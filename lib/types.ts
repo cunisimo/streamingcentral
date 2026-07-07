@@ -15,8 +15,9 @@ export interface UITitle {
   country: string | null; // ISO 3166-1 (US, KR, ...)
   genres: string[]; // slugs de la UI
   platforms: PlatformCode[]; // dónde está disponible (AR)
-  imdb: number | null;
-  metacritic: number | null;
+  tmdb: number | null; // puntaje TMDB (para cards)
+  imdb: number | null; // solo en detalle (OMDB)
+  metacritic: number | null; // solo en detalle (OMDB)
   hasEditorial: boolean;
 }
 
@@ -28,10 +29,16 @@ export interface EditorialReview {
 
 export interface UITitleDetail extends UITitle {
   age: string;
+  backdrop: string | null;
   synopsis: string;
   cast: string[];
   directors: string[];
-  links: Partial<Record<PlatformCode, string>>; // deep-link por plataforma
+  composers: string[];
+  seasons: number | null;
+  episodes: number | null;
+  links: Partial<Record<PlatformCode, string>>; // por plataforma (todos apuntan al watch link del título)
+  watchLink: string | null; // link título-específico de TMDB (agregador AR)
+  related: UITitle[];
   editorial: EditorialReview | null;
 }
 

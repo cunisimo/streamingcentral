@@ -18,6 +18,16 @@ export const COUNTRIES: Record<string, { flag: string; name: string }> = {
   ES: { flag: "🇪🇸", name: "España" }, MX: { flag: "🇲🇽", name: "México" },
   DE: { flag: "🇩🇪", name: "Alemania" }, AR: { flag: "🇦🇷", name: "Argentina" },
   BR: { flag: "🇧🇷", name: "Brasil" }, AU: { flag: "🇦🇺", name: "Australia" },
-  SE: { flag: "🇸🇪", name: "Suecia" },
+  SE: { flag: "🇸🇪", name: "Suecia" }, IN: { flag: "🇮🇳", name: "India" },
+  IS: { flag: "🇮🇸", name: "Islandia" }, CA: { flag: "🇨🇦", name: "Canadá" },
+  IE: { flag: "🇮🇪", name: "Irlanda" }, DK: { flag: "🇩🇰", name: "Dinamarca" },
+  NO: { flag: "🇳🇴", name: "Noruega" }, FI: { flag: "🇫🇮", name: "Finlandia" },
+  NL: { flag: "🇳🇱", name: "Países Bajos" }, BE: { flag: "🇧🇪", name: "Bélgica" },
+  PL: { flag: "🇵🇱", name: "Polonia" }, TR: { flag: "🇹🇷", name: "Turquía" },
+  CN: { flag: "🇨🇳", name: "China" }, HK: { flag: "🇭🇰", name: "Hong Kong" },
+  TW: { flag: "🇹🇼", name: "Taiwán" }, TH: { flag: "🇹🇭", name: "Tailandia" },
+  CL: { flag: "🇨🇱", name: "Chile" }, CO: { flag: "🇨🇴", name: "Colombia" },
+  RU: { flag: "🇷🇺", name: "Rusia" }, IL: { flag: "🇮🇱", name: "Israel" },
+  ZA: { flag: "🇿🇦", name: "Sudáfrica" }, PT: { flag: "🇵🇹", name: "Portugal" },
 };
 export const genreLabel = (slug: string) => GENRES.find((g) => g[0] === slug)?.[1] ?? slug;

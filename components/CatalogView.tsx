@@ -2,8 +2,9 @@
 import { useState } from "react";
 import { GenreSlider, CountryFilter } from "./Filters";
 import Shelf from "./Shelf";
+import FilterGrid from "./FilterGrid";
 import IndecisoHero from "./IndecisoHero";
-import CountryGrid from "./CountryGrid";
+import PersonRail from "./PersonRail";
 import { SHELVES } from "./data";
 import type { MediaType } from "@/lib/types";
 
@@ -12,32 +13,40 @@ type Mode = "inicio" | "peliculas" | "series";
 export default function CatalogView({ mode }: { mode: Mode }) {
   const [genre, setGenre] = useState("todos");
   const [country, setCountry] = useState<string | null>(null);
-  const tipo: MediaType = mode === "series" ? "tv" : "movie"; // para shelves; inicio usa ambos vía shelves de cada tipo
-  const isInicio = mode === "inicio";
+
+  if (mode === "inicio") {
+    return (
+      <>
+        <IndecisoHero />
+        <div className="wrap">
+          <Shelf title="Últimos lanzamientos" url="/api/latest" />
+          {SHELVES.map((g, i) => (
+            <Shelf key={`${i % 2 === 0 ? "m" : "t"}-${g}`} tipo={i % 2 === 0 ? "movie" : "tv"} genre={g} showType />
+          ))}
+          <PersonRail title="Directores" endpoint="/api/directores" />
+        </div>
+      </>
+    );
+  }
+
+  const tipo: MediaType = mode === "series" ? "tv" : "movie";
+  const filtering = genre !== "todos" || country !== null;
 
   return (
     <>
-      {isInicio && <IndecisoHero genre={genre} />}
       <div className="wrap">
-        {!isInicio && (
-          <div className="compact-head">
-            <h1>{mode === "peliculas" ? "Películas" : "Series"}</h1>
-            <p className="sub">{mode === "peliculas" ? "Todas las películas en tus plataformas" : "Todas las series en tus plataformas"}</p>
-          </div>
-        )}
-        <GenreSlider value={genre} onChange={(g) => setGenre(g)} />
+        <div className="compact-head">
+          <h1>{mode === "peliculas" ? "Películas" : "Series"}</h1>
+          <p className="sub">{mode === "peliculas" ? "Todas las películas en tus plataformas" : "Todas las series en tus plataformas"}</p>
+        </div>
+        <GenreSlider value={genre} onChange={setGenre} />
         <CountryFilter value={country} onChange={setCountry} />
       </div>
-      {country ? (
-        <CountryGrid tipo={isInicio ? "movie" : tipo} genre={genre} country={country} />
+      {filtering ? (
+        <FilterGrid tipo={tipo} genre={genre} country={country} />
       ) : (
         <div className="wrap">
-          {isInicio
-            ? SHELVES.flatMap((g, i) => [
-                // alterna: shelf de películas y de series por género
-                <Shelf key={`${i % 2 === 0 ? "m" : "t"}-${g}`} tipo={i % 2 === 0 ? "movie" : "tv"} genre={g} />,
-              ])
-            : SHELVES.map((g) => <Shelf key={`${tipo}-${g}`} tipo={tipo} genre={g} />)}
+          {SHELVES.map((g) => <Shelf key={`${tipo}-${g}`} tipo={tipo} genre={g} />)}
         </div>
       )}
     </>

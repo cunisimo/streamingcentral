@@ -14,7 +14,7 @@ export default function TitleCard({ t }: { t: UITitle }) {
   return (
     <Link className="card" href={`/titulo/${t.type}/${t.id}`}>
       <div className="poster" style={bg}>
-        {t.hasEditorial && <div className="ed-flag">{star}Reseña</div>}
+        {t.hasEditorial && <div className="ed-flag">{star}Reseña SC</div>}
         {!t.poster && <div className="ptitle">{t.title}</div>}
       </div>
       <div className="meta">
@@ -25,9 +25,9 @@ export default function TitleCard({ t }: { t: UITitle }) {
           {mine.length > 2 && <span className="more">+{mine.length - 2}</span>}
           {mine.length === 0 && <span className="more">—</span>}
         </div>
-        {t.imdb != null && (
+        {t.tmdb != null && (
           <div className="ratings">
-            <span className="r"><span className="star">{star}</span><span>{t.imdb.toFixed(1)}</span><span className="src">TMDB</span></span>
+            <span className="r"><span className="star">{star}</span><span>{t.tmdb.toFixed(1)}</span><span className="src">TMDB</span></span>
           </div>
         )}
       </div>

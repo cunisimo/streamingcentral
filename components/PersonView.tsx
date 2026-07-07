@@ -11,7 +11,7 @@ export default function PersonView({ id }: { id: string }) {
     () => `/api/person/${id}?providers=${platforms.join(",")}`, [id]);
   return (
     <div className="wrap">
-      <Link className="back" href="/buscar"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>Volver a Buscar</Link>
+      <Link className="back" href="/buscar"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" /></svg>Volver a Buscar</Link>
       <h2 className="section-title">{data?.person?.name ?? "Cargando…"}</h2>
       <p className="section-sub">
         {loading ? "" : `Filmografía en tus plataformas${data && data.hidden > 0 ? ` · ${data.hidden} oculto${data.hidden > 1 ? "s" : ""} (en plataformas que no tenés)` : ""}`}

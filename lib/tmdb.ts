@@ -65,6 +65,7 @@ export interface DiscoverOpts {
   sortBy?: string;
   minVotes?: number;
   page?: number;
+  extra?: Record<string, string>;
 }
 
 export function discover(type: MediaType, o: DiscoverOpts = {}) {
@@ -78,6 +79,7 @@ export function discover(type: MediaType, o: DiscoverOpts = {}) {
   if (o.genres?.length) p.with_genres = o.genres.join("|");
   if (o.keywords?.length) p.with_keywords = o.keywords.join("|");
   if (o.originCountry) p.with_origin_country = o.originCountry;
+  if (o.extra) Object.assign(p, o.extra);
   return tmdb<Paged<RawTitle>>(`/discover/${type}`, p);
 }
 
@@ -90,6 +92,7 @@ export function searchMulti(query: string, page = 1) {
 export interface CreditEntry extends RawTitle {
   media_type: MediaType;
   character?: string;
+  job?: string;
 }
 export function personCombinedCredits(id: number) {
   return tmdb<{ cast: CreditEntry[]; crew: CreditEntry[] }>(`/person/${id}/combined_credits`);
@@ -115,6 +118,7 @@ export interface RawDetail {
   vote_count: number;
   runtime?: number;
   number_of_seasons?: number;
+  number_of_episodes?: number;
   release_date?: string;
   first_air_date?: string;
   origin_country?: string[];
@@ -123,14 +127,19 @@ export interface RawDetail {
   external_ids: { imdb_id: string | null };
   content_ratings?: { results: { iso_3166_1: string; rating: string }[] };
   release_dates?: { results: { iso_3166_1: string; release_dates: { certification: string }[] }[] };
+  recommendations?: Paged<RawTitle>;
 }
 export function titleDetails(type: MediaType, id: number) {
   const append = type === "movie"
-    ? "credits,external_ids,release_dates"
-    : "credits,external_ids,content_ratings";
+    ? "credits,external_ids,release_dates,recommendations"
+    : "credits,external_ids,content_ratings,recommendations";
   return tmdb<RawDetail>(`/${type}/${id}`, { append_to_response: append });
 }
 
 export function trending(type: MediaType | "all", window: "day" | "week") {
   return tmdb<Paged<RawTitle>>(`/trending/${type}/${window}`);
+}
+
+export function personPopular(page = 1) {
+  return tmdb<Paged<RawPerson & { known_for_department?: string }>>("/person/popular", { page: String(page) });
 }
