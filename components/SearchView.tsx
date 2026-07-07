@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import PersonCard from "./PersonCard";
+import { GenreSlider, CountryFilter } from "./Filters";
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
-import type { UITitle, UIPerson } from "@/lib/types";
+import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 
 type Filter = "todo" | "movie" | "tv" | "actores";
 
@@ -16,23 +17,13 @@ export default function SearchView() {
   const [loading, setLoading] = useState(false);
   const [explore, setExplore] = useState<{ slug?: string; country?: string } | null>(null);
   const [covers, setCovers] = useState<Record<string, string | null>>({});
-  const [popActors, setPopActors] = useState<UIPerson[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
-
-  // covers de género (una vez)
   useEffect(() => {
     fetch("/api/genre-covers").then((r) => r.json()).then((j) => setCovers(j.covers ?? {})).catch(() => {});
   }, []);
-
-  // actores populares (cuando se abre la pestaña Actores sin query)
-  useEffect(() => {
-    if (filter === "actores" && !q.trim() && popActors.length === 0) {
-      fetch("/api/personas").then((r) => r.json()).then((j) => setPopActors(j.people ?? [])).catch(() => {});
-    }
-  }, [filter, q, popActors.length]);
 
   // búsqueda con debounce (desde 2 caracteres)
   useEffect(() => {
@@ -62,23 +53,14 @@ export default function SearchView() {
       </div>
       <div className="bchips">
         {(["todo", "movie", "tv", "actores"] as Filter[]).map((f) => (
-          <button key={f} className={`bchip ${filter === f ? "on" : ""}`} onClick={() => setFilter(f)}>
+          <button key={f} className={`bchip ${filter === f ? "on" : ""}`} onClick={() => { setFilter(f); setExplore(null); }}>
             {f === "todo" ? "Todo" : f === "movie" ? "Películas" : f === "tv" ? "Series" : "Actores"}
           </button>
         ))}
       </div>
 
-      {/* Sin query: pestaña Actores muestra populares; el resto, explorar */}
-      {!hasQuery && filter === "actores" && (
-        <>
-          <h2 className="bres-h">Actores populares</h2>
-          <div className="people-grid">
-            {popActors.length ? popActors.map((p) => <PersonCard key={p.id} p={p} />) : <p className="loading">Cargando…</p>}
-          </div>
-        </>
-      )}
-
-      {!hasQuery && filter !== "actores" && !explore && (
+      {/* ---- SIN QUERY: cada chip es un modo de navegación ---- */}
+      {!hasQuery && filter === "todo" && !explore && (
         <>
           <h2 className="bres-h">Explorar todo</h2>
           <div className="explore-grid">
@@ -101,9 +83,13 @@ export default function SearchView() {
         </>
       )}
 
-      {!hasQuery && filter !== "actores" && explore && <ExploreList explore={explore} onBack={() => setExplore(null)} />}
+      {!hasQuery && filter === "todo" && explore && <ExploreList explore={explore} onBack={() => setExplore(null)} />}
 
-      {/* Con query */}
+      {!hasQuery && (filter === "movie" || filter === "tv") && <BrowseTitles tipo={filter} />}
+
+      {!hasQuery && filter === "actores" && <BrowseActors />}
+
+      {/* ---- CON QUERY: los chips filtran resultados ---- */}
       {hasQuery && (
         <>
           {loading && <p className="loading">Buscando…</p>}
@@ -125,6 +111,115 @@ export default function SearchView() {
         </>
       )}
     </div>
+  );
+}
+
+// --- Navegar películas/series con filtros combinables + paginación ---
+const AGES: [string, string][] = [["ATP", "atp"], ["+13", "13"], ["+16", "16"], ["+18", "18"]];
+
+function BrowseTitles({ tipo }: { tipo: MediaType }) {
+  const { platforms, ready } = usePlatforms();
+  const [genre, setGenre] = useState("todos");
+  const [country, setCountry] = useState<string | null>(null);
+  const [age, setAge] = useState<string | null>(null);
+  const [items, setItems] = useState<UITitle[]>([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [end, setEnd] = useState(false);
+
+  const buildUrl = useCallback((p: number) => {
+    let u = `/api/discover?tipo=${tipo}&genre=${genre}&page=${p}&providers=${platforms.join(",")}`;
+    if (country) u += `&country=${country}`;
+    if (age && tipo === "movie") u += `&age=${age}`;
+    return u;
+  }, [tipo, genre, country, age, platforms]);
+
+  const load = useCallback((p: number, replace: boolean) => {
+    setLoading(true);
+    fetch(buildUrl(p)).then((r) => r.json()).then((j) => {
+      const nuevos: UITitle[] = j.items ?? [];
+      setEnd(nuevos.length === 0);
+      setItems((prev) => {
+        const base = replace ? [] : prev;
+        const seen = new Set(base.map((t) => `${t.type}-${t.id}`));
+        return [...base, ...nuevos.filter((t) => !seen.has(`${t.type}-${t.id}`))];
+      });
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [buildUrl]);
+
+  useEffect(() => {
+    if (!ready) return;
+    setPage(1); setEnd(false);
+    load(1, true);
+  }, [ready, load]);
+
+  const more = () => { const p = page + 1; setPage(p); load(p, false); };
+
+  return (
+    <>
+      <GenreSlider value={genre} onChange={setGenre} />
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <CountryFilter value={country} onChange={setCountry} />
+        {tipo === "movie" && (
+          <div className="bchips" style={{ margin: 0 }}>
+            {AGES.map(([label, val]) => (
+              <button key={val} className={`bchip ${age === val ? "on" : ""}`} onClick={() => setAge(age === val ? null : val)}>{label}</button>
+            ))}
+          </div>
+        )}
+      </div>
+      <h2 className="bres-h">{tipo === "movie" ? "Películas" : "Series"}{genre !== "todos" ? ` · ${genreLabel(genre)}` : ""}{country ? ` · ${COUNTRIES[country]?.name}` : ""}</h2>
+      <div className="grid">
+        {items.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}
+      </div>
+      {loading && <p className="loading">Cargando…</p>}
+      {!loading && items.length === 0 && <p className="empty-note">Nada con esta combinación. Probá otro filtro o activá más plataformas.</p>}
+      {!loading && !end && items.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "18px 0" }}>
+          <button className="btn ghost" onClick={more}>Cargar más</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// --- Actores populares con "Cargar más" (TMDB no tiene índice alfabético) ---
+function BrowseActors() {
+  const [people, setPeople] = useState<UIPerson[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback((p: number) => {
+    setLoading(true);
+    fetch(`/api/personas?page=${p}`).then((r) => r.json()).then((j) => {
+      const nuevos: UIPerson[] = j.people ?? [];
+      setHasMore(Boolean(j.hasMore));
+      setPeople((prev) => {
+        const seen = new Set(prev.map((x) => x.id));
+        return [...prev, ...nuevos.filter((x) => !seen.has(x.id))];
+      });
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(1); }, [load]);
+  const more = () => { const p = page + 1; setPage(p); load(p); };
+
+  return (
+    <>
+      <h2 className="bres-h">Actores populares</h2>
+      <div className="people-grid">
+        {people.map((p) => <PersonCard key={p.id} p={p} />)}
+      </div>
+      {loading && <p className="loading">Cargando…</p>}
+      {!loading && hasMore && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "18px 0" }}>
+          <button className="btn ghost" onClick={more}>Cargar más</button>
+        </div>
+      )}
+    </>
   );
 }
 

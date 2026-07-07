@@ -109,17 +109,19 @@ export async function search(query: string) {
   return { titles, people };
 }
 
-// --- Actores populares (para la pestaña Actores del buscador) ---
-export async function popularPeople(): Promise<UIPerson[]> {
-  return cached("people:popular", TTL.providers, async () => {
-    const res = await personPopular();
-    return res.results
+// --- Actores populares paginados (pestaña Actores del buscador) ---
+// TMDB no expone listado alfabético global de personas; el orden disponible
+// es por popularidad. Paginamos de a ~20 con "Cargar más".
+export async function popularPeople(page = 1): Promise<{ people: UIPerson[]; hasMore: boolean }> {
+  return cached(`people:popular:${page}`, TTL.providers, async () => {
+    const res = await personPopular(page);
+    const people = res.results
       .filter((p) => (p.known_for_department ?? "Acting") === "Acting" && p.profile_path)
-      .slice(0, 21)
       .map((p) => ({
         id: p.id, name: p.name, profile: img(p.profile_path, "w185"),
         knownFor: (p.known_for ?? []).map(titleOf).filter(Boolean).slice(0, 2),
       }));
+    return { people, hasMore: res.page < res.total_pages };
   });
 }
 
