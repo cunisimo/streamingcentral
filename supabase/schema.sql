@@ -1,4 +1,73 @@
 -- ============================================================
+-- ACTIVO: perfiles de usuario + gate de admin
+-- Todo usuario (auth.users) tiene una fila en profiles, creada
+-- automáticamente al registrarse. is_admin separa al dueño del
+-- proyecto (que edita reseñas editoriales) del público general.
+-- ============================================================
+create table if not exists profiles (
+  id            uuid primary key references auth.users (id) on delete cascade,
+  display_name  text,
+  is_admin      boolean     not null default false,
+  created_at    timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+
+-- Cada uno lee y edita su propio perfil.
+drop policy if exists "lectura de perfil propio" on profiles;
+create policy "lectura de perfil propio" on profiles
+  for select using (auth.uid() = id);
+
+drop policy if exists "edicion de perfil propio" on profiles;
+create policy "edicion de perfil propio" on profiles
+  for update using (auth.uid() = id) with check (auth.uid() = id);
+
+-- El perfil se crea por trigger (security definer), no desde el cliente,
+-- así el usuario nunca elige su propio id ni su is_admin.
+create or replace function handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, display_name)
+  values (new.id, new.raw_user_meta_data ->> 'display_name');
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
+
+-- Blindaje: un usuario común no puede auto-promocionarse a admin.
+-- Si el UPDATE viene de un cliente logueado (rol 'authenticated', que es el
+-- único vector de escalada), is_admin queda como estaba. Desde el SQL editor
+-- de Supabase (sin JWT) o service_role sí se puede cambiar, para poder
+-- designar admins a mano.
+create or replace function protect_is_admin()
+returns trigger as $$
+begin
+  if auth.role() = 'authenticated' then
+    new.is_admin := old.is_admin;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists profiles_protect_is_admin on profiles;
+create trigger profiles_protect_is_admin
+  before update on profiles
+  for each row execute function protect_is_admin();
+
+-- Helper reusable para las policies: ¿el usuario actual es admin?
+create or replace function is_admin()
+returns boolean as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and is_admin
+  );
+$$ language sql stable security definer set search_path = public;
+
+-- ============================================================
 -- ACTIVO: reseñas editoriales (tu diferencial)
 -- ============================================================
 create table if not exists editorial_reviews (
@@ -20,10 +89,14 @@ drop policy if exists "lectura publica publicadas" on editorial_reviews;
 create policy "lectura publica publicadas" on editorial_reviews
   for select using (publicado = true);
 
+-- Antes: cualquier usuario autenticado. Ahora: solo admin. Esto es lo que
+-- impide que un usuario del público (que también es 'authenticated') toque
+-- las reseñas editoriales una vez abierto el registro.
 drop policy if exists "escritura autenticada" on editorial_reviews;
-create policy "escritura autenticada" on editorial_reviews
-  for all using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+drop policy if exists "escritura solo admin" on editorial_reviews;
+create policy "escritura solo admin" on editorial_reviews
+  for all using (is_admin())
+  with check (is_admin());
 
 -- ============================================================
 -- SEAM DORMIDO: votos de usuario (para "más votados de la semana")

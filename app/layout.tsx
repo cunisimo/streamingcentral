@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
 import { ThemeProvider } from "@/components/ThemeContext";
+import { AuthProvider } from "@/components/AuthContext";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
@@ -28,7 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>
-          <PlatformsProvider>{children}</PlatformsProvider>
+          <AuthProvider>
+            <PlatformsProvider>{children}</PlatformsProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

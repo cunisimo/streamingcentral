@@ -1,21 +1,22 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const path = usePathname();
-  const [checked, setChecked] = useState(false);
+  const { user, profile, ready } = useAuth();
+  const isLogin = path === "/admin/login";
 
   useEffect(() => {
-    if (path === "/admin/login") { setChecked(true); return; }
-    supabaseBrowser().auth.getSession().then(({ data }) => {
-      if (!data.session) router.replace("/admin/login");
-      else setChecked(true);
-    });
-  }, [path, router]);
+    if (!ready || isLogin) return;
+    if (!user) { router.replace("/admin/login"); return; }
+    if (!profile?.is_admin) { router.replace("/"); }
+  }, [ready, isLogin, user, profile, router]);
 
-  if (!checked) return <div className="admin"><p className="loading">Verificando sesión…</p></div>;
+  if (isLogin) return <>{children}</>;
+  if (!ready || !user) return <div className="admin"><p className="loading">Verificando sesión…</p></div>;
+  if (!profile?.is_admin) return <div className="admin"><p className="loading">No tenés permisos para esta sección.</p></div>;
   return <>{children}</>;
 }
