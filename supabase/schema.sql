@@ -99,31 +99,38 @@ create policy "escritura solo admin" on editorial_reviews
   with check (is_admin());
 
 -- ============================================================
--- ACTIVO: "me gusta" de usuario (alimenta "Lo más votados" en Home)
--- Cada fila = un like de un usuario a un título. Votar requiere login.
--- Modelo de like simple (sin puntaje 1-5): "más votados" = más likes.
+-- ACTIVO: voto de usuario (alimenta "Lo más votados" en Home)
+-- Cada fila = el voto de un usuario a un título. Votar requiere login.
+-- rating: 1=malaso, 2=ta buena, 3=petacular. "Más votados" = más votos.
 -- ============================================================
 create table if not exists votes (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid        not null references auth.users (id) on delete cascade,
   tmdb_id     integer     not null,
   tipo        text        not null check (tipo in ('movie','tv')),
+  rating      smallint    not null default 2,
   created_at  timestamptz not null default now(),
   unique (user_id, tmdb_id, tipo)
 );
--- Migración desde el schema anterior (tenía rating 1-5): con el modelo de like
--- simple ya no se usa. Se elimina si la tabla venía de antes.
-alter table votes drop column if exists rating;
+-- Migraciones idempotentes: sirve venga la tabla del schema viejo (rating 1-5)
+-- o de una versión sin rating. Deja la columna en el rango 1-3.
+alter table votes add column if not exists rating smallint;
+update votes set rating = 2 where rating is null;
+alter table votes alter column rating set default 2;
+alter table votes alter column rating set not null;
+alter table votes drop constraint if exists votes_rating_check;
+alter table votes drop constraint if exists votes_rating_range;
+alter table votes add constraint votes_rating_range check (rating between 1 and 3);
 
 alter table votes enable row level security;
 drop policy if exists "cada uno gestiona sus votos" on votes;
 create policy "cada uno gestiona sus votos" on votes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- Agregados de "más votados". Como la policy solo deja ver los votos propios,
--- el conteo global se expone con funciones security definer (el cruce por
+-- Agregado de "más votados". Como la policy solo deja ver los votos propios,
+-- el conteo global se expone con una función security definer (el cruce por
 -- plataforma se resuelve en la app contra el provider cacheado en Redis).
--- Top de títulos por cantidad de likes en una ventana de días.
+-- Top de títulos por cantidad de votos en una ventana de días.
 create or replace function top_voted(p_days int default 7, p_limit int default 60)
 returns table (tmdb_id integer, tipo text, votos bigint) as $$
   select v.tmdb_id, v.tipo, count(*) as votos
@@ -134,13 +141,6 @@ returns table (tmdb_id integer, tipo text, votos bigint) as $$
   limit p_limit;
 $$ language sql stable security definer set search_path = public;
 grant execute on function top_voted(int, int) to anon, authenticated;
-
--- Cantidad total de likes de un título (para la ficha).
-create or replace function title_votes(p_tmdb_id integer, p_tipo text)
-returns bigint as $$
-  select count(*) from votes where tmdb_id = p_tmdb_id and tipo = p_tipo;
-$$ language sql stable security definer set search_path = public;
-grant execute on function title_votes(integer, text) to anon, authenticated;
 
 -- ============================================================
 -- SEAM DORMIDO: críticas de usuario (distinto de editorial_reviews)

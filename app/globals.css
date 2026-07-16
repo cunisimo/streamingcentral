@@ -180,6 +180,16 @@ main{padding-bottom:92px;min-height:60vh}
 .act svg{width:26px;height:26px;stroke:var(--text);fill:none;stroke-width:1.8}
 .act .lab{color:var(--dim)}
 .act.on svg{stroke:var(--accent);fill:var(--accent)}.act.on .lab{color:var(--accent)}
+.act.on svg.chk{fill:none}
+.act .twoup{display:flex;gap:2px;height:26px;align-items:center}
+.act .twoup svg{width:19px;height:19px}
+.votepop{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:10px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:6px;z-index:40;box-shadow:var(--sh-h);display:flex;flex-direction:column;gap:2px;min-width:158px}
+.voteopt{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;border:none;background:none;cursor:pointer;color:var(--text);font-size:14px;font-family:var(--body);text-align:left;width:100%}
+.voteopt:hover{background:var(--surface-2)}
+.voteopt.on{color:var(--accent)}
+.voteopt .ic{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.voteopt .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.voteopt.on .ic svg{fill:currentColor}
 .dsyn{margin-top:24px;font-size:15px;line-height:1.6;color:var(--text)}
 .dcast{margin-top:14px;font-size:14px;color:var(--dim)}.dcast b{color:var(--text);font-weight:600}
 .dsec-h{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:-.01em;margin:26px 0 12px}

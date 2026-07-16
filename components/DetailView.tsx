@@ -59,7 +59,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         <div className="actions">
           <button className={`act ${inList ? "on" : ""}`} onClick={() => setInList((v) => !v)}>
             {inList
-              ? <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.2 4.2L19 7" /></svg>
+              ? <svg className="chk" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
               : <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>}
             <span className="lab">Mi lista</span>
           </button>

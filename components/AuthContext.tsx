@@ -22,13 +22,26 @@ interface Ctx {
 }
 const AuthCtx = createContext<Ctx | null>(null);
 
-async function loadProfile(userId: string): Promise<Profile | null> {
+async function loadProfile(user: User): Promise<Profile | null> {
   const { data } = await supabaseBrowser()
     .from("profiles")
     .select("id, display_name, is_admin")
-    .eq("id", userId)
-    .single();
-  return (data as Profile) ?? null;
+    .eq("id", user.id)
+    .maybeSingle();
+  // El nombre elegido al registrarse queda también en el metadata de auth.
+  // Lo usamos como respaldo para no volver a pedirlo si el perfil no lo tiene
+  // (registro previo al trigger, o fila de perfil todavía no creada).
+  const metaName = (user.user_metadata?.display_name as string | undefined) || null;
+  if (data) {
+    const p = data as Profile;
+    if (!p.display_name && metaName) {
+      // Backfill silencioso para que la próxima vez ya venga del perfil.
+      void supabaseBrowser().from("profiles").update({ display_name: metaName }).eq("id", user.id);
+      return { ...p, display_name: metaName };
+    }
+    return p;
+  }
+  return metaName ? { id: user.id, display_name: metaName, is_admin: false } : null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -44,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = session?.user ?? null;
       if (!alive) return;
       setUser(u);
-      setProfile(u ? await loadProfile(u.id) : null);
+      setProfile(u ? await loadProfile(u) : null);
       if (alive) setReady(true);
     }
 
@@ -91,12 +104,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateDisplayName = useCallback(async (name: string) => {
     if (!user) return { error: "No hay sesión" };
-    const { error } = await supabaseBrowser()
-      .from("profiles")
-      .update({ display_name: name })
-      .eq("id", user.id);
+    const sb = supabaseBrowser();
+    const { error } = await sb.from("profiles").update({ display_name: name }).eq("id", user.id);
     if (error) return { error: error.message };
-    setProfile((p) => (p ? { ...p, display_name: name } : p));
+    // Espejamos el nombre en el metadata de auth para tenerlo siempre a mano
+    // en el próximo login sin depender de la fila de perfil.
+    void sb.auth.updateUser({ data: { display_name: name } });
+    setProfile((p) => (p ? { ...p, display_name: name } : { id: user.id, display_name: name, is_admin: false }));
     return {};
   }, [user]);
 
