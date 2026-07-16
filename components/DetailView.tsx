@@ -6,6 +6,7 @@ import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
 import TitleCard from "./TitleCard";
+import LikeButton from "./LikeButton";
 import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType } from "@/lib/types";
 
@@ -16,7 +17,6 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   const { platforms } = usePlatforms();
   const { data, loading } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
   const [inList, setInList] = useState(false);
-  const [rated, setRated] = useState(false);
   const relTrack = useRef<HTMLDivElement>(null);
 
   if (loading || !data) return <div className="detail-inner"><div className="dpad"><p className="loading">Cargando ficha…</p></div></div>;
@@ -63,10 +63,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
               : <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>}
             <span className="lab">Mi lista</span>
           </button>
-          <button className={`act ${rated ? "on" : ""}`} onClick={() => setRated((v) => !v)}>
-            <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v11M7 10l4-7c1.5 0 2.5 1 2.5 2.5L13 10h5.5c1.1 0 2 1 1.8 2.1l-1.3 7c-.2 1-1 1.9-2 1.9H7" /></svg>
-            <span className="lab">Calificar</span>
-          </button>
+          <LikeButton id={t.id} tipo={t.type} />
           <button className="act" onClick={() => navigator.share?.({ title: t.title }).catch(() => {})}>
             <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
             <span className="lab">Compartir</span>

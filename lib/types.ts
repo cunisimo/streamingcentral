@@ -19,6 +19,7 @@ export interface UITitle {
   imdb: number | null; // solo en detalle (OMDB)
   metacritic: number | null; // solo en detalle (OMDB)
   hasEditorial: boolean;
+  votes?: number; // cantidad de "me gusta" (solo en "Lo más votados")
 }
 
 export interface EditorialReview {

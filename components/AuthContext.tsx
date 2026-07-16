@@ -17,6 +17,8 @@ interface Ctx {
   signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string; needsConfirm?: boolean }>;
   signOut: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<{ error?: string }>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (password: string) => Promise<{ error?: string }>;
 }
 const AuthCtx = createContext<Ctx | null>(null);
 
@@ -72,6 +74,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabaseBrowser().auth.signOut();
   }, []);
 
+  // Manda el mail de recuperación. El link vuelve a /cuenta/reset, donde
+  // Supabase (detectSessionInUrl) canjea el token por una sesión temporal
+  // de recovery y ahí se setea la clave nueva con updatePassword.
+  const resetPassword = useCallback(async (email: string) => {
+    const redirectTo =
+      typeof window !== "undefined" ? `${window.location.origin}/cuenta/reset` : undefined;
+    const { error } = await supabaseBrowser().auth.resetPasswordForEmail(email, { redirectTo });
+    return error ? { error: error.message } : {};
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    const { error } = await supabaseBrowser().auth.updateUser({ password });
+    return error ? { error: error.message } : {};
+  }, []);
+
   const updateDisplayName = useCallback(async (name: string) => {
     if (!user) return { error: "No hay sesión" };
     const { error } = await supabaseBrowser()
@@ -84,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <AuthCtx.Provider value={{ user, profile, ready, signIn, signUp, signOut, updateDisplayName }}>
+    <AuthCtx.Provider value={{ user, profile, ready, signIn, signUp, signOut, updateDisplayName, resetPassword, updatePassword }}>
       {children}
     </AuthCtx.Provider>
   );

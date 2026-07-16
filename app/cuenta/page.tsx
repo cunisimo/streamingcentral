@@ -4,10 +4,10 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
 
-type Modo = "login" | "registro";
+type Modo = "login" | "registro" | "recuperar";
 
 export default function Cuenta() {
-  const { user, profile, ready, signIn, signUp, signOut, updateDisplayName } = useAuth();
+  const { user, profile, ready, signIn, signUp, signOut, updateDisplayName, resetPassword } = useAuth();
 
   if (!ready) {
     return (<><TopBar /><main><div className="admin"><p className="loading">Cargando…</p></div></main><BottomNav /></>);
@@ -26,7 +26,7 @@ export default function Cuenta() {
               onSignOut={signOut}
             />
           ) : (
-            <Acceso signIn={signIn} signUp={signUp} />
+            <Acceso signIn={signIn} signUp={signUp} resetPassword={resetPassword} />
           )}
         </div>
       </main>
@@ -38,9 +38,11 @@ export default function Cuenta() {
 function Acceso({
   signIn,
   signUp,
+  resetPassword,
 }: {
   signIn: (e: string, p: string) => Promise<{ error?: string }>;
   signUp: (e: string, p: string, n: string) => Promise<{ error?: string; needsConfirm?: boolean }>;
+  resetPassword: (e: string) => Promise<{ error?: string }>;
 }) {
   const [modo, setModo] = useState<Modo>("login");
   const [nombre, setNombre] = useState("");
@@ -51,10 +53,19 @@ function Acceso({
   const [busy, setBusy] = useState(false);
 
   const esRegistro = modo === "registro";
+  const esRecuperar = modo === "recuperar";
+
+  function irA(m: Modo) { setModo(m); setErr(""); setOk(""); }
 
   async function submit() {
     setBusy(true); setErr(""); setOk("");
-    if (esRegistro) {
+    if (esRecuperar) {
+      if (!email.trim()) { setBusy(false); setErr("Poné tu email."); return; }
+      const { error } = await resetPassword(email.trim());
+      setBusy(false);
+      if (error) { setErr(error); return; }
+      setOk("Si el email está registrado, te llega un enlace para elegir una nueva contraseña. Revisá tu casilla.");
+    } else if (esRegistro) {
       if (nombre.trim().length < 2) { setBusy(false); setErr("Poné un nombre para mostrar."); return; }
       const { error, needsConfirm } = await signUp(email, pass, nombre.trim());
       setBusy(false);
@@ -69,12 +80,16 @@ function Acceso({
     }
   }
 
+  const titulo = esRegistro ? "Crear cuenta" : esRecuperar ? "Recuperar contraseña" : "Ingresar";
+
   return (
     <>
-      <h1>{esRegistro ? "Crear cuenta" : "Ingresar"}</h1>
+      <h1>{titulo}</h1>
       <p className="section-sub">
         {esRegistro
           ? "Para votar, guardar lo que viste y armar tu grupo familiar."
+          : esRecuperar
+          ? "Te mandamos un enlace al mail para elegir una nueva contraseña."
           : "Entrá a tu cuenta de StreamingCentral."}
       </p>
 
@@ -86,36 +101,70 @@ function Acceso({
       )}
       <div className="field">
         <label>Email</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
-      </div>
-      <div className="field">
-        <label>Contraseña</label>
         <input
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          type="password"
-          onKeyDown={(e) => e.key === "Enter" && submit()}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          onKeyDown={(e) => e.key === "Enter" && esRecuperar && submit()}
         />
       </div>
+      {!esRecuperar && (
+        <div className="field">
+          <label>Contraseña</label>
+          <input
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            type="password"
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+          />
+        </div>
+      )}
+
+      {!esRegistro && !esRecuperar && (
+        <p style={{ marginTop: 10, fontSize: 13 }}>
+          <button
+            type="button"
+            onClick={() => irA("recuperar")}
+            style={{ background: "none", border: "none", color: "var(--dim)", cursor: "pointer", fontSize: 13, fontFamily: "inherit", padding: 0 }}
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+        </p>
+      )}
 
       {err && <p style={{ color: "var(--editorial)", marginTop: 12, fontSize: 14 }}>{err}</p>}
       {ok && <p style={{ color: "var(--accent)", marginTop: 12, fontSize: 14 }}>{ok}</p>}
 
       <div style={{ marginTop: 20 }}>
         <button className="btn" onClick={submit} disabled={busy}>
-          {busy ? "Un momento…" : esRegistro ? "Crear cuenta" : "Ingresar"}
+          {busy ? "Un momento…" : esRegistro ? "Crear cuenta" : esRecuperar ? "Enviar enlace" : "Ingresar"}
         </button>
       </div>
 
       <p style={{ marginTop: 18, fontSize: 14, color: "var(--dim)" }}>
-        {esRegistro ? "¿Ya tenés cuenta? " : "¿No tenés cuenta? "}
-        <button
-          type="button"
-          onClick={() => { setModo(esRegistro ? "login" : "registro"); setErr(""); setOk(""); }}
-          style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 14, fontFamily: "inherit", padding: 0 }}
-        >
-          {esRegistro ? "Ingresá" : "Registrate"}
-        </button>
+        {esRecuperar ? (
+          <>
+            ¿Te acordaste?{" "}
+            <button
+              type="button"
+              onClick={() => irA("login")}
+              style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 14, fontFamily: "inherit", padding: 0 }}
+            >
+              Volver a ingresar
+            </button>
+          </>
+        ) : (
+          <>
+            {esRegistro ? "¿Ya tenés cuenta? " : "¿No tenés cuenta? "}
+            <button
+              type="button"
+              onClick={() => irA(esRegistro ? "login" : "registro")}
+              style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 14, fontFamily: "inherit", padding: 0 }}
+            >
+              {esRegistro ? "Ingresá" : "Registrate"}
+            </button>
+          </>
+        )}
       </p>
     </>
   );

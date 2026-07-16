@@ -10,6 +10,7 @@ import { resolveCategory, genreIdsToSlugs, categoryLabel, CATEGORIES } from "./c
 import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
+import { topVotedRows } from "./votes";
 import type {
   MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
 } from "./types";
@@ -240,6 +241,51 @@ export async function detail(type: MediaType, id: number): Promise<UITitleDetail
     related,
     editorial,
   };
+}
+
+// --- "Lo más votados": card a partir de (tipo, id) sin listado previo ---
+// Los votos guardan solo tmdb_id+tipo, así que reconstruimos la card pidiendo
+// el detalle a TMDB (cacheado) y cruzando providers. Devuelve null si falla.
+async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
+  return cached(`card:${type}:${id}`, TTL.catalog, async () => {
+    try {
+      const [d, prov] = await Promise.all([titleDetails(type, id), providersOf(type, id)]);
+      const dt = d.release_date || d.first_air_date;
+      return {
+        id: d.id, type, title: d.title || d.name || "",
+        year: dt ? Number(dt.slice(0, 4)) : null,
+        runtime: null, poster: img(d.poster_path),
+        country: d.origin_country?.[0] ?? null,
+        genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
+        platforms: prov.codes,
+        tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
+        imdb: null, metacritic: null, hasEditorial: false,
+      } as UITitle;
+    } catch {
+      return null;
+    }
+  });
+}
+
+// Top de likes cruzado con las plataformas del usuario. Ventana en días.
+export async function mostVoted(providers: PlatformCode[], days = 7): Promise<UITitle[]> {
+  if (!providers.length) return [];
+  const rows = await topVotedRows(days, 60);
+  if (!rows.length) return [];
+  const pub = await publishedIds();
+  const cards = await Promise.all(rows.map(async (r) => {
+    const c = await titleCard(r.tipo, r.tmdb_id);
+    if (!c) return null;
+    // No mutar el objeto cacheado: se clona con los datos por-request.
+    return {
+      ...c,
+      hasEditorial: pub.has(`${r.tmdb_id}:${r.tipo}`),
+      votes: r.votos,
+    } as UITitle;
+  }));
+  return cards
+    .filter((c): c is UITitle => !!c && c.platforms.length > 0)
+    .slice(0, 20);
 }
 
 export { categoryLabel };
