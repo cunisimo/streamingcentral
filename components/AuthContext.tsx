@@ -7,6 +7,7 @@ export interface Profile {
   id: string;
   display_name: string | null;
   is_admin: boolean;
+  avatar_seed: string | null;
 }
 
 interface Ctx {
@@ -17,6 +18,7 @@ interface Ctx {
   signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string; needsConfirm?: boolean }>;
   signOut: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<{ error?: string }>;
+  updateAvatarSeed: (seed: string) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
 }
@@ -25,7 +27,7 @@ const AuthCtx = createContext<Ctx | null>(null);
 async function loadProfile(user: User): Promise<Profile | null> {
   const { data } = await supabaseBrowser()
     .from("profiles")
-    .select("id, display_name, is_admin")
+    .select("id, display_name, is_admin, avatar_seed")
     .eq("id", user.id)
     .maybeSingle();
   // El nombre elegido al registrarse queda también en el metadata de auth.
@@ -41,7 +43,7 @@ async function loadProfile(user: User): Promise<Profile | null> {
     }
     return p;
   }
-  return metaName ? { id: user.id, display_name: metaName, is_admin: false } : null;
+  return metaName ? { id: user.id, display_name: metaName, is_admin: false, avatar_seed: user.id } : null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -110,12 +112,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Espejamos el nombre en el metadata de auth para tenerlo siempre a mano
     // en el próximo login sin depender de la fila de perfil.
     void sb.auth.updateUser({ data: { display_name: name } });
-    setProfile((p) => (p ? { ...p, display_name: name } : { id: user.id, display_name: name, is_admin: false }));
+    setProfile((p) => (p ? { ...p, display_name: name } : { id: user.id, display_name: name, is_admin: false, avatar_seed: user.id }));
+    return {};
+  }, [user]);
+
+  const updateAvatarSeed = useCallback(async (seed: string) => {
+    if (!user) return { error: "No hay sesión" };
+    const sb = supabaseBrowser();
+    const { error } = await sb.from("profiles").update({ avatar_seed: seed }).eq("id", user.id);
+    if (error) return { error: error.message };
+    setProfile((p) => (p ? { ...p, avatar_seed: seed } : { id: user.id, display_name: null, is_admin: false, avatar_seed: seed }));
     return {};
   }, [user]);
 
   return (
-    <AuthCtx.Provider value={{ user, profile, ready, signIn, signUp, signOut, updateDisplayName, resetPassword, updatePassword }}>
+    <AuthCtx.Provider value={{ user, profile, ready, signIn, signUp, signOut, updateDisplayName, updateAvatarSeed, resetPassword, updatePassword }}>
       {children}
     </AuthCtx.Provider>
   );
