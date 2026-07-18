@@ -54,7 +54,7 @@ export default function IndecisoHero() {
   const [offset, setOffset] = useState(0);
   const [genre, setGenre] = useState("todos");
   const [activeMood, setActiveMood] = useState<Mood | null>(null);
-  const [activeLabel, setActiveLabel] = useState<string | null>(null);
+  const [sectionTitle, setSectionTitle] = useState("6 para hoy");
   const [query, setQuery] = useState("");
   const track = useRef<HTMLDivElement>(null);
   const { data, loading } = useApi<{ items: UITitle[] }>(
@@ -62,20 +62,25 @@ export default function IndecisoHero() {
     [offset, genre],
   );
   const picks = data?.items ?? [];
+  const filtered = genre !== "todos";
+
+  function reset() {
+    setActiveMood(null);
+    setSectionTitle("6 para hoy");
+    setQuery("");
+    setGenre("todos");
+    setOffset(0);
+  }
 
   function pickMood(m: Mood) {
     if (activeMood?.slug === m.slug) {
-      // toggle off: vuelve al pool general
-      setActiveMood(null);
-      setActiveLabel(null);
-      setQuery("");
-      setGenre("todos");
-    } else {
-      setActiveMood(m);
-      setActiveLabel(`${m.label} ${m.emoji}`);
-      setQuery(m.hint);
-      setGenre(m.slug);
+      reset(); // toggle off: vuelve al pool general
+      return;
     }
+    setActiveMood(m);
+    setSectionTitle(`Resultados: ${m.label} ${m.emoji}`);
+    setQuery(m.hint);
+    setGenre(m.slug);
     setOffset(0);
   }
 
@@ -84,11 +89,11 @@ export default function IndecisoHero() {
     if (hit) {
       const m = MOODS.find((x) => x.slug === hit.slug) ?? null;
       setActiveMood(m);
-      setActiveLabel(m ? `${m.label} ${m.emoji}` : hit.label);
+      setSectionTitle(`Resultados: ${m ? `${m.label} ${m.emoji}` : hit.label}`);
       setGenre(hit.slug);
     } else {
       setActiveMood(null);
-      setActiveLabel(null);
+      setSectionTitle("6 para hoy");
       setGenre("todos");
     }
     setOffset(0);
@@ -139,7 +144,15 @@ export default function IndecisoHero() {
       <div className="wrap">
         <div className="shelf">
           <div className="shelf-head">
-            <h2>{picks.length || 6} para hoy {activeLabel && <span className="finder-tag">{activeLabel}</span>}</h2>
+            <div className="shelf-title">
+              <h2>{sectionTitle}</h2>
+              {filtered && (
+                <button className="reset-btn" onClick={reset}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                  Restablecer
+                </button>
+              )}
+            </div>
             <button className="reshuffle" onClick={() => setOffset((o) => o + 1)}>
               <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></svg>
               Mostrame otras
