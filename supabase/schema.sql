@@ -11,6 +11,11 @@ create table if not exists profiles (
   created_at    timestamptz not null default now()
 );
 
+-- Avatar generado (DiceBear). Se guarda solo la semilla; el SVG se arma en el
+-- cliente. Backfill determinístico para perfiles viejos: semilla = id.
+alter table profiles add column if not exists avatar_seed text;
+update profiles set avatar_seed = id::text where avatar_seed is null;
+
 alter table profiles enable row level security;
 
 -- Cada uno lee y edita su propio perfil.
@@ -27,8 +32,8 @@ create policy "edicion de perfil propio" on profiles
 create or replace function handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, display_name)
-  values (new.id, new.raw_user_meta_data ->> 'display_name');
+  insert into public.profiles (id, display_name, avatar_seed)
+  values (new.id, new.raw_user_meta_data ->> 'display_name', gen_random_uuid()::text);
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
@@ -127,20 +132,30 @@ drop policy if exists "cada uno gestiona sus votos" on votes;
 create policy "cada uno gestiona sus votos" on votes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- Agregado de "más votados". Como la policy solo deja ver los votos propios,
--- el conteo global se expone con una función security definer (el cruce por
--- plataforma se resuelve en la app contra el provider cacheado en Redis).
--- Top de títulos por cantidad de votos en una ventana de días.
-create or replace function top_voted(p_days int default 7, p_limit int default 60)
+-- Agregado de votos por polaridad. Como la policy solo deja ver los votos
+-- propios, el conteo global se expone con una función security definer (el
+-- cruce por plataforma se resuelve en la app contra el provider cacheado en
+-- Redis). p_min/p_max acotan el rating: 2-3 (ta buena + petacular) alimenta
+-- "Lo más votados"; 1-1 (malaso) alimenta "Hacete cargo".
+-- Se dropea la firma vieja de 2 args para que no quede un overload ambiguo
+-- que PostgREST resolvería contando todos los ratings juntos.
+drop function if exists top_voted(int, int);
+create or replace function top_voted(
+  p_days  int default 7,
+  p_limit int default 60,
+  p_min   int default 1,
+  p_max   int default 3
+)
 returns table (tmdb_id integer, tipo text, votos bigint) as $$
   select v.tmdb_id, v.tipo, count(*) as votos
   from votes v
   where v.created_at > now() - make_interval(days => p_days)
+    and v.rating between p_min and p_max
   group by v.tmdb_id, v.tipo
   order by votos desc, max(v.created_at) desc
   limit p_limit;
 $$ language sql stable security definer set search_path = public;
-grant execute on function top_voted(int, int) to anon, authenticated;
+grant execute on function top_voted(int, int, int, int) to anon, authenticated;
 
 -- ============================================================
 -- SEAM DORMIDO: críticas de usuario (distinto de editorial_reviews)
@@ -161,4 +176,39 @@ create policy "lectura publica aprobadas" on user_reviews
   for select using (estado = 'aprobada');
 drop policy if exists "el autor gestiona la suya" on user_reviews;
 create policy "el autor gestiona la suya" on user_reviews
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- ACTIVO: items del usuario. kind='list' = Mi lista;
+-- kind='watched' = "Ya la vi" (base de emblemas futuros).
+-- ============================================================
+create table if not exists user_items (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid        not null references auth.users (id) on delete cascade,
+  tmdb_id    integer     not null,
+  tipo       text        not null check (tipo in ('movie','tv')),
+  kind       text        not null check (kind in ('list','watched')),
+  created_at timestamptz not null default now(),
+  unique (user_id, tmdb_id, tipo, kind)
+);
+alter table user_items enable row level security;
+drop policy if exists "cada uno gestiona sus items" on user_items;
+create policy "cada uno gestiona sus items" on user_items
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- ACTIVO: historial de fichas abiertas. Upsert por título
+-- actualizando viewed_at; se lee por recencia.
+-- ============================================================
+create table if not exists view_history (
+  id        uuid primary key default gen_random_uuid(),
+  user_id   uuid        not null references auth.users (id) on delete cascade,
+  tmdb_id   integer     not null,
+  tipo      text        not null check (tipo in ('movie','tv')),
+  viewed_at timestamptz not null default now(),
+  unique (user_id, tmdb_id, tipo)
+);
+alter table view_history enable row level security;
+drop policy if exists "cada uno gestiona su historial" on view_history;
+create policy "cada uno gestiona su historial" on view_history
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
