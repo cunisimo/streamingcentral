@@ -22,10 +22,10 @@ export default function UserHub() {
 
       <UserShelf
         title="Mi lista" href="/cuenta/lista"
-        load={() => itemRefs("list")}
+        load={async () => (await itemRefs("list")).slice(0, 20)}
         empty="Todavía no guardaste nada — tocá “Mi lista” en cualquier ficha."
       />
-      <UserShelf title="Me gustaron" href="/cuenta/gustaron" load={likedRefs} />
+      <UserShelf title="Me gustaron" href="/cuenta/gustaron" load={async () => (await likedRefs()).slice(0, 20)} />
       <UserShelf title="Vistos recientemente" href="/cuenta/vistos" load={() => historyRefs(20)} />
 
       <div className="hub-tiles">

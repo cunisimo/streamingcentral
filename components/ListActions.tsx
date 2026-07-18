@@ -12,7 +12,8 @@ export default function ListActions({ id, tipo }: { id: number; tipo: MediaType 
   const router = useRouter();
   const [inList, setInList] = useState(false);
   const [watched, setWatched] = useState(false);
-  const [busy, setBusy] = useState(false);
+  // busy por-botón: tocar "Mi lista" no debe descartar un click en "Ya la vi".
+  const [busy, setBusy] = useState<Record<Kind, boolean>>({ list: false, watched: false });
 
   useEffect(() => {
     if (!ready || !user) { setInList(false); setWatched(false); return; }
@@ -30,12 +31,12 @@ export default function ListActions({ id, tipo }: { id: number; tipo: MediaType 
 
   async function toggle(kind: Kind, cur: boolean, set: (v: boolean) => void) {
     if (!user) { router.push("/cuenta"); return; }
-    if (busy) return;
-    setBusy(true);
+    if (busy[kind]) return;
+    setBusy((b) => ({ ...b, [kind]: true }));
     set(!cur); // optimista
     const { error } = await setItem(user.id, kind, { tmdb_id: id, tipo }, !cur);
     if (error) set(cur); // rollback
-    setBusy(false);
+    setBusy((b) => ({ ...b, [kind]: false }));
   }
 
   return (
