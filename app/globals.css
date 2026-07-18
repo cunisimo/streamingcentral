@@ -265,4 +265,10 @@ main{padding-bottom:92px;min-height:60vh}
 .hub-tile .lock { font-size: 18px; }
 .hub-tile small { font-size: 11px; color: var(--faint); }
 
+/* Picker de avatar */
+.avpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 10px; }
+.avopt { padding: 0; border: 2px solid transparent; border-radius: 50%; background: #2A2D33; cursor: pointer; line-height: 0; }
+.avopt img { width: 100%; border-radius: 50%; display: block; }
+.avopt.on { border-color: var(--accent); }
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
