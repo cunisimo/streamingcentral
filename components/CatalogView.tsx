@@ -21,6 +21,7 @@ export default function CatalogView({ mode }: { mode: Mode }) {
         <div className="wrap">
           <Shelf title="Últimos lanzamientos" url="/api/latest" />
           <Shelf title="Lo más votados" url="/api/mas-votados" />
+          <Shelf title="Hacete cargo" url="/api/hacete-cargo" />
           {SHELVES.map((g, i) => (
             <Shelf key={`${i % 2 === 0 ? "m" : "t"}-${g}`} tipo={i % 2 === 0 ? "movie" : "tv"} genre={g} showType />
           ))}
