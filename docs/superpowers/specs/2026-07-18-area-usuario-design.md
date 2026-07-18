@@ -181,8 +181,10 @@ a `cardsByIds(pairs)` en `enrich.ts`.
 
 - `AuthContext.tsx` — agregar `avatar_seed` a `Profile` y a `loadProfile`; agregar
   `updateAvatarSeed(seed)` (update en `profiles` + espejo opcional en metadata).
-- `TopBar.tsx` — el ícono genérico de persona se reemplaza por el avatar del seed
-  cuando hay sesión.
+- `TopBar.tsx` — se mejora el acceso a la cuenta: logueado, en vez del nombre +
+  ícono genérico, muestra un **círculo chico con el avatar** del seed (borde
+  sutil, clickeable → `/cuenta`). Deslogueado, un chip "Ingresar". Sin texto de
+  nombre en la barra.
 - `DetailView.tsx` — la barra de acciones: "Mi lista" pasa de `useState` falso a
   `toggleList`/`getList` real; se agrega "Ya la vi" (`toggleWatched`); el voto
   queda igual. Al montar, si hay sesión, dispara `recordView()` (silencioso).
