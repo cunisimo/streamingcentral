@@ -252,4 +252,17 @@ main{padding-bottom:92px;min-height:60vh}
 .vertodo:hover { text-decoration: underline; }
 .user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
 
+/* Hub de usuario */
+.hub-head { display: flex; align-items: center; gap: 14px; padding: 6px 0 18px; }
+.hub-av { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--line, rgba(255,255,255,.15)); background: #2A2D33; }
+.hub-hi { margin: 0; font-size: 22px; }
+.hub-edit { font-size: 13px; color: var(--accent); text-decoration: none; }
+.hub-edit:hover { text-decoration: underline; }
+.hub-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+.hub-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 92px; border-radius: 14px; background: var(--card, #22252B); color: var(--dim); font-size: 14px; }
+.hub-tile.off { opacity: .55; }
+.hub-tile .lock { font-size: 18px; }
+.hub-tile small { font-size: 11px; color: var(--faint); }
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}

@@ -3,11 +3,12 @@ import { useState } from "react";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
+import UserHub from "@/components/UserHub";
 
 type Modo = "login" | "registro" | "recuperar";
 
 export default function Cuenta() {
-  const { user, profile, ready, signIn, signUp, signOut, updateDisplayName, resetPassword } = useAuth();
+  const { user, ready, signIn, signUp, resetPassword } = useAuth();
 
   if (!ready) {
     return (<><TopBar /><main><div className="admin"><p className="loading">Cargando…</p></div></main><BottomNav /></>);
@@ -17,18 +18,13 @@ export default function Cuenta() {
     <>
       <TopBar />
       <main>
-        <div className="admin" style={{ maxWidth: 420 }}>
-          {user ? (
-            <Perfil
-              email={user.email ?? ""}
-              displayName={profile?.display_name ?? ""}
-              onSave={updateDisplayName}
-              onSignOut={signOut}
-            />
-          ) : (
+        {user ? (
+          <UserHub />
+        ) : (
+          <div className="admin" style={{ maxWidth: 420 }}>
             <Acceso signIn={signIn} signUp={signUp} resetPassword={resetPassword} />
-          )}
-        </div>
+          </div>
+        )}
       </main>
       <BottomNav />
     </>
@@ -166,53 +162,6 @@ function Acceso({
           </>
         )}
       </p>
-    </>
-  );
-}
-
-function Perfil({
-  email,
-  displayName,
-  onSave,
-  onSignOut,
-}: {
-  email: string;
-  displayName: string;
-  onSave: (name: string) => Promise<{ error?: string }>;
-  onSignOut: () => Promise<void>;
-}) {
-  const [nombre, setNombre] = useState(displayName);
-  const [err, setErr] = useState("");
-  const [ok, setOk] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function guardar() {
-    setBusy(true); setErr(""); setOk("");
-    const { error } = await onSave(nombre.trim());
-    setBusy(false);
-    if (error) { setErr(error); return; }
-    setOk("Guardado.");
-  }
-
-  return (
-    <>
-      <h1>Mi cuenta</h1>
-      <p className="section-sub">{email}</p>
-
-      <div className="field">
-        <label>Nombre para mostrar</label>
-        <input value={nombre} onChange={(e) => { setNombre(e.target.value); setOk(""); }} type="text" />
-      </div>
-
-      {err && <p style={{ color: "var(--editorial)", marginTop: 12, fontSize: 14 }}>{err}</p>}
-      {ok && <p style={{ color: "var(--accent)", marginTop: 12, fontSize: 14 }}>{ok}</p>}
-
-      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-        <button className="btn" onClick={guardar} disabled={busy || nombre.trim() === displayName}>
-          {busy ? "Guardando…" : "Guardar"}
-        </button>
-        <button className="btn ghost" onClick={onSignOut}>Cerrar sesión</button>
-      </div>
     </>
   );
 }
