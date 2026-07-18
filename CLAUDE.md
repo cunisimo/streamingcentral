@@ -113,6 +113,8 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 |---|---|
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/recomendaciones` | pool del "modo indeciso" (día + offset) |
+| `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |
+| `GET /api/hacete-cargo` | "Hacete cargo" (votos malaso, `top_voted` 1-1) |
 | `GET /api/search` | búsqueda multi (títulos sin filtrar por plataforma + personas) |
 | `GET /api/latest` | últimos estrenos (solo movie, por fecha) |
 | `GET /api/person/[id]` | filmografía de una persona (actor o director), filtrada a plataformas |
@@ -121,6 +123,7 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 | `GET /api/genre-covers` | un póster representativo por género, cacheado 24h |
 | `GET /api/title/[tipo]/[id]` | ficha completa (TMDB+OMDB+Supabase+relacionados) |
 | `GET /api/admin-search` | búsqueda TMDB sin filtro de plataforma, para el editor de reseñas |
+| `GET /api/cards` | enriquece una lista de ids (`items=movie:1,tv:2`) a cards, sin filtro de plataforma (listas del usuario) |
 
 ## Estado actual (todo lo de arriba está construido y validado)
 
@@ -148,11 +151,12 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
 
 ## Pendiente / en standby (decisión explícita del dueño, no lo reactives sin que lo pida)
 
-- **"Las más votadas"** — requiere sistema de likes + cuentas de usuario
-  público. El schema (`votes` table) ya existe, la UI no.
-- **"Películas que viste"** — requiere historial persistente, o sea cuentas.
-  Mismo bloqueo que arriba.
-- Perfil de usuario / 5ta pestaña de nav — no arrancado.
+- ~~**"Las más votadas"**~~ — YA CONSTRUIDO. Login público activo → `LikeButton`
+  en la ficha (malaso/ta buena/petacular), tabla `votes`, función `top_voted`
+  por rango de rating, y dos shelves en Home: "Lo más votados" (2-3) y
+  "Hacete cargo" (1). Requiere re-correr `supabase/schema.sql` para que
+  `top_voted` tome la firma de 4 args.
+- ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (avatares DiceBear), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). Requiere re-correr `supabase/schema.sql`.
 
 ## Cómo levantar en local
 
