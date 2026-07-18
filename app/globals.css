@@ -246,4 +246,10 @@ main{padding-bottom:92px;min-height:60vh}
 }
 .acct-av:hover img { border-color: var(--accent); }
 
+/* Rieles del área de usuario */
+.shelf-head-r { display: flex; align-items: center; gap: 12px; }
+.vertodo { font-size: 13px; color: var(--accent); text-decoration: none; white-space: nowrap; }
+.vertodo:hover { text-decoration: underline; }
+.user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
