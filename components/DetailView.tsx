@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApi } from "./useApi";
@@ -7,6 +7,7 @@ import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
 import TitleCard from "./TitleCard";
 import LikeButton from "./LikeButton";
+import ListActions from "./ListActions";
 import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType } from "@/lib/types";
 
@@ -16,7 +17,6 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   const router = useRouter();
   const { platforms } = usePlatforms();
   const { data, loading } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
-  const [inList, setInList] = useState(false);
   const relTrack = useRef<HTMLDivElement>(null);
 
   if (loading || !data) return <div className="detail-inner"><div className="dpad"><p className="loading">Cargando ficha…</p></div></div>;
@@ -57,12 +57,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         )}
 
         <div className="actions">
-          <button className={`act ${inList ? "on" : ""}`} onClick={() => setInList((v) => !v)}>
-            {inList
-              ? <svg className="chk" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-              : <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>}
-            <span className="lab">Mi lista</span>
-          </button>
+          <ListActions id={t.id} tipo={t.type} />
           <LikeButton id={t.id} tipo={t.type} />
           <button className="act" onClick={() => navigator.share?.({ title: t.title }).catch(() => {})}>
             <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
