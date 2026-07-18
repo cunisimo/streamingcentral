@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePlatforms } from "./PlatformsContext";
 import { useAuth } from "./AuthContext";
+import { avatarSvg } from "@/lib/avatar";
 import PlatformLogo from "./PlatformLogo";
 import { PLATFORMS, platformByCode } from "@/lib/providers-ar";
 
@@ -21,12 +22,18 @@ export default function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-top">
-        <Link href="/cuenta" className="acct-link" aria-label="Mi cuenta">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-          </svg>
-          <span>{user ? (profile?.display_name || "Mi cuenta") : "Ingresar"}</span>
-        </Link>
+        {user ? (
+          <Link href="/cuenta" className="acct-av" aria-label="Mi cuenta">
+            <img src={avatarSvg(profile?.avatar_seed || user.id)} alt="" />
+          </Link>
+        ) : (
+          <Link href="/cuenta" className="acct-link" aria-label="Ingresar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+            </svg>
+            <span>Ingresar</span>
+          </Link>
+        )}
       </div>
       <div className="topbar-in">
         <Link href="/" className="brand">
