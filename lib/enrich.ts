@@ -267,10 +267,14 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
   });
 }
 
-// Top de likes cruzado con las plataformas del usuario. Ventana en días.
-export async function mostVoted(providers: PlatformCode[], days = 7): Promise<UITitle[]> {
+// Ranking de votos cruzado con las plataformas del usuario, acotado a un rango
+// de rating. Base compartida por "Lo más votados" (positivos) y "Hacete cargo"
+// (negativos). Ventana en días.
+async function votedCards(
+  providers: PlatformCode[], days: number, min: number, max: number,
+): Promise<UITitle[]> {
   if (!providers.length) return [];
-  const rows = await topVotedRows(days, 60);
+  const rows = await topVotedRows(days, 60, min, max);
   if (!rows.length) return [];
   const pub = await publishedIds();
   const cards = await Promise.all(rows.map(async (r) => {
@@ -286,6 +290,30 @@ export async function mostVoted(providers: PlatformCode[], days = 7): Promise<UI
   return cards
     .filter((c): c is UITitle => !!c && c.platforms.length > 0)
     .slice(0, 20);
+}
+
+// "Lo más votados": ta buena (2) + petacular (3).
+export async function mostVoted(providers: PlatformCode[], days = 7): Promise<UITitle[]> {
+  return votedCards(providers, days, 2, 3);
+}
+
+// "Hacete cargo": las que se llevaron malaso (1).
+export async function mostPanned(providers: PlatformCode[], days = 7): Promise<UITitle[]> {
+  return votedCards(providers, days, 1, 1);
+}
+
+// Enriquece una lista puntual de ids a cards. Para las listas del usuario:
+// NO filtra por plataforma (la lista es del usuario, se muestra completa).
+// Preserva el orden recibido.
+export async function cardsByIds(pairs: { tipo: MediaType; id: number }[]): Promise<UITitle[]> {
+  if (!pairs.length) return [];
+  const pub = await publishedIds();
+  const cards = await Promise.all(pairs.map(async (p) => {
+    const c = await titleCard(p.tipo, p.id);
+    if (!c) return null;
+    return { ...c, hasEditorial: pub.has(`${p.id}:${p.tipo}`) } as UITitle;
+  }));
+  return cards.filter((c): c is UITitle => !!c);
 }
 
 export { categoryLabel };
