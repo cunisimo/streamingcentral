@@ -43,7 +43,23 @@ main{padding-bottom:92px;min-height:60vh}
 .lg-sp{color:#5A2EAE;font-weight:800;letter-spacing:-.03em}
 
 .topbar{position:sticky;top:0;z-index:30;background:rgba(var(--bg-rgb),.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.topbar-top{display:flex;justify-content:flex-end;max-width:1240px;margin:0 auto;padding:7px 28px 0}
+.topbar-top{display:flex;justify-content:space-between;align-items:center;max-width:1240px;margin:0 auto;padding:7px 28px 0}
+.topdate{font-size:12.5px;color:var(--dim);white-space:nowrap}
+/* Links del hub (editar perfil / configuración) */
+.hub-links{display:flex;gap:14px;flex-wrap:wrap}
+/* Página de configuración */
+.cfg-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--line)}
+.cfg-info{min-width:0}
+.cfg-lbl{font-size:15px;font-weight:600}
+.cfg-sub{font-size:12.5px;color:var(--dim);margin-top:2px}
+.cfg-row.off{opacity:.6}
+.cfg-soon{font-size:12px;color:var(--faint);white-space:nowrap;flex-shrink:0}
+.cfg-select{flex-shrink:0;max-width:180px;background:var(--surface);color:var(--text);border:1px solid var(--line-2);border-radius:10px;padding:8px 10px;font-family:var(--body);font-size:14px;cursor:pointer}
+.cfg-switch{flex-shrink:0;display:inline-flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;color:var(--text);font-family:var(--body);font-size:13px}
+.cfg-switch .knob{position:relative;width:42px;height:24px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line-2);transition:background .15s}
+.cfg-switch .knob::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--dim);transition:transform .15s,background .15s}
+.cfg-switch.on .knob{background:var(--accent)}
+.cfg-switch.on .knob::after{transform:translateX(18px);background:#fff}
 .acct-link{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim);text-decoration:none;white-space:nowrap}
 .acct-link:hover{color:var(--text)}
 .acct-link svg{width:14px;height:14px}
@@ -198,13 +214,20 @@ main{padding-bottom:92px;min-height:60vh}
 .act.on svg.chk{fill:none}
 .act .twoup{display:flex;gap:2px;height:26px;align-items:center}
 .act .twoup svg{width:19px;height:19px}
-.votepop{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:10px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:6px;z-index:40;box-shadow:var(--sh-h);display:flex;flex-direction:column;gap:2px;min-width:158px}
-.voteopt{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;border:none;background:none;cursor:pointer;color:var(--text);font-size:14px;font-family:var(--body);text-align:left;width:100%}
+.votepop{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:10px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:6px;z-index:40;box-shadow:var(--sh-h);display:flex;flex-direction:row;gap:4px}
+.voteopt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 12px;border-radius:10px;border:none;background:none;cursor:pointer;color:var(--text);font-size:13px;font-family:var(--body);text-align:center;white-space:nowrap}
 .voteopt:hover{background:var(--surface-2)}
 .voteopt.on{color:var(--accent)}
 .voteopt .ic{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .voteopt .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
 .voteopt.on .ic svg{fill:currentColor}
+/* Contador de votos en la ficha */
+.votecounts{display:flex;gap:8px;margin:14px 0 4px}
+.vc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.vc-n{font-size:18px;font-weight:700;line-height:1}
+.vc-l{font-size:11px;color:var(--dim)}
+.vc.peta .vc-n{color:var(--accent)}
+.vc.mala .vc-n{color:var(--editorial)}
 .dsyn{margin-top:24px;font-size:15px;line-height:1.6;color:var(--text)}
 .dcast{margin-top:14px;font-size:14px;color:var(--dim)}.dcast b{color:var(--text);font-weight:600}
 .dsec-h{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:-.01em;margin:26px 0 12px}

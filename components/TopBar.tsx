@@ -11,6 +11,7 @@ export default function TopBar() {
   const { platforms, has, toggle } = usePlatforms();
   const { user, profile } = useAuth();
   const [open, setOpen] = useState(false);
+  const [fecha, setFecha] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,9 +20,17 @@ export default function TopBar() {
     return () => document.removeEventListener("click", h);
   }, []);
 
+  // Fecha del día. Se calcula tras el montaje para evitar mismatch de hidratación
+  // (server y cliente podrían renderizar en husos/momentos distintos).
+  useEffect(() => {
+    const f = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    setFecha(f.charAt(0).toUpperCase() + f.slice(1));
+  }, []);
+
   return (
     <header className="topbar">
       <div className="topbar-top">
+        <span className="topdate">{fecha}</span>
         {user ? (
           <Link href="/cuenta" className="acct-av" aria-label="Mi cuenta">
             <img src={avatarSvg(profile?.avatar_seed || user.id)} alt="" />

@@ -16,7 +16,10 @@ export default function UserHub() {
         <img className="hub-av" src={avatarSvg(seed)} alt="" />
         <div>
           <h1 className="hub-hi">Hola, {nombre}</h1>
-          <Link href="/cuenta/perfil" className="hub-edit">Editar perfil ›</Link>
+          <div className="hub-links">
+            <Link href="/cuenta/perfil" className="hub-edit">Editar perfil ›</Link>
+            <Link href="/cuenta/configuracion" className="hub-edit">Configuración ›</Link>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 // Categorías de la UI -> géneros/keywords de TMDB.
 // Los géneros de movie y tv NO son los mismos. Terror no existe como género
-// de TV: se resuelve con keyword 9799.
+// de TV: se resuelve con keyword 315058 ("horror"). El thriller tampoco existe
+// como género de TV: se aproxima con keyword 316362 ("thriller").
 import type { MediaType } from "./types";
 
 type Rule = { genres?: number[]; keywords?: number[]; originCountry?: string };
@@ -16,9 +17,9 @@ export const CATEGORIES: Category[] = [
   { slug: "accion",      label: "Acción",      movie: { genres: [28] },  tv: { genres: [10759] } },
   { slug: "drama",       label: "Drama",       movie: { genres: [18] },  tv: { genres: [18] } },
   { slug: "comedia",     label: "Comedia",     movie: { genres: [35] },  tv: { genres: [35] } },
-  { slug: "terror",      label: "Terror",      movie: { genres: [27] },  tv: { keywords: [9799] } },
+  { slug: "terror",      label: "Terror",      movie: { genres: [27] },  tv: { keywords: [315058] } },
   { slug: "scifi",       label: "Sci-fi",      movie: { genres: [878] }, tv: { genres: [10765] } },
-  { slug: "suspenso",    label: "Suspenso",    movie: { genres: [53] },  tv: { keywords: [9799], genres: [9648] } },
+  { slug: "suspenso",    label: "Suspenso",    movie: { genres: [53] },  tv: { keywords: [316362] } },
   { slug: "crimen",      label: "Crimen",      movie: { genres: [80] },  tv: { genres: [80] } },
   { slug: "aventura",    label: "Aventura",    movie: { genres: [12] },  tv: { genres: [10759] } },
   { slug: "animacion",   label: "Animación",   movie: { genres: [16] },  tv: { genres: [16] } },

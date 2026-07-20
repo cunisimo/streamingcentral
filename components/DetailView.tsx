@@ -8,6 +8,7 @@ import PlatformLogo from "./PlatformLogo";
 import TitleCard from "./TitleCard";
 import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
+import VoteCounts from "./VoteCounts";
 import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType } from "@/lib/types";
 
@@ -64,6 +65,8 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
             <span className="lab">Compartir</span>
           </button>
         </div>
+
+        <VoteCounts id={t.id} tipo={t.type} />
 
         {t.synopsis && <p className="dsyn">{t.synopsis}</p>}
         {t.cast.length > 0 && <p className="dcast"><b>Reparto:</b> {t.cast.slice(0, 4).join(", ")}{t.cast.length > 4 ? "…" : ""}</p>}

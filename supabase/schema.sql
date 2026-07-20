@@ -157,6 +157,18 @@ returns table (tmdb_id integer, tipo text, votos bigint) as $$
 $$ language sql stable security definer set search_path = public;
 grant execute on function top_voted(int, int, int, int) to anon, authenticated;
 
+-- Conteo de votos por rating para un título (alimenta el contador de la ficha:
+-- malaso / ta buena / petacular). Los votos son privados por RLS; el total se
+-- expone con security definer y es de lectura pública (anon).
+create or replace function vote_counts(p_tmdb_id integer, p_tipo text)
+returns table (rating smallint, votos bigint) as $$
+  select v.rating, count(*)::bigint as votos
+  from votes v
+  where v.tmdb_id = p_tmdb_id and v.tipo = p_tipo
+  group by v.rating;
+$$ language sql stable security definer set search_path = public;
+grant execute on function vote_counts(integer, text) to anon, authenticated;
+
 -- ============================================================
 -- SEAM DORMIDO: críticas de usuario (distinto de editorial_reviews)
 -- ============================================================
