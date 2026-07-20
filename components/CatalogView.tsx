@@ -4,6 +4,7 @@ import { GenreSlider, CountryFilter } from "./Filters";
 import Shelf from "./Shelf";
 import FilterGrid from "./FilterGrid";
 import IndecisoHero from "./IndecisoHero";
+import DesempateBanner from "./desempate/DesempateBanner";
 import PersonRail from "./PersonRail";
 import { SHELVES } from "./data";
 import type { MediaType } from "@/lib/types";
@@ -19,6 +20,7 @@ export default function CatalogView({ mode }: { mode: Mode }) {
       <>
         <IndecisoHero />
         <div className="wrap">
+          <DesempateBanner />
           <Shelf title="Últimos lanzamientos" url="/api/latest" />
           <Shelf title="Lo más votados" url="/api/mas-votados" />
           <Shelf title="Hacete cargo" url="/api/hacete-cargo" />

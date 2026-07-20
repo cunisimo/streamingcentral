@@ -294,4 +294,112 @@ main{padding-bottom:92px;min-height:60vh}
 .avopt img { width: 100%; border-radius: 50%; display: block; }
 .avopt.on { border-color: var(--accent); }
 
+/* ===== Desempate (rueda de la fortuna de cine) ===== */
+.dsmp{margin-top:26px}
+.dsmp-banner{width:100%;display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:var(--radius);border:1px solid var(--line-2);cursor:pointer;text-align:left;color:#fff;
+  background:linear-gradient(120deg,#241a30,#3a1c2e 55%,#4a2410);box-shadow:var(--sh);transition:filter .15s,transform .15s}
+.dsmp-banner:hover{filter:brightness(1.06)}
+.dsmp-banner.open{border-color:var(--accent);border-bottom-left-radius:0;border-bottom-right-radius:0}
+.dsmp-banner-ico{font-size:30px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
+.dsmp-banner-txt{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.dsmp-banner-title{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.01em}
+.dsmp-banner-sub{font-size:13px;color:rgba(255,255,255,.72)}
+.dsmp-banner-cta{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;height:38px;padding:0 16px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600;font-size:13.5px}
+.dsmp-banner-cta svg{width:16px;height:16px;transition:transform .2s}
+.dsmp-banner.open .dsmp-banner-cta svg{transform:rotate(180deg)}
+
+.dsmp-panel{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--accent);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:18px 20px 22px;box-shadow:var(--sh-h);animation:dsmp-in .22s ease}
+@keyframes dsmp-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.dsmp-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.dsmp-panel-title{font-family:var(--display);font-weight:700;font-size:17px}
+.dsmp-close{width:32px;height:32px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--dim);cursor:pointer;font-size:13px}
+.dsmp-close:hover{border-color:var(--accent);color:var(--accent)}
+
+/* setup */
+.dsmp-modes{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;margin-bottom:14px}
+.dsmp-mode{height:34px;padding:0 18px;border:none;background:transparent;border-radius:999px;color:var(--dim);font-family:var(--body);font-size:13.5px;font-weight:600;cursor:pointer}
+.dsmp-mode.on{background:var(--surface);color:var(--text);box-shadow:var(--sh)}
+
+.dsmp-search{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:0 12px;height:48px}
+.dsmp-search svg{width:18px;height:18px;stroke:var(--faint);stroke-width:2;flex-shrink:0}
+.dsmp-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--text);font-family:var(--body);font-size:15px;outline:none}
+.dsmp-search input::placeholder{color:var(--faint)}
+
+.dsmp-filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.dsmp-seg{display:inline-flex;border:1px solid var(--line-2);border-radius:10px;overflow:hidden}
+.dsmp-seg button{height:38px;padding:0 16px;border:none;background:var(--surface);color:var(--dim);font-family:var(--body);font-size:13.5px;font-weight:600;cursor:pointer}
+.dsmp-seg button.on{background:var(--accent);color:#fff}
+
+.dsmp-picks{display:flex;gap:12px;overflow-x:auto;padding:14px 2px 6px}
+.dsmp-pick{flex:0 0 auto;width:96px;display:flex;flex-direction:column;gap:6px;border:none;background:none;padding:0;cursor:pointer;font-family:var(--body)}
+.dsmp-pick:disabled{cursor:default}
+.dsmp-pick-poster{position:relative;aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;background-size:cover;background-position:center;box-shadow:var(--sh);display:flex;align-items:flex-end;padding:8px;color:#fff;font-size:11px;transition:transform .15s,outline-color .15s;outline:2px solid transparent}
+.dsmp-pick:not(:disabled):hover .dsmp-pick-poster{transform:translateY(-3px)}
+.dsmp-pick.is-sel .dsmp-pick-poster{outline-color:var(--accent)}
+.dsmp-pick-check{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.dsmp-pick.is-off .dsmp-pick-poster{filter:grayscale(1) brightness(.55)}
+.dsmp-pick-off{position:absolute;left:0;right:0;bottom:0;padding:4px 6px;background:rgba(0,0,0,.72);color:#fff;font-size:9.5px;font-weight:600;text-align:center;line-height:1.15}
+.dsmp-pick-name{font-size:12px;color:var(--text);line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+.dsmp-tray-head{margin:16px 0 8px;font-size:13px;font-weight:600;color:var(--dim)}
+.dsmp-tray{display:flex;gap:12px}
+.dsmp-slot-empty,.dsmp-tray-item{width:84px;aspect-ratio:2/3;border-radius:var(--radius-sm)}
+.dsmp-slot-empty{border:2px dashed var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:26px}
+.dsmp-tray-item{position:relative;background-size:cover;background-position:center;box-shadow:var(--sh);display:flex;align-items:flex-end;padding:8px;color:#fff;font-size:11px}
+.dsmp-tray-x{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:999px;border:none;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center}
+.dsmp-tray-x:hover{background:var(--editorial)}
+
+.dsmp-actions{margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.dsmp-spin-btn{height:52px;padding:0 40px;border:none;border-radius:999px;background:linear-gradient(120deg,var(--accent),#e1452b);color:#fff;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.02em;cursor:pointer;box-shadow:0 6px 20px rgba(255,106,26,.35)}
+.dsmp-spin-btn:hover:not(:disabled){filter:brightness(1.05);transform:translateY(-1px)}
+.dsmp-spin-btn:disabled{background:var(--surface-2);color:var(--faint);box-shadow:none;cursor:not-allowed}
+.dsmp-hint{font-size:12.5px;color:var(--faint)}
+
+/* rueda horizontal */
+.dsmp-wheel{display:flex;flex-direction:column;align-items:center;gap:16px;padding:6px 0}
+.dsmp-wheel-viewport{position:relative;width:100%;max-width:560px;overflow:hidden;border-radius:16px;padding:14px 0;background:linear-gradient(160deg,#17131d,#241b2c);border:1px solid #3a2e46;box-shadow:inset 0 2px 14px rgba(0,0,0,.5),var(--sh)}
+.dsmp-wheel-track{display:flex;align-items:center;will-change:transform;transition-property:transform;transition-timing-function:cubic-bezier(.11,.62,.14,1)}
+.dsmp-wheel-tile{flex:0 0 auto;border-radius:10px;background-size:cover;background-position:center;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;padding:6px;color:#fff;font-size:10px;text-align:center}
+.dsmp-wheel-tile-txt{line-height:1.1}
+.dsmp-wheel-fade{position:absolute;top:0;bottom:0;width:70px;z-index:2;pointer-events:none}
+.dsmp-wheel-fade.left{left:0;background:linear-gradient(to right,#1b1626,transparent)}
+.dsmp-wheel-fade.right{right:0;background:linear-gradient(to left,#1b1626,transparent)}
+.dsmp-wheel-marker{position:absolute;top:8px;bottom:8px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;border:2px solid var(--accent);border-radius:12px;box-shadow:0 0 18px rgba(255,106,26,.5)}
+.dsmp-wheel-pointer{position:absolute;top:-11px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:11px solid var(--accent)}
+.dsmp-slot-foot{display:flex;align-items:center;gap:14px}
+.dsmp-spinning-txt{color:var(--dim);font-size:14px;font-weight:600;letter-spacing:.02em}
+.dsmp-mute{width:38px;height:38px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);cursor:pointer;font-size:16px}
+.dsmp-mute.on{border-color:var(--accent)}
+
+/* resultado */
+.dsmp-result{padding:6px 0}
+.dsmp-result-kicker{font-family:var(--display);font-weight:700;font-size:16px;color:var(--accent);margin-bottom:12px}
+.dsmp-result-card{display:flex;gap:20px;align-items:flex-start;animation:dsmp-in .3s ease}
+.dsmp-result-poster{flex:0 0 auto;width:150px;aspect-ratio:2/3;border-radius:var(--radius-sm);background-size:cover;background-position:center;box-shadow:var(--sh-h);display:flex;align-items:flex-end;padding:10px;color:#fff;font-family:var(--display);font-weight:600}
+.dsmp-result-body{flex:1;min-width:0}
+.dsmp-result-body h3{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:-.02em;line-height:1.1}
+.dsmp-result-meta{color:var(--dim);font-size:14px;margin-top:6px}
+.dsmp-result-plats{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+.dsmp-result-plats-lbl{font-size:13px;color:var(--faint)}
+.dsmp-result-plats .logos{display:flex;align-items:center;gap:12px}
+.dsmp-result-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+.dsmp-result-actions .btn{display:inline-flex;align-items:center;height:44px;text-decoration:none;line-height:44px}
+
+/* confeti */
+.dsmp-confetti{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+.dsmp-confetti-pc{position:absolute;top:-16px;border-radius:2px;opacity:0;animation-name:dsmp-fall;animation-timing-function:cubic-bezier(.3,.2,.5,1);animation-iteration-count:1;animation-fill-mode:forwards}
+@keyframes dsmp-fall{
+  0%{opacity:0;transform:translate(0,0) rotate(0)}
+  10%{opacity:1}
+  85%{opacity:1}
+  100%{opacity:0;transform:translate(var(--drift),620px) rotate(var(--rot))}
+}
+
+@media(max-width:560px){
+  .dsmp-banner{padding:14px}
+  .dsmp-banner-sub{display:none}
+  .dsmp-result-card{flex-direction:column;align-items:center;text-align:center}
+  .dsmp-result-plats,.dsmp-result-actions{justify-content:center}
+}
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
