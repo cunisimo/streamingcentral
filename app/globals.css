@@ -456,3 +456,44 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 /* Los rieles horizontales manejan su propio gesto: bloquear el pan vertical
    sobre ellos evita que un swipe diagonal scrollee la página a mitad de riel. */
 .track{touch-action:pan-x}
+
+/* ==========================================================================
+   PWA — estado sin conexión
+   ========================================================================== */
+.offline-state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:56px 24px;max-width:420px;margin:0 auto;min-height:50vh;justify-content:center}
+.offline-ico{width:64px;height:64px;color:var(--dim)}
+.offline-ico svg{width:100%;height:100%}
+.offline-state h3{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
+.offline-state p{color:var(--dim);font-size:14.5px;margin:0;line-height:1.55}
+.offline-state .btn{margin-top:6px}
+
+/* ==========================================================================
+   PWA — banner de instalación, toast de actualización, bienvenida
+   ========================================================================== */
+/* Banner de instalación: fijo abajo, por encima de la nav. */
+.pwa-install{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-total) + 12px);z-index:60;display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);box-shadow:var(--sh-h);padding:14px 40px 14px 14px;max-width:520px;margin:0 auto}
+.pwa-install-ico{border-radius:11px;flex-shrink:0}
+.pwa-install-body{min-width:0}
+.pwa-install-body strong{display:block;font-size:15px;font-weight:700}
+.pwa-install-body p{margin:3px 0 0;font-size:13px;color:var(--dim);line-height:1.45}
+.pwa-install-cta{margin-top:10px;height:38px;padding:0 18px}
+.pwa-install-x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:none;background:none;cursor:pointer;color:var(--faint);display:flex;align-items:center;justify-content:center}
+.pwa-install-x svg{width:18px;height:18px}
+.pwa-share{display:inline-flex;vertical-align:middle;color:var(--accent)}
+.pwa-share svg{width:15px;height:15px}
+@media(min-width:1024px){.pwa-install{bottom:20px;left:auto;right:20px;margin:0}}
+
+/* Toast de actualización: arriba, discreto. */
+.pwa-update{position:fixed;left:12px;right:12px;top:calc(var(--safe-t) + 12px);z-index:65;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--text);color:var(--bg);border-radius:12px;box-shadow:var(--sh-h);padding:12px 14px;max-width:460px;margin:0 auto;font-size:13.5px}
+.pwa-update-btn{flex-shrink:0;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:var(--body);font-weight:600;font-size:13px;cursor:pointer}
+
+/* Bienvenida de primer arranque en standalone. */
+.pwa-welcome-backdrop{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:24px;padding-bottom:calc(24px + var(--safe-b))}
+.pwa-welcome{background:var(--surface);border-radius:var(--radius);box-shadow:var(--sh-h);padding:28px 24px;max-width:360px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.pwa-welcome img{border-radius:16px}
+.pwa-welcome h2{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
+.pwa-welcome p{margin:0;font-size:14px;color:var(--dim);line-height:1.55}
+.pwa-welcome .btn{margin-top:6px}
+
+/* Pasos de instalación iOS en la fila de configuración. */
+.cfg-ios-steps{margin-top:10px;font-size:12.5px;color:var(--dim);line-height:1.7;background:var(--surface-2);border-radius:10px;padding:10px 12px}

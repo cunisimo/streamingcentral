@@ -5,7 +5,7 @@ import { PlatformsProvider } from "@/components/PlatformsContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import { AuthProvider } from "@/components/AuthContext";
 import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
-import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
+import PwaClient from "@/components/pwa/PwaClient";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
@@ -57,10 +57,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider>
           <AuthProvider>
-            <PlatformsProvider>{children}</PlatformsProvider>
+            <PlatformsProvider>
+              {children}
+              {/* Dentro de PlatformsProvider: StandaloneWelcome usa usePlatforms. */}
+              <PwaClient />
+            </PlatformsProvider>
           </AuthProvider>
         </ThemeProvider>
-        <ServiceWorkerRegister />
       </body>
     </html>
   );
