@@ -4,6 +4,7 @@ import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import { AuthProvider } from "@/components/AuthContext";
+import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
@@ -32,6 +33,17 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "StreamingCentral",
   description: "Qué ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
+  applicationName: "StreamingCentral",
+  // Next inyecta <link rel="manifest"> apuntando a la metadata route app/manifest.ts.
+  manifest: "/manifest.webmanifest",
+  // iOS ignora el manifest: estas son las que hacen que se abra en standalone,
+  // con la barra de estado translúcida y el título correcto bajo el ícono.
+  appleWebApp: {
+    capable: true,
+    title: "StreamingCentral",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${display.variable} ${body.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <AppleSplashLinks />
       </head>
       <body>
         <ThemeProvider>

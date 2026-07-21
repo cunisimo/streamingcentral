@@ -87,10 +87,38 @@ async function main() {
       .toFile(join(SPLASH, splashFile(d)));
   }
 
+  // --- Screenshots (placeholder branded; reemplazables por capturas reales) ---
+  // El manifest los referencia para la ficha rica de instalación en Android.
+  // Se pueden sustituir por capturas reales de la app sin tocar el manifest.
+  await mkdir(join(ROOT, "public", "screenshots"), { recursive: true });
+  const shots = [
+    { file: "sc-mobile-1.png", w: 1080, h: 1920 },
+    { file: "sc-mobile-2.png", w: 1080, h: 1920 },
+    { file: "sc-mobile-3.png", w: 1080, h: 1920 },
+    { file: "sc-desktop-1.png", w: 1920, h: 1080 },
+  ];
+  for (const s of shots) {
+    const logoSize = Math.round(Math.min(s.w, s.h) * 0.28);
+    const logo = await sharp(logoBuf).resize(logoSize, logoSize).png().toBuffer();
+    const label = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${s.w}" height="${Math.round(s.h * 0.12)}">
+        <text x="50%" y="60%" text-anchor="middle" font-family="sans-serif" font-weight="700"
+          font-size="${Math.round(Math.min(s.w, s.h) * 0.05)}" fill="#16171B">StreamingCentral</text>
+      </svg>`
+    );
+    await sharp({ create: { width: s.w, height: s.h, channels: 4, background: SPLASH_BG } })
+      .composite([
+        { input: logo, gravity: "centre" },
+        { input: label, gravity: "south" },
+      ])
+      .png()
+      .toFile(join(ROOT, "public", "screenshots", s.file));
+  }
+
   // --- Componente de <link> generado desde la misma lista ---
   await writeSplashLinks();
 
-  console.log(`✓ ${6 + 3 + 1} íconos + ${DEVICES.length} splash generados`);
+  console.log(`✓ ${6 + 3 + 1} íconos + ${DEVICES.length} splash + 4 screenshots generados`);
   console.log("✓ components/pwa/AppleSplashLinks.tsx regenerado");
 }
 
