@@ -13,7 +13,20 @@ const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#F5F5F2",
+  // viewportFit "cover" es lo que hace que env(safe-area-inset-*) devuelva algo
+  // distinto de 0 en iPhone. Sin esto, todo el CSS de safe areas es inerte y la
+  // barra inferior queda tapada por el home indicator.
+  viewportFit: "cover",
+  // El teclado virtual achica el viewport en vez de taparlo: el input enfocado
+  // y la barra inferior quedan visibles sin necesidad de JS.
+  interactiveWidget: "resizes-content",
+  // Dos entradas con media: la barra de estado sigue al tema del sistema.
+  // El toggle manual de ThemeContext además reescribe estas etiquetas en runtime,
+  // para el caso de sistema claro + app en oscuro (o viceversa).
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F5F5F2" },
+    { media: "(prefers-color-scheme: dark)", color: "#16171B" },
+  ],
 };
 
 export const metadata: Metadata = {

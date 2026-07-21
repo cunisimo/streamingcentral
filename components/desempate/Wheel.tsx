@@ -76,7 +76,9 @@ export default function Wheel({
 
   return (
     <div className="dsmp-wheel">
-      <div className="dsmp-wheel-viewport" ref={viewportRef} style={{ height: tile.h }}>
+      {/* touchAction none: mientras gira, arrastrar sobre la rueda no debe
+          scrollear la página ni disparar el pull-to-refresh. */}
+      <div className="dsmp-wheel-viewport" ref={viewportRef} style={{ height: tile.h, touchAction: "none" }}>
         <div className="dsmp-wheel-track" ref={trackRef} style={{ gap: GAP }}>
           {strip.map((t, i) => (
             <div
