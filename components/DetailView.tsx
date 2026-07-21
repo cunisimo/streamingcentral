@@ -9,6 +9,7 @@ import TitleCard from "./TitleCard";
 import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
 import VoteCounts from "./VoteCounts";
+import OfflineState from "./pwa/OfflineState";
 import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType } from "@/lib/types";
 
@@ -17,9 +18,10 @@ const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6
 export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }) {
   const router = useRouter();
   const { platforms } = usePlatforms();
-  const { data, loading } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
+  const { data, loading, offline, retry } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
   const relTrack = useRef<HTMLDivElement>(null);
 
+  if (offline && !data) return <div className="detail-inner"><OfflineState onRetry={retry} /></div>;
   if (loading || !data) return <div className="detail-inner"><div className="dpad"><p className="loading">Cargando ficha…</p></div></div>;
   const t = data;
   const mine = t.platforms.filter((p) => platforms.includes(p));
