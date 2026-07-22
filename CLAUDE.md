@@ -173,8 +173,13 @@ La app es una PWA instalable en Android, iPhone y escritorio. Diseño completo e
   `/_next/static` e íconos `Cache First`; imágenes TMDB `Cache First` 30d/tope 300;
   **`/api/*` y Supabase `Network Only`** (nunca datos viejos); YouTube sin tocar;
   solo GET. `push`/`sync`/`share-target` son módulos **reservados** (comentados).
-- **Offline**: `app/offline/page.tsx` + `components/pwa/OfflineState.tsx`; `useApi`
-  expone `offline`/`retry`, conectado en DetailView/FilterGrid/CountryGrid/PersonView.
+- **Offline**: `public/offline.html` (HTML estático, **no** una ruta de Next: servir
+  una ruta de Next bajo otra URL rompe la hidratación) + `components/pwa/OfflineState.tsx`;
+  `useApi` expone `offline`/`retry`, conectado en DetailView/FilterGrid/CountryGrid/
+  PersonView, y `CatalogView` muestra un único estado offline en vez de dejar la
+  pantalla vacía cuando todos los rieles se ocultan.
+
+**Arquitectura completa documentada en `docs/PWA.md`.**
 - **Instalación/actualización**: `components/pwa/PwaClient.tsx` orquesta registro,
   `InstallPrompt` (banner Android / instrucciones iOS), `UpdateToast` y
   `StandaloneWelcome`. Fila "Instalar" en `/cuenta/configuracion`.

@@ -12,7 +12,7 @@
 /* global self */
 
 (function () {
-  const CACHE_VERSION = "v1";
+  const CACHE_VERSION = "v2";
 
   const CACHE = {
     static: `sc-static-${CACHE_VERSION}`, // /_next/static/* y assets propios
@@ -27,7 +27,10 @@
     VALID_CACHES: Object.values(CACHE),
     // Se precachea en install. Mínimo: la página offline y su ícono. El resto se
     // puebla solo en runtime (los assets de Next tienen hash de contenido).
-    PRECACHE: ["/offline", "/icons/icon-192.png"],
+    // /offline.html es HTML estático a propósito: servir una ruta de Next bajo
+    // otra URL rompe la hidratación (client-side exception). Ver public/offline.html.
+    PRECACHE: ["/offline.html", "/icons/icon-192.png"],
+    OFFLINE_URL: "/offline.html",
     // Cache de imágenes: LRU por cantidad + expiración.
     IMAGE_LIMIT: 300,
     IMAGE_MAX_AGE: 30 * 24 * 60 * 60 * 1000, // 30 días

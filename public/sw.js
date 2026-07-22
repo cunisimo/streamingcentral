@@ -26,10 +26,20 @@ importScripts(
 
   // Install: precache mínimo + activar de inmediato (no esperar a que se cierren
   // las pestañas). El riesgo de JS viejo + HTML nuevo se cubre con el UpdateToast.
+  //
+  // Se cachea item por item (no addAll): addAll es atómico —un solo fallo
+  // descarta TODO el precache—, y /offline es demasiado importante para perderlo
+  // porque otro item falló. cache.add fuerza no-cache para traer copia fresca.
   self.addEventListener("install", (event) => {
-    event.waitUntil(
-      caches.open(CACHE.static).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
-    );
+    event.waitUntil((async () => {
+      const cache = await caches.open(CACHE.static);
+      await Promise.all(
+        PRECACHE.map((url) =>
+          cache.add(new Request(url, { cache: "reload" })).catch(() => { /* item opcional */ })
+        )
+      );
+      await self.skipWaiting();
+    })());
   });
 
   // Activate: borrar caches de versiones anteriores y tomar control de las páginas.

@@ -9,14 +9,12 @@ export default function ServiceWorkerRegister({ onUpdate }: { onUpdate?: () => v
     if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
 
-    let refreshing = false;
-    // Cuando el SW nuevo toma control, recargar una vez para estrenar el shell.
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
-
+    // OJO: NO recargar automáticamente en "controllerchange". El SW hace
+    // skipWaiting()+clients.claim() en la primera instalación, y eso dispara un
+    // controllerchange en la carga inicial. Recargar ahí hace que CADA primera
+    // visita se recargue sola (Lighthouse lo cuenta como redirect: ~4.5s de LCP).
+    // La recarga tras una actualización la maneja el usuario desde el UpdateToast
+    // (PwaClient: postMessage SKIP_WAITING + reload). Ver spec §3.6.
     navigator.serviceWorker.register("/sw.js").then((reg) => {
       // Detectar una actualización esperando para activarse.
       reg.addEventListener("updatefound", () => {

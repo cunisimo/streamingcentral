@@ -34,7 +34,10 @@
       const hit = await cache.match(request);
       if (hit) return hit;
       if (fallbackUrl) {
-        const fb = await cache.match(fallbackUrl);
+        // caches.match (global) busca en TODOS los caches. El fallback /offline
+        // se precachea en sc-static, no en sc-pages, así que un cache.match sobre
+        // este cache específico no lo encontraría.
+        const fb = await caches.match(fallbackUrl);
         if (fb) return fb;
       }
       throw err;

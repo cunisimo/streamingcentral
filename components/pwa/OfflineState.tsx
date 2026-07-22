@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useOnline } from "@/hooks/useOnline";
 
 // Estado offline reusable para dentro de una vista: se muestra cuando el HTML
@@ -7,10 +7,15 @@ import { useOnline } from "@/hooks/useOnline";
 // página /offline. Si vuelve la conexión, reintenta solo.
 export default function OfflineState({ onRetry }: { onRetry: () => void }) {
   const online = useOnline();
+  const prevOnline = useRef(online);
 
-  // Al recuperar conexión, reintentar automáticamente sin que el usuario toque nada.
+  // Reintentar solo en la TRANSICIÓN offline→online, no al montar.
+  // useOnline arranca en true (no hay navigator en SSR), así que disparar en el
+  // primer render provocaría un refetch inútil —y un loop infinito si el retry
+  // del consumidor recarga la página.
   useEffect(() => {
-    if (online) onRetry();
+    if (online && !prevOnline.current) onRetry();
+    prevOnline.current = online;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online]);
 

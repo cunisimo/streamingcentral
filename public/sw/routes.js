@@ -10,7 +10,7 @@
 /* global self, URL */
 
 (function () {
-  const { CACHE, IMAGE_HOSTS } = self.SC_CONFIG;
+  const { CACHE, IMAGE_HOSTS, OFFLINE_URL } = self.SC_CONFIG;
   const { cacheFirst, networkFirst, networkOnly, cacheFirstImage } = self.SC_STRATEGIES;
 
   // Devuelve una Promise<Response> según el request, o null si no hay que
@@ -50,9 +50,9 @@
       return cacheFirst(request, CACHE.static);
     }
 
-    // 5. Documentos de navegación → Network First, con /offline de fallback.
+    // 5. Documentos de navegación → Network First, con /offline.html de fallback.
     if (request.mode === "navigate" || request.destination === "document") {
-      return networkFirst(request, CACHE.pages, "/offline");
+      return networkFirst(request, CACHE.pages, OFFLINE_URL);
     }
 
     // 6. Cualquier otro GET same-origin → no interceptar.

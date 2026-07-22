@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
@@ -9,10 +9,16 @@ import type { UITitle, MediaType } from "@/lib/types";
 // Shelf genérico. Por defecto arma la URL de /api/discover con tipo+género.
 // Si se pasa `url` y `title`, usa ese endpoint (ej: /api/latest).
 export default function Shelf({
-  tipo, genre, country, title, url, showType,
+  tipo, genre, country, title, url, showType, onOffline,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
   title?: string; url?: string; showType?: boolean;
+  // Aviso al contenedor de que el fetch falló por red. Los rieles se auto-ocultan
+  // (mejor que N errores iguales), pero si TODOS se ocultan la pantalla queda
+  // vacía y sin explicación: CatalogView lo pasa solo al primer riel para poder
+  // mostrar un único estado offline. Cubre el caso "hay red pero el server no
+  // responde", donde navigator.onLine sigue en true.
+  onOffline?: () => void;
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
@@ -20,8 +26,13 @@ export default function Shelf({
     url
       ? `${url}${url.includes("?") ? "&" : "?"}providers=${platforms.join(",")}`
       : `/api/discover?tipo=${tipo}&genre=${genre}&providers=${platforms.join(",")}${country ? `&country=${country}` : ""}`;
-  const { data, loading } = useApi<{ items: UITitle[] }>(buildUrl, [tipo, genre, country, url]);
+  const { data, loading, offline } = useApi<{ items: UITitle[] }>(buildUrl, [tipo, genre, country, url]);
   const items = data?.items ?? [];
+
+  useEffect(() => {
+    if (offline && onOffline) onOffline();
+  }, [offline, onOffline]);
+
   if (!loading && items.length < 2) return null;
 
   const heading = title ?? genreLabel(genre ?? "");

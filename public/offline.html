@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+  Fallback offline del Service Worker (public/sw/routes.js → networkFirst).
+  DEBE ser HTML estático autónomo: si fuera una ruta de Next (app/offline), al
+  servirse bajo otra URL (ej. /series) el payload RSC no coincidiría con la URL y
+  Next tiraría un client-side exception al hidratar. Por eso es un .html plano,
+  sin JS de framework, autocontenido. Theme-aware por prefers-color-scheme.
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sin conexión — StreamingCentral</title>
+  <link rel="icon" href="/icon.png" type="image/png" />
+  <style>
+    :root{
+      --bg:#F5F5F2;--surface:#FFFFFF;--text:#16171B;--dim:#65696F;
+      --line:#E4E4DE;--accent:#FF6A1A;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#16171B;--surface:#1D1F24;--text:#F1F1F0;--dim:#9BA0A8;--line:#2E3038;}
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%}
+    body{
+      background:var(--bg);color:var(--text);
+      font-family:Inter,system-ui,-apple-system,sans-serif;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      min-height:100dvh;padding:32px 24px;text-align:center;gap:16px;
+      padding-bottom:calc(32px + env(safe-area-inset-bottom,0px));
+    }
+    .ico{width:64px;height:64px;color:var(--dim)}
+    .ico svg{width:100%;height:100%}
+    h1{font-size:24px;font-weight:700;letter-spacing:-.02em;margin:0}
+    p{color:var(--dim);font-size:15px;line-height:1.55;margin:0;max-width:340px}
+    .btn{
+      margin-top:8px;border:none;cursor:pointer;
+      background:var(--accent);color:#fff;font-weight:600;font-size:15px;
+      border-radius:12px;padding:13px 26px;font-family:inherit;
+    }
+    .links{display:flex;gap:20px;margin-top:8px}
+    .links a{color:var(--accent);font-size:14px;font-weight:600;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="ico" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 1l22 22" /><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+      <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" /><path d="M10.71 5.05A16 16 0 0 1 22.58 9" />
+      <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+      <line x1="12" y1="20" x2="12.01" y2="20" />
+    </svg>
+  </div>
+  <h1>Estás sin conexión</h1>
+  <p>Esta pantalla necesita internet. Podés volver a lo que ya visitaste o reintentar cuando vuelva la conexión.</p>
+  <button class="btn" onclick="location.reload()">Reintentar</button>
+  <div class="links">
+    <a href="/">Inicio</a>
+    <a href="/peliculas">Películas</a>
+    <a href="/series">Series</a>
+  </div>
+</body>
+</html>
