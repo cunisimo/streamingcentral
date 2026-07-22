@@ -1,7 +1,12 @@
 /* Service Worker — configuración central.
  * Ver docs/superpowers/specs/2026-07-21-pwa-design.md §3.4
  *
- * ⚠️ SUBIR CACHE_VERSION en cada cambio del SW o de las estrategias.
+ * ⚠️ CACHE_VERSION NO se define acá: viene de self.SC_CACHE_VERSION, declarada en
+ * public/sw.js. Motivo: el navegador detecta un SW nuevo comparando los bytes del
+ * script principal; cambiar un archivo de importScripts no dispara la
+ * actualización de forma confiable. Si la versión viviera acá, subirla no
+ * actualizaría nada. Ver el comentario en sw.js.
+ *
  * activate borra todo cache cuyo nombre no coincida con la versión actual, así
  * que un bump limpio evita servir shells o assets viejos tras un deploy.
  *
@@ -12,7 +17,8 @@
 /* global self */
 
 (function () {
-  const CACHE_VERSION = "v2";
+  // Declarada en sw.js (script principal) para que un bump dispare el byte-diff.
+  const CACHE_VERSION = self.SC_CACHE_VERSION || "v0";
 
   const CACHE = {
     static: `sc-static-${CACHE_VERSION}`, // /_next/static/* y assets propios
@@ -36,6 +42,10 @@
     // otra URL rompe la hidratación (client-side exception). Ver public/offline.html.
     OFFLINE_URL: self.SC_OFFLINE_URL || "/offline.html",
     PRECACHE_OPTIONAL: ["/icons/icon-192.png"],
+    // Carrera de networkFirst contra reloj, para documentos. En lie-fi el fetch
+    // no rechaza: queda colgado. Sin esto el usuario ve pantalla en blanco
+    // indefinidamente en vez del cache o del fallback offline.
+    NETWORK_TIMEOUT_MS: 4000,
     // Cache de imágenes: LRU por cantidad + expiración.
     IMAGE_LIMIT: 300,
     IMAGE_MAX_AGE: 30 * 24 * 60 * 60 * 1000, // 30 días

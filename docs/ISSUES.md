@@ -85,12 +85,41 @@ Se usa en textos secundarios y contadores (`globals.css`, buscar `var(--faint)`)
 
 ---
 
-## #3 — `tsconfig.tsbuildinfo` está versionado
+## #3 — Caminos de red sin ejercitar en la verificación de la PWA
 
-**Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-07-21
+**Estado:** abierto · **Prioridad:** media · **Abierto:** 2026-07-21
 
-Es un artefacto de build de TypeScript, trackeado desde antes de este trabajo.
-Aparece como modificado en cada `git status` y ensucia los diffs.
+Toda la verificación offline se hizo **apagando el servidor**, nunca la red. Eso
+deja dos zonas sin ejercitar:
 
-**Criterio de cierre:** `git rm --cached tsconfig.tsbuildinfo` y agregarlo a
-`.gitignore`.
+### 3.a — `navigator.onLine` y el listener `online`
+
+Con el servidor caído, `navigator.onLine` sigue en `true`. Nunca se ejecutaron:
+
+- La rama `!online` de `CatalogView` (el estado offline por modo avión). Lo que sí
+  se probó es la otra señal, `fetchFailed`, que es la que disparó en las pruebas.
+- El listener `online` de `hooks/useOnline.ts`.
+- El reintento automático de `OfflineState` en la transición offline→online
+  (`prevOnline.current` false → true).
+
+**Cómo cerrarlo:** dispositivo real en modo avión, o DevTools → Network →
+Offline (que sí fuerza `navigator.onLine = false`, a diferencia de matar el
+servidor).
+
+### 3.b — Lie-fi más allá del timeout
+
+`networkFirst` tiene una carrera contra 4s verificada con una ruta que cuelga 30s
+(sirvió `offline.html` a los 4019ms). Lo que **no** está cubierto:
+
+- Conexión que entrega bytes muy lentamente en vez de colgarse del todo: el
+  `fetch` resuelve headers rápido y el body gotea. El timeout actual corre contra
+  la resolución de la promesa de `fetch`, no contra la descarga del body.
+- `cacheFirst` (assets de Next, imágenes TMDB) **no tiene timeout**. En lie-fi, un
+  asset no cacheado puede colgar indefinidamente. No rompe la navegación (el
+  documento sí tiene timeout) pero puede dejar la página a medio pintar.
+- Elegir 4000ms fue un criterio, no una medición. Sin datos de red real no se
+  sabe si es agresivo o permisivo para el usuario típico en Argentina.
+
+**Criterio de cierre:** decidir si `cacheFirst` necesita timeout, y validar el
+valor de `NETWORK_TIMEOUT_MS` contra una traza de red real (DevTools → Slow 3G o
+mejor, un dispositivo en condiciones malas).

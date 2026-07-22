@@ -7,7 +7,7 @@
 /* global self, caches, fetch, Response, Headers */
 
 (function () {
-  const { CACHE, IMAGE_LIMIT, IMAGE_MAX_AGE } = self.SC_CONFIG;
+  const { CACHE, IMAGE_LIMIT, IMAGE_MAX_AGE, NETWORK_TIMEOUT_MS } = self.SC_CONFIG;
 
   // Cache First: sirve del cache si está; si no, red y guarda. Para recursos
   // inmutables (assets de Next con hash, imágenes de TMDB). Nunca sirve algo
@@ -21,16 +21,38 @@
     return res;
   }
 
-  // Network First: intenta red; si falla, cae al cache; si tampoco, al fallback.
-  // Para documentos HTML: evita servir un shell viejo que referencie chunks ya
-  // borrados tras un deploy, pero mantiene navegación offline.
+  // Network First CON TIMEOUT: intenta red; si falla O TARDA DEMASIADO, cae al
+  // cache; si tampoco, al fallback.
+  //
+  // El timeout no es un lujo: en lie-fi (señal presente pero sin tránsito real —
+  // subte, ascensor, borde de cobertura) el fetch no rechaza, queda colgado. Sin
+  // carrera contra reloj, el catch nunca corre, el fallback nunca aparece y el
+  // usuario mira una pantalla en blanco indefinidamente. Ni un servidor caído ni
+  // la red apagada reproducen eso: ambos rechazan rápido.
   async function networkFirst(request, cacheName, fallbackUrl) {
     const cache = await caches.open(cacheName);
-    try {
-      const res = await fetch(request);
+
+    // La red sigue viva aunque perdamos la carrera: si llega después y está OK,
+    // igual actualiza el cache para la próxima visita.
+    const network = fetch(request).then((res) => {
       if (res.ok) cache.put(request, res.clone());
       return res;
+    });
+
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("sw-network-timeout")), NETWORK_TIMEOUT_MS);
+    });
+
+    try {
+      const res = await Promise.race([network, timeout]);
+      clearTimeout(timer);
+      return res;
     } catch (err) {
+      clearTimeout(timer);
+      // Si ganó el timeout, el fetch sigue en vuelo: silenciamos un posible
+      // rechazo posterior para no dejar una unhandled rejection en el SW.
+      network.catch(() => { /* noop */ });
       const hit = await cache.match(request);
       if (hit) return hit;
       if (fallbackUrl) {

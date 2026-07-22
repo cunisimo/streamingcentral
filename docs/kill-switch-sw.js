@@ -29,20 +29,28 @@
  */
 /* global self, caches */
 
-self.addEventListener("install", () => {
-  self.skipWaiting();
+// skipWaiting es imprescindible: sin él este SW queda en "waiting" DETRÁS del SW
+// roto hasta que el usuario cierre todas las pestañas — justo el escenario para
+// el que existe el kill-switch.
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
-    // 1. Borrar TODOS los caches, no solo los nuestros.
+    // 1. Tomar control de las pestañas YA. Sin claim(), las páginas abiertas
+    //    seguirían controladas por el SW roto hasta la próxima navegación.
+    //    Este SW no tiene handler de fetch, así que desde acá la red es directa.
+    await self.clients.claim();
+
+    // 2. Borrar TODOS los caches, no solo los nuestros.
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => caches.delete(k)));
 
-    // 2. Desregistrarse.
+    // 3. Desregistrarse.
     await self.registration.unregister();
 
-    // 3. Recargar las pestañas abiertas para que salgan del control del SW.
+    // 4. Recargar las pestañas abiertas para que queden sin controlador.
     const clients = await self.clients.matchAll({ type: "window" });
     for (const client of clients) {
       client.navigate(client.url).catch(() => { /* pestaña cerrada o cross-origin */ });

@@ -21,6 +21,16 @@
 // offline.html dispare la reinstalación.
 self.SC_OFFLINE_URL = "/offline.html?v=bed1ff07da";
 
+// ⚠️ CACHE_VERSION vive ACÁ, no en sw/config.js, por la misma razón.
+// El navegador decide si hay una versión nueva del SW comparando los bytes del
+// SCRIPT PRINCIPAL. Los archivos que entran por importScripts no disparan la
+// actualización de forma consistente entre motores — verificado en Chrome:
+// editar sw/config.js dejó corriendo el SW anterior, que nunca volvió a ejecutar
+// install. Si la versión viviera allá, subirla no actualizaría nada.
+//
+// SUBIR ESTA CONSTANTE al cambiar cualquier archivo del SW.
+self.SC_CACHE_VERSION = "v3";
+
 importScripts(
   "/sw/config.js",
   "/sw/strategies.js",

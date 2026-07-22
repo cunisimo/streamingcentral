@@ -83,6 +83,25 @@ transversales primero:
 | 6 | Documentos de navegación (`mode: navigate`) | **Network First** → cache → `/offline.html` | `sc-pages-v2` | Ver abajo. |
 | 7 | Cualquier otro GET del mismo origen | **Sin interceptar** | — | |
 
+### Timeout de red en `networkFirst` (4s)
+
+`networkFirst` corre una carrera entre el `fetch` y un reloj de
+`NETWORK_TIMEOUT_MS` (4000). Al vencer, cae al cache y, si no hay, al fallback.
+
+**No es un lujo.** En lie-fi —señal presente pero sin tránsito real: subte,
+ascensor, borde de cobertura— el `fetch` **no rechaza**, queda colgado. Sin
+carrera, el `catch` nunca corre, el fallback nunca aparece y el usuario mira una
+pantalla en blanco indefinidamente. Ni un servidor caído ni la red apagada
+reproducen eso: ambos rechazan rápido.
+
+Verificado con una ruta que el servidor cuelga 30s: el SW sirvió `offline.html` a
+los **4019ms** (`responseEnd - requestStart` del navigation entry).
+
+Si la red pierde la carrera pero llega después y responde OK, igual actualiza el
+cache para la próxima visita.
+
+⚠️ `cacheFirst` **no** tiene timeout — ver `docs/ISSUES.md` #3.b.
+
 ### Por qué los documentos son Network First y no Cache First
 
 Cache First en HTML es el bug clásico de PWA: tras un deploy, un HTML cacheado
@@ -118,11 +137,20 @@ límite y iOS termina desalojándolo entero.
 
 ### El mecanismo
 
-`public/sw/config.js` define una sola constante:
+`public/sw.js` define la constante — **no `sw/config.js`**:
 
 ```js
-const CACHE_VERSION = "v2";
+self.SC_CACHE_VERSION = "v3";
 ```
+
+⚠️ **Vive en el script principal a propósito, y esto es un bug que ya cometimos.**
+El navegador decide si hay un SW nuevo comparando los bytes del script principal;
+los archivos que entran por `importScripts` no disparan la actualización de forma
+confiable. Verificado en Chrome durante esta implementación: con `CACHE_VERSION`
+en `config.js`, editarla dejó corriendo el SW anterior, que nunca volvió a
+ejecutar `install` — el precache quedó vacío y la página sin controlador. Al
+mover la constante a `sw.js`, el mismo cambio instaló la versión nueva de
+inmediato.
 
 De ahí salen los tres nombres de cache: `sc-static-v2`, `sc-pages-v2`,
 `sc-images-v2`. El handler de `activate` borra **todo cache cuyo nombre no esté
