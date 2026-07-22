@@ -16,16 +16,20 @@ const BAR: Record<Theme, string> = { light: "#F5F5F2", dark: "#16171B" };
 
 function applyTheme(t: Theme) {
   document.documentElement.setAttribute("data-theme", t);
-  // El manifest y las meta con `media` siguen a prefers-color-scheme, no al
-  // toggle manual. Sin esto, alguien con el sistema en claro y la app en oscuro
-  // ve la barra de estado clara sobre una app oscura. Reescribimos las etiquetas
-  // en runtime para que gane la elección del usuario.
+  // Las meta theme-color con `media` (ver viewport en app/layout.tsx) siguen a
+  // prefers-color-scheme, no al toggle manual. Sin esto, alguien con el sistema
+  // en claro y la app en oscuro ve la barra de estado clara sobre una app oscura.
+  //
+  // ⚠️ SOLO mutamos `content`; nunca remover ni recrear estos nodos. Los renderiza
+  // React y los administra como "hoistable resources": si los sacamos del DOM,
+  // cuando React va a desmontarlos hace parentNode.removeChild() sobre un nodo
+  // huérfano y tira "Cannot read properties of null (reading 'removeChild')".
+  //
+  // Poner el mismo color en TODAS alcanza: matchee la que matchee por su media,
+  // el color resultante es el que eligió el usuario.
   try {
-    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
-    const meta = document.createElement("meta");
-    meta.name = "theme-color";
-    meta.content = BAR[t];
-    document.head.appendChild(meta);
+    const metas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+    metas.forEach((m) => { m.content = BAR[t]; });
   } catch { /* noop */ }
 }
 
