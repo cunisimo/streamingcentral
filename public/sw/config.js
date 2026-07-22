@@ -25,12 +25,17 @@
     CACHE,
     // Todos los nombres válidos de esta versión. Lo demás se borra en activate.
     VALID_CACHES: Object.values(CACHE),
-    // Se precachea en install. Mínimo: la página offline y su ícono. El resto se
-    // puebla solo en runtime (los assets de Next tienen hash de contenido).
+    // Precache dividido en dos niveles (ver el handler de install en sw.js):
+    //
+    //   OFFLINE_URL      → CRÍTICO. Si no se puede cachear, install debe FALLAR.
+    //                      La URL viene versionada por hash desde sw.js
+    //                      (self.SC_OFFLINE_URL, estampada por scripts/stamp-sw.mjs).
+    //   PRECACHE_OPTIONAL → best-effort. Un fallo acá no impide la activación.
+    //
     // /offline.html es HTML estático a propósito: servir una ruta de Next bajo
     // otra URL rompe la hidratación (client-side exception). Ver public/offline.html.
-    PRECACHE: ["/offline.html", "/icons/icon-192.png"],
-    OFFLINE_URL: "/offline.html",
+    OFFLINE_URL: self.SC_OFFLINE_URL || "/offline.html",
+    PRECACHE_OPTIONAL: ["/icons/icon-192.png"],
     // Cache de imágenes: LRU por cantidad + expiración.
     IMAGE_LIMIT: 300,
     IMAGE_MAX_AGE: 30 * 24 * 60 * 60 * 1000, // 30 días

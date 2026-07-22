@@ -1,5 +1,5 @@
 /* Service Worker — entry point.
- * StreamingCentral PWA. Ver docs/superpowers/specs/2026-07-21-pwa-design.md §3.4
+ * StreamingCentral PWA. Ver docs/PWA.md
  *
  * SW propio, sin librerías. Modularizado con importScripts (no ES modules: los
  * SW type:"module" no corren en Firefox y llegaron tarde a Safari).
@@ -10,7 +10,16 @@
  * Envolver también este archivo evita que sus locales colisionen con los de los
  * módulos importados.
  */
-/* global self, caches, importScripts */
+/* global self, caches, importScripts, Request */
+
+// Revisioning del fallback offline. El `?v=` lo estampa scripts/stamp-sw.mjs con
+// el hash de public/offline.html en cada build (npm run build → prebuild).
+//
+// Vive ACÁ y no en sw/config.js a propósito: el update del SW compara byte a
+// byte el script principal. La comparación de los scripts de importScripts no es
+// consistente entre motores, así que estampar acá garantiza que un cambio de
+// offline.html dispare la reinstalación.
+self.SC_OFFLINE_URL = "/offline.html?v=bed1ff07da";
 
 importScripts(
   "/sw/config.js",
@@ -22,33 +31,48 @@ importScripts(
 );
 
 (function () {
-  const { VALID_CACHES, CACHE, PRECACHE } = self.SC_CONFIG;
+  const { VALID_CACHES, CACHE, OFFLINE_URL, PRECACHE_OPTIONAL } = self.SC_CONFIG;
 
-  // Install: precache mínimo + activar de inmediato (no esperar a que se cierren
-  // las pestañas). El riesgo de JS viejo + HTML nuevo se cubre con el UpdateToast.
+  // Install. Dos niveles, y la distinción importa:
   //
-  // Se cachea item por item (no addAll): addAll es atómico —un solo fallo
-  // descarta TODO el precache—, y /offline es demasiado importante para perderlo
-  // porque otro item falló. cache.add fuerza no-cache para traer copia fresca.
+  //   CRÍTICO  → cache.add SIN catch. Si /offline.html no se puede traer, la
+  //              promesa rechaza, waitUntil falla y el SW NO se activa. Es lo
+  //              correcto: un SW activo que no tiene el fallback anuncia soporte
+  //              offline que no puede cumplir, y queda así hasta el próximo
+  //              deploy. Mejor no activar y que la app funcione sin SW.
+  //   OPCIONAL → allSettled. Un ícono que falla no debe impedir la activación.
+  //
+  // cache: "reload" fuerza copia fresca de red, ignorando el HTTP cache.
   self.addEventListener("install", (event) => {
     event.waitUntil((async () => {
       const cache = await caches.open(CACHE.static);
-      await Promise.all(
-        PRECACHE.map((url) =>
-          cache.add(new Request(url, { cache: "reload" })).catch(() => { /* item opcional */ })
-        )
+      await cache.add(new Request(OFFLINE_URL, { cache: "reload" }));
+      await Promise.allSettled(
+        PRECACHE_OPTIONAL.map((url) => cache.add(new Request(url, { cache: "reload" })))
       );
       await self.skipWaiting();
     })());
   });
 
-  // Activate: borrar caches de versiones anteriores y tomar control de las páginas.
+  // Activate: borrar caches de versiones anteriores, limpiar fallbacks offline
+  // de revisiones viejas, y tomar control de las páginas.
   self.addEventListener("activate", (event) => {
-    event.waitUntil(
-      caches.keys()
-        .then((keys) => Promise.all(keys.filter((k) => !VALID_CACHES.includes(k)).map((k) => caches.delete(k))))
-        .then(() => self.clients.claim())
-    );
+    event.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((k) => !VALID_CACHES.includes(k)).map((k) => caches.delete(k))
+      );
+      // El nombre del cache no cambia cuando solo cambia el hash de offline.html,
+      // así que las revisiones viejas quedarían acumulándose acá.
+      const cache = await caches.open(CACHE.static);
+      const current = new URL(OFFLINE_URL, self.location.origin).href;
+      for (const req of await cache.keys()) {
+        if (req.url.includes("/offline.html") && req.url !== current) {
+          await cache.delete(req);
+        }
+      }
+      await self.clients.claim();
+    })());
   });
 
   // Fetch: delegar en el router. Si devuelve null, no interceptamos (red directa).

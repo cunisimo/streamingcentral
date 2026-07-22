@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prebuild": "node scripts/stamp-sw.mjs",
+    "pwa:assets": "node scripts/generate-pwa-assets.mjs"
   },
   "dependencies": {
     "@dicebear/collection": "^9.4.2",

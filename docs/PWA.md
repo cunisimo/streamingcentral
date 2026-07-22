@@ -146,6 +146,34 @@ cachea.
 `CACHE_VERSION`.** Si no, los caches viejos sobreviven y podés servir un shell
 que ya no corresponde.
 
+**Excepción: `offline.html` no requiere bump manual.** Su revisión se resuelve
+sola por hash (ver abajo).
+
+### Revisioning del fallback offline (por hash, automático)
+
+`public/offline.html` no tiene hash en la URL, así que un cambio de contenido no
+cambiaría los bytes del SW: `install` no se re-ejecutaría y los clientes
+instalados seguirían sirviendo la copia vieja **para siempre**. Es el problema
+que Workbox resuelve con `__WB_REVISION__`; acá no usamos Workbox.
+
+La solución: `scripts/stamp-sw.mjs` corre como `prebuild`, hashea
+`public/offline.html` y estampa el resultado dentro de `public/sw.js`:
+
+```js
+self.SC_OFFLINE_URL = "/offline.html?v=bed1ff07da";
+```
+
+**Vive en `sw.js` y no en `sw/config.js` a propósito.** El algoritmo de update
+del SW compara byte a byte el *script principal*; la comparación de los scripts
+traídos por `importScripts` existe en Chrome moderno pero no es consistente entre
+motores. Estampar en `sw.js` garantiza que el byte-diff se dispare.
+
+`activate` además borra las entradas `/offline.html?v=…` de revisiones anteriores,
+porque el nombre del cache no cambia cuando solo cambia el hash.
+
+⚠️ **`npx next build` NO dispara los hooks de npm.** Usar `npm run build` (que es
+lo que corre Vercel). Con `npx next build` el SW queda con el hash anterior.
+
 ### Cómo se propaga una actualización
 
 1. El navegador pide `/sw.js` (con `Cache-Control: no-cache`, ver §7) y compara
@@ -194,6 +222,30 @@ haya datos. Los datos nunca se cachean, a propósito.
 mostrar 15 errores iguales en la Home sería peor que no mostrar el riel.
 
 ---
+
+## 5.b Precache: crítico vs. opcional
+
+`install` distingue dos niveles, y la diferencia es de seguridad, no de estilo:
+
+```js
+const cache = await caches.open(CACHE.static);
+await cache.add(new Request(OFFLINE_URL, { cache: "reload" }));   // CRÍTICO, sin catch
+await Promise.allSettled(                                          // OPCIONAL
+  PRECACHE_OPTIONAL.map((url) => cache.add(new Request(url, { cache: "reload" })))
+);
+await self.skipWaiting();
+```
+
+**El crítico no lleva `catch`.** Si `/offline.html` no se puede traer, la promesa
+rechaza, `waitUntil` falla y el SW **no se activa**. Es lo correcto: un SW activo
+sin fallback anuncia soporte offline que no puede cumplir, y queda así hasta el
+próximo deploy. Es preferible que la app funcione sin SW.
+
+> Esto fue un bug real: la versión anterior tenía `.catch(() => {})` **por
+> entrada** dentro de un `Promise.all`, así que `install` no podía fallar nunca y
+> activaba SWs sin fallback. Verificado con dos SW de prueba:
+> - crítico 404 → `installing → redundant`, no activa ✅
+> - crítico OK + opcional 404 → `installing → installed → activating → activated` ✅
 
 ## 6. Módulos reservados
 
@@ -334,3 +386,19 @@ Prueba offline real (más fiable que el modo offline de DevTools):
 4. **Recargar en `controllerchange`** hacía que cada primera visita se recargara
    sola (§4).
 5. **Usar una ruta de Next como fallback offline** rompe la hidratación (§3).
+6. **`install` que no puede fallar.** Con un `.catch()` por entrada, un fetch
+   fallido del fallback activaba un SW que anunciaba offline sin tenerlo (§5.b).
+7. **Precache sin revisioning.** Sin el hash estampado, editar `offline.html` no
+   llegaba nunca a los clientes instalados (§4).
+
+---
+
+## 12. Kill-switch
+
+`docs/kill-switch-sw.js` es un SW mínimo que borra todos los caches, se
+desregistra y recarga las pestañas. **No se despliega desde `docs/`**: para
+usarlo, copiarlo sobre `public/sw.js` y deployar.
+
+Es la salida de emergencia si un SW publicado queda sirviendo algo roto y no
+alcanza con un bump de `CACHE_VERSION`. Instrucciones completas en el encabezado
+del archivo.
