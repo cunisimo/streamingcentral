@@ -158,6 +158,58 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
   `top_voted` tome la firma de 4 args.
 - ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (avatares DiceBear), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). Requiere re-correr `supabase/schema.sql`.
 
+## PWA (instalable — construido)
+
+La app es una PWA instalable en Android, iPhone y escritorio. Diseño completo en
+`docs/superpowers/specs/2026-07-21-pwa-design.md`. Piezas:
+
+- **Manifest**: `app/manifest.ts` (metadata route tipada). **Íconos/splash**: se
+  generan con `node scripts/generate-pwa-assets.mjs` desde `assets/brand/logo.svg`
+  (fuente única). Si cambia el logo, re-ejecutar ese script regenera los 26
+  assets **y** `components/pwa/AppleSplashLinks.tsx`. La lista de dispositivos iOS
+  vive en `scripts/pwa-devices.mjs` (compartida generador↔componente).
+- **Service Worker**: `public/sw.js` + `public/sw/*` (propio, sin librerías,
+  `importScripts` con un IIFE por módulo). Estrategias: HTML `Network First`;
+  `/_next/static` e íconos `Cache First`; imágenes TMDB `Cache First` 30d/tope 300;
+  **`/api/*` y Supabase `Network Only`** (nunca datos viejos); YouTube sin tocar;
+  solo GET. `push`/`sync`/`share-target` son módulos **reservados** (comentados).
+- **Offline**: `public/offline.html` (HTML estático, **no** una ruta de Next: servir
+  una ruta de Next bajo otra URL rompe la hidratación) + `components/pwa/OfflineState.tsx`;
+  `useApi` expone `offline`/`retry`, conectado en DetailView/FilterGrid/CountryGrid/
+  PersonView, y `CatalogView` muestra un único estado offline en vez de dejar la
+  pantalla vacía cuando todos los rieles se ocultan.
+
+**Arquitectura completa documentada en `docs/PWA.md`.**
+- **Instalación/actualización**: `components/pwa/PwaClient.tsx` orquesta registro,
+  `InstallPrompt` (banner Android / instrucciones iOS), `UpdateToast` y
+  `StandaloneWelcome`. Fila "Instalar" en `/cuenta/configuracion`.
+
+### Reglas al tocar la PWA (para no romperla)
+
+- **El SW NO corre en `next dev`** (a propósito: cachear en dev es un infierno de
+  depuración). Para probarlo: `npx next build && npx next start`.
+- **Al cambiar cualquier archivo del SW, subir `CACHE_VERSION`** en
+  `public/sw/config.js`. Si no, `activate` no limpia los caches viejos.
+- **No cachear `/api/*` ni Supabase.** Es la prioridad del dueño: mejor fallar y
+  mostrar `OfflineState` que mostrar catálogo/listas desactualizadas.
+- Los módulos del SW comparten un scope global (`importScripts`): cada uno va
+  envuelto en IIFE para no colisionar `const` entre archivos.
+- **Lighthouse ya no tiene categoría PWA** (eliminada en v12). Verificar
+  instalabilidad en DevTools → Application → Manifest / Service Workers.
+
+### Limitaciones de iOS (no son bugs — no prometer fixes)
+
+- Safari **no** soporta `beforeinstallprompt`: en iPhone el banner solo da
+  instrucciones ("Compartir → Agregar a inicio"), no instala con un botón.
+- iOS ignora casi todo el manifest (display, theme_color, shortcuts, orientation):
+  eso se cubre con meta `apple-*` y los 18 splash a mano.
+- **Instalar en iOS crea un contexto de storage nuevo**: se pierden plataformas,
+  tema y sesión de Safari. Por eso `StandaloneWelcome` da la bienvenida y manda a
+  elegir plataformas en el primer arranque. Si alguien reporta "se borró todo al
+  instalar", es esto, no un bug.
+- Los screenshots del manifest (`public/screenshots/`) son placeholders branded;
+  reemplazables por capturas reales sin tocar el manifest.
+
 ## Cómo levantar en local
 
 ```bash

@@ -10,8 +10,23 @@ interface Ctx {
 const ThemeCtx = createContext<Ctx | null>(null);
 const KEY = "sc:theme";
 
+// Colores de la barra de estado en app instalada. Tienen que coincidir con
+// --bg de cada tema en globals.css.
+const BAR: Record<Theme, string> = { light: "#F5F5F2", dark: "#16171B" };
+
 function applyTheme(t: Theme) {
   document.documentElement.setAttribute("data-theme", t);
+  // El manifest y las meta con `media` siguen a prefers-color-scheme, no al
+  // toggle manual. Sin esto, alguien con el sistema en claro y la app en oscuro
+  // ve la barra de estado clara sobre una app oscura. Reescribimos las etiquetas
+  // en runtime para que gane la elección del usuario.
+  try {
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+    const meta = document.createElement("meta");
+    meta.name = "theme-color";
+    meta.content = BAR[t];
+    document.head.appendChild(meta);
+  } catch { /* noop */ }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

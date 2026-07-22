@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="StreamingCentral">
+  <!-- Fuente única de verdad de la marca. Todos los íconos y splash de la PWA se
+       derivan de este archivo con scripts/generate-pwa-assets.mjs.
+       Cambiar acá el color o la forma y re-ejecutar el script regenera los 26
+       assets. El acento (#FF6A1A) es el mismo --accent de globals.css. -->
+  <rect width="512" height="512" fill="#FF6A1A"/>
+  <!-- Triángulo de play, la marca que ya se usa en la TopBar, centrado y
+       proporcionado a la caja. Punta redondeada para que no se vea filoso a
+       tamaños chicos. -->
+  <path d="M203 148 L379 256 L203 364 Z"
+        fill="#FFFFFF"
+        stroke="#FFFFFF"
+        stroke-width="34"
+        stroke-linejoin="round"
+        stroke-linecap="round"/>
+</svg>

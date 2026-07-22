@@ -13,6 +13,16 @@
   --bg-rgb:245,245,242;
   --radius:16px;--radius-sm:11px;
   --display:var(--font-display),sans-serif;--body:var(--font-body),system-ui,sans-serif;
+  /* Layout móvil. Los env() solo devuelven algo distinto de 0 si el viewport
+     declara viewport-fit=cover (ver app/layout.tsx). Sin eso el notch y el
+     home indicator del iPhone tapan contenido. */
+  --nav-h:72px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+  /* Alto real que ocupa la barra inferior: usarlo para separar contenido. */
+  --nav-total:calc(var(--nav-h) + var(--safe-b));
 }
 [data-theme="dark"]{
   --bg:#16171B;--surface:#1D1F24;--surface-2:#25272D;
@@ -25,11 +35,27 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.5}
+body{background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.5;
+  /* Sin esto, deslizar hacia abajo dispara el pull-to-refresh del navegador
+     y la app instalada se siente como una página web. */
+  overscroll-behavior-y:none;
+  /* Mata el flash azul de iOS/Android al tocar. Cada control define su :active. */
+  -webkit-tap-highlight-color:transparent}
 a{color:inherit;text-decoration:none}
-.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
-main{padding-bottom:92px;min-height:60vh}
+/* En landscape con notch, el inset lateral evita que el contenido quede debajo
+   de la muesca o de las esquinas redondeadas. En portrait los insets son 0. */
+.wrap{max-width:1240px;margin:0 auto;padding:0 calc(28px + var(--safe-r)) 0 calc(28px + var(--safe-l))}
+main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 ::-webkit-scrollbar{height:0;width:0}
+/* En escritorio la scrollbar es una señal de que hay más contenido: se devuelve. */
+@media(min-width:1024px){
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:999px;border:2px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+  /* Los rieles horizontales siguen sin scrollbar: tienen flechas propias. */
+  .track::-webkit-scrollbar{width:0;height:0}
+}
 
 .lg{font-family:var(--body);line-height:1;display:inline-flex;align-items:center;white-space:nowrap;font-size:11px}
 .lg-n{color:#E50914;font-weight:800;letter-spacing:-.04em}
@@ -42,7 +68,9 @@ main{padding-bottom:92px;min-height:60vh}
 .lg-cr{color:#F47521;font-weight:800;letter-spacing:-.02em}
 .lg-sp{color:#5A2EAE;font-weight:800;letter-spacing:-.03em}
 
-.topbar{position:sticky;top:0;z-index:30;background:rgba(var(--bg-rgb),.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+/* padding-top y no margin: el fondo con blur tiene que llegar hasta arriba de
+   todo y quedar detrás de la barra de estado, no dejar una franja transparente. */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(var(--bg-rgb),.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding-top:var(--safe-t)}
 .topbar-top{display:flex;justify-content:space-between;align-items:center;max-width:1240px;margin:0 auto;padding:7px 28px 0}
 .topdate{font-size:12.5px;color:var(--dim);white-space:nowrap}
 /* Links del hub (editar perfil / configuración) */
@@ -183,18 +211,25 @@ main{padding-bottom:92px;min-height:60vh}
 .people-grid .pcard .av{width:100%;height:auto;aspect-ratio:1;border-radius:50%}
 
 
-.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;height:72px;background:rgba(var(--bg-rgb),.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;align-items:stretch;padding-bottom:env(safe-area-inset-bottom)}
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;height:var(--nav-h);box-sizing:content-box;background:rgba(var(--bg-rgb),.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;align-items:stretch;padding-bottom:var(--safe-b);
+  /* Long-press sobre la nav no debe seleccionar texto. */
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .navitem{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--dim);font-family:var(--body);font-size:12px;font-weight:500}
+.navitem:active{opacity:.55}
 .navitem svg{width:25px;height:25px;stroke:var(--dim);fill:none;stroke-width:1.9}
 .navitem.on{color:var(--accent);font-weight:600}
 .navitem.on svg{stroke:var(--accent)}
 
-.detail-inner{max-width:560px;margin:0 auto;background:var(--surface);min-height:100vh}
-.dhero{position:relative;min-height:50vh;display:flex;align-items:flex-end;color:#fff;background-size:cover;background-position:center}
+/* dvh en vez de vh: en iOS, 100vh incluye la barra del navegador y produce
+   el salto de scroll clásico al aparecer/desaparecer. */
+.detail-inner{max-width:560px;margin:0 auto;background:var(--surface);min-height:100dvh}
+.dhero{position:relative;min-height:50dvh;display:flex;align-items:flex-end;color:#fff;background-size:cover;background-position:center}
 .dhero::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6),rgba(0,0,0,0) 55%)}
-.dhero .dback{position:absolute;top:16px;left:16px;z-index:3;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.35);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+/* La ficha no tiene TopBar: el botón de volver es lo único arriba, así que es
+   él quien tiene que esquivar el notch. */
+.dhero .dback{position:absolute;top:calc(var(--safe-t) + 16px);left:calc(var(--safe-l) + 16px);z-index:3;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.35);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .dhero .dback svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.4}
-.dpad{padding:20px 22px 80px}
+.dpad{padding:20px 22px calc(var(--nav-total) + 20px)}
 .dttl{font-family:var(--display);font-size:30px;font-weight:700;letter-spacing:-.025em;line-height:1.05}
 .dmeta{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--dim);font-size:14px;flex-wrap:wrap}
 .dmeta .age{border:1px solid var(--line-2);background:var(--surface-2);border-radius:5px;padding:1px 7px;font-size:12px;font-weight:600;color:var(--text)}
@@ -403,3 +438,62 @@ main{padding-bottom:92px;min-height:60vh}
 }
 
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* ==========================================================================
+   PWA — app instalada
+   Se aplica solo cuando corre en standalone (ícono de la pantalla de inicio),
+   no en una pestaña del navegador. Ver docs/superpowers/specs/2026-07-21-pwa-design.md
+   ========================================================================== */
+@media(display-mode:standalone){
+  /* Sin barra de URL no hay "recargar": el scroll elástico horizontal solo
+     confunde. El vertical ya está cortado en body. */
+  body{overscroll-behavior:none}
+  /* La app instalada no tiene botón atrás del navegador en Android/iOS:
+     los controles propios de volver pasan a ser imprescindibles. */
+  .dhero .dback{background:rgba(0,0,0,.55)}
+}
+
+/* Los rieles horizontales manejan su propio gesto: bloquear el pan vertical
+   sobre ellos evita que un swipe diagonal scrollee la página a mitad de riel. */
+.track{touch-action:pan-x}
+
+/* ==========================================================================
+   PWA — estado sin conexión
+   ========================================================================== */
+.offline-state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:56px 24px;max-width:420px;margin:0 auto;min-height:50vh;justify-content:center}
+.offline-ico{width:64px;height:64px;color:var(--dim)}
+.offline-ico svg{width:100%;height:100%}
+.offline-state h3{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
+.offline-state p{color:var(--dim);font-size:14.5px;margin:0;line-height:1.55}
+.offline-state .btn{margin-top:6px}
+
+/* ==========================================================================
+   PWA — banner de instalación, toast de actualización, bienvenida
+   ========================================================================== */
+/* Banner de instalación: fijo abajo, por encima de la nav. */
+.pwa-install{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-total) + 12px);z-index:60;display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);box-shadow:var(--sh-h);padding:14px 40px 14px 14px;max-width:520px;margin:0 auto}
+.pwa-install-ico{border-radius:11px;flex-shrink:0}
+.pwa-install-body{min-width:0}
+.pwa-install-body strong{display:block;font-size:15px;font-weight:700}
+.pwa-install-body p{margin:3px 0 0;font-size:13px;color:var(--dim);line-height:1.45}
+.pwa-install-cta{margin-top:10px;height:38px;padding:0 18px}
+.pwa-install-x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:none;background:none;cursor:pointer;color:var(--faint);display:flex;align-items:center;justify-content:center}
+.pwa-install-x svg{width:18px;height:18px}
+.pwa-share{display:inline-flex;vertical-align:middle;color:var(--accent)}
+.pwa-share svg{width:15px;height:15px}
+@media(min-width:1024px){.pwa-install{bottom:20px;left:auto;right:20px;margin:0}}
+
+/* Toast de actualización: arriba, discreto. */
+.pwa-update{position:fixed;left:12px;right:12px;top:calc(var(--safe-t) + 12px);z-index:65;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--text);color:var(--bg);border-radius:12px;box-shadow:var(--sh-h);padding:12px 14px;max-width:460px;margin:0 auto;font-size:13.5px}
+.pwa-update-btn{flex-shrink:0;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:var(--body);font-weight:600;font-size:13px;cursor:pointer}
+
+/* Bienvenida de primer arranque en standalone. */
+.pwa-welcome-backdrop{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:24px;padding-bottom:calc(24px + var(--safe-b))}
+.pwa-welcome{background:var(--surface);border-radius:var(--radius);box-shadow:var(--sh-h);padding:28px 24px;max-width:360px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.pwa-welcome img{border-radius:16px}
+.pwa-welcome h2{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
+.pwa-welcome p{margin:0;font-size:14px;color:var(--dim);line-height:1.55}
+.pwa-welcome .btn{margin-top:6px}
+
+/* Pasos de instalación iOS en la fila de configuración. */
+.cfg-ios-steps{margin-top:10px;font-size:12.5px;color:var(--dim);line-height:1.7;background:var(--surface-2);border-radius:10px;padding:10px 12px}

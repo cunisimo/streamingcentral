@@ -6,6 +6,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
 import { useTheme } from "@/components/ThemeContext";
+import InstallRow from "@/components/pwa/InstallRow";
 import { COUNTRIES } from "@/components/data";
 
 const PAIS_KEY = "sc:pais";
@@ -64,6 +65,8 @@ export default function ConfiguracionPage() {
               {PAISES.map((p) => <option key={p.code} value={p.code}>{p.flag} {p.name}</option>)}
             </select>
           </div>
+
+          <InstallRow />
 
           <div className="cfg-row off">
             <div className="cfg-info">
