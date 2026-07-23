@@ -4,7 +4,8 @@
  * SW propio, sin librerías. Modularizado con importScripts (no ES modules: los
  * SW type:"module" no corren en Firefox y llegaron tarde a Safari).
  *
- * ⚠️ Al cambiar cualquier archivo del SW, subir CACHE_VERSION en sw/config.js.
+ * ⚠️ Al cambiar cualquier archivo del SW, subir SC_CACHE_VERSION (más abajo, en
+ *    este mismo archivo — no en sw/config.js).
  *
  * IIFE: importScripts comparte un único scope global entre todos los módulos.
  * Envolver también este archivo evita que sus locales colisionen con los de los

@@ -28,7 +28,12 @@ const SW = join(ROOT, "public", "sw.js");
 // vez de publicar un SW sin revisioning.
 const PATTERN = /(SC_OFFLINE_URL\s*=\s*"\/offline\.html\?v=)([^"]*)(")/;
 
-const hash = createHash("sha256").update(readFileSync(OFFLINE)).digest("hex").slice(0, 10);
+// Normalizamos CRLF→LF antes de hashear: si no, el mismo archivo da un hash
+// distinto en Windows (CRLF en disco) que en Vercel/Linux (LF), y el SW se
+// re-estampa en cada build local generando churn en git. Con la normalización el
+// hash es idéntico en todos lados.
+const offlineNormalized = readFileSync(OFFLINE, "utf8").replace(/\r\n/g, "\n");
+const hash = createHash("sha256").update(offlineNormalized, "utf8").digest("hex").slice(0, 10);
 const sw = readFileSync(SW, "utf8");
 
 if (!PATTERN.test(sw)) {
