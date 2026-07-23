@@ -12,12 +12,20 @@ export default function PwaClient() {
   const [updateReady, setUpdateReady] = useState(false);
   const onUpdate = useCallback(() => setUpdateReady(true), []);
   const reload = useCallback(() => {
-    // Pedir al SW en espera que se active, y recargar cuando tome control.
     navigator.serviceWorker?.getRegistration().then((reg) => {
-      reg?.waiting?.postMessage("SKIP_WAITING");
+      if (reg?.waiting) {
+        // Activar el SW en espera. Cuando tome control, el listener de
+        // controllerchange (en ServiceWorkerRegister) recarga la página. No
+        // recargamos acá con un setTimeout: sería una carrera contra la
+        // activación y podía recargar bajo el SW viejo, sin aplicar el cambio.
+        reg.waiting.postMessage("SKIP_WAITING");
+        // Red de seguridad por si controllerchange no llegara (raro).
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        // No hay SW en espera (ya activo o sin SW): recargar directo.
+        window.location.reload();
+      }
     });
-    // Fallback: recargar igual tras un instante.
-    setTimeout(() => window.location.reload(), 300);
   }, []);
 
   return (

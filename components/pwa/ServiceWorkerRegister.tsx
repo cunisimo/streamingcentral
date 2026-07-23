@@ -9,19 +9,30 @@ export default function ServiceWorkerRegister({ onUpdate }: { onUpdate?: () => v
     if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
 
-    // OJO: NO recargar automáticamente en "controllerchange". El SW hace
-    // skipWaiting()+clients.claim() en la primera instalación, y eso dispara un
-    // controllerchange en la carga inicial. Recargar ahí hace que CADA primera
-    // visita se recargue sola (Lighthouse lo cuenta como redirect: ~4.5s de LCP).
-    // La recarga tras una actualización la maneja el usuario desde el UpdateToast
-    // (PwaClient: postMessage SKIP_WAITING + reload). Ver spec §3.6.
+    // Recargar cuando el SW nuevo TOMA el control — pero sólo si la página ya
+    // estaba controlada al cargar (= es una actualización). En la PRIMERA
+    // instalación, clients.claim() también dispara controllerchange, y recargar
+    // ahí hace que cada primera visita se recargue sola (Lighthouse lo cuenta
+    // como redirect, +4.5s de LCP). El guard `wasControlled` distingue los casos.
+    const wasControlled = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!wasControlled || reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
+
     navigator.serviceWorker.register("/sw.js").then((reg) => {
-      // Detectar una actualización esperando para activarse.
+      // Si ya quedó un SW esperando de una sesión anterior (el usuario no
+      // actualizó), mostrar el aviso ahora.
+      if (reg.waiting && navigator.serviceWorker.controller) onUpdate?.();
+
+      // Detectar una actualización que termina de instalarse en esta sesión.
       reg.addEventListener("updatefound", () => {
         const sw = reg.installing;
         if (!sw) return;
         sw.addEventListener("statechange", () => {
-          // Hay un SW instalado y ya había uno controlando: es una actualización.
+          // Instalado + ya había uno controlando = actualización lista y en espera.
           if (sw.state === "installed" && navigator.serviceWorker.controller) {
             onUpdate?.();
           }

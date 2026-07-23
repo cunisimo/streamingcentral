@@ -30,7 +30,7 @@ self.SC_OFFLINE_URL = "/offline.html?v=bed1ff07da";
 // install. Si la versión viviera allá, subirla no actualizaría nada.
 //
 // SUBIR ESTA CONSTANTE al cambiar cualquier archivo del SW.
-self.SC_CACHE_VERSION = "v3";
+self.SC_CACHE_VERSION = "v4";
 
 importScripts(
   "/sw/config.js",
@@ -44,16 +44,21 @@ importScripts(
 (function () {
   const { VALID_CACHES, CACHE, OFFLINE_URL, PRECACHE_OPTIONAL } = self.SC_CONFIG;
 
-  // Install. Dos niveles, y la distinción importa:
+  // Install. Dos niveles de precache, y la distinción importa:
   //
   //   CRÍTICO  → cache.add SIN catch. Si /offline.html no se puede traer, la
-  //              promesa rechaza, waitUntil falla y el SW NO se activa. Es lo
-  //              correcto: un SW activo que no tiene el fallback anuncia soporte
-  //              offline que no puede cumplir, y queda así hasta el próximo
-  //              deploy. Mejor no activar y que la app funcione sin SW.
-  //   OPCIONAL → allSettled. Un ícono que falla no debe impedir la activación.
+  //              promesa rechaza, waitUntil falla y el SW NO se instala. Es lo
+  //              correcto: un SW que no tiene el fallback anuncia soporte offline
+  //              que no puede cumplir. Mejor no instalar y que la app ande sin SW.
+  //   OPCIONAL → allSettled. Un ícono que falla no debe impedir la instalación.
   //
   // cache: "reload" fuerza copia fresca de red, ignorando el HTTP cache.
+  //
+  // ⚠️ NO hay skipWaiting() acá. En una actualización, el SW nuevo queda en
+  // "waiting" hasta que el usuario toque "Actualizar" en el UpdateToast
+  // (que manda SKIP_WAITING, ver el listener de message). Así no se le cambia el
+  // shell abajo de los pies a mitad de uso. En la PRIMERA instalación no hay SW
+  // previo, así que activa igual sin skipWaiting.
   self.addEventListener("install", (event) => {
     event.waitUntil((async () => {
       const cache = await caches.open(CACHE.static);
@@ -61,7 +66,6 @@ importScripts(
       await Promise.allSettled(
         PRECACHE_OPTIONAL.map((url) => cache.add(new Request(url, { cache: "reload" })))
       );
-      await self.skipWaiting();
     })());
   });
 
