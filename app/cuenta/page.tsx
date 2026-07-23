@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
@@ -47,6 +48,7 @@ function Acceso({
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   const esRegistro = modo === "registro";
   const esRecuperar = modo === "recuperar";
@@ -67,12 +69,14 @@ function Acceso({
       setBusy(false);
       if (error) { setErr(error); return; }
       if (needsConfirm) setOk("Te mandamos un mail para confirmar la cuenta. Revisá tu casilla.");
-      // Si no requiere confirmación, onAuthStateChange ya te deja adentro.
+      // Sin confirmación por mail, ya quedás adentro: al Home, como en el login.
+      else router.push("/");
     } else {
       const { error } = await signIn(email, pass);
       setBusy(false);
       if (error) { setErr(error); return; }
-      // Al entrar, el provider actualiza la sesión y esta pantalla pasa a Perfil.
+      // Ingreso correcto → al Home (antes se quedaba en /cuenta mostrando el perfil).
+      router.push("/");
     }
   }
 

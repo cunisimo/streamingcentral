@@ -16,11 +16,17 @@ const Thumb = ({ down }: { down?: boolean }) => (
   </svg>
 );
 
+const Star = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" />
+  </svg>
+);
+
 // Icono según la opción de voto (o el placeholder "Me gusta" si no votó).
 function VoteIcon({ v }: { v: number | null }) {
-  if (v === 1) return <Thumb down />;
-  if (v === 3) return <span className="twoup"><Thumb /><Thumb /></span>;
-  return <Thumb />; // 2 (ta buena) o sin voto → pulgar arriba
+  if (v === 1) return <Thumb down />;    // malaso → pulgar abajo
+  if (v === 3) return <Star />;           // petacular → estrella
+  return <Thumb />;                       // 2 (ta buena) o sin voto → pulgar arriba
 }
 
 const OPTS = [

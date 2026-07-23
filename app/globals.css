@@ -247,8 +247,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .act .lab{color:var(--dim)}
 .act.on svg{stroke:var(--accent);fill:var(--accent)}.act.on .lab{color:var(--accent)}
 .act.on svg.chk{fill:none}
-.act .twoup{display:flex;gap:2px;height:26px;align-items:center}
-.act .twoup svg{width:19px;height:19px}
 .votepop{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:10px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:6px;z-index:40;box-shadow:var(--sh-h);display:flex;flex-direction:row;gap:4px}
 .voteopt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 12px;border-radius:10px;border:none;background:none;cursor:pointer;color:var(--text);font-size:13px;font-family:var(--body);text-align:center;white-space:nowrap}
 .voteopt:hover{background:var(--surface-2)}
@@ -453,9 +451,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .dhero .dback{background:rgba(0,0,0,.55)}
 }
 
-/* Los rieles horizontales manejan su propio gesto: bloquear el pan vertical
-   sobre ellos evita que un swipe diagonal scrollee la página a mitad de riel. */
-.track{touch-action:pan-x}
+/* Nota: NO poner `touch-action:pan-x` en .track. Bloquea el scroll vertical de
+   la página cuando el dedo arranca sobre un póster (los rieles ocupan casi toda
+   la Home), dejando "zonas muertas". El navegador ya distingue solo entre un
+   arrastre mayormente vertical (scrollea la página) y uno horizontal (scrollea
+   el riel); no hay que ayudarlo. */
 
 /* ==========================================================================
    PWA — estado sin conexión
@@ -466,6 +466,25 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .offline-state h3{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
 .offline-state p{color:var(--dim);font-size:14.5px;margin:0;line-height:1.55}
 .offline-state .btn{margin-top:6px}
+
+/* ==========================================================================
+   Skeleton (placeholder de carga) — usado en la ficha
+   ========================================================================== */
+.sk{position:relative;overflow:hidden;background:var(--surface-2);border-radius:8px}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(128,128,128,.16),transparent);
+  animation:sk-shimmer 1.3s infinite}
+@keyframes sk-shimmer{100%{transform:translateX(100%)}}
+@media(prefers-reduced-motion:reduce){.sk::after{animation:none}}
+
+.sk-hero{min-height:50dvh;border-radius:0}
+.sk-title{height:30px;width:70%;margin-top:2px;margin-bottom:14px}
+.sk-meta{height:15px;width:55%;margin-bottom:20px}
+.sk-primary{height:52px;width:100%;border-radius:11px;margin-bottom:22px}
+.sk-actions{display:flex;justify-content:space-around;margin-bottom:24px}
+.sk-act{height:44px;width:54px;border-radius:8px}
+.sk-line{height:14px;width:100%;margin-bottom:10px}
+.sk-line.short{width:45%}
 
 /* ==========================================================================
    PWA — banner de instalación, toast de actualización, bienvenida

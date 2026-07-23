@@ -10,6 +10,7 @@ import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
 import VoteCounts from "./VoteCounts";
 import OfflineState from "./pwa/OfflineState";
+import DetailSkeleton from "./DetailSkeleton";
 import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType } from "@/lib/types";
 
@@ -22,7 +23,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   const relTrack = useRef<HTMLDivElement>(null);
 
   if (offline && !data) return <div className="detail-inner"><OfflineState onRetry={retry} /></div>;
-  if (loading || !data) return <div className="detail-inner"><div className="dpad"><p className="loading">Cargando ficha…</p></div></div>;
+  if (loading || !data) return <DetailSkeleton />;
   const t = data;
   const mine = t.platforms.filter((p) => platforms.includes(p));
   const hero = t.backdrop || t.poster;
