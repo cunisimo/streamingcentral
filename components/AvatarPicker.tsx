@@ -1,37 +1,52 @@
 "use client";
-import { useState } from "react";
-import { avatarSvg, randomSeed } from "@/lib/avatar";
+import { avatarSvg } from "@/lib/avatar";
+import { AVATARS, SAGAS, DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 export default function AvatarPicker({
   current, onPick,
 }: {
   current: string; onPick: (seed: string) => void;
 }) {
-  const [seeds, setSeeds] = useState<string[]>(() => {
-    const s = new Set<string>([current].filter(Boolean));
-    while (s.size < 16) s.add(randomSeed());
-    return [...s];
-  });
-
   return (
     <div className="field">
       <label>Elegí tu avatar</label>
-      <div className="avpick">
-        {seeds.map((s) => (
-          <button
-            key={s} type="button"
-            className={`avopt ${s === current ? "on" : ""}`}
-            onClick={() => onPick(s)}
-            aria-pressed={s === current}
-          >
-            <img src={avatarSvg(s)} alt="" />
-          </button>
-        ))}
+
+      <div className="avsec">
+        <h5 className="avsec-t">General</h5>
+        <div className="avpick">
+          <Opt id={DEFAULT_AVATAR_ID} label="Por defecto" current={current} onPick={onPick} />
+        </div>
       </div>
-      <button type="button" className="btn ghost" style={{ marginTop: 10 }}
-        onClick={() => setSeeds((prev) => [...prev, ...Array.from({ length: 8 }, () => randomSeed())])}>
-        Mostrar más
-      </button>
+
+      {SAGAS.map((s) => (
+        <div key={s.key} className="avsec">
+          <h5 className="avsec-t">{s.label}</h5>
+          <div className="avpick">
+            {AVATARS.filter((a) => a.saga === s.key).map((a) => (
+              <Opt key={a.id} id={a.id} label={a.name} current={current} onPick={onPick} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
+  );
+}
+
+function Opt({
+  id, label, current, onPick,
+}: {
+  id: string; label: string; current: string; onPick: (seed: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`avopt ${id === current ? "on" : ""}`}
+      onClick={() => onPick(id)}
+      aria-pressed={id === current}
+      aria-label={label}
+      title={label}
+    >
+      <img src={avatarSvg(id)} alt="" />
+    </button>
   );
 }

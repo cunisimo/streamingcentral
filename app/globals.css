@@ -326,6 +326,9 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .avopt { padding: 0; border: 2px solid transparent; border-radius: 50%; background: #2A2D33; cursor: pointer; line-height: 0; }
 .avopt img { width: 100%; border-radius: 50%; display: block; }
 .avopt.on { border-color: var(--accent); }
+.avsec { margin-top: 14px; }
+.avsec:first-of-type { margin-top: 6px; }
+.avsec-t { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
 
 /* ===== Desempate (rueda de la fortuna de cine) ===== */
 .dsmp{margin-top:26px}
