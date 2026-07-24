@@ -311,11 +311,14 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
 
 /* Hub de usuario */
-.hub-head { display: flex; align-items: center; gap: 14px; padding: 6px 0 18px; }
+.hub-head { display: flex; align-items: center; gap: 14px; padding: 24px 0 18px; }
 .hub-av { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--line, rgba(255,255,255,.15)); background: #2A2D33; }
 .hub-hi { margin: 0; font-size: 22px; }
 .hub-edit { font-size: 13px; color: var(--accent); text-decoration: none; }
 .hub-edit:hover { text-decoration: underline; }
+.hub-ico { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--surface, #22252B); color: var(--dim); text-decoration: none; }
+.hub-ico:hover { color: var(--text); background: var(--surface-2, #2a2d33); }
+.hub-ico svg { width: 18px; height: 18px; }
 .hub-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
 .hub-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   min-height: 92px; border-radius: 14px; background: var(--card, #22252B); color: var(--dim); font-size: 14px; }
