@@ -1,14 +1,9 @@
-// Avatares generados con DiceBear (style fun-emoji). Solo se persiste la
-// semilla en profiles.avatar_seed; el SVG se arma acá, en el cliente, sin
-// llamadas de red ni assets bundleados. Cambiar de style es una línea.
-import { createAvatar } from "@dicebear/core";
-import { funEmoji } from "@dicebear/collection";
+// Avatares de personajes (SVG originales). Sólo se persiste el id en
+// profiles.avatar_seed; el SVG se resuelve acá, sin red ni assets bundleados.
+// Un id desconocido (incluye seeds DiceBear viejas) cae al avatar por defecto.
+import { byId, DEFAULT_AVATAR_ID } from "./avatars";
 
-export function avatarSvg(seed: string): string {
-  const svg = createAvatar(funEmoji, { seed: seed || "streamingcentral" }).toString();
+export function avatarSvg(id: string): string {
+  const svg = byId.get(id) ?? byId.get(DEFAULT_AVATAR_ID)!;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
-
-export function randomSeed(): string {
-  return Math.random().toString(36).slice(2, 10);
 }
