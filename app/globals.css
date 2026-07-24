@@ -295,15 +295,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .badge-pub{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(17,165,106,.12);color:var(--good)}
 .badge-draft{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--dim)}
 
-/* Avatar de cuenta en la topbar */
-.acct-av { display: inline-flex; }
-.acct-av img {
-  width: 30px; height: 30px; border-radius: 50%;
-  border: 2px solid var(--line, rgba(255,255,255,.15));
-  background: #2A2D33; object-fit: cover; display: block;
-}
-.acct-av:hover img { border-color: var(--accent); }
-
 /* Rieles del área de usuario */
 .shelf-head-r { display: flex; align-items: center; gap: 12px; }
 .vertodo { font-size: 13px; color: var(--accent); text-decoration: none; white-space: nowrap; }
@@ -314,8 +305,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .hub-head { display: flex; align-items: center; gap: 14px; padding: 24px 0 18px; }
 .hub-av { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--line, rgba(255,255,255,.15)); background: #2A2D33; }
 .hub-hi { margin: 0; font-size: 22px; }
-.hub-edit { font-size: 13px; color: var(--accent); text-decoration: none; }
-.hub-edit:hover { text-decoration: underline; }
 .hub-ico { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--surface, #22252B); color: var(--dim); text-decoration: none; }
 .hub-ico:hover { color: var(--text); background: var(--surface-2, #2a2d33); }
 .hub-ico svg { width: 18px; height: 18px; }

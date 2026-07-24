@@ -87,7 +87,6 @@ export function faceSvg(o: FaceOpts): string {
     beardMarkup(beard, beardColor) +   // barba detrás del mentón
     ears + head +
     eyes + brows + nose + mouth +
-    (beard === "full" || beard === "long" ? "" : "") +
     hairMarkup(hair, hairColor) +
     glasses +
     headwearMarkup(o.headwear ?? "none", o.headwearColor ?? "#555") +

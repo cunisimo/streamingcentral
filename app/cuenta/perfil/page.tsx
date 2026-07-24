@@ -6,6 +6,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import AvatarPicker from "@/components/AvatarPicker";
 import { useAuth } from "@/components/AuthContext";
+import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 export default function PerfilPage() {
   const { user, profile, ready, updateDisplayName, updateAvatarSeed, signOut } = useAuth();
@@ -45,7 +46,7 @@ export default function PerfilPage() {
           <h1>Mi perfil</h1>
           <p className="section-sub">{user.email}</p>
 
-          <AvatarPicker current={profile?.avatar_seed ?? user.id} onPick={elegirAvatar} />
+          <AvatarPicker current={profile?.avatar_seed ?? DEFAULT_AVATAR_ID} onPick={elegirAvatar} />
 
           <div className="field">
             <label>Nombre para mostrar</label>
