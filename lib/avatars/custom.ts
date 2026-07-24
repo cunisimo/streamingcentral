@@ -23,15 +23,16 @@ export const SW_C3PO = wrapDisc(
   `<path d="M50 24v-6" stroke="#b8901a" stroke-width="2"/>`
 );
 
-// Darth Vader — casco negro.
+// Darth Vader — casco negro sobre disco claro para que la silueta contraste.
 export const SW_VADER = wrapDisc(
-  "#111317",
-  `<path d="M20 100c0-16 13-24 30-24s30 8 30 24z" fill="#0a0a0a"/>` +
-  `<path d="M32 42c0-16 36-16 36 0 0 14-4 22-8 30-3 6-17 6-20 0-4-8-8-16-8-30z" fill="#161616"/>` +
-  `<path d="M32 42c0-16 36-16 36 0h-36z" fill="#242424"/>` +
-  `<path d="M40 44l6 6-6 6zM60 44l-6 6 6 6z" fill="#0a0a0a"/>` +
-  `<path d="M46 58h8l-2 10h-4z" fill="#0a0a0a"/>` +
-  `<path d="M50 50v6" stroke="#000" stroke-width="2"/>`
+  "#484d55",
+  `<path d="M20 100c0-16 13-24 30-24s30 8 30 24z" fill="#0d0d0f"/>` +
+  `<path d="M32 42c0-16 36-16 36 0 0 14-4 22-8 30-3 6-17 6-20 0-4-8-8-16-8-30z" fill="#17181b" stroke="#6a7078" stroke-width="1.5"/>` +
+  `<path d="M32 42c0-16 36-16 36 0h-36z" fill="#26282c"/>` +
+  `<path d="M34 40c1-8 30-8 32 0" fill="none" stroke="#5a606a" stroke-width="1.5"/>` +
+  `<path d="M40 44l7 6-7 6zM60 44l-7 6 7 6z" fill="#0a0a0a" stroke="#3a3f47" stroke-width="1"/>` +
+  `<path d="M46 58h8l-2 11h-4z" fill="#0a0a0a" stroke="#3a3f47" stroke-width="1"/>` +
+  `<path d="M47 61h6M47 64h6M48 67h4" stroke="#4a4f57" stroke-width="1"/>`
 );
 
 // Voldemort — calvo pálido, sin nariz.
