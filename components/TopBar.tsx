@@ -2,14 +2,11 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePlatforms } from "./PlatformsContext";
-import { useAuth } from "./AuthContext";
-import { avatarSvg } from "@/lib/avatar";
 import PlatformLogo from "./PlatformLogo";
 import { PLATFORMS, platformByCode } from "@/lib/providers-ar";
 
 export default function TopBar() {
   const { platforms, has, toggle } = usePlatforms();
-  const { user, profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [fecha, setFecha] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -31,18 +28,11 @@ export default function TopBar() {
     <header className="topbar">
       <div className="topbar-top">
         <span className="topdate">{fecha}</span>
-        {user ? (
-          <Link href="/cuenta" className="acct-av" aria-label="Mi cuenta">
-            <img src={avatarSvg(profile?.avatar_seed || user.id)} alt="" />
-          </Link>
-        ) : (
-          <Link href="/cuenta" className="acct-link" aria-label="Ingresar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-            </svg>
-            <span>Ingresar</span>
-          </Link>
-        )}
+        <Link href="/buscar" className="acct-link" aria-label="Buscar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
+          </svg>
+        </Link>
       </div>
       <div className="topbar-in">
         <Link href="/" className="brand">
