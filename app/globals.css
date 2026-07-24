@@ -219,6 +219,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .navitem svg{width:25px;height:25px;stroke:var(--dim);fill:none;stroke-width:1.9}
 .navitem.on{color:var(--accent);font-weight:600}
 .navitem.on svg{stroke:var(--accent)}
+.navav{width:25px;height:25px;border-radius:50%;object-fit:cover;border:1.5px solid var(--dim);display:block}
+.navitem.on .navav{border-color:var(--accent)}
 
 /* dvh en vez de vh: en iOS, 100vh incluye la barra del navegador y produce
    el salto de scroll clásico al aparecer/desaparecer. */
