@@ -4,12 +4,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import AvatarPicker from "@/components/AvatarPicker";
+import AvatarPicker from "@/components/avatar/AvatarPicker";
 import { useAuth } from "@/components/AuthContext";
-import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 export default function PerfilPage() {
-  const { user, profile, ready, updateDisplayName, updateAvatarSeed, signOut } = useAuth();
+  const { user, profile, ready, updateDisplayName, signOut } = useAuth();
   const router = useRouter();
   const [nombre, setNombre] = useState("");
   const [err, setErr] = useState("");
@@ -31,12 +30,6 @@ export default function PerfilPage() {
     setOk("Guardado.");
   }
 
-  async function elegirAvatar(seed: string) {
-    setOk(""); setErr("");
-    const { error } = await updateAvatarSeed(seed);
-    if (error) setErr(error);
-  }
-
   return (
     <>
       <TopBar />
@@ -46,7 +39,7 @@ export default function PerfilPage() {
           <h1>Mi perfil</h1>
           <p className="section-sub">{user.email}</p>
 
-          <AvatarPicker current={profile?.avatar_seed ?? DEFAULT_AVATAR_ID} onPick={elegirAvatar} />
+          <AvatarPicker />
 
           <div className="field">
             <label>Nombre para mostrar</label>
