@@ -380,7 +380,7 @@ export function avatarSvg(id: string): string {
 - [ ] **Step 3: Verificar compila**
 
 Run: `npx tsc --noEmit`
-Expected: PASS. Errores esperables a resolver: cualquier import roto de `randomSeed` (se elimina en tasks siguientes; si `tsc` marca `randomSeed` no usado acá, ignorar — se limpia en Task 4).
+Expected: un único error esperado en `components/AvatarPicker.tsx` (`randomSeed` ya no se exporta). Es transitorio: se resuelve en la Task 4, que se ejecuta **en el mismo implementador**, dejando `tsc` verde antes de cerrar. No hacer commit con `tsc` roto en verde falso — el commit de esta task convive con el de Task 4 (Tasks 3+4 comparten el gate verde).
 
 - [ ] **Step 4: Commit**
 
@@ -388,6 +388,8 @@ Expected: PASS. Errores esperables a resolver: cualquier import roto de `randomS
 git add lib/avatars/index.ts lib/avatar.ts
 git commit -m "feat(avatares): manifest de 24 personajes + avatarSvg por id"
 ```
+
+> Ejecución: Tasks 3 y 4 van juntas en un solo implementador (están acopladas por `randomSeed`); `tsc` se valida verde recién al terminar Task 4.
 
 ---
 
