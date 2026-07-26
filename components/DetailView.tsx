@@ -8,7 +8,7 @@ import PlatformLogo from "./PlatformLogo";
 import TitleCard from "./TitleCard";
 import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
-import VoteCounts from "./VoteCounts";
+import ScScore from "./ScScore";
 import CastRail from "./CastRail";
 import OfflineState from "./pwa/OfflineState";
 import DetailSkeleton from "./DetailSkeleton";
@@ -70,8 +70,6 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           </button>
         </div>
 
-        <VoteCounts id={t.id} tipo={t.type} />
-
         {t.synopsis && <p className="dsyn">{t.synopsis}</p>}
         <CastRail cast={t.cast} />
         {t.directors.length > 0 && <p className="dcast"><b>Dirección:</b> {t.directors.join(", ")}</p>}
@@ -84,6 +82,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           <>
             <div className="dsec-h">Puntajes</div>
             <div className="rating-bar">
+              <ScScore id={t.id} tipo={t.type} />
               {t.imdb != null && <div className="rb imdb"><div className="lbl">IMDb</div><div className="num">{t.imdb.toFixed(1)}</div></div>}
               {t.metacritic != null && <div className="rb mc"><div className="lbl">Metacritic</div><div className="num">{t.metacritic}</div></div>}
               {t.tmdb != null && <div className="rb"><div className="lbl">TMDB</div><div className="num">{t.tmdb.toFixed(1)}</div></div>}

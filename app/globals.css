@@ -281,6 +281,10 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .rb .num{font-family:var(--display);font-size:23px;font-weight:700;margin-top:3px}
 .rb.imdb .num{color:#C9A227}.rb.mc .num{color:var(--good)}
 .rb.ed{border-color:rgba(225,69,43,.35);background:rgba(225,69,43,.06)}.rb.ed .lbl,.rb.ed .num{color:var(--editorial)}
+.sc-score .lbl{display:inline-flex;align-items:center;gap:4px}
+.sc-score .sc-star{width:14px;height:14px;color:#f5b301}
+.sc-score .sc-max{font-size:.6em;color:var(--dim);font-weight:600}
+.sc-score .sc-votes{font-size:11px;color:var(--dim);margin-top:2px}
 .review{margin-top:14px;border-left:3px solid var(--editorial);padding:2px 0 2px 18px}
 .review .badge{display:flex;align-items:center;gap:5px;color:var(--editorial);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
 .review .badge svg{width:13px;height:13px;fill:var(--editorial)}
