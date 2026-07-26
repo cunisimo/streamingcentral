@@ -256,13 +256,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .voteopt .ic{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .voteopt .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
 .voteopt.on .ic svg{fill:currentColor}
-/* Contador de votos en la ficha */
-.votecounts{display:flex;gap:8px;margin:14px 0 4px}
-.vc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
-.vc-n{font-size:18px;font-weight:700;line-height:1}
-.vc-l{font-size:11px;color:var(--dim)}
-.vc.peta .vc-n{color:var(--accent)}
-.vc.mala .vc-n{color:var(--editorial)}
 .dsyn{margin-top:24px;font-size:15px;line-height:1.6;color:var(--text)}
 .dcast{margin-top:14px;font-size:14px;color:var(--dim)}.dcast b{color:var(--text);font-weight:600}
 .cast-sec{margin-top:18px}
