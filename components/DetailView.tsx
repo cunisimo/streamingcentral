@@ -75,7 +75,12 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         {t.directors.length > 0 && <p className="dcast"><b>Dirección:</b> {t.directors.join(", ")}</p>}
         {t.composers.length > 0 && <p className="dcast"><b>Música:</b> {t.composers.slice(0, 2).join(", ")}</p>}
         {t.type === "tv" && (t.seasons != null || t.episodes != null) && (
-          <p className="dcast"><b>Temporadas:</b> {t.seasons ?? "—"}{t.episodes != null ? ` · ${t.episodes} episodios` : ""}</p>
+          <p className="dcast">
+            <b>Serie:</b>{" "}
+            {t.seasons != null && `${t.seasons} ${t.seasons === 1 ? "temporada" : "temporadas"}`}
+            {t.seasons != null && t.episodes != null && " · "}
+            {t.episodes != null && `${t.episodes} ${t.episodes === 1 ? "episodio" : "episodios"}`}
+          </p>
         )}
 
         {(t.tmdb != null || t.imdb != null || t.metacritic != null || t.editorial) && (
