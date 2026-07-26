@@ -231,7 +231,12 @@ export async function detail(type: MediaType, id: number): Promise<UITitleDetail
     hasEditorial: !!editorial,
     age: certOf(d, type),
     synopsis: d.overview || "",
-    cast: d.credits?.cast?.slice(0, 6).map((c) => c.name) ?? [],
+    cast: d.credits?.cast?.slice(0, 12).map((c) => ({
+      id: c.id,
+      name: c.name,
+      character: c.character || null,
+      profile: img(c.profile_path, "w185"),
+    })) ?? [],
     directors: d.credits?.crew?.filter((c) => c.job === "Director").map((c) => c.name) ?? [],
     composers: [...new Set(composers)],
     seasons: d.number_of_seasons ?? null,

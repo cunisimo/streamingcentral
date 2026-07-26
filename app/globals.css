@@ -265,6 +265,15 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .vc.mala .vc-n{color:var(--editorial)}
 .dsyn{margin-top:24px;font-size:15px;line-height:1.6;color:var(--text)}
 .dcast{margin-top:14px;font-size:14px;color:var(--dim)}.dcast b{color:var(--text);font-weight:600}
+.cast-sec{margin-top:18px}
+.cast-rail{display:flex;gap:14px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
+.cast-rail::-webkit-scrollbar{display:none}
+.cast-card{flex:0 0 auto;width:84px;display:flex;flex-direction:column;align-items:center;text-align:center;text-decoration:none;color:inherit}
+.cast-photo{width:80px;height:80px;border-radius:50%;object-fit:cover;background:#2A2D33;display:block}
+.cast-ph{display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:28px;color:var(--dim)}
+.cast-name{margin-top:8px;font-size:12.5px;font-weight:600;line-height:1.2}
+.cast-char{margin-top:2px;font-size:11.5px;color:var(--dim);line-height:1.2}
+.cast-card:hover .cast-name{color:var(--accent)}
 .dsec-h{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:-.01em;margin:26px 0 12px}
 .rating-bar{display:flex;gap:10px;flex-wrap:wrap}
 .rb{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;min-width:88px;flex:1}

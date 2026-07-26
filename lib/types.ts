@@ -28,11 +28,18 @@ export interface EditorialReview {
   fecha: string;
 }
 
+export interface UICastMember {
+  id: number;
+  name: string;
+  character: string | null;
+  profile: string | null; // URL de la foto (w185) o null
+}
+
 export interface UITitleDetail extends UITitle {
   age: string;
   backdrop: string | null;
   synopsis: string;
-  cast: string[];
+  cast: UICastMember[];
   directors: string[];
   composers: string[];
   seasons: number | null;

@@ -9,6 +9,7 @@ import TitleCard from "./TitleCard";
 import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
 import VoteCounts from "./VoteCounts";
+import CastRail from "./CastRail";
 import OfflineState from "./pwa/OfflineState";
 import DetailSkeleton from "./DetailSkeleton";
 import { COUNTRIES, genreLabel } from "./data";
@@ -72,7 +73,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         <VoteCounts id={t.id} tipo={t.type} />
 
         {t.synopsis && <p className="dsyn">{t.synopsis}</p>}
-        {t.cast.length > 0 && <p className="dcast"><b>Reparto:</b> {t.cast.slice(0, 4).join(", ")}{t.cast.length > 4 ? "…" : ""}</p>}
+        <CastRail cast={t.cast} />
         {t.directors.length > 0 && <p className="dcast"><b>Dirección:</b> {t.directors.join(", ")}</p>}
         {t.composers.length > 0 && <p className="dcast"><b>Música:</b> {t.composers.slice(0, 2).join(", ")}</p>}
         {t.type === "tv" && (t.seasons != null || t.episodes != null) && (
