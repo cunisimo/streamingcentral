@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthContext";
-import { avatarSvg } from "@/lib/avatar";
+import Avatar from "./avatar/Avatar";
 
 const ITEMS = [
   { href: "/", label: "Inicio", match: (p: string) => p === "/", icon: <path d="M3 10l9-7 9 7v9a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z" /> },
@@ -17,7 +17,6 @@ export default function BottomNav() {
   // "Mi lista" es /cuenta/lista, así que Cuenta sólo se marca activo en /cuenta
   // y sus subrutas que no sean /cuenta/lista (perfil, configuracion, gustaron…).
   const cuentaOn = path.startsWith("/cuenta") && !path.startsWith("/cuenta/lista");
-  const avSeed = profile?.avatar_seed || user?.id || "";
 
   return (
     <nav className="bottomnav">
@@ -29,7 +28,7 @@ export default function BottomNav() {
       ))}
       <Link href="/cuenta" className={`navitem ${cuentaOn ? "on" : ""}`}>
         {user ? (
-          <img className="navav" src={avatarSvg(avSeed)} alt="" />
+          <Avatar seed={profile?.avatar_seed || user.id} style={profile?.avatar_style} size={25} className="navav" />
         ) : (
           <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" />

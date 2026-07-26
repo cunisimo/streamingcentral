@@ -11,10 +11,15 @@ create table if not exists profiles (
   created_at    timestamptz not null default now()
 );
 
--- Avatar generado (DiceBear). Se guarda solo la semilla; el SVG se arma en el
--- cliente. Backfill determinístico para perfiles viejos: semilla = id.
+-- Avatar generado con DiceBear (API HTTP). Se guardan solo el estilo y la
+-- semilla; la imagen nunca se almacena, la URL se arma dinámicamente en la app
+-- (lib/avatar.ts → getAvatarUrl). Backfill determinístico para perfiles viejos:
+-- semilla = id, estilo = adventurer-neutral.
 alter table profiles add column if not exists avatar_seed text;
 update profiles set avatar_seed = id::text where avatar_seed is null;
+alter table profiles add column if not exists avatar_style text;
+alter table profiles alter column avatar_style set default 'adventurer-neutral';
+update profiles set avatar_style = 'adventurer-neutral' where avatar_style is null;
 
 alter table profiles enable row level security;
 

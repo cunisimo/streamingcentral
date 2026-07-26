@@ -2,18 +2,17 @@
 import Link from "next/link";
 import { useAuth } from "./AuthContext";
 import UserShelf from "./UserShelf";
-import { avatarSvg } from "@/lib/avatar";
+import Avatar from "./avatar/Avatar";
 import { itemRefs, likedRefs, historyRefs } from "@/lib/userdata";
 
 export default function UserHub() {
   const { user, profile } = useAuth();
-  const seed = profile?.avatar_seed || user?.id || "";
   const nombre = profile?.display_name || "vos";
 
   return (
     <div className="wrap">
       <div className="hub-head">
-        <img className="hub-av" src={avatarSvg(seed)} alt="" />
+        <Avatar seed={profile?.avatar_seed || user?.id} style={profile?.avatar_style} size={64} className="hub-av" />
         <div>
           <h1 className="hub-hi">Hola, {nombre}</h1>
           <div className="hub-links">

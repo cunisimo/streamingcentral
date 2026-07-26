@@ -11,11 +11,11 @@ export default function DesempateBanner() {
       <button className={`dsmp-banner ${open ? "open" : ""}`} onClick={() => setOpen((v) => !v)}>
         <span className="dsmp-banner-ico" aria-hidden>🍀</span>
         <span className="dsmp-banner-txt">
-          <span className="dsmp-banner-title">Desempate</span>
-          <span className="dsmp-banner-sub">¿No te decidís? Jugá Desempate y que la suerte elija.</span>
+          <span className="dsmp-banner-title">¿No te decidís?</span>
+          <span className="dsmp-banner-sub">Que la suerte elija por vos.</span>
         </span>
         <span className="dsmp-banner-cta">
-          {open ? "Cerrar" : "Jugar"}
+          {open ? "Cerrar" : "Desempatá"}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
         </span>
       </button>

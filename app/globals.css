@@ -90,7 +90,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .cfg-switch.on .knob::after{transform:translateX(18px);background:#fff}
 .acct-link{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim);text-decoration:none;white-space:nowrap}
 .acct-link:hover{color:var(--text)}
-.acct-link svg{width:14px;height:14px}
+.acct-link svg{width:24px;height:24px}
 .topbar-in{display:flex;align-items:center;gap:18px;height:58px;max-width:1240px;margin:0 auto;padding:0 28px}
 @media(max-width:620px){.topbar-top{padding:12px 16px 0}.topbar-in{height:54px;padding:0 16px;gap:12px}}
 .brand{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.03em;display:flex;align-items:center;gap:9px;white-space:nowrap;cursor:pointer}
@@ -315,14 +315,26 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .hub-tile .lock { font-size: 18px; }
 .hub-tile small { font-size: 11px; color: var(--faint); }
 
-/* Picker de avatar */
-.avpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 10px; }
-.avopt { padding: 0; border: 2px solid transparent; border-radius: 50%; background: #2A2D33; cursor: pointer; line-height: 0; }
-.avopt img { width: 100%; border-radius: 50%; display: block; }
-.avopt.on { border-color: var(--accent); }
-.avsec { margin-top: 14px; }
-.avsec:first-of-type { margin-top: 6px; }
-.avsec-t { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+/* Picker de avatar (perfil): avatar actual + botón "Cambiar avatar" */
+.avpicker-row { display: flex; align-items: center; gap: 14px; }
+.avpicker-cur { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--line, rgba(255,255,255,.15)); background: #2A2D33; }
+
+/* Modal "Elegí tu avatar" (mismo patrón que .pwa-welcome-backdrop) */
+.avmodal-backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: 24px; padding-bottom: calc(24px + var(--safe-b)); }
+.avmodal { background: var(--surface); border-radius: var(--radius); box-shadow: var(--sh-h); width: 100%; max-width: 460px; max-height: calc(100dvh - 48px - var(--safe-b)); display: flex; flex-direction: column; overflow: hidden; }
+.avmodal-head { padding: 22px 22px 8px; }
+.avmodal-head h2 { font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin: 0; }
+.avmodal-head p { margin: 6px 0 0; font-size: 13.5px; color: var(--dim); line-height: 1.5; }
+.avgrid-wrap { overflow-y: auto; padding: 14px 22px; animation: avfade .22s ease; }
+@keyframes avfade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.avgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 12px; }
+.avcard { padding: 0; border: 2px solid transparent; border-radius: 50%; background: #2A2D33; cursor: pointer; line-height: 0; transition: transform .12s ease, border-color .12s ease; }
+.avcard img { width: 100%; border-radius: 50%; display: block; }
+.avcard:hover { transform: scale(1.05); }
+.avcard.on { border-color: var(--accent); transform: scale(1.08); }
+.avmodal-err { margin: 0; padding: 0 22px; color: var(--editorial); font-size: 13px; }
+.avmodal-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 22px calc(14px + var(--safe-b)); border-top: 1px solid var(--line); flex-wrap: wrap; }
+.avmodal-foot-r { display: flex; gap: 10px; margin-left: auto; }
 
 /* ===== Desempate (rueda de la fortuna de cine) ===== */
 .dsmp{margin-top:26px}

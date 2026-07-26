@@ -102,9 +102,9 @@ export default function IndecisoHero() {
   return (
     <section className="hero">
       <div className="wrap">
-        <p className="kicker">No sabés qué ver</p>
-        <h1>¿Qué tenés ganas de ver hoy?</h1>
-        <p className="sub">Menos scroll. Más play.</p>
+        <p className="kicker">Todas tus plataformas en un solo lugar</p>
+        <h1>Menos scroll. Más play.</h1>
+        <p className="sub">Encontrá qué mirar en segundos</p>
 
         <div className="finder">
           <div className="finder-head">
