@@ -54,16 +54,39 @@ async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>):
 
 // --- Listado por categoría/tipo, filtrado a las plataformas del usuario ---
 export async function listByCategory(opts: {
-  tipo: MediaType; genre?: string; country?: string;
+  tipo: MediaType; genre?: string; genre2?: string; country?: string;
   providers: PlatformCode[]; page?: number; sortBy?: string; minVotes?: number; extra?: Record<string, string>;
 }): Promise<UITitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
   const rule = opts.genre && opts.genre !== "todos" ? resolveCategory(opts.genre, opts.tipo) : {};
+  const rule2 = opts.genre2 && opts.genre2 !== "todos" ? resolveCategory(opts.genre2, opts.tipo) : {};
+
+  let genres = [...(rule.genres ?? []), ...(rule2.genres ?? [])];
+  let keywords = [...(rule.keywords ?? []), ...(rule2.keywords ?? [])];
+  let extra = opts.extra;
+
+  // Cruce donde AMBAS categorías aportan géneros: with_genres con AND (coma).
+  // discover une genres con "|" (OR), así que forzamos el AND vía extra
+  // (Object.assign(p, o.extra) en discover pisa el with_genres OR).
+  if ((rule.genres?.length ?? 0) > 0 && (rule2.genres?.length ?? 0) > 0) {
+    extra = { ...(opts.extra ?? {}), with_genres: genres.join(",") };
+    genres = []; // que discover no arme el "|"
+  }
+
+  // Cruce donde AMBAS categorías aportan keywords (ej. terror + suspenso en tv):
+  // with_keywords con AND (coma). discover une keywords con "|" (OR).
+  if ((rule.keywords?.length ?? 0) > 0 && (rule2.keywords?.length ?? 0) > 0) {
+    extra = { ...(extra ?? {}), with_keywords: keywords.join(",") };
+    keywords = []; // que discover no arme el "|"
+  }
+
   const res = await discover(opts.tipo, {
-    providers: ids, genres: rule.genres, keywords: rule.keywords,
-    originCountry: opts.country || rule.originCountry, page: opts.page,
-    sortBy: opts.sortBy, minVotes: opts.minVotes, extra: opts.extra,
+    providers: ids,
+    genres: genres.length ? genres : undefined,
+    keywords: keywords.length ? keywords : undefined,
+    originCountry: opts.country || rule.originCountry,
+    page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes, extra,
   });
   const pub = await publishedIds(opts.tipo);
   const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)));

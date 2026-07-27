@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const tipo = (sp.get("tipo") || "movie") as MediaType;
   const genre = sp.get("genre") || undefined;
+  const genre2 = sp.get("genre2") || undefined;
   const country = sp.get("country") || undefined;
   const age = sp.get("age") || undefined;
   const year = sp.get("year") || undefined;
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
   if (runtime && RUNTIME[runtime]) Object.assign(extra, RUNTIME[runtime]);
   try {
     const items = await listByCategory({
-      tipo, genre, country, providers, page,
+      tipo, genre, genre2, country, providers, page,
       extra: Object.keys(extra).length ? extra : undefined,
     });
     return NextResponse.json({ items });
