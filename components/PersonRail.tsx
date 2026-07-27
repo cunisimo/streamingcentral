@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import PersonCard from "./PersonCard";
 import type { UIPerson } from "@/lib/types";
 
-export default function PersonRail({ title, endpoint }: { title: string; endpoint: string }) {
+export default function PersonRail({ title, endpoint, seeAllHref }: { title: string; endpoint: string; seeAllHref?: string }) {
   const [people, setPeople] = useState<UIPerson[]>([]);
   const [loading, setLoading] = useState(true);
   const track = useRef<HTMLDivElement>(null);
@@ -29,7 +30,17 @@ export default function PersonRail({ title, endpoint }: { title: string; endpoin
         </div>
       </div>
       <div className="people-row" ref={track}>
-        {loading ? <span className="loading">Cargando…</span> : people.map((p) => <PersonCard key={p.id} p={p} />)}
+        {loading ? <span className="loading">Cargando…</span> : (
+          <>
+            {people.map((p) => <PersonCard key={p.id} p={p} />)}
+            {seeAllHref && people.length > 0 && (
+              <Link href={seeAllHref} className="seeall-card">
+                <span>Ver todas</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+              </Link>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

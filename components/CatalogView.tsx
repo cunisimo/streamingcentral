@@ -35,13 +35,13 @@ export default function CatalogView({ mode }: { mode: Mode }) {
         <IndecisoHero />
         <div className="wrap">
           <DesempateBanner />
-          <Shelf title="Últimos lanzamientos" url="/api/latest" onOffline={reportOffline} />
-          <Shelf title="Lo más votados" url="/api/mas-votados" />
-          <Shelf title="Hacete cargo" url="/api/hacete-cargo" />
+          <Shelf title="Últimos lanzamientos" url="/api/latest" seeAllHref="/lista/ultimos" onOffline={reportOffline} />
+          <Shelf title="Lo más votados" url="/api/mas-votados" seeAllHref="/lista/mas-votados" />
+          <Shelf title="Hacete cargo" url="/api/hacete-cargo" seeAllHref="/lista/hacete-cargo" />
           {SHELVES.map((g, i) => (
-            <Shelf key={`${i % 2 === 0 ? "m" : "t"}-${g}`} tipo={i % 2 === 0 ? "movie" : "tv"} genre={g} showType />
+            <Shelf key={`${i % 2 === 0 ? "m" : "t"}-${g}`} tipo={i % 2 === 0 ? "movie" : "tv"} genre={g} showType seeAllHref={`/categoria/${g}?tipo=${i % 2 === 0 ? "movie" : "tv"}`} />
           ))}
-          <PersonRail title="Directores" endpoint="/api/directores" />
+          <PersonRail title="Directores" endpoint="/api/directores" seeAllHref="/directores" />
         </div>
       </>
     );
@@ -65,7 +65,7 @@ export default function CatalogView({ mode }: { mode: Mode }) {
       ) : (
         <div className="wrap">
           {SHELVES.map((g, i) => (
-            <Shelf key={`${tipo}-${g}`} tipo={tipo} genre={g} onOffline={i === 0 ? reportOffline : undefined} />
+            <Shelf key={`${tipo}-${g}`} tipo={tipo} genre={g} onOffline={i === 0 ? reportOffline : undefined} seeAllHref={`/categoria/${g}?tipo=${tipo}`} />
           ))}
         </div>
       )}

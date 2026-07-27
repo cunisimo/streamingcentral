@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useEffect } from "react";
+import Link from "next/link";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
@@ -9,7 +10,7 @@ import type { UITitle, MediaType } from "@/lib/types";
 // Shelf genérico. Por defecto arma la URL de /api/discover con tipo+género.
 // Si se pasa `url` y `title`, usa ese endpoint (ej: /api/latest).
 export default function Shelf({
-  tipo, genre, country, title, url, showType, onOffline,
+  tipo, genre, country, title, url, showType, onOffline, seeAllHref,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
   title?: string; url?: string; showType?: boolean;
@@ -18,7 +19,7 @@ export default function Shelf({
   // vacía y sin explicación: CatalogView lo pasa solo al primer riel para poder
   // mostrar un único estado offline. Cubre el caso "hay red pero el server no
   // responde", donde navigator.onLine sigue en true.
-  onOffline?: () => void;
+  onOffline?: () => void; seeAllHref?: string;
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
@@ -47,7 +48,17 @@ export default function Shelf({
         </div>
       </div>
       <div className="track" ref={track}>
-        {loading ? <span className="loading">Cargando…</span> : items.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}
+        {loading ? <span className="loading">Cargando…</span> : (
+          <>
+            {items.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}
+            {seeAllHref && items.length > 0 && (
+              <Link href={seeAllHref} className="seeall-card">
+                <span>Ver todas</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+              </Link>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
