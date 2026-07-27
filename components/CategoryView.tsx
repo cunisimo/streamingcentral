@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import Shelf from "./Shelf";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
-import { CATEGORIES } from "@/lib/categories";
+import { CATEGORIES, resolveCategory } from "@/lib/categories";
 import type { MediaType } from "@/lib/types";
 
 export default function CategoryView({
@@ -17,8 +17,22 @@ export default function CategoryView({
   const reportOffline = useCallback(() => setFetchFailed(true), []);
   const sinDatos = !online || fetchFailed;
 
-  // Cruces: el género principal × cada otra categoría (salvo el propio y documental).
-  const crosses = CATEGORIES.filter((c) => c.slug !== slug && c.slug !== "documental");
+  // id-set de un rule (géneros y keywords en namespaces separados).
+  const idSet = (r: { genres?: number[]; keywords?: number[] }) =>
+    new Set([...(r.genres ?? []).map((g) => `g${g}`), ...(r.keywords ?? []).map((k) => `k${k}`)]);
+
+  // Cruces: el género principal × cada otra categoría (salvo el propio y
+  // documental). Se excluye, PARA EL TIPO ACTUAL, toda categoría que no aporte
+  // ningún id nuevo respecto del principal (ej. Acción y Aventura comparten el
+  // id 10759 en TV): el cruce daría el mismo pool que "Populares" (with_genres=
+  // X,X = X) → riel duplicado. En movie los ids son distintos, así que no se
+  // excluye nada de más.
+  const primaryIds = idSet(resolveCategory(slug, tipo));
+  const crosses = CATEGORIES.filter((c) => {
+    if (c.slug === slug || c.slug === "documental") return false;
+    const ids = idSet(resolveCategory(c.slug, tipo));
+    return [...ids].some((id) => !primaryIds.has(id));
+  });
 
   return (
     <div className="wrap">
