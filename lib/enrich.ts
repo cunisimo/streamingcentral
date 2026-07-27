@@ -63,7 +63,7 @@ export async function listByCategory(opts: {
   const rule2 = opts.genre2 && opts.genre2 !== "todos" ? resolveCategory(opts.genre2, opts.tipo) : {};
 
   let genres = [...(rule.genres ?? []), ...(rule2.genres ?? [])];
-  const keywords = [...(rule.keywords ?? []), ...(rule2.keywords ?? [])];
+  let keywords = [...(rule.keywords ?? []), ...(rule2.keywords ?? [])];
   let extra = opts.extra;
 
   // Cruce donde AMBAS categorías aportan géneros: with_genres con AND (coma).
@@ -72,6 +72,13 @@ export async function listByCategory(opts: {
   if ((rule.genres?.length ?? 0) > 0 && (rule2.genres?.length ?? 0) > 0) {
     extra = { ...(opts.extra ?? {}), with_genres: genres.join(",") };
     genres = []; // que discover no arme el "|"
+  }
+
+  // Cruce donde AMBAS categorías aportan keywords (ej. terror + suspenso en tv):
+  // with_keywords con AND (coma). discover une keywords con "|" (OR).
+  if ((rule.keywords?.length ?? 0) > 0 && (rule2.keywords?.length ?? 0) > 0) {
+    extra = { ...(extra ?? {}), with_keywords: keywords.join(",") };
+    keywords = []; // que discover no arme el "|"
   }
 
   const res = await discover(opts.tipo, {
