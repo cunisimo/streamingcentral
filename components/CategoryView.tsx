@@ -21,17 +21,22 @@ export default function CategoryView({
   const idSet = (r: { genres?: number[]; keywords?: number[] }) =>
     new Set([...(r.genres ?? []).map((g) => `g${g}`), ...(r.keywords ?? []).map((k) => `k${k}`)]);
 
-  // Cruces: el género principal × cada otra categoría (salvo el propio y
-  // documental). Se excluye, PARA EL TIPO ACTUAL, toda categoría que no aporte
-  // ningún id nuevo respecto del principal (ej. Acción y Aventura comparten el
-  // id 10759 en TV): el cruce daría el mismo pool que "Populares" (with_genres=
-  // X,X = X) → riel duplicado. En movie los ids son distintos, así que no se
-  // excluye nada de más.
+  // Cruces: el principal × cada otra categoría (salvo el propio y documental).
+  // Para el TIPO ACTUAL se excluye todo cruce cuyo set combinado (principal ∪ cruce)
+  // (a) no aporte ningún id nuevo respecto del principal —daría el mismo pool que
+  // "Populares"— o (b) ya haya salido en otro cruce. Ej. en TV: Aventura colapsa a
+  // Acción (10759), y Drama/Romance colapsan entre sí (18); se deja solo el primero.
   const primaryIds = idSet(resolveCategory(slug, tipo));
+  const seenCombos = new Set<string>();
   const crosses = CATEGORIES.filter((c) => {
     if (c.slug === slug || c.slug === "documental") return false;
-    const ids = idSet(resolveCategory(c.slug, tipo));
-    return [...ids].some((id) => !primaryIds.has(id));
+    const combined = new Set(primaryIds);
+    for (const id of idSet(resolveCategory(c.slug, tipo))) combined.add(id);
+    if (combined.size === primaryIds.size) return false; // no aporta id nuevo
+    const key = [...combined].sort().join(",");
+    if (seenCombos.has(key)) return false;               // cruce duplicado de otro
+    seenCombos.add(key);
+    return true;
   });
 
   return (
