@@ -81,9 +81,10 @@ Punto técnico clave: **`discover` une `with_genres` con `|` (OR)**
   `with_genres` y `with_keywords` son params separados y se aplican juntos (AND
   natural). Se mergean `genres` y `keywords` de ambos rules sin coma-join
   especial (un solo id de cada lado → el `|` no cambia el resultado).
-- **keyword + keyword**: mergear keywords con el `|` existente (**OR**). Es un
-  caso rarísimo (terror+suspenso en TV, ambos por keyword); se acepta OR ahí —
-  no se agrega coma-join de keywords.
+- **keyword + keyword**: `with_keywords` con AND (coma), rama simétrica a la de
+  géneros. Es un caso rarísimo (terror+suspenso en TV, ambos por keyword) pero se
+  hace AND para cumplir el constraint global sin excepciones. (Decisión del dueño
+  durante la implementación, corrige la excepción OR original.)
 
 Implementación: `listByCategory` acepta `genre2?: string`; calcula el rule
 combinado y arma el `extra` de AND cuando ambos aportan géneros.

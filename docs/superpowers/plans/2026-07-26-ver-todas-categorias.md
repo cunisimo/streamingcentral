@@ -12,7 +12,7 @@
 
 - **No hay test runner** (por diseño). Cada task se valida con `npx tsc --noEmit` (0 errores) + chequeo visual en `npm run dev`. Copiado del CLAUDE.md.
 - **Región AR + filtro por plataformas se mantienen:** todo pasa por `/api/discover` → `listByCategory`, que ya filtran. No se toca esa cadena salvo sumar `genre2`.
-- **Cruce de géneros = AND.** `discover` une `with_genres` con `|` (OR); un cruce "Acción + Comedia" necesita coma (`with_genres=28,35`). Cuando ambas categorías aportan géneros, forzar el AND vía `extra.with_genres`. genre+keyword ya es AND natural (params separados). keyword+keyword se acepta OR (caso rarísimo).
+- **Cruce de géneros = AND (sin excepciones).** `discover` une `with_genres`/`with_keywords` con `|` (OR); un cruce "Acción + Comedia" necesita coma (`with_genres=28,35`). Cuando ambas categorías aportan géneros, forzar AND vía `extra.with_genres`; cuando ambas aportan keywords, forzar AND vía `extra.with_keywords` (rama simétrica). genre+keyword ya es AND natural (params separados).
 - **Sin cambios de schema, ni modelo de votos, ni Service Worker** (las rutas nuevas son same-origin: el SW las trata como navegación, sin cambios).
 - **CSS solo en `app/globals.css`, reusando clases. Texto UI en español rioplatense.**
 - **Rama:** `feat/ver-todas-categorias` (creada, con el spec commiteado).
