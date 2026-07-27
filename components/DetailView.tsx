@@ -8,7 +8,8 @@ import PlatformLogo from "./PlatformLogo";
 import TitleCard from "./TitleCard";
 import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
-import VoteCounts from "./VoteCounts";
+import ScScore from "./ScScore";
+import CastRail from "./CastRail";
 import OfflineState from "./pwa/OfflineState";
 import DetailSkeleton from "./DetailSkeleton";
 import { COUNTRIES, genreLabel } from "./data";
@@ -69,20 +70,24 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           </button>
         </div>
 
-        <VoteCounts id={t.id} tipo={t.type} />
-
         {t.synopsis && <p className="dsyn">{t.synopsis}</p>}
-        {t.cast.length > 0 && <p className="dcast"><b>Reparto:</b> {t.cast.slice(0, 4).join(", ")}{t.cast.length > 4 ? "…" : ""}</p>}
+        <CastRail cast={t.cast} />
         {t.directors.length > 0 && <p className="dcast"><b>Dirección:</b> {t.directors.join(", ")}</p>}
         {t.composers.length > 0 && <p className="dcast"><b>Música:</b> {t.composers.slice(0, 2).join(", ")}</p>}
         {t.type === "tv" && (t.seasons != null || t.episodes != null) && (
-          <p className="dcast"><b>Temporadas:</b> {t.seasons ?? "—"}{t.episodes != null ? ` · ${t.episodes} episodios` : ""}</p>
+          <p className="dcast">
+            <b>Serie:</b>{" "}
+            {t.seasons != null && `${t.seasons} ${t.seasons === 1 ? "temporada" : "temporadas"}`}
+            {t.seasons != null && t.episodes != null && " · "}
+            {t.episodes != null && `${t.episodes} ${t.episodes === 1 ? "episodio" : "episodios"}`}
+          </p>
         )}
 
         {(t.tmdb != null || t.imdb != null || t.metacritic != null || t.editorial) && (
           <>
             <div className="dsec-h">Puntajes</div>
             <div className="rating-bar">
+              <ScScore id={t.id} tipo={t.type} />
               {t.imdb != null && <div className="rb imdb"><div className="lbl">IMDb</div><div className="num">{t.imdb.toFixed(1)}</div></div>}
               {t.metacritic != null && <div className="rb mc"><div className="lbl">Metacritic</div><div className="num">{t.metacritic}</div></div>}
               {t.tmdb != null && <div className="rb"><div className="lbl">TMDB</div><div className="num">{t.tmdb.toFixed(1)}</div></div>}

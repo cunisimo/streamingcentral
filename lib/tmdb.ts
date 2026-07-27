@@ -123,7 +123,7 @@ export interface RawDetail {
   first_air_date?: string;
   origin_country?: string[];
   genres: { id: number; name: string }[];
-  credits: { cast: { name: string }[]; crew: { job: string; name: string }[] };
+  credits: { cast: { id: number; name: string; character?: string; profile_path: string | null }[]; crew: { job: string; name: string }[] };
   external_ids: { imdb_id: string | null };
   content_ratings?: { results: { iso_3166_1: string; rating: string }[] };
   release_dates?: { results: { iso_3166_1: string; release_dates: { certification: string }[] }[] };
