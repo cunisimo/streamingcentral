@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
 import { ThemeProvider } from "@/components/ThemeContext";
@@ -9,8 +9,7 @@ import PwaClient from "@/components/pwa/PwaClient";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
-const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", display: "swap" });
-const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -26,22 +25,22 @@ export const viewport: Viewport = {
   // El toggle manual de ThemeContext además reescribe estas etiquetas en runtime,
   // para el caso de sistema claro + app en oscuro (o viceversa).
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F5F5F2" },
-    { media: "(prefers-color-scheme: dark)", color: "#16171B" },
+    { media: "(prefers-color-scheme: light)", color: "#FAFAFD" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F0E13" },
   ],
 };
 
 export const metadata: Metadata = {
-  title: "StreamingCentral",
+  title: "Yump",
   description: "Qué ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
-  applicationName: "StreamingCentral",
+  applicationName: "Yump",
   // Next inyecta <link rel="manifest"> apuntando a la metadata route app/manifest.ts.
   manifest: "/manifest.webmanifest",
   // iOS ignora el manifest: estas son las que hacen que se abra en standalone,
   // con la barra de estado translúcida y el título correcto bajo el ícono.
   appleWebApp: {
     capable: true,
-    title: "StreamingCentral",
+    title: "Yump",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },
@@ -49,7 +48,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${display.variable} ${body.variable}`}>
+    <html lang="es" className={jakarta.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <AppleSplashLinks />

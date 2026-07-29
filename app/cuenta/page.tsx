@@ -90,7 +90,7 @@ function Acceso({
           ? "Para votar, guardar lo que viste y armar tu grupo familiar."
           : esRecuperar
           ? "Te mandamos un enlace al mail para elegir una nueva contraseña."
-          : "Entrá a tu cuenta de StreamingCentral."}
+          : "Entrá a tu cuenta de Yump."}
       </p>
 
       {esRegistro && (

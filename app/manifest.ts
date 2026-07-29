@@ -6,8 +6,8 @@ import type { MetadataRoute } from "next";
 // para Android y desktop. Ver docs/superpowers/specs/2026-07-21-pwa-design.md §2.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "StreamingCentral — Qué ver en tus plataformas",
-    short_name: "StreamingCentral",
+    name: "Yump — Qué ver en tus plataformas",
+    short_name: "Yump",
     description:
       "Qué ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
     // id estable: sin esto, cambiar start_url haría que el navegador trate la
@@ -19,8 +19,8 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     lang: "es-AR",
     dir: "ltr",
-    theme_color: "#F5F5F2",
-    background_color: "#F5F5F2",
+    theme_color: "#FAFAFD",
+    background_color: "#FAFAFD",
     categories: ["entertainment", "lifestyle"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
