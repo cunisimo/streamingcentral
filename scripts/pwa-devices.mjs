@@ -8,8 +8,8 @@
 // cssW/cssH: puntos CSS en portrait. dpr: device-pixel-ratio.
 // Dimensiones reales del PNG = cssW*dpr × cssH*dpr.
 
-export const SPLASH_BG = "#F5F5F2"; // = --bg (tema claro). Los splash de iOS no
-                                    // adaptan a modo oscuro; se usa el claro.
+export const SPLASH_BG = "#FAFAFD"; // = --bg (tema claro, marca Yump). Los splash
+                                    // de iOS no adaptan a modo oscuro; se usa el claro.
 export const LOGO_RATIO = 0.32;     // el logo ocupa 32% del lado menor
 
 export const DEVICES = [
