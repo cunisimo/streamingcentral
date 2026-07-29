@@ -32,7 +32,7 @@ export default function DirectoresView() {
   return (
     <div className="wrap">
       <div className="compact-head"><h1>Directores</h1></div>
-      <div className="field" style={{ maxWidth: 360 }}>
+      <div className="dir-search">
         <input
           type="text"
           value={q}

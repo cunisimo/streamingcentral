@@ -220,6 +220,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .people-grid .pcard{width:auto}
 .people-grid .pcard .av{width:100%;height:auto;aspect-ratio:1;border-radius:50%}
 
+.dir-search{max-width:360px;margin:6px 0 4px}
+.dir-search input{width:100%;height:46px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);padding:0 16px;font-size:15px;font-family:var(--body);outline:none}
+.dir-search input::placeholder{color:var(--faint)}
+.dir-search input:focus{border-color:var(--accent)}
+
 
 .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;height:var(--nav-h);box-sizing:content-box;background:rgba(var(--bg-rgb),.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;align-items:stretch;padding-bottom:var(--safe-b);
   /* Long-press sobre la nav no debe seleccionar texto. */
