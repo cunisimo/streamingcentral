@@ -45,7 +45,6 @@ export default function DesempateManualSearch({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscá una película o serie…"
-          autoFocus
         />
       </div>
       {!platforms.length && (

@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import Shelf from "./Shelf";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
-import { CATEGORIES, resolveCategory } from "@/lib/categories";
+import { CATEGORIES, resolveCategory, CROSS_PHRASE } from "@/lib/categories";
 import type { MediaType } from "@/lib/types";
 
 export default function CategoryView({
@@ -57,7 +57,7 @@ export default function CategoryView({
           {crosses.map((c) => (
             <Shelf
               key={`${tipo}-${slug}-${c.slug}`}
-              title={`${label} + ${c.label}`}
+              title={`${label} ${CROSS_PHRASE[c.slug] ?? `+ ${c.label}`}`}
               url={`/api/discover?tipo=${tipo}&genre=${slug}&genre2=${c.slug}`}
             />
           ))}
