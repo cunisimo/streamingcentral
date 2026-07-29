@@ -35,9 +35,9 @@ export default function TopBar() {
         </Link>
       </div>
       <div className="topbar-in">
-        <Link href="/" className="brand">
-          <span className="mk"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>
-          Streaming<span>Central</span>
+        <Link href="/" className="brand" aria-label="Yump — inicio">
+          <img className="brand-wm brand-wm-light" src="/brand/yump-wordmark-black.png" alt="" />
+          <img className="brand-wm brand-wm-dark" src="/brand/yump-wordmark-white.png" alt="" />
         </Link>
         <div ref={ref} style={{ position: "relative", marginLeft: "auto" }}>
           <button className="platbtn" style={{ margin: 0 }} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
