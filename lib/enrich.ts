@@ -94,11 +94,16 @@ export async function listByCategory(opts: {
 }
 
 // --- Últimos lanzamientos (por fecha de estreno, en tus plataformas) ---
-export async function latestReleases(providers: PlatformCode[]): Promise<UITitle[]> {
+export async function latestReleases(
+  providers: PlatformCode[], tipo: MediaType = "movie", page = 1,
+): Promise<UITitle[]> {
+  const extra: Record<string, string> = tipo === "movie"
+    ? { "primary_release_date.lte": today() }
+    : { "first_air_date.lte": today() };
   return listByCategory({
-    tipo: "movie", providers,
-    sortBy: "primary_release_date.desc", minVotes: 5,
-    extra: { "primary_release_date.lte": today() },
+    tipo, providers, page, minVotes: 5,
+    sortBy: tipo === "movie" ? "primary_release_date.desc" : "first_air_date.desc",
+    extra,
   });
 }
 
