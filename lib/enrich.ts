@@ -161,8 +161,44 @@ const DIRECTOR_IDS = [
   10828,   // Guillermo del Toro
   7467,    // David Fincher
   5655,    // Wes Anderson
-  135822,  // Damien Chazelle
-  1352973, // Jordan Peele
+  136495,  // Damien Chazelle (id 135822 original ya no resuelve en TMDB)
+  291263,  // Jordan Peele (id 1352973 original apuntaba a otra persona)
+  578,     // Ridley Scott
+  2710,    // James Cameron
+  108,     // Peter Jackson
+  11218,   // Alfonso Cuarón
+  223,     // Alejandro González Iñárritu
+  309,     // Pedro Almodóvar
+  4762,    // Paul Thomas Anderson
+  1769,    // Sofia Coppola
+  14392,   // Kathryn Bigelow
+  5281,    // Spike Lee
+  510,     // Tim Burton
+  5602,    // David Lynch
+  240,     // Stanley Kubrick
+  1776,    // Francis Ford Coppola
+  190,     // Clint Eastwood
+  1614,    // Ang Lee
+  2034,    // Danny Boyle
+  6431,    // Darren Aronofsky
+  20629,   // George Miller
+  55934,   // Taika Waititi
+  1395183, // Chloé Zhao
+  67367,   // Rian Johnson
+  11090,   // Edgar Wright
+  138781,  // Robert Eggers
+  1145520, // Ari Aster
+  122423,  // Yorgos Lanthimos
+  10099,   // Park Chan-wook
+  608,     // Hayao Miyazaki
+  12453,   // Wong Kar-wai
+  1056121, // Ryan Coogler
+  1223,    // Joel Coen
+  1224,    // Ethan Coen
+  9340,    // Lana Wachowski
+  591600,  // Damián Szifron
+  84714,   // Juan José Campanella
+  56208,   // Lucrecia Martel
 ];
 export async function directorCards(): Promise<UIPerson[]> {
   return cached("people:directors", TTL.catalog, async () => {
