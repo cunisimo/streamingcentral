@@ -2,14 +2,17 @@ import { notFound } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import ListaView from "@/components/ListaView";
+import UltimosView from "@/components/UltimosView";
 
 const LISTAS: Record<string, { endpoint: string; title: string }> = {
-  "ultimos": { endpoint: "/api/latest", title: "Últimos lanzamientos" },
   "mas-votados": { endpoint: "/api/mas-votados", title: "Lo más votados" },
   "hacete-cargo": { endpoint: "/api/hacete-cargo", title: "Hacete cargo" },
 };
 
 export default function ListaPage({ params }: { params: { key: string } }) {
+  if (params.key === "ultimos") {
+    return (<><TopBar /><main><UltimosView /></main><BottomNav /></>);
+  }
   const l = LISTAS[params.key];
   if (!l) notFound();
   return (

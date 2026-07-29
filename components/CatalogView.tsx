@@ -41,7 +41,7 @@ export default function CatalogView({ mode }: { mode: Mode }) {
           {SHELVES.map((g, i) => (
             <Shelf key={`${i % 2 === 0 ? "m" : "t"}-${g}`} tipo={i % 2 === 0 ? "movie" : "tv"} genre={g} showType seeAllHref={`/categoria/${g}?tipo=${i % 2 === 0 ? "movie" : "tv"}`} />
           ))}
-          <PersonRail title="Directores" endpoint="/api/directores" seeAllHref="/directores" />
+          <PersonRail title="Directores" endpoint="/api/directores" seeAllHref="/directores" seeAllLabel="Ver todo" />
         </div>
       </>
     );

@@ -49,3 +49,18 @@ export function genreIdsToSlugs(ids: number[]): string[] {
   for (const id of ids) { const s = TMDB_GENRE_TO_SLUG[id]; if (s) out.add(s); }
   return [...out];
 }
+
+// Frase ingeniosa para el título de un sub-slider de cruce: "{Principal} {frase}".
+// Ej. Acción × comedia → "Acción con risas". Clave = slug del género secundario.
+export const CROSS_PHRASE: Record<string, string> = {
+  comedia: "con risas",
+  terror: "con sustos",
+  suspenso: "con tensión",
+  crimen: "con delito",
+  romance: "con amor",
+  scifi: "del futuro",
+  aventura: "a pura aventura",
+  drama: "para llorar",
+  animacion: "en dibujos",
+  misterio: "con enigmas",
+};
