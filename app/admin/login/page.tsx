@@ -34,7 +34,7 @@ export default function Login() {
   return (
     <div className="admin" style={{ maxWidth: 420 }}>
       <h1>{recuperar ? "Recuperar contraseña" : "Ingresar"}</h1>
-      <p className="section-sub">Dashboard editorial de StreamingCentral</p>
+      <p className="section-sub">Dashboard editorial de Yump</p>
       <div className="field"><label>Email</label><input value={email} onChange={(e) => setEmail(e.target.value)} type="email" onKeyDown={(e) => e.key === "Enter" && recuperar && enviarReset()} /></div>
       {!recuperar && (
         <div className="field"><label>Contraseña</label><input value={pass} onChange={(e) => setPass(e.target.value)} type="password" onKeyDown={(e) => e.key === "Enter" && submit()} /></div>

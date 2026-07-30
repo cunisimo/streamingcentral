@@ -7,7 +7,7 @@ export default function UpdateToast({ show, onReload }: { show: boolean; onReloa
   if (!show) return null;
   return (
     <div className="pwa-update" role="status">
-      <span>Hay una versión nueva de StreamingCentral.</span>
+      <span>Hay una versión nueva de Yump.</span>
       <button className="pwa-update-btn" onClick={onReload}>Actualizar</button>
     </div>
   );

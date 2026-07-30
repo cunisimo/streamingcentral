@@ -63,14 +63,14 @@ export default function InstallPrompt() {
   }
 
   return (
-    <div className="pwa-install" role="dialog" aria-label="Instalar StreamingCentral">
+    <div className="pwa-install" role="dialog" aria-label="Instalar Yump">
       <button className="pwa-install-x" onClick={dismiss} aria-label="Cerrar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
       <img className="pwa-install-ico" src="/icons/icon-192.png" alt="" width={48} height={48} />
       {platform === "ios" ? (
         <div className="pwa-install-body">
-          <strong>Instalá StreamingCentral</strong>
+          <strong>Instalá Yump</strong>
           <p>
             Tocá <span className="pwa-share" aria-hidden>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4M8 8l4-4 4 4" /><path d="M4 12v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" /></svg>
@@ -79,7 +79,7 @@ export default function InstallPrompt() {
         </div>
       ) : (
         <div className="pwa-install-body">
-          <strong>Instalá StreamingCentral</strong>
+          <strong>Instalá Yump</strong>
           <p>Abrila como app: sin barra del navegador, más rápido, en tu pantalla de inicio.</p>
           <button className="btn pwa-install-cta" onClick={install}>Instalar</button>
         </div>

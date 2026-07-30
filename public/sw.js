@@ -30,7 +30,7 @@ self.SC_OFFLINE_URL = "/offline.html?v=bed1ff07da";
 // install. Si la versión viviera allá, subirla no actualizaría nada.
 //
 // SUBIR ESTA CONSTANTE al cambiar cualquier archivo del SW.
-self.SC_CACHE_VERSION = "v5";
+self.SC_CACHE_VERSION = "v6";
 
 importScripts(
   "/sw/config.js",
