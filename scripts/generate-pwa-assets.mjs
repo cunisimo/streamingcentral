@@ -22,15 +22,26 @@ const ACCENT = "#F58634";
 const WHITE = "#FFFFFF";
 const FACE_SIZE = 512; // resolución de trabajo; todos los íconos se derivan de acá.
 
-// La fuente (public/brand/yump-icon.png) es un tile CON fondo propio (gradiente
-// Yump + flecha), pero no cuadrado (1000×638, tiene una "cola" que sangra fuera
-// del card). `fit:"cover"` + `strategy.attention` recorta al cuadrado centrando
-// en la zona de mayor interés visual (la flecha), sin achicar/pixelar de más
-// porque el lado corto de la fuente (638px) ya cubre el tamaño de trabajo.
+// La fuente (public/brand/yump-icon.png) es un tile con gradiente Yump + flecha,
+// pero la flecha es en realidad un RECORTE DE ALFA (transparente) sobre canvas
+// transparente — no blanco sólido. Si se compone tal cual sobre un fondo de
+// color (ej. el maskable sobre ACCENT), la flecha se vuelve un "agujero" que
+// deja ver el fondo. El sistema de marca Yump siempre muestra este ícono sobre
+// blanco, así que acá aplanamos (`flatten`) sobre blanco opaco ANTES de todo lo
+// demás: el recorte de la flecha y el canvas transparente pasan a ser blanco
+// sólido, dando un tile opaco con la burbuja degradada + flecha blanca limpia.
+// No queda transparencia en ningún punto de la cara resultante.
+// `fit:"cover"` + `strategy.attention` recorta al cuadrado centrando en la zona
+// de mayor interés visual (la flecha), sin achicar/pixelar de más porque el
+// lado corto de la fuente (638px) ya cubre el tamaño de trabajo.
 async function loadFace() {
+  // La fuente es apaisada (1000×638) y la marca (burbuja + flecha) ocupa todo el
+  // ancho, así que `cover` recortaría la flecha. Usamos `contain` sobre blanco
+  // para que la marca entre COMPLETA, centrada, con margen blanco arriba/abajo —
+  // que es como el design system muestra el ícono (sobre blanco).
   return sharp(ICON_SRC)
-    .resize(FACE_SIZE, FACE_SIZE, { fit: "cover", position: sharp.strategy.attention })
-    .ensureAlpha()
+    .flatten({ background: WHITE })
+    .resize(FACE_SIZE, FACE_SIZE, { fit: "contain", background: WHITE })
     .png()
     .toBuffer();
 }
@@ -55,10 +66,13 @@ async function withRoundedCorners(faceBuf, radius01) {
 // bien dentro de la zona segura del 80%) y centrado sobre un fondo sólido de
 // marca a full bleed — así el masking circular/squircle de Android nunca
 // recorta la flecha.
-async function maskableFace(faceBuf, safe = 0.62) {
+// La cara ya es un tile blanco opaco (flatten sobre blanco), así que el fondo
+// del maskable también es blanco: queda un tile uniforme con la burbuja+flecha
+// dentro de la zona segura, sin costuras de color ni el "agujero" de la flecha.
+async function maskableFace(faceBuf, safe = 0.72) {
   const inner = Math.round(FACE_SIZE * safe);
   const scaled = await sharp(faceBuf).resize(inner, inner, { fit: "cover" }).png().toBuffer();
-  return sharp({ create: { width: FACE_SIZE, height: FACE_SIZE, channels: 4, background: ACCENT } })
+  return sharp({ create: { width: FACE_SIZE, height: FACE_SIZE, channels: 4, background: WHITE } })
     .composite([{ input: scaled, gravity: "centre" }])
     .png()
     .toBuffer();
@@ -98,7 +112,7 @@ async function main() {
   // --- Cara del ícono, derivada del PNG Yump ---
   const face = await loadFace(); // 512×512, full bleed, tal cual el tile fuente
   const rounded = await withRoundedCorners(face, 0.22); // Android "any": esquina redondeada propia
-  const maskable = await maskableFace(face, 0.62); // full bleed + tile dentro de la zona segura
+  const maskable = await maskableFace(face, 0.72); // full bleed + tile dentro de la zona segura
 
   // --- Íconos principales ---
   await toSize(rounded, 192, join(ICONS, "icon-192.png"));
