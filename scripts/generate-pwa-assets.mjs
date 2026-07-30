@@ -31,9 +31,6 @@ const FACE_SIZE = 512; // resolución de trabajo; todos los íconos se derivan d
 // demás: el recorte de la flecha y el canvas transparente pasan a ser blanco
 // sólido, dando un tile opaco con la burbuja degradada + flecha blanca limpia.
 // No queda transparencia en ningún punto de la cara resultante.
-// `fit:"cover"` + `strategy.attention` recorta al cuadrado centrando en la zona
-// de mayor interés visual (la flecha), sin achicar/pixelar de más porque el
-// lado corto de la fuente (638px) ya cubre el tamaño de trabajo.
 async function loadFace() {
   // La fuente es apaisada (1000×638) y la marca (burbuja + flecha) ocupa todo el
   // ancho, así que `cover` recortaría la flecha. Usamos `contain` sobre blanco

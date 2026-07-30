@@ -18,8 +18,8 @@ const config: Config = {
         good: "var(--good)",
       },
       fontFamily: {
-        display: ["var(--font-display)", "sans-serif"],
-        body: ["var(--font-body)", "sans-serif"],
+        display: ["var(--font-jakarta)", "sans-serif"],
+        body: ["var(--font-jakarta)", "sans-serif"],
       },
       boxShadow: {
         sc: "0 1px 3px rgba(20,20,30,.06), 0 6px 18px rgba(20,20,30,.05)",
