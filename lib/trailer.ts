@@ -24,12 +24,14 @@ export function pickTrailer(videos: RawVideo[], originalLang: string): string | 
 
 const BASE_PARAMS: Record<string, string> = {
   autoplay: "1",
-  mute: "1",         // arranca muteado siempre (autoplay confiable en todos lados)
+  mute: "1",           // arranca muteado siempre (autoplay confiable en todos lados)
   controls: "1",
-  rel: "0",          // best-effort: YouTube ya no elimina relacionados del todo
-  playsinline: "1",  // evita fullscreen forzado en iOS
+  rel: "0",            // best-effort: YouTube ya no elimina relacionados del todo
+  playsinline: "1",    // evita fullscreen forzado en iOS
   modestbranding: "1",
-  enablejsapi: "1",  // habilita postMessage para mute/unMute
+  enablejsapi: "1",    // habilita postMessage para mute/unMute
+  cc_load_policy: "1", // subtítulos activados por defecto (best-effort)
+  cc_lang_pref: "es",  // preferir castellano cuando el trailer tenga subtítulos
 };
 
 // origin es necesario junto con enablejsapi: sin él, YouTube en móvil tira
