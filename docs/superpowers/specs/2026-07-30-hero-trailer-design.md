@@ -71,11 +71,15 @@ que fetchee aparte (respeta "`enrich.ts` es el único lugar que toca TMDB junto"
    export function pickTrailer(videos: RawVideo[]): string | null; // devuelve youtubeKey o null
    export function trailerEmbedUrl(key: string): string;           // embedUrl muteado+jsapi
    ```
-   - `pickTrailer`: filtra `site === "YouTube"`, luego prioriza:
+   - `pickTrailer`: filtra `site === "YouTube"`, luego prioriza en 4 niveles:
      1. `official === true && type === "Trailer"`
      2. `type === "Trailer"` (cualquiera)
-     3. `type === "Teaser"` (último recurso, mejora cobertura de títulos sin trailer)
-     Dentro de cada nivel, el primero de la lista de TMDB. Si no hay ninguno → `null`.
+     3. `official === true && type === "Teaser"`
+     4. `type === "Teaser"` (cualquiera)
+     Dentro de cada nivel, el primero de la lista de TMDB. **Solo** se consideran
+     `Trailer` y `Teaser`: se ignoran explícitamente `Clip`, `Featurette`,
+     `Behind the Scenes`, `Bloopers`, `Opening Credits` y cualquier otro tipo.
+     Si no hay ninguno de los 4 niveles → `null` (el botón no se muestra).
    - `trailerEmbedUrl(key)`:
      `https://www.youtube-nocookie.com/embed/{key}?autoplay=1&mute=1&controls=1&rel=0&playsinline=1&modestbranding=1&enablejsapi=1`
 
