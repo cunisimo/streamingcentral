@@ -569,6 +569,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .htrailer-msg-actions{display:flex;gap:10px}
 .htrailer-msg-actions button{height:38px;padding:0 16px;border-radius:9px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;cursor:pointer}
 
+.htrailer-btn{position:absolute;left:22px;bottom:18px;z-index:2;display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 18px 0 12px;border:none;border-radius:11px;background:rgba(0,0,0,.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.htrailer-btn:hover{background:rgba(0,0,0,.68)}
+.htrailer-btn .play{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.htrailer-btn .play svg{width:13px;height:13px;fill:#fff;margin-left:2px}
+
 @media (prefers-reduced-motion: reduce){
   .htrailer-player{animation:none}
   .htrailer-player iframe{transition:none}

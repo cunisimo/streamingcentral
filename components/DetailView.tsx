@@ -10,6 +10,7 @@ import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
 import ScScore from "./ScScore";
 import CastRail from "./CastRail";
+import HeroTrailer from "./HeroTrailer";
 import OfflineState from "./pwa/OfflineState";
 import DetailSkeleton from "./DetailSkeleton";
 import { COUNTRIES, genreLabel } from "./data";
@@ -33,11 +34,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
 
   return (
     <div className="detail-inner">
-      <div className="dhero" style={heroBg}>
-        <button className="dback" onClick={() => router.back()} aria-label="Volver">
-          <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-        </button>
-      </div>
+      <HeroTrailer heroStyle={heroBg} onBack={() => router.back()} trailerKey={t.trailerKey} />
       <div className="dpad">
         <div className="dttl">{t.title}</div>
         <div className="dmeta">
