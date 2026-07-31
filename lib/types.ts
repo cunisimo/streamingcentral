@@ -57,3 +57,24 @@ export interface UIPerson {
   profile: string | null;
   knownFor: string[];
 }
+
+// Estreno de la Agenda (upcoming). Shape que consume el read path desde Supabase.
+// Para movies los campos de TV van en null. `releaseDate` es ISO YYYY-MM-DD
+// (movie: estreno; tv: air_date del próximo episodio).
+export interface UIUpcoming {
+  id: number; // tmdb_id
+  type: MediaType;
+  title: string;
+  poster: string | null;
+  backdrop: string | null;
+  overview: string;
+  releaseDate: string;
+  genres: string[]; // slugs de la UI
+  platforms: PlatformCode[]; // códigos internos mapeados (los que tienen logo)
+  popularity: number | null;
+  voteAverage: number | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+  episodeName: string | null;
+  isSeasonPremiere: boolean | null;
+}
