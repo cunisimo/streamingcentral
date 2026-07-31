@@ -12,8 +12,9 @@ export default function TrailerPlayer({ youtubeKey, onClose }: { youtubeKey: str
   const [muted, setMuted] = useState(true);
   const [nonce, setNonce] = useState(0); // remonta el iframe al reintentar
 
-  // Foco al botón cerrar al montar (accesibilidad).
-  useEffect(() => { closeRef.current?.focus(); }, []);
+  // Foco al botón cerrar (accesibilidad). Se re-ejecuta al cambiar de estado
+  // para que el foco también aterrice en "Cerrar" del estado de error.
+  useEffect(() => { closeRef.current?.focus(); }, [status]);
 
   // Cover: dimensiona el iframe para cubrir la caja manteniendo 16:9.
   useEffect(() => {
@@ -78,6 +79,10 @@ export default function TrailerPlayer({ youtubeKey, onClose }: { youtubeKey: str
         title="Tráiler"
         allow="autoplay; encrypted-media; fullscreen"
         allowFullScreen
+        // Limitación: si el trailer tiene el embed deshabilitado o está
+        // bloqueado por región, YouTube igual dispara onLoad (renderiza su
+        // propia página "Ver en YouTube"), así que no cae en el estado de
+        // error. Degrada bien (queda el link de YouTube adentro de la caja).
         onLoad={() => setStatus("ready")}
         className={status === "ready" ? "is-ready" : ""}
       />

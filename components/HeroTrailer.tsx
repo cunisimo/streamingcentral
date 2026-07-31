@@ -11,10 +11,13 @@ export default function HeroTrailer(
   const btnRef = useRef<HTMLButtonElement>(null);
   const openedOnce = useRef(false);
 
-  // Esc cierra el player.
+  // Esc cierra el player, salvo que se esté saliendo de fullscreen (en ese caso
+  // el navegador ya consume el Esc para cerrar el fullscreen, no el trailer).
   useEffect(() => {
     if (!playing) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPlaying(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.fullscreenElement) setPlaying(false);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [playing]);
