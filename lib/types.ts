@@ -46,6 +46,7 @@ export interface UITitleDetail extends UITitle {
   episodes: number | null;
   links: Partial<Record<PlatformCode, string>>; // por plataforma (todos apuntan al watch link del título)
   watchLink: string | null; // link título-específico de TMDB (agregador AR)
+  trailerKey: string | null; // key de YouTube del mejor trailer, o null
   related: UITitle[];
   editorial: EditorialReview | null;
 }

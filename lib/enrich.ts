@@ -11,6 +11,7 @@ import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import { topVotedRows } from "./votes";
+import { pickTrailer } from "./trailer";
 import type {
   MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
 } from "./types";
@@ -307,6 +308,7 @@ export async function detail(type: MediaType, id: number): Promise<UITitleDetail
     episodes: d.number_of_episodes ?? null,
     links: prov.links,
     watchLink: prov.watchLink,
+    trailerKey: pickTrailer(d.videos?.results ?? []),
     related,
     editorial,
   };

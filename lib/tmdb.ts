@@ -107,6 +107,15 @@ export function watchProviders(type: MediaType, id: number) {
   );
 }
 
+export interface RawVideo {
+  key: string;
+  site: string;
+  type: string;
+  official: boolean;
+  name: string;
+  published_at: string;
+}
+
 export interface RawDetail {
   id: number;
   title?: string;
@@ -128,11 +137,12 @@ export interface RawDetail {
   content_ratings?: { results: { iso_3166_1: string; rating: string }[] };
   release_dates?: { results: { iso_3166_1: string; release_dates: { certification: string }[] }[] };
   recommendations?: Paged<RawTitle>;
+  videos?: { results: RawVideo[] };
 }
 export function titleDetails(type: MediaType, id: number) {
   const append = type === "movie"
-    ? "credits,external_ids,release_dates,recommendations"
-    : "credits,external_ids,content_ratings,recommendations";
+    ? "credits,external_ids,release_dates,recommendations,videos"
+    : "credits,external_ids,content_ratings,recommendations,videos";
   return tmdb<RawDetail>(`/${type}/${id}`, { append_to_response: append });
 }
 
