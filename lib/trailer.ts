@@ -3,22 +3,26 @@
 import type { RawVideo } from "./tmdb";
 
 // Devuelve la key de YouTube del mejor trailer, o null si no hay ninguno válido.
-// Prioridad: official Trailer > Trailer > official Teaser > Teaser.
-// Solo se consideran Trailer y Teaser; se ignoran Clip, Featurette,
-// Behind the Scenes, Bloopers, Opening Credits y cualquier otro tipo.
-export function pickTrailer(videos: RawVideo[]): string | null {
-  const yt = videos.filter((v) => v.site === "YouTube" && !!v.key);
-  const find = (type: string, officialOnly: boolean) =>
-    yt.find((v) => v.type === type && (!officialOnly || v.official));
-  const pick =
-    find("Trailer", true) ??
-    find("Trailer", false) ??
-    find("Teaser", true) ??
-    find("Teaser", false);
-  return pick?.key ?? null;
+// Se prefiere el IDIOMA ORIGINAL (sin doblar): idioma original > inglés > otro,
+// y dentro de cada idioma, por tipo: official Trailer > Trailer > official
+// Teaser > Teaser. Solo se consideran Trailer y Teaser; se ignoran Clip,
+// Featurette, Behind the Scenes, Bloopers, Opening Credits y cualquier otro tipo.
+export function pickTrailer(videos: RawVideo[], originalLang: string): string | null {
+  const typeRank = (v: RawVideo) =>
+    v.type === "Trailer" ? (v.official ? 0 : 1)
+    : v.type === "Teaser" ? (v.official ? 2 : 3)
+    : 99; // otros tipos: descartados
+  const langRank = (v: RawVideo) =>
+    v.iso_639_1 === originalLang ? 0 : v.iso_639_1 === "en" ? 1 : 2;
+
+  const candidates = videos
+    .filter((v) => v.site === "YouTube" && !!v.key && typeRank(v) < 99)
+    .sort((a, b) => langRank(a) - langRank(b) || typeRank(a) - typeRank(b));
+
+  return candidates[0]?.key ?? null;
 }
 
-const EMBED_PARAMS = new URLSearchParams({
+const BASE_PARAMS: Record<string, string> = {
   autoplay: "1",
   mute: "1",         // arranca muteado siempre (autoplay confiable en todos lados)
   controls: "1",
@@ -26,8 +30,13 @@ const EMBED_PARAMS = new URLSearchParams({
   playsinline: "1",  // evita fullscreen forzado en iOS
   modestbranding: "1",
   enablejsapi: "1",  // habilita postMessage para mute/unMute
-}).toString();
+};
 
-export function trailerEmbedUrl(key: string): string {
-  return `https://www.youtube-nocookie.com/embed/${key}?${EMBED_PARAMS}`;
+// origin es necesario junto con enablejsapi: sin él, YouTube en móvil tira
+// "Error 153 / error de configuración del reproductor". Se pasa desde el cliente
+// (window.location.origin) porque varía según dominio (localhost/Vercel/custom).
+export function trailerEmbedUrl(key: string, origin?: string): string {
+  const params = new URLSearchParams(BASE_PARAMS);
+  if (origin) params.set("origin", origin);
+  return `https://www.youtube-nocookie.com/embed/${key}?${params}`;
 }

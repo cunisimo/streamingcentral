@@ -1,7 +1,7 @@
 // Convierte respuestas crudas de TMDB en el shape estable que consume la UI,
 // enriqueciendo con providers (cacheados) y ratings.
 import {
-  TMDB_IMG, discover, watchProviders, titleDetails, personCombinedCredits,
+  TMDB_IMG, discover, watchProviders, titleDetails, titleVideos, personCombinedCredits,
   personDetails, searchMulti, personPopular,
   type RawTitle, type RawDetail, type CreditEntry,
 } from "./tmdb";
@@ -268,6 +268,9 @@ function certOf(d: RawDetail, type: MediaType): string {
 
 export async function detail(type: MediaType, id: number): Promise<UITitleDetail> {
   const [d, prov] = await Promise.all([titleDetails(type, id), providersOf(type, id)]);
+  const lang = d.original_language ?? "en";
+  const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
+    pickTrailer((await titleVideos(type, id, lang)).results, lang));
   const ratings = await cached(`omdb:${id}:${type}`, TTL.ratings, () =>
     d.external_ids?.imdb_id ? omdbByImdbId(d.external_ids.imdb_id) : Promise.resolve({ imdb: null, metacritic: null }));
   const editorial = await getEditorial(id, type);
@@ -308,7 +311,7 @@ export async function detail(type: MediaType, id: number): Promise<UITitleDetail
     episodes: d.number_of_episodes ?? null,
     links: prov.links,
     watchLink: prov.watchLink,
-    trailerKey: pickTrailer(d.videos?.results ?? []),
+    trailerKey: trailer,
     related,
     editorial,
   };

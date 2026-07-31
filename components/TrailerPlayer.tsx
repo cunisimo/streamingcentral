@@ -75,7 +75,7 @@ export default function TrailerPlayer({ youtubeKey, onClose }: { youtubeKey: str
       <iframe
         key={nonce}
         ref={iframeRef}
-        src={trailerEmbedUrl(youtubeKey)}
+        src={trailerEmbedUrl(youtubeKey, typeof window !== "undefined" ? window.location.origin : undefined)}
         title="Tráiler"
         allow="autoplay; encrypted-media; fullscreen"
         allowFullScreen
