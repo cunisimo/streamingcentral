@@ -107,6 +107,16 @@ export function watchProviders(type: MediaType, id: number) {
   );
 }
 
+export interface RawVideo {
+  key: string;
+  site: string;
+  type: string;
+  official: boolean;
+  name: string;
+  published_at: string;
+  iso_639_1: string; // idioma del video (para preferir el original, no el doblaje)
+}
+
 export interface RawDetail {
   id: number;
   title?: string;
@@ -122,6 +132,7 @@ export interface RawDetail {
   release_date?: string;
   first_air_date?: string;
   origin_country?: string[];
+  original_language?: string; // idioma original del título (para elegir el trailer sin doblar)
   genres: { id: number; name: string }[];
   credits: { cast: { id: number; name: string; character?: string; profile_path: string | null }[]; crew: { job: string; name: string }[] };
   external_ids: { imdb_id: string | null };
@@ -134,6 +145,18 @@ export function titleDetails(type: MediaType, id: number) {
     ? "credits,external_ids,release_dates,recommendations"
     : "credits,external_ids,content_ratings,recommendations";
   return tmdb<RawDetail>(`/${type}/${id}`, { append_to_response: append });
+}
+
+// Videos del título en el idioma ORIGINAL (no el doblaje es-ES que fuerza el
+// language global). include_video_language trae original + inglés + sin-idioma;
+// se excluye "es" a propósito para no caer en el trailer doblado.
+export function titleVideos(type: MediaType, id: number, lang: string) {
+  const l = lang || "en";
+  const include = [...new Set([l, "en", "null"])].join(",");
+  return tmdb<{ results: RawVideo[] }>(`/${type}/${id}/videos`, {
+    language: l,
+    include_video_language: include,
+  });
 }
 
 export function trending(type: MediaType | "all", window: "day" | "week") {
