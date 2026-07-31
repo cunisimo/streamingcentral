@@ -44,7 +44,9 @@ curl -X POST "https://<ref>.supabase.co/functions/v1/tmdb-sync" \
   -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"job":"syncUpcoming"}'
-# -> { job, candidates, kept, upserted, providers, deleted, window, durationMs }
+# -> { job, candidates, kept, upserted, providers, dropped, deleted, window, durationMs }
+#    kept=guardados (≥1 provider AR); dropped=evaluados que perdieron provider y se borraron;
+#    deleted=expirados por fecha. upserted cuenta filas afectadas (insert+update juntos).
 
 # 5. Cron diario: correr supabase/cron.sql (reemplazando ref + key)
 ```
@@ -65,3 +67,16 @@ curl -X POST "https://<ref>.supabase.co/functions/v1/tmdb-sync" \
 
 Idempotencia: correr la función N veces el mismo día deja el mismo estado
 (upsert por `tmdb_id+media_type`, links reemplazados en bloque, expiración por fecha).
+
+## Seguridad
+
+La función valida `role="service_role"` en el JWT del header Authorization: la
+anon key (role="anon") es rechazada con 403. Solo el cron/backend (con la
+service role key) puede dispararla.
+
+## Limitación conocida (aceptada v1)
+
+El reemplazo de links por título es delete+insert no transaccional: existe una
+ventana de milisegundos (a las 6am, tráfico bajo) donde un título podría leerse
+con 0 plataformas. El fix definitivo es un RPC transaccional en Postgres; queda
+para un hardening futuro.

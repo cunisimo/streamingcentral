@@ -15,7 +15,7 @@ const SELECT = `
   tmdb_id, media_type, title, poster_path, backdrop_path, overview, release_date,
   season_number, episode_number, episode_name, is_season_premiere,
   genre_ids, popularity, vote_average,
-  upcoming_content_providers ( provider_id, providers ( id, name, logo_path ) )
+  upcoming_content_providers ( provider_id )
 `;
 
 interface Row {

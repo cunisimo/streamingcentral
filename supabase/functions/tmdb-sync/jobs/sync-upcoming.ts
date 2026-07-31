@@ -4,7 +4,7 @@ import { arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
 
 // Parámetros (env de la función, con defaults).
 const WINDOW_DAYS = Number(Deno.env.get("SYNC_WINDOW_DAYS") ?? "90");
-const MAX_PAGES = Number(Deno.env.get("SYNC_MAX_PAGES") ?? "5");
+const MAX_PAGES = Number(Deno.env.get("SYNC_MAX_PAGES") ?? "3");
 const GRACE_DAYS = Number(Deno.env.get("SYNC_GRACE_DAYS") ?? "2");
 const BATCH = 10; // concurrencia de llamadas a TMDB por lote
 
@@ -37,12 +37,17 @@ interface Candidate {
 async function collectMovies(from: string, to: string): Promise<Candidate[]> {
   const out: Candidate[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const res = await discover("movie", {
-      "primary_release_date.gte": from,
-      "primary_release_date.lte": to,
-      sort_by: "primary_release_date.asc",
-      page: String(page),
-    });
+    let res;
+    try {
+      res = await discover("movie", {
+        "primary_release_date.gte": from,
+        "primary_release_date.lte": to,
+        sort_by: "primary_release_date.asc",
+        page: String(page),
+      });
+    } catch {
+      break; // fallo transitorio: seguimos con lo ya recolectado
+    }
     for (const t of res.results) {
       if (!t.release_date) continue;
       out.push({
@@ -76,12 +81,17 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
   const seen = new Set<number>();
   const shows: RawTitle[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const res = await discover("tv", {
-      "air_date.gte": from,
-      "air_date.lte": to,
-      sort_by: "popularity.desc",
-      page: String(page),
-    });
+    let res;
+    try {
+      res = await discover("tv", {
+        "air_date.gte": from,
+        "air_date.lte": to,
+        sort_by: "popularity.desc",
+        page: String(page),
+      });
+    } catch {
+      break; // fallo transitorio: seguimos con lo ya recolectado
+    }
     for (const t of res.results) {
       if (!seen.has(t.id)) { seen.add(t.id); shows.push(t); }
     }
@@ -183,9 +193,31 @@ export async function syncUpcoming(sb: SupabaseClient) {
     }
   }
 
-  // 4) Expirar estrenos pasados (cascade limpia el join).
+  // 4) Reconciliar: los títulos que SÍ evaluamos esta corrida pero perdieron
+  //    todos sus providers AR se borran (ya no califican). Solo tocamos los
+  //    evaluados (all): los que quedaron fuera por paginación no se tocan.
+  const keptKeys = new Set(kept.map((k) => `${k.cand.tmdb_id}:${k.cand.media_type}`));
+  const droppedMovies = all
+    .filter((c) => c.media_type === "movie" && !keptKeys.has(`${c.tmdb_id}:movie`))
+    .map((c) => c.tmdb_id);
+  const droppedTv = all
+    .filter((c) => c.media_type === "tv" && !keptKeys.has(`${c.tmdb_id}:tv`))
+    .map((c) => c.tmdb_id);
+  let dropped = 0;
+  if (droppedMovies.length) {
+    const { count } = await sb.from("upcoming_content")
+      .delete({ count: "exact" }).eq("media_type", "movie").in("tmdb_id", droppedMovies);
+    dropped += count ?? 0;
+  }
+  if (droppedTv.length) {
+    const { count } = await sb.from("upcoming_content")
+      .delete({ count: "exact" }).eq("media_type", "tv").in("tmdb_id", droppedTv);
+    dropped += count ?? 0;
+  }
+
+  // 5) Expirar estrenos pasados (cascade limpia el join).
   const cutoff = iso(new Date(now.getTime() - GRACE_DAYS * DAY));
-  const { count: deleted } = await sb
+  const { count: expired } = await sb
     .from("upcoming_content")
     .delete({ count: "exact" })
     .lt("release_date", cutoff);
@@ -195,7 +227,8 @@ export async function syncUpcoming(sb: SupabaseClient) {
     kept: kept.length,
     upserted,
     providers: providerCatalog.size,
-    deleted: deleted ?? 0,
+    dropped,
+    deleted: expired ?? 0,
     window: { from, to },
   };
 }

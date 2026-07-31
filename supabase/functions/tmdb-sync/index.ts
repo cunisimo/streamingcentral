@@ -28,8 +28,30 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// Decodifica el claim `role` del JWT del header Authorization. La anon key es
+// un JWT válido (role="anon") y pasaría verify_jwt, así que NO alcanza con eso:
+// exigimos explícitamente role="service_role" para que solo el cron/backend
+// (nunca el browser) pueda disparar el sync.
+function roleFromAuth(req: Request): string | null {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    let p = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (p.length % 4) p += "=";
+    const payload = JSON.parse(atob(p));
+    return typeof payload.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   const started = Date.now();
+
+  if (roleFromAuth(req) !== "service_role") {
+    return json({ error: "forbidden: se requiere la service role key" }, 403);
+  }
 
   // job: del body JSON o del query string; default syncUpcoming.
   let job = new URL(req.url).searchParams.get("job") ?? "syncUpcoming";
