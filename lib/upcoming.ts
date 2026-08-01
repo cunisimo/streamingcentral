@@ -125,6 +125,29 @@ export async function upcomingForRefs(
     .map(toUIUpcoming);
 }
 
+// Popurrí de películas y series para el slider del Home: trae cada tipo por
+// separado (date-asc) y los intercala, arrancando por el estreno más cercano.
+// Así el riel muestra variedad aunque un tipo domine el corto plazo (las series
+// tienen episodios semanales, las pelis con provider AR son más escasas).
+export async function upcomingMix(limit = 15): Promise<UIUpcoming[]> {
+  const per = Math.ceil(limit / 2) + 3; // margen para poder alternar
+  const [movies, series] = await Promise.all([
+    upcomingList({ mediaType: "movie", limit: per }),
+    upcomingList({ mediaType: "tv", limit: per }),
+  ]);
+  const out: UIUpcoming[] = [];
+  let i = 0, j = 0;
+  let takeMovie = (movies[0]?.releaseDate ?? "9999") <= (series[0]?.releaseDate ?? "9999");
+  while (out.length < limit && (i < movies.length || j < series.length)) {
+    if (takeMovie && i < movies.length) out.push(movies[i++]);
+    else if (!takeMovie && j < series.length) out.push(series[j++]);
+    else if (i < movies.length) out.push(movies[i++]);
+    else if (j < series.length) out.push(series[j++]);
+    takeMovie = !takeMovie;
+  }
+  return out;
+}
+
 // Wrappers finos sobre upcomingList.
 export const upcomingMovies = (limit?: number) => upcomingList({ mediaType: "movie", limit });
 export const upcomingSeries = (limit?: number) => upcomingList({ mediaType: "tv", limit });

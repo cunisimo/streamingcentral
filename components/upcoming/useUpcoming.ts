@@ -10,6 +10,7 @@ export interface UpcomingQuery {
   platform?: string; // código interno (n/d/m/...)
   month?: string; // YYYY-MM
   items?: string; // refs de la watchlist: "movie:123,tv:456"
+  mix?: boolean; // popurrí pelis+series intercaladas (para el slider)
   limit?: number;
 }
 
@@ -20,13 +21,14 @@ export function useUpcoming(q: UpcomingQuery = {}) {
     if (q.platform) sp.set("platform", q.platform);
     if (q.month) sp.set("month", q.month);
     if (q.items) sp.set("items", q.items);
+    if (q.mix) sp.set("mix", "1");
     if (q.limit) sp.set("limit", String(q.limit));
     const qs = sp.toString();
     return `/api/upcoming${qs ? `?${qs}` : ""}`;
   };
   const { data, loading, offline, retry } = useApi<{ items?: UIUpcoming[]; error?: string }>(
     url,
-    [q.mediaType, q.platform, q.month, q.items, q.limit],
+    [q.mediaType, q.platform, q.month, q.items, q.mix, q.limit],
   );
   // `offline` = fallo de red (useApi). `error` = el server respondió 500 con
   // { error } (ej. falla de Supabase). Distinguir esto del vacío real (200 sin

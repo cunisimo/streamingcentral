@@ -1,5 +1,6 @@
 "use client";
 import { useRef } from "react";
+import Link from "next/link";
 import { useUpcoming } from "./useUpcoming";
 import UpcomingCard from "./UpcomingCard";
 
@@ -8,7 +9,7 @@ import UpcomingCard from "./UpcomingCard";
 // se puede reubicar o reusar con otros filtros sin tocarlo.
 export default function UpcomingSection({ limit = 15 }: { limit?: number }) {
   const track = useRef<HTMLDivElement>(null);
-  const { items, loading, offline, error, retry } = useUpcoming({ limit });
+  const { items, loading, offline, error, retry } = useUpcoming({ mix: true, limit });
   const failed = offline || error; // red caída o 500 del server: estado de error
 
   const scroll = (d: number) =>
@@ -50,6 +51,10 @@ export default function UpcomingSection({ limit = 15 }: { limit?: number }) {
       ) : (
         <div className="track" ref={track}>
           {items.map((it) => <UpcomingCard key={`${it.type}-${it.id}`} item={it} />)}
+          <Link href="/proximamente" className="seeall-card">
+            <span>Ver todas</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+          </Link>
         </div>
       )}
     </div>
