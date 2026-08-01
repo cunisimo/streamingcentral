@@ -44,7 +44,7 @@ export default function UpcomingAllView() {
 
   return (
     <div className="wrap">
-      <div className="compact-head"><h1>Próximamente</h1></div>
+      <div className="compact-head"><h1>Próximamente en streaming</h1></div>
       <div className="tipo-toggle" role="tablist">
         <button role="tab" aria-selected={filtro === "all"} className={`tt ${filtro === "all" ? "on" : ""}`} onClick={() => setFiltro("all")}>Todos</button>
         <button role="tab" aria-selected={filtro === "movie"} className={`tt ${filtro === "movie" ? "on" : ""}`} onClick={() => setFiltro("movie")}>Películas</button>

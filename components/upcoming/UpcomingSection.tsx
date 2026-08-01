@@ -18,7 +18,7 @@ export default function UpcomingSection({ limit = 15 }: { limit?: number }) {
   return (
     <div className="shelf">
       <div className="shelf-head">
-        <h2>Próximamente</h2>
+        <h2>Próximamente en streaming</h2>
         <div className="arrows">
           <button className="arrow" onClick={() => scroll(-1)} aria-label="Anterior">
             <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
