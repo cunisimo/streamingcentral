@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
   const platform = (sp.get("platform") as PlatformCode) || undefined;
   const month = sp.get("month") || undefined;
   const itemsRaw = sp.get("items") || "";
+  const limitRaw = Number(sp.get("limit"));
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 100) : undefined;
 
   try {
     if (itemsRaw) {
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
     if (month) {
       return NextResponse.json({ items: await upcomingThisMonth(month, mediaType) });
     }
-    return NextResponse.json({ items: await upcomingList({ mediaType, platform }) });
+    return NextResponse.json({ items: await upcomingList({ mediaType, platform, limit }) });
   } catch (e) {
     return NextResponse.json({ error: String(e), items: [] }, { status: 500 });
   }

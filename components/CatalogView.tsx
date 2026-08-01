@@ -6,6 +6,7 @@ import FilterGrid from "./FilterGrid";
 import IndecisoHero from "./IndecisoHero";
 import DesempateBanner from "./desempate/DesempateBanner";
 import PersonRail from "./PersonRail";
+import UpcomingSection from "./upcoming/UpcomingSection";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
 import { SHELVES } from "./data";
@@ -35,6 +36,7 @@ export default function CatalogView({ mode }: { mode: Mode }) {
         <IndecisoHero />
         <div className="wrap">
           <DesempateBanner />
+          <UpcomingSection />
           <Shelf title="Últimos lanzamientos" url="/api/latest" seeAllHref="/lista/ultimos" onOffline={reportOffline} />
           <Shelf title="Lo más votados" url="/api/mas-votados" seeAllHref="/lista/mas-votados" />
           <Shelf title="Hacete cargo" url="/api/hacete-cargo" seeAllHref="/lista/hacete-cargo" />

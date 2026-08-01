@@ -580,3 +580,15 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .htrailer-player iframe{transition:none}
   .htrailer-spin{animation-duration:2s}
 }
+
+/* ==========================================================================
+   Próximamente (Agenda de Estrenos) — reusa .card/.poster/.meta/.track/.sk
+   ========================================================================== */
+.up-badge{position:absolute;top:9px;left:9px;z-index:3;height:22px;padding:0 9px;border-radius:7px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;display:inline-flex;align-items:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.up-date{font-size:12.5px;font-weight:600;color:var(--accent);margin-top:2px}
+.up-retry{background:none;border:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;padding:0}
+.up-retry:hover{text-decoration:underline}
+/* Skeleton de card (mismo alto que .track .card, sin el gradiente de .poster) */
+.up-skel-poster{aspect-ratio:2/3;border-radius:var(--radius-sm)}
+.up-skel-t{height:13px;width:80%;margin-top:10px}
+.up-skel-d{height:11px;width:45%;margin-top:7px}
