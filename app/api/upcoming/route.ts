@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upcomingList, upcomingForRefs, upcomingThisMonth } from "@/lib/upcoming";
+import { upcomingList, upcomingForRefs, upcomingThisMonth, upcomingMix } from "@/lib/upcoming";
 import type { MediaType, PlatformCode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,9 @@ export async function GET(req: NextRequest) {
     }
     if (month) {
       return NextResponse.json({ items: await upcomingThisMonth(month, mediaType) });
+    }
+    if (sp.get("mix") === "1") {
+      return NextResponse.json({ items: await upcomingMix(limit ?? 15) });
     }
     return NextResponse.json({ items: await upcomingList({ mediaType, platform, limit }) });
   } catch (e) {
