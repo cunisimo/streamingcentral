@@ -229,3 +229,70 @@ alter table view_history enable row level security;
 drop policy if exists "cada uno gestiona su historial" on view_history;
 create policy "cada uno gestiona su historial" on view_history
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- ACTIVO: Agenda de Estrenos (upcoming). Lo escribe SOLO la Edge
+-- Function tmdb-sync (service role, que bypassa RLS); lectura pública.
+-- Esquema normalizado: catálogo de providers + join título↔plataforma.
+-- ============================================================
+
+-- Catálogo de plataformas AR. PK = provider_id de TMDB (fuente de verdad):
+-- si TMDB cambia el nombre/logo de una plataforma, se actualiza una sola fila.
+create table if not exists providers (
+  id               integer primary key,      -- TMDB provider_id
+  name             text not null,
+  logo_path        text,
+  display_priority integer,
+  updated_at       timestamptz not null default now()
+);
+
+-- Un registro por título. Idempotente por (tmdb_id, media_type).
+create table if not exists upcoming_content (
+  id             uuid primary key default gen_random_uuid(),
+  tmdb_id        integer     not null,
+  media_type     text        not null check (media_type in ('movie','tv')),
+  title          text        not null,
+  original_title text,
+  overview       text,
+  poster_path    text,        -- path crudo TMDB (la app arma la URL con TMDB_IMG)
+  backdrop_path  text,
+  release_date   date        not null,  -- movie: estreno; tv: air_date del próximo episodio
+  -- campos TV (null en movies)
+  season_number      integer,
+  episode_number     integer,
+  episode_name       text,
+  is_season_premiere boolean,
+  tv_status          text,              -- ej. "Returning Series"
+  -- metadata
+  genre_ids      integer[]   not null default '{}',
+  popularity     numeric,
+  vote_average   numeric,
+  status         text,                  -- status TMDB del título
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  unique (tmdb_id, media_type)
+);
+
+-- Join normalizado título ↔ plataforma (providers disponibles en AR).
+create table if not exists upcoming_content_providers (
+  upcoming_id uuid    references upcoming_content (id) on delete cascade,
+  provider_id integer references providers (id),
+  primary key (upcoming_id, provider_id)
+);
+
+create index if not exists idx_upcoming_release       on upcoming_content (release_date);
+create index if not exists idx_upcoming_type_release  on upcoming_content (media_type, release_date);
+create index if not exists idx_upcoming_genres        on upcoming_content using gin (genre_ids);
+create index if not exists idx_ucp_provider           on upcoming_content_providers (provider_id);
+
+-- RLS: lectura pública (catálogo, no personal). Sin políticas de escritura:
+-- solo el service_role de la Edge Function escribe (bypassa RLS).
+alter table providers                  enable row level security;
+alter table upcoming_content           enable row level security;
+alter table upcoming_content_providers enable row level security;
+drop policy if exists "lectura pública" on providers;
+drop policy if exists "lectura pública" on upcoming_content;
+drop policy if exists "lectura pública" on upcoming_content_providers;
+create policy "lectura pública" on providers                  for select using (true);
+create policy "lectura pública" on upcoming_content           for select using (true);
+create policy "lectura pública" on upcoming_content_providers for select using (true);
