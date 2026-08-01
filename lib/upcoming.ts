@@ -81,10 +81,11 @@ export async function upcomingList(filters: UpcomingFilters = {}): Promise<UIUpc
   if (filters.platform) {
     const providerIds = codesToTmdbIds([filters.platform]);
     if (!providerIds.length) return [];
-    const { data: links } = await sb
+    const { data: links, error: linkErr } = await sb
       .from("upcoming_content_providers")
       .select("upcoming_id")
       .in("provider_id", providerIds);
+    if (linkErr) throw new Error(linkErr.message);
     idFilter = [...new Set((links ?? []).map((l: { upcoming_id: string }) => l.upcoming_id))];
     if (!idFilter.length) return [];
   }
@@ -97,8 +98,8 @@ export async function upcomingList(filters: UpcomingFilters = {}): Promise<UIUpc
   q = q.limit(filters.limit ?? 100);
 
   const { data, error } = await q;
-  if (error || !data) return [];
-  return (data as unknown as Row[]).map(toUIUpcoming);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as Row[]).map(toUIUpcoming);
 }
 
 // Cruce con la Watchlist: dado el set de refs {tmdb_id, tipo} del usuario
@@ -118,8 +119,8 @@ export async function upcomingForRefs(
     .select(SELECT)
     .in("tmdb_id", ids)
     .order("release_date", { ascending: true });
-  if (error || !data) return [];
-  return (data as unknown as Row[])
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as Row[])
     .filter((r) => wanted.has(`${r.tmdb_id}:${r.media_type}`))
     .map(toUIUpcoming);
 }

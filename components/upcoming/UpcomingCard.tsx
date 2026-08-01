@@ -17,7 +17,7 @@ export default function UpcomingCard({ item }: { item: UIUpcoming }) {
 
   return (
     <Link
-      className="card up-card"
+      className="card"
       href={`/titulo/${item.type}/${item.id}`}
       aria-label={`${item.title} — ${kind}${date ? `, estreno ${date}` : ""}`}
     >

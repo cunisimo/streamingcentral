@@ -8,7 +8,8 @@ import UpcomingCard from "./UpcomingCard";
 // se puede reubicar o reusar con otros filtros sin tocarlo.
 export default function UpcomingSection({ limit = 15 }: { limit?: number }) {
   const track = useRef<HTMLDivElement>(null);
-  const { items, loading, offline, retry } = useUpcoming({ limit });
+  const { items, loading, offline, error, retry } = useUpcoming({ limit });
+  const failed = offline || error; // red caída o 500 del server: estado de error
 
   const scroll = (d: number) =>
     track.current?.scrollBy({ left: d * (track.current.clientWidth * 0.8), behavior: "smooth" });
@@ -27,7 +28,7 @@ export default function UpcomingSection({ limit = 15 }: { limit?: number }) {
         </div>
       </div>
 
-      {offline ? (
+      {failed ? (
         <p className="empty-note">
           No se pudieron cargar los estrenos.{" "}
           <button className="up-retry" onClick={retry}>Reintentar</button>
