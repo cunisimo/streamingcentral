@@ -259,6 +259,32 @@ create table if not exists providers (
   updated_at       timestamptz not null default now()
 );
 
+-- Fuente ÚNICA de plataformas para el header + onboarding + filtros. `enabled`
+-- controla cuáles se muestran; `sort_order`, el orden. Etapa 1: solo las
+-- soportadas por la app (las que tienen código+logo+filtro en providers-ar).
+-- Default false: una plataforma nueva que traiga el sync NO aparece hasta
+-- habilitarla acá (o, a futuro, desde una config). El sync hace upsert solo de
+-- (id, name, logo_path, display_priority, updated_at), así que no pisa estos flags.
+alter table providers add column if not exists enabled boolean not null default false;
+alter table providers add column if not exists sort_order integer;
+-- Habilita y ordena las plataformas soportadas (provider_id de TMDB). Idempotente;
+-- las que todavía no estén en la tabla (p.ej. MUBI/Star+ sin estreno) se habilitan
+-- solas al re-correr esto luego de syncProviders.
+update providers set enabled = true, sort_order = v.ord from (values
+  (8, 1),      -- Netflix
+  (337, 2),    -- Disney+
+  (1899, 3),   -- Max
+  (384, 3),    -- Max (alt)
+  (119, 4),    -- Prime Video
+  (9, 4),      -- Prime Video (alt)
+  (531, 5),    -- Paramount+
+  (350, 6),    -- Apple TV
+  (2, 6),      -- Apple TV (alt)
+  (283, 7),    -- Crunchyroll
+  (11, 8),     -- MUBI
+  (619, 9)     -- Star+
+) as v(pid, ord) where providers.id = v.pid;
+
 -- Un registro por título. Idempotente por (tmdb_id, media_type).
 create table if not exists upcoming_content (
   id             uuid primary key default gen_random_uuid(),

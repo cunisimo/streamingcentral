@@ -4,17 +4,38 @@ import Link from "next/link";
 import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
 import { PLATFORMS, platformByCode } from "@/lib/providers-ar";
+import type { PlatformCode } from "@/lib/types";
+
+// Lista de plataformas del panel: fuente única = /api/providers (la misma que el
+// onboarding). Si el fetch falla, cae a las 9 de providers-ar para no dejar el
+// panel vacío (el header se usa siempre, a diferencia del onboarding).
+const FALLBACK = PLATFORMS.map((p) => ({ code: p.code, name: p.name }));
 
 export default function TopBar() {
   const { platforms, has, toggle } = usePlatforms();
   const [open, setOpen] = useState(false);
   const [fecha, setFecha] = useState("");
+  const [rows, setRows] = useState<{ code: PlatformCode; name: string }[]>(FALLBACK);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("click", h);
     return () => document.removeEventListener("click", h);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/providers")
+      .then((r) => r.json())
+      .then((j: { providers?: { code: PlatformCode | null; name: string }[] }) => {
+        const list = (j.providers ?? [])
+          .filter((p): p is { code: PlatformCode; name: string } => !!p.code)
+          .map((p) => ({ code: p.code, name: p.name }));
+        if (alive && list.length) setRows(list);
+      })
+      .catch(() => { /* se queda con el fallback */ });
+    return () => { alive = false; };
   }, []);
 
   // Fecha del día. Se calcula tras el montaje para evitar mismatch de hidratación
@@ -48,7 +69,7 @@ export default function TopBar() {
           {open && (
             <div className="panel" onClick={(e) => e.stopPropagation()}>
               <h4>Tus plataformas — elegí una o varias</h4>
-              {PLATFORMS.map((p) => (
+              {rows.map((p) => (
                 <div key={p.code} className="prow" onClick={() => toggle(p.code)}>
                   <div className="left"><PlatformLogo code={p.code} /></div>
                   <span className={`check ${has(p.code) ? "on" : ""}`}>

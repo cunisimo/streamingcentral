@@ -618,7 +618,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .ob-card:active{transform:scale(.97)}
 .ob-card.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .ob-card-logo{width:44px;height:44px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2)}
-.ob-card-logo img{width:40px;height:40px;object-fit:cover;border-radius:8px}
+.ob-card-logo img{width:40px;height:40px;object-fit:contain;border-radius:8px}
 .ob-card-ph{font-family:var(--display);font-weight:700;font-size:18px;color:var(--dim)}
 .ob-card-name{font-size:12.5px;font-weight:600;text-align:center;line-height:1.2;color:var(--text)}
 .ob-card-check{position:absolute;top:7px;right:7px;width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center}
@@ -627,4 +627,17 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .ob-cta{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:14px 22px calc(14px + var(--safe-b));background:linear-gradient(to top,var(--bg) 60%,transparent);display:flex;flex-direction:column;align-items:center;gap:8px}
 .ob-err{color:var(--editorial);font-size:13px;text-align:center;margin:0}
 .ob-cta .btn{width:100%;max-width:516px}
-@media(prefers-reduced-motion:reduce){.ob-card{transition:none}}
+/* Indicador de pasos (1 de 2) */
+.ob-steps{display:flex;justify-content:center;gap:7px;margin-top:16px}
+.ob-steps span{width:26px;height:5px;border-radius:999px;background:var(--line-2);transition:background .2s}
+.ob-steps span.on{background:var(--accent)}
+/* Botón "Atrás" del paso 2 */
+.ob-back{display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:0;margin-top:4px;color:var(--dim);font-family:var(--body);font-size:14px;font-weight:500;cursor:pointer}
+.ob-back:hover{color:var(--accent)}
+.ob-back svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+/* Input de nombre (los estilos base de .field están scopeados a .admin) */
+.ob-block .field{margin-top:4px}
+.ob-block .field label{display:block;font-size:13px;font-weight:600;color:var(--dim);margin-bottom:6px}
+.ob-block .field input{width:100%;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);padding:12px 14px;font-size:15px;font-family:var(--body);color:var(--text);outline:none}
+.ob-block .field input:focus{border-color:var(--accent)}
+@media(prefers-reduced-motion:reduce){.ob-card,.ob-steps span{transition:none}}
