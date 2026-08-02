@@ -599,3 +599,31 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .up-skel-poster{aspect-ratio:2/3;border-radius:var(--radius-sm)}
 .up-skel-t{height:13px;width:80%;margin-top:10px}
 .up-skel-d{height:11px;width:45%;margin-top:7px}
+
+/* ==========================================================================
+   Onboarding
+   ========================================================================== */
+.ob-wrap{max-width:560px;margin:0 auto;padding:32px 22px calc(var(--nav-total) + 96px)}
+.ob-header{text-align:center;margin-bottom:26px}
+.ob-header h1{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.02em}
+.ob-header p{color:var(--dim);font-size:15px;margin-top:6px}
+.ob-block{margin-top:30px}
+.ob-h{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.015em}
+.ob-sub{color:var(--dim);font-size:14px;margin-top:4px;margin-bottom:14px}
+.ob-hint{color:var(--faint);font-size:12.5px;margin-top:12px}
+.ob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:440px){.ob-grid{grid-template-columns:repeat(2,1fr)}}
+.ob-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;border-radius:var(--radius-sm);border:1px solid var(--line-2);background:var(--surface);cursor:pointer;transition:border-color .15s,transform .12s,box-shadow .15s;box-shadow:var(--sh)}
+.ob-card:hover{border-color:var(--text)}
+.ob-card:active{transform:scale(.97)}
+.ob-card.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.ob-card-logo{width:44px;height:44px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2)}
+.ob-card-logo img{width:40px;height:40px;object-fit:cover;border-radius:8px}
+.ob-card-ph{font-family:var(--display);font-weight:700;font-size:18px;color:var(--dim)}
+.ob-card-name{font-size:12.5px;font-weight:600;text-align:center;line-height:1.2;color:var(--text)}
+.ob-card-check{position:absolute;top:7px;right:7px;width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.ob-card-check svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:3}
+.ob-none .ob-plus{font-size:24px;color:var(--accent);font-weight:700;line-height:1}
+.ob-cta{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:14px 22px calc(14px + var(--safe-b));background:linear-gradient(to top,var(--bg) 60%,transparent);display:flex;justify-content:center}
+.ob-cta .btn{width:100%;max-width:516px}
+@media(prefers-reduced-motion:reduce){.ob-card{transition:none}}
