@@ -31,11 +31,13 @@ export function useOnboarding() {
     setSeeded(true);
   }, [profile, user, seeded]);
 
-  // Puente a "mis plataformas": mapea provider_id -> código; si hay mapeables,
-  // sincroniza sc:platforms (los no mapeables quedan solo en el perfil).
+  // Puente a "mis plataformas": mapea provider_id -> código y sincroniza
+  // sc:platforms. `set()` cae al default si no hay mapeables (nunca vacío), así
+  // deseleccionar todo NO deja pegada una plataforma vieja. Los provider_id sin
+  // código interno quedan igual guardados en el perfil (para fase 2).
   const bridge = useCallback((ids: number[]) => {
     const codes = [...new Set(ids.map((id) => codeForTmdbId(id)).filter((c): c is NonNullable<typeof c> => !!c))];
-    if (codes.length) platformsCtx.set(codes);
+    platformsCtx.set(codes);
   }, [platformsCtx]);
 
   const togglePlatform = useCallback((id: number) => {
@@ -50,8 +52,8 @@ export function useOnboarding() {
   const clearPlatforms = useCallback(() => {
     setSelected([]);
     void updatePlatforms([]);
-    // "No tengo ninguna": no toca sc:platforms (deja el default).
-  }, [updatePlatforms]);
+    bridge([]); // "No tengo ninguna": sc:platforms vuelve al default (no queda una vieja pegada).
+  }, [updatePlatforms, bridge]);
 
   const saveName = useCallback(() => {
     const v = name.trim();

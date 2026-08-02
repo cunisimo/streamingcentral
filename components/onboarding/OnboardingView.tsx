@@ -10,11 +10,14 @@ export default function OnboardingView() {
   const router = useRouter();
   const { selected, name, togglePlatform, clearPlatforms, setName, saveName, finish } = useOnboarding();
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   async function comenzar() {
     setBusy(true);
-    saveName();       // asegura el nombre guardado aunque no haya habido blur
-    await finish();   // onboarding_completed = true
+    setErr("");
+    saveName();                    // asegura el nombre guardado aunque no haya habido blur
+    const { error } = await finish(); // onboarding_completed = true
+    if (error) { setErr("No se pudo completar. Probá de nuevo."); setBusy(false); return; }
     router.push("/");
   }
 
@@ -35,7 +38,8 @@ export default function OnboardingView() {
       <NameBlock value={name} onChange={setName} onBlur={saveName} />
 
       <div className="ob-cta">
-        <button className="btn" onClick={comenzar} disabled={busy}>
+        {err && <p className="ob-err">{err}</p>}
+        <button type="button" className="btn" onClick={comenzar} disabled={busy}>
           {busy ? "Un momento…" : "Comenzar"}
         </button>
       </div>
