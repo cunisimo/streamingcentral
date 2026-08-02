@@ -168,7 +168,14 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 @media(max-width:620px){.grid{grid-template-columns:repeat(3,1fr)}.hero h1{font-size:27px}.track .card{flex-basis:140px}}
 @media(max-width:440px){.grid{grid-template-columns:repeat(2,1fr)}}
 
-.card{cursor:pointer;display:block}
+.card{cursor:pointer;display:block;position:relative}
+.card-link{display:block}
+.quick-add{position:absolute;top:8px;right:8px;z-index:4;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);transition:background .15s,transform .12s}
+.quick-add svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5}
+.quick-add:hover{background:rgba(0,0,0,.72)}
+.quick-add:active{transform:scale(.88)}
+.quick-add.on{background:var(--accent)}
+.quick-add:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .poster{position:relative;aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:flex-end;padding:12px;font-family:var(--display);font-weight:600;font-size:15px;line-height:1.1;letter-spacing:-.01em;color:#fff;box-shadow:var(--sh);transition:transform .18s,box-shadow .18s;background-size:cover;background-position:center}
 .card:hover .poster{transform:translateY(-5px);box-shadow:var(--sh-h)}
 .poster .ptitle{position:relative;z-index:2;text-shadow:0 2px 14px rgba(0,0,0,.55)}

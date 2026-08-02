@@ -4,6 +4,7 @@ import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import { AuthProvider } from "@/components/AuthContext";
+import { MyListProvider } from "@/components/MyListContext";
 import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
 import PwaClient from "@/components/pwa/PwaClient";
 
@@ -56,11 +57,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider>
           <AuthProvider>
-            <PlatformsProvider>
-              {children}
-              {/* Dentro de PlatformsProvider: StandaloneWelcome usa usePlatforms. */}
-              <PwaClient />
-            </PlatformsProvider>
+            <MyListProvider>
+              <PlatformsProvider>
+                {children}
+                {/* Dentro de PlatformsProvider: StandaloneWelcome usa usePlatforms. */}
+                <PwaClient />
+              </PlatformsProvider>
+            </MyListProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
