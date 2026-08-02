@@ -1,28 +1,51 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { TMDB_IMG } from "@/lib/tmdb";
+import { codeForTmdbId } from "@/lib/providers-ar";
 
 export const dynamic = "force-dynamic";
 
-// Plataformas para el onboarding, desde la tabla `providers`. Filtra los canales
-// revendedores (nombres con "Channel"). Ordenado por display_priority.
-// (Multi-región: la tabla es AR por ahora; se agregará ?region= en fase 2.)
+interface Row {
+  id: number;
+  name: string;
+  logo_path: string | null;
+  sort_order?: number | null;
+  display_priority?: number | null;
+}
+
+// Fuente ÚNICA de plataformas (la usan el header y el onboarding): la tabla
+// `providers`. Etapa 1 → solo las habilitadas (`enabled`) y ordenadas por
+// `sort_order`. Fallback (si esas columnas todavía no están aplicadas en la DB):
+// mostrar solo las soportadas por la app (las que tienen código interno),
+// ordenadas por display_priority. Devuelve `code` para que el header pueda
+// togglear "mis plataformas".
 export async function GET() {
   const sb = supabaseServer();
   if (!sb) return NextResponse.json({ providers: [] });
   try {
-    const { data, error } = await sb
+    let rows: Row[];
+    const primary = await sb
       .from("providers")
-      .select("id, name, logo_path, display_priority")
-      .order("display_priority", { ascending: true });
-    if (error) throw new Error(error.message);
-    const providers = (data ?? [])
-      .filter((p: { name: string }) => !/channel/i.test(p.name))
-      .map((p: { id: number; name: string; logo_path: string | null }) => ({
-        id: p.id,
-        name: p.name.trim(),
-        logo: p.logo_path ? `${TMDB_IMG}/w92${p.logo_path}` : null,
-      }));
+      .select("id, name, logo_path, sort_order")
+      .eq("enabled", true)
+      .order("sort_order", { ascending: true });
+    if (primary.error) {
+      // Columnas enabled/sort_order aún no aplicadas: fallback por código.
+      const fb = await sb
+        .from("providers")
+        .select("id, name, logo_path, display_priority")
+        .order("display_priority", { ascending: true });
+      if (fb.error) throw new Error(fb.error.message);
+      rows = (fb.data ?? []).filter((p: Row) => codeForTmdbId(p.id));
+    } else {
+      rows = primary.data ?? [];
+    }
+    const providers = rows.map((p) => ({
+      id: p.id,
+      code: codeForTmdbId(p.id),
+      name: p.name.trim(),
+      logo: p.logo_path ? `${TMDB_IMG}/w92${p.logo_path}` : null,
+    }));
     return NextResponse.json({ providers });
   } catch (e) {
     return NextResponse.json({ error: String(e), providers: [] }, { status: 500 });
