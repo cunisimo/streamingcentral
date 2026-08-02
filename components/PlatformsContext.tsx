@@ -7,6 +7,7 @@ interface Ctx {
   platforms: PlatformCode[];
   has: (c: PlatformCode) => boolean;
   toggle: (c: PlatformCode) => void;
+  set: (codes: PlatformCode[]) => void;
   ready: boolean;
 }
 const PlatformsCtx = createContext<Ctx | null>(null);
@@ -40,8 +41,14 @@ export function PlatformsProvider({ children }: { children: React.ReactNode }) {
 
   const has = useCallback((c: PlatformCode) => platforms.includes(c), [platforms]);
 
+  const set = useCallback((codes: PlatformCode[]) => {
+    const final = codes.length ? codes : DEFAULT_PLATFORMS; // nunca vacío
+    setPlatforms(final);
+    try { localStorage.setItem(KEY, JSON.stringify(final)); } catch { /* noop */ }
+  }, []);
+
   return (
-    <PlatformsCtx.Provider value={{ platforms, has, toggle, ready }}>
+    <PlatformsCtx.Provider value={{ platforms, has, toggle, set, ready }}>
       {children}
     </PlatformsCtx.Provider>
   );
