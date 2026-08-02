@@ -77,6 +77,19 @@ returns boolean as $$
   );
 $$ language sql stable security definer set search_path = public;
 
+-- Onboarding: se completa una vez. Los usuarios EXISTENTES se marcan como
+-- completado (no deben ver el onboarding); los nuevos arrancan en false.
+alter table profiles add column if not exists onboarding_completed boolean;
+update profiles set onboarding_completed = true where onboarding_completed is null;
+alter table profiles alter column onboarding_completed set default false;
+alter table profiles alter column onboarding_completed set not null;
+
+-- Plataformas elegidas como provider_id de TMDB (fase 2 filtra por esto).
+alter table profiles add column if not exists platforms integer[] not null default '{}';
+
+-- País (prep multi-región; el onboarding MVP no lo pide).
+alter table profiles add column if not exists country_code text not null default 'AR';
+
 -- ============================================================
 -- ACTIVO: reseñas editoriales (tu diferencial)
 -- ============================================================

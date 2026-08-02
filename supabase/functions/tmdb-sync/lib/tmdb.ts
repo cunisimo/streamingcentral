@@ -72,3 +72,16 @@ export function watchProviders(type: MediaType, id: number) {
 export function tvDetails(id: number) {
   return tmdb<TvDetail>(`/tv/${id}`);
 }
+
+export interface RawProviderInfo {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+  display_priority: number;
+  display_priorities?: Record<string, number>;
+}
+
+// Lista COMPLETA de watch providers de la región (AR por DEFAULTS).
+export function providerList(type: MediaType) {
+  return tmdb<{ results: RawProviderInfo[] }>(`/watch/providers/${type}`);
+}
