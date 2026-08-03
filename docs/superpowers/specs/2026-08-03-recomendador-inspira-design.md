@@ -74,14 +74,14 @@ nuevas en `CATEGORIES`.
 | Emoji | Label | slug | movie | tv |
 |---|---|---|---|---|
 | 💖 | A fuego lento | `romance` (reusa) | genres `[10749]` | genres `[18]` |
-| 🎄 | Magia navideña | `navidad` (nueva) | kw *christmas* | kw *christmas* |
+| 🎄 | Magia navideña | `navidad` (nueva) | kw `[207317]` | kw `[207317]` |
 | ⚔️ | Fuego cruzado | `guerra` (nueva) | genres `[10752]` | genres `[10768]` |
-| 👽 | Contacto extraterrestre | `aliens` (nueva) | kw *alien / alien invasion* | kw *idem* |
-| 🌌 | Odisea espacial | `espacio` (nueva) | kw *space / outer space / spacecraft* | kw *idem* |
-| 🧠 | Historias reales | `reales` (nueva) | genres `[99]` + kw *based on true story* | genres `[99]` |
+| 👽 | Contacto extraterrestre | `aliens` (nueva) | kw `[9951,14909,9739]` | kw `[9951,14909,9739]` |
+| 🌌 | Odisea espacial | `espacio` (nueva) | kw `[9882,3801,1612]` | kw `[9882,3801,1612]` |
+| 🧠 | Historias reales | `reales` (nueva) | genres `[99]` | genres `[99]` |
 | 🧙‍♂️ | Mundos fantásticos | `fantasia` (nueva) | genres `[14]` | genres `[10765]` |
 | 🕵️‍♂️ | Crimen y mafia | `crimen` (reusa) | genres `[80]` | genres `[80]` |
-| 🏔️ | Supervivencia extrema | `supervivencia` (nueva) | kw *survival / disaster* | kw *idem* |
+| 🏔️ | Supervivencia extrema | `supervivencia` (nueva) | kw `[10349,10617,5096]` | kw `[10349,10617,5096]` |
 
 **IDs de género: confirmados** (28 Acción, 12 Aventura, 10759 Action&Adventure
 tv, 18 Drama, 9648 Misterio, 53 Suspenso, 35 Comedia, 27 Terror, 878 Sci-fi,
@@ -89,11 +89,16 @@ tv, 18 Drama, 9648 Misterio, 53 Suspenso, 35 Comedia, 27 Terror, 878 Sci-fi,
 Romance, 10752 Guerra, 10768 War&Politics tv, 99 Documental, 14 Fantasía, 80
 Crimen).
 
-**IDs de keyword: A VERIFICAR contra TMDB en la fase de plan** (christmas, alien
-/ alien invasion, space / outer space / spacecraft, based on true story,
-survival / disaster). Se resuelven consultando
-`GET /search/keyword?query=<término>` y se fijan los IDs reales en el plan. Un ID
-inventado = riel vacío, así que ninguno va "a ojo".
+**IDs de keyword: confirmados contra TMDB** (`GET /search/keyword`):
+christmas `207317`; alien `9951` / alien invasion `14909` / extraterrestrial
+`9739`; space `9882` / space travel `3801` / spacecraft `1612`; survival
+`10349` / disaster `10617` / natural disaster `5096`.
+
+**Limitación TMDB — género y keyword se combinan con AND, no OR:** `discover`
+manda `with_genres` y `with_keywords` como params separados, que TMDB cruza con
+AND. Por eso ningún chip mezcla género + keyword en una misma regla (daría casi
+vacío). "Historias reales" queda como género Documental `[99]` solo (documentales
++ docuseries); no incluye biopics/based-on-true-story por esta limitación.
 
 ### Layout / CSS
 
