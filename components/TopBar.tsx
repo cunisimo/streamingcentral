@@ -49,11 +49,7 @@ export default function TopBar() {
     <header className="topbar">
       <div className="topbar-top">
         <span className="topdate">{fecha}</span>
-        <Link href="/buscar" className="acct-link" aria-label="Buscar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
-          </svg>
-        </Link>
+        <span className="regionflag" role="img" aria-label="Región: Argentina" title="Argentina">🇦🇷</span>
       </div>
       <div className="topbar-in">
         <Link href="/" className="brand" aria-label="Yump — inicio">
