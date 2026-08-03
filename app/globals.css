@@ -156,6 +156,13 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .shelf-head h2{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em}
 .shelf-head h2 b{color:var(--accent)}
 .arrows{display:flex;gap:8px}
+.shelf-head-l{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-width:0}
+.shelf-toggle{display:inline-flex;align-items:center;gap:12px}
+.shelf-toggle button{background:none;border:0;padding:0;font-family:var(--body);font-size:13px;font-weight:600;color:var(--faint);cursor:pointer;letter-spacing:-.01em;transition:color .15s}
+.shelf-toggle button:hover{color:var(--dim)}
+.shelf-toggle button.is-active{color:var(--accent)}
+.shelf-toggle button.is-active:hover{color:var(--accent)}
+.shelf-toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .arrow{width:34px;height:34px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh)}
 .arrow:hover{border-color:var(--text)}.arrow svg{width:16px;height:16px;stroke:var(--text);fill:none;stroke-width:2.2}
 .reshuffle{display:flex;align-items:center;gap:7px;height:36px;padding:0 15px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;box-shadow:var(--sh)}
