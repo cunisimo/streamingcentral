@@ -28,7 +28,25 @@ export const CATEGORIES: Category[] = [
   { slug: "romance",     label: "Romance",     movie: { genres: [10749] },tv: { genres: [18] } },
 ];
 
-const BY_SLUG = new Map(CATEGORIES.map((c) => [c.slug, c]));
+// Categorías EXCLUSIVAS del recomendador ("¿Qué te inspira hoy?"). Separadas de
+// CATEGORIES a propósito: CATEGORIES lo iteran las páginas de género
+// (CategoryView, cross-shelves) y genreCovers, que NO deben ver estos temas.
+// El lookup por slug (BY_SLUG, abajo) sí une ambos arrays, así que
+// resolveCategory las resuelve para /api/recomendaciones.
+export const RECOMMENDER_CATEGORIES: Category[] = [
+  { slug: "palomitas",           label: "Palomitas",             movie: { genres: [28, 12] },        tv: { genres: [10759] } },
+  { slug: "misterio-intrincado", label: "Misterio intrincado",   movie: { genres: [9648, 53] },      tv: { genres: [9648] } },
+  { slug: "familiar",            label: "Aventura familiar",     movie: { genres: [10751, 12, 16] }, tv: { genres: [10751, 10762, 16] } },
+  { slug: "navidad",             label: "Magia navideña",        movie: { keywords: [207317] },      tv: { keywords: [207317] } },
+  { slug: "guerra",              label: "Fuego cruzado",         movie: { genres: [10752] },         tv: { genres: [10768] } },
+  { slug: "aliens",              label: "Contacto extraterrestre", movie: { keywords: [9951, 14909, 9739] }, tv: { keywords: [9951, 14909, 9739] } },
+  { slug: "espacio",             label: "Odisea espacial",       movie: { keywords: [9882, 3801, 1612] }, tv: { keywords: [9882, 3801, 1612] } },
+  { slug: "reales",              label: "Historias reales",      movie: { genres: [99] },             tv: { genres: [99] } },
+  { slug: "fantasia",            label: "Mundos fantásticos",    movie: { genres: [14] },             tv: { genres: [10765] } },
+  { slug: "supervivencia",       label: "Supervivencia extrema", movie: { keywords: [10349, 10617, 5096] }, tv: { keywords: [10349, 10617, 5096] } },
+];
+
+const BY_SLUG = new Map([...CATEGORIES, ...RECOMMENDER_CATEGORIES].map((c) => [c.slug, c]));
 export const categoryLabel = (slug: string) => BY_SLUG.get(slug)?.label ?? slug;
 
 export function resolveCategory(slug: string, type: MediaType): Rule {

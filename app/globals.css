@@ -133,17 +133,12 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .finder{margin-top:20px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:16px 16px 18px;box-shadow:var(--sh)}
 .finder-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
 .finder-spark{display:inline-flex;color:var(--accent)}.finder-spark svg{width:16px;height:16px}
-.finder-spark.sm svg{width:15px;height:15px}
 .finder .chip-slider{margin:12px 0 4px}
-.finder-box{display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:0 10px 0 12px;height:52px}
-.finder-box input{flex:1;min-width:0;border:0;background:transparent;color:var(--text);font-family:var(--body);font-size:15px;outline:none}
-.finder-box input::placeholder{color:var(--faint)}
-.finder-go{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px;border-radius:var(--radius-sm);border:0;background:var(--accent);color:#fff;font-family:var(--body);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
-.finder-go:hover{filter:brightness(1.05)}.finder-go svg{width:15px;height:15px}
+.chip-group-label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:14px 0 2px 2px}
+.finder .chip-group .chip-slider{margin:6px 0 2px}
 .shelf-title{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .reset-btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:transparent;color:var(--dim);font-family:var(--body);font-size:12.5px;font-weight:500;cursor:pointer}
 .reset-btn:hover{border-color:var(--accent);color:var(--accent)}.reset-btn svg{width:13px;height:13px}
-@media(max-width:620px){.finder-box{height:auto;flex-wrap:wrap;padding:10px}.finder-box input{width:100%;flex-basis:100%;order:1}.finder-go{order:2;margin-left:auto}}
 
 .filterbar{display:flex;align-items:center;gap:12px;margin-top:16px;position:relative;flex-wrap:wrap}
 .paisbtn{display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);font-size:13px;color:var(--text);cursor:pointer;box-shadow:var(--sh)}
