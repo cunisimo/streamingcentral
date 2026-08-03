@@ -11,7 +11,19 @@ export function supabaseBrowser(): SupabaseClient {
 }
 
 // Cliente para el servidor (lectura pública con RLS): sin sesión.
+// Next parchea el `fetch` global con su Data Cache. supabase-js usa ese fetch,
+// y las lecturas del server (sobre todo `.rpc()` POST) quedaban cacheadas:
+// devolvían un resultado viejo/vacío aunque hubiera datos nuevos (ej. "Lo más
+// votados" mostraba solo los votos del primer usuario). Forzamos `no-store` en
+// todas las llamadas de este cliente para que nunca sirvan datos viejos —
+// consistente con la regla del proyecto (Supabase es Network Only, ver el SW).
 export function supabaseServer(): SupabaseClient | null {
   if (!url || !anon) return null;
-  return createClient(url, anon, { auth: { persistSession: false } });
+  return createClient(url, anon, {
+    auth: { persistSession: false },
+    global: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: "no-store" }),
+    },
+  });
 }
