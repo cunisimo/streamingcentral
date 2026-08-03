@@ -214,7 +214,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .bres-h{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.015em;margin:22px 0 14px}
 .explore-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:760px){.explore-grid{grid-template-columns:repeat(2,1fr)}}
-.explore-tile{position:relative;height:104px;border-radius:13px;padding:14px;display:flex;align-items:flex-end;color:#fff;font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-.01em;overflow:hidden;box-shadow:var(--sh);cursor:pointer;background-size:cover;background-position:center;border:none;text-align:left}
+.explore-tile{position:relative;height:104px;border-radius:13px;padding:14px;display:flex;align-items:flex-end;color:#fff;font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-.01em;overflow:hidden;box-shadow:var(--sh);cursor:pointer;background-size:cover;background-position:center;border:none;text-align:left;text-decoration:none}
 .people-row{display:flex;gap:18px;overflow-x:auto;padding-bottom:6px}
 .pcard{flex:0 0 auto;width:110px;text-align:center;cursor:pointer}
 .pcard .av{width:96px;height:96px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-weight:700;font-size:26px;box-shadow:var(--sh);background-size:cover;background-position:center}
