@@ -3,5 +3,5 @@ import BottomNav from "@/components/BottomNav";
 import CatalogView from "@/components/CatalogView";
 
 export default function Home() {
-  return (<><TopBar /><main><CatalogView mode="inicio" /></main><BottomNav /></>);
+  return (<><TopBar /><main><CatalogView /></main><BottomNav /></>);
 }
