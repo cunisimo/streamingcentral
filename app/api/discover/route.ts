@@ -6,7 +6,13 @@ export const dynamic = "force-dynamic";
 
 // Certificación: TMDB solo filtra por certificación en películas, y la base
 // argentina está incompleta; usamos la de EE.UU. mapeada como aproximación.
-const AGE_CERT: Record<string, string> = { atp: "PG", "13": "PG-13", "16": "R", "18": "NC-17" };
+// Buckets EXCLUYENTES (no acumulativos): ATP = G|PG (lte=PG), +13 = PG-13 exacto,
+// +16 = R exacto. No hay +18: NC-17 casi no existe en el catálogo de streaming.
+const AGE_CERT: Record<string, { param: string; value: string }> = {
+  atp: { param: "certification.lte", value: "PG" },
+  "13": { param: "certification", value: "PG-13" },
+  "16": { param: "certification", value: "R" },
+};
 
 // Duración: buckets simples → rango de minutos de TMDB. En TV, with_runtime
 // aplica al minutaje POR EPISODIO, no al total (limitación de TMDB).
@@ -30,7 +36,7 @@ export async function GET(req: NextRequest) {
   const extra: Record<string, string> = {};
   if (tipo === "movie" && age && AGE_CERT[age]) {
     extra.certification_country = "US";
-    extra["certification.lte"] = AGE_CERT[age];
+    extra[AGE_CERT[age].param] = AGE_CERT[age].value;
   }
   if (year) extra[tipo === "movie" ? "primary_release_year" : "first_air_date_year"] = year;
   if (runtime && RUNTIME[runtime]) Object.assign(extra, RUNTIME[runtime]);

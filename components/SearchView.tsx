@@ -52,7 +52,7 @@ export default function SearchView() {
         <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setExplore(null); }} placeholder="¿Qué querés ver?" />
       </div>
       <div className="bchips">
-        {(["todo", "movie", "tv", "actores", "directores"] as Filter[]).map((f) => (
+        {((filter === "movie" || filter === "tv" ? ["todo", "movie", "tv"] : ["todo", "movie", "tv", "actores", "directores"]) as Filter[]).map((f) => (
           <button key={f} className={`bchip ${filter === f ? "on" : ""}`} onClick={() => { setFilter(f); setExplore(null); }}>
             {f === "todo" ? "Todo" : f === "movie" ? "Películas" : f === "tv" ? "Series" : f === "actores" ? "Actores" : "Directores"}
           </button>
@@ -120,7 +120,7 @@ export default function SearchView() {
 }
 
 // --- Navegar películas/series con filtros combinables + paginación ---
-const AGES: [string, string][] = [["ATP", "atp"], ["+13", "13"], ["+16", "16"], ["+18", "18"]];
+const AGES: [string, string][] = [["ATP", "atp"], ["+13", "13"], ["+16", "16"]];
 
 function BrowseTitles({ tipo }: { tipo: MediaType }) {
   const { platforms, ready } = usePlatforms();
