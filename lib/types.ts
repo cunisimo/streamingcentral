@@ -56,6 +56,7 @@ export interface UIPerson {
   name: string;
   profile: string | null;
   knownFor: string[];
+  department?: string; // known_for_department de TMDB: "Acting" | "Directing" | …
 }
 
 // Estreno de la Agenda (upcoming). Shape que consume el read path desde Supabase.

@@ -141,7 +141,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .reset-btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:transparent;color:var(--dim);font-family:var(--body);font-size:12.5px;font-weight:500;cursor:pointer}
 .reset-btn:hover{border-color:var(--accent);color:var(--accent)}.reset-btn svg{width:13px;height:13px}
 
-.filterbar{display:flex;align-items:center;gap:12px;margin-top:16px;position:relative;flex-wrap:wrap}
+.filterbar{display:flex;align-items:center;gap:12px;position:relative;flex-wrap:wrap}
 .paisbtn{display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);font-size:13px;color:var(--text);cursor:pointer;box-shadow:var(--sh)}
 .paisbtn .cap{color:var(--dim)}.paisbtn b{font-weight:600}
 .paisbtn svg{width:14px;height:14px;stroke:var(--dim);fill:none;stroke-width:2}

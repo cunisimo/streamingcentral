@@ -129,6 +129,7 @@ export async function search(query: string) {
       id: r.id, name: r.name,
       profile: img(r.profile_path, "w185"),
       knownFor: (r.known_for ?? []).map(titleOf).filter(Boolean).slice(0, 3),
+      department: r.known_for_department,
     }));
   const rawTitles = slice.filter(
     (r): r is RawTitle & { media_type: MediaType } => r.media_type === "movie" || r.media_type === "tv",

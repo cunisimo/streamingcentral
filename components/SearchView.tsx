@@ -41,8 +41,11 @@ export default function SearchView() {
   }, [q, ready]);
 
   const hasQuery = q.trim().length >= 2;
-  const showTitles = filter === "actores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);
-  const showPeople = filter === "todo" || filter === "actores" ? res.people : [];
+  const showTitles = filter === "actores" || filter === "directores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);
+  const showPeople = filter === "actores" ? res.people.filter((p) => (p.department ?? "Acting") === "Acting")
+    : filter === "directores" ? res.people.filter((p) => p.department === "Directing")
+    : filter === "todo" ? res.people
+    : [];
 
   return (
     <div className="wrap buscar">
@@ -100,7 +103,7 @@ export default function SearchView() {
           {loading && <p className="loading">Buscando…</p>}
           {!loading && showPeople.length > 0 && (
             <>
-              <h2 className="bres-h">Actores</h2>
+              <h2 className="bres-h">{filter === "directores" ? "Directores" : "Actores"}</h2>
               <div className="people-grid">{showPeople.map((p) => <PersonCard key={p.id} p={p} />)}</div>
             </>
           )}
@@ -164,7 +167,7 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
   return (
     <>
       <GenreSlider value={genre} onChange={setGenre} />
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
         <CountryFilter value={country} onChange={setCountry} />
         {tipo === "movie" && (
           <div className="bchips" style={{ margin: 0 }}>
@@ -228,7 +231,9 @@ function BrowseActors() {
   );
 }
 
-// --- Directores curados (lista fija de /api/directores, sin paginación) ---
+// --- Directores curados (lista fija de /api/directores). TMDB no tiene índice
+// de directores como sí de actores (person/popular es ~99% actores), así que el
+// browse muestra una lista curada; para cualquier otro, usar el buscador. ---
 function BrowseDirectors() {
   const [people, setPeople] = useState<UIPerson[]>([]);
   const [loading, setLoading] = useState(true);

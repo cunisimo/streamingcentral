@@ -84,3 +84,4 @@ Base del branch: 19026b8. Plan: docs/superpowers/plans/2026-08-03-nav-buscador-u
 - [x] Task 2: TopBar banderita AR — commit 439b89a (base 5404ad5), tsc 0, auto-verificado (diff trivial 2 líneas).
 - [x] Task 3: genreCovers dedupe + cache v2 — commit e8080fd (base 439b89a), tsc 0, review aprobado limpio.
 - [x] Task 4: SearchView unificado — commit 51052f9 (base e8080fd), tsc 0, review aprobado limpio (12 slugs resuelven, sin dead code).
+- [x] Task 5: eliminar /peliculas /series + CatalogView solo Home + borrar FilterGrid/CountryGrid — commit 4d5f404 (base 51052f9), tsc 0, review aprobado (barrió .temp/.mcp por git add -A → .temp limpiado aparte).
