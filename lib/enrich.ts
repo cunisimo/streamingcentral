@@ -129,6 +129,7 @@ export async function search(query: string) {
       id: r.id, name: r.name,
       profile: img(r.profile_path, "w185"),
       knownFor: (r.known_for ?? []).map(titleOf).filter(Boolean).slice(0, 3),
+      department: r.known_for_department,
     }));
   const rawTitles = slice.filter(
     (r): r is RawTitle & { media_type: MediaType } => r.media_type === "movie" || r.media_type === "tv",
@@ -217,18 +218,27 @@ export async function directorCards(): Promise<UIPerson[]> {
 
 // --- Un póster representativo por género (para los tiles de "Explorar todo") ---
 export async function genreCovers(): Promise<Record<string, string | null>> {
-  return cached("genre:covers:v1", TTL.catalog, async () => {
+  return cached("genre:covers:v2", TTL.catalog, async () => {
     const slugs = CATEGORIES.map((c) => c.slug);
-    const entries = await Promise.all(slugs.map(async (slug) => {
+    // 1) Candidatos (posters) por género, en paralelo.
+    const candidates = await Promise.all(slugs.map(async (slug) => {
       const rule = resolveCategory(slug, "movie");
       try {
         const res = await discover("movie", { genres: rule.genres, keywords: rule.keywords, minVotes: 300 });
-        const withPoster = res.results.find((t) => t.poster_path);
-        return [slug, img(withPoster?.poster_path ?? null, "w342")] as const;
+        const posters = res.results.map((t) => t.poster_path).filter((p): p is string => !!p);
+        return [slug, posters] as const;
       } catch {
-        return [slug, null] as const;
+        return [slug, [] as string[]] as const;
       }
     }));
+    // 2) Asignación secuencial: cada género toma el primer poster no usado por
+    //    otro (evita imágenes repetidas entre tiles). Fallback: su primer poster.
+    const used = new Set<string>();
+    const entries = candidates.map(([slug, posters]) => {
+      const pick = posters.find((p) => !used.has(p)) ?? posters[0] ?? null;
+      if (pick) used.add(pick);
+      return [slug, img(pick, "w342")] as const;
+    });
     return Object.fromEntries(entries);
   });
 }

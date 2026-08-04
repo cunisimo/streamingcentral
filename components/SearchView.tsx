@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
@@ -7,7 +8,7 @@ import { GenreSlider, CountryFilter } from "./Filters";
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
 import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 
-type Filter = "todo" | "movie" | "tv" | "actores";
+type Filter = "todo" | "movie" | "tv" | "actores" | "directores";
 
 export default function SearchView() {
   const { ready } = usePlatforms();
@@ -15,7 +16,7 @@ export default function SearchView() {
   const [filter, setFilter] = useState<Filter>("todo");
   const [res, setRes] = useState<{ titles: UITitle[]; people: UIPerson[] }>({ titles: [], people: [] });
   const [loading, setLoading] = useState(false);
-  const [explore, setExplore] = useState<{ slug?: string; country?: string } | null>(null);
+  const [explore, setExplore] = useState<{ country: string } | null>(null);
   const [covers, setCovers] = useState<Record<string, string | null>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,20 +41,23 @@ export default function SearchView() {
   }, [q, ready]);
 
   const hasQuery = q.trim().length >= 2;
-  const showTitles = filter === "actores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);
-  const showPeople = filter === "todo" || filter === "actores" ? res.people : [];
+  const showTitles = filter === "actores" || filter === "directores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);
+  const showPeople = filter === "actores" ? res.people.filter((p) => (p.department ?? "Acting") === "Acting")
+    : filter === "directores" ? res.people.filter((p) => p.department === "Directing")
+    : filter === "todo" ? res.people
+    : [];
 
   return (
     <div className="wrap buscar">
-      <h1 className="buscar-title">Buscar</h1>
+      <h1 className="buscar-title">¿Qué vemos hoy?</h1>
       <div className="bsearch">
         <svg className="ico" viewBox="0 0 24 24" fill="none" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
         <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setExplore(null); }} placeholder="¿Qué querés ver?" />
       </div>
       <div className="bchips">
-        {(["todo", "movie", "tv", "actores"] as Filter[]).map((f) => (
+        {((filter === "movie" || filter === "tv" ? ["todo", "movie", "tv"] : ["todo", "movie", "tv", "actores", "directores"]) as Filter[]).map((f) => (
           <button key={f} className={`bchip ${filter === f ? "on" : ""}`} onClick={() => { setFilter(f); setExplore(null); }}>
-            {f === "todo" ? "Todo" : f === "movie" ? "Películas" : f === "tv" ? "Series" : "Actores"}
+            {f === "todo" ? "Todo" : f === "movie" ? "Películas" : f === "tv" ? "Series" : f === "actores" ? "Actores" : "Directores"}
           </button>
         ))}
       </div>
@@ -65,11 +69,14 @@ export default function SearchView() {
           <div className="explore-grid">
             {GENRES.filter((g) => g[0] !== "todos").map(([s, l]) => {
               const cover = covers[s];
+              const color = GENRE_COLOR[s];
+              // Lavado del color del género sobre el póster: la imagen queda tenue
+              // y el color diferencia cada categoría (D9≈85%, F2≈95% alpha).
               const style = cover
-                ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55)), url(${cover})` }
-                : { background: GENRE_COLOR[s] };
+                ? { backgroundImage: `linear-gradient(180deg, ${color}D9, ${color}F2), url(${cover})` }
+                : { background: color };
               return (
-                <button key={s} className="explore-tile" style={style} onClick={() => setExplore({ slug: s })}><span>{l}</span></button>
+                <Link key={s} href={`/categoria/${s}`} className="explore-tile" style={style}><span>{l}</span></Link>
               );
             })}
           </div>
@@ -88,13 +95,15 @@ export default function SearchView() {
 
       {!hasQuery && filter === "actores" && <BrowseActors />}
 
+      {!hasQuery && filter === "directores" && <BrowseDirectors />}
+
       {/* ---- CON QUERY: los chips filtran resultados ---- */}
       {hasQuery && (
         <>
           {loading && <p className="loading">Buscando…</p>}
           {!loading && showPeople.length > 0 && (
             <>
-              <h2 className="bres-h">Actores</h2>
+              <h2 className="bres-h">{filter === "directores" ? "Directores" : "Actores"}</h2>
               <div className="people-grid">{showPeople.map((p) => <PersonCard key={p.id} p={p} />)}</div>
             </>
           )}
@@ -114,7 +123,7 @@ export default function SearchView() {
 }
 
 // --- Navegar películas/series con filtros combinables + paginación ---
-const AGES: [string, string][] = [["ATP", "atp"], ["+13", "13"], ["+16", "16"], ["+18", "18"]];
+const AGES: [string, string][] = [["ATP", "atp"], ["+13", "13"], ["+16", "16"]];
 
 function BrowseTitles({ tipo }: { tipo: MediaType }) {
   const { platforms, ready } = usePlatforms();
@@ -158,7 +167,7 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
   return (
     <>
       <GenreSlider value={genre} onChange={setGenre} />
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
         <CountryFilter value={country} onChange={setCountry} />
         {tipo === "movie" && (
           <div className="bchips" style={{ margin: 0 }}>
@@ -222,18 +231,37 @@ function BrowseActors() {
   );
 }
 
-function ExploreList({ explore, onBack }: { explore: { slug?: string; country?: string }; onBack: () => void }) {
+// --- Directores curados (lista fija de /api/directores). TMDB no tiene índice
+// de directores como sí de actores (person/popular es ~99% actores), así que el
+// browse muestra una lista curada; para cualquier otro, usar el buscador. ---
+function BrowseDirectors() {
+  const [people, setPeople] = useState<UIPerson[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetch("/api/directores").then((r) => r.json()).then((j) => {
+      setPeople(j.people ?? []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+  return (
+    <>
+      <h2 className="bres-h">Directores</h2>
+      {loading ? <p className="loading">Cargando…</p>
+        : <div className="people-grid">{people.map((p) => <PersonCard key={p.id} p={p} />)}</div>}
+    </>
+  );
+}
+
+function ExploreList({ explore, onBack }: { explore: { country: string }; onBack: () => void }) {
   const { platforms } = usePlatforms();
   const [items, setItems] = useState<UITitle[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    const url = explore.slug
-      ? `/api/discover?tipo=movie&genre=${explore.slug}&providers=${platforms.join(",")}`
-      : `/api/discover?tipo=movie&country=${explore.country}&providers=${platforms.join(",")}`;
+    const url = `/api/discover?tipo=movie&country=${explore.country}&providers=${platforms.join(",")}`;
     setLoading(true);
     fetch(url).then((r) => r.json()).then((j) => { setItems(j.items ?? []); setLoading(false); }).catch(() => setLoading(false));
   }, [explore, platforms]);
-  const title = explore.slug ? genreLabel(explore.slug) : `${COUNTRIES[explore.country!]?.flag} ${COUNTRIES[explore.country!]?.name}`;
+  const title = `${COUNTRIES[explore.country]?.flag} ${COUNTRIES[explore.country]?.name}`;
   return (
     <>
       <button className="back" style={{ background: "none", border: "none", padding: 0, font: "inherit" }} onClick={onBack}><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" /></svg>Explorar todo</button>
