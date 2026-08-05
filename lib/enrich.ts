@@ -11,7 +11,7 @@ import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import { topVotedRows } from "./votes";
-import { excludeFamilyFor, FAMILY_GENRES } from "./audience";
+import { excludeFamilyFor, FAMILY_GENRES, audienceRule } from "./audience";
 import { pickTrailer } from "./trailer";
 import type {
   MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
@@ -119,6 +119,31 @@ export async function recommendations(opts: {
     listByCategory({ tipo: tp, genre: opts.genre, providers: opts.providers, page: 1 })));
   const pool = pools.flat();
   return pickDaily(pool, opts.n ?? 6, dailySeed(), opts.offset ?? 0);
+}
+
+// --- Carruseles de audiencia (family / adult-anime): receta de lib/audience,
+// movie+tv mergeados, filtrado a plataformas. Server-side, cero costo por título.
+export async function audienceTitles(slug: string, providers: PlatformCode[]): Promise<UITitle[]> {
+  const ids = codesToTmdbIds(providers);
+  if (!ids.length) return [];
+  const types: MediaType[] = ["movie", "tv"];
+  const pools = await Promise.all(types.map(async (tp) => {
+    const rule = audienceRule(slug, tp);
+    if (!rule) return [] as UITitle[];
+    const extra: Record<string, string> = {};
+    if (rule.certLte) { extra.certification_country = "US"; extra["certification.lte"] = rule.certLte; }
+    if (rule.certGte) { extra.certification_country = "US"; extra["certification.gte"] = rule.certGte; }
+    const res = await discover(tp, {
+      providers: ids,
+      genres: rule.genres,
+      withoutGenres: rule.withoutGenres,
+      extra: Object.keys(extra).length ? extra : undefined,
+    });
+    const pub = await publishedIds(tp);
+    const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, tp, pub)));
+    return items.filter((i) => i.platforms.length > 0);
+  }));
+  return pools.flat();
 }
 
 // --- Búsqueda multi: títulos (todos, con disponibilidad) + personas ---
