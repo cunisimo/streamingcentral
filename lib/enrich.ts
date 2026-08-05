@@ -11,6 +11,7 @@ import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import { topVotedRows } from "./votes";
+import { excludeFamilyFor, FAMILY_GENRES } from "./audience";
 import { pickTrailer } from "./trailer";
 import type {
   MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
@@ -86,6 +87,7 @@ export async function listByCategory(opts: {
     providers: ids,
     genres: genres.length ? genres : undefined,
     keywords: keywords.length ? keywords : undefined,
+    withoutGenres: excludeFamilyFor(opts.genre) ? FAMILY_GENRES : undefined,
     originCountry: opts.country || rule.originCountry,
     page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes, extra,
   });
