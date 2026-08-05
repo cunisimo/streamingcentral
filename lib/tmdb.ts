@@ -61,6 +61,7 @@ export interface RawProvider {
 export interface DiscoverOpts {
   providers?: number[];
   genres?: number[];
+  withoutGenres?: number[];
   keywords?: number[];
   originCountry?: string;
   sortBy?: string;
@@ -78,6 +79,7 @@ export function discover(type: MediaType, o: DiscoverOpts = {}) {
   };
   if (o.providers?.length) p.with_watch_providers = o.providers.join("|");
   if (o.genres?.length) p.with_genres = o.genres.join("|");
+  if (o.withoutGenres?.length) p.without_genres = o.withoutGenres.join(",");
   if (o.keywords?.length) p.with_keywords = o.keywords.join("|");
   if (o.originCountry) p.with_origin_country = o.originCountry;
   if (o.extra) Object.assign(p, o.extra);
