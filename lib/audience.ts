@@ -4,15 +4,19 @@
 // es family/adulto se hace acá y en ningún otro lado.
 import type { MediaType } from "./types";
 
-// Family (movie+tv) y Kids (solo tv). Se excluyen de los géneros adultos.
-export const FAMILY_GENRES = [10751, 10762];
+// Lo que NO va en los rieles de género general (acción, terror, drama…):
+// Animación (16), Familia (movie+tv) y Kids (solo tv). La animación se sirve
+// por sus propios carruseles — "Para toda la familia" y "Animación para
+// adultos" — así que sin el 16 acá el anime adulto (Death Note, Frieren) se
+// colaba en Terror y Acción: no trae 10751/10762, solo 16.
+export const EXCLUDED_FROM_GENERAL_GENRES = [16, 10751, 10762];
 
-// Categorías cuya naturaleza es animación/familiar: NO se les excluye family
-// (si no, un carrusel de Animación perdería su contenido familiar).
+// Categorías cuya naturaleza es animación/familiar: NO se les excluye nada
+// (si no, un carrusel de Animación se quedaría vacío).
 const EXEMPT = new Set(["animacion", "familiar"]);
 
-// ¿A este slug de género se le excluye el contenido family? true para géneros
-// general/adulto; false para exentos, "todos" y sin género.
+// ¿A este slug de género se le excluye animación/family? true para géneros
+// generales; false para exentos, "todos" y sin género.
 export function excludeFamilyFor(slug?: string): boolean {
   return !!slug && slug !== "todos" && !EXEMPT.has(slug);
 }
