@@ -25,6 +25,13 @@ const yearOf = (t: RawTitle) => {
 const titleOf = (t: RawTitle) => t.title || t.name || "";
 const today = () => new Date().toISOString().slice(0, 10);
 
+// ¿el título está en alguna de las plataformas elegidas por el usuario? Filtro
+// estricto: TMDB a veces devuelve títulos fuera de las plataformas pedidas, y el
+// gate viejo (platforms.length > 0) solo exigía "en alguna plataforma", no "en
+// las MÍAS". Todo el browsing filtra por esto (Próximamente es la excepción).
+const onUserPlatforms = (i: UITitle, providers: PlatformCode[]) =>
+  i.platforms.some((c) => providers.includes(c));
+
 // providers de un título en AR (cacheado) -> { codes, links, watchLink }
 async function providersOf(type: MediaType, id: number) {
   return cached(`pv:${type}:${id}`, TTL.providers, async () => {
@@ -93,7 +100,7 @@ export async function listByCategory(opts: {
   });
   const pub = await publishedIds(opts.tipo);
   const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)));
-  return items.filter((i) => i.platforms.length > 0);
+  return items.filter((i) => onUserPlatforms(i, opts.providers));
 }
 
 // --- Últimos lanzamientos (por fecha de estreno, en tus plataformas) ---
@@ -141,7 +148,7 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
     });
     const pub = await publishedIds(tp);
     const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, tp, pub)));
-    return items.filter((i) => i.platforms.length > 0);
+    return items.filter((i) => onUserPlatforms(i, providers));
   }));
   return pools.flat();
 }
@@ -285,7 +292,7 @@ export async function personFilmography(id: number, providers: PlatformCode[]) {
     return c.media_type === "movie" || c.media_type === "tv";
   }).sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0));
   const items = await Promise.all(merged.slice(0, 40).map((c) => toUITitle(c, c.media_type, pub)));
-  const avail = items.filter((i) => i.platforms.length > 0);
+  const avail = items.filter((i) => onUserPlatforms(i, providers));
   return {
     person: { id: det.id, name: det.name, profile: img(det.profile_path, "w185"), knownFor: [] } as UIPerson,
     titles: avail,
@@ -399,7 +406,7 @@ async function votedCards(
     } as UITitle;
   }));
   return cards
-    .filter((c): c is UITitle => !!c && c.platforms.length > 0)
+    .filter((c): c is UITitle => !!c && onUserPlatforms(c, providers))
     .slice(0, 20);
 }
 
