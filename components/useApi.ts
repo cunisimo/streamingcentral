@@ -20,9 +20,25 @@ interface ApiState<T> {
   retry: () => void;
 }
 
+// Centinela para distinguir "el body parseó y dio null" (dato legítimo) de "el
+// body no se pudo parsear" (ej: captive portal que responde 200 con HTML). Un
+// símbolo de módulo no puede confundirse con ningún valor real de T.
+const PARSE_FAILED = Symbol("useApi:parse-failed");
+
+interface UseApiOptions {
+  // Por defecto `data` se limpia cuando el efecto re-corre con deps distintas
+  // o cuando el fetch falla — así un consumidor que navega de un recurso a
+  // otro (DetailView, PersonView, IndecisoHero por chip) nunca renderiza el
+  // contenido del recurso anterior bajo una URL/título nuevo.
+  // Solo CatalogView necesita lo contrario: que un hipo de red durante un
+  // refetch del Home no borre los carruseles ya visibles.
+  keepPrevious?: boolean;
+}
+
 // Fetch genérico que re-dispara cuando cambian las plataformas, las deps, o se
 // pide un retry manual.
-export function useApi<T>(url: () => string, deps: unknown[] = []): ApiState<T> {
+export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseApiOptions = {}): ApiState<T> {
+  const { keepPrevious = false } = options;
   const { platforms, ready } = usePlatforms();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,22 +53,39 @@ export function useApi<T>(url: () => string, deps: unknown[] = []): ApiState<T> 
     const u = url();
     // URL vacía = riel en modo controlado (los items vienen por prop): no hay
     // nada que pedir y tampoco hay que quedar en loading para siempre.
-    if (!u) { setLoading(false); return; }
+    if (!u) { setLoading(false); if (!keepPrevious) setData(null); return; }
     let alive = true;
     setLoading(true);
     setOffline(false);
     setError(false);
+    // Limpiar ya (no solo en error) para que un consumidor sin keepPrevious no
+    // muestre el contenido del recurso anterior mientras llega el nuevo.
+    if (!keepPrevious) setData(null);
     fetch(u)
       .then(async (r) => {
         // Chequear r.ok ANTES de tomar el body como datos: r.json() resuelve
         // perfecto sobre un 500, así que sin esto el error pasaba por payload.
-        const body = await r.json().catch(() => null);
+        let body: unknown = PARSE_FAILED;
+        try { body = await r.json(); } catch { /* body queda en PARSE_FAILED */ }
         if (!alive) return;
-        if (!r.ok) { setError(true); setLoading(false); return; }
+        // 200 con body no-JSON (ej: captive portal) es tan inválido como un
+        // 4xx/5xx: si no, `data` queda null con loading/offline/error en
+        // false, un estado imposible que cuelga el skeleton para siempre.
+        if (!r.ok || body === PARSE_FAILED) {
+          setError(true);
+          setLoading(false);
+          if (!keepPrevious) setData(null);
+          return;
+        }
         setData(body as T);
         setLoading(false);
       })
-      .catch(() => { if (alive) { setLoading(false); setOffline(true); } });
+      .catch(() => {
+        if (!alive) return;
+        setLoading(false);
+        setOffline(true);
+        if (!keepPrevious) setData(null);
+      });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, platforms.join(","), nonce, ...deps]);

@@ -22,6 +22,9 @@ export default function CatalogView() {
   const { data, loading, offline, error, retry } = useApi<HomePayload>(
     () => (ready ? `/api/home?providers=${platforms.join(",")}&t=${param}` : ""),
     [param, ready],
+    // Único consumidor que necesita conservar los rieles ya visibles cuando
+    // un refetch (toggle Películas/Series) falla — ver comentario en useApi.
+    { keepPrevious: true },
   );
 
   const rails = data?.rails ?? [];
