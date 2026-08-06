@@ -1,9 +1,45 @@
 // Verifica las reglas del Home Composer contra la API local.
 // Uso: node scripts/verify-home.mjs
-const P = process.env.SC_PROVIDERS || "n,d,m,st,pv,ap";
+
+// Códigos reales de plataforma (lib/providers-ar.ts, campo PlatformDef.code).
+// Es un .mjs sin TS, así que se hardcodea acá — si se agrega/saca una
+// plataforma en providers-ar.ts, actualizar esta lista a mano.
+const CODIGOS_VALIDOS = ["n", "d", "m", "p", "pp", "at", "mb", "cr", "sp", "vx"];
+
+const P = process.env.SC_PROVIDERS || "n,d,m,p,pp,at,mb,cr,sp,vx";
+const desconocidos = P.split(",").map((c) => c.trim()).filter((c) => c && !CODIGOS_VALIDOS.includes(c));
+if (desconocidos.length) {
+  console.error(`AVISO: código(s) de plataforma inexistente(s) en SC_PROVIDERS: ${desconocidos.join(", ")} (válidos: ${CODIGOS_VALIDOS.join(", ")})`);
+}
+
 const r = await fetch(`http://localhost:3000/api/home?providers=${P}`);
 const j = await r.json();
 if (j.error) { console.error("ERROR:", j.error); process.exit(1); }
+
+// Estructura mínima esperada ANTES de chequear contenido: si esto no se
+// cumple (p.ej. 0 providers válidos → composeHome devuelve {hero:[],rails:[]})
+// no tiene sentido seguir, porque "0 duplicados" sería un falso OK.
+const RIELES_ESPERADOS = [
+  "ultimos", "mas-votados", "hacete-cargo",
+  "genre:accion", "genre:scifi", "genre:terror", "genre:drama", "genre:comedia", "genre:documental",
+  "family", "adult-anime",
+];
+const erroresEstructura = [];
+if (!Array.isArray(j.hero) || j.hero.length === 0) {
+  erroresEstructura.push("hero vacío o ausente");
+}
+if (!Array.isArray(j.rails) || j.rails.length < RIELES_ESPERADOS.length) {
+  erroresEstructura.push(`se esperaban al menos ${RIELES_ESPERADOS.length} rieles, vinieron ${j.rails?.length ?? 0}`);
+} else {
+  const claves = new Set(j.rails.map((x) => x.key));
+  const faltantes = RIELES_ESPERADOS.filter((k) => !claves.has(k));
+  if (faltantes.length) erroresEstructura.push(`faltan rieles: ${faltantes.join(", ")}`);
+}
+if (erroresEstructura.length) {
+  console.error("FALLA ESTRUCTURAL — el Home no trae la forma mínima esperada:");
+  for (const e of erroresEstructura) console.error(`  - ${e}`);
+  process.exit(1);
+}
 
 const key = (t) => `${t.type}:${t.id}`;
 const seen = new Map();
