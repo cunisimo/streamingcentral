@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function Login() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function Login() {
       <p className="section-sub">Dashboard editorial de Yump</p>
       <div className="field"><label>Email</label><input value={email} onChange={(e) => setEmail(e.target.value)} type="email" onKeyDown={(e) => e.key === "Enter" && recuperar && enviarReset()} /></div>
       {!recuperar && (
-        <div className="field"><label>Contraseña</label><input value={pass} onChange={(e) => setPass(e.target.value)} type="password" onKeyDown={(e) => e.key === "Enter" && submit()} /></div>
+        <PasswordInput label="Contraseña" value={pass} onChange={setPass} onEnter={submit} />
       )}
       {err && <p style={{ color: "var(--editorial)", marginTop: 12, fontSize: 14 }}>{err}</p>}
       {ok && <p style={{ color: "var(--accent)", marginTop: 12, fontSize: 14 }}>{ok}</p>}

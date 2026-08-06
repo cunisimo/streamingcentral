@@ -322,6 +322,13 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .admin input,.admin textarea,.admin select{width:100%;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);padding:11px 14px;font-size:15px;font-family:var(--body);color:var(--text);outline:none}
 .admin input:focus,.admin textarea:focus{border-color:var(--accent)}
 .admin textarea{min-height:200px;resize:vertical;line-height:1.6}
+/* Campo de contraseña con "ojito" (components/PasswordInput.tsx) */
+.pass-wrap{position:relative}
+.pass-wrap input{padding-right:46px}
+.pass-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border:none;border-radius:9px;background:none;color:var(--dim);cursor:pointer}
+.pass-eye:hover{color:var(--text)}
+.pass-eye[aria-pressed="true"]{color:var(--accent)}
+
 .btn{height:46px;padding:0 22px;border-radius:11px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;font-family:var(--body);cursor:pointer}
 .btn.ghost{background:var(--surface);border:1px solid var(--line-2);color:var(--text)}
 .row-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-top:10px}
