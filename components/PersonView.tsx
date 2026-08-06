@@ -8,9 +8,9 @@ import type { UITitle, UIPerson } from "@/lib/types";
 
 export default function PersonView({ id }: { id: string }) {
   const { platforms } = usePlatforms();
-  const { data, loading, offline, retry } = useApi<{ person: UIPerson; titles: UITitle[]; hidden: number }>(
+  const { data, loading, offline, error, retry } = useApi<{ person: UIPerson; titles: UITitle[]; hidden: number }>(
     () => `/api/person/${id}?providers=${platforms.join(",")}`, [id]);
-  if (offline && !data) return <div className="wrap"><OfflineState onRetry={retry} /></div>;
+  if ((offline || error) && !data) return <div className="wrap"><OfflineState onRetry={retry} /></div>;
   return (
     <div className="wrap">
       <Link className="back" href="/buscar"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" /></svg>Volver a Buscar</Link>

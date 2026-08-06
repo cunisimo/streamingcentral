@@ -19,21 +19,21 @@ import {
   categoryCandidates, enrichRaw, latestReleases, mostVoted, mostPanned,
   audienceTitles, recommendations, type RawTitle,
 } from "./enrich";
+// HOME_GENRES / defaultTypeFor viven en components/data.ts (módulo client-safe):
+// el cliente los necesita para el estado de los toggles, y si los importara de
+// acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
+import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
+// Los rieles de audiencia (family / adult-anime) mergean movie+tv (~40 títulos) y
+// siempre se mostraron completos. Cortarlos a VISIBLE_CARDS reduciría tarjetas
+// visibles, así que el composer los recorta con su propio límite.
+export const AUDIENCE_CARDS = 40;
 // Páginas de discover que se piden de entrada (20 por página). Con 2 (=40
 // candidatos) se cubre el peor solapamiento medido (7 de 20). La 3ª página solo
 // se pide si tras dedup + filtro de plataformas el riel quedó corto.
 export const FETCH_BUFFER = 2;
-
-// Orden de los rieles de género en el Home. Fuente de verdad: antes vivía en
-// components/data.ts (SHELVES); acá manda el composer.
-export const HOME_GENRES = ["accion", "scifi", "terror", "drama", "comedia", "documental"];
-
-// Tipo por defecto de cada riel de género: alterna movie/tv como hoy.
-export const defaultTypeFor = (genre: string): MediaType =>
-  HOME_GENRES.indexOf(genre) % 2 === 0 ? "movie" : "tv";
 
 export interface HomeRail {
   key: string;
@@ -165,8 +165,8 @@ export async function composeHome(opts: {
 
   // 5. Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida
   //    y solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
-  const family = take(await audienceTitles("family", providers), used);
-  const anime = take(await audienceTitles("adult-anime", providers), used);
+  const family = take(await audienceTitles("family", providers), used, AUDIENCE_CARDS);
+  const anime = take(await audienceTitles("adult-anime", providers), used, AUDIENCE_CARDS);
 
   const rails: HomeRail[] = [
     { key: "ultimos", title: "Últimos lanzamientos", items: latest, seeAllHref: "/lista/ultimos" },

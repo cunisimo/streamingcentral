@@ -1,10 +1,16 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { HOME_GENRES, defaultTypeFor } from "@/lib/home";
+// Import client-safe a propósito: components/data.ts no arrastra nada del server.
+// Importar esto de lib/home.ts metería el cliente de Upstash Redis en el bundle.
+import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import type { MediaType } from "@/lib/types";
 
-// Claves con toggle en el Home: los 6 géneros + los 2 rieles de votos.
-const TOGGLE_KEYS = [...HOME_GENRES, "mas-votados", "hacete-cargo"];
+// Claves con toggle que RECONSTRUYEN el Home: solo los 6 géneros (typeToggle
+// "refetch"). Los rieles de votos ("mas-votados" / "hacete-cargo") usan
+// typeToggle "filter": se resuelven en cliente sobre la lista mixta ya cargada,
+// así que no entran acá ni en el parámetro `t` — su preferencia la sigue
+// guardando useShelfType, en la misma clave y formato.
+const TOGGLE_KEYS = HOME_GENRES;
 // MISMA clave y MISMO formato que hooks/useShelfType.ts: un único objeto JSON
 // { [shelfKey]: "movie" | "tv" }. Si se usara una clave por riel, el usuario
 // perdería la preferencia que ya tenía guardada.
@@ -20,12 +26,9 @@ function readStore(): Store {
   }
 }
 
-const defaultFor = (k: string): MediaType =>
-  HOME_GENRES.includes(k) ? defaultTypeFor(k) : "movie";
-
-// Estado centralizado de los toggles Películas/Series del Home. Antes vivía en
-// cada Shelf (useShelfType); ahora el Home se reconstruye entero al cambiar
-// cualquiera, así que el estado tiene que estar arriba.
+// Estado centralizado de los toggles Películas/Series de los rieles de género del
+// Home. Antes vivía en cada Shelf (useShelfType); ahora el Home se reconstruye
+// entero al cambiar cualquiera, así que el estado tiene que estar arriba.
 export function useHomeTypes() {
   const [types, setTypes] = useState<Record<string, MediaType>>({});
   const [ready, setReady] = useState(false);
@@ -35,7 +38,7 @@ export function useHomeTypes() {
     const out: Record<string, MediaType> = {};
     for (const k of TOGGLE_KEYS) {
       const v = store[k];
-      out[k] = v === "movie" || v === "tv" ? v : defaultFor(k);
+      out[k] = v === "movie" || v === "tv" ? v : defaultTypeFor(k);
     }
     setTypes(out);
     setReady(true);
@@ -52,8 +55,11 @@ export function useHomeTypes() {
     }
   }, []);
 
-  // Serialización para /api/home?t=...
-  const param = TOGGLE_KEYS.map((k) => `${k}:${types[k] ?? defaultFor(k)}`).join(",");
+  // Serialización para /api/home?t=... Solo cambia si cambia un toggle de género,
+  // que es exactamente cuando hay que rearmar el Home.
+  const param = TOGGLE_KEYS.map((k) => `${k}:${types[k] ?? defaultTypeFor(k)}`).join(",");
 
+  // `types` lo consume CatalogView para que el toggle de un riel de género se vea
+  // aplicado de inmediato, sin esperar a que vuelva el payload nuevo.
   return { types, setType, param, ready };
 }

@@ -17,40 +17,84 @@ import type { HomePayload } from "@/lib/home";
 export default function CatalogView() {
   const online = useOnline();
   const { platforms } = usePlatforms();
-  const { setType, param, ready } = useHomeTypes();
+  const { types, setType, param, ready } = useHomeTypes();
 
-  const { data, loading, offline } = useApi<HomePayload>(
+  const { data, loading, offline, error, retry } = useApi<HomePayload>(
     () => (ready ? `/api/home?providers=${platforms.join(",")}&t=${param}` : ""),
     [param, ready],
   );
 
-  if (!online || offline) {
-    return <div className="wrap"><OfflineState onRetry={() => location.reload()} /></div>;
-  }
-
   const rails = data?.rails ?? [];
+  const hayContenido = rails.length > 0;
+  // Mientras useHomeTypes no leyó localStorage no hay URL que pedir y useApi apaga
+  // `loading`: sin sumarlo acá, entrar al Home desde otra página pinta un frame
+  // en blanco antes del primer fetch.
+  const cargando = !ready || loading;
+  // `error` = el server respondió 500 (composeHome se cayó). `offline` = no hubo
+  // respuesta. Los dos dejan la pantalla igual de vacía, así que se tratan juntos.
+  const fallo = !online || offline || error;
+
+  // Pantalla completa SOLO cuando no hay nada que mostrar todavía. Si ya hay
+  // rieles, un fallo de refetch no borra el Home: se avisa arriba y se ofrece
+  // reintentar (abajo).
+  if (!hayContenido && !cargando && (!online || offline)) {
+    return <div className="wrap"><OfflineState onRetry={retry} /></div>;
+  }
 
   return (
     <>
-      <IndecisoHero initialItems={data?.hero} />
+      <IndecisoHero initialItems={data?.hero} heroPendiente={!data && !fallo} />
       <div className="wrap">
         <DesempateBanner />
         <UpcomingSection />
-        {loading && !rails.length
-          ? <div className="shelf"><span className="loading">Cargando…</span></div>
-          : rails.map((r) => (
-              <Shelf
-                key={r.key}
-                items={r.items}
-                title={r.title}
-                genre={r.genre}
-                seeAllHref={r.seeAllHref}
-                typeToggle={r.typeToggle}
-                shelfKey={r.shelfKey}
-                initialType={r.activeType}
-                onTypeChange={(t) => setType(r.shelfKey ?? r.key, t)}
-              />
-            ))}
+
+        {fallo && hayContenido && (
+          <p className="empty-note home-retry" role="status">
+            No pudimos actualizar el inicio.{" "}
+            <button className="up-retry" onClick={retry}>Reintentar</button>
+          </p>
+        )}
+
+        {!hayContenido ? (
+          cargando ? (
+            <div className="shelf"><span className="loading">Cargando…</span></div>
+          ) : (
+            // El payload llegó (o falló) y no hay un solo riel: antes esto era una
+            // pantalla vacía y muda.
+            <p className="empty-note home-retry" role="status">
+              No pudimos cargar el inicio.{" "}
+              <button className="up-retry" onClick={retry}>Reintentar</button>
+            </p>
+          )
+        ) : (
+          // Durante un refetch con contenido en pantalla, los rieles se atenúan y
+          // no aceptan clicks: el toggle tarda lo que tarde composeHome y sin esto
+          // no pasaba nada visible.
+          <div className={`home-rails${cargando ? " is-refreshing" : ""}`} aria-busy={cargando}>
+            {rails.map((r) => {
+              const sk = r.shelfKey;
+              return (
+                <Shelf
+                  key={r.key}
+                  items={r.items}
+                  title={r.title}
+                  genre={r.genre}
+                  seeAllHref={r.seeAllHref}
+                  typeToggle={r.typeToggle}
+                  shelfKey={sk}
+                  // El tipo del cliente gana mientras vuelve el payload nuevo, así
+                  // el toggle se ve aplicado de inmediato y no rebota al valor viejo.
+                  initialType={(sk && types[sk]) || r.activeType}
+                  // Solo los rieles "refetch" rearman el Home. Los "filter" filtran
+                  // en cliente: pedir /api/home de nuevo devolvería lo mismo.
+                  onTypeChange={
+                    r.typeToggle === "refetch" && sk ? (t) => setType(sk, t) : undefined
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     </>
   );

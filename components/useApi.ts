@@ -10,6 +10,13 @@ interface ApiState<T> {
   // vacío mudo. El SW nunca sirve /api/* desde cache (Network Only), así que un
   // fallo de red acá siempre es un fallo real, no un dato viejo.
   offline: boolean;
+  // true cuando SÍ hubo respuesta pero con status de error (4xx/5xx). Distinto de
+  // `offline` (no hubo respuesta). Sin esto, un 500 con body JSON —el shape que
+  // devuelven nuestras rutas: { error, ...vacíos }— se tomaba como datos buenos y
+  // la vista quedaba vacía, sin mensaje ni reintento.
+  // En este caso `data` conserva el último payload bueno (semántica tipo SWR),
+  // para que un fallo de refetch no borre lo que ya está en pantalla.
+  error: boolean;
   retry: () => void;
 }
 
@@ -20,6 +27,7 @@ export function useApi<T>(url: () => string, deps: unknown[] = []): ApiState<T> 
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
+  const [error, setError] = useState(false);
   const [nonce, setNonce] = useState(0);
 
   const retry = useCallback(() => setNonce((n) => n + 1), []);
@@ -33,15 +41,23 @@ export function useApi<T>(url: () => string, deps: unknown[] = []): ApiState<T> 
     let alive = true;
     setLoading(true);
     setOffline(false);
+    setError(false);
     fetch(u)
-      .then((r) => r.json())
-      .then((j) => { if (alive) { setData(j); setLoading(false); } })
+      .then(async (r) => {
+        // Chequear r.ok ANTES de tomar el body como datos: r.json() resuelve
+        // perfecto sobre un 500, así que sin esto el error pasaba por payload.
+        const body = await r.json().catch(() => null);
+        if (!alive) return;
+        if (!r.ok) { setError(true); setLoading(false); return; }
+        setData(body as T);
+        setLoading(false);
+      })
       .catch(() => { if (alive) { setLoading(false); setOffline(true); } });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, platforms.join(","), nonce, ...deps]);
 
-  return { data, loading, offline, retry };
+  return { data, loading, offline, error, retry };
 }
 
 export const provParam = (platforms: string[]) => platforms.join(",");

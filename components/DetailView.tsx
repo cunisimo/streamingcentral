@@ -21,10 +21,12 @@ const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6
 export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }) {
   const router = useRouter();
   const { platforms } = usePlatforms();
-  const { data, loading, offline, retry } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
+  const { data, loading, offline, error, retry } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
   const relTrack = useRef<HTMLDivElement>(null);
 
-  if (offline && !data) return <div className="detail-inner"><OfflineState onRetry={retry} /></div>;
+  // `error` (500 del server) entra acá igual que `offline`: si no, el skeleton
+  // quedaría girando para siempre.
+  if ((offline || error) && !data) return <div className="detail-inner"><OfflineState onRetry={retry} /></div>;
   if (loading || !data) return <DetailSkeleton />;
   const t = data;
   const mine = t.platforms.filter((p) => platforms.includes(p));

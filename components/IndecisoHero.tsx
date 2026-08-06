@@ -31,7 +31,15 @@ const MOODS: Mood[] = [
 const ANIMO = MOODS.filter((m) => m.group === "animo");
 const TEMATICA = MOODS.filter((m) => m.group === "tematica");
 
-export default function IndecisoHero({ initialItems }: { initialItems?: UITitle[] }) {
+export default function IndecisoHero({
+  initialItems, heroPendiente,
+}: {
+  initialItems?: UITitle[];
+  // true mientras el payload del composer está en vuelo. Distingue "todavía no
+  // llegó" de "llegó vacío": sin esto, el primer render (initialItems undefined)
+  // disparaba /api/recomendaciones al pedo en CADA carga del Home.
+  heroPendiente?: boolean;
+}) {
   const { platforms } = usePlatforms();
   const [offset, setOffset] = useState(0);
   const [genre, setGenre] = useState("todos");
@@ -44,14 +52,22 @@ export default function IndecisoHero({ initialItems }: { initialItems?: UITitle[
   // "Mostrame otras" se vuelve a /api/recomendaciones: es exploración puntual y
   // NO rearma el Home.
   const esBase = genre === "todos" && offset === 0;
+  // Criterio de "controlado" igual al de Shelf: `!== undefined`, no truthiness.
+  // Un hero legítimamente vacío (0 títulos en tus plataformas) es un resultado
+  // válido del composer, no una razón para ir a buscar otra cosa.
+  const controlado = initialItems !== undefined;
+  // El estado base lo manda el composer (ya reservó esos títulos para que no se
+  // repitan abajo): mientras esté pendiente o ya haya llegado, no se fetchea.
+  // Si el composer falló (ni pendiente ni controlado) el hero se busca solo.
+  const usaComposer = esBase && (heroPendiente || controlado);
   const { data, loading: fetchLoading } = useApi<{ items: UITitle[] }>(
-    () => (esBase && initialItems?.length
+    () => (usaComposer
       ? ""
       : `/api/recomendaciones?tipo=all&genre=${genre}&offset=${offset}&providers=${platforms.join(",")}`),
-    [offset, genre, !!initialItems?.length],
+    [offset, genre, controlado, heroPendiente],
   );
-  const loading = esBase && initialItems?.length ? false : fetchLoading;
-  const picks = esBase && initialItems?.length ? initialItems : (data?.items ?? []);
+  const loading = usaComposer ? !!heroPendiente : fetchLoading;
+  const picks = usaComposer ? (initialItems ?? []) : (data?.items ?? []);
   const filtered = genre !== "todos";
 
   function reset() {
