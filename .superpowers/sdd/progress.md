@@ -170,3 +170,35 @@ TODAS LAS TASKS COMPLETAS. Pendiente: review final del branch.
   - M4 prop muerta showType fuera de Shelf.tsx (onOffline NO, la usa CategoryView).
   - M6 CLAUDE.md al día: sin peliculas//series//FilterGrid/CountryGrid/PersonRail/riel Directores;
     + /api/audience, /api/upcoming, /api/providers en la tabla de rutas.
+
+## Review final del branch (opus, con mediciones reales) — 2 rondas de fixes
+Ronda 1 (commit 1f27f34, perf): el dedup cumplía el spec pero el Home había pasado de ~0.65s al primer
+contenido (11 requests paralelos) a 6-10s (1 request con ~11 etapas secuenciales).
+- C1: /api/home podía pasar el timeout de Vercel (10.1s medidos en cache fría, default 10s) → maxDuration=60.
+- C2: sin try/catch; ~316 llamadas TMDB por request, un 429 tumbaba TODO el Home → safe()/settleAll por riel.
+- I1: las fuentes no leen `used`, solo el take() → paralelizadas. 6.04s → 2.93s (10 plat), salida byte-equivalente
+  (verificado con firma canónica: mismo orden de rieles, mismos títulos, 0 duplicados).
+- I3: "nunca reducir tarjetas" NO se cumplía en votos. La justificación registrada antes era INCORRECTA:
+  votedCards pide 60 filas y corta a 20 ANTES de que el composer vea nada → limit con default 20.
+- I4: genreRail tiraba candidatos ya pagados y compraba una página extra → arrastra el pool entre vueltas.
+
+Ronda 2 (commit 14de36d): el fix de la ronda 1 introdujo 2 Important propios.
+- H1: con safe() en todo, composeHome ya no podía rechazar → el catch de la ruta y el estado `error` quedaron
+  MUERTOS. Una caída total de TMDB se pintaba como "Nada en tus plataformas" (mentira) sin reintento.
+  → HomePayload expone `degradado`/`fallos`; CatalogView distingue 3 casos (sin plataformas / ok / degradado).
+  Probado con TMDB forzado a fallar: 200 con degradado:true fallos:16 y el aviso + Reintentar en el DOM.
+- H2: la paralelización triplicó el pico de concurrencia (~350-400 requests simultáneos a TMDB, throttle ~50/s;
+  y otras tantas a Upstash en prod) → semáforo global en tmdb() con techo 24, liberando en finally.
+  Probado con 200 fallos forzados + timeouts reales: nada se cuelga, el request siguiente pasa completo.
+  Techo 24 no se paga en caliente (2.42-2.52s); cuesta ~0.8s en cache fría.
+- H3 tope de vueltas en genreRail (4). H4 safe() loguea stack completo y re-lanza fuera de producción.
+
+VERIFICADO POR EL CONTROLADOR: 230 únicos / 0 duplicados; /api/home 2.45-2.62s con 10 plataformas;
+/, /categoria/accion, /buscar, /titulo/movie/550, /persona/287, /api/mas-votados, /api/hacete-cargo,
+/api/discover → 200. tsc 0. next build OK, / en 174 kB (venía de 190 kB antes del fix del bundle).
+
+Minor diferidos (no bloquean): "Ver todas" de votos puede mostrar menos que el riel si crece el volumen de
+votos; take() descarta enriquecidos sobrantes del margen 40%; CLAUDE.md dice lista/[slug] (real: lista/[key])
+y no lista UltimosView/DirectoresView.
+PENDIENTE DE DECISIÓN DEL DUEÑO: los chips y "Mostrame otras" del hero NO deduplican (van a
+/api/recomendaciones), así que ahí sí puede haber repetidos con los rieles de abajo.
