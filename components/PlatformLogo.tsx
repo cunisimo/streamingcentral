@@ -12,6 +12,7 @@ const LOGOS: Record<PlatformCode, JSX.Element> = {
   mb: <span className="lg lg-mb">MUBI</span>,
   cr: <span className="lg lg-cr">crunchyroll</span>,
   sp: <span className="lg lg-sp">Star+</span>,
+  vx: <span className="lg lg-vx">ViX</span>,
 };
 
 export default function PlatformLogo({ code }: { code: PlatformCode }) {

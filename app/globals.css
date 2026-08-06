@@ -68,6 +68,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .lg-mb{color:var(--text);font-weight:800;letter-spacing:.02em}
 .lg-cr{color:#F47521;font-weight:800;letter-spacing:-.02em}
 .lg-sp{color:#5A2EAE;font-weight:800;letter-spacing:-.03em}
+.lg-vx{color:#F4067F;font-weight:800;letter-spacing:-.02em}
 
 /* padding-top y no margin: el fondo con blur tiene que llegar hasta arriba de
    todo y quedar detrás de la barra de estado, no dejar una franja transparente. */
