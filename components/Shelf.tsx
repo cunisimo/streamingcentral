@@ -18,7 +18,7 @@ import type { UITitle, MediaType } from "@/lib/types";
 //  - "filter":  filtra en cliente los ítems ya cargados por `type` (votos).
 export default function Shelf({
   tipo, genre, country, title, url, showType, onOffline, seeAllHref,
-  typeToggle, shelfKey, initialType,
+  typeToggle, shelfKey, initialType, items: controlled,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
   title?: string; url?: string; showType?: boolean;
@@ -29,6 +29,10 @@ export default function Shelf({
   // responde", donde navigator.onLine sigue en true.
   onOffline?: () => void; seeAllHref?: string;
   typeToggle?: "refetch" | "filter"; shelfKey?: string; initialType?: MediaType;
+  // Modo controlado: si viene, el riel no fetchea y renderiza estos items.
+  // Lo usa el Home (payload de /api/home). Sin esta prop, fetchea como siempre
+  // (CategoryView depende de ese modo).
+  items?: UITitle[];
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
@@ -43,15 +47,19 @@ export default function Shelf({
   const effectiveTipo: MediaType | undefined =
     typeToggle === "refetch" ? activeType : tipo;
 
+  const controladoPor = controlled !== undefined;
   const buildUrl = () =>
     url
       ? `${url}${url.includes("?") ? "&" : "?"}providers=${platforms.join(",")}`
       : `/api/discover?tipo=${effectiveTipo}&genre=${genre}&providers=${platforms.join(",")}${country ? `&country=${country}` : ""}`;
-  const { data, loading, offline } = useApi<{ items: UITitle[] }>(
-    buildUrl, [effectiveTipo, genre, country, url],
+  // En modo controlado no se dispara ningún fetch: se pasa una URL vacía y el
+  // hook queda inerte (useApi no fetchea con string vacío).
+  const { data, loading: fetchLoading, offline } = useApi<{ items: UITitle[] }>(
+    () => (controladoPor ? "" : buildUrl()), [effectiveTipo, genre, country, url, controladoPor],
   );
 
-  const rawItems = data?.items ?? [];
+  const loading = controladoPor ? false : fetchLoading;
+  const rawItems = controladoPor ? controlled : (data?.items ?? []);
   // En modo filter, acotamos al tipo activo sobre la lista mixta ya cargada.
   const items = typeToggle === "filter"
     ? rawItems.filter((t) => t.type === activeType)

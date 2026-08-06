@@ -26,10 +26,14 @@ export function useApi<T>(url: () => string, deps: unknown[] = []): ApiState<T> 
 
   useEffect(() => {
     if (!ready) return;
+    const u = url();
+    // URL vacía = riel en modo controlado (los items vienen por prop): no hay
+    // nada que pedir y tampoco hay que quedar en loading para siempre.
+    if (!u) { setLoading(false); return; }
     let alive = true;
     setLoading(true);
     setOffline(false);
-    fetch(url())
+    fetch(u)
       .then((r) => r.json())
       .then((j) => { if (alive) { setData(j); setLoading(false); } })
       .catch(() => { if (alive) { setLoading(false); setOffline(true); } });
