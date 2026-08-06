@@ -32,13 +32,17 @@ const ANIMO = MOODS.filter((m) => m.group === "animo");
 const TEMATICA = MOODS.filter((m) => m.group === "tematica");
 
 export default function IndecisoHero({
-  initialItems, heroPendiente,
+  initialItems, heroPendiente, cargaDegradada,
 }: {
   initialItems?: UITitle[];
   // true mientras el payload del composer está en vuelo. Distingue "todavía no
   // llegó" de "llegó vacío": sin esto, el primer render (initialItems undefined)
   // disparaba /api/recomendaciones al pedo en CADA carga del Home.
   heroPendiente?: boolean;
+  // true cuando el composer respondió con fuentes caídas. Un hero vacío ahí NO
+  // significa "no tenés nada en tus plataformas" — significa que no se pudo
+  // cargar. El reintento vive en CatalogView (un solo botón para todo el Home).
+  cargaDegradada?: boolean;
 }) {
   const { platforms } = usePlatforms();
   const [offset, setOffset] = useState(0);
@@ -143,7 +147,9 @@ export default function IndecisoHero({
           <div className="track" ref={track}>
             {loading ? <span className="loading">Cargando…</span>
               : picks.length ? picks.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)
-              : <p className="empty-note">Nada en tus plataformas. Activá alguna en el botón de arriba.</p>}
+              : usaComposer && cargaDegradada
+                ? <p className="empty-note">No pudimos cargar las recomendaciones de hoy.</p>
+                : <p className="empty-note">Nada en tus plataformas. Activá alguna en el botón de arriba.</p>}
           </div>
         </div>
       </div>

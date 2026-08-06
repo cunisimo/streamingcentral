@@ -29,6 +29,15 @@ export async function GET(req: NextRequest) {
   try {
     return NextResponse.json(await composeHome({ providers, types: parseTypes(sp.get("t")) }));
   } catch (e) {
-    return NextResponse.json({ error: String(e), hero: [], rails: [] }, { status: 500 });
+    // composeHome envuelve cada fuente en `safe`, así que en producción no
+    // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con 200.
+    // Este catch queda para lo que `safe` NO cubre — fuera de producción `safe`
+    // re-lanza a propósito (un bug propio tiene que verse), y para cualquier
+    // fallo del propio handler.
+    console.error("[api/home] composeHome rechazó —", e);
+    return NextResponse.json(
+      { error: String(e), hero: [], rails: [], fallos: 1, degradado: true },
+      { status: 500 },
+    );
   }
 }

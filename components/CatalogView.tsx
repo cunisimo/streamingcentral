@@ -28,18 +28,26 @@ export default function CatalogView() {
   );
 
   const rails = data?.rails ?? [];
-  const hayContenido = rails.length > 0;
+  // Contenido = TARJETAS, no rieles. `rails.length > 0` era siempre true: el
+  // composer devuelve los 11 rieles siempre, vacíos incluidos (cada fuente que
+  // se cae se degrada a []). Con ese criterio el aviso de fallo era inalcanzable
+  // y una caída total de TMDB se veía como un Home legítimamente vacío.
+  const hayContenido = rails.some((r) => r.items.length > 0) || (data?.hero?.length ?? 0) > 0;
   // El server distingue "no elegiste plataformas" (payload vacío legítimo, 200)
   // de "se cayó la carga". Sin esto, el Home sin plataformas mostraba "No pudimos
   // cargar el inicio" con un botón de reintentar que nunca podía arreglarlo.
   const sinPlataformas = !!data?.sinPlataformas;
+  // 200 pero con fuentes caídas: el Home llegó incompleto. No es "no hay nada en
+  // tus plataformas" — es un fallo de carga y reintentar SÍ puede arreglarlo.
+  const degradado = !!data?.degradado;
   // Mientras useHomeTypes no leyó localStorage no hay URL que pedir y useApi apaga
   // `loading`: sin sumarlo acá, entrar al Home desde otra página pinta un frame
   // en blanco antes del primer fetch.
   const cargando = !ready || loading;
   // `error` = el server respondió 500 (composeHome se cayó). `offline` = no hubo
-  // respuesta. Los dos dejan la pantalla igual de vacía, así que se tratan juntos.
-  const fallo = !online || offline || error;
+  // respuesta. `degradado` = respondió 200 pero le faltan fuentes. Los tres
+  // ameritan el mismo aviso con reintento, así que se tratan juntos.
+  const fallo = !online || offline || error || degradado;
 
   // Pantalla completa SOLO cuando no hay nada que mostrar todavía. Si ya hay
   // rieles, un fallo de refetch no borra el Home: se avisa arriba y se ofrece
@@ -50,14 +58,22 @@ export default function CatalogView() {
 
   return (
     <>
-      <IndecisoHero initialItems={data?.hero} heroPendiente={!data && !fallo} />
+      <IndecisoHero
+        initialItems={data?.hero}
+        heroPendiente={!data && !fallo}
+        // Con el hero caído, "Nada en tus plataformas" es mentira: el usuario
+        // TIENE plataformas y lo que falló fue la carga.
+        cargaDegradada={degradado}
+      />
       <div className="wrap">
         <DesempateBanner />
         <UpcomingSection />
 
         {fallo && hayContenido && (
           <p className="empty-note home-retry" role="status">
-            No pudimos actualizar el inicio.{" "}
+            {degradado && online && !offline && !error
+              ? "No pudimos cargar todo el inicio."
+              : "No pudimos actualizar el inicio."}{" "}
             <button className="up-retry" onClick={retry}>Reintentar</button>
           </p>
         )}
@@ -85,7 +101,10 @@ export default function CatalogView() {
           // no aceptan clicks: el toggle tarda lo que tarde composeHome y sin esto
           // no pasaba nada visible.
           <div className={`home-rails${cargando ? " is-refreshing" : ""}`} aria-busy={cargando}>
-            {rails.map((r) => {
+            {/* Con carga degradada, un riel vacío no es "no hay nada de acción
+                en tus plataformas": es una fuente que se cayó. Se ocultan y el
+                aviso de arriba explica lo que pasó. */}
+            {(degradado ? rails.filter((r) => r.items.length > 0) : rails).map((r) => {
               const sk = r.shelfKey;
               return (
                 <Shelf

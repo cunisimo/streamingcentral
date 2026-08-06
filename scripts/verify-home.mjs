@@ -15,6 +15,11 @@ if (desconocidos.length) {
 const r = await fetch(`http://localhost:3000/api/home?providers=${P}`);
 const j = await r.json();
 if (j.error) { console.error("ERROR:", j.error); process.exit(1); }
+// El composer envuelve cada fuente en safe(): un fallo NO rechaza, degrada a
+// vacío. Sin este aviso, un Home al que le faltan fuentes pasaría la
+// verificación con "0 duplicados" y conteos cortos, que es justo el modo de
+// fallo silencioso que se está tratando de evitar.
+if (j.degradado) console.error(`AVISO: payload DEGRADADO — ${j.fallos} fuente(s) caída(s). Los conteos de abajo no son representativos.`);
 
 // Estructura mínima esperada ANTES de chequear contenido: si esto no se
 // cumple (p.ej. 0 providers válidos → composeHome devuelve {hero:[],rails:[]})

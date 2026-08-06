@@ -67,10 +67,15 @@ async function settleAll<T>(tareas: Promise<T>[], etiqueta: string): Promise<T[]
     .map((s) => s.value);
   if (ok.length < r.length) {
     const motivo = r.find((s): s is PromiseRejectedResult => s.status === "rejected")?.reason;
+    // El error COMPLETO (con stack), no solo `.message`: si no, un TypeError
+    // propio queda indistinguible de un 429 de TMDB.
     console.error(
       `[enrich] ${etiqueta}: ${r.length - ok.length}/${r.length} título(s) descartados —`,
-      motivo instanceof Error ? motivo.message : String(motivo),
+      motivo,
     );
+    // Fuera de producción no se traga nada: un bug propio tiene que explotar en
+    // desarrollo en vez de convertirse en un riel corto y silencioso.
+    if (process.env.NODE_ENV !== "production") throw motivo;
   }
   return ok;
 }

@@ -65,6 +65,13 @@ export interface HomePayload {
   // esta razón no es un fallo de carga y no se arregla reintentando: el cliente
   // tiene que invitar a elegir plataformas, no ofrecer un botón inútil.
   sinPlataformas?: boolean;
+  // Cuántas fuentes se cayeron (`safe` las degradó a vacío) y el booleano
+  // derivado. Con todo envuelto en `safe`, composeHome NO puede rechazar: sin
+  // esto una caída total de TMDB llegaba al cliente como un 200 con 11 rieles
+  // vacíos, indistinguible de "no hay nada en tus plataformas" — mensaje falso y
+  // sin forma de reintentar.
+  fallos: number;
+  degradado: boolean;
 }
 
 const keyOf = (t: { id: number; type: MediaType }) => `${t.type}:${t.id}`;
@@ -74,12 +81,22 @@ const rawKey = (t: RawTitle, tipo: MediaType) => `${tipo}:${t.id}`;
 // Un riel que se cae devuelve [] y se auto-oculta; el resto del Home sobrevive.
 // Antes, con ~316 llamadas a TMDB por request, un solo 429 rechazaba
 // composeHome entero → 500 → pantalla sin un solo riel. Nunca en silencio: lo
-// que se cayó queda logueado en server.
-async function safe<T>(etiqueta: string, vacio: T, fn: () => Promise<T>): Promise<T> {
+// que se cayó queda logueado en server Y contado en `Contador`, que viaja en el
+// payload: degradar sin decirlo convertía una caída de TMDB en el mensaje
+// "Nada en tus plataformas", que es mentira y no ofrece reintentar.
+interface Contador { fallos: number }
+
+async function safe<T>(c: Contador, etiqueta: string, vacio: T, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (e) {
-    console.error(`[home] "${etiqueta}" falló, se degrada a vacío —`, e instanceof Error ? e.message : String(e));
+    c.fallos++;
+    // El error COMPLETO (con stack): con solo `.message`, un TypeError propio
+    // era indistinguible de un 429 de TMDB.
+    console.error(`[home] "${etiqueta}" falló, se degrada a vacío —`, e);
+    // Fuera de producción se re-lanza: un bug propio tiene que verse en
+    // desarrollo (500 + stack), no esconderse detrás de un riel vacío.
+    if (process.env.NODE_ENV !== "production") throw e;
     return vacio;
   }
 }
@@ -105,18 +122,27 @@ function take(items: UITitle[], used: Set<string>, limit = VISIBLE_CARDS): UITit
 // enriquece con margen, filtra a las plataformas y completa VISIBLE_CARDS.
 // Los candidatos que sobran de una tanda se arrastran a la siguiente: recién
 // cuando el pool se agota de verdad se pide UNA página extra a TMDB.
+// Tope de tandas de enriquecido por riel. `tanda = ceil(faltan * 1.4)` se achica
+// junto con `faltan` (mínimo 2), así que sin tope, con cobertura baja de
+// plataformas, un género podía encadenar 10-20 round-trips SECUENCIALES (y cada
+// providersOf puede costar hasta 8 s de timeout) × 6 géneros. Termina, pero la
+// latencia de cola queda abierta. Con 4 vueltas se conserva el beneficio de
+// arrastrar el pool sin dejar el peor caso sin techo.
+const MAX_VUELTAS = 4;
+
 async function genreRail(
-  genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
+  c: Contador, genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
   candidatos: RawTitle[],
 ): Promise<UITitle[]> {
   const out: UITitle[] = [];
   let pool = candidatos;
   let pedidaExtra = false;
+  let vueltas = 0;
   // La página extra es la SIGUIENTE al buffer inicial (FETCH_BUFFER + 1) y se
   // pide una sola vez: 1..FETCH_BUFFER ya vinieron en la etapa paralela.
   const pedirExtra = async () => {
     pedidaExtra = true;
-    return safe(`genre:${genre} página extra`, [] as RawTitle[], () =>
+    return safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
       categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1 }));
   };
 
@@ -130,6 +156,9 @@ async function genreRail(
       if (!pool.length) break;
       continue;
     }
+    // El tope cuenta tandas de enriquecido (lo caro), no la recarga del pool.
+    if (vueltas >= MAX_VUELTAS) break;
+    vueltas++;
     // Margen del 40% para absorber lo que se caiga por el filtro de plataformas.
     const faltan = VISIBLE_CARDS - out.length;
     const tanda = pool.slice(0, Math.ceil(faltan * 1.4));
@@ -137,7 +166,7 @@ async function genreRail(
     // siguiente. Antes se descartaban ~12 candidatos ya pagados y se compraba
     // una página nueva para reemplazarlos.
     pool = pool.slice(tanda.length);
-    const enriquecidos = await safe(`genre:${genre} enrich`, [] as UITitle[], () =>
+    const enriquecidos = await safe(c, `genre:${genre} enrich`, [] as UITitle[], () =>
       enrichRaw(tanda, tipo, providers));
     out.push(...take(enriquecidos, used, faltan));
     if (!pool.length && pedidaExtra) break;
@@ -159,8 +188,12 @@ export async function composeHome(opts: {
   const { providers } = opts;
   const types = opts.types ?? {};
   const used = new Set<string>();
+  // Contador de fuentes caídas, compartido por todos los `safe` de este request.
+  const c: Contador = { fallos: 0 };
 
-  if (!providers.length) return { hero: [], rails: [], sinPlataformas: true };
+  if (!providers.length) {
+    return { hero: [], rails: [], sinPlataformas: true, fallos: 0, degradado: false };
+  }
 
   // Tipo activo de cada riel de género, resuelto antes de pedir nada (define el
   // endpoint de discover de cada uno).
@@ -173,19 +206,19 @@ export async function composeHome(opts: {
       // Hero "Para vos hoy" — prioridad más alta, reserva sus títulos.
       // Solo el estado base (genre=todos, offset=0): los chips y "Mostrame otras"
       // son exploración puntual y no rearman el Home.
-      safe("hero", [] as UITitle[], () => recommendations({ tipo: "all", providers, n: 6, offset: 0 })),
+      safe(c, "hero", [] as UITitle[], () => recommendations({ tipo: "all", providers, n: 6, offset: 0 })),
       // Últimos lanzamientos. Sin toggle (hoy es solo movie, por fecha de estreno).
       // La página 2 es fallback y NO se prefetchea: cuesta 1 discover + 20
       // providersOf y casi nunca hace falta (la página 1 alcanza para los 20).
-      safe("ultimos p1", [] as UITitle[], () => latestReleases(providers, "movie", 1)),
+      safe(c, "ultimos p1", [] as UITitle[], () => latestReleases(providers, "movie", 1)),
       // Votos: se pide el conjunto AMPLIO (hasta VOTED_ROWS filas) para que el
       // dedup tenga de dónde rellenar. El corte final lo hace `take` acá abajo.
-      safe("mas-votados", [] as UITitle[], () => mostVoted(providers, 7, VOTED_ROWS)),
-      safe("hacete-cargo", [] as UITitle[], () => mostPanned(providers, 7, VOTED_ROWS)),
+      safe(c, "mas-votados", [] as UITitle[], () => mostVoted(providers, 7, VOTED_ROWS)),
+      safe(c, "hacete-cargo", [] as UITitle[], () => mostPanned(providers, 7, VOTED_ROWS)),
       // Candidatos crudos de cada riel de género (páginas 1..FETCH_BUFFER).
       // Crudos = sin providersOf: enriquecer sí depende de `used` y va en etapa 2.
       Promise.all(generosTipo.map(({ g, tipo }) =>
-        safe(`genre:${g} candidatos`, [] as RawTitle[], () =>
+        safe(c, `genre:${g} candidatos`, [] as RawTitle[], () =>
           categoryCandidates({ tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER })))),
       // Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida y
       // solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
@@ -193,8 +226,8 @@ export async function composeHome(opts: {
       // hay un "conjunto más amplio" que pedir — audienceTitles trae una sola
       // página fija por tipo y no acepta paginado. Si el dedup se lleva muchos,
       // estos dos carruseles se acortan y no hay con qué rellenarlos.
-      safe("family", [] as UITitle[], () => audienceTitles("family", providers)),
-      safe("adult-anime", [] as UITitle[], () => audienceTitles("adult-anime", providers)),
+      safe(c, "family", [] as UITitle[], () => audienceTitles("family", providers)),
+      safe(c, "adult-anime", [] as UITitle[], () => audienceTitles("adult-anime", providers)),
     ]);
 
   // === Etapa 2: take() en el orden de prioridad del Home =====================
@@ -209,7 +242,7 @@ export async function composeHome(opts: {
   const latest = take(latestP1, used, VISIBLE_CARDS);
   // Página 1 vacía = no hay más resultados; pedir la 2 sería un request al pedo.
   if (latestP1.length && latest.length < VISIBLE_CARDS) {
-    const p2 = await safe("ultimos p2", [] as UITitle[], () => latestReleases(providers, "movie", 2));
+    const p2 = await safe(c, "ultimos p2", [] as UITitle[], () => latestReleases(providers, "movie", 2));
     latest.push(...take(p2, used, VISIBLE_CARDS - latest.length));
   }
 
@@ -226,7 +259,7 @@ export async function composeHome(opts: {
     generos.push({
       key: `genre:${g}`,
       genre: g,
-      items: await genreRail(g, tipo, providers, used, generosRaw[i]),
+      items: await genreRail(c, g, tipo, providers, used, generosRaw[i]),
       typeToggle: "refetch",
       shelfKey: g,
       activeType: tipo,
@@ -247,5 +280,6 @@ export async function composeHome(opts: {
     { key: "adult-anime", title: "🎬 Animación para adultos", items: anime, seeAllHref: "/lista/anime-adulto" },
   ];
 
-  return { hero, rails: personalize(rotate(rails)) };
+  if (c.fallos) console.error(`[home] payload degradado: ${c.fallos} fuente(s) caída(s)`);
+  return { hero, rails: personalize(rotate(rails)), fallos: c.fallos, degradado: c.fallos > 0 };
 }
