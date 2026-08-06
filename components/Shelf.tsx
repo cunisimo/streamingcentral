@@ -18,7 +18,7 @@ import type { UITitle, MediaType } from "@/lib/types";
 //  - "filter":  filtra en cliente los ítems ya cargados por `type` (votos).
 export default function Shelf({
   tipo, genre, country, title, url, showType, onOffline, seeAllHref,
-  typeToggle, shelfKey, initialType, items: controlled,
+  typeToggle, shelfKey, initialType, items: controlled, onTypeChange,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
   title?: string; url?: string; showType?: boolean;
@@ -33,6 +33,10 @@ export default function Shelf({
   // Lo usa el Home (payload de /api/home). Sin esta prop, fetchea como siempre
   // (CategoryView depende de ese modo).
   items?: UITitle[];
+  // En el Home el toggle no refetchea este riel: avisa al composer, que
+  // reconstruye el Home entero (decisión de diseño: el cambio de tipo es un
+  // cambio de contexto de toda la pantalla).
+  onTypeChange?: (t: MediaType) => void;
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
@@ -92,7 +96,7 @@ export default function Shelf({
       <div className="shelf-head">
         <div className="shelf-head-l">
           <h2>{heading}{showType && !typeToggle && tipo && <span style={{ color: "var(--faint)", fontWeight: 500, fontSize: "0.75em" }}>{tipo === "movie" ? " · Películas" : " · Series"}</span>}</h2>
-          {typeToggle && <ShelfTypeToggle value={activeType} onChange={setActiveType} />}
+          {typeToggle && <ShelfTypeToggle value={activeType} onChange={(t) => { setActiveType(t); onTypeChange?.(t); }} />}
         </div>
         <div className="arrows">
           <button className="arrow" onClick={() => scroll(-1)} aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg></button>

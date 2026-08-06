@@ -1,38 +1,56 @@
 "use client";
-import { useState, useCallback } from "react";
 import Shelf from "./Shelf";
 import IndecisoHero from "./IndecisoHero";
 import DesempateBanner from "./desempate/DesempateBanner";
 import UpcomingSection from "./upcoming/UpcomingSection";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
-import { SHELVES } from "./data";
+import { useApi } from "./useApi";
+import { usePlatforms } from "./PlatformsContext";
+import { useHomeTypes } from "@/hooks/useHomeTypes";
+import type { HomePayload } from "@/lib/home";
 
+// El Home se arma entero en el server (lib/home.ts): un solo fetch a /api/home
+// devuelve el hero y todos los rieles ya deduplicados y en orden. Los rieles son
+// presentacionales (Shelf en modo controlado). "Próximamente" y "Desempatá"
+// quedan fuera del composer a propósito: no reservan ni se filtran.
 export default function CatalogView() {
   const online = useOnline();
-  const [fetchFailed, setFetchFailed] = useState(false);
-  const reportOffline = useCallback(() => setFetchFailed(true), []);
+  const { platforms } = usePlatforms();
+  const { setType, param, ready } = useHomeTypes();
 
-  // Sin conexión, cada Shelf se auto-oculta; acá mostramos un único estado
-  // offline. Dos señales: navigator.onLine (modo avión) y el fallo real del
-  // primer riel (cubre "hay red pero el server no responde").
-  const sinDatos = !online || fetchFailed;
-  if (sinDatos) return <div className="wrap"><OfflineState onRetry={() => location.reload()} /></div>;
+  const { data, loading, offline } = useApi<HomePayload>(
+    () => (ready ? `/api/home?providers=${platforms.join(",")}&t=${param}` : ""),
+    [param, ready],
+  );
+
+  if (!online || offline) {
+    return <div className="wrap"><OfflineState onRetry={() => location.reload()} /></div>;
+  }
+
+  const rails = data?.rails ?? [];
 
   return (
     <>
-      <IndecisoHero />
+      <IndecisoHero initialItems={data?.hero} />
       <div className="wrap">
         <DesempateBanner />
         <UpcomingSection />
-        <Shelf title="Últimos lanzamientos" url="/api/latest" seeAllHref="/lista/ultimos" onOffline={reportOffline} />
-        <Shelf title="Lo más votados" url="/api/mas-votados" seeAllHref="/lista/mas-votados" typeToggle="filter" shelfKey="mas-votados" initialType="movie" />
-        <Shelf title="Hacete cargo" url="/api/hacete-cargo" seeAllHref="/lista/hacete-cargo" typeToggle="filter" shelfKey="hacete-cargo" initialType="movie" />
-        {SHELVES.map((g, i) => (
-          <Shelf key={g} genre={g} typeToggle="refetch" shelfKey={g} initialType={i % 2 === 0 ? "movie" : "tv"} seeAllHref={`/categoria/${g}?tipo=${i % 2 === 0 ? "movie" : "tv"}`} />
-        ))}
-        <Shelf title="🍿 Para toda la familia" url="/api/audience?a=family" seeAllHref="/lista/familia" />
-        <Shelf title="🎬 Animación para adultos" url="/api/audience?a=adult-anime" seeAllHref="/lista/anime-adulto" />
+        {loading && !rails.length
+          ? <div className="shelf"><span className="loading">Cargando…</span></div>
+          : rails.map((r) => (
+              <Shelf
+                key={r.key}
+                items={r.items}
+                title={r.title}
+                genre={r.genre}
+                seeAllHref={r.seeAllHref}
+                typeToggle={r.typeToggle}
+                shelfKey={r.shelfKey}
+                initialType={r.activeType}
+                onTypeChange={(t) => setType(r.shelfKey ?? r.key, t)}
+              />
+            ))}
       </div>
     </>
   );

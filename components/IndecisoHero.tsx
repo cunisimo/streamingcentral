@@ -31,18 +31,27 @@ const MOODS: Mood[] = [
 const ANIMO = MOODS.filter((m) => m.group === "animo");
 const TEMATICA = MOODS.filter((m) => m.group === "tematica");
 
-export default function IndecisoHero() {
+export default function IndecisoHero({ initialItems }: { initialItems?: UITitle[] }) {
   const { platforms } = usePlatforms();
   const [offset, setOffset] = useState(0);
   const [genre, setGenre] = useState("todos");
   const [activeMood, setActiveMood] = useState<Mood | null>(null);
   const [sectionTitle, setSectionTitle] = useState("6 para hoy");
   const track = useRef<HTMLDivElement>(null);
-  const { data, loading } = useApi<{ items: UITitle[] }>(
-    () => `/api/recomendaciones?tipo=all&genre=${genre}&offset=${offset}&providers=${platforms.join(",")}`,
-    [offset, genre],
+
+  // El estado base ("6 para hoy", sin chip, offset 0) viene del composer, que ya
+  // reservó esos títulos para que no se repitan abajo. Al tocar un chip o
+  // "Mostrame otras" se vuelve a /api/recomendaciones: es exploración puntual y
+  // NO rearma el Home.
+  const esBase = genre === "todos" && offset === 0;
+  const { data, loading: fetchLoading } = useApi<{ items: UITitle[] }>(
+    () => (esBase && initialItems?.length
+      ? ""
+      : `/api/recomendaciones?tipo=all&genre=${genre}&offset=${offset}&providers=${platforms.join(",")}`),
+    [offset, genre, !!initialItems?.length],
   );
-  const picks = data?.items ?? [];
+  const loading = esBase && initialItems?.length ? false : fetchLoading;
+  const picks = esBase && initialItems?.length ? initialItems : (data?.items ?? []);
   const filtered = genre !== "todos";
 
   function reset() {
