@@ -441,12 +441,15 @@ export async function cardsByIds(pairs: { tipo: MediaType; id: number }[]): Prom
 // listByCategory — se comparte la construcción del query para no divergir.
 export async function categoryCandidates(opts: {
   tipo: MediaType; genre?: string; providers: PlatformCode[];
-  pages?: number; sortBy?: string; minVotes?: number; extra?: Record<string, string>;
+  pages?: number; startPage?: number; sortBy?: string; minVotes?: number; extra?: Record<string, string>;
 }): Promise<RawTitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
   const rule = opts.genre && opts.genre !== "todos" ? resolveCategory(opts.genre, opts.tipo) : {};
   const pages = Math.max(1, opts.pages ?? 1);
+  // startPage: desde qué página de discover arrancar (default 1, compatible con
+  // todos los llamadores existentes). Pide startPage..startPage+pages-1.
+  const startPage = Math.max(1, opts.startPage ?? 1);
 
   const reqs = Array.from({ length: pages }, (_, i) =>
     discover(opts.tipo, {
@@ -455,7 +458,7 @@ export async function categoryCandidates(opts: {
       keywords: rule.keywords?.length ? rule.keywords : undefined,
       withoutGenres: excludeFamilyFor(opts.genre) ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
       originCountry: rule.originCountry,
-      page: i + 1, sortBy: opts.sortBy, minVotes: opts.minVotes, extra: opts.extra,
+      page: startPage + i, sortBy: opts.sortBy, minVotes: opts.minVotes, extra: opts.extra,
     }),
   );
   const res = await Promise.all(reqs);

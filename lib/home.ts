@@ -77,11 +77,12 @@ async function genreRail(
 ): Promise<UITitle[]> {
   const out: UITitle[] = [];
   // Vuelta 0: el buffer inicial (páginas 1..FETCH_BUFFER).
-  // Vuelta 1 (fallback, solo si quedó corto): una página más.
-  let pages = FETCH_BUFFER;
-
+  // Vuelta 1 (fallback, solo si quedó corto): SOLO la página siguiente al
+  // buffer (FETCH_BUFFER + 1), no se vuelve a pedir 1..FETCH_BUFFER.
   for (let vuelta = 0; vuelta < 2 && out.length < VISIBLE_CARDS; vuelta++) {
-    const raws = await categoryCandidates({ tipo, genre, providers, pages });
+    const startPage = vuelta === 0 ? 1 : FETCH_BUFFER + 1;
+    const pages = vuelta === 0 ? FETCH_BUFFER : 1;
+    const raws = await categoryCandidates({ tipo, genre, providers, startPage, pages });
     // Dedup sobre raw: contra lo ya usado por rieles anteriores y contra lo que
     // este mismo riel ya tomó en la vuelta previa.
     const frescos = raws.filter((r) => !used.has(rawKey(r, tipo)));
@@ -91,7 +92,24 @@ async function genreRail(
     const tanda = frescos.slice(0, Math.ceil(faltan * 1.4));
     const enriquecidos = await enrichRaw(tanda, tipo, providers);
     out.push(...take(enriquecidos, used, faltan));
-    pages += 1; // fallback: una página más allá del buffer
+  }
+  return out;
+}
+
+// --- Etapa: relleno genérico por vueltas ------------------------------------
+// Patrón compartido con genreRail: pide una página ya enriquecida/filtrada,
+// toma lo que no esté usado, y si quedó corto pide UNA página más (fallback),
+// nunca más que eso. Para fuentes que devuelven UITitle[] listos por página
+// (ej. latestReleases), a diferencia de genreRail que trabaja con raw + buffer
+// de varias páginas por vuelta.
+async function fillByPage(
+  fetchPage: (page: number) => Promise<UITitle[]>, used: Set<string>,
+): Promise<UITitle[]> {
+  const out: UITitle[] = [];
+  for (let vuelta = 0; vuelta < 2 && out.length < VISIBLE_CARDS; vuelta++) {
+    const items = await fetchPage(vuelta + 1);
+    if (!items.length) break;
+    out.push(...take(items, used, VISIBLE_CARDS - out.length));
   }
   return out;
 }
@@ -120,7 +138,9 @@ export async function composeHome(opts: {
   const hero = take(heroRaw, used, 6);
 
   // 2. Últimos lanzamientos. Sin toggle (hoy es solo movie, por fecha de estreno).
-  const latest = take(await latestReleases(providers, "movie"), used);
+  //    Si el hero ya reservó títulos de esta página, se rellena con la página
+  //    siguiente (mismo criterio que genreRail: como mucho una vuelta de fallback).
+  const latest = await fillByPage((page) => latestReleases(providers, "movie", page), used);
 
   // 3. Votos. Vienen de la DB (hasta 60 filas), ya hay margen para deduplicar.
   //    Modo "filter": la lista es mixta movie+tv y el cliente acota por tipo, así
