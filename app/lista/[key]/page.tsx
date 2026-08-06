@@ -7,6 +7,8 @@ import UltimosView from "@/components/UltimosView";
 const LISTAS: Record<string, { endpoint: string; title: string }> = {
   "mas-votados": { endpoint: "/api/mas-votados", title: "Lo más votados" },
   "hacete-cargo": { endpoint: "/api/hacete-cargo", title: "Hacete cargo" },
+  "familia": { endpoint: "/api/audience?a=family", title: "🍿 Para toda la familia" },
+  "anime-adulto": { endpoint: "/api/audience?a=adult-anime", title: "🎬 Animación para adultos" },
 };
 
 export default function ListaPage({ params }: { params: { key: string } }) {

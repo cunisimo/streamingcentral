@@ -31,8 +31,8 @@ export default function CatalogView() {
         {SHELVES.map((g, i) => (
           <Shelf key={g} genre={g} typeToggle="refetch" shelfKey={g} initialType={i % 2 === 0 ? "movie" : "tv"} seeAllHref={`/categoria/${g}?tipo=${i % 2 === 0 ? "movie" : "tv"}`} />
         ))}
-        <Shelf title="🍿 Para toda la familia" url="/api/audience?a=family" />
-        <Shelf title="🎬 Animación para adultos" url="/api/audience?a=adult-anime" />
+        <Shelf title="🍿 Para toda la familia" url="/api/audience?a=family" seeAllHref="/lista/familia" />
+        <Shelf title="🎬 Animación para adultos" url="/api/audience?a=adult-anime" seeAllHref="/lista/anime-adulto" />
       </div>
     </>
   );
