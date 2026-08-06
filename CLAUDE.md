@@ -46,6 +46,21 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   (`supabase/schema.sql`, tablas `votes` y `user_reviews`, con RLS). Esto es a
   propósito — el dueño quiere ese módulo en standby hasta decidir el sistema
   de cuentas del lado público.
+- **El Home se arma en un solo lugar (`lib/home.ts`, "Home Composer").** Pipeline
+  `TMDB → audiencia → compose → dedup → [rotación] → [personalización] → JSON`.
+  Un título aparece **una sola vez** en todo el Home: la prioridad es el orden
+  visual, y lo que toma un riel se lo quita a los de abajo (clave `type:id`,
+  nunca el nombre). **Excepciones que no participan:** "Próximamente" y
+  "Desempatá" (no reservan ni se filtran), y el hero solo reserva su estado base
+  — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
+  están cableados como identidad: son los puntos de extensión, no implementados.
+  `HOME_GENRES` y `defaultTypeFor` viven en `components/data.ts` (client-safe),
+  no en `lib/home.ts`: importarlos desde el cliente arrastraba el cliente de
+  Upstash Redis (70 KB) al bundle del navegador. Los carruseles de audiencia
+  ("Para toda la familia", "Animación para adultos") usan su propio tope
+  `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
+  "Hacete cargo" no se rellenan tras el dedup — su tope lo pone la cantidad de
+  votos en la base, no el algoritmo de relleno.
 
 ## Limitaciones duras de TMDB (no son bugs, no tienen fix)
 
@@ -79,7 +94,7 @@ app/
   globals.css                                 — todo el CSS (sin CSS-in-JS), tokens en :root
 
 components/
-  CatalogView.tsx      — orquesta Home / Películas / Series
+  CatalogView.tsx      — orquesta Home (consume `/api/home`, ver `lib/home.ts`) / Películas / Series
   IndecisoHero.tsx      — el "modo indeciso" de Home
   Shelf.tsx              — riel horizontal genérico (por género o por endpoint custom)
   FilterGrid.tsx         — grilla filtrada (género+país) para Películas/Series
@@ -89,13 +104,24 @@ components/
   PersonCard.tsx / PersonRail.tsx — tarjetas/riel de personas
   TitleCard.tsx           — card de título (usada en shelves, grillas, relacionados)
   PlatformsContext.tsx    — "mis plataformas" en localStorage
-  TopBar.tsx / BottomNav.tsx / Filters.tsx / PlatformLogo.tsx / useApi.ts / data.ts
+  TopBar.tsx / BottomNav.tsx / Filters.tsx / PlatformLogo.tsx
+  useApi.ts               — hook de fetch compartido: expone `offline` (fallo de
+                             red) y `error` (fallo HTTP) por separado, y una opción
+                             `keepPrevious` (solo la usa `CatalogView`, para no
+                             vaciar el Home mientras llega un refetch por toggle)
+  data.ts                  — client-safe: `HOME_GENRES` y `defaultTypeFor` (absorbió
+                             al viejo `SHELVES`). Lo importan tanto `CatalogView`
+                             (cliente) como `lib/home.ts` (server) — ver nota de
+                             arquitectura abajo sobre por qué no viven en `lib/home.ts`
 
 lib/
   tmdb.ts        — cliente TMDB crudo (fetch + tipos raw)
   omdb.ts         — cliente OMDB
   enrich.ts        — TODO EL MERGE: raw TMDB → shape UI, combina con OMDB/Supabase/cache.
                       Punto de entrada para casi cualquier feature nueva de datos.
+  home.ts           — Home Composer: arma el Home entero (hero + rieles) en un
+                       solo pipeline server-side, deduplicado. Ver nota de
+                       arquitectura abajo.
   providers-ar.ts   — mapeo plataforma↔id TMDB para Argentina (revisar si una
                       plataforma nueva no aparece — puede que falte su provider_id)
   categories.ts      — géneros UI ↔ géneros/keywords TMDB (movie vs tv)
@@ -111,6 +137,7 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 
 | Ruta | Qué hace |
 |---|---|
+| `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/recomendaciones` | pool del "modo indeciso" (día + offset) |
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |
