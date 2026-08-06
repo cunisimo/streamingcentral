@@ -85,3 +85,32 @@ Base del branch: 19026b8. Plan: docs/superpowers/plans/2026-08-03-nav-buscador-u
 - [x] Task 3: genreCovers dedupe + cache v2 — commit e8080fd (base 439b89a), tsc 0, review aprobado limpio.
 - [x] Task 4: SearchView unificado — commit 51052f9 (base e8080fd), tsc 0, review aprobado limpio (12 slugs resuelven, sin dead code).
 - [x] Task 5: eliminar /peliculas /series + CatalogView solo Home + borrar FilterGrid/CountryGrid — commit 4d5f404 (base 51052f9), tsc 0, review aprobado (barrió .temp/.mcp por git add -A → .temp limpiado aparte).
+
+---
+
+# Feature: clasificación de audiencia (feat/audience-classifier)
+Base del branch: 82a0bed. Plan: docs/superpowers/plans/2026-08-04-audience-classifier.md
+- [x] Task 1: lib/audience.ts + without_genres en discover — commit 83d7643 (base 82a0bed), tsc 0, review aprobado limpio.
+- [x] Task 2: exclusión family en listByCategory — commit 3b3dd7d (base 83d7643), tsc 0, curls OK (comedia sin kids, animacion exenta), review aprobado.
+- [x] Task 3: audienceTitles + /api/audience — commit b3996fc (base 3b3dd7d), tsc 0, endpoints OK (family 38, adult-anime 37), review aprobado.
+- [x] Task 4: Home +2 carruseles audiencia, -Directores — commit 665cf8d (base b3996fc), tsc 0, pendiente verif visual.
+
+## Review final (sonnet) — Ready to merge: YES. 0 Critical, 0 Important.
+- Single-source confirmado (toda la lógica en lib/audience). Exclusión en 1 punto (listByCategory) cubre todo el browsing; sin-género no afectado. Carruseles reusan Shelf. Directores sin referencias colgadas.
+- Minor: PersonRail.tsx dead → BORRADO (commit posterior). tsc 0.
+TODAS LAS TASKS + fix. Verificado visual (Home orden intacto, +2 carruseles, -Directores).
+
+---
+
+# Feature: Home Composer — dedup entre carruseles (feat/home-composer)
+Base del branch: e3423e1. Plan: docs/superpowers/plans/2026-08-06-home-composer.md
+
+Proyecto SIN framework de tests (por diseño). Verificación = `npx tsc --noEmit`
++ scripts Node contra la API local. Los reviewers NO deben marcar "faltan tests"
+como defecto.
+
+Constraints: dedup SOLO en el Home; no tocar audiencia, /categoria, buscador,
+fichas ni APIs existentes; Próximamente y Desempatá fuera del algoritmo; hero
+reserva solo su estado base; clave type:id nunca por nombre; toggle reconstruye
+todo el Home.
+
