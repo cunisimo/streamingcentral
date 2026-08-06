@@ -434,4 +434,44 @@ export async function cardsByIds(pairs: { tipo: MediaType; id: number }[]): Prom
   return cards.filter((c): c is UITitle => !!c);
 }
 
+// --- Candidatos crudos para el Home Composer ---
+// Devuelve los RawTitle de TMDB SIN enriquecer (sin providersOf, que es la
+// llamada cara: 1 request por título). El composer deduplica sobre estos raw y
+// recién enriquece lo que va a mostrar. Mismas reglas de género/audiencia que
+// listByCategory — se comparte la construcción del query para no divergir.
+export async function categoryCandidates(opts: {
+  tipo: MediaType; genre?: string; providers: PlatformCode[];
+  pages?: number; sortBy?: string; minVotes?: number; extra?: Record<string, string>;
+}): Promise<RawTitle[]> {
+  if (!opts.providers.length) return [];
+  const ids = codesToTmdbIds(opts.providers);
+  const rule = opts.genre && opts.genre !== "todos" ? resolveCategory(opts.genre, opts.tipo) : {};
+  const pages = Math.max(1, opts.pages ?? 1);
+
+  const reqs = Array.from({ length: pages }, (_, i) =>
+    discover(opts.tipo, {
+      providers: ids,
+      genres: rule.genres?.length ? rule.genres : undefined,
+      keywords: rule.keywords?.length ? rule.keywords : undefined,
+      withoutGenres: excludeFamilyFor(opts.genre) ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
+      originCountry: rule.originCountry,
+      page: i + 1, sortBy: opts.sortBy, minVotes: opts.minVotes, extra: opts.extra,
+    }),
+  );
+  const res = await Promise.all(reqs);
+  return res.flatMap((r) => r.results);
+}
+
+// Enriquece una tanda de raw (providers por título, cacheado) y filtra a las
+// plataformas del usuario. Contraparte de categoryCandidates.
+export async function enrichRaw(
+  raws: RawTitle[], tipo: MediaType, providers: PlatformCode[],
+): Promise<UITitle[]> {
+  if (!raws.length) return [];
+  const pub = await publishedIds(tipo);
+  const items = await Promise.all(raws.map((t) => toUITitle(t, tipo, pub)));
+  return items.filter((i) => onUserPlatforms(i, providers));
+}
+
 export { categoryLabel };
+export type { RawTitle };
