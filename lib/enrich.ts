@@ -1,5 +1,12 @@
 // Convierte respuestas crudas de TMDB en el shape estable que consume la UI,
 // enriqueciendo con providers (cacheados) y ratings.
+//
+// `server-only` es un guard de BUILD, no de tipos: este módulo arrastra
+// lib/cache → @upstash/redis (~70 KB) y ya se coló una vez en el bundle del
+// navegador. tsc no caza esa regresión; esto la convierte en error de compilación
+// si algún "use client" importa un valor de acá (los `import type` se borran y
+// siguen siendo legales — CatalogView importa así el tipo HomePayload).
+import "server-only";
 import {
   TMDB_IMG, discover, watchProviders, titleDetails, titleVideos, personCombinedCredits,
   personDetails, searchMulti, personPopular,
@@ -45,6 +52,27 @@ async function providersOf(type: MediaType, id: number) {
     }
     return { codes: [...codes], links, watchLink: ar?.link ?? null };
   });
+}
+
+// Enriquecido tolerante a fallos. `toUITitle` hace 1 request a TMDB por título
+// (providersOf): en un listado de 20 basta un 429 o un timeout para que el
+// Promise.all entero rechace y se caiga el riel/endpoint completo. Acá el título
+// que falla se descarta y el resto sobrevive — mismo criterio que `titleCard`,
+// que ya devolvía null. En el camino feliz la salida es idéntica a Promise.all.
+// Nunca falla en silencio: lo descartado se loguea en server.
+async function settleAll<T>(tareas: Promise<T>[], etiqueta: string): Promise<T[]> {
+  const r = await Promise.allSettled(tareas);
+  const ok = r
+    .filter((s): s is PromiseFulfilledResult<Awaited<T>> => s.status === "fulfilled")
+    .map((s) => s.value);
+  if (ok.length < r.length) {
+    const motivo = r.find((s): s is PromiseRejectedResult => s.status === "rejected")?.reason;
+    console.error(
+      `[enrich] ${etiqueta}: ${r.length - ok.length}/${r.length} título(s) descartados —`,
+      motivo instanceof Error ? motivo.message : String(motivo),
+    );
+  }
+  return ok;
 }
 
 async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>): Promise<UITitle> {
@@ -99,7 +127,10 @@ export async function listByCategory(opts: {
     page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes, extra,
   });
   const pub = await publishedIds(opts.tipo);
-  const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)));
+  const items = await settleAll(
+    res.results.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)),
+    `listByCategory ${opts.tipo}/${opts.genre ?? "todos"}`,
+  );
   return items.filter((i) => onUserPlatforms(i, opts.providers));
 }
 
@@ -147,7 +178,10 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
       extra: Object.keys(extra).length ? extra : undefined,
     });
     const pub = await publishedIds(tp);
-    const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, tp, pub)));
+    const items = await settleAll(
+      res.results.slice(0, 20).map((t) => toUITitle(t, tp, pub)),
+      `audienceTitles ${slug}/${tp}`,
+    );
     return items.filter((i) => onUserPlatforms(i, providers));
   }));
   return pools.flat();
@@ -385,14 +419,24 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
   });
 }
 
+// Cuántas filas de votos se piden a la DB antes de cruzar con plataformas.
+// Sobredimensionado a propósito: muchas se caen en el filtro de plataformas.
+export const VOTED_ROWS = 60;
+
 // Ranking de votos cruzado con las plataformas del usuario, acotado a un rango
 // de rating. Base compartida por "Lo más votados" (positivos) y "Hacete cargo"
 // (negativos). Ventana en días.
+//
+// `limit` (default 20) es el corte final. El default conserva exactamente lo que
+// devuelven /api/mas-votados y /api/hacete-cargo. El Home Composer pide un
+// conjunto más amplio: se traen hasta VOTED_ROWS filas y cortar a 20 ANTES de
+// que el composer deduplique le hacía perder tarjetas en silencio (un título ya
+// usado por un riel de arriba dejaba un hueco que nadie rellenaba).
 async function votedCards(
-  providers: PlatformCode[], days: number, min: number, max: number,
+  providers: PlatformCode[], days: number, min: number, max: number, limit = 20,
 ): Promise<UITitle[]> {
   if (!providers.length) return [];
-  const rows = await topVotedRows(days, 60, min, max);
+  const rows = await topVotedRows(days, Math.max(VOTED_ROWS, limit), min, max);
   if (!rows.length) return [];
   const pub = await publishedIds();
   const cards = await Promise.all(rows.map(async (r) => {
@@ -407,17 +451,17 @@ async function votedCards(
   }));
   return cards
     .filter((c): c is UITitle => !!c && onUserPlatforms(c, providers))
-    .slice(0, 20);
+    .slice(0, limit);
 }
 
 // "Lo más votados": ta buena (2) + petacular (3).
-export async function mostVoted(providers: PlatformCode[], days = 7): Promise<UITitle[]> {
-  return votedCards(providers, days, 2, 3);
+export async function mostVoted(providers: PlatformCode[], days = 7, limit = 20): Promise<UITitle[]> {
+  return votedCards(providers, days, 2, 3, limit);
 }
 
 // "Hacete cargo": las que se llevaron malaso (1).
-export async function mostPanned(providers: PlatformCode[], days = 7): Promise<UITitle[]> {
-  return votedCards(providers, days, 1, 1);
+export async function mostPanned(providers: PlatformCode[], days = 7, limit = 20): Promise<UITitle[]> {
+  return votedCards(providers, days, 1, 1, limit);
 }
 
 // Enriquece una lista puntual de ids a cards. Para las listas del usuario:
@@ -472,7 +516,7 @@ export async function enrichRaw(
 ): Promise<UITitle[]> {
   if (!raws.length) return [];
   const pub = await publishedIds(tipo);
-  const items = await Promise.all(raws.map((t) => toUITitle(t, tipo, pub)));
+  const items = await settleAll(raws.map((t) => toUITitle(t, tipo, pub)), `enrichRaw ${tipo}`);
   return items.filter((i) => onUserPlatforms(i, providers));
 }
 

@@ -17,11 +17,11 @@ import type { UITitle, MediaType } from "@/lib/types";
 //  - "refetch": el tipo entra en la URL de /api/discover → refetch al cambiar.
 //  - "filter":  filtra en cliente los ítems ya cargados por `type` (votos).
 export default function Shelf({
-  tipo, genre, country, title, url, showType, onOffline, seeAllHref,
+  tipo, genre, country, title, url, onOffline, seeAllHref,
   typeToggle, shelfKey, initialType, items: controlled, onTypeChange,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
-  title?: string; url?: string; showType?: boolean;
+  title?: string; url?: string;
   // Aviso al contenedor de que el fetch falló por red. Los rieles se auto-ocultan
   // (mejor que N errores iguales), pero si TODOS se ocultan la pantalla queda
   // vacía y sin explicación: CatalogView lo pasa solo al primer riel para poder
@@ -108,7 +108,7 @@ export default function Shelf({
     <div className="shelf">
       <div className="shelf-head">
         <div className="shelf-head-l">
-          <h2>{heading}{showType && !typeToggle && tipo && <span style={{ color: "var(--faint)", fontWeight: 500, fontSize: "0.75em" }}>{tipo === "movie" ? " · Películas" : " · Series"}</span>}</h2>
+          <h2>{heading}</h2>
           {typeToggle && <ShelfTypeToggle value={activeType} onChange={changeType} />}
         </div>
         <div className="arrows">

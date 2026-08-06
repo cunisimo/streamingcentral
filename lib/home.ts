@@ -15,9 +15,21 @@
 //    no se construyen acá, siguen siendo sus propios componentes.
 //  - Si un riel pierde ítems por dedup, se rellena con más candidatos hasta
 //    completar VISIBLE_CARDS. Página extra de TMDB solo como fallback.
+//
+// FETCH EN PARALELO / TAKE EN SERIE
+// El dedup (`used`) condiciona QUÉ se toma, no QUÉ se pide: ninguna de las
+// fuentes lee `used` para armar su request. Por eso todas se piden a la vez
+// (etapa 1) y recién después se aplica `take()` una por una en el orden visual
+// del Home (etapa 2). El resultado es idéntico a hacerlo secuencial — está
+// verificado comparando la salida byte a byte — pero el Home pasó de ~6 s a
+// ~2-4 s de tiempo de servidor.
+// La ÚNICA excepción es el enriquecido de los rieles de género: ahí sí importa
+// `used`, porque `providersOf` cuesta 1 request por título y no tiene sentido
+// pagarlo por títulos que un riel de más arriba ya se llevó.
+import "server-only";
 import {
   categoryCandidates, enrichRaw, latestReleases, mostVoted, mostPanned,
-  audienceTitles, recommendations, type RawTitle,
+  audienceTitles, recommendations, VOTED_ROWS, type RawTitle,
 } from "./enrich";
 // HOME_GENRES / defaultTypeFor viven en components/data.ts (módulo client-safe):
 // el cliente los necesita para el estado de los toggles, y si los importara de
@@ -49,15 +61,34 @@ export interface HomeRail {
 export interface HomePayload {
   hero: UITitle[];
   rails: HomeRail[];
+  // true SOLO cuando el usuario no eligió ninguna plataforma. Un Home vacío por
+  // esta razón no es un fallo de carga y no se arregla reintentando: el cliente
+  // tiene que invitar a elegir plataformas, no ofrecer un botón inútil.
+  sinPlataformas?: boolean;
 }
 
 const keyOf = (t: { id: number; type: MediaType }) => `${t.type}:${t.id}`;
 const rawKey = (t: RawTitle, tipo: MediaType) => `${tipo}:${t.id}`;
 
+// --- Tolerancia a fallos -----------------------------------------------------
+// Un riel que se cae devuelve [] y se auto-oculta; el resto del Home sobrevive.
+// Antes, con ~316 llamadas a TMDB por request, un solo 429 rechazaba
+// composeHome entero → 500 → pantalla sin un solo riel. Nunca en silencio: lo
+// que se cayó queda logueado en server.
+async function safe<T>(etiqueta: string, vacio: T, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    console.error(`[home] "${etiqueta}" falló, se degrada a vacío —`, e instanceof Error ? e.message : String(e));
+    return vacio;
+  }
+}
+
 // --- Etapa: Dedup -----------------------------------------------------------
 // Reserva las claves de `items` en `used` y devuelve solo las no vistas.
 function take(items: UITitle[], used: Set<string>, limit = VISIBLE_CARDS): UITitle[] {
   const out: UITitle[] = [];
+  if (limit <= 0) return out;
   for (const t of items) {
     const k = keyOf(t);
     if (used.has(k)) continue;
@@ -69,47 +100,47 @@ function take(items: UITitle[], used: Set<string>, limit = VISIBLE_CARDS): UITit
 }
 
 // --- Etapa: Source (con buffer y relleno) ------------------------------------
-// Trae candidatos crudos, descarta los ya usados ANTES de enriquecer (que es lo
-// caro: 1 request de providers por título), enriquece con margen, filtra a las
-// plataformas y completa VISIBLE_CARDS. Si no alcanza, pide una página más.
+// Consume los candidatos crudos ya pedidos (etapa 1), descarta los ya usados
+// ANTES de enriquecer (que es lo caro: 1 request de providers por título),
+// enriquece con margen, filtra a las plataformas y completa VISIBLE_CARDS.
+// Los candidatos que sobran de una tanda se arrastran a la siguiente: recién
+// cuando el pool se agota de verdad se pide UNA página extra a TMDB.
 async function genreRail(
   genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
+  candidatos: RawTitle[],
 ): Promise<UITitle[]> {
   const out: UITitle[] = [];
-  // Vuelta 0: el buffer inicial (páginas 1..FETCH_BUFFER).
-  // Vuelta 1 (fallback, solo si quedó corto): SOLO la página siguiente al
-  // buffer (FETCH_BUFFER + 1), no se vuelve a pedir 1..FETCH_BUFFER.
-  for (let vuelta = 0; vuelta < 2 && out.length < VISIBLE_CARDS; vuelta++) {
-    const startPage = vuelta === 0 ? 1 : FETCH_BUFFER + 1;
-    const pages = vuelta === 0 ? FETCH_BUFFER : 1;
-    const raws = await categoryCandidates({ tipo, genre, providers, startPage, pages });
+  let pool = candidatos;
+  let pedidaExtra = false;
+  // La página extra es la SIGUIENTE al buffer inicial (FETCH_BUFFER + 1) y se
+  // pide una sola vez: 1..FETCH_BUFFER ya vinieron en la etapa paralela.
+  const pedirExtra = async () => {
+    pedidaExtra = true;
+    return safe(`genre:${genre} página extra`, [] as RawTitle[], () =>
+      categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1 }));
+  };
+
+  while (out.length < VISIBLE_CARDS) {
     // Dedup sobre raw: contra lo ya usado por rieles anteriores y contra lo que
-    // este mismo riel ya tomó en la vuelta previa.
-    const frescos = raws.filter((r) => !used.has(rawKey(r, tipo)));
-    if (!frescos.length) break;
+    // este mismo riel ya tomó en la tanda previa.
+    pool = pool.filter((r) => !used.has(rawKey(r, tipo)));
+    if (!pool.length) {
+      if (pedidaExtra) break;
+      pool = await pedirExtra();
+      if (!pool.length) break;
+      continue;
+    }
     // Margen del 40% para absorber lo que se caiga por el filtro de plataformas.
     const faltan = VISIBLE_CARDS - out.length;
-    const tanda = frescos.slice(0, Math.ceil(faltan * 1.4));
-    const enriquecidos = await enrichRaw(tanda, tipo, providers);
+    const tanda = pool.slice(0, Math.ceil(faltan * 1.4));
+    // Lo que no entró en la tanda NO se tira: queda en el pool para la vuelta
+    // siguiente. Antes se descartaban ~12 candidatos ya pagados y se compraba
+    // una página nueva para reemplazarlos.
+    pool = pool.slice(tanda.length);
+    const enriquecidos = await safe(`genre:${genre} enrich`, [] as UITitle[], () =>
+      enrichRaw(tanda, tipo, providers));
     out.push(...take(enriquecidos, used, faltan));
-  }
-  return out;
-}
-
-// --- Etapa: relleno genérico por vueltas ------------------------------------
-// Patrón compartido con genreRail: pide una página ya enriquecida/filtrada,
-// toma lo que no esté usado, y si quedó corto pide UNA página más (fallback),
-// nunca más que eso. Para fuentes que devuelven UITitle[] listos por página
-// (ej. latestReleases), a diferencia de genreRail que trabaja con raw + buffer
-// de varias páginas por vuelta.
-async function fillByPage(
-  fetchPage: (page: number) => Promise<UITitle[]>, used: Set<string>,
-): Promise<UITitle[]> {
-  const out: UITitle[] = [];
-  for (let vuelta = 0; vuelta < 2 && out.length < VISIBLE_CARDS; vuelta++) {
-    const items = await fetchPage(vuelta + 1);
-    if (!items.length) break;
-    out.push(...take(items, used, VISIBLE_CARDS - out.length));
+    if (!pool.length && pedidaExtra) break;
   }
   return out;
 }
@@ -129,33 +160,73 @@ export async function composeHome(opts: {
   const types = opts.types ?? {};
   const used = new Set<string>();
 
-  if (!providers.length) return { hero: [], rails: [] };
+  if (!providers.length) return { hero: [], rails: [], sinPlataformas: true };
 
-  // 1. Hero "Para vos hoy" — prioridad más alta, reserva sus títulos.
-  //    Solo el estado base (genre=todos, offset=0): los chips y "Mostrame otras"
-  //    son exploración puntual y no rearman el Home.
-  const heroRaw = await recommendations({ tipo: "all", providers, n: 6, offset: 0 });
+  // Tipo activo de cada riel de género, resuelto antes de pedir nada (define el
+  // endpoint de discover de cada uno).
+  const generosTipo = HOME_GENRES.map((g) => ({ g, tipo: types[g] ?? defaultTypeFor(g) }));
+
+  // === Etapa 1: todas las fuentes en paralelo ===============================
+  // Nadie de acá lee `used`, así que el orden de resolución no afecta la salida.
+  const [heroRaw, latestP1, votadosPool, cargoPool, generosRaw, familyPool, animePool] =
+    await Promise.all([
+      // Hero "Para vos hoy" — prioridad más alta, reserva sus títulos.
+      // Solo el estado base (genre=todos, offset=0): los chips y "Mostrame otras"
+      // son exploración puntual y no rearman el Home.
+      safe("hero", [] as UITitle[], () => recommendations({ tipo: "all", providers, n: 6, offset: 0 })),
+      // Últimos lanzamientos. Sin toggle (hoy es solo movie, por fecha de estreno).
+      // La página 2 es fallback y NO se prefetchea: cuesta 1 discover + 20
+      // providersOf y casi nunca hace falta (la página 1 alcanza para los 20).
+      safe("ultimos p1", [] as UITitle[], () => latestReleases(providers, "movie", 1)),
+      // Votos: se pide el conjunto AMPLIO (hasta VOTED_ROWS filas) para que el
+      // dedup tenga de dónde rellenar. El corte final lo hace `take` acá abajo.
+      safe("mas-votados", [] as UITitle[], () => mostVoted(providers, 7, VOTED_ROWS)),
+      safe("hacete-cargo", [] as UITitle[], () => mostPanned(providers, 7, VOTED_ROWS)),
+      // Candidatos crudos de cada riel de género (páginas 1..FETCH_BUFFER).
+      // Crudos = sin providersOf: enriquecer sí depende de `used` y va en etapa 2.
+      Promise.all(generosTipo.map(({ g, tipo }) =>
+        safe(`genre:${g} candidatos`, [] as RawTitle[], () =>
+          categoryCandidates({ tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER })))),
+      // Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida y
+      // solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
+      // LIMITACIÓN: a diferencia de los votos y de los rieles de género, acá no
+      // hay un "conjunto más amplio" que pedir — audienceTitles trae una sola
+      // página fija por tipo y no acepta paginado. Si el dedup se lleva muchos,
+      // estos dos carruseles se acortan y no hay con qué rellenarlos.
+      safe("family", [] as UITitle[], () => audienceTitles("family", providers)),
+      safe("adult-anime", [] as UITitle[], () => audienceTitles("adult-anime", providers)),
+    ]);
+
+  // === Etapa 2: take() en el orden de prioridad del Home =====================
+  // Estrictamente secuencial: cada `take` reserva en `used` y se lo quita a los
+  // de abajo. Este orden ES la prioridad visual.
+
+  // 1. Hero.
   const hero = take(heroRaw, used, 6);
 
-  // 2. Últimos lanzamientos. Sin toggle (hoy es solo movie, por fecha de estreno).
-  //    Si el hero ya reservó títulos de esta página, se rellena con la página
-  //    siguiente (mismo criterio que genreRail: como mucho una vuelta de fallback).
-  const latest = await fillByPage((page) => latestReleases(providers, "movie", page), used);
+  // 2. Últimos lanzamientos. Si el hero ya reservó títulos de la página 1, se
+  //    rellena con la página 2 (como mucho una vuelta de fallback).
+  const latest = take(latestP1, used, VISIBLE_CARDS);
+  // Página 1 vacía = no hay más resultados; pedir la 2 sería un request al pedo.
+  if (latestP1.length && latest.length < VISIBLE_CARDS) {
+    const p2 = await safe("ultimos p2", [] as UITitle[], () => latestReleases(providers, "movie", 2));
+    latest.push(...take(p2, used, VISIBLE_CARDS - latest.length));
+  }
 
-  // 3. Votos. Vienen de la DB (hasta 60 filas), ya hay margen para deduplicar.
-  //    Modo "filter": la lista es mixta movie+tv y el cliente acota por tipo, así
-  //    que acá NO se corta a VISIBLE_CARDS por tipo.
-  const votados = take(await mostVoted(providers), used, VISIBLE_CARDS * 2);
-  const cargo = take(await mostPanned(providers), used, VISIBLE_CARDS * 2);
+  // 3. Votos. Modo "filter": la lista es mixta movie+tv y el cliente acota por
+  //    tipo, así que acá NO se corta a VISIBLE_CARDS por tipo.
+  const votados = take(votadosPool, used, VISIBLE_CARDS * 2);
+  const cargo = take(cargoPool, used, VISIBLE_CARDS * 2);
 
-  // 4. Rieles de género, en orden. Cada uno deduplica contra todo lo anterior.
+  // 4. Rieles de género, en orden. Cada uno deduplica contra todo lo anterior y
+  //    enriquece solo lo que va a mostrar (por eso este tramo sigue en serie).
   const generos: HomeRail[] = [];
-  for (const g of HOME_GENRES) {
-    const tipo = types[g] ?? defaultTypeFor(g);
+  for (let i = 0; i < generosTipo.length; i++) {
+    const { g, tipo } = generosTipo[i];
     generos.push({
       key: `genre:${g}`,
       genre: g,
-      items: await genreRail(g, tipo, providers, used),
+      items: await genreRail(g, tipo, providers, used, generosRaw[i]),
       typeToggle: "refetch",
       shelfKey: g,
       activeType: tipo,
@@ -163,10 +234,9 @@ export async function composeHome(opts: {
     });
   }
 
-  // 5. Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida
-  //    y solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
-  const family = take(await audienceTitles("family", providers), used, AUDIENCE_CARDS);
-  const anime = take(await audienceTitles("adult-anime", providers), used, AUDIENCE_CARDS);
+  // 5. Audiencia.
+  const family = take(familyPool, used, AUDIENCE_CARDS);
+  const anime = take(animePool, used, AUDIENCE_CARDS);
 
   const rails: HomeRail[] = [
     { key: "ultimos", title: "Últimos lanzamientos", items: latest, seeAllHref: "/lista/ultimos" },

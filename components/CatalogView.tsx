@@ -29,6 +29,10 @@ export default function CatalogView() {
 
   const rails = data?.rails ?? [];
   const hayContenido = rails.length > 0;
+  // El server distingue "no elegiste plataformas" (payload vacío legítimo, 200)
+  // de "se cayó la carga". Sin esto, el Home sin plataformas mostraba "No pudimos
+  // cargar el inicio" con un botón de reintentar que nunca podía arreglarlo.
+  const sinPlataformas = !!data?.sinPlataformas;
   // Mientras useHomeTypes no leyó localStorage no hay URL que pedir y useApi apaga
   // `loading`: sin sumarlo acá, entrar al Home desde otra página pinta un frame
   // en blanco antes del primer fetch.
@@ -61,6 +65,13 @@ export default function CatalogView() {
         {!hayContenido ? (
           cargando ? (
             <div className="shelf"><span className="loading">Cargando…</span></div>
+          ) : sinPlataformas ? (
+            // No es un fallo de carga y reintentar no lo arregla: el Home está
+            // vacío porque no hay ninguna plataforma elegida. Mismo texto que
+            // usa IndecisoHero para el hero vacío.
+            <p className="empty-note" role="status">
+              Nada en tus plataformas. Activá alguna en el botón de arriba.
+            </p>
           ) : (
             // El payload llegó (o falló) y no hay un solo riel: antes esto era una
             // pantalla vacía y muda.

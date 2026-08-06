@@ -114,3 +114,59 @@ fichas ni APIs existentes; Próximamente y Desempatá fuera del algoritmo; hero
 reserva solo su estado base; clave type:id nunca por nombre; toggle reconstruye
 todo el Home.
 
+- [x] Task 1: categoryCandidates + enrichRaw en enrich.ts — commit 5498930 (base c969408), tsc 0, review limpio (0 Critical/Important).
+- [x] Task 2: lib/home.ts (HomeComposer) — commits 5a8aa2c + fix ea77cb4 (base 5498930), tsc 0, re-review PASA.
+  - Review 1 halló 2 Important (defectos del plan, no del implementador), ambos arreglados:
+    (1) fallback de genreRail re-pedía páginas 1..3 → categoryCandidates ganó `startPage`, ahora pide solo la extra;
+    (2) "Últimos lanzamientos" sin relleno → helper fillByPage (tope 2 vueltas).
+  - Decisión: votos (mas-votados/hacete-cargo) NO se rellenan; su tope lo pone la cantidad de votos en la DB.
+  - Minor diferido: fillByPage no distingue "corto por dedup" de "fuente agotada" (1 request de más como mucho).
+- [x] Task 3: /api/home + scripts/verify-home.mjs — commits 1c30e33 + fix dded2fb (base ea77cb4), tsc 0.
+  - Review halló 1 Important (falso OK si rails vacío → aserción de 11 rieles + hero) y 1 Minor grave:
+    los códigos de plataforma usados en TODA la verificación previa (st,pv,ap) NO EXISTEN.
+    Reales (lib/providers-ar.ts): n,d,m,p,pp,at,mb,cr,sp,vx. El script ahora usa los 10 y avisa si hay inválidos.
+  - Verificado por el controlador con las 10 plataformas: 200 únicos, 0 duplicados, 6 géneros × 20.
+  - PENDIENTE (resolver en Task 6): "Para toda la familia" y "Animación para adultos" pasaron de 40 a 20
+    tarjetas por el corte a VISIBLE_CARDS. Roza la regla "nunca reducir la cantidad de tarjetas visibles".
+- [x] Task 4: Shelf modo controlado — commit 82811a5 (base dded2fb), tsc 0, /categoria/* 200.
+- [x] Task 5: CatalogView + useHomeTypes + IndecisoHero — commit 1af1fd3 (base 82811a5).
+- [x] Fix wave 4-5 (opus review) — commit 1028b90. 2 Critical + 5 Important + 4 Minor + ajuste de producto.
+  - C1 CRITICAL: hooks/useHomeTypes importaba VALORES de lib/home.ts → arrastraba lib/cache.ts (Redis.fromEnv)
+    al bundle CLIENTE. 70 KB de Upstash en la Home. Fix: HOME_GENRES/defaultTypeFor viven en components/data.ts
+    (client-safe, absorbió SHELVES). / pasó de 190 kB a 174 kB First Load JS. Lo cazó `next build`, NO tsc.
+  - C2 CRITICAL: 500 de /api/home dejaba el Home en blanco (useApi no miraba res.ok). Fix: campo `error`
+    separado de `offline` + retry.
+  - I1 el Home hacía 2 fetches (hero disparaba /api/recomendaciones antes del payload) → heroPendiente.
+  - I2 rieles de votos (typeToggle=filter) refetcheaban todo el Home al pedo → onTypeChange solo en "refetch".
+  - I3/I4 feedback durante refetch + no borrar el Home ante fallo de red. I5 una sola fuente de verdad del toggle.
+  - Producto: family/anime volvieron de 20 a ~40 tarjetas (AUDIENCE_CARDS=40).
+- [x] Fix regresiones de useApi — commit 8d9b7bf. El fix wave había roto 2 casos en el hook COMPARTIDO:
+  (1) data no se limpiaba al cambiar de recurso → la ficha de la peli A se mostraba en la URL de la B
+      (y en PersonView/IndecisoHero). Fix: `keepPrevious` opt-in, solo CatalogView lo usa.
+  (2) 200 con body no-JSON (captive portal) → skeleton eterno. Fix: body no parseable = error.
+  Verificado: /, /categoria/accion, /titulo/movie/550, /persona/287 → 200. build OK, / en 174 kB.
+- [x] Task 6: verificación final + CLAUDE.md — commit 8fab2ff. 13 rutas 200, sin animación en géneros,
+      duplicados 0, tsc 0, next build OK con / en 174 kB.
+TODAS LAS TASKS COMPLETAS. Pendiente: review final del branch.
+- [x] Review final del branch — fixes C1/C2/I1/I3/I4/M1/M2/M4/M6. Reporte completo en
+      `.superpowers/sdd/final-fixes-report.md`.
+  - C1 maxDuration=60 en /api/home (el default de Vercel son 10 s y con cache fría se medían ~10.1 s → 504).
+  - C2 tolerancia a fallos en 2 capas: settleAll() por título en enrich.ts (un 429 en el título 200 de 316
+    ya no rechaza el Promise.all) + safe() por riel en home.ts (riel caído = [], el Home sobrevive).
+    Todo logueado en server. Probado con inyección de 429 al 5%: antes 3/3 requests en 500, después 3/3 en 200
+    con los 11 rieles llenos.
+  - I1 fetch de fuentes en paralelo, take() secuencial en orden de prioridad. Salida IDÉNTICA (diff de firma
+    canónica limpio con 3 y 10 plataformas). Warm: 3 plat. 5.76→2.05 s, 10 plat. 5.91→2.51 s. Fría: 12.6→5.2 s.
+  - I3 CORRIGE la decisión registrada en Task 2: era FALSO que los votos no se pudieran rellenar. votedCards
+    pide 60 filas y corta a 20 ANTES de que el composer vea nada. Ahora mostVoted/mostPanned toman `limit`
+    (default 20, /api/mas-votados y /api/hacete-cargo sin cambios) y el composer pide el conjunto amplio.
+    Los carruseles de audiencia sí están topeados de verdad (audienceTitles no pagina): anotado en el código.
+  - I4 resuelve el Minor diferido en Task 2 y su equivalente en genreRail: los candidatos no usados se
+    arrastran entre vueltas y se consumen antes de comprar una página nueva.
+  - M1 0 plataformas ya no dice "No pudimos cargar el inicio" (payload trae `sinPlataformas`).
+  - M2 `import "server-only"` en lib/home.ts y lib/enrich.ts: convierte en error de BUILD la regresión de los
+    70 KB de Upstash que cazó C1 del fix wave 4-5 y que tsc no ve. Guard verificado (build falla al importar
+    un valor desde un "use client"). / sigue en 174 kB.
+  - M4 prop muerta showType fuera de Shelf.tsx (onOffline NO, la usa CategoryView).
+  - M6 CLAUDE.md al día: sin peliculas//series//FilterGrid/CountryGrid/PersonRail/riel Directores;
+    + /api/audience, /api/upcoming, /api/providers en la tabla de rutas.
