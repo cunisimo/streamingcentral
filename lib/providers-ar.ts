@@ -21,6 +21,7 @@ export const PLATFORMS: PlatformDef[] = [
   { code: "mb", name: "MUBI",        tmdbIds: [11],       color: "#111111" },
   { code: "cr", name: "Crunchyroll", tmdbIds: [283],      color: "#F47521" },
   { code: "sp", name: "Star+",       tmdbIds: [619],      color: "#5A2EAE" },
+  { code: "vx", name: "ViX",         tmdbIds: [457],      color: "#F4067F" },
 ];
 
 const ID_TO_CODE = new Map<number, PlatformCode>();

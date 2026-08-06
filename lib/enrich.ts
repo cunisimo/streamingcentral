@@ -11,6 +11,7 @@ import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import { topVotedRows } from "./votes";
+import { excludeFamilyFor, FAMILY_GENRES, audienceRule } from "./audience";
 import { pickTrailer } from "./trailer";
 import type {
   MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
@@ -23,6 +24,13 @@ const yearOf = (t: RawTitle) => {
 };
 const titleOf = (t: RawTitle) => t.title || t.name || "";
 const today = () => new Date().toISOString().slice(0, 10);
+
+// ¿el título está en alguna de las plataformas elegidas por el usuario? Filtro
+// estricto: TMDB a veces devuelve títulos fuera de las plataformas pedidas, y el
+// gate viejo (platforms.length > 0) solo exigía "en alguna plataforma", no "en
+// las MÍAS". Todo el browsing filtra por esto (Próximamente es la excepción).
+const onUserPlatforms = (i: UITitle, providers: PlatformCode[]) =>
+  i.platforms.some((c) => providers.includes(c));
 
 // providers de un título en AR (cacheado) -> { codes, links, watchLink }
 async function providersOf(type: MediaType, id: number) {
@@ -86,12 +94,13 @@ export async function listByCategory(opts: {
     providers: ids,
     genres: genres.length ? genres : undefined,
     keywords: keywords.length ? keywords : undefined,
+    withoutGenres: excludeFamilyFor(opts.genre) ? FAMILY_GENRES : undefined,
     originCountry: opts.country || rule.originCountry,
     page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes, extra,
   });
   const pub = await publishedIds(opts.tipo);
   const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)));
-  return items.filter((i) => i.platforms.length > 0);
+  return items.filter((i) => onUserPlatforms(i, opts.providers));
 }
 
 // --- Últimos lanzamientos (por fecha de estreno, en tus plataformas) ---
@@ -117,6 +126,31 @@ export async function recommendations(opts: {
     listByCategory({ tipo: tp, genre: opts.genre, providers: opts.providers, page: 1 })));
   const pool = pools.flat();
   return pickDaily(pool, opts.n ?? 6, dailySeed(), opts.offset ?? 0);
+}
+
+// --- Carruseles de audiencia (family / adult-anime): receta de lib/audience,
+// movie+tv mergeados, filtrado a plataformas. Server-side, cero costo por título.
+export async function audienceTitles(slug: string, providers: PlatformCode[]): Promise<UITitle[]> {
+  const ids = codesToTmdbIds(providers);
+  if (!ids.length) return [];
+  const types: MediaType[] = ["movie", "tv"];
+  const pools = await Promise.all(types.map(async (tp) => {
+    const rule = audienceRule(slug, tp);
+    if (!rule) return [] as UITitle[];
+    const extra: Record<string, string> = {};
+    if (rule.certLte) { extra.certification_country = "US"; extra["certification.lte"] = rule.certLte; }
+    if (rule.certGte) { extra.certification_country = "US"; extra["certification.gte"] = rule.certGte; }
+    const res = await discover(tp, {
+      providers: ids,
+      genres: rule.genres,
+      withoutGenres: rule.withoutGenres,
+      extra: Object.keys(extra).length ? extra : undefined,
+    });
+    const pub = await publishedIds(tp);
+    const items = await Promise.all(res.results.slice(0, 20).map((t) => toUITitle(t, tp, pub)));
+    return items.filter((i) => onUserPlatforms(i, providers));
+  }));
+  return pools.flat();
 }
 
 // --- Búsqueda multi: títulos (todos, con disponibilidad) + personas ---
@@ -258,7 +292,7 @@ export async function personFilmography(id: number, providers: PlatformCode[]) {
     return c.media_type === "movie" || c.media_type === "tv";
   }).sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0));
   const items = await Promise.all(merged.slice(0, 40).map((c) => toUITitle(c, c.media_type, pub)));
-  const avail = items.filter((i) => i.platforms.length > 0);
+  const avail = items.filter((i) => onUserPlatforms(i, providers));
   return {
     person: { id: det.id, name: det.name, profile: img(det.profile_path, "w185"), knownFor: [] } as UIPerson,
     titles: avail,
@@ -372,7 +406,7 @@ async function votedCards(
     } as UITitle;
   }));
   return cards
-    .filter((c): c is UITitle => !!c && c.platforms.length > 0)
+    .filter((c): c is UITitle => !!c && onUserPlatforms(c, providers))
     .slice(0, 20);
 }
 

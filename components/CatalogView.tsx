@@ -3,7 +3,6 @@ import { useState, useCallback } from "react";
 import Shelf from "./Shelf";
 import IndecisoHero from "./IndecisoHero";
 import DesempateBanner from "./desempate/DesempateBanner";
-import PersonRail from "./PersonRail";
 import UpcomingSection from "./upcoming/UpcomingSection";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
@@ -32,7 +31,8 @@ export default function CatalogView() {
         {SHELVES.map((g, i) => (
           <Shelf key={g} genre={g} typeToggle="refetch" shelfKey={g} initialType={i % 2 === 0 ? "movie" : "tv"} seeAllHref={`/categoria/${g}?tipo=${i % 2 === 0 ? "movie" : "tv"}`} />
         ))}
-        <PersonRail title="Directores" endpoint="/api/directores" seeAllHref="/directores" seeAllLabel="Ver todo" />
+        <Shelf title="🍿 Para toda la familia" url="/api/audience?a=family" seeAllHref="/lista/familia" />
+        <Shelf title="🎬 Animación para adultos" url="/api/audience?a=adult-anime" seeAllHref="/lista/anime-adulto" />
       </div>
     </>
   );

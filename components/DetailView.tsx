@@ -51,8 +51,13 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
             <span className="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>
             <span className="cap">Ver en</span><PlatformLogo code={mine[0]} />
           </a>
+        ) : t.platforms.length ? (
+          <div className="dprimary none">
+            <span className="cap">No está en tus plataformas · en</span>
+            {t.platforms.map((p) => <PlatformLogo key={p} code={p} />)}
+          </div>
         ) : (
-          <div className="dprimary none">No está en tus plataformas</div>
+          <div className="dprimary none">No está en streaming</div>
         )}
         {mine.length > 1 && (
           <div className="dalso">También en {mine.slice(1).map((p, i) => <span key={p}>{i > 0 && " · "}<PlatformLogo code={p} /></span>)}</div>

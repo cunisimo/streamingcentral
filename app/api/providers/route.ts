@@ -40,12 +40,21 @@ export async function GET() {
     } else {
       rows = primary.data ?? [];
     }
-    const providers = rows.map((p) => ({
-      id: p.id,
-      code: codeForTmdbId(p.id),
-      name: p.name.trim(),
-      logo: p.logo_path ? `${TMDB_IMG}/w92${p.logo_path}` : null,
-    }));
+    // Varios provider_id de TMDB mapean al mismo code interno (ej. Apple TV 350
+    // + Apple TV Store 2 → "at"). Deduplicamos por code para no repetirlo.
+    const seen = new Set<string>();
+    const providers = rows
+      .map((p) => ({
+        id: p.id,
+        code: codeForTmdbId(p.id),
+        name: p.name.trim(),
+        logo: p.logo_path ? `${TMDB_IMG}/w92${p.logo_path}` : null,
+      }))
+      .filter((p) => {
+        if (!p.code || seen.has(p.code)) return false;
+        seen.add(p.code);
+        return true;
+      });
     return NextResponse.json({ providers });
   } catch (e) {
     return NextResponse.json({ error: String(e), providers: [] }, { status: 500 });

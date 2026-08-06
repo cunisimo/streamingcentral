@@ -2,7 +2,7 @@ export type MediaType = "movie" | "tv";
 
 // Códigos internos de plataforma (los que usa la UI para logos).
 export type PlatformCode =
-  | "n" | "d" | "m" | "p" | "pp" | "at" | "mb" | "cr" | "sp";
+  | "n" | "d" | "m" | "p" | "pp" | "at" | "mb" | "cr" | "sp" | "vx";
 
 // Título tal como lo consume la UI (shape estable, igual al del prototipo).
 export interface UITitle {
