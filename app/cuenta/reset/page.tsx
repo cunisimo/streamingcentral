@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
+import PasswordInput from "@/components/PasswordInput";
 
 // A esta página se llega desde el enlace del mail de recuperación. Supabase
 // (detectSessionInUrl) canjea el token del hash por una sesión temporal de
@@ -56,19 +57,19 @@ export default function ResetPassword() {
           ) : (
             <>
               <p className="section-sub">Elegí una contraseña nueva para {user.email}.</p>
-              <div className="field">
-                <label>Nueva contraseña</label>
-                <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" />
-              </div>
-              <div className="field">
-                <label>Repetir contraseña</label>
-                <input
-                  value={pass2}
-                  onChange={(e) => setPass2(e.target.value)}
-                  type="password"
-                  onKeyDown={(e) => e.key === "Enter" && guardar()}
-                />
-              </div>
+              <PasswordInput
+                label="Nueva contraseña"
+                value={pass}
+                onChange={setPass}
+                autoComplete="new-password"
+              />
+              <PasswordInput
+                label="Repetir contraseña"
+                value={pass2}
+                onChange={setPass2}
+                onEnter={guardar}
+                autoComplete="new-password"
+              />
               {err && <p style={{ color: "var(--editorial)", marginTop: 12, fontSize: 14 }}>{err}</p>}
               <div style={{ marginTop: 20 }}>
                 <button className="btn" onClick={guardar} disabled={busy}>

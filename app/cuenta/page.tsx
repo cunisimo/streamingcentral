@@ -5,6 +5,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
 import UserHub from "@/components/UserHub";
+import PasswordInput from "@/components/PasswordInput";
 
 type Modo = "login" | "registro" | "recuperar";
 
@@ -109,15 +110,13 @@ function Acceso({
         />
       </div>
       {!esRecuperar && (
-        <div className="field">
-          <label>Contraseña</label>
-          <input
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            type="password"
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-        </div>
+        <PasswordInput
+          label="Contraseña"
+          value={pass}
+          onChange={setPass}
+          onEnter={submit}
+          autoComplete={esRegistro ? "new-password" : "current-password"}
+        />
       )}
 
       {!esRegistro && !esRecuperar && (
