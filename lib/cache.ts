@@ -1,11 +1,22 @@
 import { Redis } from "@upstash/redis";
 
+// Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
+// dependen de cómo se haya conectado la base:
+//   UPSTASH_REDIS_REST_URL / _TOKEN  → al copiarlas a mano desde Upstash
+//   KV_REST_API_URL / KV_REST_API_TOKEN → las que crea la integración de Vercel
+//     (mantiene el prefijo KV_ del viejo Vercel KV)
+// Antes solo se miraba el primer juego y se usaba Redis.fromEnv(), que exige
+// esos nombres exactos: con la integración de Vercel el cache quedaba apagado
+// EN SILENCIO y cada request rehacía ~300 llamadas a TMDB.
+// OJO: KV_URL y REDIS_URL son connection strings TCP (redis://) y NO sirven
+// para este cliente, que habla REST sobre HTTPS.
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
 // Si no hay credenciales, cae a un cache en memoria (dev sin Redis).
 let redis: Redis | null = null;
 try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    redis = Redis.fromEnv();
-  }
+  if (redisUrl && redisToken) redis = new Redis({ url: redisUrl, token: redisToken });
 } catch { redis = null; }
 
 const mem = new Map<string, { v: unknown; exp: number }>();
