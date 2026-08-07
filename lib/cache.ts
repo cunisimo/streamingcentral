@@ -47,9 +47,13 @@ export async function cachePing(): Promise<{ ok: boolean; detalle: string; clave
   if (!redis) return { ok: false, detalle: "sin cliente redis (cache en memoria)" };
   try {
     const k = "health:ping";
-    await redis.set(k, "1", { ex: 60 });
+    // El valor NO puede ser numérico: el cliente de Upstash hace JSON.parse de
+    // lo que lee, así que un "1" vuelve como number 1 y una comparación estricta
+    // contra "1" daba un falso negativo (el cache andaba y el ping decía que no).
+    const esperado = "pong";
+    await redis.set(k, esperado, { ex: 60 });
     const v = await redis.get<string>(k);
-    if (v !== "1") return { ok: false, detalle: `escribió pero leyó ${JSON.stringify(v)}` };
+    if (String(v) !== esperado) return { ok: false, detalle: `escribió "${esperado}" pero leyó ${JSON.stringify(v)}` };
     const claves = await redis.dbsize();
     return { ok: true, detalle: "lectura y escritura OK", claves };
   } catch (e) {
