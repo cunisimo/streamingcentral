@@ -25,7 +25,11 @@ export const CATEGORIES: Category[] = [
   { slug: "animacion",   label: "Animación",   movie: { genres: [16] },  tv: { genres: [16] } },
   { slug: "misterio",    label: "Misterio",    movie: { genres: [9648] },tv: { genres: [9648] } },
   { slug: "documental",  label: "Documental",  movie: { genres: [99] },  tv: { genres: [99] } },
-  { slug: "romance",     label: "Romance",     movie: { genres: [10749] },tv: { genres: [18] } },
+  // TMDB no tiene género Romance en series (10749 es solo de películas). Con
+  // `genres: [18]` a secas el chip pedía literalmente "drama" y devolvía
+  // The Walking Dead, El mentalista y Breaking Bad. Drama + keyword romance
+  // (9840) trae Outlander, Los Bridgerton y El verano en que me enamoré.
+  { slug: "romance",     label: "Romance",     movie: { genres: [10749] },tv: { genres: [18], keywords: [9840] } },
 ];
 
 // Categorías EXCLUSIVAS del recomendador ("¿Qué te inspira hoy?"). Separadas de
@@ -37,7 +41,11 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
   { slug: "palomitas",           label: "Palomitas",             movie: { genres: [28, 12] },        tv: { genres: [10759] } },
   { slug: "misterio-intrincado", label: "Misterio intrincado",   movie: { genres: [9648, 53] },      tv: { genres: [9648] } },
   { slug: "familiar",            label: "Aventura familiar",     movie: { genres: [10751, 12, 16] }, tv: { genres: [10751, 10762, 16] } },
-  { slug: "navidad",             label: "Magia navideña",        movie: { keywords: [207317] },      tv: { keywords: [207317] } },
+  // La keyword christmas sola trae todo lo que TRANSCURRE en navidad: Harry
+  // Potter, Iron Man 3, Shazam, Estragos. Cruzada con comedia/romance/familia
+  // quedan las navideñas de verdad (El Grinch, Solo en casa 2, Red One,
+  // ¡Qué bello es vivir!). En tv no existe el género romance (10749).
+  { slug: "navidad",             label: "Magia navideña",        movie: { genres: [35, 10749, 10751], keywords: [207317] }, tv: { genres: [35, 10751], keywords: [207317] } },
   { slug: "guerra",              label: "Fuego cruzado",         movie: { genres: [10752] },         tv: { genres: [10768] } },
   { slug: "aliens",              label: "Contacto extraterrestre", movie: { keywords: [9951, 14909, 9739] }, tv: { keywords: [9951, 14909, 9739] } },
   { slug: "espacio",             label: "Odisea espacial",       movie: { keywords: [9882, 3801, 1612] }, tv: { keywords: [9882, 3801, 1612] } },

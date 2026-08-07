@@ -99,12 +99,25 @@ function mulberry32(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+// Elige `n` títulos del pool, determinístico por día. `offset` AVANZA por el
+// pool (0 = los primeros n, 1 = los n siguientes...), y da la vuelta al final.
+//
+// Antes el offset se sumaba a la semilla y se rebarajaba todo: cada "Mostrame
+// otras" era una tirada nueva sobre el mismo pool, así que por azar la mayoría
+// de los títulos se repetía (el dueño reportó "solo trae 2 nuevas"). El shuffle
+// ahora depende SOLO de la fecha, y el offset pagina sobre ese orden fijo.
 export function pickDaily<T>(pool: T[], n: number, seed: number, offset = 0): T[] {
-  const rng = mulberry32(seed + offset);
+  if (!pool.length || n <= 0) return [];
+  const rng = mulberry32(seed);
   const c = [...pool];
   for (let i = c.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [c[i], c[j]] = [c[j], c[i]];
   }
-  return c.slice(0, n);
+  if (n >= c.length) return c;
+  const start = ((offset * n) % c.length + c.length) % c.length;
+  const out = c.slice(start, start + n);
+  // Si la tanda cae al final del pool, se completa desde el principio.
+  if (out.length < n) out.push(...c.slice(0, n - out.length));
+  return out;
 }
