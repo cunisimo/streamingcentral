@@ -73,9 +73,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .lg-cv{color:#DA291C;font-weight:700;letter-spacing:-.02em}
 .lg-dg{color:#00B0F0;font-weight:800;letter-spacing:-.03em}.lg-dg b{font-weight:600;margin-left:2px}
 .lg-un{color:#0B5FD4;font-weight:700}.lg-un sup{font-size:.62em;font-weight:800}
-/* Pluto TV: el amarillo de marca no contrasta sobre fondo claro, así que la
-   marca va en el color del texto y solo "tv" lleva el amarillo. */
-.lg-pt{color:var(--text);font-weight:800;letter-spacing:-.03em}.lg-pt b{color:#FFE000;font-weight:800;margin-left:2px}
 /* En px, no em: `.lg` fija 11px pero un `em` acá se calcularía sobre el font-size
    del PADRE (16px), y el wordmark salía a 14.7px, más grande que los demás. */
 .lg-ok{color:#E4002B;font-weight:700;letter-spacing:-.03em;font-size:10px}

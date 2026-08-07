@@ -17,7 +17,6 @@ const LOGOS: Record<PlatformCode, JSX.Element> = {
   cv: <span className="lg lg-cv">claro video</span>,
   dg: <span className="lg lg-dg">DIRECTV<b>GO</b></span>,
   un: <span className="lg lg-un">Universal<sup>+</sup></span>,
-  pt: <span className="lg lg-pt">pluto<b>tv</b></span>,
   ok: <span className="lg lg-ok">OnDemandKorea</span>,
 };
 
