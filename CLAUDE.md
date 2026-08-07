@@ -61,6 +61,29 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "Hacete cargo" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **Animación y familia son DOS filtros separados, y el `scope` lo decide el
+  llamador** (`lib/audience.ts` → `excludedGenres`). Mezclarlos ya causó dos bugs
+  reportados, así que no volver a unirlos:
+
+  | Superficie | Animación (16) | Familia (10751/10762) |
+  |---|---|---|
+  | Rieles de género del Home (`scope: "home"`) | excluye | excluye |
+  | Recomendador y `/categoria/[slug]` (`scope: "browse"`) | excluye | **muestra** |
+  | Próximamente, búsqueda, listas del usuario (sin `scope`) | muestra | muestra |
+
+  El filtro de familia en búsqueda explícita dejaba "Magia navideña" sin *Solo en
+  casa 2*, *El mago de Oz* ni *¡Qué bello es vivir!* (familiares, no animadas),
+  devolviendo *Terrifier 3* e *Iron Man 3*, que solo comparten la keyword. La
+  animación excluida no se pierde: va al riel de cruce de cada categoría
+  ("Terror en dibujos"), que ya existía vía `genre2`. Por eso `excludedGenres`
+  mira **`genre` y `genre2`**: en el cruce el usuario pidió animación justamente.
+- **Crunchyroll (`cr`) desactiva el filtro de animación en TODA la app.** Su
+  catálogo es anime casi puro: con el filtro puesto, a quien la elige le quedaba
+  el 4% de las series (60 de 1640) y los rieles se vaciaban (Terror 38→0, Acción
+  684→2). Alcanza con tenerla elegida, aunque haya otras. Además, si es la
+  **única** plataforma, el carrusel "Animación para adultos" se oculta: todo el
+  Home ya es anime y sería el mismo contenido con otro título. Con Crunchyroll +
+  otra (Max, Netflix) se mantiene, porque esas también tienen animación adulta.
 
 ## Limitaciones duras de TMDB (no son bugs, no tienen fix)
 

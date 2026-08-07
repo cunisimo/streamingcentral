@@ -35,6 +35,7 @@ import {
 // el cliente los necesita para el estado de los toggles, y si los importara de
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
+import { soloAnimePlatform } from "./audience";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
@@ -143,7 +144,7 @@ async function genreRail(
   const pedirExtra = async () => {
     pedidaExtra = true;
     return safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
-      categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1, excludeAudience: true }));
+      categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1, scope: "home" }));
   };
 
   while (out.length < VISIBLE_CARDS) {
@@ -219,7 +220,7 @@ export async function composeHome(opts: {
       // Crudos = sin providersOf: enriquecer sí depende de `used` y va en etapa 2.
       Promise.all(generosTipo.map(({ g, tipo }) =>
         safe(c, `genre:${g} candidatos`, [] as RawTitle[], () =>
-          categoryCandidates({ tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER, excludeAudience: true })))),
+          categoryCandidates({ tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER, scope: "home" })))),
       // Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida y
       // solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
       // LIMITACIÓN: a diferencia de los votos y de los rieles de género, acá no
@@ -268,8 +269,13 @@ export async function composeHome(opts: {
   }
 
   // 5. Audiencia.
+  // Con Crunchyroll SOLA el Home entero ya es anime (los rieles de género no lo
+  // filtran, ver excludedGenres), así que un carrusel "Animación para adultos"
+  // sería una repetición de lo mismo con otro título. Con Crunchyroll + otra
+  // plataforma sí se mantiene: Max y Netflix también tienen animación adulta.
+  const ocultarAnime = soloAnimePlatform(providers);
   const family = take(familyPool, used, AUDIENCE_CARDS);
-  const anime = take(animePool, used, AUDIENCE_CARDS);
+  const anime = ocultarAnime ? [] : take(animePool, used, AUDIENCE_CARDS);
 
   const rails: HomeRail[] = [
     { key: "ultimos", title: "Últimos lanzamientos", items: latest, seeAllHref: "/lista/ultimos" },
@@ -277,7 +283,9 @@ export async function composeHome(opts: {
     { key: "hacete-cargo", title: "Hacete cargo", items: cargo, seeAllHref: "/lista/hacete-cargo", typeToggle: "filter", shelfKey: "hacete-cargo", activeType: types["hacete-cargo"] ?? "movie" },
     ...generos,
     { key: "family", title: "🍿 Para toda la familia", items: family, seeAllHref: "/lista/familia" },
-    { key: "adult-anime", title: "🎬 Animación para adultos", items: anime, seeAllHref: "/lista/anime-adulto" },
+    ...(ocultarAnime
+      ? []
+      : [{ key: "adult-anime", title: "🎬 Animación para adultos", items: anime, seeAllHref: "/lista/anime-adulto" }]),
   ];
 
   if (c.fallos) console.error(`[home] payload degradado: ${c.fallos} fuente(s) caída(s)`);
