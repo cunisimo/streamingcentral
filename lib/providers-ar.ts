@@ -30,9 +30,15 @@ export const PLATFORMS: PlatformDef[] = [
   { code: "cv", name: "Claro video",   tmdbIds: [167],            color: "#DA291C" },
   { code: "dg", name: "DIRECTV GO",    tmdbIds: [467],            color: "#00B0F0" },
   { code: "un", name: "Universal+",    tmdbIds: [1889],           color: "#0B5FD4" },
-  { code: "pt", name: "Pluto TV",      tmdbIds: [300],            color: "#FFE000" },
   { code: "ok", name: "OnDemandKorea", tmdbIds: [575],            color: "#E4002B" },
 ];
+
+// Pluto TV (300) NO va acá: es gratis CON PUBLICIDAD y TMDB la clasifica en
+// `ads`, nunca en `flatrate`. El discover igual la devuelve con
+// with_watch_monetization_types=flatrate (inconsistencia de TMDB), pero
+// /watch/providers de cada título la lista bajo `ads`, así que `providersOf`
+// nunca le asignaba el código y el Home quedaba en 0 tarjetas. Soportarla
+// obligaría a aceptar el modelo con publicidad, que es otra app.
 
 const ID_TO_CODE = new Map<number, PlatformCode>();
 const CODE_TO_DEF = new Map<PlatformCode, PlatformDef>();
