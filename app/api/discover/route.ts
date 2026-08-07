@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listByCategory } from "@/lib/enrich";
+import { COUNTRY_LANG } from "@/lib/countries";
 import type { MediaType, PlatformCode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -19,13 +20,8 @@ const AGE_CERT: Record<string, { param: string; value: string }> = {
 // combinamos origen + idioma original del país, así se excluyen films
 // extranjeros rodados/co-producidos ahí (idioma distinto). Nota: en países
 // multi-idioma (India) puede dejar afuera cine local en otras lenguas.
-const COUNTRY_LANG: Record<string, string> = {
-  US: "en", KR: "ko", GB: "en", IT: "it", JP: "ja", FR: "fr", ES: "es",
-  MX: "es", DE: "de", AR: "es", BR: "pt", AU: "en", SE: "sv", IN: "hi",
-  IS: "is", CA: "en", IE: "en", DK: "da", NO: "no", FI: "fi", NL: "nl",
-  BE: "nl", PL: "pl", TR: "tr", CN: "zh", HK: "zh", TW: "zh", TH: "th",
-  CL: "es", CO: "es", RU: "ru", IL: "he", ZA: "en", PT: "pt",
-};
+// El mapa vive en lib/countries.ts: lo comparte `primaryCountry`, que resuelve
+// el país a mostrar en la ficha de una coproducción.
 
 // Duración: buckets simples → rango de minutos de TMDB. En TV, with_runtime
 // aplica al minutaje POR EPISODIO, no al total (limitación de TMDB).
