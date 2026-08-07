@@ -652,3 +652,15 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .ob-block .field input{width:100%;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);padding:12px 14px;font-size:15px;font-family:var(--body);color:var(--text);outline:none}
 .ob-block .field input:focus{border-color:var(--accent)}
 @media(prefers-reduced-motion:reduce){.ob-card,.ob-steps span{transition:none}}
+
+/* ==========================================================================
+   HOME — refetch del composer
+   ========================================================================== */
+/* Un toggle Películas/Series rearma el Home entero en el server. Mientras vuelve
+   el payload nuevo se mantiene el contenido viejo, atenuado y sin aceptar
+   clicks, para que el cambio no parezca que no hizo nada. */
+.home-rails{transition:opacity .18s ease}
+.home-rails.is-refreshing{opacity:.45;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.home-rails{transition:none}}
+/* Aviso de "no pudimos actualizar" arriba de los rieles (reusa .empty-note). */
+.home-retry{margin-top:26px}

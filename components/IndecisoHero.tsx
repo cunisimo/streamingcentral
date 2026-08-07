@@ -31,18 +31,47 @@ const MOODS: Mood[] = [
 const ANIMO = MOODS.filter((m) => m.group === "animo");
 const TEMATICA = MOODS.filter((m) => m.group === "tematica");
 
-export default function IndecisoHero() {
+export default function IndecisoHero({
+  initialItems, heroPendiente, cargaDegradada,
+}: {
+  initialItems?: UITitle[];
+  // true mientras el payload del composer está en vuelo. Distingue "todavía no
+  // llegó" de "llegó vacío": sin esto, el primer render (initialItems undefined)
+  // disparaba /api/recomendaciones al pedo en CADA carga del Home.
+  heroPendiente?: boolean;
+  // true cuando el composer respondió con fuentes caídas. Un hero vacío ahí NO
+  // significa "no tenés nada en tus plataformas" — significa que no se pudo
+  // cargar. El reintento vive en CatalogView (un solo botón para todo el Home).
+  cargaDegradada?: boolean;
+}) {
   const { platforms } = usePlatforms();
   const [offset, setOffset] = useState(0);
   const [genre, setGenre] = useState("todos");
   const [activeMood, setActiveMood] = useState<Mood | null>(null);
   const [sectionTitle, setSectionTitle] = useState("6 para hoy");
   const track = useRef<HTMLDivElement>(null);
-  const { data, loading } = useApi<{ items: UITitle[] }>(
-    () => `/api/recomendaciones?tipo=all&genre=${genre}&offset=${offset}&providers=${platforms.join(",")}`,
-    [offset, genre],
+
+  // El estado base ("6 para hoy", sin chip, offset 0) viene del composer, que ya
+  // reservó esos títulos para que no se repitan abajo. Al tocar un chip o
+  // "Mostrame otras" se vuelve a /api/recomendaciones: es exploración puntual y
+  // NO rearma el Home.
+  const esBase = genre === "todos" && offset === 0;
+  // Criterio de "controlado" igual al de Shelf: `!== undefined`, no truthiness.
+  // Un hero legítimamente vacío (0 títulos en tus plataformas) es un resultado
+  // válido del composer, no una razón para ir a buscar otra cosa.
+  const controlado = initialItems !== undefined;
+  // El estado base lo manda el composer (ya reservó esos títulos para que no se
+  // repitan abajo): mientras esté pendiente o ya haya llegado, no se fetchea.
+  // Si el composer falló (ni pendiente ni controlado) el hero se busca solo.
+  const usaComposer = esBase && (heroPendiente || controlado);
+  const { data, loading: fetchLoading } = useApi<{ items: UITitle[] }>(
+    () => (usaComposer
+      ? ""
+      : `/api/recomendaciones?tipo=all&genre=${genre}&offset=${offset}&providers=${platforms.join(",")}`),
+    [offset, genre, controlado, heroPendiente],
   );
-  const picks = data?.items ?? [];
+  const loading = usaComposer ? !!heroPendiente : fetchLoading;
+  const picks = usaComposer ? (initialItems ?? []) : (data?.items ?? []);
   const filtered = genre !== "todos";
 
   function reset() {
@@ -118,7 +147,9 @@ export default function IndecisoHero() {
           <div className="track" ref={track}>
             {loading ? <span className="loading">Cargando…</span>
               : picks.length ? picks.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)
-              : <p className="empty-note">Nada en tus plataformas. Activá alguna en el botón de arriba.</p>}
+              : usaComposer && cargaDegradada
+                ? <p className="empty-note">No pudimos cargar las recomendaciones de hoy.</p>
+                : <p className="empty-note">Nada en tus plataformas. Activá alguna en el botón de arriba.</p>}
           </div>
         </div>
       </div>

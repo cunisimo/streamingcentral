@@ -1,11 +1,23 @@
 // Datos client-safe (sin imports de servidor).
+import type { MediaType } from "@/lib/types";
+
 export const GENRES: [string, string][] = [
   ["todos", "Todo"], ["accion", "Acción"], ["drama", "Drama"], ["comedia", "Comedia"],
   ["terror", "Terror"], ["scifi", "Sci-fi"], ["suspenso", "Suspenso"], ["crimen", "Crimen"],
   ["animacion", "Animación"], ["aventura", "Aventura"], ["misterio", "Misterio"],
   ["documental", "Documental"], ["romance", "Romance"],
 ];
-export const SHELVES = ["accion", "scifi", "terror", "drama", "comedia", "documental"];
+// Orden de los rieles de género del Home. FUENTE ÚNICA: lo consumen el composer
+// del server (lib/home.ts) y el estado de toggles del cliente
+// (hooks/useHomeTypes.ts). Vive acá y no en lib/home.ts porque este módulo es
+// client-safe: importar lib/home.ts desde un "use client" arrastra
+// lib/enrich → lib/cache → el cliente de Upstash Redis al bundle del navegador
+// (~70 KB en la Home, medidos con next build).
+export const HOME_GENRES = ["accion", "scifi", "terror", "drama", "comedia", "documental"];
+
+// Tipo por defecto de cada riel de género: alterna movie/tv según su posición.
+export const defaultTypeFor = (genre: string): MediaType =>
+  HOME_GENRES.indexOf(genre) % 2 === 0 ? "movie" : "tv";
 export const GENRE_COLOR: Record<string, string> = {
   accion: "#E8503A", drama: "#3B6FE0", comedia: "#E0A100", terror: "#6B2BD6",
   scifi: "#119A8C", suspenso: "#C1356B", crimen: "#2C3E66", aventura: "#2E9E5B",

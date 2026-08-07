@@ -46,6 +46,21 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   (`supabase/schema.sql`, tablas `votes` y `user_reviews`, con RLS). Esto es a
   propósito — el dueño quiere ese módulo en standby hasta decidir el sistema
   de cuentas del lado público.
+- **El Home se arma en un solo lugar (`lib/home.ts`, "Home Composer").** Pipeline
+  `TMDB → audiencia → compose → dedup → [rotación] → [personalización] → JSON`.
+  Un título aparece **una sola vez** en todo el Home: la prioridad es el orden
+  visual, y lo que toma un riel se lo quita a los de abajo (clave `type:id`,
+  nunca el nombre). **Excepciones que no participan:** "Próximamente" y
+  "Desempatá" (no reservan ni se filtran), y el hero solo reserva su estado base
+  — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
+  están cableados como identidad: son los puntos de extensión, no implementados.
+  `HOME_GENRES` y `defaultTypeFor` viven en `components/data.ts` (client-safe),
+  no en `lib/home.ts`: importarlos desde el cliente arrastraba el cliente de
+  Upstash Redis (70 KB) al bundle del navegador. Los carruseles de audiencia
+  ("Para toda la familia", "Animación para adultos") usan su propio tope
+  `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
+  "Hacete cargo" no se rellenan tras el dedup — su tope lo pone la cantidad de
+  votos en la base, no el algoritmo de relleno.
 
 ## Limitaciones duras de TMDB (no son bugs, no tienen fix)
 
@@ -71,31 +86,50 @@ esto antes de prometer una solución:
 
 ```
 app/
-  page.tsx, peliculas/, series/, buscar/     — páginas públicas
+  page.tsx, buscar/                          — Home y buscador (no hay /peliculas ni
+                                               /series: el toggle Películas/Series vive
+                                               por riel, ver "Home y nav")
+  categoria/[slug]/, lista/[slug]/           — "Ver todas" de un género y de un riel
   persona/[id]/, titulo/[tipo]/[id]/         — ficha de persona y de título
+  cuenta/                                     — área de usuario (hub, perfil, listas, config)
+  proximamente/, directores/, onboarding/     — agenda de estrenos, directores, alta inicial
   admin/                                      — dashboard editorial (login + CRUD reseñas)
   api/                                        — todas las rutas backend (ver abajo)
   layout.tsx                                  — fuentes (next/font/google) + PlatformsProvider
   globals.css                                 — todo el CSS (sin CSS-in-JS), tokens en :root
 
 components/
-  CatalogView.tsx      — orquesta Home / Películas / Series
+  CatalogView.tsx      — orquesta el Home: un solo fetch a `/api/home` (ver `lib/home.ts`)
+                          y los rieles se renderizan con `Shelf` en modo controlado
   IndecisoHero.tsx      — el "modo indeciso" de Home
-  Shelf.tsx              — riel horizontal genérico (por género o por endpoint custom)
-  FilterGrid.tsx         — grilla filtrada (género+país) para Películas/Series
+  Shelf.tsx              — riel horizontal genérico. Dos modos: controlado (recibe
+                            `items`, lo usa el Home) o auto-fetch a `/api/discover`
+  CategoryView.tsx       — grilla paginada de un género (`/categoria/[slug]`)
+  ListaView.tsx          — grilla de un riel completo (`/lista/[slug]`)
   SearchView.tsx         — buscador completo: modos de navegación + filtros + paginación
   DetailView.tsx         — ficha de título
   PersonView.tsx         — filmografía de una persona (actor o director)
-  PersonCard.tsx / PersonRail.tsx — tarjetas/riel de personas
+  PersonCard.tsx          — tarjeta de persona
   TitleCard.tsx           — card de título (usada en shelves, grillas, relacionados)
   PlatformsContext.tsx    — "mis plataformas" en localStorage
-  TopBar.tsx / BottomNav.tsx / Filters.tsx / PlatformLogo.tsx / useApi.ts / data.ts
+  TopBar.tsx / BottomNav.tsx / Filters.tsx / PlatformLogo.tsx
+  useApi.ts               — hook de fetch compartido: expone `offline` (fallo de
+                             red) y `error` (fallo HTTP) por separado, y una opción
+                             `keepPrevious` (solo la usa `CatalogView`, para no
+                             vaciar el Home mientras llega un refetch por toggle)
+  data.ts                  — client-safe: `HOME_GENRES` y `defaultTypeFor` (absorbió
+                             al viejo `SHELVES`). Lo importan tanto `CatalogView`
+                             (cliente) como `lib/home.ts` (server) — ver nota de
+                             arquitectura abajo sobre por qué no viven en `lib/home.ts`
 
 lib/
   tmdb.ts        — cliente TMDB crudo (fetch + tipos raw)
   omdb.ts         — cliente OMDB
   enrich.ts        — TODO EL MERGE: raw TMDB → shape UI, combina con OMDB/Supabase/cache.
                       Punto de entrada para casi cualquier feature nueva de datos.
+  home.ts           — Home Composer: arma el Home entero (hero + rieles) en un
+                       solo pipeline server-side, deduplicado. Ver nota de
+                       arquitectura abajo.
   providers-ar.ts   — mapeo plataforma↔id TMDB para Argentina (revisar si una
                       plataforma nueva no aparece — puede que falte su provider_id)
   categories.ts      — géneros UI ↔ géneros/keywords TMDB (movie vs tv)
@@ -111,7 +145,11 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 
 | Ruta | Qué hace |
 |---|---|
+| `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. Único con `maxDuration = 60` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
+| `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |
+| `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia) |
+| `GET /api/providers` | catálogo de plataformas disponibles en AR (onboarding y selector) |
 | `GET /api/recomendaciones` | pool del "modo indeciso" (día + offset) |
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |
 | `GET /api/hacete-cargo` | "Hacete cargo" (votos malaso, `top_voted` 1-1) |
@@ -135,7 +173,7 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
 - Búsqueda con debounce real (250ms, desde 2 caracteres), sin filtrar por
   plataforma (para que aparezca aunque no la tengas — la card indica
   disponibilidad).
-- Filtros de género/país combinables y funcionales en Películas/Series.
+- Filtros de género/país combinables y funcionales en `/categoria/[slug]`.
 - Filtro de edad (solo movie, ver limitación arriba).
 - Chips Todo/Películas/Series/Actores del buscador son modos de navegación
   reales cuando no hay texto en el input.
@@ -143,8 +181,10 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
 - Ficha: hero alto con backdrop, puntajes TMDB siempre + IMDb/Metacritic si
   hay OMDB, badge y sección de reseña editorial ("Reseña SC"), música,
   temporadas/episodios en series, slider de relacionados.
-- Home: shelves alternando movie/tv, riel "Últimos lanzamientos", riel
-  "Directores" (tarjetas circulares → filmografía).
+- Home: rieles de género con toggle Películas/Series (default alternado
+  movie/tv), riel "Últimos lanzamientos", rieles de votos y los dos carruseles
+  de audiencia. El riel "Directores" se sacó del Home; la página
+  `/directores` y `/api/directores` siguen existiendo.
 - Ícono "Mi lista" corregido (el path del check estaba mal).
 - Lista de países ampliada (34 países).
 - Tiles de "Explorar todo" con póster real de fondo, no solo color plano.
@@ -175,7 +215,7 @@ La app es una PWA instalable en Android, iPhone y escritorio. Diseño completo e
   solo GET. `push`/`sync`/`share-target` son módulos **reservados** (comentados).
 - **Offline**: `public/offline.html` (HTML estático, **no** una ruta de Next: servir
   una ruta de Next bajo otra URL rompe la hidratación) + `components/pwa/OfflineState.tsx`;
-  `useApi` expone `offline`/`retry`, conectado en DetailView/FilterGrid/CountryGrid/
+  `useApi` expone `offline`/`retry`, conectado en DetailView/CategoryView/ListaView/
   PersonView, y `CatalogView` muestra un único estado offline en vez de dejar la
   pantalla vacía cuando todos los rieles se ocultan.
 

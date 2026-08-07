@@ -10,13 +10,50 @@ const HEADERS = {
 };
 const DEFAULTS = { language: "es-ES", watch_region: "AR" };
 
+// --- Techo de concurrencia contra TMDB --------------------------------------
+// El Home Composer pide todas sus fuentes en paralelo: con cache fría eso son
+// ~350-400 requests arrancando en la misma vuelta del event loop (1 providersOf
+// por título). TMDB throttlea alrededor de 50 req/s y acá cada request tiene un
+// AbortSignal.timeout(8000), así que una ráfaga así se cobra 429s y timeouts en
+// masa. En producción es peor: cada `cached()` es además un round-trip HTTPS a
+// Upstash, con lo cual la misma ráfaga lo golpea igual.
+//
+// El semáforo va acá y no en los call sites a propósito: es UN solo lugar y
+// cubre toda la app (fichas, buscador, categorías, sync). Las pantallas que
+// piden pocos requests nunca llegan al techo, así que no las afecta.
+//
+// El permiso se libera en `finally`: si el request falla o hace timeout, el
+// permiso vuelve igual. Sin eso, un pico de errores drena el semáforo y la app
+// queda trabada para siempre (el bug clásico de esta implementación).
+const MAX_EN_VUELO = Math.max(1, Number(process.env.TMDB_MAX_CONCURRENT) || 24);
+let enVuelo = 0;
+const espera: (() => void)[] = [];
+
+function adquirir(): Promise<void> {
+  if (enVuelo < MAX_EN_VUELO) { enVuelo++; return Promise.resolve(); }
+  return new Promise<void>((resolve) => { espera.push(resolve); });
+}
+function liberar(): void {
+  // El permiso se TRANSFIERE al primero en la cola (enVuelo no baja): así el
+  // techo se respeta sin ventanas donde entren dos de golpe.
+  const siguiente = espera.shift();
+  if (siguiente) siguiente();
+  else enVuelo--;
+}
+
 async function tmdb<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const q = new URLSearchParams({ ...DEFAULTS, ...params });
-  const res = await fetch(`${BASE}${path}?${q}`, {
-    headers: HEADERS, cache: "no-store", signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`TMDB ${res.status} en ${path}`);
-  return res.json() as Promise<T>;
+  await adquirir();
+  try {
+    const res = await fetch(`${BASE}${path}?${q}`, {
+      headers: HEADERS, cache: "no-store", signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`TMDB ${res.status} en ${path}`);
+    // El parseo del body va DENTRO del permiso: sigue siendo parte del request.
+    return (await res.json()) as T;
+  } finally {
+    liberar();
+  }
 }
 
 export interface Paged<T> {

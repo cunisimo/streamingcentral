@@ -26,12 +26,12 @@ export function useUpcoming(q: UpcomingQuery = {}) {
     const qs = sp.toString();
     return `/api/upcoming${qs ? `?${qs}` : ""}`;
   };
-  const { data, loading, offline, retry } = useApi<{ items?: UIUpcoming[]; error?: string }>(
+  const { data, loading, offline, error: httpError, retry } = useApi<{ items?: UIUpcoming[]; error?: string }>(
     url,
     [q.mediaType, q.platform, q.month, q.items, q.mix, q.limit],
   );
-  // `offline` = fallo de red (useApi). `error` = el server respondió 500 con
-  // { error } (ej. falla de Supabase). Distinguir esto del vacío real (200 sin
-  // error) es lo que habilita el estado de error separado que pide el spec.
-  return { items: data?.items ?? [], loading, offline, error: !!data?.error, retry };
+  // `offline` = fallo de red (useApi). `error` = el server respondió con status de
+  // error (useApi.error) o con 200 + { error } en el body. Distinguir esto del
+  // vacío real (200 sin error) es lo que habilita el estado de error separado.
+  return { items: data?.items ?? [], loading, offline, error: httpError || !!data?.error, retry };
 }

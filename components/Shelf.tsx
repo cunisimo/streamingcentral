@@ -17,11 +17,11 @@ import type { UITitle, MediaType } from "@/lib/types";
 //  - "refetch": el tipo entra en la URL de /api/discover → refetch al cambiar.
 //  - "filter":  filtra en cliente los ítems ya cargados por `type` (votos).
 export default function Shelf({
-  tipo, genre, country, title, url, showType, onOffline, seeAllHref,
-  typeToggle, shelfKey, initialType,
+  tipo, genre, country, title, url, onOffline, seeAllHref,
+  typeToggle, shelfKey, initialType, items: controlled, onTypeChange,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
-  title?: string; url?: string; showType?: boolean;
+  title?: string; url?: string;
   // Aviso al contenedor de que el fetch falló por red. Los rieles se auto-ocultan
   // (mejor que N errores iguales), pero si TODOS se ocultan la pantalla queda
   // vacía y sin explicación: CatalogView lo pasa solo al primer riel para poder
@@ -29,15 +29,37 @@ export default function Shelf({
   // responde", donde navigator.onLine sigue en true.
   onOffline?: () => void; seeAllHref?: string;
   typeToggle?: "refetch" | "filter"; shelfKey?: string; initialType?: MediaType;
+  // Modo controlado: si viene, el riel no fetchea y renderiza estos items.
+  // Lo usa el Home (payload de /api/home). Sin esta prop, fetchea como siempre
+  // (CategoryView depende de ese modo).
+  items?: UITitle[];
+  // Solo lo cablea el Home y SOLO en los rieles con typeToggle "refetch": ahí el
+  // toggle no refetchea este riel, avisa al composer, que reconstruye el Home
+  // entero. Los rieles "filter" no lo reciben: filtran en cliente la lista mixta
+  // que ya tienen, así que reconstruir el Home devolvería exactamente lo mismo.
+  onTypeChange?: (t: MediaType) => void;
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
 
-  // Estado del toggle (siempre se llama el hook por las reglas de hooks; solo
-  // se usa cuando hay typeToggle). Default: initialType, o el tipo fijo, o movie.
-  const [activeType, setActiveType] = useShelfType(
-    shelfKey ?? "", initialType ?? tipo ?? "movie",
+  const controladoPor = controlled !== undefined;
+  // Quién es dueño del tipo activo:
+  //  - Controlado + toggle "refetch" (los rieles de género del Home): el
+  //    contenedor. El riel NO guarda estado propio — si lo guardara, ignoraría el
+  //    activeType que manda el server después del montaje (dos fuentes de verdad).
+  //  - Resto (no controlado, o toggle "filter" que se resuelve en cliente):
+  //    useShelfType, con su persistencia en localStorage, igual que siempre.
+  const tipoPorProp = controladoPor && typeToggle === "refetch";
+  // El hook se llama siempre (reglas de hooks). Con shelfKey vacío queda inerte:
+  // ni lee ni escribe localStorage.
+  const [ownType, setOwnType] = useShelfType(
+    tipoPorProp ? "" : (shelfKey ?? ""), initialType ?? tipo ?? "movie",
   );
+  const activeType: MediaType = tipoPorProp ? (initialType ?? tipo ?? "movie") : ownType;
+  const changeType = (t: MediaType) => {
+    if (!tipoPorProp) setOwnType(t);
+    onTypeChange?.(t);
+  };
 
   // En modo refetch el tipo efectivo de /api/discover es el del toggle.
   const effectiveTipo: MediaType | undefined =
@@ -47,11 +69,14 @@ export default function Shelf({
     url
       ? `${url}${url.includes("?") ? "&" : "?"}providers=${platforms.join(",")}`
       : `/api/discover?tipo=${effectiveTipo}&genre=${genre}&providers=${platforms.join(",")}${country ? `&country=${country}` : ""}`;
-  const { data, loading, offline } = useApi<{ items: UITitle[] }>(
-    buildUrl, [effectiveTipo, genre, country, url],
+  // En modo controlado no se dispara ningún fetch: se pasa una URL vacía y el
+  // hook queda inerte (useApi no fetchea con string vacío).
+  const { data, loading: fetchLoading, offline } = useApi<{ items: UITitle[] }>(
+    () => (controladoPor ? "" : buildUrl()), [effectiveTipo, genre, country, url, controladoPor],
   );
 
-  const rawItems = data?.items ?? [];
+  const loading = controladoPor ? false : fetchLoading;
+  const rawItems = controladoPor ? controlled : (data?.items ?? []);
   // En modo filter, acotamos al tipo activo sobre la lista mixta ya cargada.
   const items = typeToggle === "filter"
     ? rawItems.filter((t) => t.type === activeType)
@@ -83,8 +108,8 @@ export default function Shelf({
     <div className="shelf">
       <div className="shelf-head">
         <div className="shelf-head-l">
-          <h2>{heading}{showType && !typeToggle && tipo && <span style={{ color: "var(--faint)", fontWeight: 500, fontSize: "0.75em" }}>{tipo === "movie" ? " · Películas" : " · Series"}</span>}</h2>
-          {typeToggle && <ShelfTypeToggle value={activeType} onChange={setActiveType} />}
+          <h2>{heading}</h2>
+          {typeToggle && <ShelfTypeToggle value={activeType} onChange={changeType} />}
         </div>
         <div className="arrows">
           <button className="arrow" onClick={() => scroll(-1)} aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg></button>
