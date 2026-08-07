@@ -21,6 +21,42 @@ try {
 
 const mem = new Map<string, { v: unknown; exp: number }>();
 
+// --- Diagnóstico (lo consume GET /api/health) --------------------------------
+// Este cache falla EN SILENCIO: si las credenciales no llegan, todo sigue
+// andando con el cache en memoria y lo único que se nota es la lentitud. Pasó
+// en producción y costó descubrirlo. Esto lo hace visible en un request.
+// NUNCA devuelve la URL ni el token: solo QUÉ variable se encontró.
+export function cacheStatus() {
+  const fuente = process.env.UPSTASH_REDIS_REST_URL
+    ? "UPSTASH_REDIS_REST_URL"
+    : process.env.KV_REST_API_URL
+      ? "KV_REST_API_URL"
+      : null;
+  return {
+    modo: redis ? ("redis" as const) : ("memoria" as const),
+    fuente,
+    // Que la variable exista no garantiza que el token sirva: eso lo dice el ping.
+    tieneUrl: !!redisUrl,
+    tieneToken: !!redisToken,
+  };
+}
+
+// Escribe y lee una clave propia: confirma que las credenciales FUNCIONAN, no
+// solo que están seteadas (un token vencido pasa el chequeo de arriba).
+export async function cachePing(): Promise<{ ok: boolean; detalle: string; claves?: number }> {
+  if (!redis) return { ok: false, detalle: "sin cliente redis (cache en memoria)" };
+  try {
+    const k = "health:ping";
+    await redis.set(k, "1", { ex: 60 });
+    const v = await redis.get<string>(k);
+    if (v !== "1") return { ok: false, detalle: `escribió pero leyó ${JSON.stringify(v)}` };
+    const claves = await redis.dbsize();
+    return { ok: true, detalle: "lectura y escritura OK", claves };
+  } catch (e) {
+    return { ok: false, detalle: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export const TTL = {
   catalog: 60 * 60 * 24,
   providers: 60 * 60 * 8,
