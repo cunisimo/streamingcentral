@@ -360,7 +360,9 @@ function certOf(d: RawDetail, type: MediaType): string {
   return ar?.release_dates?.[0]?.certification || "—";
 }
 
-export async function detail(type: MediaType, id: number): Promise<UITitleDetail> {
+export async function detail(
+  type: MediaType, id: number, providers: PlatformCode[] = [],
+): Promise<UITitleDetail> {
   const [d, prov] = await Promise.all([titleDetails(type, id), providersOf(type, id)]);
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
@@ -370,8 +372,17 @@ export async function detail(type: MediaType, id: number): Promise<UITitleDetail
   const editorial = await getEditorial(id, type);
   const pub = await publishedIds();
 
-  const recs = (d.recommendations?.results ?? []).filter((r) => r.poster_path).slice(0, 12);
-  const related = await Promise.all(recs.map((r) => toUITitle(r, type, pub)));
+  // Relacionados: se piden más de los que se muestran porque después se filtran
+  // a las plataformas del usuario. Antes no se filtraban y el riel llevaba a
+  // fichas con el cartel "No está en streaming" — callejones sin salida.
+  const recs = (d.recommendations?.results ?? []).filter((r) => r.poster_path).slice(0, 24);
+  const relatedTodos = await settleAll(
+    recs.map((r) => toUITitle(r, type, pub)), `related ${type}/${id}`,
+  );
+  const related = (providers.length
+    ? relatedTodos.filter((r) => onUserPlatforms(r, providers))
+    : relatedTodos
+  ).slice(0, 12);
 
   const runtime = type === "movie"
     ? (d.runtime ? `${Math.floor(d.runtime / 60)}h ${d.runtime % 60}m` : null)

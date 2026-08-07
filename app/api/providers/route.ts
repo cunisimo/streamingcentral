@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { TMDB_IMG } from "@/lib/tmdb";
-import { codeForTmdbId } from "@/lib/providers-ar";
+import { codeForTmdbId, platformByCode } from "@/lib/providers-ar";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +44,19 @@ export async function GET() {
     // + Apple TV Store 2 → "at"). Deduplicamos por code para no repetirlo.
     const seen = new Set<string>();
     const providers = rows
-      .map((p) => ({
-        id: p.id,
-        code: codeForTmdbId(p.id),
-        name: p.name.trim(),
-        logo: p.logo_path ? `${TMDB_IMG}/w92${p.logo_path}` : null,
-      }))
+      .map((p) => {
+        const code = codeForTmdbId(p.id);
+        // El nombre lo manda PLATFORMS, no la tabla: TMDB los publica con el
+        // nombre del revendedor ("Universal+ Amazon Channel", "HBO Max") y en el
+        // selector queremos la marca a secas.
+        const def = code ? platformByCode(code) : null;
+        return {
+          id: p.id,
+          code,
+          name: def?.name ?? p.name.trim(),
+          logo: p.logo_path ? `${TMDB_IMG}/w92${p.logo_path}` : null,
+        };
+      })
       .filter((p) => {
         if (!p.code || seen.has(p.code)) return false;
         seen.add(p.code);

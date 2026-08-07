@@ -61,6 +61,15 @@ function toUIUpcoming(row: Row): UIUpcoming {
   };
 }
 
+// Próximamente muestra lo que se viene en las plataformas que la app soporta.
+// Un estreno cuyo único provider no está mapeado (Running Man solo en
+// OnDemandKorea, antes de agregarla) llegaba con `platforms` vacío y su ficha
+// decía "No está en streaming": un estreno al que el usuario no puede llegar.
+// NO se filtra por las plataformas DEL USUARIO a propósito — la sección es la
+// agenda completa de estrenos y la card indica en cuál sale cada uno.
+const enPlataformasSoportadas = (items: UIUpcoming[]) =>
+  items.filter((i) => i.platforms.length > 0);
+
 export interface UpcomingFilters {
   mediaType?: MediaType;
   platform?: PlatformCode; // código interno (n/d/m/...)
@@ -99,7 +108,7 @@ export async function upcomingList(filters: UpcomingFilters = {}): Promise<UIUpc
 
   const { data, error } = await q;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as Row[]).map(toUIUpcoming);
+  return enPlataformasSoportadas(((data ?? []) as unknown as Row[]).map(toUIUpcoming));
 }
 
 // Cruce con la Watchlist: dado el set de refs {tmdb_id, tipo} del usuario
@@ -120,6 +129,9 @@ export async function upcomingForRefs(
     .in("tmdb_id", ids)
     .order("release_date", { ascending: true });
   if (error) throw new Error(error.message);
+  // A diferencia de upcomingList, acá NO se filtra por plataformas soportadas:
+  // son títulos que el usuario puso a propósito en su lista y quiere que le
+  // avisemos cuando salgan, esté donde esté.
   return ((data ?? []) as unknown as Row[])
     .filter((r) => wanted.has(`${r.tmdb_id}:${r.media_type}`))
     .map(toUIUpcoming);
