@@ -57,6 +57,10 @@ export async function GET(req: NextRequest) {
   try {
     const items = await listByCategory({
       tipo, genre, genre2, country, providers, page,
+      // Páginas de categoría: la animación se sirve en su propio riel de cruce
+      // ("Terror en dibujos"), no mezclada en el listado principal. Lo familiar
+      // sí se muestra: acá el usuario ya eligió un género a propósito.
+      scope: "browse",
       extra: Object.keys(extra).length ? extra : undefined,
     });
     return NextResponse.json({ items });

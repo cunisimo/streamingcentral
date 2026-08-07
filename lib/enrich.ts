@@ -18,7 +18,7 @@ import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import { topVotedRows } from "./votes";
-import { excludeFamilyFor, EXCLUDED_FROM_GENERAL_GENRES, audienceRule } from "./audience";
+import { excludedGenres, audienceRule } from "./audience";
 import { pickTrailer } from "./trailer";
 import type {
   MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
@@ -95,17 +95,14 @@ async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>):
 }
 
 // --- Listado por categoría/tipo, filtrado a las plataformas del usuario ---
-// `excludeAudience` lo decide el LLAMADOR, no el slug: la separación de
-// animación/familia existe para los rieles de género del Home, que tienen sus
-// propios carruseles ("Para toda la familia", "Animación para adultos"). En
-// búsqueda explícita —el recomendador y /categoria/[slug]— esconder media
-// biblioteca es un bug: "Magia navideña" se quedaba sin El Grinch, Solo en casa
-// ni Pesadilla antes de Navidad (todas familiares o animadas) y devolvía
-// Terrifier 3 y Iron Man 3, que solo comparten la keyword.
+// `scope` lo decide el LLAMADOR, no el slug (ver lib/audience.ts):
+//   "home"   → rieles de género del Home: sin animación ni familia.
+//   "browse" → recomendador y /categoria/[slug]: sin animación, con familia.
+//   sin scope → no se excluye nada (búsqueda, listas del usuario, Próximamente).
 export async function listByCategory(opts: {
   tipo: MediaType; genre?: string; genre2?: string; country?: string;
   providers: PlatformCode[]; page?: number; sortBy?: string; minVotes?: number;
-  extra?: Record<string, string>; excludeAudience?: boolean;
+  extra?: Record<string, string>; scope?: "home" | "browse";
 }): Promise<UITitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
@@ -135,8 +132,9 @@ export async function listByCategory(opts: {
     providers: ids,
     genres: genres.length ? genres : undefined,
     keywords: keywords.length ? keywords : undefined,
-    withoutGenres: opts.excludeAudience && excludeFamilyFor(opts.genre)
-      ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
+    withoutGenres: opts.scope
+      ? excludedGenres({ scope: opts.scope, genre: opts.genre, genre2: opts.genre2, providers: opts.providers })
+      : undefined,
     originCountry: opts.country || rule.originCountry,
     page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes, extra,
   });
@@ -167,8 +165,11 @@ export async function recommendations(opts: {
   genre?: string; tipo: MediaType | "all"; providers: PlatformCode[]; n?: number; offset?: number;
 }): Promise<UITitle[]> {
   const types: MediaType[] = opts.tipo === "all" ? ["movie", "tv"] : [opts.tipo];
+  // scope "browse": el recomendador es parte del Home, así que no muestra
+  // animación (va en "Animación para adultos"), pero sí lo familiar — si no,
+  // "Magia navideña" se queda sin Solo en casa 2 ni El mago de Oz.
   const pools = await Promise.all(types.map((tp) =>
-    listByCategory({ tipo: tp, genre: opts.genre, providers: opts.providers, page: 1 })));
+    listByCategory({ tipo: tp, genre: opts.genre, providers: opts.providers, page: 1, scope: "browse" })));
   const pool = pools.flat();
   return pickDaily(pool, opts.n ?? 6, dailySeed(), opts.offset ?? 0);
 }
@@ -500,7 +501,7 @@ export async function cardsByIds(pairs: { tipo: MediaType; id: number }[]): Prom
 export async function categoryCandidates(opts: {
   tipo: MediaType; genre?: string; providers: PlatformCode[];
   pages?: number; startPage?: number; sortBy?: string; minVotes?: number;
-  extra?: Record<string, string>; excludeAudience?: boolean;
+  extra?: Record<string, string>; scope?: "home" | "browse";
 }): Promise<RawTitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
@@ -516,8 +517,9 @@ export async function categoryCandidates(opts: {
       genres: rule.genres?.length ? rule.genres : undefined,
       keywords: rule.keywords?.length ? rule.keywords : undefined,
       // Igual que listByCategory: lo pide el llamador. Hoy solo lo hace el Home.
-      withoutGenres: opts.excludeAudience && excludeFamilyFor(opts.genre)
-        ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
+      withoutGenres: opts.scope
+        ? excludedGenres({ scope: opts.scope, genre: opts.genre, providers: opts.providers })
+        : undefined,
       originCountry: rule.originCountry,
       page: startPage + i, sortBy: opts.sortBy, minVotes: opts.minVotes, extra: opts.extra,
     }),
