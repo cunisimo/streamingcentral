@@ -19,6 +19,7 @@ import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
+import { primaryCountry } from "./countries";
 import { pickTrailer } from "./trailer";
 import type {
   MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
@@ -384,7 +385,7 @@ export async function detail(type: MediaType, id: number): Promise<UITitleDetail
     id: d.id, type, title: d.title || d.name || "",
     year: (d.release_date || d.first_air_date)?.slice(0, 4) ? Number((d.release_date || d.first_air_date)!.slice(0, 4)) : null,
     runtime, poster: img(d.poster_path), backdrop: img(d.backdrop_path, "w780"),
-    country: d.origin_country?.[0] ?? null,
+    country: primaryCountry(d),
     genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
     platforms: prov.codes,
     tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
@@ -422,7 +423,7 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
         id: d.id, type, title: d.title || d.name || "",
         year: dt ? Number(dt.slice(0, 4)) : null,
         runtime: null, poster: img(d.poster_path),
-        country: d.origin_country?.[0] ?? null,
+        country: primaryCountry(d),
         genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
         platforms: prov.codes,
         tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,

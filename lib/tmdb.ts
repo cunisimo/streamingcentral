@@ -172,6 +172,9 @@ export interface RawDetail {
   release_date?: string;
   first_air_date?: string;
   origin_country?: string[];
+  // Coproducciones: origin_country y production_countries traen los mismos
+  // países en ORDEN DISTINTO (ver lib/countries.ts → primaryCountry).
+  production_countries?: { iso_3166_1: string }[];
   original_language?: string; // idioma original del título (para elegir el trailer sin doblar)
   genres: { id: number; name: string }[];
   credits: { cast: { id: number; name: string; character?: string; profile_path: string | null }[]; crew: { job: string; name: string }[] };
