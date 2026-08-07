@@ -99,9 +99,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Manda el mail de recuperación. El link vuelve a /cuenta/reset, donde
   // Supabase (detectSessionInUrl) canjea el token por una sesión temporal
   // de recovery y ahí se setea la clave nueva con updatePassword.
+  //
+  // El destino sale de NEXT_PUBLIC_SITE_URL, NO de window.location.origin: con
+  // el origin, el link del mail apunta a donde se pidió el reset. Pedirlo desde
+  // localhost mandaba a un usuario real un mail con link a http://localhost:3000,
+  // una máquina a la que no tiene acceso. Sin la variable (desarrollo) cae al
+  // origin, que ahí sí es lo que se quiere.
+  //
+  // OJO: el destino además tiene que estar en la allowlist de Redirect URLs del
+  // proyecto en Supabase. Si no está, Supabase lo descarta en silencio y usa el
+  // Site URL — que es exactamente cómo se rompió esto la primera vez.
   const resetPassword = useCallback(async (email: string) => {
-    const redirectTo =
-      typeof window !== "undefined" ? `${window.location.origin}/cuenta/reset` : undefined;
+    const base = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "")
+      || (typeof window !== "undefined" ? window.location.origin : "");
+    const redirectTo = base ? `${base}/cuenta/reset` : undefined;
     const { error } = await supabaseBrowser().auth.resetPasswordForEmail(email, { redirectTo });
     return error ? { error: error.message } : {};
   }, []);
