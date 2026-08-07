@@ -143,7 +143,7 @@ async function genreRail(
   const pedirExtra = async () => {
     pedidaExtra = true;
     return safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
-      categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1 }));
+      categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1, excludeAudience: true }));
   };
 
   while (out.length < VISIBLE_CARDS) {
@@ -219,7 +219,7 @@ export async function composeHome(opts: {
       // Crudos = sin providersOf: enriquecer sí depende de `used` y va en etapa 2.
       Promise.all(generosTipo.map(({ g, tipo }) =>
         safe(c, `genre:${g} candidatos`, [] as RawTitle[], () =>
-          categoryCandidates({ tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER })))),
+          categoryCandidates({ tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER, excludeAudience: true })))),
       // Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida y
       // solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
       // LIMITACIÓN: a diferencia de los votos y de los rieles de género, acá no
