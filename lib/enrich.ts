@@ -95,9 +95,17 @@ async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>):
 }
 
 // --- Listado por categoría/tipo, filtrado a las plataformas del usuario ---
+// `excludeAudience` lo decide el LLAMADOR, no el slug: la separación de
+// animación/familia existe para los rieles de género del Home, que tienen sus
+// propios carruseles ("Para toda la familia", "Animación para adultos"). En
+// búsqueda explícita —el recomendador y /categoria/[slug]— esconder media
+// biblioteca es un bug: "Magia navideña" se quedaba sin El Grinch, Solo en casa
+// ni Pesadilla antes de Navidad (todas familiares o animadas) y devolvía
+// Terrifier 3 y Iron Man 3, que solo comparten la keyword.
 export async function listByCategory(opts: {
   tipo: MediaType; genre?: string; genre2?: string; country?: string;
-  providers: PlatformCode[]; page?: number; sortBy?: string; minVotes?: number; extra?: Record<string, string>;
+  providers: PlatformCode[]; page?: number; sortBy?: string; minVotes?: number;
+  extra?: Record<string, string>; excludeAudience?: boolean;
 }): Promise<UITitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
@@ -127,7 +135,8 @@ export async function listByCategory(opts: {
     providers: ids,
     genres: genres.length ? genres : undefined,
     keywords: keywords.length ? keywords : undefined,
-    withoutGenres: excludeFamilyFor(opts.genre) ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
+    withoutGenres: opts.excludeAudience && excludeFamilyFor(opts.genre)
+      ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
     originCountry: opts.country || rule.originCountry,
     page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes, extra,
   });
@@ -490,7 +499,8 @@ export async function cardsByIds(pairs: { tipo: MediaType; id: number }[]): Prom
 // listByCategory — se comparte la construcción del query para no divergir.
 export async function categoryCandidates(opts: {
   tipo: MediaType; genre?: string; providers: PlatformCode[];
-  pages?: number; startPage?: number; sortBy?: string; minVotes?: number; extra?: Record<string, string>;
+  pages?: number; startPage?: number; sortBy?: string; minVotes?: number;
+  extra?: Record<string, string>; excludeAudience?: boolean;
 }): Promise<RawTitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
@@ -505,7 +515,9 @@ export async function categoryCandidates(opts: {
       providers: ids,
       genres: rule.genres?.length ? rule.genres : undefined,
       keywords: rule.keywords?.length ? rule.keywords : undefined,
-      withoutGenres: excludeFamilyFor(opts.genre) ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
+      // Igual que listByCategory: lo pide el llamador. Hoy solo lo hace el Home.
+      withoutGenres: opts.excludeAudience && excludeFamilyFor(opts.genre)
+        ? EXCLUDED_FROM_GENERAL_GENRES : undefined,
       originCountry: rule.originCountry,
       page: startPage + i, sortBy: opts.sortBy, minVotes: opts.minVotes, extra: opts.extra,
     }),
