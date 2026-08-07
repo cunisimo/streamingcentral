@@ -4,7 +4,11 @@
 // como género de TV: se aproxima con keyword 316362 ("thriller").
 import type { MediaType } from "./types";
 
-type Rule = { genres?: number[]; keywords?: number[]; originCountry?: string };
+// `alt` es una regla ALTERNATIVA que se une por OR a la principal. Existe porque
+// TMDB combina `with_genres` y `with_keywords` con AND: no hay forma de pedir
+// "género documental O keyword hechos reales" en una sola query. Cuando está
+// presente, listByCategory dispara las dos y mergea (dedup por id).
+type Rule = { genres?: number[]; keywords?: number[]; originCountry?: string; alt?: Rule };
 
 export interface Category {
   slug: string;
@@ -18,7 +22,9 @@ export const CATEGORIES: Category[] = [
   { slug: "drama",       label: "Drama",       movie: { genres: [18] },  tv: { genres: [18] } },
   { slug: "comedia",     label: "Comedia",     movie: { genres: [35] },  tv: { genres: [35] } },
   { slug: "terror",      label: "Terror",      movie: { genres: [27] },  tv: { keywords: [315058] } },
-  { slug: "scifi",       label: "Sci-fi",      movie: { genres: [878] }, tv: { genres: [10765] } },
+  // tv con keywords: sin ellas daba lo mismo que "Mundos fantásticos" (TMDB une
+  // sci-fi y fantasía en el género 10765). Acá van espacio/futuro/distopía.
+  { slug: "scifi",       label: "Sci-fi",      movie: { genres: [878] }, tv: { genres: [10765], keywords: [9882, 3801, 1612, 9685, 4565] } },
   { slug: "suspenso",    label: "Suspenso",    movie: { genres: [53] },  tv: { keywords: [316362] } },
   { slug: "crimen",      label: "Crimen",      movie: { genres: [80] },  tv: { genres: [80] } },
   { slug: "aventura",    label: "Aventura",    movie: { genres: [12] },  tv: { genres: [10759] } },
@@ -39,8 +45,14 @@ export const CATEGORIES: Category[] = [
 // resolveCategory las resuelve para /api/recomendaciones.
 export const RECOMMENDER_CATEGORIES: Category[] = [
   { slug: "palomitas",           label: "Palomitas",             movie: { genres: [28, 12] },        tv: { genres: [10759] } },
-  { slug: "misterio-intrincado", label: "Misterio intrincado",   movie: { genres: [9648, 53] },      tv: { genres: [9648] } },
-  { slug: "familiar",            label: "Aventura familiar",     movie: { genres: [10751, 12, 16] }, tv: { genres: [10751, 10762, 16] } },
+  // Sin el 53 (Thriller): el OR con thriller traía acción tensa y terror
+  // (La Boca del Diablo, La momia) en vez de enigmas. Solo misterio deja
+  // The Batman, Perdida, La asistenta, Las ovejas detectives.
+  { slug: "misterio-intrincado", label: "Misterio intrincado",   movie: { genres: [9648] },          tv: { genres: [9648] } },
+  // Sin el 16 (Animación): el OR lo metía suelto y traía animación PARA ADULTOS
+  // (Rick y Morty, Padre de familia). No se pierde la animación familiar: esas
+  // llevan 10751 igual (Toy Story, Zootrópolis).
+  { slug: "familiar",            label: "Aventura familiar",     movie: { genres: [10751, 12] },     tv: { genres: [10751, 10762] } },
   // La keyword christmas sola trae todo lo que TRANSCURRE en navidad: Harry
   // Potter, Iron Man 3, Shazam, Estragos. Cruzada con comedia/romance/familia
   // quedan las navideñas de verdad (El Grinch, Solo en casa 2, Red One,
@@ -49,8 +61,15 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
   { slug: "guerra",              label: "Fuego cruzado",         movie: { genres: [10752] },         tv: { genres: [10768] } },
   { slug: "aliens",              label: "Contacto extraterrestre", movie: { keywords: [9951, 14909, 9739] }, tv: { keywords: [9951, 14909, 9739] } },
   { slug: "espacio",             label: "Odisea espacial",       movie: { keywords: [9882, 3801, 1612] }, tv: { keywords: [9882, 3801, 1612] } },
-  { slug: "reales",              label: "Historias reales",      movie: { genres: [99] },             tv: { genres: [99] } },
-  { slug: "fantasia",            label: "Mundos fantásticos",    movie: { genres: [14] },             tv: { genres: [10765] } },
+  // Documentales Y ficción basada en hechos reales, unidos por OR (ver `alt`).
+  // Solo el género 99 traía realities y programas de cocina (Jackass, Diners
+  // Drive-Ins, ¿Cómo lo hacen?); la keyword 9672 suma Oppenheimer, La lista de
+  // Schindler, Chernobyl, The Crown y Narcos.
+  { slug: "reales",              label: "Historias reales",      movie: { genres: [99], alt: { keywords: [9672] } }, tv: { genres: [99], alt: { keywords: [9672] } } },
+  // En SERIES, TMDB une sci-fi y fantasía en un solo género (10765), así que
+  // los dos chips devolvían exactamente lo mismo. Se separan por keywords:
+  // magia/dragones/espada acá, espacio/futuro/distopía en scifi.
+  { slug: "fantasia",            label: "Mundos fantásticos",    movie: { genres: [14] },             tv: { genres: [10765], keywords: [2343, 12554, 234213] } },
   { slug: "supervivencia",       label: "Supervivencia extrema", movie: { keywords: [10349, 10617, 5096] }, tv: { keywords: [10349, 10617, 5096] } },
 ];
 
