@@ -129,19 +129,41 @@ export async function listByCategory(opts: {
     keywords = []; // que discover no arme el "|"
   }
 
-  const res = await discover(opts.tipo, {
+  const sinAudiencia = opts.scope
+    ? excludedGenres({ scope: opts.scope, genre: opts.genre, genre2: opts.genre2, providers: opts.providers })
+    : undefined;
+  const base = {
     providers: ids,
-    genres: genres.length ? genres : undefined,
-    keywords: keywords.length ? keywords : undefined,
-    withoutGenres: opts.scope
-      ? excludedGenres({ scope: opts.scope, genre: opts.genre, genre2: opts.genre2, providers: opts.providers })
-      : undefined,
+    withoutGenres: sinAudiencia,
     originCountry: opts.country || rule.originCountry,
-    page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes, extra,
-  });
+    page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes,
+  };
+
+  // `alt` (ver lib/categories.ts): TMDB une with_genres y with_keywords con AND,
+  // así que "documental O basado en hechos reales" necesita dos queries. Se
+  // piden en paralelo y se intercalan para que ninguna de las dos domine.
+  const [res, resAlt] = await Promise.all([
+    discover(opts.tipo, { ...base, genres: genres.length ? genres : undefined, keywords: keywords.length ? keywords : undefined, extra }),
+    rule.alt
+      ? discover(opts.tipo, { ...base, genres: rule.alt.genres, keywords: rule.alt.keywords, extra: opts.extra })
+      : Promise.resolve(null),
+  ]);
+
+  let crudos = res.results;
+  if (resAlt) {
+    const vistos = new Set<number>();
+    const mezcla: typeof crudos = [];
+    for (let i = 0; i < Math.max(res.results.length, resAlt.results.length); i++) {
+      for (const t of [res.results[i], resAlt.results[i]]) {
+        if (t && !vistos.has(t.id)) { vistos.add(t.id); mezcla.push(t); }
+      }
+    }
+    crudos = mezcla;
+  }
+
   const pub = await publishedIds(opts.tipo);
   const items = await settleAll(
-    res.results.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)),
+    crudos.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)),
     `listByCategory ${opts.tipo}/${opts.genre ?? "todos"}`,
   );
   return items.filter((i) => onUserPlatforms(i, opts.providers));
