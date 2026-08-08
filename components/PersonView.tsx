@@ -16,7 +16,10 @@ export default function PersonView({ id }: { id: string }) {
       <Link className="back" href="/buscar"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" /></svg>Volver a Buscar</Link>
       <h2 className="section-title">{data?.person?.name ?? "Cargando…"}</h2>
       <p className="section-sub">
-        {loading ? "" : `Filmografía en tus plataformas${data && data.hidden > 0 ? ` · ${data.hidden} oculto${data.hidden > 1 ? "s" : ""} (en plataformas que no tenés)` : ""}`}
+        {/* Solo "Filmografía en tus plataformas": el conteo de ocultos ("32 en
+            plataformas que no tenés") le hacía sentir al usuario que le estamos
+            escondiendo cosas. La frase ya dice que lo que ve es lo suyo. */}
+        {loading ? "" : "Filmografía en tus plataformas"}
       </p>
       <div className="grid">
         {(data?.titles ?? []).map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}

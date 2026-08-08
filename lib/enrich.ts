@@ -136,12 +136,17 @@ export async function listByCategory(opts: {
   // Los géneros excluidos son la unión de dos cosas distintas: los de la
   // categoría (falsos positivos, ver lib/categories.ts) y los de audiencia
   // (animación/familia según la superficie, ver lib/audience.ts).
-  const sinGeneros = [...new Set([
-    ...(rule.withoutGenres ?? []), ...(rule2.withoutGenres ?? []), ...(sinAudiencia ?? []),
-  ])];
+  //
+  // La regla `alt` lleva SU PROPIA exclusión: hereda la de audiencia pero no la
+  // de la principal. Si no, una categoría que separa ficción de documental
+  // (supervivencia: la principal excluye el 99, la alt lo pide) se anulaba a sí
+  // misma y la alt devolvía vacío.
+  const sinTodo = (propios?: number[]) => {
+    const u = [...new Set([...(propios ?? []), ...(sinAudiencia ?? [])])];
+    return u.length ? u : undefined;
+  };
   const base = {
     providers: ids,
-    withoutGenres: sinGeneros.length ? sinGeneros : undefined,
     originCountry: opts.country || rule.originCountry,
     page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes,
   };
@@ -150,9 +155,21 @@ export async function listByCategory(opts: {
   // así que "documental O basado en hechos reales" necesita dos queries. Se
   // piden en paralelo y se intercalan para que ninguna de las dos domine.
   const [res, resAlt] = await Promise.all([
-    discover(opts.tipo, { ...base, genres: genres.length ? genres : undefined, keywords: keywords.length ? keywords : undefined, extra }),
+    discover(opts.tipo, {
+      ...base,
+      withoutGenres: sinTodo([...(rule.withoutGenres ?? []), ...(rule2.withoutGenres ?? [])]),
+      genres: genres.length ? genres : undefined,
+      keywords: keywords.length ? keywords : undefined,
+      extra,
+    }),
     rule.alt
-      ? discover(opts.tipo, { ...base, genres: rule.alt.genres, keywords: rule.alt.keywords, extra: opts.extra })
+      ? discover(opts.tipo, {
+          ...base,
+          withoutGenres: sinTodo(rule.alt.withoutGenres),
+          genres: rule.alt.genres,
+          keywords: rule.alt.keywords,
+          extra: opts.extra,
+        })
       : Promise.resolve(null),
   ]);
 
@@ -231,6 +248,32 @@ export async function recommendations(opts: {
   const pools = await Promise.all(types.map((tp) =>
     listByCategory({ tipo: tp, genre: opts.genre, providers: opts.providers, page: 1, scope: "browse" })));
   const pool = pools.flat();
+
+  // Mitad documentales por tanda: se barajan los dos grupos por separado (así se
+  // mantiene la rotación del día) y recién después se intercalan, para que el
+  // barajado no vuelva a mezclar las proporciones.
+  if (cat?.balanceDocs) {
+    const esDoc = (t: UITitle) => t.genres.includes("documental");
+    const docs = pickDaily(pool.filter(esDoc), 999, dailySeed());
+    const ficcion = pickDaily(pool.filter((t) => !esDoc(t)), 999, dailySeed());
+    const mezcla: UITitle[] = [];
+    for (let i = 0; i < Math.max(docs.length, ficcion.length); i++) {
+      if (ficcion[i]) mezcla.push(ficcion[i]);
+      if (docs[i]) mezcla.push(docs[i]);
+    }
+    const inicio = mezcla.length ? (offset * n) % mezcla.length : 0;
+    const tanda = mezcla.slice(inicio, inicio + n);
+    if (tanda.length < n) {
+      const yaEsta = new Set(tanda.map((t) => `${t.type}:${t.id}`));
+      for (const t of mezcla) {
+        if (tanda.length >= n) break;
+        const k = `${t.type}:${t.id}`;
+        if (!yaEsta.has(k)) { yaEsta.add(k); tanda.push(t); }
+      }
+    }
+    return tanda;
+  }
+
   return pickDaily(pool, n, dailySeed(), offset);
 }
 

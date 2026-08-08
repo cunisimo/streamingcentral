@@ -23,6 +23,11 @@ export interface Category {
   // cuando los curados no alcanzan. El slug difiere del de la app a propósito:
   // este es el del pipeline de curado, aquel es de UI.
   curatedSlug?: string;
+  // Cada tanda mitad documentales y mitad ficción. No alcanza con la regla
+  // `alt`: esa intercala el pool, pero después el barajado del día lo revuelve
+  // y la proporción de cada tanda vuelve a ser la del pool (la ficción gana por
+  // volumen, 272 títulos contra 29).
+  balanceDocs?: boolean;
 }
 
 export const CATEGORIES: Category[] = [
@@ -88,7 +93,13 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
   // los dos chips devolvían exactamente lo mismo. Se separan por keywords:
   // magia/dragones/espada acá, espacio/futuro/distopía en scifi.
   { slug: "fantasia",            label: "Mundos fantásticos",    movie: { genres: [14] },             tv: { genres: [10765], keywords: [2343, 12554, 234213] } },
-  { slug: "supervivencia",       label: "Supervivencia extrema", movie: { keywords: [10349, 10617, 5096] }, tv: { keywords: [10349, 10617, 5096] } },
+  // Mitad ficción y mitad documental, intercalados 1:1 por el mecanismo `alt`.
+  // La regla principal excluye el género 99 y la alternativa lo pide, así que
+  // ninguna de las dos se come el chip: sin esto solo salía ficción (180
+  // películas contra 10 documentales, la ficción ganaba por volumen).
+  { slug: "supervivencia",       label: "Supervivencia extrema", balanceDocs: true,
+    movie: { keywords: [10349, 10617, 5096], withoutGenres: [99], alt: { keywords: [10349, 10617, 5096], genres: [99] } },
+    tv:    { keywords: [10349, 10617, 5096], withoutGenres: [99], alt: { keywords: [10349, 10617, 5096], genres: [99] } } },
 ];
 
 const BY_SLUG = new Map([...CATEGORIES, ...RECOMMENDER_CATEGORIES].map((c) => [c.slug, c]));
