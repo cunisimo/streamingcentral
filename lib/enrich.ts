@@ -105,6 +105,9 @@ export async function listByCategory(opts: {
   tipo: MediaType; genre?: string; genre2?: string; country?: string;
   providers: PlatformCode[]; page?: number; sortBy?: string; minVotes?: number;
   extra?: Record<string, string>; scope?: "home" | "browse";
+  // Descarta lo que no tenga póster y sinopsis (ver abajo). Lo usa "Últimos
+  // lanzamientos", que ya no filtra por cantidad de votos.
+  soloCompletos?: boolean;
 }): Promise<UITitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
@@ -185,6 +188,14 @@ export async function listByCategory(opts: {
     crudos = mezcla;
   }
 
+  // Ficha completa: con póster y con sinopsis. Se filtra ANTES del corte a 20
+  // para no gastar cupo en títulos que se van a descartar igual. TMDB no puede
+  // filtrar esto del lado suyo (no hay parámetro "con sinopsis"), así que la
+  // página rinde menos y el llamador tiene que pedir la siguiente si le falta.
+  if (opts.soloCompletos) {
+    crudos = crudos.filter((t) => t.poster_path && t.overview && t.overview.trim());
+  }
+
   const pub = await publishedIds(opts.tipo);
   const items = await settleAll(
     crudos.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)),
@@ -200,8 +211,15 @@ export async function latestReleases(
   const extra: Record<string, string> = tipo === "movie"
     ? { "primary_release_date.lte": today() }
     : { "first_air_date.lte": today() };
+  // Sin umbral de votos: exigía 5 y con eso un estreno no aparecía hasta juntar
+  // votos en TMDB — días en títulos de nicho. El criterio ahora es que la ficha
+  // esté completa (póster + sinopsis), que es lo que se ve en la card. Filtra
+  // el ruido real: títulos sin traducir y sin descripción.
+  // minVotes: 0 EXPLÍCITO. `discover` tiene un default de 60 votos, así que no
+  // alcanza con sacar el umbral: quedaría en 60 y sería 12 veces más
+  // restrictivo que el 5 que tenía antes.
   return listByCategory({
-    tipo, providers, page, minVotes: 5,
+    tipo, providers, page, minVotes: 0, soloCompletos: true,
     sortBy: tipo === "movie" ? "primary_release_date.desc" : "first_air_date.desc",
     extra,
   });
