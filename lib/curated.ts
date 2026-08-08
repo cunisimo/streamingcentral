@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseServer } from "./supabase";
-import { PLATFORMS } from "./providers-ar";
+import { cached, TTL } from "./cache";
 import type { MediaType, PlatformCode } from "./types";
 
 // Chips resueltos contra títulos curados a mano en vez de discover de TMDB.
@@ -101,21 +101,32 @@ export async function curatedTitles(opts: {
   return filas;
 }
 
-// Ids vetados para un chip. Los usa el RELLENO automático: cuando los curados no
-// alcanzan y se cae a discover, sin esto vuelven a aparecer los títulos que el
-// clasificador ya había rechazado (Harry Potter, Shazam) justo donde nadie mira.
+// Ids vetados para un chip. `get_chip_titles` ya los excluye de los curados;
+// esto es para el RELLENO automático, que va por discover de TMDB y sin este
+// filtro reinyecta lo que el clasificador rechazó (Harry Potter, Shazam, Duro de
+// matar) en la quinta tanda, donde nadie mira.
+//
+// Cacheado: son pocas filas y cambian poco (95 para magica-navidad), así que no
+// tiene sentido pegarle a Supabase en cada request de chip.
 export async function curatedBlocklist(chip: string): Promise<Set<string>> {
-  const sb = supabaseServer();
-  if (!sb) return new Set();
-  const { data, error } = await sb
-    .from("chip_blocklist")
-    .select("tmdb_id, media_type")
-    .eq("chip_slug", chip);
-  if (error) {
-    console.error(`[curated] no se pudo leer chip_blocklist(${chip}): ${error.message}`);
-    return new Set();
-  }
-  return new Set((data ?? []).map((r: { tmdb_id: number; media_type: string }) => `${r.media_type}:${r.tmdb_id}`));
+  const ids = await cached(`blocklist:${chip}`, TTL.catalog, async () => {
+    const sb = supabaseServer();
+    if (!sb) return [] as string[];
+    const { data, error } = await sb
+      .from("chip_blocklist")
+      .select("tmdb_id, media_type")
+      .eq("chip_slug", chip);
+    if (error) {
+      // No se cachea el error: al tirar, `cached` no guarda nada y el próximo
+      // request reintenta. Peor sería dejar la blocklist vacía 24 h.
+      throw new Error(`chip_blocklist(${chip}): ${error.message}`);
+    }
+    return (data ?? []).map((r: { tmdb_id: number; media_type: string }) => `${r.media_type}:${r.tmdb_id}`);
+  }).catch((e) => {
+    console.error(`[curated] no se pudo leer la blocklist de ${chip} —`, e);
+    return [] as string[];
+  });
+  return new Set(ids);
 }
 
 // --- Intercalado por estrato -------------------------------------------------
