@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { TMDB_IMG } from "@/lib/tmdb";
-import { codeForTmdbId, platformByCode } from "@/lib/providers-ar";
+import { codeForTmdbId, platformByCode, platformOrder } from "@/lib/providers-ar";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +61,10 @@ export async function GET() {
         if (!p.code || seen.has(p.code)) return false;
         seen.add(p.code);
         return true;
-      });
+      })
+      // El orden lo manda PLATFORMS, no el display_priority de TMDB: el dueño
+      // definió cuáles van primero en el selector.
+      .sort((a, b) => platformOrder(a.code!) - platformOrder(b.code!));
     return NextResponse.json({ providers });
   } catch (e) {
     return NextResponse.json({ error: String(e), providers: [] }, { status: 500 });

@@ -112,7 +112,19 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .platbtn .cap{color:var(--dim)}
 .platbtn .av{display:flex;align-items:center;gap:3px}.platbtn .av span{width:8px;height:8px;border-radius:2px}
 .platbtn>svg{width:14px;height:14px;stroke:var(--dim);fill:none;stroke-width:2}
-.panel{position:absolute;top:50px;right:0;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:10px;z-index:40;box-shadow:var(--sh-h);min-width:230px;max-height:380px;overflow:auto}
+/* La barra de scroll va SIEMPRE visible (no la de aparecer-al-hover del SO):
+   con 14 plataformas la lista se corta y no había ninguna pista de que seguía
+   más abajo. `scrollbar-gutter` reserva su ancho para que las filas no se
+   corran al aparecer. */
+.panel{position:absolute;top:50px;right:0;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:10px;z-index:40;box-shadow:var(--sh-h);min-width:230px;max-height:380px;overflow-y:scroll;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.panel::-webkit-scrollbar{width:8px}
+.panel::-webkit-scrollbar-track{background:transparent}
+.panel::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:2px solid var(--surface)}
+.panel::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+/* Última plataforma activa: no se puede destildar. */
+.prow.locked{cursor:default;opacity:.75}
+.prow.locked:hover{background:transparent}
+.panel-hint{font-size:11px;color:var(--faint);padding:6px 10px 2px;line-height:1.4}
 .panel h4{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:6px 10px 8px}
 .prow{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:10px;cursor:pointer;gap:14px}
 .prow:hover{background:var(--surface-2)}
