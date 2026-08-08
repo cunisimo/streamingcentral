@@ -13,7 +13,8 @@ import {
   type RawTitle, type RawDetail, type CreditEntry,
 } from "./tmdb";
 import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
-import { resolveCategory, genreIdsToSlugs, categoryLabel, CATEGORIES } from "./categories";
+import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, type Category } from "./categories";
+import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
@@ -189,10 +190,40 @@ export async function latestReleases(
   });
 }
 
+// Debajo de este piso de curados DISPONIBLES para el usuario se completa con
+// discover. Un usuario solo-Netflix tiene ~30 curados de navidad: a 6 por tanda
+// da la vuelta en 5 clicks, que es justo la queja que originó el curado.
+const PISO_CURADOS = 12;
+
 // --- Recomendaciones del día (pool + seed) ---
 export async function recommendations(opts: {
   genre?: string; tipo: MediaType | "all"; providers: PlatformCode[]; n?: number; offset?: number;
 }): Promise<UITitle[]> {
+  const n = opts.n ?? 6;
+  const offset = opts.offset ?? 0;
+  const cat = opts.genre ? categoryBySlug(opts.genre) : undefined;
+
+  // --- Ruta curada -----------------------------------------------------------
+  if (cat?.curatedSlug) {
+    const pool = await curatedPool(cat, opts.providers, n);
+    // El RPC ya barajó con la semilla del día y el intercalado fijó el orden:
+    // acá solo se pagina. Volver a mezclar rompería ambas cosas.
+    if (!pool.length) return [];
+    const inicio = (offset * n) % pool.length;
+    const tanda = pool.slice(inicio, inicio + n);
+    // Wrap al principio si la tanda cae al final del pool. Con un pool más chico
+    // que `n` esto llegaba a repetir el mismo título dentro de la tanda.
+    if (tanda.length < n) {
+      const yaEsta = new Set(tanda.map((t) => `${t.type}:${t.id}`));
+      for (const t of pool) {
+        if (tanda.length >= n) break;
+        const k = `${t.type}:${t.id}`;
+        if (!yaEsta.has(k)) { yaEsta.add(k); tanda.push(t); }
+      }
+    }
+    return tanda;
+  }
+
   const types: MediaType[] = opts.tipo === "all" ? ["movie", "tv"] : [opts.tipo];
   // scope "browse": el recomendador es parte del Home, así que no muestra
   // animación (va en "Animación para adultos"), pero sí lo familiar — si no,
@@ -200,7 +231,42 @@ export async function recommendations(opts: {
   const pools = await Promise.all(types.map((tp) =>
     listByCategory({ tipo: tp, genre: opts.genre, providers: opts.providers, page: 1, scope: "browse" })));
   const pool = pools.flat();
-  return pickDaily(pool, opts.n ?? 6, dailySeed(), opts.offset ?? 0);
+  return pickDaily(pool, n, dailySeed(), offset);
+}
+
+// Pool completo de un chip curado, ya enriquecido y en el orden definitivo.
+// Curados primero (intercalados por estrato); si no llegan al piso, se completa
+// con discover — SOLO películas, y filtrando la blocklist para no reinyectar los
+// títulos que el clasificador ya había rechazado.
+async function curatedPool(
+  cat: Category, providers: PlatformCode[], n: number,
+): Promise<UITitle[]> {
+  const curatedSlug = cat.curatedSlug!;
+  const filas = await curatedTitles({
+    chip: curatedSlug,
+    providers,
+    // Misma semilla del día que usa todo el recomendador: mantiene el
+    // determinismo por fecha y con eso la eficiencia del cache compartido.
+    seed: String(dailySeed()),
+  });
+  const ordenadas = intercalarEstratos(filas, n);
+  const curados = await cardsByIds(
+    ordenadas.map((f) => ({ tipo: f.media_type, id: f.tmdb_id })),
+  );
+  if (curados.length >= PISO_CURADOS) return curados;
+
+  const [relleno, vetados] = await Promise.all([
+    // Solo movie: el curado es de películas, y meter series por el relleno
+    // reinyecta el ruido de discover justo donde nadie lo revisa.
+    listByCategory({ tipo: "movie", genre: cat.slug, providers, page: 1, scope: "browse" }),
+    curatedBlocklist(curatedSlug),
+  ]);
+  const yaEstan = new Set(curados.map((c) => `${c.type}:${c.id}`));
+  const extra = relleno.filter((r) => {
+    const k = `${r.type}:${r.id}`;
+    return !yaEstan.has(k) && !vetados.has(k);
+  });
+  return [...curados, ...extra];
 }
 
 // --- Carruseles de audiencia (family / adult-anime): receta de lib/audience,

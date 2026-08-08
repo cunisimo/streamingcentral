@@ -18,6 +18,11 @@ export interface Category {
   label: string;
   movie: Rule;
   tv: Rule;
+  // Si está, el chip se resuelve contra los títulos curados de la base
+  // (lib/curated.ts) en vez de discover; `movie`/`tv` quedan solo como relleno
+  // cuando los curados no alcanzan. El slug difiere del de la app a propósito:
+  // este es el del pipeline de curado, aquel es de UI.
+  curatedSlug?: string;
 }
 
 export const CATEGORIES: Category[] = [
@@ -67,7 +72,10 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
   // Potter, Iron Man 3, Shazam, Estragos. Cruzada con comedia/romance/familia
   // quedan las navideñas de verdad (El Grinch, Solo en casa 2, Red One,
   // ¡Qué bello es vivir!). En tv no existe el género romance (10749).
-  { slug: "navidad",             label: "Mágica navidad",        movie: { genres: [35, 10749, 10751], keywords: [207317] }, tv: { genres: [35, 10751], keywords: [207317] } },
+  // CURADO: se resuelve contra chip_titles. Las reglas de abajo quedan como
+  // relleno para cuando los curados disponibles no alcanzan (usuario con una
+  // sola plataforma chica), y en ese caso se filtran contra chip_blocklist.
+  { slug: "navidad",             label: "Mágica navidad",        curatedSlug: "magica-navidad", movie: { genres: [35, 10749, 10751], keywords: [207317] }, tv: { genres: [35, 10751], keywords: [207317] } },
   { slug: "guerra",              label: "Fuego cruzado",         movie: { genres: [10752] },         tv: { genres: [10768] } },
   { slug: "aliens",              label: "Contacto extraterrestre", movie: { keywords: [9951, 14909, 9739] }, tv: { keywords: [9951, 14909, 9739] } },
   { slug: "espacio",             label: "Odisea espacial",       movie: { keywords: [9882, 3801, 1612] }, tv: { keywords: [9882, 3801, 1612] } },
@@ -85,6 +93,7 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
 
 const BY_SLUG = new Map([...CATEGORIES, ...RECOMMENDER_CATEGORIES].map((c) => [c.slug, c]));
 export const categoryLabel = (slug: string) => BY_SLUG.get(slug)?.label ?? slug;
+export const categoryBySlug = (slug: string): Category | undefined => BY_SLUG.get(slug);
 
 export function resolveCategory(slug: string, type: MediaType): Rule {
   const c = BY_SLUG.get(slug);
