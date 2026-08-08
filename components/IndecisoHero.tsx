@@ -123,7 +123,7 @@ export default function IndecisoHero({
             </span>
             ¿Qué te inspira hoy?
           </div>
-          {chipGroup("Estados de ánimo", ANIMO)}
+          {chipGroup("Categorías", ANIMO)}
           {chipGroup("Temáticas", TEMATICA)}
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function IndecisoHero({
             </div>
             <button className="reshuffle" onClick={() => setOffset((o) => o + 1)}>
               <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></svg>
-              Mostrame otras
+              Otras
             </button>
           </div>
           <div className="track" ref={track}>
