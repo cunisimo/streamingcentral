@@ -65,14 +65,28 @@ export default function TopBar() {
           {open && (
             <div className="panel" onClick={(e) => e.stopPropagation()}>
               <h4>Tus plataformas — elegí una o varias</h4>
-              {rows.map((p) => (
-                <div key={p.code} className="prow" onClick={() => toggle(p.code)}>
-                  <div className="left"><PlatformLogo code={p.code} /></div>
-                  <span className={`check ${has(p.code) ? "on" : ""}`}>
-                    <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
-                  </span>
-                </div>
-              ))}
+              {rows.map((p) => {
+                // Siempre tiene que quedar al menos una: destildar la última
+                // dejaría el catálogo entero vacío. `toggle` ya lo impide, pero
+                // en silencio; acá se muestra por qué no se puede.
+                const ultima = has(p.code) && platforms.length === 1;
+                return (
+                  <div
+                    key={p.code}
+                    className={`prow ${ultima ? "locked" : ""}`}
+                    onClick={() => { if (!ultima) toggle(p.code); }}
+                    title={ultima ? "Tenés que dejar al menos una plataforma" : undefined}
+                  >
+                    <div className="left"><PlatformLogo code={p.code} /></div>
+                    <span className={`check ${has(p.code) ? "on" : ""}`}>
+                      <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+                    </span>
+                  </div>
+                );
+              })}
+              {platforms.length === 1 && (
+                <p className="panel-hint">Dejá al menos una plataforma elegida.</p>
+              )}
             </div>
           )}
         </div>

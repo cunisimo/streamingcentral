@@ -132,9 +132,15 @@ export async function listByCategory(opts: {
   const sinAudiencia = opts.scope
     ? excludedGenres({ scope: opts.scope, genre: opts.genre, genre2: opts.genre2, providers: opts.providers })
     : undefined;
+  // Los géneros excluidos son la unión de dos cosas distintas: los de la
+  // categoría (falsos positivos, ver lib/categories.ts) y los de audiencia
+  // (animación/familia según la superficie, ver lib/audience.ts).
+  const sinGeneros = [...new Set([
+    ...(rule.withoutGenres ?? []), ...(rule2.withoutGenres ?? []), ...(sinAudiencia ?? []),
+  ])];
   const base = {
     providers: ids,
-    withoutGenres: sinAudiencia,
+    withoutGenres: sinGeneros.length ? sinGeneros : undefined,
     originCountry: opts.country || rule.originCountry,
     page: opts.page, sortBy: opts.sortBy, minVotes: opts.minVotes,
   };

@@ -8,7 +8,10 @@ import type { MediaType } from "./types";
 // TMDB combina `with_genres` y `with_keywords` con AND: no hay forma de pedir
 // "género documental O keyword hechos reales" en una sola query. Cuando está
 // presente, listByCategory dispara las dos y mergea (dedup por id).
-type Rule = { genres?: number[]; keywords?: number[]; originCountry?: string; alt?: Rule };
+// `withoutGenres`: géneros que sacan falsos positivos de la propia categoría
+// (no tiene nada que ver con el filtro de audiencia de lib/audience.ts, que se
+// aplica aparte y se suma a este).
+type Rule = { genres?: number[]; keywords?: number[]; withoutGenres?: number[]; originCountry?: string; alt?: Rule };
 
 export interface Category {
   slug: string;
@@ -35,7 +38,11 @@ export const CATEGORIES: Category[] = [
   // `genres: [18]` a secas el chip pedía literalmente "drama" y devolvía
   // The Walking Dead, El mentalista y Breaking Bad. Drama + keyword romance
   // (9840) trae Outlander, Los Bridgerton y El verano en que me enamoré.
-  { slug: "romance",     label: "Romance",     movie: { genres: [10749] },tv: { genres: [18], keywords: [9840] } },
+  // En tv, la keyword romance la tienen series que NO son románticas: Better
+  // Call Saul la lleva por el vínculo Jimmy/Kim siendo policial. Sacando
+  // crimen/acción/misterio quedan Outlander, Los Bridgerton, El verano en que
+  // me enamoré.
+  { slug: "romance",     label: "Romance",     movie: { genres: [10749] },tv: { genres: [18], keywords: [9840], withoutGenres: [80, 10759, 9648] } },
 ];
 
 // Categorías EXCLUSIVAS del recomendador ("¿Qué te inspira hoy?"). Separadas de
@@ -48,7 +55,10 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
   // Sin el 53 (Thriller): el OR con thriller traía acción tensa y terror
   // (La Boca del Diablo, La momia) en vez de enigmas. Solo misterio deja
   // The Batman, Perdida, La asistenta, Las ovejas detectives.
-  { slug: "misterio-intrincado", label: "Misterio intrincado",   movie: { genres: [9648] },          tv: { genres: [9648] } },
+  // Sin terror en pelis y sin sci-fi/fantasía en series: el enigma se diluía
+  // con sustos y con lo sobrenatural (Watchmen, Sobrenatural, From, Stranger
+  // Things llevan el género Misterio pero no son whodunit).
+  { slug: "misterio-intrincado", label: "Misterio intrincado",   movie: { genres: [9648], withoutGenres: [27] }, tv: { genres: [9648], withoutGenres: [10765] } },
   // Sin el 16 (Animación): el OR lo metía suelto y traía animación PARA ADULTOS
   // (Rick y Morty, Padre de familia). No se pierde la animación familiar: esas
   // llevan 10751 igual (Toy Story, Zootrópolis).
@@ -57,7 +67,7 @@ export const RECOMMENDER_CATEGORIES: Category[] = [
   // Potter, Iron Man 3, Shazam, Estragos. Cruzada con comedia/romance/familia
   // quedan las navideñas de verdad (El Grinch, Solo en casa 2, Red One,
   // ¡Qué bello es vivir!). En tv no existe el género romance (10749).
-  { slug: "navidad",             label: "Magia navideña",        movie: { genres: [35, 10749, 10751], keywords: [207317] }, tv: { genres: [35, 10751], keywords: [207317] } },
+  { slug: "navidad",             label: "Mágica navidad",        movie: { genres: [35, 10749, 10751], keywords: [207317] }, tv: { genres: [35, 10751], keywords: [207317] } },
   { slug: "guerra",              label: "Fuego cruzado",         movie: { genres: [10752] },         tv: { genres: [10768] } },
   { slug: "aliens",              label: "Contacto extraterrestre", movie: { keywords: [9951, 14909, 9739] }, tv: { keywords: [9951, 14909, 9739] } },
   { slug: "espacio",             label: "Odisea espacial",       movie: { keywords: [9882, 3801, 1612] }, tv: { keywords: [9882, 3801, 1612] } },

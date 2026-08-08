@@ -20,7 +20,11 @@ export function PlatformsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setPlatforms(JSON.parse(raw));
+      const guardado = raw ? JSON.parse(raw) : null;
+      // El invariante "nunca vacío" también vale acá: `toggle` y `set` lo
+      // respetaban, pero la hidratación aceptaba un "[]" guardado y dejaba al
+      // usuario sin ninguna plataforma (y con el catálogo entero vacío).
+      if (Array.isArray(guardado) && guardado.length) setPlatforms(guardado);
     } catch { /* noop */ }
     setReady(true);
   }, []);
