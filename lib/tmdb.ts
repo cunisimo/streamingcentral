@@ -69,6 +69,9 @@ export interface RawTitle {
   title?: string;
   name?: string;
   poster_path: string | null;
+  // Los listados de discover/search sí lo traen; se usa para descartar fichas
+  // incompletas en "Últimos lanzamientos" (ver `soloCompletos` en enrich).
+  overview?: string;
   vote_average: number;
   vote_count: number;
   release_date?: string;
