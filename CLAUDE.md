@@ -97,7 +97,8 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   global** para toda la página, no uno por riel como en el Home: los bloques son
   la misma pregunta repetida por plataforma, y estados independientes rompen la
   lectura de "el top de ahora". El cron escribe con `supabaseAdmin()`
-  (service role, bypassa RLS, en `lib/supabase.ts`), porque `netflix_top10` solo
+  (service role, bypassa RLS, en `lib/supabase-admin.ts` — aparte de
+  `lib/supabase.ts`, que sí llega al bundle del navegador), porque `netflix_top10` solo
   tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de
   Next. Sin esa variable la ingesta no corre y el bloque de Netflix cae a
   popularidad como los otros cinco — la app no se rompe.
