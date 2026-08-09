@@ -28,6 +28,10 @@ export default function RuletaBanner() {
   const [actual, setActual] = useState<RoulettePick | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(false);
+  // Para no repetir la primera query: en el montaje `platformsKey` ya tiene
+  // un valor (el de localStorage), y no queremos que el efecto de abajo lo
+  // interprete como "cambiaron las plataformas".
+  const primerRenderPlatforms = useRef(true);
 
   // Una query por tanda. `reintento` evita el bucle infinito: si tras limpiar
   // los mostrados sigue sin venir nada, es que no hay pool y se muestra el
@@ -78,6 +82,29 @@ export default function RuletaBanner() {
     }
   }, [pedirTanda, add]);
 
+  // `platforms` es un array nuevo en cada render del contexto, así que
+  // compararlo directo dispararía el efecto todo el tiempo; el string sí es
+  // estable entre renders si el contenido no cambió.
+  const platformsKey = platforms.join(",");
+
+  // Si el usuario saca (o pone) una plataforma con el panel abierto y un
+  // escenario ya elegido, la `cola` en memoria puede tener picks de una
+  // plataforma que ya no tiene: "Otra" seguiría sirviéndolos hasta agotar
+  // la tanda vieja. Se descarta la cola y se repite la query con las
+  // plataformas nuevas. `elegir` ya limpia y vuelve a pedir, así que alcanza
+  // con llamarlo de nuevo para el escenario actual.
+  useEffect(() => {
+    if (primerRenderPlatforms.current) {
+      primerRenderPlatforms.current = false;
+      return;
+    }
+    if (!escenario) return;
+    void elegir(escenario);
+    // Sólo nos interesa reaccionar a cambios de plataformas, no a que
+    // cambien `escenario`/`elegir` (eso ya lo maneja el click de la tarjeta).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platformsKey]);
+
   const otra = useCallback(async () => {
     if (!escenario) return;
     // Consume de la tanda que ya está en el cliente; sólo pide otra al agotarse.
@@ -125,13 +152,13 @@ export default function RuletaBanner() {
           ) : cargando ? (
             <span className="loading">Buscando algo bueno…</span>
           ) : error ? (
-            <p className="empty-note">
+            <p className="empty-note" role="status">
               No pudimos traer una recomendación. <button className="rlt-btn" onClick={() => void elegir(escenario)}>Reintentar</button>
             </p>
           ) : actual ? (
             <RuletaCard pick={actual} onOtra={() => void otra()} onCerrar={volver} />
           ) : (
-            <p className="empty-note">
+            <p className="empty-note" role="status">
               No hay nada para esta situación en tus plataformas. <button className="rlt-btn" onClick={volver}>Probar otra</button>
             </p>
           )}
