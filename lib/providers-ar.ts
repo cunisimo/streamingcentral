@@ -21,7 +21,7 @@ export const PLATFORMS: PlatformDef[] = [
   { code: "n",  name: "Netflix",       tmdbIds: [8],              color: "#E50914" },
   { code: "d",  name: "Disney+",       tmdbIds: [337],            color: "#0C3FC4" },
   { code: "m",  name: "Max",           tmdbIds: [1899, 384],      color: "#0E2FD6" },
-  { code: "at", name: "Apple TV+",     tmdbIds: [350, 2, 2243],   color: "#111111" },
+  { code: "at", name: "Apple TV+",     tmdbIds: [350, 2243],      color: "#111111" },
   { code: "p",  name: "Prime Video",   tmdbIds: [119, 9],         color: "#00A8E1" },
   { code: "cr", name: "Crunchyroll",   tmdbIds: [283, 1968],      color: "#F47521" },
   { code: "pp", name: "Paramount+",    tmdbIds: [531, 582, 1853], color: "#0064FF" },
@@ -33,7 +33,6 @@ export const PLATFORMS: PlatformDef[] = [
   { code: "vx", name: "ViX",           tmdbIds: [457],            color: "#F4067F" },
   { code: "dg", name: "DIRECTV GO",    tmdbIds: [467],            color: "#00B0F0" },
   { code: "ok", name: "OnDemandKorea", tmdbIds: [575],            color: "#E4002B" },
-  { code: "sp", name: "Star+",         tmdbIds: [619],            color: "#5A2EAE" },
 ];
 
 // Posición de cada código en el orden de arriba, para ordenar listas que vienen
@@ -47,6 +46,13 @@ export const platformOrder = (c: PlatformCode) => ORDEN.get(c) ?? 999;
 // /watch/providers de cada título la lista bajo `ads`, así que `providersOf`
 // nunca le asignaba el código y el Home quedaba en 0 tarjetas. Soportarla
 // obligaría a aceptar el modelo con publicidad, que es otra app.
+
+// El id 2 ("Apple TV") NO va en Apple TV+: es la tienda de alquiler/compra, y
+// TMDB la devuelve bajo `flatrate` en AR (misma inconsistencia que Pluto TV).
+// Con el id 2 puesto, Apple TV+ pasaba de 321 títulos reales a 5389, y el
+// usuario veía cine de alquiler como si estuviera incluido en la suscripción.
+// Star+ (619) se sacó porque se fusionó con Disney+ en 2024: devuelve 0 en
+// movie y en tv.
 
 const ID_TO_CODE = new Map<number, PlatformCode>();
 const CODE_TO_DEF = new Map<PlatformCode, PlatformDef>();
