@@ -64,6 +64,15 @@ export function parseArWeek(lines: string[]): NetflixRow[] {
       rawTitle,
     });
   }
+  // Guard contra una inversión del orden del archivo: si Netflix alguna vez
+  // ordenara semana ascendente en vez de descendente, el corte de las primeras
+  // 20 filas de AR nos daría la semana más VIEJA, no la más reciente, y la
+  // ingestaríamos como si fuera actual. Netflix publica la semana cerrada el
+  // domingo anterior, así que en funcionamiento normal el desfase nunca pasa
+  // de unos días; más de 30 solo se explica por un cambio de orden.
+  if (week !== null && Date.now() - new Date(week).getTime() > 30 * 24 * 60 * 60 * 1000) {
+    throw new Error(`La semana ${week} tiene más de 30 días: ¿se invirtió el orden del TSV?`);
+  }
   if (out.length !== FILAS_ESPERADAS) {
     throw new Error(`Se esperaban ${FILAS_ESPERADAS} filas de AR, llegaron ${out.length}`);
   }
@@ -124,6 +133,10 @@ async function resolveTitle(
   for (const c of candidatos) {
     if (await enNetflixAR(category, c.id)) return { tmdbId: c.id, needsReview: true };
   }
+  // Decisión: hay candidatos pero ninguno con título exacto ni presente en
+  // Netflix AR. En vez de dejarlo en null, nos quedamos con el primer
+  // candidato (el más relevante para TMDB) marcado needs_review, para que
+  // haya algo que mostrar mientras se corrige a mano si hace falta.
   return { tmdbId: candidatos[0].id, needsReview: true };
 }
 
@@ -145,37 +158,60 @@ export async function ingestLatestWeek() {
 
   // Lo que ya está guardado para esa semana: si el raw_title no cambió, la fila
   // NO se toca. Así una corrección manual de tmdb_id sobrevive a los reintentos.
-  const { data: previas } = await db
+  // Chequeamos error explícito: supabase-js no lanza excepción ante un fallo de
+  // query, devuelve { data: null, error }. Si no lo detectáramos, "previas"
+  // quedaría vacío, las 20 filas se tratarían como pendientes y el upsert de
+  // abajo reescribiría todo, pisando correcciones manuales de tmdb_id. Mejor
+  // abortar sin escribir que ingestar sobre datos incompletos.
+  const { data: previas, error: errPrevias } = await db
     .from("netflix_top10")
-    .select("category,rank,raw_title")
+    .select("category,rank,raw_title,tmdb_id")
     .eq("week", week);
+  if (errPrevias) throw new Error(`select de previas falló: ${errPrevias.message}`);
   const yaEsta = new Map(
-    (previas ?? []).map((p) => [`${p.category}:${p.rank}`, p.raw_title as string]),
+    (previas ?? []).map((p) => [
+      `${p.category}:${p.rank}`,
+      { rawTitle: p.raw_title as string, tmdbId: p.tmdb_id as number | null },
+    ]),
   );
 
-  const pendientes = filas.filter(
-    (f) => yaEsta.get(`${f.category}:${f.rank}`) !== f.rawTitle,
-  );
+  // Pendiente si es fila nueva, cambió el raw_title, o quedó sin resolver en un
+  // intento anterior: un tmdb_id null no es una corrección manual, es una
+  // resolución que falló, y el re-run tiene que volver a intentarla (si no,
+  // queda en null hasta la semana que viene porque el raw_title no cambia).
+  const pendientes = filas.filter((f) => {
+    const prev = yaEsta.get(`${f.category}:${f.rank}`);
+    return !prev || prev.rawTitle !== f.rawTitle || prev.tmdbId === null;
+  });
   if (!pendientes.length) return { week, inserted: 0, resolved: 0, review: 0 };
 
   // Mapa de títulos ya resueltos en semanas anteriores, acotado por categoría:
   // un mismo nombre puede existir como película y como serie.
-  const { data: conocidos } = await db
+  const { data: conocidos, error: errConocidos } = await db
     .from("netflix_top10")
     .select("raw_title,category,tmdb_id")
     .in("raw_title", pendientes.map((f) => f.rawTitle))
     .not("tmdb_id", "is", null);
+  if (errConocidos) throw new Error(`select de conocidos falló: ${errConocidos.message}`);
   const mapa = new Map(
     (conocidos ?? []).map((c) => [`${c.category}:${c.raw_title}`, c.tmdb_id as number]),
   );
 
-  const rows = [];
-  let resolved = 0, review = 0;
-  for (const f of pendientes) {
+  // Resolución en paralelo: sin esto, 20 títulos por hasta ~6 llamadas a TMDB
+  // cada uno se resolvían de a uno y podían comerse el timeout del cron. No
+  // hace falta un limitador de concurrencia acá: lib/tmdb.ts ya tiene un
+  // semáforo global (MAX_EN_VUELO) que cubre toda la app.
+  const resultados = await Promise.all(pendientes.map(async (f) => {
     const conocido = mapa.get(`${f.category}:${f.rawTitle}`);
     const r = conocido != null
       ? { tmdbId: conocido, needsReview: false }
       : await resolveTitle(f.category, f.rawTitle);
+    return { f, r };
+  }));
+
+  const rows = [];
+  let resolved = 0, review = 0;
+  for (const { f, r } of resultados) {
     if (r.tmdbId != null) resolved++;
     if (r.needsReview) review++;
     rows.push({
