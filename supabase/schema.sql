@@ -335,3 +335,32 @@ drop policy if exists "lectura pública" on upcoming_content_providers;
 create policy "lectura pública" on providers                  for select using (true);
 create policy "lectura pública" on upcoming_content           for select using (true);
 create policy "lectura pública" on upcoming_content_providers for select using (true);
+
+-- ---------------------------------------------------------------------------
+-- Top 10 semanal de Netflix en Argentina.
+-- Fuente: https://www.netflix.com/tudum/top10/data/all-weeks-countries.tsv
+-- (público, sin auth, se actualiza los martes con la semana cerrada el domingo)
+--
+-- La tabla cumple DOS funciones: es el ranking y es el mapa título→TMDB. El TSV
+-- solo trae el título en inglés, sin id ni año, así que resolverlo cuesta 1-2
+-- búsquedas en TMDB por título nuevo. Como los títulos duran varias semanas en
+-- el top, consultando acá primero se resuelven 2-4 por semana en vez de 20.
+-- Efecto buscado: una corrección manual de `tmdb_id` queda fija para siempre.
+create table if not exists netflix_top10 (
+  week         date    not null,
+  category     text    not null check (category in ('movie','tv')),
+  rank         int     not null check (rank between 1 and 10),
+  raw_title    text    not null,   -- el título tal cual viene del TSV
+  tmdb_id      int,                -- null si no se pudo resolver
+  needs_review boolean not null default false,
+  updated_at   timestamptz not null default now(),
+  primary key (week, category, rank)
+);
+
+create index if not exists netflix_top10_raw_title_idx on netflix_top10 (raw_title, category);
+
+-- RLS: lectura pública (es catálogo, no dato personal). Sin políticas de
+-- escritura: solo el service_role del cron escribe, y bypassa RLS.
+alter table netflix_top10 enable row level security;
+drop policy if exists "lectura pública" on netflix_top10;
+create policy "lectura pública" on netflix_top10 for select using (true);
