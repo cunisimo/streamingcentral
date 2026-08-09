@@ -22,6 +22,17 @@ export interface TopBlock {
   slots: TopSlot[];
 }
 
+export interface TopPayload {
+  mine: TopBlock[];
+  others: TopBlock[];
+  // Mismo criterio que HomePayload (lib/home.ts): cuántos bloques se cayeron
+  // (`safe` los descartó por una excepción, ej. un 429 transitorio de TMDB) y
+  // el booleano derivado. Sin esto, un 200 con 5 de 6 bloques era indistinguible
+  // de "esa plataforma no tiene top" — mensaje falso y sin forma de reintentar.
+  fallos: number;
+  degradado: boolean;
+}
+
 // Bloque por popularidad. Sin `scope`, así que NO corren los filtros de
 // animación/familia de lib/audience.ts: esto es un ranking, no un riel curado.
 async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<TopBlock> {
@@ -68,11 +79,15 @@ async function netflixBlock(tipo: MediaType): Promise<TopBlock> {
 // aislar hacía que un 429 transitorio en UNA plataforma tumbara el array entero
 // (mine o others), y con él los bloques que ya habían resuelto bien — incluido
 // Netflix, que ni siquiera es la plataforma que falló. Acá un bloque caído se
-// loguea y se descarta, como ya se hace con los que quedan sin slots.
-async function safe(etiqueta: string, fn: () => Promise<TopBlock>): Promise<TopBlock | null> {
+// loguea, se cuenta en `c.fallos` y se descarta, como ya se hace con los que
+// quedan sin slots (eso no es un fallo, es una plataforma sin top hoy).
+interface Contador { fallos: number }
+
+async function safe(c: Contador, etiqueta: string, fn: () => Promise<TopBlock>): Promise<TopBlock | null> {
   try {
     return await fn();
   } catch (e) {
+    c.fallos++;
     // Error completo (con stack): con solo `.message` un bug propio se
     // confunde con un 429 de TMDB, igual que en home.ts.
     console.error(`[top] "${etiqueta}" falló, se descarta el bloque —`, e);
@@ -83,14 +98,15 @@ async function safe(etiqueta: string, fn: () => Promise<TopBlock>): Promise<TopB
   }
 }
 
-export async function buildTop(tipo: MediaType, providers: PlatformCode[]) {
+export async function buildTop(tipo: MediaType, providers: PlatformCode[]): Promise<TopPayload> {
   const elegidas = new Set(providers);
   const orden = (a: PlatformCode, b: PlatformCode) => platformOrder(a) - platformOrder(b);
   const mias = TOP_PLATFORMS.filter((p) => elegidas.has(p)).sort(orden);
   const resto = TOP_PLATFORMS.filter((p) => !elegidas.has(p)).sort(orden);
 
+  const c: Contador = { fallos: 0 };
   const armar = (p: PlatformCode) =>
-    safe(`${tipo}:${p}`, () => (p === "n" ? netflixBlock(tipo) : popularBlock(p, tipo)));
+    safe(c, `${tipo}:${p}`, () => (p === "n" ? netflixBlock(tipo) : popularBlock(p, tipo)));
   // Sin limitador propio: el semáforo de lib/tmdb.ts ya pone el techo global.
   const [mine, others] = await Promise.all([
     Promise.all(mias.map(armar)),
@@ -98,5 +114,9 @@ export async function buildTop(tipo: MediaType, providers: PlatformCode[]) {
   ]);
   // Un bloque caído (null) o sin nada que mostrar no se renderiza.
   const conAlgo = (b: TopBlock | null): b is TopBlock => !!b && b.slots.length > 0;
-  return { mine: mine.filter(conAlgo), others: others.filter(conAlgo) };
+  if (c.fallos) console.error(`[top] payload degradado: ${c.fallos} bloque(s) caído(s)`);
+  return {
+    mine: mine.filter(conAlgo), others: others.filter(conAlgo),
+    fallos: c.fallos, degradado: c.fallos > 0,
+  };
 }

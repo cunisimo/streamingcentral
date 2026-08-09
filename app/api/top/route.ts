@@ -13,6 +13,14 @@ export async function GET(req: NextRequest) {
   try {
     return NextResponse.json(await buildTop(tipo, providers));
   } catch (e) {
-    return NextResponse.json({ error: String(e), mine: [], others: [] }, { status: 500 });
+    // buildTop envuelve cada bloque en `safe`, así que en producción no
+    // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con
+    // 200. Este catch queda para lo que `safe` NO cubre — fuera de producción
+    // `safe` re-lanza a propósito, y para cualquier fallo del propio handler.
+    console.error("[api/top] buildTop rechazó —", e);
+    return NextResponse.json(
+      { error: String(e), mine: [], others: [], fallos: 1, degradado: true },
+      { status: 500 },
+    );
   }
 }

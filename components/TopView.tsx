@@ -1,0 +1,121 @@
+"use client";
+import { useRef, useState } from "react";
+import { useApi } from "./useApi";
+import { usePlatforms } from "./PlatformsContext";
+import { useShelfType } from "@/hooks/useShelfType";
+import ShelfTypeToggle from "./ShelfTypeToggle";
+import TitleCard from "./TitleCard";
+import PlatformLogo from "./PlatformLogo";
+import OfflineState from "./pwa/OfflineState";
+import { platformByCode } from "@/lib/providers-ar";
+import type { TopBlock, TopPayload } from "@/lib/top";
+
+const NOTA =
+  "El top de Netflix sale de los datos que la propia Netflix publica cada semana " +
+  "para Argentina: son horas vistas reales, de la semana que cerró el domingo. " +
+  "En el resto de las plataformas no hay dato público de consumo, así que " +
+  "mostramos las más populares del momento — no es lo mismo, y por eso lo " +
+  "aclaramos.";
+
+function Bloque({ b }: { b: TopBlock }) {
+  const track = useRef<HTMLDivElement>(null);
+  const [nota, setNota] = useState(false);
+  const def = platformByCode(b.platform);
+  const scroll = (d: number) =>
+    track.current?.scrollBy({ left: d * (track.current.clientWidth * 0.8), behavior: "smooth" });
+
+  return (
+    <div className="shelf">
+      <div className="shelf-head">
+        <div className="shelf-head-l">
+          {/* El wordmark de PlatformLogo YA es el nombre de la plataforma en su
+              tipografía de marca: poner además `def.name` al lado lo duplica
+              ("NETFLIX Netflix"). El aria-label deja el nombre para lectores. */}
+          <h2 aria-label={def?.name ?? b.platform}><PlatformLogo code={b.platform} /></h2>
+          {b.source === "netflix" && (
+            <button
+              type="button" className="top-info" aria-label="De dónde sale este dato"
+              aria-expanded={nota} onClick={() => setNota((v) => !v)}
+            >i</button>
+          )}
+        </div>
+        <div className="arrows">
+          <button className="arrow" onClick={() => scroll(-1)} aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg></button>
+          <button className="arrow" onClick={() => scroll(1)} aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg></button>
+        </div>
+      </div>
+      <p className="top-sub">
+        {b.source === "netflix" ? "Lo más visto esta semana · dato oficial" : "Lo más popular ahora"}
+      </p>
+      {nota && <p className="top-nota">{NOTA}</p>}
+      <div className="track" ref={track}>
+        {b.slots.map((s) =>
+          s.item
+            ? <TitleCard key={`${s.rank}-${s.item.id}`} t={s.item} rank={s.rank} />
+            : (
+              <div className="card rank-slot" key={`vacio-${s.rank}`}>
+                <div className="poster">
+                  <span className="rank-num">{s.rank}</span>
+                  <div className="ptitle rank-shift">{s.rawTitle}</div>
+                </div>
+                <div className="meta"><div className="info">Ficha no disponible</div></div>
+              </div>
+            ),
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function TopView() {
+  const { platforms } = usePlatforms();
+  const [tipo, setTipo] = useShelfType("top", "movie");
+  const { data, loading, offline, retry } = useApi<TopPayload>(
+    () => `/api/top?tipo=${tipo}&providers=${platforms.join(",")}`,
+    [tipo, platforms.join(",")],
+    { keepPrevious: true },
+  );
+
+  if (offline) return <div className="wrap"><OfflineState onRetry={retry} /></div>;
+
+  const mine = data?.mine ?? [];
+  const others = data?.others ?? [];
+  // 200 pero con bloques caídos (`safe` en lib/top.ts los descartó): distinto de
+  // "esa plataforma no tiene top hoy". Mismo criterio que CatalogView con el
+  // Home — reintentar sí puede arreglarlo.
+  const degradado = !!data?.degradado;
+
+  return (
+    <div className="wrap">
+      <h1 className="section-title">Top Yump</h1>
+      <p className="section-sub">Lo que más se está viendo en Argentina.</p>
+      <div className="top-toggle">
+        <ShelfTypeToggle value={tipo} onChange={setTipo} />
+      </div>
+
+      {degradado && (
+        <p className="empty-note home-retry" role="status">
+          No pudimos cargar todo el top.{" "}
+          <button className="up-retry" onClick={retry}>Reintentar</button>
+        </p>
+      )}
+
+      {loading && !data ? <div className="loading">Cargando…</div> : (
+        <>
+          {mine.length > 0 && (
+            <>
+              <span className="chip-group-label">Tus plataformas</span>
+              {mine.map((b) => <Bloque key={b.platform} b={b} />)}
+            </>
+          )}
+          {others.length > 0 && (
+            <>
+              <span className="chip-group-label">En otras plataformas</span>
+              {others.map((b) => <Bloque key={b.platform} b={b} />)}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
