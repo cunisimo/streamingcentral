@@ -1,6 +1,6 @@
 import "server-only";
 import { searchTitles, watchProviders } from "./tmdb";
-import { supabaseServer } from "./supabase";
+import { supabaseAdmin, supabaseServer } from "./supabase";
 import type { MediaType } from "./types";
 
 // Top 10 semanal de Netflix en Argentina.
@@ -137,7 +137,7 @@ async function enNetflixAR(type: MediaType, id: number): Promise<boolean> {
 }
 
 export async function ingestLatestWeek() {
-  const db = supabaseServer();
+  const db = supabaseAdmin();
   if (!db) throw new Error("Supabase no configurado (falta SUPABASE_SERVICE_ROLE_KEY)");
 
   const filas = await fetchArWeek();
@@ -196,6 +196,7 @@ export async function ingestLatestWeek() {
 export async function latestWeekRows(): Promise<
   { week: string; movie: StoredRow[]; tv: StoredRow[] } | null
 > {
+  // Lectura: la cubre la policy pública de `select`, no hace falta bypassear RLS.
   const db = supabaseServer();
   if (!db) return null;
   const { data: ultima } = await db

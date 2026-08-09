@@ -27,3 +27,19 @@ export function supabaseServer(): SupabaseClient | null {
     },
   });
 }
+
+// Cliente admin (service role): bypassa RLS. SOLO para rutas de servidor que
+// escriben en tablas sin policy de escritura — hoy, el cron que ingesta el top
+// 10 de Netflix. Nunca importarlo desde un componente cliente: la key da acceso
+// total a la base.
+export function supabaseAdmin(): SupabaseClient | null {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    global: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: "no-store" }),
+    },
+  });
+}
