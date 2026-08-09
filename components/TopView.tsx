@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import { useShelfType } from "@/hooks/useShelfType";
+import { useOnline } from "@/hooks/useOnline";
 import ShelfTypeToggle from "./ShelfTypeToggle";
 import TitleCard from "./TitleCard";
 import PlatformLogo from "./PlatformLogo";
@@ -35,7 +36,11 @@ function Bloque({ b }: { b: TopBlock }) {
           {b.source === "netflix" && (
             <button
               type="button" className="top-info" aria-label="De dónde sale este dato"
-              aria-expanded={nota} onClick={() => setNota((v) => !v)}
+              // `aria-controls` apunta al párrafo que este botón muestra/oculta:
+              // sin esto, `aria-expanded` dice que algo se expandió pero un
+              // lector de pantalla no tiene forma de saber qué es.
+              aria-expanded={nota} aria-controls={`top-nota-${b.platform}`}
+              onClick={() => setNota((v) => !v)}
             >i</button>
           )}
         </div>
@@ -47,7 +52,7 @@ function Bloque({ b }: { b: TopBlock }) {
       <p className="top-sub">
         {b.source === "netflix" ? "Lo más visto esta semana · dato oficial" : "Lo más popular ahora"}
       </p>
-      {nota && <p className="top-nota">{NOTA}</p>}
+      {nota && <p className="top-nota" id={`top-nota-${b.platform}`}>{NOTA}</p>}
       <div className="track" ref={track}>
         {b.slots.map((s) =>
           s.item
@@ -68,22 +73,38 @@ function Bloque({ b }: { b: TopBlock }) {
 }
 
 export default function TopView() {
+  const online = useOnline();
   const { platforms } = usePlatforms();
   const [tipo, setTipo] = useShelfType("top", "movie");
-  const { data, loading, offline, retry } = useApi<TopPayload>(
+  // Mismo patrón que CatalogView con el Home: hay que leer `error` además de
+  // `offline`, si no un 500 (body con `{ error, ... }`) se toma como si no
+  // hubiera pasado nada y la pantalla queda en blanco bajo el toggle, sin
+  // aviso ni reintento.
+  const { data, loading, offline, error, retry } = useApi<TopPayload>(
     () => `/api/top?tipo=${tipo}&providers=${platforms.join(",")}`,
     [tipo, platforms.join(",")],
     { keepPrevious: true },
   );
 
-  if (offline) return <div className="wrap"><OfflineState onRetry={retry} /></div>;
-
   const mine = data?.mine ?? [];
   const others = data?.others ?? [];
+  const hayContenido = mine.length > 0 || others.length > 0;
   // 200 pero con bloques caídos (`safe` en lib/top.ts los descartó): distinto de
   // "esa plataforma no tiene top hoy". Mismo criterio que CatalogView con el
   // Home — reintentar sí puede arreglarlo.
   const degradado = !!data?.degradado;
+  const cargando = loading;
+  // `error` = el server respondió 500. `offline` = no hubo respuesta. `degradado`
+  // = respondió 200 pero con bloques caídos. Los tres ameritan el mismo aviso
+  // con reintento.
+  const fallo = !online || offline || error || degradado;
+
+  // Pantalla completa SOLO cuando no hay nada que mostrar todavía: si ya hay
+  // bloques en pantalla, un refetch fallido no los borra (keepPrevious) — se
+  // avisa arriba y se ofrece reintentar sin tapar lo que sí cargó.
+  if (!hayContenido && !cargando && (!online || offline)) {
+    return <div className="wrap"><OfflineState onRetry={retry} /></div>;
+  }
 
   return (
     <div className="wrap">
@@ -93,14 +114,28 @@ export default function TopView() {
         <ShelfTypeToggle value={tipo} onChange={setTipo} />
       </div>
 
-      {degradado && (
+      {fallo && hayContenido && (
         <p className="empty-note home-retry" role="status">
-          No pudimos cargar todo el top.{" "}
+          {degradado && online && !offline && !error
+            ? "No pudimos cargar todo el top."
+            : "No pudimos actualizar el top."}{" "}
           <button className="up-retry" onClick={retry}>Reintentar</button>
         </p>
       )}
 
-      {loading && !data ? <div className="loading">Cargando…</div> : (
+      {!hayContenido ? (
+        cargando ? (
+          <div className="loading">Cargando…</div>
+        ) : (
+          // Payload llegó (o el fetch falló con error/degradado) y no hay un
+          // solo bloque: antes esto era una pantalla vacía y muda bajo el
+          // toggle, sin mensaje ni forma de reintentar.
+          <p className="empty-note home-retry" role="status">
+            No pudimos cargar el top.{" "}
+            <button className="up-retry" onClick={retry}>Reintentar</button>
+          </p>
+        )
+      ) : (
         <>
           {mine.length > 0 && (
             <>
