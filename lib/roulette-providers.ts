@@ -12,7 +12,8 @@ import { ALL_CODES } from "./providers-ar";
 //
 // Revisado el 2026-08-09 contra la lista COMPLETA de
 // `select distinct unnest(providers) from title_availability where region='AR'`:
-// 40 nombres. Los que quedan deliberadamente afuera, porque no son plataformas
+// 39 nombres: 19 mapeados acá abajo y 20 excluidos. Los que quedan
+// deliberadamente afuera, porque no son plataformas
 // de esta app (con su cantidad de títulos, para dimensionar lo que se pierde):
 //
 //   MGM+ Apple TV Channel 92 · MGM Plus Amazon Channel 92 · Mercado Play 92
