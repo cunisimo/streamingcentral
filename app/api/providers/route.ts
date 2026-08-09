@@ -40,8 +40,11 @@ export async function GET() {
     } else {
       rows = primary.data ?? [];
     }
-    // Varios provider_id de TMDB mapean al mismo code interno (ej. Apple TV 350
-    // + Apple TV Store 2 → "at"). Deduplicamos por code para no repetirlo.
+    // Varios provider_id de TMDB pueden mapear al mismo code interno (ver
+    // lib/providers-ar.ts: el id 2 "Apple TV" es la tienda de alquiler/compra y
+    // a propósito NO mapea a nada, así que hoy no hay caso real, pero si mañana
+    // se suma un revendedor esto sigue haciendo falta). Deduplicamos por code
+    // para no repetirlo.
     const seen = new Set<string>();
     const providers = rows
       .map((p) => {

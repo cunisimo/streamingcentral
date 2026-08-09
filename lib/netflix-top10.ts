@@ -1,6 +1,7 @@
 import "server-only";
 import { searchTitles, watchProviders } from "./tmdb";
-import { supabaseAdmin, supabaseServer } from "./supabase";
+import { supabaseServer } from "./supabase";
+import { supabaseAdmin } from "./supabase-admin";
 import type { MediaType } from "./types";
 
 // Top 10 semanal de Netflix en Argentina.
@@ -105,13 +106,20 @@ async function fetchArWeek(): Promise<NetflixRow[]> {
 
 // Resuelve un título del TSV a un id de TMDB.
 //
-// Reglas, en orden (medidas contra la semana 2026-08-02: 19/20 automáticos):
+// Las CUATRO reglas del spec, en orden (medidas contra la semana 2026-08-02:
+// 19/20 automáticos):
 //  1. título exacto Y está en Netflix AR -> se acepta
 //  2. título exacto, no figura en Netflix AR -> se acepta igual (lag de TMDB en
 //     estrenos recientes; le pasó a "My Daughter's Father")
 //  3. título distinto pero está en Netflix AR -> se acepta con needs_review
 //     ("Fear" matcheó "State of Fear")
-//  4. sin candidatos -> null + needs_review
+//  4. sin match (sin candidatos, o hay candidatos pero ninguno pasa las reglas
+//     1-3) -> tmdb_id null + needs_review
+// A propósito NO hay una quinta regla que se quede con el primer candidato
+// "por las dudas": esta es la superficie donde el sello "dato oficial" hace
+// más daño si el título es el equivocado. Ante la duda, mejor la card neutra
+// (hueco, "todavía no tenemos la ficha") que arriesgar un título que Netflix
+// nunca reportó.
 async function resolveTitle(
   category: MediaType, rawTitle: string,
 ): Promise<{ tmdbId: number | null; needsReview: boolean }> {
@@ -133,11 +141,7 @@ async function resolveTitle(
   for (const c of candidatos) {
     if (await enNetflixAR(category, c.id)) return { tmdbId: c.id, needsReview: true };
   }
-  // Decisión: hay candidatos pero ninguno con título exacto ni presente en
-  // Netflix AR. En vez de dejarlo en null, nos quedamos con el primer
-  // candidato (el más relevante para TMDB) marcado needs_review, para que
-  // haya algo que mostrar mientras se corrige a mano si hace falta.
-  return { tmdbId: candidatos[0].id, needsReview: true };
+  return { tmdbId: null, needsReview: true };
 }
 
 async function enNetflixAR(type: MediaType, id: number): Promise<boolean> {
@@ -227,8 +231,19 @@ export async function ingestLatestWeek() {
   return { week, inserted: rows.length, resolved, review };
 }
 
-// Devuelve la semana más reciente guardada. null si la tabla está vacía o si
-// Supabase no está configurado: el llamador cae a popularidad.
+// Semana guardada más vieja que esto ya no cuenta como "de esta semana": el
+// llamador la trata igual que la tabla vacía y cae a popularidad. Netflix
+// publica los martes la semana cerrada el domingo anterior, así que en
+// funcionamiento normal el desfase nunca pasa de ~9 días (domingo a domingo +
+// el margen hasta el martes de publicación); 14 da un margen de una semana
+// completa extra para que un cron que falló UNA vez (el próximo lunes se
+// recupera solo) no tire el bloque, sin llegar a sostener datos de hace meses
+// bajo el sello "dato oficial" si el cron quedó roto en serio.
+const SEMANA_VIEJA_MS = 14 * 24 * 60 * 60 * 1000;
+
+// Devuelve la semana más reciente guardada, o null si no hay nada utilizable
+// (tabla vacía, Supabase no configurado, o la última semana quedó vieja): en
+// los tres casos el llamador cae a popularidad.
 export async function latestWeekRows(): Promise<
   { week: string; movie: StoredRow[]; tv: StoredRow[] } | null
 > {
@@ -242,6 +257,7 @@ export async function latestWeekRows(): Promise<
     .limit(1)
     .maybeSingle();
   if (!ultima?.week) return null;
+  if (Date.now() - new Date(ultima.week as string).getTime() > SEMANA_VIEJA_MS) return null;
   const { data } = await db
     .from("netflix_top10")
     .select("category,rank,raw_title,tmdb_id")

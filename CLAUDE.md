@@ -140,6 +140,7 @@ app/
   persona/[id]/, titulo/[tipo]/[id]/         — ficha de persona y de título
   cuenta/                                     — área de usuario (hub, perfil, listas, config)
   proximamente/, directores/, onboarding/     — agenda de estrenos, directores, alta inicial
+  top/                                         — top 10 por plataforma (Netflix real + popularidad)
   admin/                                      — dashboard editorial (login + CRUD reseñas)
   api/                                        — todas las rutas backend (ver abajo)
   layout.tsx                                  — fuentes (next/font/google) + PlatformsProvider
@@ -158,12 +159,15 @@ components/
   PersonView.tsx         — filmografía de una persona (actor o director)
   PersonCard.tsx          — tarjeta de persona
   TitleCard.tsx           — card de título (usada en shelves, grillas, relacionados)
+  TopView.tsx             — la sección `/top`: bloques por plataforma, un solo
+                             fetch a `/api/top` (ver `lib/top.ts`)
   PlatformsContext.tsx    — "mis plataformas" en localStorage
   TopBar.tsx / BottomNav.tsx / Filters.tsx / PlatformLogo.tsx
   useApi.ts               — hook de fetch compartido: expone `offline` (fallo de
                              red) y `error` (fallo HTTP) por separado, y una opción
-                             `keepPrevious` (solo la usa `CatalogView`, para no
-                             vaciar el Home mientras llega un refetch por toggle)
+                             `keepPrevious` (la usan `CatalogView` y `TopView`,
+                             para no vaciar la pantalla mientras llega un
+                             refetch por toggle)
   data.ts                  — client-safe: `HOME_GENRES` y `defaultTypeFor` (absorbió
                              al viejo `SHELVES`). Lo importan tanto `CatalogView`
                              (cliente) como `lib/home.ts` (server) — ver nota de

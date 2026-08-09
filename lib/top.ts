@@ -5,9 +5,10 @@ import { cached, TTL } from "./cache";
 import { platformOrder } from "./providers-ar";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
-// Las seis del v1. El orden es el de aparición en la página dentro de cada
-// grupo. Elegidas por tamaño de catálogo en AR (ver el spec): las demás no
-// llegan a diez posiciones sin verse vacías al lado de Netflix.
+// Las seis del v1. Elegidas por tamaño de catálogo en AR (ver el spec): las
+// demás no llegan a diez posiciones sin verse vacías al lado de Netflix. El
+// orden NO es el de aparición en la página — eso lo decide `platformOrder`
+// (el mismo orden de PLATFORMS que usa el selector) en `buildTop`, más abajo.
 export const TOP_PLATFORMS: PlatformCode[] = ["n", "p", "m", "d", "at", "cr"];
 
 const TOPE = 10;
@@ -36,9 +37,25 @@ export interface TopPayload {
 // Bloque por popularidad. Sin `scope`, así que NO corren los filtros de
 // animación/familia de lib/audience.ts: esto es un ranking, no un riel curado.
 async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<TopBlock> {
-  const items = await cached(`top:pop:${platform}:${tipo}`, TTL.catalog, () =>
-    listByCategory({ tipo, providers: [platform], sortBy: "popularity.desc" }),
-  );
+  const items = await cached(`top:pop:${platform}:${tipo}`, TTL.catalog, async () => {
+    const r = await listByCategory({
+      tipo, providers: [platform], sortBy: "popularity.desc",
+      // Explícito, no el default de discover(): "lo más popular ahora" con
+      // menos de 60 votos no es popular en ningún sentido útil, es ruido. Medido
+      // contra Netflix AR el piso cambia 2 de 10 posiciones y lo que saca es
+      // justamente eso — ruido, no señal real.
+      minVotes: 60,
+    });
+    // `cached()` guarda cualquier valor que el fetcher devuelva, incluido `[]`
+    // (ver lib/cache.ts): un [] real de "esta plataforma no tiene top" es
+    // indistinguible de un [] por un hipo transitorio de TMDB (settleAll se
+    // traga los rechazos por título, así que una ráfaga de 429 puede dejar los
+    // candidatos en cero). Tirar acá hace que `cached()` no escriba nada y que
+    // `safe()` en buildTop lo cuente como fallo real — mismo criterio que
+    // lib/curated.ts con su propia blocklist.
+    if (!r.length) throw new Error(`sin resultados para ${platform}/${tipo}`);
+    return r;
+  });
   return {
     platform,
     source: "popular",
