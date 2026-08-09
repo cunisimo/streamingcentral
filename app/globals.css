@@ -535,6 +535,43 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .dsmp-result-plats,.dsmp-result-actions{justify-content:center}
 }
 
+/* --- Ruleta "no sé qué ver" --- */
+/* La tarjeta se despliega dentro del banner (acordeón), como el de Desempatá:
+   por eso no lleva borde arriba y continúa el radio del banner. */
+.rlt-panel{border:1px solid var(--accent);border-top:0;border-bottom-left-radius:var(--radius);border-bottom-right-radius:var(--radius);background:var(--surface);padding:20px}
+.rlt-sit{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.rlt-sit button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px;border-radius:var(--radius-sm);border:1px solid var(--line-2);background:var(--bg);color:var(--text);cursor:pointer;text-align:left;font-family:var(--body)}
+.rlt-sit button:hover{border-color:var(--accent)}
+.rlt-sit-ico{font-size:20px;line-height:1}
+.rlt-sit-tit{font-weight:600;font-size:14px;letter-spacing:-.01em}
+.rlt-sit-sub{font-size:12px;color:var(--dim)}
+.rlt-card{position:relative}
+.rlt-close{position:absolute;top:0;right:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--line-2);background:var(--bg);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rlt-close svg{width:15px;height:15px}
+.rlt-close:hover{border-color:var(--accent);color:var(--accent)}
+.rlt-title{font-family:var(--display);font-size:30px;font-weight:800;letter-spacing:-.02em;margin:2px 0 4px;line-height:1.1}
+.rlt-meta{color:var(--dim);font-size:13px;margin:0 0 14px}
+.rlt-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.rlt-tag{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg);font-size:12.5px;color:var(--dim)}
+.rlt-tag-plat{border-color:var(--accent)}
+.rlt-razon{font-size:15px;line-height:1.55;margin:2px 0 18px}
+.rlt-pero{border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:18px;background:var(--surface-2)}
+.rlt-pero-lab{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+.rlt-pero p{margin:0;font-size:13.5px;line-height:1.5;color:var(--text)}
+.rlt-acciones{display:flex;gap:10px;flex-wrap:wrap}
+.rlt-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;font-weight:600;cursor:pointer}
+.rlt-btn:hover{border-color:var(--accent)}
+.rlt-btn:disabled{opacity:.55;cursor:default}
+/* "Ya la vi" marcado. Es un toggle: se vuelve a tocar para deshacer. */
+.rlt-btn.on{border-color:var(--good);color:var(--good)}
+.rlt-btn-primary{flex:1;min-width:180px;background:var(--accent);border-color:var(--accent);color:#fff}
+.rlt-btn-primary:hover{filter:brightness(1.06);border-color:var(--accent)}
+@media (max-width:620px){
+  .rlt-sit{grid-template-columns:1fr}
+  .rlt-title{font-size:25px}
+  .rlt-btn-primary{min-width:100%}
+}
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
 /* ==========================================================================
