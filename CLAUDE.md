@@ -84,6 +84,31 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   **única** plataforma, el carrusel "Animación para adultos" se oculta: todo el
   Home ya es anime y sería el mismo contenido con otro título. Con Crunchyroll +
   otra (Max, Netflix) se mantiene, porque esas también tienen animación adulta.
+- **El Top (`/top`) es la única sección con dato de consumo real, y solo para
+  Netflix.** Sale del TSV público de Netflix (`lib/netflix-top10.ts`), ingestado
+  por un cron semanal a la tabla `netflix_top10`, que hace de ranking **y** de
+  mapa título→TMDB (el TSV solo trae el título en inglés). Las otras cinco
+  plataformas van por popularidad de TMDB y se etiquetan distinto a propósito:
+  "Lo más popular ahora" vs "Lo más visto esta semana · dato oficial". No unificar
+  ese copy — la distinción es deliberada. Disney+, Prime Video, Max, Apple TV+ y
+  Crunchyroll **no publican** su top 10; las únicas fuentes que lo agregan
+  (FlixPatrol, JustWatch) son de pago. En el Top no corren ni los filtros de
+  audiencia ni el dedup del Home. El toggle Películas/Series es **uno solo
+  global** para toda la página, no uno por riel como en el Home: los bloques son
+  la misma pregunta repetida por plataforma, y estados independientes rompen la
+  lectura de "el top de ahora". El cron escribe con `supabaseAdmin()`
+  (service role, bypassa RLS, en `lib/supabase-admin.ts` — aparte de
+  `lib/supabase.ts`, que sí llega al bundle del navegador), porque `netflix_top10` solo
+  tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de
+  Next. Sin esa variable la ingesta no corre y el bloque de Netflix cae a
+  popularidad como los otros cinco — la app no se rompe.
+- **El `provider_id` de TMDB no es confiable a ciegas.** El id `2` de Apple TV+
+  era la tienda de alquiler/compra, no el flatrate — TMDB lo devuelve igual bajo
+  `flatrate` en AR (misma inconsistencia que Pluto TV, ya descartada). Inflaba
+  Apple TV+ de 321 títulos reales a 5389 y le mostraba cine de alquiler al
+  usuario como si estuviera incluido en la suscripción; corregido en
+  `lib/providers-ar.ts`. Por la misma revisión, **Star+ se sacó** del mapeo: se
+  fusionó con Disney+ en 2024 y devuelve 0 títulos en movie y en tv.
 
 ## Limitaciones duras de TMDB (no son bugs, no tienen fix)
 
@@ -116,6 +141,7 @@ app/
   persona/[id]/, titulo/[tipo]/[id]/         — ficha de persona y de título
   cuenta/                                     — área de usuario (hub, perfil, listas, config)
   proximamente/, directores/, onboarding/     — agenda de estrenos, directores, alta inicial
+  top/                                         — top 10 por plataforma (Netflix real + popularidad)
   admin/                                      — dashboard editorial (login + CRUD reseñas)
   api/                                        — todas las rutas backend (ver abajo)
   layout.tsx                                  — fuentes (next/font/google) + PlatformsProvider
@@ -134,12 +160,15 @@ components/
   PersonView.tsx         — filmografía de una persona (actor o director)
   PersonCard.tsx          — tarjeta de persona
   TitleCard.tsx           — card de título (usada en shelves, grillas, relacionados)
+  TopView.tsx             — la sección `/top`: bloques por plataforma, un solo
+                             fetch a `/api/top` (ver `lib/top.ts`)
   PlatformsContext.tsx    — "mis plataformas" en localStorage
   TopBar.tsx / BottomNav.tsx / Filters.tsx / PlatformLogo.tsx
   useApi.ts               — hook de fetch compartido: expone `offline` (fallo de
                              red) y `error` (fallo HTTP) por separado, y una opción
-                             `keepPrevious` (solo la usa `CatalogView`, para no
-                             vaciar el Home mientras llega un refetch por toggle)
+                             `keepPrevious` (la usan `CatalogView` y `TopView`,
+                             para no vaciar la pantalla mientras llega un
+                             refetch por toggle)
   data.ts                  — client-safe: `HOME_GENRES` y `defaultTypeFor` (absorbió
                              al viejo `SHELVES`). Lo importan tanto `CatalogView`
                              (cliente) como `lib/home.ts` (server) — ver nota de
@@ -153,6 +182,12 @@ lib/
   home.ts           — Home Composer: arma el Home entero (hero + rieles) en un
                        solo pipeline server-side, deduplicado. Ver nota de
                        arquitectura abajo.
+  netflix-top10.ts   — ingesta del TSV oficial de Netflix y resolución
+                       título→TMDB contra `netflix_top10`. Ver nota de
+                       arquitectura abajo sobre el Top.
+  top.ts            — Top Composer: arma los bloques de `/top` (Netflix real +
+                       popularidad TMDB de las otras cinco), sin dedup ni
+                       filtros de audiencia.
   providers-ar.ts   — mapeo plataforma↔id TMDB para Argentina (revisar si una
                       plataforma nueva no aparece — puede que falte su provider_id)
   categories.ts      — géneros UI ↔ géneros/keywords TMDB (movie vs tv)
@@ -168,7 +203,9 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 
 | Ruta | Qué hace |
 |---|---|
-| `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. Único con `maxDuration = 60` |
+| `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. `maxDuration = 60` |
+| `GET /api/top` | top 10 por plataforma (Netflix real + popularidad), vía `lib/top.ts`. `maxDuration = 60` |
+| `GET /api/cron/netflix-top10` | ingesta semanal del TSV oficial de Netflix (Vercel Cron, martes). `maxDuration = 60`, protegida con `CRON_SECRET` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |
 | `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia) |

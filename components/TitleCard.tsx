@@ -7,7 +7,7 @@ import type { UITitle } from "@/lib/types";
 
 const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" /></svg>;
 
-export default function TitleCard({ t }: { t: UITitle }) {
+export default function TitleCard({ t, rank }: { t: UITitle; rank?: number }) {
   const { platforms } = usePlatforms();
   const mine = t.platforms.filter((p) => platforms.includes(p));
   const shown = mine.slice(0, 2);
@@ -17,7 +17,9 @@ export default function TitleCard({ t }: { t: UITitle }) {
       <Link className="card-link" href={`/titulo/${t.type}/${t.id}`}>
         <div className="poster" style={bg}>
           {t.hasEditorial && <div className="ed-flag">{star}Reseña SC</div>}
-          {!t.poster && <div className="ptitle">{t.title}</div>}
+          {/* Número del ranking del Top, va abajo a la izquierda sobre el degradado */}
+          {rank != null && <span className={`rank-num${rank <= 3 ? " top3" : ""}`}>{rank}</span>}
+          {!t.poster && <div className={`ptitle${rank != null ? " rank-shift" : ""}`}>{t.title}</div>}
         </div>
         <div className="meta">
           <div className="t">{t.title}</div>

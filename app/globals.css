@@ -205,6 +205,37 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .poster::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0) 58%)}
 .ed-flag{position:absolute;top:9px;left:9px;z-index:3;display:flex;align-items:center;gap:4px;height:23px;padding:0 9px;border-radius:7px;background:var(--editorial);color:#fff;font-size:11px;font-weight:600}
 .ed-flag svg{width:11px;height:11px;fill:#fff}
+/* Número de ranking del Top. Va DENTRO del póster, abajo a la izquierda, sobre
+   el degradado que .poster::after ya dibuja. Se descartó el número gigante al
+   costado (estilo Netflix) porque obliga a ensanchar la card de 158px a ~230px
+   y el riel dejaría de calzar con el resto de la app. */
+.rank-num{position:absolute;left:10px;bottom:6px;z-index:3;font-family:var(--display);font-size:46px;font-weight:800;line-height:.8;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.7);pointer-events:none}
+.rank-num.top3{color:var(--accent)}
+.ptitle.rank-shift{padding-left:38px}
+
+/* Sección Top. El toggle es uno solo para toda la página (a diferencia del
+   Home, donde va uno por riel): los bloques son la misma pregunta repetida por
+   plataforma, y estados independientes rompen la lectura de "el top de ahora". */
+/* Sin sticky a propósito: `.topbar` (arriba) también es sticky top:0 con
+   z-index:30, más alto que el 20 que tenía este toggle, así que al scrollear
+   quedaba tapado detrás del TopBar y no volvía a verse hasta subir del todo.
+   El alto del TopBar no es fijo (--safe-t + fila variable + 58px), así que no
+   hay offset confiable que calzarle. En el flujo normal queda visible apenas
+   se entra a la pantalla, debajo del título — mejor eso que un control
+   escondido. Si se lo vuelve a poner sticky, hay que resolver antes el offset
+   del TopBar. */
+.top-toggle{padding:10px 0 14px}
+.top-sub{color:var(--dim);font-size:13px;margin:-8px 0 12px}
+.top-nota{color:var(--dim);font-size:13px;line-height:1.5;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
+.top-info{width:20px;height:20px;border-radius:50%;border:1px solid var(--line-2);background:var(--surface);color:var(--dim);font-family:var(--display);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.top-info:hover{border-color:var(--accent);color:var(--accent)}
+.top-info:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Posición sin ficha: ocupa el lugar igual. Un top 9 se lee como un bug.
+   El flex-basis NO se fija acá: `.track .card` (arriba) ya lo hace con más
+   especificidad, incluida la variante responsive a 140px — una regla acá
+   quedaría muerta y confundiría a quien la lea pensando que hace algo. */
+.rank-slot .poster{background:var(--surface-2);color:var(--text)}
+
 .meta{padding:10px 2px 0}
 .meta .t{font-size:14px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
 .meta .info{font-size:12px;color:var(--faint);margin-top:1px}

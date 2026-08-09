@@ -27,3 +27,7 @@ export function supabaseServer(): SupabaseClient | null {
     },
   });
 }
+
+// supabaseAdmin (service role) vive en ./supabase-admin.ts, no acá: este
+// archivo lo importa supabaseBrowser y SÍ llega al bundle del navegador. Ver
+// el comentario en ese archivo.

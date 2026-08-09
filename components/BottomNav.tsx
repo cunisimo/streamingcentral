@@ -6,6 +6,7 @@ import Avatar from "./avatar/Avatar";
 
 const ITEMS = [
   { href: "/", label: "Inicio", match: (p: string) => p === "/", icon: <path d="M3 10l9-7 9 7v9a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z" /> },
+  { href: "/top", label: "Top", match: (p: string) => p.startsWith("/top"), icon: <><path d="M6 20V10" /><path d="M12 20V4" /><path d="M18 20v-7" /></> },
   { href: "/buscar", label: "Buscador", match: (p: string) => p.startsWith("/buscar"), icon: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></> },
   { href: "/cuenta/lista", label: "Mi lista", match: (p: string) => p.startsWith("/cuenta/lista"), icon: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /> },
 ];

@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/netflix-top10", "schedule": "0 12 * * 2" }
+  ]
+}
