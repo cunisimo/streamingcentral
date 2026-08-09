@@ -63,19 +63,40 @@ async function netflixBlock(tipo: MediaType): Promise<TopBlock> {
   };
 }
 
+// --- Tolerancia a fallos -----------------------------------------------------
+// Mismo criterio que `safe()` en lib/home.ts: antes, un solo `Promise.all` sin
+// aislar hacía que un 429 transitorio en UNA plataforma tumbara el array entero
+// (mine o others), y con él los bloques que ya habían resuelto bien — incluido
+// Netflix, que ni siquiera es la plataforma que falló. Acá un bloque caído se
+// loguea y se descarta, como ya se hace con los que quedan sin slots.
+async function safe(etiqueta: string, fn: () => Promise<TopBlock>): Promise<TopBlock | null> {
+  try {
+    return await fn();
+  } catch (e) {
+    // Error completo (con stack): con solo `.message` un bug propio se
+    // confunde con un 429 de TMDB, igual que en home.ts.
+    console.error(`[top] "${etiqueta}" falló, se descarta el bloque —`, e);
+    // Fuera de producción se re-lanza: un bug propio tiene que verse en
+    // desarrollo (500 + stack), no esconderse detrás de un bloque descartado.
+    if (process.env.NODE_ENV !== "production") throw e;
+    return null;
+  }
+}
+
 export async function buildTop(tipo: MediaType, providers: PlatformCode[]) {
   const elegidas = new Set(providers);
   const orden = (a: PlatformCode, b: PlatformCode) => platformOrder(a) - platformOrder(b);
   const mias = TOP_PLATFORMS.filter((p) => elegidas.has(p)).sort(orden);
   const resto = TOP_PLATFORMS.filter((p) => !elegidas.has(p)).sort(orden);
 
-  const armar = (p: PlatformCode) => (p === "n" ? netflixBlock(tipo) : popularBlock(p, tipo));
+  const armar = (p: PlatformCode) =>
+    safe(`${tipo}:${p}`, () => (p === "n" ? netflixBlock(tipo) : popularBlock(p, tipo)));
   // Sin limitador propio: el semáforo de lib/tmdb.ts ya pone el techo global.
   const [mine, others] = await Promise.all([
     Promise.all(mias.map(armar)),
     Promise.all(resto.map(armar)),
   ]);
-  // Un bloque sin nada que mostrar no se renderiza.
-  const conAlgo = (b: TopBlock) => b.slots.length > 0;
+  // Un bloque caído (null) o sin nada que mostrar no se renderiza.
+  const conAlgo = (b: TopBlock | null): b is TopBlock => !!b && b.slots.length > 0;
   return { mine: mine.filter(conAlgo), others: others.filter(conAlgo) };
 }
