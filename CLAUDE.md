@@ -93,7 +93,14 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   ese copy — la distinción es deliberada. Disney+, Prime Video, Max, Apple TV+ y
   Crunchyroll **no publican** su top 10; las únicas fuentes que lo agregan
   (FlixPatrol, JustWatch) son de pago. En el Top no corren ni los filtros de
-  audiencia ni el dedup del Home.
+  audiencia ni el dedup del Home. El toggle Películas/Series es **uno solo
+  global** para toda la página, no uno por riel como en el Home: los bloques son
+  la misma pregunta repetida por plataforma, y estados independientes rompen la
+  lectura de "el top de ahora". El cron escribe con `supabaseAdmin()`
+  (service role, bypassa RLS, en `lib/supabase.ts`), porque `netflix_top10` solo
+  tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de
+  Next. Sin esa variable la ingesta no corre y el bloque de Netflix cae a
+  popularidad como los otros cinco — la app no se rompe.
 - **El `provider_id` de TMDB no es confiable a ciegas.** El id `2` de Apple TV+
   era la tienda de alquiler/compra, no el flatrate — TMDB lo devuelve igual bajo
   `flatrate` en AR (misma inconsistencia que Pluto TV, ya descartada). Inflaba
@@ -173,9 +180,9 @@ lib/
   netflix-top10.ts   — ingesta del TSV oficial de Netflix y resolución
                        título→TMDB contra `netflix_top10`. Ver nota de
                        arquitectura abajo sobre el Top.
-  top.ts               — Top Composer: arma los bloques de `/top` (Netflix real
-                         + popularidad TMDB de las otras cinco), sin dedup ni
-                         filtros de audiencia.
+  top.ts            — Top Composer: arma los bloques de `/top` (Netflix real +
+                       popularidad TMDB de las otras cinco), sin dedup ni
+                       filtros de audiencia.
   providers-ar.ts   — mapeo plataforma↔id TMDB para Argentina (revisar si una
                       plataforma nueva no aparece — puede que falte su provider_id)
   categories.ts      — géneros UI ↔ géneros/keywords TMDB (movie vs tv)
@@ -191,9 +198,9 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 
 | Ruta | Qué hace |
 |---|---|
-| `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. Único con `maxDuration = 60` |
-| `GET /api/top` | top 10 por plataforma (Netflix real + popularidad), vía `lib/top.ts` |
-| `GET /api/cron/netflix-top10` | ingesta semanal del TSV oficial de Netflix (Vercel Cron, martes) |
+| `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. `maxDuration = 60` |
+| `GET /api/top` | top 10 por plataforma (Netflix real + popularidad), vía `lib/top.ts`. `maxDuration = 60` |
+| `GET /api/cron/netflix-top10` | ingesta semanal del TSV oficial de Netflix (Vercel Cron, martes). `maxDuration = 60`, protegida con `CRON_SECRET` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |
 | `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia) |
