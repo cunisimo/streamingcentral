@@ -19,7 +19,7 @@ export default function TitleCard({ t, rank }: { t: UITitle; rank?: number }) {
           {t.hasEditorial && <div className="ed-flag">{star}Reseña SC</div>}
           {/* Número del ranking del Top, va abajo a la izquierda sobre el degradado */}
           {rank != null && <span className={`rank-num${rank <= 3 ? " top3" : ""}`}>{rank}</span>}
-          {!t.poster && <div className="ptitle rank-shift">{t.title}</div>}
+          {!t.poster && <div className={`ptitle${rank != null ? " rank-shift" : ""}`}>{t.title}</div>}
         </div>
         <div className="meta">
           <div className="t">{t.title}</div>
