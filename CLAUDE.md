@@ -84,6 +84,23 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   **única** plataforma, el carrusel "Animación para adultos" se oculta: todo el
   Home ya es anime y sería el mismo contenido con otro título. Con Crunchyroll +
   otra (Max, Netflix) se mantiene, porque esas también tienen animación adulta.
+- **El Top (`/top`) es la única sección con dato de consumo real, y solo para
+  Netflix.** Sale del TSV público de Netflix (`lib/netflix-top10.ts`), ingestado
+  por un cron semanal a la tabla `netflix_top10`, que hace de ranking **y** de
+  mapa título→TMDB (el TSV solo trae el título en inglés). Las otras cinco
+  plataformas van por popularidad de TMDB y se etiquetan distinto a propósito:
+  "Lo más popular ahora" vs "Lo más visto esta semana · dato oficial". No unificar
+  ese copy — la distinción es deliberada. Disney+, Prime Video, Max, Apple TV+ y
+  Crunchyroll **no publican** su top 10; las únicas fuentes que lo agregan
+  (FlixPatrol, JustWatch) son de pago. En el Top no corren ni los filtros de
+  audiencia ni el dedup del Home.
+- **El `provider_id` de TMDB no es confiable a ciegas.** El id `2` de Apple TV+
+  era la tienda de alquiler/compra, no el flatrate — TMDB lo devuelve igual bajo
+  `flatrate` en AR (misma inconsistencia que Pluto TV, ya descartada). Inflaba
+  Apple TV+ de 321 títulos reales a 5389 y le mostraba cine de alquiler al
+  usuario como si estuviera incluido en la suscripción; corregido en
+  `lib/providers-ar.ts`. Por la misma revisión, **Star+ se sacó** del mapeo: se
+  fusionó con Disney+ en 2024 y devuelve 0 títulos en movie y en tv.
 
 ## Limitaciones duras de TMDB (no son bugs, no tienen fix)
 
@@ -153,6 +170,12 @@ lib/
   home.ts           — Home Composer: arma el Home entero (hero + rieles) en un
                        solo pipeline server-side, deduplicado. Ver nota de
                        arquitectura abajo.
+  netflix-top10.ts   — ingesta del TSV oficial de Netflix y resolución
+                       título→TMDB contra `netflix_top10`. Ver nota de
+                       arquitectura abajo sobre el Top.
+  top.ts               — Top Composer: arma los bloques de `/top` (Netflix real
+                         + popularidad TMDB de las otras cinco), sin dedup ni
+                         filtros de audiencia.
   providers-ar.ts   — mapeo plataforma↔id TMDB para Argentina (revisar si una
                       plataforma nueva no aparece — puede que falte su provider_id)
   categories.ts      — géneros UI ↔ géneros/keywords TMDB (movie vs tv)
@@ -169,6 +192,8 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 | Ruta | Qué hace |
 |---|---|
 | `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. Único con `maxDuration = 60` |
+| `GET /api/top` | top 10 por plataforma (Netflix real + popularidad), vía `lib/top.ts` |
+| `GET /api/cron/netflix-top10` | ingesta semanal del TSV oficial de Netflix (Vercel Cron, martes) |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |
 | `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia) |
