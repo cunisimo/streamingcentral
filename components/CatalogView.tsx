@@ -2,6 +2,7 @@
 import Shelf from "./Shelf";
 import IndecisoHero from "./IndecisoHero";
 import DesempateBanner from "./desempate/DesempateBanner";
+import RuletaBanner from "./ruleta/RuletaBanner";
 import UpcomingSection from "./upcoming/UpcomingSection";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
@@ -66,6 +67,7 @@ export default function CatalogView() {
         cargaDegradada={degradado}
       />
       <div className="wrap">
+        <RuletaBanner />
         <DesempateBanner />
         <UpcomingSection />
 
