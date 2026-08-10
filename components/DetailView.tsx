@@ -93,7 +93,10 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           <ListActions id={t.id} tipo={t.type} />
           {/* Sólo tiene sentido en lo que todavía no salió. */}
           {porEstrenar && (
-            <RecordarButton id={t.id} tipo={t.type} plataforma={t.platforms[0] ?? null} variant="texto" />
+            <RecordarButton
+              id={t.id} tipo={t.type} titulo={t.title} fecha={cuando!}
+              plataforma={t.platforms[0] ?? null} variant="texto"
+            />
           )}
           <LikeButton id={t.id} tipo={t.type} />
           <button className="act" onClick={() => navigator.share?.({ title: t.title }).catch(() => {})}>

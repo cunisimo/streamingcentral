@@ -45,6 +45,8 @@ export default function UpcomingCard({ item }: { item: UIUpcoming }) {
       <RecordarButton
         id={item.id}
         tipo={item.type}
+        titulo={item.title}
+        fecha={item.releaseDate}
         plataforma={main}
         variant="icono"
         solo={mine.length === 0}

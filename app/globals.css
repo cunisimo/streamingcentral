@@ -207,6 +207,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .quick-cal{top:48px}
 .quick-cal.solo{top:8px}
 .quick-cal svg{fill:none;stroke:currentColor;stroke-width:2}
+/* El menú "Google / Apple" existe SOLO en la ficha: en la card no entra (158px
+   de ancho) y en el riel del Home lo recortaría el overflow-x del track. */
+.act-wrap{position:relative;display:flex}
+.panel-cal{top:calc(100% + 8px);left:50%;transform:translateX(-50%);right:auto;min-width:212px;max-height:none;overflow:visible;text-align:left}
+.panel-cal .prow{font-size:14px}
 .poster{position:relative;aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:flex-end;padding:12px;font-family:var(--display);font-weight:600;font-size:15px;line-height:1.1;letter-spacing:-.01em;color:#fff;box-shadow:var(--sh);transition:transform .18s,box-shadow .18s;background-size:cover;background-position:center}
 .card:hover .poster{transform:translateY(-5px);box-shadow:var(--sh-h)}
 .poster .ptitle{position:relative;z-index:2;text-shadow:0 2px 14px rgba(0,0,0,.55)}
