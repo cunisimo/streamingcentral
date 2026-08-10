@@ -102,6 +102,41 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de
   Next. Sin esa variable la ingesta no corre y el bloque de Netflix cae a
   popularidad como los otros cinco — la app no se rompe.
+- **La ruleta sirve UNA recomendación por vez, nunca una lista.** Es el punto:
+  una lista reconstruye la parálisis de elección que la feature resuelve. El pool
+  es `roulette_titles` (curado offline, 765 con texto de los 1811) y lo sirve la
+  función `get_roulette_picks`; la app **no la modifica**. Pide 20 candidatos por
+  tanda y "Otra" los consume en el cliente: una query por tanda, no por toque.
+  Los nombres de plataforma que guarda `title_availability` **no** son los de
+  `lib/providers-ar.ts` (allá "Max" es "HBO Max", y `"VIX "` viene con un espacio
+  al final que no hay que corregir): el puente explícito está en
+  `lib/roulette-providers.ts` y falla ruidosamente en desarrollo si falta uno.
+  `atencion` (`alta`/`media`/`fondo`) es dato para filtrar y **nunca se muestra
+  crudo** — se traduce con el banco de frases de `components/ruleta/frases.ts`.
+  `advertencia` es NULL en ~27% de los casos por diseño: ahí el bloque "PERO"
+  simplemente no se renderiza, sin relleno. Los tmdb_id ya mostrados viven en
+  `localStorage` (`yump:ruleta-mostrados`, por escenario) y se pasan en
+  `p_excluir` junto con los "ya la vi": es estado de paginación, no historial —
+  sin eso, la semilla diaria compartida devuelve la misma película todo el día.
+- **Después de CADA corrida del pipeline offline hay que volver a diffear el
+  mapa de plataformas de la ruleta.** El pipeline escribe
+  `title_availability.providers` con los nombres que le devuelve TMDB/JustWatch,
+  así que una corrida nueva puede traer nombres que `lib/roulette-providers.ts`
+  no conoce, y esos títulos desaparecen **en silencio**: no hay error, solo un
+  pool más chico. El guard del módulo detecta códigos sin mapear, **no nombres
+  nuevos ni mal escritos** — contra eso no hay chequeo automático posible,
+  porque la app no conoce la lista de la base. El diff es a mano:
+
+  ```sql
+  select distinct unnest(providers) from title_availability where region = 'AR';
+  ```
+
+  Cada nombre del resultado tiene que estar o en el mapa, o en la lista de
+  exclusiones deliberadas del comentario de ese archivo. **Esa lista de 20
+  excluidas es un snapshot del 2026-08-09 y se desactualiza sola**: no la
+  trates como la verdad, comparala. Así se cazaron `Crunchyroll` a secas
+  (17 títulos, además de su channel de Amazon) y `OnDemandKorea`, los dos
+  invisibles mirando sólo el pool con texto.
 - **El `provider_id` de TMDB no es confiable a ciegas.** El id `2` de Apple TV+
   era la tienda de alquiler/compra, no el flatrate — TMDB lo devuelve igual bajo
   `flatrate` en AR (misma inconsistencia que Pluto TV, ya descartada). Inflaba
@@ -116,8 +151,11 @@ Estas ya se explicaron y aceptaron; si aparecen de nuevo como "bug", recordar
 esto antes de prometer una solución:
 
 - **No hay deep-link nativo por plataforma.** `watch/providers` da un único
-  link agregador por título/región (tipo JustWatch), no `netflix.com/title/xxx`.
-  El botón "Ver en…" abre ese link agregador — es lo máximo disponible.
+  link agregador por título/región, no `netflix.com/title/xxx`. Ese link apunta
+  a **TMDB**, no a JustWatch: hoy devuelve
+  `themoviedb.org/movie/<id>-<slug>/watch?locale=AR`, una página de TMDB que
+  lista los proveedores. Lo usan el botón "Ver en…" de la ficha y el "Verla" de
+  la ruleta, los dos con el mismo campo — es lo máximo disponible.
 - **FilmAffinity no tiene API pública.** Se descartó, no se va a agregar salvo
   que el dueño acepte scraping (frágil, legalmente gris — no se ofreció esa
   opción, no ofrecerla de nuevo sin que la pida explícitamente).
@@ -162,6 +200,10 @@ components/
   TitleCard.tsx           — card de título (usada en shelves, grillas, relacionados)
   TopView.tsx             — la sección `/top`: bloques por plataforma, un solo
                              fetch a `/api/top` (ver `lib/top.ts`)
+  ruleta/                  — RuletaBanner.tsx (acordeón de 4 situaciones +
+                             estado, montado en el Home) y RuletaCard.tsx (la
+                             tarjeta: Verla/Otra/Ya la vi). Ver nota de
+                             arquitectura arriba sobre la ruleta
   PlatformsContext.tsx    — "mis plataformas" en localStorage
   TopBar.tsx / BottomNav.tsx / Filters.tsx / PlatformLogo.tsx
   useApi.ts               — hook de fetch compartido: expone `offline` (fallo de
@@ -188,6 +230,12 @@ lib/
   top.ts            — Top Composer: arma los bloques de `/top` (Netflix real +
                        popularidad TMDB de las otras cinco), sin dedup ni
                        filtros de audiencia.
+  roulette.ts        — llama a `get_roulette_picks`, enriquece con TMDB
+                       (`cardsByIds`, clave `type:id`) y arma el deep link.
+                       Ver nota de arquitectura arriba sobre la ruleta.
+  roulette-providers.ts — puente entre `lib/providers-ar.ts` y los nombres de
+                       plataforma que guarda `title_availability`. Falla
+                       ruidosamente en desarrollo si falta un código.
   providers-ar.ts   — mapeo plataforma↔id TMDB para Argentina (revisar si una
                       plataforma nueva no aparece — puede que falte su provider_id)
   categories.ts      — géneros UI ↔ géneros/keywords TMDB (movie vs tv)
@@ -206,6 +254,7 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 | `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. `maxDuration = 60` |
 | `GET /api/top` | top 10 por plataforma (Netflix real + popularidad), vía `lib/top.ts`. `maxDuration = 60` |
 | `GET /api/cron/netflix-top10` | ingesta semanal del TSV oficial de Netflix (Vercel Cron, martes). `maxDuration = 60`, protegida con `CRON_SECRET` |
+| `GET /api/ruleta` | una tanda de 20 candidatos del pool curado (`roulette_titles`), vía `lib/roulette.ts`. `maxDuration = 60` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |
 | `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia) |

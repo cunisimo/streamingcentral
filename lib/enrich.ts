@@ -56,6 +56,13 @@ async function providersOf(type: MediaType, id: number) {
   });
 }
 
+// El link del agregador para un título. Reusa el MISMO `cached` de providersOf
+// (clave `pv:${type}:${id}`), así que en un listado ya enriquecido con
+// cardsByIds no cuesta ningún request extra a TMDB.
+export async function watchLinkFor(type: MediaType, id: number): Promise<string | null> {
+  return (await providersOf(type, id)).watchLink;
+}
+
 // Enriquecido tolerante a fallos. `toUITitle` hace 1 request a TMDB por título
 // (providersOf): en un listado de 20 basta un 429 o un timeout para que el
 // Promise.all entero rechace y se caiga el riel/endpoint completo. Acá el título
