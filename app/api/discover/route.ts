@@ -23,6 +23,24 @@ const AGE_CERT: Record<string, { param: string; value: string }> = {
 // El mapa vive en lib/countries.ts: lo comparte `primaryCountry`, que resuelve
 // el país a mostrar en la ficha de una coproducción.
 
+// Década: TMDB no tiene un parámetro de década, pero discover sí acepta rangos
+// de fecha, así que se traducen acá — mismo lugar y misma forma que `runtime`.
+// El campo cambia según el tipo: las series no tienen primary_release_date.
+//
+// "pre1970" agrupa todo lo anterior en un solo bucket. Medido el 2026-08-09
+// sobre AR + flatrate + las 14 plataformas: de 1930 a 1969 hay 260 películas,
+// contra 3133 solo en los 2020. Como décadas sueltas, los 30 y los 40 daban
+// 28 y 38 — una grilla casi vacía en cuanto el usuario suma cualquier otro
+// filtro. En series directamente no existe nada antes de 1950 (0 y 0), por eso
+// el selector no ofrece esas dos décadas cuando el tipo es tv.
+function decadeRange(tipo: MediaType, d: string): Record<string, string> | null {
+  const campo = tipo === "movie" ? "primary_release_date" : "first_air_date";
+  if (d === "pre1970") return { [`${campo}.lte`]: "1969-12-31" };
+  const desde = Number(d);
+  if (!Number.isInteger(desde) || desde % 10 !== 0 || desde < 1900 || desde > 2100) return null;
+  return { [`${campo}.gte`]: `${desde}-01-01`, [`${campo}.lte`]: `${desde + 9}-12-31` };
+}
+
 // Duración: buckets simples → rango de minutos de TMDB. En TV, with_runtime
 // aplica al minutaje POR EPISODIO, no al total (limitación de TMDB).
 const RUNTIME: Record<string, Record<string, string>> = {
@@ -40,6 +58,7 @@ export async function GET(req: NextRequest) {
   const age = sp.get("age") || undefined;
   const year = sp.get("year") || undefined;
   const runtime = sp.get("runtime") || undefined;
+  const decade = sp.get("decade") || undefined;
   const page = Number(sp.get("page") || "1");
   const providers = (sp.get("providers")?.split(",").filter(Boolean) || []) as PlatformCode[];
   const extra: Record<string, string> = {};
@@ -50,6 +69,9 @@ export async function GET(req: NextRequest) {
   if (country && COUNTRY_LANG[country]) extra.with_original_language = COUNTRY_LANG[country];
   if (year) extra[tipo === "movie" ? "primary_release_year" : "first_air_date_year"] = year;
   if (runtime && RUNTIME[runtime]) Object.assign(extra, RUNTIME[runtime]);
+  // Un valor inválido se ignora (decadeRange devuelve null): la ruta es pública
+  // y preferimos listar sin filtrar antes que devolver un error.
+  if (decade) Object.assign(extra, decadeRange(tipo, decade) ?? {});
   try {
     const items = await listByCategory({
       tipo, genre, genre2, country, providers, page,

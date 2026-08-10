@@ -259,6 +259,10 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .bsearch input::placeholder{color:var(--faint);font-weight:400}
 .bsearch input:focus{border-color:var(--accent)}
 .bsearch .ico{position:absolute;left:18px;top:17px;width:20px;height:20px;stroke:var(--faint);fill:none;stroke-width:2.2}
+/* Fila de filtros del buscador (país + edad + década). Estaba con estilos
+   inline en SearchView; vive acá como el resto. `wrap` para que en pantalla
+   angosta la década baje sola en vez de empujar los otros dos. */
+.filtros-fila{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .bchips{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px}
 .bchip{flex:0 0 auto;height:36px;padding:0 16px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);font-size:13px;font-weight:500;color:var(--text);cursor:pointer;box-shadow:var(--sh)}
 .bchip.on{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:600}
