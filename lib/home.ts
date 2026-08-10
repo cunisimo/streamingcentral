@@ -36,6 +36,7 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
+import { cachedIf, dailySeed, TTL } from "./cache";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
@@ -290,4 +291,38 @@ export async function composeHome(opts: {
 
   if (c.fallos) console.error(`[home] payload degradado: ${c.fallos} fuente(s) caída(s)`);
   return { hero, rails: personalize(rotate(rails)), fallos: c.fallos, degradado: c.fallos > 0 };
+}
+
+// --- Cache del payload compuesto --------------------------------------------
+// Los `cached()` de abajo (enrich.ts) evitan los ~300 pedidos a TMDB, pero no
+// el costo de rearmar: cada request sigue haciendo cientos de round-trips a
+// Upstash, que vive fuera de Vercel. Medido en producción, ese piso eran ~2.9 s
+// con TODO cacheado (y ~5.2 s en frío). Guardando el payload ya compuesto, la
+// segunda visita es un solo GET a Redis.
+//
+// La salida es idéntica para todos los que pidan lo mismo el mismo día:
+// `personalize()` sigue siendo identidad y el hero usa la semilla compartida.
+// Si algún día el Home se personaliza de verdad, esta clave deja de alcanzar.
+function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): string {
+  // Ordenado en las dos partes: "n,d,m" y "d,m,n" son el mismo Home, y sin
+  // ordenar generarían dos entradas distintas con el mismo contenido.
+  const p = [...providers].sort().join(",");
+  const t = Object.keys(types).sort().map((k) => `${k}:${types[k]}`).join(",");
+  return `home:v1:${dailySeed()}:${p}:${t}`;
+}
+
+export async function homePayload(opts: {
+  providers: PlatformCode[];
+  types?: Record<string, MediaType>;
+}): Promise<HomePayload> {
+  const types = opts.types ?? {};
+  return cachedIf(
+    homeKey(opts.providers, types),
+    TTL.home,
+    () => composeHome({ providers: opts.providers, types }),
+    // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
+    // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
+    // caso "sin plataformas", que no cuesta nada recalcular.
+    (v) => !v.degradado && !v.sinPlataformas,
+  );
 }
