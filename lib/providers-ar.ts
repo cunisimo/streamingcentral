@@ -9,6 +9,11 @@ export interface PlatformDef {
   name: string;
   tmdbIds: number[]; // pueden ser varios (p.ej. con y sin ads)
   color: string;
+  // Página oficial de suscripción en Argentina. La usa el bloque "No está en
+  // tus plataformas" de la ficha. TMDB no da este dato: va a mano, y hay que
+  // revisarlo de vez en cuando porque las marcas cambian sus URLs.
+  // Revisadas el 2026-08-09.
+  signupUrl?: string;
 }
 
 // Los `tmdbIds` incluyen los "channels": la MISMA plataforma revendida dentro de
@@ -18,21 +23,21 @@ export interface PlatformDef {
 // EL ORDEN DE ESTE ARRAY ES EL ORDEN DEL SELECTOR (lo pidió el dueño, y
 // /api/providers ordena por él en vez de por el display_priority de TMDB).
 export const PLATFORMS: PlatformDef[] = [
-  { code: "n",  name: "Netflix",       tmdbIds: [8],              color: "#E50914" },
-  { code: "d",  name: "Disney+",       tmdbIds: [337],            color: "#0C3FC4" },
-  { code: "m",  name: "Max",           tmdbIds: [1899, 384],      color: "#0E2FD6" },
-  { code: "at", name: "Apple TV+",     tmdbIds: [350, 2243],      color: "#111111" },
-  { code: "p",  name: "Prime Video",   tmdbIds: [119, 9],         color: "#00A8E1" },
-  { code: "cr", name: "Crunchyroll",   tmdbIds: [283, 1968],      color: "#F47521" },
-  { code: "pp", name: "Paramount+",    tmdbIds: [531, 582, 1853], color: "#0064FF" },
-  { code: "mb", name: "MUBI",          tmdbIds: [11],             color: "#111111" },
-  { code: "un", name: "Universal+",    tmdbIds: [1889],           color: "#0B5FD4" },
+  { code: "n",  name: "Netflix",       tmdbIds: [8],              color: "#E50914", signupUrl: "https://www.netflix.com/ar/" },
+  { code: "d",  name: "Disney+",       tmdbIds: [337],            color: "#0C3FC4", signupUrl: "https://www.disneyplus.com/es-ar" },
+  { code: "m",  name: "Max",           tmdbIds: [1899, 384],      color: "#0E2FD6", signupUrl: "https://www.max.com/ar/es" },
+  { code: "at", name: "Apple TV+",     tmdbIds: [350, 2243],      color: "#111111", signupUrl: "https://tv.apple.com/ar" },
+  { code: "p",  name: "Prime Video",   tmdbIds: [119, 9],         color: "#00A8E1", signupUrl: "https://www.primevideo.com/" },
+  { code: "cr", name: "Crunchyroll",   tmdbIds: [283, 1968],      color: "#F47521", signupUrl: "https://www.crunchyroll.com/es" },
+  { code: "pp", name: "Paramount+",    tmdbIds: [531, 582, 1853], color: "#0064FF", signupUrl: "https://www.paramountplus.com/ar/" },
+  { code: "mb", name: "MUBI",          tmdbIds: [11],             color: "#111111", signupUrl: "https://mubi.com/es/ar" },
+  { code: "un", name: "Universal+",    tmdbIds: [1889],           color: "#0B5FD4", signupUrl: "https://www.universalplus.com/ar" },
   // De acá para abajo el orden es indistinto.
-  { code: "mv", name: "MovistarTV",    tmdbIds: [339],            color: "#019DF4" },
-  { code: "cv", name: "Claro video",   tmdbIds: [167],            color: "#DA291C" },
-  { code: "vx", name: "ViX",           tmdbIds: [457],            color: "#F4067F" },
-  { code: "dg", name: "DIRECTV GO",    tmdbIds: [467],            color: "#00B0F0" },
-  { code: "ok", name: "OnDemandKorea", tmdbIds: [575],            color: "#E4002B" },
+  { code: "mv", name: "MovistarTV",    tmdbIds: [339],            color: "#019DF4", signupUrl: "https://www.movistar.com.ar/productos-y-servicios/television" },
+  { code: "cv", name: "Claro video",   tmdbIds: [167],            color: "#DA291C", signupUrl: "https://www.clarovideo.com/argentina/" },
+  { code: "vx", name: "ViX",           tmdbIds: [457],            color: "#F4067F", signupUrl: "https://vix.com/es-es/premium" },
+  { code: "dg", name: "DIRECTV GO",    tmdbIds: [467],            color: "#00B0F0", signupUrl: "https://www.directvgo.com/ar" },
+  { code: "ok", name: "OnDemandKorea", tmdbIds: [575],            color: "#E4002B", signupUrl: "https://www.ondemandkorea.com/" },
 ];
 
 // Posición de cada código en el orden de arriba, para ordenar listas que vienen

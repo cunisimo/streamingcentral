@@ -8,13 +8,15 @@ import PlatformLogo from "./PlatformLogo";
 import TitleCard from "./TitleCard";
 import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
+import RecordarButton from "./RecordarButton";
+import { platformByCode } from "@/lib/providers-ar";
 import ScScore from "./ScScore";
 import CastRail from "./CastRail";
 import HeroTrailer from "./HeroTrailer";
 import OfflineState from "./pwa/OfflineState";
 import DetailSkeleton from "./DetailSkeleton";
 import { COUNTRIES, genreLabel } from "./data";
-import type { UITitleDetail, MediaType } from "@/lib/types";
+import type { UITitleDetail, MediaType, PlatformCode } from "@/lib/types";
 
 const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" /></svg>;
 
@@ -30,6 +32,18 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   if (loading || !data) return <DetailSkeleton />;
   const t = data;
   const mine = t.platforms.filter((p) => platforms.includes(p));
+  // Todavía no salió: es lo que habilita "Recordarme". Se compara contra el día
+  // de hoy en ISO, sin husos: la fecha de TMDB es un día calendario, no un
+  // instante, y convertirla a Date acá corría el estreno un día en AR (UTC-3).
+  // En películas manda la fecha de estreno; en series, la del próximo episodio
+  // (`releaseDate` de una serie es su estreno original, así que una serie en
+  // emisión nunca calificaría).
+  const cuando = t.type === "movie" ? t.releaseDate : t.nextAirDate;
+  const porEstrenar = !!cuando && cuando > new Date().toISOString().slice(0, 10);
+  // Primera plataforma del título de la que conocemos la página de suscripción.
+  const suscripcion = t.platforms
+    .map((code) => ({ code, url: platformByCode(code)?.signupUrl }))
+    .find((p): p is { code: PlatformCode; url: string } => !!p.url);
   const hero = t.backdrop || t.poster;
   const heroBg = hero ? { backgroundImage: `url(${hero})` } : { background: "#2A2D33" };
   const scrollRel = (d: number) => relTrack.current?.scrollBy({ left: d * (relTrack.current.clientWidth * 0.8), behavior: "smooth" });
@@ -54,10 +68,20 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
             <span className="cap">Ver en</span><PlatformLogo code={mine[0]} />
           </a>
         ) : t.platforms.length ? (
-          <div className="dprimary none">
-            <span className="cap">No está en tus plataformas · en</span>
-            {t.platforms.map((p) => <PlatformLogo key={p} code={p} />)}
-          </div>
+          // El bloque ya existía como texto muerto. Ahora, si conocemos la
+          // página de suscripción de esa plataforma, es un link: al usuario que
+          // se está por perder un estreno le sirve más eso que un cartel.
+          suscripcion ? (
+            <a className="dprimary none link" href={suscripcion.url} target="_blank" rel="noreferrer">
+              <span className="cap">No está en tus plataformas · suscribite a</span>
+              <PlatformLogo code={suscripcion.code} />
+            </a>
+          ) : (
+            <div className="dprimary none">
+              <span className="cap">No está en tus plataformas · en</span>
+              {t.platforms.map((p) => <PlatformLogo key={p} code={p} />)}
+            </div>
+          )
         ) : (
           <div className="dprimary none">No está en streaming</div>
         )}
@@ -67,6 +91,10 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
 
         <div className="actions">
           <ListActions id={t.id} tipo={t.type} />
+          {/* Sólo tiene sentido en lo que todavía no salió. */}
+          {porEstrenar && (
+            <RecordarButton id={t.id} tipo={t.type} plataforma={t.platforms[0] ?? null} variant="texto" />
+          )}
           <LikeButton id={t.id} tipo={t.type} />
           <button className="act" onClick={() => navigator.share?.({ title: t.title }).catch(() => {})}>
             <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>

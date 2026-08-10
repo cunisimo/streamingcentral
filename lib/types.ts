@@ -37,6 +37,13 @@ export interface UICastMember {
 }
 
 export interface UITitleDetail extends UITitle {
+  // ISO YYYY-MM-DD. Lo necesita "Recordarme": la ficha tiene que saber si el
+  // título todavía no salió. `year` no alcanza — un estreno de diciembre y uno
+  // de enero del mismo año son casos distintos.
+  releaseDate: string | null;
+  // Solo series: fecha del próximo episodio, si la serie sigue en emisión. En
+  // series `releaseDate` es el estreno original y no sirve para "Recordarme".
+  nextAirDate: string | null;
   age: string;
   backdrop: string | null;
   synopsis: string;

@@ -557,6 +557,8 @@ export async function detail(
   return {
     id: d.id, type, title: d.title || d.name || "",
     year: (d.release_date || d.first_air_date)?.slice(0, 4) ? Number((d.release_date || d.first_air_date)!.slice(0, 4)) : null,
+    releaseDate: (d.release_date || d.first_air_date) || null,
+    nextAirDate: d.next_episode_to_air?.air_date || null,
     runtime, poster: img(d.poster_path), backdrop: img(d.backdrop_path, "w780"),
     country: primaryCountry(d),
     genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
