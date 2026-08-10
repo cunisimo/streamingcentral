@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import PersonCard from "./PersonCard";
-import { GenreSlider, CountryFilter } from "./Filters";
+import { GenreSlider, CountryFilter, DecadeFilter } from "./Filters";
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
 import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 
@@ -125,11 +125,36 @@ export default function SearchView() {
 // --- Navegar películas/series con filtros combinables + paginación ---
 const AGES: [string, string][] = [["ATP", "atp"], ["+13", "13"], ["+16", "16"]];
 
+// Décadas. El valor viaja a /api/discover, que lo traduce a un rango de fechas.
+//
+// Películas y series NO ofrecen lo mismo, a propósito. Medido el 2026-08-09
+// sobre AR + flatrate + las 14 plataformas: en películas, de 1930 a 1969 hay
+// 260 títulos contra 3133 solo en los 2020, así que todo eso va agrupado en un
+// bucket ("Antes de 1970") en vez de tres décadas casi vacías. En series no
+// existe NADA antes de 1950 (0 en los 30 y 0 en los 40), así que esas dos
+// simplemente no se ofrecen, y desde los 50 van sueltas.
+//
+// La lista es fija y no un conteo en vivo: saber qué década está vacía depende
+// de las plataformas del usuario y de los filtros que ya tenga puestos, o sea
+// una llamada extra a TMDB por opción cada vez que toca algo. Si dentro de un
+// tiempo el catálogo cambia, se recuenta a mano con la consulta de discover.
+const DECADES: Record<MediaType, [string, string][]> = {
+  movie: [
+    ["Antes de 1970", "pre1970"], ["Años 70", "1970"], ["Años 80", "1980"], ["Años 90", "1990"],
+    ["Años 2000", "2000"], ["Años 2010", "2010"], ["Años 2020", "2020"],
+  ],
+  tv: [
+    ["Años 50", "1950"], ["Años 60", "1960"], ["Años 70", "1970"], ["Años 80", "1980"],
+    ["Años 90", "1990"], ["Años 2000", "2000"], ["Años 2010", "2010"], ["Años 2020", "2020"],
+  ],
+};
+
 function BrowseTitles({ tipo }: { tipo: MediaType }) {
   const { platforms, ready } = usePlatforms();
   const [genre, setGenre] = useState("todos");
   const [country, setCountry] = useState<string | null>(null);
   const [age, setAge] = useState<string | null>(null);
+  const [decade, setDecade] = useState<string | null>(null);
   const [items, setItems] = useState<UITitle[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -139,8 +164,9 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
     let u = `/api/discover?tipo=${tipo}&genre=${genre}&page=${p}&providers=${platforms.join(",")}`;
     if (country) u += `&country=${country}`;
     if (age && tipo === "movie") u += `&age=${age}`;
+    if (decade) u += `&decade=${decade}`;
     return u;
-  }, [tipo, genre, country, age, platforms]);
+  }, [tipo, genre, country, age, decade, platforms]);
 
   const load = useCallback((p: number, replace: boolean) => {
     setLoading(true);
@@ -164,10 +190,19 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
 
   const more = () => { const p = page + 1; setPage(p); load(p, false); };
 
+  // Al pasar de Películas a Series el componente NO se remonta, así que una
+  // década que sólo existe en películas ("Antes de 1970") quedaría seleccionada
+  // en un selector que ya no la ofrece: filtrando sin que se vea qué filtro es.
+  const opciones = DECADES[tipo];
+  useEffect(() => {
+    if (decade && !opciones.some(([, v]) => v === decade)) setDecade(null);
+  }, [decade, opciones]);
+  const decadeLabel = opciones.find(([, v]) => v === decade)?.[0] ?? null;
+
   return (
     <>
       <GenreSlider value={genre} onChange={setGenre} />
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+      <div className="filtros-fila">
         <CountryFilter value={country} onChange={setCountry} />
         {tipo === "movie" && (
           <div className="bchips" style={{ margin: 0 }}>
@@ -176,8 +211,9 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
             ))}
           </div>
         )}
+        <DecadeFilter value={decade} onChange={setDecade} options={opciones} />
       </div>
-      <h2 className="bres-h">{tipo === "movie" ? "Películas" : "Series"}{genre !== "todos" ? ` · ${genreLabel(genre)}` : ""}{country ? ` · ${COUNTRIES[country]?.name}` : ""}</h2>
+      <h2 className="bres-h">{tipo === "movie" ? "Películas" : "Series"}{genre !== "todos" ? ` · ${genreLabel(genre)}` : ""}{country ? ` · ${COUNTRIES[country]?.name}` : ""}{decadeLabel ? ` · ${decadeLabel}` : ""}</h2>
       <div className="grid">
         {items.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}
       </div>
