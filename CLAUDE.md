@@ -55,15 +55,19 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:v1:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 1 h). Los `cached()`
+  `home:v1:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  manda la cuota de Upstash, ver el comentario de `TTL.home`). Los `cached()`
   de `enrich.ts` ya evitaban los ~300 pedidos a TMDB, pero no el costo de
   rearmar: cada request seguía haciendo cientos de round-trips a Upstash. Medido
   en producción, ese piso eran ~2.9 s con todo cacheado y ~5.2 s en frío; con el
   payload guardado, la segunda visita es un solo GET. **Un payload `degradado` no
   se guarda** (`cachedIf` en `lib/cache.ts`): si no, una caída pasajera de TMDB
-  queda congelada una hora para todos. El TTL es de 1 h y no de 24 porque adentro
-  viajan los rieles de votos, que se mueven cuando la gente vota. La clave ordena
-  las plataformas: "n,d,m" y "m,d,n" son el mismo Home.
+  queda congelada para todos. La clave ordena las plataformas: "n,d,m" y "m,d,n"
+  son el mismo Home. **Ojo con la clave: incluye el `t` de los toggles
+  Películas/Series de cada riel**, así que cambiar un toggle no es un refetch
+  barato — es una clave nueva y un rearmado completo. Es inherente al diseño (el
+  toggle reconstruye el Home entero), pero es el segundo consumidor de cuota
+  después de la expiración del TTL.
   `HOME_GENRES` y `defaultTypeFor` viven en `components/data.ts` (client-safe),
   no en `lib/home.ts`: importarlos desde el cliente arrastraba el cliente de
   Upstash Redis (70 KB) al bundle del navegador. Los carruseles de audiencia

@@ -66,11 +66,21 @@ export const TTL = {
   providers: 60 * 60 * 8,
   ratings: 60 * 60 * 24,
   daily: 60 * 60 * 24,
-  // Payload compuesto del Home. Corto a propósito: adentro viajan los rieles de
-  // votos ("Lo más votados", "Hacete cargo"), que se mueven cuando la gente
-  // vota. Una hora acota cuánto puede tardar un voto nuevo en verse, y aun así
-  // absorbe la mayoría de las visitas.
-  home: 60 * 60,
+  // Payload compuesto del Home.
+  //
+  // El número lo manda la cuota de Upstash, no el producto. Rearmar el Home
+  // cuesta 400-700 comandos de Redis (un `card:` y un `pv:` por cada uno de los
+  // ~230 títulos); la visita que pega en cache cuesta 1. Con TTL de 1 hora eso
+  // daba 24 rearmados por día ≈ 360.000 comandos al mes POR COMBINACIÓN de
+  // plataformas: el 72% del plan gratuito (500.000/mes) consumido por una sola
+  // combinación, con 10 usuarios o con 10.000. Con 6 horas son 4 rearmados
+  // diarios ≈ 60.000, y entran varias combinaciones cómodas.
+  //
+  // Lo que se paga: los rieles de votos ("Lo más votados", "Hacete cargo")
+  // pueden tardar hasta 6 h en reflejar un voto nuevo. Con el volumen actual de
+  // votos nadie lo nota. Si eso cambia, la salida NO es bajar el TTL de vuelta
+  // —volvés al problema de cuota— sino invalidar las claves `home:` al votar.
+  home: 60 * 60 * 6,
 } as const;
 
 export async function cached<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
