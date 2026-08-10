@@ -6,7 +6,9 @@ import { dailySeed } from "./cache";
 import type { MediaType, PlatformCode } from "./types";
 
 export type Escenario = "solo" | "pareja" | "chicos" | "fondo";
-export const ESCENARIOS: Escenario[] = ["solo", "pareja", "chicos", "fondo"];
+// Sin `export`: sólo lo usa `esEscenario`, acá abajo. No hace falta sacarlo
+// del módulo.
+const ESCENARIOS: Escenario[] = ["solo", "pareja", "chicos", "fondo"];
 export const esEscenario = (s: string): s is Escenario =>
   (ESCENARIOS as string[]).includes(s);
 
@@ -29,9 +31,12 @@ export interface RoulettePick {
   watchLink: string | null;
 }
 
-// Cuántos ids de "ya la mostré" se dejan pasar a la RPC. Los pools por
-// escenario son chicos (100-300 títulos), así que en una sesión larga de
-// "Otra" el excluir crece sin techo si no se le pone un tope acá.
+// Tope de contención del lado del server. El cliente (RuletaBanner.tsx) ya
+// arma `excluir` acotado antes de armar la URL, pero esta ruta es pública y
+// cualquiera puede pegarle directo con un query string más largo. Lo que no
+// tiene techo acá es la lista de "ya la vi" del usuario (`vistos` en el
+// cliente): "Otra" no es el problema, `useRouletteSeen` ya la capa en 300
+// por escenario.
 const MAX_EXCLUIR = 500;
 
 // Lo que devuelve la RPC. `title`, `genres` y `vote_average` de acá NO se usan
@@ -48,15 +53,25 @@ interface FilaRpc {
   runtime: number | null;
 }
 
+// `total` es cuántas filas trajo la RPC, ANTES de que `cardsByIds` descarte
+// las que no pudo enriquecer. Es lo que distingue "pool agotado" (total = 0,
+// hay que resetear los mostrados) de "vino algo pero se cayó al enriquecer"
+// (total > 0, picks puede venir vacío igual por un hiccup de TMDB) — el
+// cliente resetea el progreso de paginación sólo en el primer caso.
+export interface RoulettePicksResult {
+  picks: RoulettePick[];
+  total: number;
+}
+
 export async function getRoulettePicks(opts: {
   escenario: Escenario;
   providers: PlatformCode[];
   excluir: number[];
-}): Promise<RoulettePick[]> {
+}): Promise<RoulettePicksResult> {
   const db = supabaseServer();
-  if (!db) return [];
+  if (!db) return { picks: [], total: 0 };
   const nombres = roulettePlatformNames(opts.providers);
-  if (!nombres.length) return [];
+  if (!nombres.length) return { picks: [], total: 0 };
 
   // Deduplicado y con tope: `excluir` llega crudo del query string y se
   // arrastra tanda tras tanda a medida que el usuario toca "Otra". Sin esto
@@ -76,7 +91,7 @@ export async function getRoulettePicks(opts: {
   if (error) throw new Error(`get_roulette_picks falló: ${error.message}`);
 
   const filas = (data ?? []) as FilaRpc[];
-  if (!filas.length) return [];
+  if (!filas.length) return { picks: [], total: 0 };
 
   // Enriquecido con la misma función cacheada en Redis que usan los rieles del
   // Home: respeta idioma y región, y no duplica cache.
@@ -111,7 +126,10 @@ export async function getRoulettePicks(opts: {
       year: card.year,
       // `card.runtime` sale de `cardsByIds` → `titleCard`, que siempre lo deja
       // en null (usa el shape liviano, no el de detalle). La duración real la
-      // trae la RPC en minutos; se formatea igual que la ficha completa.
+      // trae la RPC en minutos. OJO: el formato "Xh Ym" de acá abajo es el de
+      // la ficha completa sólo para `movie` (lib/enrich.ts:549) — en `tv` la
+      // ficha usa "N temp." en cambio, y la RPC puede traer tv. No es "igual
+      // que la ficha completa" en todos los casos.
       runtime: f.runtime ? `${Math.floor(f.runtime / 60)}h ${f.runtime % 60}m` : null,
       poster: card.poster,
       genres: card.genres,
@@ -123,5 +141,5 @@ export async function getRoulettePicks(opts: {
     } satisfies RoulettePick;
   }));
 
-  return picks.filter((p): p is RoulettePick => p !== null);
+  return { picks: picks.filter((p): p is RoulettePick => p !== null), total: filas.length };
 }

@@ -1,10 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../AuthContext";
+import { usePlatforms } from "../PlatformsContext";
 import PlatformLogo from "../PlatformLogo";
-import { setItem } from "@/lib/userdata";
+import { genreLabel } from "../data";
+import { hasItem, setItem } from "@/lib/userdata";
 import { fraseAtencion } from "./frases";
 import type { RoulettePick } from "@/lib/roulette";
 
@@ -12,11 +14,30 @@ export default function RuletaCard({
   pick, onOtra, onCerrar,
 }: { pick: RoulettePick; onOtra: () => void; onCerrar: () => void }) {
   const { user } = useAuth();
+  const { platforms } = usePlatforms();
   const router = useRouter();
   const [visto, setVisto] = useState(false);
   const [busy, setBusy] = useState(false);
   const frase = fraseAtencion(pick.atencion, pick.id);
-  const plataforma = pick.platforms[0];
+  // `pick.platforms` son TODAS las plataformas del título en AR, en el orden
+  // que las da TMDB — no filtradas por las del usuario. La RPC garantiza que
+  // el título está en alguna de las suyas, pero no necesariamente la primera
+  // de esa lista, así que mostrar `[0]` a secas puede pintar una plataforma
+  // que el usuario no tiene (ej: sólo MovistarTV, título en Netflix + Movistar
+  // → mostraba NETFLIX). Elegimos la primera que sí tenga, y sólo si ninguna
+  // matchea (no debería pasar, pero por las dudas) caemos a `[0]`.
+  const plataforma = pick.platforms.find((p) => platforms.includes(p)) ?? pick.platforms[0];
+
+  // Hidrata "ya la vi" al montar, igual que components/ListActions.tsx: el
+  // criterio de aceptación pide reflejo en los dos sentidos (ficha↔tarjeta),
+  // no sólo tarjeta→ficha. A diferencia de ListActions, NO llamamos
+  // recordView acá: pasar por la ruleta no es "visitar la ficha".
+  useEffect(() => {
+    if (!user) { setVisto(false); return; }
+    let alive = true;
+    hasItem("watched", { tmdb_id: pick.id, tipo: pick.type }).then((w) => { if (alive) setVisto(w); });
+    return () => { alive = false; };
+  }, [user, pick.id, pick.type]);
 
   // Copia exacta de toggleWatched de components/ListActions.tsx:30 — mismo dato,
   // misma acción. Es un TOGGLE de ida y vuelta: un mistap se deshace tocando de
@@ -33,8 +54,12 @@ export default function RuletaCard({
     setBusy(false);
   }
 
+  // `pick.genres` son slugs (`accion`, `misterio-intrincado`), no texto para
+  // mostrar: hay que pasarlos por `genreLabel` como hace toda la app (ver
+  // components/DetailView.tsx) antes de unirlos.
   const meta = [
-    pick.year, pick.runtime, pick.genres.length ? pick.genres.join(" / ") : null,
+    pick.year, pick.runtime,
+    pick.genres.length ? pick.genres.map(genreLabel).join(" / ") : null,
   ].filter(Boolean).join(" · ");
 
   return (

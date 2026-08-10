@@ -7,6 +7,14 @@ import { useRouletteSeen } from "@/hooks/useRouletteSeen";
 import RuletaCard from "./RuletaCard";
 import type { Escenario, RoulettePick } from "@/lib/roulette";
 
+// Tope de `excluir` que se aplica ACÁ, antes de armar la URL — no alcanza con
+// el `MAX_EXCLUIR` de lib/roulette.ts, que recién actúa del lado del server:
+// `itemRefs("watched")` no tiene límite, así que alguien con ~2000 títulos
+// vistos arma un query string de ~16 KB y el request muere con 431 antes de
+// llegar al handler. Mismo valor que MAX_EXCLUIR en lib/roulette.ts (ese
+// queda como red de contención, no como el límite real).
+const MAX_EXCLUIR = 500;
+
 const SITUACIONES: { id: Escenario; ico: string; tit: string; sub: string }[] = [
   { id: "solo",   ico: "🎯", tit: "Solo/a",       sub: "Quiero algo bueno" },
   { id: "pareja", ico: "❤️", tit: "En pareja",    sub: "Algo para los dos" },
@@ -19,30 +27,39 @@ export default function RuletaBanner() {
   const { user } = useAuth();
   const { seen, add, reset } = useRouletteSeen();
   // Los "ya la vi" del usuario, que también van en p_excluir: la ruleta arranca
-  // sabiendo lo que ya vio desde el primer uso. Se cargan una vez al abrir el
-  // panel, no en cada tanda. Sin sesión queda vacío y no pasa nada.
-  const vistos = useRef<number[]>([]);
+  // sabiendo lo que ya vio desde el primer uso. Se piden una vez al abrir el
+  // panel, no en cada tanda. Sin sesión queda resuelto en `[]` y no pasa nada.
+  //
+  // Guardamos la PROMESA en el ref, no el resultado: si `pedirTanda` leyera
+  // un array que todavía no se terminó de llenar, un click rápido antes de
+  // que resuelva el round-trip a Supabase mandaría el `excluir` sin los
+  // vistos, y podría salir un título que el usuario ya marcó. `pedirTanda`
+  // hace `await` de esta promesa antes de armar el excluir.
+  const vistos = useRef<Promise<number[]>>(Promise.resolve([]));
   const [open, setOpen] = useState(false);
   const [escenario, setEscenario] = useState<Escenario | null>(null);
   const [cola, setCola] = useState<RoulettePick[]>([]);
   const [actual, setActual] = useState<RoulettePick | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(false);
-  // Para no repetir la primera query: en el montaje `platformsKey` ya tiene
-  // un valor (el de localStorage), y no queremos que el efecto de abajo lo
-  // interprete como "cambiaron las plataformas".
+  // Guarda contra el primer "cambio" de `platformsKey`: `PlatformsContext`
+  // arranca en DEFAULT_PLATFORMS y recién hidrata lo guardado en localStorage
+  // en un useEffect propio, después del montaje (ver PlatformsContext.tsx).
+  // Sin este guard, esa hidratación se lee como si el usuario hubiera tocado
+  // sus plataformas y dispara una query de más apenas se abre la ruleta.
   const primerRenderPlatforms = useRef(true);
 
   // Una query por tanda. `reintento` evita el bucle infinito: si tras limpiar
   // los mostrados sigue sin venir nada, es que no hay pool y se muestra el
   // estado vacío.
   useEffect(() => {
-    if (!open || !user) { if (!user) vistos.current = []; return; }
-    let alive = true;
-    void itemRefs("watched").then((refs) => {
-      if (alive) vistos.current = refs.map((r) => r.tmdb_id);
-    });
-    return () => { alive = false; };
+    if (!open || !user) { vistos.current = Promise.resolve([]); return; }
+    // Si falla (red, RLS, lo que sea) degradamos a "sin vistos" en vez de
+    // dejar la promesa colgada — `pedirTanda` la espera, y no queremos que un
+    // error acá trabe abrir la ruleta.
+    vistos.current = itemRefs("watched")
+      .then((refs) => refs.map((r) => r.tmdb_id))
+      .catch(() => []);
   }, [open, user]);
 
   const pedirTanda = useCallback(async (e: Escenario, reintento = false): Promise<RoulettePick[]> => {
@@ -50,17 +67,27 @@ export default function RuletaBanner() {
     // escenario. Lo primero es historial real (user_items); lo segundo, estado
     // de paginación. El reset por agotamiento sólo limpia lo segundo.
     const mostrados = seen(e);
-    const excluir = [...new Set([...vistos.current, ...mostrados])];
+    const vistosIds = await vistos.current;
+    // `mostrados` primero: es el estado que hace avanzar la ruleta (sin él,
+    // "Otra" repite lo mismo todo el día porque la semilla es estable).
+    // `vistosIds` es un filtro de calidad que puede quedar parcial sin romper
+    // nada, así que si hay que recortar por el tope, se recorta a costa de
+    // los vistos y no de los mostrados.
+    const excluir = [...new Set([...mostrados, ...vistosIds])].slice(0, MAX_EXCLUIR);
     const url = `/api/ruleta?escenario=${e}&providers=${platforms.join(",")}`
       + (excluir.length ? `&excluir=${excluir.join(",")}` : "");
     const r = await fetch(url);
     if (!r.ok) throw new Error(String(r.status));
-    const picks: RoulettePick[] = (await r.json()).picks ?? [];
-    // Pool agotado: se limpia el escenario y se vuelve a empezar. Sin esto la
-    // ruleta llega a un callejón sin salida, porque p_excluir sólo crece.
-    // Se reintenta sólo si había mostrados que limpiar: si lo único que excluía
-    // eran los "ya la vi", limpiar no cambia nada y sería un bucle.
-    if (!picks.length && mostrados.length && !reintento) {
+    const data = await r.json();
+    const picks: RoulettePick[] = data.picks ?? [];
+    // `total` es cuántas filas trajo la RPC antes de enriquecer (ver
+    // lib/roulette.ts). Sólo reseteamos cuando el pool está GENUINAMENTE
+    // agotado (total === 0): si la RPC trajo filas pero se cayeron todas al
+    // enriquecer (hiccup de TMDB), `picks` también viene vacío pero no hay
+    // que borrarle al usuario el progreso de paginación por un fallo
+    // transitorio que nada tiene que ver con el pool.
+    const total: number = data.total ?? picks.length;
+    if (!total && mostrados.length && !reintento) {
       reset(e);
       return pedirTanda(e, true);
     }
@@ -122,7 +149,11 @@ export default function RuletaBanner() {
 
   return (
     <div className="dsmp">
-      <button className={`dsmp-banner ${open ? "open" : ""}`} onClick={() => (open ? cerrar() : setOpen(true))}>
+      <button
+        className={`dsmp-banner ${open ? "open" : ""}`}
+        onClick={() => (open ? cerrar() : setOpen(true))}
+        aria-expanded={open}
+      >
         <span className="dsmp-banner-ico" aria-hidden>🎲</span>
         <span className="dsmp-banner-txt">
           <span className="dsmp-banner-title">¿No sabés qué ver?</span>
