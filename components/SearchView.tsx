@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import PersonCard from "./PersonCard";
-import { GenreSlider, CountryFilter } from "./Filters";
+import { GenreSlider, CountryFilter, DecadeFilter } from "./Filters";
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
 import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 
@@ -140,12 +140,12 @@ const AGES: [string, string][] = [["ATP", "atp"], ["+13", "13"], ["+16", "16"]];
 // tiempo el catálogo cambia, se recuenta a mano con la consulta de discover.
 const DECADES: Record<MediaType, [string, string][]> = {
   movie: [
-    ["Antes de 1970", "pre1970"], ["70s", "1970"], ["80s", "1980"], ["90s", "1990"],
-    ["2000s", "2000"], ["2010s", "2010"], ["2020s", "2020"],
+    ["Antes de 1970", "pre1970"], ["Años 70", "1970"], ["Años 80", "1980"], ["Años 90", "1990"],
+    ["Años 2000", "2000"], ["Años 2010", "2010"], ["Años 2020", "2020"],
   ],
   tv: [
-    ["50s", "1950"], ["60s", "1960"], ["70s", "1970"], ["80s", "1980"], ["90s", "1990"],
-    ["2000s", "2000"], ["2010s", "2010"], ["2020s", "2020"],
+    ["Años 50", "1950"], ["Años 60", "1960"], ["Años 70", "1970"], ["Años 80", "1980"],
+    ["Años 90", "1990"], ["Años 2000", "2000"], ["Años 2010", "2010"], ["Años 2020", "2020"],
   ],
 };
 
@@ -211,11 +211,7 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
             ))}
           </div>
         )}
-        <div className="bchips" style={{ margin: 0 }}>
-          {DECADES[tipo].map(([label, val]) => (
-            <button key={val} className={`bchip ${decade === val ? "on" : ""}`} onClick={() => setDecade(decade === val ? null : val)}>{label}</button>
-          ))}
-        </div>
+        <DecadeFilter value={decade} onChange={setDecade} options={opciones} />
       </div>
       <h2 className="bres-h">{tipo === "movie" ? "Películas" : "Series"}{genre !== "todos" ? ` · ${genreLabel(genre)}` : ""}{country ? ` · ${COUNTRIES[country]?.name}` : ""}{decadeLabel ? ` · ${decadeLabel}` : ""}</h2>
       <div className="grid">
