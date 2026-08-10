@@ -183,6 +183,11 @@ export interface RawDetail {
   number_of_episodes?: number;
   release_date?: string;
   first_air_date?: string;
+  // Solo en series. OJO: `first_air_date` es el estreno ORIGINAL de la serie
+  // (Reacher, 2022), no lo que viene. Para saber si una serie tiene algo por
+  // salir hay que mirar acá — si no, ninguna serie en emisión califica nunca
+  // como "por estrenar".
+  next_episode_to_air?: { air_date?: string; season_number?: number; episode_number?: number } | null;
   origin_country?: string[];
   // Coproducciones: origin_country y production_countries traen los mismos
   // países en ORDEN DISTINTO (ver lib/countries.ts → primaryCountry).

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePlatforms } from "../PlatformsContext";
 import PlatformLogo from "../PlatformLogo";
 import QuickAddButton from "../QuickAddButton";
+import RecordarButton from "../RecordarButton";
 import { formatReleaseDate } from "./format";
 import type { UIUpcoming } from "@/lib/types";
 
@@ -35,7 +36,19 @@ export default function UpcomingCard({ item }: { item: UIUpcoming }) {
           </div>
         </div>
       </Link>
-      <QuickAddButton id={item.id} tipo={item.type} />
+      {/* "Mi lista" sólo si el título va a estar en una plataforma que tenés:
+          agendarse algo que no vas a poder ver es la promesa equivocada. El
+          recordatorio, en cambio, va siempre — si NO la tenés, es justamente el
+          aviso que te da tiempo a suscribirte. Cuando es el único botón sube al
+          lugar del "+", así no queda un hueco arriba. */}
+      {mine.length > 0 && <QuickAddButton id={item.id} tipo={item.type} />}
+      <RecordarButton
+        id={item.id}
+        tipo={item.type}
+        plataforma={main}
+        variant="icono"
+        solo={mine.length === 0}
+      />
     </div>
   );
 }

@@ -202,6 +202,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .quick-add:active{transform:scale(.88)}
 .quick-add.on{background:var(--accent)}
 .quick-add:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* "Recordarme" sobre la card de Próximamente. Va debajo del "+" (32px de alto
+   + 8px de aire); cuando es el único botón sube a ocupar su lugar. */
+.quick-cal{top:48px}
+.quick-cal.solo{top:8px}
+.quick-cal svg{fill:none;stroke:currentColor;stroke-width:2}
 .poster{position:relative;aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:flex-end;padding:12px;font-family:var(--display);font-weight:600;font-size:15px;line-height:1.1;letter-spacing:-.01em;color:#fff;box-shadow:var(--sh);transition:transform .18s,box-shadow .18s;background-size:cover;background-position:center}
 .card:hover .poster{transform:translateY(-5px);box-shadow:var(--sh-h)}
 .poster .ptitle{position:relative;z-index:2;text-shadow:0 2px 14px rgba(0,0,0,.55)}
@@ -327,6 +332,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .dprimary .play svg{width:13px;height:13px;fill:#fff;margin-left:2px}
 .dprimary .cap{color:var(--dim);font-weight:500}
 .dprimary.none{color:var(--faint);cursor:default}
+/* La variante con link a suscribirse sí es clickeable: recupera el cursor y el
+   contraste que `.none` apaga, porque ahí no hay nada que hacer y acá sí. */
+.dprimary.none.link{cursor:pointer;color:var(--text)}
+.dprimary.none.link:hover{border-color:var(--accent)}
+.dprimary.none.link::after{content:"↗";color:var(--dim);font-size:13px}
 .dalso{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--dim);flex-wrap:wrap}
 .actions{display:flex;justify-content:space-around;margin-top:22px;padding:4px 0 2px}
 .act{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--text);font-size:12px;font-family:var(--body)}
