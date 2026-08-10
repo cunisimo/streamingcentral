@@ -68,15 +68,28 @@ export default function RuletaCard({
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
       </button>
 
-      <span className="chip-group-label">Te recomendamos</span>
-      <h3 className="rlt-title">
-        <Link href={`/titulo/${pick.type}/${pick.id}`}>{pick.title}</Link>
-      </h3>
-      {meta && <p className="rlt-meta">{meta}</p>}
+      {/* Póster al costado del bloque de identidad, no arriba de todo: la
+          tarjeta es mayormente texto (razón + advertencia) y sin una imagen
+          que la ancle se lee como un paredón. La razón queda a lo ancho abajo,
+          que es donde el renglón largo se lee mejor. */}
+      <div className="rlt-head">
+        {pick.poster && (
+          <Link className="rlt-poster" href={`/titulo/${pick.type}/${pick.id}`}>
+            <img src={pick.poster} alt="" loading="lazy" />
+          </Link>
+        )}
+        <div className="rlt-ident">
+          <span className="chip-group-label">Te recomendamos</span>
+          <h3 className="rlt-title">
+            <Link href={`/titulo/${pick.type}/${pick.id}`}>{pick.title}</Link>
+          </h3>
+          {meta && <p className="rlt-meta">{meta}</p>}
 
-      <div className="rlt-tags">
-        {plataforma && <span className="rlt-tag rlt-tag-plat"><PlatformLogo code={plataforma} /></span>}
-        {frase && <span className="rlt-tag">{frase}</span>}
+          <div className="rlt-tags">
+            {plataforma && <span className="rlt-tag rlt-tag-plat"><PlatformLogo code={plataforma} /></span>}
+            {frase && <span className="rlt-tag">{frase}</span>}
+          </div>
+        </div>
       </div>
 
       <span className="chip-group-label">Por qué esta</span>

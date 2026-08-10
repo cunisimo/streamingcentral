@@ -549,6 +549,13 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .rlt-sit-tit{font-weight:600;font-size:14px;letter-spacing:-.01em}
 .rlt-sit-sub{font-size:12px;color:var(--dim)}
 .rlt-card{position:relative}
+/* Póster al costado del bloque de identidad. El padding-right del texto deja
+   libre el rincón del botón de cerrar, que está posicionado absoluto. */
+.rlt-head{display:flex;gap:18px;align-items:flex-start;margin-bottom:18px}
+.rlt-poster{flex:0 0 124px;display:block;aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--sh);background:var(--surface-2)}
+.rlt-poster img{width:100%;height:100%;object-fit:cover;display:block}
+.rlt-ident{min-width:0;padding-right:40px}
+.rlt-ident .rlt-tags{margin-bottom:0}
 .rlt-close{position:absolute;top:0;right:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--line-2);background:var(--bg);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .rlt-close svg{width:15px;height:15px}
 .rlt-close:hover{border-color:var(--accent);color:var(--accent)}
@@ -573,6 +580,10 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .rlt-sit{grid-template-columns:1fr}
   .rlt-title{font-size:25px}
   .rlt-btn-primary{min-width:100%}
+  /* El póster se achica pero NO se apila arriba: apilado se come media
+     pantalla y empuja la razón, que es lo que la persona vino a leer. */
+  .rlt-head{gap:14px}
+  .rlt-poster{flex-basis:92px}
 }
 
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}

@@ -151,8 +151,11 @@ Estas ya se explicaron y aceptaron; si aparecen de nuevo como "bug", recordar
 esto antes de prometer una solución:
 
 - **No hay deep-link nativo por plataforma.** `watch/providers` da un único
-  link agregador por título/región (tipo JustWatch), no `netflix.com/title/xxx`.
-  El botón "Ver en…" abre ese link agregador — es lo máximo disponible.
+  link agregador por título/región, no `netflix.com/title/xxx`. Ese link apunta
+  a **TMDB**, no a JustWatch: hoy devuelve
+  `themoviedb.org/movie/<id>-<slug>/watch?locale=AR`, una página de TMDB que
+  lista los proveedores. Lo usan el botón "Ver en…" de la ficha y el "Verla" de
+  la ruleta, los dos con el mismo campo — es lo máximo disponible.
 - **FilmAffinity no tiene API pública.** Se descartó, no se va a agregar salvo
   que el dueño acepte scraping (frágil, legalmente gris — no se ofreció esa
   opción, no ofrecerla de nuevo sin que la pida explícitamente).
