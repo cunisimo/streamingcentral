@@ -66,6 +66,11 @@ export const TTL = {
   providers: 60 * 60 * 8,
   ratings: 60 * 60 * 24,
   daily: 60 * 60 * 24,
+  // Payload compuesto del Home. Corto a propósito: adentro viajan los rieles de
+  // votos ("Lo más votados", "Hacete cargo"), que se mueven cuando la gente
+  // vota. Una hora acota cuánto puede tardar un voto nuevo en verse, y aun así
+  // absorbe la mayoría de las visitas.
+  home: 60 * 60,
 } as const;
 
 export async function cached<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
@@ -81,6 +86,29 @@ export async function cached<T>(key: string, ttl: number, fetcher: () => Promise
   if (hit && hit.exp > now) return hit.v as T;
   const data = await fetcher();
   mem.set(key, { v: data, exp: now + ttl * 1000 });
+  return data;
+}
+
+// Igual que `cached`, pero decide DESPUÉS de calcular si el resultado merece
+// guardarse. `cached` a secas no sirve para el Home: ahí un payload degradado
+// (TMDB caído, rieles vacíos) es un resultado válido que hay que devolver, pero
+// guardarlo congelaría la caída durante toda la vida del TTL para todos los que
+// pidan lo mismo.
+export async function cachedIf<T>(
+  key: string, ttl: number, fetcher: () => Promise<T>, guardar: (v: T) => boolean,
+): Promise<T> {
+  if (redis) {
+    const hit = await redis.get<T>(key);
+    if (hit !== null && hit !== undefined) return hit;
+    const data = await fetcher();
+    if (guardar(data)) await redis.set(key, data, { ex: ttl });
+    return data;
+  }
+  const now = Date.now();
+  const hit = mem.get(key);
+  if (hit && hit.exp > now) return hit.v as T;
+  const data = await fetcher();
+  if (guardar(data)) mem.set(key, { v: data, exp: now + ttl * 1000 });
   return data;
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { composeHome } from "@/lib/home";
+import { homePayload } from "@/lib/home";
 import type { MediaType, PlatformCode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const providers = (sp.get("providers")?.split(",").filter(Boolean) ?? []) as PlatformCode[];
   try {
-    return NextResponse.json(await composeHome({ providers, types: parseTypes(sp.get("t")) }));
+    return NextResponse.json(await homePayload({ providers, types: parseTypes(sp.get("t")) }));
   } catch (e) {
     // composeHome envuelve cada fuente en `safe`, así que en producción no
     // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con 200.
