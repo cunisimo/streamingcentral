@@ -15,11 +15,13 @@ import type { Escenario, RoulettePick } from "@/lib/roulette";
 // queda como red de contención, no como el límite real).
 const MAX_EXCLUIR = 500;
 
+// Tres escenarios, mutuamente excluyentes y definidos por duración. El subtítulo
+// dice el corte real en vez de una promesa vaga: el filtro ahora es un dato duro
+// de TMDB, así que se puede prometer exactamente lo que se cumple.
 const SITUACIONES: { id: Escenario; ico: string; tit: string; sub: string }[] = [
-  { id: "solo",   ico: "🎯", tit: "Solo/a",       sub: "Quiero algo bueno" },
-  { id: "pareja", ico: "❤️", tit: "En pareja",    sub: "Algo para los dos" },
-  { id: "chicos", ico: "🧸", tit: "Con chicos",   sub: "Que la vean todos" },
-  { id: "fondo",  ico: "🍳", tit: "De fondo",     sub: "Mientras hago otra cosa" },
+  { id: "corta",  ico: "⏱️", tit: "Tengo poco tiempo",   sub: "Menos de 1 h 50" },
+  { id: "larga",  ico: "🌙", tit: "Tengo toda la noche", sub: "1 h 50 o más" },
+  { id: "chicos", ico: "🧸", tit: "Con chicos",          sub: "Que la vean todos" },
 ];
 
 export default function RuletaBanner() {

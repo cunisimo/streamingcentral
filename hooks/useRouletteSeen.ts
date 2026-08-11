@@ -9,8 +9,12 @@ import type { Escenario } from "@/lib/roulette";
 // película de la mañana. Se pasa en p_excluir junto con los "ya la vi" del
 // usuario, y aplica igual a quien está logueado.
 //
-// Por escenario y no en una bolsa única: agotar `fondo` (el más angosto, 123
-// títulos alcanzables) borraría el progreso de los otros tres.
+// Por escenario y no en una bolsa única: agotar el más angosto borraría el
+// progreso de los otros dos. Con Netflix + Disney Plus son 110 títulos en
+// `corta`, 216 en `larga` y 104 en `chicos`.
+//
+// Las claves de escenarios viejos (solo/pareja/fondo) que hayan quedado en el
+// localStorage de alguien se ignoran solas: nadie las lee. No hace falta migrar.
 const KEY = "yump:ruleta-mostrados";
 // Tope por escenario. El pool alcanzable más chico son 123 títulos, así que
 // 300 no recorta nada real; está para que la clave no crezca sin límite.
