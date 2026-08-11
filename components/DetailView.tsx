@@ -122,16 +122,14 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
             uso personal y prohíben construir algo con esos datos "whether or not
             for profit", y la app se publica abierta. Quedan el puntaje propio,
             el de TMDB y el editorial. */}
-        {(t.tmdb != null || t.editorial) && (
-          <>
-            <div className="dsec-h">Puntajes</div>
-            <div className="rating-bar">
-              <ScScore id={t.id} tipo={t.type} />
-              {t.tmdb != null && <div className="rb"><div className="lbl">TMDB</div><div className="num">{t.tmdb.toFixed(1)}</div></div>}
-              {t.editorial?.rating != null && <div className="rb ed"><div className="lbl">Reseña SC</div><div className="num">{t.editorial.rating.toFixed(1)}</div></div>}
-            </div>
-          </>
-        )}
+        {/* La sección se muestra SIEMPRE: el puntaje Yump va primero y no
+            desaparece aunque el título no tenga votos. */}
+        <div className="dsec-h">Puntajes</div>
+        <div className="rating-bar">
+          <ScScore id={t.id} tipo={t.type} />
+          {t.tmdb != null && <div className="rb"><div className="lbl">TMDB</div><div className="num">{t.tmdb.toFixed(1)}</div></div>}
+          {t.editorial?.rating != null && <div className="rb ed"><div className="lbl">Reseña Yump</div><div className="num">{t.editorial.rating.toFixed(1)}</div></div>}
+        </div>
 
         {t.editorial && (
           <>
