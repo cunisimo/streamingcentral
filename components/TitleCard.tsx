@@ -8,12 +8,20 @@ import type { UITitle } from "@/lib/types";
 const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" /></svg>;
 
 export default function TitleCard({ t, rank }: { t: UITitle; rank?: number }) {
-  const { platforms } = usePlatforms();
+  const { platforms, ready } = usePlatforms();
   const mine = t.platforms.filter((p) => platforms.includes(p));
   const shown = mine.slice(0, 2);
   const bg = t.poster ? { backgroundImage: `url(${t.poster})` } : { background: "#3A3A42" };
+  // Fuera de tus plataformas: se dice con todas las letras y el póster va en
+  // gris, para que se note de una sin leer.
+  //
+  // Los dos guardas importan. `ready` evita que TODAS las cards parpadeen en
+  // gris mientras el contexto hidrata desde localStorage (arranca con las
+  // plataformas por defecto, no con las tuyas). Y sin plataformas elegidas no
+  // se grisa nada: ahí "no está en las tuyas" no significa nada todavía.
+  const fuera = ready && platforms.length > 0 && mine.length === 0;
   return (
-    <div className="card">
+    <div className={`card${fuera ? " off-plat" : ""}`}>
       <Link className="card-link" href={`/titulo/${t.type}/${t.id}`}>
         <div className="poster" style={bg}>
           {t.hasEditorial && <div className="ed-flag">{star}Reseña SC</div>}
@@ -27,7 +35,11 @@ export default function TitleCard({ t, rank }: { t: UITitle; rank?: number }) {
           <div className="logos">
             {shown.map((p) => <PlatformLogo key={p} code={p} />)}
             {mine.length > 2 && <span className="more">+{mine.length - 2}</span>}
-            {mine.length === 0 && <span className="more">—</span>}
+            {mine.length === 0 && (
+              <span className="more off-plat-lbl">
+                {fuera ? "No está en tus plataformas" : "—"}
+              </span>
+            )}
           </div>
           {t.tmdb != null && (
             <div className="ratings">
