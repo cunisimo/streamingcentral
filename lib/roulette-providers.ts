@@ -10,24 +10,29 @@ import { ALL_CODES } from "./providers-ar";
 // puede aparecer con dos nombres (la propia y su channel dentro de Amazon o
 // Apple), que cuentan como la misma.
 //
-// Revisado el 2026-08-09 contra la lista COMPLETA de
+// Revisado el 2026-08-11 contra la lista COMPLETA de
 // `select distinct unnest(providers) from title_availability where region='AR'`:
-// 39 nombres: 19 mapeados acá abajo y 20 excluidos. Los que quedan
+// 41 nombres: 19 mapeados acá abajo y 22 excluidos. Los que quedan
 // deliberadamente afuera, porque no son plataformas
 // de esta app (con su cantidad de títulos, para dimensionar lo que se pierde):
 //
-//   MGM+ Apple TV Channel 92 · MGM Plus Amazon Channel 92 · Mercado Play 92
-//   Sony One Amazon Channel 60 · Plex 37 · Artiflix 27 · Pluto TV 18
-//   JustWatch TV 17 · Bloodstream 12 · Cultpix 8 · Runtime 5 · FilmBox+ 4
-//   Adrenalina Pura Amazon channel 3 · Adrenalina Pura Apple TV channel 3
-//   Artify 3 · Filmzie 2 · Dekkoo 1 · DocAlliance Films 1 · FOUND TV 1
-//   Shahid VIP 1
+//   Universal+ ya está mapeado; estos NO:
+//   MGM+ Apple TV Channel 111 · MGM Plus Amazon Channel 111 · Mercado Play 105
+//   Plex 90 · Artiflix 87 · Sony One Amazon Channel 71 · JustWatch TV 48
+//   Pluto TV 40 · Bloodstream 34 · Cultpix 28 · Adrenalina Pura Amazon
+//   channel 12 · Adrenalina Pura Apple TV channel 12 · FilmBox+ 12
+//   DocAlliance Films 10 · Runtime 8 · Filmzie 6 · Artify 3 · CINE 2
+//   Curiosity Stream 2 · Dekkoo 1 · FOUND TV 1 · Shahid VIP 1
 //
 // Son servicios gratuitos con publicidad o channels de marcas que la app no
 // ofrece; Pluto TV además está descartada explícitamente (ver providers-ar.ts).
 // Si alguna se suma a `PLATFORMS`, hay que sumar acá su nombre EXACTO.
 //
-// Sobre los 765 títulos con texto, este mapa alcanza 696.
+// Los dos nuevos de esta corrida los trajo la extracción de cine corto:
+// `CINE` (los dos títulos están además en Cultpix y en MUBI, así que no se
+// pierde nada) y `Curiosity Stream` (dos documentales que sólo viven ahí).
+//
+// Sobre los 2259 títulos con texto, este mapa alcanza 2028.
 const NOMBRES: Record<PlatformCode, string[]> = {
   n:  ["Netflix"],
   d:  ["Disney Plus"],

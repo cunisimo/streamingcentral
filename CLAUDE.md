@@ -143,7 +143,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   al final que no hay que corregir): el puente explícito está en
   `lib/roulette-providers.ts` y falla ruidosamente en desarrollo si falta uno.
   Los escenarios son **tres y se definen por duración**, que es un dato de TMDB
-  y no una inferencia: `corta` (menos de 110 min), `larga` (110 o más) y
+  y no una inferencia: `corta` (90 min o menos), `larga` (más de 90) y
   `chicos` (`apto_chicos`); el default es `larga`. Los cuatro anteriores
   (solo/pareja/chicos/fondo) se descartaron porque "ver solo" y "ver en pareja"
   no existen como atributo en los datos y filtraban por lo mismo. **La función

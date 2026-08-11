@@ -19,8 +19,8 @@ const MAX_EXCLUIR = 500;
 // dice el corte real en vez de una promesa vaga: el filtro ahora es un dato duro
 // de TMDB, así que se puede prometer exactamente lo que se cumple.
 const SITUACIONES: { id: Escenario; ico: string; tit: string; sub: string }[] = [
-  { id: "corta",  ico: "⏱️", tit: "Tengo poco tiempo",   sub: "Menos de 1 h 50" },
-  { id: "larga",  ico: "🌙", tit: "Tengo toda la noche", sub: "1 h 50 o más" },
+  { id: "corta",  ico: "⏱️", tit: "Tengo poco tiempo",   sub: "1 h 30 o menos" },
+  { id: "larga",  ico: "🌙", tit: "Tengo toda la noche", sub: "Más de 1 h 30" },
   { id: "chicos", ico: "🧸", tit: "Con chicos",          sub: "Que la vean todos" },
 ];
 

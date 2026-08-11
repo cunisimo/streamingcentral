@@ -14,6 +14,7 @@ import type { MediaType, PlatformCode } from "./types";
 // OJO: la función `get_roulette_picks` NO valida el escenario. Un valor que ya
 // no existe cae en su `else true` y devuelve resultados sin filtrar por nada,
 // sin tirar error. Por eso `esEscenario` gatea la entrada de la ruta.
+// El corte está en 90 min: `corta` es `runtime <= 90`, `larga` es `> 90`.
 export type Escenario = "corta" | "larga" | "chicos";
 
 // El default de la función pasó de 'solo' a 'larga'.

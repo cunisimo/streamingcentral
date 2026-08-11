@@ -31,8 +31,8 @@ resolver.
 
 1. La persona toca el botón de la ruleta.
 2. Se le muestran **tres situaciones**, una sola pregunta:
-   - Tengo poco tiempo → `corta` (menos de 110 min, sin infantil)
-   - Tengo toda la noche → `larga` (110 min o más, sin infantil)
+   - Tengo poco tiempo → `corta` (90 min o menos, sin infantil)
+   - Tengo toda la noche → `larga` (más de 90 min, sin infantil)
    - Con chicos → `chicos` (`apto_chicos`)
 
    Son mutuamente excluyentes por construcción, y los tres se definen por
@@ -191,9 +191,12 @@ de improvisar.
 
 ## Pendientes conocidos (no son parte de esta tarea)
 
-- 1046 títulos del pool no tienen texto todavía. Se completan offline; no
-  requiere cambios en la app.
-- Tamaño del pool con Netflix + Disney Plus, al 2026-08-10: **110 títulos en
-  `corta`, 216 en `larga`, 104 en `chicos`**. Con las cuatro plataformas
-  grandes, bastante más. Si alguno se siente repetitivo, se amplía desde el
-  pipeline.
+- Al 2026-08-11 el pool es de **2401 filas: 2259 con texto, 1782 con
+  advertencia, 144 con `requiere_contexto`**. Las que todavía no tienen texto
+  se completan offline; no requiere cambios en la app. El piso de votos del
+  pipeline bajó a 51 para sumar cine corto, que era lo que le faltaba al
+  escenario `corta` para cumplir su promesa.
+- Tamaño del pool con Netflix + Disney Plus, al 2026-08-11 y ya con el corte
+  en 90 min: **58 títulos en `corta` y 375 en `larga`**. Con las cuatro
+  plataformas grandes, `corta` sube a **132**. Si alguno se siente repetitivo,
+  se amplía desde el pipeline.
