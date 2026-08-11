@@ -139,13 +139,13 @@ export default function TopView() {
         <>
           {mine.length > 0 && (
             <>
-              <span className="chip-group-label">Tus plataformas</span>
+              <h2 className="top-group">Tus plataformas</h2>
               {mine.map((b) => <Bloque key={b.platform} b={b} />)}
             </>
           )}
           {others.length > 0 && (
             <>
-              <span className="chip-group-label">En otras plataformas</span>
+              <h2 className="top-group">En otras plataformas</h2>
               {others.map((b) => <Bloque key={b.platform} b={b} />)}
             </>
           )}
