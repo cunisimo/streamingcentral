@@ -125,6 +125,11 @@ export default function CatalogView() {
                   onTypeChange={
                     r.typeToggle === "refetch" && sk ? (t) => setType(sk, t) : undefined
                   }
+                  // Los rieles de votos se muestran con un solo título. En los
+                  // demás el tope lo pone el algoritmo de relleno, así que menos
+                  // de 2 significa que algo falló; en estos lo pone cuánta gente
+                  // votó, y esconder el único votado es peor que mostrarlo solo.
+                  minItems={r.key === "mas-votados" || r.key === "hacete-cargo" ? 1 : undefined}
                 />
               );
             })}
