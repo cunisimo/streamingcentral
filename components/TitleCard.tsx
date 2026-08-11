@@ -15,11 +15,12 @@ export default function TitleCard({ t, rank }: { t: UITitle; rank?: number }) {
   // Fuera de tus plataformas: se dice con todas las letras y el póster va en
   // gris, para que se note de una sin leer.
   //
-  // Los dos guardas importan. `ready` evita que TODAS las cards parpadeen en
-  // gris mientras el contexto hidrata desde localStorage (arranca con las
-  // plataformas por defecto, no con las tuyas). Y sin plataformas elegidas no
-  // se grisa nada: ahí "no está en las tuyas" no significa nada todavía.
-  const fuera = ready && platforms.length > 0 && mine.length === 0;
+  // El `ready` no es opcional: el contexto arranca con DEFAULT_PLATFORMS y
+  // recién después hidrata desde localStorage, así que sin esto TODAS las cards
+  // parpadean en gris en cada carga. No hace falta chequear que haya al menos
+  // una plataforma — PlatformsContext garantiza el invariante "nunca vacío" en
+  // la hidratación, en `toggle` y en `set`.
+  const fuera = ready && mine.length === 0;
   return (
     <div className={`card${fuera ? " off-plat" : ""}`}>
       <Link className="card-link" href={`/titulo/${t.type}/${t.id}`}>
