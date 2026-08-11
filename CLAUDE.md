@@ -2,8 +2,21 @@
 
 Agregador de streaming para Argentina. Resuelve "no sé qué ver": agrega catálogo
 de las plataformas del usuario (Netflix, Disney+, Max, etc.), sin cine ni TV
-abierta. El diferencial frente a JustWatch/similares son las **reseñas
-editoriales propias** (el dueño del proyecto, no una IA) cargadas vía dashboard.
+abierta.
+
+**El diferencial hoy son la ruleta y los votos de la comunidad, NO las reseñas
+editoriales.** El módulo de reseñas propias está construido (dashboard `/admin`,
+tabla `editorial_reviews`, badge y sección en la ficha) pero **en standby por
+decisión del dueño**: si algún día negocia con una plataforma, un puntaje bajo
+firmado por Yump sobre una película de esa plataforma se vuelve una variable de
+la negociación. La tabla está vacía a propósito y el cuadro "Reseña Yump" de la
+ficha no se renderiza nunca. **No proponer cargar reseñas ni reactivar el
+módulo** sin que el dueño lo pida.
+
+Si algún día se retoma, el camino ya está probado y es el de la ruleta: **voz
+editorial sin puntaje**. Cada título del pool trae un "por qué esta" y un "pero"
+honesto, sin nota numérica — describe para quién es cada cosa en vez de
+ordenarla, y es mucho menos objetable en una negociación que un 4/10.
 
 Dueño del proyecto: desarrollador freelance WordPress/PHP, experimentado, pero
 este es su primer proyecto en Next.js/React. Prefiere respuestas técnicas
@@ -261,7 +274,8 @@ lib/
   reviews.ts            — acceso a editorial_reviews
   types.ts               — shape estable que consume toda la UI (UITitle, UITitleDetail, UIPerson)
 
-supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormido, no usado)
+supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla vacía
+                        a propósito — ver el encabezado) + votes/user_reviews
 ```
 
 ## Rutas API (todas `force-dynamic`, sin caché de Next)
