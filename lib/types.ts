@@ -17,8 +17,6 @@ export interface UITitle {
   genres: string[]; // slugs de la UI
   platforms: PlatformCode[]; // dónde está disponible (AR)
   tmdb: number | null; // puntaje TMDB (para cards)
-  imdb: number | null; // solo en detalle (OMDB)
-  metacritic: number | null; // solo en detalle (OMDB)
   hasEditorial: boolean;
   votes?: number; // cantidad de "me gusta" (solo en "Lo más votados")
 }

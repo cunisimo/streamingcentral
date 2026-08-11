@@ -118,19 +118,18 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           </p>
         )}
 
-        {(t.tmdb != null || t.imdb != null || t.metacritic != null || t.editorial) && (
+        {/* IMDb y Metacritic salían de OMDB y se sacaron: sus términos permiten
+            uso personal y prohíben construir algo con esos datos "whether or not
+            for profit", y la app se publica abierta. Quedan el puntaje propio,
+            el de TMDB y el editorial. */}
+        {(t.tmdb != null || t.editorial) && (
           <>
             <div className="dsec-h">Puntajes</div>
             <div className="rating-bar">
               <ScScore id={t.id} tipo={t.type} />
-              {t.imdb != null && <div className="rb imdb"><div className="lbl">IMDb</div><div className="num">{t.imdb.toFixed(1)}</div></div>}
-              {t.metacritic != null && <div className="rb mc"><div className="lbl">Metacritic</div><div className="num">{t.metacritic}</div></div>}
               {t.tmdb != null && <div className="rb"><div className="lbl">TMDB</div><div className="num">{t.tmdb.toFixed(1)}</div></div>}
               {t.editorial?.rating != null && <div className="rb ed"><div className="lbl">Reseña SC</div><div className="num">{t.editorial.rating.toFixed(1)}</div></div>}
             </div>
-            {t.imdb == null && t.metacritic == null && (
-              <p className="empty-note" style={{ paddingTop: 8 }}>IMDb y Metacritic aparecen cuando configurás la clave de OMDB.</p>
-            )}
           </>
         )}
 

@@ -17,9 +17,13 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 - **TMDB** — fuente de verdad del catálogo: metadata, providers por región,
   búsqueda, recomendaciones, personas. Bearer token v4 (`TMDB_READ_TOKEN`),
   **no** el `api_key` v3.
-- **OMDB** — IMDb rating + Metacritic (TMDB no los tiene). Opcional: sin clave,
-  la app funciona, esos dos datos simplemente no aparecen en la ficha.
-- **Upstash Redis** — cache de providers/ratings/covers. Opcional: sin
+- **OMDB se sacó** (IMDb + Metacritic). Sus términos permiten uso personal y
+  prohíben construir algo con esos datos *"whether or not for profit"*, y la app
+  se publica abierta. No hay reemplazo gratis: Metacritic no tiene API pública y
+  Rotten Tomatoes y Letterboxd tampoco. **No volver a agregarlo** sin una
+  licencia. Los puntajes de la ficha son ahora el propio (`ScScore`), el de TMDB
+  y el editorial.
+- **Upstash Redis** — cache de providers/covers. Opcional: sin
   credenciales, `lib/cache.ts` cae a cache en memoria (se pierde en cada cold
   start de serverless, pero no rompe nada).
 - **Supabase** — Postgres + Auth, solo para reseñas editoriales y el login del
@@ -29,7 +33,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 
 - **TMDB es la fuente del catálogo, no se replica.** Supabase solo guarda
   `editorial_reviews`. La ficha se arma en cada request combinando
-  TMDB + OMDB + Supabase, cacheado en Redis (`lib/enrich.ts` → `detail()`).
+  TMDB + Supabase, cacheado en Redis (`lib/enrich.ts` → `detail()`).
 - **Región fija `AR`.** `watch_region=AR`, `with_watch_monetization_types=flatrate`.
   Todo lo que no tenga oferta de streaming plano en AR simplemente no aparece
   (es la definición de "solo streaming" de esta app, no un filtro extra).
@@ -232,8 +236,7 @@ components/
 
 lib/
   tmdb.ts        — cliente TMDB crudo (fetch + tipos raw)
-  omdb.ts         — cliente OMDB
-  enrich.ts        — TODO EL MERGE: raw TMDB → shape UI, combina con OMDB/Supabase/cache.
+  enrich.ts        — TODO EL MERGE: raw TMDB → shape UI, combina con Supabase/cache.
                       Punto de entrada para casi cualquier feature nueva de datos.
   home.ts           — Home Composer: arma el Home entero (hero + rieles) en un
                        solo pipeline server-side, deduplicado. Ver nota de
@@ -282,7 +285,7 @@ supabase/schema.sql   — editorial_reviews (activo) + votes/user_reviews (dormi
 | `GET /api/personas` | actores populares paginados (`?page=`) |
 | `GET /api/directores` | lista curada de directores (`DIRECTOR_IDS` en `lib/enrich.ts`) |
 | `GET /api/genre-covers` | un póster representativo por género, cacheado 24h |
-| `GET /api/title/[tipo]/[id]` | ficha completa (TMDB+OMDB+Supabase+relacionados) |
+| `GET /api/title/[tipo]/[id]` | ficha completa (TMDB+Supabase+relacionados) |
 | `GET /api/admin-search` | búsqueda TMDB sin filtro de plataforma, para el editor de reseñas |
 | `GET /api/cards` | enriquece una lista de ids (`items=movie:1,tv:2`) a cards, sin filtro de plataforma (listas del usuario) |
 
@@ -301,8 +304,8 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
 - Chips Todo/Películas/Series/Actores del buscador son modos de navegación
   reales cuando no hay texto en el input.
 - Actores populares paginados con "Cargar más".
-- Ficha: hero alto con backdrop, puntajes TMDB siempre + IMDb/Metacritic si
-  hay OMDB, badge y sección de reseña editorial ("Reseña SC"), música,
+- Ficha: hero alto con backdrop, puntaje propio + TMDB + editorial (IMDb y
+  Metacritic se sacaron con OMDB), badge y sección de reseña editorial, música,
   temporadas/episodios en series, slider de relacionados.
 - Home: rieles de género con toggle Películas/Series (default alternado
   movie/tv), riel "Últimos lanzamientos", rieles de votos y los dos carruseles
@@ -376,7 +379,7 @@ La app es una PWA instalable en Android, iPhone y escritorio. Diseño completo e
 ## Cómo levantar en local
 
 ```bash
-cp .env.local.example .env.local   # completar TMDB_READ_TOKEN + Supabase; OMDB/Upstash opcionales
+cp .env.local.example .env.local   # completar TMDB_READ_TOKEN + Supabase; Upstash opcional
 npm install
 npm run dev
 ```
@@ -390,7 +393,7 @@ red — no es indicativo de error real en ese caso).
 - Todo el texto de la UI en español rioplatense.
 - Sin CSS-in-JS ni styled-components: todo en `app/globals.css`, clases planas
   reusando las que ya existen antes de inventar una nueva.
-- `lib/enrich.ts` es el único lugar que debería tocar OMDB/Supabase/TMDB juntos.
+- `lib/enrich.ts` es el único lugar que debería tocar Supabase/TMDB juntos.
   Las rutas API son finas: parsean query params y llaman una función de `enrich.ts`.
 - Tipos de UI (`UITitle`, `UITitleDetail`, `UIPerson`) son el contrato estable
   que consume toda la capa de componentes — si agregás un campo nuevo del lado
