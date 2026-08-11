@@ -1,5 +1,5 @@
 // Convierte respuestas crudas de TMDB en el shape estable que consume la UI,
-// enriqueciendo con providers (cacheados) y ratings.
+// enriqueciendo con providers (cacheados).
 //
 // `server-only` es un guard de BUILD, no de tipos: este módulo arrastra
 // lib/cache → @upstash/redis (~70 KB) y ya se coló una vez en el bundle del
@@ -15,7 +15,6 @@ import {
 import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
 import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, type Category } from "./categories";
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
-import { omdbByImdbId } from "./omdb";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import { topVotedRows } from "./votes";
@@ -98,7 +97,6 @@ async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>):
     genres: genreIdsToSlugs(t.genre_ids ?? []),
     platforms: codes,
     tmdb: t.vote_average ? Number(t.vote_average.toFixed(1)) : null,
-    imdb: null, metacritic: null,
     hasEditorial: published ? published.has(`${t.id}:${type}`) : false,
   };
 }
@@ -512,7 +510,7 @@ export async function personFilmography(id: number, providers: PlatformCode[]) {
   };
 }
 
-// --- Detalle completo (merge TMDB + OMDB + providers + reseña + relacionados) ---
+// --- Detalle completo (merge TMDB + providers + reseña + relacionados) ---
 function certOf(d: RawDetail, type: MediaType): string {
   if (type === "tv") {
     const ar = d.content_ratings?.results.find((r) => r.iso_3166_1 === "AR");
@@ -529,8 +527,6 @@ export async function detail(
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
     pickTrailer((await titleVideos(type, id, lang)).results, lang));
-  const ratings = await cached(`omdb:${id}:${type}`, TTL.ratings, () =>
-    d.external_ids?.imdb_id ? omdbByImdbId(d.external_ids.imdb_id) : Promise.resolve({ imdb: null, metacritic: null }));
   const editorial = await getEditorial(id, type);
   const pub = await publishedIds();
 
@@ -564,7 +560,6 @@ export async function detail(
     genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
     platforms: prov.codes,
     tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
-    imdb: ratings.imdb, metacritic: ratings.metacritic,
     hasEditorial: !!editorial,
     age: certOf(d, type),
     synopsis: d.overview || "",
@@ -602,7 +597,7 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
         genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
         platforms: prov.codes,
         tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
-        imdb: null, metacritic: null, hasEditorial: false,
+        hasEditorial: false,
       } as UITitle;
     } catch {
       return null;
