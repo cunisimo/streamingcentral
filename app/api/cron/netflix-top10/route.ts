@@ -26,8 +26,25 @@ export async function GET(req: NextRequest) {
   // Vercel Cron manda `Authorization: Bearer $CRON_SECRET`. Sin el secreto
   // configurado, la ruta queda cerrada: mejor no ingestar que dejarla abierta.
   const secret = process.env.CRON_SECRET;
-  if (!secret || !secretoValido(req.headers.get("authorization"), secret)) {
-    return NextResponse.json({ ok: false, error: "no autorizado" }, { status: 401 });
+  // El 401 distingue las dos causas. Un "no autorizado" a secas no deja saber
+  // si la variable falta en el deployment o si el secreto no coincide, y son
+  // arreglos distintos: una se arregla redeployando y la otra reescribiendo el
+  // valor. `motivo` no filtra nada — quien mandó un secreto equivocado ya sabe
+  // que era equivocado, y que la variable falte no le abre ninguna puerta.
+  if (!secret) {
+    return NextResponse.json({
+      ok: false, error: "no autorizado",
+      motivo: "CRON_SECRET no está definida en este deployment",
+    }, { status: 401 });
+  }
+  if (!secretoValido(req.headers.get("authorization"), secret)) {
+    return NextResponse.json({
+      ok: false, error: "no autorizado",
+      motivo: "el secreto recibido no coincide con CRON_SECRET",
+      // La otra variable que hace falta para que la ingesta escriba. Se informa
+      // acá para no tener que descubrirlo en un segundo viaje.
+      supabaseListo: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    }, { status: 401 });
   }
   try {
     return NextResponse.json({ ok: true, ...(await ingestLatestWeek()) });
