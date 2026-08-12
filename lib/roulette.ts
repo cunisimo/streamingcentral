@@ -1,5 +1,5 @@
 import "server-only";
-import { cardsByIds, watchLinkFor } from "./enrich";
+import { cardsByIds } from "./enrich";
 import { roulettePlatformNames } from "./roulette-providers";
 import { supabaseServer } from "./supabase";
 import { dailySeed } from "./cache";
@@ -41,7 +41,6 @@ export interface RoulettePick {
   razon: string;
   advertencia: string | null;
   atencion: string | null;
-  watchLink: string | null;
 }
 
 // Tope de contención del lado del server. El cliente (RuletaBanner.tsx) ya
@@ -117,21 +116,14 @@ export async function getRoulettePicks(opts: {
   // por id hace que uno pise al otro y una pick muestre título/póster ajenos.
   const porClave = new Map(cards.map((c) => [`${c.type}:${c.id}`, c]));
 
-  const picks = await Promise.all(filas.map(async (f) => {
+  // Sin `Promise.all`: el único await por pick era el del link del agregador,
+  // que se sacó junto con el botón "Verla" hacia afuera. Armar la pick es
+  // sincrónico contra el mapa que ya está en memoria.
+  const picks = filas.map((f) => {
     const card = porClave.get(`${f.media_type}:${f.tmdb_id}`);
     // Un título que TMDB no pudo enriquecer se descarta: sin póster ni título
     // la tarjeta no se sostiene, y hay 19 más en la tanda.
     if (!card) return null;
-    // El link del agregador es un segundo pedido a Redis (cache que
-    // `cardsByIds` ya calentó): en el camino feliz pega en cache, pero un
-    // hiccup de Redis o un TTL que vence entre medio no puede tirar abajo
-    // la pick entera. Sin link la tarjeta se sostiene igual.
-    let watchLink: string | null = null;
-    try {
-      watchLink = await watchLinkFor(card.type, card.id);
-    } catch (err) {
-      console.error(`[ruleta] watchLinkFor ${card.type}/${card.id} falló —`, err);
-    }
     return {
       id: card.id,
       type: card.type,
@@ -150,9 +142,8 @@ export async function getRoulettePicks(opts: {
       razon: f.razon,
       advertencia: f.advertencia,
       atencion: f.atencion,
-      watchLink,
     } satisfies RoulettePick;
-  }));
+  });
 
   return { picks: picks.filter((p): p is RoulettePick => p !== null), total: filas.length };
 }

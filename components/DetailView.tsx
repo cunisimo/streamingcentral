@@ -44,6 +44,41 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   const suscripcion = t.platforms
     .map((code) => ({ code, url: platformByCode(code)?.signupUrl }))
     .find((p): p is { code: PlatformCode; url: string } => !!p.url);
+
+  // Compartir. Dos cosas que fallaban con el `navigator.share?.({ title })` de
+  // antes, y conviene tenerlas separadas porque son distintas:
+  //
+  // 1. El payload llevaba SÓLO `title`. Web Share entrega `title`, `text` y
+  //    `url` al target, pero WhatsApp arma el mensaje con `text` y `url`: el
+  //    `title` es una sugerencia que la mayoría de los targets de Android
+  //    descarta. Resultado, WhatsApp recibía un share sin cuerpo y mostraba
+  //    "Mensaje vacío" — ese cartel es de WhatsApp, no nuestro.
+  // 2. En escritorio `navigator.share` no existe, y el `?.` cortaba la cadena
+  //    entera: el botón no hacía absolutamente nada, sin error ni feedback.
+  //
+  // La plataforma va en el mensaje porque es el dato que evita el ida y vuelta
+  // de "¿y dónde la veo?", que es el problema que resuelve la app. Se prefiere
+  // una de las tuyas; si no tenés ninguna, la primera del título.
+  const compartir = () => {
+    const donde = mine[0] ?? t.platforms[0];
+    const nombre = donde ? platformByCode(donde)?.name : undefined;
+    const url = `${window.location.origin}/titulo/${t.type}/${t.id}`;
+    const texto =
+      `¡Mirá lo que encontré! "${t.title}"` +
+      (t.year ? ` (${t.year})` : "") +
+      (nombre ? ` — en ${nombre}` : "") +
+      ". La ficha en Yump:";
+    const whatsapp = () =>
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${texto}\n${url}`)}`, "_blank", "noopener");
+
+    if (!navigator.share) return whatsapp();
+    navigator.share({ title: t.title, text: texto, url }).catch((err: unknown) => {
+      // Cerrar la hoja de compartir tira `AbortError`: es una decisión del
+      // usuario, no una falla, y abrirle WhatsApp ahí sería pasarle por encima.
+      // Cualquier otro error sí cae al fallback.
+      if ((err as { name?: string } | null)?.name !== "AbortError") whatsapp();
+    });
+  };
   const hero = t.backdrop || t.poster;
   const heroBg = hero ? { backgroundImage: `url(${hero})` } : { background: "#2A2D33" };
   const scrollRel = (d: number) => relTrack.current?.scrollBy({ left: d * (relTrack.current.clientWidth * 0.8), behavior: "smooth" });
@@ -63,10 +98,16 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         </div>
 
         {mine.length ? (
-          <a className="dprimary" href={t.watchLink ?? t.links[mine[0]] ?? "#"} target="_blank" rel="noreferrer">
-            <span className="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>
-            <span className="cap">Ver en</span><PlatformLogo code={mine[0]} />
-          </a>
+          // NO es un link, a propósito. TMDB no da deep-link por plataforma
+          // (ver "Limitaciones duras de TMDB"): `watchLink` apunta a la página
+          // agregadora del propio TMDB, y sacar al usuario de la app para
+          // dejarlo en un listado no le resuelve nada. Queda el dato de dónde
+          // verla, no una acción que no lleva a ningún lado. El bloque de
+          // suscripción de más abajo sí sigue siendo link: ese `signupUrl` es
+          // el alta real de la plataforma, no un agregador.
+          <div className="dprimary have">
+            <span className="cap">Disponible en</span><PlatformLogo code={mine[0]} />
+          </div>
         ) : t.platforms.length ? (
           // El bloque ya existía como texto muerto. Ahora, si conocemos la
           // página de suscripción de esa plataforma, es un link: al usuario que
@@ -99,7 +140,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
             />
           )}
           <LikeButton id={t.id} tipo={t.type} />
-          <button className="act" onClick={() => navigator.share?.({ title: t.title }).catch(() => {})}>
+          <button className="act" onClick={compartir}>
             <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
             <span className="lab">Compartir</span>
           </button>
