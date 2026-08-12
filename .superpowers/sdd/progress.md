@@ -202,3 +202,166 @@ votos; take() descarta enriquecidos sobrantes del margen 40%; CLAUDE.md dice lis
 y no lista UltimosView/DirectoresView.
 PENDIENTE DE DECISIÓN DEL DUEÑO: los chips y "Mostrame otras" del hero NO deduplican (van a
 /api/recomendaciones), así que ahí sí puede haber repetidos con los rieles de abajo.
+
+---
+
+# Feature: Top Yump — top 10 por plataforma (feat/top-yump)
+Base del branch: bef5ec8. Plan: docs/superpowers/plans/2026-08-09-top-yump.md
+Spec: docs/superpowers/specs/2026-08-09-top-yump-design.md
+
+Proyecto SIN framework de tests (por diseño). Verificación = `npx tsc --noEmit`
++ `npx next build` + curls/SQL manuales con salida esperada en cada task.
+
+Constraints: UI en español rioplatense; sin CSS-in-JS (todo en globals.css);
+rutas API finas sobre lib/; región AR + flatrate; NO agregar limitador de
+concurrencia (ya está en lib/tmdb.ts, MAX_EN_VUELO=24); en el Top no corren
+los filtros de lib/audience.ts ni el dedup del Home; toggle global (uno solo);
+copy exacto: Netflix "Lo más visto esta semana · dato oficial", resto "Lo más
+popular ahora"; nav dice "Top", la página dice "Top Yump".
+
+Pasos manuales del dueño: aplicar la tabla en Supabase (Task 2) y definir
+CRON_SECRET en Vercel (Task 4).
+
+- [x] Task 1: sacar Apple TV id 2 + Star+ — commit b011c4c (base bef5ec8), tsc 0, review limpio (0 hallazgos).
+- [x] Task 2: tabla netflix_top10 en schema.sql — commit d62624d (base b011c4c), review limpio. Migración APLICADA en Supabase por el controlador vía MCP (apply_migration), 0 filas.
+- [x] Task 3: lib/netflix-top10.ts + searchTitles — commits 2c234f6 + 5fae8b7 + b2cf85a (base d62624d), tsc 0, re-review APROBADO.
+  - El implementador cazó que supabaseServer() usa la anon key y el upsert moría contra RLS → nuevo supabaseAdmin() (service role) para escritura; la lectura sigue anon. Requiere SUPABASE_SERVICE_ROLE_KEY en el entorno de Next (paso manual del dueño, no existía).
+  - Review halló 1 Critical + 2 Important + 2 Minor, TODOS arreglados en b2cf85a:
+    C1 las selects no chequeaban `error` → un fallo de query reescribía las 20 filas y PISABA correcciones manuales de tmdb_id.
+    I1 una fila con tmdb_id null nunca se reintentaba (raw_title sin cambios) → ahora cuenta como pendiente.
+    I2 sin guard contra inversión del orden del TSV → throw si la semana parseada tiene más de 30 días.
+    M1 resolución secuencial (riesgo de timeout en el cron) → Promise.all, sin limitador propio (ya está el semáforo de tmdb.ts).
+    M2 documentada la decisión del fallback needs_review.
+- [x] Task 4: cron + vercel.json + CRON_SECRET — commit 618fe2b (base b2cf85a), tsc 0, review aprobado (0 Critical/Important).
+  - Verificado: 401 sin header, 401 con secreto incorrecto, y 500 con el secreto correcto cuyo error nombra SUPABASE_SERVICE_ROLE_KEY (prueba que la auth pasa y llega a la ingesta).
+  - BLOQUEADO PARA EL DUEÑO: la ingesta real no se pudo correr porque SUPABASE_SERVICE_ROLE_KEY no está en el entorno de Next. Falta cargarla en .env.local y en Vercel.
+  - Minor diferidos: (1) la comparación del secreto no es constant-time (riesgo teórico, secreto de 256 bits); (2) confirmar el plan de Vercel al activar el cron (Hobby permite semanal, no es bloqueante).
+  - Tabla SEMBRADA POR EL CONTROLADOR vía MCP con la semana real 2026-08-02 (20 filas, 20 resueltas, "Fear" con needs_review=true) para poder verificar las tareas 5 y 7 con datos de verdad. Cuando el dueño cargue la clave, el cron debe dar inserted:0 sobre esta misma semana.
+- [x] Task 5: lib/top.ts + /api/top — commits 6572a83 + a73adad (base 618fe2b), tsc 0, re-review APROBADO.
+  - Review halló 1 Important: Promise.all sin aislar → una plataforma caída devolvía 500 y se perdían TODOS los bloques, incluido Netflix. Arreglado con el mismo patrón safe() de lib/home.ts.
+  - Verificado: 6 bloques con providers=n,d,m (Netflix source:netflix), providers vacío, tipo=tv, fallback de Netflix a popularidad (forzado sin borrar datos) y degradación con una plataforma caída (200 con 5 bloques).
+  - PENDIENTE PARA TASK 7 (Minor del re-review): /api/top no expone degradado/fallos, así que el cliente no puede distinguir "esa plataforma no tiene top" de "TMDB falló". /api/home ya resolvió esto mismo. Se resuelve en la Task 7.
+- [x] Task 6: prop rank en TitleCard + .rank-num — commits 44b6cb4 + 973437a (base a73adad), tsc 0.
+  - Review halló 1 regresión real (heredada del plan): rank-shift se aplicaba SIEMPRE que no había póster, corriendo el título 38px en TODA la app (Home, categorías, relacionados, listas) aunque nadie pasara rank. Arreglado: la clase ahora es condicional. Fix de una línea verificado directo por el controlador (diff + tsc), sin re-review.
+- [x] Task 7: TopView + /top + 5to ítem del nav + degradado/fallos — commits 2586bd3 + 47da746 (base 973437a), tsc 0, next build OK (/top 1.73 kB, 167 kB First Load).
+  - Desviación correcta del implementador: app/top/page.tsx usa el wrapper TopBar/BottomNav como directores y proximamente, porque layout.tsx no renderiza el nav globalmente. El snippet del plan dejaba /top sin nav.
+  - Review halló 1 Critical + 1 Important + 2 Minor, todos arreglados en 47da746:
+    C1 TopView ignoraba `error` de useApi → con un 500 la pantalla quedaba EN BLANCO, sin aviso ni reintento (y safe() re-lanza en dev, así que pasaba seguido). Ahora sigue el patrón de CatalogView.
+    I1 .top-toggle era sticky top:0 igual que .topbar (z-index 30 vs 20): el único control de la página quedaba tapado al scrollear. Se le sacó el sticky (el alto del TopBar no es constante, no hay offset confiable).
+    M1 regla muerta .rank-slot{flex}. M2 aria-controls en el botón ⓘ.
+  - VERIFICADO POR EL CONTROLADOR en el navegador: 6 bloques con la agrupación correcta, copys exactos, ranking 1-10 con los 3 primeros en coral, Netflix con source netflix desde la tabla; a 320px los 5 ítems del nav miden 75px sin cortarse y no hay scroll horizontal; .top-toggle quedó static; /api/top 6/6 y 8/8 en 200 bajo ráfaga concurrente con caché fría.
+- [x] Task 8: CLAUDE.md — commits 8bc8457 + ajuste del controlador (maxDuration ya no es exclusivo de /api/home, toggle global, supabaseAdmin/SUPABASE_SERVICE_ROLE_KEY, alineación del bloque de estructura).
+
+## Review final del branch (opus) — Listo para mergear: SÍ CON ARREGLOS → ARREGLADO
+0 Critical, 4 Important, todos arreglados en 1b34b36 + 18be0fb.
+- I1 datos viejos anunciados como "de esta semana": latestWeekRows devolvía max(week) sin importar la antigüedad
+  y netflixBlock solo caía a popularidad con la tabla VACÍA. Si el cron se rompía en silencio, el bloque seguía
+  afirmando "dato oficial de esta semana" con datos de meses atrás. → guard de 14 días, cae a popularidad.
+- I2 cached() guarda [] como hit válido 24h: un hipo de TMDB hacía desaparecer una plataforma entera por un día,
+  con degradado=false (ni bloque ni aviso). → el fetcher tira si viene vacío.
+- I3 resolveTitle tenía una QUINTA regla que el spec no pide (candidatos sin título exacto y sin Netflix AR →
+  primer candidato). Podía mostrar un título equivocado bajo el sello "dato oficial". → alineado al spec: null.
+- I4 el piso vote_count.gte=60 era un default heredado de discover, no una decisión. → minVotes explícito.
+- Minors arreglados: comentario de TOP_PLATFORMS, supabaseAdmin movido a lib/supabase-admin.ts con
+  import "server-only" (antes vivía en un módulo que llega al bundle del navegador), comentario obsoleto en
+  /api/providers, y CLAUDE.md (app/top/, TopView.tsx, keepPrevious, maxDuration, ubicación de supabaseAdmin).
+- Confirmado por el reviewer: la service role key NO se filtra al bundle (Next solo inlinea NEXT_PUBLIC_*);
+  el cron falla cerrado sin CRON_SECRET; RLS solo con policy de select; Star+ nunca estuvo en la tabla providers;
+  el TSV real de hoy calza con parseArWeek (header exacto, AR primero, 20 filas, LF).
+- Minors NO arreglados (deliberado): "sp" sigue en PlatformCode para no romper el localStorage de quien haya
+  elegido Star+ antes de esta rama; el 500 de /api/top devuelve String(e) (consistente con /api/providers);
+  la caché tibia de pv:/card: puede tapar el fix de Apple TV+ unas horas post-deploy.
+
+VERIFICADO POR EL CONTROLADOR al cierre: tsc 0 errores; next build compila, / sigue en 174 kB (sin regresión de
+bundle) y /top en 1.73 kB; /api/top con tipo=movie y tipo=tv devuelve los 6 bloques con 10 slots llenos cada uno,
+Netflix con source:netflix desde la tabla, degradado=false.
+
+PENDIENTE DEL DUEÑO (bloquea la ingesta real, no la sección):
+1. Cargar SUPABASE_SERVICE_ROLE_KEY en .env.local y en Vercel. Sin eso el cron no escribe (la sección funciona
+   igual: Netflix cae a popularidad).
+2. Cargar CRON_SECRET en Vercel.
+3. Prueba de humo del cron: la tabla está sembrada a mano, así que la primera corrida va a dar inserted:0 SIN
+   ejercitar fetch/parse/resolve/upsert. Para probarlo de verdad: borrar una fila
+   (delete from netflix_top10 where week='2026-08-02' and category='movie' and rank=10) y recién ahí correr el
+   cron. Ese es el único camino del código que no tiene evidencia de ejecución.
+
+ESTADO AL CIERRE: rama feat/top-yump NO mergeada. El dueño la revisa antes de produccion.
+16 commits sobre bef5ec8, HEAD 18be0fb. Arbol limpio salvo los sin-trackear preexistentes.
+
+---
+
+# Feature: ruleta "no sé qué ver" (feat/ruleta)
+Base del branch: ec3eead (plan) sobre a33754e (spec del dueño).
+Plan: docs/superpowers/plans/2026-08-09-ruleta.md
+Spec: docs/superpowers/specs/2026-08-09-ruleta-design.md (lo escribió el dueño)
+
+ALCANCE — el riesgo principal. NO se tocan: los 16 chips, lib/categories.ts,
+chip_titles, chip_blocklist, scripts/, prompts/. title_availability es SOLO
+LECTURA. roulette_titles y get_roulette_picks ya existen y no se modifican.
+Ninguna tarea escribe en la base.
+
+Constraints: UI en español rioplatense; sin CSS-in-JS; rutas API finas; una sola
+recomendación por vez (nunca una lista); una query por tanda de 20, "Otra"
+consume del cliente; `atencion` NUNCA crudo (banco de frases en código);
+advertencia NULL => sin bloque PERO; para mostrar se usa TMDB, no el title
+snapshot; no agregar limitador de concurrencia (ya está en lib/tmdb.ts).
+
+Proyecto SIN framework de tests. Verificación = tsc + next build + curls/SQL.
+
+- [x] T1: lib/roulette-providers.ts — commits 7f3e25f + 3e0c454 (base 15a300e), tsc 0, review PASS sin Critical/Important.
+  - El implementador cazó que yo había contado mal: son 39 nombres distintos en title_availability (19 mapeados + 20 excluidos), no 40. Corregido en el código y en el plan.
+  - Reviewer verificó contra la base de forma independiente: los 39 calzan carácter por carácter y cantidad por cantidad; los 19 mapeados alcanzan 696 de los 765 con texto (coincide con el comentario).
+  - MovistarTV 148 títulos sin tope, "VIX " (con espacio) 2. Ninguno en 0.
+  - OnDemandKorea devuelve 0 en los 4 escenarios: su único título (tmdb_id 455714) tiene razon NULL. Es legítimo, no un typo del mapa.
+  - Minor no accionado: el guard corre en cualquier NODE_ENV != production, no solo en dev; el comentario dice "en desarrollo".
+- [x] T2: components/ruleta/frases.ts — commit 1b812fa (base 3e0c454), tsc 0. Auto-verificado por el controlador (diff completo de 16 líneas, función pura idéntica al plan); no se despachó reviewer.
+- [x] T3: lib/roulette.ts + /api/ruleta + watchLinkFor — commits 5870754 + 815a7dc (base 1b812fa), tsc 0.
+  - Review halló 2 Important + 1 Minor + 1 observación, todos arreglados en 815a7dc (fix verificado leyendo el diff):
+    I1 el mapa de enriquecidos se indexaba solo por id: los ids de TMDB son namespaces separados por media_type, así que movie:550 y tv:550 en la misma tanda se pisaban y una pick mostraba título/póster ajenos. Ahora la clave es `type:id`.
+    I2 Promise.all sobre watchLinkFor tumbaba las 20 picks si una sola fallaba (hiccup de Redis o TTL vencido). El link ahora es opcional: se loguea y la pick sobrevive.
+    M1 `excluir` sin dedup ni tope → Set + slice(0, 500).
+    OBS runtime SIEMPRE venía null: cardsByIds usa titleCard, que hardcodea runtime:null (solo el shape de detalle lo calcula). El spec pide la duración en la tarjeta. Ahora sale de la RPC (minutos, no cambian por locale) con el mismo formato que la ficha. Pasó de 0/20 a 20/20.
+  - Verificado: los 4 escenarios con 20/20 picks, 20/20 runtime, 20/20 watchLink; providers vacío devuelve []; excluir funciona.
+  - Minor no accionado: el formato de runtime da "0h 45m" en títulos de menos de una hora. Es idéntico al de la ficha (enrich.ts:550), así que se deja por consistencia.
+- [x] T4: hooks/useRouletteSeen.ts — commit 8800052 (base 815a7dc), tsc 0. Auto-verificado (55 líneas idénticas al plan, import type de Escenario para no arrastrar el módulo server-only, tope 300 por escenario); no se despachó reviewer.
+- [x] T5: components/ruleta/RuletaCard.tsx + CSS — commit 9d4e14a (base 8800052), tsc 0. Se revisa junto con T6, que es la primera tarea que la renderiza.
+- [x] T5 + T6: RuletaCard, RuletaBanner y montaje en el Home — commits 9d4e14a + 6de1a4e + ba97c6b (base 8800052), tsc 0, next build OK. Review conjunto (T5 no era observable sin T6): 0 Critical, 0 Important.
+  - Verificado por el implementador y confirmado por el reviewer: 20 toques de "Otra" con UN solo request; el request 2 recién sale con la cola vacía, llevando los 20 ids en excluir. CatalogView tocado en exactamente 2 líneas.
+  - 2 Minor arreglados en ba97c6b: (1) la cola no se descartaba al cambiar de plataformas con el panel abierto, así que "Otra" seguía sirviendo picks de una plataforma recién sacada; (2) los estados vacío/error sin role="status".
+  - PENDIENTE DE DECISIÓN DEL DUEÑO (hallazgo visual del controlador, no de código): los banners de Ruleta y Desempatá quedan a 26 px, con el MISMO degradado y preguntas casi sinónimas ("¿No sabés qué ver?" / "¿No te decidís?"). Reusar .dsmp-banner lo pidió el dueño; la duplicación visual no estaba prevista.
+- [x] T7: aceptación + CLAUDE.md — commit 4b22d44 (base ba97c6b), tsc 0, next build OK (/ en 176 kB). 6/8 criterios verificados. Los criterios 4 y 5/5b (que un visto no vuelva a salir, y el reflejo tarjeta<->ficha con su deshacer) NO se pudieron verificar: necesitan sesión logueada real y no hay credenciales en el entorno. Quedan para el dueño.
+
+## Review final del branch (opus) — Listo para mergear: SÍ CON ARREGLOS → ARREGLADO
+0 Critical, 4 Important + 11 Minor. Arreglados en c2b534b (I1-I4, M1, M2, M3, M5, M6, M8, M10, M11 y la consistencia del panel).
+AISLAMIENTO CONFIRMADO MECÁNICAMENTE: la rama entera tiene 0 líneas borradas en 12 archivos. Nada existente se modificó.
+lib/enrich.ts solo suma watchLinkFor; CatalogView solo 2 líneas; globals.css solo selectores nuevos con prefijo .rlt-.
+- I1 la tarjeta mostraba los SLUGS de género crudos ("accion / scifi") en vez de las etiquetas. Visible en cada tarjeta.
+- I2 el logo era pick.platforms[0], o sea la primera que devuelve TMDB, sin filtrar por las del usuario: alguien solo con
+  MovistarTV veía el logo de NETFLIX. Y "dónde está" es una de las 3 cosas que el spec le pide a la tarjeta.
+- I3 carrera: itemRefs("watched") no se esperaba antes del primer pedido, así que un click rápido mandaba p_excluir SIN
+  los vistos y podía salir un título ya marcado (criterio 4 del spec). Ahora se guarda la promesa y se awaitea.
+- I4 el tope de excluir se aplicaba en el server, después de armar la URL (431 con ~2000 vistos), y recortaba los
+  MOSTRADOS antes que los vistos, borrando el estado de paginación. Ahora se topea en el cliente priorizando mostrados.
+- M1 la tarjeta no hidrataba `visto` con hasItem, así que el criterio 5 andaba en una sola dirección.
+- M2 un hiccup de TMDB se confundía con "pool agotado" y borraba el progreso del escenario.
+VERIFICADO POR EL CONTROLADOR en vivo tras el fix: tarjeta de "La sustancia" con "2024 · 2h 21m · Terror / Sci-fi /
+Suspenso", chip de plataforma entre las elegidas, frase "Pide cabeza" (nunca `alta`), bloque PERO presente,
+aria-expanded correcto. tsc 0, next build OK, / en 176 kB.
+
+PENDIENTE DEL DUEÑO:
+1. Criterios 4 y 5 del spec: necesitan sesión logueada, no hay credenciales en el entorno. Probar que un título marcado
+   no vuelve a salir, y que el "ya la vi" se refleja tarjeta<->ficha en los dos sentidos y se puede deshacer.
+2. Decisión de diseño: los banners de Ruleta y Desempatá quedan a 26 px con el mismo degradado y preguntas casi
+   sinónimas. Reusar .dsmp-banner lo pidió el dueño; la duplicación visual no estaba prevista.
+3. supabase/migrations/002_roulette.sql y data/*.sql están SIN VERSIONAR: la rama depende de objetos de base que no
+   están en el repo. Un clon limpio no reproduce el entorno. Es la misma decisión pendiente de chips/, data/ y scripts/.
+4. La policy de roulette_titles es `select using (true)` con anon key: el texto editorial curado (el diferencial del
+   producto) es scrapeable con un select *. Viene de la migración del pipeline, no de esta rama; el spec la da por
+   buena. Si importa, se arregla con security definer, no con un cambio de app.
+
+ESTADO: rama feat/ruleta NO mergeada, 14 commits sobre a33754e, HEAD c2b534b.
+
+MERGEADA a main: 756b93e (merge commit), pusheada a origin (4774489..756b93e).
+Antes del merge se sumó 00ffc41: póster en la tarjeta (al costado, 124px escritorio / 92px mobile)
+y corrección de CLAUDE.md, que decía que el link de watch/providers era "tipo JustWatch" cuando en
+realidad TMDB hoy devuelve themoviedb.org/movie/<id>/watch?locale=AR. El botón "Verla" ya iba a TMDB.

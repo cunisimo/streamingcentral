@@ -1,0 +1,3694 @@
+{
+  "classified_at": "2026-08-11T21:35:57.883Z",
+  "total": 461,
+  "rows": [
+    {
+      "tmdb_id": 155,
+      "title": "El caballero oscuro",
+      "year": 2008,
+      "saga": "Batman (El caballero oscuro) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Trilogía que se sostiene sola, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 299536,
+      "title": "Vengadores: Infinity War",
+      "year": 2018,
+      "saga": "Los Vengadores - Colección",
+      "requiere_contexto": true,
+      "motivo": "Ensamble masivo que asume conocer todo el UCM previo"
+    },
+    {
+      "tmdb_id": 299534,
+      "title": "Vengadores: Endgame",
+      "year": 2019,
+      "saga": "Los Vengadores - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continuación directa de Infinity War, incomprensible sin ella"
+    },
+    {
+      "tmdb_id": 122,
+      "title": "El señor de los anillos: El retorno del rey",
+      "year": 2003,
+      "saga": "El señor de los anillos - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra la trama iniciada en Las dos torres"
+    },
+    {
+      "tmdb_id": 99861,
+      "title": "Vengadores: La era de Ultrón",
+      "year": 2015,
+      "saga": "Los Vengadores - Colección",
+      "requiere_contexto": true,
+      "motivo": "Asume equipo y objetos establecidos en el primer Vengadores"
+    },
+    {
+      "tmdb_id": 49026,
+      "title": "El caballero oscuro: La leyenda renace",
+      "year": 2012,
+      "saga": "Batman (El caballero oscuro) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Retoma tramas de Bane y Bruce del filme anterior"
+    },
+    {
+      "tmdb_id": 76341,
+      "title": "Mad Max: Furia en la carretera",
+      "year": 2015,
+      "saga": "Mad Max - Colección",
+      "requiere_contexto": false,
+      "motivo": "Mundo se explica solo, no depende de anteriores"
+    },
+    {
+      "tmdb_id": 271110,
+      "title": "Capitán América: Civil War",
+      "year": 2016,
+      "saga": "Capitán América - Colección",
+      "requiere_contexto": true,
+      "motivo": "Peso emocional depende de Soldado de Invierno y Ultrón"
+    },
+    {
+      "tmdb_id": 121,
+      "title": "El señor de los anillos: Las dos torres",
+      "year": 2002,
+      "saga": "El señor de los anillos - Colección",
+      "requiere_contexto": true,
+      "motivo": "Arranca a mitad de historia, no cierra sola"
+    },
+    {
+      "tmdb_id": 672,
+      "title": "Harry Potter y la cámara secreta",
+      "year": 2002,
+      "saga": "Harry Potter - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura episódica, se entiende sin la primera"
+    },
+    {
+      "tmdb_id": 68721,
+      "title": "Iron Man 3",
+      "year": 2013,
+      "saga": "Iron Man - Colección",
+      "requiere_contexto": false,
+      "motivo": "Villano y trama propios, autoconclusiva pese a referencias"
+    },
+    {
+      "tmdb_id": 673,
+      "title": "Harry Potter y el prisionero de Azkaban",
+      "year": 2004,
+      "saga": "Harry Potter - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia episódica autoconclusiva dentro de la saga"
+    },
+    {
+      "tmdb_id": 283995,
+      "title": "Guardianes de la Galaxia II",
+      "year": 2017,
+      "saga": "Guardianes de la galaxia - Colección",
+      "requiere_contexto": false,
+      "motivo": "Reintroduce al equipo, trama propia autoconclusiva"
+    },
+    {
+      "tmdb_id": 10138,
+      "title": "Iron Man 2",
+      "year": 2010,
+      "saga": "Iron Man - Colección",
+      "requiere_contexto": false,
+      "motivo": "Secuela episódica que se explica por sí sola"
+    },
+    {
+      "tmdb_id": 634649,
+      "title": "Spider-Man: No Way Home",
+      "year": 2021,
+      "saga": "Spider-Man (Vengadores) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende del final de Lejos de casa y multiverso"
+    },
+    {
+      "tmdb_id": 674,
+      "title": "Harry Potter y el cáliz de fuego",
+      "year": 2005,
+      "saga": "Harry Potter - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura episódica autoconclusiva de Hogwarts"
+    },
+    {
+      "tmdb_id": 284053,
+      "title": "Thor: Ragnarok",
+      "year": 2017,
+      "saga": "Thor - Colección",
+      "requiere_contexto": false,
+      "motivo": "Tono y trama propios, funciona como reinicio"
+    },
+    {
+      "tmdb_id": 12445,
+      "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+      "year": 2011,
+      "saga": "Harry Potter - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra directamente la historia dejada abierta en Parte 1"
+    },
+    {
+      "tmdb_id": 135397,
+      "title": "Jurassic World",
+      "year": 2015,
+      "saga": "Jurassic Park - Colección",
+      "requiere_contexto": false,
+      "motivo": "Reinicio autoconclusivo décadas después, sin depender de trilogía original"
+    },
+    {
+      "tmdb_id": 675,
+      "title": "Harry Potter y la Orden del Fénix",
+      "year": 2007,
+      "saga": "Harry Potter - Colección",
+      "requiere_contexto": false,
+      "motivo": "Trama episódica, se sostiene sin las previas"
+    },
+    {
+      "tmdb_id": 767,
+      "title": "Harry Potter y el misterio del príncipe",
+      "year": 2009,
+      "saga": "Harry Potter - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia episódica, cierra su propio arco"
+    },
+    {
+      "tmdb_id": 140607,
+      "title": "Star Wars: El despertar de la fuerza",
+      "year": 2015,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": false,
+      "motivo": "Reinicia la saga con personajes y trama nuevos"
+    },
+    {
+      "tmdb_id": 263115,
+      "title": "Logan",
+      "year": 2017,
+      "saga": "Lobezno - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia íntima y autocontenida pese a ser cierre"
+    },
+    {
+      "tmdb_id": 12444,
+      "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+      "year": 2010,
+      "saga": "Harry Potter - Colección",
+      "requiere_contexto": true,
+      "motivo": "Termina sin resolver, deja la trama a mitad"
+    },
+    {
+      "tmdb_id": 100402,
+      "title": "Capitán América: El Soldado de Invierno",
+      "year": 2014,
+      "saga": "Capitán América - Colección",
+      "requiere_contexto": false,
+      "motivo": "Thriller político autoconclusivo con villano propio"
+    },
+    {
+      "tmdb_id": 383498,
+      "title": "Deadpool 2",
+      "year": 2018,
+      "saga": "Deadpool - Colección",
+      "requiere_contexto": false,
+      "motivo": "Trama y personajes nuevos, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 209112,
+      "title": "Batman vs Superman. El amanecer de la justicia",
+      "year": 2016,
+      "saga": "El hombre de acero - Colección",
+      "requiere_contexto": true,
+      "motivo": "Motivación de Batman depende del final de El hombre de acero"
+    },
+    {
+      "tmdb_id": 1891,
+      "title": "El imperio contraataca",
+      "year": 1980,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": true,
+      "motivo": "Termina en cliffhanger, no resuelve nada por sí sola"
+    },
+    {
+      "tmdb_id": 101299,
+      "title": "Los Juegos del Hambre: En llamas",
+      "year": 2013,
+      "saga": "Los Juegos del Hambre - Colección",
+      "requiere_contexto": true,
+      "motivo": "Peso político depende de las consecuencias de la primera"
+    },
+    {
+      "tmdb_id": 76338,
+      "title": "Thor: el mundo oscuro",
+      "year": 2013,
+      "saga": "Thor - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura fantástica autoconclusiva con trama propia"
+    },
+    {
+      "tmdb_id": 58,
+      "title": "Piratas del Caribe: El cofre del hombre muerto",
+      "year": 2006,
+      "saga": "Piratas del Caribe - Colección",
+      "requiere_contexto": true,
+      "motivo": "Termina en cliffhanger, no cierra su historia"
+    },
+    {
+      "tmdb_id": 429617,
+      "title": "Spider-Man: Lejos de casa",
+      "year": 2019,
+      "saga": "Spider-Man (Vengadores) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente tras los eventos de Endgame"
+    },
+    {
+      "tmdb_id": 1892,
+      "title": "El retorno del Jedi",
+      "year": 1983,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente el cliffhanger de El imperio contraataca"
+    },
+    {
+      "tmdb_id": 131631,
+      "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+      "year": 2014,
+      "saga": "Los Juegos del Hambre - Colección",
+      "requiere_contexto": true,
+      "motivo": "Primera mitad de una historia dividida en dos"
+    },
+    {
+      "tmdb_id": 558,
+      "title": "Spider-Man 2",
+      "year": 2004,
+      "saga": "Spider-Man - Colección",
+      "requiere_contexto": false,
+      "motivo": "Villano y conflicto propios, autoconclusiva"
+    },
+    {
+      "tmdb_id": 181808,
+      "title": "Star Wars: Los últimos Jedi",
+      "year": 2017,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente la trama de El despertar de la fuerza"
+    },
+    {
+      "tmdb_id": 127585,
+      "title": "X-Men: Días del futuro pasado",
+      "year": 2014,
+      "saga": "X-Men - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cruce temporal que exige conocer ambas líneas de X-Men"
+    },
+    {
+      "tmdb_id": 37724,
+      "title": "Skyfall",
+      "year": 2012,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura de Bond autoconclusiva, sin depender de anteriores"
+    },
+    {
+      "tmdb_id": 1893,
+      "title": "La guerra de las galaxias. Episodio I: La amenaza fantasma",
+      "year": 1999,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": false,
+      "motivo": "Primera cronológicamente, presenta todo desde cero"
+    },
+    {
+      "tmdb_id": 10193,
+      "title": "Toy Story 3",
+      "year": 2010,
+      "saga": "Toy Story - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia autoconclusiva, se entiende sin las previas"
+    },
+    {
+      "tmdb_id": 285,
+      "title": "Piratas del Caribe: En el fin del mundo",
+      "year": 2007,
+      "saga": "Piratas del Caribe - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa el cliffhanger de la segunda película"
+    },
+    {
+      "tmdb_id": 122917,
+      "title": "El hobbit: La batalla de los cinco ejércitos",
+      "year": 2014,
+      "saga": "El hobbit - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa sin pausa el final de la segunda parte"
+    },
+    {
+      "tmdb_id": 559,
+      "title": "Spider-Man 3",
+      "year": 2007,
+      "saga": "Spider-Man - Colección",
+      "requiere_contexto": false,
+      "motivo": "trama se resuelve sola pese a relaciones previas"
+    },
+    {
+      "tmdb_id": 335984,
+      "title": "Blade Runner 2049",
+      "year": 2017,
+      "saga": "Blade Runner - Colección",
+      "requiere_contexto": false,
+      "motivo": "protagonista nuevo, historia autoconclusiva y comprensible sola"
+    },
+    {
+      "tmdb_id": 393,
+      "title": "Kill Bill: Volumen 2",
+      "year": 2004,
+      "saga": "Kill Bill - Colección",
+      "requiere_contexto": true,
+      "motivo": "es la segunda mitad de una sola historia"
+    },
+    {
+      "tmdb_id": 863,
+      "title": "Toy Story 2: Los juguetes vuelven a la carga",
+      "year": 1999,
+      "saga": "Toy Story - Colección",
+      "requiere_contexto": false,
+      "motivo": "se entiende y disfruta sin haber visto la primera"
+    },
+    {
+      "tmdb_id": 1895,
+      "title": "La guerra de las galaxias. Episodio III: La venganza de los Sith",
+      "year": 2005,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": true,
+      "motivo": "la caída de Anakin depende del arco previo"
+    },
+    {
+      "tmdb_id": 1865,
+      "title": "Piratas del Caribe: En mareas misteriosas",
+      "year": 2011,
+      "saga": "Piratas del Caribe - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia nueva y autoconclusiva con Jack Sparrow"
+    },
+    {
+      "tmdb_id": 353486,
+      "title": "Jumanji: Bienvenidos a la jungla",
+      "year": 2017,
+      "saga": "Jumanji - Colección",
+      "requiere_contexto": false,
+      "motivo": "personajes y premisa nuevos, no depende de la original"
+    },
+    {
+      "tmdb_id": 1894,
+      "title": "La guerra de las galaxias. Episodio II: El ataque de los clones",
+      "year": 2002,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": false,
+      "motivo": "intriga política se presenta y explica por sí sola"
+    },
+    {
+      "tmdb_id": 102382,
+      "title": "The Amazing Spider-Man 2: El poder de Electro",
+      "year": 2014,
+      "saga": "The Amazing Spider-Man - Colección",
+      "requiere_contexto": true,
+      "motivo": "retoma misterio de los padres y romance de la primera"
+    },
+    {
+      "tmdb_id": 76600,
+      "title": "Avatar: El sentido del agua",
+      "year": 2022,
+      "saga": "Avatar - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa directamente el conflicto y arco de la primera"
+    },
+    {
+      "tmdb_id": 324552,
+      "title": "John Wick: Pacto de sangre",
+      "year": 2017,
+      "saga": "John Wick - Colección",
+      "requiere_contexto": true,
+      "motivo": "arranca resolviendo la deuda planteada en la primera"
+    },
+    {
+      "tmdb_id": 57158,
+      "title": "El hobbit: La desolación de Smaug",
+      "year": 2013,
+      "saga": "El hobbit - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa la travesía y termina en cliffhanger"
+    },
+    {
+      "tmdb_id": 363088,
+      "title": "Ant-Man II. Ant-Man y la Avispa",
+      "year": 2018,
+      "saga": "Ant-Man - Colección",
+      "requiere_contexto": false,
+      "motivo": "misión de rescate autoconclusiva, contexto se explica solo"
+    },
+    {
+      "tmdb_id": 240,
+      "title": "El padrino II",
+      "year": 1974,
+      "saga": "El padrino - Colección",
+      "requiere_contexto": true,
+      "motivo": "el arco de Michael depende directamente de la primera"
+    },
+    {
+      "tmdb_id": 165,
+      "title": "Regreso al futuro II",
+      "year": 1989,
+      "saga": "Regreso al futuro - Colección",
+      "requiere_contexto": true,
+      "motivo": "la trama reescribe y depende de eventos de la primera"
+    },
+    {
+      "tmdb_id": 809,
+      "title": "Shrek 2",
+      "year": 2004,
+      "saga": "Shrek - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia nueva y autoconclusiva sobre conocer a los suegros"
+    },
+    {
+      "tmdb_id": 604,
+      "title": "Matrix Reloaded",
+      "year": 2003,
+      "saga": "Matrix - Colección",
+      "requiere_contexto": true,
+      "motivo": "expande mitología asumiendo que ya sabés quién es Neo"
+    },
+    {
+      "tmdb_id": 36557,
+      "title": "Casino Royale",
+      "year": 2006,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "origen del personaje, autoconclusiva y accesible para nuevos"
+    },
+    {
+      "tmdb_id": 196,
+      "title": "Regreso al futuro III",
+      "year": 1990,
+      "saga": "Regreso al futuro - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa directamente el cliffhanger de la segunda parte"
+    },
+    {
+      "tmdb_id": 361743,
+      "title": "Top Gun: Maverick",
+      "year": 2022,
+      "saga": "Top Gun - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia nueva y autoconclusiva décadas después"
+    },
+    {
+      "tmdb_id": 580489,
+      "title": "Venom: habrá matanza",
+      "year": 2021,
+      "saga": "Venom - Colección",
+      "requiere_contexto": false,
+      "motivo": "villano nuevo, trama autoconclusiva pese a relación previa"
+    },
+    {
+      "tmdb_id": 89,
+      "title": "Indiana Jones y la última cruzada",
+      "year": 1989,
+      "saga": "Indiana Jones - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura episódica que no depende de las anteriores"
+    },
+    {
+      "tmdb_id": 36658,
+      "title": "X-Men II",
+      "year": 2003,
+      "saga": "X-Men - Colección",
+      "requiere_contexto": false,
+      "motivo": "ataque autoconclusivo aunque haya personajes conocidos"
+    },
+    {
+      "tmdb_id": 679,
+      "title": "Aliens: El regreso",
+      "year": 1986,
+      "saga": "Alien - Colección",
+      "requiere_contexto": false,
+      "motivo": "acción autoconclusiva, el mundo se explica solo"
+    },
+    {
+      "tmdb_id": 605,
+      "title": "Matrix Revolutions",
+      "year": 2003,
+      "saga": "Matrix - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa directamente el cliffhanger de Reloaded"
+    },
+    {
+      "tmdb_id": 608,
+      "title": "Hombres de negro II",
+      "year": 2002,
+      "saga": "Men in Black - Colección",
+      "requiere_contexto": false,
+      "motivo": "trama episódica autoconclusiva, premisa se resetea"
+    },
+    {
+      "tmdb_id": 772,
+      "title": "Solo en casa 2: Perdido en Nueva York",
+      "year": 1992,
+      "saga": "Solo en casa - Colección",
+      "requiere_contexto": false,
+      "motivo": "repite la premisa en un escenario nuevo, autoconclusiva"
+    },
+    {
+      "tmdb_id": 399566,
+      "title": "Godzilla vs. Kong",
+      "year": 2021,
+      "saga": "Godzilla - Colección",
+      "requiere_contexto": false,
+      "motivo": "batalla de monstruos autoconclusiva y espectacular"
+    },
+    {
+      "tmdb_id": 453395,
+      "title": "Doctor Strange en el multiverso de la locura",
+      "year": 2022,
+      "saga": "Doctor Strange - Colección",
+      "requiere_contexto": true,
+      "motivo": "depende del arco de Wanda en WandaVision"
+    },
+    {
+      "tmdb_id": 36668,
+      "title": "X-Men III. La decisión final",
+      "year": 2006,
+      "saga": "X-Men - Colección",
+      "requiere_contexto": true,
+      "motivo": "la resurrección de Jean Grey depende del final de X2"
+    },
+    {
+      "tmdb_id": 950,
+      "title": "Ice Age 2: El deshielo",
+      "year": 2006,
+      "saga": "Ice Age - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura nueva y autoconclusiva sobre un deshielo"
+    },
+    {
+      "tmdb_id": 87,
+      "title": "Indiana Jones y el templo maldito",
+      "year": 1984,
+      "saga": "Indiana Jones - Colección",
+      "requiere_contexto": false,
+      "motivo": "precuela autoconclusiva, no depende de otras películas"
+    },
+    {
+      "tmdb_id": 810,
+      "title": "Shrek tercero",
+      "year": 2007,
+      "saga": "Shrek - Colección",
+      "requiere_contexto": true,
+      "motivo": "arranca directamente de la muerte del rey en Shrek 2"
+    },
+    {
+      "tmdb_id": 436969,
+      "title": "El Escuadrón Suicida",
+      "year": 2021,
+      "saga": "Escuadrón suicida - Colección",
+      "requiere_contexto": false,
+      "motivo": "equipo y trama nuevos, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 330,
+      "title": "El mundo perdido: Jurassic Park",
+      "year": 1997,
+      "saga": "Jurassic Park - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva aventura autoconclusiva en otra isla"
+    },
+    {
+      "tmdb_id": 464052,
+      "title": "Wonder Woman 1984",
+      "year": 2020,
+      "saga": "Wonder Woman - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia nueva y autoconclusiva décadas después"
+    },
+    {
+      "tmdb_id": 533535,
+      "title": "Deadpool y Lobezno",
+      "year": 2024,
+      "saga": "Deadpool - Colección",
+      "requiere_contexto": true,
+      "motivo": "depende fuertemente del multiverso y películas previas"
+    },
+    {
+      "tmdb_id": 315162,
+      "title": "El Gato con Botas: El último deseo",
+      "year": 2022,
+      "saga": "El gato con botas - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura nueva y autoconclusiva sobre sus vidas"
+    },
+    {
+      "tmdb_id": 569094,
+      "title": "Spider-Man: Cruzando el Multiverso",
+      "year": 2023,
+      "saga": "Spider-Man: Un nuevo universo - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa tramas y cierra en cliffhanger de la anterior"
+    },
+    {
+      "tmdb_id": 616037,
+      "title": "Thor: Love and Thunder",
+      "year": 2022,
+      "saga": "Thor - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura episódica autoconclusiva de Thor"
+    },
+    {
+      "tmdb_id": 447365,
+      "title": "Guardianes de la Galaxia: Volumen 3",
+      "year": 2023,
+      "saga": "Guardianes de la galaxia - Colección",
+      "requiere_contexto": true,
+      "motivo": "cierra arcos emocionales del grupo formados en previas"
+    },
+    {
+      "tmdb_id": 693134,
+      "title": "Dune: Parte dos",
+      "year": 2024,
+      "saga": "Dune - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa directamente la trama sin recapitular la primera"
+    },
+    {
+      "tmdb_id": 603692,
+      "title": "John Wick 4",
+      "year": 2023,
+      "saga": "John Wick - Colección",
+      "requiere_contexto": true,
+      "motivo": "resuelve conflicto con la Mesa Alta iniciado antes"
+    },
+    {
+      "tmdb_id": 766507,
+      "title": "Predator: La presa",
+      "year": 2022,
+      "saga": "Predator - Colección",
+      "requiere_contexto": false,
+      "motivo": "precuela autónoma, no depende de otras películas"
+    },
+    {
+      "tmdb_id": 385128,
+      "title": "Fast & Furious 9",
+      "year": 2021,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": true,
+      "motivo": "depende de relaciones y pasado familiar de la saga"
+    },
+    {
+      "tmdb_id": 505642,
+      "title": "Black Panther: Wakanda Forever",
+      "year": 2022,
+      "saga": "Black Panther - Colección",
+      "requiere_contexto": true,
+      "motivo": "peso emocional depende de la muerte de T'Challa"
+    },
+    {
+      "tmdb_id": 520763,
+      "title": "Un lugar tranquilo 2",
+      "year": 2021,
+      "saga": "Un lugar tranquilo - Colección",
+      "requiere_contexto": true,
+      "motivo": "arranca justo donde terminó la primera película"
+    },
+    {
+      "tmdb_id": 370172,
+      "title": "Sin tiempo para morir",
+      "year": 2021,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": true,
+      "motivo": "cierra arcos de Craig como Bond de películas previas"
+    },
+    {
+      "tmdb_id": 364,
+      "title": "Batman vuelve",
+      "year": 1992,
+      "saga": "Batman - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia autoconclusiva con villanos nuevos"
+    },
+    {
+      "tmdb_id": 507086,
+      "title": "Jurassic World: Dominion",
+      "year": 2022,
+      "saga": "Jurassic Park - Colección",
+      "requiere_contexto": true,
+      "motivo": "reúne y cierra tramas de ambas trilogías previas"
+    },
+    {
+      "tmdb_id": 661374,
+      "title": "Puñales por la espalda: El misterio de Glass Onion",
+      "year": 2022,
+      "saga": "Puñales por la espalda - Colección",
+      "requiere_contexto": false,
+      "motivo": "misterio nuevo con personajes completamente distintos"
+    },
+    {
+      "tmdb_id": 1022789,
+      "title": "Del revés 2 (Inside Out 2)",
+      "year": 2024,
+      "saga": "Del revés (Inside Out) - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia de pubertad autónoma, presenta emociones nuevas"
+    },
+    {
+      "tmdb_id": 1572,
+      "title": "Jungla de cristal: la venganza",
+      "year": 1995,
+      "saga": "La jungla de cristal - Colección",
+      "requiere_contexto": false,
+      "motivo": "caso de acción independiente y autoconclusivo"
+    },
+    {
+      "tmdb_id": 423108,
+      "title": "Expediente Warren: Obligado por el demonio",
+      "year": 2021,
+      "saga": "Expediente Warren [The Conjuring] - Colección",
+      "requiere_contexto": false,
+      "motivo": "caso paranormal independiente de los Warren"
+    },
+    {
+      "tmdb_id": 624860,
+      "title": "Matrix Resurrections",
+      "year": 2021,
+      "saga": "Matrix - Colección",
+      "requiere_contexto": true,
+      "motivo": "reinterpreta y depende de la trilogía original"
+    },
+    {
+      "tmdb_id": 1573,
+      "title": "La jungla 2: Alerta roja",
+      "year": 1990,
+      "saga": "La jungla de cristal - Colección",
+      "requiere_contexto": false,
+      "motivo": "amenaza nueva en aeropuerto, historia autónoma"
+    },
+    {
+      "tmdb_id": 8077,
+      "title": "Alien III",
+      "year": 1992,
+      "saga": "Alien - Colección",
+      "requiere_contexto": true,
+      "motivo": "arranca con muertes que cierran la película anterior"
+    },
+    {
+      "tmdb_id": 385687,
+      "title": "Fast & Furious X",
+      "year": 2023,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": true,
+      "motivo": "venganza ligada a eventos de películas anteriores"
+    },
+    {
+      "tmdb_id": 640146,
+      "title": "Ant-Man y la Avispa: Quantumanía",
+      "year": 2023,
+      "saga": "Ant-Man - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura autocontenida en el Reino Cuántico"
+    },
+    {
+      "tmdb_id": 675353,
+      "title": "Sonic 2: La película",
+      "year": 2022,
+      "saga": "Sonic - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva amenaza, trama independiente y sencilla"
+    },
+    {
+      "tmdb_id": 8078,
+      "title": "Alien: Resurrección",
+      "year": 1997,
+      "saga": "Alien - Colección",
+      "requiere_contexto": true,
+      "motivo": "premisa depende del sacrificio de Ripley en la anterior"
+    },
+    {
+      "tmdb_id": 613504,
+      "title": "After: En mil pedazos",
+      "year": 2020,
+      "saga": "After - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa directamente la relación romántica del primer film"
+    },
+    {
+      "tmdb_id": 425909,
+      "title": "Cazafantasmas: Más allá",
+      "year": 2021,
+      "saga": "Los Cazafantasmas - Colección",
+      "requiere_contexto": true,
+      "motivo": "misterio central depende de conocer al Cazafantasmas original"
+    },
+    {
+      "tmdb_id": 338953,
+      "title": "Animales fantásticos III. Los secretos de Dumbledore",
+      "year": 2022,
+      "saga": "Animales fantásticos - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa tramas de Grindelwald y Credence sin recapitular"
+    },
+    {
+      "tmdb_id": 583083,
+      "title": "Mi primer beso 2",
+      "year": 2020,
+      "saga": "Mi primer beso - Colección",
+      "requiere_contexto": true,
+      "motivo": "depende de la relación y decisiones de la primera"
+    },
+    {
+      "tmdb_id": 476669,
+      "title": "The King's Man: La primera misión",
+      "year": 2021,
+      "saga": "Kingsman - Colección",
+      "requiere_contexto": false,
+      "motivo": "precuela de origen, independiente de la saga posterior"
+    },
+    {
+      "tmdb_id": 786892,
+      "title": "Mad Max. Furiosa",
+      "year": 2024,
+      "saga": "Mad Max - Colección",
+      "requiere_contexto": false,
+      "motivo": "origen autónomo, el mundo se explica solo"
+    },
+    {
+      "tmdb_id": 2978,
+      "title": "Cazafantasmas II",
+      "year": 1989,
+      "saga": "Los Cazafantasmas - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva amenaza en Nueva York, historia autónoma"
+    },
+    {
+      "tmdb_id": 1374,
+      "title": "Rocky IV",
+      "year": 1985,
+      "saga": "Rocky - Colección",
+      "requiere_contexto": true,
+      "motivo": "venganza depende de la muerte de Apollo, personaje previo"
+    },
+    {
+      "tmdb_id": 1367,
+      "title": "Rocky II",
+      "year": 1979,
+      "saga": "Rocky - Colección",
+      "requiere_contexto": true,
+      "motivo": "es la revancha directa que cierra el primer film"
+    },
+    {
+      "tmdb_id": 438695,
+      "title": "¡Canta! 2",
+      "year": 2021,
+      "saga": "¡Canta! - Colección",
+      "requiere_contexto": false,
+      "motivo": "nuevo desafío musical, historia independiente"
+    },
+    {
+      "tmdb_id": 558449,
+      "title": "Gladiator II",
+      "year": 2024,
+      "saga": "Gladiator - Colección",
+      "requiere_contexto": false,
+      "motivo": "nuevo protagonista con historia de venganza autónoma"
+    },
+    {
+      "tmdb_id": 1371,
+      "title": "Rocky III",
+      "year": 1982,
+      "saga": "Rocky - Colección",
+      "requiere_contexto": true,
+      "motivo": "depende del estatus de campeón ganado en la anterior"
+    },
+    {
+      "tmdb_id": 1369,
+      "title": "Rambo: Acorralado Parte II",
+      "year": 1985,
+      "saga": "Rambo - Colección",
+      "requiere_contexto": false,
+      "motivo": "misión de rescate autoconclusiva en Vietnam"
+    },
+    {
+      "tmdb_id": 8810,
+      "title": "Mad Max II. El guerrero de la carretera",
+      "year": 1981,
+      "saga": "Mad Max - Colección",
+      "requiere_contexto": false,
+      "motivo": "mundo post-apocalíptico se explica por sí solo"
+    },
+    {
+      "tmdb_id": 658,
+      "title": "James Bond contra Goldfinger",
+      "year": 1964,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "misión episódica de Bond, autoconclusiva"
+    },
+    {
+      "tmdb_id": 942,
+      "title": "Arma letal II",
+      "year": 1989,
+      "saga": "Arma letal - Colección",
+      "requiere_contexto": false,
+      "motivo": "caso policial nuevo e independiente"
+    },
+    {
+      "tmdb_id": 1370,
+      "title": "Rambo III",
+      "year": 1988,
+      "saga": "Rambo - Colección",
+      "requiere_contexto": false,
+      "motivo": "misión de rescate autónoma en Afganistán"
+    },
+    {
+      "tmdb_id": 657,
+      "title": "Desde Rusia con amor",
+      "year": 1963,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Bond es episódica, cada misión se resuelve sola"
+    },
+    {
+      "tmdb_id": 9355,
+      "title": "Mad Max III. Más allá de la cúpula del trueno",
+      "year": 1985,
+      "saga": "Mad Max - Colección",
+      "requiere_contexto": false,
+      "motivo": "Mundo post-apocalíptico se explica solo"
+    },
+    {
+      "tmdb_id": 96,
+      "title": "Superdetective en Hollywood II",
+      "year": 1987,
+      "saga": "Superdetective en Hollywood - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia policial autoconclusiva, sin tramas pendientes"
+    },
+    {
+      "tmdb_id": 660,
+      "title": "Operación Trueno",
+      "year": 1965,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond independiente, no continúa trama previa"
+    },
+    {
+      "tmdb_id": 8856,
+      "title": "Karate Kid II, la historia continúa",
+      "year": 1986,
+      "saga": "Karate Kid - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva historia en Okinawa, se entiende sin la primera"
+    },
+    {
+      "tmdb_id": 667,
+      "title": "Sólo se vive dos veces",
+      "year": 1967,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 681,
+      "title": "Diamantes para la eternidad",
+      "year": 1971,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 253,
+      "title": "Vive y deja morir",
+      "year": 1973,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo Bond, nueva trama, no depende de anteriores"
+    },
+    {
+      "tmdb_id": 682,
+      "title": "El hombre de la pistola de oro",
+      "year": 1974,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 11281,
+      "title": "Halloween II: Sanguinario",
+      "year": 1981,
+      "saga": "Halloween - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa literalmente la misma noche que la primera"
+    },
+    {
+      "tmdb_id": 691,
+      "title": "La espía que me amó",
+      "year": 1977,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 698,
+      "title": "Moonraker",
+      "year": 1979,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 700,
+      "title": "Octopussy",
+      "year": 1983,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 707,
+      "title": "Panorama para matar",
+      "year": 1985,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 709,
+      "title": "Licencia para matar",
+      "year": 1989,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 668,
+      "title": "007 al servicio secreto de su Majestad",
+      "year": 1969,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 154,
+      "title": "Star Trek II. La ira de Khan",
+      "year": 1982,
+      "saga": "Star Trek: La serie original - Colección",
+      "requiere_contexto": false,
+      "motivo": "Khan viene de un episodio de TV, no de película previa"
+    },
+    {
+      "tmdb_id": 579,
+      "title": "Tiburón 2",
+      "year": 1978,
+      "saga": "Tiburón - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo ataque de tiburón, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 699,
+      "title": "Sólo para sus ojos",
+      "year": 1981,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión Bond autónoma"
+    },
+    {
+      "tmdb_id": 1685,
+      "title": "Regreso al planeta de los simios",
+      "year": 1970,
+      "saga": "El planeta de los simios (Original) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Arranca buscando a Taylor, depende del final anterior"
+    },
+    {
+      "tmdb_id": 9385,
+      "title": "Las doce pruebas de Astérix",
+      "year": 1976,
+      "saga": "Astérix y Obélix (Animación) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura autoconclusiva de Astérix"
+    },
+    {
+      "tmdb_id": 1687,
+      "title": "Huida del planeta de los simios",
+      "year": 1971,
+      "saga": "El planeta de los simios (Original) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Los simios viajan en el tiempo tras el final previo"
+    },
+    {
+      "tmdb_id": 229,
+      "title": "La novia de Frankenstein",
+      "year": 1935,
+      "saga": "Frankenstein - Colección Universal",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente tras el incendio del final anterior"
+    },
+    {
+      "tmdb_id": 1688,
+      "title": "La rebelión de los simios",
+      "year": 1972,
+      "saga": "El planeta de los simios (Original) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Origen autoconclusivo de la rebelión de César"
+    },
+    {
+      "tmdb_id": 9929,
+      "title": "Astérix y Cleopatra",
+      "year": 1968,
+      "saga": "Astérix y Obélix (Animación) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura autoconclusiva de Astérix"
+    },
+    {
+      "tmdb_id": 10766,
+      "title": "La Maldición de Damien",
+      "year": 1978,
+      "saga": "La profecía - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva etapa de Damien, premisa se explica sola"
+    },
+    {
+      "tmdb_id": 11843,
+      "title": "El regreso de la pantera rosa",
+      "year": 1975,
+      "saga": "La pantera rosa (Original) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia episódica de Clouseau"
+    },
+    {
+      "tmdb_id": 1594,
+      "title": "El nuevo caso del inspector Clouseau",
+      "year": 1964,
+      "saga": "La pantera rosa (Original) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso autoconclusivo de Clouseau"
+    },
+    {
+      "tmdb_id": 12268,
+      "title": "La pantera rosa ataca de nuevo",
+      "year": 1976,
+      "saga": "La pantera rosa (Original) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia episódica de Clouseau"
+    },
+    {
+      "tmdb_id": 6081,
+      "title": "La venganza de la pantera rosa",
+      "year": 1978,
+      "saga": "La pantera rosa (Original) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia episódica de Clouseau"
+    },
+    {
+      "tmdb_id": 10711,
+      "title": "French Connection II",
+      "year": 1975,
+      "saga": "French Connection - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva investigación de Doyle en Francia, se sostiene sola"
+    },
+    {
+      "tmdb_id": 10869,
+      "title": "Herbie, un volante loco",
+      "year": 1974,
+      "saga": "Herbie - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva historia con Herbie, personajes nuevos"
+    },
+    {
+      "tmdb_id": 12639,
+      "title": "El regreso de los siete magníficos",
+      "year": 1966,
+      "saga": "Los siete magníficos - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva misión del pueblo, western autoconclusivo"
+    },
+    {
+      "tmdb_id": 4558,
+      "title": "Orfeo",
+      "year": 1950,
+      "saga": "The Orphic Trilogy",
+      "requiere_contexto": false,
+      "motivo": "Vínculo temático, no narrativo, con la trilogía"
+    },
+    {
+      "tmdb_id": 246655,
+      "title": "X-Men: Apocalipsis",
+      "year": 2016,
+      "saga": "X-Men - Colección",
+      "requiere_contexto": false,
+      "motivo": "Mundo mutante y nuevo elenco se explican solos"
+    },
+    {
+      "tmdb_id": 260513,
+      "title": "Los Increíbles 2",
+      "year": 2018,
+      "saga": "Los Increíbles - Colección",
+      "requiere_contexto": true,
+      "motivo": "Arranca justo donde terminó la primera"
+    },
+    {
+      "tmdb_id": 49538,
+      "title": "X-Men: Primera Generación",
+      "year": 2011,
+      "saga": "X-Men - Colección",
+      "requiere_contexto": false,
+      "motivo": "Origen que presenta personajes desde cero"
+    },
+    {
+      "tmdb_id": 131634,
+      "title": "Los Juegos del Hambre: Sinsajo - Parte 2",
+      "year": 2015,
+      "saga": "Los Juegos del Hambre - Colección",
+      "requiere_contexto": true,
+      "motivo": "Segunda mitad literal de Sinsajo Parte 1"
+    },
+    {
+      "tmdb_id": 166426,
+      "title": "Piratas del Caribe: La venganza de Salazar",
+      "year": 2017,
+      "saga": "Piratas del Caribe - Colección",
+      "requiere_contexto": true,
+      "motivo": "Rescate de Will Turner depende de la trilogía original"
+    },
+    {
+      "tmdb_id": 351286,
+      "title": "Jurassic World: El reino caído",
+      "year": 2018,
+      "saga": "Jurassic Park - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente la crisis abierta en Jurassic World"
+    },
+    {
+      "tmdb_id": 127380,
+      "title": "Buscando a Dory",
+      "year": 2016,
+      "saga": "Buscando a Nemo - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia de Dory autoconclusiva, aunque gana con contexto"
+    },
+    {
+      "tmdb_id": 119450,
+      "title": "El amanecer del planeta de los simios",
+      "year": 2014,
+      "saga": "El Planeta de los Simios (El Origen) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende del vínculo Caesar-Will de la película anterior"
+    },
+    {
+      "tmdb_id": 93456,
+      "title": "Gru 2. Mi villano favorito",
+      "year": 2013,
+      "saga": "Gru, mi villano favorito - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva trama de espionaje, se sostiene sola"
+    },
+    {
+      "tmdb_id": 458156,
+      "title": "John Wick: Capítulo 3 - Parabellum",
+      "year": 2019,
+      "saga": "John Wick - Colección",
+      "requiere_contexto": true,
+      "motivo": "Parte de su condición de 'excomulgado' del final anterior"
+    },
+    {
+      "tmdb_id": 291805,
+      "title": "Ahora me ves 2",
+      "year": 2016,
+      "saga": "Ahora me ves - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende de la revelación de Dylan y los Horsemen"
+    },
+    {
+      "tmdb_id": 338952,
+      "title": "Animales fantásticos II. Los crímenes de Grindelwald",
+      "year": 2018,
+      "saga": "Animales fantásticos - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa tramas y personajes sin reintroducirlos"
+    },
+    {
+      "tmdb_id": 62211,
+      "title": "Monstruos University",
+      "year": 2013,
+      "saga": "Monstruos, S.A. - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela universitaria, presenta todo desde el inicio"
+    },
+    {
+      "tmdb_id": 45243,
+      "title": "Resacón 2: ¡Ahora en Tailandia!",
+      "year": 2011,
+      "saga": "Resacón - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misma fórmula, historia nueva y cerrada"
+    },
+    {
+      "tmdb_id": 168259,
+      "title": "Fast & Furious 7",
+      "year": 2015,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": true,
+      "motivo": "Venganza de Shaw por la muerte de Han en la anterior"
+    },
+    {
+      "tmdb_id": 206647,
+      "title": "Spectre",
+      "year": 2015,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión de Bond autoconclusiva pese al hilo Spectre"
+    },
+    {
+      "tmdb_id": 82992,
+      "title": "Fast & Furious 6",
+      "year": 2013,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": true,
+      "motivo": "Regreso de Letty solo se entiende con la anterior"
+    },
+    {
+      "tmdb_id": 343668,
+      "title": "Kingsman: El círculo de oro",
+      "year": 2017,
+      "saga": "Kingsman - Colección",
+      "requiere_contexto": true,
+      "motivo": "El regreso de Harry pierde peso sin la primera"
+    },
+    {
+      "tmdb_id": 294254,
+      "title": "El corredor del laberinto II. Las pruebas",
+      "year": 2015,
+      "saga": "El corredor del laberinto - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa sin resolver el escape del laberinto anterior"
+    },
+    {
+      "tmdb_id": 41154,
+      "title": "Men in Black 3",
+      "year": 2012,
+      "saga": "Men in Black - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión de viaje en el tiempo autoconclusiva"
+    },
+    {
+      "tmdb_id": 58574,
+      "title": "Sherlock Holmes: Juego de sombras",
+      "year": 2011,
+      "saga": "Sherlock Holmes - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo caso detectivesco que se sostiene solo"
+    },
+    {
+      "tmdb_id": 181812,
+      "title": "Star Wars: El ascenso de Skywalker",
+      "year": 2019,
+      "saga": "La guerra de las galaxias - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierre de trilogía, inentendible sin las anteriores"
+    },
+    {
+      "tmdb_id": 337339,
+      "title": "Fast & Furious 8",
+      "year": 2017,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": true,
+      "motivo": "Traición de Dom depende de vínculos de películas previas"
+    },
+    {
+      "tmdb_id": 56292,
+      "title": "Misión imposible: Protocolo fantasma",
+      "year": 2011,
+      "saga": "Misión imposible - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión independiente típica de la saga"
+    },
+    {
+      "tmdb_id": 301528,
+      "title": "Toy Story 4",
+      "year": 2019,
+      "saga": "Toy Story - Colección",
+      "requiere_contexto": true,
+      "motivo": "El arco emocional de Woody depende de las anteriores"
+    },
+    {
+      "tmdb_id": 82702,
+      "title": "Cómo entrenar a tu dragón 2",
+      "year": 2014,
+      "saga": "Cómo entrenar a tu dragón - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura de dragones que se explica sola"
+    },
+    {
+      "tmdb_id": 330457,
+      "title": "Frozen 2",
+      "year": 2019,
+      "saga": "Frozen - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva búsqueda mitológica autoconclusiva"
+    },
+    {
+      "tmdb_id": 281338,
+      "title": "La guerra del planeta de los simios",
+      "year": 2017,
+      "saga": "El Planeta de los Simios (El Origen) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Guerra continúa el conflicto humano-simio previo sin explicarlo"
+    },
+    {
+      "tmdb_id": 177677,
+      "title": "Misión imposible: Nación secreta",
+      "year": 2015,
+      "saga": "Misión imposible - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión autónoma dentro de la saga"
+    },
+    {
+      "tmdb_id": 54138,
+      "title": "Star Trek II. En la oscuridad",
+      "year": 2013,
+      "saga": "Star Trek: La realidad alternativa - Colección",
+      "requiere_contexto": false,
+      "motivo": "Amenaza de Khan resuelta dentro de la propia película"
+    },
+    {
+      "tmdb_id": 474350,
+      "title": "It: Capítulo 2",
+      "year": 2019,
+      "saga": "It - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende de eventos y traumas de la primera parte"
+    },
+    {
+      "tmdb_id": 126889,
+      "title": "Alien: Covenant",
+      "year": 2017,
+      "saga": "Prometheus - Colección",
+      "requiere_contexto": true,
+      "motivo": "Misterio de David depende del final de Prometheus"
+    },
+    {
+      "tmdb_id": 512200,
+      "title": "Jumanji: Siguiente nivel",
+      "year": 2019,
+      "saga": "Jumanji - Colección",
+      "requiere_contexto": true,
+      "motivo": "Humor y avatares dependen de asignaciones de la primera"
+    },
+    {
+      "tmdb_id": 50620,
+      "title": "Crepúsculo V. Amanecer II",
+      "year": 2012,
+      "saga": "La saga Crepúsculo - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierre directo de Amanecer Parte 1"
+    },
+    {
+      "tmdb_id": 50619,
+      "title": "Crepúsculo IV. Amanecer",
+      "year": 2011,
+      "saga": "La saga Crepúsculo - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende del triángulo amoroso desarrollado antes"
+    },
+    {
+      "tmdb_id": 24021,
+      "title": "Crepúsculo III. Eclipse",
+      "year": 2010,
+      "saga": "La saga Crepúsculo - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa el conflicto Bella-Edward-Jacob sin reexplicarlo"
+    },
+    {
+      "tmdb_id": 259693,
+      "title": "Expediente Warren: El caso Enfield",
+      "year": 2016,
+      "saga": "Expediente Warren [The Conjuring] - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso nuevo tipo antología, autoconclusivo"
+    },
+    {
+      "tmdb_id": 8373,
+      "title": "Transformers: La venganza de los caídos",
+      "year": 2009,
+      "saga": "Transformers - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva amenaza robótica entendible por sí sola"
+    },
+    {
+      "tmdb_id": 47971,
+      "title": "xXx: Reactivated",
+      "year": 2017,
+      "saga": "xXx - Colección",
+      "requiere_contexto": false,
+      "motivo": "Reinicio con nuevo protagonista y misión propia"
+    },
+    {
+      "tmdb_id": 353081,
+      "title": "Misión: Imposible - Fallout",
+      "year": 2018,
+      "saga": "Misión imposible - Colección",
+      "requiere_contexto": true,
+      "motivo": "Persigue a Lane, capturado en la película anterior"
+    },
+    {
+      "tmdb_id": 217,
+      "title": "Indiana Jones y el reino de la calavera de cristal",
+      "year": 2008,
+      "saga": "Indiana Jones - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura autoconclusiva, no depende de las anteriores"
+    },
+    {
+      "tmdb_id": 38356,
+      "title": "Transformers: El lado oscuro de la Luna",
+      "year": 2011,
+      "saga": "Transformers - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva amenaza autocontenida con recapitulación suficiente"
+    },
+    {
+      "tmdb_id": 8355,
+      "title": "Ice Age 3: El origen de los dinosaurios",
+      "year": 2009,
+      "saga": "Ice Age - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura independiente de los dinosaurios"
+    },
+    {
+      "tmdb_id": 51497,
+      "title": "Fast & Furious 5",
+      "year": 2011,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": false,
+      "motivo": "heist autocontenido, personajes se presentan bien"
+    },
+    {
+      "tmdb_id": 10764,
+      "title": "Quantum of Solace",
+      "year": 2008,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": true,
+      "motivo": "continúa directo tras Casino Royale, trama de Vesper"
+    },
+    {
+      "tmdb_id": 49013,
+      "title": "Cars 2",
+      "year": 2011,
+      "saga": "Cars - Colección",
+      "requiere_contexto": false,
+      "motivo": "trama de espionaje nueva y autoconclusiva"
+    },
+    {
+      "tmdb_id": 2503,
+      "title": "El ultimátum de Bourne",
+      "year": 2007,
+      "saga": "Bourne - Colección",
+      "requiere_contexto": true,
+      "motivo": "arranca justo donde termina la anterior, sin cerrar"
+    },
+    {
+      "tmdb_id": 337167,
+      "title": "Cincuenta sombras liberadas",
+      "year": 2018,
+      "saga": "Cincuenta sombras de Grey - Colección",
+      "requiere_contexto": true,
+      "motivo": "cierra conflictos y romance de las dos anteriores"
+    },
+    {
+      "tmdb_id": 2502,
+      "title": "El mito de Bourne",
+      "year": 2004,
+      "saga": "Bourne - Colección",
+      "requiere_contexto": true,
+      "motivo": "venganza por Marie, depende del final de la primera"
+    },
+    {
+      "tmdb_id": 584,
+      "title": "2 Fast 2 Furious: A todo gas 2",
+      "year": 2003,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": false,
+      "motivo": "reparto y trama nuevos, casi independiente"
+    },
+    {
+      "tmdb_id": 57800,
+      "title": "Ice Age 4: La formación de los continentes",
+      "year": 2012,
+      "saga": "Ice Age - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura del arca autoconclusiva"
+    },
+    {
+      "tmdb_id": 404368,
+      "title": "Ralph rompe Internet",
+      "year": 2018,
+      "saga": "¡Rompe Ralph! - Colección",
+      "requiere_contexto": false,
+      "motivo": "presenta el mundo de Internet desde cero"
+    },
+    {
+      "tmdb_id": 214756,
+      "title": "Ted 2",
+      "year": 2015,
+      "saga": "Ted - Colección",
+      "requiere_contexto": false,
+      "motivo": "trama legal autoconclusiva con humor propio"
+    },
+    {
+      "tmdb_id": 10192,
+      "title": "Shrek, felices para siempre",
+      "year": 2010,
+      "saga": "Shrek - Colección",
+      "requiere_contexto": true,
+      "motivo": "realidad alterna exige conocer la vida previa de Shrek"
+    },
+    {
+      "tmdb_id": 20526,
+      "title": "TRON: Legacy",
+      "year": 2010,
+      "saga": "TRON - Colección",
+      "requiere_contexto": false,
+      "motivo": "explica su mundo y protagonista de cero"
+    },
+    {
+      "tmdb_id": 49444,
+      "title": "Kung Fu Panda 2",
+      "year": 2011,
+      "saga": "Kung Fu Panda - Colección",
+      "requiere_contexto": false,
+      "motivo": "nuevo villano y origen explicados en la propia película"
+    },
+    {
+      "tmdb_id": 163,
+      "title": "Ocean's Twelve",
+      "year": 2004,
+      "saga": "Ocean's - Colección",
+      "requiere_contexto": true,
+      "motivo": "venganza de Benedict depende del robo original"
+    },
+    {
+      "tmdb_id": 331,
+      "title": "Jurassic Park III (Parque Jurásico III)",
+      "year": 2001,
+      "saga": "Jurassic Park - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva isla y peligro autoconclusivo"
+    },
+    {
+      "tmdb_id": 13804,
+      "title": "Fast & Furious: Aún más rápido",
+      "year": 2009,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": false,
+      "motivo": "venganza autoexplicada, personajes reintroducidos"
+    },
+    {
+      "tmdb_id": 1734,
+      "title": "La momia II. El regreso de la momia",
+      "year": 2001,
+      "saga": "La Momia - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva aventura con villano propio autoconclusivo"
+    },
+    {
+      "tmdb_id": 9615,
+      "title": "A todo gas: Tokyo Race",
+      "year": 2006,
+      "saga": "A todo gas - Colección",
+      "requiere_contexto": false,
+      "motivo": "reparto y trama totalmente independientes"
+    },
+    {
+      "tmdb_id": 956,
+      "title": "Misión imposible III",
+      "year": 2006,
+      "saga": "Misión imposible - Colección",
+      "requiere_contexto": false,
+      "motivo": "misión autoconclusiva con nuevo villano"
+    },
+    {
+      "tmdb_id": 324852,
+      "title": "Gru 3. Mi villano favorito",
+      "year": 2017,
+      "saga": "Gru, mi villano favorito - Colección",
+      "requiere_contexto": false,
+      "motivo": "revelación familiar y villano propios, se entiende sola"
+    },
+    {
+      "tmdb_id": 955,
+      "title": "Misión imposible II",
+      "year": 2000,
+      "saga": "Misión imposible - Colección",
+      "requiere_contexto": false,
+      "motivo": "misión de espionaje autoconclusiva"
+    },
+    {
+      "tmdb_id": 10527,
+      "title": "Madagascar 2",
+      "year": 2008,
+      "saga": "Madagascar - Colección",
+      "requiere_contexto": false,
+      "motivo": "viaje a casa con trama cerrada en sí misma"
+    },
+    {
+      "tmdb_id": 13448,
+      "title": "Ángeles y demonios",
+      "year": 2009,
+      "saga": "Robert Langdon - Colección",
+      "requiere_contexto": false,
+      "motivo": "misterio en el Vaticano autoconclusivo"
+    },
+    {
+      "tmdb_id": 296,
+      "title": "Terminator 3: La rebelión de las máquinas",
+      "year": 2003,
+      "saga": "Terminator - Colección",
+      "requiere_contexto": false,
+      "motivo": "amenaza nueva, se explica el universo Terminator"
+    },
+    {
+      "tmdb_id": 18360,
+      "title": "Noche en el museo 2",
+      "year": 2009,
+      "saga": "Noche en el museo - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva locación y conflicto autoconclusivo"
+    },
+    {
+      "tmdb_id": 166428,
+      "title": "Cómo entrenar a tu dragón 3",
+      "year": 2019,
+      "saga": "Cómo entrenar a tu dragón - Colección",
+      "requiere_contexto": true,
+      "motivo": "cierra el arco emocional construido en la trilogía"
+    },
+    {
+      "tmdb_id": 534,
+      "title": "Terminator Salvation",
+      "year": 2009,
+      "saga": "Terminator - Colección",
+      "requiere_contexto": false,
+      "motivo": "guerra futura con nuevos personajes, autoconclusiva"
+    },
+    {
+      "tmdb_id": 298,
+      "title": "Ocean's Thirteen",
+      "year": 2007,
+      "saga": "Ocean's - Colección",
+      "requiere_contexto": false,
+      "motivo": "nuevo golpe con motivo propio, se entiende sola"
+    },
+    {
+      "tmdb_id": 2454,
+      "title": "Las crónicas de Narnia: El príncipe Caspian",
+      "year": 2008,
+      "saga": "Las crónicas de Narnia - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva aventura en Narnia, autoconclusiva"
+    },
+    {
+      "tmdb_id": 335988,
+      "title": "Transformers: El último caballero",
+      "year": 2017,
+      "saga": "Transformers - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva mitología explicada, trama cerrada"
+    },
+    {
+      "tmdb_id": 373571,
+      "title": "Godzilla: Rey de los Monstruos",
+      "year": 2019,
+      "saga": "Godzilla - Colección",
+      "requiere_contexto": false,
+      "motivo": "batalla de monstruos autoconclusiva"
+    },
+    {
+      "tmdb_id": 140300,
+      "title": "Kung Fu Panda 3",
+      "year": 2016,
+      "saga": "Kung Fu Panda - Colección",
+      "requiere_contexto": false,
+      "motivo": "revelación del padre biológico, historia cerrada"
+    },
+    {
+      "tmdb_id": 80321,
+      "title": "Madagascar 3: De marcha por Europa",
+      "year": 2012,
+      "saga": "Madagascar - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura circense autoconclusiva"
+    },
+    {
+      "tmdb_id": 38575,
+      "title": "Karate Kid",
+      "year": 2010,
+      "saga": "Karate Kid - Colección",
+      "requiere_contexto": false,
+      "motivo": "reinicio independiente, no requiere las anteriores"
+    },
+    {
+      "tmdb_id": 420809,
+      "title": "Maléfica: Maestra del mal",
+      "year": 2019,
+      "saga": "Maléfica - Colección",
+      "requiere_contexto": false,
+      "motivo": "conflicto familiar y político autoconclusivo"
+    },
+    {
+      "tmdb_id": 260514,
+      "title": "Cars 3",
+      "year": 2017,
+      "saga": "Cars - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia sobre el envejecimiento, autoconclusiva"
+    },
+    {
+      "tmdb_id": 1571,
+      "title": "La jungla 4.0",
+      "year": 2007,
+      "saga": "La jungla de cristal - Colección",
+      "requiere_contexto": false,
+      "motivo": "acción autoconclusiva, protagonista ya conocido pero no imprescindible"
+    },
+    {
+      "tmdb_id": 324668,
+      "title": "Jason Bourne",
+      "year": 2016,
+      "saga": "Bourne - Colección",
+      "requiere_contexto": true,
+      "motivo": "trama y personajes dependen de Treadstone y su padre"
+    },
+    {
+      "tmdb_id": 260346,
+      "title": "V3nganza",
+      "year": 2014,
+      "saga": "Venganza - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva trama de venganza autoconclusiva"
+    },
+    {
+      "tmdb_id": 159824,
+      "title": "Hotel Transilvania 2",
+      "year": 2015,
+      "saga": "Hotel Transilvania - Colección",
+      "requiere_contexto": false,
+      "motivo": "comedia familiar autoconclusiva"
+    },
+    {
+      "tmdb_id": 396422,
+      "title": "Annabelle: Creation",
+      "year": 2017,
+      "saga": "Annabelle - Colección",
+      "requiere_contexto": false,
+      "motivo": "precuela de origen, autoconclusiva"
+    },
+    {
+      "tmdb_id": 8961,
+      "title": "Dos policías rebeldes II",
+      "year": 2003,
+      "saga": "Dos policías rebeldes - Colección",
+      "requiere_contexto": false,
+      "motivo": "acción autoconclusiva, no depende de la primera"
+    },
+    {
+      "tmdb_id": 215,
+      "title": "Saw II",
+      "year": 2005,
+      "saga": "Saw - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva trampa y personajes, se sostiene sola"
+    },
+    {
+      "tmdb_id": 10140,
+      "title": "Las crónicas de Narnia: La travesía del viajero del alba",
+      "year": 2010,
+      "saga": "Las crónicas de Narnia - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva aventura autoconclusiva"
+    },
+    {
+      "tmdb_id": 1562,
+      "title": "28 semanas después",
+      "year": 2007,
+      "saga": "28 - Colección",
+      "requiere_contexto": false,
+      "motivo": "nuevo brote y personajes, autoconclusiva"
+    },
+    {
+      "tmdb_id": 6637,
+      "title": "La búsqueda 2: El diario secreto",
+      "year": 2007,
+      "saga": "La búsqueda - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva búsqueda del tesoro, se sostiene sola"
+    },
+    {
+      "tmdb_id": 36586,
+      "title": "Blade II",
+      "year": 2002,
+      "saga": "Blade - Trilogía",
+      "requiere_contexto": false,
+      "motivo": "aventura de monstruos autoconclusiva"
+    },
+    {
+      "tmdb_id": 9740,
+      "title": "Hannibal",
+      "year": 2001,
+      "saga": "Hannibal Lecter - Colección",
+      "requiere_contexto": true,
+      "motivo": "el vínculo con Clarice depende de El silencio de los inocentes"
+    },
+    {
+      "tmdb_id": 278154,
+      "title": "Ice Age: El gran cataclismo",
+      "year": 2016,
+      "saga": "Ice Age - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura cómica autoconclusiva"
+    },
+    {
+      "tmdb_id": 4233,
+      "title": "Scream 2",
+      "year": 1997,
+      "saga": "Scream - Colección",
+      "requiere_contexto": true,
+      "motivo": "motivo del asesino ligado al juicio de la primera película"
+    },
+    {
+      "tmdb_id": 109418,
+      "title": "Niños grandes 2",
+      "year": 2013,
+      "saga": "Niños grandes - Colección",
+      "requiere_contexto": false,
+      "motivo": "comedia autoconclusiva"
+    },
+    {
+      "tmdb_id": 400155,
+      "title": "Hotel Transilvania 3: Unas vacaciones monstruosas",
+      "year": 2018,
+      "saga": "Hotel Transilvania - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura familiar autoconclusiva"
+    },
+    {
+      "tmdb_id": 9732,
+      "title": "El rey león 2: El tesoro de Simba",
+      "year": 1998,
+      "saga": "El rey león (Animación) - Colección",
+      "requiere_contexto": false,
+      "motivo": "recapitula el pasado y cierra su propia historia"
+    },
+    {
+      "tmdb_id": 5175,
+      "title": "Hora punta II",
+      "year": 2001,
+      "saga": "Hora punta - Colección",
+      "requiere_contexto": false,
+      "motivo": "comedia policial autoconclusiva"
+    },
+    {
+      "tmdb_id": 9273,
+      "title": "Ace Ventura II. Operación África",
+      "year": 1995,
+      "saga": "Ace Ventura - Colección",
+      "requiere_contexto": false,
+      "motivo": "comedia autoconclusiva"
+    },
+    {
+      "tmdb_id": 710,
+      "title": "Goldeneye",
+      "year": 1995,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura de Bond autoconclusiva"
+    },
+    {
+      "tmdb_id": 912649,
+      "title": "Venom: El último baile",
+      "year": 2024,
+      "saga": "Venom - Colección",
+      "requiere_contexto": true,
+      "motivo": "cierra tramas de Knull iniciadas en entregas previas"
+    },
+    {
+      "tmdb_id": 653346,
+      "title": "El reino del planeta de los simios",
+      "year": 2024,
+      "saga": "El Planeta de los Simios (El Origen) - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva generación, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 505026,
+      "title": "Muerte en el Nilo",
+      "year": 2022,
+      "saga": "Hércules Poirot - Colección",
+      "requiere_contexto": false,
+      "motivo": "misterio de Poirot autoconclusivo"
+    },
+    {
+      "tmdb_id": 335977,
+      "title": "Indiana Jones y el dial del destino",
+      "year": 2023,
+      "saga": "Indiana Jones - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura nueva y autoconclusiva"
+    },
+    {
+      "tmdb_id": 379686,
+      "title": "Space Jam: Nuevas leyendas",
+      "year": 2021,
+      "saga": "Space Jam - Colección",
+      "requiere_contexto": false,
+      "motivo": "historia nueva con LeBron, autoconclusiva"
+    },
+    {
+      "tmdb_id": 529203,
+      "title": "Los Croods: Una nueva era",
+      "year": 2020,
+      "saga": "Los Croods - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura familiar autoconclusiva"
+    },
+    {
+      "tmdb_id": 4234,
+      "title": "Scream 3",
+      "year": 2000,
+      "saga": "Scream - Colección",
+      "requiere_contexto": true,
+      "motivo": "resolución ligada al pasado de la madre de Sidney"
+    },
+    {
+      "tmdb_id": 438148,
+      "title": "Minions: El origen de Gru",
+      "year": 2022,
+      "saga": "Los Minions - Colección",
+      "requiere_contexto": false,
+      "motivo": "precuela autoconclusiva"
+    },
+    {
+      "tmdb_id": 615656,
+      "title": "Megalodón 2: La fosa",
+      "year": 2023,
+      "saga": "Megalodón - Colección",
+      "requiere_contexto": false,
+      "motivo": "película de monstruos autoconclusiva"
+    },
+    {
+      "tmdb_id": 646385,
+      "title": "Scream",
+      "year": 2022,
+      "saga": "Scream - Colección",
+      "requiere_contexto": true,
+      "motivo": "misterio construido sobre los asesinatos originales"
+    },
+    {
+      "tmdb_id": 169,
+      "title": "Depredador 2",
+      "year": 1990,
+      "saga": "Predator - Colección",
+      "requiere_contexto": false,
+      "motivo": "acción alienígena autoconclusiva"
+    },
+    {
+      "tmdb_id": 713704,
+      "title": "Posesión infernal: El despertar",
+      "year": 2023,
+      "saga": "Evil Dead Standalone Collection",
+      "requiere_contexto": false,
+      "motivo": "colección standalone declarada, autoconclusiva"
+    },
+    {
+      "tmdb_id": 172385,
+      "title": "Río 2",
+      "year": 2014,
+      "saga": "Rio - Colección",
+      "requiere_contexto": false,
+      "motivo": "aventura familiar autoconclusiva"
+    },
+    {
+      "tmdb_id": 926393,
+      "title": "The Equalizer 3",
+      "year": 2023,
+      "saga": "The Equalizer (El protector) - Colección",
+      "requiere_contexto": false,
+      "motivo": "misión nueva y autoconclusiva"
+    },
+    {
+      "tmdb_id": 5174,
+      "title": "Hora punta III",
+      "year": 2007,
+      "saga": "Hora punta - Colección",
+      "requiere_contexto": false,
+      "motivo": "comedia policial autoconclusiva"
+    },
+    {
+      "tmdb_id": 817,
+      "title": "Austin Powers II. La espía que me achuchó",
+      "year": 1999,
+      "saga": "Austin Powers - Colección",
+      "requiere_contexto": false,
+      "motivo": "comedia de espías autoconclusiva"
+    },
+    {
+      "tmdb_id": 594767,
+      "title": "¡Shazam! La furia de los dioses",
+      "year": 2023,
+      "saga": "¡Shazam! - Colección",
+      "requiere_contexto": false,
+      "motivo": "villano y trama nuevos, autoconclusiva"
+    },
+    {
+      "tmdb_id": 11887,
+      "title": "High School Musical 3: Fin de curso",
+      "year": 2008,
+      "saga": "High School Musical - Colección",
+      "requiere_contexto": false,
+      "motivo": "musical romántico, se entiende rápido"
+    },
+    {
+      "tmdb_id": 1011985,
+      "title": "Kung Fu Panda 4",
+      "year": 2024,
+      "saga": "Kung Fu Panda - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva aventura y villano, autoconclusiva"
+    },
+    {
+      "tmdb_id": 1234821,
+      "title": "Jurassic World: El renacer",
+      "year": 2025,
+      "saga": "Jurassic Park - Colección",
+      "requiere_contexto": false,
+      "motivo": "nueva era, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 766,
+      "title": "El ejército de las tinieblas",
+      "year": 1992,
+      "saga": "Posesión infernal - Colección",
+      "requiere_contexto": true,
+      "motivo": "arranca literalmente donde terminó Evil Dead 2"
+    },
+    {
+      "tmdb_id": 572802,
+      "title": "Aquaman y el reino perdido",
+      "year": 2023,
+      "saga": "Aquaman - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura autoconclusiva, el mundo se explica de nuevo"
+    },
+    {
+      "tmdb_id": 714,
+      "title": "El mañana nunca muere",
+      "year": 1997,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Bond formula: caso nuevo, sin depender de anteriores"
+    },
+    {
+      "tmdb_id": 818,
+      "title": "Austin Powers en Miembro de Oro",
+      "year": 2002,
+      "saga": "Austin Powers - Colección",
+      "requiere_contexto": false,
+      "motivo": "Parodia con caso propio, chistes se explican solos"
+    },
+    {
+      "tmdb_id": 15969,
+      "title": "El retorno de Jafar",
+      "year": 1994,
+      "saga": "Aladdin (Animación) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa justo después de Aladdín, venganza de Jafar"
+    },
+    {
+      "tmdb_id": 1242898,
+      "title": "Predator: Badlands",
+      "year": 2025,
+      "saga": "Predator - Colección",
+      "requiere_contexto": false,
+      "motivo": "Protagonista y trama nuevos, no depende de anteriores"
+    },
+    {
+      "tmdb_id": 573435,
+      "title": "Bad Boys: Ride or Die",
+      "year": 2024,
+      "saga": "Dos policías rebeldes - Colección",
+      "requiere_contexto": true,
+      "motivo": "Sigue el giro de Armando de la película anterior"
+    },
+    {
+      "tmdb_id": 939243,
+      "title": "Sonic 3: La película",
+      "year": 2024,
+      "saga": "Sonic - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura familiar con equipo ya formado, se entiende sola"
+    },
+    {
+      "tmdb_id": 412117,
+      "title": "Mascotas 2",
+      "year": 2019,
+      "saga": "Mascotas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia episódica de mascotas, autoconclusiva"
+    },
+    {
+      "tmdb_id": 2758,
+      "title": "La familia Addams: La tradición continúa",
+      "year": 1993,
+      "saga": "La familia Addams - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia familiar independiente, personajes se presentan solos"
+    },
+    {
+      "tmdb_id": 36643,
+      "title": "El mundo nunca es suficiente",
+      "year": 1999,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso Bond autónomo, sin depender de entregas previas"
+    },
+    {
+      "tmdb_id": 943,
+      "title": "Arma letal III",
+      "year": 1992,
+      "saga": "Arma letal - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso policial propio, relación de personajes ya clara"
+    },
+    {
+      "tmdb_id": 519182,
+      "title": "Gru 4. Mi villano favorito",
+      "year": 2024,
+      "saga": "Gru, mi villano favorito - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia familiar cerrada, villano nuevo, se entiende sola"
+    },
+    {
+      "tmdb_id": 934433,
+      "title": "Scream VI",
+      "year": 2023,
+      "saga": "Scream - Colección",
+      "requiere_contexto": true,
+      "motivo": "Retoma trauma y sobrevivientes del reboot anterior directamente"
+    },
+    {
+      "tmdb_id": 917496,
+      "title": "Bitelchús Bitelchús",
+      "year": 2024,
+      "saga": "Bitelchús - Colección",
+      "requiere_contexto": false,
+      "motivo": "Amenaza nueva y autoconclusiva, aunque gana con contexto"
+    },
+    {
+      "tmdb_id": 1084242,
+      "title": "Zootrópolis 2",
+      "year": 2025,
+      "saga": "Zootrópolis - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misterio nuevo con dupla ya conocida, funciona solo"
+    },
+    {
+      "tmdb_id": 1241982,
+      "title": "Vaiana 2",
+      "year": 2024,
+      "saga": "Vaiana - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo viaje autoconclusivo, mundo se re-explica"
+    },
+    {
+      "tmdb_id": 718821,
+      "title": "Twisters",
+      "year": 2024,
+      "saga": "Twister - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia y elenco nuevos, conexión sólo temática"
+    },
+    {
+      "tmdb_id": 9801,
+      "title": "Bridget Jones: Sobreviviré",
+      "year": 2004,
+      "saga": "Bridget Jones - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia romántica con conflicto propio, se sostiene sola"
+    },
+    {
+      "tmdb_id": 610150,
+      "title": "Dragon Ball Super: Super Hero",
+      "year": 2022,
+      "saga": "Dragon Ball Super - Colección",
+      "requiere_contexto": false,
+      "motivo": "Villano y trama nuevos, se explica sin ver series previas"
+    },
+    {
+      "tmdb_id": 944,
+      "title": "Arma letal IV",
+      "year": 1998,
+      "saga": "Arma letal - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso policial autónomo dentro de la saga"
+    },
+    {
+      "tmdb_id": 575265,
+      "title": "Misión: Imposible - Sentencia final",
+      "year": 2025,
+      "saga": "Misión imposible - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierre directo de la trama dejada en Dead Reckoning"
+    },
+    {
+      "tmdb_id": 574475,
+      "title": "Destino final: Lazos de sangre",
+      "year": 2025,
+      "saga": "Destino final - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo grupo y premisa, formato antológico autoconclusivo"
+    },
+    {
+      "tmdb_id": 677179,
+      "title": "Creed III",
+      "year": 2023,
+      "saga": "Creed - Colección",
+      "requiere_contexto": false,
+      "motivo": "Drama de boxeo con conflicto nuevo y cerrado"
+    },
+    {
+      "tmdb_id": 37137,
+      "title": "Agárralo como puedas 2½: El aroma del miedo",
+      "year": 1991,
+      "saga": "Agárralo como puedas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Parodia con caso propio, autoconclusiva"
+    },
+    {
+      "tmdb_id": 1100988,
+      "title": "28 años después",
+      "year": 2025,
+      "saga": "28 - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevos personajes, el mundo infectado se re-explica"
+    },
+    {
+      "tmdb_id": 744275,
+      "title": "After: Almas perdidas",
+      "year": 2021,
+      "saga": "After - Colección",
+      "requiere_contexto": true,
+      "motivo": "Drama romántico serializado, depende de la relación previa"
+    },
+    {
+      "tmdb_id": 762509,
+      "title": "Mufasa: El rey león",
+      "year": 2024,
+      "saga": "El rey león - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela autoconclusiva sobre el origen de Mufasa"
+    },
+    {
+      "tmdb_id": 812583,
+      "title": "Puñales por la espalda III. De entre los muertos",
+      "year": 2025,
+      "saga": "Puñales por la espalda - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misterio antológico con caso y detective nuevos"
+    },
+    {
+      "tmdb_id": 459151,
+      "title": "El bebé jefazo: Negocios de familia",
+      "year": 2021,
+      "saga": "El bebé jefazo - Colección",
+      "requiere_contexto": false,
+      "motivo": "Villano y trama nuevos, premisa se recuerda en pantalla"
+    },
+    {
+      "tmdb_id": 36593,
+      "title": "Agárralo como puedas 33⅓: El insulto final",
+      "year": 1994,
+      "saga": "Agárralo como puedas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Parodia autoconclusiva, sin arcos pendientes"
+    },
+    {
+      "tmdb_id": 968051,
+      "title": "La monja II",
+      "year": 2023,
+      "saga": "La Monja - Colección",
+      "requiere_contexto": true,
+      "motivo": "Sigue directamente a Irene enfrentando a Valak otra vez"
+    },
+    {
+      "tmdb_id": 1251,
+      "title": "Cartas desde Iwo Jima",
+      "year": 2006,
+      "saga": "La batalla de Iwo Jima - Colección",
+      "requiere_contexto": false,
+      "motivo": "Perspectiva independiente de la misma batalla, se sostiene sola"
+    },
+    {
+      "tmdb_id": 1100782,
+      "title": "Smile 2",
+      "year": 2024,
+      "saga": "Smile - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva protagonista, la maldición se explica de nuevo"
+    },
+    {
+      "tmdb_id": 967847,
+      "title": "Cazafantasmas: Imperio helado",
+      "year": 2024,
+      "saga": "Los Cazafantasmas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Amenaza nueva y cerrada, elenco se re-presenta"
+    },
+    {
+      "tmdb_id": 9255,
+      "title": "Hot Shots! 2",
+      "year": 1993,
+      "saga": "Hot Shots! - Colección",
+      "requiere_contexto": false,
+      "motivo": "Parodia con caso propio, autoconclusiva"
+    },
+    {
+      "tmdb_id": 11357,
+      "title": "Halloween 4: El regreso de Michael Myers",
+      "year": 1988,
+      "saga": "Halloween - Colección",
+      "requiere_contexto": false,
+      "motivo": "Michael acecha víctima nueva, fórmula slasher autónoma"
+    },
+    {
+      "tmdb_id": 708,
+      "title": "Alta tensión",
+      "year": 1987,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso Bond independiente, sin depender de entregas previas"
+    },
+    {
+      "tmdb_id": 1038392,
+      "title": "Expediente Warren: El último rito",
+      "year": 2025,
+      "saga": "Expediente Warren [The Conjuring] - Colección",
+      "requiere_contexto": true,
+      "motivo": "Capítulo final que cierra el arco completo de los Warren"
+    },
+    {
+      "tmdb_id": 614479,
+      "title": "Insidious: La puerta roja",
+      "year": 2023,
+      "saga": "Insidious - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende de recuerdos y trauma de las dos primeras"
+    },
+    {
+      "tmdb_id": 199,
+      "title": "Star Trek II. Primer contacto",
+      "year": 1996,
+      "saga": "Star Trek: La nueva generación - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura de viaje en el tiempo autoconclusiva"
+    },
+    {
+      "tmdb_id": 9725,
+      "title": "Viernes 13, 2ª parte",
+      "year": 1981,
+      "saga": "Viernes 13 - Colección",
+      "requiere_contexto": false,
+      "motivo": "Slasher autoconclusivo, nueva ronda de asesinatos"
+    },
+    {
+      "tmdb_id": 8689,
+      "title": "Holocausto caníbal",
+      "year": 1980,
+      "saga": "Ад каннибалов",
+      "requiere_contexto": false,
+      "motivo": "Historia autoconclusiva, no depende de entregas previas"
+    },
+    {
+      "tmdb_id": 18491,
+      "title": "Neon Genesis Evangelion: The End of Evangelion",
+      "year": 1997,
+      "saga": "Evangelion - Colección",
+      "requiere_contexto": true,
+      "motivo": "Final alternativo de la serie, ininteligible sin ella"
+    },
+    {
+      "tmdb_id": 1007734,
+      "title": "Nadie 2",
+      "year": 2025,
+      "saga": "Nadie - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura de acción autónoma, premisa se reexplica"
+    },
+    {
+      "tmdb_id": 1311031,
+      "title": "Guardianes de la noche: Kimetsu no Yaiba La fortaleza infinita",
+      "year": 2025,
+      "saga": "Demon Slayer: Kimetsu no Yaiba Collection",
+      "requiere_contexto": true,
+      "motivo": "Arranca a mitad de arco, personajes ya establecidos"
+    },
+    {
+      "tmdb_id": 168,
+      "title": "Star Trek IV. Misión salvar la Tierra",
+      "year": 1986,
+      "saga": "Star Trek: La serie original - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directo las consecuencias de la película III"
+    },
+    {
+      "tmdb_id": 1156593,
+      "title": "Culpa tuya",
+      "year": 2024,
+      "saga": "Culpables - Colección",
+      "requiere_contexto": true,
+      "motivo": "Romance seriado, la relación previa define todo"
+    },
+    {
+      "tmdb_id": 618344,
+      "title": "Liga de la Justicia Oscura: La Guerra Apokolips",
+      "year": 2020,
+      "saga": "Liga de la Justicia Oscura (Animación) - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra arco previo, muertes sin peso sin contexto"
+    },
+    {
+      "tmdb_id": 110,
+      "title": "Tres colores: Rojo",
+      "year": 1994,
+      "saga": "Tres colores - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia y personajes propios, solo comparte tema"
+    },
+    {
+      "tmdb_id": 11873,
+      "title": "El color del dinero",
+      "year": 1986,
+      "saga": "El buscavidas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura de Eddie, se sostiene sola"
+    },
+    {
+      "tmdb_id": 533533,
+      "title": "TRON: Ares",
+      "year": 2025,
+      "saga": "TRON - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia nueva, solo comparte universo Grid"
+    },
+    {
+      "tmdb_id": 157,
+      "title": "Star Trek III. En busca de Spock",
+      "year": 1984,
+      "saga": "Star Trek: La serie original - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende de la muerte de Spock en la anterior"
+    },
+    {
+      "tmdb_id": 9730,
+      "title": "Viernes 13. Último capítulo",
+      "year": 1984,
+      "saga": "Viernes 13 - Colección",
+      "requiere_contexto": false,
+      "motivo": "Slasher autoconclusivo, trama de una noche"
+    },
+    {
+      "tmdb_id": 8408,
+      "title": "El día de los muertos",
+      "year": 1985,
+      "saga": "La noche de los muertos vivientes - Colección",
+      "requiere_contexto": false,
+      "motivo": "Supervivencia en búnker, premisa propia y cerrada"
+    },
+    {
+      "tmdb_id": 10225,
+      "title": "Viernes 13. 6ª parte: Jason vive",
+      "year": 1986,
+      "saga": "Viernes 13 - Colección",
+      "requiere_contexto": false,
+      "motivo": "Slasher autoconclusivo, se explica solo"
+    },
+    {
+      "tmdb_id": 200,
+      "title": "Star Trek III. Insurrección",
+      "year": 1998,
+      "saga": "Star Trek: La nueva generación - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura episódica independiente de la Nueva Generación"
+    },
+    {
+      "tmdb_id": 109,
+      "title": "Tres colores: Blanco",
+      "year": 1994,
+      "saga": "Tres colores - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia y personajes propios, solo comparte tema"
+    },
+    {
+      "tmdb_id": 10303,
+      "title": "La joya del Nilo",
+      "year": 1985,
+      "saga": "Tras el corazón - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura autoconclusiva de la pareja protagonista"
+    },
+    {
+      "tmdb_id": 592350,
+      "title": "My Hero Academia: El despertar de los héroes",
+      "year": 2019,
+      "saga": "My Hero Academia - Colección",
+      "requiere_contexto": true,
+      "motivo": "Asume conocer clase, poderes y vínculos previos"
+    },
+    {
+      "tmdb_id": 1159559,
+      "title": "Scream 7",
+      "year": 2026,
+      "saga": "Scream - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo misterio de asesino autoconclusivo, estilo whodunit"
+    },
+    {
+      "tmdb_id": 900667,
+      "title": "One Piece Film Red",
+      "year": 2022,
+      "saga": "One Piece - Colección",
+      "requiere_contexto": false,
+      "motivo": "Diseñada como entrada accesible centrada en Uta"
+    },
+    {
+      "tmdb_id": 1228246,
+      "title": "Five Nights at Freddy's 2",
+      "year": 2025,
+      "saga": "FNaF - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa misterio y personajes de la primera"
+    },
+    {
+      "tmdb_id": 967941,
+      "title": "Wicked Parte II",
+      "year": 2025,
+      "saga": "Wicked - Colección",
+      "requiere_contexto": true,
+      "motivo": "Es la segunda mitad literal de una sola historia"
+    },
+    {
+      "tmdb_id": 20982,
+      "title": "Naruto Shippuden 1: La Muerte de Naruto",
+      "year": 2007,
+      "saga": "Naruto Collection",
+      "requiere_contexto": true,
+      "motivo": "Continúa directo la serie, personajes ya conocidos"
+    },
+    {
+      "tmdb_id": 11285,
+      "title": "Cocoon: El retorno",
+      "year": 1988,
+      "saga": "Cocoon - Colección",
+      "requiere_contexto": true,
+      "motivo": "Premisa de inmortalidad ininteligible sin la primera"
+    },
+    {
+      "tmdb_id": 22843,
+      "title": "Evangelion: 2.0 You Can (Not) Advance",
+      "year": 2009,
+      "saga": "Reconstrucción de Evangelion - Colección",
+      "requiere_contexto": true,
+      "motivo": "Segunda parte de una reconstrucción en cuatro actos"
+    },
+    {
+      "tmdb_id": 34433,
+      "title": "Dragon Ball Z: ¡Arde! Una ardiente, intensa y super feroz batalla",
+      "year": 1993,
+      "saga": "Dragon Ball Z Películas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia paralela autoconclusiva, típica película especial"
+    },
+    {
+      "tmdb_id": 901362,
+      "title": "Trolls 3: Todos juntos",
+      "year": 2023,
+      "saga": "Trolls - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura infantil autocontenida, premisa simple"
+    },
+    {
+      "tmdb_id": 283566,
+      "title": "Evangelion: 3.0+1.01 Thrice Upon a Time",
+      "year": 2021,
+      "saga": "Reconstrucción de Evangelion - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierre final de una saga compleja de cuatro filmes"
+    },
+    {
+      "tmdb_id": 15255,
+      "title": "Invicto 2",
+      "year": 2006,
+      "saga": "Invicto - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo protagonista y trama, casi reinicio de saga"
+    },
+    {
+      "tmdb_id": 39107,
+      "title": "Dragon Ball Z: ¡El renacimiento de la fusión! Goku y Vegeta",
+      "year": 1995,
+      "saga": "Dragon Ball Z Películas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia paralela autoconclusiva, típica película especial"
+    },
+    {
+      "tmdb_id": 522478,
+      "title": "Peter Rabbit 2: A la fuga",
+      "year": 2021,
+      "saga": "Peter Rabbit - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura infantil autoconclusiva y liviana"
+    },
+    {
+      "tmdb_id": 1175942,
+      "title": "Los tipos malos 2",
+      "year": 2025,
+      "saga": "Los tipos malos - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo golpe autoconclusivo, comedia familiar"
+    },
+    {
+      "tmdb_id": 39108,
+      "title": "Dragon Ball Z: ¡La explosión del puño del dragón! Si Goku no puede hacerlo, ¿quién lo hará?",
+      "year": 1995,
+      "saga": "Dragon Ball Z Películas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia paralela autoconclusiva, típica película especial"
+    },
+    {
+      "tmdb_id": 11133,
+      "title": "Poltergeist II: El otro lado",
+      "year": 1986,
+      "saga": "Poltergeist - Colección",
+      "requiere_contexto": true,
+      "motivo": "Retoma trauma y familia establecidos en la original"
+    },
+    {
+      "tmdb_id": 1125257,
+      "title": "Ponte en mi lugar de nuevo",
+      "year": 2025,
+      "saga": "Ponte en mi lugar - Colección",
+      "requiere_contexto": false,
+      "motivo": "Intercambio de cuerpos se reexplica, comedia familiar"
+    },
+    {
+      "tmdb_id": 11966,
+      "title": "Cortocircuito 2",
+      "year": 1988,
+      "saga": "Cortocircuito - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura autoconclusiva de Johnny 5"
+    },
+    {
+      "tmdb_id": 10975,
+      "title": "La armadura de Dios 2: Operación Cóndor",
+      "year": 1991,
+      "saga": "La armadura de dios - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura de acción independiente y autoconclusiva"
+    },
+    {
+      "tmdb_id": 10753,
+      "title": "Superpolicia en apuros",
+      "year": 1988,
+      "saga": "Police Story - Colección",
+      "requiere_contexto": false,
+      "motivo": "Acción policial autoconclusiva, caso propio"
+    },
+    {
+      "tmdb_id": 39105,
+      "title": "Dragon Ball Z: ¡La Vía Láctea al límite! Un tipo super increíble",
+      "year": 1993,
+      "saga": "Dragon Ball Z Películas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia paralela autoconclusiva, típica película especial"
+    },
+    {
+      "tmdb_id": 11937,
+      "title": "Los dioses deben estar locos 2",
+      "year": 1989,
+      "saga": "Los dioses deben estar locos - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia episódica, historia autoconclusiva sin depender de la 1ª"
+    },
+    {
+      "tmdb_id": 14373,
+      "title": "Yo soy la justicia",
+      "year": 1982,
+      "saga": "Yo soy la justicia - Colección",
+      "requiere_contexto": false,
+      "motivo": "Secuela de venganza con trama propia, no continúa la anterior"
+    },
+    {
+      "tmdb_id": 36728,
+      "title": "Naruto Shippuden 3: Los Herederos de la Voluntad de Fuego",
+      "year": 2009,
+      "saga": "Naruto Collection",
+      "requiere_contexto": false,
+      "motivo": "Película filler de Naruto, historia paralela autoconclusiva"
+    },
+    {
+      "tmdb_id": 41498,
+      "title": "One Piece: Strong World",
+      "year": 2009,
+      "saga": "One Piece - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura independiente de One Piece, solo comparte universo"
+    },
+    {
+      "tmdb_id": 109439,
+      "title": "R3sacon",
+      "year": 2013,
+      "saga": "Resacón - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra el arco de Mr. Chow y del grupo iniciado antes"
+    },
+    {
+      "tmdb_id": 82675,
+      "title": "Venganza: Conexión Estambul",
+      "year": 2012,
+      "saga": "Venganza - Colección",
+      "requiere_contexto": false,
+      "motivo": "Trama de venganza autoexplicada, funciona como acción independiente"
+    },
+    {
+      "tmdb_id": 238636,
+      "title": "Anarchy: La noche de las bestias",
+      "year": 2014,
+      "saga": "The Purge: La noche de las bestias - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevos personajes, premisa del Purge se explica sola"
+    },
+    {
+      "tmdb_id": 338967,
+      "title": "Zombieland: Mata y remata",
+      "year": 2019,
+      "saga": "Zombieland - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevos personajes y amenaza, comedia zombie autoconclusiva"
+    },
+    {
+      "tmdb_id": 181533,
+      "title": "Noche en el museo: El secreto del faraón",
+      "year": 2014,
+      "saga": "Noche en el museo - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura standalone con premisa de museo mágico reexplicada"
+    },
+    {
+      "tmdb_id": 267860,
+      "title": "Objetivo: Londres",
+      "year": 2016,
+      "saga": "Objetivo - Colección",
+      "requiere_contexto": false,
+      "motivo": "Thriller de acción con trama propia, no depende de la anterior"
+    },
+    {
+      "tmdb_id": 9358,
+      "title": "Destino final 2",
+      "year": 2003,
+      "saga": "Destino final - Colección",
+      "requiere_contexto": false,
+      "motivo": "Premisa antológica de la muerte, nuevos personajes cada vez"
+    },
+    {
+      "tmdb_id": 1577,
+      "title": "Resident Evil 2: Apocalipsis",
+      "year": 2004,
+      "saga": "Resident Evil - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente la trama de Alice y Umbrella"
+    },
+    {
+      "tmdb_id": 7737,
+      "title": "Resident Evil III. Extinción",
+      "year": 2007,
+      "saga": "Resident Evil - Colección",
+      "requiere_contexto": true,
+      "motivo": "Prosigue la historia inconclusa de Alice tras Apocalipsis"
+    },
+    {
+      "tmdb_id": 9286,
+      "title": "Destino final 3",
+      "year": 2006,
+      "saga": "Destino final - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo grupo de personajes, premisa autocontenida"
+    },
+    {
+      "tmdb_id": 72545,
+      "title": "Viaje al centro de la Tierra II. La isla misteriosa",
+      "year": 2012,
+      "saga": "Viaje al centro de la Tierra Colección",
+      "requiere_contexto": false,
+      "motivo": "Elenco casi nuevo, aventura de isla independiente"
+    },
+    {
+      "tmdb_id": 52520,
+      "title": "Underworld: El despertar",
+      "year": 2012,
+      "saga": "Underworld - Colección",
+      "requiere_contexto": true,
+      "motivo": "Retoma guerra vampiros-humanos y personajes de entregas previas"
+    },
+    {
+      "tmdb_id": 35791,
+      "title": "Resident Evil IV. Ultratumba",
+      "year": 2010,
+      "saga": "Resident Evil - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente el final de Extinción"
+    },
+    {
+      "tmdb_id": 663,
+      "title": "Saw IV",
+      "year": 2007,
+      "saga": "Saw - Colección",
+      "requiere_contexto": true,
+      "motivo": "Trama de Jigsaw enlazada directamente con Saw III"
+    },
+    {
+      "tmdb_id": 55779,
+      "title": "Destino final 5",
+      "year": 2011,
+      "saga": "Destino final - Colección",
+      "requiere_contexto": false,
+      "motivo": "Premisa de accidentes fatales autocontenida, nuevos personajes"
+    },
+    {
+      "tmdb_id": 9335,
+      "title": "Transporter II",
+      "year": 2005,
+      "saga": "Transporter - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura de acción independiente con nueva trama"
+    },
+    {
+      "tmdb_id": 12437,
+      "title": "Underworld: La rebelión de los licántropos",
+      "year": 2009,
+      "saga": "Underworld - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela que narra el origen, se sostiene sola"
+    },
+    {
+      "tmdb_id": 8965,
+      "title": "Atlantis: El regreso de Milo",
+      "year": 2003,
+      "saga": "Atlantis - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventuras episódicas independientes ambientadas en Atlantis"
+    },
+    {
+      "tmdb_id": 11917,
+      "title": "Saw V",
+      "year": 2008,
+      "saga": "Saw - Colección",
+      "requiere_contexto": true,
+      "motivo": "Arranca directo del giro final de Saw IV"
+    },
+    {
+      "tmdb_id": 13387,
+      "title": "Transporter III",
+      "year": 2008,
+      "saga": "Transporter - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia de acción autónoma sin depender de anteriores"
+    },
+    {
+      "tmdb_id": 278924,
+      "title": "Mechanic: Resurrection",
+      "year": 2016,
+      "saga": "The Mechanic - Colección",
+      "requiere_contexto": false,
+      "motivo": "Trama de mercenario huyendo, se explica por sí sola"
+    },
+    {
+      "tmdb_id": 512196,
+      "title": "Feliz día de tu muerte 2",
+      "year": 2019,
+      "saga": "Feliz día de tu muerte - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende del loop temporal y personajes establecidos antes"
+    },
+    {
+      "tmdb_id": 280092,
+      "title": "Insidious: Capítulo 3",
+      "year": 2015,
+      "saga": "Insidious - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela con nueva familia, historia autocontenida"
+    },
+    {
+      "tmdb_id": 22804,
+      "title": "Saw VI",
+      "year": 2009,
+      "saga": "Saw - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continuación directa de la trampa de Saw V"
+    },
+    {
+      "tmdb_id": 109451,
+      "title": "Lluvia de albóndigas 2",
+      "year": 2013,
+      "saga": "Lluvia de albóndigas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura de comida viva, autoconclusiva"
+    },
+    {
+      "tmdb_id": 353616,
+      "title": "Dando la nota 3",
+      "year": 2017,
+      "saga": "Dando la nota - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia musical con arco propio, gira USO independiente"
+    },
+    {
+      "tmdb_id": 15092,
+      "title": "Crank: Alto Voltaje",
+      "year": 2009,
+      "saga": "Crank - Colección",
+      "requiere_contexto": true,
+      "motivo": "Empieza justo donde terminó la caída del protagonista"
+    },
+    {
+      "tmdb_id": 11430,
+      "title": "El rey león 3: Hakuna Matata",
+      "year": 2004,
+      "saga": "El rey león (Animación) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Relato paralelo desde Timón y Pumba, autoconclusivo"
+    },
+    {
+      "tmdb_id": 585083,
+      "title": "Hotel Transilvania: Transformanía",
+      "year": 2022,
+      "saga": "Hotel Transilvania - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura nueva de monstruos humanizados, independiente"
+    },
+    {
+      "tmdb_id": 400160,
+      "title": "Bob Esponja: Un héroe al rescate",
+      "year": 2020,
+      "saga": "Bob Esponja - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión nueva y autocontenida para rescatar la fórmula"
+    },
+    {
+      "tmdb_id": 11024,
+      "title": "Scooby-Doo 2: Desatado",
+      "year": 2004,
+      "saga": "Scooby-Doo - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo misterio independiente con la misma pandilla"
+    },
+    {
+      "tmdb_id": 740985,
+      "title": "Borat, película film secuela",
+      "year": 2020,
+      "saga": "Borat - Colección",
+      "requiere_contexto": false,
+      "motivo": "Recapitula la disgracia previa y presenta misión nueva"
+    },
+    {
+      "tmdb_id": 6466,
+      "title": "Freddy contra Jason",
+      "year": 2003,
+      "saga": "Viernes 13 - Colección",
+      "requiere_contexto": true,
+      "motivo": "Crossover que asume conocer ambas mitologías de terror"
+    },
+    {
+      "tmdb_id": 482373,
+      "title": "No respires 2",
+      "year": 2021,
+      "saga": "No Respires - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva trama de invasión con premisa propia"
+    },
+    {
+      "tmdb_id": 346648,
+      "title": "Paddington 2",
+      "year": 2017,
+      "saga": "Paddington - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura autoconclusiva de Paddington en la ciudad"
+    },
+    {
+      "tmdb_id": 463272,
+      "title": "Johnny English: De nuevo en acción",
+      "year": 2018,
+      "saga": "Johnny English - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión de espionaje independiente con humor propio"
+    },
+    {
+      "tmdb_id": 12242,
+      "title": "Mulán 2",
+      "year": 2004,
+      "saga": "Mulán - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura nueva sobre la boda, se explica sola"
+    },
+    {
+      "tmdb_id": 16690,
+      "title": "Peter Pan en Regreso al País de Nunca Jamás",
+      "year": 2002,
+      "saga": "Peter Pan - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva protagonista, historia independiente de Nunca Jamás"
+    },
+    {
+      "tmdb_id": 446893,
+      "title": "Trolls 2: Gira mundial",
+      "year": 2020,
+      "saga": "Trolls - Colección",
+      "requiere_contexto": false,
+      "motivo": "Gira musical con conflicto nuevo, autoconclusiva"
+    },
+    {
+      "tmdb_id": 11238,
+      "title": "Aladdín y el rey de los ladrones",
+      "year": 1996,
+      "saga": "Aladdin (Animación) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura nueva sobre ladrones, cierra en sí misma"
+    },
+    {
+      "tmdb_id": 454640,
+      "title": "Angry Birds 2: La película",
+      "year": 2019,
+      "saga": "Angry Birds - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo villano, trama de venganza autocontenida"
+    },
+    {
+      "tmdb_id": 2332,
+      "title": "Taxi 2",
+      "year": 2000,
+      "saga": "Taxi - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso policial nuevo, personajes se presentan solos"
+    },
+    {
+      "tmdb_id": 1035259,
+      "title": "Agárralo como puedas",
+      "year": 2025,
+      "saga": "Agárralo como puedas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia paródica, casos nuevos cada entrega"
+    },
+    {
+      "tmdb_id": 26736,
+      "title": "Los magos de Waverly Place: Vacaciones en el Caribe",
+      "year": 2009,
+      "saga": "Los magos de Waverly Place - Colección",
+      "requiere_contexto": false,
+      "motivo": "Especial vacacional autoconclusivo, personajes se presentan solos"
+    },
+    {
+      "tmdb_id": 65759,
+      "title": "Happy Feet 2",
+      "year": 2011,
+      "saga": "Happy Feet - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura autoconclusiva, mundo se explica solo"
+    },
+    {
+      "tmdb_id": 20760,
+      "title": "Lilo & Stitch 2: El efecto del defecto",
+      "year": 2005,
+      "saga": "Lilo & Stitch - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia nueva y autoconclusiva sobre Stitch"
+    },
+    {
+      "tmdb_id": 184345,
+      "title": "Paranormal Movie 2",
+      "year": 2014,
+      "saga": "Paranormal Movie - Colección",
+      "requiere_contexto": false,
+      "motivo": "Parodia de sketches, no requiere trama previa"
+    },
+    {
+      "tmdb_id": 10010,
+      "title": "Hermano oso 2",
+      "year": 2006,
+      "saga": "Hermano oso - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva historia romántica, se explica el contexto"
+    },
+    {
+      "tmdb_id": 14128,
+      "title": "La Cenicienta II: ¡La magia no termina a media noche!",
+      "year": 2002,
+      "saga": "La cenicienta - Colección",
+      "requiere_contexto": false,
+      "motivo": "Antología de cuentos nuevos, autoconclusiva"
+    },
+    {
+      "tmdb_id": 16290,
+      "title": "Jackass 3D",
+      "year": 2010,
+      "saga": "Jackass - Colección",
+      "requiere_contexto": false,
+      "motivo": "Sketches de bromas sin trama continuada"
+    },
+    {
+      "tmdb_id": 348893,
+      "title": "Boyka: Invicto IV",
+      "year": 2016,
+      "saga": "Invicto - Colección",
+      "requiere_contexto": false,
+      "motivo": "Torneo de lucha nuevo, autoconclusivo"
+    },
+    {
+      "tmdb_id": 75258,
+      "title": "Campanilla: El secreto de las hadas",
+      "year": 2012,
+      "saga": "Campanilla - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura de hadas nueva y autoconclusiva"
+    },
+    {
+      "tmdb_id": 49948,
+      "title": "Fantasía 2000",
+      "year": 2000,
+      "saga": "Fantasía - Colección",
+      "requiere_contexto": false,
+      "motivo": "Antología musical sin conexión narrativa"
+    },
+    {
+      "tmdb_id": 12094,
+      "title": "Jackass 2: Todavía más",
+      "year": 2006,
+      "saga": "Jackass - Colección",
+      "requiere_contexto": false,
+      "motivo": "Bromas y acrobacias sin trama continuada"
+    },
+    {
+      "tmdb_id": 1011477,
+      "title": "Karate Kid: Legends",
+      "year": 2025,
+      "saga": "Karate Kid - Colección",
+      "requiere_contexto": false,
+      "motivo": "Protagonista nuevo, mentores presentados de cero"
+    },
+    {
+      "tmdb_id": 217993,
+      "title": "La Liga de la Justicia: Guerra",
+      "year": 2014,
+      "saga": "La Liga de la Justicia (Animación) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Origen de la Liga, autoconclusiva"
+    },
+    {
+      "tmdb_id": 38234,
+      "title": "Invicto 3: Redención",
+      "year": 2010,
+      "saga": "Invicto - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nuevo torneo de lucha, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 75629,
+      "title": "Evangelion: 3.0 You Can (Not) Redo",
+      "year": 2012,
+      "saga": "Reconstrucción de Evangelion - Colección",
+      "requiere_contexto": true,
+      "motivo": "Arranca tras salto temporal sin explicar nada previo"
+    },
+    {
+      "tmdb_id": 218836,
+      "title": "Aviones: Equipo de rescate",
+      "year": 2014,
+      "saga": "Aviones - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva misión de rescate, autoconclusiva"
+    },
+    {
+      "tmdb_id": 1223601,
+      "title": "Sisu: Camino a la venganza",
+      "year": 2025,
+      "saga": "Sisu - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva historia de venganza, autoconclusiva"
+    },
+    {
+      "tmdb_id": 15947,
+      "title": "Los tres caballeros",
+      "year": 1944,
+      "saga": "Los Caballeros - Colección",
+      "requiere_contexto": false,
+      "motivo": "Antología de shorts sin trama previa"
+    },
+    {
+      "tmdb_id": 45162,
+      "title": "Superman/Batman: Apocalipsis",
+      "year": 2010,
+      "saga": "Superman / Batman (Animación) Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia autoconclusiva, introduce a Supergirl"
+    },
+    {
+      "tmdb_id": 518068,
+      "title": "Junto a los dioses: Los últimos 49 días",
+      "year": 2018,
+      "saga": "Along with the Gods Collection",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente tramas sin resolver de la primera"
+    },
+    {
+      "tmdb_id": 1156594,
+      "title": "Culpa nuestra",
+      "year": 2025,
+      "saga": "Culpables - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra relación y conflictos de las dos anteriores"
+    },
+    {
+      "tmdb_id": 516729,
+      "title": "Paddington: Aventura en la selva",
+      "year": 2024,
+      "saga": "Paddington - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura familiar autoconclusiva"
+    },
+    {
+      "tmdb_id": 10516,
+      "title": "El gendarme y los extraterrestres",
+      "year": 1979,
+      "saga": "El gendarme - Colección",
+      "requiere_contexto": false,
+      "motivo": "Episodio cómico independiente del mismo personaje"
+    },
+    {
+      "tmdb_id": 568012,
+      "title": "One Piece: Estampida",
+      "year": 2019,
+      "saga": "One Piece - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura secundaria autoconclusiva fuera del canon"
+    },
+    {
+      "tmdb_id": 4729,
+      "title": "El gendarme se casa",
+      "year": 1968,
+      "saga": "El gendarme - Colección",
+      "requiere_contexto": false,
+      "motivo": "Episodio cómico independiente del mismo personaje"
+    },
+    {
+      "tmdb_id": 12914,
+      "title": "Stargate. El contínuo",
+      "year": 2008,
+      "saga": "Stargate SG-1 - Colección",
+      "requiere_contexto": true,
+      "motivo": "Depende de personajes y continuidad de la serie SG-1"
+    },
+    {
+      "tmdb_id": 221732,
+      "title": "Kenshin, el guerrero samurái 3. El fin de la leyenda",
+      "year": 2014,
+      "saga": "Kenshin, el guerrero samurái - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa cliffhanger directo de la segunda película"
+    },
+    {
+      "tmdb_id": 4728,
+      "title": "El gendarme en Nueva York",
+      "year": 1965,
+      "saga": "El gendarme - Colección",
+      "requiere_contexto": false,
+      "motivo": "Episodio cómico independiente del mismo personaje"
+    },
+    {
+      "tmdb_id": 11913,
+      "title": "Seis gendarmes en fuga",
+      "year": 1970,
+      "saga": "El gendarme - Colección",
+      "requiere_contexto": false,
+      "motivo": "Episodio cómico independiente del mismo personaje"
+    },
+    {
+      "tmdb_id": 602063,
+      "title": "Kenshin, el guerrero samurái: El final",
+      "year": 2021,
+      "saga": "Kenshin, el guerrero samurái - Colección",
+      "requiere_contexto": true,
+      "motivo": "Retoma tramas y personajes de la trilogía original"
+    },
+    {
+      "tmdb_id": 672322,
+      "title": "Kenshin, el guerrero samurái: El principio",
+      "year": 2021,
+      "saga": "Kenshin, el guerrero samurái - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela autoconclusiva sobre el pasado de Kenshin"
+    },
+    {
+      "tmdb_id": 11328,
+      "title": "Con las manos ensangrentadas (Pusher II)",
+      "year": 2004,
+      "saga": "Pusher - Colección",
+      "requiere_contexto": false,
+      "motivo": "Sigue a otro personaje, historia autoconclusiva"
+    },
+    {
+      "tmdb_id": 17581,
+      "title": "Naruto Shippuden 2: Lazos",
+      "year": 2008,
+      "saga": "Naruto Collection",
+      "requiere_contexto": false,
+      "motivo": "Aventura lateral autoconclusiva fuera de la trama principal"
+    },
+    {
+      "tmdb_id": 533514,
+      "title": "Violet Evergarden: La película",
+      "year": 2020,
+      "saga": "ヴァイオレット・エヴァーガーデン シリーズ",
+      "requiere_contexto": true,
+      "motivo": "Cierra el arco emocional de la serie completa"
+    },
+    {
+      "tmdb_id": 50723,
+      "title": "Naruto Shippuden 4: La torre perdida",
+      "year": 2010,
+      "saga": "Naruto Collection",
+      "requiere_contexto": false,
+      "motivo": "Aventura lateral autoconclusiva fuera de la trama principal"
+    },
+    {
+      "tmdb_id": 974262,
+      "title": "Los descendientes: Corazón rebelde",
+      "year": 2024,
+      "saga": "Los descendientes - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva protagonista, historia de origen autoconclusiva"
+    },
+    {
+      "tmdb_id": 24873,
+      "title": "El justiciero de la noche",
+      "year": 1985,
+      "saga": "Yo soy la justicia - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia de venganza autoconclusiva del mismo justiciero"
+    },
+    {
+      "tmdb_id": 13378,
+      "title": "Mickey: La mejor Navidad",
+      "year": 2004,
+      "saga": "Mickey's… Upon a Christmas Collection",
+      "requiere_contexto": false,
+      "motivo": "Antología navideña autoconclusiva, no continúa una trama previa"
+    },
+    {
+      "tmdb_id": 795607,
+      "title": "La serpiente verde",
+      "year": 2021,
+      "saga": "La serpiente blanca - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia paralela con nueva protagonista, solo comparte universo"
+    },
+    {
+      "tmdb_id": 1186532,
+      "title": "La fragua",
+      "year": 2024,
+      "saga": "Kendrick Brothers Movies - Saga",
+      "requiere_contexto": false,
+      "motivo": "Película independiente, solo comparte directores con las demás"
+    },
+    {
+      "tmdb_id": 452557,
+      "title": "Wolf Warrior 2",
+      "year": 2017,
+      "saga": "Wolf Warrior - Colección",
+      "requiere_contexto": false,
+      "motivo": "Trama de acción autoconclusiva, no depende de la primera"
+    },
+    {
+      "tmdb_id": 116322,
+      "title": "La leyenda de la llorona",
+      "year": 2011,
+      "saga": "Las leyendas - colección",
+      "requiere_contexto": false,
+      "motivo": "Leyenda independiente con personajes recurrentes pero trama propia"
+    },
+    {
+      "tmdb_id": 38126,
+      "title": "El regreso de la mosca",
+      "year": 1959,
+      "saga": "La mosca - Colección",
+      "requiere_contexto": true,
+      "motivo": "El hijo repite el experimento del padre, depende del primer filme"
+    },
+    {
+      "tmdb_id": 23220,
+      "title": "Las novias de Drácula",
+      "year": 1960,
+      "saga": "Drácula - Colección Hammer",
+      "requiere_contexto": false,
+      "motivo": "Historia autónoma, ni siquiera aparece Drácula en la trama"
+    },
+    {
+      "tmdb_id": 728754,
+      "title": "Stand by Me Doraemon 2",
+      "year": 2020,
+      "saga": "Stand by Me Doraemon - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva historia sobre la boda, se entiende sin la primera"
+    },
+    {
+      "tmdb_id": 2972,
+      "title": "El Golem",
+      "year": 1920,
+      "saga": "The Golem Trilogy",
+      "requiere_contexto": false,
+      "motivo": "Precuela autoconclusiva que explica el origen del Golem"
+    },
+    {
+      "tmdb_id": 3103,
+      "title": "La zíngara y los monstruos (La mansión de Frankenstein)",
+      "year": 1944,
+      "saga": "Frankenstein - Colección Universal",
+      "requiere_contexto": false,
+      "motivo": "Reintroduce a los monstruos, crossover con historia autónoma"
+    },
+    {
+      "tmdb_id": 24348,
+      "title": "Powaqqatsi",
+      "year": 1988,
+      "saga": "Qatsi - Colección",
+      "requiere_contexto": false,
+      "motivo": "Documental experimental sin diálogos ni trama narrativa"
+    },
+    {
+      "tmdb_id": 268690,
+      "title": "La leyenda de las momias de Guanajuato",
+      "year": 2014,
+      "saga": "Las leyendas - colección",
+      "requiere_contexto": false,
+      "motivo": "Leyenda independiente, no requiere la anterior de la colección"
+    },
+    {
+      "tmdb_id": 22537,
+      "title": "Inuyasha, la película 2: El castillo de los sueños en el interior del espejo",
+      "year": 2002,
+      "saga": "Inuyasha - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura nueva y autoconclusiva con el elenco ya conocido"
+    },
+    {
+      "tmdb_id": 20408,
+      "title": "Sherlock Holmes. Terror en la noche",
+      "year": 1946,
+      "saga": "Sherlock Holmes (serie 1939) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misterio autoconclusivo típico de la serie de Rathbone"
+    },
+    {
+      "tmdb_id": 26278,
+      "title": "Quatermass 2",
+      "year": 1957,
+      "saga": "Quatermass - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva amenaza alienígena, trama cerrada en sí misma"
+    },
+    {
+      "tmdb_id": 18706,
+      "title": "Sherlock Holmes. El arma secreta",
+      "year": 1942,
+      "saga": "Sherlock Holmes (serie 1939) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso de misterio independiente, no continúa trama anterior"
+    },
+    {
+      "tmdb_id": 61462,
+      "title": "Nuestro hombre de Milán",
+      "year": 1972,
+      "saga": "The Milieu Trilogy",
+      "requiere_contexto": false,
+      "motivo": "Historia criminal autónoma, vínculo solo temático con la trilogía"
+    },
+    {
+      "tmdb_id": 33419,
+      "title": "Sherlock Holmes. La casa del miedo",
+      "year": 1945,
+      "saga": "Sherlock Holmes (serie 1939) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misterio autoconclusivo, no depende de películas anteriores"
+    },
+    {
+      "tmdb_id": 34297,
+      "title": "Inuyasha, la película 4: Fuego en la isla mística",
+      "year": 2004,
+      "saga": "Inuyasha - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura autoconclusiva con personajes ya establecidos"
+    },
+    {
+      "tmdb_id": 22968,
+      "title": "El padre es abuelo",
+      "year": 1951,
+      "saga": "El padre de la novia - Colección (1950-1951)",
+      "requiere_contexto": false,
+      "motivo": "Comedia familiar autoconclusiva, reintroduce a los personajes"
+    },
+    {
+      "tmdb_id": 11383,
+      "title": "El Desierto Viviente",
+      "year": 1953,
+      "saga": "True-Life Adventures Collection",
+      "requiere_contexto": false,
+      "motivo": "Documental de naturaleza sin continuidad narrativa entre entregas"
+    },
+    {
+      "tmdb_id": 185354,
+      "title": "The War of the World: Next Century",
+      "year": 1981,
+      "saga": "Tetralogia \"Koniec cywilizacji\" - Kolekcja",
+      "requiere_contexto": false,
+      "motivo": "Sátira independiente, vínculo solo temático con la tetralogía"
+    },
+    {
+      "tmdb_id": 62928,
+      "title": "Las momias de Guanajuato",
+      "year": 1972,
+      "saga": "El Santo Collection",
+      "requiere_contexto": false,
+      "motivo": "Aventura de lucha libre autoconclusiva dentro de la serie"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "slug": "magica-navidad",
+  "nombre": "Mágica navidad",
+  "criterio_file": "chips/magica-navidad.criterio.md",
+
+  "extraccion": {
+    "keyword_terms": [
+      "christmas",
+      "santa claus",
+      "christmas eve",
+      "christmas party",
+      "nativity",
+      "north pole"
+    ],
+    "pages_per_sort": 10,
+    "sorts": {
+      "movie": ["popularity.desc", "vote_count.desc", "revenue.desc"],
+      "tv": ["popularity.desc", "vote_count.desc"]
+    }
+  },
+
+  "prefiltro": {
+    "_comment": "Descartes deterministas: no requieren criterio, sólo reglas. Se aplican antes de clasificar para no gastar en candidatos que igual se caerían.",
+    "media_types": ["movie"],
+    "generos_excluidos": ["Terror", "Horror"],
+    "min_vote_count": 50,
+    "max_candidatos": 300
+  },
+
+  "objetivo_aprobados": 100,
+
+"seleccion": {
+    "tope_por_grupo": 2,
+    "min_vote_average": 5.5,
+    "min_votos_para_evaluar_nota": 50,
+    "objetivo": 100,
+    "excepciones_calidad": ["A Very Murray Christmas"],
+    "grupos_manuales": [
+      {
+        "nombre": "Cuento de Navidad (Dickens)",
+        "titulos": [
+          "Cuento de Navidad",
+          "Los fantasmas atacan al jefe",
+          "Los Teleñecos en Cuento de Navidad",
+          "Cuento de Navidad con Mickey",
+          "El espíritu de la Navidad",
+          "Barbie en Un cuento de Navidad",
+          "Scrooge: Cuento de Navidad",
+          "Muchas gracias, Mr. Scrooge"
+        ]
+      },
+      {
+        "nombre": "El Grinch (Dr. Seuss)",
+        "titulos": ["El Grinch", "El Grinch: el cuento animado"]
+      },
+      {
+        "nombre": "El cascanueces",
+        "titulos": [
+          "El cascanueces y los cuatro reinos",
+          "Barbie en El cascanueces",
+          "Tom y Jerry: El cuento de Cascanueces"
+        ]
+      },
+      {
+        "nombre": "Milagro en la calle 34",
+        "titulos": ["De ilusión también se vive", "Milagro en la ciudad"]
+      }
+    ]
+  },
+
+
+  "notas": [
+    "Series excluidas: la keyword christmas en TV suele marcar UN episodio navideño, no la obra. Requieren criterio propio.",
+    "generos_excluidos deriva del criterio tonal, no del temático. Si el criterio cambia a solo-tematico, vaciar esta lista."
+  ]
+}

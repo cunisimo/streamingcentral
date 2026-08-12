@@ -10,3 +10,10 @@ tsconfig.tsbuildinfo
 
 # Supabase CLI scratch
 supabase/.temp/
+
+# Pipeline de curado — se ignora todo salvo lo que costó cuota de LLM
+# o trabajo humano. Lo demás se rebaja de TMDB.
+data/*
+!data/copy-ruleta.json
+!data/contexto-ruleta.json
+!data/clasificado-magica-navidad.json
