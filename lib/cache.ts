@@ -1,3 +1,8 @@
+// `server-only` es un guard de BUILD: acá viven las credenciales de Upstash, y
+// este módulo ya se coló una vez en el bundle del navegador (70 KB del cliente
+// de Redis). tsc no caza esa regresión; esto la convierte en error de
+// compilación si algún "use client" importa un valor de acá.
+import "server-only";
 import { Redis } from "@upstash/redis";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
