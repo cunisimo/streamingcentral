@@ -5,14 +5,23 @@ import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 const DISMISS_KEY = "sc:pwa:dismissed"; // timestamp del último descarte
 const VISITS_KEY = "sc:visits";          // conteo de sesiones
 const DISMISS_DAYS = 30;
+const VISITAS_MINIMAS = 1;               // 1 = desde la primera visita; 2 = a partir de la segunda
 const SESSION_FLAG = "sc:pwa:counted";   // ya se contó esta sesión
 const SHOWN_FLAG = "sc:pwa:shown";        // ya se evaluó/mostró el banner esta sesión
 
 // Banner propio de instalación. No depende solo del banner del navegador.
 // - Android/Chrome/Edge: usa el beforeinstallprompt capturado.
 // - iOS/Safari: muestra instrucciones (no existe beforeinstallprompt).
-// Reglas: nunca en la 1ª visita, nunca si ya está instalada, silencio 30 días
-// al descartar, una vez por sesión.
+// Reglas: nunca si ya está instalada, silencio 30 días al descartar, una vez
+// por sesión.
+//
+// SÍ se muestra en la primera visita, y es un cambio deliberado sobre la regla
+// original ("nunca en la 1ª"). Esa regla es la buena práctica para tráfico frío
+// —no molestar a quien recién llega— pero hoy la app se reparte por link a gente
+// invitada: llegan porque el dueño se los mandó, no de casualidad, y esperar a
+// una segunda visita significaba que casi nadie veía el banner nunca.
+// Cuando haya tráfico que no venga de una invitación, conviene volver a exigir
+// la segunda visita: es una línea, la del contador de abajo.
 export default function InstallPrompt() {
   const { platform, canPrompt, installed, promptInstall } = useInstallPrompt();
   const [show, setShow] = useState(false);
@@ -38,8 +47,11 @@ export default function InstallPrompt() {
     // Solo hay forma de instalar si es iOS (instrucciones) o hay prompt (Android).
     if (platform !== "ios" && !canPrompt) return;
     try {
-      // Nunca en la primera visita (sesión).
-      if (Number(localStorage.getItem(VISITS_KEY) || "0") < 2) return;
+      // Mínimo de sesiones para mostrar el banner. En 1 se muestra desde la
+      // primera; subirlo a 2 restaura la regla original (ver el comentario de
+      // arriba). El contador se sigue llevando igual, así que el cambio es de
+      // este número y nada más.
+      if (Number(localStorage.getItem(VISITS_KEY) || "0") < VISITAS_MINIMAS) return;
       // Silencio tras descarte reciente.
       const d = Number(localStorage.getItem(DISMISS_KEY) || "0");
       if (d && Date.now() - d < DISMISS_DAYS * 864e5) return;
