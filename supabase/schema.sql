@@ -53,6 +53,13 @@ create trigger on_auth_user_created
 -- único vector de escalada), is_admin queda como estaba. Desde el SQL editor
 -- de Supabase (sin JWT) o service_role sí se puede cambiar, para poder
 -- designar admins a mano.
+-- `set search_path = public` no es decorativo: sin él, una función
+-- `security definer` resuelve los nombres con el search_path de quien la
+-- llama, y quien pueda crear objetos en un esquema anterior puede secuestrar
+-- lo que la función usa adentro. En Supabase un rol `authenticated` no puede
+-- crear objetos, así que hoy no es explotable — pero esta es JUSTO la función
+-- que impide la escalada a admin, y sus dos hermanas (`handle_new_user` e
+-- `is_admin`) ya lo fijan. La inconsistencia era el problema.
 create or replace function protect_is_admin()
 returns trigger as $$
 begin
@@ -61,7 +68,7 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists profiles_protect_is_admin on profiles;
 create trigger profiles_protect_is_admin

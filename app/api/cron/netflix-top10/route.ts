@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { ingestLatestWeek } from "@/lib/netflix-top10";
 
 export const dynamic = "force-dynamic";
@@ -6,11 +7,26 @@ export const dynamic = "force-dynamic";
 // nuevos (la primera corrida) puede pasarse de los 10s del default.
 export const maxDuration = 60;
 
+// Comparación en tiempo constante. Con `!==` el motor corta en el primer byte
+// distinto, así que el tiempo de respuesta filtra cuántos caracteres acertó
+// quien prueba. Con un secreto de 256 bits es un ataque teórico, pero acá no
+// cuesta nada cerrarlo.
+//
+// `timingSafeEqual` EXPLOTA si los buffers tienen distinto largo, así que hay
+// que chequearlo antes. Eso sí filtra el largo por tiempo, y está bien: el
+// largo no es el secreto, y quien ya lo conozca no gana nada.
+function secretoValido(header: string | null, secret: string): boolean {
+  const recibido = Buffer.from(header ?? "");
+  const esperado = Buffer.from(`Bearer ${secret}`);
+  if (recibido.length !== esperado.length) return false;
+  return timingSafeEqual(recibido, esperado);
+}
+
 export async function GET(req: NextRequest) {
   // Vercel Cron manda `Authorization: Bearer $CRON_SECRET`. Sin el secreto
   // configurado, la ruta queda cerrada: mejor no ingestar que dejarla abierta.
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret || !secretoValido(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ ok: false, error: "no autorizado" }, { status: 401 });
   }
   try {

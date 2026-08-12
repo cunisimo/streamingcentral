@@ -1,4 +1,10 @@
 // Cliente TMDB. Usa el v4 Read Access Token (Bearer).
+//
+// `server-only` es un guard de BUILD, no de tipos: acá vive TMDB_READ_TOKEN y
+// no tiene que poder llegar nunca al bundle del navegador. Hoy ningún cliente
+// lo importa, pero tsc no vería la regresión — esto la convierte en error de
+// compilación. Los `import type` se borran y siguen siendo legales.
+import "server-only";
 import type { MediaType } from "./types";
 
 const BASE = "https://api.themoviedb.org/3";
