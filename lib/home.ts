@@ -320,13 +320,30 @@ export async function homePayload(opts: {
   types?: Record<string, MediaType>;
 }): Promise<HomePayload> {
   const types = opts.types ?? {};
-  return cachedIf(
-    homeKey(opts.providers, types),
+  const key = homeKey(opts.providers, types);
+
+  // Tasa de aciertos del cache: la métrica que ningún panel da y que para esta
+  // app es la que más importa. Rearmar cuesta 400-700 comandos de Redis y
+  // servir del cache cuesta 1, así que si la tasa es baja el consumo se dispara
+  // sin que suba el tráfico. Una tasa baja significa que los usuarios tienen
+  // combinaciones de plataformas muy distintas, y eso NO se arregla con el TTL.
+  //
+  // Se deduce de si el fetcher llegó a correr: exacto, y no cuesta un comando
+  // extra. Se lee en los logs de Vercel filtrando por "[home]".
+  let miss = false;
+
+  const payload = await cachedIf(
+    key,
     TTL.home,
-    () => composeHome({ providers: opts.providers, types }),
+    () => { miss = true; return composeHome({ providers: opts.providers, types }); },
     // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
     // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
     // caso "sin plataformas", que no cuesta nada recalcular.
     (v) => !v.degradado && !v.sinPlataformas,
   );
+
+  // La clave va en el log a propósito: contando claves distintas se ve cuánto
+  // se fragmenta el cache por combinación de plataformas y por toggles.
+  console.log(`[home] ${miss ? "MISS" : "HIT "} ${key}`);
+  return payload;
 }
