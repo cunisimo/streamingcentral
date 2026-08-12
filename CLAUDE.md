@@ -135,9 +135,16 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   popularidad como los otros cinco — la app no se rompe.
 - **La ruleta sirve UNA recomendación por vez, nunca una lista.** Es el punto:
   una lista reconstruye la parálisis de elección que la feature resuelve. El pool
-  es `roulette_titles` (curado offline, 765 con texto de los 1811) y lo sirve la
+  es `roulette_titles` (curado offline, 2259 con texto de los 2401) y lo sirve la
   función `get_roulette_picks`; la app **no la modifica**. Pide 20 candidatos por
   tanda y "Otra" los consume en el cliente: una query por tanda, no por toque.
+  **`roulette_titles` NO se puede leer con la anon key** — un select directo
+  devuelve 401 `permission denied`. La función es `security definer` y es la
+  única vía: el texto editorial es lo más caro de producir del proyecto y no
+  tiene por qué bajarse con un `select *`. La función **capa `p_limit` a 40**, y
+  lo hace **en silencio**: pedir más no da error, devuelve 40. Hoy se piden 20
+  (`TANDA` en `lib/roulette.ts`), así que no aplica — pero si alguien sube ese
+  número por encima de 40 no se va a enterar por un error.
   Los nombres de plataforma que guarda `title_availability` **no** son los de
   `lib/providers-ar.ts` (allá "Max" es "HBO Max", y `"VIX "` viene con un espacio
   al final que no hay que corregir): el puente explícito está en
