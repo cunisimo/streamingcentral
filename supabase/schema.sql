@@ -215,6 +215,32 @@ drop policy if exists "el autor gestiona la suya" on user_reviews;
 create policy "el autor gestiona la suya" on user_reviews
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- Blindaje de `estado`, mismo caso que is_admin en profiles: la policy de
+-- arriba ata la fila a su autor, pero NO dice nada sobre las columnas. Sin
+-- esto, el autor puede insertar su reseña directamente con estado='aprobada'
+-- contra la API REST y saltearse la moderación entera — que es justo lo que
+-- esa columna existe para evitar. La lectura pública es `estado = 'aprobada'`,
+-- así que se autopublicaría.
+-- Desde el SQL editor o con service_role sí se puede mover: así se modera.
+create or replace function protect_review_estado()
+returns trigger as $$
+begin
+  if auth.role() = 'authenticated' then
+    if tg_op = 'INSERT' then
+      new.estado := 'pendiente';
+    else
+      new.estado := old.estado;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists user_reviews_protect_estado on user_reviews;
+create trigger user_reviews_protect_estado
+  before insert or update on user_reviews
+  for each row execute function protect_review_estado();
+
 -- ============================================================
 -- ACTIVO: items del usuario. kind='list' = Mi lista;
 -- kind='watched' = "Ya la vi" (base de emblemas futuros).
