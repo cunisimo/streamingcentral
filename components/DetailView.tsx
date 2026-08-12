@@ -63,10 +63,16 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         </div>
 
         {mine.length ? (
-          <a className="dprimary" href={t.watchLink ?? t.links[mine[0]] ?? "#"} target="_blank" rel="noreferrer">
-            <span className="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>
-            <span className="cap">Ver en</span><PlatformLogo code={mine[0]} />
-          </a>
+          // NO es un link, a propósito. TMDB no da deep-link por plataforma
+          // (ver "Limitaciones duras de TMDB"): `watchLink` apunta a la página
+          // agregadora del propio TMDB, y sacar al usuario de la app para
+          // dejarlo en un listado no le resuelve nada. Queda el dato de dónde
+          // verla, no una acción que no lleva a ningún lado. El bloque de
+          // suscripción de más abajo sí sigue siendo link: ese `signupUrl` es
+          // el alta real de la plataforma, no un agregador.
+          <div className="dprimary have">
+            <span className="cap">Disponible en</span><PlatformLogo code={mine[0]} />
+          </div>
         ) : t.platforms.length ? (
           // El bloque ya existía como texto muerto. Ahora, si conocemos la
           // página de suscripción de esa plataforma, es un link: al usuario que

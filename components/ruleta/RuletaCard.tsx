@@ -105,12 +105,11 @@ export default function RuletaCard({
       )}
 
       <div className="rlt-acciones">
-        <a
-          className="rlt-btn rlt-btn-primary"
-          href={pick.watchLink ?? `/titulo/${pick.type}/${pick.id}`}
-          target={pick.watchLink ? "_blank" : undefined}
-          rel={pick.watchLink ? "noreferrer" : undefined}
-        >
+        {/* Va a la ficha dentro de la app, nunca afuera. Antes intentaba
+            primero el `watchLink` de TMDB, que es su página agregadora y no la
+            plataforma: mandaba al usuario fuera para nada. Mismo criterio que
+            la ficha, ver el bloque `dprimary have` en DetailView. */}
+        <a className="rlt-btn rlt-btn-primary" href={`/titulo/${pick.type}/${pick.id}`}>
           ▶ Verla
         </a>
         <button className="rlt-btn" onClick={onOtra}>Otra</button>

@@ -358,6 +358,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .dprimary .play svg{width:13px;height:13px;fill:#fff;margin-left:2px}
 .dprimary .cap{color:var(--dim);font-weight:500}
 .dprimary.none{color:var(--faint);cursor:default}
+/* `have` = está en tus plataformas. No es link (TMDB no da deep-link por
+   plataforma), así que se le sacan cursor y hover, pero NO se apaga el color
+   como en `.none`: acá la noticia es buena. */
+.dprimary.have{cursor:default}
+.dprimary.have:hover{border-color:var(--line-2)}
 /* La variante con link a suscribirse sí es clickeable: recupera el cursor y el
    contraste que `.none` apaga, porque ahí no hay nada que hacer y acá sí. */
 .dprimary.none.link{cursor:pointer;color:var(--text)}
