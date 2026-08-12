@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/components/ThemeContext";
 import { AuthProvider } from "@/components/AuthContext";
 import { MyListProvider } from "@/components/MyListContext";
@@ -68,6 +70,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </MyListProvider>
           </AuthProvider>
         </ThemeProvider>
+        {/* Medición de uso real. Van FUERA de los providers a propósito: no
+            dependen de ningún contexto y así no re-renderizan con ellos.
+            Analytics es sin cookies, así que no obliga a un banner de consentimiento.
+            Los dos se auto-desactivan fuera de Vercel, así que en `next dev`
+            no mandan nada. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
