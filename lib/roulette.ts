@@ -5,10 +5,23 @@ import { supabaseServer } from "./supabase";
 import { dailySeed } from "./cache";
 import type { MediaType, PlatformCode } from "./types";
 
-export type Escenario = "solo" | "pareja" | "chicos" | "fondo";
+// Tres escenarios, definidos por DURACIÓN — que es un dato de TMDB, no una
+// inferencia. Los cuatro anteriores (solo/pareja/chicos/fondo) se cambiaron
+// porque "ver solo" y "ver en pareja" no son atributos que existan en los
+// datos: los dos terminaban filtrando por lo mismo. Y "fondo" mezclaba
+// películas simples con películas flojas bajo la misma promesa.
+//
+// OJO: la función `get_roulette_picks` NO valida el escenario. Un valor que ya
+// no existe cae en su `else true` y devuelve resultados sin filtrar por nada,
+// sin tirar error. Por eso `esEscenario` gatea la entrada de la ruta.
+// El corte está en 90 min: `corta` es `runtime <= 90`, `larga` es `> 90`.
+export type Escenario = "corta" | "larga" | "chicos";
+
+// El default de la función pasó de 'solo' a 'larga'.
+export const ESCENARIO_DEFAULT: Escenario = "larga";
 // Sin `export`: sólo lo usa `esEscenario`, acá abajo. No hace falta sacarlo
 // del módulo.
-const ESCENARIOS: Escenario[] = ["solo", "pareja", "chicos", "fondo"];
+const ESCENARIOS: Escenario[] = ["corta", "larga", "chicos"];
 export const esEscenario = (s: string): s is Escenario =>
   (ESCENARIOS as string[]).includes(s);
 

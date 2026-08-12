@@ -142,10 +142,19 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `lib/providers-ar.ts` (allá "Max" es "HBO Max", y `"VIX "` viene con un espacio
   al final que no hay que corregir): el puente explícito está en
   `lib/roulette-providers.ts` y falla ruidosamente en desarrollo si falta uno.
-  `atencion` (`alta`/`media`/`fondo`) es dato para filtrar y **nunca se muestra
-  crudo** — se traduce con el banco de frases de `components/ruleta/frases.ts`.
-  `advertencia` es NULL en ~27% de los casos por diseño: ahí el bloque "PERO"
-  simplemente no se renderiza, sin relleno. Los tmdb_id ya mostrados viven en
+  Los escenarios son **tres y se definen por duración**, que es un dato de TMDB
+  y no una inferencia: `corta` (90 min o menos), `larga` (más de 90) y
+  `chicos` (`apto_chicos`); el default es `larga`. Los cuatro anteriores
+  (solo/pareja/chicos/fondo) se descartaron porque "ver solo" y "ver en pareja"
+  no existen como atributo en los datos y filtraban por lo mismo. **La función
+  NO valida el escenario**: un valor viejo cae en su `else true` y devuelve el
+  pool sin filtrar, sin error — por eso `esEscenario` gatea la ruta.
+  `atencion` (`alta`/`media`/`fondo`) **ya no filtra**, quedó sólo como etiqueta,
+  y **nunca se muestra crudo** — se traduce con el banco de frases de
+  `components/ruleta/frases.ts`. Ojo que ese `fondo` es un nivel de atención, no
+  el escenario eliminado. `advertencia` en la práctica nunca viene NULL (la
+  función sólo devuelve títulos que la tengan, porque el bloque "PERO" es el
+  diferencial de la tarjeta); el guard que la oculta se mantiene por las dudas. Los tmdb_id ya mostrados viven en
   `localStorage` (`yump:ruleta-mostrados`, por escenario) y se pasan en
   `p_excluir` junto con los "ya la vi": es estado de paginación, no historial —
   sin eso, la semilla diaria compartida devuelve la misma película todo el día.

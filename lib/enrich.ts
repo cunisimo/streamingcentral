@@ -609,6 +609,19 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
 // Sobredimensionado a propósito: muchas se caen en el filtro de plataformas.
 export const VOTED_ROWS = 60;
 
+// Ventana de días que cuentan los rieles de votos.
+//
+// El número lo manda el VOLUMEN DE VOTOS, no el producto. Con 7 días —que es la
+// promesa natural, "lo más votado esta semana"— y los 27 votos que hay hoy,
+// "Hacete cargo" se quedaba con 1 título de 9 y "Lo más votados" con 5 de 17.
+// Y como el riel muestra el estado vacío por debajo de 2 ítems, el usuario veía
+// los dos rieles vacíos aunque hubiera votado.
+//
+// Medido el 2026-08-10: con 7 días, 1 y 5 títulos; con 90, 9 y 17.
+//
+// Cuando haya votos de verdad, bajarlo a 7 y la promesa vuelve a tener sentido.
+export const VOTED_DAYS = 90;
+
 // Ranking de votos cruzado con las plataformas del usuario, acotado a un rango
 // de rating. Base compartida por "Lo más votados" (positivos) y "Hacete cargo"
 // (negativos). Ventana en días.
@@ -641,12 +654,12 @@ async function votedCards(
 }
 
 // "Lo más votados": ta buena (2) + petacular (3).
-export async function mostVoted(providers: PlatformCode[], days = 7, limit = 20): Promise<UITitle[]> {
+export async function mostVoted(providers: PlatformCode[], days = VOTED_DAYS, limit = 20): Promise<UITitle[]> {
   return votedCards(providers, days, 2, 3, limit);
 }
 
 // "Hacete cargo": las que se llevaron malaso (1).
-export async function mostPanned(providers: PlatformCode[], days = 7, limit = 20): Promise<UITitle[]> {
+export async function mostPanned(providers: PlatformCode[], days = VOTED_DAYS, limit = 20): Promise<UITitle[]> {
   return votedCards(providers, days, 1, 1, limit);
 }
 

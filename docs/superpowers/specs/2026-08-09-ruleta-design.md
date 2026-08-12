@@ -30,11 +30,17 @@ resolver.
 ## Flujo
 
 1. La persona toca el botón de la ruleta.
-2. Se le muestran **cuatro situaciones**, una sola pregunta:
-   - Solo/a, quiero algo bueno → `solo`
-   - En pareja → `pareja`
-   - Con chicos → `chicos`
-   - De fondo, mientras hago otra cosa → `fondo`
+2. Se le muestran **tres situaciones**, una sola pregunta:
+   - Tengo poco tiempo → `corta` (90 min o menos, sin infantil)
+   - Tengo toda la noche → `larga` (más de 90 min, sin infantil)
+   - Con chicos → `chicos` (`apto_chicos`)
+
+   Son mutuamente excluyentes por construcción, y los tres se definen por
+   **duración**, que es un dato de TMDB y no una inferencia. Los cuatro
+   anteriores (`solo` / `pareja` / `chicos` / `fondo`) se descartaron: "ver
+   solo" y "ver en pareja" no son atributos que existan en los datos, así que
+   los dos filtraban por lo mismo; y `fondo` mezclaba películas simples con
+   películas flojas bajo la misma promesa.
 3. Elige una y aparece **una tarjeta**.
 4. Tres acciones: **Verla** (primaria), **Otra**, **Ya la vi**.
 
@@ -51,7 +57,7 @@ Función de servido:
 ```sql
 get_roulette_picks(
   p_providers text[],
-  p_escenario text default 'solo',      -- solo | pareja | chicos | fondo
+  p_escenario text default 'larga',     -- corta | larga | chicos
   p_excluir   integer[] default '{}',   -- tmdb_id ya vistos
   p_region    text default 'AR',
   p_seed      text default '',
@@ -64,7 +70,14 @@ returns (tmdb_id, media_type, title, year, runtime, genres,
 Ya resuelve del lado de la base: sólo títulos con texto, sólo disponibles en
 las plataformas pasadas, filtro por escenario, exclusión de los ya vistos, y
 exclusión de películas que requieren haber visto otras antes
-(`requiere_contexto`).
+(`requiere_contexto`), **en los tres escenarios**.
+
+Además, **sólo devuelve títulos que tengan `advertencia`**. El bloque "PERO" es
+el diferencial de la tarjeta: una tarjeta sin él se parece a cualquier otra app.
+
+**La función NO valida `p_escenario`.** Un valor que no es ninguno de los tres
+cae en su `else true` y devuelve el pool sin filtrar por nada, sin tirar error.
+Por eso la app gatea la entrada con `esEscenario` antes de llamarla.
 
 RLS permite `select` público: alcanza la anon key.
 
@@ -115,9 +128,11 @@ permite que el cache sirva a varios usuarios a la vez.
 
 ### 5. Las etiquetas son frases, no rótulos
 
-El campo `atencion` es dato (`alta` / `media` / `fondo`) y sirve para
-filtrar. **No se muestra crudo.** Se muestra una frase de un banco escrito a
-mano, rotando entre variantes:
+El campo `atencion` (`alta` / `media` / `fondo`) **ya no filtra nada**: quedó
+sólo como etiqueta de la tarjeta. Ojo que sus valores son independientes de los
+escenarios — el `fondo` de acá es un nivel de atención, no el escenario viejo
+que se eliminó. **No se muestra crudo.** Se muestra una frase de un banco
+escrito a mano, rotando entre variantes:
 
 | `atencion` | Frases |
 |---|---|
@@ -127,11 +142,12 @@ mano, rotando entre variantes:
 
 El banco vive en el código, no en la base. Voz única y consistente.
 
-### 6. La advertencia es opcional
+### 6. La advertencia es opcional (guard, no caso real)
 
-`advertencia` viene NULL en el 27% de los casos, por diseño: preferimos que
-falte a que se invente. **Cuando es NULL, el bloque "PERO" simplemente no se
-renderiza.** No poner texto de relleno ni un placeholder.
+**En la práctica ya no viene NULL**: la función filtra y sólo devuelve títulos
+que la tengan. El guard se mantiene por las dudas — **cuando es NULL, el bloque
+"PERO" simplemente no se renderiza**, sin texto de relleno ni placeholder— pero
+no se va a disparar.
 
 ### 7. Enriquecimiento y presentación
 
@@ -161,7 +177,9 @@ de improvisar.
 ## Criterios de aceptación
 
 - [ ] Los 16 chips del home se comportan exactamente igual que antes
-- [ ] Los cuatro escenarios devuelven resultados con texto
+- [ ] Los tres escenarios devuelven resultados con texto
+- [ ] Un escenario viejo o inventado NO devuelve el pool sin filtrar: la app
+      lo gatea y cae al default (`larga`)
 - [ ] "Otra" no dispara una query nueva hasta agotar la tanda de 20
 - [ ] Un título marcado como visto no vuelve a salir
 - [ ] "Ya la vi" desde la tarjeta se refleja en la ficha de esa película, y
@@ -173,7 +191,12 @@ de improvisar.
 
 ## Pendientes conocidos (no son parte de esta tarea)
 
-- 1046 títulos del pool no tienen texto todavía. Se completan offline; no
-  requiere cambios en la app.
-- El escenario `fondo` es el más angosto (134 títulos con texto). Si se
-  siente repetitivo, se amplía desde el pipeline.
+- Al 2026-08-11 el pool es de **2401 filas: 2259 con texto, 1782 con
+  advertencia, 144 con `requiere_contexto`**. Las que todavía no tienen texto
+  se completan offline; no requiere cambios en la app. El piso de votos del
+  pipeline bajó a 51 para sumar cine corto, que era lo que le faltaba al
+  escenario `corta` para cumplir su promesa.
+- Tamaño del pool con Netflix + Disney Plus, al 2026-08-11 y ya con el corte
+  en 90 min: **58 títulos en `corta` y 375 en `larga`**. Con las cuatro
+  plataformas grandes, `corta` sube a **132**. Si alguno se siente repetitivo,
+  se amplía desde el pipeline.

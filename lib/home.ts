@@ -29,7 +29,7 @@
 import "server-only";
 import {
   categoryCandidates, enrichRaw, latestReleases, mostVoted, mostPanned,
-  audienceTitles, recommendations, VOTED_ROWS, type RawTitle,
+  audienceTitles, recommendations, VOTED_ROWS, VOTED_DAYS, type RawTitle,
 } from "./enrich";
 // HOME_GENRES / defaultTypeFor viven en components/data.ts (módulo client-safe):
 // el cliente los necesita para el estado de los toggles, y si los importara de
@@ -215,8 +215,8 @@ export async function composeHome(opts: {
       safe(c, "ultimos p1", [] as UITitle[], () => latestReleases(providers, "movie", 1)),
       // Votos: se pide el conjunto AMPLIO (hasta VOTED_ROWS filas) para que el
       // dedup tenga de dónde rellenar. El corte final lo hace `take` acá abajo.
-      safe(c, "mas-votados", [] as UITitle[], () => mostVoted(providers, 7, VOTED_ROWS)),
-      safe(c, "hacete-cargo", [] as UITitle[], () => mostPanned(providers, 7, VOTED_ROWS)),
+      safe(c, "mas-votados", [] as UITitle[], () => mostVoted(providers, VOTED_DAYS, VOTED_ROWS)),
+      safe(c, "hacete-cargo", [] as UITitle[], () => mostPanned(providers, VOTED_DAYS, VOTED_ROWS)),
       // Candidatos crudos de cada riel de género (páginas 1..FETCH_BUFFER).
       // Crudos = sin providersOf: enriquecer sí depende de `used` y va en etapa 2.
       Promise.all(generosTipo.map(({ g, tipo }) =>
@@ -308,7 +308,11 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): s
   // ordenar generarían dos entradas distintas con el mismo contenido.
   const p = [...providers].sort().join(",");
   const t = Object.keys(types).sort().map((k) => `${k}:${types[k]}`).join(",");
-  return `home:v1:${dailySeed()}:${p}:${t}`;
+  // La versión de la clave se sube cuando cambia el CONTENIDO del payload, no
+  // su forma: si no, lo que ya está cacheado sigue sirviéndose hasta que expire
+  // el TTL (6 h) y el cambio "no se ve" después de deployar.
+  // v2 = ventana de votos de 7 a 90 días.
+  return `home:v2:${dailySeed()}:${p}:${t}`;
 }
 
 export async function homePayload(opts: {

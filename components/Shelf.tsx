@@ -18,7 +18,7 @@ import type { UITitle, MediaType } from "@/lib/types";
 //  - "filter":  filtra en cliente los ítems ya cargados por `type` (votos).
 export default function Shelf({
   tipo, genre, country, title, url, onOffline, seeAllHref,
-  typeToggle, shelfKey, initialType, items: controlled, onTypeChange,
+  typeToggle, shelfKey, initialType, items: controlled, onTypeChange, minItems,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
   title?: string; url?: string;
@@ -38,6 +38,9 @@ export default function Shelf({
   // entero. Los rieles "filter" no lo reciben: filtran en cliente la lista mixta
   // que ya tienen, así que reconstruir el Home devolvería exactamente lo mismo.
   onTypeChange?: (t: MediaType) => void;
+  // Mínimo de ítems para renderizar el riel (default 2). Ver el comentario de
+  // `minimo` más abajo.
+  minItems?: number;
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
@@ -86,10 +89,16 @@ export default function Shelf({
     if (offline && onOffline) onOffline();
   }, [offline, onOffline]);
 
+  // Cuántos ítems hacen falta para mostrar el riel. El default de 2 evita un
+  // carrusel de una sola tarjeta, que se ve roto. Los rieles de votos lo bajan
+  // a 1: ahí el tope no lo pone el algoritmo sino cuánta gente votó, y esconder
+  // el único título votado es peor que mostrarlo solo.
+  const minimo = minItems ?? 2;
+
   // Auto-ocultado solo para rieles SIN toggle. Con toggle, mantenemos header +
   // toggle visibles aunque el tipo activo quede vacío (si no, el usuario no
   // podría volver).
-  if (!typeToggle && !loading && items.length < 2) return null;
+  if (!typeToggle && !loading && items.length < minimo) return null;
 
   const heading = title ?? genreLabel(genre ?? "");
   const tipoLabel = activeType === "movie" ? "películas" : "series";
@@ -118,7 +127,7 @@ export default function Shelf({
       </div>
       <div className="track" ref={track}>
         {loading ? <span className="loading">Cargando…</span>
-          : items.length < 2 ? <span className="empty-note">{emptyMsg}</span>
+          : items.length < minimo ? <span className="empty-note">{emptyMsg}</span>
           : (
             <>
               {items.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}

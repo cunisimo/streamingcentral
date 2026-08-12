@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRoulettePicks, esEscenario } from "@/lib/roulette";
+import { getRoulettePicks, esEscenario, ESCENARIO_DEFAULT } from "@/lib/roulette";
 import type { PlatformCode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -7,8 +7,11 @@ export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
-  const escenarioRaw = q.get("escenario") ?? "solo";
-  const escenario = esEscenario(escenarioRaw) ? escenarioRaw : "solo";
+  // El gate importa: la función de la base NO valida el escenario. Un valor
+  // viejo o inventado cae en su `else true` y devuelve el pool sin filtrar,
+  // sin error — o sea, una recomendación que no respeta lo que el usuario pidió.
+  const escenarioRaw = q.get("escenario") ?? ESCENARIO_DEFAULT;
+  const escenario = esEscenario(escenarioRaw) ? escenarioRaw : ESCENARIO_DEFAULT;
   const providers = (q.get("providers") || "")
     .split(",").map((s) => s.trim()).filter(Boolean) as PlatformCode[];
   // `.filter(Boolean)` antes de `Number(...)`: sin él, `?excluir=` (vacío)
