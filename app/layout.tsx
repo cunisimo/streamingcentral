@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
@@ -13,7 +13,13 @@ import OnboardingGate from "@/components/onboarding/OnboardingGate";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
+// `optional` en vez de `swap`: con swap, el kicker del hero se pinta con la
+// fuente de respaldo en DOS renglones (39px) y al llegar Jakarta pasa a UNO
+// (20px), subiendo 19px todo lo que estÃ¡ abajo. Medido, era el 29% del CLS.
+// `optional` elimina el intercambio en vez de contenerlo: si la fuente no llegÃ³
+// en ~100ms, esa carga entera usa el respaldo y nunca hay reflow. El costo es
+// que la primera visita puede verse con la tipografÃ­a de respaldo.
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "optional" });
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -26,7 +32,7 @@ export const viewport: Viewport = {
   // y la barra inferior quedan visibles sin necesidad de JS.
   interactiveWidget: "resizes-content",
   // Dos entradas con media: la barra de estado sigue al tema del sistema.
-  // El toggle manual de ThemeContext además reescribe estas etiquetas en runtime,
+  // El toggle manual de ThemeContext ademÃ¡s reescribe estas etiquetas en runtime,
   // para el caso de sistema claro + app en oscuro (o viceversa).
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FAFAFD" },
@@ -36,12 +42,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Yump",
-  description: "Qué ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
+  description: "QuÃ© ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
   applicationName: "Yump",
   // Next inyecta <link rel="manifest"> apuntando a la metadata route app/manifest.ts.
   manifest: "/manifest.webmanifest",
   // iOS ignora el manifest: estas son las que hacen que se abra en standalone,
-  // con la barra de estado translúcida y el título correcto bajo el ícono.
+  // con la barra de estado translÃºcida y el tÃ­tulo correcto bajo el Ã­cono.
   appleWebApp: {
     capable: true,
     title: "Yump",
@@ -70,10 +76,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </MyListProvider>
           </AuthProvider>
         </ThemeProvider>
-        {/* Medición de uso real. Van FUERA de los providers a propósito: no
-            dependen de ningún contexto y así no re-renderizan con ellos.
-            Analytics es sin cookies, así que no obliga a un banner de consentimiento.
-            Los dos se auto-desactivan fuera de Vercel, así que en `next dev`
+        {/* MediciÃ³n de uso real. Van FUERA de los providers a propÃ³sito: no
+            dependen de ningÃºn contexto y asÃ­ no re-renderizan con ellos.
+            Analytics es sin cookies, asÃ­ que no obliga a un banner de consentimiento.
+            Los dos se auto-desactivan fuera de Vercel, asÃ­ que en `next dev`
             no mandan nada. */}
         <Analytics />
         <SpeedInsights />
