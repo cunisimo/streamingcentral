@@ -1,7 +1,7 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 12 de agosto de 2026** — HEAD `f63abab`.
+> **Última actualización: 13 de agosto de 2026** — HEAD `4c66459`.
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -66,22 +66,34 @@ puede caminarlo de a 40 vía la función. Es inherente a servir el dato sin logi
 
 ---
 
+## Pipeline versionado (resuelto el 13/8/2026)
+
+`chips/`, `prompts/`, los `scripts/*.mjs`, las tres migraciones de
+`supabase/migrations/` y `docs/MANTENIMIENTO.md` están trackeados y en
+`origin/main`. `001_chip_titles.sql` crea `title_availability`, así que ya no hay
+objetos en producción que ningún archivo describa: **un clon limpio reproduce el
+entorno.**
+
+`data/` va **parcialmente versionado a propósito** (`.gitignore`: `data/*` con
+tres excepciones). Sólo entran los tres archivos con trabajo de LLM o revisión
+humana adentro:
+
+- `data/copy-ruleta.json`
+- `data/contexto-ruleta.json`
+- `data/clasificado-magica-navidad.json`
+
+El resto son intermedios y volcados SQL que cualquier corrida del pipeline
+regenera. No agregarlos.
+
+---
+
 ## Lo que falta
 
-### 1. Versionar el pipeline — lo más urgente
-
-Sin trackear: `chips/`, `data/`, `prompts/`, 17 `scripts/*.mjs`,
-`supabase/migrations/` y `docs/MANTENIMIENTO.md`.
-
-Hay código en `main` que depende de esas migraciones, y la base tiene objetos que
-ningún archivo describe — `title_availability` existe en producción y no está en
-el repo. **Un clon limpio no reproduce el entorno.**
-
-### 2. Verificar que el cron corre solo
+### 1. Verificar que el cron corre solo
 
 El miércoles siguiente a cada martes, la semana del Top tiene que haber avanzado.
 
-### 3. Probar en dispositivos reales
+### 2. Probar en dispositivos reales
 
 - Banner de instalación en Android, en pestaña de incógnito.
 - El recordatorio, **sobre todo si suena el aviso de la víspera**: Google
@@ -90,14 +102,14 @@ El miércoles siguiente a cada martes, la semana del Top tiene que haber avanzad
 - "Ya la vi" de la ruleta logueado: son los dos criterios del spec que nunca se
   verificaron.
 
-### 4. Idioma de los títulos
+### 3. Idioma de los títulos
 
 Salen en español de España (*Jungla de cristal* en vez de *Duro de matar*). La
 variante que sirve es **`es-MX`**; `es-AR` y `es-419` caen al de España — está
 medido. Pospuesto por decisión del dueño. Requiere versionar la clave de cache
 `card:`, o conviven títulos mezclados 24 h.
 
-### 5. Decisión menor
+### 4. Decisión menor
 
 Si se deja el campo `motivo` en el diagnóstico del cron. Recomendación: dejarlo,
 no filtra nada y ahorra tiempo de diagnóstico.
