@@ -337,7 +337,13 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;height:var(--nav-h);box-sizing:content-box;background:rgba(var(--bg-rgb),.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;align-items:stretch;padding-bottom:var(--safe-b);
   /* Long-press sobre la nav no debe seleccionar texto. */
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.navitem{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--dim);font-family:var(--body);font-size:12px;font-weight:500}
+/* `flex:0 0 20%` y no `flex:1`: la barra es lo último del documento, así que en
+   red lenta el primer pintado la agarra a medio parsear y con `flex:1` los tres
+   ítems que ya llegaron se reparten el ancho entero (131px cada uno) para
+   después encogerse a 79px cuando llegan los otros dos. Con el ancho fijo, un
+   ítem mide lo mismo esté solo o completa la barra. Son cinco ítems: si se
+   agrega o saca uno, este número va con él. */
+.navitem{flex:0 0 20%;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--dim);font-family:var(--body);font-size:12px;font-weight:500}
 .navitem:active{opacity:.55}
 .navitem svg{width:25px;height:25px;stroke:var(--dim);fill:none;stroke-width:1.9}
 .navitem.on{color:var(--accent);font-weight:600}
