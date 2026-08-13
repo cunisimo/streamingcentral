@@ -3,6 +3,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import { useUpcoming } from "./useUpcoming";
 import UpcomingCard from "./UpcomingCard";
+import CardSkeleton from "../CardSkeleton";
 
 // Riel "Próximamente" del Home. Toda la lógica de datos vive en useUpcoming;
 // este componente solo orquesta el render y sus estados. Desacoplado del Home:
@@ -37,13 +38,7 @@ export default function UpcomingSection({ limit = 15 }: { limit?: number }) {
       ) : loading ? (
         <div className="track" aria-busy="true">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card up-skel" aria-hidden="true">
-              <div className="up-skel-poster sk" />
-              <div className="meta">
-                <div className="sk up-skel-t" />
-                <div className="sk up-skel-d" />
-              </div>
-            </div>
+            <CardSkeleton key={i} variant="upcoming" />
           ))}
         </div>
       ) : items.length === 0 ? (

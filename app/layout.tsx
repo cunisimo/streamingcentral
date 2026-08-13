@@ -13,7 +13,13 @@ import OnboardingGate from "@/components/onboarding/OnboardingGate";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
+// `optional` en vez de `swap`: con swap, el kicker del hero se pinta con la
+// fuente de respaldo en DOS renglones (39px) y al llegar Jakarta pasa a UNO
+// (20px), subiendo 19px todo lo que está abajo. Medido, era el 29% del CLS.
+// `optional` elimina el intercambio en vez de contenerlo: si la fuente no llegó
+// en ~100ms, esa carga entera usa el respaldo y nunca hay reflow. El costo es
+// que la primera visita puede verse con la tipografía de respaldo.
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "optional" });
 
 export const viewport: Viewport = {
   width: "device-width",

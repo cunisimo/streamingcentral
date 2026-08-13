@@ -261,6 +261,13 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 
 .meta{padding:10px 2px 0}
 .meta .t{font-size:14px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+/* En los rieles el título ocupa SIEMPRE dos renglones (42px = 2 × 14px × 1.5),
+   se recorte o no. Sin esto el alto de la card depende de cuánto mida cada
+   título, el riel entero mide lo que mida su card más alta, y no hay
+   placeholder que pueda reservar ese alto de antemano: al llegar los datos
+   todo lo de abajo se mueve. En las grillas no hace falta — no hay estado de
+   carga que reservar. */
+.track .meta .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;height:42px}
 .meta .info{font-size:12px;color:var(--faint);margin-top:1px}
 .logos{display:flex;align-items:center;gap:9px;margin-top:7px;height:13px}
 .logos .more{font-size:11px;color:var(--faint);font-weight:600}
@@ -678,6 +685,25 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sk-hero{min-height:50dvh;border-radius:0}
 .sk-title{height:30px;width:70%;margin-top:2px;margin-bottom:14px}
 .sk-meta{height:15px;width:55%;margin-bottom:20px}
+
+/* Barras del skeleton de card (components/CardSkeleton.tsx). Van DENTRO de las
+   filas reales (.t, .info, .logos…), así que su alto + márgenes tiene que dar
+   exactamente el alto de la línea de texto que reemplazan: si no, el
+   placeholder no mide lo mismo que la card y reservar espacio no sirve de
+   nada. Los números salen de font-size × 1.5 (el line-height del body). */
+.sk-l{display:block;height:10px;margin:4px 0;border-radius:5px}          /* 18px = línea de 12px */
+.sk-card .meta .t .sk-l{height:11px;margin:5px 0;width:100%}             /* 2 × 21px = los 42px del título */
+.sk-card .meta .t .sk-l-short{width:62%}
+/* Filas de una línea: la altura la pone el texto (ver CardSkeleton), la barra
+   se superpone sin ocupar lugar. */
+.sk-card .sk-row{position:relative}
+.sk-card .sk-row .sk-l{position:absolute;left:0;top:50%;transform:translateY(-50%);margin:0}
+.sk-card .up-date .sk-l{width:52%}
+.sk-card .info .sk-l{width:58%}
+.sk-card .logos .sk-l{height:13px;margin:0;width:34px}                   /* .logos ya fija 13px */
+.sk-card .ratings .sk-l{width:46%}
+/* El degradado oscuro de .poster no va sobre el gris del placeholder. */
+.sk-card .poster{box-shadow:none}
 .sk-primary{height:52px;width:100%;border-radius:11px;margin-bottom:22px}
 .sk-actions{display:flex;justify-content:space-around;margin-bottom:24px}
 .sk-act{height:44px;width:54px;border-radius:8px}
@@ -754,10 +780,10 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .up-date{font-size:12.5px;font-weight:600;color:var(--accent);margin-top:2px}
 .up-retry{background:none;border:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;padding:0}
 .up-retry:hover{text-decoration:underline}
-/* Skeleton de card (mismo alto que .track .card, sin el gradiente de .poster) */
-.up-skel-poster{aspect-ratio:2/3;border-radius:var(--radius-sm)}
-.up-skel-t{height:13px;width:80%;margin-top:10px}
-.up-skel-d{height:11px;width:45%;margin-top:7px}
+/* El skeleton de card vive en components/CardSkeleton.tsx y se estila con las
+   clases reales de .card (ver el bloque .sk-l más arriba). El anterior era
+   propio de esta sección y medía 261px contra los 347px de la card real: 86px
+   que aparecían de golpe al llegar los estrenos. */
 
 /* ==========================================================================
    Onboarding

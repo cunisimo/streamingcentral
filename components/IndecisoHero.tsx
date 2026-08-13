@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
+import CardSkeleton from "./CardSkeleton";
 import type { UITitle } from "@/lib/types";
 
 // "Recomendador": no hay IA. Cada chip mapea a un slug de categoría
@@ -145,7 +146,10 @@ export default function IndecisoHero({
             </button>
           </div>
           <div className="track" ref={track}>
-            {loading ? <span className="loading">Cargando…</span>
+            {/* Skeletons y no un "Cargando…": el texto suelto medía 141px y el
+                riel con las 6 cards mide 407px, así que al llegar el payload
+                todo el Home bajaba 266px de una. Son 6 porque 6 son los picks. */}
+            {loading ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
               : picks.length ? picks.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)
               : usaComposer && cargaDegradada
                 ? <p className="empty-note">No pudimos cargar las recomendaciones de hoy.</p>
