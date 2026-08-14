@@ -36,7 +36,7 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { cachedIf, dailySeed, TTL } from "./cache";
+import { cachedIf, dailySeed, TTL, withCacheMetrics } from "./cache";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
@@ -331,8 +331,11 @@ export async function homePayload(opts: {
   // Se deduce de si el fetcher llegó a correr: exacto, y no cuesta un comando
   // extra. Se lee en los logs de Vercel filtrando por "[home]".
   let miss = false;
+  const t0 = Date.now();
 
-  const payload = await cachedIf(
+  // El scope de métricas envuelve TODO el armado, no solo el `cachedIf`: lo que
+  // interesa medir son los cientos de lecturas que dispara composeHome adentro.
+  const { res: payload, metricas } = await withCacheMetrics(() => cachedIf(
     key,
     TTL.home,
     () => { miss = true; return composeHome({ providers: opts.providers, types }); },
@@ -340,10 +343,19 @@ export async function homePayload(opts: {
     // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
     // caso "sin plataformas", que no cuesta nada recalcular.
     (v) => !v.degradado && !v.sinPlataformas,
-  );
+  ));
 
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
   console.log(`[home] ${miss ? "MISS" : "HIT "} ${key}`);
+  // Comandos es lo que factura Upstash; requests es lo que se paga en latencia.
+  // Un MGET de 100 claves es 1 de cada uno; 100 GET sueltos son 100 y 100.
+  const lotes = metricas.lotes;
+  console.log(
+    `[home] ${Date.now() - t0}ms total | cache ${metricas.msCache}ms | ` +
+    `${metricas.comandos} comandos | ${metricas.requests} requests | ` +
+    `${metricas.claves} claves (${metricas.hits} hit / ${metricas.misses} miss) | ` +
+    `lotes: ${lotes.length ? `${lotes.length} de [${lotes.join(",")}]` : "ninguno"}`,
+  );
   return payload;
 }

@@ -3,6 +3,7 @@
 // de Redis). tsc no caza esa regresión; esto la convierte en error de
 // compilación si algún "use client" importa un valor de acá.
 import "server-only";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Redis } from "@upstash/redis";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
@@ -88,19 +89,172 @@ export const TTL = {
   home: 60 * 60 * 6,
 } as const;
 
-export async function cached<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
-  if (redis) {
-    const hit = await redis.get<T>(key);
-    if (hit !== null && hit !== undefined) return hit;
-    const data = await fetcher();
-    await redis.set(key, data, { ex: ttl });
-    return data;
+// --- Métricas por operación --------------------------------------------------
+// Para poder comparar antes/después de un cambio en la estrategia de lectura
+// hace falta saber cuántos COMANDOS se mandaron (que es lo que cobra Upstash) y
+// cuántos VIAJES HTTP (que es lo que se paga en latencia). No son lo mismo: un
+// MGET de 100 claves es 1 comando y 1 viaje; 100 GET son 100 y 100.
+//
+// AsyncLocalStorage y no un contador global: en Vercel conviven varios requests
+// en la misma instancia y un contador de módulo mezclaría los números de todos.
+export interface CacheMetrics {
+  comandos: number;   // unidades que factura Upstash
+  requests: number;   // viajes HTTP (round-trips)
+  claves: number;     // claves pedidas (después de deduplicar)
+  hits: number;
+  misses: number;
+  lotes: number[];    // tamaño de cada MGET
+  msCache: number;    // tiempo dentro del cache
+}
+const alsMetrics = new AsyncLocalStorage<CacheMetrics>();
+const nuevasMetricas = (): CacheMetrics => ({
+  comandos: 0, requests: 0, claves: 0, hits: 0, misses: 0, lotes: [], msCache: 0,
+});
+
+// Corre `fn` con un contador propio y devuelve el resultado junto a las métricas.
+export async function withCacheMetrics<T>(fn: () => Promise<T>): Promise<{ res: T; metricas: CacheMetrics }> {
+  const metricas = nuevasMetricas();
+  const res = await alsMetrics.run(metricas, fn);
+  return { res, metricas };
+}
+
+// El batcher es de módulo (las claves son globales), así que un lote puede
+// mezclar claves de dos requests concurrentes y las métricas se le anotan a
+// quien programó el flush. Para diagnóstico está bien; no lo uses para facturar.
+function anotar(fn: (m: CacheMetrics) => void) {
+  const m = alsMetrics.getStore();
+  if (m) fn(m);
+}
+
+// --- Lectura agrupada --------------------------------------------------------
+// Rearmar el Home hacía ~230 GET individuales, uno por título, porque cada
+// `cached()` iba solo a Redis. Todas esas llamadas nacen en el mismo tick (los
+// Promise.all de enrich.ts), así que se pueden juntar: se acumulan en una cola,
+// se descarga en el siguiente microtask y sale un MGET por lote.
+//
+// Deduplicar la cola es parte del ahorro y no un extra: `titleCard` pide el
+// mismo `pv:` que después vuelve a pedir `toUITitle`.
+//
+// 100 por lote: Upstash cobra el MGET como UN comando sin importar cuántas
+// claves lleve, así que el único límite real es el tamaño de la respuesta
+// (una card ronda el KB; 100 son ~100 KB, cómodo).
+const LOTE = 100;
+type Espera = { resolve: (v: unknown) => void; reject: (e: unknown) => void };
+let cola = new Map<string, Espera[]>();
+let programado = false;
+
+// Interruptor de emergencia y, de paso, la forma de medir las dos estrategias
+// con el MISMO build: CACHE_BATCH=0 vuelve al GET por clave de antes. No lo
+// pongas en Vercel salvo que el batching cause un problema.
+const batchOn = process.env.CACHE_BATCH !== "0";
+
+async function getSuelto<T>(key: string): Promise<T | null> {
+  if (!redis) {
+    const hit = mem.get(key);
+    const vivo = hit && hit.exp > Date.now();
+    anotar((m) => { m.comandos += 1; m.claves += 1; if (vivo) m.hits++; else m.misses++; });
+    return vivo ? (hit!.v as T) : null;
   }
-  const now = Date.now();
-  const hit = mem.get(key);
-  if (hit && hit.exp > now) return hit.v as T;
+  const t0 = Date.now();
+  try {
+    const v = await redis.get<T>(key);
+    anotar((m) => {
+      m.comandos += 1; m.requests += 1; m.claves += 1;
+      if (v === null || v === undefined) m.misses++; else m.hits++;
+    });
+    return v ?? null;
+  } catch (err) {
+    anotar((m) => { m.requests += 1; });
+    console.error("[cache] get falló, sigue sin cache:", err);
+    return null;
+  } finally {
+    anotar((m) => { m.msCache += Date.now() - t0; });
+  }
+}
+
+function batchGet<T>(key: string): Promise<T | null> {
+  if (!batchOn) return getSuelto<T>(key);
+  return new Promise<T | null>((resolve, reject) => {
+    const previos = cola.get(key);
+    if (previos) previos.push({ resolve: resolve as (v: unknown) => void, reject });
+    else cola.set(key, [{ resolve: resolve as (v: unknown) => void, reject }]);
+    if (!programado) {
+      programado = true;
+      queueMicrotask(() => { void flush(); });
+    }
+  });
+}
+
+async function flush() {
+  programado = false;
+  const actual = cola;
+  cola = new Map();
+  if (!actual.size) return;
+  const claves = [...actual.keys()];
+  const t0 = Date.now();
+  anotar((m) => { m.claves += claves.length; });
+
+  // Sin Redis (desarrollo) se resuelve contra el Map de memoria, pero se cuenta
+  // igual: la cantidad de comandos depende del PATRÓN de acceso —cuántas claves
+  // distintas y en cuántos lotes— y no del backend. Así se puede comparar
+  // estrategias en local; lo que no se mide sin Redis es la latencia.
+  if (!redis) {
+    const ahora = Date.now();
+    for (let i = 0; i < claves.length; i += LOTE) {
+      const lote = claves.slice(i, i + LOTE);
+      anotar((m) => { m.comandos += 1; m.lotes.push(lote.length); });
+      for (const k of lote) {
+        const hit = mem.get(k);
+        const vivo = hit && hit.exp > ahora;
+        anotar((m) => { if (vivo) m.hits++; else m.misses++; });
+        for (const e of actual.get(k) ?? []) e.resolve(vivo ? hit!.v : null);
+      }
+    }
+    return;
+  }
+  for (let i = 0; i < claves.length; i += LOTE) {
+    const lote = claves.slice(i, i + LOTE);
+    try {
+      const vals = await redis.mget<unknown[]>(...lote);
+      anotar((m) => {
+        m.comandos += 1; m.requests += 1; m.lotes.push(lote.length);
+        for (const v of vals) { if (v === null || v === undefined) m.misses++; else m.hits++; }
+      });
+      lote.forEach((k, j) => { for (const e of actual.get(k) ?? []) e.resolve(vals[j] ?? null); });
+    } catch (err) {
+      // Un lote que falla NO puede tumbar el request: el contrato de `cached`
+      // ante un Redis caído siempre fue "seguí sin cache", no "explotá".
+      anotar((m) => { m.requests += 1; });
+      console.error("[cache] mget falló, sigue sin cache:", err);
+      for (const k of lote) for (const e of actual.get(k) ?? []) e.resolve(null);
+    }
+  }
+  anotar((m) => { m.msCache += Date.now() - t0; });
+}
+
+async function guardar(key: string, data: unknown, ttl: number) {
+  if (!redis) {
+    mem.set(key, { v: data, exp: Date.now() + ttl * 1000 });
+    anotar((m) => { m.comandos += 1; });
+    return;
+  }
+  const t0 = Date.now();
+  try {
+    await redis.set(key, data, { ex: ttl });
+    anotar((m) => { m.comandos += 1; m.requests += 1; });
+  } finally {
+    anotar((m) => { m.msCache += Date.now() - t0; });
+  }
+}
+
+// Un solo camino de lectura para los dos backends: `batchGet` agrupa contra
+// Redis y resuelve contra el Map en desarrollo. Antes había dos ramas y la de
+// memoria no pasaba por ningún contador.
+export async function cached<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
+  const hit = await batchGet<T>(key);
+  if (hit !== null && hit !== undefined) return hit;
   const data = await fetcher();
-  mem.set(key, { v: data, exp: now + ttl * 1000 });
+  await guardar(key, data, ttl);
   return data;
 }
 
@@ -110,20 +264,14 @@ export async function cached<T>(key: string, ttl: number, fetcher: () => Promise
 // guardarlo congelaría la caída durante toda la vida del TTL para todos los que
 // pidan lo mismo.
 export async function cachedIf<T>(
-  key: string, ttl: number, fetcher: () => Promise<T>, guardar: (v: T) => boolean,
+  // `vale` se llamaba `guardar`; se renombró para no chocar con la función de
+  // escritura del batcher, que ahora es la única que habla con redis.set.
+  key: string, ttl: number, fetcher: () => Promise<T>, vale: (v: T) => boolean,
 ): Promise<T> {
-  if (redis) {
-    const hit = await redis.get<T>(key);
-    if (hit !== null && hit !== undefined) return hit;
-    const data = await fetcher();
-    if (guardar(data)) await redis.set(key, data, { ex: ttl });
-    return data;
-  }
-  const now = Date.now();
-  const hit = mem.get(key);
-  if (hit && hit.exp > now) return hit.v as T;
+  const hit = await batchGet<T>(key);
+  if (hit !== null && hit !== undefined) return hit;
   const data = await fetcher();
-  if (guardar(data)) mem.set(key, { v: data, exp: now + ttl * 1000 });
+  if (vale(data)) await guardar(key, data, ttl);
   return data;
 }
 
