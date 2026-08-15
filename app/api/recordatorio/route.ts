@@ -147,7 +147,19 @@ export async function GET(req: NextRequest) {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": `attachment; filename="${nombreArchivo(d.titulo)}"`,
-      "Cache-Control": "no-store",
+      // El botón pide la URL dos veces: una para chequear que haya evento y otra
+      // para bajarlo. Con `no-store` eso eran dos resoluciones de fecha contra
+      // TMDB por cada clic. Con cache privado de 5 minutos, la segunda sale del
+      // cache del navegador y no toca el server.
+      //
+      // HEAD no servía para esto: Next deriva el HEAD del propio GET, así que el
+      // handler corre igual y la llamada a TMDB se paga lo mismo. Lo que ahorra
+      // es cachear, no cambiar el verbo.
+      //
+      // `private` porque el .ics lleva la plataforma del usuario en el resumen;
+      // 5 minutos es corto contra un TTL de estreno, así que no hay riesgo real
+      // de servir una fecha vieja.
+      "Cache-Control": "private, max-age=300",
     },
   });
 }
