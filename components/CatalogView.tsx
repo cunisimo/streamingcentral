@@ -1,5 +1,6 @@
 "use client";
 import Shelf from "./Shelf";
+import ShelfSkeleton from "./ShelfSkeleton";
 import IndecisoHero from "./IndecisoHero";
 import DesempateBanner from "./desempate/DesempateBanner";
 import RuletaBanner from "./ruleta/RuletaBanner";
@@ -15,9 +16,14 @@ import type { HomePayload } from "@/lib/home";
 // devuelve el hero y todos los rieles ya deduplicados y en orden. Los rieles son
 // presentacionales (Shelf en modo controlado). "Próximamente" y "Desempatá"
 // quedan fuera del composer a propósito: no reservan ni se filtran.
+// Cuántos rieles devuelve el composer (lib/home.ts): últimos lanzamientos, los
+// dos de votos, los 6 de género y los 2 de audiencia. Solo se usa para saber
+// cuántos placeholders pintar mientras llega el payload.
+const RIELES = 11;
+
 export default function CatalogView() {
   const online = useOnline();
-  const { platforms } = usePlatforms();
+  const { platforms, ready: platsListo } = usePlatforms();
   const { types, setType, param, ready } = useHomeTypes();
 
   const { data, loading, offline, error, retry } = useApi<HomePayload>(
@@ -44,11 +50,23 @@ export default function CatalogView() {
   // Mientras useHomeTypes no leyó localStorage no hay URL que pedir y useApi apaga
   // `loading`: sin sumarlo acá, entrar al Home desde otra página pinta un frame
   // en blanco antes del primer fetch.
-  const cargando = !ready || loading;
+  // `platsListo` también, y no solo el `ready` de los toggles: useApi no fetchea
+  // hasta que PlatformsContext leyó localStorage y mientras tanto informa
+  // loading=false. En esa ventana `cargando` daba false con `data` todavía
+  // vacío y el Home pintaba por un frame el aviso de "No pudimos cargar el
+  // inicio". Antes pasaba desapercibido porque el bloque de carga medía 24px;
+  // con los rieles reservados el documento colapsaba de 6730px a 1708px y el
+  // scroll restaurado se perdía en el camino.
+  // `!data && !fallo` es el tercer caso y no sobra: useApi enciende `loading`
+  // dentro de un efecto, así que existe un render con todo listo, `loading`
+  // todavía en false y `data` sin llegar. En ese frame el Home caía al aviso de
+  // error, el documento pasaba de 6730px a 1708px y volvía. Es el mismo
+  // criterio que ya usa el hero con `heroPendiente`.
   // `error` = el server respondió 500 (composeHome se cayó). `offline` = no hubo
   // respuesta. `degradado` = respondió 200 pero le faltan fuentes. Los tres
   // ameritan el mismo aviso con reintento, así que se tratan juntos.
   const fallo = !online || offline || error || degradado;
+  const cargando = !ready || !platsListo || loading || (!data && !fallo);
 
   // Pantalla completa SOLO cuando no hay nada que mostrar todavía. Si ya hay
   // rieles, un fallo de refetch no borra el Home: se avisa arriba y se ofrece
@@ -82,7 +100,16 @@ export default function CatalogView() {
 
         {!hayContenido ? (
           cargando ? (
-            <div className="shelf"><span className="loading">Cargando…</span></div>
+            // Un riel de placeholder por cada uno que va a llegar: el composer
+            // devuelve siempre 11. Con el "Cargando…" suelto el documento medía
+            // 1688px en vez de 6275, y eso no era solo CLS — rompía la
+            // restauración de scroll al volver de una ficha (ver ShelfSkeleton).
+            // Los 3 sin toggle son "Últimos lanzamientos" y los dos de audiencia.
+            <div className="home-rails">
+              {Array.from({ length: RIELES }).map((_, i) => (
+                <ShelfSkeleton key={i} conToggle={i !== 0 && i < RIELES - 2} />
+              ))}
+            </div>
           ) : sinPlataformas ? (
             // No es un fallo de carga y reintentar no lo arregla: el Home está
             // vacío porque no hay ninguna plataforma elegida. Mismo texto que
