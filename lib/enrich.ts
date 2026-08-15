@@ -17,7 +17,7 @@ import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGO
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
-import { candidatosDePools, poolsHabilitados } from "./pools";
+import { candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje } from "./pools";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
 import { primaryCountry } from "./countries";
@@ -338,6 +338,11 @@ async function curatedPool(
 
 // --- Carruseles de audiencia (family / adult-anime): receta de lib/audience,
 // movie+tv mergeados, filtrado a plataformas. Server-side, cero costo por título.
+// Cuántos candidatos se enriquecen por tipo en los carruseles de audiencia. El
+// composer los recorta después a AUDIENCE_CARDS; enriquecer de más es pagar un
+// request de providers por título que no se muestra.
+const AUDIENCIA_TANDA = 24;
+
 export async function audienceTitles(slug: string, providers: PlatformCode[]): Promise<UITitle[]> {
   const ids = codesToTmdbIds(providers);
   if (!ids.length) return [];
@@ -348,15 +353,30 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
     const extra: Record<string, string> = {};
     if (rule.certLte) { extra.certification_country = "US"; extra["certification.lte"] = rule.certLte; }
     if (rule.certGte) { extra.certification_country = "US"; extra["certification.gte"] = rule.certGte; }
-    const res = await discover(tp, {
-      providers: ids,
-      genres: rule.genres,
-      withoutGenres: rule.withoutGenres,
-      extra: Object.keys(extra).length ? extra : undefined,
+    // El eje rota por día: hasta acá esto era el top 20 de la página 1 por
+    // popularidad, o sea el MISMO carrusel todos los días y para todos los
+    // usuarios con las mismas plataformas. Los rieles de género al menos
+    // barajaban 60; éste no barajaba nada.
+    const { receta, eje, startPage } = recetaDelDia({
+      superficie: `aud-${slug}`,
+      tipo: tp,
+      semilla: dailySeed(),
+      base: {
+        genres: rule.genres,
+        withoutGenres: rule.withoutGenres,
+        extra: Object.keys(extra).length ? extra : undefined,
+      },
     });
+    registrarEje(`aud-${slug}/${tp}`, eje);
+    const crudos = poolsHabilitados
+      ? await candidatosDePools({ tipo: tp, providers, receta, pages: 2, startPage })
+      : (await discover(tp, { ...receta.params, providers: ids, page: startPage })).results;
+    // Se mezcla con la semilla antes de recortar: sin esto la rotación de eje
+    // cambiaría el criterio pero seguiría mostrando siempre el tope del nuevo
+    // orden. Con dos páginas por plataforma hay de dónde elegir.
     const pub = await publishedIds(tp);
     const items = await settleAll(
-      res.results.slice(0, 20).map((t) => toUITitle(t, tp, pub)),
+      pickDaily(crudos, AUDIENCIA_TANDA, dailySeed() + tp.length).map((t) => toUITitle(t, tp, pub)),
       `audienceTitles ${slug}/${tp}`,
     );
     return items.filter((i) => onUserPlatforms(i, providers));

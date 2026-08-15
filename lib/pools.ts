@@ -1,4 +1,5 @@
 import "server-only";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
 import { cached, TTL } from "./cache";
 import { hoyAR } from "./fecha";
@@ -179,4 +180,125 @@ export async function candidatosDePools(opts: {
   // (genreRail) asume que los primeros son los más relevantes antes de mezclar.
   unicos.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
   return unicos;
+}
+
+// --- Ejes de extracción ------------------------------------------------------
+// El problema que resuelven: pedir siempre `popularity.desc` páginas 1-3 hace
+// que el catálogo real quede fuera de la vista. Sci-fi tiene 406 películas
+// elegibles y el riel mostraba 20 del mismo top; los carruseles de audiencia
+// eran directamente el top 20 de la página 1, idéntico todos los días y para
+// todos los usuarios.
+//
+// La rotación es INVISIBLE: los títulos de los rieles no cambian. Un encabezado
+// variable arriesga el CLS que se arregló en fix/cls-reserva-de-espacio —donde
+// el 29% del problema era justamente texto que cambiaba de alto— y además rotar
+// filas sin avisar es lo que hace cualquier app de streaming.
+export type Eje = "pop" | "top" | "nuevo" | "taquilla" | "hondo";
+
+interface DefEje {
+  // Para qué tipos vale. `taquilla` no existe en series: TMDB no tiene
+  // `revenue` para tv, así que ahí el equivalente es `vote_count.desc` — "lo que
+  // más gente vio", que es lo que taquilla aproxima en cine.
+  tipos: MediaType[];
+  params: (tipo: MediaType) => ParamsReceta;
+  startPage: number;
+}
+
+// Piso de votos de `top`, decidido midiendo qué queda afuera y no a ojo. Con 60
+// o 100 el ranking se llena de ruido de nicho (un recital de BTS con 114 votos
+// arriba de Cadena Perpetua); con 300 aparecen Cadena Perpetua, La lista de
+// Schindler y El caballero oscuro. 500 y 1000 dan el mismo top pero achican el
+// pool (3130 elegibles contra 2642 y 2036), y un pool más chico es menos
+// variedad al mezclar. Solapa 2 de 20 con `pop`: el eje aporta 18 títulos que
+// hoy no se ven nunca.
+const PISO_TOP = 300;
+
+const EJES: Record<Eje, DefEje> = {
+  pop: { tipos: ["movie", "tv"], startPage: 1, params: () => ({ sortBy: "popularity.desc", minVotes: 60 }) },
+  top: { tipos: ["movie", "tv"], startPage: 1, params: () => ({ sortBy: "vote_average.desc", minVotes: PISO_TOP }) },
+  nuevo: {
+    tipos: ["movie", "tv"], startPage: 1,
+    // Tope superior en fecha ARGENTINA: sin él, "más recientes" se llena de
+    // títulos que todavía no salieron. El piso de votos baja porque un estreno
+    // reciente no tuvo tiempo de juntar 60.
+    params: (tipo) => ({
+      sortBy: tipo === "movie" ? "primary_release_date.desc" : "first_air_date.desc",
+      minVotes: 10,
+      extra: {
+        [tipo === "movie" ? "primary_release_date.lte" : "first_air_date.lte"]: hoyAR(),
+      } as Record<string, string>,
+    }),
+  },
+  taquilla: {
+    tipos: ["movie", "tv"], startPage: 1,
+    params: (tipo) => ({ sortBy: tipo === "movie" ? "revenue.desc" : "vote_count.desc", minVotes: 60 }),
+  },
+  // Mismo criterio que `pop` pero más abajo en la lista. Sin excepción de
+  // etiqueta: como la rotación es invisible, "lo popular de la página 4" no
+  // necesita presentarse distinto.
+  hondo: { tipos: ["movie", "tv"], startPage: 4, params: () => ({ sortBy: "popularity.desc", minVotes: 60 }) },
+};
+
+const ORDEN: Eje[] = ["pop", "top", "nuevo", "taquilla", "hondo"];
+
+function hashTexto(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+// Qué eje le toca hoy a una superficie. Determinístico por día: dos usuarios del
+// mismo día comparten eje y por lo tanto comparten pool. El desplazamiento por
+// superficie evita que todo el Home salga el mismo día con el mismo criterio.
+export function ejeDelDia(superficie: string, tipo: MediaType, semilla: number): Eje {
+  const validos = ORDEN.filter((e) => EJES[e].tipos.includes(tipo));
+  return validos[(semilla + hashTexto(superficie)) % validos.length];
+}
+
+// Receta de una superficie para el eje que le toca hoy.
+export function recetaDelDia(opts: {
+  superficie: string;      // "aud-family", "g-accion-home", "hero"
+  tipo: MediaType;
+  semilla: number;
+  base?: ParamsReceta;     // géneros, keywords, exclusiones: lo propio de la superficie
+}): { receta: Receta; eje: Eje; startPage: number } {
+  const eje = ejeDelDia(opts.superficie, opts.tipo, opts.semilla);
+  const def = EJES[eje];
+  const paramsEje = def.params(opts.tipo);
+  const base = opts.base ?? {};
+  return {
+    eje,
+    startPage: def.startPage,
+    receta: {
+      nombre: `${opts.superficie}-${eje}`,
+      params: {
+        ...base,
+        ...paramsEje,
+        // El `extra` del eje se suma al de la superficie en vez de pisarlo: la
+        // certificación por edad de los carruseles de audiencia viaja ahí.
+        extra: { ...(base.extra ?? {}), ...(paramsEje.extra ?? {}) },
+      },
+    },
+  };
+}
+
+// --- Registro de ejes --------------------------------------------------------
+// Qué eje usó cada superficie en este rearmado. No hay interfaz: es solo el
+// registro. Cuando haya usuarios va a hacer falta saber qué eje funcionó mejor,
+// y sin este dato no hay forma de reconstruirlo después — el eje no queda
+// escrito en ningún lado, se deduce de la semilla del día, y esa semilla ya
+// cambió para cuando uno se hace la pregunta.
+//
+// Va por AsyncLocalStorage y no en un objeto de módulo por lo mismo que las
+// métricas de cache: en Vercel conviven varios requests en la misma instancia.
+const alsEjes = new AsyncLocalStorage<Map<string, Eje>>();
+
+export async function conRegistroDeEjes<T>(fn: () => Promise<T>): Promise<{ res: T; ejes: Map<string, Eje> }> {
+  const ejes = new Map<string, Eje>();
+  const res = await alsEjes.run(ejes, fn);
+  return { res, ejes };
+}
+
+export function registrarEje(superficie: string, eje: Eje) {
+  alsEjes.getStore()?.set(superficie, eje);
 }

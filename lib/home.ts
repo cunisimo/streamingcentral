@@ -37,6 +37,7 @@ import {
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
 import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
+import { conRegistroDeEjes } from "./pools";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
@@ -422,7 +423,7 @@ export async function homePayload(opts: {
 
   // El scope de métricas envuelve TODO el armado, no solo el `cachedIf`: lo que
   // interesa medir son los cientos de lecturas que dispara composeHome adentro.
-  const { res: payload, metricas } = await withCacheMetrics(() => cachedIf(
+  const { res: { res: payload, ejes }, metricas } = await withCacheMetrics(() => conRegistroDeEjes(() => cachedIf(
     key,
     TTL.home,
     () => { miss = true; return composeHome({ providers: opts.providers, types }); },
@@ -430,7 +431,7 @@ export async function homePayload(opts: {
     // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
     // caso "sin plataformas", que no cuesta nada recalcular.
     (v) => !v.degradado && !v.sinPlataformas,
-  ));
+  )));
 
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
@@ -444,5 +445,10 @@ export async function homePayload(opts: {
     `${metricas.claves} claves (${metricas.hits} hit / ${metricas.misses} miss) | ` +
     `lotes: ${lotes.length ? `${lotes.length} de [${lotes.join(",")}]` : "ninguno"}`,
   );
+  // Qué eje le tocó a cada superficie hoy. Solo se loguea en un MISS: en un HIT
+  // el payload viene del cache y no se eligió ningún eje.
+  if (ejes.size) {
+    console.log(`[home] EJES ${[...ejes].map(([s, e]) => `${s}=${e}`).join(" ")}`);
+  }
   return payload;
 }
