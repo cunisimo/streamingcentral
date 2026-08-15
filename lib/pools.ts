@@ -85,6 +85,20 @@ function estable(v: unknown): string {
 
 // FNV-1a en base36, 7 caracteres. No es criptografía: solo tiene que cambiar
 // cuando cambian los parámetros.
+//
+// LO QUE ESTE HASH IMPLICA, Y CONVIENE SABER ANTES DE QUE LOS NÚMEROS NO CIERREN:
+// el pool de una plataforma NO es único. Hay una variante por cada configuración
+// de filtros, porque `withoutGenres` depende del conjunto COMPLETO de
+// plataformas del usuario (tener Crunchyroll apaga el filtro de animación en
+// toda la app). O sea que "Netflix, acción, página 1" son hoy dos pools
+// distintos: el de quien tiene Crunchyroll y el de quien no.
+//
+// El hash lo resuelve solo — nadie tiene que acordarse de nada — pero el precio
+// es que multiplica la cantidad de pools y reduce cuánto se comparten entre
+// usuarios. Con las variantes de hoy no molesta. Cuando se sumen recetas
+// (hero, audiencia, chips), la multiplicación crece por los DOS lados: más
+// recetas × más variantes de filtro. Si en algún momento la tasa de acierto de
+// los pools baja sin explicación, mirar acá antes que al TTL.
 function hashParams(p: ParamsReceta): string {
   const s = estable(p);
   let h = 2166136261;
