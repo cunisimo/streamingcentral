@@ -240,9 +240,18 @@ Para que el problema no llegue a producción mientras se decide:
   de `upcoming_content` no tiene con qué validar la fecha. Es deliberadamente
   conservador. Hoy no oculta nada: la agenda son 41 series y ninguna película.
 
-**Ojo con lo que la mitigación NO hace**: cuando el botón sí aparece, el `.ics`
-sigue llevando la fecha vieja. Se limitó a esconder el botón donde no se puede
-validar, no a corregir la fecha — eso es parte de resolver el issue.
+- **Lo que se agenda**: cuando el botón sí aparece, tanto el link de Google como
+  el `.ics` usan la fecha digital argentina. La ruta `/api/recordatorio` la
+  resuelve por su cuenta —no confía en `upcoming_content`, que guarda la del
+  sync— y devuelve 404 si no existe. Verificado: *The Fantastic 4* agenda
+  `20251105` y no `20250723`; *Superman*, sin fecha digital, da 404; las series
+  no cambian.
+
+**Ojo con lo que la mitigación NO hace**: no toca el sync ni la semántica de la
+agenda. `upcoming_content` se sigue llenando con fechas de cine, así que una
+película puede aparecer en "Próximamente" meses antes de que se pueda ver —
+simplemente ya no se puede agendar con la fecha equivocada. Eso es lo que
+resuelve este issue.
 
 **Criterio de cierre:** decidir qué fecha representa "Próximamente", medir la
 cobertura real de la fecha digital AR en la ventana de ingesta, y aplicar la

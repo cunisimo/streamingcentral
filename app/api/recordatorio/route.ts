@@ -27,6 +27,25 @@ interface Datos {
 // estreno de temporada, que es lo que hace legible el evento. Un título que no
 // esté ahí (una ficha futura que el sync todavía no levantó) cae a TMDB, que
 // alcanza para el título y la fecha.
+// En PELÍCULAS el .ics se agenda con la fecha DIGITAL argentina, no con
+// `release_date`: esa es la más temprana del mundo y casi siempre la de cine
+// (The Fantastic 4: cine 2025-07-23, digital AR 2025-11-05). Sin ella no se
+// arma ningún evento — el botón ya no se ofrece en ese caso, así que llegar acá
+// sin el dato significa que algo lo saltó y es mejor un 404 que una fecha mala.
+//
+// Vale también para lo que viene de `upcoming_content`: esa tabla guarda la
+// fecha que trajo el sync, que es la de cine. El sync no se toca (issue #5),
+// pero lo que se agenda sí se corrige acá.
+async function digitalAR(id: number): Promise<string | null> {
+  try {
+    const d = await titleDetails("movie", id);
+    const ar = d.release_dates?.results.find((r) => r.iso_3166_1 === "AR");
+    return ar?.release_dates?.find((x) => x.type === 4)?.release_date?.slice(0, 10) || null;
+  } catch {
+    return null;
+  }
+}
+
 async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
   const db = supabaseServer();
   if (db) {
@@ -37,9 +56,11 @@ async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
       .eq("media_type", tipo)
       .maybeSingle();
     if (data?.release_date) {
+      const fecha = tipo === "movie" ? await digitalAR(id) : (data.release_date as string);
+      if (!fecha) return null;
       return {
         titulo: data.title as string,
-        fecha: data.release_date as string,
+        fecha,
         season: (data.season_number as number | null) ?? null,
         episode: (data.episode_number as number | null) ?? null,
         premiere: Boolean(data.is_season_premiere),
@@ -48,7 +69,7 @@ async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
   }
   try {
     const d = await titleDetails(tipo, id);
-    const fecha = d.release_date || d.first_air_date;
+    const fecha = tipo === "movie" ? await digitalAR(id) : d.first_air_date;
     if (!fecha) return null;
     return { titulo: d.title || d.name || "", fecha, season: null, episode: null, premiere: false };
   } catch {

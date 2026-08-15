@@ -48,15 +48,20 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   // En películas manda la fecha de estreno; en series, la del próximo episodio
   // (`releaseDate` de una serie es su estreno original, así que una serie en
   // emisión nunca calificaría).
-  const cuando = t.type === "movie" ? t.releaseDate : t.nextAirDate;
-  const porEstrenar = !!cuando && cuando > new Date().toISOString().slice(0, 10);
-  // Protección mínima mientras el issue #5 no esté resuelto: en películas, la
-  // fecha que tenemos es la "primary release date" de TMDB, que es la de cine y
-  // puede errarle por meses contra la llegada a streaming. Si TMDB no da la
-  // fecha digital argentina no hay con qué validar, así que no se ofrece
-  // agendar nada. Series no se tocan: ahí la fecha sale de next_episode_to_air,
-  // que es el episodio real.
-  const puedeRecordar = porEstrenar && (t.type !== "movie" || !!t.digitalAR);
+  // Qué fecha se agenda. En películas, la digital argentina y NO `releaseDate`:
+  // esa es la "primary release date" de TMDB, la más temprana del mundo, casi
+  // siempre la de cine, y puede errarle por meses contra la llegada a streaming
+  // (The Fantastic 4: cine 2025-07-23, digital AR 2025-11-05). Cuando TMDB no la
+  // publica queda en null y el botón no se ofrece: sin el dato bueno preferimos
+  // no agendar nada antes que agendar una fecha equivocada.
+  // Series no se tocan: ahí `nextAirDate` es el episodio real.
+  //
+  // Es la MISMA variable que decide si mostrar el botón: la fecha que se manda y
+  // la que habilita el botón tienen que ser una sola, o el botón termina
+  // apareciendo por una fecha y agendando otra.
+  const fechaRecordatorio = t.type === "movie" ? t.digitalAR : t.nextAirDate;
+  const puedeRecordar = !!fechaRecordatorio
+    && fechaRecordatorio > new Date().toISOString().slice(0, 10);
   // Primera plataforma del título de la que conocemos la página de suscripción.
   const suscripcion = t.platforms
     .map((code) => ({ code, url: platformByCode(code)?.signupUrl }))
@@ -153,7 +158,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
               si TMDB da la fecha digital argentina (ver `puedeRecordar`). */}
           {puedeRecordar && (
             <RecordarButton
-              id={t.id} tipo={t.type} titulo={t.title} fecha={cuando!}
+              id={t.id} tipo={t.type} titulo={t.title} fecha={fechaRecordatorio!}
               plataforma={t.platforms[0] ?? null} variant="texto"
             />
           )}
