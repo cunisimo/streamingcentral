@@ -2,6 +2,7 @@
 // La escribe SOLO la Edge Function tmdb-sync; acá solo leemos (RLS select
 // público, cliente anon). Mapea filas DB -> UIUpcoming reusando los helpers
 // de la app (TMDB_IMG, genreIdsToSlugs, codeForTmdbId).
+import { hoyAR } from "./fecha";
 import { supabaseServer } from "./supabase";
 import { TMDB_IMG } from "./tmdb";
 import { genreIdsToSlugs } from "./categories";
@@ -101,6 +102,24 @@ export async function upcomingList(filters: UpcomingFilters = {}): Promise<UIUpc
 
   let q = sb.from("upcoming_content").select(SELECT).order("release_date", { ascending: true });
   if (filters.mediaType) q = q.eq("media_type", filters.mediaType);
+  // Lo vencido no se muestra, y se decide AL LEER en vez de confiar en que el
+  // sync esté fresco. No es lo mismo que el `from` explícito de abajo: ese lo
+  // manda el llamador (la vista por mes lo usa para acotar un rango); este es el
+  // piso que siempre corre.
+  //
+  // Hace falta porque una fila puede quedar huérfana, y NO por la ventana de
+  // fechas —que está bien— sino por cobertura: el descubrimiento de series del
+  // sync mira `discover/tv` ordenado por popularidad con `MAX_PAGES = 3`, o sea
+  // las 60 primeras de 1696 elegibles (medido el 2026-08-15). Una serie que cae
+  // fuera de ese top deja de refrescarse aunque su próximo episodio esté dentro
+  // de la ventana, y la limpieza recién la borra a los GRACE_DAYS (2).
+  //
+  // Mientras tanto la fila no está solo vencida: está EQUIVOCADA. La tabla decía
+  // que Star Trek daba T4 E4 el 13; TMDB ya daba T4 E5 el 20, y la fila tenía
+  // updated_at del 8 aunque el sync había corrido ese mismo día.
+  //
+  // Y como el orden es ascendente, esas filas eran justo las PRIMERAS del riel.
+  q = q.gte("release_date", hoyAR());
   if (filters.from) q = q.gte("release_date", filters.from);
   if (filters.to) q = q.lte("release_date", filters.to);
   if (idFilter) q = q.in("id", idFilter);
