@@ -5,6 +5,7 @@ import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import { useShelfType } from "@/hooks/useShelfType";
 import TitleCard from "./TitleCard";
+import { useTrackScroll } from "@/hooks/useTrackScroll";
 import ShelfTypeToggle from "./ShelfTypeToggle";
 import { genreLabel } from "./data";
 import type { UITitle, MediaType } from "@/lib/types";
@@ -94,13 +95,18 @@ export default function Shelf({
   // a 1: ahí el tope no lo pone el algoritmo sino cuánta gente votó, y esconder
   // el único título votado es peor que mostrarlo solo.
   const minimo = minItems ?? 2;
+  const heading = title ?? genreLabel(genre ?? "");
+
+  // Recuerda el scroll horizontal entre navegaciones. Va ANTES del return
+  // temprano de abajo: un hook no puede quedar detrás de un return condicional.
+  // `shelfKey` solo lo mandan los rieles del Home; para el resto alcanza el
+  // encabezado, que es estable dentro de una misma página.
+  useTrackScroll(shelfKey ?? heading, track, !loading && items.length >= minimo);
 
   // Auto-ocultado solo para rieles SIN toggle. Con toggle, mantenemos header +
   // toggle visibles aunque el tipo activo quede vacío (si no, el usuario no
   // podría volver).
   if (!typeToggle && !loading && items.length < minimo) return null;
-
-  const heading = title ?? genreLabel(genre ?? "");
   const tipoLabel = activeType === "movie" ? "películas" : "series";
   const emptyMsg = genre
     ? `No hay ${tipoLabel} de ${genreLabel(genre).toLowerCase()} en tus plataformas`

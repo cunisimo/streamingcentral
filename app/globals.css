@@ -710,6 +710,14 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sk-card .ratings .sk-l{width:46%}
 /* El degradado oscuro de .poster no va sobre el gris del placeholder. */
 .sk-card .poster{box-shadow:none}
+
+/* Placeholder de riel (components/ShelfSkeleton.tsx). El encabezado lleva el
+   alto de UN renglón de h2 (22px × 1.5 = 33px) más su margen: es lo que mide
+   el riel real cuando el título entra al lado del toggle, que es el caso de la
+   mayoría. Las barras van en absolute para no aportar alto. */
+.sk-head{position:relative;height:33px;display:block}
+.sk-head-t{position:absolute;left:0;top:9px;height:15px;width:min(190px,46%);border-radius:6px}
+.sk-head-tg{position:absolute;right:0;top:2px;height:29px;width:128px;border-radius:999px}
 .sk-primary{height:52px;width:100%;border-radius:11px;margin-bottom:22px}
 .sk-actions{display:flex;justify-content:space-around;margin-bottom:24px}
 .sk-act{height:44px;width:54px;border-radius:8px}
