@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildIcs } from "@/lib/ics";
 import { supabaseServer } from "@/lib/supabase";
 import { titleDetails } from "@/lib/tmdb";
+import { hoyAR } from "@/lib/fecha";
 import { platformByCode } from "@/lib/providers-ar";
 import type { MediaType, PlatformCode } from "@/lib/types";
 
@@ -69,9 +70,25 @@ async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
   }
   try {
     const d = await titleDetails(tipo, id);
-    const fecha = tipo === "movie" ? await digitalAR(id) : d.first_air_date;
+    // En series, `next_episode_to_air` y NO `first_air_date`. `first_air_date`
+    // es el estreno ORIGINAL de la serie: en una en emisión es una fecha del
+    // pasado, así que el .ics guardaba en el calendario del usuario un evento ya
+    // vencido — y encima el botón se mostraba por `nextAirDate`, o sea que la
+    // fecha que decidía mostrarlo no era la que se agendaba. Sin próximo
+    // episodio no hay nada que recordar: null y 404.
+    const fecha = tipo === "movie"
+      ? await digitalAR(id)
+      : (d.next_episode_to_air?.air_date ?? null);
     if (!fecha) return null;
-    return { titulo: d.title || d.name || "", fecha, season: null, episode: null, premiere: false };
+    return {
+      titulo: d.title || d.name || "",
+      fecha,
+      // Del mismo episodio que fija la fecha, para que el resumen diga "T4 E4" y
+      // no un genérico "nuevo episodio".
+      season: tipo === "tv" ? (d.next_episode_to_air?.season_number ?? null) : null,
+      episode: tipo === "tv" ? (d.next_episode_to_air?.episode_number ?? null) : null,
+      premiere: false,
+    };
   } catch {
     return null;
   }
@@ -106,6 +123,13 @@ export async function GET(req: NextRequest) {
 
   const d = await datosDe(tipo, id);
   if (!d) return NextResponse.json({ error: "sin fecha de estreno" }, { status: 404 });
+  // Red de seguridad para cualquier fecha vencida que se cuele por otro lado:
+  // `upcoming_content` puede quedar desactualizada entre corridas del sync y
+  // devolver un episodio que ya salió. Agendar el pasado no le sirve a nadie y
+  // ensucia un calendario que no es nuestro, así que mejor no generar nada.
+  if (d.fecha < hoyAR()) {
+    return NextResponse.json({ error: "el estreno ya pasó" }, { status: 404 });
+  }
 
   const plataforma = platformByCode(code)?.name ?? null;
   const url = `${SITE}/titulo/${tipo}/${id}`;

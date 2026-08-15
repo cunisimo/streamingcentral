@@ -28,6 +28,8 @@ export default function RecordarButton({
   solo?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [bajando, setBajando] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const cerrar = useCallback(() => setOpen(false), []);
@@ -49,6 +51,38 @@ export default function RecordarButton({
   });
   const ics = icsUrl(tipo, id, plataforma);
 
+  // El .ics NO se arma como blob en el cliente: en iOS un `blob:` con contenido
+  // de calendario abre de forma inconsistente, y por eso existe la ruta (ver su
+  // comentario). Pero un `<a download>` no puede enterarse de un 404: el
+  // navegador se bajaba el JSON del error como si fuera el archivo, sin un solo
+  // aviso. Así que se pide primero y recién si la respuesta sirve se navega —
+  // la descarga la sigue haciendo el navegador contra la misma URL, con su
+  // Content-Type, que es lo que iOS necesita.
+  //
+  // Son dos requests para un archivo de medio kilobyte. Es el precio de poder
+  // avisar cuando algo falla.
+  const bajarIcs = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setError(null);
+    setBajando(true);
+    try {
+      const r = await fetch(ics);
+      if (!r.ok) {
+        setError(r.status === 404
+          ? "Todavía no hay una fecha confirmada para este título."
+          : "No pudimos armar el recordatorio. Probá de nuevo en un rato.");
+        return;
+      }
+      window.location.href = ics;
+      cerrar();
+    } catch {
+      setError("No pudimos armar el recordatorio. Revisá tu conexión.");
+    } finally {
+      setBajando(false);
+    }
+  };
+
   const ico = (
     <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="5" width="18" height="16" rx="2" />
@@ -64,10 +98,13 @@ export default function RecordarButton({
         <div className="left">Google Calendar</div>
       </a>
       {/* El .ics lleva la alarma de 24 h adentro; Google usa el default del
-          usuario, que no podemos fijar desde la URL. */}
-      <a className="prow" href={ics} download onClick={cerrar}>
-        <div className="left">Apple Calendar / Outlook</div>
+          usuario, que no podemos fijar desde la URL. Sigue siendo un <a> con la
+          URL real —así el menú contextual y "abrir en pestaña nueva" funcionan—
+          pero el click pasa por `bajarIcs`, que chequea antes de navegar. */}
+      <a className="prow" href={ics} onClick={bajarIcs} aria-busy={bajando}>
+        <div className="left">{bajando ? "Preparando…" : "Apple Calendar / Outlook"}</div>
       </a>
+      {error && <p className="panel-hint err" role="alert">{error}</p>}
     </div>
   );
 
