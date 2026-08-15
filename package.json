@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "prebuild": "node scripts/stamp-sw.mjs",
-    "pwa:assets": "node scripts/generate-pwa-assets.mjs"
+    "pwa:assets": "node scripts/generate-pwa-assets.mjs",
+    "test": "node --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

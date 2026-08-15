@@ -276,27 +276,10 @@ export async function cachedIf<T>(
 }
 
 // --- Motor "del día": determinístico por fecha ---
-// La app es de Argentina y su "día" tiene que ser el día argentino. Con
-// `toISOString()` la fecha era UTC, así que TODO lo que rota por día —el Home,
-// el recomendador, los chips curados y la ruleta— cambiaba a las 21:00 hora
-// local, en pleno horario de mayor uso: al usuario le cambiaba el Home mientras
-// lo estaba mirando, y cinco horas después volvía a ser "el mismo día".
-//
-// De paso, como la semilla es parte de la clave del cache del Home, el cruce
-// invalida todas las claves de golpe y el primer visitante de cada combinación
-// paga un rearmado. Ese golpe pasa de las 21:00 a las 00:00.
-//
-// `en-CA` es el atajo estándar para que toLocaleDateString devuelva YYYY-MM-DD.
-// Necesita ICU completo, que Node trae por defecto desde la 18 (y Vercel corre
-// 20+). El hash FNV es el mismo de antes, sobre el mismo formato de string.
-const TZ = "America/Argentina/Buenos_Aires";
-
-export function dailySeed(date = new Date()): number {
-  const s = date.toLocaleDateString("en-CA", { timeZone: TZ });
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
+// `dailySeed` se mudó a `lib/fecha.ts` (función pura, sin `server-only`) para
+// poder testearla y para que el día argentino sea uno solo en toda la app. Se
+// re-exporta desde acá porque medio proyecto la importa de `./cache`.
+export { dailySeed } from "./fecha";
 function mulberry32(seed: number) {
   return () => {
     seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
