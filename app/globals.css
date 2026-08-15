@@ -125,6 +125,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .prow.locked{cursor:default;opacity:.75}
 .prow.locked:hover{background:transparent}
 .panel-hint{font-size:11px;color:var(--faint);padding:6px 10px 2px;line-height:1.4}
+/* Aviso de error dentro de un panel: tiene que leerse, no susurrarse. */
+.panel-hint.err{color:var(--editorial);font-weight:600}
 .panel h4{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:6px 10px 8px}
 .prow{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:10px;cursor:pointer;gap:14px}
 .prow:hover{background:var(--surface-2)}
