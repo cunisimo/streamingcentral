@@ -203,7 +203,12 @@ export interface RawDetail {
   credits: { cast: { id: number; name: string; character?: string; profile_path: string | null }[]; crew: { job: string; name: string }[] };
   external_ids: { imdb_id: string | null };
   content_ratings?: { results: { iso_3166_1: string; rating: string }[] };
-  release_dates?: { results: { iso_3166_1: string; release_dates: { certification: string }[] }[] };
+  // `type` es el tipo de estreno de TMDB: 1 premiere, 2 limitado, 3 cine,
+  // 4 digital, 5 físico, 6 TV. El 4 es el único que le importa a una app de
+  // streaming — ver issue #5 en docs/ISSUES.md.
+  release_dates?: {
+    results: { iso_3166_1: string; release_dates: { certification: string; type: number; release_date: string }[] }[];
+  };
   recommendations?: Paged<RawTitle>;
 }
 export function titleDetails(type: MediaType, id: number) {

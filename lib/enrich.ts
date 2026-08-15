@@ -520,6 +520,23 @@ function certOf(d: RawDetail, type: MediaType): string {
   return ar?.release_dates?.[0]?.certification || "—";
 }
 
+// Fecha de estreno DIGITAL en Argentina (tipo 4 de TMDB), o null si TMDB no la
+// tiene — que es lo más común.
+//
+// `release_date` a secas es la "primary release date": la más temprana del
+// mundo, normalmente una premiere o el estreno en cine. Para una app de
+// streaming eso puede errarle por meses: The Fantastic 4 tiene primary
+// 2025-07-23 y digital AR 2025-11-05. Ver issue #5, que decide qué se hace
+// cuando este dato falta; acá solo se expone.
+//
+// No cuesta ningún request extra: `titleDetails` ya trae `release_dates` en el
+// append_to_response, porque de ahí sale la certificación por edad.
+function digitalARDe(d: RawDetail): string | null {
+  const ar = d.release_dates?.results.find((r) => r.iso_3166_1 === "AR");
+  const digital = ar?.release_dates?.find((x) => x.type === 4);
+  return digital?.release_date?.slice(0, 10) || null;
+}
+
 export async function detail(
   type: MediaType, id: number, providers: PlatformCode[] = [],
 ): Promise<UITitleDetail> {
@@ -562,6 +579,7 @@ export async function detail(
     tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
     hasEditorial: !!editorial,
     age: certOf(d, type),
+    digitalAR: type === "movie" ? digitalARDe(d) : null,
     synopsis: d.overview || "",
     cast: d.credits?.cast?.slice(0, 12).map((c) => ({
       id: c.id,

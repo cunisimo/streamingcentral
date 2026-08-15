@@ -50,6 +50,13 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   // emisión nunca calificaría).
   const cuando = t.type === "movie" ? t.releaseDate : t.nextAirDate;
   const porEstrenar = !!cuando && cuando > new Date().toISOString().slice(0, 10);
+  // Protección mínima mientras el issue #5 no esté resuelto: en películas, la
+  // fecha que tenemos es la "primary release date" de TMDB, que es la de cine y
+  // puede errarle por meses contra la llegada a streaming. Si TMDB no da la
+  // fecha digital argentina no hay con qué validar, así que no se ofrece
+  // agendar nada. Series no se tocan: ahí la fecha sale de next_episode_to_air,
+  // que es el episodio real.
+  const puedeRecordar = porEstrenar && (t.type !== "movie" || !!t.digitalAR);
   // Primera plataforma del título de la que conocemos la página de suscripción.
   const suscripcion = t.platforms
     .map((code) => ({ code, url: platformByCode(code)?.signupUrl }))
@@ -142,8 +149,9 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
 
         <div className="actions">
           <ListActions id={t.id} tipo={t.type} />
-          {/* Sólo tiene sentido en lo que todavía no salió. */}
-          {porEstrenar && (
+          {/* Sólo tiene sentido en lo que todavía no salió, y en películas solo
+              si TMDB da la fecha digital argentina (ver `puedeRecordar`). */}
+          {puedeRecordar && (
             <RecordarButton
               id={t.id} tipo={t.type} titulo={t.title} fecha={cuando!}
               plataforma={t.platforms[0] ?? null} variant="texto"
