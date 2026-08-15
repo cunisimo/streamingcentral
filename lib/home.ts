@@ -36,7 +36,7 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { cachedIf, dailySeed, TTL, withCacheMetrics } from "./cache";
+import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
@@ -45,9 +45,13 @@ export const VISIBLE_CARDS = 20;
 // visibles, así que el composer los recorta con su propio límite.
 export const AUDIENCE_CARDS = 40;
 // Páginas de discover que se piden de entrada (20 por página). Con 2 (=40
-// candidatos) se cubre el peor solapamiento medido (7 de 20). La 3ª página solo
-// se pide si tras dedup + filtro de plataformas el riel quedó corto.
-export const FETCH_BUFFER = 2;
+// candidatos) se cubría el peor solapamiento medido (7 de 20), pero el riel
+// tomaba casi siempre los 20 primeros por popularidad y eso es exactamente lo
+// que llenaba Sci-fi de Marvel: TMDB ordena por popularidad y las franquicias
+// ganan siempre. Con 3 páginas (=60) hay de dónde elegir después de mezclar.
+// Cuesta 1 discover más por riel de género, 6 por rearmado, contra los ~230
+// requests que ya cuesta: es barato y se cachea igual.
+export const FETCH_BUFFER = 3;
 
 export interface HomeRail {
   key: string;
@@ -105,17 +109,83 @@ async function safe<T>(c: Contador, etiqueta: string, vacio: T, fn: () => Promis
 
 // --- Etapa: Dedup -----------------------------------------------------------
 // Reserva las claves de `items` en `used` y devuelve solo las no vistas.
-function take(items: UITitle[], used: Set<string>, limit = VISIBLE_CARDS): UITitle[] {
+// `admite` se consulta DESPUÉS del dedup y solo sobre lo que realmente entraría,
+// así que puede llevar cuenta de lo aceptado (lo usa el tope por saga). Un
+// título rechazado no se reserva en `used`: queda libre para otro riel, que es
+// lo que se quiere — cuatro Spider-Man en Sci-fi sobran, uno en Acción no.
+function take(
+  items: UITitle[], used: Set<string>, limit = VISIBLE_CARDS, admite?: (t: UITitle) => boolean,
+): UITitle[] {
   const out: UITitle[] = [];
   if (limit <= 0) return out;
   for (const t of items) {
     const k = keyOf(t);
     if (used.has(k)) continue;
+    if (admite && !admite(t)) continue;
     used.add(k);
     out.push(t);
     if (out.length >= limit) break;
   }
   return out;
+}
+
+// --- Etapa: variedad ---------------------------------------------------------
+// Tope de títulos de la misma saga por riel. Con 20 lugares, Sci-fi mostraba 7
+// Spider-Man y 3 Vengadores: el dedup del Home usa `type:id` y siete Spider-Man
+// son siete ids distintos, así que nada los frenaba.
+//
+// La saga se deduce del título y NO de `belongs_to_collection`, que sería el
+// dato correcto: discover no lo devuelve y pedirlo costaría un request de
+// detalle por candidato (~230 más por rearmado). Es una heurística; el precio
+// de equivocarse es mostrar una película menos de una saga, no un error.
+const TOPE_SAGA = 2;
+
+// Desplaza la semilla diaria por riel: si todos mezclaran con la misma, dos
+// géneros con pools parecidos saldrían en el mismo orden relativo.
+function hashGenero(g: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < g.length; i++) { h ^= g.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+// "Spider-Man: Homecoming" y "Spider-Man 3" -> "spider man".
+// "The Amazing Spider-Man 2: El poder de Electro" -> "amazing spider man".
+function claveSaga(titulo: string): string {
+  return titulo
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")   // sin tildes
+    .split(/:|\s+[-–—]\s+/)[0]                           // lo de antes del subtítulo
+    .replace(/\b(el|la|los|las|un|una|the|a)\b/g, " ")   // artículos
+    .replace(/[^a-z0-9]+/g, " ")                         // guiones y signos
+    .replace(/\s+(?:[ivx]+|\d+)\s*$/, "")                // número de secuela final
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Dos claves son la misma saga si una contiene a la otra como palabras enteras:
+// así "spider man" alcanza a "amazing spider man". El piso de 6 caracteres evita
+// que una clave corta se coma títulos que no tienen nada que ver.
+function mismaSaga(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const [corto, largo] = a.length <= b.length ? [a, b] : [b, a];
+  if (corto.length < 6) return false;
+  return ` ${largo} `.includes(` ${corto} `);
+}
+
+// Devuelve el predicado de `take` que aplica el tope. Tiene estado: cuenta lo
+// que va aceptando a lo largo de las vueltas del riel.
+function topeDeSagas(tope = TOPE_SAGA) {
+  const vistas: { clave: string; n: number }[] = [];
+  return (t: UITitle) => {
+    const clave = claveSaga(t.title);
+    if (!clave) return true;
+    const saga = vistas.find((v) => mismaSaga(v.clave, clave));
+    if (!saga) { vistas.push({ clave, n: 1 }); return true; }
+    if (saga.n >= tope) return false;
+    saga.n++;
+    return true;
+  };
 }
 
 // --- Etapa: Source (con buffer y relleno) ------------------------------------
@@ -134,18 +204,27 @@ const MAX_VUELTAS = 4;
 
 async function genreRail(
   c: Contador, genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
-  candidatos: RawTitle[],
+  candidatos: RawTitle[], admite: (t: UITitle) => boolean,
 ): Promise<UITitle[]> {
   const out: UITitle[] = [];
-  let pool = candidatos;
+  // Mezcla determinística del día: sin esto el riel se lleva siempre los 20
+  // primeros por popularidad, que es el orden en el que TMDB pone adelante a las
+  // franquicias. Con 60 candidatos mezclados hay variedad real, y como la
+  // semilla es la fecha, el Home sigue siendo el mismo durante todo el día.
+  // El género entra en la semilla para que dos rieles con pools parecidos no
+  // salgan en el mismo orden.
+  const semilla = (dailySeed() + hashGenero(genre)) >>> 0;
+  const mezclar = (p: RawTitle[]) => pickDaily(p, p.length, semilla);
+  let pool = mezclar(candidatos);
   let pedidaExtra = false;
   let vueltas = 0;
   // La página extra es la SIGUIENTE al buffer inicial (FETCH_BUFFER + 1) y se
   // pide una sola vez: 1..FETCH_BUFFER ya vinieron en la etapa paralela.
   const pedirExtra = async () => {
     pedidaExtra = true;
-    return safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
+    const extra = await safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
       categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1, scope: "home" }));
+    return mezclar(extra);
   };
 
   while (out.length < VISIBLE_CARDS) {
@@ -170,7 +249,7 @@ async function genreRail(
     pool = pool.slice(tanda.length);
     const enriquecidos = await safe(c, `genre:${genre} enrich`, [] as UITitle[], () =>
       enrichRaw(tanda, tipo, providers));
-    out.push(...take(enriquecidos, used, faltan));
+    out.push(...take(enriquecidos, used, faltan, admite));
     if (!pool.length && pedidaExtra) break;
   }
   return out;
@@ -255,13 +334,21 @@ export async function composeHome(opts: {
 
   // 4. Rieles de género, en orden. Cada uno deduplica contra todo lo anterior y
   //    enriquece solo lo que va a mostrar (por eso este tramo sigue en serie).
+  //
+  //    El tope por saga es UNO SOLO para los seis, no uno por riel. Con un tope
+  //    por riel, Marvel metía dos Spider-Man en Acción y otros dos en Sci-fi:
+  //    cada riel cumplía y el Home igual quedaba lleno de lo mismo. Como los
+  //    superhéroes están en los dos géneros, el tope tiene que contar a nivel
+  //    Home. El orden de HOME_GENRES decide quién se queda con qué: Acción va
+  //    primero, así que Sci-fi ve lo que Acción no usó.
   const generos: HomeRail[] = [];
+  const admiteSaga = topeDeSagas();
   for (let i = 0; i < generosTipo.length; i++) {
     const { g, tipo } = generosTipo[i];
     generos.push({
       key: `genre:${g}`,
       genre: g,
-      items: await genreRail(c, g, tipo, providers, used, generosRaw[i]),
+      items: await genreRail(c, g, tipo, providers, used, generosRaw[i], admiteSaga),
       typeToggle: "refetch",
       shelfKey: g,
       activeType: tipo,
