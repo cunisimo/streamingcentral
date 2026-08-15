@@ -344,6 +344,11 @@ const AUDIENCIA_OBJETIVO = 20;
 // Tope de tandas de enriquecido por tipo. Mismo motivo que MAX_VUELTAS en
 // lib/home.ts: sin techo, un eje con poca cobertura en las plataformas del
 // usuario encadena vueltas secuenciales y la latencia de cola queda abierta.
+//
+// Y el mismo sesgo: está calibrado para el eje más fácil de llenar. `hondo`
+// termina en 21 tarjetas gastando 407 enriquecidos, contra 39 tarjetas y 434 de
+// un día de `pop` — le sobra presupuesto sin usar. Ver el comentario largo junto
+// a MAX_VUELTAS en lib/home.ts.
 const AUDIENCIA_VUELTAS = 4;
 
 export async function audienceTitles(slug: string, providers: PlatformCode[]): Promise<UITitle[]> {

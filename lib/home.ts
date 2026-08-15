@@ -201,6 +201,18 @@ function topeDeSagas(tope = TOPE_SAGA) {
 // providersOf puede costar hasta 8 s de timeout) × 6 géneros. Termina, pero la
 // latencia de cola queda abierta. Con 4 vueltas se conserva el beneficio de
 // arrastrar el pool sin dejar el peor caso sin techo.
+//
+// EL TOPE ESTÁ CALIBRADO PARA EL EJE MÁS FÁCIL DE LLENAR Y ATA AL MÁS PROFUNDO.
+// Medido en audiencia el 2026-08-15: un día de `hondo` (página 4) termina con 21
+// tarjetas donde uno de `pop` termina con 39. La lectura obvia es que `hondo` es
+// caro, y es al revés — ese día gastó 407 enriquecidos contra los 434 de un día
+// de `pop`: le sobraron 27 de presupuesto SIN USAR. No queda corto por caro,
+// queda corto porque el tope le corta el bucle antes de que llegue a gastar.
+//
+// O sea que darle más vueltas no lo haría caro: lo llevaría al costo de un día
+// normal. Cuando se toque este número —y los once rieles de género usan el mismo
+// mecanismo, así que el impacto es mayor acá que en audiencia— hay que revisarlo
+// con ese dato a la vista y no asumiendo que más vueltas es más costo.
 const MAX_VUELTAS = 4;
 
 async function genreRail(
