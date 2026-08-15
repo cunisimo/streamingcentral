@@ -204,7 +204,7 @@ const MAX_VUELTAS = 4;
 
 async function genreRail(
   c: Contador, genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
-  candidatos: RawTitle[],
+  candidatos: RawTitle[], admite: (t: UITitle) => boolean,
 ): Promise<UITitle[]> {
   const out: UITitle[] = [];
   // Mezcla determinística del día: sin esto el riel se lleva siempre los 20
@@ -216,8 +216,6 @@ async function genreRail(
   const semilla = (dailySeed() + hashGenero(genre)) >>> 0;
   const mezclar = (p: RawTitle[]) => pickDaily(p, p.length, semilla);
   let pool = mezclar(candidatos);
-  // Tope por saga, compartido por todas las vueltas del riel.
-  const admite = topeDeSagas();
   let pedidaExtra = false;
   let vueltas = 0;
   // La página extra es la SIGUIENTE al buffer inicial (FETCH_BUFFER + 1) y se
@@ -336,13 +334,21 @@ export async function composeHome(opts: {
 
   // 4. Rieles de género, en orden. Cada uno deduplica contra todo lo anterior y
   //    enriquece solo lo que va a mostrar (por eso este tramo sigue en serie).
+  //
+  //    El tope por saga es UNO SOLO para los seis, no uno por riel. Con un tope
+  //    por riel, Marvel metía dos Spider-Man en Acción y otros dos en Sci-fi:
+  //    cada riel cumplía y el Home igual quedaba lleno de lo mismo. Como los
+  //    superhéroes están en los dos géneros, el tope tiene que contar a nivel
+  //    Home. El orden de HOME_GENRES decide quién se queda con qué: Acción va
+  //    primero, así que Sci-fi ve lo que Acción no usó.
   const generos: HomeRail[] = [];
+  const admiteSaga = topeDeSagas();
   for (let i = 0; i < generosTipo.length; i++) {
     const { g, tipo } = generosTipo[i];
     generos.push({
       key: `genre:${g}`,
       genre: g,
-      items: await genreRail(c, g, tipo, providers, used, generosRaw[i]),
+      items: await genreRail(c, g, tipo, providers, used, generosRaw[i], admiteSaga),
       typeToggle: "refetch",
       shelfKey: g,
       activeType: tipo,
