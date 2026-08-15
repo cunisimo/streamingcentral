@@ -17,7 +17,7 @@ import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGO
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
-import { candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje } from "./pools";
+import { candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje, type Candidato } from "./pools";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
 import { primaryCountry } from "./countries";
@@ -338,10 +338,13 @@ async function curatedPool(
 
 // --- Carruseles de audiencia (family / adult-anime): receta de lib/audience,
 // movie+tv mergeados, filtrado a plataformas. Server-side, cero costo por título.
-// Cuántos candidatos se enriquecen por tipo en los carruseles de audiencia. El
-// composer los recorta después a AUDIENCE_CARDS; enriquecer de más es pagar un
-// request de providers por título que no se muestra.
-const AUDIENCIA_TANDA = 24;
+// Cuántas tarjetas apunta a devolver cada tipo del carrusel. El composer recorta
+// después a AUDIENCE_CARDS sobre los dos tipos juntos.
+const AUDIENCIA_OBJETIVO = 20;
+// Tope de tandas de enriquecido por tipo. Mismo motivo que MAX_VUELTAS en
+// lib/home.ts: sin techo, un eje con poca cobertura en las plataformas del
+// usuario encadena vueltas secuenciales y la latencia de cola queda abierta.
+const AUDIENCIA_VUELTAS = 4;
 
 export async function audienceTitles(slug: string, providers: PlatformCode[]): Promise<UITitle[]> {
   const ids = codesToTmdbIds(providers);
@@ -368,18 +371,40 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
       },
     });
     registrarEje(`aud-${slug}/${tp}`, eje);
-    const crudos = poolsHabilitados
-      ? await candidatosDePools({ tipo: tp, providers, receta, pages: 2, startPage })
-      : (await discover(tp, { ...receta.params, providers: ids, page: startPage })).results;
-    // Se mezcla con la semilla antes de recortar: sin esto la rotación de eje
-    // cambiaría el criterio pero seguiría mostrando siempre el tope del nuevo
-    // orden. Con dos páginas por plataforma hay de dónde elegir.
     const pub = await publishedIds(tp);
-    const items = await settleAll(
-      pickDaily(crudos, AUDIENCIA_TANDA, dailySeed() + tp.length).map((t) => toUITitle(t, tp, pub)),
-      `audienceTitles ${slug}/${tp}`,
-    );
-    return items.filter((i) => onUserPlatforms(i, providers));
+    // Se enriquece POR TANDAS y se vuelve a pedir hasta llenar o agotar
+    // candidatos, igual que los rieles de género. Un tamaño de tanda fijo no
+    // sirve: cuántos candidatos sobreviven al filtro de plataformas depende del
+    // eje (en `hondo`, página 4, se cae bastante más que en `pop`) y del
+    // catálogo del día, así que cualquier número elegido hoy queda mal mañana o
+    // cuando se sumen recetas.
+    let pagina = startPage;
+    let pool: Candidato[] = [];
+    const out: UITitle[] = [];
+    let vueltas = 0;
+    while (out.length < AUDIENCIA_OBJETIVO && vueltas < AUDIENCIA_VUELTAS) {
+      if (!pool.length) {
+        const traidos = poolsHabilitados
+          ? await candidatosDePools({ tipo: tp, providers, receta, pages: 1, startPage: pagina })
+          : (await discover(tp, { ...receta.params, providers: ids, page: pagina })).results;
+        pagina++;
+        if (!traidos.length) break;
+        // La mezcla del día va sobre lo traído: sin esto la rotación cambiaría
+        // el criterio pero seguiría mostrando siempre el tope del nuevo orden.
+        pool = pickDaily(traidos, traidos.length, dailySeed() + tp.length);
+      }
+      vueltas++;
+      const faltan = AUDIENCIA_OBJETIVO - out.length;
+      // 40% de margen para lo que se cae en el filtro de plataformas.
+      const tanda = pool.slice(0, Math.ceil(faltan * 1.4));
+      pool = pool.slice(tanda.length);
+      const items = await settleAll(
+        tanda.map((t) => toUITitle(t, tp, pub)),
+        `audienceTitles ${slug}/${tp}`,
+      );
+      out.push(...items.filter((i) => onUserPlatforms(i, providers)));
+    }
+    return out.slice(0, AUDIENCIA_OBJETIVO);
   }));
   return pools.flat();
 }

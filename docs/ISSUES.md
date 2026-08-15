@@ -411,6 +411,20 @@ Los rieles de género, con sus tres páginas y la mezcla del día, al menos bara
 Un carrusel que no rota es peor que uno mal ordenado: el usuario que vuelve ve
 exactamente la misma pantalla, que es el problema que la app dice resolver.
 
+### Regla de decisión sobre la calidad, escrita ANTES de medir
+
+Rotar el eje de extracción baja el promedio de nota, y eso **no significa que el
+Home haya empeorado**: lo de antes eran los 20 más populares, una lista angosta
+y por definición bien puntuada. Comparar contra ese promedio castiga cualquier
+apertura del catálogo.
+
+Queda fijada así, para no discutirla con el número a la vista:
+
+> **El promedio de nota es orientativo. El guardarraíl es cuánto queda bajo 6.0.**
+> Se acepta una caída del promedio mayor al 5 % mientras lo que está bajo 6.0 no
+> supere el **8 %** de las tarjetas. Si lo supera, se revisan los ejes — no se
+> ajusta el umbral.
+
 **Criterio de cierre:** que `sort_by` deje de tener valor por defecto en
 `discover()` y pase a ser un parámetro **obligatorio**. Una convención de "que
 cada superficie declare su orden" se olvida en el próximo agregado; un parámetro
