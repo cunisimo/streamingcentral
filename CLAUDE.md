@@ -59,6 +59,17 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   render: `lib/cache.ts` → `dailySeed()` + `pickDaily()` (mulberry32 +
   Fisher-Yates con seed de la fecha). "Mostrame otras" es un offset sobre el
   mismo pool, no un fetch nuevo random.
+  **`dailySeed()` usa la fecha de `America/Argentina/Buenos_Aires`, no UTC**: el
+  "día" de esta app es el día argentino. Con UTC, todo lo que rota por día
+  cambiaba a las 21:00 locales, en pleno horario de uso. Son **seis llamadas en
+  cinco features** las que dependen de esa semilla — la clave de cache del Home,
+  la mezcla de los rieles de género, el pool del recomendador, el intercalado
+  documentales/ficción, el orden de los chips curados y la tanda de la ruleta —
+  así que tocarla las mueve a todas juntas, que es lo que se quiere.
+  **Ojo: no es la única fecha en UTC de la app.** `today()` en `lib/enrich.ts`,
+  `porEstrenar` en `DetailView` y los helpers de calendario (`calendar-links.ts`,
+  `ics.ts`) siguen calculando en UTC y tienen el mismo corrimiento de 3 h. No se
+  cambiaron con `dailySeed()` porque el radio de impacto es distinto.
 - **Votos/reseñas de usuario están en el schema pero NO construidos**
   (`supabase/schema.sql`, tablas `votes` y `user_reviews`, con RLS). Esto es a
   propósito — el dueño quiere ese módulo en standby hasta decidir el sistema
@@ -72,8 +83,11 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:v1:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
-  manda la cuota de Upstash, ver el comentario de `TTL.home`). Los `cached()`
+  `home:v2:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  manda la cuota de Upstash, ver el comentario de `TTL.home`). La versión de la
+  clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
+  lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
+  ve" después de deployar (`v2` = ventana de votos de 7 a 90 días). Los `cached()`
   de `enrich.ts` ya evitaban los ~300 pedidos a TMDB, pero no el costo de
   rearmar: cada request seguía haciendo cientos de round-trips a Upstash. Medido
   en producción, ese piso eran ~2.9 s con todo cacheado y ~5.2 s en frío; con el
