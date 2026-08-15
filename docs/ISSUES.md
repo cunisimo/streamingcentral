@@ -399,6 +399,21 @@ donde se eligió un orden a propósito, está bien. El problema es el **default
 silencioso**: nadie decidió que "Para toda la familia" fuera un ranking de
 popularidad, quedó así porque nadie eligió otra cosa.
 
-**Criterio de cierre:** que cada superficie declare su orden explícitamente —
-aunque elija popularidad— y que las que son de descubrimiento (audiencia, hero,
-chips) muestreen de un pool más profundo en vez del top 20 de la página 1.
+### Prioridad: los carruseles de audiencia primero
+
+Por encima de los rieles de género, aunque el bug de los superhéroes se haya
+visto ahí antes. La diferencia es que **"Para toda la familia" no cambia nunca**:
+es el top 20 de la página 1, sin mezcla diaria y sin paginado, así que muestra lo
+mismo hoy que mañana y lo mismo a todos los usuarios con las mismas plataformas.
+Los rieles de género, con sus tres páginas y la mezcla del día, al menos barajan
+60 títulos y rotan.
+
+Un carrusel que no rota es peor que uno mal ordenado: el usuario que vuelve ve
+exactamente la misma pantalla, que es el problema que la app dice resolver.
+
+**Criterio de cierre:** que `sort_by` deje de tener valor por defecto en
+`discover()` y pase a ser un parámetro **obligatorio**. Una convención de "que
+cada superficie declare su orden" se olvida en el próximo agregado; un parámetro
+requerido no se puede saltear — el compilador obliga a decidir. Y que las
+superficies de descubrimiento (audiencia, hero, chips) muestreen de un pool más
+profundo en vez del top 20 de la página 1.
