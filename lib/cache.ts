@@ -87,6 +87,10 @@ export const TTL = {
   // votos nadie lo nota. Si eso cambia, la salida NO es bajar el TTL de vuelta
   // —volvés al problema de cuota— sino invalidar las claves `home:` al votar.
   home: 60 * 60 * 6,
+  // Pools de discover (lib/pools.ts). El día va en la clave, así que el TTL no
+  // es lo que define cuándo rota: 30 h es el colchón para que un pool escrito a
+  // las 23:50 no se muera antes de que su clave deje de usarse.
+  pool: 60 * 60 * 30,
 } as const;
 
 // --- Métricas por operación --------------------------------------------------

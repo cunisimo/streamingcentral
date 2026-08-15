@@ -17,6 +17,7 @@ import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGO
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
+import { candidatosDePools, poolsHabilitados } from "./pools";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
 import { primaryCountry } from "./countries";
@@ -713,21 +714,43 @@ export async function categoryCandidates(opts: {
   // todos los llamadores existentes). Pide startPage..startPage+pages-1.
   const startPage = Math.max(1, opts.startPage ?? 1);
 
-  const reqs = Array.from({ length: pages }, (_, i) =>
-    discover(opts.tipo, {
-      providers: ids,
-      genres: rule.genres?.length ? rule.genres : undefined,
-      keywords: rule.keywords?.length ? rule.keywords : undefined,
-      // Igual que listByCategory: lo pide el llamador. Hoy solo lo hace el Home.
-      withoutGenres: opts.scope
-        ? excludedGenres({ scope: opts.scope, genre: opts.genre, providers: opts.providers })
-        : undefined,
-      originCountry: rule.originCountry,
-      page: startPage + i, sortBy: opts.sortBy, minVotes: opts.minVotes, extra: opts.extra,
-    }),
-  );
-  const res = await Promise.all(reqs);
-  return res.flatMap((r) => r.results);
+  // Los parámetros que definen QUÉ trae el pool, sin plataforma ni página: esos
+  // dos son ejes propios de la clave.
+  //
+  // `withoutGenres` entra acá y es importante que así sea: depende del conjunto
+  // COMPLETO de plataformas del usuario (tener Crunchyroll apaga el filtro de
+  // animación en toda la app). Como el hash de la receta lo incluye, dos
+  // usuarios con filtros distintos usan pools distintos sin que haya que
+  // pensarlo — y los que comparten filtro comparten pool.
+  const params = {
+    genres: rule.genres?.length ? rule.genres : undefined,
+    keywords: rule.keywords?.length ? rule.keywords : undefined,
+    // Igual que listByCategory: lo pide el llamador. Hoy solo lo hace el Home.
+    withoutGenres: opts.scope
+      ? excludedGenres({ scope: opts.scope, genre: opts.genre, providers: opts.providers })
+      : undefined,
+    originCountry: rule.originCountry,
+    sortBy: opts.sortBy,
+    minVotes: opts.minVotes,
+    extra: opts.extra,
+  };
+  // Nombre legible de la receta: es lo que hace auditables las claves en Redis.
+  // El que invalida es el hash de `params` (ver lib/pools.ts), así que mover un
+  // piso de votos no exige acordarse de renombrar nada.
+  const nombre = `g-${opts.genre ?? "todos"}${opts.scope ? `-${opts.scope}` : ""}`;
+  // Camino viejo: UNA consulta por página con el conjunto entero de plataformas.
+  if (!poolsHabilitados) {
+    const res = await Promise.all(Array.from({ length: pages }, (_, i) =>
+      discover(opts.tipo, { ...params, providers: ids, page: startPage + i })));
+    return res.flatMap((r) => r.results);
+  }
+  return candidatosDePools({
+    tipo: opts.tipo,
+    providers: opts.providers,
+    receta: { nombre, params },
+    pages,
+    startPage,
+  });
 }
 
 // Enriquece una tanda de raw (providers por título, cacheado) y filtra a las
