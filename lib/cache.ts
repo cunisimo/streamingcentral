@@ -91,6 +91,10 @@ export const TTL = {
   // es lo que define cuándo rota: 30 h es el colchón para que un pool escrito a
   // las 23:50 no se muera antes de que su clave deje de usarse.
   pool: 60 * 60 * 30,
+  // Ids con reseña editorial publicada. Corto porque es el único dato del Home
+  // que se edita a mano desde /admin: si se publica una reseña, el badge tiene
+  // que aparecer en minutos y no al otro día.
+  editorial: 60 * 5,
 } as const;
 
 // --- Métricas por operación --------------------------------------------------
