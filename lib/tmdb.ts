@@ -84,6 +84,10 @@ export interface RawTitle {
   first_air_date?: string;
   genre_ids?: number[];
   origin_country?: string[];
+  // Lo devuelve discover y no se usaba, así que no estaba declarado. Hace falta
+  // para reordenar al unir pools de plataformas distintas (ver lib/pools.ts):
+  // cada pool viene ordenado por popularidad, pero la unión de dos no lo está.
+  popularity?: number;
 }
 
 export interface RawPerson {

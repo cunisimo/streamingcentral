@@ -287,6 +287,29 @@ reemplazar de esa palabra rompe el banco de frases.
 
 ---
 
+## 8.b Que dos cosas den lo mismo es una alarma, no un alivio
+
+Al medir el cache de pools, el rearmado en frio daba **exactamente las mismas 62
+llamadas a TMDB** con la optimizacion prendida y apagada. Eso no era una buena
+noticia: era el kill switch roto. `POOL_CACHE=0` salteaba el cache pero seguia
+pidiendo un pool por plataforma, asi que las dos ramas hacian el mismo trabajo y
+el interruptor no servia ni para volver atras ni para medir.
+
+La regla, que vale para cualquier medicion de este proyecto:
+
+> **Si dos configuraciones que deberian diferir dan el mismo numero, lo primero
+> que hay que dudar es de la medicion, no de la optimizacion.**
+
+Es el mismo reflejo que salvo otras dos veces acá:
+
+- Un test que pasa con la implementacion vieja y con la nueva no esta probando
+  el arreglo (por eso `lib/fecha.test.ts` incluye a proposito la version vieja y
+  verifica que FALLE).
+- Un contador de comandos en cero no significa "no gasta nada": significa que el
+  cache estaba en memoria y no habia Redis que contar.
+
+Antes de festejar un numero, preguntarse que numero se esperaba y por que.
+
 ## 9. Estado actual (11/08/2026)
 
 **Ruleta** — `roulette_titles`: 2401 filas, 2259 con texto, 1782 con
