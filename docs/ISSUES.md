@@ -256,3 +256,54 @@ resuelve este issue.
 **Criterio de cierre:** decidir qué fecha representa "Próximamente", medir la
 cobertura real de la fecha digital AR en la ventana de ingesta, y aplicar la
 decisión en el sync, en la agenda y en el `.ics` a la vez.
+
+---
+
+## #6 — "Próximamente" mezcla estrenos con episodios semanales
+
+**Estado:** abierto · **Prioridad:** media · **Abierto:** 2026-08-15
+**Tipo:** decisión de producto · **Familia:** issue #5
+
+### La pregunta
+
+*Star Trek: Strange New Worlds* y *La Patrulla Canina* no son estrenos: son
+series al aire con un episodio nuevo. Hoy conviven en el mismo riel con
+películas que sí se estrenan. **¿"Próximamente" significa "esto es nuevo" o
+"esto tiene episodio esta semana"?**
+
+Son dos listas distintas con dos usos distintos:
+
+- *"Esto es nuevo"* responde **qué empieza**: estrenos de película y de
+  temporada. Es una agenda de descubrimiento; se mira una vez por semana.
+- *"Esto tiene episodio"* responde **qué sale hoy** de lo que ya sigo. Es
+  seguimiento, no descubrimiento; se mira a diario, y sin saber qué mira el
+  usuario es ruido.
+
+Mezcladas, la sección no contesta bien ninguna de las dos: un episodio 148 de
+*Gran hermano* ocupa el mismo lugar visual que el estreno de una película.
+
+### Datos para decidir
+
+El sync ya distingue `is_season_premiere`, así que separar estreno de temporada
+de episodio suelto **no requiere datos nuevos**: la columna está. Medido el
+2026-08-15, de 41 filas de `upcoming_content` **41 eran series** y ninguna
+película, así que hoy el riel es 100% seguimiento y 0% descubrimiento — que es
+exactamente lo contrario de lo que promete el título de la sección.
+
+Ojo con la interacción con el issue #5: si la agenda pasa a mostrar películas
+por fecha digital, la mezcla se corrige sola en parte. Conviene decidir los dos
+juntos.
+
+### Opciones
+
+- **Dos rieles**: "Estrenos" (películas + estrenos de temporada, vía
+  `is_season_premiere`) y "Episodios de esta semana". El costo es más superficie
+  en el Home.
+- **Un riel, solo estrenos**: los episodios sueltos salen. Lo más simple; el
+  costo es que hoy dejaría la sección casi vacía hasta que entren películas.
+- **Un riel, con el episodio como dato secundario**: se muestra igual pero la
+  card distingue visualmente estreno de episodio.
+
+**Criterio de cierre:** decidir qué pregunta contesta la sección, y si los
+episodios semanales merecen su propio lugar o dependen de que el usuario siga la
+serie (lo que los ata al módulo de listas del usuario).
