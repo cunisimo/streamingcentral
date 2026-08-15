@@ -171,3 +171,88 @@ argentina (el helper de `dailySeed()` en `lib/cache.ts` ya la resuelve, pero es
 `server-only` y `DetailView` es cliente: hace falta un helper compartido), y que
 se verifique la zona horaria del runtime de la edge function antes de tocar
 `sync-upcoming`.
+
+---
+
+## #5 — ¿"Próximamente" muestra el estreno en cine o la llegada a streaming?
+
+**Estado:** abierto · **Prioridad:** alta · **Abierto:** 2026-08-15
+**Tipo:** decisión de producto, no bug de implementación
+
+### La pregunta
+
+Yump es una app de streaming: no muestra cine ni TV abierta. Entonces la agenda
+debería contestar *"¿cuándo puedo verla?"*, no *"¿cuándo se estrena en el
+mundo?"*. Si la respuesta es la primera —y todo indica que sí—, hoy la agenda
+está contestando la pregunta equivocada, y eso arrastra dos consecuencias que
+hay que decidir explícitamente:
+
+1. **Una película no debería aparecer en la agenda hasta su fecha digital.**
+   *The Fantastic 4* tiene estreno en cine el 2025-07-23 y llegada a digital en
+   AR el 2025-11-05. Con el criterio actual entra a la agenda en julio y el
+   recordatorio apunta a julio: **tres meses y medio antes** de que se pueda ver.
+2. **Cambia qué se ingesta.** El sync descubre películas con
+   `primary_release_date`, así que la ventana de la agenda es de estrenos de
+   cine. Cambiar el criterio cambia el contenido de `upcoming_content`.
+
+### De dónde sale la fecha hoy
+
+| Camino | Campo | Qué es |
+|---|---|---|
+| Agenda (principal) | `upcoming_content.release_date`, que el sync llena con `discover(primary_release_date.*)` **sin `region`** | La fecha más temprana del mundo: normalmente premiere o estreno en cine |
+| Ficha (fallback) | `titleDetails().release_date` **sin `region`** | Lo mismo |
+| Series | `next_episode_to_air.air_date` | El episodio real. En originales de plataforma el estreno es simultáneo mundial, así que suele coincidir |
+
+Comprobado contra TMDB:
+
+| Título | Lo que usa la app | AR cine | AR digital |
+|---|---|---|---|
+| Superman | 2025-07-09 | 2025-07-10 | — |
+| The Fantastic 4 | 2025-07-23 | 2025-07-24 | 2025-11-05 |
+
+### El problema que hay que resolver, no solo el que hay que arreglar
+
+**La fecha digital de TMDB falta seguido** — mirá que Superman ni siquiera la
+tiene. Así que no alcanza con "usar el tipo 4": hay que decidir qué pasa cuando
+ese dato no existe. Tres caminos, y ninguno es obviamente mejor:
+
+- **Mostrar la de cine igual**, aclarando en la UI que es el estreno en cine y
+  no la llegada a streaming. Mantiene el catálogo lleno; el costo es que la
+  agenda mezcla dos cosas distintas y el usuario tiene que leer la letra chica.
+- **No mostrar fecha**, solo el título como "próximamente, sin fecha". Honesto,
+  pero un ítem de agenda sin fecha no se puede agendar y sirve poco.
+- **Excluir el título** hasta que TMDB publique la digital. Es lo más fiel a
+  "app de streaming", y el costo es una agenda bastante más chica — con qué
+  frecuencia, hay que medirlo antes de decidir.
+
+Medir cuántos títulos de la ventana actual tienen fecha digital AR es el primer
+paso: sin ese número, elegir entre las tres opciones es a ciegas.
+
+### Mitigación ya aplicada (no cierra el issue)
+
+Para que el problema no llegue a producción mientras se decide:
+
+- **Ficha**: en películas, "Recordarme" solo aparece si TMDB da la fecha digital
+  argentina (`digitalAR` en `UITitleDetail`, tipo 4 de `release_dates`). No
+  cuesta requests extra: `titleDetails` ya traía `release_dates` para la
+  certificación por edad.
+- **Agenda**: en películas no se ofrece "Recordarme" y punto, porque el payload
+  de `upcoming_content` no tiene con qué validar la fecha. Es deliberadamente
+  conservador. Hoy no oculta nada: la agenda son 41 series y ninguna película.
+
+- **Lo que se agenda**: cuando el botón sí aparece, tanto el link de Google como
+  el `.ics` usan la fecha digital argentina. La ruta `/api/recordatorio` la
+  resuelve por su cuenta —no confía en `upcoming_content`, que guarda la del
+  sync— y devuelve 404 si no existe. Verificado: *The Fantastic 4* agenda
+  `20251105` y no `20250723`; *Superman*, sin fecha digital, da 404; las series
+  no cambian.
+
+**Ojo con lo que la mitigación NO hace**: no toca el sync ni la semántica de la
+agenda. `upcoming_content` se sigue llenando con fechas de cine, así que una
+película puede aparecer en "Próximamente" meses antes de que se pueda ver —
+simplemente ya no se puede agendar con la fecha equivocada. Eso es lo que
+resuelve este issue.
+
+**Criterio de cierre:** decidir qué fecha representa "Próximamente", medir la
+cobertura real de la fecha digital AR en la ventana de ingesta, y aplicar la
+decisión en el sync, en la agenda y en el `.ics` a la vez.

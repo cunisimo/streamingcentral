@@ -42,7 +42,13 @@ export default function UpcomingCard({ item }: { item: UIUpcoming }) {
           aviso que te da tiempo a suscribirte. Cuando es el único botón sube al
           lugar del "+", así no queda un hueco arriba. */}
       {mine.length > 0 && <QuickAddButton id={item.id} tipo={item.type} />}
-      <RecordarButton
+      {/* Misma protección que la ficha, pero acá NO hay con qué chequear: el
+          payload de la agenda sale de `upcoming_content`, que guarda la fecha
+          que trajo el sync y no la digital argentina. Sin poder validarla, en
+          películas no se ofrece agendar. Es deliberadamente conservador y es
+          temporal: lo levanta el issue #5, que decide qué fecha muestra
+          "Próximamente". Hoy no oculta nada — la agenda son 41 series. */}
+      {item.type !== "movie" && <RecordarButton
         id={item.id}
         tipo={item.type}
         titulo={item.title}
@@ -50,7 +56,7 @@ export default function UpcomingCard({ item }: { item: UIUpcoming }) {
         plataforma={main}
         variant="icono"
         solo={mine.length === 0}
-      />
+      />}
     </div>
   );
 }

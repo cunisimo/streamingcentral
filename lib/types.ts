@@ -42,6 +42,11 @@ export interface UITitleDetail extends UITitle {
   // Solo series: fecha del próximo episodio, si la serie sigue en emisión. En
   // series `releaseDate` es el estreno original y no sirve para "Recordarme".
   nextAirDate: string | null;
+  // Estreno DIGITAL en Argentina (tipo 4 de TMDB). Solo películas; null cuando
+  // TMDB no lo tiene, que es lo habitual. Hoy se usa únicamente para NO ofrecer
+  // "Recordarme" cuando falta: sin este dato la fecha que tenemos es la de cine
+  // y el recordatorio puede errarle por meses (issue #5).
+  digitalAR: string | null;
   age: string;
   backdrop: string | null;
   synopsis: string;
