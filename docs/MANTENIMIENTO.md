@@ -203,6 +203,36 @@ no matchea, se pierde un tercio del catálogo sin ningún error.
 
 ---
 
+## 5.b Qué es realmente `upcoming_content`
+
+Antes de tocar esa tabla, o de sacar conclusiones de lo que hay adentro:
+
+> **`upcoming_content` no es "la agenda de estrenos". Es lo que estaba en el top
+> 60 de popularidad el día en que se escribió cada fila.**
+
+Eso no se deduce del esquema, y explica cosas que si no parecen bugs sueltos:
+
+- Las filas son **sedimento de días distintos**, no una foto coherente. Dos filas
+  vecinas pueden tener `updated_at` con una semana de diferencia.
+- Un título puede **desaparecer y volver** sin que nadie lo toque, porque el
+  ranking de popularidad de TMDB fluctúa a diario.
+- Un título que nunca fue lo bastante popular **no entra nunca**, aunque estrene
+  en una plataforma soportada y dentro de la ventana.
+- Una fila que dejó de refrescarse no queda solo vencida: queda **equivocada**.
+  En series, `next_episode_to_air` se mueve cada semana, así que una fila vieja
+  anuncia un episodio que ya pasó y esconde el que viene.
+
+El motivo es `collectSeries`: `discover/tv` ordenado por `popularity.desc` con
+`MAX_PAGES = 3`. Medido el 2026-08-15, eran **60 series de 1696 elegibles**.
+
+Las dos consecuencias están separadas a propósito en `docs/ISSUES.md` — #7
+(frescura) y #8 (cobertura) — porque el arreglo de la primera no toca la segunda,
+y si van juntas se implementa el refresco y se da el tema por cerrado.
+
+La lectura ya no muestra lo vencido (`upcomingList` filtra por fecha del día
+argentino), así que el síntoma no se ve en la app; el dato de la tabla sigue
+siendo el que es.
+
 ## 6. Revisión de calidad (opcional, gratis)
 
 ```bash

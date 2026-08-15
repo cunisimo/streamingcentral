@@ -307,3 +307,98 @@ juntos.
 **Criterio de cierre:** decidir qué pregunta contesta la sección, y si los
 episodios semanales merecen su propio lugar o dependen de que el usuario siga la
 serie (lo que los ata al módulo de listas del usuario).
+
+---
+
+## #7 — `upcoming_content`: las filas que ya están se quedan viejas
+
+**Estado:** abierto · **Prioridad:** alta · **Abierto:** 2026-08-15
+
+Una fila deja de refrescarse y queda con datos **equivocados**, no solo vencidos.
+Medido el 2026-08-15: la tabla decía que *Star Trek: Strange New Worlds* daba
+T4 E4 el 13, cuando TMDB ya daba T4 E5 el 20. `updated_at` era del 8, con el
+sync habiendo corrido ese mismo día a las 06:00.
+
+Pasa porque el sync solo escribe lo que **descubre**, y el descubrimiento no
+garantiza volver a pasar por un título que ya está en la tabla (ver #8).
+
+**Arreglo propuesto:** una pasada de refresco aparte del descubrimiento, que para
+cada fila existente vuelva a pedir su `next_episode_to_air` y actualice fecha,
+temporada y episodio. Son ~41 llamadas con el volumen actual.
+
+**Lo que este arreglo NO resuelve:** traer títulos que nunca entraron. Eso es #8,
+y por eso están separados: si se hacen juntos, se implementa el refresco y se da
+el problema por cerrado.
+
+**Criterio de cierre:** ninguna fila de `upcoming_content` con `updated_at`
+anterior a la última corrida del sync.
+
+---
+
+## #8 — `upcoming_content`: sesgo permanente hacia lo popular
+
+**Estado:** abierto · **Prioridad:** media · **Abierto:** 2026-08-15
+
+`collectSeries` descubre con `discover/tv` ordenado por **popularidad** y
+`MAX_PAGES = 3`. Medido el 2026-08-15 con la consulta exacta del sync:
+
+```
+1696 series elegibles en 85 páginas · el sync mira 3 (= 60)
+Star Trek: Strange New Worlds → fuera del top 60
+Doctor Who                    → fuera del top 60
+```
+
+**Una serie que nunca estuvo en el top 60 no entra nunca**, y la pasada de
+refresco de #7 no la va a traer, porque solo refresca lo que ya está.
+
+La consecuencia de fondo es sobre qué ES la tabla: no es "la agenda de
+estrenos", es **lo que estaba en el top 60 el día en que se escribió cada fila**.
+Las filas son sedimento de días distintos, no una foto coherente, y como el
+ranking de popularidad fluctúa a diario, los títulos entran y salen sin patrón.
+
+Es justo lo contrario de lo que se busca en el pipeline de curado, donde el
+criterio es la calidad y la cobertura, no la popularidad.
+
+**Lo que NO es el arreglo:** subir `MAX_PAGES` a 85. Serían 1696 llamadas de
+detalle por corrida, porque cada serie descubierta necesita su propio
+`tvDetails` para el `next_episode_to_air`.
+
+**Criterio de cierre:** definir qué debería contener la agenda —¿todo lo que
+estrena en las plataformas soportadas? ¿un recorte con criterio?— y que la
+pertenencia no dependa del ranking de popularidad del día.
+
+---
+
+## #9 — La popularidad es el orden por defecto en toda la app, sin haberlo decidido
+
+**Estado:** abierto · **Prioridad:** media · **Abierto:** 2026-08-15
+
+`discover()` tiene `sort_by: popularity.desc` como default
+([`lib/tmdb.ts:122`](../lib/tmdb.ts)). Cada superficie que no eligió un orden
+explícito quedó siendo, sin decidirlo, un listado de lo más popular — y como
+además casi todas piden **una sola página**, terminan mostrando el top 20 de un
+catálogo de cientos.
+
+Es el mismo patrón que causó los superhéroes en Sci-fi (#ver historial) y el
+sesgo de `upcoming_content` (#8). Auditado el 2026-08-15:
+
+| Superficie | Orden | Páginas | Universo real |
+|---|---|---|---|
+| Carruseles de audiencia (`audienceTitles`) | popularidad (default) | **1** | top 20 por tipo, sin mezcla ni paginado |
+| Hero / recomendador (`recommendations`) | popularidad (default) | **1** | 40 enriquecidos → se muestran 6 |
+| Chips curados, tramo de relleno | popularidad (default) | **1** | top 20 |
+| Rieles de género del Home | popularidad (default) | 3 + mezcla del día | 60 de ~406 |
+| Sync de series (`collectSeries`) | popularidad explícita | 3 | 60 de 1696 |
+| `/categoria/[slug]` | popularidad (default) | paginado por el usuario | cobertura completa |
+| `top:pop:` | popularidad **explícita** | 1 | correcto: la sección ES un ranking |
+| `latestReleases` | fecha explícita | 1-2 | correcto |
+| Sync de películas (`collectMovies`) | fecha explícita | 3 | correcto para una agenda |
+
+Los dos últimos bloques muestran que el problema no es la popularidad en sí:
+donde se eligió un orden a propósito, está bien. El problema es el **default
+silencioso**: nadie decidió que "Para toda la familia" fuera un ranking de
+popularidad, quedó así porque nadie eligió otra cosa.
+
+**Criterio de cierre:** que cada superficie declare su orden explícitamente —
+aunque elija popularidad— y que las que son de descubrimiento (audiencia, hero,
+chips) muestreen de un pool más profundo en vez del top 20 de la página 1.
