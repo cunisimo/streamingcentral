@@ -66,10 +66,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   la mezcla de los rieles de género, el pool del recomendador, el intercalado
   documentales/ficción, el orden de los chips curados y la tanda de la ruleta —
   así que tocarla las mueve a todas juntas, que es lo que se quiere.
-  **Ojo: no es la única fecha en UTC de la app.** `today()` en `lib/enrich.ts`,
-  `porEstrenar` en `DetailView` y los helpers de calendario (`calendar-links.ts`,
-  `ics.ts`) siguen calculando en UTC y tienen el mismo corrimiento de 3 h. No se
-  cambiaron con `dailySeed()` porque el radio de impacto es distinto.
+  Quedan otras fechas calculadas en UTC — ver **issue #4** en `docs/ISSUES.md`.
 - **Votos/reseñas de usuario están en el schema pero NO construidos**
   (`supabase/schema.sql`, tablas `votes` y `user_reviews`, con RLS). Esto es a
   propósito — el dueño quiere ese módulo en standby hasta decidir el sistema
@@ -435,6 +432,16 @@ red — no es indicativo de error real en ese caso).
 ## Convenciones a mantener
 
 - Todo el texto de la UI en español rioplatense.
+- **Toda fecha se calcula en hora argentina, nunca en UTC.** El "día" de esta
+  app es el día argentino. `new Date().toISOString().slice(0,10)` está prohibido
+  para decidir qué día es hoy: devuelve la fecha UTC y a partir de las 21:00
+  locales ya cuenta como mañana. La forma correcta es
+  `toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })`,
+  que devuelve `YYYY-MM-DD` ya local (ver `dailySeed()` en `lib/cache.ts`).
+  Esto no es un detalle: **todos los bugs de fecha de este proyecto caen entre
+  las 21 h y la medianoche**, que es exactamente la franja en la que la gente
+  abre la app para elegir qué ver. La excepción son los formatos que un estándar
+  externo exige en UTC, como el `DTSTAMP` de un `.ics`.
 - Sin CSS-in-JS ni styled-components: todo en `app/globals.css`, clases planas
   reusando las que ya existen antes de inventar una nueva.
 - `lib/enrich.ts` es el único lugar que debería tocar Supabase/TMDB juntos.

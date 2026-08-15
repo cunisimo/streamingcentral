@@ -123,3 +123,51 @@ servidor).
 **Criterio de cierre:** decidir si `cacheFirst` necesita timeout, y validar el
 valor de `NETWORK_TIMEOUT_MS` contra una traza de red real (DevTools → Slow 3G o
 mejor, un dispositivo en condiciones malas).
+
+---
+
+## #4 — Fechas calculadas en UTC: la app se adelanta 3 horas
+
+**Estado:** abierto · **Prioridad:** media · **Abierto:** 2026-08-15
+
+`dailySeed()` ya se pasó a `America/Argentina/Buenos_Aires` (commit `4289677`),
+pero quedaron otros cálculos de fecha en UTC. Todos comparten el mismo defecto:
+entre las **21:00 y la medianoche** de Argentina, la app cree que ya es mañana.
+
+Esa franja es justo cuando la gente elige qué ver, así que el bug cae en el peor
+horario posible.
+
+### Lugares y efecto de cada uno
+
+| Dónde | Qué hace | Efecto entre las 21 y las 24 |
+|---|---|---|
+| [`DetailView.tsx:52`](../components/DetailView.tsx) | `porEstrenar` compara `releaseDate > hoy(UTC)` | **El más visible.** Un estreno de mañana pasa a contar como de hoy, así que "Recordarme" desaparece de la ficha tres horas antes de tiempo — justo la noche anterior, que es cuando más sentido tiene agendarlo |
+| [`enrich.ts:34`](../lib/enrich.ts) | `today()`, usado para acotar listados por fecha | Un título que estrena mañana puede entrar o salir del listado antes de tiempo. Impacto menor: cambia el borde de un listado, no un dato que el usuario se lleve |
+| [`sync-upcoming.ts:11`](../supabase/functions/tmdb-sync/jobs/sync-upcoming.ts) | `iso()` para la ventana de estrenos que se ingesta | Corre en la edge function de Supabase, **otro runtime**: hay que verificar qué zona horaria tiene antes de asumir que se arregla igual que el resto |
+
+### Lo que se revisó y NO es un problema
+
+`lib/calendar-links.ts` y `lib/ics.ts` **no tienen el bug**, y conviene dejarlo
+escrito para no volver a investigarlo:
+
+- La fecha del evento (`e.fecha`) es un `YYYY-MM-DD` que viene tal cual de TMDB
+  (`release_date` / `first_air_date`). Es un día de calendario, no un instante,
+  y `/api/recordatorio` lo pasa sin tocarlo: no hay ningún `new Date()` en el
+  camino que decida el día del evento.
+- `diaSiguiente()` hace aritmética en UTC (`T00:00:00Z` + 1 día), pero sobre un
+  valor que ya es solo-fecha y en un huso sin horario de verano: sumar un día da
+  el día siguiente exacto, sin corrimiento posible.
+- Los dos generadores emiten eventos de **día completo** (`DTSTART;VALUE=DATE` en
+  el .ics, `dates=AAAAMMDD/AAAAMMDD` en Google). Un valor de tipo DATE no lleva
+  huso: el calendario lo muestra en ese día calendario, sea cual sea la zona del
+  usuario y la hora a la que lo haya agregado.
+- El único valor en UTC es `DTSTAMP`, que el RFC 5545 **exige** en UTC.
+
+O sea: agregar un recordatorio a las 23:00 guarda el evento en el día correcto.
+No hay dato erróneo escapando a un calendario ajeno.
+
+**Criterio de cierre:** que `porEstrenar` y `today()` calculen con la fecha
+argentina (el helper de `dailySeed()` en `lib/cache.ts` ya la resuelve, pero es
+`server-only` y `DetailView` es cliente: hace falta un helper compartido), y que
+se verifique la zona horaria del runtime de la edge function antes de tocar
+`sync-upcoming`.
