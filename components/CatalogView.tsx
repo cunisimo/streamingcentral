@@ -23,7 +23,7 @@ const RIELES = 11;
 
 export default function CatalogView() {
   const online = useOnline();
-  const { platforms, ready: platsListo } = usePlatforms();
+  const { platforms } = usePlatforms();
   const { types, setType, param, ready } = useHomeTypes();
 
   const { data, loading, offline, error, retry } = useApi<HomePayload>(
@@ -47,26 +47,25 @@ export default function CatalogView() {
   // 200 pero con fuentes caídas: el Home llegó incompleto. No es "no hay nada en
   // tus plataformas" — es un fallo de carga y reintentar SÍ puede arreglarlo.
   const degradado = !!data?.degradado;
-  // Mientras useHomeTypes no leyó localStorage no hay URL que pedir y useApi apaga
-  // `loading`: sin sumarlo acá, entrar al Home desde otra página pinta un frame
-  // en blanco antes del primer fetch.
-  // `platsListo` también, y no solo el `ready` de los toggles: useApi no fetchea
-  // hasta que PlatformsContext leyó localStorage y mientras tanto informa
-  // loading=false. En esa ventana `cargando` daba false con `data` todavía
-  // vacío y el Home pintaba por un frame el aviso de "No pudimos cargar el
-  // inicio". Antes pasaba desapercibido porque el bloque de carga medía 24px;
-  // con los rieles reservados el documento colapsaba de 6730px a 1708px y el
-  // scroll restaurado se perdía en el camino.
-  // `!data && !fallo` es el tercer caso y no sobra: useApi enciende `loading`
-  // dentro de un efecto, así que existe un render con todo listo, `loading`
-  // todavía en false y `data` sin llegar. En ese frame el Home caía al aviso de
-  // error, el documento pasaba de 6730px a 1708px y volvía. Es el mismo
-  // criterio que ya usa el hero con `heroPendiente`.
   // `error` = el server respondió 500 (composeHome se cayó). `offline` = no hubo
   // respuesta. `degradado` = respondió 200 pero le faltan fuentes. Los tres
   // ameritan el mismo aviso con reintento, así que se tratan juntos.
   const fallo = !online || offline || error || degradado;
-  const cargando = !ready || !platsListo || loading || (!data && !fallo);
+  // Tres condiciones y ninguna sobra:
+  //  - `!ready`: useHomeTypes todavía no leyó los toggles, así que no hay URL
+  //    que pedir. La espera por las PLATAFORMAS ya no se chequea acá: la cubre
+  //    `loading`, que useApi mantiene en true hasta que PlatformsContext leyó
+  //    localStorage.
+  //  - `loading`: el fetch en vuelo.
+  //  - `!data && !fallo`: useApi enciende `loading` dentro de un efecto, así que
+  //    existe un render con todo listo, `loading` todavía en false y `data` sin
+  //    llegar. Es el mismo criterio que usa el hero con `heroPendiente`.
+  //
+  // Sin el tercero el Home pintaba por un frame "No pudimos cargar el inicio"
+  // con la app perfectamente sana. Con el bloque de carga de 24px pasaba
+  // desapercibido; con los rieles reservados el documento colapsaba de 6730px a
+  // 1708px y se llevaba puesto el scroll recién restaurado.
+  const cargando = !ready || loading || (!data && !fallo);
 
   // Pantalla completa SOLO cuando no hay nada que mostrar todavía. Si ya hay
   // rieles, un fallo de refetch no borra el Home: se avisa arriba y se ofrece

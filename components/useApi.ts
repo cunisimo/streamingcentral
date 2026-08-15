@@ -90,7 +90,12 @@ export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, platforms.join(","), nonce, ...deps]);
 
-  return { data, loading, offline, error, retry };
+  // `|| !ready`: mientras PlatformsContext no leyó localStorage no se pidió
+  // nada todavía, así que el estado honesto es "cargando" y no "no hay datos".
+  // Sin esto, un consumidor que pasa URL vacía hasta estar listo (el Home, los
+  // rieles controlados) recibía loading=false con data=null y pintaba por un
+  // frame su estado de error o de vacío, con la app perfectamente sana.
+  return { data, loading: loading || !ready, offline, error, retry };
 }
 
 export const provParam = (platforms: string[]) => platforms.join(",");

@@ -10,6 +10,7 @@ import { MyListProvider } from "@/components/MyListContext";
 import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
 import PwaClient from "@/components/pwa/PwaClient";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
+import NavHistorial from "@/components/NavHistorial";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {/* Dentro de PlatformsProvider: StandaloneWelcome usa usePlatforms. */}
                 <PwaClient />
                 <OnboardingGate />
+                <NavHistorial />
               </PlatformsProvider>
             </MyListProvider>
           </AuthProvider>

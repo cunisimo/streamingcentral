@@ -2,6 +2,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { hayHistorialInterno } from "./nav-historial";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
@@ -25,6 +26,15 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   const { platforms } = usePlatforms();
   const { data, loading, offline, error, retry } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
   const relTrack = useRef<HTMLDivElement>(null);
+
+  // "Volver" usa el back del navegador cuando hay una página nuestra atrás
+  // —así se conserva el scroll y el contexto del Home— y cae al inicio cuando
+  // la ficha se abrió desde un link compartido. Sin el fallback, `router.back()`
+  // en ese caso devolvía al usuario al sitio de donde vino: se iba de la app.
+  const volver = () => {
+    if (hayHistorialInterno()) router.back();
+    else router.push("/");
+  };
 
   // `error` (500 del server) entra acá igual que `offline`: si no, el skeleton
   // quedaría girando para siempre.
@@ -85,7 +95,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
 
   return (
     <div className="detail-inner">
-      <HeroTrailer heroStyle={heroBg} onBack={() => router.back()} trailerKey={t.trailerKey} />
+      <HeroTrailer heroStyle={heroBg} onBack={volver} trailerKey={t.trailerKey} />
       <div className="dpad">
         <div className="dttl">{t.title}</div>
         <div className="dmeta">
