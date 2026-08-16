@@ -17,7 +17,10 @@ import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGO
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
-import { candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje, type Candidato } from "./pools";
+import {
+  candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje,
+  type Candidato, type ParamsReceta,
+} from "./pools";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
 import { primaryCountry } from "./countries";
@@ -266,6 +269,31 @@ export async function recommendations(opts: {
   }
 
   const types: MediaType[] = opts.tipo === "all" ? ["movie", "tv"] : [opts.tipo];
+
+  // --- Ruta ancha ------------------------------------------------------------
+  // La que usan el hero base y 14 de los 16 chips. Ver `tandaAncha`.
+  //
+  // Quedan afuera las dos categorías que necesitan el pool YA ENRIQUECIDO para
+  // decidir el orden, y no se las fuerza a entrar:
+  //  - `alt` (Historias reales): son DOS queries a TMDB unidas por OR, y
+  //    `categoryCandidates` sabe hacer una sola. Meterla igual no daría error:
+  //    devolvería la mitad del chip —solo el género documental, sin la keyword
+  //    "basado en hechos reales"— y en silencio.
+  //  - `balanceDocs` (Supervivencia extrema): la proporción mitad y mitad se
+  //    calcula sobre `genres`, que es un campo de UITitle y no existe en el crudo.
+  // Las dos siguen andando exactamente como antes; sirven además de control al
+  // comparar contra la foto, porque son las únicas que no deberían moverse.
+  const reglas = cat ? [cat.movie, cat.tv] : [];
+  const necesitaEnriquecido = !!cat?.balanceDocs || reglas.some((r) => r.alt);
+  // Interruptor de emergencia, como POOL_CACHE y CACHE_BATCH: HERO_ANCHO=0 vuelve
+  // al camino viejo completo sin deployar. Se lee en cada llamada a propósito —
+  // así el script de medición corre las dos versiones en el mismo proceso y
+  // compara sin reiniciar nada.
+  if (process.env.HERO_ANCHO !== "0" && !necesitaEnriquecido) {
+    return tandaAncha({ genre: opts.genre, types, providers: opts.providers, n, offset });
+  }
+
+  // --- Ruta angosta (la de siempre) ------------------------------------------
   // scope "browse": el recomendador es parte del Home, así que no muestra
   // animación (va en "Animación para adultos"), pero sí lo familiar — si no,
   // "Magia navideña" se queda sin Solo en casa 2 ni El mago de Oz.
@@ -299,6 +327,107 @@ export async function recommendations(opts: {
   }
 
   return pickDaily(pool, n, dailySeed(), offset);
+}
+
+// --- El universo del hero ----------------------------------------------------
+// El problema que resuelve: el hero pedía UNA página de discover por tipo (20
+// movie + 20 tv), enriquecía las 40 —1 request de providers por título— y
+// mostraba 6. O sea que pagaba 40 para mostrar 6, y el universo entero eran esas
+// 40: a la sexta vez que alguien tocaba "Mostrame otras" ya había dado la vuelta,
+// y una semana entera de aperturas no podía mostrar más de 40 títulos distintos
+// porque el pool era siempre el mismo y lo único que cambiaba era el barajado.
+//
+// Se da vuelta la relación: el universo se arma con CRUDOS —que son baratos,
+// cacheados por plataforma y compartidos entre todos los usuarios del día
+// (lib/pools.ts)— y el enriquecido, que es lo caro, se paga solo sobre la
+// ventana del offset que se está mostrando. Más universo y menos costo por clic.
+//
+// Páginas de cada plataforma que entran al universo. Con 3 y tres plataformas
+// son ~180 crudos por tipo antes de deduplicar.
+const HERO_PAGINAS = 3;
+// Crudos que se enriquecen por tanda de 6. El margen absorbe lo que se cae en el
+// filtro de plataformas: TMDB ya filtró por proveedor al traerlos, pero
+// `providersOf` es la fuente autorizada y a veces no coincide (la misma
+// inconsistencia del id 2 de Apple TV+). Medido con n,d,m la caída es ~10%, así
+// que 12 para 6 es el doble de lo necesario.
+const HERO_VENTANA = 12;
+// Techo de enriquecidos por llamada. Existe para que el peor caso siga costando
+// MENOS que el camino viejo: 36 contra los 40 fijos de antes. Si una ventana
+// quedara corta tres veces seguidas, se devuelve lo que haya en vez de encadenar
+// round-trips y dejar la latencia de "Otras" abierta.
+const HERO_TOPE = HERO_VENTANA * 3;
+
+async function tandaAncha(opts: {
+  genre?: string; types: MediaType[]; providers: PlatformCode[]; n: number; offset: number;
+}): Promise<UITitle[]> {
+  const { types, providers, n, offset } = opts;
+  const universo = (await Promise.all(types.map(async (tipo) => {
+    const crudos = await categoryCandidates({
+      tipo, genre: opts.genre, providers, pages: HERO_PAGINAS, scope: "browse",
+      // El eje rota por día (pop / top / nuevo / taquilla / hondo). Es la otra
+      // mitad de la cobertura semanal: sin esto el universo sería más grande
+      // pero seguiría siendo SIEMPRE el mismo, y una semana mostraría siete
+      // barajados del mismo conjunto.
+      superficie: "hero",
+    });
+    return crudos.map((raw) => ({ raw, tipo, k: `${tipo}:${raw.id}` }));
+  }))).flat();
+
+  // Dedup: un id puede venir de dos plataformas (ya lo une candidatosDePools)
+  // pero también de los dos tipos, y ahí `movie:1` y `tv:1` son cosas distintas.
+  const vistos = new Set<string>();
+  const unicos: typeof universo = [];
+  for (const c of universo) {
+    if (vistos.has(c.k)) continue;
+    vistos.add(c.k);
+    unicos.push(c);
+  }
+
+  // ORDENAR ANTES DE BARAJAR, y por la clave y no por popularidad.
+  // `pickDaily` baraja POSICIONES: con la misma semilla y el mismo conjunto en
+  // otro orden de llegada, devuelve otra cosa. Y el orden de llegada es
+  // justamente lo más inestable que hay acá — TMDB reordena `popularity.desc`
+  // todos los días, y `candidatosDePools` une los pools de cada plataforma en el
+  // orden en que resuelven. Sin este sort, dos requests del mismo día podían dar
+  // heros distintos con el mismo universo, y "Otras" se desincronizaba: el
+  // offset 1 no era la continuación del 0 sino un barajado nuevo.
+  unicos.sort((a, b) => (a.tipo === b.tipo ? a.raw.id - b.raw.id : a.tipo < b.tipo ? -1 : 1));
+
+  const barajado = pickDaily(unicos, unicos.length, dailySeed());
+  if (!barajado.length) return [];
+
+  // La ventana de este offset. Da la vuelta al final del universo, igual que
+  // `pickDaily`: llegar al final no deja al usuario sin hero.
+  const out: UITitle[] = [];
+  const puestos = new Set<string>();
+  let i = (offset * HERO_VENTANA) % barajado.length;
+  let pagados = 0;
+  // El techo real es el menor entre el presupuesto y el universo: si el universo
+  // es más chico que la ventana, seguir dando vueltas solo vuelve a pagar por
+  // los mismos títulos.
+  const techo = Math.min(HERO_TOPE, barajado.length);
+  const ventana = Math.min(HERO_VENTANA, barajado.length);
+  while (out.length < n && pagados < techo) {
+    const tanda: typeof barajado = [];
+    for (let j = 0; j < ventana; j++) tanda.push(barajado[(i + j) % barajado.length]);
+    i += tanda.length;
+    pagados += tanda.length;
+    // Se enriquece por tipo (enrichRaw pide uno solo) y en paralelo, pero se
+    // vuelve a leer en el orden de la ventana: el barajado del día es el que
+    // manda, no el orden en que resolvieron los dos fetch.
+    const porTipo = new Map<string, UITitle>();
+    await Promise.all(types.map(async (tipo) => {
+      const suyos = tanda.filter((c) => c.tipo === tipo).map((c) => c.raw);
+      if (!suyos.length) return;
+      for (const t of await enrichRaw(suyos, tipo, providers)) porTipo.set(`${t.type}:${t.id}`, t);
+    }));
+    for (const c of tanda) {
+      if (out.length >= n) break;
+      const t = porTipo.get(c.k);
+      if (t && !puestos.has(c.k)) { puestos.add(c.k); out.push(t); }
+    }
+  }
+  return out;
 }
 
 // Pool completo de un chip curado, ya enriquecido y en el orden definitivo.
@@ -755,6 +884,10 @@ export async function categoryCandidates(opts: {
   tipo: MediaType; genre?: string; providers: PlatformCode[];
   pages?: number; startPage?: number; sortBy?: string; minVotes?: number;
   extra?: Record<string, string>; scope?: "home" | "browse";
+  // Si viene, el orden y la página de arranque los decide el eje rotativo del
+  // día (lib/pools.ts) en vez de `sortBy`/`minVotes`/`startPage`, y la receta se
+  // llama `<superficie>-<eje>`. Lo usa el hero; los rieles de género todavía no.
+  superficie?: string;
 }): Promise<RawTitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
@@ -772,7 +905,7 @@ export async function categoryCandidates(opts: {
   // animación en toda la app). Como el hash de la receta lo incluye, dos
   // usuarios con filtros distintos usan pools distintos sin que haya que
   // pensarlo — y los que comparten filtro comparten pool.
-  const params = {
+  const base = {
     genres: rule.genres?.length ? rule.genres : undefined,
     keywords: rule.keywords?.length ? rule.keywords : undefined,
     // Igual que listByCategory: lo pide el llamador. Hoy solo lo hace el Home.
@@ -787,11 +920,25 @@ export async function categoryCandidates(opts: {
   // Nombre legible de la receta: es lo que hace auditables las claves en Redis.
   // El que invalida es el hash de `params` (ver lib/pools.ts), así que mover un
   // piso de votos no exige acordarse de renombrar nada.
-  const nombre = `g-${opts.genre ?? "todos"}${opts.scope ? `-${opts.scope}` : ""}`;
+  let nombre = `g-${opts.genre ?? "todos"}${opts.scope ? `-${opts.scope}` : ""}`;
+  let params: ParamsReceta = base;
+  let desde = startPage;
+  if (opts.superficie) {
+    const r = recetaDelDia({
+      superficie: `${opts.superficie}-${opts.genre ?? "todos"}`,
+      tipo: opts.tipo, semilla: dailySeed(), base,
+    });
+    registrarEje(`${opts.superficie}-${opts.genre ?? "todos"}/${opts.tipo}`, r.eje);
+    nombre = r.receta.nombre;
+    params = r.receta.params;
+    // La página de arranque del eje reemplaza a la del llamador: `hondo` vale
+    // justamente por empezar en la 4.
+    desde = r.startPage;
+  }
   // Camino viejo: UNA consulta por página con el conjunto entero de plataformas.
   if (!poolsHabilitados) {
     const res = await Promise.all(Array.from({ length: pages }, (_, i) =>
-      discover(opts.tipo, { ...params, providers: ids, page: startPage + i })));
+      discover(opts.tipo, { ...params, providers: ids, page: desde + i })));
     return res.flatMap((r) => r.results);
   }
   return candidatosDePools({
@@ -799,7 +946,7 @@ export async function categoryCandidates(opts: {
     providers: opts.providers,
     receta: { nombre, params },
     pages,
-    startPage,
+    startPage: desde,
   });
 }
 
