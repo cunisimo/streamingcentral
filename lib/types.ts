@@ -90,3 +90,23 @@ export interface UIUpcoming {
   episodeName: string | null;
   isSeasonPremiere: boolean | null;
 }
+
+// Por qué una lista del recomendador vino vacía. Existe porque el mensaje al
+// usuario no puede ser el mismo en los tres casos: "Nada en tus plataformas,
+// activá alguna" le pide que arregle algo que a veces no es suyo.
+//  - "sin-plataformas": la consulta llegó sin ninguna plataforma. Ahí sí
+//                       corresponde pedirle que active una.
+//                       NO es alcanzable desde la interfaz: `PlatformsContext`
+//                       nunca deja la lista vacía (destildar todo cae a
+//                       DEFAULT_PLATFORMS). Sí lo es desde `/api/recomendaciones`
+//                       sin `?providers=`, que es una ruta HTTP pública, y se
+//                       queda por eso: sin este caso esa llamada devolvería
+//                       "sin-catalogo" —"se rompió de nuestro lado"— cuando lo
+//                       que pasó es que no le dijeron con qué filtrar. Un motivo
+//                       equivocado es peor que uno de más.
+//  - "filtro":          había títulos y el filtro de plataformas los sacó a todos.
+//                       Es el caso legítimo de "no lo tenés en tus plataformas".
+//  - "sin-catalogo":    la consulta volvió vacía ANTES de filtrar. No es del
+//                       usuario: es nuestro (o de TMDB), y no hay nada que pueda
+//                       activar para arreglarlo.
+export type MotivoVacio = "sin-plataformas" | "filtro" | "sin-catalogo";

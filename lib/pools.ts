@@ -255,14 +255,17 @@ export function ejeDelDia(superficie: string, tipo: MediaType, semilla: number):
   return validos[(semilla + hashTexto(superficie)) % validos.length];
 }
 
-// Receta de una superficie para el eje que le toca hoy.
-export function recetaDelDia(opts: {
+// El eje al que se cae cuando el del día no da. Es el más ancho de los cinco:
+// página 1, orden por popularidad, piso de 60 votos. Si `pop` tampoco llena, no
+// es un problema de ejes — es el catálogo real de esa superficie.
+export const EJE_BASE: Eje = "pop";
+
+// Receta de una superficie para un eje dado.
+export function recetaDeEje(eje: Eje, opts: {
   superficie: string;      // "aud-family", "g-accion-home", "hero"
   tipo: MediaType;
-  semilla: number;
   base?: ParamsReceta;     // géneros, keywords, exclusiones: lo propio de la superficie
 }): { receta: Receta; eje: Eje; startPage: number } {
-  const eje = ejeDelDia(opts.superficie, opts.tipo, opts.semilla);
   const def = EJES[eje];
   const paramsEje = def.params(opts.tipo);
   const base = opts.base ?? {};
@@ -282,6 +285,77 @@ export function recetaDelDia(opts: {
   };
 }
 
+// Receta de una superficie para el eje que le toca hoy.
+export function recetaDelDia(opts: {
+  superficie: string;
+  tipo: MediaType;
+  semilla: number;
+  base?: ParamsReceta;
+}): { receta: Receta; eje: Eje; startPage: number } {
+  return recetaDeEje(ejeDelDia(opts.superficie, opts.tipo, opts.semilla), opts);
+}
+
+// --- Un eje que no puede llenar no se usa -----------------------------------
+// Los cinco ejes se calibraron contra superficies grandes (el Home entero, los
+// carruseles de audiencia) y ahí siempre hay material. En una superficie angosta
+// no: "Contacto extraterrestre" tiene 19 títulos en Netflix, 37 en Disney+ y 20
+// en Max, así que el día que le toca `hondo` —que arranca en la página 4— los
+// pools vuelven VACÍOS, los tres, y el chip no muestra nada. No es un caso
+// especial de ese chip: medido el 16/08 con n,d,m, `aliens`, `espacio` y
+// `guerra` mueren enteros en `hondo`, y en otras seis superficies se muere el
+// lado de series (terror/tv tiene 4 títulos en Max).
+//
+// Por qué se verifica CONTRA LO QUE VOLVIÓ y no con una cuenta previa: el
+// tamaño se puede estimar con `total_results`, pero eso solo atrapa a `hondo`.
+// Mirando la cosecha se atrapa también el piso de votos de `top`, una keyword
+// que no matchea nada, una plataforma sin catálogo en el tema, y lo que venga
+// mañana. Cuesta un fetch extra SOLO en la superficie degradada, y los pools se
+// cachean por día, así que se paga una vez y lo comparten todos.
+//
+// El eje que se terminó usando queda en el registro (`registrarEje`) con un
+// asterisco, así que en los logs se ve cuándo cayó y cuál no llenaba.
+export const PISO_EJE = 24;
+
+export async function candidatosConEje(opts: {
+  superficie: string;
+  tipo: MediaType;
+  providers: PlatformCode[];
+  semilla: number;
+  base?: ParamsReceta;
+  pages: number;
+  piso?: number;
+}): Promise<{ candidatos: Candidato[]; receta: Receta; eje: Eje; startPage: number; degradado: boolean }> {
+  const piso = opts.piso ?? PISO_EJE;
+  const traer = (r: { receta: Receta; startPage: number }) => candidatosDePools({
+    tipo: opts.tipo, providers: opts.providers, receta: r.receta,
+    pages: opts.pages, startPage: r.startPage,
+  });
+
+  const delDia = recetaDelDia(opts);
+  const candidatos = await traer(delDia);
+  // El eje base no tiene a dónde caer: es el suelo.
+  if (candidatos.length >= piso || delDia.eje === EJE_BASE) {
+    registrarEje(`${opts.superficie}/${opts.tipo}`, delDia.eje);
+    return { ...delDia, candidatos, degradado: false };
+  }
+
+  const suelo = recetaDeEje(EJE_BASE, opts);
+  const deSuelo = await traer(suelo);
+  // Se queda con la cosecha más grande y no con la del suelo a ciegas: si `pop`
+  // trae todavía menos (pasa en una superficie que casi no existe en AR), bajar
+  // igual sería empeorar por seguir la regla al pie de la letra.
+  if (deSuelo.length <= candidatos.length) {
+    registrarEje(`${opts.superficie}/${opts.tipo}`, delDia.eje);
+    return { ...delDia, candidatos, degradado: false };
+  }
+  registrarEje(`${opts.superficie}/${opts.tipo}`, `${EJE_BASE}*`);
+  console.warn(
+    `[ejes] ${opts.superficie}/${opts.tipo}: "${delDia.eje}" trajo ${candidatos.length} ` +
+    `(piso ${piso}), se cae a "${EJE_BASE}" con ${deSuelo.length}`,
+  );
+  return { ...suelo, candidatos: deSuelo, degradado: true };
+}
+
 // --- Registro de ejes --------------------------------------------------------
 // Qué eje usó cada superficie en este rearmado. No hay interfaz: es solo el
 // registro. Cuando haya usuarios va a hacer falta saber qué eje funcionó mejor,
@@ -291,14 +365,19 @@ export function recetaDelDia(opts: {
 //
 // Va por AsyncLocalStorage y no en un objeto de módulo por lo mismo que las
 // métricas de cache: en Vercel conviven varios requests en la misma instancia.
-const alsEjes = new AsyncLocalStorage<Map<string, Eje>>();
+//
+// El valor es `string` y no `Eje` porque también registra CÓMO se llegó a ese
+// eje: `pop*` significa que el del día no llenaba y se cayó a la base. Sin esa
+// marca, un día degradado y un día que sacó `pop` por sorteo se ven iguales en
+// el log, que es justo la diferencia que uno quiere ver.
+const alsEjes = new AsyncLocalStorage<Map<string, string>>();
 
-export async function conRegistroDeEjes<T>(fn: () => Promise<T>): Promise<{ res: T; ejes: Map<string, Eje> }> {
-  const ejes = new Map<string, Eje>();
+export async function conRegistroDeEjes<T>(fn: () => Promise<T>): Promise<{ res: T; ejes: Map<string, string> }> {
+  const ejes = new Map<string, string>();
   const res = await alsEjes.run(ejes, fn);
   return { res, ejes };
 }
 
-export function registrarEje(superficie: string, eje: Eje) {
+export function registrarEje(superficie: string, eje: string) {
   alsEjes.getStore()?.set(superficie, eje);
 }

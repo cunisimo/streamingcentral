@@ -13,15 +13,16 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 
 ```
 origin/main   bd7c85f
-main local    7796db9   ← 5 commits por delante
+main local    4666e5f   ← 6 commits por delante
 ```
 
 **Producción NO tiene** la rotación de ejes de los carruseles de audiencia ni el
 cacheo de `publishedIds`. Está todo mergeado a `main` local, verificado y
 medido; solo falta `git push origin main`.
 
-Además hay **una rama sin mergear a propósito**: `feat/hero-universo`
-(`9ee6294`), que por ahora solo contiene la foto del "antes" del hero.
+Además hay **una rama sin mergear a propósito**: `feat/hero-universo`, que ahora
+**tiene el hero implementado y medido** y espera la prueba a mano del dueño (es
+su condición, ver abajo).
 
 ---
 
@@ -69,35 +70,84 @@ Además hay **una rama sin mergear a propósito**: `feat/hero-universo`
 
 Nada más que eso. Está todo verificado.
 
-### 2. El hero — **empezado, con la foto del antes ya tomada**
+### 2. El hero — **implementado y medido; falta la prueba a mano**
 
-Rama `feat/hero-universo`. **El plan está cerrado y acordado**, falta escribirlo:
+Rama `feat/hero-universo`. Código en `tandaAncha` (`lib/enrich.ts`); la decisión
+de arquitectura está en `CLAUDE.md`. Todos los criterios acordados se cumplen:
 
-- El universo del hero son 40 títulos: enriquece 40 para mostrar 6.
-- Se amplía con `candidatosDePools` y receta `hero-<eje>` (crudos), se elige con
-  `pickDaily` sobre ese universo grande, y **recién ahí se enriquecen los 6**.
-- **Ordenar por `id` antes de barajar**: la permutación tiene que depender del
-  conjunto y no del orden de llegada, o el botón "Otras" se desincroniza.
-- **El camino de las pastillas queda fuera de alcance.** Los chips curados son
-  base propia con revisión humana.
-
-Criterios de aceptación acordados:
-
-| | Hoy | Objetivo |
+| | Objetivo | Medido |
 |---|---|---|
-| Clics limpios de "Otras" antes de repetir | 6 | **≥ 12** |
-| Tiempo de respuesta de "Otras" | 168-179 ms | no empeora |
-| Cobertura semanal del hero | 40 | ≥ 100 |
-| Payload del Home vs `offset=0` | — | **idénticos** |
-| Chips curados | — | **idénticos a la foto** |
+| Clics limpios de "Otras" antes de repetir | ≥ 12 | **> 40** (5 antes) |
+| Cobertura semanal del hero | ≥ 100 | **236** (40 antes) |
+| Tiempo de respuesta de "Otras" | no empeora | **mejora** (ver abajo) |
+| Payload del Home vs `offset=0` | idénticos | **idénticos** ✔ |
+| Chips curados | idénticos a la foto | **`navidad` 18/18** ✔ |
+| Ningún chip vacío en 7 días | 0 vacíos de 112 | **0** ✔ |
 
-**Dos condiciones del dueño:**
+El último criterio lo agregó el dueño **después** de probar la rama, porque la
+primera versión rompía "Contacto extraterrestre" y ninguna de las otras métricas
+lo veía: todas miran el hero base o promedian los 16 chips. Ver
+`MANTENIMIENTO.md` 8.d, que es la lección general.
 
-1. La verificación de los chips va contra `docs/medidas/2026-08-15-hero-antes.json`
-   y **no** contra una corrida nueva. Ese archivo no es reproducible: la semilla
-   del día entra en el orden.
-2. **No se mergea hasta que el dueño lo pruebe a mano.** Ninguna medición dice si
-   "Mágica navidad" sigue trayendo películas de navidad.
+Reproducible con:
+
+```bash
+node --env-file=.env.local --import ./scripts/cargar-lib.mjs \
+     scripts/medir-hero.mjs informe 2026-08-15
+```
+
+Corre las mismas métricas con el camino viejo y el nuevo en un solo proceso
+(`HERO_ANCHO=0` es el interruptor). Fotos en `docs/medidas/`.
+
+**Sobre el tiempo**: el camino viejo pedía discover a TMDB **sin cachear** en
+cada clic (156-168 ms); el nuevo lee pools cacheados (0-1 ms en local). El número
+local exagera la mejora porque acá el cache es en memoria y en Vercel es Upstash:
+lo sólido es que dejó de haber una llamada a TMDB por clic, no el "0 ms".
+
+**Falta lo único que ninguna medición cubre — la condición 2 del dueño:**
+probarlo a mano. Ninguno de estos números dice si "Mágica navidad" sigue
+trayendo películas de navidad. Cómo levantarlo está en la sección siguiente.
+
+**Sobre la condición 1** (comparar contra la foto y no contra una corrida nueva):
+se cumplió, y de paso quedó claro por qué la foto igual no es reproducible al
+100%: TMDB reordena su catálogo todos los días. Corriendo el **código viejo** con
+la semilla del 15/08 un día después, la base ya daba 90% del mismo conjunto pero
+solo 31% en la misma posición. Eso es la deriva, no una rotura. Por eso el
+informe reporta *posición* y *conjunto* por separado, y por eso quedaron tres
+chips de control en el camino viejo (`navidad`, `reales`, `supervivencia`): si
+alguno se moviera, el cambio estaría tocando lo que no debe. Detalle en
+`docs/MANTENIMIENTO.md` 8.c.
+
+### 2.b Cómo probar la rama a mano
+
+```bash
+git checkout feat/hero-universo
+npm install
+npm run dev
+```
+
+Sin `next dev` corriendo en paralelo desde otra rama (corrompe `.next`; si pasa,
+borrar la carpeta). Después, en el Home:
+
+1. **"6 para hoy"** — tocar "Mostrame otras" diez o doce veces seguidas y ver que
+   no se repita nada y que lo que sale siga siendo mirable.
+2. **"Mágica navidad"** — es el chip que no se tocó: tiene que traer películas de
+   navidad, igual que antes.
+3. **"Historias reales" y "Supervivencia extrema"** — tampoco se tocaron.
+4. **El resto de los chips** — acá sí cambia el contenido, y es el punto a
+   juzgar: el eje rota por día, así que un día "Palomitas" sale por taquilla y
+   otro por estrenos. Vale la pena mirarlo más de un día.
+5. **"Contacto extraterrestre", "Odisea espacial" y "Fuego cruzado"** — son los
+   tres chips angostos que se vaciaban en un día de `hondo`. Los días en que
+   caen se ven en la consola del server: `[ejes] ... se cae a "pop"`.
+6. **El mensaje de lista vacía** — "Activá alguna" ahora aparece solo si no hay
+   ninguna plataforma elegida. Se comprueba vaciando `sc:platforms` en el
+   almacenamiento local del navegador y recargando.
+
+Para ver un día distinto sin esperar, `YUMP_FECHA=2026-08-20 npm run dev`.
+
+Si algo se ve mal y hay que descartar que sea esto: `HERO_ANCHO=0 npm run dev`
+devuelve el hero al camino viejo sin tocar código.
 
 ### 3. Después del hero
 
@@ -123,6 +173,7 @@ Criterios de aceptación acordados:
 | #7 | `upcoming_content`: las filas existentes se quedan viejas |
 | #8 | `upcoming_content`: sesgo permanente hacia lo popular |
 | #9 | La popularidad es el orden por defecto en toda la app |
+| #10 | La rotación de ejes no le llega a los chips angostos (18 de 112 casillas caen a `pop`) |
 
 ---
 

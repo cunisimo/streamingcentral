@@ -310,6 +310,128 @@ Es el mismo reflejo que salvo otras dos veces acá:
 
 Antes de festejar un numero, preguntarse que numero se esperaba y por que.
 
+## 8.b.2 Si falla el grupo de control, el roto es el instrumento
+
+Corolario de 8.b, y la señal más barata que hay: **código que no se modificó no
+puede haberse roto.** Cuando una medición marca en rojo algo que el cambio ni
+tocó, lo primero que falla es la medición.
+
+El caso, del 16/08. Al ampliar el hero quedaron tres chips a propósito en el
+camino viejo —`navidad` (curado), `reales` (regla `alt`) y `supervivencia`
+(`balanceDocs`)— justamente para que hicieran de control. La corrida del criterio
+"ningún chip vacío en 7 días" los dio **vacíos a los tres**.
+
+Ahí terminaba el problema, y no se vio. La primera hipótesis fue 429 de TMDB
+acumulados por la propia medición: plausible, y **falsa** — se descartó midiendo
+(3021 respuestas, todas 200). Lo real era mucho más tonto:
+`recommendations()` había pasado a devolver `{ items, motivo }` en vez de un
+array, y el script lee `items.length` sin tipos. `undefined` es falsy, así que
+**todas** las casillas se contaron vacías.
+
+> Un control que falla no es un hallazgo peor: es un hallazgo **imposible**, y
+> por eso es la señal más confiable de que hay que dejar de mirar el sistema y
+> mirar el instrumento. Es gratis y hay que usarla primero, antes que cualquier
+> hipótesis sobre el producto — sobre todo antes de una plausible.
+
+### Y la trampa que lo escondió: no pasar un diagnóstico por `tail`
+
+Los tres controles vacíos se habrían visto de entrada si la salida hubiera estado
+completa. Estaba pasada por `tail -30`, así que de las **112** casillas vacías se
+vieron **30**, y esas 30 empezaban justo en un chip creíble. El recorte convirtió
+"todo está vacío" —que grita *arnés roto*— en "algunos chips fallan", que parece
+un bug de producto y manda a investigar el lugar equivocado.
+
+`medir-hero.mjs` ahora tira error si las 112 casillas dan vacías y TMDB respondió
+200 siempre. Pero el reflejo importa más que el chequeo: **antes de creerle a un
+resultado malo, mirar si el control también falló.**
+
+## 8.c Medir algo que rota por día: clavar la fecha, y saber qué no se clava
+
+Casi todo lo que se puede medir en esta app rota con la semilla del día. Sin
+fijarla, dos corridas del mismo código en días distintos dan resultados
+distintos, y esa diferencia tapa la que importa.
+
+`YUMP_FECHA=2026-08-15` fuerza `hoyAR()` y con eso toda la rotación. **Solo
+funciona fuera de producción**, y solo intercepta la pregunta "¿qué día es hoy?":
+`hoyAR(unaFecha)` —formatear una fecha dada, como el `.ics` de "Recordarme"—
+sigue devolviendo lo suyo. Ver el comentario en `lib/fecha.ts`.
+
+```bash
+node --env-file=.env.local --import ./scripts/cargar-lib.mjs \
+     scripts/medir-hero.mjs informe 2026-08-15
+```
+
+`scripts/cargar-lib.mjs` es lo que permite importar `lib/*.ts` desde un script
+suelto (stub de `server-only`, alias `@/`, imports sin extensión). Sirve para
+medir cualquier función de `lib/`, no solo el hero.
+
+**Lo que la fecha NO clava, y hay que descontar antes de leer un diff:**
+
+- **El catálogo de TMDB.** `popularity.desc` se reordena todos los días del lado
+  de TMDB y los estrenos entran y salen. Una foto de ayer no es reproducible hoy
+  ni con la semilla fija.
+- **El orden de llegada.** Medido el 16/08 contra la foto del 15/08: el hero
+  viejo traía el **90% de los mismos títulos** y sin embargo solo **31% en la
+  misma posición**. No se había roto nada — `pickDaily` baraja posiciones, así
+  que el mismo conjunto llegando en otro orden sale distinto. De ahí sale la
+  regla de ordenar por clave antes de barajar (`tandaAncha` en `lib/enrich.ts`).
+
+Por eso la comparación se lee con **dos** números y no con uno: *posición* (con
+orden) y *conjunto* (sin orden). Un chip que cambia de posición pero conserva el
+conjunto se reordenó; uno que pierde el conjunto trae otra cosa.
+
+Y por eso conviene dejar **controles** en la medición: al ampliar el hero, los
+chips `navidad` (curado), `reales` (regla `alt`) y `supervivencia`
+(`balanceDocs`) quedaron a propósito en el camino viejo. Si alguno de esos tres
+se hubiera movido, el cambio estaba tocando algo que no debía.
+
+## 8.d Un promedio no ve una casilla vacía
+
+El hero ampliado pasó todos sus criterios —cobertura, clics limpios, tiempos— y
+aun así rompió "Contacto extraterrestre", que no mostraba **nada**. Ninguna de
+esas métricas podía verlo: todas miran el hero base o promedian los 16 chips, y
+un chip angosto que se vacía un día de cada cinco no mueve un promedio.
+
+La medición que sí lo ve no promedia nada: **recorrer las 112 casillas (16 chips
+× 7 días) y listar las vacías una por una.** Está en `medir-hero.mjs chips` y es
+parte del informe.
+
+> Cuando una feature tiene N superficies de tamaños muy distintos, el criterio
+> de aceptación tiene que recorrerlas todas. La superficie más chica es la que
+> rompe, y es exactamente la que un promedio esconde.
+
+De ahí salió también la regla de los ejes: los cinco se calibraron contra
+superficies grandes, donde siempre hay material. `hondo` arranca en la página 4,
+así que necesita más de 60 resultados **por plataforma** —los pools se piden por
+plataforma suelta, no por la unión— y `aliens` tiene 19 en Netflix. Ahora
+`candidatosConEje` mira la cosecha y cae a `pop` si no llena. No era solo
+`hondo`: el guard también salta con `top` en superficies angostas (scifi/tv trae
+16 títulos sobre el piso de 300 votos), que no llega a vaciar pero sí deja el
+riel corto.
+
+Lo que el guard **no** resuelve —que los chips angostos casi no reciben rotación
+porque no tienen material— está anotado como issue #10.
+
+### El arnés no lo ve `tsc`, así que miente en silencio
+
+Los scripts de `scripts/` son `.mjs`: **cuando cambia la firma de algo de `lib/`
+hay que actualizarlos a mano o se rompen sin avisar.** Así se contaron las 112
+casillas como vacías (el caso completo está en 8.b.2). Dos resguardos en
+`medir-hero.mjs`:
+
+- `tanda()` **valida la forma** de lo que devuelve `recommendations()` y explota
+  si no es la esperada, en vez de contar ceros.
+- Si las 112 casillas dan vacías y TMDB respondió 200 siempre, tira error.
+
+Y un contador de respuestas de TMDB, que avisa y sale con código 2 si alguna no
+fue 200. La hipótesis del 429 era razonable y sin el contador no se podía
+descartar; si aparece, bajar `TMDB_MAX_CONCURRENT` a 8 y repetir.
+
+> La tolerancia a fallos de la app es enemiga de la medición: `settleAll` y el
+> `allSettled` de los pools se tragan los errores **a propósito** para que un
+> riel caído no tumbe el Home, y eso mismo hace que en un informe cualquier
+> falla llegue disfrazada de "lista vacía".
+
 ## 9. Estado actual (11/08/2026)
 
 **Ruleta** — `roulette_titles`: 2401 filas, 2259 con texto, 1782 con

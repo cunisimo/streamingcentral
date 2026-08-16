@@ -111,8 +111,10 @@ export default function CatalogView() {
             </div>
           ) : sinPlataformas ? (
             // No es un fallo de carga y reintentar no lo arregla: el Home está
-            // vacío porque no hay ninguna plataforma elegida. Mismo texto que
-            // usa IndecisoHero para el hero vacío.
+            // vacío porque no hay ninguna plataforma elegida. Este es el ÚNICO
+            // caso en el que corresponde pedirle al usuario que active algo, y
+            // por eso el texto está gateado por `sinPlataformas` — IndecisoHero
+            // aplica la misma regla con `MotivoVacio` (ver lib/types.ts).
             <p className="empty-note" role="status">
               Nada en tus plataformas. Activá alguna en el botón de arriba.
             </p>

@@ -4,7 +4,7 @@ import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import CardSkeleton from "./CardSkeleton";
-import type { UITitle } from "@/lib/types";
+import type { MotivoVacio, UITitle } from "@/lib/types";
 
 // "Recomendador": no hay IA. Cada chip mapea a un slug de categoría
 // (lib/categories.ts) que alimenta el pool "6 para hoy". Dos grupos:
@@ -65,7 +65,7 @@ export default function IndecisoHero({
   // repitan abajo): mientras esté pendiente o ya haya llegado, no se fetchea.
   // Si el composer falló (ni pendiente ni controlado) el hero se busca solo.
   const usaComposer = esBase && (heroPendiente || controlado);
-  const { data, loading: fetchLoading } = useApi<{ items: UITitle[] }>(
+  const { data, loading: fetchLoading } = useApi<{ items: UITitle[]; motivo?: MotivoVacio }>(
     () => (usaComposer
       ? ""
       : `/api/recomendaciones?tipo=all&genre=${genre}&offset=${offset}&providers=${platforms.join(",")}`),
@@ -74,6 +74,37 @@ export default function IndecisoHero({
   const loading = usaComposer ? !!heroPendiente : fetchLoading;
   const picks = usaComposer ? (initialItems ?? []) : (data?.items ?? []);
   const filtered = genre !== "todos";
+
+  // Qué decir cuando no hay nada que mostrar. La regla: solo se le pide al
+  // usuario que active una plataforma cuando el filtro de plataformas fue lo que
+  // vació la lista. Si vino vacía desde antes de filtrar, el problema es
+  // nuestro y pedirle que active algo lo manda a buscar un botón que no arregla
+  // nada. Ver MotivoVacio en lib/types.ts.
+  //
+  // El texto viejo ("Nada en tus plataformas. Activá alguna") era el ÚNICO para
+  // todos los casos, y acá nunca podía ser cierto: `PlatformsContext` no deja la
+  // lista vacía —si el usuario destilda todo, cae a DEFAULT_PLATFORMS— así que
+  // el estado "no elegiste ninguna" no existe del lado del cliente.
+  //
+  // Por eso el mensaje sale del `motivo` que manda el server y NO de
+  // `platforms.length`: preguntarle al cliente daba siempre la misma respuesta
+  // (tiene plataformas) y por eso el texto injusto salía siempre. El server sí
+  // sabe con qué se pidió. Si algún día el contexto permite la lista vacía, esto
+  // ya funciona sin tocarlo.
+  function textoVacio() {
+    if (usaComposer && cargaDegradada) return "No pudimos cargar las recomendaciones de hoy.";
+    // El estado base viene del composer, que no manda motivo; ahí no se supone.
+    const motivo = usaComposer ? undefined : data?.motivo;
+    if (motivo === "sin-plataformas") return "Nada en tus plataformas. Activá alguna en el botón de arriba.";
+    if (motivo === "filtro") {
+      return filtered
+        ? "Nada de esta categoría está en tus plataformas."
+        : "No encontramos nada en tus plataformas.";
+    }
+    return filtered
+      ? "No pudimos armar esta selección hoy. Probá con otra categoría."
+      : "No pudimos armar las recomendaciones de hoy.";
+  }
 
   function reset() {
     setActiveMood(null);
@@ -151,9 +182,7 @@ export default function IndecisoHero({
                 todo el Home bajaba 266px de una. Son 6 porque 6 son los picks. */}
             {loading ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
               : picks.length ? picks.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)
-              : usaComposer && cargaDegradada
-                ? <p className="empty-note">No pudimos cargar las recomendaciones de hoy.</p>
-                : <p className="empty-note">Nada en tus plataformas. Activá alguna en el botón de arriba.</p>}
+              : <p className="empty-note">{textoVacio()}</p>}
           </div>
         </div>
       </div>

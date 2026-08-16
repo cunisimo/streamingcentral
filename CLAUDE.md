@@ -103,6 +103,53 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "Hacete cargo" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **El hero ("6 para hoy") arma un universo grande de crudos y enriquece solo lo
+  que muestra.** Antes pedía una página de discover por tipo, enriquecía las 40
+  (1 request de providers por título) y mostraba 6: pagaba 40 para mostrar 6, y
+  esas 40 eran todo el universo. A los 5 clics de "Mostrame otras" ya había dado
+  la vuelta, y una semana entera no podía mostrar más de 40 títulos distintos —
+  el pool era siempre el mismo y lo único que cambiaba era el barajado.
+  Ahora el universo son ~330 crudos (`candidatosDePools`, 3 páginas por
+  plataforma y por tipo, cacheados y compartidos entre usuarios) y el enriquecido
+  se paga por ventana de 12 sobre el offset que se está mostrando
+  (`tandaAncha` en `lib/enrich.ts`). El eje rota por día (`superficie: "hero"`),
+  que es la otra mitad de la cobertura: sin eso el universo sería más grande pero
+  siempre el mismo. Medido con n,d,m: >40 clics limpios contra 5, y 236 títulos
+  distintos por semana contra 40.
+  **Hay que ordenar por clave antes de barajar.** `pickDaily` baraja POSICIONES:
+  el mismo conjunto llegando en otro orden sale distinto, y el orden de llegada
+  es lo más inestable que hay acá (TMDB reordena `popularity.desc` a diario y los
+  pools de cada plataforma se unen en el orden en que resuelven). Sin ese sort,
+  dos requests del mismo día daban heros distintos y "Otras" se desincronizaba.
+  **Tres chips NO usan este camino, a propósito**: `navidad` (curado),
+  `reales` (regla `alt`: son dos queries unidas por OR y `categoryCandidates`
+  hace una sola — meterla igual devolvería medio chip en silencio) y
+  `supervivencia` (`balanceDocs`: la proporción se calcula sobre `genres`, que es
+  de `UITitle` y no existe en el crudo). Sirven además de control al medir.
+  Interruptor de emergencia: `HERO_ANCHO=0` vuelve al camino viejo.
+- **Un eje que no puede llenar no se usa** (`candidatosConEje` en `lib/pools.ts`).
+  Los cinco ejes se calibraron contra superficies grandes, donde siempre hay
+  material. En una angosta no: "Contacto extraterrestre" tiene 19 títulos en
+  Netflix, 37 en Disney+ y 20 en Max, así que el día que le tocaba `hondo` —que
+  arranca en la página 4— los tres pools volvían vacíos y el chip no mostraba
+  nada. **No era un caso especial de ese chip**: medido con n,d,m, `aliens`,
+  `espacio` y `guerra` mueren enteros en `hondo`, y en otras seis superficies se
+  muere el lado de series (terror/tv tiene 4 títulos en Max). Ahora se mira la
+  cosecha y, si no llega a `PISO_EJE`, se cae a `pop` páginas 1-3.
+  **Se verifica contra lo que volvió y no con una cuenta previa** a propósito:
+  `total_results` solo atraparía a `hondo`, mientras que mirar la cosecha atrapa
+  también el piso de votos de `top`, una keyword que no matchea y una plataforma
+  sin catálogo en el tema. Cuesta un fetch extra solo en la superficie degradada.
+  En los logs el eje degradado sale con asterisco (`pop*`), para distinguirlo del
+  día que sacó `pop` por sorteo. Lo que esto **no** arregla: los chips angostos
+  caen a `pop` uno de cada seis días, así que casi no reciben rotación — la
+  cobertura de 236 títulos vale para el hero base, no para ellos (**issue #10**).
+- **Una lista vacía no siempre es culpa del usuario** (`MotivoVacio` en
+  `lib/types.ts`). "Nada en tus plataformas, activá alguna" solo se muestra si el
+  filtro de plataformas fue lo que vació la lista. Si volvió vacía **antes** de
+  filtrar (`sin-catalogo`), el problema es nuestro y pedirle que active algo lo
+  manda a buscar un botón que no arregla nada. `recommendations()` devuelve
+  `{ items, motivo }` justamente para poder distinguirlos.
 - **Animación y familia son DOS filtros separados, y el `scope` lo decide el
   llamador** (`lib/audience.ts` → `excludedGenres`). Mezclarlos ya causó dos bugs
   reportados, así que no volver a unirlos:
@@ -442,6 +489,10 @@ red — no es indicativo de error real en ese caso).
   las 21 h y la medianoche**, que es exactamente la franja en la que la gente
   abre la app para elegir qué ver. La excepción son los formatos que un estándar
   externo exige en UTC, como el `DTSTAMP` de un `.ics`.
+  Para **medir** algo que rota por día: `YUMP_FECHA=2026-08-15` clava `hoyAR()` y
+  con eso toda la rotación (solo fuera de producción, y solo cuando nadie pasó
+  una fecha explícita). No clava el catálogo de TMDB, que se reordena solo — ver
+  `docs/MANTENIMIENTO.md` 8.c antes de leer un diff contra una foto vieja.
 - Sin CSS-in-JS ni styled-components: todo en `app/globals.css`, clases planas
   reusando las que ya existen antes de inventar una nueva.
 - `lib/enrich.ts` es el único lugar que debería tocar Supabase/TMDB juntos.

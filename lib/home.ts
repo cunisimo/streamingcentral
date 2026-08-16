@@ -300,7 +300,8 @@ export async function composeHome(opts: {
       // Hero "Para vos hoy" — prioridad más alta, reserva sus títulos.
       // Solo el estado base (genre=todos, offset=0): los chips y "Mostrame otras"
       // son exploración puntual y no rearman el Home.
-      safe(c, "hero", [] as UITitle[], () => recommendations({ tipo: "all", providers, n: 6, offset: 0 })),
+      safe(c, "hero", [] as UITitle[], async () =>
+        (await recommendations({ tipo: "all", providers, n: 6, offset: 0 })).items),
       // Últimos lanzamientos. Sin toggle (hoy es solo movie, por fecha de estreno).
       // La página 2 es fallback y NO se prefetchea: cuesta 1 discover + 20
       // providersOf y casi nunca hace falta (la página 1 alcanza para los 20).

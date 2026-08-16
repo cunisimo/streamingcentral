@@ -431,3 +431,62 @@ cada superficie declare su orden" se olvida en el próximo agregado; un parámet
 requerido no se puede saltear — el compilador obliga a decidir. Y que las
 superficies de descubrimiento (audiencia, hero, chips) muestreen de un pool más
 profundo en vez del top 20 de la página 1.
+
+---
+
+## #10 — La rotación de ejes no le llega a los chips angostos
+
+**Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-08-16
+
+El guard de `candidatosConEje` ([`lib/pools.ts`](../lib/pools.ts)) evita que un
+eje que no puede llenar deje una superficie vacía, cayendo a `pop` páginas 1-3.
+Eso arregla el bug, pero deja una limitación que conviene tener escrita antes de
+que alguien lea "cobertura semanal 236" y crea que vale para todo.
+
+### La medición
+
+En la corrida de 16 chips × 7 días (112 casillas), el guard **saltó 18 veces**:
+uno de cada seis días de chip termina en `pop`. Y no está repartido parejo — se
+concentra siempre en los mismos:
+
+| Superficie | Por qué cae |
+|---|---|
+| `aliens`, `espacio`, `guerra` | 15-72 títulos por plataforma: `hondo` (página 4) vuelve vacío |
+| `scifi/tv`, `fantasia/tv`, `terror/tv` | 4-22 títulos: caen por `hondo` y por `top` |
+| `espacio/tv`, `aliens/tv` | 9 y 13 sobre el piso de 300 votos: caen por `top` |
+
+O sea que los chips que **más** necesitarían variedad —porque su catálogo es
+chico y se agota rápido— son justamente los que menos rotación reciben. Los días
+que caen a `pop` muestran lo mismo que mostrarían sin el mecanismo de ejes.
+
+> **"Cobertura semanal: 236 títulos distintos" vale para el hero base y las
+> superficies grandes, no para los chips angostos.** No hay una medición de
+> cobertura por chip; si alguien la necesita, hay que hacerla.
+
+### Por qué está bien así por ahora
+
+Un chip que muestra siempre lo mismo es un problema mucho menor que uno que no
+muestra nada, y `pop` sobre un catálogo de 19 títulos igual baraja con la semilla
+del día. El costo de no hacer nada es bajo.
+
+### Si algún día se ataca
+
+La idea **no** es bajar el piso ni hacer que `hondo` pagine distinto: el material
+no existe y ningún ajuste lo va a inventar. La idea es que el respaldo **conserve
+algo de rotación** en vez de caer siempre al mismo lado.
+
+Los cinco ejes de hoy se distinguen por dos cosas: **profundidad** (`hondo`
+arranca en la página 4) y **selectividad** (`top` pide 300 votos). Las dos
+fallan por lo mismo en un catálogo chico. Lo que sí sobrevive ahí son los ejes
+que solo cambian el **orden** sobre el mismo conjunto: `taquilla`
+(`revenue.desc` / `vote_count.desc`) y `nuevo` (por fecha) andan con 19 títulos
+igual que con 5000, porque reordenan en vez de recortar.
+
+Entonces el respaldo no debería ser `pop` fijo sino **el eje del día entre los
+que no dependen de profundidad**, y solo caer a `pop` si tampoco eso llena. Con
+eso un chip angosto seguiría rotando entre tres criterios en vez de quedarse
+clavado en uno.
+
+**Criterio de cierre:** que las 18 casillas degradadas de la semana bajen, y que
+ninguna quede vacía (o sea, sin perder lo que arregló el guard). La medición ya
+está: `medir-hero.mjs chips`, contando los `[ejes] ... se cae a` del log.

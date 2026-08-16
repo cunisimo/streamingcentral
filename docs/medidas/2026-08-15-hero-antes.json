@@ -1,0 +1,1523 @@
+{
+ "fecha": "2026-08-15",
+ "providers": "n,d,m",
+ "nota": "foto del ANTES, tomada antes de tocar el hero",
+ "base": {
+  "0": [
+   {
+    "k": "movie:24428",
+    "t": "Vengadores"
+   },
+   {
+    "k": "movie:299536",
+    "t": "Vengadores: Infinity War"
+   },
+   {
+    "k": "tv:2734",
+    "t": "Ley y orden: Unidad de Víctimas Especiales"
+   },
+   {
+    "k": "movie:931285",
+    "t": "Mortal Kombat II"
+   },
+   {
+    "k": "tv:456",
+    "t": "Los Simpson"
+   },
+   {
+    "k": "tv:1396",
+    "t": "Breaking Bad"
+   }
+  ],
+  "1": [
+   {
+    "k": "movie:1668364",
+    "t": "Deseo"
+   },
+   {
+    "k": "tv:1668",
+    "t": "Friends"
+   },
+   {
+    "k": "movie:155",
+    "t": "El caballero oscuro"
+   },
+   {
+    "k": "movie:569094",
+    "t": "Spider-Man: Cruzando el Multiverso"
+   },
+   {
+    "k": "tv:1416",
+    "t": "Anatomía de Grey"
+   },
+   {
+    "k": "movie:557",
+    "t": "Spider-Man"
+   }
+  ],
+  "2": [
+   {
+    "k": "movie:559",
+    "t": "Spider-Man 3"
+   },
+   {
+    "k": "tv:60625",
+    "t": "Rick y Morty"
+   },
+   {
+    "k": "tv:94997",
+    "t": "La casa del dragón"
+   },
+   {
+    "k": "tv:44217",
+    "t": "Vikingos"
+   },
+   {
+    "k": "movie:1314481",
+    "t": "El diablo viste de Prada 2"
+   },
+   {
+    "k": "tv:1399",
+    "t": "Juego de tronos"
+   }
+  ],
+  "3": [
+   {
+    "k": "tv:1622",
+    "t": "Sobrenatural"
+   },
+   {
+    "k": "movie:1284041",
+    "t": "La última casa"
+   },
+   {
+    "k": "movie:102382",
+    "t": "The Amazing Spider-Man 2: El poder de Electro"
+   },
+   {
+    "k": "tv:66732",
+    "t": "Stranger Things"
+   },
+   {
+    "k": "tv:94664",
+    "t": "Mushoku Tensei Jobless Reincarnation"
+   },
+   {
+    "k": "tv:34307",
+    "t": "Shameless"
+   }
+  ],
+  "4": [
+   {
+    "k": "movie:83533",
+    "t": "Avatar: Fuego y ceniza"
+   },
+   {
+    "k": "tv:65334",
+    "t": "Prodigiosa: Las aventuras de Ladybug"
+   },
+   {
+    "k": "tv:79744",
+    "t": "The Rookie"
+   },
+   {
+    "k": "movie:1439930",
+    "t": "The Punisher: One Last Kill"
+   },
+   {
+    "k": "movie:429617",
+    "t": "Spider-Man: Lejos de casa"
+   },
+   {
+    "k": "movie:1930",
+    "t": "The Amazing Spider-Man"
+   }
+  ],
+  "5": [
+   {
+    "k": "movie:1084242",
+    "t": "Zootrópolis 2"
+   },
+   {
+    "k": "tv:1434",
+    "t": "Padre de familia"
+   },
+   {
+    "k": "movie:157336",
+    "t": "Interstellar"
+   },
+   {
+    "k": "tv:4057",
+    "t": "Mentes criminales"
+   },
+   {
+    "k": "tv:1402",
+    "t": "The Walking Dead"
+   },
+   {
+    "k": "movie:1630409",
+    "t": "El cobrador de deudas"
+   }
+  ],
+  "6": [
+   {
+    "k": "tv:1408",
+    "t": "House"
+   },
+   {
+    "k": "tv:5920",
+    "t": "El mentalista"
+   },
+   {
+    "k": "movie:822119",
+    "t": "Capitán América: Brave New World"
+   },
+   {
+    "k": "movie:315635",
+    "t": "Spider-Man: Homecoming"
+   },
+   {
+    "k": "movie:24428",
+    "t": "Vengadores"
+   },
+   {
+    "k": "movie:299536",
+    "t": "Vengadores: Infinity War"
+   }
+  ],
+  "7": [
+   {
+    "k": "tv:2734",
+    "t": "Ley y orden: Unidad de Víctimas Especiales"
+   },
+   {
+    "k": "movie:931285",
+    "t": "Mortal Kombat II"
+   },
+   {
+    "k": "tv:456",
+    "t": "Los Simpson"
+   },
+   {
+    "k": "tv:1396",
+    "t": "Breaking Bad"
+   },
+   {
+    "k": "movie:1668364",
+    "t": "Deseo"
+   },
+   {
+    "k": "tv:1668",
+    "t": "Friends"
+   }
+  ],
+  "8": [
+   {
+    "k": "movie:155",
+    "t": "El caballero oscuro"
+   },
+   {
+    "k": "movie:569094",
+    "t": "Spider-Man: Cruzando el Multiverso"
+   },
+   {
+    "k": "tv:1416",
+    "t": "Anatomía de Grey"
+   },
+   {
+    "k": "movie:557",
+    "t": "Spider-Man"
+   },
+   {
+    "k": "movie:559",
+    "t": "Spider-Man 3"
+   },
+   {
+    "k": "tv:60625",
+    "t": "Rick y Morty"
+   }
+  ]
+ },
+ "chips": {
+  "palomitas": {
+   "0": [
+    {
+     "k": "movie:102382",
+     "t": "The Amazing Spider-Man 2: El poder de Electro"
+    },
+    {
+     "k": "movie:83533",
+     "t": "Avatar: Fuego y ceniza"
+    },
+    {
+     "k": "tv:1402",
+     "t": "The Walking Dead"
+    },
+    {
+     "k": "movie:155",
+     "t": "El caballero oscuro"
+    },
+    {
+     "k": "tv:4604",
+     "t": "Smallville"
+    },
+    {
+     "k": "tv:31991",
+     "t": "WWE NXT"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:1439930",
+     "t": "The Punisher: One Last Kill"
+    },
+    {
+     "k": "tv:1411",
+     "t": "Vigilados, Person of Interest"
+    },
+    {
+     "k": "movie:533535",
+     "t": "Deadpool y Lobezno"
+    },
+    {
+     "k": "movie:122",
+     "t": "El señor de los anillos: El retorno del rey"
+    },
+    {
+     "k": "tv:66732",
+     "t": "Stranger Things"
+    },
+    {
+     "k": "movie:429617",
+     "t": "Spider-Man: Lejos de casa"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:157336",
+     "t": "Interstellar"
+    },
+    {
+     "k": "tv:4629",
+     "t": "Stargate SG-1"
+    },
+    {
+     "k": "tv:94997",
+     "t": "La casa del dragón"
+    },
+    {
+     "k": "tv:69478",
+     "t": "El cuento de la criada"
+    },
+    {
+     "k": "movie:1930",
+     "t": "The Amazing Spider-Man"
+    },
+    {
+     "k": "tv:71790",
+     "t": "S.W.A.T.: Los hombres de Harrelson"
+    }
+   ]
+  },
+  "drama": {
+   "0": [
+    {
+     "k": "movie:424",
+     "t": "La lista de Schindler"
+    },
+    {
+     "k": "movie:496243",
+     "t": "Parásitos"
+    },
+    {
+     "k": "tv:2734",
+     "t": "Ley y orden: Unidad de Víctimas Especiales"
+    },
+    {
+     "k": "movie:475557",
+     "t": "Joker"
+    },
+    {
+     "k": "tv:1622",
+     "t": "Sobrenatural"
+    },
+    {
+     "k": "tv:1911",
+     "t": "Bones"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:350",
+     "t": "El diablo viste de Prada"
+    },
+    {
+     "k": "tv:60735",
+     "t": "The Flash"
+    },
+    {
+     "k": "movie:228150",
+     "t": "Corazones de acero"
+    },
+    {
+     "k": "movie:210577",
+     "t": "Perdida"
+    },
+    {
+     "k": "tv:1416",
+     "t": "Anatomía de Grey"
+    },
+    {
+     "k": "movie:1439930",
+     "t": "The Punisher: One Last Kill"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:244786",
+     "t": "Whiplash"
+    },
+    {
+     "k": "tv:1402",
+     "t": "The Walking Dead"
+    },
+    {
+     "k": "tv:94997",
+     "t": "La casa del dragón"
+    },
+    {
+     "k": "tv:58841",
+     "t": "Chicago P.D."
+    },
+    {
+     "k": "movie:278",
+     "t": "Cadena perpetua"
+    },
+    {
+     "k": "tv:34307",
+     "t": "Shameless"
+    }
+   ]
+  },
+  "misterio-intrincado": {
+   "0": [
+    {
+     "k": "movie:812583",
+     "t": "Puñales por la espalda III. De entre los muertos"
+    },
+    {
+     "k": "movie:345",
+     "t": "Eyes Wide Shut"
+    },
+    {
+     "k": "tv:4057",
+     "t": "Mentes criminales"
+    },
+    {
+     "k": "movie:591",
+     "t": "El código Da Vinci"
+    },
+    {
+     "k": "tv:4607",
+     "t": "Perdidos"
+    },
+    {
+     "k": "tv:69050",
+     "t": "Riverdale"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:1659155",
+     "t": "Los creyentes"
+    },
+    {
+     "k": "tv:61056",
+     "t": "Cómo defender a un asesino"
+    },
+    {
+     "k": "movie:505026",
+     "t": "Muerte en el Nilo"
+    },
+    {
+     "k": "movie:2118",
+     "t": "L.A. Confidential"
+    },
+    {
+     "k": "tv:215072",
+     "t": "Una tienda para asesinos"
+    },
+    {
+     "k": "movie:807",
+     "t": "Seven"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:1330021",
+     "t": "Criaturas luminosas"
+    },
+    {
+     "k": "tv:78191",
+     "t": "You"
+    },
+    {
+     "k": "tv:5920",
+     "t": "El mentalista"
+    },
+    {
+     "k": "tv:107113",
+     "t": "Solo asesinatos en el edificio"
+    },
+    {
+     "k": "movie:210577",
+     "t": "Perdida"
+    },
+    {
+     "k": "tv:111803",
+     "t": "The White Lotus"
+    }
+   ]
+  },
+  "comedia": {
+   "0": [
+    {
+     "k": "movie:436969",
+     "t": "El Escuadrón Suicida"
+    },
+    {
+     "k": "movie:950387",
+     "t": "Una película de Minecraft"
+    },
+    {
+     "k": "tv:1668",
+     "t": "Friends"
+    },
+    {
+     "k": "movie:567609",
+     "t": "Noche de bodas"
+    },
+    {
+     "k": "tv:502",
+     "t": "Barrio Sesamo"
+    },
+    {
+     "k": "tv:1422",
+     "t": "The Middle"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:293660",
+     "t": "Deadpool"
+    },
+    {
+     "k": "tv:2710",
+     "t": "Colgados en Filadelfia"
+    },
+    {
+     "k": "movie:38365",
+     "t": "Niños grandes"
+    },
+    {
+     "k": "movie:346698",
+     "t": "Barbie"
+    },
+    {
+     "k": "tv:2316",
+     "t": "The Office"
+    },
+    {
+     "k": "movie:949838",
+     "t": "72 horas"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:552524",
+     "t": "Lilo y Stitch"
+    },
+    {
+     "k": "tv:287620",
+     "t": "Stuart no consigue salvar el universo"
+    },
+    {
+     "k": "tv:79744",
+     "t": "The Rookie"
+    },
+    {
+     "k": "tv:119051",
+     "t": "Miércoles"
+    },
+    {
+     "k": "movie:105",
+     "t": "Regreso al futuro"
+    },
+    {
+     "k": "tv:1400",
+     "t": "Seinfeld"
+    }
+   ]
+  },
+  "terror": {
+   "0": [
+    {
+     "k": "movie:574475",
+     "t": "Destino final: Lazos de sangre"
+    },
+    {
+     "k": "movie:1078605",
+     "t": "Weapons"
+    },
+    {
+     "k": "tv:66732",
+     "t": "Stranger Things"
+    },
+    {
+     "k": "movie:615656",
+     "t": "Megalodón 2: La fosa"
+    },
+    {
+     "k": "tv:200875",
+     "t": "It: Bienvenidos a Derry"
+    },
+    {
+     "k": "tv:279323",
+     "t": "El palacio del este"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:567609",
+     "t": "Noche de bodas"
+    },
+    {
+     "k": "tv:72844",
+     "t": "La maldición de Hill House"
+    },
+    {
+     "k": "movie:1038392",
+     "t": "Expediente Warren: El último rito"
+    },
+    {
+     "k": "movie:259693",
+     "t": "Expediente Warren: El caso Enfield"
+    },
+    {
+     "k": "tv:1413",
+     "t": "American Horror Story"
+    },
+    {
+     "k": "movie:1272837",
+     "t": "28 años después: El templo de los huesos"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:1266127",
+     "t": "Noche de bodas 2"
+    },
+    {
+     "k": "tv:90462",
+     "t": "Chucky"
+    },
+    {
+     "k": "tv:1622",
+     "t": "Sobrenatural"
+    },
+    {
+     "k": "tv:83659",
+     "t": "El gabinete de curiosidades de Guillermo del Toro"
+    },
+    {
+     "k": "movie:1233413",
+     "t": "Los pecadores"
+    },
+    {
+     "k": "tv:128098",
+     "t": "Entrevista con el vampiro"
+    }
+   ]
+  },
+  "scifi": {
+   "0": [
+    {
+     "k": "movie:102382",
+     "t": "The Amazing Spider-Man 2: El poder de Electro"
+    },
+    {
+     "k": "movie:83533",
+     "t": "Avatar: Fuego y ceniza"
+    },
+    {
+     "k": "tv:42009",
+     "t": "Black Mirror"
+    },
+    {
+     "k": "movie:271110",
+     "t": "Capitán América: Civil War"
+    },
+    {
+     "k": "tv:79680",
+     "t": "Snowpiercer: Rompenieves"
+    },
+    {
+     "k": "tv:79130",
+     "t": "Otra vida"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:822119",
+     "t": "Capitán América: Brave New World"
+    },
+    {
+     "k": "tv:241473",
+     "t": "La señal"
+    },
+    {
+     "k": "movie:617126",
+     "t": "Los Cuatro Fantásticos: Primeros pasos"
+    },
+    {
+     "k": "movie:693134",
+     "t": "Dune: Parte dos"
+    },
+    {
+     "k": "tv:83867",
+     "t": "Andor"
+    },
+    {
+     "k": "movie:557",
+     "t": "Spider-Man"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:299534",
+     "t": "Vengadores: Endgame"
+    },
+    {
+     "k": "tv:93522",
+     "t": "La valla"
+    },
+    {
+     "k": "tv:4629",
+     "t": "Stargate SG-1"
+    },
+    {
+     "k": "tv:93808",
+     "t": "Tribus de Europa"
+    },
+    {
+     "k": "movie:1930",
+     "t": "The Amazing Spider-Man"
+    },
+    {
+     "k": "tv:92830",
+     "t": "Obi-Wan Kenobi"
+    }
+   ]
+  },
+  "familiar": {
+   "0": [
+    {
+     "k": "movie:931285",
+     "t": "Mortal Kombat II"
+    },
+    {
+     "k": "movie:559",
+     "t": "Spider-Man 3"
+    },
+    {
+     "k": "tv:502",
+     "t": "Barrio Sesamo"
+    },
+    {
+     "k": "movie:27205",
+     "t": "Origen"
+    },
+    {
+     "k": "tv:12225",
+     "t": "Peppa Pig"
+    },
+    {
+     "k": "tv:2352",
+     "t": "La niñera"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:569094",
+     "t": "Spider-Man: Cruzando el Multiverso"
+    },
+    {
+     "k": "tv:40075",
+     "t": "Gravity Falls"
+    },
+    {
+     "k": "movie:99861",
+     "t": "Vengadores: La era de Ultrón"
+    },
+    {
+     "k": "movie:1234821",
+     "t": "Jurassic World: El renacer"
+    },
+    {
+     "k": "tv:57532",
+     "t": "La Patrulla Canina"
+    },
+    {
+     "k": "movie:1930",
+     "t": "The Amazing Spider-Man"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:299534",
+     "t": "Vengadores: Endgame"
+    },
+    {
+     "k": "tv:607",
+     "t": "Las Supernenas"
+    },
+    {
+     "k": "tv:65334",
+     "t": "Prodigiosa: Las aventuras de Ladybug"
+    },
+    {
+     "k": "tv:82728",
+     "t": "Bluey"
+    },
+    {
+     "k": "movie:1084242",
+     "t": "Zootrópolis 2"
+    },
+    {
+     "k": "tv:212989",
+     "t": "LEGO Ninjago: El renacer de los dragones"
+    }
+   ]
+  },
+  "romance": {
+   "0": [
+    {
+     "k": "movie:337167",
+     "t": "Cincuenta sombras liberadas"
+    },
+    {
+     "k": "movie:8966",
+     "t": "Crepúsculo"
+    },
+    {
+     "k": "tv:91239",
+     "t": "Los Bridgerton"
+    },
+    {
+     "k": "movie:9820",
+     "t": "Tú a Londres y yo a California"
+    },
+    {
+     "k": "tv:301507",
+     "t": "Más que rivales"
+    },
+    {
+     "k": "tv:278573",
+     "t": "La corona perfecta"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:829557",
+     "t": "365 días: Aquel día"
+    },
+    {
+     "k": "tv:117581",
+     "t": "Ginny y Georgia"
+    },
+    {
+     "k": "movie:2251",
+     "t": "Infiel"
+    },
+    {
+     "k": "movie:1327862",
+     "t": "A pesar de ti"
+    },
+    {
+     "k": "tv:67136",
+     "t": "This Is Us"
+    },
+    {
+     "k": "movie:11036",
+     "t": "El diario de Noa"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:4348",
+     "t": "Orgullo y prejuicio"
+    },
+    {
+     "k": "tv:126280",
+     "t": "Sexo-Vida"
+    },
+    {
+     "k": "tv:199001",
+     "t": "Mi vida con los chicos Walter"
+    },
+    {
+     "k": "tv:241454",
+     "t": "Amor en la puerta de al lado"
+    },
+    {
+     "k": "movie:402431",
+     "t": "Wicked"
+    },
+    {
+     "k": "tv:219246",
+     "t": "Si la vida te da mandarinas..."
+    }
+   ]
+  },
+  "navidad": {
+   "0": [
+    {
+     "k": "movie:10437",
+     "t": "Los Teleñecos en Cuento de Navidad"
+    },
+    {
+     "k": "movie:662546",
+     "t": "Amadrinadas"
+    },
+    {
+     "k": "movie:755339",
+     "t": "La Nochebuena es mi condena"
+    },
+    {
+     "k": "movie:21539",
+     "t": "La mujer del predicador"
+    },
+    {
+     "k": "movie:460793",
+     "t": "Frozen: Una aventura de Olaf"
+    },
+    {
+     "k": "movie:1401318",
+     "t": "Una Navidad ex cepcional"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:771",
+     "t": "Solo en casa"
+    },
+    {
+     "k": "movie:555850",
+     "t": "El calendario de Navidad"
+    },
+    {
+     "k": "movie:840430",
+     "t": "Los que se quedan"
+    },
+    {
+     "k": "movie:13380",
+     "t": "Navidades mágicas"
+    },
+    {
+     "k": "movie:643882",
+     "t": "(Re)cambio de princesa"
+    },
+    {
+     "k": "movie:734265",
+     "t": "¡Qué duro es el amor!"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:15400",
+     "t": "Mickey descubre la Navidad"
+    },
+    {
+     "k": "movie:364067",
+     "t": "A Very Murray Christmas"
+    },
+    {
+     "k": "movie:142308",
+     "t": "Santa Can 2: Los cachorros de Santa Can"
+    },
+    {
+     "k": "movie:11881",
+     "t": "De ilusión también se vive"
+    },
+    {
+     "k": "movie:508965",
+     "t": "Klaus"
+    },
+    {
+     "k": "movie:622855",
+     "t": "La navidad mágica de los Jangle"
+    }
+   ]
+  },
+  "guerra": {
+   "0": [
+    {
+     "k": "movie:49046",
+     "t": "Sin novedad en el frente"
+    },
+    {
+     "k": "movie:600",
+     "t": "La chaqueta metálica"
+    },
+    {
+     "k": "tv:63333",
+     "t": "The Last Kingdom"
+    },
+    {
+     "k": "movie:947",
+     "t": "Lawrence de Arabia"
+    },
+    {
+     "k": "tv:126308",
+     "t": "Shōgun"
+    },
+    {
+     "k": "tv:216082",
+     "t": "Día cero"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:1223601",
+     "t": "Sisu: Camino a la venganza"
+    },
+    {
+     "k": "tv:225647",
+     "t": "Reclutas"
+    },
+    {
+     "k": "movie:8741",
+     "t": "La delgada línea roja"
+    },
+    {
+     "k": "movie:9567",
+     "t": "Lágrimas del sol"
+    },
+    {
+     "k": "tv:4613",
+     "t": "Hermanos de sangre"
+    },
+    {
+     "k": "movie:228150",
+     "t": "Corazones de acero"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:770",
+     "t": "Lo que el viento se llevó"
+    },
+    {
+     "k": "tv:271855",
+     "t": "Sandokan"
+    },
+    {
+     "k": "tv:44217",
+     "t": "Vikingos"
+    },
+    {
+     "k": "tv:96481",
+     "t": "El gran Imperio otomano"
+    },
+    {
+     "k": "movie:190859",
+     "t": "El francotirador"
+    },
+    {
+     "k": "tv:16997",
+     "t": "The Pacific"
+    }
+   ]
+  },
+  "aliens": {
+   "0": [
+    {
+     "k": "tv:4629",
+     "t": "Stargate SG-1"
+    },
+    {
+     "k": "movie:602",
+     "t": "Independence Day"
+    },
+    {
+     "k": "tv:60957",
+     "t": "Mi amor de las estrellas"
+    },
+    {
+     "k": "tv:281666",
+     "t": "Pesadillas: La desaparición"
+    },
+    {
+     "k": "movie:49521",
+     "t": "El hombre de acero"
+    },
+    {
+     "k": "tv:4604",
+     "t": "Smallville"
+    }
+   ],
+   "1": [
+    {
+     "k": "tv:51001",
+     "t": "La elegida"
+    },
+    {
+     "k": "tv:79130",
+     "t": "Otra vida"
+    },
+    {
+     "k": "movie:299537",
+     "t": "Capitana Marvel"
+    },
+    {
+     "k": "movie:106",
+     "t": "Depredador"
+    },
+    {
+     "k": "tv:226362",
+     "t": "El Eternauta"
+    },
+    {
+     "k": "movie:436969",
+     "t": "El Escuadrón Suicida"
+    }
+   ],
+   "2": [
+    {
+     "k": "tv:96580",
+     "t": "Resident Alien"
+    },
+    {
+     "k": "movie:68726",
+     "t": "Pacific Rim"
+    },
+    {
+     "k": "movie:24428",
+     "t": "Vengadores"
+    },
+    {
+     "k": "movie:679",
+     "t": "Aliens: El regreso"
+    },
+    {
+     "k": "movie:1091",
+     "t": "La cosa (El enigma de otro mundo)"
+    },
+    {
+     "k": "movie:329865",
+     "t": "La llegada"
+    }
+   ]
+  },
+  "espacio": {
+   "0": [
+    {
+     "k": "tv:79130",
+     "t": "Otra vida"
+    },
+    {
+     "k": "tv:96777",
+     "t": "Mar de la tranquilidad"
+    },
+    {
+     "k": "tv:108298",
+     "t": "El último vuelo del Challenger"
+    },
+    {
+     "k": "tv:89233",
+     "t": "Away"
+    },
+    {
+     "k": "movie:11",
+     "t": "La guerra de las galaxias"
+    },
+    {
+     "k": "movie:609681",
+     "t": "The Marvels"
+    }
+   ],
+   "1": [
+    {
+     "k": "tv:241473",
+     "t": "La señal"
+    },
+    {
+     "k": "movie:329865",
+     "t": "La llegada"
+    },
+    {
+     "k": "movie:1091",
+     "t": "La cosa (El enigma de otro mundo)"
+    },
+    {
+     "k": "tv:83867",
+     "t": "Andor"
+    },
+    {
+     "k": "movie:679",
+     "t": "Aliens: El regreso"
+    },
+    {
+     "k": "movie:299536",
+     "t": "Vengadores: Infinity War"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:286217",
+     "t": "Marte (The Martian)"
+    },
+    {
+     "k": "tv:75782",
+     "t": "Nuestro planeta (One Strange Rock)"
+    },
+    {
+     "k": "movie:62",
+     "t": "2001. Una odisea del espacio"
+    },
+    {
+     "k": "movie:602",
+     "t": "Independence Day"
+    },
+    {
+     "k": "movie:348",
+     "t": "Alien: El octavo pasajero"
+    },
+    {
+     "k": "tv:75758",
+     "t": "Lost in Space"
+    }
+   ]
+  },
+  "reales": {
+   "0": [
+    {
+     "k": "movie:769",
+     "t": "Uno de los nuestros"
+    },
+    {
+     "k": "movie:138843",
+     "t": "Expediente Warren"
+    },
+    {
+     "k": "tv:70824",
+     "t": "La Niña"
+    },
+    {
+     "k": "movie:664280",
+     "t": "David Attenborough: Una vida en nuestro planeta"
+    },
+    {
+     "k": "tv:87108",
+     "t": "Chernobyl"
+    },
+    {
+     "k": "tv:90955",
+     "t": "El director desnudo 2019"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:281957",
+     "t": "El renacido"
+    },
+    {
+     "k": "tv:64513",
+     "t": "American Crime Story"
+    },
+    {
+     "k": "movie:190859",
+     "t": "El francotirador"
+    },
+    {
+     "k": "movie:1376704",
+     "t": "Compra ahora: La conspiración consumista"
+    },
+    {
+     "k": "tv:1424",
+     "t": "Orange Is the New Black"
+    },
+    {
+     "k": "movie:899082",
+     "t": "Harry Potter, 20º Aniversario: Regreso a Hogwarts"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:1183166",
+     "t": "Vjeran Tomic: El hombre araña de Paris"
+    },
+    {
+     "k": "tv:286801",
+     "t": "Monstruo: La historia de Ed Gein"
+    },
+    {
+     "k": "tv:90",
+     "t": "Mayday Catástrofes Aéreas"
+    },
+    {
+     "k": "tv:207411",
+     "t": "Una buena familia americana"
+    },
+    {
+     "k": "movie:1637319",
+     "t": "Hannah Montana: Especial 20 aniversario"
+    },
+    {
+     "k": "tv:126929",
+     "t": "Bienvenidos al Wrexham Football Club"
+    }
+   ]
+  },
+  "fantasia": {
+   "0": [
+    {
+     "k": "movie:284052",
+     "t": "Doctor Strange"
+    },
+    {
+     "k": "tv:1399",
+     "t": "Juego de tronos"
+    },
+    {
+     "k": "tv:95",
+     "t": "Buffy, cazavampiros"
+    },
+    {
+     "k": "tv:97175",
+     "t": "Destino: La saga Winx"
+    },
+    {
+     "k": "tv:133064",
+     "t": "Gatas miedicas"
+    },
+    {
+     "k": "tv:71912",
+     "t": "The Witcher"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:120",
+     "t": "El señor de los anillos: La comunidad del anillo"
+    },
+    {
+     "k": "tv:86423",
+     "t": "Locke & Key"
+    },
+    {
+     "k": "tv:114479",
+     "t": "The Acolyte"
+    },
+    {
+     "k": "movie:122917",
+     "t": "El hobbit: La batalla de los cinco ejércitos"
+    },
+    {
+     "k": "movie:122",
+     "t": "El señor de los anillos: El retorno del rey"
+    },
+    {
+     "k": "movie:673",
+     "t": "Harry Potter y el prisionero de Azkaban"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:674",
+     "t": "Harry Potter y el cáliz de fuego"
+    },
+    {
+     "k": "movie:76338",
+     "t": "Thor: el mundo oscuro"
+    },
+    {
+     "k": "movie:675",
+     "t": "Harry Potter y la Orden del Fénix"
+    },
+    {
+     "k": "tv:87689",
+     "t": "La monja guerrera"
+    },
+    {
+     "k": "movie:121",
+     "t": "El señor de los anillos: Las dos torres"
+    },
+    {
+     "k": "tv:56570",
+     "t": "Outlander"
+    }
+   ]
+  },
+  "crimen": {
+   "0": [
+    {
+     "k": "movie:475557",
+     "t": "Joker"
+    },
+    {
+     "k": "movie:807",
+     "t": "Seven"
+    },
+    {
+     "k": "tv:79744",
+     "t": "The Rookie"
+    },
+    {
+     "k": "movie:272",
+     "t": "Batman Begins"
+    },
+    {
+     "k": "tv:1911",
+     "t": "Bones"
+    },
+    {
+     "k": "tv:1412",
+     "t": "Arrow"
+    }
+   ],
+   "1": [
+    {
+     "k": "movie:1422",
+     "t": "Infiltrados"
+    },
+    {
+     "k": "tv:226637",
+     "t": "High Potential"
+    },
+    {
+     "k": "movie:111",
+     "t": "El precio del poder"
+    },
+    {
+     "k": "movie:1202033",
+     "t": "Enola Holmes 3"
+    },
+    {
+     "k": "tv:4057",
+     "t": "Mentes criminales"
+    },
+    {
+     "k": "movie:155",
+     "t": "El caballero oscuro"
+    }
+   ],
+   "2": [
+    {
+     "k": "movie:12153",
+     "t": "Dos rubias de pelo en pecho"
+    },
+    {
+     "k": "tv:71790",
+     "t": "S.W.A.T.: Los hombres de Harrelson"
+    },
+    {
+     "k": "tv:5920",
+     "t": "El mentalista"
+    },
+    {
+     "k": "tv:1411",
+     "t": "Vigilados, Person of Interest"
+    },
+    {
+     "k": "movie:949838",
+     "t": "72 horas"
+    },
+    {
+     "k": "tv:2288",
+     "t": "Prison Break"
+    }
+   ]
+  },
+  "supervivencia": {
+   "0": [
+    {
+     "k": "movie:254128",
+     "t": "San Andrés"
+    },
+    {
+     "k": "tv:108298",
+     "t": "El último vuelo del Challenger"
+    },
+    {
+     "k": "tv:87108",
+     "t": "Chernobyl"
+    },
+    {
+     "k": "movie:680058",
+     "t": "Rescate en las profundidades"
+    },
+    {
+     "k": "movie:286217",
+     "t": "Marte (The Martian)"
+    },
+    {
+     "k": "tv:106514",
+     "t": "Fauna minúscula"
+    }
+   ],
+   "1": [
+    {
+     "k": "tv:1402",
+     "t": "The Walking Dead"
+    },
+    {
+     "k": "tv:213609",
+     "t": "La vida en nuestro planeta"
+    },
+    {
+     "k": "movie:950387",
+     "t": "Una película de Minecraft"
+    },
+    {
+     "k": "movie:1018645",
+     "t": "El volcán: Rescate en Whakaari"
+    },
+    {
+     "k": "tv:88052",
+     "t": "Black Summer"
+    },
+    {
+     "k": "movie:410718",
+     "t": "Planeta Tierra: ¿Somos historia?"
+    }
+   ],
+   "2": [
+    {
+     "k": "tv:238084",
+     "t": "Gatillo"
+    },
+    {
+     "k": "tv:206246",
+     "t": "Fiasco total: Woodstock 99"
+    },
+    {
+     "k": "movie:1198994",
+     "t": "SEND HELP (Enviad ayuda)"
+    },
+    {
+     "k": "tv:90",
+     "t": "Mayday Catástrofes Aéreas"
+    },
+    {
+     "k": "tv:75758",
+     "t": "Lost in Space"
+    },
+    {
+     "k": "movie:1484253",
+     "t": "Fiasco total: El crucero de la caca"
+    }
+   ]
+  }
+ }
+}
