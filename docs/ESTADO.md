@@ -1,7 +1,7 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 13 de agosto de 2026** — HEAD `4c66459`.
+> **Última actualización: 15 de agosto de 2026.**
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -9,132 +9,151 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 
 ---
 
-## Qué está construido y en producción
+## ⚠️ Lo primero: hay trabajo sin desplegar
 
-| Feature | Qué es |
+```
+origin/main   bd7c85f
+main local    7796db9   ← 5 commits por delante
+```
+
+**Producción NO tiene** la rotación de ejes de los carruseles de audiencia ni el
+cacheo de `publishedIds`. Está todo mergeado a `main` local, verificado y
+medido; solo falta `git push origin main`.
+
+Además hay **una rama sin mergear a propósito**: `feat/hero-universo`
+(`9ee6294`), que por ahora solo contiene la foto del "antes" del hero.
+
+---
+
+## Qué se hizo en esta sesión
+
+### Rendimiento y cache
+
+| Cambio | Resultado medido |
 |---|---|
-| **Top Yump** | Top 10 de seis plataformas en AR. Netflix con consumo real (TSV oficial, cron semanal); las otras cinco por popularidad de TMDB, etiquetadas distinto **a propósito** |
-| **Ruleta** | Una recomendación por vez desde el Home. Tres escenarios por duración: `corta` (≤90 min), `larga` (>90), `chicos` |
-| **Recordarme** | En Próximamente. Google Calendar desde la card; Google + `.ics` desde la ficha |
-| **Filtro por década** | En el buscador, desplegable junto al de país |
-| **Cache del Home** | Visita caliente de 2,9 s a 0,8 s. TTL 6 h |
-| **Observabilidad** | Vercel Analytics, Speed Insights y log `HIT`/`MISS` del cache del Home |
-| **PWA** | Instalable. Banner desde la primera visita |
+| **CLS** — reserva de espacio, `font-display: optional`, ancho fijo en el navbar | 0.0857 → **0.0036** |
+| **MGET** — las lecturas de Redis se agrupan en lotes | Lecturas de un rearmado: 391 comandos → **19** |
+| **Pool cache** — `discover` cacheado por plataforma individual | Segundo usuario con plataformas que se solapan: 26 llamadas → **8** |
+| **`publishedIds`** cacheado | 16 viajes a Supabase por rearmado → **1** |
 
-**OMDB se sacó**: IMDb y Metacritic ya no existen en la ficha. Sus términos
-prohíben construir algo con esos datos *"whether or not for profit"* y la app se
-publica abierta. No hay reemplazo gratis. Quedan el puntaje Yump, el de TMDB y
-el editorial.
+### Variedad del catálogo
 
----
+- **Tope de 2 por saga en todo el Home.** Sci-fi mostraba 7 Spider-Man; ahora
+  ninguno se repite más de dos veces en todo el Home.
+- **Rotación de ejes en los carruseles de audiencia.** Cinco ejes (`pop`, `top`,
+  `nuevo`, `taquilla`, `hondo`) rotan con la semilla del día. Cobertura semanal:
+  **20 títulos fijos → 198 y 166**. Solapamiento día a día: 100% → 0-21%.
+  La rotación es **invisible**: los títulos de los rieles no cambian nunca.
 
-## Infraestructura
+### Correcciones
 
-- Las tres variables de Vercel están puestas y verificadas.
-- El cron de Netflix **corrió de punta a punta**: `week 2026-08-09, inserted 20,
-  resolved 20, review 0`.
-- Cache Redis activo; con TTL de 6 h entra cómodo en el plan gratuito de Upstash.
-- Vercel Hobby alcanza mientras no haya facturación.
-- Manifest y service worker verificados en producción: cumple los requisitos de
-  instalabilidad.
-
-**El número a vigilar durante la prueba con usuarios** son los comandos por día
-en el panel de Upstash. Es el único límite que puede cortar el servicio.
-
----
-
-## Auditoría de seguridad (12/8/2026)
-
-Cuatro frentes: rutas API, RLS y permisos, autenticación y admin, cliente y
-secretos. **Una vulnerabilidad real**, corregida:
-
-`user_reviews.estado` se podía auto-aprobar — la policy ataba la fila a
-`auth.uid() = user_id` pero no decía nada sobre las columnas, y no había
-trigger. Cerrado con `protect_review_estado`.
-
-**No la encontró ninguno de los cuatro agentes leyendo el código.** Apareció al
-consultar `pg_policies` contra la base viva. Auditar el repo no es auditar el
-sistema.
-
-Endurecimiento aplicado: `server-only` en `lib/tmdb.ts` y `lib/cache.ts`;
-`timingSafeEqual` para el `CRON_SECRET`; `search_path` fijado en
-`protect_is_admin`.
-
-**Corpus de la ruleta cerrado**: `roulette_titles` ya no se lee con la anon key
-(401). La RPC es la única vía. Limitación honesta: un scraper con estado todavía
-puede caminarlo de a 40 vía la función. Es inherente a servir el dato sin login.
+- **`dailySeed()` en hora argentina.** Todo lo que rota por día cambiaba a las
+  21:00 locales. Tiene test (`lib/fecha.test.ts`, `npm test`).
+- **"Recordarme"** ya no agenda la fecha de cine en películas: usa la digital
+  argentina y devuelve 404 si no existe. El `.ics` de series usaba
+  `first_air_date` —el estreno original, de años atrás— y ahora usa
+  `next_episode_to_air`. El 404 se avisa en la interfaz en vez de descargar el
+  JSON del error.
+- **"Próximamente"** filtra lo vencido al leer, sin depender de que el sync esté
+  fresco.
+- **Contexto al volver de una ficha**: el scroll vertical se restauraba a 930 en
+  vez de 1800; ahora vuelve entero, y cada riel recupera su scroll horizontal.
+- **Deep links**: "Volver" en una ficha compartida ya no saca al usuario de la
+  app.
 
 ---
 
-## Pipeline versionado (resuelto el 13/8/2026)
+## Lo que queda por hacer
 
-`chips/`, `prompts/`, los `scripts/*.mjs`, las tres migraciones de
-`supabase/migrations/` y `docs/MANTENIMIENTO.md` están trackeados y en
-`origin/main`. `001_chip_titles.sql` crea `title_availability`, así que ya no hay
-objetos en producción que ningún archivo describa: **un clon limpio reproduce el
-entorno.**
+### 1. Pushear `main` (5 minutos)
 
-`data/` va **parcialmente versionado a propósito** (`.gitignore`: `data/*` con
-tres excepciones). Sólo entran los tres archivos con trabajo de LLM o revisión
-humana adentro:
+Nada más que eso. Está todo verificado.
 
-- `data/copy-ruleta.json`
-- `data/contexto-ruleta.json`
-- `data/clasificado-magica-navidad.json`
+### 2. El hero — **empezado, con la foto del antes ya tomada**
 
-El resto son intermedios y volcados SQL que cualquier corrida del pipeline
-regenera. No agregarlos.
+Rama `feat/hero-universo`. **El plan está cerrado y acordado**, falta escribirlo:
 
----
+- El universo del hero son 40 títulos: enriquece 40 para mostrar 6.
+- Se amplía con `candidatosDePools` y receta `hero-<eje>` (crudos), se elige con
+  `pickDaily` sobre ese universo grande, y **recién ahí se enriquecen los 6**.
+- **Ordenar por `id` antes de barajar**: la permutación tiene que depender del
+  conjunto y no del orden de llegada, o el botón "Otras" se desincroniza.
+- **El camino de las pastillas queda fuera de alcance.** Los chips curados son
+  base propia con revisión humana.
 
-## Lo que falta
+Criterios de aceptación acordados:
 
-### 1. Verificar que el cron corre solo
+| | Hoy | Objetivo |
+|---|---|---|
+| Clics limpios de "Otras" antes de repetir | 6 | **≥ 12** |
+| Tiempo de respuesta de "Otras" | 168-179 ms | no empeora |
+| Cobertura semanal del hero | 40 | ≥ 100 |
+| Payload del Home vs `offset=0` | — | **idénticos** |
+| Chips curados | — | **idénticos a la foto** |
 
-El miércoles siguiente a cada martes, la semana del Top tiene que haber avanzado.
+**Dos condiciones del dueño:**
 
-### 2. Probar en dispositivos reales
+1. La verificación de los chips va contra `docs/medidas/2026-08-15-hero-antes.json`
+   y **no** contra una corrida nueva. Ese archivo no es reproducible: la semilla
+   del día entra en el orden.
+2. **No se mergea hasta que el dueño lo pruebe a mano.** Ninguna medición dice si
+   "Mágica navidad" sigue trayendo películas de navidad.
 
-- Banner de instalación en Android, en pestaña de incógnito.
-- El recordatorio, **sobre todo si suena el aviso de la víspera**: Google
-  Calendar puede ignorar la alarma de un evento importado. Si eso pasa, la
-  salida es poner el evento el día anterior con el texto "Mañana estrena…".
-- "Ya la vi" de la ruleta logueado: son los dos criterios del spec que nunca se
-  verificaron.
+### 3. Después del hero
 
-### 3. Idioma de los títulos
-
-Salen en español de España (*Jungla de cristal* en vez de *Duro de matar*). La
-variante que sirve es **`es-MX`**; `es-AR` y `es-419` caen al de España — está
-medido. Pospuesto por decisión del dueño. Requiere versionar la clave de cache
-`card:`, o conviven títulos mezclados 24 h.
-
-### 4. Decisión menor
-
-Si se deja el campo `motivo` en el diagnóstico del cron. Recomendación: dejarlo,
-no filtra nada y ahorra tiempo de diagnóstico.
+- **`home:v2`** — evaluar si el payload compuesto sigue teniendo sentido. Se
+  decide **con los números del paso 3 puestos**, no con los de ahora.
+- **Rieles de género con rotación de ejes** — mismo trabajo que audiencia, pero
+  son once y usan el mismo mecanismo de vueltas (ver más abajo).
+- **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
+  retorno; el rearmado en frío es el caso raro.
 
 ---
 
-## Trampas que cuestan tiempo
+## Issues abiertos (`docs/ISSUES.md`)
 
-- **`next build` con `next dev` corriendo corrompe `.next`.** Da "Cargando…"
-  eterno o "Cannot find module", y no parece un problema de build. Matar el dev
-  antes; después, recarga dura en el navegador.
-- **Vercel a veces no detecta el push.** Se destraba con un commit vacío, no con
-  Redeploy.
-- **Las variables de entorno no se aplican a deployments existentes.** Hay que
-  redeployar, sin build cache.
+| # | Qué |
+|---|---|
+| #1 | Lighthouse Performance 61 en móvil |
+| #2 | `--faint` no cumple contraste AA |
+| #3 | Caminos de red sin ejercitar en la PWA |
+| #4 | Fechas en UTC: `porEstrenar`, `today()`, el sync |
+| #5 | ¿"Próximamente" muestra estreno en cine o llegada a streaming? |
+| #6 | "Próximamente" mezcla estrenos con episodios semanales |
+| #7 | `upcoming_content`: las filas existentes se quedan viejas |
+| #8 | `upcoming_content`: sesgo permanente hacia lo popular |
+| #9 | La popularidad es el orden por defecto en toda la app |
 
 ---
 
-## Dos cosas del producto
+## Cosas que cuestan tiempo si no se saben
 
-**Sistema de votos**: malaso vale 2, ta buena 7, petacular 10; el puntaje es el
-promedio. La separación es deliberada — un malaso pesa más que un petacular.
-Pero **los rieles del Home ordenan por cantidad de votos, no por puntaje**.
+**El tope de vueltas está calibrado para el eje más fácil de llenar.** Un día de
+`hondo` termina con 21 tarjetas y uno de `pop` con 39, y la conclusión obvia
+—que `hondo` es caro— es al revés: gastó 407 enriquecidos contra 434. Le sobró
+presupuesto sin usar. Está documentado junto a `MAX_VUELTAS` en `lib/home.ts`.
+**Cuando se toquen los rieles de género, ese número se revisa con ese dato.**
 
-**En iPhone no hay botón de instalar y no lo va a haber.** Safari no expone la
-API. Lo máximo son instrucciones ("Compartir → Agregar a inicio"), y conviene
-mandarlas por mensaje junto con el link. Además, instalar en iOS estrena el
-storage: se pierden plataformas y sesión, y hay que elegirlas de nuevo.
+**Que dos cosas que deberían diferir den lo mismo es una alarma.** Documentado en
+`MANTENIMIENTO.md` 8.b. Así se encontró el kill switch roto del pool cache.
+
+**`upcoming_content` no es la agenda de estrenos**: es lo que estaba en el top 60
+de popularidad el día en que se escribió cada fila. `MANTENIMIENTO.md` 5.b.
+
+**El pool de una plataforma no es único**: hay una variante por configuración de
+filtros, porque `withoutGenres` depende del conjunto completo de plataformas.
+Documentado en `lib/pools.ts`.
+
+**Interruptores de emergencia**: `POOL_CACHE=0` vuelve al camino viejo completo
+de discover; `CACHE_BATCH=0` vuelve al GET por clave.
+
+**`next build` con `next dev` corriendo corrompe `.next`.** Matar el dev antes.
+
+---
+
+## Sin trackear, de otra línea de trabajo
+
+`prompts/noticias-filtro.md`, `prompts/noticias-redaccion.md` y
+`supabase/migrations/004_news.sql`. Estaban al empezar la sesión y no se
+tocaron. Si `004_news.sql` está aplicado en producción, debería versionarse por
+el mismo motivo que el resto del pipeline.
