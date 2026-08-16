@@ -18,15 +18,15 @@ import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import {
-  candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje,
-  type Candidato, type ParamsReceta,
+  candidatosConEje, candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje,
+  type Candidato, type ParamsReceta, type Receta,
 } from "./pools";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
 import { primaryCountry } from "./countries";
 import { pickTrailer } from "./trailer";
 import type {
-  MediaType, PlatformCode, UITitle, UITitleDetail, UIPerson,
+  MediaType, MotivoVacio, PlatformCode, UITitle, UITitleDetail, UIPerson,
 } from "./types";
 
 const img = (p: string | null, size = "w500") => (p ? `${TMDB_IMG}/${size}${p}` : null);
@@ -240,19 +240,26 @@ export async function latestReleases(
 const PISO_CURADOS = 12;
 
 // --- Recomendaciones del día (pool + seed) ---
+// Devuelve el motivo cuando vuelve vacío: la interfaz tiene que poder distinguir
+// "no lo tenés en tus plataformas" de "esto se rompió de nuestro lado", porque
+// el segundo caso no se arregla pidiéndole al usuario que active una plataforma.
+// Ver `MotivoVacio` en lib/types.ts.
 export async function recommendations(opts: {
   genre?: string; tipo: MediaType | "all"; providers: PlatformCode[]; n?: number; offset?: number;
-}): Promise<UITitle[]> {
+}): Promise<{ items: UITitle[]; motivo?: MotivoVacio }> {
   const n = opts.n ?? 6;
   const offset = opts.offset ?? 0;
   const cat = opts.genre ? categoryBySlug(opts.genre) : undefined;
+  if (!opts.providers.length) return { items: [], motivo: "sin-plataformas" };
 
   // --- Ruta curada -----------------------------------------------------------
   if (cat?.curatedSlug) {
     const pool = await curatedPool(cat, opts.providers, n);
     // El RPC ya barajó con la semilla del día y el intercalado fijó el orden:
     // acá solo se pagina. Volver a mezclar rompería ambas cosas.
-    if (!pool.length) return [];
+    // Un curado vacío ES el filtro de plataformas: la lista curada existe
+    // siempre, lo que falta es que alguno esté en las plataformas del usuario.
+    if (!pool.length) return { items: [], motivo: "filtro" };
     const inicio = (offset * n) % pool.length;
     const tanda = pool.slice(inicio, inicio + n);
     // Wrap al principio si la tanda cae al final del pool. Con un pool más chico
@@ -265,7 +272,7 @@ export async function recommendations(opts: {
         if (!yaEsta.has(k)) { yaEsta.add(k); tanda.push(t); }
       }
     }
-    return tanda;
+    return { items: tanda };
   }
 
   const types: MediaType[] = opts.tipo === "all" ? ["movie", "tv"] : [opts.tipo];
@@ -323,10 +330,16 @@ export async function recommendations(opts: {
         if (!yaEsta.has(k)) { yaEsta.add(k); tanda.push(t); }
       }
     }
-    return tanda;
+    return { items: tanda, motivo: tanda.length ? undefined : "filtro" };
   }
 
-  return pickDaily(pool, n, dailySeed(), offset);
+  // La ruta angosta pide SIEMPRE la página 1 con el orden por defecto, así que
+  // no puede volver vacía antes de filtrar salvo que la categoría entera no
+  // exista en AR. Por eso acá el motivo es "filtro" y no se distingue más fino:
+  // el caso "sin-catalogo" lo produce la ruta ancha, que es la que pagina hondo
+  // y sube el piso de votos.
+  const items = pickDaily(pool, n, dailySeed(), offset);
+  return { items, motivo: items.length ? undefined : "filtro" };
 }
 
 // --- El universo del hero ----------------------------------------------------
@@ -359,7 +372,7 @@ const HERO_TOPE = HERO_VENTANA * 3;
 
 async function tandaAncha(opts: {
   genre?: string; types: MediaType[]; providers: PlatformCode[]; n: number; offset: number;
-}): Promise<UITitle[]> {
+}): Promise<{ items: UITitle[]; motivo?: MotivoVacio }> {
   const { types, providers, n, offset } = opts;
   const universo = (await Promise.all(types.map(async (tipo) => {
     const crudos = await categoryCandidates({
@@ -394,7 +407,11 @@ async function tandaAncha(opts: {
   unicos.sort((a, b) => (a.tipo === b.tipo ? a.raw.id - b.raw.id : a.tipo < b.tipo ? -1 : 1));
 
   const barajado = pickDaily(unicos, unicos.length, dailySeed());
-  if (!barajado.length) return [];
+  // Vacío ANTES de filtrar por plataformas: la consulta no trajo un solo
+  // candidato. Con la verificación de eje puesta esto ya casi no debería pasar
+  // (era el bug de "Contacto extraterrestre" en un día de `hondo`), pero si pasa
+  // NO es culpa del usuario y la interfaz no tiene que pedirle que active nada.
+  if (!barajado.length) return { items: [], motivo: "sin-catalogo" };
 
   // La ventana de este offset. Da la vuelta al final del universo, igual que
   // `pickDaily`: llegar al final no deja al usuario sin hero.
@@ -427,7 +444,9 @@ async function tandaAncha(opts: {
       if (t && !puestos.has(c.k)) { puestos.add(c.k); out.push(t); }
     }
   }
-  return out;
+  // Había candidatos y no sobrevivió ninguno: acá sí fue el filtro de
+  // plataformas, que es el mensaje legítimo de "no lo tenés".
+  return { items: out, motivo: out.length ? undefined : "filtro" };
 }
 
 // Pool completo de un chip curado, ya enriquecido y en el orden definitivo.
@@ -494,17 +513,30 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
     // popularidad, o sea el MISMO carrusel todos los días y para todos los
     // usuarios con las mismas plataformas. Los rieles de género al menos
     // barajaban 60; éste no barajaba nada.
-    const { receta, eje, startPage } = recetaDelDia({
-      superficie: `aud-${slug}`,
-      tipo: tp,
-      semilla: dailySeed(),
-      base: {
-        genres: rule.genres,
-        withoutGenres: rule.withoutGenres,
-        extra: Object.keys(extra).length ? extra : undefined,
-      },
-    });
-    registrarEje(`aud-${slug}/${tp}`, eje);
+    const baseReceta = {
+      genres: rule.genres,
+      withoutGenres: rule.withoutGenres,
+      extra: Object.keys(extra).length ? extra : undefined,
+    };
+    // Mismo resguardo que el hero: un eje que no puede llenar no se usa. Acá el
+    // riesgo es menor (family y adult-anime son superficies anchas) pero el
+    // mecanismo es el mismo, así que la protección va en el mismo lugar y no
+    // duplicada — si mañana se suma un carrusel de audiencia más angosto, ya
+    // está cubierto. La primera tanda se aprovecha: la trajo la verificación.
+    let receta: Receta;
+    let startPage: number;
+    let primera: Candidato[] | null = null;
+    if (poolsHabilitados) {
+      const r = await candidatosConEje({
+        superficie: `aud-${slug}`, tipo: tp, providers,
+        semilla: dailySeed(), base: baseReceta, pages: 1,
+      });
+      receta = r.receta; startPage = r.startPage; primera = r.candidatos;
+    } else {
+      const r = recetaDelDia({ superficie: `aud-${slug}`, tipo: tp, semilla: dailySeed(), base: baseReceta });
+      registrarEje(`aud-${slug}/${tp}`, r.eje);
+      receta = r.receta; startPage = r.startPage;
+    }
     const pub = await publishedIds(tp);
     // Se enriquece POR TANDAS y se vuelve a pedir hasta llenar o agotar
     // candidatos, igual que los rieles de género. Un tamaño de tanda fijo no
@@ -518,9 +550,11 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
     let vueltas = 0;
     while (out.length < AUDIENCIA_OBJETIVO && vueltas < AUDIENCIA_VUELTAS) {
       if (!pool.length) {
-        const traidos = poolsHabilitados
+        // La primera vuelta reusa lo que ya trajo la verificación del eje.
+        const traidos = primera ?? (poolsHabilitados
           ? await candidatosDePools({ tipo: tp, providers, receta, pages: 1, startPage: pagina })
-          : (await discover(tp, { ...receta.params, providers: ids, page: pagina })).results;
+          : (await discover(tp, { ...receta.params, providers: ids, page: pagina })).results);
+        primera = null;
         pagina++;
         if (!traidos.length) break;
         // La mezcla del día va sobre lo traído: sin esto la rotación cambiaría
@@ -920,20 +954,25 @@ export async function categoryCandidates(opts: {
   // Nombre legible de la receta: es lo que hace auditables las claves en Redis.
   // El que invalida es el hash de `params` (ver lib/pools.ts), así que mover un
   // piso de votos no exige acordarse de renombrar nada.
-  let nombre = `g-${opts.genre ?? "todos"}${opts.scope ? `-${opts.scope}` : ""}`;
-  let params: ParamsReceta = base;
-  let desde = startPage;
-  if (opts.superficie) {
-    const r = recetaDelDia({
+  const nombre = `g-${opts.genre ?? "todos"}${opts.scope ? `-${opts.scope}` : ""}`;
+  const params: ParamsReceta = base;
+  const desde = startPage;
+
+  // Con eje rotativo: lo elige `candidatosConEje`, que además VERIFICA que ese
+  // eje pueda llenar y cae a `pop` páginas 1-3 si no (ver el comentario largo en
+  // lib/pools.ts). Sin esto, el día que a un chip angosto le tocaba `hondo` los
+  // pools volvían vacíos y el chip no mostraba nada.
+  //
+  // Con POOL_CACHE=0 no hay ejes: se cae al camino de abajo, que es popularidad
+  // páginas 1..pages. Es deliberado —ese interruptor existe para volver al
+  // comportamiento previo a los pools— y coincide con el eje base, así que lo
+  // que se pierde es la rotación, no el contenido.
+  if (opts.superficie && poolsHabilitados) {
+    const { candidatos } = await candidatosConEje({
       superficie: `${opts.superficie}-${opts.genre ?? "todos"}`,
-      tipo: opts.tipo, semilla: dailySeed(), base,
+      tipo: opts.tipo, providers: opts.providers, semilla: dailySeed(), base, pages,
     });
-    registrarEje(`${opts.superficie}-${opts.genre ?? "todos"}/${opts.tipo}`, r.eje);
-    nombre = r.receta.nombre;
-    params = r.receta.params;
-    // La página de arranque del eje reemplaza a la del llamador: `hondo` vale
-    // justamente por empezar en la 4.
-    desde = r.startPage;
+    return candidatos;
   }
   // Camino viejo: UNA consulta por página con el conjunto entero de plataformas.
   if (!poolsHabilitados) {
