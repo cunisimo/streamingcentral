@@ -80,11 +80,14 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:v2:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  `home:v3:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
   manda la cuota de Upstash, ver el comentario de `TTL.home`). La versión de la
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
-  ve" después de deployar (`v2` = ventana de votos de 7 a 90 días). Los `cached()`
+  ve" después de deployar (`v2` = ventana de votos de 7 a 90 días; `v3` = el
+  riel "Hacete cargo" pasó a llamarse "No gustaron"). **Los títulos de los
+  rieles viajan adentro del payload**, así que hasta cambiar un texto de la
+  interfaz obliga a subir la versión. Los `cached()`
   de `enrich.ts` ya evitaban los ~300 pedidos a TMDB, pero no el costo de
   rearmar: cada request seguía haciendo cientos de round-trips a Upstash. Medido
   en producción, ese piso eran ~2.9 s con todo cacheado y ~5.2 s en frío; con el
@@ -101,7 +104,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   Upstash Redis (70 KB) al bundle del navegador. Los carruseles de audiencia
   ("Para toda la familia", "Animación para adultos") usan su propio tope
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
-  "Hacete cargo" no se rellenan tras el dedup — su tope lo pone la cantidad de
+  "No gustaron" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
 - **El hero ("6 para hoy") arma un universo grande de crudos y enriquece solo lo
   que muestra.** Antes pedía una página de discover por tipo, enriquecía las 40
@@ -366,7 +369,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/providers` | catálogo de plataformas disponibles en AR (onboarding y selector) |
 | `GET /api/recomendaciones` | pool del "modo indeciso" (día + offset) |
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |
-| `GET /api/hacete-cargo` | "Hacete cargo" (votos malaso, `top_voted` 1-1) |
+| `GET /api/hacete-cargo` | "No gustaron" (votos malaso, `top_voted` 1-1). La ruta y la clave siguen diciendo `hacete-cargo`: cambió el rótulo, no el riel |
 | `GET /api/search` | búsqueda (títulos + personas). `providers` **ordena, no filtra** |
 | `GET /api/latest` | últimos estrenos (solo movie, por fecha) |
 | `GET /api/person/[id]` | filmografía de una persona (actor o director), filtrada a plataformas |
@@ -420,7 +423,7 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
 - ~~**"Las más votadas"**~~ — YA CONSTRUIDO. Login público activo → `LikeButton`
   en la ficha (malaso/ta buena/petacular), tabla `votes`, función `top_voted`
   por rango de rating, y dos shelves en Home: "Lo más votados" (2-3) y
-  "Hacete cargo" (1). Requiere re-correr `supabase/schema.sql` para que
+  "No gustaron" (1, antes rotulado "Hacete cargo"). Requiere re-correr `supabase/schema.sql` para que
   `top_voted` tome la firma de 4 args.
 - ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (avatares DiceBear), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). Requiere re-correr `supabase/schema.sql`.
 

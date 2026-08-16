@@ -382,7 +382,7 @@ export async function composeHome(opts: {
   const rails: HomeRail[] = [
     { key: "ultimos", title: "Últimos lanzamientos", items: latest, seeAllHref: "/lista/ultimos" },
     { key: "mas-votados", title: "Lo más votados", items: votados, seeAllHref: "/lista/mas-votados", typeToggle: "filter", shelfKey: "mas-votados", activeType: types["mas-votados"] ?? "movie" },
-    { key: "hacete-cargo", title: "Hacete cargo", items: cargo, seeAllHref: "/lista/hacete-cargo", typeToggle: "filter", shelfKey: "hacete-cargo", activeType: types["hacete-cargo"] ?? "movie" },
+    { key: "hacete-cargo", title: "No gustaron", items: cargo, seeAllHref: "/lista/hacete-cargo", typeToggle: "filter", shelfKey: "hacete-cargo", activeType: types["hacete-cargo"] ?? "movie" },
     ...generos,
     { key: "family", title: "🍿 Para toda la familia", items: family, seeAllHref: "/lista/familia" },
     ...(ocultarAnime
@@ -413,7 +413,11 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): s
   // su forma: si no, lo que ya está cacheado sigue sirviéndose hasta que expire
   // el TTL (6 h) y el cambio "no se ve" después de deployar.
   // v2 = ventana de votos de 7 a 90 días.
-  return `home:v2:${dailySeed()}:${p}:${t}`;
+  // v3 = el riel "Hacete cargo" pasó a llamarse "No gustaron". Los TÍTULOS de
+  //      los rieles viajan dentro del payload, así que cambiar un texto de la
+  //      interfaz es cambiar el contenido: sin subir la versión, el nombre
+  //      viejo se sigue sirviendo hasta 6 h después del deploy.
+  return `home:v3:${dailySeed()}:${p}:${t}`;
 }
 
 export async function homePayload(opts: {

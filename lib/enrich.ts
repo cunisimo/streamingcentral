@@ -981,7 +981,7 @@ export const VOTED_ROWS = 60;
 //
 // El número lo manda el VOLUMEN DE VOTOS, no el producto. Con 7 días —que es la
 // promesa natural, "lo más votado esta semana"— y los 27 votos que hay hoy,
-// "Hacete cargo" se quedaba con 1 título de 9 y "Lo más votados" con 5 de 17.
+// "No gustaron" se quedaba con 1 título de 9 y "Lo más votados" con 5 de 17.
 // Y como el riel muestra el estado vacío por debajo de 2 ítems, el usuario veía
 // los dos rieles vacíos aunque hubiera votado.
 //
@@ -991,7 +991,7 @@ export const VOTED_ROWS = 60;
 export const VOTED_DAYS = 90;
 
 // Ranking de votos cruzado con las plataformas del usuario, acotado a un rango
-// de rating. Base compartida por "Lo más votados" (positivos) y "Hacete cargo"
+// de rating. Base compartida por "Lo más votados" (positivos) y "No gustaron"
 // (negativos). Ventana en días.
 //
 // `limit` (default 20) es el corte final. El default conserva exactamente lo que
@@ -1026,7 +1026,8 @@ export async function mostVoted(providers: PlatformCode[], days = VOTED_DAYS, li
   return votedCards(providers, days, 2, 3, limit);
 }
 
-// "Hacete cargo": las que se llevaron malaso (1).
+// "No gustaron" (la ruta y la función siguen diciendo hacete-cargo/mostPanned:
+// cambió el rótulo, no el riel): las que se llevaron malaso (1).
 export async function mostPanned(providers: PlatformCode[], days = VOTED_DAYS, limit = 20): Promise<UITitle[]> {
   return votedCards(providers, days, 1, 1, limit);
 }

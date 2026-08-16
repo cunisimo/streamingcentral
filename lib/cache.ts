@@ -82,7 +82,7 @@ export const TTL = {
   // combinación, con 10 usuarios o con 10.000. Con 6 horas son 4 rearmados
   // diarios ≈ 60.000, y entran varias combinaciones cómodas.
   //
-  // Lo que se paga: los rieles de votos ("Lo más votados", "Hacete cargo")
+  // Lo que se paga: los rieles de votos ("Lo más votados", "No gustaron")
   // pueden tardar hasta 6 h en reflejar un voto nuevo. Con el volumen actual de
   // votos nadie lo nota. Si eso cambia, la salida NO es bajar el TTL de vuelta
   // —volvés al problema de cuota— sino invalidar las claves `home:` al votar.
