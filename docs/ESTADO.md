@@ -1,7 +1,7 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 15 de agosto de 2026.**
+> **Última actualización: 16 de agosto de 2026.**
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -9,20 +9,21 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 
 ---
 
-## ⚠️ Lo primero: hay trabajo sin desplegar
+## Estado de despliegue: al día
 
 ```
-origin/main   bd7c85f
-main local    4666e5f   ← 6 commits por delante
+origin/main   644f79c
+main local    644f79c   ← nada sin pushear
 ```
 
-**Producción NO tiene** la rotación de ejes de los carruseles de audiencia ni el
-cacheo de `publishedIds`. Está todo mergeado a `main` local, verificado y
-medido; solo falta `git push origin main`.
+`feat/hero-universo` está mergeada (probada a mano por el dueño) y **todo lo que
+estaba pendiente de subir se pusheó el 16/08**: la rotación de ejes de los
+carruseles de audiencia, el cacheo de `publishedIds` y el hero ampliado con su
+arreglo de ejes.
 
-Además hay **una rama sin mergear a propósito**: `feat/hero-universo`, que ahora
-**tiene el hero implementado y medido** y espera la prueba a mano del dueño (es
-su condición, ver abajo).
+**Verificar que Vercel haya tomado el push.** Ya pasó tres veces que no lo
+detecta; se destraba con un commit vacío, no con Redeploy (ver la nota en la
+memoria del proyecto).
 
 ---
 
@@ -64,16 +65,11 @@ su condición, ver abajo).
 
 ---
 
-## Lo que queda por hacer
+## El hero — **cerrado y en producción**
 
-### 1. Pushear `main` (5 minutos)
-
-Nada más que eso. Está todo verificado.
-
-### 2. El hero — **implementado y medido; falta la prueba a mano**
-
-Rama `feat/hero-universo`. Código en `tandaAncha` (`lib/enrich.ts`); la decisión
-de arquitectura está en `CLAUDE.md`. Todos los criterios acordados se cumplen:
+Mergeado el 16/08 tras la prueba a mano del dueño. Código en `tandaAncha`
+(`lib/enrich.ts`); la decisión de arquitectura está en `CLAUDE.md`. Todos los
+criterios acordados se cumplen:
 
 | | Objetivo | Medido |
 |---|---|---|
@@ -104,9 +100,9 @@ cada clic (156-168 ms); el nuevo lee pools cacheados (0-1 ms en local). El núme
 local exagera la mejora porque acá el cache es en memoria y en Vercel es Upstash:
 lo sólido es que dejó de haber una llamada a TMDB por clic, no el "0 ms".
 
-**Falta lo único que ninguna medición cubre — la condición 2 del dueño:**
-probarlo a mano. Ninguno de estos números dice si "Mágica navidad" sigue
-trayendo películas de navidad. Cómo levantarlo está en la sección siguiente.
+**La condición 2 del dueño** (no mergear sin probarlo a mano) se cumplió y fue lo
+que encontró el bug: ninguna de las métricas de arriba veía que "Contacto
+extraterrestre" no mostrara nada. Eso pasó a ser el sexto criterio.
 
 **Sobre la condición 1** (comparar contra la foto y no contra una corrida nueva):
 se cumplió, y de paso quedó claro por qué la foto igual no es reproducible al
@@ -118,16 +114,14 @@ chips de control en el camino viejo (`navidad`, `reales`, `supervivencia`): si
 alguno se moviera, el cambio estaría tocando lo que no debe. Detalle en
 `docs/MANTENIMIENTO.md` 8.c.
 
-### 2.b Cómo probar la rama a mano
+### Cómo volver a probarlo a mano
 
 ```bash
-git checkout feat/hero-universo
-npm install
 npm run dev
 ```
 
-Sin `next dev` corriendo en paralelo desde otra rama (corrompe `.next`; si pasa,
-borrar la carpeta). Después, en el Home:
+Sin `next build` en paralelo (corrompe `.next`; si pasa, borrar la carpeta).
+Después, en el Home:
 
 1. **"6 para hoy"** — tocar "Mostrame otras" diez o doce veces seguidas y ver que
    no se repita nada y que lo que sale siga siendo mirable.
@@ -149,14 +143,19 @@ Para ver un día distinto sin esperar, `YUMP_FECHA=2026-08-20 npm run dev`.
 Si algo se ve mal y hay que descartar que sea esto: `HERO_ANCHO=0 npm run dev`
 devuelve el hero al camino viejo sin tocar código.
 
-### 3. Después del hero
+---
 
-- **`home:v2`** — evaluar si el payload compuesto sigue teniendo sentido. Se
-  decide **con los números del paso 3 puestos**, no con los de ahora.
+## Lo que queda por hacer
+
+- **`home:v2`** — evaluar si el payload compuesto sigue teniendo sentido, ahora
+  sí con los números del hero puestos.
 - **Rieles de género con rotación de ejes** — mismo trabajo que audiencia, pero
-  son once y usan el mismo mecanismo de vueltas (ver más abajo).
+  son once y usan el mismo mecanismo de vueltas (ver más abajo). **El guard de
+  ejes ya está puesto** (`categoryCandidates` con `superficie`), así que este
+  trabajo no vuelve a traer el bug de los chips angostos.
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
   retorno; el rearmado en frío es el caso raro.
+- Los diez issues de `docs/ISSUES.md`.
 
 ---
 
