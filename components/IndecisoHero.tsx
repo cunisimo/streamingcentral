@@ -82,15 +82,21 @@ export default function IndecisoHero({
   // nada. Ver MotivoVacio en lib/types.ts.
   //
   // El texto viejo ("Nada en tus plataformas. Activá alguna") era el ÚNICO para
-  // todos los casos, y resulta que nunca podía ser cierto acá:
-  // `PlatformsContext` no deja la lista vacía —si el usuario destilda todo, cae
-  // a DEFAULT_PLATFORMS— así que el estado "no elegiste ninguna" no existe del
-  // lado del cliente. El guard queda igual, como defensa por si eso cambia.
+  // todos los casos, y acá nunca podía ser cierto: `PlatformsContext` no deja la
+  // lista vacía —si el usuario destilda todo, cae a DEFAULT_PLATFORMS— así que
+  // el estado "no elegiste ninguna" no existe del lado del cliente.
+  //
+  // Por eso el mensaje sale del `motivo` que manda el server y NO de
+  // `platforms.length`: preguntarle al cliente daba siempre la misma respuesta
+  // (tiene plataformas) y por eso el texto injusto salía siempre. El server sí
+  // sabe con qué se pidió. Si algún día el contexto permite la lista vacía, esto
+  // ya funciona sin tocarlo.
   function textoVacio() {
     if (usaComposer && cargaDegradada) return "No pudimos cargar las recomendaciones de hoy.";
-    if (!platforms.length) return "Nada en tus plataformas. Activá alguna en el botón de arriba.";
     // El estado base viene del composer, que no manda motivo; ahí no se supone.
-    if ((usaComposer ? undefined : data?.motivo) === "filtro") {
+    const motivo = usaComposer ? undefined : data?.motivo;
+    if (motivo === "sin-plataformas") return "Nada en tus plataformas. Activá alguna en el botón de arriba.";
+    if (motivo === "filtro") {
       return filtered
         ? "Nada de esta categoría está en tus plataformas."
         : "No encontramos nada en tus plataformas.";
