@@ -17,6 +17,25 @@
 // del mismo día— y las reporta por separado. Ver docs/MANTENIMIENTO.md.
 import { readFileSync, writeFileSync } from "node:fs";
 
+// --- Contador de respuestas de TMDB ------------------------------------------
+// Sin esto, una corrida larga miente. `settleAll` y el `allSettled` de los pools
+// se tragan los fallos a propósito (un riel caído no tumba el Home), así que un
+// 429 llega hasta acá disfrazado de "lista vacía" — indistinguible de un bug de
+// verdad. Pasó: la primera corrida de las 112 casillas dio 30 vacías, incluidos
+// los tres chips que ni siquiera se tocaron. Eran 429.
+const respuestas = new Map();
+const fetchOriginal = globalThis.fetch;
+globalThis.fetch = async (...args) => {
+  const r = await fetchOriginal(...args);
+  if (String(args[0]).includes("themoviedb.org")) {
+    respuestas.set(r.status, (respuestas.get(r.status) ?? 0) + 1);
+  }
+  return r;
+};
+const resumenTmdb = () => [...respuestas].sort((a, b) => a[0] - b[0])
+  .map(([s, n]) => `${s}×${n}`).join(" ");
+const huboFallos = () => [...respuestas].some(([s, n]) => s !== 200 && n > 0);
+
 const PROVIDERS = ["n", "d", "m"];   // las mismas de la foto del 2026-08-15
 const N = 6;                          // tarjetas del hero
 const CHIPS = [
@@ -36,10 +55,16 @@ function fijarFecha(f) {
 }
 
 async function tanda(genre, offset) {
-  return recommendations({
+  const r = await recommendations({
     genre: genre === "todos" ? undefined : genre,
     tipo: "all", providers: PROVIDERS, n: N, offset,
   });
+  // `recommendations` devuelve { items, motivo }. Cuando dejó de devolver un
+  // array pelado, esto seguía compilando (no hay tipos acá) y `items.length`
+  // pasó a ser undefined: la corrida de las 112 casillas dio 112 vacías con
+  // 3021 respuestas 200 de TMDB. De ahí el chequeo de abajo.
+  if (!Array.isArray(r?.items)) throw new Error("recommendations() no devolvió { items }");
+  return r.items;
 }
 
 // --- foto --------------------------------------------------------------------
@@ -143,6 +168,37 @@ async function cobertura(desde, dias, offsets = 1) {
   return { total: vistos.size, dias, solapes };
 }
 
+// --- ningún chip vacío en 7 días ---------------------------------------------
+// El criterio que faltaba, y que dejó pasar el bug de "Contacto extraterrestre":
+// las métricas de arriba miran el hero base y promedios, y un chip angosto que
+// se vacía UN día no mueve ninguna de ellas. Acá se recorren los 16 chips en los
+// 7 días y se reporta cada casilla vacía, sin promediar nada.
+async function chipsPorDia(desde, dias = 7) {
+  const d0 = new Date(`${desde}T12:00:00Z`);
+  const vacios = [];
+  const minimos = [];
+  for (let i = 0; i < dias; i++) {
+    const dia = new Date(d0.getTime() + i * 86400000).toISOString().slice(0, 10);
+    fijarFecha(dia);
+    for (const chip of CHIPS) {
+      const items = await tanda(chip, 0);
+      if (!items.length) vacios.push(`${dia} · ${chip}`);
+      else if (items.length < N) minimos.push(`${dia} · ${chip} (${items.length}/${N})`);
+    }
+    process.stderr.write(`  ${dia} ✓  (TMDB ${resumenTmdb()})\n`);
+  }
+  const casillas = dias * CHIPS.length;
+  // Todo vacío no es un hallazgo, es un arnés roto. Ya pasó una vez y el
+  // informe lo reportó con cara de dato. Mismo reflejo que MANTENIMIENTO 8.b.
+  if (vacios.length === casillas && !huboFallos()) {
+    throw new Error(
+      `las ${casillas} casillas dieron vacías y TMDB respondió 200 siempre: ` +
+      "es la medición, no el producto",
+    );
+  }
+  return { vacios, minimos, casillas };
+}
+
 // --- tiempos -----------------------------------------------------------------
 // Con el cache TIBIO, que es el caso real: el primer visitante del día lo llena
 // y el resto lo lee. Medir en frío mide a TMDB, no al código.
@@ -200,6 +256,24 @@ if (cmd === "foto") {
     console.log("\n### tiempo de \"Otras\" (cache tibio)");
     const t = await tiempos(fecha);
     console.log(`  ${t.ms.join(" / ")} ms — min ${t.min}, max ${t.max}`);
+
+    console.log("\n### ningún chip vacío en 7 días");
+    const ch = await chipsPorDia(fecha);
+    console.log(`  ${ch.casillas} casillas (16 chips × 7 días)`);
+    console.log(`  VACÍAS: ${ch.vacios.length}${ch.vacios.length ? `\n    ${ch.vacios.join("\n    ")}` : " ✔"}`);
+    if (ch.minimos.length) console.log(`  incompletas: ${ch.minimos.length}\n    ${ch.minimos.join("\n    ")}`);
+  }
+} else if (cmd === "chips") {
+  const [fecha = "2026-08-15"] = args;
+  const ch = await chipsPorDia(fecha);
+  console.log(`${ch.casillas} casillas · vacías: ${ch.vacios.length}`);
+  if (ch.vacios.length) console.log(ch.vacios.join("\n"));
+  if (ch.minimos.length) console.log(`incompletas:\n${ch.minimos.join("\n")}`);
+  console.log(`respuestas de TMDB: ${resumenTmdb()}`);
+  if (huboFallos()) {
+    console.log("\n⚠ Hubo respuestas que no fueron 200. Una casilla vacía puede");
+    console.log("  ser eso y no un bug — bajá TMDB_MAX_CONCURRENT y repetí.");
+    process.exitCode = 2;
   }
 } else {
   console.log("uso: medir-hero.mjs [foto <fecha> <salida> | comparar <foto.json> | informe [fecha] [foto.json]]");

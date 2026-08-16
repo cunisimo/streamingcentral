@@ -82,6 +82,12 @@ de arquitectura está en `CLAUDE.md`. Todos los criterios acordados se cumplen:
 | Tiempo de respuesta de "Otras" | no empeora | **mejora** (ver abajo) |
 | Payload del Home vs `offset=0` | idénticos | **idénticos** ✔ |
 | Chips curados | idénticos a la foto | **`navidad` 18/18** ✔ |
+| Ningún chip vacío en 7 días | 0 vacíos de 112 | **0** ✔ |
+
+El último criterio lo agregó el dueño **después** de probar la rama, porque la
+primera versión rompía "Contacto extraterrestre" y ninguna de las otras métricas
+lo veía: todas miran el hero base o promedian los 16 chips. Ver
+`MANTENIMIENTO.md` 8.d, que es la lección general.
 
 Reproducible con:
 
@@ -131,6 +137,12 @@ borrar la carpeta). Después, en el Home:
 4. **El resto de los chips** — acá sí cambia el contenido, y es el punto a
    juzgar: el eje rota por día, así que un día "Palomitas" sale por taquilla y
    otro por estrenos. Vale la pena mirarlo más de un día.
+5. **"Contacto extraterrestre", "Odisea espacial" y "Fuego cruzado"** — son los
+   tres chips angostos que se vaciaban en un día de `hondo`. Los días en que
+   caen se ven en la consola del server: `[ejes] ... se cae a "pop"`.
+6. **El mensaje de lista vacía** — "Activá alguna" ahora aparece solo si no hay
+   ninguna plataforma elegida. Se comprueba vaciando `sc:platforms` en el
+   almacenamiento local del navegador y recargando.
 
 Para ver un día distinto sin esperar, `YUMP_FECHA=2026-08-20 npm run dev`.
 

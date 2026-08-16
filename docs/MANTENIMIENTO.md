@@ -350,6 +350,67 @@ chips `navidad` (curado), `reales` (regla `alt`) y `supervivencia`
 (`balanceDocs`) quedaron a propósito en el camino viejo. Si alguno de esos tres
 se hubiera movido, el cambio estaba tocando algo que no debía.
 
+## 8.d Un promedio no ve una casilla vacía
+
+El hero ampliado pasó todos sus criterios —cobertura, clics limpios, tiempos— y
+aun así rompió "Contacto extraterrestre", que no mostraba **nada**. Ninguna de
+esas métricas podía verlo: todas miran el hero base o promedian los 16 chips, y
+un chip angosto que se vacía un día de cada cinco no mueve un promedio.
+
+La medición que sí lo ve no promedia nada: **recorrer las 112 casillas (16 chips
+× 7 días) y listar las vacías una por una.** Está en `medir-hero.mjs chips` y es
+parte del informe.
+
+> Cuando una feature tiene N superficies de tamaños muy distintos, el criterio
+> de aceptación tiene que recorrerlas todas. La superficie más chica es la que
+> rompe, y es exactamente la que un promedio esconde.
+
+De ahí salió también la regla de los ejes: los cinco se calibraron contra
+superficies grandes, donde siempre hay material. `hondo` arranca en la página 4,
+así que necesita más de 60 resultados **por plataforma** —los pools se piden por
+plataforma suelta, no por la unión— y `aliens` tiene 19 en Netflix. Ahora
+`candidatosConEje` mira la cosecha y cae a `pop` si no llena. No era solo
+`hondo`: el guard también salta con `top` en superficies angostas (scifi/tv trae
+16 títulos sobre el piso de 300 votos), que no llega a vaciar pero sí deja el
+riel corto.
+
+### El arnés de medición no tiene tipos, así que miente en silencio
+
+La primera pasada de las 112 casillas dio **todas vacías**, incluidos los tres
+chips de control que no se habían tocado. La primera hipótesis —429 de TMDB
+acumulados por la propia medición— era **falsa**, y se descartó midiendo:
+3021 respuestas, todas 200.
+
+Lo que había pasado es más tonto y más peligroso: `recommendations()` había
+dejado de devolver un array pelado para devolver `{ items, motivo }`, y el
+script lee `items.length` sin tipos. `undefined` es falsy, así que **cada
+casilla se contó como vacía y el informe lo reportó con cara de dato**. Los
+scripts de `scripts/` son `.mjs` y no los ve `tsc`: cuando cambia la firma de
+algo de `lib/`, hay que actualizarlos a mano o se rompen sin avisar.
+
+Dos resguardos, los dos en `medir-hero.mjs`:
+
+- `tanda()` **valida la forma** de lo que devuelve `recommendations()` y explota
+  si no es la esperada, en vez de contar ceros.
+- Si las 112 casillas dan vacías y TMDB respondió 200 siempre, el script
+  **tira error**: eso no es un hallazgo, es el arnés roto. Es el reflejo de 8.b
+  aplicado al caso extremo.
+
+Se mantiene además el contador de respuestas de TMDB (avisa y sale con código 2
+si alguna no fue 200): la hipótesis del 429 era razonable y sin el contador no
+se podía descartar. Si aparece, bajar `TMDB_MAX_CONCURRENT` a 8 y repetir.
+
+> La tolerancia a fallos de la app es enemiga de la medición: `settleAll` y el
+> `allSettled` de los pools se tragan los errores **a propósito** para que un
+> riel caído no tumbe el Home, y eso mismo hace que en un informe cualquier
+> falla llegue disfrazada de "lista vacía".
+
+Y una de método, que costó una corrida entera de 40 minutos:
+
+> **No pasar un diagnóstico por `tail`.** Las 112 casillas vacías se vieron como
+> "30" porque la salida estaba cortada, y esas 30 arrancaban justo en un chip
+> plausible. Un recorte hizo que un arnés roto pareciera un bug de producto.
+
 ## 9. Estado actual (11/08/2026)
 
 **Ruleta** — `roulette_titles`: 2401 filas, 2259 con texto, 1782 con
