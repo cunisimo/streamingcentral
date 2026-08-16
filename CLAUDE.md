@@ -367,7 +367,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/recomendaciones` | pool del "modo indeciso" (día + offset) |
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |
 | `GET /api/hacete-cargo` | "Hacete cargo" (votos malaso, `top_voted` 1-1) |
-| `GET /api/search` | búsqueda multi (títulos sin filtrar por plataforma + personas) |
+| `GET /api/search` | búsqueda (títulos + personas). `providers` **ordena, no filtra** |
 | `GET /api/latest` | últimos estrenos (solo movie, por fecha) |
 | `GET /api/person/[id]` | filmografía de una persona (actor o director), filtrada a plataformas |
 | `GET /api/personas` | actores populares paginados (`?page=`) |
@@ -384,9 +384,21 @@ completo). El único fallo de build visto fue la descarga de Google Fonts en
 sandbox sin red — no ocurre en Vercel ni en desarrollo normal con internet.
 
 Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
-- Búsqueda con debounce real (250ms, desde 2 caracteres), sin filtrar por
-  plataforma (para que aparezca aunque no la tengas — la card indica
-  disponibilidad).
+- **Búsqueda predictiva.** Debounce real (250ms, desde 2 caracteres). No filtra
+  por plataforma —si buscás por nombre querés verlo aunque no lo tengas, y la
+  card indica disponibilidad— pero **sí ordena: lo que está en tus plataformas
+  va primero y el resto sigue abajo**.
+  Ojo con el diagnóstico si algo no aparece: **TMDB sí busca por prefijo** (con
+  "spielb" encuentra a Spielberg). Lo que hace mal es el ORDEN — rankea primero
+  los match exactos, así que la página 1 de "ste" son diez personas llamadas
+  literalmente "Ste" y Spielberg está en el puesto 49. Por eso `search()` pide
+  varias páginas de `/search/person`, `/search/movie` y `/search/tv` por
+  separado (en `/search/multi` las personas y los títulos compiten por los
+  mismos 20 lugares) y **reordena por popularidad**. El nivel de "match exacto"
+  se aplica a títulos y **no** a personas, a propósito: un título se busca por su
+  nombre completo, a una persona se la busca tecleando de a poco, y premiar el
+  nombre completo ahí devolvía cuatro desconocidos llamados "Coco".
+  El resultado se cachea 1 h por consulta + plataformas (`TTL.search`).
 - Filtros de género/país combinables y funcionales en `/categoria/[slug]`.
 - Filtro de edad (solo movie, ver limitación arriba).
 - Chips Todo/Películas/Series/Actores del buscador son modos de navegación

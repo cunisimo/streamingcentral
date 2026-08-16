@@ -95,6 +95,13 @@ export const TTL = {
   // que se edita a mano desde /admin: si se publica una reseña, el badge tiene
   // que aparecer en minutos y no al otro día.
   editorial: 60 * 5,
+  // Resultado ya armado de una búsqueda. El buscador corre mientras se tipea,
+  // así que "matrix" se pide de nuevo cada vez que alguien lo escribe — y cada
+  // vez cuesta 7 llamadas de búsqueda a TMDB más un providersOf por título.
+  // Una hora alcanza para que la sesión entera de un usuario y las de los que
+  // buscan lo mismo salgan de acá; el catálogo no cambia tan rápido como para
+  // que valga la pena menos.
+  search: 60 * 60,
 } as const;
 
 // --- Métricas por operación --------------------------------------------------

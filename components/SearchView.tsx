@@ -11,7 +11,7 @@ import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 type Filter = "todo" | "movie" | "tv" | "actores" | "directores";
 
 export default function SearchView() {
-  const { ready } = usePlatforms();
+  const { platforms, ready } = usePlatforms();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("todo");
   const [res, setRes] = useState<{ titles: UITitle[]; people: UIPerson[] }>({ titles: [], people: [] });
@@ -33,12 +33,14 @@ export default function SearchView() {
     if (timer.current) clearTimeout(timer.current);
     setLoading(true);
     timer.current = setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(term)}`)
+      // Las plataformas van para ORDENAR, no para filtrar: los resultados que
+      // sí podés ver van arriba y el resto sigue apareciendo abajo.
+      fetch(`/api/search?q=${encodeURIComponent(term)}&providers=${platforms.join(",")}`)
         .then((r) => r.json())
         .then((j) => { setRes({ titles: j.titles ?? [], people: j.people ?? [] }); setLoading(false); })
         .catch(() => setLoading(false));
     }, 250);
-  }, [q, ready]);
+  }, [q, ready, platforms]);
 
   const hasQuery = q.trim().length >= 2;
   const showTitles = filter === "actores" || filter === "directores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);

@@ -92,11 +92,18 @@ export interface RawTitle {
 
 export interface RawPerson {
   id: number;
-  media_type: "person";
+  // Opcional porque solo lo trae `/search/multi`. Ni `/search/person` ni
+  // `/person/popular` lo devuelven: cuando el endpoint ya es de personas, TMDB
+  // no repite el tipo. Estaba declarado como obligatorio y era mentira en dos
+  // de los tres usos.
+  media_type?: "person";
   name: string;
   profile_path: string | null;
   known_for?: RawTitle[];
   known_for_department?: string;
+  // Lo usa el buscador para ordenar: TMDB rankea por match exacto y hay que
+  // reordenar por popularidad. Ver `search()` en lib/enrich.ts.
+  popularity?: number;
 }
 
 export type RawMulti = RawTitle | RawPerson;
@@ -148,6 +155,22 @@ export function searchMulti(query: string, page = 1) {
 export function searchTitles(type: MediaType, query: string) {
   return tmdb<Paged<RawTitle>>(`/search/${type}`, {
     query, include_adult: "false", language: "en-US", page: "1",
+  });
+}
+
+// Las dos de abajo son para el buscador de la app y NO son intercambiables con
+// `searchTitles`: mantienen el `es-ES` de DEFAULTS (el usuario busca en
+// español) y aceptan página, que es lo que permite mirar más allá de los 20
+// primeros para poder reordenar. Ver `search()` en lib/enrich.ts.
+export function searchDeTipo(type: MediaType, query: string, page = 1) {
+  return tmdb<Paged<RawTitle>>(`/search/${type}`, {
+    query, include_adult: "false", page: String(page),
+  });
+}
+
+export function searchPersonas(query: string, page = 1) {
+  return tmdb<Paged<RawPerson>>("/search/person", {
+    query, include_adult: "false", page: String(page),
   });
 }
 

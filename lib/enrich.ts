@@ -9,7 +9,7 @@
 import "server-only";
 import {
   TMDB_IMG, discover, watchProviders, titleDetails, titleVideos, personCombinedCredits,
-  personDetails, searchMulti, personPopular,
+  personDetails, searchDeTipo, searchPersonas, personPopular,
   type RawTitle, type RawDetail, type CreditEntry,
 } from "./tmdb";
 import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
@@ -577,25 +577,161 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
   return pools.flat();
 }
 
-// --- Búsqueda multi: títulos (todos, con disponibilidad) + personas ---
-export async function search(query: string) {
-  const [res, pub] = await Promise.all([searchMulti(query), publishedIds()]);
-  const slice = res.results.slice(0, 20);
-  const people: UIPerson[] = slice
-    .filter((r): r is Extract<typeof r, { media_type: "person" }> => r.media_type === "person")
+// --- Búsqueda: títulos (todos, con disponibilidad) + personas ---
+//
+// EL PROBLEMA QUE RESUELVE, PORQUE NO ES EL QUE PARECE. Escribir "ste" no traía
+// a Steven Spielberg, y la conclusión intuitiva —que TMDB no busca por prefijo—
+// es falsa: sí lo hace ("spielb" lo encuentra, y "ste" devuelve 10.000
+// resultados). Lo que falla es el ORDEN. TMDB rankea primero los match exactos,
+// así que la página 1 de "ste" son diez personas que se llaman literalmente
+// "Ste" y una película checa. Spielberg está en el puesto 49.
+//
+// Como el buscador pedía UNA página y se quedaba con los 20 primeros, mostraba
+// exactamente esa capa de ruido. El arreglo son dos cosas:
+//
+//  1. Mirar más allá de la primera página, y por endpoint dedicado en vez de
+//     `/search/multi`: en multi las personas compiten con los títulos por los
+//     mismos 20 lugares, así que se pierden los dos.
+//  2. Reordenar por popularidad. Es lo que convierte "predictivo" en útil: de
+//     los miles que empiezan con "ste", el que se busca es casi siempre uno de
+//     los conocidos. Medido: "ste" pasa de "Ste Johnston" a Spielberg segundo.
+//
+// Páginas por endpoint. 3 en personas no es un número redondo: Spielberg cae en
+// el puesto 49 de "ste" y con 2 páginas (40) se lo perdía. En títulos alcanza
+// con 2 porque el ruido de nombres propios es un problema de personas.
+const BUSQUEDA_PAGINAS_PERSONA = 3;
+const BUSQUEDA_PAGINAS_TITULO = 2;
+// Cuántos títulos se enriquecen. Es el techo de costo de la búsqueda: cada uno
+// cuesta un `providersOf`, y ese es el único modo de saber si está en las
+// plataformas del usuario. Se ordena por relevancia ANTES de cortar, así que
+// son los 24 más relevantes y no los 24 primeros que llegaron.
+//
+// 24 es el ancho del semáforo de TMDB (`MAX_EN_VUELO` en lib/tmdb.ts): el
+// enriquecido entra en una sola tanda. Medido con consultas frescas:
+//
+//   tope   latencia en frío   disponibles que aparecen
+//     24     1,2 - 2,4 s              5 - 9
+//     48     2,9 - 3,4 s             11 - 17
+//
+// Duplicar el tope duplica las dos cosas. Se eligió la latencia: 3 s es
+// demasiado para algo que corre mientras se tipea.
+//
+// LO QUE SE PIERDE, y conviene saberlo antes de que alguien lo reporte como
+// bug: el corte pasa ANTES de conocer la disponibilidad, porque conocerla es
+// justamente lo caro. O sea que un título que está en tus plataformas pero
+// quedó en el puesto 30 por relevancia no aparece. En la práctica son títulos
+// muy poco conocidos de búsquedas muy genéricas ("amor", "noche"); si alguna
+// vez molesta, la salida NO es subir este número a ciegas sino enriquecer de a
+// tandas y cortar cuando se juntaron N disponibles.
+const BUSQUEDA_TITULOS = 24;
+const BUSQUEDA_PERSONAS = 24;
+
+const sinAcentos = (s: string) =>
+  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+// Cuánto "empieza con" hay entre el nombre y lo tecleado. Solo separa lo que
+// calza de lo que no; el orden dentro de cada grupo lo pone la popularidad.
+//
+// `exacto` (el nivel 3) se usa en TÍTULOS y no en personas, y la asimetría es a
+// propósito. Un título se busca por su nombre completo —escribir "matrix" es
+// pedir Matrix— y sin ese nivel una película poco conocida quedaría debajo de
+// cualquier popular que comparta el prefijo. A una persona, en cambio, se la
+// busca tecleando de a poco ("spielb"), y premiar el nombre completo trae
+// justo el ruido que este arreglo vino a sacar: con "coco" salían cuatro
+// desconocidos llamados Coco antes que cualquier actor, y con "ste" una persona
+// llamada literalmente "Ste", con popularidad 0, arriba de Spielberg.
+function relevancia(nombre: string, q: string, exacto: boolean): number {
+  const n = sinAcentos(nombre);
+  const t = sinAcentos(q);
+  if (!t) return 0;
+  if (exacto && n === t) return 3;
+  if (n.startsWith(t)) return 2;
+  if (n.split(/[\s:.,\-–—'"()¡!¿?]+/).some((w) => w.startsWith(t))) return 2;
+  return n.includes(t) ? 1 : 0;
+}
+
+// Ordena por relevancia y, dentro de cada nivel, por popularidad.
+function ordenarPorRelevancia<T>(
+  items: T[], q: string, nombreDe: (t: T) => string, popDe: (t: T) => number,
+  exacto = false,
+): T[] {
+  return items
+    .map((x) => ({ x, r: relevancia(nombreDe(x), q, exacto), p: popDe(x) }))
+    .filter((e) => e.r > 0)
+    .sort((a, b) => (b.r - a.r) || (b.p - a.p))
+    .map((e) => e.x);
+}
+
+export async function search(query: string, providers: PlatformCode[] = []) {
+  const q = query.trim();
+  if (!q) return { titles: [] as UITitle[], people: [] as UIPerson[] };
+  // Las plataformas van en la clave porque cambian el ORDEN del resultado, no
+  // solo su presentación: dos usuarios con plataformas distintas reciben las
+  // mismas tarjetas en distinto orden. Ordenadas, para que "n,d" y "d,n" sean
+  // la misma entrada.
+  return cached(
+    `search:v1:${q.toLowerCase()}:${[...providers].sort().join(",")}`,
+    TTL.search,
+    () => buscarYOrdenar(q, providers),
+  );
+}
+
+async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
+  const paginas = <T>(n: number, fn: (p: number) => Promise<{ results: T[] }>) =>
+    Promise.all(Array.from({ length: n }, (_, i) => fn(i + 1)))
+      .then((rs) => rs.flatMap((r) => r.results ?? []));
+
+  const [personasRaw, pelis, series, pub] = await Promise.all([
+    paginas(BUSQUEDA_PAGINAS_PERSONA, (p) => searchPersonas(q, p)),
+    paginas(BUSQUEDA_PAGINAS_TITULO, (p) => searchDeTipo("movie", q, p)),
+    paginas(BUSQUEDA_PAGINAS_TITULO, (p) => searchDeTipo("tv", q, p)),
+    publishedIds(),
+  ]);
+
+  const people: UIPerson[] = ordenarPorRelevancia(
+    personasRaw, q, (p) => p.name ?? "", (p) => p.popularity ?? 0,
+  )
+    .slice(0, BUSQUEDA_PERSONAS)
     .map((r) => ({
       id: r.id, name: r.name,
       profile: img(r.profile_path, "w185"),
       knownFor: (r.known_for ?? []).map(titleOf).filter(Boolean).slice(0, 3),
       department: r.known_for_department,
     }));
-  const rawTitles = slice.filter(
-    (r): r is RawTitle & { media_type: MediaType } => r.media_type === "movie" || r.media_type === "tv",
-  );
-  // No filtramos por plataforma: si buscás algo por nombre, querés verlo aunque
-  // no lo tengas. La card indica disponibilidad.
-  const titles = await Promise.all(rawTitles.map((r) => toUITitle(r, r.media_type, pub)));
-  return { titles, people };
+
+  // Películas y series compiten en la misma lista: el usuario busca un título,
+  // no un tipo, y el chip Películas/Series de la interfaz filtra después.
+  const crudos = [
+    ...pelis.map((m) => ({ raw: m, tipo: "movie" as MediaType })),
+    ...series.map((s) => ({ raw: s, tipo: "tv" as MediaType })),
+  ];
+  const vistos = new Set<string>();
+  const unicos = crudos.filter((c) => {
+    const k = `${c.tipo}:${c.raw.id}`;
+    if (vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
+  const elegidos = ordenarPorRelevancia(
+    unicos, q,
+    (c) => c.raw.title || c.raw.name || "",
+    (c) => c.raw.popularity ?? 0,
+    true,   // en títulos, el nombre completo sí manda
+  ).slice(0, BUSQUEDA_TITULOS);
+
+  // No se filtra por plataforma: si buscás algo por nombre, querés verlo aunque
+  // no lo tengas, y la card indica disponibilidad. Pero sí se ORDENA: lo que
+  // está en tus plataformas va primero. Antes salía mezclado, y encontrar lo
+  // que podés ver esta noche era ir cazándolo entre lo que no.
+  //
+  // Es una partición estable, no un orden nuevo: dentro de "disponible" y
+  // dentro de "no disponible" se conserva el orden por relevancia de arriba.
+  const titles = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub)));
+  if (!providers.length) return { titles, people };
+  const disponibles: UITitle[] = [];
+  const resto: UITitle[] = [];
+  for (const t of titles) (onUserPlatforms(t, providers) ? disponibles : resto).push(t);
+  return { titles: [...disponibles, ...resto], people };
 }
 
 // --- Actores populares paginados (pestaña Actores del buscador) ---
