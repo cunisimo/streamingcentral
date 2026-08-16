@@ -11,8 +11,10 @@ export async function GET(req: NextRequest) {
   const offset = Number(sp.get("offset") || "0");
   const providers = (sp.get("providers")?.split(",").filter(Boolean) || []) as PlatformCode[];
   try {
-    const items = await recommendations({ genre, tipo, providers, n: 6, offset });
-    return NextResponse.json({ items });
+    // `motivo` viaja para que la interfaz no culpe al usuario de una lista vacía
+    // que no es suya. Ver MotivoVacio en lib/types.ts.
+    const { items, motivo } = await recommendations({ genre, tipo, providers, n: 6, offset });
+    return NextResponse.json({ items, motivo });
   } catch (e) {
     return NextResponse.json({ error: String(e), items: [] }, { status: 500 });
   }
