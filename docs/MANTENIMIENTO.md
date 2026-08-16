@@ -310,6 +310,41 @@ Es el mismo reflejo que salvo otras dos veces acá:
 
 Antes de festejar un numero, preguntarse que numero se esperaba y por que.
 
+## 8.b.2 Si falla el grupo de control, el roto es el instrumento
+
+Corolario de 8.b, y la señal más barata que hay: **código que no se modificó no
+puede haberse roto.** Cuando una medición marca en rojo algo que el cambio ni
+tocó, lo primero que falla es la medición.
+
+El caso, del 16/08. Al ampliar el hero quedaron tres chips a propósito en el
+camino viejo —`navidad` (curado), `reales` (regla `alt`) y `supervivencia`
+(`balanceDocs`)— justamente para que hicieran de control. La corrida del criterio
+"ningún chip vacío en 7 días" los dio **vacíos a los tres**.
+
+Ahí terminaba el problema, y no se vio. La primera hipótesis fue 429 de TMDB
+acumulados por la propia medición: plausible, y **falsa** — se descartó midiendo
+(3021 respuestas, todas 200). Lo real era mucho más tonto:
+`recommendations()` había pasado a devolver `{ items, motivo }` en vez de un
+array, y el script lee `items.length` sin tipos. `undefined` es falsy, así que
+**todas** las casillas se contaron vacías.
+
+> Un control que falla no es un hallazgo peor: es un hallazgo **imposible**, y
+> por eso es la señal más confiable de que hay que dejar de mirar el sistema y
+> mirar el instrumento. Es gratis y hay que usarla primero, antes que cualquier
+> hipótesis sobre el producto — sobre todo antes de una plausible.
+
+### Y la trampa que lo escondió: no pasar un diagnóstico por `tail`
+
+Los tres controles vacíos se habrían visto de entrada si la salida hubiera estado
+completa. Estaba pasada por `tail -30`, así que de las **112** casillas vacías se
+vieron **30**, y esas 30 empezaban justo en un chip creíble. El recorte convirtió
+"todo está vacío" —que grita *arnés roto*— en "algunos chips fallan", que parece
+un bug de producto y manda a investigar el lugar equivocado.
+
+`medir-hero.mjs` ahora tira error si las 112 casillas dan vacías y TMDB respondió
+200 siempre. Pero el reflejo importa más que el chequeo: **antes de creerle a un
+resultado malo, mirar si el control también falló.**
+
 ## 8.c Medir algo que rota por día: clavar la fecha, y saber qué no se clava
 
 Casi todo lo que se puede medir en esta app rota con la semilla del día. Sin
@@ -374,42 +409,28 @@ plataforma suelta, no por la unión— y `aliens` tiene 19 en Netflix. Ahora
 16 títulos sobre el piso de 300 votos), que no llega a vaciar pero sí deja el
 riel corto.
 
-### El arnés de medición no tiene tipos, así que miente en silencio
+Lo que el guard **no** resuelve —que los chips angostos casi no reciben rotación
+porque no tienen material— está anotado como issue #10.
 
-La primera pasada de las 112 casillas dio **todas vacías**, incluidos los tres
-chips de control que no se habían tocado. La primera hipótesis —429 de TMDB
-acumulados por la propia medición— era **falsa**, y se descartó midiendo:
-3021 respuestas, todas 200.
+### El arnés no lo ve `tsc`, así que miente en silencio
 
-Lo que había pasado es más tonto y más peligroso: `recommendations()` había
-dejado de devolver un array pelado para devolver `{ items, motivo }`, y el
-script lee `items.length` sin tipos. `undefined` es falsy, así que **cada
-casilla se contó como vacía y el informe lo reportó con cara de dato**. Los
-scripts de `scripts/` son `.mjs` y no los ve `tsc`: cuando cambia la firma de
-algo de `lib/`, hay que actualizarlos a mano o se rompen sin avisar.
-
-Dos resguardos, los dos en `medir-hero.mjs`:
+Los scripts de `scripts/` son `.mjs`: **cuando cambia la firma de algo de `lib/`
+hay que actualizarlos a mano o se rompen sin avisar.** Así se contaron las 112
+casillas como vacías (el caso completo está en 8.b.2). Dos resguardos en
+`medir-hero.mjs`:
 
 - `tanda()` **valida la forma** de lo que devuelve `recommendations()` y explota
   si no es la esperada, en vez de contar ceros.
-- Si las 112 casillas dan vacías y TMDB respondió 200 siempre, el script
-  **tira error**: eso no es un hallazgo, es el arnés roto. Es el reflejo de 8.b
-  aplicado al caso extremo.
+- Si las 112 casillas dan vacías y TMDB respondió 200 siempre, tira error.
 
-Se mantiene además el contador de respuestas de TMDB (avisa y sale con código 2
-si alguna no fue 200): la hipótesis del 429 era razonable y sin el contador no
-se podía descartar. Si aparece, bajar `TMDB_MAX_CONCURRENT` a 8 y repetir.
+Y un contador de respuestas de TMDB, que avisa y sale con código 2 si alguna no
+fue 200. La hipótesis del 429 era razonable y sin el contador no se podía
+descartar; si aparece, bajar `TMDB_MAX_CONCURRENT` a 8 y repetir.
 
 > La tolerancia a fallos de la app es enemiga de la medición: `settleAll` y el
 > `allSettled` de los pools se tragan los errores **a propósito** para que un
 > riel caído no tumbe el Home, y eso mismo hace que en un informe cualquier
 > falla llegue disfrazada de "lista vacía".
-
-Y una de método, que costó una corrida entera de 40 minutos:
-
-> **No pasar un diagnóstico por `tail`.** Las 112 casillas vacías se vieron como
-> "30" porque la salida estaba cortada, y esas 30 arrancaban justo en un chip
-> plausible. Un recorte hizo que un arnés roto pareciera un bug de producto.
 
 ## 9. Estado actual (11/08/2026)
 

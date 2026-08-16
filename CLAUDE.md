@@ -141,7 +141,9 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   también el piso de votos de `top`, una keyword que no matchea y una plataforma
   sin catálogo en el tema. Cuesta un fetch extra solo en la superficie degradada.
   En los logs el eje degradado sale con asterisco (`pop*`), para distinguirlo del
-  día que sacó `pop` por sorteo.
+  día que sacó `pop` por sorteo. Lo que esto **no** arregla: los chips angostos
+  caen a `pop` uno de cada seis días, así que casi no reciben rotación — la
+  cobertura de 236 títulos vale para el hero base, no para ellos (**issue #10**).
 - **Una lista vacía no siempre es culpa del usuario** (`MotivoVacio` en
   `lib/types.ts`). "Nada en tus plataformas, activá alguna" solo se muestra si el
   filtro de plataformas fue lo que vació la lista. Si volvió vacía **antes** de

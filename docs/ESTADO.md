@@ -173,6 +173,7 @@ devuelve el hero al camino viejo sin tocar código.
 | #7 | `upcoming_content`: las filas existentes se quedan viejas |
 | #8 | `upcoming_content`: sesgo permanente hacia lo popular |
 | #9 | La popularidad es el orden por defecto en toda la app |
+| #10 | La rotación de ejes no le llega a los chips angostos (18 de 112 casillas caen a `pop`) |
 
 ---
 
