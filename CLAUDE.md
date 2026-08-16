@@ -103,6 +103,30 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "Hacete cargo" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **El hero ("6 para hoy") arma un universo grande de crudos y enriquece solo lo
+  que muestra.** Antes pedía una página de discover por tipo, enriquecía las 40
+  (1 request de providers por título) y mostraba 6: pagaba 40 para mostrar 6, y
+  esas 40 eran todo el universo. A los 5 clics de "Mostrame otras" ya había dado
+  la vuelta, y una semana entera no podía mostrar más de 40 títulos distintos —
+  el pool era siempre el mismo y lo único que cambiaba era el barajado.
+  Ahora el universo son ~330 crudos (`candidatosDePools`, 3 páginas por
+  plataforma y por tipo, cacheados y compartidos entre usuarios) y el enriquecido
+  se paga por ventana de 12 sobre el offset que se está mostrando
+  (`tandaAncha` en `lib/enrich.ts`). El eje rota por día (`superficie: "hero"`),
+  que es la otra mitad de la cobertura: sin eso el universo sería más grande pero
+  siempre el mismo. Medido con n,d,m: >40 clics limpios contra 5, y 236 títulos
+  distintos por semana contra 40.
+  **Hay que ordenar por clave antes de barajar.** `pickDaily` baraja POSICIONES:
+  el mismo conjunto llegando en otro orden sale distinto, y el orden de llegada
+  es lo más inestable que hay acá (TMDB reordena `popularity.desc` a diario y los
+  pools de cada plataforma se unen en el orden en que resuelven). Sin ese sort,
+  dos requests del mismo día daban heros distintos y "Otras" se desincronizaba.
+  **Tres chips NO usan este camino, a propósito**: `navidad` (curado),
+  `reales` (regla `alt`: son dos queries unidas por OR y `categoryCandidates`
+  hace una sola — meterla igual devolvería medio chip en silencio) y
+  `supervivencia` (`balanceDocs`: la proporción se calcula sobre `genres`, que es
+  de `UITitle` y no existe en el crudo). Sirven además de control al medir.
+  Interruptor de emergencia: `HERO_ANCHO=0` vuelve al camino viejo.
 - **Animación y familia son DOS filtros separados, y el `scope` lo decide el
   llamador** (`lib/audience.ts` → `excludedGenres`). Mezclarlos ya causó dos bugs
   reportados, así que no volver a unirlos:
@@ -442,6 +466,10 @@ red — no es indicativo de error real en ese caso).
   las 21 h y la medianoche**, que es exactamente la franja en la que la gente
   abre la app para elegir qué ver. La excepción son los formatos que un estándar
   externo exige en UTC, como el `DTSTAMP` de un `.ics`.
+  Para **medir** algo que rota por día: `YUMP_FECHA=2026-08-15` clava `hoyAR()` y
+  con eso toda la rotación (solo fuera de producción, y solo cuando nadie pasó
+  una fecha explícita). No clava el catálogo de TMDB, que se reordena solo — ver
+  `docs/MANTENIMIENTO.md` 8.c antes de leer un diff contra una foto vieja.
 - Sin CSS-in-JS ni styled-components: todo en `app/globals.css`, clases planas
   reusando las que ya existen antes de inventar una nueva.
 - `lib/enrich.ts` es el único lugar que debería tocar Supabase/TMDB juntos.

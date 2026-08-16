@@ -310,6 +310,46 @@ Es el mismo reflejo que salvo otras dos veces acá:
 
 Antes de festejar un numero, preguntarse que numero se esperaba y por que.
 
+## 8.c Medir algo que rota por día: clavar la fecha, y saber qué no se clava
+
+Casi todo lo que se puede medir en esta app rota con la semilla del día. Sin
+fijarla, dos corridas del mismo código en días distintos dan resultados
+distintos, y esa diferencia tapa la que importa.
+
+`YUMP_FECHA=2026-08-15` fuerza `hoyAR()` y con eso toda la rotación. **Solo
+funciona fuera de producción**, y solo intercepta la pregunta "¿qué día es hoy?":
+`hoyAR(unaFecha)` —formatear una fecha dada, como el `.ics` de "Recordarme"—
+sigue devolviendo lo suyo. Ver el comentario en `lib/fecha.ts`.
+
+```bash
+node --env-file=.env.local --import ./scripts/cargar-lib.mjs \
+     scripts/medir-hero.mjs informe 2026-08-15
+```
+
+`scripts/cargar-lib.mjs` es lo que permite importar `lib/*.ts` desde un script
+suelto (stub de `server-only`, alias `@/`, imports sin extensión). Sirve para
+medir cualquier función de `lib/`, no solo el hero.
+
+**Lo que la fecha NO clava, y hay que descontar antes de leer un diff:**
+
+- **El catálogo de TMDB.** `popularity.desc` se reordena todos los días del lado
+  de TMDB y los estrenos entran y salen. Una foto de ayer no es reproducible hoy
+  ni con la semilla fija.
+- **El orden de llegada.** Medido el 16/08 contra la foto del 15/08: el hero
+  viejo traía el **90% de los mismos títulos** y sin embargo solo **31% en la
+  misma posición**. No se había roto nada — `pickDaily` baraja posiciones, así
+  que el mismo conjunto llegando en otro orden sale distinto. De ahí sale la
+  regla de ordenar por clave antes de barajar (`tandaAncha` en `lib/enrich.ts`).
+
+Por eso la comparación se lee con **dos** números y no con uno: *posición* (con
+orden) y *conjunto* (sin orden). Un chip que cambia de posición pero conserva el
+conjunto se reordenó; uno que pierde el conjunto trae otra cosa.
+
+Y por eso conviene dejar **controles** en la medición: al ampliar el hero, los
+chips `navidad` (curado), `reales` (regla `alt`) y `supervivencia`
+(`balanceDocs`) quedaron a propósito en el camino viejo. Si alguno de esos tres
+se hubiera movido, el cambio estaba tocando algo que no debía.
+
 ## 9. Estado actual (11/08/2026)
 
 **Ruleta** — `roulette_titles`: 2401 filas, 2259 con texto, 1782 con
