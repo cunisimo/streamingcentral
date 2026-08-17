@@ -149,7 +149,7 @@ devuelve el hero al camino viejo sin tocar código.
 
 ---
 
-## Rieles de género con rotación de ejes — **medido, con un criterio FALLADO**
+## Rieles de género con rotación de ejes — **cerrado, con una falla ACEPTADA**
 
 Rama `feat/ejes-rieles-genero` (`1912f56`). Cierra el paso 3: era la última
 superficie del Home que pedía siempre popularidad páginas 1-3.
@@ -162,12 +162,12 @@ superficie del Home que pedía siempre popularidad páginas 1-3.
 | Ningún riel vacío en 7 días, películas y series | ✅ 0 vacíos en los tres bloques |
 | Kill switch | ✅ `EJES_RIELES=0` (se usó para medir todo el "antes") |
 | TMDB en frío en día de `hondo`/`nuevo` | ✅ +9 pools, sin diferencia de tiempo |
-| **Calidad: no empeorar el % bajo 6.0 por riel** | ❌ **FALLA** |
+| **Calidad: no empeorar el % bajo 6.0 por riel** | ❌ **FALLA, aceptada** (ver abajo) |
 
 Cobertura (base): accion 99→**120**, terror 102→**126**, drama 96→**121**,
 comedia 98→**120**, documental 72→**110**, scifi 22→22.
 
-### El criterio de calidad falló, y queda registrado como falla
+### El criterio de calidad FALLÓ y se aceptó igual — no pasó
 
 Promediado sobre los 7 días, estado base:
 
@@ -180,10 +180,16 @@ Promediado sobre los 7 días, estado base:
 | documental | 5% → 3% | 4% → 2% |
 | scifi | 5% → 5% | 0% → 0% |
 
-**No está cumplido.** La decisión de aceptarlo o no la toma el dueño después de
-probarlo a mano, mirando comedia y terror en particular: que comedia triplique
-de 4% a 12% es un cambio real de composición, y ningún porcentaje responde si
-esa composición está bien.
+**NO ESTÁ CUMPLIDO. Se aceptó como falla, no como cumplido.** Si alguien lee
+esto en seis meses: este criterio no pasó. Se mergeó de todas formas, y el
+motivo está abajo.
+
+**Por qué se aceptó.** El dueño probó a mano los dos peores días (17/08 en
+terror con `hondo`, 21/08 en comedia con `taquilla`) y miró los títulos que
+entran, no los porcentajes. Son secuelas de terror de los 2000 y comedias de
+Eddie Murphy: **cine popular con nota tibia, que cae en la franja de 5 a 6 y que
+forma parte de la variedad que el producto busca.** El veredicto fue sobre el
+contenido, que es lo que ningún porcentaje contesta.
 
 **Por qué aceptarlo NO sería acomodar la vara.** El umbral de 5.0 se pidió
 **antes** de ver estos resultados, porque el dueño no confiaba en el 6.0 como
@@ -200,10 +206,13 @@ mismo riel dos días seguidos—, **nunca agregando un piso de nota. Ninguna
 película se saca del Home por su puntaje.** Está escrito como principio en
 `CLAUDE.md`, en el comentario de `discover()` y en el issue #12.
 
-### Cómo probar la rama a mano
+### Cómo volver a mirar el peor caso
+
+Mergeado el 17/08. Los dos días de abajo son los que más títulos de 5 a 6 meten
+en cada riel: sirven para volver a juzgar la composición si alguna vez se duda
+de la decisión.
 
 ```bash
-git checkout feat/ejes-rieles-genero
 npm run dev
 ```
 
