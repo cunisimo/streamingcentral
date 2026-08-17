@@ -72,21 +72,29 @@ export const TTL = {
   providers: 60 * 60 * 8,
   ratings: 60 * 60 * 24,
   daily: 60 * 60 * 24,
-  // Payload compuesto del Home.
+  // Payload compuesto del Home. 26 h, y no 6 como antes. Las 6 h venían de la cuota vieja: un rearmado costaba 400-700
+  // comandos. Con el batching de MGET son 27, o sea trece veces menos, y ese
+  // argumento se evaporó.
   //
-  // El número lo manda la cuota de Upstash, no el producto. Rearmar el Home
-  // cuesta 400-700 comandos de Redis (un `card:` y un `pv:` por cada uno de los
-  // ~230 títulos); la visita que pega en cache cuesta 1. Con TTL de 1 hora eso
-  // daba 24 rearmados por día ≈ 360.000 comandos al mes POR COMBINACIÓN de
-  // plataformas: el 72% del plan gratuito (500.000/mes) consumido por una sola
-  // combinación, con 10 usuarios o con 10.000. Con 6 horas son 4 rearmados
-  // diarios ≈ 60.000, y entran varias combinaciones cómodas.
+  // Lo importante: la clave del payload YA incluye el día de rotación
+  // (`dailySeed()`), así que a las 04:00 cambia sola sin que el TTL intervenga.
+  // Un TTL más corto que el día no protegía nada — solo hacía que el payload
+  // muriera cuatro veces por día y que el rearmado lo pagara una persona cada
+  // vez. 26 h es el día más dos de colchón para cruzar el borde, el mismo
+  // criterio que `pool` (30 h).
   //
-  // Lo que se paga: los rieles de votos ("Lo más votados", "No gustaron")
-  // pueden tardar hasta 6 h en reflejar un voto nuevo. Con el volumen actual de
-  // votos nadie lo nota. Si eso cambia, la salida NO es bajar el TTL de vuelta
-  // —volvés al problema de cuota— sino invalidar las claves `home:` al votar.
-  home: 60 * 60 * 6,
+  // Lo que se paga: los rieles de votos ("Lo más votados", "No gustaron") pasan
+  // de reflejar un voto nuevo en 6 h a hacerlo al día siguiente.
+  home: 60 * 60 * 26,
+  // Payload DEGRADADO (alguna fuente caída). Antes no se guardaba, y eso tenía
+  // un costo escondido: durante una caída de TMDB, CADA request rearmaba el Home
+  // entero —~500 llamadas— contra el servicio que justamente estaba fallando.
+  // Guardarlo unos minutos corta esa estampida sin congelar el problema.
+  //
+  // Es corto a propósito, y ADEMÁS el botón "Reintentar" lo saltea: si no, el
+  // usuario reintenta y recibe exactamente la misma foto rota, que es peor que
+  // no tener botón.
+  homeDegradado: 60 * 8,
   // Pools de discover (lib/pools.ts). El día va en la clave, así que el TTL no
   // es lo que define cuándo rota: 30 h es el colchón para que un pool escrito a
   // las 23:50 no se muera antes de que su clave deje de usarse.
@@ -278,15 +286,24 @@ export async function cached<T>(key: string, ttl: number, fetcher: () => Promise
 // (TMDB caído, rieles vacíos) es un resultado válido que hay que devolver, pero
 // guardarlo congelaría la caída durante toda la vida del TTL para todos los que
 // pidan lo mismo.
+// `ttlDe` decide DESPUÉS de calcular: devuelve los segundos que ese resultado
+// merece vivir, o `null` para no guardarlo. Antes era un booleano y un TTL fijo,
+// y no alcanzaba: un payload degradado no es "no guardar" ni "guardar como si
+// nada", es "guardar poquito".
+//
+// `saltear` fuerza el recálculo ignorando lo que haya guardado, y pisa la
+// entrada con el resultado nuevo. Lo usa el botón "Reintentar".
 export async function cachedIf<T>(
-  // `vale` se llamaba `guardar`; se renombró para no chocar con la función de
-  // escritura del batcher, que ahora es la única que habla con redis.set.
-  key: string, ttl: number, fetcher: () => Promise<T>, vale: (v: T) => boolean,
+  key: string, fetcher: () => Promise<T>, ttlDe: (v: T) => number | null,
+  saltear = false,
 ): Promise<T> {
-  const hit = await batchGet<T>(key);
-  if (hit !== null && hit !== undefined) return hit;
+  if (!saltear) {
+    const hit = await batchGet<T>(key);
+    if (hit !== null && hit !== undefined) return hit;
+  }
   const data = await fetcher();
-  if (vale(data)) await guardar(key, data, ttl);
+  const ttl = ttlDe(data);
+  if (ttl !== null) await guardar(key, data, ttl);
   return data;
 }
 

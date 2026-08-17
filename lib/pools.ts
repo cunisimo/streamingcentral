@@ -2,7 +2,7 @@ import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
 import { cached, TTL } from "./cache";
-import { hoyAR } from "./fecha";
+import { diaYump, hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode } from "./types";
 
@@ -113,7 +113,7 @@ function hashParams(p: ParamsReceta): string {
 // receta, el nombre queda igual. El hash de los parámetros reales sí, y no
 // depende de que nadie se acuerde de subir la versión.
 //
-// El día va en la clave, y no es lo mismo que un TTL de 24 h. El Home promete
+// El día de ROTACIÓN va en la clave, y no es lo mismo que un TTL de 24 h. El Home promete
 // ser el mismo durante todo el día: con un TTL que vence a media tarde, el pool
 // se refetchea, la mezcla cambia con la misma semilla y el Home se reordena
 // mientras el usuario lo está mirando. Con el día adentro, el pool rota cuando
@@ -125,7 +125,10 @@ function hashParams(p: ParamsReceta): string {
 export function clavePool(
   tipo: MediaType, plataforma: PlatformCode, receta: Receta, pagina: number,
 ): string {
-  return `disc:${VERSION}:${REGION}:${hoyAR()}:${tipo}:${plataforma}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
+  // `diaYump()` y no `hoyAR()`: la clave del pool ROTA con el Home, y tiene que
+  // hacerlo en el mismo instante o a las 00:00 se enfriarían los pools mientras
+  // la semilla sigue siendo la de ayer.
+  return `disc:${VERSION}:${REGION}:${diaYump()}:${tipo}:${plataforma}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
 }
 
 // Un pool: una plataforma, una página, una receta.
@@ -225,6 +228,10 @@ const EJES: Record<Eje, DefEje> = {
       sortBy: tipo === "movie" ? "primary_release_date.desc" : "first_air_date.desc",
       minVotes: 10,
       extra: {
+        // `hoyAR()` a propósito, no `diaYump()`: esto es un límite FACTUAL que
+        // se le pide a TMDB ("no me traigas lo que todavía no salió"), no algo
+        // que rote. Con el día de rotación, entre las 00 y las 04 pediríamos
+        // hasta ayer y perderíamos los estrenos de hoy.
         [tipo === "movie" ? "primary_release_date.lte" : "first_air_date.lte"]: hoyAR(),
       } as Record<string, string>,
     }),

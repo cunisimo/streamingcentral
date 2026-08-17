@@ -504,6 +504,11 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): s
 export async function homePayload(opts: {
   providers: PlatformCode[];
   types?: Record<string, MediaType>;
+  // Ignora lo cacheado y rearma. Lo manda el botón "Reintentar" del cliente:
+  // sin esto, reintentar durante una caída devolvía exactamente la misma foto
+  // rota que ya se estaba mirando (el payload degradado ahora SÍ se guarda,
+  // aunque por pocos minutos), y el botón no servía para nada.
+  fresh?: boolean;
 }): Promise<HomePayload> {
   const types = opts.types ?? {};
   const key = homeKey(opts.providers, types);
@@ -523,17 +528,21 @@ export async function homePayload(opts: {
   // interesa medir son los cientos de lecturas que dispara composeHome adentro.
   const { res: { res: payload, ejes }, metricas } = await withCacheMetrics(() => conRegistroDeEjes(() => cachedIf(
     key,
-    TTL.home,
     () => { miss = true; return composeHome({ providers: opts.providers, types }); },
-    // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
-    // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
-    // caso "sin plataformas", que no cuesta nada recalcular.
-    (v) => !v.degradado && !v.sinPlataformas,
+    // Cuánto merece vivir cada resultado:
+    //  - "sin plataformas" no se guarda: no cuesta nada recalcularlo.
+    //  - degradado se guarda POCO. No guardarlo era peor de lo que parecía:
+    //    durante una caída de TMDB cada request rearmaba el Home entero contra
+    //    el servicio que estaba fallando. Unos minutos cortan esa estampida sin
+    //    congelar el problema, y "Reintentar" saltea igual.
+    //  - completo, el día entero.
+    (v) => (v.sinPlataformas ? null : v.degradado ? TTL.homeDegradado : TTL.home),
+    opts.fresh,
   )));
 
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
-  console.log(`[home] ${miss ? "MISS" : "HIT "} ${key}`);
+  console.log(`[home] ${miss ? "MISS" : "HIT "}${opts.fresh ? " (fresh)" : ""} ${key}`);
   // Comandos es lo que factura Upstash; requests es lo que se paga en latencia.
   // Un MGET de 100 claves es 1 de cada uno; 100 GET sueltos son 100 y 100.
   const lotes = metricas.lotes;

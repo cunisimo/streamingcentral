@@ -27,7 +27,13 @@ export default function CatalogView() {
   const { types, setType, param, ready } = useHomeTypes();
 
   const { data, loading, offline, error, retry } = useApi<HomePayload>(
-    () => (ready ? `/api/home?providers=${platforms.join(",")}&t=${param}` : ""),
+    // `fresh=1` a partir del primer reintento manual. El payload degradado ahora
+    // se guarda unos minutos (para que una caída de TMDB no dispare un rearmado
+    // completo por request), así que sin esto "Reintentar" devolvería
+    // exactamente la misma foto rota que el usuario ya está mirando.
+    (reintentos) => (ready
+      ? `/api/home?providers=${platforms.join(",")}&t=${param}${reintentos > 0 ? "&fresh=1" : ""}`
+      : ""),
     [param, ready],
     // Único consumidor que necesita conservar los rieles ya visibles cuando
     // un refetch (toggle Películas/Series) falla — ver comentario en useApi.

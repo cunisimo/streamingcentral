@@ -27,7 +27,11 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const providers = (sp.get("providers")?.split(",").filter(Boolean) ?? []) as PlatformCode[];
   try {
-    return NextResponse.json(await homePayload({ providers, types: parseTypes(sp.get("t")) }));
+    // `fresh=1` lo manda el boton "Reintentar": ignora lo cacheado y rearma.
+    // Hace falta porque el payload degradado AHORA se guarda unos minutos, asi
+    // que sin esto reintentar devolvia la misma foto rota.
+    const fresh = sp.get("fresh") === "1";
+    return NextResponse.json(await homePayload({ providers, types: parseTypes(sp.get("t")), fresh }));
   } catch (e) {
     // composeHome envuelve cada fuente en `safe`, así que en producción no
     // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con 200.

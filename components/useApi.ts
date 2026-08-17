@@ -37,7 +37,11 @@ interface UseApiOptions {
 
 // Fetch genérico que re-dispara cuando cambian las plataformas, las deps, o se
 // pide un retry manual.
-export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseApiOptions = {}): ApiState<T> {
+// `url` recibe cuántos reintentos manuales van: sirve para que el consumidor
+// pueda pedir explícitamente algo distinto al reintentar (el Home manda
+// `fresh=1` para saltear el cache). Los que no lo necesitan siguen declarando
+// `() => string` y lo ignoran.
+export function useApi<T>(url: (reintentos: number) => string, deps: unknown[] = [], options: UseApiOptions = {}): ApiState<T> {
   const { keepPrevious = false } = options;
   const { platforms, ready } = usePlatforms();
   const [data, setData] = useState<T | null>(null);
@@ -50,7 +54,7 @@ export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseA
 
   useEffect(() => {
     if (!ready) return;
-    const u = url();
+    const u = url(nonce);
     // URL vacía = riel en modo controlado (los items vienen por prop): no hay
     // nada que pedir y tampoco hay que quedar en loading para siempre.
     if (!u) { setLoading(false); if (!keepPrevious) setData(null); return; }

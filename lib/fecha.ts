@@ -38,11 +38,43 @@ export function hoyAR(date?: Date): string {
   return (date ?? new Date()).toLocaleDateString("en-CA", { timeZone: TZ });
 }
 
-// Semilla determinística del día (hash FNV-1a sobre la fecha argentina).
+// --- El "día" de la rotación, con borde a las 04:00 -------------------------
+// Hay DOS nociones de día en esta app y confundirlas rompe cosas distintas:
+//
+//   `hoyAR()`    — la fecha CALENDARIO argentina. Es lo factual: si un estreno
+//                  ya pasó, si un episodio salió, hasta qué fecha pedirle a
+//                  TMDB. A las 00:30 del martes, es martes.
+//
+//   `diaYump()`  — el día de la ROTACIÓN. Gobierna solo lo que rota una vez por
+//                  día: la semilla, la clave del Home, las claves diarias de
+//                  pools y los ejes. A las 00:30 del martes, sigue siendo lunes.
+//
+// Por qué el borde a las 04:00 y no a medianoche: el Home entero se rearma
+// cuando cambia la semilla, y a medianoche eso le pasa a alguien que está usando
+// la app — la noche del domingo a la 01:00 sigue siendo "su domingo". Correrlo a
+// las 04:00 lo mueve al hueco donde no hay nadie.
+//
+// POR QUÉ NO ALCANZABA CON MOVER `hoyAR()`, que era lo primero que uno piensa:
+// si el borde de las 04:00 gobernara también lo factual, entre las 00:00 y las
+// 04:00 la app creería que es ayer y mostraría como "próximos" estrenos que ya
+// salieron. Por eso son dos funciones y no una con un parámetro.
+const BORDE_HORA = 4;
+
+export function diaYump(date?: Date): string {
+  const forzada = fechaForzada();
+  if (!date && forzada) return forzada;
+  const base = date ?? new Date();
+  // Restar el borde y volver a preguntar qué día argentino es. Se hace sobre el
+  // instante y no sobre el string de fecha para no tener que razonar sobre fin
+  // de mes ni año bisiesto.
+  return hoyAR(new Date(base.getTime() - BORDE_HORA * 60 * 60 * 1000));
+}
+
+// Semilla determinística del día (hash FNV-1a sobre el día de rotación).
 // La consumen el Home (clave de cache y mezcla de rieles), el recomendador, los
 // chips curados y la ruleta: todo lo que rota una vez por día.
 export function dailySeed(date?: Date): number {
-  const s = hoyAR(date);
+  const s = diaYump(date);
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return h >>> 0;
