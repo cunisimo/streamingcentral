@@ -28,7 +28,7 @@
 // pagarlo por títulos que un riel de más arriba ya se llevó.
 import "server-only";
 import {
-  categoryCandidates, enrichRaw, latestReleases, mostVoted, mostPanned,
+  categoryCandidates, candidatosDeSuperficie, enrichRaw, latestReleases, mostVoted, mostPanned,
   audienceTitles, recommendations, VOTED_ROWS, VOTED_DAYS, type RawTitle,
 } from "./enrich";
 // HOME_GENRES / defaultTypeFor viven en components/data.ts (módulo client-safe):
@@ -37,7 +37,7 @@ import {
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
 import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
-import { conRegistroDeEjes } from "./pools";
+import { conRegistroDeEjes, type Eje } from "./pools";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
@@ -92,6 +92,25 @@ const rawKey = (t: RawTitle, tipo: MediaType) => `${tipo}:${t.id}`;
 // payload: degradar sin decirlo convertía una caída de TMDB en el mensaje
 // "Nada en tus plataformas", que es mentira y no ofrece reintentar.
 interface Contador { fallos: number }
+
+// El "vacío" con el que `safe` degrada los candidatos de un riel. Tiene que ser
+// la forma completa y no `[]`: desde que la etapa 1 devuelve también el eje, un
+// riel caído tiene que seguir siendo consumible por `genreRail`.
+const vacioDeSuperficie = {
+  candidatos: [] as RawTitle[], startPage: 1, eje: null as Eje | null, degradado: false,
+};
+
+// --- Gasto de cada riel ------------------------------------------------------
+// Cuántas tandas de enriquecido consumió un riel y cuántos títulos pagó. Sin
+// esto `MAX_VUELTAS` no se puede calibrar: medido contando llamadas a
+// /watch/providers daban 366 para seis rieles, pero ese número incluye el hero,
+// los votos y los dos carruseles de audiencia, así que no dice nada del riel.
+//
+// Viaja como valor de retorno y NO en un objeto de módulo: en Vercel conviven
+// varios requests en la misma instancia y un contador global mezclaría los
+// números de todos (el mismo motivo por el que las métricas de cache y el
+// registro de ejes usan AsyncLocalStorage).
+interface GastoRiel { vueltas: number; pagados: number }
 
 async function safe<T>(c: Contador, etiqueta: string, vacio: T, fn: () => Promise<T>): Promise<T> {
   try {
@@ -202,24 +221,56 @@ function topeDeSagas(tope = TOPE_SAGA) {
 // latencia de cola queda abierta. Con 4 vueltas se conserva el beneficio de
 // arrastrar el pool sin dejar el peor caso sin techo.
 //
-// EL TOPE ESTÁ CALIBRADO PARA EL EJE MÁS FÁCIL DE LLENAR Y ATA AL MÁS PROFUNDO.
-// Medido en audiencia el 2026-08-15: un día de `hondo` (página 4) termina con 21
-// tarjetas donde uno de `pop` termina con 39. La lectura obvia es que `hondo` es
-// caro, y es al revés — ese día gastó 407 enriquecidos contra los 434 de un día
-// de `pop`: le sobraron 27 de presupuesto SIN USAR. No queda corto por caro,
-// queda corto porque el tope le corta el bucle antes de que llegue a gastar.
+// EL TOPE ESTABA CALIBRADO PARA EL EJE MÁS FÁCIL DE LLENAR Y ATABA AL MÁS
+// PROFUNDO. Medido en audiencia el 2026-08-15: un día de `hondo` (página 4)
+// terminaba con 21 tarjetas donde uno de `pop` terminaba con 39. La lectura
+// obvia es que `hondo` es caro, y es al revés — ese día gastó 407 enriquecidos
+// contra los 434 de un día de `pop`: le sobraron 27 de presupuesto SIN USAR. No
+// quedaba corto por caro, quedaba corto porque el tope le cortaba el bucle antes
+// de que llegara a gastar.
 //
-// O sea que darle más vueltas no lo haría caro: lo llevaría al costo de un día
-// normal. Cuando se toque este número —y los once rieles de género usan el mismo
-// mecanismo, así que el impacto es mayor acá que en audiencia— hay que revisarlo
-// con ese dato a la vista y no asumiendo que más vueltas es más costo.
-const MAX_VUELTAS = 4;
+// (Ese comentario decía "los once rieles de género". Son SEIS: once son los
+// rieles TOTALES del Home. Se corrige acá porque el número entra en cualquier
+// cuenta de costo que alguien haga a partir de esto.)
+//
+// REVISADO CON DATOS al sumar los ejes a los rieles de género, que es el momento
+// que este comentario dejaba marcado. **El tope no ata acá, y queda en 4.**
+//
+// Medido el 2026-08-16, día de `hondo` en accion/tv y drama/tv, con el tope en
+// 1, 2, 4, 6 y 8: resultado IDÉNTICO en los cinco (120 tarjetas, 516 llamadas a
+// TMDB). Que no cambie ni bajándolo a 1 es lo que dio la explicación: cada riel
+// llena sus 20 tarjetas en UNA sola vuelta, pagando 28 enriquecidos.
+//
+// La diferencia con audiencia —donde el tope sí ataba— no es el eje: es el
+// buffer. Un riel pide FETCH_BUFFER=3 páginas de entrada (~130-180 candidatos),
+// así que una tanda de 28 le sobra para 20 lugares. Audiencia pide UNA página
+// por vuelta, y por eso ahí el tope corta el bucle antes de llenar.
+//
+// O sea que la nota vieja se equivocaba en las dos cosas que afirmaba: no son
+// once rieles sino seis, y el impacto acá no es mayor que en audiencia sino
+// nulo. La constante que sí decide en esta superficie es FETCH_BUFFER.
+//
+// Se puede pisar por entorno solo para medir (`MAX_VUELTAS=6`); en producción
+// manda la constante. El desglose por riel sale en el log `[home] VUELTAS`.
+const MAX_VUELTAS = Number(process.env.MAX_VUELTAS) || 4;
+
+// Kill switch de la rotación de ejes en los rieles de género: `EJES_RIELES=0`
+// vuelve al camino viejo (popularidad, páginas 1-3) sin revertir ni deployar.
+// Se lee en cada llamada a propósito, para poder medir las dos versiones en el
+// mismo proceso.
+const ejesEnRieles = () => process.env.EJES_RIELES !== "0";
+// Nombre de la superficie de los rieles. Va con prefijo propio para que las
+// claves de Redis se distingan de las del hero (`hero-<genero>-<eje>`) y de las
+// de audiencia (`aud-<slug>-<eje>`).
+const SUPERFICIE_RIEL = "riel";
 
 async function genreRail(
   c: Contador, genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
   candidatos: RawTitle[], admite: (t: UITitle) => boolean,
-): Promise<UITitle[]> {
+  desde = 1, eje: Eje | null = null,
+): Promise<{ items: UITitle[]; gasto: GastoRiel }> {
   const out: UITitle[] = [];
+  let pagados = 0;
   // Mezcla determinística del día: sin esto el riel se lleva siempre los 20
   // primeros por popularidad, que es el orden en el que TMDB pone adelante a las
   // franquicias. Con 60 candidatos mezclados hay variedad real, y como la
@@ -231,12 +282,21 @@ async function genreRail(
   let pool = mezclar(candidatos);
   let pedidaExtra = false;
   let vueltas = 0;
-  // La página extra es la SIGUIENTE al buffer inicial (FETCH_BUFFER + 1) y se
-  // pide una sola vez: 1..FETCH_BUFFER ya vinieron en la etapa paralela.
+  // La página extra es la SIGUIENTE a la ventana que ya se pidió, y se pide una
+  // sola vez. Con ejes esa ventana no arranca siempre en la 1: `hondo` empieza
+  // en la 4, así que ya trajo 4-6 y su extra es la 7. Pedir la 4 fija le habría
+  // dado candidatos que ya tenía, y al riel más profundo —el único que
+  // necesita el fallback— lo habría dejado sin él.
   const pedirExtra = async () => {
     pedidaExtra = true;
     const extra = await safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
-      categoryCandidates({ tipo, genre, providers, startPage: FETCH_BUFFER + 1, pages: 1, scope: "home" }));
+      categoryCandidates({
+        tipo, genre, providers, startPage: desde + FETCH_BUFFER, pages: 1, scope: "home",
+        // Se reusa el eje ya resuelto (`ejeFijo`) en vez de volver a elegirlo:
+        // la extra tiene que ser la página siguiente de LA MISMA receta, y
+        // además así no se vuelve a correr la verificación del guard.
+        ...(eje ? { superficie: SUPERFICIE_RIEL, ejeFijo: eje } : {}),
+      }));
     return mezclar(extra);
   };
 
@@ -260,12 +320,13 @@ async function genreRail(
     // siguiente. Antes se descartaban ~12 candidatos ya pagados y se compraba
     // una página nueva para reemplazarlos.
     pool = pool.slice(tanda.length);
+    pagados += tanda.length;
     const enriquecidos = await safe(c, `genre:${genre} enrich`, [] as UITitle[], () =>
       enrichRaw(tanda, tipo, providers));
     out.push(...take(enriquecidos, used, faltan, admite));
     if (!pool.length && pedidaExtra) break;
   }
-  return out;
+  return { items: out, gasto: { vueltas, pagados } };
 }
 
 // --- Etapas reservadas (hoy identidad) --------------------------------------
@@ -310,11 +371,21 @@ export async function composeHome(opts: {
       // dedup tenga de dónde rellenar. El corte final lo hace `take` acá abajo.
       safe(c, "mas-votados", [] as UITitle[], () => mostVoted(providers, VOTED_DAYS, VOTED_ROWS)),
       safe(c, "hacete-cargo", [] as UITitle[], () => mostPanned(providers, VOTED_DAYS, VOTED_ROWS)),
-      // Candidatos crudos de cada riel de género (páginas 1..FETCH_BUFFER).
-      // Crudos = sin providersOf: enriquecer sí depende de `used` y va en etapa 2.
+      // Candidatos crudos de cada riel de género. Crudos = sin providersOf:
+      // enriquecer sí depende de `used` y va en etapa 2.
+      //
+      // El eje rota por día (`superficie: "riel"`). Es la última superficie del
+      // Home que pedía siempre popularidad páginas 1-3, o sea la más grande y la
+      // que menos variedad daba: Sci-fi tiene ~400 películas elegibles y el riel
+      // mostraba 20 del mismo top, todos los días. `candidatosDeSuperficie`
+      // devuelve además QUÉ eje tocó y desde qué página, que el riel necesita
+      // para su página extra de fallback.
       Promise.all(generosTipo.map(({ g, tipo }) =>
-        safe(c, `genre:${g} candidatos`, [] as RawTitle[], () =>
-          categoryCandidates({ tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER, scope: "home" })))),
+        safe(c, `genre:${g} candidatos`, vacioDeSuperficie, () =>
+          candidatosDeSuperficie({
+            tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER, scope: "home",
+            ...(ejesEnRieles() ? { superficie: SUPERFICIE_RIEL } : {}),
+          })))),
       // Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida y
       // solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
       // LIMITACIÓN: a diferencia de los votos y de los rieles de género, acá no
@@ -356,13 +427,20 @@ export async function composeHome(opts: {
   //    Home. El orden de HOME_GENRES decide quién se queda con qué: Acción va
   //    primero, así que Sci-fi ve lo que Acción no usó.
   const generos: HomeRail[] = [];
+  const gasto: string[] = [];
   const admiteSaga = topeDeSagas();
   for (let i = 0; i < generosTipo.length; i++) {
     const { g, tipo } = generosTipo[i];
+    const fuente = generosRaw[i];
+    const riel = await genreRail(
+      c, g, tipo, providers, used, fuente.candidatos, admiteSaga,
+      fuente.startPage, fuente.eje,
+    );
+    gasto.push(`${g}=${riel.gasto.vueltas}v/${riel.gasto.pagados}`);
     generos.push({
       key: `genre:${g}`,
       genre: g,
-      items: await genreRail(c, g, tipo, providers, used, generosRaw[i], admiteSaga),
+      items: riel.items,
       typeToggle: "refetch",
       shelfKey: g,
       activeType: tipo,
@@ -390,6 +468,9 @@ export async function composeHome(opts: {
       : [{ key: "adult-anime", title: "🎬 Animación para adultos", items: anime, seeAllHref: "/lista/anime-adulto" }]),
   ];
 
+  // Vueltas y títulos enriquecidos por riel. Es el dato con el que se calibra
+  // MAX_VUELTAS, y el único que distingue "el tope me cortó" de "llené y salí".
+  console.log(`[home] VUELTAS ${gasto.join(" ")} (tope ${MAX_VUELTAS})`);
   if (c.fallos) console.error(`[home] payload degradado: ${c.fallos} fuente(s) caída(s)`);
   return { hero, rails: personalize(rotate(rails)), fallos: c.fallos, degradado: c.fallos > 0 };
 }

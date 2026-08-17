@@ -1,0 +1,4439 @@
+{
+ "fecha": "2026-08-16",
+ "providers": "n,d,m",
+ "generos": [
+  "accion",
+  "scifi",
+  "terror",
+  "drama",
+  "comedia",
+  "documental"
+ ],
+ "base": {
+  "hero": [
+   {
+    "k": "movie:693134",
+    "t": "Dune: Parte dos"
+   },
+   {
+    "k": "movie:246655",
+    "t": "X-Men: Apocalipsis"
+   },
+   {
+    "k": "tv:1438",
+    "t": "Bajo escucha"
+   },
+   {
+    "k": "tv:1412",
+    "t": "Arrow"
+   },
+   {
+    "k": "tv:44217",
+    "t": "Vikingos"
+   },
+   {
+    "k": "tv:4588",
+    "t": "Urgencias"
+   }
+  ],
+  "degradado": false,
+  "fallos": 0,
+  "ejes": {
+   "hero-todos/movie": "pop",
+   "hero-todos/tv": "pop",
+   "aud-family/movie": "taquilla",
+   "aud-family/tv": "taquilla",
+   "aud-adult-anime/tv": "hondo",
+   "aud-adult-anime/movie": "pop*"
+  },
+  "rieles": [
+   {
+    "key": "ultimos",
+    "titulo": "Últimos lanzamientos",
+    "tipo": null,
+    "n": 20,
+    "nota": 6.13,
+    "bajos": 7,
+    "items": [
+     {
+      "k": "movie:1589248",
+      "t": "Mi mejor amigo, su novia y yo",
+      "v": 3
+     },
+     {
+      "k": "movie:1632473",
+      "t": "Esto, aquello y todo lo demás",
+      "v": 4.5
+     },
+     {
+      "k": "movie:1504358",
+      "t": "No se desea buena suerte",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1493400",
+      "t": "Camp Rock 3",
+      "v": 6.2
+     },
+     {
+      "k": "movie:1487864",
+      "t": "Nando entre dos mundos",
+      "v": 5.2
+     },
+     {
+      "k": "movie:1679730",
+      "t": "La heroína del lazo",
+      "v": 7.2
+     },
+     {
+      "k": "movie:1284041",
+      "t": "La última casa",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1728056",
+      "t": "Pollo a lo grande: Una conspiración de comida rápida",
+      "v": 5.5
+     },
+     {
+      "k": "movie:1421594",
+      "t": "El escándalo de Trustor desde dentro",
+      "v": 5.7
+     },
+     {
+      "k": "movie:1740877",
+      "t": "Sesame Street y la tormenta",
+      "v": 6.6
+     },
+     {
+      "k": "movie:1616131",
+      "t": "Un hijo propio",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1736916",
+      "t": "Instadocs: Los juegos de predicción",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1732097",
+      "t": "Euphoria: Echando la vista atrás",
+      "v": 3.2
+     },
+     {
+      "k": "movie:1659155",
+      "t": "Los creyentes",
+      "v": 5.8
+     },
+     {
+      "k": "movie:1620682",
+      "t": "Te quiero desde siempre",
+      "v": 6.4
+     },
+     {
+      "k": "movie:1723460",
+      "t": "Una tóxica historia de amor",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1487861",
+      "t": "Elize: Sombras de una mujer",
+      "v": 7.4
+     },
+     {
+      "k": "movie:1630409",
+      "t": "El cobrador de deudas",
+      "v": 8
+     },
+     {
+      "k": "movie:949838",
+      "t": "72 horas",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1318621",
+      "t": "Los Descendientes: viaje al mundo oscuro",
+      "v": 7.6
+     }
+    ]
+   },
+   {
+    "key": "mas-votados",
+    "titulo": "Lo más votados",
+    "tipo": "movie",
+    "n": 33,
+    "nota": 7.82,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:18491",
+      "t": "Neon Genesis Evangelion: The End of Evangelion",
+      "v": 8.3
+     },
+     {
+      "k": "tv:62320",
+      "t": "Grace y Frankie",
+      "v": 7.7
+     },
+     {
+      "k": "tv:237964",
+      "t": "Muertos S.L.",
+      "v": 7.3
+     },
+     {
+      "k": "tv:5920",
+      "t": "El mentalista",
+      "v": 8.4
+     },
+     {
+      "k": "movie:120467",
+      "t": "El gran hotel Budapest",
+      "v": 8
+     },
+     {
+      "k": "movie:508965",
+      "t": "Klaus",
+      "v": 8.2
+     },
+     {
+      "k": "movie:1151031",
+      "t": "Devuélvemela",
+      "v": 7.3
+     },
+     {
+      "k": "movie:1233413",
+      "t": "Los pecadores",
+      "v": 7.5
+     },
+     {
+      "k": "movie:569094",
+      "t": "Spider-Man: Cruzando el Multiverso",
+      "v": 8.3
+     },
+     {
+      "k": "tv:136315",
+      "t": "The Bear",
+      "v": 8.1
+     },
+     {
+      "k": "tv:48891",
+      "t": "Brooklyn Nine-Nine",
+      "v": 8.2
+     },
+     {
+      "k": "tv:79622",
+      "t": "Hunters",
+      "v": 7.1
+     },
+     {
+      "k": "tv:281679",
+      "t": "La historia de mi familia",
+      "v": 7.3
+     },
+     {
+      "k": "tv:1418",
+      "t": "Big Bang",
+      "v": 7.9
+     },
+     {
+      "k": "tv:1421",
+      "t": "Modern Family",
+      "v": 7.9
+     },
+     {
+      "k": "tv:81290",
+      "t": "El método Kominsky",
+      "v": 7.5
+     },
+     {
+      "k": "tv:4686",
+      "t": "Ben 10",
+      "v": 8.2
+     },
+     {
+      "k": "movie:122",
+      "t": "El señor de los anillos: El retorno del rey",
+      "v": 8.5
+     },
+     {
+      "k": "movie:121",
+      "t": "El señor de los anillos: Las dos torres",
+      "v": 8.4
+     },
+     {
+      "k": "movie:120",
+      "t": "El señor de los anillos: La comunidad del anillo",
+      "v": 8.4
+     },
+     {
+      "k": "movie:547565",
+      "t": "La casa oscura",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1895",
+      "t": "La guerra de las galaxias. Episodio III: La venganza de los Sith",
+      "v": 7.5
+     },
+     {
+      "k": "tv:259200",
+      "t": "Perdiendo el juicio",
+      "v": 7.5
+     },
+     {
+      "k": "movie:429617",
+      "t": "Spider-Man: Lejos de casa",
+      "v": 7.4
+     },
+     {
+      "k": "movie:350",
+      "t": "El diablo viste de Prada",
+      "v": 7.4
+     },
+     {
+      "k": "movie:286217",
+      "t": "Marte (The Martian)",
+      "v": 7.7
+     },
+     {
+      "k": "movie:299536",
+      "t": "Vengadores: Infinity War",
+      "v": 8.2
+     },
+     {
+      "k": "movie:1297842",
+      "t": "GOAT: Como cabras",
+      "v": 8.1
+     },
+     {
+      "k": "tv:1399",
+      "t": "Juego de tronos",
+      "v": 8.5
+     },
+     {
+      "k": "movie:1265609",
+      "t": "Máquina de guerra",
+      "v": 7.4
+     },
+     {
+      "k": "movie:713704",
+      "t": "Posesión infernal: El despertar",
+      "v": 7
+     },
+     {
+      "k": "movie:155",
+      "t": "El caballero oscuro",
+      "v": 8.5
+     },
+     {
+      "k": "movie:1242898",
+      "t": "Predator: Badlands",
+      "v": 7.8
+     }
+    ]
+   },
+   {
+    "key": "hacete-cargo",
+    "titulo": "No gustaron",
+    "tipo": "movie",
+    "n": 12,
+    "nota": 7.13,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:1314481",
+      "t": "El diablo viste de Prada 2",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1368881",
+      "t": "Las damas primero",
+      "v": 6
+     },
+     {
+      "k": "movie:945937",
+      "t": "Fast Charlie",
+      "v": 6.2
+     },
+     {
+      "k": "tv:278178",
+      "t": "Te encontraré",
+      "v": 8.3
+     },
+     {
+      "k": "movie:1272837",
+      "t": "28 años después: El templo de los huesos",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1397385",
+      "t": "Hermanito",
+      "v": 6.4
+     },
+     {
+      "k": "tv:60625",
+      "t": "Rick y Morty",
+      "v": 8.7
+     },
+     {
+      "k": "movie:83533",
+      "t": "Avatar: Fuego y ceniza",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1304313",
+      "t": "La momia de Lee Cronin",
+      "v": 7.9
+     },
+     {
+      "k": "movie:1234821",
+      "t": "Jurassic World: El renacer",
+      "v": 6.3
+     },
+     {
+      "k": "movie:1318447",
+      "t": "Depredador dominante",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1198994",
+      "t": "SEND HELP (Enviad ayuda)",
+      "v": 7
+     }
+    ]
+   },
+   {
+    "key": "genre:accion",
+    "titulo": "accion",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 7.39,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:545611",
+      "t": "Todo a la vez en todas partes",
+      "v": 7.7
+     },
+     {
+      "k": "movie:1439930",
+      "t": "The Punisher: One Last Kill",
+      "v": 8.3
+     },
+     {
+      "k": "movie:929590",
+      "t": "Civil War",
+      "v": 6.8
+     },
+     {
+      "k": "movie:639933",
+      "t": "El hombre del norte",
+      "v": 7
+     },
+     {
+      "k": "movie:333339",
+      "t": "Ready Player One",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1268127",
+      "t": "Humint",
+      "v": 7.5
+     },
+     {
+      "k": "movie:315635",
+      "t": "Spider-Man: Homecoming",
+      "v": 7.3
+     },
+     {
+      "k": "movie:245891",
+      "t": "John Wick",
+      "v": 7.5
+     },
+     {
+      "k": "movie:168259",
+      "t": "Fast & Furious 7",
+      "v": 7.2
+     },
+     {
+      "k": "movie:653346",
+      "t": "El reino del planeta de los simios",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1495",
+      "t": "El reino de los cielos",
+      "v": 7.1
+     },
+     {
+      "k": "movie:137113",
+      "t": "Al filo del mañana",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1271",
+      "t": "300",
+      "v": 7.2
+     },
+     {
+      "k": "movie:866398",
+      "t": "Beekeeper: El protector",
+      "v": 7.3
+     },
+     {
+      "k": "movie:2109",
+      "t": "Hora punta",
+      "v": 7.1
+     },
+     {
+      "k": "movie:24428",
+      "t": "Vengadores",
+      "v": 8.1
+     },
+     {
+      "k": "movie:263115",
+      "t": "Logan",
+      "v": 7.8
+     },
+     {
+      "k": "movie:949",
+      "t": "Heat",
+      "v": 7.9
+     },
+     {
+      "k": "movie:505642",
+      "t": "Black Panther: Wakanda Forever",
+      "v": 7
+     },
+     {
+      "k": "movie:10195",
+      "t": "Thor",
+      "v": 6.8
+     }
+    ]
+   },
+   {
+    "key": "genre:scifi",
+    "titulo": "scifi",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 7.14,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "tv:69478",
+      "t": "El cuento de la criada",
+      "v": 8.2
+     },
+     {
+      "k": "tv:245648",
+      "t": "El refugio atómico",
+      "v": 6.3
+     },
+     {
+      "k": "tv:241473",
+      "t": "La señal",
+      "v": 6.4
+     },
+     {
+      "k": "tv:93808",
+      "t": "Tribus de Europa",
+      "v": 6.9
+     },
+     {
+      "k": "tv:239770",
+      "t": "Doctor Who",
+      "v": 6.4
+     },
+     {
+      "k": "tv:85424",
+      "t": "Osmosis",
+      "v": 5.5
+     },
+     {
+      "k": "tv:89233",
+      "t": "Away",
+      "v": 6.6
+     },
+     {
+      "k": "tv:93522",
+      "t": "La valla",
+      "v": 7
+     },
+     {
+      "k": "tv:137040",
+      "t": "El caballero negro",
+      "v": 7.4
+     },
+     {
+      "k": "tv:76604",
+      "t": "Primero bésame",
+      "v": 6.4
+     },
+     {
+      "k": "tv:90811",
+      "t": "Avenue 5",
+      "v": 6.6
+     },
+     {
+      "k": "tv:75758",
+      "t": "Lost in Space",
+      "v": 7.5
+     },
+     {
+      "k": "tv:79680",
+      "t": "Snowpiercer: Rompenieves",
+      "v": 7.4
+     },
+     {
+      "k": "tv:4629",
+      "t": "Stargate SG-1",
+      "v": 8.3
+     },
+     {
+      "k": "tv:62017",
+      "t": "El hombre en el castillo",
+      "v": 7.5
+     },
+     {
+      "k": "tv:96777",
+      "t": "Mar de la tranquilidad",
+      "v": 7.6
+     },
+     {
+      "k": "tv:92830",
+      "t": "Obi-Wan Kenobi",
+      "v": 7
+     },
+     {
+      "k": "tv:42009",
+      "t": "Black Mirror",
+      "v": 8.3
+     },
+     {
+      "k": "tv:83867",
+      "t": "Andor",
+      "v": 8.3
+     },
+     {
+      "k": "tv:73157",
+      "t": "Future Man",
+      "v": 7.1
+     }
+    ]
+   },
+   {
+    "key": "genre:terror",
+    "titulo": "terror",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 6.33,
+    "bajos": 4,
+    "items": [
+     {
+      "k": "movie:578",
+      "t": "Tiburón",
+      "v": 7.7
+     },
+     {
+      "k": "movie:38321",
+      "t": "El sicario de Dios",
+      "v": 5.9
+     },
+     {
+      "k": "movie:9358",
+      "t": "Destino final 2",
+      "v": 6.3
+     },
+     {
+      "k": "movie:4488",
+      "t": "Viernes 13",
+      "v": 6.4
+     },
+     {
+      "k": "movie:338676",
+      "t": "Extinction",
+      "v": 6.3
+     },
+     {
+      "k": "movie:755566",
+      "t": "Turno de día",
+      "v": 6.7
+     },
+     {
+      "k": "movie:1197137",
+      "t": "Black Phone 2",
+      "v": 6.6
+     },
+     {
+      "k": "movie:800815",
+      "t": "Los crímenes de la academia",
+      "v": 6.8
+     },
+     {
+      "k": "movie:340102",
+      "t": "Los nuevos mutantes",
+      "v": 6.1
+     },
+     {
+      "k": "movie:1239134",
+      "t": "La Boda Maldita",
+      "v": 5.7
+     },
+     {
+      "k": "movie:933260",
+      "t": "La sustancia",
+      "v": 7.1
+     },
+     {
+      "k": "movie:570670",
+      "t": "El hombre invisible",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1302916",
+      "t": "El asesino con ojos de corazón",
+      "v": 6.3
+     },
+     {
+      "k": "movie:10066",
+      "t": "La casa de cera",
+      "v": 6
+     },
+     {
+      "k": "movie:71469",
+      "t": "La hora más oscura",
+      "v": 5.3
+     },
+     {
+      "k": "movie:58151",
+      "t": "Noche de miedo (Fright Night)",
+      "v": 6.2
+     },
+     {
+      "k": "movie:1024530",
+      "t": "Grimcutty: Asesino implacable",
+      "v": 5
+     },
+     {
+      "k": "movie:426063",
+      "t": "Nosferatu",
+      "v": 6.7
+     },
+     {
+      "k": "movie:8078",
+      "t": "Alien: Resurrección",
+      "v": 6.2
+     },
+     {
+      "k": "movie:516329",
+      "t": "Antlers: Criatura oscura",
+      "v": 6.2
+     }
+    ]
+   },
+   {
+    "key": "genre:drama",
+    "titulo": "drama",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 8.15,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "tv:34524",
+      "t": "Teen Wolf",
+      "v": 8.4
+     },
+     {
+      "k": "tv:276161",
+      "t": "Así aprenderás",
+      "v": 9.4
+     },
+     {
+      "k": "tv:250307",
+      "t": "The Pitt",
+      "v": 8.7
+     },
+     {
+      "k": "tv:56570",
+      "t": "Outlander",
+      "v": 8.2
+     },
+     {
+      "k": "tv:84958",
+      "t": "Loki",
+      "v": 8.2
+     },
+     {
+      "k": "tv:76331",
+      "t": "Succession",
+      "v": 8.3
+     },
+     {
+      "k": "tv:82782",
+      "t": "Los Gemstone",
+      "v": 7.5
+     },
+     {
+      "k": "tv:1413",
+      "t": "American Horror Story",
+      "v": 8.1
+     },
+     {
+      "k": "tv:126308",
+      "t": "Shōgun",
+      "v": 8.4
+     },
+     {
+      "k": "tv:1621",
+      "t": "Boardwalk Empire",
+      "v": 8
+     },
+     {
+      "k": "tv:76669",
+      "t": "Élite",
+      "v": 8
+     },
+     {
+      "k": "tv:111803",
+      "t": "The White Lotus",
+      "v": 7.6
+     },
+     {
+      "k": "tv:60574",
+      "t": "Peaky Blinders",
+      "v": 8.5
+     },
+     {
+      "k": "tv:10545",
+      "t": "True Blood (Sangre fresca)",
+      "v": 7.6
+     },
+     {
+      "k": "tv:100088",
+      "t": "The Last of Us",
+      "v": 8.4
+     },
+     {
+      "k": "tv:105",
+      "t": "Sexo en Nueva York",
+      "v": 7.4
+     },
+     {
+      "k": "tv:61056",
+      "t": "Cómo defender a un asesino",
+      "v": 7.8
+     },
+     {
+      "k": "tv:2734",
+      "t": "Ley y orden: Unidad de Víctimas Especiales",
+      "v": 8
+     },
+     {
+      "k": "tv:200709",
+      "t": "Un héroe débil",
+      "v": 8.7
+     },
+     {
+      "k": "tv:106158",
+      "t": "Ley y orden: Crimen organizado",
+      "v": 7.9
+     }
+    ]
+   },
+   {
+    "key": "genre:comedia",
+    "titulo": "comedia",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 6.79,
+    "bajos": 2,
+    "items": [
+     {
+      "k": "movie:337170",
+      "t": "Barry Seal: el traficante",
+      "v": 6.9
+     },
+     {
+      "k": "movie:45243",
+      "t": "Resacón 2: ¡Ahora en Tailandia!",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1034716",
+      "t": "Gente que conocemos en vacaciones",
+      "v": 7
+     },
+     {
+      "k": "movie:9600",
+      "t": "Esta abuela es un peligro",
+      "v": 5.8
+     },
+     {
+      "k": "movie:593643",
+      "t": "El menú",
+      "v": 7.2
+     },
+     {
+      "k": "movie:4951",
+      "t": "10 razones para odiarte",
+      "v": 7.6
+     },
+     {
+      "k": "movie:773",
+      "t": "Pequeña Miss Sunshine",
+      "v": 7.7
+     },
+     {
+      "k": "movie:308266",
+      "t": "Juego de armas",
+      "v": 6.9
+     },
+     {
+      "k": "movie:514999",
+      "t": "Criminales en el mar",
+      "v": 6.3
+     },
+     {
+      "k": "movie:642885",
+      "t": "El retorno de las brujas 2",
+      "v": 7.1
+     },
+     {
+      "k": "movie:9072",
+      "t": "Pequeño pero matón",
+      "v": 5.9
+     },
+     {
+      "k": "movie:71552",
+      "t": "American Pie: El reencuentro",
+      "v": 6.3
+     },
+     {
+      "k": "movie:9489",
+      "t": "Tienes un e-mail",
+      "v": 6.7
+     },
+     {
+      "k": "movie:484247",
+      "t": "Un pequeño favor",
+      "v": 6.6
+     },
+     {
+      "k": "movie:9374",
+      "t": "La muerte os sienta tan bien",
+      "v": 6.8
+     },
+     {
+      "k": "movie:567609",
+      "t": "Noche de bodas",
+      "v": 7.1
+     },
+     {
+      "k": "movie:287947",
+      "t": "¡Shazam!",
+      "v": 7
+     },
+     {
+      "k": "movie:391713",
+      "t": "Lady Bird",
+      "v": 7.2
+     },
+     {
+      "k": "movie:65057",
+      "t": "Los descendientes",
+      "v": 6.8
+     },
+     {
+      "k": "movie:75",
+      "t": "Mars Attacks!",
+      "v": 6.4
+     }
+    ]
+   },
+   {
+    "key": "genre:documental",
+    "titulo": "documental",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 7.4,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "tv:220499",
+      "t": "MH370: El avión que desapareció",
+      "v": 6.6
+     },
+     {
+      "k": "tv:127626",
+      "t": "Cómo se convirtieron en tiranos",
+      "v": 7.3
+     },
+     {
+      "k": "tv:93514",
+      "t": "La mente, en pocas palabras",
+      "v": 7.5
+     },
+     {
+      "k": "tv:102281",
+      "t": "Lenox Hill",
+      "v": 6.8
+     },
+     {
+      "k": "tv:263089",
+      "t": "Vince McMahon: El titán de la WWE",
+      "v": 7.8
+     },
+     {
+      "k": "tv:66185",
+      "t": "La historia de Dios con Morgan Freeman",
+      "v": 7.5
+     },
+     {
+      "k": "tv:85833",
+      "t": "Conversaciones con asesinos: Las cintas de Ted Bundy",
+      "v": 7.5
+     },
+     {
+      "k": "tv:206246",
+      "t": "Fiasco total: Woodstock 99",
+      "v": 7.3
+     },
+     {
+      "k": "tv:61929",
+      "t": "The Jinx (El gafe)",
+      "v": 8
+     },
+     {
+      "k": "tv:103506",
+      "t": "Jeffrey Epstein: Asquerosamente rico",
+      "v": 7.1
+     },
+     {
+      "k": "tv:110971",
+      "t": "How To with John Wilson",
+      "v": 8.1
+     },
+     {
+      "k": "tv:21421",
+      "t": "El caso de la escalera",
+      "v": 7.6
+     },
+     {
+      "k": "tv:74851",
+      "t": "Más allá de Stranger Things",
+      "v": 7.5
+     },
+     {
+      "k": "tv:46664",
+      "t": "África",
+      "v": 8.3
+     },
+     {
+      "k": "tv:4709",
+      "t": "El último superviviente",
+      "v": 7.1
+     },
+     {
+      "k": "tv:68708",
+      "t": "El sangriento Imperio Romano",
+      "v": 6.9
+     },
+     {
+      "k": "tv:118043",
+      "t": "Estados Unidos: La lucha por la libertad",
+      "v": 7.1
+     },
+     {
+      "k": "tv:132719",
+      "t": "La casa de papel: De Tokio a Berlín",
+      "v": 8.2
+     },
+     {
+      "k": "tv:124337",
+      "t": "El dinero, en pocas palabras",
+      "v": 7.2
+     },
+     {
+      "k": "tv:91505",
+      "t": "La Familia",
+      "v": 6.7
+     }
+    ]
+   },
+   {
+    "key": "family",
+    "titulo": "🍿 Para toda la familia",
+    "tipo": null,
+    "n": 40,
+    "nota": 7.3,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:1022789",
+      "t": "Del revés 2 (Inside Out 2)",
+      "v": 7.5
+     },
+     {
+      "k": "movie:269149",
+      "t": "Zootrópolis",
+      "v": 7.8
+     },
+     {
+      "k": "movie:136799",
+      "t": "Trolls",
+      "v": 6.6
+     },
+     {
+      "k": "movie:129",
+      "t": "El viaje de Chihiro",
+      "v": 8.5
+     },
+     {
+      "k": "movie:10192",
+      "t": "Shrek, felices para siempre",
+      "v": 6.4
+     },
+     {
+      "k": "movie:301528",
+      "t": "Toy Story 4",
+      "v": 7.5
+     },
+     {
+      "k": "movie:181533",
+      "t": "Noche en el museo: El secreto del faraón",
+      "v": 6.2
+     },
+     {
+      "k": "movie:360920",
+      "t": "El Grinch",
+      "v": 6.9
+     },
+     {
+      "k": "movie:417859",
+      "t": "El gato con botas",
+      "v": 6.6
+     },
+     {
+      "k": "movie:1593",
+      "t": "Noche en el museo",
+      "v": 6.6
+     },
+     {
+      "k": "movie:940551",
+      "t": "Migración. Un viaje patas arriba",
+      "v": 7.4
+     },
+     {
+      "k": "movie:15512",
+      "t": "Monstruos contra alienígenas",
+      "v": 6.3
+     },
+     {
+      "k": "movie:20352",
+      "t": "Gru Mi villano favorito",
+      "v": 7.3
+     },
+     {
+      "k": "movie:166428",
+      "t": "Cómo entrenar a tu dragón 3",
+      "v": 7.8
+     },
+     {
+      "k": "movie:118",
+      "t": "Charlie y la fábrica de chocolate",
+      "v": 7
+     },
+     {
+      "k": "movie:153518",
+      "t": "Angry Birds: La película",
+      "v": 6.3
+     },
+     {
+      "k": "movie:950387",
+      "t": "Una película de Minecraft",
+      "v": 6.2
+     },
+     {
+      "k": "movie:77950",
+      "t": "Turbo",
+      "v": 6.3
+     },
+     {
+      "k": "movie:9502",
+      "t": "Kung Fu Panda",
+      "v": 7.3
+     },
+     {
+      "k": "movie:18360",
+      "t": "Noche en el museo 2",
+      "v": 6.2
+     },
+     {
+      "k": "tv:31251",
+      "t": "Victorious",
+      "v": 8.2
+     },
+     {
+      "k": "tv:15079",
+      "t": "Zack y Cody: Todos a bordo",
+      "v": 7.7
+     },
+     {
+      "k": "tv:4232",
+      "t": "Don Gato y su pandilla",
+      "v": 7.5
+     },
+     {
+      "k": "tv:2675",
+      "t": "La sirenita",
+      "v": 7
+     },
+     {
+      "k": "tv:21641",
+      "t": "¡Buena suerte, Charlie!",
+      "v": 7.9
+     },
+     {
+      "k": "tv:45666",
+      "t": "Sam y Cat",
+      "v": 7.6
+     },
+     {
+      "k": "tv:1988",
+      "t": "ThunderCats",
+      "v": 8.2
+     },
+     {
+      "k": "tv:4429",
+      "t": "Timón y Pumba",
+      "v": 7.2
+     },
+     {
+      "k": "tv:670",
+      "t": "Baby Looney Tunes",
+      "v": 7.1
+     },
+     {
+      "k": "tv:38974",
+      "t": "Jessie",
+      "v": 8
+     },
+     {
+      "k": "tv:4575",
+      "t": "Lizzie McGuire",
+      "v": 7.2
+     },
+     {
+      "k": "tv:12225",
+      "t": "Peppa Pig",
+      "v": 6.6
+     },
+     {
+      "k": "tv:132559",
+      "t": "Los Crood: Árbol genealógico",
+      "v": 7.2
+     },
+     {
+      "k": "tv:115577",
+      "t": "Sonic Prime",
+      "v": 8.3
+     },
+     {
+      "k": "tv:3498",
+      "t": "Los magos de Waverly Place",
+      "v": 8.6
+     },
+     {
+      "k": "tv:97441",
+      "t": "¡Guau, qué amigo!",
+      "v": 7.1
+     },
+     {
+      "k": "tv:3319",
+      "t": "El Pato Darwing",
+      "v": 7.4
+     },
+     {
+      "k": "tv:82728",
+      "t": "Bluey",
+      "v": 8.6
+     },
+     {
+      "k": "tv:720",
+      "t": "Patoaventuras",
+      "v": 7.7
+     },
+     {
+      "k": "tv:4574",
+      "t": "X Men, La Serie Animada",
+      "v": 8.2
+     }
+    ]
+   },
+   {
+    "key": "adult-anime",
+    "titulo": "🎬 Animación para adultos",
+    "tipo": null,
+    "n": 40,
+    "nota": 7.5,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "movie:41498",
+      "t": "One Piece: Strong World",
+      "v": 7.4
+     },
+     {
+      "k": "movie:618353",
+      "t": "Batman: Death in the Family",
+      "v": 7
+     },
+     {
+      "k": "movie:1062807",
+      "t": "Spy x Family Código: Blanco",
+      "v": 7.2
+     },
+     {
+      "k": "movie:839033",
+      "t": "El señor de los anillos: La guerra de los Rohirrim",
+      "v": 6.5
+     },
+     {
+      "k": "movie:149870",
+      "t": "El viento se levanta",
+      "v": 7.8
+     },
+     {
+      "k": "movie:75624",
+      "t": "Naruto Shippuden 5: Prisión de Sangre",
+      "v": 7.2
+     },
+     {
+      "k": "movie:297556",
+      "t": "La Liga de la Justicia: El trono de Atlantis",
+      "v": 7
+     },
+     {
+      "k": "movie:399174",
+      "t": "Isla de perros",
+      "v": 7.8
+     },
+     {
+      "k": "movie:40662",
+      "t": "Batman: Capucha Roja",
+      "v": 7.8
+     },
+     {
+      "k": "movie:81",
+      "t": "Guerreros del viento",
+      "v": 7.9
+     },
+     {
+      "k": "movie:183011",
+      "t": "La Liga de la Justicia: La paradoja del tiempo",
+      "v": 7.9
+     },
+     {
+      "k": "movie:736074",
+      "t": "Batman: El Largo Halloween, Parte 2",
+      "v": 7.4
+     },
+     {
+      "k": "movie:1725116",
+      "t": "Simpsley",
+      "v": 7.9
+     },
+     {
+      "k": "movie:1297763",
+      "t": "Batman Ninja vs. Yakuza League",
+      "v": 6.7
+     },
+     {
+      "k": "movie:987400",
+      "t": "Batman Azteca: Choque de imperios",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1376434",
+      "t": "Predator: Asesino de asesinos",
+      "v": 7.8
+     },
+     {
+      "k": "movie:16907",
+      "t": "Naruto: ¡Batalla ninja en la tierra de la nieve!",
+      "v": 7.3
+     },
+     {
+      "k": "movie:223702",
+      "t": "La fiesta de las salchichas",
+      "v": 5.7
+     },
+     {
+      "k": "movie:1034062",
+      "t": "Mortal Kombat Legends - Demonios y Ángeles",
+      "v": 6.8
+     },
+     {
+      "k": "movie:128",
+      "t": "La princesa Mononoke",
+      "v": 8.3
+     },
+     {
+      "k": "tv:3097",
+      "t": "Iron Man, La serie animada",
+      "v": 6.7
+     },
+     {
+      "k": "tv:32315",
+      "t": "Sym-Bionic Titan",
+      "v": 8.5
+     },
+     {
+      "k": "tv:134297",
+      "t": "Olaf presenta",
+      "v": 7.2
+     },
+     {
+      "k": "tv:34356",
+      "t": "Tron: La resistencia",
+      "v": 7.6
+     },
+     {
+      "k": "tv:98214",
+      "t": "Villanos",
+      "v": 8.6
+     },
+     {
+      "k": "tv:77240",
+      "t": "Capitán Tsubasa",
+      "v": 8.2
+     },
+     {
+      "k": "tv:137720",
+      "t": "Los sustos ocultos de Frankelda",
+      "v": 8.6
+     },
+     {
+      "k": "tv:253811",
+      "t": "Tougen Anki",
+      "v": 7.5
+     },
+     {
+      "k": "tv:114501",
+      "t": "Dug y Carl",
+      "v": 7.4
+     },
+     {
+      "k": "tv:40044",
+      "t": "Hulk Y Los Agentes De S.M.A.S.H",
+      "v": 6.2
+     },
+     {
+      "k": "tv:133733",
+      "t": "Black Rock Shooter: Dawn Fall",
+      "v": 8.1
+     },
+     {
+      "k": "tv:62110",
+      "t": "Assassination Classroom",
+      "v": 8.4
+     },
+     {
+      "k": "tv:65228",
+      "t": "Animals.",
+      "v": 6.3
+     },
+     {
+      "k": "tv:195382",
+      "t": "Complejo Residencial C",
+      "v": 7.1
+     },
+     {
+      "k": "tv:114505",
+      "t": "Palomitas Pixar",
+      "v": 7.2
+     },
+     {
+      "k": "tv:239478",
+      "t": "SAND LAND: THE SERIES",
+      "v": 8.1
+     },
+     {
+      "k": "tv:203085",
+      "t": "Star Wars: Las crónicas jedi",
+      "v": 8
+     },
+     {
+      "k": "tv:236994",
+      "t": "Dragon Ball Daima",
+      "v": 8.2
+     },
+     {
+      "k": "tv:80671",
+      "t": "Cells at work!",
+      "v": 8.1
+     },
+     {
+      "k": "tv:79356",
+      "t": "Tuca y Bertie",
+      "v": 6.9
+     }
+    ]
+   }
+  ]
+ },
+ "pelis": {
+  "hero": [
+   {
+    "k": "movie:693134",
+    "t": "Dune: Parte dos"
+   },
+   {
+    "k": "movie:246655",
+    "t": "X-Men: Apocalipsis"
+   },
+   {
+    "k": "tv:1438",
+    "t": "Bajo escucha"
+   },
+   {
+    "k": "tv:1412",
+    "t": "Arrow"
+   },
+   {
+    "k": "tv:44217",
+    "t": "Vikingos"
+   },
+   {
+    "k": "tv:4588",
+    "t": "Urgencias"
+   }
+  ],
+  "degradado": false,
+  "fallos": 0,
+  "ejes": {
+   "hero-todos/movie": "pop",
+   "hero-todos/tv": "pop",
+   "aud-family/movie": "taquilla",
+   "aud-family/tv": "taquilla",
+   "aud-adult-anime/tv": "hondo",
+   "aud-adult-anime/movie": "pop*"
+  },
+  "rieles": [
+   {
+    "key": "ultimos",
+    "titulo": "Últimos lanzamientos",
+    "tipo": null,
+    "n": 20,
+    "nota": 6.13,
+    "bajos": 7,
+    "items": [
+     {
+      "k": "movie:1589248",
+      "t": "Mi mejor amigo, su novia y yo",
+      "v": 3
+     },
+     {
+      "k": "movie:1632473",
+      "t": "Esto, aquello y todo lo demás",
+      "v": 4.5
+     },
+     {
+      "k": "movie:1504358",
+      "t": "No se desea buena suerte",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1493400",
+      "t": "Camp Rock 3",
+      "v": 6.2
+     },
+     {
+      "k": "movie:1487864",
+      "t": "Nando entre dos mundos",
+      "v": 5.2
+     },
+     {
+      "k": "movie:1679730",
+      "t": "La heroína del lazo",
+      "v": 7.2
+     },
+     {
+      "k": "movie:1284041",
+      "t": "La última casa",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1728056",
+      "t": "Pollo a lo grande: Una conspiración de comida rápida",
+      "v": 5.5
+     },
+     {
+      "k": "movie:1421594",
+      "t": "El escándalo de Trustor desde dentro",
+      "v": 5.7
+     },
+     {
+      "k": "movie:1740877",
+      "t": "Sesame Street y la tormenta",
+      "v": 6.6
+     },
+     {
+      "k": "movie:1616131",
+      "t": "Un hijo propio",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1736916",
+      "t": "Instadocs: Los juegos de predicción",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1732097",
+      "t": "Euphoria: Echando la vista atrás",
+      "v": 3.2
+     },
+     {
+      "k": "movie:1659155",
+      "t": "Los creyentes",
+      "v": 5.8
+     },
+     {
+      "k": "movie:1620682",
+      "t": "Te quiero desde siempre",
+      "v": 6.4
+     },
+     {
+      "k": "movie:1723460",
+      "t": "Una tóxica historia de amor",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1487861",
+      "t": "Elize: Sombras de una mujer",
+      "v": 7.4
+     },
+     {
+      "k": "movie:1630409",
+      "t": "El cobrador de deudas",
+      "v": 8
+     },
+     {
+      "k": "movie:949838",
+      "t": "72 horas",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1318621",
+      "t": "Los Descendientes: viaje al mundo oscuro",
+      "v": 7.6
+     }
+    ]
+   },
+   {
+    "key": "mas-votados",
+    "titulo": "Lo más votados",
+    "tipo": "movie",
+    "n": 33,
+    "nota": 7.82,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:18491",
+      "t": "Neon Genesis Evangelion: The End of Evangelion",
+      "v": 8.3
+     },
+     {
+      "k": "tv:62320",
+      "t": "Grace y Frankie",
+      "v": 7.7
+     },
+     {
+      "k": "tv:237964",
+      "t": "Muertos S.L.",
+      "v": 7.3
+     },
+     {
+      "k": "tv:5920",
+      "t": "El mentalista",
+      "v": 8.4
+     },
+     {
+      "k": "movie:120467",
+      "t": "El gran hotel Budapest",
+      "v": 8
+     },
+     {
+      "k": "movie:508965",
+      "t": "Klaus",
+      "v": 8.2
+     },
+     {
+      "k": "movie:1151031",
+      "t": "Devuélvemela",
+      "v": 7.3
+     },
+     {
+      "k": "movie:1233413",
+      "t": "Los pecadores",
+      "v": 7.5
+     },
+     {
+      "k": "movie:569094",
+      "t": "Spider-Man: Cruzando el Multiverso",
+      "v": 8.3
+     },
+     {
+      "k": "tv:136315",
+      "t": "The Bear",
+      "v": 8.1
+     },
+     {
+      "k": "tv:48891",
+      "t": "Brooklyn Nine-Nine",
+      "v": 8.2
+     },
+     {
+      "k": "tv:79622",
+      "t": "Hunters",
+      "v": 7.1
+     },
+     {
+      "k": "tv:281679",
+      "t": "La historia de mi familia",
+      "v": 7.3
+     },
+     {
+      "k": "tv:1418",
+      "t": "Big Bang",
+      "v": 7.9
+     },
+     {
+      "k": "tv:1421",
+      "t": "Modern Family",
+      "v": 7.9
+     },
+     {
+      "k": "tv:81290",
+      "t": "El método Kominsky",
+      "v": 7.5
+     },
+     {
+      "k": "tv:4686",
+      "t": "Ben 10",
+      "v": 8.2
+     },
+     {
+      "k": "movie:122",
+      "t": "El señor de los anillos: El retorno del rey",
+      "v": 8.5
+     },
+     {
+      "k": "movie:121",
+      "t": "El señor de los anillos: Las dos torres",
+      "v": 8.4
+     },
+     {
+      "k": "movie:120",
+      "t": "El señor de los anillos: La comunidad del anillo",
+      "v": 8.4
+     },
+     {
+      "k": "movie:547565",
+      "t": "La casa oscura",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1895",
+      "t": "La guerra de las galaxias. Episodio III: La venganza de los Sith",
+      "v": 7.5
+     },
+     {
+      "k": "tv:259200",
+      "t": "Perdiendo el juicio",
+      "v": 7.5
+     },
+     {
+      "k": "movie:429617",
+      "t": "Spider-Man: Lejos de casa",
+      "v": 7.4
+     },
+     {
+      "k": "movie:350",
+      "t": "El diablo viste de Prada",
+      "v": 7.4
+     },
+     {
+      "k": "movie:286217",
+      "t": "Marte (The Martian)",
+      "v": 7.7
+     },
+     {
+      "k": "movie:299536",
+      "t": "Vengadores: Infinity War",
+      "v": 8.2
+     },
+     {
+      "k": "movie:1297842",
+      "t": "GOAT: Como cabras",
+      "v": 8.1
+     },
+     {
+      "k": "tv:1399",
+      "t": "Juego de tronos",
+      "v": 8.5
+     },
+     {
+      "k": "movie:1265609",
+      "t": "Máquina de guerra",
+      "v": 7.4
+     },
+     {
+      "k": "movie:713704",
+      "t": "Posesión infernal: El despertar",
+      "v": 7
+     },
+     {
+      "k": "movie:155",
+      "t": "El caballero oscuro",
+      "v": 8.5
+     },
+     {
+      "k": "movie:1242898",
+      "t": "Predator: Badlands",
+      "v": 7.8
+     }
+    ]
+   },
+   {
+    "key": "hacete-cargo",
+    "titulo": "No gustaron",
+    "tipo": "movie",
+    "n": 12,
+    "nota": 7.13,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:1314481",
+      "t": "El diablo viste de Prada 2",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1368881",
+      "t": "Las damas primero",
+      "v": 6
+     },
+     {
+      "k": "movie:945937",
+      "t": "Fast Charlie",
+      "v": 6.2
+     },
+     {
+      "k": "tv:278178",
+      "t": "Te encontraré",
+      "v": 8.3
+     },
+     {
+      "k": "movie:1272837",
+      "t": "28 años después: El templo de los huesos",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1397385",
+      "t": "Hermanito",
+      "v": 6.4
+     },
+     {
+      "k": "tv:60625",
+      "t": "Rick y Morty",
+      "v": 8.7
+     },
+     {
+      "k": "movie:83533",
+      "t": "Avatar: Fuego y ceniza",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1304313",
+      "t": "La momia de Lee Cronin",
+      "v": 7.9
+     },
+     {
+      "k": "movie:1234821",
+      "t": "Jurassic World: El renacer",
+      "v": 6.3
+     },
+     {
+      "k": "movie:1318447",
+      "t": "Depredador dominante",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1198994",
+      "t": "SEND HELP (Enviad ayuda)",
+      "v": 7
+     }
+    ]
+   },
+   {
+    "key": "genre:accion",
+    "titulo": "accion",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 7.39,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:545611",
+      "t": "Todo a la vez en todas partes",
+      "v": 7.7
+     },
+     {
+      "k": "movie:1439930",
+      "t": "The Punisher: One Last Kill",
+      "v": 8.3
+     },
+     {
+      "k": "movie:929590",
+      "t": "Civil War",
+      "v": 6.8
+     },
+     {
+      "k": "movie:639933",
+      "t": "El hombre del norte",
+      "v": 7
+     },
+     {
+      "k": "movie:333339",
+      "t": "Ready Player One",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1268127",
+      "t": "Humint",
+      "v": 7.5
+     },
+     {
+      "k": "movie:315635",
+      "t": "Spider-Man: Homecoming",
+      "v": 7.3
+     },
+     {
+      "k": "movie:245891",
+      "t": "John Wick",
+      "v": 7.5
+     },
+     {
+      "k": "movie:168259",
+      "t": "Fast & Furious 7",
+      "v": 7.2
+     },
+     {
+      "k": "movie:653346",
+      "t": "El reino del planeta de los simios",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1495",
+      "t": "El reino de los cielos",
+      "v": 7.1
+     },
+     {
+      "k": "movie:137113",
+      "t": "Al filo del mañana",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1271",
+      "t": "300",
+      "v": 7.2
+     },
+     {
+      "k": "movie:866398",
+      "t": "Beekeeper: El protector",
+      "v": 7.3
+     },
+     {
+      "k": "movie:2109",
+      "t": "Hora punta",
+      "v": 7.1
+     },
+     {
+      "k": "movie:24428",
+      "t": "Vengadores",
+      "v": 8.1
+     },
+     {
+      "k": "movie:263115",
+      "t": "Logan",
+      "v": 7.8
+     },
+     {
+      "k": "movie:949",
+      "t": "Heat",
+      "v": 7.9
+     },
+     {
+      "k": "movie:505642",
+      "t": "Black Panther: Wakanda Forever",
+      "v": 7
+     },
+     {
+      "k": "movie:10195",
+      "t": "Thor",
+      "v": 6.8
+     }
+    ]
+   },
+   {
+    "key": "genre:scifi",
+    "titulo": "scifi",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 6.94,
+    "bajos": 2,
+    "items": [
+     {
+      "k": "movie:76341",
+      "t": "Mad Max: Furia en la carretera",
+      "v": 7.6
+     },
+     {
+      "k": "movie:49521",
+      "t": "El hombre de acero",
+      "v": 6.7
+     },
+     {
+      "k": "movie:340102",
+      "t": "Los nuevos mutantes",
+      "v": 6.1
+     },
+     {
+      "k": "movie:1100988",
+      "t": "28 años después",
+      "v": 6.6
+     },
+     {
+      "k": "movie:257344",
+      "t": "Pixels",
+      "v": 5.8
+     },
+     {
+      "k": "movie:119450",
+      "t": "El amanecer del planeta de los simios",
+      "v": 7.3
+     },
+     {
+      "k": "movie:271110",
+      "t": "Capitán América: Civil War",
+      "v": 7.5
+     },
+     {
+      "k": "movie:118340",
+      "t": "Guardianes de la galaxia",
+      "v": 7.9
+     },
+     {
+      "k": "movie:227719",
+      "t": "Project Almanac",
+      "v": 6.8
+     },
+     {
+      "k": "movie:6950",
+      "t": "Estallido",
+      "v": 6.6
+     },
+     {
+      "k": "movie:1891",
+      "t": "El imperio contraataca",
+      "v": 8.4
+     },
+     {
+      "k": "movie:76600",
+      "t": "Avatar: El sentido del agua",
+      "v": 7.6
+     },
+     {
+      "k": "movie:68726",
+      "t": "Pacific Rim",
+      "v": 6.9
+     },
+     {
+      "k": "movie:982843",
+      "t": "El gran diluvio",
+      "v": 6
+     },
+     {
+      "k": "movie:37686",
+      "t": "Super 8",
+      "v": 6.8
+     },
+     {
+      "k": "movie:338676",
+      "t": "Extinction",
+      "v": 6.3
+     },
+     {
+      "k": "movie:617126",
+      "t": "Los Cuatro Fantásticos: Primeros pasos",
+      "v": 6.9
+     },
+     {
+      "k": "movie:284053",
+      "t": "Thor: Ragnarok",
+      "v": 7.6
+     },
+     {
+      "k": "movie:76757",
+      "t": "El destino de Júpiter",
+      "v": 5.5
+     },
+     {
+      "k": "movie:438631",
+      "t": "Dune",
+      "v": 7.8
+     }
+    ]
+   },
+   {
+    "key": "genre:terror",
+    "titulo": "terror",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 6.33,
+    "bajos": 5,
+    "items": [
+     {
+      "k": "movie:578",
+      "t": "Tiburón",
+      "v": 7.7
+     },
+     {
+      "k": "movie:38321",
+      "t": "El sicario de Dios",
+      "v": 5.9
+     },
+     {
+      "k": "movie:9358",
+      "t": "Destino final 2",
+      "v": 6.3
+     },
+     {
+      "k": "movie:4488",
+      "t": "Viernes 13",
+      "v": 6.4
+     },
+     {
+      "k": "movie:755566",
+      "t": "Turno de día",
+      "v": 6.7
+     },
+     {
+      "k": "movie:1197137",
+      "t": "Black Phone 2",
+      "v": 6.6
+     },
+     {
+      "k": "movie:800815",
+      "t": "Los crímenes de la academia",
+      "v": 6.8
+     },
+     {
+      "k": "movie:1239134",
+      "t": "La Boda Maldita",
+      "v": 5.7
+     },
+     {
+      "k": "movie:933260",
+      "t": "La sustancia",
+      "v": 7.1
+     },
+     {
+      "k": "movie:570670",
+      "t": "El hombre invisible",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1302916",
+      "t": "El asesino con ojos de corazón",
+      "v": 6.3
+     },
+     {
+      "k": "movie:10066",
+      "t": "La casa de cera",
+      "v": 6
+     },
+     {
+      "k": "movie:71469",
+      "t": "La hora más oscura",
+      "v": 5.3
+     },
+     {
+      "k": "movie:58151",
+      "t": "Noche de miedo (Fright Night)",
+      "v": 6.2
+     },
+     {
+      "k": "movie:1024530",
+      "t": "Grimcutty: Asesino implacable",
+      "v": 5
+     },
+     {
+      "k": "movie:426063",
+      "t": "Nosferatu",
+      "v": 6.7
+     },
+     {
+      "k": "movie:8078",
+      "t": "Alien: Resurrección",
+      "v": 6.2
+     },
+     {
+      "k": "movie:516329",
+      "t": "Antlers: Criatura oscura",
+      "v": 6.2
+     },
+     {
+      "k": "movie:2668",
+      "t": "Sleepy Hollow (El Jinete sin Cabeza)",
+      "v": 7.2
+     },
+     {
+      "k": "movie:440",
+      "t": "Alien contra predator II",
+      "v": 5.2
+     }
+    ]
+   },
+   {
+    "key": "genre:drama",
+    "titulo": "drama",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 7.26,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "movie:1057265",
+      "t": "Peddi",
+      "v": 5.8
+     },
+     {
+      "k": "movie:103",
+      "t": "Taxi Driver",
+      "v": 8.1
+     },
+     {
+      "k": "movie:1359",
+      "t": "American Psycho",
+      "v": 7.4
+     },
+     {
+      "k": "movie:615",
+      "t": "La pasión de Cristo",
+      "v": 7.5
+     },
+     {
+      "k": "movie:9798",
+      "t": "Enemigo público",
+      "v": 7.1
+     },
+     {
+      "k": "movie:203833",
+      "t": "La ladrona de libros",
+      "v": 7.5
+     },
+     {
+      "k": "movie:2503",
+      "t": "El ultimátum de Bourne",
+      "v": 7.4
+     },
+     {
+      "k": "movie:50014",
+      "t": "Criadas y Señoras",
+      "v": 8.2
+     },
+     {
+      "k": "movie:359724",
+      "t": "Le Mans '66",
+      "v": 8
+     },
+     {
+      "k": "movie:9567",
+      "t": "Lágrimas del sol",
+      "v": 6.9
+     },
+     {
+      "k": "movie:24021",
+      "t": "Crepúsculo III. Eclipse",
+      "v": 6.2
+     },
+     {
+      "k": "movie:254128",
+      "t": "San Andrés",
+      "v": 6.3
+     },
+     {
+      "k": "movie:597",
+      "t": "Titanic",
+      "v": 7.9
+     },
+     {
+      "k": "movie:329865",
+      "t": "La llegada",
+      "v": 7.6
+     },
+     {
+      "k": "movie:661539",
+      "t": "A Complete Unknown",
+      "v": 7.1
+     },
+     {
+      "k": "movie:402431",
+      "t": "Wicked",
+      "v": 6.9
+     },
+     {
+      "k": "movie:337404",
+      "t": "Cruella",
+      "v": 8
+     },
+     {
+      "k": "movie:1426776",
+      "t": "Harta",
+      "v": 7.7
+     },
+     {
+      "k": "movie:1668364",
+      "t": "Deseo",
+      "v": 6.7
+     },
+     {
+      "k": "movie:1254786",
+      "t": "Mi lista de deseos",
+      "v": 7
+     }
+    ]
+   },
+   {
+    "key": "genre:comedia",
+    "titulo": "comedia",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 6.79,
+    "bajos": 2,
+    "items": [
+     {
+      "k": "movie:337170",
+      "t": "Barry Seal: el traficante",
+      "v": 6.9
+     },
+     {
+      "k": "movie:45243",
+      "t": "Resacón 2: ¡Ahora en Tailandia!",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1034716",
+      "t": "Gente que conocemos en vacaciones",
+      "v": 7
+     },
+     {
+      "k": "movie:9600",
+      "t": "Esta abuela es un peligro",
+      "v": 5.8
+     },
+     {
+      "k": "movie:593643",
+      "t": "El menú",
+      "v": 7.2
+     },
+     {
+      "k": "movie:4951",
+      "t": "10 razones para odiarte",
+      "v": 7.6
+     },
+     {
+      "k": "movie:773",
+      "t": "Pequeña Miss Sunshine",
+      "v": 7.7
+     },
+     {
+      "k": "movie:308266",
+      "t": "Juego de armas",
+      "v": 6.9
+     },
+     {
+      "k": "movie:514999",
+      "t": "Criminales en el mar",
+      "v": 6.3
+     },
+     {
+      "k": "movie:642885",
+      "t": "El retorno de las brujas 2",
+      "v": 7.1
+     },
+     {
+      "k": "movie:9072",
+      "t": "Pequeño pero matón",
+      "v": 5.9
+     },
+     {
+      "k": "movie:71552",
+      "t": "American Pie: El reencuentro",
+      "v": 6.3
+     },
+     {
+      "k": "movie:9489",
+      "t": "Tienes un e-mail",
+      "v": 6.7
+     },
+     {
+      "k": "movie:484247",
+      "t": "Un pequeño favor",
+      "v": 6.6
+     },
+     {
+      "k": "movie:9374",
+      "t": "La muerte os sienta tan bien",
+      "v": 6.8
+     },
+     {
+      "k": "movie:567609",
+      "t": "Noche de bodas",
+      "v": 7.1
+     },
+     {
+      "k": "movie:287947",
+      "t": "¡Shazam!",
+      "v": 7
+     },
+     {
+      "k": "movie:391713",
+      "t": "Lady Bird",
+      "v": 7.2
+     },
+     {
+      "k": "movie:65057",
+      "t": "Los descendientes",
+      "v": 6.8
+     },
+     {
+      "k": "movie:75",
+      "t": "Mars Attacks!",
+      "v": 6.4
+     }
+    ]
+   },
+   {
+    "key": "genre:documental",
+    "titulo": "documental",
+    "tipo": "movie",
+    "n": 20,
+    "nota": 7.28,
+    "bajos": 3,
+    "items": [
+     {
+      "k": "movie:17700",
+      "t": "Deep Sea",
+      "v": 6.6
+     },
+     {
+      "k": "movie:738362",
+      "t": "El príncipe de Bel-Air El Reencuentro",
+      "v": 8.1
+     },
+     {
+      "k": "movie:60378",
+      "t": "Hitler: una biografía",
+      "v": 7.4
+     },
+     {
+      "k": "movie:890825",
+      "t": "Los 14 ochomiles: No hay nada imposible",
+      "v": 7.3
+     },
+     {
+      "k": "movie:438446",
+      "t": "Madre muerta y querida",
+      "v": 7.4
+     },
+     {
+      "k": "movie:1087040",
+      "t": "Hasta el fondo: La historia de Pornhub",
+      "v": 5.8
+     },
+     {
+      "k": "movie:682589",
+      "t": "Crazy, Not Insane",
+      "v": 7.2
+     },
+     {
+      "k": "movie:743601",
+      "t": "El caso Watts: El padre homicida",
+      "v": 7.3
+     },
+     {
+      "k": "movie:76180",
+      "t": "El imperio de los sueños. La historia de Star Wars",
+      "v": 7.6
+     },
+     {
+      "k": "movie:398738",
+      "t": "Bright Lights: Starring Carrie Fisher and Debbie Reynolds",
+      "v": 7.5
+     },
+     {
+      "k": "movie:1484253",
+      "t": "Fiasco total: El crucero de la caca",
+      "v": 5.9
+     },
+     {
+      "k": "movie:473415",
+      "t": "Voyeur",
+      "v": 5.9
+     },
+     {
+      "k": "movie:20556",
+      "t": "The Beatles: Let it be",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1094266",
+      "t": "Amén: Francisco responde",
+      "v": 7.5
+     },
+     {
+      "k": "movie:664280",
+      "t": "David Attenborough: Una vida en nuestro planeta",
+      "v": 8.4
+     },
+     {
+      "k": "movie:768141",
+      "t": "Taylor Swift: folklore: las grabaciones en long pond studio",
+      "v": 8.5
+     },
+     {
+      "k": "movie:1595481",
+      "t": "Secuestros: Elizabeth Smart",
+      "v": 7.3
+     },
+     {
+      "k": "movie:913862",
+      "t": "Caída en picado: El caso contra Boeing",
+      "v": 7.1
+     },
+     {
+      "k": "movie:779783",
+      "t": "Soy Luna: El último concierto",
+      "v": 8
+     },
+     {
+      "k": "movie:1146302",
+      "t": "Sly",
+      "v": 7.2
+     }
+    ]
+   },
+   {
+    "key": "family",
+    "titulo": "🍿 Para toda la familia",
+    "tipo": null,
+    "n": 40,
+    "nota": 7.3,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:1022789",
+      "t": "Del revés 2 (Inside Out 2)",
+      "v": 7.5
+     },
+     {
+      "k": "movie:269149",
+      "t": "Zootrópolis",
+      "v": 7.8
+     },
+     {
+      "k": "movie:136799",
+      "t": "Trolls",
+      "v": 6.6
+     },
+     {
+      "k": "movie:129",
+      "t": "El viaje de Chihiro",
+      "v": 8.5
+     },
+     {
+      "k": "movie:10192",
+      "t": "Shrek, felices para siempre",
+      "v": 6.4
+     },
+     {
+      "k": "movie:301528",
+      "t": "Toy Story 4",
+      "v": 7.5
+     },
+     {
+      "k": "movie:181533",
+      "t": "Noche en el museo: El secreto del faraón",
+      "v": 6.2
+     },
+     {
+      "k": "movie:360920",
+      "t": "El Grinch",
+      "v": 6.9
+     },
+     {
+      "k": "movie:417859",
+      "t": "El gato con botas",
+      "v": 6.6
+     },
+     {
+      "k": "movie:1593",
+      "t": "Noche en el museo",
+      "v": 6.6
+     },
+     {
+      "k": "movie:940551",
+      "t": "Migración. Un viaje patas arriba",
+      "v": 7.4
+     },
+     {
+      "k": "movie:15512",
+      "t": "Monstruos contra alienígenas",
+      "v": 6.3
+     },
+     {
+      "k": "movie:20352",
+      "t": "Gru Mi villano favorito",
+      "v": 7.3
+     },
+     {
+      "k": "movie:166428",
+      "t": "Cómo entrenar a tu dragón 3",
+      "v": 7.8
+     },
+     {
+      "k": "movie:118",
+      "t": "Charlie y la fábrica de chocolate",
+      "v": 7
+     },
+     {
+      "k": "movie:153518",
+      "t": "Angry Birds: La película",
+      "v": 6.3
+     },
+     {
+      "k": "movie:950387",
+      "t": "Una película de Minecraft",
+      "v": 6.2
+     },
+     {
+      "k": "movie:77950",
+      "t": "Turbo",
+      "v": 6.3
+     },
+     {
+      "k": "movie:9502",
+      "t": "Kung Fu Panda",
+      "v": 7.3
+     },
+     {
+      "k": "movie:18360",
+      "t": "Noche en el museo 2",
+      "v": 6.2
+     },
+     {
+      "k": "tv:31251",
+      "t": "Victorious",
+      "v": 8.2
+     },
+     {
+      "k": "tv:15079",
+      "t": "Zack y Cody: Todos a bordo",
+      "v": 7.7
+     },
+     {
+      "k": "tv:4232",
+      "t": "Don Gato y su pandilla",
+      "v": 7.5
+     },
+     {
+      "k": "tv:2675",
+      "t": "La sirenita",
+      "v": 7
+     },
+     {
+      "k": "tv:21641",
+      "t": "¡Buena suerte, Charlie!",
+      "v": 7.9
+     },
+     {
+      "k": "tv:45666",
+      "t": "Sam y Cat",
+      "v": 7.6
+     },
+     {
+      "k": "tv:1988",
+      "t": "ThunderCats",
+      "v": 8.2
+     },
+     {
+      "k": "tv:4429",
+      "t": "Timón y Pumba",
+      "v": 7.2
+     },
+     {
+      "k": "tv:670",
+      "t": "Baby Looney Tunes",
+      "v": 7.1
+     },
+     {
+      "k": "tv:38974",
+      "t": "Jessie",
+      "v": 8
+     },
+     {
+      "k": "tv:4575",
+      "t": "Lizzie McGuire",
+      "v": 7.2
+     },
+     {
+      "k": "tv:12225",
+      "t": "Peppa Pig",
+      "v": 6.6
+     },
+     {
+      "k": "tv:132559",
+      "t": "Los Crood: Árbol genealógico",
+      "v": 7.2
+     },
+     {
+      "k": "tv:115577",
+      "t": "Sonic Prime",
+      "v": 8.3
+     },
+     {
+      "k": "tv:3498",
+      "t": "Los magos de Waverly Place",
+      "v": 8.6
+     },
+     {
+      "k": "tv:97441",
+      "t": "¡Guau, qué amigo!",
+      "v": 7.1
+     },
+     {
+      "k": "tv:3319",
+      "t": "El Pato Darwing",
+      "v": 7.4
+     },
+     {
+      "k": "tv:82728",
+      "t": "Bluey",
+      "v": 8.6
+     },
+     {
+      "k": "tv:720",
+      "t": "Patoaventuras",
+      "v": 7.7
+     },
+     {
+      "k": "tv:4574",
+      "t": "X Men, La Serie Animada",
+      "v": 8.2
+     }
+    ]
+   },
+   {
+    "key": "adult-anime",
+    "titulo": "🎬 Animación para adultos",
+    "tipo": null,
+    "n": 40,
+    "nota": 7.5,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "movie:41498",
+      "t": "One Piece: Strong World",
+      "v": 7.4
+     },
+     {
+      "k": "movie:618353",
+      "t": "Batman: Death in the Family",
+      "v": 7
+     },
+     {
+      "k": "movie:1062807",
+      "t": "Spy x Family Código: Blanco",
+      "v": 7.2
+     },
+     {
+      "k": "movie:839033",
+      "t": "El señor de los anillos: La guerra de los Rohirrim",
+      "v": 6.5
+     },
+     {
+      "k": "movie:149870",
+      "t": "El viento se levanta",
+      "v": 7.8
+     },
+     {
+      "k": "movie:75624",
+      "t": "Naruto Shippuden 5: Prisión de Sangre",
+      "v": 7.2
+     },
+     {
+      "k": "movie:297556",
+      "t": "La Liga de la Justicia: El trono de Atlantis",
+      "v": 7
+     },
+     {
+      "k": "movie:399174",
+      "t": "Isla de perros",
+      "v": 7.8
+     },
+     {
+      "k": "movie:40662",
+      "t": "Batman: Capucha Roja",
+      "v": 7.8
+     },
+     {
+      "k": "movie:81",
+      "t": "Guerreros del viento",
+      "v": 7.9
+     },
+     {
+      "k": "movie:183011",
+      "t": "La Liga de la Justicia: La paradoja del tiempo",
+      "v": 7.9
+     },
+     {
+      "k": "movie:736074",
+      "t": "Batman: El Largo Halloween, Parte 2",
+      "v": 7.4
+     },
+     {
+      "k": "movie:1725116",
+      "t": "Simpsley",
+      "v": 7.9
+     },
+     {
+      "k": "movie:1297763",
+      "t": "Batman Ninja vs. Yakuza League",
+      "v": 6.7
+     },
+     {
+      "k": "movie:987400",
+      "t": "Batman Azteca: Choque de imperios",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1376434",
+      "t": "Predator: Asesino de asesinos",
+      "v": 7.8
+     },
+     {
+      "k": "movie:16907",
+      "t": "Naruto: ¡Batalla ninja en la tierra de la nieve!",
+      "v": 7.3
+     },
+     {
+      "k": "movie:223702",
+      "t": "La fiesta de las salchichas",
+      "v": 5.7
+     },
+     {
+      "k": "movie:1034062",
+      "t": "Mortal Kombat Legends - Demonios y Ángeles",
+      "v": 6.8
+     },
+     {
+      "k": "movie:128",
+      "t": "La princesa Mononoke",
+      "v": 8.3
+     },
+     {
+      "k": "tv:3097",
+      "t": "Iron Man, La serie animada",
+      "v": 6.7
+     },
+     {
+      "k": "tv:32315",
+      "t": "Sym-Bionic Titan",
+      "v": 8.5
+     },
+     {
+      "k": "tv:134297",
+      "t": "Olaf presenta",
+      "v": 7.2
+     },
+     {
+      "k": "tv:34356",
+      "t": "Tron: La resistencia",
+      "v": 7.6
+     },
+     {
+      "k": "tv:98214",
+      "t": "Villanos",
+      "v": 8.6
+     },
+     {
+      "k": "tv:77240",
+      "t": "Capitán Tsubasa",
+      "v": 8.2
+     },
+     {
+      "k": "tv:137720",
+      "t": "Los sustos ocultos de Frankelda",
+      "v": 8.6
+     },
+     {
+      "k": "tv:253811",
+      "t": "Tougen Anki",
+      "v": 7.5
+     },
+     {
+      "k": "tv:114501",
+      "t": "Dug y Carl",
+      "v": 7.4
+     },
+     {
+      "k": "tv:40044",
+      "t": "Hulk Y Los Agentes De S.M.A.S.H",
+      "v": 6.2
+     },
+     {
+      "k": "tv:133733",
+      "t": "Black Rock Shooter: Dawn Fall",
+      "v": 8.1
+     },
+     {
+      "k": "tv:62110",
+      "t": "Assassination Classroom",
+      "v": 8.4
+     },
+     {
+      "k": "tv:65228",
+      "t": "Animals.",
+      "v": 6.3
+     },
+     {
+      "k": "tv:195382",
+      "t": "Complejo Residencial C",
+      "v": 7.1
+     },
+     {
+      "k": "tv:114505",
+      "t": "Palomitas Pixar",
+      "v": 7.2
+     },
+     {
+      "k": "tv:239478",
+      "t": "SAND LAND: THE SERIES",
+      "v": 8.1
+     },
+     {
+      "k": "tv:203085",
+      "t": "Star Wars: Las crónicas jedi",
+      "v": 8
+     },
+     {
+      "k": "tv:236994",
+      "t": "Dragon Ball Daima",
+      "v": 8.2
+     },
+     {
+      "k": "tv:80671",
+      "t": "Cells at work!",
+      "v": 8.1
+     },
+     {
+      "k": "tv:79356",
+      "t": "Tuca y Bertie",
+      "v": 6.9
+     }
+    ]
+   }
+  ]
+ },
+ "series": {
+  "hero": [
+   {
+    "k": "movie:693134",
+    "t": "Dune: Parte dos"
+   },
+   {
+    "k": "movie:246655",
+    "t": "X-Men: Apocalipsis"
+   },
+   {
+    "k": "tv:1438",
+    "t": "Bajo escucha"
+   },
+   {
+    "k": "tv:1412",
+    "t": "Arrow"
+   },
+   {
+    "k": "tv:44217",
+    "t": "Vikingos"
+   },
+   {
+    "k": "tv:4588",
+    "t": "Urgencias"
+   }
+  ],
+  "degradado": false,
+  "fallos": 0,
+  "ejes": {
+   "hero-todos/movie": "pop",
+   "hero-todos/tv": "pop",
+   "aud-family/movie": "taquilla",
+   "aud-family/tv": "taquilla",
+   "aud-adult-anime/tv": "hondo",
+   "aud-adult-anime/movie": "pop*"
+  },
+  "rieles": [
+   {
+    "key": "ultimos",
+    "titulo": "Últimos lanzamientos",
+    "tipo": null,
+    "n": 20,
+    "nota": 6.13,
+    "bajos": 7,
+    "items": [
+     {
+      "k": "movie:1589248",
+      "t": "Mi mejor amigo, su novia y yo",
+      "v": 3
+     },
+     {
+      "k": "movie:1632473",
+      "t": "Esto, aquello y todo lo demás",
+      "v": 4.5
+     },
+     {
+      "k": "movie:1504358",
+      "t": "No se desea buena suerte",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1493400",
+      "t": "Camp Rock 3",
+      "v": 6.2
+     },
+     {
+      "k": "movie:1487864",
+      "t": "Nando entre dos mundos",
+      "v": 5.2
+     },
+     {
+      "k": "movie:1679730",
+      "t": "La heroína del lazo",
+      "v": 7.2
+     },
+     {
+      "k": "movie:1284041",
+      "t": "La última casa",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1728056",
+      "t": "Pollo a lo grande: Una conspiración de comida rápida",
+      "v": 5.5
+     },
+     {
+      "k": "movie:1421594",
+      "t": "El escándalo de Trustor desde dentro",
+      "v": 5.7
+     },
+     {
+      "k": "movie:1740877",
+      "t": "Sesame Street y la tormenta",
+      "v": 6.6
+     },
+     {
+      "k": "movie:1616131",
+      "t": "Un hijo propio",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1736916",
+      "t": "Instadocs: Los juegos de predicción",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1732097",
+      "t": "Euphoria: Echando la vista atrás",
+      "v": 3.2
+     },
+     {
+      "k": "movie:1659155",
+      "t": "Los creyentes",
+      "v": 5.8
+     },
+     {
+      "k": "movie:1620682",
+      "t": "Te quiero desde siempre",
+      "v": 6.4
+     },
+     {
+      "k": "movie:1723460",
+      "t": "Una tóxica historia de amor",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1487861",
+      "t": "Elize: Sombras de una mujer",
+      "v": 7.4
+     },
+     {
+      "k": "movie:1630409",
+      "t": "El cobrador de deudas",
+      "v": 8
+     },
+     {
+      "k": "movie:949838",
+      "t": "72 horas",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1318621",
+      "t": "Los Descendientes: viaje al mundo oscuro",
+      "v": 7.6
+     }
+    ]
+   },
+   {
+    "key": "mas-votados",
+    "titulo": "Lo más votados",
+    "tipo": "movie",
+    "n": 33,
+    "nota": 7.82,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:18491",
+      "t": "Neon Genesis Evangelion: The End of Evangelion",
+      "v": 8.3
+     },
+     {
+      "k": "tv:62320",
+      "t": "Grace y Frankie",
+      "v": 7.7
+     },
+     {
+      "k": "tv:237964",
+      "t": "Muertos S.L.",
+      "v": 7.3
+     },
+     {
+      "k": "tv:5920",
+      "t": "El mentalista",
+      "v": 8.4
+     },
+     {
+      "k": "movie:120467",
+      "t": "El gran hotel Budapest",
+      "v": 8
+     },
+     {
+      "k": "movie:508965",
+      "t": "Klaus",
+      "v": 8.2
+     },
+     {
+      "k": "movie:1151031",
+      "t": "Devuélvemela",
+      "v": 7.3
+     },
+     {
+      "k": "movie:1233413",
+      "t": "Los pecadores",
+      "v": 7.5
+     },
+     {
+      "k": "movie:569094",
+      "t": "Spider-Man: Cruzando el Multiverso",
+      "v": 8.3
+     },
+     {
+      "k": "tv:136315",
+      "t": "The Bear",
+      "v": 8.1
+     },
+     {
+      "k": "tv:48891",
+      "t": "Brooklyn Nine-Nine",
+      "v": 8.2
+     },
+     {
+      "k": "tv:79622",
+      "t": "Hunters",
+      "v": 7.1
+     },
+     {
+      "k": "tv:281679",
+      "t": "La historia de mi familia",
+      "v": 7.3
+     },
+     {
+      "k": "tv:1418",
+      "t": "Big Bang",
+      "v": 7.9
+     },
+     {
+      "k": "tv:1421",
+      "t": "Modern Family",
+      "v": 7.9
+     },
+     {
+      "k": "tv:81290",
+      "t": "El método Kominsky",
+      "v": 7.5
+     },
+     {
+      "k": "tv:4686",
+      "t": "Ben 10",
+      "v": 8.2
+     },
+     {
+      "k": "movie:122",
+      "t": "El señor de los anillos: El retorno del rey",
+      "v": 8.5
+     },
+     {
+      "k": "movie:121",
+      "t": "El señor de los anillos: Las dos torres",
+      "v": 8.4
+     },
+     {
+      "k": "movie:120",
+      "t": "El señor de los anillos: La comunidad del anillo",
+      "v": 8.4
+     },
+     {
+      "k": "movie:547565",
+      "t": "La casa oscura",
+      "v": 6.5
+     },
+     {
+      "k": "movie:1895",
+      "t": "La guerra de las galaxias. Episodio III: La venganza de los Sith",
+      "v": 7.5
+     },
+     {
+      "k": "tv:259200",
+      "t": "Perdiendo el juicio",
+      "v": 7.5
+     },
+     {
+      "k": "movie:429617",
+      "t": "Spider-Man: Lejos de casa",
+      "v": 7.4
+     },
+     {
+      "k": "movie:350",
+      "t": "El diablo viste de Prada",
+      "v": 7.4
+     },
+     {
+      "k": "movie:286217",
+      "t": "Marte (The Martian)",
+      "v": 7.7
+     },
+     {
+      "k": "movie:299536",
+      "t": "Vengadores: Infinity War",
+      "v": 8.2
+     },
+     {
+      "k": "movie:1297842",
+      "t": "GOAT: Como cabras",
+      "v": 8.1
+     },
+     {
+      "k": "tv:1399",
+      "t": "Juego de tronos",
+      "v": 8.5
+     },
+     {
+      "k": "movie:1265609",
+      "t": "Máquina de guerra",
+      "v": 7.4
+     },
+     {
+      "k": "movie:713704",
+      "t": "Posesión infernal: El despertar",
+      "v": 7
+     },
+     {
+      "k": "movie:155",
+      "t": "El caballero oscuro",
+      "v": 8.5
+     },
+     {
+      "k": "movie:1242898",
+      "t": "Predator: Badlands",
+      "v": 7.8
+     }
+    ]
+   },
+   {
+    "key": "hacete-cargo",
+    "titulo": "No gustaron",
+    "tipo": "movie",
+    "n": 12,
+    "nota": 7.13,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:1314481",
+      "t": "El diablo viste de Prada 2",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1368881",
+      "t": "Las damas primero",
+      "v": 6
+     },
+     {
+      "k": "movie:945937",
+      "t": "Fast Charlie",
+      "v": 6.2
+     },
+     {
+      "k": "tv:278178",
+      "t": "Te encontraré",
+      "v": 8.3
+     },
+     {
+      "k": "movie:1272837",
+      "t": "28 años después: El templo de los huesos",
+      "v": 7.1
+     },
+     {
+      "k": "movie:1397385",
+      "t": "Hermanito",
+      "v": 6.4
+     },
+     {
+      "k": "tv:60625",
+      "t": "Rick y Morty",
+      "v": 8.7
+     },
+     {
+      "k": "movie:83533",
+      "t": "Avatar: Fuego y ceniza",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1304313",
+      "t": "La momia de Lee Cronin",
+      "v": 7.9
+     },
+     {
+      "k": "movie:1234821",
+      "t": "Jurassic World: El renacer",
+      "v": 6.3
+     },
+     {
+      "k": "movie:1318447",
+      "t": "Depredador dominante",
+      "v": 6.9
+     },
+     {
+      "k": "movie:1198994",
+      "t": "SEND HELP (Enviad ayuda)",
+      "v": 7
+     }
+    ]
+   },
+   {
+    "key": "genre:accion",
+    "titulo": "accion",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 7.92,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "tv:117376",
+      "t": "Vincenzo",
+      "v": 8.5
+     },
+     {
+      "k": "tv:34967",
+      "t": "Falling Skies",
+      "v": 7.1
+     },
+     {
+      "k": "tv:73544",
+      "t": "Warrior",
+      "v": 8
+     },
+     {
+      "k": "tv:61833",
+      "t": "Expedición al pasado",
+      "v": 8
+     },
+     {
+      "k": "tv:32754",
+      "t": "Terra Nova",
+      "v": 6.7
+     },
+     {
+      "k": "tv:82856",
+      "t": "The Mandalorian",
+      "v": 8.4
+     },
+     {
+      "k": "tv:66190",
+      "t": "Capa y Puñal",
+      "v": 7.1
+     },
+     {
+      "k": "tv:60699",
+      "t": "Marco Polo",
+      "v": 7.4
+     },
+     {
+      "k": "tv:4629",
+      "t": "Stargate SG-1",
+      "v": 8.3
+     },
+     {
+      "k": "tv:284838",
+      "t": "9-1-1: Nashville",
+      "v": 8.1
+     },
+     {
+      "k": "tv:68507",
+      "t": "La materia oscura",
+      "v": 7.8
+     },
+     {
+      "k": "tv:276161",
+      "t": "Así aprenderás",
+      "v": 9.4
+     },
+     {
+      "k": "tv:279323",
+      "t": "El palacio del este",
+      "v": 8.2
+     },
+     {
+      "k": "tv:94244",
+      "t": "Hechos polvo",
+      "v": 7
+     },
+     {
+      "k": "tv:66732",
+      "t": "Stranger Things",
+      "v": 8.6
+     },
+     {
+      "k": "tv:308014",
+      "t": "Berlín y la dama del armiño",
+      "v": 8.1
+     },
+     {
+      "k": "tv:61889",
+      "t": "Marvel - Daredevil",
+      "v": 8.2
+     },
+     {
+      "k": "tv:75006",
+      "t": "The Umbrella Academy",
+      "v": 8.5
+     },
+     {
+      "k": "tv:71912",
+      "t": "The Witcher",
+      "v": 7.9
+     },
+     {
+      "k": "tv:4709",
+      "t": "El último superviviente",
+      "v": 7.1
+     }
+    ]
+   },
+   {
+    "key": "genre:scifi",
+    "titulo": "scifi",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 7.02,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "tv:69478",
+      "t": "El cuento de la criada",
+      "v": 8.2
+     },
+     {
+      "k": "tv:245648",
+      "t": "El refugio atómico",
+      "v": 6.3
+     },
+     {
+      "k": "tv:241473",
+      "t": "La señal",
+      "v": 6.4
+     },
+     {
+      "k": "tv:93808",
+      "t": "Tribus de Europa",
+      "v": 6.9
+     },
+     {
+      "k": "tv:239770",
+      "t": "Doctor Who",
+      "v": 6.4
+     },
+     {
+      "k": "tv:85424",
+      "t": "Osmosis",
+      "v": 5.5
+     },
+     {
+      "k": "tv:89233",
+      "t": "Away",
+      "v": 6.6
+     },
+     {
+      "k": "tv:93522",
+      "t": "La valla",
+      "v": 7
+     },
+     {
+      "k": "tv:137040",
+      "t": "El caballero negro",
+      "v": 7.4
+     },
+     {
+      "k": "tv:76604",
+      "t": "Primero bésame",
+      "v": 6.4
+     },
+     {
+      "k": "tv:90811",
+      "t": "Avenue 5",
+      "v": 6.6
+     },
+     {
+      "k": "tv:75758",
+      "t": "Lost in Space",
+      "v": 7.5
+     },
+     {
+      "k": "tv:79680",
+      "t": "Snowpiercer: Rompenieves",
+      "v": 7.4
+     },
+     {
+      "k": "tv:62017",
+      "t": "El hombre en el castillo",
+      "v": 7.5
+     },
+     {
+      "k": "tv:96777",
+      "t": "Mar de la tranquilidad",
+      "v": 7.6
+     },
+     {
+      "k": "tv:92830",
+      "t": "Obi-Wan Kenobi",
+      "v": 7
+     },
+     {
+      "k": "tv:42009",
+      "t": "Black Mirror",
+      "v": 8.3
+     },
+     {
+      "k": "tv:83867",
+      "t": "Andor",
+      "v": 8.3
+     },
+     {
+      "k": "tv:73157",
+      "t": "Future Man",
+      "v": 7.1
+     },
+     {
+      "k": "tv:79130",
+      "t": "Otra vida",
+      "v": 6.1
+     }
+    ]
+   },
+   {
+    "key": "genre:terror",
+    "titulo": "terror",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 7.23,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "tv:247518",
+      "t": "Grotesquerie",
+      "v": 7.3
+     },
+     {
+      "k": "tv:285838",
+      "t": "Si los deseos mataran...",
+      "v": 8.1
+     },
+     {
+      "k": "tv:76819",
+      "t": "Requiem",
+      "v": 6.2
+     },
+     {
+      "k": "tv:158396",
+      "t": "Monstruos de Cracovia",
+      "v": 6
+     },
+     {
+      "k": "tv:203502",
+      "t": "School Tales: The Series",
+      "v": 7.4
+     },
+     {
+      "k": "tv:259265",
+      "t": "Algo terrible está a punto de suceder",
+      "v": 6.6
+     },
+     {
+      "k": "tv:84661",
+      "t": "El visitante",
+      "v": 7.4
+     },
+     {
+      "k": "tv:273081",
+      "t": "No vengas a casa",
+      "v": 7.9
+     },
+     {
+      "k": "tv:92916",
+      "t": "Marianne",
+      "v": 7.6
+     },
+     {
+      "k": "tv:157004",
+      "t": "Pesadillas",
+      "v": 7.1
+     },
+     {
+      "k": "tv:83659",
+      "t": "El gabinete de curiosidades de Guillermo del Toro",
+      "v": 7.5
+     },
+     {
+      "k": "tv:157065",
+      "t": "La caída de la casa Usher",
+      "v": 7.6
+     },
+     {
+      "k": "tv:65784",
+      "t": "Slasher",
+      "v": 6.7
+     },
+     {
+      "k": "tv:128098",
+      "t": "Entrevista con el vampiro",
+      "v": 7.6
+     },
+     {
+      "k": "tv:106651",
+      "t": "Rumbo al infierno",
+      "v": 7.3
+     },
+     {
+      "k": "tv:97400",
+      "t": "Misa de medianoche",
+      "v": 7.6
+     },
+     {
+      "k": "tv:78036",
+      "t": "Las crónicas del miedo",
+      "v": 7.2
+     },
+     {
+      "k": "tv:69470",
+      "t": "Santa Clarita Diet",
+      "v": 7.4
+     },
+     {
+      "k": "tv:1413",
+      "t": "American Horror Story",
+      "v": 8.1
+     },
+     {
+      "k": "tv:115915",
+      "t": "El bebé",
+      "v": 6.1
+     }
+    ]
+   },
+   {
+    "key": "genre:drama",
+    "titulo": "drama",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 8.07,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "tv:34524",
+      "t": "Teen Wolf",
+      "v": 8.4
+     },
+     {
+      "k": "tv:250307",
+      "t": "The Pitt",
+      "v": 8.7
+     },
+     {
+      "k": "tv:56570",
+      "t": "Outlander",
+      "v": 8.2
+     },
+     {
+      "k": "tv:84958",
+      "t": "Loki",
+      "v": 8.2
+     },
+     {
+      "k": "tv:76331",
+      "t": "Succession",
+      "v": 8.3
+     },
+     {
+      "k": "tv:82782",
+      "t": "Los Gemstone",
+      "v": 7.5
+     },
+     {
+      "k": "tv:126308",
+      "t": "Shōgun",
+      "v": 8.4
+     },
+     {
+      "k": "tv:1621",
+      "t": "Boardwalk Empire",
+      "v": 8
+     },
+     {
+      "k": "tv:76669",
+      "t": "Élite",
+      "v": 8
+     },
+     {
+      "k": "tv:111803",
+      "t": "The White Lotus",
+      "v": 7.6
+     },
+     {
+      "k": "tv:60574",
+      "t": "Peaky Blinders",
+      "v": 8.5
+     },
+     {
+      "k": "tv:10545",
+      "t": "True Blood (Sangre fresca)",
+      "v": 7.6
+     },
+     {
+      "k": "tv:100088",
+      "t": "The Last of Us",
+      "v": 8.4
+     },
+     {
+      "k": "tv:105",
+      "t": "Sexo en Nueva York",
+      "v": 7.4
+     },
+     {
+      "k": "tv:61056",
+      "t": "Cómo defender a un asesino",
+      "v": 7.8
+     },
+     {
+      "k": "tv:2734",
+      "t": "Ley y orden: Unidad de Víctimas Especiales",
+      "v": 8
+     },
+     {
+      "k": "tv:200709",
+      "t": "Un héroe débil",
+      "v": 8.7
+     },
+     {
+      "k": "tv:106158",
+      "t": "Ley y orden: Crimen organizado",
+      "v": 7.9
+     },
+     {
+      "k": "tv:224372",
+      "t": "El caballero de los Siete Reinos",
+      "v": 8.4
+     },
+     {
+      "k": "tv:124101",
+      "t": "Hacks",
+      "v": 7.5
+     }
+    ]
+   },
+   {
+    "key": "genre:comedia",
+    "titulo": "comedia",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 7.29,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "tv:204284",
+      "t": "Los ensayos",
+      "v": 8
+     },
+     {
+      "k": "tv:1100",
+      "t": "Cómo conocí a vuestra madre",
+      "v": 8.1
+     },
+     {
+      "k": "tv:92782",
+      "t": "Ms. Marvel",
+      "v": 6.3
+     },
+     {
+      "k": "tv:18347",
+      "t": "Community",
+      "v": 8
+     },
+     {
+      "k": "tv:4602",
+      "t": "Raven",
+      "v": 7.2
+     },
+     {
+      "k": "tv:221300",
+      "t": "FUBAR",
+      "v": 6.6
+     },
+     {
+      "k": "tv:74577",
+      "t": "The End of the F***ing World",
+      "v": 8
+     },
+     {
+      "k": "tv:206829",
+      "t": "El régimen",
+      "v": 6.1
+     },
+     {
+      "k": "tv:4608",
+      "t": "Rockefeller Plaza",
+      "v": 7.5
+     },
+     {
+      "k": "tv:901",
+      "t": "The Sarah Silverman Program",
+      "v": 6.3
+     },
+     {
+      "k": "tv:252372",
+      "t": "Mindfulness para asesinos",
+      "v": 7.6
+     },
+     {
+      "k": "tv:2317",
+      "t": "Me llamo Earl",
+      "v": 7.6
+     },
+     {
+      "k": "tv:258742",
+      "t": "Todas las de la ley",
+      "v": 4.7
+     },
+     {
+      "k": "tv:133748",
+      "t": "Twisted Metal",
+      "v": 7.7
+     },
+     {
+      "k": "tv:1417",
+      "t": "Glee",
+      "v": 6.8
+     },
+     {
+      "k": "tv:8624",
+      "t": "De culo y cuesta abajo",
+      "v": 7.4
+     },
+     {
+      "k": "tv:64010",
+      "t": "Respuesta 1988",
+      "v": 8.8
+     },
+     {
+      "k": "tv:62490",
+      "t": "El negocio",
+      "v": 7.8
+     },
+     {
+      "k": "tv:94796",
+      "t": "Crash Landing on You",
+      "v": 8.5
+     },
+     {
+      "k": "tv:62117",
+      "t": "Younger",
+      "v": 6.8
+     }
+    ]
+   },
+   {
+    "key": "genre:documental",
+    "titulo": "documental",
+    "tipo": "tv",
+    "n": 20,
+    "nota": 7.27,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "tv:220499",
+      "t": "MH370: El avión que desapareció",
+      "v": 6.6
+     },
+     {
+      "k": "tv:127626",
+      "t": "Cómo se convirtieron en tiranos",
+      "v": 7.3
+     },
+     {
+      "k": "tv:93514",
+      "t": "La mente, en pocas palabras",
+      "v": 7.5
+     },
+     {
+      "k": "tv:102281",
+      "t": "Lenox Hill",
+      "v": 6.8
+     },
+     {
+      "k": "tv:263089",
+      "t": "Vince McMahon: El titán de la WWE",
+      "v": 7.8
+     },
+     {
+      "k": "tv:66185",
+      "t": "La historia de Dios con Morgan Freeman",
+      "v": 7.5
+     },
+     {
+      "k": "tv:85833",
+      "t": "Conversaciones con asesinos: Las cintas de Ted Bundy",
+      "v": 7.5
+     },
+     {
+      "k": "tv:206246",
+      "t": "Fiasco total: Woodstock 99",
+      "v": 7.3
+     },
+     {
+      "k": "tv:61929",
+      "t": "The Jinx (El gafe)",
+      "v": 8
+     },
+     {
+      "k": "tv:103506",
+      "t": "Jeffrey Epstein: Asquerosamente rico",
+      "v": 7.1
+     },
+     {
+      "k": "tv:110971",
+      "t": "How To with John Wilson",
+      "v": 8.1
+     },
+     {
+      "k": "tv:21421",
+      "t": "El caso de la escalera",
+      "v": 7.6
+     },
+     {
+      "k": "tv:74851",
+      "t": "Más allá de Stranger Things",
+      "v": 7.5
+     },
+     {
+      "k": "tv:46664",
+      "t": "África",
+      "v": 8.3
+     },
+     {
+      "k": "tv:68708",
+      "t": "El sangriento Imperio Romano",
+      "v": 6.9
+     },
+     {
+      "k": "tv:118043",
+      "t": "Estados Unidos: La lucha por la libertad",
+      "v": 7.1
+     },
+     {
+      "k": "tv:132719",
+      "t": "La casa de papel: De Tokio a Berlín",
+      "v": 8.2
+     },
+     {
+      "k": "tv:124337",
+      "t": "El dinero, en pocas palabras",
+      "v": 7.2
+     },
+     {
+      "k": "tv:91505",
+      "t": "La Familia",
+      "v": 6.7
+     },
+     {
+      "k": "tv:323111",
+      "t": "Michael Jackson: El veredicto",
+      "v": 4.5
+     }
+    ]
+   },
+   {
+    "key": "family",
+    "titulo": "🍿 Para toda la familia",
+    "tipo": null,
+    "n": 40,
+    "nota": 7.3,
+    "bajos": 0,
+    "items": [
+     {
+      "k": "movie:1022789",
+      "t": "Del revés 2 (Inside Out 2)",
+      "v": 7.5
+     },
+     {
+      "k": "movie:269149",
+      "t": "Zootrópolis",
+      "v": 7.8
+     },
+     {
+      "k": "movie:136799",
+      "t": "Trolls",
+      "v": 6.6
+     },
+     {
+      "k": "movie:129",
+      "t": "El viaje de Chihiro",
+      "v": 8.5
+     },
+     {
+      "k": "movie:10192",
+      "t": "Shrek, felices para siempre",
+      "v": 6.4
+     },
+     {
+      "k": "movie:301528",
+      "t": "Toy Story 4",
+      "v": 7.5
+     },
+     {
+      "k": "movie:181533",
+      "t": "Noche en el museo: El secreto del faraón",
+      "v": 6.2
+     },
+     {
+      "k": "movie:360920",
+      "t": "El Grinch",
+      "v": 6.9
+     },
+     {
+      "k": "movie:417859",
+      "t": "El gato con botas",
+      "v": 6.6
+     },
+     {
+      "k": "movie:1593",
+      "t": "Noche en el museo",
+      "v": 6.6
+     },
+     {
+      "k": "movie:940551",
+      "t": "Migración. Un viaje patas arriba",
+      "v": 7.4
+     },
+     {
+      "k": "movie:15512",
+      "t": "Monstruos contra alienígenas",
+      "v": 6.3
+     },
+     {
+      "k": "movie:20352",
+      "t": "Gru Mi villano favorito",
+      "v": 7.3
+     },
+     {
+      "k": "movie:166428",
+      "t": "Cómo entrenar a tu dragón 3",
+      "v": 7.8
+     },
+     {
+      "k": "movie:118",
+      "t": "Charlie y la fábrica de chocolate",
+      "v": 7
+     },
+     {
+      "k": "movie:153518",
+      "t": "Angry Birds: La película",
+      "v": 6.3
+     },
+     {
+      "k": "movie:950387",
+      "t": "Una película de Minecraft",
+      "v": 6.2
+     },
+     {
+      "k": "movie:77950",
+      "t": "Turbo",
+      "v": 6.3
+     },
+     {
+      "k": "movie:9502",
+      "t": "Kung Fu Panda",
+      "v": 7.3
+     },
+     {
+      "k": "movie:18360",
+      "t": "Noche en el museo 2",
+      "v": 6.2
+     },
+     {
+      "k": "tv:31251",
+      "t": "Victorious",
+      "v": 8.2
+     },
+     {
+      "k": "tv:15079",
+      "t": "Zack y Cody: Todos a bordo",
+      "v": 7.7
+     },
+     {
+      "k": "tv:4232",
+      "t": "Don Gato y su pandilla",
+      "v": 7.5
+     },
+     {
+      "k": "tv:2675",
+      "t": "La sirenita",
+      "v": 7
+     },
+     {
+      "k": "tv:21641",
+      "t": "¡Buena suerte, Charlie!",
+      "v": 7.9
+     },
+     {
+      "k": "tv:45666",
+      "t": "Sam y Cat",
+      "v": 7.6
+     },
+     {
+      "k": "tv:1988",
+      "t": "ThunderCats",
+      "v": 8.2
+     },
+     {
+      "k": "tv:4429",
+      "t": "Timón y Pumba",
+      "v": 7.2
+     },
+     {
+      "k": "tv:670",
+      "t": "Baby Looney Tunes",
+      "v": 7.1
+     },
+     {
+      "k": "tv:38974",
+      "t": "Jessie",
+      "v": 8
+     },
+     {
+      "k": "tv:4575",
+      "t": "Lizzie McGuire",
+      "v": 7.2
+     },
+     {
+      "k": "tv:12225",
+      "t": "Peppa Pig",
+      "v": 6.6
+     },
+     {
+      "k": "tv:132559",
+      "t": "Los Crood: Árbol genealógico",
+      "v": 7.2
+     },
+     {
+      "k": "tv:115577",
+      "t": "Sonic Prime",
+      "v": 8.3
+     },
+     {
+      "k": "tv:3498",
+      "t": "Los magos de Waverly Place",
+      "v": 8.6
+     },
+     {
+      "k": "tv:97441",
+      "t": "¡Guau, qué amigo!",
+      "v": 7.1
+     },
+     {
+      "k": "tv:3319",
+      "t": "El Pato Darwing",
+      "v": 7.4
+     },
+     {
+      "k": "tv:82728",
+      "t": "Bluey",
+      "v": 8.6
+     },
+     {
+      "k": "tv:720",
+      "t": "Patoaventuras",
+      "v": 7.7
+     },
+     {
+      "k": "tv:4574",
+      "t": "X Men, La Serie Animada",
+      "v": 8.2
+     }
+    ]
+   },
+   {
+    "key": "adult-anime",
+    "titulo": "🎬 Animación para adultos",
+    "tipo": null,
+    "n": 40,
+    "nota": 7.5,
+    "bajos": 1,
+    "items": [
+     {
+      "k": "movie:41498",
+      "t": "One Piece: Strong World",
+      "v": 7.4
+     },
+     {
+      "k": "movie:618353",
+      "t": "Batman: Death in the Family",
+      "v": 7
+     },
+     {
+      "k": "movie:1062807",
+      "t": "Spy x Family Código: Blanco",
+      "v": 7.2
+     },
+     {
+      "k": "movie:839033",
+      "t": "El señor de los anillos: La guerra de los Rohirrim",
+      "v": 6.5
+     },
+     {
+      "k": "movie:149870",
+      "t": "El viento se levanta",
+      "v": 7.8
+     },
+     {
+      "k": "movie:75624",
+      "t": "Naruto Shippuden 5: Prisión de Sangre",
+      "v": 7.2
+     },
+     {
+      "k": "movie:297556",
+      "t": "La Liga de la Justicia: El trono de Atlantis",
+      "v": 7
+     },
+     {
+      "k": "movie:399174",
+      "t": "Isla de perros",
+      "v": 7.8
+     },
+     {
+      "k": "movie:40662",
+      "t": "Batman: Capucha Roja",
+      "v": 7.8
+     },
+     {
+      "k": "movie:81",
+      "t": "Guerreros del viento",
+      "v": 7.9
+     },
+     {
+      "k": "movie:183011",
+      "t": "La Liga de la Justicia: La paradoja del tiempo",
+      "v": 7.9
+     },
+     {
+      "k": "movie:736074",
+      "t": "Batman: El Largo Halloween, Parte 2",
+      "v": 7.4
+     },
+     {
+      "k": "movie:1725116",
+      "t": "Simpsley",
+      "v": 7.9
+     },
+     {
+      "k": "movie:1297763",
+      "t": "Batman Ninja vs. Yakuza League",
+      "v": 6.7
+     },
+     {
+      "k": "movie:987400",
+      "t": "Batman Azteca: Choque de imperios",
+      "v": 7.6
+     },
+     {
+      "k": "movie:1376434",
+      "t": "Predator: Asesino de asesinos",
+      "v": 7.8
+     },
+     {
+      "k": "movie:16907",
+      "t": "Naruto: ¡Batalla ninja en la tierra de la nieve!",
+      "v": 7.3
+     },
+     {
+      "k": "movie:223702",
+      "t": "La fiesta de las salchichas",
+      "v": 5.7
+     },
+     {
+      "k": "movie:1034062",
+      "t": "Mortal Kombat Legends - Demonios y Ángeles",
+      "v": 6.8
+     },
+     {
+      "k": "movie:128",
+      "t": "La princesa Mononoke",
+      "v": 8.3
+     },
+     {
+      "k": "tv:3097",
+      "t": "Iron Man, La serie animada",
+      "v": 6.7
+     },
+     {
+      "k": "tv:32315",
+      "t": "Sym-Bionic Titan",
+      "v": 8.5
+     },
+     {
+      "k": "tv:134297",
+      "t": "Olaf presenta",
+      "v": 7.2
+     },
+     {
+      "k": "tv:34356",
+      "t": "Tron: La resistencia",
+      "v": 7.6
+     },
+     {
+      "k": "tv:98214",
+      "t": "Villanos",
+      "v": 8.6
+     },
+     {
+      "k": "tv:77240",
+      "t": "Capitán Tsubasa",
+      "v": 8.2
+     },
+     {
+      "k": "tv:137720",
+      "t": "Los sustos ocultos de Frankelda",
+      "v": 8.6
+     },
+     {
+      "k": "tv:253811",
+      "t": "Tougen Anki",
+      "v": 7.5
+     },
+     {
+      "k": "tv:114501",
+      "t": "Dug y Carl",
+      "v": 7.4
+     },
+     {
+      "k": "tv:40044",
+      "t": "Hulk Y Los Agentes De S.M.A.S.H",
+      "v": 6.2
+     },
+     {
+      "k": "tv:133733",
+      "t": "Black Rock Shooter: Dawn Fall",
+      "v": 8.1
+     },
+     {
+      "k": "tv:62110",
+      "t": "Assassination Classroom",
+      "v": 8.4
+     },
+     {
+      "k": "tv:65228",
+      "t": "Animals.",
+      "v": 6.3
+     },
+     {
+      "k": "tv:195382",
+      "t": "Complejo Residencial C",
+      "v": 7.1
+     },
+     {
+      "k": "tv:114505",
+      "t": "Palomitas Pixar",
+      "v": 7.2
+     },
+     {
+      "k": "tv:239478",
+      "t": "SAND LAND: THE SERIES",
+      "v": 8.1
+     },
+     {
+      "k": "tv:203085",
+      "t": "Star Wars: Las crónicas jedi",
+      "v": 8
+     },
+     {
+      "k": "tv:236994",
+      "t": "Dragon Ball Daima",
+      "v": 8.2
+     },
+     {
+      "k": "tv:80671",
+      "t": "Cells at work!",
+      "v": 8.1
+     },
+     {
+      "k": "tv:79356",
+      "t": "Tuca y Bertie",
+      "v": 6.9
+     }
+    ]
+   }
+  ]
+ },
+ "nota": "foto tomada con scripts/medir-rieles.mjs",
+ "tmdb": "200×722"
+}

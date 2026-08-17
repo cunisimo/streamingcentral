@@ -130,6 +130,17 @@ export interface DiscoverOpts {
 export function discover(type: MediaType, o: DiscoverOpts = {}) {
   const p: Record<string, string> = {
     with_watch_monetization_types: "flatrate",
+    // Los dos defaults de abajo son FILTROS REALES que nadie decidió por
+    // superficie, y los dos tienen issue abierto: `sort_by` es el #9 y el piso
+    // de 60 votos es el #12. El de votos es el que va en contra del producto:
+    // saca cine argentino y latinoamericano de toda superficie que no lo pise.
+    // No cambiarlo acá sin leer el #12 — la decisión es del dueño y quiere verla
+    // medida.
+    //
+    // Lo que NO se puede agregar acá ni en ningún otro lado: un piso de NOTA.
+    // El puntaje de TMDB no se usa nunca para excluir títulos en esta app, solo
+    // para medir (ver el principio en CLAUDE.md). Si hay que ajustar la mezcla
+    // del Home, se ajusta QUÉ ejes rotan y con qué frecuencia, no la nota.
     sort_by: o.sortBy ?? "popularity.desc",
     "vote_count.gte": String(o.minVotes ?? 60),
     page: String(o.page ?? 1),

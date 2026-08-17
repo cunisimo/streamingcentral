@@ -130,6 +130,20 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `supervivencia` (`balanceDocs`: la proporción se calcula sobre `genres`, que es
   de `UITitle` y no existe en el crudo). Sirven además de control al medir.
   Interruptor de emergencia: `HERO_ANCHO=0` vuelve al camino viejo.
+- **Los rieles de género rotan el eje por día** (`superficie: "riel"`), igual que
+  audiencia y el hero. Era la última superficie que pedía siempre popularidad
+  páginas 1-3 — la más grande del Home y la que menos variedad daba. Kill switch:
+  `EJES_RIELES=0`.
+  **Lo que decide acá es `FETCH_BUFFER`, no `MAX_VUELTAS`.** Medido en un día de
+  `hondo` con el tope en 1, 2, 4, 6 y 8: resultado idéntico en los cinco. Cada
+  riel llena sus 20 tarjetas en UNA vuelta, pagando 28 enriquecidos, porque pide
+  3 páginas de entrada (~130-180 candidatos). Audiencia pide UNA página por
+  vuelta, y por eso ahí el tope sí ata. El desglose sale en el log
+  `[home] VUELTAS`.
+  **La página extra de fallback reusa el eje ya resuelto** (`ejeFijo`): tiene que
+  ser la página siguiente de la MISMA receta. Con `hondo`, que arranca en la 4,
+  la ventana ya trajo 4-6 y la extra es la 7 — pedir la 4 fija le habría dado lo
+  que ya tenía, y justo al riel más profundo, que es el único que la necesita.
 - **Un eje que no puede llenar no se usa** (`candidatosConEje` en `lib/pools.ts`).
   Los cinco ejes se calibraron contra superficies grandes, donde siempre hay
   material. En una angosta no: "Contacto extraterrestre" tiene 19 títulos en
@@ -153,6 +167,23 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   filtrar (`sin-catalogo`), el problema es nuestro y pedirle que active algo lo
   manda a buscar un botón que no arregla nada. `recommendations()` devuelve
   `{ items, motivo }` justamente para poder distinguirlos.
+- **El puntaje de TMDB NO se usa nunca como filtro de exclusión, solo como
+  medición.** Lo que busca esta app es variedad, y `vote_average` está sesgado
+  por popularidad e idioma: hay cine de 5 que tiene que estar. Auditado el
+  2026-08-16, **en la app viva no hay ningún piso de nota** — `vote_average`
+  solo ORDENA (en el eje `top`). Los dos pisos de nota que existen
+  (`MIN_NOTA` 6.2 en el pipeline de la ruleta, 6.0 en el de shorts) son del
+  pipeline **offline**, que es curado por definición.
+  Esto vale sobre todo para la **personalización** que viene: personalizar va a
+  ser reordenar y esconder lo ya visto, **nunca imponer pisos de calidad**. A
+  quien le gusta el drama hay que darle drama, aunque las notas del género sean
+  bajas.
+  Los pisos que sí filtran son de **cantidad de votos**, y conviene tenerlos a
+  la vista: `discover()` trae **60 por defecto** (`lib/tmdb.ts`) y ese es el
+  único que nadie decidió por superficie — excluye cine regional en todas, y es
+  el gemelo del **issue #9**. Los demás son explícitos y medidos: 300 en el eje
+  `top` y en `genreCovers()`, 10 en el eje `nuevo`, 60 en `lib/top.ts`, y **0**
+  en `latestReleases`.
 - **Animación y familia son DOS filtros separados, y el `scope` lo decide el
   llamador** (`lib/audience.ts` → `excludedGenres`). Mezclarlos ya causó dos bugs
   reportados, así que no volver a unirlos:

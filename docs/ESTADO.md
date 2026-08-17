@@ -1,7 +1,7 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 16 de agosto de 2026.**
+> **Última actualización: 17 de agosto de 2026.**
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -9,12 +9,16 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 
 ---
 
-## Estado de despliegue: al día
+## Estado de despliegue
 
 ```
-origin/main   644f79c
-main local    644f79c   ← nada sin pushear
+origin/main   ab4e189   ← main al día, nada sin pushear
+feat/ejes-rieles-genero  1912f56   ← pusheada como respaldo, SIN mergear
 ```
+
+`feat/ejes-rieles-genero` está en el remoto solo para que no viva en una sola
+máquina. **No está mergeada**: espera la prueba a mano del dueño, y tiene un
+criterio de aceptación fallado (ver más abajo).
 
 `feat/hero-universo` está mergeada (probada a mano por el dueño) y **todo lo que
 estaba pendiente de subir se pusheó el 16/08**: la rotación de ejes de los
@@ -145,14 +149,115 @@ devuelve el hero al camino viejo sin tocar código.
 
 ---
 
+## Rieles de género con rotación de ejes — **cerrado, con una falla ACEPTADA**
+
+Rama `feat/ejes-rieles-genero` (`1912f56`). Cierra el paso 3: era la última
+superficie del Home que pedía siempre popularidad páginas 1-3.
+
+| Criterio | Resultado |
+|---|---|
+| Cobertura semanal ≥ hoy | ✅ 5 de 6 suben; `scifi/tv` plano (22 títulos en total, issue #10) |
+| Solapamiento día a día baja | ✅ 13%→2%, 10%→3%, 12%→5%, 9%→2%, 19%→2% |
+| Piso de 15 ítems por riel | ✅ mínimo 20/día (19 un día en scifi/series) |
+| Ningún riel vacío en 7 días, películas y series | ✅ 0 vacíos en los tres bloques |
+| Kill switch | ✅ `EJES_RIELES=0` (se usó para medir todo el "antes") |
+| TMDB en frío en día de `hondo`/`nuevo` | ✅ +9 pools, sin diferencia de tiempo |
+| **Calidad: no empeorar el % bajo 6.0 por riel** | ❌ **FALLA, aceptada** (ver abajo) |
+
+Cobertura (base): accion 99→**120**, terror 102→**126**, drama 96→**121**,
+comedia 98→**120**, documental 72→**110**, scifi 22→22.
+
+### El criterio de calidad FALLÓ y se aceptó igual — no pasó
+
+Promediado sobre los 7 días, estado base:
+
+| riel | <6.0 antes→después | <5.0 antes→después |
+|---|---|---|
+| comedia | 4% → **12%** | 0% → 1% |
+| terror | 24% → **31%** | 1% → 2% |
+| accion | 4% → **8%** | 0% → 1% |
+| drama | 0% → **1%** | 0% → 1% |
+| documental | 5% → 3% | 4% → 2% |
+| scifi | 5% → 5% | 0% → 0% |
+
+**NO ESTÁ CUMPLIDO. Se aceptó como falla, no como cumplido.** Si alguien lee
+esto en seis meses: este criterio no pasó. Se mergeó de todas formas, y el
+motivo está abajo.
+
+**Por qué se aceptó.** El dueño probó a mano los dos peores días (17/08 en
+terror con `hondo`, 21/08 en comedia con `taquilla`) y miró los títulos que
+entran, no los porcentajes. Son secuelas de terror de los 2000 y comedias de
+Eddie Murphy: **cine popular con nota tibia, que cae en la franja de 5 a 6 y que
+forma parte de la variedad que el producto busca.** El veredicto fue sobre el
+contenido, que es lo que ningún porcentaje contesta.
+
+**Por qué aceptarlo NO sería acomodar la vara.** El umbral de 5.0 se pidió
+**antes** de ver estos resultados, porque el dueño no confiaba en el 6.0 como
+línea (el puntaje de TMDB está sesgado por popularidad e idioma). La
+reinterpretación quedó registrada de antemano, y esa es exactamente la
+diferencia con mover el arco después del tiro: el criterio secundario existía
+antes del disparo, no se inventó para justificar el resultado. Lo que el 5.0
+dice es que lo que entra son títulos de 5 a 6 —el catálogo abriéndose hacia el
+medio, que es la variedad buscada— y no cine malo.
+
+**Si de la prueba a mano sale que hay que ajustar algo, se ajusta QUÉ ejes rotan
+y con qué frecuencia** —que `nuevo` o `hondo` pesen menos, que no le toquen al
+mismo riel dos días seguidos—, **nunca agregando un piso de nota. Ninguna
+película se saca del Home por su puntaje.** Está escrito como principio en
+`CLAUDE.md`, en el comentario de `discover()` y en el issue #12.
+
+### Cómo volver a mirar el peor caso
+
+Mergeado el 17/08. Los dos días de abajo son los que más títulos de 5 a 6 meten
+en cada riel: sirven para volver a juzgar la composición si alguna vez se duda
+de la decisión.
+
+```bash
+npm run dev
+```
+
+Sin `next build` en paralelo (corrompe `.next`; si pasa, borrar la carpeta).
+
+**Los dos peores días, para no probar uno que salga lindo de casualidad.** Son
+los que más títulos de 5 a 6 meten en cada riel:
+
+```bash
+YUMP_FECHA=2026-08-17 npm run dev
+```
+
+Terror, eje `hondo`: **7 de 20 entre 5 y 6** (y 2 bajo 5). Lo que entra:
+El Halloween de Hubie (5.9), Mr. Crocket (5.2), Sé lo que hicisteis el último
+verano (5.6), El caimán humano (5.6), Cuarentena terminal (5.7), Pesadilla en
+Elm Street: El origen (5.5), La clásica historia de terror (5.8).
+
+```bash
+YUMP_FECHA=2026-08-21 npm run dev
+```
+
+Comedia, eje `taquilla`: **5 de 20 entre 5 y 6** (0 bajo 5). Lo que entra:
+Into the Woods (5.8), El profesor chiflado II (5.0), El profesor chiflado (5.6),
+Separados (5.9), Abuelos al poder (5.9).
+
+Qué más mirar:
+
+1. **Los seis rieles llenan 20** en los dos días, en Películas y en Series.
+2. **El toggle Películas/Series** de cada riel: el lado de series es donde
+   `scifi` y `terror` se quedaban en cero antes del guard.
+3. **La consola del server**: `[home] EJES` dice qué eje le tocó a cada riel, con
+   asterisco (`pop*`) cuando saltó el guard; `[home] VUELTAS` dice cuánto pagó
+   cada uno.
+4. **`scifi` en Series** va a verse casi igual todos los días: tiene 22 títulos
+   en total y no hay rotación posible (issue #10).
+
+Para volver al camino viejo y comparar en la misma pantalla:
+`EJES_RIELES=0 npm run dev`.
+
+---
+
 ## Lo que queda por hacer
 
 - **`home:v2`** — evaluar si el payload compuesto sigue teniendo sentido, ahora
   sí con los números del hero puestos.
-- **Rieles de género con rotación de ejes** — mismo trabajo que audiencia, pero
-  son once y usan el mismo mecanismo de vueltas (ver más abajo). **El guard de
-  ejes ya está puesto** (`categoryCandidates` con `superficie`), así que este
-  trabajo no vuelve a traer el bug de los chips angostos.
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
   retorno; el rearmado en frío es el caso raro.
 - Los diez issues de `docs/ISSUES.md`.
@@ -173,6 +278,8 @@ devuelve el hero al camino viejo sin tocar código.
 | #8 | `upcoming_content`: sesgo permanente hacia lo popular |
 | #9 | La popularidad es el orden por defecto en toda la app |
 | #10 | La rotación de ejes no le llega a los chips angostos (18 de 112 casillas caen a `pop`) |
+| #11 | "Últimos lanzamientos" tiene 35% de títulos bajo 6.0 |
+| #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
 
 ---
 
