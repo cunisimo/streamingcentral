@@ -280,6 +280,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
 | #10 | La rotación de ejes no le llega a los chips angostos (18 de 112 casillas caen a `pop`) |
 | #11 | "Últimos lanzamientos" tiene 35% de títulos bajo 6.0 |
 | #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
+| #13 | Los rieles de votos se actualizan al día siguiente (aceptado; se resuelve con la reserva de la tanda de toggles) |
 
 ---
 

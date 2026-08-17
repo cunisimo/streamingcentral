@@ -599,3 +599,47 @@ se cuela. `latestReleases` ya resolvió ese ruido sin votos, con
 **Criterio de cierre:** que `minVotes` sea una decisión explícita por superficie
 —idealmente un parámetro obligatorio, como propone #9 para `sort_by`— y que el
 número de cada una salga de una medición y no del default.
+
+
+---
+
+## #13 — Los rieles de votos se actualizan al día Yump siguiente
+
+**Estado:** abierto (aceptado a conciencia) · **Prioridad:** baja · **Abierto:** 2026-08-17
+
+Con `TTL.home` en 26 h, "Lo más votados" y "No gustaron" pasan de reflejar un
+voto nuevo en 6 h a hacerlo al día siguiente. **El dueño lo aceptó midiendo**,
+no por descarte, y con el volumen de votos actual no lo nota nadie.
+
+Es el patrón de siempre: **el componente barato le impone la cadencia al caro.**
+Los dos rieles de votos cuestan una consulta a Supabase y unas cards cacheadas;
+viajan adentro de un payload que cuesta ~516 llamadas a TMDB, y por eso heredan
+su TTL.
+
+### La solución cuando se haga, que NO es ninguna de las dos obvias
+
+Al medirlo se propusieron dos caminos y **los dos están descartados**:
+
+| Camino | Por qué no |
+|---|---|
+| Deduplicar los votos al final | Los demota: hoy reservan antes que los rieles de género y se llevan lo mejor. Perderían hasta 16 títulos |
+| Cachearlos aparte sin mover la prioridad | Debilita el dedup: el payload largo dedupleó contra el conjunto de votos VIEJO, así que un título recién votado puede aparecer dos veces |
+
+**Lo que se quiere es conservar la prioridad de los votos Y rellenar los rieles
+de género desde la reserva.** O sea: los votos siguen eligiendo primero, y lo
+que le sacan a un riel de género se repone desde el margen que ese riel ya va a
+traer. No se debilita el dedup y no se demota a nadie.
+
+Eso **depende de la tanda de los toggles**, que es la que introduce la reserva
+(cada riel viajando con más ítems de los que muestra). Antes de esa tanda, este
+issue no se puede resolver bien; después, sale casi solo.
+
+**Criterio de cierre:** que un voto se refleje en minutos, sin que ningún riel
+de género pierda ítems ni aparezca un título dos veces en el Home.
+
+### Medido el 2026-08-17
+
+Los dos rieles reservan **49 títulos**; **16** aparecen también en los pools de
+candidatos de los rieles de género (sobre 766). Ese 16 es el techo de cuántos
+habría que reponer desde la reserva — el número real es menor, porque estar en
+el pool no significa entrar en las 20 visibles.
