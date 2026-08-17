@@ -539,3 +539,63 @@ Direcciones posibles, ninguna evaluada todavía:
 
 **Criterio de cierre:** que se decida cuál de las tres, con el número medido
 antes y después. Hoy el número existe (35%) y la decisión no.
+
+
+---
+
+## #12 — El piso de 60 votos de `discover()` excluye cine regional en toda la app
+
+**Estado:** abierto · **Prioridad:** alta · **Abierto:** 2026-08-17
+**No tocar todavía:** el dueño quiere decidirlo viendo qué aparece si se saca.
+
+`discover()` tiene `"vote_count.gte": String(o.minVotes ?? 60)`
+([`lib/tmdb.ts`](../lib/tmdb.ts)). **Toda superficie que no pise `minVotes`
+hereda ese 60**, y nadie lo decidió por superficie: es un default silencioso,
+igual que el `sort_by: popularity.desc` del **issue #9**. Los dos salieron de la
+misma línea de código y del mismo descuido.
+
+Es el único piso de la app que va **en contra** de lo que el producto busca. La
+app es un agregador argentino y esto saca, sin avisar, buena parte del cine
+argentino y latinoamericano: una película local con 40 votos en TMDB no existe
+para ninguna de las superficies de abajo, aunque esté en Netflix AR.
+
+### Quiénes lo heredan (sin decidirlo)
+
+| Superficie | Vía |
+|---|---|
+| `/categoria/[slug]` y los modos de navegación del buscador | `/api/discover` → `listByCategory` sin `minVotes` |
+| Recomendador, ruta angosta (`reales`, `supervivencia`) | `listByCategory` sin `minVotes` |
+| Relleno de los chips curados cuando no llegan al piso | `listByCategory` sin `minVotes` |
+
+### Quiénes NO lo heredan (lo declaran)
+
+| Superficie | Piso | Por qué |
+|---|---|---|
+| `latestReleases` | **0** explícito | un estreno no juntó votos todavía |
+| eje `nuevo` | 10 | mismo motivo, más laxo |
+| ejes `pop`, `taquilla`, `hondo` | 60 explícito | mismo valor, pero elegido |
+| eje `top` | 300 | medido: con 60 el ranking se llena de nicho |
+| `genreCovers()` | 300 | elegir UN póster representativo |
+| `lib/top.ts` | 60 explícito | medido contra Netflix AR |
+
+`supabase/functions/tmdb-sync` tiene su propia implementación de `discover` (es
+una edge function de Deno, aparte) y no comparte este default. Hay que revisarla
+por separado.
+
+### Lo que NO es la solución
+
+Bajar el piso a un número más chico elegido a ojo. Y **jamás** reemplazarlo por
+un piso de nota: ver el principio en `CLAUDE.md` — el puntaje de TMDB no se usa
+nunca para excluir títulos en esta app, solo para medir.
+
+### Cómo decidirlo
+
+Medir qué APARECE con el piso en 0, no razonar sobre qué debería aparecer. Las
+preguntas: cuántos títulos nuevos entran por superficie, qué proporción son cine
+regional, y cuánto ruido real (títulos sin traducir, sin sinopsis, sin póster)
+se cuela. `latestReleases` ya resolvió ese ruido sin votos, con
+`soloCompletos` (póster + sinopsis), y ese es el camino a evaluar primero.
+
+**Criterio de cierre:** que `minVotes` sea una decisión explícita por superficie
+—idealmente un parámetro obligatorio, como propone #9 para `sort_by`— y que el
+número de cada una salga de una medición y no del default.
