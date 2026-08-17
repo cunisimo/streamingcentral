@@ -286,25 +286,44 @@ export async function cached<T>(key: string, ttl: number, fetcher: () => Promise
 // (TMDB caído, rieles vacíos) es un resultado válido que hay que devolver, pero
 // guardarlo congelaría la caída durante toda la vida del TTL para todos los que
 // pidan lo mismo.
-// `ttlDe` decide DESPUÉS de calcular: devuelve los segundos que ese resultado
-// merece vivir, o `null` para no guardarlo. Antes era un booleano y un TTL fijo,
-// y no alcanzaba: un payload degradado no es "no guardar" ni "guardar como si
-// nada", es "guardar poquito".
+// Lectura y escritura sueltas, para quien necesita decidir ENTRE las dos.
+// Las usa el Home: su política de refresco (lib/home-refresco.ts) tiene que
+// mirar lo guardado antes de resolver si rearma, y con un helper del tipo
+// `cached(clave, ttl, fn)` esa decisión no tiene dónde meterse.
+export async function leerCache<T>(key: string): Promise<T | null> {
+  const v = await batchGet<T>(key);
+  return v === undefined ? null : v;
+}
+
+export async function escribirCache(key: string, data: unknown, ttl: number) {
+  await guardar(key, data, ttl);
+}
+
+// Cortafuegos de frecuencia: devuelve true UNA sola vez cada `segundos`, para
+// la misma clave. Es lo que impide que mil "Reintentar" durante una caída de
+// TMDB se conviertan en mil rearmados contra el servicio que está caído.
 //
-// `saltear` fuerza el recálculo ignorando lo que haya guardado, y pisa la
-// entrada con el resultado nuevo. Lo usa el botón "Reintentar".
-export async function cachedIf<T>(
-  key: string, fetcher: () => Promise<T>, ttlDe: (v: T) => number | null,
-  saltear = false,
-): Promise<T> {
-  if (!saltear) {
-    const hit = await batchGet<T>(key);
-    if (hit !== null && hit !== undefined) return hit;
+// Se apoya en SET NX, que es atómico: dos requests simultáneos no pueden ganar
+// los dos. En desarrollo (sin Redis) se emula con el Map — ahí no hay
+// concurrencia real entre instancias, así que alcanza.
+export async function tomarTurno(key: string, segundos: number): Promise<boolean> {
+  if (!redis) {
+    const hit = mem.get(key);
+    if (hit && hit.exp > Date.now()) return false;
+    mem.set(key, { v: 1, exp: Date.now() + segundos * 1000 });
+    anotar((m) => { m.comandos += 1; });
+    return true;
   }
-  const data = await fetcher();
-  const ttl = ttlDe(data);
-  if (ttl !== null) await guardar(key, data, ttl);
-  return data;
+  try {
+    const r = await redis.set(key, 1, { ex: segundos, nx: true });
+    anotar((m) => { m.comandos += 1; m.requests += 1; });
+    return r === "OK";
+  } catch (err) {
+    // Si el cortafuegos no se puede consultar, NO se rearma: ante la duda, la
+    // opción segura es servir lo que hay.
+    console.error("[cache] tomarTurno falló, no se rearma:", err);
+    return false;
+  }
 }
 
 // --- Motor "del día": determinístico por fecha ---

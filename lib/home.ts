@@ -36,7 +36,8 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
+import { dailySeed, escribirCache, leerCache, pickDaily, TTL, tomarTurno, withCacheMetrics } from "./cache";
+import { permiteRearmar, ttlDePayload } from "./home-refresco";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
@@ -501,13 +502,17 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): s
   return `home:v3:${dailySeed()}:${p}:${t}`;
 }
 
+// Cada cuánto se admite UN rearmado por clave cuando lo guardado está
+// degradado. Es el techo de daño de "Reintentar": con esto, mil personas
+// apretando durante una caída de TMDB producen un rearmado por minuto y no mil.
+const ESPERA_REFRESCO = 60;
+
 export async function homePayload(opts: {
   providers: PlatformCode[];
   types?: Record<string, MediaType>;
-  // Ignora lo cacheado y rearma. Lo manda el botón "Reintentar" del cliente:
-  // sin esto, reintentar durante una caída devolvía exactamente la misma foto
-  // rota que ya se estaba mirando (el payload degradado ahora SÍ se guarda,
-  // aunque por pocos minutos), y el botón no servía para nada.
+  // SOLICITUD de rearmado, del botón "Reintentar". No es una orden: el servidor
+  // solo la concede si lo guardado está degradado y hay turno disponible. Ver
+  // lib/home-refresco.ts.
   fresh?: boolean;
 }): Promise<HomePayload> {
   const types = opts.types ?? {};
@@ -526,19 +531,27 @@ export async function homePayload(opts: {
 
   // El scope de métricas envuelve TODO el armado, no solo el `cachedIf`: lo que
   // interesa medir son los cientos de lecturas que dispara composeHome adentro.
-  const { res: { res: payload, ejes }, metricas } = await withCacheMetrics(() => conRegistroDeEjes(() => cachedIf(
-    key,
-    () => { miss = true; return composeHome({ providers: opts.providers, types }); },
-    // Cuánto merece vivir cada resultado:
-    //  - "sin plataformas" no se guarda: no cuesta nada recalcularlo.
-    //  - degradado se guarda POCO. No guardarlo era peor de lo que parecía:
-    //    durante una caída de TMDB cada request rearmaba el Home entero contra
-    //    el servicio que estaba fallando. Unos minutos cortan esa estampida sin
-    //    congelar el problema, y "Reintentar" saltea igual.
-    //  - completo, el día entero.
-    (v) => (v.sinPlataformas ? null : v.degradado ? TTL.homeDegradado : TTL.home),
-    opts.fresh,
-  )));
+  const { res: { res: payload, ejes }, metricas } = await withCacheMetrics(() => conRegistroDeEjes(async () => {
+    const guardado = await leerCache<HomePayload>(key);
+    // El bypass lo decide el SERVIDOR mirando lo guardado, NO el parámetro del
+    // cliente. Ver el comentario largo en lib/home-refresco.ts: con el bypass a
+    // pedido, `?fresh=1` en bucle forzaba un rearmado completo por request
+    // (~558 comandos y ~516 llamadas a TMDB) y vaciaba las dos cuotas en
+    // minutos. `tomarTurno` es el cortafuegos que además limita la estampida
+    // cuando la caída es real y mil personas aprietan "Reintentar".
+    const rearmar = permiteRearmar({
+      pedido: !!opts.fresh,
+      guardado,
+      turno: guardado?.degradado ? await tomarTurno(`${key}:refresco`, ESPERA_REFRESCO) : false,
+    });
+    if (guardado && !rearmar) return guardado;
+
+    miss = true;
+    const nuevo = await composeHome({ providers: opts.providers, types });
+    const ttl = ttlDePayload(nuevo, TTL);
+    if (ttl !== null) await escribirCache(key, nuevo, ttl);
+    return nuevo;
+  }));
 
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
