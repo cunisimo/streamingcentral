@@ -9,25 +9,33 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 
 ---
 
-## Estado de despliegue
+## Estado de despliegue (17/08)
 
 ```
-origin/main   ab4e189   ← main al día, nada sin pushear
-feat/ejes-rieles-genero  1912f56   ← pusheada como respaldo, SIN mergear
+origin/main               11f0cae   ← al día
+feat/cookie-plataformas   4a3e44f   ← pusheada, SIN mergear
+feat/dia-rotacion         c607785   ← pusheada, SIN mergear
 ```
 
-`feat/ejes-rieles-genero` está en el remoto solo para que no viva en una sola
-máquina. **No está mergeada**: espera la prueba a mano del dueño, y tiene un
-criterio de aceptación fallado (ver más abajo).
+Las dos ramas están en el remoto **solo como respaldo**, para que no vivan en
+una sola máquina. Ninguna está mergeada: las dos esperan la prueba a mano del
+dueño.
 
-`feat/hero-universo` está mergeada (probada a mano por el dueño) y **todo lo que
-estaba pendiente de subir se pusheó el 16/08**: la rotación de ejes de los
-carruseles de audiencia, el cacheo de `publishedIds` y el hero ampliado con su
-arreglo de ejes.
+- **`feat/cookie-plataformas`** — las plataformas viajan también en una cookie,
+  para que el servidor pueda saberlas. Solo se escribe; `localStorage` sigue
+  siendo la fuente de verdad y nadie la lee todavía. Sin esto no hay render
+  progresivo posible. Falta ejercitar el `toggle()` del selector del header, que
+  no se pudo automatizar.
+- **`feat/dia-rotacion`** — `diaYump()` con borde 04:00, `TTL.home` a 26 h, el
+  payload degradado guardado poco, y el bypass del cache decidido por el
+  servidor.
+
+Ya en producción: el hero ampliado, la rotación de ejes en los seis rieles de
+género y en los carruseles de audiencia, el buscador predictivo y el renombre
+del riel "No gustaron".
 
 **Verificar que Vercel haya tomado el push.** Ya pasó tres veces que no lo
-detecta; se destraba con un commit vacío, no con Redeploy (ver la nota en la
-memoria del proyecto).
+detecta; se destraba con un commit vacío, no con Redeploy.
 
 ---
 
