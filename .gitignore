@@ -8,6 +8,11 @@ node_modules
 
 tsconfig.tsbuildinfo
 
+# Codex de ChatGPT trabaja sobre esta carpeta como auditor (lee, no modifica).
+# Su scratch es local y no le sirve a nadie más. `AGENTS.md` SÍ se versiona:
+# es el puntero que lo manda a CLAUDE.md.
+.codex/
+
 # Supabase CLI scratch
 supabase/.temp/
 
