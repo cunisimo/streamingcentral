@@ -18,8 +18,8 @@ import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import {
-  candidatosConEje, candidatosDePools, poolsHabilitados, recetaDelDia, registrarEje,
-  type Candidato, type ParamsReceta, type Receta,
+  candidatosConEje, candidatosDePools, poolsHabilitados, recetaDeEje, recetaDelDia, registrarEje,
+  type Candidato, type Eje, type ParamsReceta, type Receta,
 } from "./pools";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
@@ -1060,7 +1060,26 @@ export async function categoryCandidates(opts: {
   // llama `<superficie>-<eje>`. Lo usa el hero; los rieles de género todavía no.
   superficie?: string;
 }): Promise<RawTitle[]> {
-  if (!opts.providers.length) return [];
+  return (await candidatosDeSuperficie(opts)).candidatos;
+}
+
+// Igual que `categoryCandidates` pero devuelve además QUÉ eje se usó y desde
+// qué página. El Home lo necesita para su página extra de fallback: con el eje
+// rotativo, "la siguiente a las que ya pedí" no es la 4 fija, es la que sigue a
+// la ventana del eje (`hondo` arranca en la 4, así que su extra es la 7).
+export async function candidatosDeSuperficie(opts: {
+  tipo: MediaType; genre?: string; providers: PlatformCode[];
+  pages?: number; startPage?: number; sortBy?: string; minVotes?: number;
+  extra?: Record<string, string>; scope?: "home" | "browse";
+  superficie?: string;
+  // Reusa un eje YA resuelto en vez de elegir uno. Lo usa la página extra de
+  // fallback del Home: tiene que continuar el paginado de la misma receta con
+  // la que se armó la ventana, o los candidatos no serían comparables. Con esto
+  // `startPage` vuelve a mandar (que es lo que se quiere ahí) y no se vuelve a
+  // correr la verificación del guard, que ya se hizo.
+  ejeFijo?: Eje;
+}): Promise<{ candidatos: RawTitle[]; startPage: number; eje: Eje | null; degradado: boolean }> {
+  if (!opts.providers.length) return { candidatos: [], startPage: 1, eje: null, degradado: false };
   const ids = codesToTmdbIds(opts.providers);
   const rule = opts.genre && opts.genre !== "todos" ? resolveCategory(opts.genre, opts.tipo) : {};
   const pages = Math.max(1, opts.pages ?? 1);
@@ -1105,25 +1124,35 @@ export async function categoryCandidates(opts: {
   // comportamiento previo a los pools— y coincide con el eje base, así que lo
   // que se pierde es la rotación, no el contenido.
   if (opts.superficie && poolsHabilitados) {
-    const { candidatos } = await candidatosConEje({
-      superficie: `${opts.superficie}-${opts.genre ?? "todos"}`,
-      tipo: opts.tipo, providers: opts.providers, semilla: dailySeed(), base, pages,
+    const suf = `${opts.superficie}-${opts.genre ?? "todos"}`;
+    if (opts.ejeFijo) {
+      const r = recetaDeEje(opts.ejeFijo, { superficie: suf, tipo: opts.tipo, base });
+      const candidatos = await candidatosDePools({
+        tipo: opts.tipo, providers: opts.providers, receta: r.receta, pages, startPage,
+      });
+      return { candidatos, startPage, eje: opts.ejeFijo, degradado: false };
+    }
+    const r = await candidatosConEje({
+      superficie: suf, tipo: opts.tipo, providers: opts.providers,
+      semilla: dailySeed(), base, pages,
     });
-    return candidatos;
+    return { candidatos: r.candidatos, startPage: r.startPage, eje: r.eje, degradado: r.degradado };
   }
+
   // Camino viejo: UNA consulta por página con el conjunto entero de plataformas.
   if (!poolsHabilitados) {
     const res = await Promise.all(Array.from({ length: pages }, (_, i) =>
       discover(opts.tipo, { ...params, providers: ids, page: desde + i })));
-    return res.flatMap((r) => r.results);
+    return { candidatos: res.flatMap((r) => r.results), startPage: desde, eje: null, degradado: false };
   }
-  return candidatosDePools({
+  const candidatos = await candidatosDePools({
     tipo: opts.tipo,
     providers: opts.providers,
     receta: { nombre, params },
     pages,
     startPage: desde,
   });
+  return { candidatos, startPage: desde, eje: null, degradado: false };
 }
 
 // Enriquece una tanda de raw (providers por título, cacheado) y filtra a las

@@ -469,6 +469,22 @@ Un chip que muestra siempre lo mismo es un problema mucho menor que uno que no
 muestra nada, y `pop` sobre un catálogo de 19 títulos igual baraja con la semilla
 del día. El costo de no hacer nada es bajo.
 
+### Los rieles de género tienen el mismo techo
+
+Al sumar los ejes a los rieles (2026-08-16) apareció el mismo caso, y conviene
+tenerlo escrito para que nadie lea una mejora de cobertura y suponga que aplica
+a todo el Home:
+
+| riel/tipo | candidatos con el mejor eje |
+|---|---|
+| `scifi/tv` | **24** (22 con `pop`, 16 con `top`, 0 con `hondo`) |
+| `terror/tv` | 53 (0 con `hondo`) |
+
+**`scifi/tv` no puede mejorar su cobertura semanal**: su catálogo entero en
+n,d,m son ~22 títulos, y el riel muestra 20. Rote lo que rote, va a mostrar casi
+lo mismo todos los días. El guard evita que quede vacío, que es lo único que se
+puede hacer sin material.
+
 ### Si algún día se ataca
 
 La idea **no** es bajar el piso ni hacer que `hondo` pagine distinto: el material
@@ -490,3 +506,36 @@ clavado en uno.
 **Criterio de cierre:** que las 18 casillas degradadas de la semana bajen, y que
 ninguna quede vacía (o sea, sin perder lo que arregló el guard). La medición ya
 está: `medir-hero.mjs chips`, contando los `[ejes] ... se cae a` del log.
+
+
+---
+
+## #11 — "Últimos lanzamientos" tiene 35% de títulos bajo 6.0
+
+**Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-08-16
+
+Medido al fotografiar el Home antes de rotar los ejes de los rieles
+(`docs/medidas/2026-08-16-rieles-antes.json`): de los 20 títulos del riel,
+**el 35% tiene nota TMDB menor a 6.0** — con diferencia el peor del Home. El
+segundo es Terror con 20%, y el resto está entre 0% y 15%.
+
+No es un bug ni una regresión: es consecuencia directa de una decisión tomada a
+propósito. `latestReleases` pide `minVotes: 0` **explícito** (ver el comentario
+en `lib/enrich.ts`) porque exigir votos dejaba fuera los estrenos hasta que
+juntaran unos cuantos, o sea días. El criterio pasó a ser "ficha completa"
+(póster + sinopsis). El costo es este: un estreno con 12 votos y nota 4,8 entra.
+
+**Lo que NO hay que hacer:** ponerle un piso de nota. Ver el principio en
+`CLAUDE.md` — el puntaje de TMDB no se usa como filtro de exclusión en esta app,
+y menos en el riel de estrenos, donde la nota temprana es ruido estadístico
+(veinte votos no dicen nada) y además llegaría sesgada al cine local.
+
+Direcciones posibles, ninguna evaluada todavía:
+
+- Ordenar dentro del riel para que lo malo no encabece, sin sacarlo.
+- Un piso de votos bajo (5-10) en vez de 0, que saca lo que literalmente nadie
+  vio sin esperar a que junte 60.
+- Aceptarlo: es el riel de novedades, y las novedades son irregulares.
+
+**Criterio de cierre:** que se decida cuál de las tres, con el número medido
+antes y después. Hoy el número existe (35%) y la decisión no.
