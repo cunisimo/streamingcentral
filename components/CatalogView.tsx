@@ -6,6 +6,7 @@ import DesempateBanner from "./desempate/DesempateBanner";
 import RuletaBanner from "./ruleta/RuletaBanner";
 import UpcomingSection from "./upcoming/UpcomingSection";
 import OfflineState from "./pwa/OfflineState";
+import TeVaAGustar from "./TeVaAGustar";
 import { useOnline } from "@/hooks/useOnline";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
@@ -162,6 +163,20 @@ export default function CatalogView() {
               );
             })}
           </div>
+        )}
+
+        {/* "Te va a gustar" va DESPUÉS de los rieles y se pide aparte: si tarda
+            o falla, no aparece y nada de arriba se retrasa. Recibe las claves ya
+            mostradas para no repetir ninguna — el dedup del Home vive en el
+            composer y este riel no pasa por ahí. Con la carga degradada no se
+            muestra: el "enHome" estaría incompleto y repetiría títulos. */}
+        {hayContenido && !degradado && (
+          <TeVaAGustar
+            enHome={[
+              ...(data?.hero ?? []),
+              ...rails.flatMap((r) => r.items),
+            ].map((t) => `${t.type}:${t.id}`)}
+          />
         )}
       </div>
     </>

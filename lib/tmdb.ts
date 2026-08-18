@@ -185,6 +185,17 @@ export function searchPersonas(query: string, page = 1) {
   });
 }
 
+// Keywords de un título. OJO con la forma de la respuesta: TMDB las devuelve
+// bajo `keywords` en movie y bajo `results` en tv. No es un detalle: leer solo
+// una de las dos deja el cruce de tipo sin keywords para la mitad del catálogo,
+// y sin keywords el cruce no se intenta (ver lib/reco.ts).
+export async function tmdbKeywords(type: MediaType, id: number): Promise<{ id: number; name: string }[]> {
+  const r = await tmdb<{ keywords?: { id: number; name: string }[]; results?: { id: number; name: string }[] }>(
+    `/${type}/${id}/keywords`,
+  );
+  return r.keywords ?? r.results ?? [];
+}
+
 export interface CreditEntry extends RawTitle {
   media_type: MediaType;
   character?: string;
