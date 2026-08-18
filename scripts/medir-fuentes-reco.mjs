@@ -29,9 +29,14 @@
 //
 // La otra cara, y hay que tenerla presente al leer los resultados: en un título
 // de 5 votos `/recommendations` no puede ser comportamiento (nadie lo vio), es
-// el respaldo por contenido de TMDB. Coherente de género, pero genérico. Por eso
-// la auditoría del riel registra cuántos votos tenía el ORIGEN: es lo que
-// distingue una recomendación fuerte de una débil.
+// el respaldo por contenido de TMDB. Coherente de género, pero genérico.
+//
+// CORRECCIÓN, porque acá decía otra cosa y estaba mal: `vote_count` se registra
+// como CONTEXTO y nada más. NO se usa para excluir, ni para bajarle peso a nada,
+// ni para afirmar que una recomendación es fuerte o débil. Esa lectura es el
+// mismo error que ya está prohibido como principio del proyecto — popularidad
+// usada como proxy de calidad — y castiga justo al cine regional, que es lo que
+// esta app quiere mostrar. Ver CLAUDE.md y el issue #12.
 const T = process.env.TMDB_READ_TOKEN;
 const api = async (p, q = {}) => {
   const u = new URL("https://api.themoviedb.org/3" + p);
