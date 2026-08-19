@@ -1,4 +1,4 @@
-// "Te va a gustar" — el único riel personalizado del Home.
+// "Elegidas para vos" — el único riel personalizado del Home.
 //
 // QUÉ NO ES: no personaliza el Home. El Home sigue siendo universal y compartido
 // (ver la decisión sobre "Ya la vi" en CLAUDE.md). Esto es un riel más, aislado,

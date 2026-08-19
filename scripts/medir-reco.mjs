@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Arnés del riel "Te va a gustar": los CUATRO caminos, con el embudo completo.
+// Arnés del riel "Elegidas para vos": los CUATRO caminos, con el embudo completo.
 //
 //   node --env-file=.env.local --import ./scripts/cargar-lib.mjs \
 //        scripts/medir-reco.mjs [movie:157336,tv:1399,...]

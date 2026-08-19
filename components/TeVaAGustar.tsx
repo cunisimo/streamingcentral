@@ -7,7 +7,7 @@ import { usePlatforms } from "./PlatformsContext";
 import { supabaseBrowser } from "@/lib/supabase";
 import type { UITitle } from "@/lib/types";
 
-// "Te podría gustar" — el único riel personalizado, y solo para usuarios con
+// "Elegidas para vos" — el único riel personalizado, y solo para usuarios con
 // sesión. Se pide APARTE y DESPUÉS del Home: si tarda o falla, no aparece y el
 // Home no se entera.
 //
@@ -108,7 +108,7 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
 
   return (
     <Shelf
-      title="Te podría gustar"
+      title="Elegidas para vos"
       items={items}
       // El motivo de cada tarjeta ("Porque te gustó X") viaja en `porque`, que
       // Shelf todavía no muestra. Se agrega cuando el riel esté aprobado.

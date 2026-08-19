@@ -1,4 +1,4 @@
-// Las tres funciones puras del riel "Te podría gustar": elegir orígenes,
+// Las tres funciones puras del riel "Elegidas para vos": elegir orígenes,
 // intercalar por origen y mezclar los dos tipos.
 //
 // Viven acá y no en `lib/reco.ts` por la misma razón que `lib/fecha.ts` y

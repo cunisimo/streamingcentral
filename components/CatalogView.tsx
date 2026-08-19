@@ -85,7 +85,7 @@ export default function CatalogView() {
         cargaDegradada={degradado}
       />
       <div className="wrap">
-        {/* "Te podría gustar" va acá, debajo de "6 para hoy", y NO al final. Se
+        {/* "Elegidas para vos" va acá, debajo de "6 para hoy", y NO al final. Se
             pide aparte y después del Home: si tarda o falla, no aparece y nada
             se retrasa. Mientras carga reserva su alto (ver el comentario del
             componente): estando tan arriba, aparecer de golpe empujaría todo el

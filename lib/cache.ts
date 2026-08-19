@@ -102,7 +102,7 @@ export const TTL = {
   // buscan lo mismo salgan de acá; el catálogo no cambia tan rápido como para
   // que valga la pena menos.
   search: 60 * 60,
-  // El riel "Te va a gustar", ya armado. La clave lleva un hash de las señales,
+  // El riel "Elegidas para vos", ya armado. La clave lleva un hash de las señales,
   // así que votar o tocar Mi lista lo invalida solo: no hace falta que el TTL
   // sea corto para que el riel se sienta vivo. 6 h es el colchón para que una
   // sesión larga no lo rearme, y de paso acota cuánto vive una entrada que quedó

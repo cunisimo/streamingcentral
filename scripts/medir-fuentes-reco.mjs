@@ -3,7 +3,7 @@
 //
 //   node --env-file=.env.local scripts/medir-fuentes-reco.mjs
 //
-// El riel "Te va a gustar" se arma desde dos fuentes: `/recommendations` del
+// El riel "Elegidas para vos" se arma desde dos fuentes: `/recommendations` del
 // título que al usuario le gustó, y `discover` por las keywords de ese título.
 // Este script mide CUÁNDO existe cada una, por país y por tramo de votos.
 //
