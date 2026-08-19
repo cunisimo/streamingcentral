@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { clave, encolar, seMuestra, visibles, _limpiarCola } from "./reco-descartes.ts";
+import { clave, encolar, paginar, resolverAviso, seMuestra, visibles, _limpiarCola } from "./reco-descartes.ts";
 
 beforeEach(() => _limpiarCola());
 
@@ -110,4 +110,79 @@ test("dos descartes seguidos del mismo título se serializan", async () => {
   const b = encolar(k, async () => { await new Promise((r) => setTimeout(r, 1)); orden.push("b"); });
   await Promise.all([a, b]);
   assert.deepEqual(orden, ["a", "b"]);
+});
+
+// --- leer los descartes: completo o nada ------------------------------------
+
+const fila = (n: number) => ({ tmdb_id: n, tipo: "movie" as const });
+const ok = <T,>(data: T[]) => Promise.resolve({ data, error: null });
+
+test("una sola página: una llamada y listo", async () => {
+  const pedidos: [number, number][] = [];
+  const r = await paginar((d, h) => { pedidos.push([d, h]); return ok([fila(1), fila(2)]); }, 500);
+  assert.equal(r.length, 2);
+  assert.deepEqual(pedidos, [[0, 499]], "no pide una segunda página si la primera vino incompleta");
+});
+
+test("pagina de verdad cuando alguien pasa el tamaño de página", async () => {
+  // El caso excepcional: el costo extra existe SOLO para quien supera el límite.
+  const llena = Array.from({ length: 3 }, (_, i) => fila(i));
+  let n = 0;
+  const r = await paginar(() => (++n <= 2 ? ok(llena) : ok([fila(99)])), 3);
+  assert.equal(r.length, 7, "3 + 3 + 1");
+  assert.equal(n, 3);
+});
+
+test("NO devuelve descartes parciales si falla la primera página", async () => {
+  // Devolver [] acá haría reaparecer TODOS los descartes en silencio.
+  await assert.rejects(
+    () => paginar(() => Promise.resolve({ data: null, error: "500 boom" }), 3),
+    /No se pudieron leer los descartes/,
+  );
+});
+
+test("NO devuelve descartes parciales si falla una página POSTERIOR", async () => {
+  // El caso traicionero: la primera anduvo, así que hay datos en la mano y la
+  // tentación es devolver eso. Sería una lista incompleta, y los que faltan
+  // vuelven a aparecer sin ningún error que lo explique.
+  const llena = [fila(1), fila(2), fila(3)];
+  let n = 0;
+  await assert.rejects(
+    () => paginar(() => (++n === 1 ? ok(llena) : Promise.resolve({ data: null, error: "timeout" })), 3),
+    /No se pudieron leer los descartes/,
+  );
+  assert.equal(n, 2, "falló en la segunda, no antes");
+});
+
+// --- respuestas que llegan tarde --------------------------------------------
+
+const AV = (id: number) => ({ id, k: `movie:${id}`, titulo: `T${id}` });
+
+test("el fallo tardío de A no pisa el aviso de B", async () => {
+  // Descartás A, después B —el aviso ya es de B— y recién ahí falla el guardado
+  // de A. Sin la comprobación, A borra el "Deshacer" de B y muestra un error de
+  // una tarjeta que ya no está en pantalla.
+  const r = resolverAviso(AV(2), 1, true);
+  assert.deepEqual(r.aviso, AV(2), "el aviso de B sigue ahí");
+  assert.equal(r.mostrarError, false, "y no aparece el error de A");
+});
+
+test("el fallo de la acción vigente sí se muestra", () => {
+  const r = resolverAviso(AV(1), 1, true);
+  assert.equal(r.aviso, null);
+  assert.equal(r.mostrarError, true);
+});
+
+test("después de deshacer, un fallo tardío no muestra ningún error", () => {
+  // Deshacer deja el aviso en null. Si el INSERT falla después, no hay nada que
+  // reportar: la persona ya revirtió esa acción.
+  const r = resolverAviso(null, 1, true);
+  assert.equal(r.aviso, null);
+  assert.equal(r.mostrarError, false);
+});
+
+test("que el guardado salga bien no toca el aviso: Deshacer sigue disponible", () => {
+  const r = resolverAviso(AV(1), 1, false);
+  assert.deepEqual(r.aviso, AV(1));
+  assert.equal(r.mostrarError, false);
 });

@@ -73,3 +73,64 @@ export function encolar<T>(k: string, fn: () => Promise<T>): Promise<T> {
 export function _limpiarCola() {
   enVuelo.clear();
 }
+
+// --- Leer los descartes: completo o nada -------------------------------------
+
+// De a cuántos se leen. NO es un tope: es el tamaño de página. Un tope haría
+// reaparecer títulos en silencio al pasarse, que es el peor modo de fallar acá
+// —el usuario ya dijo que no y nada avisa que se ignoró—. Quien tiene 40
+// descartes paga una query igual que antes; el costo extra lo paga solo quien
+// pasa los 500.
+export const PAGINA_DESCARTES = 500;
+
+// El bucle, separado del cliente de Supabase para poder probarlo. Recibe cómo
+// traer una página y devuelve todo junto.
+//
+// SI FALLA UNA PÁGINA, FALLA TODO. Devolver lo que se pudo leer sería devolver
+// una lista de descartes INCOMPLETA, y con eso los títulos que faltan
+// reaparecen en el riel sin que nadie se entere: la persona ve volver algo que
+// ya descartó y no hay ningún error que lo explique. Prefiere romperse: el
+// llamador oculta el riel, que es una ausencia visible y honesta.
+export async function paginar<T>(
+  traer: (desde: number, hasta: number) => Promise<{ data: T[] | null; error: unknown }>,
+  tam = PAGINA_DESCARTES,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let desde = 0; ; desde += tam) {
+    const { data, error } = await traer(desde, desde + tam - 1);
+    if (error) throw new Error(`No se pudieron leer los descartes: ${String(error)}`);
+    const pagina = data ?? [];
+    out.push(...pagina);
+    // Página incompleta = no hay más. Con exactamente `tam` se pide otra, que
+    // vuelve vacía: un viaje de más en un caso rarísimo, a cambio de no tener
+    // que adivinar el total.
+    if (pagina.length < tam) return out;
+  }
+}
+
+// --- Respuestas que llegan tarde ---------------------------------------------
+
+export interface EstadoAviso { id: number; k: string; titulo: string }
+
+// Qué hacer con el aviso cuando responde una escritura que puede haber quedado
+// vieja.
+//
+// LA CARRERA ES VISUAL, no de datos: la cola de arriba ya ordena lo que llega a
+// la base. Descartás A, después B —el aviso ahora es de B—, y recién ahí falla
+// el guardado de A. Sin esta comprobación, la respuesta de A borra el
+// "Deshacer" de B y muestra un error de una tarjeta que ya no está en pantalla.
+// El otro caso es deshacer mientras el INSERT sigue en curso: si después falla,
+// aparece el error de algo que la persona ya revirtió.
+//
+// La regla: una respuesta solo toca el aviso si el aviso TODAVÍA es el de esa
+// acción. La tarjeta, en cambio, se restaura siempre — que vuelva a aparecer es
+// la señal honesta de que no se guardó, y no puede depender de qué aviso esté.
+export function resolverAviso(
+  actual: EstadoAviso | null,
+  accion: number,
+  fallo: boolean,
+): { aviso: EstadoAviso | null; mostrarError: boolean } {
+  if (actual?.id !== accion) return { aviso: actual, mostrarError: false };
+  if (fallo) return { aviso: null, mostrarError: true };
+  return { aviso: actual, mostrarError: false };
+}

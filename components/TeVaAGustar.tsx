@@ -1,12 +1,12 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Shelf from "./Shelf";
 import ShelfSkeleton from "./ShelfSkeleton";
 import { useAuth } from "./AuthContext";
 import { usePlatforms } from "./PlatformsContext";
 import { supabaseBrowser } from "@/lib/supabase";
 import { dismissedRefs, olvidarDescarte, setItem } from "@/lib/userdata";
-import { clave, encolar, seMuestra, visibles } from "./reco-descartes";
+import { clave, encolar, resolverAviso, seMuestra, visibles, type EstadoAviso } from "./reco-descartes";
 import type { UITitle } from "@/lib/types";
 
 // "Elegidas para vos" — el único riel personalizado, y solo para usuarios con
@@ -44,7 +44,11 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
   // del Set devuelve la tarjeta a su lugar original, porque el orden lo sigue
   // poniendo el payload del servidor.
   const [descartados, setDescartados] = useState<ReadonlySet<string>>(new Set());
-  const [aviso, setAviso] = useState<{ k: string; titulo: string } | null>(null);
+  // El aviso lleva un id de ACCIÓN, no solo la clave del título. Es lo que
+  // permite que una respuesta que llega tarde sepa si todavía le corresponde
+  // tocar la pantalla — ver `resolverAviso`.
+  const [aviso, setAviso] = useState<EstadoAviso | null>(null);
+  const proximaAccion = useRef(0);
   const [errorDescarte, setErrorDescarte] = useState<string | null>(null);
 
   useEffect(() => {
@@ -139,21 +143,29 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
   const descartar = useCallback((t: UITitle) => {
     if (!user) return;
     const k = clave(t.type, t.id);
+    const id = ++proximaAccion.current;
     // Optimista: la tarjeta se va ya. No se re-pide el riel ni se rellena el
     // hueco, así que esto no dispara NINGUNA llamada a TMDB, a Upstash ni al
     // recomendador — solo el INSERT de abajo, que va a Supabase.
     setDescartados((prev) => new Set(prev).add(k));
-    setAviso({ k, titulo: t.title });
+    setAviso({ id, k, titulo: t.title });
     setErrorDescarte(null);
 
     void encolar(k, () => setItem(user.id, "dismissed", { tmdb_id: t.id, tipo: t.type }, true))
       .then(({ error }) => {
         if (!error) return;
-        // No se pudo guardar: la tarjeta vuelve y se dice por qué. Dejarla
-        // escondida sería mentir — en la próxima carga reaparece igual.
+        // La tarjeta vuelve SIEMPRE: que reaparezca es la señal honesta de que
+        // no se guardó, y no puede depender de qué aviso esté en pantalla.
         setDescartados((prev) => { const n = new Set(prev); n.delete(k); return n; });
-        setAviso(null);
-        setErrorDescarte("No pudimos guardarlo. Probá de nuevo.");
+        // El aviso, en cambio, solo si esta respuesta todavía manda. Si mientras
+        // tanto se descartó otra tarjeta —o se deshizo esta—, la respuesta ya
+        // quedó vieja y pisaría el "Deshacer" de otra acción con un error de una
+        // tarjeta que ya no está.
+        setAviso((actual) => {
+          const { aviso: siguiente, mostrarError } = resolverAviso(actual, id, true);
+          if (mostrarError) setErrorDescarte("No pudimos guardarlo. Probá de nuevo.");
+          return siguiente;
+        });
       });
   }, [user]);
 

@@ -3,6 +3,7 @@
 // Las escrituras sí lo necesitan (columna user_id, with check auth.uid()).
 "use client";
 import { supabaseBrowser } from "./supabase";
+import { paginar, PAGINA_DESCARTES } from "@/components/reco-descartes";
 import type { MediaType } from "./types";
 
 export interface ItemRef { tmdb_id: number; tipo: MediaType }
@@ -78,48 +79,40 @@ export async function likedRefs(): Promise<ItemRef[]> {
 
 // --- "No es para mí" ---------------------------------------------------------
 
-// De a cuántos se leen los descartes. NO es un tope: es el tamaño de página.
-//
-// Un tope haría reaparecer títulos EN SILENCIO al pasarse —el peor modo de
-// fallar que hay acá, porque el usuario ya dijo que no y no hay ninguna señal de
-// que se ignoró—. Así, quien tiene 40 descartes paga una sola query igual que
-// hoy, y el costo extra existe únicamente para el caso excepcional de pasar los
-// 500, que además lo paga solo esa persona.
-const PAGINA_DESCARTES = 500;
-
+// LANZA si Supabase falla, en cualquier página. Ver `paginar` en
+// components/reco-descartes.ts: una lista de descartes incompleta hace
+// reaparecer títulos en silencio, así que el riel prefiere no mostrarse.
 export async function dismissedRefs(): Promise<ItemRef[]> {
   const sb = supabaseBrowser();
-  const out: ItemRef[] = [];
-  for (let desde = 0; ; desde += PAGINA_DESCARTES) {
-    const { data, error } = await sb
-      .from("user_items")
-      .select("tmdb_id, tipo")
-      .eq("kind", "dismissed")
-      .order("created_at", { ascending: false })
-      .range(desde, desde + PAGINA_DESCARTES - 1);
-    if (error) break;
-    const refs = toRefs(data);
-    out.push(...refs);
-    // Página incompleta = no hay más. Con exactamente 500 se pide otra, que
-    // vuelve vacía: un viaje de más en un caso rarísimo, a cambio de no tener
-    // que adivinar el total.
-    if (refs.length < PAGINA_DESCARTES) break;
-  }
-  return out;
+  const filas = await paginar<{ tmdb_id: number; tipo: MediaType }>(
+    async (desde, hasta) => {
+      const { data, error } = await sb
+        .from("user_items")
+        .select("tmdb_id, tipo")
+        .eq("kind", "dismissed")
+        .order("created_at", { ascending: false })
+        .range(desde, hasta);
+      return { data: data as { tmdb_id: number; tipo: MediaType }[] | null, error };
+    },
+    PAGINA_DESCARTES,
+  );
+  return toRefs(filas);
 }
 
 // Borra el descarte de un título, si lo hubiera. La usan dos caminos distintos:
 //
 //   1. "Deshacer" del aviso, que es el obvio.
-//   2. LA SEÑAL POSITIVA GANA. Si después de descartar algo le ponés "Ta buena",
-//      "Petacular" o lo mandás a Mi lista, ese "sí" pisa al "no" anterior: sería
-//      absurdo que el riel siguiera escondiendo un título que acabás de marcar
-//      como que te gusta. "Ya la vi" y "Malaso" NO lo revierten — los dos son
-//      compatibles con no querer verlo recomendado.
+//   2. LA SEÑAL POSITIVA GANA. Votar "Ta buena"/"Petacular" o mandarlo a Mi
+//      lista borra un "No es para mí" anterior. "Ya la vi" y "Malaso" NO lo
+//      revierten: son compatibles con no querer verlo recomendado.
 //
-// No devuelve error a propósito en el caso 2: es un efecto secundario de otra
-// acción y no puede hacerla fallar. Si no se borra, lo peor que pasa es que el
-// título siga oculto del riel.
+// OJO CON LO QUE ESTO **NO** HACE: la tarjeta NO vuelve al riel. Un título
+// votado o en Mi lista ya viaja en `excluir`, así que el servidor no lo devuelve
+// nunca más — y está bien, porque el riel recomienda lo que todavía no
+// calificaste. Lo que cambia es otra cosa: al desaparecer el `dismissed`, ese
+// título pasa a ser una SEÑAL POSITIVA y empieza a originar recomendaciones de
+// OTROS títulos. Sin borrarlo quedaban dos filas contradictorias, un "sí" y un
+// "no" sobre lo mismo.
 export async function olvidarDescarte(userId: string, ref: ItemRef): Promise<{ error?: string }> {
   const { error } = await supabaseBrowser()
     .from("user_items")
