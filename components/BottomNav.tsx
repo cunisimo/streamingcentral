@@ -11,7 +11,16 @@ const ITEMS = [
   { href: "/cuenta/lista", label: "Mi lista", match: (p: string) => p.startsWith("/cuenta/lista"), icon: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /> },
 ];
 
-export default function BottomNav() {
+// `sobreFicha` lo pasa SOLO la ficha de titulo, que es la unica pagina sin
+// TopBar: ahi la barra es lo unico fijo en pantalla y se translucida un escalon
+// mas para que no tape del todo lo que pasa por atras.
+//
+// Es un prop y no un `usePathname().startsWith("/titulo/")` adentro del
+// componente a proposito, aunque el hook ya este importado. Lo que el nav sabe
+// de las rutas es cual de sus items esta activo, que es propio de un nav; como
+// se ve en una pagina determinada no lo es. Con el prop, quien lo decide es la
+// pagina y se lee de un vistazo desde el llamador.
+export default function BottomNav({ sobreFicha = false }: { sobreFicha?: boolean } = {}) {
   const path = usePathname();
   const { user, profile } = useAuth();
   // "Mi lista" es /cuenta/lista, así que Cuenta sólo se marca activo en /cuenta
@@ -19,7 +28,7 @@ export default function BottomNav() {
   const cuentaOn = path.startsWith("/cuenta") && !path.startsWith("/cuenta/lista");
 
   return (
-    <nav className="bottomnav">
+    <nav className={`bottomnav ${sobreFicha ? "sobre-ficha" : ""}`}>
       {ITEMS.map((it) => (
         <Link key={it.href} href={it.href} className={`navitem ${it.match(path) ? "on" : ""}`}>
           <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">{it.icon}</svg>
