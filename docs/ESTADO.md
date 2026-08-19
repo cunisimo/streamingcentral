@@ -64,6 +64,12 @@ memoria del proyecto).
   fresco.
 - **Contexto al volver de una ficha**: el scroll vertical se restauraba a 930 en
   vez de 1800; ahora vuelve entero, y cada riel recupera su scroll horizontal.
+  **Corregido el 18/08**: esa frase era falsa para DOS rieles. `useTrackScroll`
+  vivía solo dentro de `Shelf`, y "6 para hoy" y "Próximamente" tienen su propio
+  `.track` sin pasar por ahí — los dos volvían al principio. Ya están
+  conectados, y el hero además recuerda el chip y la tanda: volver de una ficha
+  te devuelve al mismo conjunto, no solo a la misma posición sobre otro
+  contenido.
 - **Deep links**: "Volver" en una ficha compartida ya no saca al usuario de la
   app.
 

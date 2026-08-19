@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, type RefObject } from "react";
+import { guardarPosicion, posicionDe } from "./track-scroll-store";
 
 // Recuerda la posición horizontal de un riel entre navegaciones.
 //
@@ -7,21 +8,14 @@ import { useEffect, type RefObject } from "react";
 // overflow-x, no. Volver de una ficha te devolvía todos los rieles al principio
 // y había que rehacer el camino hasta donde estabas.
 //
-// sessionStorage y no localStorage a propósito: es estado de una sesión de
-// navegación, no una preferencia. Abrir la app al día siguiente tiene que
-// empezar de cero, igual que el scroll vertical.
-const KEY = "yump:track-scroll";
-
-type Store = Record<string, number>;
-
-function leer(): Store {
-  try {
-    const raw = sessionStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Store) : {};
-  } catch {
-    return {};
-  }
-}
+// El almacén vive en ./track-scroll-store, que es la parte con tests: un hook
+// necesita un DOM que dispare scroll y ejecute rAF, y eso no existe en
+// `node --test`.
+//
+// QUIÉN LO USA. Hasta el 18/08 solo `Shelf`, y por eso "6 para hoy" y
+// "Próximamente" —que tienen su propio `.track` sin pasar por `Shelf`— volvían
+// siempre al principio. Ahora los tres lo usan.
+export { debeReiniciar, olvidarTrack } from "./track-scroll-store";
 
 export function useTrackScroll(clave: string | undefined, ref: RefObject<HTMLElement>, listo: boolean) {
   useEffect(() => {
@@ -31,8 +25,9 @@ export function useTrackScroll(clave: string | undefined, ref: RefObject<HTMLEle
     // que es exactamente el bug que rompe la restauración vertical del Home.
     if (!clave || !el || !listo) return;
 
-    const guardado = leer()[clave];
-    if (guardado) el.scrollLeft = guardado;
+    // SIEMPRE se asigna, aunque no haya nada guardado — `posicionDe` devuelve 0.
+    // Ver el comentario largo en track-scroll-store.ts.
+    el.scrollLeft = posicionDe(clave);
 
     // Se guarda en el scroll con rAF en vez de en cada evento: el scroll
     // horizontal en touch dispara decenas de eventos por segundo y no hace
@@ -43,13 +38,7 @@ export function useTrackScroll(clave: string | undefined, ref: RefObject<HTMLEle
       pendiente = true;
       requestAnimationFrame(() => {
         pendiente = false;
-        try {
-          const store = leer();
-          store[clave] = Math.round(el.scrollLeft);
-          sessionStorage.setItem(KEY, JSON.stringify(store));
-        } catch {
-          /* sessionStorage lleno o bloqueado: no persiste, no rompe */
-        }
+        guardarPosicion(clave, el.scrollLeft);
       });
     };
     el.addEventListener("scroll", onScroll, { passive: true });

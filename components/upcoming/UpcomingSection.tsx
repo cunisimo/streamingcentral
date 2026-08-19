@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useUpcoming } from "./useUpcoming";
 import UpcomingCard from "./UpcomingCard";
 import CardSkeleton from "../CardSkeleton";
+import { useTrackScroll } from "@/hooks/useTrackScroll";
 
 // Riel "Próximamente" del Home. Toda la lógica de datos vive en useUpcoming;
 // este componente solo orquesta el render y sus estados. Desacoplado del Home:
@@ -12,6 +13,13 @@ export default function UpcomingSection({ limit = 15 }: { limit?: number }) {
   const track = useRef<HTMLDivElement>(null);
   const { items, loading, offline, error, retry } = useUpcoming({ mix: true, limit });
   const failed = offline || error; // red caída o 500 del server: estado de error
+
+  // Este riel tiene su propio `.track` y no pasa por `Shelf`, así que hasta acá
+  // era el único del Home que NO recordaba su posición: volver de una ficha lo
+  // devolvía al principio. La clave es fija porque el contenido es uno solo (no
+  // hay chips ni toggle), y se restaura recién con las tarjetas puestas — con el
+  // riel vacío no hay ancho que scrollear.
+  useTrackScroll("upcoming", track, !loading && !failed && items.length > 0);
 
   const scroll = (d: number) =>
     track.current?.scrollBy({ left: d * (track.current.clientWidth * 0.8), behavior: "smooth" });
