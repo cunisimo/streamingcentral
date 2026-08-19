@@ -524,9 +524,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .dsmp-close:hover{border-color:var(--accent);color:var(--accent)}
 
 /* setup */
-.dsmp-modes{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;margin-bottom:14px}
-.dsmp-mode{height:34px;padding:0 18px;border:none;background:transparent;border-radius:999px;color:var(--dim);font-family:var(--body);font-size:13.5px;font-weight:600;cursor:pointer}
-.dsmp-mode.on{background:var(--surface);color:var(--text);box-shadow:var(--sh)}
 
 .dsmp-search{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:0 12px;height:48px}
 .dsmp-search svg{width:18px;height:18px;stroke:var(--faint);stroke-width:2;flex-shrink:0}
@@ -562,6 +559,9 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .dsmp-spin-btn:hover:not(:disabled){filter:brightness(1.05);transform:translateY(-1px)}
 .dsmp-spin-btn:disabled{background:var(--surface-2);color:var(--faint);box-shadow:none;cursor:not-allowed}
 .dsmp-hint{font-size:12.5px;color:var(--faint)}
+/* La misma ayuda, pero pegada al campo de búsqueda en vez de al botón. Alineada
+   a la izquierda porque acompaña al input, no a una acción centrada. */
+.dsmp-hint-search{margin:8px 0 0;text-align:left}
 
 /* rueda horizontal */
 .dsmp-wheel{display:flex;flex-direction:column;align-items:center;gap:16px;padding:6px 0}

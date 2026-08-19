@@ -1,15 +1,17 @@
 "use client";
 import type { UITitle } from "@/lib/types";
-import type { Mode } from "./useDesempate";
 import { MAX_PICKS, MIN_PICKS } from "./useDesempate";
 import DesempateManualSearch from "./DesempateManualSearch";
-import DesempateFilterForm from "./DesempateFilterForm";
 
+// Un solo camino: buscás y cargás títulos a mano.
+//
+// El modo "Desde filtros" se sacó (19/08). Eran dos formas de llenar la misma
+// bandeja y el selector obligaba a elegir antes de entender qué se estaba
+// eligiendo. `DesempateFilterForm` se borró con él; si alguna vez vuelve, está
+// en la historia de git.
 export default function DesempateSetup({
-  mode, setMode, selected, add, remove, spin, keyOf,
+  selected, add, remove, spin, keyOf,
 }: {
-  mode: Mode;
-  setMode: (m: Mode) => void;
   selected: UITitle[];
   add: (t: UITitle) => void;
   remove: (key: string) => void;
@@ -22,14 +24,13 @@ export default function DesempateSetup({
 
   return (
     <div className="dsmp-setup">
-      <div className="dsmp-modes">
-        <button className={`dsmp-mode ${mode === "manual" ? "on" : ""}`} onClick={() => setMode("manual")}>Manual</button>
-        <button className={`dsmp-mode ${mode === "filtros" ? "on" : ""}`} onClick={() => setMode("filtros")}>Desde filtros</button>
-      </div>
+      <DesempateManualSearch onAdd={add} isSelected={isSelected} full={full} />
 
-      {mode === "manual"
-        ? <DesempateManualSearch onAdd={add} isSelected={isSelected} full={full} />
-        : <DesempateFilterForm onAdd={add} isSelected={isSelected} full={full} />}
+      {/* La ayuda va acá, pegada al campo, y no abajo junto al botón: es una
+          instrucción de lo que hay que HACER, y allá abajo aparecía a un scroll
+          de distancia de la única acción que la resuelve. Desaparece sola
+          cuando ya cargaste las dos. */}
+      {!canSpin && <p className="dsmp-hint dsmp-hint-search">Cargá al menos {MIN_PICKS} títulos</p>}
 
       <div className="dsmp-tray-head">Tu selección ({selected.length}/{MAX_PICKS})</div>
       <div className="dsmp-tray">
@@ -49,7 +50,6 @@ export default function DesempateSetup({
         <button className="dsmp-spin-btn" onClick={spin} disabled={!canSpin}>
           🍀 ¡Tirar!
         </button>
-        {!canSpin && <p className="dsmp-hint">Cargá al menos {MIN_PICKS} títulos para desempatar.</p>}
       </div>
     </div>
   );
