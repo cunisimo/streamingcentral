@@ -110,8 +110,15 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
     <Shelf
       title="Elegidas para vos"
       items={items}
-      // El motivo de cada tarjeta ("Porque te gustó X") viaja en `porque`, que
-      // Shelf todavía no muestra. Se agrega cuando el riel esté aprobado.
+      // "Porque te gustó X" está EN STANDBY por decisión del dueño (17/08). El
+      // riel está aprobado y mostrado; lo que no se muestra es el motivo.
+      //
+      // OJO: `porque` NO es código muerto y no se borra. Sigue viajando en el
+      // payload porque es el ÚNICO registro de dónde salió cada recomendación, y
+      // es lo que hace auditable el riel: sin él, una recomendación buena y una
+      // mala se ven exactamente igual. Lo consume `scripts/medir-reco.mjs` y se
+      // lee en la respuesta del POST cuando hay que revisar por qué el riel
+      // trajo lo que trajo.
       minItems={10}
     />
   );
