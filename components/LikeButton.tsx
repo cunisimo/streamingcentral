@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { supabaseBrowser } from "@/lib/supabase";
+import { olvidarDescarte } from "@/lib/userdata";
 import type { MediaType } from "@/lib/types";
 
 // Voto de la ficha. Solo aparece logueado. Al hacer click se despliega un
@@ -78,6 +79,13 @@ export default function LikeButton({ id, tipo }: { id: number; tipo: MediaType }
         { onConflict: "user_id,tmdb_id,tipo" },
       );
       if (!error) setVote(v);
+      // Un voto POSITIVO pisa un "No es para mí" anterior. No devuelve la
+      // tarjeta al riel ni cambia lo que se recomienda —el voto ya es señal por
+      // sí mismo—: evita el estado contradictorio y que el descarte viejo siga
+      // escondiendo el título si algún día sacás el voto. Ver `olvidarDescarte`.
+      // Malaso (1) no lo borra: no querer verlo recomendado y que no te haya
+      // gustado son dos formas de lo mismo.
+      if (!error && v >= 2) void olvidarDescarte(user.id, { tmdb_id: id, tipo });
     }
     setBusy(false);
     setOpen(false);

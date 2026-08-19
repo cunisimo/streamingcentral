@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-import { itemRefs, setItem } from "@/lib/userdata";
+import { itemRefs, olvidarDescarte, setItem } from "@/lib/userdata";
 import type { MediaType } from "@/lib/types";
 
 // "Mi lista" (user_items kind='list') cargada una sola vez en memoria, para que
@@ -42,6 +42,12 @@ export function MyListProvider({ children }: { children: ReactNode }) {
     setIds((prev) => { const n = new Set(prev); if (on) n.add(k); else n.delete(k); return n; }); // optimista
     const { error } = await setItem(user.id, "list", { tmdb_id: id, tipo }, on);
     if (error) setIds((prev) => { const n = new Set(prev); if (on) n.delete(k); else n.add(k); return n; }); // rollback
+    // Agregarlo a Mi lista PISA un "No es para mí" anterior. No devuelve la
+    // tarjeta al riel ni cambia lo que recomienda —eso ya pasa por estar en Mi
+    // lista—: evita el estado contradictorio y que el descarte viejo siga
+    // actuando si algún día lo sacás de la lista. Ver `olvidarDescarte`.
+    // Sacarlo de la lista no lo vuelve a descartar: eso es neutro, no un "no".
+    else if (on) void olvidarDescarte(user.id, { tmdb_id: id, tipo });
   }, [user, ids]);
 
   return <Ctx.Provider value={{ has, toggle, loaded }}>{children}</Ctx.Provider>;

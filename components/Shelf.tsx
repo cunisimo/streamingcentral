@@ -19,7 +19,7 @@ import type { UITitle, MediaType } from "@/lib/types";
 //  - "filter":  filtra en cliente los ítems ya cargados por `type` (votos).
 export default function Shelf({
   tipo, genre, country, title, url, onOffline, seeAllHref,
-  typeToggle, shelfKey, initialType, items: controlled, onTypeChange, minItems,
+  typeToggle, shelfKey, initialType, items: controlled, onTypeChange, minItems, onDescartar,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
   title?: string; url?: string;
@@ -42,6 +42,9 @@ export default function Shelf({
   // Mínimo de ítems para renderizar el riel (default 2). Ver el comentario de
   // `minimo` más abajo.
   minItems?: number;
+  // "No es para mí" sobre cada card. Lo pasa SOLO "Elegidas para vos": sin este
+  // prop la card no dibuja el botón, así que ningún otro riel puede mostrarlo.
+  onDescartar?: (t: UITitle) => void;
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
@@ -164,7 +167,7 @@ export default function Shelf({
           : items.length < minimo ? <span className="empty-note">{emptyMsg}</span>
           : (
             <>
-              {items.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}
+              {items.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} onDescartar={onDescartar} />)}
               {resolvedSeeAll && items.length > 0 && (
                 <Link href={resolvedSeeAll} className="seeall-card">
                   <span>Ver todas</span>
