@@ -204,6 +204,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .quick-add:active{transform:scale(.88)}
 .quick-add.on{background:var(--accent)}
 .quick-add:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* "No es para mí", solo en "Elegidas para vos". Debajo del "+" (32px de alto +
+   8px de aire), igual que "Recordarme" en Próximamente: es la misma columna de
+   botones sobre el póster y la misma cuenta. */
+.quick-hide{top:48px}
+.quick-hide svg{stroke-width:2}
 /* "Recordarme" sobre la card de Próximamente. Va debajo del "+" (32px de alto
    + 8px de aire); cuando es el único botón sube a ocupar su lugar. */
 .quick-cal{top:48px}
@@ -753,6 +758,15 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 /* Toast de actualización: arriba, discreto. */
 .pwa-update{position:fixed;left:12px;right:12px;top:calc(var(--safe-t) + 12px);z-index:65;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--text);color:var(--bg);border-radius:12px;box-shadow:var(--sh-h);padding:12px 14px;max-width:460px;margin:0 auto;font-size:13.5px}
 .pwa-update-btn{flex-shrink:0;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:var(--body);font-weight:600;font-size:13px;cursor:pointer}
+
+/* Aviso de "No es para mí", con Deshacer. Abajo y no arriba: el riel está en la
+   parte alta del Home y un aviso ahí taparía justo la fila que se acaba de
+   tocar. Esquiva la barra inferior con --nav-total, como el banner de la PWA.
+   Reusa la forma de .pwa-update (fondo --text sobre --bg) para que no haya dos
+   lenguajes de aviso distintos en la misma app. */
+.reco-toast{position:fixed;left:12px;right:12px;bottom:calc(var(--nav-total) + 12px);z-index:64;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--text);color:var(--bg);border-radius:12px;box-shadow:var(--sh-h);padding:12px 14px;max-width:460px;margin:0 auto;font-size:13.5px}
+.reco-toast-btn{flex-shrink:0;background:none;border:none;color:var(--bg);font-family:var(--body);font-weight:700;font-size:13px;cursor:pointer;text-decoration:underline;padding:4px 2px}
+@media(min-width:1024px){.reco-toast{left:auto;right:20px;bottom:20px;margin:0}}
 
 /* Bienvenida de primer arranque en standalone. */
 .pwa-welcome-backdrop{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:24px;padding-bottom:calc(24px + var(--safe-b))}

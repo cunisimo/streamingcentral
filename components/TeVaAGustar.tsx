@@ -1,10 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Shelf from "./Shelf";
 import ShelfSkeleton from "./ShelfSkeleton";
 import { useAuth } from "./AuthContext";
 import { usePlatforms } from "./PlatformsContext";
 import { supabaseBrowser } from "@/lib/supabase";
+import { dismissedRefs, olvidarDescarte, setItem } from "@/lib/userdata";
+import { clave, encolar, seMuestra, visibles } from "./reco-descartes";
 import type { UITitle } from "@/lib/types";
 
 // "Elegidas para vos" — el único riel personalizado, y solo para usuarios con
@@ -37,6 +39,13 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
   const { user, ready } = useAuth();
   const { platforms, ready: listoPlataformas } = usePlatforms();
   const [items, setItems] = useState<Reco[] | null>(null);
+  // Los descartados se guardan como Set de claves y la lista visible se DERIVA.
+  // Eso hace que Deshacer sea exacto sin llevar ningún índice: sacar la clave
+  // del Set devuelve la tarjeta a su lugar original, porque el orden lo sigue
+  // poniendo el payload del servidor.
+  const [descartados, setDescartados] = useState<ReadonlySet<string>>(new Set());
+  const [aviso, setAviso] = useState<{ k: string; titulo: string } | null>(null);
+  const [errorDescarte, setErrorDescarte] = useState<string | null>(null);
 
   useEffect(() => {
     // Sin sesión no hay riel, y tampoco se lee ningún historial.
@@ -48,11 +57,20 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
         const sb = supabaseBrowser();
         // Solo lo reciente: acota el costo y hace que el riel se mueva cuando la
         // persona se mueve, en vez de quedar anclado a lo que votó hace meses.
-        const [votos, marcados, sesion] = await Promise.all([
+        //
+        // LOS DESCARTES VAN EN SU PROPIA QUERY, y no es cosmético. La de arriba
+        // tiene tope 200: si los descartes compartieran ese presupuesto, cada
+        // descarte nuevo empujaría al fondo un registro de Mi lista o Ya la vi,
+        // que dejaría de excluirse Y de ser señal. Con presupuestos separados no
+        // se pueden desplazar. Van en el mismo `Promise.all`, así que es un
+        // viaje más en paralelo y no suma latencia.
+        const [votos, marcados, descartes, sesion] = await Promise.all([
           sb.from("votes").select("tmdb_id, tipo, rating")
             .order("created_at", { ascending: false }).limit(40),
           sb.from("user_items").select("tmdb_id, tipo, kind")
+            .in("kind", ["list", "watched"])
             .order("created_at", { ascending: false }).limit(200),
+          dismissedRefs(),
           sb.auth.getSession(),
         ]);
         const v = votos.data ?? [];
@@ -75,6 +93,13 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
         // Todo lo que el usuario tocó no puede aparecer recomendado: cualquier
         // voto (incluido Malaso), Mi lista y Ya la vi. Más lo que ya se está
         // mostrando en el Home, para no repetir.
+        //
+        // LOS DESCARTES NO ENTRAN ACÁ, a propósito. `excluir` forma parte de la
+        // clave de cache del recomendador (ver `reco.ts`), así que mandarlos
+        // significaría un cache MISS garantizado —un rearmado completo del riel—
+        // por cada descarte. Se filtran abajo, en el cliente, sobre el mismo
+        // payload cacheado. Como además quedamos en NO rellenar el hueco, el
+        // resultado en pantalla es idéntico y el costo es cero.
         const excluir = [
           ...v.map((x) => `${x.tipo}:${x.tmdb_id}`),
           ...it.map((x) => `${x.tipo}:${x.tmdb_id}`),
@@ -88,7 +113,10 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
         });
         if (!r.ok) { if (vivo) setItems([]); return; }
         const j = await r.json();
-        if (vivo) setItems(j.items ?? []);
+        if (vivo) {
+          setDescartados(new Set(descartes.map((d) => clave(d.tipo, d.tmdb_id))));
+          setItems(j.items ?? []);
+        }
       } catch {
         // Silencio a propósito: el riel es opcional. Cualquier fallo lo oculta y
         // el resto del Home sigue igual.
@@ -99,17 +127,66 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
     return () => { vivo = false; };
   }, [ready, listoPlataformas, user, platforms, enHome]);
 
+  // El aviso se va solo. 7 segundos es tiempo de sobra para tocar "Deshacer" y
+  // poco para que quede tapando el Home. Al irse NO se cancela nada: el descarte
+  // ya se guardó, lo único que caduca es el atajo para revertirlo.
+  useEffect(() => {
+    if (!aviso) return;
+    const t = setTimeout(() => setAviso(null), 7000);
+    return () => clearTimeout(t);
+  }, [aviso]);
+
+  const descartar = useCallback((t: UITitle) => {
+    if (!user) return;
+    const k = clave(t.type, t.id);
+    // Optimista: la tarjeta se va ya. No se re-pide el riel ni se rellena el
+    // hueco, así que esto no dispara NINGUNA llamada a TMDB, a Upstash ni al
+    // recomendador — solo el INSERT de abajo, que va a Supabase.
+    setDescartados((prev) => new Set(prev).add(k));
+    setAviso({ k, titulo: t.title });
+    setErrorDescarte(null);
+
+    void encolar(k, () => setItem(user.id, "dismissed", { tmdb_id: t.id, tipo: t.type }, true))
+      .then(({ error }) => {
+        if (!error) return;
+        // No se pudo guardar: la tarjeta vuelve y se dice por qué. Dejarla
+        // escondida sería mentir — en la próxima carga reaparece igual.
+        setDescartados((prev) => { const n = new Set(prev); n.delete(k); return n; });
+        setAviso(null);
+        setErrorDescarte("No pudimos guardarlo. Probá de nuevo.");
+      });
+  }, [user]);
+
+  const deshacer = useCallback(() => {
+    if (!user || !aviso) return;
+    const [tipo, id] = aviso.k.split(":");
+    setDescartados((prev) => { const n = new Set(prev); n.delete(aviso.k); return n; });
+    setAviso(null);
+    // Encolado por clave: si el INSERT del descarte sigue en vuelo, este DELETE
+    // espera. Sin eso el DELETE puede correr primero, el INSERT aterriza después
+    // y el título queda descartado para siempre con la tarjeta visible.
+    void encolar(aviso.k, () =>
+      olvidarDescarte(user.id, { tmdb_id: Number(id), tipo: tipo as UITitle["type"] }));
+  }, [user, aviso]);
+
   // Sin sesión el riel no existe y no reserva nada: el Home de un visitante
   // anónimo queda exactamente igual que antes.
   if (!ready || !user) return null;
   // En vuelo: se reserva el alto para que al llegar no empuje el Home.
   if (items === null) return <ShelfSkeleton conToggle={false} />;
-  if (items.length < 10) return null;
+
+  const enPantalla = visibles(items, descartados);
+  // Dos piso distintos: el de 10 lo decide lo que trajo el SERVIDOR y define si
+  // el riel aparece; una vez que apareció, descartar no lo puede esconder salvo
+  // que no quede ninguna. Ver `seMuestra` en ./reco-descartes.
+  if (!seMuestra(items.length, enPantalla.length)) return null;
 
   return (
+    <>
     <Shelf
       title="Elegidas para vos"
-      items={items}
+      items={enPantalla}
+      onDescartar={descartar}
       // "Porque te gustó X" está EN STANDBY por decisión del dueño (17/08). El
       // riel está aprobado y mostrado; lo que no se muestra es el motivo.
       //
@@ -119,7 +196,27 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
       // mala se ven exactamente igual. Lo consume `scripts/medir-reco.mjs` y se
       // lee en la respuesta del POST cuando hay que revisar por qué el riel
       // trajo lo que trajo.
-      minItems={10}
+      // El piso de Shelf tiene que ser 1, no 10: acá ya se decidió arriba si el
+      // riel se muestra. Dejarlo en 10 haría que descartar la tercera de once
+      // vaciara el riel entero, que es justo lo contrario de lo que se pidió.
+      minItems={1}
     />
+    {aviso && (
+      <div className="reco-toast" role="status">
+        {/* "La sacamos de Elegidas para vos" y NO "no volveremos a mostrarte
+            este título": el descarte saca el título de ESTE riel, pero el Home
+            general es universal y compartido, así que puede seguir apareciendo
+            ahí. Prometer lo otro sería mentir. */}
+        <span>La sacamos de Elegidas para vos</span>
+        <button type="button" className="reco-toast-btn" onClick={deshacer}>Deshacer</button>
+      </div>
+    )}
+    {errorDescarte && (
+      <div className="reco-toast" role="alert">
+        <span>{errorDescarte}</span>
+        <button type="button" className="reco-toast-btn" onClick={() => setErrorDescarte(null)}>Cerrar</button>
+      </div>
+    )}
+    </>
   );
 }

@@ -250,7 +250,11 @@ create table if not exists user_items (
   user_id    uuid        not null references auth.users (id) on delete cascade,
   tmdb_id    integer     not null,
   tipo       text        not null check (tipo in ('movie','tv')),
-  kind       text        not null check (kind in ('list','watched')),
+  -- 'dismissed' = "No es para mí" del riel "Elegidas para vos": descarta ese
+  -- título exacto, sin marcarlo visto ni votarlo. Sobre una base que YA existe
+  -- este archivo no lo agrega (`create table if not exists`): eso lo hace
+  -- migrations/005_dismissed.sql.
+  kind       text        not null check (kind in ('list','watched','dismissed')),
   created_at timestamptz not null default now(),
   unique (user_id, tmdb_id, tipo, kind)
 );

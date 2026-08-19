@@ -3,11 +3,16 @@ import Link from "next/link";
 import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
 import QuickAddButton from "./QuickAddButton";
+import DescartarButton from "./DescartarButton";
 import type { UITitle } from "@/lib/types";
 
 const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" /></svg>;
 
-export default function TitleCard({ t, rank }: { t: UITitle; rank?: number }) {
+// `onDescartar` es OPCIONAL y sin él no se dibuja nada: es lo que hace que "No
+// es para mí" exista solo en "Elegidas para vos". La card es la misma en todos
+// los rieles, así que la diferencia tiene que entrar por el llamador — un riel
+// que no pasa el prop no puede mostrar el botón ni por descuido.
+export default function TitleCard({ t, rank, onDescartar }: { t: UITitle; rank?: number; onDescartar?: (t: UITitle) => void }) {
   const { platforms, ready } = usePlatforms();
   const mine = t.platforms.filter((p) => platforms.includes(p));
   const shown = mine.slice(0, 2);
@@ -50,6 +55,7 @@ export default function TitleCard({ t, rank }: { t: UITitle; rank?: number }) {
         </div>
       </Link>
       <QuickAddButton id={t.id} tipo={t.type} />
+      {onDescartar && <DescartarButton onDescartar={() => onDescartar(t)} />}
     </div>
   );
 }
