@@ -345,15 +345,14 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
    después encogerse a 79px cuando llegan los otros dos. Con el ancho fijo, un
    ítem mide lo mismo esté solo o completa la barra. Son cinco ítems: si se
    agrega o saca uno, este número va con él. */
-/* La ficha de titulo, y solo ella. `.82` es el mismo valor que usa `.topbar`,
-   que es el escalon de "barra translucida" de la casa; el resto de la app va en
-   `.92`. El `backdrop-filter` de arriba NO se toca: es lo que hace que el texto
+/* La ficha de titulo, y solo ella. Un escalon mas translucido que `.topbar`
+   (`.82`), que a su vez ya es mas que el resto de la app (`.92`). El `backdrop-filter` de arriba NO se toca: es lo que hace que el texto
    que pasa por debajo se lea como textura y no como texto pisando los iconos.
    Ojo con el fondo real: en la ficha lo de atras es `--surface`, no `--bg`, y
    en oscuro `--surface` es MAS CLARO que `--bg` (#1C1B22 vs #0F0E13). O sea que
    la barra se ve un poco mas oscura que la ficha, y esa diferencia es la que la
    separa del contenido ahora que no hay nada opaco. */
-.bottomnav.sobre-ficha{background:rgba(var(--bg-rgb),.82)}
+.bottomnav.sobre-ficha{background:rgba(var(--bg-rgb),.75)}
 .navitem{flex:0 0 20%;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--dim);font-family:var(--body);font-size:12px;font-weight:500}
 .navitem:active{opacity:.55}
 .navitem svg{width:25px;height:25px;stroke:var(--dim);fill:none;stroke-width:1.9}
