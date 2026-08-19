@@ -83,6 +83,10 @@ test("tocar el toggle activo no reinicia nada", () => {
   // El borde: sin esta comprobación, tocar "Películas" estando en Películas
   // olvidaba la posición y mandaba el riel al principio. Ningún contenido
   // cambia, así que no hay nada que reiniciar.
+  //
+  // En `Shelf` este falso corta el handler ENTERO con un return, no solo el
+  // reset: `onTypeChange` es lo caro —en el Home rearma el payload con una
+  // clave de cache nueva— y un clic que no cambia nada no tiene por qué pagarlo.
   assert.equal(debeReiniciar("movie", "movie"), false);
   assert.equal(debeReiniciar("tv", "tv"), false);
 });

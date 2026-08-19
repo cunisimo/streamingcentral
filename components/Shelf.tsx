@@ -65,6 +65,14 @@ export default function Shelf({
   const claveTrack = shelfKey ?? (title ?? genreLabel(genre ?? ""));
 
   const changeType = (t: MediaType) => {
+    // Tocar el toggle que YA está activo no es un cambio: es un no-op completo y
+    // se sale acá. No alcanza con saltear el reset del scroll — `onTypeChange`
+    // es lo caro: en el Home rearma el payload entero con una clave de cache
+    // nueva (ver la nota del Home Composer en CLAUDE.md, el toggle es el segundo
+    // consumidor de cuota después del TTL). Un clic que no cambia nada no tiene
+    // por qué pagar eso, ni hacer parpadear el riel con un `loading`.
+    if (!debeReiniciar(activeType, t)) return;
+
     // El contenido nuevo SIEMPRE empieza desde el principio. Llegar al final de
     // Películas y pasar a Series te dejaba en la misma posición horizontal sobre
     // otra lista: mirabas el final de un riel que recién empezaba.
@@ -78,12 +86,9 @@ export default function Shelf({
     // Sin animación a propósito: el contenido está cambiando, así que un
     // desplazamiento suave sería una animación sobre tarjetas que ya no son las
     // mismas.
-    // Tocar el toggle que YA está activo no es un cambio: es un no-op. Sin este
-    // guard, ese clic igual olvidaba la posición y mandaba el riel al principio.
-    if (debeReiniciar(activeType, t)) {
-      olvidarTrack(claveTrack);
-      if (track.current) track.current.scrollLeft = 0;
-    }
+    olvidarTrack(claveTrack);
+    if (track.current) track.current.scrollLeft = 0;
+
     if (!tipoPorProp) setOwnType(t);
     onTypeChange?.(t);
   };
