@@ -28,6 +28,29 @@ export function supabaseServer(): SupabaseClient | null {
   });
 }
 
+// Valida un access token de Supabase y devuelve el id del usuario, o null.
+//
+// Es la ÚNICA forma de que una ruta sepa que quien pide tiene sesión: el resto
+// de la app es anónima del lado del servidor (la sesión vive en localStorage del
+// navegador, no en cookies). La usa /api/te-va-a-gustar, que sin esto aceptaba
+// pedidos de cualquiera — y cada pedido puede costar hasta 80 llamadas a TMDB.
+//
+// Devuelve el id y NADA MÁS: no hace falta el mail ni el perfil para lo único
+// que se necesita, que es saber que la sesión es real. Lo que no se pide no se
+// puede filtrar por un log.
+export async function usuarioDeToken(token: string | null): Promise<string | null> {
+  if (!token) return null;
+  const sb = supabaseServer();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.auth.getUser(token);
+    if (error || !data.user) return null;
+    return data.user.id;
+  } catch {
+    return null;
+  }
+}
+
 // supabaseAdmin (service role) vive en ./supabase-admin.ts, no acá: este
 // archivo lo importa supabaseBrowser y SÍ llega al bundle del navegador. Ver
 // el comentario en ese archivo.
