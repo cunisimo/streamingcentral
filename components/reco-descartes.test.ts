@@ -157,6 +157,19 @@ test("NO devuelve descartes parciales si falla una página POSTERIOR", async () 
   assert.equal(n, 2, "falló en la segunda, no antes");
 });
 
+test("el error dice QUÉ se estaba leyendo", async () => {
+  // `paginar` la usan tres lecturas distintas —descartes, votos, Mi lista/Ya la
+  // vi—. Un mensaje fijo mandaría a investigar el lugar equivocado.
+  await assert.rejects(
+    () => paginar(() => Promise.resolve({ data: null, error: "500" }), 3, "los votos"),
+    /No se pudieron leer los votos/,
+  );
+  await assert.rejects(
+    () => paginar(() => Promise.resolve({ data: null, error: "500" }), 3, "Mi lista y Ya la vi"),
+    /No se pudieron leer Mi lista y Ya la vi/,
+  );
+});
+
 // --- respuestas que llegan tarde --------------------------------------------
 
 const AV = (id: number) => ({ id, k: `movie:${id}`, titulo: `T${id}` });

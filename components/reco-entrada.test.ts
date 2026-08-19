@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { armarSenales, clavesExcluidas, VOTOS_PARA_SENALES } from "./reco-entrada.ts";
+import {
+  armarSenales, clavesExcluidas, MARCADOS_PARA_SENALES, VOTOS_PARA_SENALES,
+} from "./reco-entrada.ts";
 
 const voto = (id: number, rating: number) => ({ tmdb_id: id, tipo: "movie" as const, rating });
 // 45 votos, del más nuevo al más viejo, como los devuelve la query.
@@ -61,4 +63,59 @@ test("Ya la vi excluye pero no es señal", () => {
 
 test("lo que ya está en el Home también se excluye", () => {
   assert.ok(clavesExcluidas([], [], ["movie:500"]).includes("movie:500"));
+});
+
+// --- lo mismo, del lado de user_items ---------------------------------------
+
+const marcado = (id: number, kind: "list" | "watched") => ({ tmdb_id: id, tipo: "movie" as const, kind });
+// 250 marcados, del más nuevo al más viejo, alternando list y watched.
+const MUCHOS_ITEMS = Array.from({ length: 250 }, (_, i) => marcado(i + 1, i % 2 === 0 ? "list" : "watched"));
+
+test("las señales de Mi lista se acotan a los 200 registros más recientes", () => {
+  const s = armarSenales([], MUCHOS_ITEMS);
+  // De los 200 primeros, la mitad son `list`: 100 señales.
+  assert.equal(s.length, 100);
+  assert.ok(!s.some((x) => x.id > MARCADOS_PARA_SENALES), "el marcado 201 no es señal");
+});
+
+test("el presupuesto de 200 se mide sobre list Y watched juntos", () => {
+  // Es el comportamiento exacto del `limit(200)` que hacía la query: cortaba
+  // sobre los dos kinds mezclados y recién después se filtraba `list`. Cortar
+  // después del filtro daría 200 señales en vez de 100, que es otra cosa.
+  const s = armarSenales([], MUCHOS_ITEMS);
+  const soloList = MUCHOS_ITEMS.filter((x) => x.kind === "list").length;
+  assert.equal(soloList, 125, "hay 125 en Mi lista en total");
+  assert.equal(s.length, 100, "pero solo 100 caen dentro de los 200 más nuevos");
+});
+
+test("TODOS los marcados se excluyen, también los que pasan de 200", () => {
+  // El bug: a partir del registro 201 el título se caía de `excluir` y volvía a
+  // aparecer RECOMENDADO, aunque estuviera en Mi lista o marcado como visto.
+  const ex = clavesExcluidas([], MUCHOS_ITEMS, []);
+  assert.equal(ex.length, 250);
+  for (const n of [201, 225, 250]) {
+    assert.ok(ex.includes(`movie:${n}`), `el marcado ${n} tiene que estar excluido`);
+  }
+});
+
+test("un marcado viejo queda excluido y NO amplía las señales", () => {
+  // Los dos conceptos separados, en un solo caso.
+  const viejo = "movie:249";   // `list`, posición 249 → fuera de los 200
+  const s = armarSenales([], MUCHOS_ITEMS);
+  const ex = clavesExcluidas([], MUCHOS_ITEMS, []);
+  assert.ok(!s.some((x) => `movie:${x.id}` === viejo), "no es señal");
+  assert.ok(ex.includes(viejo), "pero sigue excluido");
+});
+
+test("con menos de 200 marcados no cambia nada", () => {
+  const pocos = MUCHOS_ITEMS.slice(0, 30);
+  assert.equal(armarSenales([], pocos).length, 15);
+  assert.equal(clavesExcluidas([], pocos, []).length, 30);
+});
+
+test("los dos presupuestos son independientes", () => {
+  // Tener 250 marcados no le come lugar a los votos, ni al revés.
+  const s = armarSenales(MUCHOS, MUCHOS_ITEMS);
+  assert.equal(s.filter((x) => x.peso >= 2).length, VOTOS_PARA_SENALES);
+  assert.equal(s.filter((x) => x.peso === 1).length, 100);
 });

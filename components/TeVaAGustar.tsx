@@ -5,7 +5,7 @@ import ShelfSkeleton from "./ShelfSkeleton";
 import { useAuth } from "./AuthContext";
 import { usePlatforms } from "./PlatformsContext";
 import { supabaseBrowser } from "@/lib/supabase";
-import { allVotes, dismissedRefs, olvidarDescarte, setItem } from "@/lib/userdata";
+import { allItems, allVotes, dismissedRefs, olvidarDescarte, setItem } from "@/lib/userdata";
 import { armarSenales, clavesExcluidas } from "./reco-entrada";
 import {
   clave, encolar, esUltimaAccion, registrarAccion, resolverAviso, seMuestra, visibles,
@@ -63,32 +63,28 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
     (async () => {
       try {
         const sb = supabaseBrowser();
-        // SEÑALES Y EXCLUSIONES SON DOS COSAS DISTINTAS y se leen enteras acá;
-        // el recorte a lo reciente pasa después, en memoria y SOLO para las
-        // señales (ver `armarSenales`). Recortar la lectura acotaba las dos por
-        // igual, y eso hacía reaparecer recomendado un título calificado hace
-        // mucho.
+        // SEÑALES Y EXCLUSIONES SON DOS COSAS DISTINTAS, y las tres listas se
+        // leen ENTERAS. Los recortes —40 votos, 200 marcados— existen igual,
+        // pero se aplican después y en memoria, y solo a las señales (ver
+        // `armarSenales`). Recortar la lectura acotaba las dos cosas por igual,
+        // y con eso un título calificado hace mucho se caía de `excluir` y
+        // volvía a aparecer RECOMENDADO — justo a quien más usa la app.
         //
-        // LOS DESCARTES VAN EN SU PROPIA QUERY, y no es cosmético. La de arriba
-        // tiene tope 200: si los descartes compartieran ese presupuesto, cada
-        // descarte nuevo empujaría al fondo un registro de Mi lista o Ya la vi,
-        // que dejaría de excluirse Y de ser señal. Con presupuestos separados no
-        // se pueden desplazar. Van en el mismo `Promise.all`, así que es un
-        // viaje más en paralelo y no suma latencia.
+        // LOS DESCARTES VAN EN SU PROPIA QUERY, y tampoco es cosmético: si
+        // compartieran presupuesto con los marcados, cada descarte nuevo
+        // empujaría al fondo un registro de Mi lista o Ya la vi.
+        //
+        // Las cuatro van en el mismo `Promise.all`, así que son viajes en
+        // paralelo y no suman latencia. Cada una pagina sola y solo para quien
+        // pase los 500 registros.
         const [votos, marcados, descartes, sesion] = await Promise.all([
-          // TODOS los votos, no los 40 más recientes: el recorte a 40 es para
-          // las SEÑALES y se hace abajo en memoria. Recortar acá dejaba fuera de
-          // `excluir` a los votos viejos, y el título volvía a aparecer
-          // recomendado justo a quien más usa la app.
           allVotes(),
-          sb.from("user_items").select("tmdb_id, tipo, kind")
-            .in("kind", ["list", "watched"])
-            .order("created_at", { ascending: false }).limit(200),
+          allItems(),
           dismissedRefs(),
           sb.auth.getSession(),
         ]);
         const v = votos;
-        const it = marcados.data ?? [];
+        const it = marcados;
         const token = sesion.data.session?.access_token;
         if (!token) { if (vivo) setItems([]); return; }
 

@@ -107,18 +107,23 @@ export const PAGINA_DESCARTES = 500;
 // traer una página y devuelve todo junto.
 //
 // SI FALLA UNA PÁGINA, FALLA TODO. Devolver lo que se pudo leer sería devolver
-// una lista de descartes INCOMPLETA, y con eso los títulos que faltan
-// reaparecen en el riel sin que nadie se entere: la persona ve volver algo que
-// ya descartó y no hay ningún error que lo explique. Prefiere romperse: el
-// llamador oculta el riel, que es una ausencia visible y honesta.
+// una lista INCOMPLETA, y las tres lecturas que usan esto fallan igual de mal:
+// un descarte que falta hace reaparecer un título ya descartado, y una exclusión
+// que falta lo hace reaparecer recomendado. En los dos casos la persona ve
+// volver algo que ya resolvió y no hay ningún error que lo explique. Prefiere
+// romperse: el llamador oculta el riel, que es una ausencia visible y honesta.
 export async function paginar<T>(
   traer: (desde: number, hasta: number) => Promise<{ data: T[] | null; error: unknown }>,
   tam = PAGINA_DESCARTES,
+  // Qué se estaba leyendo, para que el error lo diga. Lo usan tres lecturas
+  // distintas (descartes, votos, marcados) y un mensaje fijo mandaría a
+  // investigar el lugar equivocado.
+  que = "los descartes",
 ): Promise<T[]> {
   const out: T[] = [];
   for (let desde = 0; ; desde += tam) {
     const { data, error } = await traer(desde, desde + tam - 1);
-    if (error) throw new Error(`No se pudieron leer los descartes: ${String(error)}`);
+    if (error) throw new Error(`No se pudieron leer ${que}: ${String(error)}`);
     const pagina = data ?? [];
     out.push(...pagina);
     // Página incompleta = no hay más. Con exactamente `tam` se pide otra, que

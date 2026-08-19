@@ -95,6 +95,7 @@ export async function dismissedRefs(): Promise<ItemRef[]> {
       return { data: data as { tmdb_id: number; tipo: MediaType }[] | null, error };
     },
     PAGINA_DESCARTES,
+    "los descartes",
   );
   return toRefs(filas);
 }
@@ -151,5 +152,29 @@ export async function allVotes(): Promise<{ tmdb_id: number; tipo: MediaType; ra
       return { data: data as { tmdb_id: number; tipo: MediaType; rating: number }[] | null, error };
     },
     PAGINA_DESCARTES,
+    "los votos",
+  );
+}
+
+// TODOS los "Mi lista" y "Ya la vi", del más nuevo al más viejo.
+//
+// Sin tope y paginado, por lo mismo que los votos: con el tope de 200 anterior,
+// a partir del registro 201 el título se caía de `excluir` y volvía a aparecer
+// RECOMENDADO. El recorte a 200 sigue existiendo, pero solo para las señales y
+// en memoria (ver `armarSenales`).
+export async function allItems(): Promise<{ tmdb_id: number; tipo: MediaType; kind: string }[]> {
+  const sb = supabaseBrowser();
+  return paginar<{ tmdb_id: number; tipo: MediaType; kind: string }>(
+    async (desde, hasta) => {
+      const { data, error } = await sb
+        .from("user_items")
+        .select("tmdb_id, tipo, kind")
+        .in("kind", ["list", "watched"])
+        .order("created_at", { ascending: false })
+        .range(desde, hasta);
+      return { data: data as { tmdb_id: number; tipo: MediaType; kind: string }[] | null, error };
+    },
+    PAGINA_DESCARTES,
+    "Mi lista y Ya la vi",
   );
 }
