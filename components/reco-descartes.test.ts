@@ -1,6 +1,9 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { clave, encolar, paginar, resolverAviso, seMuestra, visibles, _limpiarCola } from "./reco-descartes.ts";
+import {
+  clave, encolar, esUltimaAccion, paginar, registrarAccion, resolverAviso, seMuestra, visibles,
+  _limpiarCola,
+} from "./reco-descartes.ts";
 
 beforeEach(() => _limpiarCola());
 
@@ -185,4 +188,41 @@ test("que el guardado salga bien no toca el aviso: Deshacer sigue disponible", (
   const r = resolverAviso(AV(1), 1, false);
   assert.deepEqual(r.aviso, AV(1));
   assert.equal(r.mostrarError, false);
+});
+
+// --- descartar, deshacer y volver a descartar EL MISMO título ---------------
+
+test("el fallo del primer descarte no revive una tarjeta re-descartada", () => {
+  // La secuencia entera, toda antes de que termine el primer INSERT:
+  //   1. descartar A   → la tarjeta se va
+  //   2. deshacer      → la tarjeta vuelve
+  //   3. descartar A   → la tarjeta se va otra vez
+  //   4. falla el (1)  → llega tarde
+  // Sin esta comprobación el paso 4 saca A del Set y la tarjeta REAPARECE,
+  // aunque el descarte del paso 3 esté vigente y se vaya a guardar bien.
+  const k = clave("movie", 7);
+  registrarAccion(k, 1);   // descartar
+  registrarAccion(k, 2);   // deshacer
+  registrarAccion(k, 3);   // descartar de nuevo
+
+  assert.equal(esUltimaAccion(k, 1), false, "el fallo del primero ya no manda");
+  assert.equal(esUltimaAccion(k, 3), true, "el que manda es el último descarte");
+});
+
+test("si el que falla es el descarte vigente, la tarjeta sí vuelve", () => {
+  const k = clave("movie", 7);
+  registrarAccion(k, 1);
+  assert.equal(esUltimaAccion(k, 1), true);
+});
+
+test("cada título lleva su propia cuenta", () => {
+  const a = clave("movie", 1), b = clave("tv", 2);
+  registrarAccion(a, 1);
+  registrarAccion(b, 2);
+  assert.equal(esUltimaAccion(a, 1), true, "descartar B no invalida el fallo de A");
+  assert.equal(esUltimaAccion(b, 2), true);
+});
+
+test("un título del que nunca se supo nada no es la última acción de nadie", () => {
+  assert.equal(esUltimaAccion(clave("tv", 999), 1), false);
 });

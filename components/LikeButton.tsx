@@ -79,12 +79,12 @@ export default function LikeButton({ id, tipo }: { id: number; tipo: MediaType }
         { onConflict: "user_id,tmdb_id,tipo" },
       );
       if (!error) setVote(v);
-      // Un voto POSITIVO pisa un "No es para mí" anterior (ver `olvidarDescarte`).
-      // No devuelve la tarjeta al riel: cualquier título votado ya queda fuera
-      // por `excluir`, y así tiene que ser —el riel recomienda lo que todavía no
-      // calificaste—. Lo que cambia es que pasa a ser señal para recomendar
-      // OTROS. Malaso (1) no lo borra: no querer verlo recomendado y que no te
-      // haya gustado son dos formas de lo mismo.
+      // Un voto POSITIVO pisa un "No es para mí" anterior. No devuelve la
+      // tarjeta al riel ni cambia lo que se recomienda —el voto ya es señal por
+      // sí mismo—: evita el estado contradictorio y que el descarte viejo siga
+      // escondiendo el título si algún día sacás el voto. Ver `olvidarDescarte`.
+      // Malaso (1) no lo borra: no querer verlo recomendado y que no te haya
+      // gustado son dos formas de lo mismo.
       if (!error && v >= 2) void olvidarDescarte(user.id, { tmdb_id: id, tipo });
     }
     setBusy(false);

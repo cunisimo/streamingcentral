@@ -106,13 +106,20 @@ export async function dismissedRefs(): Promise<ItemRef[]> {
 //      lista borra un "No es para mí" anterior. "Ya la vi" y "Malaso" NO lo
 //      revierten: son compatibles con no querer verlo recomendado.
 //
-// OJO CON LO QUE ESTO **NO** HACE: la tarjeta NO vuelve al riel. Un título
-// votado o en Mi lista ya viaja en `excluir`, así que el servidor no lo devuelve
-// nunca más — y está bien, porque el riel recomienda lo que todavía no
-// calificaste. Lo que cambia es otra cosa: al desaparecer el `dismissed`, ese
-// título pasa a ser una SEÑAL POSITIVA y empieza a originar recomendaciones de
-// OTROS títulos. Sin borrarlo quedaban dos filas contradictorias, un "sí" y un
-// "no" sobre lo mismo.
+// QUÉ NO HACE, para no repetir dos errores que ya se escribieron acá:
+//
+//   - NO devuelve la tarjeta al riel. Un título votado o en Mi lista ya viaja en
+//     `excluir`, así que el servidor no lo ofrece más — y está bien, porque el
+//     riel recomienda lo que TODAVÍA NO calificaste.
+//   - NO hace que el título empiece a generar recomendaciones. Ya las generaba:
+//     las señales salen de `votes` y de Mi lista, y la fila `dismissed` nunca
+//     tuvo nada que ver con eso.
+//
+// Lo que sí hace es evitar un estado contradictorio —un "sí" y un "no" sobre el
+// mismo título— y, sobre todo, que ese descarte viejo vuelva a actuar más
+// adelante: si algún día sacás el voto o lo quitás de Mi lista, el título
+// vuelve a ser recomendable, y la fila olvidada lo seguiría escondiendo sin que
+// nadie entienda por qué.
 export async function olvidarDescarte(userId: string, ref: ItemRef): Promise<{ error?: string }> {
   const { error } = await supabaseBrowser()
     .from("user_items")
@@ -120,4 +127,29 @@ export async function olvidarDescarte(userId: string, ref: ItemRef): Promise<{ e
     .eq("user_id", userId).eq("kind", "dismissed")
     .eq("tmdb_id", ref.tmdb_id).eq("tipo", ref.tipo);
   return error ? { error: error.message } : {};
+}
+
+// TODOS los votos del usuario, del más nuevo al más viejo.
+//
+// Sin tope, y paginado por la misma razón que los descartes: PostgREST corta en
+// su `max-rows` por defecto y lo hace EN SILENCIO, así que un tope implícito
+// devolvería exclusiones incompletas y haría reaparecer títulos ya calificados
+// sin ningún error. Si falla una página, falla la lectura entera.
+//
+// No suma llamadas en el caso normal: quien tiene menos de 500 votos paga UNA
+// query, la misma de siempre. El recorte a los 40 más recientes para las señales
+// se hace en memoria (ver `armarSenales` en components/reco-entrada.ts).
+export async function allVotes(): Promise<{ tmdb_id: number; tipo: MediaType; rating: number }[]> {
+  const sb = supabaseBrowser();
+  return paginar<{ tmdb_id: number; tipo: MediaType; rating: number }>(
+    async (desde, hasta) => {
+      const { data, error } = await sb
+        .from("votes")
+        .select("tmdb_id, tipo, rating")
+        .order("created_at", { ascending: false })
+        .range(desde, hasta);
+      return { data: data as { tmdb_id: number; tipo: MediaType; rating: number }[] | null, error };
+    },
+    PAGINA_DESCARTES,
+  );
 }

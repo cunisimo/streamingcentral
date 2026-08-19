@@ -68,10 +68,30 @@ export function encolar<T>(k: string, fn: () => Promise<T>): Promise<T> {
   return propia;
 }
 
-// Solo para los tests: la cola es estado de módulo y hay que poder limpiarla
-// entre casos.
+// Cuál fue la ÚLTIMA acción sobre cada título. La cola de arriba ordena las
+// escrituras; esto resuelve algo distinto: qué respuesta tardía puede todavía
+// tocar la pantalla.
+//
+// La secuencia que lo hace falta: descartás A, deshacés y volvés a descartar A,
+// todo antes de que termine el primer INSERT. Si ese primero falla, sin esta
+// comprobación saca A del Set y la tarjeta reaparece —aunque el SEGUNDO descarte
+// siga vigente y se vaya a guardar bien—. La persona ve volver algo que acaba de
+// descartar por segunda vez.
+const ultimaAccion = new Map<string, number>();
+
+export function registrarAccion(k: string, id: number) {
+  ultimaAccion.set(k, id);
+}
+
+export function esUltimaAccion(k: string, id: number): boolean {
+  return ultimaAccion.get(k) === id;
+}
+
+// Solo para los tests: la cola y el registro son estado de módulo y hay que
+// poder limpiarlos entre casos.
 export function _limpiarCola() {
   enVuelo.clear();
+  ultimaAccion.clear();
 }
 
 // --- Leer los descartes: completo o nada -------------------------------------

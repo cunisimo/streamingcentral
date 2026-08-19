@@ -42,11 +42,11 @@ export function MyListProvider({ children }: { children: ReactNode }) {
     setIds((prev) => { const n = new Set(prev); if (on) n.add(k); else n.delete(k); return n; }); // optimista
     const { error } = await setItem(user.id, "list", { tmdb_id: id, tipo }, on);
     if (error) setIds((prev) => { const n = new Set(prev); if (on) n.delete(k); else n.add(k); return n; }); // rollback
-    // Agregarlo a Mi lista PISA un "No es para mí" anterior. NO lo devuelve al
-    // riel —un título en Mi lista ya viaja en `excluir`—: lo que hace es que
-    // deje de haber dos filas contradictorias y que ese título pase a ser señal
-    // positiva para recomendar OTROS. Sacarlo de la lista no lo vuelve a
-    // descartar: eso es neutro, no un "no".
+    // Agregarlo a Mi lista PISA un "No es para mí" anterior. No devuelve la
+    // tarjeta al riel ni cambia lo que recomienda —eso ya pasa por estar en Mi
+    // lista—: evita el estado contradictorio y que el descarte viejo siga
+    // actuando si algún día lo sacás de la lista. Ver `olvidarDescarte`.
+    // Sacarlo de la lista no lo vuelve a descartar: eso es neutro, no un "no".
     else if (on) void olvidarDescarte(user.id, { tmdb_id: id, tipo });
   }, [user, ids]);
 

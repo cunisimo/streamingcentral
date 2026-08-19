@@ -5,8 +5,12 @@ import ShelfSkeleton from "./ShelfSkeleton";
 import { useAuth } from "./AuthContext";
 import { usePlatforms } from "./PlatformsContext";
 import { supabaseBrowser } from "@/lib/supabase";
-import { dismissedRefs, olvidarDescarte, setItem } from "@/lib/userdata";
-import { clave, encolar, resolverAviso, seMuestra, visibles, type EstadoAviso } from "./reco-descartes";
+import { allVotes, dismissedRefs, olvidarDescarte, setItem } from "@/lib/userdata";
+import { armarSenales, clavesExcluidas } from "./reco-entrada";
+import {
+  clave, encolar, esUltimaAccion, registrarAccion, resolverAviso, seMuestra, visibles,
+  type EstadoAviso,
+} from "./reco-descartes";
 import type { UITitle } from "@/lib/types";
 
 // "Elegidas para vos" — el único riel personalizado, y solo para usuarios con
@@ -59,8 +63,11 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
     (async () => {
       try {
         const sb = supabaseBrowser();
-        // Solo lo reciente: acota el costo y hace que el riel se mueva cuando la
-        // persona se mueve, en vez de quedar anclado a lo que votó hace meses.
+        // SEÑALES Y EXCLUSIONES SON DOS COSAS DISTINTAS y se leen enteras acá;
+        // el recorte a lo reciente pasa después, en memoria y SOLO para las
+        // señales (ver `armarSenales`). Recortar la lectura acotaba las dos por
+        // igual, y eso hacía reaparecer recomendado un título calificado hace
+        // mucho.
         //
         // LOS DESCARTES VAN EN SU PROPIA QUERY, y no es cosmético. La de arriba
         // tiene tope 200: si los descartes compartieran ese presupuesto, cada
@@ -69,46 +76,26 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
         // se pueden desplazar. Van en el mismo `Promise.all`, así que es un
         // viaje más en paralelo y no suma latencia.
         const [votos, marcados, descartes, sesion] = await Promise.all([
-          sb.from("votes").select("tmdb_id, tipo, rating")
-            .order("created_at", { ascending: false }).limit(40),
+          // TODOS los votos, no los 40 más recientes: el recorte a 40 es para
+          // las SEÑALES y se hace abajo en memoria. Recortar acá dejaba fuera de
+          // `excluir` a los votos viejos, y el título volvía a aparecer
+          // recomendado justo a quien más usa la app.
+          allVotes(),
           sb.from("user_items").select("tmdb_id, tipo, kind")
             .in("kind", ["list", "watched"])
             .order("created_at", { ascending: false }).limit(200),
           dismissedRefs(),
           sb.auth.getSession(),
         ]);
-        const v = votos.data ?? [];
+        const v = votos;
         const it = marcados.data ?? [];
         const token = sesion.data.session?.access_token;
         if (!token) { if (vivo) setItems([]); return; }
 
-        // Jerarquía: Petacular (3) > Ta buena (2) > Mi lista (1).
-        // `Malaso` NO es fuente — un título que no te gustó no origina nada.
-        // Un mismo título puede aparecer en dos de estas listas (votado Y en Mi
-        // lista); de eso se encarga `recomendaciones`, que deduplica por
-        // `tipo:id` y conserva la señal más fuerte.
-        const senales = [
-          ...v.filter((x) => x.rating === 3).map((x) => ({ tipo: x.tipo, id: x.tmdb_id, peso: 3 })),
-          ...v.filter((x) => x.rating === 2).map((x) => ({ tipo: x.tipo, id: x.tmdb_id, peso: 2 })),
-          ...it.filter((x) => x.kind === "list").map((x) => ({ tipo: x.tipo, id: x.tmdb_id, peso: 1 })),
-        ];
+        const senales = armarSenales(v, it);
         if (!senales.length) { if (vivo) setItems([]); return; }
 
-        // Todo lo que el usuario tocó no puede aparecer recomendado: cualquier
-        // voto (incluido Malaso), Mi lista y Ya la vi. Más lo que ya se está
-        // mostrando en el Home, para no repetir.
-        //
-        // LOS DESCARTES NO ENTRAN ACÁ, a propósito. `excluir` forma parte de la
-        // clave de cache del recomendador (ver `reco.ts`), así que mandarlos
-        // significaría un cache MISS garantizado —un rearmado completo del riel—
-        // por cada descarte. Se filtran abajo, en el cliente, sobre el mismo
-        // payload cacheado. Como además quedamos en NO rellenar el hueco, el
-        // resultado en pantalla es idéntico y el costo es cero.
-        const excluir = [
-          ...v.map((x) => `${x.tipo}:${x.tmdb_id}`),
-          ...it.map((x) => `${x.tipo}:${x.tmdb_id}`),
-          ...enHome,
-        ];
+        const excluir = clavesExcluidas(v, it, enHome);
 
         const r = await fetch("/api/te-va-a-gustar", {
           method: "POST",
@@ -144,6 +131,7 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
     if (!user) return;
     const k = clave(t.type, t.id);
     const id = ++proximaAccion.current;
+    registrarAccion(k, id);
     // Optimista: la tarjeta se va ya. No se re-pide el riel ni se rellena el
     // hueco, así que esto no dispara NINGUNA llamada a TMDB, a Upstash ni al
     // recomendador — solo el INSERT de abajo, que va a Supabase.
@@ -154,8 +142,12 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
     void encolar(k, () => setItem(user.id, "dismissed", { tmdb_id: t.id, tipo: t.type }, true))
       .then(({ error }) => {
         if (!error) return;
-        // La tarjeta vuelve SIEMPRE: que reaparezca es la señal honesta de que
-        // no se guardó, y no puede depender de qué aviso esté en pantalla.
+        // La tarjeta vuelve —que reaparezca es la señal honesta de que no se
+        // guardó— PERO solo si este sigue siendo el último descarte de ESE
+        // título. Si mientras tanto se deshizo y se volvió a descartar, el que
+        // manda es el nuevo y este fallo llegó tarde: restaurar acá haría
+        // reaparecer una tarjeta que la persona acaba de descartar de nuevo.
+        if (!esUltimaAccion(k, id)) return;
         setDescartados((prev) => { const n = new Set(prev); n.delete(k); return n; });
         // El aviso, en cambio, solo si esta respuesta todavía manda. Si mientras
         // tanto se descartó otra tarjeta —o se deshizo esta—, la respuesta ya
@@ -172,6 +164,9 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
   const deshacer = useCallback(() => {
     if (!user || !aviso) return;
     const [tipo, id] = aviso.k.split(":");
+    // Deshacer también es una acción sobre ese título: reclama la clave para que
+    // un fallo tardío del descarte no la dé por suya.
+    registrarAccion(aviso.k, ++proximaAccion.current);
     setDescartados((prev) => { const n = new Set(prev); n.delete(aviso.k); return n; });
     setAviso(null);
     // Encolado por clave: si el INSERT del descarte sigue en vuelo, este DELETE
