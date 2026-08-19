@@ -43,6 +43,8 @@ import { genreIdsToSlugs, resolveCategory } from "./categories";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 import type { RawTitle } from "./tmdb";
+import { elegirOrigenes, intercalarPorOrigen, mezclarTipos, type Senal } from "./reco-mezcla";
+export type { Senal, PesoSenal } from "./reco-mezcla";
 
 // Cuántos títulos del usuario se usan como origen. El costo real no está acá
 // —6 orígenes son 18 llamadas, todas cacheadas POR TÍTULO y compartidas entre
@@ -83,16 +85,11 @@ export const OBJETIVO_POR_TIPO = 10;
 // para llegar al número: un riel corto es honesto, uno rellenado es mentira.
 export const PISO = 10;
 
-// Peso de cada señal. `Malaso` NO es fuente: un título que no te gustó no
-// origina recomendaciones. Y como TODO lo que el usuario calificó entra en las
-// exclusiones, tampoco puede reaparecer recomendado desde otro origen.
-export type PesoSenal = 3 | 2 | 1;   // 3 Petacular · 2 Ta buena · 1 Mi lista
-
-export interface Senal {
-  tipo: MediaType;
-  id: number;
-  peso: PesoSenal;
-}
+// `Senal` y `PesoSenal` se re-exportan de ./reco-mezcla, que es donde viven las
+// funciones puras del riel (y donde están sus tests). `Malaso` NO es fuente: un
+// título que no te gustó no origina recomendaciones. Y como TODO lo que el
+// usuario calificó entra en las exclusiones, tampoco puede reaparecer
+// recomendado desde otro origen.
 
 export interface Recomendacion extends UITitle {
   // De qué título salió. Viaja hasta la tarjeta ("Porque te gustó X") y es lo
@@ -107,13 +104,14 @@ export interface Recomendacion extends UITitle {
 // Por qué el riel no se muestra. Los cuatro casos se ven idénticos desde afuera
 // —el riel no está— y son cosas muy distintas.
 export type MotivoSinRiel =
+  | "sin-sesion"         // el riel es solo para usuarios con sesión
   | "sin-senales"        // el usuario todavía no calificó ni listó nada
   | "sin-plataformas"
   | "sin-candidatos"     // TMDB no devolvió nada para ningún origen
   | "filtrado"           // había candidatos y los filtros los dejaron bajo el piso
   ;
 
-const clave = (t: MediaType, id: number) => `${t}:${id}`;
+import { clave } from "./reco-mezcla";
 const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
 
 // --- Fuentes por título, cacheadas ------------------------------------------
@@ -182,47 +180,20 @@ async function cruzadosDe(
   return { items, hubo: true };
 }
 
-// --- Orden -------------------------------------------------------------------
-// Intercala por origen: uno de cada uno por vuelta. Sin esto el riel se lo lleva
-// el primer origen — medido, 8 de los 12 primeros salían del mismo título,
-// porque casi ningún candidato tiene 2+ apoyos y entonces el desempate no
-// desempata y manda el orden de llegada.
-function intercalarPorOrigen<T extends { porque: { id: number }; apoyos: number }>(cands: T[]): T[] {
-  const grupos = new Map<number, T[]>();
-  for (const c of cands) {
-    const g = grupos.get(c.porque.id) ?? [];
-    g.push(c);
-    grupos.set(c.porque.id, g);
-  }
-  // Dentro de cada origen, primero los que tienen más apoyos.
-  for (const g of grupos.values()) g.sort((a, b) => b.apoyos - a.apoyos);
-  const listas = [...grupos.values()];
-  const out: T[] = [];
-  for (let i = 0; out.length < cands.length; i++) {
-    let hubo = false;
-    for (const l of listas) {
-      if (i < l.length) { out.push(l[i]); hubo = true; }
-    }
-    if (!hubo) break;
-  }
-  return out;
-}
-
-// Mezcla los dos tipos apuntando a mitad y mitad. Si un lado no llega, el otro
-// completa: el riel es uno solo y mixto, así que "10 y 10" es un objetivo, no
-// una cuota.
-function mezclarTipos(items: Recomendacion[], objetivo: number, porTipo: number): Recomendacion[] {
-  const pel = items.filter((i) => i.type === "movie");
-  const ser = items.filter((i) => i.type === "tv");
-  const out: Recomendacion[] = [];
-  let p = 0, s = 0;
-  while (out.length < objetivo && (p < pel.length || s < ser.length)) {
-    if (p < pel.length && (out.filter((i) => i.type === "movie").length < porTipo || s >= ser.length)) out.push(pel[p++]);
-    else if (s < ser.length) out.push(ser[s++]);
-    else if (p < pel.length) out.push(pel[p++]);
-    else break;
-  }
-  return out;
+// Hash estable de lo que define un riel. Sirve para dos cosas a la vez: es la
+// clave del cache Y su invalidación. Al votar o tocar Mi lista cambian las
+// señales, cambia el hash y el riel se rearma solo — nadie tiene que acordarse
+// de borrar nada. Es el mismo truco que el hash de receta en lib/pools.ts.
+//
+// El id del usuario NO entra: no hace falta. Dos personas con exactamente las
+// mismas señales, exclusiones y plataformas merecen el mismo riel, y compartir
+// esa entrada es correcto además de barato. Y de paso, en el cache no queda
+// ningún identificador de persona.
+function huella(...partes: string[]): string {
+  const s = partes.join("|");
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
 }
 
 export async function recomendaciones(opts: {
@@ -237,10 +208,30 @@ export async function recomendaciones(opts: {
   if (!opts.providers.length) return { items: [], motivo: "sin-plataformas" };
   if (!opts.senales.length) return { items: [], motivo: "sin-senales" };
 
+  // El riel entero, cacheado. Sin esto cada carga del Home de un usuario con
+  // sesión pagaba hasta 80 `providersOf`, y volver atrás desde una ficha los
+  // pagaba otra vez.
+  const clv = `reco:v1:${huella(
+    [...opts.senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(","),
+    [...opts.excluir].sort().join(","),
+    [...opts.providers].sort().join(","),
+  )}`;
+  return cached(clv, TTL.reco, () => armar(opts));
+}
+
+async function armar(opts: {
+  senales: Senal[];
+  excluir: string[];
+  providers: PlatformCode[];
+}): Promise<{ items: Recomendacion[]; motivo?: MotivoSinRiel }> {
+
   // Jerarquía Petacular > Ta buena > Mi lista, y dentro de cada nivel el orden
   // en que vino (el cliente los manda por fecha descendente). No hay cupo por
   // nivel: si alguien solo tiene Mi lista, esos ocupan los 6 lugares.
-  const origenes = [...opts.senales].sort((a, b) => b.peso - a.peso).slice(0, MAX_ORIGENES);
+  // Elegir orígenes: deduplica por `tipo:id` conservando la señal más fuerte y
+  // corta a MAX_ORIGENES. La lógica vive en ./reco-mezcla porque es pura y tiene
+  // tests; acá solo se usa.
+  const origenes = elegirOrigenes(opts.senales, MAX_ORIGENES);
 
   const porOrigen = await Promise.all(origenes.map(async (o) => {
     const [mismos, cruce, perfil] = await Promise.all([

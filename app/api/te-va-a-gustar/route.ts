@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recomendaciones, MAX_ORIGENES, type Senal } from "@/lib/reco";
+import { usuarioDeToken } from "@/lib/supabase";
 import type { MediaType, PlatformCode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,23 @@ interface Cuerpo {
 const esTipo = (v: unknown): v is MediaType => v === "movie" || v === "tv";
 
 export async function POST(req: NextRequest) {
+  // SESIÓN OBLIGATORIA, y no por privacidad: por costo. El endpoint no lee datos
+  // de nadie —las señales las manda quien pide— así que sin autenticar no se
+  // filtraba nada. Lo que sí pasaba es que CADA pedido puede disparar hasta 80
+  // llamadas a TMDB, y eso en un bucle vacía la cuota. Es el mismo agujero que
+  // el `fresh=1` del Home.
+  //
+  // Hasta acá "solo para conectados" lo cumplía la interfaz, que es una
+  // convención y no un límite: la URL se puede pedir a mano.
+  //
+  // El token viaja en el header y NO se loguea. Del usuario solo se usa que
+  // exista; su id no se guarda ni entra en la clave de cache.
+  const auth = req.headers.get("authorization");
+  const token = auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7) : null;
+  if (!(await usuarioDeToken(token))) {
+    return NextResponse.json({ items: [], motivo: "sin-sesion" }, { status: 401 });
+  }
+
   let cuerpo: Cuerpo;
   try {
     cuerpo = await req.json();

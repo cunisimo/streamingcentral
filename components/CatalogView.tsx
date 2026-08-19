@@ -85,6 +85,24 @@ export default function CatalogView() {
         cargaDegradada={degradado}
       />
       <div className="wrap">
+        {/* "Te podría gustar" va acá, debajo de "6 para hoy", y NO al final. Se
+            pide aparte y después del Home: si tarda o falla, no aparece y nada
+            se retrasa. Mientras carga reserva su alto (ver el comentario del
+            componente): estando tan arriba, aparecer de golpe empujaría todo el
+            Home y rompería el CLS y la restauración de scroll.
+
+            Recibe las claves ya mostradas para no repetir ninguna — el dedup del
+            Home vive en el composer y este riel no pasa por ahí. Con la carga
+            degradada no se muestra: `enHome` estaría incompleto y repetiría. */}
+        {hayContenido && !degradado && (
+          <TeVaAGustar
+            enHome={[
+              ...(data?.hero ?? []),
+              ...rails.flatMap((r) => r.items),
+            ].map((t) => `${t.type}:${t.id}`)}
+          />
+        )}
+
         <RuletaBanner />
         <DesempateBanner />
         <UpcomingSection />
@@ -165,19 +183,6 @@ export default function CatalogView() {
           </div>
         )}
 
-        {/* "Te va a gustar" va DESPUÉS de los rieles y se pide aparte: si tarda
-            o falla, no aparece y nada de arriba se retrasa. Recibe las claves ya
-            mostradas para no repetir ninguna — el dedup del Home vive en el
-            composer y este riel no pasa por ahí. Con la carga degradada no se
-            muestra: el "enHome" estaría incompleto y repetiría títulos. */}
-        {hayContenido && !degradado && (
-          <TeVaAGustar
-            enHome={[
-              ...(data?.hero ?? []),
-              ...rails.flatMap((r) => r.items),
-            ].map((t) => `${t.type}:${t.id}`)}
-          />
-        )}
       </div>
     </>
   );
