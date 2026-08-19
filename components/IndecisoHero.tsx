@@ -1,9 +1,11 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import CardSkeleton from "./CardSkeleton";
+import { useTrackScroll } from "@/hooks/useTrackScroll";
+import { claveTrackHero, guardarEstadoHero, leerEstadoHero } from "./hero-estado";
 import type { MotivoVacio, UITitle } from "@/lib/types";
 
 // "Recomendador": no hay IA. Cada chip mapea a un slug de categoría
@@ -51,6 +53,38 @@ export default function IndecisoHero({
   const [activeMood, setActiveMood] = useState<Mood | null>(null);
   const [sectionTitle, setSectionTitle] = useState("6 para hoy");
   const track = useRef<HTMLDivElement>(null);
+  // Hasta que no se leyó el estado guardado no se persiste nada: si no, el
+  // primer render (con el estado inicial) pisaría lo que el usuario dejó.
+  const [restaurado, setRestaurado] = useState(false);
+
+  // Volver de una ficha tiene que devolverte al MISMO conjunto, no solo a la
+  // misma posición de scroll. Sin esto, elegir "Terror", pedir "Otras" dos
+  // veces y abrir una ficha te devolvía a "6 para hoy" desde cero: la posición
+  // horizontal se restauraba, pero sobre otro contenido.
+  //
+  // Se lee en un efecto y no en el estado inicial porque este componente lo
+  // renderiza el server: leer sessionStorage durante el render sería un
+  // mismatch de hidratación.
+  useEffect(() => {
+    const e = leerEstadoHero();
+    if (e.slug !== "todos" || e.offset > 0) {
+      const m = MOODS.find((x) => x.slug === e.slug) ?? null;
+      // El chip se DERIVA del slug: la etiqueta y el emoji salen de la lista, no
+      // del sessionStorage. Si el slug ya no existe (chip renombrado o sacado),
+      // `m` es null y se vuelve al estado base en vez de romper.
+      if (m) {
+        setActiveMood(m);
+        setSectionTitle(`Resultados: ${m.label} ${m.emoji}`);
+        setGenre(m.slug);
+      }
+      setOffset(e.offset);
+    }
+    setRestaurado(true);
+  }, []);
+
+  useEffect(() => {
+    if (restaurado) guardarEstadoHero({ slug: genre, offset });
+  }, [restaurado, genre, offset]);
 
   // El estado base ("6 para hoy", sin chip, offset 0) viene del composer, que ya
   // reservó esos títulos para que no se repitan abajo. Al tocar un chip o
@@ -74,6 +108,11 @@ export default function IndecisoHero({
   const loading = usaComposer ? !!heroPendiente : fetchLoading;
   const picks = usaComposer ? (initialItems ?? []) : (data?.items ?? []);
   const filtered = genre !== "todos";
+
+  // La clave incluye chip y tanda: cada conjunto de 6 es contenido distinto y
+  // tiene su propia posición. Se restaura recién con las tarjetas puestas — con
+  // el riel vacío no hay ancho que scrollear y asignar `scrollLeft` no hace nada.
+  useTrackScroll(claveTrackHero({ slug: genre, offset }), track, !loading && picks.length > 0);
 
   // Qué decir cuando no hay nada que mostrar. La regla: solo se le pide al
   // usuario que active una plataforma cuando el filtro de plataformas fue lo que

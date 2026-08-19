@@ -5,7 +5,7 @@ import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import { useShelfType } from "@/hooks/useShelfType";
 import TitleCard from "./TitleCard";
-import { useTrackScroll } from "@/hooks/useTrackScroll";
+import { olvidarTrack, useTrackScroll } from "@/hooks/useTrackScroll";
 import ShelfTypeToggle from "./ShelfTypeToggle";
 import { genreLabel } from "./data";
 import type { UITitle, MediaType } from "@/lib/types";
@@ -60,7 +60,26 @@ export default function Shelf({
     tipoPorProp ? "" : (shelfKey ?? ""), initialType ?? tipo ?? "movie",
   );
   const activeType: MediaType = tipoPorProp ? (initialType ?? tipo ?? "movie") : ownType;
+  // La clave del scroll. `shelfKey` solo lo mandan los rieles del Home; para el
+  // resto alcanza el encabezado, que es estable dentro de una misma página.
+  const claveTrack = shelfKey ?? (title ?? genreLabel(genre ?? ""));
+
   const changeType = (t: MediaType) => {
+    // El contenido nuevo SIEMPRE empieza desde el principio. Llegar al final de
+    // Películas y pasar a Series te dejaba en la misma posición horizontal sobre
+    // otra lista: mirabas el final de un riel que recién empezaba.
+    //
+    // Y no alcanza con asignar `scrollLeft = 0`, que es lo primero que uno hace.
+    // En los rieles `refetch` el contenido llega DESPUÉS, y ahí `useTrackScroll`
+    // se vuelve a ejecutar (`listo` pasa de false a true) y restaura la posición
+    // guardada, deshaciendo el reset. Por eso además se OLVIDA el valor: así la
+    // restauración pone 0 y las dos cosas quedan de acuerdo.
+    //
+    // Sin animación a propósito: el contenido está cambiando, así que un
+    // desplazamiento suave sería una animación sobre tarjetas que ya no son las
+    // mismas.
+    olvidarTrack(claveTrack);
+    if (track.current) track.current.scrollLeft = 0;
     if (!tipoPorProp) setOwnType(t);
     onTypeChange?.(t);
   };
@@ -101,7 +120,7 @@ export default function Shelf({
   // temprano de abajo: un hook no puede quedar detrás de un return condicional.
   // `shelfKey` solo lo mandan los rieles del Home; para el resto alcanza el
   // encabezado, que es estable dentro de una misma página.
-  useTrackScroll(shelfKey ?? heading, track, !loading && items.length >= minimo);
+  useTrackScroll(claveTrack, track, !loading && items.length >= minimo);
 
   // Auto-ocultado solo para rieles SIN toggle. Con toggle, mantenemos header +
   // toggle visibles aunque el tipo activo quede vacío (si no, el usuario no
