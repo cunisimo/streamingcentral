@@ -48,6 +48,19 @@ export function guardarPosicion(clave: string, px: number) {
   escribir(store);
 }
 
+// ¿Un clic en el toggle tiene que reiniciar el riel?
+//
+// Solo si el tipo CAMBIA. Tocar el toggle que ya está activo es un no-op: sin
+// esta comprobación, ese clic olvidaba la posición y mandaba el riel al
+// principio, o sea que tocar "Películas" estando en Películas te hacía perder
+// el lugar sin cambiar nada de lo que estabas mirando.
+//
+// Vive acá y no como un `if` suelto en `Shelf` para que sea probable: es un
+// invariante del riel, no un detalle de implementación.
+export function debeReiniciar(tipoActual: string, tipoNuevo: string): boolean {
+  return tipoActual !== tipoNuevo;
+}
+
 // Borra la posición guardada de un riel. La usa el toggle Películas/Series:
 // resetear `scrollLeft` a mano NO alcanza en los rieles `refetch`, porque
 // cuando llega el contenido nuevo el hook se vuelve a ejecutar (`listo` pasa de

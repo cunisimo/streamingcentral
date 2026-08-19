@@ -1,6 +1,6 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { guardarPosicion, olvidarTrack, posicionDe } from "./track-scroll-store.ts";
+import { debeReiniciar, guardarPosicion, olvidarTrack, posicionDe } from "./track-scroll-store.ts";
 
 class FakeStorage {
   private m = new Map<string, string>();
@@ -74,5 +74,30 @@ test("un sessionStorage corrupto no rompe: todo vale 0", () => {
 
 test("un valor no numérico se trata como 0", () => {
   sessionStorage.setItem("yump:track-scroll", JSON.stringify({ accion: "mucho" }));
+  assert.equal(posicionDe("accion"), 0);
+});
+
+// --- el toggle que YA está activo es un no-op --------------------------------
+
+test("tocar el toggle activo no reinicia nada", () => {
+  // El borde: sin esta comprobación, tocar "Películas" estando en Películas
+  // olvidaba la posición y mandaba el riel al principio. Ningún contenido
+  // cambia, así que no hay nada que reiniciar.
+  assert.equal(debeReiniciar("movie", "movie"), false);
+  assert.equal(debeReiniciar("tv", "tv"), false);
+});
+
+test("cambiar de tipo sí reinicia, en las dos direcciones", () => {
+  assert.equal(debeReiniciar("movie", "tv"), true);
+  assert.equal(debeReiniciar("tv", "movie"), true);
+});
+
+test("el no-op deja intacta la posición guardada", () => {
+  // Las dos mitades juntas: lo que protege el guard es esto.
+  guardarPosicion("accion", 640);
+  if (debeReiniciar("movie", "movie")) olvidarTrack("accion");
+  assert.equal(posicionDe("accion"), 640);
+
+  if (debeReiniciar("movie", "tv")) olvidarTrack("accion");
   assert.equal(posicionDe("accion"), 0);
 });

@@ -53,6 +53,21 @@ export function guardarEstadoHero(e: EstadoHero) {
   }
 }
 
+// Qué estado se puede APLICAR realmente, dada la lista de chips que existe hoy.
+//
+// Un slug que ya no existe —chip renombrado, sacado, o un sessionStorage de una
+// versión anterior— descarta el estado ENTERO, incluido el offset. Antes se
+// descartaba solo el chip y el offset sobrevivía, y eso dejaba al usuario en
+// "6 para hoy" con la tanda 2: un estado que nunca eligió, mostrando la tercera
+// tanda del pool general sin ninguna razón visible.
+//
+// `todos` con offset es un estado legítimo y se conserva: es "6 para hoy" más
+// unos cuantos "Mostrame otras".
+export function estadoAplicable(e: EstadoHero, slugsValidos: readonly string[]): EstadoHero {
+  if (e.slug === "todos") return e;
+  return slugsValidos.includes(e.slug) ? e : ESTADO_INICIAL;
+}
+
 // Clave del scroll horizontal del hero. Incluye el chip Y la tanda a propósito:
 // cada conjunto de 6 títulos es contenido distinto, así que tiene su propia
 // posición. El efecto secundario es el que se quiere — al cambiar de chip o

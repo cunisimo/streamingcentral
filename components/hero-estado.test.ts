@@ -1,7 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
-  claveTrackHero, guardarEstadoHero, leerEstadoHero, normalizar, ESTADO_INICIAL,
+  claveTrackHero, estadoAplicable, guardarEstadoHero, leerEstadoHero, normalizar, ESTADO_INICIAL,
 } from "./hero-estado.ts";
 
 // sessionStorage no existe en Node. Se falsea con lo mínimo que usa el módulo,
@@ -78,4 +78,40 @@ test("la clave no colisiona con la de otros rieles", () => {
   // Los rieles de Shelf usan `shelfKey` o el encabezado; "Próximamente" usa
   // "upcoming". El prefijo evita que un chip llamado "upcoming" los pise.
   assert.ok(claveTrackHero({ slug: "upcoming", offset: 0 }).startsWith("hero:"));
+});
+
+// --- un slug que ya no existe descarta el estado ENTERO ----------------------
+
+const CHIPS = ["terror", "comedia", "accion"];
+
+test("un slug desconocido vuelve al estado base, offset incluido", () => {
+  // El borde: descartar solo el chip y conservar el offset dejaba al usuario en
+  // `todos` con la tanda 2 — "6 para hoy" mostrando la tercera tanda del pool
+  // general, un estado que nunca eligió y que no tiene forma de explicarse.
+  assert.deepEqual(estadoAplicable({ slug: "policial", offset: 2 }, CHIPS), ESTADO_INICIAL);
+});
+
+test("un chip que sigue existiendo conserva su tanda", () => {
+  const e = { slug: "terror", offset: 3 };
+  assert.deepEqual(estadoAplicable(e, CHIPS), e);
+});
+
+test("`todos` con tanda es válido y se conserva", () => {
+  // No es un estado inválido: es "6 para hoy" más tres "Mostrame otras".
+  assert.deepEqual(estadoAplicable({ slug: "todos", offset: 3 }, CHIPS), { slug: "todos", offset: 3 });
+});
+
+test("sin chips todavía, cualquier slug se descarta", () => {
+  // Pasa de verdad: si la lista llegara vacía, es preferible el estado base a
+  // restaurar un chip que no se puede mostrar.
+  assert.deepEqual(estadoAplicable({ slug: "terror", offset: 1 }, []), ESTADO_INICIAL);
+});
+
+test("descartar y guardar deja el sessionStorage limpio", () => {
+  // Las dos mitades juntas: el estado inválido no queda esperando a la próxima
+  // carga. `guardarEstadoHero` del estado base BORRA la clave.
+  guardarEstadoHero({ slug: "policial", offset: 2 });
+  guardarEstadoHero(estadoAplicable(leerEstadoHero(), CHIPS));
+  assert.equal(fake.size, 0);
+  assert.deepEqual(leerEstadoHero(), ESTADO_INICIAL);
 });

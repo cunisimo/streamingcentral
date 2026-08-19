@@ -5,7 +5,7 @@ import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import { useShelfType } from "@/hooks/useShelfType";
 import TitleCard from "./TitleCard";
-import { olvidarTrack, useTrackScroll } from "@/hooks/useTrackScroll";
+import { debeReiniciar, olvidarTrack, useTrackScroll } from "@/hooks/useTrackScroll";
 import ShelfTypeToggle from "./ShelfTypeToggle";
 import { genreLabel } from "./data";
 import type { UITitle, MediaType } from "@/lib/types";
@@ -78,8 +78,12 @@ export default function Shelf({
     // Sin animación a propósito: el contenido está cambiando, así que un
     // desplazamiento suave sería una animación sobre tarjetas que ya no son las
     // mismas.
-    olvidarTrack(claveTrack);
-    if (track.current) track.current.scrollLeft = 0;
+    // Tocar el toggle que YA está activo no es un cambio: es un no-op. Sin este
+    // guard, ese clic igual olvidaba la posición y mandaba el riel al principio.
+    if (debeReiniciar(activeType, t)) {
+      olvidarTrack(claveTrack);
+      if (track.current) track.current.scrollLeft = 0;
+    }
     if (!tipoPorProp) setOwnType(t);
     onTypeChange?.(t);
   };

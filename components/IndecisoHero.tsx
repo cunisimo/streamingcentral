@@ -5,7 +5,7 @@ import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import CardSkeleton from "./CardSkeleton";
 import { useTrackScroll } from "@/hooks/useTrackScroll";
-import { claveTrackHero, guardarEstadoHero, leerEstadoHero } from "./hero-estado";
+import { claveTrackHero, estadoAplicable, guardarEstadoHero, leerEstadoHero } from "./hero-estado";
 import type { MotivoVacio, UITitle } from "@/lib/types";
 
 // "Recomendador": no hay IA. Cada chip mapea a un slug de categoría
@@ -66,19 +66,25 @@ export default function IndecisoHero({
   // renderiza el server: leer sessionStorage durante el render sería un
   // mismatch de hidratación.
   useEffect(() => {
-    const e = leerEstadoHero();
-    if (e.slug !== "todos" || e.offset > 0) {
-      const m = MOODS.find((x) => x.slug === e.slug) ?? null;
+    const guardado = leerEstadoHero();
+    // Si el slug ya no existe se descarta el estado ENTERO, offset incluido.
+    // Descartar solo el chip dejaba al usuario en "6 para hoy" con la tanda 2,
+    // un estado que nunca eligió.
+    const e = estadoAplicable(guardado, MOODS.map((m) => m.slug));
+    // Y se limpia lo guardado, para que el estado invalido no siga ahí
+    // esperando a la próxima carga.
+    if (e !== guardado) guardarEstadoHero(e);
+
+    if (e.slug !== "todos") {
       // El chip se DERIVA del slug: la etiqueta y el emoji salen de la lista, no
-      // del sessionStorage. Si el slug ya no existe (chip renombrado o sacado),
-      // `m` es null y se vuelve al estado base en vez de romper.
-      if (m) {
-        setActiveMood(m);
-        setSectionTitle(`Resultados: ${m.label} ${m.emoji}`);
-        setGenre(m.slug);
-      }
-      setOffset(e.offset);
+      // del sessionStorage. Así, renombrar un chip no deja estados viejos con el
+      // nombre anterior dando vueltas.
+      const m = MOODS.find((x) => x.slug === e.slug)!;
+      setActiveMood(m);
+      setSectionTitle(`Resultados: ${m.label} ${m.emoji}`);
+      setGenre(m.slug);
     }
+    if (e.offset > 0) setOffset(e.offset);
     setRestaurado(true);
   }, []);
 

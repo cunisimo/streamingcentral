@@ -15,7 +15,7 @@ import { guardarPosicion, posicionDe } from "./track-scroll-store";
 // QUIÉN LO USA. Hasta el 18/08 solo `Shelf`, y por eso "6 para hoy" y
 // "Próximamente" —que tienen su propio `.track` sin pasar por `Shelf`— volvían
 // siempre al principio. Ahora los tres lo usan.
-export { olvidarTrack } from "./track-scroll-store";
+export { debeReiniciar, olvidarTrack } from "./track-scroll-store";
 
 export function useTrackScroll(clave: string | undefined, ref: RefObject<HTMLElement>, listo: boolean) {
   useEffect(() => {
