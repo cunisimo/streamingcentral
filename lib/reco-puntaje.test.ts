@@ -158,6 +158,20 @@ test("el desempate final es estable, no depende del orden de llegada", () => {
   assert.equal(mejorRespaldo(a, b).origenId, mejorRespaldo(b, a).origenId);
 });
 
+test("una película y una serie con el MISMO id no vuelven a empatar", () => {
+  // TMDB numera películas y series por separado: el id 1399 es Game of Thrones
+  // como serie y otra cosa como película. Desempatando solo por el número, estos
+  // dos empatan y el resultado vuelve a depender del orden de entrada — que es
+  // exactamente lo que este desempate existe para evitar.
+  const peli = resp({ origenId: 1399, origenTipo: "movie", origenTitulo: "Peli 1399" });
+  const serie = resp({ origenId: 1399, origenTipo: "tv", origenTitulo: "GoT" });
+  const ganaA = mejorRespaldo(peli, serie);
+  const ganaB = mejorRespaldo(serie, peli);
+  assert.equal(ganaA.origenTipo, ganaB.origenTipo, "gana el mismo en las dos direcciones");
+  assert.equal(ganaA.origenTitulo, ganaB.origenTitulo, "y es el mismo objeto, no solo el mismo tipo");
+  assert.equal(ganaA.origenTipo, "movie", "el criterio es la clave completa tipo:id");
+});
+
 // --- orden -------------------------------------------------------------------
 
 const conOrigen = (id: number, origenId: number, fuerza: number, tema = 0.5) =>

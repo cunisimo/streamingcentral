@@ -51,6 +51,18 @@ const SENALES = [
   { tipo: "movie", id: 155, peso: 1 },      // Batman TDK
 ];
 
+// El mismo perfil pero con UNA senal positiva de anime entre los origenes
+// elegidos. Verifica la otra mitad del guard: que cuando corresponde habilitarlo,
+// el anime no solo entra al pool sino que LLEGA AL RESULTADO FINAL despues del
+// filtro de plataformas. Verificarlo antes del enriquecido no alcanzaba: un
+// anime puede estar en el pool y morir por no estar en tus plataformas, y ahi
+// el guard se veria roto sin estarlo.
+const CON_ANIME = [
+  { tipo: "tv", id: 1429, peso: 3 },        // Attack on Titan
+  { tipo: "movie", id: 603, peso: 3 },      // Matrix
+  { tipo: "tv", id: 1396, peso: 2 },        // Breaking Bad
+];
+
 async function perfilDe(tipo, id) {
   const d = await titleDetails(tipo, id);
   const propias = (await tmdbKeywords(tipo, id)).map((k) => k.id);
@@ -92,7 +104,16 @@ async function correr(senales, providers) {
       tema: coincidencia(raw.genre_ids ?? [], esperados),
     };
     const ya = mapa.get(k);
-    if (ya) { ya.apoyos++; ya.respaldo = mejorRespaldo(ya.respaldo, respaldo); return; }
+    if (ya) {
+      ya.apoyos++;
+      // LA BASELINE CONSERVA EL PRIMER ORIGEN, literalmente como el codigo
+      // viejo: `if (ya) { ya.apoyos++; return; }`. No es un detalle — el origen
+      // decide en que grupo cae el candidato dentro de `intercalarPorOrigen`,
+      // asi que usar `mejorRespaldo` tambien en la baseline mezclaba una parte
+      // del cambio nuevo adentro del control y falseaba la comparacion.
+      if (VARIANTE === "nuevo") ya.respaldo = mejorRespaldo(ya.respaldo, respaldo);
+      return;
+    }
     mapa.set(k, { tipo, raw, apoyos: 1, respaldo });
   };
   for (const o of porOrigen) {
@@ -169,6 +190,22 @@ for (const provs of [["n", "d", "m"], ["n"]]) {
       `${r.fuerza.toFixed(2).padStart(7)} ${r.tema.toFixed(2).padStart(5)} ${String(r.anime).padStart(6)}`,
     );
   }
+}
+console.log("-".repeat(92));
+console.log("");
+console.log("Con UNA senal positiva de anime entre los origenes (Attack on Titan):");
+for (const provs of [["n", "d", "m"], ["n"]]) {
+  const r = await correr(CON_ANIME, provs);
+  const nota = VARIANTE === "nuevo"
+    ? (r.anime > 0 ? "<- anime PERMITIDO y llega al final" : "<- permitido pero NO sobrevivio a plataformas")
+    : "<- baseline: sin guard, nunca se filtro";
+  console.log(
+    `${provs.join(",").padEnd(12)} ${String(CON_ANIME.length).padStart(7)} ` +
+    `${String(r.candidatos).padStart(6)} ${String(r.aLaVentana).padStart(8)} ` +
+    `${String(r.sobrevivieron).padStart(7)} ${String(r.final).padStart(6)} ` +
+    `${`${r.pelis}/${r.final - r.pelis}`.padStart(6)} ${String(r.origenes).padStart(9)} ` +
+    `${r.fuerza.toFixed(2).padStart(7)} ${r.tema.toFixed(2).padStart(5)} ${String(r.anime).padStart(6)}  ${nota}`,
+  );
 }
 console.log("-".repeat(92));
 console.log(`\nLlamadas REALES a TMDB en toda la matriz (incluye providersOf del enriquecido): ${llamadas}`);

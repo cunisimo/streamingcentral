@@ -99,8 +99,15 @@ export function mejorRespaldo(a: Respaldo, b: Respaldo): Respaldo {
   // mejor no dice cómo funciona — TMDB no documenta ese ranking. A igual fuerza
   // y tema decide la posición de TMDB, y después una clave estable.
   if (a.pos !== b.pos) return a.pos < b.pos ? a : b;
-  // Empate total: se decide por id para que el orden sea estable entre corridas.
-  return a.origenId <= b.origenId ? a : b;
+  // Empate total: se decide por `tipo:id`, no por id solo. TMDB numera películas
+  // y series por separado, así que el id 1399 es Game of Thrones Y una película
+  // distinta — ya nos mordió antes. Comparando solo el número, dos orígenes de
+  // tipos distintos con el mismo id empatan otra vez y el resultado vuelve a
+  // depender del orden de entrada, que es lo que este desempate existe para
+  // evitar.
+  const ka = `${a.origenTipo}:${a.origenId}`;
+  const kb = `${b.origenTipo}:${b.origenId}`;
+  return ka <= kb ? a : b;
 }
 
 // --- Puntaje -----------------------------------------------------------------
@@ -139,9 +146,14 @@ export interface Pesos {
 // (docs/medidas/2026-08-20-reco-completo.txt): el guard saca el 100% del anime
 // —de 7 y 10 sobre 20 en los perfiles de una sola señal, a 0 en los ocho
 // escenarios— y el orden nuevo sube la fuerza promedio sin perder orígenes.
+// Y la otra mitad, que también se verificó después del filtro de plataformas:
+// con Attack on Titan entre los orígenes el anime queda permitido y LLEGA — 7
+// de 20, tanto con tres plataformas como con Netflix sola.
 // Y lo que CUESTA, que también hay que mirarlo: con una sola señal y una sola
-// plataforma el riel baja de 20 a 11 títulos. Sigue arriba del piso de 10, pero
-// por poco.
+// plataforma el riel baja de 20 a 11 títulos. Se sigue mostrando —el piso es 10,
+// así que 11 y 10 pasan— y desaparece recién en 9: son DOS títulos de margen,
+// no uno. Decisión tomada el 20/08: con una sola señal se prefiere un riel corto
+// y honesto antes que 20 títulos con ruido. No se rellena ni se pide de más.
 //
 // `camino` arranca en 0 A PROPÓSITO. Medimos que `/recommendations` no trajo
 // anime (0 de 120) y el cruce sí (32%), pero eso dice que anduvo mejor en esa
