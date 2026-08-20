@@ -1,0 +1,56 @@
+MEDICIÓN COMPLETA — Elegidas para vos, orden por afinidad + guard de anime
+Fecha: 2026-08-20 · TMDB en vivo · cache en memoria (sin Upstash local)
+
+Atraviesa el pipeline ENTERO, incluido enrichRaw() y el filtro de plataformas.
+La BASELINE conserva la semántica vieja exacta: el primer origen gana y solo
+se incrementa apoyos (sin mejorRespaldo), porque el origen decide en qué grupo
+cae el candidato dentro de intercalarPorOrigen.
+
+
+=== VARIANTE: baseline ===
+(baseline = intercalado por origen, sin guard · nuevo = turnos ponderados + guard)
+
+plataformas  señales  cands  ventana  sobrev  FINAL  p/s    orígenes  fuerza  tema  anime
+--------------------------------------------------------------------------------------------
+n,d,m              1     40       40      30     20  10/10         1    3.00  0.93      7
+n,d,m              2     72       72      54     20  10/10         2    3.00  0.83      4
+n,d,m              3    112       80      52     20  10/10         3    2.65  0.81      1
+n,d,m              6    216       80      36     20  10/10         6    1.95  0.82      0
+n                  1     40       40      22     20   2/18         1    3.00  0.88     10
+n                  2     72       72      42     20   2/18         2    3.00  0.72      6
+n                  3    112       80      37     20   8/12         3    2.45  0.85      2
+n                  6    209       80      18     18   6/12         5    2.11  0.86      2
+--------------------------------------------------------------------------------------------
+
+Con UNA senal positiva de anime entre los origenes (Attack on Titan):
+n,d,m              3    117       80      47     20  10/10         3    2.65  0.82      6  <- baseline: sin guard, nunca se filtro
+n                  3    119       80      36     20  10/10         3    2.65  0.88      5  <- baseline: sin guard, nunca se filtro
+--------------------------------------------------------------------------------------------
+
+Llamadas REALES a TMDB en toda la matriz (incluye providersOf del enriquecido): 272
+Este es el punto de medición que faltaba: las 18 de antes eran solo el armado del pool.
+
+
+=== VARIANTE: nuevo ===
+(baseline = intercalado por origen, sin guard · nuevo = turnos ponderados + guard)
+
+plataformas  señales  cands  ventana  sobrev  FINAL  p/s    orígenes  fuerza  tema  anime
+--------------------------------------------------------------------------------------------
+n,d,m              1     29       29      19     19   10/9         1    3.00  0.87      0
+n,d,m              2     59       59      41     20  10/10         2    3.00  0.90      0
+n,d,m              3     99       80      57     20  10/10         3    2.80  0.95      0
+n,d,m              6    201       80      53     20  10/10         6    2.45  0.90      0
+n                  1     29       29      11     11    2/9         1    3.00  0.86      0
+n                  2     60       60      30     20   2/18         2    3.00  0.75      0
+n                  3    100       80      46     20  10/10         3    2.55  0.93      0
+n                  6    195       80      39     20  10/10         6    2.30  0.91      0
+--------------------------------------------------------------------------------------------
+
+Con UNA senal positiva de anime entre los origenes (Attack on Titan):
+n,d,m              3    117       80      55     20  10/10         3    2.80  0.92      7  <- anime PERMITIDO y llega al final
+n                  3    119       80      50     20  10/10         3    2.80  0.90      7  <- anime PERMITIDO y llega al final
+--------------------------------------------------------------------------------------------
+
+Llamadas REALES a TMDB en toda la matriz (incluye providersOf del enriquecido): 261
+Este es el punto de medición que faltaba: las 18 de antes eran solo el armado del pool.
+

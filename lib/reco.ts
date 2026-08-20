@@ -43,7 +43,11 @@ import { genreIdsToSlugs, resolveCategory } from "./categories";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 import type { RawTitle } from "./tmdb";
-import { elegirOrigenes, intercalarPorOrigen, mezclarTipos, type Senal } from "./reco-mezcla";
+import { elegirOrigenes, mezclarTipos, type Senal } from "./reco-mezcla";
+import {
+  coincidencia, componentes, esAnime, mejorRespaldo, ordenarTurnosPonderados, permiteAnime,
+  type Candidato, type Respaldo,
+} from "./reco-puntaje";
 export type { Senal, PesoSenal } from "./reco-mezcla";
 
 // Cuántos títulos del usuario se usan como origen. El costo real no está acá
@@ -132,10 +136,22 @@ interface PerfilTematico {
   titulo: string;
   keywords: number[];
   generosOpuesto: number[];
+  // Los géneros del origen EN SU PROPIO TIPO. Son con los que se compara un
+  // candidato del camino "mismo", que llega en el mismo espacio de géneros.
+  generosPropios: number[];
+  // Idioma original, para el guard de anime. Sale del mismo `titleDetails` que
+  // ya se pedía: no cuesta una llamada más.
+  idioma: string;
 }
 
 async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
-  return cached(`reco:perfil:${tipo}:${id}`, TTL.catalog, async () => {
+  // v2: el perfil sumó `generosPropios` e `idioma`. La clave TIENE que subir de
+  // versión: en producción hay entradas guardadas con la forma vieja, y al
+  // recuperarlas esos dos campos vienen `undefined`. Sin esto, el primer armado
+  // después del deploy le pasa `undefined` a `coincidencia()` y a `esAnime()`
+  // por cada título ya cacheado — y encima solo hasta que expire el TTL, así que
+  // sería un bug que se cura solo y no se puede reproducir después.
+  return cached(`reco:perfil:v2:${tipo}:${id}`, TTL.catalog, async () => {
     const d = await titleDetails(tipo, id);
     const propias = (await tmdbKeywords(tipo, id)).map((k) => k.id);
     const slugs = genreIdsToSlugs((d.genres ?? []).map((g) => g.id));
@@ -150,6 +166,8 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
       titulo: d.title || d.name || "",
       keywords: [...new Set([...propias, ...delMapeo])].slice(0, 4),
       generosOpuesto,
+      generosPropios: (d.genres ?? []).map((g) => g.id),
+      idioma: d.original_language ?? "",
     };
   });
 }
@@ -211,7 +229,11 @@ export async function recomendaciones(opts: {
   // El riel entero, cacheado. Sin esto cada carga del Home de un usuario con
   // sesión pagaba hasta 80 `providersOf`, y volver atrás desde una ficha los
   // pagaba otra vez.
-  const clv = `reco:v1:${huella(
+  // v2: el orden dejó de ser "intercalado por origen + posición de TMDB" y pasó
+  // a ser un puntaje de afinidad, y se agregó el guard de anime. Cambia el
+  // CONTENIDO del riel, así que sin subir la versión lo ya cacheado se sigue
+  // sirviendo hasta que expire el TTL y el cambio "no se ve" después de deployar.
+  const clv = `reco:v2:${huella(
     [...opts.senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(","),
     [...opts.excluir].sort().join(","),
     [...opts.providers].sort().join(","),
@@ -239,23 +261,37 @@ async function armar(opts: {
       cruzadosDe(o.tipo, o.id, opts.providers),
       perfilDe(o.tipo, o.id),
     ]);
-    return { origen: o, titulo: perfil.titulo, mismos, cruzados: cruce.items };
+    return { origen: o, perfil, mismos, cruzados: cruce.items };
   }));
 
-  interface Cand { tipo: MediaType; raw: RawTitle; camino: "mismo" | "cruce"; porque: { id: number; tipo: MediaType; titulo: string }; apoyos: number }
+  // El candidato guarda su MEJOR respaldo, no el primero que llegó, y la
+  // posición que traía dentro de la respuesta de TMDB — que hasta ahora se
+  // tiraba y es justamente el dato que decidía el orden sin que nadie lo mirara.
+  interface Cand {
+    tipo: MediaType; raw: RawTitle; apoyos: number; respaldo: Respaldo;
+  }
   const porClave = new Map<string, Cand>();
-  const sumar = (tipo: MediaType, raw: RawTitle, camino: "mismo" | "cruce", o: (typeof porOrigen)[number]) => {
+  const sumar = (
+    tipo: MediaType, raw: RawTitle, camino: "mismo" | "cruce",
+    o: (typeof porOrigen)[number], pos: number,
+  ) => {
     const k = clave(tipo, raw.id);
+    // Con qué se compara el candidato depende del camino: uno del MISMO tipo
+    // llega en el mismo espacio de géneros que el origen, y uno de CRUCE ya
+    // viene mapeado al tipo opuesto.
+    const esperados = camino === "mismo" ? o.perfil.generosPropios : o.perfil.generosOpuesto;
+    const respaldo: Respaldo = {
+      origenId: o.origen.id, origenTipo: o.origen.tipo, origenTitulo: o.perfil.titulo,
+      fuerza: o.origen.peso, camino, pos,
+      tema: coincidencia(raw.genre_ids ?? [], esperados),
+    };
     const ya = porClave.get(k);
-    if (ya) { ya.apoyos++; return; }
-    porClave.set(k, {
-      tipo, raw, camino, apoyos: 1,
-      porque: { id: o.origen.id, tipo: o.origen.tipo, titulo: o.titulo },
-    });
+    if (ya) { ya.apoyos++; ya.respaldo = mejorRespaldo(ya.respaldo, respaldo); return; }
+    porClave.set(k, { tipo, raw, apoyos: 1, respaldo });
   };
   for (const o of porOrigen) {
-    for (const r of o.mismos) sumar(o.origen.tipo, r, "mismo", o);
-    for (const r of o.cruzados) sumar(otro(o.origen.tipo), r, "cruce", o);
+    o.mismos.forEach((r, i) => sumar(o.origen.tipo, r, "mismo", o, i + 1));
+    o.cruzados.forEach((r, i) => sumar(otro(o.origen.tipo), r, "cruce", o, i + 1));
   }
   if (!porClave.size) return { items: [], motivo: "sin-candidatos" };
 
@@ -266,13 +302,53 @@ async function armar(opts: {
   // (Joker recomendado a partir de Parásitos, siendo Joker una de las señales).
   // Un invariante del riel no puede depender de que el cliente se acuerde.
   const excluidos = new Set([...opts.excluir, ...opts.senales.map((s) => clave(s.tipo, s.id))]);
-  const vivos = [...porClave.values()].filter((c) => !excluidos.has(clave(c.tipo, c.raw.id)));
+  let vivos = [...porClave.values()].filter((c) => !excluidos.has(clave(c.tipo, c.raw.id)));
 
-  // Ordenar ANTES de enriquecer: `providersOf` cuesta 1 request por título, así
-  // que se paga solo por los que tienen chance de entrar.
-  const ordenados = intercalarPorOrigen(vivos).slice(0, VENTANA);
+  // GUARD DE ANIME. Va acá, antes de la ventana, así que no cuesta nada y no le
+  // quita lugar a nadie en el enriquecido. Ver `permiteAnime`: se habilita solo
+  // si alguno de los seis orígenes positivos es anime.
+  const conAnime = permiteAnime(porOrigen.map((o) => ({
+    generos: o.perfil.generosPropios, idioma: o.perfil.idioma,
+  })));
+  if (!conAnime) {
+    vivos = vivos.filter((c) => !esAnime({
+      generos: c.raw.genre_ids ?? [], idioma: c.raw.original_language ?? "",
+    }));
+  }
 
-  const enriquecidos: Recomendacion[] = [];
+  const comoCandidato = (c: Cand): Candidato => ({
+    tipo: c.tipo, id: c.raw.id, apoyos: c.apoyos, respaldo: c.respaldo,
+    generos: c.raw.genre_ids ?? [], idioma: c.raw.original_language ?? "",
+  });
+
+  // Auditoría. Son títulos del catálogo, no datos de la persona: no hay nada
+  // que identifique a nadie.
+  //
+  // DOS ETIQUETAS, y la distinción importa. `pre-enriquecido` son los que
+  // entran a la ventana; `final` son los que quedaron en las tarjetas. En el
+  // medio está `enrichRaw`, que filtra por plataformas y se lleva puestos
+  // muchos —los del camino "mismo" vienen de `/recommendations`, que no filtra
+  // nada—. Leer solo el primero y creer que eso es lo que se mostró es el error
+  // fácil, y era el que habilitaba el log anterior.
+  const auditar = (etiqueta: string, xs: { tipo: MediaType; raw: RawTitle; apoyos: number; respaldo: Respaldo }[]) => {
+    if (process.env.RECO_LOG !== "1") return;
+    for (const c of xs) {
+      const k = componentes(comoCandidato(c));
+      console.log(
+        `[reco:${etiqueta}] ${clave(c.tipo, c.raw.id).padEnd(12)} ` +
+        `${(c.raw.title || c.raw.name || "").slice(0, 26).padEnd(26)} ` +
+        `origen=${c.respaldo.origenTitulo.slice(0, 16).padEnd(16)} camino=${c.respaldo.camino.padEnd(6)} ` +
+        `fuerza=${c.respaldo.fuerza} apoyos=${c.apoyos} tema=${k.tema.toFixed(2)} ` +
+        `posTMDB=${String(c.respaldo.pos).padStart(2)} total=${k.total.toFixed(3)}`,
+      );
+    }
+  };
+
+  const ordenados = ordenarTurnosPonderados(vivos, comoCandidato).slice(0, VENTANA);
+  auditar("pre-enriquecido", ordenados);
+
+  // `_cand` viaja solo hasta el reordenado y se saca antes de devolver.
+  const enriquecidos: (Recomendacion & { _cand: Cand })[] = [];
   await Promise.all((["movie", "tv"] as MediaType[]).map(async (tipo) => {
     const delTipo = ordenados.filter((c) => c.tipo === tipo);
     if (!delTipo.length) return;
@@ -280,13 +356,28 @@ async function armar(opts: {
     const meta = new Map(delTipo.map((c) => [clave(c.tipo, c.raw.id), c]));
     for (const t of ok) {
       const m = meta.get(clave(t.type, t.id));
-      if (m) enriquecidos.push({ ...t, porque: m.porque, camino: m.camino, apoyos: m.apoyos });
+      if (m) {
+        enriquecidos.push({
+          ...t,
+          // `porque` sale del MEJOR respaldo, no del primero que llegó.
+          porque: { id: m.respaldo.origenId, tipo: m.respaldo.origenTipo, titulo: m.respaldo.origenTitulo },
+          camino: m.respaldo.camino,
+          apoyos: m.apoyos,
+          _cand: m,
+        });
+      }
     }
   }));
 
-  // El enriquecido por tipo rompe el intercalado, así que se rehace sobre lo que
+  // El enriquecido por tipo rompe el orden, así que se rehace sobre lo que
   // sobrevivió y recién ahí se mezclan los dos tipos.
-  const items = mezclarTipos(intercalarPorOrigen(enriquecidos), OBJETIVO, OBJETIVO_POR_TIPO);
+  const reordenados = ordenarTurnosPonderados(enriquecidos, (t) => comoCandidato(t._cand))
+    .map(({ _cand, ...t }) => t as Recomendacion);
+  const items = mezclarTipos(reordenados, OBJETIVO, OBJETIVO_POR_TIPO);
+  // `final` = lo que se muestra. Se re-busca el candidato de cada uno porque
+  // `_cand` ya se sacó del objeto que se devuelve.
+  const porId = new Map(enriquecidos.map((e) => [clave(e.type, e.id), e._cand]));
+  auditar("final", items.map((t) => porId.get(clave(t.type, t.id))!).filter(Boolean));
   if (items.length < PISO) return { items: [], motivo: "filtrado" };
   return { items };
 }

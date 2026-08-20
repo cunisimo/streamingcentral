@@ -1,0 +1,44 @@
+
+=== PERFIL SIN NINGUNA SEÑAL DE ANIME ===
+
+Pool: 216 candidatos · 18 llamadas a TMDB para armarlo
+
+¿Algún origen es anime? NO → el guard FILTRA
+
+Anime en el pool: 15 · tras el guard: 0
+
+Órdenes, sobre el MISMO pool ya filtrado:
+  actual (intercalado)       20 títulos · 10p/10s · 6 orígenes · fuerza 1.95 · tema 0.73 · 0 anime
+  global, tope 3             20 títulos · 10p/10s · 6 orígenes · fuerza 2.20 · tema 0.91 · 0 anime
+  global, tope 4             20 títulos · 10p/10s · 6 orígenes · fuerza 2.20 · tema 0.88 · 0 anime
+  global, tope 5             20 títulos · 10p/10s · 6 orígenes · fuerza 2.40 · tema 0.88 · 0 anime
+  global, tope 6             20 títulos · 10p/10s · 4 orígenes · fuerza 2.60 · tema 0.88 · 0 anime
+  global, tope 8             20 títulos · 10p/10s · 4 orígenes · fuerza 2.70 · tema 0.91 · 0 anime
+  turnos ponderados          20 títulos · 10p/10s · 6 orígenes · fuerza 2.50 · tema 0.91 · 0 anime
+
+=== CASO DE REGRESIÓN: Bleach desde Matrix ===
+  En el pool: SÍ · origen=Matrix · camino=cruce
+  posTMDB=1 · fuerza=3 · tema=1.00 · total=1.900
+  tema 1.00 → el puntaje temático NO lo baja; lo que lo saca es el guard.
+  posición con el orden ACTUAL y sin guard: 127
+  ¿sobrevive al guard?  NO ✔
+
+Con cuantas senales llega Bleach a mostrarse?
+  1 senales -> posicion 21 de 40 · DENTRO de la ventana de 80
+  2 senales -> posicion 39 de 72 · DENTRO de la ventana de 80
+  3 senales -> posicion 58 de 112 · DENTRO de la ventana de 80
+  4 senales -> posicion 85 de 147 · fuera de la ventana
+  6 senales -> posicion 127 de 216 · fuera de la ventana
+
+=== EL MISMO PERFIL, CON UNA SEÑAL POSITIVA DE ANIME ===
+
+¿Algún origen es anime? SÍ → el guard NO filtra
+Anime en el pool: 32 · tras el guard: 32
+
+  global, tope 5             20 títulos · 10p/10s · 5 orígenes · fuerza 2.50 · tema 0.93 · 2 anime
+
+Llamadas a TMDB: 18 antes del cambio, 18 después.
+El puntaje usa solo datos que ya venían en esas respuestas.
+
+Pesos: {"fuerza":1,"apoyos":0.8,"tema":0.6,"pos":0.3,"camino":0}
+
