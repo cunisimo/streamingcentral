@@ -83,6 +83,10 @@ export interface RawTitle {
   release_date?: string;
   first_air_date?: string;
   genre_ids?: number[];
+  // Lo devuelven discover, /recommendations y /similar. Hace falta para el guard
+  // de anime del recomendador (animación 16 + idioma "ja"), que no puede pedir
+  // el detalle de cada candidato.
+  original_language?: string;
   origin_country?: string[];
   // Lo devuelve discover y no se usaba, así que no estaba declarado. Hace falta
   // para reordenar al unir pools de plataformas distintas (ver lib/pools.ts):
