@@ -27,8 +27,13 @@ import type { MediaType } from "./types";
 export const GENERO_ANIMACION = 16;
 export const IDIOMA_ANIME = "ja";
 
-export function esAnime(x: { generos: number[]; idioma: string }): boolean {
-  return x.generos.includes(GENERO_ANIMACION) && x.idioma === IDIOMA_ANIME;
+// Tolera que falten los campos, y no por prolijidad: un perfil cacheado con la
+// forma vieja los devuelve `undefined`. La clave del cache se versionó para que
+// no pase, pero un guard que revienta con datos incompletos convierte un dato
+// faltante en un riel caído, y acá "no sé si es anime" tiene que significar "no
+// lo trato como anime", no una excepción.
+export function esAnime(x: { generos?: number[]; idioma?: string }): boolean {
+  return !!x.generos?.includes(GENERO_ANIMACION) && x.idioma === IDIOMA_ANIME;
 }
 
 // ¿Puede aparecer anime en este armado?
@@ -43,7 +48,7 @@ export function esAnime(x: { generos: number[]; idioma: string }): boolean {
 // si tu único anime positivo no entró al top 6, ese armado no muestra anime.
 // Es un falso negativo, y es la dirección segura — el error es no mostrar anime
 // a quien le gusta, no mostrárselo a quien no.
-export function permiteAnime(origenes: { generos: number[]; idioma: string }[]): boolean {
+export function permiteAnime(origenes: { generos?: number[]; idioma?: string }[]): boolean {
   return origenes.some(esAnime);
 }
 
@@ -57,8 +62,10 @@ export function permiteAnime(origenes: { generos: number[]; idioma: string }[]):
 // lo habría SUBIDO. De Bleach se encarga el guard de anime, que es
 // independiente; esto sirve para los otros casos, donde un candidato entra por
 // una keyword suelta sin compartir nada de género.
-export function coincidencia(generosCandidato: number[], generosEsperados: number[]): number {
-  if (!generosEsperados.length) return 0;
+// Devuelve 0 —no rompe— si falta alguno de los dos lados. Mismo motivo que
+// `esAnime`: sin géneros no hay evidencia temática, y eso es un 0, no un error.
+export function coincidencia(generosCandidato?: number[], generosEsperados?: number[]): number {
+  if (!generosEsperados?.length || !generosCandidato?.length) return 0;
   const set = new Set(generosCandidato);
   const n = generosEsperados.filter((g) => set.has(g)).length;
   return n / generosEsperados.length;
@@ -86,7 +93,11 @@ export interface Respaldo {
 export function mejorRespaldo(a: Respaldo, b: Respaldo): Respaldo {
   if (a.fuerza !== b.fuerza) return a.fuerza > b.fuerza ? a : b;
   if (a.tema !== b.tema) return a.tema > b.tema ? a : b;
-  if (a.camino !== b.camino) return a.camino === "mismo" ? a : b;
+  // Acá NO se desempata por camino. Preferir "mismo" sería premiar la misma
+  // hipótesis que el peso 0 de `camino` decidió no premiar: que
+  // `/recommendations` vale más que el cruce. Que en una medición haya andado
+  // mejor no dice cómo funciona — TMDB no documenta ese ranking. A igual fuerza
+  // y tema decide la posición de TMDB, y después una clave estable.
   if (a.pos !== b.pos) return a.pos < b.pos ? a : b;
   // Empate total: se decide por id para que el orden sea estable entre corridas.
   return a.origenId <= b.origenId ? a : b;
@@ -111,10 +122,26 @@ export interface Pesos {
   camino: number;
 }
 
-// Los pesos NO se eligen a ojo: salen de comparar órdenes con
-// `scripts/medir-puntaje-reco.mjs`. Los de acá son los que ganaron esa
-// comparación; el script imprime los componentes de cada candidato para poder
-// rehacerla.
+// PESOS: UNA HEURÍSTICA CALIBRADA, NO UNA RELEVANCIA DEMOSTRADA.
+//
+// Salen de comparar órdenes con `scripts/medir-puntaje-reco.mjs`, así que no se
+// eligieron a ojo. Pero la comparación tiene un límite que conviene dejar
+// escrito antes de que alguien la cite como prueba: **es circular**. El script
+// mide fuerza y tema promedio de los 20 finales, y elige el orden que maximiza
+// fuerza y tema. Un orden que priorice esas dos cosas va a ganar por
+// construcción; lo único que la medición demuestra de verdad es que subirlas NO
+// cuesta variedad de orígenes ni balance películas/series, que era la duda real.
+//
+// Si estos pesos sirven o no se sabe mirando el riel, no la tabla. La única
+// validación posible hoy es la prueba a mano del dueño.
+//
+// Lo que la medición SÍ demuestra, atravesando el pipeline completo
+// (docs/medidas/2026-08-20-reco-completo.txt): el guard saca el 100% del anime
+// —de 7 y 10 sobre 20 en los perfiles de una sola señal, a 0 en los ocho
+// escenarios— y el orden nuevo sube la fuerza promedio sin perder orígenes.
+// Y lo que CUESTA, que también hay que mirarlo: con una sola señal y una sola
+// plataforma el riel baja de 20 a 11 títulos. Sigue arriba del piso de 10, pero
+// por poco.
 //
 // `camino` arranca en 0 A PROPÓSITO. Medimos que `/recommendations` no trajo
 // anime (0 de 120) y el cruce sí (32%), pero eso dice que anduvo mejor en esa

@@ -142,10 +142,14 @@ test("a igual fuerza gana el más coherente", () => {
   assert.equal(mejorRespaldo(a, b).origenId, 2);
 });
 
-test("a igual fuerza y tema, gana el camino del mismo tipo", () => {
-  const a = resp({ origenId: 1, fuerza: 2, tema: 0.5, camino: "cruce" });
-  const b = resp({ origenId: 2, fuerza: 2, tema: 0.5, camino: "mismo" });
-  assert.equal(mejorRespaldo(a, b).origenId, 2);
+test("a igual fuerza y tema NO decide el camino, decide la posición", () => {
+  // Preferir "mismo" premiaba la misma hipótesis que el peso 0 de `camino`
+  // decidió no premiar: que `/recommendations` vale más que el cruce. TMDB no
+  // documenta ese ranking, así que el desempate es la posición.
+  const cruceArriba = resp({ origenId: 1, fuerza: 2, tema: 0.5, camino: "cruce", pos: 1 });
+  const mismoAbajo = resp({ origenId: 2, fuerza: 2, tema: 0.5, camino: "mismo", pos: 9 });
+  assert.equal(mejorRespaldo(cruceArriba, mismoAbajo).origenId, 1, "gana el cruce por venir primero");
+  assert.equal(mejorRespaldo(mismoAbajo, cruceArriba).origenId, 1, "y da lo mismo en qué orden se comparen");
 });
 
 test("el desempate final es estable, no depende del orden de llegada", () => {
@@ -226,4 +230,40 @@ test("el orden es estable: la misma entrada en otro orden da el mismo resultado"
 test("con lista vacía no rompe", () => {
   assert.deepEqual(ordenarTurnosPonderados([], (c: Candidato) => c), []);
   assert.deepEqual(ordenarGlobalConTope([], (c: Candidato) => c, 3), []);
+});
+
+// --- perfiles cacheados con la forma VIEJA -----------------------------------
+// La clave subió a `reco:perfil:v2`, así que en teoría no debería llegar nunca
+// uno viejo. Estos tests son la red por debajo: un guard que revienta con un
+// campo faltante convierte un dato incompleto en un riel caído, y encima sería
+// un bug que se cura solo al expirar el TTL y no se puede reproducir después.
+
+test("un perfil viejo sin `generos` no rompe el guard de anime", () => {
+  const viejo = { titulo: "X", keywords: [], generosOpuesto: [28] } as {
+    generos?: number[]; idioma?: string;
+  };
+  assert.doesNotThrow(() => esAnime(viejo));
+  assert.equal(esAnime(viejo), false, "sin datos NO se trata como anime");
+});
+
+test("un perfil viejo sin `idioma` no habilita anime por accidente", () => {
+  assert.equal(permiteAnime([{ generos: [16] }]), false, "animación sin idioma no alcanza");
+});
+
+test("permiteAnime con perfiles viejos no rompe y devuelve false", () => {
+  assert.doesNotThrow(() => permiteAnime([{}, { generos: undefined, idioma: undefined }]));
+  assert.equal(permiteAnime([{}, {}]), false);
+});
+
+test("coincidencia con un perfil viejo sin `generosPropios` devuelve 0", () => {
+  // Es el camino "mismo": compara contra `generosPropios`, que en la forma vieja
+  // no existe. Antes tiraba TypeError sobre `.length`.
+  assert.doesNotThrow(() => coincidencia([28, 878], undefined));
+  assert.equal(coincidencia([28, 878], undefined), 0);
+  assert.equal(coincidencia(undefined, [28]), 0);
+});
+
+test("un candidato sin género no rompe ni puntúa temáticamente", () => {
+  const c = cand(1, { generos: [], respaldo: resp({ tema: coincidencia([], [28, 878]) }) });
+  assert.equal(componentes(c).tema, 0);
 });

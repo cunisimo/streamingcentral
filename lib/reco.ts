@@ -145,7 +145,13 @@ interface PerfilTematico {
 }
 
 async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
-  return cached(`reco:perfil:${tipo}:${id}`, TTL.catalog, async () => {
+  // v2: el perfil sumó `generosPropios` e `idioma`. La clave TIENE que subir de
+  // versión: en producción hay entradas guardadas con la forma vieja, y al
+  // recuperarlas esos dos campos vienen `undefined`. Sin esto, el primer armado
+  // después del deploy le pasa `undefined` a `coincidencia()` y a `esAnime()`
+  // por cada título ya cacheado — y encima solo hasta que expire el TTL, así que
+  // sería un bug que se cura solo y no se puede reproducir después.
+  return cached(`reco:perfil:v2:${tipo}:${id}`, TTL.catalog, async () => {
     const d = await titleDetails(tipo, id);
     const propias = (await tmdbKeywords(tipo, id)).map((k) => k.id);
     const slugs = genreIdsToSlugs((d.genres ?? []).map((g) => g.id));
@@ -315,21 +321,31 @@ async function armar(opts: {
     generos: c.raw.genre_ids ?? [], idioma: c.raw.original_language ?? "",
   });
 
-  // Auditoría: qué puntuó cada candidato y con qué. Sin identificar a nadie —
-  // son títulos del catálogo, no datos de la persona.
-  if (process.env.RECO_LOG === "1") {
-    for (const c of ordenarTurnosPonderados(vivos, comoCandidato).slice(0, 30)) {
+  // Auditoría. Son títulos del catálogo, no datos de la persona: no hay nada
+  // que identifique a nadie.
+  //
+  // DOS ETIQUETAS, y la distinción importa. `pre-enriquecido` son los que
+  // entran a la ventana; `final` son los que quedaron en las tarjetas. En el
+  // medio está `enrichRaw`, que filtra por plataformas y se lleva puestos
+  // muchos —los del camino "mismo" vienen de `/recommendations`, que no filtra
+  // nada—. Leer solo el primero y creer que eso es lo que se mostró es el error
+  // fácil, y era el que habilitaba el log anterior.
+  const auditar = (etiqueta: string, xs: { tipo: MediaType; raw: RawTitle; apoyos: number; respaldo: Respaldo }[]) => {
+    if (process.env.RECO_LOG !== "1") return;
+    for (const c of xs) {
       const k = componentes(comoCandidato(c));
       console.log(
-        `[reco] ${clave(c.tipo, c.raw.id).padEnd(12)} ${(c.raw.title || c.raw.name || "").slice(0, 28).padEnd(28)} ` +
-        `origen=${c.respaldo.origenTitulo.slice(0, 18).padEnd(18)} camino=${c.respaldo.camino.padEnd(6)} ` +
+        `[reco:${etiqueta}] ${clave(c.tipo, c.raw.id).padEnd(12)} ` +
+        `${(c.raw.title || c.raw.name || "").slice(0, 26).padEnd(26)} ` +
+        `origen=${c.respaldo.origenTitulo.slice(0, 16).padEnd(16)} camino=${c.respaldo.camino.padEnd(6)} ` +
         `fuerza=${c.respaldo.fuerza} apoyos=${c.apoyos} tema=${k.tema.toFixed(2)} ` +
         `posTMDB=${String(c.respaldo.pos).padStart(2)} total=${k.total.toFixed(3)}`,
       );
     }
-  }
+  };
 
   const ordenados = ordenarTurnosPonderados(vivos, comoCandidato).slice(0, VENTANA);
+  auditar("pre-enriquecido", ordenados);
 
   // `_cand` viaja solo hasta el reordenado y se saca antes de devolver.
   const enriquecidos: (Recomendacion & { _cand: Cand })[] = [];
@@ -358,6 +374,10 @@ async function armar(opts: {
   const reordenados = ordenarTurnosPonderados(enriquecidos, (t) => comoCandidato(t._cand))
     .map(({ _cand, ...t }) => t as Recomendacion);
   const items = mezclarTipos(reordenados, OBJETIVO, OBJETIVO_POR_TIPO);
+  // `final` = lo que se muestra. Se re-busca el candidato de cada uno porque
+  // `_cand` ya se sacó del objeto que se devuelve.
+  const porId = new Map(enriquecidos.map((e) => [clave(e.type, e.id), e._cand]));
+  auditar("final", items.map((t) => porId.get(clave(t.type, t.id))!).filter(Boolean));
   if (items.length < PISO) return { items: [], motivo: "filtrado" };
   return { items };
 }
