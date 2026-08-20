@@ -4,7 +4,6 @@ import type { UITitle } from "@/lib/types";
 
 // Máquina de estado del minijuego. Efímera: nada se persiste.
 export type Phase = "setup" | "spinning" | "result";
-export type Mode = "manual" | "filtros";
 
 export const MAX_PICKS = 3;
 export const MIN_PICKS = 2;
@@ -13,25 +12,21 @@ const keyOf = (t: { type: string; id: number }) => `${t.type}-${t.id}`;
 
 interface State {
   phase: Phase;
-  mode: Mode;
   selected: UITitle[];
   winnerIdx: number | null;
 }
 
 type Action =
-  | { type: "MODE"; mode: Mode }
   | { type: "ADD"; title: UITitle }
   | { type: "REMOVE"; key: string }
   | { type: "SPIN" }
   | { type: "FINISH" }
   | { type: "REPLAY" };
 
-const initial: State = { phase: "setup", mode: "manual", selected: [], winnerIdx: null };
+const initial: State = { phase: "setup", selected: [], winnerIdx: null };
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
-    case "MODE":
-      return { ...s, mode: a.mode };
     case "ADD": {
       if (s.selected.length >= MAX_PICKS) return s;
       if (s.selected.some((t) => keyOf(t) === keyOf(a.title))) return s;
@@ -61,7 +56,6 @@ export function useDesempate() {
   return {
     state,
     winner,
-    setMode: (mode: Mode) => dispatch({ type: "MODE", mode }),
     add: (title: UITitle) => dispatch({ type: "ADD", title }),
     remove: (key: string) => dispatch({ type: "REMOVE", key }),
     spin: () => dispatch({ type: "SPIN" }),
