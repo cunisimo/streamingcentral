@@ -1,0 +1,1672 @@
+{
+ "generado": "2026-08-21T20:07:41.569Z",
+ "fechaAR": "2026-08-21",
+ "receta": {
+  "with_type": "2",
+  "with_status": "3"
+ },
+ "sinGenerosTrio": [
+  99,
+  10751,
+  10762,
+  16
+ ],
+ "plataformas": [
+  {
+   "code": "n",
+   "nombre": "Netflix",
+   "ejes": {
+    "pop": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "top",
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "hondo",
+     "degradado": false
+    }
+   },
+   "min": 20,
+   "max": 20,
+   "veredicto": "20 siempre",
+   "ejesBajoPiso": []
+  },
+  {
+   "code": "d",
+   "nombre": "Disney+",
+   "ejes": {
+    "pop": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 20,
+   "max": 20,
+   "veredicto": "20 siempre",
+   "ejesBajoPiso": []
+  },
+  {
+   "code": "m",
+   "nombre": "Max",
+   "ejes": {
+    "pop": {
+     "candidatos": 41,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 41,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 41,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 41,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 20,
+   "max": 20,
+   "veredicto": "20 siempre",
+   "ejesBajoPiso": []
+  },
+  {
+   "code": "at",
+   "nombre": "Apple TV+",
+   "ejes": {
+    "pop": {
+     "candidatos": 26,
+     "tarjetas": 20,
+     "pagados": 26,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 26,
+     "tarjetas": 20,
+     "pagados": 26,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 29,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 26,
+     "tarjetas": 20,
+     "pagados": 26,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 26,
+     "tarjetas": 20,
+     "pagados": 26,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 20,
+   "max": 20,
+   "veredicto": "20 siempre",
+   "ejesBajoPiso": []
+  },
+  {
+   "code": "p",
+   "nombre": "Prime Video",
+   "ejes": {
+    "pop": {
+     "candidatos": 38,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 38,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 38,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 38,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 20,
+   "max": 20,
+   "veredicto": "20 siempre",
+   "ejesBajoPiso": []
+  },
+  {
+   "code": "cr",
+   "nombre": "Crunchyroll",
+   "ejes": {
+    "pop": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 23,
+     "tarjetas": 20,
+     "pagados": 23,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 11,
+   "max": 20,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "taquilla",
+    "hondo"
+   ]
+  },
+  {
+   "code": "pp",
+   "nombre": "Paramount+",
+   "ejes": {
+    "pop": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 22,
+     "tarjetas": 20,
+     "pagados": 22,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "pagados": 11,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 11,
+   "max": 20,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "taquilla",
+    "hondo"
+   ]
+  },
+  {
+   "code": "mb",
+   "nombre": "MUBI",
+   "ejes": {
+    "pop": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "pagados": 2,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "pagados": 2,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "pagados": 2,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "pagados": 2,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 2,
+   "max": 3,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "nuevo",
+    "taquilla",
+    "hondo"
+   ]
+  },
+  {
+   "code": "un",
+   "nombre": "Universal+",
+   "ejes": {
+    "pop": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 9,
+     "tarjetas": 9,
+     "pagados": 9,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 3,
+   "max": 9,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "nuevo",
+    "taquilla",
+    "hondo"
+   ]
+  },
+  {
+   "code": "mv",
+   "nombre": "MovistarTV",
+   "ejes": {
+    "pop": {
+     "candidatos": 50,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 50,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 50,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 50,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 20,
+   "max": 20,
+   "veredicto": "20 siempre",
+   "ejesBajoPiso": []
+  },
+  {
+   "code": "cv",
+   "nombre": "Claro video",
+   "ejes": {
+    "pop": {
+     "candidatos": 6,
+     "tarjetas": 6,
+     "pagados": 6,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 6,
+     "tarjetas": 6,
+     "pagados": 6,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 12,
+     "tarjetas": 12,
+     "pagados": 12,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 6,
+     "tarjetas": 6,
+     "pagados": 6,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 6,
+     "tarjetas": 6,
+     "pagados": 6,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 6,
+   "max": 12,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "nuevo",
+    "taquilla",
+    "hondo"
+   ]
+  },
+  {
+   "code": "vx",
+   "nombre": "ViX",
+   "ejes": {
+    "pop": {
+     "candidatos": 0,
+     "tarjetas": 0,
+     "pagados": 0,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 0,
+     "tarjetas": 0,
+     "pagados": 0,
+     "ejeUsado": "top",
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "pagados": 2,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 0,
+     "tarjetas": 0,
+     "pagados": 0,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 0,
+     "tarjetas": 0,
+     "pagados": 0,
+     "ejeUsado": "hondo",
+     "degradado": false
+    }
+   },
+   "min": 0,
+   "max": 2,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "nuevo",
+    "taquilla",
+    "hondo"
+   ]
+  },
+  {
+   "code": "dg",
+   "nombre": "DIRECTV GO",
+   "ejes": {
+    "pop": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 4,
+     "tarjetas": 4,
+     "pagados": 4,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "pagados": 3,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 3,
+   "max": 4,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "nuevo",
+    "taquilla",
+    "hondo"
+   ]
+  },
+  {
+   "code": "ok",
+   "nombre": "OnDemandKorea",
+   "ejes": {
+    "pop": {
+     "candidatos": 7,
+     "tarjetas": 7,
+     "pagados": 7,
+     "ejeUsado": "pop",
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 7,
+     "tarjetas": 7,
+     "pagados": 7,
+     "ejeUsado": "pop*",
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 33,
+     "tarjetas": 20,
+     "pagados": 28,
+     "ejeUsado": "nuevo",
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 7,
+     "tarjetas": 7,
+     "pagados": 7,
+     "ejeUsado": "taquilla",
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 7,
+     "tarjetas": 7,
+     "pagados": 7,
+     "ejeUsado": "pop*",
+     "degradado": true
+    }
+   },
+   "min": 7,
+   "max": 20,
+   "veredicto": "se oculta algún día",
+   "ejesBajoPiso": [
+    "pop",
+    "top",
+    "taquilla",
+    "hondo"
+   ]
+  }
+ ],
+ "tipos": [
+  {
+   "with_type": 0,
+   "total_results": 1031,
+   "muestra": 8,
+   "tipos": {
+    "Documentary": 8
+   },
+   "ejemplos": [
+    "Mayday Catástrofes Aéreas (2003)",
+    "Memòria negra (2017)",
+    "Expedición al pasado (2015)"
+   ]
+  },
+  {
+   "with_type": 1,
+   "total_results": 7,
+   "muestra": 7,
+   "tipos": {
+    "News": 7
+   },
+   "ejemplos": [
+    "Last Week Tonight with John Oliver (2014)",
+    "El síndrome de Ulises (2007)",
+    "El problema con Jon Stewart (2021)"
+   ]
+  },
+  {
+   "with_type": 2,
+   "total_results": 1986,
+   "muestra": 8,
+   "tipos": {
+    "Miniseries": 8
+   },
+   "ejemplos": [
+    "Lucky (2026)",
+    "Acaramelados (2026)",
+    "Así aprenderás (2026)"
+   ]
+  },
+  {
+   "with_type": 3,
+   "total_results": 1142,
+   "muestra": 8,
+   "tipos": {
+    "Reality": 8
+   },
+   "ejemplos": [
+    "El conquistador (2005)",
+    "The Voice (2011)",
+    "Running Man (2010)"
+   ]
+  },
+  {
+   "with_type": 4,
+   "total_results": 7809,
+   "muestra": 8,
+   "tipos": {
+    "Scripted": 8
+   },
+   "ejemplos": [
+    "Reacher (2022)",
+    "El mentalista (2008)",
+    "Operaciones Especiales: Lioness (2023)"
+   ]
+  },
+  {
+   "with_type": 5,
+   "total_results": 80,
+   "muestra": 8,
+   "tipos": {
+    "Talk Show": 8
+   },
+   "ejemplos": [
+    "라디오스타 (2007)",
+    "Vergüenza ajena (2011)",
+    "El gran tour (2016)"
+   ]
+  },
+  {
+   "with_type": 6,
+   "total_results": 19,
+   "muestra": 8,
+   "tipos": {
+    "Video": 8
+   },
+   "ejemplos": [
+    "Los Caballeros del Zodiaco: La saga de Hades (2002)",
+    "Uchuu Senkan Yamato 2199 (2013)",
+    "Tenchi Muyo! (1992)"
+   ]
+  }
+ ],
+ "variantes": [
+  {
+   "id": "A",
+   "etiqueta": "with_type=2 · piso heredado 60 votos",
+   "p": {
+    "with_type": "2",
+    "vote_count.gte": "60"
+   },
+   "porPlataforma": {
+    "n": {
+     "nombre": "Netflix",
+     "total": 391
+    },
+    "d": {
+     "nombre": "Disney+",
+     "total": 71
+    },
+    "m": {
+     "nombre": "Max",
+     "total": 55
+    }
+   },
+   "combinadaTMDB": 515,
+   "unionPools": 174,
+   "filtroEstricto": {
+    "evaluadas": 60,
+    "sobreviven": 60
+   },
+   "ejemplos": [
+    "Así aprenderás (2026) · 815v · 9.4",
+    "Cenizas del pasado (2023) · 81v · 7.1",
+    "Agente Kim reactivado (2026) · 138v · 8.4",
+    "Te encontraré (2026) · 438v · 8.2",
+    "Monstruo: La historia de Ed Gein (2025) · 547v · 7.2",
+    "Monstruo: La historia de Jeffrey Dahmer (2022) · 2910v · 8.0",
+    "Chernobyl (2019) · 8194v · 8.7",
+    "Hermanos de sangre (2001) · 4322v · 8.6",
+    "Cyberpunk: Edgerunners (2022) · 1941v · 8.5",
+    "Bruja Escarlata y Visión (2021) · 12839v · 8.2",
+    "Agatha, ¿quién si no? (2024) · 1011v · 7.4",
+    "Berlín y la dama del armiño (2026) · 209v · 8.1"
+   ]
+  },
+  {
+   "id": "B",
+   "etiqueta": "with_type=2 + with_status=3 · piso 60",
+   "p": {
+    "with_type": "2",
+    "with_status": "3",
+    "vote_count.gte": "60"
+   },
+   "porPlataforma": {
+    "n": {
+     "nombre": "Netflix",
+     "total": 385
+    },
+    "d": {
+     "nombre": "Disney+",
+     "total": 71
+    },
+    "m": {
+     "nombre": "Max",
+     "total": 54
+    }
+   },
+   "combinadaTMDB": 508,
+   "unionPools": 173,
+   "filtroEstricto": {
+    "evaluadas": 60,
+    "sobreviven": 60
+   },
+   "ejemplos": [
+    "Así aprenderás (2026) · 815v · 9.4",
+    "Cenizas del pasado (2023) · 81v · 7.1",
+    "Agente Kim reactivado (2026) · 138v · 8.4",
+    "Te encontraré (2026) · 438v · 8.2",
+    "Monstruo: La historia de Ed Gein (2025) · 547v · 7.2",
+    "Monstruo: La historia de Jeffrey Dahmer (2022) · 2910v · 8.0",
+    "Chernobyl (2019) · 8194v · 8.7",
+    "Hermanos de sangre (2001) · 4322v · 8.6",
+    "Cyberpunk: Edgerunners (2022) · 1941v · 8.5",
+    "Bruja Escarlata y Visión (2021) · 12839v · 8.2",
+    "Agatha, ¿quién si no? (2024) · 1011v · 7.4",
+    "Berlín y la dama del armiño (2026) · 209v · 8.1"
+   ]
+  },
+  {
+   "id": "C",
+   "etiqueta": "with_type=2 · minVotes 0",
+   "p": {
+    "with_type": "2",
+    "vote_count.gte": "0"
+   },
+   "porPlataforma": {
+    "n": {
+     "nombre": "Netflix",
+     "total": 822
+    },
+    "d": {
+     "nombre": "Disney+",
+     "total": 252
+    },
+    "m": {
+     "nombre": "Max",
+     "total": 267
+    }
+   },
+   "combinadaTMDB": 1332,
+   "unionPools": 180,
+   "filtroEstricto": {
+    "evaluadas": 60,
+    "sobreviven": 60
+   },
+   "ejemplos": [
+    "Acaramelados (2026) · 59v · 8.7",
+    "Así aprenderás (2026) · 815v · 9.4",
+    "Cenizas del pasado (2023) · 81v · 7.1",
+    "Muertos de amor (2026) · 39v · 8.8",
+    "Agente Kim reactivado (2026) · 138v · 8.4",
+    "Mi brillante carrera (2026) · 19v · 4.6",
+    "Te encontraré (2026) · 438v · 8.2",
+    "Monstruo: La historia de Ed Gein (2025) · 547v · 7.2",
+    "Monstruo: La historia de Jeffrey Dahmer (2022) · 2910v · 8.0",
+    "Chernobyl (2019) · 8194v · 8.7",
+    "Hermanos de sangre (2001) · 4322v · 8.6",
+    "Cyberpunk: Edgerunners (2022) · 1941v · 8.5"
+   ]
+  },
+  {
+   "id": "D",
+   "etiqueta": "with_type=2 + with_status=3 · minVotes 0",
+   "p": {
+    "with_type": "2",
+    "with_status": "3",
+    "vote_count.gte": "0"
+   },
+   "porPlataforma": {
+    "n": {
+     "nombre": "Netflix",
+     "total": 792
+    },
+    "d": {
+     "nombre": "Disney+",
+     "total": 242
+    },
+    "m": {
+     "nombre": "Max",
+     "total": 253
+    }
+   },
+   "combinadaTMDB": 1280,
+   "unionPools": 180,
+   "filtroEstricto": {
+    "evaluadas": 60,
+    "sobreviven": 60
+   },
+   "ejemplos": [
+    "Acaramelados (2026) · 59v · 8.7",
+    "Así aprenderás (2026) · 815v · 9.4",
+    "Cenizas del pasado (2023) · 81v · 7.1",
+    "Agente Kim reactivado (2026) · 138v · 8.4",
+    "Mi brillante carrera (2026) · 19v · 4.6",
+    "Te encontraré (2026) · 438v · 8.2",
+    "Monstruo: La historia de Ed Gein (2025) · 547v · 7.2",
+    "Monstruo: La historia de Jeffrey Dahmer (2022) · 2910v · 8.0",
+    "Chernobyl (2019) · 8194v · 8.7",
+    "Hermanos de sangre (2001) · 4322v · 8.6",
+    "Cyberpunk: Edgerunners (2022) · 1941v · 8.5",
+    "El capo del bloque (2026) · 25v · 8.7"
+   ]
+  }
+ ],
+ "temporadas": {
+  "porEje": {
+   "pop": 154,
+   "top": 98,
+   "nuevo": 180,
+   "taquilla": 154,
+   "hondo": 60
+  },
+  "total": 317,
+  "type": {
+   "Miniseries": 317
+  },
+  "status": {
+   "Ended": 310,
+   "Returning Series": 5,
+   "Canceled": 2
+  },
+  "temporadas": {
+   "1": 311,
+   "2": 5,
+   "3+": 1
+  },
+  "multiTemporada": [
+   "Un papá soltero — 2 temp · status Ended",
+   "มหาลัยคลั่ง — 2 temp · status Returning Series",
+   "Vota Juan — 3 temp · status Ended",
+   "Un gallo para Esculapio — 2 temp · status Ended",
+   "El sinuoso camino del derecho — 2 temp · status Ended",
+   "Hello My Twenties — 2 temp · status Ended"
+  ],
+  "multiTemporadaTrasFiltro": [
+   "Un papá soltero — 2 temp",
+   "Vota Juan — 3 temp",
+   "Un gallo para Esculapio — 2 temp",
+   "El sinuoso camino del derecho — 2 temp",
+   "Hello My Twenties — 2 temp"
+  ],
+  "conFiltroEstado": {
+   "pasan": 310,
+   "quedanFuera": 7,
+   "multiQueSobrevive": 5
+  },
+  "episodios": {
+   "min": 2,
+   "p25": 6,
+   "mediana": 8,
+   "p75": 8,
+   "p95": 14,
+   "max": 60,
+   "sobre12": 19,
+   "n": 317
+  }
+ },
+ "combos": [
+  {
+   "combo": "n",
+   "n": 1,
+   "ejes": {
+    "pop": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 3,
+   "clavesPorDiaConFallback": 6
+  },
+  {
+   "combo": "d",
+   "n": 1,
+   "ejes": {
+    "pop": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 53,
+     "tarjetas": 20,
+     "degradado": true
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 3,
+   "clavesPorDiaConFallback": 6
+  },
+  {
+   "combo": "cr",
+   "n": 1,
+   "ejes": {
+    "pop": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 23,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 11,
+     "tarjetas": 11,
+     "degradado": true
+    }
+   },
+   "min": 11,
+   "veredicto": "se oculta algún día",
+   "clavesPorDia": 3,
+   "clavesPorDiaConFallback": 6
+  },
+  {
+   "combo": "mb",
+   "n": 1,
+   "ejes": {
+    "pop": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 3,
+     "tarjetas": 3,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 2,
+     "tarjetas": 2,
+     "degradado": true
+    }
+   },
+   "min": 2,
+   "veredicto": "se oculta algún día",
+   "clavesPorDia": 3,
+   "clavesPorDiaConFallback": 6
+  },
+  {
+   "combo": "n,d,m",
+   "n": 3,
+   "ejes": {
+    "pop": {
+     "candidatos": 153,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 98,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 180,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 153,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 9,
+   "clavesPorDiaConFallback": 18
+  },
+  {
+   "combo": "n,p",
+   "n": 2,
+   "ejes": {
+    "pop": {
+     "candidatos": 98,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 66,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 120,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 98,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 6,
+   "clavesPorDiaConFallback": 12
+  },
+  {
+   "combo": "d,m",
+   "n": 2,
+   "ejes": {
+    "pop": {
+     "candidatos": 94,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 39,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 120,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 94,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 94,
+     "tarjetas": 20,
+     "degradado": true
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 6,
+   "clavesPorDiaConFallback": 12
+  },
+  {
+   "combo": "cr,n",
+   "n": 2,
+   "ejes": {
+    "pop": {
+     "candidatos": 71,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 63,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 83,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 71,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 6,
+   "clavesPorDiaConFallback": 12
+  },
+  {
+   "combo": "mb,un,vx",
+   "n": 3,
+   "ejes": {
+    "pop": {
+     "candidatos": 5,
+     "tarjetas": 5,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 5,
+     "tarjetas": 5,
+     "degradado": true
+    },
+    "nuevo": {
+     "candidatos": 14,
+     "tarjetas": 14,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 5,
+     "tarjetas": 5,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 5,
+     "tarjetas": 5,
+     "degradado": true
+    }
+   },
+   "min": 5,
+   "veredicto": "se oculta algún día",
+   "clavesPorDia": 9,
+   "clavesPorDiaConFallback": 18
+  },
+  {
+   "combo": "n,d,m,at,p,pp",
+   "n": 6,
+   "ejes": {
+    "pop": {
+     "candidatos": 227,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 111,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 291,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 227,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 18,
+   "clavesPorDiaConFallback": 36
+  },
+  {
+   "combo": "n,d,m,at,p,cr,pp,mb,un,mv,cv,vx,dg,ok",
+   "n": 14,
+   "ejes": {
+    "pop": {
+     "candidatos": 288,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "top": {
+     "candidatos": 125,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "nuevo": {
+     "candidatos": 397,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "taquilla": {
+     "candidatos": 288,
+     "tarjetas": 20,
+     "degradado": false
+    },
+    "hondo": {
+     "candidatos": 60,
+     "tarjetas": 20,
+     "degradado": false
+    }
+   },
+   "min": 20,
+   "veredicto": "20 siempre",
+   "clavesPorDia": 42,
+   "clavesPorDiaConFallback": 84
+  }
+ ],
+ "region": {
+  "porEje": {
+   "pop": {
+    "pisoDelEje": "60",
+    "conPiso": {
+     "total": 153,
+     "ar": 1,
+     "latam": 3,
+     "titulos": [
+      "Emergencia radiactiva (2026) BR · 140v",
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "Santa Evita (2022) AR · 70v"
+     ]
+    },
+    "conCero": {
+     "total": 180,
+     "ar": 2,
+     "latam": 9,
+     "titulos": [
+      "El otro padre (2026) MX · 49v",
+      "Furioso (2026) BR · 12v",
+      "Emergencia radiactiva (2026) BR · 140v",
+      "Amor Mío (2005) AR/MX · 5v",
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "Mary & Mike (2018) CL · 15v",
+      "Máscaras de Oxigênio Não Cairão Automaticamente (2025) BR · 7v",
+      "Angela Diniz: asesinada y condenada (2025) BR · 11v",
+      "Un gallo para Esculapio (2017) AR · 29v"
+     ]
+    },
+    "latamQueSoloApareceConCero": [
+     "El otro padre (2026) MX · 49v",
+     "Furioso (2026) BR · 12v",
+     "Amor Mío (2005) AR/MX · 5v",
+     "Mary & Mike (2018) CL · 15v",
+     "Máscaras de Oxigênio Não Cairão Automaticamente (2025) BR · 7v",
+     "Angela Diniz: asesinada y condenada (2025) BR · 11v",
+     "Un gallo para Esculapio (2017) AR · 29v"
+    ]
+   },
+   "top": {
+    "pisoDelEje": "300",
+    "conPiso": {
+     "total": 98,
+     "ar": 0,
+     "latam": 3,
+     "titulos": [
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "Historia de un crimen: la búsqueda (2020) MX · 346v",
+      "El robo del siglo (2020) CO · 613v"
+     ]
+    },
+    "conCero": {
+     "total": 180,
+     "ar": 8,
+     "latam": 21,
+     "titulos": [
+      "El otro padre (2026) MX · 49v",
+      "Furioso (2026) BR · 12v",
+      "Brasil 70: La saga del tricampeonato (2026) BR · 18v",
+      "No tengo miedo (2026) MX · 43v",
+      "Senna (2024) BR · 260v",
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "La Reina De Persia (2024) BR · 14v",
+      "Ringo. Gloria y muerte (2023) AR · 19v",
+      "Mary & Mike (2018) CL · 15v",
+      "La vida de Job (2025) BR · 1v",
+      "El tiempo de las moscas (2026) AR · 11v",
+      "El mejor infarto de mi vida (2025) AR · 19v",
+      "Máscaras de Oxigênio Não Cairão Automaticamente (2025) BR · 7v",
+      "Angela Diniz: asesinada y condenada (2025) BR · 11v",
+      "Santa Evita (2022) AR · 70v",
+      "Un gallo para Esculapio (2017) AR · 29v",
+      "María: La leyenda de una bandida (2025) BR · 8v",
+      "Okupas (2000) AR · 89v",
+      "Los Chávez (2024) MX · 7v",
+      "María Marta: el crimen del country (2022) AR · 20v",
+      "La voz ausente (2024) AR · 16v"
+     ]
+    },
+    "latamQueSoloApareceConCero": [
+     "El otro padre (2026) MX · 49v",
+     "Furioso (2026) BR · 12v",
+     "Brasil 70: La saga del tricampeonato (2026) BR · 18v",
+     "No tengo miedo (2026) MX · 43v",
+     "Senna (2024) BR · 260v",
+     "La Reina De Persia (2024) BR · 14v",
+     "Ringo. Gloria y muerte (2023) AR · 19v",
+     "Mary & Mike (2018) CL · 15v",
+     "La vida de Job (2025) BR · 1v",
+     "El tiempo de las moscas (2026) AR · 11v",
+     "El mejor infarto de mi vida (2025) AR · 19v",
+     "Máscaras de Oxigênio Não Cairão Automaticamente (2025) BR · 7v",
+     "Angela Diniz: asesinada y condenada (2025) BR · 11v",
+     "Santa Evita (2022) AR · 70v",
+     "Un gallo para Esculapio (2017) AR · 29v",
+     "María: La leyenda de una bandida (2025) BR · 8v",
+     "Okupas (2000) AR · 89v",
+     "Los Chávez (2024) MX · 7v",
+     "María Marta: el crimen del country (2022) AR · 20v",
+     "La voz ausente (2024) AR · 16v"
+    ]
+   },
+   "nuevo": {
+    "pisoDelEje": "10",
+    "conPiso": {
+     "total": 180,
+     "ar": 6,
+     "latam": 19,
+     "titulos": [
+      "El otro padre (2026) MX · 49v",
+      "Furioso (2026) BR · 12v",
+      "Emergencia radiactiva (2026) BR · 140v",
+      "Brasil 70: La saga del tricampeonato (2026) BR · 18v",
+      "No tengo miedo (2026) MX · 43v",
+      "Simplemente Alicia (2025) CO · 31v",
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "Nadie nos vio partir (2025) MX · 35v",
+      "La Reina De Persia (2024) BR · 14v",
+      "Ringo. Gloria y muerte (2023) AR · 19v",
+      "Mary & Mike (2018) CL · 15v",
+      "El tiempo de las moscas (2026) AR · 11v",
+      "El mejor infarto de mi vida (2025) AR · 19v",
+      "Alguien tiene que saber (2026) CL · 14v",
+      "Angela Diniz: asesinada y condenada (2025) BR · 11v",
+      "Un gallo para Esculapio (2017) AR · 29v",
+      "Estado de fuga 1986 (2025) CO · 24v",
+      "María Marta: el crimen del country (2022) AR · 20v",
+      "La voz ausente (2024) AR · 16v"
+     ]
+    },
+    "conCero": {
+     "total": 180,
+     "ar": 4,
+     "latam": 20,
+     "titulos": [
+      "El otro padre (2026) MX · 49v",
+      "Furioso (2026) BR · 12v",
+      "Emergencia radiactiva (2026) BR · 140v",
+      "Brasil 70: La saga del tricampeonato (2026) BR · 18v",
+      "No tengo miedo (2026) MX · 43v",
+      "Simplemente Alicia (2025) CO · 31v",
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "La Reina De Persia (2024) BR · 14v",
+      "Santita (2026) MX · 7v",
+      "La vida de Job (2025) BR · 1v",
+      "El tiempo de las moscas (2026) AR · 11v",
+      "El mejor infarto de mi vida (2025) AR · 19v",
+      "Alguien tiene que saber (2026) CL · 14v",
+      "Máscaras de Oxigênio Não Cairão Automaticamente (2025) BR · 7v",
+      "Angela Diniz: asesinada y condenada (2025) BR · 11v",
+      "María: La leyenda de una bandida (2025) BR · 8v",
+      "Estado de fuga 1986 (2025) CO · 24v",
+      "Los Chávez (2024) MX · 7v",
+      "María Marta: el crimen del country (2022) AR · 20v",
+      "La voz ausente (2024) AR · 16v"
+     ]
+    },
+    "latamQueSoloApareceConCero": [
+     "Santita (2026) MX · 7v",
+     "La vida de Job (2025) BR · 1v",
+     "Máscaras de Oxigênio Não Cairão Automaticamente (2025) BR · 7v",
+     "María: La leyenda de una bandida (2025) BR · 8v",
+     "Los Chávez (2024) MX · 7v"
+    ]
+   },
+   "taquilla": {
+    "pisoDelEje": "60",
+    "conPiso": {
+     "total": 153,
+     "ar": 1,
+     "latam": 4,
+     "titulos": [
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "Historia de un crimen: la búsqueda (2020) MX · 346v",
+      "Santa Evita (2022) AR · 70v",
+      "El robo del siglo (2020) CO · 613v"
+     ]
+    },
+    "conCero": {
+     "total": 179,
+     "ar": 3,
+     "latam": 7,
+     "titulos": [
+      "Chespirito: Sin querer queriendo (2025) MX · 470v",
+      "Historia de un crimen: la búsqueda (2020) MX · 346v",
+      "Mary & Mike (2018) CL · 15v",
+      "Santa Evita (2022) AR · 70v",
+      "Un gallo para Esculapio (2017) AR · 29v",
+      "El robo del siglo (2020) CO · 613v",
+      "María Marta: el crimen del country (2022) AR · 20v"
+     ]
+    },
+    "latamQueSoloApareceConCero": [
+     "Mary & Mike (2018) CL · 15v",
+     "Un gallo para Esculapio (2017) AR · 29v",
+     "María Marta: el crimen del country (2022) AR · 20v"
+    ]
+   },
+   "hondo": {
+    "pisoDelEje": "60",
+    "conPiso": {
+     "total": 60,
+     "ar": 0,
+     "latam": 1,
+     "titulos": [
+      "Bolívar (2019) CO · 280v"
+     ]
+    },
+    "conCero": {
+     "total": 118,
+     "ar": 8,
+     "latam": 15,
+     "titulos": [
+      "Bolívar (2019) CO · 280v",
+      "Secuestro del vuelo 601 (2024) CO · 47v",
+      "Brasil 70: La saga del tricampeonato (2026) BR · 18v",
+      "La Reina De Persia (2024) BR · 14v",
+      "Ringo. Gloria y muerte (2023) AR · 19v",
+      "La vida de Job (2025) BR · 1v",
+      "El mejor infarto de mi vida (2025) AR · 19v",
+      "Santa Evita (2022) AR · 70v",
+      "María: La leyenda de una bandida (2025) BR · 8v",
+      "El lobista (2018) AR · 4v",
+      "Nafta Súper (2016) AR · 5v",
+      "Los Chávez (2024) MX · 7v",
+      "María Marta: el crimen del country (2022) AR · 20v",
+      "La voz ausente (2024) AR · 16v",
+      "La fragilidad de los cuerpos (2017) AR · 9v"
+     ]
+    },
+    "latamQueSoloApareceConCero": [
+     "Secuestro del vuelo 601 (2024) CO · 47v",
+     "Brasil 70: La saga del tricampeonato (2026) BR · 18v",
+     "La Reina De Persia (2024) BR · 14v",
+     "Ringo. Gloria y muerte (2023) AR · 19v",
+     "La vida de Job (2025) BR · 1v",
+     "El mejor infarto de mi vida (2025) AR · 19v",
+     "Santa Evita (2022) AR · 70v",
+     "María: La leyenda de una bandida (2025) BR · 8v",
+     "El lobista (2018) AR · 4v",
+     "Nafta Súper (2016) AR · 5v",
+     "Los Chávez (2024) MX · 7v",
+     "María Marta: el crimen del country (2022) AR · 20v",
+     "La voz ausente (2024) AR · 16v",
+     "La fragilidad de los cuerpos (2017) AR · 9v"
+    ]
+   }
+  },
+  "resumen": {
+   "latamUnicasConPiso": 23,
+   "latamUnicasConCero": 34,
+   "soloConCero": 12,
+   "titulosSoloConCero": [
+    "Amor Mío (2005) AR/MX · 5v",
+    "Máscaras de Oxigênio Não Cairão Automaticamente (2025) BR · 7v",
+    "Senna (2024) BR · 260v",
+    "La vida de Job (2025) BR · 1v",
+    "María: La leyenda de una bandida (2025) BR · 8v",
+    "Okupas (2000) AR · 89v",
+    "Los Chávez (2024) MX · 7v",
+    "Santita (2026) MX · 7v",
+    "Secuestro del vuelo 601 (2024) CO · 47v",
+    "El lobista (2018) AR · 4v",
+    "Nafta Súper (2016) AR · 5v",
+    "La fragilidad de los cuerpos (2017) AR · 9v"
+   ]
+  }
+ },
+ "costoMedicion": {
+  "requests": 1850,
+  "status": {
+   "200": 1850
+  },
+  "segundos": 62
+ }
+}

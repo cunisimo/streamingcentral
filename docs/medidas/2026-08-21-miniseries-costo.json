@@ -1,0 +1,138 @@
+{
+ "generado": "2026-08-21T20:15:52.348Z",
+ "fecha": "2026-08-21",
+ "providers": [
+  "n",
+  "d",
+  "m"
+ ],
+ "corridasPorVariante": 3,
+ "cache": {
+  "modo": "memoria",
+  "fuente": null,
+  "tieneUrl": false,
+  "tieneToken": false
+ },
+ "nota": "Frío equivalente: el cache está en modo memoria (sin Upstash), así que un proceso nuevo arranca con el Map vacío. El script aborta si detecta credenciales de Redis. Los HIT/MISS de cada corrida lo confirman: los pocos hits del frío son claves repetidas DENTRO de la misma corrida, no arrastre de la anterior.",
+ "sin": {
+  "frio": {
+   "ms": {
+    "min": 5234,
+    "max": 5467,
+    "mediana": 5299
+   },
+   "tmdb": {
+    "min": 561,
+    "max": 561,
+    "mediana": 561
+   },
+   "comandos": {
+    "min": 599,
+    "max": 599,
+    "mediana": 599
+   },
+   "claves": {
+    "min": 579,
+    "max": 579,
+    "mediana": 579
+   },
+   "payloadKB": 77.5,
+   "tarjetas": 294,
+   "hitMiss": [
+    "15/564",
+    "15/564",
+    "15/564"
+   ]
+  },
+  "caliente": {
+   "ms": {
+    "min": 474,
+    "max": 492,
+    "mediana": 483
+   },
+   "tmdb": {
+    "min": 2,
+    "max": 2,
+    "mediana": 2
+   },
+   "comandos": {
+    "min": 26,
+    "max": 26,
+    "mediana": 26
+   },
+   "claves": {
+    "min": 500,
+    "max": 500,
+    "mediana": 500
+   },
+   "payloadKB": 77.5,
+   "tarjetas": 294,
+   "hitMiss": [
+    "500/0",
+    "500/0",
+    "500/0"
+   ]
+  }
+ },
+ "con": {
+  "frio": {
+   "ms": {
+    "min": 5831,
+    "max": 6176,
+    "mediana": 6120
+   },
+   "tmdb": {
+    "min": 606,
+    "max": 606,
+    "mediana": 606
+   },
+   "comandos": {
+    "min": 648,
+    "max": 648,
+    "mediana": 648
+   },
+   "claves": {
+    "min": 626,
+    "max": 626,
+    "mediana": 626
+   },
+   "payloadKB": 82.6,
+   "tarjetas": 314,
+   "hitMiss": [
+    "17/609",
+    "17/609",
+    "17/609"
+   ]
+  },
+  "caliente": {
+   "ms": {
+    "min": 465,
+    "max": 471,
+    "mediana": 469
+   },
+   "tmdb": {
+    "min": 2,
+    "max": 2,
+    "mediana": 2
+   },
+   "comandos": {
+    "min": 30,
+    "max": 30,
+    "mediana": 30
+   },
+   "claves": {
+    "min": 547,
+    "max": 547,
+    "mediana": 547
+   },
+   "payloadKB": 82.6,
+   "tarjetas": 314,
+   "hitMiss": [
+    "547/0",
+    "547/0",
+    "547/0"
+   ]
+  }
+ },
+ "advertencia": "En la corrida CON, 9 de los 45 requests extra son un artefacto de la medición: el 2026-08-21 toca el eje top y el script pide los candidatos dos veces para aplicarle su piso propio. En producción el piso viaja en la receta desde el arranque y ese doble pedido no existe."
+}
