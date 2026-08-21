@@ -1,5 +1,5 @@
 {
- "generado": "2026-08-21T20:13:06.320Z",
+ "generado": "2026-08-21T20:27:09.644Z",
  "desde": "2026-08-21",
  "dias": 7,
  "providers": [
@@ -7,25 +7,7 @@
   "d",
   "m"
  ],
- "receta": {
-  "with_type": "2",
-  "with_status": "3"
- },
- "pisoVotos": {
-  "pop": "0",
-  "top": "10",
-  "nuevo": "0",
-  "taquilla": "0",
-  "hondo": "0"
- },
- "sinGeneros": [
-  99,
-  10751,
-  10762,
-  16
- ],
  "cobertura": 117,
- "solapeMedio": 8,
  "solapes": [
   0,
   10,
@@ -34,6 +16,7 @@
   15,
   5
  ],
+ "solapeMedio": 8,
  "minPorDia": 20,
  "diasOculto": 0,
  "calidad": {
@@ -42,18 +25,29 @@
   "bajo5": 1,
   "n": 139
  },
- "tmdb": "200x2320",
- "fallosTmdb": false,
+ "problemas": [],
+ "tmdb": "200x2325",
  "dias_": [
   {
    "fecha": "2026-08-21",
    "ejeMini": "top",
-   "degradadoEje": false,
-   "candidatos": 180,
-   "mini": 20,
-   "vueltas": 1,
-   "pagados": 28,
-   "seOculta": false,
+   "ejes": {
+    "hero-todos/movie": "taquilla",
+    "hero-todos/tv": "taquilla",
+    "riel-accion/movie": "nuevo",
+    "riel-terror/movie": "taquilla",
+    "riel-drama/tv": "nuevo",
+    "riel-comedia/movie": "taquilla",
+    "riel-documental/tv": "taquilla",
+    "aud-family/movie": "top",
+    "aud-family/tv": "top",
+    "aud-adult-anime/movie": "nuevo",
+    "aud-adult-anime/tv": "nuevo",
+    "riel-scifi/tv": "pop*",
+    "riel-mini-miniseries/tv": "top"
+   },
+   "visible": true,
+   "n": 20,
    "claves": [
     "tv:254389",
     "tv:125350",
@@ -120,98 +114,60 @@
     8.2,
     6.2
    ],
-   "rieles": [
-    {
-     "key": "ultimos",
-     "n": 20,
-     "cambia": false
+   "rieles": {
+    "sin": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "family": 40,
+     "adult-anime": 40
     },
-    {
-     "key": "mas-votados",
-     "n": 40,
-     "cambia": false
-    },
-    {
-     "key": "hacete-cargo",
-     "n": 28,
-     "cambia": false
-    },
-    {
-     "key": "genre:accion",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:scifi",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:terror",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:drama",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:comedia",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:documental",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "miniseries",
-     "n": 20,
-     "cambia": true
-    },
-    {
-     "key": "family",
-     "n": 40,
-     "antes": 40,
-     "perdidos": 0,
-     "cambia": true
-    },
-    {
-     "key": "adult-anime",
-     "n": 40,
-     "antes": 40,
-     "perdidos": 0,
-     "cambia": true
+    "con": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "miniseries": 20,
+     "family": 40,
+     "adult-anime": 40
     }
-   ],
-   "heroN": 6,
+   },
+   "unicosSin": 294,
+   "unicosCon": 314,
    "degradado": false,
-   "ejesHome": {
-    "hero-todos/tv": "taquilla",
-    "hero-todos/movie": "taquilla",
-    "riel-accion/movie": "nuevo",
-    "riel-terror/movie": "taquilla",
-    "riel-drama/tv": "nuevo",
-    "riel-comedia/movie": "taquilla",
-    "aud-family/movie": "top",
-    "aud-adult-anime/movie": "nuevo",
-    "aud-family/tv": "top",
-    "riel-documental/tv": "taquilla",
-    "aud-adult-anime/tv": "nuevo",
-    "riel-scifi/tv": "pop*"
-   }
+   "problemas": []
   },
   {
    "fecha": "2026-08-22",
    "ejeMini": "taquilla",
-   "degradadoEje": false,
-   "candidatos": 179,
-   "mini": 20,
-   "vueltas": 1,
-   "pagados": 28,
-   "seOculta": false,
+   "ejes": {
+    "hero-todos/movie": "pop",
+    "hero-todos/tv": "pop",
+    "riel-accion/movie": "hondo",
+    "riel-terror/movie": "pop",
+    "riel-drama/tv": "hondo",
+    "riel-comedia/movie": "pop",
+    "riel-documental/tv": "pop",
+    "aud-family/movie": "taquilla",
+    "aud-family/tv": "taquilla",
+    "aud-adult-anime/tv": "hondo",
+    "riel-scifi/tv": "pop*",
+    "aud-adult-anime/movie": "pop*",
+    "riel-mini-miniseries/tv": "taquilla"
+   },
+   "visible": true,
+   "n": 20,
    "claves": [
     "tv:205082",
     "tv:119988",
@@ -278,98 +234,60 @@
     7.2,
     7.2
    ],
-   "rieles": [
-    {
-     "key": "ultimos",
-     "n": 20,
-     "cambia": false
+   "rieles": {
+    "sin": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "family": 39,
+     "adult-anime": 39
     },
-    {
-     "key": "mas-votados",
-     "n": 40,
-     "cambia": false
-    },
-    {
-     "key": "hacete-cargo",
-     "n": 28,
-     "cambia": false
-    },
-    {
-     "key": "genre:accion",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:scifi",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:terror",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:drama",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:comedia",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:documental",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "miniseries",
-     "n": 20,
-     "cambia": true
-    },
-    {
-     "key": "family",
-     "n": 39,
-     "antes": 39,
-     "perdidos": 0,
-     "cambia": true
-    },
-    {
-     "key": "adult-anime",
-     "n": 39,
-     "antes": 39,
-     "perdidos": 0,
-     "cambia": true
+    "con": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "miniseries": 20,
+     "family": 39,
+     "adult-anime": 39
     }
-   ],
-   "heroN": 6,
+   },
+   "unicosSin": 292,
+   "unicosCon": 312,
    "degradado": false,
-   "ejesHome": {
-    "hero-todos/tv": "pop",
-    "hero-todos/movie": "pop",
-    "riel-accion/movie": "hondo",
-    "riel-terror/movie": "pop",
-    "riel-drama/tv": "hondo",
-    "aud-family/movie": "taquilla",
-    "aud-family/tv": "taquilla",
-    "aud-adult-anime/tv": "hondo",
-    "riel-documental/tv": "pop",
-    "riel-comedia/movie": "pop",
-    "aud-adult-anime/movie": "pop*",
-    "riel-scifi/tv": "pop*"
-   }
+   "problemas": []
   },
   {
    "fecha": "2026-08-23",
    "ejeMini": "hondo",
-   "degradadoEje": false,
-   "candidatos": 118,
-   "mini": 20,
-   "vueltas": 1,
-   "pagados": 28,
-   "seOculta": false,
+   "ejes": {
+    "hero-todos/movie": "top",
+    "hero-todos/tv": "top",
+    "riel-accion/movie": "pop",
+    "riel-scifi/tv": "nuevo",
+    "riel-terror/movie": "top",
+    "riel-drama/tv": "pop",
+    "riel-comedia/movie": "top",
+    "aud-family/movie": "hondo",
+    "aud-adult-anime/movie": "pop",
+    "aud-adult-anime/tv": "pop",
+    "riel-documental/tv": "pop*",
+    "aud-family/tv": "pop*",
+    "riel-mini-miniseries/tv": "hondo"
+   },
+   "visible": true,
+   "n": 20,
    "claves": [
     "tv:232766",
     "tv:238458",
@@ -435,98 +353,60 @@
     6.7,
     7
    ],
-   "rieles": [
-    {
-     "key": "ultimos",
-     "n": 20,
-     "cambia": false
+   "rieles": {
+    "sin": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "family": 40,
+     "adult-anime": 36
     },
-    {
-     "key": "mas-votados",
-     "n": 40,
-     "cambia": false
-    },
-    {
-     "key": "hacete-cargo",
-     "n": 28,
-     "cambia": false
-    },
-    {
-     "key": "genre:accion",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:scifi",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:terror",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:drama",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:comedia",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:documental",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "miniseries",
-     "n": 20,
-     "cambia": true
-    },
-    {
-     "key": "family",
-     "n": 40,
-     "antes": 40,
-     "perdidos": 0,
-     "cambia": true
-    },
-    {
-     "key": "adult-anime",
-     "n": 36,
-     "antes": 36,
-     "perdidos": 0,
-     "cambia": true
+    "con": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "miniseries": 20,
+     "family": 40,
+     "adult-anime": 36
     }
-   ],
-   "heroN": 6,
+   },
+   "unicosSin": 290,
+   "unicosCon": 310,
    "degradado": false,
-   "ejesHome": {
+   "problemas": []
+  },
+  {
+   "fecha": "2026-08-24",
+   "ejeMini": "hondo",
+   "ejes": {
     "hero-todos/movie": "top",
     "hero-todos/tv": "top",
     "riel-accion/movie": "pop",
+    "riel-scifi/tv": "nuevo",
     "riel-terror/movie": "top",
     "riel-drama/tv": "pop",
     "riel-comedia/movie": "top",
     "aud-family/movie": "hondo",
     "aud-adult-anime/movie": "pop",
     "aud-adult-anime/tv": "pop",
-    "riel-scifi/tv": "nuevo",
+    "riel-documental/tv": "pop*",
     "aud-family/tv": "pop*",
-    "riel-documental/tv": "pop*"
-   }
-  },
-  {
-   "fecha": "2026-08-24",
-   "ejeMini": "hondo",
-   "degradadoEje": false,
-   "candidatos": 118,
-   "mini": 20,
-   "vueltas": 1,
-   "pagados": 28,
-   "seOculta": false,
+    "riel-mini-miniseries/tv": "hondo"
+   },
+   "visible": true,
+   "n": 20,
    "claves": [
     "tv:203554",
     "tv:82400",
@@ -593,98 +473,60 @@
     6.8,
     8.9
    ],
-   "rieles": [
-    {
-     "key": "ultimos",
-     "n": 20,
-     "cambia": false
+   "rieles": {
+    "sin": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "family": 39,
+     "adult-anime": 39
     },
-    {
-     "key": "mas-votados",
-     "n": 40,
-     "cambia": false
-    },
-    {
-     "key": "hacete-cargo",
-     "n": 28,
-     "cambia": false
-    },
-    {
-     "key": "genre:accion",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:scifi",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:terror",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:drama",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:comedia",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:documental",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "miniseries",
-     "n": 20,
-     "cambia": true
-    },
-    {
-     "key": "family",
-     "n": 39,
-     "antes": 39,
-     "perdidos": 0,
-     "cambia": true
-    },
-    {
-     "key": "adult-anime",
-     "n": 39,
-     "antes": 39,
-     "perdidos": 0,
-     "cambia": true
+    "con": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "miniseries": 20,
+     "family": 39,
+     "adult-anime": 39
     }
-   ],
-   "heroN": 6,
+   },
+   "unicosSin": 292,
+   "unicosCon": 312,
    "degradado": false,
-   "ejesHome": {
-    "hero-todos/movie": "top",
-    "hero-todos/tv": "top",
-    "riel-accion/movie": "pop",
-    "riel-terror/movie": "top",
-    "riel-scifi/tv": "nuevo",
-    "riel-drama/tv": "pop",
-    "riel-comedia/movie": "top",
-    "aud-family/movie": "hondo",
-    "aud-adult-anime/tv": "pop",
-    "aud-adult-anime/movie": "pop",
-    "aud-family/tv": "pop*",
-    "riel-documental/tv": "pop*"
-   }
+   "problemas": []
   },
   {
    "fecha": "2026-08-25",
    "ejeMini": "pop",
-   "degradadoEje": false,
-   "candidatos": 180,
-   "mini": 20,
-   "vueltas": 1,
-   "pagados": 28,
-   "seOculta": false,
+   "ejes": {
+    "hero-todos/movie": "nuevo",
+    "hero-todos/tv": "nuevo",
+    "riel-accion/movie": "top",
+    "riel-terror/movie": "nuevo",
+    "riel-drama/tv": "top",
+    "riel-comedia/movie": "nuevo",
+    "riel-documental/tv": "nuevo",
+    "aud-family/movie": "pop",
+    "aud-family/tv": "pop",
+    "aud-adult-anime/movie": "top",
+    "aud-adult-anime/tv": "top",
+    "riel-scifi/tv": "taquilla",
+    "riel-mini-miniseries/tv": "pop"
+   },
+   "visible": true,
+   "n": 20,
    "claves": [
     "tv:248416",
     "tv:206828",
@@ -751,98 +593,60 @@
     8.3,
     6.3
    ],
-   "rieles": [
-    {
-     "key": "ultimos",
-     "n": 20,
-     "cambia": false
+   "rieles": {
+    "sin": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "family": 40,
+     "adult-anime": 38
     },
-    {
-     "key": "mas-votados",
-     "n": 40,
-     "cambia": false
-    },
-    {
-     "key": "hacete-cargo",
-     "n": 28,
-     "cambia": false
-    },
-    {
-     "key": "genre:accion",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:scifi",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:terror",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:drama",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:comedia",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:documental",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "miniseries",
-     "n": 20,
-     "cambia": true
-    },
-    {
-     "key": "family",
-     "n": 40,
-     "antes": 40,
-     "perdidos": 0,
-     "cambia": true
-    },
-    {
-     "key": "adult-anime",
-     "n": 38,
-     "antes": 38,
-     "perdidos": 0,
-     "cambia": true
+    "con": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "miniseries": 20,
+     "family": 40,
+     "adult-anime": 38
     }
-   ],
-   "heroN": 6,
+   },
+   "unicosSin": 292,
+   "unicosCon": 312,
    "degradado": false,
-   "ejesHome": {
-    "hero-todos/tv": "nuevo",
-    "hero-todos/movie": "nuevo",
-    "riel-accion/movie": "top",
-    "riel-terror/movie": "nuevo",
-    "riel-drama/tv": "top",
-    "riel-documental/tv": "nuevo",
-    "aud-family/movie": "pop",
-    "aud-family/tv": "pop",
-    "aud-adult-anime/movie": "top",
-    "aud-adult-anime/tv": "top",
-    "riel-comedia/movie": "nuevo",
-    "riel-scifi/tv": "taquilla"
-   }
+   "problemas": []
   },
   {
    "fecha": "2026-08-26",
    "ejeMini": "nuevo",
-   "degradadoEje": false,
-   "candidatos": 180,
-   "mini": 20,
-   "vueltas": 1,
-   "pagados": 28,
-   "seOculta": false,
+   "ejes": {
+    "hero-todos/movie": "hondo",
+    "hero-todos/tv": "hondo",
+    "riel-accion/movie": "taquilla",
+    "riel-scifi/tv": "pop",
+    "riel-terror/movie": "hondo",
+    "riel-drama/tv": "taquilla",
+    "riel-comedia/movie": "hondo",
+    "riel-documental/tv": "hondo",
+    "aud-family/movie": "nuevo",
+    "aud-family/tv": "nuevo",
+    "aud-adult-anime/movie": "taquilla",
+    "aud-adult-anime/tv": "taquilla",
+    "riel-mini-miniseries/tv": "nuevo"
+   },
+   "visible": true,
+   "n": 20,
    "claves": [
     "tv:276472",
     "tv:300727",
@@ -909,98 +713,60 @@
     6.3,
     7
    ],
-   "rieles": [
-    {
-     "key": "ultimos",
-     "n": 20,
-     "cambia": false
+   "rieles": {
+    "sin": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "family": 40,
+     "adult-anime": 39
     },
-    {
-     "key": "mas-votados",
-     "n": 40,
-     "cambia": false
-    },
-    {
-     "key": "hacete-cargo",
-     "n": 28,
-     "cambia": false
-    },
-    {
-     "key": "genre:accion",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:scifi",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:terror",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:drama",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:comedia",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:documental",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "miniseries",
-     "n": 20,
-     "cambia": true
-    },
-    {
-     "key": "family",
-     "n": 40,
-     "antes": 40,
-     "perdidos": 0,
-     "cambia": true
-    },
-    {
-     "key": "adult-anime",
-     "n": 39,
-     "antes": 39,
-     "perdidos": 0,
-     "cambia": true
+    "con": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "miniseries": 20,
+     "family": 40,
+     "adult-anime": 39
     }
-   ],
-   "heroN": 6,
+   },
+   "unicosSin": 293,
+   "unicosCon": 313,
    "degradado": false,
-   "ejesHome": {
-    "hero-todos/movie": "hondo",
-    "hero-todos/tv": "hondo",
-    "riel-accion/movie": "taquilla",
-    "riel-terror/movie": "hondo",
-    "riel-scifi/tv": "pop",
-    "riel-drama/tv": "taquilla",
-    "riel-comedia/movie": "hondo",
-    "aud-family/movie": "nuevo",
-    "aud-family/tv": "nuevo",
-    "aud-adult-anime/movie": "taquilla",
-    "aud-adult-anime/tv": "taquilla",
-    "riel-documental/tv": "hondo"
-   }
+   "problemas": []
   },
   {
    "fecha": "2026-08-27",
    "ejeMini": "taquilla",
-   "degradadoEje": false,
-   "candidatos": 179,
-   "mini": 20,
-   "vueltas": 1,
-   "pagados": 28,
-   "seOculta": false,
+   "ejes": {
+    "hero-todos/movie": "pop",
+    "hero-todos/tv": "pop",
+    "riel-accion/movie": "hondo",
+    "riel-terror/movie": "pop",
+    "riel-drama/tv": "hondo",
+    "riel-comedia/movie": "pop",
+    "riel-documental/tv": "pop",
+    "aud-family/movie": "taquilla",
+    "aud-family/tv": "taquilla",
+    "aud-adult-anime/tv": "hondo",
+    "riel-scifi/tv": "pop*",
+    "aud-adult-anime/movie": "pop*",
+    "riel-mini-miniseries/tv": "taquilla"
+   },
+   "visible": true,
+   "n": 20,
    "claves": [
     "tv:16997",
     "tv:111838",
@@ -1067,88 +833,39 @@
     7.9,
     8.2
    ],
-   "rieles": [
-    {
-     "key": "ultimos",
-     "n": 20,
-     "cambia": false
+   "rieles": {
+    "sin": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "family": 40,
+     "adult-anime": 40
     },
-    {
-     "key": "mas-votados",
-     "n": 40,
-     "cambia": false
-    },
-    {
-     "key": "hacete-cargo",
-     "n": 28,
-     "cambia": false
-    },
-    {
-     "key": "genre:accion",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:scifi",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:terror",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:drama",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:comedia",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "genre:documental",
-     "n": 20,
-     "cambia": false
-    },
-    {
-     "key": "miniseries",
-     "n": 20,
-     "cambia": true
-    },
-    {
-     "key": "family",
-     "n": 40,
-     "antes": 40,
-     "perdidos": 0,
-     "cambia": true
-    },
-    {
-     "key": "adult-anime",
-     "n": 40,
-     "antes": 40,
-     "perdidos": 0,
-     "cambia": true
+    "con": {
+     "ultimos": 20,
+     "mas-votados": 40,
+     "hacete-cargo": 28,
+     "genre:accion": 20,
+     "genre:scifi": 20,
+     "genre:terror": 20,
+     "genre:drama": 20,
+     "genre:comedia": 20,
+     "genre:documental": 20,
+     "miniseries": 20,
+     "family": 40,
+     "adult-anime": 40
     }
-   ],
-   "heroN": 6,
+   },
+   "unicosSin": 294,
+   "unicosCon": 314,
    "degradado": false,
-   "ejesHome": {
-    "hero-todos/tv": "pop",
-    "hero-todos/movie": "pop",
-    "riel-accion/movie": "hondo",
-    "riel-terror/movie": "pop",
-    "riel-drama/tv": "hondo",
-    "riel-comedia/movie": "pop",
-    "aud-family/movie": "taquilla",
-    "aud-family/tv": "taquilla",
-    "riel-documental/tv": "pop",
-    "aud-adult-anime/tv": "hondo",
-    "riel-scifi/tv": "pop*",
-    "aud-adult-anime/movie": "pop*"
-   }
+   "problemas": []
   }
  ]
 }

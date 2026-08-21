@@ -69,4 +69,42 @@ console.log(`únicos: ${seen.size} | duplicados: ${dupes}`);
 const cortos = j.rails.filter((x) => x.key.startsWith("genre:") && x.items.length < 20);
 if (cortos.length) console.error(`FALLA: rieles de género con menos de 20: ${cortos.map((c) => `${c.genre}(${c.items.length})`).join(", ")}`);
 if (dupes) console.error(`FALLA: ${dupes} duplicados`);
-process.exit(dupes || cortos.length ? 1 : 0);
+
+// --- Riel "Miniseries para ansiosos" ----------------------------------------
+// No está en RIELES_ESPERADOS a propósito: puede faltar legítimamente, por el
+// kill switch o porque no llegó al piso. Lo que NO puede es aparecer mal.
+// Estas reglas son las de lib/miniseries.ts verificadas del otro lado del cable
+// —sobre el payload que realmente viaja— porque el test unitario prueba el
+// guard y esto prueba que el guard esté enchufado.
+const MINI_TITULO = "Miniseries para ansiosos";
+const MINI_PISO = 15;
+const fallosMini = [];
+const mini = j.rails.find((x) => x.key === "miniseries");
+const codigos = P.split(",").map((c) => c.trim()).filter(Boolean);
+if (!mini) {
+  console.log(`\nminiseries: ausente (kill switch apagado o por debajo del piso de ${MINI_PISO}) — no es un fallo`);
+} else {
+  if (mini.title !== MINI_TITULO) fallosMini.push(`el título es "${mini.title}" y tiene que ser exactamente "${MINI_TITULO}"`);
+  if (mini.items.length < MINI_PISO) fallosMini.push(`${mini.items.length} tarjetas, por debajo del piso de ${MINI_PISO}: tendría que estar OCULTO, no corto`);
+  if (mini.typeToggle) fallosMini.push(`no lleva toggle Películas/Series y trae typeToggle="${mini.typeToggle}"`);
+  const pelis = mini.items.filter((t) => t.type !== "tv");
+  if (pelis.length) fallosMini.push(`${pelis.length} título(s) que no son serie: ${pelis.map((t) => t.title).join(", ")}`);
+  const fuera = mini.items.filter((t) => !(t.platforms ?? []).some((c) => codigos.includes(c)));
+  if (fuera.length) fallosMini.push(`${fuera.length} fuera de las plataformas pedidas: ${fuera.map((t) => `${t.title} [${(t.platforms ?? []).join(",") || "ninguna"}]`).join(", ")}`);
+  const internos = new Set();
+  for (const t of mini.items) {
+    const k = key(t);
+    if (internos.has(k)) fallosMini.push(`duplicado dentro del riel: ${t.title}`);
+    internos.add(k);
+  }
+  console.log(`\nminiseries: ${mini.items.length} tarjetas, título "${mini.title}"`);
+  // La nota es INFORMATIVA y nunca excluye (ver el principio en CLAUDE.md).
+  const notas = mini.items.map((t) => t.tmdb).filter((v) => typeof v === "number");
+  if (notas.length) {
+    const media = Math.round((notas.reduce((a, b) => a + b, 0) / notas.length) * 100) / 100;
+    console.log(`  nota media ${media} · <6.0 ${notas.filter((n) => n < 6).length}/${notas.length} (informativo, no filtra)`);
+  }
+}
+for (const f of fallosMini) console.error(`FALLA miniseries: ${f}`);
+
+process.exit(dupes || cortos.length || fallosMini.length ? 1 : 0);

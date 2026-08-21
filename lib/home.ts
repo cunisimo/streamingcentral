@@ -38,6 +38,10 @@ import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
 import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
 import { conRegistroDeEjes, type Eje } from "./pools";
+import {
+  MINISERIES_KEY, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso, consultaMiniseries,
+  rielMiniseriesActivo, soloMiniseries,
+} from "./miniseries";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 export const VISIBLE_CARDS = 20;
@@ -264,10 +268,18 @@ const ejesEnRieles = () => process.env.EJES_RIELES !== "0";
 // de audiencia (`aud-<slug>-<eje>`).
 const SUPERFICIE_RIEL = "riel";
 
-async function genreRail(
-  c: Contador, genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
-  candidatos: RawTitle[], admite: (t: UITitle) => boolean,
-  desde = 1, eje: Eje | null = null,
+// El bucle de armado, compartido por los rieles de género y por el de
+// miniseries. Se extrajo cuando entró el segundo consumidor: son el mismo
+// algoritmo —mezclar, descartar lo usado, enriquecer en tandas, rellenar— y
+// duplicarlo habría dejado dos lugares donde ajustar el margen del 40%, el tope
+// de vueltas y el arrastre del pool.
+//
+// `etiqueta` es lo que desplaza la semilla de la mezcla. Para los géneros sigue
+// siendo el slug, así que el Home de siempre no se mueve ni un título.
+async function armarRiel(
+  c: Contador, etiqueta: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
+  candidatos: RawTitle[], admite: ((t: UITitle) => boolean) | undefined,
+  limite: number, pedirPaginaExtra: () => Promise<RawTitle[]>,
 ): Promise<{ items: UITitle[]; gasto: GastoRiel }> {
   const out: UITitle[] = [];
   let pagados = 0;
@@ -275,32 +287,19 @@ async function genreRail(
   // primeros por popularidad, que es el orden en el que TMDB pone adelante a las
   // franquicias. Con 60 candidatos mezclados hay variedad real, y como la
   // semilla es la fecha, el Home sigue siendo el mismo durante todo el día.
-  // El género entra en la semilla para que dos rieles con pools parecidos no
+  // La etiqueta entra en la semilla para que dos rieles con pools parecidos no
   // salgan en el mismo orden.
-  const semilla = (dailySeed() + hashGenero(genre)) >>> 0;
+  const semilla = (dailySeed() + hashGenero(etiqueta)) >>> 0;
   const mezclar = (p: RawTitle[]) => pickDaily(p, p.length, semilla);
   let pool = mezclar(candidatos);
   let pedidaExtra = false;
   let vueltas = 0;
-  // La página extra es la SIGUIENTE a la ventana que ya se pidió, y se pide una
-  // sola vez. Con ejes esa ventana no arranca siempre en la 1: `hondo` empieza
-  // en la 4, así que ya trajo 4-6 y su extra es la 7. Pedir la 4 fija le habría
-  // dado candidatos que ya tenía, y al riel más profundo —el único que
-  // necesita el fallback— lo habría dejado sin él.
   const pedirExtra = async () => {
     pedidaExtra = true;
-    const extra = await safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
-      categoryCandidates({
-        tipo, genre, providers, startPage: desde + FETCH_BUFFER, pages: 1, scope: "home",
-        // Se reusa el eje ya resuelto (`ejeFijo`) en vez de volver a elegirlo:
-        // la extra tiene que ser la página siguiente de LA MISMA receta, y
-        // además así no se vuelve a correr la verificación del guard.
-        ...(eje ? { superficie: SUPERFICIE_RIEL, ejeFijo: eje } : {}),
-      }));
-    return mezclar(extra);
+    return mezclar(await pedirPaginaExtra());
   };
 
-  while (out.length < VISIBLE_CARDS) {
+  while (out.length < limite) {
     // Dedup sobre raw: contra lo ya usado por rieles anteriores y contra lo que
     // este mismo riel ya tomó en la tanda previa.
     pool = pool.filter((r) => !used.has(rawKey(r, tipo)));
@@ -314,19 +313,87 @@ async function genreRail(
     if (vueltas >= MAX_VUELTAS) break;
     vueltas++;
     // Margen del 40% para absorber lo que se caiga por el filtro de plataformas.
-    const faltan = VISIBLE_CARDS - out.length;
+    const faltan = limite - out.length;
     const tanda = pool.slice(0, Math.ceil(faltan * 1.4));
     // Lo que no entró en la tanda NO se tira: queda en el pool para la vuelta
     // siguiente. Antes se descartaban ~12 candidatos ya pagados y se compraba
     // una página nueva para reemplazarlos.
     pool = pool.slice(tanda.length);
     pagados += tanda.length;
-    const enriquecidos = await safe(c, `genre:${genre} enrich`, [] as UITitle[], () =>
+    const enriquecidos = await safe(c, `${etiqueta} enrich`, [] as UITitle[], () =>
       enrichRaw(tanda, tipo, providers));
     out.push(...take(enriquecidos, used, faltan, admite));
     if (!pool.length && pedidaExtra) break;
   }
   return { items: out, gasto: { vueltas, pagados } };
+}
+
+function genreRail(
+  c: Contador, genre: string, tipo: MediaType, providers: PlatformCode[], used: Set<string>,
+  candidatos: RawTitle[], admite: (t: UITitle) => boolean,
+  desde = 1, eje: Eje | null = null,
+): Promise<{ items: UITitle[]; gasto: GastoRiel }> {
+  // La página extra es la SIGUIENTE a la ventana que ya se pidió, y se pide una
+  // sola vez. Con ejes esa ventana no arranca siempre en la 1: `hondo` empieza
+  // en la 4, así que ya trajo 4-6 y su extra es la 7. Pedir la 4 fija le habría
+  // dado candidatos que ya tenía, y al riel más profundo —el único que necesita
+  // el fallback— lo habría dejado sin él.
+  const pedirExtra = () =>
+    safe(c, `genre:${genre} página extra`, [] as RawTitle[], () =>
+      categoryCandidates({
+        tipo, genre, providers, startPage: desde + FETCH_BUFFER, pages: 1, scope: "home",
+        // Se reusa el eje ya resuelto (`ejeFijo`) en vez de volver a elegirlo:
+        // la extra tiene que ser la página siguiente de LA MISMA receta, y
+        // además así no se vuelve a correr la verificación del guard.
+        ...(eje ? { superficie: SUPERFICIE_RIEL, ejeFijo: eje } : {}),
+      }));
+  return armarRiel(
+    c, genre, tipo, providers, used, candidatos, admite, VISIBLE_CARDS, pedirExtra,
+  );
+}
+
+// --- Riel "Miniseries para ansiosos" ----------------------------------------
+// Series cortas con una historia cerrada, para el que no quiere comprometerse
+// con varias temporadas. La consulta, el piso, el interruptor y el guard final
+// viven en lib/miniseries.ts (módulo puro, con tests); acá va solo el cableado
+// al pipeline del Home. Los números que respaldan cada decisión están en
+// docs/medidas/2026-08-21-miniseries-*.json.
+//
+// Nombre de la superficie: prefijo propio para que las claves de Redis se
+// distingan de las del hero (`hero-…`), las de audiencia (`aud-…`) y las de los
+// rieles de género (`riel-…`).
+const SUPERFICIE_MINI = "riel-mini";
+
+// Lo que se le pide a `candidatosDeSuperficie`. Es una función y no una
+// constante porque el kill switch de ejes se lee en cada llamada.
+function fuenteMiniseries(providers: PlatformCode[]) {
+  return {
+    ...consultaMiniseries(),
+    providers,
+    startPage: 1,
+    pages: FETCH_BUFFER,
+    ...(ejesEnRieles() ? { superficie: SUPERFICIE_MINI } : {}),
+  };
+}
+
+function miniseriesRail(
+  c: Contador, providers: PlatformCode[], used: Set<string>,
+  candidatos: RawTitle[], desde: number, eje: Eje | null,
+): Promise<{ items: UITitle[]; gasto: GastoRiel }> {
+  const pedirExtra = () =>
+    safe(c, "miniseries página extra", [] as RawTitle[], () =>
+      categoryCandidates({
+        ...fuenteMiniseries(providers),
+        startPage: desde + FETCH_BUFFER, pages: 1,
+        ...(eje ? { superficie: SUPERFICIE_MINI, ejeFijo: eje } : {}),
+      }));
+  // Sin tope de sagas: medido sobre 7 días, la mezcla diaria ya deja la
+  // concentración de franquicia en 0-5 de 20 (sin mezclar llegaba a 7). Y el
+  // tope no la agarraría igual: "Bruja Escarlata y Visión" y "Ojo de Halcón" no
+  // comparten ninguna palabra, que es de lo único que se agarra `claveSaga`.
+  return armarRiel(
+    c, MINISERIES_KEY, "tv", providers, used, candidatos, undefined, VISIBLE_CARDS, pedirExtra,
+  );
 }
 
 // --- Etapas reservadas (hoy identidad) --------------------------------------
@@ -356,7 +423,7 @@ export async function composeHome(opts: {
 
   // === Etapa 1: todas las fuentes en paralelo ===============================
   // Nadie de acá lee `used`, así que el orden de resolución no afecta la salida.
-  const [heroRaw, latestP1, votadosPool, cargoPool, generosRaw, familyPool, animePool] =
+  const [heroRaw, latestP1, votadosPool, cargoPool, generosRaw, miniRaw, familyPool, animePool] =
     await Promise.all([
       // Hero "Para vos hoy" — prioridad más alta, reserva sus títulos.
       // Solo el estado base (genre=todos, offset=0): los chips y "Mostrame otras"
@@ -386,6 +453,13 @@ export async function composeHome(opts: {
             tipo, genre: g, providers, startPage: 1, pages: FETCH_BUFFER, scope: "home",
             ...(ejesEnRieles() ? { superficie: SUPERFICIE_RIEL } : {}),
           })))),
+      // Miniseries. Se pide SIEMPRE que el riel esté encendido, en paralelo con
+      // el resto: como nadie de esta etapa lee `used`, pedirlo acá no cambia lo
+      // que toma después. Con el kill switch apagado no se pide nada.
+      rielMiniseriesActivo()
+        ? safe(c, "miniseries candidatos", vacioDeSuperficie, () =>
+          candidatosDeSuperficie(fuenteMiniseries(providers)))
+        : Promise.resolve(vacioDeSuperficie),
       // Audiencia. NO se toca su lógica (lib/audience.ts): se consume su salida y
       // solo se deduplica. Devuelve movie+tv mergeados (~40), hay margen.
       // LIMITACIÓN: a diferencia de los votos y de los rieles de género, acá no
@@ -448,6 +522,46 @@ export async function composeHome(opts: {
     });
   }
 
+  // 4.b Miniseries. Va DESPUÉS de los seis rieles de género —o sea, debajo de
+  //     "Documental"— y antes de los dos de audiencia. Esa posición ES su
+  //     prioridad de dedup: se lleva lo que los de arriba no usaron y le puede
+  //     sacar títulos a los de abajo.
+  //
+  //     Medido 7 días con n,d,m: no les saca NINGUNO. Con animación e infantil
+  //     ya excluidos de este riel no hay intersección posible con "Para toda la
+  //     familia" ni con "Animación para adultos", que son los únicos dos que
+  //     quedan debajo. Sin esa exclusión les sacaba hasta 2 tarjetas por día, y
+  //     ahí duele: `audienceTitles` trae una sola página y no tiene con qué
+  //     rellenar.
+  let mini: UITitle[] = [];
+  if (rielMiniseriesActivo()) {
+    const riel = await miniseriesRail(
+      c, providers, used, miniRaw.candidatos, miniRaw.startPage, miniRaw.eje,
+    );
+    gasto.push(`${MINISERIES_KEY}=${riel.gasto.vueltas}v/${riel.gasto.pagados}`);
+    // Guard final: nada que no sea serie, nada fuera de las plataformas, nada
+    // repetido. Lo que descarte se loguea — un guard silencioso esconde el bug
+    // que tendría que delatar.
+    mini = soloMiniseries(riel.items, providers, (m) =>
+      console.error(`[home] miniseries: descartado — ${m}`));
+    // Lo que el guard descarta se libera de `used`: `take` ya lo había
+    // reservado, y dejarlo reservado sería quitárselo a un riel de abajo por un
+    // título que este riel ni siquiera muestra.
+    if (mini.length < riel.items.length) {
+      const publicados = new Set(mini.map(keyOf));
+      for (const t of riel.items) if (!publicados.has(keyOf(t))) used.delete(keyOf(t));
+    }
+    // Debajo del piso el riel no se muestra, y sus títulos se DEVUELVEN al pozo:
+    // si quedaran reservados en `used`, un riel que ni siquiera se ve le estaría
+    // robando tarjetas a "Para toda la familia" y a "Animación para adultos",
+    // que son los dos que no tienen con qué rellenar.
+    if (!alcanzaElPiso(mini.length)) {
+      console.log(`[home] miniseries: ${mini.length} < ${MINISERIES_PISO}, se oculta`);
+      for (const t of mini) used.delete(keyOf(t));
+      mini = [];
+    }
+  }
+
   // 5. Audiencia.
   // Con Crunchyroll SOLA el Home entero ya es anime (los rieles de género no lo
   // filtran, ver excludedGenres), así que un carrusel "Animación para adultos"
@@ -462,6 +576,10 @@ export async function composeHome(opts: {
     { key: "mas-votados", title: "Lo más votados", items: votados, seeAllHref: "/lista/mas-votados", typeToggle: "filter", shelfKey: "mas-votados", activeType: types["mas-votados"] ?? "movie" },
     { key: "hacete-cargo", title: "No gustaron", items: cargo, seeAllHref: "/lista/hacete-cargo", typeToggle: "filter", shelfKey: "hacete-cargo", activeType: types["hacete-cargo"] ?? "movie" },
     ...generos,
+    // Un riel sin ítems se auto-oculta en el cliente (Shelf, `minItems`), así
+    // que el caso "no llegó al piso" y el caso "kill switch apagado" se ven
+    // igual: sin riel. No hay estado vacío posible.
+    ...(mini.length ? [{ key: MINISERIES_KEY, title: MINISERIES_TITULO, items: mini }] : []),
     { key: "family", title: "🍿 Para toda la familia", items: family, seeAllHref: "/lista/familia" },
     ...(ocultarAnime
       ? []
@@ -498,7 +616,11 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): s
   //      los rieles viajan dentro del payload, así que cambiar un texto de la
   //      interfaz es cambiar el contenido: sin subir la versión, el nombre
   //      viejo se sigue sirviendo hasta 6 h después del deploy.
-  return `home:v3:${dailySeed()}:${p}:${t}`;
+  // v4 = entró el riel "Miniseries para ansiosos". Es un riel más en el payload
+  //      y además corre el dedup: los de abajo pueden quedar distintos aunque
+  //      nadie los toque. Un payload v3 cacheado no lo tiene, y sin subir la
+  //      versión el riel "no aparecía" hasta 6 h después del deploy.
+  return `home:v4:${dailySeed()}:${p}:${t}`;
 }
 
 export async function homePayload(opts: {

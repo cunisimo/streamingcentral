@@ -85,7 +85,8 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
   ve" después de deployar (`v2` = ventana de votos de 7 a 90 días; `v3` = el
-  riel "Hacete cargo" pasó a llamarse "No gustaron"). **Los títulos de los
+  riel "Hacete cargo" pasó a llamarse "No gustaron"; `v4` = entró el riel
+  "Miniseries para ansiosos"). **Los títulos de los
   rieles viajan adentro del payload**, así que hasta cambiar un texto de la
   interfaz obliga a subir la versión. Los `cached()`
   de `enrich.ts` ya evitaban los ~300 pedidos a TMDB, pero no el costo de
@@ -106,6 +107,29 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "No gustaron" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **"Miniseries para ansiosos"** (`lib/miniseries.ts` + el cableado en
+  `lib/home.ts`) va debajo de "Documental" y arriba de los dos de audiencia; esa
+  posición ES su prioridad de dedup. Solo `tv` y sin toggle. La condición es
+  `with_type=2` de TMDB, que es *exactamente* el flag de miniserie (verificado:
+  317 de 317 con `type: "Miniseries"`, 311 con una sola temporada).
+  `with_status=3` significa **"marcada finalizada por TMDB"** y nada más — no
+  garantiza historia cerrada ni una temporada: 5 de las 6 series de más de una
+  temporada del pool lo pasan, porque filtra por el campo `status`. **Piso de 15
+  para mostrarse**: debajo de eso el riel se oculta entero y *no* se rellena con
+  series comunes (se aplica en el server, así que un riel corto ni viaja en el
+  payload; con una plataforma chica sola —MUBI, ViX— desaparece, que es lo
+  buscado). Excluye documental (99) por decisión de producto —en el eje `nuevo`
+  el pool llegaba a 41% de documentales y quedaba pegado abajo de "Documental"—
+  y hereda animación/infantil de la regla de audiencia con su excepción de
+  Crunchyroll. **Su piso de votos está declarado, no heredado del eje**
+  (`MINISERIES_PISO_VOTOS`, tipo `Record<Eje, number>` para que sumar un eje no
+  compile hasta decidirlo): 0 en cuatro y 10 en `top`. El 0 es por país de
+  origen, no por cantidad — con el piso de los ejes entran 23 títulos de LatAm
+  (7 argentinos) y con 0 entran 34 (12), sumando Okupas, Santa Evita, El lobista
+  y Nafta Súper; el 10 de `top` es porque ahí el `sort_by` **es** la nota y sin
+  piso de votos encabeza un 10.0 con un voto. **No es un piso de nota** — no hay
+  ninguno. Kill switch `RIEL_MINISERIES=0`. Medidas en
+  `docs/medidas/2026-08-21-miniseries-*.json`.
 - **El hero ("6 para hoy") arma un universo grande de crudos y enriquece solo lo
   que muestra.** Antes pedía una página de discover por tipo, enriquecía las 40
   (1 request de providers por título) y mostraba 6: pagaba 40 para mostrar 6, y
