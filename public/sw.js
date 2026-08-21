@@ -20,7 +20,7 @@
 // byte el script principal. La comparación de los scripts de importScripts no es
 // consistente entre motores, así que estampar acá garantiza que un cambio de
 // offline.html dispare la reinstalación.
-self.SC_OFFLINE_URL = "/offline.html?v=bed1ff07da";
+self.SC_OFFLINE_URL = "/offline.html?v=61201b7faa";
 
 // ⚠️ CACHE_VERSION vive ACÁ, no en sw/config.js, por la misma razón.
 // El navegador decide si hay una versión nueva del SW comparando los bytes del
