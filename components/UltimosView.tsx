@@ -4,6 +4,7 @@ import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
+import { useListaPaginada } from "@/hooks/useListaPaginada";
 import type { UITitle, MediaType } from "@/lib/types";
 
 export default function UltimosView() {
@@ -16,6 +17,19 @@ export default function UltimosView() {
   const online = useOnline();
   const [failed, setFailed] = useState(false);
   const reqId = useRef(0);
+
+  // El tipo activo entra en la firma junto con las plataformas: son las dos
+  // cosas que cambian QUÉ lista es. Volver de una ficha estando en "Series" no
+  // puede restaurar la tanda de "Películas".
+  const firma = `${tipo}|${platforms.join(",")}`;
+  const { fase, inicial, reiniciar } = useListaPaginada<UITitle>({
+    clave: "lista:ultimos",
+    firma,
+    items,
+    pagina: page,
+    hayMas: !done,
+    listo: !loading && items.length > 0,
+  });
 
   const load = useCallback(async (t: MediaType, p: number) => {
     const myReq = ++reqId.current;
@@ -36,7 +50,23 @@ export default function UltimosView() {
   }, [platforms]);
 
   // Carga inicial + al cambiar tipo o plataformas: reset a página 1.
-  useEffect(() => { if (!ready) return; setPage(1); load(tipo, 1); }, [tipo, load, ready]);
+  //
+  // Espera a que `useListaPaginada` decida si hay algo que restaurar. Si lo hay,
+  // no se pide nada: los títulos ya cargados vuelven tal cual, junto con la
+  // página en la que iba y la posición del scroll.
+  useEffect(() => {
+    if (!ready || fase !== "listo") return;
+    if (inicial && inicial.firma === firma) {
+      setItems(inicial.items);
+      setPage(inicial.pagina);
+      setDone(!inicial.hayMas);
+      setLoading(false);
+      return;
+    }
+    reiniciar();
+    setPage(1);
+    load(tipo, 1);
+  }, [tipo, load, ready, fase, inicial, firma, reiniciar]);
 
   function switchTipo(t: MediaType) { if (t !== tipo) { setItems([]); setDone(false); setTipo(t); } }
   function more() { const next = page + 1; setPage(next); load(tipo, next); }

@@ -4,6 +4,7 @@ import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
+import { useListaPaginada } from "@/hooks/useListaPaginada";
 import { MINISERIES_TITULO } from "@/lib/miniseries";
 import type { UITitle } from "@/lib/types";
 
@@ -27,6 +28,19 @@ export default function MiniseriesView() {
   const online = useOnline();
   const [failed, setFailed] = useState(false);
   const reqId = useRef(0);
+  const firma = platforms.join(",");
+
+  const { fase, inicial, reiniciar } = useListaPaginada<UITitle, { total: number | null }>({
+    clave: "lista:miniseries",
+    firma,
+    items,
+    pagina: page,
+    hayMas,
+    // El total del catálogo también vuelve: si no, el subtítulo pasaba de
+    // "60 de 627 títulos" a "60 títulos" justo al volver.
+    extra: { total },
+    listo: !loading && items.length > 0,
+  });
 
   const load = useCallback(async (p: number) => {
     const myReq = ++reqId.current;
@@ -55,8 +69,26 @@ export default function MiniseriesView() {
     }
   }, [platforms]);
 
-  // Carga inicial y al cambiar plataformas: siempre vuelve a la página 1.
-  useEffect(() => { if (!ready) return; setPage(1); load(1); }, [load, ready]);
+  // Carga inicial y al cambiar plataformas.
+  //
+  // Espera a que `useListaPaginada` decida si hay algo que restaurar: si pidiera
+  // la página 1 antes, se pagarían dos cargas y la restaurada pisaría a la otra
+  // con un parpadeo. Si restauró, no se pide NADA — los títulos ya están.
+  useEffect(() => {
+    if (!ready || fase !== "listo") return;
+    if (inicial && inicial.firma === firma) {
+      setItems(inicial.items);
+      setPage(inicial.pagina);
+      setHayMas(inicial.hayMas);
+      setTotal(inicial.extra?.total ?? null);
+      setLoading(false);
+      return;
+    }
+    // Entrada normal o cambio de plataformas: desde arriba y sin herencia.
+    reiniciar();
+    setPage(1);
+    load(1);
+  }, [load, ready, fase, inicial, firma, reiniciar]);
 
   const more = () => { const next = page + 1; setPage(next); load(next); };
 
