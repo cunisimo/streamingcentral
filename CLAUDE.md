@@ -131,6 +131,32 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   piso de votos encabeza un 10.0 con un voto. **No es un piso de nota** — no hay
   ninguno. Kill switch `RIEL_MINISERIES=0`. Medidas en
   `docs/medidas/2026-08-21-miniseries-*.json`.
+- **`/lista/miniseries` ("Ver todas") pagina con UNA consulta combinada, no con
+  la unión de pools.** El enlace viaja en el mismo objeto del riel, así que
+  aparece solo cuando el riel aparece. La unión de pools por plataforma sirve
+  para el Home —comparte cache y le alcanza una ventana fija— pero **no se puede
+  paginar**: la lista ordenada se reconstruye y crece con cada página, y un
+  título de una página profunda puede correr el borde entre dos páginas dejando
+  fuera lo que queda del otro lado. Un dedup en el cliente tapa el duplicado y
+  no recupera lo salteado. `candidatosCombinados` (lib/pools.ts) pide
+  `with_watch_providers=a|b|c` y usa la paginación de TMDB, así que el orden se
+  fija una vez: cada página es un tramo de un ranking que no se mueve, y
+  `hayMas` sale de `total_pages` en vez de deducirse. Verificado barriendo las
+  32 páginas de n,d,m: 627 servidos, 627 únicos, 627 declarados por TMDB — el
+  catálogo entero sin repetir ni faltar uno. Cuesta 1 discover + 20
+  `providersOf` por página, constante. La lista **no rota por ejes** (es
+  exploración, tiene que ser estable) y **no deduplica contra el Home** (muestra
+  el catálogo completo, riel incluido).
+- **Las vistas paginadas conservan lo cargado al volver de una ficha**
+  (`hooks/useListaPaginada.ts` + `lista-paginada-store.ts`). Antes no: volver
+  te devolvía a la página 1 y al scroll 0, y era así en todas. Restaura **solo**
+  con atrás/adelante — lo detecta un `popstate` registrado al importar el módulo,
+  porque el orden es popstate → render de la ruta → montaje, y un listener
+  montado con la vista llega tarde a su propio evento. La marca vence a los 8 s
+  (cualquier vuelta atrás la dispara, también las que no van a una lista).
+  Entrar por un link o cambiar de plataformas **empieza arriba y borra lo
+  guardado**: `reiniciar()` hace las dos mitades. Lo que invalida el estado va en
+  la `firma` (plataformas, y el tipo activo en "Últimos lanzamientos").
 - **El hero ("6 para hoy") arma un universo grande de crudos y enriquece solo lo
   que muestra.** Antes pedía una página de discover por tipo, enriquecía las 40
   (1 request de providers por título) y mostraba 6: pagaba 40 para mostrar 6, y
