@@ -39,8 +39,8 @@ import { soloAnimePlatform } from "./audience";
 import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
-  MINISERIES_KEY, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso, consultaMiniseries,
-  rielMiniseriesActivo, soloMiniseries,
+  MINISERIES_KEY, MINISERIES_LISTA_HREF, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso,
+  consultaMiniseries, rielMiniseriesActivo, soloMiniseries,
 } from "./miniseries";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
@@ -579,7 +579,11 @@ export async function composeHome(opts: {
     // Un riel sin ítems se auto-oculta en el cliente (Shelf, `minItems`), así
     // que el caso "no llegó al piso" y el caso "kill switch apagado" se ven
     // igual: sin riel. No hay estado vacío posible.
-    ...(mini.length ? [{ key: MINISERIES_KEY, title: MINISERIES_TITULO, items: mini }] : []),
+    // "Ver todas" viaja SOLO cuando el riel viaja: si no llegó al piso o el kill
+    // switch lo apagó, no hay riel, así que no hay enlace suelto ni hueco.
+    ...(mini.length
+      ? [{ key: MINISERIES_KEY, title: MINISERIES_TITULO, items: mini, seeAllHref: MINISERIES_LISTA_HREF }]
+      : []),
     { key: "family", title: "🍿 Para toda la familia", items: family, seeAllHref: "/lista/familia" },
     ...(ocultarAnime
       ? []
@@ -620,7 +624,10 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): s
   //      y además corre el dedup: los de abajo pueden quedar distintos aunque
   //      nadie los toque. Un payload v3 cacheado no lo tiene, y sin subir la
   //      versión el riel "no aparecía" hasta 6 h después del deploy.
-  return `home:v4:${dailySeed()}:${p}:${t}`;
+  // v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
+  //      tarjeta más, pero es contenido del payload igual: sin subir la versión
+  //      el botón no aparecía hasta 6 h después. Mismo caso que v3.
+  return `home:v5:${dailySeed()}:${p}:${t}`;
 }
 
 export async function homePayload(opts: {

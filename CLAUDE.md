@@ -86,7 +86,8 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
   ve" después de deployar (`v2` = ventana de votos de 7 a 90 días; `v3` = el
   riel "Hacete cargo" pasó a llamarse "No gustaron"; `v4` = entró el riel
-  "Miniseries para ansiosos"). **Los títulos de los
+  "Miniseries para ansiosos"; `v5` = ese riel sumó su "Ver todas").
+  **Los títulos de los
   rieles viajan adentro del payload**, así que hasta cambiar un texto de la
   interfaz obliga a subir la versión. Los `cached()`
   de `enrich.ts` ya evitaban los ~300 pedidos a TMDB, pero no el costo de

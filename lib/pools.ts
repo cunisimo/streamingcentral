@@ -141,6 +141,63 @@ async function pool(
   return cached(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer);
 }
 
+// --- Consulta combinada, paginada por TMDB -----------------------------------
+// La otra forma de pedir: UNA sola consulta con todas las plataformas unidas por
+// `|`, y la paginación de TMDB tal cual.
+//
+// CUÁNDO USAR ESTA Y NO `candidatosDePools`. La unión de pools existe para
+// COMPARTIR CACHE entre usuarios (el pool de Netflix lo aprovecha todo el que la
+// tenga) y le alcanza con una ventana fija de páginas, que es el caso del Home.
+// Pero para una lista que el usuario PAGINA no sirve, y el motivo es el mismo
+// que está documentado arriba: la unión de las páginas 1..N no es la página N de
+// la unión. Al pedir más profundidad la lista ordenada CRECE, y un título de una
+// página profunda puede meterse antes del borde entre dos páginas y correrlo:
+// el que queda del otro lado no se muestra NUNCA. Un dedup en el cliente tapa el
+// duplicado pero no recupera lo salteado.
+//
+// Acá el orden lo fija TMDB una sola vez y no se reconstruye, así que cada
+// página es un tramo de un ranking que no se mueve: sin duplicados y sin
+// salteos, por construcción y no por suerte del catálogo.
+//
+// El precio es cache menos compartido —una entrada por COMBINACIÓN de
+// plataformas en vez de una por plataforma— y a cambio sale más barato por
+// página: 1 request a TMDB en vez de uno por plataforma, sin crecer con la
+// profundidad. Medido con n,d,m, 8 páginas: 0 duplicados, 0 salteados, 160 de
+// 160 únicos, 100% sobrevive al filtro estricto de plataformas.
+// Ver docs/medidas/2026-08-21-miniseries-lista.json.
+export function claveCombinada(
+  tipo: MediaType, providers: PlatformCode[], receta: Receta, pagina: number,
+): string {
+  // Ordenado: "n,d,m" y "m,d,n" son la misma consulta y tienen que ser la misma
+  // clave, igual que en `homeKey`.
+  const p = [...providers].sort().join("+");
+  return `disc:${VERSION}:${REGION}:${hoyAR()}:${tipo}:combo-${p}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
+}
+
+export interface PaginaCombinada {
+  candidatos: Candidato[];
+  // Los dos vienen de TMDB. `totalPaginas` es lo que hace innecesario adivinar
+  // si hay más: no hace falta pedir una página de más para descubrir que está
+  // vacía, ni deducirlo de "vinieron menos de 20".
+  totalPaginas: number;
+  total: number;
+}
+
+export async function candidatosCombinados(opts: {
+  tipo: MediaType;
+  providers: PlatformCode[];
+  receta: Receta;
+  pagina: number;
+}): Promise<PaginaCombinada> {
+  const ids = codesToTmdbIds(opts.providers);
+  if (!ids.length) return { candidatos: [], totalPaginas: 0, total: 0 };
+  const pagina = Math.max(1, opts.pagina);
+  return cached(claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool, async () => {
+    const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
+    return { candidatos: r.results.map(recortar), totalPaginas: r.total_pages, total: r.total_results };
+  });
+}
+
 // Candidatos de varias plataformas y varias páginas, unidos.
 //
 // Todas las lecturas salen en el mismo tick, así que el batcher de lib/cache.ts

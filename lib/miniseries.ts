@@ -112,6 +112,58 @@ export function consultaMiniseries(): ConsultaMiniseries {
 
 export const alcanzaElPiso = (n: number) => n >= MINISERIES_PISO;
 
+// --- "Ver todas" -------------------------------------------------------------
+// El enlace del riel. Vive acá para que el `seeAllHref` del payload y la ruta
+// registrada en app/lista/[key]/page.tsx no puedan separarse.
+export const MINISERIES_LISTA_HREF = "/lista/miniseries";
+export const MINISERIES_LISTA_KEY = "miniseries";
+// Tamaño de página. Es el de TMDB, y no es una elección: la página de la lista
+// ES la página de TMDB (ver `MINISERIES_LISTA_PARAMS`), así que ponerle otro
+// número obligaría a recortar o a juntar páginas, que es justo lo que abre la
+// puerta a los salteos.
+export const MINISERIES_LISTA_TAM = 20;
+
+// Parámetros que la lista NO comparte con el riel, y por qué.
+//
+// El riel rota por ejes para dar variedad diaria. La lista es EXPLORACIÓN: tiene
+// que ser estable, o "Cargar más" traería el orden de otro criterio a mitad de
+// camino y el usuario vería el catálogo saltar. Así que orden fijo por
+// popularidad desde la página 1, sin ejes.
+//
+// `minVotes: 0` va EXPLÍCITO y no omitido: `discover()` mete 60 por defecto
+// (`o.minVotes ?? 60`), que es el piso que deja afuera el catálogo regional.
+// Omitirlo sería heredarlo sin querer — exactamente lo que se evitó en el riel.
+// Y sigue sin haber ningún piso de NOTA, acá tampoco.
+export const MINISERIES_LISTA_PARAMS = {
+  sortBy: "popularity.desc",
+  minVotes: 0,
+} as const;
+
+// Lo que comparten riel y lista: la definición de qué es una miniserie elegible.
+// Está en una sola función para que no puedan divergir — si mañana cambia
+// `with_status`, cambia en los dos o en ninguno.
+export interface ConsultaLista {
+  tipo: MediaType;
+  genre: string;
+  scope: "home";
+  sinGeneros: number[];
+  extra: Record<string, string>;
+  sortBy: string;
+  minVotes: number;
+}
+
+export function consultaListaMiniseries(): ConsultaLista {
+  const q = consultaMiniseries();
+  return {
+    tipo: q.tipo,
+    genre: q.genre,
+    scope: q.scope,
+    sinGeneros: q.sinGeneros,
+    extra: q.extra,
+    ...MINISERIES_LISTA_PARAMS,
+  };
+}
+
 // Guard final antes de publicar el riel. Es barato (todo en memoria) y convierte
 // tres promesas en invariantes verificadas en vez de confiadas:
 //

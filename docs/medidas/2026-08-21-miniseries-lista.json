@@ -1,0 +1,133 @@
+{
+ "generado": "2026-08-21T21:29:34.983Z",
+ "plataformas": [
+  "n",
+  "d",
+  "m"
+ ],
+ "paginas": 8,
+ "totalTMDB": 627,
+ "totalPaginasTMDB": 32,
+ "combinada": {
+  "paginas": [
+   {
+    "pagina": 1,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   },
+   {
+    "pagina": 2,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   },
+   {
+    "pagina": 3,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   },
+   {
+    "pagina": 4,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   },
+   {
+    "pagina": 5,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   },
+   {
+    "pagina": 6,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   },
+   {
+    "pagina": 7,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   },
+   {
+    "pagina": 8,
+    "crudos": 20,
+    "visibles": 20,
+    "total": 627,
+    "totalPaginas": 32
+   }
+  ],
+  "duplicados": [],
+  "unicos": 160,
+  "requestsPorPagina": [
+   21,
+   21,
+   21,
+   21,
+   21,
+   21,
+   21,
+   21
+  ],
+  "sobrevivenAlFiltro": 160,
+  "crudosServidos": 160
+ },
+ "unionDePools": {
+  "paginas": [
+   {
+    "pagina": 1,
+    "union": 120,
+    "tramo": 20
+   },
+   {
+    "pagina": 2,
+    "union": 180,
+    "tramo": 20
+   },
+   {
+    "pagina": 3,
+    "union": 239,
+    "tramo": 20
+   },
+   {
+    "pagina": 4,
+    "union": 277,
+    "tramo": 20
+   },
+   {
+    "pagina": 5,
+    "union": 296,
+    "tramo": 20
+   },
+   {
+    "pagina": 6,
+    "union": 316,
+    "tramo": 20
+   },
+   {
+    "pagina": 7,
+    "union": 336,
+    "tramo": 20
+   },
+   {
+    "pagina": 8,
+    "union": 356,
+    "tramo": 20
+   }
+  ],
+  "duplicados": 0,
+  "salteados": []
+ },
+ "requests": 327,
+ "segundos": 9
+}

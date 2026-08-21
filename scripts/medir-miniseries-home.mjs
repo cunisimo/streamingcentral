@@ -213,7 +213,70 @@ async function cmdCosto(fecha, variante) {
   console.log(JSON.stringify({ fecha, variante, cache: estado, frio: await corrida(), caliente: await corrida() }, null, 1));
 }
 
+// ============================================================================
+// BARRIDO DE /lista/miniseries — la prueba de que la paginación no saltea.
+//
+// Recorre TODAS las páginas hasta que el server dice que no hay más y comprueba
+// tres cosas contra el total que declara TMDB: que no se repita ningún título,
+// que no falte ninguno, y que no se cuele nada que no sea una miniserie en las
+// plataformas elegidas. Un dedup en el cliente probaría lo primero; lo segundo
+// —que es lo que importa— solo se prueba llegando al final y contando.
+async function cmdLista(codigos, salida) {
+  const { miniseriesLista } = await import("@/lib/enrich.ts");
+  const vistos = new Map();
+  const paginas = [];
+  const problemas = [];
+  let total = 0, declarado = 0, totalPaginas = 0;
+  for (let p = 1; p <= 200; p++) {
+    const r0 = tmdbReq;
+    const t0 = Date.now();
+    const { res, metricas } = await withCacheMetrics(() => miniseriesLista(codigos, p));
+    declarado = res.total; totalPaginas = res.totalPaginas;
+    for (const t of res.items) {
+      const k = clave(t);
+      if (vistos.has(k)) problemas.push(`duplicado "${t.title}" en las páginas ${vistos.get(k)} y ${p}`);
+      else vistos.set(k, p);
+      if (t.type !== "tv") problemas.push(`no es serie: "${t.title}" (pág ${p})`);
+      if (!t.platforms.some((c) => codigos.includes(c))) problemas.push(`fuera de plataforma: "${t.title}" (pág ${p})`);
+    }
+    total += res.items.length;
+    paginas.push({
+      pagina: p, items: res.items.length, hayMas: res.hayMas,
+      tmdb: tmdbReq - r0, comandos: metricas.comandos, ms: Date.now() - t0,
+    });
+    process.stderr.write(`  pág ${String(p).padStart(2)}: ${String(res.items.length).padStart(2)} items · hayMás ${res.hayMas ? "sí" : "NO"} · tmdb ${tmdbReq - r0}\n`);
+    if (!res.hayMas) break;
+  }
+  // La cuenta que decide: TMDB dice cuántos hay, y hay que haberlos visto todos
+  // exactamente una vez. Si falta uno, se lo salteó la paginación.
+  if (vistos.size !== declarado) {
+    problemas.push(`TMDB declara ${declarado} títulos y se vieron ${vistos.size}: faltan ${declarado - vistos.size}`);
+  }
+  const frios = paginas.filter((x) => x.tmdb > 0);
+  console.log(`\nplataformas: ${codigos.join(",")}`);
+  console.log(`páginas: ${paginas.length} de ${totalPaginas} · items ${total} · únicos ${vistos.size} · declarados por TMDB ${declarado}`);
+  console.log(`cobertura: ${declarado ? (vistos.size / declarado * 100).toFixed(1) : 0}% del catálogo, sin repetir`);
+  if (frios.length) {
+    const t = frios.map((x) => x.tmdb);
+    console.log(`costo por página (frío): TMDB ${Math.min(...t)}-${Math.max(...t)} · comandos ${Math.min(...frios.map((x) => x.comandos))}-${Math.max(...frios.map((x) => x.comandos))}`);
+  }
+  if (problemas.length) { console.error(`\n${problemas.length} PROBLEMA(S):`); for (const x of problemas) console.error(`  - ${x}`); }
+  else console.log("\nsin problemas: cero duplicados, cero salteados, cero no-series, cero fuera de plataforma.");
+  if (salida) {
+    writeFileSync(salida, `${JSON.stringify({
+      generado: new Date().toISOString(), plataformas: codigos,
+      paginas: paginas.length, totalPaginasTMDB: totalPaginas, items: total,
+      unicos: vistos.size, declaradosPorTMDB: declarado,
+      cobertura: declarado ? Number((vistos.size / declarado * 100).toFixed(1)) : 0,
+      problemas, detalle: paginas, tmdb: resumenTmdb(),
+    }, null, 1)}\n`);
+    console.log(`\nescrito en ${salida}`);
+  }
+  process.exit(problemas.length ? 1 : 0);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === "dias") await cmdDias(args[0] ?? "2026-08-21", Number(args[1] ?? 7), args[2]);
 else if (cmd === "costo") await cmdCosto(args[0] ?? "2026-08-21", args[1] ?? "sin");
-else { console.error("uso: dias <fecha> <n> [salida.json] | costo <fecha> sin|con"); process.exit(1); }
+else if (cmd === "lista") await cmdLista((args[0] ?? "n,d,m").split(",").filter(Boolean), args[1]);
+else { console.error("uso: dias <fecha> <n> [salida.json] | costo <fecha> sin|con | lista <plataformas> [salida.json]"); process.exit(1); }

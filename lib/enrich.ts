@@ -18,9 +18,11 @@ import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import {
-  candidatosConEje, candidatosDePools, poolsHabilitados, recetaDeEje, recetaDelDia, registrarEje,
+  candidatosCombinados, candidatosConEje, candidatosDePools, poolsHabilitados, recetaDeEje,
+  recetaDelDia, registrarEje,
   type Candidato, type Eje, type ParamsReceta, type PisoPorEje, type Receta,
 } from "./pools";
+import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
 import { primaryCountry } from "./countries";
@@ -1176,6 +1178,49 @@ export async function candidatosDeSuperficie(opts: {
     startPage: desde,
   });
   return { candidatos, startPage: desde, eje: null, degradado: false };
+}
+
+// --- "Miniseries para ansiosos": la lista paginada ---------------------------
+// La página de /lista/miniseries. Mismas reglas de elegibilidad que el riel
+// (`consultaListaMiniseries` las comparte) pero con dos diferencias deliberadas:
+// no rota por ejes —la exploración tiene que ser estable— y NO deduplica contra
+// el Home: "Ver todas" muestra el catálogo entero, incluidos los títulos que el
+// riel ya está mostrando.
+//
+// Una página de la lista ES una página de TMDB. Con eso, `hayMas` sale de
+// `total_pages` en vez de deducirse, y no hay forma de saltear ni de repetir un
+// título entre páginas (ver el comentario de `candidatosCombinados`).
+//
+// El único filtro que puede achicar una página es el estricto de plataformas de
+// `enrichRaw`, y sobre esta superficie casi no corta: medido, 100% sobrevive en
+// n,d,m a lo largo de 8 páginas. Por eso `hayMas` NO se calcula sobre lo
+// visible: una página que quedara corta no puede cortar la lista.
+export async function miniseriesLista(
+  providers: PlatformCode[], pagina: number,
+): Promise<{ items: UITitle[]; hayMas: boolean; pagina: number; totalPaginas: number; total: number }> {
+  const p = Math.max(1, Math.floor(pagina) || 1);
+  if (!providers.length) return { items: [], hayMas: false, pagina: p, totalPaginas: 0, total: 0 };
+  const q = consultaListaMiniseries();
+  const sinTodo = [...new Set([
+    ...(excludedGenres({ scope: q.scope, genre: q.genre, providers }) ?? []),
+    ...q.sinGeneros,
+  ])].sort((a, b) => a - b);
+  const receta: Receta = {
+    nombre: "lista-mini",
+    params: {
+      withoutGenres: sinTodo.length ? sinTodo : undefined,
+      sortBy: q.sortBy,
+      minVotes: q.minVotes,
+      extra: { ...q.extra },
+    },
+  };
+  const r = await candidatosCombinados({ tipo: q.tipo, providers, receta, pagina: p });
+  const items = soloMiniseries(
+    await enrichRaw(r.candidatos, q.tipo, providers),
+    providers,
+    (m) => console.error(`[lista-mini] descartado — ${m}`),
+  );
+  return { items, hayMas: p < r.totalPaginas, pagina: p, totalPaginas: r.totalPaginas, total: r.total };
 }
 
 // Enriquece una tanda de raw (providers por título, cacheado) y filtra a las

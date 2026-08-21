@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  MINISERIES_KEY, MINISERIES_OBJETIVO, MINISERIES_PISO, MINISERIES_PISO_VOTOS,
-  MINISERIES_TITULO, alcanzaElPiso, consultaMiniseries, rielMiniseriesActivo, soloMiniseries,
+  MINISERIES_KEY, MINISERIES_LISTA_HREF, MINISERIES_LISTA_KEY, MINISERIES_LISTA_TAM,
+  MINISERIES_OBJETIVO, MINISERIES_PISO, MINISERIES_PISO_VOTOS, MINISERIES_TITULO,
+  alcanzaElPiso, consultaListaMiniseries, consultaMiniseries, rielMiniseriesActivo, soloMiniseries,
 } from "./miniseries.ts";
 import type { MediaType, PlatformCode, UITitle } from "./types.ts";
 
@@ -103,6 +104,42 @@ test("el kill switch apaga el riel solo con RIEL_MINISERIES=0", () => {
   // app (POOL_CACHE, EJES_RIELES) usan el mismo criterio y tener dos formas de
   // apagar cosas es cómo se apaga la equivocada.
   assert.equal(rielMiniseriesActivo("false"), true);
+});
+
+// --- "Ver todas" -------------------------------------------------------------
+
+test("el enlace del riel apunta a la ruta que la página registra", () => {
+  // Los dos salen de la misma constante; el test es contra el literal para que
+  // mover la ruta sea una decisión y no un typo que deja un 404 en el Home.
+  assert.equal(MINISERIES_LISTA_HREF, "/lista/miniseries");
+  assert.equal(MINISERIES_LISTA_HREF, `/lista/${MINISERIES_LISTA_KEY}`);
+});
+
+test("la lista comparte con el riel qué es una miniserie elegible", () => {
+  // Si divergen, "Ver todas" mostraría cosas que el riel nunca mostraría. Por eso
+  // `consultaListaMiniseries` deriva de `consultaMiniseries` en vez de repetir.
+  const riel = consultaMiniseries();
+  const lista = consultaListaMiniseries();
+  assert.deepEqual(lista.extra, riel.extra, "with_type / with_status idénticos");
+  assert.deepEqual(lista.sinGeneros, riel.sinGeneros, "mismas exclusiones de género");
+  assert.equal(lista.tipo, "tv");
+  assert.equal(lista.scope, riel.scope, "la excepción de Crunchyroll vale igual en las dos");
+});
+
+test("la lista NO rota: orden fijo por popularidad y minVotes 0 explícito", () => {
+  const lista = consultaListaMiniseries();
+  assert.equal(lista.sortBy, "popularity.desc", "exploración estable, sin ejes");
+  // Explícito y no omitido: `discover()` mete 60 por defecto (`o.minVotes ?? 60`),
+  // que es el piso que deja afuera el catálogo regional. Un 0 omitido sería un 60.
+  assert.equal(lista.minVotes, 0);
+  assert.ok(!("minVotesPorEje" in lista), "la lista no tiene ejes que puedan pisarlo");
+});
+
+test("la página de la lista es la página de TMDB", () => {
+  // 20 no es una elección de diseño: es el tamaño de página de TMDB. Con otro
+  // número habría que recortar o juntar páginas, que es justo lo que abre la
+  // puerta a los salteos entre páginas.
+  assert.equal(MINISERIES_LISTA_TAM, 20);
 });
 
 // --- Guard final -------------------------------------------------------------
