@@ -85,7 +85,9 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
   ve" después de deployar (`v2` = ventana de votos de 7 a 90 días; `v3` = el
-  riel "Hacete cargo" pasó a llamarse "No gustaron"). **Los títulos de los
+  riel "Hacete cargo" pasó a llamarse "No gustaron"; `v4` = entró el riel
+  "Miniseries para ansiosos"; `v5` = ese riel sumó su "Ver todas").
+  **Los títulos de los
   rieles viajan adentro del payload**, así que hasta cambiar un texto de la
   interfaz obliga a subir la versión. Los `cached()`
   de `enrich.ts` ya evitaban los ~300 pedidos a TMDB, pero no el costo de
@@ -106,6 +108,59 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "No gustaron" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **"Miniseries para ansiosos"** (`lib/miniseries.ts` + el cableado en
+  `lib/home.ts`) va debajo de "Documental" y arriba de los dos de audiencia; esa
+  posición ES su prioridad de dedup. Solo `tv` y sin toggle. La condición es
+  `with_type=2` de TMDB, que es *exactamente* el flag de miniserie (verificado:
+  317 de 317 con `type: "Miniseries"`, 311 con una sola temporada).
+  `with_status=3` significa **"marcada finalizada por TMDB"** y nada más — no
+  garantiza historia cerrada ni una temporada: 5 de las 6 series de más de una
+  temporada del pool lo pasan, porque filtra por el campo `status`. **Piso de 15
+  para mostrarse**: debajo de eso el riel se oculta entero y *no* se rellena con
+  series comunes (se aplica en el server, así que un riel corto ni viaja en el
+  payload; con una plataforma chica sola —MUBI, ViX— desaparece, que es lo
+  buscado). Excluye documental (99) por decisión de producto —en el eje `nuevo`
+  el pool llegaba a 41% de documentales y quedaba pegado abajo de "Documental"—
+  y hereda animación/infantil de la regla de audiencia con su excepción de
+  Crunchyroll. **Su piso de votos está declarado, no heredado del eje**
+  (`MINISERIES_PISO_VOTOS`, tipo `Record<Eje, number>` para que sumar un eje no
+  compile hasta decidirlo): 0 en cuatro y 10 en `top`. El 0 es por país de
+  origen, no por cantidad — con el piso de los ejes entran 23 títulos de LatAm
+  (7 argentinos) y con 0 entran 34 (12), sumando Okupas, Santa Evita, El lobista
+  y Nafta Súper; el 10 de `top` es porque ahí el `sort_by` **es** la nota y sin
+  piso de votos encabeza un 10.0 con un voto. **No es un piso de nota** — no hay
+  ninguno. Kill switch `RIEL_MINISERIES=0`. Medidas en
+  `docs/medidas/2026-08-21-miniseries-*.json`.
+- **`/lista/miniseries` ("Ver todas") pagina con UNA consulta combinada, no con
+  la unión de pools.** El enlace viaja en el mismo objeto del riel, así que
+  aparece solo cuando el riel aparece. La unión de pools por plataforma sirve
+  para el Home —comparte cache y le alcanza una ventana fija— pero **no se puede
+  paginar**: la lista ordenada se reconstruye y crece con cada página, y un
+  título de una página profunda puede correr el borde entre dos páginas dejando
+  fuera lo que queda del otro lado. Un dedup en el cliente tapa el duplicado y
+  no recupera lo salteado. `candidatosCombinados` (lib/pools.ts) pide
+  `with_watch_providers=a|b|c` y usa la paginación de TMDB, así que el orden se
+  fija una vez: cada página es un tramo de un ranking que no se mueve, y
+  `hayMas` sale de `total_pages` en vez de deducirse. Verificado barriendo las
+  32 páginas de n,d,m: 627 servidos, 627 únicos, 627 declarados por TMDB — el
+  catálogo entero sin repetir ni faltar uno. **La estabilidad llega hasta donde
+  llega TMDB**: si recalculan el ranking entre dos pedidos las páginas se pueden
+  mover, que es la limitación normal de paginar una API ajena; lo que se elimina
+  es la causa que estaba de nuestro lado. El dedup del cliente se conserva como
+  defensa. Cuesta 1 discover + 20
+  `providersOf` por página, constante. La lista **no rota por ejes** (es
+  exploración, tiene que ser estable) y **no deduplica contra el Home** (muestra
+  el catálogo completo, riel incluido).
+- **Las vistas paginadas conservan lo cargado al volver de una ficha**
+  (`hooks/useListaPaginada.ts` + `lista-paginada-store.ts`). Antes no: volver
+  te devolvía a la página 1 y al scroll 0, y era así en todas. Restaura **solo**
+  con atrás/adelante — lo detecta un `popstate` registrado al importar el módulo,
+  porque el orden es popstate → render de la ruta → montaje, y un listener
+  montado con la vista llega tarde a su propio evento. La marca vence a los 8 s
+  (cualquier vuelta atrás la dispara, también las que no van a una lista).
+  Entrar por un link o cambiar de plataformas **empieza arriba y borra lo
+  guardado**: `reiniciar()` hace las dos mitades. Lo que invalida el estado va en
+  la `firma` (plataformas, y el tipo activo en "Últimos lanzamientos").
 - **El hero ("6 para hoy") arma un universo grande de crudos y enriquece solo lo
   que muestra.** Antes pedía una página de discover por tipo, enriquecía las 40
   (1 request de providers por título) y mostraba 6: pagaba 40 para mostrar 6, y

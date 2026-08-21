@@ -141,6 +141,71 @@ async function pool(
   return cached(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer);
 }
 
+// --- Consulta combinada, paginada por TMDB -----------------------------------
+// La otra forma de pedir: UNA sola consulta con todas las plataformas unidas por
+// `|`, y la paginación de TMDB tal cual.
+//
+// CUÁNDO USAR ESTA Y NO `candidatosDePools`. La unión de pools existe para
+// COMPARTIR CACHE entre usuarios (el pool de Netflix lo aprovecha todo el que la
+// tenga) y le alcanza con una ventana fija de páginas, que es el caso del Home.
+// Pero para una lista que el usuario PAGINA no sirve, y el motivo es el mismo
+// que está documentado arriba: la unión de las páginas 1..N no es la página N de
+// la unión. Al pedir más profundidad la lista ordenada CRECE, y un título de una
+// página profunda puede meterse antes del borde entre dos páginas y correrlo:
+// el que queda del otro lado no se muestra NUNCA. Un dedup en el cliente tapa el
+// duplicado pero no recupera lo salteado.
+//
+// Acá el orden lo fija TMDB y no se reconstruye de nuestro lado, así que cada
+// página es un tramo de un ranking que nosotros no movemos.
+//
+// HASTA DÓNDE LLEGA ESA GARANTÍA. Es estable mientras TMDB mantenga el catálogo
+// y el orden entre pedidos, que es la limitación normal de paginar una API
+// ajena: la `popularity` se recalcula del lado de ellos y no es matemáticamente
+// imposible que dos llamadas vean rankings distintos. Lo que sí se elimina es la
+// causa que estaba de NUESTRO lado —reordenar una unión que crece— y el día
+// queda congelado en la clave del cache, así que dentro de una sesión las
+// páginas ya pedidas no se mueven. El dedup del cliente se conserva como
+// defensa para lo que quede.
+//
+// El precio es cache menos compartido —una entrada por COMBINACIÓN de
+// plataformas en vez de una por plataforma— y a cambio sale más barato por
+// página: 1 request a TMDB en vez de uno por plataforma, sin crecer con la
+// profundidad. Medido con n,d,m, 8 páginas: 0 duplicados, 0 salteados, 160 de
+// 160 únicos, 100% sobrevive al filtro estricto de plataformas.
+// Ver docs/medidas/2026-08-21-miniseries-lista.json.
+export function claveCombinada(
+  tipo: MediaType, providers: PlatformCode[], receta: Receta, pagina: number,
+): string {
+  // Ordenado: "n,d,m" y "m,d,n" son la misma consulta y tienen que ser la misma
+  // clave, igual que en `homeKey`.
+  const p = [...providers].sort().join("+");
+  return `disc:${VERSION}:${REGION}:${hoyAR()}:${tipo}:combo-${p}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
+}
+
+export interface PaginaCombinada {
+  candidatos: Candidato[];
+  // Los dos vienen de TMDB. `totalPaginas` es lo que hace innecesario adivinar
+  // si hay más: no hace falta pedir una página de más para descubrir que está
+  // vacía, ni deducirlo de "vinieron menos de 20".
+  totalPaginas: number;
+  total: number;
+}
+
+export async function candidatosCombinados(opts: {
+  tipo: MediaType;
+  providers: PlatformCode[];
+  receta: Receta;
+  pagina: number;
+}): Promise<PaginaCombinada> {
+  const ids = codesToTmdbIds(opts.providers);
+  if (!ids.length) return { candidatos: [], totalPaginas: 0, total: 0 };
+  const pagina = Math.max(1, opts.pagina);
+  return cached(claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool, async () => {
+    const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
+    return { candidatos: r.results.map(recortar), totalPaginas: r.total_pages, total: r.total_results };
+  });
+}
+
 // Candidatos de varias plataformas y varias páginas, unidos.
 //
 // Todas las lecturas salen en el mismo tick, así que el batcher de lib/cache.ts
@@ -260,15 +325,33 @@ export function ejeDelDia(superficie: string, tipo: MediaType, semilla: number):
 // es un problema de ejes — es el catálogo real de esa superficie.
 export const EJE_BASE: Eje = "pop";
 
+// Piso de CANTIDAD de votos declarado por la superficie, por eje. Pisa el que
+// trae el eje.
+//
+// Existe porque el `minVotes` de una superficie no llegaba nunca: `recetaDeEje`
+// arma `{...base, ...paramsEje}` y el del eje gana siempre. Como default está
+// bien —los cinco ejes se calibraron con su piso—, pero convertía cualquier
+// intento de DECIDIR el piso en una superficie nueva en una omisión silenciosa:
+// se pasaba `minVotes`, no pasaba nada, y nadie se enteraba.
+//
+// OJO CON QUÉ ES ESTE NÚMERO: es cuánta GENTE votó, no qué nota sacó. Un piso
+// de NOTA no se puede agregar acá ni en ningún otro lado (ver el principio en
+// CLAUDE.md y la nota de `discover` en lib/tmdb.ts). La única razón legítima
+// para subirlo es que el `sort_by` del eje SEA la nota —`top`—, donde sin piso
+// de votos el orden lo encabeza un 10.0 con un voto y no significa nada.
+export type PisoPorEje = Partial<Record<Eje, number>>;
+
 // Receta de una superficie para un eje dado.
 export function recetaDeEje(eje: Eje, opts: {
   superficie: string;      // "aud-family", "g-accion-home", "hero"
   tipo: MediaType;
   base?: ParamsReceta;     // géneros, keywords, exclusiones: lo propio de la superficie
+  minVotesPorEje?: PisoPorEje;
 }): { receta: Receta; eje: Eje; startPage: number } {
   const def = EJES[eje];
   const paramsEje = def.params(opts.tipo);
   const base = opts.base ?? {};
+  const pisoPropio = opts.minVotesPorEje?.[eje];
   return {
     eje,
     startPage: def.startPage,
@@ -277,6 +360,11 @@ export function recetaDeEje(eje: Eje, opts: {
       params: {
         ...base,
         ...paramsEje,
+        // Va DESPUÉS de `paramsEje` justamente para poder pisarlo. Si la
+        // superficie no declara piso no se escribe nada: `hashParams` filtra las
+        // claves `undefined`, así que las recetas de siempre siguen dando el
+        // mismo hash y los pools ya cacheados siguen valiendo.
+        ...(pisoPropio !== undefined ? { minVotes: pisoPropio } : {}),
         // El `extra` del eje se suma al de la superficie en vez de pisarlo: la
         // certificación por edad de los carruseles de audiencia viaja ahí.
         extra: { ...(base.extra ?? {}), ...(paramsEje.extra ?? {}) },
@@ -291,6 +379,7 @@ export function recetaDelDia(opts: {
   tipo: MediaType;
   semilla: number;
   base?: ParamsReceta;
+  minVotesPorEje?: PisoPorEje;
 }): { receta: Receta; eje: Eje; startPage: number } {
   return recetaDeEje(ejeDelDia(opts.superficie, opts.tipo, opts.semilla), opts);
 }
@@ -324,6 +413,10 @@ export async function candidatosConEje(opts: {
   base?: ParamsReceta;
   pages: number;
   piso?: number;
+  // Se pasa entero a `recetaDelDia` y a `recetaDeEje`, así que el piso propio
+  // vale también para el eje al que se cae el guard. Si valiera solo para el eje
+  // del día, un día degradado usaría un piso distinto sin que se note.
+  minVotesPorEje?: PisoPorEje;
 }): Promise<{ candidatos: Candidato[]; receta: Receta; eje: Eje; startPage: number; degradado: boolean }> {
   const piso = opts.piso ?? PISO_EJE;
   const traer = (r: { receta: Receta; startPage: number }) => candidatosDePools({

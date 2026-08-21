@@ -1,0 +1,274 @@
+{
+ "generado": "2026-08-21T21:36:42.394Z",
+ "plataformas": [
+  "n",
+  "d",
+  "m"
+ ],
+ "paginas": 32,
+ "totalPaginasTMDB": 32,
+ "items": 627,
+ "unicos": 627,
+ "declaradosPorTMDB": 627,
+ "cobertura": 100,
+ "problemas": [],
+ "detalle": [
+  {
+   "pagina": 1,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 25,
+   "ms": 1852
+  },
+  {
+   "pagina": 2,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 412
+  },
+  {
+   "pagina": 3,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 346
+  },
+  {
+   "pagina": 4,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 353
+  },
+  {
+   "pagina": 5,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 369
+  },
+  {
+   "pagina": 6,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 361
+  },
+  {
+   "pagina": 7,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 361
+  },
+  {
+   "pagina": 8,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 355
+  },
+  {
+   "pagina": 9,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 406
+  },
+  {
+   "pagina": 10,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 414
+  },
+  {
+   "pagina": 11,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 369
+  },
+  {
+   "pagina": 12,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 367
+  },
+  {
+   "pagina": 13,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 411
+  },
+  {
+   "pagina": 14,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 357
+  },
+  {
+   "pagina": 15,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 394
+  },
+  {
+   "pagina": 16,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 365
+  },
+  {
+   "pagina": 17,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 357
+  },
+  {
+   "pagina": 18,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 362
+  },
+  {
+   "pagina": 19,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 409
+  },
+  {
+   "pagina": 20,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 396
+  },
+  {
+   "pagina": 21,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 401
+  },
+  {
+   "pagina": 22,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 403
+  },
+  {
+   "pagina": 23,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 404
+  },
+  {
+   "pagina": 24,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 391
+  },
+  {
+   "pagina": 25,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 371
+  },
+  {
+   "pagina": 26,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 371
+  },
+  {
+   "pagina": 27,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 396
+  },
+  {
+   "pagina": 28,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 362
+  },
+  {
+   "pagina": 29,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 358
+  },
+  {
+   "pagina": 30,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 366
+  },
+  {
+   "pagina": 31,
+   "items": 20,
+   "hayMas": true,
+   "tmdb": 21,
+   "comandos": 24,
+   "ms": 392
+  },
+  {
+   "pagina": 32,
+   "items": 7,
+   "hayMas": false,
+   "tmdb": 8,
+   "comandos": 11,
+   "ms": 368
+  }
+ ],
+ "tmdb": "200x659"
+}

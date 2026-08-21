@@ -18,9 +18,11 @@ import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
 import {
-  candidatosConEje, candidatosDePools, poolsHabilitados, recetaDeEje, recetaDelDia, registrarEje,
-  type Candidato, type Eje, type ParamsReceta, type Receta,
+  candidatosCombinados, candidatosConEje, candidatosDePools, poolsHabilitados, recetaDeEje,
+  recetaDelDia, registrarEje,
+  type Candidato, type Eje, type ParamsReceta, type PisoPorEje, type Receta,
 } from "./pools";
+import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
 import { primaryCountry } from "./countries";
@@ -1059,6 +1061,12 @@ export async function categoryCandidates(opts: {
   // día (lib/pools.ts) en vez de `sortBy`/`minVotes`/`startPage`, y la receta se
   // llama `<superficie>-<eje>`. Lo usa el hero; los rieles de género todavía no.
   superficie?: string;
+  // Ver `candidatosDeSuperficie`. Van acá también porque la página extra de
+  // fallback del Home entra por esta puerta, y si no los reenviara pediría la
+  // página siguiente de OTRA receta — con otros géneros excluidos y otro piso.
+  sinGeneros?: number[];
+  minVotesPorEje?: PisoPorEje;
+  ejeFijo?: Eje;
 }): Promise<RawTitle[]> {
   return (await candidatosDeSuperficie(opts)).candidatos;
 }
@@ -1072,6 +1080,14 @@ export async function candidatosDeSuperficie(opts: {
   pages?: number; startPage?: number; sortBy?: string; minVotes?: number;
   extra?: Record<string, string>; scope?: "home" | "browse";
   superficie?: string;
+  // Géneros que excluye LA SUPERFICIE, aparte de los que salen de `scope`. Se
+  // UNEN, no se pisan: el riel de miniseries saca documental (99) por decisión
+  // propia y encima hereda animación/infantil de la regla de audiencia.
+  sinGeneros?: number[];
+  // Piso de cantidad de votos declarado por la superficie, por eje (ver
+  // `PisoPorEje` en lib/pools.ts). Sin esto el piso del eje gana siempre y pasar
+  // `minVotes` en una superficie con eje rotativo no hace absolutamente nada.
+  minVotesPorEje?: PisoPorEje;
   // Reusa un eje YA resuelto en vez de elegir uno. Lo usa la página extra de
   // fallback del Home: tiene que continuar el paginado de la misma receta con
   // la que se armó la ventana, o los candidatos no serían comparables. Con esto
@@ -1095,13 +1111,20 @@ export async function candidatosDeSuperficie(opts: {
   // animación en toda la app). Como el hash de la receta lo incluye, dos
   // usuarios con filtros distintos usan pools distintos sin que haya que
   // pensarlo — y los que comparten filtro comparten pool.
+  // Unión de las dos fuentes de exclusión: la de audiencia (`scope`) y la que
+  // declara la superficie. Ordenada y sin repetidos para que el hash de la
+  // receta no dependa del orden en que se escribieron.
+  const sinTodo = [...new Set([
+    ...(opts.scope
+      ? excludedGenres({ scope: opts.scope, genre: opts.genre, providers: opts.providers }) ?? []
+      : []),
+    ...(opts.sinGeneros ?? []),
+  ])].sort((a, b) => a - b);
   const base = {
     genres: rule.genres?.length ? rule.genres : undefined,
     keywords: rule.keywords?.length ? rule.keywords : undefined,
     // Igual que listByCategory: lo pide el llamador. Hoy solo lo hace el Home.
-    withoutGenres: opts.scope
-      ? excludedGenres({ scope: opts.scope, genre: opts.genre, providers: opts.providers })
-      : undefined,
+    withoutGenres: sinTodo.length ? sinTodo : undefined,
     originCountry: rule.originCountry,
     sortBy: opts.sortBy,
     minVotes: opts.minVotes,
@@ -1126,7 +1149,9 @@ export async function candidatosDeSuperficie(opts: {
   if (opts.superficie && poolsHabilitados) {
     const suf = `${opts.superficie}-${opts.genre ?? "todos"}`;
     if (opts.ejeFijo) {
-      const r = recetaDeEje(opts.ejeFijo, { superficie: suf, tipo: opts.tipo, base });
+      const r = recetaDeEje(opts.ejeFijo, {
+        superficie: suf, tipo: opts.tipo, base, minVotesPorEje: opts.minVotesPorEje,
+      });
       const candidatos = await candidatosDePools({
         tipo: opts.tipo, providers: opts.providers, receta: r.receta, pages, startPage,
       });
@@ -1134,7 +1159,7 @@ export async function candidatosDeSuperficie(opts: {
     }
     const r = await candidatosConEje({
       superficie: suf, tipo: opts.tipo, providers: opts.providers,
-      semilla: dailySeed(), base, pages,
+      semilla: dailySeed(), base, pages, minVotesPorEje: opts.minVotesPorEje,
     });
     return { candidatos: r.candidatos, startPage: r.startPage, eje: r.eje, degradado: r.degradado };
   }
@@ -1153,6 +1178,52 @@ export async function candidatosDeSuperficie(opts: {
     startPage: desde,
   });
   return { candidatos, startPage: desde, eje: null, degradado: false };
+}
+
+// --- "Miniseries para ansiosos": la lista paginada ---------------------------
+// La página de /lista/miniseries. Mismas reglas de elegibilidad que el riel
+// (`consultaListaMiniseries` las comparte) pero con dos diferencias deliberadas:
+// no rota por ejes —la exploración tiene que ser estable— y NO deduplica contra
+// el Home: "Ver todas" muestra el catálogo entero, incluidos los títulos que el
+// riel ya está mostrando.
+//
+// Una página de la lista ES una página de TMDB. Con eso, `hayMas` sale de
+// `total_pages` en vez de deducirse, y el orden no se reconstruye de nuestro
+// lado, que era la causa de los salteos. La garantía llega hasta donde llega
+// TMDB: si ellos recalculan el ranking entre dos pedidos, las páginas se pueden
+// mover — es la limitación normal de paginar una API ajena, y por eso el cliente
+// conserva su dedup al concatenar (ver `candidatosCombinados`).
+//
+// El único filtro que puede achicar una página es el estricto de plataformas de
+// `enrichRaw`, y sobre esta superficie casi no corta: medido, 100% sobrevive en
+// n,d,m a lo largo de 8 páginas. Por eso `hayMas` NO se calcula sobre lo
+// visible: una página que quedara corta no puede cortar la lista.
+export async function miniseriesLista(
+  providers: PlatformCode[], pagina: number,
+): Promise<{ items: UITitle[]; hayMas: boolean; pagina: number; totalPaginas: number; total: number }> {
+  const p = Math.max(1, Math.floor(pagina) || 1);
+  if (!providers.length) return { items: [], hayMas: false, pagina: p, totalPaginas: 0, total: 0 };
+  const q = consultaListaMiniseries();
+  const sinTodo = [...new Set([
+    ...(excludedGenres({ scope: q.scope, genre: q.genre, providers }) ?? []),
+    ...q.sinGeneros,
+  ])].sort((a, b) => a - b);
+  const receta: Receta = {
+    nombre: "lista-mini",
+    params: {
+      withoutGenres: sinTodo.length ? sinTodo : undefined,
+      sortBy: q.sortBy,
+      minVotes: q.minVotes,
+      extra: { ...q.extra },
+    },
+  };
+  const r = await candidatosCombinados({ tipo: q.tipo, providers, receta, pagina: p });
+  const items = soloMiniseries(
+    await enrichRaw(r.candidatos, q.tipo, providers),
+    providers,
+    (m) => console.error(`[lista-mini] descartado — ${m}`),
+  );
+  return { items, hayMas: p < r.totalPaginas, pagina: p, totalPaginas: r.totalPaginas, total: r.total };
 }
 
 // Enriquece una tanda de raw (providers por título, cacheado) y filtra a las

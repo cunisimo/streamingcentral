@@ -3,6 +3,8 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import ListaView from "@/components/ListaView";
 import UltimosView from "@/components/UltimosView";
+import MiniseriesView from "@/components/MiniseriesView";
+import { MINISERIES_LISTA_KEY } from "@/lib/miniseries";
 
 const LISTAS: Record<string, { endpoint: string; title: string }> = {
   "mas-votados": { endpoint: "/api/mas-votados", title: "Lo más votados" },
@@ -11,9 +13,16 @@ const LISTAS: Record<string, { endpoint: string; title: string }> = {
   "anime-adulto": { endpoint: "/api/audience?a=adult-anime", title: "🎬 Animación para adultos" },
 };
 
+// Las dos de abajo tienen vista propia y no entran en LISTAS: `ListaView` trae
+// todo de una sola vez y estas dos paginan. El título de miniseries no se
+// escribe acá a propósito — sale de lib/miniseries.ts, que es de donde lo saca
+// también el riel, para que no puedan quedar distintos.
 export default function ListaPage({ params }: { params: { key: string } }) {
   if (params.key === "ultimos") {
     return (<><TopBar /><main><UltimosView /></main><BottomNav /></>);
+  }
+  if (params.key === MINISERIES_LISTA_KEY) {
+    return (<><TopBar /><main><MiniseriesView /></main><BottomNav /></>);
   }
   const l = LISTAS[params.key];
   if (!l) notFound();
