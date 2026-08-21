@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   consumirVuelta, decidirRestauracion, guardarLista, marcarVuelta, olvidarLista,
   type EstadoLista,
@@ -12,8 +13,13 @@ export { olvidarLista } from "./lista-paginada-store";
 // la vista se monte: cuando el usuario aprieta atrás, el orden es popstate →
 // render de la ruta anterior → montaje de la vista. Un listener que se registrara
 // en el montaje llegaría tarde a su propio evento.
+//
+// `location.pathname` YA es el destino cuando corre el handler: el navegador
+// cambia la URL y recién después dispara popstate. Esa ruta es la mitad de la
+// marca — sin ella, una vuelta atrás hacia CUALQUIER otra página dejaba una
+// marca que la lista tomaba como propia (ver `consumirVuelta`).
 if (typeof window !== "undefined") {
-  window.addEventListener("popstate", () => marcarVuelta());
+  window.addEventListener("popstate", () => marcarVuelta(window.location.pathname));
 }
 
 export type Fase = "decidiendo" | "listo";
@@ -48,6 +54,7 @@ export function useListaPaginada<T, E = unknown>(opts: {
   listo: boolean;
 }): { fase: Fase; inicial: EstadoLista<T, E> | null; reiniciar: () => void } {
   const { clave, firma, items, pagina, hayMas, extra, listo } = opts;
+  const ruta = usePathname();
   const [fase, setFase] = useState<Fase>("decidiendo");
   const [inicial, setInicial] = useState<EstadoLista<T, E> | null>(null);
   const scrollPendiente = useRef<number | null>(null);
@@ -55,7 +62,7 @@ export function useListaPaginada<T, E = unknown>(opts: {
 
   // Decisión: restaurar o empezar limpio. Una sola vez, al montar.
   useEffect(() => {
-    const e = decidirRestauracion<T, E>({ clave, firma, volvio: consumirVuelta() });
+    const e = decidirRestauracion<T, E>({ clave, firma, volvio: consumirVuelta(ruta) });
     if (e) { setInicial(e); scrollPendiente.current = e.scrollY; }
     restaurado.current = true;
     setFase("listo");

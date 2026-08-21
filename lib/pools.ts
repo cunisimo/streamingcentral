@@ -155,9 +155,17 @@ async function pool(
 // el que queda del otro lado no se muestra NUNCA. Un dedup en el cliente tapa el
 // duplicado pero no recupera lo salteado.
 //
-// Acá el orden lo fija TMDB una sola vez y no se reconstruye, así que cada
-// página es un tramo de un ranking que no se mueve: sin duplicados y sin
-// salteos, por construcción y no por suerte del catálogo.
+// Acá el orden lo fija TMDB y no se reconstruye de nuestro lado, así que cada
+// página es un tramo de un ranking que nosotros no movemos.
+//
+// HASTA DÓNDE LLEGA ESA GARANTÍA. Es estable mientras TMDB mantenga el catálogo
+// y el orden entre pedidos, que es la limitación normal de paginar una API
+// ajena: la `popularity` se recalcula del lado de ellos y no es matemáticamente
+// imposible que dos llamadas vean rankings distintos. Lo que sí se elimina es la
+// causa que estaba de NUESTRO lado —reordenar una unión que crece— y el día
+// queda congelado en la clave del cache, así que dentro de una sesión las
+// páginas ya pedidas no se mueven. El dedup del cliente se conserva como
+// defensa para lo que quede.
 //
 // El precio es cache menos compartido —una entrada por COMBINACIÓN de
 // plataformas en vez de una por plataforma— y a cambio sale más barato por

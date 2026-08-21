@@ -143,7 +143,11 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   fija una vez: cada página es un tramo de un ranking que no se mueve, y
   `hayMas` sale de `total_pages` en vez de deducirse. Verificado barriendo las
   32 páginas de n,d,m: 627 servidos, 627 únicos, 627 declarados por TMDB — el
-  catálogo entero sin repetir ni faltar uno. Cuesta 1 discover + 20
+  catálogo entero sin repetir ni faltar uno. **La estabilidad llega hasta donde
+  llega TMDB**: si recalculan el ranking entre dos pedidos las páginas se pueden
+  mover, que es la limitación normal de paginar una API ajena; lo que se elimina
+  es la causa que estaba de nuestro lado. El dedup del cliente se conserva como
+  defensa. Cuesta 1 discover + 20
   `providersOf` por página, constante. La lista **no rota por ejes** (es
   exploración, tiene que ser estable) y **no deduplica contra el Home** (muestra
   el catálogo completo, riel incluido).

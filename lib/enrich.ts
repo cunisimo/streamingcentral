@@ -1188,8 +1188,11 @@ export async function candidatosDeSuperficie(opts: {
 // riel ya está mostrando.
 //
 // Una página de la lista ES una página de TMDB. Con eso, `hayMas` sale de
-// `total_pages` en vez de deducirse, y no hay forma de saltear ni de repetir un
-// título entre páginas (ver el comentario de `candidatosCombinados`).
+// `total_pages` en vez de deducirse, y el orden no se reconstruye de nuestro
+// lado, que era la causa de los salteos. La garantía llega hasta donde llega
+// TMDB: si ellos recalculan el ranking entre dos pedidos, las páginas se pueden
+// mover — es la limitación normal de paginar una API ajena, y por eso el cliente
+// conserva su dedup al concatenar (ver `candidatosCombinados`).
 //
 // El único filtro que puede achicar una página es el estricto de plataformas de
 // `enrichRaw`, y sobre esta superficie casi no corta: medido, 100% sobrevive en

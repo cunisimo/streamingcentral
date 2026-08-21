@@ -29,10 +29,18 @@ const KEY_VUELTA = "yump:lista-vuelta";
 export const VENTANA_VUELTA_MS = 8000;
 
 export interface EstadoLista<T, E = unknown> {
-  // Lo que invalida el estado guardado. Hoy son las plataformas elegidas: con
+  // Lo que INVALIDA el estado guardado. Hoy son las plataformas elegidas: con
   // otras plataformas la lista es otra y restaurarla sería mostrar títulos que
   // el usuario ya no puede ver. Va adentro del estado y no en la clave para que
   // cambiar de plataformas PISE lo viejo en vez de dejarlo acumulado.
+  //
+  // OJO CON QUÉ VA ACÁ Y QUÉ VA EN `extra`. Lo que la vista RESTAURA no puede
+  // estar en la firma. El toggle Películas/Series de "Últimos lanzamientos"
+  // estaba acá y era un bug: la vista monta siempre en `movie`, así que la firma
+  // del montaje era `movie|…`, no coincidía con la guardada `tv|…`, y
+  // `leerLista` BORRABA el estado antes de que nadie pudiera leer que el toggle
+  // estaba en Series. Lo que se restaura va en `extra`; en la firma va solo lo
+  // que, si cambió, obliga a tirar todo.
   firma: string;
   items: T[];
   pagina: number;
@@ -95,24 +103,48 @@ export function olvidarLista(clave: string) {
 // `popstate` del navegador, que solo dispara en atrás/adelante y no cuando se
 // navega con un link.
 //
+// LA MARCA GUARDA A DÓNDE SE VOLVIÓ, no solo cuándo. Con una fecha sola había
+// una regresión concreta: volver con Atrás desde cualquier lado hacia una página
+// que NO es la lista deja la marca puesta —nadie la consume, porque esa página
+// no usa este hook— y si dentro de la ventana el usuario entra normalmente a la
+// lista, esa marca ajena le restauraba un estado viejo que ya no correspondía.
+// Con la ruta adentro, la marca solo vale para la ruta que la generó.
+//
 // `ahora` se inyecta para poder probar el vencimiento sin esperar 8 segundos.
-export function marcarVuelta(ahora: number = Date.now()) {
-  try { sessionStorage.setItem(KEY_VUELTA, String(ahora)); } catch { /* ídem */ }
+interface Marca { ruta: string; t: number }
+
+export function marcarVuelta(ruta: string, ahora: number = Date.now()) {
+  try {
+    sessionStorage.setItem(KEY_VUELTA, JSON.stringify({ ruta, t: ahora } satisfies Marca));
+  } catch { /* ídem */ }
 }
 
-// Lee la marca Y LA BORRA: una vuelta restaura una vez. Sin el borrado, la misma
-// marca justificaría restaurar en cada montaje siguiente.
-export function consumirVuelta(ahora: number = Date.now()): boolean {
+// ¿Se llegó a `ruta` volviendo atrás?
+//
+// Solo consume (borra) la marca cuando es SUYA. Una marca de otra ruta se deja
+// donde está: no es de esta vista, y borrarla sería tirar información de una
+// vuelta que todavía no llegó a su destino. Se vence sola.
+export function consumirVuelta(ruta: string, ahora: number = Date.now()): boolean {
   let raw: string | null = null;
   try {
     raw = sessionStorage.getItem(KEY_VUELTA);
-    sessionStorage.removeItem(KEY_VUELTA);
   } catch {
     return false;
   }
-  const t = Number(raw);
-  if (!raw || !Number.isFinite(t)) return false;
-  return ahora - t <= VENTANA_VUELTA_MS;
+  if (!raw) return false;
+  let m: Marca;
+  try {
+    const v = JSON.parse(raw);
+    if (!v || typeof v !== "object" || typeof v.ruta !== "string" || !Number.isFinite(v.t)) return false;
+    m = v as Marca;
+  } catch {
+    return false;
+  }
+  if (m.ruta !== ruta) return false;
+  // Es la nuestra: se borra pase o no pase la ventana. Una vuelta restaura UNA
+  // vez, y una marca vencida no tiene por qué quedar dando vueltas.
+  try { sessionStorage.removeItem(KEY_VUELTA); } catch { /* ídem */ }
+  return ahora - m.t <= VENTANA_VUELTA_MS;
 }
 
 // Qué hacer al montar una vista paginada: restaurar lo guardado, o empezar

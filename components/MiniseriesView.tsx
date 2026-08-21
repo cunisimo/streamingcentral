@@ -50,10 +50,11 @@ export default function MiniseriesView() {
       const j = await res.json();
       if (myReq !== reqId.current) return; // respuesta obsoleta: descartar
       const got: UITitle[] = j.items ?? [];
-      // Dedup al concatenar. Con la consulta combinada no puede haber repetidos
-      // entre páginas (el orden lo fija TMDB y no se reconstruye), así que esto
-      // es un cinturón, no el mecanismo: si algún día vuelve a repetirse algo,
-      // que no se vea en pantalla mientras se investiga.
+      // Dedup al concatenar. La consulta combinada saca la causa que estaba de
+      // nuestro lado (reordenar una unión que crece), pero el orden sigue siendo
+      // de TMDB: si recalculan la popularidad entre dos pedidos, dos páginas
+      // pueden solaparse. Es la limitación normal de paginar una API ajena, así
+      // que esto queda como defensa permanente y no como un parche temporal.
       setItems((prev) => {
         if (p === 1) return got;
         const vistos = new Set(prev.map((t) => `${t.type}:${t.id}`));
@@ -69,23 +70,47 @@ export default function MiniseriesView() {
     }
   }, [platforms]);
 
-  // Carga inicial y al cambiar plataformas.
+  // Montaje: restaurar o empezar limpio. Corre UNA sola vez (`aplicado`), para
+  // que un `inicial` ya consumido no pueda volver a aplicarse más tarde.
   //
-  // Espera a que `useListaPaginada` decida si hay algo que restaurar: si pidiera
-  // la página 1 antes, se pagarían dos cargas y la restaurada pisaría a la otra
-  // con un parpadeo. Si restauró, no se pide NADA — los títulos ya están.
+  // Espera a que `useListaPaginada` decida: si pidiera la página 1 antes, se
+  // pagarían dos cargas y la restaurada pisaría a la otra con un parpadeo. Si
+  // restauró, no se pide NADA — los títulos ya están.
+  // Se recuerda QUÉ FIRMA se aplicó, no "si ya monté". Un booleano de primera
+  // vez no alcanza: `platforms` llega vacío y se completa un render después, así
+  // que `ready` ya es true cuando la firma pasa de "" a "n,d,m", y eso contaba
+  // como cambio de plataformas: recargaba la página 1 encima de lo recién
+  // restaurado. Por eso la comparación es contra el valor.
+  const firmaAplicada = useRef<string | null>(null);
   useEffect(() => {
     if (!ready || fase !== "listo") return;
-    if (inicial && inicial.firma === firma) {
-      setItems(inicial.items);
-      setPage(inicial.pagina);
-      setHayMas(inicial.hayMas);
-      setTotal(inicial.extra?.total ?? null);
-      setLoading(false);
+
+    if (firmaAplicada.current === null) {
+      firmaAplicada.current = firma;
+      if (inicial) {
+        setItems(inicial.items);
+        setPage(inicial.pagina);
+        setHayMas(inicial.hayMas);
+        setTotal(inicial.extra?.total ?? null);
+        setLoading(false);
+        return;
+      }
+      // Entrada normal: `decidirRestauracion` ya tiró lo guardado, pero
+      // "empezar desde arriba" es la otra mitad y hay que pedirla — una
+      // navegación SPA puede llegar con scroll heredado de la pantalla anterior.
+      reiniciar();
+      setPage(1);
+      load(1);
       return;
     }
-    // Entrada normal o cambio de plataformas: desde arriba y sin herencia.
+
+    if (firmaAplicada.current === firma) return;
+    // Cambió de plataformas: la lista es otra, se empieza de cero y arriba.
+    firmaAplicada.current = firma;
     reiniciar();
+    setItems([]);
+    setHayMas(false);
+    setTotal(null);
     setPage(1);
     load(1);
   }, [load, ready, fase, inicial, firma, reiniciar]);
