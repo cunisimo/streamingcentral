@@ -24,7 +24,9 @@ claro. Nunca muestra datos viejos para simular que funciona.
 ```
 public/
   sw.js                    Entry del SW: install / activate / fetch / message
-  sw/config.js             CACHE_VERSION, nombres de cache, límites, PRECACHE
+                           + SC_CACHE_VERSION y SC_OFFLINE_URL (ver §4)
+  sw/config.js             Nombres de cache, límites, PRECACHE. LEE la versión de
+                           self.SC_CACHE_VERSION; NO la define (ver §4)
   sw/strategies.js         cacheFirst · networkFirst · networkOnly · cacheFirstImage · trimCache
   sw/routes.js             Router: request → estrategia
   sw/push.js               RESERVADO (Web Push)
@@ -140,7 +142,7 @@ límite y iOS termina desalojándolo entero.
 `public/sw.js` define la constante — **no `sw/config.js`**:
 
 ```js
-self.SC_CACHE_VERSION = "v3";
+self.SC_CACHE_VERSION = "v<n>";   // se sube A MANO en cada cambio del SW
 ```
 
 ⚠️ **Vive en el script principal a propósito, y esto es un bug que ya cometimos.**
@@ -188,7 +190,7 @@ La solución: `scripts/stamp-sw.mjs` corre como `prebuild`, hashea
 `public/offline.html` y estampa el resultado dentro de `public/sw.js`:
 
 ```js
-self.SC_OFFLINE_URL = "/offline.html?v=bed1ff07da";
+self.SC_OFFLINE_URL = "/offline.html?v=<hash>";
 ```
 
 **Vive en `sw.js` y no en `sw/config.js` a propósito.** El algoritmo de update
@@ -198,6 +200,13 @@ motores. Estampar en `sw.js` garantiza que el byte-diff se dispare.
 
 `activate` además borra las entradas `/offline.html?v=…` de revisiones anteriores,
 porque el nombre del cache no cambia cuando solo cambia el hash.
+
+**Por eso editar `offline.html` NO exige subir `SC_CACHE_VERSION`**, y es la única
+excepción a la regla de arriba: el archivo ya se versiona solo por su hash, el
+stamp cambia los bytes de `sw.js` (que es lo que dispara la actualización) y
+`activate` limpia las revisiones viejas. Subir la versión además de eso tiraría
+todos los caches sin necesidad. El bump sigue haciendo falta para cualquier otro
+cambio del SW.
 
 ⚠️ **`npx next build` NO dispara los hooks de npm.** Usar `npm run build` (que es
 lo que corre Vercel). Con `npx next build` el SW queda con el hash anterior.

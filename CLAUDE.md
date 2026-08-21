@@ -542,9 +542,17 @@ La app es una PWA instalable en Android, iPhone y escritorio. Diseño completo e
 ### Reglas al tocar la PWA (para no romperla)
 
 - **El SW NO corre en `next dev`** (a propósito: cachear en dev es un infierno de
-  depuración). Para probarlo: `npx next build && npx next start`.
-- **Al cambiar cualquier archivo del SW, subir `CACHE_VERSION`** en
-  `public/sw/config.js`. Si no, `activate` no limpia los caches viejos.
+  depuración). Para probarlo: `npm run build && npx next start`. **`npm run`, no
+  `npx next build`**: el stamp del fallback offline se aplica en el hook
+  `prebuild`, que npx no dispara, así que con `npx next build` el SW queda con el
+  hash anterior y la actualización no se propaga.
+- **Al cambiar cualquier archivo del SW, subir `SC_CACHE_VERSION`** en
+  `public/sw.js` — **no** en `public/sw/config.js`, que es justamente el bug que
+  se corrigió (el navegador compara los bytes del script principal, no los de los
+  `importScripts`). Si no, `activate` no limpia los caches viejos.
+  **La excepción es `offline.html`**: no necesita bump porque se versiona por su
+  propio hash (`SC_OFFLINE_URL`, ver `docs/PWA.md`) y `activate` borra las
+  revisiones viejas.
 - **No cachear `/api/*` ni Supabase.** Es la prioridad del dueño: mejor fallar y
   mostrar `OfflineState` que mostrar catálogo/listas desactualizadas.
 - Los módulos del SW comparten un scope global (`importScripts`): cada uno va
