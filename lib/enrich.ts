@@ -25,6 +25,7 @@ import {
 import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
 import { excludedGenres, audienceRule } from "./audience";
+import { ordenarPorRelevancia } from "./busqueda-orden";
 import { primaryCountry } from "./countries";
 import { pickTrailer } from "./trailer";
 import type {
@@ -628,41 +629,10 @@ const BUSQUEDA_PAGINAS_TITULO = 2;
 const BUSQUEDA_TITULOS = 24;
 const BUSQUEDA_PERSONAS = 24;
 
-const sinAcentos = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-
-// Cuánto "empieza con" hay entre el nombre y lo tecleado. Solo separa lo que
-// calza de lo que no; el orden dentro de cada grupo lo pone la popularidad.
-//
-// `exacto` (el nivel 3) se usa en TÍTULOS y no en personas, y la asimetría es a
-// propósito. Un título se busca por su nombre completo —escribir "matrix" es
-// pedir Matrix— y sin ese nivel una película poco conocida quedaría debajo de
-// cualquier popular que comparta el prefijo. A una persona, en cambio, se la
-// busca tecleando de a poco ("spielb"), y premiar el nombre completo trae
-// justo el ruido que este arreglo vino a sacar: con "coco" salían cuatro
-// desconocidos llamados Coco antes que cualquier actor, y con "ste" una persona
-// llamada literalmente "Ste", con popularidad 0, arriba de Spielberg.
-function relevancia(nombre: string, q: string, exacto: boolean): number {
-  const n = sinAcentos(nombre);
-  const t = sinAcentos(q);
-  if (!t) return 0;
-  if (exacto && n === t) return 3;
-  if (n.startsWith(t)) return 2;
-  if (n.split(/[\s:.,\-–—'"()¡!¿?]+/).some((w) => w.startsWith(t))) return 2;
-  return n.includes(t) ? 1 : 0;
-}
-
-// Ordena por relevancia y, dentro de cada nivel, por popularidad.
-function ordenarPorRelevancia<T>(
-  items: T[], q: string, nombreDe: (t: T) => string, popDe: (t: T) => number,
-  exacto = false,
-): T[] {
-  return items
-    .map((x) => ({ x, r: relevancia(nombreDe(x), q, exacto), p: popDe(x) }))
-    .filter((e) => e.r > 0)
-    .sort((a, b) => (b.r - a.r) || (b.p - a.p))
-    .map((e) => e.x);
-}
+// El orden del buscador vive en ./busqueda-orden: es puro y tiene tests.
+// `relevancia` y `ordenarPorRelevancia` se movieron ahí sin cambiar de lógica;
+// lo único nuevo es `conservarAlias`, que deja pasar los títulos que TMDB
+// encontró por un nombre alternativo.
 
 export async function search(query: string, providers: PlatformCode[] = []) {
   const q = query.trim();
@@ -672,7 +642,10 @@ export async function search(query: string, providers: PlatformCode[] = []) {
   // mismas tarjetas en distinto orden. Ordenadas, para que "n,d" y "d,n" sean
   // la misma entrada.
   return cached(
-    `search:v1:${q.toLowerCase()}:${[...providers].sort().join(",")}`,
+    // v2: cambia el CONTENIDO. `searchDeTipo` pasó a es-MX y los títulos que
+    // TMDB encuentra por un nombre alternativo ya no se descartan. Sin subir la
+    // versión, lo cacheado se sigue sirviendo hasta que expire el TTL.
+    `search:v2:${q.toLowerCase()}:${[...providers].sort().join(",")}`,
     TTL.search,
     () => buscarYOrdenar(q, providers),
   );
@@ -690,9 +663,12 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
     publishedIds(),
   ]);
 
-  const people: UIPerson[] = ordenarPorRelevancia(
-    personasRaw, q, (p) => p.name ?? "", (p) => p.popularity ?? 0,
-  )
+  // Las personas NO conservan alias: acá el filtro por nombre es lo que saca el
+  // ruido, y es el arreglo que hizo que "ste" devuelva a Spielberg en vez de
+  // diez personas llamadas literalmente "Ste".
+  const people: UIPerson[] = ordenarPorRelevancia(personasRaw, q, {
+    nombreDe: (p) => p.name ?? "", popDe: (p) => p.popularity ?? 0,
+  })
     .slice(0, BUSQUEDA_PERSONAS)
     .map((r) => ({
       id: r.id, name: r.name,
@@ -714,12 +690,12 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
     vistos.add(k);
     return true;
   });
-  const elegidos = ordenarPorRelevancia(
-    unicos, q,
-    (c) => c.raw.title || c.raw.name || "",
-    (c) => c.raw.popularity ?? 0,
-    true,   // en títulos, el nombre completo sí manda
-  ).slice(0, BUSQUEDA_TITULOS);
+  const elegidos = ordenarPorRelevancia(unicos, q, {
+    nombreDe: (c) => c.raw.title || c.raw.name || "",
+    popDe: (c) => c.raw.popularity ?? 0,
+    exacto: true,          // en títulos, el nombre completo sí manda
+    conservarAlias: true,  // "La jungla de cristal" tiene que encontrar la 562
+  }).slice(0, BUSQUEDA_TITULOS);
 
   // No se filtra por plataforma: si buscás algo por nombre, querés verlo aunque
   // no lo tengas, y la card indica disponibilidad. Pero sí se ORDENA: lo que
