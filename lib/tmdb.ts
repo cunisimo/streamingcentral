@@ -174,12 +174,33 @@ export function searchTitles(type: MediaType, query: string) {
 }
 
 // Las dos de abajo son para el buscador de la app y NO son intercambiables con
-// `searchTitles`: mantienen el `es-ES` de DEFAULTS (el usuario busca en
-// español) y aceptan página, que es lo que permite mirar más allá de los 20
+// `searchTitles`: aceptan página, que es lo que permite mirar más allá de los 20
 // primeros para poder reordenar. Ver `search()` en lib/enrich.ts.
+
+// ES-MX ACÁ Y EN NINGÚN OTRO LADO. El resto de la app sigue en el `es-ES` de
+// DEFAULTS; esto pisa el idioma SOLO para la búsqueda de títulos.
+//
+// El motivo es que con `es-ES` la app no encuentra las películas por el nombre
+// con el que se las conoce en Argentina. Medido contra TMDB el 20/08:
+//
+//   consulta               es-ES                       es-MX
+//   "Duro de matar"        33542, otra película        562 "Duro de matar" ✔
+//   "Mi pobre angelito"    771 como "Solo en casa"     771 "Mi pobre angelito" ✔
+//
+// En es-ES la 771 llega igual desde TMDB, pero con el título español: el
+// buscador la descartaba después, al calcular relevancia contra un nombre que
+// no contiene lo tecleado.
+//
+// `es-AR` NO sirve —devuelve prácticamente los mismos nombres españoles—; es
+// `es-MX` el que trae los títulos latinoamericanos.
+//
+// LO QUE ESTO NO ARREGLA, y conviene tenerlo escrito antes de que aparezca como
+// bug: la FICHA sigue en es-ES. Una tarjeta del buscador puede decir "Duro de
+// matar" y, al entrar, la ficha mostrar "Jungla de cristal". Es un límite
+// conocido y aceptado; el idioma de las fichas es una decisión aparte.
 export function searchDeTipo(type: MediaType, query: string, page = 1) {
   return tmdb<Paged<RawTitle>>(`/search/${type}`, {
-    query, include_adult: "false", page: String(page),
+    query, include_adult: "false", page: String(page), language: "es-MX",
   });
 }
 

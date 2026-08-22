@@ -538,12 +538,28 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .dsmp-picks{display:flex;gap:12px;overflow-x:auto;padding:14px 2px 6px}
 .dsmp-pick{flex:0 0 auto;width:96px;display:flex;flex-direction:column;gap:6px;border:none;background:none;padding:0;cursor:pointer;font-family:var(--body)}
 .dsmp-pick:disabled{cursor:default}
+.dsmp-pick-txt{position:relative;z-index:2}
 .dsmp-pick-poster{position:relative;aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;background-size:cover;background-position:center;box-shadow:var(--sh);display:flex;align-items:flex-end;padding:8px;color:#fff;font-size:11px;transition:transform .15s,outline-color .15s;outline:2px solid transparent}
 .dsmp-pick:not(:disabled):hover .dsmp-pick-poster{transform:translateY(-3px)}
 .dsmp-pick.is-sel .dsmp-pick-poster{outline-color:var(--accent)}
-.dsmp-pick-check{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
-.dsmp-pick.is-off .dsmp-pick-poster{filter:grayscale(1) brightness(.55)}
-.dsmp-pick-off{position:absolute;left:0;right:0;bottom:0;padding:4px 6px;background:rgba(0,0,0,.72);color:#fff;font-size:9.5px;font-weight:600;text-align:center;line-height:1.15}
+/* El póster vive en su PROPIA capa, y esa capa es la única que lleva el
+   filtro de "no disponible". Estando el filter en `.dsmp-pick-poster`, que es
+   el contenedor, apagaba TODOS los descendientes: el cartel blanco terminaba
+   gris al 55% de brillo. No se arregla con otro color:#fff — un elemento
+   filtrado no se puede "desfiltrar" desde adentro. */
+.dsmp-pick-img{position:absolute;inset:0;background-size:cover;background-position:center}
+/* La marca del centro: `+` para agregar, `✓` cuando ya está elegida. Mismo
+   lenguaje que el `+` de las cards del Home (círculo chico, negro translúcido,
+   blur), pero centrado sobre el póster. Es un <span aria-hidden>: la tarjeta
+   entera ya es el <button> y anidar botones es HTML inválido. */
+.dsmp-pick-marca{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:34px;height:34px;border-radius:999px;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:600;line-height:1;transition:background .15s,transform .12s}
+.dsmp-pick:not(:disabled):hover .dsmp-pick-marca{background:rgba(0,0,0,.72)}
+.dsmp-pick-marca.is-sel{background:var(--accent);font-size:16px;font-weight:700}
+/* Cupo lleno: la marca se apaga en vez de desaparecer, así el botón sigue
+   explicándose. El aria-label dice el motivo. */
+.dsmp-pick-marca.is-lleno{opacity:.35}
+.dsmp-pick.is-off .dsmp-pick-img{filter:grayscale(1) brightness(.55)}
+.dsmp-pick-off{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:4px 6px;background:rgba(0,0,0,.72);color:#fff;font-size:9.5px;font-weight:600;text-align:center;line-height:1.15}
 .dsmp-pick-name{font-size:12px;color:var(--text);line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 
 .dsmp-tray-head{margin:16px 0 8px;font-size:13px;font-weight:600;color:var(--dim)}
