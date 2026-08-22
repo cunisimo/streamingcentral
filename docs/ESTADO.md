@@ -320,3 +320,61 @@ de discover; `CACHE_BATCH=0` vuelve al GET por clave.
 `supabase/migrations/004_news.sql`. Estaban al empezar la sesión y no se
 tocaron. Si `004_news.sql` está aplicado en producción, debería versionarse por
 el mismo motivo que el resto del pipeline.
+
+## Eliminar cuenta (Apple / Google Play)
+
+`Cuenta → Configuración → Zona de riesgo → Eliminar cuenta`.
+
+**Qué elimina.** Una sola operación —`admin.deleteUser(id, false)`— y todo lo
+demás cae por CASCADE. Verificado contra la base real con una cuenta
+descartable el 22/08: antes 1 perfil, 3 votos, 3 `user_items` (los tres kinds),
+3 en historial, 1 reseña, 1 identidad y 3 sesiones; después, 0 en todas.
+
+| Dato | Tabla | Cómo se borra |
+|---|---|---|
+| Cuenta, email, hash de contraseña | `auth.users` | `admin.deleteUser` |
+| Identidades, sesiones, tokens, MFA, WebAuthn, OAuth | `auth.*` (8 tablas) | CASCADE |
+| Nombre, avatar, país, plataformas | `profiles` | CASCADE |
+| Votos | `votes` | CASCADE |
+| Mi lista, Ya la vi, descartes | `user_items` | CASCADE |
+| Reseñas de usuario | `user_reviews` | CASCADE |
+| Historial de fichas | `view_history` | CASCADE |
+
+**Storage no participa**: el proyecto tiene 0 buckets y 0 objetos — los avatares
+son DiceBear generados desde `avatar_seed`. Si algún día se suben archivos, el
+lugar donde agregar su borrado es `lib/eliminar-cuenta.ts`.
+
+**En el dispositivo** se borra el estado personal (`yump:ruleta-mostrados`,
+`yump:hero-estado`, `yump:lista-paginada`, `yump:lista-vuelta`,
+`yump:track-scroll`, y la sesión `sb-*-auth-token`) y **se conservan** las
+preferencias: `sc:platforms` y su cookie, `sc:theme`, `sc:pais`, `sc:visits`,
+`yump:shelf-type`. La persona sigue usando Yump como invitada sin reconfigurar
+nada. El reparto vive en `lib/limpieza-local.ts`, que es puro y tiene tests.
+
+**En Upstash no queda nada personal**: ninguna clave de cache lleva un id de
+usuario. La única derivada es la del riel personalizado, que es un hash de las
+señales — no identifica a nadie y expira sola en 6 h.
+
+**Seguridad.** La identidad sale SOLO del token (`sesionDeToken`); el cuerpo del
+pedido lleva únicamente la contraseña, así que no hay ningún campo del cliente
+que pueda cambiar a quién se borra. La contraseña se revalida con un cliente
+Supabase aislado por pedido (`persistSession`, `autoRefreshToken` y
+`detectSessionInUrl` en false) y su sesión se cierra al terminar. Límite de 5
+intentos fallidos por usuario cada 15 minutos. La ruta es `force-dynamic` con
+`Cache-Control: no-store` en TODAS las respuestas, y no registra cuerpo, token,
+email ni contraseña.
+
+**El orden es el punto delicado**: primero el servidor; recién con un 200 se
+cierra la sesión y se limpia el dispositivo. Si falla, la cuenta y la sesión
+quedan intactas y se muestra el motivo.
+
+### Pendiente para Google Play
+
+Falta la **página pública `/eliminar-cuenta`**, accesible sin la app, que Google
+exige enlazar desde la ficha de Play. El mecanismo del servidor ya está listo
+para reutilizarse: depende solo de un token válido, así que esa página solo
+tiene que pedir email y contraseña, iniciar sesión y llamar al mismo endpoint.
+No hace falta tocar `lib/eliminar-cuenta.ts` ni la ruta.
+
+También falta declarar en Play qué datos se recogen y cuáles se borran; la tabla
+de arriba es la fuente para ese formulario.
