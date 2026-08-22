@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApi } from "./useApi";
 import { consumirVuelta, decidirRestauracionVista, guardarVista } from "@/hooks/lista-paginada-store";
+import { contextoDe, snapshotVigente } from "@/hooks/restauracion-vigente";
 import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import OfflineState from "./pwa/OfflineState";
@@ -23,12 +24,25 @@ export default function ListaView({ endpoint, title }: { endpoint: string; title
   const [restaurado, setRestaurado] = useState<UITitle[] | null>(null);
   const [decidido, setDecidido] = useState(false);
   const pendiente = useRef<number | null>(null);
+  // A qué plataformas pertenece lo restaurado. Mientras haya snapshot la URL
+  // de `useApi` queda vacía, así que si cambian las plataformas y no se suelta,
+  // la lista queda congelada en el catálogo anterior sin pedir nada.
+  const [ctxRestaurado, setCtxRestaurado] = useState<string | null>(null);
+  const ctxActual = contextoDe([firma]);
   useEffect(() => {
     const e = decidirRestauracionVista<UITitle[]>({ clave, firma, volvio: consumirVuelta(window.location.pathname) });
-    if (e) { setRestaurado(e.datos); pendiente.current = e.scrollY; }
+    if (e) { setRestaurado(e.datos); pendiente.current = e.scrollY; setCtxRestaurado(ctxActual); }
     setDecidido(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clave]);
+
+  useEffect(() => {
+    if (snapshotVigente(ctxRestaurado, ctxActual)) return;
+    setRestaurado(null);
+    setCtxRestaurado(null);
+    pendiente.current = null;
+    window.scrollTo(0, 0);
+  }, [ctxRestaurado, ctxActual]);
 
   const { data, loading, offline, error, retry } = useApi<{ items: UITitle[] }>(
     // URL vacía = `useApi` no fetchea. Mientras se decide, y si se restauró,

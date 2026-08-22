@@ -151,16 +151,73 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `providersOf` por página, constante. La lista **no rota por ejes** (es
   exploración, tiene que ser estable) y **no deduplica contra el Home** (muestra
   el catálogo completo, riel incluido).
-- **Las vistas paginadas conservan lo cargado al volver de una ficha**
-  (`hooks/useListaPaginada.ts` + `lista-paginada-store.ts`). Antes no: volver
-  te devolvía a la página 1 y al scroll 0, y era así en todas. Restaura **solo**
-  con atrás/adelante — lo detecta un `popstate` registrado al importar el módulo,
-  porque el orden es popstate → render de la ruta → montaje, y un listener
-  montado con la vista llega tarde a su propio evento. La marca vence a los 8 s
-  (cualquier vuelta atrás la dispara, también las que no van a una lista).
-  Entrar por un link o cambiar de plataformas **empieza arriba y borra lo
-  guardado**: `reiniciar()` hace las dos mitades. Lo que invalida el estado va en
-  la `firma` (plataformas, y el tipo activo en "Últimos lanzamientos").
+- **Volver de una ficha devuelve LA VISTA, no solo la ruta.** El mecanismo vive
+  en `hooks/lista-paginada-store.ts` (el almacén y la marca de vuelta) con dos
+  hooks encima: `useListaPaginada` para lo paginado y `useEstadoSimple` para lo
+  que trae todo de una. **Un solo `popstate` en toda la app**, registrado al
+  importar el STORE — estuvo en el hook y era un bug latente: `/categoria` no
+  importa ese hook, así que ahí el listener nunca se registraba y la
+  restauración fallaba en silencio.
+
+  **Tres cosas distintas que se pierden por separado**, y una vista no está
+  cubierta porque persista una sola: filtros/toggle, scroll vertical de la
+  página y scroll horizontal de los carruseles (ese último es `useTrackScroll`,
+  aparte).
+
+  | Superficie | Qué restaura |
+  |---|---|
+  | `/lista/miniseries`, `/lista/ultimos` | items, página, scroll (paginado) |
+  | `/buscar` | texto, pestaña, país, filtros, páginas cargadas, scroll |
+  | `/directores` | lista, texto del filtro, cuántos visibles, scroll |
+  | `/categoria/[slug]` | tipo y scroll |
+  | `/lista/[key]` simples | items y scroll |
+  | `/proximamente` | filtro, items y scroll |
+  | `/top` | payload, scroll vertical y horizontal de cada carrusel |
+  | `/cuenta/*` | scroll horizontal de cada riel |
+
+  **Fuera a propósito**: Home y `/persona` **no se tocaron** — se auditaron y no
+  reprodujeron la falla, aunque comparten la carrera (contenido asíncrono +
+  restauración nativa del navegador). Si alguna vez aparece, es esto.
+
+  **Qué guarda**: `sessionStorage`, clave `yump:lista-paginada`, una entrada por
+  vista. **Una sola entrada por ruta, NO una por modo**: en `/buscar`, cambiar
+  de pestaña pisa el snapshot. Con claves por modo quedaba memoria paralela de
+  Películas, Series y Actores, que es historial por pestaña y no "volver a lo
+  que dejaste". Medido: 71 KB con siete vistas guardadas a la vez, contra un
+  tope de ~5 MB.
+
+  **Qué lo invalida**: la `firma` (las plataformas; el tipo en "Últimos
+  lanzamientos"). Lo que se RESTAURA nunca va en la firma — va en `extra`. Y en
+  las vistas que gatean el fetch con la decisión (`/top`, `/lista/[key]`) hay
+  que soltar el snapshot cuando cambia el contexto (`snapshotVigente`): mientras
+  siga presente, la URL de `useApi` queda vacía y la vista se congela mostrando
+  el contenido viejo sin pedir nada.
+
+  **Restaura SOLO con atrás/adelante.** Entrar por un link empieza arriba y
+  borra lo guardado. **La marca vence a los 8 s** y esa ventana es la limitación
+  conocida: cualquier vuelta atrás la dispara, también las que no van a una
+  vista con restauración, así que una marca huérfana se vence sola en vez de
+  disparar una restauración a destiempo. Con red muy lenta, una transición que
+  tarde más de 8 s pierde la restauración.
+
+  **`/buscar` reparte la vuelta con un TICKET** (`hooks/ticket-vuelta.ts`): el
+  modo y el texto viven en el padre y los items en los hijos, y `consumirVuelta`
+  borra la marca al leerla. La consume el padre y la reparte a nombre del modo
+  restaurado; **lo cierra el hijo** cuando avisa que leyó o descartó su
+  snapshot, no un timeout ni un contador de renders. **Con texto de búsqueda no
+  se emite ticket**: ahí los resultados los pinta el padre y no monta ningún
+  hijo, así que el ticket quedaba abierto y bastaba con borrar el texto para que
+  el hijo que montara reclamara una vuelta vieja.
+
+  **`/categoria` restaura cuando se asentaron TODOS los rieles**
+  (`hooks/categoria-generaciones.ts`), no cuando termina el primero: cada riel
+  pendiente sigue moviendo la altura. Un riel vacío o con error también cuenta
+  como terminado. Al cambiar de tipo arranca una generación nueva y los avisos
+  de la anterior se descartan por número. **El tipo se restaura del snapshot, no
+  de la URL**: al volver atrás Next no re-ejecuta el componente de servidor,
+  sirve el RSC cacheado, así que la barra decía `?tipo=tv` y la vista se
+  rendereaba en Películas igual. El `?tipo=` con `replaceState` sigue valiendo
+  para compartir la URL y para una entrada nueva.
 - **El hero ("6 para hoy") arma un universo grande de crudos y enriquece solo lo
   que muestra.** Antes pedía una página de discover por tipo, enriquecía las 40
   (1 request de providers por título) y mostraba 6: pagaba 40 para mostrar 6, y

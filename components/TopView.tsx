@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { olvidarTrack, useTrackScroll } from "@/hooks/useTrackScroll";
 import { consumirVuelta, decidirRestauracionVista, guardarVista } from "@/hooks/lista-paginada-store";
+import { contextoDe, snapshotVigente } from "@/hooks/restauracion-vigente";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import { useShelfType } from "@/hooks/useShelfType";
@@ -103,12 +104,28 @@ export default function TopView() {
   const [restaurado, setRestaurado] = useState<TopPayload | null>(null);
   const [decidido, setDecidido] = useState(false);
   const pendienteY = useRef<number | null>(null);
+  // A qué tipo y plataformas pertenece lo restaurado. Si el usuario cambia
+  // cualquiera de las dos, el snapshot deja de corresponder y hay que soltarlo:
+  // mientras siga presente, la URL de `useApi` queda vacía y no se pide nada.
+  const [ctxRestaurado, setCtxRestaurado] = useState<string | null>(null);
+  const ctxActual = contextoDe([tipo, firmaTop]);
+
   useEffect(() => {
     const e = decidirRestauracionVista<TopPayload>({ clave: claveTop2, firma: firmaTop, volvio: consumirVuelta(window.location.pathname) });
-    if (e) { setRestaurado(e.datos); pendienteY.current = e.scrollY; }
+    if (e) { setRestaurado(e.datos); pendienteY.current = e.scrollY; setCtxRestaurado(ctxActual); }
     setDecidido(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claveTop2]);
+
+  // Cambió el tipo o las plataformas: se suelta lo restaurado y se vuelve
+  // arriba. Recién ahí `useApi` recupera su URL y pide lo nuevo.
+  useEffect(() => {
+    if (snapshotVigente(ctxRestaurado, ctxActual)) return;
+    setRestaurado(null);
+    setCtxRestaurado(null);
+    pendienteY.current = null;
+    window.scrollTo(0, 0);
+  }, [ctxRestaurado, ctxActual]);
 
   const { data, loading, offline, error, retry } = useApi<TopPayload>(
     () => (!decidido || restaurado ? "" : `/api/top?tipo=${tipo}&providers=${platforms.join(",")}`),
@@ -151,11 +168,11 @@ export default function TopView() {
     if (tipoPrevio.current === tipo) return;
     const anterior = tipoPrevio.current;
     tipoPrevio.current = tipo;
-    for (const b of [...(data?.mine ?? []), ...(data?.others ?? [])]) {
+    for (const b of [...(vivo?.mine ?? []), ...(vivo?.others ?? [])]) {
       olvidarTrack(claveTop(b.platform, anterior));
       olvidarTrack(claveTop(b.platform, tipo));
     }
-  }, [tipo, data]);
+  }, [tipo, vivo]);
 
   const mine = vivo?.mine ?? [];
   const others = vivo?.others ?? [];

@@ -66,7 +66,16 @@ export default function SearchView() {
     setFilter(e.filter);
     setExplore(e.explore);
     setRes(inicial.datos);
-    setTicket(crearTicket(++proximoTicket.current, e.filter));
+    // EL TICKET SOLO SE EMITE SI VA A MONTAR UN HIJO QUE PUEDA CONSUMIRLO.
+    // Con texto de búsqueda los resultados los pinta el padre y no monta
+    // ninguno, así que el ticket quedaba abierto para siempre: bastaba con
+    // borrar el texto para que el hijo que montara reclamara una vuelta vieja
+    // y restaurara filtros y páginas de una navegación anterior.
+    const conTexto = e.q.trim().length >= 2;
+    if (!conTexto) {
+      // El modo del ticket incluye "explore": ese hijo también restaura.
+      setTicket(crearTicket(++proximoTicket.current, e.explore ? "explore" : e.filter));
+    }
   }, [fase, inicial]);
 
   const idTicket = ticket?.id ?? -1;
@@ -159,13 +168,13 @@ export default function SearchView() {
         </>
       )}
 
-      {!hasQuery && filter === "todo" && explore && <ExploreList explore={explore} onBack={() => setExplore(null)} />}
+      {!hasQuery && filter === "todo" && explore && <ExploreList explore={explore} onBack={() => setExplore(null)} volvio={esParaMi(ticket, "explore")} onDecidido={cerrarTicket} />}
 
       {!hasQuery && (filter === "movie" || filter === "tv") && <BrowseTitles tipo={filter} volvio={esParaMi(ticket, filter)} onDecidido={cerrarTicket} />}
 
       {!hasQuery && filter === "actores" && <BrowseActors volvio={esParaMi(ticket, "actores")} onDecidido={cerrarTicket} />}
 
-      {!hasQuery && filter === "directores" && <BrowseDirectors />}
+      {!hasQuery && filter === "directores" && <BrowseDirectors volvio={esParaMi(ticket, "directores")} onDecidido={cerrarTicket} />}
 
       {/* ---- CON QUERY: los chips filtran resultados ---- */}
       {hasQuery && (
@@ -417,15 +426,37 @@ function BrowseActors({ volvio, onDecidido }: { volvio?: boolean; onDecidido?: (
 // --- Directores curados (lista fija de /api/directores). TMDB no tiene índice
 // de directores como sí de actores (person/popular es ~99% actores), así que el
 // browse muestra una lista curada; para cualquier otro, usar el buscador. ---
-function BrowseDirectors() {
+function BrowseDirectors({ volvio, onDecidido }: { volvio?: boolean; onDecidido?: () => void }) {
   const [people, setPeople] = useState<UIPerson[]>([]);
   const [loading, setLoading] = useState(true);
+  // Comparte la ÚNICA entrada de los hijos. Sin esto no había forma de saber
+  // cuándo terminó de cargar, así que el padre no tenía condición válida para
+  // devolver el scroll: volvía al modo correcto y a la posición 0.
+  const { fase, inicial } = useEstadoSimple<UIPerson[], ExtraHijo>({
+    clave: CLAVE_HIJO,
+    firma: "",          // la lista de directores es curada, no depende de plataformas
+    datos: people,
+    extra: { modo: "directores" },
+    listo: !loading && people.length > 0,
+    vacio: people.length === 0,
+    volvio,
+    onDecidido,
+  });
+  const restaurado = useRef(false);
   useEffect(() => {
+    if (fase !== "listo" || restaurado.current) return;
+    restaurado.current = true;
+    if (inicial && inicial.extra?.modo === "directores") {
+      setPeople(inicial.datos);
+      setLoading(false);
+      return;
+    }
     fetch("/api/directores").then((r) => r.json()).then((j) => {
       setPeople(j.people ?? []);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, inicial]);
   return (
     <>
       <h2 className="bres-h">Directores</h2>
@@ -435,15 +466,41 @@ function BrowseDirectors() {
   );
 }
 
-function ExploreList({ explore, onBack }: { explore: { country: string }; onBack: () => void }) {
+function ExploreList({ explore, onBack, volvio, onDecidido }: {
+  explore: { country: string }; onBack: () => void; volvio?: boolean; onDecidido?: () => void;
+}) {
   const { platforms } = usePlatforms();
   const [items, setItems] = useState<UITitle[]>([]);
   const [loading, setLoading] = useState(true);
+  // El país lo restaura el padre; los títulos y la posición, este hijo. El
+  // modo guardado incluye el país para no restaurar el listado de otro.
+  const modoPais = `explore:${explore.country}`;
+  const { fase, inicial } = useEstadoSimple<UITitle[], ExtraHijo>({
+    clave: CLAVE_HIJO,
+    firma: platforms.join(","),
+    datos: items,
+    extra: { modo: modoPais },
+    listo: !loading && items.length > 0,
+    vacio: items.length === 0,
+    volvio,
+    onDecidido,
+  });
+  const restaurado = useRef(false);
   useEffect(() => {
+    if (fase !== "listo") return;
+    if (!restaurado.current) {
+      restaurado.current = true;
+      if (inicial && inicial.extra?.modo === modoPais) {
+        setItems(inicial.datos);
+        setLoading(false);
+        return;
+      }
+    }
     const url = `/api/discover?tipo=movie&country=${explore.country}&providers=${platforms.join(",")}`;
     setLoading(true);
     fetch(url).then((r) => r.json()).then((j) => { setItems(j.items ?? []); setLoading(false); }).catch(() => setLoading(false));
-  }, [explore, platforms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, inicial, explore, platforms]);
   const title = `${COUNTRIES[explore.country]?.flag} ${COUNTRIES[explore.country]?.name}`;
   return (
     <>

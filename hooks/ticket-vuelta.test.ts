@@ -207,3 +207,89 @@ test("UNA entrada por ruta: cambiar de modo pisa el snapshot", () => {
   assert.equal(e?.extra?.modo, "actores");
   assert.deepEqual(e?.datos, [9], "no quedó nada del modo anterior");
 });
+
+// ============================================================================
+// REGRESIONES de la auditoría del 22/08. Las cinco fallaban antes del arreglo.
+// ============================================================================
+
+import { contextoDe, snapshotVigente } from "./restauracion-vigente.ts";
+
+test("REGRESIÓN Top: cambiar de tipo después de volver suelta el snapshot", () => {
+  // Reproducido: entrar a /top en Películas, ficha, volver, tocar Series. El
+  // toggle quedaba en Series MOSTRANDO PELÍCULAS, y sin pedir nada: `restaurado`
+  // seguía presente y mantenía la URL de `useApi` vacía.
+  const alRestaurar = contextoDe(["movie", "n,d,m"]);
+  assert.equal(snapshotVigente(alRestaurar, contextoDe(["movie", "n,d,m"])), true, "mismo tipo: vale");
+  assert.equal(snapshotVigente(alRestaurar, contextoDe(["tv", "n,d,m"])), false, "otro tipo: se suelta");
+});
+
+test("REGRESIÓN Top: cambiar plataformas después de volver suelta el snapshot", () => {
+  const alRestaurar = contextoDe(["movie", "n,d,m"]);
+  assert.equal(snapshotVigente(alRestaurar, contextoDe(["movie", "n"])), false);
+});
+
+test("REGRESIÓN lista simple: cambiar plataformas después de volver suelta el snapshot", () => {
+  // Mismo patrón en /lista/[key]: ahí el contexto es solo la firma.
+  const alRestaurar = contextoDe(["n,d,m"]);
+  assert.equal(snapshotVigente(alRestaurar, contextoDe(["n,d,m"])), true);
+  assert.equal(snapshotVigente(alRestaurar, contextoDe(["n"])), false);
+});
+
+test("sin nada restaurado no hay nada que invalidar", () => {
+  // Una vista que está pidiendo normalmente no tiene que soltar nada ni volver
+  // arriba cada vez que cambia una plataforma: de eso ya se encarga su refetch.
+  assert.equal(snapshotVigente(null, contextoDe(["tv", "n"])), true);
+});
+
+test("el contexto distingue partes vacías de partes ausentes", () => {
+  assert.notEqual(contextoDe(["a", ""]), contextoDe(["a"]));
+  assert.equal(contextoDe(["a", null]), contextoDe(["a", undefined]));
+});
+
+// --- el ticket huérfano ------------------------------------------------------
+
+// Qué modo (si alguno) recibe el ticket al restaurar. Es la regla que decide si
+// se emite: con texto de búsqueda los resultados los pinta el PADRE y no monta
+// ningún hijo, así que emitirlo dejaba un ticket abierto para siempre.
+function modoDelTicket(e: { q: string; filter: string; explore: { country: string } | null }): string | null {
+  if (e.q.trim().length >= 2) return null;
+  return e.explore ? "explore" : e.filter;
+}
+
+test("REGRESIÓN: con texto de búsqueda NO se emite ticket", () => {
+  // El agujero: se restauraba "matrix" (que pinta el padre), se emitía un ticket
+  // para el modo "todo" y nadie lo consumía. Después bastaba con BORRAR el texto
+  // para que montara un hijo y reclamara esa vuelta vieja, restaurando los
+  // filtros y las páginas de una navegación anterior.
+  assert.equal(modoDelTicket({ q: "matrix", filter: "movie", explore: null }), null);
+  assert.equal(modoDelTicket({ q: "ma", filter: "todo", explore: null }), null);
+});
+
+test("sin texto sí se emite, y a nombre del modo que va a montar", () => {
+  assert.equal(modoDelTicket({ q: "", filter: "movie", explore: null }), "movie");
+  assert.equal(modoDelTicket({ q: " ", filter: "actores", explore: null }), "actores");
+  assert.equal(modoDelTicket({ q: "", filter: "directores", explore: null }), "directores");
+});
+
+test("explorar por país gana al modo: es el hijo que monta", () => {
+  assert.equal(modoDelTicket({ q: "", filter: "todo", explore: { country: "AR" } }), "explore");
+});
+
+test("un texto de una sola letra no cuenta como búsqueda", () => {
+  // El umbral es el mismo del debounce: con menos de 2 caracteres no hay
+  // resultados y el modo browse sigue montado.
+  assert.equal(modoDelTicket({ q: "m", filter: "movie", explore: null }), "movie");
+});
+
+test("los cuatro hijos de /buscar pueden reclamar su ticket", () => {
+  for (const modo of ["movie", "tv", "actores", "directores", "explore"]) {
+    assert.equal(esParaMi(crearTicket(1, modo), modo), true, modo);
+  }
+});
+
+test("un hijo NO reclama el ticket de otro modo", () => {
+  const t = crearTicket(1, "directores");
+  for (const otro of ["movie", "tv", "actores", "explore"]) {
+    assert.equal(esParaMi(t, otro), false, otro);
+  }
+});
