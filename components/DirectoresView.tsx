@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PersonCard from "./PersonCard";
+import { useEstadoSimple } from "@/hooks/useEstadoSimple";
 import type { UIPerson } from "@/lib/types";
 
 const PAGE = 20;
@@ -13,14 +14,40 @@ export default function DirectoresView() {
   const [q, setQ] = useState("");
   const [visible, setVisible] = useState(PAGE);
 
+  // NO usa `useListaPaginada` aunque tenga "Cargar más": no hay paginación de
+  // servidor. La lista llega COMPLETA en una llamada y `visible` solo decide
+  // cuántas se pintan. Forzarla dentro del hook paginado sería inventarle una
+  // `pagina` que no existe.
+  //
+  // Firma vacía: la lista de directores es curada y no depende de plataformas.
+  const { fase, inicial } = useEstadoSimple<UIPerson[], { q: string; visible: number }>({
+    clave: "directores",
+    firma: "",
+    datos: people,
+    extra: { q, visible },
+    listo: !loading && people.length > 0,
+    vacio: people.length === 0,
+  });
+
+  // Restaurar antes de pedir: si el snapshot vale, no se llama a /api/directores.
+  const decidido = useRef(false);
   useEffect(() => {
+    if (fase !== "listo" || decidido.current) return;
+    decidido.current = true;
+    if (inicial) {
+      setPeople(inicial.datos);
+      if (inicial.extra) { setQ(inicial.extra.q); setVisible(inicial.extra.visible); }
+      setLoading(false);
+      return;
+    }
     let alive = true;
     fetch("/api/directores")
       .then((r) => r.json())
       .then((j) => { if (alive) { setPeople(j.people ?? []); setLoading(false); } })
       .catch(() => alive && setLoading(false));
     return () => { alive = false; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, inicial]);
 
   const filtered = useMemo(() => {
     const nq = norm(q.trim());

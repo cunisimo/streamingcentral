@@ -1,5 +1,7 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { olvidarTrack, useTrackScroll } from "@/hooks/useTrackScroll";
+import { consumirVuelta, decidirRestauracionVista, guardarVista } from "@/hooks/lista-paginada-store";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import { useShelfType } from "@/hooks/useShelfType";
@@ -10,6 +12,7 @@ import PlatformLogo from "./PlatformLogo";
 import OfflineState from "./pwa/OfflineState";
 import { platformByCode } from "@/lib/providers-ar";
 import type { TopBlock, TopPayload } from "@/lib/top";
+import type { MediaType } from "@/lib/types";
 
 const NOTA =
   "El top de Netflix sale de los datos que la propia Netflix publica cada semana " +
@@ -18,9 +21,17 @@ const NOTA =
   "mostramos las más populares del momento — no es lo mismo, y por eso lo " +
   "aclaramos.";
 
-function Bloque({ b }: { b: TopBlock }) {
+// La clave del carrusel incluye el TIPO, y eso es lo que hace que al pasar de
+// Películas a Series cada riel arranque del principio: es una clave nueva, no
+// hay nada guardado y `useTrackScroll` asigna 0. Además `TopView` olvida las
+// posiciones del tipo anterior al cambiar, para que volver a Películas tampoco
+// devuelva una posición vieja — mismo criterio que `Shelf.changeType`.
+export const claveTop = (platform: string, tipo: MediaType) => `top:${tipo}:${platform}`;
+
+function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
   const track = useRef<HTMLDivElement>(null);
   const [nota, setNota] = useState(false);
+  useTrackScroll(claveTop(b.platform, tipo), track, b.slots.length > 0);
   const def = platformByCode(b.platform);
   const scroll = (d: number) =>
     track.current?.scrollBy({ left: d * (track.current.clientWidth * 0.8), behavior: "smooth" });
@@ -80,19 +91,79 @@ export default function TopView() {
   // `offline`, si no un 500 (body con `{ error, ... }`) se toma como si no
   // hubiera pasado nada y la pantalla queda en blanco bajo el toggle, sin
   // aviso ni reintento.
+  // LA DECISIÓN VA ANTES DEL FETCH. `useEstadoSimple` decide en un efecto, y
+  // para entonces `useApi` ya salió a pedir: el snapshot devolvía la vista pero
+  // igual se llamaba a /api/top. Con la URL vacía, `useApi` queda inerte.
+  //
+  // El tipo va en la CLAVE, no en la firma: así los snapshots de Películas y
+  // Series conviven y volver restaura el que corresponde. Las plataformas sí
+  // invalidan, y por eso van en la firma.
+  const claveTop2 = `top:${tipo}`;
+  const firmaTop = platforms.join(",");
+  const [restaurado, setRestaurado] = useState<TopPayload | null>(null);
+  const [decidido, setDecidido] = useState(false);
+  const pendienteY = useRef<number | null>(null);
+  useEffect(() => {
+    const e = decidirRestauracionVista<TopPayload>({ clave: claveTop2, firma: firmaTop, volvio: consumirVuelta(window.location.pathname) });
+    if (e) { setRestaurado(e.datos); pendienteY.current = e.scrollY; }
+    setDecidido(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveTop2]);
+
   const { data, loading, offline, error, retry } = useApi<TopPayload>(
-    () => `/api/top?tipo=${tipo}&providers=${platforms.join(",")}`,
-    [tipo, platforms.join(",")],
+    () => (!decidido || restaurado ? "" : `/api/top?tipo=${tipo}&providers=${platforms.join(",")}`),
+    [tipo, platforms.join(","), decidido, !!restaurado],
     { keepPrevious: true },
   );
 
-  const mine = data?.mine ?? [];
-  const others = data?.others ?? [];
+  // Snapshot del payload entero + scroll. Medido el 22/08: volver a /top con
+  // 900 de scroll aterrizaba en 0 (la página volvía con 543 px de alto), y el
+  // carrusel que estaba en 354 volvía a 2.
+  //
+  // El tipo NO va en la firma sino que forma parte de la clave del snapshot:
+  // así el snapshot de Películas y el de Series no se pisan, y volver restaura
+  // el que corresponde. Las plataformas SÍ invalidan.
+  const vivo = data ?? restaurado;
+
+  // El scroll, con los bloques ya montados.
+  useEffect(() => {
+    if (!vivo || pendienteY.current === null) return;
+    const y = pendienteY.current;
+    pendienteY.current = null;
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+  }, [vivo]);
+
+  useEffect(() => {
+    if (!decidido || !vivo) return;
+    let pend = false;
+    const g = () => guardarVista<TopPayload>(claveTop2, { firma: firmaTop, datos: vivo, scrollY: window.scrollY });
+    g();
+    const onScroll = () => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; g(); }); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [claveTop2, firmaTop, vivo, decidido]);
+
+  // Al cambiar de tipo, cada carrusel vuelve al principio y se olvida lo
+  // anterior. Sin el olvido, volver al tipo original restauraría una posición
+  // sobre otro contenido.
+  const tipoPrevio = useRef(tipo);
+  useEffect(() => {
+    if (tipoPrevio.current === tipo) return;
+    const anterior = tipoPrevio.current;
+    tipoPrevio.current = tipo;
+    for (const b of [...(data?.mine ?? []), ...(data?.others ?? [])]) {
+      olvidarTrack(claveTop(b.platform, anterior));
+      olvidarTrack(claveTop(b.platform, tipo));
+    }
+  }, [tipo, data]);
+
+  const mine = vivo?.mine ?? [];
+  const others = vivo?.others ?? [];
   const hayContenido = mine.length > 0 || others.length > 0;
   // 200 pero con bloques caídos (`safe` en lib/top.ts los descartó): distinto de
   // "esa plataforma no tiene top hoy". Mismo criterio que CatalogView con el
   // Home — reintentar sí puede arreglarlo.
-  const degradado = !!data?.degradado;
+  const degradado = !!vivo?.degradado;
   const cargando = loading;
   // `error` = el server respondió 500. `offline` = no hubo respuesta. `degradado`
   // = respondió 200 pero con bloques caídos. Los tres ameritan el mismo aviso
@@ -140,13 +211,13 @@ export default function TopView() {
           {mine.length > 0 && (
             <>
               <h2 className="top-group">Tus plataformas</h2>
-              {mine.map((b) => <Bloque key={b.platform} b={b} />)}
+              {mine.map((b) => <Bloque key={b.platform} b={b} tipo={tipo} />)}
             </>
           )}
           {others.length > 0 && (
             <>
               <h2 className="top-group">En otras plataformas</h2>
-              {others.map((b) => <Bloque key={b.platform} b={b} />)}
+              {others.map((b) => <Bloque key={b.platform} b={b} tipo={tipo} />)}
             </>
           )}
         </>

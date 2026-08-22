@@ -113,6 +113,23 @@ export function olvidarLista(clave: string) {
 // `ahora` se inyecta para poder probar el vencimiento sin esperar 8 segundos.
 interface Marca { ruta: string; t: number }
 
+// El listener se registra UNA vez por carga del bundle, al importar el módulo, y
+// no en un efecto de la vista. Tiene que estar puesto ANTES de que la vista se
+// monte: al apretar atrás el orden es popstate → render de la ruta anterior →
+// montaje de la vista, así que un listener montado con la vista llega tarde a su
+// propio evento.
+//
+// Vive en el STORE y no en `useListaPaginada` porque no todas las vistas usan
+// ese hook: `/categoria` y las listas simples hablan con el store directamente.
+// Con el listener en el hook, en esas páginas no se registraba nadie y la marca
+// no se escribía nunca — la restauración fallaba en silencio.
+//
+// `location.pathname` YA es el destino cuando corre el handler: el navegador
+// cambia la URL y recién después dispara popstate.
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => marcarVuelta(window.location.pathname));
+}
+
 export function marcarVuelta(ruta: string, ahora: number = Date.now()) {
   try {
     sessionStorage.setItem(KEY_VUELTA, JSON.stringify({ ruta, t: ahora } satisfies Marca));
@@ -162,6 +179,57 @@ export function decidirRestauracion<T, E = unknown>(opts: {
     // Entrada normal: arriba de todo y sin herencia. Se olvida explícitamente en
     // vez de dejarlo vencer, porque "empezar limpio" tiene que incluir no
     // arrastrar lo anterior a la vuelta siguiente.
+    if (guardado) olvidarLista(opts.clave);
+    return null;
+  }
+  return guardado;
+}
+
+// --- Estado de vistas que NO paginan ----------------------------------------
+//
+// `/proximamente`, `/directores`, `/top` y las listas simples de `/lista/[key]`
+// también pierden lo que tenían al volver de una ficha, pero no son listas
+// paginadas: traen todo de una sola vez. Forzarlas dentro de `EstadoLista`
+// significaría inventarles una `pagina` y un `hayMas` que no existen, y esa
+// mentira después hay que mantenerla.
+//
+// Comparten el MISMO almacén y la MISMA marca de vuelta: lo que cambia es la
+// forma de lo guardado, no el mecanismo. Un `popstate` solo, un `sessionStorage`
+// solo.
+export interface EstadoVista<D, E = unknown> {
+  // Mismo criterio que en `EstadoLista`: acá va lo que INVALIDA (plataformas), y
+  // lo que se RESTAURA (filtro, texto, modo) va en `extra`.
+  firma: string;
+  // Lo que se muestra. Puede ser un array (títulos, personas) o un objeto (el
+  // payload de /top, que son bloques por plataforma).
+  datos: D;
+  scrollY: number;
+  extra?: E;
+}
+
+// Igual que `leerLista`, pero sin exigir que `datos` sea un array: `/top` guarda
+// un objeto. Lo único que se valida es que haya algo y que la firma coincida.
+export function leerVista<D, E = unknown>(clave: string, firma: string): EstadoVista<D, E> | null {
+  const e = leer()[clave] as unknown as EstadoVista<D, E> | undefined;
+  if (!e || typeof e !== "object" || e.datos === undefined || e.datos === null) return null;
+  if (e.firma !== firma) { olvidarLista(clave); return null; }
+  return e;
+}
+
+export function guardarVista<D, E = unknown>(clave: string, estado: EstadoVista<D, E>) {
+  const store = leer();
+  (store as Record<string, unknown>)[clave] = estado;
+  escribir(store);
+}
+
+// La misma decisión que `decidirRestauracion`, para las vistas sin paginación.
+export function decidirRestauracionVista<D, E = unknown>(opts: {
+  clave: string;
+  firma: string;
+  volvio: boolean;
+}): EstadoVista<D, E> | null {
+  const guardado = leerVista<D, E>(opts.clave, opts.firma);
+  if (!opts.volvio) {
     if (guardado) olvidarLista(opts.clave);
     return null;
   }

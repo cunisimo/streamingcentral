@@ -2,25 +2,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
-  consumirVuelta, decidirRestauracion, guardarLista, marcarVuelta, olvidarLista,
+  consumirVuelta, decidirRestauracion, guardarLista, olvidarLista,
   type EstadoLista,
 } from "./lista-paginada-store";
 
 export { olvidarLista } from "./lista-paginada-store";
 
-// El listener de `popstate` se registra UNA vez por carga del bundle, al importar
-// el módulo, y no en un efecto de la vista. Tiene que estar puesto ANTES de que
-// la vista se monte: cuando el usuario aprieta atrás, el orden es popstate →
-// render de la ruta anterior → montaje de la vista. Un listener que se registrara
-// en el montaje llegaría tarde a su propio evento.
+// El listener de `popstate` se MUDÓ a ./lista-paginada-store.
 //
-// `location.pathname` YA es el destino cuando corre el handler: el navegador
-// cambia la URL y recién después dispara popstate. Esa ruta es la mitad de la
-// marca — sin ella, una vuelta atrás hacia CUALQUIER otra página dejaba una
-// marca que la lista tomaba como propia (ver `consumirVuelta`).
-if (typeof window !== "undefined") {
-  window.addEventListener("popstate", () => marcarVuelta(window.location.pathname));
-}
+// Estaba acá y era un bug latente que apareció al usar el mecanismo en más
+// vistas: `CategoryView` no importa este hook —usa el store directo—, así que en
+// /categoria el listener nunca se registraba y la marca nunca se escribía. La
+// restauración fallaba en silencio y parecía un problema de la vista.
+//
+// En el store, cualquiera que use el mecanismo lo arrastra por importarlo.
 
 export type Fase = "decidiendo" | "listo";
 

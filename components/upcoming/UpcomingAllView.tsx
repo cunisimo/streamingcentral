@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import UpcomingCard from "./UpcomingCard";
 import OfflineState from "../pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
+import { useEstadoSimple } from "@/hooks/useEstadoSimple";
 import type { UIUpcoming } from "@/lib/types";
 
 type Filtro = "all" | "movie" | "tv";
@@ -17,6 +18,22 @@ export default function UpcomingAllView() {
   const online = useOnline();
   const [failed, setFailed] = useState(false);
   const reqId = useRef(0);
+
+  // Volver de una ficha tiene que devolver el filtro, los items y la posición.
+  // NO es una lista paginada —trae todo de una con `limit=100`—, así que va por
+  // el mecanismo simple y no por `useListaPaginada`.
+  //
+  // La firma queda vacía a propósito: la agenda no depende de las plataformas
+  // elegidas (el motor ya la acota a títulos con provider AR), así que no hay
+  // nada que la invalide. El filtro va en `extra`, que es lo que se restaura.
+  const { fase, inicial } = useEstadoSimple<UIUpcoming[], { filtro: Filtro }>({
+    clave: "proximamente",
+    firma: "",
+    datos: items,
+    extra: { filtro },
+    listo: !loading && items.length > 0,
+    vacio: items.length === 0,
+  });
 
   const load = useCallback(async (f: Filtro) => {
     const myReq = ++reqId.current;
@@ -36,7 +53,35 @@ export default function UpcomingAllView() {
     }
   }, []);
 
-  useEffect(() => { load(filtro); }, [filtro, load]);
+  // Restaurar ANTES de pedir nada: sin esto se dispara el fetch del filtro por
+  // defecto y después lo pisa lo restaurado — dos cargas, un parpadeo y una
+  // llamada de red que no hacía falta.
+  const restaurado = useRef(false);
+  useEffect(() => {
+    if (fase !== "listo" || restaurado.current) return;
+    restaurado.current = true;
+    if (inicial) {
+      setItems(inicial.datos);
+      if (inicial.extra?.filtro) setFiltro(inicial.extra.filtro);
+      setLoading(false);
+      return;   // los items volvieron del snapshot: no se pide nada
+    }
+    load(filtro);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, inicial]);
+
+  // Los cambios de filtro POSTERIORES sí piden. El guard de `restaurado` evita
+  // que este efecto dispare la carga inicial por duplicado.
+  const filtroPrevio = useRef<Filtro | null>(null);
+  useEffect(() => {
+    if (!restaurado.current) return;
+    if (filtroPrevio.current === null) { filtroPrevio.current = filtro; return; }
+    if (filtroPrevio.current === filtro) return;
+    filtroPrevio.current = filtro;
+    // Cambiar de filtro es una acción deliberada: lista nueva y arriba de todo.
+    window.scrollTo(0, 0);
+    load(filtro);
+  }, [filtro, load]);
 
   if ((!online || failed) && !items.length) {
     return <div className="wrap"><OfflineState onRetry={() => load(filtro)} /></div>;

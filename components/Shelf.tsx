@@ -19,7 +19,7 @@ import type { UITitle, MediaType } from "@/lib/types";
 //  - "filter":  filtra en cliente los ítems ya cargados por `type` (votos).
 export default function Shelf({
   tipo, genre, country, title, url, onOffline, seeAllHref,
-  typeToggle, shelfKey, initialType, items: controlled, onTypeChange, minItems, onDescartar,
+  typeToggle, shelfKey, initialType, items: controlled, onTypeChange, minItems, onDescartar, onListo,
 }: {
   tipo?: MediaType; genre?: string; country?: string;
   title?: string; url?: string;
@@ -45,6 +45,14 @@ export default function Shelf({
   // "No es para mí" sobre cada card. Lo pasa SOLO "Elegidas para vos": sin este
   // prop la card no dibuja el botón, así que ningún otro riel puede mostrarlo.
   onDescartar?: (t: UITitle) => void;
+  // Avisa UNA vez que este riel se asentó: ya no va a cambiar de alto. Cuenta
+  // como asentado también si vino VACÍO o si falló — lo que importa no es que
+  // haya contenido, sino que la página deje de crecer.
+  //
+  // Lo usa `/categoria/[slug]` para saber cuándo puede devolver el scroll. No
+  // alcanza con esperar al primero: cada riel pendiente sigue moviendo la
+  // altura. Ver hooks/categoria-generaciones.ts.
+  onListo?: () => void;
 }) {
   const { platforms } = usePlatforms();
   const track = useRef<HTMLDivElement>(null);
@@ -106,7 +114,7 @@ export default function Shelf({
       : `/api/discover?tipo=${effectiveTipo}&genre=${genre}&providers=${platforms.join(",")}${country ? `&country=${country}` : ""}`;
   // En modo controlado no se dispara ningún fetch: se pasa una URL vacía y el
   // hook queda inerte (useApi no fetchea con string vacío).
-  const { data, loading: fetchLoading, offline } = useApi<{ items: UITitle[] }>(
+  const { data, loading: fetchLoading, offline, error } = useApi<{ items: UITitle[] }>(
     () => (controladoPor ? "" : buildUrl()), [effectiveTipo, genre, country, url, controladoPor],
   );
 
@@ -120,6 +128,27 @@ export default function Shelf({
   useEffect(() => {
     if (offline && onOffline) onOffline();
   }, [offline, onOffline]);
+
+  // El aviso de asentado. Una sola vez por montaje: al cambiar de tipo el riel
+  // se remonta con otra `key`, así que la generación nueva vuelve a avisar.
+  const aviso = useRef(onListo);
+  aviso.current = onListo;
+  const yaAviso = useRef(false);
+  useEffect(() => {
+    if (yaAviso.current) return;
+    // NO alcanza con `!loading`: `useApi` arranca en `loading: false` y lo
+    // enciende dentro de un efecto, así que en el primer render el riel parece
+    // terminado sin haber pedido nada. Hay que esperar a que HAYA respuesta —
+    // datos, o un fallo—. En modo controlado no hay fetch: termina de entrada.
+    // `error` también termina: un riel que respondió 500 no va a cambiar más de
+    // alto. Sin contarlo, una categoría con un cruce caído no se asienta NUNCA y
+    // el scroll no se restaura — falla en silencio y parece un problema del
+    // scroll, no del riel.
+    const termino = controladoPor || offline || error || data !== undefined;
+    if (!termino || loading) return;
+    yaAviso.current = true;
+    aviso.current?.();
+  }, [loading, data, offline, error, controladoPor]);
 
   // Cuántos ítems hacen falta para mostrar el riel. El default de 2 evita un
   // carrusel de una sola tarjeta, que se ve roto. Los rieles de votos lo bajan
