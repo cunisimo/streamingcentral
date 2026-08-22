@@ -5,6 +5,8 @@ import { usePlatforms } from "./PlatformsContext";
 import TitleCard from "./TitleCard";
 import PersonCard from "./PersonCard";
 import { GenreSlider, CountryFilter, DecadeFilter } from "./Filters";
+import { useEstadoSimple } from "@/hooks/useEstadoSimple";
+import { crearTicket, esParaMi, invalidar, type Ticket } from "@/hooks/ticket-vuelta";
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
 import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 
@@ -21,6 +23,66 @@ export default function SearchView() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // --- Volver de una ficha --------------------------------------------------
+  // Acá hay DOS dueños de estado: el modo y el texto viven en esta vista, y los
+  // títulos y las páginas en los hijos (`BrowseTitles`, `BrowseActors`). Como
+  // `consumirVuelta` borra la marca al leerla, si los dos preguntaran el primero
+  // se la llevaría y el segundo restauraría vacío.
+  //
+  // Por eso la consume UNA sola vez el padre —adentro de `useEstadoSimple`— y la
+  // reparte con un ticket a nombre del modo restaurado. Ver hooks/ticket-vuelta.
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const proximoTicket = useRef(0);
+
+  const { fase, inicial } = useEstadoSimple<
+    { titles: UITitle[]; people: UIPerson[] },
+    { q: string; filter: Filter; explore: { country: string } | null }
+  >({
+    clave: "buscar",
+    firma: platforms.join(","),
+    datos: res,
+    extra: { q, filter, explore },
+    // Hay altura cuando ya se pintó algo: resultados de texto o el modo browse.
+    listo: !loading && (res.titles.length > 0 || res.people.length > 0),
+    // Con la vista en su estado inicial no hay nada que guardar. Si no, el
+    // primer render pisaría el snapshot justo antes de que alguien lo lea.
+    vacio: !q.trim() && filter === "todo" && !explore,
+  });
+
+  // Lo restaurado se aplica una sola vez, y el ticket se emite recién después de
+  // haber puesto el modo: el hijo que monte es el que estaba abierto.
+  const aplicado = useRef(false);
+  const qRestaurado = useRef<string | null>(null);
+  useEffect(() => {
+    if (fase !== "listo" || aplicado.current) return;
+    aplicado.current = true;
+    if (!inicial?.extra) return;
+    const e = inicial.extra;
+    // `qRestaurado` evita que el debounce vuelva a buscar lo mismo que acaba de
+    // volver del snapshot: sin esto, restaurar el texto dispara la llamada a
+    // /api/search que el snapshot justamente hacía innecesaria.
+    qRestaurado.current = e.q;
+    setQ(e.q);
+    setFilter(e.filter);
+    setExplore(e.explore);
+    setRes(inicial.datos);
+    // EL TICKET SOLO SE EMITE SI VA A MONTAR UN HIJO QUE PUEDA CONSUMIRLO.
+    // Con texto de búsqueda los resultados los pinta el padre y no monta
+    // ninguno, así que el ticket quedaba abierto para siempre: bastaba con
+    // borrar el texto para que el hijo que montara reclamara una vuelta vieja
+    // y restaurara filtros y páginas de una navegación anterior.
+    const conTexto = e.q.trim().length >= 2;
+    if (!conTexto) {
+      // El modo del ticket incluye "explore": ese hijo también restaura.
+      setTicket(crearTicket(++proximoTicket.current, e.explore ? "explore" : e.filter));
+    }
+  }, [fase, inicial]);
+
+  const idTicket = ticket?.id ?? -1;
+  const cerrarTicket = useCallback(() => {
+    setTicket((t) => invalidar(t, idTicket));
+  }, [idTicket]);
+
   useEffect(() => {
     fetch("/api/genre-covers").then((r) => r.json()).then((j) => setCovers(j.covers ?? {})).catch(() => {});
   }, []);
@@ -28,7 +90,22 @@ export default function SearchView() {
   // búsqueda con debounce (desde 2 caracteres)
   useEffect(() => {
     if (!ready) return;
+    // Esperar a que se decida la restauración: si no, se dispara la búsqueda del
+    // estado inicial y después la pisa lo restaurado — dos cargas y un parpadeo.
+    if (fase !== "listo") return;
     const term = q.trim();
+    // Mientras se está restaurando, este efecto NO puede tocar nada. Corre una
+    // vez con el `q` viejo —React todavía no aplicó el `setQ` del snapshot— y
+    // ahí el `term.length < 2` de abajo limpiaba `res`, borrando los resultados
+    // restaurados justo antes de pintarlos: volvía el texto y la pestaña, con
+    // la grilla vacía.
+    if (qRestaurado.current !== null) {
+      if (term !== qRestaurado.current.trim()) return;   // todavía no llegó el texto
+      // Ya llegó: los resultados vinieron con él, así que no hay nada que pedir.
+      qRestaurado.current = null;
+      setLoading(false);
+      return;
+    }
     if (term.length < 2) { setRes({ titles: [], people: [] }); setLoading(false); return; }
     if (timer.current) clearTimeout(timer.current);
     setLoading(true);
@@ -40,7 +117,7 @@ export default function SearchView() {
         .then((j) => { setRes({ titles: j.titles ?? [], people: j.people ?? [] }); setLoading(false); })
         .catch(() => setLoading(false));
     }, 250);
-  }, [q, ready, platforms]);
+  }, [q, ready, platforms, fase]);
 
   const hasQuery = q.trim().length >= 2;
   const showTitles = filter === "actores" || filter === "directores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);
@@ -91,13 +168,13 @@ export default function SearchView() {
         </>
       )}
 
-      {!hasQuery && filter === "todo" && explore && <ExploreList explore={explore} onBack={() => setExplore(null)} />}
+      {!hasQuery && filter === "todo" && explore && <ExploreList explore={explore} onBack={() => setExplore(null)} volvio={esParaMi(ticket, "explore")} onDecidido={cerrarTicket} />}
 
-      {!hasQuery && (filter === "movie" || filter === "tv") && <BrowseTitles tipo={filter} />}
+      {!hasQuery && (filter === "movie" || filter === "tv") && <BrowseTitles tipo={filter} volvio={esParaMi(ticket, filter)} onDecidido={cerrarTicket} />}
 
-      {!hasQuery && filter === "actores" && <BrowseActors />}
+      {!hasQuery && filter === "actores" && <BrowseActors volvio={esParaMi(ticket, "actores")} onDecidido={cerrarTicket} />}
 
-      {!hasQuery && filter === "directores" && <BrowseDirectors />}
+      {!hasQuery && filter === "directores" && <BrowseDirectors volvio={esParaMi(ticket, "directores")} onDecidido={cerrarTicket} />}
 
       {/* ---- CON QUERY: los chips filtran resultados ---- */}
       {hasQuery && (
@@ -151,7 +228,17 @@ const DECADES: Record<MediaType, [string, string][]> = {
   ],
 };
 
-function BrowseTitles({ tipo }: { tipo: MediaType }) {
+// UNA sola entrada para los hijos, compartida entre todos los modos: cambiar de
+// pestaña la pisa. No queremos historiales paralelos de Películas, Series y
+// Actores — la regla es volver a la vista que dejaste, no recordar una por
+// pestaña. El modo va adentro del snapshot para descartarlo si no corresponde.
+const CLAVE_HIJO = "buscar:hijo";
+
+interface ExtraHijo { modo: string; genre?: string; country?: string | null; age?: string | null; decade?: string | null; page?: number }
+
+function BrowseTitles({ tipo, volvio, onDecidido }: {
+  tipo: MediaType; volvio?: boolean; onDecidido?: () => void;
+}) {
   const { platforms, ready } = usePlatforms();
   const [genre, setGenre] = useState("todos");
   const [country, setCountry] = useState<string | null>(null);
@@ -184,11 +271,52 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
     }).catch(() => setLoading(false));
   }, [buildUrl]);
 
+  const { fase, inicial } = useEstadoSimple<UITitle[], ExtraHijo>({
+    clave: CLAVE_HIJO,
+    firma: platforms.join(","),
+    datos: items,
+    extra: { modo: tipo, genre, country, age, decade, page },
+    listo: !loading && items.length > 0,
+    vacio: items.length === 0,
+    volvio,          // el ticket del padre: acá NO se consume la marca
+    onDecidido,      // y así se cierra: lo avisa el hijo, no un timeout
+  });
+
+  // Restaurar antes de pedir. Si el snapshot vale, no se llama a /api/discover:
+  // vuelven los títulos, los filtros y la página en la que iba.
+  const restaurado = useRef(false);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || fase !== "listo" || restaurado.current) return;
+    restaurado.current = true;
+    const e = inicial?.extra;
+    if (inicial && e?.modo === tipo) {
+      setItems(inicial.datos);
+      setGenre(e.genre ?? "todos");
+      setCountry(e.country ?? null);
+      setAge(e.age ?? null);
+      setDecade(e.decade ?? null);
+      setPage(e.page ?? 1);
+      setLoading(false);
+      return;
+    }
     setPage(1); setEnd(false);
     load(1, true);
-  }, [ready, load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, fase, inicial]);
+
+  // Los cambios POSTERIORES de filtro sí recargan, y son deliberados: lista
+  // nueva desde la página 1 y arriba de todo.
+  const urlPrevia = useRef<string | null>(null);
+  useEffect(() => {
+    if (!restaurado.current) return;
+    const u = buildUrl(1);
+    if (urlPrevia.current === null) { urlPrevia.current = u; return; }
+    if (urlPrevia.current === u) return;
+    urlPrevia.current = u;
+    setPage(1); setEnd(false);
+    window.scrollTo(0, 0);
+    load(1, true);
+  }, [buildUrl, load]);
 
   const more = () => { const p = page + 1; setPage(p); load(p, false); };
 
@@ -231,7 +359,7 @@ function BrowseTitles({ tipo }: { tipo: MediaType }) {
 }
 
 // --- Actores populares con "Cargar más" (TMDB no tiene índice alfabético) ---
-function BrowseActors() {
+function BrowseActors({ volvio, onDecidido }: { volvio?: boolean; onDecidido?: () => void }) {
   const [people, setPeople] = useState<UIPerson[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -250,7 +378,33 @@ function BrowseActors() {
     }).catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { load(1); }, [load]);
+  // Comparte la entrada con `BrowseTitles`: una sola por ruta. El `modo` del
+  // snapshot es lo que evita leer una lista de títulos como si fueran personas.
+  const { fase, inicial } = useEstadoSimple<UIPerson[], ExtraHijo>({
+    clave: CLAVE_HIJO,
+    firma: "",       // /api/personas no depende de plataformas
+    datos: people,
+    extra: { modo: "actores", page },
+    listo: !loading && people.length > 0,
+    vacio: people.length === 0,
+    volvio,
+    onDecidido,
+  });
+
+  const restaurado = useRef(false);
+  useEffect(() => {
+    if (fase !== "listo" || restaurado.current) return;
+    restaurado.current = true;
+    if (inicial && inicial.extra?.modo === "actores") {
+      setPeople(inicial.datos);
+      setPage(inicial.extra.page ?? 1);
+      setLoading(false);
+      return;
+    }
+    load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, inicial]);
+
   const more = () => { const p = page + 1; setPage(p); load(p); };
 
   return (
@@ -272,15 +426,37 @@ function BrowseActors() {
 // --- Directores curados (lista fija de /api/directores). TMDB no tiene índice
 // de directores como sí de actores (person/popular es ~99% actores), así que el
 // browse muestra una lista curada; para cualquier otro, usar el buscador. ---
-function BrowseDirectors() {
+function BrowseDirectors({ volvio, onDecidido }: { volvio?: boolean; onDecidido?: () => void }) {
   const [people, setPeople] = useState<UIPerson[]>([]);
   const [loading, setLoading] = useState(true);
+  // Comparte la ÚNICA entrada de los hijos. Sin esto no había forma de saber
+  // cuándo terminó de cargar, así que el padre no tenía condición válida para
+  // devolver el scroll: volvía al modo correcto y a la posición 0.
+  const { fase, inicial } = useEstadoSimple<UIPerson[], ExtraHijo>({
+    clave: CLAVE_HIJO,
+    firma: "",          // la lista de directores es curada, no depende de plataformas
+    datos: people,
+    extra: { modo: "directores" },
+    listo: !loading && people.length > 0,
+    vacio: people.length === 0,
+    volvio,
+    onDecidido,
+  });
+  const restaurado = useRef(false);
   useEffect(() => {
+    if (fase !== "listo" || restaurado.current) return;
+    restaurado.current = true;
+    if (inicial && inicial.extra?.modo === "directores") {
+      setPeople(inicial.datos);
+      setLoading(false);
+      return;
+    }
     fetch("/api/directores").then((r) => r.json()).then((j) => {
       setPeople(j.people ?? []);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, inicial]);
   return (
     <>
       <h2 className="bres-h">Directores</h2>
@@ -290,15 +466,41 @@ function BrowseDirectors() {
   );
 }
 
-function ExploreList({ explore, onBack }: { explore: { country: string }; onBack: () => void }) {
+function ExploreList({ explore, onBack, volvio, onDecidido }: {
+  explore: { country: string }; onBack: () => void; volvio?: boolean; onDecidido?: () => void;
+}) {
   const { platforms } = usePlatforms();
   const [items, setItems] = useState<UITitle[]>([]);
   const [loading, setLoading] = useState(true);
+  // El país lo restaura el padre; los títulos y la posición, este hijo. El
+  // modo guardado incluye el país para no restaurar el listado de otro.
+  const modoPais = `explore:${explore.country}`;
+  const { fase, inicial } = useEstadoSimple<UITitle[], ExtraHijo>({
+    clave: CLAVE_HIJO,
+    firma: platforms.join(","),
+    datos: items,
+    extra: { modo: modoPais },
+    listo: !loading && items.length > 0,
+    vacio: items.length === 0,
+    volvio,
+    onDecidido,
+  });
+  const restaurado = useRef(false);
   useEffect(() => {
+    if (fase !== "listo") return;
+    if (!restaurado.current) {
+      restaurado.current = true;
+      if (inicial && inicial.extra?.modo === modoPais) {
+        setItems(inicial.datos);
+        setLoading(false);
+        return;
+      }
+    }
     const url = `/api/discover?tipo=movie&country=${explore.country}&providers=${platforms.join(",")}`;
     setLoading(true);
     fetch(url).then((r) => r.json()).then((j) => { setItems(j.items ?? []); setLoading(false); }).catch(() => setLoading(false));
-  }, [explore, platforms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, inicial, explore, platforms]);
   const title = `${COUNTRIES[explore.country]?.flag} ${COUNTRIES[explore.country]?.name}`;
   return (
     <>

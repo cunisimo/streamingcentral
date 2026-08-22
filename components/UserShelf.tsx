@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useTrackScroll } from "@/hooks/useTrackScroll";
 import Link from "next/link";
 import { useAuth } from "./AuthContext";
 import TitleCard from "./TitleCard";
@@ -14,6 +15,14 @@ export default function UserShelf({
   const { ready, user } = useAuth();
   const [items, setItems] = useState<UITitle[] | null>(null);
   const track = useRef<HTMLDivElement>(null);
+  // El carrusel recuerda su posición al volver de una ficha. La clave sale del
+  // TÍTULO del riel y lleva prefijo propio: en `/cuenta` conviven "Mi lista",
+  // "Me gustaron" y "Vistos recientemente" en la misma página, y con una clave
+  // compartida cada uno pisaría al otro.
+  //
+  // En modo `full` NO se aplica: ahí no hay carrusel, es una grilla vertical, y
+  // el hook estaría guardando el scrollLeft de algo que nunca scrollea de lado.
+  useTrackScroll(full ? undefined : `cuenta:${title}`, track, !!items && items.length > 0);
 
   useEffect(() => {
     if (!ready) return;
