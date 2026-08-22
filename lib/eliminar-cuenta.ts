@@ -28,10 +28,11 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "./supabase-admin";
+import { correrFlujo, type Resultado } from "./eliminar-cuenta-flujo";
 
-export type ResultadoEliminar =
-  | { ok: true }
-  | { ok: false; motivo: "sin-config" | "password-invalida" | "fallo-borrado" };
+// El orden de los pasos vive en ./eliminar-cuenta-flujo, que es donde se puede
+// probar QUÉ se ejecuta y qué no. Acá solo se cablea con qué se hace cada uno.
+export type ResultadoEliminar = Resultado;
 
 // Revalida la contraseña de un usuario YA identificado por su token.
 //
@@ -71,26 +72,24 @@ export async function eliminarCuenta(opts: {
   email: string;
   password: string;
 }): Promise<ResultadoEliminar> {
-  // LA CONTRASEÑA SE VALIDA PRIMERO, antes de mirar si hay credencial
-  // administrativa. Al revés —como estaba— un despliegue sin la service role
-  // key devolvía 500 también para una contraseña incorrecta, y como el límite
-  // de intentos solo cuenta `password-invalida`, ese servidor mal configurado
-  // habría permitido probar contraseñas sin tope. El costo de este orden es un
-  // viaje a Supabase en un caso que igual va a fallar.
-  if (!(await contrasenaValida(opts.email, opts.password))) {
-    return { ok: false, motivo: "password-invalida" };
-  }
-
-  const admin = supabaseAdmin();
-  if (!admin) return { ok: false, motivo: "sin-config" };
-
-  // `shouldSoftDelete: false` EXPLÍCITO. Es el default de Supabase, pero es
-  // justo el parámetro que convierte esto en lo contrario de lo que promete la
-  // pantalla: un soft delete deja la fila con `deleted_at` y NO dispara los
-  // CASCADE, así que votos, historial y perfil seguirían existiendo mientras la
-  // interfaz dice "eliminada para siempre". Escrito, no puede cambiar por un
-  // default de una versión futura sin que alguien lo lea.
-  const { error } = await admin.auth.admin.deleteUser(opts.userId, false);
-  if (error) return { ok: false, motivo: "fallo-borrado" };
-  return { ok: true };
+  return correrFlujo({
+    // Se pregunta ANTES de tocar ninguna contraseña. Sin la credencial
+    // administrativa el endpoint responde una sola cosa para todos los casos:
+    // validar primero convertía la falta de configuración en un oráculo que
+    // distingue una contraseña correcta de una incorrecta.
+    hayAdmin: () => supabaseAdmin() !== null,
+    validarPassword: contrasenaValida,
+    borrar: async (userId) => {
+      const admin = supabaseAdmin();
+      if (!admin) return false;
+      // `shouldSoftDelete: false` EXPLÍCITO. Es el default de Supabase, pero es
+      // justo el parámetro que convierte esto en lo contrario de lo que promete
+      // la pantalla: un soft delete deja la fila con `deleted_at` y NO dispara
+      // los CASCADE, así que votos, historial y perfil seguirían existiendo
+      // mientras la interfaz dice "eliminada para siempre". Escrito, no puede
+      // cambiar por un default de una versión futura sin que alguien lo lea.
+      const { error } = await admin.auth.admin.deleteUser(userId, false);
+      return !error;
+    },
+  }, opts);
 }

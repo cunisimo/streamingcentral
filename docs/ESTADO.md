@@ -355,6 +355,13 @@ nada. El reparto vive en `lib/limpieza-local.ts`, que es puro y tiene tests.
 usuario. La única derivada es la del riel personalizado, que es un hash de las
 señales — no identifica a nadie y expira sola en 6 h.
 
+**Sin `SUPABASE_SERVICE_ROLE_KEY` el endpoint responde 503 `no-disponible` y NO
+comprueba ninguna contraseña.** No es un detalle de robustez: validarla antes
+convertía la falta de configuración en un oráculo —contraseña incorrecta 401,
+correcta 500— que responde "¿esta clave es la buena?" a cualquiera con un token,
+que es justo lo que la revalidación viene a impedir. Ese pedido tampoco suma al
+límite de intentos, porque no se comprobó ninguna contraseña.
+
 **Seguridad.** La identidad sale SOLO del token (`sesionDeToken`); el cuerpo del
 pedido lleva únicamente la contraseña, así que no hay ningún campo del cliente
 que pueda cambiar a quién se borra. La contraseña se revalida con un cliente

@@ -130,6 +130,7 @@ function mensaje(codigo: unknown, minutos: unknown): string {
     return `Demasiados intentos. Probá de nuevo en ${m} minuto${m === 1 ? "" : "s"}.`;
   }
   if (codigo === "sin-sesion") return "Se cerró tu sesión. Volvé a entrar e intentá de nuevo.";
+  if (codigo === "no-disponible") return "El borrado de cuentas no está disponible en este momento. Escribinos si el problema sigue.";
   return "No pudimos eliminar la cuenta. Probá de nuevo en un rato.";
 }
 

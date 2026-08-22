@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sesionDeToken } from "@/lib/supabase";
 import { eliminarCuenta } from "@/lib/eliminar-cuenta";
 import { bloqueado, minutosRestantes, registrarFallo, type Intentos } from "@/lib/intentos-eliminar";
+import { cuentaComoIntento } from "@/lib/eliminar-cuenta-flujo";
 
 // Dinámica y sin caché: es una acción destructiva, no una lectura. Una respuesta
 // de esto guardada en cualquier lado no tiene ningún uso legítimo.
@@ -55,16 +56,21 @@ export async function POST(req: NextRequest) {
 
   const r = await eliminarCuenta({ userId: sesion.id, email: sesion.email, password });
 
-  if (!r.ok && r.motivo === "password-invalida") {
+  // Solo suma al límite lo que de verdad comprobó una contraseña y la encontró
+  // mal. Un `sin-config` no llegó a comprobar ninguna, y contarlo dejaría a la
+  // persona bloqueada quince minutos por un problema del servidor.
+  if (cuentaComoIntento(r)) {
     intentos.set(sesion.id, registrarFallo(previos, ahora));
     return responder({ error: "password-invalida" }, 401);
   }
-  if (!r.ok) {
-    // `sin-config` (falta la service role key) y `fallo-borrado` se devuelven
-    // igual: los dos son "el servidor no pudo", y distinguirlos hacia afuera solo
-    // le diría a un curioso cómo está configurado el despliegue.
-    return responder({ error: "no-se-pudo" }, 500);
+  if (!r.ok && r.motivo === "sin-config") {
+    // 503 y no 500: el servicio no está disponible, no es que este pedido salió
+    // mal. Y es la MISMA respuesta con cualquier contraseña — sin esto, el par
+    // 401/500 convertía la falta de configuración en un oráculo que distingue
+    // la contraseña correcta de la incorrecta.
+    return responder({ error: "no-disponible" }, 503);
   }
+  if (!r.ok) return responder({ error: "no-se-pudo" }, 500);
 
   // La cuenta ya no existe: el contador tampoco tiene por qué.
   intentos.delete(sesion.id);
