@@ -30,7 +30,7 @@ export default function DesempateSetup({
           instrucción de lo que hay que HACER, y allá abajo aparecía a un scroll
           de distancia de la única acción que la resuelve. Desaparece sola
           cuando ya cargaste las dos. */}
-      {!canSpin && <p className="dsmp-hint dsmp-hint-search">Cargá al menos {MIN_PICKS} títulos</p>}
+      {!canSpin && <p className="dsmp-hint dsmp-hint-search">Elegí {MIN_PICKS} o {MAX_PICKS} películas o series que estés considerando.</p>}
 
       <div className="dsmp-tray-head">Tu selección ({selected.length}/{MAX_PICKS})</div>
       <div className="dsmp-tray">

@@ -11,7 +11,10 @@ export default function DesempatePanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="dsmp-panel">
       <div className="dsmp-panel-head">
-        <span className="dsmp-panel-title">🎰 Ruleta Yump</span>
+        {/* El nombre ya está en el banner justo arriba: repetirlo acá gastaba la
+            línea más visible del panel en decir dos veces lo mismo. En su lugar,
+            lo único que hace falta saber al abrirlo. */}
+        <span className="dsmp-panel-title">Buscá o escribí una película o serie</span>
         <button className="dsmp-close" onClick={onClose} aria-label="Cerrar">✕</button>
       </div>
 
