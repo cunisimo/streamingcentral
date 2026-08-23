@@ -33,7 +33,7 @@ function pre(huella: string): string {
 
 const marcar = (s: string) => s as ClaveLocalizada;
 
-// --- Las diez familias -------------------------------------------------------
+// --- Las once familias -------------------------------------------------------
 // El orden y el formato de cada una reproducen el código anterior byte a byte.
 // Los tests fijan los literales de hoy: si alguna cambia, fallan.
 
@@ -90,6 +90,16 @@ export function claveRecoPerfil(tipo: MediaType, id: number, huella: string): Cl
   return marcar(`reco:perfil:${pre(huella)}v2:${tipo}:${id}`);
 }
 
+/** Búsqueda ya ordenada.
+ *
+ *  SÍ es localizada, aunque `searchDeTipo` esté clavado en es-MX: el resultado
+ *  incluye personas, y su `knownFor` sale del IDIOMA BASE. Con es-MX la mitad
+ *  del payload cambia. La primera auditoría la dejó fuera mirando solo la parte
+ *  de títulos. */
+export function claveSearch(q: string, providers: string, huella: string): ClaveLocalizada {
+  return marcar(`search:${pre(huella)}v2:${q}:${providers}`);
+}
+
 /** Actores populares. Guarda `knownFor`, que son títulos localizados. */
 export function clavePeoplePopular(page: number, huella: string): ClaveLocalizada {
   return marcar(`people:popular:${pre(huella)}${page}`);
@@ -106,7 +116,6 @@ export function clavePeoplePopular(page: number, huella: string): ClaveLocalizad
 //   people:directors        knownFor siempre vacío
 //   ed:pub:<tipo>           ids
 //   blocklist:<chip>        ids
-//   search:v2:<q>:<plats>   `searchDeTipo` está clavado en es-MX y no se toca
 export const CLAVES_SIN_HUELLA = [
-  "pv:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:", "search:",
+  "pv:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
 ] as const;

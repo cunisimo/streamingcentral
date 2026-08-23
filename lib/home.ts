@@ -39,7 +39,7 @@ import { soloAnimePlatform } from "./audience";
 import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
 import { claveHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import { HUELLA_EN_CLAVES, metricasFallback, reiniciarMetricasFallback } from "./idioma";
+import { HUELLA_EN_CLAVES, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
   MINISERIES_KEY, MINISERIES_LISTA_HREF, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso,
@@ -597,7 +597,22 @@ export async function composeHome(opts: {
   // MAX_VUELTAS, y el único que distingue "el tope me cortó" de "llené y salí".
   console.log(`[home] VUELTAS ${gasto.join(" ")} (tope ${MAX_VUELTAS})`);
   if (c.fallos) console.error(`[home] payload degradado: ${c.fallos} fuente(s) caída(s)`);
-  return { hero, rails: personalize(rotate(rails)), fallos: c.fallos, degradado: c.fallos > 0 };
+
+  // Un fallo de la reparación de idioma degrada el payload IGUAL que una fuente
+  // caída. Si no, el Home entero quedaría cacheado 6 h como "completo" con
+  // títulos sin reparar adentro, y nadie volvería a intentar hasta que expire.
+  // `cachedIf` no guarda los payloads degradados, así que el próximo request
+  // rearma y reintenta.
+  const mi = metricasIdiomaActuales();
+  const fallosIdioma = mi?.fallos ?? 0;
+  if (fallosIdioma) {
+    console.error(`[home] payload degradado: ${fallosIdioma} fallo(s) de reparación de idioma`);
+  }
+  return {
+    hero, rails: personalize(rotate(rails)),
+    fallos: c.fallos + fallosIdioma,
+    degradado: c.fallos > 0 || fallosIdioma > 0,
+  };
 }
 
 // --- Cache del payload compuesto --------------------------------------------
@@ -650,14 +665,14 @@ export async function homePayload(opts: {
   // extra. Se lee en los logs de Vercel filtrando por "[home]".
   let miss = false;
   const t0 = Date.now();
-  // Reparación de idioma: con es-ES tiene que dar CERO. Es la medición que
-  // demuestra que el mecanismo entra inerte, y en la tanda 2 es lo que dice
-  // cuántas páginas de fallback se pagaron de verdad.
-  reiniciarMetricasFallback();
 
   // El scope de métricas envuelve TODO el armado, no solo el `cachedIf`: lo que
   // interesa medir son los cientos de lecturas que dispara composeHome adentro.
-  const { res: { res: payload, ejes }, metricas } = await withCacheMetrics(() => conRegistroDeEjes(() => cachedLocIf(
+  // Métricas de idioma POR REQUEST, con el mismo mecanismo que el cache: con un
+  // contador de módulo, dos Homes simultáneos en la misma instancia se
+  // reiniciarían los números entre sí.
+  const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
+    await withMetricasIdioma(() => withCacheMetrics(() => conRegistroDeEjes(() => cachedLocIf(
     key,
     TTL.home,
     () => { miss = true; return composeHome({ providers: opts.providers, types }); },
@@ -665,15 +680,14 @@ export async function homePayload(opts: {
     // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
     // caso "sin plataformas", que no cuesta nada recalcular.
     (v) => !v.degradado && !v.sinPlataformas,
-  )));
+  ))));
 
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
   console.log(`[home] ${miss ? "MISS" : "HIT "} ${key}`);
-  const fb = metricasFallback();
   console.log(
-    `[idioma] fallback: ${fb.llamadas} llamadas | ${fb.lotes} lotes | ` +
-    `${fb.titulosReparados} títulos reparados | ${fb.fallos} fallos`,
+    `[idioma] fallback: ${mIdioma.llamadas} llamadas | ${mIdioma.lotesConRotos} lotes con rotos | ` +
+    `${mIdioma.titulosReparados} títulos reparados | ${mIdioma.fallos} fallos`,
   );
   // Comandos es lo que factura Upstash; requests es lo que se paga en latencia.
   // Un MGET de 100 claves es 1 de cada uno; 100 GET sueltos son 100 y 100.

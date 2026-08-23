@@ -10,7 +10,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   claveCard, claveCombinadaCache, claveHome, clavePeoplePopular, clavePoolCache,
-  claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil, claveTopPop,
+  claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil, claveSearch, claveTopPop,
 } from "./claves.ts";
 import { calcularHuella } from "./idioma.ts";
 
@@ -20,7 +20,7 @@ import { calcularHuella } from "./idioma.ts";
 // Si alguna falla, el deploy de la tanda 1 provoca un arranque frío que el plan
 // dice explícitamente que no tiene que haber.
 
-test("modo compatible: las diez familias producen los bytes de hoy", () => {
+test("modo compatible: las once familias producen los bytes de hoy", () => {
   const H = "";   // HUELLA_EN_CLAVES en la tanda 1
   assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v5:3523671066:d,m,n:");
   assert.equal(
@@ -38,6 +38,9 @@ test("modo compatible: las diez familias producen los bytes de hoy", () => {
   assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:movie:557:d,m,n");
   assert.equal(claveRecoPerfil("movie", 557, H), "reco:perfil:v2:movie:557");
   assert.equal(clavePeoplePopular(3, H), "people:popular:3");
+  // La familia 11: `search:v2` SÍ es localizada, aunque `searchDeTipo` esté
+  // clavado en es-MX — el `knownFor` de las personas sale del idioma base.
+  assert.equal(claveSearch("matrix", "d,m,n", H), "search:v2:matrix:d,m,n");
 });
 
 // ============================================================================
@@ -114,15 +117,19 @@ test("rollback es-MX+f → es-MX → es-ES → es-MX: nunca lee el espacio de ot
 // 4. BARRIDO: ninguna clave localizada construida a mano
 // ============================================================================
 // La primera línea de defensa es el TIPO: `cachedLoc`/`cachedLocIf` exigen
-// `ClaveLocalizada`, que solo devuelven los constructores de este módulo. Esto
-// es la red para lo que un `as` o un `cached()` a secas podría saltear.
+// `ClaveLocalizada`, que solo devuelven los constructores de este módulo.
+//
+// QUÉ PROTEGE Y QUÉ NO: el tipo evita las construcciones manuales ACCIDENTALES
+// —que son las que pasan de verdad— pero no puede impedir un `as
+// ClaveLocalizada` deliberado. Para eso está el barrido, que además mira
+// `cachedLoc`/`cachedLocIf` y rechaza los literales con `as`.
 //
 // NO busca prefijos en texto suelto —encontraría comentarios, logs, tests y
 // `TTL.home`—: mira SOLO el primer argumento de `cached(`/`cachedIf(`, y además
 // resuelve variables, que era el agujero de la primera versión.
 
 const FAMILIAS_LOCALIZADAS = [
-  "home:", "disc:", "card:", "top:pop:", "reco:", "people:popular:",
+  "home:", "disc:", "card:", "top:pop:", "reco:", "people:popular:", "search:",
 ];
 // Empiezan igual que una familia localizada pero no lo son.
 const EXCEPCIONES_NO_LOCALIZADAS = ["people:directors"];
@@ -142,8 +149,19 @@ function claveManualEn(src: string): string[] {
     vars.set(m[1], m[2].replace(/^[`"']/, ""));
   }
 
-  for (const m of src.matchAll(/\bcached(?:If)?\s*\(\s*([^,]+),/g)) {
+  // Incluye `cachedLoc`/`cachedLocIf`: el tipo marcado no puede impedir un `as`
+  // deliberado, así que el barrido tiene que mirar esas llamadas también.
+  for (const m of src.matchAll(/\bcached(?:Loc)?(?:If)?\s*\(\s*([^,]+),/g)) {
     const arg = m[1].trim();
+    // Un `as ClaveLocalizada` sobre un literal es exactamente la evasión que el
+    // tipo no puede frenar.
+    const conAs = /^[`"']([^`"']*)[`"']\s+as\s+ClaveLocalizada/.exec(arg);
+    if (conAs) {
+      if (esClaveLocalizada(conAs[1])) {
+        hallados.push(`as ClaveLocalizada: ${conAs[1].slice(0, 40)}`);
+      }
+      continue;
+    }
     if (/^["'`]/.test(arg)) {
       const desnudo = arg.replace(/^[`"']/, "");
       if (esClaveLocalizada(desnudo)) hallados.push(arg.slice(0, 60));
@@ -202,6 +220,17 @@ test("EN ROJO: detecta una variable con `let` y anotación de tipo", () => {
     "return cached(clv, TTL.reco, fn);",
   ].join("\n");
   assert.equal(claveManualEn(src).length, 1);
+});
+
+test("EN ROJO: detecta un `as ClaveLocalizada` sobre un literal", () => {
+  // El tipo no lo frena: es una aserción deliberada. El barrido sí.
+  const evasion = 'cachedLoc(`card:${type}:${id}` as ClaveLocalizada, TTL.catalog, fn);';
+  assert.equal(claveManualEn(evasion).length, 1);
+});
+
+test("EN ROJO: el barrido mira también cachedLoc y cachedLocIf", () => {
+  assert.equal(claveManualEn("cachedLoc(`top:pop:${p}:${t}`, TTL.catalog, fn);").length, 1);
+  assert.equal(claveManualEn("cachedLocIf(`home:v5:${s}`, TTL.home, fn, ok);").length, 1);
 });
 
 test("EN VERDE: no marca constructores ni claves sin huella", () => {

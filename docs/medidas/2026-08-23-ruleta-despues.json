@@ -1,0 +1,25 @@
+{
+  "generado": "2026-08-23",
+  "filas": [
+    {
+      "tmdb_id": 277834,
+      "media_type": "movie",
+      "title": "Vaiana",
+      "razon": "Disney construye una aventura de navegación basada en mitología polinesia. Las canciones de Lin-Manuel Miranda llevan la trama en vez de detenerla. Moana no depende de un romance para moverse, algo poco común en el catálogo clásico del estudio.",
+      "advertencia": null,
+      "updated_at": "2026-08-23T17:17:38.393487+00:00"
+    },
+    {
+      "tmdb_id": 13179,
+      "media_type": "movie",
+      "title": "Campanilla",
+      "razon": "Primera película del universo Disney Fairies, centrada en la inseguridad de su protagonista por no encontrarle sentido a su propio talento. El ritmo es pausado y pensado para las más chicas, sin grandes villanos ni peligro real. Funciona bien como puerta de entrada a la saga.",
+      "advertencia": "Si buscás algo con más conflicto o aventura, acá el mayor drama es interno y bastante suave.",
+      "updated_at": "2026-08-23T17:17:38.744204+00:00"
+    }
+  ],
+  "filas_tocadas": [
+    "movie:277834",
+    "movie:13179"
+  ]
+}

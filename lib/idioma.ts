@@ -12,44 +12,27 @@
 // alternativos y el de las tres grandes no.
 //
 // LO QUE ESTE MÓDULO NO HACE: cambiar el idioma. `IDIOMA_BASE` sale de
-// `IDIOMA_TITULOS` y su default sigue siendo es-ES. El cambio se hace con la
-// variable de entorno, en la tanda 2 del plan.
+// `IDIOMA_TITULOS` y su default sigue siendo es-ES.
 //
 // NO IMPORTA NADA DE `./tmdb`, ni siquiera un tipo: `tmdb.ts` importa de acá
-// para el idioma base, y devolver el favor cerraba un ciclo. La forma
-// estructural `Localizable` alcanza y no acopla los dos módulos.
+// para el idioma base, y devolver el favor cerraba un ciclo.
+import { AsyncLocalStorage } from "node:async_hooks";
 
 // --- Configuración -----------------------------------------------------------
 export const IDIOMA_BASE = process.env.IDIOMA_TITULOS || "es-ES";
-
-// A dónde se cae cuando TMDB no tiene la traducción. Es una constante y no una
-// variable: es-ES es el único idioma con cobertura completa medida (es-AR dio 0%
-// en la muestra de 60 y /translations solo devuelve ES y MX).
 export const IDIOMA_FALLBACK = "es-ES";
 
-// Kill switch. Ver el runbook: cambiar la variable NO afecta a los deployments
-// existentes — hace falta un deployment nuevo o un Redeploy.
 const FALLBACK_PEDIDO = process.env.FALLBACK_IDIOMA !== "0";
 
 // El fallback SOLO puede cambiar la salida si el idioma base es otro. Con
 // es-ES es inerte, y por eso no entra en la huella: si entrara, apagarlo
-// abriría un espacio de claves nuevo idéntico al anterior y provocaría un
-// arranque frío sin ningún motivo.
+// abriría un espacio de claves nuevo idéntico al anterior.
 export const FALLBACK_ACTIVO = FALLBACK_PEDIDO && IDIOMA_BASE !== IDIOMA_FALLBACK;
 
 // --- Huella de configuración -------------------------------------------------
-// Toda clave de cache que guarde `title`, `name` u `overview` la lleva. Sin
-// esto, un rollback a es-ES seguiría leyendo títulos mexicanos de las mismas
-// claves hasta que expire el TTL, y el rollback no revertiría nada.
-//
-// Sube al cambiar el predicado de reparación o la fusión: dos resolvers
-// distintos producen contenido distinto bajo la misma configuración.
 export const RESOLVER_VERSION = "r1";
 
-// FUNCIÓN PURA, y es la que USA `HUELLA_IDIOMA`. No es una fórmula para copiar
-// en un test: los tests llaman a esta misma. Una réplica en el test puede
-// quedar verde mientras la implementación real cambia, que es exactamente lo
-// que no queremos de este cálculo.
+// FUNCIÓN PURA, y es la que USA `HUELLA_IDIOMA`. Los tests llaman a esta misma.
 export function calcularHuella(
   idiomaBase: string, fallbackPedido: boolean, resolverVersion: string = RESOLVER_VERSION,
 ): string {
@@ -59,21 +42,11 @@ export function calcularHuella(
 
 export const HUELLA_IDIOMA = calcularHuella(IDIOMA_BASE, FALLBACK_PEDIDO);
 
-// TANDA 1: los constructores de clave se cablean en MODO COMPATIBLE, o sea con
-// huella vacía, para producir exactamente los mismos bytes que antes y no
-// provocar ningún arranque frío. En la tanda 2 esto pasa a `HUELLA_IDIOMA` y
-// ahí ocurre la única invalidación del plan.
+// TANDA 1: modo compatible — huella vacía, mismos bytes que antes, ningún
+// arranque frío. En la tanda 2 esto pasa a `HUELLA_IDIOMA`.
 export const HUELLA_EN_CLAVES = "";
 
-// --- Qué hay que reparar -----------------------------------------------------
-// UN SOLO PREDICADO, compartido por la detección y por la fusión. Estaban
-// separados y no coincidían: la señal 3 (el título cayó al original) marcaba el
-// título como roto, pero la fusión solo reemplazaba títulos en alfabeto no
-// latino. Resultado: se pagaba la llamada de reparación y no se reparaba nada.
-
-// Latín básico + suplemento + extendido A/B, puntuación general y símbolos de
-// moneda. Todo lo de afuera (hangul, kana, han, cirílico, árabe) es un título
-// que no se puede mostrar en una app en español.
+// --- Qué hay que reparar: UN SOLO PREDICADO ---------------------------------
 const NO_LATINO = /[^\u0000-\u024F\u2000-\u206F\u20A0-\u20BF\s]/;
 
 export interface Localizable {
@@ -86,9 +59,7 @@ export interface Localizable {
 }
 
 export interface Reparacion {
-  /** El título hay que reemplazarlo por el del idioma de respaldo. */
   titulo: boolean;
-  /** La sinopsis vino vacía. */
   sinopsis: boolean;
 }
 
@@ -97,25 +68,19 @@ export function queReparar(t: Localizable): Reparacion {
   const original = t.original_title ?? t.original_name ?? "";
   const idioma = t.original_language ?? "";
 
-  // 1. Alfabeto que no se puede mostrar (`런닝맨`).
   const noLatino = NO_LATINO.test(titulo);
 
-  // 2. El título ES el original y el idioma original no es español ni inglés:
-  //    señal de que no hay traducción y TMDB cayó al original.
+  // El título ES el original y el idioma original no es español ni inglés.
   //
-  //    `en` está excluido A PROPÓSITO y VERIFICADO con 12 casos. Los 38 títulos
-  //    (3,7%) donde es-MX devuelve el original inglés son "Monsters, Inc.",
-  //    "Moana 2", "WandaVision", "Black Widow", "Game of Thrones": en Argentina
-  //    esos SON los nombres publicados. Medido en Disney+: con "Zootopia 2" la
-  //    película aparece y con "Zootrópolis 2" NO. Repararlos rompería lo único
-  //    que funciona.
+  // `en` está excluido A PROPÓSITO y VERIFICADO con 12 casos: los 38 títulos
+  // (3,7%) donde es-MX devuelve el original inglés son "Monsters, Inc.",
+  // "Moana 2", "WandaVision", "Black Widow", "Game of Thrones", y en Argentina
+  // esos SON los nombres publicados. Medido en Disney+: "Zootopia 2" aparece,
+  // "Zootrópolis 2" no.
   const cayoAlOriginal = !!original && titulo === original
     && idioma !== "es" && idioma !== "en";
 
-  return {
-    titulo: noLatino || cayoAlOriginal,
-    sinopsis: !(t.overview ?? "").trim(),
-  };
+  return { titulo: noLatino || cayoAlOriginal, sinopsis: !(t.overview ?? "").trim() };
 }
 
 export function necesitaReparacion(t: Localizable): boolean {
@@ -123,121 +88,207 @@ export function necesitaReparacion(t: Localizable): boolean {
   return r.titulo || r.sinopsis;
 }
 
-// La fusión usa EL MISMO predicado: si `queReparar` dice que el título hay que
-// reemplazarlo, se reemplaza. Es por CAMPO y no por objeto — un título al que
-// solo le falta la sinopsis conserva su título es-MX, que es justo lo que se
-// fue a buscar.
-export function fusionarPorCampo<T extends Localizable>(base: T, respaldo: Localizable | undefined): T {
+// La fusión usa EL MISMO predicado. Por CAMPO y no por objeto: un título al que
+// solo le falta la sinopsis conserva su título es-MX.
+//
+// DEVUELVE LA MISMA REFERENCIA si nada mejoró. Es lo que permite contar como
+// "reparado" solo lo que de verdad cambió.
+export function fusionarPorCampo<T extends Localizable>(
+  base: T, respaldo: Localizable | undefined | null,
+): T {
   if (!respaldo) return base;
   const r = queReparar(base);
+  if (!r.titulo && !r.sinopsis) return base;
+
+  let cambio = false;
   const out: T = { ...base };
 
   if (r.titulo) {
     const t = respaldo.title ?? respaldo.name ?? "";
-    // El respaldo también puede venir roto (una película coreana sin traducción
-    // ni al es-ES). Si no mejora, no se toca: mejor el original que un vacío.
-    if (t && !NO_LATINO.test(t)) {
+    // El respaldo también puede venir roto (una coreana sin traducción ni al
+    // es-ES). Si no mejora, no se toca: mejor el original que un vacío.
+    const mismo = t === (base.title ?? base.name ?? "");
+    if (t && !NO_LATINO.test(t) && !mismo) {
       if (respaldo.title !== undefined) out.title = respaldo.title;
       if (respaldo.name !== undefined) out.name = respaldo.name;
+      cambio = true;
     }
   }
   if (r.sinopsis && (respaldo.overview ?? "").trim()) {
     out.overview = respaldo.overview;
+    cambio = true;
   }
-  return out;
+  return cambio ? out : base;
 }
 
-// --- Métricas ----------------------------------------------------------------
-// Cuántas llamadas de reparación se hicieron. Es lo que demuestra que con es-ES
-// el mecanismo está inerte: tiene que dar 0.
-const metricas = { llamadas: 0, lotes: 0, titulosReparados: 0, fallos: 0 };
-export function metricasFallback() { return { ...metricas }; }
-export function reiniciarMetricasFallback() {
-  metricas.llamadas = 0; metricas.lotes = 0; metricas.titulosReparados = 0; metricas.fallos = 0;
+// --- Métricas POR REQUEST ----------------------------------------------------
+// AsyncLocalStorage y no un contador de módulo, por el mismo motivo que
+// lib/cache.ts: en Vercel conviven varios requests en la misma instancia, y un
+// contador global mezclaría los números de todos — o peor, uno reiniciaría los
+// del otro a mitad de camino.
+export interface MetricasIdioma {
+  /** Llamadas de respaldo efectivamente hechas. */
+  llamadas: number;
+  /** Lotes donde se detectó al menos un título roto. */
+  lotesConRotos: number;
+  /** Títulos donde la fusión CAMBIÓ algo. No es lo mismo que detectados. */
+  titulosReparados: number;
+  /** Respaldos que fallaron: rechazo, timeout o respuesta vacía. */
+  fallos: number;
+}
+const nuevas = (): MetricasIdioma => ({
+  llamadas: 0, lotesConRotos: 0, titulosReparados: 0, fallos: 0,
+});
+const als = new AsyncLocalStorage<MetricasIdioma>();
+
+/** Corre `fn` con un contador propio. Igual que `withCacheMetrics`. */
+export async function withMetricasIdioma<T>(
+  fn: () => Promise<T>,
+): Promise<{ res: T; metricas: MetricasIdioma }> {
+  const metricas = nuevas();
+  const res = await als.run(metricas, fn);
+  return { res, metricas };
+}
+
+function anotar(fn: (m: MetricasIdioma) => void) {
+  const m = als.getStore();
+  if (m) fn(m);
+}
+
+/** Las métricas del scope actual, o null fuera de uno. */
+export function metricasIdiomaActuales(): MetricasIdioma | null {
+  const m = als.getStore();
+  return m ? { ...m } : null;
+}
+
+// --- Identidad dentro de un lote --------------------------------------------
+// En lotes MIXTOS (películas y series juntas) el `id` NO alcanza: TMDB reutiliza
+// los números entre tipos, así que la película 1399 y la serie 1399 existen las
+// dos. Emparejar por id le daría a una el título de la otra.
+export type ClaveDeLote<T> = (t: T) => string;
+
+export function claveMixta(t: Localizable & { id?: number; media_type?: string }): string {
+  return `${t.media_type ?? "?"}:${t.id ?? "?"}`;
+}
+/** Para lotes de UN solo tipo, donde el id ya es único. */
+export function clavePorId(t: Localizable & { id?: number }): string {
+  return String(t.id ?? "?");
 }
 
 // --- EL mecanismo, uno solo --------------------------------------------------
-// Todas las superficies pasan por acá. Antes cada una podía implementar su
-// variante y divergir; ahora la guarda de inercia, el manejo de fallos y la
-// fusión viven en un solo lugar.
+// COSTE: UNA llamada extra por LOTE, no por título. Dos mediciones, que son de
+// instrumentos distintos y no hay que mezclar (docs/medidas/):
 //
-// COSTE: UNA llamada extra por LOTE, no por título. Medido sobre un Home frío
-// de n,d,m: 1021 títulos, 57 rotos (5,6%) en 32 de 107 páginas. Reparar título
-// por título costaba +57 llamadas; así cuesta +32, porque un discover repara
-// hasta 20 de una vez.
+//   -idioma-fallback.json  modelo de 72 páginas: 1021 títulos, 57 rotos (5,6%),
+//                          concentrados en 21 de esas 72 (29,2%)
+//   -idioma-home-e2e.json  composer REAL: 107 páginas de discover y 32 de
+//                          fallback; 612 → 643 llamadas (+5,1%)
 //
-// SI EL RESPALDO FALLA, se devuelve la base INTACTA. El fallback es una mejora
-// opcional: una página válida en es-MX con una sinopsis faltante es mejor que
-// ninguna página.
+// El modelo dice la TASA; el end-to-end dice el COSTE. Reparar título por
+// título habría costado +57 en el modelo, contra +21 por página.
+//
+// SI EL RESPALDO FALLA, se devuelve la base INTACTA **y se avisa**. El aviso no
+// es cosmético: sin él, el llamador guardaría esa base sin reparar bajo una
+// clave `es-MX+f` por 6 a 30 horas y el usuario vería títulos rotos hasta que
+// expirara el TTL. Con `fallo: true` el llamador NO cachea y el próximo request
+// vuelve a intentar.
 
-/** Repara un lote con UNA llamada extra. Devuelve la base si algo falla. */
-export async function repararLote<T extends Localizable & { id: number }>(
+export interface ResultadoReparacion<T> {
+  items: T[];
+  /** El respaldo falló: NO cachear este resultado. */
+  fallo: boolean;
+}
+
+export async function repararLote<T extends Localizable>(
   base: T[],
-  pedirRespaldo: () => Promise<Localizable[]>,
+  pedirRespaldo: () => Promise<Localizable[] | null | undefined>,
   etiqueta: string,
-  // Explícito y con default: sin esto los tests del camino de FALLO no se
-  // pueden escribir — con la config del proceso en es-ES la guarda sale antes
-  // y el try/catch nunca corre, o sea que el test pasa sin probar nada.
-  activo: boolean = FALLBACK_ACTIVO,
-): Promise<T[]> {
-  // La guarda mira la CONFIGURACIÓN, no si hay títulos rotos. Que con es-ES no
-  // haya rotos es una propiedad de los datos y podría dejar de cumplirse.
-  if (!activo) return base;
+  opts: {
+    /** Cómo se identifica cada elemento. `claveMixta` si el lote es mixto. */
+    clave: ClaveDeLote<T>;
+    claveRespaldo?: ClaveDeLote<Localizable>;
+    /** Explícito: sin esto los tests del camino de FALLO no pueden correr,
+     *  porque con es-ES la guarda sale antes y no ejecutan nada. */
+    activo?: boolean;
+  },
+): Promise<ResultadoReparacion<T>> {
+  const activo = opts.activo ?? FALLBACK_ACTIVO;
+  // La guarda mira la CONFIGURACIÓN, no si hay títulos rotos.
+  if (!activo) return { items: base, fallo: false };
 
-  const rotos = new Set<number>();
-  for (const t of base) if (necesitaReparacion(t)) rotos.add(t.id);
-  if (!rotos.size) return base;
+  const rotos = new Set<string>();
+  for (const t of base) if (necesitaReparacion(t)) rotos.add(opts.clave(t));
+  if (!rotos.size) return { items: base, fallo: false };
 
-  metricas.lotes++;
-  let respaldo: Localizable[];
+  anotar((m) => { m.lotesConRotos++; });
+
+  let respaldo: Localizable[] | null | undefined;
   try {
-    metricas.llamadas++;
+    anotar((m) => { m.llamadas++; });
     respaldo = await pedirRespaldo();
   } catch (e) {
-    metricas.fallos++;
-    console.error(`[idioma] fallback falló en ${etiqueta}, se sirve sin reparar:`, e);
-    return base;
+    anotar((m) => { m.fallos++; });
+    console.error(`[idioma] fallback falló en ${etiqueta}; se sirve sin reparar y NO se cachea:`, e);
+    return { items: base, fallo: true };
   }
 
-  const porId = new Map<number, Localizable>();
-  for (const r of respaldo) {
-    const id = (r as { id?: number }).id;
-    if (typeof id === "number") porId.set(id, r);
+  // `null`, `undefined` y lista vacía son FALLOS, no éxitos con cero
+  // reparaciones: cachear la base como si estuviera reparada la congelaría.
+  if (!respaldo || !respaldo.length) {
+    anotar((m) => { m.fallos++; });
+    console.error(`[idioma] fallback vacío en ${etiqueta}; se sirve sin reparar y NO se cachea`);
+    return { items: base, fallo: true };
   }
 
-  return base.map((t) => {
-    if (!rotos.has(t.id)) return t;
-    const arreglado = fusionarPorCampo(t, porId.get(t.id));
-    if (arreglado !== t) metricas.titulosReparados++;
+  const claveResp = opts.claveRespaldo ?? (opts.clave as unknown as ClaveDeLote<Localizable>);
+  const porClave = new Map<string, Localizable>();
+  for (const r of respaldo) porClave.set(claveResp(r), r);
+
+  const items = base.map((t) => {
+    const k = opts.clave(t);
+    if (!rotos.has(k)) return t;
+    const arreglado = fusionarPorCampo(t, porClave.get(k));
+    if (arreglado !== t) anotar((m) => { m.titulosReparados++; });
     return arreglado;
   });
+  return { items, fallo: false };
 }
 
-/** Repara UN título con una llamada extra. Devuelve la base si algo falla. */
+export interface ResultadoReparacionUno<T> {
+  item: T;
+  fallo: boolean;
+}
+
 export async function repararUno<T extends Localizable>(
   base: T,
-  pedirRespaldo: () => Promise<Localizable | null>,
+  pedirRespaldo: () => Promise<Localizable | null | undefined>,
   etiqueta: string,
   activo: boolean = FALLBACK_ACTIVO,
-): Promise<T> {
-  if (!activo) return base;
-  if (!necesitaReparacion(base)) return base;
+): Promise<ResultadoReparacionUno<T>> {
+  if (!activo) return { item: base, fallo: false };
+  if (!necesitaReparacion(base)) return { item: base, fallo: false };
 
-  metricas.lotes++;
+  anotar((m) => { m.lotesConRotos++; });
+  let respaldo: Localizable | null | undefined;
   try {
-    metricas.llamadas++;
-    const respaldo = await pedirRespaldo();
-    if (!respaldo) return base;
-    metricas.titulosReparados++;
-    return fusionarPorCampo(base, respaldo);
+    anotar((m) => { m.llamadas++; });
+    respaldo = await pedirRespaldo();
   } catch (e) {
-    metricas.fallos++;
-    console.error(`[idioma] fallback falló en ${etiqueta}, se sirve sin reparar:`, e);
-    return base;
+    anotar((m) => { m.fallos++; });
+    console.error(`[idioma] fallback falló en ${etiqueta}; se sirve sin reparar y NO se cachea:`, e);
+    return { item: base, fallo: true };
   }
+  if (!respaldo) {
+    anotar((m) => { m.fallos++; });
+    console.error(`[idioma] fallback vacío en ${etiqueta}; se sirve sin reparar y NO se cachea`);
+    return { item: base, fallo: true };
+  }
+  // Se cuenta DESPUÉS de comprobar que la fusión cambió algo.
+  const item = fusionarPorCampo(base, respaldo);
+  if (item !== base) anotar((m) => { m.titulosReparados++; });
+  return { item, fallo: false };
 }
 
-// --- La guarda, expuesta para las superficies que quieran saltear trabajo ----
 export function fallbackInerte(): boolean {
   return !FALLBACK_ACTIVO;
 }

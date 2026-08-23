@@ -1,0 +1,464 @@
+{
+  "generado": "2026-08-23",
+  "total": 38,
+  "titulos": [
+    {
+      "ref": "movie:24",
+      "es_ES": "Kill Bill: Volumen 1",
+      "es_MX": "Kill Bill: Vol. 1",
+      "plataformas": [
+        "Netflix",
+        "MovistarTV"
+      ]
+    },
+    {
+      "ref": "movie:497698",
+      "es_ES": "Viuda Negra",
+      "es_MX": "Black Widow",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:299536",
+      "es_ES": "Vengadores: Infinity War",
+      "es_MX": "Avengers: Infinity War",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:299534",
+      "es_ES": "Vengadores: Endgame",
+      "es_MX": "Avengers: Endgame",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:533535",
+      "es_ES": "Deadpool y Lobezno",
+      "es_MX": "Deadpool & Wolverine",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:393",
+      "es_ES": "Kill Bill: Volumen 2",
+      "es_MX": "Kill Bill: Vol. 2",
+      "plataformas": [
+        "Netflix"
+      ]
+    },
+    {
+      "ref": "tv:1411",
+      "es_ES": "Vigilados, Person of Interest",
+      "es_MX": "Person of Interest",
+      "plataformas": [
+        "Netflix"
+      ]
+    },
+    {
+      "ref": "tv:110492",
+      "es_ES": "El Pacificador",
+      "es_MX": "Peacemaker",
+      "plataformas": [
+        "Max"
+      ]
+    },
+    {
+      "ref": "tv:68507",
+      "es_ES": "La materia oscura",
+      "es_MX": "His Dark Materials",
+      "plataformas": [
+        "MovistarTV",
+        "Max"
+      ]
+    },
+    {
+      "ref": "tv:91363",
+      "es_ES": "¿Qué pasaría si...?",
+      "es_MX": "What If...?",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "tv:4574",
+      "es_ES": "X Men, La Serie Animada",
+      "es_MX": "X-Men",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "tv:85271",
+      "es_ES": "Bruja Escarlata y Visión",
+      "es_MX": "WandaVision",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "tv:1622",
+      "es_ES": "Sobrenatural",
+      "es_MX": "Supernatural",
+      "plataformas": [
+        "Prime Video",
+        "MovistarTV",
+        "Max"
+      ]
+    },
+    {
+      "ref": "tv:1399",
+      "es_ES": "Juego de tronos",
+      "es_MX": "Game of Thrones",
+      "plataformas": [
+        "DIRECTV GO",
+        "Max"
+      ]
+    },
+    {
+      "ref": "tv:10545",
+      "es_ES": "True Blood (Sangre fresca)",
+      "es_MX": "True Blood",
+      "plataformas": [
+        "Max"
+      ]
+    },
+    {
+      "ref": "tv:85349",
+      "es_ES": "Anfibilandia",
+      "es_MX": "Amphibia",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "tv:92749",
+      "es_ES": "Caballero Luna",
+      "es_MX": "Moon Knight",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:36648",
+      "es_ES": "Blade III. Trinity",
+      "es_MX": "Blade: Trinity",
+      "plataformas": [
+        "Netflix",
+        "MovistarTV",
+        "Max"
+      ]
+    },
+    {
+      "ref": "movie:8077",
+      "es_ES": "Alien III",
+      "es_MX": "Alien³",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:945961",
+      "es_ES": "Alien. Romulus",
+      "es_MX": "Alien: Romulus",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:917496",
+      "es_ES": "Bitelchús Bitelchús",
+      "es_MX": "Beetlejuice Beetlejuice",
+      "plataformas": [
+        "Netflix"
+      ]
+    },
+    {
+      "ref": "tv:44217",
+      "es_ES": "Vikingos",
+      "es_MX": "Vikings",
+      "plataformas": [
+        "Netflix"
+      ]
+    },
+    {
+      "ref": "tv:71790",
+      "es_ES": "S.W.A.T.: Los hombres de Harrelson",
+      "es_MX": "S.W.A.T.",
+      "plataformas": [
+        "Netflix",
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "tv:91239",
+      "es_ES": "Los Bridgerton",
+      "es_MX": "Bridgerton",
+      "plataformas": [
+        "Netflix"
+      ]
+    },
+    {
+      "ref": "tv:4607",
+      "es_ES": "Perdidos",
+      "es_MX": "Lost",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "tv:3172",
+      "es_ES": "Sin cita previa",
+      "es_MX": "Private Practice",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:1084242",
+      "es_ES": "Zootrópolis 2",
+      "es_MX": "Zootopia 2",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:585",
+      "es_ES": "Monstruos, S.A.",
+      "es_MX": "Monsters, Inc.",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:863",
+      "es_ES": "Toy Story 2: Los juguetes vuelven a la carga",
+      "es_MX": "Toy Story 2",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:1241982",
+      "es_ES": "Vaiana 2",
+      "es_MX": "Moana 2",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:269149",
+      "es_ES": "Zootrópolis",
+      "es_MX": "Zootopia",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:62211",
+      "es_ES": "Monstruos University",
+      "es_MX": "Monsters University",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "movie:11631",
+      "es_ES": "Mamma Mia! La película",
+      "es_MX": "Mamma Mia!",
+      "plataformas": [
+        "Netflix",
+        "Prime Video",
+        "MovistarTV"
+      ]
+    },
+    {
+      "ref": "movie:76492",
+      "es_ES": "Hotel Transilvania",
+      "es_MX": "Hotel Transylvania",
+      "plataformas": [
+        "Prime Video",
+        "Max",
+        "Universal+"
+      ]
+    },
+    {
+      "ref": "movie:159824",
+      "es_ES": "Hotel Transilvania 2",
+      "es_MX": "Hotel Transylvania 2",
+      "plataformas": [
+        "Prime Video",
+        "MovistarTV",
+        "Max"
+      ]
+    },
+    {
+      "ref": "tv:87083",
+      "es_ES": "Formula 1: La emoción de un Grand Prix",
+      "es_MX": "Formula 1: Drive to Survive",
+      "plataformas": [
+        "Netflix"
+      ]
+    },
+    {
+      "ref": "movie:10681",
+      "es_ES": "WALL·E: Batallón de limpieza",
+      "es_MX": "WALL·E",
+      "plataformas": [
+        "Disney+"
+      ]
+    },
+    {
+      "ref": "tv:4546",
+      "es_ES": "Larry David",
+      "es_MX": "Curb Your Enthusiasm",
+      "plataformas": [
+        "Max"
+      ]
+    }
+  ],
+  "submuestra_a_verificar": {
+    "criterio": "12 de los 38, priorizando Netflix, Disney+ y Max (las tres que exigen sesión). Mezcla de infantil, clásico y reciente. Completar `estado_es_ES` y `estado_es_MX` con directo / relacionados / no.",
+    "probados_por_mi": "Solo 4 de los 38 están en Prime Video, la única plataforma que puedo consultar. Ver `probados_en_prime`.",
+    "filas": [
+      {
+        "ref": "movie:585",
+        "plataforma": "Disney+",
+        "es_ES": "Monstruos, S.A.",
+        "es_MX": "Monsters, Inc.",
+        "estado_es_ES": "no",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "movie:1241982",
+        "plataforma": "Disney+",
+        "es_ES": "Vaiana 2",
+        "es_MX": "Moana 2",
+        "estado_es_ES": "no",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:85271",
+        "plataforma": "Disney+",
+        "es_ES": "Bruja Escarlata y Visión",
+        "es_MX": "WandaVision",
+        "estado_es_ES": "no",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "movie:497698",
+        "plataforma": "Disney+",
+        "es_ES": "Viuda Negra",
+        "es_MX": "Black Widow",
+        "estado_es_ES": "no",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:4607",
+        "plataforma": "Disney+",
+        "es_ES": "Perdidos",
+        "es_MX": "Lost",
+        "estado_es_ES": "no",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:91239",
+        "plataforma": "Netflix",
+        "es_ES": "Los Bridgerton",
+        "es_MX": "Bridgerton",
+        "estado_es_ES": "directo",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:44217",
+        "plataforma": "Netflix",
+        "es_ES": "Vikingos",
+        "es_MX": "Vikings",
+        "estado_es_ES": "directo",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "movie:24",
+        "plataforma": "Netflix,MovistarTV",
+        "es_ES": "Kill Bill: Volumen 1",
+        "es_MX": "Kill Bill: Vol. 1",
+        "estado_es_ES": "directo",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:87083",
+        "plataforma": "Netflix",
+        "es_ES": "Formula 1: La emoción de un Grand Prix",
+        "es_MX": "Formula 1: Drive to Survive",
+        "estado_es_ES": "directo",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:110492",
+        "plataforma": "Max",
+        "es_ES": "El Pacificador",
+        "es_MX": "Peacemaker",
+        "estado_es_ES": "directo",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:10545",
+        "plataforma": "Max",
+        "es_ES": "True Blood (Sangre fresca)",
+        "es_MX": "True Blood",
+        "estado_es_ES": "no",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      },
+      {
+        "ref": "tv:4546",
+        "plataforma": "Max",
+        "es_ES": "Larry David",
+        "es_MX": "Curb Your Enthusiasm",
+        "estado_es_ES": "directo",
+        "estado_es_MX": "directo",
+        "fuente": "dueño"
+      }
+    ],
+    "resultado": {
+      "es_ES": "6/12 directo, 6/12 no",
+      "es_MX_y_original": "12/12 directo",
+      "conclusion": "Ningun caso donde conservar el titulo original ingles sea PEOR que es-ES. La regla de no reparar el pasaje al ingles queda APROBADA y se fija con tests.",
+      "por_plataforma": "Disney+ 0/5 con es-ES (los cinco fallan); Netflix 4/4 con es-ES; Max 2/3."
+    }
+  },
+  "probados_en_prime": [
+    {
+      "ref": "tv:1622",
+      "plataforma": "Prime Video",
+      "es_ES": "Sobrenatural",
+      "es_MX": "Supernatural",
+      "estado_es_ES": "directo",
+      "estado_es_MX": "directo",
+      "nota": "es-MX primer resultado; es-ES quinto"
+    },
+    {
+      "ref": "movie:76492",
+      "plataforma": "Prime Video",
+      "es_ES": "Hotel Transilvania",
+      "es_MX": "Hotel Transylvania",
+      "estado_es_ES": "directo",
+      "estado_es_MX": "directo",
+      "nota": "resultados idénticos con i y con y"
+    }
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "generado": "2026-08-23",
+  "que_es": "Medicion END-TO-END del composer real del Home (lib/home.ts via GET /api/home?providers=n,d,m), no una suma teorica. Cada corrida es un proceso nuevo, sin credenciales de Upstash, asi que el cache arranca VACIO y no se toca el de produccion. El contador de comandos sigue siendo fiel: lib/cache.ts los cuenta igual en modo memoria, porque dependen del patron de acceso y no del backend.",
+  "banco": "git worktree aparte, parcheado solo ahi (idioma por entorno, contador de llamadas a TMDB, fallback opcion C). El repo no se toco.",
+  "base_es_ES": {
+    "corridas": 3,
+    "tmdb_total": [
+      612,
+      612,
+      612
+    ],
+    "paginas_fallback": [
+      0,
+      0,
+      0
+    ],
+    "comandos_upstash": [
+      659,
+      655,
+      655
+    ],
+    "ms_composer": [
+      9548,
+      5462,
+      5822
+    ],
+    "payload_bytes": [
+      84063,
+      84063,
+      84063
+    ],
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+      "Últimos lanzamientos=20",
+      "Lo más votados=40",
+      "No gustaron=30",
+      "undefined=20",
+      "undefined=20",
+      "undefined=20",
+      "undefined=20",
+      "undefined=20",
+      "undefined=20",
+      "Miniseries para ansiosos=20",
+      "🍿 Para toda la familia=40",
+      "🎬 Animación para adultos=38"
+    ],
+    "tmdb_por_path": {
+      "/discover/movie": 44,
+      "/discover/tv": 63,
+      "/tv/:id/watch/providers": 191,
+      "/movie/:id/watch/providers": 232,
+      "/movie/:id": 57,
+      "/tv/:id": 25
+    }
+  },
+  "es_MX_sin_fallback": {
+    "corridas": 1,
+    "tmdb_total": [
+      612
+    ],
+    "paginas_fallback": [
+      0
+    ],
+    "comandos_upstash": [
+      655
+    ],
+    "ms_composer": [
+      22610
+    ],
+    "payload_bytes": [
+      84516
+    ],
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+      "Últimos lanzamientos=20",
+      "Lo más votados=40",
+      "No gustaron=30",
+      "accion=20",
+      "scifi=20",
+      "terror=20",
+      "drama=20",
+      "comedia=20",
+      "documental=20",
+      "Miniseries para ansiosos=20",
+      "🍿 Para toda la familia=40",
+      "🎬 Animación para adultos=38"
+    ],
+    "tmdb_por_path": {
+      "/discover/movie": 44,
+      "/discover/tv": 63,
+      "/movie/:id": 57,
+      "/tv/:id": 25,
+      "/movie/:id/watch/providers": 233,
+      "/tv/:id/watch/providers": 190
+    }
+  },
+  "es_MX_con_fallback": {
+    "corridas": 3,
+    "tmdb_total": [
+      643,
+      641,
+      643
+    ],
+    "paginas_fallback": [
+      32,
+      32,
+      32
+    ],
+    "comandos_upstash": [
+      654,
+      650,
+      654
+    ],
+    "ms_composer": [
+      6413,
+      6270,
+      5734
+    ],
+    "payload_bytes": [
+      84516,
+      84516,
+      84516
+    ],
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+      "Últimos lanzamientos=20",
+      "Lo más votados=40",
+      "No gustaron=30",
+      "accion=20",
+      "scifi=20",
+      "terror=20",
+      "drama=20",
+      "comedia=20",
+      "documental=20",
+      "Miniseries para ansiosos=20",
+      "🍿 Para toda la familia=40",
+      "🎬 Animación para adultos=38"
+    ],
+    "tmdb_por_path": {
+      "/discover/movie": 56,
+      "/discover/tv": 83,
+      "/movie/:id": 57,
+      "/tv/:id": 25,
+      "/movie/:id/watch/providers": 232,
+      "/tv/:id/watch/providers": 190
+    }
+  },
+  "delta": {
+    "tmdb_llamadas": "612 -> 643 (+31, +5.1%)",
+    "paginas_de_fallback_pedidas": 32,
+    "comandos_upstash": "[659, 655, 655] -> [654, 650, 654] (sin cambio; la variacion es el hit/miss de pools)",
+    "payload": "84063 -> 84516 (+453 bytes, +0.54%)",
+    "ms_composer": "base [5462, 5822, 9548] vs mx+fb [5734, 6270, 6413] — RANGOS SUPERPUESTOS: la diferencia esta dentro del ruido, no se puede afirmar un costo de tiempo",
+    "titulos_por_riel": "identicos en las 7 corridas",
+    "degradado": "false en todas; fallos = 0 en todas",
+    "caliente": "1 comando, 0 llamadas a TMDB, 2-3 ms en todas las variantes"
+  }
+}

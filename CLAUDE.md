@@ -80,7 +80,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:v3:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  `home:v5:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
   manda la cuota de Upstash, ver el comentario de `TTL.home`). La versión de la
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se

@@ -1,0 +1,6873 @@
+{
+  "generado": "2026-08-23",
+  "muestra": "docs/medidas/2026-08-23-idioma-muestra.json",
+  "llamadas_reales": 360,
+  "llamadas_por_titulo": 6,
+  "status": {
+    "200": 360
+  },
+  "titulos": [
+    {
+      "id": 12535,
+      "tipo": "movie",
+      "motivos": [
+        "obligatorio: caso Mel Brooks"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1977,
+      "original": "High Anxiety",
+      "idioma_original": "en",
+      "es_ES": "Máxima ansiedad",
+      "es_AR": "Máxima ansiedad",
+      "es_MX": "Angustias del Doctor Mel Brooks",
+      "alt_AR": [
+        "Las angustias del Dr. Mel Brooks"
+      ],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "BR",
+          "titulo": "Alta Ansiedade",
+          "tipo": null
+        },
+        {
+          "pais": "AR",
+          "titulo": "Las angustias del Dr. Mel Brooks",
+          "tipo": "Spanish"
+        },
+        {
+          "pais": "DK",
+          "titulo": "Høj skræk",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Máxima ansiedad"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Angustias del Doctor Mel Brooks"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/12535-high-anxiety/watch?locale=AR"
+    },
+    {
+      "id": 1284041,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Netflix",
+        "pop",
+        "terror"
+      ],
+      "plataforma_semilla": "n",
+      "anio": 2026,
+      "original": "The Last House",
+      "idioma_original": "en",
+      "es_ES": "La última casa",
+      "es_AR": "La última casa",
+      "es_MX": "La última casa",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "11817",
+          "tipo": "working title"
+        },
+        {
+          "pais": "TH",
+          "titulo": "บ้านหลังสุดท้าย",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "La última casa"
+        },
+        {
+          "pais": "MX",
+          "titulo": "La última casa"
+        }
+      ],
+      "plataformas_ar": [
+        "n"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1284041-the-last-house/watch?locale=AR"
+    },
+    {
+      "id": 5920,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Netflix",
+        "cobertura Max",
+        "cobertura MovistarTV",
+        "pop"
+      ],
+      "plataforma_semilla": "n",
+      "anio": 2008,
+      "original": "The Mentalist",
+      "idioma_original": "en",
+      "es_ES": "El mentalista",
+      "es_AR": "El mentalista",
+      "es_MX": "El Mentalista",
+      "alt_AR": [
+        "El mentalista"
+      ],
+      "alt_MX": [],
+      "alt_ES": [
+        "El mentalista"
+      ],
+      "alt_todos": [
+        {
+          "pais": "AR",
+          "titulo": "El mentalista",
+          "tipo": "Serie"
+        },
+        {
+          "pais": "BG",
+          "titulo": "Менталистът",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "O Mentalista",
+          "tipo": "Série"
+        },
+        {
+          "pais": "CN",
+          "titulo": "超感神探",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "超感警探",
+          "tipo": null
+        },
+        {
+          "pais": "EE",
+          "titulo": "Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "El mentalista",
+          "tipo": null
+        },
+        {
+          "pais": "FI",
+          "titulo": "Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "The Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "心计",
+          "tipo": null
+        },
+        {
+          "pais": "HR",
+          "titulo": "Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "HU",
+          "titulo": "A mentalista",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "The Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "THE MENTALIST メンタリスト",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "メンタリスト",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "멘탈리스트",
+          "tipo": null
+        },
+        {
+          "pais": "LT",
+          "titulo": "Mentalistas",
+          "tipo": null
+        },
+        {
+          "pais": "MK",
+          "titulo": "Менталист",
+          "tipo": null
+        },
+        {
+          "pais": "NL",
+          "titulo": "De Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Mentalista",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "O Mentalista",
+          "tipo": "Suspense"
+        },
+        {
+          "pais": "RO",
+          "titulo": "În mintea criminalului",
+          "tipo": null
+        },
+        {
+          "pais": "RS",
+          "titulo": "Mentalista",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Менталист",
+          "tipo": null
+        },
+        {
+          "pais": "SI",
+          "titulo": "Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Mentalist",
+          "tipo": null
+        },
+        {
+          "pais": "UY",
+          "titulo": "El mentalista",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Tam Ly Vien",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "El mentalista"
+        },
+        {
+          "pais": "MX",
+          "titulo": "El Mentalista"
+        }
+      ],
+      "plataformas_ar": [
+        "n",
+        "p",
+        "mv",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        },
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/5920-the-mentalist/watch?locale=AR"
+    },
+    {
+      "id": 299536,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Disney+",
+        "pop"
+      ],
+      "plataforma_semilla": "d",
+      "anio": 2018,
+      "original": "Avengers: Infinity War",
+      "idioma_original": "en",
+      "es_ES": "Vengadores: Infinity War",
+      "es_AR": "Vengadores: Infinity War",
+      "es_MX": "Avengers: Infinity War",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "Vengadores: Infinity War"
+      ],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Avengers: Infinity War Part I",
+          "tipo": "working title"
+        },
+        {
+          "pais": "RU",
+          "titulo": "Мстители: Война бесконечности. Часть 1",
+          "tipo": null
+        },
+        {
+          "pais": "LT",
+          "titulo": "Kersytojai: Begalybes Karas. I dalis",
+          "tipo": null
+        },
+        {
+          "pais": "HU",
+          "titulo": "Bosszúállók: Végtelen háború - I. rész",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "נוקמים 3: מלחמת האין-סוף",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Avengers: Sonsuzluk Savaşı",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Qasoskorlar 3: Adabiyat jangi",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Avengers: Abadiyat jangi",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Qasoskorlar: Cheksizlik urushi",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Qasoskorlar: Cheksizlik jangi",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Marvel Studios' Avengers: Infinity War",
+          "tipo": "promotional title"
+        },
+        {
+          "pais": "KH",
+          "titulo": "អ្នកចំបាំងអាវេនជឺ : សង្គ្រាមគ្មានដែនបញ្ចប់",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "마블 어벤져스: 인피니티 워",
+          "tipo": null
+        },
+        {
+          "pais": "AL",
+          "titulo": "Avengers: Lufta e pafundësisë",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Os Vingadores 3 - Guerra Infinita",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Avengers 3: Cuộc Chiến Vô Cực",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "어벤져스 인피니티 워",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "어벤져스 3",
+          "tipo": null
+        },
+        {
+          "pais": "SK",
+          "titulo": "Avengers: Nekonečná vojna",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Avengers 3",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Vengadores: Infinity War",
+          "tipo": null
+        },
+        {
+          "pais": "BA",
+          "titulo": "avengers inifity war",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Marvel's The Avengers 3 - Infinity War",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Վրիժառուները։ Անվերջության պատերազմ",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "复仇者联盟3：无限战争",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Avengers - Infinity War",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "المنتقمون الحرب الأبدية",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "Εκδικητές: Ο Πόλεμος της Αιωνιότητας",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "어벤저스 인피니티 워",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Vengadores: Infinity War"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/299536-avengers-infinity-war/watch?locale=AR"
+    },
+    {
+      "id": 1416,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Disney+",
+        "pop"
+      ],
+      "plataforma_semilla": "d",
+      "anio": 2005,
+      "original": "Grey's Anatomy",
+      "idioma_original": "en",
+      "es_ES": "Anatomía de Grey",
+      "es_AR": "Anatomía de Grey",
+      "es_MX": "Anatomía según Grey",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "AL",
+          "titulo": "Anatomia e Greit",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "A Anatomia de Grey",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "L'anatomie de Grey",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "实习医生",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Grey's Anatomy Die jungen Ärzte",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Grey's Anatomy Die jungen Aerzte",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Grey's Anatomy - Die jungen Ärzte",
+          "tipo": null
+        },
+        {
+          "pais": "FI",
+          "titulo": "L'anatomie de Grey",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "A coeur ouvert",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "그레이 아나토미",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Анатомия Грей",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Анатомія пристрасті",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Greys Anatomy",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Anatomía de Grey"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Anatomía según Grey"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/1416-grey-s-anatomy/watch?locale=AR"
+    },
+    {
+      "id": 315635,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Max",
+        "cobertura MovistarTV",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "m",
+      "anio": 2017,
+      "original": "Spider-Man: Homecoming",
+      "idioma_original": "en",
+      "es_ES": "Spider-Man: Homecoming",
+      "es_AR": "Spider-Man: Homecoming",
+      "es_MX": "Spider-Man: De regreso a casa",
+      "alt_AR": [],
+      "alt_MX": [
+        "El Hombre-Araña: De Regreso a Casa"
+      ],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "KR",
+          "titulo": "마블 스파이더맨 홈커밍",
+          "tipo": null
+        },
+        {
+          "pais": "CR",
+          "titulo": "Hombre araña: Regreso a casa",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "Spider-Man : Les Retrouvailles",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Spider-Man: Trở Về Nhà",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სპაიდერმენი: შინ დაბრუნება",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ობობა-კაცი: შინ დაბრუნება",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ობობა-კაცი: სახლში დაბრუნება",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სპაიდერმენი: სახლში დაბრუნება",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ადამიანი-ობობა: სახლში დაბრუნება",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "蜘蛛侠1：英雄归来 (汤姆·赫兰德)",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "ספיידר-מן 1: השיבה הביתה",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Սարդ-մարդը. տուն վերադարձ",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Spider-Man - Homecoming",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Örümcek-Adam: Eve Dönüş",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "스파이더맨: 홈 커밍",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "الرجل العنكبوت العودة للوطن",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "El Hombre-Araña: De Regreso a Casa",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Hörümçək Adam: Evə Qayıdış",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Человек-паук КВМ 1",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Человек-паук 1",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "สไปเดอร์แมน โฮมคัมมิ่ง",
+          "tipo": "Thai"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "Spider-Man: De regreso a casa"
+        }
+      ],
+      "plataformas_ar": [
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/315635-spider-man-homecoming/watch?locale=AR"
+    },
+    {
+      "id": 95350,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Max",
+        "pop",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "m",
+      "anio": 2026,
+      "original": "Lanterns",
+      "idioma_original": "en",
+      "es_ES": "Linternas",
+      "es_AR": "Linternas",
+      "es_MX": "Linternas",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "IL",
+          "titulo": "לנטרנס",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "לנטרנים",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Корпус Зеленых Фонарей",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Корпус Зелёных Фонарей",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Linternas"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Linternas"
+        }
+      ],
+      "plataformas_ar": [
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/95350-lanterns/watch?locale=AR"
+    },
+    {
+      "id": 911430,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Apple TV+"
+      ],
+      "plataforma_semilla": "at",
+      "anio": 2025,
+      "original": "F1",
+      "idioma_original": "en",
+      "es_ES": "F1 la película",
+      "es_AR": "F1 la película",
+      "es_MX": "F1 la película",
+      "alt_AR": [],
+      "alt_MX": [
+        "F1: La película"
+      ],
+      "alt_ES": [
+        "F1: La película"
+      ],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Apex",
+          "tipo": "rumored title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Formula 1",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Formula One",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "弯道峰点",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "弯心",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "一级方程式",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "포뮬라 원",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "포뮬라 1",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "에프원",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "布萊德彼特之F1",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "F1®",
+          "tipo": "with registered trademark symbol"
+        },
+        {
+          "pais": "CN",
+          "titulo": "F1：赛道风云",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "F1® The Movie",
+          "tipo": "with registered trademark symbol"
+        },
+        {
+          "pais": "IL",
+          "titulo": "פורמולה 1",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "F1: The Movie",
+          "tipo": "Apple TV+ title"
+        },
+        {
+          "pais": "JP",
+          "titulo": "F1：ザ・ムービー",
+          "tipo": "Apple TV+ title"
+        },
+        {
+          "pais": "IL",
+          "titulo": "F1: הסרט",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "F1: La película",
+          "tipo": "Apple TV+ title"
+        },
+        {
+          "pais": "MX",
+          "titulo": "F1: La película",
+          "tipo": "Apple TV+ title"
+        },
+        {
+          "pais": "JP",
+          "titulo": "F1®／エフワン",
+          "tipo": "with registered trademark symbol"
+        },
+        {
+          "pais": "PL",
+          "titulo": "F1: Film",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Phim Điện Ảnh F1",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "F1: O Filme",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "F1 - Der Film",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "F1 The Movie",
+          "tipo": "promotional title"
+        },
+        {
+          "pais": "FR",
+          "titulo": "F1, le film",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "F1 : Le Film",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "F1：狂飙飞车",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Формула 1",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "F1 Le Film",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "F1 - Le Film",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "F1: фильм",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "F1",
+          "tipo": "Apple TV+ title"
+        },
+        {
+          "pais": "CZ",
+          "titulo": "F1: Film",
+          "tipo": null
+        },
+        {
+          "pais": "CZ",
+          "titulo": "F1 Film",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ფ1",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ფორმულა 1",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ფორმულა ერთი",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "F1 la película"
+        },
+        {
+          "pais": "ES",
+          "titulo": "F1 la película"
+        }
+      ],
+      "plataformas_ar": [
+        "at"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 350,
+          "nombre": "Apple TV"
+        },
+        {
+          "id": 2243,
+          "nombre": "Apple TV Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/911430-f1/watch?locale=AR"
+    },
+    {
+      "id": 125988,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Apple TV+",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "at",
+      "anio": 2023,
+      "original": "Silo",
+      "idioma_original": "en",
+      "es_ES": "Silo",
+      "es_AR": "Silo",
+      "es_MX": "Silo",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "羊毛战记",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სილოსი",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "סילו",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "سیلو",
+          "tipo": "Mazanderani"
+        },
+        {
+          "pais": "KR",
+          "titulo": "지하창고 사일로의 비밀",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "사일로",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Бункер",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "الصومعة",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Бункер",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Wool",
+          "tipo": "working title"
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "at"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 350,
+          "nombre": "Apple TV"
+        },
+        {
+          "id": 2243,
+          "nombre": "Apple TV Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/125988-silo/watch?locale=AR"
+    },
+    {
+      "id": 687163,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Prime Video",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "p",
+      "anio": 2026,
+      "original": "Project Hail Mary",
+      "idioma_original": "en",
+      "es_ES": "Proyecto Salvación",
+      "es_AR": "Proyecto Salvación",
+      "es_MX": "Proyecto Fin del Mundo",
+      "alt_AR": [],
+      "alt_MX": [
+        "Projecto Fin del Mundo"
+      ],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CA",
+          "titulo": "Projet dernière chance",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "ภารกิจกู้สุริยะ",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Проект «Аве Мария»",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Проект «Конец света»",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "مشروع هيل ماري",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "プロジェクト・ヘイル・メアリー",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Devoradores de Estrelas",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Projecto Hail Mary",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Проект «Последняя надежда»",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "Projecto Fin del Mundo",
+          "tipo": null
+        },
+        {
+          "pais": "AL",
+          "titulo": "Projekti Shpresa e Fundit",
+          "tipo": null
+        },
+        {
+          "pais": "XK",
+          "titulo": "Projekti Shpresa e Fundit",
+          "tipo": null
+        },
+        {
+          "pais": "ID",
+          "titulo": "Proyek Hail Mary",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Proyecto Salvación"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Proyecto Fin del Mundo"
+        }
+      ],
+      "plataformas_ar": [
+        "p"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 2142,
+          "nombre": "MGM+ Apple TV Channel"
+        },
+        {
+          "id": 2141,
+          "nombre": "MGM Plus Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/687163-project-hail-mary/watch?locale=AR"
+    },
+    {
+      "id": 108978,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Prime Video",
+        "cobertura MovistarTV",
+        "pop"
+      ],
+      "plataforma_semilla": "p",
+      "anio": 2022,
+      "original": "Reacher",
+      "idioma_original": "en",
+      "es_ES": "Reacher",
+      "es_AR": "Reacher",
+      "es_MX": "Reacher",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "烈探雷彻",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "侠探杰克",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "ریچر",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ジャック・リーチャー -正義のアウトロー-",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ジャック・リーチャー 正義のアウトロー",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "잭 리처",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Джек Ричер",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "แจ็ค รีชเชอร์ ยอดคนสืบระห่ำ",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "神隱任務",
+          "tipo": "first title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Reacher",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Reacher[M]",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "p",
+        "mv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/108978-reacher/watch?locale=AR"
+    },
+    {
+      "id": 1311031,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Crunchyroll"
+      ],
+      "plataforma_semilla": "cr",
+      "anio": 2025,
+      "original": "劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+      "idioma_original": "ja",
+      "es_ES": "Guardianes de la noche: Kimetsu no Yaiba La fortaleza infinita",
+      "es_AR": "Guardianes de la noche: Kimetsu no Yaiba La fortaleza infinita",
+      "es_MX": "Demon Slayer: Kimetsu no Yaiba Castillo infinito",
+      "alt_AR": [
+        "Demon Slayer: Kimetsu no Yaiba - Castillo infinito"
+      ],
+      "alt_MX": [
+        "Demon Slayer: Kimetsu no Yaiba - Castillo infinito"
+      ],
+      "alt_ES": [
+        "Guardianes de la noche: Kimetsu no Yaiba - La fortaleza infinita"
+      ],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Demon Slayer -Kimetsu no Yaiba- the Movie: Infinity Castle",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Gekijōban Kimetsu no Yaiba Mugenjō-hen",
+          "tipo": "romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Gekijouban Kimetsu no Yaiba Mugenjou-hen",
+          "tipo": "romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Kimetsu no Yaiba: Mugenjou-hen",
+          "tipo": "romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Kimetsu no Yaiba Movie: Mugen Jou-hen",
+          "tipo": "romaji"
+        },
+        {
+          "pais": "HK",
+          "titulo": "「鬼滅之刃」無限城編",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Demon Slayer: Infinity Castle Movie 1 - Akaza's Revenge",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Kimetsu no Yaiba: Mugenjou-hen Movie 1 - Akaza Sairai",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba Sonsuzluk Kalesi",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba Infinity Castle Chapter 1: The Return of Akaza",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba - The Movie: Infinity Castle - Part 1: Akaza Returns",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "劇場版 鬼滅之刃 無限城篇",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Demon Slayer Infinity Castle",
+          "tipo": null
+        },
+        {
+          "pais": "AR",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba - Castillo infinito",
+          "tipo": null
+        },
+        {
+          "pais": "AT",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba Infinity Castle - Teil 1",
+          "tipo": null
+        },
+        {
+          "pais": "CL",
+          "titulo": "Gekijouban Kimetsu no Yaiba: Mugen-jou-hen Movie 1",
+          "tipo": null
+        },
+        {
+          "pais": "CO",
+          "titulo": "Gekijouban Kimetsu no Yaiba: Mugen-jou-hen Movie 1",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba La Forteresse Infinie Film 1",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Demon Slayer -Kimetsu no Yaiba- The Movie: Infinity Castle",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Demon Slayer -Kimetsu no Yaiba- Il Castello dell'Infinito",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba - Castillo infinito",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba Castelo Infinito",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Истребитель демонов: Бесконечная крепость",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Guardianes de la noche: Kimetsu no Yaiba - La fortaleza infinita",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "劇場版「鬼滅之刃」無限城篇 第一章 猗窩座再襲",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Вбивця Демонів: Замок Нескінченності",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "დემონების მკვეთი ხმალი: უსასრულო ციხესიმაგრე",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "극장판 귀멸의 칼날: 무한성편 제1장 아카자 재래",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "קוטל השדים: קִימֶטְסוּ נוֹ יָאיבָּה - הסרט: טירת האינסוף",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "קוטל השדים: טירת האינסוף",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Demon Slayer Kimetsu no Yaiba - Le film  La Forteresse infinie",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Demon Slayer, Kimetsu no Yaiba - Le film  La Forteresse infinie",
+          "tipo": null
+        },
+        {
+          "pais": "KH",
+          "titulo": "អ្នកប្រហារបិសាច: ប្រាសាទគ្មានទីបញ្ចប់",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "鬼滅之刃劇場版：無限城篇 第一章 猗窩座再襲",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Клинок, рассекающий демонов: Бесконечный замок",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Клинок, рассекающий демонов: Бесконечный замок — Возвращение Акадзы",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "劇場版「鬼滅之刃」無限城篇 第一章 猗窩座再襲",
+          "tipo": "Full Title"
+        },
+        {
+          "pais": "KR",
+          "titulo": "극장판 귀멸의 칼날: 무한성편 제1장",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Gekijô-ban Kimetsu no Yaiba Mugen Jô-hen",
+          "tipo": "romanized"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Gekijo-ban Kimetsu No Yaiba Mugen Jo-hen",
+          "tipo": "romanized"
+        },
+        {
+          "pais": "KR",
+          "titulo": "귀멸의 칼날 극장판: 무한성편",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba, le film : La Forteresse infinie",
+          "tipo": "Titre officiel"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "Demon Slayer: Kimetsu no Yaiba Castillo infinito"
+        },
+        {
+          "pais": "ES",
+          "titulo": "Guardianes de la noche: Kimetsu no Yaiba La fortaleza infinita"
+        }
+      ],
+      "plataformas_ar": [
+        "cr"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 283,
+          "nombre": "Crunchyroll"
+        },
+        {
+          "id": 1968,
+          "nombre": "Crunchyroll Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1311031/watch?locale=AR"
+    },
+    {
+      "id": 94664,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Crunchyroll"
+      ],
+      "plataforma_semilla": "cr",
+      "anio": 2021,
+      "original": "無職転生 ～異世界行ったら本気だす～",
+      "idioma_original": "ja",
+      "es_ES": "Mushoku Tensei Jobless Reincarnation",
+      "es_AR": "Mushoku Tensei Jobless Reincarnation",
+      "es_MX": "Mushoku Tensei Jobless Reincarnation",
+      "alt_AR": [],
+      "alt_MX": [
+        "Mushoku Tensei: Jobless Reincarnation Parte 2",
+        "Reencarnación sin trabajo: lo intentaré seriamente si voy a otro mundo"
+      ],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "无职转生～在异世界认真地活下去～",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "无职转生",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "无职转生2",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "无职转生～到了异世界就拿出真本事",
+          "tipo": null
+        },
+        {
+          "pais": "CZ",
+          "titulo": "Mushoku Tensei: Nezaměstnaný dostává druhou šanci",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Mushoku Tensei, Jobless Reincarnation",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Mushoku Tensei Jobless Reincarnation",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Mushoku Tensei - Jobless Reincarnation",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+          "tipo": "Romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei: Isekai Ittara Honki Dasu 2nd Season",
+          "tipo": "second cours romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "無職転生Ⅱ ～異世界行ったら本気だす～",
+          "tipo": "season 2"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei II: Isekai Ittara Honki Dasu",
+          "tipo": "season 2 romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei Isekai Ittara Honki Dasu",
+          "tipo": "Romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei: Isekai Ittara Honki Dasu - Eris no Goblin Toubatsu",
+          "tipo": "tv special"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei II: Isekai Ittara Honki Dasu - Shugo Jutsushi Fitz",
+          "tipo": "tv special"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei S3",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Mushoku Tensei III",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "무직 전생 ~이세계에 갔으면 최선을 다한다~",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "무직전생 Ⅲ ~이세계에 갔으면 최선을 다한다~",
+          "tipo": "시즌3"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Mushoku Tensei: Jobless Reincarnation Parte 2",
+          "tipo": "second cours"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Reencarnación sin trabajo: lo intentaré seriamente si voy a otro mundo",
+          "tipo": "manga title"
+        },
+        {
+          "pais": "RU",
+          "titulo": "Реинкарнация безработного",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Mushoku Tensei: Перерождение безработного",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Перерождение безработного",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Реинкарнация безработного: История о приключениях в другом мире",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "無職轉生",
+          "tipo": "short title"
+        },
+        {
+          "pais": "TW",
+          "titulo": "無職轉生～到了異世界就拿出真本事",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Реінкарнація безробітного: Історія про пригоди в іншому світі",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Jobless Reincarnation: I Will Seriously Try If I Go to Another World",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Mushoku Tensei",
+          "tipo": "short title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Mushoku Tensei: Jobless Reincarnation Part 2",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Jobless Reincarnation",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Mushoku Tensei: Jobless Reincarnation - Eris the Goblin Slayer",
+          "tipo": "tv special"
+        },
+        {
+          "pais": "US",
+          "titulo": "Mushoku Tensei: Jobless Reincarnation Season 2 - Guardian Fitz",
+          "tipo": "tv special"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Mushoku Tensei Jobless Reincarnation"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Mushoku Tensei Jobless Reincarnation"
+        }
+      ],
+      "plataformas_ar": [
+        "n",
+        "cr"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        },
+        {
+          "id": 283,
+          "nombre": "Crunchyroll"
+        },
+        {
+          "id": 1968,
+          "nombre": "Crunchyroll Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/94664/watch?locale=AR"
+    },
+    {
+      "id": 980431,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Paramount+",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "pp",
+      "anio": 2026,
+      "original": "Avatar Aang: The Last Airbender",
+      "idioma_original": "en",
+      "es_ES": "La leyenda de Aang: El último Airbender",
+      "es_AR": "La leyenda de Aang: El último Airbender",
+      "es_MX": "Avatar: Aang, El último Maestro Aire",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Aang: The Last Airbender",
+          "tipo": "working title"
+        },
+        {
+          "pais": "US",
+          "titulo": "The Legend of Aang: The Last Airbender",
+          "tipo": "working title"
+        },
+        {
+          "pais": "SE",
+          "titulo": "Legenden om Aang: Den siste luftbändaren",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "أفاتار: آخر مسخّر هواء – الأصداء والتداعيات",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ავატარი ლეგენდა აანგზე: ჰაერის უკანასკნელ ბრძანებელზე",
+          "tipo": "ქართული (MyKadri)"
+        },
+        {
+          "pais": "IL",
+          "titulo": "האגדה של אנג: כשף האוויר האחרון",
+          "tipo": "the working title translated to hebrew"
+        },
+        {
+          "pais": "BR",
+          "titulo": "Avatar Aang: O Último Mestre do Ar",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "آنگ: آخرین بادافزار",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "La leyenda de Aang: El último Airbender"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Avatar: Aang, El último Maestro Aire"
+        }
+      ],
+      "plataformas_ar": [
+        "pp"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 531,
+          "nombre": "Paramount Plus"
+        },
+        {
+          "id": 582,
+          "nombre": "Paramount+ Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/980431-avatar-aang-the-last-airbender/watch?locale=AR"
+    },
+    {
+      "id": 113962,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Paramount+",
+        "cobertura Claro video",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "pp",
+      "anio": 2023,
+      "original": "Lioness",
+      "idioma_original": "en",
+      "es_ES": "Operaciones Especiales: Lioness",
+      "es_AR": "Operaciones Especiales: Lioness",
+      "es_MX": "Operativo: Lioness",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "BR",
+          "titulo": "Operação: Lioness",
+          "tipo": "2023–2024"
+        },
+        {
+          "pais": "CN",
+          "titulo": "母狮",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "特别行动：母狮",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Special Ops: Lioness",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Opérations Spéciales : Lioness",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "מבצעים מיוחדים: לביאה",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "شیرزن",
+          "tipo": null
+        },
+        {
+          "pais": "NL",
+          "titulo": "Special Ops Lioness",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "諜戰行動：母獅",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Special Ops: Lioness",
+          "tipo": "2023–2024"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Operaciones Especiales: Lioness"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Operativo: Lioness"
+        }
+      ],
+      "plataformas_ar": [
+        "pp",
+        "cv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 531,
+          "nombre": "Paramount Plus"
+        },
+        {
+          "id": 167,
+          "nombre": "Claro video"
+        },
+        {
+          "id": 1853,
+          "nombre": "Paramount Plus Apple TV channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/113962-lioness/watch?locale=AR"
+    },
+    {
+      "id": 933260,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura MUBI"
+      ],
+      "plataforma_semilla": "mb",
+      "anio": 2024,
+      "original": "The Substance",
+      "idioma_original": "en",
+      "es_ES": "La sustancia",
+      "es_AR": "La sustancia",
+      "es_MX": "La sustancia",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "GE",
+          "titulo": "სუბსტანცია",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "サブスタンス",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Սուբստանցիա",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "La Substance",
+          "tipo": "Titre VFQ"
+        },
+        {
+          "pais": "PL",
+          "titulo": "substancja",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Cevher",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "La sustancia"
+        },
+        {
+          "pais": "MX",
+          "titulo": "La sustancia"
+        }
+      ],
+      "plataformas_ar": [
+        "mb",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 11,
+          "nombre": "MUBI"
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        },
+        {
+          "id": 201,
+          "nombre": "MUBI Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/933260-the-substance/watch?locale=AR"
+    },
+    {
+      "id": 1920,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura MUBI"
+      ],
+      "plataforma_semilla": "mb",
+      "anio": 1990,
+      "original": "Twin Peaks",
+      "idioma_original": "en",
+      "es_ES": "Twin Peaks",
+      "es_AR": "Twin Peaks",
+      "es_MX": "Twin Peaks",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "DE",
+          "titulo": "Das Geheimnis von Twin Peaks",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Mystères à Twin Peaks",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "KR",
+          "titulo": "트윈 픽스",
+          "tipo": null
+        },
+        {
+          "pais": "LT",
+          "titulo": "Tvin Pykso miestelis",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Twin Peaks: A Limited Event Series",
+          "tipo": "season 3"
+        },
+        {
+          "pais": "US",
+          "titulo": "Twin Peaks: The Return",
+          "tipo": "season 3"
+        },
+        {
+          "pais": "US",
+          "titulo": "Northwest Passage",
+          "tipo": "working title"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "Twin Peaks"
+        }
+      ],
+      "plataformas_ar": [
+        "mb"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 11,
+          "nombre": "MUBI"
+        },
+        {
+          "id": 201,
+          "nombre": "MUBI Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/1920-twin-peaks/watch?locale=AR"
+    },
+    {
+      "id": 634649,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Universal+",
+        "cobertura MovistarTV",
+        "cobertura Claro video",
+        "pop"
+      ],
+      "plataforma_semilla": "un",
+      "anio": 2021,
+      "original": "Spider-Man: No Way Home",
+      "idioma_original": "en",
+      "es_ES": "Spider-Man: No Way Home",
+      "es_AR": "Spider-Man: No Way Home",
+      "es_MX": "Spider-Man: Sin camino a casa",
+      "alt_AR": [],
+      "alt_MX": [
+        "El Hombre-Araña: Sin camino a casa"
+      ],
+      "alt_ES": [
+        "Spider-Man. No Way Home"
+      ],
+      "alt_todos": [
+        {
+          "pais": "KR",
+          "titulo": "스파이더맨 3",
+          "tipo": "working title"
+        },
+        {
+          "pais": "IR",
+          "titulo": "مرد عنکبوتی : بدون راه برگشت",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "สไปเดอร์-แมน: โน เวย์ โฮม",
+          "tipo": null
+        },
+        {
+          "pais": "KZ",
+          "titulo": "Өрмекші-адам: Үйге жол жоқ",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "O'rgimchak-odam: Uyga yo'l yo'q",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Spider-Man 3",
+          "tipo": "working title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Spider-Man: No Way Home - The More Fun Stuff Version",
+          "tipo": "extended version"
+        },
+        {
+          "pais": "VN",
+          "titulo": "Spider-Man: Không Còn Nhà",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ობობა-კაცი: შინისკენ გზა არაა",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სპაიდერმენი: შინისკენ გზა არაა",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ადამიანი-ობობა: სახლისკენ გზა არაა0",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ობობა-კაცი: სახლისკენ გზა არაა",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სპაიდერმენი: სახლისკენ გზა არაა",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Örümcek-Adam: Eve Dönüş Yok",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "ספיידר-מן 3: אין דרך הביתה",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "스파이더맨 8: 노 웨이 홈",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "스파이더맨: 노웨이홈",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Սարդ-Մարդը. Տուն ճանապարհ չկա",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "スパイダーマン：ノー・ウェイ・ホーム：2021",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Spider-Man : No Way Home (version longue)",
+          "tipo": "Extended version"
+        },
+        {
+          "pais": "US",
+          "titulo": "Spider-Man 3: No Way Home",
+          "tipo": "working title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Spider Man No Way Home",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Spider-Man. No Way Home",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "蜘蛛俠：不戰無歸",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "蜘蛛侠：英雄无归",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Spider-man 5 No Way Home",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "स्पाइडर मैन: नो वे होम",
+          "tipo": "देवनागरी"
+        },
+        {
+          "pais": "KR",
+          "titulo": "스파이더맨: 노 웨이 홈 '펀 버전'",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "الرجل العنكبوت لاعودة للوطن",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "El Hombre-Araña: Sin camino a casa",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Hörümçək Adam: Evə Dönüş Yoxdur",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Человек-паук 3",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Человек-паук КВМ 3",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "Spider-Man: Sin camino a casa"
+        }
+      ],
+      "plataformas_ar": [
+        "mv",
+        "un"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 1889,
+          "nombre": "Universal+ Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/634649-spider-man-no-way-home/watch?locale=AR"
+    },
+    {
+      "id": 79744,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Universal+",
+        "comedia",
+        "pop"
+      ],
+      "plataforma_semilla": "un",
+      "anio": 2018,
+      "original": "The Rookie",
+      "idioma_original": "en",
+      "es_ES": "The Rookie",
+      "es_AR": "The Rookie",
+      "es_MX": "The Rookie",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "AE",
+          "titulo": "الروكي",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "菜鸟警察",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "The Rookie : Le Flic de Los Angeles",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "Ο Νεοσύλλεκτος",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "عنوان فارسی : تازه‌کار",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ザ・ルーキ",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "더 루키",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Руки",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Новобранец",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Новачок",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "The Rookie"
+        }
+      ],
+      "plataformas_ar": [
+        "n",
+        "p",
+        "un"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        },
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 1889,
+          "nombre": "Universal+ Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/79744-the-rookie/watch?locale=AR"
+    },
+    {
+      "id": 557,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura MovistarTV",
+        "cobertura ViX"
+      ],
+      "plataforma_semilla": "mv",
+      "anio": 2002,
+      "original": "Spider-Man",
+      "idioma_original": "en",
+      "es_ES": "Spider-Man",
+      "es_AR": "Spider-Man",
+      "es_MX": "El hombre araña",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "RS",
+          "titulo": "Spajdermen",
+          "tipo": "romanization"
+        },
+        {
+          "pais": "US",
+          "titulo": "Spider-Man: The Motion Picture",
+          "tipo": "working title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Spiderman",
+          "tipo": "alternative spelling"
+        },
+        {
+          "pais": "BG",
+          "titulo": "Spaĭdŭr-men",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Lyudyna-pavuk",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "蜘蛛侠1 (托比·马奎尔)",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "스파이더 맨",
+          "tipo": null
+        },
+        {
+          "pais": "FI",
+          "titulo": "Hämähäkkimies",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ობობა-კაცი",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სპაიდერმენი",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Spider-Man 1",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Spider-Man I",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "JP",
+          "titulo": "スパイダーマン：2002",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Người Nhện",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Spider Man",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Սարդ Մարդը",
+          "tipo": null
+        },
+        {
+          "pais": "MM",
+          "titulo": "ပင့်ကူလူသား",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Hörümçək-Adam",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "الرجل العنكبوت",
+          "tipo": null
+        },
+        {
+          "pais": "MA",
+          "titulo": "ⵙⴱⴰⵢⴷⵔⵎⴰⵏ",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Homem Aranha / Homem-Aranha",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "El hombre araña"
+        }
+      ],
+      "plataformas_ar": [
+        "p",
+        "mv",
+        "cv",
+        "vx",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 167,
+          "nombre": "Claro video"
+        },
+        {
+          "id": 457,
+          "nombre": "VIX "
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        },
+        {
+          "id": 1866,
+          "nombre": "ViX Premium Amazon Channel"
+        },
+        {
+          "id": 2161,
+          "nombre": "Sony One Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/557-spider-man/watch?locale=AR"
+    },
+    {
+      "id": 2734,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura MovistarTV",
+        "pop",
+        "clasico",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "mv",
+      "anio": 1999,
+      "original": "Law & Order: Special Victims Unit",
+      "idioma_original": "en",
+      "es_ES": "Ley y orden: Unidad de Víctimas Especiales",
+      "es_AR": "Ley y orden: Unidad de Víctimas Especiales",
+      "es_MX": "La Ley y el Orden: Unidad de Víctimas Especiales",
+      "alt_AR": [
+        "La Ley y el Orden: UVE"
+      ],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "AR",
+          "titulo": "La Ley y el Orden: UVE",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Law & Order: Unidade de Vítimas Especiais (SVU)",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Law & Order: Investigação Especial",
+          "tipo": "TV aberta (Band)"
+        },
+        {
+          "pais": "BR",
+          "titulo": "Lei & Ordem: UVE",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Law and Order: New York",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "La  Loi & l'Ordre : USV",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "La  Loi & l'Ordre : Unité spéciale",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "New York : Unité spéciale",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "قانون و نظم: واحد قربانیان ویژه",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "LAW & ORDER： 性犯罪特捜班",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "성범죄수사대: SVU",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "로 앤 오더: 성범죄 전담반",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "로앤오더: 성범죄전담반",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "로앤오더: 성범죄 전담반",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "Law & Order: 성범죄전담반",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "Law & Order: 성범죄 전담반",
+          "tipo": null
+        },
+        {
+          "pais": "LV",
+          "titulo": "Likums un Kārtība: Ņujorka",
+          "tipo": "360TV nosaukums"
+        },
+        {
+          "pais": "US",
+          "titulo": "Law & Order: SVU",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Law and Order Special Victims Unit",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Law and Order SVU",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Ley y orden: Unidad de Víctimas Especiales"
+        },
+        {
+          "pais": "MX",
+          "titulo": "La Ley y el Orden: Unidad de Víctimas Especiales"
+        }
+      ],
+      "plataformas_ar": [
+        "n",
+        "p",
+        "mv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        },
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/2734-law-order-special-victims-unit/watch?locale=AR"
+    },
+    {
+      "id": 278,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura Claro video",
+        "clasico",
+        "pop"
+      ],
+      "plataforma_semilla": "cv",
+      "anio": 1994,
+      "original": "The Shawshank Redemption",
+      "idioma_original": "en",
+      "es_ES": "Cadena perpetua",
+      "es_AR": "Cadena perpetua",
+      "es_MX": "Sueño de fuga",
+      "alt_AR": [
+        "Sueños de Libertad"
+      ],
+      "alt_MX": [
+        "Sueños de Libertad"
+      ],
+      "alt_ES": [
+        "Sueños de Libertad"
+      ],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "肖申克的救赎",
+          "tipo": "Mandarin title"
+        },
+        {
+          "pais": "GE",
+          "titulo": "Gaqceva shoushenkidan",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Şouşenkdən qaçış",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Shoushenkden Qacish",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "Rastgari Dar Shawshank",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "Homot Shel Tikva",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Shôshanku no sora ni",
+          "tipo": null
+        },
+        {
+          "pais": "RS",
+          "titulo": "Бекство из Шошенка",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "쇼생크 탈출",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Les Évadés",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Skazani na Shawshank",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ショーシャンクの空に：1994",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "رستگاری در شاوشنگ",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "쇼생크탈출",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Um Sonho de Liberdade",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "刺激1995",
+          "tipo": null
+        },
+        {
+          "pais": "AR",
+          "titulo": "Sueños de Libertad",
+          "tipo": null
+        },
+        {
+          "pais": "BY",
+          "titulo": "Выкупленне з Шаўшэнку",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "شاوشانك ريديمبشن",
+          "tipo": null
+        },
+        {
+          "pais": "LV",
+          "titulo": "Bēgšana no Saušenkas",
+          "tipo": null
+        },
+        {
+          "pais": "LV",
+          "titulo": "Brīvības cena",
+          "tipo": null
+        },
+        {
+          "pais": "CL",
+          "titulo": "Sueños de Libertad",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "Sueños de Libertad",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Sueños de Libertad",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Cadena perpetua"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Sueño de fuga"
+        }
+      ],
+      "plataformas_ar": [
+        "n",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/278-the-shawshank-redemption/watch?locale=AR"
+    },
+    {
+      "id": 4614,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura Claro video"
+      ],
+      "plataforma_semilla": "cv",
+      "anio": 2003,
+      "original": "NCIS",
+      "idioma_original": "en",
+      "es_ES": "Navy: Investigación criminal",
+      "es_AR": "Navy: Investigación criminal",
+      "es_MX": "NCIS: Criminología Naval",
+      "alt_AR": [],
+      "alt_MX": [
+        "NCIS"
+      ],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "BG",
+          "titulo": "Морски детективи",
+          "tipo": null
+        },
+        {
+          "pais": "CZ",
+          "titulo": "Navy NCIS",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "NCIS or NCIS : Enquêtes spéciales",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "NCIS: Λος Άντζελες",
+          "tipo": null
+        },
+        {
+          "pais": "HU",
+          "titulo": "NCIS - Tengerészeti Helyszínelők",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "NCIS (سرویس تحقیقات جنایی نیروی دریایی آمریکا)",
+          "tipo": null
+        },
+        {
+          "pais": "LT",
+          "titulo": "Specialioji jūrų policijos tarnyba (NCIS)",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "NCIS",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Investigação Criminal",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "เอ็นซีไอเอส: หน่วยสืบสวนแห่งนาวิกโยธิน",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Морська поліція",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "N.C.I.S.",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "NCIS: Naval Criminal Investigative Service",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Navy NCIS: Naval Criminal Investigative Service",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Navy NCIS",
+          "tipo": "title used during season 1"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Navy: Investigación criminal"
+        },
+        {
+          "pais": "MX",
+          "titulo": "NCIS: Criminología Naval"
+        }
+      ],
+      "plataformas_ar": [
+        "p",
+        "pp",
+        "cv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 531,
+          "nombre": "Paramount Plus"
+        },
+        {
+          "id": 167,
+          "nombre": "Claro video"
+        },
+        {
+          "id": 1853,
+          "nombre": "Paramount Plus Apple TV channel"
+        },
+        {
+          "id": 582,
+          "nombre": "Paramount+ Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/4614-ncis/watch?locale=AR"
+    },
+    {
+      "id": 1930,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura ViX"
+      ],
+      "plataforma_semilla": "vx",
+      "anio": 2012,
+      "original": "The Amazing Spider-Man",
+      "idioma_original": "en",
+      "es_ES": "The Amazing Spider-Man",
+      "es_AR": "The Amazing Spider-Man",
+      "es_MX": "El Sorprendente Hombre-Araña",
+      "alt_AR": [],
+      "alt_MX": [
+        "El Sorprendente Hombre Araña"
+      ],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "UZ",
+          "titulo": "Yangi O'rgimchak odam",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "გასაოცარი ობობა-კაცი",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "საოცარი ადამიანი-ობობა",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "საოცარი ობობა-კაცი",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "საოცარი სპაიდერმენი",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "გასაოცარი სპაიდერმენი",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "Amazing Spider-Man 1",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "The Amazing Spider-Man I",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "JP",
+          "titulo": "アメイジング・スパイダーマン：2012",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Người Nhện Siêu Đẳng",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "El Sorprendente Hombre Araña",
+          "tipo": "Traducción al Español Latinoamericano"
+        },
+        {
+          "pais": "CN",
+          "titulo": "超凡蜘蛛侠1 (安德鲁·加菲尔德)",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "წარმოუდგენელი ადამიანი-ობობა",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "الرجل العنكبوت المذهل",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Удивительный Человек-паук",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Невероятный Человек-паук",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "El Sorprendente Hombre-Araña"
+        }
+      ],
+      "plataformas_ar": [
+        "p",
+        "mv",
+        "vx",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 457,
+          "nombre": "VIX "
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        },
+        {
+          "id": 1866,
+          "nombre": "ViX Premium Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1930-the-amazing-spider-man/watch?locale=AR"
+    },
+    {
+      "id": 44953,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura ViX"
+      ],
+      "plataforma_semilla": "vx",
+      "anio": 2013,
+      "original": "El señor de los cielos",
+      "idioma_original": "es",
+      "es_ES": "El señor de los cielos",
+      "es_AR": "El señor de los cielos",
+      "es_MX": "El Señor de los Cielos",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "IR",
+          "titulo": "سلطان آسمان‌ها",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "The Lord of the Skies",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "El Señor de los Cielos"
+        }
+      ],
+      "plataformas_ar": [
+        "vx"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 457,
+          "nombre": "VIX "
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/44953-el-senor-de-los-cielos/watch?locale=AR"
+    },
+    {
+      "id": 205596,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura DIRECTV GO"
+      ],
+      "plataforma_semilla": "dg",
+      "anio": 2014,
+      "original": "The Imitation Game",
+      "idioma_original": "en",
+      "es_ES": "The Imitation Game (Descifrando Enigma)",
+      "es_AR": "The Imitation Game (Descifrando Enigma)",
+      "es_MX": "El código enigma",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "Descifrando Enigma"
+      ],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "模拟游戏",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Імітаційна гра",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Descifrando Enigma",
+          "tipo": null
+        },
+        {
+          "pais": "CO",
+          "titulo": "Código Enigma",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "解碼遊戲",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "解碼遊戲(2015)",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "The Imitation Game",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Իմիտացիոն խաղեր",
+          "tipo": null
+        },
+        {
+          "pais": "FI",
+          "titulo": "Imitationsspelet",
+          "tipo": "TV / Swedish translation"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "The Imitation Game (Descifrando Enigma)"
+        },
+        {
+          "pais": "MX",
+          "titulo": "El código enigma"
+        }
+      ],
+      "plataformas_ar": [
+        "p",
+        "mv",
+        "dg"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 467,
+          "nombre": "DIRECTV GO"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/205596-the-imitation-game/watch?locale=AR"
+    },
+    {
+      "id": 1399,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura DIRECTV GO"
+      ],
+      "plataforma_semilla": "dg",
+      "anio": 2011,
+      "original": "Game of Thrones",
+      "idioma_original": "en",
+      "es_ES": "Juego de tronos",
+      "es_AR": "Juego de tronos",
+      "es_MX": "Game of Thrones",
+      "alt_AR": [
+        "El Juego de Tronos"
+      ],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "AL",
+          "titulo": "Froni i shpatave",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Գահերի Խաղը",
+          "tipo": null
+        },
+        {
+          "pais": "AR",
+          "titulo": "El Juego de Tronos",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Taxt Oyunları",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "A Guerra dos Tronos",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "Le Trône de fer",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "冰与火之歌",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "权力的游戏",
+          "tipo": null
+        },
+        {
+          "pais": "CO",
+          "titulo": "Juego de Tronos",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Game of Thrones - Le trône de fer",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სატახტოთა თამაში",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "Παιχνίδι Του Στέμματος",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "權力遊戲",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "Baziye tajo takht",
+          "tipo": "romanization"
+        },
+        {
+          "pais": "IR",
+          "titulo": "بازی تاج و تخت",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "گیم آف ترونز",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "왕좌의 게임",
+          "tipo": null
+        },
+        {
+          "pais": "LT",
+          "titulo": "Sostų žaidimas",
+          "tipo": null
+        },
+        {
+          "pais": "LV",
+          "titulo": "Troņu spēle",
+          "tipo": null
+        },
+        {
+          "pais": "MK",
+          "titulo": "Игра на тронови",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Gra o Tron",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "A Guerra dos Tronos",
+          "tipo": "Fantasia"
+        },
+        {
+          "pais": "SA",
+          "titulo": "لعبة العروش",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "صراع العروش",
+          "tipo": null
+        },
+        {
+          "pais": "SI",
+          "titulo": "Igra prestolov",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Taht Oyunları",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Гра Престолів",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "A Song of Ice and Fire",
+          "tipo": "working title"
+        },
+        {
+          "pais": "US",
+          "titulo": "GoT",
+          "tipo": "common abbreviation"
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Taxt o'yinlari",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Taxtlar o'yini",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Cuộc Chiến Vương Quyền",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Juego de tronos"
+        }
+      ],
+      "plataformas_ar": [
+        "dg",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 467,
+          "nombre": "DIRECTV GO"
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/1399-game-of-thrones/watch?locale=AR"
+    },
+    {
+      "id": 615173,
+      "tipo": "movie",
+      "motivos": [
+        "cobertura OnDemandKorea"
+      ],
+      "plataforma_semilla": "ok",
+      "anio": 2022,
+      "original": "마녀 2",
+      "idioma_original": "ko",
+      "es_ES": "The Witch: Part 2. The Other One",
+      "es_AR": "The Witch: Part 2. The Other One",
+      "es_MX": "La Bruja: Parte 2 - La Cacería",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "GB",
+          "titulo": "The Witch: Part 2",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "마녀 2",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "Manyeo: 2 Bu. Dareun Hana",
+          "tipo": "revised romanization"
+        },
+        {
+          "pais": "US",
+          "titulo": "The Witch: Part 2. The Collision",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "Manyeo 2",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "마녀(魔女) Part2. The Other One",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "마녀 파트 2. The Other One",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "마녀 Part2. The Other One",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "魔女2：另一个她",
+          "tipo": "中国"
+        },
+        {
+          "pais": "DE",
+          "titulo": "The Witch 2: The Other One",
+          "tipo": null
+        },
+        {
+          "pais": "GB",
+          "titulo": "The Witch: Part 2 - The Other One",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "THE WITCH／魔女 -増殖-",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "魔女2",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "The Witch: Part 2. The Other One"
+        },
+        {
+          "pais": "MX",
+          "titulo": "La Bruja: Parte 2 - La Cacería"
+        }
+      ],
+      "plataformas_ar": [
+        "p"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/615173-2/watch?locale=AR"
+    },
+    {
+      "id": 33238,
+      "tipo": "tv",
+      "motivos": [
+        "cobertura OnDemandKorea"
+      ],
+      "plataforma_semilla": "ok",
+      "anio": 2010,
+      "original": "런닝맨",
+      "idioma_original": "ko",
+      "es_ES": "Running Man",
+      "es_AR": "Running Man",
+      "es_MX": "런닝맨",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "KR",
+          "titulo": "런닝맨",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Running Man"
+        }
+      ],
+      "plataformas_ar": [
+        "ok"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 575,
+          "nombre": "OnDemandKorea"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/33238/watch?locale=AR"
+    },
+    {
+      "id": 454639,
+      "tipo": "movie",
+      "motivos": [
+        "pop",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "Masters of the Universe",
+      "idioma_original": "en",
+      "es_ES": "He-Man y los Masters del Universo",
+      "es_AR": "He-Man y los Masters del Universo",
+      "es_MX": "Amos del Universo",
+      "alt_AR": [],
+      "alt_MX": [
+        "AMOS DEL UNIVERSO",
+        "He-Man y los amos del universo",
+        "He-Man y Los Maestros del Universo"
+      ],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "MOTU",
+          "tipo": "Abbreviation"
+        },
+        {
+          "pais": "TH",
+          "titulo": "นักรบเจ้าจักรวาล",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "AMOS DEL UNIVERSO",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "마스터즈 오브 더 유니버스",
+          "tipo": null
+        },
+        {
+          "pais": "AU",
+          "titulo": "He-Man and the masters of the universe",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "He-Man y los amos del universo",
+          "tipo": null
+        },
+        {
+          "pais": "SV",
+          "titulo": "Amos del Universo",
+          "tipo": null
+        },
+        {
+          "pais": "EG",
+          "titulo": "أسياد الكون",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Mestres do Universo",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "He-Man y Los Maestros del Universo",
+          "tipo": null
+        },
+        {
+          "pais": "CL",
+          "titulo": "He-Man y Los Maestros del Universo",
+          "tipo": null
+        },
+        {
+          "pais": "ID",
+          "titulo": "Penguasa Alam Semesta",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Masters of the Universe",
+          "tipo": "Original"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "He-Man y los Masters del Universo"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Amos del Universo"
+        }
+      ],
+      "plataformas_ar": [
+        "p"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/454639-masters-of-the-universe/watch?locale=AR"
+    },
+    {
+      "id": 238,
+      "tipo": "movie",
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1972,
+      "original": "The Godfather",
+      "idioma_original": "en",
+      "es_ES": "El padrino",
+      "es_AR": "El padrino",
+      "es_MX": "El Padrino",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "NL",
+          "titulo": "De Peetvader",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "教父",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Крёстный отец",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Крестный отец",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Baba",
+          "tipo": null
+        },
+        {
+          "pais": "RS",
+          "titulo": "Кум",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ゴッドファーザー",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Ojciec chrzestny",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "پدرخوانده",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Xaç Atası",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "O Padrinho",
+          "tipo": null
+        },
+        {
+          "pais": "NO",
+          "titulo": "Gudfaren",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Il Padrino",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ნათლიმამა",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "教父",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Կնքահայրը",
+          "tipo": null
+        },
+        {
+          "pais": "AL",
+          "titulo": "Kumbari",
+          "tipo": null
+        },
+        {
+          "pais": "XK",
+          "titulo": "Kumbari",
+          "tipo": null
+        },
+        {
+          "pais": "DK",
+          "titulo": "The Godfather Part I",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "The Godfather The Coppola Restoration",
+          "tipo": "Bluray Restoration"
+        },
+        {
+          "pais": "BR",
+          "titulo": "O Poderoso Chefão",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "العراب",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "대부",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "El padrino"
+        },
+        {
+          "pais": "MX",
+          "titulo": "El Padrino"
+        }
+      ],
+      "plataformas_ar": [
+        "pp",
+        "mv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 531,
+          "nombre": "Paramount Plus"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 582,
+          "nombre": "Paramount+ Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/238-the-godfather/watch?locale=AR"
+    },
+    {
+      "id": 456,
+      "tipo": "tv",
+      "motivos": [
+        "clasico",
+        "comedia",
+        "pop"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1989,
+      "original": "The Simpsons",
+      "idioma_original": "en",
+      "es_ES": "Los Simpson",
+      "es_AR": "Los Simpson",
+      "es_MX": "Los Simpson",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "AL",
+          "titulo": "Simpsonët",
+          "tipo": null
+        },
+        {
+          "pais": "AO",
+          "titulo": "Os Simpson",
+          "tipo": null
+        },
+        {
+          "pais": "EG",
+          "titulo": "Al-Shamshoon",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "הסימפסונים",
+          "tipo": "Kan 11"
+        },
+        {
+          "pais": "KR",
+          "titulo": "심슨네 가족들",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "심슨가족",
+          "tipo": null
+        },
+        {
+          "pais": "MZ",
+          "titulo": "Os Simpson",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Simpsonlar oilasi",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Los Simpson"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Los Simpson"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/456-the-simpsons/watch?locale=AR"
+    },
+    {
+      "id": 1084242,
+      "tipo": "movie",
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2025,
+      "original": "Zootopia 2",
+      "idioma_original": "en",
+      "es_ES": "Zootrópolis 2",
+      "es_AR": "Zootrópolis 2",
+      "es_MX": "Zootopia 2",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "Zootròpolis 2",
+        "Zootrópolis 2"
+      ],
+      "alt_todos": [
+        {
+          "pais": "SA",
+          "titulo": "زوتروبوليس ٢",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "زوتروبوليس 2",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "TH",
+          "titulo": "นครสัตว์มหาสนุก 2",
+          "tipo": null
+        },
+        {
+          "pais": "NO",
+          "titulo": "Zootropolis 2",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "زوتوپیا 2",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Zoomania 2",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "动物乌托邦2",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Zootopie 2",
+          "tipo": null
+        },
+        {
+          "pais": "BY",
+          "titulo": "Звераполіс 2",
+          "tipo": null
+        },
+        {
+          "pais": "BG",
+          "titulo": "Зоотрополис 2",
+          "tipo": null
+        },
+        {
+          "pais": "MK",
+          "titulo": "Зоотропола 2",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Зверополис 2",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Зверополис: Змеиная история",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "UA",
+          "titulo": "Зоотрополіс 2",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "Ζωούπολη 2",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Heyvanlar diyarı 2",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Zootròpolis 2",
+          "tipo": "Catalan title"
+        },
+        {
+          "pais": "ES",
+          "titulo": "Zootrópolis 2",
+          "tipo": "Castilian title"
+        },
+        {
+          "pais": "LV",
+          "titulo": "Zootropole 2",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Zwierzogród 2",
+          "tipo": null
+        },
+        {
+          "pais": "FI",
+          "titulo": "Zootropolis – eläinten kaupunki 2",
+          "tipo": null
+        },
+        {
+          "pais": "IS",
+          "titulo": "Zootropolis",
+          "tipo": null
+        },
+        {
+          "pais": "CZ",
+          "titulo": "Zootropolis: Město zvířat 2",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Կենդանապոլիս 2",
+          "tipo": null
+        },
+        {
+          "pais": "PK",
+          "titulo": "زوٹوپیا 2",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "זוטרופוליס 2",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "झूटोपिया २",
+          "tipo": "Marathi title"
+        },
+        {
+          "pais": "JP",
+          "titulo": "ズートピア2",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "주토피아 2",
+          "tipo": null
+        },
+        {
+          "pais": "TJ",
+          "titulo": "Шаҳри ҳайвонот 2",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Phi Vụ Động Trời 2",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "சூடோபியா 2",
+          "tipo": "Tamil title"
+        },
+        {
+          "pais": "LA",
+          "titulo": "ຊູໂທເປຍ 2",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "優獸大都會 2",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "動物方城市2",
+          "tipo": null
+        },
+        {
+          "pais": "HR",
+          "titulo": "Zootropola 2",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "ზოოტოპია 2",
+          "tipo": null
+        },
+        {
+          "pais": "HU",
+          "titulo": "Zootropolis 2.",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Zootropolis 2",
+          "tipo": null
+        },
+        {
+          "pais": "BE",
+          "titulo": "Zootropolis 2",
+          "tipo": null
+        },
+        {
+          "pais": "GB",
+          "titulo": "Zootropolis 2",
+          "tipo": null
+        },
+        {
+          "pais": "EE",
+          "titulo": "Zootropolis 2",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Zwierzogrod 2",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "动物大都会2",
+          "tipo": null
+        },
+        {
+          "pais": "AL",
+          "titulo": "Zootropoli 2",
+          "tipo": "Theatrical title"
+        },
+        {
+          "pais": "XK",
+          "titulo": "Zootropoli 2",
+          "tipo": "Theatrical title"
+        },
+        {
+          "pais": "BR",
+          "titulo": "Zootopia 2",
+          "tipo": null
+        },
+        {
+          "pais": "RS",
+          "titulo": "Zootropolis 2",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Zootrópolis 2"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1084242-zootopia-2/watch?locale=AR"
+    },
+    {
+      "id": 3022,
+      "tipo": "tv",
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1991,
+      "original": "Rugrats",
+      "idioma_original": "en",
+      "es_ES": "Rugrats: Aventuras en pañales",
+      "es_AR": "Rugrats: Aventuras en pañales",
+      "es_MX": "Rugrats: Aventuras en Pañales",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "IL",
+          "titulo": "ילדודס",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "Rugrats: Aventuras en Pañales"
+        },
+        {
+          "pais": "ES",
+          "titulo": "Rugrats: Aventuras en pañales"
+        }
+      ],
+      "plataformas_ar": [
+        "pp",
+        "mv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 531,
+          "nombre": "Paramount Plus"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 1853,
+          "nombre": "Paramount Plus Apple TV channel"
+        },
+        {
+          "id": 582,
+          "nombre": "Paramount+ Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/3022-rugrats/watch?locale=AR"
+    },
+    {
+      "id": 1481343,
+      "tipo": "movie",
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "The Devil's Mouth",
+      "idioma_original": "en",
+      "es_ES": "La Boca del Diablo",
+      "es_AR": "La Boca del Diablo",
+      "es_MX": "Nunca debimos entrar",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "La boca del diablo"
+      ],
+      "alt_todos": [
+        {
+          "pais": "AZ",
+          "titulo": "Şeytanın Ağzı",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "La boca del diablo",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "Nunca debimos entrar"
+        },
+        {
+          "pais": "ES",
+          "titulo": "La Boca del Diablo"
+        }
+      ],
+      "plataformas_ar": [
+        "p"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1481343-the-devil-s-mouth/watch?locale=AR"
+    },
+    {
+      "id": 291496,
+      "tipo": "tv",
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "이런 엿같은 사랑",
+      "idioma_original": "ko",
+      "es_ES": "Acaramelados",
+      "es_AR": "Acaramelados",
+      "es_MX": "Acaramelados",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "这糟糕的爱情",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "Ireon Yeot Gateun Sarang",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Эта чёртова любовь",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Эта проклятая любовь",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "MX",
+          "titulo": "Acaramelados"
+        },
+        {
+          "pais": "ES",
+          "titulo": "Acaramelados"
+        }
+      ],
+      "plataformas_ar": [
+        "n"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/291496/watch?locale=AR"
+    },
+    {
+      "id": 1314481,
+      "tipo": "movie",
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "The Devil Wears Prada 2",
+      "idioma_original": "en",
+      "es_ES": "El diablo viste de Prada 2",
+      "es_AR": "El diablo viste de Prada 2",
+      "es_MX": "El diablo viste a la moda 2",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "VN",
+          "titulo": "Yêu Nữ Mặc Đồ Prada 2",
+          "tipo": null
+        },
+        {
+          "pais": "AL",
+          "titulo": "Djalli vishet me Prada 2",
+          "tipo": null
+        },
+        {
+          "pais": "XK",
+          "titulo": "Djalli vishet me Prada 2",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Şeytan Marka Giyer 2",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Дьявол носит Prada 2",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Il diavolo veste Prada 2",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "El diablo viste de Prada 2"
+        },
+        {
+          "pais": "MX",
+          "titulo": "El diablo viste a la moda 2"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1314481-the-devil-wears-prada-2/watch?locale=AR"
+    },
+    {
+      "id": 1434,
+      "tipo": "tv",
+      "motivos": [
+        "comedia",
+        "clasico",
+        "comedia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1999,
+      "original": "Family Guy",
+      "idioma_original": "en",
+      "es_ES": "Padre de familia",
+      "es_AR": "Padre de familia",
+      "es_MX": "Padre de Familia",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "GE",
+          "titulo": "გრიფინები",
+          "tipo": null
+        },
+        {
+          "pais": "ID",
+          "titulo": "Keluarga Pria",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "مرد خانه",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "خانواده‌ دوست",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "쇼킹 패밀리",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "쇼킹패밀리",
+          "tipo": null
+        },
+        {
+          "pais": "NP",
+          "titulo": "परिवारको केटा",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Сім’янин",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Ґріффіни",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Padre de familia"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Padre de Familia"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/1434-family-guy/watch?locale=AR"
+    },
+    {
+      "id": 1668364,
+      "tipo": "movie",
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "Deseo",
+      "idioma_original": "es",
+      "es_ES": "Deseo",
+      "es_AR": "Deseo",
+      "es_MX": "Deseo",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "SE",
+          "titulo": "Förbjudna begär",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Arzu",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "n"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1668364-deseo/watch?locale=AR"
+    },
+    {
+      "id": 117217,
+      "tipo": "tv",
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2005,
+      "original": "El conquistador",
+      "idioma_original": "es",
+      "es_ES": "El conquistador",
+      "es_AR": "El conquistador",
+      "es_MX": "El conquistador",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "El conquistador del fin del mundo",
+        "El conquistador del caribe"
+      ],
+      "alt_todos": [
+        {
+          "pais": "ES",
+          "titulo": "El conquistador del fin del mundo",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "El conquistador del caribe",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "p"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 1866,
+          "nombre": "ViX Premium Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/117217-el-conquistador/watch?locale=AR"
+    },
+    {
+      "id": 755898,
+      "tipo": "movie",
+      "motivos": [
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2025,
+      "original": "War of the Worlds",
+      "idioma_original": "en",
+      "es_ES": "La guerra de los mundos",
+      "es_AR": "La guerra de los mundos",
+      "es_MX": "La guerra de los mundos",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "La guerra de los mundos"
+      ],
+      "alt_todos": [
+        {
+          "pais": "FR",
+          "titulo": "La Guerre des mondes",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Война миров",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Krieg der Welten",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "La guerra de los mundos",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "La guerra dei mondi",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "حرب العوالم",
+          "tipo": null
+        },
+        {
+          "pais": "BG",
+          "titulo": "Война на световете",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "世界大战",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "世界大戰",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "우주전쟁",
+          "tipo": null
+        },
+        {
+          "pais": "HR",
+          "titulo": "Rat svjetova",
+          "tipo": null
+        },
+        {
+          "pais": "DK",
+          "titulo": "Klodernes kamp",
+          "tipo": null
+        },
+        {
+          "pais": "FI",
+          "titulo": "Maailmojen sota",
+          "tipo": null
+        },
+        {
+          "pais": "GE",
+          "titulo": "სამყაროთა ომი",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "Ο πόλεμος των κόσμων",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "מלחמת העולמות",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "वॉर ऑफ़ द वर्ल्ड्स",
+          "tipo": "Hindi title"
+        },
+        {
+          "pais": "HU",
+          "titulo": "Világok harca",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ウォー・オブ・ザ・ワールド",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "ವಿಶ್ವ ಯುದ್ಧ",
+          "tipo": "Kannada title"
+        },
+        {
+          "pais": "IN",
+          "titulo": "ലോകയുദ്ധം",
+          "tipo": "Malayalam title"
+        },
+        {
+          "pais": "NL",
+          "titulo": "De oorlog der werelden",
+          "tipo": null
+        },
+        {
+          "pais": "NO",
+          "titulo": "Klodenes kamp",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Wojna światów",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "A Guerra dos Mundos",
+          "tipo": null
+        },
+        {
+          "pais": "SE",
+          "titulo": "Världarnas krig",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "வார் ஆஃப் தி வேர்ல்ட்ஸ்",
+          "tipo": "Tamil title"
+        },
+        {
+          "pais": "CZ",
+          "titulo": "Válka světů",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "สงครามโลก",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Dünyalar Savaşı",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Війна світів",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Cuộc Chiến Giữa Các Thế Giới",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "La guerra de los mundos"
+        },
+        {
+          "pais": "MX",
+          "titulo": "La guerra de los mundos"
+        }
+      ],
+      "plataformas_ar": [
+        "p"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/755898-war-of-the-worlds/watch?locale=AR"
+    },
+    {
+      "id": 94997,
+      "tipo": "tv",
+      "motivos": [
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2022,
+      "original": "House of the Dragon",
+      "idioma_original": "en",
+      "es_ES": "La casa del dragón",
+      "es_AR": "La casa del dragón",
+      "es_MX": "La casa del dragón",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "BG",
+          "titulo": "Дом дракона",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "La Maison du Dragon / House of the Dragon",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "龙之家族",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Maison du dragon",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "龍之家族",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "משחקי הכס: בית הדרקון",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "하우스 오브 드래곤",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "하우스 오브 더 드래곤",
+          "tipo": null
+        },
+        {
+          "pais": "KZ",
+          "titulo": "Айдаһар әулеті",
+          "tipo": null
+        },
+        {
+          "pais": "MA",
+          "titulo": "ⵜⴰⴷⴷⴰⵔⵜ ⵏ ⵉⴷⵖⴰⵖⵏ",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "A Guerra dos Tronos: House of the Dragon",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Casa do Dragão",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "آل التنين",
+          "tipo": "ترجمة العنوان الأصلي"
+        },
+        {
+          "pais": "SA",
+          "titulo": "هاوس أوف ذا دراغون",
+          "tipo": "عوربة العنوان الأصلي"
+        },
+        {
+          "pais": "UA",
+          "titulo": "Дім Дракона",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Game of Thrones: House of the Dragon",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "HOTD",
+          "tipo": "abbreviation"
+        },
+        {
+          "pais": "US",
+          "titulo": "The House That Dragons Built",
+          "tipo": "behind-the-scenes specials"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "La casa del dragón"
+        },
+        {
+          "pais": "MX",
+          "titulo": "La casa del dragón"
+        }
+      ],
+      "plataformas_ar": [
+        "mv",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/94997-house-of-the-dragon/watch?locale=AR"
+    },
+    {
+      "id": 603,
+      "tipo": "movie",
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1999,
+      "original": "The Matrix",
+      "idioma_original": "en",
+      "es_ES": "Matrix",
+      "es_AR": "Matrix",
+      "es_MX": "Matrix",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "TH",
+          "titulo": "เพาะพันธุ์มนุษย์เหนือโลก",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "Μάτριξ",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "매트릭스",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "廿二世紀殺人網絡",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "廿二世紀殺人網絡",
+          "tipo": null
+        },
+        {
+          "pais": "HK",
+          "titulo": "22世紀網絡",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "廿二世紀殺人網絡",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "駭客任務",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Մատրիցա",
+          "tipo": null
+        },
+        {
+          "pais": "BY",
+          "titulo": "Матрыца",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Matrix"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Matrix"
+        }
+      ],
+      "plataformas_ar": [
+        "mv",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/603-the-matrix/watch?locale=AR"
+    },
+    {
+      "id": 549,
+      "tipo": "tv",
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1990,
+      "original": "Law & Order",
+      "idioma_original": "en",
+      "es_ES": "Ley y orden",
+      "es_AR": "Ley y orden",
+      "es_MX": "La Ley y el Orden",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "BR",
+          "titulo": "Law & Order: Lei e Ordem",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "La loi & l'ordre",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "La loi et l'ordre : Police judiciaire",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "New York District",
+          "tipo": "seasons 1–5 title"
+        },
+        {
+          "pais": "GR",
+          "titulo": "Νόμος και Τάξη",
+          "tipo": "alternative spelling"
+        },
+        {
+          "pais": "IR",
+          "titulo": "قانون و حکم",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "نظم و قانون",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "قانون و نظم",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Law & Order - I due volti della giustizia",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ロー&オーダー",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "ロー・アンド・オーダー",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "LAW & ORDER 新章",
+          "tipo": "revival"
+        },
+        {
+          "pais": "KR",
+          "titulo": "로앤오더 리부트",
+          "tipo": "revival"
+        },
+        {
+          "pais": "KR",
+          "titulo": "로 앤 오더 리부트",
+          "tipo": "revival"
+        },
+        {
+          "pais": "PL",
+          "titulo": "W obronie prawa",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Prawo i bezprawie",
+          "tipo": null
+        },
+        {
+          "pais": "SK",
+          "titulo": "Zákon a poriadok: Špeciálna jednotka",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Law and Order",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Ley y orden"
+        },
+        {
+          "pais": "MX",
+          "titulo": "La Ley y el Orden"
+        }
+      ],
+      "plataformas_ar": [
+        "p",
+        "un"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 1889,
+          "nombre": "Universal+ Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/549-law-order/watch?locale=AR"
+    },
+    {
+      "id": 1125257,
+      "tipo": "movie",
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2025,
+      "original": "Freakier Friday",
+      "idioma_original": "en",
+      "es_ES": "Ponte en mi lugar de nuevo",
+      "es_AR": "Ponte en mi lugar de nuevo",
+      "es_MX": "Otro viernes de locos",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Freaky Friday 2",
+          "tipo": "working title"
+        },
+        {
+          "pais": "IL",
+          "titulo": "שישי הפוך 2",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Sexta-Feira Muito Louca 2",
+          "tipo": null
+        },
+        {
+          "pais": "CS",
+          "titulo": "Уврнути петак 2",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Shuffle Friday",
+          "tipo": null
+        },
+        {
+          "pais": "HU",
+          "titulo": "Nem férek a bőrödbe 2.",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "CN",
+          "titulo": "错位星期五",
+          "tipo": "Disney"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Ponte en mi lugar de nuevo"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Otro viernes de locos"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1125257-freakier-friday/watch?locale=AR"
+    },
+    {
+      "id": 607,
+      "tipo": "tv",
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1998,
+      "original": "The Powerpuff Girls",
+      "idioma_original": "en",
+      "es_ES": "Las Supernenas",
+      "es_AR": "Las Supernenas",
+      "es_MX": "Las chicas superpoderosas",
+      "alt_AR": [],
+      "alt_MX": [
+        "Las Chicas Superpoderosas"
+      ],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "DK",
+          "titulo": "Powerpuff Pigerne",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Les Supers Nanas",
+          "tipo": "plural form for Super"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Las Chicas Superpoderosas",
+          "tipo": null
+        },
+        {
+          "pais": "NO",
+          "titulo": "Powerpuff-jentene",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Суперкрошки",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Las Supernenas"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Las chicas superpoderosas"
+        }
+      ],
+      "plataformas_ar": [
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/607-the-powerpuff-girls/watch?locale=AR"
+    },
+    {
+      "id": 1510795,
+      "tipo": "movie",
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "Shake, Rattle & Roll: Evil Origins",
+      "idioma_original": "tl",
+      "es_ES": "Shake, Rattle & Roll 17: El origen del mal",
+      "es_AR": "Shake, Rattle & Roll 17: El origen del mal",
+      "es_MX": "Shake, Rattle & Roll: Evil Origins",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Shake, Rattle & Roll 17: El origen del mal"
+        }
+      ],
+      "plataformas_ar": [
+        "n"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1510795-shake-rattle-roll-evil-origins/watch?locale=AR"
+    },
+    {
+      "id": 259140,
+      "tipo": "tv",
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2024,
+      "original": "らんま1/2",
+      "idioma_original": "ja",
+      "es_ES": "Ranma1/2",
+      "es_AR": "Ranma1/2",
+      "es_MX": "Ranma1/2",
+      "alt_AR": [
+        "Ranma ½"
+      ],
+      "alt_MX": [
+        "Ranma ½"
+      ],
+      "alt_ES": [
+        "Ranma ½"
+      ],
+      "alt_todos": [
+        {
+          "pais": "AR",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "乱马½",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "Nekomoe Kissaten Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "乱马1/2",
+          "tipo": null
+        },
+        {
+          "pais": "CO",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "EC",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Ranma ½ (2024)",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Ranma 1-2 (2024)",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Ranma 1-2",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Ranma ½ (2024)",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "らんま1／2",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Ranma Nibun-no-Ichi",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "らんま½ (2024)",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "란마12",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "란마½",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "란마1／2",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "란마 1/2",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "란마 ½",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "란마 1／2",
+          "tipo": null
+        },
+        {
+          "pais": "MX",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Ranma 1/2",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Ranma ½ (2024)",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Ranma 1/2 (2024)",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Ранма 1/2",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Ранма 1/2: Ремейк",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "รันม่า ½",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "รันม่า 1/2",
+          "tipo": null
+        },
+        {
+          "pais": "TH",
+          "titulo": "รันม่าไอ้หนุ่มกังฟู",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "亂馬 1/2",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "亂馬½",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Ranma ½",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Ranma 1/2",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Ranma Half",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Ranma One-Half",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Ranma One Half",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Ranma1/2"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Ranma1/2"
+        }
+      ],
+      "plataformas_ar": [
+        "n"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/259140-1-2/watch?locale=AR"
+    },
+    {
+      "id": 1493400,
+      "tipo": "movie",
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "Camp Rock 3",
+      "idioma_original": "en",
+      "es_ES": "Camp Rock 3",
+      "es_AR": "Camp Rock 3",
+      "es_MX": "Camp Rock 3",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Rock the Boat",
+          "tipo": "Production Title"
+        },
+        {
+          "pais": "TR",
+          "titulo": "Rock Kampı 3",
+          "tipo": "Transliteration"
+        },
+        {
+          "pais": "RU",
+          "titulo": "Camp Rock 3: Рок в летнем лагере 3",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1493400-camp-rock-3/watch?locale=AR"
+    },
+    {
+      "id": 60625,
+      "tipo": "tv",
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2013,
+      "original": "Rick and Morty",
+      "idioma_original": "en",
+      "es_ES": "Rick y Morty",
+      "es_AR": "Rick y Morty",
+      "es_MX": "Rick y Morty",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "BR",
+          "titulo": "Rick e Morty",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "瑞克和莫蒂",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "瑞克与莫蒂",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Rick et Morty",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "ריק ומורטי",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "ریک و مورتی",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "ریک اند مورتی",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Rick e Morty",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "リック・アンド・モーティ",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "릭 앤 모티",
+          "tipo": null
+        },
+        {
+          "pais": "MN",
+          "titulo": "Рик Морти хоёр",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Рік і Морті",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Vindicators 2",
+          "tipo": "webisodes"
+        },
+        {
+          "pais": "US",
+          "titulo": "Vindicators 2: Last Stand Between Earth and Doom",
+          "tipo": "webisodes"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Rick y Morty"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Rick y Morty"
+        }
+      ],
+      "plataformas_ar": [
+        "n",
+        "m"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        },
+        {
+          "id": 1899,
+          "nombre": "HBO Max"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/60625-rick-and-morty/watch?locale=AR"
+    },
+    {
+      "id": 1621552,
+      "tipo": "movie",
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "La captura",
+      "idioma_original": "es",
+      "es_ES": "La captura",
+      "es_AR": "La captura",
+      "es_MX": "La captura",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "TR",
+          "titulo": "El Chapo ile Yüz Yüze",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "n"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1621552-la-captura/watch?locale=AR"
+    },
+    {
+      "id": 12513,
+      "tipo": "tv",
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2001,
+      "original": "Operación triunfo",
+      "idioma_original": "es",
+      "es_ES": "Operación triunfo",
+      "es_AR": "Operación triunfo",
+      "es_MX": "Operación triunfo",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "OT"
+      ],
+      "alt_todos": [
+        {
+          "pais": "ES",
+          "titulo": "OT",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "p"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/12513-operacion-triunfo/watch?locale=AR"
+    },
+    {
+      "id": 83533,
+      "tipo": "movie",
+      "motivos": [
+        "pop"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2025,
+      "original": "Avatar: Fire and Ash",
+      "idioma_original": "en",
+      "es_ES": "Avatar: Fuego y ceniza",
+      "es_AR": "Avatar: Fuego y ceniza",
+      "es_MX": "Avatar: Fuego y ceniza",
+      "alt_AR": [],
+      "alt_MX": [
+        "Avatar: fuego y cenizas"
+      ],
+      "alt_ES": [
+        "Avatar: Foc i cendra",
+        "Avatar: fuego y ceniza"
+      ],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Avatar 3",
+          "tipo": "working title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Avatar: The Seed Bearer",
+          "tipo": "rumored working title"
+        },
+        {
+          "pais": "KR",
+          "titulo": "아바타 3",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "CN",
+          "titulo": "阿凡达3：带种者",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "CN",
+          "titulo": "阿凡达3",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "TW",
+          "titulo": "阿凡達：火與灰燼",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "أفاتار: النار والرماد",
+          "tipo": null
+        },
+        {
+          "pais": "SA",
+          "titulo": "أفاتار 3",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "IL",
+          "titulo": "אווטאר 3",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "BR",
+          "titulo": "Avatar: Fogo e Cinzas",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Avatar: Od və Kül",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Аватар 3",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "TH",
+          "titulo": "อวตาร: อัคนีและธุลีดิน",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Avatar: Feuer und Asche",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Avatar : De feu et de cendres",
+          "tipo": null
+        },
+        {
+          "pais": "CA",
+          "titulo": "Avatar : Feu et cendre",
+          "tipo": "Québec title"
+        },
+        {
+          "pais": "BG",
+          "titulo": "Аватар: Огън и пепел",
+          "tipo": null
+        },
+        {
+          "pais": "RS",
+          "titulo": "Аватар: Ватра и пепео",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Аватар: Вогонь і попіл",
+          "tipo": null
+        },
+        {
+          "pais": "GR",
+          "titulo": "Avatar: Φωτιά και Στάχτη",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Avatar: Foc i cendra",
+          "tipo": "Catalan title"
+        },
+        {
+          "pais": "ES",
+          "titulo": "Avatar: fuego y ceniza",
+          "tipo": "Castilian title"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Avatar: fuego y cenizas",
+          "tipo": null
+        },
+        {
+          "pais": "HR",
+          "titulo": "Avatar: Vatra i pepeo",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Avatar - Fuoco e Cenere",
+          "tipo": null
+        },
+        {
+          "pais": "RO",
+          "titulo": "Avatar: Foc și cenușă",
+          "tipo": null
+        },
+        {
+          "pais": "LV",
+          "titulo": "Avatars: Uguns un pelni",
+          "tipo": null
+        },
+        {
+          "pais": "SK",
+          "titulo": "Avatar: Oheň a popol",
+          "tipo": null
+        },
+        {
+          "pais": "HU",
+          "titulo": "Avatar: Tűz és hamu",
+          "tipo": null
+        },
+        {
+          "pais": "TR",
+          "titulo": "Avatar: Ateş ve Kül",
+          "tipo": null
+        },
+        {
+          "pais": "CZ",
+          "titulo": "Avatar: Oheň a popel",
+          "tipo": null
+        },
+        {
+          "pais": "PL",
+          "titulo": "Avatar: Ogień i popiół",
+          "tipo": null
+        },
+        {
+          "pais": "AM",
+          "titulo": "Ավատար 3",
+          "tipo": null
+        },
+        {
+          "pais": "PK",
+          "titulo": "اوتار: فائر اینڈ ایش",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "آواتار: آتش و خاکستر",
+          "tipo": null
+        },
+        {
+          "pais": "IQ",
+          "titulo": "ئەڤەتار: ئاگر و خۆڵەمێش",
+          "tipo": "Sorani Kurdish title"
+        },
+        {
+          "pais": "IL",
+          "titulo": "אווטאר: אש ואפר",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "アバター：ファイヤー・アンド・アッシュ",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "아바타: 불과 재",
+          "tipo": null
+        },
+        {
+          "pais": "KG",
+          "titulo": "Аватар: От жана күл",
+          "tipo": null
+        },
+        {
+          "pais": "UZ",
+          "titulo": "Avatar: Olov va kul",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Avatar: Lửa và tro tàn",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "अवतार: फ़ायर ऐंड ऐश",
+          "tipo": "Hindi title"
+        },
+        {
+          "pais": "IN",
+          "titulo": "अवतार 3",
+          "tipo": "alternative Hindi title"
+        },
+        {
+          "pais": "BD",
+          "titulo": "অ্যাভাটার: ফায়ার অ্যান্ড অ্যাশ",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "ಅವತಾರ್: ಫೈರ್ ಅಂಡ್ ಯಾಶ್",
+          "tipo": "Kannada title"
+        },
+        {
+          "pais": "IN",
+          "titulo": "അവായർ: ഫയർ ആൻഡ്ആഷ്",
+          "tipo": "Malayalam title"
+        },
+        {
+          "pais": "SI",
+          "titulo": "Avatar: Ogenj in pepel",
+          "tipo": null
+        },
+        {
+          "pais": "IN",
+          "titulo": "அவதார்: ஃபயர் அண்ட் ஆஷ்",
+          "tipo": "Tamil title"
+        },
+        {
+          "pais": "IN",
+          "titulo": "అవతార్: ఫైర్ అండ్ యాష్",
+          "tipo": "Telugu title"
+        },
+        {
+          "pais": "US",
+          "titulo": "Avatar Fire and Ash",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "FR",
+          "titulo": "Avatar (3) ː de feu et de cendres",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Avatar 3 - De Feu et de Cendres",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Avatar De feu et de cendres",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Avatar - De feu et de cendres",
+          "tipo": null
+        },
+        {
+          "pais": "FR",
+          "titulo": "Avatar, De feu et de cendres",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Avatar: Fuoco e Cenere",
+          "tipo": null
+        },
+        {
+          "pais": "IT",
+          "titulo": "Avatar 3",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Avatar 3 - Fire and Ash",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Avatar - Fire and Ash",
+          "tipo": "alternative title"
+        },
+        {
+          "pais": "DE",
+          "titulo": "Avatar - Feuer und Asche",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Avatar: Fuego y ceniza"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Avatar: Fuego y ceniza"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/83533-avatar-fire-and-ash/watch?locale=AR"
+    },
+    {
+      "id": 862,
+      "tipo": "movie",
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1995,
+      "original": "Toy Story",
+      "idioma_original": "en",
+      "es_ES": "Toy Story",
+      "es_AR": "Toy Story",
+      "es_MX": "Toy Story",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "FI",
+          "titulo": "Toy Story - leksaksliv",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "Tzatzooa Shel Sippur",
+          "tipo": null
+        },
+        {
+          "pais": "LT",
+          "titulo": "Zaislu istorija",
+          "tipo": null
+        },
+        {
+          "pais": "RS",
+          "titulo": "Priča o igračkama",
+          "tipo": null
+        },
+        {
+          "pais": "SI",
+          "titulo": "Svet igrac",
+          "tipo": null
+        },
+        {
+          "pais": "SK",
+          "titulo": "Toy story - Boj hraciek",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "Cau Chuyen Do Choi",
+          "tipo": null
+        },
+        {
+          "pais": "CZ",
+          "titulo": "Toy story: Príbeh hracek",
+          "tipo": null
+        },
+        {
+          "pais": "AZ",
+          "titulo": "Oyuncaq Hekayəsi",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "玩具總動員",
+          "tipo": null
+        },
+        {
+          "pais": "IS",
+          "titulo": "Leikfangasaga",
+          "tipo": "Title"
+        },
+        {
+          "pais": "BY",
+          "titulo": "Гісторыя цацак",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "反斗奇兵",
+          "tipo": null
+        },
+        {
+          "pais": "BR",
+          "titulo": "Toy Story: Lá Ele",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "История игрушек",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Toy Story"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Toy Story"
+        }
+      ],
+      "plataformas_ar": [
+        "d"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 337,
+          "nombre": "Disney Plus"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/862-toy-story/watch?locale=AR"
+    },
+    {
+      "id": 764,
+      "tipo": "tv",
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null,
+      "anio": 1997,
+      "original": "Midsomer Murders",
+      "idioma_original": "en",
+      "es_ES": "Los asesinatos de Midsomer",
+      "es_AR": "Los asesinatos de Midsomer",
+      "es_MX": "Los asesinatos de Midsomer",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "骇人命案事件簿",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Inspector Barnaby",
+          "tipo": "Krimi"
+        },
+        {
+          "pais": "HU",
+          "titulo": "A Midsomer gyilkosságok",
+          "tipo": null
+        },
+        {
+          "pais": "IR",
+          "titulo": "قتل‌های میدسامر",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Убийства в Мидсомере",
+          "tipo": "Alternative"
+        },
+        {
+          "pais": "UA",
+          "titulo": "Суто англійські вбивства",
+          "tipo": "Переклад російської локалізації"
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Los asesinatos de Midsomer"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Los asesinatos de Midsomer"
+        }
+      ],
+      "plataformas_ar": [
+        "p",
+        "mv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/764-midsomer-murders/watch?locale=AR"
+    },
+    {
+      "id": 1007757,
+      "tipo": "movie",
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2026,
+      "original": "Swapped",
+      "idioma_original": "en",
+      "es_ES": "Intercambiados",
+      "es_AR": "Intercambiados",
+      "es_MX": "Intercambiados",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [
+        "Intercambiados"
+      ],
+      "alt_todos": [
+        {
+          "pais": "US",
+          "titulo": "Pookoo",
+          "tipo": "working title"
+        },
+        {
+          "pais": "SE",
+          "titulo": "I fel kropp",
+          "tipo": null
+        },
+        {
+          "pais": "NO",
+          "titulo": "Feil Fjær",
+          "tipo": null
+        },
+        {
+          "pais": "NO",
+          "titulo": "Feil kropp",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Обмен Телами",
+          "tipo": null
+        },
+        {
+          "pais": "UA",
+          "titulo": "Поміняно Місцями",
+          "tipo": null
+        },
+        {
+          "pais": "DE",
+          "titulo": "Ausgetauscht",
+          "tipo": null
+        },
+        {
+          "pais": "PT",
+          "titulo": "Trocados",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Intercambiados",
+          "tipo": null
+        },
+        {
+          "pais": "ID",
+          "titulo": "Tertukar",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "Intercambiados"
+        },
+        {
+          "pais": "MX",
+          "titulo": "Intercambiados"
+        }
+      ],
+      "plataformas_ar": [
+        "n"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 8,
+          "nombre": "Netflix"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/movie/1007757-swapped/watch?locale=AR"
+    },
+    {
+      "id": 63893,
+      "tipo": "tv",
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2013,
+      "original": "Peter Rabbit",
+      "idioma_original": "en",
+      "es_ES": "Peter Rabbit",
+      "es_AR": "Peter Rabbit",
+      "es_MX": "Peter Rabbit",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "pp",
+        "cv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 531,
+          "nombre": "Paramount Plus"
+        },
+        {
+          "id": 167,
+          "nombre": "Claro video"
+        },
+        {
+          "id": 1853,
+          "nombre": "Paramount Plus Apple TV channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/63893-peter-rabbit/watch?locale=AR"
+    },
+    {
+      "id": 223564,
+      "tipo": "tv",
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2023,
+      "original": "君のことが大大大大大好きな100人の彼女",
+      "idioma_original": "ja",
+      "es_ES": "The 100 Girlfriends Who Really, Really, Really, Really, REALLY Love You",
+      "es_AR": "The 100 Girlfriends Who Really, Really, Really, Really, REALLY Love You",
+      "es_MX": "The 100 Girlfriends Who Really, Really, Really, Really, Really Love You",
+      "alt_AR": [
+        "Mis 100 novias que me quieren mucho mucho"
+      ],
+      "alt_MX": [],
+      "alt_ES": [
+        "Mis 100 novias que me quieren mogollón mogollón"
+      ],
+      "alt_todos": [
+        {
+          "pais": "AR",
+          "titulo": "Mis 100 novias que me quieren mucho mucho",
+          "tipo": null
+        },
+        {
+          "pais": "CL",
+          "titulo": "Las 100 novias que de verdad, te Aman",
+          "tipo": null
+        },
+        {
+          "pais": "CN",
+          "titulo": "超超超超超喜欢你的100个女朋友",
+          "tipo": null
+        },
+        {
+          "pais": "ES",
+          "titulo": "Mis 100 novias que me quieren mogollón mogollón",
+          "tipo": null
+        },
+        {
+          "pais": "ID",
+          "titulo": "100 Pacar yang Sungguh Sangat Amat Benar-benar Mencintaimu",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "100 החברות שבאמת, באמת, באמת, באמת, באמת, באמת אוהבות אותך",
+          "tipo": null
+        },
+        {
+          "pais": "JP",
+          "titulo": "Kimi no Koto ga Dai Dai Dai Dai Daisuki na 100 Nin no Kanojo",
+          "tipo": "romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Hyakkano",
+          "tipo": "romaji short title"
+        },
+        {
+          "pais": "JP",
+          "titulo": "Kimi no Koto ga Daidaidaidaidaisuki na 100-nin no Kanojo",
+          "tipo": "romaji"
+        },
+        {
+          "pais": "JP",
+          "titulo": "君のことが大大大大大好きな100人の彼女(第3期)",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "너를 너무너무너무너무 좋아하는 100명의 그녀 2기",
+          "tipo": null
+        },
+        {
+          "pais": "RU",
+          "titulo": "Сто девушек, которые очень-очень-очень-очень-очень сильно тебя любят",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "The 100 Girlfriends Who Really Really Really Really REALLY Love You",
+          "tipo": null
+        },
+        {
+          "pais": "VN",
+          "titulo": "100 cô bạn gái yêu bạn rất, rất, rất, rất, rất nhiều",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "The 100 Girlfriends Who Really, Really, Really, Really, REALLY Love You"
+        },
+        {
+          "pais": "MX",
+          "titulo": "The 100 Girlfriends Who Really, Really, Really, Really, Really Love You"
+        }
+      ],
+      "plataformas_ar": [
+        "cr"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 283,
+          "nombre": "Crunchyroll"
+        },
+        {
+          "id": 1968,
+          "nombre": "Crunchyroll Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/223564-100/watch?locale=AR"
+    },
+    {
+      "id": 97546,
+      "tipo": "tv",
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2020,
+      "original": "Ted Lasso",
+      "idioma_original": "en",
+      "es_ES": "Ted Lasso",
+      "es_AR": "Ted Lasso",
+      "es_MX": "Ted Lasso",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CN",
+          "titulo": "足球教练",
+          "tipo": null
+        },
+        {
+          "pais": "IL",
+          "titulo": "טד לאסו",
+          "tipo": null
+        },
+        {
+          "pais": "KR",
+          "titulo": "테드 래소",
+          "tipo": null
+        },
+        {
+          "pais": "TW",
+          "titulo": "泰德拉索",
+          "tipo": null
+        },
+        {
+          "pais": "US",
+          "titulo": "Ted Lasso: The Richmond Way",
+          "tipo": "seasons 1-3 Blu-ray title"
+        }
+      ],
+      "traducciones_es": [],
+      "plataformas_ar": [
+        "p",
+        "at"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 350,
+          "nombre": "Apple TV"
+        },
+        {
+          "id": 2243,
+          "nombre": "Apple TV Amazon Channel"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/97546-ted-lasso/watch?locale=AR"
+    },
+    {
+      "id": 31268,
+      "tipo": "tv",
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null,
+      "anio": 2009,
+      "original": "El Capo",
+      "idioma_original": "es",
+      "es_ES": "El Capo",
+      "es_AR": "El Capo",
+      "es_MX": "El Capo",
+      "alt_AR": [],
+      "alt_MX": [],
+      "alt_ES": [],
+      "alt_todos": [
+        {
+          "pais": "CO",
+          "titulo": "El Capo 2, Inmortal",
+          "tipo": null
+        }
+      ],
+      "traducciones_es": [
+        {
+          "pais": "ES",
+          "titulo": "El Capo"
+        }
+      ],
+      "plataformas_ar": [
+        "p",
+        "mv"
+      ],
+      "proveedores_crudos": [
+        {
+          "id": 119,
+          "nombre": "Amazon Prime Video"
+        },
+        {
+          "id": 339,
+          "nombre": "MovistarTV"
+        }
+      ],
+      "link_tmdb": "https://www.themoviedb.org/tv/31268-el-capo/watch?locale=AR"
+    }
+  ]
+}

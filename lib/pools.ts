@@ -1,10 +1,10 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
-import { cached, cachedLoc, TTL } from "./cache";
+import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveCombinadaCache, clavePoolCache } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, repararLote } from "./idioma";
+import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, clavePorId, repararLote } from "./idioma";
 import { hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode } from "./types";
@@ -145,18 +145,26 @@ async function pool(
 ): Promise<Candidato[]> {
   const ids = codesToTmdbIds([plataforma]);
   if (!ids.length) return [];
+  // `fallo` sale de la clausura para llegar al predicado de `cachedLocIf`: si
+  // el respaldo falló, el usuario recibe la página igual pero NO se guarda —
+  // si no, una base sin reparar quedaría congelada bajo una clave `es-MX+f`
+  // hasta 30 h, y el próximo request no volvería a intentar.
+  let fallo = false;
   const traer = async () => {
     const r = await discover(tipo, { ...receta.params, providers: ids, page: pagina });
-    return repararLote(
+    const rep = await repararLote(
       r.results.map(recortar),
       async () => (await discover(tipo, {
         ...receta.params, providers: ids, page: pagina,
         extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
       })).results,
       `pool ${tipo}/${plataforma}/p${pagina}`,
+      { clave: clavePorId },
     );
+    fallo = rep.fallo;
+    return rep.items;
   };
-  return cachedLoc(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer);
+  return cachedLocIf(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer, () => !fallo);
 }
 
 // --- Consulta combinada, paginada por TMDB -----------------------------------
@@ -219,18 +227,27 @@ export async function candidatosCombinados(opts: {
   const ids = codesToTmdbIds(opts.providers);
   if (!ids.length) return { candidatos: [], totalPaginas: 0, total: 0 };
   const pagina = Math.max(1, opts.pagina);
-  return cachedLoc(claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool, async () => {
-    const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
-    const candidatos = await repararLote(
-      r.results.map(recortar),
-      async () => (await discover(opts.tipo, {
-        ...opts.receta.params, providers: ids, page: pagina,
-        extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
-      })).results,
-      `combinada ${opts.tipo}/p${pagina}`,
-    );
-    return { candidatos, totalPaginas: r.total_pages, total: r.total_results };
-  });
+  let fallo = false;
+  return cachedLocIf(
+    claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool,
+    async () => {
+      const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
+      const rep = await repararLote(
+        r.results.map(recortar),
+        async () => (await discover(opts.tipo, {
+          ...opts.receta.params, providers: ids, page: pagina,
+          extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+        })).results,
+        `combinada ${opts.tipo}/p${pagina}`,
+        { clave: clavePorId },
+      );
+      fallo = rep.fallo;
+      // Los metadatos de paginación se arman DESPUÉS de reparar: un fallo del
+      // respaldo no puede perder `totalPaginas` ni `total`.
+      return { candidatos: rep.items, totalPaginas: r.total_pages, total: r.total_results };
+    },
+    () => !fallo,
+  );
 }
 
 // Candidatos de varias plataformas y varias páginas, unidos.

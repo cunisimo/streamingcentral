@@ -16,10 +16,11 @@ import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
 import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, type Category } from "./categories";
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
-import { cached, cachedLoc, TTL, dailySeed, pickDaily } from "./cache";
-import { claveCard, clavePeoplePopular } from "./claves";
+import { cached, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
+import { claveCard, clavePeoplePopular, claveSearch } from "./claves";
 import {
-  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, repararLote, repararUno,
+  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK,
+  claveMixta, clavePorId, repararLote, repararUno,
 } from "./idioma";
 import { ayudasDeBusqueda } from "./consultas-verificadas";
 import {
@@ -196,16 +197,16 @@ export async function listByCategory(opts: {
   const [res, resAlt] = await Promise.all([
     discover(opts.tipo, paramsBase).then(async (r) => ({
       ...r,
-      results: await repararLote(r.results, async () => (await discover(opts.tipo, {
+      results: (await repararLote(r.results, async () => (await discover(opts.tipo, {
         ...paramsBase, extra: { ...(paramsBase.extra ?? {}), language: IDIOMA_FALLBACK },
-      })).results, `categoria ${opts.tipo}/${opts.genre ?? "?"}`),
+      })).results, `categoria ${opts.tipo}/${opts.genre ?? "?"}`, { clave: clavePorId })).items,
     })),
     paramsAlt
       ? discover(opts.tipo, paramsAlt).then(async (r) => ({
           ...r,
-          results: await repararLote(r.results, async () => (await discover(opts.tipo, {
+          results: (await repararLote(r.results, async () => (await discover(opts.tipo, {
             ...paramsAlt, extra: { ...(paramsAlt.extra ?? {}), language: IDIOMA_FALLBACK },
-          })).results, `categoria-alt ${opts.tipo}`),
+          })).results, `categoria-alt ${opts.tipo}`, { clave: clavePorId })).items,
         }))
       : Promise.resolve(null),
   ]);
@@ -581,14 +582,15 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
         // nada que ver una con la otra.
         const traidos = primera ?? (poolsHabilitados
           ? await candidatosDePools({ tipo: tp, providers, receta, pages: 1, startPage: pagina })
-          : await repararLote(
+          : (await repararLote(
               (await discover(tp, { ...receta.params, providers: ids, page: pagina })).results,
               async () => (await discover(tp, {
                 ...receta.params, providers: ids, page: pagina,
                 extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
               })).results,
               `audiencia-sin-pools ${tp}/p${pagina}`,
-            ));
+              { clave: clavePorId },
+            )).items);
         primera = null;
         pagina++;
         if (!traidos.length) break;
@@ -673,17 +675,27 @@ export async function search(query: string, providers: PlatformCode[] = []) {
   // solo su presentación: dos usuarios con plataformas distintas reciben las
   // mismas tarjetas en distinto orden. Ordenadas, para que "n,d" y "d,n" sean
   // la misma entrada.
-  return cached(
-    // v2: cambia el CONTENIDO. `searchDeTipo` pasó a es-MX y los títulos que
-    // TMDB encuentra por un nombre alternativo ya no se descartan. Sin subir la
-    // versión, lo cacheado se sigue sirviendo hasta que expire el TTL.
-    `search:v2:${q.toLowerCase()}:${[...providers].sort().join(",")}`,
+  // v2: cambia el CONTENIDO. `searchDeTipo` pasó a es-MX y los títulos que
+  // TMDB encuentra por un nombre alternativo ya no se descartan.
+  //
+  // La clave sale del constructor porque el resultado SÍ es localizado: los
+  // títulos vienen en es-MX (pin de `searchDeTipo`) pero el `knownFor` de las
+  // personas sale del idioma base.
+  let fallo = false;
+  return cachedLocIf(
+    claveSearch(q.toLowerCase(), [...providers].sort().join(","), HUELLA_EN_CLAVES),
     TTL.search,
-    () => buscarYOrdenar(q, providers),
+    async () => {
+      const r = await buscarYOrdenar(q, providers);
+      fallo = r.fallo;
+      return { titles: r.titles, people: r.people };
+    },
+    () => !fallo,
   );
 }
 
 async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
+  let falloIdioma = false;
   const paginas = <T>(n: number, fn: (p: number) => Promise<{ results: T[] }>) =>
     Promise.all(Array.from({ length: n }, (_, i) => fn(i + 1)))
       .then((rs) => rs.flatMap((r) => r.results ?? []));
@@ -695,6 +707,21 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
     publishedIds(),
   ]);
 
+  // Los `known_for` de las personas son TÍTULOS localizados, y salen del idioma
+  // base (a diferencia de los títulos, que vienen del pin es-MX de
+  // `searchDeTipo`). Lote MIXTO: mezclan películas y series.
+  const conocidos = personasRaw.flatMap((p) => p.known_for ?? []);
+  const repConocidos = await repararLote(
+    conocidos,
+    async () => (await Promise.all(Array.from({ length: BUSQUEDA_PAGINAS_PERSONA },
+      (_, i) => searchPersonas(q, i + 1, IDIOMA_FALLBACK))))
+      .flatMap((r) => r.results ?? []).flatMap((p) => p.known_for ?? []),
+    `search known_for «${q}»`,
+    { clave: claveMixta, claveRespaldo: claveMixta },
+  );
+  falloIdioma = repConocidos.fallo;
+  const porClaveConocidos = new Map(repConocidos.items.map((t) => [claveMixta(t), t]));
+
   // Las personas NO conservan alias: acá el filtro por nombre es lo que saca el
   // ruido, y es el arreglo que hizo que "ste" devuelva a Spielberg en vez de
   // diez personas llamadas literalmente "Ste".
@@ -705,7 +732,9 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
     .map((r) => ({
       id: r.id, name: r.name,
       profile: img(r.profile_path, "w185"),
-      knownFor: (r.known_for ?? []).map(titleOf).filter(Boolean).slice(0, 3),
+      knownFor: (r.known_for ?? [])
+        .map((k) => titleOf(porClaveConocidos.get(claveMixta(k)) ?? k))
+        .filter(Boolean).slice(0, 3),
       department: r.known_for_department,
     }));
 
@@ -737,18 +766,19 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
   // Es una partición estable, no un orden nuevo: dentro de "disponible" y
   // dentro de "no disponible" se conserva el orden por relevancia de arriba.
   const titles = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub)));
-  if (!providers.length) return { titles, people };
+  if (!providers.length) return { titles, people, fallo: falloIdioma };
   const disponibles: UITitle[] = [];
   const resto: UITitle[] = [];
   for (const t of titles) (onUserPlatforms(t, providers) ? disponibles : resto).push(t);
-  return { titles: [...disponibles, ...resto], people };
+  return { titles: [...disponibles, ...resto], people, fallo: falloIdioma };
 }
 
 // --- Actores populares paginados (pestaña Actores del buscador) ---
 // TMDB no expone listado alfabético global de personas; el orden disponible
 // es por popularidad. Paginamos de a ~20 con "Cargar más".
 export async function popularPeople(page = 1): Promise<{ people: UIPerson[]; hasMore: boolean }> {
-  return cachedLoc(clavePeoplePopular(page, HUELLA_EN_CLAVES), TTL.providers, async () => {
+  let fallo = false;
+  return cachedLocIf(clavePeoplePopular(page, HUELLA_EN_CLAVES), TTL.providers, async () => {
     const res = await personPopular(page);
 
     // `knownFor` son TÍTULOS localizados: la lista de actores también entra en
@@ -756,21 +786,26 @@ export async function popularPeople(page = 1): Promise<{ people: UIPerson[]; has
     // Se aplanan los `known_for` de todas las personas en UN lote, así una sola
     // llamada de respaldo cubre la página entera.
     const planos = res.results.flatMap((p) => p.known_for ?? []);
+    // Lote MIXTO: `known_for` mezcla películas y series, y TMDB reutiliza los
+    // ids entre tipos. Con `clavePorId` la serie 1399 recibiría el título de la
+    // película 1399.
     const reparados = await repararLote(
       planos,
       async () => (await personPopular(page, IDIOMA_FALLBACK)).results.flatMap((p) => p.known_for ?? []),
       `people:popular p${page}`,
+      { clave: claveMixta, claveRespaldo: claveMixta },
     );
-    const porId = new Map(reparados.map((t) => [t.id, t]));
+    fallo = reparados.fallo;
+    const porClave = new Map(reparados.items.map((t) => [claveMixta(t), t]));
 
     const people = res.results
       .filter((p) => (p.known_for_department ?? "Acting") === "Acting" && p.profile_path)
       .map((p) => ({
         id: p.id, name: p.name, profile: img(p.profile_path, "w185"),
-        knownFor: (p.known_for ?? []).map((k) => titleOf(porId.get(k.id) ?? k)).filter(Boolean).slice(0, 2),
+        knownFor: (p.known_for ?? []).map((k) => titleOf(porClave.get(claveMixta(k)) ?? k)).filter(Boolean).slice(0, 2),
       }));
     return { people, hasMore: res.page < res.total_pages };
-  });
+  }, () => !fallo);
 }
 
 // --- Directores destacados (lista curada, editable) ---
@@ -863,7 +898,26 @@ export async function genreCovers(): Promise<Record<string, string | null>> {
 // --- Filmografía de una persona (actor o director), en tus plataformas ---
 const JUNK_GENRES = new Set([10767, 10763, 10764]); // talk, news, reality
 export async function personFilmography(id: number, providers: PlatformCode[]) {
-  const [det, credits] = await Promise.all([personDetails(id), personCombinedCredits(id)]);
+  const [det, creditsCrudos] = await Promise.all([personDetails(id), personCombinedCredits(id)]);
+
+  // La filmografía es un lote MIXTO: `cast` y `crew` mezclan películas y series,
+  // y TMDB reutiliza los ids entre tipos. No está cacheada, así que un fallo del
+  // respaldo solo cuesta esta vista y no se congela en ningún lado.
+  const planos = [...creditsCrudos.cast, ...creditsCrudos.crew];
+  const repCreditos = await repararLote(
+    planos,
+    async () => {
+      const r = await personCombinedCredits(id, IDIOMA_FALLBACK);
+      return [...r.cast, ...r.crew];
+    },
+    `filmografía persona:${id}`,
+    { clave: claveMixta, claveRespaldo: claveMixta },
+  );
+  const porClaveCred = new Map(repCreditos.items.map((t) => [claveMixta(t), t]));
+  const credits = {
+    cast: creditsCrudos.cast.map((c) => ({ ...c, ...porClaveCred.get(claveMixta(c)) })),
+    crew: creditsCrudos.crew.map((c) => ({ ...c, ...porClaveCred.get(claveMixta(c)) })),
+  };
   const pub = await publishedIds();
   const seen = new Set<string>();
   const acting = credits.cast.filter((c) => c.character && !/^(self|himself|herself)$/i.test(c.character));
@@ -915,40 +969,55 @@ function digitalARDe(d: RawDetail): string | null {
 // se enciende. Medido: 5,6% de los títulos, o sea +0,056 llamadas por ficha en
 // promedio. La alternativa era `append_to_response=translations`, que cuesta 0
 // llamadas pero +34 KB en el 100% de las fichas para arreglar el 5,6%.
-async function detalleReparado(type: MediaType, id: number): Promise<RawDetail> {
+// Reparación de UN detalle, SIN mirar los relacionados. La usa `titleCard`,
+// que descarta `recommendations`: inspeccionarlos ahí podía disparar una
+// llamada de respaldo por un relacionado roto cuando la card estaba perfecta.
+async function detalleReparado(
+  type: MediaType, id: number,
+): Promise<{ detalle: RawDetail; fallo: boolean }> {
   const d = await titleDetails(type, id);
+  const r = await repararUno(
+    d, () => titleDetails(type, id, IDIOMA_FALLBACK), `ficha ${type}:${id}`,
+  );
+  return { detalle: r.item, fallo: r.fallo };
+}
 
-  // Los RELACIONADOS viajan adentro del mismo detalle (`append_to_response`), y
-  // son títulos localizados como cualquier otro: si no se reparan acá, el riel
-  // de abajo de la ficha queda con nombres en el idioma equivocado aunque el
-  // título de arriba esté bien.
+// Reparación del detalle MÁS sus relacionados. Solo para la ficha, que sí los
+// muestra. UNA sola llamada de respaldo cubre las dos cosas, porque el detalle
+// en es-ES trae los relacionados adentro.
+async function detalleYRelacionadosReparados(
+  type: MediaType, id: number,
+): Promise<{ detalle: RawDetail; fallo: boolean }> {
+  const d = await titleDetails(type, id);
   const relacionados = d.recommendations?.results ?? [];
 
-  // UNA sola llamada de respaldo cubre las dos cosas: el detalle y sus
-  // relacionados vienen en la misma respuesta.
   let respaldo: RawDetail | null = null;
   const pedir = async () => {
     respaldo ??= await titleDetails(type, id, IDIOMA_FALLBACK);
     return respaldo;
   };
 
-  const arreglado = await repararUno(d, pedir, `ficha ${type}:${id}`);
-  if (!relacionados.length) return arreglado;
+  const uno = await repararUno(d, pedir, `ficha ${type}:${id}`);
+  if (!relacionados.length) return { detalle: uno.item, fallo: uno.fallo };
 
   const rels = await repararLote(
     relacionados,
     async () => (await pedir()).recommendations?.results ?? [],
     `relacionados ${type}:${id}`,
+    // Los relacionados de una película pueden ser series: lote MIXTO.
+    { clave: claveMixta, claveRespaldo: claveMixta },
   );
-  return rels === relacionados
-    ? arreglado
-    : { ...arreglado, recommendations: { ...d.recommendations!, results: rels } };
+  const detalle = rels.items === relacionados
+    ? uno.item
+    : { ...uno.item, recommendations: { ...d.recommendations!, results: rels.items } };
+  return { detalle, fallo: uno.fallo || rels.fallo };
 }
 
 export async function detail(
   type: MediaType, id: number, providers: PlatformCode[] = [],
 ): Promise<UITitleDetail> {
-  const [d, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
+  const [rep, prov] = await Promise.all([detalleYRelacionadosReparados(type, id), providersOf(type, id)]);
+  const d = rep.detalle;
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
     pickTrailer((await titleVideos(type, id, lang)).results, lang));
@@ -1031,7 +1100,8 @@ export async function detail(
 async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
   return cachedLoc(claveCard(type, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     try {
-      const [d, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
+      const [rep, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
+      const d = rep.detalle;
       const dt = d.release_date || d.first_air_date;
       return {
         id: d.id, type, title: d.title || d.name || "",
@@ -1242,10 +1312,10 @@ export async function candidatosDeSuperficie(opts: {
   if (!poolsHabilitados) {
     const res = await Promise.all(Array.from({ length: pages }, (_, i) =>
       discover(opts.tipo, { ...params, providers: ids, page: desde + i })
-        .then(async (r) => repararLote(r.results, async () => (await discover(opts.tipo, {
+        .then(async (r) => (await repararLote(r.results, async () => (await discover(opts.tipo, {
           ...params, providers: ids, page: desde + i,
           extra: { ...(params.extra ?? {}), language: IDIOMA_FALLBACK },
-        })).results, `superficie-sin-pools ${opts.tipo}/p${desde + i}`))));
+        })).results, `superficie-sin-pools ${opts.tipo}/p${desde + i}`, { clave: clavePorId })).items)));
     return { candidatos: res.flat(), startPage: desde, eje: null, degradado: false };
   }
   const candidatos = await candidatosDePools({

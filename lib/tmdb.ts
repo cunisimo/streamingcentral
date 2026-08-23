@@ -214,9 +214,12 @@ export function searchDeTipo(type: MediaType, query: string, page = 1) {
   });
 }
 
-export function searchPersonas(query: string, page = 1) {
+// `language` solo lo usa la reparación de idioma: `known_for` trae títulos
+// localizados y hay que poder pedir la misma página en es-ES.
+export function searchPersonas(query: string, page = 1, language?: string) {
   return tmdb<Paged<RawPerson>>("/search/person", {
     query, include_adult: "false", page: String(page),
+    ...(language ? { language } : {}),
   });
 }
 
@@ -236,8 +239,10 @@ export interface CreditEntry extends RawTitle {
   character?: string;
   job?: string;
 }
-export function personCombinedCredits(id: number) {
-  return tmdb<{ cast: CreditEntry[]; crew: CreditEntry[] }>(`/person/${id}/combined_credits`);
+export function personCombinedCredits(id: number, language?: string) {
+  return tmdb<{ cast: CreditEntry[]; crew: CreditEntry[] }>(
+    `/person/${id}/combined_credits`, language ? { language } : {},
+  );
 }
 export function personDetails(id: number) {
   return tmdb<{ id: number; name: string; profile_path: string | null }>(`/person/${id}`);
