@@ -51,6 +51,28 @@ export async function usuarioDeToken(token: string | null): Promise<string | nul
   }
 }
 
+// Igual que `usuarioDeToken` pero devuelve TAMBIÉN el email.
+//
+// Existe aparte y no como una opción de la otra a propósito: el email es un
+// dato personal y lo pide una sola ruta, la de eliminar la cuenta, que lo
+// necesita para revalidar la contraseña. Que sea una función distinta hace
+// visible en el diff cualquier lugar nuevo que empiece a pedirlo.
+//
+// El email sale del token verificado, NUNCA del cuerpo del pedido: si viniera
+// del cliente, alguien podría revalidar contra una cuenta y borrar otra.
+export async function sesionDeToken(token: string | null): Promise<{ id: string; email: string } | null> {
+  if (!token) return null;
+  const sb = supabaseServer();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.auth.getUser(token);
+    if (error || !data.user?.email) return null;
+    return { id: data.user.id, email: data.user.email };
+  } catch {
+    return null;
+  }
+}
+
 // supabaseAdmin (service role) vive en ./supabase-admin.ts, no acá: este
 // archivo lo importa supabaseBrowser y SÍ llega al bundle del navegador. Ver
 // el comentario en ese archivo.

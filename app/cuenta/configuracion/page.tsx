@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
 import { useTheme } from "@/components/ThemeContext";
 import InstallRow from "@/components/pwa/InstallRow";
+import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
 import { COUNTRIES } from "@/components/data";
 
 const PAIS_KEY = "sc:pais";
@@ -75,6 +76,10 @@ export default function ConfiguracionPage() {
             </div>
             <span className="cfg-soon">Próximamente</span>
           </div>
+
+          {/* ÚLTIMA sección de la página y visualmente separada: una acción
+              irreversible no puede quedar al lado de un toggle de tema. */}
+          <EliminarCuenta email={user.email ?? ""} />
         </div>
       </main>
       <BottomNav />
