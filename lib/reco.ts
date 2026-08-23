@@ -37,6 +37,8 @@
 // título aporta solo por su mismo tipo.
 import "server-only";
 import { cached, TTL } from "./cache";
+import { claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil } from "./claves";
+import { HUELLA_EN_CLAVES } from "./idioma";
 import { discover, titleDetails, tmdbKeywords } from "./tmdb";
 import { enrichRaw } from "./enrich";
 import { genreIdsToSlugs, resolveCategory } from "./categories";
@@ -124,7 +126,7 @@ const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
 // el riel (`pv:` es la misma clave que usa todo el resto de la app).
 
 async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
-  return cached(`reco:mismo:${tipo}:${id}`, TTL.catalog, async () => {
+  return cached(claveRecoMismo(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     // `/recommendations` viene dentro de titleDetails vía append_to_response, así
     // que esto no cuesta una llamada extra sobre la ficha.
     const d = await titleDetails(tipo, id);
@@ -151,7 +153,7 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
   // después del deploy le pasa `undefined` a `coincidencia()` y a `esAnime()`
   // por cada título ya cacheado — y encima solo hasta que expire el TTL, así que
   // sería un bug que se cura solo y no se puede reproducir después.
-  return cached(`reco:perfil:v2:${tipo}:${id}`, TTL.catalog, async () => {
+  return cached(claveRecoPerfil(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     const d = await titleDetails(tipo, id);
     const propias = (await tmdbKeywords(tipo, id)).map((k) => k.id);
     const slugs = genreIdsToSlugs((d.genres ?? []).map((g) => g.id));
@@ -180,7 +182,7 @@ async function cruzadosDe(
   const ids = codesToTmdbIds(providers);
   if (!ids.length) return { items: [], hubo: false };
   const items = await cached(
-    `reco:cruce:${tipo}:${id}:${[...providers].sort().join(",")}`,
+    claveRecoCruce(tipo, id, [...providers].sort().join(","), HUELLA_EN_CLAVES),
     TTL.catalog,
     async () => {
       const d = await discover(otro(tipo), {
@@ -233,11 +235,11 @@ export async function recomendaciones(opts: {
   // a ser un puntaje de afinidad, y se agregó el guard de anime. Cambia el
   // CONTENIDO del riel, así que sin subir la versión lo ya cacheado se sigue
   // sirviendo hasta que expire el TTL y el cambio "no se ve" después de deployar.
-  const clv = `reco:v2:${huella(
+  const clv = claveReco(huella(
     [...opts.senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(","),
     [...opts.excluir].sort().join(","),
     [...opts.providers].sort().join(","),
-  )}`;
+  ), HUELLA_EN_CLAVES);
   return cached(clv, TTL.reco, () => armar(opts));
 }
 

@@ -18,6 +18,7 @@ import OfflineState from "./pwa/OfflineState";
 import DetailSkeleton from "./DetailSkeleton";
 import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType, PlatformCode } from "@/lib/types";
+import AyudasBusqueda from "@/components/AyudasBusqueda";
 
 const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" /></svg>;
 
@@ -151,6 +152,9 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         {mine.length > 1 && (
           <div className="dalso">También en {mine.slice(1).map((p, i) => <span key={p}>{i > 0 && " · "}<PlatformLogo code={p} /></span>)}</div>
         )}
+
+        {/* Ya viene resuelto del servidor: acá no se decide nada. */}
+        <AyudasBusqueda ayudas={t.ayudas} ayudaOriginal={t.ayudaOriginal} />
 
         <div className="actions">
           <ListActions id={t.id} tipo={t.type} />

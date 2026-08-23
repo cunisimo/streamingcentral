@@ -921,3 +921,16 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 /* El diálogo define su propio --danger: está fuera de .cfg-peligro en el DOM. */
 .dlg{--danger:#C0392B}
 [data-theme="dark"] .dlg{--danger:#E74C3C}
+
+/* --- "Buscala como…" en la ficha -------------------------------------------
+   El nombre que mostramos no siempre encuentra el título en la plataforma; ver
+   components/AyudasBusqueda.tsx. Va debajo de .dalso y usa sus mismos tokens
+   para leerse como parte del mismo grupo. */
+.ayudas{margin:10px 0 0;display:flex;flex-direction:column;gap:6px}
+.ayuda{margin:0;font-size:13px;line-height:1.45;color:var(--dim)}
+.ayuda b{color:var(--text);font-weight:600}
+.ayuda q{color:var(--text);font-style:normal}
+.ayuda-copiar{margin-left:6px;padding:2px 8px;font-size:11px;line-height:1.6;
+  color:var(--dim);background:var(--surface-2);border:1px solid var(--line);
+  border-radius:999px;cursor:pointer}
+.ayuda-copiar:hover{color:var(--text);border-color:var(--line-2)}

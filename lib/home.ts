@@ -37,6 +37,8 @@ import {
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
 import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
+import { claveHome } from "./claves";
+import { HUELLA_EN_CLAVES } from "./idioma";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
   MINISERIES_KEY, MINISERIES_LISTA_HREF, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso,
@@ -627,7 +629,7 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): s
   // v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
   //      tarjeta más, pero es contenido del payload igual: sin subir la versión
   //      el botón no aparecía hasta 6 h después. Mismo caso que v3.
-  return `home:v5:${dailySeed()}:${p}:${t}`;
+  return claveHome(dailySeed(), p, t, HUELLA_EN_CLAVES);
 }
 
 export async function homePayload(opts: {

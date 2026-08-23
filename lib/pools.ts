@@ -2,6 +2,10 @@ import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
 import { cached, TTL } from "./cache";
+import { claveCombinadaCache, clavePoolCache } from "./claves";
+import {
+  FALLBACK_ACTIVO, HUELLA_EN_CLAVES, IDIOMA_FALLBACK, fusionarPorCampo, necesitaReparacion,
+} from "./idioma";
 import { hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode } from "./types";
@@ -125,7 +129,40 @@ function hashParams(p: ParamsReceta): string {
 export function clavePool(
   tipo: MediaType, plataforma: PlatformCode, receta: Receta, pagina: number,
 ): string {
-  return `disc:${VERSION}:${REGION}:${hoyAR()}:${tipo}:${plataforma}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
+  return clavePoolCache(VERSION, REGION, hoyAR(), tipo, plataforma,
+    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_EN_CLAVES);
+}
+
+// --- Fallback de idioma: opción C, por PÁGINA y solo si hace falta ----------
+// Medido sobre un Home frío de n,d,m (docs/medidas/2026-08-23-idioma-fallback.json):
+// 1021 títulos, 57 rotos (5,6%) repartidos en 32 de las 107 páginas de discover.
+//
+//   pedir siempre los dos idiomas   +72 llamadas
+//   reparar título por título       +57
+//   ESTA: pedir es-ES solo si la página tiene algún roto   +21
+//
+// Gana esta porque UN discover repara hasta 20 títulos de una vez y solo el 29%
+// de las páginas lo necesita. End-to-end medido: 612 → 643 llamadas (+5,1%), sin
+// un solo comando extra de Upstash — la reparación se guarda dentro del MISMO
+// valor cacheado, así que se paga una vez por día y por pool, compartida.
+//
+// Va DENTRO del `cached()` a propósito: si fuera afuera se pagaría por request.
+async function conFallback<T>(
+  crudos: Candidato[],
+  pedirRespaldo: () => Promise<RawTitle[]>,
+  envolver: (reparados: Candidato[]) => T,
+): Promise<T> {
+  // La guarda mira la CONFIGURACIÓN, no si hay títulos rotos. Que con es-ES no
+  // haya rotos es una propiedad de los datos y podría dejar de cumplirse; esto
+  // no. Con el idioma base en es-ES el fallback no hace ni una llamada.
+  if (!FALLBACK_ACTIVO) return envolver(crudos);
+
+  const rotos = new Set(crudos.filter(necesitaReparacion).map((t) => t.id));
+  if (!rotos.size) return envolver(crudos);
+
+  const respaldo = await pedirRespaldo();
+  const porId = new Map(respaldo.map((x) => [x.id, x]));
+  return envolver(crudos.map((t) => (rotos.has(t.id) ? fusionarPorCampo(t, porId.get(t.id) as Candidato | undefined) : t)));
 }
 
 // Un pool: una plataforma, una página, una receta.
@@ -136,7 +173,14 @@ async function pool(
   if (!ids.length) return [];
   const traer = async () => {
     const r = await discover(tipo, { ...receta.params, providers: ids, page: pagina });
-    return r.results.map(recortar);
+    return conFallback(
+      r.results.map(recortar),
+      async () => (await discover(tipo, {
+        ...receta.params, providers: ids, page: pagina,
+        extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+      })).results,
+      (reparados) => reparados,
+    );
   };
   return cached(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer);
 }
@@ -179,7 +223,8 @@ export function claveCombinada(
   // Ordenado: "n,d,m" y "m,d,n" son la misma consulta y tienen que ser la misma
   // clave, igual que en `homeKey`.
   const p = [...providers].sort().join("+");
-  return `disc:${VERSION}:${REGION}:${hoyAR()}:${tipo}:combo-${p}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
+  return claveCombinadaCache(VERSION, REGION, hoyAR(), tipo, p,
+    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_EN_CLAVES);
 }
 
 export interface PaginaCombinada {
@@ -202,7 +247,14 @@ export async function candidatosCombinados(opts: {
   const pagina = Math.max(1, opts.pagina);
   return cached(claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool, async () => {
     const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
-    return { candidatos: r.results.map(recortar), totalPaginas: r.total_pages, total: r.total_results };
+    return conFallback(
+      r.results.map(recortar),
+      async () => (await discover(opts.tipo, {
+        ...opts.receta.params, providers: ids, page: pagina,
+        extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+      })).results,
+      (candidatos) => ({ candidatos, totalPaginas: r.total_pages, total: r.total_results }),
+    );
   });
 }
 

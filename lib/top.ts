@@ -2,6 +2,8 @@ import "server-only";
 import { cardsByIds, listByCategory } from "./enrich";
 import { latestWeekRows } from "./netflix-top10";
 import { cached, TTL } from "./cache";
+import { claveTopPop } from "./claves";
+import { HUELLA_EN_CLAVES } from "./idioma";
 import { platformOrder } from "./providers-ar";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
@@ -37,7 +39,7 @@ export interface TopPayload {
 // Bloque por popularidad. Sin `scope`, así que NO corren los filtros de
 // animación/familia de lib/audience.ts: esto es un ranking, no un riel curado.
 async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<TopBlock> {
-  const items = await cached(`top:pop:${platform}:${tipo}`, TTL.catalog, async () => {
+  const items = await cached(claveTopPop(platform, tipo, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     const r = await listByCategory({
       tipo, providers: [platform], sortBy: "popularity.desc",
       // Explícito, no el default de discover(): "lo más popular ahora" con

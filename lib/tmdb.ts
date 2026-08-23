@@ -5,6 +5,7 @@
 // lo importa, pero tsc no vería la regresión — esto la convierte en error de
 // compilación. Los `import type` se borran y siguen siendo legales.
 import "server-only";
+import { IDIOMA_BASE } from "./idioma";
 import type { MediaType } from "./types";
 
 const BASE = "https://api.themoviedb.org/3";
@@ -14,7 +15,10 @@ const HEADERS = {
   Authorization: `Bearer ${process.env.TMDB_READ_TOKEN ?? ""}`,
   accept: "application/json",
 };
-const DEFAULTS = { language: "es-ES", watch_region: "AR" };
+// El idioma sale de `IDIOMA_BASE` (lib/idioma.ts), que hoy tiene default es-ES:
+// cableado y probado, pero SIN cambiar el comportamiento. El cambio a es-MX se
+// hace con la variable `IDIOMA_TITULOS`, en la tanda 2 del plan.
+const DEFAULTS = { language: IDIOMA_BASE, watch_region: "AR" };
 
 // --- Techo de concurrencia contra TMDB --------------------------------------
 // El Home Composer pide todas sus fuentes en paralelo: con cache fría eso son
@@ -253,6 +257,12 @@ export interface RawDetail {
   id: number;
   title?: string;
   name?: string;
+  // El título en su idioma original. Lo devuelve TMDB en la misma respuesta,
+  // así que exponerlo no cuesta ninguna llamada — solo unos bytes en el payload
+  // de /api/title (+32 B de promedio, medido). Es la mitad de la unión que
+  // encuentra 29/29: ver docs/medidas/2026-08-23-idioma-informe.md.
+  original_title?: string;
+  original_name?: string;
   poster_path: string | null;
   backdrop_path: string | null;
   overview: string;
@@ -285,11 +295,17 @@ export interface RawDetail {
   };
   recommendations?: Paged<RawTitle>;
 }
-export function titleDetails(type: MediaType, id: number) {
+// `language` se pasa SOLO para el fallback de la ficha (lib/enrich.ts →
+// `detalleReparado`), que pide el mismo detalle en es-ES cuando el es-MX vino
+// roto. Sin argumento usa el idioma base, como todo el resto.
+export function titleDetails(type: MediaType, id: number, language?: string) {
   const append = type === "movie"
     ? "credits,external_ids,release_dates,recommendations"
     : "credits,external_ids,content_ratings,recommendations";
-  return tmdb<RawDetail>(`/${type}/${id}`, { append_to_response: append });
+  return tmdb<RawDetail>(`/${type}/${id}`, {
+    append_to_response: append,
+    ...(language ? { language } : {}),
+  });
 }
 
 // Videos del título en el idioma ORIGINAL (no el doblaje es-ES que fuerza el

@@ -17,6 +17,12 @@ import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGO
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
 import { cached, TTL, dailySeed, pickDaily } from "./cache";
+import { claveCard, clavePeoplePopular } from "./claves";
+import {
+  FALLBACK_ACTIVO, HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK,
+  fusionarPorCampo, necesitaReparacion,
+} from "./idioma";
+import { ayudasDeBusqueda } from "./consultas-verificadas";
 import {
   candidatosCombinados, candidatosConEje, candidatosDePools, poolsHabilitados, recetaDeEje,
   recetaDelDia, registrarEje,
@@ -716,7 +722,7 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
 // TMDB no expone listado alfabético global de personas; el orden disponible
 // es por popularidad. Paginamos de a ~20 con "Cargar más".
 export async function popularPeople(page = 1): Promise<{ people: UIPerson[]; hasMore: boolean }> {
-  return cached(`people:popular:${page}`, TTL.providers, async () => {
+  return cached(clavePeoplePopular(page, HUELLA_EN_CLAVES), TTL.providers, async () => {
     const res = await personPopular(page);
     const people = res.results
       .filter((p) => (p.known_for_department ?? "Acting") === "Acting" && p.profile_path)
@@ -865,10 +871,28 @@ function digitalARDe(d: RawDetail): string | null {
   return digital?.release_date?.slice(0, 10) || null;
 }
 
+// Fallback de la FICHA. Un solo título, así que el truco de reparar la página
+// entera no aplica: acá se paga una segunda llamada, y solo cuando alguna señal
+// se enciende. Medido: 5,6% de los títulos, o sea +0,056 llamadas por ficha en
+// promedio. La alternativa era `append_to_response=translations`, que cuesta 0
+// llamadas pero +34 KB en el 100% de las fichas para arreglar el 5,6%.
+async function detalleReparado(type: MediaType, id: number): Promise<RawDetail> {
+  const d = await titleDetails(type, id);
+  // La guarda mira la configuración, no los datos. Con es-ES no hace nada.
+  if (!FALLBACK_ACTIVO || !necesitaReparacion(d)) return d;
+  try {
+    const respaldo = await titleDetails(type, id, IDIOMA_FALLBACK);
+    return fusionarPorCampo(d, respaldo);
+  } catch {
+    // Una ficha con la sinopsis vacía es mejor que una ficha que no carga.
+    return d;
+  }
+}
+
 export async function detail(
   type: MediaType, id: number, providers: PlatformCode[] = [],
 ): Promise<UITitleDetail> {
-  const [d, prov] = await Promise.all([titleDetails(type, id), providersOf(type, id)]);
+  const [d, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
     pickTrailer((await titleVideos(type, id, lang)).results, lang));
@@ -895,8 +919,22 @@ export async function detail(
     ?.filter((c) => c.job === "Original Music Composer" || c.job === "Music")
     .map((c) => c.name) ?? [];
 
+  // Las ayudas se resuelven ACÁ, en el servidor. El componente recibe lo que
+  // tiene que pintar: no importa el mapa ni lee variables de entorno.
+  const titulo = d.title || d.name || "";
+  const original = d.original_title || d.original_name || "";
+  const { ayudas, ayudaOriginal } = await ayudasDeBusqueda({
+    tipo: type, tmdbId: d.id, tituloVisible: titulo,
+    originalTitle: original,
+    // La configuración se resuelve acá, en el servidor, y viaja como argumento.
+    idiomaBase: IDIOMA_BASE,
+    // SOLO donde el título está disponible: una ayuda para Max en algo que no
+    // está en Max no se emite.
+    plataformas: prov.codes,
+  });
+
   return {
-    id: d.id, type, title: d.title || d.name || "",
+    id: d.id, type, title: titulo,
     year: (d.release_date || d.first_air_date)?.slice(0, 4) ? Number((d.release_date || d.first_air_date)!.slice(0, 4)) : null,
     releaseDate: (d.release_date || d.first_air_date) || null,
     nextAirDate: d.next_episode_to_air?.air_date || null,
@@ -924,6 +962,10 @@ export async function detail(
     trailerKey: trailer,
     related,
     editorial,
+    // Solo si difiere del que se muestra: si no, es ruido en el payload.
+    ...(original && original !== titulo ? { originalTitle: original } : {}),
+    ...(ayudas ? { ayudas } : {}),
+    ...(ayudaOriginal ? { ayudaOriginal } : {}),
   };
 }
 
@@ -931,7 +973,7 @@ export async function detail(
 // Los votos guardan solo tmdb_id+tipo, así que reconstruimos la card pidiendo
 // el detalle a TMDB (cacheado) y cruzando providers. Devuelve null si falla.
 async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
-  return cached(`card:${type}:${id}`, TTL.catalog, async () => {
+  return cached(claveCard(type, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     try {
       const [d, prov] = await Promise.all([titleDetails(type, id), providersOf(type, id)]);
       const dt = d.release_date || d.first_air_date;
