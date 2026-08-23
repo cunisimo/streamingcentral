@@ -1,7 +1,7 @@
 import "server-only";
 import { cardsByIds, listByCategory } from "./enrich";
 import { latestWeekRows } from "./netflix-top10";
-import { cached, cachedLoc, TTL } from "./cache";
+import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveTopPop } from "./claves";
 import { HUELLA_EN_CLAVES } from "./idioma";
 import { platformOrder } from "./providers-ar";
@@ -39,7 +39,10 @@ export interface TopPayload {
 // Bloque por popularidad. Sin `scope`, así que NO corren los filtros de
 // animación/familia de lib/audience.ts: esto es un ranking, no un riel curado.
 async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<TopBlock> {
-  const items = await cachedLoc(claveTopPop(platform, tipo, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+  // Si la reparación de idioma falló, el bloque se devuelve igual pero NO se
+  // guarda: si no, un top sin reparar quedaba congelado 24 h.
+  const senal = { fallo: false };
+  const items = await cachedLocIf(claveTopPop(platform, tipo, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     const r = await listByCategory({
       tipo, providers: [platform], sortBy: "popularity.desc",
       // Explícito, no el default de discover(): "lo más popular ahora" con
@@ -47,6 +50,7 @@ async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<To
       // contra Netflix AR el piso cambia 2 de 10 posiciones y lo que saca es
       // justamente eso — ruido, no señal real.
       minVotes: 60,
+      senal,
     });
     // `cached()` guarda cualquier valor que el fetcher devuelva, incluido `[]`
     // (ver lib/cache.ts): un [] real de "esta plataforma no tiene top" es
@@ -57,7 +61,7 @@ async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<To
     // lib/curated.ts con su propia blocklist.
     if (!r.length) throw new Error(`sin resultados para ${platform}/${tipo}`);
     return r;
-  });
+  }, () => !senal.fallo);
   return {
     platform,
     source: "popular",

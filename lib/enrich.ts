@@ -126,6 +126,11 @@ export async function listByCategory(opts: {
   // Descarta lo que no tenga póster y sinopsis (ver abajo). Lo usa "Últimos
   // lanzamientos", que ya no filtra por cantidad de votos.
   soloCompletos?: boolean;
+  /** Señal de salida: `fallo` queda en true si la reparación de idioma falló.
+   *  Quien cachea el resultado (hoy `top:pop:`) la mira para NO guardar una
+   *  lista sin reparar. Opcional: los llamadores que no cachean la ignoran, y
+   *  así no hay que cambiarle la firma a los diez que ya existen. */
+  senal?: { fallo: boolean };
 }): Promise<UITitle[]> {
   if (!opts.providers.length) return [];
   const ids = codesToTmdbIds(opts.providers);
@@ -186,6 +191,7 @@ export async function listByCategory(opts: {
     keywords: keywords.length ? keywords : undefined,
     extra,
   };
+  let falloIdiomaCat = false;
   const paramsAlt = rule.alt ? {
     ...base,
     withoutGenres: sinTodo(rule.alt.withoutGenres),
@@ -197,16 +203,24 @@ export async function listByCategory(opts: {
   const [res, resAlt] = await Promise.all([
     discover(opts.tipo, paramsBase).then(async (r) => ({
       ...r,
-      results: (await repararLote(r.results, async () => (await discover(opts.tipo, {
-        ...paramsBase, extra: { ...(paramsBase.extra ?? {}), language: IDIOMA_FALLBACK },
-      })).results, `categoria ${opts.tipo}/${opts.genre ?? "?"}`, { clave: clavePorId })).items,
+      results: await (async () => {
+        const rep = await repararLote(r.results, async () => (await discover(opts.tipo, {
+          ...paramsBase, extra: { ...(paramsBase.extra ?? {}), language: IDIOMA_FALLBACK },
+        })).results, `categoria ${opts.tipo}/${opts.genre ?? "?"}`, { clave: clavePorId });
+        if (rep.fallo) falloIdiomaCat = true;
+        return rep.items;
+      })(),
     })),
     paramsAlt
       ? discover(opts.tipo, paramsAlt).then(async (r) => ({
           ...r,
-          results: (await repararLote(r.results, async () => (await discover(opts.tipo, {
-            ...paramsAlt, extra: { ...(paramsAlt.extra ?? {}), language: IDIOMA_FALLBACK },
-          })).results, `categoria-alt ${opts.tipo}`, { clave: clavePorId })).items,
+          results: await (async () => {
+            const rep = await repararLote(r.results, async () => (await discover(opts.tipo, {
+              ...paramsAlt, extra: { ...(paramsAlt.extra ?? {}), language: IDIOMA_FALLBACK },
+            })).results, `categoria-alt ${opts.tipo}`, { clave: clavePorId });
+            if (rep.fallo) falloIdiomaCat = true;
+            return rep.items;
+          })(),
         }))
       : Promise.resolve(null),
   ]);
@@ -236,6 +250,7 @@ export async function listByCategory(opts: {
     crudos.slice(0, 20).map((t) => toUITitle(t, opts.tipo, pub)),
     `listByCategory ${opts.tipo}/${opts.genre ?? "todos"}`,
   );
+  if (opts.senal && falloIdiomaCat) opts.senal.fallo = true;
   return items.filter((i) => onUserPlatforms(i, opts.providers));
 }
 
@@ -972,7 +987,7 @@ function digitalARDe(d: RawDetail): string | null {
 // Reparación de UN detalle, SIN mirar los relacionados. La usa `titleCard`,
 // que descarta `recommendations`: inspeccionarlos ahí podía disparar una
 // llamada de respaldo por un relacionado roto cuando la card estaba perfecta.
-async function detalleReparado(
+export async function detalleReparado(
   type: MediaType, id: number,
 ): Promise<{ detalle: RawDetail; fallo: boolean }> {
   const d = await titleDetails(type, id);
@@ -1098,10 +1113,16 @@ export async function detail(
 // Los votos guardan solo tmdb_id+tipo, así que reconstruimos la card pidiendo
 // el detalle a TMDB (cacheado) y cruzando providers. Devuelve null si falla.
 async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
-  return cachedLoc(claveCard(type, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+  // `fallo` sale de la clausura al predicado: si el respaldo falló, la card se
+  // devuelve igual pero NO se guarda. Sin esto, una card sin reparar quedaba
+  // congelada 24 h bajo una clave con fallback, y la ruleta y los rieles de
+  // votos —que se arman con `card:`— la servían hasta que expirara.
+  let fallo = false;
+  return cachedLocIf(claveCard(type, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     try {
       const [rep, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
       const d = rep.detalle;
+      fallo = rep.fallo;
       const dt = d.release_date || d.first_air_date;
       return {
         id: d.id, type, title: d.title || d.name || "",
@@ -1116,7 +1137,7 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
     } catch {
       return null;
     }
-  });
+  }, () => !fallo);
 }
 
 // Cuántas filas de votos se piden a la DB antes de cruzar con plataformas.

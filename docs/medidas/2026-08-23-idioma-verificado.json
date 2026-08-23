@@ -11,7 +11,7 @@
   },
   "fuentes": {
     "dueño": "buscado por el dueño en su propia sesión de la plataforma",
-    "catalogo publico AR": "buscador público de la plataforma, desde IP argentina (181.105.83.159). Sin login, sin scraping."
+    "catalogo publico AR": "buscador público de la plataforma, desde una IP argentina. Sin login, sin scraping."
   },
   "limitaciones_del_instrumento": [
     "Prime Video distingue nativamente: 'Principales resultados' = directo, solo 'Más para explorar' = relacionados. Verificado con una consulta inexistente, que devuelve solo 'Más para explorar'.",

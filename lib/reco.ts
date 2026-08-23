@@ -39,7 +39,8 @@ import "server-only";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil } from "./claves";
 import {
-  HUELLA_EN_CLAVES, IDIOMA_FALLBACK, claveMixta, clavePorId, repararLote, repararUno,
+  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, anotarLlamadaIdioma,
+  claveMixta, clavePorId, metricasIdiomaActuales, repararLote, repararUno,
 } from "./idioma";
 import { discover, titleDetails, tmdbKeywords, type RawDetail } from "./tmdb";
 import { crearSingleFlight } from "./single-flight";
@@ -137,12 +138,23 @@ const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
 // Esto comparte la PROMESA por `tipo:id`, y la borra al resolverse. No es un
 // cache: no guarda nada entre requests, solo evita que dos llamadas que están
 // en vuelo al mismo tiempo se dupliquen. Por eso no puede servir datos viejos.
-// El mecanismo vive en `lib/single-flight.ts` (módulo puro, con tests). La
-// clave es `tipo:id` y no `id`: TMDB reutiliza los números entre películas y
-// series.
-const compartirDetalle = crearSingleFlight<RawDetail>();
-const detalleDe = (tipo: MediaType, id: number) =>
-  compartirDetalle(`${tipo}:${id}`, () => titleDetails(tipo, id));
+// El mecanismo vive en `lib/single-flight.ts` (módulo puro, con tests).
+//
+// La clave es `idioma:tipo:id`. El tipo, porque TMDB reutiliza los números entre
+// películas y series. El IDIOMA, porque la llamada base y la de respaldo son
+// dos pedidos distintos al mismo título: sin él, el respaldo en es-ES recibiría
+// la promesa del pedido en es-MX.
+//
+// Base Y respaldo pasan los dos por acá: es lo que garantiza el peor caso de
+// "1 base + como máximo 1 respaldo por origen", aunque los tres caminos del
+// recomendador pidan la reparación al mismo tiempo.
+const compartirDetalle = crearSingleFlight<RawDetail>({
+  // Las métricas se anotan donde de VERDAD se sale a la red.
+  alPedir: () => anotarLlamadaIdioma(),
+});
+const detalleDe = (tipo: MediaType, id: number, idioma = IDIOMA_BASE) =>
+  compartirDetalle(`${idioma}:${tipo}:${id}`, () => titleDetails(tipo, id,
+    idioma === IDIOMA_BASE ? undefined : idioma));
 
 async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
   let fallo = false;
@@ -155,7 +167,7 @@ async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> 
     // reutiliza los ids entre tipos.
     const rep = await repararLote(
       base,
-      async () => (await titleDetails(tipo, id, IDIOMA_FALLBACK)).recommendations?.results ?? [],
+      async () => (await detalleDe(tipo, id, IDIOMA_FALLBACK)).recommendations?.results ?? [],
       `reco:mismo ${tipo}:${id}`,
       { clave: claveMixta, claveRespaldo: claveMixta },
     );
@@ -190,7 +202,7 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
     // una clave que va a mostrar el idioma viejo el día que alguien la muestre.
     const rep = await repararUno(
       await detalleDe(tipo, id),
-      () => titleDetails(tipo, id, IDIOMA_FALLBACK),
+      () => detalleDe(tipo, id, IDIOMA_FALLBACK),
       `reco:perfil ${tipo}:${id}`,
     );
     falloPerfil = rep.fallo;
@@ -292,14 +304,33 @@ export async function recomendaciones(opts: {
     [...opts.excluir].sort().join(","),
     [...opts.providers].sort().join(","),
   ), HUELLA_EN_CLAVES);
-  return cachedLoc(clv, TTL.reco, () => armar(opts));
+  // El riel entero: si alguna reparación de adentro falló, se sirve igual pero
+  // NO se guarda. Con TTL.reco de 6 h, un riel sin reparar quedaría congelado
+  // aunque cada `card:` de adentro sí se haya protegido por separado.
+  const senal = { fallo: false };
+  return cachedLocIf(clv, TTL.reco, () => armar({ ...opts, senal }), () => !senal.fallo);
 }
 
 async function armar(opts: {
+  /** Señal de salida: la reparación de idioma falló en alguna capa de adentro. */
+  senal?: { fallo: boolean };
   senales: Senal[];
   excluir: string[];
   providers: PlatformCode[];
 }): Promise<{ items: Recomendacion[]; motivo?: MotivoSinRiel }> {
+  // Delta de fallos DURANTE el armado. Las capas de adentro (`card:`,
+  // `reco:mismo`, `reco:cruce`) ya se protegen cada una, pero el riel COMPUESTO
+  // se guarda aparte y podría cachear items sin reparar.
+  //
+  // Es deliberadamente conservador: si otra rama del mismo request falla al
+  // mismo tiempo, este riel tampoco se guarda. Errar hacia "no cachear" cuesta
+  // un rearmado; errar al revés congela contenido roto 6 h.
+  const fallosAntes = metricasIdiomaActuales()?.fallos ?? 0;
+  const marcarSiFallo = () => {
+    if (opts.senal && (metricasIdiomaActuales()?.fallos ?? 0) > fallosAntes) {
+      opts.senal.fallo = true;
+    }
+  };
 
   // Jerarquía Petacular > Ta buena > Mi lista, y dentro de cada nivel el orden
   // en que vino (el cliente los manda por fecha descendente). No hay cupo por
@@ -433,5 +464,6 @@ async function armar(opts: {
   const porId = new Map(enriquecidos.map((e) => [clave(e.type, e.id), e._cand]));
   auditar("final", items.map((t) => porId.get(clave(t.type, t.id))!).filter(Boolean));
   if (items.length < PISO) return { items: [], motivo: "filtrado" };
+  marcarSiFallo();
   return { items };
 }

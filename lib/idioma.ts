@@ -127,7 +127,9 @@ export function fusionarPorCampo<T extends Localizable>(
 // contador global mezclaría los números de todos — o peor, uno reiniciaría los
 // del otro a mitad de camino.
 export interface MetricasIdioma {
-  /** Llamadas de respaldo efectivamente hechas. */
+  /** Requests REALES a TMDB por respaldo. Los cuenta quien de verdad sale a la
+   *  red (`lib/single-flight.ts`), no el reparador: dos reparadores que
+   *  comparten la misma promesa son UN pedido, no dos. */
   llamadas: number;
   /** Lotes donde se detectó al menos un título roto. */
   lotesConRotos: number;
@@ -155,6 +157,13 @@ function anotar(fn: (m: MetricasIdioma) => void) {
   if (m) fn(m);
 }
 
+/** La cuenta una llamada REAL a TMDB. La invoca quien sale a la red — hoy
+ *  `lib/single-flight.ts` — y no el reparador, que puede estar compartiendo una
+ *  promesa que ya estaba en vuelo. */
+export function anotarLlamadaIdioma() {
+  anotar((m) => { m.llamadas++; });
+}
+
 /** Las métricas del scope actual, o null fuera de uno. */
 export function metricasIdiomaActuales(): MetricasIdioma | null {
   const m = als.getStore();
@@ -165,14 +174,24 @@ export function metricasIdiomaActuales(): MetricasIdioma | null {
 // En lotes MIXTOS (películas y series juntas) el `id` NO alcanza: TMDB reutiliza
 // los números entre tipos, así que la película 1399 y la serie 1399 existen las
 // dos. Emparejar por id le daría a una el título de la otra.
-export type ClaveDeLote<T> = (t: T) => string;
+export type ClaveDeLote<T> = (t: T) => string | null;
 
-export function claveMixta(t: Localizable & { id?: number; media_type?: string }): string {
-  return `${t.media_type ?? "?"}:${t.id ?? "?"}`;
+// Devuelve `null` cuando el tipo es AMBIGUO. `?:id` no sirve como clave: dos
+// elementos sin tipo y con el mismo id colisionarían, y uno recibiría el título
+// del otro — que es exactamente lo que la clave mixta viene a evitar.
+// Un elemento sin clave se deja INTACTO y no se cruza con nada.
+export function claveMixta(t: Localizable & { id?: number; media_type?: string }): string | null {
+  if (t.id === undefined || !t.media_type) return null;
+  return `${t.media_type}:${t.id}`;
+}
+
+/** Fija el tipo cuando el contexto lo conoce (una lista que es toda de un tipo). */
+export function claveMixtaCon(tipo: string): ClaveDeLote<Localizable & { id?: number; media_type?: string }> {
+  return (t) => (t.id === undefined ? null : `${t.media_type ?? tipo}:${t.id}`);
 }
 /** Para lotes de UN solo tipo, donde el id ya es único. */
-export function clavePorId(t: Localizable & { id?: number }): string {
-  return String(t.id ?? "?");
+export function clavePorId(t: Localizable & { id?: number }): string | null {
+  return t.id === undefined ? null : String(t.id);
 }
 
 // --- EL mecanismo, uno solo --------------------------------------------------
@@ -216,15 +235,24 @@ export async function repararLote<T extends Localizable>(
   // La guarda mira la CONFIGURACIÓN, no si hay títulos rotos.
   if (!activo) return { items: base, fallo: false };
 
+  // Un elemento con clave `null` (tipo ambiguo) se deja INTACTO: no se puede
+  // cruzar con nada sin arriesgar darle el título de otro.
   const rotos = new Set<string>();
-  for (const t of base) if (necesitaReparacion(t)) rotos.add(opts.clave(t));
+  for (const t of base) {
+    if (!necesitaReparacion(t)) continue;
+    const k = opts.clave(t);
+    if (k !== null) rotos.add(k);
+  }
   if (!rotos.size) return { items: base, fallo: false };
 
   anotar((m) => { m.lotesConRotos++; });
 
   let respaldo: Localizable[] | null | undefined;
   try {
-    anotar((m) => { m.llamadas++; });
+    // La llamada la cuenta el DUEÑO del request HTTP (o del single-flight), no
+    // acá: dos reparadores que comparten la misma promesa son un solo pedido a
+    // TMDB, y contarlo antes de ejecutar el callback informaría intentos
+    // lógicos en vez de requests reales.
     respaldo = await pedirRespaldo();
   } catch (e) {
     anotar((m) => { m.fallos++; });
@@ -232,21 +260,31 @@ export async function repararLote<T extends Localizable>(
     return { items: base, fallo: true };
   }
 
-  // `null`, `undefined` y lista vacía son FALLOS, no éxitos con cero
-  // reparaciones: cachear la base como si estuviera reparada la congelaría.
-  if (!respaldo || !respaldo.length) {
+  // `null` y `undefined` son FALLOS: la respuesta vino malformada y cachear la
+  // base como si estuviera reparada la congelaría.
+  if (respaldo === null || respaldo === undefined) {
     anotar((m) => { m.fallos++; });
-    console.error(`[idioma] fallback vacío en ${etiqueta}; se sirve sin reparar y NO se cachea`);
+    console.error(`[idioma] fallback malformado en ${etiqueta}; se sirve sin reparar y NO se cachea`);
     return { items: base, fallo: true };
   }
 
+  // Una lista VACÍA devuelta correctamente por TMDB NO es una caída de
+  // transporte: es una respuesta válida que simplemente no trae con qué
+  // reparar. Tratarla como fallo dejaría esa clave sin cachear para siempre,
+  // reintentando en cada request algo que nunca va a mejorar.
+  // Un respaldo PARCIAL —trae algunos y no otros— es lo mismo: se repara lo que
+  // hay y no se declara caída general.
+
   const claveResp = opts.claveRespaldo ?? (opts.clave as unknown as ClaveDeLote<Localizable>);
   const porClave = new Map<string, Localizable>();
-  for (const r of respaldo) porClave.set(claveResp(r), r);
+  for (const r of respaldo) {
+    const k = claveResp(r);
+    if (k !== null) porClave.set(k, r);
+  }
 
   const items = base.map((t) => {
     const k = opts.clave(t);
-    if (!rotos.has(k)) return t;
+    if (k === null || !rotos.has(k)) return t;
     const arreglado = fusionarPorCampo(t, porClave.get(k));
     if (arreglado !== t) anotar((m) => { m.titulosReparados++; });
     return arreglado;
@@ -271,7 +309,6 @@ export async function repararUno<T extends Localizable>(
   anotar((m) => { m.lotesConRotos++; });
   let respaldo: Localizable | null | undefined;
   try {
-    anotar((m) => { m.llamadas++; });
     respaldo = await pedirRespaldo();
   } catch (e) {
     anotar((m) => { m.fallos++; });

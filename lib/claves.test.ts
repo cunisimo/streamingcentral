@@ -188,7 +188,7 @@ function fuentes(dir: string, out: string[] = []): string[] {
 
 test("ninguna llamada a cached()/cachedIf() construye una clave localizada a mano", () => {
   const infractores: string[] = [];
-  for (const archivo of [...fuentes("lib"), ...fuentes("app")]) {
+  for (const archivo of [...fuentes("lib"), ...fuentes("app"), ...fuentes("components")]) {
     for (const h of claveManualEn(readFileSync(archivo, "utf8"))) {
       infractores.push(`${archivo}: ${h}`);
     }

@@ -40,7 +40,8 @@ entra en la tanda 2 como en las otras diez.
 | **Relacionados de la ficha** | `recommendations` dentro del mismo detalle | **sí** | Lote **mixto** (`claveMixta`). **Comparten la llamada de respaldo** con la ficha |
 | **Filmografía** (`/persona/[id]`) | `personCombinedCredits()` | **sí** | Lote **mixto**: `cast` y `crew` mezclan películas y series. Sin cachear |
 | **Personas del buscador** | `searchPersonas().known_for` | **sí** | Lote **mixto**, dentro de `search:v2` |
-| **Recordarme / calendario** | el `title` de la ficha | **sí** (heredado) | No pide nada a TMDB: usa el título que ya vino reparado |
+| **Recordarme, camino directo** | `detalleReparado()` | **sí** | La afirmación anterior —"hereda el título de la ficha"— era **falsa**: la ruta llamaba a `titleDetails()` crudo. Corregido |
+| **Recordarme, vía `upcoming_content`** | `upcoming_content.title` | **no — TANDA 3** | Ese contenido persistido sigue en `es-ES`. Hasta el backfill, un recordatorio de Próximamente puede traer el título español aunque la ficha muestre otro: inconsistencia **conocida y acotada a esa tabla** |
 | **Búsqueda del admin** (`/api/admin-search`) | `searchMulti()` | **no, y a propósito** | Es el buscador del dashboard editorial, lo usa solo el dueño para elegir un id. El nombre que ve ahí no lo ve ningún usuario, y el módulo está en standby |
 | `/categoria`, exploración | `listByCategory()` → `/discover` ×2 | **sí** | Las dos consultas (base y la `alt` de `lib/categories.ts`) se reparan por separado |
 | Carruseles de audiencia | pools, o `/discover` si `POOL_CACHE=0` | **sí** | **Los dos caminos.** Apagar el cache de pools no puede apagar la reparación de idioma |

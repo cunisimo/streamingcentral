@@ -7,8 +7,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   FALLBACK_ACTIVO, HUELLA_EN_CLAVES, HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK,
-  calcularHuella, claveMixta, clavePorId, fusionarPorCampo, metricasIdiomaActuales,
-  necesitaReparacion, queReparar, repararLote, repararUno, withMetricasIdioma,
+  calcularHuella, claveMixta, claveMixtaCon, clavePorId, fusionarPorCampo, metricasIdiomaActuales,
+  anotarLlamadaIdioma, necesitaReparacion, queReparar, repararLote, repararUno,
+  withMetricasIdioma,
 } from "./idioma.ts";
 
 const crudo = (o: Record<string, unknown> = {}) => ({
@@ -185,6 +186,11 @@ test("con el fallback activo: UNA llamada para todo el lote, y repara", async ()
   let pedidos = 0;
   const { res, metricas } = await withMetricasIdioma(() => repararLote(base, async () => {
     pedidos++;
+    // El dueño REAL de la llamada es quien sale a la red (`single-flight`), y es
+    // quien anota la métrica. Acá se modela ese contrato: `repararLote` ya no
+    // cuenta llamadas, porque dos reparadores que comparten una promesa son UN
+    // pedido y no dos.
+    anotarLlamadaIdioma();
     return [
       crudo({ id: 1, title: "Running Man", overview: "Un programa." }),
       crudo({ id: 3, title: "La película", overview: "Otra." }),
@@ -214,14 +220,13 @@ test("un lote SANO no pide respaldo ni con el fallback activo", async () => {
 // FALLO DEL RESPALDO → señal `fallo`, que impide cachear
 // ============================================================================
 
-test("rechazo, timeout, null, undefined y lista vacía: base intacta y fallo=true", async () => {
+test("rechazo, timeout, null y undefined: base intacta y fallo=true", async () => {
   const base = [crudo({ id: 1, overview: "" })];
   const casos: [string, () => Promise<never[] | null | undefined>][] = [
     ["rechazo", () => Promise.reject(new Error("TMDB 500"))],
     ["timeout", () => Promise.reject(new DOMException("aborted", "TimeoutError"))],
     ["null", async () => null],
     ["undefined", async () => undefined],
-    ["vacío", async () => []],
   ];
   for (const [nombre, respaldo] of casos) {
     const { res, metricas } = await withMetricasIdioma(() =>
@@ -231,6 +236,31 @@ test("rechazo, timeout, null, undefined y lista vacía: base intacta y fallo=tru
     assert.equal(metricas.fallos, 1, `${nombre} se contabiliza`);
     assert.equal(metricas.titulosReparados, 0);
   }
+});
+
+test("lista VACÍA válida NO es caída: fallo=false y cero reparaciones", async () => {
+  // Una `[]` devuelta correctamente por TMDB no es un fallo de transporte.
+  // Tratarla como caída dejaría esa clave sin cachear para siempre.
+  const base = [crudo({ id: 1, overview: "" })];
+  const { res, metricas } = await withMetricasIdioma(() =>
+    repararLote(base, async () => [], "test-vacío", porId));
+  assert.deepEqual(res.items, base);
+  assert.equal(res.fallo, false, "vacío válido NO es fallo");
+  assert.equal(metricas.fallos, 0);
+  assert.equal(metricas.titulosReparados, 0);
+});
+
+test("respaldo PARCIAL: repara lo que hay y no declara caída", async () => {
+  const base = [
+    crudo({ id: 1, title: "런닝맨", original_language: "ko", overview: "" }),
+    crudo({ id: 2, title: "마녀", original_language: "ko", overview: "" }),
+  ];
+  const r = await repararLote(base, async () => [
+    crudo({ id: 1, title: "Running Man", overview: "Un programa." }),
+  ], "parcial", porId);
+  assert.equal(r.fallo, false, "parcial no es caída general");
+  assert.equal(r.items[0].title, "Running Man");
+  assert.equal(r.items[1].title, "마녀", "el que no vino queda intacto");
 });
 
 test("REINTENTO: el primer respaldo falla, el segundo repara", async () => {
@@ -270,8 +300,7 @@ test("repararUno NO cuenta como reparado si la fusión no cambió nada", async (
     repararUno(base, async () => crudo({ title: "X", overview: "" }), "t", ACTIVO));
   assert.equal(res.item, base);
   assert.equal(res.fallo, false);
-  assert.equal(metricas.llamadas, 1, "la llamada sí se hizo");
-  assert.equal(metricas.titulosReparados, 0, "pero nada cambió");
+  assert.equal(metricas.titulosReparados, 0, "nada cambió, no se cuenta");
 });
 
 // ============================================================================
@@ -298,11 +327,51 @@ test("una película y una serie con el mismo ID no se mezclan", async () => {
   assert.equal(r.items[1].overview, "Tele.");
 });
 
+test("TIPO AUSENTE en los DOS: no se cruzan, quedan intactos", () => {
+  // `?:id` no sirve como clave: dos elementos sin tipo y con el mismo id
+  // colisionarían y uno recibiría el título del otro. `claveMixta` devuelve
+  // null y `repararLote` los deja INTACTOS.
+  const base = [
+    { id: 1399, title: "런닝맨", original_language: "ko", overview: "" },
+    { id: 1399, title: "마녀", original_language: "ko", overview: "" },
+  ];
+  return repararLote(base, async () => [
+    { id: 1399, media_type: "movie", title: "La película", overview: "Cine." },
+  ], "ambiguo", { clave: claveMixta, claveRespaldo: claveMixta, activo: true })
+    .then((r) => {
+      assert.equal(r.items[0].title, "런닝맨", "sin tipo, no se toca");
+      assert.equal(r.items[1].title, "마녀", "sin tipo, no se toca");
+      assert.equal(r.fallo, false, "no es una caída: es ambigüedad");
+    });
+});
+
+test("TIPO AUSENTE en UNO solo: el que lo tiene se repara, el otro no", async () => {
+  const base = [
+    { id: 1399, media_type: "tv", title: "마녀", original_language: "ko", overview: "" },
+    { id: 1399, title: "런닝맨", original_language: "ko", overview: "" },
+  ];
+  const r = await repararLote(base, async () => [
+    { id: 1399, media_type: "tv", title: "La serie", overview: "Tele." },
+    { id: 1399, media_type: "movie", title: "La película", overview: "Cine." },
+  ], "medio-ambiguo", { clave: claveMixta, claveRespaldo: claveMixta, activo: true });
+  assert.equal(r.items[0].title, "La serie", "el que tiene tipo se repara");
+  assert.equal(r.items[1].title, "런닝맨", "el ambiguo queda intacto");
+});
+
+test("claveMixtaCon fija el tipo cuando el contexto lo conoce", () => {
+  const conTv = claveMixtaCon("tv");
+  assert.equal(conTv({ id: 1399 }), "tv:1399", "usa el tipo del contexto");
+  assert.equal(conTv({ id: 1399, media_type: "movie" }), "movie:1399", "el propio gana");
+  assert.equal(conTv({}), null, "sin id sigue siendo ambiguo");
+});
+
 test("claveMixta distingue tipos; clavePorId no", () => {
   const peli = { id: 1399, media_type: "movie" };
   const serie = { id: 1399, media_type: "tv" };
   assert.notEqual(claveMixta(peli), claveMixta(serie));
   assert.equal(clavePorId(peli), clavePorId(serie), "por eso no sirve en lotes mixtos");
+  assert.equal(claveMixta({ id: 1399 }), null, "sin tipo: ambiguo");
+  assert.equal(clavePorId({}), null, "sin id: ambiguo");
 });
 
 // ============================================================================
@@ -314,8 +383,11 @@ test("dos reparaciones CONCURRENTES no se mezclan las métricas", async () => {
   // primero a mitad de camino. Con AsyncLocalStorage cada scope es suyo.
   const lote = (n: number) => Array.from({ length: n }, (_, i) =>
     crudo({ id: i + 1, title: "런닝맨", original_language: "ko", overview: "" }));
-  const resp = (n: number) => async () => Array.from({ length: n }, (_, i) =>
-    crudo({ id: i + 1, title: `Arreglado ${i}`, overview: "ok" }));
+  const resp = (n: number) => async () => {
+    anotarLlamadaIdioma();   // el dueño real de la llamada
+    return Array.from({ length: n }, (_, i) =>
+      crudo({ id: i + 1, title: `Arreglado ${i}`, overview: "ok" }));
+  };
 
   const correr = (n: number, ms: number) => withMetricasIdioma(async () => {
     await new Promise((r) => setTimeout(r, ms));
