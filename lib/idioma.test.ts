@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 import {
   FALLBACK_ACTIVO, HUELLA_EN_CLAVES, HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK,
   calcularHuella, claveMixta, claveMixtaCon, clavePorId, fusionarPorCampo, metricasIdiomaActuales,
-  anotarLlamadaIdioma, necesitaReparacion, queReparar, repararLote, repararUno,
-  withMetricasIdioma,
+  conRespuesto, indiceMixto, necesitaReparacion, pedirRespaldoIdioma, queReparar,
+  repararLote, repararUno, withMetricasIdioma,
 } from "./idioma.ts";
 
 const crudo = (o: Record<string, unknown> = {}) => ({
@@ -186,11 +186,6 @@ test("con el fallback activo: UNA llamada para todo el lote, y repara", async ()
   let pedidos = 0;
   const { res, metricas } = await withMetricasIdioma(() => repararLote(base, async () => {
     pedidos++;
-    // El dueño REAL de la llamada es quien sale a la red (`single-flight`), y es
-    // quien anota la métrica. Acá se modela ese contrato: `repararLote` ya no
-    // cuenta llamadas, porque dos reparadores que comparten una promesa son UN
-    // pedido y no dos.
-    anotarLlamadaIdioma();
     return [
       crudo({ id: 1, title: "Running Man", overview: "Un programa." }),
       crudo({ id: 3, title: "La película", overview: "Otra." }),
@@ -203,7 +198,6 @@ test("con el fallback activo: UNA llamada para todo el lote, y repara", async ()
   assert.equal(res.items[2].title, "La película", "señal 3 reparada");
   assert.equal(res.items[2].overview, "Hay.", "la sinopsis existente no se pisa");
   assert.equal(res.fallo, false);
-  assert.equal(metricas.llamadas, 1);
   assert.equal(metricas.lotesConRotos, 1);
   assert.equal(metricas.titulosReparados, 2, "solo los que CAMBIARON");
 });
@@ -383,11 +377,9 @@ test("dos reparaciones CONCURRENTES no se mezclan las métricas", async () => {
   // primero a mitad de camino. Con AsyncLocalStorage cada scope es suyo.
   const lote = (n: number) => Array.from({ length: n }, (_, i) =>
     crudo({ id: i + 1, title: "런닝맨", original_language: "ko", overview: "" }));
-  const resp = (n: number) => async () => {
-    anotarLlamadaIdioma();   // el dueño real de la llamada
-    return Array.from({ length: n }, (_, i) =>
-      crudo({ id: i + 1, title: `Arreglado ${i}`, overview: "ok" }));
-  };
+  const resp = (n: number) => () => pedirRespaldoIdioma(`concurrente-${n}`, async () =>
+    Array.from({ length: n }, (_, i) =>
+      crudo({ id: i + 1, title: `Arreglado ${i}`, overview: "ok" })));
 
   const correr = (n: number, ms: number) => withMetricasIdioma(async () => {
     await new Promise((r) => setTimeout(r, ms));

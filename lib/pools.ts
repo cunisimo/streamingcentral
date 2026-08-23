@@ -4,7 +4,9 @@ import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveCombinadaCache, clavePoolCache } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, clavePorId, repararLote } from "./idioma";
+import {
+  HUELLA_EN_CLAVES, IDIOMA_FALLBACK, clavePorId, pedirRespaldoIdioma, repararLote,
+} from "./idioma";
 import { hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode } from "./types";
@@ -154,10 +156,13 @@ async function pool(
     const r = await discover(tipo, { ...receta.params, providers: ids, page: pagina });
     const rep = await repararLote(
       r.results.map(recortar),
-      async () => (await discover(tipo, {
-        ...receta.params, providers: ids, page: pagina,
-        extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
-      })).results,
+      () => pedirRespaldoIdioma(
+        `pool:${tipo}:${plataforma}:${receta.nombre}:p${pagina}`,
+        async () => (await discover(tipo, {
+          ...receta.params, providers: ids, page: pagina,
+          extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+        })).results,
+      ),
       `pool ${tipo}/${plataforma}/p${pagina}`,
       { clave: clavePorId },
     );
@@ -234,10 +239,13 @@ export async function candidatosCombinados(opts: {
       const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
       const rep = await repararLote(
         r.results.map(recortar),
-        async () => (await discover(opts.tipo, {
-          ...opts.receta.params, providers: ids, page: pagina,
-          extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
-        })).results,
+        () => pedirRespaldoIdioma(
+          `combo:${opts.tipo}:${opts.providers.join("+")}:${opts.receta.nombre}:p${pagina}`,
+          async () => (await discover(opts.tipo, {
+            ...opts.receta.params, providers: ids, page: pagina,
+            extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+          })).results,
+        ),
         `combinada ${opts.tipo}/p${pagina}`,
         { clave: clavePorId },
       );

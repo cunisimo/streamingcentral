@@ -6,6 +6,7 @@ import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Redis } from "@upstash/redis";
 import type { ClaveLocalizada } from "./claves";
+import { resolverConCache, type BackendCache } from "./reparar-y-cachear";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
 // dependen de cómo se haya conectado la base:
@@ -307,6 +308,15 @@ export async function cached<T>(key: string, ttl: number, fetcher: () => Promise
 // (TMDB caído, rieles vacíos) es un resultado válido que hay que devolver, pero
 // guardarlo congelaría la caída durante toda la vida del TTL para todos los que
 // pidan lo mismo.
+// El backend REAL. `resolverConCache` (lib/reparar-y-cachear.ts) es la función
+// pura que decide qué se guarda y qué no; los tests la llaman con un backend en
+// memoria, así que producción y tests comparten la MISMA implementación de esa
+// decisión en vez de que el test la reimplemente.
+export const backendCache: BackendCache = {
+  leer: <T>(clave: string) => batchGet<T>(clave),
+  escribir: <T>(clave: string, valor: T, ttl: number) => guardar(clave, valor, ttl),
+};
+
 export async function cachedIf<T>(
   // `vale` se llamaba `guardar`; se renombró para no chocar con la función de
   // escritura del batcher, que ahora es la única que habla con redis.set.

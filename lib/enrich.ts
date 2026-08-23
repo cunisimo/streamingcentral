@@ -19,8 +19,8 @@ import { getEditorial, publishedIds } from "./reviews";
 import { cached, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
 import { claveCard, clavePeoplePopular, claveSearch } from "./claves";
 import {
-  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK,
-  claveMixta, clavePorId, repararLote, repararUno,
+  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
+  conRespuesto, indiceMixto, pedirRespaldoIdioma, repararLote, repararUno,
 } from "./idioma";
 import { ayudasDeBusqueda } from "./consultas-verificadas";
 import {
@@ -127,9 +127,8 @@ export async function listByCategory(opts: {
   // lanzamientos", que ya no filtra por cantidad de votos.
   soloCompletos?: boolean;
   /** Señal de salida: `fallo` queda en true si la reparación de idioma falló.
-   *  Quien cachea el resultado (hoy `top:pop:`) la mira para NO guardar una
-   *  lista sin reparar. Opcional: los llamadores que no cachean la ignoran, y
-   *  así no hay que cambiarle la firma a los diez que ya existen. */
+   *  Los llamadores que NO cachean la omiten. El que sí cachea usa
+   *  `listByCategoryCacheable`, que la exige por tipo — así no se puede olvidar. */
   senal?: { fallo: boolean };
 }): Promise<UITitle[]> {
   if (!opts.providers.length) return [];
@@ -204,9 +203,12 @@ export async function listByCategory(opts: {
     discover(opts.tipo, paramsBase).then(async (r) => ({
       ...r,
       results: await (async () => {
-        const rep = await repararLote(r.results, async () => (await discover(opts.tipo, {
-          ...paramsBase, extra: { ...(paramsBase.extra ?? {}), language: IDIOMA_FALLBACK },
-        })).results, `categoria ${opts.tipo}/${opts.genre ?? "?"}`, { clave: clavePorId });
+        const rep = await repararLote(r.results, () => pedirRespaldoIdioma(
+          `categoria:${opts.tipo}:${opts.genre ?? "todos"}:p${opts.page ?? 1}`,
+          async () => (await discover(opts.tipo, {
+            ...paramsBase, extra: { ...(paramsBase.extra ?? {}), language: IDIOMA_FALLBACK },
+          })).results,
+        ), `categoria ${opts.tipo}/${opts.genre ?? "?"}`, { clave: clavePorId });
         if (rep.fallo) falloIdiomaCat = true;
         return rep.items;
       })(),
@@ -215,9 +217,12 @@ export async function listByCategory(opts: {
       ? discover(opts.tipo, paramsAlt).then(async (r) => ({
           ...r,
           results: await (async () => {
-            const rep = await repararLote(r.results, async () => (await discover(opts.tipo, {
-              ...paramsAlt, extra: { ...(paramsAlt.extra ?? {}), language: IDIOMA_FALLBACK },
-            })).results, `categoria-alt ${opts.tipo}`, { clave: clavePorId });
+            const rep = await repararLote(r.results, () => pedirRespaldoIdioma(
+              `categoria-alt:${opts.tipo}:${opts.genre ?? "todos"}:p${opts.page ?? 1}`,
+              async () => (await discover(opts.tipo, {
+                ...paramsAlt, extra: { ...(paramsAlt.extra ?? {}), language: IDIOMA_FALLBACK },
+              })).results,
+            ), `categoria-alt ${opts.tipo}`, { clave: clavePorId });
             if (rep.fallo) falloIdiomaCat = true;
             return rep.items;
           })(),
@@ -252,6 +257,20 @@ export async function listByCategory(opts: {
   );
   if (opts.senal && falloIdiomaCat) opts.senal.fallo = true;
   return items.filter((i) => onUserPlatforms(i, opts.providers));
+}
+
+/**
+ * `listByCategory` para quien va a CACHEAR el resultado.
+ *
+ * La señal deja de ser opcional: el tipo obliga a pasarla. Antes era opcional
+ * para no cambiarle la firma a los diez llamadores que no cachean, y eso dejaba
+ * al que sí cachea (`top:pop:`) a un descuido de guardar una lista sin reparar
+ * durante 24 h.
+ */
+export function listByCategoryCacheable(
+  opts: Omit<Parameters<typeof listByCategory>[0], "senal"> & { senal: { fallo: boolean } },
+): Promise<UITitle[]> {
+  return listByCategory(opts);
 }
 
 // --- Últimos lanzamientos (por fecha de estreno, en tus plataformas) ---
@@ -599,10 +618,13 @@ export async function audienceTitles(slug: string, providers: PlatformCode[]): P
           ? await candidatosDePools({ tipo: tp, providers, receta, pages: 1, startPage: pagina })
           : (await repararLote(
               (await discover(tp, { ...receta.params, providers: ids, page: pagina })).results,
-              async () => (await discover(tp, {
-                ...receta.params, providers: ids, page: pagina,
-                extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
-              })).results,
+              () => pedirRespaldoIdioma(
+                `audiencia:${tp}:p${pagina}`,
+                async () => (await discover(tp, {
+                  ...receta.params, providers: ids, page: pagina,
+                  extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+                })).results,
+              ),
               `audiencia-sin-pools ${tp}/p${pagina}`,
               { clave: clavePorId },
             )).items);
@@ -728,14 +750,15 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
   const conocidos = personasRaw.flatMap((p) => p.known_for ?? []);
   const repConocidos = await repararLote(
     conocidos,
-    async () => (await Promise.all(Array.from({ length: BUSQUEDA_PAGINAS_PERSONA },
-      (_, i) => searchPersonas(q, i + 1, IDIOMA_FALLBACK))))
-      .flatMap((r) => r.results ?? []).flatMap((p) => p.known_for ?? []),
+    () => pedirRespaldoIdioma(`search:personas:${q}`,
+      async () => (await Promise.all(Array.from({ length: BUSQUEDA_PAGINAS_PERSONA },
+        (_, i) => searchPersonas(q, i + 1, IDIOMA_FALLBACK))))
+        .flatMap((r) => r.results ?? []).flatMap((p) => p.known_for ?? [])),
     `search known_for «${q}»`,
     { clave: claveMixta, claveRespaldo: claveMixta },
   );
   falloIdioma = repConocidos.fallo;
-  const porClaveConocidos = new Map(repConocidos.items.map((t) => [claveMixta(t), t]));
+  const porClaveConocidos = indiceMixto(repConocidos.items, claveMixta);
 
   // Las personas NO conservan alias: acá el filtro por nombre es lo que saca el
   // ruido, y es el arreglo que hizo que "ste" devuelva a Spielberg en vez de
@@ -748,7 +771,7 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
       id: r.id, name: r.name,
       profile: img(r.profile_path, "w185"),
       knownFor: (r.known_for ?? [])
-        .map((k) => titleOf(porClaveConocidos.get(claveMixta(k)) ?? k))
+        .map((k) => titleOf(conRespuesto(porClaveConocidos, k, claveMixta)))
         .filter(Boolean).slice(0, 3),
       department: r.known_for_department,
     }));
@@ -806,18 +829,20 @@ export async function popularPeople(page = 1): Promise<{ people: UIPerson[]; has
     // película 1399.
     const reparados = await repararLote(
       planos,
-      async () => (await personPopular(page, IDIOMA_FALLBACK)).results.flatMap((p) => p.known_for ?? []),
+      () => pedirRespaldoIdioma(`people:popular:p${page}`,
+        async () => (await personPopular(page, IDIOMA_FALLBACK)).results.flatMap((p) => p.known_for ?? [])),
       `people:popular p${page}`,
       { clave: claveMixta, claveRespaldo: claveMixta },
     );
     fallo = reparados.fallo;
-    const porClave = new Map(reparados.items.map((t) => [claveMixta(t), t]));
+    const porClave = indiceMixto(reparados.items, claveMixta);
 
     const people = res.results
       .filter((p) => (p.known_for_department ?? "Acting") === "Acting" && p.profile_path)
       .map((p) => ({
         id: p.id, name: p.name, profile: img(p.profile_path, "w185"),
-        knownFor: (p.known_for ?? []).map((k) => titleOf(porClave.get(claveMixta(k)) ?? k)).filter(Boolean).slice(0, 2),
+        knownFor: (p.known_for ?? []).map((k) => titleOf(conRespuesto(porClave, k, claveMixta)))
+          .filter(Boolean).slice(0, 2),
       }));
     return { people, hasMore: res.page < res.total_pages };
   }, () => !fallo);
@@ -921,17 +946,17 @@ export async function personFilmography(id: number, providers: PlatformCode[]) {
   const planos = [...creditsCrudos.cast, ...creditsCrudos.crew];
   const repCreditos = await repararLote(
     planos,
-    async () => {
+    () => pedirRespaldoIdioma(`filmografia:${id}`, async () => {
       const r = await personCombinedCredits(id, IDIOMA_FALLBACK);
       return [...r.cast, ...r.crew];
-    },
+    }),
     `filmografía persona:${id}`,
     { clave: claveMixta, claveRespaldo: claveMixta },
   );
-  const porClaveCred = new Map(repCreditos.items.map((t) => [claveMixta(t), t]));
+  const porClaveCred = indiceMixto(repCreditos.items, claveMixta);
   const credits = {
-    cast: creditsCrudos.cast.map((c) => ({ ...c, ...porClaveCred.get(claveMixta(c)) })),
-    crew: creditsCrudos.crew.map((c) => ({ ...c, ...porClaveCred.get(claveMixta(c)) })),
+    cast: creditsCrudos.cast.map((c) => ({ ...c, ...conRespuesto(porClaveCred, c, claveMixta) })),
+    crew: creditsCrudos.crew.map((c) => ({ ...c, ...conRespuesto(porClaveCred, c, claveMixta) })),
   };
   const pub = await publishedIds();
   const seen = new Set<string>();
@@ -992,7 +1017,8 @@ export async function detalleReparado(
 ): Promise<{ detalle: RawDetail; fallo: boolean }> {
   const d = await titleDetails(type, id);
   const r = await repararUno(
-    d, () => titleDetails(type, id, IDIOMA_FALLBACK), `ficha ${type}:${id}`,
+    d, () => pedirRespaldoIdioma(`detalle:${type}:${id}`,
+      () => titleDetails(type, id, IDIOMA_FALLBACK)), `ficha ${type}:${id}`,
   );
   return { detalle: r.item, fallo: r.fallo };
 }
@@ -1006,11 +1032,11 @@ async function detalleYRelacionadosReparados(
   const d = await titleDetails(type, id);
   const relacionados = d.recommendations?.results ?? [];
 
-  let respaldo: RawDetail | null = null;
-  const pedir = async () => {
-    respaldo ??= await titleDetails(type, id, IDIOMA_FALLBACK);
-    return respaldo;
-  };
+  // El punto único ya une lo que esté en vuelo, así que la ficha y sus
+  // relacionados comparten UNA sola llamada de respaldo sin memo propio.
+  const pedir = () => pedirRespaldoIdioma(
+    `detalle:${type}:${id}`, () => titleDetails(type, id, IDIOMA_FALLBACK),
+  );
 
   const uno = await repararUno(d, pedir, `ficha ${type}:${id}`);
   if (!relacionados.length) return { detalle: uno.item, fallo: uno.fallo };
@@ -1333,10 +1359,13 @@ export async function candidatosDeSuperficie(opts: {
   if (!poolsHabilitados) {
     const res = await Promise.all(Array.from({ length: pages }, (_, i) =>
       discover(opts.tipo, { ...params, providers: ids, page: desde + i })
-        .then(async (r) => (await repararLote(r.results, async () => (await discover(opts.tipo, {
-          ...params, providers: ids, page: desde + i,
-          extra: { ...(params.extra ?? {}), language: IDIOMA_FALLBACK },
-        })).results, `superficie-sin-pools ${opts.tipo}/p${desde + i}`, { clave: clavePorId })).items)));
+        .then(async (r) => (await repararLote(r.results, () => pedirRespaldoIdioma(
+          `superficie:${opts.tipo}:p${desde + i}`,
+          async () => (await discover(opts.tipo, {
+            ...params, providers: ids, page: desde + i,
+            extra: { ...(params.extra ?? {}), language: IDIOMA_FALLBACK },
+          })).results,
+        ), `superficie-sin-pools ${opts.tipo}/p${desde + i}`, { clave: clavePorId })).items)));
     return { candidatos: res.flat(), startPage: desde, eje: null, degradado: false };
   }
   const candidatos = await candidatosDePools({

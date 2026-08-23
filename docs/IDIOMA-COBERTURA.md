@@ -16,8 +16,8 @@ que divergieran.
 | `disc:` (pool) | `/discover` por plataforma y página | **sí** | `pool()` dentro del `cached()` | título, sinopsis | 1 llamada por página con algún roto |
 | `disc:` (combinada) | `/discover` con todas las plataformas | **sí** | `candidatosCombinados()` dentro del `cached()` | título, sinopsis | ídem |
 | `card:` | `/movie\|tv/{id}` | **sí** | `titleCard()` → `detalleReparado()` | título, sinopsis | 1 llamada por título roto |
-| `top:pop:` | `listByCategory()` → `/discover` | **sí** (heredado) | `listByCategory` | título, sinopsis | 1 por consulta con algún roto |
-| `reco:v2:` | cards ya reparadas | **sí** (heredado) | se arma con `card:` y pools | — | 0 |
+| `top:pop:` | `listByCategoryCacheable()` → `/discover` | **sí** | la señal es **obligatoria por tipo**: no se puede omitir | título, sinopsis | 1 por consulta con algún roto |
+| `reco:v2:` | cards y pools ya reparados | **sí** | `recomendaciones()` abre su **propio** `withMetricasIdioma` | — | 0 |
 | `reco:mismo:` | `titleDetails().recommendations` | **sí** | `recomendadosDe()` | título, sinopsis | 1 por lista con algún roto |
 | `reco:cruce:` | `/discover` por keywords | **sí** | `cruzadosDe()` | título, sinopsis | 1 por consulta con algún roto |
 | `reco:perfil:` | `titleDetails()` (`titulo`) | **sí** | `perfilDe()` | título, sinopsis | 1 por título roto |
@@ -85,7 +85,8 @@ segundo intento → vuelve a llamar y repara.
 |---|---|
 | El respaldo rechaza (500, red) | base intacta, `console.error`, `fallos++` |
 | El respaldo hace timeout | ídem |
-| El respaldo devuelve `null`, `undefined` o lista vacía | base intacta, **y cuenta como fallo** |
+| El respaldo devuelve `null` o `undefined` | base intacta, **cuenta como fallo**, no se cachea |
+| El respaldo devuelve una **lista vacía válida** | base intacta, **NO es fallo**, y **sí se cachea**: TMDB respondió bien, simplemente no había con qué reparar |
 | El respaldo trae el título igual de roto | no se pisa nada: mejor el original que un vacío |
 | Un elemento del lote no viene en el respaldo | ese título queda sin reparar; el resto sí, y **no** cuenta como fallo |
 
@@ -102,9 +103,16 @@ posterior usa **exactamente la misma**.
 | Pools, categorías, `reco:cruce` | `clavePorId` — un solo tipo por consulta |
 | `known_for` (buscador y `people:popular`), filmografías, relacionados | **`claveMixta`** |
 
-Cubierto por tests en `lib/idioma.test.ts`, incluida la **consulta paginada**:
-`candidatosCombinados` arma `{ candidatos, totalPaginas, total }` **después** de
-reparar, así que un fallo del respaldo no puede perder la paginación.
+Cubierto por `lib/reparar-y-cachear.test.ts`, que **no simula el caché**: llama
+a `resolverConCache` —la misma función que usa `cachedIf`/`cachedLocIf` en
+producción— con un backend en memoria, y a los adaptadores reales de
+`lib/idioma-adaptadores.ts` con TMDB falso. La versión anterior de esos tests
+reimplementaba la semántica del caché adentro del propio test, y por eso tres
+bugs reales quedaron verdes.
+
+Incluye la **consulta paginada**: `adaptadorPaginaCombinada` arma
+`{ candidatos, totalPaginas, total }` **después** de reparar, así que un fallo
+del respaldo no puede perder la paginación.
 
 ---
 
@@ -153,14 +161,69 @@ respaldo: **hasta 6**.
 | Antes | 3 `titleDetails` (+3 de respaldo en el peor caso) | 12 (hasta 24) |
 | **Ahora** | **1** (+1 de respaldo) | **4 (hasta 8)** |
 
-`lib/single-flight.ts` comparte la **promesa** por `tipo:id` y la borra al
-resolverse. **No es un cache**: no guarda nada entre requests, así que no puede
-servir datos viejos y no hay nada que invalidar. Lo único que hace es no repetir
-lo que ya está en el aire. Cubierto por `lib/single-flight.test.ts`, incluido el
-caso de la promesa rechazada — sin el `finally` que borra la clave, un fallo de
-TMDB dejaría ese título imposible de pedir en lo que le queda de vida al proceso.
+`lib/single-flight.ts` comparte la **promesa** y la borra al resolverse.
 
-La clave es `tipo:id` y no `id`, por lo mismo que los lotes mixtos.
+**La clave es `idioma:tipo:id`.** El tipo, porque TMDB reutiliza los números
+entre películas y series. El **idioma**, porque la llamada base y la de respaldo
+son dos pedidos distintos al mismo título: sin él, el respaldo en `es-ES`
+recibiría la promesa del pedido en `es-MX`.
+
+**Sí se comparte entre requests simultáneos, y eso es deseable**: dos usuarios
+pidiendo la misma ficha al mismo tiempo son un solo pedido a TMDB. Lo que **no**
+hace es guardar entre requests — la entrada se borra al resolverse o rechazarse,
+así que nunca sirve datos viejos.
+
+Cubierto por `lib/single-flight.test.ts`, incluida la promesa rechazada: sin el
+`finally` que borra la clave, un fallo de TMDB dejaría ese título imposible de
+pedir en lo que le queda de vida al proceso.
+
+---
+
+## Quién cuenta cada llamada de respaldo
+
+**Un solo punto: `pedirRespaldoIdioma()` en `lib/idioma.ts`.** Es lo que hace
+que la métrica `llamadas` signifique *requests de respaldo* y no "llamadas a
+TMDB" ni "intentos lógicos".
+
+| Camino | Clave del pedido | Quién lo llama |
+|---|---|---|
+| Pool por plataforma | `pool:<tipo>:<plat>:<receta>:p<n>` | `lib/pools.ts` |
+| Consulta combinada | `combo:<tipo>:<plats>:<receta>:p<n>` | `lib/pools.ts` |
+| Categoría / `top:pop` / audiencia | `categoria:…`, `categoria-alt:…` | `lib/enrich.ts` |
+| Sin pools (`POOL_CACHE=0`) | `audiencia:…`, `superficie:…` | `lib/enrich.ts` |
+| Ficha y relacionados | `detalle:<tipo>:<id>` | `lib/enrich.ts` |
+| `reco:mismo` y `reco:perfil` | `detalle:<tipo>:<id>` | `lib/reco.ts` |
+| `reco:cruce` | `cruce:<tipo>:<id>` | `lib/reco.ts` |
+| `people:popular` | `people:popular:p<n>` | `lib/enrich.ts` |
+| Personas del buscador | `search:personas:<q>` | `lib/enrich.ts` |
+| Filmografía | `filmografia:<id>` | `lib/enrich.ts` |
+
+Dos reglas que antes no se cumplían:
+
+1. **La llamada base NO se cuenta.** El contador estaba en el single-flight de
+   detalles del recomendador, que sirve a los dos idiomas, así que cada pedido
+   base se anotaba como si fuera un respaldo.
+2. **Varios consumidores de la misma promesa cuentan UNA vez.** El conteo va en
+   `alPedir`, que el single-flight invoca solo cuando de verdad sale a la red.
+
+La ficha y sus relacionados comparten la clave `detalle:<tipo>:<id>`, así que
+pagan **un** respaldo entre los dos.
+
+---
+
+## Quién abre el contexto de métricas de `reco:v2`
+
+**`recomendaciones()`, dentro del fetcher de `reco:v2`.** No la route.
+
+Antes se leía `metricasIdiomaActuales()` confiando en que alguien más hubiera
+abierto el scope: `/api/home` lo hacía y **`/api/te-va-a-gustar` no**, así que
+ahí volvía `null` y el riel se guardaba 6 h con los fallos adentro.
+
+Ahora el fetcher hace `withMetricasIdioma(() => armar(opts))` y decide el
+`fallo` **al terminar**, mirando `metricas.fallos`. Con eso quedan cubiertos los
+retornos tempranos —`sin-candidatos`, `filtrado`— sin tener que acordarse de
+marcar nada antes de cada `return`, y ninguna route necesita recordar abrir
+nada.
 
 ---
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { cardsByIds, listByCategory } from "./enrich";
+import { cardsByIds, listByCategoryCacheable } from "./enrich";
 import { latestWeekRows } from "./netflix-top10";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveTopPop } from "./claves";
@@ -43,7 +43,7 @@ async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<To
   // guarda: si no, un top sin reparar quedaba congelado 24 h.
   const senal = { fallo: false };
   const items = await cachedLocIf(claveTopPop(platform, tipo, HUELLA_EN_CLAVES), TTL.catalog, async () => {
-    const r = await listByCategory({
+    const r = await listByCategoryCacheable({
       tipo, providers: [platform], sortBy: "popularity.desc",
       // Explícito, no el default de discover(): "lo más popular ahora" con
       // menos de 60 votos no es popular en ningún sentido útil, es ruido. Medido

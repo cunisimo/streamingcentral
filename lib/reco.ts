@@ -39,8 +39,9 @@ import "server-only";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil } from "./claves";
 import {
-  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, anotarLlamadaIdioma,
-  claveMixta, clavePorId, metricasIdiomaActuales, repararLote, repararUno,
+  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
+  pedirRespaldoIdioma, repararLote, repararUno,
+  withMetricasIdioma,
 } from "./idioma";
 import { discover, titleDetails, tmdbKeywords, type RawDetail } from "./tmdb";
 import { crearSingleFlight } from "./single-flight";
@@ -148,26 +149,29 @@ const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
 // Base Y respaldo pasan los dos por acá: es lo que garantiza el peor caso de
 // "1 base + como máximo 1 respaldo por origen", aunque los tres caminos del
 // recomendador pidan la reparación al mismo tiempo.
-const compartirDetalle = crearSingleFlight<RawDetail>({
-  // Las métricas se anotan donde de VERDAD se sale a la red.
-  alPedir: () => anotarLlamadaIdioma(),
-});
-const detalleDe = (tipo: MediaType, id: number, idioma = IDIOMA_BASE) =>
-  compartirDetalle(`${idioma}:${tipo}:${id}`, () => titleDetails(tipo, id,
-    idioma === IDIOMA_BASE ? undefined : idioma));
+// El single-flight de la BASE no cuenta nada: la métrica `llamadas` mide
+// respaldos, y contarlo acá anotaba cada pedido base como si lo fuera.
+const compartirDetalle = crearSingleFlight<RawDetail>();
+const detalleBase = (tipo: MediaType, id: number) =>
+  compartirDetalle(`${IDIOMA_BASE}:${tipo}:${id}`, () => titleDetails(tipo, id));
+
+// El respaldo va por el punto único, que es quien cuenta y quien une lo que ya
+// esté en vuelo.
+const detalleRespaldo = (tipo: MediaType, id: number) =>
+  pedirRespaldoIdioma(`detalle:${tipo}:${id}`, () => titleDetails(tipo, id, IDIOMA_FALLBACK));
 
 async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
   let fallo = false;
   return cachedLocIf(claveRecoMismo(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     // `/recommendations` viene dentro de titleDetails vía append_to_response, así
     // que esto no cuesta una llamada extra sobre la ficha.
-    const d = await detalleDe(tipo, id);
+    const d = await detalleBase(tipo, id);
     const base = (d.recommendations?.results ?? []).map((x) => ({ ...x }));
     // Lote MIXTO: los recomendados de una película pueden ser series y TMDB
     // reutiliza los ids entre tipos.
     const rep = await repararLote(
       base,
-      async () => (await detalleDe(tipo, id, IDIOMA_FALLBACK)).recommendations?.results ?? [],
+      async () => (await detalleRespaldo(tipo, id)).recommendations?.results ?? [],
       `reco:mismo ${tipo}:${id}`,
       { clave: claveMixta, claveRespaldo: claveMixta },
     );
@@ -201,8 +205,8 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
     // puntuar y para los logs, pero una clave localizada que no se repara es
     // una clave que va a mostrar el idioma viejo el día que alguien la muestre.
     const rep = await repararUno(
-      await detalleDe(tipo, id),
-      () => detalleDe(tipo, id, IDIOMA_FALLBACK),
+      await detalleBase(tipo, id),
+      () => detalleRespaldo(tipo, id),
       `reco:perfil ${tipo}:${id}`,
     );
     falloPerfil = rep.fallo;
@@ -250,9 +254,12 @@ async function cruzadosDe(
       const d = await discover(otro(tipo), params);
       const rep = await repararLote(
         d.results,
-        async () => (await discover(otro(tipo), {
-          ...params, extra: { language: IDIOMA_FALLBACK },
-        })).results,
+        () => pedirRespaldoIdioma(
+          `cruce:${tipo}:${id}`,
+          async () => (await discover(otro(tipo), {
+            ...params, extra: { language: IDIOMA_FALLBACK },
+          })).results,
+        ),
         `reco:cruce ${tipo}:${id}`,
         { clave: clavePorId },
       );
@@ -307,30 +314,29 @@ export async function recomendaciones(opts: {
   // El riel entero: si alguna reparación de adentro falló, se sirve igual pero
   // NO se guarda. Con TTL.reco de 6 h, un riel sin reparar quedaría congelado
   // aunque cada `card:` de adentro sí se haya protegido por separado.
-  const senal = { fallo: false };
-  return cachedLocIf(clv, TTL.reco, () => armar({ ...opts, senal }), () => !senal.fallo);
+  //
+  // EL CONTEXTO LO ABRE ESTA FUNCIÓN, no la route. Antes se leía
+  // `metricasIdiomaActuales()` confiando en que alguien más hubiera abierto el
+  // scope: `/api/home` lo hacía y `/api/te-va-a-gustar` no, así que ahí volvía
+  // `null` y el riel se guardaba 6 h con los fallos adentro.
+  //
+  // Y la decisión se toma DESPUÉS de que `armar()` terminó, mirando las
+  // métricas del scope. Así los retornos tempranos —`sin-candidatos`,
+  // `filtrado`— quedan cubiertos sin tener que acordarse de llamar a nada antes
+  // de cada `return`.
+  let fallo = false;
+  return cachedLocIf(clv, TTL.reco, async () => {
+    const { res, metricas } = await withMetricasIdioma(() => armar(opts));
+    fallo = metricas.fallos > 0;
+    return res;
+  }, () => !fallo);
 }
 
 async function armar(opts: {
-  /** Señal de salida: la reparación de idioma falló en alguna capa de adentro. */
-  senal?: { fallo: boolean };
   senales: Senal[];
   excluir: string[];
   providers: PlatformCode[];
 }): Promise<{ items: Recomendacion[]; motivo?: MotivoSinRiel }> {
-  // Delta de fallos DURANTE el armado. Las capas de adentro (`card:`,
-  // `reco:mismo`, `reco:cruce`) ya se protegen cada una, pero el riel COMPUESTO
-  // se guarda aparte y podría cachear items sin reparar.
-  //
-  // Es deliberadamente conservador: si otra rama del mismo request falla al
-  // mismo tiempo, este riel tampoco se guarda. Errar hacia "no cachear" cuesta
-  // un rearmado; errar al revés congela contenido roto 6 h.
-  const fallosAntes = metricasIdiomaActuales()?.fallos ?? 0;
-  const marcarSiFallo = () => {
-    if (opts.senal && (metricasIdiomaActuales()?.fallos ?? 0) > fallosAntes) {
-      opts.senal.fallo = true;
-    }
-  };
 
   // Jerarquía Petacular > Ta buena > Mi lista, y dentro de cada nivel el orden
   // en que vino (el cliente los manda por fecha descendente). No hay cupo por
@@ -464,6 +470,5 @@ async function armar(opts: {
   const porId = new Map(enriquecidos.map((e) => [clave(e.type, e.id), e._cand]));
   auditar("final", items.map((t) => porId.get(clave(t.type, t.id))!).filter(Boolean));
   if (items.length < PISO) return { items: [], motivo: "filtrado" };
-  marcarSiFallo();
   return { items };
 }

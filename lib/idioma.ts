@@ -17,6 +17,7 @@
 // NO IMPORTA NADA DE `./tmdb`, ni siquiera un tipo: `tmdb.ts` importa de acá
 // para el idioma base, y devolver el favor cerraba un ciclo.
 import { AsyncLocalStorage } from "node:async_hooks";
+import { crearSingleFlight } from "./single-flight.ts";
 
 // --- Configuración -----------------------------------------------------------
 export const IDIOMA_BASE = process.env.IDIOMA_TITULOS || "es-ES";
@@ -135,7 +136,9 @@ export interface MetricasIdioma {
   lotesConRotos: number;
   /** Títulos donde la fusión CAMBIÓ algo. No es lo mismo que detectados. */
   titulosReparados: number;
-  /** Respaldos que fallaron: rechazo, timeout o respuesta vacía. */
+  /** Respaldos que fallaron. Cuentan la excepción, el timeout y la respuesta
+   *  MALFORMADA (`null`/`undefined`). Una lista vacía válida NO es un fallo:
+   *  es una respuesta correcta que simplemente no trae con qué reparar. */
   fallos: number;
 }
 const nuevas = (): MetricasIdioma => ({
@@ -157,17 +160,40 @@ function anotar(fn: (m: MetricasIdioma) => void) {
   if (m) fn(m);
 }
 
-/** La cuenta una llamada REAL a TMDB. La invoca quien sale a la red — hoy
- *  `lib/single-flight.ts` — y no el reparador, que puede estar compartiendo una
- *  promesa que ya estaba en vuelo. */
-export function anotarLlamadaIdioma() {
-  anotar((m) => { m.llamadas++; });
-}
-
 /** Las métricas del scope actual, o null fuera de uno. */
 export function metricasIdiomaActuales(): MetricasIdioma | null {
   const m = als.getStore();
   return m ? { ...m } : null;
+}
+
+// --- EL punto único donde se pide un respaldo -------------------------------
+// TODOS los caminos pasan por acá: pool, combinada, categoría, detalle, reco,
+// personas y búsqueda. Es lo que hace que la métrica `llamadas` signifique
+// "requests de RESPALDO", y no "llamadas a TMDB" ni "intentos lógicos".
+//
+// Dos reglas que antes no se cumplían:
+//
+//   1. La llamada BASE no se cuenta. El contador estaba en el single-flight de
+//      detalles del recomendador, que sirve a los dos idiomas, así que cada
+//      pedido base se anotaba como si fuera un respaldo.
+//   2. Si varios consumidores comparten la misma promesa de respaldo, se cuenta
+//      UNA sola vez. Por eso el conteo va en `alPedir`, que el single-flight
+//      invoca solo cuando de verdad sale a la red.
+const flightRespaldo = crearSingleFlight<unknown>({
+  alPedir: () => anotar((m) => { m.llamadas++; }),
+});
+
+/**
+ * Pide el respaldo en `IDIOMA_FALLBACK`, uniendo lo que ya esté en vuelo.
+ *
+ * `clave` identifica el PEDIDO, no el título: dos superficies que necesitan la
+ * misma página de discover en es-ES comparten la llamada. Se le antepone el
+ * idioma para que nunca colisione con un pedido base.
+ */
+export function pedirRespaldoIdioma<T>(clave: string, pedir: () => Promise<T>): Promise<T> {
+  return flightRespaldo(
+    `${IDIOMA_FALLBACK}:${clave}`, pedir as () => Promise<unknown>,
+  ) as Promise<T>;
 }
 
 // --- Identidad dentro de un lote --------------------------------------------
@@ -192,6 +218,30 @@ export function claveMixtaCon(tipo: string): ClaveDeLote<Localizable & { id?: nu
 /** Para lotes de UN solo tipo, donde el id ya es único. */
 export function clavePorId(t: Localizable & { id?: number }): string | null {
   return t.id === undefined ? null : String(t.id);
+}
+
+// --- Índice de lotes MIXTOS -------------------------------------------------
+// `claveMixta` devuelve `null` cuando el tipo es ambiguo, y `new Map(items.map(
+// (t) => [claveMixta(t), t]))` metía TODOS los ambiguos bajo la misma clave
+// `null`: el último pisaba a los anteriores y después uno podía recibir el
+// título de otro — exactamente lo que la clave mixta viene a evitar.
+//
+// Este índice no inserta claves nulas, y `conRespuesto` nunca hace `get(null)`.
+
+export function indiceMixto<T>(items: T[], clave: ClaveDeLote<T>): Map<string, T> {
+  const m = new Map<string, T>();
+  for (const t of items) {
+    const k = clave(t);
+    if (k !== null) m.set(k, t);
+  }
+  return m;
+}
+
+/** El reemplazo del índice, o el original si la clave es ambigua o no está. */
+export function conRespuesto<T>(indice: Map<string, T>, t: T, clave: ClaveDeLote<T>): T {
+  const k = clave(t);
+  if (k === null) return t;
+  return indice.get(k) ?? t;
 }
 
 // --- EL mecanismo, uno solo --------------------------------------------------
