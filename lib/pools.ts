@@ -4,9 +4,8 @@ import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveCombinadaCache, clavePoolCache } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import {
-  HUELLA_EN_CLAVES, IDIOMA_FALLBACK, clavePorId, pedirRespaldoIdioma, repararLote,
-} from "./idioma";
+import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, pedirRespaldoIdioma } from "./idioma";
+import { adaptadorLista, adaptadorPaginaCombinada } from "./idioma-adaptadores";
 import { hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode } from "./types";
@@ -153,21 +152,20 @@ async function pool(
   // hasta 30 h, y el próximo request no volvería a intentar.
   let fallo = false;
   const traer = async () => {
-    const r = await discover(tipo, { ...receta.params, providers: ids, page: pagina });
-    const rep = await repararLote(
-      r.results.map(recortar),
-      () => pedirRespaldoIdioma(
+    const rep = await adaptadorLista({
+      pedirBase: async () =>
+        (await discover(tipo, { ...receta.params, providers: ids, page: pagina }))
+          .results.map(recortar),
+      pedirRespaldo: () => pedirRespaldoIdioma(
         `pool:${tipo}:${plataforma}:${receta.nombre}:p${pagina}`,
         async () => (await discover(tipo, {
           ...receta.params, providers: ids, page: pagina,
           extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
         })).results,
       ),
-      `pool ${tipo}/${plataforma}/p${pagina}`,
-      { clave: clavePorId },
-    );
+    });
     fallo = rep.fallo;
-    return rep.items;
+    return rep.valor;
   };
   return cachedLocIf(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer, () => !fallo);
 }
@@ -236,23 +234,29 @@ export async function candidatosCombinados(opts: {
   return cachedLocIf(
     claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool,
     async () => {
-      const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
-      const rep = await repararLote(
-        r.results.map(recortar),
-        () => pedirRespaldoIdioma(
+      // Los metadatos de paginación los arma el adaptador DESPUÉS de reparar:
+      // un fallo del respaldo no puede perder `totalPaginas` ni `total`.
+      const rep = await adaptadorPaginaCombinada({
+        pedirBase: async () => {
+          const r = await discover(opts.tipo, {
+            ...opts.receta.params, providers: ids, page: pagina,
+          });
+          return {
+            results: r.results.map(recortar),
+            total_pages: r.total_pages,
+            total_results: r.total_results,
+          };
+        },
+        pedirRespaldo: () => pedirRespaldoIdioma(
           `combo:${opts.tipo}:${opts.providers.join("+")}:${opts.receta.nombre}:p${pagina}`,
           async () => (await discover(opts.tipo, {
             ...opts.receta.params, providers: ids, page: pagina,
             extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
           })).results,
         ),
-        `combinada ${opts.tipo}/p${pagina}`,
-        { clave: clavePorId },
-      );
+      });
       fallo = rep.fallo;
-      // Los metadatos de paginación se arman DESPUÉS de reparar: un fallo del
-      // respaldo no puede perder `totalPaginas` ni `total`.
-      return { candidatos: rep.items, totalPaginas: r.total_pages, total: r.total_results };
+      return rep.valor;
     },
     () => !fallo,
   );

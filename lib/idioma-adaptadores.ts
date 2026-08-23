@@ -10,7 +10,7 @@
 //
 // Módulo puro: solo depende de `lib/idioma.ts`, que tampoco importa runtime.
 import {
-  claveMixta, clavePorId, repararLote, repararUno,
+  clavePorId, repararLote, repararUno,
   type ClaveDeLote, type Localizable,
 } from "./idioma.ts";
 import type { Producido } from "./reparar-y-cachear.ts";
@@ -22,12 +22,13 @@ export async function adaptadorCard<T extends Localizable>(deps: {
   activo?: boolean;
 }): Promise<Producido<T>> {
   const base = await deps.pedirBase();
-  const r = await repararUno(base, deps.pedirRespaldo, "card", deps.activo ?? true);
+  const r = await repararUno(base, deps.pedirRespaldo, "card", deps.activo);
   return { valor: r.item, fallo: r.fallo };
 }
 
-/** Una lista de un solo tipo: `top:pop:`, categorías, pools. */
-export async function adaptadorTopPop<T extends Localizable>(deps: {
+/** Una lista de un solo tipo: el productor de `top:pop:` (`listByCategory`),
+ *  las categorías y los pools por plataforma. */
+export async function adaptadorLista<T extends Localizable>(deps: {
   pedirBase: () => Promise<T[]>;
   pedirRespaldo: () => Promise<Localizable[] | null | undefined>;
   clave?: ClaveDeLote<T>;
@@ -36,7 +37,7 @@ export async function adaptadorTopPop<T extends Localizable>(deps: {
   const base = await deps.pedirBase();
   const r = await repararLote(base, deps.pedirRespaldo, "lista", {
     clave: deps.clave ?? (clavePorId as ClaveDeLote<T>),
-    activo: deps.activo ?? true,
+    activo: deps.activo,
   });
   return { valor: r.items, fallo: r.fallo };
 }
@@ -52,7 +53,7 @@ export async function adaptadorPaginaCombinada<T extends Localizable>(deps: {
   const r = await deps.pedirBase();
   const rep = await repararLote(r.results, deps.pedirRespaldo, "combinada", {
     clave: deps.clave ?? (clavePorId as ClaveDeLote<T>),
-    activo: deps.activo ?? true,
+    activo: deps.activo,
   });
   return {
     valor: { candidatos: rep.items, totalPaginas: r.total_pages, total: r.total_results },
@@ -63,26 +64,24 @@ export async function adaptadorPaginaCombinada<T extends Localizable>(deps: {
 /**
  * El riel compuesto de "Elegidas para vos".
  *
- * `armar` recibe un `reparar` y puede llamarlo cuantas veces quiera. El `fallo`
- * se decide DESPUÉS de que `armar` terminó, así que los retornos tempranos
- * —`sin-candidatos`, `filtrado`— quedan cubiertos sin tener que acordarse de
- * marcar nada antes de cada `return`.
+ * LA FORMA ES LA QUE IMPONE LA ARQUITECTURA REAL. La primera versión de este
+ * adaptador le pasaba un `reparar` a `armar`, y eso NO encaja: las reparaciones
+ * de `reco:v2` pasan adentro de `recomendadosDe`, `cruzadosDe` y `perfilDe`, no
+ * en el nivel del riel. Envolverlas habría sido una segunda reparación encima
+ * de la que ya existe.
+ *
+ * Lo que sí es del nivel del riel: correr `armar` dentro de un scope de
+ * métricas y decidir el `fallo` AL TERMINAR. Así quedan cubiertos los retornos
+ * tempranos —`sin-candidatos`, `filtrado`— sin tener que marcar nada antes de
+ * cada `return`.
+ *
+ * `conMetricas` se inyecta para que el test use exactamente el mismo
+ * `withMetricasIdioma` que producción.
  */
 export async function adaptadorRiel<V>(deps: {
-  armar: (reparar: <T extends Localizable>(base: T[]) => Promise<T[]>) => Promise<V>;
-  pedirRespaldo: () => Promise<Localizable[] | null | undefined>;
-  activo?: boolean;
+  armar: () => Promise<V>;
+  conMetricas: <T>(fn: () => Promise<T>) => Promise<{ res: T; metricas: { fallos: number } }>;
 }): Promise<Producido<V>> {
-  let fallo = false;
-  const reparar = async <T extends Localizable>(base: T[]): Promise<T[]> => {
-    const r = await repararLote(base, deps.pedirRespaldo, "riel", {
-      clave: claveMixta as ClaveDeLote<T>,
-      claveRespaldo: claveMixta,
-      activo: deps.activo ?? true,
-    });
-    if (r.fallo) fallo = true;
-    return r.items;
-  };
-  const valor = await deps.armar(reparar);
-  return { valor, fallo };
+  const { res, metricas } = await deps.conMetricas(deps.armar);
+  return { valor: res, fallo: metricas.fallos > 0 };
 }

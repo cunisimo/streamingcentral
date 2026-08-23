@@ -43,6 +43,7 @@ import {
   pedirRespaldoIdioma, repararLote, repararUno,
   withMetricasIdioma,
 } from "./idioma";
+import { adaptadorRiel } from "./idioma-adaptadores";
 import { discover, titleDetails, tmdbKeywords, type RawDetail } from "./tmdb";
 import { crearSingleFlight } from "./single-flight";
 import { enrichRaw } from "./enrich";
@@ -326,9 +327,12 @@ export async function recomendaciones(opts: {
   // de cada `return`.
   let fallo = false;
   return cachedLocIf(clv, TTL.reco, async () => {
-    const { res, metricas } = await withMetricasIdioma(() => armar(opts));
-    fallo = metricas.fallos > 0;
-    return res;
+    const rep = await adaptadorRiel({
+      armar: () => armar(opts),
+      conMetricas: withMetricasIdioma,
+    });
+    fallo = rep.fallo;
+    return rep.valor;
   }, () => !fallo);
 }
 

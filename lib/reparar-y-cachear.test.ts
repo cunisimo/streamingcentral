@@ -12,8 +12,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolverConCache, type BackendCache } from "./reparar-y-cachear.ts";
 import {
-  adaptadorCard, adaptadorPaginaCombinada, adaptadorRiel, adaptadorTopPop,
+  adaptadorCard, adaptadorLista, adaptadorPaginaCombinada, adaptadorRiel,
 } from "./idioma-adaptadores.ts";
+// El MISMO scope de métricas que usa `recomendaciones()` en producción.
+import { withMetricasIdioma } from "./idioma.ts";
 
 // --- Backend en memoria, con la misma forma que el real ---------------------
 function backendMemoria() {
@@ -83,6 +85,7 @@ test("card: — falla, no cachea, reintenta, repara, cachea, HIT", async () => {
     () => adaptadorCard({
       pedirBase: async () => roto(1),
       pedirRespaldo: r.pedir,
+      activo: true,
     }),
     (v: { title: string }) => v.title,
     () => r.intentos,
@@ -93,9 +96,10 @@ test("top:pop: — falla, no cachea, reintenta, repara, cachea, HIT", async () =
   const r = fallaUnaVez(() => [sano(1), sano(2)]);
   await cincoPasos(
     "top:pop:n:movie",
-    () => adaptadorTopPop({
+    () => adaptadorLista({
       pedirBase: async () => [roto(1), roto(2)],
       pedirRespaldo: r.pedir,
+      activo: true,
     }),
     (v: { title: string }[]) => v[0].title,
     () => r.intentos,
@@ -107,8 +111,15 @@ test("reco:v2 — el riel COMPUESTO tampoco se guarda si una capa falló", async
   await cincoPasos(
     "reco:v2:huella",
     () => adaptadorRiel({
-      armar: async (reparar) => ({ items: await reparar([roto(1)]) }),
-      pedirRespaldo: r.pedir,
+      // `armar` repara ADENTRO, como en producción: las reparaciones de
+      // reco:v2 pasan en recomendadosDe/cruzadosDe/perfilDe, no en el nivel del
+      // riel. El adaptador solo corre el scope y decide el fallo al terminar.
+      armar: async () => ({
+        items: (await adaptadorLista({
+          pedirBase: async () => [roto(1)], pedirRespaldo: r.pedir, activo: true,
+        })).valor,
+      }),
+      conMetricas: withMetricasIdioma,
     }),
     (v: { items: { title: string }[] }) => v.items[0].title,
     () => r.intentos,
@@ -121,11 +132,17 @@ test("reco:v2 — un RETORNO TEMPRANO con fallo tampoco se cachea", async () => 
   // que no depende de acordarse de marcar nada antes de cada `return`.
   const m = backendMemoria();
   const producir = () => adaptadorRiel({
-    armar: async (reparar) => {
-      await reparar([roto(1)]);              // falla acá
-      return { items: [], motivo: "sin-candidatos" };   // y sale temprano
+    armar: async () => {
+      // Falla una reparación de adentro…
+      await adaptadorLista({
+        pedirBase: async () => [roto(1)],
+        pedirRespaldo: async () => { throw new Error("TMDB 500"); },
+        activo: true,
+      });
+      // …y `armar` sale temprano, sin marcar nada.
+      return { items: [], motivo: "sin-candidatos" };
     },
-    pedirRespaldo: async () => { throw new Error("TMDB 500"); },
+    conMetricas: withMetricasIdioma,
   });
   const v = await resolverConCache({ clave: "reco:v2:temprano", ttl: 3600, backend: m.backend, producir });
   assert.deepEqual((v as { items: unknown[] }).items, []);
@@ -138,6 +155,7 @@ test("disc combinada — conserva totalPaginas y total, y no cachea si falló", 
   const producir = () => adaptadorPaginaCombinada({
     pedirBase: async () => ({ results: [roto(1)], total_pages: 32, total_results: 627 }),
     pedirRespaldo: r.pedir,
+    activo: true,
   });
   const pedir = () => resolverConCache({ clave: "disc:combo:p1", ttl: 3600, backend: m.backend, producir });
 
@@ -161,9 +179,10 @@ test("lista VACÍA válida: fallo=false, sin reparaciones, y SÍ se cachea", asy
   const m = backendMemoria();
   const v = await resolverConCache({
     clave: "disc:vacio", ttl: 3600, backend: m.backend,
-    producir: () => adaptadorTopPop({
+    producir: () => adaptadorLista({
       pedirBase: async () => [roto(1)],
       pedirRespaldo: async () => [],
+      activo: true,
     }),
   }) as { title: string }[];
   assert.equal(v[0].title, "런닝맨", "no había con qué reparar");
@@ -174,9 +193,10 @@ test("null del respaldo: fallo, y no se cachea", async () => {
   const m = backendMemoria();
   await resolverConCache({
     clave: "k", ttl: 3600, backend: m.backend,
-    producir: () => adaptadorTopPop({
+    producir: () => adaptadorLista({
       pedirBase: async () => [roto(1)],
       pedirRespaldo: async () => null,
+      activo: true,
     }),
   });
   assert.equal(m.escrituras, 0);

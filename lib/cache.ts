@@ -322,11 +322,24 @@ export async function cachedIf<T>(
   // escritura del batcher, que ahora es la única que habla con redis.set.
   key: string, ttl: number, fetcher: () => Promise<T>, vale: (v: T) => boolean,
 ): Promise<T> {
-  const hit = await batchGet<T>(key);
-  if (hit !== null && hit !== undefined) return hit;
-  const data = await fetcher();
-  if (vale(data)) await guardar(key, data, ttl);
-  return data;
+  // DELEGA en `resolverConCache`, que es la única implementación de "leer →
+  // producir → decidir si guardar → guardar". No la reimplementa: si lo
+  // hiciera, los tests que llaman a `resolverConCache` con un backend en
+  // memoria dejarían de probar lo que corre en producción, que es exactamente
+  // lo que pasaba antes. `lib/cache-delega.test.ts` falla si se vuelve atrás.
+  //
+  // El adaptador entre los dos contratos es solo dar vuelta el predicado:
+  // `vale(v) === true` significa "guardalo", y `resolverConCache` guarda cuando
+  // NO hubo `fallo`.
+  return resolverConCache<T>({
+    clave: key,
+    ttl,
+    backend: backendCache,
+    producir: async () => {
+      const valor = await fetcher();
+      return { valor, fallo: !vale(valor) };
+    },
+  });
 }
 
 // --- Motor "del día": determinístico por fecha ---

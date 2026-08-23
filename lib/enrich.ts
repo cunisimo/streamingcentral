@@ -20,8 +20,9 @@ import { cached, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cac
 import { claveCard, clavePeoplePopular, claveSearch } from "./claves";
 import {
   HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
-  conRespuesto, indiceMixto, pedirRespaldoIdioma, repararLote, repararUno,
+  conRespuesto, indiceMixto, pedirRespaldoIdioma, repararLote,
 } from "./idioma";
+import { adaptadorCard, adaptadorLista } from "./idioma-adaptadores";
 import { ayudasDeBusqueda } from "./consultas-verificadas";
 import {
   candidatosCombinados, candidatosConEje, candidatosDePools, poolsHabilitados, recetaDeEje,
@@ -203,28 +204,34 @@ export async function listByCategory(opts: {
     discover(opts.tipo, paramsBase).then(async (r) => ({
       ...r,
       results: await (async () => {
-        const rep = await repararLote(r.results, () => pedirRespaldoIdioma(
-          `categoria:${opts.tipo}:${opts.genre ?? "todos"}:p${opts.page ?? 1}`,
-          async () => (await discover(opts.tipo, {
-            ...paramsBase, extra: { ...(paramsBase.extra ?? {}), language: IDIOMA_FALLBACK },
-          })).results,
-        ), `categoria ${opts.tipo}/${opts.genre ?? "?"}`, { clave: clavePorId });
+        const rep = await adaptadorLista({
+          pedirBase: async () => r.results,
+          pedirRespaldo: () => pedirRespaldoIdioma(
+            `categoria:${opts.tipo}:${opts.genre ?? "todos"}:p${opts.page ?? 1}`,
+            async () => (await discover(opts.tipo, {
+              ...paramsBase, extra: { ...(paramsBase.extra ?? {}), language: IDIOMA_FALLBACK },
+            })).results,
+          ),
+        });
         if (rep.fallo) falloIdiomaCat = true;
-        return rep.items;
+        return rep.valor;
       })(),
     })),
     paramsAlt
       ? discover(opts.tipo, paramsAlt).then(async (r) => ({
           ...r,
           results: await (async () => {
-            const rep = await repararLote(r.results, () => pedirRespaldoIdioma(
-              `categoria-alt:${opts.tipo}:${opts.genre ?? "todos"}:p${opts.page ?? 1}`,
-              async () => (await discover(opts.tipo, {
-                ...paramsAlt, extra: { ...(paramsAlt.extra ?? {}), language: IDIOMA_FALLBACK },
-              })).results,
-            ), `categoria-alt ${opts.tipo}`, { clave: clavePorId });
+            const rep = await adaptadorLista({
+              pedirBase: async () => r.results,
+              pedirRespaldo: () => pedirRespaldoIdioma(
+                `categoria-alt:${opts.tipo}:${opts.genre ?? "todos"}:p${opts.page ?? 1}`,
+                async () => (await discover(opts.tipo, {
+                  ...paramsAlt, extra: { ...(paramsAlt.extra ?? {}), language: IDIOMA_FALLBACK },
+                })).results,
+              ),
+            });
             if (rep.fallo) falloIdiomaCat = true;
-            return rep.items;
+            return rep.valor;
           })(),
         }))
       : Promise.resolve(null),
@@ -1015,12 +1022,13 @@ function digitalARDe(d: RawDetail): string | null {
 export async function detalleReparado(
   type: MediaType, id: number,
 ): Promise<{ detalle: RawDetail; fallo: boolean }> {
-  const d = await titleDetails(type, id);
-  const r = await repararUno(
-    d, () => pedirRespaldoIdioma(`detalle:${type}:${id}`,
-      () => titleDetails(type, id, IDIOMA_FALLBACK)), `ficha ${type}:${id}`,
-  );
-  return { detalle: r.item, fallo: r.fallo };
+  const r = await adaptadorCard({
+    pedirBase: () => titleDetails(type, id),
+    pedirRespaldo: () => pedirRespaldoIdioma(
+      `detalle:${type}:${id}`, () => titleDetails(type, id, IDIOMA_FALLBACK),
+    ),
+  });
+  return { detalle: r.valor, fallo: r.fallo };
 }
 
 // Reparación del detalle MÁS sus relacionados. Solo para la ficha, que sí los
@@ -1038,8 +1046,10 @@ async function detalleYRelacionadosReparados(
     `detalle:${type}:${id}`, () => titleDetails(type, id, IDIOMA_FALLBACK),
   );
 
-  const uno = await repararUno(d, pedir, `ficha ${type}:${id}`);
-  if (!relacionados.length) return { detalle: uno.item, fallo: uno.fallo };
+  // El MISMO adaptador que usa la card: la diferencia entre los dos caminos es
+  // que este además repara los relacionados, no que repare distinto el detalle.
+  const uno = await adaptadorCard({ pedirBase: async () => d, pedirRespaldo: pedir });
+  if (!relacionados.length) return { detalle: uno.valor, fallo: uno.fallo };
 
   const rels = await repararLote(
     relacionados,
@@ -1049,8 +1059,8 @@ async function detalleYRelacionadosReparados(
     { clave: claveMixta, claveRespaldo: claveMixta },
   );
   const detalle = rels.items === relacionados
-    ? uno.item
-    : { ...uno.item, recommendations: { ...d.recommendations!, results: rels.items } };
+    ? uno.valor
+    : { ...uno.valor, recommendations: { ...d.recommendations!, results: rels.items } };
   return { detalle, fallo: uno.fallo || rels.fallo };
 }
 
