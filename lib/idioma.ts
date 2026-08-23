@@ -14,7 +14,13 @@
 // LO QUE ESTE MÓDULO NO HACE: cambiar el idioma. `IDIOMA_BASE` sale de
 // `IDIOMA_TITULOS` y su default sigue siendo es-ES. El cambio se hace con la
 // variable de entorno, en la tanda 2 del plan.
-import type { RawTitle } from "./tmdb";
+//
+// NO IMPORTA NADA DE `./tmdb`, ni siquiera un tipo: `tmdb.ts` importa de acá
+// para el idioma base, y devolver el favor cerraba un ciclo tmdb → idioma →
+// tmdb. Un `import type` se borra al compilar y no debería molestar, pero un
+// ciclo entre el cliente de TMDB y su configuración no aporta nada y es la
+// clase de cosa que después aparece como un módulo `undefined` a mitad de una
+// carga. La forma estructural de abajo alcanza y no acopla nada.
 
 // --- Configuración -----------------------------------------------------------
 export const IDIOMA_BASE = process.env.IDIOMA_TITULOS || "es-ES";
@@ -65,10 +71,6 @@ export const HUELLA_EN_CLAVES = "";
 // moneda. Todo lo de afuera (hangul, kana, han, cirílico, árabe) es un título
 // que no se puede mostrar en una app en español.
 const NO_LATINO = /[^\u0000-\u024F\u2000-\u206F\u20A0-\u20BF\s]/;
-
-export function tituloDe(t: Pick<RawTitle, "title" | "name">): string {
-  return t.title ?? t.name ?? "";
-}
 
 interface Localizable {
   title?: string;
