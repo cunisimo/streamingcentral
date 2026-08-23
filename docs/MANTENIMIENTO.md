@@ -451,3 +451,45 @@ revisión humana.
   escenario `corta`, pero necesitan criterio propio (¿la serie entera o la
   primera temporada?).
 - `extract-pool-navidad.mjs` no está parametrizado por chip.
+
+---
+
+## Preview NO puede compartir el Redis de producción (idioma es-MX)
+
+**La trampa.** La integración de Vercel con Upstash crea `KV_REST_API_URL` y
+`KV_REST_API_TOKEN` y por defecto las asigna a **los tres scopes**: Production,
+Preview y Development. `lib/cache.ts` acepta ese juego de nombres además de los
+`UPSTASH_*`, así que **un Preview lee y escribe el mismo Redis que producción**.
+
+Con el idioma en `es-ES` eso nunca importó: Preview escribía las mismas claves
+compatibles que producción y el contenido era idéntico. **Con la tanda 2 sí
+importa**, porque las claves llevan la huella (`es-MX+f.r1`) y un Preview
+probando `es-MX` **precalienta exactamente las claves que producción va a usar**.
+El "arranque frío" que hay que medir después del deploy llegaría **caliente**, y
+la medición de +llamadas y +comandos daría un número falso y optimista.
+
+**Antes de la tanda 2, verificar qué recibe Preview:**
+
+1. Vercel → Settings → Environment Variables → mirar los scopes de `KV_REST_API_URL`.
+2. Desplegar un Preview y pedir `GET /api/health`. La respuesta dice `cache`:
+   `"redis"` significa que Preview está pegándole a Upstash.
+
+**Aislamiento, sin sumar un servicio pago — dos opciones:**
+
+| | Cómo | Costo | Contra |
+|---|---|---|---|
+| **A. Preview sin Redis** *(recomendada)* | Sacar `KV_*` del scope Preview, o definirlas vacías ahí. `lib/cache.ts` cae al cache en memoria | 0 | Preview más lento y sin cache entre instancias. Para probar funcionalidad alcanza |
+| B. Namespace separado | Un prefijo por entorno en todas las claves | 0 | Código nuevo en el camino crítico, para un problema que dura una tanda |
+
+Se elige **A**: no toca código y el aislamiento es total. La confirmación es
+`GET /api/health` en el Preview devolviendo `"cache": "memoria"`.
+
+**Qué NO hace falta limpiar.** Lo que se leyó y escribió durante la tanda 1 usa
+las claves compatibles de `es-ES` —las mismas de siempre, con el mismo
+contenido—, así que no hay nada que borrar. La prohibición es para las claves
+**nuevas** de la tanda 2.
+
+**Y no medir desde local contra el Redis de producción.** Hoy `.env.local` no
+tiene credenciales de Upstash y el dev corre en memoria (se confirma con
+`GET /api/health` → `"cache": "memoria"`, o con `0 requests` en la línea
+`[home]`). Si alguna vez se agregan, vale la misma regla.

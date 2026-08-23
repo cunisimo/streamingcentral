@@ -5,6 +5,7 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Redis } from "@upstash/redis";
+import type { ClaveLocalizada } from "./claves";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
 // dependen de cómo se haya conectado la base:
@@ -271,6 +272,28 @@ async function guardar(key: string, data: unknown, ttl: number) {
 // Un solo camino de lectura para los dos backends: `batchGet` agrupa contra
 // Redis y resuelve contra el Map en desarrollo. Antes había dos ramas y la de
 // memoria no pasaba por ningún contador.
+// --- Cache de contenido LOCALIZADO -------------------------------------------
+// Exige `ClaveLocalizada`, que solo devuelven los constructores de lib/claves.ts.
+// Una clave escrita a mano NO COMPILA acá, ni siquiera guardada antes en una
+// variable — que era el agujero de la primera versión: `cached()` acepta
+// `string`, así que `const k = \`card:${id}\`; cached(k, …)` pasaba el tipo y
+// pasaba el barrido.
+//
+// Por qué no se le puso el tipo a `cached` a secas: hay siete familias que NO
+// son localizadas (`pv:`, `videos:`, `genre:covers:`…) y obligarlas a fabricar
+// una marca que no les corresponde solo confundiría.
+export function cachedLoc<T>(
+  key: ClaveLocalizada, ttl: number, fetcher: () => Promise<T>,
+): Promise<T> {
+  return cached(key, ttl, fetcher);
+}
+
+export function cachedLocIf<T>(
+  key: ClaveLocalizada, ttl: number, fetcher: () => Promise<T>, vale: (v: T) => boolean,
+): Promise<T> {
+  return cachedIf(key, ttl, fetcher, vale);
+}
+
 export async function cached<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
   const hit = await batchGet<T>(key);
   if (hit !== null && hit !== undefined) return hit;

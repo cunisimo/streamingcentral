@@ -36,9 +36,10 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { cachedIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
+import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
 import { claveHome } from "./claves";
-import { HUELLA_EN_CLAVES } from "./idioma";
+import type { ClaveLocalizada } from "./claves";
+import { HUELLA_EN_CLAVES, metricasFallback, reiniciarMetricasFallback } from "./idioma";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
   MINISERIES_KEY, MINISERIES_LISTA_HREF, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso,
@@ -609,7 +610,7 @@ export async function composeHome(opts: {
 // La salida es idéntica para todos los que pidan lo mismo el mismo día:
 // `personalize()` sigue siendo identidad y el hero usa la semilla compartida.
 // Si algún día el Home se personaliza de verdad, esta clave deja de alcanzar.
-function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): string {
+function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): ClaveLocalizada {
   // Ordenado en las dos partes: "n,d,m" y "d,m,n" son el mismo Home, y sin
   // ordenar generarían dos entradas distintas con el mismo contenido.
   const p = [...providers].sort().join(",");
@@ -649,10 +650,14 @@ export async function homePayload(opts: {
   // extra. Se lee en los logs de Vercel filtrando por "[home]".
   let miss = false;
   const t0 = Date.now();
+  // Reparación de idioma: con es-ES tiene que dar CERO. Es la medición que
+  // demuestra que el mecanismo entra inerte, y en la tanda 2 es lo que dice
+  // cuántas páginas de fallback se pagaron de verdad.
+  reiniciarMetricasFallback();
 
   // El scope de métricas envuelve TODO el armado, no solo el `cachedIf`: lo que
   // interesa medir son los cientos de lecturas que dispara composeHome adentro.
-  const { res: { res: payload, ejes }, metricas } = await withCacheMetrics(() => conRegistroDeEjes(() => cachedIf(
+  const { res: { res: payload, ejes }, metricas } = await withCacheMetrics(() => conRegistroDeEjes(() => cachedLocIf(
     key,
     TTL.home,
     () => { miss = true; return composeHome({ providers: opts.providers, types }); },
@@ -665,6 +670,11 @@ export async function homePayload(opts: {
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
   console.log(`[home] ${miss ? "MISS" : "HIT "} ${key}`);
+  const fb = metricasFallback();
+  console.log(
+    `[idioma] fallback: ${fb.llamadas} llamadas | ${fb.lotes} lotes | ` +
+    `${fb.titulosReparados} títulos reparados | ${fb.fallos} fallos`,
+  );
   // Comandos es lo que factura Upstash; requests es lo que se paga en latencia.
   // Un MGET de 100 claves es 1 de cada uno; 100 GET sueltos son 100 y 100.
   const lotes = metricas.lotes;

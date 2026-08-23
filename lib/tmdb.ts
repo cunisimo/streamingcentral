@@ -91,6 +91,12 @@ export interface RawTitle {
   // de anime del recomendador (animación 16 + idioma "ja"), que no puede pedir
   // el detalle de cada candidato.
   original_language?: string;
+  // Los devuelve discover. Hacen falta para la señal 3 de `queReparar` (el
+  // título cayó al original porque no hay traducción): sin ellos esa señal solo
+  // se puede evaluar en la ficha, y no en los rieles, que es donde está el 95%
+  // de los títulos que ve el usuario.
+  original_title?: string;
+  original_name?: string;
   origin_country?: string[];
   // Lo devuelve discover y no se usaba, así que no estaba declarado. Hace falta
   // para reordenar al unir pools de plataformas distintas (ver lib/pools.ts):
@@ -324,6 +330,10 @@ export function trending(type: MediaType | "all", window: "day" | "week") {
   return tmdb<Paged<RawTitle>>(`/trending/${type}/${window}`);
 }
 
-export function personPopular(page = 1) {
-  return tmdb<Paged<RawPerson & { known_for_department?: string }>>("/person/popular", { page: String(page) });
+// `language` solo lo usa la reparación de idioma (lib/enrich.ts): `known_for`
+// trae títulos localizados y hay que poder pedir la misma página en es-ES.
+export function personPopular(page = 1, language?: string) {
+  return tmdb<Paged<RawPerson & { known_for_department?: string }>>("/person/popular", {
+    page: String(page), ...(language ? { language } : {}),
+  });
 }

@@ -1,11 +1,10 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
-import { cached, TTL } from "./cache";
+import { cached, cachedLoc, TTL } from "./cache";
 import { claveCombinadaCache, clavePoolCache } from "./claves";
-import {
-  FALLBACK_ACTIVO, HUELLA_EN_CLAVES, IDIOMA_FALLBACK, fusionarPorCampo, necesitaReparacion,
-} from "./idioma";
+import type { ClaveLocalizada } from "./claves";
+import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, repararLote } from "./idioma";
 import { hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode } from "./types";
@@ -61,6 +60,13 @@ function recortar(t: RawTitle): Candidato {
     genre_ids: t.genre_ids,
     origin_country: t.origin_country,
     popularity: t.popularity,
+    // Los tres de abajo NO son decoración: sin ellos la señal 3 de
+    // `queReparar` (el título cayó al original) no se puede evaluar dentro de
+    // un pool, porque `recortar` los borraba. Se detectaba en la ficha y no en
+    // los rieles, que es donde está el 95% de los títulos.
+    original_title: t.original_title,
+    original_name: t.original_name,
+    original_language: t.original_language,
   };
 }
 
@@ -128,41 +134,9 @@ function hashParams(p: ParamsReceta): string {
 // como un bug.
 export function clavePool(
   tipo: MediaType, plataforma: PlatformCode, receta: Receta, pagina: number,
-): string {
+): ClaveLocalizada {
   return clavePoolCache(VERSION, REGION, hoyAR(), tipo, plataforma,
     `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_EN_CLAVES);
-}
-
-// --- Fallback de idioma: opción C, por PÁGINA y solo si hace falta ----------
-// Medido sobre un Home frío de n,d,m (docs/medidas/2026-08-23-idioma-fallback.json):
-// 1021 títulos, 57 rotos (5,6%) repartidos en 32 de las 107 páginas de discover.
-//
-//   pedir siempre los dos idiomas   +72 llamadas
-//   reparar título por título       +57
-//   ESTA: pedir es-ES solo si la página tiene algún roto   +21
-//
-// Gana esta porque UN discover repara hasta 20 títulos de una vez y solo el 29%
-// de las páginas lo necesita. End-to-end medido: 612 → 643 llamadas (+5,1%), sin
-// un solo comando extra de Upstash — la reparación se guarda dentro del MISMO
-// valor cacheado, así que se paga una vez por día y por pool, compartida.
-//
-// Va DENTRO del `cached()` a propósito: si fuera afuera se pagaría por request.
-async function conFallback<T>(
-  crudos: Candidato[],
-  pedirRespaldo: () => Promise<RawTitle[]>,
-  envolver: (reparados: Candidato[]) => T,
-): Promise<T> {
-  // La guarda mira la CONFIGURACIÓN, no si hay títulos rotos. Que con es-ES no
-  // haya rotos es una propiedad de los datos y podría dejar de cumplirse; esto
-  // no. Con el idioma base en es-ES el fallback no hace ni una llamada.
-  if (!FALLBACK_ACTIVO) return envolver(crudos);
-
-  const rotos = new Set(crudos.filter(necesitaReparacion).map((t) => t.id));
-  if (!rotos.size) return envolver(crudos);
-
-  const respaldo = await pedirRespaldo();
-  const porId = new Map(respaldo.map((x) => [x.id, x]));
-  return envolver(crudos.map((t) => (rotos.has(t.id) ? fusionarPorCampo(t, porId.get(t.id) as Candidato | undefined) : t)));
 }
 
 // Un pool: una plataforma, una página, una receta.
@@ -173,16 +147,16 @@ async function pool(
   if (!ids.length) return [];
   const traer = async () => {
     const r = await discover(tipo, { ...receta.params, providers: ids, page: pagina });
-    return conFallback(
+    return repararLote(
       r.results.map(recortar),
       async () => (await discover(tipo, {
         ...receta.params, providers: ids, page: pagina,
         extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
       })).results,
-      (reparados) => reparados,
+      `pool ${tipo}/${plataforma}/p${pagina}`,
     );
   };
-  return cached(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer);
+  return cachedLoc(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer);
 }
 
 // --- Consulta combinada, paginada por TMDB -----------------------------------
@@ -219,7 +193,7 @@ async function pool(
 // Ver docs/medidas/2026-08-21-miniseries-lista.json.
 export function claveCombinada(
   tipo: MediaType, providers: PlatformCode[], receta: Receta, pagina: number,
-): string {
+): ClaveLocalizada {
   // Ordenado: "n,d,m" y "m,d,n" son la misma consulta y tienen que ser la misma
   // clave, igual que en `homeKey`.
   const p = [...providers].sort().join("+");
@@ -245,16 +219,17 @@ export async function candidatosCombinados(opts: {
   const ids = codesToTmdbIds(opts.providers);
   if (!ids.length) return { candidatos: [], totalPaginas: 0, total: 0 };
   const pagina = Math.max(1, opts.pagina);
-  return cached(claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool, async () => {
+  return cachedLoc(claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool, async () => {
     const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
-    return conFallback(
+    const candidatos = await repararLote(
       r.results.map(recortar),
       async () => (await discover(opts.tipo, {
         ...opts.receta.params, providers: ids, page: pagina,
         extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
       })).results,
-      (candidatos) => ({ candidatos, totalPaginas: r.total_pages, total: r.total_results }),
+      `combinada ${opts.tipo}/p${pagina}`,
     );
+    return { candidatos, totalPaginas: r.total_pages, total: r.total_results };
   });
 }
 

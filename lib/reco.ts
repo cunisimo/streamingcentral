@@ -36,9 +36,9 @@
 // keyword —2 de cada 40 títulos del catálogo AR, siempre de pocos votos— ese
 // título aporta solo por su mismo tipo.
 import "server-only";
-import { cached, TTL } from "./cache";
+import { cached, cachedLoc, TTL } from "./cache";
 import { claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil } from "./claves";
-import { HUELLA_EN_CLAVES } from "./idioma";
+import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, repararLote, repararUno } from "./idioma";
 import { discover, titleDetails, tmdbKeywords } from "./tmdb";
 import { enrichRaw } from "./enrich";
 import { genreIdsToSlugs, resolveCategory } from "./categories";
@@ -126,11 +126,17 @@ const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
 // el riel (`pv:` es la misma clave que usa todo el resto de la app).
 
 async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
-  return cached(claveRecoMismo(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+  return cachedLoc(claveRecoMismo(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     // `/recommendations` viene dentro de titleDetails vía append_to_response, así
     // que esto no cuesta una llamada extra sobre la ficha.
     const d = await titleDetails(tipo, id);
-    return (d.recommendations?.results ?? []).map((x) => ({ ...x }));
+    const base = (d.recommendations?.results ?? []).map((x) => ({ ...x }));
+    // Se reparan como lote: una sola llamada de respaldo para toda la lista.
+    return repararLote(
+      base,
+      async () => (await titleDetails(tipo, id, IDIOMA_FALLBACK)).recommendations?.results ?? [],
+      `reco:mismo ${tipo}:${id}`,
+    );
   });
 }
 
@@ -153,8 +159,15 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
   // después del deploy le pasa `undefined` a `coincidencia()` y a `esAnime()`
   // por cada título ya cacheado — y encima solo hasta que expire el TTL, así que
   // sería un bug que se cura solo y no se puede reproducir después.
-  return cached(claveRecoPerfil(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
-    const d = await titleDetails(tipo, id);
+  return cachedLoc(claveRecoPerfil(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+    // `titulo` se guarda en el cache y es localizado. Hoy solo se usa para
+    // puntuar y para los logs, pero una clave localizada que no se repara es
+    // una clave que va a mostrar el idioma viejo el día que alguien la muestre.
+    const d = await repararUno(
+      await titleDetails(tipo, id),
+      () => titleDetails(tipo, id, IDIOMA_FALLBACK),
+      `reco:perfil ${tipo}:${id}`,
+    );
     const propias = (await tmdbKeywords(tipo, id)).map((k) => k.id);
     const slugs = genreIdsToSlugs((d.genres ?? []).map((g) => g.id));
     // Dos fuentes de keywords: las del título y las que aporta el mapeo de
@@ -181,11 +194,11 @@ async function cruzadosDe(
   if (!perfil.keywords.length) return { items: [], hubo: false };
   const ids = codesToTmdbIds(providers);
   if (!ids.length) return { items: [], hubo: false };
-  const items = await cached(
+  const items = await cachedLoc(
     claveRecoCruce(tipo, id, [...providers].sort().join(","), HUELLA_EN_CLAVES),
     TTL.catalog,
     async () => {
-      const d = await discover(otro(tipo), {
+      const params = {
         keywords: perfil.keywords,
         genres: perfil.generosOpuesto.length ? perfil.generosOpuesto : undefined,
         providers: ids,
@@ -193,8 +206,15 @@ async function cruzadosDe(
         // fuera el cine regional, que es justo lo que esta app quiere mostrar
         // (issue #12).
         minVotes: 0,
-      });
-      return d.results;
+      };
+      const d = await discover(otro(tipo), params);
+      return repararLote(
+        d.results,
+        async () => (await discover(otro(tipo), {
+          ...params, extra: { language: IDIOMA_FALLBACK },
+        })).results,
+        `reco:cruce ${tipo}:${id}`,
+      );
     },
   );
   return { items, hubo: true };
@@ -240,7 +260,7 @@ export async function recomendaciones(opts: {
     [...opts.excluir].sort().join(","),
     [...opts.providers].sort().join(","),
   ), HUELLA_EN_CLAVES);
-  return cached(clv, TTL.reco, () => armar(opts));
+  return cachedLoc(clv, TTL.reco, () => armar(opts));
 }
 
 async function armar(opts: {
