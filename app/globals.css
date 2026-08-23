@@ -892,32 +892,32 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 @media(prefers-reduced-motion:reduce){.home-rails{transition:none}}
 /* Aviso de "no pudimos actualizar" arriba de los rieles (reusa .empty-note). */
 .home-retry{margin-top:26px}
-
-/* ==========================================================================
-   Eliminar cuenta — zona de riesgo de Cuenta → Configuración
-   ========================================================================== */
-/* Separada del resto con borde y color de alerta: una acción irreversible no
-   puede verse igual que un toggle de tema. `--danger` no existía; se define acá
-   con las dos variantes de tema, sin tocar la paleta general. */
-.cfg-peligro{--danger:#C0392B;margin-top:28px;border:1px solid rgba(192,57,43,.35);border-radius:var(--radius);padding:14px 16px}
-[data-theme="dark"] .cfg-peligro{--danger:#E74C3C;border-color:rgba(231,76,60,.32)}
-.cfg-peligro-h{font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--danger);margin-bottom:6px}
-.cfg-danger-btn{flex-shrink:0;background:var(--danger);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-family:var(--body);font-size:13.5px;font-weight:600;cursor:pointer}
-.cfg-danger-btn:hover{filter:brightness(1.08)}
-.cfg-danger-btn:disabled{opacity:.55;cursor:default;filter:none}
-
-/* El diálogo de confirmación. Reusa la forma de .pwa-welcome (fondo oscurecido
-   + tarjeta centrada) para no inventar un segundo lenguaje de modal. */
-.dlg-backdrop{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;padding-bottom:calc(20px + var(--safe-b));overflow-y:auto}
-.dlg{background:var(--surface);border-radius:var(--radius);box-shadow:var(--sh-h);padding:22px;max-width:420px;width:100%;max-height:calc(100dvh - 40px);overflow-y:auto}
-.dlg h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 10px}
-.dlg-sub{margin:0 0 10px;font-size:14px;color:var(--dim);line-height:1.55}
-.dlg-lista{margin:0 0 12px;padding-left:20px;font-size:14px;color:var(--text);line-height:1.7}
-.dlg-lbl{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
-.dlg-input{width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font-family:var(--body);font-size:15px}
-.dlg-input:focus{outline:2px solid var(--accent);outline-offset:1px}
-.dlg-error{margin:10px 0 0;font-size:13.5px;color:var(--danger,#C0392B);font-weight:600}
-.dlg-acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
-/* El diálogo define su propio --danger: está fuera de .cfg-peligro en el DOM. */
-.dlg{--danger:#C0392B}
+
+/* ==========================================================================
+   Eliminar cuenta — zona de riesgo de Cuenta → Configuración
+   ========================================================================== */
+/* Separada del resto con borde y color de alerta: una acción irreversible no
+   puede verse igual que un toggle de tema. `--danger` no existía; se define acá
+   con las dos variantes de tema, sin tocar la paleta general. */
+.cfg-peligro{--danger:#C0392B;margin-top:28px;border:1px solid rgba(192,57,43,.35);border-radius:var(--radius);padding:14px 16px}
+[data-theme="dark"] .cfg-peligro{--danger:#E74C3C;border-color:rgba(231,76,60,.32)}
+.cfg-peligro-h{font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--danger);margin-bottom:6px}
+.cfg-danger-btn{flex-shrink:0;background:var(--danger);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-family:var(--body);font-size:13.5px;font-weight:600;cursor:pointer}
+.cfg-danger-btn:hover{filter:brightness(1.08)}
+.cfg-danger-btn:disabled{opacity:.55;cursor:default;filter:none}
+
+/* El diálogo de confirmación. Reusa la forma de .pwa-welcome (fondo oscurecido
+   + tarjeta centrada) para no inventar un segundo lenguaje de modal. */
+.dlg-backdrop{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;padding-bottom:calc(20px + var(--safe-b));overflow-y:auto}
+.dlg{background:var(--surface);border-radius:var(--radius);box-shadow:var(--sh-h);padding:22px;max-width:420px;width:100%;max-height:calc(100dvh - 40px);overflow-y:auto}
+.dlg h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 10px}
+.dlg-sub{margin:0 0 10px;font-size:14px;color:var(--dim);line-height:1.55}
+.dlg-lista{margin:0 0 12px;padding-left:20px;font-size:14px;color:var(--text);line-height:1.7}
+.dlg-lbl{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.dlg-input{width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font-family:var(--body);font-size:15px}
+.dlg-input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.dlg-error{margin:10px 0 0;font-size:13.5px;color:var(--danger,#C0392B);font-weight:600}
+.dlg-acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+/* El diálogo define su propio --danger: está fuera de .cfg-peligro en el DOM. */
+.dlg{--danger:#C0392B}
 [data-theme="dark"] .dlg{--danger:#E74C3C}
