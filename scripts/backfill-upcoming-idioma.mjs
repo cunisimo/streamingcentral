@@ -65,35 +65,34 @@ const FALLAR_EN = args["fallar-en"] !== undefined ? Number(args["fallar-en"]) : 
 const IDIOMA = typeof args.idioma === "string" ? args.idioma : "es-MX";
 const IDIOMA_FALLBACK = "es-ES";
 
-if (FALLAR_EN !== null && !ENSAYO) {
-  console.error("--fallar-en SOLO se permite con --ensayo. No se ensaya un fallo contra la tabla real.");
-  process.exit(2);
-}
-if (SEMBRAR && !ENSAYO) {
-  console.error("--sembrar SOLO se permite con --ensayo.");
-  process.exit(2);
-}
-if (DESDE && DESDE_PLAN) {
-  console.error("--desde (rollback) y --desde-plan (aplicación) son excluyentes.");
-  process.exit(2);
-}
-if (APLICAR && !DESDE && !DESDE_PLAN) {
-  console.error("--aplicar exige --desde-plan=<snapshot aprobado> (o --desde=<snapshot> para revertir).");
-  console.error("Se aplica el plan revisado, no uno recalculado en el momento.");
-  process.exit(2);
-}
-
 const URL_SB = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const TMDB_TOKEN = process.env.TMDB_READ_TOKEN ?? "";
-if (!URL_SB || !ANON || !TMDB_TOKEN) {
-  console.error("faltan NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY o TMDB_READ_TOKEN");
-  process.exit(2);
-}
-if (APLICAR && !SERVICE) {
-  console.error("--aplicar necesita SUPABASE_SERVICE_ROLE_KEY: la RPC solo la puede ejecutar service_role");
-  process.exit(2);
+
+// Los guards de argumentos devuelven el motivo en vez de llamar a
+// `process.exit()`. Ver la nota del final del archivo: en Windows, salir con
+// escrituras a stdout en vuelo tumba a libuv y el proceso termina con 127 en vez
+// de con el codigo pedido.
+function motivoDeRechazo() {
+  if (FALLAR_EN !== null && !ENSAYO) {
+    return "--fallar-en SOLO se permite con --ensayo. No se ensaya un fallo contra la tabla real.";
+  }
+  if (SEMBRAR && !ENSAYO) return "--sembrar SOLO se permite con --ensayo.";
+  if (DESDE && DESDE_PLAN) {
+    return "--desde (rollback) y --desde-plan (aplicación) son excluyentes.";
+  }
+  if (APLICAR && !DESDE && !DESDE_PLAN) {
+    return "--aplicar exige --desde-plan=<snapshot aprobado> (o --desde=<snapshot> para revertir).\n"
+      + "Se aplica el plan revisado, no uno recalculado en el momento.";
+  }
+  if (!URL_SB || !ANON || !TMDB_TOKEN) {
+    return "faltan NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY o TMDB_READ_TOKEN";
+  }
+  if (APLICAR && !SERVICE) {
+    return "--aplicar necesita SUPABASE_SERVICE_ROLE_KEY: la RPC solo la puede ejecutar service_role";
+  }
+  return null;
 }
 
 // --- Clientes ---------------------------------------------------------------
@@ -321,6 +320,9 @@ async function sembrar() {
 
 // --- Main -------------------------------------------------------------------
 async function main() {
+  const rechazo = motivoDeRechazo();
+  if (rechazo) { console.error(rechazo); return 2; }
+
   console.log(`tabla:   ${ENSAYO ? "ensayo.upcoming_content (ESPEJO)" : "public.upcoming_content (REAL)"}`);
   console.log(`idioma:  ${IDIOMA}  (respaldo ${IDIOMA_FALLBACK})`);
   const modo = DESDE ? "ROLLBACK desde " + DESDE
@@ -437,10 +439,22 @@ async function main() {
   return 0;
 }
 
+// `process.exitCode` y NO `process.exit()`.
+//
+// En Windows, `process.exit()` con escrituras a stdout todavia en vuelo tumba a
+// libuv con `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` y el
+// proceso termina con 127 —"command not found"— en vez de con el codigo que se
+// quiso devolver. Un script cuyo trabajo es avisar "esto fallo, no sigas" no
+// puede comunicarlo con un crash: el 127 es distinto de cero por accidente y no
+// por diseno, y el mensaje que queda en pantalla habla de un handle de libuv en
+// lugar del error real.
+//
+// Con `exitCode`, Node vacia stdout y sale limpio con el codigo pedido.
 try {
-  process.exit(await main());
+  process.exitCode = await main();
 } catch (e) {
-  console.error("\nABORTADO:", e.message);
-  console.error("Si el error viene de la RPC, la transacción se deshizo entera: no quedó nada a medias.");
-  process.exit(1);
+  console.error("");
+  console.error("ABORTADO:", e.message);
+  console.error("Si el error viene de la RPC, la transaccion se deshizo entera: no quedo nada a medias.");
+  process.exitCode = 1;
 }
