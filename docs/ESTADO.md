@@ -12,8 +12,8 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ## Estado de despliegue
 
 ```
-origin/main               5fc0c2e   ← al día; la tanda 1 del idioma ya está desplegada
-feat/idioma-tanda-2       c29c23e   ← LOCAL, sin pushear: espera el Preview aislado
+origin/main               361cf5b   ← Merge feat/idioma-tanda-2, DESPLEGADO en producción
+feat/idioma-tanda-2       2d9e970   ← mergeada; la rama sobrevive pero ya no sirve (ver abajo)
 feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
 ```
 
@@ -393,10 +393,44 @@ de arriba es la fuente para ese formulario.
 
 ---
 
-## Rama actual: `feat/idioma-tanda-2`
+## Tanda 2 del idioma: EN PRODUCCIÓN
 
-Tanda 2 del plan de idioma (`docs/medidas/2026-08-23-idioma-plan.md`).
-**Sin mergear y sin tocar producción**: producción sigue en `es-ES`.
+**Activada el 2026-08-24.** `main` = `361cf5b` (`Merge feat/idioma-tanda-2`),
+desplegado, con `IDIOMA_TITULOS=es-MX` en el scope **Production** únicamente.
+
+Evidencia del cierre, leída de producción y no del banco:
+
+| Qué | Resultado |
+|---|---|
+| Commit desplegado | `361cf5b`, rama `main` |
+| `/api/health` | **200**, `cache: redis`, ping OK |
+| Claves del Home | **siete**, todas `home:es-MX+f.r1:v5:…` — una por combinación |
+| Precalentamiento | **7/7**, 12 rieles cada una, ninguna degradada, salida 0 |
+| Segunda vuelta | las siete desde caché (354-501 ms) |
+| Fallos de respaldo | **0** acumulados sobre 16 requests de Home |
+| Errores 5xx | **0** |
+| Claves en Upstash | 1.593 → **2.378** |
+
+**El arranque en frío fue PARCIAL, y eso es el diseño funcionando**: el primer
+`MISS` registró `401 hit / 236 miss` de 637 claves. Las familias que **no**
+llevan huella —`pv:`, `videos:`, `genre:covers:`, `blocklist:`— seguían
+calientes de la etapa `es-ES` y no se invalidaron. Solo se rearmó lo localizado.
+
+**Rollback**: `IDIOMA_TITULOS=es-ES` + un deployment nuevo del **mismo** `main`.
+Nunca revertir el código: el código sin huella con la variable en `es-MX` es la
+combinación que envenena las claves de `es-ES`.
+
+### La rama `feat/idioma-tanda-2` quedó viva y ya no es segura
+
+Sigue en el remoto, pero **sus seis variables de aislamiento se borraron** (paso
+final del runbook). Con `IDIOMA_TITULOS` solo en Production, un push nuevo a esa
+rama arma un Preview que **comparte el Redis de producción** y corre `es-ES` con
+huella: escribiría un espacio `es-ES.r1` entero contra la cuota de producción,
+para nada. Si no se va a usar más, borrarla.
+
+---
+
+## Cómo llegó acá (histórico de la tanda 2)
 
 **Un solo cambio de código**: los once call sites pasaban `HUELLA_EN_CLAVES` —la
 cadena vacía del modo compatible de la tanda 1— y ahora pasan `HUELLA_IDIOMA`.
