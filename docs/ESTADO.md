@@ -439,6 +439,37 @@ verde sin probar nada.
    stdout en vuelo tumba a libuv. Un script que avisa "esto falló" no puede
    comunicarlo con un crash.
 
+### Etapa intermedia, ejecutada el 2026-08-24
+
+| Paso | Estado |
+|---|---|
+| Rama en el remoto | `origin/feat/idioma-tanda-3` = `1aaaff6`, **sin mergear** |
+| Foto previa de las dos tablas | `docs/medidas/foto-upcoming-2026-08-24T194456.json` |
+| Cron `tmdb-sync-upcoming-daily` | **PAUSADO** — jobid 2, `active = false`, pg_cron 1.6.4 vía `cron.alter_job` |
+| Secret `IDIOMA_TITULOS` | creado en **`es-ES`** (inerte: es el default del código nuevo) |
+| Edge Function `tmdb-sync` | **desplegada**, version 4, `ezbr_sha256 e6775466…` |
+
+**El cron quedó pausado y hay que acordarse de reactivarlo**:
+`select cron.alter_job(job_id := 2, active := true);` — su horario es 06:00 UTC
+(03:00 AR), así que cada día que pase sin reactivar es un día sin refrescar la
+agenda.
+
+**Cómo se verificó el deploy, y por qué el hash no sirve.** `supabase functions
+download` devuelve el código **transpilado**, no el fuente: los tipos están
+borrados y los objetos reformateados, así que comparar hashes contra el commit da
+11 de 11 distintos sin que eso signifique nada. La verificación es semántica —
+nueve marcadores que tienen que estar y cuatro que no:
+
+```
+SI  idioma base por entorno            SI  idioma NO hardcodeado
+SI  episodeDetails por coordenadas     SI  el respaldo NO relee next_episode_to_air
+SI  metricas por invocacion            SI  sin acumulador de metricas en el modulo
+SI  el nucleo compartido _shared       SI  sin la condicion de descarte vieja
+```
+
+El bundle descargado **incluye `_shared/idioma-nucleo.ts`**, que es la
+confirmación en producción de lo que `deno info` ya había mostrado en local.
+
 ### Lo que falta, en orden, y necesita aprobación
 
 1. Pausar el cron (`update cron.job set active = false where jobname = 'tmdb-sync-upcoming-daily'`).
