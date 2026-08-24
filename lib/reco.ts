@@ -36,8 +36,16 @@
 // keyword —2 de cada 40 títulos del catálogo AR, siempre de pocos votos— ese
 // título aporta solo por su mismo tipo.
 import "server-only";
-import { cached, TTL } from "./cache";
-import { discover, titleDetails, tmdbKeywords } from "./tmdb";
+import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
+import { claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil } from "./claves";
+import {
+  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
+  pedirRespaldoIdioma, repararLote, repararUno,
+  withMetricasIdioma,
+} from "./idioma";
+import { adaptadorRiel } from "./idioma-adaptadores";
+import { discover, titleDetails, tmdbKeywords, type RawDetail } from "./tmdb";
+import { crearSingleFlight } from "./single-flight";
 import { enrichRaw } from "./enrich";
 import { genreIdsToSlugs, resolveCategory } from "./categories";
 import { codesToTmdbIds } from "./providers-ar";
@@ -123,13 +131,54 @@ const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
 // mismo pagan una sola vez, y el enriquecido lo comparte hasta quien nunca abrió
 // el riel (`pv:` es la misma clave que usa todo el resto de la app).
 
+// --- Un solo `titleDetails` por origen --------------------------------------
+// Cada origen dispara TRES caminos en paralelo (`recomendadosDe`, `cruzadosDe`
+// que llama a `perfilDe`, y `perfilDe` otra vez), y los tres piden el MISMO
+// detalle. `cached()` no hace single-flight: en un MISS concurrente los tres
+// salen a TMDB.
+//
+// Esto comparte la PROMESA por `tipo:id`, y la borra al resolverse. No es un
+// cache: no guarda nada entre requests, solo evita que dos llamadas que están
+// en vuelo al mismo tiempo se dupliquen. Por eso no puede servir datos viejos.
+// El mecanismo vive en `lib/single-flight.ts` (módulo puro, con tests).
+//
+// La clave es `idioma:tipo:id`. El tipo, porque TMDB reutiliza los números entre
+// películas y series. El IDIOMA, porque la llamada base y la de respaldo son
+// dos pedidos distintos al mismo título: sin él, el respaldo en es-ES recibiría
+// la promesa del pedido en es-MX.
+//
+// Base Y respaldo pasan los dos por acá: es lo que garantiza el peor caso de
+// "1 base + como máximo 1 respaldo por origen", aunque los tres caminos del
+// recomendador pidan la reparación al mismo tiempo.
+// El single-flight de la BASE no cuenta nada: la métrica `llamadas` mide
+// respaldos, y contarlo acá anotaba cada pedido base como si lo fuera.
+const compartirDetalle = crearSingleFlight<RawDetail>();
+const detalleBase = (tipo: MediaType, id: number) =>
+  compartirDetalle(`${IDIOMA_BASE}:${tipo}:${id}`, () => titleDetails(tipo, id));
+
+// El respaldo va por el punto único, que es quien cuenta y quien une lo que ya
+// esté en vuelo.
+const detalleRespaldo = (tipo: MediaType, id: number) =>
+  pedirRespaldoIdioma(`detalle:${tipo}:${id}`, () => titleDetails(tipo, id, IDIOMA_FALLBACK));
+
 async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
-  return cached(`reco:mismo:${tipo}:${id}`, TTL.catalog, async () => {
+  let fallo = false;
+  return cachedLocIf(claveRecoMismo(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
     // `/recommendations` viene dentro de titleDetails vía append_to_response, así
     // que esto no cuesta una llamada extra sobre la ficha.
-    const d = await titleDetails(tipo, id);
-    return (d.recommendations?.results ?? []).map((x) => ({ ...x }));
-  });
+    const d = await detalleBase(tipo, id);
+    const base = (d.recommendations?.results ?? []).map((x) => ({ ...x }));
+    // Lote MIXTO: los recomendados de una película pueden ser series y TMDB
+    // reutiliza los ids entre tipos.
+    const rep = await repararLote(
+      base,
+      async () => (await detalleRespaldo(tipo, id)).recommendations?.results ?? [],
+      `reco:mismo ${tipo}:${id}`,
+      { clave: claveMixta, claveRespaldo: claveMixta },
+    );
+    fallo = rep.fallo;
+    return rep.items;
+  }, () => !fallo);
 }
 
 interface PerfilTematico {
@@ -151,8 +200,18 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
   // después del deploy le pasa `undefined` a `coincidencia()` y a `esAnime()`
   // por cada título ya cacheado — y encima solo hasta que expire el TTL, así que
   // sería un bug que se cura solo y no se puede reproducir después.
-  return cached(`reco:perfil:v2:${tipo}:${id}`, TTL.catalog, async () => {
-    const d = await titleDetails(tipo, id);
+  let falloPerfil = false;
+  return cachedLocIf(claveRecoPerfil(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+    // `titulo` se guarda en el cache y es localizado. Hoy solo se usa para
+    // puntuar y para los logs, pero una clave localizada que no se repara es
+    // una clave que va a mostrar el idioma viejo el día que alguien la muestre.
+    const rep = await repararUno(
+      await detalleBase(tipo, id),
+      () => detalleRespaldo(tipo, id),
+      `reco:perfil ${tipo}:${id}`,
+    );
+    falloPerfil = rep.fallo;
+    const d = rep.item;
     const propias = (await tmdbKeywords(tipo, id)).map((k) => k.id);
     const slugs = genreIdsToSlugs((d.genres ?? []).map((g) => g.id));
     // Dos fuentes de keywords: las del título y las que aporta el mapeo de
@@ -169,7 +228,7 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
       generosPropios: (d.genres ?? []).map((g) => g.id),
       idioma: d.original_language ?? "",
     };
-  });
+  }, () => !falloPerfil);
 }
 
 async function cruzadosDe(
@@ -179,11 +238,12 @@ async function cruzadosDe(
   if (!perfil.keywords.length) return { items: [], hubo: false };
   const ids = codesToTmdbIds(providers);
   if (!ids.length) return { items: [], hubo: false };
-  const items = await cached(
-    `reco:cruce:${tipo}:${id}:${[...providers].sort().join(",")}`,
+  let falloCruce = false;
+  const items = await cachedLocIf(
+    claveRecoCruce(tipo, id, [...providers].sort().join(","), HUELLA_EN_CLAVES),
     TTL.catalog,
     async () => {
-      const d = await discover(otro(tipo), {
+      const params = {
         keywords: perfil.keywords,
         genres: perfil.generosOpuesto.length ? perfil.generosOpuesto : undefined,
         providers: ids,
@@ -191,9 +251,23 @@ async function cruzadosDe(
         // fuera el cine regional, que es justo lo que esta app quiere mostrar
         // (issue #12).
         minVotes: 0,
-      });
-      return d.results;
+      };
+      const d = await discover(otro(tipo), params);
+      const rep = await repararLote(
+        d.results,
+        () => pedirRespaldoIdioma(
+          `cruce:${tipo}:${id}`,
+          async () => (await discover(otro(tipo), {
+            ...params, extra: { language: IDIOMA_FALLBACK },
+          })).results,
+        ),
+        `reco:cruce ${tipo}:${id}`,
+        { clave: clavePorId },
+      );
+      falloCruce = rep.fallo;
+      return rep.items;
     },
+    () => !falloCruce,
   );
   return { items, hubo: true };
 }
@@ -233,12 +307,33 @@ export async function recomendaciones(opts: {
   // a ser un puntaje de afinidad, y se agregó el guard de anime. Cambia el
   // CONTENIDO del riel, así que sin subir la versión lo ya cacheado se sigue
   // sirviendo hasta que expire el TTL y el cambio "no se ve" después de deployar.
-  const clv = `reco:v2:${huella(
+  const clv = claveReco(huella(
     [...opts.senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(","),
     [...opts.excluir].sort().join(","),
     [...opts.providers].sort().join(","),
-  )}`;
-  return cached(clv, TTL.reco, () => armar(opts));
+  ), HUELLA_EN_CLAVES);
+  // El riel entero: si alguna reparación de adentro falló, se sirve igual pero
+  // NO se guarda. Con TTL.reco de 6 h, un riel sin reparar quedaría congelado
+  // aunque cada `card:` de adentro sí se haya protegido por separado.
+  //
+  // EL CONTEXTO LO ABRE ESTA FUNCIÓN, no la route. Antes se leía
+  // `metricasIdiomaActuales()` confiando en que alguien más hubiera abierto el
+  // scope: `/api/home` lo hacía y `/api/te-va-a-gustar` no, así que ahí volvía
+  // `null` y el riel se guardaba 6 h con los fallos adentro.
+  //
+  // Y la decisión se toma DESPUÉS de que `armar()` terminó, mirando las
+  // métricas del scope. Así los retornos tempranos —`sin-candidatos`,
+  // `filtrado`— quedan cubiertos sin tener que acordarse de llamar a nada antes
+  // de cada `return`.
+  let fallo = false;
+  return cachedLocIf(clv, TTL.reco, async () => {
+    const rep = await adaptadorRiel({
+      armar: () => armar(opts),
+      conMetricas: withMetricasIdioma,
+    });
+    fallo = rep.fallo;
+    return rep.valor;
+  }, () => !fallo);
 }
 
 async function armar(opts: {

@@ -1,0 +1,655 @@
+{
+  "generado": "2026-08-23",
+  "nota": "Muestra FIJA. `medir` la lee de acá, así que la medición es reproducible aunque TMDB reordene su catálogo.",
+  "plataformas_medidas": 14,
+  "total": 60,
+  "movies": 30,
+  "tv": 30,
+  "requests_de_esta_fase": 41,
+  "titulos": [
+    {
+      "id": 12535,
+      "tipo": "movie",
+      "titulo_es_es": "Máxima ansiedad",
+      "anio": 1977,
+      "motivos": [
+        "obligatorio: caso Mel Brooks"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1284041,
+      "tipo": "movie",
+      "titulo_es_es": "La última casa",
+      "anio": 2026,
+      "motivos": [
+        "cobertura Netflix",
+        "pop",
+        "terror"
+      ],
+      "plataforma_semilla": "n"
+    },
+    {
+      "id": 5920,
+      "tipo": "tv",
+      "titulo_es_es": "El mentalista",
+      "anio": 2008,
+      "motivos": [
+        "cobertura Netflix",
+        "cobertura Max",
+        "cobertura MovistarTV",
+        "pop"
+      ],
+      "plataforma_semilla": "n"
+    },
+    {
+      "id": 299536,
+      "tipo": "movie",
+      "titulo_es_es": "Vengadores: Infinity War",
+      "anio": 2018,
+      "motivos": [
+        "cobertura Disney+",
+        "pop"
+      ],
+      "plataforma_semilla": "d"
+    },
+    {
+      "id": 1416,
+      "tipo": "tv",
+      "titulo_es_es": "Anatomía de Grey",
+      "anio": 2005,
+      "motivos": [
+        "cobertura Disney+",
+        "pop"
+      ],
+      "plataforma_semilla": "d"
+    },
+    {
+      "id": 315635,
+      "tipo": "movie",
+      "titulo_es_es": "Spider-Man: Homecoming",
+      "anio": 2017,
+      "motivos": [
+        "cobertura Max",
+        "cobertura MovistarTV",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "m"
+    },
+    {
+      "id": 95350,
+      "tipo": "tv",
+      "titulo_es_es": "Linternas",
+      "anio": 2026,
+      "motivos": [
+        "cobertura Max",
+        "pop",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "m"
+    },
+    {
+      "id": 911430,
+      "tipo": "movie",
+      "titulo_es_es": "F1 la película",
+      "anio": 2025,
+      "motivos": [
+        "cobertura Apple TV+"
+      ],
+      "plataforma_semilla": "at"
+    },
+    {
+      "id": 125988,
+      "tipo": "tv",
+      "titulo_es_es": "Silo",
+      "anio": 2023,
+      "motivos": [
+        "cobertura Apple TV+",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "at"
+    },
+    {
+      "id": 687163,
+      "tipo": "movie",
+      "titulo_es_es": "Proyecto Salvación",
+      "anio": 2026,
+      "motivos": [
+        "cobertura Prime Video",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "p"
+    },
+    {
+      "id": 108978,
+      "tipo": "tv",
+      "titulo_es_es": "Reacher",
+      "anio": 2022,
+      "motivos": [
+        "cobertura Prime Video",
+        "cobertura MovistarTV",
+        "pop"
+      ],
+      "plataforma_semilla": "p"
+    },
+    {
+      "id": 1311031,
+      "tipo": "movie",
+      "titulo_es_es": "Guardianes de la noche: Kimetsu no Yaiba La fortaleza infinita",
+      "anio": 2025,
+      "motivos": [
+        "cobertura Crunchyroll"
+      ],
+      "plataforma_semilla": "cr"
+    },
+    {
+      "id": 94664,
+      "tipo": "tv",
+      "titulo_es_es": "Mushoku Tensei Jobless Reincarnation",
+      "anio": 2021,
+      "motivos": [
+        "cobertura Crunchyroll"
+      ],
+      "plataforma_semilla": "cr"
+    },
+    {
+      "id": 980431,
+      "tipo": "movie",
+      "titulo_es_es": "La leyenda de Aang: El último Airbender",
+      "anio": 2026,
+      "motivos": [
+        "cobertura Paramount+",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "pp"
+    },
+    {
+      "id": 113962,
+      "tipo": "tv",
+      "titulo_es_es": "Operaciones Especiales: Lioness",
+      "anio": 2023,
+      "motivos": [
+        "cobertura Paramount+",
+        "cobertura Claro video",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "pp"
+    },
+    {
+      "id": 933260,
+      "tipo": "movie",
+      "titulo_es_es": "La sustancia",
+      "anio": 2024,
+      "motivos": [
+        "cobertura MUBI"
+      ],
+      "plataforma_semilla": "mb"
+    },
+    {
+      "id": 1920,
+      "tipo": "tv",
+      "titulo_es_es": "Twin Peaks",
+      "anio": 1990,
+      "motivos": [
+        "cobertura MUBI"
+      ],
+      "plataforma_semilla": "mb"
+    },
+    {
+      "id": 634649,
+      "tipo": "movie",
+      "titulo_es_es": "Spider-Man: No Way Home",
+      "anio": 2021,
+      "motivos": [
+        "cobertura Universal+",
+        "cobertura MovistarTV",
+        "cobertura Claro video",
+        "pop"
+      ],
+      "plataforma_semilla": "un"
+    },
+    {
+      "id": 79744,
+      "tipo": "tv",
+      "titulo_es_es": "The Rookie",
+      "anio": 2018,
+      "motivos": [
+        "cobertura Universal+",
+        "comedia",
+        "pop"
+      ],
+      "plataforma_semilla": "un"
+    },
+    {
+      "id": 557,
+      "tipo": "movie",
+      "titulo_es_es": "Spider-Man",
+      "anio": 2002,
+      "motivos": [
+        "cobertura MovistarTV",
+        "cobertura ViX"
+      ],
+      "plataforma_semilla": "mv"
+    },
+    {
+      "id": 2734,
+      "tipo": "tv",
+      "titulo_es_es": "Ley y orden: Unidad de Víctimas Especiales",
+      "anio": 1999,
+      "motivos": [
+        "cobertura MovistarTV",
+        "pop",
+        "clasico",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": "mv"
+    },
+    {
+      "id": 278,
+      "tipo": "movie",
+      "titulo_es_es": "Cadena perpetua",
+      "anio": 1994,
+      "motivos": [
+        "cobertura Claro video",
+        "clasico",
+        "pop"
+      ],
+      "plataforma_semilla": "cv"
+    },
+    {
+      "id": 4614,
+      "tipo": "tv",
+      "titulo_es_es": "Navy: Investigación criminal",
+      "anio": 2003,
+      "motivos": [
+        "cobertura Claro video"
+      ],
+      "plataforma_semilla": "cv"
+    },
+    {
+      "id": 1930,
+      "tipo": "movie",
+      "titulo_es_es": "The Amazing Spider-Man",
+      "anio": 2012,
+      "motivos": [
+        "cobertura ViX"
+      ],
+      "plataforma_semilla": "vx"
+    },
+    {
+      "id": 44953,
+      "tipo": "tv",
+      "titulo_es_es": "El señor de los cielos",
+      "anio": 2013,
+      "motivos": [
+        "cobertura ViX"
+      ],
+      "plataforma_semilla": "vx"
+    },
+    {
+      "id": 205596,
+      "tipo": "movie",
+      "titulo_es_es": "The Imitation Game (Descifrando Enigma)",
+      "anio": 2014,
+      "motivos": [
+        "cobertura DIRECTV GO"
+      ],
+      "plataforma_semilla": "dg"
+    },
+    {
+      "id": 1399,
+      "tipo": "tv",
+      "titulo_es_es": "Juego de tronos",
+      "anio": 2011,
+      "motivos": [
+        "cobertura DIRECTV GO"
+      ],
+      "plataforma_semilla": "dg"
+    },
+    {
+      "id": 615173,
+      "tipo": "movie",
+      "titulo_es_es": "The Witch: Part 2. The Other One",
+      "anio": 2022,
+      "motivos": [
+        "cobertura OnDemandKorea"
+      ],
+      "plataforma_semilla": "ok"
+    },
+    {
+      "id": 33238,
+      "tipo": "tv",
+      "titulo_es_es": "Running Man",
+      "anio": 2010,
+      "motivos": [
+        "cobertura OnDemandKorea"
+      ],
+      "plataforma_semilla": "ok"
+    },
+    {
+      "id": 454639,
+      "tipo": "movie",
+      "titulo_es_es": "He-Man y los Masters del Universo",
+      "anio": 2026,
+      "motivos": [
+        "pop",
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 238,
+      "tipo": "movie",
+      "titulo_es_es": "El padrino",
+      "anio": 1972,
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 456,
+      "tipo": "tv",
+      "titulo_es_es": "Los Simpson",
+      "anio": 1989,
+      "motivos": [
+        "clasico",
+        "comedia",
+        "pop"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1084242,
+      "tipo": "movie",
+      "titulo_es_es": "Zootrópolis 2",
+      "anio": 2025,
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 3022,
+      "tipo": "tv",
+      "titulo_es_es": "Rugrats: Aventuras en pañales",
+      "anio": 1991,
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1481343,
+      "tipo": "movie",
+      "titulo_es_es": "La Boca del Diablo",
+      "anio": 2026,
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 291496,
+      "tipo": "tv",
+      "titulo_es_es": "Acaramelados",
+      "anio": 2026,
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1314481,
+      "tipo": "movie",
+      "titulo_es_es": "El diablo viste de Prada 2",
+      "anio": 2026,
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1434,
+      "tipo": "tv",
+      "titulo_es_es": "Padre de familia",
+      "anio": 1999,
+      "motivos": [
+        "comedia",
+        "clasico",
+        "comedia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1668364,
+      "tipo": "movie",
+      "titulo_es_es": "Deseo",
+      "anio": 2026,
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 117217,
+      "tipo": "tv",
+      "titulo_es_es": "El conquistador",
+      "anio": 2005,
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 755898,
+      "tipo": "movie",
+      "titulo_es_es": "La guerra de los mundos",
+      "anio": 2025,
+      "motivos": [
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 94997,
+      "tipo": "tv",
+      "titulo_es_es": "La casa del dragón",
+      "anio": 2022,
+      "motivos": [
+        "pop",
+        "pop"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 603,
+      "tipo": "movie",
+      "titulo_es_es": "Matrix",
+      "anio": 1999,
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 549,
+      "tipo": "tv",
+      "titulo_es_es": "Ley y orden",
+      "anio": 1990,
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1125257,
+      "tipo": "movie",
+      "titulo_es_es": "Ponte en mi lugar de nuevo",
+      "anio": 2025,
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 607,
+      "tipo": "tv",
+      "titulo_es_es": "Las Supernenas",
+      "anio": 1998,
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1510795,
+      "tipo": "movie",
+      "titulo_es_es": "Shake, Rattle & Roll 17: El origen del mal",
+      "anio": 2026,
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 259140,
+      "tipo": "tv",
+      "titulo_es_es": "Ranma1/2",
+      "anio": 2024,
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1493400,
+      "tipo": "movie",
+      "titulo_es_es": "Camp Rock 3",
+      "anio": 2026,
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 60625,
+      "tipo": "tv",
+      "titulo_es_es": "Rick y Morty",
+      "anio": 2013,
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1621552,
+      "tipo": "movie",
+      "titulo_es_es": "La captura",
+      "anio": 2026,
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 12513,
+      "tipo": "tv",
+      "titulo_es_es": "Operación triunfo",
+      "anio": 2001,
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 83533,
+      "tipo": "movie",
+      "titulo_es_es": "Avatar: Fuego y ceniza",
+      "anio": 2025,
+      "motivos": [
+        "pop"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 862,
+      "tipo": "movie",
+      "titulo_es_es": "Toy Story",
+      "anio": 1995,
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 764,
+      "tipo": "tv",
+      "titulo_es_es": "Los asesinatos de Midsomer",
+      "anio": 1997,
+      "motivos": [
+        "clasico"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 1007757,
+      "tipo": "movie",
+      "titulo_es_es": "Intercambiados",
+      "anio": 2026,
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 63893,
+      "tipo": "tv",
+      "titulo_es_es": "Peter Rabbit",
+      "anio": 2013,
+      "motivos": [
+        "familia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 223564,
+      "tipo": "tv",
+      "titulo_es_es": "The 100 Girlfriends Who Really, Really, Really, Really, REALLY Love You",
+      "anio": 2023,
+      "motivos": [
+        "terror"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 97546,
+      "tipo": "tv",
+      "titulo_es_es": "Ted Lasso",
+      "anio": 2020,
+      "motivos": [
+        "comedia"
+      ],
+      "plataforma_semilla": null
+    },
+    {
+      "id": 31268,
+      "tipo": "tv",
+      "titulo_es_es": "El Capo",
+      "anio": 2009,
+      "motivos": [
+        "latam"
+      ],
+      "plataforma_semilla": null
+    }
+  ]
+}

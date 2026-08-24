@@ -1,0 +1,928 @@
+{
+  "generado": "2026-08-23",
+  "revision": 4,
+  "que_es": "Encontrabilidad REAL de cada variante de título en el buscador de la plataforma argentina. La pregunta no es si el nombre se parece al publicado, sino si escribiéndolo aparece la película.",
+  "estados": {
+    "directo": "aparece en el bloque de resultados normales de la plataforma",
+    "relacionados": "aparece, pero la plataforma declara que no encontró coincidencia directa (Prime Video: solo bloque 'Más para explorar'; Netflix: avisa que no encontró el título y lo muestra entre relacionados)",
+    "no": "no aparece",
+    "no_probado": "no se buscó esa variante",
+    "no_verificado": "no hay acceso a la plataforma"
+  },
+  "fuentes": {
+    "dueño": "buscado por el dueño en su propia sesión de la plataforma",
+    "catalogo publico AR": "buscador público de la plataforma, desde una IP argentina. Sin login, sin scraping."
+  },
+  "limitaciones_del_instrumento": [
+    "Prime Video distingue nativamente: 'Principales resultados' = directo, solo 'Más para explorar' = relacionados. Verificado con una consulta inexistente, que devuelve solo 'Más para explorar'.",
+    "En movie:454639 el NOMBRE EXACTO que publica Prime Video ('Amos del Universo') da relacionados, reproducido dos veces. Es el techo del instrumento en esa plataforma: un 'relacionados' ahí no es culpa del título elegido.",
+    "Crunchyroll NO tiene estado intermedio observable: o muestra resultados o dice 'no se han encontrado resultados'. Además su buscador devuelve CERO para el nombre exacto que él mismo publica ('Demon Slayer: Kimetsu no Yaiba Castillo Infinito I'), así que ninguna variante completa puede dar directo. Por eso movie:1311031 se mide con el prefijo que una persona realmente tipea, y queda marcado como instrumento_degradado.",
+    "Paramount+ sin verificar: el dueño no tiene cuenta. NO cuenta como fallo de ninguna estrategia.",
+    "movie:12535: el nombre publicado por Disney+ (\"Las ansiedades del Dr. Mel Brooks\") devuelve CERO en el buscador de Disney+. El nombre publicado y la consulta que funciona son dos cosas distintas."
+  ],
+  "casos": [
+    {
+      "ref": "movie:278",
+      "plataforma": "Netflix",
+      "anio": 1994,
+      "nombre_publicado": "Sueño de fuga",
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Cadena perpetua",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Sueño de fuga",
+          "estado": "relacionados",
+          "nota": "Netflix primero dice que no encontró el título y después la muestra entre relacionados"
+        },
+        "alt_AR": {
+          "consulta": "Sueños de Libertad",
+          "estado": "no"
+        },
+        "original": {
+          "consulta": "The Shawshank Redemption",
+          "estado": "no"
+        }
+      },
+      "consulta_verificada": null,
+      "consulta_verificada_origen": "ninguna variante dio directo",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "tv:2734",
+      "plataforma": "Netflix",
+      "anio": 1999,
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Ley y orden: Unidad de Víctimas Especiales",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "La Ley y el Orden: Unidad de Víctimas Especiales",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "consulta": "La Ley y el Orden: UVE",
+          "estado": "no"
+        },
+        "original": {
+          "consulta": "Law & Order: Special Victims Unit",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "La Ley y el Orden: Unidad de Víctimas Especiales",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "tv:5920",
+      "plataforma": "Netflix",
+      "anio": 2008,
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "El mentalista",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "El mentalista",
+          "estado": "directo",
+          "nota": "la variante es-MX es 'El Mentalista': difiere de la cadena probada SOLO en una mayúscula"
+        },
+        "alt_AR": {
+          "consulta": "El mentalista",
+          "estado": "directo",
+          "nota": "el alternativo AR de TMDB es idéntico al es-ES"
+        },
+        "original": {
+          "consulta": "The Mentalist",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "El mentalista",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:1084242",
+      "plataforma": "Disney+",
+      "anio": 2025,
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Zootrópolis 2",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Zootopia 2",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado",
+          "nota": "TMDB no tiene alternativo AR"
+        },
+        "original": {
+          "consulta": "Zootopia 2",
+          "estado": "directo",
+          "nota": "el original es idéntico al es-MX"
+        }
+      },
+      "consulta_verificada": "Zootopia 2",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:1125257",
+      "plataforma": "Disney+",
+      "anio": 2025,
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Ponte en mi lugar de nuevo",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Otro viernes de locos",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado",
+          "nota": "TMDB no tiene alternativo AR"
+        },
+        "original": {
+          "consulta": "Freakier Friday",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "Otro viernes de locos",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "tv:1434",
+      "plataforma": "Disney+",
+      "anio": 1999,
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Padre de familia",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Padre de familia",
+          "estado": "directo",
+          "nota": "la variante es-MX es 'Padre de Familia': difiere SOLO en una mayúscula"
+        },
+        "alt_AR": {
+          "estado": "no_probado",
+          "nota": "TMDB no tiene alternativo AR"
+        },
+        "original": {
+          "consulta": "Family Guy",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "Padre de familia",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "tv:1399",
+      "plataforma": "Max",
+      "anio": 2011,
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Juego de tronos",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Game of Thrones",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "consulta": "El Juego de Tronos",
+          "estado": "directo"
+        },
+        "original": {
+          "consulta": "Game of Thrones",
+          "estado": "directo",
+          "nota": "idéntico al es-MX"
+        }
+      },
+      "consulta_verificada": "Game of Thrones",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "tv:607",
+      "plataforma": "Max",
+      "anio": 1998,
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Las Supernenas",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Las chicas superpoderosas",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado",
+          "nota": "TMDB no tiene alternativo AR"
+        },
+        "original": {
+          "consulta": "The Powerpuff Girls",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "Las chicas superpoderosas",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:557",
+      "plataforma": "Prime Video",
+      "anio": 2002,
+      "nombre_publicado": "El Hombre-Araña",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Spider-Man",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "El hombre araña",
+          "estado": "directo",
+          "nota": "primer resultado"
+        },
+        "alt_AR": {
+          "estado": "no_probado",
+          "nota": "TMDB no tiene alternativo AR"
+        },
+        "original": {
+          "consulta": "Spider-Man",
+          "estado": "directo",
+          "nota": "idéntico al es-ES"
+        }
+      },
+      "consulta_verificada": "El hombre araña",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:1930",
+      "plataforma": "Prime Video",
+      "anio": 2012,
+      "nombre_publicado": "El Sorprendente Hombre-Araña",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "The Amazing Spider-Man",
+          "estado": "directo",
+          "nota": "primer resultado"
+        },
+        "es_MX": {
+          "consulta": "El Sorprendente Hombre-Araña",
+          "estado": "directo",
+          "nota": "cuarto resultado"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "The Amazing Spider-Man",
+          "estado": "directo",
+          "nota": "idéntico al es-ES"
+        }
+      },
+      "consulta_verificada": "El Sorprendente Hombre-Araña",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:634649",
+      "plataforma": "Prime Video",
+      "anio": 2021,
+      "nombre_publicado": "Spider-Man: Sin Camino a Casa",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Spider-Man: No Way Home",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Spider-Man: Sin camino a casa",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Spider-Man: No Way Home",
+          "estado": "directo",
+          "nota": "idéntico al es-ES"
+        }
+      },
+      "consulta_verificada": "Spider-Man: Sin camino a casa",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:205596",
+      "plataforma": "Prime Video",
+      "anio": 2014,
+      "nombre_publicado": "El Código Enigma",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "The Imitation Game (Descifrando Enigma)",
+          "estado": "directo",
+          "nota": "primer resultado"
+        },
+        "es_MX": {
+          "consulta": "El código enigma",
+          "estado": "directo",
+          "nota": "séptimo resultado — el propio nombre publicado rankea peor que el inglés"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "The Imitation Game",
+          "estado": "directo",
+          "nota": "primer resultado"
+        }
+      },
+      "consulta_verificada": "El código enigma",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "tv:4614",
+      "plataforma": "Prime Video",
+      "anio": 2003,
+      "nombre_publicado": "NCIS",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Navy: Investigación criminal",
+          "estado": "relacionados",
+          "nota": "NCIS aparece solo dentro de 'Más para explorar'"
+        },
+        "es_MX": {
+          "consulta": "NCIS: Criminología Naval",
+          "estado": "directo",
+          "nota": "primer resultado"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "NCIS",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "NCIS: Criminología Naval",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:454639",
+      "plataforma": "Prime Video",
+      "anio": 2026,
+      "nombre_publicado": "Amos del Universo",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "He-Man y los Masters del Universo",
+          "estado": "relacionados"
+        },
+        "es_MX": {
+          "consulta": "Amos del Universo",
+          "estado": "relacionados",
+          "nota": "ES EL NOMBRE EXACTO PUBLICADO y aun así da relacionados. Reproducido dos veces. Techo del instrumento."
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Masters of the Universe",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "Masters of the Universe",
+      "consulta_verificada_origen": "original",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:1481343",
+      "plataforma": "Prime Video",
+      "anio": 2026,
+      "nombre_publicado": "Nunca debimos entrar",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "La Boca del Diablo",
+          "estado": "directo",
+          "nota": "nombre completamente distinto al publicado y aun así primer resultado"
+        },
+        "es_MX": {
+          "consulta": "Nunca debimos entrar",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "The Devil's Mouth",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "Nunca debimos entrar",
+      "consulta_verificada_origen": "es_MX",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:615173",
+      "plataforma": "Prime Video",
+      "anio": 2022,
+      "nombre_publicado": "La bruja 2: la cacería",
+      "fuente": "catalogo publico AR",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "The Witch: Part 2. The Other One",
+          "estado": "directo",
+          "nota": "primer resultado"
+        },
+        "es_MX": {
+          "consulta": "La Bruja: Parte 2 - La Cacería",
+          "estado": "relacionados",
+          "nota": "ÚNICO caso donde es-ES gana a es-MX"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "마녀 2",
+          "estado": "relacionados"
+        }
+      },
+      "consulta_verificada": "The Witch: Part 2. The Other One",
+      "consulta_verificada_origen": "es_ES",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:1311031",
+      "plataforma": "Crunchyroll",
+      "anio": 2025,
+      "nombre_publicado": "Demon Slayer: Kimetsu no Yaiba Castillo Infinito I",
+      "fuente": "catalogo publico AR",
+      "instrumento_degradado": true,
+      "nota": "El buscador de Crunchyroll devuelve CERO resultados para su propio nombre publicado. Con la cadena completa, es-ES, es-MX y alt_AR dan los tres 'no'. Los estados de abajo son con el PREFIJO que una persona tipearía.",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Guardianes de la noche",
+          "estado": "relacionados",
+          "nota": "cadena completa: no. Con el prefijo aparece en la posición ~13, detrás de The Silver Guardian, Chainsaw Man y Dragon Ball Z"
+        },
+        "es_MX": {
+          "consulta": "Demon Slayer",
+          "estado": "relacionados",
+          "nota": "cadena completa: no. Con el prefijo, el primer resultado es la franquicia correcta"
+        },
+        "alt_AR": {
+          "consulta": "Demon Slayer: Kimetsu no Yaiba - Castillo infinito",
+          "estado": "no",
+          "nota": "difiere del es-MX SOLO en un guion y eso alcanza para que devuelva cero"
+        },
+        "original": {
+          "estado": "no_probado"
+        }
+      },
+      "consulta_verificada": null,
+      "consulta_verificada_origen": "ninguna variante dio directo",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:12535",
+      "plataforma": "Disney+",
+      "anio": 1977,
+      "nombre_publicado": "Las ansiedades del Dr. Mel Brooks",
+      "fuente": "dueño",
+      "nota": "EL CASO CLAVE DEL MODELO. El nombre que Disney+ MUESTRA no es una consulta que su propio buscador reconozca: buscarlo literal da cero. Lo único que la encuentra es el título original.",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Máxima ansiedad",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Angustias del Doctor Mel Brooks",
+          "estado": "no"
+        },
+        "alt_AR": {
+          "consulta": "Las angustias del Dr. Mel Brooks",
+          "estado": "no"
+        },
+        "original": {
+          "consulta": "High Anxiety",
+          "estado": "directo"
+        }
+      },
+      "consulta_verificada": "High Anxiety",
+      "consulta_verificada_origen": "original",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:238",
+      "plataforma": "Paramount+",
+      "anio": 1972,
+      "nombre_publicado": null,
+      "fuente": null,
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "El padrino",
+          "estado": "no_verificado"
+        },
+        "es_MX": {
+          "consulta": "El Padrino",
+          "estado": "no_verificado"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "The Godfather",
+          "estado": "no_verificado"
+        }
+      },
+      "consulta_verificada": null,
+      "consulta_verificada_origen": "ninguna variante dio directo",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "tv:3022",
+      "plataforma": "Paramount+",
+      "anio": 1991,
+      "nombre_publicado": null,
+      "fuente": null,
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Rugrats: Aventuras en pañales",
+          "estado": "no_verificado"
+        },
+        "es_MX": {
+          "consulta": "Rugrats: Aventuras en Pañales",
+          "estado": "no_verificado"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Rugrats",
+          "estado": "no_verificado"
+        }
+      },
+      "consulta_verificada": null,
+      "consulta_verificada_origen": "ninguna variante dio directo",
+      "muestra": "encontrabilidad"
+    },
+    {
+      "ref": "movie:585",
+      "plataforma": "Disney+",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Monstruos, S.A.",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Monsters, Inc.",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Monsters, Inc.",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Monsters, Inc.",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "movie:1241982",
+      "plataforma": "Disney+",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Vaiana 2",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Moana 2",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Moana 2",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Moana 2",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:85271",
+      "plataforma": "Disney+",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Bruja Escarlata y Visión",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "WandaVision",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "WandaVision",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "WandaVision",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "movie:497698",
+      "plataforma": "Disney+",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Viuda Negra",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Black Widow",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Black Widow",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Black Widow",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:4607",
+      "plataforma": "Disney+",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Perdidos",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "Lost",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Lost",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Lost",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:91239",
+      "plataforma": "Netflix",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Los Bridgerton",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Bridgerton",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Bridgerton",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Bridgerton",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:44217",
+      "plataforma": "Netflix",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Vikingos",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Vikings",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Vikings",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Vikings",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "movie:24",
+      "plataforma": "Netflix",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Kill Bill: Volumen 1",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Kill Bill: Vol. 1",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Kill Bill: Vol. 1",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Kill Bill: Vol. 1",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:87083",
+      "plataforma": "Netflix",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Formula 1: La emoción de un Grand Prix",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Formula 1: Drive to Survive",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Formula 1: Drive to Survive",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Formula 1: Drive to Survive",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:110492",
+      "plataforma": "Max",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "El Pacificador",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Peacemaker",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Peacemaker",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Peacemaker",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:10545",
+      "plataforma": "Max",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "True Blood (Sangre fresca)",
+          "estado": "no"
+        },
+        "es_MX": {
+          "consulta": "True Blood",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "True Blood",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "True Blood",
+      "consulta_verificada_origen": "es_MX"
+    },
+    {
+      "ref": "tv:4546",
+      "plataforma": "Max",
+      "muestra": "pasaje-al-ingles",
+      "nombre_publicado": null,
+      "fuente": "dueño",
+      "encontrabilidad": {
+        "es_ES": {
+          "consulta": "Larry David",
+          "estado": "directo"
+        },
+        "es_MX": {
+          "consulta": "Curb Your Enthusiasm",
+          "estado": "directo"
+        },
+        "alt_AR": {
+          "estado": "no_probado"
+        },
+        "original": {
+          "consulta": "Curb Your Enthusiasm",
+          "estado": "directo",
+          "nota": "en esta muestra el es-MX ES el titulo original"
+        }
+      },
+      "consulta_verificada": "Curb Your Enthusiasm",
+      "consulta_verificada_origen": "es_MX"
+    }
+  ],
+  "concepto_consulta_verificada": "La tabla propia NO guarda el nombre publicado: guarda la CONSULTA que se verificó que funciona en el buscador de esa plataforma. Clave: tipo + tmdb_id + plataforma + país. El nombre publicado se conserva solo como dato de auditoría y NO se usa para buscar — movie:12535 lo demuestra: Disney+ muestra \"Las ansiedades del Dr. Mel Brooks\" y su propio buscador no lo reconoce.",
+  "paramount": "Declarado FUERA DE ALCANCE por el dueño (sin cuenta). No bloquea la implementación."
+}

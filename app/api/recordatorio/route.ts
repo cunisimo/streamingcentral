@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildIcs } from "@/lib/ics";
 import { supabaseServer } from "@/lib/supabase";
-import { titleDetails } from "@/lib/tmdb";
+// El detalle pasa por el resolver REPARADO, no por `titleDetails` crudo: el
+// nombre que termina en el .ics es el mismo que el usuario vio en la ficha.
+// (El camino que lee `upcoming_content` NO se repara acá — ver abajo.)
+import { detalleReparado } from "@/lib/enrich";
+// El texto vive en un módulo puro para poder probarlo: es lo que fija qué
+// nombre termina en el archivo que el usuario agenda.
+import { resumen, type DatosRecordatorio as Datos } from "@/lib/recordatorio-texto";
 import { hoyAR } from "@/lib/fecha";
 import { platformByCode } from "@/lib/providers-ar";
 import type { MediaType, PlatformCode } from "@/lib/types";
@@ -16,14 +22,13 @@ export const dynamic = "force-dynamic";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://streamingcentral.vercel.app";
 
-interface Datos {
-  titulo: string;
-  fecha: string;
-  season: number | null;
-  episode: number | null;
-  premiere: boolean;
-}
 
+// OJO CON EL IDIOMA: esta rama lee `upcoming_content.title`, que hoy está
+// persistido en es-ES y NO se repara acá. Queda a cargo de la TANDA 3, donde la
+// Edge Function pasa a es-MX y se hace el backfill. Hasta entonces, un
+// recordatorio de Próximamente puede traer el título español aunque la ficha ya
+// muestre otro — es una inconsistencia CONOCIDA y acotada a esa tabla.
+//
 // El dato bueno está en `upcoming_content`: trae temporada, episodio y si es
 // estreno de temporada, que es lo que hace legible el evento. Un título que no
 // esté ahí (una ficha futura que el sync todavía no levantó) cae a TMDB, que
@@ -39,7 +44,7 @@ interface Datos {
 // pero lo que se agenda sí se corrige acá.
 async function digitalAR(id: number): Promise<string | null> {
   try {
-    const d = await titleDetails("movie", id);
+    const { detalle: d } = await detalleReparado("movie", id);
     const ar = d.release_dates?.results.find((r) => r.iso_3166_1 === "AR");
     return ar?.release_dates?.find((x) => x.type === 4)?.release_date?.slice(0, 10) || null;
   } catch {
@@ -69,7 +74,7 @@ async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
     }
   }
   try {
-    const d = await titleDetails(tipo, id);
+    const { detalle: d } = await detalleReparado(tipo, id);
     // En series, `next_episode_to_air` y NO `first_air_date`. `first_air_date`
     // es el estreno ORIGINAL de la serie: en una en emisión es una fecha del
     // pasado, así que el .ics guardaba en el calendario del usuario un evento ya
@@ -94,15 +99,6 @@ async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
   }
 }
 
-// Qué dice el evento. Para series el dueño pidió NO agendar recurrencias: cada
-// toque agenda un solo evento, sea el estreno de temporada o el episodio suelto.
-function resumen(d: Datos, tipo: MediaType, plataforma: string | null): string {
-  const donde = plataforma ? ` en ${plataforma}` : "";
-  if (tipo === "movie") return `${d.titulo} — estreno${donde}`;
-  if (d.premiere && d.season) return `${d.titulo} — estrena la temporada ${d.season}${donde}`;
-  if (d.season && d.episode) return `${d.titulo} — T${d.season} E${d.episode}${donde}`;
-  return `${d.titulo} — nuevo episodio${donde}`;
-}
 
 // Nombre de archivo sin acentos ni símbolos: algunos clientes de correo y el
 // Safari viejo se comen los nombres con caracteres no ASCII.

@@ -1,0 +1,27 @@
+{
+  "generado": "2026-08-23",
+  "filas": [
+    {
+      "tmdb_id": 277834,
+      "media_type": "movie",
+      "title": "Vaiana",
+      "razon": "Disney construye una aventura de navegación basada en mitología polinesia. Las canciones de Lin-Manuel Miranda llevan la trama en vez de detenerla. Vaiana no depende de un romance para moverse, algo poco común en el catálogo clásico del estudio.",
+      "advertencia": null,
+      "updated_at": "2026-08-11T21:38:53.986769+00:00",
+      "campo": "razon",
+      "texto_actual": "Disney construye una aventura de navegación basada en mitología polinesia. Las canciones de Lin-Manuel Miranda llevan la trama en vez de detenerla. Vaiana no depende de un romance para moverse, algo poco común en el catálogo clásico del estudio.",
+      "texto_nuevo": "Disney construye una aventura de navegación basada en mitología polinesia. Las canciones de Lin-Manuel Miranda llevan la trama en vez de detenerla. Moana no depende de un romance para moverse, algo poco común en el catálogo clásico del estudio."
+    },
+    {
+      "tmdb_id": 13179,
+      "media_type": "movie",
+      "title": "Campanilla",
+      "razon": "Primera película del universo Disney Fairies, centrada en la inseguridad de Campanilla por no encontrarle sentido a su propio talento. El ritmo es pausado y pensado para las más chicas, sin grandes villanos ni peligro real. Funciona bien como puerta de entrada a la saga.",
+      "advertencia": "Si buscás algo con más conflicto o aventura, acá el mayor drama es interno y bastante suave.",
+      "updated_at": "2026-08-11T21:38:53.986769+00:00",
+      "campo": "razon",
+      "texto_actual": "Primera película del universo Disney Fairies, centrada en la inseguridad de Campanilla por no encontrarle sentido a su propio talento. El ritmo es pausado y pensado para las más chicas, sin grandes villanos ni peligro real. Funciona bien como puerta de entrada a la saga.",
+      "texto_nuevo": "Primera película del universo Disney Fairies, centrada en la inseguridad de su protagonista por no encontrarle sentido a su propio talento. El ritmo es pausado y pensado para las más chicas, sin grandes villanos ni peligro real. Funciona bien como puerta de entrada a la saga."
+    }
+  ]
+}

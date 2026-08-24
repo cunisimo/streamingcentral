@@ -60,6 +60,29 @@ export interface UITitleDetail extends UITitle {
   trailerKey: string | null; // key de YouTube del mejor trailer, o null
   related: UITitle[];
   editorial: EditorialReview | null;
+
+  // --- Ayudas para encontrar el título EN la plataforma ----------------------
+  // Medido: el nombre que la app muestra no siempre es el que encuentra la
+  // película en el buscador de la plataforma. Caso testigo, movie:12535 en
+  // Disney+: ni "Máxima ansiedad" (es-ES), ni "Angustias del Doctor Mel Brooks"
+  // (es-MX), ni el alternativo argentino de TMDB, NI SIQUIERA el nombre que
+  // Disney+ muestra devuelven nada. Lo único que la encuentra es "High Anxiety".
+  //
+  // Todo esto se resuelve EN EL SERVIDOR (lib/consultas-verificadas.ts): el
+  // componente recibe lo que tiene que pintar y no decide nada.
+
+  /** Título original. Solo viaja si difiere del que se muestra. */
+  originalTitle?: string;
+  /** Consultas verificadas, una por plataforma. Ausente si no hay ninguna. */
+  ayudas?: AyudaBusqueda[];
+  /** Respaldo genérico. UNA sola vez para toda la ficha, nunca por plataforma. */
+  ayudaOriginal?: string;
+}
+
+/** Qué escribir en el buscador de UNA plataforma para encontrar este título. */
+export interface AyudaBusqueda {
+  plataforma: PlatformCode;
+  consulta: string;
 }
 
 export interface UIPerson {

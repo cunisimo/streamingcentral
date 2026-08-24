@@ -1,0 +1,175 @@
+#!/usr/bin/env node
+// ¿El texto editorial de la ruleta nombra la película en es-ES?
+//
+//   node --env-file=.env.local scripts/auditar-ruleta-idioma.mjs
+//
+// Por qué importa: `roulette_titles.razon` y `.advertencia` se generaron con un
+// pipeline offline que recibió los títulos en es-ES (ver el encabezado de
+// scripts/check-vocabulario.mjs). Si alguno de esos textos nombra la película
+// adentro, al pasar la app a es-MX la tarjeta va a mostrar el título mexicano
+// arriba y el nombre español en el cuerpo.
+//
+// SOLO LECTURA. Hace `select` y nada más: ni update, ni delete, ni DDL. No
+// imprime credenciales ni el texto editorial completo — solo el fragmento
+// alrededor de una coincidencia, que es lo mínimo para poder decidir.
+import { createClient } from "@supabase/supabase-js";
+import { writeFileSync } from "node:fs";
+
+const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!URL || !KEY) {
+  console.error("faltan NEXT_PUBLIC_SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY");
+  process.exit(1);
+}
+// El service role bypassa RLS: es la única forma de leer roulette_titles, que
+// fuera de get_roulette_picks devuelve 401 con la anon key.
+const sb = createClient(URL, KEY, { auth: { persistSession: false } });
+
+const SALIDA = "docs/medidas/2026-08-23-idioma-ruleta.json";
+
+// Normalización para comparar: sin acentos, sin puntuación, minúsculas.
+const norm = (s) => (s ?? "").toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-z0-9ñ ]/g, " ").replace(/\s+/g, " ").trim();
+
+// Palabras demasiado comunes para que una coincidencia signifique algo.
+const VACIAS = new Set(["the","los","las","una","uno","del","por","con","para",
+  "que","como","mas","sin","son","este","esta","esa","ese","hay","muy","todo",
+  "toda","todos","todas","pero","cuando","donde","porque","tiene","hace","vida",
+  "amor","casa","dia","noche","mundo","hombre","mujer","gran","otra","otro"]);
+
+async function main() {
+  // Paginado: Supabase corta en 1000 filas por request.
+  const filas = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data, error } = await sb
+      .from("roulette_titles")
+      .select("tmdb_id, media_type, title, razon, advertencia")
+      .range(desde, desde + 999);
+    if (error) throw new Error(`select falló: ${error.message}`);
+    filas.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+
+  const conTexto = filas.filter((f) => (f.razon ?? "").trim() || (f.advertencia ?? "").trim());
+  const hallazgos = [];
+
+  for (const f of conTexto) {
+    const titulo = norm(f.title);
+    if (!titulo) continue;
+    const cuerpo = `${f.razon ?? ""} \0 ${f.advertencia ?? ""}`;
+    const cuerpoN = norm(cuerpo);
+
+    // 1. El título COMPLETO adentro del texto. Es el caso que importa: si el
+    //    texto dice "Jungla de cristal" y la tarjeta pasa a decir "Duro de
+    //    matar", el cuerpo contradice al encabezado.
+    const completo = titulo.length >= 6 && cuerpoN.includes(titulo);
+
+    // 2. Palabras distintivas del título (>4 letras, no vacías) presentes en el
+    //    texto. Señal más débil: sirve para no dar un "0" tranquilizador si el
+    //    texto parafrasea el nombre.
+    const distintivas = titulo.split(" ")
+      .filter((w) => w.length > 4 && !VACIAS.has(w));
+    const presentes = distintivas.filter((w) => cuerpoN.includes(w));
+
+    if (completo || presentes.length) {
+      const i = cuerpoN.indexOf(completo ? titulo : presentes[0]);
+      hallazgos.push({
+        ref: `${f.media_type}:${f.tmdb_id}`,
+        title: f.title,
+        titulo_completo_en_el_texto: completo,
+        palabras_distintivas: distintivas,
+        palabras_encontradas: presentes,
+        // Fragmento acotado, no el texto editorial entero.
+        fragmento: cuerpo.slice(Math.max(0, i - 60), i + 90).replace(/\0/g, " | "),
+      });
+    }
+  }
+
+  // --- FASE 2: la pregunta precisa --------------------------------------
+  // Que el texto contenga el titulo NO basta: "Batman", "Cleopatra" o "Apache"
+  // son palabras que el texto usa naturalmente. La contradiccion solo existe si
+  // el titulo CAMBIA al pasar a es-MX. Se consulta TMDB por cada hallazgo.
+  const TOKEN = process.env.TMDB_READ_TOKEN;
+  if (TOKEN) {
+    const H = { Authorization: `Bearer ${TOKEN}`, accept: "application/json" };
+    const pedir = async (tipo, id, lang) => {
+      const r = await fetch(`https://api.themoviedb.org/3/${tipo}/${id}?language=${lang}`, { headers: H });
+      if (!r.ok) return null;
+      const d = await r.json();
+      return d.title ?? d.name ?? null;
+    };
+    for (let i = 0; i < hallazgos.length; i += 12) {
+      await Promise.all(hallazgos.slice(i, i + 12).map(async (h) => {
+        const [tipo, id] = h.ref.split(":");
+        const [es, mx] = await Promise.all([pedir(tipo, id, "es-ES"), pedir(tipo, id, "es-MX")]);
+        h.titulo_es_ES = es; h.titulo_es_MX = mx;
+        h.el_titulo_cambia = !!es && !!mx && es !== mx;
+        // Riesgo REAL: el texto nombra el titulo completo Y el titulo cambia.
+        h.riesgo_real = h.titulo_completo_en_el_texto && h.el_titulo_cambia;
+      }));
+      if (i % 120 === 0) console.error(`  TMDB ${i}/${hallazgos.length}`);
+    }
+  } else {
+    console.error("sin TMDB_READ_TOKEN: no se puede decidir si el titulo cambia");
+  }
+
+  const completos = hallazgos.filter((h) => h.titulo_completo_en_el_texto);
+  const riesgo = hallazgos.filter((h) => h.riesgo_real);
+  const cambian = hallazgos.filter((h) => h.el_titulo_cambia);
+  const resumen = {
+    generado: "2026-08-23",
+    solo_lectura: true,
+    filas_totales: filas.length,
+    filas_con_texto_editorial: conTexto.length,
+    textos_que_contienen_el_TITULO_COMPLETO: completos.length,
+    textos_con_alguna_palabra_distintiva_del_titulo: hallazgos.length,
+    de_esos_cuyo_titulo_CAMBIA_en_es_MX: cambian.length,
+    RIESGO_REAL_titulo_completo_en_el_texto_Y_el_titulo_cambia: riesgo.length,
+    veredicto: riesgo.length === 0
+      ? `Ninguna fila tiene riesgo real. Hay ${completos.length} textos que contienen el título, pero en ninguno de ellos el título cambia al pasar a es-MX, así que el cuerpo no puede contradecir al encabezado. NO hace falta re-correr el pipeline antes del cambio de idioma.`
+      : `ATENCIÓN: ${riesgo.length} filas con riesgo real (el texto nombra el título completo Y el título cambia en es-MX). Revisarlas antes del cambio.`,
+  };
+
+  writeFileSync(SALIDA, JSON.stringify({ resumen, hallazgos }, null, 2));
+  console.log(JSON.stringify(resumen, null, 2));
+  if (completos.length) {
+    console.log("\n--- textos con el título completo ---");
+    for (const h of completos.slice(0, 20)) console.log(`  ${h.ref} «${h.title}»\n    …${h.fragmento}…`);
+  }
+  if (hallazgos.length) {
+    console.log(`\n--- señal débil: ${hallazgos.length} con alguna palabra distintiva (muestra de 10) ---`);
+    for (const h of hallazgos.slice(0, 10)) {
+      console.log(`  ${h.ref} «${h.title}» → ${h.palabras_encontradas.join(", ")}\n    …${h.fragmento}…`);
+    }
+  }
+  console.log(`\n${SALIDA} escrito.`);
+}
+
+// --- Modo "ver dos filas completas" ------------------------------------------
+// `node ... auditar-ruleta-idioma.mjs ver movie:277834 movie:13179`
+// SOLO LECTURA, y solo de las filas pedidas por (media_type, tmdb_id).
+async function ver(refs) {
+  for (const ref of refs) {
+    const [tipo, id] = ref.split(":");
+    const { data, error } = await sb
+      .from("roulette_titles")
+      .select("tmdb_id, media_type, title, razon, advertencia, atencion, updated_at")
+      .eq("media_type", tipo).eq("tmdb_id", Number(id)).single();
+    if (error) { console.error(`${ref}: ${error.message}`); continue; }
+    console.log(`
+${"=".repeat(72)}
+${ref}  «${data.title}»   (updated_at ${data.updated_at})`);
+    console.log(`
+RAZON (${(data.razon ?? "").length} car.):
+${data.razon ?? "(null)"}`);
+    console.log(`
+ADVERTENCIA (${(data.advertencia ?? "").length} car.):
+${data.advertencia ?? "(null)"}`);
+    console.log(`
+atencion: ${data.atencion}`);
+  }
+}
+
+if (process.argv[2] === "ver") await ver(process.argv.slice(3));
+else await main();

@@ -385,3 +385,44 @@ No hace falta tocar `lib/eliminar-cuenta.ts` ni la ruta.
 
 También falta declarar en Play qué datos se recogen y cuáles se borran; la tabla
 de arriba es la fuente para ese formulario.
+
+---
+
+## Rama actual: `feat/idioma-tanda-1`
+
+Tanda 1 del plan de idioma (`docs/medidas/2026-08-23-idioma-plan.md`).
+**Sin mergear**, a la espera de la prueba manual del dueño.
+
+Qué hace y qué no:
+
+- **No cambia el idioma.** `IDIOMA_BASE` sale de `IDIOMA_TITULOS` y su default
+  sigue siendo `es-ES`. El cambio es la tanda 2, y se hace con la variable.
+- **No invalida ninguna clave.** Los once constructores de `lib/claves.ts`
+  corren en *modo compatible* y producen los mismos bytes que antes.
+- **Lo único visible:** el aviso "En Disney+, buscala como «High Anxiety»" en
+  `movie:12535`.
+
+Piezas: `lib/idioma.ts` (predicado, fusión, mecanismo de lote, métricas por
+request), `lib/claves.ts`, `lib/consultas-verificadas.ts`,
+`lib/single-flight.ts`, `lib/recordatorio-texto.ts` y
+`components/AyudasBusqueda.tsx`. Matriz de cobertura en
+`docs/IDIOMA-COBERTURA.md`.
+
+Kill switches (**requieren redeploy**): `CONSULTA_VERIFICADA=0`,
+`FALLBACK_IDIOMA=0`, y `IDIOMA_TITULOS` que es la tanda 2.
+
+### Archivos ajenos, sin registrar y a propósito
+
+Estos tres son del dueño, son **preexistentes** y **no** pertenecen a ninguna
+rama de idioma. Aparecen como `??` en `git status` y así tienen que quedar:
+
+- `prompts/noticias-filtro.md`
+- `prompts/noticias-redaccion.md`
+- `supabase/migrations/004_news.sql`
+
+La tabla `news_items` ya está aplicada en la base, pero su migración sigue sin
+versionar — es una decisión pendiente del dueño, no un olvido.
+
+**Al preparar commits, agregar rutas explícitas y nunca `git add -A`**: fue así
+como se colaron en un commit de esta rama, y hubo que sacarlos con
+`git rm --cached` (que no toca la copia de trabajo).

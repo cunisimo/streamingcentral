@@ -1,0 +1,53 @@
+{
+  "generado": "2026-08-23",
+  "que_es": "Coste de exponer originalTitle en el payload de /api/title. Cero llamadas y cero bytes adicionales DESDE TMDB (el campo ya viaja en la respuesta), pero agrega bytes al JSON que la ficha manda al navegador.",
+  "medido_sobre": "respuestas reales de GET /api/title/:tipo/:id?providers=n,d,m en el banco aislado",
+  "filas": [
+    {
+      "ref": "movie:12535",
+      "bytes": 2737,
+      "orig": "High Anxiety",
+      "delta": 31,
+      "pct": 1.13
+    },
+    {
+      "ref": "movie:278",
+      "bytes": 3810,
+      "orig": "The Shawshank Redemption",
+      "delta": 43,
+      "pct": 1.13
+    },
+    {
+      "ref": "tv:1399",
+      "bytes": 6247,
+      "orig": "Game of Thrones",
+      "delta": 34,
+      "pct": 0.54
+    },
+    {
+      "ref": "movie:557",
+      "bytes": 6387,
+      "orig": "Spider-Man",
+      "delta": 29,
+      "pct": 0.45
+    },
+    {
+      "ref": "tv:4614",
+      "bytes": 1546,
+      "orig": "NCIS",
+      "delta": 23,
+      "pct": 1.49
+    },
+    {
+      "ref": "movie:1084242",
+      "bytes": 5441,
+      "orig": "Zootopia 2",
+      "delta": 29,
+      "pct": 0.53
+    }
+  ],
+  "promedio_payload_bytes": 4361,
+  "promedio_delta_bytes": 32,
+  "promedio_delta_pct": 0.72,
+  "fichas_donde_el_original_difiere_del_es_MX": "42/60"
+}

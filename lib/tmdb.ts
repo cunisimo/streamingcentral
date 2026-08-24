@@ -5,6 +5,7 @@
 // lo importa, pero tsc no vería la regresión — esto la convierte en error de
 // compilación. Los `import type` se borran y siguen siendo legales.
 import "server-only";
+import { IDIOMA_BASE } from "./idioma";
 import type { MediaType } from "./types";
 
 const BASE = "https://api.themoviedb.org/3";
@@ -14,7 +15,10 @@ const HEADERS = {
   Authorization: `Bearer ${process.env.TMDB_READ_TOKEN ?? ""}`,
   accept: "application/json",
 };
-const DEFAULTS = { language: "es-ES", watch_region: "AR" };
+// El idioma sale de `IDIOMA_BASE` (lib/idioma.ts), que hoy tiene default es-ES:
+// cableado y probado, pero SIN cambiar el comportamiento. El cambio a es-MX se
+// hace con la variable `IDIOMA_TITULOS`, en la tanda 2 del plan.
+const DEFAULTS = { language: IDIOMA_BASE, watch_region: "AR" };
 
 // --- Techo de concurrencia contra TMDB --------------------------------------
 // El Home Composer pide todas sus fuentes en paralelo: con cache fría eso son
@@ -87,6 +91,12 @@ export interface RawTitle {
   // de anime del recomendador (animación 16 + idioma "ja"), que no puede pedir
   // el detalle de cada candidato.
   original_language?: string;
+  // Los devuelve discover. Hacen falta para la señal 3 de `queReparar` (el
+  // título cayó al original porque no hay traducción): sin ellos esa señal solo
+  // se puede evaluar en la ficha, y no en los rieles, que es donde está el 95%
+  // de los títulos que ve el usuario.
+  original_title?: string;
+  original_name?: string;
   origin_country?: string[];
   // Lo devuelve discover y no se usaba, así que no estaba declarado. Hace falta
   // para reordenar al unir pools de plataformas distintas (ver lib/pools.ts):
@@ -204,9 +214,12 @@ export function searchDeTipo(type: MediaType, query: string, page = 1) {
   });
 }
 
-export function searchPersonas(query: string, page = 1) {
+// `language` solo lo usa la reparación de idioma: `known_for` trae títulos
+// localizados y hay que poder pedir la misma página en es-ES.
+export function searchPersonas(query: string, page = 1, language?: string) {
   return tmdb<Paged<RawPerson>>("/search/person", {
     query, include_adult: "false", page: String(page),
+    ...(language ? { language } : {}),
   });
 }
 
@@ -226,8 +239,10 @@ export interface CreditEntry extends RawTitle {
   character?: string;
   job?: string;
 }
-export function personCombinedCredits(id: number) {
-  return tmdb<{ cast: CreditEntry[]; crew: CreditEntry[] }>(`/person/${id}/combined_credits`);
+export function personCombinedCredits(id: number, language?: string) {
+  return tmdb<{ cast: CreditEntry[]; crew: CreditEntry[] }>(
+    `/person/${id}/combined_credits`, language ? { language } : {},
+  );
 }
 export function personDetails(id: number) {
   return tmdb<{ id: number; name: string; profile_path: string | null }>(`/person/${id}`);
@@ -253,6 +268,12 @@ export interface RawDetail {
   id: number;
   title?: string;
   name?: string;
+  // El título en su idioma original. Lo devuelve TMDB en la misma respuesta,
+  // así que exponerlo no cuesta ninguna llamada — solo unos bytes en el payload
+  // de /api/title (+32 B de promedio, medido). Es la mitad de la unión que
+  // encuentra 29/29: ver docs/medidas/2026-08-23-idioma-informe.md.
+  original_title?: string;
+  original_name?: string;
   poster_path: string | null;
   backdrop_path: string | null;
   overview: string;
@@ -285,11 +306,17 @@ export interface RawDetail {
   };
   recommendations?: Paged<RawTitle>;
 }
-export function titleDetails(type: MediaType, id: number) {
+// `language` se pasa SOLO para el fallback de la ficha (lib/enrich.ts →
+// `detalleReparado`), que pide el mismo detalle en es-ES cuando el es-MX vino
+// roto. Sin argumento usa el idioma base, como todo el resto.
+export function titleDetails(type: MediaType, id: number, language?: string) {
   const append = type === "movie"
     ? "credits,external_ids,release_dates,recommendations"
     : "credits,external_ids,content_ratings,recommendations";
-  return tmdb<RawDetail>(`/${type}/${id}`, { append_to_response: append });
+  return tmdb<RawDetail>(`/${type}/${id}`, {
+    append_to_response: append,
+    ...(language ? { language } : {}),
+  });
 }
 
 // Videos del título en el idioma ORIGINAL (no el doblaje es-ES que fuerza el
@@ -308,6 +335,10 @@ export function trending(type: MediaType | "all", window: "day" | "week") {
   return tmdb<Paged<RawTitle>>(`/trending/${type}/${window}`);
 }
 
-export function personPopular(page = 1) {
-  return tmdb<Paged<RawPerson & { known_for_department?: string }>>("/person/popular", { page: String(page) });
+// `language` solo lo usa la reparación de idioma (lib/enrich.ts): `known_for`
+// trae títulos localizados y hay que poder pedir la misma página en es-ES.
+export function personPopular(page = 1, language?: string) {
+  return tmdb<Paged<RawPerson & { known_for_department?: string }>>("/person/popular", {
+    page: String(page), ...(language ? { language } : {}),
+  });
 }

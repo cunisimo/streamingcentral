@@ -1,0 +1,443 @@
+{
+  "generado": "2026-08-23",
+  "llamadas": 120,
+  "resumen": {
+    "n": 60,
+    "sinopsis_vacia_es_ES": 2,
+    "sinopsis_vacia_es_MX": 4,
+    "regresion_tenia_y_pierde": [
+      "tv:33238",
+      "tv:117217",
+      "movie:1510795",
+      "tv:12513"
+    ],
+    "mejora_no_tenia_y_gana": [
+      "movie:1621552",
+      "tv:63893"
+    ],
+    "largo_promedio_es_ES": 324,
+    "largo_promedio_es_MX": 277
+  },
+  "filas": [
+    {
+      "ref": "movie:12535",
+      "es": 308,
+      "mx": 406,
+      "tit_es": "Máxima ansiedad",
+      "tit_mx": "Angustias del Doctor Mel Brooks"
+    },
+    {
+      "ref": "movie:1284041",
+      "es": 155,
+      "mx": 177,
+      "tit_es": "La última casa",
+      "tit_mx": "La última casa"
+    },
+    {
+      "ref": "tv:5920",
+      "es": 287,
+      "mx": 449,
+      "tit_es": "El mentalista",
+      "tit_mx": "El Mentalista"
+    },
+    {
+      "ref": "movie:299536",
+      "es": 627,
+      "mx": 182,
+      "tit_es": "Vengadores: Infinity War",
+      "tit_mx": "Avengers: Infinity War"
+    },
+    {
+      "ref": "tv:1416",
+      "es": 634,
+      "mx": 634,
+      "tit_es": "Anatomía de Grey",
+      "tit_mx": "Anatomía según Grey"
+    },
+    {
+      "ref": "movie:315635",
+      "es": 455,
+      "mx": 473,
+      "tit_es": "Spider-Man: Homecoming",
+      "tit_mx": "Spider-Man: De regreso a casa"
+    },
+    {
+      "ref": "tv:95350",
+      "es": 281,
+      "mx": 199,
+      "tit_es": "Linternas",
+      "tit_mx": "Linternas"
+    },
+    {
+      "ref": "movie:911430",
+      "es": 178,
+      "mx": 220,
+      "tit_es": "F1 la película",
+      "tit_mx": "F1 la película"
+    },
+    {
+      "ref": "tv:125988",
+      "es": 233,
+      "mx": 219,
+      "tit_es": "Silo",
+      "tit_mx": "Silo"
+    },
+    {
+      "ref": "movie:687163",
+      "es": 499,
+      "mx": 284,
+      "tit_es": "Proyecto Salvación",
+      "tit_mx": "Proyecto Fin del Mundo"
+    },
+    {
+      "ref": "tv:108978",
+      "es": 397,
+      "mx": 387,
+      "tit_es": "Reacher",
+      "tit_mx": "Reacher"
+    },
+    {
+      "ref": "movie:1311031",
+      "es": 169,
+      "mx": 719,
+      "tit_es": "Guardianes de la noche: Kimetsu no Yaiba La fortaleza infinita",
+      "tit_mx": "Demon Slayer: Kimetsu no Yaiba Castillo infinito"
+    },
+    {
+      "ref": "tv:94664",
+      "es": 418,
+      "mx": 416,
+      "tit_es": "Mushoku Tensei Jobless Reincarnation",
+      "tit_mx": "Mushoku Tensei Jobless Reincarnation"
+    },
+    {
+      "ref": "movie:980431",
+      "es": 168,
+      "mx": 310,
+      "tit_es": "La leyenda de Aang: El último Airbender",
+      "tit_mx": "Avatar: Aang, El último Maestro Aire"
+    },
+    {
+      "ref": "tv:113962",
+      "es": 321,
+      "mx": 239,
+      "tit_es": "Operaciones Especiales: Lioness",
+      "tit_mx": "Operativo: Lioness"
+    },
+    {
+      "ref": "movie:933260",
+      "es": 190,
+      "mx": 174,
+      "tit_es": "La sustancia",
+      "tit_mx": "La sustancia"
+    },
+    {
+      "ref": "tv:1920",
+      "es": 437,
+      "mx": 473,
+      "tit_es": "Twin Peaks",
+      "tit_mx": "Twin Peaks"
+    },
+    {
+      "ref": "movie:634649",
+      "es": 283,
+      "mx": 494,
+      "tit_es": "Spider-Man: No Way Home",
+      "tit_mx": "Spider-Man: Sin camino a casa"
+    },
+    {
+      "ref": "tv:79744",
+      "es": 355,
+      "mx": 355,
+      "tit_es": "The Rookie",
+      "tit_mx": "The Rookie"
+    },
+    {
+      "ref": "movie:557",
+      "es": 293,
+      "mx": 279,
+      "tit_es": "Spider-Man",
+      "tit_mx": "El hombre araña"
+    },
+    {
+      "ref": "tv:2734",
+      "es": 340,
+      "mx": 192,
+      "tit_es": "Ley y orden: Unidad de Víctimas Especiales",
+      "tit_mx": "La Ley y el Orden: Unidad de Víctimas Especiales"
+    },
+    {
+      "ref": "movie:278",
+      "es": 311,
+      "mx": 362,
+      "tit_es": "Cadena perpetua",
+      "tit_mx": "Sueño de fuga"
+    },
+    {
+      "ref": "tv:4614",
+      "es": 192,
+      "mx": 585,
+      "tit_es": "Navy: Investigación criminal",
+      "tit_mx": "NCIS: Criminología Naval"
+    },
+    {
+      "ref": "movie:1930",
+      "es": 277,
+      "mx": 372,
+      "tit_es": "The Amazing Spider-Man",
+      "tit_mx": "El Sorprendente Hombre-Araña"
+    },
+    {
+      "ref": "tv:44953",
+      "es": 335,
+      "mx": 146,
+      "tit_es": "El señor de los cielos",
+      "tit_mx": "El Señor de los Cielos"
+    },
+    {
+      "ref": "movie:205596",
+      "es": 698,
+      "mx": 701,
+      "tit_es": "The Imitation Game (Descifrando Enigma)",
+      "tit_mx": "El código enigma"
+    },
+    {
+      "ref": "tv:1399",
+      "es": 621,
+      "mx": 270,
+      "tit_es": "Juego de tronos",
+      "tit_mx": "Game of Thrones"
+    },
+    {
+      "ref": "movie:615173",
+      "es": 279,
+      "mx": 198,
+      "tit_es": "The Witch: Part 2. The Other One",
+      "tit_mx": "La Bruja: Parte 2 - La Cacería"
+    },
+    {
+      "ref": "tv:33238",
+      "es": 258,
+      "mx": 0,
+      "tit_es": "Running Man",
+      "tit_mx": "런닝맨"
+    },
+    {
+      "ref": "movie:454639",
+      "es": 339,
+      "mx": 341,
+      "tit_es": "He-Man y los Masters del Universo",
+      "tit_mx": "Amos del Universo"
+    },
+    {
+      "ref": "movie:238",
+      "es": 479,
+      "mx": 499,
+      "tit_es": "El padrino",
+      "tit_mx": "El Padrino"
+    },
+    {
+      "ref": "tv:456",
+      "es": 535,
+      "mx": 166,
+      "tit_es": "Los Simpson",
+      "tit_mx": "Los Simpson"
+    },
+    {
+      "ref": "movie:1084242",
+      "es": 413,
+      "mx": 226,
+      "tit_es": "Zootrópolis 2",
+      "tit_mx": "Zootopia 2"
+    },
+    {
+      "ref": "tv:3022",
+      "es": 295,
+      "mx": 351,
+      "tit_es": "Rugrats: Aventuras en pañales",
+      "tit_mx": "Rugrats: Aventuras en Pañales"
+    },
+    {
+      "ref": "movie:1481343",
+      "es": 271,
+      "mx": 382,
+      "tit_es": "La Boca del Diablo",
+      "tit_mx": "Nunca debimos entrar"
+    },
+    {
+      "ref": "tv:291496",
+      "es": 158,
+      "mx": 159,
+      "tit_es": "Acaramelados",
+      "tit_mx": "Acaramelados"
+    },
+    {
+      "ref": "movie:1314481",
+      "es": 239,
+      "mx": 240,
+      "tit_es": "El diablo viste de Prada 2",
+      "tit_mx": "El diablo viste a la moda 2"
+    },
+    {
+      "ref": "tv:1434",
+      "es": 318,
+      "mx": 222,
+      "tit_es": "Padre de familia",
+      "tit_mx": "Padre de Familia"
+    },
+    {
+      "ref": "movie:1668364",
+      "es": 164,
+      "mx": 258,
+      "tit_es": "Deseo",
+      "tit_mx": "Deseo"
+    },
+    {
+      "ref": "tv:117217",
+      "es": 191,
+      "mx": 0,
+      "tit_es": "El conquistador",
+      "tit_mx": "El conquistador"
+    },
+    {
+      "ref": "movie:755898",
+      "es": 296,
+      "mx": 296,
+      "tit_es": "La guerra de los mundos",
+      "tit_mx": "La guerra de los mundos"
+    },
+    {
+      "ref": "tv:94997",
+      "es": 166,
+      "mx": 166,
+      "tit_es": "La casa del dragón",
+      "tit_mx": "La casa del dragón"
+    },
+    {
+      "ref": "movie:603",
+      "es": 307,
+      "mx": 142,
+      "tit_es": "Matrix",
+      "tit_mx": "Matrix"
+    },
+    {
+      "ref": "tv:549",
+      "es": 121,
+      "mx": 121,
+      "tit_es": "Ley y orden",
+      "tit_mx": "La Ley y el Orden"
+    },
+    {
+      "ref": "movie:1125257",
+      "es": 262,
+      "mx": 264,
+      "tit_es": "Ponte en mi lugar de nuevo",
+      "tit_mx": "Otro viernes de locos"
+    },
+    {
+      "ref": "tv:607",
+      "es": 238,
+      "mx": 168,
+      "tit_es": "Las Supernenas",
+      "tit_mx": "Las chicas superpoderosas"
+    },
+    {
+      "ref": "movie:1510795",
+      "es": 416,
+      "mx": 0,
+      "tit_es": "Shake, Rattle & Roll 17: El origen del mal",
+      "tit_mx": "Shake, Rattle & Roll: Evil Origins"
+    },
+    {
+      "ref": "tv:259140",
+      "es": 164,
+      "mx": 173,
+      "tit_es": "Ranma1/2",
+      "tit_mx": "Ranma1/2"
+    },
+    {
+      "ref": "movie:1493400",
+      "es": 158,
+      "mx": 260,
+      "tit_es": "Camp Rock 3",
+      "tit_mx": "Camp Rock 3"
+    },
+    {
+      "ref": "tv:60625",
+      "es": 168,
+      "mx": 277,
+      "tit_es": "Rick y Morty",
+      "tit_mx": "Rick y Morty"
+    },
+    {
+      "ref": "movie:1621552",
+      "es": 0,
+      "mx": 193,
+      "tit_es": "La captura",
+      "tit_mx": "La captura"
+    },
+    {
+      "ref": "tv:12513",
+      "es": 221,
+      "mx": 0,
+      "tit_es": "Operación triunfo",
+      "tit_mx": "Operación triunfo"
+    },
+    {
+      "ref": "movie:83533",
+      "es": 502,
+      "mx": 236,
+      "tit_es": "Avatar: Fuego y ceniza",
+      "tit_mx": "Avatar: Fuego y ceniza"
+    },
+    {
+      "ref": "movie:862",
+      "es": 513,
+      "mx": 167,
+      "tit_es": "Toy Story",
+      "tit_mx": "Toy Story"
+    },
+    {
+      "ref": "tv:764",
+      "es": 502,
+      "mx": 232,
+      "tit_es": "Los asesinatos de Midsomer",
+      "tit_mx": "Los asesinatos de Midsomer"
+    },
+    {
+      "ref": "movie:1007757",
+      "es": 175,
+      "mx": 150,
+      "tit_es": "Intercambiados",
+      "tit_mx": "Intercambiados"
+    },
+    {
+      "ref": "tv:63893",
+      "es": 0,
+      "mx": 101,
+      "tit_es": "Peter Rabbit",
+      "tit_mx": "Peter Rabbit"
+    },
+    {
+      "ref": "tv:223564",
+      "es": 539,
+      "mx": 443,
+      "tit_es": "The 100 Girlfriends Who Really, Really, Really, Really, REALLY Love You",
+      "tit_mx": "The 100 Girlfriends Who Really, Really, Really, Really, Really Love You"
+    },
+    {
+      "ref": "tv:97546",
+      "es": 221,
+      "mx": 291,
+      "tit_es": "Ted Lasso",
+      "tit_mx": "Ted Lasso"
+    },
+    {
+      "ref": "tv:31268",
+      "es": 1086,
+      "mx": 208,
+      "tit_es": "El Capo",
+      "tit_mx": "El Capo"
+    }
+  ]
+}

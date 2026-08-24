@@ -1,7 +1,11 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
-import { cached, TTL } from "./cache";
+import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
+import { claveCombinadaCache, clavePoolCache } from "./claves";
+import type { ClaveLocalizada } from "./claves";
+import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, pedirRespaldoIdioma } from "./idioma";
+import { adaptadorLista, adaptadorPaginaCombinada } from "./idioma-adaptadores";
 import { hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode } from "./types";
@@ -57,6 +61,13 @@ function recortar(t: RawTitle): Candidato {
     genre_ids: t.genre_ids,
     origin_country: t.origin_country,
     popularity: t.popularity,
+    // Los tres de abajo NO son decoración: sin ellos la señal 3 de
+    // `queReparar` (el título cayó al original) no se puede evaluar dentro de
+    // un pool, porque `recortar` los borraba. Se detectaba en la ficha y no en
+    // los rieles, que es donde está el 95% de los títulos.
+    original_title: t.original_title,
+    original_name: t.original_name,
+    original_language: t.original_language,
   };
 }
 
@@ -124,8 +135,9 @@ function hashParams(p: ParamsReceta): string {
 // como un bug.
 export function clavePool(
   tipo: MediaType, plataforma: PlatformCode, receta: Receta, pagina: number,
-): string {
-  return `disc:${VERSION}:${REGION}:${hoyAR()}:${tipo}:${plataforma}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
+): ClaveLocalizada {
+  return clavePoolCache(VERSION, REGION, hoyAR(), tipo, plataforma,
+    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_EN_CLAVES);
 }
 
 // Un pool: una plataforma, una página, una receta.
@@ -134,11 +146,28 @@ async function pool(
 ): Promise<Candidato[]> {
   const ids = codesToTmdbIds([plataforma]);
   if (!ids.length) return [];
+  // `fallo` sale de la clausura para llegar al predicado de `cachedLocIf`: si
+  // el respaldo falló, el usuario recibe la página igual pero NO se guarda —
+  // si no, una base sin reparar quedaría congelada bajo una clave `es-MX+f`
+  // hasta 30 h, y el próximo request no volvería a intentar.
+  let fallo = false;
   const traer = async () => {
-    const r = await discover(tipo, { ...receta.params, providers: ids, page: pagina });
-    return r.results.map(recortar);
+    const rep = await adaptadorLista({
+      pedirBase: async () =>
+        (await discover(tipo, { ...receta.params, providers: ids, page: pagina }))
+          .results.map(recortar),
+      pedirRespaldo: () => pedirRespaldoIdioma(
+        `pool:${tipo}:${plataforma}:${receta.nombre}:p${pagina}`,
+        async () => (await discover(tipo, {
+          ...receta.params, providers: ids, page: pagina,
+          extra: { ...(receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+        })).results,
+      ),
+    });
+    fallo = rep.fallo;
+    return rep.valor;
   };
-  return cached(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer);
+  return cachedLocIf(clavePool(tipo, plataforma, receta, pagina), TTL.pool, traer, () => !fallo);
 }
 
 // --- Consulta combinada, paginada por TMDB -----------------------------------
@@ -175,11 +204,12 @@ async function pool(
 // Ver docs/medidas/2026-08-21-miniseries-lista.json.
 export function claveCombinada(
   tipo: MediaType, providers: PlatformCode[], receta: Receta, pagina: number,
-): string {
+): ClaveLocalizada {
   // Ordenado: "n,d,m" y "m,d,n" son la misma consulta y tienen que ser la misma
   // clave, igual que en `homeKey`.
   const p = [...providers].sort().join("+");
-  return `disc:${VERSION}:${REGION}:${hoyAR()}:${tipo}:combo-${p}:${receta.nombre}.${hashParams(receta.params)}:p${pagina}`;
+  return claveCombinadaCache(VERSION, REGION, hoyAR(), tipo, p,
+    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_EN_CLAVES);
 }
 
 export interface PaginaCombinada {
@@ -200,10 +230,36 @@ export async function candidatosCombinados(opts: {
   const ids = codesToTmdbIds(opts.providers);
   if (!ids.length) return { candidatos: [], totalPaginas: 0, total: 0 };
   const pagina = Math.max(1, opts.pagina);
-  return cached(claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool, async () => {
-    const r = await discover(opts.tipo, { ...opts.receta.params, providers: ids, page: pagina });
-    return { candidatos: r.results.map(recortar), totalPaginas: r.total_pages, total: r.total_results };
-  });
+  let fallo = false;
+  return cachedLocIf(
+    claveCombinada(opts.tipo, opts.providers, opts.receta, pagina), TTL.pool,
+    async () => {
+      // Los metadatos de paginación los arma el adaptador DESPUÉS de reparar:
+      // un fallo del respaldo no puede perder `totalPaginas` ni `total`.
+      const rep = await adaptadorPaginaCombinada({
+        pedirBase: async () => {
+          const r = await discover(opts.tipo, {
+            ...opts.receta.params, providers: ids, page: pagina,
+          });
+          return {
+            results: r.results.map(recortar),
+            total_pages: r.total_pages,
+            total_results: r.total_results,
+          };
+        },
+        pedirRespaldo: () => pedirRespaldoIdioma(
+          `combo:${opts.tipo}:${opts.providers.join("+")}:${opts.receta.nombre}:p${pagina}`,
+          async () => (await discover(opts.tipo, {
+            ...opts.receta.params, providers: ids, page: pagina,
+            extra: { ...(opts.receta.params.extra ?? {}), language: IDIOMA_FALLBACK },
+          })).results,
+        ),
+      });
+      fallo = rep.fallo;
+      return rep.valor;
+    },
+    () => !fallo,
+  );
 }
 
 // Candidatos de varias plataformas y varias páginas, unidos.
