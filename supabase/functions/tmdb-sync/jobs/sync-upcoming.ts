@@ -3,7 +3,10 @@ import {
   discover, episodeDetails, FALLBACK_ACTIVO, IDIOMA_BASE, IDIOMA_FALLBACK, MediaType,
   RawTitle, tvDetails,
 } from "../lib/tmdb.ts";
-import { repararLista, repararNombreEpisodio } from "../lib/reparar.ts";
+import {
+  type MetricasIdioma, nuevasMetricas, repararLista, repararNombreEpisodio,
+  sumarEpisodio, sumarLote,
+} from "../lib/reparar.ts";
 import { arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
 
 // Parámetros (env de la función, con defaults).
@@ -12,23 +15,10 @@ const MAX_PAGES = Number(Deno.env.get("SYNC_MAX_PAGES") ?? "3");
 const GRACE_DAYS = Number(Deno.env.get("SYNC_GRACE_DAYS") ?? "2");
 const BATCH = 10; // concurrencia de llamadas a TMDB por lote
 
-// Metricas de idioma AGREGADAS de toda la corrida. Van en el RESULTADO del job,
-// no solo en el log: verificar una corrida manual no puede depender de
-// reconstruirla leyendo mensajes sueltos.
-interface MetricasIdioma {
-  llamadas: number;     // requests de respaldo que salieron a la red
-  reparados: number;    // titulos/episodios donde la reparacion CAMBIO algo
-  descartados: number;  // se cayeron de la corrida por no poder repararse
-  fallos: number;       // respaldos que fallaron (excepcion o timeout)
-}
-const metricas: MetricasIdioma = { llamadas: 0, reparados: 0, descartados: 0, fallos: 0 };
-const sumar = (r: { llamadas: number; reparados: number; descartados: number; fallo: boolean }) => {
-  metricas.llamadas += r.llamadas;
-  metricas.reparados += r.reparados;
-  metricas.descartados += r.descartados;
-  if (r.fallo) metricas.fallos++;
-};
-
+// Las metricas de idioma se crean POR INVOCACION y se pasan por parametro (ver
+// `MetricasIdioma` en lib/reparar.ts). Antes vivian en un `const` de modulo, y
+// dos corridas solapadas de `syncUpcoming` —dos POST al endpoint, o un reintento
+// del cron encima de la corrida anterior— habrian mezclado sus numeros.
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const DAY = 86_400_000;
 
@@ -55,7 +45,9 @@ interface Candidate {
 // Películas con estreno futuro dentro de la ventana. Se descubre por FECHA
 // (sin filtrar por provider en discover) y el filtro de plataforma AR se aplica
 // después con watch/providers, para no perder originales pre-listados.
-async function collectMovies(from: string, to: string): Promise<Candidate[]> {
+async function collectMovies(
+  from: string, to: string, metricas: MetricasIdioma,
+): Promise<Candidate[]> {
   const out: Candidate[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
     let res;
@@ -85,7 +77,7 @@ async function collectMovies(from: string, to: string): Promise<Candidate[]> {
       FALLBACK_ACTIVO,
     );
 
-    sumar(rep);
+    sumarLote(metricas, rep);
     for (const t of rep.items) {
       if (!t.release_date) continue;
       out.push({
@@ -115,7 +107,9 @@ async function collectMovies(from: string, to: string): Promise<Candidate[]> {
 
 // Series con episodios próximos (nuevas temporadas / vuelven al aire). Se
 // descubren por air_date y para cada una se pide el next_episode_to_air exacto.
-async function collectSeries(from: string, to: string): Promise<Candidate[]> {
+async function collectSeries(
+  from: string, to: string, metricas: MetricasIdioma,
+): Promise<Candidate[]> {
   const seen = new Set<number>();
   const shows: RawTitle[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -140,7 +134,7 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
       `series p${page}`,
       FALLBACK_ACTIVO,
     );
-    sumar(rep);
+    sumarLote(metricas, rep);
     for (const t of rep.items) {
       if (!seen.has(t.id)) { seen.add(t.id); shows.push(t); }
     }
@@ -176,9 +170,8 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
         `episodio tv:${t.id} T${sn}E${en}`,
         FALLBACK_ACTIVO,
       );
-      metricas.llamadas += repEp.llamadas;
-      if (repEp.reparado) metricas.reparados++;
-      if (repEp.descartar) { metricas.descartados++; continue; }
+      sumarEpisodio(metricas, repEp);
+      if (repEp.descartar) continue;
       const nombreEp = repEp.nombre;
 
       out.push({
@@ -206,13 +199,16 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
 }
 
 export async function syncUpcoming(sb: SupabaseClient) {
-  // El acumulador es de modulo: se reinicia al empezar cada corrida.
-  metricas.llamadas = 0; metricas.reparados = 0; metricas.descartados = 0; metricas.fallos = 0;
+  // Acumulador PROPIO de esta invocacion. Dos corridas concurrentes tienen cada
+  // una el suyo y no se pisan.
+  const metricas = nuevasMetricas();
   const now = new Date();
   const from = iso(now);
   const to = iso(new Date(now.getTime() + WINDOW_DAYS * DAY));
 
-  const [movies, series] = await Promise.all([collectMovies(from, to), collectSeries(from, to)]);
+  const [movies, series] = await Promise.all([
+    collectMovies(from, to, metricas), collectSeries(from, to, metricas),
+  ]);
   const all = [...movies, ...series];
 
   // Resolver providers AR por título (en lotes) y conservar solo los que tienen >=1.

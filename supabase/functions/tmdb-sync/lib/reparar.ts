@@ -23,6 +23,44 @@ import {
   fusionarPorCampo, type Localizable, necesitaReparacion, NO_LATINO,
 } from "../../_shared/idioma-nucleo.ts";
 
+/**
+ * Metricas de idioma de UNA corrida.
+ *
+ * Se crean con `nuevasMetricas()` y se pasan por parametro. NO son estado de
+ * modulo: dos invocaciones de `syncUpcoming` que se solapen —dos pedidos al
+ * endpoint, un reintento del cron encima de la corrida anterior— compartirian
+ * el acumulador y mezclarian sus numeros, o peor, uno reiniciaria los del otro
+ * a mitad de camino. Es el mismo motivo por el que `lib/cache.ts` y
+ * `lib/idioma.ts` de la app usan AsyncLocalStorage en vez de un contador
+ * global.
+ */
+export interface MetricasIdioma {
+  /** Requests de respaldo que de verdad salieron a la red. */
+  llamadas: number;
+  /** Titulos o episodios donde la reparacion CAMBIO algo. */
+  reparados: number;
+  /** Se cayeron de la corrida por no poder repararse. */
+  descartados: number;
+  /** Respaldos que fallaron (excepcion o timeout). */
+  fallos: number;
+}
+
+export const nuevasMetricas = (): MetricasIdioma =>
+  ({ llamadas: 0, reparados: 0, descartados: 0, fallos: 0 });
+
+export function sumarLote<T>(m: MetricasIdioma, r: ResultadoReparacion<T>): void {
+  m.llamadas += r.llamadas;
+  m.reparados += r.reparados;
+  m.descartados += r.descartados;
+  if (r.fallo) m.fallos++;
+}
+
+export function sumarEpisodio(m: MetricasIdioma, r: ResultadoEpisodio): void {
+  m.llamadas += r.llamadas;
+  if (r.reparado) m.reparados++;
+  if (r.descartar) { m.descartados++; m.fallos += r.fallo ? 1 : 0; }
+}
+
 export interface ResultadoReparacion<T> {
   /** Lo que se puede escribir. Si el respaldo falló, van solo los sanos. */
   items: T[];
@@ -102,6 +140,9 @@ export interface ResultadoEpisodio {
   descartar: boolean;
   llamadas: number;
   reparado: boolean;
+  /** true solo si el respaldo se cayo (excepcion). Un respaldo que responde
+   *  bien pero sin nombre util NO es un fallo de transporte. */
+  fallo: boolean;
 }
 
 /**
@@ -127,9 +168,9 @@ export async function repararNombreEpisodio(
 ): Promise<ResultadoEpisodio> {
   const limpio = (nombre ?? "").trim() || null;
   // Con el fallback apagado no se descarta nada: el estado es el de siempre.
-  if (!activo) return { nombre: limpio, descartar: false, llamadas: 0, reparado: false };
+  if (!activo) return { nombre: limpio, descartar: false, llamadas: 0, reparado: false, fallo: false };
   if (!nombreDeEpisodioRoto(nombre)) {
-    return { nombre: limpio, descartar: false, llamadas: 0, reparado: false };
+    return { nombre: limpio, descartar: false, llamadas: 0, reparado: false, fallo: false };
   }
 
   let respaldo: string | null;
@@ -137,11 +178,11 @@ export async function repararNombreEpisodio(
     respaldo = await pedirRespaldo();
   } catch (e) {
     console.error(`[idioma] respaldo de episodio falló en ${etiqueta}; se descarta de esta corrida —`, e);
-    return { nombre: null, descartar: true, llamadas: 1, reparado: false };
+    return { nombre: null, descartar: true, llamadas: 1, reparado: false, fallo: true };
   }
   if (nombreDeEpisodioRoto(respaldo)) {
     console.warn(`[idioma] ${etiqueta}: el respaldo del episodio tampoco sirve; se descarta de esta corrida`);
-    return { nombre: null, descartar: true, llamadas: 1, reparado: false };
+    return { nombre: null, descartar: true, llamadas: 1, reparado: false, fallo: false };
   }
-  return { nombre: (respaldo ?? "").trim(), descartar: false, llamadas: 1, reparado: true };
+  return { nombre: (respaldo ?? "").trim(), descartar: false, llamadas: 1, reparado: true, fallo: false };
 }
