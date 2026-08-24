@@ -308,8 +308,13 @@ export async function syncUpcoming(sb: SupabaseClient) {
       fallback_activo: FALLBACK_ACTIVO,
       llamadas_respaldo: metricas.llamadas,
       reparados: metricas.reparados,
-      descartados_sin_respaldo: metricas.descartados,
-      sin_mejora_posible: metricas.sinReparar,
+      // Separados POR CONSECUENCIA. Los dos primeros SE ESCRIBEN igual; los dos
+      // del medio dejan el candidato afuera y su fila anterior intacta; `fallos`
+      // es transporte y es el unico que justifica reintentar.
+      sinopsis_sin_mejora: metricas.sinopsisSinMejora,
+      episodio_sin_nombre: metricas.episodioSinNombre,
+      titulo_sin_reparar: metricas.tituloSinReparar,
+      episodio_no_reparado: metricas.episodioNoReparado,
       fallos: metricas.fallos,
     },
   };
