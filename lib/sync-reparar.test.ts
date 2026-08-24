@@ -27,8 +27,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   nombreDeEpisodioRoto, nuevasMetricas, repararLista, repararNombreEpisodio,
-  sumarEpisodio, sumarLote,
+  sumarEpisodio, sumarLote, tituloIlegible,
 } from "../supabase/functions/tmdb-sync/lib/reparar.ts";
+import { aBorrar } from "../supabase/functions/tmdb-sync/lib/reconciliar.ts";
 
 const ACTIVO = true;
 const coreano = (id: number) => ({
@@ -49,7 +50,7 @@ test("1. sinopsis vacía en LOS DOS idiomas: SE ESCRIBE", async () => {
   const r = await repararLista(base, async () => [{ id: 1, title: "Un título normal", overview: "" }], "p1", ACTIVO);
   assert.deepEqual(r.items, base, "el título entra a la corrida");
   assert.equal(r.sinopsisSinMejora, 1);
-  assert.equal(r.tituloSinReparar, 0);
+  assert.equal(r.titulosIlegiblesDescartados, 0);
   assert.equal(r.fallo, false);
 });
 
@@ -57,7 +58,7 @@ test("2. título coreano en LOS DOS idiomas: se DESCARTA el candidato", async ()
   const base = [coreano(1)];
   const r = await repararLista(base, async () => [{ id: 1, title: "런닝맨", overview: "hay sinopsis" }], "p1", ACTIVO);
   assert.deepEqual(r.items, [], "no se escribe: la fila anterior sobrevive");
-  assert.equal(r.tituloSinReparar, 1);
+  assert.equal(r.titulosIlegiblesDescartados, 1);
   assert.equal(r.sinopsisSinMejora, 0);
   assert.equal(r.fallo, false, "el respaldo respondió: no es una caída de transporte");
 });
@@ -72,7 +73,7 @@ test("3. título roto REPARADO pero sinopsis todavía vacía: SE ESCRIBE", async
   assert.equal(r.items[0].overview, "", "la sinopsis sigue vacía y está bien");
   assert.equal(r.reparados, 1);
   assert.equal(r.sinopsisSinMejora, 1);
-  assert.equal(r.tituloSinReparar, 0);
+  assert.equal(r.titulosIlegiblesDescartados, 0);
 });
 
 test("4. episodio vacío en LOS DOS idiomas: se CONSERVA vacío", async () => {
@@ -148,7 +149,7 @@ test("con el fallback APAGADO nada se descarta ni se pide", async () => {
   const r = await repararLista(base, async () => { pedidos++; return []; }, "p1", false);
   assert.equal(pedidos, 0);
   assert.deepEqual(r.items, base);
-  assert.equal(r.tituloSinReparar, 0);
+  assert.equal(r.titulosIlegiblesDescartados, 0);
 
   const ep = await repararNombreEpisodio("", async () => { pedidos++; return "x"; }, "tv", false);
   assert.equal(ep.descartar, false);
@@ -184,11 +185,12 @@ test("las métricas separan lo que se escribe de lo que queda afuera", async () 
   assert.deepEqual(m, {
     llamadas: 4,
     reparados: 0,
-    sinopsisSinMejora: 1,      // se escribió
-    tituloSinReparar: 1,       // quedó afuera
-    episodioSinNombre: 1,      // se conservó vacío
-    episodioNoReparado: 1,     // quedó afuera
-    fallos: 1,                 // transporte
+    sinopsisSinMejora: 1,               // se escribió
+    titulosOriginalesLegibles: 0,
+    titulosIlegiblesDescartados: 1,     // quedó afuera
+    episodioSinNombre: 1,               // se conservó vacío
+    episodioNoReparado: 1,              // quedó afuera
+    fallos: 1,                          // transporte
   });
 });
 
@@ -218,13 +220,13 @@ test("dos corridas CONCURRENTES no se contaminan las métricas", async () => {
 test("una corrida que arranca no le borra las métricas a la que ya corría", () => {
   const vieja = nuevasMetricas();
   sumarLote(vieja, {
-    items: [], tituloSinReparar: 2, sinopsisSinMejora: 3,
-    reparados: 5, llamadas: 1, fallo: true,
+    items: [], titulosOriginalesLegibles: 1, titulosIlegiblesDescartados: 2,
+    sinopsisSinMejora: 3, reparados: 5, llamadas: 1, fallo: true,
   });
   const nueva = nuevasMetricas();
   assert.equal(nueva.reparados, 0);
   assert.equal(vieja.reparados, 5);
-  assert.equal(vieja.tituloSinReparar, 2);
+  assert.equal(vieja.titulosIlegiblesDescartados, 2);
   assert.equal(vieja.fallos, 1);
 });
 
@@ -243,7 +245,127 @@ test("BARRIDO: sync-upcoming.ts no tiene estado mutable de métricas en el módu
 
 test("BARRIDO: el resultado del sync informa los cuatro motivos por separado", () => {
   const src = readFileSync(join("supabase", "functions", "tmdb-sync", "jobs", "sync-upcoming.ts"), "utf8");
-  for (const campo of ["sinopsis_sin_mejora", "episodio_sin_nombre", "titulo_sin_reparar", "episodio_no_reparado", "fallos"]) {
+  for (const campo of ["sinopsis_sin_mejora", "titulos_originales_legibles",
+    "episodio_sin_nombre", "titulos_ilegibles_descartados", "episodio_no_reparado", "fallos"]) {
     assert.match(src, new RegExp(campo), `falta ${campo} en el resultado del job`);
   }
+});
+
+// ============================================================================
+// EL CORTE DEFINITIVO: legible se conserva, ilegible se descarta
+// ============================================================================
+// La versión anterior descartaba todo lo que "seguía roto" según el predicado, y
+// ahí caían 37 títulos de 120 — 30 de ellos con nombres perfectamente legibles
+// ("Le bruit des souvenirs", "Yandakiler", "The Povera"), que son el nombre real
+// de esas obras porque TMDB no las tradujo a ningún español.
+//
+// Y había un problema de fondo: esa rama NO PODÍA proteger de una regresión de
+// idioma. Si es-ES tuviera un título mejor, `fusionarPorCampo` ya lo habría
+// usado y el título saldría reparado. O sea que solo se disparaba cuando el dato
+// ya estaba igual de mal antes del cambio.
+//
+// Lo que queda es un PISO DE CALIDAD sobre el resultado final: vacío o no
+// latino, afuera. Todo lo demás entra.
+
+const francés = (id: number) => ({
+  id, title: "Le bruit des souvenirs", overview: "Une histoire.",
+  original_title: "Le bruit des souvenirs", original_language: "fr",
+});
+
+test("título francés en alfabeto latino, IGUAL en los dos idiomas: se CONSERVA", async () => {
+  const base = [francés(1)];
+  const r = await repararLista(base, async () => [
+    { id: 1, title: "Le bruit des souvenirs", overview: "Une histoire." },
+  ], "p1", ACTIVO);
+  assert.deepEqual(r.items, base, "es el nombre real de la obra");
+  assert.equal(r.titulosOriginalesLegibles, 1);
+  assert.equal(r.titulosIlegiblesDescartados, 0);
+});
+
+test("título turco en alfabeto latino, igual en los dos: se CONSERVA", async () => {
+  const base = [{
+    id: 2, title: "Yandakiler", overview: "Bir hikaye.",
+    original_name: "Yandakiler", original_language: "tr",
+  }];
+  const r = await repararLista(base, async () => [{ id: 2, title: "Yandakiler", overview: "Bir hikaye." }], "p1", ACTIVO);
+  assert.equal(r.items.length, 1);
+  assert.equal(r.titulosOriginalesLegibles, 1);
+});
+
+test("título coreano IGUAL en los dos idiomas: se DESCARTA", async () => {
+  const r = await repararLista([coreano(3)], async () => [{ id: 3, title: "런닝맨", overview: "hay sinopsis" }], "p1", ACTIVO);
+  assert.deepEqual(r.items, []);
+  assert.equal(r.titulosIlegiblesDescartados, 1);
+  assert.equal(r.titulosOriginalesLegibles, 0);
+});
+
+test("título coreano REPARADO por es-ES: se conserva reparado", async () => {
+  const r = await repararLista([coreano(4)], async () => [{ id: 4, title: "Running Man", overview: "hay sinopsis" }], "p1", ACTIVO);
+  assert.equal(r.items.length, 1);
+  assert.equal(r.items[0].title, "Running Man");
+  assert.equal(r.reparados, 1);
+  assert.equal(r.titulosIlegiblesDescartados, 0);
+  assert.equal(r.titulosOriginalesLegibles, 0, "quedó traducido: no es un original sin traducción");
+});
+
+test("título INGLÉS original: se conserva y ni siquiera cuenta como original sin traducción", async () => {
+  // `en` está excluido del predicado a propósito: en Argentina "Game of Thrones"
+  // ES el nombre publicado. Entra por la rama de la sinopsis vacía.
+  const base = [{
+    id: 5, title: "Sakamoto Days", overview: "",
+    original_name: "Sakamoto Days", original_language: "en",
+  }];
+  const r = await repararLista(base, async () => [{ id: 5, title: "Sakamoto Days", overview: "" }], "p1", ACTIVO);
+  assert.deepEqual(r.items, base);
+  assert.equal(r.titulosOriginalesLegibles, 0);
+  assert.equal(r.sinopsisSinMejora, 1);
+});
+
+test("título VACÍO en los dos idiomas: se DESCARTA", async () => {
+  const base = [{ id: 6, title: "", overview: "hay sinopsis", original_title: "", original_language: "fr" }];
+  const r = await repararLista(base, async () => [{ id: 6, title: "", overview: "hay sinopsis" }], "p1", ACTIVO);
+  assert.deepEqual(r.items, [], "una fila sin título viola el NOT NULL de la tabla");
+  assert.equal(r.titulosIlegiblesDescartados, 1);
+});
+
+test("tituloIlegible: solo vacío y no latino, nunca por coincidir con el original", () => {
+  assert.equal(tituloIlegible({ title: "" }), true);
+  assert.equal(tituloIlegible({ title: "   " }), true);
+  assert.equal(tituloIlegible({ title: "런닝맨" }), true);
+  assert.equal(tituloIlegible({ title: "破产姐妹" }), true);
+  assert.equal(tituloIlegible({ title: "Le bruit des souvenirs" }), false);
+  assert.equal(tituloIlegible({ title: "Yandakiler" }), false);
+  assert.equal(tituloIlegible({ name: "Hibernacija" }), false);
+  assert.equal(tituloIlegible({ title: "Sueño de fuga" }), false);
+});
+
+// ============================================================================
+// UN DESCARTE NO PUEDE BORRAR LA FILA ANTERIOR
+// ============================================================================
+// Es la propiedad que hace que descartar sea seguro. Si un candidato descartado
+// terminara en la lista de borrado, "no escribir" sería PEOR que escribir mal:
+// se perdería el dato viejo, que estaba bien.
+
+test("un candidato DESCARTADO no entra a la lista de borrado", () => {
+  // `evaluados` son los que sobrevivieron a la reparación. El descartado no está
+  // ahí —repararLista lo sacó antes—, así que no puede aparecer en `aBorrar`.
+  const evaluados = [
+    { tmdb_id: 100, media_type: "tv" as const },   // se evaluó y se conservó
+    { tmdb_id: 200, media_type: "tv" as const },   // se evaluó y perdió providers
+  ];
+  const conservados = [{ tmdb_id: 100, media_type: "tv" as const }];
+  const borrar = aBorrar(evaluados, conservados, "tv");
+  assert.deepEqual(borrar, [200], "solo el que se evaluó y perdió providers");
+  assert.ok(!borrar.includes(300), "el descartado (300) ni figura: nunca fue evaluado");
+});
+
+test("aBorrar separa por tipo y no mezcla ids entre movie y tv", () => {
+  const evaluados = [
+    { tmdb_id: 1399, media_type: "tv" as const },
+    { tmdb_id: 1399, media_type: "movie" as const },
+  ];
+  const conservados = [{ tmdb_id: 1399, media_type: "tv" as const }];
+  assert.deepEqual(aBorrar(evaluados, conservados, "tv"), []);
+  assert.deepEqual(aBorrar(evaluados, conservados, "movie"), [1399],
+    "el id se repite entre tipos: la clave es el par, no el número");
 });

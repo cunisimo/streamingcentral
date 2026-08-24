@@ -35,9 +35,16 @@
 //
 //   - Sinopsis vacía en los dos idiomas -> SE ESCRIBE. Ese título no tiene
 //     sinopsis en español y nunca la tuvo; no es un daño del cambio de idioma.
-//   - Título todavía roto después de fusionar -> NO SE ESCRIBE. Ahí el es-ES
-//     tenía algo mejor, o el dato es inservible; persistirlo es peor que dejar
-//     la fila anterior donde estaba.
+//   - Título final LEGIBLE -> SE ESCRIBE, aunque coincida con el original y no
+//     exista traducción en ninguno de los dos idiomas. "Le bruit des
+//     souvenirs", "Yandakiler" o "The Povera" SON el nombre de esas obras.
+//   - Título final VACÍO o en escritura no latina -> NO SE ESCRIBE.
+//
+// Ese último corte es un PISO DE CALIDAD, no una protección de idioma, y
+// conviene tenerlo claro: la fusión ya repara todo lo que es-ES pueda mejorar,
+// así que un título que sigue ilegible después de fusionar es un título que
+// tampoco existía legible antes. Lo que se decide acá es si `헤라클레스` puede
+// aparecer en Próximamente, y la respuesta es que no.
 //
 // Y "el respaldo respondió y no sirvió" NO es "el respaldo se cayó". Lo primero
 // es un dato sobre el catálogo; lo segundo es una falla de transporte, y es la
@@ -65,8 +72,10 @@ export interface MetricasIdioma {
   // --- Lo que el respaldo no pudo mejorar, separado POR CONSECUENCIA -------
   /** Sinopsis vacía en los dos idiomas. Se ESCRIBE igual: no es un daño. */
   sinopsisSinMejora: number;
-  /** El título sigue roto después de fusionar. NO se escribe. */
-  tituloSinReparar: number;
+  /** Título sin traducción en ningún idioma pero LEGIBLE. Se ESCRIBE. */
+  titulosOriginalesLegibles: number;
+  /** Título final vacío o en escritura no latina. NO se escribe. */
+  titulosIlegiblesDescartados: number;
   /** Episodio sin nombre en los dos idiomas. Se conserva vacío. */
   episodioSinNombre: number;
   /** Episodio ilegible que el respaldo no arregla. Se descarta el candidato. */
@@ -78,7 +87,8 @@ export interface MetricasIdioma {
 
 export const nuevasMetricas = (): MetricasIdioma => ({
   llamadas: 0, reparados: 0,
-  sinopsisSinMejora: 0, tituloSinReparar: 0,
+  sinopsisSinMejora: 0,
+  titulosOriginalesLegibles: 0, titulosIlegiblesDescartados: 0,
   episodioSinNombre: 0, episodioNoReparado: 0,
   fallos: 0,
 });
@@ -86,8 +96,10 @@ export const nuevasMetricas = (): MetricasIdioma => ({
 export interface ResultadoReparacion<T> {
   /** Lo que se puede escribir. */
   items: T[];
-  /** Quedaron fuera porque su TÍTULO sigue roto. */
-  tituloSinReparar: number;
+  /** Sin traducción en ningún idioma, pero legibles: se escriben. */
+  titulosOriginalesLegibles: number;
+  /** Título final vacío o ilegible: quedaron fuera. */
+  titulosIlegiblesDescartados: number;
   /** Se escriben con la sinopsis vacía, porque tampoco la hay en es-ES. */
   sinopsisSinMejora: number;
   /** La fusión mejoró algo. */
@@ -100,7 +112,8 @@ export interface ResultadoReparacion<T> {
 export function sumarLote<T>(m: MetricasIdioma, r: ResultadoReparacion<T>): void {
   m.llamadas += r.llamadas;
   m.reparados += r.reparados;
-  m.tituloSinReparar += r.tituloSinReparar;
+  m.titulosOriginalesLegibles += r.titulosOriginalesLegibles;
+  m.titulosIlegiblesDescartados += r.titulosIlegiblesDescartados;
   m.sinopsisSinMejora += r.sinopsisSinMejora;
   if (r.fallo) m.fallos++;
 }
@@ -117,15 +130,29 @@ export async function repararLista<T extends Localizable & { id: number }>(
   etiqueta: string,
   activo: boolean,
 ): Promise<ResultadoReparacion<T>> {
-  const intacto: ResultadoReparacion<T> = {
-    items: base, tituloSinReparar: 0, sinopsisSinMejora: 0,
-    reparados: 0, llamadas: 0, fallo: false,
-  };
-  if (!activo) return intacto;
+  if (!activo) {
+    return {
+      items: base, titulosOriginalesLegibles: 0, titulosIlegiblesDescartados: 0,
+      sinopsisSinMejora: 0, reparados: 0, llamadas: 0, fallo: false,
+    };
+  }
 
   const rotos = new Set<number>();
   for (const t of base) if (necesitaReparacion(t)) rotos.add(t.id);
-  if (!rotos.size) return intacto;
+
+  if (!rotos.size) {
+    // Nada que reparar, pero el PISO DE CALIDAD corre igual: un título VACÍO con
+    // una sinopsis buena no dispara ninguna de las tres señales —`cayoAlOriginal`
+    // exige que el original exista, y no existe— así que salía por acá y se
+    // escribía el vacío. Lo encontró el test, no la lectura del código.
+    const legibles = base.filter((t) => !tituloIlegible(t));
+    return {
+      items: legibles,
+      titulosOriginalesLegibles: 0,
+      titulosIlegiblesDescartados: base.length - legibles.length,
+      sinopsisSinMejora: 0, reparados: 0, llamadas: 0, fallo: false,
+    };
+  }
 
   let respaldo: Localizable[];
   try {
@@ -134,10 +161,13 @@ export async function repararLista<T extends Localizable & { id: number }>(
     // TRANSPORTE: no se pudo mirar, así que no se escribe nada dudoso. La fila
     // anterior de cada uno queda intacta y mañana se reintenta.
     console.error(`[idioma] respaldo falló en ${etiqueta}: ${rotos.size} título(s) fuera de esta corrida —`, e);
+    // Los sanos siguen su camino, pero pasando igual por el piso de calidad.
+    const sanos = base.filter((t) => !rotos.has(t.id) && !tituloIlegible(t));
     return {
-      items: base.filter((t) => !rotos.has(t.id)),
-      tituloSinReparar: 0, sinopsisSinMejora: 0,
-      reparados: 0, llamadas: 1, fallo: true,
+      items: sanos,
+      titulosOriginalesLegibles: 0,
+      titulosIlegiblesDescartados: base.filter((t) => !rotos.has(t.id)).length - sanos.length,
+      sinopsisSinMejora: 0, reparados: 0, llamadas: 1, fallo: true,
     };
   }
 
@@ -148,31 +178,43 @@ export async function repararLista<T extends Localizable & { id: number }>(
   }
 
   const items: T[] = [];
-  let tituloSinReparar = 0, sinopsisSinMejora = 0, reparados = 0;
+  let originalesLegibles = 0, ilegibles = 0, sinopsisSinMejora = 0, reparados = 0;
   for (const t of base) {
-    if (!rotos.has(t.id)) { items.push(t); continue; }
+    // El PISO DE CALIDAD se aplica a TODOS, no solo a los que entraron al camino
+    // de reparación. Un título VACÍO con una sinopsis buena no dispara ninguna
+    // de las tres señales —`cayoAlOriginal` exige que exista el original, y no
+    // existe— así que nunca pasaba por acá y se escribía el vacío. Lo encontró
+    // el test, no la lectura del código.
+    const arreglado = rotos.has(t.id) ? fusionarPorCampo(t, porId.get(t.id)) : t;
 
-    const arreglado = fusionarPorCampo(t, porId.get(t.id));
-    // LA PREGUNTA CORRECTA. Mirar si cambió la referencia no distingue "le falta
-    // la sinopsis" de "el título es ilegible", y son decisiones opuestas.
-    const queda = queReparar(arreglado);
-
-    if (queda.titulo) {
-      tituloSinReparar++;
+    // Se decide sobre el RESULTADO FUSIONADO, no sobre si la fusión cambió algo.
+    if (tituloIlegible(arreglado)) {
+      ilegibles++;
       continue;                            // no se escribe: sobrevive la fila anterior
     }
-    if (queda.sinopsis) sinopsisSinMejora++;   // se escribe igual
+    if (!rotos.has(t.id)) { items.push(t); continue; }
+    // Legible pero sin traducción: es el nombre real de la obra. Se escribe y se
+    // cuenta aparte, para que quede claro que NO es lo mismo que descartarlo.
+    if (queReparar(arreglado).titulo) originalesLegibles++;
+    if (queReparar(arreglado).sinopsis) sinopsisSinMejora++;
     if (arreglado !== t) reparados++;
     items.push(arreglado);
   }
 
-  if (tituloSinReparar) {
-    console.warn(`[idioma] ${etiqueta}: ${tituloSinReparar} título(s) siguen rotos después del respaldo; fuera de esta corrida`);
+  if (ilegibles) {
+    console.warn(`[idioma] ${etiqueta}: ${ilegibles} título(s) ilegibles después del respaldo; fuera de esta corrida`);
+  }
+  if (originalesLegibles) {
+    console.log(`[idioma] ${etiqueta}: ${originalesLegibles} título(s) sin traducción pero legibles; se escriben tal cual`);
   }
   if (sinopsisSinMejora) {
     console.log(`[idioma] ${etiqueta}: ${sinopsisSinMejora} título(s) sin sinopsis en ningún idioma; se escriben igual`);
   }
-  return { items, tituloSinReparar, sinopsisSinMejora, reparados, llamadas: 1, fallo: false };
+  return {
+    items, titulosOriginalesLegibles: originalesLegibles,
+    titulosIlegiblesDescartados: ilegibles,
+    sinopsisSinMejora, reparados, llamadas: 1, fallo: false,
+  };
 }
 
 // ============================================================================
@@ -184,6 +226,16 @@ export async function repararLista<T extends Localizable & { id: number }>(
 //   - vacío en los dos idiomas -> se conserva vacío. Es lo que escribía el sync
 //     viejo, y un episodio sin nombre no es un dato corrupto.
 //   - ilegible que el respaldo no arregla -> se descarta el candidato.
+
+/**
+ * EL CORTE. Un título es inaceptable si queda vacío o si no se puede leer en
+ * alfabeto latino. Nada más: que coincida con el original NO lo hace
+ * inaceptable, porque para miles de obras ese ES su nombre.
+ */
+export function tituloIlegible(t: Localizable): boolean {
+  const n = (t.title ?? t.name ?? "").trim();
+  return !n || NO_LATINO.test(n);
+}
 
 export function nombreDeEpisodioRoto(nombre: string | undefined | null): boolean {
   const n = (nombre ?? "").trim();

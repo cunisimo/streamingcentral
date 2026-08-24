@@ -7,6 +7,7 @@ import {
   type MetricasIdioma, nuevasMetricas, repararLista, repararNombreEpisodio,
   sumarEpisodio, sumarLote,
 } from "../lib/reparar.ts";
+import { aBorrar } from "../lib/reconciliar.ts";
 import { arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
 
 // Parámetros (env de la función, con defaults).
@@ -266,16 +267,10 @@ export async function syncUpcoming(sb: SupabaseClient) {
     }
   }
 
-  // 4) Reconciliar: los títulos que SÍ evaluamos esta corrida pero perdieron
-  //    todos sus providers AR se borran (ya no califican). Solo tocamos los
-  //    evaluados (all): los que quedaron fuera por paginación no se tocan.
-  const keptKeys = new Set(kept.map((k) => `${k.cand.tmdb_id}:${k.cand.media_type}`));
-  const droppedMovies = all
-    .filter((c) => c.media_type === "movie" && !keptKeys.has(`${c.tmdb_id}:movie`))
-    .map((c) => c.tmdb_id);
-  const droppedTv = all
-    .filter((c) => c.media_type === "tv" && !keptKeys.has(`${c.tmdb_id}:tv`))
-    .map((c) => c.tmdb_id);
+  // 4) Reconciliar. Ver `aBorrar`, que es la parte con la regla y está aparte
+  //    para poder probarla sin una base de datos.
+  const droppedMovies = aBorrar(all, kept.map((k) => k.cand), "movie");
+  const droppedTv = aBorrar(all, kept.map((k) => k.cand), "tv");
   let dropped = 0;
   if (droppedMovies.length) {
     const { count } = await sb.from("upcoming_content")
@@ -312,8 +307,9 @@ export async function syncUpcoming(sb: SupabaseClient) {
       // del medio dejan el candidato afuera y su fila anterior intacta; `fallos`
       // es transporte y es el unico que justifica reintentar.
       sinopsis_sin_mejora: metricas.sinopsisSinMejora,
+      titulos_originales_legibles: metricas.titulosOriginalesLegibles,
       episodio_sin_nombre: metricas.episodioSinNombre,
-      titulo_sin_reparar: metricas.tituloSinReparar,
+      titulos_ilegibles_descartados: metricas.titulosIlegiblesDescartados,
       episodio_no_reparado: metricas.episodioNoReparado,
       fallos: metricas.fallos,
     },
