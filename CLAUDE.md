@@ -80,7 +80,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:v5:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  `home:<huella de idioma>:v5:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
   manda la cuota de Upstash, ver el comentario de `TTL.home`). La versión de la
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
@@ -108,6 +108,25 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "No gustaron" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **El idioma de los títulos sale de una variable, y la configuración va DENTRO
+  de la clave de cache** (`lib/idioma.ts` → `HUELLA_IDIOMA`, `lib/claves.ts`).
+  `IDIOMA_TITULOS` decide el idioma base (default `es-ES`) y `FALLBACK_IDIOMA`
+  decide si lo que TMDB no traduce se repara pidiendo el respaldo en `es-ES`.
+  Las **once** familias de claves localizadas llevan la huella
+  (`card:es-MX+f.r1:movie:278`), y eso es lo que hace que un rollback revierta de
+  verdad: sin la huella, volver a `es-ES` seguiría leyendo títulos mexicanos de
+  las mismas claves hasta que expiraran TTLs de hasta 30 h. **El precio es que
+  cada cambio de configuración cuesta un arranque frío**, ida y vuelta.
+  Medido: `es-ES` → `es-MX` con fallback son +35 llamadas a TMDB (+5,7%), los
+  mismos comandos de Upstash (la reparación se guarda bajo la MISMA clave) y
+  +72 B de payload. **Lo que NO se repara es el pasaje al inglés**: los 38
+  títulos donde `es-MX` devuelve "Monsters, Inc.", "Moana 2" o "Game of Thrones"
+  son los nombres publicados en Argentina, y hay tests que lo fijan.
+  **Ojo al comparar dos corridas: TMDB ordena `discover` por idioma.** Mismo
+  query y los mismos ids, en otro orden — así que el Home se recompone aunque el
+  catálogo sea idéntico. No es un bug del composer, que es determinístico.
+  `searchDeTipo` está clavado en `es-MX` y `searchTitles` en `en-US` (matchea el
+  TSV de Netflix): ninguno de los dos sigue al idioma base.
 - **"Miniseries para ansiosos"** (`lib/miniseries.ts` + el cableado en
   `lib/home.ts`) va debajo de "Documental" y arriba de los dos de audiencia; esa
   posición ES su prioridad de dedup. Solo `tv` y sin toggle. La condición es

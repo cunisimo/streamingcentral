@@ -1,0 +1,1799 @@
+{
+  "generado": "2026-08-23",
+  "resumen": {
+    "plataformas": "n,d,m",
+    "paginas_de_discover_en_un_home_frio": 72,
+    "titulos_unicos_tocados": 1019,
+    "titulos_rotos": 57,
+    "titulos_rotos_pct": 5.6,
+    "desglose_rotos": {
+      "titulo_no_latino": 2,
+      "sin_sinopsis": 54,
+      "cayo_al_original": 8
+    },
+    "paginas_con_al_menos_un_roto": 21,
+    "paginas_con_al_menos_un_roto_pct": 29.2,
+    "pasaje_al_ingles_no_reparado": 38,
+    "pasaje_al_ingles_pct": 3.7,
+    "muestra_pasaje_al_ingles": [
+      "Kill Bill: Volumen 2  ->  Kill Bill: Vol. 2",
+      "Kill Bill: Volumen 1  ->  Kill Bill: Vol. 1",
+      "Viuda Negra  ->  Black Widow",
+      "Vengadores: Infinity War  ->  Avengers: Infinity War",
+      "Vengadores: Endgame  ->  Avengers: Endgame",
+      "Deadpool y Lobezno  ->  Deadpool & Wolverine",
+      "Vigilados, Person of Interest  ->  Person of Interest",
+      "Anfibilandia  ->  Amphibia",
+      "Caballero Luna  ->  Moon Knight",
+      "¿Qué pasaría si...?  ->  What If...?",
+      "X Men, La Serie Animada  ->  X-Men",
+      "Bruja Escarlata y Visión  ->  WandaVision",
+      "El Pacificador  ->  Peacemaker",
+      "La materia oscura  ->  His Dark Materials",
+      "Sobrenatural  ->  Supernatural"
+    ],
+    "coste": {
+      "A_doble_discover_siempre": {
+        "llamadas_extra": 72,
+        "nota": "1 extra por página, repara 20 títulos de una"
+      },
+      "B_reparar_titulo_por_titulo": {
+        "llamadas_extra": 57,
+        "nota": "1 extra por título roto"
+      },
+      "C_doble_discover_solo_si_hay_roto": {
+        "llamadas_extra": 21,
+        "nota": "requiere pedir es-MX primero: es A cuando casi toda página tiene un roto"
+      }
+    },
+    "llamadas_reales_de_esta_medicion": 144,
+    "status": {
+      "200": 144
+    }
+  },
+  "por_pagina": [
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 1
+    },
+    {
+      "superficie": "riel-accion",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 2
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 2
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-scifi",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 1
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 2
+    },
+    {
+      "superficie": "riel-terror",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 2
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 2
+    },
+    {
+      "superficie": "riel-drama",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 1
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 1
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 3
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 3
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-comedia",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 1
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 7
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 4
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 6
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 6
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 8
+    },
+    {
+      "superficie": "riel-documental",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 6
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 2
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "movie",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 1
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 1,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 3,
+      "titulos": 20,
+      "rotos": 0
+    },
+    {
+      "superficie": "hero",
+      "tipo": "tv",
+      "pagina": 2,
+      "titulos": 20,
+      "rotos": 2
+    }
+  ],
+  "rotos": [
+    {
+      "id": 70523,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Dark",
+      "titulo_es": "Dark",
+      "original": "Dark",
+      "idioma": "de"
+    },
+    {
+      "id": 289324,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Star Wars: Visions presenta - La Jedi número 9",
+      "titulo_es": "Star Wars: Visions presenta - La Jedi número 9",
+      "original": "スター・ウォーズ：ビジョンズ／九人目のジェダイ",
+      "idioma": "ja"
+    },
+    {
+      "id": 232869,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Mickey Mouse Clubhouse+",
+      "titulo_es": "La Casa de Mickey Mouse+",
+      "original": "Mickey Mouse Clubhouse+",
+      "idioma": "en"
+    },
+    {
+      "id": 2426,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Angel",
+      "titulo_es": "Ángel",
+      "original": "Angel",
+      "idioma": "en"
+    },
+    {
+      "id": 286345,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": true,
+      "sin_sinopsis": true,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "ふつつかな悪女ではございますが ～雛宮蝶鼠とりかえ伝～",
+      "titulo_es": "Futsutsuka na Akujo dewa Gozaimasu ga: Suuguu Chouso Torikae Den",
+      "original": "ふつつかな悪女ではございますが ～雛宮蝶鼠とりかえ伝～",
+      "idioma": "ja"
+    },
+    {
+      "id": 1510795,
+      "tipo": "movie",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Shake, Rattle & Roll: Evil Origins",
+      "titulo_es": "Shake, Rattle & Roll 17: El origen del mal",
+      "original": "Shake, Rattle & Roll: Evil Origins",
+      "idioma": "tl"
+    },
+    {
+      "id": 1950,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Everwood",
+      "titulo_es": "Everwood",
+      "original": "Everwood",
+      "idioma": "en"
+    },
+    {
+      "id": 16281,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "WWE Superstars",
+      "titulo_es": "WWE Superstars",
+      "original": "WWE Superstars",
+      "idioma": "en"
+    },
+    {
+      "id": 1940,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Entourage: El séquito",
+      "titulo_es": "Entourage: El séquito",
+      "original": "Entourage",
+      "idioma": "en"
+    },
+    {
+      "id": 239526,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Sueños de libertad",
+      "titulo_es": "Sueños de libertad",
+      "original": "Sueños de libertad",
+      "idioma": "es"
+    },
+    {
+      "id": 1418582,
+      "tipo": "movie",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Quinze Dias",
+      "titulo_es": "Quince días",
+      "original": "Quinze Dias",
+      "idioma": "pt"
+    },
+    {
+      "id": 1432631,
+      "tipo": "movie",
+      "roto": true,
+      "no_latino": true,
+      "sin_sinopsis": true,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "இதயம் முரளி",
+      "titulo_es": "இதயம் முரளி",
+      "original": "இதயம் முரளி",
+      "idioma": "ta"
+    },
+    {
+      "id": 212869,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Los apocalipsis del pasado",
+      "titulo_es": "Los apocalipsis del pasado",
+      "original": "Ancient Apocalypse",
+      "idioma": "en"
+    },
+    {
+      "id": 318880,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Hulk Hogan: Real American",
+      "titulo_es": "Hulk Hogan: Real American",
+      "original": "Hulk Hogan: Real American",
+      "idioma": "en"
+    },
+    {
+      "id": 91505,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "The Family",
+      "titulo_es": "La Familia",
+      "original": "The Family",
+      "idioma": "en"
+    },
+    {
+      "id": 21421,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "The Staircase",
+      "titulo_es": "El caso de la escalera",
+      "original": "Soupçons",
+      "idioma": "en"
+    },
+    {
+      "id": 71373,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Hot Girls Wanted: Turned On",
+      "titulo_es": "Hot Girls Wanted: Turned On",
+      "original": "Hot Girls Wanted: Turned On",
+      "idioma": "en"
+    },
+    {
+      "id": 117180,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Crims",
+      "titulo_es": "Crímenes",
+      "original": "Crims",
+      "idioma": "ca"
+    },
+    {
+      "id": 289485,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "WWE: Unreal",
+      "titulo_es": "WWE: Increíble",
+      "original": "WWE: Unreal",
+      "idioma": "en"
+    },
+    {
+      "id": 201285,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "LIGHT & MAGIC",
+      "titulo_es": "LIGHT & MAGIC",
+      "original": "LIGHT & MAGIC",
+      "idioma": "en"
+    },
+    {
+      "id": 241569,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Tucci in Italy",
+      "titulo_es": "Tucci en Italia",
+      "original": "Tucci in Italy",
+      "idioma": "en"
+    },
+    {
+      "id": 56556,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Nazi Megastructures",
+      "titulo_es": "Nazi Megaestructuras",
+      "original": "Nazi Megastructures",
+      "idioma": "en"
+    },
+    {
+      "id": 204554,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "LA Lakers: El Legado",
+      "titulo_es": "Legado: Los LA Lakers de Jerry Buss",
+      "original": "Legacy: The True Story of the LA Lakers",
+      "idioma": "en"
+    },
+    {
+      "id": 87994,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Tesoros perdidos de Egipto",
+      "titulo_es": "Tesoros perdidos de Egipto",
+      "original": "Lost Treasures of Egypt",
+      "idioma": "en"
+    },
+    {
+      "id": 76405,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Chain of Command",
+      "titulo_es": "Cadena de mando",
+      "original": "Chain of Command",
+      "idioma": "en"
+    },
+    {
+      "id": 218274,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Secrets of the Bees",
+      "titulo_es": "Los secretos de las abejas",
+      "original": "Secrets of the Bees",
+      "idioma": "en"
+    },
+    {
+      "id": 246212,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "The Americas",
+      "titulo_es": "The Americas",
+      "original": "The Americas",
+      "idioma": "en"
+    },
+    {
+      "id": 202139,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Restaurants at the End of the World",
+      "titulo_es": "Restaurants at the End of the World",
+      "original": "Restaurants at the End of the World",
+      "idioma": "en"
+    },
+    {
+      "id": 96988,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "F2: Chasing the Dream",
+      "titulo_es": "F2: Chasing the Dream",
+      "original": "F2: Chasing the Dream",
+      "idioma": "en"
+    },
+    {
+      "id": 157205,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "David Blaine: Do Not Attempt",
+      "titulo_es": "David Blaine Retos Extremos",
+      "original": "David Blaine: Do Not Attempt",
+      "idioma": "en"
+    },
+    {
+      "id": 104521,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Guardianes De Alaska",
+      "titulo_es": "Héroes de Alaska",
+      "original": "Alaska Animal Rescue",
+      "idioma": "en"
+    },
+    {
+      "id": 283272,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "The Fox Hollow Murders: Playground of a Serial Killer",
+      "titulo_es": "Los asesinatos de Fox Hollow: El reino de un asesino en serie",
+      "original": "The Fox Hollow Murders: Playground of a Serial Killer",
+      "idioma": "en"
+    },
+    {
+      "id": 202597,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Edge of the Unknown with Jimmy Chin",
+      "titulo_es": "Edge of the Unknown with Jimmy Chin",
+      "original": "Edge of the Unknown with Jimmy Chin",
+      "idioma": "en"
+    },
+    {
+      "id": 95755,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Europe from Above",
+      "titulo_es": "Europa desde el cielo",
+      "original": "Europe from Above",
+      "idioma": "en"
+    },
+    {
+      "id": 329987,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "9/11: Reunited",
+      "titulo_es": "11-S: El reencuentro",
+      "original": "9/11: Reunited",
+      "idioma": "en"
+    },
+    {
+      "id": 65859,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Primal Survivor",
+      "titulo_es": "Solo contra el mundo: Hazen Audel",
+      "original": "Primal Survivor",
+      "idioma": "en"
+    },
+    {
+      "id": 66006,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Web of Lies",
+      "titulo_es": "Crimenes en la red",
+      "original": "Web of Lies",
+      "idioma": "en"
+    },
+    {
+      "id": 26728,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Disappeared",
+      "titulo_es": "Disappeared",
+      "original": "Disappeared",
+      "idioma": "en"
+    },
+    {
+      "id": 210661,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Operación frontera: Brasil",
+      "titulo_es": "Control de fronteras: Brasil",
+      "original": "Operação Fronteira Brasil",
+      "idioma": "pt"
+    },
+    {
+      "id": 277685,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Pee-wee as Himself",
+      "titulo_es": "El mismísimo Pee-wee",
+      "original": "Pee-wee as Himself",
+      "idioma": "en"
+    },
+    {
+      "id": 36154,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Who The (Bleep) Did I Marry?",
+      "titulo_es": "Who The (Bleep) Did I Marry?",
+      "original": "Who The (Bleep) Did I Marry?",
+      "idioma": "en"
+    },
+    {
+      "id": 64922,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Gold Rush: The Dirt",
+      "titulo_es": "Gold Rush: The Dirt",
+      "original": "Gold Rush: The Dirt",
+      "idioma": "en"
+    },
+    {
+      "id": 227144,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Contrabando en la frontera",
+      "titulo_es": "Contraband: Seized at the Border",
+      "original": "Contraband: Seized at the Border",
+      "idioma": "en"
+    },
+    {
+      "id": 40971,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "The Dead Files",
+      "titulo_es": "The Dead Files",
+      "original": "The Dead Files",
+      "idioma": "en"
+    },
+    {
+      "id": 62168,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Homicide Hunter: Lt Joe Kenda",
+      "titulo_es": "Homicide Hunter: Lt Joe Kenda",
+      "original": "Homicide Hunter: Lt Joe Kenda",
+      "idioma": "en"
+    },
+    {
+      "id": 1754,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Overhaulin'",
+      "titulo_es": "Overhaulin'",
+      "original": "Overhaulin'",
+      "idioma": "en"
+    },
+    {
+      "id": 4898,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Bizarre Foods with Andrew Zimmern",
+      "titulo_es": "Bizarre Foods with Andrew Zimmern",
+      "original": "Bizarre Foods with Andrew Zimmern",
+      "idioma": "en"
+    },
+    {
+      "id": 62991,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Bizarre Foods: Delicious Destinations",
+      "titulo_es": "Bizarre Foods: Delicious Destinations",
+      "original": "Bizarre Foods: Delicious Destinations",
+      "idioma": "en"
+    },
+    {
+      "id": 285652,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Jay & Pamela",
+      "titulo_es": "Jay & Pamela",
+      "original": "Jay & Pamela",
+      "idioma": "en"
+    },
+    {
+      "id": 110170,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Estonia - fyndet som ändrar allt",
+      "titulo_es": "Estonia - A Find That Changes Everything",
+      "original": "Estonia - fyndet som ändrar allt",
+      "idioma": "sv"
+    },
+    {
+      "id": 1749,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Así Se Hace",
+      "titulo_es": "¿Cómo lo hacen?",
+      "original": "How It's Made",
+      "idioma": "en"
+    },
+    {
+      "id": 12940,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Hard Knocks",
+      "titulo_es": "Hard Knocks",
+      "original": "Hard Knocks",
+      "idioma": "en"
+    },
+    {
+      "id": 108179,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "La Agencia",
+      "titulo_es": "La Agencia",
+      "original": "Menajerimi Ara",
+      "idioma": "tr"
+    },
+    {
+      "id": 1292,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "How Do They Do It?",
+      "titulo_es": "¿Cómo lo hacen?",
+      "original": "How Do They Do It?",
+      "idioma": "en"
+    },
+    {
+      "id": 58704,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Bering Sea Gold",
+      "titulo_es": "La pesca del oro",
+      "original": "Bering Sea Gold",
+      "idioma": "en"
+    },
+    {
+      "id": 108464,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": true,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "Signs of a Psychopath",
+      "titulo_es": "Signs of a Psychopath",
+      "original": "Signs of a Psychopath",
+      "idioma": "en"
+    },
+    {
+      "id": 120089,
+      "tipo": "tv",
+      "roto": true,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": true,
+      "pasaje_al_ingles": false,
+      "titulo_mx": "SPY×FAMILY",
+      "titulo_es": "SPY x FAMILY",
+      "original": "SPY×FAMILY",
+      "idioma": "ja"
+    }
+  ],
+  "pasajes": [
+    {
+      "id": 393,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Kill Bill: Vol. 2",
+      "titulo_es": "Kill Bill: Volumen 2",
+      "original": "Kill Bill: Vol. 2",
+      "idioma": "en"
+    },
+    {
+      "id": 24,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Kill Bill: Vol. 1",
+      "titulo_es": "Kill Bill: Volumen 1",
+      "original": "Kill Bill: Vol. 1",
+      "idioma": "en"
+    },
+    {
+      "id": 497698,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Black Widow",
+      "titulo_es": "Viuda Negra",
+      "original": "Black Widow",
+      "idioma": "en"
+    },
+    {
+      "id": 299536,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Avengers: Infinity War",
+      "titulo_es": "Vengadores: Infinity War",
+      "original": "Avengers: Infinity War",
+      "idioma": "en"
+    },
+    {
+      "id": 299534,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Avengers: Endgame",
+      "titulo_es": "Vengadores: Endgame",
+      "original": "Avengers: Endgame",
+      "idioma": "en"
+    },
+    {
+      "id": 533535,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Deadpool & Wolverine",
+      "titulo_es": "Deadpool y Lobezno",
+      "original": "Deadpool & Wolverine",
+      "idioma": "en"
+    },
+    {
+      "id": 1411,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Person of Interest",
+      "titulo_es": "Vigilados, Person of Interest",
+      "original": "Person of Interest",
+      "idioma": "en"
+    },
+    {
+      "id": 85349,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Amphibia",
+      "titulo_es": "Anfibilandia",
+      "original": "Amphibia",
+      "idioma": "en"
+    },
+    {
+      "id": 92749,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Moon Knight",
+      "titulo_es": "Caballero Luna",
+      "original": "Moon Knight",
+      "idioma": "en"
+    },
+    {
+      "id": 91363,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "What If...?",
+      "titulo_es": "¿Qué pasaría si...?",
+      "original": "What If...?",
+      "idioma": "en"
+    },
+    {
+      "id": 4574,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "X-Men",
+      "titulo_es": "X Men, La Serie Animada",
+      "original": "X-Men",
+      "idioma": "en"
+    },
+    {
+      "id": 85271,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "WandaVision",
+      "titulo_es": "Bruja Escarlata y Visión",
+      "original": "WandaVision",
+      "idioma": "en"
+    },
+    {
+      "id": 110492,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Peacemaker",
+      "titulo_es": "El Pacificador",
+      "original": "Peacemaker",
+      "idioma": "en"
+    },
+    {
+      "id": 68507,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "His Dark Materials",
+      "titulo_es": "La materia oscura",
+      "original": "His Dark Materials",
+      "idioma": "en"
+    },
+    {
+      "id": 1622,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Supernatural",
+      "titulo_es": "Sobrenatural",
+      "original": "Supernatural",
+      "idioma": "en"
+    },
+    {
+      "id": 1399,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Game of Thrones",
+      "titulo_es": "Juego de tronos",
+      "original": "Game of Thrones",
+      "idioma": "en"
+    },
+    {
+      "id": 10545,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "True Blood",
+      "titulo_es": "True Blood (Sangre fresca)",
+      "original": "True Blood",
+      "idioma": "en"
+    },
+    {
+      "id": 917496,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Beetlejuice Beetlejuice",
+      "titulo_es": "Bitelchús Bitelchús",
+      "original": "Beetlejuice Beetlejuice",
+      "idioma": "en"
+    },
+    {
+      "id": 8077,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Alien³",
+      "titulo_es": "Alien III",
+      "original": "Alien³",
+      "idioma": "en"
+    },
+    {
+      "id": 36648,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Blade: Trinity",
+      "titulo_es": "Blade III. Trinity",
+      "original": "Blade: Trinity",
+      "idioma": "en"
+    },
+    {
+      "id": 945961,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Alien: Romulus",
+      "titulo_es": "Alien. Romulus",
+      "original": "Alien: Romulus",
+      "idioma": "en"
+    },
+    {
+      "id": 91239,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Bridgerton",
+      "titulo_es": "Los Bridgerton",
+      "original": "Bridgerton",
+      "idioma": "en"
+    },
+    {
+      "id": 44217,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Vikings",
+      "titulo_es": "Vikingos",
+      "original": "Vikings",
+      "idioma": "en"
+    },
+    {
+      "id": 71790,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "S.W.A.T.",
+      "titulo_es": "S.W.A.T.: Los hombres de Harrelson",
+      "original": "S.W.A.T.",
+      "idioma": "en"
+    },
+    {
+      "id": 4607,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Lost",
+      "titulo_es": "Perdidos",
+      "original": "Lost",
+      "idioma": "en"
+    },
+    {
+      "id": 3172,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Private Practice",
+      "titulo_es": "Sin cita previa",
+      "original": "Private Practice",
+      "idioma": "en"
+    },
+    {
+      "id": 1084242,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Zootopia 2",
+      "titulo_es": "Zootrópolis 2",
+      "original": "Zootopia 2",
+      "idioma": "en"
+    },
+    {
+      "id": 585,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Monsters, Inc.",
+      "titulo_es": "Monstruos, S.A.",
+      "original": "Monsters, Inc.",
+      "idioma": "en"
+    },
+    {
+      "id": 863,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Toy Story 2",
+      "titulo_es": "Toy Story 2: Los juguetes vuelven a la carga",
+      "original": "Toy Story 2",
+      "idioma": "en"
+    },
+    {
+      "id": 1241982,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Moana 2",
+      "titulo_es": "Vaiana 2",
+      "original": "Moana 2",
+      "idioma": "en"
+    },
+    {
+      "id": 11631,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Mamma Mia!",
+      "titulo_es": "Mamma Mia! La película",
+      "original": "Mamma Mia!",
+      "idioma": "en"
+    },
+    {
+      "id": 269149,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Zootopia",
+      "titulo_es": "Zootrópolis",
+      "original": "Zootopia",
+      "idioma": "en"
+    },
+    {
+      "id": 62211,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Monsters University",
+      "titulo_es": "Monstruos University",
+      "original": "Monsters University",
+      "idioma": "en"
+    },
+    {
+      "id": 76492,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Hotel Transylvania",
+      "titulo_es": "Hotel Transilvania",
+      "original": "Hotel Transylvania",
+      "idioma": "en"
+    },
+    {
+      "id": 159824,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Hotel Transylvania 2",
+      "titulo_es": "Hotel Transilvania 2",
+      "original": "Hotel Transylvania 2",
+      "idioma": "en"
+    },
+    {
+      "id": 87083,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Formula 1: Drive to Survive",
+      "titulo_es": "Formula 1: La emoción de un Grand Prix",
+      "original": "Formula 1: Drive to Survive",
+      "idioma": "en"
+    },
+    {
+      "id": 10681,
+      "tipo": "movie",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "WALL·E",
+      "titulo_es": "WALL·E: Batallón de limpieza",
+      "original": "WALL·E",
+      "idioma": "en"
+    },
+    {
+      "id": 4546,
+      "tipo": "tv",
+      "roto": false,
+      "no_latino": false,
+      "sin_sinopsis": false,
+      "cayo_al_original": false,
+      "pasaje_al_ingles": true,
+      "titulo_mx": "Curb Your Enthusiasm",
+      "titulo_es": "Larry David",
+      "original": "Curb Your Enthusiasm",
+      "idioma": "en"
+    }
+  ]
+}

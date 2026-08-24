@@ -49,89 +49,69 @@ Plan: `docs/medidas/2026-08-23-idioma-plan.md`.
 
 ## Estado actual
 
-**`main` = `b172982`, sincronizado con `origin/main`. Desplegado y verificado en
-producción.**
+**Producción sigue en `es-ES` y no se tocó.** La tanda 1 está desplegada
+(`main` = `5fc0c2e`) y lo único visible ahí es el aviso "En Disney+, buscala como
+«High Anxiety»" en `movie:12535`.
 
-### La Tanda 1 está en producción
+### La Tanda 2 está en `feat/idioma-tanda-2`, sin mergear
 
-Lo único que el usuario ve: en `/titulo/movie/12535` aparece
-**"En Disney+, buscala como «High Anxiety»"** con botón de copiar.
+Un solo cambio de código: los once call sites pasaban `HUELLA_EN_CLAVES` —la
+cadena vacía del modo compatible— y ahora pasan `HUELLA_IDIOMA`. La constante
+vacía se eliminó, y el candado que ocupa su lugar es un barrido nuevo que exige
+`HUELLA_IDIOMA` en todas las llamadas a un constructor y fija el total en 11.
 
-**El idioma NO cambió.** Todo sigue en `es-ES`: "Bitelchús", "Vaiana 2",
-"Monstruos, S.A.". Eso es lo esperado.
+**318 tests, 0 fallas. `tsc` limpio. `next build` completo.**
 
-Lo que entró, todo **inerte y cableado**, para que la Tanda 2 sea solo una
-variable de entorno:
+Medición contra una línea de base **nueva** (los 612/655 son referencia
+histórica: la tanda 1 los movió). Todo en
+`docs/medidas/2026-08-23-idioma-tanda2-e2e.json`.
 
-| Módulo | Qué hace |
-|---|---|
-| `lib/idioma.ts` | Configuración, el predicado `queReparar`, la fusión por campo, el mecanismo `repararLote`/`repararUno`, métricas por request (AsyncLocalStorage) y `pedirRespaldoIdioma()` — el punto ÚNICO donde se pide un respaldo |
-| `lib/claves.ts` | Los **once** constructores de claves localizadas, en *modo compatible*: producen los mismos bytes que antes |
-| `lib/consultas-verificadas.ts` | El mapa de consultas verificadas (una fila: Mel Brooks) y el resolver |
-| `lib/idioma-adaptadores.ts` | Los cuatro `producir` que usan producción y tests |
-| `lib/reparar-y-cachear.ts` | `resolverConCache`: "leer → producir → decidir si guardar" |
-| `lib/single-flight.ts` | Une lo que está en vuelo, clave `idioma:tipo:id` |
-| `lib/recordatorio-texto.ts` | El texto del `.ics` |
-| `components/AyudasBusqueda.tsx` | Pinta lo que el servidor ya resolvió |
+| Home frío `n,d,m` | Base (es-ES) | Tanda 2 (es-MX+f) | Tope | |
+|---|---|---|---|---|
+| Llamadas a TMDB | 613 · 614 · 614 | 649 · 649 · 649 | ≤ 660 | ✅ |
+| Comandos de Upstash | 660 · 657 · 657 | 655 · 655 · 654 | ≤ 670 | ✅ |
+| Páginas de fallback | 0 | 38 | ~32 | ✅ |
+| Payload | 84.318 B | 84.390 B | ≤ 85.000 B | ✅ |
+| `degradado` / `fallos` | false / 0 | false / 0 | | ✅ |
+| Títulos por riel | …·40·38 | …·**39·39** | idénticos | ⚠️ |
 
-**311 tests, 0 fallas. `tsc` limpio.**
+El desvío tiene causa medida: **TMDB ordena `discover` por idioma** (mismos ids,
+otro orden), así que el Home se recompone aunque el catálogo sea idéntico. Los
+dos carruseles de audiencia suman 78 en los dos casos y ningún riel queda vacío.
+El criterio "idénticos" no es alcanzable con un cambio de idioma.
 
-### Configuración viva
+**Ensayo de rollback (local):** `IDIOMA_TITULOS=es-ES` devuelve exactamente la
+línea de base — mismos rieles, mismo hero, mismas fichas. Lo que **no** devuelve
+es el cache: la huella pasa a `es-ES.r1` y eso cuesta un **segundo** arranque
+frío.
 
-```
-IDIOMA_BASE       = "es-ES"   (default; IDIOMA_TITULOS no está definida)
-FALLBACK_ACTIVO   = false     (base === fallback ⇒ inerte)
-HUELLA_EN_CLAVES  = ""        (modo compatible, ninguna clave cambió)
-```
+## Lo que falta: Vercel
 
-Verificado en producción: `/api/health` → `cache: redis`, 2752 claves. No hubo
-arranque frío.
+**Bloqueo actual: `vercel whoami` responde "The specified token is not valid".**
+La sesión del CLI está vencida, así que las variables y el Preview quedaron sin
+hacer. En orden:
 
----
+1. **Aislar Preview del Redis de producción.** Sacar `KV_*` del scope Preview
+   (sin tocar Production) y confirmar con `GET /api/health` en el Preview:
+   `503` + `"cache":"memoria"` está bien; `200` + `"redis"` obliga a frenar,
+   porque el Preview estaría precalentando las claves `es-MX+f.r1` que
+   producción tiene que estrenar en frío. El 503 es deliberado, no un deploy
+   roto.
+2. **`IDIOMA_TITULOS=es-MX` solo en Preview**, y recién después pushear la rama:
+   un deployment toma el valor que existía cuando se creó.
+3. Probar a mano la checklist de abajo.
+4. Recién ahí, sumar el scope Production y redeployar.
 
-## Lo que sigue: la Tanda 2
+### Qué mirar a mano en el Preview
 
-**Es el único cambio global del idioma del catálogo y del Home, y el único
-arranque frío del plan.**
-
-Trabajo de código: **uno solo**.
-
-1. Pasar `HUELLA_IDIOMA` a los once constructores de `lib/claves.ts` (hoy
-   reciben `HUELLA_EN_CLAVES`, que es `""`).
-2. `IDIOMA_TITULOS=es-MX` en Vercel.
-
-El idioma base, el fallback y el respaldo genérico al original **ya están
-implementados y probados**: se encienden solos con la variable.
-
-### La trampa que hay que revisar ANTES
-
-**Preview no puede compartir el Redis de producción.** La integración de Vercel
-asigna `KV_*` a los tres scopes, así que un Preview probando `es-MX`
-precalentaría exactamente las claves `es-MX+f.r1` que producción va a usar, y el
-arranque frío que hay que medir llegaría **caliente**.
-
-Solución elegida (costo 0): sacar `KV_*` del scope Preview → cae al caché en
-memoria. Se confirma con `GET /api/health` en el Preview:
-
-```
-HTTP 503 + "cache":"memoria"  → Preview aislado, SE PUEDE medir
-HTTP 200 + "cache":"redis"    → está pegándole a producción, PARAR
-```
-
-El 503 es deliberado y **no** es un deploy roto. Todo en `docs/MANTENIMIENTO.md`.
-
-### Criterios de aceptación de la Tanda 2
-
-Contra la línea de base medida end-to-end (Home frío de `n,d,m`):
-
-| | Base | Tope |
-|---|---|---|
-| Llamadas a TMDB | 612 | ≤ 660 |
-| Comandos de Upstash | 655 | ≤ 670 |
-| Payload del Home | 84.063 B | ≤ 85.000 B |
-| `degradado` / `fallos` | false / 0 | false / 0 |
-
-Y `[home] MISS` en el primer request: si dice `HIT`, la huella no se cableó.
+1. `[home] MISS home:es-MX+f.r1:v5:…` en el primer request; el segundo, `HIT`.
+2. `movie:278` → "Sueño de fuga" + el respaldo "The Shawshank Redemption".
+3. `movie:12535` → la ayuda de Disney+ sigue, **sin** duplicarse.
+4. `tv:1399` → "Game of Thrones"; `movie:585` → "Monsters, Inc.";
+   `movie:1084242` → "Zootopia 2".
+5. `/top` y `/personas` (las claves menos obvias) y `/buscar` con "Duro de
+   matar" y "Mi pobre angelito".
+6. La ruleta: encabezado y cuerpo sin contradicción; se esperan **cero**.
 
 ### Después, la Tanda 3
 

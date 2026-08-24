@@ -482,7 +482,22 @@ la medición de +llamadas y +comandos daría un número falso y optimista.
 | B. Namespace separado | Un prefijo por entorno en todas las claves | 0 | Código nuevo en el camino crítico, para un problema que dura una tanda |
 
 Se elige **A**: no toca código y el aislamiento es total. La confirmación es
-`GET /api/health` en el Preview devolviendo `"cache": "memoria"`.
+`GET /api/health` en el Preview:
+
+```
+HTTP 503 + "cache":"memoria"   → Preview aislado, se puede medir
+HTTP 200 + "cache":"redis"     → le está pegando a producción, PARAR
+```
+
+**El 503 es deliberado y no es un deploy roto**: la ruta responde 503 cuando el
+cache no está operativo, justamente para poder monitorearlo sin parsear el
+cuerpo. En un Preview sin Redis, ese 503 es el resultado esperado.
+
+**Si la integración no deja quitar `KV_*` solo de Preview** sin afectar
+Production, eso es un bloqueo real: no seguir y resolverlo primero. Definir las
+dos variables como cadena vacía en el scope Preview tiene el mismo efecto
+(`lib/cache.ts` exige URL **y** token no vacíos para instanciar el cliente) y no
+toca la entrada de Production.
 
 **Qué NO hace falta limpiar.** Lo que se leyó y escribió durante la tanda 1 usa
 las claves compatibles de `es-ES` —las mismas de siempre, con el mismo
@@ -493,3 +508,69 @@ contenido—, así que no hay nada que borrar. La prohibición es para las clave
 tiene credenciales de Upstash y el dev corre en memoria (se confirma con
 `GET /api/health` → `"cache": "memoria"`, o con `0 requests` en la línea
 `[home]`). Si alguna vez se agregan, vale la misma regla.
+
+
+---
+
+## El rollback del idioma cuesta un segundo arranque frío
+
+**`IDIOMA_TITULOS=es-ES` + redeploy revierte el contenido de inmediato, pero no
+devuelve el cache que había antes.** La huella pasa de `es-MX+f.r1` a `es-ES.r1`,
+que **no** es el espacio vacío del modo compatible de la tanda 1: es un tercer
+espacio, así que el Home y las diez familias restantes se rearman una vez más.
+
+Es el precio elegido a propósito. La alternativa —claves sin huella— hacía que
+un rollback siguiera sirviendo títulos mexicanos desde las mismas claves hasta
+que expiraran TTLs de hasta 30 h, o sea que **no revertía nada**.
+
+Medido (`docs/medidas/2026-08-23-idioma-tanda2-e2e.json`, corrida `roll`): el
+contenido vuelve **exacto** a la línea de base —614 llamadas, 657 comandos,
+84.318 B, los mismos 12 rieles, el mismo hero y las 7 fichas de control
+idénticas—; lo único que se paga es el rearmado.
+
+**El interruptor intermedio es `FALLBACK_IDIOMA=0`**: deja el idioma en `es-MX` y
+apaga la reparación (huella `es-MX.r1`, 611 llamadas, 0 reparaciones). También
+cuesta su propio arranque frío, y sirve para el caso "el fallback salió caro" sin
+tener que volver al español de España.
+
+---
+
+## Cómo rehacer la medición de idioma con el mismo instrumento
+
+El banco es un `git worktree` aparte, instrumentado **solo ahí**: el repo nunca
+se toca. Dos piezas versionadas:
+
+```bash
+git worktree add --detach <ruta-del-banco> <commit>
+cd <ruta-del-banco> && npm install && cp <repo>/.env.local .
+node <repo>/scripts/banco-idioma-parche.mjs <ruta-del-banco>
+bash <repo>/scripts/banco-idioma-correr.sh base1 3971 es-ES 1 fichas
+bash <repo>/scripts/banco-idioma-correr.sh mx1   3981 es-MX 1 fichas
+```
+
+Tres reglas que el arnés ya aplica y que no hay que aflojar:
+
+- **Un puerto distinto por corrida**, y abortar si está ocupado. Un servidor
+  huérfano de la corrida anterior responde igual y se mide la variante
+  equivocada — ya pasó, y dio payloads idénticos entre `es-ES` y `es-MX`.
+- **Matar el ÁRBOL** (`taskkill /T /F`): `kill` sobre lo que devuelve `npx next
+  dev` mata el wrapper, no el servidor.
+- **`YUMP_FECHA` fija en todas las corridas.** Sin eso, cruzar la medianoche
+  argentina cambia la semilla del día y la comparación mezcla el cambio de
+  código con el cambio de día.
+
+Y una regla de lectura: **verificar en la salida qué variante respondió**. El
+arnés lo hace solo (la línea `[BANCO]` trae el idioma y el fallback, y aborta si
+no coinciden con lo pedido).
+
+**Los dos scripts de medición escriben en una ruta FIJA de `docs/medidas/`**
+(`-idioma-fallback.json`, `-idioma-sinopsis.json`), así que volver a correrlos
+**pisa el artefacto de la tanda 1**. Las corridas de la tanda 2 se guardaron
+aparte (`-fallback-tanda2.json`, `-sinopsis-tanda2.json`) y el original se
+recuperó con `git checkout --`. Si se vuelven a correr, hacer lo mismo: la foto
+vieja es la mitad "antes" de cualquier comparación futura.
+
+**Y no leer un diff contra una foto vieja sin acordarse de que TMDB deriva
+solo.** En la corrida de la tanda 2, `sinopsis_vacia_es_ES` pasó de 2 a 1 sin que
+nadie tocara nada: un título ganó su sinopsis en español entre una medición y la
+otra.

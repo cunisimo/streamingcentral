@@ -1,7 +1,7 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 17 de agosto de 2026.**
+> **Última actualización: 23 de agosto de 2026.**
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -388,28 +388,96 @@ de arriba es la fuente para ese formulario.
 
 ---
 
-## Rama actual: `feat/idioma-tanda-1`
+## Rama actual: `feat/idioma-tanda-2`
 
-Tanda 1 del plan de idioma (`docs/medidas/2026-08-23-idioma-plan.md`).
-**Sin mergear**, a la espera de la prueba manual del dueño.
+Tanda 2 del plan de idioma (`docs/medidas/2026-08-23-idioma-plan.md`).
+**Sin mergear y sin tocar producción**: producción sigue en `es-ES`.
 
-Qué hace y qué no:
+**Un solo cambio de código**: los once call sites pasaban `HUELLA_EN_CLAVES` —la
+cadena vacía del modo compatible de la tanda 1— y ahora pasan `HUELLA_IDIOMA`.
+Con eso la clave depende de la configuración: `card:es-MX+f.r1:movie:278` en vez
+de `card:movie:278`. Las once familias juntas, que es lo que provoca **un** solo
+arranque frío en vez de once, y evita un Home mitad es-MX y mitad es-ES mientras
+durara el escalonamiento.
 
-- **No cambia el idioma.** `IDIOMA_BASE` sale de `IDIOMA_TITULOS` y su default
-  sigue siendo `es-ES`. El cambio es la tanda 2, y se hace con la variable.
-- **No invalida ninguna clave.** Los once constructores de `lib/claves.ts`
-  corren en *modo compatible* y producen los mismos bytes que antes.
-- **Lo único visible:** el aviso "En Disney+, buscala como «High Anxiety»" en
-  `movie:12535`.
+`HUELLA_EN_CLAVES` se **eliminó** en vez de repuntarse: mientras existiera, un
+call site nuevo podía quedarse en modo compatible sin que nada lo notara, y el
+síntoma no es un error sino títulos mezclados. En su lugar hay un barrido nuevo
+(`lib/claves.test.ts`) que exige `HUELLA_IDIOMA` en **todas** las llamadas a un
+constructor y fija el total en 11. Visto en rojo inyectando `""` en `lib/top.ts`.
 
-Piezas: `lib/idioma.ts` (predicado, fusión, mecanismo de lote, métricas por
-request), `lib/claves.ts`, `lib/consultas-verificadas.ts`,
-`lib/single-flight.ts`, `lib/recordatorio-texto.ts` y
-`components/AyudasBusqueda.tsx`. Matriz de cobertura en
-`docs/IDIOMA-COBERTURA.md`.
+El idioma base, el fallback, `ayudaOriginal` y la consulta verificada ya estaban
+implementados y probados desde la tanda 1: **se encienden con la variable, sin
+tocar código.**
 
-Kill switches (**requieren redeploy**): `CONSULTA_VERIFICADA=0`,
-`FALLBACK_IDIOMA=0`, y `IDIOMA_TITULOS` que es la tanda 2.
+### Medición, contra una línea de base NUEVA
+
+Los 612 / 655 del informe de la tanda 1 son **referencia histórica**: la tanda 1
+movió esos números. La base se rehízo el mismo día, con el mismo arnés y con
+`YUMP_FECHA` fija. Todo en `docs/medidas/2026-08-23-idioma-tanda2-e2e.json`.
+
+| Home frío `n,d,m` | Base (es-ES) | Tanda 2 (es-MX+f) | Tope | |
+|---|---|---|---|---|
+| Llamadas a TMDB | 613 · 614 · 614 | 649 · 649 · 649 | ≤ 660 | ✅ |
+| Comandos de Upstash | 660 · 657 · 657 | 655 · 655 · 654 | ≤ 670 | ✅ |
+| Páginas de fallback | 0 | 38 | ~32 | ✅ |
+| Payload | 84.318 B | 84.390 B | ≤ 85.000 B | ✅ |
+| Home caliente | 1 comando, 0 TMDB | 1 comando, 0 TMDB | igual | ✅ |
+| `degradado` / `fallos` | false / 0 | false / 0 | | ✅ |
+| Títulos por riel | 20·40·30·20×6·20·40·38 | 20·40·30·20×6·20·**39·39** | idénticos | ⚠️ |
+
+**El único desvío tiene causa medida y no es del cambio de claves: TMDB ordena
+`discover` POR IDIOMA.** Mismo query, mismo `total_results` (4.773) y los mismos
+20 ids por página, pero 18 de 20 en la misma posición en la página 1. Con otro
+orden de entrada, el filtro de ficha completa (póster + sinopsis) descarta otros
+títulos y `pickDaily` —que baraja POSICIONES— elige otros. Los dos carruseles de
+audiencia suman 78 en los dos casos; ningún riel queda vacío ni degradado. El
+criterio "títulos por riel idénticos" se escribió sin saber esto: no es
+alcanzable con un cambio de idioma.
+
+**Control de que el composer no es el que se mueve:** las tres corridas de la
+base son idénticas entre sí (0 rieles distintos) y las tres de `es-MX` también.
+
+### Ensayo de rollback
+
+`IDIOMA_TITULOS=es-ES` devuelve **exactamente** la línea de base: 614 llamadas,
+657 comandos, 84.318 B, los mismos 12 rieles, el mismo hero y las 7 fichas de
+control idénticas.
+
+**Lo que el rollback NO devuelve es el cache.** La huella pasa a `es-ES.r1`, que
+no es el espacio vacío de la tanda 1: **volver atrás cuesta un segundo arranque
+frío**. Es el precio de que el rollback sea inmediato en vez de esperar TTLs de
+hasta 30 h.
+
+### Qué mirar a mano (Preview)
+
+1. `[home] MISS home:es-MX+f.r1:v5:…` en el primer request. Si dice `HIT`, la
+   huella no llegó.
+2. `movie:278` → "Sueño de fuga", y **ahora sí** aparece el respaldo original.
+3. `movie:12535` → sigue la ayuda verificada de Disney+, **sin** duplicarla con
+   el respaldo genérico.
+4. `tv:1399` → "Game of Thrones"; `movie:585` → "Monsters, Inc.";
+   `movie:1084242` → "Zootopia 2". El pasaje al inglés **no** se repara.
+5. `/top` y `/personas`: las dos superficies de `top:pop:` y `people:popular:`,
+   las claves menos obvias.
+6. La ruleta: encabezado y cuerpo sin contradicción. Se esperan **cero**
+   contradicciones conocidas.
+
+### Bloqueo: el Preview no se pudo aislar ni deployar
+
+`vercel whoami` responde *"The specified token is not valid"*: la sesión del CLI
+está vencida y **nadie más puede tocar las variables de Vercel**. Quedan sin
+hacer, y hay que hacerlas **en este orden**:
+
+1. Sacar `KV_*` / `UPSTASH_*` del scope **Preview** (sin tocar Production) y
+   confirmar con `GET /api/health` en el Preview: **503 + `"cache":"memoria"`**
+   es lo correcto; **200 + `"redis"` significa PARAR**, porque el Preview estaría
+   precalentando las claves `es-MX+f.r1` que producción tiene que estrenar en
+   frío. Si la integración no deja quitarlo solo de Preview, eso es un bloqueo
+   real y hay que resolverlo antes de seguir.
+2. `IDIOMA_TITULOS=es-MX` **solo en Preview**, y recién después pushear la rama:
+   un deployment toma el valor que existía cuando se creó.
+3. Producción se queda en `es-ES` hasta que la prueba manual pase.
 
 ### Archivos ajenos, sin registrar y a propósito
 

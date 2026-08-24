@@ -1,7 +1,13 @@
 # Reparación de idioma: matriz de cobertura
 
-**2026-08-23 · tanda 1.** Qué superficies producen títulos localizados, cuáles
+**2026-08-23 · tanda 2.** Qué superficies producen títulos localizados, cuáles
 pasan por la reparación y qué pasa si el respaldo falla.
+
+**Desde la tanda 2 las once familias llevan la huella en la clave**
+(`card:es-MX+f.r1:movie:278`). En la tanda 1 corrían en modo compatible, con la
+huella vacía. Lo que decide el espacio de claves es la configuración
+—`IDIOMA_TITULOS` y `FALLBACK_IDIOMA`—, así que un rollback selecciona otro
+espacio en vez de esperar a que expiren TTLs de hasta 30 h.
 
 El mecanismo es **uno solo**: `repararLote` / `repararUno` en `lib/idioma.ts`.
 Ninguna superficie implementa su propia variante — esa era la forma segura de
@@ -124,7 +130,12 @@ frase** — es lo que hacía la primera versión de este documento:
 | Artefacto | Qué mide | Números |
 |---|---|---|
 | `-idioma-fallback.json` | modelo de 72 páginas de discover | 1021 títulos, **57 rotos (5,6%)** en **21 de 72 páginas (29,2%)** |
-| `-idioma-home-e2e.json` | el composer REAL | **107** páginas de discover, **32** de fallback, 612 → 643 llamadas (+5,1%) |
+| `-idioma-home-e2e.json` | el composer REAL, antes de la tanda 1 | **107** páginas de discover, **32** de fallback, 612 → 643 llamadas (+5,1%) |
+| `-idioma-tanda2-e2e.json` | el composer REAL, **con la tanda 2 puesta** | **38** páginas de fallback, 614 → 649 llamadas (+5,7%), 58 títulos reparados, 0 fallos |
+
+La línea de base de la tanda 2 es **614**, no 612: la tanda 1 movió el número y
+la base se rehízo el mismo día antes de comparar. Los 612 son referencia
+histórica.
 
 El modelo da la **tasa**; el end-to-end da el **coste**. Sobre el modelo:
 

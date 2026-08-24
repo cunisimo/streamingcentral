@@ -1,0 +1,588 @@
+{
+ "generado": "2026-08-23",
+ "que_es": "Medicion END-TO-END de la tanda 2 (idioma es-MX + huella en las once familias de claves), contra una linea de base NUEVA tomada sobre main el mismo dia y con el mismo arnes. Reemplaza como referencia a los 612/655 del informe de la tanda 1: la tanda 1 movio esos numeros y el plan pedia rehacer la base antes de comparar.",
+ "arnes": {
+  "como": "worktree aparte (git worktree), instrumentado solo ahi: contador de llamadas a TMDB en lib/tmdb.ts y una linea [BANCO] en app/api/home/route.ts. El repo no se toco. El idioma y el fallback NO se parchean: salen de IDIOMA_TITULOS y FALLBACK_IDIOMA, que son codigo de produccion desde la tanda 1.",
+  "aislamiento": "sin credenciales de Upstash en .env.local, asi que cada corrida arranca con el cache en memoria VACIO y el Redis de produccion no se toca ni se precalienta. El contador de comandos sigue siendo fiel: lib/cache.ts los cuenta igual en modo memoria porque dependen del patron de acceso, no del backend.",
+  "huerfanos": "un puerto distinto por corrida (3971-3985), aborto si el puerto esta ocupado, taskkill sobre el ARBOL (kill mata el wrapper de npx, no el servidor) y espera activa a que el puerto quede libre. Ademas cada corrida VERIFICA en la linea [BANCO] que respondio la variante pedida: si contestara un servidor huerfano de la corrida anterior, aborta.",
+  "fecha_fija": "YUMP_FECHA=2026-08-23 en todas las corridas. Sin eso la semilla del dia cambia a la medianoche argentina y la comparacion mezcla el cambio de codigo con el cambio de dia; la medicion se hizo pasadas las 22:00 AR.",
+  "url": "GET /api/home?providers=n,d,m — frio y despues caliente"
+ },
+ "corridas": {
+  "base1": {
+   "etiqueta": "base1",
+   "clave": "home:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 613,
+    "tmdb_por_path": {
+     "/discover/movie": 44,
+     "/discover/tv": 63,
+     "/tv/:id/watch/providers": 191,
+     "/movie/:id/watch/providers": 233,
+     "/movie/:id": 57,
+     "/tv/:id": 25
+    },
+    "comandos": 660,
+    "claves": 634,
+    "hits": 13,
+    "ms_composer": 9683,
+    "payload_bytes": 84318,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=40",
+     "adult-anime=38"
+    ],
+    "fallback": {
+     "llamadas": 0,
+     "lotes_con_rotos": 0,
+     "titulos_reparados": 0,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 0
+   },
+   "pared": [
+    "frio     http=200 pared=14.237177s bytes=84318",
+    "caliente http=200 pared=0.033629s bytes=84318"
+   ]
+  },
+  "base2": {
+   "etiqueta": "base2",
+   "clave": "home:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 614,
+    "tmdb_por_path": {
+     "/discover/movie": 44,
+     "/discover/tv": 63,
+     "/movie/:id": 57,
+     "/tv/:id": 25,
+     "/movie/:id/watch/providers": 235,
+     "/tv/:id/watch/providers": 190
+    },
+    "comandos": 657,
+    "claves": 634,
+    "hits": 16,
+    "ms_composer": 6123,
+    "payload_bytes": 84318,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=40",
+     "adult-anime=38"
+    ],
+    "fallback": {
+     "llamadas": 0,
+     "lotes_con_rotos": 0,
+     "titulos_reparados": 0,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 0
+   },
+   "pared": [
+    "frio     http=200 pared=9.834308s bytes=84318",
+    "caliente http=200 pared=0.049706s bytes=84318"
+   ]
+  },
+  "base3": {
+   "etiqueta": "base3",
+   "clave": "home:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 614,
+    "tmdb_por_path": {
+     "/discover/movie": 44,
+     "/discover/tv": 63,
+     "/movie/:id": 57,
+     "/tv/:id": 25,
+     "/movie/:id/watch/providers": 235,
+     "/tv/:id/watch/providers": 190
+    },
+    "comandos": 657,
+    "claves": 634,
+    "hits": 16,
+    "ms_composer": 6367,
+    "payload_bytes": 84318,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=40",
+     "adult-anime=38"
+    ],
+    "fallback": {
+     "llamadas": 0,
+     "lotes_con_rotos": 0,
+     "titulos_reparados": 0,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 1
+   },
+   "pared": [
+    "frio     http=200 pared=9.310142s bytes=84318",
+    "caliente http=200 pared=0.036589s bytes=84318"
+   ]
+  },
+  "mx1": {
+   "etiqueta": "mx1",
+   "clave": "home:es-MX+f.r1:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 649,
+    "tmdb_por_path": {
+     "/discover/movie": 58,
+     "/discover/tv": 85,
+     "/movie/:id": 57,
+     "/tv/:id": 27,
+     "/movie/:id/watch/providers": 233,
+     "/tv/:id/watch/providers": 189
+    },
+    "comandos": 655,
+    "claves": 635,
+    "hits": 19,
+    "ms_composer": 24446,
+    "payload_bytes": 84390,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=39",
+     "adult-anime=39"
+    ],
+    "fallback": {
+     "llamadas": 38,
+     "lotes_con_rotos": 38,
+     "titulos_reparados": 58,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 0
+   },
+   "pared": [
+    "frio     http=200 pared=27.208718s bytes=84390",
+    "caliente http=200 pared=0.042013s bytes=84390"
+   ]
+  },
+  "mx2": {
+   "etiqueta": "mx2",
+   "clave": "home:es-MX+f.r1:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 649,
+    "tmdb_por_path": {
+     "/discover/movie": 58,
+     "/discover/tv": 85,
+     "/movie/:id": 57,
+     "/tv/:id": 27,
+     "/movie/:id/watch/providers": 233,
+     "/tv/:id/watch/providers": 189
+    },
+    "comandos": 655,
+    "claves": 635,
+    "hits": 19,
+    "ms_composer": 7012,
+    "payload_bytes": 84390,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=39",
+     "adult-anime=39"
+    ],
+    "fallback": {
+     "llamadas": 38,
+     "lotes_con_rotos": 38,
+     "titulos_reparados": 58,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 0
+   },
+   "pared": [
+    "frio     http=200 pared=10.128863s bytes=84390",
+    "caliente http=200 pared=0.032905s bytes=84390"
+   ]
+  },
+  "mx3": {
+   "etiqueta": "mx3",
+   "clave": "home:es-MX+f.r1:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 649,
+    "tmdb_por_path": {
+     "/discover/movie": 58,
+     "/discover/tv": 85,
+     "/movie/:id": 57,
+     "/tv/:id": 27,
+     "/movie/:id/watch/providers": 233,
+     "/tv/:id/watch/providers": 189
+    },
+    "comandos": 654,
+    "claves": 635,
+    "hits": 20,
+    "ms_composer": 6030,
+    "payload_bytes": 84390,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=39",
+     "adult-anime=39"
+    ],
+    "fallback": {
+     "llamadas": 38,
+     "lotes_con_rotos": 38,
+     "titulos_reparados": 58,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 0
+   },
+   "pared": [
+    "frio     http=200 pared=7.702944s bytes=84390",
+    "caliente http=200 pared=0.032284s bytes=84390"
+   ]
+  },
+  "mxnofb": {
+   "etiqueta": "mxnofb",
+   "clave": "home:es-MX.r1:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 611,
+    "tmdb_por_path": {
+     "/discover/movie": 44,
+     "/discover/tv": 63,
+     "/movie/:id/watch/providers": 231,
+     "/tv/:id/watch/providers": 191,
+     "/movie/:id": 57,
+     "/tv/:id": 25
+    },
+    "comandos": 654,
+    "claves": 633,
+    "hits": 18,
+    "ms_composer": 5332,
+    "payload_bytes": 84388,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=39",
+     "adult-anime=39"
+    ],
+    "fallback": {
+     "llamadas": 0,
+     "lotes_con_rotos": 0,
+     "titulos_reparados": 0,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 1
+   },
+   "pared": [
+    "frio     http=200 pared=7.199076s bytes=84388",
+    "caliente http=200 pared=0.041224s bytes=84388"
+   ]
+  },
+  "roll": {
+   "etiqueta": "roll",
+   "clave": "home:es-ES.r1:v5:3523671066:d,m,n:",
+   "frio": {
+    "tmdb": 614,
+    "tmdb_por_path": {
+     "/discover/movie": 44,
+     "/discover/tv": 63,
+     "/movie/:id": 57,
+     "/tv/:id": 25,
+     "/movie/:id/watch/providers": 235,
+     "/tv/:id/watch/providers": 190
+    },
+    "comandos": 657,
+    "claves": 634,
+    "hits": 16,
+    "ms_composer": 5985,
+    "payload_bytes": 84318,
+    "hero": 6,
+    "degradado": false,
+    "fallos": 0,
+    "rieles": [
+     "ultimos=20",
+     "mas-votados=40",
+     "hacete-cargo=30",
+     "genre:accion=20",
+     "genre:scifi=20",
+     "genre:terror=20",
+     "genre:drama=20",
+     "genre:comedia=20",
+     "genre:documental=20",
+     "miniseries=20",
+     "family=40",
+     "adult-anime=38"
+    ],
+    "fallback": {
+     "llamadas": 0,
+     "lotes_con_rotos": 0,
+     "titulos_reparados": 0,
+     "fallos": 0
+    }
+   },
+   "caliente": {
+    "tmdb": 0,
+    "comandos": 1,
+    "ms": 1
+   },
+   "pared": [
+    "frio     http=200 pared=7.955240s bytes=84318",
+    "caliente http=200 pared=0.032814s bytes=84318"
+   ]
+  }
+ },
+ "aceptacion": {
+  "llamadas_tmdb": {
+   "base": "613 / 614 / 614",
+   "tanda2": "649 / 649 / 649",
+   "tope": 660,
+   "veredicto": "PASA",
+   "delta": "+35 (+5,7%)"
+  },
+  "comandos_upstash": {
+   "base": "660 / 657 / 657",
+   "tanda2": "655 / 655 / 654",
+   "tope": 670,
+   "veredicto": "PASA",
+   "delta": "-3: la reparacion se guarda bajo la MISMA clave, no agrega comandos"
+  },
+  "paginas_de_fallback": {
+   "base": 0,
+   "tanda2": 38,
+   "esperado": "~32",
+   "veredicto": "PASA",
+   "nota": "38 lotes con rotos, 58 titulos reparados, 0 fallos"
+  },
+  "payload": {
+   "base": 84318,
+   "tanda2": 84390,
+   "tope": 85000,
+   "veredicto": "PASA",
+   "delta": "+72 B (+0,09%)"
+  },
+  "home_caliente": {
+   "base": "1 comando, 0 llamadas a TMDB",
+   "tanda2": "1 comando, 0 llamadas a TMDB",
+   "veredicto": "PASA"
+  },
+  "degradado_y_fallos": {
+   "base": "false / 0",
+   "tanda2": "false / 0",
+   "veredicto": "PASA"
+  },
+  "titulos_por_riel": {
+   "base": "20 40 30 20x6 20 40 38",
+   "tanda2": "20 40 30 20x6 20 39 39",
+   "veredicto": "PASA CON DESVIO",
+   "nota": "ver hallazgos.orden_por_idioma"
+  }
+ },
+ "hallazgos": {
+  "orden_por_idioma": {
+   "que": "TMDB ordena discover POR IDIOMA. Mismo query, mismo total_results (4773) y los mismos 20 ids por pagina, pero en otro orden: 18 de 20 en la misma posicion en la pagina 1, 20 de 20 en la pagina 2.",
+   "consecuencia": "la composicion del Home cambia aunque el catalogo sea identico. El filtro soloCompletos (poster + sinopsis) descarta otros titulos y pickDaily baraja POSICIONES, asi que otro orden de entrada da otra seleccion. Es inherente a cambiar el idioma, no un efecto del cambio de claves.",
+   "control": "las tres corridas de la base son identicas entre si (0 rieles distintos) y las tres de es-MX tambien: el composer es deterministico. Lo unico que movio el contenido fue el idioma.",
+   "impacto_medido": "314 titulos en el payload en los dos casos. Ningun riel vacio, ninguno degradado. El unico desvio de cantidad es family 40 -> 39 y adult-anime 38 -> 39: la suma de los dos carruseles de audiencia es 78 en los dos.",
+   "por_que_el_plan_esperaba_identicas": "el criterio 'titulos por riel identicos' se escribio antes de saber que popularity.desc se ordena por idioma. No es alcanzable, y no deberia serlo."
+  },
+  "titulo_sin_traduccion_en_ningun_idioma": {
+   "ref": "tv:313117",
+   "titulo": "破产姐妹",
+   "riel": "miniseries",
+   "que": "aparece igual en la linea de base es-ES. TMDB no tiene name ni overview en es-ES, es-MX ni en-US: original_language zh y los tres devuelven el original.",
+   "por_que_el_fallback_no_lo_repara": "el respaldo viene igualmente roto y fusionarPorCampo devuelve la base cuando el respaldo no mejora. Es el caso previsto, no una falla.",
+   "no_es_regresion": "esta en los dos payloads"
+  },
+  "rollback_no_vuelve_al_espacio_compatible": {
+   "que": "IDIOMA_TITULOS=es-ES deja huella es-ES.r1, no la huella vacia de la tanda 1.",
+   "consecuencia": "el rollback cuesta un SEGUNDO arranque frio. El contenido vuelve exacto; lo que no vuelve es el cache.",
+   "verificado": "la corrida roll da 614 llamadas, 657 comandos, 84318 bytes, los MISMOS 12 rieles y el MISMO hero que la linea de base; las 7 fichas de control vuelven identicas."
+  },
+  "fallback_apagado": {
+   "que": "es-MX con FALLBACK_IDIOMA=0 da huella es-MX.r1, 611 llamadas (38 menos que con fallback) y 0 reparaciones.",
+   "para_que_sirve": "es el interruptor intermedio: si el fallback se volviera caro o ruidoso, se apaga sin volver a es-ES. Cuesta su propio arranque frio."
+  }
+ },
+ "subcomandos": {
+  "medir-idioma-titulos estrategias": "29 casos utiles. es-ES 18/29, es-MX 28/29, original 28/29, union 29/29. Sin cambios respecto de la tanda 1.",
+  "medir-idioma-titulos sinopsis": "4 de 60 pierden sinopsis en es-MX (tv:33238, tv:117217, movie:1510795, tv:12513). Las cuatro tienen sinopsis en es-ES, asi que el fallback las repara: residual 1 de 60, que ya estaba vacia en es-ES. Criterio <=2: PASA.",
+  "medir-fallback-idioma": "57 rotos de 1019 (5,6%) ANTES de reparar, en 21 de 72 paginas. Es la tasa de entrada, no el residual; salida completa en 2026-08-23-idioma-fallback-tanda2.json. El residual medido end-to-end es 1 titulo en 314 (tv:313117), no reparable en ningun idioma. Criterio <=1: PASA."
+ },
+ "fichas_de_control": {
+  "movie:12535": {
+   "es_ES": "Máxima ansiedad",
+   "es_MX": "Angustias del Doctor Mel Brooks",
+   "ayudas": "d: High Anxiety",
+   "ayudaOriginal": "ausente — la consulta verificada YA es el original, no se duplica"
+  },
+  "movie:278": {
+   "es_ES": "Cadena perpetua",
+   "es_MX": "Sueño de fuga",
+   "ayudaOriginal": "The Shawshank Redemption"
+  },
+  "movie:1084242": {
+   "es_ES": "Zootrópolis 2",
+   "es_MX": "Zootopia 2",
+   "ayudaOriginal": "ausente — el visible ya ES el original"
+  },
+  "movie:585": {
+   "es_ES": "Monstruos, S.A.",
+   "es_MX": "Monsters, Inc.",
+   "ayudaOriginal": "ausente — el visible ya ES el original"
+  },
+  "tv:1399": {
+   "es_ES": "Juego de tronos",
+   "es_MX": "Game of Thrones",
+   "nota": "el pasaje al ingles NO se repara, a proposito"
+  },
+  "tv:4614": {
+   "es_ES": "Navy: Investigación criminal",
+   "es_MX": "NCIS: Criminología Naval",
+   "ayudaOriginal": "NCIS"
+  },
+  "movie:557": {
+   "es_ES": "Spider-Man",
+   "es_MX": "El hombre araña",
+   "ayudaOriginal": "Spider-Man"
+  }
+ },
+ "siete_titulos_del_pedido": {
+  "movie:1241982 Disney+": {
+   "es_ES": "Vaiana 2",
+   "es_MX": "Moana 2",
+   "busqueda_es_ES": "no",
+   "busqueda_es_MX": "directo"
+  },
+  "movie:585 Disney+": {
+   "es_ES": "Monstruos, S.A.",
+   "es_MX": "Monsters, Inc.",
+   "busqueda_es_ES": "no",
+   "busqueda_es_MX": "directo"
+  },
+  "tv:85271 Disney+": {
+   "es_ES": "Bruja Escarlata y Visión",
+   "es_MX": "WandaVision",
+   "busqueda_es_ES": "no",
+   "busqueda_es_MX": "directo"
+  },
+  "movie:497698 Disney+": {
+   "es_ES": "Viuda Negra",
+   "es_MX": "Black Widow",
+   "busqueda_es_ES": "no",
+   "busqueda_es_MX": "directo"
+  },
+  "tv:4607 Disney+": {
+   "es_ES": "Perdidos",
+   "es_MX": "Lost",
+   "busqueda_es_ES": "no",
+   "busqueda_es_MX": "directo"
+  },
+  "tv:110492 Max": {
+   "es_ES": "El Pacificador",
+   "es_MX": "Peacemaker",
+   "busqueda_es_ES": "directo",
+   "busqueda_es_MX": "directo"
+  },
+  "tv:10545 Max": {
+   "es_ES": "True Blood (Sangre fresca)",
+   "es_MX": "True Blood",
+   "busqueda_es_ES": "no",
+   "busqueda_es_MX": "directo"
+  }
+ }
+}
