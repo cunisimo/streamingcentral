@@ -507,21 +507,36 @@ hasta 30 h.
 6. La ruleta: encabezado y cuerpo sin contradicción. Se esperan **cero**
    contradicciones conocidas.
 
-### Bloqueo: el Preview no se pudo aislar ni deployar
+### El Preview: aislado y desplegado
 
-`vercel whoami` responde *"The specified token is not valid"*: la sesión del CLI
-está vencida y **nadie más puede tocar las variables de Vercel**. Quedan sin
-hacer, y hay que hacerlas **en este orden**:
+```
+https://streamingcentral-git-feat-4b4d31-jfgalindez-gmailcoms-projects.vercel.app
+```
 
-1. Sacar `KV_*` / `UPSTASH_*` del scope **Preview** (sin tocar Production) y
-   confirmar con `GET /api/health` en el Preview: **503 + `"cache":"memoria"`**
-   es lo correcto; **200 + `"redis"` significa PARAR**, porque el Preview estaría
-   precalentando las claves `es-MX+f.r1` que producción tiene que estrenar en
-   frío. Si la integración no deja quitarlo solo de Preview, eso es un bloqueo
-   real y hay que resolverlo antes de seguir.
-2. `IDIOMA_TITULOS=es-MX` **solo en Preview**, y recién después pushear la rama:
-   un deployment toma el valor que existía cuando se creó.
-3. Producción se queda en `es-ES` hasta que la prueba manual pase.
+**Producción sigue en `es-ES` y sus variables no se tocaron.**
+
+**El plan decía "sacar `KV_*` del scope Preview" y eso no se puede hacer sin
+romper producción.** La integración crea **una sola entrada por variable con los
+dos targets** (`Production, Preview`), así que borrar "la de Preview" se lleva
+puesta la de Production — y producción sin Redis rearma el Home entero en cada
+request. Lo que se hizo en cambio: **variables de Preview acotadas a la rama**,
+que conviven con la entrada compartida y la pisan solo ahí. Las cinco de Redis
+en vacío (`lib/cache.ts` exige URL y token no vacíos) más `IDIOMA_TITULOS=es-MX`.
+Procedimiento completo, con la trampa del orden, en `docs/MANTENIMIENTO.md`.
+
+**Verificado, no asumido:** `GET /api/health` en el Preview devuelve **503** con
+`cache: "memoria"`, `fuente: null` y las dos credenciales en `false`. Confirmado
+también del lado del servidor en los logs de runtime (`environment: preview`,
+`branch: feat/idioma-tanda-2`, `503`).
+
+**Los Previews están detrás de Vercel SSO**, así que la verificación visual la
+hace el dueño con su sesión; lo automatizable es `vercel logs --json`, que está
+autenticado por CLI.
+
+**Al terminar hay que borrar las seis variables de rama** (comando en
+`MANTENIMIENTO.md`) y **recién después** de aprobar el Preview se toca
+Production, en este orden: `IDIOMA_TITULOS=es-MX` en Production → redeploy →
+`scripts/precalentar-home.mjs`.
 
 ### Archivos ajenos, sin registrar y a propósito
 

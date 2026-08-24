@@ -478,8 +478,82 @@ la medición de +llamadas y +comandos daría un número falso y optimista.
 
 | | Cómo | Costo | Contra |
 |---|---|---|---|
-| **A. Preview sin Redis** *(recomendada)* | Sacar `KV_*` del scope Preview, o definirlas vacías ahí. `lib/cache.ts` cae al cache en memoria | 0 | Preview más lento y sin cache entre instancias. Para probar funcionalidad alcanza |
+| **A. Preview sin Redis** *(recomendada)* | Neutralizar `KV_*` en Preview. `lib/cache.ts` cae al cache en memoria | 0 | Preview más lento y sin cache entre instancias. Para probar funcionalidad alcanza |
 | B. Namespace separado | Un prefijo por entorno en todas las claves | 0 | Código nuevo en el camino crítico, para un problema que dura una tanda |
+
+### "Sacar `KV_*` del scope Preview" NO se puede — hacerlo así
+
+**La primera redacción de esto decía "sacar `KV_*` del scope Preview" y es una
+instrucción peligrosa.** La integración crea **una sola entrada por variable con
+los dos targets**:
+
+```
+KV_REST_API_URL    Sensitive    Production, Preview
+KV_REST_API_TOKEN  Sensitive    Production, Preview
+```
+
+No hay una entrada de Preview separada que borrar. Un `vercel env rm
+KV_REST_API_URL preview` sobre una entrada compartida se lleva puesta también la
+de Production, y **producción sin Redis cae al cache en memoria**: cada request
+rearma el Home entero, ~650 llamadas a TMDB. Es el peor resultado posible de un
+paso cuyo objetivo era no tocar producción.
+
+**Lo que sí funciona: una variable de Preview ACOTADA A LA RAMA.** Convive con la
+entrada compartida, la pisa solo para esa rama, y no toca Production:
+
+```bash
+export VERCEL_ORG_ID=… VERCEL_PROJECT_ID=…
+for v in KV_REST_API_URL KV_REST_API_TOKEN KV_REST_API_READ_ONLY_TOKEN KV_URL REDIS_URL; do
+  npx vercel env add "$v" preview <rama> --value "" --yes
+done
+npx vercel env add IDIOMA_TITULOS preview <rama> --value "es-MX" --yes
+```
+
+El valor **vacío** es lo que hace caer a memoria: `lib/cache.ts` exige URL **y**
+token no vacíos para instanciar el cliente. Un valor inválido pero no vacío es
+peor — construiría el cliente y fallaría en cada comando en vez de degradar
+limpio.
+
+**Se neutralizan las cinco, no solo las dos que el código lee.** `KV_URL` y
+`REDIS_URL` son connection strings TCP que este cliente no usa, y
+`KV_REST_API_READ_ONLY_TOKEN` no se lee nunca; pero el objetivo es que el Preview
+no *tenga* credenciales, no que no las use.
+
+**El orden tiene una trampa: la rama tiene que existir en el repo conectado
+antes de poder crear una variable acotada a ella.** Vercel responde
+`branch_not_found`. Y la variable tiene que existir antes del deployment que la
+necesita. Los dos requisitos juntos se resuelven así:
+
+1. Crear la rama remota **apuntando a `main`**:
+   `git push origin main:refs/heads/<rama>`. El Preview que dispara es código
+   idéntico a producción: aunque alguien lo abra, escribe las mismas claves que
+   producción ya usa. Empujar primero la rama con los cambios haría que ese
+   primer Preview corriera con la configuración vieja y estrenara un espacio de
+   claves nuevo contra el Redis de producción.
+2. Crear las variables acotadas a la rama.
+3. Recién ahí, `git push origin <rama>` con los commits reales.
+
+**Verificar siempre, nunca asumir que el override ganó**: `GET /api/health` en el
+Preview tiene que decir `503` + `"cache":"memoria"` + `credenciales: {url:false,
+token:false}`. Si dice `200` + `redis`, el override no se aplicó y hay que frenar.
+
+**Al terminar, deshacer** — estas entradas son de la rama y no tienen por qué
+sobrevivirla:
+
+```bash
+for v in KV_REST_API_URL KV_REST_API_TOKEN KV_REST_API_READ_ONLY_TOKEN KV_URL REDIS_URL IDIOMA_TITULOS; do
+  npx vercel env rm "$v" preview <rama> --yes
+done
+```
+
+Ese `rm` sí es seguro: apunta a la entrada de la rama, que es una entrada aparte.
+
+**Los Previews están detrás de Vercel SSO**, así que `curl` recibe un 302 al
+login y la verificación visual la hace una persona con sesión. Lo que sí se
+puede automatizar es el lado del servidor: `vercel logs <url> --json` está
+autenticado por CLI y no pasa por el SSO. No hace tail continuo —cada
+invocación trae una ventana reciente—, así que para seguir una sesión de pruebas
+hay que hacer poll y deduplicar por `id`.
 
 Se elige **A**: no toca código y el aislamiento es total. La confirmación es
 `GET /api/health` en el Preview:
