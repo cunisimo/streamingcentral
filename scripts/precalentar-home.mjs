@@ -10,11 +10,24 @@
 // es el primer usuario que abre la app, y con la combinacion de plataformas que
 // tenga. Con esto la paga esta corrida, en el momento elegido.
 //
-// CUANDO. DESPUES de aprobar el Preview aislado y ANTES de poner es-MX en
-// Production. Nunca antes: precalentar con la configuracion vieja llena el
-// espacio de claves equivocado, y precalentar desde un Preview que comparte el
-// Redis de produccion es exactamente la trampa que docs/MANTENIMIENTO.md manda
-// evitar (arruina la medicion del arranque frio).
+// CUANDO. DESPUES de configurar es-MX en Production Y de confirmar que el
+// commit del merge quedo desplegado ahi. Es lo ULTIMO del orden de activacion,
+// no un paso previo.
+//
+// Nunca antes, por dos motivos distintos:
+//
+//   - Con Production todavia en es-ES, esto llena el espacio de claves VIEJO.
+//     No solo no sirve: gasta ~650 llamadas a TMDB por combinacion en claves
+//     que el deploy siguiente deja de leer.
+//   - Con la variable puesta pero el merge sin desplegar, produccion corre
+//     codigo SIN huella: escribiria titulos es-MX adentro de las claves de
+//     es-ES, y ahi el rollback deja de revertir hasta que expiren TTLs de
+//     hasta 30 h. Por eso el paso 5 del runbook verifica el commit desplegado
+//     antes de llegar aca.
+//
+// Y nunca desde un Preview que comparta el Redis de produccion: es la trampa
+// que docs/MANTENIMIENTO.md manda evitar (arruina la medicion del arranque
+// frio).
 //
 // TRES REGLAS, y las tres estan implementadas aca, no confiadas al operador:
 //
