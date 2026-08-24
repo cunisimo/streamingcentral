@@ -1,5 +1,8 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { discover, MediaType, RawTitle, tvDetails } from "../lib/tmdb.ts";
+import {
+  discover, FALLBACK_ACTIVO, IDIOMA_FALLBACK, MediaType, RawTitle, tvDetails,
+} from "../lib/tmdb.ts";
+import { repararLista, repararNombreEpisodio } from "../lib/reparar.ts";
 import { arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
 
 // Parámetros (env de la función, con defaults).
@@ -48,7 +51,23 @@ async function collectMovies(from: string, to: string): Promise<Candidate[]> {
     } catch {
       break; // fallo transitorio: seguimos con lo ya recolectado
     }
-    for (const t of res.results) {
+    // Reparación de idioma ANTES de construir el candidato: lo que se escribe
+    // en la base es lo reparado, no lo que vino en el idioma base. Cuesta UNA
+    // llamada por página, y solo si la página trae algún roto.
+    const params = {
+      "primary_release_date.gte": from,
+      "primary_release_date.lte": to,
+      sort_by: "primary_release_date.asc",
+      page: String(page),
+    };
+    const rep = await repararLista(
+      res.results,
+      async () => (await discover("movie", { ...params, language: IDIOMA_FALLBACK })).results,
+      `peliculas p${page}`,
+      FALLBACK_ACTIVO,
+    );
+
+    for (const t of rep.items) {
       if (!t.release_date) continue;
       out.push({
         tmdb_id: t.id,
@@ -92,7 +111,17 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
     } catch {
       break; // fallo transitorio: seguimos con lo ya recolectado
     }
-    for (const t of res.results) {
+    const rep = await repararLista(
+      res.results,
+      async () => (await discover("tv", {
+        "air_date.gte": from, "air_date.lte": to,
+        sort_by: "popularity.desc", page: String(page),
+        language: IDIOMA_FALLBACK,
+      })).results,
+      `series p${page}`,
+      FALLBACK_ACTIVO,
+    );
+    for (const t of rep.items) {
       if (!seen.has(t.id)) { seen.add(t.id); shows.push(t); }
     }
     if (page >= res.total_pages) break;
@@ -106,6 +135,18 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
       const t = slice[j];
       const nx = details[j]?.next_episode_to_air;
       if (!nx?.air_date || nx.air_date < from || nx.air_date > to) continue;
+
+      // `episode_name` sale del DETALLE, así que su reparación es aparte de la
+      // de la página. Si no se puede reparar, la serie se cae de la corrida: su
+      // fila anterior queda intacta y se reintenta mañana.
+      const nombreEp = await repararNombreEpisodio(
+        nx.name,
+        async () => (await tvDetails(t.id, IDIOMA_FALLBACK)).next_episode_to_air?.name ?? null,
+        `episodio tv:${t.id}`,
+        FALLBACK_ACTIVO,
+      );
+      if (FALLBACK_ACTIVO && nombreEp === null && (nx.name ?? "").trim()) continue;
+
       out.push({
         tmdb_id: t.id,
         media_type: "tv",
@@ -117,7 +158,7 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
         release_date: nx.air_date,
         season_number: nx.season_number ?? null,
         episode_number: nx.episode_number ?? null,
-        episode_name: nx.name ?? null,
+        episode_name: nombreEp ?? nx.name ?? null,
         is_season_premiere: (nx.episode_number ?? 0) === 1,
         tv_status: details[j]?.status ?? null,
         genre_ids: t.genre_ids ?? [],
