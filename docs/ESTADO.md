@@ -470,6 +470,38 @@ SI  el nucleo compartido _shared       SI  sin la condicion de descarte vieja
 El bundle descargado **incluye `_shared/idioma-nucleo.ts`**, que es la
 confirmación en producción de lo que `deno info` ya había mostrado en local.
 
+### El backfill aprobado: los 16 campos, completos
+
+Snapshot `docs/medidas/snapshot-upcoming-2026-08-24T205416-es-MX.json`.
+**13 filas, 16 campos.** La lista entera, porque el dry-run imprime solo los
+primeros 8 y reportarla como "completa" fue un error de informe:
+
+| Campo | Antes | Después |
+|---|---|---|
+| `tv:211288.title` | Tracker | Tracker: Buscador de recompensas |
+| `tv:287620.title` | Stuart no consigue salvar el universo | Stuart no logra salvar el Universo |
+| `tv:45140.title` | Los Jóvenes Titanes en Acción | Los Jóvenes Titanes en acción |
+| `tv:95480.title` | Slow Horses | Caballos lentos |
+| `tv:30984.episode_name` | Episodio 46 | VIDA PARA DEFENDERTE. |
+| `tv:153312.overview` | Justo después de ser liberado… | Después de cumplir 25 años… |
+| `tv:207333.overview` | En el atemporal pueblo de Macondo… | En el mítico pueblo de Macondo… |
+| `tv:211288.overview` | Colter Shaw recorre el país… | Colter Shaw es un lobo solitario… |
+| `tv:259140.overview` | Akane Tendô conoce a su prometido… | Akane Tendo conoce a su prometido… |
+| `tv:283428.overview` | A Koyuki le cuesta relacionarse… | A Koyuki le cuesta trabajo conectar… |
+| `tv:287620.overview` | Stuart Bloom, dueño de una tienda… | A Stuart Bloom se le encomienda… |
+| `tv:31991.overview` | *(vacía)* | En este programa debutan nuevos talentos… |
+| `tv:62650.overview` | Chicago Med se describe como… | Muestra el caótico día a día del hospital… |
+| `tv:84773.overview` | Un reparto coral de personajes… | Comenzando en un tiempo relativamente pacífico… |
+| `tv:91768.overview` | Urano Motuso es una joven amante… | Motosu Urano era una estudiante universitaria… |
+| `tv:95480.overview` | Drama de espías con tintes de comedia negra… | Esta ingeniosa serie de espionaje… |
+
+**Cuatro títulos y un nombre de episodio**; los once restantes son sinopsis.
+`tv:95480` (*Slow Horses* → *Caballos lentos*) y `tv:45140` (mayúscula en
+"acción") estaban entre los que faltaban en el informe.
+
+El único campo omitido que no es "ya está en es-MX" es
+`tv:220542.episode_name`, que da 404 por coordenadas y conserva `"Episodio 49"`.
+
 ### Lo que falta, en orden, y necesita aprobación
 
 1. Pausar el cron (`update cron.job set active = false where jobname = 'tmdb-sync-upcoming-daily'`).
