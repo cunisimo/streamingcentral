@@ -1,6 +1,6 @@
 // Constructores de las claves de cache que guardan contenido LOCALIZADO.
 //
-// POR QUÉ EXISTE ESTE MÓDULO. Diez familias de claves guardan `title`, `name` u
+// POR QUÉ EXISTE ESTE MÓDULO. Once familias de claves guardan `title`, `name` u
 // `overview`. Si el idioma cambia y las claves no, un rollback a es-ES sigue
 // leyendo títulos mexicanos de las mismas claves hasta que expire el TTL (24 h
 // en varias): el rollback no revierte nada. Con la huella adentro de la clave,

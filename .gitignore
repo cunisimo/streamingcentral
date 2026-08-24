@@ -22,3 +22,12 @@ data/*
 !data/copy-ruleta.json
 !data/contexto-ruleta.json
 !data/clasificado-magica-navidad.json
+
+# Permisos locales de Claude Code. NO se versiona y NO se lee: es configuracion
+# de la maquina del dueno, no del proyecto (`.claude/settings.json` y
+# `launch.json` SI se versionan, que es la parte compartida).
+#
+# Estaba protegido SOLO por el ignore global de esta maquina
+# (~/.config/git/ignore), asi que en cualquier otro clon un `git add -A` lo
+# habria incluido. Aca la proteccion viaja con el repo.
+.claude/settings.local.json

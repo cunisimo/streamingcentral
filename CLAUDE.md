@@ -117,14 +117,25 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   verdad: sin la huella, volver a `es-ES` seguiría leyendo títulos mexicanos de
   las mismas claves hasta que expiraran TTLs de hasta 30 h. **El precio es que
   cada cambio de configuración cuesta un arranque frío**, ida y vuelta.
-  Medido: `es-ES` → `es-MX` con fallback son +35 llamadas a TMDB (+5,7%), los
-  mismos comandos de Upstash (la reparación se guarda bajo la MISMA clave) y
-  +72 B de payload. **Lo que NO se repara es el pasaje al inglés**: los 38
+  Medido con las dos variantes alternadas en la misma ventana: `es-ES` →
+  `es-MX` con fallback son **+38 llamadas a TMDB (+6,2%)**, entre **+0 y +2**
+  comandos de Upstash (la reparación se guarda bajo la MISMA clave) y **+337 B**
+  de payload. Las 38-39 llamadas de respaldo son **37 páginas de `discover` + 2
+  detalles de ficha**, no 39 páginas. Aislado contra su propio control
+  (`FALLBACK_IDIOMA=0`), el fallback cuesta **+440 ms** en un Home frío. **Lo que NO se repara es el pasaje al inglés**: los 38
   títulos donde `es-MX` devuelve "Monsters, Inc.", "Moana 2" o "Game of Thrones"
   son los nombres publicados en Argentina, y hay tests que lo fijan.
-  **Ojo al comparar dos corridas: TMDB ordena `discover` por idioma.** Mismo
-  query y los mismos ids, en otro orden — así que el Home se recompone aunque el
-  catálogo sea idéntico. No es un bug del composer, que es determinístico.
+  **TMDB ordena `discover` por idioma**: mismo query, mismos ids, otro orden (18
+  de 20 en la misma posición en la página 1). El efecto sobre el Home es chico y
+  está medido: en la misma ventana, **11 de 12 rieles traen los mismos títulos en
+  el mismo orden** y el hero es idéntico; el único que se mueve es "Últimos
+  lanzamientos" (un título de 20), que ordena por fecha y sin piso de votos.
+  **La trampa de medición es otra y es más grande: el catálogo de TMDB deriva
+  solo.** Comparar una corrida de hoy contra una foto de hace una hora atribuye
+  al cambio lo que era deriva — pasó, y se publicó una conclusión equivocada
+  sobre las cantidades por riel. Las dos variantes se miden **alternadas en la
+  misma ventana**, y el control es correr la misma variante dos veces: si el
+  composer es determinístico, da 0 diferencias.
   `searchDeTipo` está clavado en `es-MX` y `searchTitles` en `en-US` (matchea el
   TSV de Netflix): ninguno de los dos sigue al idioma base.
 - **"Miniseries para ansiosos"** (`lib/miniseries.ts` + el cableado en

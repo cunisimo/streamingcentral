@@ -574,3 +574,100 @@ vieja es la mitad "antes" de cualquier comparación futura.
 solo.** En la corrida de la tanda 2, `sinopsis_vacia_es_ES` pasó de 2 a 1 sin que
 nadie tocara nada: un título ganó su sinopsis en español entre una medición y la
 otra.
+
+---
+
+## Runbook: precalentar el Home DESPUÉS de aprobar el Preview
+
+**El problema que resuelve.** La tanda 2 cambia la huella de las once familias de
+claves, así que el primer request después de activar `es-MX` en Production
+encuentra el cache vacío y paga ~650 llamadas a TMDB y ~650 comandos de Upstash.
+Sin precalentar, esa cuenta la paga **el primer usuario que abra la app**, con la
+combinación de plataformas que tenga, y las demás combinaciones siguen frías.
+
+**El orden importa y no es negociable:**
+
+1. Preview **aislado** del Redis de producción (`/api/health` → 503 + `memoria`).
+2. Probar la checklist en Preview.
+3. **Recién ahí**, `IDIOMA_TITULOS=es-MX` en Production + redeploy.
+4. **Recién ahí**, precalentar.
+
+**Precalentar antes del paso 3 no sirve y encima estorba**: llenaría el espacio
+de claves de `es-ES` (el viejo), y hacerlo desde un Preview que comparte el Redis
+de producción es exactamente la trampa de la sección anterior — arruina la
+medición del arranque frío, que es el número que hay que mirar en el deploy.
+
+```bash
+node scripts/precalentar-home.mjs --base=https://<produccion>
+```
+
+Sin `--aplicar` es un **dry-run**: lista las combinaciones y sale. Con
+`--aplicar` las pide **una por vez**, con 3 s entre medio.
+
+**Las tres reglas están en el script, no confiadas a quien lo corre:**
+
+- **Explícito.** Sin `--aplicar` no pide nada.
+- **Secuencial.** En paralelo son ~650 llamadas a TMDB por combinación arrancando
+  juntas, y eso es justo lo que hace fallar a TMDB (ver abajo).
+- **Rechaza lo degradado.** Si el payload viene con `degradado: true` o
+  `fallos > 0`, esa combinación **no quedó cacheada** —`cachedIf` no guarda un
+  payload degradado, a propósito— así que el script corta ahí y termina con
+  código distinto de cero. Un precalentamiento que informa éxito habiendo servido
+  rieles caídos es peor que no correrlo: deja creer que el cache está lleno.
+
+Al final hace una **segunda vuelta de verificación**: si alguna combinación no
+responde en menos de 1,5 s, no quedó cacheada y el éxito anterior era falso.
+
+Las combinaciones por defecto son `n`, `d`, `m` y sus pares y el trío. **La clave
+del Home ordena las plataformas**, así que `n,d` y `d,n` son la misma entrada; y
+**no** incluye los toggles Películas/Series, que son claves aparte: cubrirlos
+serían cientos de combinaciones. Se cambian con `--combos=n|d|n,d`.
+
+---
+
+## TMDB se degrada bajo concurrencia, y eso arruina cualquier medición de tiempo
+
+**Demostrado, no supuesto.** Corriendo `scripts/medir-fallback-idioma.mjs` (144
+requests a 16 en paralelo) y **al mismo tiempo** un Home frío del banco (hasta 24
+en vuelo), TMDB empezó a devolver **502 en `/watch/providers`** y el Home salió
+degradado.
+
+Antes de fallar, se pone lento: en reposo la latencia por request es **p50 142 ms,
+p95 ~200 ms, máximo bajo 600 ms y cero requests por encima de 2 s**. Las corridas
+"raras" de 21-27 s que aparecieron en la medición del idioma venían todas justo
+después de una ráfaga: para que un composer pase de 6 s a 22 s con las mismas 651
+llamadas y el techo de 24 en vuelo, la latencia media tiene que multiplicarse
+por cinco.
+
+**Regla: no medir tiempos con otra cosa pegándole a TMDB al mismo tiempo.** Los
+conteos —llamadas, comandos, bytes, títulos por riel— aguantan la carga; los
+tiempos no. Y si una corrida sale lenta, mirar qué más estaba corriendo antes de
+buscarle una explicación en el código.
+
+Efecto secundario útil de ese accidente: confirmó **en vivo** que `safe` degrada
+riel por riel en vez de tirar el Home entero, y que `cachedIf` no guarda un
+payload degradado. En desarrollo `safe` re-lanza a propósito y por eso se vio
+como un 500; en producción habría sido un 200 degradado y sin cachear.
+
+---
+
+## Comparar dos corridas: alternar, nunca contra una foto vieja
+
+**El catálogo de TMDB deriva solo, y la deriva es del mismo orden que el efecto
+que se busca medir.** Pasó y costó una conclusión publicada: se comparó una tanda
+de `es-ES` contra una de `es-MX` medida hora y media después y se concluyó que el
+idioma cambiaba las cantidades por riel. No las cambia — medidas **alternadas en
+la misma ventana**, los doce rieles dan las mismas cantidades y once de doce el
+mismo contenido.
+
+Dos reglas que salen de ahí:
+
+1. **Alternar las variantes dentro de la misma ventana**, no medir todo A y
+   después todo B.
+2. **Correr el control**: la misma variante dos veces. Si el composer es
+   determinístico tiene que dar 0 diferencias, y si no da 0, lo que se esté
+   midiendo no es el cambio.
+
+Es la misma familia que la nota de 8.c sobre el hero, pero más estricta: allá
+alcanzaba con reportar *conjunto* y *posición* por separado; acá el efecto es tan
+chico (un título en 314) que la deriva lo tapa entero.

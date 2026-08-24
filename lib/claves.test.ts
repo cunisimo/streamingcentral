@@ -302,11 +302,29 @@ test("EN VERDE: people:directors no es localizada", () => {
 // tanda 1: aquella constante era el interruptor único, y al sacarla hacía falta
 // algo que verificara los once call sites de verdad.
 
-const CONSTRUCTORES = [
-  "claveHome", "clavePoolCache", "claveCombinadaCache", "claveCard", "claveTopPop",
-  "claveReco", "claveRecoMismo", "claveRecoCruce", "claveRecoPerfil", "claveSearch",
-  "clavePeoplePopular",
-];
+// Los constructores se DESCUBREN leyendo lib/claves.ts, no se listan a mano.
+// Con la lista escrita a mano, agregar una familia nueva no rompia nada: el
+// barrido no la miraba y su call site podia quedarse sin huella para siempre.
+// Ahora una familia nueva entra sola al barrido el dia que se exporta.
+function constructoresExportados(): string[] {
+  const src = readFileSync(join("lib", "claves.ts"), "utf8");
+  return [...src.matchAll(/export function (clave\w+)\s*\(/g)].map((m) => m[1]);
+}
+const CONSTRUCTORES = constructoresExportados();
+
+test("el barrido descubre los constructores solo, y hay once", () => {
+  // Si esto falla porque agregaste una familia: NO subas el numero sin mas. Una
+  // familia localizada nueva significa un espacio de claves nuevo y, con el,
+  // otro arranque frio. El numero esta aca para que esa decision se tome a
+  // proposito y no de costado.
+  assert.equal(CONSTRUCTORES.length, 11, `constructores en lib/claves.ts: ${CONSTRUCTORES.join(", ")}`);
+  // Y que sean los que el resto del archivo prueba, no otros once.
+  assert.deepEqual([...CONSTRUCTORES].sort(), [
+    "claveCard", "claveCombinadaCache", "claveHome", "clavePeoplePopular",
+    "clavePoolCache", "claveReco", "claveRecoCruce", "claveRecoMismo",
+    "claveRecoPerfil", "claveSearch", "claveTopPop",
+  ]);
+});
 
 /** El último argumento de cada llamada a un constructor.
  *
@@ -351,18 +369,25 @@ function llamadasAConstructores(src: string): { nombre: string; ultimo: string }
 
 test("los once call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
   const infractores: string[] = [];
+  const usos: Record<string, number> = {};
   let total = 0;
   for (const archivo of [...fuentes("lib"), ...fuentes("app"), ...fuentes("components")]) {
     for (const l of llamadasAConstructores(readFileSync(archivo, "utf8"))) {
       total++;
+      usos[l.nombre] = (usos[l.nombre] ?? 0) + 1;
       if (l.ultimo !== "HUELLA_IDIOMA") infractores.push(`${archivo}: ${l.nombre}(… , ${l.ultimo})`);
     }
   }
   assert.deepEqual(infractores, [],
     `constructores sin la huella real:\n${infractores.join("\n")}`);
   // Las once familias, cableadas de una sola vez: es lo que provoca UN arranque
-  // frío y no once. Si aparece una familia nueva, el número sube a propósito.
+  // frio y no once. El total se afirma para que agregar una familia obligue a
+  // decidirlo, no para contar por contar.
   assert.equal(total, 11, `se esperaban 11 llamadas a constructores, hay ${total}`);
+  // Un constructor exportado que nadie llama es una familia declarada y sin
+  // usar: o falta cablearla, o sobra. Las dos cosas hay que verlas.
+  const sinUsar = CONSTRUCTORES.filter((c) => !(usos[c] > 0));
+  assert.deepEqual(sinUsar, [], `constructores exportados que nadie llama: ${sinUsar.join(", ")}`);
 });
 
 // --- El barrido, visto en rojo ----------------------------------------------

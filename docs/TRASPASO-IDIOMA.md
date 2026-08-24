@@ -68,17 +68,29 @@ histórica: la tanda 1 los movió). Todo en
 
 | Home frío `n,d,m` | Base (es-ES) | Tanda 2 (es-MX+f) | Tope | |
 |---|---|---|---|---|
-| Llamadas a TMDB | 613 · 614 · 614 | 649 · 649 · 649 | ≤ 660 | ✅ |
-| Comandos de Upstash | 660 · 657 · 657 | 655 · 655 · 654 | ≤ 670 | ✅ |
-| Páginas de fallback | 0 | 38 | ~32 | ✅ |
-| Payload | 84.318 B | 84.390 B | ≤ 85.000 B | ✅ |
+| Llamadas a TMDB | 613 · 613 · 613 | 651 · 652 · 651 | ≤ 660 | ✅ |
+| Comandos de Upstash | 656 · 656 · 656 | 656 · 658 · 656 | ≤ 670 | ✅ |
+| Llamadas de respaldo | 0 | 39 = **37 páginas + 2 detalles** | ~32 páginas | ✅ |
+| Payload | 84.413 B | 84.750 B | ≤ 85.000 B | ✅ |
+| **Tiempo frío (pared)** | 8,07 · 7,69 · 7,90 s | 8,46 · 8,53 · 7,06 s | — | ✅ |
+| **Tiempo frío (composer)** | 5.895 · 5.518 · 5.747 ms | 6.079 · 6.029 · 5.725 ms | — | ✅ |
+| Home caliente | 1 comando, 0 TMDB | 1 comando, 0 TMDB | igual | ✅ |
 | `degradado` / `fallos` | false / 0 | false / 0 | | ✅ |
-| Títulos por riel | …·40·38 | …·**39·39** | idénticos | ⚠️ |
+| Títulos por riel | 20·40·30·20×6·20·39·39 | **idénticos** | idénticos | ✅ |
 
-El desvío tiene causa medida: **TMDB ordena `discover` por idioma** (mismos ids,
-otro orden), así que el Home se recompone aunque el catálogo sea idéntico. Los
-dos carruseles de audiencia suman 78 en los dos casos y ningún riel queda vacío.
-El criterio "idénticos" no es alcanzable con un cambio de idioma.
+**Las dos variantes se midieron alternadas en la misma ventana**, tres corridas
+cada una. Es la corrección más importante de esta revisión: la primera comparó
+dos ventanas separadas por hora y media y le atribuyó al idioma lo que era
+deriva del catálogo de TMDB.
+
+**Los títulos por riel SÍ dan idénticos** — la primera revisión dijo que no, y se
+equivocó: comparaba contra una foto de hora y media antes y le atribuyó al idioma
+la deriva del catálogo. En la misma ventana difiere **1 riel de 12** en
+contenido ("Últimos lanzamientos", un título de 20) y ninguno en cantidad.
+
+**El pico de 27,2 s era TMDB bajo carga, no el fallback**: `es-ES` también dio
+17,5 s de composer sin una sola llamada de respaldo, y el fallback aislado cuesta
+440 ms. Detalle y demostración en `docs/ESTADO.md`.
 
 **Ensayo de rollback (local):** `IDIOMA_TITULOS=es-ES` devuelve exactamente la
 línea de base — mismos rieles, mismo hero, mismas fichas. Lo que **no** devuelve

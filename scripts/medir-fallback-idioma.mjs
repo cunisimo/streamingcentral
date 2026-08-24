@@ -15,6 +15,17 @@
 // Replica el perfil de pedidos de un Home frío (lib/home.ts): 6 rieles de
 // género × FETCH_BUFFER páginas × plataforma, más el hero. NO usa Redis ni
 // Supabase — pega directo contra TMDB, así que no contamina ningún cache.
+//
+// DOS REGLAS DE MEDICIÓN, las dos aprendidas rompiéndolas:
+//
+//   1. La identidad de un título es `tipo:id`, nunca `id`. TMDB reutiliza los
+//      números entre tipos.
+//   2. El resultado no puede depender de qué promesa resuelve antes. Las
+//      observaciones se acumulan y se reducen con una regla explícita al final,
+//      en vez de "el primero que llega gana" sobre seis páginas concurrentes.
+//
+// Corriéndolo dos veces seguidas tiene que dar el MISMO resumen. Si no, alguna
+// de las dos reglas se rompió otra vez.
 import { writeFileSync } from "node:fs";
 
 const TOKEN = process.env.TMDB_READ_TOKEN;
@@ -135,7 +146,24 @@ async function main() {
   console.error(`llamadas si se pide en UN idioma: ${paginas.length}`);
   console.error(`llamadas si se pide en DOS idiomas: ${paginas.length * 2}\n`);
 
-  const porTitulo = new Map();     // id → diagnóstico (dedup: el Home dedupea)
+  // --- Identidad: `tipo:id`, NUNCA `id` -------------------------------------
+  // TMDB reutiliza los números entre tipos: la película 1399 y la serie 1399
+  // existen las dos. Deduplicar por `id` pelado hacía desaparecer una de las
+  // dos de las estadísticas, en silencio. Es el mismo motivo por el que
+  // `lib/idioma.ts` tiene `claveMixta`.
+  const ref = (tipo, id) => `${tipo}:${id}`;
+
+  // --- Orden: se acumulan TODAS las observaciones y se reducen al final -----
+  // La versión anterior hacía "el primero que llega gana" sobre 6 páginas
+  // concurrentes, y eso NO es inocuo: `titulo_es` —y con él
+  // `pasaje_al_ingles`— dependen de si el es-ES de esa página trajo al mismo
+  // título, y el reparto por página no coincide entre los dos idiomas. O sea
+  // que el número publicado dependía de qué promesa resolvía antes.
+  //
+  // Las tres señales de `roto` NO dependen del respaldo (miran solo el objeto
+  // es-MX), así que el conteo de rotos siempre fue estable; lo que se movía era
+  // el de pasajes al inglés.
+  const observaciones = new Map();  // "tipo:id" → [observación, …]
   const porPagina = [];
   const LOTE = 6;
   for (let i = 0; i < paginas.length; i += LOTE) {
@@ -144,13 +172,19 @@ async function main() {
         discover(pg.tipo, "es-MX", { ...pg.extra, page: String(pg.pagina) }),
         discover(pg.tipo, "es-ES", { ...pg.extra, page: String(pg.pagina) }),
       ]);
+      // Dentro de una página el tipo es uno solo, así que acá el id alcanza.
       const esPorId = new Map(es.map((x) => [x.id, x]));
       let rotosEnPagina = 0;
       for (const t of mx) {
         const d = diagnostico(t, esPorId.get(t.id));
         const roto = d.no_latino || d.sin_sinopsis || d.cayo_al_original;
         if (roto) rotosEnPagina++;
-        if (!porTitulo.has(t.id)) porTitulo.set(t.id, { id: t.id, tipo: pg.tipo, roto, ...d });
+        const k = ref(pg.tipo, t.id);
+        if (!observaciones.has(k)) observaciones.set(k, []);
+        observaciones.get(k).push({
+          ref: k, id: t.id, tipo: pg.tipo, roto, ...d,
+          superficie: pg.superficie, pagina: pg.pagina,
+        });
       }
       porPagina.push({ superficie: pg.superficie, tipo: pg.tipo, pagina: pg.pagina,
         titulos: mx.length, rotos: rotosEnPagina });
@@ -158,7 +192,23 @@ async function main() {
     console.error(`  ${porPagina.length}/${paginas.length} páginas`);
   }
 
-  const titulos = [...porTitulo.values()];
+  // Reducción DETERMINÍSTICA: gana la observación que SÍ vio el respaldo —es la
+  // que tiene más información— y entre esas, la de la superficie y página más
+  // chicas. No queda ningún empate que resuelva el orden de llegada.
+  const desacuerdos = [];
+  const titulos = [...observaciones.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, obs]) => {
+      if (new Set(obs.map((o) => o.roto)).size > 1) {
+        desacuerdos.push({ ref: k, campo: "roto", valores: obs.map((o) => o.roto) });
+      }
+      const orden = [...obs].sort((x, y) =>
+        (y.titulo_es ? 1 : 0) - (x.titulo_es ? 1 : 0)
+        || (x.superficie < y.superficie ? -1 : x.superficie > y.superficie ? 1 : 0)
+        || x.pagina - y.pagina);
+      const { superficie, pagina, ...limpio } = orden[0];
+      return { ...limpio, visto_en: obs.length };
+    });
   const rotos = titulos.filter((t) => t.roto);
   const paginasConAlgunRoto = porPagina.filter((p) => p.rotos > 0).length;
 
@@ -166,11 +216,29 @@ async function main() {
   // Escapes reales: el pasaje al inglés, que las tres señales dejan pasar aposta.
   const pasajes = titulos.filter((t) => !t.roto && t.pasaje_al_ingles);
 
+  // Colisiones reales de id entre tipos, en ESTA muestra.
+  const tiposPorId = new Map();
+  for (const t of titulos) {
+    if (!tiposPorId.has(t.id)) tiposPorId.set(t.id, new Set());
+    tiposPorId.get(t.id).add(t.tipo);
+  }
+  const idsCompartidos = [...tiposPorId.values()].filter((s) => s.size > 1).length;
+
   const N = paginas.length;
   const resumen = {
     plataformas: plataformas.join(","),
     paginas_de_discover_en_un_home_frio: N,
+    // La unidad es `tipo:id`. Con dedup por `id` pelado este número salía de
+    // menos: dos títulos de distinto tipo con el mismo número contaban como uno.
     titulos_unicos_tocados: titulos.length,
+    // Si alguna vez sale distinto de vacío, dos observaciones del MISMO título
+    // se contradicen y el número de rotos dejó de ser una propiedad del título.
+    desacuerdos_entre_observaciones: desacuerdos,
+    // Cuántos números de id aparecen como película Y como serie. Es lo que el
+    // dedup por `id` pelado fusionaba en uno, y por eso está publicado: sin este
+    // número, "cambié la clave y subió el total" no se distingue de la deriva
+    // del catálogo de TMDB entre dos corridas.
+    ids_compartidos_entre_tipos: idsCompartidos,
     titulos_rotos: rotos.length,
     titulos_rotos_pct: Math.round(rotos.length / titulos.length * 1000) / 10,
     desglose_rotos: {
@@ -182,7 +250,7 @@ async function main() {
     paginas_con_al_menos_un_roto_pct: Math.round(paginasConAlgunRoto / N * 1000) / 10,
     pasaje_al_ingles_no_reparado: pasajes.length,
     pasaje_al_ingles_pct: Math.round(pasajes.length / titulos.length * 1000) / 10,
-    muestra_pasaje_al_ingles: pasajes.slice(0, 15).map((t) => `${t.titulo_es}  ->  ${t.titulo_mx}`),
+    muestra_pasaje_al_ingles: pasajes.slice(0, 15).map((t) => `${t.ref}  ${t.titulo_es}  ->  ${t.titulo_mx}`),
     coste: {
       "A_doble_discover_siempre":       { llamadas_extra: N,   nota: "1 extra por página, repara 20 títulos de una" },
       "B_reparar_titulo_por_titulo":    { llamadas_extra: rotos.length, nota: "1 extra por título roto" },

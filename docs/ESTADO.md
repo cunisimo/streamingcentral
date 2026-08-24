@@ -12,9 +12,14 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ## Estado de despliegue
 
 ```
-origin/main   ab4e189   ← main al día, nada sin pushear
-feat/ejes-rieles-genero  1912f56   ← pusheada como respaldo, SIN mergear
+origin/main               5fc0c2e   ← al día; la tanda 1 del idioma ya está desplegada
+feat/idioma-tanda-2       c29c23e   ← LOCAL, sin pushear: espera el Preview aislado
+feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
 ```
+
+**Este bloque se actualiza en el mismo commit que mueve `main`.** Quedó tres
+semanas diciendo `ab4e189` mientras `main` iba por `5fc0c2e`, y un SHA viejo acá
+es peor que ninguno: se lee como "esto es lo que hay desplegado".
 
 `feat/ejes-rieles-genero` está en el remoto solo para que no viva en una sola
 máquina. **No está mergeada**: espera la prueba a mano del dueño, y tiene un
@@ -413,36 +418,75 @@ tocar código.**
 ### Medición, contra una línea de base NUEVA
 
 Los 612 / 655 del informe de la tanda 1 son **referencia histórica**: la tanda 1
-movió esos números. La base se rehízo el mismo día, con el mismo arnés y con
-`YUMP_FECHA` fija. Todo en `docs/medidas/2026-08-23-idioma-tanda2-e2e.json`.
+movió esos números. Todo en `docs/medidas/2026-08-23-idioma-tanda2-e2e.json`.
 
 | Home frío `n,d,m` | Base (es-ES) | Tanda 2 (es-MX+f) | Tope | |
 |---|---|---|---|---|
-| Llamadas a TMDB | 613 · 614 · 614 | 649 · 649 · 649 | ≤ 660 | ✅ |
-| Comandos de Upstash | 660 · 657 · 657 | 655 · 655 · 654 | ≤ 670 | ✅ |
-| Páginas de fallback | 0 | 38 | ~32 | ✅ |
-| Payload | 84.318 B | 84.390 B | ≤ 85.000 B | ✅ |
+| Llamadas a TMDB | 613 · 613 · 613 | 651 · 652 · 651 | ≤ 660 | ✅ |
+| Comandos de Upstash | 656 · 656 · 656 | 656 · 658 · 656 | ≤ 670 | ✅ |
+| Llamadas de respaldo | 0 | 39 = **37 páginas + 2 detalles** | ~32 páginas | ✅ |
+| Payload | 84.413 B | 84.750 B | ≤ 85.000 B | ✅ |
+| **Tiempo frío (pared)** | 8,07 · 7,69 · 7,90 s | 8,46 · 8,53 · 7,06 s | — | ✅ |
+| **Tiempo frío (composer)** | 5.895 · 5.518 · 5.747 ms | 6.079 · 6.029 · 5.725 ms | — | ✅ |
 | Home caliente | 1 comando, 0 TMDB | 1 comando, 0 TMDB | igual | ✅ |
 | `degradado` / `fallos` | false / 0 | false / 0 | | ✅ |
-| Títulos por riel | 20·40·30·20×6·20·40·38 | 20·40·30·20×6·20·**39·39** | idénticos | ⚠️ |
+| Títulos por riel | 20·40·30·20×6·20·39·39 | **idénticos** | idénticos | ✅ |
 
-**El único desvío tiene causa medida y no es del cambio de claves: TMDB ordena
-`discover` POR IDIOMA.** Mismo query, mismo `total_results` (4.773) y los mismos
-20 ids por página, pero 18 de 20 en la misma posición en la página 1. Con otro
-orden de entrada, el filtro de ficha completa (póster + sinopsis) descarta otros
-títulos y `pickDaily` —que baraja POSICIONES— elige otros. Los dos carruseles de
-audiencia suman 78 en los dos casos; ningún riel queda vacío ni degradado. El
-criterio "títulos por riel idénticos" se escribió sin saber esto: no es
-alcanzable con un cambio de idioma.
+**Las dos variantes se midieron alternadas en la misma ventana**, tres corridas
+cada una. Es la corrección más importante de esta revisión: la primera comparó
+dos ventanas separadas por hora y media y le atribuyó al idioma lo que era
+deriva del catálogo de TMDB.
 
-**Control de que el composer no es el que se mueve:** las tres corridas de la
-base son idénticas entre sí (0 rieles distintos) y las tres de `es-MX` también.
+**Corrección importante sobre la primera revisión de esta medición.** Se publicó
+que el idioma cambiaba las cantidades por riel (family 40→39, adult-anime 38→39)
+y que "casi todos los rieles difieren". **Las dos cosas eran deriva del catálogo,
+no del idioma.** Medido en la misma ventana:
+
+| Comparación | Rieles con contenido distinto |
+|---|---|
+| es-ES contra es-ES (control) | 0 de 12 |
+| es-MX contra es-MX (control) | 0 de 12 |
+| **es-ES contra es-MX** | **1 de 12** |
+
+El único que se mueve es "Últimos lanzamientos": 19 de 20 títulos en la misma
+posición, uno cambiado. Es el riel que ordena por fecha y sin piso de votos, así
+que el borde entre entrar y no entrar es de horas. El hero es idéntico.
+
+La causa de fondo sigue siendo real —**TMDB ordena `discover` por idioma**, 18 de
+20 en la misma posición en la página 1— pero su efecto sobre el Home es de un
+título en 314, no de un riel entero.
+
+### El pico de 27 segundos: era TMDB, no el fallback
+
+La primera medición tuvo una corrida de `es-MX` de 27,2 s en frío y quedó sin
+explicar. Cuatro evidencias:
+
+1. **`es-ES` también lo hace**: una corrida de `es-ES` dio 21,2 s de pared y
+   17,5 s de composer, con **cero** llamadas de respaldo.
+2. En la misma ventana, `es-ES` y `es-MX` dan **5.747 y 5.725 ms**: indistinguibles.
+3. Aislado contra su propio control (`FALLBACK_IDIOMA=0`), el fallback cuesta
+   **440 ms**, no 18 segundos.
+4. **No es el compilado de `next dev`**: `/api/home` compila en 1,3-2,3 s en
+   todas las corridas, incluidas las lentas.
+
+**Lo que sí lo explica, demostrado:** se lanzó el script de medición (144
+requests a 16 concurrentes) y encima un Home frío. **TMDB empezó a devolver 502**
+en `/watch/providers` y el Home salió degradado. TMDB se degrada bajo
+concurrencia: primero se pone lento, después falla. Las corridas lentas venían
+justo después de ráfagas de medición.
+
+De yapa, esa corrida degradada confirmó dos cosas del diseño **en vivo**: `safe`
+degrada riel por riel en vez de tirar el Home entero, y `cachedIf` **no guarda**
+un payload degradado.
+
+**Regla: no medir tiempos con otra cosa pegándole a TMDB al mismo tiempo.** Los
+conteos (llamadas, comandos, bytes, títulos) aguantan; los tiempos no.
 
 ### Ensayo de rollback
 
-`IDIOMA_TITULOS=es-ES` devuelve **exactamente** la línea de base: 614 llamadas,
-657 comandos, 84.318 B, los mismos 12 rieles, el mismo hero y las 7 fichas de
-control idénticas.
+`IDIOMA_TITULOS=es-ES` devuelve **exactamente** la línea de base: mismas
+llamadas, mismos comandos, mismo payload, los mismos 12 rieles, el mismo hero y
+las 7 fichas de control idénticas.
 
 **Lo que el rollback NO devuelve es el cache.** La huella pasa a `es-ES.r1`, que
 no es el espacio vacío de la tanda 1: **volver atrás cuesta un segundo arranque
@@ -481,12 +525,23 @@ hacer, y hay que hacerlas **en este orden**:
 
 ### Archivos ajenos, sin registrar y a propósito
 
-Estos tres son del dueño, son **preexistentes** y **no** pertenecen a ninguna
-rama de idioma. Aparecen como `??` en `git status` y así tienen que quedar:
+Estos **cuatro** son del dueño, son **preexistentes** y **no** pertenecen a
+ninguna rama de idioma:
 
-- `prompts/noticias-filtro.md`
-- `prompts/noticias-redaccion.md`
-- `supabase/migrations/004_news.sql`
+| Archivo | Cómo está protegido |
+|---|---|
+| `prompts/noticias-filtro.md` | aparece como `??`; hay que no agregarlo a mano |
+| `prompts/noticias-redaccion.md` | ídem |
+| `supabase/migrations/004_news.sql` | ídem |
+| `.claude/settings.local.json` | **`.gitignore` del repo** |
+
+**El cuarto faltaba en esta lista y estaba peor protegido que los otros tres.**
+`git status` no lo mostraba, y eso no era porque estuviera a salvo: lo tapaba el
+ignore GLOBAL de esta máquina (`~/.config/git/ignore`). En cualquier otro clon,
+un `git add -A` lo habría incluido — y es configuración de permisos, no del
+proyecto. Ahora está en el `.gitignore` del repo, así que la protección viaja
+con él. `.claude/settings.json` y `.claude/launch.json` **sí** se versionan: esa
+es la parte compartida.
 
 La tabla `news_items` ya está aplicada en la base, pero su migración sigue sin
 versionar — es una decisión pendiente del dueño, no un olvido.
