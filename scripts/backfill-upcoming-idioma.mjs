@@ -376,15 +376,18 @@ async function main() {
   const porCampo = (c) => plan.filter((p) => p.cambia.includes(c)).length;
   const omitidos = (m) => plan.reduce((a, p) => a + Object.values(p.omitidos).filter((x) => x === m).length, 0);
 
-  console.log(`\ncampo          cambia   omitido-frescura   omitido-404   omitido-vacio`);
+  console.log(`\ncampo          cambia   ya-en-es-MX   frescura   404   vacio`);
   for (const c of ["title", "overview", "episode_name"]) {
     const om = (m) => plan.filter((p) => p.omitidos[c] === m).length;
-    console.log(c.padEnd(14), String(porCampo(c)).padStart(6), String(om("frescura")).padStart(18),
-      String(om("episodio-404")).padStart(13), String(om("vacio")).padStart(15));
+    console.log(c.padEnd(14), String(porCampo(c)).padStart(6), String(om("ya-en-destino")).padStart(12),
+      String(om("frescura")).padStart(10), String(om("episodio-404")).padStart(5),
+      String(om("vacio")).padStart(7));
   }
   console.log(`\nfilas que cambian: ${cambian.length} de ${plan.length}`);
   console.log(`campos que cambian: ${plan.reduce((a, p) => a + p.cambia.length, 0)}`);
-  console.log(`omitidos: ${omitidos("frescura")} por frescura, ${omitidos("episodio-404")} por 404, ${omitidos("vacio")} por vacío`);
+  console.log(`omitidos: ${omitidos("ya-en-destino")} ya en es-MX (nada que hacer), ` +
+    `${omitidos("frescura")} por frescura, ${omitidos("episodio-404")} por 404, ` +
+    `${omitidos("vacio")} por vacío`);
 
   // El fallback se informa APARTE, y no como parte del diff: cuando repara bien,
   // el valor queda IGUAL al guardado y desaparece del diff. Contarlo solo por el
@@ -419,8 +422,11 @@ async function main() {
     }
   }
 
+  // Los "ya-en-destino" no se listan de a uno: son decenas y no hay nada que
+  // revisar en ellos. Lo que hay que mirar caso por caso son los otros tres.
   for (const p of plan) for (const [c, m] of Object.entries(p.omitidos)) {
-    console.log(`  omitido ${p.clave}.${c} (${m}): se conserva ${JSON.stringify(p.antes[c])}`);
+    if (m === "ya-en-destino") continue;
+    console.log(`  omitido ${p.clave}.${c} (${m}): se conserva ${JSON.stringify((p.antes[c] ?? "").slice(0, 60))}`);
   }
   console.log("\nprimeros cambios:");
   for (const p of cambian.slice(0, 8)) {

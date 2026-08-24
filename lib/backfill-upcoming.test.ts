@@ -384,3 +384,29 @@ test("null y cadena vacía son distintos para `cambia`", () => {
   const e = validarSnapshot({ ...s, entradas: [rota], filas_que_cambian: 0, campos_que_cambian: 0 }, DESTINO);
   assert.ok(e.some((x) => /`cambia` dice/.test(x)));
 });
+
+test("YA EN DESTINO: el campo que el sync ya dejó en es-MX no es 'frescura'", () => {
+  // El sync corre antes que el backfill y deja sus filas en es-MX. Para el
+  // backfill, ese valor "no coincide con el es-ES de hoy" — igual que uno
+  // desactualizado. Pero significan lo opuesto: uno está listo y el otro hay que
+  // mirarlo. Mezclarlos hacía que 41 campos ya traducidos aparecieran como
+  // pendientes de revisión en el plan.
+  const p = planificarFila({
+    fila: pelicula({ title: "Sueño de fuga" }),           // el sync ya lo tradujo
+    mx: { title: "Sueño de fuga", overview: "Sinopsis en es-ES." },
+    es: { title: "Cadena perpetua", overview: "Sinopsis en es-ES." },
+  });
+  assert.equal(p.omitidos.title, "ya-en-destino");
+  assert.equal(p.despues.title, "Sueño de fuga");
+  assert.deepEqual(p.cambia, []);
+});
+
+test("y sigue siendo 'frescura' cuando lo guardado no es NI el es-ES NI el es-MX", () => {
+  const p = planificarFila({
+    fila: pelicula({ title: "Un título de hace un mes" }),
+    mx: { title: "Sueño de fuga", overview: "Sinopsis en es-ES." },
+    es: { title: "Cadena perpetua", overview: "Sinopsis en es-ES." },
+  });
+  assert.equal(p.omitidos.title, "frescura");
+  assert.equal(p.despues.title, "Un título de hace un mes");
+});

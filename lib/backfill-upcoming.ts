@@ -11,7 +11,7 @@
 // Function. Acá no hay una segunda implementación del predicado.
 import { fusionarPorCampo, type Localizable, NO_LATINO } from "../supabase/functions/_shared/idioma-nucleo.ts";
 
-export type MotivoOmision = "frescura" | "episodio-404" | "vacio";
+export type MotivoOmision = "frescura" | "episodio-404" | "vacio" | "ya-en-destino";
 
 /** Las tres columnas localizadas, y nada más. */
 export interface ColumnasLocalizadas {
@@ -113,9 +113,20 @@ export function planificarFila(opts: {
     // cambio de contenido que no existe. El orden solo cambia la ETIQUETA:
     // ninguna de las dos ramas escribe nada.
     if (vacio(propuesto[c]) && !vacio(antes[c])) { omitidos[c] = "vacio"; continue; }
-    // FRESCURA: si lo guardado ya no es el es-ES de hoy, la fila cambió por otro
-    // motivo y eso está fuera de alcance. Se conserva y se reporta.
-    if (!igual(antes[c], hoyEs[c])) { omitidos[c] = "frescura"; continue; }
+    if (!igual(antes[c], hoyEs[c])) {
+      // YA ESTÁ EN DESTINO. Lo guardado no coincide con el es-ES de hoy porque
+      // YA es el es-MX: el sync lo escribió antes de que corriera el backfill.
+      // No hay nada que hacer y no hay nada que revisar.
+      //
+      // Se distingue de la frescura a propósito, aunque las dos conserven el
+      // valor: son mensajes opuestos para quien revisa el plan. "Ya en destino"
+      // dice "esto está listo"; "frescura" dice "esto cambió por otro motivo,
+      // andá a mirarlo". Mezclarlos hacía que 41 campos ya traducidos
+      // aparecieran como pendientes de revisión.
+      if (igual(antes[c], propuesto[c])) { omitidos[c] = "ya-en-destino"; continue; }
+      omitidos[c] = "frescura";
+      continue;
+    }
     if (igual(propuesto[c], antes[c])) continue;
     despues[c] = propuesto[c];
   }
