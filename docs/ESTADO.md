@@ -393,6 +393,69 @@ de arriba es la fuente para ese formulario.
 
 ---
 
+## Tanda 3 del idioma: implementada y ENSAYADA, sin desplegar
+
+Rama `feat/idioma-tanda-3`, sin mergear. **Producción intacta**: el cron sigue
+corriendo, la Edge Function sigue en es-ES, no se tocaron secrets y
+`public.upcoming_content` no se escribió ni una vez.
+
+### Qué hay
+
+| Pieza | Estado |
+|---|---|
+| `supabase/functions/_shared/idioma-nucleo.ts` | núcleo compartido por la app, la Edge Function y el backfill |
+| Edge Function con idioma por entorno + fallback | escrita, **no desplegada** |
+| `006_backfill_upcoming_idioma.sql` | **aplicada** en la base |
+| `scripts/backfill-upcoming-idioma.mjs` | escrito y ensayado |
+| Tests | 365 |
+
+### El ensayo integral, cerrado el 2026-08-24
+
+Sobre un espejo `ensayo.upcoming_content` creado con `LIKE ... INCLUDING ALL`,
+en un esquema **no expuesto** en PostgREST, con dos títulos REALES de TMDB que no
+están en la tabla (`movie:278` y `tv:1399`) para ejercitar el camino de películas
+—que producción no puede probar, porque hoy las 43 filas son todas series—.
+
+| Etapa | Resultado |
+|---|---|
+| Sembrar + dry-run | 45 filas, 40 cambian, 58 campos, 181 llamadas a TMDB |
+| Episodio por coordenadas | **verificado**: se pidió `/tv/1399/season/1/episode/1` en los dos idiomas |
+| Aplicar desde el snapshot | 40 filas, verificado con `===` contra `después` |
+| Restaurar | 40 filas, verificado con `===` contra `antes` |
+| `--fallar-en` | abortó con `23502 not-null`, **0 campos cambiados**, tres veces |
+| `public.upcoming_content` | `sha256 492993ee122c0bd5` antes y después: **0 campos distintos** |
+| Limpieza | esquema 0, tablas 0, funciones `ensayo_*` 0, `backfill_upcoming_idioma` 1 |
+
+**El `23502` es la prueba de que el espejo conservó el `NOT NULL`.** Con
+`CREATE TABLE AS SELECT` no habría constraint que violar y el ensayo habría dado
+verde sin probar nada.
+
+**Dos bugs los encontró el ensayo, no la revisión de código:**
+
+1. `ensayo_leer()` no devolvía las coordenadas del episodio, así que los títulos
+   sintéticos —los únicos que no están en la tabla real— caían en el camino del
+   404 y el episodio exacto nunca se ejercitaba.
+2. El script salía con **127** en vez de 1: en Windows, `process.exit()` con
+   stdout en vuelo tumba a libuv. Un script que avisa "esto falló" no puede
+   comunicarlo con un crash.
+
+### Lo que falta, en orden, y necesita aprobación
+
+1. Pausar el cron (`update cron.job set active = false where jobname = 'tmdb-sync-upcoming-daily'`).
+2. Desplegar la Edge Function **inerte** (su default sigue siendo es-ES).
+3. `supabase secrets set IDIOMA_TITULOS=es-MX` y **una** corrida manual del sync.
+4. Dry-run sobre la tabla real → snapshot → revisarlo.
+5. `--aplicar --desde-plan=<ese snapshot>`.
+6. Verificar `/proximamente` contra la ficha del mismo título.
+7. Reactivar el cron.
+
+**El orden importa**: si el backfill fuera antes del sync, la próxima corrida en
+es-ES pisaría lo reparado. Y entre el paso 3 y el 5 el cron tiene que estar
+pausado, o el bloqueo optimista de la RPC va a abortar el backfill — que es lo
+que tiene que hacer, pero mejor no llegar ahí.
+
+---
+
 ## Tanda 2 del idioma: EN PRODUCCIÓN
 
 **Activada el 2026-08-24.** `main` = `361cf5b` (`Merge feat/idioma-tanda-2`),
