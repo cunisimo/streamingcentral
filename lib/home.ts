@@ -39,7 +39,7 @@ import { soloAnimePlatform } from "./audience";
 import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
 import { claveHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import { HUELLA_EN_CLAVES, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
+import { HUELLA_IDIOMA, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
   MINISERIES_KEY, MINISERIES_LISTA_HREF, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso,
@@ -645,7 +645,7 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): C
   // v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
   //      tarjeta más, pero es contenido del payload igual: sin subir la versión
   //      el botón no aparecía hasta 6 h después. Mismo caso que v3.
-  return claveHome(dailySeed(), p, t, HUELLA_EN_CLAVES);
+  return claveHome(dailySeed(), p, t, HUELLA_IDIOMA);
 }
 
 export async function homePayload(opts: {

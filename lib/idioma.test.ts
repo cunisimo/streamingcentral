@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  FALLBACK_ACTIVO, HUELLA_EN_CLAVES, HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK,
+  FALLBACK_ACTIVO, HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK,
   calcularHuella, claveMixta, claveMixtaCon, clavePorId, fusionarPorCampo, metricasIdiomaActuales,
   conRespuesto, indiceMixto, necesitaReparacion, pedirRespaldoIdioma, queReparar,
   repararLote, repararUno, withMetricasIdioma,
@@ -26,17 +26,28 @@ const porId = { clave: clavePorId, activo: ACTIVO };
 // Configuración
 // ============================================================================
 
-test("el idioma base por default es es-ES: la tanda 1 no cambia el idioma", () => {
-  assert.equal(IDIOMA_BASE, "es-ES");
+// El DEFAULT del código sigue siendo es-ES, también en la tanda 2: el cambio a
+// es-MX lo hace `IDIOMA_TITULOS` en el entorno, y eso es lo que permite revertir
+// sin deployar código. Estos tests corren sin la variable, así que describen el
+// estado de reposo, no el de producción.
+test("sin IDIOMA_TITULOS el idioma base es es-ES", () => {
+  assert.equal(process.env.IDIOMA_TITULOS ?? "es-ES", IDIOMA_BASE);
+  if (!process.env.IDIOMA_TITULOS) assert.equal(IDIOMA_BASE, "es-ES");
 });
 
 test("con el idioma base en es-ES el fallback está INERTE", () => {
   assert.equal(IDIOMA_FALLBACK, "es-ES");
-  assert.equal(FALLBACK_ACTIVO, false);
+  if (IDIOMA_BASE === "es-ES") assert.equal(FALLBACK_ACTIVO, false);
 });
 
-test("modo compatible: las claves no llevan huella en la tanda 1", () => {
-  assert.equal(HUELLA_EN_CLAVES, "");
+// TANDA 2. Lo que antes fijaba `HUELLA_EN_CLAVES === ""` ahora lo fija esto:
+// las claves llevan la huella REAL, y con la configuración de producción
+// (es-MX + fallback) esa huella es `es-MX+f.r1`. El barrido de claves.test.ts
+// es la otra mitad — comprueba que todos los constructores la reciban.
+test("las claves llevan la huella de la configuración, no la cadena vacía", () => {
+  assert.notEqual(HUELLA_IDIOMA, "");
+  assert.equal(HUELLA_IDIOMA, calcularHuella(IDIOMA_BASE, process.env.FALLBACK_IDIOMA !== "0"));
+  assert.equal(calcularHuella("es-MX", true), "es-MX+f.r1");
 });
 
 // ============================================================================

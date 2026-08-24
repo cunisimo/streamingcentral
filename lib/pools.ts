@@ -4,7 +4,7 @@ import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveCombinadaCache, clavePoolCache } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import { HUELLA_EN_CLAVES, IDIOMA_FALLBACK, pedirRespaldoIdioma } from "./idioma";
+import { HUELLA_IDIOMA, IDIOMA_FALLBACK, pedirRespaldoIdioma } from "./idioma";
 import { adaptadorLista, adaptadorPaginaCombinada } from "./idioma-adaptadores";
 import { hoyAR } from "./fecha";
 import { codesToTmdbIds } from "./providers-ar";
@@ -137,7 +137,7 @@ export function clavePool(
   tipo: MediaType, plataforma: PlatformCode, receta: Receta, pagina: number,
 ): ClaveLocalizada {
   return clavePoolCache(VERSION, REGION, hoyAR(), tipo, plataforma,
-    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_EN_CLAVES);
+    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_IDIOMA);
 }
 
 // Un pool: una plataforma, una página, una receta.
@@ -209,7 +209,7 @@ export function claveCombinada(
   // clave, igual que en `homeKey`.
   const p = [...providers].sort().join("+");
   return claveCombinadaCache(VERSION, REGION, hoyAR(), tipo, p,
-    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_EN_CLAVES);
+    `${receta.nombre}.${hashParams(receta.params)}`, pagina, HUELLA_IDIOMA);
 }
 
 export interface PaginaCombinada {

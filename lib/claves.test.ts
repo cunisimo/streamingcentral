@@ -15,13 +15,14 @@ import {
 import { calcularHuella } from "./idioma.ts";
 
 // ============================================================================
-// 1. MODO COMPATIBLE: byte a byte lo que producía el código anterior
+// 1. MODO COMPATIBLE: byte a byte lo que producía el código PRE-TANDA-1
 // ============================================================================
-// Si alguna falla, el deploy de la tanda 1 provoca un arranque frío que el plan
-// dice explícitamente que no tiene que haber.
+// Ya no es lo que corre en producción —la tanda 2 puso la huella— pero sigue
+// siendo el "antes" del rollback: son las claves que quedaron escritas en
+// Upstash con es-ES y que nadie tiene que volver a leer por accidente.
 
-test("modo compatible: las once familias producen los bytes de hoy", () => {
-  const H = "";   // HUELLA_EN_CLAVES en la tanda 1
+test("modo compatible: las once familias producen los bytes pre-tanda-1", () => {
+  const H = "";   // la huella vacía, que es lo que se pasaba en la tanda 1
   assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v5:3523671066:d,m,n:");
   assert.equal(
     clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
@@ -41,6 +42,49 @@ test("modo compatible: las once familias producen los bytes de hoy", () => {
   // La familia 11: `search:v2` SÍ es localizada, aunque `searchDeTipo` esté
   // clavado en es-MX — el `knownFor` de las personas sale del idioma base.
   assert.equal(claveSearch("matrix", "d,m,n", H), "search:v2:matrix:d,m,n");
+});
+
+// ============================================================================
+// 1bis. TANDA 2: las claves que produce la configuración de producción
+// ============================================================================
+// Los literales completos, a propósito. Son las claves que van a aparecer en
+// Upstash después del deploy, y tenerlas escritas acá es lo que permite mirar
+// el panel y confirmar que el arranque frío ocurrió una sola vez y en la
+// familia que corresponde. La huella sale de `calcularHuella`, no de una
+// cadena a mano: si la fórmula cambia, este test cambia con ella.
+
+test("tanda 2: las once familias llevan la huella es-MX+f.r1", () => {
+  const H = calcularHuella("es-MX", true);
+  assert.equal(H, "es-MX+f.r1");
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v5:3523671066:d,m,n:");
+  assert.equal(
+    clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
+    "disc:es-MX+f.r1:v1:AR:2026-08-23:movie:n:pop.abc123:p2",
+  );
+  assert.equal(
+    claveCombinadaCache("v1", "AR", "2026-08-23", "tv", "d+m+n", "pop.abc123", 3, H),
+    "disc:es-MX+f.r1:v1:AR:2026-08-23:tv:combo-d+m+n:pop.abc123:p3",
+  );
+  assert.equal(claveCard("movie", 278, H), "card:es-MX+f.r1:movie:278");
+  assert.equal(claveTopPop("n", "movie", H), "top:pop:es-MX+f.r1:n:movie");
+  assert.equal(claveReco("h4sh", H), "reco:es-MX+f.r1:v2:h4sh");
+  assert.equal(claveRecoMismo("tv", 1399, H), "reco:mismo:es-MX+f.r1:tv:1399");
+  assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:es-MX+f.r1:movie:557:d,m,n");
+  assert.equal(claveRecoPerfil("movie", 557, H), "reco:perfil:es-MX+f.r1:v2:movie:557");
+  assert.equal(clavePeoplePopular(3, H), "people:popular:es-MX+f.r1:3");
+  assert.equal(claveSearch("matrix", "d,m,n", H), "search:es-MX+f.r1:v2:matrix:d,m,n");
+});
+
+// El rollback tiene que devolver EXACTAMENTE las claves de es-ES, y esas no son
+// las del modo compatible: `IDIOMA_TITULOS=es-ES` deja huella `es-ES.r1`, no
+// vacía. Es la diferencia entre "vuelve a lo de antes de la tanda 2" (sí) y
+// "vuelve a lo de antes de la tanda 1" (no, y no hace falta: el contenido es el
+// mismo, lo que cambia es que se rearma una vez).
+test("tanda 2: el rollback a es-ES da su propio espacio, no el compatible", () => {
+  const ES = calcularHuella("es-ES", true);
+  assert.equal(ES, "es-ES.r1");
+  assert.equal(claveCard("movie", 278, ES), "card:es-ES.r1:movie:278");
+  assert.notEqual(claveCard("movie", 278, ES), claveCard("movie", 278, ""));
 });
 
 // ============================================================================
@@ -244,4 +288,105 @@ test("EN VERDE: no marca constructores ni claves sin huella", () => {
 test("EN VERDE: people:directors no es localizada", () => {
   assert.equal(esClaveLocalizada("people:directors"), false);
   assert.equal(esClaveLocalizada("people:popular:3"), true);
+});
+
+// ============================================================================
+// 5. BARRIDO DE LA TANDA 2: ningún constructor quedó en modo compatible
+// ============================================================================
+// El barrido de la sección 4 obliga a que las claves salgan de un constructor.
+// Este obliga a lo otro: que ese constructor reciba la huella REAL. Sin él, un
+// call site nuevo podría pasar `""` y quedarse leyendo el espacio viejo —el Home
+// en es-MX y una card en es-ES, sin ningún error a la vista.
+//
+// Es también lo que reemplaza al `assert.equal(HUELLA_EN_CLAVES, "")` de la
+// tanda 1: aquella constante era el interruptor único, y al sacarla hacía falta
+// algo que verificara los once call sites de verdad.
+
+const CONSTRUCTORES = [
+  "claveHome", "clavePoolCache", "claveCombinadaCache", "claveCard", "claveTopPop",
+  "claveReco", "claveRecoMismo", "claveRecoCruce", "claveRecoPerfil", "claveSearch",
+  "clavePeoplePopular",
+];
+
+/** El último argumento de cada llamada a un constructor.
+ *
+ *  Un scanner de paréntesis balanceados y no una regex: las llamadas cruzan
+ *  líneas (lib/pools.ts, lib/reco.ts) y traen templates con paréntesis y comas
+ *  adentro — `${hashParams(receta.params)}`, `.join(",")` —, así que una regex
+ *  cortaba el argumento en el lugar equivocado. Los strings y los comentarios
+ *  se saltean enteros: una coma adentro de `","` no separa argumentos. */
+function llamadasAConstructores(src: string): { nombre: string; ultimo: string }[] {
+  const out: { nombre: string; ultimo: string }[] = [];
+  for (const nombre of CONSTRUCTORES) {
+    const re = new RegExp(`\\b${nombre}\\s*\\(`, "g");
+    for (const m of src.matchAll(re)) {
+      let i = m.index! + m[0].length;   // justo después del "("
+      let profundidad = 1;
+      const comas: number[] = [];
+      const inicio = i;
+      while (i < src.length && profundidad > 0) {
+        const c = src[i];
+        if (c === '"' || c === "'" || c === "`") {
+          const cierre = c;
+          i++;
+          while (i < src.length && src[i] !== cierre) { if (src[i] === "\\") i++; i++; }
+        } else if (c === "/" && src[i + 1] === "/") {
+          while (i < src.length && src[i] !== "\n") i++;
+        } else if (c === "/" && src[i + 1] === "*") {
+          i += 2;
+          while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++;
+          i++;
+        } else if (c === "(" || c === "[" || c === "{") profundidad++;
+        else if (c === ")" || c === "]" || c === "}") profundidad--;
+        else if (c === "," && profundidad === 1) comas.push(i);
+        i++;
+      }
+      const fin = i - 1;   // el ")" que cerró
+      const desde = comas.length ? comas[comas.length - 1] + 1 : inicio;
+      out.push({ nombre, ultimo: src.slice(desde, fin).trim() });
+    }
+  }
+  return out;
+}
+
+test("los once call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
+  const infractores: string[] = [];
+  let total = 0;
+  for (const archivo of [...fuentes("lib"), ...fuentes("app"), ...fuentes("components")]) {
+    for (const l of llamadasAConstructores(readFileSync(archivo, "utf8"))) {
+      total++;
+      if (l.ultimo !== "HUELLA_IDIOMA") infractores.push(`${archivo}: ${l.nombre}(… , ${l.ultimo})`);
+    }
+  }
+  assert.deepEqual(infractores, [],
+    `constructores sin la huella real:\n${infractores.join("\n")}`);
+  // Las once familias, cableadas de una sola vez: es lo que provoca UN arranque
+  // frío y no once. Si aparece una familia nueva, el número sube a propósito.
+  assert.equal(total, 11, `se esperaban 11 llamadas a constructores, hay ${total}`);
+});
+
+// --- El barrido, visto en rojo ----------------------------------------------
+
+test("EN ROJO: detecta un constructor que quedó con la huella vacía", () => {
+  const l = llamadasAConstructores(`return cachedLoc(claveCard(type, id, ""), TTL.catalog, fn);`);
+  assert.deepEqual(l, [{ nombre: "claveCard", ultimo: `""` }]);
+});
+
+test("EN ROJO: detecta una huella que no es HUELLA_IDIOMA", () => {
+  const l = llamadasAConstructores(`claveTopPop(p, t, HUELLA_EN_CLAVES)`);
+  assert.equal(l[0].ultimo, "HUELLA_EN_CLAVES");
+});
+
+test("EN VERDE: no se confunde con comas dentro de strings ni con saltos de línea", () => {
+  const src = [
+    "const k = claveSearch(",
+    '  q.toLowerCase(), [...providers].sort().join(","), HUELLA_IDIOMA);',
+  ].join("\n");
+  assert.deepEqual(llamadasAConstructores(src), [{ nombre: "claveSearch", ultimo: "HUELLA_IDIOMA" }]);
+});
+
+test("EN VERDE: claveReco no matchea claveRecoMismo ni claveRecoPerfil", () => {
+  const src = "claveReco(h, HUELLA_IDIOMA); claveRecoMismo(t, i, HUELLA_IDIOMA);";
+  assert.deepEqual(llamadasAConstructores(src).map((l) => l.nombre).sort(),
+    ["claveReco", "claveRecoMismo"]);
 });

@@ -43,9 +43,14 @@ export function calcularHuella(
 
 export const HUELLA_IDIOMA = calcularHuella(IDIOMA_BASE, FALLBACK_PEDIDO);
 
-// TANDA 1: modo compatible — huella vacía, mismos bytes que antes, ningún
-// arranque frío. En la tanda 2 esto pasa a `HUELLA_IDIOMA`.
-export const HUELLA_EN_CLAVES = "";
+// TANDA 2: se acabó el modo compatible. Las once familias localizadas reciben
+// `HUELLA_IDIOMA` directo (lib/claves.ts), así que el espacio de claves depende
+// de la configuración y el rollback a es-ES es inmediato en vez de esperar a que
+// expiren TTLs de hasta 30 h. `HUELLA_EN_CLAVES` —la constante vacía de la
+// tanda 1— se eliminó a propósito: mientras existiera, un call site nuevo podía
+// quedarse en modo compatible sin que nada lo notara. Lo que impide que vuelva a
+// pasar es el barrido de `lib/claves.test.ts`, que exige que TODA llamada a un
+// constructor pase `HUELLA_IDIOMA`.
 
 // --- Qué hay que reparar: UN SOLO PREDICADO ---------------------------------
 const NO_LATINO = /[^\u0000-\u024F\u2000-\u206F\u20A0-\u20BF\s]/;

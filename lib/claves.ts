@@ -6,11 +6,19 @@
 // en varias): el rollback no revierte nada. Con la huella adentro de la clave,
 // cambiar la configuración selecciona otro espacio y el rollback es inmediato.
 //
-// MODO COMPATIBLE (tanda 1). Hoy se llaman con `HUELLA_EN_CLAVES`, que es la
-// cadena vacía, y por eso producen EXACTAMENTE los mismos bytes que el código
-// anterior. Eso permite cablearlos y probar el barrido sin provocar ningún
-// arranque frío. En la tanda 2 se les pasa `HUELLA_IDIOMA` y ahí ocurre la
-// única invalidación del plan.
+// TANDA 2 — LA HUELLA ESTÁ PUESTA. Las once familias se llaman con
+// `HUELLA_IDIOMA` (lib/idioma.ts), así que hoy producen `card:es-MX+f.r1:movie:278`
+// y no `card:movie:278`. Ahí ocurrió la única invalidación del plan: un solo
+// arranque frío, todas las familias a la vez. Se hicieron juntas a propósito —
+// escalonarlas habría dado un arranque frío por tanda y, peor, un Home mitad
+// es-MX y mitad es-ES mientras durara.
+//
+// El parámetro `huella` sigue siendo un ARGUMENTO y no una lectura del módulo:
+// `HUELLA_IDIOMA` se calcula al importar, y con eso los constructores no se
+// podrían probar en sus cuatro configuraciones sin recargar módulos. La cadena
+// vacía sigue siendo válida y produce los bytes del código pre-tanda-1; lo que
+// la conserva probada es el test de modo compatible, que es también la mitad
+// "antes" del test de rollback.
 //
 // El tipo `ClaveLocalizada` es una marca: `cached()` en las familias de acá
 // exige ese tipo, así que una clave escrita a mano no compila. El test de
