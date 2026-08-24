@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
-  discover, FALLBACK_ACTIVO, IDIOMA_FALLBACK, MediaType, RawTitle, tvDetails,
+  discover, episodeDetails, FALLBACK_ACTIVO, IDIOMA_BASE, IDIOMA_FALLBACK, MediaType,
+  RawTitle, tvDetails,
 } from "../lib/tmdb.ts";
 import { repararLista, repararNombreEpisodio } from "../lib/reparar.ts";
 import { arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
@@ -10,6 +11,23 @@ const WINDOW_DAYS = Number(Deno.env.get("SYNC_WINDOW_DAYS") ?? "90");
 const MAX_PAGES = Number(Deno.env.get("SYNC_MAX_PAGES") ?? "3");
 const GRACE_DAYS = Number(Deno.env.get("SYNC_GRACE_DAYS") ?? "2");
 const BATCH = 10; // concurrencia de llamadas a TMDB por lote
+
+// Metricas de idioma AGREGADAS de toda la corrida. Van en el RESULTADO del job,
+// no solo en el log: verificar una corrida manual no puede depender de
+// reconstruirla leyendo mensajes sueltos.
+interface MetricasIdioma {
+  llamadas: number;     // requests de respaldo que salieron a la red
+  reparados: number;    // titulos/episodios donde la reparacion CAMBIO algo
+  descartados: number;  // se cayeron de la corrida por no poder repararse
+  fallos: number;       // respaldos que fallaron (excepcion o timeout)
+}
+const metricas: MetricasIdioma = { llamadas: 0, reparados: 0, descartados: 0, fallos: 0 };
+const sumar = (r: { llamadas: number; reparados: number; descartados: number; fallo: boolean }) => {
+  metricas.llamadas += r.llamadas;
+  metricas.reparados += r.reparados;
+  metricas.descartados += r.descartados;
+  if (r.fallo) metricas.fallos++;
+};
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const DAY = 86_400_000;
@@ -67,6 +85,7 @@ async function collectMovies(from: string, to: string): Promise<Candidate[]> {
       FALLBACK_ACTIVO,
     );
 
+    sumar(rep);
     for (const t of rep.items) {
       if (!t.release_date) continue;
       out.push({
@@ -121,6 +140,7 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
       `series p${page}`,
       FALLBACK_ACTIVO,
     );
+    sumar(rep);
     for (const t of rep.items) {
       if (!seen.has(t.id)) { seen.add(t.id); shows.push(t); }
     }
@@ -139,13 +159,27 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
       // `episode_name` sale del DETALLE, así que su reparación es aparte de la
       // de la página. Si no se puede reparar, la serie se cae de la corrida: su
       // fila anterior queda intacta y se reintenta mañana.
-      const nombreEp = await repararNombreEpisodio(
+      // Si NECESITABA reparacion y no se pudo reparar, la serie se cae de la
+      // corrida (da igual si el valor roto era vacio o no latino): su fila
+      // anterior queda intacta y se reintenta manana. Escribir `null` seria peor
+      // que no escribir.
+      //
+      // El respaldo se pide por las MISMAS coordenadas del episodio base, no
+      // releyendo `next_episode_to_air` en el otro idioma: entre las dos
+      // llamadas "el proximo" puede haber avanzado y se mezclaria otro episodio.
+      const sn = nx.season_number, en = nx.episode_number;
+      const repEp = await repararNombreEpisodio(
         nx.name,
-        async () => (await tvDetails(t.id, IDIOMA_FALLBACK)).next_episode_to_air?.name ?? null,
-        `episodio tv:${t.id}`,
+        async () => (sn == null || en == null)
+          ? null
+          : (await episodeDetails(t.id, sn, en, IDIOMA_FALLBACK)).name ?? null,
+        `episodio tv:${t.id} T${sn}E${en}`,
         FALLBACK_ACTIVO,
       );
-      if (FALLBACK_ACTIVO && nombreEp === null && (nx.name ?? "").trim()) continue;
+      metricas.llamadas += repEp.llamadas;
+      if (repEp.reparado) metricas.reparados++;
+      if (repEp.descartar) { metricas.descartados++; continue; }
+      const nombreEp = repEp.nombre;
 
       out.push({
         tmdb_id: t.id,
@@ -172,6 +206,8 @@ async function collectSeries(from: string, to: string): Promise<Candidate[]> {
 }
 
 export async function syncUpcoming(sb: SupabaseClient) {
+  // El acumulador es de modulo: se reinicia al empezar cada corrida.
+  metricas.llamadas = 0; metricas.reparados = 0; metricas.descartados = 0; metricas.fallos = 0;
   const now = new Date();
   const from = iso(now);
   const to = iso(new Date(now.getTime() + WINDOW_DAYS * DAY));
@@ -271,5 +307,13 @@ export async function syncUpcoming(sb: SupabaseClient) {
     dropped,
     deleted: expired ?? 0,
     window: { from, to },
+    idioma: {
+      base: IDIOMA_BASE,
+      fallback_activo: FALLBACK_ACTIVO,
+      llamadas_respaldo: metricas.llamadas,
+      reparados: metricas.reparados,
+      descartados_sin_respaldo: metricas.descartados,
+      fallos: metricas.fallos,
+    },
   };
 }

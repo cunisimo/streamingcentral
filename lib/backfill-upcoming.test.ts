@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  episodioRoto, filaDePayload, planificarFila, type FilaGuardada,
+  episodioRoto, filaDePayload, planificarFila, validarSnapshot, type FilaGuardada,
 } from "./backfill-upcoming.ts";
 
 const pelicula = (o: Partial<FilaGuardada> = {}): FilaGuardada => ({
@@ -293,4 +293,94 @@ test("episodioRoto: vacío y alfabeto no latino, nada más", () => {
   // Un nombre de episodio IGUAL al original no es señal de nada: los episodios
   // no tienen `original_name` con el cual comparar.
   assert.equal(episodioRoto("Winter Is Coming"), false);
+});
+
+// ============================================================================
+// VALIDACIÓN DEL SNAPSHOT
+// ============================================================================
+// El snapshot es el contrato entre "esto es lo que revisé" y "esto es lo que se
+// escribe". Entre esos dos momentos es un archivo en disco.
+
+const DESTINO = { tabla: "public.upcoming_content", idioma: "es-MX" };
+
+function snapshot(over: Record<string, unknown> = {}) {
+  const entrada = {
+    clave: "movie:278", tmdb_id: 278, media_type: "movie",
+    antes: { title: "Cadena perpetua", overview: "a", episode_name: null },
+    despues: { title: "Sueño de fuga", overview: "a", episode_name: null },
+    omitidos: {}, cambia: ["title"],
+  };
+  return {
+    tabla: "public.upcoming_content", idioma_destino: "es-MX",
+    filas: 1, filas_que_cambian: 1, campos_que_cambian: 1,
+    entradas: [entrada], ...over,
+  };
+}
+
+test("snapshot válido: sin errores", () => {
+  assert.deepEqual(validarSnapshot(snapshot(), DESTINO), []);
+});
+
+test("EL CHEQUEO QUE MÁS IMPORTA: un snapshot del espejo no se aplica a la tabla real", () => {
+  const e = validarSnapshot(snapshot({ tabla: "ensayo.upcoming_content" }), DESTINO);
+  assert.equal(e.length, 1);
+  assert.match(e[0], /destino equivocado/);
+});
+
+test("y al revés: el snapshot real no se aplica al espejo", () => {
+  const e = validarSnapshot(snapshot(), { tabla: "ensayo.upcoming_content", idioma: "es-MX" });
+  assert.match(e[0], /destino equivocado/);
+});
+
+test("idioma distinto: se rechaza", () => {
+  assert.match(validarSnapshot(snapshot({ idioma_destino: "es-ES" }), DESTINO)[0], /idioma equivocado/);
+});
+
+test("claves repetidas: se rechaza", () => {
+  const s = snapshot();
+  const dup = { ...s.entradas[0] };
+  const e = validarSnapshot({ ...s, entradas: [s.entradas[0], dup], filas: 2, filas_que_cambian: 2, campos_que_cambian: 2 }, DESTINO);
+  assert.ok(e.some((x) => /clave repetida/.test(x)));
+});
+
+test("falta una de las tres columnas en `antes`: se rechaza", () => {
+  const s = snapshot();
+  const rota = { ...s.entradas[0], antes: { title: "x", overview: "a" } };
+  const e = validarSnapshot({ ...s, entradas: [rota] }, DESTINO);
+  assert.ok(e.some((x) => /falta la columna `episode_name`/.test(x)));
+});
+
+test("conteos incoherentes: se rechaza", () => {
+  assert.ok(validarSnapshot(snapshot({ filas: 9 }), DESTINO).some((x) => /`filas`/.test(x)));
+  assert.ok(validarSnapshot(snapshot({ campos_que_cambian: 7 }), DESTINO).some((x) => /campos_que_cambian/.test(x)));
+});
+
+test("`cambia` que no describe la diferencia real: se rechaza", () => {
+  // El caso peligroso: `cambia` vacío con antes != después. El conteo que se le
+  // declara a la RPC saldría de `cambia`, así que mentiría sobre lo que escribe.
+  const s = snapshot();
+  const rota = { ...s.entradas[0], cambia: [] };
+  const e = validarSnapshot({ ...s, entradas: [rota], filas_que_cambian: 0, campos_que_cambian: 0 }, DESTINO);
+  assert.ok(e.some((x) => /`cambia` dice/.test(x)));
+});
+
+test("clave que no coincide con media_type:tmdb_id: se rechaza", () => {
+  const s = snapshot();
+  const rota = { ...s.entradas[0], clave: "tv:278" };
+  assert.ok(validarSnapshot({ ...s, entradas: [rota] }, DESTINO).some((x) => /no coincide/.test(x)));
+});
+
+test("null y cadena vacía son distintos para `cambia`", () => {
+  // La validación usa igualdad EXACTA, igual que la verificación: si tratara
+  // null como "", un snapshot que dice "no cambia nada" pasaría teniendo un
+  // cambio de null a "" adentro.
+  const s = snapshot();
+  const rota = {
+    ...s.entradas[0],
+    antes: { title: "x", overview: null, episode_name: null },
+    despues: { title: "x", overview: "", episode_name: null },
+    cambia: [],
+  };
+  const e = validarSnapshot({ ...s, entradas: [rota], filas_que_cambian: 0, campos_que_cambian: 0 }, DESTINO);
+  assert.ok(e.some((x) => /`cambia` dice/.test(x)));
 });

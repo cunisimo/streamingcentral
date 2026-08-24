@@ -3,13 +3,19 @@
 //
 //   node --env-file=.env.local scripts/backfill-upcoming-idioma.mjs [flags]
 //
-//   --aplicar            escribe. SIN ESTO NO ESCRIBE NADA (dry-run es el default)
-//   --ensayo             trabaja contra la tabla espejo ensayo.upcoming_content
-//   --sembrar            (solo con --ensayo) siembra los dos títulos reales de prueba
-//   --desde=<archivo>    ROLLBACK: restaura `antes` desde un snapshot
-//   --fallar-en=<n>      (solo con --ensayo) inyecta una fila inválida en la
-//                        posición n para comprobar que NO queda nada a medias
-//   --idioma=es-MX       idioma destino (default es-MX)
+//   (sin flags)              DRY-RUN: planifica y ESCRIBE UN SNAPSHOT NUEVO
+//   --aplicar --desde-plan=<f>   aplica EXACTAMENTE ese snapshot aprobado
+//   --aplicar --desde=<f>        ROLLBACK: restaura `antes` desde ese snapshot
+//   --ensayo                 trabaja contra la tabla espejo ensayo.upcoming_content
+//   --sembrar                (solo con --ensayo) siembra los dos títulos reales
+//   --fallar-en=<n>          (solo con --ensayo) inyecta una fila inválida en la
+//                            posición n para comprobar que no queda nada a medias
+//   --idioma=es-MX           idioma destino (default es-MX)
+//
+// APLICAR NO CONSULTA TMDB. Se aplica el plan que se aprobó y nada más: si
+// `--aplicar` volviera a planificar, el catálogo puede haberse movido entre la
+// revisión y la ejecución y se aplicaría un plan distinto del revisado. El
+// snapshot es el contrato, y este script no lo puede reescribir.
 //
 // ============================================================================
 // LAS CINCO REGLAS, y por qué
@@ -40,8 +46,10 @@
 //
 // El fallback usa el MISMO núcleo que la app y que la Edge Function
 // (supabase/functions/_shared/idioma-nucleo.ts). Acá no se reimplementa nada.
-import { readFileSync, writeFileSync } from "node:fs";
-import { filaDePayload, planificarFila } from "../lib/backfill-upcoming.ts";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  filaDePayload, planificarFila, validarSnapshot,
+} from "../lib/backfill-upcoming.ts";
 
 // --- Flags ------------------------------------------------------------------
 const args = Object.fromEntries(process.argv.slice(2).map((a) => {
@@ -52,6 +60,7 @@ const APLICAR = args.aplicar === true;
 const ENSAYO = args.ensayo === true;
 const SEMBRAR = args.sembrar === true;
 const DESDE = typeof args.desde === "string" ? args.desde : null;
+const DESDE_PLAN = typeof args["desde-plan"] === "string" ? args["desde-plan"] : null;
 const FALLAR_EN = args["fallar-en"] !== undefined ? Number(args["fallar-en"]) : null;
 const IDIOMA = typeof args.idioma === "string" ? args.idioma : "es-MX";
 const IDIOMA_FALLBACK = "es-ES";
@@ -62,6 +71,15 @@ if (FALLAR_EN !== null && !ENSAYO) {
 }
 if (SEMBRAR && !ENSAYO) {
   console.error("--sembrar SOLO se permite con --ensayo.");
+  process.exit(2);
+}
+if (DESDE && DESDE_PLAN) {
+  console.error("--desde (rollback) y --desde-plan (aplicación) son excluyentes.");
+  process.exit(2);
+}
+if (APLICAR && !DESDE && !DESDE_PLAN) {
+  console.error("--aplicar exige --desde-plan=<snapshot aprobado> (o --desde=<snapshot> para revertir).");
+  console.error("Se aplica el plan revisado, no uno recalculado en el momento.");
   process.exit(2);
 }
 
@@ -81,6 +99,9 @@ if (APLICAR && !SERVICE) {
 // --- Clientes ---------------------------------------------------------------
 const TMDB = "https://api.themoviedb.org/3";
 let llamadasTmdb = 0;
+// Cada ruta pedida, con su idioma. Es lo que permite DEMOSTRAR que el episodio
+// se pidio por coordenadas exactas y no inferirlo del resultado.
+const rutasPedidas = new Set();
 let enVuelo = 0; const cola = [];
 const adq = () => (enVuelo < 8 ? (enVuelo++, Promise.resolve()) : new Promise((r) => cola.push(r)));
 const lib = () => { const n = cola.shift(); if (n) n(); else enVuelo--; };
@@ -89,6 +110,7 @@ async function tmdb(path, language) {
   await adq();
   try {
     llamadasTmdb++;
+    rutasPedidas.add(`${path}?language=${language}`);
     const r = await fetch(`${TMDB}${path}?language=${language}`, {
       headers: { Authorization: `Bearer ${TMDB_TOKEN}`, accept: "application/json" },
       signal: AbortSignal.timeout(15000),
@@ -114,19 +136,12 @@ async function rpc(fn, body, key = SERVICE) {
 const COLS = "tmdb_id,media_type,title,overview,episode_name,season_number,episode_number";
 
 async function leerFilas() {
-  if (ENSAYO) {
-    // El espejo no tiene endpoint: se lee por función. Pero para planificar
-    // hacen falta también las coordenadas del episodio, que `ensayo_leer` no
-    // devuelve; se toman de la tabla real, que es de donde salió la copia.
-    const espejo = await rpc("ensayo_leer", {}, SERVICE || ANON);
-    const reales = await leerTablaReal();
-    const coords = new Map(reales.map((f) => [clave(f), f]));
-    return espejo.map((e) => ({
-      ...e,
-      season_number: coords.get(clave(e))?.season_number ?? e.season_number ?? null,
-      episode_number: coords.get(clave(e))?.episode_number ?? e.episode_number ?? null,
-    }));
-  }
+  // El espejo no tiene endpoint (el esquema `ensayo` no está expuesto): se lee
+  // por función, y esa función devuelve las COORDENADAS del episodio. Antes se
+  // completaban cruzando con la tabla real, y eso dejaba los títulos sintéticos
+  // —que por definición no están en la tabla real— con `season_number: null`:
+  // el ensayo terminaba probando el camino del 404 en vez del episodio exacto.
+  if (ENSAYO) return rpc("ensayo_leer", {}, SERVICE || ANON);
   return leerTablaReal();
 }
 
@@ -139,8 +154,17 @@ async function leerTablaReal() {
 }
 
 const clave = (f) => `${f.media_type}:${f.tmdb_id}`;
-const vacio = (s) => !(s ?? "").trim();
-const igual = (a, b) => (a ?? "") === (b ?? "");
+
+// DOS igualdades distintas, y mezclarlas fue un bug real.
+//
+// La igualdad SEMÁNTICA —null y "" son lo mismo— vive en el planificador
+// (lib/backfill-upcoming.ts) y sirve para DECIDIR si vale la pena escribir un
+// campo: pasar de null a "" no es un cambio que justifique un UPDATE.
+//
+// Acá solo se usa la EXACTA, porque acá se VERIFICA. Si la verificación usara la
+// semántica, escribir "" donde el snapshot decía null pasaría como correcto y
+// "byte a byte" sería una frase en vez de una comprobación.
+const identico = (a, b) => a === b;
 
 // --- Planificación ----------------------------------------------------------
 // La DECISIÓN vive en lib/backfill-upcoming.ts y es pura: acá solo se hacen los
@@ -166,9 +190,16 @@ async function planificar(filas) {
 }
 
 // --- Snapshot ---------------------------------------------------------------
+// Fecha Y HORA en el nombre, y nunca se pisa uno existente. Un snapshot es el
+// contrato de una aplicación concreta: si dos corridas comparten archivo, el que
+// se revisó deja de existir y no queda cómo revertir.
 function rutaSnapshot() {
-  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
-  return `docs/medidas/snapshot-upcoming-${hoy}-${IDIOMA}${ENSAYO ? "-ensayo" : ""}.json`;
+  const ahora = new Date();
+  const fecha = ahora.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+  const hora = ahora.toLocaleTimeString("en-GB", {
+    timeZone: "America/Argentina/Buenos_Aires", hour12: false,
+  }).replace(/:/g, "");
+  return `docs/medidas/snapshot-upcoming-${fecha}T${hora}-${IDIOMA}${ENSAYO ? "-ensayo" : ""}.json`;
 }
 
 // Se escribe, se RELEE DEL DISCO y se compara. Escribirlo no alcanza: lo que
@@ -187,12 +218,31 @@ function escribirSnapshot(plan) {
       antes: p.antes, despues: p.despues, omitidos: p.omitidos, cambia: p.cambia,
     })),
   };
+  if (existsSync(ruta)) {
+    throw new Error(`el snapshot ${ruta} ya existe: no se sobrescribe (sería tirar el plan que alguien aprobó)`);
+  }
   writeFileSync(ruta, JSON.stringify(doc, null, 1));
   const releido = JSON.parse(readFileSync(ruta, "utf8"));
   if (JSON.stringify(releido) !== JSON.stringify(doc)) {
     throw new Error(`el snapshot ${ruta} no se releyó igual que como se escribió: NO se escribe en la base`);
   }
   return { ruta, doc };
+}
+
+// --- Validación de un snapshot ----------------------------------------------
+// Un snapshot es un archivo de disco que alguien pudo editar, mover o generar
+// contra otra tabla. Antes de que su contenido llegue a la RPC hay que
+// comprobar que es lo que dice ser. La validación vive en
+// lib/backfill-upcoming.ts para poder probarla; acá solo se carga el archivo.
+const TABLA_DESTINO = () => (ENSAYO ? "ensayo.upcoming_content" : "public.upcoming_content");
+
+function cargarSnapshot(ruta) {
+  const doc = JSON.parse(readFileSync(ruta, "utf8"));
+  const errores = validarSnapshot(doc, { tabla: TABLA_DESTINO(), idioma: IDIOMA });
+  if (errores.length) {
+    throw new Error(`el snapshot ${ruta} no es válido para este destino:\n  - ${errores.join("\n  - ")}`);
+  }
+  return doc;
 }
 
 // --- Escritura --------------------------------------------------------------
@@ -218,6 +268,7 @@ async function escribir(entradas, direccion) {
 }
 
 // --- Verificación -----------------------------------------------------------
+// Verificación EXACTA: `===`, no equivalencia. null y "" son distintos acá.
 async function verificar(entradas, esperado) {
   const actual = new Map((await leerFilas()).map((f) => [clave(f), f]));
   const malas = [];
@@ -225,8 +276,10 @@ async function verificar(entradas, esperado) {
     const f = actual.get(e.clave);
     if (!f) { malas.push(`${e.clave}: desapareció`); continue; }
     for (const c of ["title", "overview", "episode_name"]) {
-      if (!igual(f[c], e[esperado][c])) {
-        malas.push(`${e.clave}.${c}: ${JSON.stringify(f[c])} != ${JSON.stringify(e[esperado][c])}`);
+      const enBase = f[c] ?? null;          // PostgREST omite las columnas null
+      const enPlan = e[esperado][c] ?? null;
+      if (!identico(enBase, enPlan)) {
+        malas.push(`${e.clave}.${c}: base=${JSON.stringify(enBase)} plan=${JSON.stringify(enPlan)}`);
       }
     }
   }
@@ -270,15 +323,18 @@ async function sembrar() {
 async function main() {
   console.log(`tabla:   ${ENSAYO ? "ensayo.upcoming_content (ESPEJO)" : "public.upcoming_content (REAL)"}`);
   console.log(`idioma:  ${IDIOMA}  (respaldo ${IDIOMA_FALLBACK})`);
-  console.log(`modo:    ${DESDE ? "ROLLBACK desde " + DESDE : APLICAR ? "APLICAR" : "DRY-RUN"}\n`);
+  const modo = DESDE ? "ROLLBACK desde " + DESDE
+    : DESDE_PLAN ? "APLICAR el plan " + DESDE_PLAN
+    : "DRY-RUN";
+  console.log(`modo:    ${modo}\n`);
 
   if (SEMBRAR) { await sembrar(); console.log(); }
 
-  // ----- Rollback -----
+  // ----- Rollback: `después` esperado, `antes` escrito -----
   if (DESDE) {
-    const doc = JSON.parse(readFileSync(DESDE, "utf8"));
+    const doc = cargarSnapshot(DESDE);
     const entradas = doc.entradas.filter((e) => e.cambia.length);
-    console.log(`snapshot: ${doc.filas} filas, ${entradas.length} para revertir`);
+    console.log(`snapshot validado: ${doc.filas} filas, ${entradas.length} para revertir`);
     if (!APLICAR) {
       console.log("DRY-RUN: no se revierte nada. Agregar --aplicar.");
       return 0;
@@ -287,7 +343,26 @@ async function main() {
     console.log(`revertidas ${n} filas`);
     const malas = await verificar(entradas, "antes");
     if (malas.length) { console.error("LA REVERSIÓN NO COINCIDE:\n  " + malas.join("\n  ")); return 1; }
-    console.log(`verificado: las ${entradas.length} filas coinciden byte a byte con \`antes\``);
+    console.log(`verificado (===): las ${entradas.length} filas coinciden exactamente con \`antes\``);
+    return 0;
+  }
+
+  // ----- Aplicación: SOLO desde un plan aprobado, sin tocar TMDB -----
+  if (DESDE_PLAN) {
+    const doc = cargarSnapshot(DESDE_PLAN);
+    const entradas = doc.entradas.filter((e) => e.cambia.length);
+    console.log(`snapshot validado: ${doc.filas} filas, ${entradas.length} con cambios, ` +
+      `${doc.campos_que_cambian} campos`);
+    console.log("no se consulta TMDB: se aplica exactamente lo que dice el archivo.");
+    if (!APLICAR) {
+      console.log("DRY-RUN: no se aplica nada. Agregar --aplicar.");
+      return 0;
+    }
+    const n = await escribir(entradas, "aplicar");
+    console.log(`actualizadas ${n} filas`);
+    const malas = await verificar(entradas, "despues");
+    if (malas.length) { console.error("LA VERIFICACIÓN FALLÓ:\n  " + malas.join("\n  ")); return 1; }
+    console.log(`verificado (===): las ${entradas.length} filas coinciden exactamente con \`después\``);
     return 0;
   }
 
@@ -318,6 +393,30 @@ async function main() {
     (fbT.length ? ` → ${fbT.map((p) => p.clave).join(" ")}` : ""));
   console.log(`llamadas a TMDB: ${llamadasTmdb}`);
 
+  // --- Comprobacion del ensayo integral -----------------------------------
+  // El ensayo tiene que ejercitar la consulta del EPISODIO EXACTO, no el camino
+  // del 404. Con las coordenadas perdidas eso pasaba en silencio: la serie
+  // sintetica se planificaba como si no tuviera episodio y el camino real nunca
+  // se probaba. Aca se exige la evidencia.
+  if (ENSAYO) {
+    const faltan = SINTETICOS
+      .filter((x) => x.media_type === "tv")
+      .flatMap((x) => [IDIOMA, IDIOMA_FALLBACK].map((l) =>
+        `/tv/${x.tmdb_id}/season/${x.season_number}/episode/${x.episode_number}?language=${l}`))
+      .filter((r) => !rutasPedidas.has(r));
+    if (faltan.length) {
+      throw new Error("el ensayo NO pidio el episodio por coordenadas exactas:\n  - " + faltan.join("\n  - "));
+    }
+    console.log("ensayo: verificado que se pidio el episodio por coordenadas exactas en los dos idiomas");
+    const sinteticos = plan.filter((p) => SINTETICOS.some((x) => `${x.media_type}:${x.tmdb_id}` === p.clave));
+    for (const p of sinteticos) {
+      console.log(`  ${p.clave}: cambia [${p.cambia}] omitidos ${JSON.stringify(p.omitidos)}`);
+    }
+    if (sinteticos.length !== SINTETICOS.length) {
+      throw new Error(`el ensayo esperaba ${SINTETICOS.length} titulos sinteticos en el plan y hay ${sinteticos.length}: sembraste?`);
+    }
+  }
+
   for (const p of plan) for (const [c, m] of Object.entries(p.omitidos)) {
     console.log(`  omitido ${p.clave}.${c} (${m}): se conserva ${JSON.stringify(p.antes[c])}`);
   }
@@ -328,21 +427,13 @@ async function main() {
     }
   }
 
-  if (!APLICAR) {
-    console.log(`\nDRY-RUN: no se escribió nada. Agregar --aplicar.`);
-    const { ruta } = escribirSnapshot(plan);
-    console.log(`snapshot de referencia escrito y releído: ${ruta}`);
-    return 0;
-  }
-
-  // ----- Aplicación -----
+  // El dry-run NO escribe en la base y su único producto es el snapshot, que es
+  // lo que se revisa y lo que después se aplica con --desde-plan.
   const { ruta } = escribirSnapshot(plan);
-  console.log(`\nsnapshot escrito y releído OK: ${ruta}`);
-  const n = await escribir(cambian, "aplicar");
-  console.log(`actualizadas ${n} filas`);
-  const malas = await verificar(cambian, "despues");
-  if (malas.length) { console.error("LA VERIFICACIÓN FALLÓ:\n  " + malas.join("\n  ")); return 1; }
-  console.log(`verificado: las ${cambian.length} filas coinciden byte a byte con \`después\``);
+  console.log(`\nDRY-RUN: no se escribió nada en la base.`);
+  console.log(`plan escrito y releído: ${ruta}`);
+  console.log(`para aplicarlo, después de revisarlo:`);
+  console.log(`  node --env-file=.env.local scripts/backfill-upcoming-idioma.mjs --aplicar --desde-plan=${ruta}${ENSAYO ? " --ensayo" : ""}`);
   return 0;
 }
 

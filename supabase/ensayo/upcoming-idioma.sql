@@ -103,13 +103,22 @@ begin
   return v_n;
 end $$;
 
+-- Devuelve TAMBIÉN las coordenadas del episodio. No es un detalle: sin ellas el
+-- script no puede pedir /tv/{id}/season/{n}/episode/{m} y termina tratando cada
+-- serie como un 404. La primera versión las omitía y las completaba cruzando con
+-- la tabla real — que funciona para las filas copiadas y falla justo para los
+-- títulos SINTÉTICOS, que no están en la tabla real. O sea que el ensayo
+-- integral probaba el camino del 404 y nunca el del episodio exacto: exactamente
+-- el camino que más importa verificar.
 create or replace function public.ensayo_leer()
-returns table (tmdb_id integer, media_type text, title text, overview text, episode_name text)
+returns table (tmdb_id integer, media_type text, title text, overview text,
+               episode_name text, season_number integer, episode_number integer)
 language sql
 security invoker
 set search_path = ''
 as $$
-  select e.tmdb_id, e.media_type, e.title, e.overview, e.episode_name
+  select e.tmdb_id, e.media_type, e.title, e.overview, e.episode_name,
+         e.season_number, e.episode_number
     from ensayo.upcoming_content e
    order by e.media_type, e.tmdb_id;
 $$;

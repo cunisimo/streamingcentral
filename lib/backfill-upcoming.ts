@@ -152,3 +152,75 @@ export function filaDePayload(e: EntradaPlan, direccion: "aplicar" | "revertir")
     nuevo_episode_name: a.episode_name,
   };
 }
+
+// ============================================================================
+// VALIDACIÓN DE UN SNAPSHOT
+// ============================================================================
+// Un snapshot no es un objeto en memoria: es un archivo que estuvo en disco
+// mientras alguien lo revisaba, y que se le pasa a una función que ESCRIBE. Se
+// valida antes de que su contenido llegue a la base.
+//
+// El chequeo que más importa es el de DESTINO: un snapshot del espejo aplicado a
+// la tabla real —o al revés— escribiría valores que nadie revisó para ese
+// destino, y encima con el bloqueo optimista pasando, porque las filas del
+// espejo son copia de las reales.
+
+export interface DestinoSnapshot {
+  tabla: string;
+  idioma: string;
+}
+
+export function validarSnapshot(doc: unknown, destino: DestinoSnapshot): string[] {
+  const errores: string[] = [];
+  const d = doc as {
+    tabla?: unknown; idioma_destino?: unknown; entradas?: unknown;
+    filas?: unknown; filas_que_cambian?: unknown; campos_que_cambian?: unknown;
+  } | null;
+
+  if (!d || typeof d !== "object") return ["no es un objeto JSON"];
+  if (d.tabla !== destino.tabla) {
+    errores.push(`destino equivocado: el snapshot es de \`${String(d.tabla)}\` y se apunta a \`${destino.tabla}\``);
+  }
+  if (d.idioma_destino !== destino.idioma) {
+    errores.push(`idioma equivocado: el snapshot es de \`${String(d.idioma_destino)}\` y se pidió \`${destino.idioma}\``);
+  }
+  if (!Array.isArray(d.entradas)) errores.push("no tiene `entradas`");
+  if (errores.length) return errores;
+
+  const entradas = d.entradas as EntradaPlan[];
+  const vistas = new Set<string>();
+  for (const [i, e] of entradas.entries()) {
+    const donde = `entradas[${i}] (${e?.clave ?? "sin clave"})`;
+    if (typeof e?.tmdb_id !== "number") errores.push(`${donde}: tmdb_id no es número`);
+    if (e?.media_type !== "movie" && e?.media_type !== "tv") errores.push(`${donde}: media_type inválido`);
+    if (e?.clave !== `${e?.media_type}:${e?.tmdb_id}`) errores.push(`${donde}: la clave no coincide con media_type:tmdb_id`);
+    if (vistas.has(e?.clave)) errores.push(`${donde}: clave repetida`);
+    vistas.add(e?.clave);
+
+    for (const lado of ["antes", "despues"] as const) {
+      const o = e?.[lado] as unknown as Record<string, unknown> | undefined;
+      if (!o || typeof o !== "object") { errores.push(`${donde}: falta \`${lado}\``); continue; }
+      for (const c of ["title", "overview", "episode_name"] as const) {
+        if (!(c in o)) errores.push(`${donde}.${lado}: falta la columna \`${c}\``);
+      }
+    }
+
+    if (!Array.isArray(e?.cambia)) { errores.push(`${donde}: \`cambia\` no es un array`); continue; }
+    // `cambia` decide cuántas filas se le declaran a la RPC como esperadas: si
+    // no describe lo que de verdad difiere entre antes y después, el conteo
+    // miente y el bloqueo optimista aborta —o peor, no aborta—.
+    const real = (["title", "overview", "episode_name"] as const)
+      .filter((c) => e.antes?.[c] !== e.despues?.[c]);
+    if ([...real].sort().join(",") !== [...e.cambia].sort().join(",")) {
+      errores.push(`${donde}: \`cambia\` dice [${e.cambia}] pero antes/después difieren en [${real}]`);
+    }
+  }
+
+  if (d.filas !== entradas.length) errores.push(`\`filas\` (${String(d.filas)}) != entradas (${entradas.length})`);
+  const cambian = entradas.filter((e) => e.cambia?.length).length;
+  if (d.filas_que_cambian !== cambian) errores.push(`\`filas_que_cambian\` (${String(d.filas_que_cambian)}) != ${cambian}`);
+  const campos = entradas.reduce((a, e) => a + (e.cambia?.length ?? 0), 0);
+  if (d.campos_que_cambian !== campos) errores.push(`\`campos_que_cambian\` (${String(d.campos_que_cambian)}) != ${campos}`);
+
+  return errores;
+}

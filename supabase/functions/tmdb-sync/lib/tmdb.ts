@@ -91,6 +91,22 @@ export function tvDetails(id: number, language?: string) {
   return tmdb<TvDetail>(`/tv/${id}`, language ? { language } : {});
 }
 
+/**
+ * Un episodio por COORDENADAS EXACTAS.
+ *
+ * Es la única forma correcta de pedir el respaldo del nombre de un episodio.
+ * Volver a leer `next_episode_to_air` en el otro idioma parece equivalente y no
+ * lo es: entre las dos llamadas "el próximo" puede haber avanzado, y entonces se
+ * escribiría el nombre de OTRO episodio en una fila que apunta a este.
+ */
+export function episodeDetails(
+  id: number, season: number, episode: number, language?: string,
+) {
+  return tmdb<{ id: number; name?: string; season_number?: number; episode_number?: number }>(
+    `/tv/${id}/season/${season}/episode/${episode}`, language ? { language } : {},
+  );
+}
+
 export interface RawProviderInfo {
   provider_id: number;
   provider_name: string;
