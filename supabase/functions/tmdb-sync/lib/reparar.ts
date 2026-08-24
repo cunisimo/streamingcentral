@@ -14,11 +14,23 @@
 // popularidad, así que "el próximo sync" puede no llegar nunca. Escribir
 // `런닝맨` en `upcoming_content` es persistirlo, no mostrarlo un rato.
 //
-// Por eso, si el respaldo falla, los títulos que NECESITABAN reparación se caen
-// de esta corrida: no se escriben. Y como también quedan fuera de la lista de
-// evaluados, la reconciliación de `sync-upcoming.ts` tampoco los borra — su fila
-// anterior queda intacta, que es exactamente lo que se quiere. Los sanos de la
-// misma página siguen su camino.
+// Por eso, si LA LLAMADA DE RESPALDO FALLA, los títulos que necesitaban
+// reparación se caen de esta corrida: no se escriben. Y como también quedan
+// fuera de la lista de evaluados, la reconciliación de `sync-upcoming.ts`
+// tampoco los borra — su fila anterior queda intacta. Los sanos de la misma
+// página siguen su camino.
+//
+// PERO "EL RESPALDO NO MEJORA" NO ES LO MISMO QUE "EL RESPALDO FALLÓ", y
+// confundirlos costó caro. La primera versión descartaba las dos cosas, y en la
+// primera corrida real eso tiró 79 títulos de 120: casi todos eran títulos SIN
+// SINOPSIS EN NINGÚN IDIOMA — ni en es-MX ni en es-ES. A esos no los rompió el
+// cambio de idioma; el sync viejo los escribía igual, y con razón. Descartarlos
+// no protegía nada: bajaba la cobertura del descubrimiento a un tercio.
+//
+// La regla correcta es la misma que usa `lib/idioma.ts` en la app: se protege
+// contra NO PODER MIRAR (la llamada se cayó), no contra "miré y no había nada
+// mejor". Si el respaldo responde y no mejora, se escribe la base, que es
+// exactamente lo que se escribía antes de todo esto.
 import {
   fusionarPorCampo, type Localizable, necesitaReparacion, NO_LATINO,
 } from "../../_shared/idioma-nucleo.ts";
@@ -39,19 +51,23 @@ export interface MetricasIdioma {
   llamadas: number;
   /** Titulos o episodios donde la reparacion CAMBIO algo. */
   reparados: number;
-  /** Se cayeron de la corrida por no poder repararse. */
+  /** Se cayeron de la corrida porque la llamada de respaldo FALLO. */
   descartados: number;
+  /** El respaldo respondio y no mejoraba: se escribe la base, igual que antes
+   *  del cambio de idioma. NO es un problema; se cuenta para poder verlo. */
+  sinReparar: number;
   /** Respaldos que fallaron (excepcion o timeout). */
   fallos: number;
 }
 
 export const nuevasMetricas = (): MetricasIdioma =>
-  ({ llamadas: 0, reparados: 0, descartados: 0, fallos: 0 });
+  ({ llamadas: 0, reparados: 0, descartados: 0, sinReparar: 0, fallos: 0 });
 
 export function sumarLote<T>(m: MetricasIdioma, r: ResultadoReparacion<T>): void {
   m.llamadas += r.llamadas;
   m.reparados += r.reparados;
   m.descartados += r.descartados;
+  m.sinReparar += r.sinReparar;
   if (r.fallo) m.fallos++;
 }
 
@@ -64,8 +80,11 @@ export function sumarEpisodio(m: MetricasIdioma, r: ResultadoEpisodio): void {
 export interface ResultadoReparacion<T> {
   /** Lo que se puede escribir. Si el respaldo falló, van solo los sanos. */
   items: T[];
-  /** Cuántos se cayeron de la corrida por no poder repararse. */
+  /** Se cayeron de la corrida porque la llamada de respaldo FALLÓ. */
   descartados: number;
+  /** El respaldo respondió pero no mejoraba: se escribe la base, como antes.
+   *  No es un problema; se cuenta para poder verlo. */
+  sinReparar: number;
   /** Requests de respaldo que de verdad salieron a la red. */
   llamadas: number;
   /** Títulos donde la fusión CAMBIÓ algo. No es lo mismo que detectados. */
@@ -85,18 +104,21 @@ export async function repararLista<T extends Localizable & { id: number }>(
   etiqueta: string,
   activo: boolean,
 ): Promise<ResultadoReparacion<T>> {
-  if (!activo) return { items: base, descartados: 0, llamadas: 0, reparados: 0, fallo: false };
+  if (!activo) return { items: base, descartados: 0, sinReparar: 0, llamadas: 0, reparados: 0, fallo: false };
 
   const rotos = new Set<number>();
   for (const t of base) if (necesitaReparacion(t)) rotos.add(t.id);
-  if (!rotos.size) return { items: base, descartados: 0, llamadas: 0, reparados: 0, fallo: false };
+  if (!rotos.size) return { items: base, descartados: 0, sinReparar: 0, llamadas: 0, reparados: 0, fallo: false };
 
   let respaldo: Localizable[];
   try {
     respaldo = await pedirRespaldo();
   } catch (e) {
     console.error(`[idioma] respaldo falló en ${etiqueta}: se descartan ${rotos.size} título(s) de esta corrida, sin tocar sus filas —`, e);
-    return { items: base.filter((t) => !rotos.has(t.id)), descartados: rotos.size, llamadas: 1, reparados: 0, fallo: true };
+    return {
+      items: base.filter((t) => !rotos.has(t.id)),
+      descartados: rotos.size, sinReparar: 0, llamadas: 1, reparados: 0, fallo: true,
+    };
   }
 
   const porId = new Map<number, Localizable>();
@@ -109,18 +131,25 @@ export async function repararLista<T extends Localizable & { id: number }>(
   // válida que simplemente no trae con qué reparar. Lo que no se pudo reparar se
   // descarta igual, por la misma razón que arriba.
   const items: T[] = [];
-  let descartados = 0, reparados = 0;
+  let sinReparar = 0, reparados = 0;
   for (const t of base) {
     if (!rotos.has(t.id)) { items.push(t); continue; }
     const arreglado = fusionarPorCampo(t, porId.get(t.id));
-    if (arreglado === t) { descartados++; continue; }   // no mejoró: no se escribe
+    if (arreglado === t) {
+      // El respaldo respondió y no había nada mejor. Se escribe la base: es lo
+      // mismo que escribía el sync antes del cambio de idioma. Ver la nota de
+      // arriba sobre por qué descartar acá era un error.
+      sinReparar++;
+      items.push(t);
+      continue;
+    }
     reparados++;
     items.push(arreglado);
   }
-  if (descartados) {
-    console.warn(`[idioma] ${etiqueta}: ${descartados} título(s) sin reparación posible, se descartan de esta corrida`);
+  if (sinReparar) {
+    console.log(`[idioma] ${etiqueta}: ${sinReparar} título(s) sin mejora posible (el respaldo tampoco los tiene); se escriben tal cual`);
   }
-  return { items, descartados, llamadas: 1, reparados, fallo: false };
+  return { items, descartados: 0, sinReparar, llamadas: 1, reparados, fallo: false };
 }
 
 /**
@@ -181,8 +210,11 @@ export async function repararNombreEpisodio(
     return { nombre: null, descartar: true, llamadas: 1, reparado: false, fallo: true };
   }
   if (nombreDeEpisodioRoto(respaldo)) {
-    console.warn(`[idioma] ${etiqueta}: el respaldo del episodio tampoco sirve; se descarta de esta corrida`);
-    return { nombre: null, descartar: true, llamadas: 1, reparado: false, fallo: false };
+    // Mismo criterio que el lote: el respaldo respondió y no sirve, así que se
+    // conserva la base. Es lo que escribía el sync viejo — un episodio sin
+    // nombre en ningún idioma no es un daño del cambio de idioma.
+    console.log(`[idioma] ${etiqueta}: el respaldo del episodio tampoco tiene nombre; se conserva la base`);
+    return { nombre: limpio, descartar: false, llamadas: 1, reparado: false, fallo: false };
   }
   return { nombre: (respaldo ?? "").trim(), descartar: false, llamadas: 1, reparado: true, fallo: false };
 }

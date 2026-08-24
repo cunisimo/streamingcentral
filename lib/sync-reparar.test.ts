@@ -39,18 +39,25 @@ test("base VACÍA + respaldo CAÍDO: se descarta la serie, no se escribe null", 
   assert.equal(r.reparado, false);
 });
 
-test("base VACÍA + respaldo VACÍO: se descarta igual", async () => {
+// CORREGIDO DESPUES DE LA PRIMERA CORRIDA REAL. Antes esto descartaba, y estaba
+// mal: si el episodio no tiene nombre en NINGUN idioma, el cambio de idioma no
+// rompio nada — el sync viejo escribia null igual. Descartar la serie por eso
+// tiraba cobertura sin proteger nada. Se protege contra NO PODER MIRAR, no
+// contra "mire y no habia nada mejor".
+test("base VACÍA + respaldo VACÍO: NO se descarta, se conserva la base", async () => {
   const r = await repararNombreEpisodio("", async () => "", "tv:2 T1E1", ACTIVO);
-  assert.equal(r.descartar, true);
+  assert.equal(r.descartar, false, "el respaldo respondió: no hay nada de qué protegerse");
+  assert.equal(r.nombre, null, "la base era vacía y sigue vacía, como antes del cambio");
+  assert.equal(r.reparado, false);
+});
+
+test("base VACÍA + respaldo con espacios: tampoco descarta", async () => {
+  const r = await repararNombreEpisodio("", async () => "   ", "tv:2b T1E1", ACTIVO);
+  assert.equal(r.descartar, false);
   assert.equal(r.nombre, null);
 });
 
-test("base VACÍA + respaldo con espacios: se descarta (no es un nombre)", async () => {
-  const r = await repararNombreEpisodio("", async () => "   ", "tv:2b T1E1", ACTIVO);
-  assert.equal(r.descartar, true);
-});
-
-test("base NO LATINA + respaldo CAÍDO: se descarta, y no se escribe el coreano", async () => {
+test("base NO LATINA + respaldo CAÍDO: se descarta (la llamada falló)", async () => {
   const r = await repararNombreEpisodio(
     "런닝맨", async () => { throw new Error("timeout"); }, "tv:3 T1E1", ACTIVO,
   );
@@ -141,14 +148,29 @@ test("respaldo caído: los sanos siguen, los rotos se caen de la corrida", async
   assert.deepEqual(r.items.map((t) => t.id), [2], "el sano no se pierde por culpa del roto");
 });
 
-test("el respaldo no trae al roto: ese título se descarta, no se escribe roto", async () => {
+// EL TEST QUE HABRIA EVITADO LA REGRESION. En la primera corrida real, 79
+// titulos de 120 se cayeron por esta rama: eran titulos SIN SINOPSIS EN NINGUN
+// IDIOMA, que el sync viejo escribia sin problema. El descubrimiento paso de
+// ~120 candidatos a 40.
+test("el respaldo responde pero no mejora: se ESCRIBE la base, no se descarta", async () => {
   const base = [
-    { id: 1, title: "런닝맨", overview: "a", original_name: "런닝맨", original_language: "ko" },
+    { id: 1, title: "Sin sinopsis", overview: "", original_name: "Sin sinopsis", original_language: "en" },
+  ];
+  const r = await repararLista(base, async () => [{ id: 1, title: "Sin sinopsis", overview: "" }], "p1", ACTIVO);
+  assert.equal(r.fallo, false, "una respuesta válida no es una caída");
+  assert.equal(r.descartados, 0, "descartar acá tiraba cobertura sin proteger nada");
+  assert.equal(r.sinReparar, 1);
+  assert.deepEqual(r.items, base, "se escribe tal cual, igual que antes del cambio de idioma");
+});
+
+test("respaldo que no trae al título: tampoco se descarta", async () => {
+  const base = [
+    { id: 1, title: "Sin sinopsis", overview: "", original_name: "Sin sinopsis", original_language: "en" },
   ];
   const r = await repararLista(base, async () => [], "p1", ACTIVO);
-  assert.equal(r.fallo, false, "una lista vacía válida no es una caída");
-  assert.equal(r.descartados, 1);
-  assert.deepEqual(r.items, []);
+  assert.equal(r.descartados, 0);
+  assert.equal(r.sinReparar, 1);
+  assert.deepEqual(r.items, base);
 });
 
 test("con el fallback apagado el lote pasa intacto y sin llamadas", async () => {
@@ -194,31 +216,31 @@ test("dos corridas CONCURRENTES no se contaminan las métricas", async () => {
   const [a, b] = await Promise.all([corrida(3, 20), corrida(7, 5)]);
 
   // Si el acumulador fuera de módulo, las dos verían 10 reparados + 2 episodios.
-  assert.deepEqual(a, { llamadas: 2, reparados: 4, descartados: 0, fallos: 0 },
+  assert.deepEqual(a, { llamadas: 2, reparados: 4, descartados: 0, sinReparar: 0, fallos: 0 },
     "la corrida A tiene que ver SOLO sus 3 títulos + 1 episodio");
-  assert.deepEqual(b, { llamadas: 2, reparados: 8, descartados: 0, fallos: 0 },
+  assert.deepEqual(b, { llamadas: 2, reparados: 8, descartados: 0, sinReparar: 0, fallos: 0 },
     "la corrida B tiene que ver SOLO sus 7 títulos + 1 episodio");
 });
 
 test("una corrida que arranca no le borra las métricas a la que ya corría", async () => {
   const vieja = nuevasMetricas();
-  sumarLote(vieja, { items: [], descartados: 2, llamadas: 1, reparados: 5, fallo: true });
+  sumarLote(vieja, { items: [], descartados: 2, sinReparar: 0, llamadas: 1, reparados: 5, fallo: true });
   // Arranca otra: con estado de módulo, este `nuevasMetricas()` era un reset
   // global y la de arriba se quedaba en cero a mitad de camino.
   const nueva = nuevasMetricas();
-  assert.deepEqual(nueva, { llamadas: 0, reparados: 0, descartados: 0, fallos: 0 });
-  assert.deepEqual(vieja, { llamadas: 1, reparados: 5, descartados: 2, fallos: 1 });
+  assert.deepEqual(nueva, { llamadas: 0, reparados: 0, descartados: 0, sinReparar: 0, fallos: 0 });
+  assert.deepEqual(vieja, { llamadas: 1, reparados: 5, descartados: 2, sinReparar: 0, fallos: 1 });
 });
 
-test("sumarEpisodio: un descarte por respaldo CAÍDO cuenta como fallo; uno por respaldo inútil no", async () => {
+test("sumarEpisodio: solo el respaldo CAÍDO descarta y cuenta como fallo", async () => {
   const caido = nuevasMetricas();
   sumarEpisodio(caido, await repararNombreEpisodio("", async () => { throw new Error("x"); }, "e", true));
-  assert.deepEqual(caido, { llamadas: 1, reparados: 0, descartados: 1, fallos: 1 });
+  assert.deepEqual(caido, { llamadas: 1, reparados: 0, descartados: 1, sinReparar: 0, fallos: 1 });
 
   const inutil = nuevasMetricas();
   sumarEpisodio(inutil, await repararNombreEpisodio("", async () => "", "e", true));
-  assert.deepEqual(inutil, { llamadas: 1, reparados: 0, descartados: 1, fallos: 0 },
-    "el respaldo respondió bien, solo que no servía: no es una caída");
+  assert.deepEqual(inutil, { llamadas: 1, reparados: 0, descartados: 0, sinReparar: 0, fallos: 0 },
+    "el respaldo respondió: ni se descarta ni es una caída");
 });
 
 // --- El barrido que impide la regresión -------------------------------------

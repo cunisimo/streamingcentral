@@ -309,6 +309,7 @@ export async function syncUpcoming(sb: SupabaseClient) {
       llamadas_respaldo: metricas.llamadas,
       reparados: metricas.reparados,
       descartados_sin_respaldo: metricas.descartados,
+      sin_mejora_posible: metricas.sinReparar,
       fallos: metricas.fallos,
     },
   };
