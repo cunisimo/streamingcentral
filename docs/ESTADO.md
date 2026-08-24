@@ -533,10 +533,42 @@ también del lado del servidor en los logs de runtime (`environment: preview`,
 hace el dueño con su sesión; lo automatizable es `vercel logs --json`, que está
 autenticado por CLI.
 
-**Al terminar hay que borrar las seis variables de rama** (comando en
-`MANTENIMIENTO.md`) y **recién después** de aprobar el Preview se toca
-Production, en este orden: `IDIOMA_TITULOS=es-MX` en Production → redeploy →
-`scripts/precalentar-home.mjs`.
+### Verificado EN EL PREVIEW, no solo en el banco
+
+El arranque en frío real, leído de los logs de runtime de Vercel:
+
+```
+[home] MISS home:es-MX+f.r1:v5:3439782971:d,m,n,p:accion:movie,…
+[idioma] fallback: 47 llamadas | 47 lotes con rotos | 85 títulos reparados | 0 fallos
+[home] 7121ms total | cache 0ms | 682 comandos | 0 requests | 661 claves (18 hit / 643 miss)
+```
+
+| Qué | Evidencia |
+|---|---|
+| La huella entra en la clave | `home:es-MX+f.r1:v5:…` en el `MISS` **y** en el `HIT` |
+| El payload se guarda y se sirve | `HIT` con **1 comando / 0 requests** |
+| El respaldo no falla en Vercel | **`0 fallos`** sobre 47 llamadas y 85 títulos reparados |
+| Nada roto en la navegación | 100 eventos, 49 rutas, **0 errores 5xx** |
+| El aislamiento, por tercera vía | **682 comandos contados y `0 requests` reales**: se contabiliza el patrón de acceso pero no sale un solo round-trip a Upstash |
+
+**Ese `MISS` es de `d,m,n,p` (cuatro plataformas), no de `n,d,m`**, porque la
+forma de forzar un arranque en frío fue agregar Prime Video. Sus 682 comandos y
+47 llamadas de respaldo **no se comparan** contra los topes de la tabla de
+aceptación, que son de tres plataformas. Lo que sí vale de acá es lo que no
+depende del tamaño: la huella en la clave, el `0 fallos` y el `0 requests`.
+
+**Un detalle del log que confirma otra cosa, de paso**:
+`[ejes] aud-family/tv: "hondo" trajo 1 (piso 24), se cae a "pop" con 69` — el
+guard de ejes que no puede llenar, funcionando en producción real.
+
+### Lo que falta, en orden
+
+1. Borrar las seis variables de rama (comando en `MANTENIMIENTO.md`).
+2. `IDIOMA_TITULOS=es-MX` en **Production**.
+3. Redeploy de producción (editar la variable **no** toca ningún deployment
+   existente).
+4. `scripts/precalentar-home.mjs --base=… --aplicar`, con las combinaciones que
+   decida el dueño.
 
 ### Archivos ajenos, sin registrar y a propósito
 
