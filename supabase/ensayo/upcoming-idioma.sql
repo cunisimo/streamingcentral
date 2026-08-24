@@ -1,6 +1,17 @@
 -- ENSAYO del backfill de idioma. NO es una migración: no va en supabase/migrations
 -- a propósito, porque nada de esto tiene que quedar en la base.
 --
+-- ANTES DE CORRER ESTE ARCHIVO, mirar que hay (es solo lectura):
+--
+--   select n.nspname, c.relname, c.relkind
+--     from pg_namespace n left join pg_class c on c.relnamespace = n.oid
+--    where n.nspname = 'ensayo';
+--   select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--    where n.nspname = 'ensayo' or p.proname like 'ensayo_%';
+--
+-- Lo esperado es CERO filas en las dos. El archivo igual trae la guarda que
+-- frena solo si encuentra algo ajeno, pero mirar primero cuesta diez segundos.
+--
 -- Correr en el SQL editor, con el flujo:
 --   1. este archivo            -> crea el espejo y las funciones auxiliares
 --   2. el script con --ensayo  -> siembra, dry-run, aplica, --fallar-en, restaura
@@ -20,6 +31,54 @@
 -- hacen falta, porque la tabla no tiene FK propias y no es alcanzable desde la
 -- API — el esquema `ensayo` no está en los esquemas expuestos de PostgREST.
 -- ============================================================================
+
+-- ============================================================================
+-- GUARDA: el esquema `ensayo` tiene que no existir, o contener SOLO lo de esta
+-- prueba. Va ANTES de cualquier `drop`, y ese orden es el punto.
+-- ============================================================================
+-- El archivo arrancaba con `drop table if exists ensayo.upcoming_content`. Si
+-- alguien hubiera creado un esquema `ensayo` para otra cosa —y adentro una
+-- tabla con ese nombre—, el drop se la llevaba puesta antes de que nadie mirara
+-- nada. Un esquema llamado "ensayo" es exactamente el nombre que otra persona
+-- elegiria para otra prueba.
+--
+-- Si esto levanta la excepcion: NO seguir, NO borrar nada, y reportar que hay
+-- adentro. La decision de que hacer con objetos ajenos no es de este script.
+do $$
+declare
+  v_existe  boolean;
+  v_ajenos  text;
+begin
+  select exists (select 1 from pg_namespace where nspname = 'ensayo') into v_existe;
+  if not v_existe then
+    raise notice 'El esquema `ensayo` no existe: se crea limpio.';
+    return;
+  end if;
+
+  raise notice 'El esquema `ensayo` YA existe: revisando que no haya nada ajeno.';
+
+  -- Relaciones que no sean nuestra tabla espejo.
+  select string_agg(format('%s (%s)', c.relname, c.relkind), ', ')
+    into v_ajenos
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'ensayo'
+     and c.relkind in ('r', 'v', 'm', 'f', 'p')      -- tablas y vistas, no indices
+     and c.relname <> 'upcoming_content';
+  if v_ajenos is not null then
+    raise exception 'FRENAR: el esquema `ensayo` tiene objetos ajenos a esta prueba: %. No se borro nada.', v_ajenos;
+  end if;
+
+  -- Funciones dentro del esquema.
+  select string_agg(p.proname, ', ') into v_ajenos
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'ensayo';
+  if v_ajenos is not null then
+    raise exception 'FRENAR: el esquema `ensayo` tiene funciones ajenas: %. No se borro nada.', v_ajenos;
+  end if;
+
+  raise notice 'El esquema `ensayo` solo tiene lo de esta prueba: se puede seguir.';
+end $$;
 
 create schema if not exists ensayo;
 
