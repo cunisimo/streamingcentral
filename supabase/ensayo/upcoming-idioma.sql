@@ -86,6 +86,16 @@ drop table if exists ensayo.upcoming_content;
 create table ensayo.upcoming_content
   (like public.upcoming_content including all);
 
+-- `LIKE ... INCLUDING ALL` NO copia RLS: es una de las tres cosas que se quedan
+-- afuera, junto con las foreign keys y las policies. Se activa a mano por dos
+-- motivos: acerca el espejo a la tabla real, que sí lo tiene, y cierra la
+-- advertencia del SQL Editor de verdad en vez de con un argumento.
+--
+-- No afecta al ensayo: el unico rol que toca esta tabla es `service_role`, que
+-- bypassa RLS. Y sin policies, cualquier otro rol no ve nada — que es lo que se
+-- quiere para una tabla de prueba.
+alter table ensayo.upcoming_content enable row level security;
+
 -- --- VERIFICACIÓN de que los constraints llegaron ---------------------------
 -- Si algo de esto no da lo esperado, el ensayo NO vale: frenar acá.
 do $$
