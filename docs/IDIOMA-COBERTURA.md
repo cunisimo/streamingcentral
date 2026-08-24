@@ -1,7 +1,13 @@
 # Reparación de idioma: matriz de cobertura
 
-**2026-08-23 · tanda 1.** Qué superficies producen títulos localizados, cuáles
+**2026-08-23 · tanda 2.** Qué superficies producen títulos localizados, cuáles
 pasan por la reparación y qué pasa si el respaldo falla.
+
+**Desde la tanda 2 las once familias llevan la huella en la clave**
+(`card:es-MX+f.r1:movie:278`). En la tanda 1 corrían en modo compatible, con la
+huella vacía. Lo que decide el espacio de claves es la configuración
+—`IDIOMA_TITULOS` y `FALLBACK_IDIOMA`—, así que un rollback selecciona otro
+espacio en vez de esperar a que expiren TTLs de hasta 30 h.
 
 El mecanismo es **uno solo**: `repararLote` / `repararUno` en `lib/idioma.ts`.
 Ninguna superficie implementa su propia variante — esa era la forma segura de
@@ -30,7 +36,7 @@ solo por el lado de los títulos —que están clavados en es-MX y no cambian—
 pasó por alto que el resultado también trae personas, y que su `knownFor` sale
 del **idioma base**. Con es-MX, medio payload cambia.
 En la tanda 1 conserva sus bytes exactos (`search:v2:<q>:<plats>`); la huella
-entra en la tanda 2 como en las otras diez.
+entra en la tanda 2 como en las otras diez (once en total, contándola).
 
 ## Superficies sin clave propia
 
@@ -124,7 +130,22 @@ frase** — es lo que hacía la primera versión de este documento:
 | Artefacto | Qué mide | Números |
 |---|---|---|
 | `-idioma-fallback.json` | modelo de 72 páginas de discover | 1021 títulos, **57 rotos (5,6%)** en **21 de 72 páginas (29,2%)** |
-| `-idioma-home-e2e.json` | el composer REAL | **107** páginas de discover, **32** de fallback, 612 → 643 llamadas (+5,1%) |
+| `-idioma-home-e2e.json` | el composer REAL, antes de la tanda 1 | **107** páginas de discover, **32** de fallback, 612 → 643 llamadas (+5,1%) |
+| `-idioma-tanda2-e2e.json` | el composer REAL, **con la tanda 2 puesta** | **39 llamadas de respaldo** = 37 páginas de `discover` + 2 detalles; 613 → 651 llamadas (+6,2%), 58 títulos reparados, 0 fallos |
+
+**"Páginas" y "llamadas" no son lo mismo, y la primera redacción las mezcló.**
+Lo que cuenta `lib/idioma.ts` son *llamadas* de respaldo; de esas, 37 son páginas
+de `discover` y 2 son detalles de ficha (`/tv/:id`).
+
+**Y son más que las ~32 que estimó la tanda 1, por una razón conocida:** aquel
+número salió de un banco que tenía el fallback implementado a mano y cableado
+**solo en `pool()`**. La implementación real repara además la consulta combinada,
+las categorías, el recomendador, el top, las personas y la ficha. Más superficies
+reparadas, más páginas: 37 de 107 páginas de `discover` (34,6%), consistente con
+el 30,6% que da el modelo de 72 páginas.
+
+La línea de base es **613**, no 612: la tanda 1 movió el número y la base se
+rehízo antes de comparar. Los 612 son referencia histórica.
 
 El modelo da la **tasa**; el end-to-end da el **coste**. Sobre el modelo:
 

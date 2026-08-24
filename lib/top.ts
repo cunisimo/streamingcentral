@@ -3,7 +3,7 @@ import { cardsByIds, listByCategoryCacheable } from "./enrich";
 import { latestWeekRows } from "./netflix-top10";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveTopPop } from "./claves";
-import { HUELLA_EN_CLAVES } from "./idioma";
+import { HUELLA_IDIOMA } from "./idioma";
 import { platformOrder } from "./providers-ar";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
@@ -42,7 +42,7 @@ async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<To
   // Si la reparación de idioma falló, el bloque se devuelve igual pero NO se
   // guarda: si no, un top sin reparar quedaba congelado 24 h.
   const senal = { fallo: false };
-  const items = await cachedLocIf(claveTopPop(platform, tipo, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+  const items = await cachedLocIf(claveTopPop(platform, tipo, HUELLA_IDIOMA), TTL.catalog, async () => {
     const r = await listByCategoryCacheable({
       tipo, providers: [platform], sortBy: "popularity.desc",
       // Explícito, no el default de discover(): "lo más popular ahora" con

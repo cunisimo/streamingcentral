@@ -19,7 +19,7 @@ import { getEditorial, publishedIds } from "./reviews";
 import { cached, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
 import { claveCard, clavePeoplePopular, claveSearch } from "./claves";
 import {
-  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
+  HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
   conRespuesto, indiceMixto, pedirRespaldoIdioma, repararLote,
 } from "./idioma";
 import { adaptadorCard, adaptadorLista } from "./idioma-adaptadores";
@@ -727,7 +727,7 @@ export async function search(query: string, providers: PlatformCode[] = []) {
   // personas sale del idioma base.
   let fallo = false;
   return cachedLocIf(
-    claveSearch(q.toLowerCase(), [...providers].sort().join(","), HUELLA_EN_CLAVES),
+    claveSearch(q.toLowerCase(), [...providers].sort().join(","), HUELLA_IDIOMA),
     TTL.search,
     async () => {
       const r = await buscarYOrdenar(q, providers);
@@ -823,7 +823,7 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
 // es por popularidad. Paginamos de a ~20 con "Cargar más".
 export async function popularPeople(page = 1): Promise<{ people: UIPerson[]; hasMore: boolean }> {
   let fallo = false;
-  return cachedLocIf(clavePeoplePopular(page, HUELLA_EN_CLAVES), TTL.providers, async () => {
+  return cachedLocIf(clavePeoplePopular(page, HUELLA_IDIOMA), TTL.providers, async () => {
     const res = await personPopular(page);
 
     // `knownFor` son TÍTULOS localizados: la lista de actores también entra en
@@ -1154,7 +1154,7 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
   // congelada 24 h bajo una clave con fallback, y la ruleta y los rieles de
   // votos —que se arman con `card:`— la servían hasta que expirara.
   let fallo = false;
-  return cachedLocIf(claveCard(type, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+  return cachedLocIf(claveCard(type, id, HUELLA_IDIOMA), TTL.catalog, async () => {
     try {
       const [rep, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
       const d = rep.detalle;

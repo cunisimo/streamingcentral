@@ -39,7 +39,7 @@ import "server-only";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil } from "./claves";
 import {
-  HUELLA_EN_CLAVES, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
+  HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
   pedirRespaldoIdioma, repararLote, repararUno,
   withMetricasIdioma,
 } from "./idioma";
@@ -163,7 +163,7 @@ const detalleRespaldo = (tipo: MediaType, id: number) =>
 
 async function recomendadosDe(tipo: MediaType, id: number): Promise<RawTitle[]> {
   let fallo = false;
-  return cachedLocIf(claveRecoMismo(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+  return cachedLocIf(claveRecoMismo(tipo, id, HUELLA_IDIOMA), TTL.catalog, async () => {
     // `/recommendations` viene dentro de titleDetails vía append_to_response, así
     // que esto no cuesta una llamada extra sobre la ficha.
     const d = await detalleBase(tipo, id);
@@ -201,7 +201,7 @@ async function perfilDe(tipo: MediaType, id: number): Promise<PerfilTematico> {
   // por cada título ya cacheado — y encima solo hasta que expire el TTL, así que
   // sería un bug que se cura solo y no se puede reproducir después.
   let falloPerfil = false;
-  return cachedLocIf(claveRecoPerfil(tipo, id, HUELLA_EN_CLAVES), TTL.catalog, async () => {
+  return cachedLocIf(claveRecoPerfil(tipo, id, HUELLA_IDIOMA), TTL.catalog, async () => {
     // `titulo` se guarda en el cache y es localizado. Hoy solo se usa para
     // puntuar y para los logs, pero una clave localizada que no se repara es
     // una clave que va a mostrar el idioma viejo el día que alguien la muestre.
@@ -240,7 +240,7 @@ async function cruzadosDe(
   if (!ids.length) return { items: [], hubo: false };
   let falloCruce = false;
   const items = await cachedLocIf(
-    claveRecoCruce(tipo, id, [...providers].sort().join(","), HUELLA_EN_CLAVES),
+    claveRecoCruce(tipo, id, [...providers].sort().join(","), HUELLA_IDIOMA),
     TTL.catalog,
     async () => {
       const params = {
@@ -311,7 +311,7 @@ export async function recomendaciones(opts: {
     [...opts.senales].map((s) => `${s.tipo}:${s.id}:${s.peso}`).sort().join(","),
     [...opts.excluir].sort().join(","),
     [...opts.providers].sort().join(","),
-  ), HUELLA_EN_CLAVES);
+  ), HUELLA_IDIOMA);
   // El riel entero: si alguna reparación de adentro falló, se sirve igual pero
   // NO se guarda. Con TTL.reco de 6 h, un riel sin reparar quedaría congelado
   // aunque cada `card:` de adentro sí se haya protegido por separado.

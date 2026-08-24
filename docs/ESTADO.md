@@ -1,7 +1,7 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 17 de agosto de 2026.**
+> **Última actualización: 23 de agosto de 2026.**
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -12,9 +12,14 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ## Estado de despliegue
 
 ```
-origin/main   ab4e189   ← main al día, nada sin pushear
-feat/ejes-rieles-genero  1912f56   ← pusheada como respaldo, SIN mergear
+origin/main               5fc0c2e   ← al día; la tanda 1 del idioma ya está desplegada
+feat/idioma-tanda-2       c29c23e   ← LOCAL, sin pushear: espera el Preview aislado
+feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
 ```
+
+**Este bloque se actualiza en el mismo commit que mueve `main`.** Quedó tres
+semanas diciendo `ab4e189` mientras `main` iba por `5fc0c2e`, y un SHA viejo acá
+es peor que ninguno: se lee como "esto es lo que hay desplegado".
 
 `feat/ejes-rieles-genero` está en el remoto solo para que no viva en una sola
 máquina. **No está mergeada**: espera la prueba a mano del dueño, y tiene un
@@ -388,37 +393,202 @@ de arriba es la fuente para ese formulario.
 
 ---
 
-## Rama actual: `feat/idioma-tanda-1`
+## Rama actual: `feat/idioma-tanda-2`
 
-Tanda 1 del plan de idioma (`docs/medidas/2026-08-23-idioma-plan.md`).
-**Sin mergear**, a la espera de la prueba manual del dueño.
+Tanda 2 del plan de idioma (`docs/medidas/2026-08-23-idioma-plan.md`).
+**Sin mergear y sin tocar producción**: producción sigue en `es-ES`.
 
-Qué hace y qué no:
+**Un solo cambio de código**: los once call sites pasaban `HUELLA_EN_CLAVES` —la
+cadena vacía del modo compatible de la tanda 1— y ahora pasan `HUELLA_IDIOMA`.
+Con eso la clave depende de la configuración: `card:es-MX+f.r1:movie:278` en vez
+de `card:movie:278`. Las once familias juntas, que es lo que provoca **un** solo
+arranque frío en vez de once, y evita un Home mitad es-MX y mitad es-ES mientras
+durara el escalonamiento.
 
-- **No cambia el idioma.** `IDIOMA_BASE` sale de `IDIOMA_TITULOS` y su default
-  sigue siendo `es-ES`. El cambio es la tanda 2, y se hace con la variable.
-- **No invalida ninguna clave.** Los once constructores de `lib/claves.ts`
-  corren en *modo compatible* y producen los mismos bytes que antes.
-- **Lo único visible:** el aviso "En Disney+, buscala como «High Anxiety»" en
-  `movie:12535`.
+`HUELLA_EN_CLAVES` se **eliminó** en vez de repuntarse: mientras existiera, un
+call site nuevo podía quedarse en modo compatible sin que nada lo notara, y el
+síntoma no es un error sino títulos mezclados. En su lugar hay un barrido nuevo
+(`lib/claves.test.ts`) que exige `HUELLA_IDIOMA` en **todas** las llamadas a un
+constructor y fija el total en 11. Visto en rojo inyectando `""` en `lib/top.ts`.
 
-Piezas: `lib/idioma.ts` (predicado, fusión, mecanismo de lote, métricas por
-request), `lib/claves.ts`, `lib/consultas-verificadas.ts`,
-`lib/single-flight.ts`, `lib/recordatorio-texto.ts` y
-`components/AyudasBusqueda.tsx`. Matriz de cobertura en
-`docs/IDIOMA-COBERTURA.md`.
+El idioma base, el fallback, `ayudaOriginal` y la consulta verificada ya estaban
+implementados y probados desde la tanda 1: **se encienden con la variable, sin
+tocar código.**
 
-Kill switches (**requieren redeploy**): `CONSULTA_VERIFICADA=0`,
-`FALLBACK_IDIOMA=0`, y `IDIOMA_TITULOS` que es la tanda 2.
+### Medición, contra una línea de base NUEVA
+
+Los 612 / 655 del informe de la tanda 1 son **referencia histórica**: la tanda 1
+movió esos números. Todo en `docs/medidas/2026-08-23-idioma-tanda2-e2e.json`.
+
+| Home frío `n,d,m` | Base (es-ES) | Tanda 2 (es-MX+f) | Tope | |
+|---|---|---|---|---|
+| Llamadas a TMDB | 613 · 613 · 613 | 651 · 652 · 651 | ≤ 660 | ✅ |
+| Comandos de Upstash | 656 · 656 · 656 | 656 · 658 · 656 | ≤ 670 | ✅ |
+| Llamadas de respaldo | 0 | 39 = **37 páginas + 2 detalles** | ~32 páginas | ✅ |
+| Payload | 84.413 B | 84.750 B | ≤ 85.000 B | ✅ |
+| **Tiempo frío (pared)** | 8,07 · 7,69 · 7,90 s | 8,46 · 8,53 · 7,06 s | — | ✅ |
+| **Tiempo frío (composer)** | 5.895 · 5.518 · 5.747 ms | 6.079 · 6.029 · 5.725 ms | — | ✅ |
+| Home caliente | 1 comando, 0 TMDB | 1 comando, 0 TMDB | igual | ✅ |
+| `degradado` / `fallos` | false / 0 | false / 0 | | ✅ |
+| Títulos por riel | 20·40·30·20×6·20·39·39 | **idénticos** | idénticos | ✅ |
+
+**Las dos variantes se midieron alternadas en la misma ventana**, tres corridas
+cada una. Es la corrección más importante de esta revisión: la primera comparó
+dos ventanas separadas por hora y media y le atribuyó al idioma lo que era
+deriva del catálogo de TMDB.
+
+**Corrección importante sobre la primera revisión de esta medición.** Se publicó
+que el idioma cambiaba las cantidades por riel (family 40→39, adult-anime 38→39)
+y que "casi todos los rieles difieren". **Las dos cosas eran deriva del catálogo,
+no del idioma.** Medido en la misma ventana:
+
+| Comparación | Rieles con contenido distinto |
+|---|---|
+| es-ES contra es-ES (control) | 0 de 12 |
+| es-MX contra es-MX (control) | 0 de 12 |
+| **es-ES contra es-MX** | **1 de 12** |
+
+El único que se mueve es "Últimos lanzamientos": 19 de 20 títulos en la misma
+posición, uno cambiado. Es el riel que ordena por fecha y sin piso de votos, así
+que el borde entre entrar y no entrar es de horas. El hero es idéntico.
+
+La causa de fondo sigue siendo real —**TMDB ordena `discover` por idioma**, 18 de
+20 en la misma posición en la página 1— pero su efecto sobre el Home es de un
+título en 314, no de un riel entero.
+
+### El pico de 27 segundos: era TMDB, no el fallback
+
+La primera medición tuvo una corrida de `es-MX` de 27,2 s en frío y quedó sin
+explicar. Cuatro evidencias:
+
+1. **`es-ES` también lo hace**: una corrida de `es-ES` dio 21,2 s de pared y
+   17,5 s de composer, con **cero** llamadas de respaldo.
+2. En la misma ventana, `es-ES` y `es-MX` dan **5.747 y 5.725 ms**: indistinguibles.
+3. Aislado contra su propio control (`FALLBACK_IDIOMA=0`), el fallback cuesta
+   **440 ms**, no 18 segundos.
+4. **No es el compilado de `next dev`**: `/api/home` compila en 1,3-2,3 s en
+   todas las corridas, incluidas las lentas.
+
+**Lo que sí lo explica, demostrado:** se lanzó el script de medición (144
+requests a 16 concurrentes) y encima un Home frío. **TMDB empezó a devolver 502**
+en `/watch/providers` y el Home salió degradado. TMDB se degrada bajo
+concurrencia: primero se pone lento, después falla. Las corridas lentas venían
+justo después de ráfagas de medición.
+
+De yapa, esa corrida degradada confirmó dos cosas del diseño **en vivo**: `safe`
+degrada riel por riel en vez de tirar el Home entero, y `cachedIf` **no guarda**
+un payload degradado.
+
+**Regla: no medir tiempos con otra cosa pegándole a TMDB al mismo tiempo.** Los
+conteos (llamadas, comandos, bytes, títulos) aguantan; los tiempos no.
+
+### Ensayo de rollback
+
+`IDIOMA_TITULOS=es-ES` devuelve **exactamente** la línea de base: mismas
+llamadas, mismos comandos, mismo payload, los mismos 12 rieles, el mismo hero y
+las 7 fichas de control idénticas.
+
+**Lo que el rollback NO devuelve es el cache.** La huella pasa a `es-ES.r1`, que
+no es el espacio vacío de la tanda 1: **volver atrás cuesta un segundo arranque
+frío**. Es el precio de que el rollback sea inmediato en vez de esperar TTLs de
+hasta 30 h.
+
+### Qué mirar a mano (Preview)
+
+1. `[home] MISS home:es-MX+f.r1:v5:…` en el primer request. Si dice `HIT`, la
+   huella no llegó.
+2. `movie:278` → "Sueño de fuga", y **ahora sí** aparece el respaldo original.
+3. `movie:12535` → sigue la ayuda verificada de Disney+, **sin** duplicarla con
+   el respaldo genérico.
+4. `tv:1399` → "Game of Thrones"; `movie:585` → "Monsters, Inc.";
+   `movie:1084242` → "Zootopia 2". El pasaje al inglés **no** se repara.
+5. `/top` y `/personas`: las dos superficies de `top:pop:` y `people:popular:`,
+   las claves menos obvias.
+6. La ruleta: encabezado y cuerpo sin contradicción. Se esperan **cero**
+   contradicciones conocidas.
+
+### El Preview: aislado y desplegado
+
+```
+https://streamingcentral-git-feat-4b4d31-jfgalindez-gmailcoms-projects.vercel.app
+```
+
+**Producción sigue en `es-ES` y sus variables no se tocaron.**
+
+**El plan decía "sacar `KV_*` del scope Preview" y eso no se puede hacer sin
+romper producción.** La integración crea **una sola entrada por variable con los
+dos targets** (`Production, Preview`), así que borrar "la de Preview" se lleva
+puesta la de Production — y producción sin Redis rearma el Home entero en cada
+request. Lo que se hizo en cambio: **variables de Preview acotadas a la rama**,
+que conviven con la entrada compartida y la pisan solo ahí. Las cinco de Redis
+en vacío (`lib/cache.ts` exige URL y token no vacíos) más `IDIOMA_TITULOS=es-MX`.
+Procedimiento completo, con la trampa del orden, en `docs/MANTENIMIENTO.md`.
+
+**Verificado, no asumido:** `GET /api/health` en el Preview devuelve **503** con
+`cache: "memoria"`, `fuente: null` y las dos credenciales en `false`. Confirmado
+también del lado del servidor en los logs de runtime (`environment: preview`,
+`branch: feat/idioma-tanda-2`, `503`).
+
+**Los Previews están detrás de Vercel SSO**, así que la verificación visual la
+hace el dueño con su sesión; lo automatizable es `vercel logs --json`, que está
+autenticado por CLI.
+
+### Verificado EN EL PREVIEW, no solo en el banco
+
+El arranque en frío real, leído de los logs de runtime de Vercel:
+
+```
+[home] MISS home:es-MX+f.r1:v5:3439782971:d,m,n,p:accion:movie,…
+[idioma] fallback: 47 llamadas | 47 lotes con rotos | 85 títulos reparados | 0 fallos
+[home] 7121ms total | cache 0ms | 682 comandos | 0 requests | 661 claves (18 hit / 643 miss)
+```
+
+| Qué | Evidencia |
+|---|---|
+| La huella entra en la clave | `home:es-MX+f.r1:v5:…` en el `MISS` **y** en el `HIT` |
+| El payload se guarda y se sirve | `HIT` con **1 comando / 0 requests** |
+| El respaldo no falla en Vercel | **`0 fallos`** sobre 47 llamadas y 85 títulos reparados |
+| Nada roto en la navegación | 100 eventos, 49 rutas, **0 errores 5xx** |
+| El aislamiento, por tercera vía | **682 comandos contados y `0 requests` reales**: se contabiliza el patrón de acceso pero no sale un solo round-trip a Upstash |
+
+**Ese `MISS` es de `d,m,n,p` (cuatro plataformas), no de `n,d,m`**, porque la
+forma de forzar un arranque en frío fue agregar Prime Video. Sus 682 comandos y
+47 llamadas de respaldo **no se comparan** contra los topes de la tabla de
+aceptación, que son de tres plataformas. Lo que sí vale de acá es lo que no
+depende del tamaño: la huella en la clave, el `0 fallos` y el `0 requests`.
+
+**Un detalle del log que confirma otra cosa, de paso**:
+`[ejes] aud-family/tv: "hondo" trajo 1 (piso 24), se cae a "pop" con 69` — el
+guard de ejes que no puede llenar, funcionando en producción real.
+
+### Lo que falta, en orden
+
+1. Borrar las seis variables de rama (comando en `MANTENIMIENTO.md`).
+2. `IDIOMA_TITULOS=es-MX` en **Production**.
+3. Redeploy de producción (editar la variable **no** toca ningún deployment
+   existente).
+4. `scripts/precalentar-home.mjs --base=… --aplicar`, con las combinaciones que
+   decida el dueño.
 
 ### Archivos ajenos, sin registrar y a propósito
 
-Estos tres son del dueño, son **preexistentes** y **no** pertenecen a ninguna
-rama de idioma. Aparecen como `??` en `git status` y así tienen que quedar:
+Estos **cuatro** son del dueño, son **preexistentes** y **no** pertenecen a
+ninguna rama de idioma:
 
-- `prompts/noticias-filtro.md`
-- `prompts/noticias-redaccion.md`
-- `supabase/migrations/004_news.sql`
+| Archivo | Cómo está protegido |
+|---|---|
+| `prompts/noticias-filtro.md` | aparece como `??`; hay que no agregarlo a mano |
+| `prompts/noticias-redaccion.md` | ídem |
+| `supabase/migrations/004_news.sql` | ídem |
+| `.claude/settings.local.json` | **`.gitignore` del repo** |
+
+**El cuarto faltaba en esta lista y estaba peor protegido que los otros tres.**
+`git status` no lo mostraba, y eso no era porque estuviera a salvo: lo tapaba el
+ignore GLOBAL de esta máquina (`~/.config/git/ignore`). En cualquier otro clon,
+un `git add -A` lo habría incluido — y es configuración de permisos, no del
+proyecto. Ahora está en el `.gitignore` del repo, así que la protección viaja
+con él. `.claude/settings.json` y `.claude/launch.json` **sí** se versionan: esa
+es la parte compartida.
 
 La tabla `news_items` ya está aplicada en la base, pero su migración sigue sin
 versionar — es una decisión pendiente del dueño, no un olvido.

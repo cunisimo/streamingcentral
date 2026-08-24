@@ -80,7 +80,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:v5:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  `home:<huella de idioma>:v5:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
   manda la cuota de Upstash, ver el comentario de `TTL.home`). La versión de la
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
@@ -108,6 +108,36 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "No gustaron" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **El idioma de los títulos sale de una variable, y la configuración va DENTRO
+  de la clave de cache** (`lib/idioma.ts` → `HUELLA_IDIOMA`, `lib/claves.ts`).
+  `IDIOMA_TITULOS` decide el idioma base (default `es-ES`) y `FALLBACK_IDIOMA`
+  decide si lo que TMDB no traduce se repara pidiendo el respaldo en `es-ES`.
+  Las **once** familias de claves localizadas llevan la huella
+  (`card:es-MX+f.r1:movie:278`), y eso es lo que hace que un rollback revierta de
+  verdad: sin la huella, volver a `es-ES` seguiría leyendo títulos mexicanos de
+  las mismas claves hasta que expiraran TTLs de hasta 30 h. **El precio es que
+  cada cambio de configuración cuesta un arranque frío**, ida y vuelta.
+  Medido con las dos variantes alternadas en la misma ventana: `es-ES` →
+  `es-MX` con fallback son **+38 llamadas a TMDB (+6,2%)**, entre **+0 y +2**
+  comandos de Upstash (la reparación se guarda bajo la MISMA clave) y **+337 B**
+  de payload. Las 38-39 llamadas de respaldo son **37 páginas de `discover` + 2
+  detalles de ficha**, no 39 páginas. Aislado contra su propio control
+  (`FALLBACK_IDIOMA=0`), el fallback cuesta **+440 ms** en un Home frío. **Lo que NO se repara es el pasaje al inglés**: los 38
+  títulos donde `es-MX` devuelve "Monsters, Inc.", "Moana 2" o "Game of Thrones"
+  son los nombres publicados en Argentina, y hay tests que lo fijan.
+  **TMDB ordena `discover` por idioma**: mismo query, mismos ids, otro orden (18
+  de 20 en la misma posición en la página 1). El efecto sobre el Home es chico y
+  está medido: en la misma ventana, **11 de 12 rieles traen los mismos títulos en
+  el mismo orden** y el hero es idéntico; el único que se mueve es "Últimos
+  lanzamientos" (un título de 20), que ordena por fecha y sin piso de votos.
+  **La trampa de medición es otra y es más grande: el catálogo de TMDB deriva
+  solo.** Comparar una corrida de hoy contra una foto de hace una hora atribuye
+  al cambio lo que era deriva — pasó, y se publicó una conclusión equivocada
+  sobre las cantidades por riel. Las dos variantes se miden **alternadas en la
+  misma ventana**, y el control es correr la misma variante dos veces: si el
+  composer es determinístico, da 0 diferencias.
+  `searchDeTipo` está clavado en `es-MX` y `searchTitles` en `en-US` (matchea el
+  TSV de Netflix): ninguno de los dos sigue al idioma base.
 - **"Miniseries para ansiosos"** (`lib/miniseries.ts` + el cableado en
   `lib/home.ts`) va debajo de "Documental" y arriba de los dos de audiencia; esa
   posición ES su prioridad de dedup. Solo `tv` y sin toggle. La condición es

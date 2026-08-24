@@ -478,11 +478,100 @@ la medición de +llamadas y +comandos daría un número falso y optimista.
 
 | | Cómo | Costo | Contra |
 |---|---|---|---|
-| **A. Preview sin Redis** *(recomendada)* | Sacar `KV_*` del scope Preview, o definirlas vacías ahí. `lib/cache.ts` cae al cache en memoria | 0 | Preview más lento y sin cache entre instancias. Para probar funcionalidad alcanza |
+| **A. Preview sin Redis** *(recomendada)* | Neutralizar `KV_*` en Preview. `lib/cache.ts` cae al cache en memoria | 0 | Preview más lento y sin cache entre instancias. Para probar funcionalidad alcanza |
 | B. Namespace separado | Un prefijo por entorno en todas las claves | 0 | Código nuevo en el camino crítico, para un problema que dura una tanda |
 
+### "Sacar `KV_*` del scope Preview" NO se puede — hacerlo así
+
+**La primera redacción de esto decía "sacar `KV_*` del scope Preview" y es una
+instrucción peligrosa.** La integración crea **una sola entrada por variable con
+los dos targets**:
+
+```
+KV_REST_API_URL    Sensitive    Production, Preview
+KV_REST_API_TOKEN  Sensitive    Production, Preview
+```
+
+No hay una entrada de Preview separada que borrar. Un `vercel env rm
+KV_REST_API_URL preview` sobre una entrada compartida se lleva puesta también la
+de Production, y **producción sin Redis cae al cache en memoria**: cada request
+rearma el Home entero, ~650 llamadas a TMDB. Es el peor resultado posible de un
+paso cuyo objetivo era no tocar producción.
+
+**Lo que sí funciona: una variable de Preview ACOTADA A LA RAMA.** Convive con la
+entrada compartida, la pisa solo para esa rama, y no toca Production:
+
+```bash
+export VERCEL_ORG_ID=… VERCEL_PROJECT_ID=…
+for v in KV_REST_API_URL KV_REST_API_TOKEN KV_REST_API_READ_ONLY_TOKEN KV_URL REDIS_URL; do
+  npx vercel env add "$v" preview <rama> --value "" --yes
+done
+npx vercel env add IDIOMA_TITULOS preview <rama> --value "es-MX" --yes
+```
+
+El valor **vacío** es lo que hace caer a memoria: `lib/cache.ts` exige URL **y**
+token no vacíos para instanciar el cliente. Un valor inválido pero no vacío es
+peor — construiría el cliente y fallaría en cada comando en vez de degradar
+limpio.
+
+**Se neutralizan las cinco, no solo las dos que el código lee.** `KV_URL` y
+`REDIS_URL` son connection strings TCP que este cliente no usa, y
+`KV_REST_API_READ_ONLY_TOKEN` no se lee nunca; pero el objetivo es que el Preview
+no *tenga* credenciales, no que no las use.
+
+**El orden tiene una trampa: la rama tiene que existir en el repo conectado
+antes de poder crear una variable acotada a ella.** Vercel responde
+`branch_not_found`. Y la variable tiene que existir antes del deployment que la
+necesita. Los dos requisitos juntos se resuelven así:
+
+1. Crear la rama remota **apuntando a `main`**:
+   `git push origin main:refs/heads/<rama>`. El Preview que dispara es código
+   idéntico a producción: aunque alguien lo abra, escribe las mismas claves que
+   producción ya usa. Empujar primero la rama con los cambios haría que ese
+   primer Preview corriera con la configuración vieja y estrenara un espacio de
+   claves nuevo contra el Redis de producción.
+2. Crear las variables acotadas a la rama.
+3. Recién ahí, `git push origin <rama>` con los commits reales.
+
+**Verificar siempre, nunca asumir que el override ganó**: `GET /api/health` en el
+Preview tiene que decir `503` + `"cache":"memoria"` + `credenciales: {url:false,
+token:false}`. Si dice `200` + `redis`, el override no se aplicó y hay que frenar.
+
+**Al terminar, deshacer** — estas entradas son de la rama y no tienen por qué
+sobrevivirla:
+
+```bash
+for v in KV_REST_API_URL KV_REST_API_TOKEN KV_REST_API_READ_ONLY_TOKEN KV_URL REDIS_URL IDIOMA_TITULOS; do
+  npx vercel env rm "$v" preview <rama> --yes
+done
+```
+
+Ese `rm` sí es seguro: apunta a la entrada de la rama, que es una entrada aparte.
+
+**Los Previews están detrás de Vercel SSO**, así que `curl` recibe un 302 al
+login y la verificación visual la hace una persona con sesión. Lo que sí se
+puede automatizar es el lado del servidor: `vercel logs <url> --json` está
+autenticado por CLI y no pasa por el SSO. No hace tail continuo —cada
+invocación trae una ventana reciente—, así que para seguir una sesión de pruebas
+hay que hacer poll y deduplicar por `id`.
+
 Se elige **A**: no toca código y el aislamiento es total. La confirmación es
-`GET /api/health` en el Preview devolviendo `"cache": "memoria"`.
+`GET /api/health` en el Preview:
+
+```
+HTTP 503 + "cache":"memoria"   → Preview aislado, se puede medir
+HTTP 200 + "cache":"redis"     → le está pegando a producción, PARAR
+```
+
+**El 503 es deliberado y no es un deploy roto**: la ruta responde 503 cuando el
+cache no está operativo, justamente para poder monitorearlo sin parsear el
+cuerpo. En un Preview sin Redis, ese 503 es el resultado esperado.
+
+**Si la integración no deja quitar `KV_*` solo de Preview** sin afectar
+Production, eso es un bloqueo real: no seguir y resolverlo primero. Definir las
+dos variables como cadena vacía en el scope Preview tiene el mismo efecto
+(`lib/cache.ts` exige URL **y** token no vacíos para instanciar el cliente) y no
+toca la entrada de Production.
 
 **Qué NO hace falta limpiar.** Lo que se leyó y escribió durante la tanda 1 usa
 las claves compatibles de `es-ES` —las mismas de siempre, con el mismo
@@ -493,3 +582,166 @@ contenido—, así que no hay nada que borrar. La prohibición es para las clave
 tiene credenciales de Upstash y el dev corre en memoria (se confirma con
 `GET /api/health` → `"cache": "memoria"`, o con `0 requests` en la línea
 `[home]`). Si alguna vez se agregan, vale la misma regla.
+
+
+---
+
+## El rollback del idioma cuesta un segundo arranque frío
+
+**`IDIOMA_TITULOS=es-ES` + redeploy revierte el contenido de inmediato, pero no
+devuelve el cache que había antes.** La huella pasa de `es-MX+f.r1` a `es-ES.r1`,
+que **no** es el espacio vacío del modo compatible de la tanda 1: es un tercer
+espacio, así que el Home y las diez familias restantes se rearman una vez más.
+
+Es el precio elegido a propósito. La alternativa —claves sin huella— hacía que
+un rollback siguiera sirviendo títulos mexicanos desde las mismas claves hasta
+que expiraran TTLs de hasta 30 h, o sea que **no revertía nada**.
+
+Medido (`docs/medidas/2026-08-23-idioma-tanda2-e2e.json`, corrida `roll`): el
+contenido vuelve **exacto** a la línea de base —614 llamadas, 657 comandos,
+84.318 B, los mismos 12 rieles, el mismo hero y las 7 fichas de control
+idénticas—; lo único que se paga es el rearmado.
+
+**El interruptor intermedio es `FALLBACK_IDIOMA=0`**: deja el idioma en `es-MX` y
+apaga la reparación (huella `es-MX.r1`, 611 llamadas, 0 reparaciones). También
+cuesta su propio arranque frío, y sirve para el caso "el fallback salió caro" sin
+tener que volver al español de España.
+
+---
+
+## Cómo rehacer la medición de idioma con el mismo instrumento
+
+El banco es un `git worktree` aparte, instrumentado **solo ahí**: el repo nunca
+se toca. Dos piezas versionadas:
+
+```bash
+git worktree add --detach <ruta-del-banco> <commit>
+cd <ruta-del-banco> && npm install && cp <repo>/.env.local .
+node <repo>/scripts/banco-idioma-parche.mjs <ruta-del-banco>
+bash <repo>/scripts/banco-idioma-correr.sh base1 3971 es-ES 1 fichas
+bash <repo>/scripts/banco-idioma-correr.sh mx1   3981 es-MX 1 fichas
+```
+
+Tres reglas que el arnés ya aplica y que no hay que aflojar:
+
+- **Un puerto distinto por corrida**, y abortar si está ocupado. Un servidor
+  huérfano de la corrida anterior responde igual y se mide la variante
+  equivocada — ya pasó, y dio payloads idénticos entre `es-ES` y `es-MX`.
+- **Matar el ÁRBOL** (`taskkill /T /F`): `kill` sobre lo que devuelve `npx next
+  dev` mata el wrapper, no el servidor.
+- **`YUMP_FECHA` fija en todas las corridas.** Sin eso, cruzar la medianoche
+  argentina cambia la semilla del día y la comparación mezcla el cambio de
+  código con el cambio de día.
+
+Y una regla de lectura: **verificar en la salida qué variante respondió**. El
+arnés lo hace solo (la línea `[BANCO]` trae el idioma y el fallback, y aborta si
+no coinciden con lo pedido).
+
+**Los dos scripts de medición escriben en una ruta FIJA de `docs/medidas/`**
+(`-idioma-fallback.json`, `-idioma-sinopsis.json`), así que volver a correrlos
+**pisa el artefacto de la tanda 1**. Las corridas de la tanda 2 se guardaron
+aparte (`-fallback-tanda2.json`, `-sinopsis-tanda2.json`) y el original se
+recuperó con `git checkout --`. Si se vuelven a correr, hacer lo mismo: la foto
+vieja es la mitad "antes" de cualquier comparación futura.
+
+**Y no leer un diff contra una foto vieja sin acordarse de que TMDB deriva
+solo.** En la corrida de la tanda 2, `sinopsis_vacia_es_ES` pasó de 2 a 1 sin que
+nadie tocara nada: un título ganó su sinopsis en español entre una medición y la
+otra.
+
+---
+
+## Runbook: precalentar el Home DESPUÉS de aprobar el Preview
+
+**El problema que resuelve.** La tanda 2 cambia la huella de las once familias de
+claves, así que el primer request después de activar `es-MX` en Production
+encuentra el cache vacío y paga ~650 llamadas a TMDB y ~650 comandos de Upstash.
+Sin precalentar, esa cuenta la paga **el primer usuario que abra la app**, con la
+combinación de plataformas que tenga, y las demás combinaciones siguen frías.
+
+**El orden importa y no es negociable:**
+
+1. Preview **aislado** del Redis de producción (`/api/health` → 503 + `memoria`).
+2. Probar la checklist en Preview.
+3. **Recién ahí**, `IDIOMA_TITULOS=es-MX` en Production + redeploy.
+4. **Recién ahí**, precalentar.
+
+**Precalentar antes del paso 3 no sirve y encima estorba**: llenaría el espacio
+de claves de `es-ES` (el viejo), y hacerlo desde un Preview que comparte el Redis
+de producción es exactamente la trampa de la sección anterior — arruina la
+medición del arranque frío, que es el número que hay que mirar en el deploy.
+
+```bash
+node scripts/precalentar-home.mjs --base=https://<produccion>
+```
+
+Sin `--aplicar` es un **dry-run**: lista las combinaciones y sale. Con
+`--aplicar` las pide **una por vez**, con 3 s entre medio.
+
+**Las tres reglas están en el script, no confiadas a quien lo corre:**
+
+- **Explícito.** Sin `--aplicar` no pide nada.
+- **Secuencial.** En paralelo son ~650 llamadas a TMDB por combinación arrancando
+  juntas, y eso es justo lo que hace fallar a TMDB (ver abajo).
+- **Rechaza lo degradado.** Si el payload viene con `degradado: true` o
+  `fallos > 0`, esa combinación **no quedó cacheada** —`cachedIf` no guarda un
+  payload degradado, a propósito— así que el script corta ahí y termina con
+  código distinto de cero. Un precalentamiento que informa éxito habiendo servido
+  rieles caídos es peor que no correrlo: deja creer que el cache está lleno.
+
+Al final hace una **segunda vuelta de verificación**: si alguna combinación no
+responde en menos de 1,5 s, no quedó cacheada y el éxito anterior era falso.
+
+Las combinaciones por defecto son `n`, `d`, `m` y sus pares y el trío. **La clave
+del Home ordena las plataformas**, así que `n,d` y `d,n` son la misma entrada; y
+**no** incluye los toggles Películas/Series, que son claves aparte: cubrirlos
+serían cientos de combinaciones. Se cambian con `--combos=n|d|n,d`.
+
+---
+
+## TMDB se degrada bajo concurrencia, y eso arruina cualquier medición de tiempo
+
+**Demostrado, no supuesto.** Corriendo `scripts/medir-fallback-idioma.mjs` (144
+requests a 16 en paralelo) y **al mismo tiempo** un Home frío del banco (hasta 24
+en vuelo), TMDB empezó a devolver **502 en `/watch/providers`** y el Home salió
+degradado.
+
+Antes de fallar, se pone lento: en reposo la latencia por request es **p50 142 ms,
+p95 ~200 ms, máximo bajo 600 ms y cero requests por encima de 2 s**. Las corridas
+"raras" de 21-27 s que aparecieron en la medición del idioma venían todas justo
+después de una ráfaga: para que un composer pase de 6 s a 22 s con las mismas 651
+llamadas y el techo de 24 en vuelo, la latencia media tiene que multiplicarse
+por cinco.
+
+**Regla: no medir tiempos con otra cosa pegándole a TMDB al mismo tiempo.** Los
+conteos —llamadas, comandos, bytes, títulos por riel— aguantan la carga; los
+tiempos no. Y si una corrida sale lenta, mirar qué más estaba corriendo antes de
+buscarle una explicación en el código.
+
+Efecto secundario útil de ese accidente: confirmó **en vivo** que `safe` degrada
+riel por riel en vez de tirar el Home entero, y que `cachedIf` no guarda un
+payload degradado. En desarrollo `safe` re-lanza a propósito y por eso se vio
+como un 500; en producción habría sido un 200 degradado y sin cachear.
+
+---
+
+## Comparar dos corridas: alternar, nunca contra una foto vieja
+
+**El catálogo de TMDB deriva solo, y la deriva es del mismo orden que el efecto
+que se busca medir.** Pasó y costó una conclusión publicada: se comparó una tanda
+de `es-ES` contra una de `es-MX` medida hora y media después y se concluyó que el
+idioma cambiaba las cantidades por riel. No las cambia — medidas **alternadas en
+la misma ventana**, los doce rieles dan las mismas cantidades y once de doce el
+mismo contenido.
+
+Dos reglas que salen de ahí:
+
+1. **Alternar las variantes dentro de la misma ventana**, no medir todo A y
+   después todo B.
+2. **Correr el control**: la misma variante dos veces. Si el composer es
+   determinístico tiene que dar 0 diferencias, y si no da 0, lo que se esté
+   midiendo no es el cambio.
+
+Es la misma familia que la nota de 8.c sobre el hero, pero más estricta: allá
+alcanzaba con reportar *conjunto* y *posición* por separado; acá el efecto es tan
+chico (un título en 314) que la deriva lo tapa entero.

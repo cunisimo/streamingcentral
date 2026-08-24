@@ -247,9 +247,14 @@ export function claveCard(tipo: MediaType, id: number, huella = ""): ClaveLocali
 Con `huella = ""` sale `card:movie:123`, byte a byte lo de hoy. En la tanda 2 se
 le pasa `HUELLA_IDIOMA` y sale `card:es-MX+f.r1:movie:123`.
 
-Las **diez familias localizadas** salen de ese único módulo: `home`, `disc`
+Las **once familias localizadas** salen de ese único módulo: `home`, `disc`
 (pool y combinada), `card`, `top:pop`, `reco`, `reco:mismo`, `reco:cruce`,
-`reco:perfil`, `people:popular`.
+`reco:perfil`, `people:popular` y **`search:v2`**.
+
+> **Corregido durante la tanda 1.** El plan decía "diez" y contaba mal: la
+> auditoría original miró `search:v2` sólo por el lado de los títulos —que están
+> clavados en `es-MX` y no cambian— y no vio que el resultado también trae
+> personas, cuyo `knownFor` sale del idioma base. Son **once**.
 
 **Comprobación de que el modo compatible no invalida nada:** en Preview, cargar
 el Home, deployar la tanda 1, volver a cargarlo → **`[home] HIT` con la misma
@@ -394,7 +399,7 @@ Lo que no cambia es el idioma, ninguna clave de caché y ningún arranque frío.
 |---|---|
 | 1 | `lib/idioma.ts`: `IDIOMA_BASE`, `IDIOMA_FALLBACK`, `HUELLA_IDIOMA`, las tres señales, `fusionarPorCampo`. |
 | 2 | **`lib/tmdb.ts`: `DEFAULTS.language = IDIOMA_BASE`.** Con el default `es-ES` no cambia nada, pero deja la activación por variable **cableada y probada**. |
-| 3 | `lib/claves.ts`: los diez constructores + `ClaveLocalizada`, **cableados en modo compatible** (§4): mismos bytes que hoy. |
+| 3 | `lib/claves.ts`: los once constructores + `ClaveLocalizada`, **cableados en modo compatible** (§4): mismos bytes que hoy. |
 | 4 | `originalTitle` en `UITitleDetail`, poblado en `detail()`. |
 | 5 | `lib/consultas-verificadas.ts` + `ayudasDeBusqueda()` (async), con la entrada de Mel Brooks. |
 | 6 | `AyudaBusqueda`, `ayudas`, `ayudaOriginal` en el contrato; resolución en `detail()`; `CONSULTA_VERIFICADA` leído en el servidor. **`ayudaOriginal` queda implementado entero e inerte mientras `IDIOMA_BASE` sea `es-ES`.** |
@@ -453,7 +458,7 @@ ayuda de Mel Brooks y la tanda 3 cambia los títulos de Próximamente.
 
 | Commit | Qué |
 |---|---|
-| 1 | **Pasar `HUELLA_IDIOMA` a los diez constructores, de una sola vez.** Es el único cambio de código de la tanda. |
+| 1 | **Pasar `HUELLA_IDIOMA` a los once constructores, de una sola vez.** Es el único cambio de código de la tanda. |
 | 2 | `IDIOMA_TITULOS=es-MX`, primero en Preview (§3). |
 
 El idioma base y `ayudaOriginal` **ya están implementados y probados desde la
