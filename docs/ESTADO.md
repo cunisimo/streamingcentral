@@ -1,7 +1,7 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 23 de agosto de 2026.**
+> **Última actualización: 25 de agosto de 2026.**
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -12,10 +12,15 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ## Estado de despliegue
 
 ```
-origin/main               361cf5b   ← Merge feat/idioma-tanda-2, DESPLEGADO en producción
-feat/idioma-tanda-2       2d9e970   ← mergeada; la rama sobrevive pero ya no sirve (ver abajo)
+origin/main               ba4a5aa   ← Merge feat/idioma-tanda-3, DESPLEGADO en producción
 feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
+feat/dia-rotacion                    ← sin mergear y MUY atrás de main; hay que rebasarla
 ```
+
+`feat/idioma-tanda-2` y `feat/idioma-tanda-3` ya no existen: se borraron de los
+dos lados con borrado seguro (`git branch -d`, sin forzar) una vez verificada la
+producción. **Las tres tandas del idioma están cerradas** — el traspaso completo
+de esa línea de trabajo vive en `docs/TRASPASO-IDIOMA.md`.
 
 **Este bloque se actualiza en el mismo commit que mueve `main`.** Quedó tres
 semanas diciendo `ab4e189` mientras `main` iba por `5fc0c2e`, y un SHA viejo acá
@@ -33,6 +38,47 @@ arreglo de ejes.
 **Verificar que Vercel haya tomado el push.** Ya pasó tres veces que no lo
 detecta; se destraba con un commit vacío, no con Redeploy (ver la nota en la
 memoria del proyecto).
+
+---
+
+## El Top 10 de Netflix quedó sirviendo popularidad — **abierto**
+
+**Detectado el 2026-08-25 por el dueño**, mirando la pantalla: el bloque de
+Netflix mostraba "Lo más popular ahora" donde antes decía "dato oficial".
+
+**El código hizo lo correcto.** `latestWeekRows()` descarta la semana guardada si
+tiene más de 14 días, para no sostener datos viejos bajo el sello de oficiales.
+La última ingesta es la semana `2026-08-09`, escrita el 12/08: al detectarlo
+llevaba **16,4 días**, o sea que cruzó la línea unos dos días antes — que es
+exactamente lo que reportó el dueño ("hasta hace 2 días estaba bien").
+
+**La causa raíz es otra y es peor**: las dos escrituras que existen en la tabla
+son de un **domingo** 17:27 UTC y un **miércoles** 18:10 UTC, contra un cron
+declarado `0 12 * * 2` (martes al mediodía). Ninguna cae en su horario, así que
+las dos ingestas fueron a mano: **el cron de Vercel no disparó nunca**. Lo que
+cambió no fue el comportamiento, fue que se agotó el colchón.
+
+**No tiene ninguna relación con el cambio de idioma.** `latestWeekRows` no toca
+claves de caché ni idioma; la coincidencia de fechas es casual.
+
+**Dos acciones, separadas y las dos pendientes:**
+
+1. **Recuperar la semana que falta** — una llamada autenticada a
+   `/api/cron/netflix-top10` con el `CRON_SECRET`. Es un upsert idempotente de 20
+   filas. **Escribe en la base, así que espera el OK del dueño.**
+2. **Arreglar el cron** — hay que mirar **Vercel → el proyecto → Settings → Cron
+   Jobs**, donde se ve si está registrado y sus últimas ejecuciones. Sin esto, el
+   bloque vuelve a degradar en 14 días.
+
+**Lo que se descartó en la misma revisión**, para no volver a levantarlo: que
+Prime Video y Max compartan títulos **no es un bug**. Verificado contra TMDB, hay
+películas con flatrate real en las dos plataformas en Argentina, y el mapeo no
+infla (los ids `9` y `384` aportan 0 títulos en AR). Los seis bloques del Top
+devuelven 10 lugares, `fallos: 0`, `degradado: false`.
+
+**La lección que sobrevive al cron**: una guarda que degrada en silencio esconde
+la falla que la disparó. El bloque venía degradando bien desde hacía dos días y
+nada avisaba que hacía dos semanas que no entraba un dato.
 
 ---
 
@@ -271,7 +317,8 @@ Para volver al camino viejo y comparar en la misma pantalla:
   sí con los números del hero puestos.
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
   retorno; el rearmado en frío es el caso raro.
-- Los diez issues de `docs/ISSUES.md`.
+- Los trece issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
+  del Top 10 de Netflix nunca disparó y el bloque está sirviendo popularidad.
 
 ---
 
@@ -291,6 +338,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
 | #10 | La rotación de ejes no le llega a los chips angostos (18 de 112 casillas caen a `pop`) |
 | #11 | "Últimos lanzamientos" tiene 35% de títulos bajo 6.0 |
 | #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
+| #13 | **El cron semanal del Top 10 de Netflix nunca disparó** (lo más fresco, ver abajo) |
 
 ---
 
@@ -552,9 +600,13 @@ primeros 8 y reportarla como "completa" fue un error de informe:
 El único campo omitido que no es "ya está en es-MX" es
 `tv:220542.episode_name`, que da 404 por coordenadas y conserva `"Episodio 49"`.
 
-### Lo que falta, en orden, y necesita aprobación
+### El orden en que se ejecutó (ya está hecho, queda como referencia)
 
-1. Pausar el cron (`update cron.job set active = false where jobname = 'tmdb-sync-upcoming-daily'`).
+Se corrió completo el 2026-08-24/25 y **los siete pasos están cerrados**; el
+cron quedó reactivado. Se deja escrito porque es la receta para cualquier cambio
+futuro sobre `upcoming_content`:
+
+1. Pausar el cron (`cron.alter_job(2, active := false)`).
 2. Desplegar la Edge Function **inerte** (su default sigue siendo es-ES).
 3. `supabase secrets set IDIOMA_TITULOS=es-MX` y **una** corrida manual del sync.
 4. Dry-run sobre la tabla real → snapshot → revisarlo.
@@ -771,7 +823,10 @@ depende del tamaño: la huella en la clave, el `0 fallos` y el `0 requests`.
 `[ejes] aud-family/tv: "hondo" trajo 1 (piso 24), se cae a "pop" con 69` — el
 guard de ejes que no puede llenar, funcionando en producción real.
 
-### Lo que falta, en orden
+### La activación, ya ejecutada (queda como receta)
+
+Los cuatro pasos se corrieron el 2026-08-24 y están cerrados. Se conservan
+porque son la receta de cualquier cambio futuro de `IDIOMA_TITULOS`:
 
 1. Borrar las seis variables de rama (comando en `MANTENIMIENTO.md`).
 2. `IDIOMA_TITULOS=es-MX` en **Production**.

@@ -1,222 +1,245 @@
-# Traspaso: el trabajo de idioma de los títulos
+# Traspaso: el idioma de los títulos, cerrado — y lo que quedó abierto
 
-**2026-08-23.** Para retomar en otra sesión sin perder contexto.
+**2026-08-25.** Reemplaza al traspaso del 23/08, que cubría solo las tandas 1 y 2.
+Para retomar en otra sesión sin perder contexto.
 
 ---
 
-## El problema, en una línea
+## En una línea
 
-Yump muestra los títulos en **español de España** y las plataformas argentinas
-usan otros nombres, así que el usuario no encuentra lo que la app le recomienda.
-El caso que lo disparó: `movie:12535` — Yump dice "Máxima ansiedad", Disney+ AR
-publica "Las ansiedades del Dr. Mel Brooks", y el usuario tuvo que googlearla.
+**Toda la app está en `es-MX`** —catálogo, Home y Próximamente— con respaldo a
+`es-ES`. Las tres tandas están mergeadas y desplegadas. Lo que quedó abierto no
+es del idioma: es que **el cron semanal del Top 10 de Netflix nunca disparó**
+(issue #13).
 
-## Qué se decidió, y con qué evidencia
+## Estado de despliegue
 
-Se midió contra el buscador **real** de cada plataforma argentina, **29 casos
-verificados** (8 los probó el dueño en Netflix, Disney+ y Max; 10 los probé yo
-en el catálogo público de Prime Video y Crunchyroll; 12 más en una submuestra
-dirigida):
+```
+main = ba4a5aa   Merge feat/idioma-tanda-3   ← desplegado y verificado
+```
 
-| Variante | Encuentra |
+`origin/main` sincronizado. La rama `feat/idioma-tanda-3` se borró de los dos
+lados con borrado seguro. Sin worktrees colgados.
+
+| Pieza | Estado |
 |---|---|
-| `es-ES` (lo que hay hoy) | **18/29** |
-| `es-MX` | **28/29** |
-| Título original | 28/29 |
-| Alternativo argentino de TMDB | 2/5 |
-| **`es-MX` ∪ original** | **29/29** |
-
-**Los 11 fallos de `es-ES` son TODOS de Netflix, Disney+ y Max.** En Disney+
-falla 8 de 9. En Prime Video no falla nunca, porque su buscador indexa títulos
-alternativos y el de las tres grandes no.
-
-Tres hallazgos que cambiaron el plan:
-
-1. **`es-AR` no sirve.** 0% de cobertura en la muestra de 60: TMDB solo tiene
-   `ES` y `MX` para el español.
-2. **Cuando falta la traducción MX, TMDB cae al título ORIGINAL, no a `es-ES`.**
-   Por eso `es-MX` a veces devuelve `런닝맨` o deja la sinopsis vacía. Es la
-   causa de las dos regresiones que el fallback repara.
-3. **El nombre que publica una plataforma no siempre es una consulta que su
-   propio buscador reconozca.** "Las ansiedades del Dr. Mel Brooks" devuelve
-   **cero** en Disney+. Lo único que la encuentra es `High Anxiety`. Por eso la
-   tabla propia guarda **consultas verificadas**, no nombres publicados.
-
-Informe completo: `docs/medidas/2026-08-23-idioma-informe.md`.
-Plan: `docs/medidas/2026-08-23-idioma-plan.md`.
+| `IDIOMA_TITULOS` en **Vercel** (app) | `es-MX`, scope Production |
+| `IDIOMA_TITULOS` en **Supabase** (Edge Functions) | `es-MX` |
+| Edge Function `tmdb-sync` | desplegada, **version 7** |
+| Migración `006_backfill_upcoming_idioma.sql` | aplicada |
+| Cron `tmdb-sync-upcoming-daily` (pg_cron) | **activo**, jobid 2, `0 6 * * *` |
+| Cron `netflix-top10` (Vercel) | **ROTO — ver issue #13** |
 
 ---
 
-## Estado actual
+## Qué se hizo, por tanda
 
-**Producción sigue en `es-ES` y no se tocó.** La tanda 1 está desplegada
-(`main` = `5fc0c2e`) y lo único visible ahí es el aviso "En Disney+, buscala como
-«High Anxiety»" en `movie:12535`.
+### Tanda 2 — el catálogo y el Home a es-MX
 
-### La Tanda 2 está en `feat/idioma-tanda-2`, sin mergear
+Un solo cambio de código: pasar `HUELLA_IDIOMA` a los **once** constructores de
+`lib/claves.ts`. Con eso la clave de cache depende de la configuración
+(`card:es-MX+f.r1:movie:278`) y un rollback selecciona otro espacio en vez de
+esperar TTLs de hasta 30 h.
 
-Un solo cambio de código: los once call sites pasaban `HUELLA_EN_CLAVES` —la
-cadena vacía del modo compatible— y ahora pasan `HUELLA_IDIOMA`. La constante
-vacía se eliminó, y el candado que ocupa su lugar es un barrido nuevo que exige
-`HUELLA_IDIOMA` en todas las llamadas a un constructor y fija el total en 11.
+Medido con las dos variantes **alternadas en la misma ventana**: +38 llamadas a
+TMDB (+6,2%), +0 a +2 comandos de Upstash, +337 B de payload. Las 38-39 llamadas
+de respaldo son **37 páginas de `discover` + 2 detalles**, no 39 páginas.
 
-**318 tests, 0 fallas. `tsc` limpio. `next build` completo.**
+**El arranque frío fue PARCIAL y eso es el diseño funcionando**: el primer MISS
+dio `401 hit / 236 miss` de 637 claves. Las familias sin huella —`pv:`,
+`videos:`, `genre:covers:`, `blocklist:`— siguieron calientes.
 
-Medición contra una línea de base **nueva** (los 612/655 son referencia
-histórica: la tanda 1 los movió). Todo en
-`docs/medidas/2026-08-23-idioma-tanda2-e2e.json`.
+### Tanda 3 — Próximamente
 
-| Home frío `n,d,m` | Base (es-ES) | Tanda 2 (es-MX+f) | Tope | |
-|---|---|---|---|---|
-| Llamadas a TMDB | 613 · 613 · 613 | 651 · 652 · 651 | ≤ 660 | ✅ |
-| Comandos de Upstash | 656 · 656 · 656 | 656 · 658 · 656 | ≤ 670 | ✅ |
-| Llamadas de respaldo | 0 | 39 = **37 páginas + 2 detalles** | ~32 páginas | ✅ |
-| Payload | 84.413 B | 84.750 B | ≤ 85.000 B | ✅ |
-| **Tiempo frío (pared)** | 8,07 · 7,69 · 7,90 s | 8,46 · 8,53 · 7,06 s | — | ✅ |
-| **Tiempo frío (composer)** | 5.895 · 5.518 · 5.747 ms | 6.079 · 6.029 · 5.725 ms | — | ✅ |
-| Home caliente | 1 comando, 0 TMDB | 1 comando, 0 TMDB | igual | ✅ |
-| `degradado` / `fallos` | false / 0 | false / 0 | | ✅ |
-| Títulos por riel | 20·40·30·20×6·20·39·39 | **idénticos** | idénticos | ✅ |
+`upcoming_content` pasó a es-MX por dos vías: el sync escribe en es-MX de acá en
+adelante, y un **backfill** corrigió las filas que el sync no alcanza (mira 3
+páginas por popularidad, así que hay filas que no se refrescan nunca).
 
-**Las dos variantes se midieron alternadas en la misma ventana**, tres corridas
-cada una. Es la corrección más importante de esta revisión: la primera comparó
-dos ventanas separadas por hora y media y le atribuyó al idioma lo que era
-deriva del catálogo de TMDB.
-
-**Los títulos por riel SÍ dan idénticos** — la primera revisión dijo que no, y se
-equivocó: comparaba contra una foto de hora y media antes y le atribuyó al idioma
-la deriva del catálogo. En la misma ventana difiere **1 riel de 12** en
-contenido ("Últimos lanzamientos", un título de 20) y ninguno en cantidad.
-
-**El pico de 27,2 s era TMDB bajo carga, no el fallback**: `es-ES` también dio
-17,5 s de composer sin una sola llamada de respaldo, y el fallback aislado cuesta
-440 ms. Detalle y demostración en `docs/ESTADO.md`.
-
-**Ensayo de rollback (local):** `IDIOMA_TITULOS=es-ES` devuelve exactamente la
-línea de base — mismos rieles, mismo hero, mismas fichas. Lo que **no** devuelve
-es el cache: la huella pasa a `es-ES.r1` y eso cuesta un **segundo** arranque
-frío.
-
-## Lo que falta: Vercel
-
-**Bloqueo actual: `vercel whoami` responde "The specified token is not valid".**
-La sesión del CLI está vencida, así que las variables y el Preview quedaron sin
-hacer. En orden:
-
-1. **Aislar Preview del Redis de producción.** Sacar `KV_*` del scope Preview
-   (sin tocar Production) y confirmar con `GET /api/health` en el Preview:
-   `503` + `"cache":"memoria"` está bien; `200` + `"redis"` obliga a frenar,
-   porque el Preview estaría precalentando las claves `es-MX+f.r1` que
-   producción tiene que estrenar en frío. El 503 es deliberado, no un deploy
-   roto.
-2. **`IDIOMA_TITULOS=es-MX` solo en Preview**, y recién después pushear la rama:
-   un deployment toma el valor que existía cuando se creó.
-3. Probar a mano la checklist de abajo.
-4. Recién ahí, sumar el scope Production y redeployar.
-
-### Qué mirar a mano en el Preview
-
-1. `[home] MISS home:es-MX+f.r1:v5:…` en el primer request; el segundo, `HIT`.
-2. `movie:278` → "Sueño de fuga" + el respaldo "The Shawshank Redemption".
-3. `movie:12535` → la ayuda de Disney+ sigue, **sin** duplicarse.
-4. `tv:1399` → "Game of Thrones"; `movie:585` → "Monsters, Inc.";
-   `movie:1084242` → "Zootopia 2".
-5. `/top` y `/personas` (las claves menos obvias) y `/buscar` con "Duro de
-   matar" y "Mi pobre angelito".
-6. La ruleta: encabezado y cuerpo sin contradicción; se esperan **cero**.
-
-### Después, la Tanda 3
-
-`upcoming_content` (Próximamente) sigue en `es-ES`: Edge Function `tmdb-sync` a
-`es-MX` + backfill. El backfill necesita **dry-run, snapshot obligatorio y
-compensación automática verificada**; el plan explica por qué "revertir la
-función y re-sincronizar" no alcanza (el sync solo reescribe su ventana).
+Backfill: **13 filas, 16 campos**, aplicado desde un snapshot aprobado. Los 44
+títulos de la agenda coinciden con su ficha (0 diferencias).
 
 ---
 
-## Decisiones que NO hay que volver a discutir
+## Las decisiones que no hay que volver a discutir
 
-- **El pasaje al inglés NO se repara.** Los 38 títulos donde `es-MX` devuelve el
-  original inglés son "Monsters, Inc.", "Moana 2", "WandaVision", "Black Widow",
-  "Game of Thrones": en Argentina **esos son los nombres publicados**. Verificado
-  con 12 casos. Medido en Disney+: "Zootopia 2" aparece, "Zootrópolis 2" no.
-  Hay tests que lo fijan.
-- **El buscador queda clavado en `es-MX`** (`searchDeTipo`). Es lo que hace que
-  "Duro de matar" encuentre la 562.
-- **`searchTitles` queda en `en-US`.** Matchea el TSV de Netflix.
-- **`alternative_titles` está fuera de la v1.** Encontró 2 de 5, agrega payload y
-  falló en el caso que disparó todo.
-- **La búsqueda del admin queda fuera de alcance.** Es del dashboard editorial,
-  la usa solo el dueño para elegir un id.
-- **Paramount+ sin verificar** (el dueño no tiene cuenta). No cuenta como fallo.
-
----
-
-## Cosas que muerden, aprendidas a los golpes
-
-- **Nunca `git add -A`.** Así se colaron tres archivos ajenos del dueño en un
-  commit. Se sacaron con `git rm --cached` (que no toca la copia de trabajo).
-  **Commits con rutas explícitas, siempre.**
-- **Estos tres archivos son del dueño y van sin registrar, a propósito:**
-  `prompts/noticias-filtro.md`, `prompts/noticias-redaccion.md`,
-  `supabase/migrations/004_news.sql`. Tienen que seguir apareciendo como `??`.
-- **Dos procesos de Next sobre la misma carpeta corrompen `.next`** y dan
-  `Cannot read properties of undefined (reading 'call')` en `options.factory`,
-  que parece un bug de código y no lo es. Matar todo
-  `next/dist/server/lib/start-server.js` que sobre, borrar `.next`, levantar de
-  nuevo. Un `kill` sobre `npx next dev` mata el wrapper, **no** el servidor.
-- **`.env.local` no tiene credenciales de Upstash**: el dev local corre con el
-  caché en memoria. El `0 requests` de la línea `[home]` lo confirma.
-- **Un test que reimplementa lo que dice probar no prueba nada.** Pasó tres
-  veces en esta sesión. Por eso `resolverConCache` y los adaptadores son
-  compartidos entre producción y tests, y hay un test que falla si `cachedIf`
-  deja de delegar.
-- **Los tests de un camino de fallo tienen que forzar `activo: true`**: con la
-  config en `es-ES` la guarda de inercia sale antes y el test pasa sin ejecutar
-  nada.
+- **El pasaje al inglés NO se repara.** "Monsters, Inc.", "Moana 2", "Game of
+  Thrones" son los nombres publicados en Argentina. Hay tests que lo fijan.
+- **`searchDeTipo` sigue en `es-MX` y `searchTitles` en `en-US`** (matchea el TSV
+  de Netflix).
+- **`poster_path` cambia con es-MX y es deliberado**: los pósters de TMDB son
+  localizados y acompañan la encontrabilidad. Documentado en `docs/UPCOMING.md`.
+  **El backfill sigue limitado a `title`, `overview` y `episode_name`.**
+- **El rollback de la app** es `IDIOMA_TITULOS=es-ES` + un deployment nuevo del
+  **mismo** `main`. **Nunca revertir el código**: código sin huella con la
+  variable en es-MX escribe títulos mexicanos en las claves de es-ES, y ahí el
+  rollback deja de revertir. En el sync, el rollback es el secret de Supabase y
+  hay que hacerlo **antes** de restaurar un snapshot, o el sync pisa la
+  restauración.
+- **Un rollback cuesta un SEGUNDO arranque frío**: la huella pasa a `es-ES.r1`,
+  que no es el espacio vacío de la tanda 1.
 
 ---
 
-## Ramas sin mergear
+## Lo que costó tres iteraciones, y es lo más transferible
 
-| Rama | Qué es |
+La política del sync ante un respaldo que no alcanza se equivocó **dos veces**, y
+las dos las encontró **una corrida real, no la revisión de código**:
+
+1. **Descartar todo lo que el respaldo no mejorara** → tiró 79 títulos de 120,
+   casi todos sin sinopsis en ningún idioma. El descubrimiento bajó a un tercio.
+2. **Escribir todo lo que el respaldo no mejorara** → habría persistido títulos
+   coreanos que es-ES tenía en español.
+
+Las dos preguntaban *"¿la fusión cambió algo?"*. **La pregunta correcta es "¿qué
+sigue roto DESPUÉS de fusionar?", y se decide por campo.** La regla final:
+
+```
+título final no vacío y en alfabeto latino  ->  se escribe, aunque coincida
+                                                con el original y no exista
+                                                traducción en ningún idioma
+título final vacío o en escritura no latina ->  el candidato queda fuera
+sinopsis vacía en los dos idiomas           ->  se escribe
+solo un fallo de TRANSPORTE justifica reintentar
+```
+
+Ese último corte es un **piso de calidad, no una protección de idioma**: la
+fusión ya repara todo lo que es-ES pueda mejorar. Candidatos: 40 → 83 → **113 de
+120**.
+
+### Otras cosas que encontró correr y no leer
+
+- **Un título vacío con sinopsis buena no dispara ninguna señal**
+  (`cayoAlOriginal` exige que el original exista). Se escribía el vacío. El piso
+  ahora corre sobre todos los items y en los tres caminos.
+- **El script salía con 127 en vez de 1**: en Windows, `process.exit()` con
+  stdout en vuelo tumba a libuv. Un script que avisa "esto falló" no puede
+  comunicarlo con un crash.
+- **`ensayo_leer()` no devolvía las coordenadas del episodio**, así que los
+  títulos sintéticos —los únicos que no están en la tabla real— caían en el
+  camino del 404 y el episodio exacto nunca se ejercitaba.
+- **El episodio se pide por COORDENADAS EXACTAS**
+  (`/tv/{id}/season/{n}/episode/{m}`), nunca `next_episode_to_air`: el backfill
+  corre días después del sync y "el próximo" ya avanzó.
+
+---
+
+## Reglas de medición que se ganaron a los golpes
+
+- **Alternar las variantes en la misma ventana.** El catálogo de TMDB deriva
+  solo, y la deriva es del mismo orden que el efecto que se busca. Comparar
+  contra una foto de hace una hora hizo publicar una conclusión equivocada sobre
+  las cantidades por riel.
+- **Correr el control**: la misma variante dos veces. Si da 0 diferencias, el
+  composer es determinístico y lo que se mide es el cambio.
+- **TMDB se degrada bajo concurrencia.** Demostrado: corriendo el script de
+  medición y un Home frío a la vez, TMDB devolvió **502** en `/watch/providers`.
+  Los conteos aguantan la carga; **los tiempos no**.
+- **Un puerto distinto por corrida**, y verificar en la salida qué variante
+  respondió. `kill` sobre `npx next dev` mata el wrapper, no el servidor.
+- **`YUMP_FECHA` fija** en todas las corridas, o cruzar la medianoche argentina
+  mezcla el cambio de código con el cambio de día.
+
+---
+
+## Trampas de infraestructura, documentadas
+
+- **"Sacar `KV_*` del scope Preview" es una instrucción PELIGROSA.** La
+  integración de Vercel crea **una entrada por variable con los dos targets**, así
+  que borrar "la de Preview" se lleva puesta la de Production. Lo que sí funciona:
+  **variables de Preview acotadas a la rama**, en vacío. Ver `docs/MANTENIMIENTO.md`.
+- **Los Previews están detrás de Vercel SSO**: `curl` recibe un 302. Lo
+  automatizable es `vercel logs --json`, autenticado por CLI.
+- **Un deploy de Edge Function no se verifica por hash.** `functions download`
+  devuelve el código **transpilado**; los 11 archivos dan distinto sin que eso
+  signifique nada. La verificación es **semántica**: marcadores que tienen que
+  estar y marcadores que no.
+- **`deno check` en un contenedor** prueba el bundling de `_shared` sin
+  desplegar; `deno info` muestra el grafo de módulos.
+- **Deno genera un `deno.lock`** cada vez que corre `deno check`. Hay que
+  borrarlo; no está en `.gitignore`.
+
+---
+
+## Archivos ajenos, sin registrar y a propósito
+
+Estos **cuatro** son del dueño y no pertenecen a ninguna rama de trabajo:
+
+| Archivo | Cómo está protegido |
 |---|---|
-| `audit/idioma-titulos` | La auditoría: informe, plan y scripts de medición. Los artefactos de `docs/medidas/` ya viajaron dentro de la Tanda 1; el informe y el plan viven ahí. **Decisión pendiente del dueño: mergear o dejar como registro.** |
-| `feat/dia-rotacion` | `diaYump()` con borde a las 04:00 y `TTL.home` 26 h. **Anterior a este trabajo**, quedó pendiente de una prueba manual del agujero de cuota. Está muy detrás de `main`: hay que rebasarla. |
+| `prompts/noticias-filtro.md` | aparece como `??`; no agregarlo a mano |
+| `prompts/noticias-redaccion.md` | ídem |
+| `supabase/migrations/004_news.sql` | ídem |
+| `.claude/settings.local.json` | **`.gitignore` del repo** (antes solo el ignore global) |
+
+**Nunca `git add -A`.** Commits con rutas explícitas, siempre.
 
 ---
 
-## Otros pendientes del proyecto, ajenos a esto
+## PENDIENTES
 
-- **Bloqueante para Google Play:** la página pública `/eliminar-cuenta`,
-  accesible sin la app. El mecanismo del servidor ya está listo.
-- `docs/ISSUES.md` tiene **12 abiertos**. El más relevante es el **#12**: el
-  piso de 60 votos por defecto en `discover()` excluye cine regional en toda la
-  app. El dueño pidió no tocarlo hasta decidir viendo qué aparece sin él.
-- **No hay `.gitattributes`** y `core.autocrlf=true`: esa combinación ya produjo
-  un churn de 1600 líneas. Va a volver a pasar.
+### 1. El Top 10 de Netflix — issue #13, lo más fresco
+
+**El cron semanal nunca disparó.** El bloque de Netflix está mostrando
+popularidad en vez del top oficial porque la última semana ingestada
+(`2026-08-09`) superó los 14 días de la guarda. Netflix ya publicó `2026-08-16`.
+
+Las dos escrituras de la tabla son fuera de horario (domingo y miércoles, contra
+un cron de martes 12:00 UTC): **las dos ingestas fueron manuales**.
+
+Dos cosas, separadas:
+
+1. **Recuperar la semana que falta**: una llamada a `/api/cron/netflix-top10` con
+   el `CRON_SECRET`. Upsert idempotente de 20 filas. **Pendiente de aprobación
+   del dueño.**
+2. **Arreglar el cron.** Hay que mirar **Vercel → Settings → Cron Jobs**. Sin
+   eso, el bloque vuelve a caer a popularidad en 14 días.
+
+Detalle completo en `docs/ISSUES.md` #13.
+
+### 2. Bloqueante de Google Play
+
+La página pública **`/eliminar-cuenta`**, accesible sin la app. El mecanismo del
+servidor ya está listo: depende solo de un token válido.
+
+### 3. Los issues de `upcoming_content` que quedaron fuera de alcance
+
+Declarados fuera de la tanda 3 **a propósito**: frescura (#7), cobertura (#8),
+la mezcla de estrenos con episodios semanales (#6) y las fechas en UTC (#4).
+
+### 4. Ramas sin mergear, anteriores a todo esto
+
+`feat/dia-rotacion` (`diaYump()` con borde a las 04:00 y `TTL.home` 26 h) quedó
+pendiente de una prueba manual y está **muy** detrás de `main`: hay que rebasarla.
 
 ---
 
-## Dos cosas que este entorno no puede verificar
+## Lo que NO es un bug, por si vuelve a aparecer
 
-- **El scroll.** El panel del navegador no dispara eventos de scroll ni ejecuta
-  `requestAnimationFrame`, así que todo lo de "volver de una ficha" está
-  verificado hasta el último paso menos el `scrollTo` final.
-- **Las capturas de pantalla.** El panel no compone frames; se verifica por DOM
-  y estilos computados.
+- **Prime Video y Max comparten títulos en el Top.** Verificado contra TMDB:
+  *El hombre araña*, *El Sorprendente Hombre-Araña* y *El Origen* tienen flatrate
+  en `119 Amazon Prime Video` **y** en `1899 HBO Max` en Argentina. Es catálogo no
+  exclusivo. Y el mapeo no infla: los ids **9** (Prime) y **384** (Max legacy) no
+  existen en AR y aportan **0 títulos**.
+- **La interfaz del Top no miente.** El copy es
+  `source === "netflix" ? "…dato oficial" : "Lo más popular ahora"`.
 
 ---
 
 ## Dónde está cada cosa
 
 ```
-docs/medidas/2026-08-23-idioma-informe.md    el informe con los 29 casos
-docs/medidas/2026-08-23-idioma-plan.md       el plan en tres tandas
-docs/IDIOMA-COBERTURA.md                     matriz: qué superficie repara qué
-docs/MANTENIMIENTO.md                        la trampa de Preview/Redis y el 503
-docs/ESTADO.md                               estado de la rama y archivos ajenos
-scripts/medir-idioma-titulos.mjs             instrumento/muestra/medición
-scripts/medir-fallback-idioma.mjs            coste del fallback
-scripts/auditar-ruleta-idioma.mjs            auditoría de roulette_titles
+docs/ISSUES.md                                 #13, el cron del Top 10
+docs/ESTADO.md                                 estado de las tres tandas
+docs/UPCOMING.md                               el idioma del sync y el póster
+docs/MANTENIMIENTO.md                          Preview/Redis, precalentado, medición
+docs/IDIOMA-COBERTURA.md                       qué superficie repara qué
+docs/medidas/2026-08-23-idioma-tanda2-e2e.json la medición de la tanda 2
+docs/medidas/foto-upcoming-*.json              fotos de la agenda, con hash
+docs/medidas/snapshot-upcoming-*.json          los planes del backfill
+scripts/backfill-upcoming-idioma.mjs           dry-run por default
+scripts/foto-upcoming.mjs                      fotos completas con hash
+scripts/precalentar-home.mjs                   runbook de activación
+scripts/banco-idioma-*.{sh,mjs}                el arnés de medición
+supabase/functions/_shared/idioma-nucleo.ts    el predicado y la fusión, compartidos
+supabase/ensayo/upcoming-idioma.sql            el espejo del ensayo (con su guarda)
 ```
