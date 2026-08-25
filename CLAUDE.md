@@ -361,7 +361,24 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   audiencia ni el dedup del Home. El toggle Películas/Series es **uno solo
   global** para toda la página, no uno por riel como en el Home: los bloques son
   la misma pregunta repetida por plataforma, y estados independientes rompen la
-  lectura de "el top de ahora". El cron escribe con `supabaseAdmin()`
+  lectura de "el top de ahora".
+  **En el bloque oficial, la plataforma la garantiza la FUENTE, no TMDB**
+  (`lib/top-plataformas.ts`). Esos veinte títulos los publicó Netflix como lo
+  más visto EN Netflix Argentina, así que "está en Netflix" es un dato, no una
+  deducción — y es mejor dato que `watch/providers`, que llega tarde en los
+  estrenos. Sin eso, "Moria" entró **#1 del top oficial pintada en gris y con
+  "No está en tus plataformas"** (`tv/322428`, semana 2026-08-16: estrenó el
+  14/08 y TMDB no tenía proveedores en NINGUNA región). Es el caso que la
+  **regla 2** de `resolveTitle` ya contemplaba —título exacto que TMDB todavía
+  no ubica en Netflix— y que nadie había bajado a la card. **Solo se aplica
+  cuando no sabemos NADA**: si TMDB conoce el título y lo ubica en otras
+  plataformas, no hay lag que explicar, lo más probable es que la resolución
+  del TSV haya agarrado un homónimo, y ahí agregar Netflix convertiría un error
+  de matcheo en una afirmación falsa bajo el sello "dato oficial". **La ficha
+  del título NO recibe esta corrección** y va a decir "No está en streaming"
+  hasta que TMDB cargue los proveedores: ahí no tenemos la evidencia del TSV a
+  mano y traerla costaría una lectura a Supabase por ficha.
+  El cron escribe con `supabaseAdmin()`
   (service role, bypassa RLS, en `lib/supabase-admin.ts` — aparte de
   `lib/supabase.ts`, que sí llega al bundle del navegador), porque `netflix_top10` solo
   tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de

@@ -661,3 +661,22 @@ Dos cosas separadas:
 se venía degradando bien, pero nada avisaba que hacía dos semanas que no entraba
 un dato. Vale la pena un chequeo de frescura visible —en `/api/health`, por
 ejemplo— para las fuentes que dependen de un cron.
+
+### Desenlace parcial — 2026-08-25
+
+**El cron disparó.** La semana `2026-08-16` entró el **martes 2026-08-25 a las
+12:58 UTC**: el día que corresponde y dentro de la hora de su `0 12 * * 2`, que
+es el margen con el que Vercel dispara los cron. Es la primera escritura de esta
+tabla que parece automática. El bloque de Netflix volvió a "dato oficial".
+
+**Lo que sigue sin explicación**: esa semana tendría que haber entrado el martes
+**2026-08-18**, no siete días después. O el cron no disparó ese día o disparó y
+falló, y desde acá no hay forma de distinguirlo — hay que mirar los logs de
+Vercel.
+
+**Y la fragilidad de fondo no se movió**: la guarda mide la antigüedad desde la
+FECHA DE LA SEMANA, no desde la ingesta. La semana que tenemos hoy ya nació con
+9 días encima, así que **una sola corrida perdida vuelve a degradar el bloque**.
+Verificado de paso que no hay un desfase sistemático: el TSV de Netflix todavía
+publica `2026-08-16` como su semana más nueva, así que la corrida de hoy se
+llevó lo más fresco que había.

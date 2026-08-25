@@ -5,6 +5,7 @@ import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveTopPop } from "./claves";
 import { HUELLA_IDIOMA } from "./idioma";
 import { platformOrder } from "./providers-ar";
+import { conPlataformaDeLaFuente } from "./top-plataformas";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 // Las seis del v1. Elegidas por tamaño de catálogo en AR (ver el spec): las
@@ -83,7 +84,14 @@ async function netflixBlock(tipo: MediaType): Promise<TopBlock> {
   const cards = await cardsByIds(conId.map((f) => ({ tipo, id: f.tmdbId as number })));
   // cardsByIds descarta lo que no pudo enriquecer y no preserva el orden, así
   // que se reindexa por id y se rearma siguiendo el rank, que es el que manda.
-  const porId = new Map(cards.map((c) => [c.id, c]));
+  //
+  // `conPlataformaDeLaFuente` es lo único que este bloque sabe y `cardsByIds`
+  // no: estos veinte títulos los publicó Netflix como lo más visto EN Netflix
+  // Argentina, así que la plataforma es un dato de la fuente. Sin eso, un
+  // estreno que TMDB todavía no tiene fichado como disponible entra al bloque
+  // de Netflix pintado en gris y con "No está en tus plataformas" — ver el
+  // comentario de esa función.
+  const porId = new Map(cards.map((c) => [c.id, conPlataformaDeLaFuente(c, "n")]));
 
   return {
     platform: "n",
