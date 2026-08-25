@@ -129,7 +129,8 @@ Proyecto Supabase `aibqqebwlladjjkeqllo`. ✅ Todas las tablas tienen RLS
 **El servidor no sabe quién pide en la personalización.** ✅ `/api/te-va-a-gustar`
 recibe las señales *del cliente* porque es el único que puede leerlas (RLS); del
 usuario solo se comprueba que exista sesión, y su id no se guarda ni entra en la
-clave de cache. Para Data Safety eso es **procesamiento efímero**.
+clave de cache. Para Data Safety eso es **procesamiento efímero** — ⚠️ lo que
+**no** quiere decir que no se declare: ver §2.c.
 
 ### Nivel D — Datos que pueden quedar temporalmente en logs operativos
 
@@ -215,13 +216,14 @@ qué. Acá va la excepción concreta en cada fila.
 | Votos | App activity → **Other actions** ⚠️ ver 2.d | Sí | No | Service provider | Opcional | App functionality, Personalization |
 | Mi lista / Ya la vi / Descartes | App activity → **App interactions** | Sí | No | Service provider | Opcional | App functionality, Personalization |
 | Historial de fichas | App activity → **App interactions** | Sí | No | Service provider | Opcional | App functionality, Personalization |
-| Señales de personalización | — | **No**: procesamiento **efímero** | No | **Ephemeral processing** | — | — |
+| Señales de personalización | App activity → **App interactions** | **Sí, y se marca EFÍMERO** ⚠️ | No | Service provider (Vercel). Efímero **se responde igual**, ver 2.c | Opcional | App functionality, Personalization |
+| **Contraseña** (solo en la baja) | Personal info → **Other info** 🔵 | **Sí, y se marca EFÍMERO** | No | Service provider (Supabase) | Opcional | Account management |
 | Speed Insights | App info and performance → **Diagnostics** | 🟡 **Sí** | No | Service provider (Vercel) | Obligatorio | Analytics |
 | Web Analytics | App activity → **App interactions** | 🟡 **Sí** | No | Service provider (Vercel) | Obligatorio | Analytics |
 | **Geolocalización de Analytics** | Location → **Approximate location** | 🔵 **DECISIÓN** — ver 2.b | No | Service provider | Obligatorio | Analytics |
-| Avatar (estilo + semilla) | *(sin tipo claro)* — hoy la semilla puede ser el `user_id` | 🟡 Sí, como **User IDs**, mientras no se arregle | **Sí, a DiceBear** ⚠️ | **Ninguna excepción clara**: DiceBear no es proveedor nuestro | Opcional | App functionality |
-| Pósters (TMDB) | — | La IP la ve TMDB, pero **no transmitimos datos de usuario** | No | — | — | — |
-| Tráilers (YouTube) | — | ídem | 🔵 **DECISIÓN** — ver 2.e | — | — | — |
+| **Avatar** (semilla persistida en `profiles`) | Personal info → **User IDs** ⚠️ ver 2.f | Sí | **Sí, a DiceBear** | **Ninguna excepción aplicable** mientras el navegador contacte a DiceBear | Opcional | App functionality |
+| **Pósters de TMDB** (`image.tmdb.org`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Obligatorio | App functionality |
+| **Tráilers de YouTube** (`youtube-nocookie.com`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Opcional (solo al reproducir) | App functionality |
 | Google Calendar | Calendar → **Calendar events** | **No** | **No** | **User-initiated transfer**: lo abre la persona, con divulgación previa | — | — |
 | Advertising ID | Device or other IDs | **No** — no se usa | No | — | — | — |
 
@@ -256,29 +258,89 @@ resuelve por escrito.
 | | **A. Mantener Analytics y declarar** | **B. Retirar o limitar Analytics** |
 |---|---|---|
 | Declaración | `Approximate location`, `Diagnostics`, `App interactions` — todas "recogidas", finalidad Analytics, no compartidas (service provider) | nada que declarar por este concepto |
-| Riesgo de rechazo | bajo: declarar de más nunca hizo rechazar una app | nulo |
-| Riesgo de discrepancia | nulo | nulo |
+| Superficie de datos | **mayor**: se sigue transmitiendo geolocalización a nivel ciudad, y la ficha lo muestra | **menor**: deja de transmitirse |
 | Qué se pierde | nada | la medición de uso real y de Web Vitals |
 | Trabajo | rellenar tres filas más | sacar dos componentes de `layout.tsx` |
 | Opción intermedia | `beforeSend` para redactar rutas sensibles ([redacting sensitive data](https://vercel.com/docs/analytics/redacting-sensitive-data)) — **no** elimina la geolocalización | — |
 
-🟡 **RECOMENDACIÓN CONSERVADORA: opción A**, declarando las tres categorías
-**incluida `Approximate location`**. Declarar de más cuesta tres casillas;
-declarar de menos, si Google verifica, es una discrepancia en el formulario. La
-opción intermedia no sirve para esto: `beforeSend` toca la URL, no la
+⚠️ **CORREGIDO.** La versión anterior decía "declarar de más nunca hizo rechazar
+una app" y "riesgo de rechazo nulo". **Se retiran las dos.** Nadie puede
+garantizar el resultado de una revisión, y lo que Google sí escribe es la
+obligación: *"You alone are responsible for making complete and accurate
+declarations in your app's store listing on Google Play"*, y ante una
+discrepancia entre el comportamiento real y lo declarado *"we may take
+appropriate action, including enforcement action"*.
+
+Las dos opciones son, entonces, **mayor o menor superficie de datos**, no "más
+riesgoso o menos riesgoso de aprobar":
+
+- **A** mantiene la funcionalidad y obliga a declarar tres categorías más, una de
+  ellas visible en la ficha.
+- **B** reduce lo que se transmite, y con eso lo que hay que declarar y lo que
+  hay que sostener como exacto.
+
+🟡 **RECOMENDACIÓN CONSERVADORA**: si Analytics se mantiene, declarar las tres
+**incluida `Approximate location`**, porque el criterio que sí es verificable es
+la exactitud del formulario, y la definición de Google usa "ciudad" como ejemplo
+literal. La opción intermedia no sirve acá: `beforeSend` toca la URL, no la
 geolocalización.
 
-🔵 **Queda como decisión tuya**, porque implica aceptar que la ficha diga que la
-app recoge ubicación aproximada, y eso se ve en la tienda.
+🔵 **La decisión es tuya**, y es una decisión de producto antes que de trámite:
+¿vale la medición de uso lo que cuesta declarar ubicación aproximada en la ficha?
 
-### 2.c 🔵 DECISIÓN — La contraseña
+### 2.c ⚠️ CORREGIDO — La contraseña: el recorrido real
 
-La lista de tipos de Play **no incluye** "password". Lo más cercano sería
-`Personal info → Other info`. **No encontré una fuente oficial que resuelva si
-una credencial de autenticación debe declararse**, y no voy a inventar una.
+La versión anterior decía que la contraseña "se guarda con hash, nunca en claro".
+**Eso es cierto para el almacenamiento y falso como descripción del recorrido.**
+Hay un tramo donde la contraseña en claro pasa por NUESTRO servidor.
 
-🟡 No declararla como tipo separado, y explicarla igual en `/privacidad`
-(se guarda con hash, nunca en claro, nadie la ve).
+**El recorrido completo, ✅ verificado en el código:**
+
+| Momento | Quién la recibe | Qué pasa con ella |
+|---|---|---|
+| **Registro** | el navegador → **Supabase Auth** directo (`supabaseBrowser().auth.signUp`) | Supabase la guarda con hash. **No pasa por nuestro servidor** |
+| **Login** | el navegador → **Supabase Auth** directo (`signInWithPassword`) | ídem |
+| **Cambio / recuperación** | el navegador → **Supabase Auth** directo | ídem |
+| **Baja de cuenta** | el navegador → **`/api/cuenta/eliminar`**, o sea **nuestro servidor en Vercel** | 👈 **acá está la diferencia** |
+
+En la baja, `route.ts` lee `cuerpo.password` y se lo pasa a `eliminarCuenta()`,
+que crea un cliente aislado de Supabase y llama a `signInWithPassword(email,
+password)` para reautenticar. O sea: **la contraseña viaja en claro dentro del
+HTTPS hasta nuestra función, se usa en memoria y se descarta.**
+
+✅ **Lo que sí es cierto y está verificado**: no se persiste y no se registra —
+el comentario del archivo lo dice y el código lo cumple (*"NADA de esta función
+registra el cuerpo, la contraseña, el token ni el email"*), y los errores se
+devuelven como códigos propios y no como el mensaje de Supabase, que puede
+incluir el email.
+
+**Clasificación**: **procesamiento efímero**. Se accede en memoria y se retiene
+sólo lo necesario para atender la petición.
+
+⚠️ **Y acá va la corrección más importante de esta versión**, que afecta también
+a las señales de personalización: **procesamiento efímero NO significa "no se
+declara"**. Google es explícito:
+
+> *"User data transmitted off device that is processed ephemerally **needs to be
+> included in your form response**, but if it meets the standard below, it will
+> not be disclosed in your app's Data safety section on Google Play."*
+
+Es decir: **se responde en el formulario y se marca como efímero**; lo que no
+ocurre es que aparezca en la ficha pública. La versión anterior lo trataba como
+una exención de declarar. Era un error.
+
+**Cómo responder en Data Safety:**
+
+1. Declarar el dato, con el tipo que corresponda.
+2. Responder **"sí"** a *"Is this data processed ephemerally?"*.
+3. Finalidad: `Account management`.
+4. No compartido: el destino es **Supabase, service provider**.
+
+🔵 **Lo que sigue siendo decisión tuya**: **con qué tipo**. La lista de Play no
+tiene "password"; lo más cercano es `Personal info → Other info`. No encontré
+fuente oficial que resuelva si una credencial de autenticación debe declararse
+como tipo propio, y no voy a inventar una. 🟡 Declararla como `Other info` con la
+marca de efímero es la lectura prudente, y no aparece en la ficha pública.
 
 ### 2.d ⚠️ Votos: cambié la clasificación
 
@@ -303,16 +365,123 @@ anuncio dentro de la app.
 it's considered a violation … and may result in your app(s) being suspended"*.
 El costo de declararlo es una etiqueta "Contiene anuncios" en la ficha.
 
-### 2.f ⚠️ El avatar es el único "sharing" real
+### 2.f ⚠️ CORREGIDO — El avatar, y por qué cambiar la semilla NO alcanza
 
-Todo lo demás cae bajo **service provider**. DiceBear **no** procesa datos por
-cuenta nuestra siguiendo nuestras instrucciones: es un servicio público al que el
-navegador le pide una imagen. Si la semilla es el `user_id`, eso es transferir un
-identificador a un tercero.
+La versión anterior decía que bastaba con que la semilla dejara de ser el
+`user.id`, y que eso era "una línea de código". **Las dos cosas están mal.**
 
-🟡 **Arreglarlo antes de completar el formulario** (garantizar que la semilla
-nunca sea el `user_id`) y así la fila desaparece de la matriz. Es una línea de
-código y evita tener que declarar "compartimos identificadores".
+**Por qué no alcanza.** La semilla se **persiste en `profiles.avatar_seed`** y se
+reutiliza en **todas** las peticiones de esa persona, en todos sus dispositivos y
+sesiones. Sea `user.id` o un `gen_random_uuid()`, es **un valor estable, único y
+vinculado internamente a una cuenta**: DiceBear recibe siempre el mismo string
+junto con la IP, y puede correlacionar peticiones a lo largo del tiempo. Que
+nosotros no le contemos a qué cuenta corresponde no lo vuelve anónimo — lo vuelve
+**seudónimo**.
+
+Y la definición de Google no habla de nombres, habla de vínculo:
+
+> **User IDs**: *"Identifiers that relate to an identifiable person. For example,
+> an **account ID**, account number, or account name."*
+
+`avatar_seed` es literalmente un id de cuenta: vive en la fila de la cuenta, es
+uno por cuenta y muere con ella. **Un identificador seudónimo se declara.**
+
+**La otra parte que estaba mal**: aunque la semilla fuera aleatoria por
+dispositivo, **la transferencia a DiceBear seguiría existiendo** — IP,
+user-agent y el recurso pedido. Cambiar la semilla no elimina la transferencia,
+sólo la hace menos correlacionable.
+
+**Las cuatro soluciones, comparadas:**
+
+| | **A. Generación local con la librería** | **B. Set propio de avatares** | **C. Proxy + almacenamiento en Yump** | **D. Seguir como está y declararlo** |
+|---|---|---|---|---|
+| ¿El navegador contacta a DiceBear? | **No** | **No** | **No** | **Sí** |
+| ¿Hay que declarar transferencia a un tercero? | No | No | No | **Sí** |
+| Cómo | `@dicebear/core` + `@dicebear/styles`, render del SVG en servidor o cliente. ✅ *"avatars are generated entirely on your infrastructure. No personal data ever leaves your systems"* | ilustrar o comprar N avatares y que la persona elija uno | pedirlos una vez desde nuestro servidor, guardarlos y servirlos desde nuestro dominio | nada |
+| Atribución CC BY 4.0 | **se conserva**: la licencia es del estilo, no del transporte | depende de la fuente de los assets | **se conserva** | se conserva |
+| Trabajo | dos dependencias, un helper y ajustar el `<img>` a un SVG inline o a una ruta propia | diseño de N avatares | una ruta, almacenamiento y política de caché | ninguno |
+| Efecto secundario | el SVG viaja en el HTML o se sirve local; **el service worker deja de cachear un dominio externo** | se pierde la variedad infinita | sumamos almacenamiento de imágenes, que hoy no tenemos | queda una fila de "sharing" en la matriz |
+| Riesgo | bajo | bajo | medio: hay que decidir dónde se guardan y cuánto viven | — |
+
+🟡 **RECOMENDACIÓN: opción A — generación local con `@dicebear/core` +
+`@dicebear/styles`.** Es la única que **elimina de verdad la transferencia** sin
+resignar la variedad ni rediseñar la funcionalidad, y la documentación oficial lo
+afirma explícitamente. La opción C también la elimina, pero nos deja
+almacenamiento de imágenes que hoy el proyecto no tiene y una política de purga
+que mantener.
+
+**La atribución CC BY 4.0 se conserva igual.** La licencia recae sobre el
+**estilo** (`adventurer-neutral`, de Lisa Wischofsky), no sobre cómo se
+transporta. Generarlo localmente no cambia nada: el crédito va en `/acerca-de`.
+
+🔍 **VERIFICAR antes de implementar**: la licencia de la **librería** en sí
+(`@dicebear/core`) no está declarada en la página de la documentación que
+consulté; hay que leerla en el paquete publicado. Y hay que confirmar el nombre
+exacto del paquete de estilos, porque la documentación menciona
+`@dicebear/styles` mientras que versiones anteriores usaban `@dicebear/collection`.
+
+🔵 **DECISIÓN tuya**: A, B, C o D. **Mientras no se decida, la fila del avatar
+queda en la matriz como transferencia a un tercero sin excepción aplicable**, y
+hay que declararla.
+
+### 2.g ⚠️ CORREGIDO — Los tres dominios que contacta el navegador
+
+La versión anterior despachaba TMDB y YouTube con "no transmitimos datos de
+usuario". **Es una respuesta incompleta**: el navegador les abre una conexión y
+eso transmite datos, los pongamos nosotros o no.
+
+**Qué se transmite, en los tres casos:**
+
+| | `image.tmdb.org` | `youtube-nocookie.com` | `api.dicebear.com` |
+|---|---|---|---|
+| IP del dispositivo | sí | sí | sí |
+| User-agent | sí | sí | sí |
+| Recurso pedido | **qué póster** = qué título estás mirando | **qué tráiler** reproducís | **la semilla** del avatar |
+| Referrer | según la política del documento | sí (el player lo usa) | según la política |
+| Cookies del tercero | no las pone TMDB | el modo privacidad **no** las elimina, evita la personalización | no |
+| Correlación entre sesiones | por IP | por IP y por lo que Google ya tenga de esa persona | **por la semilla**: es estable |
+| ¿Iniciado por la persona? | **no**: se carga con la pantalla | **sí**: hay que tocar reproducir | **no**: se carga con la pantalla |
+| ¿Es proveedor de servicio nuestro? | **no**: es una CDN pública, no procesa por cuenta nuestra ni bajo nuestras instrucciones | **no** | **no** |
+
+**Cómo encaja —o no— en un tipo del formulario:**
+
+- **El patrón de navegación implícito** (qué pósters se piden) no tiene un tipo
+  obvio. `Web browsing history` se refiere a historial de navegación web, no a
+  qué recursos carga una app. **No hay un tipo que calce**, y ése es justamente
+  el problema.
+- **La IP no es un tipo declarable** por sí sola en la lista de Play.
+- **La semilla del avatar sí calza**: `User IDs`. Es la única de las tres con un
+  tipo claro, y por eso es la única que puse en la matriz con su fila.
+
+**Qué excepción podría aplicar:**
+
+- **YouTube**: *"User-initiated transfers"*, porque la conexión sólo ocurre si la
+  persona toca reproducir — pero la excepción exige *"prominent disclosure and
+  user consent"*, y **hoy la app no muestra ninguna divulgación antes de cargar
+  el player**. 🟡 Si se quiere apoyar en esa excepción, hay que agregar el aviso.
+- **TMDB**: no encuentro excepción aplicable. No es proveedor de servicio, no es
+  iniciado por el usuario y no está anonimizado.
+- **DiceBear**: ninguna, ver 2.f.
+
+🔍 **VERIFICACIÓN PENDIENTE, y la dejo abierta a propósito.** No encontré
+documentación oficial de Google que resuelva si **cargar un recurso estático
+desde un dominio de terceros** cuenta como "collection" o "sharing" a los efectos
+del formulario. La definición de *collection* —*"Transmitting data from your app
+off a user's device"*— **es lo bastante amplia como para incluirlo**, y la de
+*sharing* —*"Transferring user data collected from your app to a third party"*—
+depende de si la IP y el recurso pedido cuentan como "user data collected from
+your app". Google no lo aclara para este caso.
+
+**No lo resuelvo por mi cuenta.** 🟡 Lo que sí recomiendo, porque reduce el
+problema en vez de discutirlo:
+
+1. **DiceBear**: eliminar la transferencia (§2.f, opción A). Es la única de las
+   tres que podemos sacar sin perder nada.
+2. **YouTube**: agregar una divulgación previa al player, que además es lo que
+   pide la excepción de transferencia iniciada por el usuario.
+3. **TMDB**: no es eliminable sin proxear todas las imágenes, que es un costo de
+   infraestructura real. **Declararlo en `/privacidad`** con todas las letras y
+   dejar la fila del formulario como pendiente hasta consultarlo.
 
 ---
 
@@ -485,7 +654,9 @@ De los [API Terms of Use](https://www.themoviedb.org/api-terms-of-use):
   marks that primarily describe or identify Your Application"*.
 - **Colocación**: *"prominently in or on Your Application"*.
 - **Uso comercial**: requiere acuerdo escrito aparte.
-- **Cache**: prohibido más de **6 meses**. ✅ Nuestro TTL más largo es `pool: 30 h`.
+- **Cache**: prohibido *"Cache, for longer than 6 months, any information
+  obtained through or from TMDB or the TMDB APIs"*. ⚠️ **Ver §5.f: los 30 h de
+  Redis NO alcanzan para afirmar que el proyecto cumple.**
 
 **Corrección al texto que me pasaste**: citaste la forma corta ("This product
 uses the TMDB API but is not endorsed or certified by TMDB"). La vigente en los
@@ -531,6 +702,91 @@ un producto propio en una tienda.
 Cualquier ingreso —publicidad, suscripción, afiliados— **exige acuerdo comercial
 escrito con TMDB antes de activarlo**. Si la decisión #4 es "sí", ese contacto va
 primero en el orden de trabajo.
+
+### 5.f ⚠️ NUEVO — Auditoría de persistencia: dónde más vive contenido de TMDB
+
+La versión anterior cerraba el tema del límite de 6 meses con *"nuestro TTL más
+largo es `pool: 30 h`"*. **Eso sólo habla de Redis.** El proyecto guarda
+contenido de TMDB en al menos tres lugares más, y uno de ellos no tiene ningún
+mecanismo que impida superar los seis meses.
+
+**No se borró nada.** Esto es un inventario.
+
+#### Familia 1 — Cache de Upstash Redis ✅ CUMPLE
+
+| Claves | TTL máximo |
+|---|---|
+| `card:`, `pv:`, `videos:`, `home:`, `genre:covers:`, `people:`, `blocklist:` | `pool: 30 h`, y es el más largo de toda la tabla `TTL` |
+
+Nada puede sobrevivir más de 30 horas. ✅ Cumple con enorme margen.
+
+#### Familia 2 — Tablas de Supabase ⚠️ REQUIEREN POLÍTICA
+
+| Tabla | Campos de TMDB | ¿Se refresca? | ¿Se borra? | Estado |
+|---|---|---|---|---|
+| **`upcoming_content`** (42 filas) | `title`, `original_title`, `overview`, `poster_path`, `backdrop_path`, `release_date`, `episode_name`, `genre_ids`, `popularity`, `vote_average`, `status`, `tv_status` | **sólo si el sync la redescubre** | sólo si pierde todos sus providers AR (`aBorrar`) | ⚠️ **RIESGO REAL** |
+| **`providers`** (58 filas) | `name`, `logo_path`, `display_priority` | upsert del sync | nunca | ⚠️ **queda indefinidamente** |
+| **`roulette_titles`** (2401 filas) | `title`, `year`, `runtime`, `genres`, `edad`, `vote_count`, `vote_average` | **no**: pool curado offline, escrito una vez | nunca | ⚠️ **queda indefinidamente** |
+| **`title_availability`** | `providers[]`, `rent_only`, `checked_at` | sólo al re-correr el pipeline | nunca | ⚠️ **queda indefinidamente** |
+| **`chip_titles`** | `title`, `year` | no | nunca | ⚠️ **queda indefinidamente** |
+| **`netflix_top10`** (60 filas) | `tmdb_id` — sólo el id, más `raw_title` **que viene del TSV de Netflix, no de TMDB** | semanal | nunca | 🟡 un id no es "información obtenida de TMDB" en el sentido del texto, pero conviene decidirlo |
+
+**El caso más claro es `upcoming_content`**, y **ya está documentado como bug
+independiente**: el **issue #7** dice que *"una fila deja de refrescarse y queda
+con datos equivocados, no solo vencidos"*, porque *"el sync solo escribe lo que
+descubre, y el descubrimiento no garantiza volver a pasar por un título que ya
+está en la tabla"*.
+
+✅ **Medido hoy contra la base**: la fila menos refrescada tiene `created_at`
+**2026-07-31** y `updated_at` **2026-08-08** — 17 días sin tocarse. Y ✅
+verificado: **no hay ninguna consulta que borre filas por antigüedad ni por fecha
+de estreno pasada**. Una fila que el sync no vuelva a descubrir **no tiene hoy
+ningún camino que la elimine ni que la refresque**.
+
+La tabla tiene menos de dos meses de vida, así que **hoy nada supera los seis
+meses**. Pero **no existe el mecanismo que lo impida**, y eso es lo que hay que
+registrar antes de afirmar cumplimiento.
+
+#### Familia 3 — Archivos versionados en git ⚠️ PERMANENTES POR DEFINICIÓN
+
+Un archivo commiteado no "expira": vive en el historial para siempre, incluso si
+se borra del árbol de trabajo.
+
+| Archivo | Contenido de TMDB | Desde |
+|---|---|---|
+| `data/clasificado-magica-navidad.json` | `title`, `original_title`, `year`, **`overview`** de 260 títulos | 2026-08-08 |
+| `data/contexto-ruleta.json` | `title`, `year`, saga, de 461 títulos | 2026-08-11 |
+| `data/copy-ruleta.json` | 2401 filas del pool | 2026-08-11 |
+| `docs/medidas/2026-08-23-idioma-ruleta.json` | 550 campos `title`/`name`/`overview`, 331 KB | 2026-08-23 |
+| `docs/medidas/snapshot-upcoming-*.json` (4) | 224-236 campos cada uno, con `title`, `overview` y `episode_name` | 2026-08-24 |
+| `docs/medidas/foto-upcoming-*.json` (5) | 88-90 campos cada uno, fotos completas de la tabla | 2026-08-24 |
+| resto de `docs/medidas/` | 36 archivos, 1,5 MB en total | desde 2026-08-15 |
+
+**El más viejo es del 2026-08-08**, o sea que **el primero cumpliría seis meses
+alrededor del 8 de febrero de 2027**. Hay tiempo, pero la fecha existe.
+
+#### Qué hay que decidir 🔵
+
+| # | Familia | Opciones |
+|---|---|---|
+| 1 | `upcoming_content` | (a) arreglar el issue #7 con una pasada de refresco —que resuelve el bug **y** el cumplimiento de una vez—; (b) purgar filas con `updated_at` más viejo que N; (c) las dos |
+| 2 | `roulette_titles`, `chip_titles`, `title_availability` | ¿se re-corre el pipeline periódicamente, o se acepta que el snapshot de TMDB envejezca? Ojo: **el texto editorial de la ruleta es propio y no es de TMDB**; lo que cae bajo la regla son `title`, `year`, `genres`, `vote_*` |
+| 3 | `providers` | refrescar en cada corrida del sync, que ya lo hace por upsert — 🔍 verificar que el upsert corra siempre y no sólo al descubrir |
+| 4 | Archivos versionados | (a) política de purga con calendario; (b) reducir los snapshots a lo mínimo (ids y hashes en vez de textos); (c) evaluar si un archivo de auditoría interno cae bajo "cache" |
+
+🟡 **RECOMENDACIÓN**: arrancar por la #1, porque el issue #7 ya está abierto por
+otro motivo y **un solo arreglo cierra las dos cosas**. Y para la #4, la salida
+más limpia hacia adelante es que los snapshots nuevos guarden **ids y hashes**
+en lugar de títulos y sinopsis: sirven igual para comparar corridas y dejan de
+acumular contenido ajeno.
+
+🔍 **VERIFICACIÓN PENDIENTE**: si un archivo de medición interno, no distribuido
+y usado para auditar el propio sistema, cuenta como "cache" a los efectos de esa
+cláusula. **No lo resuelve el texto de los términos**, y no lo voy a decidir yo.
+
+**Conclusión de esta sección**: ⚠️ **retiro la afirmación de cumplimiento.** Lo
+correcto hoy es: *Redis cumple con margen; el resto del proyecto no tiene un
+mecanismo que garantice el límite, aunque nada lo haya superado todavía.*
 
 ### 5.e Dónde mencionar TMDB
 
@@ -646,7 +902,14 @@ Las diez de §4.c, más:
 14. §2.e — ¿"Contains ads" por YouTube?
 15. §5.c — ¿Capturas con pósters reales o con placeholders propios?
 16. §6.d — ¿Se aprueba el reemplazo por nombres neutros?
-17. §2.f — ¿Se arregla el `avatar_seed = user.id` antes de completar el formulario?
+17. §2.f — **¿Qué solución de avatares?** A (generación local), B (set propio),
+    C (proxy) o D (dejar como está y declarar la transferencia). **Bloquea el
+    commit 3 de la primera tanda.**
+18. §2.c — ¿Con qué tipo de Play se declara la contraseña efímera?
+19. §2.g — ¿Se agrega una divulgación previa al player de YouTube, para poder
+    apoyarse en la excepción de transferencia iniciada por el usuario?
+20. §5.f — ¿Qué se hace con cada familia de contenido de TMDB persistido?
+    (refresco de `upcoming_content`, pipeline de la ruleta, archivos versionados)
 
 ### 7.c 🔍 Verificaciones pendientes en paneles
 
@@ -670,7 +933,7 @@ hoy dos incumplimientos que ya existen en producción**.
 |---|---|---|---|
 | 1 | `fix(legal): atribución de TMDB y DiceBear` | `/acerca-de` con logo TMDB local, el texto largo verbatim, enlace, crédito CC BY 4.0 a Lisa Wischofsky y aviso de no afiliación | nada — **es el que cierra el incumplimiento vigente** |
 | 2 | `fix(onboarding): las rutas legales quedan exentas del gate` | lista de exentas + **test** de que `/privacidad`, `/terminos`, `/acerca-de` y `/eliminar-cuenta` no redirigen con `onboarding_completed = false` | nada |
-| 3 | `fix(privacidad): el avatar deja de exponer el user_id` | la semilla nunca es `user.id` | nada |
+| 3 | `fix(privacidad): los avatares dejan de salir hacia DiceBear` | ⚠️ **depende de la decisión arquitectónica de §2.f**, no es cambiar la semilla. Si es la opción A: agregar `@dicebear/core` + `@dicebear/styles`, generar el SVG sin red y **borrar el helper que arma la URL de `api.dicebear.com`** | **decisión 17 — bloqueante** |
 | 4 | `refactor(marcas): nombres neutros en lugar de wordmarks imitados` | `PlatformLogo.tsx` + borrar las 15 reglas `.lg-*` | decisión 16 |
 | 5 | `feat(legal): /privacidad y /terminos` | las estructuras de §4 | decisiones 1-6 |
 | 6 | `feat(cuenta): /eliminar-cuenta pública` | §3.e; reusa `<EliminarCuenta/>` | decisiones 1-2 |
@@ -689,10 +952,22 @@ hoy dos incumplimientos que ya existen en producción**.
 - `/eliminar-cuenta` permite iniciar sesión y borrar, con un solo mensaje de
   error genérico.
 - Ninguna marca de plataforma conserva su color ni su tipografía.
+- ⚠️ **Si se elige eliminar la transferencia a DiceBear, hay que DEMOSTRARLO, no
+  suponerlo.** Dos comprobaciones, y las dos son necesarias:
+  1. **Test automático**: que ningún módulo del bundle contenga la cadena
+     `api.dicebear.com`. Es el equivalente del test de importaciones que ya usa
+     el proyecto para que `lib/claves.ts` no llegue al navegador.
+  2. **Verificación en el navegador**: cargar `/cuenta/perfil` con una cuenta
+     real y comprobar en las peticiones de red que **no hay ni una sola** a
+     `api.dicebear.com` — ni de la página ni del service worker. El registro de
+     red es la prueba; el código leído no alcanza, porque el SW puede tener la
+     URL vieja cacheada.
 
 **Criterio de aceptación de la tanda**: las cuatro rutas responden 200 en
-producción sin sesión, `/acerca-de` muestra la atribución de TMDB y DiceBear, y
-el enlace de borrado es pegable en Play Console.
+producción sin sesión, `/acerca-de` muestra la atribución de TMDB y de DiceBear
+(CC BY 4.0, incluso si se generan localmente), el enlace de borrado es pegable en
+Play Console, y —si se eligió A, B o C en §2.f— el registro de red no muestra
+ninguna petición a `api.dicebear.com`.
 
 ---
 
@@ -717,6 +992,15 @@ Se declara explícitamente para que nadie lo tome como confirmado:
    contratados. Requiere mirar los paneles (§7.c).
 7. **Si `providers.logo_path` se renderiza hoy en `/proximamente`.** Está guardado
    en la base; no verifiqué si algún componente lo pinta.
+8. **Si cargar un recurso estático desde un dominio de terceros** (`image.tmdb.org`,
+   `youtube-nocookie.com`) cuenta como *collection* o *sharing* en el formulario.
+   Las definiciones son lo bastante amplias como para incluirlo y Google no lo
+   aclara para este caso (§2.g).
+9. **Si un archivo de medición interno, versionado y no distribuido**, cuenta
+   como "cache" a los efectos del límite de 6 meses de TMDB (§5.f).
+10. **La licencia de la librería `@dicebear/core`** y el nombre exacto del paquete
+    de estilos (`@dicebear/styles` vs `@dicebear/collection`). Hay que leerlo en
+    el paquete publicado (§2.f).
 
 ---
 
@@ -736,4 +1020,11 @@ Se declara explícitamente para que nadie lo tome como confirmado:
 - [x] Requisitos, decisiones, verificaciones y recomendaciones, separados
 - [x] Primera tanda web/legal, independiente de Android
 - [x] Lista explícita de lo no verificado
+- [x] **Tercera pasada**: avatares con cuatro soluciones comparadas y una
+      recomendación que elimina la transferencia; recorrido real de la
+      contraseña y su clasificación como efímero **que sí se declara**;
+      afirmaciones absolutas sobre el resultado de la revisión, retiradas;
+      filas de TMDB, YouTube y DiceBear con qué se transmite y qué excepción
+      aplicaría; auditoría de persistencia de contenido de TMDB en las tres
+      familias
 - [ ] **Tu aprobación antes de escribir una línea de código**
