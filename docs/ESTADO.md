@@ -393,7 +393,57 @@ de arriba es la fuente para ese formulario.
 
 ---
 
-## Tanda 3 del idioma: implementada y ENSAYADA, sin desplegar
+## Tanda 3 del idioma: EN PRODUCCIÓN
+
+**Cerrada el 2026-08-24.** `upcoming_content` quedó en es-MX y el sync escribe en
+es-MX de acá en adelante. Falta **solo el merge** de `feat/idioma-tanda-3`.
+
+| Pieza | Estado |
+|---|---|
+| Migración `006` (RPC del backfill) | aplicada |
+| Edge Function `tmdb-sync` | desplegada, **version 7** |
+| Secret `IDIOMA_TITULOS` | **`es-MX`** |
+| Backfill | aplicado: 13 filas, 16 campos |
+| Cron `tmdb-sync-upcoming-daily` | **reactivado**, jobid 2, `active = true` |
+
+Verificaciones del backfill: 13 filas y 16 campos exactos, igualdad `===` contra
+`después`, **ninguna** columna fuera de las tres, `upcoming_content_providers`
+con el mismo sha256, 0 títulos vacíos o no latinos, y **los 44 títulos de la
+agenda coinciden con su ficha** (0 diferencias).
+
+`updated_at` tampoco cambió con el backfill: la tabla no tiene trigger y el
+`UPDATE` nombra solo las tres columnas. Sigue marcando cuándo lo refrescó el
+*sync*, que es el diagnóstico de frescura que no había que pisar.
+
+### Lo que costó tres iteraciones, y por qué
+
+La política del sync ante un respaldo que no alcanza se equivocó dos veces antes
+de quedar bien, y las dos veces lo encontró una corrida real, no la lectura:
+
+1. **Descartar todo lo que el respaldo no mejorara** tiró 79 títulos de 120 —casi
+   todos sin sinopsis en ningún idioma— y bajó el descubrimiento a un tercio.
+2. **Escribir todo lo que el respaldo no mejorara** habría persistido títulos
+   coreanos que es-ES tenía en español.
+
+Las dos preguntaban "¿la fusión cambió algo?". La correcta es **qué sigue roto
+después de fusionar**, y la respuesta se decide por campo. La regla final:
+
+```
+título final no vacío y en alfabeto latino  ->  se escribe, aunque coincida
+                                                con el original
+título final vacío o en escritura no latina ->  el candidato queda fuera
+```
+
+Y ese corte es un **piso de calidad**, no una protección de idioma: la fusión ya
+repara todo lo que es-ES pueda mejorar. Candidatos: 40 → 83 → **113 de 120**.
+
+**`poster_path` cambia con es-MX y es deliberado** (`docs/UPCOMING.md`): los
+pósters de TMDB son localizados. El backfill sigue limitado a `title`,
+`overview` y `episode_name`.
+
+---
+
+## Histórico: cómo se ensayó la tanda 3
 
 Rama `feat/idioma-tanda-3`, sin mergear. **Producción intacta**: el cron sigue
 corriendo, la Edge Function sigue en es-ES, no se tocaron secrets y
