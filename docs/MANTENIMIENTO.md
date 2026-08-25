@@ -745,3 +745,99 @@ Dos reglas que salen de ahí:
 Es la misma familia que la nota de 8.c sobre el hero, pero más estricta: allá
 alcanzaba con reportar *conjunto* y *posición* por separado; acá el efecto es tan
 chico (un título en 314) que la deriva lo tapa entero.
+
+---
+
+## Runbook: la ingesta manual del Top 10 después de deployar el resolvedor
+
+Corre UNA vez, después de que el deploy esté en producción. **No hace falta
+borrar ni tocar nada de la tabla**: `ingestLatestWeek()` reintenta sola las filas
+con `tmdb_id` en `null` (`pendientes` incluye `prev.tmdbId === null`), así que la
+única fila que va a resolver es la de Operation.
+
+### Antes de correrla, qué va a pasar exactamente
+
+`rows` se arma **sólo con las pendientes**, así que el `upsert` lleva **una fila**
+y las otras 19 de la semana ni viajan en el payload. No es que "probablemente no
+cambien": no se tocan.
+
+De paso: el `select` de "conocidos" busca ese `raw_title` en semanas anteriores.
+No existe, así que va derecho al resolvedor nuevo.
+
+### 1. Verificar que el deploy es el que tiene el arreglo
+
+En Vercel, que el deployment de producción apunte al commit `d3d5c7e` (o al que
+quede al mergear). Si Vercel no tomó el push, es el problema conocido: se
+destraba con un commit vacío, no con Redeploy.
+
+### 2. La llamada, una sola vez
+
+```bash
+curl -sS -H "Authorization: Bearer $CRON_SECRET" https://app.yump.ar/api/cron/netflix-top10
+```
+
+`$CRON_SECRET` es el mismo valor que está en las variables de Vercel y en tu
+`.env.local`. La ruta compara en tiempo constante y sólo acepta el header
+`Authorization`, no un query param.
+
+**Respuesta esperada:**
+
+```json
+{ "ok": true, "week": "2026-08-16", "inserted": 1, "resolved": 1, "review": 1 }
+```
+
+- `inserted: 1` → tocó **una** fila. Si dice 20, algo cambió los `raw_title` y
+  hay que mirar antes de seguir.
+- `resolved: 1` → le encontró id.
+- `review: 1` → esperado: el subtítulo de TMDB no es el del TSV.
+
+**Si da timeout o una respuesta ambigua, NO la repitas.** Mirá primero la tabla
+con el paso 3: el upsert es idempotente por `(week, category, rank)`, pero un
+segundo intento a ciegas gasta llamadas a TMDB sin decirte nada nuevo.
+
+**Si da `500`**, el cuerpo trae el error. Los dos probables: `SUPABASE_SERVICE_ROLE_KEY`
+sin definir en producción, o TMDB caído (en ese caso el resolvedor devuelve
+`null` sin asociar nada, que es el comportamiento correcto — reintentá más tarde).
+
+### 3. Verificar en la base
+
+```sql
+select rank, raw_title, tmdb_id, needs_review, updated_at
+  from netflix_top10
+ where week = '2026-08-16' and category = 'tv'
+ order by rank;
+```
+
+Qué tiene que dar:
+
+- `rank 7` → `tmdb_id = 284753`, `needs_review = true`.
+- Las otras 9 filas de `tv` con **el mismo `tmdb_id` y el mismo `updated_at`**
+  que antes de la corrida. Ese `updated_at` sin mover es la prueba de que no se
+  reescribieron.
+- `movie` no se consulta porque no tenía pendientes; si querés la foto completa,
+  sacá el `and category = 'tv'`.
+
+### 4. Verificar en la app
+
+En `/top`, con Netflix entre tus plataformas y el toggle en **Series**:
+
+1. **Puesto 7** — ya no es el hueco gris con "Ficha no disponible": tiene que
+   tener póster, título en español y el logo de Netflix.
+2. **Puesto 1, Moria** — a color, con el logo de Netflix, **sin** el cartel "No
+   está en tus plataformas".
+3. **Los otros 8 puestos** — los mismos títulos y en el mismo orden.
+4. El rótulo del bloque tiene que seguir diciendo **"Lo más visto esta semana ·
+   dato oficial"**. Si dice "Lo más popular ahora", la semana pasó los 14 días y
+   el problema es otro (issue #13).
+
+No hace falta invalidar ninguna caché: el bloque de Netflix no se cachea —
+`latestWeekRows()` va a Supabase en cada request y las fichas se enriquecen por
+título. El service worker tampoco molesta: `/api/*` es Network Only.
+
+### Lo que esta corrida NO arregla
+
+La **ficha individual** de Moria (`/titulo/tv/322428`) va a seguir diciendo
+**"No está en streaming"** hasta que TMDB cargue los proveedores. Es una
+limitación conocida y aceptada, no un bug abierto: la corrección de la fuente
+sólo llega a las cards del bloque oficial, que es donde tenemos la evidencia del
+TSV a mano.
