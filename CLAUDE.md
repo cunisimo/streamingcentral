@@ -377,7 +377,27 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   de matcheo en una afirmación falsa bajo el sello "dato oficial". **La ficha
   del título NO recibe esta corrección** y va a decir "No está en streaming"
   hasta que TMDB cargue los proveedores: ahí no tenemos la evidencia del TSV a
-  mano y traerla costaría una lectura a Supabase por ficha.
+  mano y traerla costaría una lectura a Supabase por ficha. **Limitación
+  pendiente, no un bug abierto.**
+  **La resolución título→TMDB vive en `lib/netflix-resolver.ts`**, sin
+  `server-only` para poder probarla sin red; `netflix-top10.ts` sólo le enchufa
+  las dos puertas (`buscar`, `enNetflixAR`). Las tres reglas de siempre no
+  cambiaron y hay un **cuarto paso**: si ninguna aceptó y el título trae
+  subtítulo, se repite la búsqueda con la parte anterior a los dos puntos.
+  Nació de "Operation Safed Sagar: The Highest Air Force Mission", donde TMDB
+  devuelve **cero** resultados para el título completo y uno solo para
+  "Operation Safed Sagar" (`tv/284753`, con Netflix en AR y otro subtítulo).
+  **Ese paso es más desconfiado que los otros tres, y tiene que serlo**: exige
+  que TMDB devuelva **un único** resultado —ése es el criterio de "coincidencia
+  dudosa", y reemplaza cualquier cuenta de palabras: "Monster: The Ed Gein
+  Story" reduce a "Monster" y entre varios "Monster" alguno va a estar en
+  Netflix AR—, mira **primero el proveedor y después el título** (al revés que
+  la consulta completa, porque acá el título se compara contra un prefijo) y
+  marca **todo** con `needs_review`. Exige dos puntos **seguidos de espacio**:
+  de 1969 títulos del TSV argentino, 209 tienen `:` y el único sin espacio es
+  "3:10 to Yuma", donde reducir a "3" sería la peor consulta posible. Una caída
+  de la búsqueda completa aborta **sin** intentar la reducida: un error no es
+  "no encontré", es "no sé".
   El cron escribe con `supabaseAdmin()`
   (service role, bypassa RLS, en `lib/supabase-admin.ts` — aparte de
   `lib/supabase.ts`, que sí llega al bundle del navegador), porque `netflix_top10` solo

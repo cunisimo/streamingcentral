@@ -2,7 +2,13 @@ import "server-only";
 import { searchTitles, watchProviders } from "./tmdb";
 import { supabaseServer } from "./supabase";
 import { supabaseAdmin } from "./supabase-admin";
+import { resolverTitulo } from "./netflix-resolver";
 import type { MediaType } from "./types";
+
+// La regla de resolución vive en `lib/netflix-resolver.ts`, sin `server-only`,
+// para poder probarla sin red. Se reexporta desde acá para no cambiarle la
+// puerta de entrada a nadie.
+export { normalizeTitle } from "./netflix-resolver";
 
 // Top 10 semanal de Netflix en Argentina.
 //
@@ -24,18 +30,6 @@ export interface StoredRow {
   rank: number;
   rawTitle: string;
   tmdbId: number | null;
-}
-
-// Minúsculas, sin acentos, sin puntuación, espacios colapsados. Se usa para
-// comparar el título del TSV contra el de TMDB: "Fear" != "State of Fear".
-export function normalizeTitle(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 // Toma las primeras líneas del TSV y devuelve las filas de AR de la semana más
@@ -106,42 +100,30 @@ async function fetchArWeek(): Promise<NetflixRow[]> {
 
 // Resuelve un título del TSV a un id de TMDB.
 //
-// Las CUATRO reglas del spec, en orden (medidas contra la semana 2026-08-02:
-// 19/20 automáticos):
-//  1. título exacto Y está en Netflix AR -> se acepta
-//  2. título exacto, no figura en Netflix AR -> se acepta igual (lag de TMDB en
-//     estrenos recientes; le pasó a "My Daughter's Father")
-//  3. título distinto pero está en Netflix AR -> se acepta con needs_review
-//     ("Fear" matcheó "State of Fear")
-//  4. sin match (sin candidatos, o hay candidatos pero ninguno pasa las reglas
-//     1-3) -> tmdb_id null + needs_review
-// A propósito NO hay una quinta regla que se quede con el primer candidato
-// "por las dudas": esta es la superficie donde el sello "dato oficial" hace
-// más daño si el título es el equivocado. Ante la duda, mejor la card neutra
-// (hueco, "todavía no tenemos la ficha") que arriesgar un título que Netflix
-// nunca reportó.
+// La REGLA vive en `lib/netflix-resolver.ts` (probada sin red). Acá queda sólo
+// el cableado a TMDB: las dos puertas que la regla usa, `buscar` y
+// `enNetflixAR`, con el `category` ya atado.
+//
+// El contrato de cada puerta importa y no es simétrico:
+//  - `buscar` LANZA si el transporte falla. La regla distingue "no encontré" de
+//    "no sé", y sólo la primera habilita la segunda consulta.
+//  - `enNetflixAR` NUNCA lanza: un error se ve como "no está en Netflix", que es
+//    el lado seguro (no acepta a nadie por proveedor).
+//
+// Los 5 candidatos son el tope de siempre: TMDB devuelve 20 y más abajo del
+// quinto ya no hay nada que sea el título que Netflix reportó.
 async function resolveTitle(
   category: MediaType, rawTitle: string,
 ): Promise<{ tmdbId: number | null; needsReview: boolean }> {
-  const objetivo = normalizeTitle(rawTitle);
-  let candidatos: { id: number; title: string }[] = [];
-  try {
-    const r = await searchTitles(category, rawTitle);
-    candidatos = (r.results ?? []).slice(0, 5).map((c) => ({
-      id: c.id, title: c.title ?? c.name ?? "",
-    }));
-  } catch {
-    return { tmdbId: null, needsReview: true };
-  }
-  if (!candidatos.length) return { tmdbId: null, needsReview: true };
-
-  const exacto = candidatos.find((c) => normalizeTitle(c.title) === objetivo);
-  if (exacto) return { tmdbId: exacto.id, needsReview: false };
-
-  for (const c of candidatos) {
-    if (await enNetflixAR(category, c.id)) return { tmdbId: c.id, needsReview: true };
-  }
-  return { tmdbId: null, needsReview: true };
+  return resolverTitulo(rawTitle, {
+    async buscar(consulta) {
+      const r = await searchTitles(category, consulta);
+      return (r.results ?? []).slice(0, 5).map((c) => ({
+        id: c.id, title: c.title ?? c.name ?? "",
+      }));
+    },
+    enNetflixAR: (id) => enNetflixAR(category, id),
+  });
 }
 
 async function enNetflixAR(type: MediaType, id: number): Promise<boolean> {
