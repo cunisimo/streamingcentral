@@ -31,6 +31,8 @@ import {
 } from "./pools";
 import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
+import { disponiblesEnTopOficial } from "./netflix-top10";
+import { plataformasDeFicha } from "./top-plataformas";
 import { excludedGenres, audienceRule } from "./audience";
 import { ordenarPorRelevancia } from "./busqueda-orden";
 import { primaryCountry } from "./countries";
@@ -1069,6 +1071,25 @@ export async function detail(
 ): Promise<UITitleDetail> {
   const [rep, prov] = await Promise.all([detalleYRelacionadosReparados(type, id), providersOf(type, id)]);
   const d = rep.detalle;
+  // DESPUÉS de leer el cache de proveedores, y sin tocarlo. Si TMDB no informa
+  // ninguna plataforma en AR, se mira si el título está en el top oficial
+  // vigente de Netflix: esa lista la publica Netflix y dice, literalmente, qué
+  // se vio EN Netflix Argentina esta semana.
+  //
+  // Pasó con "Moria" (`tv/322428`): TMDB tiene la ficha —hasta muestra el canal
+  // y el homepage de Netflix en su web— pero `watch/providers` devuelve
+  // `results: {}`, sin AR y sin ninguna otra región. La ficha del #1 del top
+  // oficial de Netflix decía "No está en streaming".
+  //
+  // Lo que NO se hace acá, y es tan importante como lo que sí:
+  //  - No se inventa `watchLink`. Ese link sale de TMDB y si TMDB no lo tiene,
+  //    no hay a dónde mandar a nadie. La ficha dice dónde está, no promete un
+  //    botón que no existe.
+  //  - No se usa `networks` como disponibilidad. Que la serie sea "de Netflix"
+  //    no dice que se pueda ver en Netflix Argentina; hay producciones de
+  //    Netflix licenciadas a otros en la región, y otras que directamente no
+  //    llegan. Lo único que se usa es el top de ESTE país.
+  const plataformas = await plataformasDeFicha(type, id, prov.codes, disponiblesEnTopOficial);
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
     pickTrailer((await titleVideos(type, id, lang)).results, lang));
@@ -1106,7 +1127,7 @@ export async function detail(
     idiomaBase: IDIOMA_BASE,
     // SOLO donde el título está disponible: una ayuda para Max en algo que no
     // está en Max no se emite.
-    plataformas: prov.codes,
+    plataformas,
   });
 
   return {
@@ -1117,7 +1138,7 @@ export async function detail(
     runtime, poster: img(d.poster_path), backdrop: img(d.backdrop_path, "w780"),
     country: primaryCountry(d),
     genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
-    platforms: prov.codes,
+    platforms: plataformas,
     tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
     hasEditorial: !!editorial,
     age: certOf(d, type),

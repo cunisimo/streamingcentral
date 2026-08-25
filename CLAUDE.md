@@ -374,11 +374,23 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   cuando no sabemos NADA**: si TMDB conoce el título y lo ubica en otras
   plataformas, no hay lag que explicar, lo más probable es que la resolución
   del TSV haya agarrado un homónimo, y ahí agregar Netflix convertiría un error
-  de matcheo en una afirmación falsa bajo el sello "dato oficial". **La ficha
-  del título NO recibe esta corrección** y va a decir "No está en streaming"
-  hasta que TMDB cargue los proveedores: ahí no tenemos la evidencia del TSV a
-  mano y traerla costaría una lectura a Supabase por ficha. **Limitación
-  pendiente, no un bug abierto.**
+  de matcheo en una afirmación falsa bajo el sello "dato oficial".
+  **La FICHA usa la misma evidencia** (`plataformasDeFicha` +
+  `disponiblesEnTopOficial`). Era una limitación declarada y estaba mal: `Moria`
+  decía **"No está en streaming"** siendo el #1 del top oficial, y esperar a
+  TMDB no era una salida — su web ya muestra el canal y el homepage de Netflix
+  mientras `/tv/322428/watch/providers` sigue devolviendo `results: {}`. Si
+  `providersOf` viene **vacío**, se mira si ese `tipo:id` está en la semana
+  vigente del top con `tmdb_id` resuelto y **`needs_review = false`**. Esa
+  segunda condición es más estricta que en la card a propósito: `needs_review`
+  marca las filas que pueden apuntar a un homónimo, y en el top el peor caso es
+  una card de más, mientras que la ficha dice "Disponible en Netflix". Tres
+  cosas que NO se hacen: inventar `watchLink` (sale de TMDB; si no lo hay, no
+  hay a dónde mandar a nadie), usar `networks` como disponibilidad (que sea "de
+  Netflix" no dice que se vea en Netflix Argentina) y tocar el array cacheado de
+  `providersOf`. La evidencia se cachea 5 min bajo una clave fija: medido, tres
+  fichas con proveedores de TMDB cuestan **0** lecturas a Supabase y cinco
+  visitas seguidas a una ficha sin proveedores cuestan **1**.
   **La resolución título→TMDB vive en `lib/netflix-resolver.ts`**, sin
   `server-only` para poder probarla sin red; `netflix-top10.ts` sólo le enchufa
   las dos puertas (`buscar`, `enNetflixAR`). Las tres reglas de siempre no

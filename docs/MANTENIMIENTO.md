@@ -834,10 +834,20 @@ No hace falta invalidar ninguna caché: el bloque de Netflix no se cachea —
 `latestWeekRows()` va a Supabase en cada request y las fichas se enriquecen por
 título. El service worker tampoco molesta: `/api/*` es Network Only.
 
-### Lo que esta corrida NO arregla
+### La ficha individual también quedó arreglada
 
-La **ficha individual** de Moria (`/titulo/tv/322428`) va a seguir diciendo
-**"No está en streaming"** hasta que TMDB cargue los proveedores. Es una
-limitación conocida y aceptada, no un bug abierto: la corrección de la fuente
-sólo llega a las cards del bloque oficial, que es donde tenemos la evidencia del
-TSV a mano.
+**Esta sección decía que no lo estaba, y era una limitación mal declarada.** La
+ficha de Moria (`/titulo/tv/322428`) mostraba "No está en streaming" siendo el
+#1 del top oficial de Netflix. Esperar a TMDB no era una salida: su web ya
+muestra el canal y el homepage de Netflix, y `/tv/322428/watch/providers` sigue
+devolviendo `results: {}` — no es un cache nuestro ni una demora de horas.
+
+Ahora la ficha usa la misma evidencia que la card, con una condición más:
+además de `tmdb_id` resuelto exige **`needs_review = false`**. En el top, una
+fila dudosa muestra una card de más; en la ficha afirmaría "Disponible en
+Netflix", que es otra cosa. Por eso `Operation` (`needs_review = true`) NO
+hereda nada — y no lo necesita, porque TMDB ya le informa Netflix.
+
+Al verificar en `/titulo/tv/322428` tiene que decir **"Disponible en Netflix"**,
+y **sin** botón de "Ver en": el `watchLink` sale de TMDB y sigue siendo `null`.
+Eso es correcto — no se inventa un link a ningún lado.
