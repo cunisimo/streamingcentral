@@ -1,0 +1,841 @@
+{
+ "generado": "2026-08-24T21:16:07.697Z",
+ "idioma_destino": "es-MX",
+ "tabla": "public.upcoming_content",
+ "filas": 43,
+ "filas_que_cambian": 38,
+ "campos_que_cambian": 54,
+ "entradas": [
+  {
+   "clave": "tv:108978",
+   "tmdb_id": 108978,
+   "media_type": "tv",
+   "antes": {
+    "title": "Reacher",
+    "overview": "Cuando el exagente de la Policía Militar Jack Reacher es detenido por un asesinato que no ha cometido, se ve envuelto en una mortífera conspiración llena de policías corruptos, empresarios dudosos y políticos intrigantes. Armado solo con su ingenio, debe averiguar qué pasa en Margrave, Georgia. La primera temporada de Reacher se basa en Zona peligrosa, el superventas internacional de Lee Child.",
+    "episode_name": "Puente"
+   },
+   "despues": {
+    "title": "Reacher",
+    "overview": "Cuando lo arrestan por un asesinato que no cometió, el oficial retirado de la policía militar Jack Reacher se ve envuelto en una conspiración letal de policías corruptos, empresarios turbios y políticos intrigantes. Solo con su ingenio, debe descubrir qué está sucediendo en Margrave, Georgia. La primera temporada de \"Reacher\" se basa en la exitosa novela \"Zona peligrosa\" de Lee Child.",
+    "episode_name": "Puente"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:113962",
+   "tmdb_id": 113962,
+   "media_type": "tv",
+   "antes": {
+    "title": "Operaciones Especiales: Lioness",
+    "overview": "Cruz Manuelos, una joven infante de marina ruda pero apasionada, es reclutada para unirse al Equipo Lioness Engagement de la CIA para ayudar a acabar con una organización terrorista desde adentro. Joe, el jefe de estación del programa Lioness, tiene la tarea de capacitar, administrar y liderar a sus agentes encubiertos.",
+    "episode_name": "Episodio 5"
+   },
+   "despues": {
+    "title": "Operativo: Lioness",
+    "overview": "Joe intenta equilibrar su vida personal y profesional como punta de lanza de la CIA en la guerra contra el terrorismo. El Programa Lioness recluta a Cruz para que opere de incógnito junto a Joe entre los poderosos del terrorismo de Estado.",
+    "episode_name": "Episodio 5"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:125988",
+   "tmdb_id": 125988,
+   "media_type": "tv",
+   "antes": {
+    "title": "Silo",
+    "overview": "En un futuro ruinoso y tóxico, existe una comunidad en un gigantesco silo subterráneo que alcanza cientos de pisos de profundidad. Allí, las personas viven en una sociedad llena de normas que creen que están destinadas a protegerlas.",
+    "episode_name": "Despedida"
+   },
+   "despues": {
+    "title": "Silo",
+    "overview": "En un futuro arruinado y tóxico, existe una comunidad en un enorme silo subterráneo cientos de pisos bajo tierra. Ahí, hombres y mujeres viven en una sociedad llena de reglas que creen que están hechas para protegerlos.",
+    "episode_name": "Despedida"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:1413",
+   "tmdb_id": 1413,
+   "media_type": "tv",
+   "antes": {
+    "title": "American Horror Story",
+    "overview": "American Horror Story es una serie antológica de televisión, creada y producida por Ryan Murphy y Brad Falchuk. Cada una de sus temporadas narra una trama independiente, ambientada en lugares diferentes y cerrando siempre la historia; donde muchos actores repiten, pero siempre interpretando personajes distintos.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "American Horror Story",
+    "overview": "Serie de antología, ya que cada temporada se realiza como una miniserie independiente, con un grupo de personajes diferentes, escenarios distintos y una trama que tiene su propio comienzo, desarrollo y final. Aun así, las temporadas están conectadas entre sí.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:1416",
+   "tmdb_id": 1416,
+   "media_type": "tv",
+   "antes": {
+    "title": "Anatomía de Grey",
+    "overview": "La vida de Meredith Grey no es nada fácil. Intenta tomar las riendas de su vida, aunque su trabajo sea de esos que te hacen la vida imposible. Meredith es una cirujana interna de primer año en el Hospital Grace de Seattle, el programa de prácticas más duro de la Facultad de Medicina de Harvard. Y ella lo va a comprobar. Pero no estará sola. Un elenco de compañeros de promoción tendrán que superar la misma prueba. Ahora están en el mundo real, son doctores del hospital. Y en un mundo donde la experiencia en el trabajo puede ser un factor de vida o muerte, todos ellos tendrán que lidiar con los altibajos de sus vidas personales.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Anatomía según Grey",
+    "overview": "La vida de Meredith Grey no es nada fácil. Intenta tomar las riendas de su vida, aunque su trabajo sea de esos que te hacen la vida imposible. Meredith es una cirujana interna de primer año en el Hospital Grace de Seattle, el programa de prácticas más duro de la Facultad de Medicina de Harvard. Y ella lo va a comprobar. Pero no estará sola. Un elenco de compañeros de promoción tendrán que superar la misma prueba. Ahora están en el mundo real, son doctores del hospital. Y en un mundo donde la experiencia en el trabajo puede ser un factor de vida o muerte, todos ellos tendrán que lidiar con los altibajos de sus vidas personales.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title"
+   ]
+  },
+  {
+   "clave": "tv:1433",
+   "tmdb_id": 1433,
+   "media_type": "tv",
+   "antes": {
+    "title": "Padre made in USA",
+    "overview": "Padre made in USA, es una serie de televisión de animación para adolescentes y adultos del creador de Padre de familia, Seth MacFarlane.",
+    "episode_name": "Episodio 12"
+   },
+   "despues": {
+    "title": "American Dad: Un Agente de Familia",
+    "overview": "American Dad es la serie de animación subversiva que gira en torno a Stan Smith (Seth MacFarlane), un agente de la CIA con sede en Langley Falls, Virginia, que es un indiscutible experto en armas y orgulloso hombre de familia. Stan está constantemente en alerta por actividad terrorista y llegará a extremos para proteger a su amado Estados Unidos y mantener su patria segura. Solo hay que ver el medidor de alerta terrorista de su refrigerador y su reacción inmediata de dispararle a la tostadora cada vez que salta una tostada.",
+    "episode_name": "Episodio 12"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:153312",
+   "tmdb_id": 153312,
+   "media_type": "tv",
+   "antes": {
+    "title": "Tulsa King",
+    "overview": "Justo después de ser liberado de prisión después de 25 años, el capo de la mafia de Nueva York, Dwight \"El General\" Manfredi, es exiliado sin contemplaciones por su jefe para instalarse en Tulsa, Oklahoma. Al darse cuenta de que su familia de la mafia puede no tener sus mejores intereses en mente, Dwight construye lentamente una \"tripulación\" a partir de un grupo de personajes inverosímiles, para ayudarlo a establecer un nuevo imperio criminal en un lugar que para él bien podría ser otro planeta.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Tulsa King",
+    "overview": "Después de cumplir 25 años en prisión, Dwight Manfredi es exiliado por su jefe de la mafia para establecer una tienda en Oklahoma. Dwight construye lentamente un nuevo imperio criminal en Tulsa.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:1667",
+   "tmdb_id": 1667,
+   "media_type": "tv",
+   "antes": {
+    "title": "Saturday Night Live",
+    "overview": "Saturday Night Live es un show televisivo nocturno estadounidense, emitido en vivo, que revolucionó la televisión en los años 70 con su combinación de sketches, comedia, variedad, actores, músicos, e invitados especiales. Ha sido una cantera generadora de talentos muy fuerte de varios guinistas, actores, escritores, productores y cantantes. Creado por Lorne Michaels y desarrollado por Dick Ebersol, el programa fue estrenado por la cadena de televisión NBC. Durante más de 30 años, el programa ha presentado personajes locos, situaciones humorísticamente extrañas, parodias de los presidentes y políticos de turno, sarcásticas burlas a celebridades contemporáneas de la música y del cine, y shows musicales en vivo. Su reparto se compone de miembros repertorios, también conocidos como The Not Ready for Prime-Time Players (el nombre del reparto original del programa, que viene a significar «La Compañía No Apta para las Horas de Máxima Audiencia»), y nuevos miembros quienes se conocen como The Featured Players («La Compañía Destacada»).",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Saturday Night Live",
+    "overview": "Sátira galardonada con premios Emmy que revolucionó la televisión con sus `sketches' y reparto siempre cambiante de actores y cómicos quienes luego llegaron a la fama. Por mencionar a unos pocos, Eddie Murphy, Dana Carvey, Chevy Chase, Bill Murray, Dan Aykroyd, Al Franken y Mike Myers. Desde su estreno, con la rendición memorable del tema musical de `Mighty Mouse' por Andy Kaufman, hasta la interpretación de John Belushi como un `Samurai', el programa cambió la imagen de la TV una vez por todas.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:207333",
+   "tmdb_id": 207333,
+   "media_type": "tv",
+   "antes": {
+    "title": "Cien años de soledad",
+    "overview": "En el atemporal pueblo de Macondo, siete generaciones de la familia Buendía transitan entre el amor, el olvido, un pasado ineludible... y el destino.",
+    "episode_name": "Episodio 8"
+   },
+   "despues": {
+    "title": "Cien años de soledad",
+    "overview": "En el mítico pueblo de Macondo, siete generaciones de la familia Buendía se enfrentan a una maldición, al olvido y lo ineludible de su pasado... y de su destino.",
+    "episode_name": "Episodio 8"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:211288",
+   "tmdb_id": 211288,
+   "media_type": "tv",
+   "antes": {
+    "title": "Tracker",
+    "overview": "Colter Shaw recorre el país en su vieja autocaravana para ayudar a la policía y a ciudadanos particulares a resolver crímenes y localizar a personas desaparecidas, hasta que su último caso lo cambia todo.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Tracker: Buscador de recompensas",
+    "overview": "Colter Shaw es un lobo solitario dedicado a la supervivencia que recorre el país en busca de recompensas, usando sus expertas habilidades de rastreo para ayudar a ciudadanos particulares y a las fuerzas del orden a resolver todo tipo de misterios, al tiempo que lidia con su propia familia dividida.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:2190",
+   "tmdb_id": 2190,
+   "media_type": "tv",
+   "antes": {
+    "title": "South Park",
+    "overview": "South Park es una serie de televisión estadounidense de animación, creada por Trey Parker y Matt Stone para el canal Comedy Central. Está dirigida al público adulto y se caracteriza por satirizar con humor negro la sociedad, actualidad y cultura estadounidense a través de las historias y situaciones surrealistas que les suceden a sus protagonistas, cuatro niños (Stan, Kyle, Cartman y Kenny) residentes en un pueblo ficticio de Colorado que se llama South Park.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "South Park",
+    "overview": "Cuatro niños (Stan, Kyle, Cartman y Kenny) irreverentes de primaria viven grandes y surrealistas desventuras en la tranquila y disfuncional pueblo South Park, Colorado.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:220542",
+   "tmdb_id": 220542,
+   "media_type": "tv",
+   "antes": {
+    "title": "Los diarios de la boticaria",
+    "overview": "Maomao llevaba una vida tranquila ayudando a su padre, un boticario. Todo cambia el día que la venden como sirvienta al palacio del emperador, pero la vida entre nobles y realeza no es para ella. Cuando la familia imperial enferma, ella decide intervenir para encontrar una cura, lo que llama la atención de Jinshi, un guapo oficial de palacio que decide ascenderla como dama de compañía de una de las concubinas del emperador. ¡Su habilidad con la medicina la hará conocida en el palacio por ayudar a resolver muchos misterios!",
+    "episode_name": "Episodio 49"
+   },
+   "despues": {
+    "title": "Los diarios de la boticaria",
+    "overview": "Maomao llevaba una vida tranquila ayudando a su padre, un boticario. Todo cambia el día que la venden como sirvienta al palacio del emperador, pero la vida entre nobles y realeza no es para ella. Cuando la familia imperial enferma, ella decide intervenir para encontrar una cura, lo que llama la atención de Jinshi, un guapo oficial de palacio que decide ascenderla como dama de compañía de una de las concubinas del emperador. ¡Su habilidad con la medicina la hará conocida en el palacio por ayudar a resolver muchos misterios!",
+    "episode_name": "Episodio 49"
+   },
+   "omitidos": {
+    "episode_name": "episodio-404"
+   },
+   "cambia": []
+  },
+  {
+   "clave": "tv:223911",
+   "tmdb_id": 223911,
+   "media_type": "tv",
+   "antes": {
+    "title": "Renegade Immortal",
+    "overview": "La historia tiene lugar en el mismo universo que Yi Nian Yong Heng (I Will Eternal). Wang Lin es un chico inteligente con padres amorosos. Sin embargo, él y sus padres son rechazados por el resto de la familia. A pesar de su bajo potencial de cultivo, Wang Lin intentará convertirse en un inmortal para enorgullecer a sus padres.",
+    "episode_name": "Episodio 156"
+   },
+   "despues": {
+    "title": "Renegade Immortal",
+    "overview": "La historia tiene lugar en el mismo universo que Yi Nian Yong Heng (I Will Eternal). Wang Lin es un chico inteligente con padres amorosos. Sin embargo, él y sus padres son rechazados por el resto de la familia. A pesar de su bajo potencial de cultivo, Wang Lin intentará convertirse en un inmortal para enorgullecer a sus padres.",
+    "episode_name": "Episodio 156"
+   },
+   "omitidos": {},
+   "cambia": []
+  },
+  {
+   "clave": "tv:259140",
+   "tmdb_id": 259140,
+   "media_type": "tv",
+   "antes": {
+    "title": "Ranma1/2",
+    "overview": "Akane Tendô conoce a su prometido, Ranma Saotome, un prodigio de las artes marciales con una peculiaridad: se transforma mágicamente en chica al tocar el agua fría.",
+    "episode_name": "Episodio 25"
+   },
+   "despues": {
+    "title": "Ranma1/2",
+    "overview": "Akane Tendo conoce a su prometido, Ranma Saotome, un experto en artes marciales con un detallecito menor: por arte de magia, se transforma en chica cuando toca el agua fría.",
+    "episode_name": "Episodio 25"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:2710",
+   "tmdb_id": 2710,
+   "media_type": "tv",
+   "antes": {
+    "title": "Colgados en Filadelfia",
+    "overview": "Cuatro amigos que regentan un pequeño bar en un barrio del sur de Philadelphia, la ciudad del amor fraternal, intentan mantener el equilibrio entre negocio y amistad, tarea nada fácil, ya que cada uno de ellos suele dejarse llevar únicamente por sus intereses personales, lo que desemboca en situaciones incómodas que amenazan con deteriorar sus relaciones personales.",
+    "episode_name": "Episodio 3"
+   },
+   "despues": {
+    "title": "Siempre hace sol en Filadelfia",
+    "overview": "Cuatro amigos que regentan un pequeño bar en un barrio del sur de Philadelphia, la ciudad del amor fraternal, intentan mantener el equilibrio entre negocio y amistad, tarea nada fácil, ya que cada uno de ellos suele dejarse llevar únicamente por sus intereses personales, lo que desemboca en situaciones incómodas que amenazan con deteriorar sus relaciones personales.",
+    "episode_name": "Episodio 3"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title"
+   ]
+  },
+  {
+   "clave": "tv:2734",
+   "tmdb_id": 2734,
+   "media_type": "tv",
+   "antes": {
+    "title": "Ley y orden: Unidad de Víctimas Especiales",
+    "overview": "‘Ley y Orden: Unidad de Víctimas Especiales’ es una serie de televisión estadounidense grabada en Nueva York donde es también principalmente producida. Con el estilo de la original ‘Ley y Orden’ los episodios son usualmente \"sacados de los titulares\" o basados libremente en verdaderos asesinatos que han recibido la atención de los medios.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "La Ley y el Orden: Unidad de Víctimas Especiales",
+    "overview": "Serie surgida a la sombra de \"Law & Order\". Una unidad especial de la policía de Nueva York se dedica a investigar delitos de carácter sexual: violaciones, pedofilia y malos tratos infantiles.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:283428",
+   "tmdb_id": 283428,
+   "media_type": "tv",
+   "antes": {
+    "title": "Rompiendo el hielo",
+    "overview": "A Koyuki le cuesta relacionarse y le parece bien pasar sus años de instituto sola... hasta que aparece Minato, que se empeña en derretir su muro de hielo.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Rompiendo el hielo",
+    "overview": "A Koyuki le cuesta trabajo conectar con otros. Preferiría pasar sus años escolares sola…, hasta que aparece Minato, que decide derretir los muros de hielo a su alrededor.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:284029",
+   "tmdb_id": 284029,
+   "media_type": "tv",
+   "antes": {
+    "title": "Neko to Ryuu",
+    "overview": "En lo profundo del bosque, entre bestias feroces y criaturas mágicas, un gato adopta a un bebé dragón huérfano como su propio hijo.",
+    "episode_name": "Episodio 9"
+   },
+   "despues": {
+    "title": "Neko to Ryuu",
+    "overview": "En lo más profundo del bosque, un gato adopta a un bebé dragón huérfano en un mundo de bestias feroces y criaturas mágicas.",
+    "episode_name": "Episodio 9"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:287620",
+   "tmdb_id": 287620,
+   "media_type": "tv",
+   "antes": {
+    "title": "Stuart no consigue salvar el universo",
+    "overview": "Stuart Bloom, dueño de una tienda de cómics, recibe la misión de restaurar la realidad tras romper un dispositivo construido por Sheldon y Leonard, provocando accidentalmente un Armagedón multiverso. En esta misión, Stuart cuenta con la ayuda de su novia Denise, su amigo geólogo Bert y el físico cuántico y pesado Barry Kripke. En el camino, se encuentran con versiones en universos alternativos de personajes que conocemos y apreciamos de Big Bang. Como indica el título, las cosas no salen bien.",
+    "episode_name": "Episodio 6"
+   },
+   "despues": {
+    "title": "Stuart no logra salvar el Universo",
+    "overview": "A Stuart Bloom se le encomienda la tarea de restaurar la realidad después de provocar un Armagedón multiverso.",
+    "episode_name": "Episodio 6"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:30983",
+   "tmdb_id": 30983,
+   "media_type": "tv",
+   "antes": {
+    "title": "Detective Conan",
+    "overview": "Shinichi Kudo es un joven detective que consigue esclarecer cualquier misterio, por difícil que sea. Un día, nuestro protagonista descubre los maléficos planes de una peligrosa organización criminal y es envenenado. Sin embargo, el veneno no lo mata, sino que por accidente, lo encoge y lo convierte en un niño de apenas 6 años. Atrapado en este cuerpo, Shinichi, bajo el seudónimo de Conan Edogawa, deberá resolver los casos más difíciles mientras intenta encontrar un antídoto que lo devuelva a la normalidad y hacer lo posible para que su amiga, Ran Mouri, no sospeche quién es realmente el sabiondo Conan...",
+    "episode_name": "Episodio 1211"
+   },
+   "despues": {
+    "title": "Detective Conan",
+    "overview": "Shinichi Kudo es un joven detective que consigue esclarecer cualquier misterio, por difícil que sea. Un día, nuestro protagonista descubre los maléficos planes de una peligrosa organización criminal y es envenenado. Sin embargo, el veneno no lo mata, sino que por accidente, lo encoge y lo convierte en un niño de apenas 6 años. Atrapado en este cuerpo, Shinichi, bajo el seudónimo de Conan Edogawa, deberá resolver los casos más difíciles mientras intenta encontrar un antídoto que lo devuelva a la normalidad y hacer lo posible para que su amiga, Ran Mouri, no sospeche quién es realmente el sabiondo Conan...",
+    "episode_name": "Episodio 1211"
+   },
+   "omitidos": {},
+   "cambia": []
+  },
+  {
+   "clave": "tv:30984",
+   "tmdb_id": 30984,
+   "media_type": "tv",
+   "antes": {
+    "title": "Bleach",
+    "overview": "La serie narra las aventuras de Ichigo Kurosaki, un adolescente que tiene la facultad de interactuar con los espíritus. Una noche, Ichigo se encuentra con una shinigami —personificación japonesa del Dios de la muerte— llamada Rukia Kuchiki, quien se sorprende que pueda verla. Sin embargo, su conversación es interrumpida por la aparición de un hollow, un espíritu maligno. Después de que Rukia fuera gravemente herida al tratar de proteger a Ichigo, esta intenta traspasarle parte de sus poderes a Ichigo para que pueda enfrentarse al hollow en igualdad de condiciones. No obstante, Ichigo sin darse cuenta los absorbe casi por completo y logra vencer con facilidad al espíritu.",
+    "episode_name": "Episodio 46"
+   },
+   "despues": {
+    "title": "Bleach",
+    "overview": "La serie narra las aventuras de Ichigo Kurosaki, un adolescente que tiene la facultad de interactuar con los espíritus. Una noche, Ichigo se encuentra con una Cegador —personificación japonesa del Dios de la muerte— llamada Rukia Kuchiki, quien se sorprende que pueda verla. Sin embargo, su conversación es interrumpida por la aparición de un Hueco, un espíritu maligno. Después de que Rukia fuera gravemente herida al tratar de proteger a Ichigo, esta intenta traspasarle parte de sus poderes a Ichigo para que pueda enfrentarse al Hueco en igualdad de condiciones. No obstante, Ichigo sin darse cuenta los absorbe casi por completo y logra vencer con facilidad al espíritu.",
+    "episode_name": "VIDA PARA DEFENDERTE."
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview",
+    "episode_name"
+   ]
+  },
+  {
+   "clave": "tv:31991",
+   "tmdb_id": 31991,
+   "media_type": "tv",
+   "antes": {
+    "title": "WWE NXT",
+    "overview": "",
+    "episode_name": "Episodio 34"
+   },
+   "despues": {
+    "title": "WWE NXT",
+    "overview": "En este programa debutan nuevos talentos y se dan a conocer las nuevas estrellas de la WWE, provenientes de la Florida Championship Wrestling (FCW), llamados rookies o novatos, para debutar, un luchador profesional o Pro les ayuda a destacar en el difícil camino a la fama.",
+    "episode_name": "Episodio 34"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:33238",
+   "tmdb_id": 33238,
+   "media_type": "tv",
+   "antes": {
+    "title": "Running Man",
+    "overview": "Running Man es un espectáculo de variedades de Corea del Sur transmitido desde el 11 de julio de 2010 hasta ahora a través de SBS. El programa forma parte de la formación de \"Good Sunday\". El programa fue creado por Jo Hyo-jin, Kim Joo-hyung y Im Hyung-taek.",
+    "episode_name": "Episodio 818"
+   },
+   "despues": {
+    "title": "Running Man",
+    "overview": "Running Man es un espectáculo de variedades de Corea del Sur transmitido desde el 11 de julio de 2010 hasta ahora a través de SBS. El programa forma parte de la formación de \"Good Sunday\". El programa fue creado por Jo Hyo-jin, Kim Joo-hyung y Im Hyung-taek.",
+    "episode_name": "Episodio 818"
+   },
+   "omitidos": {},
+   "cambia": []
+  },
+  {
+   "clave": "tv:37678",
+   "tmdb_id": 37678,
+   "media_type": "tv",
+   "antes": {
+    "title": "The Voice",
+    "overview": "Los cantantes aficionados compiten por los máximos honores en un concurso de canto de telerrealidad en el que los artistas famosos se emparejan con equipos de cantantes que entrenarán y guiarán hasta que el mejor intérprete quede en pie al final.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "La voz de América",
+    "overview": "El noticiero de televisión de la Voz de América presenta los eventos noticiosos más relevantes en Estados Unidos, América Latina y el mundo.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:44006",
+   "tmdb_id": 44006,
+   "media_type": "tv",
+   "antes": {
+    "title": "Chicago Fire",
+    "overview": "El espectáculo sigue las vidas de los bomberos y paramédicos que trabajan en el Departamento de Bomberos de la ciudad de Chicago en la estación de bomberos 51, formada por el Camión 81, la Brigada 3, la Ambulancia 61 y la Patrulla 25.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Chicago en llamas",
+    "overview": "Las decisiones de los bomberos, equipos de rescate y paramédicos de la estación de bomberos 51 hacen la diferencia entre la vida y la muerte. Pero eso no es lo único, también se crea una gran familia entre los miembros del equipo. Dirigidos por el jefe Wallace Boden, la Unidad 51 lo deja todo en cada rescate de esta noble profesión.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:44953",
+   "tmdb_id": 44953,
+   "media_type": "tv",
+   "antes": {
+    "title": "El señor de los cielos",
+    "overview": "La serie narra la historia de Aurelio Casillas, uno de los narcotraficante más importantes de México en los años 90. La única ambición de Aurelio era convertirse en el narco más poderoso de todo México, sin importarle ser cauteloso y mucho menos llamativo. Logró tener fortuna, mujeres, casas, edificios y mansiones sin mucho esfuerzo.",
+    "episode_name": "Episodio 35"
+   },
+   "despues": {
+    "title": "El Señor de los Cielos",
+    "overview": "Aurelio Casillas busca convertirse en el narcotraficante más temido de México y está dispuesto a hacer cualquier cosa para mantenerse en el poder.",
+    "episode_name": "Episodio 35"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:45140",
+   "tmdb_id": 45140,
+   "media_type": "tv",
+   "antes": {
+    "title": "Los Jóvenes Titanes en Acción",
+    "overview": "Teen Titans Go! es una serie de animación que sigue las aventuras de los Jóvenes Titanes cuando no están salvando el mundo mientras viven juntos como adolescentes sin adultos que se entrometan. Las situaciones son, a diferencia de la mayoría de las series superheróicas, cómicas, alocadas y paródicas; por ejemplo, bromas juveniles que alcanzan nuevas cotas de peligrosidad, obtener el permiso de conducir tras destrozar el Batmóvil o lavar los trajes tras mancharlos al luchar contra sus enemigos.",
+    "episode_name": "Episodio 46"
+   },
+   "despues": {
+    "title": "Los Jóvenes Titanes en acción",
+    "overview": "Teen Titans Go! es una serie de animación que sigue las aventuras de los Jóvenes Titanes cuando no están salvando el mundo mientras viven juntos como adolescentes sin adultos que se entrometan. Las situaciones son, a diferencia de la mayoría de las series superheróicas, cómicas, alocadas y paródicas; por ejemplo, bromas juveniles que alcanzan nuevas cotas de peligrosidad, obtener el permiso de conducir tras destrozar el Batmóvil o lavar los trajes tras mancharlos al luchar contra sus enemigos.",
+    "episode_name": "Episodio 46"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title"
+   ]
+  },
+  {
+   "clave": "tv:456",
+   "tmdb_id": 456,
+   "media_type": "tv",
+   "antes": {
+    "title": "Los Simpson",
+    "overview": "El día a día de una peculiar familia formada por Homer, Marge, Bart, Maggie y Lisa Simpson y otros divertidos personajes de la localidad norteamericana de Springfield. Homer, el padre, es un desastroso inspector de seguridad de una central nuclear. Marge, la madre, es un ama de casa acostumbrada a soportar a su peculiar familia. Bart, de diez años, intenta divertirse con travesuras de todo tipo. Lisa es la más inteligente de la familia, y Maggie, la más pequeña, es un bebé que todavía no habla, pero que juega un importante papel.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Los Simpson",
+    "overview": "La familia Simpson (Homero, Marge, Bart, Lisa y Maggie), y un reparto virtual de miles, viven aventuras cotidianas en Springfield, una ciudad estadounidense promedio.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:4614",
+   "tmdb_id": 4614,
+   "media_type": "tv",
+   "antes": {
+    "title": "Navy: Investigación criminal",
+    "overview": "Gibbs, agente especial del servicio de investigación criminal de la armada, dirige un equipo extravagante para resolver crímenes que van desde el terrorismo y el espionaje hasta el terrorismo.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "NCIS: Criminología Naval",
+    "overview": "Un equipo de agentes especiales del Servicio de Investigación Criminal de la Marina de los Estados Unidos, liderados por el agente especial Leroy Jethro Gibbs (Mark Harmon), investiga los crímenes que se cometen dentro del Cuerpo Naval. Entre los casos está la muerte del ayudante del maletín nuclear del presidente, una situación explosiva a bordo de un buque de guerra de la Armada y la muerte de un famoso durante un show de televisión en una base del cuerpo de marines... La serie nació como un spin-off de algunos personajes presentados previamente en la serie \"JAG: Alerta roja\".",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:4656",
+   "tmdb_id": 4656,
+   "media_type": "tv",
+   "antes": {
+    "title": "Raw",
+    "overview": "",
+    "episode_name": "Episodio 34"
+   },
+   "despues": {
+    "title": "WWE Raw",
+    "overview": "WWE Raw, también conocido como Monday Night Raw, es un programa de televisión de entretenimiento deportivo de lucha libre profesional producido por la WWE. Se ha transmitido sin interrupciones desde su estreno del 11 de enero de 1993 hasta la fecha, desde Estados Unidos por medio de la cadena USA Network",
+    "episode_name": "Episodio 34"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:549",
+   "tmdb_id": 549,
+   "media_type": "tv",
+   "antes": {
+    "title": "Ley y orden",
+    "overview": "Serie sobre la investigación de crímenes en la ciudad de Nueva York. Policías y jueces son los principales protagonistas.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "La Ley y el Orden",
+    "overview": "Serie sobre la investigación de crímenes en la ciudad de Nueva York. Policías y jueces son los principales protagonistas.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title"
+   ]
+  },
+  {
+   "clave": "tv:58841",
+   "tmdb_id": 58841,
+   "media_type": "tv",
+   "antes": {
+    "title": "Chicago P.D.",
+    "overview": "Narra las historias del Distrito 21 del Departamento de Policía de Chicago, hombres y mujeres que lo dan todo para proteger su comunidad El distrito 21 está compuesto por dos grupos, los uniformados que patrullan la ciudad y se enfrentan a los delitos callejeros, y la unidad de inteligencia, que combate los grandes delitos - crimen organizado, tráfico de drogas, asesinatos y más.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Policías de Chicago",
+    "overview": "El Distrito 21 del Departamento de Policía de Chicago está compuesto de policías uniformados, que tratan con la delincuencia callejera, y la Unidad de Inteligencia, ocupada de los delitos graves como el tráfico de drogas y asesinatos de alto perfil.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:615",
+   "tmdb_id": 615,
+   "media_type": "tv",
+   "antes": {
+    "title": "Futurama",
+    "overview": "Serie de animación creada por Matt Groening (creador también de Los Simpson) y David X. Cohen (guionista también de Los Simpson). Ambientada en la ciudad de \"Nueva Nueva York\" en el año 3000, la serie comienza con Philip J. Fry, un joven repartidor de pizza neoyorquino fracasado y desmotivado que es criogénicamente congelado por accidente la Nochevieja de 1999. Mil años después es descongelado, encontrándose en Nueva Nueva York el 31 de diciembre de 2999. El intento de Fry por escapar de la entonces obligatoria asignación laboral como repartidor termina cuando es contratado en Planet Express, una pequeña compañía de mensajería intergaláctica propiedad de su sobrino lejano, como repartidor. La serie trata sobre las aventuras de Fry y sus colegas cuando viajan por el universo haciendo repartos para Planet Express.",
+    "episode_name": "Episodio 5"
+   },
+   "despues": {
+    "title": "Futurama",
+    "overview": "Una divertidísima serie animada creada por Matt Groening que cuenta la historia de un repartidor de pizzas llamado Fry que se congela criogénicamente por accidente en 1999 y se despierta 1000 años más tarde en un nuevo mundo que, en muchos aspectos, no ha progresado mucho desde el siglo XX.",
+    "episode_name": "Episodio 5"
+   },
+   "omitidos": {
+    "episode_name": "frescura"
+   },
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:62650",
+   "tmdb_id": 62650,
+   "media_type": "tv",
+   "antes": {
+    "title": "Chicago Med",
+    "overview": "Chicago Med se describe como \"un viaje emocional a través del caos del día a día del hospital más explosivo de la ciudad y el equipo de valientes médicos que lo mantiene unido.\" La serie hace frente a casos inspirados por acontecimientos de la actualidad, además de entrelazar con los personajes de Chicago Fire y Chicago P.D.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Chicago Med",
+    "overview": "Muestra el caótico día a día del hospital más colapsado de Chicago, y el duro trabajo que realiza su entregado equipo de médicos y enfermeras para que el sistema siga funcionando. Al mismo tiempo que afrontan sus problemas personales, estos médicos tendrán que resolver casos de extraordinaria gravedad.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:65942",
+   "tmdb_id": 65942,
+   "media_type": "tv",
+   "antes": {
+    "title": "Re:Zero - Empezar de cero en un mundo diferente",
+    "overview": "Subaru Natsuki es un estudiante corriente de preparatoria que conoce a una hermosa chica de pelo plateado de otro mundo que lo rescata. Para devolverle el favor decide quedarse con ella, pero el destino con el que carga la muchacha es mucho más pesado de lo que Subaru puede imaginar. Los enemigos atacan sin descanso, uno tras otro, hasta que finalmente mueren tanto él como la chica. Subaru no quiere que la chica resulte herida, con lo que jura acabar con cualquier enemigo, con cualquier destino que le aguarde, siempre por protegerla.",
+    "episode_name": "Episodio 80"
+   },
+   "despues": {
+    "title": "Re:ZERO -Starting Life in Another World-",
+    "overview": "Natsuki Subaru, un estudiante de secundaria ordinario, está en camino a casa desde la tienda de conveniencia cuando se encuentra transportado a otro mundo. Como está perdido y confundido en un mundo nuevo en el que ni siquiera sabe de izquierda a derecha, la única persona que le alcanzó fue una hermosa niña con cabello plateado. Determinada a pagarle de alguna manera por salvarlo de su propia desesperación, Subaru acepta ayudar a la niña a encontrar algo que está buscando.",
+    "episode_name": "Episodio 80"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:75219",
+   "tmdb_id": 75219,
+   "media_type": "tv",
+   "antes": {
+    "title": "9-1-1",
+    "overview": "Se centra en las vidas y las carreras de los que reciben las llamadas de emergencia: policías, paramédicos, bomberos, gente que arriesga su vida para salvar a otros.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "9-1-1",
+    "overview": "Se centra en las vidas y las carreras de los que reciben las llamadas de emergencia: policías, paramédicos, bomberos, gente que arriesga su vida para salvar a otros.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": []
+  },
+  {
+   "clave": "tv:80748",
+   "tmdb_id": 80748,
+   "media_type": "tv",
+   "antes": {
+    "title": "FBI",
+    "overview": "La unidad de élite de la oficina del FBI en Nueva York ofrece todos sus talentos, intelecto y experiencia técnica en casos importantes para mantener a salvo a Nueva York y el país.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "F.B.I.",
+    "overview": "Drama vertiginoso sobre el funcionamiento interno de la oficina de Nueva York del FBI. Estos agentes de primera clase, incluida la agente especial Maggie Bell (Missy Peregrym) y su compañero, el agente especial Omar Adom 'OA' Zidan (Zeeko Zaki), aportan todo su talento, intelecto y experiencia técnica para investigar con tenacidad casos de gran magnitud, incluidos terrorismo, crimen organizado y contrainteligencia, para mantener a salvo a Nueva York y al país.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:84773",
+   "tmdb_id": 84773,
+   "media_type": "tv",
+   "antes": {
+    "title": "El señor de los anillos: Los anillos de poder",
+    "overview": "Un reparto coral de personajes —unos conocidos y otros nuevos— debe afrontar la reaparición del mal en la Tierra Media. Desde las profundidades más oscuras de las Montañas Nubladas hasta los majestuosos bosques de Lindon, desde el reino insular de Númenor hasta los extremos más remotos del mapa, estos parajes y personajes forjarán los legados que perdurarán más allá de su desaparición.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "El señor de los anillos: Los anillos de poder",
+    "overview": "Comenzando en un tiempo relativamente pacífico, acompañamos a un grupo de personajes mientras enfrentan el resurgimiento del mal en la Tierra Media. Desde las profundidades más oscuras de las Montañas Nubladas hasta el majestuoso bosque de Lindon, la imponente isla de Númenor y los rincones más lejanos del mapa, estos reinos y personajes darán lugar a legados que perdurarán en el tiempo.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:91768",
+   "tmdb_id": 91768,
+   "media_type": "tv",
+   "antes": {
+    "title": "Ascendance of a Bookworm",
+    "overview": "Urano Motuso es una joven amante de los libros que va a cumplir su sueño de trabajar como bibliotecaria. Sin embargo, durante un terremoto, muere aplastada por el colapso de una estantería de la biblioteca. Cuando recupera la consciencia, descubre que se ha reencarnado en otro mundo en el cuerpo de Myne, una niña hija de un pobre soldado en la ciudad de Ehrenfest, donde los libros son escasos y solo están accesibles para los nobles. Así que decide imprimir y crear sus propios libros para poder leer de nuevo.",
+    "episode_name": "Episodio 19"
+   },
+   "despues": {
+    "title": "Ascendance of a Bookworm",
+    "overview": "Motosu Urano era una estudiante universitaria y ávida lectora que murió en un desafortunado e inoportuno accidente. Por fin había recibido la noticia de que trabajaría entre libros como siempre soñó.\n\nCuando recuperó el sentido ya no era ella misma, había renacido como Myne, la hija de un soldado de bajo nivel adquisitivo. Su nuevo hogar era el pueblo de Ehrenfest, en un mundo paralelo en el que un incuestionable sistema de clases daba poder absoluto a los nobles, quienes poseían la capacidad de usar magia.",
+    "episode_name": "Episodio 19"
+   },
+   "omitidos": {
+    "episode_name": "frescura"
+   },
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:94664",
+   "tmdb_id": 94664,
+   "media_type": "tv",
+   "antes": {
+    "title": "Mushoku Tensei Jobless Reincarnation",
+    "overview": "Un joven virgen \"nini\" de 34 años es echado de casa cuando se queda sin dinero. Él se arrepiente de su vida cuando muere en un accidente de tráfico. Tras el accidente, se reencarna en un bebé en un mundo fantástico de espada y brujería. Tras la decisión de hacer lo mejor que pueda con el conocimiento adquirido en su anterior mundo, él decide aprovechar la oportunidad y aprender a usar magia desde su nueva juventud.",
+    "episode_name": "Episodio 9"
+   },
+   "despues": {
+    "title": "Mushoku Tensei Jobless Reincarnation",
+    "overview": "Cuando un autobús atropella a un joven de 34 años que no ha logrado mucho en su vida, su historia no termina ahí. Habiendo reencarnado en un niño, Rudy aprovechará cada oportunidad para vivir la vida que siempre quiso. ¡Con la ayuda de sus amigos, unas habilidades mágicas recién adquiridas, y el coraje para hacer las cosas que siempre ha soñado, se embarca en una aventura épica, con su experiencia pasada intacta!",
+    "episode_name": "Episodio 9"
+   },
+   "omitidos": {
+    "episode_name": "frescura"
+   },
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:95350",
+   "tmdb_id": 95350,
+   "media_type": "tv",
+   "antes": {
+    "title": "Linternas",
+    "overview": "Sigue al nuevo recluta John Stewart y al legendario Linterna Hal Jordan, dos policías intergalácticos que se ven envueltos en un oscuro misterio terrestre mientras investigan un asesinato en el corazón de Estados Unidos. Esto les lleva a misterios y ajustes de cuentas más oscuros.",
+    "episode_name": "Episodio 3"
+   },
+   "despues": {
+    "title": "Linternas",
+    "overview": "El nuevo recluta John Stewart y la leyenda Hal Jordan, dos policías intergalácticos, se ven envueltos en un oscuro misterio terrestre mientras investigan un asesinato en el corazón de Estados Unidos.",
+    "episode_name": "Episodio 3"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:95480",
+   "tmdb_id": 95480,
+   "media_type": "tv",
+   "antes": {
+    "title": "Slow Horses",
+    "overview": "Drama de espías con tintes de comedia negra centrado en las andanzas de un incompetente equipo de agentes del MI5 y en su jefe, el irreverente Jackson Lamb, a medida que desmontan los artificios del espionaje para defender Inglaterra de las fuerzas del mal.",
+    "episode_name": "Episodio 1"
+   },
+   "despues": {
+    "title": "Caballos lentos",
+    "overview": "Esta ingeniosa serie de espionaje sigue a un equipo disfuncional de agentes del MI5, y a su insoportable jefe, el famoso Jackson Lamb, mientras exploran el engañoso mundo del espionaje para defender a Inglaterra de perversos enemigos.",
+    "episode_name": "Episodio 1"
+   },
+   "omitidos": {},
+   "cambia": [
+    "title",
+    "overview"
+   ]
+  },
+  {
+   "clave": "tv:97546",
+   "tmdb_id": 97546,
+   "media_type": "tv",
+   "antes": {
+    "title": "Ted Lasso",
+    "overview": "Un ingenuo entrenador de fútbol americano decide probar suerte en un club de fútbol inglés, pero su inexperiencia despierta recelo y desdén entre jugadores y aficionados. ¿Logrará conquistarlos con sus peculiares métodos?",
+    "episode_name": "El día libre de las greyhounds"
+   },
+   "despues": {
+    "title": "Ted Lasso",
+    "overview": "Ted Lasso, un ingenuo entrenador de fútbol americano que decide probar suerte en un club de fútbol inglés aunque no tiene idea de ese deporte. Su inexperiencia despierta recelo y desdén entre jugadores y aficionados. Con un equipo y una ciudad que lo mira con sospecha, ¿Logrará tener éxito?",
+    "episode_name": "Galgos expertas en diversión"
+   },
+   "omitidos": {},
+   "cambia": [
+    "overview",
+    "episode_name"
+   ]
+  }
+ ]
+}

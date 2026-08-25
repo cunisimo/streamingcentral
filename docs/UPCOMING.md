@@ -80,3 +80,41 @@ El reemplazo de links por título es delete+insert no transaccional: existe una
 ventana de milisegundos (a las 6am, tráfico bajo) donde un título podría leerse
 con 0 plataformas. El fix definitivo es un RPC transaccional en Postgres; queda
 para un hardening futuro.
+
+## El idioma del sync, y el póster (decidido el 2026-08-24)
+
+El sync escribe en el idioma que diga `IDIOMA_TITULOS` (secret de Edge
+Functions, default `es-ES`), con respaldo a `es-ES` cuando TMDB no traduce.
+
+**`poster_path` cambia con el idioma, y es DELIBERADO.** Los pósters de TMDB son
+localizados: el de `es-MX` no es el de `es-ES`. La primera corrida en `es-MX`
+cambió el póster de 12 de 43 filas. No es un daño ni un efecto colateral que
+haya que corregir — acompaña el objetivo de encontrabilidad, que es que el
+usuario vea en Yump lo mismo que va a ver en la plataforma.
+
+**El backfill NO comparte ese alcance**: sigue limitado a `title`, `overview` y
+`episode_name`. La diferencia no es contradictoria: el sync reescribe la fila
+entera porque es su trabajo, y el backfill toca lo mínimo porque corre sobre
+filas que nadie está mirando.
+
+### Qué hace el sync cuando el respaldo no alcanza
+
+La decisión es **por campo** y sobre el resultado **ya fusionado** — no sobre si
+la fusión cambió algo:
+
+| Situación | Qué pasa | Métrica |
+|---|---|---|
+| Sinopsis vacía en los dos idiomas | **se escribe** | `sinopsis_sin_mejora` |
+| Título sigue roto después de fusionar | **no se escribe**, la fila anterior queda | `titulo_sin_reparar` |
+| Episodio sin nombre en los dos idiomas | se conserva vacío | `episodio_sin_nombre` |
+| Episodio ilegible sin respaldo útil | **no se escribe** | `episodio_no_reparado` |
+| El respaldo se cayó | **no se escribe** | `fallos` |
+
+**Los dos primeros no son problemas.** Una sinopsis vacía en es-MX que también
+está vacía en es-ES no la rompió el cambio de idioma: ese título no tiene
+sinopsis en español y nunca la tuvo. Descartarlos —que fue la primera versión—
+tiró 79 títulos de 120 en la primera corrida real y bajó el descubrimiento a un
+tercio.
+
+**Solo `fallos` justifica reintentar.** Los demás son datos sobre el catálogo,
+no fallas.

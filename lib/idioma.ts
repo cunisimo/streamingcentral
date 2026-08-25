@@ -18,6 +18,10 @@
 // para el idioma base, y devolver el favor cerraba un ciclo.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { crearSingleFlight } from "./single-flight.ts";
+import {
+  fusionarPorCampo, necesitaReparacion, queReparar,
+} from "../supabase/functions/_shared/idioma-nucleo.ts";
+import type { Localizable } from "../supabase/functions/_shared/idioma-nucleo.ts";
 
 // --- Configuración -----------------------------------------------------------
 export const IDIOMA_BASE = process.env.IDIOMA_TITULOS || "es-ES";
@@ -53,79 +57,18 @@ export const HUELLA_IDIOMA = calcularHuella(IDIOMA_BASE, FALLBACK_PEDIDO);
 // constructor pase `HUELLA_IDIOMA`.
 
 // --- Qué hay que reparar: UN SOLO PREDICADO ---------------------------------
-const NO_LATINO = /[^\u0000-\u024F\u2000-\u206F\u20A0-\u20BF\s]/;
-
-export interface Localizable {
-  title?: string;
-  name?: string;
-  overview?: string;
-  original_title?: string;
-  original_name?: string;
-  original_language?: string;
-}
-
-export interface Reparacion {
-  titulo: boolean;
-  sinopsis: boolean;
-}
-
-export function queReparar(t: Localizable): Reparacion {
-  const titulo = t.title ?? t.name ?? "";
-  const original = t.original_title ?? t.original_name ?? "";
-  const idioma = t.original_language ?? "";
-
-  const noLatino = NO_LATINO.test(titulo);
-
-  // El título ES el original y el idioma original no es español ni inglés.
-  //
-  // `en` está excluido A PROPÓSITO y VERIFICADO con 12 casos: los 38 títulos
-  // (3,7%) donde es-MX devuelve el original inglés son "Monsters, Inc.",
-  // "Moana 2", "WandaVision", "Black Widow", "Game of Thrones", y en Argentina
-  // esos SON los nombres publicados. Medido en Disney+: "Zootopia 2" aparece,
-  // "Zootrópolis 2" no.
-  const cayoAlOriginal = !!original && titulo === original
-    && idioma !== "es" && idioma !== "en";
-
-  return { titulo: noLatino || cayoAlOriginal, sinopsis: !(t.overview ?? "").trim() };
-}
-
-export function necesitaReparacion(t: Localizable): boolean {
-  const r = queReparar(t);
-  return r.titulo || r.sinopsis;
-}
-
-// La fusión usa EL MISMO predicado. Por CAMPO y no por objeto: un título al que
-// solo le falta la sinopsis conserva su título es-MX.
+// El predicado y la fusión NO viven acá: viven en
+// `supabase/functions/_shared/idioma-nucleo.ts`, porque la Edge Function del
+// sync corre en Deno y no puede importar este archivo (usa `node:async_hooks`
+// para las métricas por request). Es el mismo código para los dos runtimes, que
+// es la regla del proyecto: ninguna superficie implementa su propia variante.
 //
-// DEVUELVE LA MISMA REFERENCIA si nada mejoró. Es lo que permite contar como
-// "reparado" solo lo que de verdad cambió.
-export function fusionarPorCampo<T extends Localizable>(
-  base: T, respaldo: Localizable | undefined | null,
-): T {
-  if (!respaldo) return base;
-  const r = queReparar(base);
-  if (!r.titulo && !r.sinopsis) return base;
-
-  let cambio = false;
-  const out: T = { ...base };
-
-  if (r.titulo) {
-    const t = respaldo.title ?? respaldo.name ?? "";
-    // El respaldo también puede venir roto (una coreana sin traducción ni al
-    // es-ES). Si no mejora, no se toca: mejor el original que un vacío.
-    const mismo = t === (base.title ?? base.name ?? "");
-    if (t && !NO_LATINO.test(t) && !mismo) {
-      if (respaldo.title !== undefined) out.title = respaldo.title;
-      if (respaldo.name !== undefined) out.name = respaldo.name;
-      cambio = true;
-    }
-  }
-  if (r.sinopsis && (respaldo.overview ?? "").trim()) {
-    out.overview = respaldo.overview;
-    cambio = true;
-  }
-  return cambio ? out : base;
-}
+// Se re-exportan para que el resto de la app siga importando de `lib/idioma.ts`
+// como siempre.
+export {
+  NO_LATINO, queReparar, necesitaReparacion, fusionarPorCampo,
+} from "../supabase/functions/_shared/idioma-nucleo.ts";
+export type { Localizable, Reparacion } from "../supabase/functions/_shared/idioma-nucleo.ts";
 
 // --- Métricas POR REQUEST ----------------------------------------------------
 // AsyncLocalStorage y no un contador de módulo, por el mismo motivo que

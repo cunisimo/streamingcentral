@@ -393,6 +393,182 @@ de arriba es la fuente para ese formulario.
 
 ---
 
+## Tanda 3 del idioma: EN PRODUCCIÓN
+
+**Cerrada el 2026-08-24.** `upcoming_content` quedó en es-MX y el sync escribe en
+es-MX de acá en adelante. Falta **solo el merge** de `feat/idioma-tanda-3`.
+
+| Pieza | Estado |
+|---|---|
+| Migración `006` (RPC del backfill) | aplicada |
+| Edge Function `tmdb-sync` | desplegada, **version 7** |
+| Secret `IDIOMA_TITULOS` | **`es-MX`** |
+| Backfill | aplicado: 13 filas, 16 campos |
+| Cron `tmdb-sync-upcoming-daily` | **reactivado**, jobid 2, `active = true` |
+
+Verificaciones del backfill: 13 filas y 16 campos exactos, igualdad `===` contra
+`después`, **ninguna** columna fuera de las tres, `upcoming_content_providers`
+con el mismo sha256, 0 títulos vacíos o no latinos, y **los 44 títulos de la
+agenda coinciden con su ficha** (0 diferencias).
+
+`updated_at` tampoco cambió con el backfill: la tabla no tiene trigger y el
+`UPDATE` nombra solo las tres columnas. Sigue marcando cuándo lo refrescó el
+*sync*, que es el diagnóstico de frescura que no había que pisar.
+
+### Lo que costó tres iteraciones, y por qué
+
+La política del sync ante un respaldo que no alcanza se equivocó dos veces antes
+de quedar bien, y las dos veces lo encontró una corrida real, no la lectura:
+
+1. **Descartar todo lo que el respaldo no mejorara** tiró 79 títulos de 120 —casi
+   todos sin sinopsis en ningún idioma— y bajó el descubrimiento a un tercio.
+2. **Escribir todo lo que el respaldo no mejorara** habría persistido títulos
+   coreanos que es-ES tenía en español.
+
+Las dos preguntaban "¿la fusión cambió algo?". La correcta es **qué sigue roto
+después de fusionar**, y la respuesta se decide por campo. La regla final:
+
+```
+título final no vacío y en alfabeto latino  ->  se escribe, aunque coincida
+                                                con el original
+título final vacío o en escritura no latina ->  el candidato queda fuera
+```
+
+Y ese corte es un **piso de calidad**, no una protección de idioma: la fusión ya
+repara todo lo que es-ES pueda mejorar. Candidatos: 40 → 83 → **113 de 120**.
+
+**`poster_path` cambia con es-MX y es deliberado** (`docs/UPCOMING.md`): los
+pósters de TMDB son localizados. El backfill sigue limitado a `title`,
+`overview` y `episode_name`.
+
+---
+
+## Histórico: cómo se ensayó la tanda 3
+
+Rama `feat/idioma-tanda-3`, sin mergear. **Producción intacta**: el cron sigue
+corriendo, la Edge Function sigue en es-ES, no se tocaron secrets y
+`public.upcoming_content` no se escribió ni una vez.
+
+### Qué hay
+
+| Pieza | Estado |
+|---|---|
+| `supabase/functions/_shared/idioma-nucleo.ts` | núcleo compartido por la app, la Edge Function y el backfill |
+| Edge Function con idioma por entorno + fallback | escrita, **no desplegada** |
+| `006_backfill_upcoming_idioma.sql` | **aplicada** en la base |
+| `scripts/backfill-upcoming-idioma.mjs` | escrito y ensayado |
+| Tests | 365 |
+
+### El ensayo integral, cerrado el 2026-08-24
+
+Sobre un espejo `ensayo.upcoming_content` creado con `LIKE ... INCLUDING ALL`,
+en un esquema **no expuesto** en PostgREST, con dos títulos REALES de TMDB que no
+están en la tabla (`movie:278` y `tv:1399`) para ejercitar el camino de películas
+—que producción no puede probar, porque hoy las 43 filas son todas series—.
+
+| Etapa | Resultado |
+|---|---|
+| Sembrar + dry-run | 45 filas, 40 cambian, 58 campos, 181 llamadas a TMDB |
+| Episodio por coordenadas | **verificado**: se pidió `/tv/1399/season/1/episode/1` en los dos idiomas |
+| Aplicar desde el snapshot | 40 filas, verificado con `===` contra `después` |
+| Restaurar | 40 filas, verificado con `===` contra `antes` |
+| `--fallar-en` | abortó con `23502 not-null`, **0 campos cambiados**, tres veces |
+| `public.upcoming_content` | `sha256 492993ee122c0bd5` antes y después: **0 campos distintos** |
+| Limpieza | esquema 0, tablas 0, funciones `ensayo_*` 0, `backfill_upcoming_idioma` 1 |
+
+**El `23502` es la prueba de que el espejo conservó el `NOT NULL`.** Con
+`CREATE TABLE AS SELECT` no habría constraint que violar y el ensayo habría dado
+verde sin probar nada.
+
+**Dos bugs los encontró el ensayo, no la revisión de código:**
+
+1. `ensayo_leer()` no devolvía las coordenadas del episodio, así que los títulos
+   sintéticos —los únicos que no están en la tabla real— caían en el camino del
+   404 y el episodio exacto nunca se ejercitaba.
+2. El script salía con **127** en vez de 1: en Windows, `process.exit()` con
+   stdout en vuelo tumba a libuv. Un script que avisa "esto falló" no puede
+   comunicarlo con un crash.
+
+### Etapa intermedia, ejecutada el 2026-08-24
+
+| Paso | Estado |
+|---|---|
+| Rama en el remoto | `origin/feat/idioma-tanda-3` = `1aaaff6`, **sin mergear** |
+| Foto previa de las dos tablas | `docs/medidas/foto-upcoming-2026-08-24T194456.json` |
+| Cron `tmdb-sync-upcoming-daily` | **PAUSADO** — jobid 2, `active = false`, pg_cron 1.6.4 vía `cron.alter_job` |
+| Secret `IDIOMA_TITULOS` | creado en **`es-ES`** (inerte: es el default del código nuevo) |
+| Edge Function `tmdb-sync` | **desplegada**, version 4, `ezbr_sha256 e6775466…` |
+
+**El cron quedó pausado y hay que acordarse de reactivarlo**:
+`select cron.alter_job(job_id := 2, active := true);` — su horario es 06:00 UTC
+(03:00 AR), así que cada día que pase sin reactivar es un día sin refrescar la
+agenda.
+
+**Cómo se verificó el deploy, y por qué el hash no sirve.** `supabase functions
+download` devuelve el código **transpilado**, no el fuente: los tipos están
+borrados y los objetos reformateados, así que comparar hashes contra el commit da
+11 de 11 distintos sin que eso signifique nada. La verificación es semántica —
+nueve marcadores que tienen que estar y cuatro que no:
+
+```
+SI  idioma base por entorno            SI  idioma NO hardcodeado
+SI  episodeDetails por coordenadas     SI  el respaldo NO relee next_episode_to_air
+SI  metricas por invocacion            SI  sin acumulador de metricas en el modulo
+SI  el nucleo compartido _shared       SI  sin la condicion de descarte vieja
+```
+
+El bundle descargado **incluye `_shared/idioma-nucleo.ts`**, que es la
+confirmación en producción de lo que `deno info` ya había mostrado en local.
+
+### El backfill aprobado: los 16 campos, completos
+
+Snapshot `docs/medidas/snapshot-upcoming-2026-08-24T205416-es-MX.json`.
+**13 filas, 16 campos.** La lista entera, porque el dry-run imprime solo los
+primeros 8 y reportarla como "completa" fue un error de informe:
+
+| Campo | Antes | Después |
+|---|---|---|
+| `tv:211288.title` | Tracker | Tracker: Buscador de recompensas |
+| `tv:287620.title` | Stuart no consigue salvar el universo | Stuart no logra salvar el Universo |
+| `tv:45140.title` | Los Jóvenes Titanes en Acción | Los Jóvenes Titanes en acción |
+| `tv:95480.title` | Slow Horses | Caballos lentos |
+| `tv:30984.episode_name` | Episodio 46 | VIDA PARA DEFENDERTE. |
+| `tv:153312.overview` | Justo después de ser liberado… | Después de cumplir 25 años… |
+| `tv:207333.overview` | En el atemporal pueblo de Macondo… | En el mítico pueblo de Macondo… |
+| `tv:211288.overview` | Colter Shaw recorre el país… | Colter Shaw es un lobo solitario… |
+| `tv:259140.overview` | Akane Tendô conoce a su prometido… | Akane Tendo conoce a su prometido… |
+| `tv:283428.overview` | A Koyuki le cuesta relacionarse… | A Koyuki le cuesta trabajo conectar… |
+| `tv:287620.overview` | Stuart Bloom, dueño de una tienda… | A Stuart Bloom se le encomienda… |
+| `tv:31991.overview` | *(vacía)* | En este programa debutan nuevos talentos… |
+| `tv:62650.overview` | Chicago Med se describe como… | Muestra el caótico día a día del hospital… |
+| `tv:84773.overview` | Un reparto coral de personajes… | Comenzando en un tiempo relativamente pacífico… |
+| `tv:91768.overview` | Urano Motuso es una joven amante… | Motosu Urano era una estudiante universitaria… |
+| `tv:95480.overview` | Drama de espías con tintes de comedia negra… | Esta ingeniosa serie de espionaje… |
+
+**Cuatro títulos y un nombre de episodio**; los once restantes son sinopsis.
+`tv:95480` (*Slow Horses* → *Caballos lentos*) y `tv:45140` (mayúscula en
+"acción") estaban entre los que faltaban en el informe.
+
+El único campo omitido que no es "ya está en es-MX" es
+`tv:220542.episode_name`, que da 404 por coordenadas y conserva `"Episodio 49"`.
+
+### Lo que falta, en orden, y necesita aprobación
+
+1. Pausar el cron (`update cron.job set active = false where jobname = 'tmdb-sync-upcoming-daily'`).
+2. Desplegar la Edge Function **inerte** (su default sigue siendo es-ES).
+3. `supabase secrets set IDIOMA_TITULOS=es-MX` y **una** corrida manual del sync.
+4. Dry-run sobre la tabla real → snapshot → revisarlo.
+5. `--aplicar --desde-plan=<ese snapshot>`.
+6. Verificar `/proximamente` contra la ficha del mismo título.
+7. Reactivar el cron.
+
+**El orden importa**: si el backfill fuera antes del sync, la próxima corrida en
+es-ES pisaría lo reparado. Y entre el paso 3 y el 5 el cron tiene que estar
+pausado, o el bloqueo optimista de la RPC va a abortar el backfill — que es lo
+que tiene que hacer, pero mejor no llegar ahí.
+
+---
+
 ## Tanda 2 del idioma: EN PRODUCCIÓN
 
 **Activada el 2026-08-24.** `main` = `361cf5b` (`Merge feat/idioma-tanda-2`),

@@ -3,7 +3,20 @@
 // aquel es Node/Next; acá corre en Deno.
 const BASE = "https://api.themoviedb.org/3";
 const TOKEN = Deno.env.get("TMDB_READ_TOKEN") ?? "";
-const DEFAULTS: Record<string, string> = { language: "es-ES", watch_region: "AR" };
+// --- Idioma, por entorno --------------------------------------------------
+// Espeja `lib/idioma.ts` de la app: el idioma base sale de una variable y el
+// default sigue siendo es-ES, asi que DESPLEGAR ESTO NO CAMBIA NADA. El cambio
+// lo hace `supabase secrets set IDIOMA_TITULOS=es-MX`, que es lo que permite
+// revertir sin volver a desplegar.
+export const IDIOMA_BASE = Deno.env.get("IDIOMA_TITULOS") || "es-ES";
+export const IDIOMA_FALLBACK = "es-ES";
+
+// El fallback SOLO puede cambiar la salida si el idioma base es otro. Con es-ES
+// es inerte, igual que en la app.
+export const FALLBACK_ACTIVO = Deno.env.get("FALLBACK_IDIOMA") !== "0"
+  && IDIOMA_BASE !== IDIOMA_FALLBACK;
+
+const DEFAULTS: Record<string, string> = { language: IDIOMA_BASE, watch_region: "AR" };
 
 export type MediaType = "movie" | "tv";
 
@@ -40,6 +53,11 @@ export interface RawProvider {
 export interface TvDetail {
   id: number;
   name?: string;
+  // `overview`, `original_name` y `original_language` los pide el predicado de
+  // idioma (_shared/idioma-nucleo.ts), no el sync.
+  overview?: string;
+  original_name?: string;
+  original_language?: string;
   status?: string;
   next_episode_to_air?: {
     air_date: string;
@@ -69,8 +87,24 @@ export function watchProviders(type: MediaType, id: number) {
   );
 }
 
-export function tvDetails(id: number) {
-  return tmdb<TvDetail>(`/tv/${id}`);
+export function tvDetails(id: number, language?: string) {
+  return tmdb<TvDetail>(`/tv/${id}`, language ? { language } : {});
+}
+
+/**
+ * Un episodio por COORDENADAS EXACTAS.
+ *
+ * Es la única forma correcta de pedir el respaldo del nombre de un episodio.
+ * Volver a leer `next_episode_to_air` en el otro idioma parece equivalente y no
+ * lo es: entre las dos llamadas "el próximo" puede haber avanzado, y entonces se
+ * escribiría el nombre de OTRO episodio en una fila que apunta a este.
+ */
+export function episodeDetails(
+  id: number, season: number, episode: number, language?: string,
+) {
+  return tmdb<{ id: number; name?: string; season_number?: number; episode_number?: number }>(
+    `/tv/${id}/season/${season}/episode/${episode}`, language ? { language } : {},
+  );
 }
 
 export interface RawProviderInfo {

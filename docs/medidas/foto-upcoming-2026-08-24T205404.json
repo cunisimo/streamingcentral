@@ -1,0 +1,1540 @@
+{
+ "que_es": "Foto COMPLETA de la agenda de estrenos ANTES del sync manual y del backfill de idioma (tanda 3). Todas las columnas de las dos tablas. Complementa al snapshot del backfill, que solo guarda las tres columnas localizadas de las filas que va a tocar.",
+ "generado": "2026-08-24T23:54:04.118Z",
+ "zona": "America/Argentina/Buenos_Aires",
+ "tablas": {
+  "upcoming_content": {
+   "filas": 44,
+   "columnas": [
+    "backdrop_path",
+    "created_at",
+    "episode_name",
+    "episode_number",
+    "genre_ids",
+    "id",
+    "is_season_premiere",
+    "media_type",
+    "original_title",
+    "overview",
+    "popularity",
+    "poster_path",
+    "release_date",
+    "season_number",
+    "status",
+    "title",
+    "tmdb_id",
+    "tv_status",
+    "updated_at",
+    "vote_average"
+   ],
+   "sha256": "0cbaa3a8dfafa0197d710f36e26d95213acbf35a8f588be00b23a3b2a4e901c7",
+   "por_tipo": {
+    "tv": 44
+   },
+   "rango_release_date": [
+    "2026-08-22",
+    "2026-11-11"
+   ],
+   "rango_updated_at": [
+    "2026-08-08T06:00:11.853+00:00",
+    "2026-08-24T23:53:49.581+00:00"
+   ]
+  },
+  "upcoming_content_providers": {
+   "filas": 87,
+   "columnas": [
+    "provider_id",
+    "upcoming_id"
+   ],
+   "sha256": "f794e07e624eed67f3561e0eb762c62818cf63da0fa39b4dacdb8c2f63b8728f",
+   "providers_distintos": [
+    8,
+    119,
+    167,
+    283,
+    337,
+    339,
+    350,
+    457,
+    531,
+    575,
+    582,
+    1853,
+    1889,
+    1899,
+    1968,
+    2243
+   ]
+  }
+ },
+ "como_verificar": "Volver a correr scripts/foto-upcoming.mjs y comparar los sha256. El hash se calcula sobre las columnas ORDENADAS alfabeticamente y una fila por linea, asi que no depende de como serialice PostgREST.",
+ "upcoming_content": [
+  {
+   "id": "fe426f94-7514-49c8-a8c7-78156db653d6",
+   "tmdb_id": 456,
+   "media_type": "tv",
+   "title": "Los Simpson",
+   "original_title": "The Simpsons",
+   "overview": "La familia Simpson (Homero, Marge, Bart, Lisa y Maggie), y un reparto virtual de miles, viven aventuras cotidianas en Springfield, una ciudad estadounidense promedio.",
+   "poster_path": "/mpizUstxJmMbgMwc8MDEXQ6kXTP.jpg",
+   "backdrop_path": "/jIArNHIekrCSVgdMbKPAXpPY03Y.jpg",
+   "release_date": "2026-09-27",
+   "season_number": 38,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    35
+   ],
+   "popularity": 262.7853,
+   "vote_average": 8.022,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "28506283-730f-46f3-8e09-4ec11786815f",
+   "tmdb_id": 549,
+   "media_type": "tv",
+   "title": "La Ley y el Orden",
+   "original_title": "Law & Order",
+   "overview": "Serie sobre la investigación de crímenes en la ciudad de Nueva York. Policías y jueces son los principales protagonistas.",
+   "poster_path": "/bvy6AowxJp5jGhEMlpwesFFYXBL.jpg",
+   "backdrop_path": "/tc7canPSAn2X14hYi6Rl3gZm1o4.jpg",
+   "release_date": "2026-10-08",
+   "season_number": 26,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    18
+   ],
+   "popularity": 213.7223,
+   "vote_average": 7.3,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "6fd04dce-d739-4f1c-bc46-8615bc5072ee",
+   "tmdb_id": 615,
+   "media_type": "tv",
+   "title": "Futurama",
+   "original_title": "Futurama",
+   "overview": "Una divertidísima serie animada creada por Matt Groening que cuenta la historia de un repartidor de pizzas llamado Fry que se congela criogénicamente por accidente en 1999 y se despierta 1000 años más tarde en un nuevo mundo que, en muchos aspectos, no ha progresado mucho desde el siglo XX.",
+   "poster_path": "/5PLGffaQ5Xw7RyMSZXh39ue6RSt.jpg",
+   "backdrop_path": "/4xKG4S1IyLIglHbCYGJDsptgQNh.jpg",
+   "release_date": "2026-08-24",
+   "season_number": 11,
+   "episode_number": 5,
+   "episode_name": "Episodio 5",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    35,
+    10765
+   ],
+   "popularity": 171.4645,
+   "vote_average": 8.364,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "045b17c4-30db-4cb7-be40-72fa64fe7f61",
+   "tmdb_id": 1413,
+   "media_type": "tv",
+   "title": "American Horror Story",
+   "original_title": "American Horror Story",
+   "overview": "Serie de antología, ya que cada temporada se realiza como una miniserie independiente, con un grupo de personajes diferentes, escenarios distintos y una trama que tiene su propio comienzo, desarrollo y final. Aun así, las temporadas están conectadas entre sí.",
+   "poster_path": "/x2c3AvZeTyNehRZXabTojAxfDuR.jpg",
+   "backdrop_path": "/6TSJRc77dDOesKzcNqkz0KeXdLz.jpg",
+   "release_date": "2026-09-24",
+   "season_number": 13,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18,
+    9648,
+    10765
+   ],
+   "popularity": 114.9043,
+   "vote_average": 8.1,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "94736ef3-24ec-4c9d-b280-ae6528d74530",
+   "tmdb_id": 1416,
+   "media_type": "tv",
+   "title": "Anatomía según Grey",
+   "original_title": "Grey's Anatomy",
+   "overview": "La vida de Meredith Grey no es nada fácil. Intenta tomar las riendas de su vida, aunque su trabajo sea de esos que te hacen la vida imposible. Meredith es una cirujana interna de primer año en el Hospital Grace de Seattle, el programa de prácticas más duro de la Facultad de Medicina de Harvard. Y ella lo va a comprobar. Pero no estará sola. Un elenco de compañeros de promoción tendrán que superar la misma prueba. Ahora están en el mundo real, son doctores del hospital. Y en un mundo donde la experiencia en el trabajo puede ser un factor de vida o muerte, todos ellos tendrán que lidiar con los altibajos de sus vidas personales.",
+   "poster_path": "/iSQ0s4XsprwuBXz6RYMhcSuPX1O.jpg",
+   "backdrop_path": "/jP0Rhj9OTPDAwQlHQwOLFDdeE8t.jpg",
+   "release_date": "2026-10-15",
+   "season_number": 23,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18
+   ],
+   "popularity": 251.7009,
+   "vote_average": 8.2,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "2f3ccad0-2cb3-4754-ac2c-c24ec801ba03",
+   "tmdb_id": 1433,
+   "media_type": "tv",
+   "title": "American Dad: Un Agente de Familia",
+   "original_title": "American Dad!",
+   "overview": "American Dad es la serie de animación subversiva que gira en torno a Stan Smith (Seth MacFarlane), un agente de la CIA con sede en Langley Falls, Virginia, que es un indiscutible experto en armas y orgulloso hombre de familia. Stan está constantemente en alerta por actividad terrorista y llegará a extremos para proteger a su amado Estados Unidos y mantener su patria segura. Solo hay que ver el medidor de alerta terrorista de su refrigerador y su reacción inmediata de dispararle a la tostadora cada vez que salta una tostada.",
+   "poster_path": "/bcQKWQWZCTU47Gzm3xtFkjYGGA7.jpg",
+   "backdrop_path": "/iixxhk3ycXmFqBn616pAsC3lu53.jpg",
+   "release_date": "2026-09-13",
+   "season_number": 22,
+   "episode_number": 12,
+   "episode_name": "Episodio 12",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    35
+   ],
+   "popularity": 168.7991,
+   "vote_average": 7.023,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "20013b0b-9dcf-42cb-91f8-01753879ddf4",
+   "tmdb_id": 1667,
+   "media_type": "tv",
+   "title": "Saturday Night Live",
+   "original_title": "Saturday Night Live",
+   "overview": "Sátira galardonada con premios Emmy que revolucionó la televisión con sus `sketches' y reparto siempre cambiante de actores y cómicos quienes luego llegaron a la fama. Por mencionar a unos pocos, Eddie Murphy, Dana Carvey, Chevy Chase, Bill Murray, Dan Aykroyd, Al Franken y Mike Myers. Desde su estreno, con la rendición memorable del tema musical de `Mighty Mouse' por Andy Kaufman, hasta la interpretación de John Belushi como un `Samurai', el programa cambió la imagen de la TV una vez por todas.",
+   "poster_path": "/s1cZBqbMwAF3w8S3Yo0j5nr2Yuo.jpg",
+   "backdrop_path": "/sSAX59Kf01lBRkBW4UcIL4kIoIm.jpg",
+   "release_date": "2026-09-26",
+   "season_number": 52,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    35,
+    10763
+   ],
+   "popularity": 109.5633,
+   "vote_average": 6.908,
+   "status": "Returning Series",
+   "created_at": "2026-08-07T20:40:24.751965+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "fe56131f-b4de-41fe-b563-eadb3bc79326",
+   "tmdb_id": 2190,
+   "media_type": "tv",
+   "title": "South Park",
+   "original_title": "South Park",
+   "overview": "Cuatro niños (Stan, Kyle, Cartman y Kenny) irreverentes de primaria viven grandes y surrealistas desventuras en la tranquila y disfuncional pueblo South Park, Colorado.",
+   "poster_path": "/w9Kz3tZsEn95F8WHh6ydFXaQIFO.jpg",
+   "backdrop_path": "/3UviYOlhn8EgXMBuiT6MnUuo1w9.jpg",
+   "release_date": "2026-09-16",
+   "season_number": 29,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    35
+   ],
+   "popularity": 100.1708,
+   "vote_average": 8.337,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "64343f24-16a8-49ac-8556-c8b358ed45fa",
+   "tmdb_id": 2710,
+   "media_type": "tv",
+   "title": "Siempre hace sol en Filadelfia",
+   "original_title": "It's Always Sunny in Philadelphia",
+   "overview": "Cuatro amigos que regentan un pequeño bar en un barrio del sur de Philadelphia, la ciudad del amor fraternal, intentan mantener el equilibrio entre negocio y amistad, tarea nada fácil, ya que cada uno de ellos suele dejarse llevar únicamente por sus intereses personales, lo que desemboca en situaciones incómodas que amenazan con deteriorar sus relaciones personales.",
+   "poster_path": "/xFlneHKJXFHaajdqrTmzHp13sqW.jpg",
+   "backdrop_path": "/265v8OtLO4h8XgJu5eDRpJdf9e0.jpg",
+   "release_date": "2026-08-24",
+   "season_number": 18,
+   "episode_number": 3,
+   "episode_name": "Episodio 3",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    35
+   ],
+   "popularity": 89.3139,
+   "vote_average": 8.261,
+   "status": "Returning Series",
+   "created_at": "2026-08-07T20:40:24.751965+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "e7ca50e3-8b7c-4113-8b19-5d0b6ac5a7ba",
+   "tmdb_id": 2734,
+   "media_type": "tv",
+   "title": "La Ley y el Orden: Unidad de Víctimas Especiales",
+   "original_title": "Law & Order: Special Victims Unit",
+   "overview": "Serie surgida a la sombra de \"Law & Order\". Una unidad especial de la policía de Nueva York se dedica a investigar delitos de carácter sexual: violaciones, pedofilia y malos tratos infantiles.",
+   "poster_path": "/2RW2SQQSaCMGwAk5sfvfOisQV4s.jpg",
+   "backdrop_path": "/obtdxPgmfykYwVnvuYXC5f2xKlQ.jpg",
+   "release_date": "2026-10-08",
+   "season_number": 28,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    18,
+    9648
+   ],
+   "popularity": 290.8261,
+   "vote_average": 8,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "805b9872-7764-407f-82a2-9c13533dd716",
+   "tmdb_id": 4614,
+   "media_type": "tv",
+   "title": "NCIS: Criminología Naval",
+   "original_title": "NCIS",
+   "overview": "Un equipo de agentes especiales del Servicio de Investigación Criminal de la Marina de los Estados Unidos, liderados por el agente especial Leroy Jethro Gibbs (Mark Harmon), investiga los crímenes que se cometen dentro del Cuerpo Naval. Entre los casos está la muerte del ayudante del maletín nuclear del presidente, una situación explosiva a bordo de un buque de guerra de la Armada y la muerte de un famoso durante un show de televisión en una base del cuerpo de marines... La serie nació como un spin-off de algunos personajes presentados previamente en la serie \"JAG: Alerta roja\".",
+   "poster_path": "/i5dZG5SJ7NuApNneDDeJdz3k0Dl.jpg",
+   "backdrop_path": "/nn3SuLTO4hum8yAxaY4ql8h6kRk.jpg",
+   "release_date": "2026-10-06",
+   "season_number": 24,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    18,
+    10759
+   ],
+   "popularity": 233.4631,
+   "vote_average": 7.61,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "2af8e1f5-0ee3-4fc4-8167-37e8743eaf12",
+   "tmdb_id": 4656,
+   "media_type": "tv",
+   "title": "WWE Raw",
+   "original_title": "Raw",
+   "overview": "WWE Raw, también conocido como Monday Night Raw, es un programa de televisión de entretenimiento deportivo de lucha libre profesional producido por la WWE. Se ha transmitido sin interrupciones desde su estreno del 11 de enero de 1993 hasta la fecha, desde Estados Unidos por medio de la cadena USA Network",
+   "poster_path": "/fstEe6RsyNyPUnMwNcL20iNl0nE.jpg",
+   "backdrop_path": "/gjRnFAQk4EVg1P1s5512FT1Lq9c.jpg",
+   "release_date": "2026-08-24",
+   "season_number": 34,
+   "episode_number": 34,
+   "episode_name": "Episodio 34",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10764
+   ],
+   "popularity": 116.8332,
+   "vote_average": 6.801,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "a570692f-1114-4301-9b90-ee154c2ecfc2",
+   "tmdb_id": 30983,
+   "media_type": "tv",
+   "title": "Detective Conan",
+   "original_title": "名探偵コナン",
+   "overview": "Shinichi Kudo es un joven detective que consigue esclarecer cualquier misterio, por difícil que sea. Un día, nuestro protagonista descubre los maléficos planes de una peligrosa organización criminal y es envenenado. Sin embargo, el veneno no lo mata, sino que por accidente, lo encoge y lo convierte en un niño de apenas 6 años. Atrapado en este cuerpo, Shinichi, bajo el seudónimo de Conan Edogawa, deberá resolver los casos más difíciles mientras intenta encontrar un antídoto que lo devuelva a la normalidad y hacer lo posible para que su amiga, Ran Mouri, no sospeche quién es realmente el sabiondo Conan...",
+   "poster_path": "/gW14n6xxONXrya8CIDhRe5Ada7U.jpg",
+   "backdrop_path": "/z67lpMtm8YGykJO4p89meuNMvj8.jpg",
+   "release_date": "2026-08-29",
+   "season_number": 1,
+   "episode_number": 1211,
+   "episode_name": "Episodio 1211",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    80,
+    9648,
+    35
+   ],
+   "popularity": 81.306,
+   "vote_average": 8.015,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "43f0a214-5f4a-4e37-abed-7a690a390222",
+   "tmdb_id": 30984,
+   "media_type": "tv",
+   "title": "Bleach",
+   "original_title": "BLEACH",
+   "overview": "La serie narra las aventuras de Ichigo Kurosaki, un adolescente que tiene la facultad de interactuar con los espíritus. Una noche, Ichigo se encuentra con una Cegador —personificación japonesa del Dios de la muerte— llamada Rukia Kuchiki, quien se sorprende que pueda verla. Sin embargo, su conversación es interrumpida por la aparición de un Hueco, un espíritu maligno. Después de que Rukia fuera gravemente herida al tratar de proteger a Ichigo, esta intenta traspasarle parte de sus poderes a Ichigo para que pueda enfrentarse al Hueco en igualdad de condiciones. No obstante, Ichigo sin darse cuenta los absorbe casi por completo y logra vencer con facilidad al espíritu.",
+   "poster_path": "/rsv116o9M983WvInXztEiwc6WRD.jpg",
+   "backdrop_path": "/o0NsbcIvsllg6CJX0FBFY8wWbsn.jpg",
+   "release_date": "2026-08-29",
+   "season_number": 2,
+   "episode_number": 46,
+   "episode_name": "Episodio 46",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10759,
+    16,
+    10765
+   ],
+   "popularity": 136.5879,
+   "vote_average": 8.368,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "9c5273ce-2c21-453d-9662-29cf1a570514",
+   "tmdb_id": 31991,
+   "media_type": "tv",
+   "title": "WWE NXT",
+   "original_title": "WWE NXT",
+   "overview": "",
+   "poster_path": "/9nLBX5Bf7PW4FAaWJLXpFFdeTlV.jpg",
+   "backdrop_path": "/AELAPRTRAlvjxo1zx4Bc7YHKiz.jpg",
+   "release_date": "2026-08-25",
+   "season_number": 20,
+   "episode_number": 34,
+   "episode_name": "Episodio 34",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10759,
+    18,
+    10764
+   ],
+   "popularity": 69.032,
+   "vote_average": 6.7,
+   "status": "Returning Series",
+   "created_at": "2026-08-11T06:00:15.672918+00:00",
+   "updated_at": "2026-08-21T06:00:14.834+00:00"
+  },
+  {
+   "id": "1c9ae5e3-ef7f-4e4e-b42e-e4019eab7f2e",
+   "tmdb_id": 33238,
+   "media_type": "tv",
+   "title": "Running Man",
+   "original_title": "런닝맨",
+   "overview": "Running Man es un espectáculo de variedades de Corea del Sur transmitido desde el 11 de julio de 2010 hasta ahora a través de SBS. El programa forma parte de la formación de \"Good Sunday\". El programa fue creado por Jo Hyo-jin, Kim Joo-hyung y Im Hyung-taek.",
+   "poster_path": "/15SMnscZqd7HZ0bzruatOcKUlOV.jpg",
+   "backdrop_path": "/wsHj4oHQJoe7DMYaqNFwVoyLiAh.jpg",
+   "release_date": "2026-08-30",
+   "season_number": 1,
+   "episode_number": 818,
+   "episode_name": "Episodio 818",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    35,
+    10764
+   ],
+   "popularity": 75.3545,
+   "vote_average": 8.222,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T06:00:12.945+00:00"
+  },
+  {
+   "id": "50fba698-834e-42a8-8c5b-aa744df60fa3",
+   "tmdb_id": 37678,
+   "media_type": "tv",
+   "title": "La voz de América",
+   "original_title": "The Voice",
+   "overview": "El noticiero de televisión de la Voz de América presenta los eventos noticiosos más relevantes en Estados Unidos, América Latina y el mundo.",
+   "poster_path": "/7ah1WExcMkzbq7sARCTmcC23tBr.jpg",
+   "backdrop_path": "/jzkSqv00uImypVLSUpg16rBjwdW.jpg",
+   "release_date": "2026-09-21",
+   "season_number": 30,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10764
+   ],
+   "popularity": 96.7001,
+   "vote_average": 5.9,
+   "status": "Returning Series",
+   "created_at": "2026-08-18T06:00:13.293856+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "ff1980f2-3d47-431c-a00e-29dfc24d2922",
+   "tmdb_id": 44006,
+   "media_type": "tv",
+   "title": "Chicago en llamas",
+   "original_title": "Chicago Fire",
+   "overview": "Las decisiones de los bomberos, equipos de rescate y paramédicos de la estación de bomberos 51 hacen la diferencia entre la vida y la muerte. Pero eso no es lo único, también se crea una gran familia entre los miembros del equipo. Dirigidos por el jefe Wallace Boden, la Unidad 51 lo deja todo en cada rescate de esta noble profesión.",
+   "poster_path": "/r915sk2JpthZSjHEgZKifWxgo6L.jpg",
+   "backdrop_path": "/14LzHqJrFcHk7ruMNCXpEkB0Thg.jpg",
+   "release_date": "2026-10-07",
+   "season_number": 15,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18
+   ],
+   "popularity": 128.6124,
+   "vote_average": 8.409,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "83e875fc-073b-4a28-afb9-ea21b9d460e2",
+   "tmdb_id": 44953,
+   "media_type": "tv",
+   "title": "El Señor de los Cielos",
+   "original_title": "El señor de los cielos",
+   "overview": "Aurelio Casillas busca convertirse en el narcotraficante más temido de México y está dispuesto a hacer cualquier cosa para mantenerse en el poder.",
+   "poster_path": "/Ag7VUdnrRz5Qpq3Yn3E5OCvFnu0.jpg",
+   "backdrop_path": "/h3sqf7qkdSvMiBhyzfuXAEFkn5R.jpg",
+   "release_date": "2026-08-24",
+   "season_number": 10,
+   "episode_number": 35,
+   "episode_name": "Episodio 35",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    18,
+    10766
+   ],
+   "popularity": 87.5073,
+   "vote_average": 8,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "05ae257d-b878-46f7-9d4b-79db3bbf9930",
+   "tmdb_id": 45140,
+   "media_type": "tv",
+   "title": "Los Jóvenes Titanes en Acción",
+   "original_title": "Teen Titans Go!",
+   "overview": "Teen Titans Go! es una serie de animación que sigue las aventuras de los Jóvenes Titanes cuando no están salvando el mundo mientras viven juntos como adolescentes sin adultos que se entrometan. Las situaciones son, a diferencia de la mayoría de las series superheróicas, cómicas, alocadas y paródicas; por ejemplo, bromas juveniles que alcanzan nuevas cotas de peligrosidad, obtener el permiso de conducir tras destrozar el Batmóvil o lavar los trajes tras mancharlos al luchar contra sus enemigos.",
+   "poster_path": "/dFRzEMjRuAF778RnYg6VsMMlKwx.jpg",
+   "backdrop_path": "/bIHCUqaapZdRjd2kzSDiwzYyrpC.jpg",
+   "release_date": "2026-08-22",
+   "season_number": 9,
+   "episode_number": 46,
+   "episode_name": "Episodio 46",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    10759,
+    35,
+    10751,
+    10765
+   ],
+   "popularity": 110.6982,
+   "vote_average": 6.4,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-22T06:00:14.97+00:00"
+  },
+  {
+   "id": "14511b5a-b592-4fb3-8028-70d1b49ef6ff",
+   "tmdb_id": 58841,
+   "media_type": "tv",
+   "title": "Policías de Chicago",
+   "original_title": "Chicago P.D.",
+   "overview": "El Distrito 21 del Departamento de Policía de Chicago está compuesto de policías uniformados, que tratan con la delincuencia callejera, y la Unidad de Inteligencia, ocupada de los delitos graves como el tráfico de drogas y asesinatos de alto perfil.",
+   "poster_path": "/bez40PgT36RUu4gstD2A6GSM0tP.jpg",
+   "backdrop_path": "/rhp8vYG1sIFtqH3ETmHJuI5Z3Cb.jpg",
+   "release_date": "2026-10-07",
+   "season_number": 14,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    18
+   ],
+   "popularity": 108.0376,
+   "vote_average": 8.427,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "df1115da-33f9-4c74-9505-41444411a2ba",
+   "tmdb_id": 62650,
+   "media_type": "tv",
+   "title": "Chicago Med",
+   "original_title": "Chicago Med",
+   "overview": "Chicago Med se describe como \"un viaje emocional a través del caos del día a día del hospital más explosivo de la ciudad y el equipo de valientes médicos que lo mantiene unido.\" La serie hace frente a casos inspirados por acontecimientos de la actualidad, además de entrelazar con los personajes de Chicago Fire y Chicago P.D.",
+   "poster_path": "/9eym662FRJJb9wdgCiDKPDciZzf.jpg",
+   "backdrop_path": "/x2jNLrYw1s9i6kihEJqsBQgs9nR.jpg",
+   "release_date": "2026-10-07",
+   "season_number": 12,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18
+   ],
+   "popularity": 66.8628,
+   "vote_average": 8.262,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-23T06:00:17.457+00:00"
+  },
+  {
+   "id": "d410fa02-939d-411c-b0a4-7eb4f3233a90",
+   "tmdb_id": 65282,
+   "media_type": "tv",
+   "title": "Solo en casa",
+   "original_title": "나 혼자 산다",
+   "overview": "Puede ser una insignia de honor estar \"soltero\". “I Live Alone” es una serie de telerrealidad surcoreana de estilo documental que sigue a los miembros de un club autoformado llamado Rainbow, que está compuesto por celebridades que son solteras y viven solas.",
+   "poster_path": "/bq3Emv3pJLUyHvwGqiAXRwJvAmL.jpg",
+   "backdrop_path": "/sztoil0XfQ0cSHy4PXmYW6uAdfQ.jpg",
+   "release_date": "2026-08-28",
+   "season_number": 1,
+   "episode_number": 662,
+   "episode_name": "Episodio 662",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10764
+   ],
+   "popularity": 113.3944,
+   "vote_average": 7.5,
+   "status": "Returning Series",
+   "created_at": "2026-08-24T23:02:26.654827+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "fa9099d6-6f04-4dc8-8e69-8b481c00aebe",
+   "tmdb_id": 65942,
+   "media_type": "tv",
+   "title": "Re:ZERO -Starting Life in Another World-",
+   "original_title": "Re:ゼロから始める異世界生活",
+   "overview": "Natsuki Subaru, un estudiante de secundaria ordinario, está en camino a casa desde la tienda de conveniencia cuando se encuentra transportado a otro mundo. Como está perdido y confundido en un mundo nuevo en el que ni siquiera sabe de izquierda a derecha, la única persona que le alcanzó fue una hermosa niña con cabello plateado. Determinada a pagarle de alguna manera por salvarlo de su propia desesperación, Subaru acepta ayudar a la niña a encontrar algo que está buscando.",
+   "poster_path": "/ccG0ZfXOQ0834bIus4SwZrXtkyM.jpg",
+   "backdrop_path": "/7ZruEnSnHD6Jx5mF0hBt1E306Vt.jpg",
+   "release_date": "2026-08-26",
+   "season_number": 1,
+   "episode_number": 80,
+   "episode_name": "Episodio 80",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    9648,
+    10759,
+    10765
+   ],
+   "popularity": 97.8114,
+   "vote_average": 8.1,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "d444cc1f-73cc-481a-9e10-edc115b4c021",
+   "tmdb_id": 75219,
+   "media_type": "tv",
+   "title": "9-1-1",
+   "original_title": "9-1-1",
+   "overview": "Se centra en las vidas y las carreras de los que reciben las llamadas de emergencia: policías, paramédicos, bomberos, gente que arriesga su vida para salvar a otros.",
+   "poster_path": "/n3IbaTXhPsnP68I5wsoKe7vchgS.jpg",
+   "backdrop_path": "/h050XJoiIobaH6bhj3MAhgilkpJ.jpg",
+   "release_date": "2026-10-15",
+   "season_number": 10,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18,
+    80,
+    10759
+   ],
+   "popularity": 116.7175,
+   "vote_average": 8.224,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "4795c88e-92a6-41e7-9a0c-2bb411c35a85",
+   "tmdb_id": 80748,
+   "media_type": "tv",
+   "title": "F.B.I.",
+   "original_title": "FBI",
+   "overview": "Drama vertiginoso sobre el funcionamiento interno de la oficina de Nueva York del FBI. Estos agentes de primera clase, incluida la agente especial Maggie Bell (Missy Peregrym) y su compañero, el agente especial Omar Adom 'OA' Zidan (Zeeko Zaki), aportan todo su talento, intelecto y experiencia técnica para investigar con tenacidad casos de gran magnitud, incluidos terrorismo, crimen organizado y contrainteligencia, para mantener a salvo a Nueva York y al país.",
+   "poster_path": "/zfKS4WL0OZ9udpNoSYZw91VB3aH.jpg",
+   "backdrop_path": "/5DFvscYGpcFaQMJljCic5gbzVe6.jpg",
+   "release_date": "2026-10-05",
+   "season_number": 9,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    10759,
+    18
+   ],
+   "popularity": 148.9016,
+   "vote_average": 7.922,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "2316b1a1-ff38-4bef-9730-ef4540602314",
+   "tmdb_id": 84773,
+   "media_type": "tv",
+   "title": "El señor de los anillos: Los anillos de poder",
+   "original_title": "The Lord of the Rings: The Rings of Power",
+   "overview": "Un reparto coral de personajes —unos conocidos y otros nuevos— debe afrontar la reaparición del mal en la Tierra Media. Desde las profundidades más oscuras de las Montañas Nubladas hasta los majestuosos bosques de Lindon, desde el reino insular de Númenor hasta los extremos más remotos del mapa, estos parajes y personajes forjarán los legados que perdurarán más allá de su desaparición.",
+   "poster_path": "/suvlZfDAoq5vfVUrfb468KJhFlL.jpg",
+   "backdrop_path": "/o2wg8QiSCQrhj91tBfxunE3O5Ba.jpg",
+   "release_date": "2026-11-11",
+   "season_number": 3,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10759,
+    18,
+    10765
+   ],
+   "popularity": 74.5923,
+   "vote_average": 7.226,
+   "status": "Returning Series",
+   "created_at": "2026-08-13T06:00:16.430791+00:00",
+   "updated_at": "2026-08-24T06:00:12.945+00:00"
+  },
+  {
+   "id": "cd71b402-ad08-4412-8535-eadcf09b811d",
+   "tmdb_id": 91768,
+   "media_type": "tv",
+   "title": "Ascendance of a Bookworm",
+   "original_title": "本好きの下剋上 司書になるためには手段を選んでいられません",
+   "overview": "Urano Motuso es una joven amante de los libros que va a cumplir su sueño de trabajar como bibliotecaria. Sin embargo, durante un terremoto, muere aplastada por el colapso de una estantería de la biblioteca. Cuando recupera la consciencia, descubre que se ha reencarnado en otro mundo en el cuerpo de Myne, una niña hija de un pobre soldado en la ciudad de Ehrenfest, donde los libros son escasos y solo están accesibles para los nobles. Así que decide imprimir y crear sus propios libros para poder leer de nuevo.",
+   "poster_path": "/cBgA4PdYNr0EqXB1naRe1ndrC33.jpg",
+   "backdrop_path": "/2ta3O7D1Nh42nTZof9qxJCVAvwk.jpg",
+   "release_date": "2026-08-22",
+   "season_number": 2,
+   "episode_number": 19,
+   "episode_name": "Episodio 19",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    18,
+    10765
+   ],
+   "popularity": 69.5585,
+   "vote_average": 8.078,
+   "status": "Returning Series",
+   "created_at": "2026-08-17T06:00:15.192364+00:00",
+   "updated_at": "2026-08-20T06:00:19.879+00:00"
+  },
+  {
+   "id": "2751fab6-3271-483f-885a-61bf4be071b6",
+   "tmdb_id": 94664,
+   "media_type": "tv",
+   "title": "Mushoku Tensei Jobless Reincarnation",
+   "original_title": "無職転生 ～異世界行ったら本気だす～",
+   "overview": "Cuando un autobús atropella a un joven de 34 años que no ha logrado mucho en su vida, su historia no termina ahí. Habiendo reencarnado en un niño, Rudy aprovechará cada oportunidad para vivir la vida que siempre quiso. ¡Con la ayuda de sus amigos, unas habilidades mágicas recién adquiridas, y el coraje para hacer las cosas que siempre ha soñado, se embarca en una aventura épica, con su experiencia pasada intacta!",
+   "poster_path": "/tn2mxPYSSUPHgfcAe5SCga1DO0i.jpg",
+   "backdrop_path": "/j9fRIimor0AMFJR9kjZubXcABzZ.jpg",
+   "release_date": "2026-08-24",
+   "season_number": 3,
+   "episode_number": 9,
+   "episode_name": "Episodio 9",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10759,
+    16,
+    10765
+   ],
+   "popularity": 138.3159,
+   "vote_average": 8.41,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "54bff2a4-aa3c-4074-acef-9c123c4c3a09",
+   "tmdb_id": 95350,
+   "media_type": "tv",
+   "title": "Linternas",
+   "original_title": "Lanterns",
+   "overview": "El nuevo recluta John Stewart y la leyenda Hal Jordan, dos policías intergalácticos, se ven envueltos en un oscuro misterio terrestre mientras investigan un asesinato en el corazón de Estados Unidos.",
+   "poster_path": "/tWQQufVyYfIwDvhicXI1gLAXWR0.jpg",
+   "backdrop_path": "/mdbWfpbWhvxgG3k5MHpo90UgAUe.jpg",
+   "release_date": "2026-08-30",
+   "season_number": 1,
+   "episode_number": 3,
+   "episode_name": "Episodio 3",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18,
+    9648,
+    10765
+   ],
+   "popularity": 280.1615,
+   "vote_average": 8.146,
+   "status": "Returning Series",
+   "created_at": "2026-08-19T06:00:15.064679+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "03eba03a-cfc6-47fa-b6e0-d80b8f99696f",
+   "tmdb_id": 95480,
+   "media_type": "tv",
+   "title": "Slow Horses",
+   "original_title": "Slow Horses",
+   "overview": "Drama de espías con tintes de comedia negra centrado en las andanzas de un incompetente equipo de agentes del MI5 y en su jefe, el irreverente Jackson Lamb, a medida que desmontan los artificios del espionaje para defender Inglaterra de las fuerzas del mal.",
+   "poster_path": "/glcBuLW6NkZytmcpkkETsFXuVYj.jpg",
+   "backdrop_path": "/bDfboQUb45Cv9MYyVBDZw8M8xSM.jpg",
+   "release_date": "2026-09-16",
+   "season_number": 6,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    18,
+    9648
+   ],
+   "popularity": 70.6635,
+   "vote_average": 7.999,
+   "status": "Returning Series",
+   "created_at": "2026-08-24T06:00:14.106306+00:00",
+   "updated_at": "2026-08-24T06:00:12.945+00:00"
+  },
+  {
+   "id": "1db67a2c-1b44-4028-896e-abc822564adb",
+   "tmdb_id": 97546,
+   "media_type": "tv",
+   "title": "Ted Lasso",
+   "original_title": "Ted Lasso",
+   "overview": "Ted Lasso, un ingenuo entrenador de fútbol americano que decide probar suerte en un club de fútbol inglés aunque no tiene idea de ese deporte. Su inexperiencia despierta recelo y desdén entre jugadores y aficionados. Con un equipo y una ciudad que lo mira con sospecha, ¿Logrará tener éxito?",
+   "poster_path": "/6YUzArR2TElmGMj1HmnnfVlgunL.jpg",
+   "backdrop_path": "/nE94ejEbzNCU48bW1oju0dqBONz.jpg",
+   "release_date": "2026-08-25",
+   "season_number": 4,
+   "episode_number": 4,
+   "episode_name": "Galgos expertas en diversión",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18,
+    35
+   ],
+   "popularity": 186.3862,
+   "vote_average": 8.363,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "9deed4ba-c649-4952-bba2-ed6b4f67c35a",
+   "tmdb_id": 108978,
+   "media_type": "tv",
+   "title": "Reacher",
+   "original_title": "Reacher",
+   "overview": "Cuando lo arrestan por un asesinato que no cometió, el oficial retirado de la policía militar Jack Reacher se ve envuelto en una conspiración letal de policías corruptos, empresarios turbios y políticos intrigantes. Solo con su ingenio, debe descubrir qué está sucediendo en Margrave, Georgia. La primera temporada de \"Reacher\" se basa en la exitosa novela \"Zona peligrosa\" de Lee Child.",
+   "poster_path": "/puKRIbG2asaTFHIjJS5sydIW1zB.jpg",
+   "backdrop_path": "/pF0qkRsrHkdYadPWY9AMeFZfcwk.jpg",
+   "release_date": "2026-08-26",
+   "season_number": 4,
+   "episode_number": 5,
+   "episode_name": "Puente",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10759,
+    80
+   ],
+   "popularity": 662.9716,
+   "vote_average": 8.086,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "86fe998a-6095-408d-ab6c-9ef6baf8185b",
+   "tmdb_id": 113962,
+   "media_type": "tv",
+   "title": "Operativo: Lioness",
+   "original_title": "Lioness",
+   "overview": "Joe intenta equilibrar su vida personal y profesional como punta de lanza de la CIA en la guerra contra el terrorismo. El Programa Lioness recluta a Cruz para que opere de incógnito junto a Joe entre los poderosos del terrorismo de Estado.",
+   "poster_path": "/mGtMh4eZ6b4U9LNTPn26ZYKr1ju.jpg",
+   "backdrop_path": "/4NBYDOnEjAzyuP7CMkD5s7fs44K.jpg",
+   "release_date": "2026-08-30",
+   "season_number": 3,
+   "episode_number": 5,
+   "episode_name": "Episodio 5",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18,
+    10768
+   ],
+   "popularity": 368.7606,
+   "vote_average": 8.079,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "a39088c7-2e40-4375-a00d-a66649a2d50b",
+   "tmdb_id": 125988,
+   "media_type": "tv",
+   "title": "Silo",
+   "original_title": "Silo",
+   "overview": "En un futuro arruinado y tóxico, existe una comunidad en un enorme silo subterráneo cientos de pisos bajo tierra. Ahí, hombres y mujeres viven en una sociedad llena de reglas que creen que están hechas para protegerlos.",
+   "poster_path": "/s4yRu8IRcMLbfoUsO4q9Yuci4F0.jpg",
+   "backdrop_path": "/uTWhbLc7Bj4qNSdW3ZvZKL8cOHv.jpg",
+   "release_date": "2026-08-27",
+   "season_number": 3,
+   "episode_number": 9,
+   "episode_name": "Despedida",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    10765,
+    18
+   ],
+   "popularity": 301.0535,
+   "vote_average": 8.196,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "c625ec52-2314-4fc5-b8bf-3937d78451b0",
+   "tmdb_id": 153312,
+   "media_type": "tv",
+   "title": "Tulsa King",
+   "original_title": "Tulsa King",
+   "overview": "Justo después de ser liberado de prisión después de 25 años, el capo de la mafia de Nueva York, Dwight \"El General\" Manfredi, es exiliado sin contemplaciones por su jefe para instalarse en Tulsa, Oklahoma. Al darse cuenta de que su familia de la mafia puede no tener sus mejores intereses en mente, Dwight construye lentamente una \"tripulación\" a partir de un grupo de personajes inverosímiles, para ayudarlo a establecer un nuevo imperio criminal en un lugar que para él bien podría ser otro planeta.",
+   "poster_path": "/6ryay9RQfT5jrY9i1dveUUGryAO.jpg",
+   "backdrop_path": "/mNHRGO1gFpR2CYZdANe72kcKq7G.jpg",
+   "release_date": "2026-09-21",
+   "season_number": 4,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    80,
+    18
+   ],
+   "popularity": 67.0894,
+   "vote_average": 8.301,
+   "status": "Returning Series",
+   "created_at": "2026-08-18T06:00:13.293856+00:00",
+   "updated_at": "2026-08-18T06:00:12.203+00:00"
+  },
+  {
+   "id": "e94c6e2c-b0bb-457e-b539-0ca43d90f7a1",
+   "tmdb_id": 207333,
+   "media_type": "tv",
+   "title": "Cien años de soledad",
+   "original_title": "Cien años de soledad",
+   "overview": "En el atemporal pueblo de Macondo, siete generaciones de la familia Buendía transitan entre el amor, el olvido, un pasado ineludible... y el destino.",
+   "poster_path": "/3VRa9ZM0wq2vhdMGZ1Z3UpZDkXm.jpg",
+   "backdrop_path": "/5mcc7J07f680Q88xeLClf5SIZtt.jpg",
+   "release_date": "2026-08-26",
+   "season_number": 2,
+   "episode_number": 8,
+   "episode_name": "Episodio 8",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18,
+    10765
+   ],
+   "popularity": 65.8403,
+   "vote_average": 7.961,
+   "status": "Returning Series",
+   "created_at": "2026-08-07T20:40:24.751965+00:00",
+   "updated_at": "2026-08-12T06:00:14.072+00:00"
+  },
+  {
+   "id": "9315e547-6680-4b60-84cd-00811188bbae",
+   "tmdb_id": 211288,
+   "media_type": "tv",
+   "title": "Tracker",
+   "original_title": "Tracker",
+   "overview": "Colter Shaw recorre el país en su vieja autocaravana para ayudar a la policía y a ciudadanos particulares a resolver crímenes y localizar a personas desaparecidas, hasta que su último caso lo cambia todo.",
+   "poster_path": "/5PXqBrCQ0FdDDtFCVhUyLDSwZYF.jpg",
+   "backdrop_path": "/5C5cMYUlmX6BU5YxBqhp7ZpSd3Q.jpg",
+   "release_date": "2026-10-04",
+   "season_number": 4,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    18,
+    80
+   ],
+   "popularity": 71.6166,
+   "vote_average": 7.586,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-12T06:00:14.072+00:00"
+  },
+  {
+   "id": "04e4d1dc-a7ac-4ea8-ad5b-b65b41cc64ce",
+   "tmdb_id": 220542,
+   "media_type": "tv",
+   "title": "Los diarios de la boticaria",
+   "original_title": "薬屋のひとりごと",
+   "overview": "Maomao llevaba una vida tranquila ayudando a su padre, un boticario. Todo cambia el día que la venden como sirvienta al palacio del emperador, pero la vida entre nobles y realeza no es para ella. Cuando la familia imperial enferma, ella decide intervenir para encontrar una cura, lo que llama la atención de Jinshi, un guapo oficial de palacio que decide ascenderla como dama de compañía de una de las concubinas del emperador. ¡Su habilidad con la medicina la hará conocida en el palacio por ayudar a resolver muchos misterios!",
+   "poster_path": "/bYPACmBf5Nomw3I2IEGGTNwgvWj.jpg",
+   "backdrop_path": "/gffVOVZ2Y9cmVIZ26Gt9ByMGCYH.jpg",
+   "release_date": "2026-10-02",
+   "season_number": 1,
+   "episode_number": 49,
+   "episode_name": "Episodio 49",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    18,
+    9648
+   ],
+   "popularity": 83.8118,
+   "vote_average": 8.626,
+   "status": "Returning Series",
+   "created_at": "2026-08-09T06:00:14.444379+00:00",
+   "updated_at": "2026-08-21T06:00:14.834+00:00"
+  },
+  {
+   "id": "06115411-1d87-4350-a5cd-2b9ee5841228",
+   "tmdb_id": 223911,
+   "media_type": "tv",
+   "title": "Renegade Immortal",
+   "original_title": "仙逆",
+   "overview": "La historia tiene lugar en el mismo universo que Yi Nian Yong Heng (I Will Eternal). Wang Lin es un chico inteligente con padres amorosos. Sin embargo, él y sus padres son rechazados por el resto de la familia. A pesar de su bajo potencial de cultivo, Wang Lin intentará convertirse en un inmortal para enorgullecer a sus padres.",
+   "poster_path": "/mCt5qgkOYEvuHSiSwNByMv6LMoB.jpg",
+   "backdrop_path": "/crn53sSGWRZ8wAtEGso52nepEkz.jpg",
+   "release_date": "2026-08-30",
+   "season_number": 1,
+   "episode_number": 156,
+   "episode_name": "Episodio 156",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    18,
+    10759
+   ],
+   "popularity": 101.0251,
+   "vote_average": 8.2,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "2ee8f736-5440-4ad7-8c6d-89c9151747e2",
+   "tmdb_id": 259140,
+   "media_type": "tv",
+   "title": "Ranma1/2",
+   "original_title": "らんま1/2",
+   "overview": "Akane Tendô conoce a su prometido, Ranma Saotome, un prodigio de las artes marciales con una peculiaridad: se transforma mágicamente en chica al tocar el agua fría.",
+   "poster_path": "/xvgflNHdEClMcAR9RuPtJiPDPkp.jpg",
+   "backdrop_path": "/xvD9urN8lUtWw5fm4a87Rl3dCZn.jpg",
+   "release_date": "2026-10-04",
+   "season_number": 1,
+   "episode_number": 25,
+   "episode_name": "Episodio 25",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    10759,
+    35
+   ],
+   "popularity": 60.5619,
+   "vote_average": 8.1,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-08T06:00:11.853+00:00"
+  },
+  {
+   "id": "a28b01e8-b232-466a-816c-5be5948a9895",
+   "tmdb_id": 283428,
+   "media_type": "tv",
+   "title": "Rompiendo el hielo",
+   "original_title": "氷の城壁",
+   "overview": "A Koyuki le cuesta relacionarse y le parece bien pasar sus años de instituto sola... hasta que aparece Minato, que se empeña en derretir su muro de hielo.",
+   "poster_path": "/n2DMlpO3DPqSmW1r8atuhcIgl7A.jpg",
+   "backdrop_path": "/ht6WUmez8cFbwlrFmGdjbYyn3RG.jpg",
+   "release_date": "2026-10-01",
+   "season_number": 2,
+   "episode_number": 1,
+   "episode_name": "Episodio 1",
+   "is_season_premiere": true,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    18
+   ],
+   "popularity": 49.306,
+   "vote_average": 8.559,
+   "status": "Returning Series",
+   "created_at": "2026-08-19T06:00:15.064679+00:00",
+   "updated_at": "2026-08-19T06:00:14.196+00:00"
+  },
+  {
+   "id": "da8bd79b-ec38-47a3-a1a5-c48d2e327aa8",
+   "tmdb_id": 284029,
+   "media_type": "tv",
+   "title": "Neko to Ryuu",
+   "original_title": "猫と竜",
+   "overview": "En lo más profundo del bosque, un gato adopta a un bebé dragón huérfano en un mundo de bestias feroces y criaturas mágicas.",
+   "poster_path": "/yxk6gTbLKnENVzej1ER4mH6zfkB.jpg",
+   "backdrop_path": "/u02TXrpVxJXxbh9odWbrqbymPKC.jpg",
+   "release_date": "2026-08-29",
+   "season_number": 1,
+   "episode_number": 9,
+   "episode_name": "Episodio 9",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    16,
+    10765
+   ],
+   "popularity": 105.5141,
+   "vote_average": 8.667,
+   "status": "Returning Series",
+   "created_at": "2026-08-24T06:00:14.106306+00:00",
+   "updated_at": "2026-08-24T23:53:49.581+00:00"
+  },
+  {
+   "id": "c342061e-47e6-47c5-953c-0bb5774cf2e8",
+   "tmdb_id": 287620,
+   "media_type": "tv",
+   "title": "Stuart no consigue salvar el universo",
+   "original_title": "Stuart Fails to Save the Universe",
+   "overview": "Stuart Bloom, dueño de una tienda de cómics, recibe la misión de restaurar la realidad tras romper un dispositivo construido por Sheldon y Leonard, provocando accidentalmente un Armagedón multiverso. En esta misión, Stuart cuenta con la ayuda de su novia Denise, su amigo geólogo Bert y el físico cuántico y pesado Barry Kripke. En el camino, se encuentran con versiones en universos alternativos de personajes que conocemos y apreciamos de Big Bang. Como indica el título, las cosas no salen bien.",
+   "poster_path": "/a2BVGU3Uf30wJFfRBr2G9T8S6bi.jpg",
+   "backdrop_path": "/k5ujbFUxNlBQQ6sh3UmApwadVTV.jpg",
+   "release_date": "2026-08-27",
+   "season_number": 1,
+   "episode_number": 6,
+   "episode_name": "Episodio 6",
+   "is_season_premiere": false,
+   "tv_status": "Returning Series",
+   "genre_ids": [
+    35,
+    10765
+   ],
+   "popularity": 68.3784,
+   "vote_average": 9.021,
+   "status": "Returning Series",
+   "created_at": "2026-07-31T21:09:20.43843+00:00",
+   "updated_at": "2026-08-23T06:00:17.457+00:00"
+  }
+ ],
+ "upcoming_content_providers": [
+  {
+   "upcoming_id": "03eba03a-cfc6-47fa-b6e0-d80b8f99696f",
+   "provider_id": 350
+  },
+  {
+   "upcoming_id": "03eba03a-cfc6-47fa-b6e0-d80b8f99696f",
+   "provider_id": 2243
+  },
+  {
+   "upcoming_id": "045b17c4-30db-4cb7-be40-72fa64fe7f61",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "04e4d1dc-a7ac-4ea8-ad5b-b65b41cc64ce",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "04e4d1dc-a7ac-4ea8-ad5b-b65b41cc64ce",
+   "provider_id": 283
+  },
+  {
+   "upcoming_id": "04e4d1dc-a7ac-4ea8-ad5b-b65b41cc64ce",
+   "provider_id": 1899
+  },
+  {
+   "upcoming_id": "04e4d1dc-a7ac-4ea8-ad5b-b65b41cc64ce",
+   "provider_id": 1968
+  },
+  {
+   "upcoming_id": "05ae257d-b878-46f7-9d4b-79db3bbf9930",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "05ae257d-b878-46f7-9d4b-79db3bbf9930",
+   "provider_id": 1899
+  },
+  {
+   "upcoming_id": "06115411-1d87-4350-a5cd-2b9ee5841228",
+   "provider_id": 283
+  },
+  {
+   "upcoming_id": "06115411-1d87-4350-a5cd-2b9ee5841228",
+   "provider_id": 1968
+  },
+  {
+   "upcoming_id": "14511b5a-b592-4fb3-8028-70d1b49ef6ff",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "14511b5a-b592-4fb3-8028-70d1b49ef6ff",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "14511b5a-b592-4fb3-8028-70d1b49ef6ff",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "14511b5a-b592-4fb3-8028-70d1b49ef6ff",
+   "provider_id": 1889
+  },
+  {
+   "upcoming_id": "1c9ae5e3-ef7f-4e4e-b42e-e4019eab7f2e",
+   "provider_id": 575
+  },
+  {
+   "upcoming_id": "1db67a2c-1b44-4028-896e-abc822564adb",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "1db67a2c-1b44-4028-896e-abc822564adb",
+   "provider_id": 350
+  },
+  {
+   "upcoming_id": "1db67a2c-1b44-4028-896e-abc822564adb",
+   "provider_id": 2243
+  },
+  {
+   "upcoming_id": "20013b0b-9dcf-42cb-91f8-01753879ddf4",
+   "provider_id": 1889
+  },
+  {
+   "upcoming_id": "2316b1a1-ff38-4bef-9730-ef4540602314",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "2316b1a1-ff38-4bef-9730-ef4540602314",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "2751fab6-3271-483f-885a-61bf4be071b6",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "2751fab6-3271-483f-885a-61bf4be071b6",
+   "provider_id": 283
+  },
+  {
+   "upcoming_id": "2751fab6-3271-483f-885a-61bf4be071b6",
+   "provider_id": 1968
+  },
+  {
+   "upcoming_id": "28506283-730f-46f3-8e09-4ec11786815f",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "28506283-730f-46f3-8e09-4ec11786815f",
+   "provider_id": 1889
+  },
+  {
+   "upcoming_id": "2af8e1f5-0ee3-4fc4-8167-37e8743eaf12",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "2ee8f736-5440-4ad7-8c6d-89c9151747e2",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "2f3ccad0-2cb3-4754-ac2c-c24ec801ba03",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "43f0a214-5f4a-4e37-abed-7a690a390222",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "4795c88e-92a6-41e7-9a0c-2bb411c35a85",
+   "provider_id": 167
+  },
+  {
+   "upcoming_id": "4795c88e-92a6-41e7-9a0c-2bb411c35a85",
+   "provider_id": 531
+  },
+  {
+   "upcoming_id": "4795c88e-92a6-41e7-9a0c-2bb411c35a85",
+   "provider_id": 582
+  },
+  {
+   "upcoming_id": "4795c88e-92a6-41e7-9a0c-2bb411c35a85",
+   "provider_id": 1853
+  },
+  {
+   "upcoming_id": "4795c88e-92a6-41e7-9a0c-2bb411c35a85",
+   "provider_id": 1889
+  },
+  {
+   "upcoming_id": "50fba698-834e-42a8-8c5b-aa744df60fa3",
+   "provider_id": 1889
+  },
+  {
+   "upcoming_id": "54bff2a4-aa3c-4074-acef-9c123c4c3a09",
+   "provider_id": 1899
+  },
+  {
+   "upcoming_id": "64343f24-16a8-49ac-8556-c8b358ed45fa",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "6fd04dce-d739-4f1c-bc46-8615bc5072ee",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "805b9872-7764-407f-82a2-9c13533dd716",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "805b9872-7764-407f-82a2-9c13533dd716",
+   "provider_id": 167
+  },
+  {
+   "upcoming_id": "805b9872-7764-407f-82a2-9c13533dd716",
+   "provider_id": 531
+  },
+  {
+   "upcoming_id": "805b9872-7764-407f-82a2-9c13533dd716",
+   "provider_id": 582
+  },
+  {
+   "upcoming_id": "805b9872-7764-407f-82a2-9c13533dd716",
+   "provider_id": 1853
+  },
+  {
+   "upcoming_id": "83e875fc-073b-4a28-afb9-ea21b9d460e2",
+   "provider_id": 457
+  },
+  {
+   "upcoming_id": "86fe998a-6095-408d-ab6c-9ef6baf8185b",
+   "provider_id": 167
+  },
+  {
+   "upcoming_id": "86fe998a-6095-408d-ab6c-9ef6baf8185b",
+   "provider_id": 531
+  },
+  {
+   "upcoming_id": "86fe998a-6095-408d-ab6c-9ef6baf8185b",
+   "provider_id": 1853
+  },
+  {
+   "upcoming_id": "9315e547-6680-4b60-84cd-00811188bbae",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "94736ef3-24ec-4c9d-b280-ae6528d74530",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "9c5273ce-2c21-453d-9662-29cf1a570514",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "9deed4ba-c649-4952-bba2-ed6b4f67c35a",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "9deed4ba-c649-4952-bba2-ed6b4f67c35a",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "a28b01e8-b232-466a-816c-5be5948a9895",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "a39088c7-2e40-4375-a00d-a66649a2d50b",
+   "provider_id": 350
+  },
+  {
+   "upcoming_id": "a39088c7-2e40-4375-a00d-a66649a2d50b",
+   "provider_id": 2243
+  },
+  {
+   "upcoming_id": "a570692f-1114-4301-9b90-ee154c2ecfc2",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "a570692f-1114-4301-9b90-ee154c2ecfc2",
+   "provider_id": 283
+  },
+  {
+   "upcoming_id": "c342061e-47e6-47c5-953c-0bb5774cf2e8",
+   "provider_id": 1899
+  },
+  {
+   "upcoming_id": "c625ec52-2314-4fc5-b8bf-3937d78451b0",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "c625ec52-2314-4fc5-b8bf-3937d78451b0",
+   "provider_id": 531
+  },
+  {
+   "upcoming_id": "c625ec52-2314-4fc5-b8bf-3937d78451b0",
+   "provider_id": 582
+  },
+  {
+   "upcoming_id": "c625ec52-2314-4fc5-b8bf-3937d78451b0",
+   "provider_id": 1853
+  },
+  {
+   "upcoming_id": "cd71b402-ad08-4412-8535-eadcf09b811d",
+   "provider_id": 283
+  },
+  {
+   "upcoming_id": "cd71b402-ad08-4412-8535-eadcf09b811d",
+   "provider_id": 1968
+  },
+  {
+   "upcoming_id": "d410fa02-939d-411c-b0a4-7eb4f3233a90",
+   "provider_id": 575
+  },
+  {
+   "upcoming_id": "d444cc1f-73cc-481a-9e10-edc115b4c021",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "da8bd79b-ec38-47a3-a1a5-c48d2e327aa8",
+   "provider_id": 283
+  },
+  {
+   "upcoming_id": "da8bd79b-ec38-47a3-a1a5-c48d2e327aa8",
+   "provider_id": 1968
+  },
+  {
+   "upcoming_id": "df1115da-33f9-4c74-9505-41444411a2ba",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "df1115da-33f9-4c74-9505-41444411a2ba",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "df1115da-33f9-4c74-9505-41444411a2ba",
+   "provider_id": 1889
+  },
+  {
+   "upcoming_id": "e7ca50e3-8b7c-4113-8b19-5d0b6ac5a7ba",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "e7ca50e3-8b7c-4113-8b19-5d0b6ac5a7ba",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "e7ca50e3-8b7c-4113-8b19-5d0b6ac5a7ba",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "e94c6e2c-b0bb-457e-b539-0ca43d90f7a1",
+   "provider_id": 8
+  },
+  {
+   "upcoming_id": "fa9099d6-6f04-4dc8-8e69-8b481c00aebe",
+   "provider_id": 283
+  },
+  {
+   "upcoming_id": "fa9099d6-6f04-4dc8-8e69-8b481c00aebe",
+   "provider_id": 1968
+  },
+  {
+   "upcoming_id": "fe426f94-7514-49c8-a8c7-78156db653d6",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "fe56131f-b4de-41fe-b563-eadb3bc79326",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "fe56131f-b4de-41fe-b563-eadb3bc79326",
+   "provider_id": 531
+  },
+  {
+   "upcoming_id": "fe56131f-b4de-41fe-b563-eadb3bc79326",
+   "provider_id": 1853
+  },
+  {
+   "upcoming_id": "ff1980f2-3d47-431c-a00e-29dfc24d2922",
+   "provider_id": 119
+  },
+  {
+   "upcoming_id": "ff1980f2-3d47-431c-a00e-29dfc24d2922",
+   "provider_id": 337
+  },
+  {
+   "upcoming_id": "ff1980f2-3d47-431c-a00e-29dfc24d2922",
+   "provider_id": 339
+  },
+  {
+   "upcoming_id": "ff1980f2-3d47-431c-a00e-29dfc24d2922",
+   "provider_id": 1889
+  }
+ ]
+}
