@@ -599,3 +599,65 @@ se cuela. `latestReleases` ya resolvió ese ruido sin votos, con
 **Criterio de cierre:** que `minVotes` sea una decisión explícita por superficie
 —idealmente un parámetro obligatorio, como propone #9 para `sort_by`— y que el
 número de cada una salga de una medición y no del default.
+
+---
+
+## #13 — El cron semanal del Top 10 de Netflix nunca disparó
+
+**Detectado el 2026-08-25, reportado por el dueño**: "el Top 10 de Netflix me
+trae lo más popular; hasta hace dos días estaba bien".
+
+**No es un bug del código: es que dejaron de entrar datos.** `latestWeekRows()`
+devuelve `null` si la semana guardada tiene más de `SEMANA_VIEJA_MS` (14 días), y
+el bloque cae a popularidad. Esa guarda es deliberada — no sostener datos viejos
+bajo el sello "dato oficial" — e hizo exactamente lo que tenía que hacer.
+
+| | |
+|---|---|
+| Última semana guardada | **2026-08-09**, escrita el 2026-08-12 18:10 UTC |
+| Antigüedad al detectarlo | **16,4 días** (cruzó los 14 hace ~2,4) |
+| Última semana publicada por Netflix | **2026-08-16**, disponible desde el ~18/08 |
+
+### La causa raíz
+
+El cron es `0 12 * * 2` (martes 12:00 UTC), pero las dos escrituras que existen
+en la tabla son **fuera de horario**:
+
+- semana `2026-08-02` → **domingo** 09/08, 17:27 UTC
+- semana `2026-08-09` → **miércoles** 12/08, 18:10 UTC
+
+Ninguna coincide con un martes al mediodía. **Las dos ingestas fueron manuales**:
+el cron de Vercel no disparó nunca. La guarda de 14 días lo tapó durante dos
+semanas — mientras el dato aguantó, nadie se enteró.
+
+**Sospecha sin confirmar**: el scope de Vercel se llama
+`jfgalindez-gmailcom's projects`, que es el nombre de un plan Hobby, y ahí los
+cron jobs tienen límites. **No está verificado** y hay que mirarlo en
+Vercel → Settings → Cron Jobs, donde se ve si el cron está registrado y sus
+últimas ejecuciones. No dar por sentado cómo se comporta la plataforma: es el
+tipo de suposición que ya mordió en este proyecto.
+
+### Lo que NO es
+
+- **No tiene relación con el cambio de idioma a es-MX.** `latestWeekRows` no toca
+  claves de caché ni idioma. La coincidencia de fechas es casual.
+- **La interfaz no miente.** El copy es
+  `source === "netflix" ? "Lo más visto esta semana · dato oficial" : "Lo más popular ahora"`,
+  así que mientras sirve popularidad lo dice. Degradó con honestidad, y por eso
+  se pudo detectar mirando la pantalla.
+
+### Cómo se arregla
+
+Dos cosas separadas:
+
+1. **Recuperar la semana que falta**: una llamada a `/api/cron/netflix-top10`
+   con el `CRON_SECRET`. Es un upsert idempotente de 20 filas.
+2. **Arreglar el cron**, que es el problema de fondo. Sin eso, el bloque vuelve a
+   caer a popularidad en 14 días.
+
+### Lo que este issue enseña, más allá del cron
+
+**Una guarda que degrada en silencio esconde la falla que la disparó.** El bloque
+se venía degradando bien, pero nada avisaba que hacía dos semanas que no entraba
+un dato. Vale la pena un chequeo de frescura visible —en `/api/health`, por
+ejemplo— para las fuentes que dependen de un cron.
