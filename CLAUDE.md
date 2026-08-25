@@ -380,17 +380,29 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   decía **"No está en streaming"** siendo el #1 del top oficial, y esperar a
   TMDB no era una salida — su web ya muestra el canal y el homepage de Netflix
   mientras `/tv/322428/watch/providers` sigue devolviendo `results: {}`. Si
-  `providersOf` viene **vacío**, se mira si ese `tipo:id` está en la semana
-  vigente del top con `tmdb_id` resuelto y **`needs_review = false`**. Esa
-  segunda condición es más estricta que en la card a propósito: `needs_review`
-  marca las filas que pueden apuntar a un homónimo, y en el top el peor caso es
-  una card de más, mientras que la ficha dice "Disponible en Netflix". Tres
-  cosas que NO se hacen: inventar `watchLink` (sale de TMDB; si no lo hay, no
-  hay a dónde mandar a nadie), usar `networks` como disponibilidad (que sea "de
-  Netflix" no dice que se vea en Netflix Argentina) y tocar el array cacheado de
-  `providersOf`. La evidencia se cachea 5 min bajo una clave fija: medido, tres
-  fichas con proveedores de TMDB cuestan **0** lecturas a Supabase y cinco
-  visitas seguidas a una ficha sin proveedores cuestan **1**.
+  `providersOf` viene **vacío**, se mira si ese `tipo:id` aparece en el top con
+  `tmdb_id` resuelto y **`needs_review = false`**. Esa segunda condición es más
+  estricta que en la card a propósito: `needs_review` marca las filas que pueden
+  apuntar a un homónimo, y en el top el peor caso es una card de más, mientras
+  que la ficha dice "Disponible en Netflix".
+  **Mira TODAS las semanas de la ventana de 14 días, no la última**, y eso no es
+  un detalle: atada a la semana más nueva, la evidencia se evaporaba sola con el
+  cron siguiente —el título salía del top, la ficha volvía a "No está en
+  streaming" y no había cambiado nada ni en TMDB ni acá—. Era una regresión
+  programada. Por lo mismo, una fila nueva con `needs_review = true` **no**
+  invalida una anterior confiable del mismo `tipo:id`: la evidencia se acumula
+  en un conjunto, no se resuelve por "la última gana".
+  Tres cosas que NO se hacen: inventar `watchLink` (sale de TMDB; si no lo hay,
+  no hay a dónde mandar a nadie), usar `networks` como disponibilidad (que sea
+  "de Netflix" no dice que se vea en Netflix Argentina) y tocar el array
+  cacheado de `providersOf`.
+  **UNA consulta por MISS**, filtrada por fecha: el corte sale del reloj, no de
+  una consulta previa que pregunte cuál es la última semana. La primera versión
+  hacía esas dos y por eso el techo real era 24 lecturas por hora, no 12.
+  Medido: tres fichas con proveedores de TMDB cuestan **0** consultas, y cinco
+  visitas seguidas a una ficha sin proveedores más una sexta ficha vacía
+  distinta cuestan **1** (clave fija, la comparten todas). Con el TTL de 5 min,
+  el techo es **12 consultas por hora**, haya el tráfico que haya.
   **La resolución título→TMDB vive en `lib/netflix-resolver.ts`**, sin
   `server-only` para poder probarla sin red; `netflix-top10.ts` sólo le enchufa
   las dos puertas (`buscar`, `enNetflixAR`). Las tres reglas de siempre no

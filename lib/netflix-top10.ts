@@ -3,8 +3,10 @@ import { searchTitles, watchProviders } from "./tmdb";
 import { supabaseServer } from "./supabase";
 import { supabaseAdmin } from "./supabase-admin";
 import { resolverTitulo } from "./netflix-resolver";
-import { evidenciaOficial, type FilaOficial } from "./top-plataformas";
-import { cachedIf } from "./cache";
+import {
+  VENTANA_RECIENTE_MS, evidenciaCacheada, type FilaOficial,
+} from "./top-plataformas";
+import { backendCache } from "./cache";
 import type { MediaType } from "./types";
 
 // La regla de resolución vive en `lib/netflix-resolver.ts`, sin `server-only`,
@@ -223,7 +225,9 @@ export async function ingestLatestWeek() {
 // completa extra para que un cron que falló UNA vez (el próximo lunes se
 // recupera solo) no tire el bloque, sin llegar a sostener datos de hace meses
 // bajo el sello "dato oficial" si el cron quedó roto en serio.
-const SEMANA_VIEJA_MS = 14 * 24 * 60 * 60 * 1000;
+// El valor vive en `lib/top-plataformas.ts` para que la ficha y el bloque del
+// Top usen literalmente el mismo umbral, no dos que hoy coinciden.
+const SEMANA_VIEJA_MS = VENTANA_RECIENTE_MS;
 
 // Devuelve la semana más reciente guardada, o null si no hay nada utilizable
 // (tabla vacía, Supabase no configurado, o la última semana quedó vieja): en
@@ -258,56 +262,40 @@ export async function latestWeekRows(): Promise<
 // La misma tabla, ahora como EVIDENCIA DE DISPONIBILIDAD para la ficha
 // ============================================================================
 
-// La semana ya está en la clave, así que el TTL no decide cuándo rota el
-// contenido: decide cuánto tarda en verse una corrección. Cinco minutos es lo
-// mismo que `TTL.editorial` y por el mismo motivo — es un dato que puede
-// arreglarse a mano en la base (un `tmdb_id` corregido, un `needs_review` que
-// se baja), y una ficha que sigue diciendo "No está en streaming" media hora
-// después de arreglar la fila se lee como que el arreglo no funcionó.
-//
-// Lo que compra: con o sin tráfico, esto son 12 lecturas a Supabase por hora
-// como techo, no una por visita a una ficha sin proveedores.
-const TTL_EVIDENCIA = 60 * 5;
-const CLAVE_EVIDENCIA = "top:oficial:disponibles";
-
 /**
- * Los `tipo:id` del top oficial vigente que sirven para AFIRMAR que un título
- * está en Netflix Argentina. Ver `evidenciaOficial` para las dos condiciones.
+ * Los `tipo:id` del top oficial que sirven para AFIRMAR que un título está en
+ * Netflix Argentina. Las condiciones están en `evidenciaOficial`.
  *
- * Reusa la MISMA guarda de 14 días que `latestWeekRows`, y no es casualidad:
- * si una semana ya está demasiado vieja para mostrarse bajo el rótulo "dato
- * oficial", también está demasiado vieja para respaldar una afirmación de
- * disponibilidad. Un solo umbral, un solo criterio.
+ * UNA sola consulta, filtrada por fecha. La primera versión preguntaba primero
+ * cuál era la última semana y después pedía sus filas, y eso tenía dos
+ * problemas: costaba el doble de lecturas (24 por hora en el peor caso, no 12),
+ * y sobre todo ataba la evidencia a la semana MÁS NUEVA. Con eso, un título que
+ * salía del top a la semana siguiente perdía la evidencia de un día para el
+ * otro y su ficha volvía sola a "No está en streaming", sin que hubiera
+ * cambiado nada ni en TMDB ni acá. Era una regresión programada.
  *
- * Un fallo (Supabase caído, sin configurar) devuelve el conjunto vacío y NO se
- * cachea: congelar cinco minutos de "no sé" por un hipo de la base dejaría la
- * ficha rota justo después de arreglarla.
+ * Los tres filtros van también en el `where` para no traer filas de más, pero
+ * quien DECIDE es `evidenciaOficial`: el corte de fecha del SQL lleva un día de
+ * holgura a propósito (ver `desdeSemana`).
  */
 export async function disponiblesEnTopOficial(): Promise<Set<string>> {
-  const senal = { fallo: false };
-  const ids = await cachedIf(CLAVE_EVIDENCIA, TTL_EVIDENCIA, async () => {
-    const db = supabaseServer();
-    if (!db) { senal.fallo = true; return [] as string[]; }
-    const { data: ultima, error: e1 } = await db
-      .from("netflix_top10")
-      .select("week")
-      .order("week", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    // Un error de query NO es "la tabla está vacía": supabase-js devuelve
-    // `{ data: null, error }` en vez de lanzar, así que sin este chequeo una
-    // caída se guardaría cinco minutos como "no hay evidencia".
-    if (e1) { senal.fallo = true; return [] as string[]; }
-    if (!ultima?.week) return [] as string[];
-    if (Date.now() - new Date(ultima.week as string).getTime() > SEMANA_VIEJA_MS) {
-      return [] as string[];
-    }
-    const { data, error: e2 } = await db
-      .from("netflix_top10")
-      .select("category,tmdb_id,needs_review")
-      .eq("week", ultima.week);
-    if (e2) { senal.fallo = true; return [] as string[]; }
-    return evidenciaOficial((data ?? []) as FilaOficial[]);
-  }, () => !senal.fallo);
-  return new Set(ids);
+  return evidenciaCacheada({
+    ahora: Date.now(),
+    backend: backendCache,
+    async consultar(desde) {
+      const db = supabaseServer();
+      if (!db) return { filas: [], fallo: true };
+      const { data, error } = await db
+        .from("netflix_top10")
+        .select("week,category,tmdb_id,needs_review")
+        .gte("week", desde)
+        .eq("needs_review", false)
+        .not("tmdb_id", "is", null);
+      // Un error de query NO es "no hay filas": supabase-js devuelve
+      // `{ data: null, error }` en vez de lanzar, así que sin este chequeo una
+      // caída se guardaría cinco minutos como "no hay evidencia".
+      if (error) return { filas: [], fallo: true };
+      return { filas: (data ?? []) as FilaOficial[], fallo: false };
+    },
+  });
 }

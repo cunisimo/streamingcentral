@@ -848,6 +848,13 @@ fila dudosa muestra una card de más; en la ficha afirmaría "Disponible en
 Netflix", que es otra cosa. Por eso `Operation` (`needs_review = true`) NO
 hereda nada — y no lo necesita, porque TMDB ya le informa Netflix.
 
+**La evidencia mira los últimos 14 días, no la última semana.** Si mirara sólo
+la semana más nueva, el próximo cron traería otras veinte filas, Moria dejaría
+de estar y su ficha volvería sola a "No está en streaming" — una regresión con
+fecha de vencimiento puesta. Es una sola consulta con `week >= <hoy - 15 días>`;
+el corte sale del reloj y no de una consulta previa, así que el costo es **una
+lectura por MISS** y, con el TTL de 5 minutos, **12 por hora** como techo.
+
 Al verificar en `/titulo/tv/322428` tiene que decir **"Disponible en Netflix"**,
 y **sin** botón de "Ver en": el `watchLink` sale de TMDB y sigue siendo `null`.
 Eso es correcto — no se inventa un link a ningún lado.
