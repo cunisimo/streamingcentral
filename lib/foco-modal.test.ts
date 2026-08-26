@@ -158,9 +158,14 @@ test("el bloqueo usa aria-disabled y NO el atributo disabled", () => {
   assert.deepEqual(atributosBloqueo(false), { "aria-disabled": undefined });
 });
 
-test("un control bloqueado con aria-disabled SIGUE siendo enfocable", () => {
-  // El selector de enfocables excluye `[disabled]`, no `[aria-disabled]`. Es lo
-  // que garantiza que el foco no se pierda durante el guardado.
+test("el selector de enfocables NO excluye [aria-disabled]", () => {
+  // ALCANCE, dicho con precisión: esto verifica una cadena de texto, nada más.
+  // Comprueba que el selector no filtra por `[aria-disabled]`, que es la
+  // CONDICIÓN para que un control bloqueado siga en el ciclo de foco.
+  //
+  // Lo que NO prueba: que el foco del DOM se comporte así de verdad, ni que un
+  // lector de pantalla anuncie el control como no disponible. Las dos cosas
+  // están en la lista de verificación manual de `docs/AVATARES.md`.
   assert.match(SELECTOR_ENFOCABLE, /button:not\(\[disabled\]\)/);
   assert.doesNotMatch(SELECTOR_ENFOCABLE, /aria-disabled/);
 });

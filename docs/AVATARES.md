@@ -1,30 +1,44 @@
 # Los avatares de Yump
 
-**Son 31 archivos WebP propios, servidos desde `/avatars/`. No hay ninguna
-dependencia externa, ninguna conexión saliente y ningún servicio de terceros
-involucrado.**
+**Son 31 archivos WebP propios, servidos desde el propio origen de Yump
+(`/avatars/`). No hay librería de terceros ni petición saliente para generar o
+servir un avatar.** La semilla que elige cuál mostrar **sí se guarda en
+Supabase**, que actúa como proveedor de servicio — ver más abajo.
 
 ## Autoría
 
-- **Los personajes de Pajaritos son creaciones originales de Juan Facundo
-  Galíndez**, adaptadas en 3D para Yump.
-- Instagram oficial de la tira: <https://www.instagram.com/pajaritos.web/>
-- El resto de las ilustraciones también se aportó expresamente para Yump.
+Tres grupos, y conviene no mezclarlos:
+
+| Grupo | Cuántos | Qué es |
+|---|---|---|
+| **Pajaritos** | **9** | Personajes de la tira **Pajaritos**, creaciones originales de **Juan Facundo Galíndez**, adaptados en 3D para Yump. Buitracio, Buitracia, Coco, Fini, Jipi, Juan Palomo, Lola, Pocho y Rico |
+| **Don Tito** | **1** | **Mascota y personaje original de Yump**, creado específicamente para la app. **NO es de Pajaritos** |
+| Otras ilustraciones | 21 | Criaturas y objetos, también propios de la app |
+
+- Instagram oficial de la tira: <https://www.instagram.com/pajaritos.web/> —
+  **ese enlace acompaña únicamente a Pajaritos, no a Don Tito.**
 - **© Juan Facundo Galíndez. Todos los derechos reservados.**
 
-**Ya no corresponde atribución a DiceBear ni a ningún tercero**, porque ya no se
-usa ninguno.
+> **Nota técnica.** El id de Don Tito sigue siendo `dontito`, con su archivo, su
+> posición en la grilla y su lugar en `LEGADO_V1` — ese id vive en la base de
+> datos de cada persona que lo eligió. Lo que cambió es el **nombre visible**
+> (`Don Tito`, con espacio) y la **categoría** (`yump`, no `pajaritos`).
 
-**Qué cambió exactamente con los datos, dicho con precisión:** antes, cada render
-de un avatar mandaba a `api.dicebear.com` la semilla del perfil —un identificador
-seudónimo vinculado a la cuenta— junto con la IP del dispositivo. **Eso
-desapareció.** Los WebP se sirven desde el propio origen de Yump.
+**Ya no corresponde atribución a DiceBear**, porque ya no se usa.
 
-Lo que **no** cambió, y conviene no confundir: `avatar_seed` **se sigue guardando
-en Supabase**, así que es un dato **recopilado fuera del dispositivo**. Supabase
-actúa como **proveedor de servicio**. En Data Safety figura como **recopilado, no
-compartido**. Lo que se eliminó es el envío a un tercero para generar la imagen,
-no el almacenamiento del dato.
+**Qué pasa con los datos, dicho con precisión y sin absolutos:**
+
+- **La semilla se recopila y se guarda en Supabase.** `avatar_seed` es un dato
+  que sale del dispositivo y queda almacenado.
+- **Supabase actúa como proveedor de servicio.**
+- **Para Data Safety: recopilado, NO compartido.**
+- **Ya no se envía a DiceBear ni a terceros para generar o servir el avatar.**
+  Antes, cada render mandaba a `api.dicebear.com` la semilla del perfil junto con
+  la IP del dispositivo. Eso desapareció.
+- **Los WebP salen del propio origen de Yump.**
+
+Lo que se eliminó es el envío a un tercero para producir la imagen, **no** el
+almacenamiento del dato.
 
 ### Texto preparado para `/acerca-de`
 
@@ -35,7 +49,15 @@ copiarse tal cual:
 > Juan Facundo Galíndez y adaptados en 3D para Yump. Conocé la tira en
 > @pajaritos.web.
 >
+> Don Tito es la mascota de Yump, un personaje original creado para la app.
+>
+> El resto de las ilustraciones también son propias de Yump.
+>
 > © Juan Facundo Galíndez. Todos los derechos reservados.
+
+**Ojo con el orden de los párrafos**: el enlace a @pajaritos.web tiene que quedar
+**dentro del párrafo de Pajaritos**. Don Tito va en su propio párrafo justamente
+para que no se lea como si fuera de la tira.
 
 **El enlace a Instagram va textual y externo**, sin widget, sin embed y sin
 script de Instagram. Un embed traería justamente lo que esta tanda sacó: una

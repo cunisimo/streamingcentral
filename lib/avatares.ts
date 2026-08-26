@@ -6,12 +6,19 @@
 // así que un archivo nuevo o borrado rompe el test en vez de aparecer o
 // desaparecer en silencio.
 //
-// SON RECURSOS PROPIOS. Los personajes de Pajaritos son creaciones originales de
-// Juan Facundo Galíndez, adaptadas en 3D para Yump; el resto de las
-// ilustraciones también se aportó expresamente para el proyecto. No hay
-// dependencia, ni conexión, ni atribución a ningún servicio externo — antes esto
-// era una URL a `api.dicebear.com` construida con la semilla del perfil, o sea
-// un identificador seudónimo saliendo del dispositivo en cada render.
+// SON RECURSOS PROPIOS, en tres grupos. NUEVE personajes de la tira Pajaritos,
+// creaciones originales de Juan Facundo Galíndez adaptadas en 3D para Yump;
+// DON TITO, que es la mascota y personaje original de la app y NO es de
+// Pajaritos; y el resto de las ilustraciones, también propias.
+//
+// No hay librería de terceros ni conexión saliente para generar o servir un
+// avatar: los WebP salen del propio origen. Antes esto era una URL a
+// `api.dicebear.com` construida con la semilla del perfil, o sea un
+// identificador seudónimo viajando a un tercero en cada render.
+//
+// Precisión que importa para el formulario de Data Safety: la semilla SÍ se
+// recopila y se guarda en Supabase, que actúa como proveedor de servicio —
+// recopilado, NO compartido. Lo que desapareció es el envío a un tercero.
 //
 
 /**
@@ -26,8 +33,17 @@ export function hashCadena(s: string): number {
   return h >>> 0;
 }
 
-/** Agrupación visual. NO es una afirmación de autoría: todo es material propio. */
-export type CategoriaAvatar = "pajaritos" | "criaturas" | "objetos";
+/**
+ * Agrupación por ORIGEN, y acá sí importa la autoría:
+ *
+ *  - `pajaritos` — los NUEVE personajes de la tira Pajaritos, creaciones
+ *    originales de Juan Facundo Galíndez, adaptadas en 3D para Yump.
+ *  - `yump` — **Don Tito**, mascota y personaje original de la app. NO es de
+ *    Pajaritos: se creó específicamente para Yump, así que no le corresponde el
+ *    enlace a @pajaritos.web.
+ *  - `criaturas` y `objetos` — el resto de las ilustraciones propias.
+ */
+export type CategoriaAvatar = "pajaritos" | "yump" | "criaturas" | "objetos";
 
 export interface Avatar {
   /** Identificador estable. Es lo que se guarda en `profiles.avatar_seed`. */
@@ -56,11 +72,17 @@ const def = (id: string, nombre: string, categoria: CategoriaAvatar): Avatar =>
  * persona que ya eligió su avatar.
  */
 export const AVATARES: readonly Avatar[] = Object.freeze([
-  // --- Pajaritos y compañía: personajes con nombre propio -------------------
+  // --- Personajes con nombre propio -----------------------------------------
+  // Nueve de Pajaritos y uno de Yump. El ORDEN no se toca: sacar a Don Tito de
+  // acá le cambiaría la posición y con eso el orden de la grilla, aunque su
+  // categoría sea otra.
   def("buitracio", "Buitracio", "pajaritos"),
   def("buitracia", "Buitracia", "pajaritos"),
   def("coco", "Coco", "pajaritos"),
-  def("dontito", "Dontito", "pajaritos"),
+  // Don Tito es la MASCOTA DE YUMP, no un personaje de Pajaritos. El id técnico
+  // `dontito` se conserva porque vive en `profiles.avatar_seed` y en LEGADO_V1;
+  // lo que cambia es el nombre visible y la categoría.
+  def("dontito", "Don Tito", "yump"),
   def("fini", "Fini", "pajaritos"),
   def("jipi", "Jipi", "pajaritos"),
   def("juanpalomo", "Juan Palomo", "pajaritos"),

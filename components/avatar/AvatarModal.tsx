@@ -94,17 +94,18 @@ export default function AvatarModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="avmodal-backdrop" role="dialog" aria-modal="true" aria-label="Elegí tu avatar" onClick={() => cerrar("fondo")}>
-      <div
-        className="avmodal"
-        ref={caja}
-        tabIndex={-1}
-        // Mientras la petición está en vuelo, el diálogo entero se anuncia
-        // ocupado: es lo que le dice a un lector de pantalla que lo que hay en
-        // pantalla está a la espera.
-        aria-busy={busy || undefined}
-        onClick={(e) => e.stopPropagation()}
-      >
+    // `aria-busy` va ACÁ, en el elemento que tiene `role="dialog"`, y no en el
+    // contenedor de adentro: lo que se anuncia ocupado tiene que ser el diálogo
+    // de verdad, que es el que un lector de pantalla trata como una unidad.
+    <div
+      className="avmodal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Elegí tu avatar"
+      aria-busy={busy || undefined}
+      onClick={() => cerrar("fondo")}
+    >
+      <div className="avmodal" ref={caja} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="avmodal-head">
           <h2>Elegí tu avatar</h2>
           <p>Son dibujos propios de Yump. Tocá el que más te guste.</p>

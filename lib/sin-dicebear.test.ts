@@ -102,10 +102,33 @@ test("CANARIO del CLI: sin hallazgos sale con 0 y lo dice", () => {
 // ============================================================================
 
 test("supabase/schema.sql no impone ningún estilo por default", () => {
-  // El archivo es rerunnable: un default acá se reimpone en cada corrida.
+  // El archivo es rerunnable: un `set default` acá reimpone DiceBear en cada
+  // corrida, y el `update` que lo escribía sobrescribía perfiles existentes.
   const sql = leerRaiz("supabase/schema.sql");
-  assert.match(sql, /alter column avatar_style drop default/);
-  assert.doesNotMatch(sql, /avatar_style set default/);
+  assert.doesNotMatch(sql, /^\s*alter table profiles alter column avatar_style set default/m);
+  assert.doesNotMatch(sql, /^\s*update profiles set avatar_style/m);
+});
+
+test("supabase/schema.sql TAMPOCO trae un `drop default` activo", () => {
+  // Quitar el default que Producción ya tiene es una migración destructiva sobre
+  // el esquema vivo, y no está autorizada. Que el propio archivo la declarara
+  // "no autorizada" mientras la dejaba ejecutable era la peor combinación: quien
+  // corriera el schema la aplicaba igual.
+  //
+  // Se mira línea por línea salteando comentarios: el archivo SÍ menciona el
+  // `drop default` en prosa, para explicar por qué no está.
+  const lineas = leerRaiz("supabase/schema.sql").split("\n").map((l) => l.replace("\r", ""));
+  const activas = lineas.filter((l) => !l.trim().startsWith("--") && /drop default/i.test(l));
+  assert.deepEqual(activas, [], "hay un `drop default` ejecutable en el schema");
+});
+
+test("el schema crea `avatar_style` sin default en una base nueva", () => {
+  // `add column if not exists` sin cláusula `default`: columna nueva sin default,
+  // y sobre Producción no hace nada porque la columna ya existe.
+  assert.match(
+    leerRaiz("supabase/schema.sql"),
+    /alter table profiles add column if not exists avatar_style text;/,
+  );
 });
 
 test("lib/avatar.ts, el helper que armaba la URL remota, ya no existe", () => {

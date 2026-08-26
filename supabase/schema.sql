@@ -11,9 +11,14 @@ create table if not exists profiles (
   created_at    timestamptz not null default now()
 );
 
--- Avatar. Los dibujos son ARCHIVOS PROPIOS de Yump, servidos desde /avatars/;
--- no hay servicio externo, ni URL remota, ni nada que salga del dispositivo.
--- Estas dos columnas guardan únicamente CUÁL eligió cada persona.
+-- Avatar. Los dibujos son ARCHIVOS PROPIOS de Yump, servidos desde /avatars/,
+-- o sea desde el propio origen: no hay librería de terceros ni petición saliente
+-- para generar ni servir un avatar.
+--
+-- Estas dos columnas guardan únicamente CUÁL eligió cada persona. Ojo con la
+-- redacción: `avatar_seed` SE RECOPILA Y SE GUARDA ACÁ, con Supabase como
+-- proveedor de servicio — para Data Safety es "recopilado, no compartido". Lo
+-- que se eliminó es el envío a DiceBear o a otro tercero.
 --
 -- QUÉ SIGNIFICA CADA VALOR (lo resuelve lib/avatares.ts → resolverAvatar):
 --
@@ -30,26 +35,31 @@ create table if not exists profiles (
 --   sin semilla utilizable
 --       → el avatar por defecto del catálogo.
 --
--- ⚠️ ESTE ARCHIVO DESCRIBE EL ESTADO DESEADO, NO EL QUE TIENE PRODUCCIÓN HOY.
+-- QUÉ SE SACÓ DE ACÁ Y POR QUÉ. Este archivo es RERUNNABLE, y antes tenía dos
+-- sentencias que reimponían DiceBear en cada corrida:
 --
--- En Producción, `avatar_style` TODAVÍA TIENE el default `'adventurer-neutral'`,
--- y los perfiles existentes conservan ese valor. El `drop default` de abajo
--- **NO se aplicó y no está autorizado a aplicarse**.
+--   alter table profiles alter column avatar_style set default 'adventurer-neutral';
+--   update profiles set avatar_style = 'adventurer-neutral' where avatar_style is null;
 --
--- Y no hace falta que se aplique: cualquier estilo distinto de `yump` —incluido
--- `'adventurer-neutral'`, incluido NULL— se resuelve LOCALMENTE por `LEGADO_V1`
--- (lib/avatares.ts). El nombre del estilo viejo quedó como una etiqueta inerte:
--- NO dispara ninguna conexión a DiceBear. Lo único que cambiaría el `drop
--- default` es de qué valor nacen las cuentas nuevas.
+-- Las dos se eliminaron. El `update` además sobrescribía perfiles existentes.
 --
--- Por qué está escrito igual: este archivo es RERUNNABLE, así que mientras
--- dijera `set default 'adventurer-neutral'` volvía a imponer el nombre de un
--- servicio que ya no se usa cada vez que alguien lo corriera. También se eliminó
--- el `update` que escribía ese valor en las filas con NULL, que sí sobrescribía
--- perfiles. `drop default` es idempotente y NO toca ninguna fila existente.
+-- LO QUE **NO** SE HACE ACÁ: quitar el default que Producción ya tiene. Un
+-- `alter column avatar_style drop default` sería una operación destructiva sobre
+-- el esquema vivo, y ESTE archivo no es el lugar para una migración que no está
+-- autorizada. El comportamiento buscado es:
+--
+--   · base NUEVA      → `add column if not exists` crea la columna SIN default.
+--   · PRODUCCIÓN      → volver a correr el schema NO toca el default existente
+--                       (`'adventurer-neutral'`), porque la columna ya existe y
+--                       el `if not exists` no hace nada.
+--   · si algún día se decide quitarlo → migración explícita y autorizada, aparte.
+--
+-- Y no hace falta quitarlo para que el sistema funcione: cualquier estilo
+-- distinto de `yump` —incluido `'adventurer-neutral'`, incluido NULL— se resuelve
+-- LOCALMENTE por `LEGADO_V1` (lib/avatares.ts). El nombre del estilo viejo quedó
+-- como una etiqueta inerte y NO dispara ninguna conexión a DiceBear.
 alter table profiles add column if not exists avatar_seed text;
 alter table profiles add column if not exists avatar_style text;
-alter table profiles alter column avatar_style drop default;
 
 -- Backfill de la semilla, y sólo de la semilla. Toca EXCLUSIVAMENTE filas con
 -- `avatar_seed` en NULL, así que no pisa la elección de nadie; en una base ya
@@ -59,8 +69,9 @@ alter table profiles alter column avatar_style drop default;
 --
 -- La semilla es un dato GUARDADO ACÁ, o sea recopilado fuera del dispositivo,
 -- con Supabase como proveedor de servicio. Lo que cambió es que ya no se envía a
--- ningún tercero para generar una imagen: el hash que la convierte en un avatar
--- corre en el dispositivo y los WebP salen del propio origen de Yump.
+-- DiceBear ni a terceros para generar ni servir la imagen: el hash que la
+-- convierte en un avatar corre en el dispositivo y los WebP salen del propio
+-- origen de Yump.
 update profiles set avatar_seed = id::text where avatar_seed is null;
 
 alter table profiles enable row level security;

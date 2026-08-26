@@ -76,12 +76,36 @@ test("todos tienen nombre legible, apto para aria-label", () => {
 
 test("el orden es explícito y estable: los diez primeros son los personajes", () => {
   // Fija el contrato del orden. Reordenar la grilla es una decisión, no un
-  // efecto colateral de tocar el archivo.
+  // efecto colateral de tocar el archivo. Don Tito conserva su posición aunque
+  // su categoría sea otra.
   assert.deepEqual(
     AVATARES.slice(0, 10).map((a) => a.id),
     ["buitracio", "buitracia", "coco", "dontito", "fini", "jipi", "juanpalomo", "lola", "pocho", "rico"],
   );
-  assert.ok(AVATARES.slice(0, 10).every((a) => a.categoria === "pajaritos"));
+});
+
+test("son NUEVE los personajes de Pajaritos, no diez", () => {
+  // Corrección editorial confirmada por el autor: de los diez personajes con
+  // nombre, nueve son de la tira Pajaritos. Don Tito no.
+  const pajaritos = AVATARES.filter((a) => a.categoria === "pajaritos");
+  assert.equal(pajaritos.length, 9);
+  assert.deepEqual(
+    pajaritos.map((a) => a.id),
+    ["buitracio", "buitracia", "coco", "fini", "jipi", "juanpalomo", "lola", "pocho", "rico"],
+  );
+  assert.ok(!pajaritos.some((a) => a.id === "dontito"), "Don Tito no es de Pajaritos");
+});
+
+test("Don Tito es la mascota de Yump: categoría propia y nombre con espacio", () => {
+  const dt = AVATARES.find((a) => a.id === "dontito");
+  assert.ok(dt, "desapareció Don Tito del catálogo");
+  assert.equal(dt.categoria, "yump");
+  assert.equal(dt.nombre, "Don Tito");
+  // El id TÉCNICO no cambia: vive en `profiles.avatar_seed` y en LEGADO_V1.
+  assert.equal(dt.id, "dontito");
+  assert.equal(dt.src, "/avatars/avatar-dontito.webp");
+  // Y es el único de su categoría.
+  assert.deepEqual(AVATARES.filter((a) => a.categoria === "yump").map((a) => a.id), ["dontito"]);
 });
 
 // ============================================================================

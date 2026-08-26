@@ -29,17 +29,17 @@ Todo lo de acá cae en una de cuatro cajas, y **no se mezclan**:
 > - **Avatares locales propios**: 31 archivos WebP en `/avatars/`.
 > - **Cero conexión a DiceBear**, verificado con un barrido de fuente, SQL,
 >   archivos públicos, service worker y bundles generados.
-> - **La semilla ya NO se envía a DiceBear ni a ningún tercero.** Ojo con la
->   redacción: `avatar_seed` **se guarda en Supabase**, así que sigue siendo un
->   dato **recopilado fuera del dispositivo** — Supabase como proveedor de
->   servicio. En Data Safety figura **recopilado, no compartido**. Lo que
->   desapareció es el envío a un tercero para generar la imagen.
-> - **Los archivos WebP se sirven desde el propio origen de Yump.**
+> - **La semilla se recopila y se guarda en Supabase**, que actúa como
+>   **proveedor de servicio**. Para Data Safety: **recopilado, NO compartido**.
+> - **Ya no se envía a DiceBear ni a terceros** para generar ni servir el avatar.
+> - **Los archivos WebP salen del propio origen de Yump.**
 > - **Ninguna atribución a DiceBear** corresponde ya, porque no se usa.
-> - **Autoría: Juan Facundo Galíndez.** Los personajes de Pajaritos son
->   creaciones originales suyas, adaptadas en 3D para Yump.
-> - **La atribución de Pajaritos va en `/acerca-de`**, en la tanda legal, con
->   enlace textual a @pajaritos.web y sin widget.
+> - **Autoría, en tres grupos**: **nueve** personajes de **Pajaritos**, creados
+>   por **Juan Facundo Galíndez** y adaptados en 3D para Yump; **Don Tito**,
+>   **mascota y personaje original de Yump** (no es de Pajaritos); y las demás
+>   ilustraciones, también propias de la app.
+> - **En `/acerca-de`**, en la tanda legal: el enlace textual a @pajaritos.web
+>   acompaña **sólo a Pajaritos**, no a Don Tito. Sin widget.
 >
 > Ver `docs/AVATARES.md`. Las secciones §1, §2.a, §2.f, §2.g, §7 y §8 quedaron
 > actualizadas; el razonamiento anterior se conserva marcado como **historia**.
@@ -400,15 +400,15 @@ El costo de declararlo es una etiqueta "Contiene anuncios" en la ficha.
 - **Cero conexión a DiceBear.** Verificado con un barrido de fuente, SQL,
   archivos públicos, service worker y bundles generados, con canarios que prueban
   que el barrido detecta de verdad.
-- **La semilla ya no se envía a DiceBear ni a ningún tercero.** Precisión que
-  importa para el formulario: `avatar_seed` **se guarda en Supabase**, así que
-  **sigue siendo un dato recopilado fuera del dispositivo**. No decir "cero
-  transferencia" a secas.
+- **La semilla se recopila y se guarda en Supabase**, proveedor de servicio. No
+  decir "cero transferencia" a secas: el dato sale del dispositivo y queda
+  almacenado.
+- **Ya no se envía a DiceBear ni a terceros** para generar ni servir el avatar.
 - **Para Data Safety**: la fila del avatar ya **no es un "sharing"**. Es
   `App activity → Other actions`, **recopilado, NO compartido**, con la excepción
   de *service provider* (Supabase) como todo lo demás del perfil.
-- **Los archivos WebP se sirven desde el propio origen de Yump**, no desde una
-  CDN de terceros.
+- **Los archivos WebP salen del propio origen de Yump**, no de una CDN de
+  terceros.
 - **Autoría**: Juan Facundo Galíndez. La atribución de Pajaritos va en
   `/acerca-de` con enlace textual a @pajaritos.web.
 
@@ -987,7 +987,7 @@ hoy dos incumplimientos que ya existen en producción**.
 
 | # | Commit | Contenido | Depende de |
 |---|---|---|---|
-| 1 | `fix(legal): atribución de TMDB y autoría de los avatares` | `/acerca-de` con logo TMDB local, el texto largo verbatim, enlace, **la autoría de Juan Facundo Galíndez por los personajes de Pajaritos con enlace textual a @pajaritos.web** (sin widget) y el aviso de no afiliación. **Ya NO lleva crédito a DiceBear** | nada — **es el que cierra el incumplimiento vigente** |
+| 1 | `fix(legal): atribución de TMDB y autoría de los avatares` | `/acerca-de` con logo TMDB local, el texto largo verbatim, enlace, y la autoría en **tres grupos separados**: los **nueve** personajes de **Pajaritos** de **Juan Facundo Galíndez** con enlace textual a @pajaritos.web (sin widget), **Don Tito como mascota original de Yump** en su propio párrafo y **sin** ese enlace, y las demás ilustraciones propias. Más el aviso de no afiliación. **Ya NO lleva crédito a DiceBear** | nada — **es el que cierra el incumplimiento vigente** |
 | 2 | `fix(onboarding): las rutas legales quedan exentas del gate` | lista de exentas + **test** de que `/privacidad`, `/terminos`, `/acerca-de` y `/eliminar-cuenta` no redirigen con `onboarding_completed = false` | nada |
 | ~~3~~ | ~~`fix(privacidad): los avatares dejan de salir hacia DiceBear`~~ | ✅ **HECHO en la rama `feat/avatares-propios`**, antes que esta tanda. Ver `docs/AVATARES.md` | — |
 | 4 | `refactor(marcas): nombres neutros en lugar de wordmarks imitados` | `PlatformLogo.tsx` + borrar las 15 reglas `.lg-*` | decisión 16 |
@@ -1015,10 +1015,11 @@ hoy dos incumplimientos que ya existen en producción**.
   la prueba definitiva y necesita credenciales.
 
 **Criterio de aceptación de la tanda**: las cuatro rutas responden 200 en
-producción sin sesión; `/acerca-de` muestra **la atribución de TMDB** y **la
-autoría de Juan Facundo Galíndez** por los personajes de Pajaritos, con enlace
-textual a @pajaritos.web y **sin ninguna mención a DiceBear**; y el enlace de
-borrado es pegable en Play Console.
+producción sin sesión; `/acerca-de` muestra **la atribución de TMDB** y la
+autoría **separada en tres grupos** —los nueve de Pajaritos con el enlace textual
+a @pajaritos.web, **Don Tito como mascota de Yump sin ese enlace**, y las demás
+ilustraciones propias— **sin ninguna mención a DiceBear**; y el enlace de borrado
+es pegable en Play Console.
 
 ---
 

@@ -657,9 +657,12 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
 - ~~**"Las más votadas"**~~ — YA CONSTRUIDO. Login público activo → `LikeButton`
   en la ficha (malaso/ta buena/petacular), tabla `votes`, función `top_voted`
   por rango de rating, y dos shelves en Home: "Lo más votados" (2-3) y
-  "No gustaron" (1, antes rotulado "Hacete cargo"). Requiere re-correr `supabase/schema.sql` para que
-  `top_voted` tome la firma de 4 args.
-- ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (**31 avatares propios de Yump** en `/avatars/`, ver `lib/avatares.ts` — no hay ninguna dependencia ni conexión externa), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). **El módulo de avatares NO requiere ejecutar SQL ni tocar Producción**: funciona con el esquema que ya está aplicado. `supabase/schema.sql` tiene un `drop default` sobre `avatar_style` que describe el estado deseado y **no está autorizado a aplicarse** — ver `docs/AVATARES.md`.
+  "No gustaron" (1, antes rotulado "Hacete cargo"). **No hay nada que ejecutar**:
+  Producción ya tiene `top_voted(p_days integer, p_limit integer, p_min integer,
+  p_max integer)`, o sea la firma de 4 argumentos. La instrucción de re-correr el
+  schema quedó obsoleta y se sacó — correr el schema completo por eso sería
+  innecesario.
+- ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (**31 avatares propios de Yump** en `/avatars/`, ver `lib/avatares.ts` y `docs/AVATARES.md` — sin librería de terceros ni petición saliente para generar o servir un avatar; la semilla sí se guarda en Supabase, que es proveedor de servicio), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). **El módulo de avatares NO requiere ejecutar SQL ni tocar Producción**: funciona con el esquema que ya está aplicado — ver `docs/AVATARES.md`.
 
 ## PWA (instalable — construido)
 
