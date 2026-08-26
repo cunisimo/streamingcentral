@@ -503,6 +503,9 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .avcard:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; transform: scale(1.05); }
 .avcard.on { border-color: var(--accent); transform: scale(1.08); }
 .avmodal-err { margin: 0; padding: 0 22px; color: var(--editorial); font-size: 13px; }
+/* El <p> del error vive siempre en el árbol para que `aria-live` funcione (un
+   nodo que aparece de la nada a veces no se anuncia). Vacío no ocupa nada. */
+.avmodal-err:empty { display: none; }
 @media (max-width: 360px) {
   .avmodal-backdrop { padding: 12px; padding-bottom: calc(12px + var(--safe-b)); }
   .avmodal-head { padding: 18px 16px 6px; }

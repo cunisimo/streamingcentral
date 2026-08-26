@@ -153,12 +153,74 @@ test("todo id de LEGADO_V1 existe en el catálogo", () => {
   for (const id of LEGADO_V1) assert.ok(ids.has(id), `${id} está en el legado y no en el catálogo`);
 });
 
-test("el hash es estable frente a valores conocidos", () => {
-  // Clava el algoritmo. Si alguien lo cambia, este test lo dice antes de que se
-  // note en producción como "se me cambió el avatar solo".
+// EL CONTRATO DEL MAPEO LEGADO, CLAVADO A VALORES EXACTOS.
+//
+// La versión anterior de este test sólo fijaba `hashCadena("")`, y eso no
+// alcanzaba: se podía cambiar el algoritmo, el módulo, el orden de `LEGADO_V1` o
+// la correspondencia final y el test seguía verde mientras a todos los perfiles
+// viejos les cambiaba el dibujo.
+//
+// Cada fila fija LAS DOS PUNTAS: el número exacto del hash y el id exacto que
+// sale. Con las dos, no hay cambio silencioso posible en ningún eslabón de la
+// cadena `semilla → hash → índice → id`.
+//
+// Las ocho semillas caen en OCHO POSICIONES DISTINTAS y separadas
+// (1, 3, 5, 6, 12, 14, 16, 22), así que un reordenamiento parcial de
+// `LEGADO_V1` tampoco pasa desapercibido. Hay cinco uuids realistas —incluidos
+// los dos extremos, todo ceros y todo efes—, el valor por defecto viejo del
+// helper y el nombre del estilo de DiceBear.
+const CASOS: [semilla: string, hash: number, indice: number, id: string][] = [
+  ["8f14e45f-ceea-467a-9f61-6c7b8b0a1d2e", 787400601, 12, "witch"],
+  ["3c9a1e77-2b4d-4f8a-9c15-7ad0e6b3f102", 104246909, 16, "reproductor"],
+  ["d41d8cd9-8f00-b204-e980-0998ecf8427e", 3822259300, 3, "dontito"],
+  ["a1b2c3d4-e5f6-4708-9a0b-1c2d3e4f5061", 358666378, 5, "jipi"],
+  ["00000000-0000-0000-0000-000000000000", 3192360657, 1, "buitracia"],
+  ["ffffffff-ffff-ffff-ffff-ffffffffffff", 654879633, 14, "astronauta"],
+  ["streamingcentral", 1540129544, 6, "juanpalomo"],
+  ["adventurer-neutral", 3457507181, 22, "auriculares"],
+];
+
+test("el hash da EXACTAMENTE estos números", () => {
+  // Primer eslabón: el algoritmo. Cambiarlo rompe acá.
   assert.equal(hashCadena(""), 2166136261);
-  assert.equal(typeof hashCadena(SEMILLA_VIEJA), "number");
-  assert.ok(hashCadena(SEMILLA_VIEJA) >= 0);
+  for (const [semilla, hash] of CASOS) {
+    assert.equal(hashCadena(semilla), hash, `cambió el hash de "${semilla}"`);
+  }
+});
+
+test("el índice sale del módulo sobre LEGADO_V1, y da EXACTAMENTE estos", () => {
+  // Segundo eslabón: el módulo. Si `LEGADO_V1` cambiara de tamaño, rompe acá.
+  for (const [semilla, hash, indice] of CASOS) {
+    assert.equal(hash % LEGADO_V1.length, indice, `cambió el índice de "${semilla}"`);
+    assert.equal(LEGADO_V1[indice], CASOS.find((c) => c[0] === semilla)![3]);
+  }
+});
+
+test("cada semilla vieja resuelve al MISMO avatar de siempre", () => {
+  // Tercer eslabón: la correspondencia final. Es lo que ve la persona.
+  for (const [semilla, , , id] of CASOS) {
+    const r = resolverAvatar({ avatar_style: "adventurer-neutral", avatar_seed: semilla });
+    assert.equal(r.id, id, `"${semilla}" ahora resuelve a "${r.id}" en vez de "${id}"`);
+    assert.equal(r.src, `/avatars/avatar-${id}.webp`);
+  }
+});
+
+test("el estilo no cambia el resultado del mapeo legado", () => {
+  // Un perfil de DiceBear, uno con estilo desconocido y uno sin estilo tienen
+  // que ver lo MISMO si comparten la semilla: el estilo sólo decide si es una
+  // elección explícita, no a qué dibujo cae el que no eligió.
+  for (const [semilla, , , id] of CASOS) {
+    for (const style of ["adventurer-neutral", "pixel-art", "", null]) {
+      assert.equal(resolverAvatar({ avatar_style: style, avatar_seed: semilla }).id, id);
+    }
+  }
+});
+
+test("las ocho semillas cubren ocho posiciones distintas", () => {
+  // Si todas cayeran en el mismo índice, el test de arriba no detectaría un
+  // reordenamiento parcial de la lista.
+  const indices = new Set(CASOS.map((c) => c[2]));
+  assert.equal(indices.size, CASOS.length, "hay semillas que comparten posición");
 });
 
 // ============================================================================
