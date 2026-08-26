@@ -72,7 +72,7 @@ conexión a un tercero en cada carga.
 | `lib/avatares.test.ts` | descubre los archivos del disco y los compara contra el catálogo |
 | `components/avatar/` | `Avatar`, `AvatarCard`, `AvatarGrid`, `AvatarModal`, `AvatarPicker` |
 | `scripts/barrido-dicebear.mjs` | barrido de fuente, públicos, SW y bundles |
-| `scripts/barrido-sql-avatar.mjs` | **allowlist** del SQL de `supabase/schema.sql` que puede tocar `avatar_style` |
+| `scripts/barrido-sql-avatar.mjs` | **guard textual** sobre la columna de estilo en `supabase/schema.sql` |
 
 ### El catálogo
 
@@ -114,26 +114,36 @@ conexión a DiceBear**, ni hoy ni después.
 
 #### Cómo se sostiene esto en el tiempo
 
-`scripts/barrido-sql-avatar.mjs` mira **`supabase/schema.sql` y sólo ese
-archivo** — no recorre `supabase/migrations/` ni ningún otro `.sql`. Corta el SQL
-en sentencias respetando comentarios, cadenas y bloques `$$`, y exige que **la
-única sentencia ejecutable que mencione `avatar_style` sea**:
+`scripts/barrido-sql-avatar.mjs` es un **guard textual**, y conviene decir con
+precisión qué es y qué no:
+
+| | |
+|---|---|
+| **Es** | un guard contra una **regresión accidental**. Cuenta apariciones del identificador `avatar_style` en `supabase/schema.sql` y exige que haya **exactamente una**, en una línea que, normalizada, sea la sentencia autorizada |
+| **No es** | un parser de SQL, ni una barrera contra SQL deliberadamente ofuscado. No interpreta comentarios, cadenas, identificadores entre comillas ni bloques `$tag$` — **no lo intenta** |
+| **Alcance** | **un solo archivo**: `supabase/schema.sql`. No recorre `supabase/migrations/` ni ningún otro `.sql` del repositorio |
 
 ```sql
+-- la única línea autorizada a contener el identificador
 alter table profiles add column if not exists avatar_style text;
 ```
 
-**Es una allowlist, no una lista de prohibiciones**, y esa vuelta importa. La
-versión anterior enumeraba las operaciones peligrosas con expresiones regulares
-y **aceptaba sintaxis válida de PostgreSQL que viola la misma regla**: `COLUMN`
-es opcional en `alter column`, `update` admite `only` y alias, y el default se
-puede declarar dentro del `create table`. Perseguir cada forma con otra regex es
-una carrera que se pierde — el que escribe SQL siempre tiene más variantes
-disponibles que las que el barrido enumeró.
+**Por qué se abandonaron los parsers.** Hubo dos intentos de entender el SQL y
+los dos tuvieron falsos negativos demostrados. El segundo troceaba respetando
+comentarios y cadenas, y aun así dejaba pasar un `--` metido en una cadena con
+escape (`E'x'-- texto'`) y otro en un identificador entre comillas (`as "--"`):
+los tomaba por comentario y descartaba la sentencia entera. La respuesta correcta
+no era otro estado en el parser — **para proteger UNA línea no hace falta el
+lexer de PostgreSQL**. Contar texto no tiene esos agujeros porque no interpreta
+nada.
 
-Enumerando lo permitido, cualquier otra sentencia es un hallazgo **por no estar
-en la lista**, incluido un DDL que todavía no existe. Y sumar algo a esa lista
-es una decisión que queda en el diff.
+**El precio, dicho de frente:** una aparición del identificador en un comentario
+del schema hace fallar el guard aunque sea inofensiva. Es deliberado, falla del
+lado conservador, y por eso **los comentarios de `supabase/schema.sql` dicen "la
+columna de estilo" y nunca el nombre literal**.
+
+Doce canarios lo fijan, incluidos los dos casos que rompían el parser anterior,
+comentar la línea autorizada, borrarla, y agregarle un `default`.
 
 | Estado del perfil | Qué se muestra |
 |---|---|

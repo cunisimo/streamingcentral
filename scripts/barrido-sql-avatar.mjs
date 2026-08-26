@@ -1,132 +1,92 @@
-// Qué SQL EJECUTABLE de `supabase/schema.sql` puede tocar `profiles.avatar_style`.
+// Guard TEXTUAL sobre la columna de estilo del avatar en `supabase/schema.sql`.
 //
-// ⚠️ ALCANCE: **este módulo mira UN archivo, `supabase/schema.sql`.** No recorre
-// las migraciones de `supabase/migrations/` ni ningún otro `.sql` del
-// repositorio. Decir "barre el SQL del proyecto" sería mentir.
+// ⚠️ QUÉ ES Y QUÉ NO ES, porque la diferencia importa:
 //
-// POR QUÉ ES UNA ALLOWLIST Y NO UNA LISTA DE PROHIBICIONES.
+//   ES     un guard contra una REGRESIÓN ACCIDENTAL. Cuenta apariciones de un
+//          identificador en un archivo y exige que haya exactamente una, en una
+//          línea que tiene que ser textualmente la sentencia autorizada.
 //
-// La versión anterior buscaba las operaciones peligrosas una por una con
-// expresiones regulares. Detectaba las variantes que se le habían ocurrido a
-// quien la escribió, y **aceptaba sintaxis de PostgreSQL perfectamente válida que
-// viola exactamente la misma regla**:
+//   NO ES  un parser de SQL, ni una barrera contra SQL deliberadamente
+//          ofuscado. No interpreta comentarios, ni cadenas, ni identificadores
+//          entre comillas, ni bloques `$tag$`. **No lo intenta.**
 //
-//     create table profiles (avatar_style text default null);
-//     alter table profiles alter avatar_style drop default;   -- COLUMN es opcional
-//     update profiles p set avatar_style = null;               -- alias
-//     update only profiles set avatar_style = null;            -- ONLY
+// POR QUÉ SE ABANDONÓ EL PARSER. Las dos versiones anteriores intentaron
+// entender el SQL, y las dos tuvieron falsos negativos demostrados. La segunda
+// troceaba respetando comentarios y cadenas, y aun así dejaba pasar esto:
 //
-// Perseguir cada forma con otra regex es una carrera que se pierde: el que
-// escribe SQL nuevo siempre tiene más formas disponibles que las que el barrido
-// enumeró. Así que se da vuelta la pregunta.
+//     update profiles
+//     set display_name = E'x\'-- texto', avatar_style = null;
 //
-// **No se enumera lo prohibido: se enumera lo permitido.** Hoy hay exactamente
-// UNA sentencia autorizada que mencione `avatar_style`. Cualquier otra —un DDL
-// que no se nos ocurrió, una escritura nueva, un `create table` con default
-// adentro— es un hallazgo por el solo hecho de no estar en la lista.
+//     update profiles as "--"
+//     set avatar_style = null;
+//
+// En los dos casos tomaba por comentario un `--` que pertenecía a una cadena con
+// escape o a un identificador entre comillas dobles. La respuesta correcta no es
+// otro estado en el parser: **para proteger UNA línea no hace falta el lexer de
+// PostgreSQL.** Contar texto no tiene esos agujeros porque no interpreta nada.
+//
+// El precio, dicho de frente: una aparición del identificador en un comentario
+// del schema hace fallar el guard aunque sea inofensiva. Es deliberado — falla
+// del lado conservador — y por eso los comentarios de `supabase/schema.sql`
+// dicen "la columna de estilo" y no el nombre literal.
 import fs from "node:fs";
 import path from "node:path";
 
-/** El único archivo que este módulo mira. */
+/** El único archivo que este guard mira. */
 export const ARCHIVO = path.join("supabase", "schema.sql");
 
+/** El identificador que se cuenta. */
+export const COLUMNA = "avatar_style";
+
 /**
- * La ÚNICA sentencia autorizada que puede mencionar `avatar_style`, ya
- * normalizada.
+ * La única línea autorizada a contenerlo, ya normalizada.
  *
  * Crea la columna sin default: sobre una base nueva nace sin default, y sobre
- * Producción no hace nada porque la columna ya existe — que es exactamente el
- * comportamiento que se quiere.
+ * Producción no hace nada porque la columna ya existe.
  *
- * **Agregar algo acá es una decisión de producto, no un arreglo de test.** Si
- * alguna vez se autoriza una migración sobre esta columna, se suma su forma
- * normalizada a esta lista y queda registrado en el diff quién lo decidió.
+ * **Cambiar esto es una decisión de producto, no un arreglo de test.**
  */
-export const SENTENCIAS_AUTORIZADAS = Object.freeze([
-  "alter table profiles add column if not exists avatar_style text;",
-]);
+export const LINEA_AUTORIZADA = "alter table profiles add column if not exists avatar_style text;";
+
+/** Minúsculas y un solo espacio. Un reformateo inocente no rompe el build. */
+export const normalizar = (linea) => linea.replace(/\s+/g, " ").trim().toLowerCase();
 
 /**
- * Corta el SQL en sentencias, salteando comentarios, cadenas y bloques
- * `$tag$...$tag$`.
+ * Revisa el contenido de un schema. Devuelve los problemas encontrados, o `[]`.
  *
- * No alcanza con `split(";")`: el schema define funciones con el cuerpo entre
- * `$$`, y ahí adentro hay puntos y comas que no terminan ninguna sentencia. Sin
- * respetarlos, una función quedaría partida en pedazos y el barrido leería
- * fragmentos sin sentido.
+ * Tres reglas, en orden:
+ *
+ *  1. Tiene que haber **exactamente una** aparición del identificador.
+ *  2. La línea que la contiene, normalizada, tiene que ser la autorizada.
+ *  3. Cero apariciones también falla: significa que alguien borró o comentó la
+ *     sentencia que crea la columna.
  */
-export function trocear(sql) {
-  const fuera = [];
-  let buf = "";
-  let i = 0;
-  while (i < sql.length) {
-    const dos = sql.slice(i, i + 2);
+export function revisar(sql) {
+  const lineas = sql.split(/\r?\n/);
+  const conLaColumna = lineas
+    .map((linea, i) => ({ linea, n: i + 1 }))
+    .filter(({ linea }) => linea.includes(COLUMNA));
 
-    // Comentario de línea: hasta el salto.
-    if (dos === "--") { while (i < sql.length && sql[i] !== "\n") i++; continue; }
+  // Una línea podría traerlo dos veces.
+  const apariciones = lineas.reduce((a, l) => a + l.split(COLUMNA).length - 1, 0);
 
-    // Comentario de bloque.
-    if (dos === "/*") {
-      i += 2;
-      while (i < sql.length && sql.slice(i, i + 2) !== "*/") i++;
-      i += 2;
-      continue;
-    }
-
-    // Cadena literal. Se copia entera para no confundir un `;` de adentro.
-    if (sql[i] === "'") {
-      buf += sql[i++];
-      while (i < sql.length) {
-        if (sql[i] === "'" && sql[i + 1] === "'") { buf += "''"; i += 2; continue; }
-        if (sql[i] === "'") { buf += sql[i++]; break; }
-        buf += sql[i++];
-      }
-      continue;
-    }
-
-    // Bloque `$$ ... $$` o `$tag$ ... $tag$`.
-    const dolar = /^\$[A-Za-z_0-9]*\$/.exec(sql.slice(i));
-    if (dolar) {
-      const tag = dolar[0];
-      const cierre = sql.indexOf(tag, i + tag.length);
-      const hasta = cierre === -1 ? sql.length : cierre + tag.length;
-      buf += sql.slice(i, hasta);
-      i = hasta;
-      continue;
-    }
-
-    if (sql[i] === ";") { fuera.push(buf); buf = ""; i++; continue; }
-    buf += sql[i++];
+  if (apariciones === 0) {
+    return [`no aparece \`${COLUMNA}\` en ninguna línea: ¿se borró o se comentó la sentencia que crea la columna?`];
   }
-  if (buf.trim()) fuera.push(buf);
-  return fuera;
+  if (apariciones > 1) {
+    return conLaColumna.map(({ linea, n }) =>
+      `línea ${n}: aparición no autorizada de \`${COLUMNA}\` — ${linea.trim()}`);
+  }
+
+  const { linea, n } = conLaColumna[0];
+  const norm = normalizar(linea);
+  if (norm !== LINEA_AUTORIZADA) {
+    return [`línea ${n}: la única aparición no es la sentencia autorizada.\n  esperado: ${LINEA_AUTORIZADA}\n  hallado : ${norm}`];
+  }
+  return [];
 }
 
-/** Una sentencia en su forma canónica: minúsculas, un espacio, con `;`. */
-export function normalizar(sentencia) {
-  const s = sentencia.replace(/\s+/g, " ").trim().toLowerCase();
-  return s ? `${s};` : "";
-}
-
-/** Todas las sentencias ejecutables, normalizadas. Los comentarios ya no están. */
-export function sentencias(sql) {
-  return trocear(sql).map(normalizar).filter(Boolean);
-}
-
-/**
- * Las sentencias ejecutables que mencionan `avatar_style` y **no** están
- * autorizadas.
- *
- * Vacío = limpio. Que una sentencia aparezca acá no dice qué hace: dice que
- * toca esa columna y que nadie la autorizó, que es todo lo que hace falta saber.
- */
-export function sentenciasProhibidas(sql) {
-  return sentencias(sql)
-    .filter((s) => s.includes("avatar_style"))
-    .filter((s) => !SENTENCIAS_AUTORIZADAS.includes(s));
-}
-
-/** Lo mismo, sobre `supabase/schema.sql`. */
-export function barrerSchema(raiz = process.cwd()) {
-  return sentenciasProhibidas(fs.readFileSync(path.join(raiz, ARCHIVO), "utf8"));
+/** Lo mismo, leyendo `supabase/schema.sql`. */
+export function revisarSchema(raiz = process.cwd()) {
+  return revisar(fs.readFileSync(path.join(raiz, ARCHIVO), "utf8"));
 }

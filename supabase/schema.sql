@@ -20,13 +20,14 @@ create table if not exists profiles (
 -- proveedor de servicio — para Data Safety es "recopilado, no compartido". Lo
 -- que se eliminó es el envío a DiceBear o a otro tercero.
 --
--- QUÉ SIGNIFICA CADA VALOR (lo resuelve lib/avatares.ts → resolverAvatar):
+-- QUÉ SIGNIFICA CADA VALOR de la columna de estilo (lo resuelve
+-- lib/avatares.ts → resolverAvatar):
 --
---   avatar_style = 'yump'  + avatar_seed = un id del catálogo
+--   'yump' + una semilla que es un id del catálogo
 --       → elección explícita. Es lo único que escribe la app, y sólo cuando la
 --         persona toca Guardar en el selector.
 --
---   cualquier otro estilo (incluido NULL) + avatar_seed con algo
+--   cualquier otro estilo (incluido NULL) + una semilla con algo
 --       → mapeo LOCAL y determinístico sobre LEGADO_V1, una lista congelada de
 --         31 ids. La misma semilla da siempre el mismo dibujo, en todos los
 --         dispositivos, SIN escribir nada en la base. Acá caen los perfiles
@@ -36,17 +37,15 @@ create table if not exists profiles (
 --       → el avatar por defecto del catálogo.
 --
 -- QUÉ SE SACÓ DE ACÁ Y POR QUÉ. Este archivo es RERUNNABLE, y antes tenía dos
--- sentencias que reimponían DiceBear en cada corrida:
---
---   alter table profiles alter column avatar_style set default 'adventurer-neutral';
---   update profiles set avatar_style = 'adventurer-neutral' where avatar_style is null;
---
--- Las dos se eliminaron. El `update` además sobrescribía perfiles existentes.
+-- sentencias sobre la columna de estilo que reimponían DiceBear en cada corrida:
+-- un `set default` con el nombre del estilo viejo, y un `update` que lo escribía
+-- en las filas que lo tuvieran en NULL. Las dos se eliminaron; el `update`
+-- además sobrescribía perfiles existentes.
 --
 -- LO QUE **NO** SE HACE ACÁ: quitar el default que Producción ya tiene. Un
--- `alter column avatar_style drop default` sería una operación destructiva sobre
--- el esquema vivo, y ESTE archivo no es el lugar para una migración que no está
--- autorizada. El comportamiento buscado es:
+-- `drop default` sobre la columna de estilo sería una operación destructiva
+-- sobre el esquema vivo, y ESTE archivo no es el lugar para una migración que no
+-- está autorizada. El comportamiento buscado es:
 --
 --   · base NUEVA      → `add column if not exists` crea la columna SIN default.
 --   · PRODUCCIÓN      → volver a correr el schema NO toca el default existente
@@ -58,6 +57,13 @@ create table if not exists profiles (
 -- distinto de `yump` —incluido `'adventurer-neutral'`, incluido NULL— se resuelve
 -- LOCALMENTE por `LEGADO_V1` (lib/avatares.ts). El nombre del estilo viejo quedó
 -- como una etiqueta inerte y NO dispara ninguna conexión a DiceBear.
+--
+-- ⚠️ EN LOS COMENTARIOS DE ESTE ARCHIVO SE DICE "la columna de estilo", NUNCA su
+-- nombre literal. `scripts/barrido-sql-avatar.mjs` es un guard TEXTUAL: cuenta
+-- las apariciones del identificador en todo el archivo y exige que haya UNA
+-- sola, la de la sentencia autorizada de abajo. Escribirlo en un comentario haría
+-- fallar el guard — a propósito, porque contar texto es lo único que se puede
+-- hacer sin escribir un lexer de PostgreSQL. Detalle en docs/AVATARES.md.
 alter table profiles add column if not exists avatar_seed text;
 alter table profiles add column if not exists avatar_style text;
 
@@ -89,16 +95,16 @@ create policy "edicion de perfil propio" on profiles
 -- así el usuario nunca elige su propio id ni su is_admin.
 --
 -- El trigger NO CAMBIÓ y no hace falta ninguna migración. Escribe una semilla
--- aleatoria (`gen_random_uuid()`) y no menciona `avatar_style`, que toma el
--- default de la columna.
+-- aleatoria (`gen_random_uuid()`) y no menciona la columna de estilo, que toma
+-- el default de la columna.
 --
 -- EN PRODUCCIÓN ESE DEFAULT SIGUE SIENDO `'adventurer-neutral'`, así que una
 -- cuenta creada hoy nace con ese valor, NO con NULL. Da igual: entra al mapeo
 -- local descrito arriba y muestra un avatar propio DESDE EL PRIMER RENDER.
 --
 -- Migración OPCIONAL, no aplicada y sin autorización: se podría hacer que
--- escriba `avatar_style = 'yump'` y un id del catálogo. No hace falta para que
--- funcione. Ver docs/AVATARES.md.
+-- escriba `'yump'` en la columna de estilo y un id del catálogo. No hace falta
+-- para que el sistema funcione. Ver docs/AVATARES.md.
 create or replace function handle_new_user()
 returns trigger as $$
 begin
