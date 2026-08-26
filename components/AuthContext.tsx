@@ -2,7 +2,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase";
-import { DEFAULT_AVATAR_STYLE } from "@/lib/avatar";
 
 export interface Profile {
   id: string;
@@ -50,7 +49,7 @@ async function loadProfile(user: User): Promise<Profile | null> {
     }
     return p;
   }
-  return metaName ? { id: user.id, display_name: metaName, is_admin: false, avatar_seed: user.id, avatar_style: DEFAULT_AVATAR_STYLE, onboarding_completed: true, platforms: [], country_code: "AR" } : null;
+  return metaName ? { id: user.id, display_name: metaName, is_admin: false, avatar_seed: user.id, avatar_style: null, onboarding_completed: true, platforms: [], country_code: "AR" } : null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -130,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Espejamos el nombre en el metadata de auth para tenerlo siempre a mano
     // en el próximo login sin depender de la fila de perfil.
     void sb.auth.updateUser({ data: { display_name: name } });
-    setProfile((p) => (p ? { ...p, display_name: name } : { id: user.id, display_name: name, is_admin: false, avatar_seed: user.id, avatar_style: DEFAULT_AVATAR_STYLE, onboarding_completed: true, platforms: [], country_code: "AR" }));
+    setProfile((p) => (p ? { ...p, display_name: name } : { id: user.id, display_name: name, is_admin: false, avatar_seed: user.id, avatar_style: null, onboarding_completed: true, platforms: [], country_code: "AR" }));
     return {};
   }, [user]);
 

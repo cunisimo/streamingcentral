@@ -49,8 +49,9 @@
     // Cache de imágenes: LRU por cantidad + expiración.
     IMAGE_LIMIT: 300,
     IMAGE_MAX_AGE: 30 * 24 * 60 * 60 * 1000, // 30 días
-    // Hosts de imágenes que sí cacheamos con Cache First (URLs estables):
-    // pósters/backdrops de TMDB y avatares de DiceBear (deterministas por seed).
-    IMAGE_HOSTS: ["image.tmdb.org", "api.dicebear.com"],
+    // Hosts de imágenes que sí cacheamos con Cache First (URLs estables).
+    // Sólo TMDB: los avatares son archivos propios bajo /avatars/ y los cachea
+    // la regla de assets estáticos del mismo origen, sin salir a ningún lado.
+    IMAGE_HOSTS: ["image.tmdb.org"],
   };
 })();

@@ -1,18 +1,32 @@
 "use client";
 import AvatarCard from "./AvatarCard";
+import { AVATARES } from "@/lib/avatares";
 
-// Grilla de opciones. No maneja estado: recibe las semillas y la selección.
+// Cuántas cargan de entrada. Con la grilla más angosta (320 px, 4 columnas) las
+// primeras dos filas y media entran en pantalla; el resto llega al hacer scroll.
+const ANSIOSAS = 10;
+
+// Grilla de opciones. No maneja estado: recibe la selección y avisa.
+//
+// Recorre el catálogo directamente en vez de recibir una lista: el orden del
+// catálogo ES el orden de la grilla, y así no hay dos sitios que puedan
+// discrepar.
 export default function AvatarGrid({
-  seeds, selected, onSelect,
+  selected, onSelect,
 }: {
-  seeds: string[];
   selected: string | null;
-  onSelect: (seed: string) => void;
+  onSelect: (id: string) => void;
 }) {
   return (
-    <div className="avgrid">
-      {seeds.map((s) => (
-        <AvatarCard key={s} seed={s} selected={s === selected} onSelect={onSelect} />
+    <div className="avgrid" role="group" aria-label="Avatares disponibles">
+      {AVATARES.map((a, i) => (
+        <AvatarCard
+          key={a.id}
+          avatar={a}
+          selected={a.id === selected}
+          onSelect={onSelect}
+          lazy={i >= ANSIOSAS}
+        />
       ))}
     </div>
   );

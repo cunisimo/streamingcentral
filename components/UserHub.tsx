@@ -12,7 +12,7 @@ export default function UserHub() {
   return (
     <div className="wrap">
       <div className="hub-head">
-        <Avatar seed={profile?.avatar_seed || user?.id} style={profile?.avatar_style} size={64} className="hub-av" />
+        <Avatar perfil={profile} size={64} className="hub-av" />
         <div>
           <h1 className="hub-hi">Hola, {nombre}</h1>
           <div className="hub-links">
