@@ -11,15 +11,40 @@ create table if not exists profiles (
   created_at    timestamptz not null default now()
 );
 
--- Avatar generado con DiceBear (API HTTP). Se guardan solo el estilo y la
--- semilla; la imagen nunca se almacena, la URL se arma dinámicamente en la app
--- (lib/avatar.ts → getAvatarUrl). Backfill determinístico para perfiles viejos:
--- semilla = id, estilo = adventurer-neutral.
+-- Avatar. Los dibujos son ARCHIVOS PROPIOS de Yump, servidos desde /avatars/;
+-- no hay servicio externo, ni URL remota, ni nada que salga del dispositivo.
+-- Estas dos columnas guardan únicamente CUÁL eligió cada persona.
+--
+-- QUÉ SIGNIFICA CADA VALOR (lo resuelve lib/avatares.ts → resolverAvatar):
+--
+--   avatar_style = 'yump'  + avatar_seed = un id del catálogo
+--       → elección explícita. Es lo único que escribe la app, y sólo cuando la
+--         persona toca Guardar en el selector.
+--
+--   cualquier otro estilo (incluido NULL) + avatar_seed con algo
+--       → mapeo LOCAL y determinístico sobre LEGADO_V1, una lista congelada de
+--         31 ids. La misma semilla da siempre el mismo dibujo, en todos los
+--         dispositivos, SIN escribir nada en la base. Acá caen los perfiles
+--         anteriores al cambio y los que crea el trigger de abajo.
+--
+--   sin semilla utilizable
+--       → el avatar por defecto del catálogo.
+--
+-- POR QUÉ `avatar_style` NO TIENE DEFAULT. Antes tenía `'adventurer-neutral'`, y
+-- además había un `update` que lo escribía en las filas que lo tuvieran en NULL.
+-- Las dos cosas se sacaron: este archivo es RERUNNABLE, así que volver a
+-- correrlo reimponía el nombre de un servicio que ya no se usa. `drop default`
+-- es idempotente y NO toca ninguna fila existente.
 alter table profiles add column if not exists avatar_seed text;
-update profiles set avatar_seed = id::text where avatar_seed is null;
 alter table profiles add column if not exists avatar_style text;
-alter table profiles alter column avatar_style set default 'adventurer-neutral';
-update profiles set avatar_style = 'adventurer-neutral' where avatar_style is null;
+alter table profiles alter column avatar_style drop default;
+
+-- Backfill de la semilla, y sólo de la semilla. Toca EXCLUSIVAMENTE filas con
+-- `avatar_seed` en NULL, así que no pisa la elección de nadie; en una base ya
+-- inicializada es un no-op. Sin semilla, todos esos perfiles caerían en el mismo
+-- avatar por defecto; con el id como semilla, cada uno recibe uno distinto y
+-- estable. El id NO sale del dispositivo: sólo entra a un hash que corre local.
+update profiles set avatar_seed = id::text where avatar_seed is null;
 
 alter table profiles enable row level security;
 
@@ -34,6 +59,17 @@ create policy "edicion de perfil propio" on profiles
 
 -- El perfil se crea por trigger (security definer), no desde el cliente,
 -- así el usuario nunca elige su propio id ni su is_admin.
+--
+-- El trigger NO CAMBIÓ y no hace falta ninguna migración. Sigue escribiendo una
+-- semilla aleatoria y no toca `avatar_style`, que ahora queda en NULL: esa
+-- combinación entra al mapeo local descrito arriba, así que una cuenta nueva
+-- muestra un avatar propio DESDE EL PRIMER RENDER. La semilla es un
+-- `gen_random_uuid()` y nunca sale de la base ni del dispositivo.
+--
+-- Migración OPCIONAL, no aplicada y sin autorización para aplicarse: se podría
+-- hacer que escriba `avatar_style = 'yump'` y un id del catálogo. No hace falta
+-- para que funcione; sólo evitaría que las cuentas nuevas nazcan con una semilla
+-- que no significa nada. Ver docs/AVATARES.md.
 create or replace function handle_new_user()
 returns trigger as $$
 begin

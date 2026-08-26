@@ -14,21 +14,32 @@
 //
 //   docs/                    la historia. Explica por qué existe el mapeo legado;
 //                            borrarla sería perder la única razón escrita.
-//   líneas de comentario     un comentario no abre una conexión. Se saltean las
-//                            que EMPIEZAN con //, * o /* — nunca se corta a mitad
-//                            de línea, porque `https://api.dicebear.com` contiene
-//                            `//` y recortar ahí sería un falso negativo.
+//   líneas de comentario     un comentario no abre una conexión ni ejecuta SQL.
+//                            Se saltean las que EMPIEZAN con //, *, /* o -- (SQL)
+//                            — nunca se corta a mitad de línea, porque
+//                            `https://api.dicebear.com` contiene `//` y recortar
+//                            ahí sería un falso negativo. Una SENTENCIA SQL que
+//                            mencione la cadena NO está exenta: `-- ...` sí,
+//                            `update ... set avatar_style = '...'` no.
 //   *.test.ts                los tests del mapeo legado NECESITAN la cadena
 //                            "adventurer-neutral" para probar que un perfil viejo
 //                            resuelve bien. No se despachan al navegador.
 //   este mismo archivo       define los patrones.
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 /** Lo que no puede aparecer. */
 export const PROHIBIDO = [/api\.dicebear\.com/i, /adventurer-neutral/i, /@dicebear\//i];
 
-const EXTENSIONES = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css", ".html"]);
+// `.sql` NO estaba, y ése fue un agujero real: el barrido decía revisar
+// `supabase/` pero se saltaba todos los `.sql`, así que no vio que
+// `supabase/schema.sql` seguía teniendo sentencias ACTIVAS que ponían
+// `avatar_style = 'adventurer-neutral'`. Un barrido que no mira la extensión del
+// archivo donde vive el problema no barre nada.
+export const EXTENSIONES = new Set([
+  ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css", ".html", ".sql",
+]);
 
 // Carpetas que nunca se miran: dependencias, git y la documentación histórica.
 const SALTAR = new Set(["node_modules", ".git", "docs", "avatares"]);
@@ -85,11 +96,18 @@ export const RAICES_FUENTE = ["lib", "components", "app", "hooks", "scripts", "s
 export const RAICES_CON_BUNDLE = [...RAICES_FUENTE, ".next/static", ".next/server"];
 
 // --- CLI ---------------------------------------------------------------------
-// `argv[1]` puede no existir (por ejemplo con `node -e`), y este módulo se
-// importa desde el test: sin la guarda, importarlo tiraba.
-const esCli = Boolean(process.argv[1]) && import.meta.url.endsWith(
-  process.argv[1].split(/[\/]/).pop(),
-);
+// Detectar "me ejecutaron directamente" vs "me importaron desde el test".
+//
+// La versión anterior comparaba `import.meta.url` contra el nombre de archivo de
+// `process.argv[1]` a mano, y NUNCA daba true: el CLI no corría, así que el
+// comando salía con 0 sin haber barrido nada. Un `exit=0` que no ejecuta nada se
+// lee igual que un `exit=0` limpio, y ésa es la peor forma de fallar.
+//
+// `pathToFileURL` es la comparación correcta: resuelve el path a la MISMA forma
+// de URL que trae `import.meta.url`, con el mismo escapado.
+const esCli = Boolean(process.argv[1])
+  && import.meta.url === pathToFileURL(process.argv[1]).href;
+
 if (esCli) {
   const hayBuild = fs.existsSync(path.join(process.cwd(), ".next"));
   const raices = hayBuild ? RAICES_CON_BUNDLE : RAICES_FUENTE;

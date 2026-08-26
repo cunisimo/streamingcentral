@@ -8,12 +8,104 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { RAICES_FUENTE, barrer } from "../scripts/barrido-dicebear.mjs";
+import { spawnSync } from "node:child_process";
+import os from "node:os";
+import { EXTENSIONES, RAICES_FUENTE, barrer } from "../scripts/barrido-dicebear.mjs";
 
 test("cero rastros de DiceBear en código ejecutable y archivos públicos", () => {
   const hallazgos = barrer(RAICES_FUENTE);
   const detalle = hallazgos.map((h) => `${h.archivo}:${h.linea}  ${h.texto}`).join("\n");
   assert.deepEqual(hallazgos, [], `quedaron rastros de DiceBear:\n${detalle}`);
+});
+
+// ============================================================================
+// El escáner detecta de verdad — con canarios, no por confianza
+// ============================================================================
+
+// Los dos agujeros que tuvo este barrido y que un test tenía que haber cazado:
+//
+//   1. `.sql` no estaba en EXTENSIONES, así que decía revisar `supabase/` y se
+//      saltaba todos los `.sql`. No vio que `schema.sql` seguía imponiendo
+//      `avatar_style = 'adventurer-neutral'` en sentencias ACTIVAS.
+//   2. La guarda del CLI nunca daba true: el comando salía con 0 sin barrer
+//      nada, y un `exit 0` vacío se lee igual que uno limpio.
+//
+// Los canarios de abajo son la red para los dos.
+
+/** Escribe un archivo temporal y lo barre. Devuelve los hallazgos. */
+function canario(nombre: string, contenido: string) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "canario-"));
+  const sub = path.join(dir, "lib");
+  fs.mkdirSync(sub);
+  fs.writeFileSync(path.join(sub, nombre), contenido, "utf8");
+  try { return barrer(["lib"], dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+test("EXTENSIONES incluye .sql: sin eso el barrido no mira el schema", () => {
+  assert.ok([...EXTENSIONES].includes(".sql"), "el barrido se saltearía todos los .sql");
+});
+
+test("CANARIO SQL: una SENTENCIA con la cadena prohibida se detecta", () => {
+  const h = canario("migracion.sql", [
+    "-- este comentario menciona adventurer-neutral y NO cuenta",
+    "alter table profiles alter column avatar_style set default 'adventurer-neutral';",
+    "update profiles set avatar_style = 'adventurer-neutral' where avatar_style is null;",
+  ].join("\n"));
+  assert.equal(h.length, 2, `esperaba 2 sentencias detectadas, hubo ${h.length}: ${JSON.stringify(h)}`);
+  assert.ok(h.every((x) => x.archivo.endsWith("migracion.sql")));
+  // La línea 1 es el comentario: no puede estar entre los hallazgos.
+  assert.deepEqual(h.map((x) => x.linea), [2, 3]);
+});
+
+test("CANARIO JS: código sí, comentario no", () => {
+  const h = canario("malo.ts", [
+    "const u = `https://api.dicebear.com/10.x/adventurer-neutral/svg?seed=${x}`;",
+    "// este comentario menciona api.dicebear.com y NO cuenta",
+  ].join("\n"));
+  assert.equal(h.length, 1);
+  assert.equal(h[0].linea, 1);
+});
+
+test("CANARIO del CLI: ejecutar el script de verdad DEVUELVE 1 ante un hallazgo", () => {
+  // El agujero #2: la guarda del CLI no disparaba y el script salía con 0 sin
+  // hacer nada. Acá se ejecuta el comando real contra un directorio sembrado.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "canario-cli-"));
+  fs.mkdirSync(path.join(dir, "lib"));
+  fs.writeFileSync(
+    path.join(dir, "lib", "malo.sql"),
+    "update profiles set avatar_style = 'adventurer-neutral';\n",
+  );
+  try {
+    const script = path.join(process.cwd(), "scripts", "barrido-dicebear.mjs");
+    const r = spawnSync(process.execPath, [script], { cwd: dir, encoding: "utf8" });
+    assert.equal(r.status, 1, `el CLI salió con ${r.status}; salida: ${r.stdout}${r.stderr}`);
+    assert.match(r.stderr, /malo\.sql/);
+    // Y tiene que HABLAR: un barrido mudo no se distingue de uno que no corrió.
+    assert.match(r.stdout, /Barriendo/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("CANARIO del CLI: sin hallazgos sale con 0 y lo dice", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "canario-limpio-"));
+  fs.mkdirSync(path.join(dir, "lib"));
+  fs.writeFileSync(path.join(dir, "lib", "bien.ts"), "export const x = 1;\n");
+  try {
+    const script = path.join(process.cwd(), "scripts", "barrido-dicebear.mjs");
+    const r = spawnSync(process.execPath, [script], { cwd: dir, encoding: "utf8" });
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /LIMPIO/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// ============================================================================
+// El estado del repo
+// ============================================================================
+
+test("supabase/schema.sql no impone ningún estilo por default", () => {
+  // El archivo es rerunnable: un default acá se reimpone en cada corrida.
+  const sql = leerRaiz("supabase/schema.sql");
+  assert.match(sql, /alter column avatar_style drop default/);
+  assert.doesNotMatch(sql, /avatar_style set default/);
 });
 
 test("lib/avatar.ts, el helper que armaba la URL remota, ya no existe", () => {
@@ -29,6 +121,7 @@ test("lib/avatar.ts, el helper que armaba la URL remota, ya no existe", () => {
 // ============================================================================
 
 const leer = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8");
+const leerRaiz = leer;
 
 test("el service worker ya no cachea ningún host de imágenes externo salvo TMDB", () => {
   const config = leer("public/sw/config.js");
