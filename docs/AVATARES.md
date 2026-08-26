@@ -88,23 +88,28 @@ desaparecer en silencio.
 Las columnas de `profiles` **no cambiaron**: siguen siendo `avatar_style` y
 `avatar_seed`. **No hubo migración, no se ejecutó SQL y no se tocó Producción.**
 
-### ⚠️ Producción y `supabase/schema.sql` NO dicen lo mismo, y es a propósito
+### El default de `avatar_style`: qué pasa en cada caso
 
-| | **Producción, HOY** | **`supabase/schema.sql`, estado deseado** |
-|---|---|---|
-| Default de `avatar_style` | **`'adventurer-neutral'`** — sigue ahí | sin default (`drop default`) |
-| Perfiles existentes | conservan `avatar_style = 'adventurer-neutral'` | — |
-| Cuentas nuevas | nacen con `avatar_style = 'adventurer-neutral'` y una semilla aleatoria | nacerían con `avatar_style` en NULL |
+`supabase/schema.sql` **no contiene ninguna operación sobre el default**. Sobre
+`avatar_style` sólo hace esto:
 
-**El archivo describe a dónde queremos llegar; la base todavía no llegó.** El
-`drop default` **no está autorizado y no se aplicó**.
+```sql
+alter table profiles add column if not exists avatar_style text;
+```
 
-**Y no hace falta que se aplique para que todo funcione.** Cualquier estilo
-distinto de `yump` —incluido `'adventurer-neutral'`, incluido NULL— se resuelve
-**localmente** por `LEGADO_V1`. El nombre del estilo viejo quedó en la base como
-una etiqueta sin consecuencias: **no dispara ninguna conexión a DiceBear**, ni
-hoy ni después. Lo único que cambiaría al aplicar el `drop default` es que las
-cuentas nuevas dejarían de nacer con el nombre de un servicio que ya no se usa.
+Y eso da dos comportamientos, que son los únicos dos que existen:
+
+| | Qué pasa |
+|---|---|
+| **Base NUEVA** | la columna se crea **sin default**, porque el `add column` no declara ninguno |
+| **Producción** | volver a ejecutar el schema **conserva el default existente** (`'adventurer-neutral'`), porque la columna ya existe y el `if not exists` no hace nada |
+
+**Esta tanda no tiene ninguna migración pendiente para `avatar_style`.** No se
+autoriza quitar el default, y **no hace falta quitarlo para que los avatares
+funcionen**: cualquier estilo distinto de `yump` —incluido `'adventurer-neutral'`,
+incluido NULL— se resuelve **localmente** por `LEGADO_V1`. El nombre del estilo
+viejo quedó en la base como una etiqueta sin consecuencias: **no dispara ninguna
+conexión a DiceBear**, ni hoy ni después.
 
 | Estado del perfil | Qué se muestra |
 |---|---|
@@ -149,15 +154,16 @@ cuenta creada hoy nace con ese valor**, no con NULL. Da exactamente igual: cae e
 el mapeo legado y **muestra un avatar propio desde el primer render**. El nombre
 del estilo viejo es una etiqueta inerte.
 
-**Dos migraciones OPCIONALES, ninguna aplicada y ninguna autorizada:**
+**No hay ninguna migración pendiente, ni autorizada, para esta tanda.**
 
-1. `alter table profiles alter column avatar_style drop default;` — lo que ya
-   dice `supabase/schema.sql`. Sólo cambia de qué valor nacen las cuentas nuevas.
-2. Cambiar el trigger para que escriba `avatar_style = 'yump'` y un id del
-   catálogo.
+Se podría, algún día y si alguien lo decide, cambiar el trigger para que escriba
+`avatar_style = 'yump'` y un id del catálogo. **No hace falta para que el sistema
+funcione** y no está autorizado. Cualquier cambio así sería una migración
+explícita, aparte de `supabase/schema.sql`, y con su propia autorización.
 
-**Ninguna de las dos hace falta para que el sistema funcione.** No ejecutar sin
-pedirlo.
+**A propósito no se deja acá ningún SQL copiable sobre el default**: un bloque
+listo para pegar en el editor de Supabase es una invitación a ejecutarlo, y la
+decisión de tocar el esquema vivo no se toma leyendo un documento técnico.
 
 ## Seguridad de rutas
 

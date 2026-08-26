@@ -11,6 +11,9 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import { EXTENSIONES, RAICES_FUENTE, barrer } from "../scripts/barrido-dicebear.mjs";
+import {
+  barrerArchivo, operacionesProhibidas, sqlEjecutable,
+} from "../scripts/barrido-sql-avatar.mjs";
 
 test("cero rastros de DiceBear en código ejecutable y archivos públicos", () => {
   const hallazgos = barrer(RAICES_FUENTE);
@@ -101,33 +104,111 @@ test("CANARIO del CLI: sin hallazgos sale con 0 y lo dice", () => {
 // El estado del repo
 // ============================================================================
 
-test("supabase/schema.sql no impone ningún estilo por default", () => {
-  // El archivo es rerunnable: un `set default` acá reimpone DiceBear en cada
-  // corrida, y el `update` que lo escribía sobrescribía perfiles existentes.
-  const sql = leerRaiz("supabase/schema.sql");
-  assert.doesNotMatch(sql, /^\s*alter table profiles alter column avatar_style set default/m);
-  assert.doesNotMatch(sql, /^\s*update profiles set avatar_style/m);
-});
+// ============================================================================
+// El SQL ejecutable que toca `profiles.avatar_style`
+// ============================================================================
 
-test("supabase/schema.sql TAMPOCO trae un `drop default` activo", () => {
-  // Quitar el default que Producción ya tiene es una migración destructiva sobre
-  // el esquema vivo, y no está autorizada. Que el propio archivo la declarara
-  // "no autorizada" mientras la dejaba ejecutable era la peor combinación: quien
-  // corriera el schema la aplicaba igual.
-  //
-  // Se mira línea por línea salteando comentarios: el archivo SÍ menciona el
-  // `drop default` en prosa, para explicar por qué no está.
-  const lineas = leerRaiz("supabase/schema.sql").split("\n").map((l) => l.replace("\r", ""));
-  const activas = lineas.filter((l) => !l.trim().startsWith("--") && /drop default/i.test(l));
-  assert.deepEqual(activas, [], "hay un `drop default` ejecutable en el schema");
+// Los chequeos anteriores buscaban cadenas exactas de UNA línea, así que
+// cualquier reformateo se les escapaba. `barrido-sql-avatar.mjs` aplana el SQL
+// —saca comentarios, colapsa espacios y saltos— antes de buscar, de manera que
+// multilínea y una línea sean lo mismo, y contempla `profiles` y
+// `public.profiles`.
+
+test("supabase/schema.sql no trae NINGUNA operación prohibida sobre avatar_style", () => {
+  const hallazgos = barrerArchivo(path.join(process.cwd(), "supabase", "schema.sql"));
+  const detalle = hallazgos.map((h) => `${h.nombre} — ${h.porque}`).join("; ");
+  assert.deepEqual(hallazgos, [], `el schema trae operaciones prohibidas: ${detalle}`);
 });
 
 test("el schema crea `avatar_style` sin default en una base nueva", () => {
   // `add column if not exists` sin cláusula `default`: columna nueva sin default,
   // y sobre Producción no hace nada porque la columna ya existe.
   assert.match(
-    leerRaiz("supabase/schema.sql"),
+    sqlEjecutable(leerRaiz("supabase/schema.sql")),
     /alter table profiles add column if not exists avatar_style text;/,
+  );
+});
+
+// --- Canarios: que el barrido detecte las variantes -------------------------
+
+test("CANARIO SQL: detecta un DROP DEFAULT escrito en TRES líneas", () => {
+  // La variante concreta que se escapaba antes.
+  const sql = [
+    "alter table public.profiles",
+    "  alter column avatar_style",
+    "  drop default;",
+  ].join("\n");
+  const h = operacionesProhibidas(sql);
+  assert.equal(h.length, 1, `no lo detectó: ${JSON.stringify(h)}`);
+  assert.match(h[0].nombre, /DROP DEFAULT/);
+});
+
+test("CANARIO SQL: detecta DROP DEFAULT sin calificar por esquema", () => {
+  const h = operacionesProhibidas("alter table profiles alter column avatar_style drop default;");
+  assert.equal(h.length, 1);
+});
+
+test("CANARIO SQL: detecta SET DEFAULT multilínea y calificado", () => {
+  const sql = [
+    "alter table public.profiles",
+    "    alter column avatar_style",
+    "    set default 'adventurer-neutral';",
+  ].join("\n");
+  const h = operacionesProhibidas(sql);
+  assert.equal(h.length, 1, `no lo detectó: ${JSON.stringify(h)}`);
+  assert.match(h[0].nombre, /SET DEFAULT/);
+});
+
+test("CANARIO SQL: detecta un UPDATE sobre avatar_style, calificado y multilínea", () => {
+  const sql = [
+    "update public.profiles",
+    "   set avatar_style = 'adventurer-neutral'",
+    " where avatar_style is null;",
+  ].join("\n");
+  const h = operacionesProhibidas(sql);
+  assert.equal(h.length, 1, `no lo detectó: ${JSON.stringify(h)}`);
+  assert.match(h[0].nombre, /escritura directa/);
+});
+
+test("CANARIO SQL: detecta un UPDATE que toca avatar_style junto con otra columna", () => {
+  const h = operacionesProhibidas("update profiles set display_name = 'x', avatar_style = 'y';");
+  assert.equal(h.length, 1);
+});
+
+test("CANARIO SQL: detecta una columna creada CON default", () => {
+  const sql = [
+    "alter table profiles",
+    "  add column if not exists avatar_style text default 'adventurer-neutral';",
+  ].join("\n");
+  const h = operacionesProhibidas(sql);
+  assert.ok(h.some((x) => /CON default/.test(x.nombre)), `no lo detectó: ${JSON.stringify(h)}`);
+});
+
+test("CANARIO SQL: un COMENTARIO que menciona la operación NO cuenta", () => {
+  // El schema explica en prosa por qué el `drop default` no está. Si el barrido
+  // contara eso, el archivo no podría documentarse a sí mismo.
+  const sql = [
+    "-- alter table profiles alter column avatar_style drop default;",
+    "/* alter table public.profiles",
+    "     alter column avatar_style set default 'x'; */",
+    "alter table profiles add column if not exists avatar_style text;",
+  ].join("\n");
+  assert.deepEqual(operacionesProhibidas(sql), []);
+});
+
+test("CANARIO SQL: el SQL legítimo del schema no da falsos positivos", () => {
+  const sql = [
+    "alter table profiles add column if not exists avatar_seed text;",
+    "alter table profiles add column if not exists avatar_style text;",
+    "update profiles set avatar_seed = id::text where avatar_seed is null;",
+  ].join("\n");
+  assert.deepEqual(operacionesProhibidas(sql), []);
+});
+
+test("sqlEjecutable aplana saltos y espacios, y baja a minúsculas", () => {
+  assert.equal(
+    sqlEjecutable(["ALTER TABLE", "   profiles", "  ADD   COLUMN x;  -- nota"].join("\n")),
+    "alter table profiles add column x;",
   );
 });
 

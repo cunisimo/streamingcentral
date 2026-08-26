@@ -409,8 +409,17 @@ El costo de declararlo es una etiqueta "Contiene anuncios" en la ficha.
   de *service provider* (Supabase) como todo lo demás del perfil.
 - **Los archivos WebP salen del propio origen de Yump**, no de una CDN de
   terceros.
-- **Autoría**: Juan Facundo Galíndez. La atribución de Pajaritos va en
-  `/acerca-de` con enlace textual a @pajaritos.web.
+- **Autoría, en tres grupos separados** — no es una sola atribución:
+
+  | Grupo | Cuántos | Qué es | ¿Lleva el enlace a @pajaritos.web? |
+  |---|---|---|---|
+  | **Pajaritos** | **9** | personajes de la tira, creados por **Juan Facundo Galíndez** y adaptados en 3D para Yump | **sí** |
+  | **Don Tito** | **1** | **mascota y personaje original de Yump**, creado para la app. **No es de Pajaritos** | **no** |
+  | Otras ilustraciones | **21** | criaturas y objetos, también propios de la app | no |
+
+  En `/acerca-de` los tres van en párrafos distintos, y el enlace textual a
+  @pajaritos.web queda **dentro del párrafo de Pajaritos** — poner a Don Tito
+  cerca de ese enlace lo haría leer como si fuera de la tira.
 
 Detalle completo en `docs/AVATARES.md`.
 
