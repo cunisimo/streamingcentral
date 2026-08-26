@@ -12,7 +12,7 @@ import { spawnSync } from "node:child_process";
 import os from "node:os";
 import { EXTENSIONES, RAICES_FUENTE, barrer } from "../scripts/barrido-dicebear.mjs";
 import {
-  barrerArchivo, operacionesProhibidas, sqlEjecutable,
+  SENTENCIAS_AUTORIZADAS, barrerSchema, normalizar, sentencias, sentenciasProhibidas,
 } from "../scripts/barrido-sql-avatar.mjs";
 
 test("cero rastros de DiceBear en código ejecutable y archivos públicos", () => {
@@ -101,116 +101,146 @@ test("CANARIO del CLI: sin hallazgos sale con 0 y lo dice", () => {
 });
 
 // ============================================================================
-// El estado del repo
+// El SQL ejecutable de `supabase/schema.sql` que toca `avatar_style`
 // ============================================================================
 
-// ============================================================================
-// El SQL ejecutable que toca `profiles.avatar_style`
-// ============================================================================
+// ⚠️ ALCANCE: estos tests miran UN archivo, `supabase/schema.sql`. NO recorren
+// `supabase/migrations/` ni ningún otro `.sql` del repositorio.
+//
+// POR QUÉ ALLOWLIST. La versión anterior enumeraba las operaciones peligrosas
+// con expresiones regulares, y aceptaba sintaxis válida de PostgreSQL que viola
+// la misma regla: `COLUMN` es opcional en `alter column`, `update` admite `only`
+// y alias, y el default se puede declarar dentro del `create table`. Perseguir
+// cada forma con otra regex es una carrera perdida.
+//
+// Ahora se enumera lo PERMITIDO: hay exactamente una sentencia autorizada que
+// mencione `avatar_style`, y cualquier otra es un hallazgo por no estar en la
+// lista — incluido un DDL que todavía no existe.
 
-// Los chequeos anteriores buscaban cadenas exactas de UNA línea, así que
-// cualquier reformateo se les escapaba. `barrido-sql-avatar.mjs` aplana el SQL
-// —saca comentarios, colapsa espacios y saltos— antes de buscar, de manera que
-// multilínea y una línea sean lo mismo, y contempla `profiles` y
-// `public.profiles`.
-
-test("supabase/schema.sql no trae NINGUNA operación prohibida sobre avatar_style", () => {
-  const hallazgos = barrerArchivo(path.join(process.cwd(), "supabase", "schema.sql"));
-  const detalle = hallazgos.map((h) => `${h.nombre} — ${h.porque}`).join("; ");
-  assert.deepEqual(hallazgos, [], `el schema trae operaciones prohibidas: ${detalle}`);
+test("supabase/schema.sql: ninguna sentencia no autorizada toca avatar_style", () => {
+  const hallazgos = barrerSchema();
+  assert.deepEqual(hallazgos, [], `sentencias sin autorizar:\n${hallazgos.join("\n")}`);
 });
 
-test("el schema crea `avatar_style` sin default en una base nueva", () => {
-  // `add column if not exists` sin cláusula `default`: columna nueva sin default,
-  // y sobre Producción no hace nada porque la columna ya existe.
-  assert.match(
-    sqlEjecutable(leerRaiz("supabase/schema.sql")),
-    /alter table profiles add column if not exists avatar_style text;/,
+test("la única sentencia autorizada es la que crea la columna sin default", () => {
+  // Si esto cambia, cambió una decisión de producto y tiene que verse en el diff.
+  assert.deepEqual(
+    [...SENTENCIAS_AUTORIZADAS],
+    ["alter table profiles add column if not exists avatar_style text;"],
   );
 });
 
-// --- Canarios: que el barrido detecte las variantes -------------------------
-
-test("CANARIO SQL: detecta un DROP DEFAULT escrito en TRES líneas", () => {
-  // La variante concreta que se escapaba antes.
-  const sql = [
-    "alter table public.profiles",
-    "  alter column avatar_style",
-    "  drop default;",
-  ].join("\n");
-  const h = operacionesProhibidas(sql);
-  assert.equal(h.length, 1, `no lo detectó: ${JSON.stringify(h)}`);
-  assert.match(h[0].nombre, /DROP DEFAULT/);
+test("el schema menciona avatar_style en UNA sola sentencia ejecutable", () => {
+  const conLaColumna = sentencias(leerRaiz("supabase/schema.sql"))
+    .filter((s) => s.includes("avatar_style"));
+  assert.deepEqual(conLaColumna, [...SENTENCIAS_AUTORIZADAS]);
 });
 
-test("CANARIO SQL: detecta DROP DEFAULT sin calificar por esquema", () => {
-  const h = operacionesProhibidas("alter table profiles alter column avatar_style drop default;");
-  assert.equal(h.length, 1);
+// --- Canarios: los cuatro falsos negativos que tenía la versión anterior -----
+
+const FALSOS_NEGATIVOS = [
+  // El default declarado dentro del CREATE TABLE.
+  "create table profiles (avatar_style text default null);",
+  // `COLUMN` es opcional en `ALTER [COLUMN]`.
+  "alter table profiles alter avatar_style drop default;",
+  // UPDATE con alias de tabla.
+  "update profiles p set avatar_style = null;",
+  // UPDATE con ONLY.
+  "update only profiles set avatar_style = null;",
+];
+
+for (const sql of FALSOS_NEGATIVOS) {
+  test(`CANARIO SQL: se detecta -> ${sql}`, () => {
+    const h = sentenciasProhibidas(sql);
+    assert.equal(h.length, 1, `no lo detectó: ${JSON.stringify(h)}`);
+  });
+}
+
+test("CANARIO SQL: la sentencia AUTORIZADA sigue pasando", () => {
+  assert.deepEqual(
+    sentenciasProhibidas("alter table profiles add column if not exists avatar_style text;"),
+    [],
+  );
 });
 
-test("CANARIO SQL: detecta SET DEFAULT multilínea y calificado", () => {
-  const sql = [
-    "alter table public.profiles",
-    "    alter column avatar_style",
-    "    set default 'adventurer-neutral';",
-  ].join("\n");
-  const h = operacionesProhibidas(sql);
-  assert.equal(h.length, 1, `no lo detectó: ${JSON.stringify(h)}`);
-  assert.match(h[0].nombre, /SET DEFAULT/);
+test("CANARIO SQL: la autorizada pasa aunque venga con otro formato", () => {
+  // Mayúsculas, saltos y espacios de más: la normalización los borra, así que un
+  // reformateo inocente no rompe el build.
+  const sql = ["ALTER TABLE   profiles", "  ADD COLUMN IF NOT EXISTS", "  avatar_style    text;"].join("\n");
+  assert.deepEqual(sentenciasProhibidas(sql), []);
 });
 
-test("CANARIO SQL: detecta un UPDATE sobre avatar_style, calificado y multilínea", () => {
-  const sql = [
-    "update public.profiles",
-    "   set avatar_style = 'adventurer-neutral'",
-    " where avatar_style is null;",
-  ].join("\n");
-  const h = operacionesProhibidas(sql);
-  assert.equal(h.length, 1, `no lo detectó: ${JSON.stringify(h)}`);
-  assert.match(h[0].nombre, /escritura directa/);
+// --- Canarios: las variantes que ya se detectaban, para que no se pierdan ----
+
+test("CANARIO SQL: DROP DEFAULT en tres líneas y calificado por esquema", () => {
+  const sql = ["alter table public.profiles", "  alter column avatar_style", "  drop default;"].join("\n");
+  assert.equal(sentenciasProhibidas(sql).length, 1);
 });
 
-test("CANARIO SQL: detecta un UPDATE que toca avatar_style junto con otra columna", () => {
-  const h = operacionesProhibidas("update profiles set display_name = 'x', avatar_style = 'y';");
-  assert.equal(h.length, 1);
+test("CANARIO SQL: SET DEFAULT multilínea", () => {
+  const sql = ["alter table profiles", "  alter column avatar_style", "  set default 'adventurer-neutral';"].join("\n");
+  assert.equal(sentenciasProhibidas(sql).length, 1);
 });
 
-test("CANARIO SQL: detecta una columna creada CON default", () => {
-  const sql = [
-    "alter table profiles",
-    "  add column if not exists avatar_style text default 'adventurer-neutral';",
-  ].join("\n");
-  const h = operacionesProhibidas(sql);
-  assert.ok(h.some((x) => /CON default/.test(x.nombre)), `no lo detectó: ${JSON.stringify(h)}`);
+test("CANARIO SQL: UPDATE que toca avatar_style junto con otra columna", () => {
+  assert.equal(
+    sentenciasProhibidas("update profiles set display_name = 'x', avatar_style = 'y';").length,
+    1,
+  );
 });
+
+// --- Lo que NO tiene que dar hallazgo ---------------------------------------
 
 test("CANARIO SQL: un COMENTARIO que menciona la operación NO cuenta", () => {
   // El schema explica en prosa por qué el `drop default` no está. Si el barrido
   // contara eso, el archivo no podría documentarse a sí mismo.
   const sql = [
     "-- alter table profiles alter column avatar_style drop default;",
-    "/* alter table public.profiles",
-    "     alter column avatar_style set default 'x'; */",
+    "/* update profiles set avatar_style = 'x'; */",
     "alter table profiles add column if not exists avatar_style text;",
   ].join("\n");
-  assert.deepEqual(operacionesProhibidas(sql), []);
+  assert.deepEqual(sentenciasProhibidas(sql), []);
 });
 
-test("CANARIO SQL: el SQL legítimo del schema no da falsos positivos", () => {
+test("CANARIO SQL: otras columnas de profiles no son asunto de este barrido", () => {
   const sql = [
     "alter table profiles add column if not exists avatar_seed text;",
-    "alter table profiles add column if not exists avatar_style text;",
     "update profiles set avatar_seed = id::text where avatar_seed is null;",
   ].join("\n");
-  assert.deepEqual(operacionesProhibidas(sql), []);
+  assert.deepEqual(sentenciasProhibidas(sql), []);
 });
 
-test("sqlEjecutable aplana saltos y espacios, y baja a minúsculas", () => {
+// --- El troceo, que es de lo que depende todo lo anterior -------------------
+
+test("trocear respeta los bloques $$ de las funciones", () => {
+  // Sin esto, `create function ... $$ ... ; ... $$` se partiría en pedazos y el
+  // barrido leería fragmentos que no son sentencias.
+  const sql = [
+    "create function f() returns trigger as $$",
+    "begin",
+    "  insert into profiles (id) values (new.id);",
+    "  return new;",
+    "end;",
+    "$$ language plpgsql;",
+    "alter table profiles add column if not exists avatar_style text;",
+  ].join("\n");
+  const trozos = sentencias(sql);
+  assert.equal(trozos.length, 2, `troceó mal: ${JSON.stringify(trozos)}`);
+  assert.equal(trozos[1], "alter table profiles add column if not exists avatar_style text;");
+});
+
+test("trocear no parte una sentencia por un `;` dentro de una cadena", () => {
+  const trozos = sentencias("update t set c = 'a;b'; select 1;");
+  assert.deepEqual(trozos, ["update t set c = 'a;b';", "select 1;"]);
+});
+
+test("normalizar aplana saltos y espacios, y baja a minúsculas", () => {
   assert.equal(
-    sqlEjecutable(["ALTER TABLE", "   profiles", "  ADD   COLUMN x;  -- nota"].join("\n")),
+    normalizar(["ALTER TABLE", "   profiles", "  ADD   COLUMN x"].join("\n")),
     "alter table profiles add column x;",
   );
 });
+
 
 test("lib/avatar.ts, el helper que armaba la URL remota, ya no existe", () => {
   assert.equal(

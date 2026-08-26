@@ -72,6 +72,7 @@ conexión a un tercero en cada carga.
 | `lib/avatares.test.ts` | descubre los archivos del disco y los compara contra el catálogo |
 | `components/avatar/` | `Avatar`, `AvatarCard`, `AvatarGrid`, `AvatarModal`, `AvatarPicker` |
 | `scripts/barrido-dicebear.mjs` | barrido de fuente, públicos, SW y bundles |
+| `scripts/barrido-sql-avatar.mjs` | **allowlist** del SQL de `supabase/schema.sql` que puede tocar `avatar_style` |
 
 ### El catálogo
 
@@ -110,6 +111,29 @@ funcionen**: cualquier estilo distinto de `yump` —incluido `'adventurer-neutra
 incluido NULL— se resuelve **localmente** por `LEGADO_V1`. El nombre del estilo
 viejo quedó en la base como una etiqueta sin consecuencias: **no dispara ninguna
 conexión a DiceBear**, ni hoy ni después.
+
+#### Cómo se sostiene esto en el tiempo
+
+`scripts/barrido-sql-avatar.mjs` mira **`supabase/schema.sql` y sólo ese
+archivo** — no recorre `supabase/migrations/` ni ningún otro `.sql`. Corta el SQL
+en sentencias respetando comentarios, cadenas y bloques `$$`, y exige que **la
+única sentencia ejecutable que mencione `avatar_style` sea**:
+
+```sql
+alter table profiles add column if not exists avatar_style text;
+```
+
+**Es una allowlist, no una lista de prohibiciones**, y esa vuelta importa. La
+versión anterior enumeraba las operaciones peligrosas con expresiones regulares
+y **aceptaba sintaxis válida de PostgreSQL que viola la misma regla**: `COLUMN`
+es opcional en `alter column`, `update` admite `only` y alias, y el default se
+puede declarar dentro del `create table`. Perseguir cada forma con otra regex es
+una carrera que se pierde — el que escribe SQL siempre tiene más variantes
+disponibles que las que el barrido enumeró.
+
+Enumerando lo permitido, cualquier otra sentencia es un hallazgo **por no estar
+en la lista**, incluido un DDL que todavía no existe. Y sumar algo a esa lista
+es una decisión que queda en el diff.
 
 | Estado del perfil | Qué se muestra |
 |---|---|
