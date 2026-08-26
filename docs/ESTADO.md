@@ -393,8 +393,9 @@ descartable el 22/08: antes 1 perfil, 3 votos, 3 `user_items` (los tres kinds),
 | Reseñas de usuario | `user_reviews` | CASCADE |
 | Historial de fichas | `view_history` | CASCADE |
 
-**Storage no participa**: el proyecto tiene 0 buckets y 0 objetos — los avatares
-son DiceBear generados desde `avatar_seed`. Si algún día se suben archivos, el
+**Storage no participa**: el proyecto tiene 0 buckets y 0 objetos. Los avatares
+son **archivos propios de Yump** en `/avatars/`, iguales para todos; el perfil
+sólo guarda cuál eligió cada uno. Si algún día se suben archivos por usuario, el
 lugar donde agregar su borrado es `lib/eliminar-cuenta.ts`.
 
 **En el dispositivo** se borra el estado personal (`yump:ruleta-mostrados`,

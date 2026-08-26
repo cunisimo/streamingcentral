@@ -17,9 +17,11 @@
 //              → profiles, votes, user_items (list/watched/dismissed),
 //                user_reviews, view_history
 //
-// Storage no participa: el proyecto tiene 0 buckets y 0 objetos, porque los
-// avatares son DiceBear generados desde `avatar_seed`. Si algún día se suben
-// archivos, ESTE es el lugar donde hay que agregar su borrado.
+// Storage no participa: el proyecto tiene 0 buckets y 0 objetos. Los avatares
+// son archivos propios de Yump servidos desde `/avatars/`, iguales para todo el
+// mundo; el perfil sólo guarda CUÁL eligió cada persona, y esa fila se va con el
+// CASCADE. Si algún día se suben archivos por usuario, ESTE es el lugar donde
+// hay que agregar su borrado.
 //
 // NO HAY ESTADOS PARCIALES, y no por cuidado nuestro sino por el diseño de la
 // base: al ser todo CASCADE, el borrado es atómico. O se borró la fila de

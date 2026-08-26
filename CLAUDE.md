@@ -659,7 +659,7 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
   por rango de rating, y dos shelves en Home: "Lo más votados" (2-3) y
   "No gustaron" (1, antes rotulado "Hacete cargo"). Requiere re-correr `supabase/schema.sql` para que
   `top_voted` tome la firma de 4 args.
-- ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (avatares DiceBear), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). Requiere re-correr `supabase/schema.sql`.
+- ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (**31 avatares propios de Yump** en `/avatars/`, ver `lib/avatares.ts` — no hay ninguna dependencia ni conexión externa), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). Requiere re-correr `supabase/schema.sql`.
 
 ## PWA (instalable — construido)
 
