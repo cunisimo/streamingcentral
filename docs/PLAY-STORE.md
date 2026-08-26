@@ -23,6 +23,13 @@ Todo lo de acá cae en una de cuatro cajas, y **no se mezclan**:
 
 ## 0. Hallazgos confirmados
 
+> **Actualización del 2026-08-25 — el hallazgo 2 (atribución CC BY 4.0 de
+> DiceBear) y la decisión 17 (§2.f) están RESUELTOS.** DiceBear salió del
+> proyecto: los avatares son ahora 31 archivos propios en `/avatars/`, sin
+> dependencia ni conexión externa. Eso elimina la fila de "sharing" de §2.f,
+> saca `api.dicebear.com` de la matriz de terceros de §2.g y deja sin objeto la
+> atribución. Ver `docs/AVATARES.md`. El resto de esta auditoría sigue vigente.
+
 1. ✅ **Falta la atribución visible de TMDB.** Cero menciones en la interfaz. La
    app ya está publicada, así que es un incumplimiento vigente.
 2. ✅ **Falta la atribución CC BY 4.0 de DiceBear** (`adventurer-neutral`, de
