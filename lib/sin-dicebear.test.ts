@@ -123,7 +123,9 @@ test("supabase/schema.sql pasa el guard", () => {
 });
 
 test("el schema tiene EXACTAMENTE una aparición del identificador", () => {
-  const sql = leerRaiz("supabase/schema.sql");
+  // SIN distinguir mayúsculas: PostgreSQL pliega los identificadores no citados,
+  // así que `AVATAR_STYLE` es la misma columna y tiene que contarse igual.
+  const sql = leerRaiz("supabase/schema.sql").toLowerCase();
   const n = sql.split(COLUMNA).length - 1;
   assert.equal(n, 1, `aparece ${n} veces; los comentarios deben decir "la columna de estilo"`);
 });
@@ -173,7 +175,7 @@ test("CANARIO: el E-string con `--` adentro FALLA", () => {
   const sql = [
     "alter table profiles add column if not exists avatar_style text;",
     "update profiles",
-    "set display_name = E'x\'-- texto', avatar_style = null;",
+    "set display_name = E'x\\'-- texto', avatar_style = null;",
   ].join("\n");
   assert.ok(revisar(sql).length > 0, "no detectó el UPDATE con el E-string");
 });
@@ -205,6 +207,58 @@ test("CANARIO: cambiar la sentencia para que traiga un default FALLA", () => {
   const p = revisar("alter table profiles add column if not exists avatar_style text default 'x';");
   assert.ok(p.length > 0);
   assert.ok(p[0].includes("no es la sentencia autorizada"));
+});
+
+// --- Mayúsculas: PostgreSQL pliega los identificadores no citados ------------
+
+test("CANARIO: la sentencia autorizada TODA EN MAYÚSCULAS pasa", () => {
+  // `normalizar` baja a minúsculas, así que es la misma sentencia. Antes fallaba
+  // por partida doble: no la contaba, y encima reportaba "no aparece".
+  assert.deepEqual(
+    revisar("ALTER TABLE PROFILES ADD COLUMN IF NOT EXISTS AVATAR_STYLE TEXT;"),
+    [],
+  );
+});
+
+test("CANARIO: una segunda aparición como AVATAR_STYLE FALLA", () => {
+  // El falso negativo que bloqueaba el push: `update profiles set AVATAR_STYLE`
+  // toca exactamente la misma columna y pasaba entero.
+  const sql = [
+    "alter table profiles add column if not exists avatar_style text;",
+    "update profiles set AVATAR_STYLE = null;",
+  ].join("\n");
+  const p = revisar(sql);
+  assert.ok(p.length > 0, "no detectó la segunda aparición en mayúsculas");
+  assert.ok(p.some((x: string) => x.includes("AVATAR_STYLE")), "el diagnóstico no muestra la línea original");
+});
+
+test("CANARIO: una segunda aparición como Avatar_Style FALLA", () => {
+  const sql = [
+    "alter table profiles add column if not exists avatar_style text;",
+    "update profiles set Avatar_Style = null;",
+  ].join("\n");
+  assert.ok(revisar(sql).length > 0, "no detectó la variante en capitalización mixta");
+});
+
+test("CANARIO: una aparición EN MAYÚSCULAS dentro de un comentario también falla", () => {
+  // Mismo criterio conservador que con minúsculas: contar texto no distingue un
+  // comentario de una sentencia, y esa es la propiedad que lo hace confiable.
+  const sql = [
+    "-- ojo con AVATAR_STYLE",
+    "alter table profiles add column if not exists avatar_style text;",
+  ].join("\n");
+  assert.ok(revisar(sql).length > 0, "un comentario en mayúsculas debería fallar");
+});
+
+test("CANARIO: el diagnóstico muestra la línea TAL CUAL está en el archivo", () => {
+  // Se cuenta en minúsculas pero se reporta el original: un mensaje que dijera
+  // la línea en minúsculas no se parecería a lo que hay que ir a buscar.
+  const sql = [
+    "alter table profiles add column if not exists avatar_style text;",
+    "UPDATE Profiles SET Avatar_Style = NULL;",
+  ].join("\n");
+  const p = revisar(sql);
+  assert.ok(p.some((x: string) => x.includes("UPDATE Profiles SET Avatar_Style = NULL;")));
 });
 
 test("CANARIO: otras columnas de profiles no son asunto de este guard", () => {

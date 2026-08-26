@@ -35,7 +35,16 @@ import path from "node:path";
 /** El único archivo que este guard mira. */
 export const ARCHIVO = path.join("supabase", "schema.sql");
 
-/** El identificador que se cuenta. */
+/**
+ * El identificador que se cuenta, siempre escrito en minúsculas.
+ *
+ * **La comparación NO distingue mayúsculas**, y no es una comodidad de estilo:
+ * PostgreSQL pliega los identificadores no citados a minúsculas, así que
+ * `AVATAR_STYLE`, `Avatar_Style` y `avatar_style` son **la misma columna**.
+ * Contar sólo la forma en minúsculas dejaba pasar entero un
+ * `update profiles set AVATAR_STYLE = null;` y, de paso, hacía fallar la
+ * sentencia autorizada si alguien la escribía en mayúsculas.
+ */
 export const COLUMNA = "avatar_style";
 
 /**
@@ -56,30 +65,36 @@ export const normalizar = (linea) => linea.replace(/\s+/g, " ").trim().toLowerCa
  *
  * Tres reglas, en orden:
  *
- *  1. Tiene que haber **exactamente una** aparición del identificador.
+ *  1. Tiene que haber **exactamente una** aparición del identificador,
+ *     **sin distinguir mayúsculas** (ver `COLUMNA`).
  *  2. La línea que la contiene, normalizada, tiene que ser la autorizada.
  *  3. Cero apariciones también falla: significa que alguien borró o comentó la
  *     sentencia que crea la columna.
  */
 export function revisar(sql) {
-  const lineas = sql.split(/\r?\n/);
-  const conLaColumna = lineas
-    .map((linea, i) => ({ linea, n: i + 1 }))
-    .filter(({ linea }) => linea.includes(COLUMNA));
+  // Se SELECCIONA y se CUENTA sobre una copia plegada a minúsculas; la línea
+  // original se conserva sólo para el diagnóstico, que en minúsculas no se
+  // parecería a lo que hay escrito en el archivo.
+  const lineas = sql.split(/\r?\n/).map((original, i) => ({
+    original,
+    plegada: original.toLowerCase(),
+    n: i + 1,
+  }));
+  const conLaColumna = lineas.filter(({ plegada }) => plegada.includes(COLUMNA));
 
   // Una línea podría traerlo dos veces.
-  const apariciones = lineas.reduce((a, l) => a + l.split(COLUMNA).length - 1, 0);
+  const apariciones = lineas.reduce((a, l) => a + l.plegada.split(COLUMNA).length - 1, 0);
 
   if (apariciones === 0) {
     return [`no aparece \`${COLUMNA}\` en ninguna línea: ¿se borró o se comentó la sentencia que crea la columna?`];
   }
   if (apariciones > 1) {
-    return conLaColumna.map(({ linea, n }) =>
-      `línea ${n}: aparición no autorizada de \`${COLUMNA}\` — ${linea.trim()}`);
+    return conLaColumna.map(({ original, n }) =>
+      `línea ${n}: aparición no autorizada de \`${COLUMNA}\` — ${original.trim()}`);
   }
 
-  const { linea, n } = conLaColumna[0];
-  const norm = normalizar(linea);
+  const { original, n } = conLaColumna[0];
+  const norm = normalizar(original);
   if (norm !== LINEA_AUTORIZADA) {
     return [`línea ${n}: la única aparición no es la sentencia autorizada.\n  esperado: ${LINEA_AUTORIZADA}\n  hallado : ${norm}`];
   }

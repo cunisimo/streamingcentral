@@ -120,6 +120,7 @@ precisión qué es y qué no:
 | | |
 |---|---|
 | **Es** | un guard contra una **regresión accidental**. Cuenta apariciones del identificador `avatar_style` en `supabase/schema.sql` y exige que haya **exactamente una**, en una línea que, normalizada, sea la sentencia autorizada |
+| **No distingue mayúsculas** | el conteo se hace sobre una copia plegada a minúsculas. PostgreSQL pliega los identificadores no citados, así que `AVATAR_STYLE`, `Avatar_Style` y `avatar_style` son **la misma columna** y cuentan igual. El diagnóstico sí muestra la línea tal cual está en el archivo |
 | **No es** | un parser de SQL, ni una barrera contra SQL deliberadamente ofuscado. No interpreta comentarios, cadenas, identificadores entre comillas ni bloques `$tag$` — **no lo intenta** |
 | **Alcance** | **un solo archivo**: `supabase/schema.sql`. No recorre `supabase/migrations/` ni ningún otro `.sql` del repositorio |
 
@@ -131,7 +132,7 @@ alter table profiles add column if not exists avatar_style text;
 **Por qué se abandonaron los parsers.** Hubo dos intentos de entender el SQL y
 los dos tuvieron falsos negativos demostrados. El segundo troceaba respetando
 comentarios y cadenas, y aun así dejaba pasar un `--` metido en una cadena con
-escape (`E'x'-- texto'`) y otro en un identificador entre comillas (`as "--"`):
+escape (`E'x\'-- texto'`) y otro en un identificador entre comillas (`as "--"`):
 los tomaba por comentario y descartaba la sentencia entera. La respuesta correcta
 no era otro estado en el parser — **para proteger UNA línea no hace falta el
 lexer de PostgreSQL**. Contar texto no tiene esos agujeros porque no interpreta
@@ -142,8 +143,16 @@ del schema hace fallar el guard aunque sea inofensiva. Es deliberado, falla del
 lado conservador, y por eso **los comentarios de `supabase/schema.sql` dicen "la
 columna de estilo" y nunca el nombre literal**.
 
-Doce canarios lo fijan, incluidos los dos casos que rompían el parser anterior,
-comentar la línea autorizada, borrarla, y agregarle un `default`.
+Diecisiete canarios lo fijan: los dos casos que rompían el parser anterior,
+comentar la línea autorizada, borrarla, agregarle un `default`, y las cuatro
+variantes de mayúsculas — la sentencia autorizada toda en mayúsculas pasa, y
+`AVATAR_STYLE` o `Avatar_Style` en una segunda sentencia, o en un comentario,
+fallan.
+
+**El caso de las mayúsculas fue un falso negativo real**, encontrado después de
+dar el guard por bueno: `update profiles set AVATAR_STYLE = null;` toca la misma
+columna y pasaba entero, porque el conteo era sensible a mayúsculas. De paso, la
+sentencia autorizada escrita en mayúsculas también fallaba.
 
 | Estado del perfil | Qué se muestra |
 |---|---|
