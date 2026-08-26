@@ -13,9 +13,18 @@ involucrado.**
 - **© Juan Facundo Galíndez. Todos los derechos reservados.**
 
 **Ya no corresponde atribución a DiceBear ni a ningún tercero**, porque ya no se
-usa ninguno. Tampoco hay transferencia de datos: antes, cada render de un avatar
-mandaba a `api.dicebear.com` la semilla del perfil —un identificador seudónimo
-vinculado a la cuenta— junto con la IP del dispositivo. Eso desapareció.
+usa ninguno.
+
+**Qué cambió exactamente con los datos, dicho con precisión:** antes, cada render
+de un avatar mandaba a `api.dicebear.com` la semilla del perfil —un identificador
+seudónimo vinculado a la cuenta— junto con la IP del dispositivo. **Eso
+desapareció.** Los WebP se sirven desde el propio origen de Yump.
+
+Lo que **no** cambió, y conviene no confundir: `avatar_seed` **se sigue guardando
+en Supabase**, así que es un dato **recopilado fuera del dispositivo**. Supabase
+actúa como **proveedor de servicio**. En Data Safety figura como **recopilado, no
+compartido**. Lo que se eliminó es el envío a un tercero para generar la imagen,
+no el almacenamiento del dato.
 
 ### Texto preparado para `/acerca-de`
 
@@ -55,7 +64,25 @@ desaparecer en silencio.
 ## Compatibilidad con los perfiles que ya existen
 
 Las columnas de `profiles` **no cambiaron**: siguen siendo `avatar_style` y
-`avatar_seed`. No hubo migración ni escritura masiva.
+`avatar_seed`. **No hubo migración, no se ejecutó SQL y no se tocó Producción.**
+
+### ⚠️ Producción y `supabase/schema.sql` NO dicen lo mismo, y es a propósito
+
+| | **Producción, HOY** | **`supabase/schema.sql`, estado deseado** |
+|---|---|---|
+| Default de `avatar_style` | **`'adventurer-neutral'`** — sigue ahí | sin default (`drop default`) |
+| Perfiles existentes | conservan `avatar_style = 'adventurer-neutral'` | — |
+| Cuentas nuevas | nacen con `avatar_style = 'adventurer-neutral'` y una semilla aleatoria | nacerían con `avatar_style` en NULL |
+
+**El archivo describe a dónde queremos llegar; la base todavía no llegó.** El
+`drop default` **no está autorizado y no se aplicó**.
+
+**Y no hace falta que se aplique para que todo funcione.** Cualquier estilo
+distinto de `yump` —incluido `'adventurer-neutral'`, incluido NULL— se resuelve
+**localmente** por `LEGADO_V1`. El nombre del estilo viejo quedó en la base como
+una etiqueta sin consecuencias: **no dispara ninguna conexión a DiceBear**, ni
+hoy ni después. Lo único que cambiaría al aplicar el `drop default` es que las
+cuentas nuevas dejarían de nacer con el nombre de un servicio que ya no se usa.
 
 | Estado del perfil | Qué se muestra |
 |---|---|
@@ -63,9 +90,11 @@ Las columnas de `profiles` **no cambiaron**: siguen siendo `avatar_style` y
 | Cualquier otra cosa **con** semilla (DiceBear, estilo desconocido, id inválido) | mapeo **determinístico** sobre `LEGADO_V1` |
 | Sin semilla utilizable (null, vacío, basura) | `AVATAR_POR_DEFECTO` |
 
-El mapeo legado es `hashCadena(semilla) % LEGADO_V1.length`. Es **puro**, así que
-la misma persona ve el mismo dibujo en todos sus dispositivos **sin que se
-escriba nada en la base**.
+El mapeo legado es `hashCadena(semilla) % LEGADO_V1.length`. Es **puro** y corre
+**en el dispositivo**, así que la misma persona ve el mismo dibujo en todos sus
+dispositivos **sin que se escriba nada en la base**. La semilla que entra a ese
+hash ya estaba guardada en Supabase; lo que no ocurre es que salga hacia un
+tercero.
 
 ### `LEGADO_V1` está congelada, y es la decisión importante
 
@@ -90,16 +119,23 @@ Después de elegir, la elección persiste como cualquier otra.
 
 ### Alta de una cuenta nueva
 
-El trigger `handle_new_user` de Supabase **no se tocó**: sigue escribiendo un
-`gen_random_uuid()` en `avatar_seed` y no toca `avatar_style`, que ahora queda en
-**NULL** —el default `'adventurer-neutral'` se sacó de `supabase/schema.sql`, que
-es rerunnable y lo reimponía en cada corrida—. Da igual: esa combinación cae en el
-mapeo legado y **muestra un avatar local desde el primer render**.
+El trigger `handle_new_user` **no se tocó**: escribe un `gen_random_uuid()` en
+`avatar_seed` y no menciona `avatar_style`, que toma el default de la columna.
 
-**Migración opcional, NO aplicada y sin autorización para aplicarse**: se podría
-cambiar el trigger para que escriba `avatar_style = 'yump'` y un id del catálogo.
-No hace falta para que funcione — sólo evitaría que las cuentas nuevas nazcan con
-una semilla que no significa nada. **No ejecutar sin pedirlo.**
+**En Producción ese default sigue siendo `'adventurer-neutral'`**, así que **una
+cuenta creada hoy nace con ese valor**, no con NULL. Da exactamente igual: cae en
+el mapeo legado y **muestra un avatar propio desde el primer render**. El nombre
+del estilo viejo es una etiqueta inerte.
+
+**Dos migraciones OPCIONALES, ninguna aplicada y ninguna autorizada:**
+
+1. `alter table profiles alter column avatar_style drop default;` — lo que ya
+   dice `supabase/schema.sql`. Sólo cambia de qué valor nacen las cuentas nuevas.
+2. Cambiar el trigger para que escriba `avatar_style = 'yump'` y un id del
+   catálogo.
+
+**Ninguna de las dos hace falta para que el sistema funcione.** No ejecutar sin
+pedirlo.
 
 ## Seguridad de rutas
 
@@ -157,21 +193,68 @@ alguna hay que tomar**:
 
 🟡 Preferí **versionar la URL**: el costo es proporcional al cambio.
 
-### Retirar un avatar del selector
+### Retirar un avatar del selector: HOY NO SE PUEDE, y hay que decirlo
 
-**Sacarlo de `AVATARES` no puede dejar rota a la gente que ya lo eligió.** Dos
-condiciones, y las dos importan:
+⚠️ **Corrección.** Una versión anterior de este documento explicaba cómo retirar
+un avatar "conservándolo resoluble". **Con la arquitectura actual eso no existe**,
+y conviene ser honesto sobre por qué en vez de escribir una receta que no
+funciona.
 
-1. **`LEGADO_V1` sigue conteniendo su id.** Está congelada justamente para esto,
-   y hay un test que verifica que todo id de `LEGADO_V1` existe en el catálogo —
-   así que un retiro que rompa esa relación no compila el test.
-2. **Si se saca del catálogo, `resolverAvatar` deja de encontrarlo** y esos
-   perfiles caen al mapeo legado, que les da otro dibujo. Es un cambio visual de
-   una vez, igual que el de esta tanda, y hay que decidirlo a conciencia.
+El motivo es que **`AVATARES` cumple dos papeles a la vez**:
 
-**Lo que NO hay que hacer es borrar el archivo de `public/avatars/`** mientras su
-id siga en `LEGADO_V1`: eso produce un 404 y un avatar roto. Si un avatar se
-retira, lo prudente es **sacarlo del selector pero dejar el archivo servido**.
+1. **Alimenta el selector** — `AvatarGrid` recorre el array entero.
+2. **Alimenta `POR_ID`**, que es el índice que usa `resolverAvatar`.
+
+Sacar una entrada de `AVATARES` la saca de los dos lugares al mismo tiempo. Y
+además hay un test —*"todo id de `LEGADO_V1` existe en el catálogo"*— que se pone
+rojo, con razón: dejaría ids del mapeo legado apuntando a la nada.
+
+**Qué habría que construir antes de poder retirar uno**, cuando haga falta:
+
+| Lista | Para qué | Quién la usa |
+|---|---|---|
+| **catálogo completo y estable** | resolver cualquier id que exista en la base | `resolverAvatar` / `POR_ID` |
+| **subconjunto seleccionable** | qué se ofrece hoy en el selector | `AvatarGrid` |
+
+Con esa separación, retirar uno es sacarlo del subconjunto y dejarlo en el
+catálogo: quien ya lo tenía elegido lo sigue viendo, y nadie nuevo puede elegirlo.
+
+**HASTA ENTONCES, la regla es simple y no admite excepción: ningún avatar
+existente se saca de `AVATARES`, ni de `LEGADO_V1`, ni de `public/avatars/`.**
+Agregar sí; quitar no.
+
+## Accesibilidad del selector: qué está probado y qué NO
+
+⚠️ **Los tests de `lib/foco-modal.test.ts` prueban la ARITMÉTICA del ciclo de
+foco, no el cableado al DOM.** `AvatarModal` usa `useAuth` y este proyecto **no
+tiene un arnés de DOM** (ni jsdom ni testing-library), así que el componente no
+se monta en ningún test. Lo que está cubierto automáticamente es que, dada una
+cantidad de controles y una posición, la función devuelve el índice correcto —y
+eso es real y útil— **pero no demuestra que el `querySelectorAll`, los
+`focus()` y los listeners estén bien conectados**.
+
+Presentar esos tests como prueba integral sería exagerar lo que cubren.
+
+### Verificación manual OBLIGATORIA en Preview
+
+Con una cuenta real, antes de dar por buena cualquier tanda que toque el selector:
+
+| # | Qué probar | Qué tiene que pasar |
+|---|---|---|
+| 1 | Abrir "Cambiar avatar" | el foco arranca en **el avatar que ya tenías**, no en el contenedor ni en el primero |
+| 2 | Tab repetido hasta pasar Guardar | vuelve al **primer** control del diálogo, **nunca** a la página de atrás |
+| 3 | Shift+Tab desde el primer control | va al **último** del diálogo |
+| 4 | Escape | cierra |
+| 5 | Clic en el fondo oscuro | cierra |
+| 6 | Cancelar | cierra |
+| 7 | Después de cerrar de cualquiera de las tres formas | el foco vuelve al botón **"Cambiar avatar"** |
+| 8 | Tocar Guardar y, mientras dice "Guardando…", tocar otra card | **no cambia la selección** |
+| 9 | Durante "Guardando…", probar Escape, el fondo y Cancelar | **no cierra** |
+| 10 | Forzar un error de guardado (modo avión, por ejemplo) | aparece el mensaje, las 31 opciones y los dos botones **se reactivan**, y se puede reintentar |
+| 11 | Con un lector de pantalla, durante el guardado | el diálogo se anuncia **ocupado** (`aria-busy`) |
+
+**Los puntos 8, 9 y 10 son los que ningún test automático de este proyecto
+cubre de punta a punta**, porque dependen de una petición real a Supabase.
 
 ## Cómo verificar que DiceBear no volvió
 

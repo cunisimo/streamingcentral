@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  SELECTOR_ENFOCABLE, cierraElDialogo, focoInicial, siguienteFoco,
+  SELECTOR_ENFOCABLE, atributosBloqueo, cierraElDialogo, focoInicial, nuevaSeleccion,
+  puedeElegir, siguienteFoco,
 } from "./foco-modal.ts";
 
 // ============================================================================
@@ -120,4 +121,46 @@ test("MIENTRAS SE GUARDA no cierra nada", () => {
 test("el selector de enfocables excluye lo deshabilitado y lo sacado del orden", () => {
   assert.match(SELECTOR_ENFOCABLE, /button:not\(\[disabled\]\)/);
   assert.match(SELECTOR_ENFOCABLE, /tabindex.*-1/);
+});
+
+// ============================================================================
+// Bloqueo de la selección mientras se guarda
+// ============================================================================
+
+test("con la petición en vuelo NO se puede cambiar la selección", () => {
+  assert.equal(puedeElegir(true), false);
+  assert.equal(puedeElegir(false), true);
+});
+
+test("tocar otra card mientras guarda deja la selección COMO ESTABA", () => {
+  // El caso concreto: está guardando "pocho" y alguien toca "lola". La pantalla
+  // tiene que seguir mostrando "pocho", que es lo que la base va a recibir.
+  assert.equal(nuevaSeleccion("pocho", "lola", true), "pocho");
+});
+
+test("sin guardar, tocar una card sí cambia la selección", () => {
+  assert.equal(nuevaSeleccion("pocho", "lola", false), "lola");
+});
+
+test("después de un error se puede volver a elegir y reintentar", () => {
+  // `guardando` vuelve a false cuando la petición falla, así que la misma
+  // función habilita todo de nuevo. Es el camino del reintento.
+  assert.equal(puedeElegir(false), true);
+  assert.equal(nuevaSeleccion("pocho", "lola", false), "lola");
+});
+
+test("el bloqueo usa aria-disabled y NO el atributo disabled", () => {
+  // `disabled` saca al elemento del orden de tabulación: si el foco está encima
+  // —y lo está, porque acabás de tocar Guardar— se cae al body y el ciclo de
+  // foco se rompe justo cuando no se puede hacer nada más que esperar.
+  assert.deepEqual(atributosBloqueo(true), { "aria-disabled": true });
+  // Sin guardar, el atributo directamente no se emite.
+  assert.deepEqual(atributosBloqueo(false), { "aria-disabled": undefined });
+});
+
+test("un control bloqueado con aria-disabled SIGUE siendo enfocable", () => {
+  // El selector de enfocables excluye `[disabled]`, no `[aria-disabled]`. Es lo
+  // que garantiza que el foco no se pierda durante el guardado.
+  assert.match(SELECTOR_ENFOCABLE, /button:not\(\[disabled\]\)/);
+  assert.doesNotMatch(SELECTOR_ENFOCABLE, /aria-disabled/);
 });

@@ -30,11 +30,23 @@ create table if not exists profiles (
 --   sin semilla utilizable
 --       → el avatar por defecto del catálogo.
 --
--- POR QUÉ `avatar_style` NO TIENE DEFAULT. Antes tenía `'adventurer-neutral'`, y
--- además había un `update` que lo escribía en las filas que lo tuvieran en NULL.
--- Las dos cosas se sacaron: este archivo es RERUNNABLE, así que volver a
--- correrlo reimponía el nombre de un servicio que ya no se usa. `drop default`
--- es idempotente y NO toca ninguna fila existente.
+-- ⚠️ ESTE ARCHIVO DESCRIBE EL ESTADO DESEADO, NO EL QUE TIENE PRODUCCIÓN HOY.
+--
+-- En Producción, `avatar_style` TODAVÍA TIENE el default `'adventurer-neutral'`,
+-- y los perfiles existentes conservan ese valor. El `drop default` de abajo
+-- **NO se aplicó y no está autorizado a aplicarse**.
+--
+-- Y no hace falta que se aplique: cualquier estilo distinto de `yump` —incluido
+-- `'adventurer-neutral'`, incluido NULL— se resuelve LOCALMENTE por `LEGADO_V1`
+-- (lib/avatares.ts). El nombre del estilo viejo quedó como una etiqueta inerte:
+-- NO dispara ninguna conexión a DiceBear. Lo único que cambiaría el `drop
+-- default` es de qué valor nacen las cuentas nuevas.
+--
+-- Por qué está escrito igual: este archivo es RERUNNABLE, así que mientras
+-- dijera `set default 'adventurer-neutral'` volvía a imponer el nombre de un
+-- servicio que ya no se usa cada vez que alguien lo corriera. También se eliminó
+-- el `update` que escribía ese valor en las filas con NULL, que sí sobrescribía
+-- perfiles. `drop default` es idempotente y NO toca ninguna fila existente.
 alter table profiles add column if not exists avatar_seed text;
 alter table profiles add column if not exists avatar_style text;
 alter table profiles alter column avatar_style drop default;
@@ -43,7 +55,12 @@ alter table profiles alter column avatar_style drop default;
 -- `avatar_seed` en NULL, así que no pisa la elección de nadie; en una base ya
 -- inicializada es un no-op. Sin semilla, todos esos perfiles caerían en el mismo
 -- avatar por defecto; con el id como semilla, cada uno recibe uno distinto y
--- estable. El id NO sale del dispositivo: sólo entra a un hash que corre local.
+-- estable.
+--
+-- La semilla es un dato GUARDADO ACÁ, o sea recopilado fuera del dispositivo,
+-- con Supabase como proveedor de servicio. Lo que cambió es que ya no se envía a
+-- ningún tercero para generar una imagen: el hash que la convierte en un avatar
+-- corre en el dispositivo y los WebP salen del propio origen de Yump.
 update profiles set avatar_seed = id::text where avatar_seed is null;
 
 alter table profiles enable row level security;
@@ -60,16 +77,17 @@ create policy "edicion de perfil propio" on profiles
 -- El perfil se crea por trigger (security definer), no desde el cliente,
 -- así el usuario nunca elige su propio id ni su is_admin.
 --
--- El trigger NO CAMBIÓ y no hace falta ninguna migración. Sigue escribiendo una
--- semilla aleatoria y no toca `avatar_style`, que ahora queda en NULL: esa
--- combinación entra al mapeo local descrito arriba, así que una cuenta nueva
--- muestra un avatar propio DESDE EL PRIMER RENDER. La semilla es un
--- `gen_random_uuid()` y nunca sale de la base ni del dispositivo.
+-- El trigger NO CAMBIÓ y no hace falta ninguna migración. Escribe una semilla
+-- aleatoria (`gen_random_uuid()`) y no menciona `avatar_style`, que toma el
+-- default de la columna.
 --
--- Migración OPCIONAL, no aplicada y sin autorización para aplicarse: se podría
--- hacer que escriba `avatar_style = 'yump'` y un id del catálogo. No hace falta
--- para que funcione; sólo evitaría que las cuentas nuevas nazcan con una semilla
--- que no significa nada. Ver docs/AVATARES.md.
+-- EN PRODUCCIÓN ESE DEFAULT SIGUE SIENDO `'adventurer-neutral'`, así que una
+-- cuenta creada hoy nace con ese valor, NO con NULL. Da igual: entra al mapeo
+-- local descrito arriba y muestra un avatar propio DESDE EL PRIMER RENDER.
+--
+-- Migración OPCIONAL, no aplicada y sin autorización: se podría hacer que
+-- escriba `avatar_style = 'yump'` y un id del catálogo. No hace falta para que
+-- funcione. Ver docs/AVATARES.md.
 create or replace function handle_new_user()
 returns trigger as $$
 begin

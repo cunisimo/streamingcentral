@@ -29,8 +29,12 @@ Todo lo de acá cae en una de cuatro cajas, y **no se mezclan**:
 > - **Avatares locales propios**: 31 archivos WebP en `/avatars/`.
 > - **Cero conexión a DiceBear**, verificado con un barrido de fuente, SQL,
 >   archivos públicos, service worker y bundles generados.
-> - **Cero transferencia de la semilla**: no sale del dispositivo. Sólo entra a
->   un hash que corre local.
+> - **La semilla ya NO se envía a DiceBear ni a ningún tercero.** Ojo con la
+>   redacción: `avatar_seed` **se guarda en Supabase**, así que sigue siendo un
+>   dato **recopilado fuera del dispositivo** — Supabase como proveedor de
+>   servicio. En Data Safety figura **recopilado, no compartido**. Lo que
+>   desapareció es el envío a un tercero para generar la imagen.
+> - **Los archivos WebP se sirven desde el propio origen de Yump.**
 > - **Ninguna atribución a DiceBear** corresponde ya, porque no se usa.
 > - **Autoría: Juan Facundo Galíndez.** Los personajes de Pajaritos son
 >   creaciones originales suyas, adaptadas en 3D para Yump.
@@ -130,7 +134,7 @@ Proyecto Supabase `aibqqebwlladjjkeqllo`. ✅ Todas las tablas tienen RLS
 | **Sesión / refresh token** | `auth.sessions` + `localStorage` | mantener sesión | `signOut()` + limpieza local |
 | **`user_id` (uuid)** | PK de `profiles`, FK de todo | vincular | cascade |
 | **Nombre visible** | `profiles.display_name` | saludo, firma | cascade |
-| **Avatar** (`avatar_style`, `avatar_seed`) | `profiles` | guardar **cuál** de los 31 avatares propios eligió | cascade. ✅ **La semilla NO sale del dispositivo**: sólo entra a un hash local. Los dibujos son archivos de Yump servidos desde `/avatars/`, iguales para todos |
+| **Avatar** (`avatar_style`, `avatar_seed`) | `profiles` (Supabase) | guardar **cuál** de los 31 avatares propios eligió | cascade. **Es un dato recopilado**: vive en Supabase, que actúa como proveedor de servicio. ✅ Lo que cambió es que **ya no se envía a DiceBear ni a ningún tercero**; los WebP se sirven desde el propio origen de Yump |
 | **País** | `profiles.country_code` (default `AR`) | preferencia | cascade — ✅ verificado: **no se envía como parámetro a ninguna ruta** |
 | **Plataformas** | `profiles.platforms integer[]` | preferencia sincronizada | cascade |
 | **Votos** | `votes` (1-3 + `tmdb_id` + fecha) | rieles de votos y personalización | cascade |
@@ -190,9 +194,10 @@ Ven la IP porque el navegador les habla sin pasar por nosotros.
 ✅ ~~**Hallazgo**: en `components/AuthContext.tsx` hay un camino de respaldo donde
 `avatar_seed` toma el valor de `user.id` y el UUID viaja a DiceBear.~~
 **CERRADO el 2026-08-25.** Ya no hay a dónde viajar: el `user.id` sigue usándose
-como semilla en ese respaldo, pero **sólo entra a un hash que corre en el
-dispositivo** para elegir uno de los 31 dibujos locales. No hay petición
-saliente.
+como semilla en ese respaldo, y **entra a un hash que corre en el dispositivo**
+para elegir uno de los 31 dibujos locales. **No hay petición saliente a ningún
+tercero.** (La semilla guardada en `profiles` sigue siendo un dato recopilado por
+Supabase; lo que se eliminó es el envío a DiceBear.)
 
 ---
 
@@ -242,7 +247,7 @@ qué. Acá va la excepción concreta en cada fila.
 | Speed Insights | App info and performance → **Diagnostics** | 🟡 **Sí** | No | Service provider (Vercel) | Obligatorio | Analytics |
 | Web Analytics | App activity → **App interactions** | 🟡 **Sí** | No | Service provider (Vercel) | Obligatorio | Analytics |
 | **Geolocalización de Analytics** | Location → **Approximate location** | 🔵 **DECISIÓN** — ver 2.b | No | Service provider | Obligatorio | Analytics |
-| **Avatar** (qué dibujo eligió) | App activity → **Other actions** | Sí | **No** | Service provider (Supabase). ✅ **Ya no hay transferencia a ningún tercero**: los archivos son propios, ver 2.f | Opcional | App functionality, Personalization |
+| **Avatar** (`avatar_style` + `avatar_seed`) | App activity → **Other actions** | **Sí** — se guarda en Supabase | **No** | **Service provider** (Supabase). ✅ Ya no se envía a DiceBear; los WebP salen del propio origen. Ver 2.f | Opcional | App functionality, Personalization |
 | **Pósters de TMDB** (`image.tmdb.org`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Obligatorio | App functionality |
 | **Tráilers de YouTube** (`youtube-nocookie.com`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Opcional (solo al reproducir) | App functionality |
 | Google Calendar | Calendar → **Calendar events** | **No** | **No** | **User-initiated transfer**: lo abre la persona, con divulgación previa | — | — |
@@ -395,11 +400,15 @@ El costo de declararlo es una etiqueta "Contiene anuncios" en la ficha.
 - **Cero conexión a DiceBear.** Verificado con un barrido de fuente, SQL,
   archivos públicos, service worker y bundles generados, con canarios que prueban
   que el barrido detecta de verdad.
-- **Cero transferencia de la semilla.** `avatar_seed` no sale del dispositivo:
-  sólo entra a un hash local que elige uno de los 31.
+- **La semilla ya no se envía a DiceBear ni a ningún tercero.** Precisión que
+  importa para el formulario: `avatar_seed` **se guarda en Supabase**, así que
+  **sigue siendo un dato recopilado fuera del dispositivo**. No decir "cero
+  transferencia" a secas.
 - **Para Data Safety**: la fila del avatar ya **no es un "sharing"**. Es
-  `App activity → Other actions`, recogido, no compartido, con la excepción de
-  *service provider* (Supabase) como todo lo demás del perfil.
+  `App activity → Other actions`, **recopilado, NO compartido**, con la excepción
+  de *service provider* (Supabase) como todo lo demás del perfil.
+- **Los archivos WebP se sirven desde el propio origen de Yump**, no desde una
+  CDN de terceros.
 - **Autoría**: Juan Facundo Galíndez. La atribución de Pajaritos va en
   `/acerca-de` con enlace textual a @pajaritos.web.
 

@@ -12,10 +12,12 @@ const ANSIOSAS = 10;
 // catálogo ES el orden de la grilla, y así no hay dos sitios que puedan
 // discrepar.
 export default function AvatarGrid({
-  selected, onSelect,
+  selected, onSelect, bloqueado,
 }: {
   selected: string | null;
   onSelect: (id: string) => void;
+  /** `true` mientras se guarda. */
+  bloqueado: boolean;
 }) {
   return (
     <div className="avgrid" role="group" aria-label="Avatares disponibles">
@@ -26,6 +28,7 @@ export default function AvatarGrid({
           selected={a.id === selected}
           onSelect={onSelect}
           lazy={i >= ANSIOSAS}
+          bloqueado={bloqueado}
         />
       ))}
     </div>

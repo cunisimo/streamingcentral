@@ -501,6 +501,12 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .avcard img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 .avcard:hover { transform: scale(1.05); }
 .avcard:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; transform: scale(1.05); }
+/* Bloqueadas mientras se guarda. Siguen enfocables a propósito (llevan
+   aria-disabled, no disabled), así que el foco no se pierde; lo que cambia es
+   que no responden y se ven inertes. */
+.avcard[aria-disabled="true"] { opacity: .5; cursor: default; }
+.avcard[aria-disabled="true"]:hover { transform: none; }
+.btn[aria-disabled="true"] { opacity: .55; cursor: default; }
 .avcard.on { border-color: var(--accent); transform: scale(1.08); }
 .avmodal-err { margin: 0; padding: 0 22px; color: var(--editorial); font-size: 13px; }
 /* El <p> del error vive siempre en el árbol para que `aria-live` funcione (un

@@ -2,7 +2,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { ESTILO_YUMP, resolverAvatar } from "@/lib/avatares";
-import { SELECTOR_ENFOCABLE, cierraElDialogo, focoInicial, siguienteFoco } from "@/lib/foco-modal";
+import {
+  SELECTOR_ENFOCABLE, atributosBloqueo, cierraElDialogo, focoInicial, nuevaSeleccion,
+  siguienteFoco,
+} from "@/lib/foco-modal";
 import AvatarGrid from "./AvatarGrid";
 
 // El selector. Ya no genera nada: muestra los 31 avatares propios y guarda el id
@@ -35,6 +38,13 @@ export default function AvatarModal({ onClose }: { onClose: () => void }) {
     if (!cierraElDialogo(gesto, guardando.current)) return;
     onClose();
   }, [onClose]);
+
+  // El toque de una card pasa SIEMPRE por acá. Durante el guardado devuelve la
+  // selección actual, así que el toque no hace nada: antes las 31 cards seguían
+  // activas y se podía marcar B con la petición ya guardando A.
+  const elegir = useCallback((id: string) => {
+    setSelected((actual) => nuevaSeleccion(actual, id, guardando.current));
+  }, []);
 
   useEffect(() => {
     // Devolver el foco al botón que abrió el modal cuando se cierra: sin esto,
@@ -74,26 +84,53 @@ export default function AvatarModal({ onClose }: { onClose: () => void }) {
     const { error } = await updateAvatar(selected, ESTILO_YUMP);
     guardando.current = false;
     setBusy(false);
-    if (error) { setErr(error); return; }
+    if (error) {
+      // Falló: `guardando` ya volvió a false, así que las 31 opciones, Cancelar
+      // y Guardar se reactivan solas y se puede reintentar.
+      setErr(error);
+      return;
+    }
     onClose();
   }
 
   return (
     <div className="avmodal-backdrop" role="dialog" aria-modal="true" aria-label="Elegí tu avatar" onClick={() => cerrar("fondo")}>
-      <div className="avmodal" ref={caja} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+      <div
+        className="avmodal"
+        ref={caja}
+        tabIndex={-1}
+        // Mientras la petición está en vuelo, el diálogo entero se anuncia
+        // ocupado: es lo que le dice a un lector de pantalla que lo que hay en
+        // pantalla está a la espera.
+        aria-busy={busy || undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="avmodal-head">
           <h2>Elegí tu avatar</h2>
           <p>Son dibujos propios de Yump. Tocá el que más te guste.</p>
         </div>
         <div className="avgrid-wrap">
-          <AvatarGrid selected={selected} onSelect={setSelected} />
+          <AvatarGrid selected={selected} onSelect={elegir} bloqueado={busy} />
         </div>
         {/* `aria-live`: quien no ve la pantalla se entera del error igual. */}
         <p className="avmodal-err" role="status" aria-live="polite">{err}</p>
         <div className="avmodal-foot">
           <div className="avmodal-foot-r">
-            <button type="button" className="btn ghost" onClick={() => cerrar("cancelar")} disabled={busy}>Cancelar</button>
-            <button type="button" className="btn" onClick={guardar} disabled={!selected || busy}>
+            {/* `aria-disabled` en vez de `disabled` en los dos: `disabled` los
+                saca del orden de tabulación, y el foco está justo encima de
+                Guardar cuando se lo acaba de tocar. El bloqueo real lo hacen
+                `cierraElDialogo` y la guarda de `guardar()`. */}
+            <button
+              type="button" className="btn ghost"
+              onClick={() => cerrar("cancelar")}
+              {...atributosBloqueo(busy)}
+            >Cancelar</button>
+            <button
+              type="button" className="btn"
+              onClick={guardar}
+              disabled={!selected}
+              {...atributosBloqueo(busy)}
+            >
               {busy ? "Guardando…" : "Guardar"}
             </button>
           </div>
