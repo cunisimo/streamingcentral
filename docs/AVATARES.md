@@ -91,9 +91,10 @@ Después de elegir, la elección persiste como cualquier otra.
 ### Alta de una cuenta nueva
 
 El trigger `handle_new_user` de Supabase **no se tocó**: sigue escribiendo un
-`gen_random_uuid()` en `avatar_seed`, y `avatar_style` toma su default. Da igual:
-esa combinación cae en el mapeo legado y **muestra un avatar local desde el
-primer render**.
+`gen_random_uuid()` en `avatar_seed` y no toca `avatar_style`, que ahora queda en
+**NULL** —el default `'adventurer-neutral'` se sacó de `supabase/schema.sql`, que
+es rerunnable y lo reimponía en cada corrida—. Da igual: esa combinación cae en el
+mapeo legado y **muestra un avatar local desde el primer render**.
 
 **Migración opcional, NO aplicada y sin autorización para aplicarse**: se podría
 cambiar el trigger para que escriba `avatar_style = 'yump'` y un id del catálogo.
@@ -118,6 +119,59 @@ Hay un test con esos casos exactos.
   no esté en `VALID_CACHES`, así que `sc-images-v6` —donde estaban guardados los
   SVG de DiceBear— desaparece al activar. No toca `localStorage`, `sessionStorage`
   ni IndexedDB: ahí viven las plataformas elegidas y la sesión.
+
+## Política de caché
+
+Los avatares se cachean con **Cache First permanente**, sin expiración. Eso vale
+la pena porque las URLs son estables, pero define reglas que hay que respetar.
+
+### La regla base: un id y su archivo son INMUTABLES
+
+**Un `id` está atado a una ilustración para siempre.** Ese par —`id` y el archivo
+que le corresponde— no cambia de contenido. No es una preferencia estética: el id
+vive en `profiles.avatar_seed` de cada persona que ya eligió, y la URL vive en la
+caché de cada navegador y de cada PWA instalada.
+
+### Agregar un avatar: no invalida nada
+
+**Un avatar nuevo con un id nuevo y una URL nueva NO necesita subir
+`SC_CACHE_VERSION`.** Su URL no existía, así que no hay nada cacheado que
+contradecir; el navegador la pide la primera vez que la ve. Los 31 anteriores
+siguen sirviéndose de la caché sin volver a descargarse.
+
+Agregar es, entonces, el camino barato: se suma la entrada al final de su grupo
+en `AVATARES`, se copia el `.webp` a `public/avatars/` y listo. **`LEGADO_V1` no
+se toca** (ver arriba).
+
+### Reemplazar el contenido de un archivo: SÍ hay que invalidar
+
+Si alguna vez hay que cambiar el dibujo **conservando la misma URL** —un arreglo
+en la ilustración, un cambio de paleta— quien ya la tenga cacheada seguiría
+viendo la vieja para siempre, porque Cache First no revalida. Hay **dos salidas y
+alguna hay que tomar**:
+
+| Salida | Cuándo conviene |
+|---|---|
+| **Subir `SC_CACHE_VERSION`** en `public/sw.js` | si se reemplazan varios archivos a la vez. Invalida *toda* la caché estática, así que se vuelve a descargar más de lo necesario |
+| **Versionar la URL** (`avatar-pocho.webp?v=2`, o un nombre nuevo) | si es uno solo. Es una URL nueva, así que aplica la regla de arriba: no invalida nada más |
+
+🟡 Preferí **versionar la URL**: el costo es proporcional al cambio.
+
+### Retirar un avatar del selector
+
+**Sacarlo de `AVATARES` no puede dejar rota a la gente que ya lo eligió.** Dos
+condiciones, y las dos importan:
+
+1. **`LEGADO_V1` sigue conteniendo su id.** Está congelada justamente para esto,
+   y hay un test que verifica que todo id de `LEGADO_V1` existe en el catálogo —
+   así que un retiro que rompa esa relación no compila el test.
+2. **Si se saca del catálogo, `resolverAvatar` deja de encontrarlo** y esos
+   perfiles caen al mapeo legado, que les da otro dibujo. Es un cambio visual de
+   una vez, igual que el de esta tanda, y hay que decidirlo a conciencia.
+
+**Lo que NO hay que hacer es borrar el archivo de `public/avatars/`** mientras su
+id siga en `LEGADO_V1`: eso produce un 404 y un avatar roto. Si un avatar se
+retira, lo prudente es **sacarlo del selector pero dejar el archivo servido**.
 
 ## Cómo verificar que DiceBear no volvió
 
