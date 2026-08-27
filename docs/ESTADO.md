@@ -400,7 +400,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
   sí con los números del hero puestos.
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
   retorno; el rearmado en frío es el caso raro.
-- Los catorce issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
+- Los quince issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
   del Top 10 de Netflix se salteó la corrida del 18/08. Disparó bien el 25/08 y
   el bloque oficial quedó recuperado, pero no hay explicación del salto y la
   guarda mide antigüedad desde la fecha de la semana, así que la próxima corrida
@@ -426,6 +426,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
 | #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
 | #13 | **El cron del Top 10 se salteó el 18/08** — disparó el 25/08 y el bloque oficial está recuperado; sin explicación del salto, y una corrida perdida vuelve a degradarlo (lo más fresco, ver arriba) |
 | #14 | El avatar propio parpadea en cada carga — **no es una regresión de la tanda de avatares**, el código anterior hacía lo mismo. Se arregla en una rama aparte, después de desplegar los avatares y antes del empaquetado nativo |
+| #15 | **Selector de avatares.** Los círculos vacíos: causa confirmada (`loading="lazy"`, 21 de 31 nunca se pedían) y **corregidos** — diez aperturas sin uno solo. Queda abierto por una demora aislada de 4-6 s en dos aperturas calientes, **sin causa demostrada**: por decisión del dueño no se sigue investigando y no bloquea el merge |
 
 ---
 

@@ -739,3 +739,104 @@ el CLS no empeora.
 `UserHub`). El componente `Avatar` y `resolverAvatar` **no se tocan** — su
 contrato de devolver siempre uno del catálogo es correcto y hay tests que lo
 fijan.
+
+
+---
+
+## #15 — Selector de avatares: círculos vacíos (corregido) y una demora aislada (aceptada)
+
+**Estado:** el bug, **corregido**. La demora, **limitación aceptada** por decisión
+del dueño · **Abierto:** 2026-08-27 · Reportado sobre Producción
+
+### El bug: círculos vacíos — CORREGIDO
+
+Al abrir "Elegí tu avatar" aparecían uno o varios círculos **vacíos**, y al
+cerrar y volver a abrir eran **otros**.
+
+**Causa: no eran archivos que faltaran ni peticiones que fallaran. Eran imágenes
+que nunca se pedían.** Los tres estados de un `<img>` lo separan:
+
+| Estado | `complete` | `naturalWidth` |
+|---|---|---|
+| carga diferida no iniciada | `false` | 0 |
+| petición fallida | `true` | 0 |
+| petición correcta | `true` | >0 |
+
+Medido en un banco que replica el DOM y el CSS del modal, con los WebP reales de
+Producción:
+
+```
+lazy   (como estaba):   10/31 OK · 21 SIN INICIAR (complete=false) · 0 fallos
+eager  (la corrección): 31/31 OK · 31 peticiones                   · 0 fallos
+```
+
+Las 21 vacías eran **exactamente** las 21 con `loading="lazy"`
+(`ANSIOSAS = 10`), en cinco aperturas seguidas. `avatar-moon.webp` responde
+`200 image/webp`, así que el archivo nunca fue el problema.
+`CastRail.tsx` ya documentaba lo mismo en rieles y modales: fue la segunda vez.
+
+**La corrección:** las 31 se piden al montar el modal —no antes: entra por
+`next/dynamic`—, y la prop `lazy` de `Avatar` se eliminó entera para que no
+vuelva por descuido. Como defensa se agregó **un** reintento acotado con marca
+fija en la URL y, si tampoco carga, un respaldo visible en lugar del hueco
+(`lib/reintento-imagen.ts`, con tests).
+
+**Verificado por el dueño en el Preview: diez aperturas, cero círculos vacíos.**
+
+### La demora aislada — LIMITACIÓN ACEPTADA, no se sigue investigando
+
+En esas mismas diez aperturas, **dos** mostraron una demora: en una, tres
+avatares tardaron ~6 s en aparecer; en otra, uno tardó ~4 s. **Sin throttling y
+con caché caliente.**
+
+**No hay causa demostrada, y no se afirma ninguna.** Se descartó explícitamente
+la explicación fácil: con los recursos ya pedidos, el peso de la primera descarga
+**no** explica una demora que aparece en la sexta apertura. Una medición previa
+que decía *"segunda apertura: 0 ms"* se tomó en un banco con la pestaña oculta y
+**no describe el comportamiento real** — queda retirada.
+
+Quedaron cinco hipótesis sin separar: red o CDN, lectura del service worker,
+decodificación por exceso de resolución, planificación del navegador, y fallo de
+transporte.
+
+**Decisión del dueño, 27/08: no se sigue investigando ahora, y esto no bloquea el
+merge.** El bug reportado —círculos permanentemente vacíos— está corregido y
+verificado; lo que queda es una demora ocasional que no deja la interfaz rota.
+
+**Si se retoma**, lo que haría falta es una traza por imagen de una apertura
+lenta: instante de creación del `<img>`, `load`/`error`, `complete`,
+`naturalWidth`, duración del recurso, los tres tamaños, `workerStart` y el tiempo
+de `decode()` — con las **duraciones** separadas de los instantes, porque el
+tiempo humano hasta el clic contamina cualquier instante medido desde el inicio.
+Y el candidato más barato de probar sería servir en la grilla una variante de
+160 px en vez de los 512 px actuales, conservando los 512 para los usos
+individuales.
+
+### Lo que NO se tocó, a propósito
+
+- **`cacheFirst` del service worker.** Su falta de timeout es un problema real y
+  **general** —afecta chunks, íconos y todo lo demás— y sigue en el **issue #3**,
+  apartado b, que es donde corresponde decidirlo con una traza de red real.
+- **`next/image`.** No corresponde: los archivos ya vienen en el tamaño y el
+  formato correctos.
+- **Variantes reducidas.** No se generaron: sin saber la capa responsable habrían
+  sido una apuesta.
+
+### Ojo: NO confundir con el issue #14
+
+| | #14 | #15 |
+|---|---|---|
+| Qué se ve | **un** avatar equivocado, un instante, al cargar la página | círculos vacíos dentro del selector |
+| Dónde | nav, hub, perfil | sólo el selector |
+| Causa | `profile` en `null` mientras resuelve la sesión | `loading="lazy"` |
+| ¿Regresión de la tanda de avatares? | **no**, el código anterior hacía lo mismo | **sí**, la introdujo `ANSIOSAS` |
+
+### Criterio de cierre
+
+El del bug **ya se cumplió**: 31 botones, 31 imágenes con `complete === true` y
+`naturalWidth > 0`, sin errores en consola ni peticiones a terceros, en diez
+aperturas.
+
+Este issue queda abierto **sólo** por la demora, y se cierra el día que se
+midan diez aperturas calientes seguidas sin que ninguna imagen pase de un
+segundo — o el día que se decida que no vale la pena y se borre.
