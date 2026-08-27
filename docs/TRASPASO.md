@@ -23,7 +23,7 @@ histórico.
 ```
 origin/main               1e14f5c   ← DESPLEGADO en producción (app.yump.ar)
 main (local)              321d318   ← tres commits de documentación SIN pushear
-origin/feat/avatares-propios  124fdc8   ← en Preview, sin mergear
+origin/feat/avatares-propios  <punta>   ← en Preview, sin mergear
 ```
 
 ⚠️ **`main` local está TRES commits por delante de `origin/main`** y son sólo
@@ -35,7 +35,7 @@ con no arrastrarlos sin querer** — o pushealos aparte y de forma consciente.
 | Pieza | Estado |
 |---|---|
 | Producción `app.yump.ar` | `1e14f5c`, READY |
-| Preview de avatares | punta de la rama, `124fdc8` (el contrato de persistencia se corrigió en `e627ec7`, el 27/08). **El estado del deployment no se pudo verificar desde la sesión**: no hay CLI de Vercel ni token, y la URL del Preview está detrás del SSO de Vercel. Hay que mirarlo en el panel |
+| Preview de avatares | la punta de `feat/avatares-propios` (el contrato de persistencia se corrigió en `e627ec7`, el 27/08). **Acá NO se escribe el hash de la punta**: un commit no puede nombrar su propio hash, así que la tabla quedaba desactualizada por el commit que la actualizaba. Se mira con `git log -1 feat/avatares-propios`. **El estado del deployment no se pudo verificar desde la sesión**: no hay CLI de Vercel ni token, y la URL del Preview está detrás del SSO de Vercel. Hay que mirarlo en el panel |
 | URL del Preview | `streamingcentral-git-feat-4e07d7-jfgalindez-gmailcoms-projects.vercel.app` |
 | `IDIOMA_TITULOS` | `es-MX` en Vercel Production y en Supabase Edge Functions |
 | Cron `tmdb-sync-upcoming-daily` (pg_cron) | activo, jobid 2 |
