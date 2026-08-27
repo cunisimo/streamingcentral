@@ -124,6 +124,13 @@ servidor).
 valor de `NETWORK_TIMEOUT_MS` contra una traza de red real (DevTools → Slow 3G o
 mejor, un dispositivo en condiciones malas).
 
+> **Rozó al issue #15 (27/08) y se decidió no tocarlo.** Investigando los
+> círculos vacíos del selector de avatares apareció otra vez que `cacheFirst` no
+> tiene timeout. **No era la causa** —esas imágenes ni siquiera se pedían— y
+> agregarle un timeout desde ahí habría cambiado la estrategia de **todos** los
+> assets: chunks de Next, íconos, imágenes de TMDB. Sigue viviendo acá, que es
+> donde corresponde decidirlo con una traza de red real.
+
 ---
 
 ## #4 — Fechas calculadas en UTC: la app se adelanta 3 horas
@@ -739,3 +746,126 @@ el CLS no empeora.
 `UserHub`). El componente `Avatar` y `resolverAvatar` **no se tocan** — su
 contrato de devolver siempre uno del catálogo es correcto y hay tests que lo
 fijan.
+
+
+---
+
+## #15 — Círculos vacíos en el selector de avatares (`loading="lazy"`)
+
+**Estado:** corregido en `fix/avatares-sin-lazy`, esperando prueba en Preview ·
+**Abierto:** 2026-08-27 · Reportado por el dueño sobre Producción
+
+### El síntoma
+
+Al abrir "Elegí tu avatar", uno o varios círculos aparecen **vacíos**. Cerrando y
+volviendo a abrir, los vacíos son **otros**.
+
+### La causa, con evidencia
+
+**No es un archivo que falte ni una petición que falle. Son imágenes que nunca se
+piden.** Los tres estados de un `<img>` se distinguen así, y son la prueba:
+
+| Estado | `complete` | `naturalWidth` |
+|---|---|---|
+| carga diferida no iniciada | `false` | 0 |
+| petición fallida | `true` | 0 |
+| petición correcta | `true` | >0 |
+
+Medido en un banco que replica el DOM y el CSS de `AvatarModal` + `AvatarGrid`
+—incluido `.avgrid-wrap` con su `overflow-y: auto` y su animación `avfade`— y con
+los WebP reales servidos por Producción:
+
+```
+lazy   (como estaba):  10/31 OK · 21 SIN INICIAR (complete=false) · 0 fallos
+eager  (la corrección): 31/31 OK en 157 ms · 31 peticiones · 0 fallos
+```
+
+Las 21 vacías eran **exactamente** las 21 que llevaban `loading="lazy"`
+(`ANSIOSAS = 10`). Cinco aperturas seguidas: las mismas 21, todas
+`complete === false`. Y `https://app.yump.ar/avatars/avatar-moon.webp` responde
+`200 image/webp`, así que el archivo y la ruta nunca fueron el problema.
+
+**Y no era "están abajo del scroll":** en el banco, `scrollHeight === clientHeight
+=== 444`, o sea que **las 31 entran sin scroll** y las 21 vacías estaban dentro
+del área visible. Scrollear el contenedor no cambió nada.
+
+⚠️ **Límite honesto de esta medición.** El panel de navegador de este entorno no
+compone frames: la pestaña corre con `document.visibilityState === "hidden"`, y
+con la pestaña oculta el navegador **legítimamente** no dispara la carga
+diferida. O sea que el banco **no reproduce la condición exacta del dispositivo
+del dueño**, donde sólo fallan algunas. Lo que sí demuestra, y alcanza para
+decidir, es el A/B en idénticas condiciones: **con `lazy` faltan 21, con `eager`
+están las 31.** El mecanismo es el mismo que `CastRail.tsx` ya documentaba en
+este repositorio —"se evitó `loading="lazy"` porque dejó imágenes sin cargar en
+rieles y modales"—, así que ésta es la **segunda vez** que muerde.
+
+### La corrección
+
+**Se saca la carga diferida del selector.** Las 31 se piden al **montar el
+modal**, que es cuando alguien tocó "Cambiar avatar" — no antes: `AvatarModal`
+entra por `next/dynamic`, así que ese código no viaja al navegador hasta que se
+abre.
+
+La prop `lazy` de `Avatar` **se eliminó entera**, no se puso en `false`: era la
+única usuaria y así no vuelve por descuido.
+
+#### El costo, medido
+
+| | |
+|---|---|
+| Archivos | 31 WebP |
+| Peso total | **1.901.294 B = 1,81 MB** (promedio 61 KB) |
+| Caché fría | 31 peticiones · **157 ms** hasta que las 31 tienen `naturalWidth > 0` |
+| Segunda apertura | **0 peticiones, 0 ms** — el navegador las sirve de su caché |
+| CDN | 31/31 con `HIT` en Vercel |
+
+El 1,81 MB se paga **una vez por dispositivo** y sólo si la persona abre el
+selector. A partir de ahí el service worker las tiene en Cache First como assets
+propios, que es lo que hace que el avatar se siga viendo sin conexión.
+
+### La defensa que se agregó, y lo que NO es
+
+`AvatarCard` no manejaba `onError`, así que una petición **realmente** fallida
+también dejaba un círculo vacío para siempre. Se agregó, con tres límites
+(`lib/reintento-imagen.ts`, con tests):
+
+- **UN reintento**, no un bucle. Cien `onError` seguidos no pasan de un reintento.
+- **Marca fija en la URL** (`?reintento=1`), no un timestamp: un timestamp daría
+  una URL nueva por fallo y con eso una entrada nueva en el cache del service
+  worker cada vez. Verificado en navegador: el reintento produce **una segunda
+  petición real** y ahí se detiene.
+- **Un 404 permanente no se esconde.** Agotado el reintento se muestra un
+  respaldo estable —la inicial del nombre, del mismo tamaño que la imagen, así la
+  grilla no se mueve—, el botón conserva su nombre accesible, y **deja de poder
+  elegirse**: guardar un avatar cuya imagen no está dejaría a la persona con un
+  avatar roto en la nav, en el hub y en el perfil.
+
+**Este fallo NO se reprodujo** en ninguna corrida: cero imágenes en estado
+`complete=true, naturalWidth=0`. El reintento es defensa, no la corrección.
+
+### Lo que NO se tocó, a propósito
+
+- **`cacheFirst` del service worker.** Que no tenga timeout es un problema real y
+  **general** —afecta chunks, íconos y todo lo demás—, ya documentado en el
+  **issue #3**, apartado b. Cambiarlo de refilón acá habría sido tocar la
+  estrategia de toda la app para arreglar un selector.
+- **`next/image`.** No corresponde: los archivos ya vienen en el tamaño y el
+  formato correctos, y el problema nunca fue la optimización.
+
+### Ojo: NO confundir con el issue #14
+
+Son dos cosas distintas y se arreglan en lugares distintos:
+
+| | #14 | #15 |
+|---|---|---|
+| Qué se ve | **un** avatar equivocado, un instante, al cargar la página | **varios** círculos vacíos dentro del selector |
+| Dónde | nav, hub, perfil | sólo el selector |
+| Causa | `profile` en `null` mientras resuelve la sesión | `loading="lazy"` |
+| ¿Regresión de la tanda de avatares? | **no**, el código anterior hacía lo mismo | **sí**, la introdujo `ANSIOSAS` |
+
+### Criterio de cierre
+
+En el Preview, con el selector abierto: **31 botones, 31 imágenes con
+`complete === true` y `naturalWidth > 0`**, cero errores en consola y cero
+peticiones a un tercero. Abrir y cerrar cinco veces sin que aparezca un círculo
+vacío.
