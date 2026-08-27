@@ -87,11 +87,28 @@ test("elegir `pocho` se lee como el WebP local de Pocho", () => {
 // El lector histórico: qué pasaría con un rollback
 // ============================================================================
 
-// COPIA CONGELADA del lector que corre hoy en Producción
-// (`origin/main:lib/avatar.ts`). Está transcripto acá, y no leído con `git show`
-// ni pedido por red, por dos razones: un test no puede depender de que exista un
-// remoto, y lo que se quiere fijar es EL COMPORTAMIENTO QUE HUBO, que no cambia
-// aunque la rama se mueva.
+// ⚠️ ESTO ES UN FIXTURE DE COMPORTAMIENTO, NO EL ARCHIVO DE `origin/main`.
+//
+// Es una TRANSCRIPCIÓN a mano del lector histórico. Coincide con el archivo real
+// —se comparó—, pero estos tests **no ejecutan el código de `origin/main`**: si
+// alguien editara la transcripción, seguirían pasando. **Por sí solos no prueban
+// nada sobre ese archivo**; prueban que el payload del contrato, pasado por ESTA
+// fórmula, produce una URL válida.
+//
+// Se transcribe en vez de leerse con `git show` a propósito: `npm test` no puede
+// depender de un remoto ni de la forma del repositorio de quien lo corra.
+//
+// LA EVIDENCIA INMUTABLE, para que cualquiera reconstruya el original sin
+// confiar en esta copia:
+//
+//   commit  1e14f5c45d17b287b20d9d3c98cadc2c2d16cf63
+//   blob    158aa27c52318648b1149d1c7c632ce4e6af7323   (lib/avatar.ts)
+//
+//   git cat-file blob 158aa27c52318648b1149d1c7c632ce4e6af7323
+//
+// Un blob de git es el hash de su contenido: ese identificador no puede
+// referirse a otro texto. Si la transcripción de abajo dejara de coincidir con
+// el original, el comando lo muestra en un diff.
 //
 // Este archivo es `.test.ts`, así que está exento del barrido de DiceBear — por
 // eso puede contener la URL entera sin romperlo.
@@ -103,7 +120,7 @@ function lectorHistorico(p: { avatar_style?: string | null; avatar_seed?: string
   return `https://api.dicebear.com/10.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
 }
 
-test("EL ROLLBACK: el lector histórico arma una URL bajo /adventurer-neutral/", () => {
+test("EL ROLLBACK: el fixture del lector histórico arma una URL bajo /adventurer-neutral/", () => {
   const e = eleccionAvatar("pocho");
   assert.ok(e);
   assert.equal(
@@ -157,8 +174,9 @@ test("AvatarModal NO escribe el nombre del estilo a mano", () => {
 });
 
 test("NINGÚN componente pasa `ESTILO_YUMP` a una escritura", () => {
-  // `ESTILO_YUMP` queda como lectura defensiva de los perfiles que alcanzaron a
-  // guardarse desde el Preview. Ninguna ruta activa lo escribe.
+  // `ESTILO_YUMP` queda como lectura defensiva ante un valor legado POSIBLE —en
+  // Producción, al 27/08/2026, no hay ninguna fila con ese valor—. Ninguna ruta
+  // activa lo escribe.
   const dir = path.join(process.cwd(), "components");
   const archivos: string[] = [];
   (function recorrer(d: string) {

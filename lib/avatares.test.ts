@@ -384,9 +384,11 @@ test("la pertenencia vale para los 31, no sólo para uno", () => {
 });
 
 test("LECTURA DEFENSIVA: un perfil con estilo `yump` e id válido sigue resolviendo bien", () => {
-  // Los perfiles que alcanzaron a guardarse desde el Preview tienen `yump` en la
-  // columna de estilo. Se siguen leyendo igual, aunque ninguna ruta activa lo
-  // escriba más.
+  // PROTECCIÓN, no descripción de la base. Consultada Producción el 27/08/2026,
+  // sobre 10 perfiles hay CERO con `yump`. Pero el valor pudo escribirse mientras
+  // el código nuevo estuvo sólo en Preview sobre la base compartida, y podría
+  // aparecer si alguien guarda desde un despliegue viejo. Se lee igual, aunque
+  // ninguna ruta activa lo escriba.
   for (const a of AVATARES) {
     assert.equal(resolverAvatar({ avatar_style: ESTILO_YUMP, avatar_seed: a.id }).id, a.id);
   }

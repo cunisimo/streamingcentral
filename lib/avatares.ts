@@ -59,9 +59,18 @@ export interface Avatar {
  * ETIQUETA HEREDADA, SÓLO DE LECTURA. **Ninguna ruta activa la escribe.**
  *
  * Fue el valor que guardaba la primera versión de esta tanda en la columna de
- * estilo, y quedó en los perfiles que alcanzaron a elegir un avatar desde el
- * Preview. Sigue exportada porque esos perfiles existen y hay tests que fijan
- * que se leen bien — ver `ESTILO_PERSISTIDO` para lo que se escribe hoy.
+ * estilo, mientras el código nuevo estuvo sólo en Preview sobre la base
+ * compartida.
+ *
+ * **No es una descripción de la base: es una protección.** Consultada Producción
+ * el 27/08/2026, sobre 10 perfiles hay **cero** con este valor, cero semillas
+ * vacías y cero semillas que no sean uuid — o sea que nadie llegó a elegir un
+ * avatar. Sigue exportada, y hay tests que fijan su lectura, porque el valor
+ * PUDO haberse escrito y podría aparecer en cualquier momento en que alguien
+ * guarde desde un despliegue viejo. Cuesta nada y cubre un caso que no se puede
+ * descartar mirando una foto de la base.
+ *
+ * Ver `ESTILO_PERSISTIDO` para lo que se escribe hoy.
  */
 export const ESTILO_YUMP = "yump";
 
