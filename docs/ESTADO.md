@@ -1,7 +1,13 @@
 # Estado de Yump
 
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
-> **Última actualización: 25 de agosto de 2026.**
+> **Última actualización: 27 de agosto de 2026.**
+>
+> **ESTE ES EL DOCUMENTO CANÓNICO DEL ESTADO.** Qué está desplegado, qué rama
+> está viva y qué queda abierto se escribe **acá y en ningún otro lado**.
+> `docs/TRASPASO.md` cuenta el detalle de una tanda y apunta acá para el estado;
+> `CLAUDE.md` guarda las decisiones de arquitectura, que no cambian con cada
+> deploy. Dos documentos con el mismo SHA es un SHA viejo esperando.
 
 `CLAUDE.md` se carga solo en cada conversación y ya contiene las decisiones de
 arquitectura, las limitaciones de TMDB y las reglas de cada feature. **Este
@@ -12,15 +18,43 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ## Estado de despliegue
 
 ```
-origin/main               ba4a5aa   ← Merge feat/idioma-tanda-3, DESPLEGADO en producción
+origin/main               1e14f5c   ← DESPLEGADO en producción (app.yump.ar)
+main (local)              321d318   ← tres commits de DOCUMENTACIÓN, entran con el merge
+feat/avatares-propios                ← la rama viva: en Preview, SIN mergear
 feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
 feat/dia-rotacion                    ← sin mergear y MUY atrás de main; hay que rebasarla
 ```
+
+**Lo que hay en `origin/main` y desplegado** (`1e14f5c`): las tres tandas del
+idioma (catálogo en `es-MX` con respaldo a `es-ES`) y los dos arreglos del Top 10
+de Netflix — la plataforma garantizada por la fuente y la consulta acotada por
+subtítulo, con la ficha usando la misma evidencia. Detalle abajo.
+
+**A propósito NO se escribe acá el SHA de la punta de `feat/avatares-propios`.**
+Un commit no puede nombrar su propio hash, así que el commit que actualiza la
+tabla la desactualiza; ya pasó dos veces seguidas. Se mira con
+`git log -1 feat/avatares-propios`.
+
+**`main` local está TRES commits por delante de `origin/main`**, todos de
+documentación (issue #13, traspaso del idioma y la primera versión de la
+auditoría de Play). No se pushearon porque no hacía falta tocar producción por
+documentación.
+
+**Decisión del dueño, 27/08: van INCLUIDOS en el merge de los avatares.** Son
+sólo `docs/PLAY-STORE.md` y compañía, no tocan el runtime, y hacen falta para la
+etapa siguiente. Lo que antes decía acá —"ojo con no arrastrarlos"— era una
+advertencia mientras la decisión estaba pendiente; ya está tomada.
 
 `feat/idioma-tanda-2` y `feat/idioma-tanda-3` ya no existen: se borraron de los
 dos lados con borrado seguro (`git branch -d`, sin forzar) una vez verificada la
 producción. **Las tres tandas del idioma están cerradas** — el traspaso completo
 de esa línea de trabajo vive en `docs/TRASPASO-IDIOMA.md`.
+
+**La rama viva es `feat/avatares-propios`**: reemplaza DiceBear por 31 avatares
+WebP propios servidos desde `/avatars/`. Está en Preview esperando la prueba
+manual del dueño, que es lo único que bloquea el merge. El sistema, el contrato
+de persistencia y la lista de verificación están en `docs/AVATARES.md`; el
+detalle de la tanda, en `docs/TRASPASO.md`.
 
 **Este bloque se actualiza en el mismo commit que mueve `main`.** Quedó tres
 semanas diciendo `ab4e189` mientras `main` iba por `5fc0c2e`, y un SHA viejo acá
@@ -41,7 +75,35 @@ memoria del proyecto).
 
 ---
 
-## El Top 10 de Netflix quedó sirviendo popularidad — **abierto**
+## El Top 10 de Netflix — **el código, cerrado y desplegado; el cron, abierto**
+
+**Estado al 27/08.** Se cerraron y desplegaron en `1e14f5c` tres arreglos de
+código, y queda abierto el problema del cron (**issue #13**).
+
+**Lo cerrado, ya en producción:**
+
+- **La plataforma la garantiza la FUENTE, no TMDB** (`lib/top-plataformas.ts`).
+  "Moria" entró **#1 del top oficial pintada en gris**, porque TMDB no tenía
+  proveedores para ella en ninguna región. Esos veinte títulos los publicó
+  Netflix como lo más visto en Netflix Argentina: eso es un dato, no una
+  deducción. Sólo se aplica cuando no sabemos nada.
+- **Consulta acotada cuando el título trae subtítulo** (`lib/netflix-resolver.ts`).
+  "Operation Safed Sagar: The Highest Air Force Mission" daba cero resultados
+  completo y uno solo reducido a la parte anterior a los dos puntos. Exige un
+  único resultado, mira primero el proveedor y marca todo con `needs_review`.
+- **La ficha usa la misma evidencia**, con `needs_review = false` y mirando toda
+  la ventana de 14 días y no la última semana — atada a la semana más nueva, la
+  evidencia se evaporaba con el cron siguiente.
+
+**Lo que sigue abierto (issue #13):** el cron **disparó el 25/08 a las 12:58
+UTC**, día correcto y dentro de su ventana, así que la afirmación de más abajo de
+que "no disparó nunca" quedó desactualizada — pero **no hay explicación de por
+qué se salteó el martes 18/08**, y hay que mirar los logs de Vercel. La
+fragilidad de fondo tampoco se movió: **la guarda mide antigüedad desde la fecha
+de la semana, no desde la ingesta**, así que una corrida perdida vuelve a
+degradar el bloque a "Lo más popular ahora".
+
+### Cómo se detectó, en su momento
 
 **Detectado el 2026-08-25 por el dueño**, mirando la pantalla: el bloque de
 Netflix mostraba "Lo más popular ahora" donde antes decía "dato oficial".
@@ -52,23 +114,33 @@ La última ingesta es la semana `2026-08-09`, escrita el 12/08: al detectarlo
 llevaba **16,4 días**, o sea que cruzó la línea unos dos días antes — que es
 exactamente lo que reportó el dueño ("hasta hace 2 días estaba bien").
 
-**La causa raíz es otra y es peor**: las dos escrituras que existen en la tabla
-son de un **domingo** 17:27 UTC y un **miércoles** 18:10 UTC, contra un cron
-declarado `0 12 * * 2` (martes al mediodía). Ninguna cae en su horario, así que
-las dos ingestas fueron a mano: **el cron de Vercel no disparó nunca**. Lo que
-cambió no fue el comportamiento, fue que se agotó el colchón.
+**La causa raíz es otra y es peor**: las dos escrituras que existían en la tabla
+al 25/08 eran de un **domingo** 17:27 UTC y un **miércoles** 18:10 UTC, contra un
+cron declarado `0 12 * * 2` (martes al mediodía). Ninguna cae en su horario, así
+que las dos ingestas fueron a mano. Lo que cambió no fue el comportamiento, fue
+que se agotó el colchón.
+
+> **Corregido el 27/08.** Acá decía "el cron de Vercel no disparó nunca". Ya no
+> es cierto: **disparó el 25/08 a las 12:58 UTC**, en su día y su ventana. Lo que
+> sigue sin explicación es el martes 18/08. La conclusión que sí se sostiene es
+> la otra —dos ingestas a mano y ninguna del cron hasta esa fecha—, y por eso la
+> corrección va acá y no borrando el párrafo.
 
 **No tiene ninguna relación con el cambio de idioma.** `latestWeekRows` no toca
 claves de caché ni idioma; la coincidencia de fechas es casual.
 
-**Dos acciones, separadas y las dos pendientes:**
+**Dos acciones, separadas:**
 
-1. **Recuperar la semana que falta** — una llamada autenticada a
-   `/api/cron/netflix-top10` con el `CRON_SECRET`. Es un upsert idempotente de 20
-   filas. **Escribe en la base, así que espera el OK del dueño.**
-2. **Arreglar el cron** — hay que mirar **Vercel → el proyecto → Settings → Cron
-   Jobs**, donde se ve si está registrado y sus últimas ejecuciones. Sin esto, el
-   bloque vuelve a degradar en 14 días.
+1. ~~**Recuperar la semana que falta**~~ — el cron del 25/08 escribió una semana
+   nueva. Si el bloque volviera a degradar, la salida sigue siendo una llamada
+   autenticada a `/api/cron/netflix-top10` con el `CRON_SECRET`: un upsert
+   idempotente de 20 filas. **Escribe en la base, así que espera el OK del
+   dueño.**
+2. **Arreglar el cron — PENDIENTE, es el issue #13.** Hay que mirar
+   **Vercel → el proyecto → Settings → Cron Jobs**, donde se ven sus últimas
+   ejecuciones, y entender por qué se salteó el 18/08 habiendo disparado el
+   25/08. Sin esto, el bloque vuelve a degradar cada vez que se pierda una
+   corrida.
 
 **Lo que se descartó en la misma revisión**, para no volver a levantarlo: que
 Prime Video y Max compartan títulos **no es un bug**. Verificado contra TMDB, hay
@@ -317,8 +389,11 @@ Para volver al camino viejo y comparar en la misma pantalla:
   sí con los números del hero puestos.
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
   retorno; el rearmado en frío es el caso raro.
-- Los trece issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
-  del Top 10 de Netflix nunca disparó y el bloque está sirviendo popularidad.
+- Los catorce issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
+  del Top 10 de Netflix se salteó la corrida del 18/08. Disparó bien el 25/08 y
+  el bloque oficial quedó recuperado, pero no hay explicación del salto y la
+  guarda mide antigüedad desde la fecha de la semana, así que la próxima corrida
+  perdida vuelve a degradarlo.
 
 ---
 
@@ -338,7 +413,8 @@ Para volver al camino viejo y comparar en la misma pantalla:
 | #10 | La rotación de ejes no le llega a los chips angostos (18 de 112 casillas caen a `pop`) |
 | #11 | "Últimos lanzamientos" tiene 35% de títulos bajo 6.0 |
 | #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
-| #13 | **El cron semanal del Top 10 de Netflix nunca disparó** (lo más fresco, ver abajo) |
+| #13 | **El cron del Top 10 se salteó el 18/08** — disparó el 25/08 y el bloque oficial está recuperado; sin explicación del salto, y una corrida perdida vuelve a degradarlo (lo más fresco, ver arriba) |
+| #14 | El avatar propio parpadea en cada carga — **no es una regresión de la tanda de avatares**, el código anterior hacía lo mismo. Se arregla en una rama aparte, después de desplegar los avatares y antes del empaquetado nativo |
 
 ---
 
@@ -393,8 +469,9 @@ descartable el 22/08: antes 1 perfil, 3 votos, 3 `user_items` (los tres kinds),
 | Reseñas de usuario | `user_reviews` | CASCADE |
 | Historial de fichas | `view_history` | CASCADE |
 
-**Storage no participa**: el proyecto tiene 0 buckets y 0 objetos — los avatares
-son DiceBear generados desde `avatar_seed`. Si algún día se suben archivos, el
+**Storage no participa**: el proyecto tiene 0 buckets y 0 objetos. Los avatares
+son **archivos propios de Yump** en `/avatars/`, iguales para todos; el perfil
+sólo guarda cuál eligió cada uno. Si algún día se suben archivos por usuario, el
 lugar donde agregar su borrado es `lib/eliminar-cuenta.ts`.
 
 **En el dispositivo** se borra el estado personal (`yump:ruleta-mostrados`,

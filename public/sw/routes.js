@@ -40,8 +40,13 @@
       return cacheFirst(request, CACHE.static);
     }
 
-    // 4. Assets propios estáticos (íconos, splash, screenshots, manifest).
+    // 4. Assets propios estáticos (avatares, íconos, splash, screenshots, manifest).
+    //
+    // Los avatares entran ACÁ y no en la regla de imágenes de arriba porque son
+    // del mismo origen: no hay host externo que permitir. Cache First permanente,
+    // que es lo que hace que el avatar siga viéndose sin conexión.
     if (
+      url.pathname.startsWith("/avatars/") ||
       url.pathname.startsWith("/icons/") ||
       url.pathname.startsWith("/splash/") ||
       url.pathname.startsWith("/screenshots/") ||

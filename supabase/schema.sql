@@ -11,15 +11,85 @@ create table if not exists profiles (
   created_at    timestamptz not null default now()
 );
 
--- Avatar generado con DiceBear (API HTTP). Se guardan solo el estilo y la
--- semilla; la imagen nunca se almacena, la URL se arma dinámicamente en la app
--- (lib/avatar.ts → getAvatarUrl). Backfill determinístico para perfiles viejos:
--- semilla = id, estilo = adventurer-neutral.
+-- Avatar. Los dibujos son ARCHIVOS PROPIOS de Yump, servidos desde /avatars/,
+-- o sea desde el propio origen: no hay librería de terceros ni petición saliente
+-- para generar ni servir un avatar.
+--
+-- Estas dos columnas guardan únicamente CUÁL eligió cada persona. Ojo con la
+-- redacción: `avatar_seed` SE RECOPILA Y SE GUARDA ACÁ, con Supabase como
+-- proveedor de servicio — para Data Safety es "recopilado, no compartido". Lo
+-- que se eliminó es el envío a DiceBear o a otro tercero.
+--
+-- LO QUE DECIDE ES LA SEMILLA, NO LA COLUMNA DE ESTILO (lo resuelve
+-- lib/avatares.ts → resolverAvatar):
+--
+--   una semilla que ES un id del catálogo
+--       → elección explícita, ese avatar. La columna de estilo NO SE MIRA.
+--
+--   cualquier otra semilla
+--       → mapeo LOCAL y determinístico sobre LEGADO_V1, una lista congelada de
+--         31 ids. La misma semilla da siempre el mismo dibujo, en todos los
+--         dispositivos, SIN escribir nada en la base. Acá caen los perfiles
+--         anteriores al cambio y los que crea el trigger de abajo.
+--
+--   sin semilla utilizable
+--       → el avatar por defecto del catálogo.
+--
+-- No hay ambigüedad entre los dos primeros casos: los ids del catálogo no tienen
+-- formato uuid y todas las semillas heredadas sí lo tienen (gen_random_uuid() en
+-- el trigger, id::text en el backfill de abajo, crypto.randomUUID() en el
+-- selector anterior). Hay tests que fijan esa condición para los 31.
+--
+-- QUÉ ESCRIBE LA APP en la columna de estilo cuando alguien elige un avatar: el
+-- nombre del estilo viejo, a propósito y como ETIQUETA DE COMPATIBILIDAD. No lo
+-- lee nadie del lado nuevo; está para que un rollback al lector anterior —que
+-- interpolaba ese valor en una URL de un generador externo— arme una URL que
+-- responde en vez de una rota. Detalle completo en docs/AVATARES.md.
+--
+-- QUÉ SE SACÓ DE ACÁ Y POR QUÉ. Este archivo es RERUNNABLE, y antes tenía dos
+-- sentencias sobre la columna de estilo que reimponían DiceBear en cada corrida:
+-- un `set default` con el nombre del estilo viejo, y un `update` que lo escribía
+-- en las filas que lo tuvieran en NULL. Las dos se eliminaron; el `update`
+-- además sobrescribía perfiles existentes.
+--
+-- LO QUE **NO** SE HACE ACÁ: quitar el default que Producción ya tiene. Un
+-- `drop default` sobre la columna de estilo sería una operación destructiva
+-- sobre el esquema vivo, y ESTE archivo no es el lugar para una migración que no
+-- está autorizada. El comportamiento buscado es:
+--
+--   · base NUEVA      → `add column if not exists` crea la columna SIN default.
+--   · PRODUCCIÓN      → volver a correr el schema NO toca el default existente
+--                       (el nombre del estilo viejo), porque la columna ya
+--                       existe y el `if not exists` no hace nada.
+--   · si algún día se decide quitarlo → migración explícita y autorizada, aparte.
+--
+-- Y no hace falta quitarlo para que el sistema funcione: el valor de la columna
+-- de estilo NO SE MIRA al resolver. Quien no eligió avatar cae en el mapeo local
+-- de LEGADO_V1 (lib/avatares.ts) por su semilla, tenga esa columna lo que tenga
+-- —incluido NULL—. El nombre del estilo viejo es una etiqueta inerte y NO
+-- dispara ninguna conexión a DiceBear.
+--
+-- ⚠️ EN LOS COMENTARIOS DE ESTE ARCHIVO SE DICE "la columna de estilo", NUNCA su
+-- nombre literal. `scripts/barrido-sql-avatar.mjs` es un guard TEXTUAL: cuenta
+-- las apariciones del identificador en todo el archivo y exige que haya UNA
+-- sola, la de la sentencia autorizada de abajo. Escribirlo en un comentario haría
+-- fallar el guard — a propósito, porque contar texto es lo único que se puede
+-- hacer sin escribir un lexer de PostgreSQL. Detalle en docs/AVATARES.md.
 alter table profiles add column if not exists avatar_seed text;
-update profiles set avatar_seed = id::text where avatar_seed is null;
 alter table profiles add column if not exists avatar_style text;
-alter table profiles alter column avatar_style set default 'adventurer-neutral';
-update profiles set avatar_style = 'adventurer-neutral' where avatar_style is null;
+
+-- Backfill de la semilla, y sólo de la semilla. Toca EXCLUSIVAMENTE filas con
+-- `avatar_seed` en NULL, así que no pisa la elección de nadie; en una base ya
+-- inicializada es un no-op. Sin semilla, todos esos perfiles caerían en el mismo
+-- avatar por defecto; con el id como semilla, cada uno recibe uno distinto y
+-- estable.
+--
+-- La semilla es un dato GUARDADO ACÁ, o sea recopilado fuera del dispositivo,
+-- con Supabase como proveedor de servicio. Lo que cambió es que ya no se envía a
+-- DiceBear ni a terceros para generar ni servir la imagen: el hash que la
+-- convierte en un avatar corre en el dispositivo y los WebP salen del propio
+-- origen de Yump.
+update profiles set avatar_seed = id::text where avatar_seed is null;
 
 alter table profiles enable row level security;
 
@@ -34,6 +104,21 @@ create policy "edicion de perfil propio" on profiles
 
 -- El perfil se crea por trigger (security definer), no desde el cliente,
 -- así el usuario nunca elige su propio id ni su is_admin.
+--
+-- El trigger NO CAMBIÓ y no hace falta ninguna migración. Escribe una semilla
+-- aleatoria (`gen_random_uuid()`) y no menciona la columna de estilo, que toma
+-- el default de la columna.
+--
+-- EN PRODUCCIÓN ESE DEFAULT SIGUE SIENDO EL NOMBRE DEL ESTILO VIEJO, así que una
+-- cuenta creada hoy nace con ese valor, NO con NULL. Da igual: entra al mapeo
+-- local descrito arriba y muestra un avatar propio DESDE EL PRIMER RENDER.
+--
+-- Migración OPCIONAL, no aplicada y sin autorización: se podría hacer que el
+-- trigger escriba un id del catálogo como semilla, para que una cuenta nueva
+-- nazca con un avatar elegible en vez de uno sorteado por hash. NO hace falta
+-- para que el sistema funcione, y la columna de estilo no habría que tocarla:
+-- el único valor que la app escribe ahí es la etiqueta de compatibilidad
+-- descrita arriba. Ver docs/AVATARES.md.
 create or replace function handle_new_user()
 returns trigger as $$
 begin

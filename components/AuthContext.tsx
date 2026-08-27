@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase";
-import { DEFAULT_AVATAR_STYLE } from "@/lib/avatar";
+import type { EleccionAvatar } from "@/lib/avatares";
 
 export interface Profile {
   id: string;
@@ -23,7 +23,10 @@ interface Ctx {
   signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string; needsConfirm?: boolean }>;
   signOut: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<{ error?: string }>;
-  updateAvatar: (seed: string, style: string) => Promise<{ error?: string }>;
+  // Recibe el objeto entero, no dos strings sueltos: los valores los arma
+  // `eleccionAvatar` (lib/avatares.ts), que es la fuente única de lo que se
+  // persiste. Con dos parámetros del mismo tipo, además, invertirlos compilaba.
+  updateAvatar: (eleccion: EleccionAvatar) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
   updatePlatforms: (ids: number[]) => Promise<{ error?: string }>;
@@ -50,7 +53,7 @@ async function loadProfile(user: User): Promise<Profile | null> {
     }
     return p;
   }
-  return metaName ? { id: user.id, display_name: metaName, is_admin: false, avatar_seed: user.id, avatar_style: DEFAULT_AVATAR_STYLE, onboarding_completed: true, platforms: [], country_code: "AR" } : null;
+  return metaName ? { id: user.id, display_name: metaName, is_admin: false, avatar_seed: user.id, avatar_style: null, onboarding_completed: true, platforms: [], country_code: "AR" } : null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -130,16 +133,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Espejamos el nombre en el metadata de auth para tenerlo siempre a mano
     // en el próximo login sin depender de la fila de perfil.
     void sb.auth.updateUser({ data: { display_name: name } });
-    setProfile((p) => (p ? { ...p, display_name: name } : { id: user.id, display_name: name, is_admin: false, avatar_seed: user.id, avatar_style: DEFAULT_AVATAR_STYLE, onboarding_completed: true, platforms: [], country_code: "AR" }));
+    setProfile((p) => (p ? { ...p, display_name: name } : { id: user.id, display_name: name, is_admin: false, avatar_seed: user.id, avatar_style: null, onboarding_completed: true, platforms: [], country_code: "AR" }));
     return {};
   }, [user]);
 
-  const updateAvatar = useCallback(async (seed: string, style: string) => {
+  const updateAvatar = useCallback(async (eleccion: EleccionAvatar) => {
     if (!user) return { error: "No hay sesión" };
+    const { avatar_seed, avatar_style } = eleccion;
     const sb = supabaseBrowser();
-    const { error } = await sb.from("profiles").update({ avatar_seed: seed, avatar_style: style }).eq("id", user.id);
+    const { error } = await sb.from("profiles").update({ avatar_seed, avatar_style }).eq("id", user.id);
     if (error) return { error: error.message };
-    setProfile((p) => (p ? { ...p, avatar_seed: seed, avatar_style: style } : { id: user.id, display_name: null, is_admin: false, avatar_seed: seed, avatar_style: style, onboarding_completed: true, platforms: [], country_code: "AR" }));
+    setProfile((p) => (p ? { ...p, avatar_seed, avatar_style } : { id: user.id, display_name: null, is_admin: false, avatar_seed, avatar_style, onboarding_completed: true, platforms: [], country_code: "AR" }));
     return {};
   }, [user]);
 

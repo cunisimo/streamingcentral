@@ -680,3 +680,62 @@ FECHA DE LA SEMANA, no desde la ingesta. La semana que tenemos hoy ya nació con
 Verificado de paso que no hay un desfase sistemático: el TSV de Netflix todavía
 publica `2026-08-16` como su semana más nueva, así que la corrida de hoy se
 llevó lo más fresco que había.
+
+
+---
+
+## #14 — El avatar propio parpadea en cada carga
+
+**Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-08-27
+
+**NO es una regresión de la tanda de avatares**, y eso decide cuándo se arregla:
+el código anterior tenía exactamente el mismo parpadeo, con otro dibujo.
+
+### Qué se ve
+
+Al cargar cualquier pantalla con el avatar propio —la barra de abajo, el hub de
+`/cuenta`, `/cuenta/perfil`— se ve **un avatar que no es el tuyo durante un
+instante**, y después aparece el correcto. Reportado por el dueño en la
+verificación manual del 27/08, recargando después de guardar.
+
+### Causa
+
+`profile` viaja en `null` hasta que la sesión resuelve, y los tres componentes
+pintan igual:
+
+```tsx
+<Avatar perfil={profile} … />
+```
+
+Con `null`, `resolverAvatar` devuelve `AVATAR_POR_DEFECTO` — que es lo correcto
+para esa función, porque siempre tiene que devolver un avatar del catálogo. El
+problema no es la resolución: es **pedirle una respuesta antes de tener el
+dato**.
+
+**El código anterior hacía lo mismo**: `getAvatarUrl(undefined)` caía al estilo
+y la semilla por defecto y pintaba un DiceBear fijo. Cambió el dibujo del
+parpadeo, no el parpadeo.
+
+### Por qué no se arregló en `feat/avatares-propios`
+
+Decisión del dueño, 27/08: **se resuelve en una rama aparte, después de
+desplegar los avatares y antes del empaquetado nativo.** Meter un cambio en la
+nav y en el hub adentro de una rama que ya estaba verificada a mano habría
+obligado a repetir la verificación entera por algo que ya estaba pasando en
+producción.
+
+### Criterio de cierre
+
+`AuthContext` ya expone `ready`. Mientras sea `false`, los tres puntos que
+muestran el avatar propio no tienen que resolver ninguno: va un hueco neutro del
+mismo tamaño —para no mover el layout, que sería cambiar un parpadeo por un
+salto— y recién con `ready` en `true` se pinta el avatar.
+
+**Cerrado cuando**: recargando `/cuenta`, `/cuenta/perfil` y cualquier pantalla
+con la barra de abajo, **no aparece ningún avatar que no sea el del perfil**, y
+el CLS no empeora.
+
+**Ojo con el alcance**: son tres llamadores (`AvatarPicker`, `BottomNav`,
+`UserHub`). El componente `Avatar` y `resolverAvatar` **no se tocan** — su
+contrato de devolver siempre uno del catálogo es correcto y hay tests que lo
+fijan.

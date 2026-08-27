@@ -37,7 +37,7 @@ export default function BottomNav({ sobreFicha = false }: { sobreFicha?: boolean
       ))}
       <Link href="/cuenta" className={`navitem ${cuentaOn ? "on" : ""}`}>
         {user ? (
-          <Avatar seed={profile?.avatar_seed || user.id} style={profile?.avatar_style} size={25} className="navav" />
+          <Avatar perfil={profile} size={25} className="navav" />
         ) : (
           <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" />

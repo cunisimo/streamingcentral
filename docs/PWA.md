@@ -81,7 +81,8 @@ transversales primero:
 | 2 | Otros hosts externos (Supabase, YouTube, `api.themoviedb.org`) | **Sin interceptar** | — | Supabase = sesión y datos del usuario. YouTube = video (cachearlo es inútil y rompe el player). |
 | 3 | `/api/*` (propia) | **Network Only** | ninguno | **La regla más importante.** Catálogo, listas y votos nunca se cachean. Si falla, la UI muestra `OfflineState`. |
 | 4 | `/_next/static/*` (JS, CSS, fuentes) | **Cache First**, sin expiración | `sc-static-v2` | Next hashea por contenido: un cambio produce otro nombre de archivo. Imposible servir algo obsoleto. |
-| 5 | `/icons/*`, `/splash/*`, `/screenshots/*`, `/manifest.webmanifest` | **Cache First** | `sc-static-v2` | Assets propios estáticos. |
+| 5 | `/avatars/*` (los 31 avatares propios) | **Cache First**, sin expiración | `sc-static-v7` | Archivos propios e **inmutables**: un `id` está atado a una ilustración para siempre. Es lo que hace que el avatar se siga viendo sin conexión. Ver la política de caché en `docs/AVATARES.md`. |
+| 6 | `/icons/*`, `/splash/*`, `/screenshots/*`, `/manifest.webmanifest` | **Cache First** | `sc-static-v7` | Assets propios estáticos. |
 | 6 | Documentos de navegación (`mode: navigate`) | **Network First** → cache → `/offline.html` | `sc-pages-v2` | Ver abajo. |
 | 7 | Cualquier otro GET del mismo origen | **Sin interceptar** | — | |
 
@@ -245,6 +246,7 @@ redirects" y LCP 8.2s. La recarga tras un update la decide el usuario desde el
 | Abrir una ruta **nunca visitada** | ✅ Muestra `/offline.html` (no un error del navegador) |
 | JS, CSS y fuentes | ✅ Cache First (`sc-static`) |
 | Pósters y backdrops ya vistos | ✅ Cache First (`sc-images`) |
+| El avatar propio | ✅ Cache First (`sc-static`) |
 | Íconos, splash, manifest | ✅ Precacheados |
 | Cualquier sección con datos (Home, Series, Películas, ficha, Mi lista) | ⚠️ Carga el shell y muestra `OfflineState` con **Reintentar** |
 | Votar, agregar a Mi Lista, login | ❌ Falla con aviso (sin Background Sync — ver §6) |

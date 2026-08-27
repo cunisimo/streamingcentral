@@ -23,10 +23,34 @@ Todo lo de acá cae en una de cuatro cajas, y **no se mezclan**:
 
 ## 0. Hallazgos confirmados
 
+> **Actualización del 2026-08-25 — los avatares están RESUELTOS.** DiceBear salió
+> del proyecto. El estado actual, sin ambigüedad:
+>
+> - **Avatares locales propios**: 31 archivos WebP en `/avatars/`.
+> - **Cero conexión a DiceBear**, verificado con un barrido de fuente, SQL,
+>   archivos públicos, service worker y bundles generados.
+> - **La semilla se recopila y se guarda en Supabase**, que actúa como
+>   **proveedor de servicio**. Para Data Safety: **recopilado, NO compartido**.
+> - **Ya no se envía a DiceBear ni a terceros** para generar ni servir el avatar.
+> - **Los archivos WebP salen del propio origen de Yump.**
+> - **Ninguna atribución a DiceBear** corresponde ya, porque no se usa.
+> - **Autoría, en tres grupos**: **nueve** personajes de **Pajaritos**, creados
+>   por **Juan Facundo Galíndez** y adaptados en 3D para Yump; **Don Tito**,
+>   **mascota y personaje original de Yump** (no es de Pajaritos); y las demás
+>   ilustraciones, también propias de la app.
+> - **En `/acerca-de`**, en la tanda legal: el enlace textual a @pajaritos.web
+>   acompaña **sólo a Pajaritos**, no a Don Tito. Sin widget.
+>
+> Ver `docs/AVATARES.md`. Las secciones §1, §2.a, §2.f, §2.g, §7 y §8 quedaron
+> actualizadas; el razonamiento anterior se conserva marcado como **historia**.
+> El resto de esta auditoría sigue vigente.
+
 1. ✅ **Falta la atribución visible de TMDB.** Cero menciones en la interfaz. La
    app ya está publicada, así que es un incumplimiento vigente.
-2. ✅ **Falta la atribución CC BY 4.0 de DiceBear** (`adventurer-neutral`, de
-   Lisa Wischofsky).
+2. ~~Falta la atribución CC BY 4.0 de DiceBear.~~ **CERRADO el 2026-08-25**: no
+   corresponde ninguna atribución porque DiceBear ya no se usa. Lo que sí hay que
+   poner en `/acerca-de` es la autoría de **Juan Facundo Galíndez** por los
+   personajes de Pajaritos.
 3. ✅ **Los wordmarks dibujados de plataformas no son adecuados para Play.**
 4. ✅ **Faltan las cuatro rutas públicas**: `/privacidad`, `/terminos`,
    `/acerca-de`, `/eliminar-cuenta`.
@@ -110,7 +134,7 @@ Proyecto Supabase `aibqqebwlladjjkeqllo`. ✅ Todas las tablas tienen RLS
 | **Sesión / refresh token** | `auth.sessions` + `localStorage` | mantener sesión | `signOut()` + limpieza local |
 | **`user_id` (uuid)** | PK de `profiles`, FK de todo | vincular | cascade |
 | **Nombre visible** | `profiles.display_name` | saludo, firma | cascade |
-| **Avatar** (`avatar_style`, `avatar_seed`) | `profiles` | dibujar el avatar | cascade — pero **la semilla sale hacia DiceBear**, ver §1.E |
+| **Avatar** (`avatar_style`, `avatar_seed`) | `profiles` (Supabase) | guardar **cuál** de los 31 avatares propios eligió | cascade. **Es un dato recopilado**: vive en Supabase, que actúa como proveedor de servicio. ✅ Lo que cambió es que **ya no se envía a DiceBear ni a ningún tercero**; los WebP se sirven desde el propio origen de Yump |
 | **País** | `profiles.country_code` (default `AR`) | preferencia | cascade — ✅ verificado: **no se envía como parámetro a ninguna ruta** |
 | **Plataformas** | `profiles.platforms integer[]` | preferencia sincronizada | cascade |
 | **Votos** | `votes` (1-3 + `tmdb_id` + fecha) | rieles de votos y personalización | cascade |
@@ -164,14 +188,16 @@ Ven la IP porque el navegador les habla sin pasar por nosotros.
 | **Vercel Speed Insights** | ruta, URL, velocidad de red, navegador, dispositivo, SO, **país**, Web Vitals | [Speed Insights — Privacy](https://vercel.com/docs/speed-insights/privacy-policy) |
 | **`image.tmdb.org`** | IP, user-agent y qué póster se mira | pósters servidos directo |
 | **`youtube-nocookie.com`** | IP, user-agent, al reproducir. El modo privacidad **no elimina el rastreo, evita la personalización**; los anuncios siguen pudiendo aparecer, no personalizados | [Privacy Enhanced Mode](https://support.google.com/youtube/answer/171780) |
-| **`api.dicebear.com`** | IP + **la semilla del avatar**. Registra "IP addresses or domain names of the computers utilized by the Users"; responsable Florian Körner (Alemania), hosting Hetzner + BunnyWay | [DiceBear — Privacy](https://www.iubenda.com/privacy-policy/57216581/full-legal) |
+| ~~`api.dicebear.com`~~ | **YA NO SE CONTACTA.** Los avatares son archivos propios del mismo origen. La fila se conserva tachada para que se entienda qué cambió | — |
 | **`calendar.google.com`** | solo al tocar "Agendar": título y fecha en la URL. **Navegación iniciada por el usuario** | `lib/calendar-links.ts` |
 
-✅ **Hallazgo a corregir antes de publicar la política**: en
-`components/AuthContext.tsx:53` (y 133, 142) hay un camino de respaldo donde
-`avatar_seed` toma el valor de `user.id`. Cuando corre, **el UUID de la cuenta
-viaja en la URL a DiceBear** y queda en sus logs. El camino normal usa el
-`gen_random_uuid()` del trigger `handle_new_user`, sin vínculo con nada.
+✅ ~~**Hallazgo**: en `components/AuthContext.tsx` hay un camino de respaldo donde
+`avatar_seed` toma el valor de `user.id` y el UUID viaja a DiceBear.~~
+**CERRADO el 2026-08-25.** Ya no hay a dónde viajar: el `user.id` sigue usándose
+como semilla en ese respaldo, y **entra a un hash que corre en el dispositivo**
+para elegir uno de los 31 dibujos locales. **No hay petición saliente a ningún
+tercero.** (La semilla guardada en `profiles` sigue siendo un dato recopilado por
+Supabase; lo que se eliminó es el envío a DiceBear.)
 
 ---
 
@@ -221,7 +247,7 @@ qué. Acá va la excepción concreta en cada fila.
 | Speed Insights | App info and performance → **Diagnostics** | 🟡 **Sí** | No | Service provider (Vercel) | Obligatorio | Analytics |
 | Web Analytics | App activity → **App interactions** | 🟡 **Sí** | No | Service provider (Vercel) | Obligatorio | Analytics |
 | **Geolocalización de Analytics** | Location → **Approximate location** | 🔵 **DECISIÓN** — ver 2.b | No | Service provider | Obligatorio | Analytics |
-| **Avatar** (semilla persistida en `profiles`) | Personal info → **User IDs** ⚠️ ver 2.f | Sí | **Sí, a DiceBear** | **Ninguna excepción aplicable** mientras el navegador contacte a DiceBear | Opcional | App functionality |
+| **Avatar** (`avatar_style` + `avatar_seed`) | App activity → **Other actions** | **Sí** — se guarda en Supabase | **No** | **Service provider** (Supabase). ✅ Ya no se envía a DiceBear; los WebP salen del propio origen. Ver 2.f | Opcional | App functionality, Personalization |
 | **Pósters de TMDB** (`image.tmdb.org`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Obligatorio | App functionality |
 | **Tráilers de YouTube** (`youtube-nocookie.com`) | ⚠️ ver 2.g | ⚠️ ver 2.g | ⚠️ ver 2.g | 🔍 **VERIFICACIÓN PENDIENTE** | Opcional (solo al reproducir) | App functionality |
 | Google Calendar | Calendar → **Calendar events** | **No** | **No** | **User-initiated transfer**: lo abre la persona, con divulgación previa | — | — |
@@ -365,7 +391,42 @@ anuncio dentro de la app.
 it's considered a violation … and may result in your app(s) being suspended"*.
 El costo de declararlo es una etiqueta "Contiene anuncios" en la ficha.
 
-### 2.f ⚠️ CORREGIDO — El avatar, y por qué cambiar la semilla NO alcanza
+### 2.f ✅ RESUELTO — Los avatares son propios y locales
+
+**ESTADO ACTUAL, y es lo único que hay que leer para completar el formulario:**
+
+- Los avatares son **31 archivos WebP propios** en `/avatars/`, del mismo origen
+  que la app.
+- **Cero conexión a DiceBear.** Verificado con un barrido de fuente, SQL,
+  archivos públicos, service worker y bundles generados, con canarios que prueban
+  que el barrido detecta de verdad.
+- **La semilla se recopila y se guarda en Supabase**, proveedor de servicio. No
+  decir "cero transferencia" a secas: el dato sale del dispositivo y queda
+  almacenado.
+- **Ya no se envía a DiceBear ni a terceros** para generar ni servir el avatar.
+- **Para Data Safety**: la fila del avatar ya **no es un "sharing"**. Es
+  `App activity → Other actions`, **recopilado, NO compartido**, con la excepción
+  de *service provider* (Supabase) como todo lo demás del perfil.
+- **Los archivos WebP salen del propio origen de Yump**, no de una CDN de
+  terceros.
+- **Autoría, en tres grupos separados** — no es una sola atribución:
+
+  | Grupo | Cuántos | Qué es | ¿Lleva el enlace a @pajaritos.web? |
+  |---|---|---|---|
+  | **Pajaritos** | **9** | personajes de la tira, creados por **Juan Facundo Galíndez** y adaptados en 3D para Yump | **sí** |
+  | **Don Tito** | **1** | **mascota y personaje original de Yump**, creado para la app. **No es de Pajaritos** | **no** |
+  | Otras ilustraciones | **21** | criaturas y objetos, también propios de la app | no |
+
+  En `/acerca-de` los tres van en párrafos distintos, y el enlace textual a
+  @pajaritos.web queda **dentro del párrafo de Pajaritos** — poner a Don Tito
+  cerca de ese enlace lo haría leer como si fuera de la tira.
+
+Detalle completo en `docs/AVATARES.md`.
+
+<details>
+<summary><strong>HISTORIA — el análisis que llevó a esta decisión (cerrado)</strong></summary>
+
+#### El avatar, y por qué cambiar la semilla NO alcanzaba
 
 La versión anterior decía que bastaba con que la semilla dejara de ser el
 `user.id`, y que eso era "una línea de código". **Las dos cosas están mal.**
@@ -420,9 +481,12 @@ consulté; hay que leerla en el paquete publicado. Y hay que confirmar el nombre
 exacto del paquete de estilos, porque la documentación menciona
 `@dicebear/styles` mientras que versiones anteriores usaban `@dicebear/collection`.
 
-🔵 **DECISIÓN tuya**: A, B, C o D. **Mientras no se decida, la fila del avatar
-queda en la matriz como transferencia a un tercero sin excepción aplicable**, y
-hay que declararla.
+**DECISIÓN TOMADA: una variante de la opción B.** No se usó la librería de
+DiceBear: se reemplazó por **31 ilustraciones propias**, que elimina la
+transferencia igual que la opción A y además saca cualquier dependencia de
+terceros, incluida la licencia CC BY 4.0 que la opción A conservaba.
+
+</details>
 
 ### 2.g ⚠️ CORREGIDO — Los tres dominios que contacta el navegador
 
@@ -432,11 +496,11 @@ eso transmite datos, los pongamos nosotros o no.
 
 **Qué se transmite, en los tres casos:**
 
-| | `image.tmdb.org` | `youtube-nocookie.com` | `api.dicebear.com` |
+| | `image.tmdb.org` | `youtube-nocookie.com` | ~~`api.dicebear.com`~~ |
 |---|---|---|---|
 | IP del dispositivo | sí | sí | sí |
 | User-agent | sí | sí | sí |
-| Recurso pedido | **qué póster** = qué título estás mirando | **qué tráiler** reproducís | **la semilla** del avatar |
+| Recurso pedido | **qué póster** = qué título estás mirando | **qué tráiler** reproducís | ✅ **ya no se contacta** |
 | Referrer | según la política del documento | sí (el player lo usa) | según la política |
 | Cookies del tercero | no las pone TMDB | el modo privacidad **no** las elimina, evita la personalización | no |
 | Correlación entre sesiones | por IP | por IP y por lo que Google ya tenga de esa persona | **por la semilla**: es estable |
@@ -450,8 +514,9 @@ eso transmite datos, los pongamos nosotros o no.
   qué recursos carga una app. **No hay un tipo que calce**, y ése es justamente
   el problema.
 - **La IP no es un tipo declarable** por sí sola en la lista de Play.
-- **La semilla del avatar sí calza**: `User IDs`. Es la única de las tres con un
-  tipo claro, y por eso es la única que puse en la matriz con su fila.
+- ~~La semilla del avatar sí calza: `User IDs`.~~ ✅ **Ya no aplica**: los
+  avatares son locales, así que **quedan sólo DOS dominios de terceros**, y
+  ninguno de los dos tiene un tipo del formulario que le calce bien.
 
 **Qué excepción podría aplicar:**
 
@@ -461,7 +526,7 @@ eso transmite datos, los pongamos nosotros o no.
   el player**. 🟡 Si se quiere apoyar en esa excepción, hay que agregar el aviso.
 - **TMDB**: no encuentro excepción aplicable. No es proveedor de servicio, no es
   iniciado por el usuario y no está anonimizado.
-- **DiceBear**: ninguna, ver 2.f.
+- ~~**DiceBear**: ninguna.~~ ✅ **Resuelto**: la transferencia se eliminó (§2.f).
 
 🔍 **VERIFICACIÓN PENDIENTE, y la dejo abierta a propósito.** No encontré
 documentación oficial de Google que resuelva si **cargar un recurso estático
@@ -475,8 +540,8 @@ your app". Google no lo aclara para este caso.
 **No lo resuelvo por mi cuenta.** 🟡 Lo que sí recomiendo, porque reduce el
 problema en vez de discutirlo:
 
-1. **DiceBear**: eliminar la transferencia (§2.f, opción A). Es la única de las
-   tres que podemos sacar sin perder nada.
+1. ~~**DiceBear**: eliminar la transferencia.~~ ✅ **HECHO.** Era la única de las
+   tres que se podía sacar sin perder nada, y se sacó.
 2. **YouTube**: agregar una divulgación previa al player, que además es lo que
    pide la excepción de transferencia iniciada por el usuario.
 3. **TMDB**: no es eliminable sin proxear todas las imágenes, que es un costo de
@@ -597,7 +662,8 @@ cero service role en el cliente.
 5. Qué se guarda si creás una cuenta (Nivel C)
 6. Logs operativos (Nivel D) 🔍
 7. Terceros: **proveedores de servicio** (Vercel, Supabase, Upstash) vs
-   **terceros que contacta tu navegador** (TMDB, YouTube, DiceBear)
+   **terceros que contacta tu navegador** (TMDB, YouTube). ✅ **DiceBear ya no
+   está en esta lista**; los avatares son propios y locales
 8. Retención 🔍
 9. Cómo borrar la cuenta → `/eliminar-cuenta`
 10. Derechos 🔵 (depende de jurisdicción)
@@ -902,9 +968,8 @@ Las diez de §4.c, más:
 14. §2.e — ¿"Contains ads" por YouTube?
 15. §5.c — ¿Capturas con pósters reales o con placeholders propios?
 16. §6.d — ¿Se aprueba el reemplazo por nombres neutros?
-17. §2.f — **¿Qué solución de avatares?** A (generación local), B (set propio),
-    C (proxy) o D (dejar como está y declarar la transferencia). **Bloquea el
-    commit 3 de la primera tanda.**
+17. ~~§2.f — ¿Qué solución de avatares?~~ ✅ **DECIDIDO Y HECHO el 2026-08-25**:
+    31 ilustraciones propias. Ya no bloquea nada.
 18. §2.c — ¿Con qué tipo de Play se declara la contraseña efímera?
 19. §2.g — ¿Se agrega una divulgación previa al player de YouTube, para poder
     apoyarse en la excepción de transferencia iniciada por el usuario?
@@ -931,9 +996,9 @@ hoy dos incumplimientos que ya existen en producción**.
 
 | # | Commit | Contenido | Depende de |
 |---|---|---|---|
-| 1 | `fix(legal): atribución de TMDB y DiceBear` | `/acerca-de` con logo TMDB local, el texto largo verbatim, enlace, crédito CC BY 4.0 a Lisa Wischofsky y aviso de no afiliación | nada — **es el que cierra el incumplimiento vigente** |
+| 1 | `fix(legal): atribución de TMDB y autoría de los avatares` | `/acerca-de` con logo TMDB local, el texto largo verbatim, enlace, y la autoría en **tres grupos separados**: los **nueve** personajes de **Pajaritos** de **Juan Facundo Galíndez** con enlace textual a @pajaritos.web (sin widget), **Don Tito como mascota original de Yump** en su propio párrafo y **sin** ese enlace, y las demás ilustraciones propias. Más el aviso de no afiliación. **Ya NO lleva crédito a DiceBear** | nada — **es el que cierra el incumplimiento vigente** |
 | 2 | `fix(onboarding): las rutas legales quedan exentas del gate` | lista de exentas + **test** de que `/privacidad`, `/terminos`, `/acerca-de` y `/eliminar-cuenta` no redirigen con `onboarding_completed = false` | nada |
-| 3 | `fix(privacidad): los avatares dejan de salir hacia DiceBear` | ⚠️ **depende de la decisión arquitectónica de §2.f**, no es cambiar la semilla. Si es la opción A: agregar `@dicebear/core` + `@dicebear/styles`, generar el SVG sin red y **borrar el helper que arma la URL de `api.dicebear.com`** | **decisión 17 — bloqueante** |
+| ~~3~~ | ~~`fix(privacidad): los avatares dejan de salir hacia DiceBear`~~ | ✅ **HECHO en la rama `feat/avatares-propios`**, antes que esta tanda. Ver `docs/AVATARES.md` | — |
 | 4 | `refactor(marcas): nombres neutros en lugar de wordmarks imitados` | `PlatformLogo.tsx` + borrar las 15 reglas `.lg-*` | decisión 16 |
 | 5 | `feat(legal): /privacidad y /terminos` | las estructuras de §4 | decisiones 1-6 |
 | 6 | `feat(cuenta): /eliminar-cuenta pública` | §3.e; reusa `<EliminarCuenta/>` | decisiones 1-2 |
@@ -952,22 +1017,18 @@ hoy dos incumplimientos que ya existen en producción**.
 - `/eliminar-cuenta` permite iniciar sesión y borrar, con un solo mensaje de
   error genérico.
 - Ninguna marca de plataforma conserva su color ni su tipografía.
-- ⚠️ **Si se elige eliminar la transferencia a DiceBear, hay que DEMOSTRARLO, no
-  suponerlo.** Dos comprobaciones, y las dos son necesarias:
-  1. **Test automático**: que ningún módulo del bundle contenga la cadena
-     `api.dicebear.com`. Es el equivalente del test de importaciones que ya usa
-     el proyecto para que `lib/claves.ts` no llegue al navegador.
-  2. **Verificación en el navegador**: cargar `/cuenta/perfil` con una cuenta
-     real y comprobar en las peticiones de red que **no hay ni una sola** a
-     `api.dicebear.com` — ni de la página ni del service worker. El registro de
-     red es la prueba; el código leído no alcanza, porque el SW puede tener la
-     URL vieja cacheada.
+- ✅ **La eliminación de DiceBear ya está demostrada** en la rama
+  `feat/avatares-propios`, con el barrido de fuente, SQL, públicos, SW y bundles,
+  más canarios que prueban que el barrido detecta de verdad. **Queda pendiente
+  la comprobación con una cuenta real en el navegador** — el registro de red es
+  la prueba definitiva y necesita credenciales.
 
 **Criterio de aceptación de la tanda**: las cuatro rutas responden 200 en
-producción sin sesión, `/acerca-de` muestra la atribución de TMDB y de DiceBear
-(CC BY 4.0, incluso si se generan localmente), el enlace de borrado es pegable en
-Play Console, y —si se eligió A, B o C en §2.f— el registro de red no muestra
-ninguna petición a `api.dicebear.com`.
+producción sin sesión; `/acerca-de` muestra **la atribución de TMDB** y la
+autoría **separada en tres grupos** —los nueve de Pajaritos con el enlace textual
+a @pajaritos.web, **Don Tito como mascota de Yump sin ese enlace**, y las demás
+ilustraciones propias— **sin ninguna mención a DiceBear**; y el enlace de borrado
+es pegable en Play Console.
 
 ---
 
@@ -998,9 +1059,9 @@ Se declara explícitamente para que nadie lo tome como confirmado:
    aclara para este caso (§2.g).
 9. **Si un archivo de medición interno, versionado y no distribuido**, cuenta
    como "cache" a los efectos del límite de 6 meses de TMDB (§5.f).
-10. **La licencia de la librería `@dicebear/core`** y el nombre exacto del paquete
-    de estilos (`@dicebear/styles` vs `@dicebear/collection`). Hay que leerlo en
-    el paquete publicado (§2.f).
+10. ~~La licencia de la librería `@dicebear/core` y el nombre del paquete de
+    estilos.~~ ✅ **Ya no aplica**: no se instaló ninguna librería. Los avatares
+    son ilustraciones propias.
 
 ---
 
@@ -1027,4 +1088,7 @@ Se declara explícitamente para que nadie lo tome como confirmado:
       filas de TMDB, YouTube y DiceBear con qué se transmite y qué excepción
       aplicaría; auditoría de persistencia de contenido de TMDB en las tres
       familias
-- [ ] **Tu aprobación antes de escribir una línea de código**
+- [x] **Cuarta pasada (2026-08-25)**: los avatares se resolvieron y el documento
+      quedó coherente en todas sus secciones. El razonamiento anterior sobre
+      DiceBear se conserva **marcado como historia**, no como estado actual
+- [ ] **Tu aprobación antes de escribir una línea de código de la tanda legal**
