@@ -143,9 +143,9 @@ del schema hace fallar el guard aunque sea inofensiva. Es deliberado, falla del
 lado conservador, y por eso **los comentarios de `supabase/schema.sql` dicen "la
 columna de estilo" y nunca el nombre literal**.
 
-Diecisiete canarios lo fijan: los dos casos que rompían el parser anterior,
-comentar la línea autorizada, borrarla, agregarle un `default`, y las cuatro
-variantes de mayúsculas — la sentencia autorizada toda en mayúsculas pasa, y
+Los tests y canarios lo fijan: los dos casos que rompían el parser anterior,
+comentar la línea autorizada, borrarla, agregarle un `default`, y las variantes
+de mayúsculas — la sentencia autorizada toda en mayúsculas pasa, y
 `AVATAR_STYLE` o `Avatar_Style` en una segunda sentencia, o en un comentario,
 fallan.
 
