@@ -18,43 +18,54 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ## Estado de despliegue
 
 ```
-origin/main               1e14f5c   ← DESPLEGADO en producción (app.yump.ar)
-main (local)              321d318   ← tres commits de DOCUMENTACIÓN, entran con el merge
-feat/avatares-propios                ← la rama viva: en Preview, SIN mergear
+origin/main                          ← DESPLEGADO en producción (app.yump.ar)
+                                       trae los avatares desde el merge 89ccb73
+feat/avatares-propios                ← MERGEADA el 27/08 con --no-ff. Se puede borrar
 feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
 feat/dia-rotacion                    ← sin mergear y MUY atrás de main; hay que rebasarla
 ```
 
-**Lo que hay en `origin/main` y desplegado** (`1e14f5c`): las tres tandas del
-idioma (catálogo en `es-MX` con respaldo a `es-ES`) y los dos arreglos del Top 10
-de Netflix — la plataforma garantizada por la fuente y la consulta acotada por
-subtítulo, con la ficha usando la misma evidencia. Detalle abajo.
+**A propósito NO se escribe acá el SHA de la punta.** Un commit no puede nombrar
+su propio hash, así que el commit que actualiza esta tabla la desactualiza; ya
+pasó dos veces seguidas. Se mira con `git log -1 origin/main`. Lo que sí se
+escribe es el SHA de un hito ya cerrado, como el merge de arriba.
 
-**A propósito NO se escribe acá el SHA de la punta de `feat/avatares-propios`.**
-Un commit no puede nombrar su propio hash, así que el commit que actualiza la
-tabla la desactualiza; ya pasó dos veces seguidas. Se mira con
-`git log -1 feat/avatares-propios`.
+**Lo que hay desplegado hoy:**
 
-**`main` local está TRES commits por delante de `origin/main`**, todos de
-documentación (issue #13, traspaso del idioma y la primera versión de la
-auditoría de Play). No se pushearon porque no hacía falta tocar producción por
-documentación.
+- las tres tandas del **idioma** (catálogo en `es-MX` con respaldo a `es-ES`);
+- los tres arreglos del **Top 10 de Netflix** — la plataforma garantizada por la
+  fuente, la consulta acotada por subtítulo y la ficha usando la misma evidencia;
+- los **31 avatares propios** (merge `89ccb73`, 27/08), con DiceBear fuera de la
+  app entera.
 
-**Decisión del dueño, 27/08: van INCLUIDOS en el merge de los avatares.** Son
-sólo `docs/PLAY-STORE.md` y compañía, no tocan el runtime, y hacen falta para la
-etapa siguiente. Lo que antes decía acá —"ojo con no arrastrarlos"— era una
-advertencia mientras la decisión estaba pendiente; ya está tomada.
+### El merge de los avatares — 27/08
+
+Entró con `--no-ff`, así que el merge commit está y se puede revertir de una
+pieza. Verificado antes de pushear: 565 tests, `tsc` limpio, `next build`
+compila, barrido de DiceBear en cero, guard del SQL OK, `SC_CACHE_VERSION` en
+`v7`. Y después, contra producción: los chunks del home traen **cero** rastros de
+DiceBear y `/avatars/avatar-pocho.webp` responde 200 `image/webp`.
+
+**Entraron también los tres commits de documentación** que esperaban en `main`
+local: la auditoría legal de Google Play (`docs/PLAY-STORE.md`). Decisión
+explícita del dueño — no tocan el runtime y hacen falta para la etapa siguiente.
+
+**No se ejecutó SQL, no se tocó Supabase y las columnas de `profiles` no
+cambiaron.** El contrato de persistencia está en `docs/AVATARES.md`.
+
+**Lo que queda de esa línea**, en orden:
+
+1. El dueño elige su avatar definitivo con la cuenta principal. Ya no hay
+   ninguna precaución que tomar.
+2. **Issue #14** —el parpadeo del avatar al cargar— en una rama aparte, antes del
+   empaquetado nativo. No es una regresión: el código anterior hacía lo mismo.
+3. Borrar `feat/avatares-propios` de los dos lados, con borrado seguro
+   (`git branch -d`, sin forzar), cuando el dueño lo confirme.
 
 `feat/idioma-tanda-2` y `feat/idioma-tanda-3` ya no existen: se borraron de los
-dos lados con borrado seguro (`git branch -d`, sin forzar) una vez verificada la
-producción. **Las tres tandas del idioma están cerradas** — el traspaso completo
-de esa línea de trabajo vive en `docs/TRASPASO-IDIOMA.md`.
-
-**La rama viva es `feat/avatares-propios`**: reemplaza DiceBear por 31 avatares
-WebP propios servidos desde `/avatars/`. Está en Preview esperando la prueba
-manual del dueño, que es lo único que bloquea el merge. El sistema, el contrato
-de persistencia y la lista de verificación están en `docs/AVATARES.md`; el
-detalle de la tanda, en `docs/TRASPASO.md`.
+dos lados con borrado seguro una vez verificada la producción. **Las tres tandas
+del idioma están cerradas** — el traspaso completo de esa línea de trabajo vive
+en `docs/TRASPASO-IDIOMA.md`.
 
 **Este bloque se actualiza en el mismo commit que mueve `main`.** Quedó tres
 semanas diciendo `ab4e189` mientras `main` iba por `5fc0c2e`, y un SHA viejo acá

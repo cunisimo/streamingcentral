@@ -11,9 +11,9 @@ histórico.
 1. **Producción (`app.yump.ar`) está estable**: catálogo en es-MX, Top 10 de
    Netflix arreglado, ficha de Moria arreglada. **El SHA desplegado vive en
    `docs/ESTADO.md`**, que es el documento canónico del estado.
-2. **`feat/avatares-propios` está en Preview esperando tu prueba manual.** Es la
-   única rama viva. **No mergeada.** El contrato de persistencia se corrigió el
-   27/08 para que un rollback no rompa nada — ver abajo.
+2. **`feat/avatares-propios` se mergeó el 27/08** (`89ccb73`, con `--no-ff`) y
+   está en producción: los once puntos de la verificación manual pasaron. Queda
+   elegir el avatar definitivo, y el issue #14 en una rama aparte.
 3. Lo que sigue después es la **tanda legal de Google Play**, ya auditada y
    diseñada en `docs/PLAY-STORE.md`, bloqueada por decisiones tuyas.
 
@@ -160,8 +160,8 @@ encontró una corrida real, no la revisión de código.
 
 | # | Qué | Quién |
 |---|---|---|
-| 1 | **Probar el Preview de avatares con una cuenta descartable** | vos |
-| 2 | Mergear `feat/avatares-propios` y verificar el deploy | después de 1 |
+| 1 | ~~Probar el Preview de avatares~~ — **hecho el 27/08: los once puntos pasan** | ✅ |
+| 2 | ~~Mergear y verificar el deploy~~ — **hecho: merge `89ccb73` con --no-ff, desplegado y verificado contra producción** | ✅ |
 | 3 | ~~Decidir qué hacer con los tres commits de documentación en `main` local~~ — **decidido el 27/08: entran con el merge** | ✅ |
 
 ### 3.b El cron del Top 10 — issue #13, sigue abierto
