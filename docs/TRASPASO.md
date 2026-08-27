@@ -23,7 +23,7 @@ histórico.
 ```
 origin/main               1e14f5c   ← DESPLEGADO en producción (app.yump.ar)
 main (local)              321d318   ← tres commits de documentación SIN pushear
-origin/feat/avatares-propios  fc1ba6d   ← en Preview, sin mergear
+origin/feat/avatares-propios  97bea6f   ← en Preview, sin mergear
 ```
 
 ⚠️ **`main` local está TRES commits por delante de `origin/main`** y son sólo
@@ -35,7 +35,7 @@ con no arrastrarlos sin querer** — o pushealos aparte y de forma consciente.
 | Pieza | Estado |
 |---|---|
 | Producción `app.yump.ar` | `1e14f5c`, READY |
-| Preview de avatares | `dpl_Cx94gvUgHTXeEfUMgXvfwjFthDCa`, READY, commit `fc1ba6d` |
+| Preview de avatares | commit `97bea6f` (contrato de persistencia corregido el 27/08). **El estado del deployment no se pudo verificar desde la sesión**: no hay CLI de Vercel ni token, y la URL del Preview está detrás del SSO de Vercel. Hay que mirarlo en el panel |
 | URL del Preview | `streamingcentral-git-feat-4e07d7-jfgalindez-gmailcoms-projects.vercel.app` |
 | `IDIOMA_TITULOS` | `es-MX` en Vercel Production y en Supabase Edge Functions |
 | Cron `tmdb-sync-upcoming-daily` (pg_cron) | activo, jobid 2 |
