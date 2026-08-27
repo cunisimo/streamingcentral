@@ -8,8 +8,9 @@ histórico.
 
 ## En tres líneas
 
-1. **Producción (`main` → `1e14f5c`, `app.yump.ar`)** está estable: catálogo en
-   es-MX, Top 10 de Netflix arreglado, ficha de Moria arreglada.
+1. **Producción (`app.yump.ar`) está estable**: catálogo en es-MX, Top 10 de
+   Netflix arreglado, ficha de Moria arreglada. **El SHA desplegado vive en
+   `docs/ESTADO.md`**, que es el documento canónico del estado.
 2. **`feat/avatares-propios` está en Preview esperando tu prueba manual.** Es la
    única rama viva. **No mergeada.** El contrato de persistencia se corrigió el
    27/08 para que un rollback no rompa nada — ver abajo.
@@ -18,38 +19,33 @@ histórico.
 
 ---
 
-## Estado de despliegue
+## Estado de despliegue → `docs/ESTADO.md`
 
-```
-origin/main               1e14f5c   ← DESPLEGADO en producción (app.yump.ar)
-main (local)              321d318   ← tres commits de documentación SIN pushear
-origin/feat/avatares-propios  <punta>   ← en Preview, sin mergear
-```
+**El estado vive en `docs/ESTADO.md` y no se repite acá.** Qué SHA está
+desplegado, qué ramas hay vivas y qué queda abierto cambia con cada deploy; dos
+documentos con la misma tabla terminan siendo uno viejo y uno nuevo sin que se
+note cuál es cuál — este documento ya arrastró dos correcciones por eso.
 
-⚠️ **`main` local está TRES commits por delante de `origin/main`** y son sólo
-documentación (`88ef0f6`, `f622bb8`, `321d318`: issue #13, traspaso del idioma y
-la primera versión de la auditoría de Play). No se pushearon porque no hacía
-falta tocar producción por documentación. **Al mergear la rama de avatares, ojo
-con no arrastrarlos sin querer** — o pushealos aparte y de forma consciente.
+Lo que sí es propio de esta tanda:
 
-| Pieza | Estado |
+| Pieza | Dato |
 |---|---|
-| Producción `app.yump.ar` | `1e14f5c`, READY |
-| Preview de avatares | la punta de `feat/avatares-propios` (el contrato de persistencia se corrigió en `e627ec7`, el 27/08). **Acá NO se escribe el hash de la punta**: un commit no puede nombrar su propio hash, así que la tabla quedaba desactualizada por el commit que la actualizaba. Se mira con `git log -1 feat/avatares-propios`. **El estado del deployment no se pudo verificar desde la sesión**: no hay CLI de Vercel ni token, y la URL del Preview está detrás del SSO de Vercel. Hay que mirarlo en el panel |
 | URL del Preview | `streamingcentral-git-feat-4e07d7-jfgalindez-gmailcoms-projects.vercel.app` |
-| `IDIOMA_TITULOS` | `es-MX` en Vercel Production y en Supabase Edge Functions |
-| Cron `tmdb-sync-upcoming-daily` (pg_cron) | activo, jobid 2 |
-| Cron `netflix-top10` (Vercel) | ⚠️ ver issue #13 |
+| Estado del deployment | **no verificado desde la sesión**: no hay CLI de Vercel ni token, y la URL responde 302 al SSO. Hay que mirarlo en el panel |
+| Punta de la rama | `git log -1 feat/avatares-propios` — a propósito no se escribe acá |
 
 ---
 
 ## 1. La rama viva: `feat/avatares-propios`
 
 **Qué hace:** reemplaza DiceBear por 31 avatares WebP propios servidos desde
-`/avatars/`. Dieciséis commits. Documentación completa en `docs/AVATARES.md`.
+`/avatars/`. Documentación completa en `docs/AVATARES.md`; el recuento de commits
+se mira con `git log origin/main..feat/avatares-propios`.
 
-**Verificado:** 541 tests, `tsc` limpio, `next build` compila, barrido de DiceBear
-en cero sobre fuente, SQL, públicos, service worker y bundles.
+**Verificado:** `npm test` entero en verde, `tsc` limpio, `next build` compila,
+barrido de DiceBear en cero sobre fuente, manifiestos, SQL, públicos, service
+worker y bundles. (Los conteos —de tests, de commits— no se escriben acá: quedan
+viejos al día siguiente y nadie los vuelve a mirar.)
 
 ### Con qué cuenta se prueba — CORREGIDO el 27/08
 
@@ -170,7 +166,8 @@ encontró una corrida real, no la revisión de código.
 
 ### 3.b El cron del Top 10 — issue #13, sigue abierto
 
-Disparó el 25/08 a las 12:58 UTC, día correcto y dentro de su ventana. **Lo que
+**El estado completo está en `docs/ESTADO.md`**, que es donde se actualiza. En
+corto: disparó el 25/08 a las 12:58 UTC, día correcto y dentro de su ventana. **Lo que
 sigue sin explicación es por qué se salteó el martes 18/08** — hay que mirar los
 logs de Vercel. Y la fragilidad de fondo no se movió: **la guarda mide antigüedad
 desde la fecha de la semana, no desde la ingesta**, así que una corrida perdida

@@ -128,6 +128,32 @@ responde y muestra **otro** dibujo — no el elegido, pero nunca un hueco.
 recuperación es automática porque la semilla —que es el dato que importa— nunca
 se pierde.
 
+##### Qué prueba, exactamente, el test del rollback
+
+`lib/avatares-persistencia.test.ts` pasa el payload del contrato por una
+**transcripción** del lector histórico. Dicho sin adornos: **ese test no ejecuta
+el código de `origin/main`**. Coincide con el archivo real —se comparó— pero si
+alguien editara la transcripción, seguiría pasando. Lo que prueba es que el
+payload, por ESA fórmula, da una URL válida.
+
+Se transcribe en vez de leerse con `git show` porque `npm test` no puede depender
+de un remoto ni de la forma del repositorio de quien lo corra.
+
+**La evidencia inmutable**, para reconstruir el original sin confiar en la copia:
+
+```bash
+git cat-file blob 158aa27c52318648b1149d1c7c632ce4e6af7323
+```
+
+| | |
+|---|---|
+| commit | `1e14f5c45d17b287b20d9d3c98cadc2c2d16cf63` |
+| blob de `lib/avatar.ts` | `158aa27c52318648b1149d1c7c632ce4e6af7323` |
+
+Un blob de git **es** el hash de su contenido: ese identificador no puede
+referirse a otro texto. Si la transcripción dejara de coincidir, el comando lo
+muestra.
+
 #### Por qué la semilla alcanza para distinguir una elección de una herencia
 
 Porque los dos conjuntos no se pisan:
@@ -145,10 +171,36 @@ perfil viejo.
 
 #### `"yump"` sigue leyéndose, pero ya no se escribe
 
-Los perfiles que alcanzaron a guardar desde el Preview tienen `"yump"` en la
-columna de estilo. **Se resuelven bien sin ningún caso especial**, justamente
-porque la resolución mira la semilla. `ESTILO_YUMP` sigue exportado como etiqueta
-de lectura y hay un test que verifica que **ninguna ruta activa lo escriba**.
+Un perfil con `"yump"` en la columna de estilo **se resuelve bien sin ningún caso
+especial**, justamente porque la resolución mira la semilla. `ESTILO_YUMP` sigue
+exportado como etiqueta de lectura y hay un test que verifica que **ninguna ruta
+activa lo escriba**.
+
+⚠️ **Eso es una PROTECCIÓN ante un valor posible, no la descripción de filas que
+existan.** Una versión anterior de este documento decía "los perfiles que
+alcanzaron a guardar desde el Preview tienen `yump`", y no había ninguno.
+
+#### Lo que hay en la base, medido
+
+Consulta a Producción del **27 de agosto de 2026** — sólo lectura, no se escribió
+nada:
+
+| | |
+|---|---|
+| Perfiles | **10** |
+| Con `avatar_style = "yump"` | **0** |
+| Con semilla vacía | **0** |
+| Con semilla que **no** es uuid | **0** |
+
+Las dos últimas filas dicen lo mismo desde dos lados: **nadie eligió todavía un
+avatar del catálogo**. Los 10 perfiles llevan la semilla que les puso el trigger o
+el backfill, así que hoy todos ven su avatar por mapeo legado.
+
+**Y aun así la lectura defensiva se mantiene.** El valor pudo escribirse mientras
+el código nuevo estuvo sólo en Preview sobre la base compartida, y podría
+escribirse de nuevo si alguien guardara desde un despliegue viejo. Una foto de la
+base dice qué hay hoy, no qué puede llegar; sacar el caso costaría más que
+dejarlo.
 
 ### El default de `avatar_style`: qué pasa en cada caso
 
@@ -218,8 +270,13 @@ sentencia autorizada escrita en mayúsculas también fallaba.
 | Estado del perfil | Qué se muestra |
 |---|---|
 | La semilla **es un id del catálogo** | ese avatar. Es una elección explícita. **No se mira la columna de estilo** — da igual que diga `adventurer-neutral`, `yump`, otra cosa o nada |
-| Cualquier otra semilla (uuid heredado, estilo desconocido, basura) | mapeo **determinístico** sobre `LEGADO_V1` |
-| Sin semilla utilizable (null, vacío, basura) | `AVATAR_POR_DEFECTO` |
+| **Cualquier otro texto no vacío** — un uuid heredado, un id mal escrito, `../../etc/passwd`, un `<script>` | mapeo **determinístico** sobre `LEGADO_V1`. No hace falta que la semilla "tenga sentido": lo único que se le pide es que sea texto |
+| **Sin semilla utilizable**: `null`, `undefined`, cadena vacía, sólo espacios, o un valor que no es string (un número, un objeto — la base puede devolverlos) | `AVATAR_POR_DEFECTO` |
+
+⚠️ **La frontera es "no vacío", no "válido".** Una versión anterior de esta tabla
+ponía "basura" en las dos filas, que es contradictorio: `"@#$%"` entra al mapeo
+legado y sale con un avatar estable, no cae al por defecto. Lo único que cae al
+por defecto es lo que **no deja nada que hashear** después de `trim`.
 
 El mapeo legado es `hashCadena(semilla) % LEGADO_V1.length`. Es **puro** y corre
 **en el dispositivo**, así que la misma persona ve el mismo dibujo en todos sus
@@ -443,16 +500,61 @@ cubre de punta a punta**, porque dependen de una petición real a Supabase.
 node scripts/barrido-dicebear.mjs
 ```
 
-Barre `lib`, `components`, `app`, `hooks`, `scripts`, `supabase` y `public`, y
-—si hay un build— también `.next/static` y `.next/server`. `lib/sin-dicebear.test.ts`
+Barre `lib`, `components`, `app`, `hooks`, `scripts`, `supabase` y `public`, más
+los manifiestos de dependencias, y —si hay un build— también `.next/static` y
+`.next/server`. `lib/sin-dicebear.test.ts`
 importa **el mismo escáner**, así que no hay dos implementaciones que puedan
 divergir.
 
-Excluye las líneas que **empiezan** con marca de comentario, porque un comentario
-no abre una conexión, pero **nunca corta a mitad de línea**: `https://api.dicebear.com`
-contiene `//` y recortar ahí sería un falso negativo. Verificado con un canario
-—un archivo con la URL en código y la misma URL en un comentario— que detecta
-exactamente uno.
+Excluye las líneas de comentario, porque un comentario no abre una conexión, pero
+**nunca corta a mitad de línea**: `https://api.dicebear.com` contiene `//` y
+recortar ahí sería un falso negativo. Verificado con un canario —un archivo con la
+URL en código y la misma URL en un comentario— que detecta exactamente uno.
+
+### Qué es un comentario, y los cuatro falsos negativos del 27/08
+
+⚠️ **El criterio anterior era "arranca con `//`, `*`, `/*` o `--`", y estaba
+mal.** Auditado el 27/08, dejaba pasar cuatro formas de código ejecutable — y no
+en teoría: `app/globals.css` tiene hoy `*{box-sizing:border-box}` y varias
+`--bg:#FAFAFD;…`, y el barrido las estaba descartando como si fueran comentarios.
+
+| Línea | Por qué pasaba | Qué es en realidad |
+|---|---|---|
+| `*{background-image:url("…")}` | empieza con `*` | el **selector universal** de CSS |
+| `* {background-image:url("…")}` | ídem, con espacio | lo mismo |
+| `/* c */ a{background:url("…")}` | empieza con `/*` | el bloque **cierra** y sigue código |
+| `--fondo: url("…");` | empieza con `--` | una **propiedad personalizada** de CSS |
+
+**El criterio nuevo es por lenguaje, y conservador**: ante la duda, reporta.
+
+| Marca | Cuándo exime |
+|---|---|
+| `//` | siempre — comenta hasta el fin de línea |
+| `--` | **sólo en `.sql`**. En CSS abre una propiedad |
+| `/*` y el cierre | sólo si **no queda código detrás del cierre** en la misma línea |
+| `*` al principio | **sólo en JS/TS**, y sólo como `*` solo o `* ` con espacio |
+
+En un `.css` **no se exime ninguna línea que empiece con `*`**, ni siquiera la
+del medio de un comentario de bloque. Es un falso positivo aceptado a
+conciencia: el costo de uno es leerlo, el de un falso negativo es publicar la
+conexión. Hay un canario por cada fila de las dos tablas, y uno que comprueba que
+esas formas siguen existiendo en `app/globals.css`.
+
+### Los manifiestos de dependencias también se barren
+
+Un `@dicebear/core` agregado a `package.json` es la forma más directa de que
+DiceBear vuelva, y **el barrido no lo veía**: `.json` estaba en las extensiones,
+pero ninguna raíz llegaba a la raíz del repositorio.
+
+Se barren `package.json`, `package-lock.json` y los locks alternativos
+(`pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `bun.lockb`) — listados aunque hoy no
+existan, para que cambiar de gestor de paquetes no reabra el agujero.
+
+**Se nombran los archivos, uno por uno; la raíz NO se recorre.** No es una
+cuestión de velocidad: en la raíz viven los cuatro archivos ajenos a esta rama
+(`avatares/`, los dos `prompts/` y una migración sin registrar), y un barrido que
+los tocara estaría mirando trabajo de otra tanda. Hay un canario que verifica que
+un `.json` suelto en la raíz **no** se barra.
 
 ### La única excepción: la constante del estilo persistido
 
