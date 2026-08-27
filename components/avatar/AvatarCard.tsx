@@ -1,7 +1,7 @@
 "use client";
 import { memo } from "react";
 import Avatar from "./Avatar";
-import { ESTILO_YUMP, type Avatar as AvatarDef } from "@/lib/avatares";
+import { type Avatar as AvatarDef } from "@/lib/avatares";
 import { atributosBloqueo } from "@/lib/foco-modal";
 
 // Una opción del selector. El nombre accesible sale del catálogo, así que un
@@ -34,11 +34,9 @@ function AvatarCardBase({
       title={avatar.nombre}
       {...atributosBloqueo(bloqueado)}
     >
-      <Avatar
-        perfil={{ avatar_style: ESTILO_YUMP, avatar_seed: avatar.id }}
-        size={64}
-        lazy={lazy}
-      />
+      {/* Alcanza con la semilla: `resolverAvatar` resuelve por pertenencia al
+          catálogo y no mira la columna de estilo. */}
+      <Avatar perfil={{ avatar_seed: avatar.id }} size={64} lazy={lazy} />
     </button>
   );
 }

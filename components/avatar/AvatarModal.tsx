@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
-import { ESTILO_YUMP, resolverAvatar } from "@/lib/avatares";
+import { eleccionAvatar, resolverAvatar } from "@/lib/avatares";
 import {
   SELECTOR_ENFOCABLE, atributosBloqueo, cierraElDialogo, focoInicial, nuevaSeleccion,
   siguienteFoco,
@@ -77,11 +77,15 @@ export default function AvatarModal({ onClose }: { onClose: () => void }) {
 
   async function guardar() {
     if (!selected || guardando.current) return;
+    // Los dos valores que se persisten salen de `eleccionAvatar` y de ningún
+    // otro lado: el componente no sabe —ni tiene por qué saber— qué se escribe
+    // en la columna de estilo. Devuelve `null` si el id no está en el catálogo,
+    // y entonces no se escribe nada.
+    const eleccion = eleccionAvatar(selected);
+    if (!eleccion) return;
     guardando.current = true;
     setBusy(true); setErr("");
-    // `ESTILO_YUMP` es lo que distingue una elección explícita de una semilla
-    // heredada: sin eso, el id elegido caería en el mapeo legado.
-    const { error } = await updateAvatar(selected, ESTILO_YUMP);
+    const { error } = await updateAvatar(eleccion);
     guardando.current = false;
     setBusy(false);
     if (error) {

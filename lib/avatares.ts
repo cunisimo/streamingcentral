@@ -55,8 +55,36 @@ export interface Avatar {
   readonly categoria: CategoriaAvatar;
 }
 
-/** El estilo que identifica a un avatar propio en `profiles.avatar_style`. */
+/**
+ * ETIQUETA HEREDADA, SÓLO DE LECTURA. **Ninguna ruta activa la escribe.**
+ *
+ * Fue el valor que guardaba la primera versión de esta tanda en la columna de
+ * estilo, y quedó en los perfiles que alcanzaron a elegir un avatar desde el
+ * Preview. Sigue exportada porque esos perfiles existen y hay tests que fijan
+ * que se leen bien — ver `ESTILO_PERSISTIDO` para lo que se escribe hoy.
+ */
 export const ESTILO_YUMP = "yump";
+
+/**
+ * EL ESTILO QUE SE PERSISTE con una elección nueva, y el motivo por el que es
+ * éste y no `yump`.
+ *
+ * Producción y Preview comparten la base de Supabase pero pueden correr
+ * versiones distintas del código, y un rollback devuelve el lector anterior
+ * (`lib/avatar.ts` en `origin/main`), que **interpola el valor de esta columna
+ * en una URL de un generador externo**. Con `yump` esa URL no existe: da 404 y
+ * la persona se queda sin avatar. Con el nombre del estilo viejo, el código
+ * anterior arma una URL que responde y muestra un dibujo válido.
+ *
+ * O sea: **el valor es una etiqueta de compatibilidad, no una dependencia.** El
+ * código nuevo NUNCA lo lee para armar nada — `resolverAvatar` ni siquiera mira
+ * la columna de estilo. La elección se recupera exacta por la semilla.
+ *
+ * Es la única aparición autorizada de esta cadena en todo el código ejecutable;
+ * `scripts/barrido-dicebear.mjs` la tiene en una allowlist de una sola línea y
+ * reporta cualquier otra. **Si se cambia esta línea, hay que cambiar allá.**
+ */
+export const ESTILO_PERSISTIDO = "adventurer-neutral";
 
 const ruta = (id: string) => `/avatars/avatar-${id}.webp`;
 
@@ -155,11 +183,24 @@ export interface PerfilAvatar {
  *
  * Tres caminos, en orden:
  *
- *  1. Estilo `yump` + un id que existe → ese avatar. Es la elección explícita.
- *  2. Cualquier otra cosa CON semilla → mapeo determinístico sobre `LEGADO_V1`.
- *     Acá caen los perfiles de DiceBear, los estilos desconocidos y las
- *     semillas que no son ids válidos.
+ *  1. La semilla ES un id del catálogo → ese avatar. **No se mira la columna de
+ *     estilo**: la elección la identifica la semilla y nada más.
+ *  2. Cualquier otra semilla → mapeo determinístico sobre `LEGADO_V1`. Acá caen
+ *     los perfiles anteriores, los estilos desconocidos y las semillas que no
+ *     son ids válidos.
  *  3. Sin semilla utilizable → `AVATAR_POR_DEFECTO`.
+ *
+ * POR QUÉ LA PERTENENCIA VA PRIMERO Y EL ESTILO NO PARTICIPA. Lo que se persiste
+ * hoy es `ESTILO_PERSISTIDO`, que es también el estilo de los perfiles viejos:
+ * si la resolución dependiera de esa columna, no habría forma de distinguir una
+ * elección de una semilla heredada. La semilla sí las distingue, y sin
+ * ambigüedad posible: **los ids del catálogo no tienen formato uuid y todas las
+ * semillas heredadas sí lo tienen** (`crypto.randomUUID()` en el selector
+ * anterior, `gen_random_uuid()::text` en el trigger). Hay un test que fija esa
+ * condición para los 31.
+ *
+ * El efecto secundario buscado es que los perfiles que guardaron `yump` desde el
+ * Preview se siguen leyendo bien, sin ningún caso especial.
  *
  * NUNCA construye una ruta con texto de la base. La semilla sólo se usa para
  * buscar en un índice o para calcular un número: no se interpola en `src` bajo
@@ -171,12 +212,9 @@ export interface PerfilAvatar {
  */
 export function resolverAvatar(p: PerfilAvatar | null | undefined): Avatar {
   const seed = typeof p?.avatar_seed === "string" ? p.avatar_seed.trim() : "";
-  const style = typeof p?.avatar_style === "string" ? p.avatar_style.trim() : "";
 
-  if (style === ESTILO_YUMP) {
-    const elegido = POR_ID.get(seed);
-    if (elegido) return elegido;
-  }
+  const elegido = POR_ID.get(seed);
+  if (elegido) return elegido;
 
   if (!seed) return AVATAR_POR_DEFECTO;
 
@@ -190,3 +228,28 @@ export function resolverAvatar(p: PerfilAvatar | null | undefined): Avatar {
 /** Atajo para la interfaz: la ruta que va en el `src` de un `<img>`. */
 export const rutaAvatar = (p: PerfilAvatar | null | undefined): string =>
   resolverAvatar(p).src;
+
+/**
+ * Lo que se GUARDA en `profiles` cuando alguien elige un avatar. Las dos
+ * columnas, juntas, porque una sin la otra no significa nada.
+ */
+export interface EleccionAvatar {
+  readonly avatar_seed: string;
+  readonly avatar_style: string;
+}
+
+/**
+ * FUENTE ÚNICA DE VERDAD DE LO QUE SE ESCRIBE. Ningún componente arma estos dos
+ * valores a mano: si el contrato cambia, cambia acá y en ningún otro lado.
+ *
+ * Devuelve `null` si el id no está en el catálogo. **A propósito no cae a un
+ * valor por defecto**: guardar un avatar que la persona no eligió es peor que no
+ * guardar nada, y el llamador ya sabe abortar (`AvatarModal.guardar`).
+ *
+ * No escribe: sólo arma el objeto. La escritura la hace `updateAvatar`.
+ */
+export function eleccionAvatar(id: string): EleccionAvatar | null {
+  const avatar = typeof id === "string" ? POR_ID.get(id.trim()) : undefined;
+  if (!avatar) return null;
+  return { avatar_seed: avatar.id, avatar_style: ESTILO_PERSISTIDO };
+}

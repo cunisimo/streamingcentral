@@ -335,3 +335,63 @@ test("el catálogo no contiene ninguna URL externa", () => {
   assert.doesNotMatch(json, /dicebear/i);
   assert.doesNotMatch(json, /https?:\/\//);
 });
+
+// ============================================================================
+// Resolución POR PERTENENCIA: la semilla manda, el estilo no
+// ============================================================================
+
+// El cambio de contrato: una elección nueva se guarda con el estilo compatible
+// `adventurer-neutral`, no con `yump` (ver `lib/avatares-persistencia.test.ts` y
+// docs/AVATARES.md). Para que eso funcione, el primer criterio de resolución
+// tiene que ser LA PERTENENCIA DE LA SEMILLA AL CATÁLOGO, sin mirar el estilo.
+//
+// No hay ambigüedad posible porque los ids del catálogo NO tienen formato uuid y
+// todas las semillas heredadas SÍ lo tienen: `crypto.randomUUID()` en el
+// selector viejo y `gen_random_uuid()::text` en el trigger.
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+test("NINGÚN id del catálogo tiene formato uuid", () => {
+  // Si un id lo tuviera, podría chocar con una semilla heredada y le cambiaría
+  // el dibujo a un perfil viejo. Es la condición que hace segura la regla de
+  // pertenencia.
+  for (const a of AVATARES) {
+    assert.doesNotMatch(a.id, UUID, `${a.id} tiene formato uuid`);
+  }
+});
+
+test("todas las semillas heredadas de los casos fijados SÍ son uuid o texto suelto", () => {
+  // La otra mitad de la condición: ninguna de las semillas legadas es un id del
+  // catálogo, así que la regla de pertenencia no las toca.
+  const ids = new Set(AVATARES.map((a) => a.id));
+  for (const [semilla] of CASOS) {
+    assert.ok(!ids.has(semilla), `la semilla legada "${semilla}" es un id del catálogo`);
+  }
+});
+
+test("una semilla que es un id del catálogo resuelve a ESE avatar, con cualquier estilo", () => {
+  for (const style of ["adventurer-neutral", ESTILO_YUMP, "pixel-art", "", null, undefined]) {
+    const r = resolverAvatar({ avatar_style: style, avatar_seed: "pocho" });
+    assert.equal(r.id, "pocho", `con estilo ${JSON.stringify(style)} resolvió a ${r.id}`);
+    assert.equal(r.src, "/avatars/avatar-pocho.webp");
+  }
+});
+
+test("la pertenencia vale para los 31, no sólo para uno", () => {
+  for (const a of AVATARES) {
+    assert.equal(resolverAvatar({ avatar_style: "adventurer-neutral", avatar_seed: a.id }).id, a.id);
+  }
+});
+
+test("LECTURA DEFENSIVA: un perfil con estilo `yump` e id válido sigue resolviendo bien", () => {
+  // Los perfiles que alcanzaron a guardarse desde el Preview tienen `yump` en la
+  // columna de estilo. Se siguen leyendo igual, aunque ninguna ruta activa lo
+  // escriba más.
+  for (const a of AVATARES) {
+    assert.equal(resolverAvatar({ avatar_style: ESTILO_YUMP, avatar_seed: a.id }).id, a.id);
+  }
+});
+
+test("la semilla se compara sin espacios de sobra", () => {
+  assert.equal(resolverAvatar({ avatar_style: "adventurer-neutral", avatar_seed: "  pocho  " }).id, "pocho");
+});
