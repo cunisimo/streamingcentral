@@ -6,6 +6,12 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import AvatarPicker from "@/components/avatar/AvatarPicker";
 import { useAuth } from "@/components/AuthContext";
+import dynamic from "next/dynamic";
+
+// PANEL DE DIAGNOSTICO TEMPORAL — issue #15. NO entra en el merge final: vive en
+// la rama diag/panel. Entra por dynamic y con ssr:false, asi que su codigo NO
+// viaja al navegador salvo que se pida con ?diagnostico=avatares.
+const PanelTraza = dynamic(() => import("@/components/diagnostico/PanelTraza"), { ssr: false });
 
 export default function PerfilPage() {
   const { user, profile, ready, updateDisplayName, signOut } = useAuth();
@@ -14,6 +20,13 @@ export default function PerfilPage() {
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
+  // Se lee de window y no con useSearchParams para no arrastrar un Suspense a
+  // una pagina que hoy no lo necesita. Es temporal.
+  const [diagnostico, setDiagnostico] = useState(false);
+
+  useEffect(() => {
+    setDiagnostico(new URLSearchParams(window.location.search).get("diagnostico") === "avatares");
+  }, []);
 
   useEffect(() => { if (ready && profile) setNombre(profile.display_name ?? ""); }, [ready, profile]);
   useEffect(() => { if (ready && !user) router.replace("/cuenta"); }, [ready, user, router]);
@@ -58,6 +71,7 @@ export default function PerfilPage() {
         </div>
       </main>
       <BottomNav />
+      {diagnostico && <PanelTraza />}
     </>
   );
 }

@@ -959,3 +959,25 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   color:var(--dim);background:var(--surface-2);border:1px solid var(--line);
   border-radius:999px;cursor:pointer}
 .ayuda-copiar:hover{color:var(--text);border-color:var(--line-2)}
+
+/* ============================================================================
+   PANEL DE DIAGNOSTICO TEMPORAL — issue #15. NO entra en el merge final: vive
+   en la rama `diag/panel` y se borra con ella. Solo se monta con
+   `?diagnostico=avatares` en la URL.
+   ============================================================================ */
+.diagp { position: fixed; right: 12px; bottom: 84px; z-index: 90; width: 320px; max-width: calc(100vw - 24px); max-height: 70vh; overflow: auto; background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); box-shadow: var(--sh-h); padding: 12px; font-size: 12.5px; }
+.diagp-tit { font-family: var(--display); font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.diagp-badge { font-family: var(--sans); font-weight: 600; font-size: 10.5px; color: var(--dim); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+.diagp-btns { display: flex; gap: 8px; margin: 10px 0 6px; }
+.diagp-btns .btn { flex: 1; padding: 7px 8px; font-size: 12px; }
+.diagp-paso { margin: 0 0 6px; color: var(--dim); line-height: 1.4; }
+.diagp-aviso { margin: 6px 0 0; color: var(--dim); }
+.diagp-veredicto { margin: 8px 0; padding: 7px 9px; border-radius: 8px; font-weight: 700; line-height: 1.35; }
+.diagp-veredicto.bien { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); }
+.diagp-veredicto.mal { background: color-mix(in srgb, var(--editorial) 18%, transparent); color: var(--text); }
+.diagp-tabla { width: 100%; border-collapse: collapse; }
+.diagp-tabla th { text-align: left; font-weight: 600; color: var(--dim); padding: 2px 0; white-space: nowrap; }
+.diagp-tabla td { text-align: right; padding: 2px 0; font-variant-numeric: tabular-nums; }
+.diagp-lentas { margin: 8px 0; padding-left: 16px; color: var(--editorial); line-height: 1.4; }
+.diagp-crudo { margin-top: 8px; color: var(--dim); }
+.diagp-crudo textarea { width: 100%; margin-top: 6px; font: 11px/1.35 ui-monospace, monospace; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
