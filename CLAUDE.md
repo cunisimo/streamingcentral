@@ -663,6 +663,19 @@ Ya resueltos en iteraciones anteriores (por si aparecen reportados de nuevo):
   schema quedó obsoleta y se sacó — correr el schema completo por eso sería
   innecesario.
 - ~~**"Películas que viste" + "Perfil de usuario / 5ta pestaña"**~~ — YA CONSTRUIDO. Área de usuario completa: hub con rieles (Mi lista, Me gustaron, Vistos recientemente), perfil con edición de nombre y picker de avatar (**31 avatares propios de Yump** en `/avatars/`, ver `lib/avatares.ts` y `docs/AVATARES.md` — sin librería de terceros ni petición saliente para generar o servir un avatar; la semilla sí se guarda en Supabase, que es proveedor de servicio), historial de vistas (`view_history`), Mi lista y Ya la vi (`user_items`). Próximos módulos: **Mis amigos** y **Mis emblemas** (placeholders en el hub). **El módulo de avatares NO requiere ejecutar SQL ni tocar Producción**: funciona con el esquema que ya está aplicado — ver `docs/AVATARES.md`.
+  **Lo que decide qué avatar se muestra es la SEMILLA, no la columna de estilo.**
+  Una elección guarda el id del catálogo en `avatar_seed` y
+  `avatar_style = "adventurer-neutral"`, que es una **etiqueta de
+  compatibilidad**: el código nuevo ni la lee, pero el lector anterior
+  (`lib/avatar.ts` en `origin/main`) la interpolaba en una URL de DiceBear, así
+  que con `"yump"` —lo que se guardaba antes— un rollback dejaba la imagen rota
+  (404 verificado). Con el estilo compatible muestra otro dibujo, y al volver al
+  código nuevo **reaparece la elección exacta sin migración**. La ambigüedad
+  entre elección y semilla heredada no existe porque **ningún id del catálogo
+  tiene formato uuid** y todas las semillas viejas sí. Los dos valores los arma
+  un solo lugar, `eleccionAvatar()`; ningún componente los escribe a mano. La
+  cadena `adventurer-neutral` tiene **una sola aparición autorizada** en código
+  ejecutable, con allowlist textual en `scripts/barrido-dicebear.mjs`.
 
 ## PWA (instalable — construido)
 

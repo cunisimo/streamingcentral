@@ -69,7 +69,8 @@ conexión a un tercero en cada carga.
 |---|---|
 | `public/avatars/avatar-<id>.webp` | los 31 archivos, 512×512 con transparencia |
 | `lib/avatares.ts` | **la fuente única de verdad**: catálogo tipado y resolución |
-| `lib/avatares.test.ts` | descubre los archivos del disco y los compara contra el catálogo |
+| `lib/avatares.test.ts` | descubre los archivos del disco y los compara contra el catálogo, y fija la resolución |
+| `lib/avatares-persistencia.test.ts` | **qué se escribe** en `profiles`, y la evidencia del rollback |
 | `components/avatar/` | `Avatar`, `AvatarCard`, `AvatarGrid`, `AvatarModal`, `AvatarPicker` |
 | `scripts/barrido-dicebear.mjs` | barrido de fuente, públicos, SW y bundles |
 | `scripts/barrido-sql-avatar.mjs` | **guard textual** sobre la columna de estilo en `supabase/schema.sql` |
@@ -88,6 +89,66 @@ desaparecer en silencio.
 
 Las columnas de `profiles` **no cambiaron**: siguen siendo `avatar_style` y
 `avatar_seed`. **No hubo migración, no se ejecutó SQL y no se tocó Producción.**
+
+### El contrato de persistencia, y por qué el estilo dice `adventurer-neutral`
+
+Cuando alguien elige un avatar se escriben exactamente estos dos valores:
+
+```text
+avatar_seed  = <id del catálogo>        ej. "pocho"
+avatar_style = "adventurer-neutral"
+```
+
+**La elección la identifica la semilla.** La columna de estilo **no participa de
+la resolución**: `resolverAvatar` ni siquiera la lee. Es una **etiqueta de
+compatibilidad**, y está ahí por una sola razón — que un rollback no rompa nada.
+
+**El problema que resuelve.** Producción y Preview comparten la base de Supabase
+pero pueden correr versiones distintas del código. El lector anterior
+(`lib/avatar.ts` en `origin/main`) **interpola el valor de esa columna en una URL
+de DiceBear**. La primera versión de esta tanda guardaba `"yump"` ahí, y eso
+producía una URL inexistente. Verificado contra la API, una sola vez y a mano:
+
+```
+/10.x/yump/svg?seed=pocho                → HTTP 404   ← imagen rota
+/10.x/adventurer-neutral/svg?seed=pocho  → HTTP 200   ← un dibujo válido
+```
+
+O sea: con `"yump"`, cualquier rollback dejaba **sin avatar** a todo el que
+hubiera elegido uno. Con el estilo compatible, el código viejo arma una URL que
+responde y muestra **otro** dibujo — no el elegido, pero nunca un hueco.
+
+| Qué código corre | Qué muestra un perfil con `seed = "pocho"` |
+|---|---|
+| **El nuevo** | el WebP local de Pocho, exactamente el elegido |
+| **El viejo** (rollback) | un DiceBear cualquiera, generado a partir de la semilla `pocho`. Feo, no roto |
+| **El nuevo otra vez** | el WebP local de Pocho, **automáticamente**. La base no cambió |
+
+**No hace falta ninguna migración, ni backfill, ni escritura administrativa.** La
+recuperación es automática porque la semilla —que es el dato que importa— nunca
+se pierde.
+
+#### Por qué la semilla alcanza para distinguir una elección de una herencia
+
+Porque los dos conjuntos no se pisan:
+
+- **Los ids del catálogo no tienen formato uuid** (`pocho`, `dontito`, `moon`).
+- **Todas las semillas heredadas sí lo tienen**: `crypto.randomUUID()` en el
+  selector anterior, `gen_random_uuid()::text` en el trigger, `id::text` en el
+  backfill del schema.
+
+Hay un test que fija esa condición para los 31 ids, y otro que verifica que
+ninguna de las semillas legadas fijadas en los casos de prueba sea un id del
+catálogo. **Es la condición que hace segura la regla de pertenencia**: si algún
+día se agregara un avatar con id en formato uuid, le cambiaría el dibujo a un
+perfil viejo.
+
+#### `"yump"` sigue leyéndose, pero ya no se escribe
+
+Los perfiles que alcanzaron a guardar desde el Preview tienen `"yump"` en la
+columna de estilo. **Se resuelven bien sin ningún caso especial**, justamente
+porque la resolución mira la semilla. `ESTILO_YUMP` sigue exportado como etiqueta
+de lectura y hay un test que verifica que **ninguna ruta activa lo escriba**.
 
 ### El default de `avatar_style`: qué pasa en cada caso
 
@@ -156,8 +217,8 @@ sentencia autorizada escrita en mayúsculas también fallaba.
 
 | Estado del perfil | Qué se muestra |
 |---|---|
-| `avatar_style = "yump"` + un id del catálogo | ese avatar. Es una elección explícita |
-| Cualquier otra cosa **con** semilla (DiceBear, estilo desconocido, id inválido) | mapeo **determinístico** sobre `LEGADO_V1` |
+| La semilla **es un id del catálogo** | ese avatar. Es una elección explícita. **No se mira la columna de estilo** — da igual que diga `adventurer-neutral`, `yump`, otra cosa o nada |
+| Cualquier otra semilla (uuid heredado, estilo desconocido, basura) | mapeo **determinístico** sobre `LEGADO_V1` |
 | Sin semilla utilizable (null, vacío, basura) | `AVATAR_POR_DEFECTO` |
 
 El mapeo legado es `hashCadena(semilla) % LEGADO_V1.length`. Es **puro** y corre
@@ -182,7 +243,15 @@ Hay un test que fija los 31 ids en orden y falla si alguien la edita.
 
 Cargar un perfil **no escribe nada**. `resolverAvatar` es una función pura. La
 base se actualiza sólo cuando la persona elige un avatar y toca Guardar, y ahí se
-graba `avatar_style = "yump"` + el id.
+graban los dos valores del contrato de arriba: el id en la semilla y el estilo
+compatible.
+
+**Los arma un solo lugar**: `eleccionAvatar(id)` en `lib/avatares.ts`. Ningún
+componente escribe esos valores a mano — `AvatarModal` le pasa el objeto entero a
+`updateAvatar`, que también recibe uno solo en vez de dos strings sueltos (dos
+parámetros del mismo tipo se pueden invertir y compila igual). Si el id no está
+en el catálogo, `eleccionAvatar` devuelve `null` y **no se escribe nada**: guardar
+un avatar que la persona no eligió es peor que no guardar.
 
 **El cambio visual de una sola vez para los perfiles viejos está aceptado.**
 Después de elegir, la elección persiste como cualquier otra.
@@ -200,9 +269,11 @@ del estilo viejo es una etiqueta inerte.
 **No hay ninguna migración pendiente, ni autorizada, para esta tanda.**
 
 Se podría, algún día y si alguien lo decide, cambiar el trigger para que escriba
-`avatar_style = 'yump'` y un id del catálogo. **No hace falta para que el sistema
-funcione** y no está autorizado. Cualquier cambio así sería una migración
-explícita, aparte de `supabase/schema.sql`, y con su propia autorización.
+**un id del catálogo como semilla**, y así una cuenta nueva nacería con un avatar
+elegible en vez de uno sorteado por hash. **No hace falta para que el sistema
+funcione** y no está autorizado. La columna de estilo no habría que tocarla: no
+participa de la resolución. Cualquier cambio así sería una migración explícita,
+aparte de `supabase/schema.sql`, y con su propia autorización.
 
 **A propósito no se deja acá ningún SQL copiable sobre el default**: un bloque
 listo para pegar en el editor de Supabase es una invitación a ejecutarlo, y la
@@ -306,48 +377,43 @@ eso es real y útil— **pero no demuestra que el `querySelectorAll`, los
 
 Presentar esos tests como prueba integral sería exagerar lo que cubren.
 
-### ⚠️ ANTES DE PROBAR: con qué cuenta, y por qué importa
+### ⚠️ ANTES DE PROBAR: con qué cuenta, y por qué
 
 **Preview y Producción comparten la misma base de Supabase, pero ejecutan
-versiones distintas del código.** Mientras esta tanda no esté mergeada y
-desplegada, eso abre una incompatibilidad transitoria concreta:
+versiones distintas del código.** Eso sigue siendo cierto. Lo que cambió es la
+consecuencia:
 
-| Dónde | Qué código corre | Qué hace con `avatar_style` |
+> **Guardar desde el Preview YA NO ROMPE nada en Producción.** El contrato de
+> persistencia escribe el estilo compatible, así que el código viejo arma una URL
+> que responde. Ver "El contrato de persistencia" arriba.
+
+⚠️ **Corrección de una versión anterior de este documento.** Acá decía que
+guardar desde el Preview dejaba a la cuenta **sin avatar** en Producción, y que
+elegir otro no lo arreglaba. **Era cierto con el contrato anterior** (`"yump"` en
+la columna de estilo) y dejó de serlo. Se corrigió el contrato, no el texto.
+
+**Lo que sí pasa mientras las dos versiones conviven**, dicho sin adornos:
+
+| Dónde | Qué código corre | Qué muestra después de guardar desde el Preview |
 |---|---|---|
-| **Preview** | el nuevo | guarda `avatar_style = "yump"` y resuelve el dibujo por catálogo local |
-| **Producción** | `lib/avatar.ts`, el viejo | **interpola el valor en una URL de DiceBear**: `https://api.dicebear.com/10.x/{avatar_style}/svg` |
+| **Preview** | el nuevo | el avatar elegido |
+| **Producción** | `lib/avatar.ts`, el viejo | **otro dibujo** — un DiceBear generado a partir de la semilla. Válido, no roto |
 
-Guardar un avatar desde el Preview escribe `"yump"` en la base. El código viejo
-lo lee como si fuera **el nombre de un estilo de DiceBear** y pide
-`/10.x/yump/svg`, que **no existe**. Verificado contra la API:
+Y en cuanto Producción recibe el código nuevo, **reaparece el avatar elegido
+solo**, sin tocar la base.
 
-```
-/10.x/yump/svg?seed=pocho                → HTTP 404
-/10.x/adventurer-neutral/svg?seed=pocho  → HTTP 200
-```
+#### La recomendación, que se mantiene
 
-Resultado: en Producción, esa cuenta se queda **sin avatar** hasta que el código
-nuevo esté desplegado.
-
-**Elegir otro avatar en el Preview NO lo arregla.** Los 31 se guardan con el
-mismo estilo `"yump"` — es lo que distingue una elección explícita de una semilla
-heredada. Cualquier avatar que elijas deja el mismo valor en la base, así que no
-hay ninguna opción del selector que devuelva la compatibilidad con el código
-viejo. Lo único que la restaura es que Producción tenga el código nuevo.
-
-**No es un defecto del sistema final**: es un riesgo de la ventana en que las dos
-versiones conviven sobre la misma base.
-
-#### La regla, en dos etapas
+🟡 **Usá una cuenta descartable para probar antes del merge.** Ya no es por
+riesgo de romper nada — es porque guardar desde el Preview **te cambia el avatar
+visible en Producción** hasta que se despliegue, y no tiene sentido que tu cuenta
+principal pase por eso para probar un modal.
 
 | Etapa | Cuenta | Qué se puede hacer |
 |---|---|---|
-| **ANTES del merge**, con el código nuevo sólo en Preview | **cuenta de prueba descartable** | todo, incluido **Guardar** |
-| ídem | **cuenta principal** | pruebas **sin escritura**: abrir el selector, mirar los 31, teclado, foco, Escape, fondo, Cancelar, red, offline. **NO tocar Guardar** |
-| **DESPUÉS** de que el código nuevo esté desplegado en Producción | **cuenta principal** | elegir su avatar definitivo, sin ninguna precaución |
-
-Y si la incompatibilidad ya ocurrió: **es reversible**. Se arregla sola cuando
-Producción recibe el código nuevo, sin tocar la base.
+| **ANTES del merge** | **descartable** | todo, incluido **Guardar** |
+| ídem | **principal** | todo también; el único costo de Guardar es ver otro dibujo en Producción hasta el deploy |
+| **DESPUÉS** del deploy | **principal** | elegir su avatar definitivo |
 
 ### Verificación manual OBLIGATORIA en Preview
 
@@ -387,6 +453,66 @@ no abre una conexión, pero **nunca corta a mitad de línea**: `https://api.dice
 contiene `//` y recortar ahí sería un falso negativo. Verificado con un canario
 —un archivo con la URL en código y la misma URL en un comentario— que detecta
 exactamente uno.
+
+### La única excepción: la constante del estilo persistido
+
+El contrato de persistencia obliga a que la cadena `adventurer-neutral` exista en
+el código, y esa cadena es uno de los patrones del barrido. La excepción tiene la
+**misma forma que el guard del SQL**: una allowlist textual de **una línea exacta
+en un archivo exacto**.
+
+```ts
+// lib/avatares.ts — la única aparición autorizada en código ejecutable
+export const ESTILO_PERSISTIDO = "adventurer-neutral";
+```
+
+| Caso | Qué pasa |
+|---|---|
+| Esa línea en `lib/avatares.ts` | **pasa** (la indentación no importa) |
+| **La misma línea en otro archivo** | se reporta — sería una segunda fuente de verdad |
+| **Otra línea con la cadena** en `lib/avatares.ts` | se reporta |
+| Esa línea **duplicada** en su archivo | se reporta, vía `revisarAutorizadas` |
+| `api.dicebear.com` o `@dicebear/` en cualquier lado | se reporta **siempre**. Esos patrones no tienen excepción y no la van a tener |
+
+**Dos caminos que se descartaron**, porque los dos rompen el barrido en silencio:
+sacar el patrón de `PROHIBIDO` (dejaría de detectar cualquier regreso del estilo
+viejo) y armar la cadena por pedazos para que el escáner no la vea (eso es
+ofuscación, que es lo contrario de un guard).
+
+**`revisarAutorizadas` es la mitad que el barrido no puede hacer.** El escáner
+salta las apariciones autorizadas una por una, así que dos copias idénticas le
+parecen las dos legítimas; la cuenta exige que la línea aparezca **exactamente
+una vez**. El CLI la corre siempre, aunque el barrido venga limpio — si no, un
+`exit 0` volvería a significar dos cosas distintas.
+
+**Si se cambia esa línea, hay que cambiarla en los dos lados**: `lib/avatares.ts`
+y `AUTORIZADO` en `scripts/barrido-dicebear.mjs`. Hay tests que lo fijan.
+
+### En los bundles se revisa MENOS, y hay que decir por qué
+
+**El nombre del estilo viaja al navegador a propósito**: es el valor que el
+selector escribe en la base, así que queda inlineado en los chunks de `.next`.
+Medido en un build real, tres chunks lo traen —y **ninguno de los tres contiene
+`dicebear`**:
+
+```
+avatar_seed:e.id,avatar_style:"adventurer-neutral"
+```
+
+La allowlist no sirve ahí: es por archivo y línea exactos, y un bundle minificado
+es **una sola línea** en un archivo con **nombre hasheado que cambia en cada
+build**.
+
+| Dónde | Qué patrones se aplican |
+|---|---|
+| **Fuente** (`lib`, `components`, `app`, `hooks`, `scripts`, `supabase`, `public`) | los **tres**, el nombre del estilo incluido |
+| **Bundles** (`.next/static`, `.next/server`) | sólo los **dos de dependencia real**: `api.dicebear.com` y `@dicebear/` |
+
+El criterio es la diferencia entre un valor y una conexión: un nombre de estilo
+en un chunk es una cadena que se manda a Supabase; `api.dicebear.com` en un chunk
+es una petición saliente. Lo segundo sigue siendo un fallo en cualquier lado, sin
+excepciones. Hay canarios para los dos casos, y uno que verifica que el
+subconjunto **no** se filtre a la fuente.
 
 **La documentación histórica (`docs/`) está exenta a propósito**: explica por qué
 existe el mapeo legado, y borrarla sería perder la única razón escrita.

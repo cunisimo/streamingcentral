@@ -20,14 +20,13 @@ create table if not exists profiles (
 -- proveedor de servicio — para Data Safety es "recopilado, no compartido". Lo
 -- que se eliminó es el envío a DiceBear o a otro tercero.
 --
--- QUÉ SIGNIFICA CADA VALOR de la columna de estilo (lo resuelve
+-- LO QUE DECIDE ES LA SEMILLA, NO LA COLUMNA DE ESTILO (lo resuelve
 -- lib/avatares.ts → resolverAvatar):
 --
---   'yump' + una semilla que es un id del catálogo
---       → elección explícita. Es lo único que escribe la app, y sólo cuando la
---         persona toca Guardar en el selector.
+--   una semilla que ES un id del catálogo
+--       → elección explícita, ese avatar. La columna de estilo NO SE MIRA.
 --
---   cualquier otro estilo (incluido NULL) + una semilla con algo
+--   cualquier otra semilla
 --       → mapeo LOCAL y determinístico sobre LEGADO_V1, una lista congelada de
 --         31 ids. La misma semilla da siempre el mismo dibujo, en todos los
 --         dispositivos, SIN escribir nada en la base. Acá caen los perfiles
@@ -35,6 +34,17 @@ create table if not exists profiles (
 --
 --   sin semilla utilizable
 --       → el avatar por defecto del catálogo.
+--
+-- No hay ambigüedad entre los dos primeros casos: los ids del catálogo no tienen
+-- formato uuid y todas las semillas heredadas sí lo tienen (gen_random_uuid() en
+-- el trigger, id::text en el backfill de abajo, crypto.randomUUID() en el
+-- selector anterior). Hay tests que fijan esa condición para los 31.
+--
+-- QUÉ ESCRIBE LA APP en la columna de estilo cuando alguien elige un avatar: el
+-- nombre del estilo viejo, a propósito y como ETIQUETA DE COMPATIBILIDAD. No lo
+-- lee nadie del lado nuevo; está para que un rollback al lector anterior —que
+-- interpolaba ese valor en una URL de un generador externo— arme una URL que
+-- responde en vez de una rota. Detalle completo en docs/AVATARES.md.
 --
 -- QUÉ SE SACÓ DE ACÁ Y POR QUÉ. Este archivo es RERUNNABLE, y antes tenía dos
 -- sentencias sobre la columna de estilo que reimponían DiceBear en cada corrida:
@@ -53,10 +63,11 @@ create table if not exists profiles (
 --                       el `if not exists` no hace nada.
 --   · si algún día se decide quitarlo → migración explícita y autorizada, aparte.
 --
--- Y no hace falta quitarlo para que el sistema funcione: cualquier estilo
--- distinto de `yump` —incluido `'adventurer-neutral'`, incluido NULL— se resuelve
--- LOCALMENTE por `LEGADO_V1` (lib/avatares.ts). El nombre del estilo viejo quedó
--- como una etiqueta inerte y NO dispara ninguna conexión a DiceBear.
+-- Y no hace falta quitarlo para que el sistema funcione: el valor de la columna
+-- de estilo NO SE MIRA al resolver. Quien no eligió avatar cae en el mapeo local
+-- de LEGADO_V1 (lib/avatares.ts) por su semilla, tenga esa columna lo que tenga
+-- —incluido NULL—. El nombre del estilo viejo es una etiqueta inerte y NO
+-- dispara ninguna conexión a DiceBear.
 --
 -- ⚠️ EN LOS COMENTARIOS DE ESTE ARCHIVO SE DICE "la columna de estilo", NUNCA su
 -- nombre literal. `scripts/barrido-sql-avatar.mjs` es un guard TEXTUAL: cuenta
@@ -102,9 +113,12 @@ create policy "edicion de perfil propio" on profiles
 -- cuenta creada hoy nace con ese valor, NO con NULL. Da igual: entra al mapeo
 -- local descrito arriba y muestra un avatar propio DESDE EL PRIMER RENDER.
 --
--- Migración OPCIONAL, no aplicada y sin autorización: se podría hacer que
--- escriba `'yump'` en la columna de estilo y un id del catálogo. No hace falta
--- para que el sistema funcione. Ver docs/AVATARES.md.
+-- Migración OPCIONAL, no aplicada y sin autorización: se podría hacer que el
+-- trigger escriba un id del catálogo como semilla, para que una cuenta nueva
+-- nazca con un avatar elegible en vez de uno sorteado por hash. NO hace falta
+-- para que el sistema funcione, y la columna de estilo no habría que tocarla:
+-- el único valor que la app escribe ahí es la etiqueta de compatibilidad
+-- descrita arriba. Ver docs/AVATARES.md.
 create or replace function handle_new_user()
 returns trigger as $$
 begin

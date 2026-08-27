@@ -10,8 +10,9 @@ histórico.
 
 1. **Producción (`main` → `1e14f5c`, `app.yump.ar`)** está estable: catálogo en
    es-MX, Top 10 de Netflix arreglado, ficha de Moria arreglada.
-2. **`feat/avatares-propios` (`fc1ba6d`) está en Preview esperando tu prueba
-   manual.** Es la única rama viva. **No mergeada.**
+2. **`feat/avatares-propios` está en Preview esperando tu prueba manual.** Es la
+   única rama viva. **No mergeada.** El contrato de persistencia se corrigió el
+   27/08 para que un rollback no rompa nada — ver abajo.
 3. Lo que sigue después es la **tanda legal de Google Play**, ya auditada y
    diseñada en `docs/PLAY-STORE.md`, bloqueada por decisiones tuyas.
 
@@ -47,29 +48,38 @@ con no arrastrarlos sin querer** — o pushealos aparte y de forma consciente.
 **Qué hace:** reemplaza DiceBear por 31 avatares WebP propios servidos desde
 `/avatars/`. Dieciséis commits. Documentación completa en `docs/AVATARES.md`.
 
-**Verificado:** 505 tests, `tsc` limpio, `next build` compila, barrido de DiceBear
+**Verificado:** 541 tests, `tsc` limpio, `next build` compila, barrido de DiceBear
 en cero sobre fuente, SQL, públicos, service worker y bundles.
 
-### ⚠️ LO PRIMERO QUE HAY QUE SABER: con qué cuenta se prueba
+### Con qué cuenta se prueba — CORREGIDO el 27/08
 
 **Preview y Producción comparten la base de Supabase pero corren versiones
-distintas.** El Preview guarda `avatar_style = "yump"`; Producción todavía corre
-`lib/avatar.ts`, que interpola ese valor en una URL de DiceBear. Verificado:
+distintas.** Eso no cambió. Lo que cambió es la consecuencia.
+
+⚠️ **Lo que decía acá era esto, y ya no vale:** el Preview guardaba
+`avatar_style = "yump"`, Producción interpolaba ese valor en una URL de DiceBear
+(`/10.x/yump/svg` → HTTP 404) y la cuenta se quedaba **sin avatar** hasta el
+deploy.
+
+**Se corrigió el contrato de persistencia**, no el texto. Ahora una elección
+guarda `avatar_style = "adventurer-neutral"` — una etiqueta de compatibilidad que
+el código nuevo ni siquiera lee, porque resuelve por la semilla. Verificado, una
+vez y a mano:
 
 ```
-/10.x/yump/svg?seed=pocho                → HTTP 404
-/10.x/adventurer-neutral/svg?seed=pocho  → HTTP 200
+/10.x/adventurer-neutral/svg?seed=pocho  → HTTP 200   ← lo que se guarda hoy
+/10.x/yump/svg?seed=pocho                → HTTP 404   ← lo que se guardaba antes
 ```
 
-Si guardás con tu cuenta principal, **en Producción te quedás sin avatar** hasta
-que el código nuevo esté desplegado. **Elegir otro avatar NO lo arregla**: los 31
-guardan el mismo estilo. Se arregla solo con el deploy, sin tocar la base.
+| Qué código corre | Qué muestra un perfil con `seed = "pocho"` |
+|---|---|
+| El nuevo | el WebP local de Pocho |
+| El viejo (rollback / Producción hoy) | otro dibujo, generado desde la semilla. **Válido, no roto** |
+| El nuevo otra vez | Pocho, automáticamente. Sin migración |
 
-| Etapa | Cuenta | Qué se puede |
-|---|---|---|
-| Antes del merge | **descartable** | todo, incluido Guardar |
-| Antes del merge | principal | pruebas **sin escritura**. **No tocar Guardar** |
-| Después del deploy | principal | elegir su avatar definitivo |
+🟡 **La cuenta descartable se sigue recomendando**, pero por otro motivo: guardar
+desde el Preview te cambia el avatar **visible** en Producción hasta que se
+despliegue. No hay nada que se rompa ni que haya que arreglar después.
 
 ### Lo que falta: tu prueba manual
 
@@ -96,8 +106,11 @@ otra — está escrito en el propio módulo.
   congelado; `../`, URLs absolutas y `data:` no pueden producir una ruta.
 - **No hay migración de SQL, y `supabase/schema.sql` ya no trae ninguna
   operación sobre el default de la columna de estilo.** Producción conserva su
-  default `'adventurer-neutral'`, que es inerte: cualquier estilo distinto de
-  `yump` se resuelve local.
+  default `'adventurer-neutral'`, que es inerte: **la columna de estilo no se
+  mira al resolver**, todo se decide por la semilla.
+- **La elección se guarda con el estilo compatible, no con `yump`.** Los valores
+  los arma un solo lugar (`eleccionAvatar` en `lib/avatares.ts`); ningún
+  componente los escribe a mano. Es lo que hace inofensivo un rollback.
 - **Retirar un avatar hoy NO se puede** — `AVATARES` alimenta el selector y el
   índice de resolución a la vez. Antes habría que separar catálogo de subconjunto
   seleccionable. Mientras tanto: **ninguno se saca de `AVATARES`, `LEGADO_V1` ni
