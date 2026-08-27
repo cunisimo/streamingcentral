@@ -11,8 +11,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import {
-  AUTORIZADO, EXTENSIONES, PROHIBIDO, PROHIBIDO_DEPENDENCIA, RAICES_FUENTE, barrer,
-  revisarAutorizadas,
+  AUTORIZADO, EXTENSIONES, MANIFIESTOS, PROHIBIDO, PROHIBIDO_DEPENDENCIA, RAICES_FUENTE,
+  barrer, revisarAutorizadas,
 } from "../scripts/barrido-dicebear.mjs";
 import {
   COLUMNA, LINEA_AUTORIZADA, normalizar, revisar, revisarSchema,
@@ -568,4 +568,138 @@ test("CANARIO del CLI: un bundle con la URL del generador sale con 1", () => {
     assert.equal(r.status, 1, `el CLI salió con ${r.status}; salida: ${r.stdout}${r.stderr}`);
     assert.match(r.stderr, /chunk-abc\.js/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// ============================================================================
+// FALSOS NEGATIVOS del criterio de comentario — auditoría del 27/08
+// ============================================================================
+
+// El criterio era: si la línea, después de `trim`, empieza con `//`, `*`, `/*`
+// o `--`, no ejecuta nada. **Es falso en CSS y falso para el bloque cerrado en
+// la misma línea**, y no era teórico: en `app/globals.css` hay una línea
+// `*{box-sizing:border-box}` y varias `--bg:#FAFAFD;…` que el barrido estaba
+// descartando como si fueran comentarios.
+//
+// El criterio nuevo es CONSERVADOR: ante la duda, reporta. Un comentario de
+// bloque en CSS cuya línea del medio empiece con `*` se va a marcar aunque sea
+// inofensivo, y está bien que así sea — el costo de un falso positivo es leerlo,
+// el de un falso negativo es publicar la conexión.
+
+const URL_PROHIBIDA = "https://api.dicebear.com/10.x/adventurer-neutral/svg?seed=x";
+
+test("CANARIO CSS: el selector universal NO es un comentario", () => {
+  const h = canario("estilos.css", `*{background-image:url("${URL_PROHIBIDA}")}`);
+  assert.equal(h.length, 1, "el barrido tomó `*{…}` por un comentario");
+});
+
+test("CANARIO CSS: el selector universal CON espacio tampoco", () => {
+  // `* {…}` es CSS válido y se parece a una continuación de JSDoc. En un `.css`
+  // no se exime ninguna línea que empiece con `*`.
+  const h = canario("estilos.css", `* {background-image:url("${URL_PROHIBIDA}")}`);
+  assert.equal(h.length, 1, "el barrido tomó `* {…}` por una continuación de bloque");
+});
+
+test("CANARIO: código DESPUÉS de un bloque cerrado en la misma línea", () => {
+  const h = canario("estilos.css", `/* comentario */ a{background:url("${URL_PROHIBIDA}")}`);
+  assert.equal(h.length, 1, "el barrido descartó la línea entera por el `/*` del principio");
+});
+
+test("CANARIO: código después de CERRAR un bloque abierto antes", () => {
+  const h = canario("estilos.css", `*/ a{background:url("${URL_PROHIBIDA}")}`);
+  assert.equal(h.length, 1, "el barrido descartó una línea que cierra y sigue con código");
+});
+
+test("CANARIO CSS: una propiedad personalizada empieza con `--` y ES código", () => {
+  const h = canario("estilos.css", `--fondo: url("${URL_PROHIBIDA}");`);
+  assert.equal(h.length, 1, "el barrido tomó una custom property por un comentario de SQL");
+});
+
+test("en SQL, `--` SIGUE siendo comentario", () => {
+  // La exención no se elimina: se acota al lenguaje donde `--` comenta de verdad.
+  assert.deepEqual(canario("m.sql", "-- menciona api.dicebear.com y no cuenta"), []);
+});
+
+test("en JS/TS, la continuación de JSDoc SIGUE exenta", () => {
+  assert.deepEqual(canario("x.ts", " * menciona api.dicebear.com en un JSDoc"), []);
+  assert.deepEqual(canario("x.ts", " *"), []);
+  assert.deepEqual(canario("x.ts", "// menciona api.dicebear.com"), []);
+  assert.deepEqual(canario("x.ts", "/* menciona api.dicebear.com */"), []);
+  assert.deepEqual(canario("x.ts", "/* abre un bloque con api.dicebear.com"), []);
+});
+
+test("en JS/TS, `*{` NO es una continuación de JSDoc", () => {
+  const h = canario("x.ts", `const css = "*{background:url('${URL_PROHIBIDA}')}";`);
+  assert.equal(h.length, 1);
+});
+
+test("app/globals.css tiene las formas que disparaban el falso negativo", () => {
+  // Para que el canario no quede como un caso de laboratorio: estas líneas
+  // existen HOY en el proyecto, y hasta esta corrección el barrido las salteaba.
+  const css = leerRaiz("app/globals.css").split(/\r?\n/);
+  assert.ok(css.some((l) => l.trim().startsWith("*{")), "ya no está el selector universal");
+  assert.ok(css.some((l) => l.trim().startsWith("--")), "ya no están las custom properties");
+});
+
+// ============================================================================
+// Manifiestos y locks de dependencias
+// ============================================================================
+
+// Un `@dicebear/core` agregado a `package.json` es una dependencia REAL y el
+// barrido no lo veía: `.json` estaba en EXTENSIONES, pero ninguna raíz llegaba a
+// la raíz del repositorio. Se agregan los manifiestos **por archivo**, nunca
+// recorriendo el directorio raíz: ahí viven los cuatro archivos ajenos
+// (`avatares/`, los dos `prompts/` y la migración) que no pertenecen a esta rama.
+
+/** Siembra archivos en la raíz de un directorio temporal y barre `raices`. */
+function canarioRaiz(archivos: Record<string, string>, raices = RAICES_FUENTE) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "canario-raiz-"));
+  for (const [nombre, contenido] of Object.entries(archivos)) {
+    fs.writeFileSync(path.join(dir, nombre), contenido, "utf8");
+  }
+  try { return barrer(raices, dir); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+test("MANIFIESTOS incluye package.json y package-lock.json", () => {
+  assert.ok(MANIFIESTOS.includes("package.json"));
+  assert.ok(MANIFIESTOS.includes("package-lock.json"));
+  // Y los locks alternativos, para que agregar uno mañana no abra el agujero.
+  for (const lock of ["pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"]) {
+    assert.ok(MANIFIESTOS.includes(lock), `falta ${lock}`);
+  }
+});
+
+test("los manifiestos son parte de las raíces de fuente", () => {
+  for (const m of MANIFIESTOS) assert.ok(RAICES_FUENTE.includes(m), `${m} no se barre`);
+});
+
+test("CANARIO: `@dicebear/core` en package.json se detecta", () => {
+  const h = canarioRaiz({
+    "package.json": JSON.stringify({ dependencies: { "@dicebear/core": "^9.0.0" } }, null, 2),
+  });
+  assert.equal(h.length, 1, "una dependencia de DiceBear pasó desapercibida");
+  assert.equal(h[0].archivo, "package.json");
+});
+
+test("CANARIO: `@dicebear/core` en package-lock.json se detecta", () => {
+  const h = canarioRaiz({
+    "package-lock.json": '{"packages":{"node_modules/@dicebear/core":{"version":"9.0.0"}}}',
+  });
+  assert.equal(h.length, 1, "el lock pasó desapercibido");
+  assert.equal(h[0].archivo, "package-lock.json");
+});
+
+test("CANARIO: un lock alternativo también se barre", () => {
+  const h = canarioRaiz({ "pnpm-lock.yaml": "  '@dicebear/core@9.0.0':\n    resolution: {}" });
+  assert.equal(h.length, 1, "el lock alternativo no se revisó");
+});
+
+test("la raíz del repositorio NO se recorre entera", () => {
+  // Los cuatro archivos ajenos viven ahí y no pertenecen a esta rama. Se agregan
+  // archivos nombrados, no el directorio.
+  assert.ok(!RAICES_FUENTE.includes("."), "se agregó la raíz entera");
+  const h = canarioRaiz({
+    "package.json": "{}",
+    "ajeno.json": `{"x":"${URL_PROHIBIDA}"}`,
+  });
+  assert.deepEqual(h, [], "se barrió un archivo suelto de la raíz que no es manifiesto");
 });

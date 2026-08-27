@@ -20,8 +20,11 @@
 //
 //   docs/                    la historia. Explica por qué existe el mapeo legado;
 //                            borrarla sería perder la única razón escrita.
-//   líneas de comentario     un comentario no abre una conexión ni ejecuta SQL.
-//                            Se saltean las que EMPIEZAN con //, *, /* o -- (SQL)
+//   líneas de comentario     un comentario no abre una conexión ni ejecuta SQL,
+//                            pero la exención es POR LENGUAJE y conservadora
+//                            (ver `esComentario`): `--` comenta en SQL y ABRE UNA
+//                            PROPIEDAD en CSS, y `*` es continuación de bloque en
+//                            JS/TS pero el SELECTOR UNIVERSAL en CSS
 //                            — nunca se corta a mitad de línea, porque
 //                            `https://api.dicebear.com` contiene `//` y recortar
 //                            ahí sería un falso negativo. Una SENTENCIA SQL que
@@ -119,11 +122,49 @@ const SALTAR = new Set(["node_modules", ".git", "docs", "avatares"]);
 // Los tests y el propio escáner quedan fuera; ver el encabezado.
 const exento = (p) => /\.test\.(ts|tsx|mjs|js)$/.test(p) || p.endsWith("barrido-dicebear.mjs");
 
-// Una línea que ARRANCA con marca de comentario no ejecuta nada.
-const esComentario = (l) => {
-  const t = l.trim();
-  return t.startsWith("//") || t.startsWith("*") || t.startsWith("/*") || t.startsWith("--");
+/** Extensiones donde un `*` al principio es la continuación de un bloque JSDoc. */
+const EXT_JS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
+
+/** ¿La línea cierra un bloque y SIGUE con código detrás? */
+const codigoTrasElCierre = (t) => {
+  const i = t.indexOf("*/");
+  return i !== -1 && t.slice(i + 2).trim() !== "";
 };
+
+/**
+ * ¿Es esta línea ENTERA un comentario? Si hay la más mínima duda, **no**: el
+ * costo de un falso positivo es leerlo, el de un falso negativo es publicar una
+ * conexión a un tercero.
+ *
+ * LOS CUATRO FALSOS NEGATIVOS QUE TENÍA EL CRITERIO ANTERIOR. Decía: si después
+ * de `trim` arranca con `//`, `*`, `/*` o `--`, no ejecuta nada. Es falso, y no
+ * en teoría — `app/globals.css` tiene hoy `*{box-sizing:border-box}` y varias
+ * `--bg:#FAFAFD;…`, y el barrido las estaba descartando:
+ *
+ *   `*{background-image:url("…")}`      el selector universal de CSS
+ *   `* {background-image:url("…")}`     el mismo, con espacio
+ *   `[bloque cerrado] a{background:url("…")}`  código detrás del cierre
+ *   `--fondo: url("…");`                una custom property, no un comentario SQL
+ *
+ * Las reglas, por lenguaje y no "a ojo":
+ *
+ *   `//`         comenta hasta el fin de línea. Vale en todos lados.
+ *   `--`         comenta SÓLO en SQL. En CSS abre una propiedad personalizada.
+ *   apertura y cierre de bloque: exentas sólo si NO queda código detrás del
+ *                cierre en la misma línea.
+ *   `*`          continuación de bloque SÓLO en JS/TS. En un `.css` no se exime
+ *                ninguna línea que empiece con `*`, aunque sea la del medio de un
+ *                comentario de bloque: preferimos marcarla y que alguien la lea.
+ */
+export function esComentario(linea, ext = "") {
+  const t = linea.trim();
+  if (!t) return false;
+  if (t.startsWith("//")) return true;
+  if (t.startsWith("--")) return ext === ".sql";
+  if (t.startsWith("/*") || t.startsWith("*/")) return !codigoTrasElCierre(t);
+  if (EXT_JS.has(ext) && (t === "*" || t.startsWith("* "))) return true;
+  return false;
+}
 
 function* archivos(dir) {
   let entradas;
@@ -154,9 +195,12 @@ export function barrer(raices, base = process.cwd(), patrones = PROHIBIDO) {
       : [...archivos(abs)];
     for (const f of lista) {
       const relativo = path.relative(base, f);
+      const ext = path.extname(f).toLowerCase();
       const lineas = fs.readFileSync(f, "utf8").split(/\r?\n/);
       lineas.forEach((linea, i) => {
-        if (esComentario(linea)) return;
+        // La EXTENSIÓN decide qué es comentario: `--` comenta en SQL y abre una
+        // propiedad personalizada en CSS. Ver `esComentario`.
+        if (esComentario(linea, ext)) return;
         if (estaAutorizada(relativo, linea)) return;
         if (patrones.some((re) => re.test(linea))) {
           hallazgos.push({ archivo: relativo, linea: i + 1, texto: linea.trim().slice(0, 120) });
@@ -182,7 +226,8 @@ export function revisarAutorizadas(base = process.cwd()) {
     try { contenido = fs.readFileSync(path.join(base, archivo), "utf8"); } catch { contenido = ""; }
     const n = contenido
       .split(/\r?\n/)
-      .filter((l) => !esComentario(l) && normalizarLinea(l) === linea).length;
+      .filter((l) => !esComentario(l, path.extname(archivo).toLowerCase())
+        && normalizarLinea(l) === linea).length;
     if (n === 1) continue;
     problemas.push(n === 0
       ? `${archivo}: no aparece la línea autorizada — ${linea}`
@@ -191,8 +236,36 @@ export function revisarAutorizadas(base = process.cwd()) {
   return problemas;
 }
 
-/** Fuente y archivos públicos. Existen siempre, así que el test los usa. */
-export const RAICES_FUENTE = ["lib", "components", "app", "hooks", "scripts", "supabase", "public"];
+/**
+ * MANIFIESTOS Y LOCKS de dependencias, nombrados por ARCHIVO y nunca por
+ * directorio.
+ *
+ * Un `@dicebear/core` agregado a `package.json` es la forma más directa de que
+ * DiceBear vuelva, y el barrido no lo veía: `.json` estaba en `EXTENSIONES`,
+ * pero ninguna raíz llegaba a la raíz del repositorio.
+ *
+ * **No se recorre la raíz entera**, y no es una cuestión de eficiencia: ahí viven
+ * los cuatro archivos ajenos a esta rama (`avatares/`, los dos `prompts/` y una
+ * migración sin registrar). Se nombran los archivos, uno por uno.
+ *
+ * Los locks alternativos se listan aunque hoy no existan —`barrer` ignora lo que
+ * no está—: si mañana el proyecto cambia de gestor de paquetes, el agujero no se
+ * reabre solo.
+ */
+export const MANIFIESTOS = [
+  "package.json",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+  "bun.lock",
+  "bun.lockb",
+];
+
+/** Fuente, archivos públicos y manifiestos. Existen siempre, así que el test los usa. */
+export const RAICES_FUENTE = [
+  "lib", "components", "app", "hooks", "scripts", "supabase", "public",
+  ...MANIFIESTOS,
+];
 
 /**
  * Los bundles generados. Sólo existen después de `npm run build`, y se barren
