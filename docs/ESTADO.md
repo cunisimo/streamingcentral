@@ -385,7 +385,10 @@ Para volver al camino viejo y comparar en la misma pantalla:
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
   retorno; el rearmado en frío es el caso raro.
 - Los trece issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
-  del Top 10 de Netflix nunca disparó y el bloque está sirviendo popularidad.
+  del Top 10 de Netflix se salteó la corrida del 18/08. Disparó bien el 25/08 y
+  el bloque oficial quedó recuperado, pero no hay explicación del salto y la
+  guarda mide antigüedad desde la fecha de la semana, así que la próxima corrida
+  perdida vuelve a degradarlo.
 
 ---
 
@@ -405,7 +408,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
 | #10 | La rotación de ejes no le llega a los chips angostos (18 de 112 casillas caen a `pop`) |
 | #11 | "Últimos lanzamientos" tiene 35% de títulos bajo 6.0 |
 | #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
-| #13 | **El cron semanal del Top 10 de Netflix nunca disparó** (lo más fresco, ver abajo) |
+| #13 | **El cron del Top 10 se salteó el 18/08** — disparó el 25/08 y el bloque oficial está recuperado; sin explicación del salto, y una corrida perdida vuelve a degradarlo (lo más fresco, ver arriba) |
 
 ---
 
