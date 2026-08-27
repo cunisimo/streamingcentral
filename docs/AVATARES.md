@@ -306,9 +306,53 @@ eso es real y útil— **pero no demuestra que el `querySelectorAll`, los
 
 Presentar esos tests como prueba integral sería exagerar lo que cubren.
 
+### ⚠️ ANTES DE PROBAR: con qué cuenta, y por qué importa
+
+**Preview y Producción comparten la misma base de Supabase, pero ejecutan
+versiones distintas del código.** Mientras esta tanda no esté mergeada y
+desplegada, eso abre una incompatibilidad transitoria concreta:
+
+| Dónde | Qué código corre | Qué hace con `avatar_style` |
+|---|---|---|
+| **Preview** | el nuevo | guarda `avatar_style = "yump"` y resuelve el dibujo por catálogo local |
+| **Producción** | `lib/avatar.ts`, el viejo | **interpola el valor en una URL de DiceBear**: `https://api.dicebear.com/10.x/{avatar_style}/svg` |
+
+Guardar un avatar desde el Preview escribe `"yump"` en la base. El código viejo
+lo lee como si fuera **el nombre de un estilo de DiceBear** y pide
+`/10.x/yump/svg`, que **no existe**. Verificado contra la API:
+
+```
+/10.x/yump/svg?seed=pocho                → HTTP 404
+/10.x/adventurer-neutral/svg?seed=pocho  → HTTP 200
+```
+
+Resultado: en Producción, esa cuenta se queda **sin avatar** hasta que el código
+nuevo esté desplegado.
+
+**Elegir otro avatar en el Preview NO lo arregla.** Los 31 se guardan con el
+mismo estilo `"yump"` — es lo que distingue una elección explícita de una semilla
+heredada. Cualquier avatar que elijas deja el mismo valor en la base, así que no
+hay ninguna opción del selector que devuelva la compatibilidad con el código
+viejo. Lo único que la restaura es que Producción tenga el código nuevo.
+
+**No es un defecto del sistema final**: es un riesgo de la ventana en que las dos
+versiones conviven sobre la misma base.
+
+#### La regla, en dos etapas
+
+| Etapa | Cuenta | Qué se puede hacer |
+|---|---|---|
+| **ANTES del merge**, con el código nuevo sólo en Preview | **cuenta de prueba descartable** | todo, incluido **Guardar** |
+| ídem | **cuenta principal** | pruebas **sin escritura**: abrir el selector, mirar los 31, teclado, foco, Escape, fondo, Cancelar, red, offline. **NO tocar Guardar** |
+| **DESPUÉS** de que el código nuevo esté desplegado en Producción | **cuenta principal** | elegir su avatar definitivo, sin ninguna precaución |
+
+Y si la incompatibilidad ya ocurrió: **es reversible**. Se arregla sola cuando
+Producción recibe el código nuevo, sin tocar la base.
+
 ### Verificación manual OBLIGATORIA en Preview
 
-Con una cuenta real, antes de dar por buena cualquier tanda que toque el selector:
+Con la cuenta que corresponda según la tabla de arriba, antes de dar por buena
+cualquier tanda que toque el selector:
 
 | # | Qué probar | Qué tiene que pasar |
 |---|---|---|
