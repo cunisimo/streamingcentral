@@ -16,24 +16,19 @@
 // nombre del estilo viaja al navegador a propósito, porque es el valor que se
 // guarda en la base.
 //
-// QUÉ SE EXCLUYE, Y POR QUÉ CADA COSA:
+// QUE SE EXCLUYE, Y POR QUE CADA COSA. Son TRES exclusiones y ninguna mira el
+// contenido de una linea:
 //
-//   docs/                    la historia. Explica por qué existe el mapeo legado;
-//                            borrarla sería perder la única razón escrita.
-//   líneas de comentario     un comentario no abre una conexión ni ejecuta SQL,
-//                            pero la exención es POR LENGUAJE y conservadora
-//                            (ver `esComentario`): `--` comenta en SQL y ABRE UNA
-//                            PROPIEDAD en CSS, y `*` es continuación de bloque en
-//                            JS/TS pero el SELECTOR UNIVERSAL en CSS
-//                            — nunca se corta a mitad de línea, porque
-//                            `https://api.dicebear.com` contiene `//` y recortar
-//                            ahí sería un falso negativo. Una SENTENCIA SQL que
-//                            mencione la cadena NO está exenta: `-- ...` sí,
-//                            `update ... set avatar_style = '...'` no.
-//   *.test.ts                los tests del mapeo legado NECESITAN la cadena
-//                            "adventurer-neutral" para probar que un perfil viejo
-//                            resuelve bien. No se despachan al navegador.
+//   docs/                    la historia. Explica por que existe el mapeo legado;
+//                            borrarla seria perder la unica razon escrita.
+//   *.test.ts                los tests del mapeo legado NECESITAN las cadenas
+//                            para probar que un perfil viejo resuelve bien. No se
+//                            despachan al navegador.
 //   este mismo archivo       define los patrones.
+//
+// NO se excluyen las lineas de comentario. Se intento dos veces y las dos
+// tuvieron falsos negativos demostrados; el motivo esta escrito abajo, donde
+// antes vivia esa funcion.
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -122,49 +117,33 @@ const SALTAR = new Set(["node_modules", ".git", "docs", "avatares"]);
 // Los tests y el propio escáner quedan fuera; ver el encabezado.
 const exento = (p) => /\.test\.(ts|tsx|mjs|js)$/.test(p) || p.endsWith("barrido-dicebear.mjs");
 
-/** Extensiones donde un `*` al principio es la continuación de un bloque JSDoc. */
-const EXT_JS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
-
-/** ¿La línea cierra un bloque y SIGUE con código detrás? */
-const codigoTrasElCierre = (t) => {
-  const i = t.indexOf("*/");
-  return i !== -1 && t.slice(i + 2).trim() !== "";
-};
-
 /**
- * ¿Es esta línea ENTERA un comentario? Si hay la más mínima duda, **no**: el
- * costo de un falso positivo es leerlo, el de un falso negativo es publicar una
- * conexión a un tercero.
+ * NO HAY FUNCION QUE DECIDA SI UNA LINEA ES UN COMENTARIO. **Se inspecciona
+ * todo el texto de los archivos incluidos**, y es una decision, no un descuido.
  *
- * LOS CUATRO FALSOS NEGATIVOS QUE TENÍA EL CRITERIO ANTERIOR. Decía: si después
- * de `trim` arranca con `//`, `*`, `/*` o `--`, no ejecuta nada. Es falso, y no
- * en teoría — `app/globals.css` tiene hoy `*{box-sizing:border-box}` y varias
- * `--bg:#FAFAFD;…`, y el barrido las estaba descartando:
+ * POR QUE SE ABANDONO. Hubo dos criterios y los dos tuvieron falsos negativos
+ * demostrados. El primero eximia toda linea que empezara con `//`, `*`, `/*` o
+ * `--`, y se comia el selector universal de CSS y las propiedades
+ * personalizadas. El segundo acoto la exencion por lenguaje, y aun asi dejaba
+ * pasar dos casos reales:
  *
- *   `*{background-image:url("…")}`      el selector universal de CSS
- *   `* {background-image:url("…")}`     el mismo, con espacio
- *   `[bloque cerrado] a{background:url("…")}`  código detrás del cierre
- *   `--fondo: url("…");`                una custom property, no un comentario SQL
+ *     * generator() { return "…/svg"; }        un metodo generador
  *
- * Las reglas, por lenguaje y no "a ojo":
+ *     const plantilla = `
+ *     [una linea que arranca con la apertura de bloque]
+ *     `;                                       contenido de una plantilla
  *
- *   `//`         comenta hasta el fin de línea. Vale en todos lados.
- *   `--`         comenta SÓLO en SQL. En CSS abre una propiedad personalizada.
- *   apertura y cierre de bloque: exentas sólo si NO queda código detrás del
- *                cierre en la misma línea.
- *   `*`          continuación de bloque SÓLO en JS/TS. En un `.css` no se exime
- *                ninguna línea que empiece con `*`, aunque sea la del medio de un
- *                comentario de bloque: preferimos marcarla y que alguien la lea.
+ * Decidir si una linea es comentario mirandola sola, sin analizar el archivo,
+ * **no se puede**: la misma secuencia de caracteres es comentario o codigo segun
+ * el contexto de arriba. Es la misma conclusion a la que llego el guard del SQL
+ * despues de dos parsers, y por el mismo motivo.
+ *
+ * EL PRECIO, dicho de frente: un comentario legitimo que mencione una de las
+ * cadenas rompe el barrido. Se paga reformulandolo — habia cinco en el codigo y
+ * en el SQL, y se reescribieron. Queda una sola aparicion autorizada en todo el
+ * codigo ejecutable, la de `AUTORIZADO`. Un comentario nuevo que la mencione es
+ * un test en rojo, no un falso verde.
  */
-export function esComentario(linea, ext = "") {
-  const t = linea.trim();
-  if (!t) return false;
-  if (t.startsWith("//")) return true;
-  if (t.startsWith("--")) return ext === ".sql";
-  if (t.startsWith("/*") || t.startsWith("*/")) return !codigoTrasElCierre(t);
-  if (EXT_JS.has(ext) && (t === "*" || t.startsWith("* "))) return true;
-  return false;
-}
 
 function* archivos(dir) {
   let entradas;
@@ -195,12 +174,8 @@ export function barrer(raices, base = process.cwd(), patrones = PROHIBIDO) {
       : [...archivos(abs)];
     for (const f of lista) {
       const relativo = path.relative(base, f);
-      const ext = path.extname(f).toLowerCase();
       const lineas = fs.readFileSync(f, "utf8").split(/\r?\n/);
       lineas.forEach((linea, i) => {
-        // La EXTENSIÓN decide qué es comentario: `--` comenta en SQL y abre una
-        // propiedad personalizada en CSS. Ver `esComentario`.
-        if (esComentario(linea, ext)) return;
         if (estaAutorizada(relativo, linea)) return;
         if (patrones.some((re) => re.test(linea))) {
           hallazgos.push({ archivo: relativo, linea: i + 1, texto: linea.trim().slice(0, 120) });
@@ -226,8 +201,7 @@ export function revisarAutorizadas(base = process.cwd()) {
     try { contenido = fs.readFileSync(path.join(base, archivo), "utf8"); } catch { contenido = ""; }
     const n = contenido
       .split(/\r?\n/)
-      .filter((l) => !esComentario(l, path.extname(archivo).toLowerCase())
-        && normalizarLinea(l) === linea).length;
+      .filter((l) => normalizarLinea(l) === linea).length;
     if (n === 1) continue;
     problemas.push(n === 0
       ? `${archivo}: no aparece la línea autorizada — ${linea}`

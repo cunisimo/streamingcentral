@@ -10,7 +10,7 @@ import { rutaAvatar } from "@/lib/avatares";
 // Pasarlos por el optimizador sumaría una función de imagen por cada uno sin
 // mejorar nada.
 //
-// ANTES esto armaba una URL a `api.dicebear.com` con la semilla del perfil, o
+// ANTES esto armaba una URL a la API de DiceBear con la semilla del perfil, o
 // sea que en cada render salía del dispositivo un identificador seudónimo
 // vinculado a la cuenta. Ahora no hay ninguna conexión externa.
 //

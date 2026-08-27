@@ -12,9 +12,9 @@
 // Pajaritos; y el resto de las ilustraciones, también propias.
 //
 // No hay librería de terceros ni conexión saliente para generar o servir un
-// avatar: los WebP salen del propio origen. Antes esto era una URL a
-// `api.dicebear.com` construida con la semilla del perfil, o sea un
-// identificador seudónimo viajando a un tercero en cada render.
+// avatar: los WebP salen del propio origen. Antes esto era una URL a la API de
+// DiceBear construida con la semilla del perfil, o sea un identificador
+// seudónimo viajando a un tercero en cada render.
 //
 // Precisión que importa para el formulario de Data Safety: la semilla SÍ se
 // recopila y se guarda en Supabase, que actúa como proveedor de servicio —
@@ -160,8 +160,8 @@ export const AVATAR_POR_DEFECTO: Avatar = AVATARES[0];
 /**
  * EL CONJUNTO CONGELADO DEL MAPEO LEGADO.
  *
- * Los perfiles viejos guardan una semilla de DiceBear (un uuid) y el estilo
- * `adventurer-neutral`. A cada uno se le asigna un avatar local de forma
+ * Los perfiles viejos guardan una semilla de DiceBear (un uuid) y el nombre del
+ * estilo que usaba esa librería. A cada uno se le asigna un avatar local de forma
  * determinística, para que la misma persona vea siempre el mismo dibujo en
  * todos sus dispositivos sin que haya que escribir nada en la base.
  *

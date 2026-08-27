@@ -51,25 +51,25 @@ test("EXTENSIONES incluye .sql: sin eso el barrido no mira el schema", () => {
   assert.ok([...EXTENSIONES].includes(".sql"), "el barrido se saltearía todos los .sql");
 });
 
-test("CANARIO SQL: una SENTENCIA con la cadena prohibida se detecta", () => {
+test("CANARIO SQL: las sentencias con la cadena prohibida se detectan", () => {
   const h = canario("migracion.sql", [
-    "-- este comentario menciona adventurer-neutral y NO cuenta",
+    "-- este comentario tambien cuenta: menciona adventurer-neutral",
     "alter table profiles alter column avatar_style set default 'adventurer-neutral';",
     "update profiles set avatar_style = 'adventurer-neutral' where avatar_style is null;",
   ].join("\n"));
-  assert.equal(h.length, 2, `esperaba 2 sentencias detectadas, hubo ${h.length}: ${JSON.stringify(h)}`);
+  // LAS TRES, el comentario incluido: el barrido ya no decide que es comentario.
+  assert.equal(h.length, 3, `esperaba 3 lineas detectadas, hubo ${h.length}: ${JSON.stringify(h)}`);
   assert.ok(h.every((x) => x.archivo.endsWith("migracion.sql")));
-  // La línea 1 es el comentario: no puede estar entre los hallazgos.
-  assert.deepEqual(h.map((x) => x.linea), [2, 3]);
+  assert.deepEqual(h.map((x) => x.linea), [1, 2, 3]);
 });
 
-test("CANARIO JS: código sí, comentario no", () => {
+test("CANARIO JS: el codigo Y el comentario se reportan los dos", () => {
   const h = canario("malo.ts", [
     "const u = `https://api.dicebear.com/10.x/adventurer-neutral/svg?seed=${x}`;",
-    "// este comentario menciona api.dicebear.com y NO cuenta",
+    "// este comentario tambien menciona api.dicebear.com",
   ].join("\n"));
-  assert.equal(h.length, 1);
-  assert.equal(h[0].linea, 1);
+  assert.equal(h.length, 2, "el barrido volvio a intentar distinguir comentarios");
+  assert.deepEqual(h.map((x) => x.linea), [1, 2]);
 });
 
 test("CANARIO del CLI: ejecutar el script de verdad DEVUELVE 1 ante un hallazgo", () => {
@@ -614,22 +614,19 @@ test("CANARIO CSS: una propiedad personalizada empieza con `--` y ES código", (
   assert.equal(h.length, 1, "el barrido tomó una custom property por un comentario de SQL");
 });
 
-test("en SQL, `--` SIGUE siendo comentario", () => {
-  // La exención no se elimina: se acota al lenguaje donde `--` comenta de verdad.
-  assert.deepEqual(canario("m.sql", "-- menciona api.dicebear.com y no cuenta"), []);
-});
-
-test("en JS/TS, la continuación de JSDoc SIGUE exenta", () => {
-  assert.deepEqual(canario("x.ts", " * menciona api.dicebear.com en un JSDoc"), []);
-  assert.deepEqual(canario("x.ts", " *"), []);
-  assert.deepEqual(canario("x.ts", "// menciona api.dicebear.com"), []);
-  assert.deepEqual(canario("x.ts", "/* menciona api.dicebear.com */"), []);
-  assert.deepEqual(canario("x.ts", "/* abre un bloque con api.dicebear.com"), []);
-});
-
-test("en JS/TS, `*{` NO es una continuación de JSDoc", () => {
-  const h = canario("x.ts", `const css = "*{background:url('${URL_PROHIBIDA}')}";`);
-  assert.equal(h.length, 1);
+test("NINGUNA forma de comentario exime ya, en ningun lenguaje", () => {
+  // La lista completa de lo que ANTES se salteaba. Ahora se reportan todas.
+  for (const linea of [
+    "-- menciona api.dicebear.com",
+    " * menciona api.dicebear.com en un JSDoc",
+    "// menciona api.dicebear.com",
+    "/* menciona api.dicebear.com */",
+    "/* abre un bloque con api.dicebear.com",
+    "*/ cierra un bloque con api.dicebear.com",
+  ]) {
+    assert.equal(canario("x.ts", linea).length, 1, `no se reporto en TS: ${linea}`);
+    assert.equal(canario("m.sql", linea).length, 1, `no se reporto en SQL: ${linea}`);
+  }
 });
 
 test("app/globals.css tiene las formas que disparaban el falso negativo", () => {
@@ -702,4 +699,56 @@ test("la raíz del repositorio NO se recorre entera", () => {
     "ajeno.json": `{"x":"${URL_PROHIBIDA}"}`,
   });
   assert.deepEqual(h, [], "se barrió un archivo suelto de la raíz que no es manifiesto");
+});
+
+// ============================================================================
+// EL BARRIDO YA NO ADIVINA — auditoría del 27/08, segunda pasada
+// ============================================================================
+
+// La corrección anterior acotó la exención de comentarios por lenguaje. **Seguía
+// habiendo falsos negativos**, y era inevitable: decidir si una línea es un
+// comentario, mirándola sola y sin analizar el archivo, no se puede. Dos casos
+// reproducidos contra `928f24e`, los dos devolvían `[]`:
+//
+//   `* generator() { return "https://api.dicebear.com/…"; }`
+//       sintaxis válida de un método generador, no una continuación de JSDoc.
+//
+//   una línea de una plantilla cuyo CONTENIDO arranca con `/*`
+//       es texto que se ejecuta o se inyecta después, no un comentario.
+//
+// **La salida no es una variante más del parser: es no tener parser.** El
+// barrido inspecciona TODO el texto de los archivos incluidos. El precio son
+// falsos positivos en comentarios legítimos, y se paga reformulando los cinco
+// que había — quedó una sola aparición autorizada en todo el código ejecutable.
+//
+// Es exactamente la misma conclusión a la que llegó el guard del SQL después de
+// dos parsers con falsos negativos demostrados. Dos veces la misma lección.
+
+test("CANARIO: un metodo generador NO es una continuacion de bloque", () => {
+  const h = canario("x.ts", `  * generator() { return "${URL_PROHIBIDA}"; }`);
+  assert.equal(h.length, 1, "el barrido tomo un metodo generador por un comentario");
+});
+
+test("CANARIO: una plantilla cuyo contenido arranca con /* se inspecciona", () => {
+  const h = canario("x.ts", [
+    "const plantilla = `",
+    `/* ${URL_PROHIBIDA}`,
+    "`;",
+  ].join("\n"));
+  assert.equal(h.length, 1, "el barrido tomo el contenido de una plantilla por un comentario");
+  assert.equal(h[0].linea, 2);
+});
+
+test("el escaner NO exporta ninguna funcion que decida si algo es comentario", () => {
+  // El guard contra volver a intentarlo. Si alguien reintroduce la heurística,
+  // este test lo pone en el diff.
+  const src = leerRaiz(path.join("scripts", "barrido-dicebear.mjs"));
+  assert.doesNotMatch(src, /esComentario/, "volvio la heuristica de comentarios");
+});
+
+test("los comentarios legitimos del codigo se reformularon", () => {
+  // La contracara del cambio: sin exención, un comentario que mencione la cadena
+  // rompe el barrido. Los cinco que había se reescribieron; el único que queda es
+  // la línea autorizada. Este test es el que avisa si alguien escribe uno nuevo.
+  assert.deepEqual(barrer(RAICES_FUENTE), []);
 });

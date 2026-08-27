@@ -506,17 +506,18 @@ los manifiestos de dependencias, y —si hay un build— también `.next/static`
 importa **el mismo escáner**, así que no hay dos implementaciones que puedan
 divergir.
 
-Excluye las líneas de comentario, porque un comentario no abre una conexión, pero
-**nunca corta a mitad de línea**: `https://api.dicebear.com` contiene `//` y
-recortar ahí sería un falso negativo. Verificado con un canario —un archivo con la
-URL en código y la misma URL en un comentario— que detecta exactamente uno.
+**No excluye líneas de comentario.** Las exclusiones son por archivo y están en
+la sección siguiente, junto con las dos veces que se intentó lo contrario.
 
-### Qué es un comentario, y los cuatro falsos negativos del 27/08
+### El barrido NO decide qué es un comentario, y esa es la corrección
 
-⚠️ **El criterio anterior era "arranca con `//`, `*`, `/*` o `--`", y estaba
-mal.** Auditado el 27/08, dejaba pasar cuatro formas de código ejecutable — y no
-en teoría: `app/globals.css` tiene hoy `*{box-sizing:border-box}` y varias
-`--bg:#FAFAFD;…`, y el barrido las estaba descartando como si fueran comentarios.
+⚠️ **Hubo dos criterios para eximir comentarios y los dos tuvieron falsos
+negativos demostrados. El tercer intento fue no tener criterio.**
+
+**Primer criterio** — "arranca con `//`, `*`, `/*` o `--`". Dejaba pasar cuatro
+formas de código ejecutable, y no en teoría: `app/globals.css` tiene hoy
+`*{box-sizing:border-box}` y varias `--bg:#FAFAFD;…`, y el barrido las estaba
+descartando.
 
 | Línea | Por qué pasaba | Qué es en realidad |
 |---|---|---|
@@ -525,20 +526,42 @@ en teoría: `app/globals.css` tiene hoy `*{box-sizing:border-box}` y varias
 | `/* c */ a{background:url("…")}` | empieza con `/*` | el bloque **cierra** y sigue código |
 | `--fondo: url("…");` | empieza con `--` | una **propiedad personalizada** de CSS |
 
-**El criterio nuevo es por lenguaje, y conservador**: ante la duda, reporta.
+**Segundo criterio** — el mismo, acotado por lenguaje (`--` sólo en SQL, `*`
+sólo en JS/TS, bloque sólo si no queda código detrás del cierre). Mejor, y
+todavía falso:
 
-| Marca | Cuándo exime |
+| Línea | Por qué pasaba | Qué es en realidad |
+|---|---|---|
+| `* generator() { return "…/svg"; }` | empieza con `* ` en un `.ts` | un **método generador**, sintaxis válida |
+| una línea de una plantilla cuyo contenido arranca con `/*` | empieza con `/*` | **texto que se ejecuta o se inyecta**, no un comentario |
+
+**La conclusión, que ya se había aprendido una vez.** Decidir si una línea es un
+comentario **mirándola sola, sin analizar el archivo, no se puede**: la misma
+secuencia de caracteres es comentario o código según lo que haya arriba. Es
+exactamente el camino que recorrió el guard del SQL —regex, después parser con
+troceo, después contar texto— y termina igual: **para esto no hace falta el lexer
+de nadie, hace falta no adivinar.**
+
+**Hoy el barrido inspecciona todo el texto de los archivos incluidos.** Las
+únicas exclusiones son por archivo y ninguna mira el contenido de una línea:
+
+| Exclusión | Por qué |
 |---|---|
-| `//` | siempre — comenta hasta el fin de línea |
-| `--` | **sólo en `.sql`**. En CSS abre una propiedad |
-| `/*` y el cierre | sólo si **no queda código detrás del cierre** en la misma línea |
-| `*` al principio | **sólo en JS/TS**, y sólo como `*` solo o `* ` con espacio |
+| `docs/` | la historia. Explica por qué existe el mapeo legado |
+| `*.test.ts` | los tests del mapeo legado **necesitan** las cadenas, y no se despachan al navegador |
+| el propio `barrido-dicebear.mjs` | define los patrones |
 
-En un `.css` **no se exime ninguna línea que empiece con `*`**, ni siquiera la
-del medio de un comentario de bloque. Es un falso positivo aceptado a
-conciencia: el costo de uno es leerlo, el de un falso negativo es publicar la
-conexión. Hay un canario por cada fila de las dos tablas, y uno que comprueba que
-esas formas siguen existiendo en `app/globals.css`.
+**El precio, dicho de frente:** un comentario legítimo que mencione una de las
+cadenas rompe el barrido. Había cinco —dos en `lib/avatares.ts`, uno en
+`components/avatar/Avatar.tsx` y dos en `supabase/schema.sql`— y se
+reformularon: dicen "la API de DiceBear" y "el nombre del estilo viejo" en vez
+del literal. **Queda UNA sola aparición en todo el código ejecutable**, la línea
+autorizada. Un comentario nuevo que la mencione es un test en rojo, que es
+exactamente lo que se quiere: nunca un falso verde.
+
+Hay un canario por cada fila de las dos tablas de arriba, uno que comprueba que
+esas formas siguen existiendo en `app/globals.css`, y uno que falla si alguien
+reintroduce una función que decida qué es comentario.
 
 ### Los manifiestos de dependencias también se barren
 

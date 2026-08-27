@@ -59,8 +59,8 @@ create table if not exists profiles (
 --
 --   · base NUEVA      → `add column if not exists` crea la columna SIN default.
 --   · PRODUCCIÓN      → volver a correr el schema NO toca el default existente
---                       (`'adventurer-neutral'`), porque la columna ya existe y
---                       el `if not exists` no hace nada.
+--                       (el nombre del estilo viejo), porque la columna ya
+--                       existe y el `if not exists` no hace nada.
 --   · si algún día se decide quitarlo → migración explícita y autorizada, aparte.
 --
 -- Y no hace falta quitarlo para que el sistema funcione: el valor de la columna
@@ -109,7 +109,7 @@ create policy "edicion de perfil propio" on profiles
 -- aleatoria (`gen_random_uuid()`) y no menciona la columna de estilo, que toma
 -- el default de la columna.
 --
--- EN PRODUCCIÓN ESE DEFAULT SIGUE SIENDO `'adventurer-neutral'`, así que una
+-- EN PRODUCCIÓN ESE DEFAULT SIGUE SIENDO EL NOMBRE DEL ESTILO VIEJO, así que una
 -- cuenta creada hoy nace con ese valor, NO con NULL. Da igual: entra al mapeo
 -- local descrito arriba y muestra un avatar propio DESDE EL PRIMER RENDER.
 --
