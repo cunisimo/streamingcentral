@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { eleccionAvatar, resolverAvatar } from "@/lib/avatares";
+import { mensajeDeGuardado } from "@/lib/mensaje-guardado";
 import {
   SELECTOR_ENFOCABLE, atributosBloqueo, cierraElDialogo, focoInicial, nuevaSeleccion,
   siguienteFoco,
@@ -91,7 +92,13 @@ export default function AvatarModal({ onClose }: { onClose: () => void }) {
     if (error) {
       // Falló: `guardando` ya volvió a false, así que las 31 opciones, Cancelar
       // y Guardar se reactivan solas y se puede reintentar.
-      setErr(error);
+      //
+      // En pantalla va un mensaje en castellano, NUNCA el error crudo: sin esto
+      // se leía "TypeError: Failed to fetch", que no le dice a nadie que lo
+      // único que hay que hacer es reintentar. El detalle técnico queda en la
+      // consola, que es donde sirve.
+      console.error("[avatar] falló el guardado:", error);
+      setErr(mensajeDeGuardado(error));
       return;
     }
     onClose();

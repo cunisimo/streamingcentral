@@ -485,14 +485,36 @@ cualquier tanda que toque el selector:
 | 4 | Escape | cierra |
 | 5 | Clic en el fondo oscuro | cierra |
 | 6 | Cancelar | cierra |
-| 7 | Después de cerrar de cualquiera de las tres formas | el foco vuelve al botón **"Cambiar avatar"** |
+| 7a | Cerrar con **Escape** | el foco vuelve al botón **"Cambiar avatar"**, con su anillo visible |
+| 7b | Cerrar con **Cancelar** o **clic en el fondo**, y apretar **Tab una vez** | el foco salta a lo que viene DESPUÉS de "Cambiar avatar". ⚠️ Con el mouse **no vas a ver el anillo**, y no es un error: todos los anillos del proyecto son `:focus-visible` y el navegador los oculta cuando la última interacción fue un clic. Verificarlo a ojo con el mouse es imposible — por eso el Tab |
 | 8 | Tocar Guardar y, mientras dice "Guardando…", tocar otra card | **no cambia la selección** |
 | 9 | Durante "Guardando…", probar Escape, el fondo y Cancelar | **no cierra** |
-| 10 | Forzar un error de guardado (modo avión, por ejemplo) | aparece el mensaje, las 31 opciones y los dos botones **se reactivan**, y se puede reintentar |
+| 10 | Forzar un error de guardado (DevTools → Network → Offline) | aparece **"No se pudo guardar. Revisá tu conexión y probá de nuevo."** —nunca el error crudo del navegador—, las 31 opciones y los dos botones **se reactivan**, y con la red de vuelta se puede reintentar |
 | 11 | Con un lector de pantalla, durante el guardado | el diálogo se anuncia **ocupado** (`aria-busy`) |
 
 **Los puntos 8, 9 y 10 son los que ningún test automático de este proyecto
 cubre de punta a punta**, porque dependen de una petición real a Supabase.
+
+### Resultado de la corrida del 27/08, y lo que salió de ahí
+
+Corrida por el dueño sobre el Preview, con una cuenta de prueba.
+
+| Punto | Resultado |
+|---|---|
+| 1 a 6 | ✅ pasan |
+| 7 | ✅ con Escape. Con Cancelar y con el fondo **parecía fallar** y no fallaba: el foco vuelve, lo que no vuelve es el anillo, porque `:focus-visible` lo oculta después de un clic. **Se reescribió el punto**, que pedía comprobar a ojo algo invisible |
+| 8 | ✅ pasa |
+| 9 | ✅ el clic en el fondo no cierra. Escape y Cancelar parecían cerrar, pero el guardado ya había terminado y el diálogo se había cerrado solo: los tres gestos pasan por la misma guarda (`cierraElDialogo`), no hay forma de que uno bloquee y los otros no |
+| 10 | ⚠️ **falló, y era un defecto real**: se mostraba `TypeError: Failed to fetch`, el error crudo del navegador. La recuperación estaba bien —las opciones y los botones se reactivaban y el reintento funcionaba—; lo roto era el texto. Corregido con `lib/mensaje-guardado.ts` |
+| 11 | ⏳ pendiente |
+
+**Un hallazgo que NO es de esta tanda.** Al recargar, el avatar propio parpadea:
+se ve `AVATAR_POR_DEFECTO` un instante y después el que corresponde. Es porque
+`profile` viaja en `null` hasta que resuelve la sesión, y `resolverAvatar(null)`
+devuelve el por defecto. **El código anterior tenía exactamente el mismo
+parpadeo** —`getAvatarUrl(undefined)` devolvía un DiceBear fijo—, así que no es
+una regresión y no bloquea el merge. Se arregla sin tocar avatares: no resolver
+un avatar hasta que `ready` sea `true`.
 
 ## Cómo verificar que DiceBear no volvió
 
