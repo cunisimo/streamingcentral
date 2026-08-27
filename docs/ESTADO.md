@@ -19,7 +19,7 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 
 ```
 origin/main               1e14f5c   ← DESPLEGADO en producción (app.yump.ar)
-main (local)              321d318   ← tres commits de DOCUMENTACIÓN sin pushear
+main (local)              321d318   ← tres commits de DOCUMENTACIÓN, entran con el merge
 feat/avatares-propios                ← la rama viva: en Preview, SIN mergear
 feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
 feat/dia-rotacion                    ← sin mergear y MUY atrás de main; hay que rebasarla
@@ -35,10 +35,15 @@ Un commit no puede nombrar su propio hash, así que el commit que actualiza la
 tabla la desactualiza; ya pasó dos veces seguidas. Se mira con
 `git log -1 feat/avatares-propios`.
 
-⚠️ **`main` local está TRES commits por delante de `origin/main`**, todos de
+**`main` local está TRES commits por delante de `origin/main`**, todos de
 documentación (issue #13, traspaso del idioma y la primera versión de la
 auditoría de Play). No se pushearon porque no hacía falta tocar producción por
-documentación. **Al mergear la rama de avatares, ojo con no arrastrarlos.**
+documentación.
+
+**Decisión del dueño, 27/08: van INCLUIDOS en el merge de los avatares.** Son
+sólo `docs/PLAY-STORE.md` y compañía, no tocan el runtime, y hacen falta para la
+etapa siguiente. Lo que antes decía acá —"ojo con no arrastrarlos"— era una
+advertencia mientras la decisión estaba pendiente; ya está tomada.
 
 `feat/idioma-tanda-2` y `feat/idioma-tanda-3` ya no existen: se borraron de los
 dos lados con borrado seguro (`git branch -d`, sin forzar) una vez verificada la
@@ -384,7 +389,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
   sí con los números del hero puestos.
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
   retorno; el rearmado en frío es el caso raro.
-- Los trece issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
+- Los catorce issues de `docs/ISSUES.md`, empezando por **#13**: el cron semanal
   del Top 10 de Netflix se salteó la corrida del 18/08. Disparó bien el 25/08 y
   el bloque oficial quedó recuperado, pero no hay explicación del salto y la
   guarda mide antigüedad desde la fecha de la semana, así que la próxima corrida
@@ -409,6 +414,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
 | #11 | "Últimos lanzamientos" tiene 35% de títulos bajo 6.0 |
 | #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
 | #13 | **El cron del Top 10 se salteó el 18/08** — disparó el 25/08 y el bloque oficial está recuperado; sin explicación del salto, y una corrida perdida vuelve a degradarlo (lo más fresco, ver arriba) |
+| #14 | El avatar propio parpadea en cada carga — **no es una regresión de la tanda de avatares**, el código anterior hacía lo mismo. Se arregla en una rama aparte, después de desplegar los avatares y antes del empaquetado nativo |
 
 ---
 

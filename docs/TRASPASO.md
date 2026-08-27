@@ -162,7 +162,7 @@ encontró una corrida real, no la revisión de código.
 |---|---|---|
 | 1 | **Probar el Preview de avatares con una cuenta descartable** | vos |
 | 2 | Mergear `feat/avatares-propios` y verificar el deploy | después de 1 |
-| 3 | Decidir qué hacer con los tres commits de documentación en `main` local | vos |
+| 3 | ~~Decidir qué hacer con los tres commits de documentación en `main` local~~ — **decidido el 27/08: entran con el merge** | ✅ |
 
 ### 3.b El cron del Top 10 — issue #13, sigue abierto
 
@@ -248,7 +248,7 @@ contexto de `vm`.
 ```
 docs/AVATARES.md          el sistema de avatares, la prueba manual y el riesgo transitorio
 docs/PLAY-STORE.md        la auditoría legal completa de Google Play
-docs/ISSUES.md            13 issues, #13 es el cron del Top 10
+docs/ISSUES.md            14 issues; #13 es el cron del Top 10 y #14 el parpadeo del avatar
 docs/ESTADO.md            estado de despliegue e histórico de las tandas de idioma
 docs/TRASPASO-IDIOMA.md   la línea del idioma, cerrada
 docs/MANTENIMIENTO.md     recetas: Preview/Redis, precalentado, ingesta manual del Top 10

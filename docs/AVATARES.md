@@ -506,15 +506,20 @@ Corrida por el dueño sobre el Preview, con una cuenta de prueba.
 | 8 | ✅ pasa |
 | 9 | ✅ el clic en el fondo no cierra. Escape y Cancelar parecían cerrar, pero el guardado ya había terminado y el diálogo se había cerrado solo: los tres gestos pasan por la misma guarda (`cierraElDialogo`), no hay forma de que uno bloquee y los otros no |
 | 10 | ⚠️ **falló, y era un defecto real**: se mostraba `TypeError: Failed to fetch`, el error crudo del navegador. La recuperación estaba bien —las opciones y los botones se reactivaban y el reintento funcionaba—; lo roto era el texto. Corregido con `lib/mensaje-guardado.ts` |
-| 11 | ⏳ pendiente |
+| 11 | ✅ pasa: el diálogo se anuncia ocupado durante el guardado |
 
-**Un hallazgo que NO es de esta tanda.** Al recargar, el avatar propio parpadea:
-se ve `AVATAR_POR_DEFECTO` un instante y después el que corresponde. Es porque
-`profile` viaja en `null` hasta que resuelve la sesión, y `resolverAvatar(null)`
-devuelve el por defecto. **El código anterior tenía exactamente el mismo
-parpadeo** —`getAvatarUrl(undefined)` devolvía un DiceBear fijo—, así que no es
-una regresión y no bloquea el merge. Se arregla sin tocar avatares: no resolver
-un avatar hasta que `ready` sea `true`.
+**Un hallazgo que NO es de esta tanda: issue #14.** Al recargar, el avatar propio
+parpadea: se ve `AVATAR_POR_DEFECTO` un instante y después el que corresponde. Es
+porque `profile` viaja en `null` hasta que resuelve la sesión. **El código
+anterior tenía exactamente el mismo parpadeo** —`getAvatarUrl(undefined)`
+devolvía un DiceBear fijo—, así que no es una regresión.
+
+**Decisión del dueño, 27/08: NO se arregla en esta rama.** Va en una rama aparte,
+**después de desplegar los avatares y antes del empaquetado nativo**. El motivo
+es de riesgo, no de pereza: toca la barra de abajo y el hub, o sea pantallas
+fuera de esta tanda, y meterlo acá obligaría a repetir la verificación manual
+entera por algo que ya venía pasando en producción. El detalle y el criterio de
+cierre, en `docs/ISSUES.md` → **#14**.
 
 ## Cómo verificar que DiceBear no volvió
 
