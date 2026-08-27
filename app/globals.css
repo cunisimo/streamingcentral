@@ -506,6 +506,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
    que no responden y se ven inertes. */
 .avcard[aria-disabled="true"] { opacity: .5; cursor: default; }
 .avcard[aria-disabled="true"]:hover { transform: none; }
+/* Respaldo cuando la imagen no cargó ni con el reintento: la inicial del nombre,
+   ocupando exactamente lo mismo que el <img>, para que la grilla no se mueva.
+   Un circulo vacio no se distingue de una card rota; esto si. */
+.avcard-fb { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; border-radius: 50%; background: var(--surface-2); color: var(--dim); font-family: var(--display); font-size: 22px; font-weight: 700; line-height: 1; }
+.avcard.sin-imagen { border-color: var(--line-2); }
 .btn[aria-disabled="true"] { opacity: .55; cursor: default; }
 .avcard.on { border-color: var(--accent); transform: scale(1.08); }
 .avmodal-err { margin: 0; padding: 0 22px; color: var(--editorial); font-size: 13px; }

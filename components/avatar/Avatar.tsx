@@ -17,15 +17,19 @@ import { rutaAvatar } from "@/lib/avatares";
 // `alt=""` por defecto y `aria-hidden`: en la nav y en el hub el avatar es
 // decorativo, el nombre de la persona ya está al lado. Donde SÍ importa —cada
 // opción del selector— el nombre accesible lo pone el botón que lo envuelve.
+//
+// **NO tiene carga diferida, y ya no tiene ni la opción.** Existía un `lazy` que
+// usaba sólo el selector, y era la causa de los círculos vacíos: 21 de 31
+// imágenes se quedaban en `complete === false`, nunca pedidas. Se sacó la prop
+// entera para que no vuelva por descuido — `docs/ISSUES.md` → #15. Los otros dos
+// usos (la nav y el hub) muestran UNA imagen y siempre la cargaron de una.
 function AvatarBase({
-  perfil, size = 40, className, alt = "", lazy = false,
+  perfil, size = 40, className, alt = "",
 }: {
   perfil?: { avatar_seed?: string | null; avatar_style?: string | null } | null;
   size?: number;
   className?: string;
   alt?: string;
-  /** `true` en las opciones del selector, que están fuera del área visible. */
-  lazy?: boolean;
 }) {
   return (
     <img
@@ -35,7 +39,6 @@ function AvatarBase({
       alt={alt}
       aria-hidden={alt ? undefined : true}
       className={className}
-      loading={lazy ? "lazy" : "eager"}
       decoding="async"
       draggable={false}
     />
