@@ -7,6 +7,13 @@ import type { PlatformCode } from "./types";
 export interface PlatformDef {
   code: PlatformCode;
   name: string;
+  /**
+   * ⚠️ NO SE USA PARA PINTAR LA INTERFAZ, y no hay que volver a hacerlo. Es el
+   * color de marca de un tercero: usarlo en la app es reproducir identidad
+   * ajena, que es justo lo que se sacó al reemplazar los wordmarks por texto
+   * neutro (ver components/PlatformLogo.tsx y docs/PLAY-STORE.md). Queda como
+   * dato de referencia del proveedor, nada más.
+   */
   tmdbIds: number[]; // pueden ser varios (p.ej. con y sin ads)
   color: string;
   // Página oficial de suscripción en Argentina. La usa el bloque "No está en

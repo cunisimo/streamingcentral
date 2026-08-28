@@ -21,6 +21,85 @@ Todo lo de acá cae en una de cuatro cajas, y **no se mezclan**:
 
 ---
 
+---
+
+## 0.a Decisiones tomadas — 27 de agosto de 2026
+
+Las tomó el dueño y **cierran una parte de §4.c y §7.b**. Dejan de ser 🔵.
+
+| # | Decisión | Qué desbloquea |
+|---|---|---|
+| 1 | **Responsable legal, creador y desarrollador: Juan Facundo Galíndez** | El nombre que va en las cuatro páginas, en la ficha de Play y en el aviso de no afiliación (§4.c #1) |
+| 3 | **Jurisdicción: Argentina** | Ley aplicable en `/terminos` (§4.c #3) |
+| 6 | **Edad mínima: 16 años** | Target Audience en Play y la cláusula de elegibilidad (§4.c #6) |
+| 4 | **Sin publicidad, suscripciones ni monetización, por ahora** | No hace falta acuerdo comercial con TMDB **hoy** (§4.c #4, §5.d) |
+| 8 | **Las cuatro páginas públicas viven en `yump.ar`** | Los enlaces de la app (§4.c #8) |
+| 16 | **Se aprueba el reemplazo por nombres neutros** | §6.d deja de estar pendiente |
+
+### La monetización futura NO es sólo un interruptor
+
+Que hoy no haya publicidad ni suscripciones evita el acuerdo comercial con TMDB.
+**Si algún día se monetiza —de cualquier forma, incluida la publicidad—, hay que
+revisar ANTES tres cosas**, y esto queda escrito para que no se cuele en un
+sprint sin mirarlo:
+
+1. **Las condiciones de la API de TMDB**, que distinguen uso comercial del que no
+   lo es (§5.d).
+2. **`/terminos`**, que hoy va a describir un servicio gratuito.
+3. **`/privacidad`** y la matriz de Data Safety: publicidad significa
+   identificadores publicitarios y, con eso, otra declaración en Play y
+   probablemente marcar **"Contains ads"** (§2.e).
+
+### Las cuatro páginas públicas
+
+```
+https://yump.ar/acerca-de
+https://yump.ar/privacidad
+https://yump.ar/terminos
+https://yump.ar/eliminar-cuenta
+```
+
+**Las prepara el dueño, en el dominio principal.** No son rutas de esta app: la
+app sólo enlaza a ellas.
+
+⚠️ **Al 27/08 las cuatro responden 404**, con `https://yump.ar/` en 200.
+Verificado. Mientras sigan así, **la app no puede desplegarse a Producción con
+esos enlaces**: serían cuatro enlaces rotos en la sección legal, que es
+exactamente lo que una revisión de Play mira.
+
+### Dentro de la app: la sección "Sobre Yump"
+
+Va **dentro de Perfil** (`/cuenta/perfil`), con los cuatro enlaces, la atribución
+de TMDB, la autoría de las ilustraciones y el aviso de no afiliación.
+
+### Nombres de plataformas: texto neutro
+
+Se muestran con **la tipografía y el color de Yump**, sin wordmarks, sin
+símbolos y sin colores de marca imitados. Los **códigos internos y toda la
+lógica no cambian**: es un cambio visual.
+
+**Y el tamaño sube.** Con el color de la marca afuera, el nombre es lo único que
+queda para reconocerla: a 11px se perdía. Pasa a 13px.
+
+---
+
+## 0.b ⚠️ CONTRADICCIÓN con el plan de §8, detectada al aplicar estas decisiones
+
+**§8 y §3.d asumen que las cuatro páginas son RUTAS DE ESTA APP.** Con la
+decisión 8 ya no lo son, y eso cambia dos cosas del plan:
+
+| Lo que decía | Qué pasa ahora |
+|---|---|
+| §8, commit 2: *"las rutas legales quedan exentas del gate"*, con un test de que `/privacidad`, `/terminos`, `/acerca-de` y `/eliminar-cuenta` no redirigen | **Ya no hace falta.** No hay rutas que eximir: `OnboardingGate` no puede interceptar `yump.ar`, que es otro sitio |
+| §3.d: *"`OnboardingGate` bloquea las cuatro rutas"* | El hallazgo **era correcto** cuando se escribió, y **deja de aplicar** por la decisión, no porque estuviera mal |
+
+**Lo que NO desaparece**, y conviene no perderlo de vista: el **borrado de cuenta
+sigue ocurriendo dentro de la app** (§3.a). La página externa
+`yump.ar/eliminar-cuenta` es la que Play exige poder abrir **sin instalar la
+app**; tiene que explicar el procedimiento y llevar a la app, no reemplazar el
+flujo. Y si esa página termina apuntando a una ruta interna, el problema del
+gate vuelve — ahí sí habría que eximirla.
+
 ## 0. Hallazgos confirmados
 
 > **Actualización del 2026-08-25 — los avatares están RESUELTOS.** DiceBear salió
@@ -690,14 +769,14 @@ cero service role en el cliente.
 
 | # | Decisión | Por qué bloquea |
 |---|---|---|
-| 1 | Nombre del responsable (persona, nombre público o sociedad) | Va en las cuatro páginas, en la ficha y en el aviso de no afiliación |
+| 1 | ~~Nombre del responsable~~ ✅ **Juan Facundo Galíndez** (27/08, ver §0.a) | — |
 | 2 | Email de soporte y de privacidad (puede ser el mismo) | Play exige email de soporte; la política necesita contacto |
-| 3 | Domicilio o jurisdicción | Ley aplicable. ¿Argentina? |
-| 4 | ¿Habrá monetización, publicidad o suscripciones? | Decide si hace falta acuerdo comercial con TMDB (§5) |
+| 3 | ~~Domicilio o jurisdicción~~ ✅ **Argentina** (27/08, ver §0.a) | — |
+| 4 | ~~¿Habrá monetización?~~ ✅ **No, por ahora** (27/08). Monetizar después exige revisar TMDB, términos y privacidad ANTES — ver §0.a | — |
 | 5 | Períodos de retención | Depende de las verificaciones 🔍 de §7.c |
-| 6 | Edad mínima y público objetivo | Define Target Audience y si aplica Families Policy |
+| 6 | ~~Edad mínima~~ ✅ **16 años** (27/08, ver §0.a). Queda declarar el público objetivo en Play | Target Audience |
 | 7 | Tipo de cuenta de Play y fecha de creación | Decide si aplica la prueba cerrada |
-| 8 | Dominio definitivo de la ficha | Hoy `app.yump.ar`. Los enlaces tienen que ser estables |
+| 8 | ~~Dominio de las páginas legales~~ ✅ **`yump.ar`**, las prepara el dueño (27/08, ver §0.a). ⚠️ Las cuatro dan 404 hoy | Queda el dominio de la FICHA de Play |
 | 9 | ¿Se saca la cookie `sc_platforms`? | Minimización gratis |
 | 10 | ¿TWA o nativo? | Define el trabajo de la segunda tanda |
 
@@ -967,7 +1046,7 @@ Las diez de §4.c, más:
 13. §2.d — ¿Votos como `Other actions` o como `Other user-generated content`?
 14. §2.e — ¿"Contains ads" por YouTube?
 15. §5.c — ¿Capturas con pósters reales o con placeholders propios?
-16. §6.d — ¿Se aprueba el reemplazo por nombres neutros?
+16. ~~§6.d — ¿Se aprueba el reemplazo por nombres neutros?~~ ✅ **APROBADO Y HECHO el 27/08**: los wordmarks imitados se reemplazaron por el nombre en texto neutro, con la tipografía y el color de Yump. Ya no bloquea nada.
 17. ~~§2.f — ¿Qué solución de avatares?~~ ✅ **DECIDIDO Y HECHO el 2026-08-25**:
     31 ilustraciones propias. Ya no bloquea nada.
 18. §2.c — ¿Con qué tipo de Play se declara la contraseña efímera?
