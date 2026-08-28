@@ -41,9 +41,9 @@ function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
     <div className="shelf">
       <div className="shelf-head">
         <div className="shelf-head-l">
-          {/* El wordmark de PlatformLogo YA es el nombre de la plataforma en su
-              tipografía de marca: poner además `def.name` al lado lo duplica
-              ("NETFLIX Netflix"). El aria-label deja el nombre para lectores. */}
+          {/* `PlatformLogo` YA es el nombre de la plataforma en texto neutro,
+              así que poner además `def.name` al lado lo duplicaría. El
+              aria-label lo deja explícito para lectores de pantalla. */}
           <h2 aria-label={def?.name ?? b.platform}><PlatformLogo code={b.platform} /></h2>
           {b.source === "netflix" && (
             <button

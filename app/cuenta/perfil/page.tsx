@@ -6,6 +6,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import AvatarPicker from "@/components/avatar/AvatarPicker";
 import { useAuth } from "@/components/AuthContext";
+import SobreYump from "@/components/legal/SobreYump";
 
 export default function PerfilPage() {
   const { user, profile, ready, updateDisplayName, signOut } = useAuth();
@@ -55,6 +56,8 @@ export default function PerfilPage() {
             </button>
             <button className="btn ghost" onClick={signOut}>Cerrar sesión</button>
           </div>
+
+          <SobreYump />
         </div>
       </main>
       <BottomNav />

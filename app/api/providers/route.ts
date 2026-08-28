@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
-import { TMDB_IMG } from "@/lib/tmdb";
 import { codeForTmdbId, platformByCode, platformOrder } from "@/lib/providers-ar";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +7,7 @@ export const dynamic = "force-dynamic";
 interface Row {
   id: number;
   name: string;
-  logo_path: string | null;
+  // NO se pide el logo de TMDB: ver components/onboarding/ProviderCard.tsx.
   sort_order?: number | null;
   display_priority?: number | null;
 }
@@ -26,14 +25,14 @@ export async function GET() {
     let rows: Row[];
     const primary = await sb
       .from("providers")
-      .select("id, name, logo_path, sort_order")
+      .select("id, name, sort_order")
       .eq("enabled", true)
       .order("sort_order", { ascending: true });
     if (primary.error) {
       // Columnas enabled/sort_order aún no aplicadas: fallback por código.
       const fb = await sb
         .from("providers")
-        .select("id, name, logo_path, display_priority")
+        .select("id, name, display_priority")
         .order("display_priority", { ascending: true });
       if (fb.error) throw new Error(fb.error.message);
       rows = (fb.data ?? []).filter((p: Row) => codeForTmdbId(p.id));
@@ -57,7 +56,6 @@ export async function GET() {
           id: p.id,
           code,
           name: def?.name ?? p.name.trim(),
-          logo: p.logo_path ? `${TMDB_IMG}/w92${p.logo_path}` : null,
         };
       })
       .filter((p) => {

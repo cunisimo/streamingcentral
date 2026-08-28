@@ -58,24 +58,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .track::-webkit-scrollbar{width:0;height:0}
 }
 
-.lg{font-family:var(--body);line-height:1;display:inline-flex;align-items:center;white-space:nowrap;font-size:11px}
-.lg-n{color:#E50914;font-weight:800;letter-spacing:-.04em}
-.lg-d{color:#0C3FC4;font-weight:700}.lg-d sup{font-size:.62em;font-weight:800;margin-left:.5px}
-.lg-m{color:#0E2FD6;font-weight:800;letter-spacing:-.06em}
-.lg-p{color:#00A8E1;font-weight:700;display:inline-flex;align-items:center;gap:3px}.lg-p svg{width:11px;height:9px}
-.lg-pp{color:#0064FF;font-weight:700}.lg-pp sup{font-size:.62em;font-weight:800}
-.lg-at{color:var(--text);font-weight:600}.lg-at b{font-weight:800}
-.lg-mb{color:var(--text);font-weight:800;letter-spacing:.02em}
-.lg-cr{color:#F47521;font-weight:800;letter-spacing:-.02em}
-.lg-sp{color:#5A2EAE;font-weight:800;letter-spacing:-.03em}
-.lg-vx{color:#F4067F;font-weight:800;letter-spacing:-.02em}
-.lg-mv{color:#019DF4;font-weight:700;letter-spacing:-.02em}
-.lg-cv{color:#DA291C;font-weight:700;letter-spacing:-.02em}
-.lg-dg{color:#00B0F0;font-weight:800;letter-spacing:-.03em}.lg-dg b{font-weight:600;margin-left:2px}
-.lg-un{color:#0B5FD4;font-weight:700}.lg-un sup{font-size:.62em;font-weight:800}
-/* En px, no em: `.lg` fija 11px pero un `em` acá se calcularía sobre el font-size
-   del PADRE (16px), y el wordmark salía a 14.7px, más grande que los demás. */
-.lg-ok{color:#E4002B;font-weight:700;letter-spacing:-.03em;font-size:10px}
+/* El nombre de la plataforma, en texto NEUTRO: tipografia y color de Yump, sin
+   wordmarks, simbolos ni colores de marca imitados. Ver components/PlatformLogo.
+   El tamano subio de 11px a 13px: sin el color de la marca, el nombre es lo unico
+   que queda para reconocerla y a 11px se perdia. */
+.lg{font-family:var(--body);font-weight:600;font-size:13px;line-height:1;color:var(--dim);display:inline-flex;align-items:center;white-space:nowrap;letter-spacing:-.01em}
 
 /* padding-top y no margin: el fondo con blur tiene que llegar hasta arriba de
    todo y quedar detrás de la barra de estado, no dejar una franja transparente. */
@@ -110,7 +97,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 [data-theme="dark"] .brand-wm-dark{display:block}
 .platbtn{margin-left:auto;display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);font-size:13px;color:var(--text);cursor:pointer;white-space:nowrap;box-shadow:var(--sh);position:relative}
 .platbtn .cap{color:var(--dim)}
-.platbtn .av{display:flex;align-items:center;gap:3px}.platbtn .av span{width:8px;height:8px;border-radius:2px}
+.platbtn .av{display:flex;align-items:center;gap:3px}.platbtn .av span{width:8px;height:8px;border-radius:2px;background:var(--accent)}
 .platbtn>svg{width:14px;height:14px;stroke:var(--dim);fill:none;stroke-width:2}
 /* La barra de scroll va SIEMPRE visible (no la de aparecer-al-hover del SO):
    con 14 plataformas la lista se corta y no había ninguna pista de que seguía
@@ -883,8 +870,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .ob-card.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .ob-card-logo{width:44px;height:44px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2)}
 .ob-card-logo img{width:40px;height:40px;object-fit:contain;border-radius:8px}
-.ob-card-ph{font-family:var(--display);font-weight:700;font-size:18px;color:var(--dim)}
-.ob-card-name{font-size:12.5px;font-weight:600;text-align:center;line-height:1.2;color:var(--text)}
+.ob-card-ph{font-family:var(--display);font-weight:700;font-size:22px;color:var(--dim)}
+.ob-card-name{font-size:14px;font-weight:600;text-align:center;line-height:1.25;color:var(--text)}
 .ob-card-check{position:absolute;top:7px;right:7px;width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center}
 .ob-card-check svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:3}
 .ob-none .ob-plus{font-size:24px;color:var(--accent);font-weight:700;line-height:1}
@@ -959,3 +946,31 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   color:var(--dim);background:var(--surface-2);border:1px solid var(--line);
   border-radius:999px;cursor:pointer}
 .ayuda-copiar:hover{color:var(--text);border-color:var(--line-2)}
+
+/* ============================================================================
+   "Sobre Yump" — la seccion legal dentro de Perfil. Ver components/legal/.
+   Movil primero: los enlaces son filas de 48px de alto, que es el minimo comodo
+   para tocar con el pulgar.
+   ============================================================================ */
+.sy{margin-top:28px;padding-top:20px;border-top:1px solid var(--line)}
+.sy-tit{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.02em;margin:0 0 12px}
+.sy-sub{font-family:var(--display);font-size:15px;font-weight:700;margin:18px 0 6px}
+.sy-links{list-style:none;margin:0 0 18px;padding:0;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.sy-links li+li{border-top:1px solid var(--line)}
+.sy-links a{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:0 14px;font-size:15px;font-weight:600;color:var(--text);text-decoration:none}
+.sy-links a:hover{background:var(--surface-2)}
+.sy-links a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sy-links svg{width:15px;height:15px;flex:none;fill:none;stroke:var(--faint);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sy-p{margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--dim)}
+.sy-p a{color:var(--accent)}
+.sy-c{font-size:12.5px;color:var(--faint)}
+/* La atribucion de TMDB. Lo que va con MENOS prominencia que la identidad de
+   Yump es el LOGO -12px de alto, al final de la seccion-, no el aviso: el
+   requisito de TMDB es que el aviso sea prominente. Estuvo en 11.5px y en
+   --faint, que ademas no cumple contraste AA (issue #2), o sea casi
+   imperceptible. El texto obligatorio pasa a 13.5px y al color de texto normal;
+   la aclaracion en castellano queda un escalon abajo. */
+.sy-tmdb{margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+.sy-tmdb img{display:block;height:12px;width:auto;opacity:.85}
+.sy-tmdb-req{margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--text)}
+.sy-tmdb-txt{margin:6px 0 0;font-size:12.5px;line-height:1.55;color:var(--dim)}

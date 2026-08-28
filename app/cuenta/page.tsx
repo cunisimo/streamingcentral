@@ -6,6 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
 import UserHub from "@/components/UserHub";
 import PasswordInput from "@/components/PasswordInput";
+import SobreYump from "@/components/legal/SobreYump";
 
 type Modo = "login" | "registro" | "recuperar";
 
@@ -27,6 +28,14 @@ export default function Cuenta() {
             <Acceso signIn={signIn} signUp={signUp} resetPassword={resetPassword} />
           </div>
         )}
+        {/* La sección legal va acá ADEMÁS de en Perfil, y fuera del `user ?`:
+            `/cuenta/perfil` redirige a `/cuenta` sin sesión, así que ésta es la
+            única pantalla de la pestaña Cuenta donde alguien sin cuenta puede
+            leer las páginas legales, la atribución de TMDB y el aviso de no
+            afiliación. Play pide poder consultarlas sin instalar ni entrar. */}
+        <div className="admin" style={{ maxWidth: 480 }}>
+          <SobreYump />
+        </div>
       </main>
       <BottomNav />
     </>

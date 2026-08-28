@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
-import { PLATFORMS, platformByCode } from "@/lib/providers-ar";
+import { PLATFORMS } from "@/lib/providers-ar";
 import type { PlatformCode } from "@/lib/types";
 
 // Lista de plataformas del panel: fuente única = /api/providers (la misma que el
@@ -59,7 +59,11 @@ export default function TopBar() {
         <div ref={ref} style={{ position: "relative", marginLeft: "auto" }}>
           <button className="platbtn" style={{ margin: 0 }} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
             <span className="cap">Plataformas</span>
-            <span className="av">{platforms.map((p) => <span key={p} style={{ background: platformByCode(p)?.color }} />)}</span>
+            {/* Puntitos NEUTROS: antes cada uno iba pintado con el color exacto de
+                la marca (`platformByCode(p).color`), que es identidad ajena en la
+                interfaz. Ahora todos usan el acento de Yump: siguen diciendo
+                cuántas plataformas hay activas, que es para lo que están. */}
+            <span className="av">{platforms.map((p) => <span key={p} />)}</span>
             <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
           </button>
           {open && (
