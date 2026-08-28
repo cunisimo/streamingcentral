@@ -62,10 +62,9 @@ https://yump.ar/eliminar-cuenta
 **Las prepara el dueño, en el dominio principal.** No son rutas de esta app: la
 app sólo enlaza a ellas.
 
-⚠️ **Al 27/08 las cuatro responden 404**, con `https://yump.ar/` en 200.
-Verificado. Mientras sigan así, **la app no puede desplegarse a Producción con
-esos enlaces**: serían cuatro enlaces rotos en la sección legal, que es
-exactamente lo que una revisión de Play mira.
+✅ **Las cuatro responden 200** (con barra final; sin ella, 301). Los enlaces de
+la app ya no están rotos. ⚠️ **Pero son marcadores vacíos**: ver el estado real
+en §0.b, que es lo que sigue bloqueando el envío a Play.
 
 ### Dentro de la app: la sección "Sobre Yump"
 
@@ -83,22 +82,63 @@ queda para reconocerla: a 11px se perdía. Pasa a 13px.
 
 ---
 
-## 0.b ⚠️ CONTRADICCIÓN con el plan de §8, detectada al aplicar estas decisiones
+## 0.b El diseño vigente de las cuatro páginas y de la baja de cuenta
 
-**§8 y §3.d asumen que las cuatro páginas son RUTAS DE ESTA APP.** Con la
-decisión 8 ya no lo son, y eso cambia dos cosas del plan:
+**Esto reemplaza lo que decían §3.d y §8 sobre rutas legales dentro de la app.**
+Aquello se escribió cuando las cuatro páginas iban a ser rutas de Next; con la
+decisión 8 dejaron de serlo. Las dos secciones quedan marcadas como históricas y
+**este apartado es el único vigente**.
 
-| Lo que decía | Qué pasa ahora |
-|---|---|
-| §8, commit 2: *"las rutas legales quedan exentas del gate"*, con un test de que `/privacidad`, `/terminos`, `/acerca-de` y `/eliminar-cuenta` no redirigen | **Ya no hace falta.** No hay rutas que eximir: `OnboardingGate` no puede interceptar `yump.ar`, que es otro sitio |
-| §3.d: *"`OnboardingGate` bloquea las cuatro rutas"* | El hallazgo **era correcto** cuando se escribió, y **deja de aplicar** por la decisión, no porque estuviera mal |
+### Dónde vive cada cosa
 
-**Lo que NO desaparece**, y conviene no perderlo de vista: el **borrado de cuenta
-sigue ocurriendo dentro de la app** (§3.a). La página externa
-`yump.ar/eliminar-cuenta` es la que Play exige poder abrir **sin instalar la
-app**; tiene que explicar el procedimiento y llevar a la app, no reemplazar el
-flujo. Y si esa página termina apuntando a una ruta interna, el problema del
-gate vuelve — ahí sí habría que eximirla.
+| Pieza | Dónde | Quién la hace |
+|---|---|---|
+| `/acerca-de`, `/privacidad`, `/terminos`, `/eliminar-cuenta` | **`yump.ar`**, fuera de la app | el dueño |
+| Sección "Sobre Yump" con los cuatro enlaces, la atribución de TMDB, la autoría y el aviso de no afiliación | **dentro de la app**: pestaña **Cuenta** y **Perfil** | hecho, rama `feat/legal-play-web` |
+| Borrado de cuenta automático | **dentro de la app**, en Configuración | ya existía (§3.a) |
+
+### Se consulta SIN sesión, y por qué eso obligó a montarla dos veces
+
+Su lugar conceptual es Perfil. Pero **`/cuenta/perfil` redirige a `/cuenta`
+cuando no hay sesión**, así que montada sólo ahí la información legal era
+inalcanzable para cualquiera sin cuenta — que es exactamente a quien Play exige
+poder mostrársela.
+
+Por eso la misma sección se monta también en la **pestaña Cuenta**, que sin
+sesión muestra el login. Ahí **no interviene el `OnboardingGate`**: sale temprano
+cuando no hay usuario (`if (!ready || !user || !profile) return;`), y hay un test
+que se rompe si esa guarda cambia.
+
+### La baja de cuenta: dos caminos, y qué implica cada uno
+
+Play exige un **recurso web que permita INICIAR la solicitud sin instalar la
+app**. Explicar el procedimiento y devolver a la aplicación **no alcanza**.
+
+| Camino | Qué hace falta | Efecto sobre el gate |
+|---|---|---|
+| 🟡 **A. Formulario o correo en `yump.ar/eliminar-cuenta/`** (recomendado) | La página recibe la solicitud —formulario o dirección de contacto publicada— y el dueño la procesa | **Ninguno.** No hay ruta de la app involucrada, así que **no hay que tocar `OnboardingGate`** |
+| B. La página enlaza a una ruta de `app.yump.ar` | Esa ruta tiene que ser **directa, pública antes de autenticarse y exenta del gate**, con su test | Vuelve el trabajo de eximir rutas que §8 daba por necesario |
+
+**Se recomienda A**: no toca el gate, no agrega superficie a la app y no depende
+de que alguien pueda autenticarse para pedir la baja — que es justo lo que puede
+estar roto cuando alguien quiere irse.
+
+**El borrado automático dentro de Configuración se conserva** en los dos casos.
+El recurso web es la vía alternativa que Play pide, no un reemplazo.
+
+### ⚠️ Estado real de las cuatro páginas al 27/08
+
+Las cuatro **ya responden 200** (con barra final; sin ella devuelven 301). Los
+enlaces de la app **dejaron de estar rotos**.
+
+**Pero las cuatro son marcadores vacíos**: verificado, `/privacidad/` no tiene
+ninguna sección sobre datos, terceros, retención ni derechos, y
+`/eliminar-cuenta/` **no tiene formulario, ni dirección de contacto, ni ningún
+mecanismo para iniciar la solicitud**. O sea:
+
+- ✅ ya no bloquean el despliegue de la app por enlaces rotos;
+- ❌ **siguen bloqueando el envío a Play**, y `/eliminar-cuenta/` es la más
+  urgente: sin mecanismo, no cumple el requisito por más que la URL exista.
 
 ## 0. Hallazgos confirmados
 
@@ -672,7 +712,16 @@ El in-app existe; falta el web.
 - ✅ El contenido informativo (qué se borra, qué se conserva, quién es Yump,
   contacto) **debe leerse sin iniciar sesión**.
 
-### 3.d ✅ CONFIRMADO — `OnboardingGate` bloquea las cuatro rutas
+### 3.d 🗄️ HISTÓRICO — `OnboardingGate` y las rutas legales
+
+> **Ya no aplica. El diseño vigente está en §0.b.** Lo de abajo se escribió
+> cuando las cuatro páginas iban a ser rutas de esta app; hoy viven en
+> `yump.ar`, así que **no hay rutas que eximir** y el gate no se toca. El
+> hallazgo era correcto entonces y se conserva por dos motivos: explica por qué
+> el gate importa, y **vuelve a aplicar tal cual** si alguna vez la página de
+> baja enlaza a una ruta de `app.yump.ar` (camino B de §0.b).
+
+#### Lo que decía
 
 `components/onboarding/OnboardingGate.tsx` está montado en `app/layout.tsx`, o
 sea en **todas** las rutas:
@@ -1069,19 +1118,24 @@ Las diez de §4.c, más:
 
 ## 8. Primera tanda: web y legal, independiente de Android
 
+> **Actualizado el 27/08 con lo que efectivamente se hizo.** El plan original
+> asumía cuatro rutas legales dentro de la app; ese supuesto cayó con la decisión
+> 8 y el diseño vigente es el de **§0.b**. Las filas de abajo dicen qué quedó
+> hecho, qué cambió de forma y qué ya no corresponde.
+
 **Alcance exacto.** No toca el paquete Android, no crea el proyecto TWA, no
 depende de Play Console. Se puede hacer, revisar y desplegar sola — y **cierra
 hoy dos incumplimientos que ya existen en producción**.
 
 | # | Commit | Contenido | Depende de |
 |---|---|---|---|
-| 1 | `fix(legal): atribución de TMDB y autoría de los avatares` | `/acerca-de` con logo TMDB local, el texto largo verbatim, enlace, y la autoría en **tres grupos separados**: los **nueve** personajes de **Pajaritos** de **Juan Facundo Galíndez** con enlace textual a @pajaritos.web (sin widget), **Don Tito como mascota original de Yump** en su propio párrafo y **sin** ese enlace, y las demás ilustraciones propias. Más el aviso de no afiliación. **Ya NO lleva crédito a DiceBear** | nada — **es el que cierra el incumplimiento vigente** |
-| 2 | `fix(onboarding): las rutas legales quedan exentas del gate` | lista de exentas + **test** de que `/privacidad`, `/terminos`, `/acerca-de` y `/eliminar-cuenta` no redirigen con `onboarding_completed = false` | nada |
+| 1 | ✅ **HECHO** — `feat(legal): "Sobre Yump"…` | La atribución de TMDB con logo local y texto literal, la autoría en **tres grupos separados** —los **nueve** de **Pajaritos** con enlace textual a @pajaritos.web, **Don Tito** en su propio párrafo y **sin** ese enlace, y el resto propias— y el aviso de no afiliación. **Cambió la forma**: no es una ruta `/acerca-de` de la app sino la sección **"Sobre Yump"** montada en Cuenta y en Perfil, con enlaces a `yump.ar`. **Ya NO lleva crédito a DiceBear** | nada — cerró el incumplimiento vigente |
+| ~~2~~ | ~~`fix(onboarding): las rutas legales quedan exentas del gate`~~ | 🗄️ **YA NO CORRESPONDE.** Las cuatro páginas viven en `yump.ar`: no hay rutas de la app que eximir y el gate no se toca. La información legal se alcanza sin sesión por la pestaña **Cuenta** (§0.b). **Vuelve a hacer falta** sólo si se toma el camino B de §0.b | — |
 | ~~3~~ | ~~`fix(privacidad): los avatares dejan de salir hacia DiceBear`~~ | ✅ **HECHO en la rama `feat/avatares-propios`**, antes que esta tanda. Ver `docs/AVATARES.md` | — |
-| 4 | `refactor(marcas): nombres neutros en lugar de wordmarks imitados` | `PlatformLogo.tsx` + borrar las 15 reglas `.lg-*` | decisión 16 |
-| 5 | `feat(legal): /privacidad y /terminos` | las estructuras de §4 | decisiones 1-6 |
-| 6 | `feat(cuenta): /eliminar-cuenta pública` | §3.e; reusa `<EliminarCuenta/>` | decisiones 1-2 |
-| 7 | `feat(legal): enlaces visibles al pie` | pie con las cuatro rutas, en todas las páginas | 1, 5, 6 |
+| 4 | ✅ **HECHO** — `refactor(marcas): nombres neutros` | `PlatformLogo.tsx` + las 15 reglas `.lg-*` borradas. **Y dos cosas más que aparecieron al revisar**: el onboarding servía los logos REALES de TMDB (`logo_path`) y los puntitos de la barra iban con el color exacto de cada marca | ~~decisión 16~~ ✅ |
+| 5 | 🗄️ **CAMBIÓ DE MANOS** — `/privacidad` y `/terminos` | Las escribe el dueño en `yump.ar`. Las estructuras de §4 siguen sirviendo como guión. ⚠️ Hoy son marcadores vacíos | decisiones 1-6 ✅ |
+| 6 | 🗄️ **CAMBIÓ DE MANOS** — `/eliminar-cuenta` | La hace el dueño en `yump.ar` y **tiene que permitir iniciar la solicitud** (formulario o correo), no sólo explicar (§0.b). El borrado automático de Configuración se conserva. ⚠️ Hoy no tiene mecanismo | decisiones 1-2 ✅ |
+| 7 | ✅ **HECHO de otra forma** | En vez de un pie en todas las páginas, los cuatro enlaces viven en la sección **"Sobre Yump"**, alcanzable con y sin sesión desde la pestaña Cuenta | 1 |
 | 8 | `chore(privacidad): decisión sobre la cookie sc_platforms` | sacarla o darle uso | decisión 9 |
 
 **Verificación de la tanda:**

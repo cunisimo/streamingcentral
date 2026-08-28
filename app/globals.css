@@ -964,8 +964,13 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sy-p{margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--dim)}
 .sy-p a{color:var(--accent)}
 .sy-c{font-size:12.5px;color:var(--faint)}
-/* La atribucion de TMDB: visible, pero con MENOS prominencia que la identidad
-   de Yump. Por eso va al final, en 11.5px y en color atenuado. */
+/* La atribucion de TMDB. Lo que va con MENOS prominencia que la identidad de
+   Yump es el LOGO -12px de alto, al final de la seccion-, no el aviso: el
+   requisito de TMDB es que el aviso sea prominente. Estuvo en 11.5px y en
+   --faint, que ademas no cumple contraste AA (issue #2), o sea casi
+   imperceptible. El texto obligatorio pasa a 13.5px y al color de texto normal;
+   la aclaracion en castellano queda un escalon abajo. */
 .sy-tmdb{margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
 .sy-tmdb img{display:block;height:12px;width:auto;opacity:.85}
-.sy-tmdb-txt{margin:8px 0 0;font-size:11.5px;line-height:1.55;color:var(--faint)}
+.sy-tmdb-req{margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--text)}
+.sy-tmdb-txt{margin:6px 0 0;font-size:12.5px;line-height:1.55;color:var(--dim)}

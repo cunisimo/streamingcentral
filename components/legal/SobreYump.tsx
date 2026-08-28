@@ -1,20 +1,21 @@
-// "Sobre Yump": la sección legal dentro de Perfil.
+import { PAGINAS_LEGALES, TMDB } from "@/lib/legal";
+
+// "Sobre Yump": la sección legal.
 //
-// Junta lo que una revisión de Google Play pide tener a la vista y que hasta
-// ahora no estaba en ningún lado: las cuatro páginas públicas, la atribución de
-// TMDB, la autoría de las ilustraciones y el aviso de que Yump no está afiliado
-// a las plataformas.
+// Junta lo que una revisión de Google Play pide tener a la vista: las cuatro
+// páginas públicas, la atribución de TMDB, la autoría de las ilustraciones y el
+// aviso de que Yump no está afiliado a las plataformas.
 //
-// LAS CUATRO PÁGINAS VIVEN EN EL DOMINIO PRINCIPAL, no dentro de la app: las
-// prepara el dueño en `yump.ar`. Por eso son enlaces externos y no rutas de
-// Next. Si alguna todavía no responde, el enlace lleva a un 404 — hay que
-// verificarlas antes de desplegar esto a Producción.
-const PAGINAS = [
-  { href: "https://yump.ar/acerca-de", texto: "Acerca de Yump" },
-  { href: "https://yump.ar/privacidad", texto: "Política de privacidad" },
-  { href: "https://yump.ar/terminos", texto: "Términos y condiciones" },
-  { href: "https://yump.ar/eliminar-cuenta", texto: "Eliminar mi cuenta" },
-];
+// ⚠️ SE MONTA EN DOS LADOS, Y NO ES UNA DUPLICACIÓN POR DESCUIDO. Su lugar
+// conceptual es Perfil, pero `/cuenta/perfil` **redirige a `/cuenta` cuando no
+// hay sesión**: montada sólo ahí, nadie sin cuenta podría leer la información
+// legal, que es justo lo que Play exige que se pueda consultar. Por eso va
+// también en la pestaña **Cuenta**, que sin sesión muestra el login — y ahí el
+// `OnboardingGate` no interviene, porque sale temprano cuando no hay usuario.
+//
+// LAS CUATRO PÁGINAS VIVEN EN `yump.ar`, no dentro de la app: las prepara el
+// dueño. Por eso son enlaces externos y no rutas de Next. Los datos y su
+// contrato están en `lib/legal.ts`.
 
 const externo = { target: "_blank", rel: "noopener noreferrer" } as const;
 
@@ -24,7 +25,7 @@ export default function SobreYump() {
       <h2 className="sy-tit" id="sy-tit">Sobre Yump</h2>
 
       <ul className="sy-links">
-        {PAGINAS.map((p) => (
+        {PAGINAS_LEGALES.map((p) => (
           <li key={p.href}>
             <a href={p.href} {...externo}>
               {p.texto}
@@ -72,13 +73,15 @@ export default function SobreYump() {
           palabra. Debajo va una aclaración en castellano, separada, que no lo
           reemplaza. -------------------------------------------------------- */}
       <div className="sy-tmdb">
-        <a href="https://www.themoviedb.org/" {...externo} aria-label="The Movie Database (TMDB)">
-          <img src="/brand/tmdb.svg" alt="The Movie Database (TMDB)" width={92} height={12} />
+        <a href={TMDB.SITIO} {...externo} aria-label="The Movie Database (TMDB)">
+          <img src={TMDB.LOGO} alt="The Movie Database (TMDB)" width={92} height={12} />
         </a>
-        <p className="sy-tmdb-txt" lang="en">
-          This application uses TMDB and the TMDB APIs but is not endorsed, certified, or
-          otherwise approved by TMDB.
-        </p>
+        {/* El texto obligatorio, LITERAL y legible. Estuvo en 11.5px y en el
+            color más tenue de la paleta, que además no cumple contraste AA (ver
+            issue #2): una atribución que hay que buscar con lupa no cumple el
+            requisito de ser prominente. Ahora va en 13.5px y en el color de
+            texto normal. */}
+        <p className="sy-tmdb-req" lang="en">{TMDB.TEXTO}</p>
         <p className="sy-tmdb-txt">
           Los datos de películas y series salen de TMDB. El texto de arriba es el que TMDB
           exige mostrar, tal cual.
