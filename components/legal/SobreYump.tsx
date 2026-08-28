@@ -82,10 +82,11 @@ export default function SobreYump() {
             requisito de ser prominente. Ahora va en 13.5px y en el color de
             texto normal. */}
         <p className="sy-tmdb-req" lang="en">{TMDB.TEXTO}</p>
-        <p className="sy-tmdb-txt">
-          Los datos de películas y series salen de TMDB. El texto de arriba es el que TMDB
-          exige mostrar, tal cual.
-        </p>
+        {/* Sólo de dónde salen los datos. La segunda oración que había acá —"el
+            texto de arriba es el que TMDB exige mostrar"— le hablaba a quien
+            audita la app, no a quien la usa: era una nota interna en pantalla, y
+            TMDB no la pide. */}
+        <p className="sy-tmdb-txt">Los datos de películas y series salen de TMDB.</p>
       </div>
     </section>
   );
