@@ -62,9 +62,8 @@ https://yump.ar/eliminar-cuenta
 **Las prepara el dueño, en el dominio principal.** No son rutas de esta app: la
 app sólo enlaza a ellas.
 
-✅ **Las cuatro responden 200** (con barra final; sin ella, 301). Los enlaces de
-la app ya no están rotos. ⚠️ **Pero son marcadores vacíos**: ver el estado real
-en §0.b, que es lo que sigue bloqueando el envío a Play.
+✅ **Las cuatro responden 200 y están COMPLETAS** (con barra final; sin ella,
+301). Auditadas en vivo el 28/08: ver §0.b.
 
 ### Dentro de la app: la sección "Sobre Yump"
 
@@ -126,19 +125,69 @@ estar roto cuando alguien quiere irse.
 **El borrado automático dentro de Configuración se conserva** en los dos casos.
 El recurso web es la vía alternativa que Play pide, no un reemplazo.
 
-### ⚠️ Estado real de las cuatro páginas al 27/08
+### ✅ Estado de las cuatro páginas — auditadas en vivo el 28/08
 
-Las cuatro **ya responden 200** (con barra final; sin ella devuelven 301). Los
-enlaces de la app **dejaron de estar rotos**.
+**Las cuatro responden 200 sin login y tienen contenido completo.** Ya no quedan
+marcadores, campos pendientes ni contradicciones entre ellas. Corrige lo que
+decía este mismo apartado el 27/08, cuando eran plantillas vacías.
 
-**Pero las cuatro son marcadores vacíos**: verificado, `/privacidad/` no tiene
-ninguna sección sobre datos, terceros, retención ni derechos, y
-`/eliminar-cuenta/` **no tiene formulario, ni dirección de contacto, ni ningún
-mecanismo para iniciar la solicitud**. O sea:
+| Página | Estado |
+|---|---|
+| `/acerca-de/` | Completa. Quién creó Yump, independencia, autoría en los tres grupos, y la atribución de TMDB **con el texto literal**, el mismo que muestra la app |
+| `/privacidad/` | Completa, 19 secciones. Responsable con domicilio, datos con y sin cuenta, proveedores (Supabase, Vercel, Upstash), TMDB, YouTube, Google Calendar, seguridad, conservación, derechos bajo la **ley 25.326**, menores y contacto |
+| `/terminos/` | Completa, 20 secciones. Responsable, independencia de las plataformas, edad mínima, uso permitido, responsabilidad, baja y **ley argentina** |
+| `/eliminar-cuenta/` | Completa. Ver abajo |
 
-- ✅ ya no bloquean el despliegue de la app por enlaces rotos;
-- ❌ **siguen bloqueando el envío a Play**, y `/eliminar-cuenta/` es la más
-  urgente: sin mecanismo, no cumple el requisito por más que la URL exista.
+**Los correos aparecen donde corresponde**: `info@yump.ar` como contacto general
+(acerca-de, términos §1 y §20, privacidad §1) y `privacidad@yump.ar` para datos
+personales (privacidad §1, §16, §17 y §19, términos §20, y la página de baja).
+**El dueño confirmó a mano que las dos reciben correo; no se enviaron mensajes de
+prueba desde acá.**
+
+#### La baja por correo cumple, y se verificó punto por punto
+
+| Requisito | Verificado |
+|---|---|
+| Enlace funcional y visible para escribir | ✅ `mailto:privacidad@yump.ar?subject=Solicitud%20de%20eliminación%20de%20cuenta%20de%20Yump`, con el texto **"Solicitar la eliminación de mi cuenta"** |
+| Alcanza sin instalar ni abrir la app | ✅ lo dice explícitamente: *"No necesitás tener instalada la aplicación para iniciar la eliminación"* |
+| No se pide contraseña por correo | ✅ *"Nunca envíes tu contraseña. Yump no te solicitará contraseñas por correo electrónico"*, y aclara que la verificación adicional no la pedirá |
+| Datos que se eliminan | ✅ lista de 13 ítems |
+| Datos locales que se conservan | ✅ lista de 5, con cómo borrarlos desde el dispositivo |
+| Plazo máximo | ✅ **cinco días hábiles**, gratuito, con confirmación al terminar |
+
+#### El enlace al borrado inmediato: adónde lleva de verdad
+
+La página ofrece además `https://app.yump.ar/cuenta/configuracion` para quien
+**todavía puede entrar**. Comprobado:
+
+- el servidor devuelve **200**, sin redirección propia;
+- **sin sesión**, la app redirige del lado del cliente a `/cuenta`
+  (`if (ready && !user) router.replace("/cuenta")`), o sea al login;
+- **con sesión y el onboarding sin terminar**, el `OnboardingGate` lo manda a
+  `/onboarding`.
+
+**Ninguno de los dos desvíos es un problema, y el gate NO se toca**: ese enlace
+está ofrecido para quien puede ingresar, y el mecanismo principal —el correo— es
+independiente de la app. Es exactamente el camino A de este mismo apartado.
+
+#### Consistencia entre las tres páginas
+
+| Punto | Coincide |
+|---|---|
+| Responsable | ✅ Juan Facundo Galíndez, con domicilio en Córdoba, Argentina |
+| Jurisdicción | ✅ Argentina (privacidad §1, términos §19) |
+| Edad mínima | ✅ **16 años** (privacidad §17, términos §6) |
+| Datos | ✅ la lista de privacidad §4 y §15 coincide con la de la página de baja |
+| Proveedores | ✅ Supabase, Vercel y Upstash en privacidad §8; TMDB en §9 y en términos §5 |
+| Monetización | ✅ las tres dicen que no hay suscripciones, publicidad propia ni venta de datos, con la salvedad de la publicidad de YouTube |
+| Retención | ✅ compatibles — ver la observación de abajo |
+
+🟡 **Una sola observación menor, y no es una contradicción.** La página de baja
+dice que los registros técnicos duran *"un máximo de un día"*; privacidad §14 los
+describe en general (*"el período disponible en el plan… de nuestros
+proveedores"*) sin dar el número. Conviene que privacidad diga el mismo plazo, o
+que la de baja lo afloje: hoy la más específica es la que menos garantías tiene
+detrás. Es del dueño y no bloquea nada.
 
 ## 0. Hallazgos confirmados
 
@@ -1133,8 +1182,8 @@ hoy dos incumplimientos que ya existen en producción**.
 | ~~2~~ | ~~`fix(onboarding): las rutas legales quedan exentas del gate`~~ | 🗄️ **YA NO CORRESPONDE.** Las cuatro páginas viven en `yump.ar`: no hay rutas de la app que eximir y el gate no se toca. La información legal se alcanza sin sesión por la pestaña **Cuenta** (§0.b). **Vuelve a hacer falta** sólo si se toma el camino B de §0.b | — |
 | ~~3~~ | ~~`fix(privacidad): los avatares dejan de salir hacia DiceBear`~~ | ✅ **HECHO en la rama `feat/avatares-propios`**, antes que esta tanda. Ver `docs/AVATARES.md` | — |
 | 4 | ✅ **HECHO** — `refactor(marcas): nombres neutros` | `PlatformLogo.tsx` + las 15 reglas `.lg-*` borradas. **Y dos cosas más que aparecieron al revisar**: el onboarding servía los logos REALES de TMDB (`logo_path`) y los puntitos de la barra iban con el color exacto de cada marca | ~~decisión 16~~ ✅ |
-| 5 | 🗄️ **CAMBIÓ DE MANOS** — `/privacidad` y `/terminos` | Las escribe el dueño en `yump.ar`. Las estructuras de §4 siguen sirviendo como guión. ⚠️ Hoy son marcadores vacíos | decisiones 1-6 ✅ |
-| 6 | 🗄️ **CAMBIÓ DE MANOS** — `/eliminar-cuenta` | La hace el dueño en `yump.ar` y **tiene que permitir iniciar la solicitud** (formulario o correo), no sólo explicar (§0.b). El borrado automático de Configuración se conserva. ⚠️ Hoy no tiene mecanismo | decisiones 1-2 ✅ |
+| 5 | ✅ **HECHO por el dueño** — `/privacidad` y `/terminos` | Publicadas y completas en `yump.ar` (auditadas el 28/08, §0.b) | decisiones 1-6 ✅ |
+| 6 | ✅ **HECHO por el dueño** — `/eliminar-cuenta` | Publicada y completa. Permite **iniciar la solicitud por correo** a `privacidad@yump.ar` sin instalar ni abrir la app, con plazo de cinco días hábiles; no pide contraseña por correo. El borrado automático de Configuración se conserva. Es el **camino A** de §0.b: el gate no se toca | decisiones 1-2 ✅ |
 | 7 | ✅ **HECHO de otra forma** | En vez de un pie en todas las páginas, los cuatro enlaces viven en la sección **"Sobre Yump"**, alcanzable con y sin sesión desde la pestaña Cuenta | 1 |
 | 8 | `chore(privacidad): decisión sobre la cookie sc_platforms` | sacarla o darle uso | decisión 9 |
 
