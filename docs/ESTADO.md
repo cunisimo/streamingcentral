@@ -19,8 +19,9 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 
 ```
 origin/main                          ← DESPLEGADO en producción (app.yump.ar)
-                                       trae los avatares desde el merge 89ccb73
+                                       avatares: merge 89ccb73 · legal: merge 27669c0
 feat/avatares-propios                ← MERGEADA el 27/08 con --no-ff. Se puede borrar
+feat/legal-play-web                  ← MERGEADA el 28/08 con --no-ff. Se puede borrar
 feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
 feat/dia-rotacion                    ← sin mergear y MUY atrás de main; hay que rebasarla
 ```
@@ -36,7 +37,29 @@ escribe es el SHA de un hito ya cerrado, como el merge de arriba.
 - los tres arreglos del **Top 10 de Netflix** — la plataforma garantizada por la
   fuente, la consulta acotada por subtítulo y la ficha usando la misma evidencia;
 - los **31 avatares propios** (merge `89ccb73`, 27/08), con DiceBear fuera de la
-  app entera.
+  app entera;
+- la **tanda web/legal** previa al empaquetado Android (merge `27669c0`, 28/08).
+
+### El merge web/legal — 28/08
+
+Entró con `--no-ff` (merge `27669c0`). Lo que agrega:
+
+- la sección **"Sobre Yump"**, con los enlaces a las cuatro páginas de
+  `yump.ar`, la atribución de TMDB —logo oficial servido local y texto literal
+  de la sección 3 de sus términos—, la autoría de las ilustraciones en tres
+  grupos y el aviso de agregador independiente;
+- **se consulta SIN sesión**: va en la pestaña Cuenta además de en Perfil,
+  porque `/cuenta/perfil` redirige al login cuando no hay usuario;
+- los **nombres de plataforma en texto neutro**, en lugar de los wordmarks
+  imitados. Fuera también los logos reales de TMDB que servía el onboarding y
+  los colores de marca de los puntitos de la barra.
+
+**Los códigos internos, los filtros y el comportamiento no cambiaron**: fue un
+cambio visual. Y **el `OnboardingGate` no se tocó**: la baja de cuenta se
+inicia por correo a `privacidad@yump.ar`, que no depende de la app.
+
+Las cuatro páginas de `yump.ar` fueron auditadas en vivo el 28/08 y están
+completas. El detalle, en `docs/PLAY-STORE.md` §0.b.
 
 ### El merge de los avatares — 27/08
 
