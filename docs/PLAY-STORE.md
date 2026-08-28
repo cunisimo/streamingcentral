@@ -876,7 +876,7 @@ cero service role en el cliente.
 | 7 | Tipo de cuenta de Play y fecha de creación | Decide si aplica la prueba cerrada |
 | 8 | ~~Dominio de las páginas legales~~ ✅ **`yump.ar`**, las prepara el dueño (27/08, ver §0.a). ⚠️ Las cuatro dan 404 hoy | Queda el dominio de la FICHA de Play |
 | 9 | ¿Se saca la cookie `sc_platforms`? | Minimización gratis |
-| 10 | ¿TWA o nativo? | Define el trabajo de la segunda tanda |
+| 10 | ~~¿TWA o nativo?~~ ✅ **Capacitor, con bundle local** (28/08). TWA queda descartado porque iOS tiene que salir uno o dos meses después de Android. Auditoría completa en `docs/CAPACITOR.md` | — |
 
 ---
 
@@ -1120,7 +1120,7 @@ alternativa A y el aviso, esa pregunta es mucho menos probable — 🟡 no impos
 |---|---|---|---|
 | 1 | **Target API 36**, nuevas apps y updates, **31/08/2026** (prórroga hasta 01/11) | ❌ no hay build | [Target API](https://developer.android.com/google/play/requirements/target-sdk) |
 | 2 | AAB firmado + Play App Signing | ❌ | — |
-| 3 | `assetlinks.json` en `/.well-known/` | ❌ imprescindible para TWA | — |
+| 3 | `assetlinks.json` en `/.well-known/` | ❌ sigue haciendo falta, pero **ya no por TWA**: ahora es para los App Links de Android y el retorno de los mails de autenticación (`docs/CAPACITOR.md` §7.a) | — |
 | 4 | Política de privacidad con URL pública | ❌ | — |
 | 5 | Data Safety | ⚠️ matriz en §2 | [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469) |
 | 6 | Borrado: in-app **y** enlace web | ⚠️ in-app ✅, web ❌ | [Data deletion](https://support.google.com/googleplay/android-developer/answer/13327111) |
