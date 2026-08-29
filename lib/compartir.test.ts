@@ -141,6 +141,23 @@ test("DetailView no arma el enlace compartido con el origen del navegador", () =
     "DetailView no usa la fuente única del enlace público");
 });
 
+test("el ejemplo de entorno documenta el dominio canónico como el de producción", () => {
+  // No es cosmético: este archivo es lo que alguien copia para configurar el
+  // proyecto. Documentaba el dominio ANTERIOR como "la URL real", así que la
+  // próxima persona que siguiera las instrucciones volvía a dejar
+  // `NEXT_PUBLIC_SITE_URL` apuntando al dominio viejo — y de ahí sale el mail
+  // de recuperación de contraseña.
+  const src = fuente(".env.local.example");
+  const bloque = src.slice(src.indexOf("URL pública del sitio"), src.indexOf("NEXT_PUBLIC_SITE_URL="));
+  assert.ok(bloque.length > 0, "no se encontró el bloque de NEXT_PUBLIC_SITE_URL");
+  assert.match(bloque, /https:\/\/app\.yump\.ar/,
+    "el ejemplo no documenta el dominio canónico");
+  // El dominio viejo puede seguir NOMBRADO, pero sólo como advertencia: nunca
+  // presentado como el valor a usar.
+  assert.doesNotMatch(bloque, /real \(https:\/\/streamingcentral\.vercel\.app\)/,
+    "el ejemplo todavía presenta el dominio viejo como la URL real");
+});
+
 test("no queda ningún dominio viejo escrito a mano en el código", () => {
   for (const f of [
     path.join("components", "DetailView.tsx"),
