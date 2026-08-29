@@ -1,7 +1,70 @@
-# Etapa 2 — Prototipo Android con Capacitor (plan, revisión 6)
+# Etapa 2 — Prototipo Android con Capacitor (plan, revisión 7)
 
-> **No está empezado.** Sin Capacitor, sin `android/`, sin staging, sin export,
-> sin rama de spike, sin ningún checkpoint ejecutado.
+> **CP1 está HECHO** (commit `d53883b` en `spike/capacitor-android`). El resto
+> no. Sin Capacitor, sin `android/`, sin staging, sin export.
+
+## ✅ CP1 — completado el 30/08/2026
+
+**Aprobado, con una prueba diferida a CP2.** Commit `d53883b`.
+
+### Lo que se implementó
+`next.config.mjs` condicional · `scripts/build-capacitor.mjs` (mínimo, sólo
+diagnóstico) · `scripts/config.test.mjs` · script `build:capacitor` · las tres
+entradas de `.gitignore`. **Cero dependencias agregadas** — `serve` no entró
+porque CP1 no sirve nada.
+
+### 🔴 Hallazgo 1: `pageExtensions: ["tsx"]` ROMPE el build
+
+Con ese valor el build muere con **`pageExtensions.map is not a function`** sobre
+`next/dist/client/components/not-found-error` y sobre **cada** página. El motivo:
+**los componentes internos de Next son `.js`**, y sacarlos de la lista hace que
+no los pueda resolver.
+
+**Valor corregido y confirmado por el dueño: `["tsx", "jsx", "js"]`** — el
+**default de Next 14 menos `"ts"`**. Es el cambio quirúrgico: conserva los
+internos JavaScript y excluye `route.ts` y `app/manifest.ts`. Con eso el build
+llega a `✓ Compiled successfully`.
+
+El resto del documento ya usa el valor corregido. Las dos menciones a
+`["tsx"]` que quedan son éstas, que describen el error.
+
+### 🔴 Hallazgo 2: el guard de "ejecutado directamente" falla en Windows
+
+`import.meta.url` es `file:///D:/…` con **tres** barras, así que compararlo
+contra un `file://${process.argv[1]}` armado a mano **nunca coincide**: el script
+se importaba, no ejecutaba nada y **salía con 0 como si el build hubiera
+andado**. Corregido con `pathToFileURL(process.argv[1]).href`.
+
+### Errores dinámicos realmente observados
+
+| Predicho | Observado |
+|---|---|
+| `persona/[id]` | ✅ visto |
+| `admin/resena/[id]` | ✅ visto |
+| `lista/[key]` | ✅ visto |
+| `titulo/[tipo]/[id]` | ⏳ no alcanzado |
+| `categoria/[slug]` | ⏳ no alcanzado |
+| `searchParams` en Server Component | ⏳ no alcanzado |
+
+⚠️ **Next informa UNA ruta dinámica por corrida** (`Promise.all` rechaza en la
+primera), así que las cinco no salen juntas. Las tres vistas son el mismo caso.
+
+### 🔴 Lo que CP1 NO pudo probar, y por qué
+
+**No se pudo demostrar que `pageExtensions` excluye los 25 route handlers.**
+Next valida las páginas dinámicas **antes** de mirar los route handlers, así que
+el build nunca llega a esa etapa y el directorio de salida ni se escribe. El
+**experimento de control** (correr sin `pageExtensions`) **tampoco distingue**,
+por el mismo motivo: falla igual en una página dinámica.
+
+La única evidencia disponible es indirecta: el compile de webpack pasa.
+
+**Traslado formal: la prueba definitiva pasa a CP2** (§CP2.7), aprobado por el
+dueño. **CP1 queda aprobado con esa prueba diferida.**
+
+---
+
+> El resto del documento describe lo que falta.
 
 **Base:** `main = origin/main = e9f8eaf` · **Next.js instalado: 14.2.35**
 **Rama propuesta (NO creada):** `spike/capacitor-android`
@@ -871,7 +934,7 @@ const nextConfig = esCapacitor
   ? {
       output: "export",
       distDir: process.env.CAPACITOR_DIST ?? "out",   // diagnóstico vs staging
-      pageExtensions: ["tsx"],
+      pageExtensions: ["tsx", "jsx", "js"],   // el default menos "ts" (ver CP1)
       trailingSlash: true,            // §9
       images: { unoptimized: true },  // §10
     }
@@ -937,7 +1000,8 @@ test("build CAPACITOR: export, sin headers, sin optimizador", () => {
   const c = cargarConfig(true);
   assert.equal(c.output, "export");
   assert.equal(c.distDir, "out");
-  assert.deepEqual(c.pageExtensions, ["tsx"]);
+  assert.deepEqual(c.pageExtensions, ["tsx", "jsx", "js"]);
+  assert.ok(!c.pageExtensions.includes("ts"), "debe excluir .ts para dejar afuera route.ts");
   assert.equal(c.trailingSlash, true);
   assert.equal(c.unoptimized, true);
   assert.equal(c.tieneHeaders, false);
@@ -1038,7 +1102,54 @@ los relacionados de `DetailView` (cubiertos por `TitleCard`).
       `public/` (§3.2).
 - [ ] Criterio de no-regresión web (§1).
 
-**Estimación: 2–2,5 sesiones** (absorbe el staging completo).
+### CP2.7 — Canario de `pageExtensions` (prueba diferida de CP1)
+
+🔴 **Un export exitoso NO prueba nada por sí solo**, y es la trampa que hay que
+evitar: el staging **excluye físicamente `app/api`**, así que el build
+completaría aunque `pageExtensions` no estuviera haciendo nada. Hace falta un
+canario que sólo pueda sobrevivir si el matcher de rutas ignora `.ts`.
+
+**Procedimiento, después de que el export normal de CP2 complete:**
+
+- [ ] **1.** Preparar el staging normal (con las páginas dinámicas ya resueltas
+      o excluidas) conservándolo: `--keep-staging`.
+- [ ] **2.** Crear **únicamente dentro del staging**
+      `.capacitor-build/app/__pageextensions_canary__/route.ts`:
+
+```ts
+// Canario de pageExtensions. Si Next lo detectara como ruta, el build fallaría:
+// output:"export" no admite POST ni rutas que dependan del Request.
+// Que el build COMPLETE es la prueba de que `.ts` está excluido.
+export const dynamic = "force-dynamic";
+
+export async function POST(req: Request): Promise<Response> {
+  const cuerpo: unknown = await req.json();
+  return Response.json({ ok: true, cuerpo });
+}
+```
+
+🔴 **Tiene que ser TypeScript VÁLIDO** —sin imports inexistentes, sin errores de
+tipo— para que el typecheck no falle **antes** de llegar a medir el matcher de
+rutas. Si falla por tipos, el canario no midió nada.
+
+- [ ] **3.** Ejecutar Next **directamente**, con `cwd = .capacitor-build`, **sin
+      regenerar el staging** (regenerarlo borraría el canario):
+      `node node_modules/next/dist/bin/next build`
+- [ ] **4.** **Resultado esperado: el build COMPLETA.**
+      🔴 **Si falla mencionando el canario, `pageExtensions` NO está excluyendo
+      `route.ts` y CP2 NO se aprueba.**
+- [ ] **5.** Verificar que el canario **no aparece en el artefacto**: no existe
+      `__pageextensions_canary__` en la salida.
+- [ ] **6.** Verificar que `app/api` **no existe en la copia** normal del
+      staging (la exclusión física, que es lo otro).
+- [ ] **7.** Verificar que **`manifest.ts` no produjo `manifest.webmanifest`**
+      en el export — la otra mitad de lo que `pageExtensions` excluye.
+- [ ] **8.** Limpiar o regenerar el staging.
+
+**Esto cierra formalmente el criterio diferido de CP1.**
+⚠️ **No se vuelve a cambiar `pageExtensions` sin evidencia nueva.**
+
+**Estimación: 2,5–3 sesiones** (absorbe el staging completo y el canario).
 
 ---
 
@@ -1197,7 +1308,7 @@ artefacto: **no hace falta tocarlo**.
 
 | Elemento | En el artefacto nativo | Cómo |
 |---|---|---|
-| `<link rel="manifest">` | **omitir** — `pageExtensions: ["tsx"]` ya excluye `app/manifest.ts`, así que el archivo **no existe** y el link apuntaría a un 404 | condicionar `manifest:` con `ES_NATIVO` |
+| `<link rel="manifest">` | **omitir** — `pageExtensions` sin `"ts"` ya excluye `app/manifest.ts`, así que el archivo **no existe** y el link apuntaría a un 404 | condicionar `manifest:` con `ES_NATIVO` |
 | `appleWebApp` | **omitir**: es metadata de "agregar a inicio" en Safari, sin sentido en un APK | idem |
 | `<AppleSplashLinks />` | **no montar**: 18 `<link>` a splash de iOS, inertes y peso muerto | guard con `ES_NATIVO` |
 | `themeColor`, `viewportFit`, `interactiveWidget`, safe areas | **se conservan** | son de layout, no de PWA |
