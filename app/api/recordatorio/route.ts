@@ -10,6 +10,7 @@ import { detalleReparado } from "@/lib/enrich";
 import { resumen, type DatosRecordatorio as Datos } from "@/lib/recordatorio-texto";
 import { hoyAR } from "@/lib/fecha";
 import { platformByCode } from "@/lib/providers-ar";
+import { SITIO_PUBLICO } from "@/lib/compartir";
 import type { MediaType, PlatformCode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,12 @@ export const dynamic = "force-dynamic";
 // la manda derecho a la app Calendario. Como iOS es plataforma objetivo, el
 // costo de la ruta se paga solo.
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://streamingcentral.vercel.app";
+// El respaldo es el dominio CANÓNICO, no el viejo de Vercel que estaba escrito
+// acá: este enlace termina dentro de un evento de calendario ajeno y no hay
+// forma de corregirlo después. `NEXT_PUBLIC_SITE_URL` sigue teniendo
+// precedencia —no se toca su papel en la recuperación de contraseña—, así que
+// esto sólo cambia lo que pasa cuando la variable no está cargada.
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || SITIO_PUBLICO;
 
 
 // OJO CON EL IDIOMA: esta rama lee `upcoming_content.title`, que hoy está
