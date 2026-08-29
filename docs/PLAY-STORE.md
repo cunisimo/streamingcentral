@@ -1,10 +1,19 @@
 # Google Play: auditoría y diseño legal
 
-**Etapa de auditoría y diseño. No se tocó código, no se creó ninguna página, no
-se desplegó nada y no se escribió en Supabase.**
+**Nació como etapa de auditoría y diseño.** Ese encabezado decía que no se había
+tocado código ni desplegado nada: **eso ya no es cierto y quedaba engañoso**. La
+tanda legal se construyó y se desplegó (`27669c0`), y las cuatro páginas de
+`yump.ar` están en línea y auditadas. Lo que sigue siendo cierto es que **nada de
+este documento tocó Supabase**.
 
-**Última corrección: 25 de agosto de 2026.** Esta versión corrige errores de la
-primera, marcados con ⚠️ **CORREGIDO** donde corresponde.
+**Última corrección: 29 de agosto de 2026.** Las anteriores están marcadas con
+⚠️ **CORREGIDO** donde corresponde; se conservan porque explican por qué se
+decidió cada cosa.
+
+**La arquitectura de la app de tienda ya está decidida: Capacitor con bundle
+local, Android primero. TWA quedó descartado.** Donde este documento hable de
+TWA, léase como historia. La auditoría técnica completa vive en
+[`docs/CAPACITOR.md`](CAPACITOR.md).
 
 ---
 
@@ -222,9 +231,11 @@ detrás. Es del dueño y no bloquea nada.
 3. ✅ **Los wordmarks dibujados de plataformas no son adecuados para Play.**
 4. ✅ **Faltan las cuatro rutas públicas**: `/privacidad`, `/terminos`,
    `/acerca-de`, `/eliminar-cuenta`.
-5. ✅ **Falta el paquete Android por completo** — no hay `assetlinks.json`, ni
-   `twa-manifest.json`, ni proyecto Bubblewrap — y **debe apuntar directamente a
-   API 36**.
+5. ✅ **Falta el paquete Android por completo** — no hay `assetlinks.json` ni
+   proyecto nativo — y **debe apuntar directamente a API 36**. ⚠️ *Escrito
+   cuando TWA seguía sobre la mesa; la mención a `twa-manifest.json` y
+   Bubblewrap quedó sin efecto con la decisión 10. Lo que falta hoy es el
+   proyecto **Capacitor**, y el `assetlinks.json` sigue haciendo falta igual.*
 6. ✅ **Hay que preparar**: Data Safety, clasificación de contenido, acceso para
    revisión, recursos de tienda, firma, `assetlinks.json`, pruebas y revisión del
    AAB final.
@@ -868,15 +879,15 @@ cero service role en el cliente.
 | # | Decisión | Por qué bloquea |
 |---|---|---|
 | 1 | ~~Nombre del responsable~~ ✅ **Juan Facundo Galíndez** (27/08, ver §0.a) | — |
-| 2 | Email de soporte y de privacidad (puede ser el mismo) | Play exige email de soporte; la política necesita contacto |
+| 2 | ~~Email de soporte y de privacidad~~ ✅ **`info@yump.ar` y `privacidad@yump.ar`**, configurados y publicados (28/08). Verificados en vivo | — |
 | 3 | ~~Domicilio o jurisdicción~~ ✅ **Argentina** (27/08, ver §0.a) | — |
 | 4 | ~~¿Habrá monetización?~~ ✅ **No, por ahora** (27/08). Monetizar después exige revisar TMDB, términos y privacidad ANTES — ver §0.a | — |
 | 5 | Períodos de retención | Depende de las verificaciones 🔍 de §7.c |
 | 6 | ~~Edad mínima~~ ✅ **16 años** (27/08, ver §0.a). Queda declarar el público objetivo en Play | Target Audience |
 | 7 | Tipo de cuenta de Play y fecha de creación | Decide si aplica la prueba cerrada |
-| 8 | ~~Dominio de las páginas legales~~ ✅ **`yump.ar`**, las prepara el dueño (27/08, ver §0.a). ⚠️ Las cuatro dan 404 hoy | Queda el dominio de la FICHA de Play |
+| 8 | ~~Dominio de las páginas legales~~ ✅ **`yump.ar`** (27/08, ver §0.a). ~~⚠️ Las cuatro dan 404 hoy~~ → **las cuatro responden 200 y están completas**, auditadas en vivo el 28/08 | Queda el dominio de la FICHA de Play |
 | 9 | ¿Se saca la cookie `sc_platforms`? | Minimización gratis |
-| 10 | ~~¿TWA o nativo?~~ ✅ **Capacitor, con bundle local** (28/08). TWA queda descartado porque iOS tiene que salir uno o dos meses después de Android. Auditoría completa en `docs/CAPACITOR.md` | — |
+| 10 | ~~¿TWA o nativo?~~ ✅ **Capacitor, con bundle local; Android primero** (29/08). TWA y PWA quedan descartadas como arquitectura de la app de tienda —la PWA existente se conserva y sigue funcionando—. iOS es objetivo posterior, sujeto al resultado de Android. Auditoría completa en [`docs/CAPACITOR.md`](CAPACITOR.md) | — |
 
 ---
 
@@ -1118,17 +1129,17 @@ alternativa A y el aviso, esa pregunta es mucho menos probable — 🟡 no impos
 
 | # | Ítem | Estado | Fuente |
 |---|---|---|---|
-| 1 | **Target API 36**, nuevas apps y updates, **31/08/2026** (prórroga hasta 01/11) | ❌ no hay build | [Target API](https://developer.android.com/google/play/requirements/target-sdk) |
+| 1 | **Target API 36**, apps nuevas y updates, **31/08/2026** | ❌ no hay build. ⚠️ **La prórroga al 01/11/2026 es para apps que YA existen**: Yump es nueva y no le aplica. Se resuelve usando **Capacitor 8**, que apunta a SDK 36 — Capacitor no admite target SDK a medida (`docs/CAPACITOR.md` §7.a) | [Target API](https://developer.android.com/google/play/requirements/target-sdk) |
 | 2 | AAB firmado + Play App Signing | ❌ | — |
 | 3 | `assetlinks.json` en `/.well-known/` | ❌ sigue haciendo falta, pero **ya no por TWA**: ahora es para los App Links de Android y el retorno de los mails de autenticación (`docs/CAPACITOR.md` §7.a) | — |
-| 4 | Política de privacidad con URL pública | ❌ | — |
+| 4 | Política de privacidad con URL pública | ✅ `https://yump.ar/privacidad/`, en línea y auditada (28/08) | — |
 | 5 | Data Safety | ⚠️ matriz en §2 | [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469) |
-| 6 | Borrado: in-app **y** enlace web | ⚠️ in-app ✅, web ❌ | [Data deletion](https://support.google.com/googleplay/android-developer/answer/13327111) |
+| 6 | Borrado: in-app **y** enlace web | ✅ los dos: in-app en `/cuenta/configuracion` y web en `https://yump.ar/eliminar-cuenta/` (ver §0.b) | [Data deletion](https://support.google.com/googleplay/android-developer/answer/13327111) |
 | 7 | Acceso del revisor + cuenta de prueba | ⚠️ el login es email+contraseña sin 2FA: alcanza con crear una | — |
 | 8 | Clasificación de contenido (IARC) | ⚠️ pendiente | — |
 | 9 | Target audience & content | ⚠️ depende de la decisión 6 | [Target audience](https://support.google.com/googleplay/android-developer/answer/9867159) |
 | 10 | Declaración de anuncios | ⚠️ §2.e | [Ads](https://support.google.com/googleplay/android-developer/answer/9857753) |
-| 11 | Email y sitio de soporte | ❌ falta el email | — |
+| 11 | Email y sitio de soporte | ✅ `info@yump.ar`, configurado y verificado (28/08) | — |
 | 12 | Materiales de ficha (ícono 512², destacado 1024×500, ≥2 capturas, título ≤30, corta ≤80, larga ≤4000) | ⚠️ los `public/screenshots/` son placeholders del manifest, **no** sirven para Play | — |
 | 13 | Prueba cerrada 12 testers / 14 días consecutivos | ⚠️ ver 7.c | [App testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465) |
 | 14 | Cuenta de desarrollador verificada | ⚠️ | — |
@@ -1172,9 +1183,10 @@ Las diez de §4.c, más:
 > 8 y el diseño vigente es el de **§0.b**. Las filas de abajo dicen qué quedó
 > hecho, qué cambió de forma y qué ya no corresponde.
 
-**Alcance exacto.** No toca el paquete Android, no crea el proyecto TWA, no
-depende de Play Console. Se puede hacer, revisar y desplegar sola — y **cierra
-hoy dos incumplimientos que ya existen en producción**.
+**Alcance exacto.** No toca el paquete Android, no crea proyecto nativo alguno
+(entonces se decía "TWA"; hoy sería Capacitor), no depende de Play Console. Se
+puede hacer, revisar y desplegar sola — y **cierra hoy dos incumplimientos que
+ya existen en producción**.
 
 | # | Commit | Contenido | Depende de |
 |---|---|---|---|

@@ -686,7 +686,12 @@ llevó lo más fresco que había.
 
 ## #14 — El avatar propio parpadea en cada carga
 
-**Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-08-27
+**Estado:** abierto, **POSTERGADO** · **Prioridad:** baja · **Abierto:** 2026-08-27
+
+> **Postergado el 29/08/2026, por decisión del dueño.** Antes figuraba como
+> "se arregla antes del empaquetado nativo". **Ya no**: no bloquea el prototipo
+> Android, ni la adaptación de la capa web, ni la publicación en Play. Se retoma
+> cuando el dueño lo pida. Ver `docs/CAPACITOR.md` §0.a, decisión 8.
 
 **NO es una regresión de la tanda de avatares**, y eso decide cuándo se arregla:
 el código anterior tenía exactamente el mismo parpadeo, con otro dibujo.
@@ -718,8 +723,9 @@ parpadeo, no el parpadeo.
 
 ### Por qué no se arregló en `feat/avatares-propios`
 
-Decisión del dueño, 27/08: **se resuelve en una rama aparte, después de
-desplegar los avatares y antes del empaquetado nativo.** Meter un cambio en la
+Decisión del dueño, 27/08: **se resuelve en una rama aparte**, después de
+desplegar los avatares. *(El "y antes del empaquetado nativo" que decía acá se
+levantó el 29/08: ver el encabezado de este issue.)* Meter un cambio en la
 nav y en el hub adentro de una rama que ya estaba verificada a mano habría
 obligado a repetir la verificación entera por algo que ya estaba pasando en
 producción.

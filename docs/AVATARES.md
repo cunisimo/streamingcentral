@@ -514,8 +514,9 @@ porque `profile` viaja en `null` hasta que resuelve la sesión. **El código
 anterior tenía exactamente el mismo parpadeo** —`getAvatarUrl(undefined)`
 devolvía un DiceBear fijo—, así que no es una regresión.
 
-**Decisión del dueño, 27/08: NO se arregla en esta rama.** Va en una rama aparte,
-**después de desplegar los avatares y antes del empaquetado nativo**. El motivo
+**Decisión del dueño, 27/08: NO se arregla en esta rama.** Va en una rama aparte.
+~~*Antes decía "antes del empaquetado nativo"*~~ → **el 29/08 quedó POSTERGADO
+sin condición de orden: no bloquea el empaquetado con Capacitor.** El motivo
 es de riesgo, no de pereza: toca la barra de abajo y el hub, o sea pantallas
 fuera de esta tanda, y meterlo acá obligaría a repetir la verificación manual
 entera por algo que ya venía pasando en producción. El detalle y el criterio de

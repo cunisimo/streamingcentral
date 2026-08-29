@@ -40,10 +40,61 @@ que dependa de eso está marcado 🔍 y hay que confirmarlo en la Etapa 0.
 2. Aun así, **el export estático NO sale gratis**: hay cuatro bloqueantes
    concretos y verificados, y uno de ellos (las rutas de ficha y persona) es de
    los que rompen en silencio si no se atacan a propósito.
-3. La recomendación es **bundle local + API remota** (opción B), con el detalle
-   de configuración de §3.4. Cargar `app.yump.ar` dentro del contenedor
-   (opción A) es *exactamente* lo que la regla 4.2 de Apple rechaza, y sería
-   cambiar el bloqueo de TWA por el mismo bloqueo con otro nombre.
+3. La arquitectura es **bundle local + API remota** (opción B). Cargar
+   `app.yump.ar` dentro del contenedor (opción A) es *exactamente* lo que la
+   regla 4.2 de Apple rechaza, y además la documentación oficial de Capacitor
+   dice que `server.url` **"no está pensado para producción"** (§14).
+
+---
+
+## 0.a Decisiones vigentes — 29 de agosto de 2026
+
+**Este apartado manda sobre cualquier cosa que diga el resto del documento.**
+Lo de abajo se escribió durante la auditoría del 28/08, cuando varias de estas
+preguntas todavía estaban abiertas; se conserva porque explica **por qué** se
+decidió cada cosa, pero donde haya contradicción, vale esto.
+
+| # | Decisión | Qué cierra |
+|---|---|---|
+| 1 | **Yump se empaqueta con Capacitor** | §3: la comparación de opciones queda cerrada |
+| 2 | **Android es la primera plataforma** en desarrollarse y publicarse | §10: el plan se ordena alrededor de esto |
+| 3 | **iOS es objetivo posterior y NO exige comprar una Mac** | §7.b se reescribió entero: una Mac remota alcanza |
+| 4 | **TWA y PWA quedan descartadas** como arquitectura de la app de tienda. **La PWA existente se conserva y tiene que seguir funcionando** | §9 |
+| 5 | **Cáscara local + API en el servidor.** La app consume `https://app.yump.ar/api/...`. `api.yump.ar` es una **opción futura, no un requisito** | §3.4, reescrito |
+| 6 | **Compatibilidad con iOS desde el diseño**, aunque Android se construya primero. No se aceptan atajos Android-only que obliguen a rehacer la arquitectura | §3.4, §10 |
+| 7 | **Estimaciones separadas**: Android ~8-12 sesiones; iOS se estima aparte y después | §10 |
+| 8 | **Issue #14 (parpadeo del avatar) queda postergado** y no bloquea nada de esto | `docs/ISSUES.md` #14 |
+| 9 | **El bug de compartir está CERRADO y verificado en producción** | §4.h, reescrito |
+
+### Lo que cambió respecto de la auditoría del 28/08
+
+Tres cosas, y las tres salen de haber ido a la documentación oficial (§14):
+
+1. **La configuración que proponía §3.4 no es posible.** Sugería servir la
+   cáscara como `https://app.yump.ar` con `server.hostname` + `iosScheme`.
+   Capacitor documenta que `iosScheme` **no puede** ser `http` ni `https`
+   (WKWebView ya los maneja) y que conviene dejar `hostname` en `localhost`,
+   porque es lo que habilita las Web APIs que exigen contexto seguro. La sección
+   está reescrita con la arquitectura que sí funciona.
+2. **El target SDK no se fija a mano.** §7.a decía tocar `variables.gradle`.
+   Capacitor documenta que **no soporta target SDK personalizado**: va atado a
+   la versión mayor. La respuesta correcta es usar **Capacitor 8**, que apunta a
+   **SDK 36**, justo lo que Google Play exige.
+3. **La Mac dejó de ser un bloqueante.** Era el riesgo #1 de §11.a. Con Mac
+   remota, iOS pasa a ser una decisión de gasto y de momento, no un muro.
+
+### Configuración web vigente (informada por el dueño, 29/08)
+
+- Vercel: `NEXT_PUBLIC_SITE_URL = https://app.yump.ar` en Production y Preview.
+- Supabase: Site URL = `https://app.yump.ar`.
+- Redirect URLs incluye `https://app.yump.ar/cuenta/reset`.
+- Se conservan **temporalmente** `localhost` y el redirect del dominio anterior.
+- Recuperación de contraseña, confirmación de registro y compartir: **probados
+  correctamente por el dueño**.
+
+⚠️ **El dominio anterior no se toca todavía.** La PWA instalada desde
+`streamingcentral.vercel.app` necesita seguir llegando al proyecto para recibir
+actualizaciones. Retirarlo antes de tiempo deja a esos usuarios congelados.
 
 ---
 
@@ -180,8 +231,10 @@ cada deploy a Vercel actualiza las dos apps al instante.
   binario sin contenido que abre un sitio. La probabilidad de rechazo acá no es
   un riesgo a mitigar, es el resultado esperado. Descartar TWA por este motivo y
   después hacer esto es cambiarle el nombre al problema.
-- El propio Capacitor documenta `server.url` como herramienta de **live reload
-  en desarrollo**, no como arquitectura de producción.
+- **La documentación oficial de Capacitor lo dice con todas las letras**: sobre
+  `server.url`, *"Load an external URL in the Web View. This is intended for use
+  with live-reload servers. **This is not intended for use in production.**"*
+  (consultado el 29/08/2026, ver §14). No es una interpretación mía.
 - **Sin red no hay nada**: un arranque en frío sin conexión muestra la pantalla
   de error del WebView, no `offline.html` (el SW todavía no está instalado).
 - Toda la app pasa a depender de que un dominio responda, sin ningún respaldo
@@ -234,54 +287,77 @@ tiendas ponen límites a lo que se puede cambiar sin revisión (no puede alterar
 el propósito de la app). Es una optimización de la etapa 2, cuando ya haya algo
 publicado que valga la pena parchear rápido.
 
-### 3.4 La configuración que hace que B duela poco — 🔍 hay que probarla
+### 3.4 La configuración real — ⚠️ REESCRITA el 29/08
 
-Este es el punto de mayor apalancamiento de toda la auditoría, y también el que
-menos puedo afirmar sin haberlo corrido.
+**Lo que decía antes, y por qué estaba mal.** La versión del 28/08 proponía
+servir la cáscara local bajo `https://app.yump.ar` usando `server.hostname` y
+`iosScheme`, para que el origen del WebView fuera un https real. Estaba marcada
+🔍 "hay que probarla". Fui a la documentación oficial y **no se puede**:
 
-**El problema.** Con los esquemas por defecto, el origen del WebView es
-`https://localhost` (Android) y `capacitor://localhost` (iOS). Eso dispara, de
-un saque, cuatro problemas distintos:
+- `server.iosScheme` **no admite `http` ni `https`**: son esquemas que WKWebView
+  ya maneja. El origen en iOS va a ser `capacitor://localhost` y punto.
+- `server.hostname`: Capacitor **recomienda dejarlo en `localhost`**, porque es
+  lo que habilita las Web APIs que exigen contexto seguro.
 
-| Qué se rompe | Por qué |
+Se conserva el párrafo anterior tachado en el historial de git, no acá, para que
+esta sección no confunda. **La arquitectura correcta es la de abajo, y es más
+simple.**
+
+### La arquitectura, en cuatro líneas
+
+| Pieza | Dónde vive |
 |---|---|
-| `fetch("/api/home")` | resuelve contra el contenedor, que no tiene `/api` |
-| El embed de YouTube | `trailerEmbedUrl` manda `origin=capacitor://localhost`; con `enablejsapi=1` eso es el **error 153** que ya documenta `lib/trailer.ts:38` |
-| Compartir una ficha | `components/DetailView.tsx:88` arma la URL con `window.location.origin` → manda `capacitor://localhost/titulo/movie/278` por WhatsApp |
-| `localStorage` | queda cazado a un origen que no es el de la web (esperable, pero hay que saberlo) |
+| Cáscara, CSS, JS, fuentes, íconos | **dentro del binario** (`webDir`) |
+| Origen del WebView | `https://localhost` (Android) · `capacitor://localhost` (iOS) — **los defaults** |
+| Datos | `https://app.yump.ar/api/...`, en Vercel, como hoy |
+| CORS | la API declara el origen del contenedor (§3.5) |
 
-**La idea.** Capacitor deja fijar el host con el que se sirve el bundle local
-(`server.hostname`, y en iOS además `iosScheme`). Sirviendo la cáscara como
-**`https://app.yump.ar`**, los cuatro problemas se caen juntos: el origen es un
-https real, YouTube lo acepta, la URL para compartir sale correcta y el
-`localStorage` queda en el mismo origen que la web.
+**`api.yump.ar` no hace falta.** Era una consecuencia del truco que se cayó: si
+el contenedor no reclama el host `app.yump.ar`, no hay colisión que resolver.
+Queda como **opción futura** —si algún día conviene separar la API por
+operación o por costos— y **no es un bloqueante para nada de este plan**.
 
-**La trampa, y por eso esto es 🔍 y no 🟡.** Si el WebView cree que
-`app.yump.ar` es local, un `fetch` a `https://app.yump.ar/api/home` lo atiende
-el servidor local y devuelve 404. **La API tiene que estar en OTRO host.** La
-salida es barata: agregar `api.yump.ar` como segundo dominio del mismo proyecto
-de Vercel — mismo deploy, mismo código, sin infraestructura nueva. Y entonces el
-CORS es de un solo origen exacto (`Access-Control-Allow-Origin:
-https://app.yump.ar`), no un comodín.
+### Los tres efectos del origen local, y cómo se resuelve cada uno
 
-**Si en el spike resulta que no se puede**, el camino de respaldo es: esquemas
-por defecto + CORS + parches puntuales (sacar `enablejsapi` en nativo, base URL
-explícita para compartir). Funciona, pero son tres parches en vez de una línea
-de configuración. **Esto es lo primero que hay que resolver en la Etapa 0.**
+Que el origen sea `localhost` tiene consecuencias concretas. Las tres están
+identificadas y ninguna es cara:
 
-### 3.5 El CORS, si hace falta — 🔵 hay una decisión de seguridad escondida
+| Efecto | Estado |
+|---|---|
+| `fetch("/api/...")` relativo no resuelve | se arregla con una base URL explícita (Etapa 3) |
+| El embed de YouTube manda `origin=capacitor://localhost` y puede dar el **error 153** que ya documenta `lib/trailer.ts:38` | **ya hay solución y es de una línea**: pasar `SITIO_PUBLICO` como `origin` en vez del origen del navegador |
+| El enlace compartido saldría con el origen del contenedor | ✅ **YA RESUELTO Y EN PRODUCCIÓN** — ver §4.h |
+
+El segundo y el tercero se resuelven con **la misma pieza**: `lib/compartir.ts`,
+que se construyó el 29/08 para arreglar el bug de compartir y expone
+`SITIO_PUBLICO`. Es el ejemplo de la decisión 6: una pieza pensada para la web
+que sirve igual en los dos contenedores, sin ramas por plataforma.
+
+### 3.5 El CORS — 🔵 hay una decisión de seguridad escondida
+
+Con el origen del contenedor en `localhost`, **todas** las llamadas a
+`app.yump.ar/api` son cross-origin. Esto ya no es un "si hace falta": hace falta.
 
 La salida más rápida es `Access-Control-Allow-Origin: *` en `/api/:path*` desde
-`next.config.mjs`. Técnicamente es inocua para la autenticación (las dos rutas
-con sesión usan `Bearer`, no cookies, así que el comodín no filtra nada).
+`next.config.mjs`. Técnicamente es inocua para la autenticación: las dos rutas
+con sesión usan `Authorization: Bearer`, no cookies, así que el comodín no
+filtra nada.
 
 **Pero abre la API a cualquier sitio web.** Hoy cualquiera puede llamarla desde
-un servidor, sí — el comodín agrega poder llamarla desde el navegador de
-cualquier página, que es lo que hace fácil el scraping. Y `/api/home` cuesta
-hasta 60 s y cientos de comandos de Upstash. 🟡 Preferir el origen exacto de
-§3.4, o una allowlist de dos orígenes en un wrapper de ruta. **No** meter un
+un servidor; el comodín agrega poder llamarla desde el navegador de cualquier
+página, que es lo que hace fácil el scraping. Y `/api/home` cuesta hasta 60 s y
+cientos de comandos de Upstash.
+
+🟡 Preferir una **allowlist de dos orígenes** (`https://localhost` y
+`capacitor://localhost`) en un wrapper de ruta. Son dos valores fijos y conocidos
+de antemano, así que no hay que echar el origen dinámicamente. **No** meter un
 `middleware.ts` sólo para esto: hoy no hay ninguno y agregarlo pone latencia y
 costo en *todos* los requests, incluidos los de la web.
+
+⚠️ La alternativa que Capacitor ofrece —activar `CapacitorHttp`, que parchea el
+`fetch` global para salir por vía nativa y esquivar CORS— **no se recomienda
+acá**: parchea también el fetch de `supabase-js`, y eso es una fuente conocida
+de fallas sutiles (§4.b).
 
 ---
 
@@ -457,12 +533,24 @@ Eso elimina de raíz el problema clásico de estas apps (abrir Netflix con la
 película justa) — no porque esté resuelto, sino porque no se prometió nunca. Lo
 que sí sale afuera es el `signupUrl` del alta de plataforma, y eso va por §4.e.
 
-🔴 **Compartir hay que arreglarlo.** Dos cosas: `navigator.share` **no existe**
-en WKWebView ni en el WebView de Android, así que hoy caería siempre al fallback
-de WhatsApp; y la URL se arma con `window.location.origin`, que en el contenedor
-no es `app.yump.ar` (salvo que §3.4 funcione). 🟡 `@capacitor/share` da la hoja
-nativa real en las dos plataformas, con una base URL explícita. Y de paso es una
-integración nativa que suma para 4.2.
+✅ **Compartir: la mitad difícil YA ESTÁ RESUELTA Y EN PRODUCCIÓN** (29/08).
+
+Cuando se escribió esta auditoría, la URL compartida se armaba con el origen del
+navegador y por eso figuraba acá como trabajo pendiente de Capacitor. **Ya no lo
+es**: se arregló como bug de la web —una PWA instalada desde el dominio anterior
+compartía enlaces viejos— y el arreglo dejó justo la pieza que el contenedor
+necesita.
+
+`lib/compartir.ts` es la fuente única del enlace público: `SITIO_PUBLICO` es una
+constante, **no depende del origen**, y hay una prueba que lo fija simulando el
+dominio viejo. Verificado en producción por el dueño desde la PWA instalada.
+
+Lo que queda es chico y sigue siendo trabajo de contenedor: `navigator.share`
+**no existe** en WKWebView ni en el WebView de Android, así que hoy caería
+siempre al fallback de WhatsApp. 🟡 `@capacitor/share` da la hoja nativa real en
+las dos plataformas — y como la URL ya sale canónica, ese plugin sólo cambia
+**cómo** se comparte, no **qué**. Es además una integración nativa que suma
+para 4.2.
 
 ### 4.i Actualización de la web y de la app instalada
 
@@ -588,23 +676,57 @@ todo el proyecto y se toma antes de la primera subida.
 | Qué | Estado | Nota |
 |---|---|---|
 | Android Studio + JDK | ❌ no instalado | Capacitor genera un proyecto Gradle estándar |
-| **Target API 36** | ❌ | Vence **31/08/2026**, prórroga al **01/11/2026**. Hay que fijarlo explícitamente en `variables.gradle`; 🔍 no dar por hecho el default de la versión de Capacitor que se instale |
+| **Capacitor 8** | ❌ | ⚠️ **CORREGIDO el 29/08.** Antes decía "fijar `targetSdk 36` en `variables.gradle`". La documentación oficial dice que **Capacitor no soporta target SDK personalizado**: va atado a la versión mayor, y **Capacitor 8 apunta a SDK 36**. O sea que la respuesta no es tocar Gradle, es **instalar la versión mayor correcta desde el principio** |
+| **Target API 36** | ❌ | Google Play lo exige a **apps nuevas y actualizaciones desde el 31/08/2026**. La prórroga al 01/11/2026 es para **apps que ya existen**: Yump es nueva, así que no aplica y simplemente arranca en 36 (que es lo que da Capacitor 8) |
 | Keystore de subida | ❌ | `keytool`. **Perderlo es un trámite con Google, no un `rm`** |
 | Play App Signing | ❌ | Google guarda la clave de firma final |
 | `assetlinks.json` en `yump.ar` | ❌ | ⚠️ **el SHA-256 que va acá es el de Play App Signing, no el del keystore de subida.** Es el error clásico y sólo se ve cuando los deep links no abren |
-| Cuenta de Play | 🔍 | US$25 una vez. **Si es personal y se creó después del 13/11/2023: 12 testers, 14 días corridos.** Es la decisión 7 de `PLAY-STORE.md` §4.c y mueve el cronograma dos semanas |
+| Cuenta de Play | 🔍 | US$25 una vez. **Si es personal y se creó después del 13/11/2023: 12 testers opted-in de forma continua durante 14 días corridos** antes de poder pedir acceso a producción. Confirmado en la ayuda de Play (§14). Mueve el cronograma dos semanas |
 
-### 7.b iOS
+### 7.b iOS — ⚠️ REESCRITA el 29/08: la Mac ya no es un muro
+
+**Lo que decía antes:** "no sé si el dueño tiene Mac; es un requisito duro".
+Figuraba como el bloqueante #1 de todo el proyecto. **Eso cambió**: sigue
+haciendo falta macOS, pero **no hace falta comprarlo**.
+
+**Lo que es cierto y no cambió:** en algún momento hay que tocar Xcode. No
+existe camino a la App Store que lo evite — Xcode Cloud tampoco, porque los
+workflows **se configuran desde Xcode** (§14), así que es una forma de no tener
+que *compilar* en una máquina propia, no de no necesitar macOS nunca.
+
+**Lo que cambió: esa Mac puede ser alquilada.** Y acá hay una distinción que
+importa más que el precio:
+
+| Tipo de plan | Qué da | Sirve para Capacitor? |
+|---|---|---|
+| **Administrado / pay-as-you-go** (el tramo barato, por hora o por día) | una cuenta de usuario en una Mac compartida. **Sin acceso root/admin** — MacinCloud lo dice explícitamente: las tareas de administrador las hace su soporte a pedido | 🔍 **a verificar antes de pagar.** Un build de Capacitor necesita Node, npm y CocoaPods. Si vienen preinstalados y en versión usable, alcanza; si hay que instalarlos, sin root se depende del soporte |
+| **Dedicado** (Mac mini entero) | **acceso root completo** | ✅ sin fricción, y es lo que hay que presupuestar si el administrado no da |
+
+🟡 **Recomendación:** empezar por el tramo barato **para el spike**, con la
+pregunta concreta "¿puedo correr `npx cap sync ios` y abrir el proyecto?". Si la
+respuesta es no, escalar a dedicado. No comprometerse a un plan anual antes de
+haber compilado una vez.
+
+⚠️ **Sobre los precios: son referencias, no tarifas.** Varían por proveedor,
+plan, disponibilidad, región e impuestos, y cambian sin aviso. Los verificados
+el **29/08/2026** están en §14, con la fuente. **Confirmar el precio del día
+antes de contratar** — no tomar ningún número de este documento como el que se
+va a pagar.
 
 | Qué | Estado | Nota |
 |---|---|---|
-| **Mac** | 🔵 **no sé si el dueño tiene** | **Es un requisito duro.** Xcode no corre en Windows y Transporter tampoco. Alternativas: comprar/prestar un Mac, o CI con runners macOS (GitHub Actions, Codemagic) — pero **el primer setup y la depuración conviene hacerlos en un Mac de verdad** |
-| Xcode 16+ | ❌ | y macOS reciente |
-| Apple Developer Program | ❌ | **US$99/año**, se renueva. Individual: figura el nombre real como vendedor. Organización: hace falta D-U-N-S |
-| Certificados y perfiles | ❌ | Xcode los gestiona solo con "automatically manage signing" |
+| macOS + Xcode | ❌ | **remoto sirve**; ver arriba |
+| Apple Developer Program | ❌ | **US$99 por año de membresía**, según la propia Apple (§14). Se renueva. Los precios pueden variar por región y se muestran en moneda local al inscribirse. Individual: figura el nombre real como vendedor. Organización: hace falta D-U-N-S |
+| **iPhone físico** | 🔵 | 🟡 **fuertemente recomendado** para la verificación final. El simulador no valida lo que más riesgo tiene: la purga de `localStorage` de WKWebView, las safe areas reales, el teclado, los Universal Links y el embed de YouTube |
+| Certificados y perfiles | ❌ | Xcode los gestiona con "automatically manage signing" |
 | AASA en `yump.ar` | ❌ | para Universal Links, con el Team ID |
 | `ITSAppUsesNonExemptEncryption = false` | ❌ | 🟡 declararlo en `Info.plist` desde el principio: sólo se usa HTTPS estándar, y sin esto Apple pregunta lo mismo en **cada** subida |
 | **Trader status (UE)** | 🔍 | Apple exige declararlo para distribuir en la Unión Europea. Si Yump se publica sólo en Argentina/LatAm, se restringen territorios y no aplica. 🔵 Decisión |
+
+**La condición de todo esto:** iOS queda **sujeto al resultado de Android** y a
+que el dueño apruebe el gasto. **No hay fecha de lanzamiento de iOS**, y no se
+fija una acá.
+
 
 ### 7.c Dispositivos físicos
 
@@ -687,133 +809,188 @@ que alguien abre la app instalada**, así que van en la checklist de la Etapa 2.
 
 ---
 
-## 10. Plan por etapas
+## 10. Plan por etapas — ⚠️ REORDENADO el 29/08
+
+Cambió respecto de la versión del 28/08: **Android va entero primero y se
+evalúa antes de tocar iOS.** Antes iOS estaba intercalado, y eso sólo tiene
+sentido si las dos salen juntas.
 
 Estimación en **sesiones de trabajo** (media jornada), no en días de calendario.
-Cuenta que es el primer proyecto nativo del dueño, así que la curva de Xcode y
-de Android Studio está incluida.
+Incluye la curva de Android Studio, que es primer proyecto nativo del dueño.
 
-### Etapa 0 — Spike: ¿la opción B es viable? (1-2 sesiones)
+### Estimaciones, separadas
 
-**Esta etapa existe para poder cancelar barato.** No se escribe código de
-producto: se contesta una pregunta.
+| Bloque | Trabajo | Calendario aparte |
+|---|---|---|
+| **Android (etapas 1-6)** | **~8-12 sesiones** | + prueba cerrada (12 testers × 14 días corridos) + revisión de Play |
+| **iOS (etapas 8-9)** | **se estima cuando se llegue**, no ahora | + TestFlight + revisión de Apple |
 
-1. Export estático de la cáscara con `output: "export"` detrás de una variable
-   (`CAPACITOR=1`), **sin tocar el build de la web**.
-2. Resolver `titulo`/`persona` (§2.b) con dos páginas de query y el helper de
-   links.
-3. Capacitor en un proyecto Android descartable. **Probar la configuración de
-   §3.4** (`server.hostname` = `app.yump.ar` + API en `api.yump.ar`).
-4. Que cargue el Home con datos reales en un teléfono físico.
+**Por qué iOS no se estima todavía**, y no es cautela de más: el número depende
+de cuánto de la Etapa 3 resultó realmente reutilizable, de si el plan de Mac
+remota administrado alcanzó o hubo que ir a dedicado, y de la curva de Xcode,
+que no se puede estimar sin haberla tocado. Un número ahora sería inventado.
+Lo que sí está decidido es **qué incluye** cuando se estime: adaptación,
+pruebas en iPhone físico, TestFlight y revisión.
 
-**Criterio de salida:** el Home renderiza con datos en un Android real. **Si
-§3.4 no funciona**, documentar el camino de respaldo y volver a estimar antes de
-seguir.
+### Etapa 1 — Auditoría y documentación cerradas ✅
 
-### Etapa 1 — Adaptar la capa web (3-5 sesiones)
+Esta etapa. Este documento, `docs/PLAY-STORE.md` y los de estado, sin
+contradicciones y con las decisiones vigentes escritas. **Terminada.**
 
-Todo esto es código de este repo y **no rompe la web** si se hace detrás de
-banderas:
+### Etapa 2 — Prototipo Android local y descartable (1-2 sesiones)
+
+**Existe para poder cancelar barato.** No se escribe código de producto: se
+contesta si la opción B funciona. El proyecto se tira al terminar.
+
+Lo que **tiene que validar** —y esta lista es el criterio de salida—:
+
+- [ ] empaquetado de la cáscara local;
+- [ ] consumo de `https://app.yump.ar/api` (con el CORS de §3.5);
+- [ ] rutas dinámicas de títulos y personas (§2.b — el que rompe en silencio);
+- [ ] autenticación y persistencia de sesión;
+- [ ] tráiler de YouTube en el WebView (§3.4 — el error 153);
+- [ ] compartir con URL canónica;
+- [ ] enlaces externos;
+- [ ] botón Atrás;
+- [ ] teclado, barra de estado y safe areas;
+- [ ] comportamiento sin conexión;
+- [ ] arranque frío y caliente **en un Android físico**;
+- [ ] **decisiones que permitan reutilizar el trabajo en iOS** (decisión 6).
+
+Ese último punto no es decorativo: es lo que separa este plan de un atajo
+Android-only. Concretamente significa **no** resolver nada con APIs que sólo
+existan en el WebView de Android, **no** asumir que el origen es `https://`, y
+**no** meter ramas por plataforma donde alcance una constante compartida.
+
+### Etapa 3 — Adaptación de la capa web para bundle local (3-5 sesiones)
+
+Código de este repo, detrás de banderas, **sin romper la web**:
 
 - Base URL de la API + CORS (§3.5).
-- Helper `hrefTitulo`/`hrefPersona` (10 call sites).
-- `abrirExterno()` con `@capacitor/browser` (~6 call sites).
-- Compartir con `@capacitor/share` + base URL explícita.
+- Helper `hrefTitulo`/`hrefPersona` (10 call sites, §2.b).
+- `abrirExterno()` con `@capacitor/browser` (~6 call sites, §4.e).
+- `@capacitor/share` (§4.h — la URL ya sale canónica).
+- El `origin` del embed de YouTube pasa a `SITIO_PUBLICO` (§3.4).
 - Gatear `InstallPrompt`, `ServiceWorkerRegister`, `UpdateToast`; revisar
-  `StandaloneWelcome`.
-- Adaptador de `@capacitor/preferences` para sesión Supabase y `sc:platforms`.
-- `searchParams` de `/categoria` al cliente.
-- `npx tsc --noEmit` + `npm run build` de la web tienen que seguir limpios.
+  `StandaloneWelcome` (§9).
+- Adaptador de `@capacitor/preferences` para la sesión y `sc:platforms` (§4.a).
+- `searchParams` de `/categoria` al cliente (§2.c).
+- `npx tsc --noEmit`, la suite y `npm run build` de la web, limpios.
 
-### Etapa 2 — Android usable (3-4 sesiones)
+### Etapa 4 — Aplicación Android usable (3-4 sesiones)
 
-- Proyecto Android, `applicationId`, `targetSdk 36`, íconos y splash.
+- Proyecto Android con Capacitor 8, `applicationId`, íconos y splash.
 - Botón Atrás (§4.f) — **primero, es lo que más se nota**.
 - Barra de estado sincronizada con `ThemeContext`.
 - Keystore + Play App Signing + `assetlinks.json` (⚠️ el SHA-256 correcto).
 - Deep links y el retorno del mail de reset.
-- Notificaciones locales de "Recordarme", si entra en alcance.
+- Notificaciones locales de "Recordarme", si entra en alcance (§5.b).
 - Recorrer la checklist de §9 en un teléfono real.
 
-### Etapa 3 — iOS usable (3-5 sesiones)
+### Etapa 5 — Pruebas internas (2-3 sesiones + calendario)
 
-**Bloqueada por el Mac y por la cuenta de Apple.**
+- Internal testing de Play.
+- **Si la cuenta es personal post-13/11/2023: 12 testers opted-in de forma
+  continua durante 14 días corridos.** Es calendario, no trabajo: **arrancarlo
+  lo antes posible**, en paralelo con la Etapa 4 si se puede.
 
-- Proyecto iOS, `Info.plist` (`ITSAppUsesNonExemptEncryption`), splash, íconos.
-- AASA + Universal Links.
-- Safe areas y teclado en un iPhone con notch.
-- 🔍 **Probar a propósito la purga de `localStorage`** y confirmar que
-  `@capacitor/preferences` la sobrevive.
-- 🔍 El embed de YouTube: es donde §3.4 se paga o se cobra.
+### Etapa 6 — Publicación en Google Play (2-3 sesiones)
 
-### Etapa 4 — Pruebas internas (2-3 sesiones + calendario)
-
-- Internal testing de Play (rápido) y TestFlight interno.
-- **Si la cuenta de Play es personal post-13/11/2023: 12 testers × 14 días
-  corridos.** Es calendario, no trabajo, y hay que arrancarlo lo antes posible.
-
-### Etapa 5 — Publicación en Google Play (2-3 sesiones)
-
-- Data Safety (matriz de `PLAY-STORE.md` §2), clasificación IARC, público
-  objetivo (16 años, ya decidido), capturas reales — **los `public/screenshots/`
-  actuales son placeholders del manifest y no sirven**.
+- Data Safety (matriz de `PLAY-STORE.md` §2), IARC, público objetivo (16 años).
+- Capturas reales — **los `public/screenshots/` son placeholders del manifest y
+  no sirven para Play**.
 - Los ítems abiertos de `PLAY-STORE.md` §7.b.
 
-### Etapa 6 — App Store (2-4 sesiones + revisión)
+### Etapa 7 — Evaluación del resultado de Android 🔵
 
-- Etiquetas de privacidad, capturas por tamaño de pantalla, cuenta de prueba
-  para el revisor.
-- 🟡 **Notas para el revisor: liderar con la ruleta** y con las notificaciones
+**Punto de decisión, no de trabajo.** Con la app publicada y datos reales
+—instalaciones, retención, si alguien la usa— el dueño decide si iOS se
+justifica. Es la condición que él mismo puso: el gasto de iOS se aprueba contra
+resultados, no contra expectativas.
+
+**Si acá la respuesta es no, el proyecto está completo.** Las etapas 8 y 9 no
+son deuda pendiente.
+
+### Etapa 8 — Prototipo iOS con Mac remota (estimación pendiente)
+
+- Contratar el plan y **verificar primero lo de §7.b**: ¿se puede correr
+  `npx cap sync ios` y abrir el proyecto? Esa es la pregunta que decide si el
+  plan barato alcanza.
+- Proyecto iOS, `Info.plist` (`ITSAppUsesNonExemptEncryption`), splash, íconos.
+- AASA + Universal Links.
+- Safe areas y teclado en un iPhone físico.
+- 🔍 Probar a propósito la **purga de `localStorage`** y confirmar que
+  `@capacitor/preferences` la sobrevive.
+- 🔍 El embed de YouTube bajo `capacitor://` — donde se cobra la Etapa 3.
+
+### Etapa 9 — TestFlight y App Store (estimación pendiente) 🔵
+
+**Sujeta a que el dueño apruebe costo y alcance.**
+
+- Etiquetas de privacidad, capturas por tamaño de pantalla, cuenta de prueba.
+- 🟡 Notas para el revisor: **liderar con la ruleta** y con las notificaciones
   locales (§5.a).
 - Presupuestar **al menos un rechazo**. Es lo normal en una primera app, y más
   con este perfil de producto.
 
-**Total: ~14-21 sesiones de trabajo, más 2-4 semanas de calendario** entre
-prueba cerrada y revisiones. La ventana de Apple (uno o dos meses después de
-Android) es realista **si la Etapa 3 no se bloquea por el Mac**.
+**Sin fecha.** No se fija una acá y no se debería fijar hasta terminar la
+Etapa 7.
 
 ---
 
 ## 11. Riesgos, bloqueantes y decisiones del dueño
 
-### 11.a Bloqueantes duros (nada avanza sin esto)
+### 11.a Bloqueantes duros — ⚠️ ACTUALIZADO el 29/08
+
+**El bloqueante #1 de la versión anterior era "no hay Mac". Ya no lo es**: con
+Mac remota, iOS pasa de muro a decisión de gasto, y además queda después de la
+Etapa 7. Lo que queda:
 
 | # | Bloqueante | Impacto |
 |---|---|---|
-| 1 | **No hay Mac** 🔵 | iOS no existe sin esto. Es la primera pregunta a contestar, porque define si la ventana de "uno o dos meses" es alcanzable |
-| 2 | **Target API 36 vence el 01/11/2026** | quedan ~2 meses de prórroga |
-| 3 | **Tipo de cuenta de Play** 🔵 | personal post-13/11/2023 = +14 días corridos de prueba cerrada |
-| 4 | **Identificador definitivo** 🔵 | irreversible después de la primera subida (§6) |
+| 1 | **Target API 36** | Google Play lo exige a apps nuevas desde el **31/08/2026**. Se resuelve solo usando **Capacitor 8**; la prórroga al 01/11 es para apps existentes y a Yump no le aplica |
+| 2 | **Tipo de cuenta de Play** 🔵 | personal post-13/11/2023 = 12 testers × 14 días corridos antes de producción |
+| 3 | **Identificador definitivo** 🔵 | irreversible después de la primera subida (§6) |
+
+**Ya NO son bloqueantes** (se resolvieron o se reclasificaron):
+
+- ~~No hay Mac~~ → Mac remota, y recién en la Etapa 8.
+- ~~`api.yump.ar`~~ → no hace falta (§3.4).
+- ~~El bug de compartir~~ → cerrado y verificado en producción (§4.h).
+- ~~Issue #14, parpadeo del avatar~~ → **postergado por decisión del dueño**; no
+  bloquea el prototipo ni el empaquetado.
 
 ### 11.b Riesgos técnicos, ordenados por probabilidad × daño
 
 | Riesgo | Prob. | Daño | Mitigación |
 |---|---|---|---|
-| **Rechazo de Apple por 4.2** | media | alto | las 5 integraciones nativas de §5.b + notas liderando con la ruleta |
-| **§3.4 no funciona como espero** | 🔍 media | medio | Etapa 0 lo resuelve; hay camino de respaldo documentado |
-| **YouTube error 153 en nativo** | media | medio | ya está documentado en el repo; §3.4 lo resuelve de raíz |
-| **Purga de `localStorage` en iOS** | media | alto | `@capacitor/preferences` para sesión y plataformas |
-| **Desfasaje cáscara/API** | media | alto | regla de compatibilidad escrita + `minVersionApp` (§4.i) |
+| **Back de Android cierra la app** | **alta** | alto | `@capacitor/app`, Etapa 4 |
 | **`InstallPrompt` dentro de la app** | **alta** | medio | una condición, pero hay que acordarse (§9) |
-| **Back de Android cierra la app** | **alta** | alto | `@capacitor/app`, Etapa 2 |
-| **CORS abierto = API scrapeable** | media | medio | origen exacto, no comodín (§3.5) |
+| **Rutas dinámicas rompen al tocar una card** | **alta** si no se ataca | alto | §2.b, Etapa 2 lo valida |
+| **Desfasaje cáscara/API** | media | alto | regla de compatibilidad escrita + `minVersionApp` (§4.i) |
+| **YouTube error 153 en el contenedor** | media | medio | `SITIO_PUBLICO` como `origin` (§3.4) |
+| **CORS abierto = API scrapeable** | media | medio | allowlist de dos orígenes, no comodín (§3.5) |
+| **El plan de Mac administrado no deja compilar** | 🔍 media | medio | verificarlo en el spike de la Etapa 8 antes de pagar de más (§7.b) |
+| **Rechazo de Apple por 4.2** | media | alto | las 5 integraciones nativas de §5.b — **pero recién en la Etapa 9** |
+| **Purga de `localStorage` en iOS** | media | alto | `@capacitor/preferences`, y se diseña en la Etapa 3 aunque se pruebe en la 8 |
 | **Se pierde el cache de pósters** | alta | bajo | aceptar y medir |
 | **Analytics muertos en la app** | alta | bajo | 🔵 decidir si se reemplaza |
 
-### 11.c Decisiones que necesitan al dueño
+### 11.c Decisiones que todavía necesitan al dueño
 
-| # | Decisión | Por qué bloquea |
+Las de arquitectura ya están tomadas (§0.a). Quedan estas:
+
+| # | Decisión | Cuándo hace falta |
 |---|---|---|
-| 1 | **¿Hay Mac, o se consigue?** | define si iOS entra en la ventana pedida |
-| 2 | **Identificador: ¿`ar.yump.app`?** | irreversible |
-| 3 | **Cuenta de Play: ¿personal u organización?** | ±14 días de calendario |
-| 4 | **Apple: ¿individual u organización?** | organización pide D-U-N-S; individual publica el nombre real |
-| 5 | **¿Se distribuye en la UE?** | si sí, hay que declarar trader status |
-| 6 | **¿Entran las notificaciones locales en la v1?** | es el mejor argumento contra 4.2, y suma un permiso |
-| 7 | **¿`api.yump.ar` como segundo dominio?** | habilita la configuración de §3.4 |
-| 8 | **¿Se saca la cookie `sc_platforms`?** | decisión 9 de `PLAY-STORE.md`; acá queda sin ningún uso |
-| 9 | **¿Se reemplaza Vercel Analytics en la app?** | si no, no hay métricas de la app instalada |
-| 10 | **¿OTA (Capgo/Live Updates)?** | 🟡 no para la v1 |
+| 1 | **Identificador: ¿`ar.yump.app`?** | **antes de la primera subida**. Irreversible |
+| 2 | **Cuenta de Play: ¿personal u organización?** | antes de la Etapa 5. ±14 días de calendario |
+| 3 | **¿Entran las notificaciones locales en la v1?** | Etapa 4. Es el mejor argumento contra 4.2, y suma un permiso |
+| 4 | **¿Se reemplaza Vercel Analytics en la app?** | Etapa 3. Si no, no hay métricas de la app instalada |
+| 5 | **¿Se saca la cookie `sc_platforms`?** | Etapa 3. En el contenedor no hace nada |
+| 6 | **¿iOS se hace?** | **Etapa 7**, contra resultados de Android |
+| 7 | **Apple: ¿individual u organización?** | sólo si la 6 es sí. Organización pide D-U-N-S |
+| 8 | **¿Se distribuye en la UE?** | sólo si la 6 es sí. Trader status |
+| 9 | **¿OTA (Capgo/Live Updates)?** | 🟡 no para la v1 |
 
 ---
 
@@ -821,9 +998,11 @@ Android) es realista **si la Etapa 3 no se bloquea por el Mac**.
 
 Para que nadie lo tome por confirmado:
 
-- **No se corrió Capacitor.** Todo lo de `server.hostname`, esquemas, service
-  worker en el WebView de Android y comportamiento del bundle local está marcado
-  🔍 y sale de conocimiento general, no de una prueba contra este repo.
+- **No se corrió Capacitor.** Nada de esto se probó contra este repo. Lo que
+  cambió el 29/08 es que las afirmaciones sobre `server.url`, `iosScheme`,
+  `hostname` y el target SDK **ya no salen de conocimiento general**: salen de la
+  documentación oficial, citada en §14. Lo que sigue sin probarse es cómo se
+  comporta ESTE proyecto adentro de un contenedor — para eso está la Etapa 2.
 - **No se abrieron Play Console ni App Store Connect.** El estado de las
   cuentas, la disponibilidad del identificador y las fechas exactas de las
   políticas hay que confirmarlos ahí.
@@ -846,3 +1025,40 @@ descartado por la ventana de iOS, y el camino es **Capacitor con bundle local**.
 Como consecuencia, la fila 3 de §7.b (`assetlinks.json`, "imprescindible para
 TWA") cambia de motivo pero **no de estado**: sigue haciendo falta, ahora para
 los App Links de Android y el retorno de los mails de autenticación.
+
+
+---
+
+## 14. Fuentes consultadas — 29 de agosto de 2026
+
+Todo lo que este documento afirma sobre plataformas, herramientas y precios sale
+de acá. **Las fechas importan**: los requisitos de tienda y los precios cambian,
+y una cita sin fecha envejece sin avisar.
+
+### Oficiales
+
+| Qué se confirmó | Fuente |
+|---|---|
+| `server.url` **"is not intended for use in production"**; `iosScheme` no admite `http`/`https`; se recomienda dejar `hostname` en `localhost` por el contexto seguro | [Capacitor — Configuration](https://capacitorjs.com/docs/config) |
+| **Capacitor 8 → target SDK 36**, y *"Capacitor Android does not support custom target SDK versions"* | [Capacitor — Setting Android Target SDK](https://capacitorjs.com/docs/android/setting-target-sdk) |
+| Apps nuevas y actualizaciones deben apuntar a **API 36 desde el 31/08/2026**; prórroga al **01/11/2026** solicitable **para apps existentes** | [Google Play — Target API level requirements](https://developer.android.com/google/play/requirements/target-sdk) |
+| Cuentas personales creadas después del **13/11/2023**: **12 testers** opted-in de forma continua **14 días** antes de pedir acceso a producción | [Play Console Help — App testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465) |
+| Apple Developer Program: **99 USD por año de membresía**; puede variar por región y se muestra en moneda local al inscribirse. Organizaciones necesitan **D-U-N-S** | [Apple — Membership Details](https://developer.apple.com/programs/whats-included/) · [Enroll](https://developer.apple.com/programs/enroll/) |
+| Xcode Cloud: requiere **Xcode 15+** y membresía; **los workflows se configuran desde Xcode**. Incluye 25 horas de cómputo al mes | [Apple — Get started with Xcode Cloud](https://developer.apple.com/xcode-cloud/get-started/) |
+
+### Comerciales — ⚠️ referencias, NO tarifas
+
+**Estos números no son un presupuesto.** Cambian por proveedor, plan,
+configuración, disponibilidad, región e impuestos, y pueden haber cambiado desde
+que se escribió esto. **Verificar el precio del día antes de contratar.**
+
+| Proveedor | Lo relevante, al 29/08/2026 | Fuente |
+|---|---|---|
+| **MacinCloud** | Los planes **administrados / pay-as-you-go** (el tramo barato, por hora o por día) **no dan acceso root/admin**: las tareas de administrador las hace su soporte a pedido. Para autogestión hay que ir a los planes dedicados. **Esta es la distinción que importa, más que el precio** | [MacinCloud — Pay-as-you-go](https://support.macincloud.com/support/solutions/articles/8000044698-what-is-macincloud-s-pay-as-you-go-server-plan-) |
+| **MacStadium** | Mac mini dedicados **desde ~US$109/mes** (M2.S) hasta ~US$349. Dan *"full, root-access control"*. Facturación mensual, prepaga, en dólares; la página **no aclara impuestos** | [MacStadium — Pricing](https://macstadium.com/pricing) |
+
+**Sobre la referencia de ~US$25/mes** que manejaba el dueño: es plausible para
+el tramo **administrado por hora/día**, no para un Mac dedicado. La diferencia no
+es de comodidad — es si se puede instalar lo que un build de Capacitor necesita
+(§7.b). **Es la primera pregunta a resolver en la Etapa 8, y se resuelve
+pagando el plan más barato una vez, no leyendo páginas de precios.**
