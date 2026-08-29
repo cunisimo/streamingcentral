@@ -11,6 +11,7 @@ import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
 import RecordarButton from "./RecordarButton";
 import { platformByCode } from "@/lib/providers-ar";
+import { mensajeCompartir, enlaceWhatsapp } from "@/lib/compartir";
 import ScScore from "./ScScore";
 import CastRail from "./CastRail";
 import HeroTrailer from "./HeroTrailer";
@@ -79,23 +80,24 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   // 2. En escritorio `navigator.share` no existe, y el `?.` cortaba la cadena
   //    entera: el botón no hacía absolutamente nada, sin error ni feedback.
   //
+  // 3. El enlace se armaba con el origen del navegador. Una PWA instalada
+  //    cuando Yump vivía en el dominio anterior conserva ese origen para
+  //    siempre —el scope de una instalación es por origen y no se migra—,
+  //    así que esos usuarios compartían enlaces al dominio viejo sin que se
+  //    notara desde adentro de la app. El enlace público es SIEMPRE el
+  //    canónico y sale de `lib/compartir.ts`, que es su fuente única.
+  //
   // La plataforma va en el mensaje porque es el dato que evita el ida y vuelta
   // de "¿y dónde la veo?", que es el problema que resuelve la app. Se prefiere
   // una de las tuyas; si no tenés ninguna, la primera del título.
   const compartir = () => {
     const donde = mine[0] ?? t.platforms[0];
-    const nombre = donde ? platformByCode(donde)?.name : undefined;
-    const url = `${window.location.origin}/titulo/${t.type}/${t.id}`;
-    const texto =
-      `¡Mirá lo que encontré! "${t.title}"` +
-      (t.year ? ` (${t.year})` : "") +
-      (nombre ? ` — en ${nombre}` : "") +
-      ". La ficha en Yump:";
-    const whatsapp = () =>
-      window.open(`https://wa.me/?text=${encodeURIComponent(`${texto}\n${url}`)}`, "_blank", "noopener");
+    const nombre = (donde ? platformByCode(donde)?.name : null) ?? null;
+    const m = mensajeCompartir(t, nombre);
+    const whatsapp = () => window.open(enlaceWhatsapp(m), "_blank", "noopener");
 
     if (!navigator.share) return whatsapp();
-    navigator.share({ title: t.title, text: texto, url }).catch((err: unknown) => {
+    navigator.share({ title: m.titulo, text: m.texto, url: m.url }).catch((err: unknown) => {
       // Cerrar la hoja de compartir tira `AbortError`: es una decisión del
       // usuario, no una falla, y abrirle WhatsApp ahí sería pasarle por encima.
       // Cualquier otro error sí cae al fallback.
