@@ -80,8 +80,10 @@ cambiaron.** El contrato de persistencia está en `docs/AVATARES.md`.
 
 1. El dueño elige su avatar definitivo con la cuenta principal. Ya no hay
    ninguna precaución que tomar.
-2. **Issue #14** —el parpadeo del avatar al cargar— en una rama aparte, antes del
-   empaquetado nativo. No es una regresión: el código anterior hacía lo mismo.
+2. **Issue #14** —el parpadeo del avatar al cargar— **POSTERGADO** por decisión
+   del dueño (29/08). No es una regresión: el código anterior hacía lo mismo, y
+   **no bloquea el prototipo ni el empaquetado con Capacitor**. Antes acá decía
+   "antes del empaquetado nativo"; ese orden ya no rige.
 3. Borrar `feat/avatares-propios` de los dos lados, con borrado seguro
    (`git branch -d`, sin forzar), cuando el dueño lo confirme.
 
@@ -448,7 +450,7 @@ Para volver al camino viejo y comparar en la misma pantalla:
 | #11 | "Últimos lanzamientos" tiene 35% de títulos bajo 6.0 |
 | #12 | **El piso de 60 votos de `discover()` excluye cine regional en toda la app** |
 | #13 | **El cron del Top 10 se salteó el 18/08** — disparó el 25/08 y el bloque oficial está recuperado; sin explicación del salto, y una corrida perdida vuelve a degradarlo (lo más fresco, ver arriba) |
-| #14 | El avatar propio parpadea en cada carga — **no es una regresión de la tanda de avatares**, el código anterior hacía lo mismo. Se arregla en una rama aparte, después de desplegar los avatares y antes del empaquetado nativo |
+| #14 | El avatar propio parpadea en cada carga — **no es una regresión de la tanda de avatares**, el código anterior hacía lo mismo. **POSTERGADO (29/08): no bloquea el prototipo ni el empaquetado con Capacitor.** Se arregla en una rama aparte cuando el dueño lo pida |
 | #15 | **Selector de avatares.** Los círculos vacíos: causa confirmada (`loading="lazy"`, 21 de 31 nunca se pedían) y **corregidos** — diez aperturas sin uno solo. Queda abierto por una demora aislada de 4-6 s en dos aperturas calientes, **sin causa demostrada**: por decisión del dueño no se sigue investigando y no bloquea el merge |
 
 ---

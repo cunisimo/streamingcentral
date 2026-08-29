@@ -12,10 +12,18 @@ histórico.
    Netflix arreglado, ficha de Moria arreglada. **El SHA desplegado vive en
    `docs/ESTADO.md`**, que es el documento canónico del estado.
 2. **`feat/avatares-propios` se mergeó el 27/08** (`89ccb73`, con `--no-ff`) y
-   está en producción: los once puntos de la verificación manual pasaron. Queda
-   elegir el avatar definitivo, y el issue #14 en una rama aparte.
-3. Lo que sigue después es la **tanda legal de Google Play**, ya auditada y
-   diseñada en `docs/PLAY-STORE.md`, bloqueada por decisiones tuyas.
+   está en producción: los once puntos de la verificación manual pasaron.
+3. ~~Lo que sigue es la tanda legal de Google Play, bloqueada por decisiones
+   tuyas.~~ → **La tanda legal se hizo y se mergeó** (`27669c0`): las cuatro
+   páginas de `yump.ar` están en línea y auditadas en vivo. Ya no bloquea nada.
+4. **Lo que sigue ahora es el empaquetado con Capacitor, Android primero.** La
+   auditoría técnica y el plan por etapas viven en
+   [`docs/CAPACITOR.md`](CAPACITOR.md); las decisiones vigentes están en su
+   §0.a. **Nada de eso está empezado**: no hay Capacitor instalado ni proyecto
+   nativo.
+5. **El bug de compartir está cerrado** (`41487e8`, 29/08): el acento de la
+   descripción y el enlace canónico `https://app.yump.ar/titulo/...`, verificados
+   en producción por el dueño desde la PWA instalada.
 
 ---
 
@@ -181,9 +189,13 @@ tuya, 🔍 verificar en un panel y 🟡 recomendación conservadora.
 
 **Bloqueantes:**
 
-1. **Target API 36 venció el 31/08/2026** — prórroga solicitable hasta el
-   01/11/2026. Y **no existe ningún artefacto Android**: sin `assetlinks.json`,
-   sin `twa-manifest.json`, sin Bubblewrap.
+1. **Target API 36**: Google Play lo exige a apps nuevas desde el 31/08/2026.
+   ⚠️ *Acá decía que la prórroga al 01/11/2026 servía; es para apps que ya
+   están publicadas, y Yump no existe todavía en Play. **No es un camino
+   disponible.*** Se cubre creando el proyecto con **Capacitor 8** y
+   **verificando** `targetSdkVersion = 36` en `android/variables.gradle`. Y **no existe ningún artefacto Android**: sin `assetlinks.json` y sin
+   proyecto nativo. ⚠️ *La mención a `twa-manifest.json` y Bubblewrap quedó sin
+   efecto: TWA está descartado (ver `docs/CAPACITOR.md` §0.a).*
 2. **La app no atribuye a TMDB en ningún lado**, y ya está publicada.
 3. **Los wordmarks de plataforma son imitaciones a mano** — el rojo Netflix, el
    swoosh de Prime dibujado en SVG.
@@ -248,7 +260,9 @@ contexto de `vm`.
 ```
 docs/AVATARES.md          el sistema de avatares, la prueba manual y el riesgo transitorio
 docs/PLAY-STORE.md        la auditoría legal completa de Google Play
-docs/ISSUES.md            14 issues; #13 es el cron del Top 10 y #14 el parpadeo del avatar
+docs/ISSUES.md            15 issues; #13 es el cron del Top 10, #14 el parpadeo del avatar
+                          (POSTERGADO, no bloquea Capacitor) y #15 el selector de avatares
+docs/CAPACITOR.md         auditoria de Capacitor, decisiones vigentes y el plan por etapas
 docs/ESTADO.md            estado de despliegue e histórico de las tandas de idioma
 docs/TRASPASO-IDIOMA.md   la línea del idioma, cerrada
 docs/MANTENIMIENTO.md     recetas: Preview/Redis, precalentado, ingesta manual del Top 10
