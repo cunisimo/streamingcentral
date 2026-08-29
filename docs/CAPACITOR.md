@@ -76,10 +76,14 @@ Tres cosas, y las tres salen de haber ido a la documentación oficial (§14):
    (WKWebView ya los maneja) y que conviene dejar `hostname` en `localhost`,
    porque es lo que habilita las Web APIs que exigen contexto seguro. La sección
    está reescrita con la arquitectura que sí funciona.
-2. **El target SDK no se fija a mano.** §7.a decía tocar `variables.gradle`.
-   Capacitor documenta que **no soporta target SDK personalizado**: va atado a
-   la versión mayor. La respuesta correcta es usar **Capacitor 8**, que apunta a
-   **SDK 36**, justo lo que Google Play exige.
+2. **El target SDK no se personaliza; sí se verifica.** §7.a decía "tocar
+   `variables.gradle`" como si el valor fuera libre. No lo es: Capacitor
+   documenta que **cada versión mayor exige su target SDK y sólo da soporte a
+   ése**. Pero el valor **sí vive en `android/variables.gradle`** y **hay que
+   mirarlo**: crear el proyecto con **Capacitor 8**, confirmar que quedó en
+   `compileSdkVersion = 36` y `targetSdkVersion = 36`, y no cambiarlos a
+   valores no soportados. Cuando Google exija un SDK posterior, lo que se sube
+   es **la versión mayor de Capacitor**, no ese archivo.
 3. **La Mac dejó de ser un bloqueante.** Era el riesgo #1 de §11.a. Con Mac
    remota, iOS pasa a ser una decisión de gasto y de momento, no un muro.
 
@@ -325,13 +329,60 @@ identificadas y ninguna es cara:
 | Efecto | Estado |
 |---|---|
 | `fetch("/api/...")` relativo no resuelve | se arregla con una base URL explícita (Etapa 3) |
-| El embed de YouTube manda `origin=capacitor://localhost` y puede dar el **error 153** que ya documenta `lib/trailer.ts:38` | **ya hay solución y es de una línea**: pasar `SITIO_PUBLICO` como `origin` en vez del origen del navegador |
+| El embed de YouTube puede dar el **error 153** que ya documenta `lib/trailer.ts:38` | ⚠️ **abierto, sin solución confirmada** — ver abajo. Es el punto de mayor incertidumbre técnica del proyecto |
 | El enlace compartido saldría con el origen del contenedor | ✅ **YA RESUELTO Y EN PRODUCCIÓN** — ver §4.h |
 
-El segundo y el tercero se resuelven con **la misma pieza**: `lib/compartir.ts`,
-que se construyó el 29/08 para arreglar el bug de compartir y expone
-`SITIO_PUBLICO`. Es el ejemplo de la decisión 6: una pieza pensada para la web
-que sirve igual en los dos contenedores, sin ramas por plataforma.
+El tercero ya está resuelto por `lib/compartir.ts`, que se construyó el 29/08
+para arreglar el bug de compartir y expone `SITIO_PUBLICO`: es el ejemplo de la
+decisión 6, una pieza pensada para la web que sirve igual en los dos
+contenedores. **El segundo NO está resuelto**, y merece su propio apartado.
+
+### El tráiler de YouTube — ⚠️ ABIERTO, corregido el 30/08
+
+**Acá había una afirmación mía que era falsa y conviene decirlo sin vueltas.**
+Este documento decía que el error 153 se arreglaba "con una línea", pasando
+`SITIO_PUBLICO` como parámetro `origin`. **Eso no está demostrado, y la
+documentación de YouTube apunta a otro mecanismo.**
+
+**Qué es realmente el error 153.** La referencia del IFrame Player API dice:
+*"Error `153` indicates the request does not include the `HTTP Referer` header
+or equivalent API Client identification."* O sea que **no habla del parámetro
+`origin`**: habla del **encabezado `Referer`**. No son lo mismo — `origin` es un
+parámetro de la URL del embed y su función documentada es de seguridad
+(*"protects against malicious third-party JavaScript being injected into your
+page"*), no de identificación ante YouTube.
+
+**Qué pide YouTube para un WebView.** Los términos de funcionalidad mínima son
+explícitos: *"API Clients that use the YouTube embedded player must provide
+identification through the `HTTP Referer` request header."* Y para apps
+móviles, donde ese encabezado **viene vacío por defecto**, hay que fijarlo con
+métodos propios de la plataforma. El valor tiene que ser una URL completa, con
+**HTTPS**, cuyo dominio sea **el identificador de la aplicación** — o sea, con
+el identificador propuesto en §6, algo de la forma `https://ar.yump.app`.
+
+**Lo que sí está a favor nuestro:** los mismos términos piden usar *"one of the
+OS-provided WebView types"* —el `WebView` de Android, `WKWebView` en iOS—, que
+es exactamente lo que usa Capacitor. Esa parte se cumple sola.
+
+**Los caminos posibles, en orden de probabilidad:**
+
+1. **Fijar el `Referer` del WebView** con el identificador de la app. Es lo que
+   la documentación describe, y por eso es la primera hipótesis a probar.
+2. **URL base del contenido local.** Con HTML servido localmente, puede hacer
+   falta configurar la URL base para que el embed no quede sin referente.
+3. **Pasar `SITIO_PUBLICO` como `origin`.** 🔍 **Hipótesis, no solución.** Puede
+   ayudar, pero por la definición del error 153 no debería alcanzar por sí sola.
+4. **WebView Media Integrity** (Android) como forma de identificación. 🔍 Hay
+   que verificarlo en el entorno real; no lo doy por bueno desde acá.
+
+**Cómo se decide.** No desde este documento. **La solución definitiva se elige
+después de reproducir un tráiler en un dispositivo Android físico y con una
+build firmada** — firmada importa, porque la identidad de la app es justamente
+lo que está en discusión. Es un punto explícito del checklist de la Etapa 2.
+
+🔴 **Y si falla, lo que NO se hace es esconder el tráiler.** Se investiga la
+configuración del WebView o se integra de otra forma. Desactivar la función en
+silencio sería tapar el problema y perder una parte visible del producto.
 
 ### 3.5 El CORS — 🔵 hay una decisión de seguridad escondida
 
@@ -676,8 +727,10 @@ todo el proyecto y se toma antes de la primera subida.
 | Qué | Estado | Nota |
 |---|---|---|
 | Android Studio + JDK | ❌ no instalado | Capacitor genera un proyecto Gradle estándar |
-| **Capacitor 8** | ❌ | ⚠️ **CORREGIDO el 29/08.** Antes decía "fijar `targetSdk 36` en `variables.gradle`". La documentación oficial dice que **Capacitor no soporta target SDK personalizado**: va atado a la versión mayor, y **Capacitor 8 apunta a SDK 36**. O sea que la respuesta no es tocar Gradle, es **instalar la versión mayor correcta desde el principio** |
-| **Target API 36** | ❌ | Google Play lo exige a **apps nuevas y actualizaciones desde el 31/08/2026**. La prórroga al 01/11/2026 es para **apps que ya existen**: Yump es nueva, así que no aplica y simplemente arranca en 36 (que es lo que da Capacitor 8) |
+| **Capacitor 8** | ❌ | La versión mayor **es** la que decide el target SDK: Capacitor documenta que cada una exige el suyo y **sólo da soporte a ése**. Capacitor 8 → SDK 36. Por eso se crea el proyecto con 8 desde el principio, no con una anterior |
+| **`android/variables.gradle`** | ❌ | ⚠️ **Matiz importante, corregido el 30/08.** Antes acá se dijo primero "fijar `targetSdk 36` a mano" y después, sobrecorrigiendo, "no se toca". Las dos son inexactas. **El valor vive en ese archivo y hay que VERIFICARLO** después de crear el proyecto: `compileSdkVersion = 36` y `targetSdkVersion = 36`. Lo que no se hace es **personalizarlo** a un valor distinto del que pide la versión mayor |
+| **Target API 36** | ❌ | Google Play lo exige a **apps nuevas y actualizaciones desde el 31/08/2026**. Yump es nueva, así que arranca en 36 — que es lo que trae Capacitor 8 y **lo que hay que confirmar en `variables.gradle`**. *La prórroga al 01/11/2026 existe pero es para apps que ya están publicadas: **a Yump no le aplica y no es un camino disponible**.* |
+| **Actualizaciones futuras** | — | Cuando Google exija un SDK posterior, la acción es **subir la versión mayor de Capacitor**, no editar Gradle. Capacitor saca una mayor por año justamente para eso |
 | Keystore de subida | ❌ | `keytool`. **Perderlo es un trámite con Google, no un `rm`** |
 | Play App Signing | ❌ | Google guarda la clave de firma final |
 | `assetlinks.json` en `yump.ar` | ❌ | ⚠️ **el SHA-256 que va acá es el de Play App Signing, no el del keystore de subida.** Es el error clásico y sólo se ve cuando los deep links no abren |
@@ -699,13 +752,34 @@ importa más que el precio:
 
 | Tipo de plan | Qué da | Sirve para Capacitor? |
 |---|---|---|
-| **Administrado / pay-as-you-go** (el tramo barato, por hora o por día) | una cuenta de usuario en una Mac compartida. **Sin acceso root/admin** — MacinCloud lo dice explícitamente: las tareas de administrador las hace su soporte a pedido | 🔍 **a verificar antes de pagar.** Un build de Capacitor necesita Node, npm y CocoaPods. Si vienen preinstalados y en versión usable, alcanza; si hay que instalarlos, sin root se depende del soporte |
-| **Dedicado** (Mac mini entero) | **acceso root completo** | ✅ sin fricción, y es lo que hay que presupuestar si el administrado no da |
+| **Administrado / pay-as-you-go** (el tramo barato, por hora o por día) | una cuenta de usuario en una Mac compartida. MacinCloud documenta que **no dan root/admin**: las tareas de administrador las hace su soporte a pedido | 🔍 **a verificar, no a descartar** — ver abajo |
+| **Dedicado** (Mac mini entero) | **acceso root completo** | ✅ sin fricción; es a lo que se escala **si aparece un bloqueo demostrado**, no por las dudas |
 
-🟡 **Recomendación:** empezar por el tramo barato **para el spike**, con la
-pregunta concreta "¿puedo correr `npx cap sync ios` y abrir el proyecto?". Si la
-respuesta es no, escalar a dedicado. No comprometerse a un plan anual antes de
-haber compilado una vez.
+⚠️ **Corregido el 30/08: acá se decía que un build de Capacitor "necesita Node,
+npm y CocoaPods", y de ahí se deducía que sin root el plan barato no serviría.
+Las dos mitades estaban mal.**
+
+- **CocoaPods ya no es el default.** Capacitor 8 *"now creates iOS SPM projects
+  as default"* (Swift Package Manager). CocoaPods sólo entra si se elige a
+  propósito —hay una bandera `--packagemanager CocoaPods`— o si algún plugin
+  concreto lo exige. O sea que la dependencia que motivaba el miedo a no tener
+  root **puede directamente no existir**.
+- **Y no hay que afirmar que hace falta root antes de probarlo.** Que el
+  proveedor no lo ofrezca no equivale a que el build no corra: lo que importa es
+  si el entorno **ya tiene** lo necesario, no quién puede instalarlo.
+
+**Lo que sí hay que verificar de ese plan barato, y es otra lista:**
+
+| # | Qué verificar | Por qué |
+|---|---|---|
+| 1 | Versión de **macOS** capaz de correr Xcode 26 | Capacitor 8 lo exige; un plan con macOS viejo no sirve por más root que dé |
+| 2 | **Xcode 26 disponible** en la imagen | no alcanza con que la máquina lo aguante |
+| 3 | Posibilidad de usar **Node 22 o superior** | Capacitor 8 *"requires NodeJS 22 or greater"* |
+| 4 | Que se pueda correr `npx cap sync ios` y abrir el proyecto | la prueba de fuego, y la única que vale |
+
+🟡 **Recomendación: empezar por el plan más económico que cumpla esas cuatro, y
+escalar a dedicado SÓLO ante un bloqueo demostrado.** No comprometerse a un plan
+anual antes de haber compilado una vez.
 
 ⚠️ **Sobre los precios: son referencias, no tarifas.** Varían por proveedor,
 plan, disponibilidad, región e impuestos, y cambian sin aviso. Los verificados
@@ -715,9 +789,12 @@ va a pagar.
 
 | Qué | Estado | Nota |
 |---|---|---|
-| macOS + Xcode | ❌ | **remoto sirve**; ver arriba |
+| macOS + **Xcode 26 o superior** | ❌ | lo exige Capacitor 8 (§14). **Remoto sirve**; ver arriba |
+| **Node 22 o superior** | ❌ | lo exige Capacitor 8. Vale para la Mac remota igual que para la máquina local |
+| **Deployment target iOS 15** | — | mínimo de Capacitor 8. No es trabajo: es el piso que queda declarado |
+| **Gestor de paquetes iOS** | — | **Swift Package Manager por defecto** en Capacitor 8. CocoaPods sólo si se elige explícitamente o si un plugin concreto lo pide |
 | Apple Developer Program | ❌ | **US$99 por año de membresía**, según la propia Apple (§14). Se renueva. Los precios pueden variar por región y se muestran en moneda local al inscribirse. Individual: figura el nombre real como vendedor. Organización: hace falta D-U-N-S |
-| **iPhone físico** | 🔵 | 🟡 **fuertemente recomendado** para la verificación final. El simulador no valida lo que más riesgo tiene: la purga de `localStorage` de WKWebView, las safe areas reales, el teclado, los Universal Links y el embed de YouTube |
+| **iPhone físico** | 🔵 | 🟡 **fuertemente recomendado, NO obligatorio.** Corregido el 30/08: **no hace falta para compilar ni para enviar el binario**. Hace falta para **validar con responsabilidad** — ver §7.c, que detalla qué no reproduce bien el simulador. Publicar sin haberlo probado en un iPhone es una decisión de riesgo, no un impedimento técnico |
 | Certificados y perfiles | ❌ | Xcode los gestiona con "automatically manage signing" |
 | AASA en `yump.ar` | ❌ | para Universal Links, con el Team ID |
 | `ITSAppUsesNonExemptEncryption = false` | ❌ | 🟡 declararlo en `Info.plist` desde el principio: sólo se usa HTTPS estándar, y sin esto Apple pregunta lo mismo en **cada** subida |
@@ -730,11 +807,27 @@ fija una acá.
 
 ### 7.c Dispositivos físicos
 
-🔴 **Hace falta al menos un Android real y un iPhone real.** Emulador y
-simulador no validan justamente lo que más riesgo tiene acá: la purga de
-`localStorage` de iOS, las safe areas en un teléfono con notch, el
-comportamiento real del teclado, los deep links, el embed de YouTube y el
-rendimiento del Home (que hoy tarda ~2,9 s con todo cacheado).
+**No son la misma exigencia, y mezclarlas confunde. Corregido el 30/08.**
+
+🔴 **Android físico: OBLIGATORIO.** Es criterio de salida del prototipo
+(Etapa 2). Sin un teléfono real no se aprueba nada: el emulador no resuelve el
+punto abierto del tráiler —que depende de la identidad de una build firmada—,
+ni el arranque en frío, ni el comportamiento real del teclado.
+
+🟡 **iPhone físico: fuertemente recomendado, NO obligatorio.** No hace falta
+para compilar ni para enviar el binario. Hace falta para validar con
+responsabilidad antes de publicar.
+
+**Qué NO valida bien el simulador de iOS**, que es lo que hay que pesar al
+decidir:
+
+| Qué | Por qué el simulador no alcanza |
+|---|---|
+| **Safe areas reales** | no reproduce el notch ni el home indicator de un dispositivo concreto |
+| **Teclado** | el comportamiento real, y la app depende de `interactiveWidget` |
+| **Universal Links** | la asociación con el dominio se resuelve distinto |
+| **Rendimiento** | corre sobre el CPU de la Mac; el Home tarda ~2,9 s con todo cacheado y eso ahí no se mide |
+| **Comportamiento del WebView** | la purga de `localStorage` bajo presión de memoria, y el embed de YouTube |
 
 ---
 
@@ -830,7 +923,8 @@ de cuánto de la Etapa 3 resultó realmente reutilizable, de si el plan de Mac
 remota administrado alcanzó o hubo que ir a dedicado, y de la curva de Xcode,
 que no se puede estimar sin haberla tocado. Un número ahora sería inventado.
 Lo que sí está decidido es **qué incluye** cuando se estime: adaptación,
-pruebas en iPhone físico, TestFlight y revisión.
+pruebas —en iPhone físico si el dueño decide conseguir uno—, TestFlight y
+revisión.
 
 ### Etapa 1 — Auditoría y documentación cerradas ✅
 
@@ -848,7 +942,11 @@ Lo que **tiene que validar** —y esta lista es el criterio de salida—:
 - [ ] consumo de `https://app.yump.ar/api` (con el CORS de §3.5);
 - [ ] rutas dinámicas de títulos y personas (§2.b — el que rompe en silencio);
 - [ ] autenticación y persistencia de sesión;
-- [ ] tráiler de YouTube en el WebView (§3.4 — el error 153);
+- [ ] **tráiler de YouTube en el WebView, en un Android físico y con build
+      firmada** (§3.4). Es el punto abierto con más incertidumbre: hay que
+      determinar **qué mecanismo de identificación acepta YouTube** (`Referer`
+      del WebView, URL base, `origin`, WebView Media Integrity), no dar por
+      buena ninguna hipótesis de antemano;
 - [ ] compartir con URL canónica;
 - [ ] enlaces externos;
 - [ ] botón Atrás;
@@ -870,7 +968,8 @@ Código de este repo, detrás de banderas, **sin romper la web**:
 - Helper `hrefTitulo`/`hrefPersona` (10 call sites, §2.b).
 - `abrirExterno()` con `@capacitor/browser` (~6 call sites, §4.e).
 - `@capacitor/share` (§4.h — la URL ya sale canónica).
-- El `origin` del embed de YouTube pasa a `SITIO_PUBLICO` (§3.4).
+- El embed de YouTube: aplicar **lo que haya resultado de la Etapa 2**, no una
+  solución elegida de antemano (§3.4).
 - Gatear `InstallPrompt`, `ServiceWorkerRegister`, `UpdateToast`; revisar
   `StandaloneWelcome` (§9).
 - Adaptador de `@capacitor/preferences` para la sesión y `sc:platforms` (§4.a).
@@ -913,15 +1012,20 @@ son deuda pendiente.
 
 ### Etapa 8 — Prototipo iOS con Mac remota (estimación pendiente)
 
-- Contratar el plan y **verificar primero lo de §7.b**: ¿se puede correr
-  `npx cap sync ios` y abrir el proyecto? Esa es la pregunta que decide si el
-  plan barato alcanza.
+- **Empezar por el plan más económico que cumpla las cuatro condiciones de
+  §7.b** (macOS apto para Xcode 26, Xcode 26 disponible, Node 22, y que corra
+  `npx cap sync ios`). Escalar a dedicado **sólo ante un bloqueo demostrado**,
+  no preventivamente.
 - Proyecto iOS, `Info.plist` (`ITSAppUsesNonExemptEncryption`), splash, íconos.
 - AASA + Universal Links.
-- Safe areas y teclado en un iPhone físico.
+- Safe areas y teclado — 🟡 en un iPhone físico si hay uno disponible; si no,
+  queda como riesgo asumido y declarado (§7.c).
 - 🔍 Probar a propósito la **purga de `localStorage`** y confirmar que
   `@capacitor/preferences` la sobrevive.
-- 🔍 El embed de YouTube bajo `capacitor://` — donde se cobra la Etapa 3.
+- 🔍 El embed de YouTube bajo `capacitor://`: hay que **repetir la
+  determinación de la Etapa 2 en iOS**, porque el mecanismo para fijar el
+  `Referer` es propio de cada plataforma y lo que funcione en Android no se
+  traslada solo.
 
 ### Etapa 9 — TestFlight y App Store (estimación pendiente) 🔵
 
@@ -948,7 +1052,7 @@ Etapa 7. Lo que queda:
 
 | # | Bloqueante | Impacto |
 |---|---|---|
-| 1 | **Target API 36** | Google Play lo exige a apps nuevas desde el **31/08/2026**. Se resuelve solo usando **Capacitor 8**; la prórroga al 01/11 es para apps existentes y a Yump no le aplica |
+| 1 | **Target API 36** | Google Play lo exige a apps nuevas desde el **31/08/2026**. Se cubre creando el proyecto con **Capacitor 8** **y verificando** `compileSdkVersion`/`targetSdkVersion` = 36 en `android/variables.gradle` (§7.a). No es automático: es un chequeo de la Etapa 2. *La prórroga al 01/11 es sólo para apps ya publicadas; a Yump no le aplica.* |
 | 2 | **Tipo de cuenta de Play** 🔵 | personal post-13/11/2023 = 12 testers × 14 días corridos antes de producción |
 | 3 | **Identificador definitivo** 🔵 | irreversible después de la primera subida (§6) |
 
@@ -968,7 +1072,7 @@ Etapa 7. Lo que queda:
 | **`InstallPrompt` dentro de la app** | **alta** | medio | una condición, pero hay que acordarse (§9) |
 | **Rutas dinámicas rompen al tocar una card** | **alta** si no se ataca | alto | §2.b, Etapa 2 lo valida |
 | **Desfasaje cáscara/API** | media | alto | regla de compatibilidad escrita + `minVersionApp` (§4.i) |
-| **YouTube error 153 en el contenedor** | media | medio | `SITIO_PUBLICO` como `origin` (§3.4) |
+| **YouTube error 153 en el contenedor** | 🔍 **desconocida** | **alto** — es una función visible del producto | ⚠️ **sin mitigación confirmada.** Se determina en la Etapa 2, en un Android físico con build firmada (§3.4). Antes decía "una línea con `SITIO_PUBLICO`": era falso |
 | **CORS abierto = API scrapeable** | media | medio | allowlist de dos orígenes, no comodín (§3.5) |
 | **El plan de Mac administrado no deja compilar** | 🔍 media | medio | verificarlo en el spike de la Etapa 8 antes de pagar de más (§7.b) |
 | **Rechazo de Apple por 4.2** | media | alto | las 5 integraciones nativas de §5.b — **pero recién en la Etapa 9** |
@@ -1040,11 +1144,15 @@ y una cita sin fecha envejece sin avisar.
 | Qué se confirmó | Fuente |
 |---|---|
 | `server.url` **"is not intended for use in production"**; `iosScheme` no admite `http`/`https`; se recomienda dejar `hostname` en `localhost` por el contexto seguro | [Capacitor — Configuration](https://capacitorjs.com/docs/config) |
-| **Capacitor 8 → target SDK 36**, y *"Capacitor Android does not support custom target SDK versions"* | [Capacitor — Setting Android Target SDK](https://capacitorjs.com/docs/android/setting-target-sdk) |
+| El target SDK se especifica en **`/android/variables.gradle`**; *"Capacitor Android does not support custom target SDK versions. Each version of Capacitor Android requires a specific target SDK version and support is only provided for that matching version"*; y hay que **mantener la versión mayor al día** porque cada una trae el SDK que Google pide ese año | [Capacitor — Setting Android Target SDK](https://capacitorjs.com/docs/android/setting-target-sdk) |
+| **Capacitor 8**: *"requires NodeJS 22 or greater"*, *"requires Xcode 26.0+"*, deployment target mínimo **iOS 15.0**, `minSdkVersion = 24`, `targetSdkVersion = 36`, `compileSdkVersion = 36`, y *"Capacitor CLI now creates iOS SPM projects as default"* | [Capacitor — Updating to 8.0](https://capacitorjs.com/docs/updating/8-0) |
 | Apps nuevas y actualizaciones deben apuntar a **API 36 desde el 31/08/2026**; prórroga al **01/11/2026** solicitable **para apps existentes** | [Google Play — Target API level requirements](https://developer.android.com/google/play/requirements/target-sdk) |
 | Cuentas personales creadas después del **13/11/2023**: **12 testers** opted-in de forma continua **14 días** antes de pedir acceso a producción | [Play Console Help — App testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465) |
 | Apple Developer Program: **99 USD por año de membresía**; puede variar por región y se muestra en moneda local al inscribirse. Organizaciones necesitan **D-U-N-S** | [Apple — Membership Details](https://developer.apple.com/programs/whats-included/) · [Enroll](https://developer.apple.com/programs/enroll/) |
 | Xcode Cloud: requiere **Xcode 15+** y membresía; **los workflows se configuran desde Xcode**. Incluye 25 horas de cómputo al mes | [Apple — Get started with Xcode Cloud](https://developer.apple.com/xcode-cloud/get-started/) |
+
+| **Error 153** = *"the request does not include the `HTTP Referer` header or equivalent API Client identification"*; el parámetro `origin` es una medida de seguridad (*"protects against malicious third-party JavaScript being injected into your page"*), **no** el mecanismo de identificación | [YouTube — IFrame Player API Reference](https://developers.google.com/youtube/iframe_api_reference) |
+| *"API Clients that use the YouTube embedded player must provide identification through the `HTTP Referer` request header"*; en apps móviles ese encabezado viene vacío y hay que fijarlo con métodos de la plataforma, con una URL HTTPS cuyo dominio sea **el identificador de la app**; y hay que usar *"one of the OS-provided WebView types"* (Capacitor ya lo cumple) | [YouTube — Required Minimum Functionality](https://developers.google.com/youtube/terms/required-minimum-functionality) |
 
 ### Comerciales — ⚠️ referencias, NO tarifas
 

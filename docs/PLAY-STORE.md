@@ -243,10 +243,15 @@ detrás. Es del dueño y no bloquea nada.
 8. ⚠️ **CORREGIDO — las plataformas elegidas se transmiten al backend en casi
    toda la app, también para invitados.** Ver §1.
 
-**Sobre el plazo de API 36**: el requisito vence el **31/08/2026**, con prórroga
-solicitable hasta el 01/11/2026
+**Sobre el plazo de API 36**: el requisito rige desde el **31/08/2026**.
+⚠️ *Acá seguía la prórroga al 01/11/2026 como si fuera una opción de Yump. **No
+lo es**: esa prórroga es para apps YA publicadas, y Yump no existe todavía en
+Play. Se conserva la mención sólo como nota histórica.* La app nueva nace en
+API 36 y punto
 ([Target API level requirements](https://developer.android.com/google/play/requirements/target-sdk)).
-🔍 **VERIFICAR** en Play Console si el formulario de prórroga ya está disponible
+~~🔍 VERIFICAR en Play Console si el formulario de prórroga ya está
+disponible~~ → **pendiente eliminado el 30/08**: no aplica a una app nueva
+(ver arriba). No hay nada que verificar acá
 para tu cuenta.
 
 ---
@@ -1129,7 +1134,7 @@ alternativa A y el aviso, esa pregunta es mucho menos probable — 🟡 no impos
 
 | # | Ítem | Estado | Fuente |
 |---|---|---|---|
-| 1 | **Target API 36**, apps nuevas y updates, **31/08/2026** | ❌ no hay build. ⚠️ **La prórroga al 01/11/2026 es para apps que YA existen**: Yump es nueva y no le aplica. Se resuelve usando **Capacitor 8**, que apunta a SDK 36 — Capacitor no admite target SDK a medida (`docs/CAPACITOR.md` §7.a) | [Target API](https://developer.android.com/google/play/requirements/target-sdk) |
+| 1 | **Target API 36**, apps nuevas y updates, **31/08/2026** | ❌ no hay build. Se cubre creando el proyecto con **Capacitor 8** (cada versión mayor trae su target SDK y Capacitor no da soporte a valores a medida) **y verificando** `compileSdkVersion = 36` y `targetSdkVersion = 36` en `android/variables.gradle` — el archivo existe y hay que mirarlo, no se resuelve a ciegas (`docs/CAPACITOR.md` §7.a). *La prórroga al 01/11/2026 es sólo para apps ya publicadas: a Yump no le aplica.* | [Target API](https://developer.android.com/google/play/requirements/target-sdk) |
 | 2 | AAB firmado + Play App Signing | ❌ | — |
 | 3 | `assetlinks.json` en `/.well-known/` | ❌ sigue haciendo falta, pero **ya no por TWA**: ahora es para los App Links de Android y el retorno de los mails de autenticación (`docs/CAPACITOR.md` §7.a) | — |
 | 4 | Política de privacidad con URL pública | ✅ `https://yump.ar/privacidad/`, en línea y auditada (28/08) | — |
@@ -1171,7 +1176,7 @@ Las diez de §4.c, más:
 | 1 | **Plan de Vercel** y retención real de Runtime Logs | Vercel → Settings | Escribir la retención en `/privacidad` sin inventarla |
 | 2 | **Plan de Supabase y política de backups / PITR** | Supabase → Settings → Database | Es lo que determina cuánto sobrevive un dato tras el borrado |
 | 3 | **Tipo de cuenta de Play y fecha de creación** | Play Console | Si aplica la prueba cerrada de 12/14. La documentación habla de *"personal developer accounts created after November 13, 2023"* y **no menciona** las cuentas de organización: no voy a afirmar que estén exentas |
-| 4 | **Formulario de prórroga de API 36** | Play Console | Si no se llega al 31/08 |
+| 4 | ~~Formulario de prórroga de API 36~~ | — | **ELIMINADO el 30/08.** Sólo aplica a apps ya publicadas; Yump es nueva y nace en API 36 |
 | 5 | **Región de alojamiento de Supabase** | Supabase → Settings | Transferencias internacionales en la política |
 
 ---

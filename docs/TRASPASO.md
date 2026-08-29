@@ -191,8 +191,9 @@ tuya, 🔍 verificar en un panel y 🟡 recomendación conservadora.
 
 1. **Target API 36**: Google Play lo exige a apps nuevas desde el 31/08/2026.
    ⚠️ *Acá decía que la prórroga al 01/11/2026 servía; es para apps que ya
-   existen, y Yump es nueva.* Se resuelve usando **Capacitor 8**, que apunta a
-   SDK 36. Y **no existe ningún artefacto Android**: sin `assetlinks.json` y sin
+   están publicadas, y Yump no existe todavía en Play. **No es un camino
+   disponible.*** Se cubre creando el proyecto con **Capacitor 8** y
+   **verificando** `targetSdkVersion = 36` en `android/variables.gradle`. Y **no existe ningún artefacto Android**: sin `assetlinks.json` y sin
    proyecto nativo. ⚠️ *La mención a `twa-manifest.json` y Bubblewrap quedó sin
    efecto: TWA está descartado (ver `docs/CAPACITOR.md` §0.a).*
 2. **La app no atribuye a TMDB en ningún lado**, y ya está publicada.
