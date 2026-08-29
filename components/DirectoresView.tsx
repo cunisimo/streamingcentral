@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PersonCard from "./PersonCard";
 import { useEstadoSimple } from "@/hooks/useEstadoSimple";
 import type { UIPerson } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 const PAGE = 20;
 // Normaliza para búsqueda insensible a acentos y mayúsculas.
@@ -41,7 +42,7 @@ export default function DirectoresView() {
       return;
     }
     let alive = true;
-    fetch("/api/directores")
+    fetch(apiUrl("/api/directores"))
       .then((r) => r.json())
       .then((j) => { if (alive) { setPeople(j.people ?? []); setLoading(false); } })
       .catch(() => alive && setLoading(false));

@@ -6,6 +6,7 @@ import { useAuth } from "./AuthContext";
 import TitleCard from "./TitleCard";
 import type { ItemRef } from "@/lib/userdata";
 import type { UITitle } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 export default function UserShelf({
   title, href, load, empty, full,
@@ -32,7 +33,7 @@ export default function UserShelf({
       const refs = await load();
       if (!refs.length) { if (alive) setItems([]); return; }
       const q = refs.map((r) => `${r.tipo}:${r.tmdb_id}`).join(",");
-      const res = await fetch(`/api/cards?items=${encodeURIComponent(q)}`);
+      const res = await fetch(apiUrl(`/api/cards?items=${encodeURIComponent(q)}`));
       const data = await res.json().catch(() => ({ items: [] as UITitle[] }));
       if (alive) setItems((data.items as UITitle[]) ?? []);
     })();

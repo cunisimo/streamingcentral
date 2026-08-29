@@ -61,10 +61,10 @@ test("llegan las SEIS de aplicación, ni una más ni una menos", () => {
   const app = Object.keys(env).filter((k) => k === "CAPACITOR" || k.startsWith("NEXT_PUBLIC_"));
   assert.deepEqual(app.sort(), [
     "CAPACITOR",
-    "NEXT_PUBLIC_API_BASE",
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_YUMP_API_BASE",
     "NEXT_PUBLIC_YUMP_NATIVO",
   ]);
 });

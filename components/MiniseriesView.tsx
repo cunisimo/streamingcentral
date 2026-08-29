@@ -7,6 +7,7 @@ import { useOnline } from "@/hooks/useOnline";
 import { useListaPaginada } from "@/hooks/useListaPaginada";
 import { MINISERIES_TITULO } from "@/lib/miniseries";
 import type { UITitle } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 // "Ver todas" del riel de miniseries.
 //
@@ -46,7 +47,7 @@ export default function MiniseriesView() {
     const myReq = ++reqId.current;
     setLoading(true);
     try {
-      const res = await fetch(`/api/miniseries?page=${p}&providers=${platforms.join(",")}`);
+      const res = await fetch(apiUrl(`/api/miniseries?page=${p}&providers=${platforms.join(",")}`));
       const j = await res.json();
       if (myReq !== reqId.current) return; // respuesta obsoleta: descartar
       const got: UITitle[] = j.items ?? [];

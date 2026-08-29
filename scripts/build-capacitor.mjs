@@ -93,7 +93,7 @@ export const APP_DESDE_ENV = [
   "NEXT_PUBLIC_SITE_URL",
 ];
 /** Públicas de la aplicación que arma este script. */
-export const APP_DEL_SCRIPT = ["CAPACITOR", "NEXT_PUBLIC_YUMP_NATIVO", "NEXT_PUBLIC_API_BASE"];
+export const APP_DEL_SCRIPT = ["CAPACITOR", "NEXT_PUBLIC_YUMP_NATIVO", "NEXT_PUBLIC_YUMP_API_BASE"];
 
 /**
  * Operativas del sistema. Sin ellas Next no arranca en Windows.
@@ -136,7 +136,7 @@ export function entornoDelBuild(apiBase, opts = {}) {
     ...operativasDelSistema(sistema),
     CAPACITOR: "1",
     NEXT_PUBLIC_YUMP_NATIVO: "1",
-    NEXT_PUBLIC_API_BASE: apiBase,
+    NEXT_PUBLIC_YUMP_API_BASE: apiBase,
   };
   const faltan = [];
   for (const k of APP_DESDE_ENV) {

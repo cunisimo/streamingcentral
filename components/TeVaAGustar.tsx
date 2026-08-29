@@ -12,6 +12,7 @@ import {
   type EstadoAviso,
 } from "./reco-descartes";
 import type { UITitle } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 // "Elegidas para vos" — el único riel personalizado, y solo para usuarios con
 // sesión. Se pide APARTE y DESPUÉS del Home: si tarda o falla, no aparece y el
@@ -93,7 +94,7 @@ export default function TeVaAGustar({ enHome }: { enHome: string[] }) {
 
         const excluir = clavesExcluidas(v, it, enHome);
 
-        const r = await fetch("/api/te-va-a-gustar", {
+        const r = await fetch(apiUrl("/api/te-va-a-gustar"), {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ senales, excluir, providers: platforms }),

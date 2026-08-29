@@ -6,6 +6,7 @@ import { itemRefs } from "@/lib/userdata";
 import { useRouletteSeen } from "@/hooks/useRouletteSeen";
 import RuletaCard from "./RuletaCard";
 import type { Escenario, RoulettePick } from "@/lib/roulette";
+import { apiUrl } from "@/lib/api-base";
 
 // Tope de `excluir` que se aplica ACÁ, antes de armar la URL — no alcanza con
 // el `MAX_EXCLUIR` de lib/roulette.ts, que recién actúa del lado del server:
@@ -78,7 +79,7 @@ export default function RuletaBanner() {
     const excluir = [...new Set([...mostrados, ...vistosIds])].slice(0, MAX_EXCLUIR);
     const url = `/api/ruleta?escenario=${e}&providers=${platforms.join(",")}`
       + (excluir.length ? `&excluir=${excluir.join(",")}` : "");
-    const r = await fetch(url);
+    const r = await fetch(apiUrl(url));
     if (!r.ok) throw new Error(String(r.status));
     const data = await r.json();
     const picks: RoulettePick[] = data.picks ?? [];

@@ -9,6 +9,7 @@ import { useEstadoSimple } from "@/hooks/useEstadoSimple";
 import { crearTicket, esParaMi, invalidar, type Ticket } from "@/hooks/ticket-vuelta";
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
 import type { UITitle, UIPerson, MediaType } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 type Filter = "todo" | "movie" | "tv" | "actores" | "directores";
 
@@ -84,7 +85,7 @@ export default function SearchView() {
   }, [idTicket]);
 
   useEffect(() => {
-    fetch("/api/genre-covers").then((r) => r.json()).then((j) => setCovers(j.covers ?? {})).catch(() => {});
+    fetch(apiUrl("/api/genre-covers")).then((r) => r.json()).then((j) => setCovers(j.covers ?? {})).catch(() => {});
   }, []);
 
   // búsqueda con debounce (desde 2 caracteres)
@@ -112,7 +113,7 @@ export default function SearchView() {
     timer.current = setTimeout(() => {
       // Las plataformas van para ORDENAR, no para filtrar: los resultados que
       // sí podés ver van arriba y el resto sigue apareciendo abajo.
-      fetch(`/api/search?q=${encodeURIComponent(term)}&providers=${platforms.join(",")}`)
+      fetch(apiUrl(`/api/search?q=${encodeURIComponent(term)}&providers=${platforms.join(",")}`))
         .then((r) => r.json())
         .then((j) => { setRes({ titles: j.titles ?? [], people: j.people ?? [] }); setLoading(false); })
         .catch(() => setLoading(false));
@@ -259,7 +260,7 @@ function BrowseTitles({ tipo, volvio, onDecidido }: {
 
   const load = useCallback((p: number, replace: boolean) => {
     setLoading(true);
-    fetch(buildUrl(p)).then((r) => r.json()).then((j) => {
+    fetch(apiUrl(buildUrl(p))).then((r) => r.json()).then((j) => {
       const nuevos: UITitle[] = j.items ?? [];
       setEnd(nuevos.length === 0);
       setItems((prev) => {
@@ -367,7 +368,7 @@ function BrowseActors({ volvio, onDecidido }: { volvio?: boolean; onDecidido?: (
 
   const load = useCallback((p: number) => {
     setLoading(true);
-    fetch(`/api/personas?page=${p}`).then((r) => r.json()).then((j) => {
+    fetch(apiUrl(`/api/personas?page=${p}`)).then((r) => r.json()).then((j) => {
       const nuevos: UIPerson[] = j.people ?? [];
       setHasMore(Boolean(j.hasMore));
       setPeople((prev) => {
@@ -451,7 +452,7 @@ function BrowseDirectors({ volvio, onDecidido }: { volvio?: boolean; onDecidido?
       setLoading(false);
       return;
     }
-    fetch("/api/directores").then((r) => r.json()).then((j) => {
+    fetch(apiUrl("/api/directores")).then((r) => r.json()).then((j) => {
       setPeople(j.people ?? []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -498,7 +499,7 @@ function ExploreList({ explore, onBack, volvio, onDecidido }: {
     }
     const url = `/api/discover?tipo=movie&country=${explore.country}&providers=${platforms.join(",")}`;
     setLoading(true);
-    fetch(url).then((r) => r.json()).then((j) => { setItems(j.items ?? []); setLoading(false); }).catch(() => setLoading(false));
+    fetch(apiUrl(url)).then((r) => r.json()).then((j) => { setItems(j.items ?? []); setLoading(false); }).catch(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase, inicial, explore, platforms]);
   const title = `${COUNTRIES[explore.country]?.flag} ${COUNTRIES[explore.country]?.name}`;

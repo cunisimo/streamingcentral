@@ -5,6 +5,7 @@ import OfflineState from "../pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
 import { useEstadoSimple } from "@/hooks/useEstadoSimple";
 import type { UIUpcoming } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 type Filtro = "all" | "movie" | "tv";
 
@@ -40,7 +41,7 @@ export default function UpcomingAllView() {
     setLoading(true);
     try {
       const mt = f === "all" ? "" : `mediaType=${f}&`;
-      const res = await fetch(`/api/upcoming?${mt}limit=100`);
+      const res = await fetch(apiUrl(`/api/upcoming?${mt}limit=100`));
       const j = await res.json();
       if (myReq !== reqId.current) return; // respuesta obsoleta
       if (!res.ok) throw new Error(j?.error ?? "error");

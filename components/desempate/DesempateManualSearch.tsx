@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlatforms } from "../PlatformsContext";
 import { estaEnTusPlataformas, ordenarPorDisponibilidad } from "./desempate-orden";
 import type { UITitle } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 // Mismo patrón de debounce que SearchView (250ms, desde 2 caracteres). Usa
 // /api/search (multi, sin filtrar por plataforma), pero acá sólo se puede
@@ -32,7 +33,7 @@ export default function DesempateManualSearch({
     if (timer.current) clearTimeout(timer.current);
     setLoading(true);
     timer.current = setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(term)}`)
+      fetch(apiUrl(`/api/search?q=${encodeURIComponent(term)}`))
         .then((r) => r.json())
         .then((j) => { setTitles(j.titles ?? []); setLoading(false); })
         .catch(() => setLoading(false));

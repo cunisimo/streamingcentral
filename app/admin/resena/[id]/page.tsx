@@ -33,6 +33,10 @@ export default function ResenaEditor({ params }: { params: { id: string } }) {
     if (!esNueva || !q.trim()) { setHits([]); return; }
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
+      // Relativa a propósito, sin `apiUrl`: `app/admin` NO viaja en el
+      // artefacto nativo —el staging de Capacitor lo excluye— así que este
+      // fetch sólo corre en la web, donde `/api/...` es same-origin.
+      // Ver lib/api-base.ts y el guard de lib/api-base.test.ts.
       fetch(`/api/admin-search?q=${encodeURIComponent(q)}`).then((r) => r.json()).then((j) => setHits(j.items ?? []));
     }, 300);
   }, [q, esNueva]);

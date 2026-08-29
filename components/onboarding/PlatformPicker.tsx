@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import ProviderCard from "./ProviderCard";
+import { apiUrl } from "@/lib/api-base";
 
 interface Provider { id: number; name: string }
 
@@ -12,7 +13,7 @@ export default function PlatformPicker({ selected, onToggle, onNone }:
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/providers")
+    fetch(apiUrl("/api/providers"))
       .then((r) => r.json())
       .then((j) => { if (alive) { setProviders(j.providers ?? []); setLoading(false); } })
       .catch(() => { if (alive) setLoading(false); });

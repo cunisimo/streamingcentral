@@ -6,6 +6,7 @@ import OfflineState from "./pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
 import { useListaPaginada } from "@/hooks/useListaPaginada";
 import type { UITitle, MediaType } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 export default function UltimosView() {
   const { platforms, ready } = usePlatforms();
@@ -38,7 +39,7 @@ export default function UltimosView() {
     const myReq = ++reqId.current;
     setLoading(true);
     try {
-      const res = await fetch(`/api/latest?tipo=${t}&page=${p}&providers=${platforms.join(",")}`);
+      const res = await fetch(apiUrl(`/api/latest?tipo=${t}&page=${p}&providers=${platforms.join(",")}`));
       const j = await res.json();
       if (myReq !== reqId.current) return; // respuesta obsoleta: descartar
       const got: UITitle[] = j.items ?? [];

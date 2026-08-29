@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { googleCalendarUrl, icsUrl } from "@/lib/calendar-links";
 import { platformByCode } from "@/lib/providers-ar";
 import type { MediaType, PlatformCode } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 // "Recordarme": agenda el estreno en el calendario del usuario.
 //
@@ -49,7 +50,18 @@ export default function RecordarButton({
     fecha,
     detalle: "Te lo recordás desde Yump.",
   });
-  const ics = icsUrl(tipo, id, plataforma);
+  // `apiUrl` se aplica UNA vez, acá, y no en cada uso. `ics` alimenta tres
+  // cosas —el `fetch` de validación, el `window.location.href` de la descarga y
+  // el `href` del `<a>`— y las tres apuntan al MISMO recurso: dejar una relativa
+  // y otra absoluta sería incoherente, y en el contenedor la navegación
+  // resolvería contra el bundle local, que no tiene `/api`.
+  //
+  // En la web `apiUrl` devuelve la ruta intacta, así que acá no cambia nada.
+  //
+  // ⚠️ Que la URL sea correcta NO alcanza para el contenedor: además hay que
+  // abrirla fuera del WebView. Eso es trabajo de CP9 (`@capacitor/browser`), no
+  // de CP3.
+  const ics = apiUrl(icsUrl(tipo, id, plataforma));
 
   // El .ics NO se arma como blob en el cliente: en iOS un `blob:` con contenido
   // de calendario abre de forma inconsistente, y por eso existe la ruta (ver su
