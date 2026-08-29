@@ -65,8 +65,11 @@ test("sin params tampoco", () => {
 });
 
 test("la ruta nativa lleva barra ANTES de la query: el export usa trailingSlash", () => {
-  // Sin la barra, resolver `/t` depende de que el servidor trate el directorio
-  // como index.html o redirija. Con ella no depende de nada. Ver lib/rutas.ts.
+  // ⚠️ Esto fija el CONTRATO DE FORMATO y nada más. No demuestra cómo se
+  // comporta ningún servidor: con `trailingSlash: true` el export emite
+  // `t/index.html`, y `/t/?...` es la forma que coincide con esa estructura.
+  // La compatibilidad real con el servidor interno de Capacitor se verifica en
+  // CP8. Ver el comentario de lib/rutas.ts.
   for (const href of [hrefTitulo("movie", 1, { nativo: true }), hrefPersona(1, { nativo: true })]) {
     assert.match(href, /^\/[tp]\/\?/, `${href} perdió la barra antes de la query`);
   }

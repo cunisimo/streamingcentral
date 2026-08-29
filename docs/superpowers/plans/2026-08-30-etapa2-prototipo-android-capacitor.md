@@ -91,13 +91,28 @@ final a `main`.** 🔵 La elección entre las dos opciones es del dueño.
 
 ### Dos comprobaciones que cerraron después
 
-1. **Los helpers emiten `/t/?…` y `/p/?…`, con barra antes de la query.** La
-   primera versión emitía `/t?…`. Medido: contra un servidor estricto esa forma
-   da **404**; contra uno que resuelve directorios, las dos dan 200 idéntico. O
-   sea que `/t?…` dependía de la cortesía del servidor. Con `trailingSlash: true`
-   la forma canónica es la de barra, y funciona en un conjunto de servidores
-   estrictamente mayor. Importa sobre todo para `RuletaCard`, que usa un `<a>`
-   —navegación completa, resuelta por el servidor— y no un `<Link>`.
+1. **Los helpers emiten `/t/?…` y `/p/?…`, con barra antes de la query.**
+
+   ⚠️ *Corrección: la primera redacción decía que esa forma "funciona en un
+   conjunto de servidores estrictamente mayor" y que "no depende de nada". **Las
+   dos afirmaciones eran falsas**, y la propia medición las contradecía: contra
+   el servidor estricto **las DOS formas dieron 404**, así que esa prueba no
+   distingue entre ellas.*
+
+   Lo demostrado, y nada más:
+
+   - `trailingSlash: true` genera `t/index.html` y `p/index.html`.
+   - `/t/?…` y `/p/?…` son las formas **canónicas elegidas porque coinciden con
+     esa estructura**.
+   - Funcionaron **sin redirección** en el servidor local que resuelve índices de
+     directorio.
+   - 🔍 **La compatibilidad real con el servidor interno de Capacitor sigue
+     PENDIENTE: se verifica en CP8.**
+   - La prueba automática fija el **contrato de formato**; no demuestra
+     comportamiento de servidores.
+
+   Interesa sobre todo para `RuletaCard`, que usa un `<a>` —navegación completa,
+   resuelta por el servidor— y no un `<Link>`.
 2. **El `fallback` del `<Suspense>` no podía ser `null`.** `useSearchParams`
    hace que Next marque el subárbol como renderizado en cliente, así que el HTML
    estático lleva el fallback: medido, `/categoria/terror` salía con un `<main>`

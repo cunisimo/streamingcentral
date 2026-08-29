@@ -22,20 +22,22 @@ interface Opciones {
   nativo?: boolean;
 }
 
-// ⚠️ LA BARRA ANTES DE LA QUERY NO SOBRA: `/t/?...`, no `/t?...`.
+// LA BARRA ANTES DE LA QUERY: `/t/?...`, no `/t?...`.
 //
 // El build de Capacitor usa `trailingSlash: true`, así que el export emite
-// `t/index.html` y NO emite `t.html`. Con `/t?...` la resolución depende de que
-// el servidor se dé cuenta de que `/t` es un directorio y busque su `index.html`
-// —o de que redirija a `/t/`—. Medido contra un servidor estricto: `/t?...` da
-// 404. Contra uno que resuelve directorios: las dos formas dan 200 idéntico.
+// `t/index.html` y `p/index.html`. `/t/?...` y `/p/?...` son las formas
+// **canónicas elegidas porque coinciden con esa estructura**.
 //
-// O sea que `/t/?...` funciona en un conjunto de servidores estrictamente mayor,
-// y no depende de ninguna redirección. El comportamiento del servidor interno
-// de Capacitor no está verificado todavía (es una comprobación de CP8), así que
-// se elige la forma que no necesita suponer nada. Cuesta un carácter.
+// Lo que se midió, y nada más: contra un servidor local que resuelve el
+// `index.html` de un directorio, las dos formas responden 200 **sin
+// redirección**. Contra un servidor estricto —que no resuelve directorios—
+// **las dos dan 404**, así que esa medición no distingue entre ellas.
 //
-// Importa sobre todo para `RuletaCard`, que usa un `<a>` y no un `<Link>`: eso
+// ⚠️ **La compatibilidad con el servidor interno de Capacitor sigue PENDIENTE**
+// y se verifica en CP8. Hasta entonces esto es una elección de forma canónica,
+// no una garantía de comportamiento.
+//
+// Interesa sobre todo para `RuletaCard`, que usa un `<a>` y no un `<Link>`: eso
 // es una navegación completa, resuelta por el servidor, no por el router.
 
 /** El href interno a la ficha de un título. */
