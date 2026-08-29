@@ -31,3 +31,11 @@ data/*
 # (~/.config/git/ignore), asi que en cualquier otro clon un `git add -A` lo
 # habria incluido. Aca la proteccion viaja con el repo.
 .claude/settings.local.json
+
+# Build de la cascara para Capacitor. Los tres son artefactos y se regeneran.
+# .capacitor-diagnostico: salida del export de DIAGNOSTICO (CP1).
+# .capacitor-build:       workspace de staging (CP2).
+# out-capacitor:          la cascara final, el webDir del contenedor.
+.capacitor-diagnostico/
+.capacitor-build/
+out-capacitor/

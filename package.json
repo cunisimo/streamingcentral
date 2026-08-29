@@ -9,7 +9,8 @@
     "lint": "next lint",
     "prebuild": "node scripts/stamp-sw.mjs",
     "pwa:assets": "node scripts/generate-pwa-assets.mjs",
-    "test": "node --test \"{lib,components,hooks}/**/*.test.ts\""
+    "test": "node --test \"{lib,components,hooks}/**/*.test.ts\"",
+    "build:capacitor": "node scripts/build-capacitor.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
