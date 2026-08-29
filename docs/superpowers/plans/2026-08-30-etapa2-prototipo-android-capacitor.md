@@ -122,6 +122,63 @@ final a `main`.** 🔵 La elección entre las dos opciones es del dueño.
 
 ---
 
+## ✅ CP3 — implementado el 30/08/2026, PENDIENTE DE AUDITORÍA
+
+⚠️ **Implementado, no integrado ni publicado.** Vive sólo en
+`spike/capacitor-android`, sin mergear y sin pushear. **Pendiente de auditoría
+del dueño / Codex.**
+
+`lib/api-base.ts` convierte rutas internas `/api/…` en absolutas cuando el build
+es nativo. Todo lo demás se devuelve intacto: URLs externas, rutas internas que
+no son de API, y la cadena vacía que `useApi` usa como "no pidas nada".
+
+### Las decisiones aplicadas
+
+| Decisión | Estado |
+|---|---|
+| Variable propia `NEXT_PUBLIC_YUMP_API_BASE` | ✅ |
+| **NO** reutilizar `NEXT_PUBLIC_SITE_URL` | ✅ con test que prueba que la ignora |
+| **SIN** fallback de ejecución | ✅ no hay default a `app.yump.ar` |
+| Falla el build si falta o es inválida (con `NEXT_PUBLIC_YUMP_NATIVO=1`) | ✅ verificado de punta a punta |
+| **HTTPS obligatorio** | ✅ `http://` se rechaza: el contenedor se sirve desde `https://localhost` y una API `http` sería contenido mixto |
+| CP3 usa `https://api-base.invalid` | ✅ sólo en el entorno local del spike |
+| La web sigue con `/api/…` relativo | ✅ y no necesita la variable |
+| `lib/compartir.ts` sin cambios | ✅ con guard |
+
+### Inventario real
+
+| Categoría | Cantidad | Detalle |
+|---|---|---|
+| Central | **1** | `components/useApi.ts:64`, cubre sus 8 consumidores |
+| Directas | **18** | en 13 archivos |
+| Fuera de un `fetch` | **1** | `components/RecordarButton.tsx` |
+| **Excepciones del guard** | **1** | `app/admin/resena/[id]/page.tsx` |
+
+⚠️ **Sobre `RecordarButton`, para no atribuir mal la adaptación:** `icsUrl()` se
+origina en `lib/calendar-links.ts`, **pero ese archivo NO se modificó**. La
+aplicación de `apiUrl()` ocurre **una sola vez, en
+`components/RecordarButton.tsx`**, al armar `ics`; esa URL alimenta después el
+`fetch` de validación y las dos navegaciones. Es un **caso especial
+correctamente adaptado**, **no una excepción del guard**.
+
+### El guard
+
+Recorre `app/`, `components/` y `hooks/` y falla si aparece un `fetch` cuyo
+primer argumento sea la ruta literal `/api/…` sin pasar por `apiUrl`.
+
+- **No analiza línea por línea.** Normaliza los espacios del archivo entero,
+  porque `fetch(` y la ruta pueden quedar en renglones distintos y un barrido
+  por línea daría un falso negativo justo con el caso que más importa.
+- **Cinco canarios** prueban que detecta lo malo (una línea, multilínea,
+  template literal multilínea) y que no marca lo bueno (`fetch(apiUrl(…))`,
+  `fetch(variableYaAdaptada)`).
+- **La única excepción es `app/admin`**, porque no viaja en el artefacto. Y la
+  prueba de excepciones **no se conforma con que el archivo exista**: verifica
+  que la llamada que justifica la exención **siga estando**. Si desaparece o
+  pasa por `apiUrl`, la exención queda huérfana y el test falla.
+
+---
+
 > El resto del documento describe lo que falta.
 
 **Base:** `main = origin/main = e9f8eaf` · **Next.js instalado: 14.2.35**
@@ -391,7 +448,7 @@ la web, inertes) y viajan al staging como cualquier otra ruta.
 `cwd = .capacitor-build`, y el contrato excluye `.env.local` (bien: evita que un
 secreto entre al staging). **Pero entonces Next no carga ningún `.env.local`**, y
 el script sólo inyectaba `CAPACITOR`, `NEXT_PUBLIC_YUMP_NATIVO` y
-`NEXT_PUBLIC_API_BASE`. Faltan tres variables públicas que el cliente necesita.
+`NEXT_PUBLIC_YUMP_API_BASE`. Faltan tres variables públicas que el cliente necesita.
 
 **Consecuencias si faltan:**
 
@@ -408,7 +465,7 @@ el script sólo inyectaba `CAPACITOR`, `NEXT_PUBLIC_YUMP_NATIVO` y
 4. Extrae por **allowlist** exactamente tres:
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `NEXT_PUBLIC_SITE_URL`.
-5. Suma `NEXT_PUBLIC_API_BASE` (del argumento), `NEXT_PUBLIC_YUMP_NATIVO=1` y
+5. Suma `NEXT_PUBLIC_YUMP_API_BASE` (del argumento), `NEXT_PUBLIC_YUMP_NATIVO=1` y
    `CAPACITOR=1`.
 6. 🔴 **Nunca transmite** `TMDB_READ_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`,
    `CRON_SECRET`, los tokens de Upstash ni ninguna otra variable server-only.
@@ -434,7 +491,7 @@ const APP_DESDE_ENV = [
   "NEXT_PUBLIC_SITE_URL",
 ];
 /** Variables de APLICACIÓN que arma el propio script. */
-const APP_DEL_SCRIPT = ["CAPACITOR", "NEXT_PUBLIC_YUMP_NATIVO", "NEXT_PUBLIC_API_BASE"];
+const APP_DEL_SCRIPT = ["CAPACITOR", "NEXT_PUBLIC_YUMP_NATIVO", "NEXT_PUBLIC_YUMP_API_BASE"];
 
 /**
  * Variables OPERATIVAS del sistema. Sin ellas Next no arranca en Windows.
@@ -477,7 +534,7 @@ function entornoDelBuild(apiBase, opts = {}) {
     ...operativasDelSistema(sistema),
     CAPACITOR: "1",
     NEXT_PUBLIC_YUMP_NATIVO: "1",
-    NEXT_PUBLIC_API_BASE: apiBase,
+    NEXT_PUBLIC_YUMP_API_BASE: apiBase,
   };
   const faltan = [];
   for (const k of APP_DESDE_ENV) {
@@ -557,7 +614,6 @@ test("llegan las SEIS variables de aplicación, ni una más ni una menos", () =>
   const app = Object.keys(env).filter((k) => k === "CAPACITOR" || k.startsWith("NEXT_PUBLIC_"));
   assert.deepEqual(app.sort(), [
     "CAPACITOR",
-    "NEXT_PUBLIC_API_BASE",
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "NEXT_PUBLIC_SUPABASE_URL",

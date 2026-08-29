@@ -128,6 +128,51 @@ test("build NATIVO con base inválida: FALLA", () => {
   }
 });
 
+// ============================================================================
+// La base nativa tiene que ser HTTPS
+// ============================================================================
+//
+// El contenedor Android sirve la cáscara desde `https://localhost`. Una llamada
+// desde ese contexto hacia una API `http://` es CONTENIDO MIXTO y el WebView la
+// bloquea. Aceptar `http` produciría un binario que pasa el build y no sirve
+// para nada en ejecución, que es el peor de los errores posibles: se descubre
+// en el teléfono.
+
+test("build NATIVO rechaza http://, aunque sea el dominio real", () => {
+  const r = enProceso({ NEXT_PUBLIC_YUMP_NATIVO: "1", NEXT_PUBLIC_YUMP_API_BASE: "http://app.yump.ar" });
+  assert.notEqual(r.status, 0, "aceptó http://app.yump.ar");
+  assert.match(r.stderr, /NEXT_PUBLIC_YUMP_API_BASE/);
+  assert.match(r.stderr, /HTTPS/i, "el mensaje tiene que decir HTTPS");
+});
+
+test("build NATIVO rechaza http://localhost:3000, el caso de desarrollo", () => {
+  const r = enProceso({ NEXT_PUBLIC_YUMP_NATIVO: "1", NEXT_PUBLIC_YUMP_API_BASE: "http://localhost:3000" });
+  assert.notEqual(r.status, 0, "aceptó http://localhost:3000");
+  assert.match(r.stderr, /NEXT_PUBLIC_YUMP_API_BASE/);
+});
+
+test("build NATIVO acepta https://api-base.invalid", () => {
+  const r = enProceso({ NEXT_PUBLIC_YUMP_NATIVO: "1", NEXT_PUBLIC_YUMP_API_BASE: "https://api-base.invalid" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(JSON.parse(r.stdout).API_BASE, "https://api-base.invalid");
+});
+
+test("el mensaje de rechazo NO imprime el valor recibido", () => {
+  const r = enProceso({
+    NEXT_PUBLIC_YUMP_NATIVO: "1",
+    NEXT_PUBLIC_YUMP_API_BASE: "http://valor-que-no-debe-aparecer.invalid",
+  });
+  assert.notEqual(r.status, 0);
+  assert.doesNotMatch(r.stderr, /valor-que-no-debe-aparecer/);
+});
+
+test("lo prohibido es http como BASE, no recibir una URL http como argumento", () => {
+  // `apiUrl` no valida: sólo decide si prefija. Una URL externa http se
+  // devuelve intacta, porque no empieza con `/api/`.
+  assert.equal(apiUrl("http://otro.example/api/home", BASE), "http://otro.example/api/home");
+  assert.equal(apiUrl("http://cualquier.cosa/x.jpg", BASE), "http://cualquier.cosa/x.jpg");
+});
+
 test("los procesos no se contaminan, en los dos órdenes", () => {
   const nativo = () => JSON.parse(
     enProceso({ NEXT_PUBLIC_YUMP_NATIVO: "1", NEXT_PUBLIC_YUMP_API_BASE: BASE }).stdout).API_BASE;
@@ -160,20 +205,71 @@ test("ignora NEXT_PUBLIC_SITE_URL: son variables con propósitos distintos", () 
 // este proyecto no tiene arnés de DOM (misma nota que `lib/legal.test.ts`).
 // Fija la regresión real: que alguien agregue un `fetch("/api/…")` nuevo y el
 // contenedor lo pida contra el bundle local, que no tiene `/api`.
-//
-// Las excepciones son DOS y están justificadas en el código:
-//
-//   app/admin/resena/[id]/page.tsx  →  `app/admin` no viaja en el artefacto
-//                                      nativo: el staging lo excluye.
-//   components/RecordarButton.tsx   →  ahí `apiUrl` se aplica UNA vez al armar
-//                                      `ics`, porque alimenta el fetch Y dos
-//                                      navegaciones al mismo recurso.
+
+/**
+ * ¿Hay en `src` un `fetch(` cuyo primer argumento sea la ruta LITERAL `/api/…`
+ * sin pasar por `apiUrl`?
+ *
+ * ⚠️ NO se analiza línea por línea, y no es un detalle: `fetch(` y la ruta
+ * pueden quedar en renglones distintos por el formateo, y un barrido por línea
+ * daría un falso negativo justo con el caso que más importa —una llamada nueva
+ * mal escrita—. Se normalizan los espacios de todo el archivo y se busca sobre
+ * el texto entero.
+ */
+export function llamadasDirectasSinAdaptar(src: string): string[] {
+  const plano = src.replace(/\s+/g, " ");
+  const re = /fetch\(\s*(["'`])\/api\//g;
+  const hits: string[] = [];
+  for (const m of plano.matchAll(re)) {
+    const desde = Math.max(0, m.index - 12);
+    hits.push(plano.slice(desde, m.index + 60).trim());
+  }
+  return hits;
+}
+
+// Las excepciones REALES son UNA. `RecordarButton` NO es excepción: cumple el
+// contrato, porque aplica `apiUrl` una sola vez al armar `ics`. Exceptuar todo
+// ese archivo permitiría meterle después un `fetch("/api/…")` mal escrito sin
+// que el guard lo viera.
 const EXCEPCIONES = new Map([
-  ["app/admin/resena/[id]/page.tsx", "app/admin no viaja en el artefacto nativo"],
-  ["components/RecordarButton.tsx", "apiUrl se aplica al armar `ics`, en un solo lugar"],
+  ["app/admin/resena/[id]/page.tsx", {
+    motivo: "app/admin NO viaja en el artefacto nativo: el staging lo excluye",
+    // Lo que justifica la exención tiene que SEGUIR EXISTIENDO. Si esa llamada
+    // desaparece o pasa por apiUrl, la exención queda huérfana y hay que
+    // sacarla: no alcanza con que el archivo exista.
+    debeContener: "/api/admin-search",
+  }],
 ]);
 
-test("ningún fetch cliente a /api se salta apiUrl, salvo las excepciones", () => {
+// ---------------------------------------------------------------- canarios
+// El guard tiene que detectar lo malo Y no marcar lo bueno. Sin esto, un
+// detector roto pasaría todos los días sin que nadie se entere.
+
+test("CANARIO: detecta fetch directo en una línea", () => {
+  assert.equal(llamadasDirectasSinAdaptar('fetch("/api/x")').length, 1);
+});
+
+test("CANARIO: detecta fetch directo partido en varias líneas", () => {
+  assert.equal(llamadasDirectasSinAdaptar('fetch(\n  "/api/x"\n)').length, 1);
+});
+
+test("CANARIO: detecta template literal partido en varias líneas", () => {
+  assert.equal(llamadasDirectasSinAdaptar("fetch(\n  `/api/x?q=1`\n)").length, 1);
+});
+
+test("CANARIO: NO marca fetch(apiUrl(...))", () => {
+  assert.deepEqual(llamadasDirectasSinAdaptar('fetch(apiUrl("/api/x"))'), []);
+  assert.deepEqual(llamadasDirectasSinAdaptar('fetch(\n  apiUrl("/api/x")\n)'), []);
+});
+
+test("CANARIO: NO marca fetch de una variable ya adaptada", () => {
+  assert.deepEqual(llamadasDirectasSinAdaptar("const ics = apiUrl(icsUrl(a, b)); await fetch(ics);"), []);
+  assert.deepEqual(llamadasDirectasSinAdaptar("fetch(url)"), []);
+});
+
+// ---------------------------------------------------------------- el barrido
+
+test("ningún fetch cliente a /api se salta apiUrl, salvo la excepción", () => {
   const raiz = process.cwd();
   const infractores: string[] = [];
   const mirar = (dir: string) => {
@@ -182,14 +278,9 @@ test("ningún fetch cliente a /api se salta apiUrl, salvo las excepciones", () =
       if (e.isDirectory()) { mirar(full); continue; }
       if (!/\.tsx?$/.test(e.name) || /\.test\.tsx?$/.test(e.name)) continue;
       const rel = path.relative(raiz, full).split(path.sep).join("/");
-      const src = fs.readFileSync(full, "utf8");
-      for (const linea of src.split("\n")) {
-        // Un fetch cuyo argumento arranca con la ruta literal /api/ y no pasa
-        // por apiUrl.
-        if (/fetch\(\s*[`"'"]\/api\//.test(linea) && !linea.includes("apiUrl")) {
-          if (EXCEPCIONES.has(rel)) continue;
-          infractores.push(`${rel}: ${linea.trim().slice(0, 70)}`);
-        }
+      if (EXCEPCIONES.has(rel)) continue;
+      for (const hit of llamadasDirectasSinAdaptar(fs.readFileSync(full, "utf8"))) {
+        infractores.push(`${rel}: …${hit}`);
       }
     }
   };
@@ -197,9 +288,22 @@ test("ningún fetch cliente a /api se salta apiUrl, salvo las excepciones", () =
   assert.deepEqual(infractores, [], `fetch a /api sin apiUrl:\n${infractores.join("\n")}`);
 });
 
-test("las excepciones siguen existiendo: si desaparecen, sobra la exención", () => {
-  for (const [archivo, motivo] of EXCEPCIONES) {
-    assert.ok(fs.existsSync(path.join(process.cwd(), archivo)),
-      `la excepción apunta a un archivo que ya no está: ${archivo} (${motivo})`);
+test("RecordarButton NO es excepción, y aun así el guard lo aprueba", () => {
+  // Cumple el contrato de verdad: `apiUrl` se aplica al armar `ics`.
+  const src = fs.readFileSync(path.join(process.cwd(), "components/RecordarButton.tsx"), "utf8");
+  assert.ok(!EXCEPCIONES.has("components/RecordarButton.tsx"), "no debe estar exceptuado");
+  assert.deepEqual(llamadasDirectasSinAdaptar(src), []);
+  assert.match(src, /apiUrl\(icsUrl\(/, "perdió la aplicación de apiUrl al armar `ics`");
+});
+
+test("cada excepción sigue conteniendo lo que la justifica", () => {
+  for (const [archivo, { motivo, debeContener }] of EXCEPCIONES) {
+    const full = path.join(process.cwd(), archivo);
+    assert.ok(fs.existsSync(full), `la excepción apunta a un archivo que ya no está: ${archivo}`);
+    const src = fs.readFileSync(full, "utf8");
+    assert.ok(src.includes(debeContener),
+      `${archivo} ya no contiene "${debeContener}": la exención quedó huérfana (${motivo})`);
+    assert.ok(llamadasDirectasSinAdaptar(src).length > 0,
+      `${archivo} ya no tiene una llamada directa: la exención sobra y hay que sacarla (${motivo})`);
   }
 });

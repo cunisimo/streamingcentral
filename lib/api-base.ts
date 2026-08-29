@@ -19,14 +19,23 @@
 // binario que apunta a producción sin que nadie lo haya decidido. Si el build
 // es nativo y la base falta o no sirve, el build FALLA acá mismo, en tiempo de
 // build, con el nombre de la variable en el mensaje.
+//
+// Y la base tiene que ser HTTPS: ver `baseValida`.
 import { ES_NATIVO } from "./plataforma.ts";
 
 const VARIABLE = "NEXT_PUBLIC_YUMP_API_BASE";
 
 /**
- * Valida la base. Tiene que ser una URL absoluta http(s) con host, y nada más:
- * sin path, sin query, sin fragmento. Un path acá se duplicaría con el `/api/…`
- * de cada llamada y el error saldría recién en el teléfono.
+ * Valida la base: URL absoluta **HTTPS**, con host, y nada más — sin path, sin
+ * query, sin fragmento.
+ *
+ * ⚠️ `http:` SE RECHAZA, y no es purismo. El contenedor Android sirve la cáscara
+ * desde `https://localhost`, así que una llamada desde ese contexto hacia una
+ * API `http://` es CONTENIDO MIXTO y el WebView la bloquea. Aceptarla produciría
+ * un binario que compila y no funciona: el error aparecería recién en el
+ * teléfono, que es el peor momento para descubrirlo.
+ *
+ * Un path tampoco: se duplicaría con el `/api/…` de cada llamada.
  */
 function baseValida(valor: string): boolean {
   let u: URL;
@@ -35,7 +44,7 @@ function baseValida(valor: string): boolean {
   } catch {
     return false;
   }
-  if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+  if (u.protocol !== "https:") return false;
   if (!u.hostname) return false;
   if (u.search || u.hash) return false;
   return u.pathname === "/" || u.pathname === "";
@@ -61,8 +70,10 @@ function resolverBase(): string {
   if (!baseValida(valor)) {
     // El mensaje NO incluye el valor: puede venir de un entorno y no se imprime.
     throw new Error(
-      `${VARIABLE} no es una base válida. Tiene que ser una URL absoluta http(s) ` +
-      `con host y sin path, query ni fragmento (por ejemplo https://api.ejemplo.com).`,
+      `${VARIABLE} no es una base válida. Tiene que ser una URL HTTPS absoluta ` +
+      `con host y sin path, query ni fragmento (por ejemplo https://api.ejemplo.com). ` +
+      `HTTP no se acepta: el contenedor se sirve desde https y una API http seria ` +
+      `contenido mixto, que el WebView bloquea.`,
     );
   }
   return valor.replace(/\/+$/, "");          // sin barra final: la pone la ruta
