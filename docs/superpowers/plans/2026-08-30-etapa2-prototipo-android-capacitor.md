@@ -181,7 +181,7 @@ primer argumento sea la ruta literal `/api/…` sin pasar por `apiUrl`.
 
 > El resto del documento describe lo que falta.
 
-**Base:** `main = origin/main = e9f8eaf` · **Next.js instalado: 14.2.35**
+**Base:** `main = origin/main = 397842c` · **Next.js instalado: 14.2.35**
 **Rama propuesta (NO creada):** `spike/capacitor-android`
 
 ---
@@ -617,7 +617,8 @@ test("llegan las SEIS variables de aplicación, ni una más ni una menos", () =>
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_YUMP_NATIVO",          // ← faltaba en la rev. 5: el test fallaba
+    "NEXT_PUBLIC_YUMP_API_BASE",
+    "NEXT_PUBLIC_YUMP_NATIVO",
   ]);
 });
 
