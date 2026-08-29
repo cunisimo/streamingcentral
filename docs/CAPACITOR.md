@@ -314,7 +314,7 @@ simple.**
 | Cáscara, CSS, JS, fuentes, íconos | **dentro del binario** (`webDir`) |
 | Origen del WebView | `https://localhost` (Android) · `capacitor://localhost` (iOS) — **los defaults** |
 | Datos | `https://app.yump.ar/api/...`, en Vercel, como hoy |
-| CORS | la API declara el origen del contenedor (§3.5) |
+| CORS | la API **selecciona por request** cuál de los dos orígenes del contenedor autoriza, más `Vary: Origin` (§3.5) |
 
 **`api.yump.ar` no hace falta.** Era una consecuencia del truco que se cayó: si
 el contenedor no reclama el host `app.yump.ar`, no hay colisión que resolver.
@@ -384,31 +384,87 @@ lo que está en discusión. Es un punto explícito del checklist de la Etapa 2.
 configuración del WebView o se integra de otra forma. Desactivar la función en
 silencio sería tapar el problema y perder una parte visible del producto.
 
-### 3.5 El CORS — 🔵 hay una decisión de seguridad escondida
+### 3.5 El CORS — ⚠️ REESCRITA el 30/08
 
 Con el origen del contenedor en `localhost`, **todas** las llamadas a
 `app.yump.ar/api` son cross-origin. Esto ya no es un "si hace falta": hace falta.
 
-La salida más rápida es `Access-Control-Allow-Origin: *` en `/api/:path*` desde
-`next.config.mjs`. Técnicamente es inocua para la autenticación: las dos rutas
-con sesión usan `Authorization: Bearer`, no cookies, así que el comodín no
-filtra nada.
+**El error que tenía esta sección.** Decía: *"una allowlist de dos orígenes…
+son dos valores fijos y conocidos de antemano, así que **no hay que echar el
+origen dinámicamente**"*. Eso es falso, y de una forma que se descubriría recién
+al probar en el teléfono.
+
+**`Access-Control-Allow-Origin` acepta UN solo origen, o `*`. No acepta una
+lista.** No existe forma de escribir los dos valores en una respuesta estática:
+mandar `https://localhost, capacitor://localhost` no es un valor válido y el
+navegador lo rechaza. Como no queremos `*`, **la API tiene que elegir, para cada
+request, cuál de los dos devolver**. O sea que sí o sí hay lógica por request.
+
+### El diseño, punto por punto
+
+Esto es **diseño, no implementación**: no se escribió una línea todavía.
+
+1. **Leer el encabezado `Origin`** del request.
+2. **Compararlo contra una allowlist de coincidencia EXACTA** — comparación de
+   cadena completa, no `startsWith`, no expresiones regulares, no "termina en":
+   - `https://localhost` (Android)
+   - `capacitor://localhost` (iOS)
+3. **Si coincide, devolver EXACTAMENTE ese valor** en `Access-Control-Allow-Origin`.
+   Uno solo, el que coincidió.
+4. **Agregar `Vary: Origin`.** Sin esto, cualquier caché intermedia puede
+   guardar la respuesta preparada para un origen y servírsela al otro, y ahí la
+   allowlist deja de existir en la práctica. Es el punto que más fácil se olvida
+   y el más difícil de diagnosticar después.
+5. **Responder el preflight `OPTIONS` sin ejecutar la lógica normal de la ruta.**
+   No es un detalle de prolijidad: `/api/home` puede tardar hasta 60 s y gastar
+   cientos de comandos de Upstash. Un preflight que caiga en el handler real
+   duplica ese costo por cada llamada.
+6. **Declarar, como mínimo:**
+   - **Los métodos que la API usa de verdad.** Auditado hoy: **23 `GET` y 2
+     `POST`**, más el `OPTIONS` del propio preflight. **No hay `PUT`, `PATCH`
+     ni `DELETE`** — no declarar métodos que no existen.
+   - `Access-Control-Allow-Headers: Authorization, Content-Type`
+   - Un `Access-Control-Max-Age` prudente **si** se decide cachear el preflight.
+7. **NO agregar `Access-Control-Allow-Credentials`** salvo necesidad demostrada.
+   La sesión viaja por `Authorization: Bearer`, no por cookies de autenticación
+   (§4.a). Activarlo sin necesitarlo además prohíbe el comodín y arrastra reglas
+   que no queremos.
+8. **A un origen desconocido no se le entregan encabezados CORS.** Y sobre todo:
+   **no reflejar cualquier `Origin` recibido.** Un reflector es funcionalmente
+   idéntico a `*`, pero parece seguro — que es peor.
+9. **Las peticiones normales de la web no cambian.** `app.yump.ar` pidiéndole a
+   `app.yump.ar/api` es **same-origin**: no necesita CORS, y muchas veces ni
+   siquiera manda `Origin`. Sin `Origin`, el diseño no hace nada. Esto es lo que
+   garantiza que la web de hoy no se entere del cambio.
+
+### Dónde vive esto — 🔵 deliberadamente sin cerrar
+
+La documentación **puede** proponer un helper reutilizable para no repetir los
+mismos encabezados en 25 rutas, y sería raro no hacerlo. Pero **dónde se
+integra** —en cada ruta, en un wrapper, en otra capa— **no se decide acá**: se
+decide midiendo el impacto en la Etapa 3, con el proyecto armado.
+
+⚠️ **Lo que sí sigue decidido: no meter `middleware.ts` preventivamente.** Hoy
+no hay ninguno (§1) y agregarlo pone latencia y costo en *todos* los requests,
+incluidos los de la web, que son la mayoría y no necesitan nada de esto.
+
+### La decisión de seguridad que sigue siendo del dueño — 🔵
+
+La salida más rápida sería `Access-Control-Allow-Origin: *` en `/api/:path*`
+desde `next.config.mjs`, sin lógica ninguna. Es inocua para la autenticación:
+las dos rutas con sesión usan `Bearer`, no cookies, así que el comodín no filtra
+nada.
 
 **Pero abre la API a cualquier sitio web.** Hoy cualquiera puede llamarla desde
 un servidor; el comodín agrega poder llamarla desde el navegador de cualquier
 página, que es lo que hace fácil el scraping. Y `/api/home` cuesta hasta 60 s y
-cientos de comandos de Upstash.
-
-🟡 Preferir una **allowlist de dos orígenes** (`https://localhost` y
-`capacitor://localhost`) en un wrapper de ruta. Son dos valores fijos y conocidos
-de antemano, así que no hay que echar el origen dinámicamente. **No** meter un
-`middleware.ts` sólo para esto: hoy no hay ninguno y agregarlo pone latencia y
-costo en *todos* los requests, incluidos los de la web.
+cientos de comandos de Upstash. 🟡 Por eso se recomienda la allowlist, aunque
+cueste lógica por request.
 
 ⚠️ La alternativa que Capacitor ofrece —activar `CapacitorHttp`, que parchea el
-`fetch` global para salir por vía nativa y esquivar CORS— **no se recomienda
-acá**: parchea también el fetch de `supabase-js`, y eso es una fuente conocida
-de fallas sutiles (§4.b).
+`fetch` global para salir por vía nativa y esquivar CORS entero— **no se
+recomienda acá**: parchea también el fetch de `supabase-js`, y eso es una fuente
+conocida de fallas sutiles (§4.b).
 
 ---
 
@@ -939,7 +995,12 @@ contesta si la opción B funciona. El proyecto se tira al terminar.
 Lo que **tiene que validar** —y esta lista es el criterio de salida—:
 
 - [ ] empaquetado de la cáscara local;
-- [ ] consumo de `https://app.yump.ar/api` (con el CORS de §3.5);
+- [ ] consumo de `https://app.yump.ar/api` con el CORS de §3.5, y **cinco
+      comprobaciones concretas**: un `GET` público; un `POST` con cuerpo JSON;
+      una llamada con `Authorization: Bearer`; el **preflight `OPTIONS`** (que
+      se dispara justo en las dos rutas con sesión, porque `Authorization` más
+      `Content-Type: application/json` deja de ser un request simple); y que
+      **un origen NO permitido no reciba autorización CORS**;
 - [ ] rutas dinámicas de títulos y personas (§2.b — el que rompe en silencio);
 - [ ] autenticación y persistencia de sesión;
 - [ ] **tráiler de YouTube en el WebView, en un Android físico y con build
@@ -964,7 +1025,8 @@ existan en el WebView de Android, **no** asumir que el origen es `https://`, y
 
 Código de este repo, detrás de banderas, **sin romper la web**:
 
-- Base URL de la API + CORS (§3.5).
+- Base URL de la API + CORS (§3.5). **Acá se decide dónde vive el helper**,
+  midiendo el impacto — no antes.
 - Helper `hrefTitulo`/`hrefPersona` (10 call sites, §2.b).
 - `abrirExterno()` con `@capacitor/browser` (~6 call sites, §4.e).
 - `@capacitor/share` (§4.h — la URL ya sale canónica).
@@ -1073,7 +1135,7 @@ Etapa 7. Lo que queda:
 | **Rutas dinámicas rompen al tocar una card** | **alta** si no se ataca | alto | §2.b, Etapa 2 lo valida |
 | **Desfasaje cáscara/API** | media | alto | regla de compatibilidad escrita + `minVersionApp` (§4.i) |
 | **YouTube error 153 en el contenedor** | 🔍 **desconocida** | **alto** — es una función visible del producto | ⚠️ **sin mitigación confirmada.** Se determina en la Etapa 2, en un Android físico con build firmada (§3.4). Antes decía "una línea con `SITIO_PUBLICO`": era falso |
-| **CORS abierto = API scrapeable** | media | medio | allowlist de dos orígenes, no comodín (§3.5) |
+| **CORS abierto = API scrapeable** | media | medio | allowlist de coincidencia exacta con selección por request, no comodín ni reflector (§3.5) |
 | **El plan de Mac administrado no deja compilar** | 🔍 media | medio | verificarlo en el spike de la Etapa 8 antes de pagar de más (§7.b) |
 | **Rechazo de Apple por 4.2** | media | alto | las 5 integraciones nativas de §5.b — **pero recién en la Etapa 9** |
 | **Purga de `localStorage` en iOS** | media | alto | `@capacitor/preferences`, y se diseña en la Etapa 3 aunque se pruebe en la 8 |
