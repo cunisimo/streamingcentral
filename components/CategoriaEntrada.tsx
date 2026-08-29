@@ -2,6 +2,7 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import CategoryView from "./CategoryView";
+import CategoriaSkeleton from "./CategoriaSkeleton";
 import type { MediaType } from "@/lib/types";
 
 // Lee el `?tipo=` de la URL EN EL CLIENTE y se lo pasa a `CategoryView`.
@@ -29,8 +30,14 @@ function Entrada({ slug, label }: { slug: string; label: string }) {
 export default function CategoriaEntrada({ slug, label }: { slug: string; label: string }) {
   // `useSearchParams` exige Suspense al prerenderizar, y con `output: "export"`
   // todas las páginas lo son. Sin el boundary, el build falla.
+  //
+  // ⚠️ El fallback NO puede ser `null`. Next marca este subárbol como
+  // "renderizado en cliente", así que el HTML estático lleva el fallback: con
+  // `null` la página salía literalmente en blanco hasta hidratar (medido: un
+  // `<main>` de 84 bytes). `CategoriaSkeleton` reproduce el encabezado y el
+  // toggle con el mismo marcado, así que no hay vacío ni salto.
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<CategoriaSkeleton label={label} />}>
       <Entrada slug={slug} label={label} />
     </Suspense>
   );

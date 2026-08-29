@@ -5,6 +5,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import PersonView from "@/components/PersonView";
 import ParametrosInvalidos from "@/components/ParametrosInvalidos";
+import ShelfSkeleton from "@/components/ShelfSkeleton";
 import { parseParamsPersona } from "@/lib/rutas";
 
 // La filmografía de una persona, por QUERY. Mismo motivo que `/t`: el universo
@@ -23,7 +24,11 @@ export default function PPage() {
     <>
       <TopBar />
       <main>
-        <Suspense fallback={null}>
+        {/* Mismo motivo que en categoría: con `fallback={null}` la página sale
+            vacía del export. `PersonView` ya arranca con su propio encabezado y
+            sus tarjetas en carga, así que el esqueleto de tarjetas mantiene el
+            alto y evita el salto. */}
+        <Suspense fallback={<ShelfSkeleton />}>
           <PDetalle />
         </Suspense>
       </main>

@@ -64,6 +64,49 @@ dueño. **CP1 queda aprobado con esa prueba diferida.**
 
 ---
 
+## ✅ CP2 — completado el 30/08/2026
+
+El export completa: 34 rutas, con `/t/`, `/p/`, 12 categorías y 6 listas, y sin
+`api`, `admin`, `titulo`, `persona`, `sw.js`, `sw/` ni `manifest.webmanifest`.
+
+### 🔴 BLOQUEA EL MERGE A PRODUCCIÓN: `/t` y `/p` existen también en el build web
+
+`app/t/page.tsx` y `app/p/page.tsx` son rutas normales de Next, así que **el
+build web las emite igual que el nativo** — verificado: aparecen en el listado de
+`npm run build`. En la web no se usan (los helpers devuelven `/titulo/…` y
+`/persona/…`), pero **son alcanzables e indexables**.
+
+El problema es de SEO, no funcional: `/t/?tipo=movie&id=278` y
+`/titulo/movie/278` mostrarían **el mismo contenido en dos URLs distintas**, que
+es contenido duplicado.
+
+**Antes de mergear a Producción hay que hacer una de las dos:**
+
+- [ ] Excluirlas de indexación (`robots` / `noindex` en esas dos rutas), **o**
+- [ ] Declarar un `canonical` de `/t` hacia `/titulo/[tipo]/[id]` y de `/p`
+      hacia `/persona/[id]`.
+
+⚠️ **Esto NO bloquea CP3** — el spike no se publica. **Sí bloquea el merge
+final a `main`.** 🔵 La elección entre las dos opciones es del dueño.
+
+### Dos comprobaciones que cerraron después
+
+1. **Los helpers emiten `/t/?…` y `/p/?…`, con barra antes de la query.** La
+   primera versión emitía `/t?…`. Medido: contra un servidor estricto esa forma
+   da **404**; contra uno que resuelve directorios, las dos dan 200 idéntico. O
+   sea que `/t?…` dependía de la cortesía del servidor. Con `trailingSlash: true`
+   la forma canónica es la de barra, y funciona en un conjunto de servidores
+   estrictamente mayor. Importa sobre todo para `RuletaCard`, que usa un `<a>`
+   —navegación completa, resuelta por el servidor— y no un `<Link>`.
+2. **El `fallback` del `<Suspense>` no podía ser `null`.** `useSearchParams`
+   hace que Next marque el subárbol como renderizado en cliente, así que el HTML
+   estático lleva el fallback: medido, `/categoria/terror` salía con un `<main>`
+   de **84 bytes**, literalmente en blanco hasta hidratar. Con
+   `CategoriaSkeleton` pasa a **5871 bytes**, con el encabezado, el título y el
+   toggle ya presentes. Mismo arreglo en `/p`.
+
+---
+
 > El resto del documento describe lo que falta.
 
 **Base:** `main = origin/main = e9f8eaf` · **Next.js instalado: 14.2.35**

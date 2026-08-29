@@ -21,9 +21,9 @@ test("web: las rutas públicas no cambian", () => {
 });
 
 test("contenedor: query, sin segmento dinámico", () => {
-  assert.equal(hrefTitulo("movie", 278, { nativo: true }), "/t?tipo=movie&id=278");
-  assert.equal(hrefTitulo("tv", 1396, { nativo: true }), "/t?tipo=tv&id=1396");
-  assert.equal(hrefPersona(123, { nativo: true }), "/p?id=123");
+  assert.equal(hrefTitulo("movie", 278, { nativo: true }), "/t/?tipo=movie&id=278");
+  assert.equal(hrefTitulo("tv", 1396, { nativo: true }), "/t/?tipo=tv&id=1396");
+  assert.equal(hrefPersona(123, { nativo: true }), "/p/?id=123");
 });
 
 test("sin opts resuelve con la bandera de build; en Node (web) da la ruta pública", () => {
@@ -32,7 +32,7 @@ test("sin opts resuelve con la bandera de build; en Node (web) da la ruta públi
 });
 
 test("acepta id numérico o string, sin cambiar el resultado", () => {
-  assert.equal(hrefTitulo("movie", "278", { nativo: true }), "/t?tipo=movie&id=278");
+  assert.equal(hrefTitulo("movie", "278", { nativo: true }), "/t/?tipo=movie&id=278");
   assert.equal(hrefPersona("123", { nativo: false }), "/persona/123");
 });
 
@@ -62,6 +62,14 @@ test("id no numérico no produce ruta", () => {
 
 test("sin params tampoco", () => {
   assert.equal(parseParamsTitulo(new URLSearchParams("")), null);
+});
+
+test("la ruta nativa lleva barra ANTES de la query: el export usa trailingSlash", () => {
+  // Sin la barra, resolver `/t` depende de que el servidor trate el directorio
+  // como index.html o redirija. Con ella no depende de nada. Ver lib/rutas.ts.
+  for (const href of [hrefTitulo("movie", 1, { nativo: true }), hrefPersona(1, { nativo: true })]) {
+    assert.match(href, /^\/[tp]\/\?/, `${href} perdió la barra antes de la query`);
+  }
 });
 
 // ============================================================================
@@ -96,11 +104,11 @@ test("proceso web: rutas públicas", () => {
 });
 
 test("proceso nativo: rutas de query", () => {
-  assert.deepEqual(enProceso(true), { t: "/t?tipo=movie&id=278", p: "/p?id=123" });
+  assert.deepEqual(enProceso(true), { t: "/t/?tipo=movie&id=278", p: "/p/?id=123" });
 });
 
 test("sin contaminación entre procesos, en los dos órdenes", () => {
-  assert.equal(enProceso(true).t, "/t?tipo=movie&id=278");
+  assert.equal(enProceso(true).t, "/t/?tipo=movie&id=278");
   assert.equal(enProceso(false).t, "/titulo/movie/278");
-  assert.equal(enProceso(true).t, "/t?tipo=movie&id=278");
+  assert.equal(enProceso(true).t, "/t/?tipo=movie&id=278");
 });

@@ -22,16 +22,32 @@ interface Opciones {
   nativo?: boolean;
 }
 
+// ⚠️ LA BARRA ANTES DE LA QUERY NO SOBRA: `/t/?...`, no `/t?...`.
+//
+// El build de Capacitor usa `trailingSlash: true`, así que el export emite
+// `t/index.html` y NO emite `t.html`. Con `/t?...` la resolución depende de que
+// el servidor se dé cuenta de que `/t` es un directorio y busque su `index.html`
+// —o de que redirija a `/t/`—. Medido contra un servidor estricto: `/t?...` da
+// 404. Contra uno que resuelve directorios: las dos formas dan 200 idéntico.
+//
+// O sea que `/t/?...` funciona en un conjunto de servidores estrictamente mayor,
+// y no depende de ninguna redirección. El comportamiento del servidor interno
+// de Capacitor no está verificado todavía (es una comprobación de CP8), así que
+// se elige la forma que no necesita suponer nada. Cuesta un carácter.
+//
+// Importa sobre todo para `RuletaCard`, que usa un `<a>` y no un `<Link>`: eso
+// es una navegación completa, resuelta por el servidor, no por el router.
+
 /** El href interno a la ficha de un título. */
 export function hrefTitulo(tipo: MediaType, id: number | string, opts: Opciones = {}): string {
   return esNativo(opts.nativo)
-    ? `/t?tipo=${tipo}&id=${id}`
+    ? `/t/?tipo=${tipo}&id=${id}`
     : `/titulo/${tipo}/${id}`;
 }
 
 /** El href interno a la ficha de una persona. */
 export function hrefPersona(id: number | string, opts: Opciones = {}): string {
-  return esNativo(opts.nativo) ? `/p?id=${id}` : `/persona/${id}`;
+  return esNativo(opts.nativo) ? `/p/?id=${id}` : `/persona/${id}`;
 }
 
 // Los parámetros se validan y NO se confía en la URL: `/t` y `/p` son rutas
