@@ -17,6 +17,17 @@ const LISTAS: Record<string, { endpoint: string; title: string }> = {
 // todo de una sola vez y estas dos paginan. El título de miniseries no se
 // escribe acá a propósito — sale de lib/miniseries.ts, que es de donde lo saca
 // también el riel, para que no puedan quedar distintos.
+// Las SEIS keys son finitas y conocidas, asi que esta ruta dinamica se puede
+// enumerar para el export estatico: las cuatro de LISTAS, "ultimos" y
+// miniseries. Es la diferencia con /titulo y /persona, que cubren todo TMDB.
+export function generateStaticParams() {
+  return [
+    ...Object.keys(LISTAS).map((key) => ({ key })),
+    { key: "ultimos" },
+    { key: MINISERIES_LISTA_KEY },
+  ];
+}
+
 export default function ListaPage({ params }: { params: { key: string } }) {
   if (params.key === "ultimos") {
     return (<><TopBar /><main><UltimosView /></main><BottomNav /></>);

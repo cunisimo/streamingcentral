@@ -5,6 +5,7 @@ import PlatformLogo from "./PlatformLogo";
 import QuickAddButton from "./QuickAddButton";
 import DescartarButton from "./DescartarButton";
 import type { UITitle } from "@/lib/types";
+import { hrefTitulo } from "@/lib/rutas";
 
 const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" /></svg>;
 
@@ -28,7 +29,7 @@ export default function TitleCard({ t, rank, onDescartar }: { t: UITitle; rank?:
   const fuera = ready && mine.length === 0;
   return (
     <div className={`card${fuera ? " off-plat" : ""}`}>
-      <Link className="card-link" href={`/titulo/${t.type}/${t.id}`}>
+      <Link className="card-link" href={hrefTitulo(t.type, t.id)}>
         <div className="poster" style={bg}>
           {t.hasEditorial && <div className="ed-flag">{star}Reseña SC</div>}
           {/* Número del ranking del Top, va abajo a la izquierda sobre el degradado */}
