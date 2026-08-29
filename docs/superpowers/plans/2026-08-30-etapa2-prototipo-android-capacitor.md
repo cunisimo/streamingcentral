@@ -1,0 +1,1490 @@
+# Etapa 2 — Prototipo Android con Capacitor (plan, revisión 6)
+
+> **No está empezado.** Sin Capacitor, sin `android/`, sin staging, sin export,
+> sin rama de spike, sin ningún checkpoint ejecutado.
+
+**Base:** `main = origin/main = e9f8eaf` · **Next.js instalado: 14.2.35**
+**Rama propuesta (NO creada):** `spike/capacitor-android`
+
+---
+
+## 0. Qué se corrigió en esta revisión
+
+| # | Problema de la rev. 3 | Corrección |
+|---|---|---|
+| 1 | La PWA se apagaba **después** del primer `cap run` | **CP6 nuevo, antes de Android.** El contenedor nunca se abre por primera vez con la PWA activa. Más un procedimiento de recuperación por si igual pasa |
+| 2 | `esNativo()` sin contrato; riesgo de hydration mismatch | **Bandera de build** `NEXT_PUBLIC_YUMP_NATIVO`, no detección runtime. CP2 **no importa `@capacitor/core`** |
+| 3 | Staging sin especificar; conflicto de `distDir`; `mklink` no es ejecutable de PowerShell | Contrato completo, ubicación canónica única, junction por **API de Node** |
+| 4 | "Instrumentar de la forma más simple que funcione" | Interfaces concretas + tabla de las 23 rutas |
+| 5 | La ventana de Preview quedaba abierta 5–7,5 sesiones | **Ventanas por sesión**, con apertura y cierre verificados |
+| 6 | `npm i -D` para los tres paquetes | Confirmado contra la doc: `core` y `android` van en **dependencies** |
+| 7 | "idéntico a `e9f8eaf`", "necesitará Producción", `preferences` como solución automática | Reformulados |
+
+### Y en la revisión 5
+
+| # | Problema de la rev. 4 | Corrección |
+|---|---|---|
+| 8 | El staging no lleva las variables públicas que el cliente necesita | **Allowlist explícita** leída del `.env.local` de la raíz con `util.parseEnv` (§3.4) |
+| 9 | El staging copia los tests pero no sus dependencias | **`tsconfig` derivado** dentro del staging que excluye tests (§3.5) |
+| 10 | La comprobación anti-hydration no demuestra nada | Reemplazada por **dos niveles**: módulos en procesos aislados + DOM real en CP7 (§2.1) |
+| 11 | Faltaba `InstallRow` en el inventario de PWA | Agregado, más **auditoría completa** de `components/pwa/*` (§CP6) |
+| 12 | CP1 podía dejar un `out/` ambiguo en la raíz | **Directorio de diagnóstico explícito y aislado** (§CP1) |
+
+**Hallazgos propios de la rev. 5:**
+
+- 🔴 **Next 14 NO documenta `typescript.tsconfigPath`.** La única opción bajo
+  `typescript` es `ignoreBuildErrors`, que **no se usa**. Pero no hace falta:
+  como el build corre desde una copia, **el staging tiene su propio
+  `tsconfig.json`** y el del repo no se toca (§3.5).
+- 🔴 **Son DOS tests, no uno,** los que importan fuera de las carpetas copiadas:
+  `lib/sin-dicebear.test.ts` → `../scripts/`, y **`lib/sync-reparar.test.ts` →
+  `../supabase/functions/…`**. El segundo no estaba reportado.
+- ⚠️ **`OfflineState` NO es una entrada de PWA**: lo importan 8 vistas y es el
+  estado sin conexión de la app. **Se conserva en el artefacto nativo.**
+
+**Hallazgo propio de la rev. 4:** al buscar qué rutas leen `Authorization`,
+el grep sensible a mayúsculas fallaba: **las rutas leen `"authorization"` en
+minúscula** (`req.headers.get("authorization")`). Verificado en
+`te-va-a-gustar:41` y `cuenta/eliminar:37`. Sólo esas dos leen el header desde
+el navegador, y **son las únicas que provocan preflight**.
+
+---
+
+## 1. Global
+
+| Regla | Valor |
+|---|---|
+| Nombre / `applicationId` | `Yump Dev` / `ar.yump.app.dev` |
+| Firma | debug |
+| Capacitor | **8** (target SDK 36; verificar en `variables.gradle`) |
+| Node | 22+ — la máquina tiene **v24.18.0** ✅ |
+| `server.url` | prohibido |
+| Producción | **no se toca en ningún checkpoint** |
+| PWA web | **no se afecta** |
+
+### El criterio de no-regresión de la web — reformulado
+
+🔴 **La rev. 3 decía "idéntico a `e9f8eaf`". Es falso**: al integrar helpers y
+rutas cambian hashes y artefactos. El criterio correcto, y el que se verifica en
+cada checkpoint:
+
+- [ ] `npm run build` **completa** sin errores.
+- [ ] `npm test` y `npx tsc --noEmit` verdes.
+- [ ] **Contratos públicos iguales**: `/titulo/movie/278` y `/persona/:id` siguen
+      existiendo y respondiendo; `SITIO_PUBLICO` sigue siendo `https://app.yump.ar`.
+- [ ] **PWA web funcional**: `headers()` presente, `/sw.js` servido,
+      `manifest.webmanifest` emitido.
+- [ ] **Ninguna URL ni bandera de Preview/nativo en el bundle web** — se verifica
+      grepeando `.next/static`.
+- [ ] **Ningún comportamiento nativo activo** en la web.
+
+---
+
+## 2. Contrato de plataforma — `lib/plataforma.ts`
+
+### El problema que resuelve
+
+Una detección puramente runtime (`Capacitor.isNativePlatform()`) daría **`false`
+durante el prerender** y **`true` después de hidratar**. Con `output: "export"`
+las páginas se prerenderizan en build, así que los 9 enlaces internos nacerían
+como `/titulo/movie/278` en el HTML estático y recién cambiarían a `/t?…` tras
+hidratar: **hydration mismatch**, y links rotos en el primer frame.
+
+### La solución: bandera de build, no detección runtime
+
+```ts
+// lib/plataforma.ts — NO importa @capacitor/core (que recién se instala en CP7)
+/**
+ * true cuando el bundle se construyó para el contenedor nativo.
+ * Sale de una bandera de BUILD, no de detección en runtime: así el prerender
+ * estático y el cliente producen el MISMO valor desde el primer render.
+ * En el build web es siempre false.
+ */
+export const ES_NATIVO: boolean = process.env.NEXT_PUBLIC_YUMP_NATIVO === "1";
+
+/** Igual que ES_NATIVO, en forma de función, para poder inyectar en tests. */
+export function esNativo(override?: boolean): boolean {
+  return override ?? ES_NATIVO;
+}
+```
+
+**Por qué una constante y no una función que mire `window`:**
+
+| Requisito | Cómo se cumple |
+|---|---|
+| build web: siempre web | la variable no se define → `false` |
+| export Capacitor: nativo en prerender **y** cliente | `build-capacitor` la inyecta en el proceso; Next la **inlinea** en el bundle, así que servidor y cliente ven lo mismo |
+| tests Node: configurable sin `window` | `esNativo(true/false)` |
+| nada persiste en el entorno | vive en el `env` del `spawnSync`, no en `.env.local` |
+| ninguna URL de Preview en el build web | se verifica por grep (§1) |
+| CP2 no importa un paquete de CP7 | **no hay import de Capacitor** |
+
+**`Capacitor.isNativePlatform()` NO se usa para generar URLs.** Si más adelante
+hace falta (por ejemplo para elegir plugin vs fallback en CP9), se usa **sólo en
+efectos de cliente**, nunca en render, y **`ES_NATIVO` tiene precedencia** para
+todo lo que afecte el HTML.
+
+**Pruebas (compilan contra esa firma):**
+```ts
+test("por defecto, sin la bandera, es web", () => assert.equal(esNativo(), false));
+test("el override explícito manda, sin tocar window", () => {
+  assert.equal(esNativo(true), true);
+  assert.equal(esNativo(false), false);
+});
+test("no depende de window", () => {
+  assert.equal(typeof globalThis.window, "undefined");   // Node
+  assert.equal(esNativo(), false);                       // no lanza
+});
+```
+
+### 2.1 Comprobación anti-hydration — en dos niveles
+
+🔴 **La rev. 4 proponía grepear el HTML exportado buscando `/t?tipo=` y
+descartando `/titulo/`. Eso no demuestra nada**, por dos motivos:
+
+1. **El Home prerenderizado no tiene cards.** Los datos llegan después por la
+   API, así que puede no haber **ningún** `/t?tipo=` en el HTML aunque el helper
+   sea perfecto. La ausencia no probaría un fallo.
+2. **`/titulo/` puede aparecer por motivos que no son un enlace mal generado**:
+   chunks, metadata, manifests de build, comentarios compilados.
+
+**Nivel 1 — automático, antes de Android (CP2).** Cargar los módulos en
+**procesos aislados**, que es lo único que prueba que la bandera se inlinea
+igual en los dos caminos:
+
+```js
+// lib/plataforma.test.ts — mismo patrón que scripts/config.test.mjs
+function enProceso(nativo) {
+  const code =
+    "import {ES_NATIVO} from './lib/plataforma.ts';" +
+    "import {hrefTitulo, hrefPersona} from './lib/rutas.ts';" +
+    "console.log(JSON.stringify({ES_NATIVO,t:hrefTitulo('movie',278),p:hrefPersona(123)}));";
+  const r = spawnSync(process.execPath, ["--input-type=module", "-e", code], {
+    encoding: "utf8", shell: false,
+    env: nativo ? { ...process.env, NEXT_PUBLIC_YUMP_NATIVO: "1" }
+                : { ...process.env, NEXT_PUBLIC_YUMP_NATIVO: "" },
+  });
+  assert.equal(r.status, 0, r.stderr);
+  return JSON.parse(r.stdout);
+}
+
+test("web: ES_NATIVO false y rutas públicas", () => {
+  const w = enProceso(false);
+  assert.equal(w.ES_NATIVO, false);
+  assert.equal(w.t, "/titulo/movie/278");
+  assert.equal(w.p, "/persona/123");
+});
+test("nativo: ES_NATIVO true y rutas de query", () => {
+  const n = enProceso(true);
+  assert.equal(n.ES_NATIVO, true);
+  assert.equal(n.t, "/t?tipo=movie&id=278");
+  assert.equal(n.p, "/p?id=123");
+});
+test("una ejecución no contamina a la otra", () => {
+  assert.equal(enProceso(true).ES_NATIVO, true);
+  assert.equal(enProceso(false).ES_NATIVO, false);   // el orden no importa
+  assert.equal(enProceso(true).ES_NATIVO, true);
+});
+test("no depende de window", () => {
+  assert.equal(typeof globalThis.window, "undefined");
+  assert.equal(esNativo(), false);
+});
+```
+
+**Nivel 2 — integral, en CP7, con datos reales de Preview.** Recién ahí hay
+cards que inspeccionar:
+
+- [ ] En `chrome://inspect`, inspeccionar el DOM de una card del Home.
+- [ ] Su `href` **ya es `/t?tipo=…&id=…`**.
+- [ ] **No cambia después de hidratar** (comparar antes y después de que la
+      página termine de cargar).
+- [ ] Abrirla → monta la ficha.
+- [ ] **Atrás** → vuelve al Home.
+- [ ] **Recargar** en la ficha → vuelve a montar.
+- [ ] **Consola sin warning de hydration.**
+
+🔴 **La presencia o ausencia de cadenas en `index.html` NO es criterio de
+aprobación.**
+
+---
+
+## 3. Contrato de staging — completo
+
+### Ubicación canónica (resuelve el conflicto de `distDir`)
+
+🔴 **El conflicto de la rev. 3:** el build corre dentro de `.capacitor-build`,
+así que `distDir: "out-capacitor"` produce `.capacitor-build/out-capacitor`,
+pero `capacitor.config.ts` apunta al `out-capacitor` de la raíz.
+
+**Resolución — una sola ubicación canónica en todos los checkpoints:**
+
+```
+<raíz>/.capacitor-build/          ← workspace de staging (ignorado por git)
+<raíz>/.capacitor-build/out/      ← distDir: "out"  (salida del export)
+<raíz>/out-capacitor/             ← CANÓNICO. Lo copia el script al terminar.
+                                     Es el webDir de capacitor.config.ts
+                                     y es lo que se sirve en CP2.
+```
+
+- `distDir` sale de `CAPACITOR_DIST`, con **`"out"`** por defecto, relativo al
+  cwd del build. El diagnóstico de CP1 lo apunta a `.capacitor-diagnostico`.
+- El script **copia** `.capacitor-build/out/` → `<raíz>/out-capacitor/`.
+- `capacitor.config.ts` usa `webDir: "out-capacitor"`.
+- **CP2 sirve `<raíz>/out-capacitor/`**, el mismo directorio que consumirá
+  Capacitor. Nunca se sirve el de adentro del staging.
+
+### Qué se copia — lista exacta
+
+| Origen | ¿Va? | Nota |
+|---|:--:|---|
+| `app/` | ✅ **menos** las exclusiones de abajo | |
+| `components/` `lib/` `hooks/` `public/` `assets/` | ✅ | |
+| `next.config.mjs` `tsconfig.json` `postcss.config.mjs` `tailwind.config.ts` | ✅ | necesarios para construir |
+| `next-env.d.ts` | ✅ | tipos de Next |
+| `package.json` `package-lock.json` | ✅ | Next lee `package.json` |
+| `node_modules` | ✅ **por junction**, no copia | ver §3.3 |
+| `.gitignore` `.claude/` `.mcp.json` `AGENTS.md` `CLAUDE.md` `README.md` | ❌ | no intervienen en el build |
+| `docs/` `scripts/` `supabase/` `data/` `chips/` `prompts/` | ❌ | no intervienen |
+| `vercel.json` | ❌ | es config de despliegue, no de build local |
+| `.env.local` | ❌ | 🔴 **nunca se copia**: evita que un secreto entre al staging |
+
+### Exclusiones dentro de `app/`
+
+| Ruta | Por qué se excluye | Qué la reemplaza |
+|---|---|---|
+| `app/api/` | 25 route handlers incompatibles | — (los sirve Vercel) |
+| `app/admin/` | 4 archivos; el dashboard no viaja en la app pública | — |
+| `app/titulo/` | universo infinito, sin `generateStaticParams` | **`app/t/`** |
+| `app/persona/` | idem | **`app/p/`** |
+
+🔴 **`app/t/` y `app/p/` SÍ se copian** — son parte de `app/` y no están en la
+lista de exclusiones. Se crean en CP2 en el árbol original (funcionan también en
+la web, inertes) y viajan al staging como cualquier otra ruta.
+
+**Además, y sólo para el artefacto nativo (§6):** `public/sw.js` y `public/sw/`
+**no se copian**. Sin archivo no hay nada que registrar, aunque un guard falle.
+
+### 3.4 Variables públicas — allowlist explícita
+
+🔴 **El problema que la rev. 4 no vio.** El build corre con
+`cwd = .capacitor-build`, y el contrato excluye `.env.local` (bien: evita que un
+secreto entre al staging). **Pero entonces Next no carga ningún `.env.local`**, y
+el script sólo inyectaba `CAPACITOR`, `NEXT_PUBLIC_YUMP_NATIVO` y
+`NEXT_PUBLIC_API_BASE`. Faltan tres variables públicas que el cliente necesita.
+
+**Consecuencias si faltan:**
+
+| Falta | Qué pasa |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` / `..._ANON_KEY` | `createClient` recibe `""` (ver `lib/supabase.ts:3-4`): el cliente puede fallar en build, prerender o runtime. **Sin login, sin listas, sin votos** |
+| `NEXT_PUBLIC_SITE_URL` | `AuthContext:117` cae a `window.location.origin`, que **en el contenedor es `https://localhost`** → el mail de recuperación apuntaría a `https://localhost/cuenta/reset`, una URL que no existe para nadie |
+
+**El mecanismo, en seis reglas:**
+
+1. El script **lee** el `.env.local` de la **raíz original** — sólo como fuente.
+2. **No lo copia** al staging.
+3. **No pasa todos sus valores** al proceso hijo.
+4. Extrae por **allowlist** exactamente tres:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `NEXT_PUBLIC_SITE_URL`.
+5. Suma `NEXT_PUBLIC_API_BASE` (del argumento), `NEXT_PUBLIC_YUMP_NATIVO=1` y
+   `CAPACITOR=1`.
+6. 🔴 **Nunca transmite** `TMDB_READ_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `CRON_SECRET`, los tokens de Upstash ni ninguna otra variable server-only.
+
+**Se usa la API estándar de Node, no un parser improvisado.** Verificado:
+`node v24.18.0` expone `util.parseEnv` y `process.loadEnvFile`. Se usa
+`util.parseEnv` porque **devuelve un objeto sin tocar `process.env`**.
+
+### Dos allowlists SEPARADAS, y no se mezclan
+
+🔴 **Corrección de la rev. 5:** ahí `PATH` aparecía suelto junto a las variables
+públicas. Son cosas distintas y se evalúan por separado.
+
+```js
+import { parseEnv } from "node:util";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+/** Variables de APLICACIÓN. Las tres se leen del .env.local. */
+const APP_DESDE_ENV = [
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "NEXT_PUBLIC_SITE_URL",
+];
+/** Variables de APLICACIÓN que arma el propio script. */
+const APP_DEL_SCRIPT = ["CAPACITOR", "NEXT_PUBLIC_YUMP_NATIVO", "NEXT_PUBLIC_API_BASE"];
+
+/**
+ * Variables OPERATIVAS del sistema. Sin ellas Next no arranca en Windows.
+ * Se copian preservando el NOMBRE Y EL CASING REAL de process.env: en Windows
+ * la variable puede llamarse "Path" o "PATH" según cómo se haya iniciado el
+ * proceso, y buscar sólo "PATH" la perdería.
+ */
+const OPERATIVAS = [
+  "PATH", "SystemRoot", "ComSpec", "PATHEXT",
+  "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA",
+];
+
+function operativasDelSistema(fuente = process.env) {
+  const out = {};
+  for (const querida of OPERATIVAS) {
+    const real = Object.keys(fuente).find((k) => k.toLowerCase() === querida.toLowerCase());
+    if (real) out[real] = fuente[real];        // conserva el casing real
+  }
+  return out;
+}
+
+/**
+ * Arma el entorno del proceso hijo. `fuente` es inyectable para las pruebas:
+ * puede ser un texto, una ruta, o una función lectora.
+ * NUNCA se hace {...process.env}: eso filtraría los secretos server-only.
+ */
+function entornoDelBuild(apiBase, opts = {}) {
+  const { fuente = resolve(".env.local"), sistema = process.env } = opts;
+
+  let texto;
+  if (typeof fuente === "function") texto = fuente();
+  else if (typeof fuente === "string" && fuente.includes("=")) texto = fuente;   // contenido
+  else {
+    if (!existsSync(fuente)) throw new Error(`no existe el archivo de entorno: ${fuente}`);
+    texto = readFileSync(fuente, "utf8");
+  }
+  const leido = parseEnv(texto);              // NO toca process.env
+
+  const env = {
+    ...operativasDelSistema(sistema),
+    CAPACITOR: "1",
+    NEXT_PUBLIC_YUMP_NATIVO: "1",
+    NEXT_PUBLIC_API_BASE: apiBase,
+  };
+  const faltan = [];
+  for (const k of APP_DESDE_ENV) {
+    if (!leido[k]) { faltan.push(k); continue; }   // sólo el NOMBRE
+    env[k] = leido[k];
+  }
+  if (faltan.length) throw new Error(`faltan variables públicas: ${faltan.join(", ")}`);
+  return env;
+}
+```
+
+### Cómo se lanza Next — sin `npx` ni `shell: true`
+
+🔴 **Corrección de la rev. 5.** `npx` puede intentar descargar, y `shell: true`
+mete un intérprete en el medio con reglas de escapado propias. Se resuelve el
+CLI de forma absoluta y se ejecuta con el mismo Node:
+
+```js
+const cliNext = resolve("node_modules", "next", "dist", "bin", "next");   // verificado que existe
+const r = spawnSync(process.execPath, [cliNext, "build"], {
+  cwd: dirDeTrabajo,
+  stdio: "inherit",
+  shell: false,                       // sin intérprete de por medio
+  env: entornoDelBuild(apiBase),      // construido desde cero
+});
+```
+
+🔵 **Si Next o una herramienta demuestra necesitar otra variable operativa**, se
+agrega **por nombre y con la justificación escrita** en `OPERATIVAS`. **Nunca se
+hereda todo el entorno como atajo.**
+
+**Mensajes de error sin valores:** se nombra la variable que falta, **nunca su
+contenido**, ni siquiera truncado.
+
+**Por qué estas tres pueden quedar dentro del APK:** las tres son
+`NEXT_PUBLIC_*`, o sea que **ya viajan al navegador en la web de hoy**. La anon
+key de Supabase está diseñada para ser pública y está protegida por RLS. No se
+agrega ninguna exposición nueva.
+
+**Pruebas:**
+
+🔴 **Los tests NUNCA tocan el `.env.local` real.** Usan un archivo dentro de un
+directorio temporal propio, que se borra al terminar. El camino real sí lee el
+de la raíz — por eso `fuente` es inyectable.
+
+```js
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const FIXTURE = [
+  "NEXT_PUBLIC_SUPABASE_URL=https://ejemplo.supabase.co",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY=clave-de-prueba-no-real",
+  "NEXT_PUBLIC_SITE_URL=https://app.yump.ar",
+  "TMDB_READ_TOKEN=secreto-de-prueba",
+  "SUPABASE_SERVICE_ROLE_KEY=secreto-de-prueba",
+  "CRON_SECRET=secreto-de-prueba",
+  "UPSTASH_REDIS_REST_TOKEN=secreto-de-prueba",
+  "SECRETO_FICTICIO_DE_PRUEBA=no-debe-viajar",
+].join("\n");
+
+function conFixture(fn) {
+  const dir = mkdtempSync(join(tmpdir(), "yump-env-"));
+  const ruta = join(dir, ".env.local");
+  writeFileSync(ruta, FIXTURE, "utf8");
+  try { return fn(ruta); } finally { rmSync(dir, { recursive: true, force: true }); }
+}
+
+const SISTEMA_FALSO = { Path: "C:\\fake", SystemRoot: "C:\\Windows", ComSpec: "C:\\cmd.exe",
+  PATHEXT: ".EXE", TEMP: "C:\\T", TMP: "C:\\T", USERPROFILE: "C:\\U",
+  APPDATA: "C:\\A", LOCALAPPDATA: "C:\\L", TMDB_READ_TOKEN: "no-debe-viajar" };
+
+// ---------- 1. Variables de APLICACIÓN permitidas: exactamente seis ----------
+test("llegan las SEIS variables de aplicación, ni una más ni una menos", () => {
+  const env = conFixture((f) =>
+    entornoDelBuild("https://x.vercel.app", { fuente: f, sistema: SISTEMA_FALSO }));
+  const app = Object.keys(env).filter((k) => k === "CAPACITOR" || k.startsWith("NEXT_PUBLIC_"));
+  assert.deepEqual(app.sort(), [
+    "CAPACITOR",
+    "NEXT_PUBLIC_API_BASE",
+    "NEXT_PUBLIC_SITE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_YUMP_NATIVO",          // ← faltaba en la rev. 5: el test fallaba
+  ]);
+});
+
+// ---------- 2. Variables OPERATIVAS: se evalúan APARTE ----------
+test("Next recibe las operativas que necesita, con su casing real", () => {
+  const env = conFixture((f) =>
+    entornoDelBuild("https://x.vercel.app", { fuente: f, sistema: SISTEMA_FALSO }));
+  assert.equal(env.Path, "C:\\fake");        // conserva "Path", no lo renombra a "PATH"
+  for (const k of ["SystemRoot", "ComSpec", "PATHEXT", "TEMP", "TMP",
+                   "USERPROFILE", "APPDATA", "LOCALAPPDATA"]) {
+    assert.ok(env[k], `falta la operativa ${k}`);
+  }
+});
+
+// ---------- 3. Variables PROHIBIDAS ----------
+test("PRUEBA NEGATIVA: ningún secreto llega, ni del .env.local ni del sistema", () => {
+  const env = conFixture((f) =>
+    entornoDelBuild("https://x.vercel.app", { fuente: f, sistema: SISTEMA_FALSO }));
+  for (const k of ["TMDB_READ_TOKEN", "SUPABASE_SERVICE_ROLE_KEY", "CRON_SECRET",
+                   "UPSTASH_REDIS_REST_TOKEN", "SECRETO_FICTICIO_DE_PRUEBA"]) {
+    assert.equal(env[k], undefined, `se coló ${k}`);
+  }
+  // Y nada fuera de las dos allowlists.
+  const permitidas = new Set([...APP_DESDE_ENV, ...APP_DEL_SCRIPT,
+                              ...Object.keys(operativasDelSistema(SISTEMA_FALSO))]);
+  for (const k of Object.keys(env)) assert.ok(permitidas.has(k), `se coló ${k}`);
+});
+
+test("faltar una pública falla con el NOMBRE, sin el valor", () => {
+  const parcial = "NEXT_PUBLIC_SUPABASE_URL=https://ejemplo.supabase.co\nCRON_SECRET=secreto";
+  assert.throws(
+    () => entornoDelBuild("", { fuente: parcial, sistema: SISTEMA_FALSO }),
+    (e) => {
+      assert.match(e.message, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+      assert.doesNotMatch(e.message, /secreto|ejemplo\.supabase/);   // ningún valor
+      return true;
+    });
+});
+
+// ---------- 4. NEXT_PUBLIC_SITE_URL, comprobada DIRECTAMENTE ----------
+test("SITE_URL llega como https://app.yump.ar", () => {
+  const env = conFixture((f) =>
+    entornoDelBuild("https://x.vercel.app", { fuente: f, sistema: SISTEMA_FALSO }));
+  assert.equal(env.NEXT_PUBLIC_SITE_URL, "https://app.yump.ar");
+});
+```
+
+**Comprobaciones manuales del checkpoint:**
+
+- [ ] `npm run build` normal **sigue leyendo su entorno habitual** (Next carga
+      `.env.local` desde la raíz como siempre) — se verifica arrancando
+      `npm run dev` y comprobando que el login funciona.
+- [ ] 🔴 **`NEXT_PUBLIC_SITE_URL` se comprueba en el ENTORNO, no por grep.** La
+      rev. 5 proponía buscar `https://app.yump.ar` en el bundle — **no prueba
+      nada**, porque esa misma URL ya está en `SITIO_PUBLICO` (`lib/compartir.ts`)
+      y aparecería igual aunque la variable no se hubiera inyectado. La
+      comprobación válida es la aserción directa
+      `env.NEXT_PUBLIC_SITE_URL === "https://app.yump.ar"` (test 4 de arriba).
+- [ ] **Validación integral, en CP7:** disparar el flujo de recuperación de
+      contraseña desde la app y confirmar que el destino **no** es
+      `https://localhost/cuenta/reset`.
+- [ ] Ningún secreto en `out-capacitor/`: grepear los **nombres**
+      `TMDB_READ_TOKEN`, `SERVICE_ROLE`, `CRON_SECRET` → **cero coincidencias**.
+
+🔴 **En este documento no van valores ni credenciales reales.**
+
+### 3.5 TypeScript en el staging — `tsconfig` derivado
+
+🔴 **El problema que la rev. 4 no vio.** El staging copia `lib/`, `components/`
+y `hooks/` **con sus tests**, pero excluye `scripts/` y `supabase/`. Y
+`tsconfig.json` incluye `**/*.ts`, así que **`next build` typechequea los
+tests**. Auditados **todos** los archivos de prueba, hay **dos** que importan
+fuera de lo copiado:
+
+| Test | Importa |
+|---|---|
+| `lib/sin-dicebear.test.ts` | `../scripts/barrido-dicebear.mjs`, `../scripts/barrido-sql-avatar.mjs` |
+| **`lib/sync-reparar.test.ts`** | `../supabase/functions/tmdb-sync/lib/reconciliar.ts`, `.../reparar.ts` |
+
+*(El segundo no estaba reportado.)* **El repo tiene hoy 34 archivos `*.test.ts`
+y ninguno `*.test.tsx`** — verificado con `git ls-files`. Los otros 32 sólo
+importan de su propia carpeta y no dan problema. El `exclude` cubre las dos
+extensiones igual, para que un `.test.tsx` futuro no reabra el agujero.
+
+**Estrategia elegida: `tsconfig` derivado dentro del staging.**
+
+🔴 **Next 14 NO documenta `typescript.tsconfigPath`** — la única opción bajo
+`typescript` es `ignoreBuildErrors`. **Pero no hace falta ninguna opción:** como
+el build corre desde una copia, el staging **tiene su propio `tsconfig.json`**,
+y Next lee el del cwd. El del repo **no se toca**.
+
+🔴 **La rev. 5 tenía un placeholder** (*"…todo el contenido del tsconfig.json…"*).
+Acá está el procedimiento ejecutable, con `typescript`, que **ya es dependencia
+directa del proyecto** (`devDependencies.typescript: ^5.6.3`, verificado):
+
+```js
+import ts from "typescript";
+import { writeFileSync } from "node:fs";
+import { resolve, join } from "node:path";
+
+/** Deriva el tsconfig del staging a partir del de la raíz. NO toca el original. */
+function escribirTsconfigDerivado(dirStaging) {
+  const origen = resolve("tsconfig.json");
+  const { config, error } = ts.readConfigFile(origen, ts.sys.readFile);   // lee JSONC
+  if (error) {
+    throw new Error(
+      `no se pudo parsear tsconfig.json: ${ts.flattenDiagnosticMessageText(error.messageText, " ")}`,
+    );
+  }
+  // `config` conserva compilerOptions, include y todo lo demás tal cual.
+  const derivado = {
+    ...config,
+    exclude: [
+      "node_modules",
+      "supabase/functions",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+    ],
+  };
+  const destino = join(dirStaging, "tsconfig.json");
+  writeFileSync(destino, JSON.stringify(derivado, null, 2) + "\n", "utf8");  // JSON válido
+  return destino;
+}
+```
+
+- Se escribe **únicamente** en `.capacitor-build/tsconfig.json`.
+- El `tsconfig.json` de la raíz **no se modifica**.
+- **No se usa `ignoreBuildErrors`.**
+- Un error de parseo del original **aborta con mensaje**, no sigue en silencio.
+
+**Lo que NO se hace, y es deliberado:**
+
+- ❌ **No se usa `ignoreBuildErrors`.**
+- ❌ **No se desactiva el typecheck globalmente.**
+- ❌ **No se silencia ningún error de código de aplicación.**
+- ❌ No se copian `scripts/` ni `supabase/` sólo para satisfacer a los tests: el
+  staging construye el artefacto, **no es un entorno de pruebas**.
+
+**Dónde corren los tests:** `npm test` se ejecuta **antes** del build, **desde la
+raíz**, con el repo completo. Ahí `scripts/` y `supabase/` están, y los **34**
+archivos de prueba pasan como siempre.
+
+**Verificación de que el typecheck sigue vivo — el test canario.**
+
+🔴 **El procedimiento de la rev. 5 se auto-invalidaba:** decía "correr el build",
+y `build-capacitor` **regenera el staging**, así que borraría el error antes de
+probarlo. El build habría pasado y el canario habría "aprobado" sin probar nada.
+Procedimiento correcto, en seis pasos:
+
+- [ ] **1.** Generar el staging **conservándolo**:
+      `npm run build:capacitor -- --api-base=... --keep-staging`
+- [ ] **2.** Introducir el error **sólo en la copia del staging**, nunca en la
+      fuente: editar `.capacitor-build/lib/rutas.ts` y agregar
+      `const canario: number = "texto";`
+- [ ] **3.** Ejecutar Next **directamente**, sin volver a generar staging:
+      ```
+      node node_modules/next/dist/bin/next build
+      ```
+      con `cwd = .capacitor-build`.
+- [ ] **4.** **Tiene que FALLAR** con un error de TypeScript que nombre
+      `canario`. Si pasa, el `tsconfig` derivado excluye de más → **el
+      checkpoint falla**.
+- [ ] **5.** Borrar `.capacitor-build/` (con la verificación de ruta absoluta) o
+      regenerarlo.
+- [ ] **6.** `git status --short` → **`lib/rutas.ts` sin modificar**. Confirma
+      que el canario vivió y murió dentro del staging.
+
+### 3.1 Procedimiento
+
+```
+1. Si existe .capacitor-build/  → borrarlo entero (recursivo).
+   Nunca se borra nada fuera de ese directorio.
+2. mkdir .capacitor-build
+3. Copiar la lista de arriba, respetando las exclusiones.
+4. Enlazar node_modules por junction (§3.3).
+4b. Escribir .capacitor-build/tsconfig.json derivado (§3.5).
+5. Ejecutar `next build` con cwd = .capacitor-build
+   y env = entornoDelBuild(--api-base)  (§3.4: allowlist, construido desde cero)
+6. Verificar que existe .capacitor-build/out/index.html
+7. Borrar <raíz>/out-capacitor/ si existía; copiar .capacitor-build/out/ ahí.
+8. Borrar .capacitor-build/  (salvo --keep-staging para depurar).
+```
+
+### 3.2 Interrupción y garantías
+
+| Situación | Qué queda | Recuperación |
+|---|---|---|
+| Interrupción en pasos 1-4 | `.capacitor-build/` a medias | borrarlo; **el árbol original no se tocó** |
+| Interrupción en 5-6 | idem | idem |
+| Interrupción en 7 | `out-capacitor/` a medias | volver a correr el build |
+
+🔴 **El script NUNCA escribe, mueve ni borra fuera de `.capacitor-build/` y
+`out-capacitor/`.** Verificación al final de CP2:
+```
+- [ ] git status --short  →  sólo archivos nuevos esperados, ningún " D " ni " M "
+      en app/, components/, lib/, hooks/, public/
+```
+
+### 3.3 La junction, por API de Node
+
+🔴 **`mklink` es un comando interno de `cmd.exe`, no un ejecutable.** No se
+puede invocar como programa desde PowerShell ni desde `spawnSync` sin envolverlo
+en `cmd /c`. Se usa la API del filesystem:
+
+```js
+import { symlinkSync, existsSync, lstatSync, readlinkSync, unlinkSync } from "node:fs";
+import { resolve } from "node:path";
+
+const destino = resolve("node_modules");            // absoluto, obligatorio
+const enlace  = resolve(".capacitor-build/node_modules");
+
+function enlazarNodeModules() {
+  if (existsSync(enlace)) {
+    const st = lstatSync(enlace);
+    if (!st.isSymbolicLink()) throw new Error("existe y NO es junction: revisar a mano");
+    if (resolve(readlinkSync(enlace)) !== destino) unlinkSync(enlace);   // apunta mal
+    else return "ya existía y apunta bien";
+  }
+  symlinkSync(destino, enlace, "junction");   // 'junction' NO requiere elevación
+  return "creada";
+}
+```
+
+| Caso | Comportamiento |
+|---|---|
+| No existe | se crea con tipo `junction` |
+| Existe y apunta bien | se reutiliza |
+| Existe y apunta mal | `unlinkSync` **borra el enlace, no el destino** |
+| Existe y NO es enlace | **error ruidoso**, se revisa a mano. Nunca se borra un directorio real |
+| `symlinkSync` falla | ver fallback |
+
+**Borrado seguro:** `unlinkSync` sobre una junction borra **el enlace**, no su
+contenido. 🔴 **El borrado de `.capacitor-build/` tiene que quitar la junction
+ANTES del borrado recursivo**, para que ningún `rm -r` la siga hacia
+`node_modules`.
+
+**Fallback si la junction falla** — 🔍 cuantificado antes de elegirlo:
+`node_modules` de este proyecto ronda los **cientos de MB**; copiarlo en cada
+build sería lento y ocuparía el doble. **No se copia por defecto.** Si la
+junction falla, el script **aborta con un mensaje claro** y se decide a mano
+entre (a) correr una vez con `--copy-node-modules` asumiendo el costo, o (b)
+construir en la raíz con las exclusiones aplicadas de otra forma. 🔵 Decisión
+sólo si pasa.
+
+---
+
+## 4. Contrato CORS — concreto
+
+🔴 **La rev. 3 decía "de la forma más simple que funcione" en el mismo
+checkpoint que modifica 23 archivos.** Eso es un placeholder. Acá está la forma.
+
+### 4.1 Separación de alcance
+
+- **En el spike:** una implementación concreta y limitada — un helper y una
+  envoltura por ruta.
+- **En Etapa 3:** la decisión sobre refactor global (wrapper, middleware u otra
+  capa), **con la medición del spike en la mano**. `middleware.ts` sigue
+  descartado preventivamente.
+
+### 4.2 Interfaces
+
+```ts
+// lib/cors.ts
+const PERMITIDOS = ["https://localhost", "capacitor://localhost"] as const;
+
+/** Agrega "Origin" a Vary conservando lo existente, sin duplicar. */
+export function anexarVary(actual: string | null, valor?: string): string;
+
+/**
+ * Aplica CORS a una Response YA construida y la devuelve.
+ * - Conserva todos los encabezados que la respuesta ya traía.
+ * - Anexa Vary: Origin SIEMPRE (permitido, rechazado o sin Origin).
+ * - Sólo agrega Allow-Origin si el Origin coincide EXACTO con la allowlist.
+ * - Nunca agrega Allow-Credentials. Nunca usa "*".
+ * Sirve para éxito, 4xx, 5xx, validaciones, auth fallida y fallbacks:
+ * como envuelve la Response final, no hay camino de salida sin CORS.
+ */
+export function conCors(res: Response, req: Request): Response;
+
+/**
+ * Respuesta 204 de preflight. NO ejecuta el handler real.
+ * `metodos` se declara por ruta: "GET, OPTIONS" o "POST, OPTIONS".
+ */
+export function preflight(req: Request, metodos: string): Response;
+```
+
+### 4.3 Cómo se envuelve una ruta — patrón único
+
+```ts
+// Al final de cada ruta GET:
+export async function OPTIONS(req: Request) { return preflight(req, "GET, OPTIONS"); }
+export async function GET(req: NextRequest) {
+  return conCors(await manejar(req), req);      // `manejar` es el cuerpo de hoy, sin tocar
+}
+```
+
+**Por qué esto cubre todos los caminos de salida:** el cuerpo actual de cada ruta
+se renombra a `manejar()` **sin modificarlo**, y `conCors` envuelve **lo que sea
+que devuelva** — éxito, validación fallida, 401, 404, 500, o el fallback del
+`catch`. No queda ningún `return` sin CORS, porque hay un solo punto de salida.
+
+**Excepciones no capturadas:** si `manejar()` lanza, Next devuelve un 500 propio
+**sin** CORS. Se agrega un `try/catch` en la envoltura que convierte la excepción
+en un 500 con CORS — así el navegador ve el status real en vez de un error de red.
+
+### 4.4 Las 23 rutas — conteo corregido
+
+**25 rutas totales − `cron/netflix-top10` (server-to-server) − `admin-search`
+(sale con `app/admin`) = 23.** De esas 23: **21 `GET` + 2 `POST`.**
+
+| # | Ruta | Método | ¿`Authorization`? | ¿Preflight? | Prueba que la valida |
+|---|---|---|:--:|:--:|---|
+| 1 | `/api/home` | GET | no | no | CP7 arranque · CP8 #9/#12/#13 |
+| 2 | `/api/providers` | GET | no | no | CP4 curl 1 · CP8 #15 |
+| 3 | `/api/title/[tipo]/[id]` | GET | no | no | CP4 curl 7 · **CP10 YouTube** |
+| 4 | `/api/discover` | GET | no | no | CP8 navegación por género |
+| 5 | `/api/search` | GET | no | no | CP8 #4 teclado |
+| 6 | `/api/upcoming` | GET | no | no | CP8 #2 |
+| 7 | `/api/recordatorio` | GET | no | no | CP8 #2 (`fetch` de validación) |
+| 8 | `/api/ruleta` | GET | no | no | CP8 recorrido |
+| 9 | `/api/top` | GET | no | no | CP8 recorrido |
+| 10 | `/api/person/[id]` | GET | no | no | CP8 recorrido |
+| 11 | `/api/recomendaciones` | GET | no | no | CP8 recorrido |
+| 12 | `/api/cards` | GET | no | no | CP8 #14 (listas del usuario) |
+| 13 | `/api/latest` | GET | no | no | CP8 recorrido |
+| 14 | `/api/miniseries` | GET | no | no | CP8 recorrido |
+| 15 | `/api/personas` | GET | no | no | CP8 recorrido |
+| 16 | `/api/directores` | GET | no | no | CP8 recorrido |
+| 17 | `/api/genre-covers` | GET | no | no | CP8 recorrido |
+| 18 | `/api/audience` | GET | no | no | CP8 recorrido |
+| 19 | `/api/mas-votados` | GET | no | no | CP8 recorrido |
+| 20 | `/api/hacete-cargo` | GET | no | no | CP8 recorrido |
+| 21 | `/api/health` | GET | no | no | CP4 curl 6 (sin `Origin`) |
+| 22 | `/api/te-va-a-gustar` | **POST** | **sí** (`:41`) | **sí** | CP4 curl 2 y 3 · CP8 #14 |
+| 23 | `/api/cuenta/eliminar` | **POST** | **sí** (`:37`) | **sí** | CP4 curl 4 — 🔴 **sólo el preflight** |
+
+**Fuera, por inventario:**
+
+| Ruta | Motivo |
+|---|---|
+| `/api/cron/netflix-top10` | server-to-server (Vercel Cron) |
+| `/api/admin-search` | sale del artefacto junto con `app/admin` (§3) |
+
+🔴 **Sólo las filas 22 y 23 provocan preflight**, porque son las únicas que
+mandan `Authorization` y `Content-Type: application/json`. Las 21 `GET` son
+requests simples. Verificado: leen `req.headers.get("authorization")`, en
+minúscula.
+
+---
+
+## 5. Ventanas de Preview — una por sesión
+
+🔴 **La rev. 3 pedía autorización antes de CP7 pero `curl`eaba en CP4**, y dejaba
+la protección abierta durante las 5–7,5 sesiones de Gate B mientras afirmaba que
+la ventana era corta. Corregido: **la protección se abre y se cierra por
+sesión.**
+
+### Secuencia
+
+```
+ 1. CP4 completo y verificado LOCALMENTE (tests unitarios de lib/cors.ts).
+ 2. Commit en spike/capacitor-android.
+ 3. Push de la rama.
+ 4. Esperar el deploy de Preview.
+ 5. Confirmar la URL estable de rama EN EL PANEL del deploy
+    (patrón <proyecto>-git-<rama>-<scope>.vercel.app; se confirma, no se deduce).
+ 6. 🔵 APROBACIÓN DEL DUEÑO → abrir Deployment Protection.
+ 7. Ventana abierta: ejecutar los 7 curl de CP4.
+ 8. CERRAR la protección. Verificar que un curl sin credenciales ya no pasa.
+ 9. Gate A (CP5) — no necesita la Preview abierta.
+10. Gate B: 🔵 APROBACIÓN por cada sesión que necesite el teléfono →
+    abrir al empezar, cerrar al terminar.
+11. Verificar el cierre al final de CADA sesión.
+```
+
+⚠️ **Alcance real:** el toggle es **del proyecto, no de una URL**. Abrirlo expone
+**todos los deployments de Preview**, no sólo el de esta rama. Por eso las
+ventanas son por sesión y se verifica el cierre.
+
+**Qué deja de funcionar al cerrar:** todo lo que consuma la API desde el
+teléfono — o sea CP7 a CP10 completos. **La app instalada queda sin datos.** No
+es una falla: es el estado esperado fuera de sesión.
+
+**Cómo se reanuda:** abrir la protección, y si la URL de Preview cambió porque
+hubo push nuevo, **reconstruir con `--api-base`** y volver a sincronizar. El
+binario lleva la URL adentro; no se actualiza sola.
+
+🔴 **La autorización no es permanente.** Cada apertura la aprueba el dueño, o el
+dueño autoriza explícitamente **todas** las aperturas de esta etapa por
+adelantado. No se asume.
+
+🔴 **Nunca un bypass secret en el APK.**
+
+---
+
+## CP1 — Diagnóstico del export y de la configuración
+
+**Precondiciones:** ninguna. Sin Android Studio, sin teléfono.
+
+**Archivos:** modificar `next.config.mjs` · crear `scripts/build-capacitor.mjs`
+y `scripts/config.test.mjs` · **modificar** `package.json` (script) y
+`.gitignore` (**los tres**: `.capacitor-diagnostico/`, `.capacitor-build/`,
+`out-capacitor/`) · declarar `serve` como devDependency.
+
+🔴 **CP1 no puede dejar un `out/` ambiguo en la raíz.** La rev. 4 corría el
+diagnóstico desde la raíz con `distDir: "out"`, y un fallo a mitad dejaría un
+`<raíz>/out/` que **no está en el contrato de directorios protegidos**.
+Corregido: `distDir` sale de una variable, y el diagnóstico usa un directorio
+**explícito, aislado y propio**.
+
+| Modo | cwd | `distDir` | Resultado |
+|---|---|---|---|
+| **Diagnóstico (CP1)** | raíz | `.capacitor-diagnostico` | `<raíz>/.capacitor-diagnostico/` |
+| **Build real (CP2+)** | `.capacitor-build` | `out` | `.capacitor-build/out/` → copiado a `<raíz>/out-capacitor/` |
+
+Los **tres** directorios (`.capacitor-diagnostico/`, `.capacitor-build/`,
+`out-capacitor/`) van al `.gitignore` en este checkpoint.
+
+🔴 **Antes de borrar cualquiera de los tres**, el script verifica que la ruta
+**absoluta resuelta** esté dentro del workspace y que su nombre sea exactamente
+uno de los tres. Nunca hay un borrado recursivo contra un nombre genérico como
+`out/`.
+
+```js
+// next.config.mjs
+const esCapacitor = process.env.CAPACITOR === "1";
+const nextConfig = esCapacitor
+  ? {
+      output: "export",
+      distDir: process.env.CAPACITOR_DIST ?? "out",   // diagnóstico vs staging
+      pageExtensions: ["tsx"],
+      trailingSlash: true,            // §9
+      images: { unoptimized: true },  // §10
+    }
+  : {
+      images: { remotePatterns: [{ protocol: "https", hostname: "image.tmdb.org" }] },
+      async headers() { /* … el bloque actual, intacto … */ },
+    };
+export default nextConfig;
+```
+
+**El lanzador, sin `npx` ni `shell: true`** (mismo criterio de §3.4):
+
+```js
+// scripts/build-capacitor.mjs — versión MÍNIMA de CP1. El staging llega en CP2.
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
+
+const diagnostico = process.argv.includes("--diagnostico");
+const cliNext = resolve("node_modules", "next", "dist", "bin", "next");
+
+const r = spawnSync(process.execPath, [cliNext, "build"], {
+  stdio: "inherit",
+  shell: false,                       // sin intérprete de por medio
+  env: {
+    ...operativasDelSistema(),        // §3.4, allowlist de sistema con casing real
+    CAPACITOR: "1",
+    ...(diagnostico ? { CAPACITOR_DIST: ".capacitor-diagnostico" } : {}),
+  },
+});
+process.exit(r.status ?? 1);
+```
+
+⚠️ **En CP1 todavía NO se inyectan las variables de aplicación**: el diagnóstico
+sólo busca la lista de errores del export, y las públicas llegan en CP2 junto
+con el staging (§3.4). Lo que sí vale desde CP1 es que la variable vive **sólo
+en ese proceso**: no va a `.env.local`, así que un `npm run build` posterior no
+puede heredarla.
+
+**Test RED de verdad — dos procesos aislados** (un solo proceso no sirve: el
+`import` cachea el módulo):
+
+```js
+// scripts/config.test.mjs
+function cargarConfig(capacitor) {
+  const code = "import c from './next.config.mjs';" +
+    "console.log(JSON.stringify({output:c.output,tieneHeaders:typeof c.headers==='function'," +
+    "distDir:c.distDir,pageExtensions:c.pageExtensions,trailingSlash:c.trailingSlash," +
+    "unoptimized:c.images?.unoptimized,remotePatterns:!!c.images?.remotePatterns}));";
+  const r = spawnSync(process.execPath, ["--input-type=module", "-e", code], {
+    encoding: "utf8", shell: false,
+    env: capacitor ? { ...process.env, CAPACITOR: "1" } : { ...process.env, CAPACITOR: "" },
+  });
+  assert.equal(r.status, 0, r.stderr);
+  return JSON.parse(r.stdout);
+}
+test("build WEB: sin output, con headers, con optimización actual", () => {
+  const c = cargarConfig(false);
+  assert.equal(c.output, undefined);
+  assert.equal(c.tieneHeaders, true);
+  assert.equal(c.remotePatterns, true);
+});
+test("build CAPACITOR: export, sin headers, sin optimizador", () => {
+  const c = cargarConfig(true);
+  assert.equal(c.output, "export");
+  assert.equal(c.distDir, "out");
+  assert.deepEqual(c.pageExtensions, ["tsx"]);
+  assert.equal(c.trailingSlash, true);
+  assert.equal(c.unoptimized, true);
+  assert.equal(c.tieneHeaders, false);
+});
+```
+
+- [ ] Escribir el test → **FALLA el segundo** (hoy `output` es `undefined`).
+- [ ] Aplicar el config y el script.
+- [ ] `node --test scripts/config.test.mjs` → los dos pasan.
+- [ ] `npm test` + `npx tsc --noEmit` verdes.
+- [ ] `npm run build` → criterio de no-regresión de §1; `out-capacitor` no existe.
+- [ ] `npm run build:capacitor -- --diagnostico` → se espera que **FALLE**.
+      Anotar los errores contra la predicción:
+
+| Predicho | ¿Apareció? |
+|---|---|
+| `titulo/[tipo]/[id]` sin `generateStaticParams` | |
+| `persona/[id]` sin `generateStaticParams` | |
+| `categoria/[slug]` sin `generateStaticParams` | |
+| `lista/[key]` sin `generateStaticParams` | |
+| `admin/resena/[id]` sin `generateStaticParams` | |
+| `categoria/[slug]` usa `searchParams` en Server Component | |
+| **Ningún error por las 25 rutas de API** ← valida `pageExtensions` | |
+
+- [ ] 🔍 Probar la junction por API de Node (§3.3): ¿se crea sin elevación?
+- [ ] **Limpieza recuperable tras el fallo esperado:** borrar
+      `.capacitor-diagnostico/` (con la verificación de ruta absoluta de arriba).
+- [ ] `git status --short` → **sólo los cuatro archivos ajenos de siempre**,
+      ningún residuo.
+- [ ] `dir` en la raíz → **no existe `out/`** ni ningún artefacto parcial fuera
+      de los tres directorios autorizados.
+- [ ] Commit.
+
+**Aprobación:** los errores son **exactamente** los predichos, **ninguno viene
+de las 25 rutas de API**, y **no quedó ningún artefacto fuera de los
+directorios autorizados**.
+**Cancelación:** aparece un error estructural distinto irresoluble en ≤1 sesión.
+**Artefactos:** candidatos a integración posterior.
+**Estimación: 1–1,5 sesiones.**
+
+---
+
+## CP2 — Staging, rutas exportables, indicador nativo y export completo
+
+**Precondiciones:** CP1 aprobado.
+
+**Archivos:** `lib/plataforma.ts` (+test) · `lib/rutas.ts` (+test) ·
+`app/t/page.tsx` · `app/p/page.tsx` · `generateStaticParams` en
+`app/lista/[key]/page.tsx` y `app/categoria/[slug]/page.tsx` ·
+`searchParams` de categoría al cliente · los 9 enlaces internos ·
+`scripts/build-capacitor.mjs` (staging completo de §3).
+
+**Contrato de rutas — una sola firma pública:**
+```ts
+/**
+ * href interno a una ficha. Web: /titulo/movie/278. Nativo: /t?tipo=movie&id=278.
+ * `opts.nativo` existe SÓLO para pruebas; en producción se omite y resuelve
+ * con ES_NATIVO (bandera de build, §2).
+ * NO confundir con lib/compartir.ts, que arma el enlace PÚBLICO absoluto.
+ */
+export function hrefTitulo(tipo: MediaType, id: number|string, opts?: {nativo?: boolean}): string;
+export function hrefPersona(id: number|string, opts?: {nativo?: boolean}): string;
+export function parseParamsTitulo(sp: URLSearchParams): {tipo: MediaType; id: string} | null;
+export function parseParamsPersona(sp: URLSearchParams): {id: string} | null;
+```
+
+**`/t` y `/p`: params inválidos SIN `notFound()`.** Verificado: `notFound()` no
+está documentado para Client Components en Next 14 — el ejemplo oficial es un
+Server Component `async`.
+
+```tsx
+// app/t/page.tsx
+"use client";
+function TDetalle() {
+  const p = parseParamsTitulo(useSearchParams());
+  if (!p) return <ParametrosInvalidos volverA="/" />;   // estado propio
+  return <DetailView tipo={p.tipo} id={p.id} />;
+}
+export default function Page() {
+  // useSearchParams EXIGE Suspense bajo output:'export'.
+  // Verificado: éste es el primer <Suspense> del repo.
+  return <Suspense fallback={<DetailSkeleton />}><TDetalle /></Suspense>;
+}
+```
+
+**Los 9 enlaces internos:** `TitleCard.tsx:31` · `ruleta/RuletaCard.tsx:77, :84,
+:112` *(el 112 es `<a>`, no `Link`)* · `upcoming/UpcomingCard.tsx:24` ·
+`desempate/DesempateResult.tsx:38` · `CastRail.tsx:15` · `PersonCard.tsx:8` ·
+los relacionados de `DetailView` (cubiertos por `TitleCard`).
+
+**Aprobación:**
+- [ ] `npm run build:capacitor` **completa**.
+- [ ] `out-capacitor/index.html` existe.
+- [ ] **Anti-mismatch:** el HTML exportado contiene `/t?tipo=` y **no** `/titulo/`.
+- [ ] Servir `<raíz>/out-capacitor/` y abrir `/t/?tipo=movie&id=278` **por URL
+      directa** — no hace falta tocar una card.
+- [ ] `git status --short` limpio en `app/`, `components/`, `lib/`, `hooks/`,
+      `public/` (§3.2).
+- [ ] Criterio de no-regresión web (§1).
+
+**Estimación: 2–2,5 sesiones** (absorbe el staging completo).
+
+---
+
+## CP3 — Base remota de la API
+
+**Precondiciones:** CP2 aprobado.
+
+```ts
+export const API_BASE: string;                                  // "" en web
+export function apiUrl(path: string, base?: string): string;    // idempotente sobre absolutas
+```
+
+**Las 20 ediciones:** `components/useApi.ts:64` (cubre a los 8 consumidores de
+`useApi`) + 18 fetches directos + `lib/calendar-links.ts:37` (`icsUrl`).
+
+Los 18: `DirectoresView:44` · `MiniseriesView:49` · **`RecordarButton:70`** ·
+`SearchView:87, :115, :262, :370, :454, :501` · `TeVaAGustar:96` · `TopBar:29` ·
+`UltimosView:41` · `UserShelf:35` · `cuenta/EliminarCuenta:43` ·
+`desempate/DesempateManualSearch:35` · `onboarding/PlatformPicker:15` ·
+`ruleta/RuletaBanner:81` · `upcoming/UpcomingAllView:43`.
+
+**`/api/recordatorio` tiene DOS operaciones** (verificado en `RecordarButton`):
+
+| Línea | Operación | ¿CORS? | ¿URL absoluta? |
+|---|---|:--:|:--:|
+| `:70` `await fetch(ics)` | validación | **sí** | sí |
+| `:77` `window.location.href = ics` | navegación del `.ics` | no | **sí** |
+| `:104` `<a href={ics}>` | idem | no | **sí** |
+
+**Cómo entra la URL de Preview sin persistir:**
+`npm run build:capacitor -- --api-base=https://<deploy>.vercel.app`
+La inyecta el `spawnSync`; no va a `.env.local`.
+
+**Aprobación:** suite verde · `npm run dev` sin variables → web idéntica ·
+**grep de `.next/static` tras un `npm run build`: la URL de Preview NO aparece**.
+
+**Estimación: 1 sesión.**
+
+---
+
+## CP4 — CORS en 23 rutas + ventana de Preview
+
+**Precondiciones:** CP3 aprobado.
+
+**Archivos:** `lib/cors.ts` (+test) y las **23 rutas** de §4.4, con el patrón de
+§4.3.
+
+**Pruebas unitarias (RED):** allowlist exacta · `Vary` siempre (incluso
+rechazado) · `http://localhost` **no** permitido · no refleja parecidos · nunca
+`Allow-Credentials` ni `*` · `anexarVary` no pisa ni duplica · preflight con
+`GET, POST, OPTIONS`, `Authorization, Content-Type` y `Max-Age: 600` ·
+**una respuesta 500 también lleva CORS**.
+
+**Luego, la secuencia de §5** (commit → push → esperar Preview → confirmar URL →
+🔵 aprobación → abrir → curl → **cerrar**).
+
+**Los 7 `curl`** (`curl` viene con Git for Windows):
+1. `GET /api/providers` con `Origin: https://localhost` → `Allow-Origin` + `Vary`.
+2. `OPTIONS /api/te-va-a-gustar` → `204`, métodos, headers, **la ruta no se ejecuta**.
+3. `POST /api/te-va-a-gustar` con Bearer de la **cuenta de prueba** → responde con CORS.
+4. `OPTIONS /api/cuenta/eliminar` → **sólo preflight**. 🔴 el POST real no se prueba.
+5. `GET` con `Origin: https://malicioso.com` → **sin** `Allow-Origin`, **con** `Vary`.
+6. `GET /api/health` sin `Origin` → normal.
+7. `GET /api/title/movie/278` con `Origin: https://localhost` → **habilita CP10**.
+
+**Aprobación:** los siete pasan **y la protección quedó cerrada** al terminar.
+**Artefactos:** `lib/cors.ts` es **candidato a integración posterior**, sujeto a
+aprobación después del veredicto. *(La rev. 3 decía "necesitará Producción"
+antes de tener veredicto.)*
+
+**Estimación: 2–2,5 sesiones** (23 rutas + la ventana).
+
+---
+
+## CP5 — 🚦 GATE A
+
+**No se escribe código.** Gate A valida **export, navegación, helpers y contrato
+de CORS** por tests y `curl`. 🔴 **NO afirma consumo real desde el WebView**: el
+export de escritorio se sirve desde `http://localhost`, que **no está en la
+allowlist y no se agrega**. La primera prueba integral es CP7.
+
+**Decisión 🔵:** ¿se pasa a Gate B? Si no, se cancela habiendo gastado ~6–7,5
+sesiones **sin instalar Android Studio**.
+**Estimación: 0,25 sesión.**
+
+---
+
+## CP6 — 🔴 Neutralizar la PWA ANTES del primer arranque nativo
+
+**Precondiciones:** Gate A aprobado. **Ningún `cap run` ejecutado todavía.**
+
+🔴 **Por qué va acá y no después.** En el primer `cap run android` el bundle ya
+es `production`, y `ServiceWorkerRegister.tsx:9` sólo sale con
+`NODE_ENV !== "production"` — así que **registraría `/sw.js` dentro de la app**.
+Apagarlo en el build siguiente **no deshace**: el SW ya registrado, el controller
+existente, el Cache Storage ni lo cacheado. **El contenedor nunca debe abrirse
+por primera vez con la PWA activa.**
+
+### Defensa en dos capas
+
+| Capa | Qué hace | Dónde |
+|---|---|---|
+| **Build** (§3) | `public/sw.js` y `public/sw/` **no se copian al staging**. Sin archivo, `register("/sw.js")` falla aunque un guard falle | `scripts/build-capacitor.mjs` |
+| **Guard de componente** | no se intenta registrar ni mostrar nada | los 4 componentes de abajo |
+
+### Inventario COMPLETO de `components/pwa/` — los 8 archivos
+
+🔴 **La rev. 4 sólo cubría el árbol de `PwaClient` y se perdía `InstallRow`**,
+que se monta desde **otro lado**: `app/cuenta/configuracion/page.tsx:9`.
+
+| Archivo | Dónde se monta | En el artefacto nativo | Web |
+|---|---|---|---|
+| `ServiceWorkerRegister.tsx` | `PwaClient` ← `layout.tsx:11` | **no registrar** si `ES_NATIVO` | **intacta** |
+| `UpdateToast.tsx` | `PwaClient` | **no mostrar** | intacta |
+| `InstallPrompt.tsx` | `PwaClient` | **no mostrar** *(en iOS diría "Compartir → Agregar a inicio" adentro de la app)* | intacta |
+| `StandaloneWelcome.tsx` | `PwaClient` | revisar el texto | intacta |
+| **`InstallRow.tsx`** | **`app/cuenta/configuracion/page.tsx:9`** | 🔴 **OCULTAR la fila entera** | intacta |
+| `AppleSplashLinks.tsx` | `layout.tsx:10` | **no montar** (18 `<link>` inertes) | intacta |
+| `OfflineState.tsx` | 8 vistas (`CatalogView`, `CategoryView`, `DetailView`, `ListaView`, `MiniseriesView`, `PersonView`, `TopView`, `UltimosView`) | ⚠️ **SE CONSERVA** | intacta |
+| `PwaClient.tsx` | `layout.tsx:11` | se conserva como contenedor; sus hijos se apagan solos | intacta |
+
+⚠️ **`OfflineState` no es una entrada de PWA.** Es el estado "sin conexión" de
+la app y lo consumen 8 vistas. **Tocarlo rompería CP8 #13**, que es una de las
+tres pruebas obligatorias.
+
+**Por qué `InstallRow` no se puede dejar como está.** Su primera rama es
+`if (installed) return …` con el texto *"Ya la estás usando como app instalada.
+🎉"* y la etiqueta *"Instalada"*. Dentro de Capacitor `isStandalone()` matchea
+`display-mode: standalone`, así que **`installed` da `true`** y el usuario de un
+APK vería un mensaje sobre una instalación de PWA que nunca hizo. Las otras
+ramas son peores: ofrecerían **instalar** una app que ya está instalada.
+
+🟡 **Para el spike: ocultar la fila entera** con la misma bandera de build. Es la
+opción mínima. Reemplazarla por información útil de la app instalada (versión,
+build) es producto, no spike — 🔵 y sólo si el dueño lo pide.
+
+**`hooks/useInstallPrompt.ts`** lo consumen únicamente `InstallPrompt` e
+`InstallRow`. Con las dos apagadas, el hook queda sin llamadores en el
+artefacto: **no hace falta tocarlo**.
+
+**Auditoría de cierre — ninguna UI puede invitar a instalar dentro del APK:**
+
+- [ ] Recorrer `/cuenta/configuracion` en el teléfono: **no aparece** la fila de
+      instalación en ninguna de sus tres formas.
+- [ ] Recorrer el Home y esperar: **no aparece** el banner de instalación.
+- [ ] No aparece el aviso de actualización de la PWA.
+- [ ] El HTML exportado no trae `<link rel="manifest">` ni
+      `apple-touch-startup-image`.
+- [ ] **En la web, las tres entradas siguen existiendo**: banner, fila de
+      configuración y aviso de actualización.
+
+### Metadata de PWA en el artefacto nativo
+
+`app/layout.tsx` declara `manifest: "/manifest.webmanifest"` (línea 49),
+`appleWebApp` (52-56) y monta `<AppleSplashLinks />` (65).
+
+| Elemento | En el artefacto nativo | Cómo |
+|---|---|---|
+| `<link rel="manifest">` | **omitir** — `pageExtensions: ["tsx"]` ya excluye `app/manifest.ts`, así que el archivo **no existe** y el link apuntaría a un 404 | condicionar `manifest:` con `ES_NATIVO` |
+| `appleWebApp` | **omitir**: es metadata de "agregar a inicio" en Safari, sin sentido en un APK | idem |
+| `<AppleSplashLinks />` | **no montar**: 18 `<link>` a splash de iOS, inertes y peso muerto | guard con `ES_NATIVO` |
+| `themeColor`, `viewportFit`, `interactiveWidget`, safe areas | **se conservan** | son de layout, no de PWA |
+
+**Aprobación (antes de cualquier `cap run`):**
+- [ ] `out-capacitor/` **no contiene** `sw.js` ni `sw/`.
+- [ ] `out-capacitor/` **no contiene** `manifest.webmanifest`.
+- [ ] El HTML exportado **no** tiene `<link rel="manifest">` ni `apple-touch-startup-image`.
+- [ ] Criterio de no-regresión web (§1): `/sw.js` y `manifest.webmanifest` **siguen
+      sirviéndose** en el build web.
+
+### Recuperación de una instalación contaminada
+
+🔴 **Camino de emergencia, no el normal.** Si por un error igual se abrió con la
+PWA activa:
+
+```
+1. chrome://inspect → Inspect sobre el WebView de Yump Dev
+2. Consola:
+     const rs = await navigator.serviceWorker.getRegistrations();
+     await Promise.all(rs.map(r => r.unregister()));
+     const ks = await caches.keys();
+     await Promise.all(ks.map(k => caches.delete(k)));
+3. Android: Ajustes → Apps → Yump Dev → Almacenamiento → Borrar datos
+   (o desinstalar y reinstalar la build debug)
+4. Verificar, otra vez en consola:
+     (await navigator.serviceWorker.getRegistrations()).length   → 0
+     (await caches.keys()).length                                → 0
+```
+
+**Estimación: 0,75 sesión.**
+
+---
+
+## CP7 — Proyecto Android y primera prueba integral limpia
+
+**Precondiciones:** CP6 aprobado y **verificado**. 🔵 Ventana de Preview abierta
+para esta sesión (§5).
+
+**Dependencias — corregido contra la doc oficial de Capacitor:**
+
+```
+npm install @capacitor/core@8 @capacitor/android@8
+npm install --save-dev @capacitor/cli@8
+```
+
+🔴 **La rev. 3 ponía los tres con `-D`. Está mal:** `@capacitor/core` y
+`@capacitor/android` son **runtime del proyecto nativo** y van en
+`dependencies`; sólo `@capacitor/cli` es de desarrollo. **El mismo criterio vale
+para los plugins de CP9:** son runtime → `dependencies`.
+
+- [ ] Android Studio + JDK + SDK 36 + Platform Tools; `adb devices` lista el teléfono.
+- [ ] Instalar con los comandos de arriba.
+- [ ] **Verificar las versiones efectivamente resueltas** antes de crear Android:
+      `npm ls @capacitor/core @capacitor/cli @capacitor/android` → las tres en 8.x.
+- [ ] `npx cap init "Yump Dev" ar.yump.app.dev --web-dir out-capacitor`
+- [ ] `npx cap add android`
+- [ ] **Verificar** `android/variables.gradle`: `compileSdkVersion = 36`,
+      `targetSdkVersion = 36`. No se personalizan.
+- [ ] **Verificar** que el `AndroidManifest.xml` generado **ya trae**
+      `android.permission.INTERNET`. 🔴 **No agregarlo a mano**: si está, es del
+      template; si no está, recién ahí se evalúa. Y **sacar cualquier permiso que
+      sobre**.
+- [ ] `.gitignore`: **sólo** `out-capacitor/` y `.capacitor-build/`.
+      🔴 **`android/` SÍ se versiona** — lleva configuración, plugins y evidencia.
+- [ ] `npm run build` normal antes y después: criterio de §1.
+- [ ] `npm run build:capacitor -- --api-base=<URL de Preview>` → `npx cap sync
+      android` → `npx cap run android`.
+- [ ] **Primera comprobación al abrir**, en `chrome://inspect`:
+      `getRegistrations()` → `[]` y `caches.keys()` → `[]`. **Limpio de entrada.**
+
+**Aprobación:** el Home carga **con datos reales de Preview en el teléfono**, y
+la app abrió **sin** service worker ni caches.
+**Cierre de sesión:** volver a proteger la Preview y verificarlo (§5).
+**Estimación: 1,5–2 sesiones.**
+
+---
+
+## CP8 — Matriz móvil, sin instalar un solo plugin
+
+**Precondiciones:** CP7 aprobado. 🔵 Ventana de Preview de esta sesión.
+
+| # | Qué | Criterio |
+|---|---|---|
+| 1 | Botón Atrás físico | ¿navega o cierra? |
+| 2 | Enlaces externos (legales, alta, Calendar, `.ics`) | ¿abren fuera, adentro, o nada? |
+| 3 | **Compartir** | lleva `https://app.yump.ar/titulo/...` — no Preview ni `localhost` |
+| 4 | Teclado en `/buscar` | ¿tapa el input? |
+| 5 | Barra de estado | legible en claro y oscuro |
+| 6 | Safe areas | nada bajo el gesture bar |
+| 7 | Orientación | rotar no rompe |
+| 8 | Suspensión 5 min | vuelve donde estaba |
+| 9 | Arranque frío | anotar tiempo |
+| 10 | Arranque caliente | idem |
+| 11 | Cierre forzado | reabre sin estado corrupto |
+| 12 | Red lenta | esqueletos, sin pantalla muerta |
+| 13 | **Modo avión** | la cáscara **abre** y muestra `OfflineState` |
+| 14 | **Sesión** | login → cerrar → reabrir → **sigue logueado** |
+| 15 | Plataformas | persisten entre reinicios |
+| 16 | **Navegación del export** | §9 |
+
+**Aprobación:** 3, 13 y 14 obligatorios. El resto se documenta aunque falle.
+**Estimación: 1 sesión.**
+
+---
+
+## CP9 — Plugins, sólo los que CP8 demostró
+
+**Todos van en `dependencies`** (son runtime), no en devDependencies.
+
+| Plugin | Problema | Prueba previa | Permiso | Criterio |
+|---|---|---|---|---|
+| `@capacitor/app` | el back cierra la app | CP8 #1 | ninguno | si #1 falla |
+| `@capacitor/browser` | sitios ajenos adentro del WebView | CP8 #2 | ninguno | si #2 falla |
+| `@capacitor/share` | `navigator.share` no existe en WebView | CP8 #3 | ninguno | si #3 falla |
+| `@capacitor/status-bar` | barra ilegible | CP8 #5 | ninguno | si #5 falla |
+| `@capacitor/preferences` | sesión perdida | CP8 #14 | ninguno | **ver abajo** |
+| `@capacitor/splash-screen` | pantalla en blanco | CP8 #9 | ninguno | cosmético; **no** en el spike |
+
+🔴 **`@capacitor/preferences` NO es una solución automática.** Instalarlo **no
+arregla nada por sí solo**: haría falta escribir un **adaptador de
+almacenamiento** y pasárselo a `createClient` como `auth.storage`, más decidir
+qué pasa con la sesión ya guardada en `localStorage` (migrar o perder) y
+verificar que sobreviva. **Si CP8 #14 falla, eso es un mini-proyecto**, no una
+instalación — y se estima aparte.
+
+**Estimación: 0,5–1,5 sesiones.**
+
+---
+
+## CP10 — YouTube
+
+**Precondiciones:** CP7 aprobado **y `/api/title/[tipo]/[id]` con CORS** (CP4).
+Sin ficha no hay tráiler. 🔵 Ventana de Preview de esta sesión.
+
+🔴 **Con `ar.yump.app.dev` y firma debug.**
+
+| # | Experimento | Observable |
+|---|---|---|
+| 1 | Abrir un tráiler sin tocar nada | el error exacto en consola remota |
+| 2 | **Medir si el `Referer` viaja** | Network de `chrome://inspect` |
+| 3 | Fijar `Referer: https://ar.yump.app.dev` | ¿desaparece el 153? |
+| 4 | URL base del contenido local | idem |
+| 5 | WebView Media Integrity | idem |
+| 6 | `origin=SITIO_PUBLICO` | 🔍 hipótesis adicional; **no** es la solución del `Referer` |
+
+🔵 Si funciona el 5, **no implica adelantar identificador ni keystore**: se
+**eleva la pregunta** al dueño. El prototipo sigue con `.dev` y debug.
+🔴 Si ninguno funciona, **no se apagan los tráileres en silencio**: se documenta.
+
+**Estimación: 0,5–2 sesiones.**
+
+---
+
+## CP11 — Veredicto y cierre
+
+- [ ] Escribir el resultado en `docs/CAPACITOR.md`.
+- [ ] **Extraer y verificar** lo reutilizable en una rama limpia; recién después
+      proponer qué se descarta.
+- [ ] 🔴 **Nada se borra sin aprobación.**
+- [ ] **Verificar que la Preview quedó protegida.**
+- [ ] Confirmar que ningún secreto quedó en el repo ni en el APK.
+- [ ] Criterio de no-regresión web (§1).
+
+**Estimación: 0,5 sesión.**
+
+---
+
+## 9. Navegación del export dentro de Capacitor — verificar en CP8 #16
+
+`trailingSlash: true` (doc de Next 14): con `output: "export"`, `/about` se emite
+como **`/about/index.html`** en vez de `/about.html`. Se elige a propósito: un
+servidor de archivos resuelve un directorio con `index.html` de forma natural,
+mientras que `/about.html` exige que el servidor pruebe `$uri.html` —
+comportamiento **no garantizado** en el servidor interno de Capacitor.
+
+🔴 **No se asume que `serve` en escritorio se comporte igual.** Por eso la
+comprobación es **en el teléfono**:
+
+| Qué | Esperado |
+|---|---|
+| Arranque en `/` | `index.html` |
+| `Link` a `/buscar` | client-side, sin recarga |
+| **Carga directa** de `/t/?tipo=movie&id=278` | monta la ficha |
+| **Recarga** en `/buscar` | vuelve a montar, no 404 |
+| **Query strings** tras recarga | `?tipo=movie&id=278` sigue |
+| Atrás desde `/t` | vuelve a la pantalla anterior |
+| Ruta inexistente | `404.html`, no pantalla en blanco |
+
+---
+
+## 10. `next/image` — no bloquea, pero se blinda
+
+**Verificado: el proyecto NO usa `next/image`.** El único hit en todo el árbol es
+un comentario en `components/avatar/Avatar.tsx:8` explicando que no se usa a
+propósito. Igual se declara `images: { unoptimized: true }` en el config de
+Capacitor: cuesta una línea y evita que el día que alguien agregue un `<Image>`
+el build nativo se rompa sin explicación. La web conserva `remotePatterns`, con
+test de regresión en CP1.
+
+---
+
+## 11. Secuencia y estimación
+
+```
+GATE A (sin teléfono)
+  CP1 diagnóstico → CP2 staging + rutas + plataforma + export completo
+  → CP3 base API → CP4 CORS 23 rutas + ventana Preview → CP5 Gate A
+
+ANTES DE ANDROID
+  CP6 🔴 PWA neutralizada en el artefacto
+
+GATE B (teléfono, ventana de Preview por sesión)
+  CP7 Android + 1ª prueba integral limpia → CP8 matriz → CP9 plugins
+  → CP10 YouTube → CP11 cierre
+```
+
+| Gate | CP | Sesiones | Cambio vs rev. 3 |
+|---|---|---|---|
+| **A** | CP1 diagnóstico | 1–1,5 | = |
+| A | CP2 staging + rutas + plataforma | **2,5–3** | +0,5 más: allowlist de entorno y `tsconfig` derivado |
+| A | CP3 base API | 1 | = |
+| A | CP4 CORS + ventana | **2–2,5** | +0,5: contrato concreto y secuencia de Preview |
+| A | CP5 Gate A | 0,25 | = |
+| | **Subtotal A** | **6,75–8,25** | |
+| — | **CP6 PWA** | **1** | +0,25: `InstallRow` y la auditoría de las 8 piezas |
+| **B** | CP7 Android | 1,5–2 | = |
+| B | CP8 matriz | 1 | = |
+| B | CP9 plugins | 0,5–1,5 | = |
+| B | CP10 YouTube | 0,5–2 | = |
+| B | CP11 cierre | 0,5 | = |
+| | **Subtotal B** | **4–7** | |
+
+**Total: 11,75–16,25 sesiones** (rev. 4: 11–15,5; rev. 3: 10,25–14,25).
+
+⚠️ **Fuera de esa cuenta:** si CP8 #14 falla, el adaptador de almacenamiento de
+§CP9 es un mini-proyecto que se estima aparte.
+
+---
+
+## 12. Matriz de artefactos
+
+| Artefacto | Sólo prototipo | Reutilizable web | Candidato a integración | Android | Reutilizable iOS |
+|---|:--:|:--:|:--:|:--:|:--:|
+| `next.config.mjs` condicional | | ✅ | ✅ | | ✅ |
+| `scripts/build-capacitor.mjs` (staging) | | ✅ | ✅ | | ✅ |
+| `scripts/config.test.mjs` | | ✅ | ✅ | | ✅ |
+| `generateStaticParams` (lista, categoría) | | ✅ | ✅ | | ✅ |
+| `lib/plataforma.ts` (bandera de build) | | ✅ | ✅ | | ✅ |
+| `lib/rutas.ts` + `/t` + `/p` + Suspense | | ✅ | ✅ | | ✅ |
+| `lib/api-base.ts` + 20 ediciones | | ✅ | ✅ | | ✅ |
+| `lib/cors.ts` (23 rutas) | | | ✅ **sujeto a aprobación** | | ✅ |
+| Neutralización PWA (build + guards) | | ✅ | ✅ | | ✅ |
+| `@capacitor/app` · `browser` · `share` | | | ✅ | ✅ | ✅ (share/browser) |
+| Fix de YouTube | | | ✅ | ✅ | ⚠️ hay que rehacerlo |
+| `capacitor.config.ts` (`.dev`) | ✅ | | | ✅ | |
+| `android/` (**se versiona, no se borra**) | ✅ | | | ✅ | |
+| **`lib/compartir.ts`** | — | **NO SE TOCA** | — | — | — |
+
+---
+
+## 13. Riesgos
+
+| Riesgo | Prob. | Daño | Mitigación |
+|---|---|---|---|
+| `pageExtensions` no excluye las rutas | media | alto | CP1 lo dice en 1 sesión |
+| YouTube no se resuelve (CP10) | 🔍 alta | alto | 6 experimentos; decide el dueño |
+| Hydration mismatch por el indicador nativo | **baja** | alto | bandera de build + comprobación sobre el HTML exportado (§2) |
+| **Primer arranque con la PWA activa** | **baja** | **alto** | CP6 antes de Android + doble capa + recuperación |
+| Suspense + export en CP2 | media | medio | primer `<Suspense>` del repo |
+| La junction falla | baja | bajo | aborta con mensaje; se decide a mano |
+| Ventana de Preview olvidada abierta | media | medio | cierre verificado al final de cada sesión |
+| El servidor de Capacitor no resuelve como `serve` | media | medio | CP8 #16, en el teléfono |
+| Sesión perdida en CP8 #14 | baja | alto | el adaptador es un mini-proyecto, se estima aparte |
+
+---
+
+## 14. Decisiones que requieren aprobación
+
+| # | Decisión | Cuándo | Estado |
+|---|---|---|---|
+| 1 | **Abrir Deployment Protection** — afecta **todos** los Preview del proyecto | **antes de CP4**, y **una vez por sesión** en Gate B | 🔵 **no es permanente** |
+| 2 | Seguir a Gate B | CP5 | 🔵 punto de corte |
+| 3 | Integrar `lib/cors.ts` a Producción | Etapa 3, **después del veredicto** | 🔵 |
+| 4 | Si `app/admin` no se puede excluir y viaja en el APK | CP2 | 🔵 |
+| 5 | Si CP10 termina en Media Integrity: ¿se eleva a identificador definitivo? | CP10 | 🔵 no automático |
+| 6 | Si CP8 #14 falla: ¿se hace el adaptador de almacenamiento? | CP9 | 🔵 mini-proyecto aparte |
+| 7 | Qué se descarta al cerrar | CP11 | 🔵 **nada se borra sin esto** |
+
+**Producción no se toca en ningún checkpoint.**
