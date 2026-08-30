@@ -159,6 +159,24 @@ test("el preflight NO ejecuta el handler real", async () => {
   assert.equal(ejecutado, true);
 });
 
+/** Captura las llamadas a console.error y SIEMPRE lo restaura. */
+async function espiandoConsola<T>(fn: () => Promise<T>): Promise<{ r: T; llamadas: unknown[][] }> {
+  const original = console.error;
+  const llamadas: unknown[][] = [];
+  console.error = (...args: unknown[]) => { llamadas.push(args); };
+  try {
+    const r = await fn();
+    return { r, llamadas };
+  } finally {
+    console.error = original;   // también si la prueba falla
+  }
+}
+
+const PEDIDO_CON_SECRETOS = () => new Request(
+  "https://app.yump.ar/api/ruleta?escenario=corta&token=secreto-en-query",
+  { method: "GET", headers: { Origin: ANDROID, Authorization: "Bearer secreto-en-header" } },
+);
+
 // ============================================================================
 // 12-14. Respuestas reales
 // ============================================================================
@@ -203,8 +221,12 @@ test("un 401 controlado también lleva CORS", async () => {
 test("una EXCEPCIÓN no capturada sale como 500 CON CORS", async () => {
   // Sin esto, Next devolvería su propio 500 sin encabezados y el navegador
   // mostraría un error de red genérico en vez del status real.
+  //
+  // Va con `espiandoConsola` porque `conCors` ahora REGISTRA la excepción: sin
+  // el espía, este test escupiría un `[api] … error no controlado` en la salida
+  // de la suite y ensuciaría el output de todos los días.
   const manejar = async () => { throw new Error("boom"); };
-  const res = await conCors(manejar, "GET")(pedir(ANDROID, "GET"));
+  const { r: res } = await espiandoConsola(() => conCors(manejar, "GET")(pedir(ANDROID, "GET")));
   assert.equal(res.status, 500);
   assert.equal(res.headers.get("Access-Control-Allow-Origin"), ANDROID);
   assert.equal(res.headers.get("Vary"), "Origin");
@@ -212,7 +234,7 @@ test("una EXCEPCIÓN no capturada sale como 500 CON CORS", async () => {
 
 test("el 500 de la integración no filtra el mensaje de la excepción", async () => {
   const manejar = async () => { throw new Error("detalle-interno-que-no-debe-salir"); };
-  const res = await conCors(manejar, "GET")(pedir(ANDROID, "GET"));
+  const { r: res } = await espiandoConsola(() => conCors(manejar, "GET")(pedir(ANDROID, "GET")));
   assert.doesNotMatch(await res.text(), /detalle-interno-que-no-debe-salir/);
 });
 
@@ -242,4 +264,63 @@ test("con origen permitido tampoco pisa los headers de la ruta", async () => {
   const res = await conCors(manejar, "GET")(pedir(ANDROID, "GET"));
   assert.equal(res.headers.get("Cache-Control"), "no-store");
   assert.equal(res.headers.get("Vary"), "Accept-Encoding, Origin", "pisó el Vary previo");
+});
+
+// ============================================================================
+// Observabilidad: una excepción no puede desaparecer de los logs
+// ============================================================================
+//
+// `conCors` captura para poder devolver un 500 CON CORS. Si además se tragara el
+// error, los fallos no controlados de 23 rutas se volverían invisibles: la
+// respuesta diría "error interno" y en los logs no habría nada. Se registra el
+// contexto MÍNIMO y el objeto de error (que conserva el stack).
+
+test("una excepción registra UNA sola vez en console.error", async () => {
+  const manejar = async () => { throw new Error("boom"); };
+  const { llamadas } = await espiandoConsola(() =>
+    conCors(manejar, "GET")(PEDIDO_CON_SECRETOS()));
+  assert.equal(llamadas.length, 1, "tiene que registrar exactamente una vez");
+});
+
+test("el contexto registrado trae método y pathname", async () => {
+  const manejar = async () => { throw new Error("boom"); };
+  const { llamadas } = await espiandoConsola(() =>
+    conCors(manejar, "GET")(PEDIDO_CON_SECRETOS()));
+  const contexto = String(llamadas[0][0]);
+  assert.match(contexto, /GET/);
+  assert.match(contexto, /\/api\/ruleta/);
+});
+
+test("el contexto NO trae query, Authorization, cookies ni headers", async () => {
+  const manejar = async () => { throw new Error("boom"); };
+  const { llamadas } = await espiandoConsola(() =>
+    conCors(manejar, "GET")(PEDIDO_CON_SECRETOS()));
+  const todo = llamadas[0].map((a) => (a instanceof Error ? a.message : String(a))).join(" | ");
+  assert.doesNotMatch(todo, /secreto-en-query/, "se filtró la query");
+  assert.doesNotMatch(todo, /secreto-en-header/, "se filtró el Authorization");
+  assert.doesNotMatch(todo, /escenario=corta/, "se filtró la query string");
+  assert.doesNotMatch(todo, /Bearer/i);
+});
+
+test("se registra el OBJETO de error, para conservar el stack", async () => {
+  const boom = new Error("boom");
+  const { llamadas } = await espiandoConsola(() =>
+    conCors(async () => { throw boom; }, "GET")(PEDIDO_CON_SECRETOS()));
+  assert.ok(llamadas[0].includes(boom), "hay que pasar el error, no sólo su texto");
+});
+
+test("pese al log, la respuesta sigue siendo 500 con CORS y sin el mensaje interno", async () => {
+  const manejar = async () => { throw new Error("detalle-interno-que-no-debe-salir"); };
+  const { r: res } = await espiandoConsola(() =>
+    conCors(manejar, "GET")(PEDIDO_CON_SECRETOS()));
+  assert.equal(res.status, 500);
+  assert.equal(res.headers.get("Access-Control-Allow-Origin"), ANDROID);
+  assert.equal(res.headers.get("Vary"), "Origin");
+  assert.doesNotMatch(await res.text(), /detalle-interno-que-no-debe-salir/);
+});
+
+test("una respuesta normal NO registra nada: cero ruido en la suite", async () => {
+  const { llamadas } = await espiandoConsola(() =>
+    conCors(async () => Response.json({ ok: true }), "GET")(pedir(ANDROID, "GET")));
+  assert.deepEqual(llamadas, []);
 });

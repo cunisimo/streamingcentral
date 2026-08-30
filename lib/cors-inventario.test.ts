@@ -1,9 +1,9 @@
-// El inventario de rutas: quién integra CORS, quién está excluida a propósito y
-// quién todavía no está clasificada.
+// El inventario de rutas: quién integra CORS y quién queda afuera a propósito.
 //
 // ⚠️ Comprobación sobre el TEXTO de los archivos, no sobre la app montada: este
-// proyecto no tiene arnés de DOM (misma nota que `lib/legal.test.ts`). Fija la
-// regresión real: que aparezca una ruta nueva y nadie decida a qué grupo va.
+// proyecto no tiene arnés de DOM (misma nota que `lib/legal.test.ts`). Fija dos
+// regresiones reales: que aparezca una ruta nueva y nadie decida a qué grupo va,
+// y que el método declarado en una ruta deje de coincidir consigo mismo.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -23,18 +23,46 @@ export function rutasDeApi(dir = API): string[] {
   return out.sort();
 }
 
-/** ¿El archivo integra el contrato de CORS? */
-export function integraCors(src: string): boolean {
-  return /export const (GET|POST) = conCors\(/.test(src)
-      && /export const OPTIONS = opcionesCors\(/.test(src);
+const leer = (rel: string) => fs.readFileSync(path.join(RAIZ, rel), "utf8");
+
+// ============================================================================
+// Coherencia del método: los TRES lugares donde se escribe
+// ============================================================================
+//
+// Cada ruta integrada nombra su método tres veces:
+//
+//   export const GET = conCors(manejar, "GET");   ← el export, y el argumento
+//   export const OPTIONS = opcionesCors("GET");   ← y otra vez acá
+//
+// No hay "un único lugar". Lo que impide que diverjan es esto: si el export se
+// llama GET pero se envuelve como POST, el preflight anunciaría un método que la
+// ruta no tiene, y el navegador dejaría pasar un request que después falla.
+
+export interface Integracion {
+  /** Nombre del export envuelto: "GET" o "POST". */
+  export: string | null;
+  /** Método pasado a `conCors`. */
+  conCors: string | null;
+  /** Método pasado a `opcionesCors`. */
+  opciones: string | null;
+}
+
+export function leerIntegracion(src: string): Integracion {
+  const env = src.match(/export const (GET|POST) = conCors\([^,]+,\s*"(GET|POST)"\s*\)/);
+  const opt = src.match(/export const OPTIONS = opcionesCors\("(GET|POST)"\s*\)/);
+  return {
+    export: env?.[1] ?? null,
+    conCors: env?.[2] ?? null,
+    opciones: opt?.[1] ?? null,
+  };
 }
 
 /**
- * ¿El `OPTIONS` de esta ruta ejecutaría el handler real?
+ * ¿El `OPTIONS` podría ejecutar el handler real?
  *
- * El contrato es que `OPTIONS` salga de `opcionesCors`, que NO recibe el
- * handler. Cualquier otra forma —un `export async function OPTIONS` propio, o
- * un `conCors` en el OPTIONS— podría llegar a la lógica de la ruta, y en
+ * El contrato es que salga de `opcionesCors`, que NO recibe el handler.
+ * Cualquier otra forma —un `export async function OPTIONS` propio, o un
+ * `conCors` en el OPTIONS— podría llegar a la lógica de la ruta, y en
  * `/api/home` eso son hasta 60 s y cientos de comandos de Upstash por preflight.
  */
 export function optionsPodriaEjecutarElHandler(src: string): boolean {
@@ -43,68 +71,75 @@ export function optionsPodriaEjecutarElHandler(src: string): boolean {
   return false;
 }
 
-// ============================================================================
-// La clasificación. Toda ruta tiene que estar en exactamente UNO de los tres.
-// ============================================================================
+/** Integra el contrato Y los tres métodos coinciden. */
+export function integraCors(src: string): boolean {
+  const i = leerIntegracion(src);
+  if (!i.export || !i.conCors || !i.opciones) return false;
+  if (optionsPodriaEjecutarElHandler(src)) return false;
+  return i.export === i.conCors && i.conCors === i.opciones;
+}
 
-/** Excluidas a propósito: nunca las llama un navegador. */
-const EXCLUIDAS = new Map([
-  ["app/api/cron/netflix-top10/route.ts",
-   "server-to-server: la dispara Vercel Cron con el CRON_SECRET, ningún navegador la pide"],
-]);
+// ============================================================================
+// La clasificación. Toda ruta está en exactamente UNO de los dos grupos.
+// ============================================================================
 
 /**
- * 🔵 PENDIENTES DE DECISIÓN DEL DUEÑO. No es olvido: son las dos rutas donde el
- * plan y la instrucción de CP4 se contradicen, y adaptarlas sin resolver eso
- * sería elegir por él.
+ * Fuera del contrato a propósito.
  *
- *   recordatorio  → la instrucción de CP4 la excluye ("se consume por
- *                   navegación/descarga del .ics"). Pero CP3 verificó que
- *                   `RecordarButton` hace además un `fetch(ics)` de validación,
- *                   con `ics` ya absoluta: en el contenedor esa llamada es
- *                   cross-origin y SIN CORS quedaría bloqueada, rompiendo el
- *                   botón "Recordarme".
- *   admin-search  → la instrucción de CP4 la incluye; el plan la excluía porque
- *                   `app/admin` no viaja en el artefacto nativo. Incluirla es
- *                   inofensivo pero inútil; excluirla es coherente con el
- *                   staging.
+ * ⚠️ El motivo NO es "ningún navegador las llama" — `admin-search` sí se llama
+ * desde un navegador, en la web. Lo que ninguna necesita es **lectura
+ * cross-origin desde el contenedor**, que es lo único que CORS habilita.
  */
-const PENDIENTES = new Map([
-  ["app/api/recordatorio/route.ts",
-   "conflicto: la instrucción de CP4 la excluye, pero RecordarButton le hace un fetch de validación"],
+const EXCLUIDAS = new Map([
+  ["app/api/cron/netflix-top10/route.ts",
+   "server-to-server: la ejecuta Vercel Cron con el CRON_SECRET; el contenedor no la consume"],
   ["app/api/admin-search/route.ts",
-   "conflicto: la instrucción de CP4 la incluye, el plan la excluía porque app/admin no viaja"],
+   "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
 ]);
 
 // ============================================================================
-// Canarios: el guard tiene que detectar los tres fallos que importan
+// Canarios del contrato
 // ============================================================================
 
-test("CANARIO: detecta una ruta que NO integra el contrato", () => {
-  assert.equal(integraCors('export async function GET() { return Response.json({}); }'), false);
-  assert.equal(integraCors('export const GET = conCors(manejar, "GET");'), false,
-    "sin OPTIONS no alcanza");
-  assert.equal(integraCors('export const OPTIONS = opcionesCors("GET");'), false,
-    "sin el método envuelto tampoco");
+const bien = (m: string) =>
+  `export const ${m} = conCors(manejar, "${m}");\nexport const OPTIONS = opcionesCors("${m}");`;
+
+test("CANARIO 1: GET + conCors GET + opcionesCors GET es válido", () => {
+  assert.equal(integraCors(bien("GET")), true);
+  assert.deepEqual(leerIntegracion(bien("GET")), { export: "GET", conCors: "GET", opciones: "GET" });
 });
 
-test("CANARIO: reconoce una ruta bien integrada", () => {
-  const bien = 'export const GET = conCors(manejar, "GET");\nexport const OPTIONS = opcionesCors("GET");';
-  assert.equal(integraCors(bien), true);
+test("CANARIO 2: POST + conCors POST + opcionesCors POST es válido", () => {
+  assert.equal(integraCors(bien("POST")), true);
 });
 
-test("CANARIO: detecta un OPTIONS que ejecutaría el handler real", () => {
-  assert.equal(optionsPodriaEjecutarElHandler(
-    'export async function OPTIONS(req) { return manejar(req); }'), true);
-  assert.equal(optionsPodriaEjecutarElHandler(
-    'export const OPTIONS = conCors(manejar, "GET");'), true);
-  assert.equal(optionsPodriaEjecutarElHandler(
-    'export const OPTIONS = opcionesCors("GET");'), false);
+test("CANARIO 3: export GET con conCors POST FALLA", () => {
+  const mal = 'export const GET = conCors(manejar, "POST");\nexport const OPTIONS = opcionesCors("GET");';
+  assert.equal(integraCors(mal), false, "no detectó que el export y conCors divergen");
 });
 
-test("CANARIO: una exclusión huérfana se detecta", () => {
-  // Si una excluida dejara de existir, el mapa apuntaría a la nada. Se prueba
-  // con un mapa de mentira para no depender de romper el repo.
+test("CANARIO 4: conCors GET con opcionesCors POST FALLA", () => {
+  const mal = 'export const GET = conCors(manejar, "GET");\nexport const OPTIONS = opcionesCors("POST");';
+  assert.equal(integraCors(mal), false, "no detectó que conCors y el preflight divergen");
+});
+
+test("CANARIO 5: sin OPTIONS FALLA", () => {
+  assert.equal(integraCors('export const GET = conCors(manejar, "GET");'), false);
+});
+
+test("CANARIO 6: un OPTIONS que llama o envuelve el handler real FALLA", () => {
+  const propio = 'export const GET = conCors(manejar, "GET");\n'
+    + "export async function OPTIONS(req) { return manejar(req); }";
+  const envuelto = 'export const GET = conCors(manejar, "GET");\n'
+    + 'export const OPTIONS = conCors(manejar, "GET");';
+  assert.equal(optionsPodriaEjecutarElHandler(propio), true);
+  assert.equal(optionsPodriaEjecutarElHandler(envuelto), true);
+  assert.equal(integraCors(propio), false);
+  assert.equal(integraCors(envuelto), false);
+  assert.equal(optionsPodriaEjecutarElHandler(bien("GET")), false);
+});
+
+test("CANARIO 7: una exclusión huérfana se detecta", () => {
   const falsa = new Map([["app/api/no-existe/route.ts", "motivo"]]);
   const huerfanas = [...falsa.keys()].filter((r) => !fs.existsSync(path.join(RAIZ, r)));
   assert.deepEqual(huerfanas, ["app/api/no-existe/route.ts"]);
@@ -114,50 +149,71 @@ test("CANARIO: una exclusión huérfana se detecta", () => {
 // El barrido real
 // ============================================================================
 
-test("toda ruta está clasificada: integrada, excluida o pendiente", () => {
-  const sinClasificar = rutasDeApi().filter((r) => {
-    if (EXCLUIDAS.has(r) || PENDIENTES.has(r)) return false;
-    return !integraCors(fs.readFileSync(path.join(RAIZ, r), "utf8"));
-  });
+test("toda ruta está clasificada: integrada o excluida, sin pendientes", () => {
+  const sinClasificar = rutasDeApi()
+    .filter((r) => !EXCLUIDAS.has(r))
+    .filter((r) => !integraCors(leer(r)));
   assert.deepEqual(sinClasificar, [],
     `rutas sin CORS y sin clasificar:\n${sinClasificar.join("\n")}`);
 });
 
-test("las excluidas y las pendientes NO integran CORS", () => {
-  for (const [r, motivo] of [...EXCLUIDAS, ...PENDIENTES]) {
-    const src = fs.readFileSync(path.join(RAIZ, r), "utf8");
+test("las 23 integradas coinciden en sus TRES declaraciones de método", () => {
+  const divergentes: string[] = [];
+  for (const r of rutasDeApi()) {
+    if (EXCLUIDAS.has(r)) continue;
+    const i = leerIntegracion(leer(r));
+    if (!(i.export && i.export === i.conCors && i.conCors === i.opciones)) {
+      divergentes.push(`${r}: export=${i.export} conCors=${i.conCors} opciones=${i.opciones}`);
+    }
+  }
+  assert.deepEqual(divergentes, [], `métodos divergentes:\n${divergentes.join("\n")}`);
+});
+
+test("las excluidas NO integran CORS ni exportan OPTIONS", () => {
+  for (const [r, motivo] of EXCLUIDAS) {
+    const src = leer(r);
     assert.equal(integraCors(src), false, `${r} integró CORS pese a estar fuera (${motivo})`);
+    assert.doesNotMatch(src, /export (const|async function) OPTIONS/,
+      `${r} exporta OPTIONS y no debería`);
   }
 });
 
-test("ninguna exclusión ni pendiente quedó huérfana", () => {
-  for (const r of [...EXCLUIDAS.keys(), ...PENDIENTES.keys()]) {
+test("ninguna exclusión quedó huérfana", () => {
+  for (const r of EXCLUIDAS.keys()) {
     assert.ok(fs.existsSync(path.join(RAIZ, r)),
       `la clasificación apunta a un archivo que ya no está: ${r}`);
   }
 });
 
 test("ningún OPTIONS puede ejecutar el handler real", () => {
-  const malas = rutasDeApi().filter((r) =>
-    optionsPodriaEjecutarElHandler(fs.readFileSync(path.join(RAIZ, r), "utf8")));
+  const malas = rutasDeApi().filter((r) => optionsPodriaEjecutarElHandler(leer(r)));
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 25 rutas = 22 integradas + 1 excluida + 2 pendientes", () => {
+test("el recuento cierra: 25 rutas = 23 integradas + 2 excluidas", () => {
   const todas = rutasDeApi();
-  const integradas = todas.filter((r) => integraCors(fs.readFileSync(path.join(RAIZ, r), "utf8")));
+  const integradas = todas.filter((r) => integraCors(leer(r)));
   assert.equal(todas.length, 25, "cambió la cantidad de rutas: hay que reclasificar");
-  assert.equal(integradas.length, 22);
-  assert.equal(EXCLUIDAS.size, 1);
-  assert.equal(PENDIENTES.size, 2);
-  assert.equal(integradas.length + EXCLUIDAS.size + PENDIENTES.size, todas.length);
+  assert.equal(integradas.length, 23);
+  assert.equal(EXCLUIDAS.size, 2);
+  assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
+});
+
+test("recordatorio integra CORS: su fetch de validación es cross-origin", () => {
+  const r = "app/api/recordatorio/route.ts";
+  assert.equal(integraCors(leer(r)), true);
+  // Y las cabeceras del .ics siguen ahí: `conCors` copia las de la ruta.
+  const src = leer(r);
+  assert.match(src, /text\/calendar/);
+  assert.match(src, /Content-Disposition/);
+  assert.match(src, /private, max-age=300/);
 });
 
 test("ninguna ruta declara métodos que no existen", () => {
   for (const r of rutasDeApi()) {
-    const src = fs.readFileSync(path.join(RAIZ, r), "utf8");
     for (const inexistente of ["PUT", "PATCH", "DELETE", "HEAD"]) {
-      assert.doesNotMatch(src, new RegExp(`opcionesCors\\("${inexistente}"`), `${r} declara ${inexistente}`);
+      assert.doesNotMatch(leer(r), new RegExp(`opcionesCors\\("${inexistente}"`),
+        `${r} declara ${inexistente}`);
     }
   }
 });

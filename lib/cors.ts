@@ -94,6 +94,12 @@ export function cabecerasCors(
 /**
  * El handler de `OPTIONS` de una ruta: responde el preflight con `204`.
  *
+ * ⚠️ El método se escribe en TRES lugares por ruta: el nombre del export, el
+ * argumento de `conCors` y el de `opcionesCors`. No hay "un único lugar" —eso
+ * decía el comentario anterior y era falso—. Lo que impide que diverjan es el
+ * guard de `lib/cors-inventario.test.ts`, que extrae los tres y exige que
+ * coincidan.
+ *
  * ⚠️ NO RECIBE EL HANDLER REAL, y es deliberado: así es **imposible** que el
  * preflight ejecute la lógica de la ruta. No es que "no suele pasar" — es que
  * no hay forma de llamarla desde acá. Importa porque `/api/home` puede tardar
@@ -143,7 +149,23 @@ export function conCors<R extends Request, A extends unknown[]>(
     let res: Response;
     try {
       res = await handler(req, ...extra);
-    } catch {
+    } catch (error) {
+      // ⚠️ SE REGISTRA, no se traga. Capturar para poder devolver un 500 CON
+      // CORS es correcto; hacerlo en silencio volvería invisibles los fallos no
+      // controlados de las 23 rutas: la respuesta diría "error interno" y en los
+      // logs no habría nada. Antes de envolver las rutas, esa excepción la
+      // registraba Next; acá se conserva esa observabilidad.
+      //
+      // Contexto MÍNIMO a propósito: método y pathname, nada más. NO van la
+      // query —puede traer términos de búsqueda o ids—, ni `Authorization`, ni
+      // cookies, ni headers, ni el entorno. El objeto de error SÍ, porque es lo
+      // que conserva el stack y sin eso el log no sirve para diagnosticar.
+      console.error(
+        `[api] ${req.method} ${new URL(req.url).pathname}: error no controlado`,
+        error,
+      );
+      // El mensaje de la excepción NO viaja en la respuesta: puede traer
+      // detalles internos.
       res = Response.json({ error: "error interno" }, { status: 500 });
     }
     // Se copian los encabezados de la ruta y se AGREGAN los de CORS. `Vary` se
@@ -152,9 +174,9 @@ export function conCors<R extends Request, A extends unknown[]>(
     for (const [k, v] of Object.entries(cabecerasCors(origin, headers.get("Vary")))) {
       headers.set(k, v);
     }
-    // `metodos` no se usa en la respuesta normal —sólo el preflight los
-    // declara— pero se pide en la firma para que cada ruta declare el suyo en
-    // un único lugar y no puedan divergir el GET y su OPTIONS.
+    // `metodos` no se usa en la respuesta normal: sólo el preflight los declara.
+    // Se pide igual en la firma para que el guard pueda comprobar que coincide
+    // con el nombre del export y con el `opcionesCors` de la misma ruta.
     void metodos;
     return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
   };

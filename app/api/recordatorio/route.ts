@@ -12,6 +12,7 @@ import { hoyAR } from "@/lib/fecha";
 import { platformByCode } from "@/lib/providers-ar";
 import { SITIO_PUBLICO } from "@/lib/compartir";
 import type { MediaType, PlatformCode } from "@/lib/types";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,7 @@ function nombreArchivo(titulo: string): string {
   return `${base || "recordatorio"}.ics`;
 }
 
-export async function GET(req: NextRequest) {
+async function manejar(req: NextRequest) {
   const q = req.nextUrl.searchParams;
   const tipo: MediaType = q.get("tipo") === "tv" ? "tv" : "movie";
   const id = Number(q.get("id"));
@@ -165,3 +166,16 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios: las
+// cabeceras del .ics —Content-Type text/calendar, Content-Disposition y el
+// Cache-Control private— salen intactas, porque `conCors` copia las de la ruta y
+// sólo AGREGA las suyas.
+//
+// Esta ruta hace DOS cosas y por eso está acá: `RecordarButton` primero le hace
+// un `fetch` de validación —para poder avisar "todavía no hay fecha confirmada"
+// en vez de bajar un archivo roto— y recién después navega para descargar. La
+// navegación no necesita CORS; **el fetch sí**, y dentro del contenedor es
+// cross-origin. Sin esto el botón "Recordarme" falla antes de descargar nada.
+export const GET = conCors(manejar, "GET");
+export const OPTIONS = opcionesCors("GET");

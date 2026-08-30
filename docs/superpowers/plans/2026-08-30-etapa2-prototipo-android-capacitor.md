@@ -178,6 +178,72 @@ primer argumento sea la ruta literal `/api/…` sin pasar por `apiUrl`.
 
 ---
 
+## 🟡 CP4 — implementación local completa, checkpoint ABIERTO
+
+**Lo local está hecho. El checkpoint NO está cerrado**: falta la ventana de
+Preview y los siete `curl`, que necesitan autorización aparte del dueño.
+
+### Clasificación final: 25 = 23 + 2
+
+| Grupo | Cuántas | Cuáles |
+|---|---|---|
+| **Integran CORS** | **23** | 21 `GET` + 2 `POST` |
+| **Excluidas** | **2** | `cron/netflix-top10` · `admin-search` |
+
+⚠️ **El motivo de las exclusiones NO es "ningún navegador las llama"**:
+`admin-search` sí se llama desde un navegador, en la web. Lo que ninguna de las
+dos necesita es **lectura cross-origin desde el contenedor**, que es lo único
+que CORS habilita.
+
+- `cron/netflix-top10` — server-to-server: la ejecuta Vercel Cron con el
+  `CRON_SECRET`.
+- `admin-search` — sólo la consume `app/admin`, que **no viaja en el artefacto
+  nativo**: habilitarla sería innecesario.
+
+**`recordatorio` SÍ integra CORS**, y la evidencia lo decide sin margen:
+`RecordarButton` arma `apiUrl(icsUrl(...))` y ejecuta **primero** un
+`await fetch(ics)` de validación —para poder avisar "todavía no hay fecha
+confirmada" en vez de bajar un archivo roto—. En el contenedor ese `fetch` es
+cross-origin: sin CORS el botón "Recordarme" falla antes de descargar nada. La
+navegación posterior no necesita CORS, pero la validación sí. Sus cabeceras
+(`text/calendar`, `Content-Disposition`, `Cache-Control: private, max-age=300`)
+salen intactas: `conCors` copia las de la ruta y sólo agrega las suyas.
+
+### El patrón, y por qué el método se declara tres veces
+
+```ts
+export const GET = conCors(manejar, "GET");
+export const OPTIONS = opcionesCors("GET");
+```
+
+El cuerpo de cada ruta se renombra a `manejar` **sin tocarlo**. `conCors`
+envuelve la Response FINAL, así que ningún camino de salida queda sin
+encabezados. `opcionesCors` **no recibe el handler**: hace imposible que el
+preflight ejecute la lógica de la ruta.
+
+⚠️ El método se escribe en **tres** lugares: el nombre del export, el argumento
+de `conCors` y el de `opcionesCors`. **No hay "un único lugar"** —eso decía un
+comentario anterior y era falso—. Lo que impide que diverjan es el guard de
+`lib/cors-inventario.test.ts`, que extrae los tres y exige que coincidan, con
+canarios que prueban que detecta cada forma de divergencia.
+
+### Observabilidad
+
+`conCors` captura para devolver un 500 **con** CORS, pero **no se traga el
+error**: registra con `console.error` el método y el pathname más el objeto de
+error, que es lo que conserva el stack. **No** registra query, `Authorization`,
+cookies, headers ni entorno, y el mensaje de la excepción **no viaja en la
+respuesta**. Sin esto, los fallos no controlados de 23 rutas se habrían vuelto
+invisibles.
+
+### 🔵 Lo que falta para cerrar CP4
+
+🔍 La ventana de Preview y los siete `curl` de §CP4. **Requiere autorización
+del dueño**, porque abrir Deployment Protection expone **todos** los deployments
+de Preview del proyecto (§5).
+
+---
+
 > El resto del documento describe lo que falta.
 
 **Base:** `main = origin/main = 397842c` · **Next.js instalado: 14.2.35**
