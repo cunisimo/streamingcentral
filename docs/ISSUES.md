@@ -881,8 +881,14 @@ segundo — o el día que se decida que no vale la pena y se borre.
 
 ## #16 — TMDB no publica el catálogo regional completo, y no hay forma de saber cuánto falta
 
-**Estado: mitigado, no resuelto** (rama `fix/disponibilidad-oficial`). Ver
-`docs/medidas/2026-08-30-disponibilidad-informe.md`.
+**Estado: MITIGADO, NO RESUELTO.** Integrado desde
+`fix/disponibilidad-oficial` (prueba manual aprobada por el dueño el
+2026-08-30). Ver `docs/medidas/2026-08-30-disponibilidad-informe.md`.
+
+⚠️ **Mitigado no es cerrado, y la diferencia importa acá.** De los 11 títulos sin
+proveedor `AR` de la muestra, la resolución recupera **4**. Los otros 7 siguen
+sin aparecer como disponibles, y ninguna medición dice cuántos títulos más
+faltan fuera de la red que se midió. Este issue **queda abierto**.
 
 Medido el 2026-08-30 sobre la red Disney+, 60 días de estrenos: **11 de 15
 series no tenían proveedor `AR`** en `watch/providers`, incluida una que

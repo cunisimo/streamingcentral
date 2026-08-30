@@ -1005,11 +1005,30 @@ Verificado sobre el build local: `tv:275224` pasa de `[]` a `["d"]`, aparece
 primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
 títulos con proveedor de TMDB no cambian.
 
-**Estado de verificación al 2026-08-30, con la rama todavía ABIERTA:** suite
-**757/757**, `tsc` 0, build OK.
+**Estado de verificación al 2026-08-30:** suite **757/757**, `tsc` 0, build OK.
 
-⚠️ **La rama no está terminada**: falta el Preview aislado y la prueba manual del
-dueño. Este conteo es del último commit verificado, no de un cierre.
+✅ **Prueba manual APROBADA por el dueño**, sobre el build de producción corrido
+en local (`next start` en el 3100). Se verificó el recorrido completo: el Home
+abre, "Últimos lanzamientos" arranca en Películas, el selector cambia el
+contenido de verdad, "Gutiérrez Is mai neim" aparece con Disney+ elegida, su
+ficha muestra Disney+ y no dice "No está en streaming", volver atrás conserva la
+navegación, "Ver todas" funciona, y volver a Películas actualiza el riel. Sin
+regresiones visibles en una película y una serie conocidas.
+
+⚠️ **El Preview se OMITIÓ por decisión del dueño.** El aislamiento del Redis de
+Producción exige crear variables `KV_*` vacías acotadas a la rama, y se prefirió
+no tocar variables de Vercel. La prueba local cumplió la misma función con
+aislamiento verificado: `/api/health` devolvió `503` con `cache: "memoria"`,
+`fuente: null` y `credenciales: {url:false, token:false}`, o sea sin Redis de por
+medio.
+
+🔴 **Lo que la prueba local NO puede cubrir**, y hay que mirar después del
+deploy: el comportamiento con Redis real. Local corre en memoria, así que las
+claves nuevas (`home:…v6`, `pv2:`, `ultimos:`, `disp:`, `serie:oficial:`) no se
+ejercitaron contra Upstash. El primer Home de producción va a ser un arranque
+frío.
+
+**La rama queda LISTA PARA INTEGRAR.**
 
 Los conteos anteriores de este documento (678) eran de una revisión intermedia.
 El 771 que figuró un rato acá **era incorrecto**: salió de contar antes de
