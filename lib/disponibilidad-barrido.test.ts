@@ -145,8 +145,72 @@ test("el caso testigo no está hardcodeado en ningún lado", () => {
 });
 
 // ============================================================================
+// 3.bis La señal de fallo llega a las cachés de afuera
+// ============================================================================
+
+test("el adaptador REGISTRA el fallo, no se lo queda", () => {
+  const src = codigo("lib/enrich.ts");
+  assert.match(src, /if \(r\.fallo\) registrarFalloDisponibilidad\(\)/,
+    "disponibilidadDe perdió la señal: la card, el Home y la lista guardarían resultados incompletos");
+});
+
+test("las tres superficies cacheadas envuelven con el contexto de fallos", () => {
+  // Si una superficie que consume disponibilidad no envuelve, su `cachedLocIf`
+  // no puede enterarse y guarda contenido incompleto por horas.
+  const enrich = codigo("lib/enrich.ts");
+  const home = codigo("lib/home.ts");
+  assert.equal((enrich.match(/withFallosDisponibilidad\(/g) ?? []).length, 3,
+    "enrich tiene que envolver la card y los dos tramos de la lista de últimos");
+  assert.match(home, /withFallosDisponibilidad\(/, "el Home no envuelve");
+});
+
+test("un fallo de disponibilidad degrada el payload del Home", () => {
+  const src = codigo("lib/home.ts");
+  assert.match(src, /degradado: true/,
+    "el Home no marca degradado, así que `cachedLocIf` lo guardaría igual");
+});
+
+test("los predicados de guardado siguen mirando la señal", () => {
+  const enrich = codigo("lib/enrich.ts");
+  assert.match(enrich, /if \(fallos\) fallo = true/, "la card no propaga");
+  assert.match(enrich, /if \(fallos\) senal\.fallo = true/, "la lista no propaga");
+});
+
+// ============================================================================
 // 4. El riel "Últimos lanzamientos" y su selector
 // ============================================================================
+
+test("el selector de `ultimos` está cableado al parámetro del Home", () => {
+  // 🔴 El bug que esto impide: el riel declaraba el toggle en el composer pero
+  // `TOGGLE_KEYS` no incluía `ultimos`, así que el botón cambiaba en pantalla y
+  // `/api/home` seguía recibiendo el mismo `t`. Los tests estructurales del
+  // composer no podían verlo.
+  const nucleo = codigo("hooks/home-types-nucleo.ts");
+  assert.match(nucleo, /"ultimos"/, "`ultimos` no es clave de refetch");
+  assert.match(nucleo, /DEFAULTS_TOGGLE[\s\S]{0,120}ultimos:\s*"movie"/,
+    "el default de `ultimos` no está declarado como movie");
+  // Y que el hook use el núcleo en vez de tener su propia lista, que es como
+  // se desincronizaron la primera vez.
+  const hook = codigo("hooks/useHomeTypes.ts");
+  assert.match(hook, /from "\.\/home-types-nucleo"/);
+  assert.doesNotMatch(hook, /const TOGGLE_KEYS\s*=/, "el hook volvió a tener su propia lista");
+});
+
+test("la lista de últimos NO se trunca en una ventana fija", () => {
+  const src = codigo("lib/enrich.ts");
+  // La regresión era mezclar N páginas por fuente y terminar ahí.
+  assert.doesNotMatch(src, /ULTIMOS_PAGINAS\b(?!_RED)/,
+    "volvió la ventana fija del catálogo regional");
+  assert.match(src, /hayMasRegional/, "no propaga si el catálogo regional sigue");
+  assert.match(src, /ULTIMOS_MAX_PAGINAS/, "no hay tope de seguridad para el bucle");
+});
+
+test("cada tramo de la lista se cachea por separado", () => {
+  const src = codigo("lib/enrich.ts");
+  // Si un solo cache cubriera la página entera, pedir la 2 rearmaría la 1.
+  assert.match(src, /claveUltimosSeries\(hoy, orden, `reg:p\$\{pagina\}`/);
+  assert.match(src, /claveUltimosSeries\(hoy, orden, "red"/);
+});
 
 test("el riel `ultimos` declara toggle, clave y tipo activo", () => {
   const src = codigo("lib/home.ts");

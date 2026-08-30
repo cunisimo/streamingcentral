@@ -81,34 +81,92 @@ otra región y 2 lo tienen de otro dominio. **Ninguno se fuerza.**
 En una corrida completa del Home + listas, **7 títulos** se resolvieron por
 `enlace-oficial`, **todos a `d`**. Ninguno por `manual` (el registro está vacío).
 
-## Costo
+## Costo — corregido tras la revisión
 
-`/api/home` con `n,d,m`, cache en memoria (sin Redis):
+### La secuencia que importa: página 1 fría → primera página 2 → repetición
+
+La primera versión metía `page` en la clave pero **cada MISS rearmaba la ventana
+entera**, así que "se paga una vez por día y combinación" era falso: se pagaba
+una vez por cada página pedida. Ahora cada tramo se cachea por separado —una
+clave por página regional, una para el suplemento por redes— y la mezcla es en
+memoria.
+
+Medido con `providers=n` (Netflix, sin red oficial habilitada), servidor recién
+levantado, cache en memoria:
+
+| Pedido | Tiempo | Qué costó |
+|---|--:|---|
+| p1 fría | **1586 ms** | 1 discover regional + enriquecido de esa página |
+| **p2 primera vez** | **806 ms** | **sólo la página regional 2**; la 1 ya estaba |
+| p2 repetida | **420 ms** | todo HIT: sólo lectura y mezcla |
+| p3 primera vez | 783 ms | ídem: una página más |
+| p5 primera vez | 3393 ms | las páginas 4 y 5, que faltaban |
+
+Con `providers=d` (Disney+, con suplemento por red) la página 1 fría cuesta
+además las 3 páginas de `with_networks`, que se cachean una sola vez por día y
+combinación y se reusan en todas las páginas.
+
+**Lo que esto corrige:** antes, la primera página 2 repetía las 3 páginas
+regionales, las 3 por red y ~120 enriquecidos. Ahora cuesta **una página**.
+
+### Home
 
 | Escenario | Tiempo | Comandos | Claves (hit/miss) |
 |---|--:|--:|--:|
 | Frío (default, `movie`) | 5586 ms | 664 | 649 (24 / 625) |
 | Cambio de toggle a `ultimos:tv` | 1196 ms | 39 | 683 (673 / 10) |
-| **Segunda vez, misma consulta** | **0 ms** | **1** | **1 (1 / 0)** |
+| Segunda vez, misma consulta | **0 ms** | **1** | **1 (1 / 0)** |
 
-La segunda solicitud equivalente es **HIT con un solo comando** y no repite
-ninguna llamada a TMDB. `/api/latest?tipo=tv` responde en **73 ms** la segunda
-vez contra varios segundos la primera.
+**Costo de la resolución**: **cero** para los títulos que TMDB ya ubica —
+`disponibilidadDe` corta antes de tocar el cache, y ahora corta también cuando
+TMDB informa un flatrate argentino que Yump no mapea.
 
-**Costo adicional del descubrimiento por red**, sólo en `tipo=tv`: 3 páginas de
-`discover` extra (1 por página de ventana) más el enriquecido de esos candidatos.
-Se paga una vez por día y por combinación de plataformas: la clave
-`claveUltimosSeries` lleva la fecha argentina y las plataformas ordenadas.
+## Bytes: por qué `pv2:` NO guarda el mapa por región
 
-**Costo adicional de la resolución**: **cero** para los títulos que TMDB ya
-ubica — `disponibilidadDe` corta antes de tocar el cache. Sólo los que vienen
-vacíos pagan `/tv/{id}` (cacheado 8 h) y una lectura de la evidencia de Netflix.
+Medido sobre 20 títulos reales (los más populares de AR en flatrate), que traen
+**91,7 regiones en promedio**:
 
-## Paginación
+| Representación | B/título | vs. antes | Home frío (~230 títulos) |
+|---|--:|--:|--:|
+| `pv:` (antes) | **214** | — | 48,0 KB |
+| `pv2:` con mapa por región | **1273** | **+495%** | **286,0 KB** (+238 KB) |
+| `pv2:` con ids únicos | **296** | **+38%** | **66,4 KB** (+18 KB) |
 
-`/api/latest?tipo=tv&providers=d`: página 1 y página 2 traen 20 cada una con
-**intersección vacía**. Los tests fijan además que no se saltean elementos y que
-la página 2 continúa exactamente donde termina la 1.
+**Se eligió la representación compacta.** El mapa por región costaba **6× el
+valor original** y no compraba nada: `hayContradiccion` sólo deriva dos
+booleanos —si hay algún dato regional y si alguno es de esta plataforma— y los
+dos salen del conjunto plano de ids de las regiones que no son AR.
+
+⚠️ **Lo que se pierde, dicho explícito:** ya no se sabe QUÉ región dice qué. Si
+alguna regla futura lo necesita, hay que volver al mapa **y subir la versión de
+la clave**, porque desde el conjunto plano no se reconstruye.
+
+El tamaño de respuesta de `/api/home` **no cambia**: `porRegion`/
+`idsOtrasRegiones` viven en el cache de `pv2:` y nunca viajan en el payload —
+`UITitle` sólo lleva `platforms`.
+
+## Paginación — sin truncamiento
+
+La primera versión mezclaba **3 páginas fijas por fuente y terminaba ahí**: con
+Netflix, Max o Prime la página 4 salía vacía aunque TMDB tuviera cientos de
+resultados. Era una **regresión** contra la lista paginada anterior. Se sacó: el
+catálogo regional se pagina de verdad y lo único acotado es el suplemento por
+redes, que por naturaleza son un puñado de estrenos recientes.
+
+Verificado contra el build local, `providers=n`, páginas 1 a 6:
+
+| | |
+|---|--:|
+| Títulos servidos | **120** |
+| Únicos | **120** |
+| Repetidos | **0** |
+| Páginas cortas | **0** |
+
+Y en los tests: 137 títulos regionales servidos completos en 7 páginas, las
+páginas 1–5 reproducen exactamente la clasificación completa, una plataforma sin
+red oficial pagina igual, Disney+ mezcla las dos fuentes a lo largo de 8 páginas
+sin perder ninguno de los extras, y una página posterior al final vuelve
+realmente vacía con `hayMas: false`.
 
 ## 🔴 Lo que esta medición NO pudo verificar
 
@@ -121,6 +179,12 @@ de ventana no se tocó.
 No es una regresión de este cambio y está cubierto por tests (23 casos en
 `lib/top-plataformas.test.ts`, ahora apuntados al resolvedor central).
 
-⚠️ **Hallazgo aparte, para el dueño:** el cron es semanal y martes, pero la
-última ingesta es del 2026-08-16 — faltan las del 18 y 25 de agosto. Eso es un
-problema del cron, no de esta corrección.
+⚠️ **Corrección a una versión anterior de este informe.** Decía que "faltaban
+las corridas del 18 y del 25 de agosto". **Era falso**: salía de leer `week` como
+si fuera la fecha de ejecución. Comprobado en la base, la semana `2026-08-16` se
+escribió el **martes 2026-08-25 a las 12:58 UTC** — el cron corrió y entró en
+horario. `week` identifica la semana del RANKING, no cuándo corrió la ingesta.
+
+Lo que sí pasa es que la guarda mide 14 días **desde `week`**, y Netflix publica
+con ~9 días de retraso: el ranking nace viejo y vence a los pocos días. Es el
+issue **#13**, que ya existía, y **no se toca en esta rama**.

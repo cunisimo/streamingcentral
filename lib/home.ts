@@ -37,6 +37,7 @@ import {
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
 import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
+import { withFallosDisponibilidad } from "./fallos-disponibilidad";
 import { claveHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
 import { HUELLA_IDIOMA, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
@@ -687,7 +688,18 @@ export async function homePayload(opts: {
     await withMetricasIdioma(() => withCacheMetrics(() => conRegistroDeEjes(() => cachedLocIf(
     key,
     TTL.home,
-    () => { miss = true; return composeHome({ providers: opts.providers, types }); },
+    async () => {
+      miss = true;
+      // Los fallos de disponibilidad cuentan como degradación del payload: un
+      // Home con títulos en gris porque Supabase parpadeó no puede quedar
+      // congelado 6 h para todos.
+      const { res, fallos } = await withFallosDisponibilidad(
+        () => composeHome({ providers: opts.providers, types }),
+      );
+      if (!fallos) return res;
+      console.error(`[home] payload degradado: ${fallos} fallo(s) de disponibilidad`);
+      return { ...res, fallos: res.fallos + fallos, degradado: true };
+    },
     // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
     // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
     // caso "sin plataformas", que no cuesta nada recalcular.

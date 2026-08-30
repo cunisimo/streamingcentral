@@ -3,8 +3,14 @@
 **2026-08-23 · tanda 2.** Qué superficies producen títulos localizados, cuáles
 pasan por la reparación y qué pasa si el respaldo falla.
 
-**Desde la tanda 2 las once familias llevan la huella en la clave**
-(`card:es-MX+f.r1:movie:278`). En la tanda 1 corrían en modo compatible, con la
+**Desde la tanda 2 las familias localizadas llevan la huella en la clave**
+(`card:es-MX+f.r1:movie:278`).
+
+⚠️ **Eran once en la tanda 2; hoy son DOCE.** La duodécima es `ultimos:`, que
+entró con la corrección de disponibilidad (2026-08-30). Los documentos de la
+tanda 2 conservan el número original a propósito: describen lo que se midió
+entonces. El número vigente lo fija `lib/claves.test.ts`, que falla si no
+coincide. En la tanda 1 corrían en modo compatible, con la
 huella vacía. Lo que decide el espacio de claves es la configuración
 —`IDIOMA_TITULOS` y `FALLBACK_IDIOMA`—, así que un rollback selecciona otro
 espacio en vez de esperar a que expiren TTLs de hasta 30 h.
@@ -60,7 +66,8 @@ entra en la tanda 2 como en las otras diez (once en total, contándola).
 
 ## Superficies que NO producen títulos
 
-`pv:` (códigos de plataforma), `videos:` (key de YouTube), `genre:covers:`
+`pv2:` (códigos de plataforma; era `pv:` hasta que sumó el mapa por región),
+`videos:` (key de YouTube), `genre:covers:`
 (rutas de póster), `people:directors` (`knownFor` siempre vacío), `ed:pub:`
 (ids), `blocklist:` (ids).
 

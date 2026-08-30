@@ -681,6 +681,38 @@ Verificado de paso que no hay un desfase sistemático: el TSV de Netflix todaví
 publica `2026-08-16` como su semana más nueva, así que la corrida de hoy se
 llevó lo más fresco que había.
 
+### Volvió a vencer — 2026-08-30
+
+Comprobado en la base, no deducido:
+
+| semana | primera escritura | filas |
+|---|---|--:|
+| `2026-08-16` | **2026-08-25 12:58:03 UTC** (martes) | 20 |
+| `2026-08-09` | 2026-08-12 18:10 UTC | 20 |
+| `2026-08-02` | 2026-08-09 17:27 UTC | 20 |
+
+**El cron corrió el 25/08 y entró en horario.** La semana `2026-08-16` es la más
+nueva que hay, y hoy tiene **exactamente 14 días**: la guarda mide desde `week`,
+no desde la ingesta, así que **la evidencia venció otra vez** — por horas.
+
+⚠️ **`week` es la semana del RANKING, no cuándo corrió la ingesta.** Que la fila
+diga `2026-08-16` no prueba que hayan faltado corridas: la del 25/08 existe y
+está fechada. Una versión anterior de esta nota afirmaba que faltaban las
+corridas del 18 y del 25, y **era falso** — salía de leer `week` como si fuera la
+fecha de ejecución.
+
+**Consecuencia hoy:** ningún título recibe el respaldo del top oficial, así que
+`/api/title/tv/322428` (Moria) devuelve `[]`. **Moria no está resuelta
+actualmente**, y no lo está en `main` tampoco: la regla de ventana no cambió.
+Esto NO lo arregla la rama `fix/disponibilidad-oficial` y no se intentó ahí — es
+este issue, que sigue abierto.
+
+Lo que hay que decidir acá (no en la rama de disponibilidad): si la guarda debe
+medir desde `week` o desde `updated_at`. Medir desde `week` es lo honesto para el
+rótulo "dato oficial" —el ranking es viejo aunque lo hayamos bajado hoy— pero
+condena al bloque a degradarse cada dos semanas mientras Netflix publique con 9
+días de retraso.
+
 
 ---
 
@@ -847,17 +879,17 @@ Este issue queda abierto **sólo** por la demora, y se cierra el día que se
 midan diez aperturas calientes seguidas sin que ninguna imagen pase de un
 segundo — o el día que se decida que no vale la pena y se borre.
 
-## #13 — TMDB no publica el catálogo regional completo, y no hay forma de saber cuánto falta
+## #16 — TMDB no publica el catálogo regional completo, y no hay forma de saber cuánto falta
 
-**Estado: mitigado, no resuelto.** Ver
+**Estado: mitigado, no resuelto** (rama `fix/disponibilidad-oficial`). Ver
 `docs/medidas/2026-08-30-disponibilidad-informe.md`.
 
 Medido el 2026-08-30 sobre la red Disney+, 60 días de estrenos: **11 de 15
 series no tenían proveedor `AR`** en `watch/providers`, incluida una que
-JustWatch mostraba como #1 del país. La resolución centralizada
-(`lib/disponibilidad.ts`) recupera **4 de esas 11** con evidencia oficial
-estricta; las otras 7 no tienen enlace oficial, o lo tienen de otra región o de
-otro dominio, y **no se fuerzan**.
+JustWatch mostraba como #1 del país (`tv:275224`). La resolución centralizada
+recupera **4 de esas 11** con evidencia oficial estricta; las otras 7 no tienen
+enlace oficial, o lo tienen de otra región o de otro dominio, y **no se
+fuerzan**.
 
 **Lo que sigue abierto:**
 
@@ -867,24 +899,9 @@ otro dominio, y **no se fuerzan**.
 2. **No se puede medir el agujero completo.** Sabemos cuántas series de una red
    conocida no tienen dato regional; no sabemos cuántos títulos faltan de redes
    que ni siquiera consultamos.
-3. **La ventana del descubrimiento es fija** (3 páginas por fuente). Un título
-   más viejo que el último de la ventana no aparece aunque exista.
+3. **El suplemento por redes tiene ventana fija.** El catálogo regional sí
+   pagina indefinidamente, pero los candidatos que llegan por red salen de una
+   ventana acotada: un título de red más viejo que esa ventana no aparece.
 
 **Lo que NO es una salida:** usar `networks` sola, o el `homepage` solo. Las dos
 producen afirmaciones falsas y hay tests que las rechazan.
-
-## #14 — La ingesta del top 10 de Netflix lleva dos semanas sin correr
-
-**Estado: abierto, detectado el 2026-08-30 de costado.**
-
-La semana más nueva de `netflix_top10` es **2026-08-16**. El cron es semanal y
-corre los martes, así que faltan las corridas del **18 y el 25 de agosto**.
-
-**Consecuencia visible:** la ventana de evidencia son 14 días, así que hoy la
-evidencia del top oficial está **vencida por horas** y ningún título la recibe.
-`/api/title/tv/322428` (Moria) devuelve `[]` — igual que en `main`, porque la
-regla de ventana no cambió.
-
-No lo causó la corrección de disponibilidad y no se arregló acá: es el cron o su
-configuración lo que hay que mirar (`CRON_SECRET`,
-`SUPABASE_SERVICE_ROLE_KEY`, el schedule de Vercel).

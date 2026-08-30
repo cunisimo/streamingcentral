@@ -21,6 +21,17 @@ import type { PlatformCode } from "./types";
 
 const HOY = "2026-08-30";
 
+/**
+ * Aplana un mapa por región al conjunto plano que consume la regla.
+ *
+ * Las fixtures se escriben por región porque así se lee de dónde sale cada
+ * dato, pero lo que se guarda en `pv2:` son los ids únicos: el mapa completo
+ * costaba 1273 B por título contra 296 B, medido, y la regla sólo deriva dos
+ * booleanos. AR se excluye acá igual que en `providersOf`.
+ */
+const deRegiones = (m: Record<string, number[]>): number[] =>
+  [...new Set(Object.entries(m).filter(([r]) => r !== "AR").flatMap(([, v]) => v))];
+
 // El caso testigo, con los datos REALES medidos el 2026-08-30 contra TMDB.
 // Ver docs/medidas/2026-08-30-disponibilidad-disney.json.
 const GUTIERREZ: DatosSerie = {
@@ -28,7 +39,7 @@ const GUTIERREZ: DatosSerie = {
   redes: [2739],
   homepage: "https://www.disneyplus.com/browse/entity-bafb5cb7-91e5-4b20-85bb-6cf6b5fe2a00",
   // ID, MY y US: las tres con Disney+ (122 en Asia, 337 en US). Corrobora.
-  proveedoresPorRegion: { ID: [122], MY: [122], US: [337, 15] },
+  idsOtrasRegiones: deRegiones({ ID: [122], MY: [122], US: [337, 15] }),
 };
 
 const sinAR = (o: Partial<DatosSerie> = {}): DatosSerie => ({ ...GUTIERREZ, ...o });
@@ -133,6 +144,12 @@ for (const [etiqueta, url] of Object.entries({
   "página de suscripción": "https://www.disneyplus.com/sign-up",
   "listado corporativo": "https://www.disneyplus.com/brand/marvel",
   "browse sin entidad": "https://www.disneyplus.com/browse",
+  // El cuantificador era `{0,12}` y aceptaba cero caracteres finales: una ruta
+  // terminada en guion pasaba como si fuera un UUID.
+  "entidad terminada en guion": "https://www.disneyplus.com/browse/entity-bafb5cb7-91e5-4b20-85bb-",
+  "identificador incompleto": "https://www.disneyplus.com/browse/entity-bafb5cb7-91e5-4b20-85bb-6cf6b5",
+  "entidad sin el ultimo grupo": "https://www.disneyplus.com/browse/entity-bafb5cb7-91e5-4b20-85bb",
+  "entidad vacía": "https://www.disneyplus.com/browse/entity-",
 })) {
   test(`ruta rechazada — ${etiqueta}`, () => {
     assert.equal(
@@ -150,7 +167,7 @@ test("URL explícita de OTRA región: no vale como evidencia argentina", () => {
       tipo: "tv", hoy: HOY,
       datos: sinAR({
         homepage: "https://www.disneyplus.com/es-es/browse/entity-3c055b32-28f7-4c27-8a0b-7a8cd91",
-        proveedoresPorRegion: { ES: [337] },
+        idsOtrasRegiones: deRegiones({ ES: [337] }),
       }),
     }),
     null,
@@ -209,7 +226,7 @@ test("otras regiones lo ubican en OTRA plataforma: no se infiere", () => {
   assert.equal(
     evidenciaEnlaceOficial({
       tipo: "tv", hoy: HOY,
-      datos: sinAR({ proveedoresPorRegion: { US: [8], GB: [8] } }), // Netflix
+      datos: sinAR({ idsOtrasRegiones: deRegiones({ US: [8], GB: [8] }) }), // Netflix
     }),
     null,
   );
@@ -219,7 +236,7 @@ test("ninguna región con datos: no hay contradicción, se infiere", () => {
   // Caso real: tv:328337 "Bluey Compilados", 0 regiones con flatrate.
   assert.equal(
     evidenciaEnlaceOficial({
-      tipo: "tv", datos: sinAR({ proveedoresPorRegion: {} }), hoy: HOY,
+      tipo: "tv", datos: sinAR({ idsOtrasRegiones: deRegiones({}) }), hoy: HOY,
     }),
     "d",
   );
@@ -230,19 +247,22 @@ test("alguna región con la MISMA plataforma corrobora, aunque otras difieran", 
   assert.equal(
     evidenciaEnlaceOficial({
       tipo: "tv", hoy: HOY,
-      datos: sinAR({ proveedoresPorRegion: { IN: [2336], US: [337] } }),
+      datos: sinAR({ idsOtrasRegiones: deRegiones({ IN: [2336], US: [337] }) }),
     }),
     "d",
   );
 });
 
-test("si AR ya tiene datos, esta regla NI SE EVALÚA (la decide el resolvedor)", () => {
-  // La condición 1 de la prioridad. Acá se documenta que la función de enlace no
-  // es la que decide eso: lo hace `resolverDisponibilidad`.
+test("los datos de AR no llegan siquiera a esta regla", () => {
+  // Doble protección, y las dos importan:
+  //  1. `resolverDisponibilidad` corta antes si AR tiene flatrate (`hayFlatrateAR`).
+  //  2. `providersOf` excluye AR al armar `idsOtrasRegiones`, así que aunque se
+  //     llamara a esta función con un título que TMDB ubica en AR, el chequeo de
+  //     contradicción no lo vería. La regla mira el mundo, no Argentina.
   assert.equal(
     evidenciaEnlaceOficial({
       tipo: "tv", hoy: HOY,
-      datos: sinAR({ proveedoresPorRegion: { AR: [337] } }),
+      datos: sinAR({ idsOtrasRegiones: deRegiones({ AR: [337] }) }),
     }),
     "d",
   );
@@ -265,6 +285,41 @@ test("TMDB AR con proveedores: prevalece y NO consulta ningún respaldo", async 
   assert.deepEqual(r.plataformas, ["d"]);
   assert.equal(r.procedencia, "tmdb-ar");
   assert.equal(consultas, 0, "consultó un respaldo teniendo dato de TMDB");
+});
+
+test("TMDB tiene flatrate AR que Yump no mapea: NO se consulta ningún respaldo", async () => {
+  // 🔴 EL CASO QUE SE ESCAPABA. `providersOf` descarta los provider_id de AR que
+  // no tienen código en `providers-ar.ts`, así que `codes` queda vacío — igual
+  // que si TMDB no supiera nada. No es lo mismo: TMDB SÍ sabe, y dice que está
+  // en otra plataforma. Inferir Disney+ ahí sería contradecir a TMDB, que es
+  // exactamente lo que los respaldos no pueden hacer.
+  let consultas = 0;
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 275224, deTmdb: [], hayFlatrateAR: true, hoy: HOY,
+    leerTopOficial: async () => { consultas++; return new Set(["tv:275224"]); },
+    leerDatosSerie: async () => { consultas++; return GUTIERREZ; },
+    excepciones: [EXC({ clave: "tv:275224" })],
+  });
+  assert.deepEqual(r.plataformas, [], "infirió una plataforma pisando el dato de TMDB");
+  assert.equal(r.procedencia, "tmdb-ar", "la procedencia tiene que decir que mandó TMDB");
+  assert.equal(consultas, 0, "consultó un respaldo teniendo flatrate AR");
+});
+
+test("sin flatrate AR sí se consultan los respaldos", async () => {
+  // El control del test de arriba: la misma llamada con la señal en false.
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 275224, deTmdb: [], hayFlatrateAR: false, hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosSerie: async () => GUTIERREZ,
+  });
+  assert.deepEqual(r.plataformas, ["d"]);
+});
+
+test("la señal por defecto es `false`: no cambia lo que ya andaba", async () => {
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosSerie: async () => GUTIERREZ,
+  });
+  assert.deepEqual(r.plataformas, ["d"]);
 });
 
 test("NO muta el array cacheado de TMDB", async () => {

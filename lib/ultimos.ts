@@ -64,6 +64,13 @@ export function combinarUltimos(opts: {
   porPagina: number;
   /** Fecha argentina, YYYY-MM-DD. */
   hoy: string;
+  /**
+   * ¿El catálogo regional tiene más páginas en TMDB de las que se pasaron acá?
+   *
+   * Sin esto, `hayMas` sólo miraría la lista en memoria y diría "se acabó" en
+   * cuanto se consume lo cargado — que es lo que truncaba la lista a la ventana.
+   */
+  hayMasRegional?: boolean;
 }): { items: CandidatoUltimos[]; hayMas: boolean } {
   const vistos = new Set<string>();
   const todos: CandidatoUltimos[] = [];
@@ -91,5 +98,9 @@ export function combinarUltimos(opts: {
 
   const desde = (opts.page - 1) * opts.porPagina;
   const items = todos.slice(desde, desde + opts.porPagina);
-  return { items, hayMas: desde + opts.porPagina < todos.length };
+  // Hay más si sobran títulos ya clasificados O si el catálogo regional sigue
+  // teniendo páginas. Lo segundo es lo que impide que la lista se corte donde
+  // termina lo que se trajo.
+  const sobran = desde + opts.porPagina < todos.length;
+  return { items, hayMas: sobran || Boolean(opts.hayMasRegional) };
 }

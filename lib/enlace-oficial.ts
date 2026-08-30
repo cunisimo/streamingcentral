@@ -29,10 +29,20 @@ export interface DatosSerie {
   /** `homepage`, tal cual viene. */
   homepage: string;
   /**
-   * `watch/providers` completo, aplanado a ids de `flatrate` por región.
-   * Se usa SÓLO para detectar contradicciones.
+   * Los `provider_id` de `flatrate` que aparecen en **cualquier región que no
+   * sea AR**, deduplicados. Se usa SÓLO para detectar contradicciones.
+   *
+   * ⚠️ ES UN CONJUNTO PLANO, NO UN MAPA POR REGIÓN, y la diferencia está medida.
+   * Guardar `watch/providers` entero cuesta **1273 B por título** contra 214 B
+   * de antes (+495%): un Home frío pasaba de 48 KB a 286 KB. Con los ids únicos
+   * son 296 B (+38%), o sea **+18 KB en vez de +238 KB**.
+   *
+   * Alcanza porque `hayContradiccion` sólo deriva dos booleanos: si hay algún
+   * dato regional y si alguno es de esta plataforma. **Si algún día una regla
+   * necesita saber QUÉ región dice qué, hay que volver al mapa y subir la
+   * versión de la clave `pv2:`** — no se puede reconstruir desde acá.
    */
-  proveedoresPorRegion: Record<string, number[]>;
+  idsOtrasRegiones: number[];
 }
 
 /**
@@ -86,7 +96,10 @@ export const PLATAFORMAS_OFICIALES: PlataformaOficial[] = [
     // `/browse/entity-<uuid>` es la forma que usan los 5 enlaces de Disney+ de
     // la muestra. Es específica de un título: `/`, `/home`, `/sign-up` y
     // `/brand/<x>` no matchean, que es exactamente lo que se quiere.
-    rutaTitulo: /^\/browse\/entity-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{0,12}$/i,
+    // UUID COMPLETO: `{12}`, no `{0,12}`. Con el cuantificador flexible,
+    // `…-85bb-` (terminado en guion) y cualquier identificador truncado pasaban
+    // la validación. Las cinco URLs medidas traen el UUID entero.
+    rutaTitulo: /^\/browse\/entity-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i,
     // 337 = Disney Plus (América, Europa). 122 = Disney+ (ID, MY, TH).
     // Los dos verificados en la medición.
     idsGlobales: [337, 122],
@@ -162,16 +175,10 @@ export function enlaceDeLaPlataforma(homepage: string, def: PlataformaOficial): 
  * habría decidido y esta regla ni se evaluaría.
  */
 export function hayContradiccion(
-  porRegion: Record<string, number[]>, def: PlataformaOficial,
+  idsOtrasRegiones: number[], def: PlataformaOficial,
 ): boolean {
-  let algunaConDatos = false;
-  let algunaConLaPlataforma = false;
-  for (const [region, ids] of Object.entries(porRegion)) {
-    if (region === "AR" || !ids.length) continue;
-    algunaConDatos = true;
-    if (ids.some((i) => def.idsGlobales.includes(i))) algunaConLaPlataforma = true;
-  }
-  return algunaConDatos && !algunaConLaPlataforma;
+  if (!idsOtrasRegiones.length) return false;
+  return !idsOtrasRegiones.some((i) => def.idsGlobales.includes(i));
 }
 
 /**
@@ -199,7 +206,7 @@ export function evidenciaEnlaceOficial(opts: {
 }): PlatformCode | null {
   if (opts.tipo !== "tv") return null;
 
-  const { estreno, redes, homepage, proveedoresPorRegion } = opts.datos;
+  const { estreno, redes, homepage, idsOtrasRegiones } = opts.datos;
   // 1. Estrenada. Comparación de cadenas YYYY-MM-DD, que ordena igual que la
   //    fecha y evita construir un Date con su huso.
   if (!estreno || estreno > opts.hoy) return null;
@@ -217,7 +224,7 @@ export function evidenciaEnlaceOficial(opts: {
   if (!enlaceDeLaPlataforma(homepage, def)) return null;
 
   // 6. Sin contradicción regional.
-  if (hayContradiccion(proveedoresPorRegion, def)) return null;
+  if (hayContradiccion(idsOtrasRegiones, def)) return null;
 
   return def.code;
 }

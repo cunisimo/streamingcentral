@@ -451,6 +451,30 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   plataforma, el dato en conflicto es el nuestro. Y **un fallo nunca es una
   ausencia**: si Supabase o TMDB se caen se devuelve lo de TMDB y **no se
   cachea** (`fallo` viaja hasta `cachedIf`).
+- **Un fallo de disponibilidad NO se congela en las cachés de afuera**
+  (`lib/fallos-disponibilidad.ts`). `disponibilidadDe` no guardaba su `disp:`
+  cuando la evidencia fallaba, pero devolvía sólo el array de plataformas y la
+  señal moría ahí: **más afuera sí se guardaba** —la card 24 h, el Home 6 h, la
+  lista de últimos 8 h—, así que una caída de dos segundos dejaba títulos en gris
+  por un día. La señal viaja por **contexto async**, como `withCacheMetrics`: si
+  se pasara por parámetro habría que enhebrarla por `toUITitle` → `enrichRaw` →
+  `listByCategory` → cada llamador, y alcanzaría con que uno se la olvidara.
+  Se responde con lo que hay, no se guarda, y el pedido siguiente reintenta.
+- **"TMDB no sabe nada" y "TMDB sabe algo que no mapeamos" NO son lo mismo**
+  (`hayFlatrateAR`). `providersOf` descarta los `provider_id` argentinos que no
+  están en `providers-ar.ts`, así que un título que TMDB ubica en una plataforma
+  no soportada llegaba con `codes` vacío — indistinguible del caso que los
+  respaldos cubren, y la regla de enlace podía inferir Disney+ **contradiciendo a
+  TMDB**. Con la señal, el resultado visible sigue vacío (no hay código que
+  mostrar) pero **ningún respaldo se consulta ni se aplica**.
+- **El selector de un riel no existe hasta que entra en `TOGGLE_KEYS`**
+  (`hooks/home-types-nucleo.ts`). El riel puede declarar `typeToggle` en el
+  composer y el botón puede cambiar en pantalla: si la clave no está en la lista
+  del hook, el `t` que viaja a `/api/home` no cambia y el Home nunca se rearma.
+  Pasó con `ultimos`. El inventario, los defaults y la serialización viven en un
+  módulo **puro** justamente para poder probar el parámetro, que es lo único que
+  decide si hay refetch. El default de `ultimos` está **declarado** (`movie`), no
+  heredado de `defaultTypeFor`, que alterna por posición de género.
 - **El problema que resuelve: el catálogo regional de TMDB está incompleto.**
   Medido el 2026-08-30 sobre las series de la red Disney+ estrenadas en 60 días:
   **15 candidatos, 4 con proveedor AR y 11 sin ninguno**. El caso testigo es
@@ -483,13 +507,15 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   🔴 **`with_watch_monetization_types` es lo que rompía la consulta por red**, no
   `watch_region`: medido, 304 resultados con ese parámetro y 440 sin él, y el
   caso testigo sólo aparece sin él. De ahí sale `sinMonetizacion` en `tmdb.ts`.
-  **La paginación usa una VENTANA FIJA, no "página N de cada fuente"**: TMDB no
-  deja combinar `with_watch_providers` con `with_networks` (los une con AND), así
-  que la mezcla es inevitable, y paginar cada fuente por separado produce
-  repetidos y salteos. Se traen ventanas fijas, se ordena una sola vez con un
-  orden TOTAL (fecha desc, id desc como desempate estable) y las páginas son
-  tajadas de esa lista. **Lo que NO resuelve: la cobertura llega hasta donde
-  llega la ventana.**
+  **El catálogo regional se pagina de verdad; lo acotado es SÓLO el suplemento
+  por redes.** Una primera versión mezclaba 3 páginas fijas por fuente y ahí
+  terminaba: con Netflix, Max o Prime la página 4 salía vacía aunque TMDB tuviera
+  cientos de resultados — una regresión contra la lista que ya existía. Ahora se
+  traen páginas regionales hasta cubrir la pedida (cada una **cacheada por
+  separado**, así pedir la 2 no rearma la 1), se mezclan con el suplemento —que
+  se calcula una vez por día y combinación— y se ordena con un orden TOTAL (fecha
+  desc, id desc como desempate estable). `hayMasRegional` es lo que impide que la
+  lista se corte donde termina lo que se trajo.
 - **"Últimos lanzamientos" tiene selector Películas/Series** (`shelfKey:
   "ultimos"`, `typeToggle: "refetch"`). **El default sigue siendo Películas**, así
   que el Home inicial no cambió. El tipo entra en el `t` y por lo tanto en la

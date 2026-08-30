@@ -999,6 +999,8 @@ Verificado sobre el build local: `tv:275224` pasa de `[]` a `["d"]`, aparece
 primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
 títulos con proveedor de TMDB no cambian. Suite 678/678, `tsc` 0, build OK.
 
-⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix, por
-el issue #14 (la ingesta lleva dos semanas parada y la ventana venció). Está
-cubierto por 23 tests.
+⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix. Es
+el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide
+14 días desde `week` y el ranking más nuevo de Netflix es del 2026-08-16, así que
+volvió a vencer. **Moria NO está resuelta hoy**, ni acá ni en `main`. La regla
+está cubierta por 23 tests apuntados al resolvedor.

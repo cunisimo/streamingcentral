@@ -19,7 +19,7 @@
 // se pisan ni dejan huecos.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { combinarUltimos, ordenUltimos } from "./ultimos.ts";
+import { combinarUltimos, ordenUltimos, type CandidatoUltimos } from "./ultimos.ts";
 import type { UITitle } from "./types";
 
 const t = (id: number, fecha: string, platforms = ["d"]): UITitle & { fecha: string } => ({
@@ -187,4 +187,106 @@ test("sin fecha no entra: no se puede ordenar ni saber si ya estrenó", () => {
     providers: ["d"], page: 1, porPagina: 20, hoy: "2026-08-30",
   });
   assert.deepEqual(r.items, []);
+});
+
+// ============================================================================
+// Catálogo grande: la lista regional NO se trunca
+// ============================================================================
+//
+// 🔴 LA REGRESIÓN QUE ESTOS TESTS IMPIDEN. La primera versión mezclaba una
+// ventana fija de 3 páginas por fuente, así que con Netflix, Max o Prime la
+// página 4 salía vacía aunque TMDB tuviera cientos de resultados. Era peor que
+// la lista paginada anterior, que sí seguía de largo.
+
+/** 137 títulos regionales con fechas descendentes y sin empates. */
+const REGIONAL_GRANDE: CandidatoUltimos[] = Array.from({ length: 137 }, (_, i) => {
+  const dia = new Date(Date.UTC(2026, 7, 30) - i * 864e5).toISOString().slice(0, 10);
+  return t(5000 + i, dia);
+});
+
+test("más de 60 resultados regionales: se sirven todos, sin ventana", () => {
+  const vistos: number[] = [];
+  for (let p = 1; p <= 7; p++) {
+    vistos.push(...combinarUltimos({
+      regionales: REGIONAL_GRANDE, porRed: [],
+      providers: ["d"], page: p, porPagina: 20, hoy: "2026-08-30",
+    }).items.map((x) => x.id));
+  }
+  assert.equal(vistos.length, 137, "se truncó la lista regional");
+  assert.equal(new Set(vistos).size, 137, "hay repetidos");
+});
+
+test("páginas 1 a 5: ni intersecciones ni omisiones", () => {
+  const paginas: number[][] = [];
+  for (let p = 1; p <= 5; p++) {
+    paginas.push(combinarUltimos({
+      regionales: REGIONAL_GRANDE, porRed: [],
+      providers: ["d"], page: p, porPagina: 20, hoy: "2026-08-30",
+    }).items.map((x) => x.id));
+  }
+  const plano = paginas.flat();
+  assert.equal(plano.length, 100, "alguna página vino corta");
+  assert.equal(new Set(plano).size, 100, "hay repetidos entre páginas");
+  // Y son exactamente los 100 primeros de la clasificación completa.
+  const completa = combinarUltimos({
+    regionales: REGIONAL_GRANDE, porRed: [],
+    providers: ["d"], page: 1, porPagina: 100, hoy: "2026-08-30",
+  }).items.map((x) => x.id);
+  assert.deepEqual(plano, completa, "las páginas no reproducen la clasificación");
+});
+
+test("una plataforma SIN red oficial habilitada pagina igual", () => {
+  // Netflix no está en el registro de enlace oficial: su riel es sólo regional.
+  // Es exactamente el caso que quedaba truncado en la página 4.
+  const soloNetflix = REGIONAL_GRANDE.map((x) => ({ ...x, platforms: ["n"] as UITitle["platforms"] }));
+  const p4 = combinarUltimos({
+    regionales: soloNetflix, porRed: [],
+    providers: ["n"], page: 4, porPagina: 20, hoy: "2026-08-30",
+  });
+  assert.equal(p4.items.length, 20, "la página 4 vino vacía o corta");
+  assert.equal(p4.hayMas, true);
+});
+
+test("Disney+ mezcla las dos fuentes a lo largo de varias páginas", () => {
+  const extras = [GUTIERREZ, t(9001, "2026-08-20"), t(9002, "2026-07-15")];
+  const vistos: number[] = [];
+  for (let p = 1; p <= 8; p++) {
+    vistos.push(...combinarUltimos({
+      regionales: REGIONAL_GRANDE, porRed: extras,
+      providers: ["d"], page: p, porPagina: 20, hoy: "2026-08-30",
+    }).items.map((x) => x.id));
+  }
+  assert.equal(vistos.length, 140, "no entraron los tres de la fuente por red");
+  assert.equal(new Set(vistos).size, 140, "hay repetidos");
+  for (const e of extras) assert.ok(vistos.includes(e.id), `falta el extra ${e.id}`);
+});
+
+test("hayMas refleja que el catálogo regional sigue, no sólo la ventana en memoria", () => {
+  // Con una sola página regional cargada pero más páginas disponibles en TMDB,
+  // `hayMas` tiene que ser true aunque la lista en memoria se haya agotado.
+  const r = combinarUltimos({
+    regionales: REGIONAL_GRANDE.slice(0, 20), porRed: [],
+    providers: ["d"], page: 1, porPagina: 20, hoy: "2026-08-30",
+    hayMasRegional: true,
+  });
+  assert.equal(r.items.length, 20);
+  assert.equal(r.hayMas, true, "diría que se acabó teniendo más páginas en TMDB");
+});
+
+test("sin más páginas regionales y sin sobrantes, hayMas es false", () => {
+  const r = combinarUltimos({
+    regionales: REGIONAL_GRANDE.slice(0, 20), porRed: [],
+    providers: ["d"], page: 1, porPagina: 20, hoy: "2026-08-30",
+    hayMasRegional: false,
+  });
+  assert.equal(r.hayMas, false);
+});
+
+test("una página posterior al final está REALMENTE vacía", () => {
+  const r = combinarUltimos({
+    regionales: REGIONAL_GRANDE, porRed: [],
+    providers: ["d"], page: 20, porPagina: 20, hoy: "2026-08-30",
+  });
+  assert.deepEqual(r.items, []);
+  assert.equal(r.hayMas, false);
 });

@@ -129,7 +129,7 @@ const otro = (t: MediaType): MediaType => (t === "movie" ? "tv" : "movie");
 // --- Fuentes por título, cacheadas ------------------------------------------
 // La clave es POR TÍTULO y no por usuario: dos personas a las que les gustó lo
 // mismo pagan una sola vez, y el enriquecido lo comparte hasta quien nunca abrió
-// el riel (`pv:` es la misma clave que usa todo el resto de la app).
+// el riel (`pv2:` es la misma clave que usa todo el resto de la app).
 
 // --- Un solo `titleDetails` por origen --------------------------------------
 // Cada origen dispara TRES caminos en paralelo (`recomendadosDe`, `cruzadosDe`

@@ -61,6 +61,22 @@ export async function resolverDisponibilidad(opts: {
   tipo: MediaType;
   id: number;
   deTmdb: PlatformCode[];
+  /**
+   * ¿TMDB informa **algún** `flatrate` en Argentina, aunque Yump no tenga código
+   * para mostrarlo?
+   *
+   * 🔴 NO ES LO MISMO QUE `deTmdb.length`. `providersOf` descarta los
+   * `provider_id` argentinos que no están en `providers-ar.ts`, así que un
+   * título que TMDB ubica en una plataforma no soportada llega acá con `deTmdb`
+   * vacío — indistinguible de "TMDB no sabe nada", que es el caso que los
+   * respaldos existen para cubrir. Sin esta señal, la regla de enlace oficial
+   * podía afirmar Disney+ sobre un título que TMDB ubica en otro lado: o sea
+   * contradecir a TMDB, que es justo lo que no puede pasar.
+   *
+   * El resultado visible sigue siendo vacío (no hay código que mostrar), pero
+   * **ningún respaldo se consulta ni se aplica**.
+   */
+  hayFlatrateAR?: boolean;
   /** Fecha argentina, YYYY-MM-DD. */
   hoy: string;
   /** Evidencia del top oficial de Netflix. Puede lanzar. */
@@ -73,7 +89,12 @@ export async function resolverDisponibilidad(opts: {
   // El orden ES la optimización: con dato de TMDB no se lee Supabase, no se
   // pide nada más a TMDB y no se toca el cache. El costo extra queda sólo en
   // los títulos que vienen vacíos, que son pocos y son exactamente los rotos.
-  if (opts.deTmdb.length) {
+  //
+  // `hayFlatrateAR` corta acá TAMBIÉN cuando no hay ningún código que mostrar:
+  // TMDB dijo que el título está en algo argentino, y que nosotros no sepamos
+  // pintarlo no nos habilita a inventar otra cosa. Devuelve el array vacío con
+  // procedencia `tmdb-ar`, que es la verdad: la decisión fue de TMDB.
+  if (opts.deTmdb.length || opts.hayFlatrateAR) {
     return { plataformas: opts.deTmdb, procedencia: "tmdb-ar", fallo: false };
   }
 

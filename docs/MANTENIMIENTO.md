@@ -653,8 +653,8 @@ otra.
 
 ## Runbook: precalentar el Home DESPUÉS de aprobar el Preview
 
-**El problema que resuelve.** La tanda 2 cambia la huella de las once familias de
-claves, así que el primer request después de activar `es-MX` en Production
+**El problema que resuelve.** La tanda 2 cambia la huella de las familias de
+claves (once en su momento, **doce desde 2026-08-30**), así que el primer request después de activar `es-MX` en Production
 encuentra el cache vacío y paga ~650 llamadas a TMDB y ~650 comandos de Upstash.
 Sin precalentar, esa cuenta la paga **el primer usuario que abra la app**, con la
 combinación de plataformas que tenga, y las demás combinaciones siguen frías.

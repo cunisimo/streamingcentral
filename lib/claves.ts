@@ -123,9 +123,9 @@ export function claveSearch(q: string, providers: string, huella: string): Clave
  * quedaría sin los estrenos de la mañana.
  */
 export function claveUltimosSeries(
-  dia: string, providers: string, pagina: number, huella: string,
+  dia: string, providers: string, tramo: string, huella: string,
 ): ClaveLocalizada {
-  return marcar(`ultimos:${pre(huella)}v1:tv:${dia}:${providers}:p${pagina}`);
+  return marcar(`ultimos:${pre(huella)}v1:tv:${dia}:${providers}:${tramo}`);
 }
 
 /** Actores populares. Guarda `knownFor`, que son títulos localizados. */
@@ -138,12 +138,19 @@ export function clavePeoplePopular(page: number, huella: string): ClaveLocalizad
 // huella. Están acá para que la lista completa viva en un solo lugar y el
 // barrido pueda distinguir "no lleva huella" de "se olvidaron de ponerla".
 //
-//   pv:<tipo>:<id>          códigos de plataforma
+//   pv2:<tipo>:<id>         códigos de plataforma + mapa de flatrate por región
+//                           (era `pv:`; la versión subió al sumar el mapa, ver
+//                           `providersOf` en lib/enrich.ts)
+//   disp:<tipo>:<id>        disponibilidad ya resuelta de un título vacío en AR
+//   serie:oficial:<id>      redes/homepage/estreno para la regla de enlace oficial
 //   videos:<tipo>:<id>      key de YouTube; ya pide el idioma original
 //   genre:covers:v2         rutas de póster
 //   people:directors        knownFor siempre vacío
 //   ed:pub:<tipo>           ids
 //   blocklist:<chip>        ids
 export const CLAVES_SIN_HUELLA = [
-  "pv:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
+  "pv2:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
+  // Las dos de disponibilidad guardan códigos de plataforma, ids de red y una
+  // URL: ningún título, ninguna sinopsis. No llevan huella y está verificado.
+  "disp:", "serie:oficial:",
 ] as const;
