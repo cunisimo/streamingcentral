@@ -1006,14 +1006,20 @@ primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
 títulos con proveedor de TMDB no cambian.
 
 **Estado de verificación al 2026-08-30, con la rama todavía ABIERTA:** suite
-**751/751**, `tsc` 0, build OK.
+**757/757**, `tsc` 0, build OK.
 
 ⚠️ **La rama no está terminada**: falta el Preview aislado y la prueba manual del
 dueño. Este conteo es del último commit verificado, no de un cierre.
 
 Los conteos anteriores de este documento (678) eran de una revisión intermedia.
 El 771 que figuró un rato acá **era incorrecto**: salió de contar antes de
-eliminar `combinarUltimos`, que era código muerto y se llevó sus ~24 tests.
+eliminar `combinarUltimos`, que era código muerto y se llevó sus ~24 tests. Y el
+751 que lo reemplazó quedó corto por seis en el mismo commit que lo escribió, al
+trasladar la cobertura de esa función al orquestador real.
+
+⚠️ **Un conteo escrito a mano se desactualiza en el commit siguiente.** Vale como
+foto fechada de una verificación, no como dato vivo: el número real lo da
+`npm test`.
 
 ⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix. Es
 el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide
