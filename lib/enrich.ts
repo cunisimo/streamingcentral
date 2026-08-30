@@ -37,7 +37,9 @@ import {
   hayFallosDisponibilidad, registrarFalloDisponibilidad, withFallosDisponibilidad,
 } from "./fallos-disponibilidad";
 import { redesDePlataforma } from "./enlace-oficial";
-import { paginarUltimos, type CandidatoUltimos, type PaginaRegional } from "./ultimos";
+import {
+  paginarUltimos, plataformasValidas, type CandidatoUltimos, type PaginaRegional,
+} from "./ultimos";
 import type { DatosSerie } from "./enlace-oficial";
 import { excludedGenres, audienceRule } from "./audience";
 import { ordenarPorRelevancia } from "./busqueda-orden";
@@ -413,7 +415,7 @@ const ULTIMOS_PAGINAS_RED = 3;
 // `listByCategory`. Sin esto el riel nuevo quedaría fuera del fallback.
 async function crudosConIdioma(
   params: Parameters<typeof discover>[1], etiqueta: string, senal: { fallo: boolean },
-): Promise<{ items: RawTitle[]; totalPaginas: number }> {
+): Promise<{ items: RawTitle[]; totalPaginas: number; totalResultados: number }> {
   const r = await discover("tv", params);
   const rep = await adaptadorLista({
     pedirBase: async () => r.results,
@@ -422,7 +424,11 @@ async function crudosConIdioma(
     })).results),
   });
   if (rep.fallo) senal.fallo = true;
-  return { items: rep.valor, totalPaginas: r.total_pages ?? 1 };
+  return {
+    items: rep.valor,
+    totalPaginas: r.total_pages ?? 1,
+    totalResultados: r.total_results ?? rep.valor.length,
+  };
 }
 
 /** Enriquece crudos de series y les pega la fecha con la que se ordenan. */
@@ -446,19 +452,25 @@ async function aCandidatosUltimos(raws: RawTitle[]): Promise<CandidatoUltimos[]>
 async function ultimosRegionalPagina(
   providers: PlatformCode[], pagina: number, senal: { fallo: boolean },
 ): Promise<PaginaRegional> {
+  // `providers` llega YA normalizado por `paginarUltimos`. El guard igual está
+  // acá: si alguna vez alguien llamara a esta función directamente, un `[]`
+  // haría que `discover` saliera sin `with_watch_providers`, o sea con el
+  // catálogo entero.
+  if (!providers.length) return { items: [], totalPaginas: 1, totalResultados: 0 };
   const hoy = hoyAR();
   const orden = [...providers].sort().join(",");
   return cachedLocIf(
     claveUltimosSeries(hoy, orden, `reg:p${pagina}`, HUELLA_IDIOMA), TTL.providers,
     async () => {
       const { res, fallos } = await withFallosDisponibilidad(async () => {
-        const { items, totalPaginas } = await crudosConIdioma({
+        const { items, totalPaginas, totalResultados } = await crudosConIdioma({
           providers: codesToTmdbIds(providers), minVotes: 0, page: pagina,
           sortBy: "first_air_date.desc", extra: { "first_air_date.lte": hoy },
         }, `ultimos:reg:p${pagina}`, senal);
-        // Se devuelve `totalPaginas` tal cual: es el límite real de la fuente
-        // y lo único que puede cortar el bucle de `paginarUltimos`.
-        return { items: await aCandidatosUltimos(items), totalPaginas };
+        // `totalPaginas` y `totalResultados` van tal cual: son el límite real de
+        // la fuente y la cota superior que permite descartar una página
+        // imposible sin recorrer el catálogo.
+        return { items: await aCandidatosUltimos(items), totalPaginas, totalResultados };
       });
       if (fallos) senal.fallo = true;
       return res;
@@ -482,13 +494,14 @@ async function ultimosRegionalPagina(
  * flatrate argentino, que es justo el dato que falta. Medido: 304 resultados
  * con el parámetro y 440 sin él.
  *
- * Se enriquece SIN filtrar por plataformas: el filtro lo hace `combinarUltimos`
+ * Se enriquece SIN filtrar por plataformas: el filtro lo hace `paginarUltimos`
  * DESPUÉS de que la resolución central haya decidido. Filtrar antes dejaría
  * afuera justamente a los que vienen sin proveedor de TMDB.
  */
 async function ultimosExtrasPorRed(
   providers: PlatformCode[], senal: { fallo: boolean },
 ): Promise<CandidatoUltimos[]> {
+  if (!providers.length) return [];
   // Sólo las redes de las plataformas del usuario que estén habilitadas. Salen
   // del MISMO registro que la evidencia oficial: no se piden candidatos por una
   // red que después no podría resolverse.
@@ -526,8 +539,10 @@ async function ultimosSeries(
 ): Promise<CandidatoUltimos[]> {
   const { items } = await paginarUltimos({
     page, porPagina: ULTIMOS_POR_PAGINA, providers, hoy: hoyAR(),
-    traerRegional: (pagina) => ultimosRegionalPagina(providers, pagina, senal),
-    traerExtras: () => ultimosExtrasPorRed(providers, senal),
+    // Las dos puertas reciben la lista YA normalizada que arma la orquestación,
+    // no la cruda: así un código desconocido no puede llegar a `discover`.
+    traerRegional: (pagina, validas) => ultimosRegionalPagina(validas, pagina, senal),
+    traerExtras: (validas) => ultimosExtrasPorRed(validas, senal),
   });
   return items;
 }
@@ -535,6 +550,12 @@ async function ultimosSeries(
 export async function latestReleases(
   providers: PlatformCode[], tipo: MediaType = "movie", page = 1,
 ): Promise<UITitle[]> {
+  // Retorno temprano del CONTRATO PÚBLICO, además del de la orquestación.
+  // `listByCategory` lo tiene desde siempre y la rama de series lo perdió al
+  // dejar de pasar por ahí: con `providers: []` se pedía el catálogo entero
+  // para devolver cero. Se valida acá y adentro, sin confiar en que la
+  // interfaz mande datos correctos.
+  if (!plataformasValidas(providers).length) return [];
   if (tipo === "tv") {
     const senal = { fallo: false };
     return ultimosSeries(providers, page, senal);

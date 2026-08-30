@@ -21,7 +21,10 @@ que divergieran.
 
 ---
 
-## Las ONCE familias de claves localizadas
+## Las familias de claves localizadas
+
+⚠️ Este listado describe las **once** de la tanda 2. Desde 2026-08-30 son
+**doce**: se sumó `ultimos:`. El número vigente lo fija `lib/claves.test.ts`.
 
 | Familia | Origen TMDB | ¿Repara? | Dónde | Campos | Coste extra |
 |---|---|---|---|---|---|

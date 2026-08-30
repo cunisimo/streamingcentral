@@ -189,6 +189,54 @@ Se arregló con dos reglas:
 por redes sigue acotado a 3 páginas y eso es deliberado — es un suplemento de
 estrenos recientes, no la lista.
 
+## Guardas de entrada y contrato de `page`
+
+Dos agujeros que quedaban después del rediseño de la paginación, medidos contra
+el build local **antes y después**:
+
+| Entrada | Antes | Después |
+|---|--:|--:|
+| `providers=` (ninguna) | **88.440 ms**, 0 ítems | **671 ms**, 0 ítems |
+| `providers=zz` (código inválido) | recorría el catálogo | **330 ms**, 0 ítems |
+| `page=x` (`NaN`) | **74.790 ms**, **0 ítems** | **2389 ms**, **20 ítems** (página 1) |
+| `page=0` | 0 ítems | **328 ms**, 20 ítems |
+| `page=9999` | recorrido completo | **276 ms**, 0 ítems |
+
+**Llamadas observadas** (contadas en los tests con la fuente inyectada):
+
+| Entrada | `traerRegional` | `traerExtras` |
+|---|--:|--:|
+| Sin plataformas válidas | **0** | **0** |
+| `page` inválida (`NaN`, 0, negativa, ±∞) | **1** | 1 |
+| `page` enorme (9999 sobre 1000 resultados) | **1** | 1 |
+
+Antes, sin plataformas se pedían las **50** páginas de la fuente para devolver
+cero.
+
+**El contrato de `page`**: un entero finito ≥ 1, o la página 1. Ausente, `NaN`,
+cero, negativa, infinita y fraccionaria caen todas en esa regla —la fraccionaria
+se trunca—. Vive en `normalizarPagina` (`lib/ultimos.ts`) y lo aplica tanto la
+ruta como la orquestación.
+
+**La cota superior** sale de `total_results` de TMDB más la cantidad de extras,
+por eso se agregó `totalResultados` al contrato de `PaginaRegional`: con
+`total_pages` sola no se puede saber cuántos títulos hay. Es una cota —el
+filtrado sólo saca— así que **nunca descarta una página que sí podría traer
+resultados**: verificado con la página 15 sobre 300 resultados, que se intenta.
+
+## 🔴 Riesgo residual de la paginación
+
+**Un salto en frío a una página válida y profunda sigue costando el prefijo.**
+Para mezclar de forma estable hay que haber traído las páginas 1..N, así que
+pedir la 13 sin cache pide trece páginas: medido, **6222 ms**. Cada una queda
+cacheada por separado, así que se paga una vez y las páginas intermedias que se
+pidan después ya están — pero **el costo del salto no desapareció**.
+
+Quitarlo exigiría rediseñar la paginación (por ejemplo con un cursor por fecha
+en vez de por número de página), y **eso no se hizo**. No se afirma paginación
+barata en profundidad ni paginación indefinida: se pagina hasta `total_pages`,
+que es el límite de TMDB.
+
 ## 🔴 Lo que esta medición NO pudo verificar
 
 **El respaldo oficial de Netflix no se pudo ejercitar en vivo hoy.** La semana

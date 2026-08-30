@@ -6,20 +6,37 @@
 // TMDB todavía no tiene. Medido el 2026-08-30 con Disney+/AR: 1152 resultados y
 // `tv:275224` no está en ninguno, mientras `with_networks=2739` sí lo trae.
 //
-// 🔴 LA VENTANA FIJA ES LO QUE HACE QUE LA PAGINACIÓN CIERRE. TMDB no deja
-// combinar `with_watch_providers` con `with_networks` en un solo query (los une
-// con AND), así que la mezcla es inevitable — y una mezcla paginada "página N de
-// cada fuente" produce repetidos y salteos, porque la lista ordenada cambia con
-// cada página. Acá se traen VENTANAS FIJAS de las dos fuentes, se ordena una
-// sola vez con un orden TOTAL, y las páginas son tajadas de esa lista. Mientras
-// la ventana no dependa de la página pedida, dos páginas consecutivas no se
-// pisan ni dejan huecos.
+// 🔴 NO HAY VENTANA FIJA DEL CATÁLOGO REGIONAL. TMDB no deja combinar
+// `with_watch_providers` con `with_networks` en un solo query (los une con AND),
+// así que la mezcla es inevitable — y una mezcla paginada "página N de cada
+// fuente" produce repetidos y salteos. Hubo dos intentos que sí usaban ventana
+// fija (3 páginas por fuente, y después un tope de 12 "de seguridad") y los dos
+// truncaban la lista: con Netflix, Max o Prime la página 4 —y después la 13—
+// volvían vacías aunque TMDB tuviera cientos de resultados.
 //
-// LO QUE ESTO NO RESUELVE, dicho claro: la cobertura llega hasta donde llega la
-// ventana. Un título más viejo que el último de la ventana no aparece, aunque
-// exista. Es el precio de no poder pedirle a TMDB una sola lista.
+// Ahora el catálogo regional se pagina hasta donde llegue `total_pages`, que es
+// el límite REAL de la fuente, y lo acotado es sólo el suplemento por redes —que
+// por naturaleza son un puñado de estrenos recientes—.
+//
+// Lo que hace que las páginas no se pisen es otra cosa: el orden regional es el
+// de TMDB, estabilizado, así que una página nueva sólo agrega al final; y un
+// extra entra recién cuando el stream regional pasó su fecha, porque antes su
+// posición no está decidida. Ver `paginarUltimos`.
+//
+// LO QUE ESTO NO RESUELVE, dicho claro:
+//  - La cobertura llega hasta `total_pages` de TMDB. No es "indefinida": es el
+//    límite de la fuente, no nuestro.
+//  - El suplemento por redes SÍ tiene ventana fija (3 páginas). Un título de red
+//    más viejo que eso no aparece.
+//  - 🔴 RIESGO RESIDUAL: un salto en frío a una página válida y profunda todavía
+//    tiene que reconstruir el prefijo —pedir las páginas 1..N— para poder
+//    mezclarlo de forma estable. Cada página queda cacheada por separado, así
+//    que se paga una vez, pero el costo del salto no desapareció. Quitarlo
+//    exigiría rediseñar la paginación (por ejemplo con cursor por fecha), y eso
+//    no se hizo.
 //
 // Sin `server-only`: es lógica pura y todo el punto es poder probarla.
+import { platformByCode } from "./providers-ar.ts";
 import type { PlatformCode, UITitle } from "./types";
 
 /** Un candidato: una card más la fecha con la que se ordena. */
@@ -42,69 +59,16 @@ export function ordenUltimos(a: CandidatoUltimos, b: CandidatoUltimos): number {
 
 const clave = (t: UITitle) => `${t.type}:${t.id}`;
 
-/**
- * Mezcla las dos fuentes y devuelve una página.
- *
- * El filtrado va ANTES de ordenar y paginar, para que la clasificación sea la
- * lista final: si se filtrara después, las páginas quedarían de tamaños
- * distintos y `hayMas` mentiría.
- *
- * Los candidatos que llegan por red ya pasaron por la resolución central de
- * disponibilidad, así que `platforms` es lo que la evidencia sostuvo. El que
- * quedó sin plataformas no sobrevive el filtro de abajo — que es exactamente lo
- * que se quiere: por red llegan muchos que no están en Argentina.
- */
-export function combinarUltimos(opts: {
-  /** Candidatos de la fuente regional de siempre. */
-  regionales: CandidatoUltimos[];
-  /** Candidatos traídos por las redes oficiales, ya resueltos. */
-  porRed: CandidatoUltimos[];
-  providers: PlatformCode[];
-  page: number;
-  porPagina: number;
-  /** Fecha argentina, YYYY-MM-DD. */
-  hoy: string;
-  /**
-   * ¿El catálogo regional tiene más páginas en TMDB de las que se pasaron acá?
-   *
-   * Sin esto, `hayMas` sólo miraría la lista en memoria y diría "se acabó" en
-   * cuanto se consume lo cargado — que es lo que truncaba la lista a la ventana.
-   */
-  hayMasRegional?: boolean;
-}): { items: CandidatoUltimos[]; hayMas: boolean } {
-  const vistos = new Set<string>();
-  const todos: CandidatoUltimos[] = [];
-
-  for (const t of [...opts.regionales, ...opts.porRed]) {
-    // Sin fecha no se puede ordenar ni saber si ya estrenó.
-    if (!t.fecha) continue;
-    // Nada futuro: "Últimos lanzamientos" es lo que YA salió. Comparación de
-    // cadenas YYYY-MM-DD, que ordena igual que la fecha y no construye un Date
-    // con su huso — el día de esta app es el argentino.
-    if (t.fecha > opts.hoy) continue;
-    // Ficha completa: mismo criterio que la fuente regional (`soloCompletos`).
-    if (!t.poster) continue;
-    // Sólo las plataformas del usuario. Un título en varias entra si alguna lo es.
-    if (!t.platforms.some((c) => opts.providers.includes(c))) continue;
-    // Dedup por `tipo:id`, nunca por nombre: el mismo id en movie y en tv son
-    // dos títulos distintos.
-    const k = clave(t);
-    if (vistos.has(k)) continue;
-    vistos.add(k);
-    todos.push(t);
-  }
-
-  todos.sort(ordenUltimos);
-
-  const desde = (opts.page - 1) * opts.porPagina;
-  const items = todos.slice(desde, desde + opts.porPagina);
-  // Hay más si sobran títulos ya clasificados O si el catálogo regional sigue
-  // teniendo páginas. Lo segundo es lo que impide que la lista se corte donde
-  // termina lo que se trajo.
-  const sobran = desde + opts.porPagina < todos.length;
-  return { items, hayMas: sobran || Boolean(opts.hayMasRegional) };
-}
-
+// `combinarUltimos` vivía acá y se ELIMINÓ.
+//
+// Dejó de usarse cuando la orquestación pasó a `paginarUltimos`, y quedó como
+// un segundo camino para la misma decisión: exportado, con sus propios tests
+// pasando, y sin que nada de producción lo llamara. Es la misma forma del
+// problema que tuvo `plataformasDeFicha` — dos lugares decidiendo lo mismo, uno
+// de ellos invisible— así que se saca en vez de dejarlo con un comentario.
+//
+// Lo que hacía lo hacen ahora `filtrar`, `ordenarExtras` y `mezclar`, que son
+// privadas y las usa un solo llamador.
 // ============================================================================
 // Orquestación: pedir páginas regionales hasta cubrir la pedida
 // ============================================================================
@@ -114,6 +78,43 @@ export interface PaginaRegional {
   items: CandidatoUltimos[];
   /** `total_pages` de TMDB. Es el ÚNICO límite real del bucle. */
   totalPaginas: number;
+  /**
+   * `total_results` de TMDB, **antes** de enriquecer y filtrar.
+   *
+   * Se agregó al contrato para poder descartar una página imposible sin
+   * recorrer el catálogo entero: con `totalPaginas` sola no alcanza, porque no
+   * dice cuántos títulos hay. Es una COTA SUPERIOR —el filtrado sólo saca— así
+   * que nunca declara imposible una página que sí podría traer algo.
+   */
+  totalResultados: number;
+}
+
+/**
+ * Sólo los códigos que existen en `providers-ar.ts`.
+ *
+ * 🔴 UN CÓDIGO DESCONOCIDO NO ES "SIN FILTRO". `codesToTmdbIds` descarta lo que
+ * no conoce y devuelve `[]`, y `discover` sólo pone `with_watch_providers` si
+ * recibe ids: con un código inválido salía **el catálogo entero sin filtrar**,
+ * para después descartarlo contra unas plataformas que no existen. Acá se
+ * normaliza una vez, arriba de todo, y las puertas reciben la lista limpia.
+ */
+export function plataformasValidas(codes: PlatformCode[]): PlatformCode[] {
+  return codes.filter((c) => Boolean(platformByCode(c)));
+}
+
+/**
+ * El contrato de `page`: **un entero finito >= 1, o la página 1**.
+ *
+ * Ausente, `NaN`, cero, negativa, infinita o fraccionaria caen todas acá y
+ * salen normalizadas. Una regla sola, sin excepciones que recordar.
+ *
+ * Antes `app/api/latest/route.ts` hacía `Number(...)` sin validar: con `page=x`
+ * entraba `NaN`, la condición de cobertura no se cumplía nunca y la orquestación
+ * recorría `total_pages` completo pidiéndole todo el catálogo a TMDB.
+ */
+export function normalizarPagina(page: unknown): number {
+  const n = Math.trunc(Number(page));
+  return Number.isFinite(n) && n >= 1 ? n : 1;
 }
 
 /**
@@ -155,11 +156,23 @@ export async function paginarUltimos(opts: {
   providers: PlatformCode[];
   /** Fecha argentina, YYYY-MM-DD. */
   hoy: string;
-  traerRegional: (pagina: number) => Promise<PaginaRegional>;
-  traerExtras: () => Promise<CandidatoUltimos[]>;
+  /** Recibe la lista de plataformas YA normalizada. */
+  traerRegional: (pagina: number, providers: PlatformCode[]) => Promise<PaginaRegional>;
+  traerExtras: (providers: PlatformCode[]) => Promise<CandidatoUltimos[]>;
 }): Promise<{ items: CandidatoUltimos[]; hayMas: boolean }> {
-  const extras = ordenarExtras(filtrar(await opts.traerExtras(), opts));
-  const necesarios = opts.page * opts.porPagina;
+  // --- Guardas de entrada, ANTES de pedir nada -----------------------------
+  //
+  // Sin plataformas válidas no hay nada que buscar: ni una página regional ni el
+  // suplemento. `listByCategory` tiene este retorno temprano desde siempre; la
+  // rama de series lo perdió al dejar de pasar por ahí, y con `providers: []`
+  // sobre una fuente de 50 páginas las pedía las 50 para devolver cero.
+  const providers = plataformasValidas(opts.providers);
+  if (!providers.length) return { items: [], hayMas: false };
+  const page = normalizarPagina(opts.page);
+  const filtro = { providers, hoy: opts.hoy };
+
+  const extras = ordenarExtras(filtrar(await opts.traerExtras(providers), filtro));
+  const necesarios = page * opts.porPagina;
 
   const regionales: CandidatoUltimos[] = [];
   let pagina = 1;
@@ -168,10 +181,21 @@ export async function paginarUltimos(opts: {
 
   // Se pide de a una página hasta cubrir la pedida o agotar la fuente.
   for (;;) {
-    const r = await opts.traerRegional(pagina);
+    const r = await opts.traerRegional(pagina, providers);
     totalPaginas = r.totalPaginas;
-    regionales.push(...filtrar(r.items, opts));
+    regionales.push(...filtrar(r.items, filtro));
     agotado = pagina >= totalPaginas;
+
+    // COTA SUPERIOR, apenas se conoce: más títulos que éstos no puede haber.
+    // Sirve para cortar una página imposible sin recorrer el catálogo entero —
+    // el caso de `page=9999`, que antes pedía las 50 páginas para nada. Es una
+    // cota, no una cuenta exacta: el filtrado sólo saca, así que nunca descarta
+    // una página que sí podría tener resultados.
+    if (pagina === 1) {
+      const techo = Math.ceil((r.totalResultados + extras.length) / opts.porPagina);
+      if (page > Math.max(1, techo)) return { items: [], hayMas: false };
+    }
+
     // La cuenta se hace sobre la MEZCLA, que es lo que se sirve. Una página
     // enriquecida vacía no corta: lo que corta es que TMDB no tenga más.
     if (agotado) break;
@@ -180,7 +204,7 @@ export async function paginarUltimos(opts: {
   }
 
   const todos = mezclar(regionales, extras, agotado);
-  const desde = (opts.page - 1) * opts.porPagina;
+  const desde = (page - 1) * opts.porPagina;
   const items = todos.slice(desde, desde + opts.porPagina);
   // Hay más si sobran títulos ya clasificados o si la fuente sigue teniendo
   // páginas que no se pidieron.
@@ -199,9 +223,17 @@ function filtrar(
     && t.platforms.some((c) => opts.providers.includes(c)));
 }
 
-/** Los extras, por fecha descendente y con desempate estable por id. */
+/**
+ * Los extras, por fecha descendente y con desempate estable por id.
+ *
+ * Usa `ordenUltimos` en vez de repetir el comparador: el desempate tiene que ser
+ * el mismo en los dos lados o dos requests pueden ordenarlos distinto.
+ *
+ * ⚠️ El stream REGIONAL no se ordena con esto: conserva el orden de TMDB, que es
+ * lo que hace que una página nueva sólo agregue al final. Ver `mezclar`.
+ */
 function ordenarExtras(items: CandidatoUltimos[]): CandidatoUltimos[] {
-  return [...items].sort((a, b) => (a.fecha === b.fecha ? b.id - a.id : (a.fecha < b.fecha ? 1 : -1)));
+  return [...items].sort(ordenUltimos);
 }
 
 /**

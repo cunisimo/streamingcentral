@@ -989,15 +989,26 @@ Rama `fix/disponibilidad-oficial`. **No mergeada al escribir esto.**
 - **Registro manual versionado** (`lib/excepciones-disponibilidad.ts`), **vacío**:
   el caso testigo se resuelve por la regla general, no por una excepción.
 - **"Últimos lanzamientos · Series"** mezcla la fuente regional con candidatos
-  por red oficial, con ventana fija y orden total para que la paginación no
-  repita ni saltee (`lib/ultimos.ts`).
+  por red oficial (`lib/ultimos.ts`). El catálogo regional se pagina hasta
+  `total_pages` de TMDB —**sin ventana fija**, que fue una regresión corregida
+  dos veces—; lo acotado es sólo el suplemento por redes. Las páginas no repiten
+  ni saltean porque el orden regional es el de TMDB, estabilizado, y un extra
+  entra recién cuando el stream pasó su fecha.
+- **Guardas de entrada**: sin plataformas válidas no se pide una sola página, y
+  `page` se normaliza a un entero ≥ 1. Una página imposible se descarta con una
+  consulta, no recorriendo el catálogo.
 - **El riel estrenó selector Películas/Series.** Default Películas: el Home
   inicial no cambia. Clave del Home **`v5` → `v6`**.
 - **Sin SQL, sin migraciones, sin escrituras en Supabase.**
 
 Verificado sobre el build local: `tv:275224` pasa de `[]` a `["d"]`, aparece
 primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
-títulos con proveedor de TMDB no cambian. Suite 678/678, `tsc` 0, build OK.
+títulos con proveedor de TMDB no cambian.
+
+**Estado de verificación al 2026-08-30 (commit final de la rama):** suite
+**771/771**, `tsc` 0, build OK. Los conteos anteriores de este documento (678)
+eran de una revisión intermedia y quedaron obsoletos al sumar los tests de
+propagación anidada, inventario de cachés y orquestación de la paginación.
 
 ⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix. Es
 el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide

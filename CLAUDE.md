@@ -713,7 +713,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |
 | `GET /api/hacete-cargo` | "No gustaron" (votos malaso, `top_voted` 1-1). La ruta y la clave siguen diciendo `hacete-cargo`: cambió el rótulo, no el riel |
 | `GET /api/search` | búsqueda (títulos + personas). `providers` **ordena, no filtra** |
-| `GET /api/latest` | últimos estrenos (solo movie, por fecha) |
+| `GET /api/latest` | últimos estrenos por fecha. `?tipo=movie` (default) o `tv`; en `tv` mezcla el catálogo regional con candidatos por red oficial. `?page=` se normaliza (entero ≥ 1, o 1) |
 | `GET /api/person/[id]` | filmografía de una persona (actor o director), filtrada a plataformas |
 | `GET /api/personas` | actores populares paginados (`?page=`) |
 | `GET /api/directores` | lista curada de directores (`DIRECTOR_IDS` en `lib/enrich.ts`) |
