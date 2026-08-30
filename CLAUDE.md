@@ -27,7 +27,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 
 - **Next.js 14 App Router + TypeScript + Tailwind.** SSR/API routes en un solo
   proyecto, deploy directo a Vercel.
-- **TMDB** — fuente de verdad del catálogo: metadata, providers por región,
+- **TMDB** — fuente del catálogo: metadata, providers por región,
   búsqueda, recomendaciones, personas. Bearer token v4 (`TMDB_READ_TOKEN`),
   **no** el `api_key` v3.
 - **OMDB se sacó** (IMDb + Metacritic). Sus términos permiten uso personal y
@@ -393,9 +393,14 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   invalida una anterior confiable del mismo `tipo:id`: la evidencia se acumula
   en un conjunto, no se resuelve por "la última gana".
   Tres cosas que NO se hacen: inventar `watchLink` (sale de TMDB; si no lo hay,
-  no hay a dónde mandar a nadie), usar `networks` como disponibilidad (que sea
-  "de Netflix" no dice que se vea en Netflix Argentina) y tocar el array
-  cacheado de `providersOf`.
+  no hay a dónde mandar a nadie), usar `networks` **solo** como disponibilidad
+  (que sea "de Netflix" no dice que se vea en Netflix Argentina) y tocar el
+  array cacheado de `providersOf`.
+  ⚠️ **Esa regla del medio cambió y conviene leerla bien.** Antes decía
+  "`networks` no se usa nunca". Ahora dice **"`networks` nunca se usa SOLA"**:
+  acompañada de un enlace oficial de la misma plataforma a ese título concreto,
+  y con las otras cuatro condiciones de la regla estricta, sí sirve. Ver
+  "Disponibilidad" abajo.
   **UNA consulta por MISS**, filtrada por fecha: el corte sale del reloj, no de
   una consulta previa que pregunte cuál es la última semana. La primera versión
   hacía esas dos y por eso el techo real era 24 lecturas por hora, no 12.
@@ -428,6 +433,71 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de
   Next. Sin esa variable la ingesta no corre y el bloque de Netflix cae a
   popularidad como los otros cinco — la app no se rompe.
+- **La disponibilidad se resuelve en UN solo lugar** (`lib/disponibilidad.ts` →
+  `resolverDisponibilidad`, con el adaptador `disponibilidadDe` en `enrich.ts`).
+  Ficha, cards, búsqueda, relacionados, listas y Home pasan todos por ahí.
+  **Antes cada superficie decidía sola**, y por eso el arreglo de Moria quedó
+  atado a la ficha mientras las cards del mismo título seguían en gris. Un
+  barrido (`lib/disponibilidad-barrido.test.ts`) falla si una superficie nueva
+  lee `watchProviders` y se saltea el resolvedor.
+  **Prioridad de evidencia**, y sólo se AGREGA cuando TMDB no sabe nada:
+  1. `watch/providers` de TMDB para AR, `flatrate` → `tmdb-ar`.
+  2. Top oficial reciente de Netflix → `top-oficial` (reglas de ventana y
+     `needs_review` intactas).
+  3. **Enlace oficial estricto** para series → `enlace-oficial`.
+  4. Registro manual versionado (`lib/excepciones-disponibilidad.ts`, hoy
+     **vacío**) → `manual`.
+  🔴 **Los respaldos nunca contradicen a TMDB.** Si TMDB ubica el título en otra
+  plataforma, el dato en conflicto es el nuestro. Y **un fallo nunca es una
+  ausencia**: si Supabase o TMDB se caen se devuelve lo de TMDB y **no se
+  cachea** (`fallo` viaja hasta `cachedIf`).
+- **El problema que resuelve: el catálogo regional de TMDB está incompleto.**
+  Medido el 2026-08-30 sobre las series de la red Disney+ estrenadas en 60 días:
+  **15 candidatos, 4 con proveedor AR y 11 sin ninguno**. El caso testigo es
+  `tv:275224` (Gutiérrez Is mai neim), #1 de Disney+ en JustWatch AR, del que
+  TMDB sólo conoce ID, MY y US. **No es cache.** El arreglo de Moria fue
+  correcto pero no general: dependía del top oficial de Netflix, que sólo existe
+  para Netflix. Informe: `docs/medidas/2026-08-30-disponibilidad-informe.md`.
+- **La evidencia oficial estricta exige SEIS cosas a la vez**
+  (`lib/enlace-oficial.ts`): serie ya estrenada en fecha argentina · exactamente
+  UNA red mapeada a una plataforma soportada · `homepage` HTTPS con el dominio
+  oficial EXACTO de esa misma plataforma · ruta que apunta a un título · sin
+  locale de otra región · sin datos regionales que contradigan.
+  **`networks` nunca se usa sola y `homepage` tampoco.** El host se compara
+  completo, nunca con `includes`: `disneyplus.com.evil.ru` y `disneyplus-ar.com`
+  contienen la cadena y no son el dominio. `/es-es/` se rechaza por ser España —
+  es un caso real de la muestra (`tv:325313`). **Películas nunca**: `networks` es
+  un campo de series.
+  **Hoy hay UNA sola plataforma habilitada, Disney+**, y un test falla si se
+  agrega otra sin actualizar el número: cada combinación de red, dominio, ruta e
+  ids globales hay que medirla. **Netflix NO está acá** a propósito — su respaldo
+  es el top semanal, que es mejor evidencia.
+  ⚠️ Los `idsGlobales` (337 y 122) **no son** los `tmdbIds` de
+  `providers-ar.ts` y no hay que unificarlos: allá el 337 es el único Disney+ de
+  Argentina, y meter el 122 cambiaría lo que el discover argentino considera
+  Disney+.
+- **Corregir la ficha no alcanzaba: el `discover` por proveedor nunca devuelve
+  el título.** Medido: 1152 series en Disney+/AR y el caso testigo en ninguna.
+  Por eso "Últimos lanzamientos · Series" mezcla la fuente regional con
+  candidatos traídos por las **redes oficiales** (`lib/ultimos.ts`).
+  🔴 **`with_watch_monetization_types` es lo que rompía la consulta por red**, no
+  `watch_region`: medido, 304 resultados con ese parámetro y 440 sin él, y el
+  caso testigo sólo aparece sin él. De ahí sale `sinMonetizacion` en `tmdb.ts`.
+  **La paginación usa una VENTANA FIJA, no "página N de cada fuente"**: TMDB no
+  deja combinar `with_watch_providers` con `with_networks` (los une con AND), así
+  que la mezcla es inevitable, y paginar cada fuente por separado produce
+  repetidos y salteos. Se traen ventanas fijas, se ordena una sola vez con un
+  orden TOTAL (fecha desc, id desc como desempate estable) y las páginas son
+  tajadas de esa lista. **Lo que NO resuelve: la cobertura llega hasta donde
+  llega la ventana.**
+- **"Últimos lanzamientos" tiene selector Películas/Series** (`shelfKey:
+  "ultimos"`, `typeToggle: "refetch"`). **El default sigue siendo Películas**, así
+  que el Home inicial no cambió. El tipo entra en el `t` y por lo tanto en la
+  clave del payload: la versión subió a **`v6`** justamente porque un payload
+  `v5` cacheado no trae el selector y el cambio "no se vería" durante 6 h.
+  "Ver todas" lleva `?tipo=`, y `/lista/ultimos` lo recibe **desde el server**
+  (no con `useSearchParams`, que forzaría un `<Suspense>`). **Al volver atrás
+  manda el snapshot, no la URL**, igual que en `/categoria`.
 - **La ruleta sirve UNA recomendación por vez, nunca una lista.** Es el punto:
   una lista reconstruye la parálisis de elección que la feature resuelve. El pool
   es `roulette_titles` (curado offline, 2259 con texto de los 2401) y lo sirve la

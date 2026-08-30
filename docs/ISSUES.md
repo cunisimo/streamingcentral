@@ -846,3 +846,45 @@ aperturas.
 Este issue queda abierto **sólo** por la demora, y se cierra el día que se
 midan diez aperturas calientes seguidas sin que ninguna imagen pase de un
 segundo — o el día que se decida que no vale la pena y se borre.
+
+## #13 — TMDB no publica el catálogo regional completo, y no hay forma de saber cuánto falta
+
+**Estado: mitigado, no resuelto.** Ver
+`docs/medidas/2026-08-30-disponibilidad-informe.md`.
+
+Medido el 2026-08-30 sobre la red Disney+, 60 días de estrenos: **11 de 15
+series no tenían proveedor `AR`** en `watch/providers`, incluida una que
+JustWatch mostraba como #1 del país. La resolución centralizada
+(`lib/disponibilidad.ts`) recupera **4 de esas 11** con evidencia oficial
+estricta; las otras 7 no tienen enlace oficial, o lo tienen de otra región o de
+otro dominio, y **no se fuerzan**.
+
+**Lo que sigue abierto:**
+
+1. **Sólo Disney+ está habilitada** para la regla de enlace oficial. Las otras
+   plataformas necesitan que alguien mida sus redes, dominios y rutas antes de
+   sumarlas — no se habilitan a ojo.
+2. **No se puede medir el agujero completo.** Sabemos cuántas series de una red
+   conocida no tienen dato regional; no sabemos cuántos títulos faltan de redes
+   que ni siquiera consultamos.
+3. **La ventana del descubrimiento es fija** (3 páginas por fuente). Un título
+   más viejo que el último de la ventana no aparece aunque exista.
+
+**Lo que NO es una salida:** usar `networks` sola, o el `homepage` solo. Las dos
+producen afirmaciones falsas y hay tests que las rechazan.
+
+## #14 — La ingesta del top 10 de Netflix lleva dos semanas sin correr
+
+**Estado: abierto, detectado el 2026-08-30 de costado.**
+
+La semana más nueva de `netflix_top10` es **2026-08-16**. El cron es semanal y
+corre los martes, así que faltan las corridas del **18 y el 25 de agosto**.
+
+**Consecuencia visible:** la ventana de evidencia son 14 días, así que hoy la
+evidencia del top oficial está **vencida por horas** y ningún título la recibe.
+`/api/title/tv/322428` (Moria) devuelve `[]` — igual que en `main`, porque la
+regla de ventana no cambió.
+
+No lo causó la corrección de disponibilidad y no se arregló acá: es el cron o su
+configuración lo que hay que mirar (`CRON_SECRET`,
+`SUPABASE_SERVICE_ROLE_KEY`, el schedule de Vercel).

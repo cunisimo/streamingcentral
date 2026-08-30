@@ -2,10 +2,29 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CLAVE_EVIDENCIA, VENTANA_RECIENTE_MS, conPlataformaDeLaFuente, desdeSemana,
-  evidenciaCacheada, evidenciaOficial, plataformasDeFicha, type FilaOficial,
+  evidenciaCacheada, evidenciaOficial, type FilaOficial,
 } from "./top-plataformas.ts";
+import { resolverDisponibilidad } from "./disponibilidad.ts";
 import type { BackendCache } from "./reparar-y-cachear.ts";
 import type { MediaType, PlatformCode, UITitle } from "./types.ts";
+
+// `plataformasDeFicha` se ELIMINÓ: era un segundo camino para decidir
+// disponibilidad y por eso mismo una forma de saltarse el resolvedor central.
+//
+// Estas pruebas no se borraron ni se aflojaron: se apuntan al camino nuevo con
+// este adaptador. Todo lo que fijaban del respaldo oficial de Netflix —Moria,
+// Operation con `needs_review`, la ventana, el no-mutar, el no-consultar
+// teniendo dato de TMDB— ahora lo fija `resolverDisponibilidad`.
+const plataformasDeFicha = async (
+  tipo: MediaType, id: number, deTmdb: PlatformCode[],
+  leerEvidencia: () => Promise<Set<string>>,
+): Promise<PlatformCode[]> =>
+  (await resolverDisponibilidad({
+    tipo, id, deTmdb, hoy: "2026-08-30",
+    leerTopOficial: leerEvidencia,
+    // Sin datos de serie: acá se prueba el respaldo de Netflix, no el de enlace.
+    leerDatosSerie: async () => null,
+  })).plataformas;
 
 const card = (platforms: PlatformCode[], type: MediaType = "tv"): UITitle => ({
   id: 322428, type, title: "Moria", year: 2026, runtime: null, poster: null,

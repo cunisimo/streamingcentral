@@ -45,9 +45,16 @@ const marcar = (s: string) => s as ClaveLocalizada;
 // El orden y el formato de cada una reproducen el código anterior byte a byte.
 // Los tests fijan los literales de hoy: si alguna cambia, fallan.
 
-/** Payload compuesto del Home. La versión `v5` es del contenido, no del idioma. */
+/**
+ * Payload compuesto del Home. La versión `v6` es del contenido, no del idioma.
+ *
+ * `v6`: "Últimos lanzamientos" estrenó selector Películas/Series. Sube porque un
+ * payload `v5` cacheado NO trae `typeToggle` ni `shelfKey` en ese riel, así que
+ * durante las 6 h del TTL el selector no aparecería y el cambio "no se vería"
+ * después de deployar. Un solo cambio de versión y un solo arranque frío.
+ */
 export function claveHome(semilla: number, providers: string, tipos: string, huella: string): ClaveLocalizada {
-  return marcar(`home:${pre(huella)}v5:${semilla}:${providers}:${tipos}`);
+  return marcar(`home:${pre(huella)}v6:${semilla}:${providers}:${tipos}`);
 }
 
 /** Un pool de discover: una plataforma, una receta, una página. */
@@ -106,6 +113,19 @@ export function claveRecoPerfil(tipo: MediaType, id: number, huella: string): Cl
  *  de títulos. */
 export function claveSearch(q: string, providers: string, huella: string): ClaveLocalizada {
   return marcar(`search:${pre(huella)}v2:${q}:${providers}`);
+}
+
+/**
+ * "Últimos lanzamientos · Series", ya mezclado y paginado.
+ *
+ * Lleva la fecha argentina en la clave porque la ventana se corta en "hoy": sin
+ * eso, la lista del día anterior sobreviviría al cambio de día y el riel se
+ * quedaría sin los estrenos de la mañana.
+ */
+export function claveUltimosSeries(
+  dia: string, providers: string, pagina: number, huella: string,
+): ClaveLocalizada {
+  return marcar(`ultimos:${pre(huella)}v1:tv:${dia}:${providers}:p${pagina}`);
 }
 
 /** Actores populares. Guarda `knownFor`, que son títulos localizados. */

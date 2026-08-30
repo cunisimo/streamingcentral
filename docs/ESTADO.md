@@ -975,3 +975,30 @@ versionar — es una decisión pendiente del dueño, no un olvido.
 **Al preparar commits, agregar rutas explícitas y nunca `git add -A`**: fue así
 como se colaron en un commit de esta rama, y hubo que sacarlos con
 `git rm --cached` (que no toca la copia de trabajo).
+
+## Disponibilidad centralizada + selector en "Últimos lanzamientos" (2026-08-30)
+
+Rama `fix/disponibilidad-oficial`. **No mergeada al escribir esto.**
+
+- **Un solo resolvedor** decide "está en X" para toda la app
+  (`lib/disponibilidad.ts`). Antes cada superficie decidía sola: por eso el
+  arreglo de Moria vivía sólo en la ficha.
+- **Evidencia oficial estricta** para series cuyo dato regional TMDB no tiene
+  (`lib/enlace-oficial.ts`): red + enlace oficial específico + estrenada + sin
+  contradicción. **Sólo Disney+ habilitada**, verificada contra datos reales.
+- **Registro manual versionado** (`lib/excepciones-disponibilidad.ts`), **vacío**:
+  el caso testigo se resuelve por la regla general, no por una excepción.
+- **"Últimos lanzamientos · Series"** mezcla la fuente regional con candidatos
+  por red oficial, con ventana fija y orden total para que la paginación no
+  repita ni saltee (`lib/ultimos.ts`).
+- **El riel estrenó selector Películas/Series.** Default Películas: el Home
+  inicial no cambia. Clave del Home **`v5` → `v6`**.
+- **Sin SQL, sin migraciones, sin escrituras en Supabase.**
+
+Verificado sobre el build local: `tv:275224` pasa de `[]` a `["d"]`, aparece
+primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
+títulos con proveedor de TMDB no cambian. Suite 678/678, `tsc` 0, build OK.
+
+⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix, por
+el issue #14 (la ingesta lleva dos semanas parada y la ventana venció). Está
+cubierto por 23 tests.

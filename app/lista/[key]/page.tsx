@@ -17,9 +17,18 @@ const LISTAS: Record<string, { endpoint: string; title: string }> = {
 // todo de una sola vez y estas dos paginan. El título de miniseries no se
 // escribe acá a propósito — sale de lib/miniseries.ts, que es de donde lo saca
 // también el riel, para que no puedan quedar distintos.
-export default function ListaPage({ params }: { params: { key: string } }) {
+export default function ListaPage(
+  { params, searchParams }: {
+    params: { key: string };
+    searchParams?: { tipo?: string };
+  },
+) {
   if (params.key === "ultimos") {
-    return (<><TopBar /><main><UltimosView /></main><BottomNav /></>);
+    // El `?tipo=` lo pone el "Ver todas" del riel del Home, para abrir la lista
+    // en el mismo tipo que se estaba mirando. Se valida acá: cualquier otra
+    // cosa cae en "movie", que es el default del riel.
+    const tipoInicial = searchParams?.tipo === "tv" ? "tv" : "movie";
+    return (<><TopBar /><main><UltimosView tipoInicial={tipoInicial} /></main><BottomNav /></>);
   }
   if (params.key === MINISERIES_LISTA_KEY) {
     return (<><TopBar /><main><MiniseriesView /></main><BottomNav /></>);

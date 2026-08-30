@@ -16,8 +16,8 @@ import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
 import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, type Category } from "./categories";
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
-import { cached, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
-import { claveCard, clavePeoplePopular, claveSearch } from "./claves";
+import { cached, cachedIf, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
+import { claveCard, clavePeoplePopular, claveSearch, claveUltimosSeries } from "./claves";
 import {
   HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
   conRespuesto, indiceMixto, pedirRespaldoIdioma, repararLote,
@@ -32,10 +32,14 @@ import {
 import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
 import { disponiblesEnTopOficial } from "./netflix-top10";
-import { plataformasDeFicha } from "./top-plataformas";
+import { resolverDisponibilidad } from "./disponibilidad";
+import { redesDePlataforma } from "./enlace-oficial";
+import { combinarUltimos, type CandidatoUltimos } from "./ultimos";
+import type { DatosSerie } from "./enlace-oficial";
 import { excludedGenres, audienceRule } from "./audience";
 import { ordenarPorRelevancia } from "./busqueda-orden";
 import { primaryCountry } from "./countries";
+import { hoyAR } from "./fecha";
 import { pickTrailer } from "./trailer";
 import type {
   MediaType, MotivoVacio, PlatformCode, UITitle, UITitleDetail, UIPerson,
@@ -56,9 +60,21 @@ const today = () => new Date().toISOString().slice(0, 10);
 const onUserPlatforms = (i: UITitle, providers: PlatformCode[]) =>
   i.platforms.some((c) => providers.includes(c));
 
-// providers de un título en AR (cacheado) -> { codes, links, watchLink }
+// providers de un título en AR (cacheado)
+//   -> { codes, links, watchLink, porRegion }
+//
+// `porRegion` es el mapa de ids de `flatrate` de TODAS las regiones, y lo usa
+// SÓLO el chequeo de contradicción de `lib/enlace-oficial.ts`. Se guarda acá,
+// en la misma entrada, para no pagar un segundo `watch/providers` por título.
+//
+// 🔴 LA CLAVE ES `pv2:` Y ESE CAMBIO ES DELIBERADO. Las entradas viejas no
+// tienen `porRegion`, y leerlas como "sin datos regionales" sería peor que
+// inútil: el chequeo de contradicción sólo RECHAZA, así que un mapa vacío lo
+// vuelve permisivo y durante las 8 h del TTL podría afirmar una disponibilidad
+// que con los datos completos se habría rechazado. Un arranque frío de
+// proveedores es barato; una afirmación falsa no.
 async function providersOf(type: MediaType, id: number) {
-  return cached(`pv:${type}:${id}`, TTL.providers, async () => {
+  return cached(`pv2:${type}:${id}`, TTL.providers, async () => {
     const r = await watchProviders(type, id);
     const ar = r.results?.["AR"];
     const codes = new Set<PlatformCode>();
@@ -67,8 +83,66 @@ async function providersOf(type: MediaType, id: number) {
       const code = codeForTmdbId(p.provider_id);
       if (code) { codes.add(code); links[code] = ar.link; }
     }
-    return { codes: [...codes], links, watchLink: ar?.link ?? null };
+    const porRegion: Record<string, number[]> = {};
+    for (const [region, v] of Object.entries(r.results ?? {})) {
+      const ids = (v?.flatrate ?? []).map((x) => x.provider_id);
+      if (ids.length) porRegion[region] = ids;
+    }
+    return { codes: [...codes], links, watchLink: ar?.link ?? null, porRegion };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Disponibilidad: el ÚNICO camino por el que la app decide "está en X".
+// ---------------------------------------------------------------------------
+
+// Los datos que la regla de enlace oficial necesita, cacheados aparte de la
+// ficha para no arrastrar el detalle entero. Sólo se piden cuando hacen falta.
+async function datosSerieDe(
+  type: MediaType, id: number, porRegion: Record<string, number[]>,
+): Promise<DatosSerie | null> {
+  if (type !== "tv") return null;
+  const d = await cached(`serie:oficial:${id}`, TTL.providers, async () => {
+    const det = await titleDetails("tv", id);
+    return {
+      estreno: det.first_air_date ?? null,
+      redes: (det.networks ?? []).map((n) => n.id),
+      homepage: det.homepage ?? "",
+    };
+  });
+  return { ...d, proveedoresPorRegion: porRegion };
+}
+
+/**
+ * Las plataformas de un título, resueltas por el camino central.
+ *
+ * ⚠️ CORTA ANTES DE TOCAR NADA si TMDB ya sabe. Ese `if` no es una
+ * micro-optimización: el Home enriquece ~300 títulos y casi todos tienen
+ * proveedor, así que sin él cada uno pagaría un round-trip a Redis de más.
+ * Devuelve el MISMO array que guardó `providersOf` — no se muta ni se copia.
+ *
+ * Un `fallo` NO se cachea: `cachedIf` deja pasar el valor y no lo guarda, así
+ * que una caída de Supabase no congela un "no está en ningún lado".
+ */
+export async function disponibilidadDe(
+  type: MediaType, id: number,
+  prov: { codes: PlatformCode[]; porRegion?: Record<string, number[]> },
+): Promise<PlatformCode[]> {
+  if (prov.codes.length) return prov.codes;
+  let fallo = false;
+  const res = await cachedIf(`disp:${type}:${id}`, TTL.editorial, async () => {
+    const r = await resolverDisponibilidad({
+      tipo: type, id, deTmdb: prov.codes, hoy: hoyAR(),
+      leerTopOficial: disponiblesEnTopOficial,
+      leerDatosSerie: () => datosSerieDe(type, id, prov.porRegion ?? {}),
+    });
+    fallo = r.fallo;
+    if (r.procedencia && r.procedencia !== "tmdb-ar") {
+      console.log(`[disponibilidad] ${type}:${id} -> ${r.plataformas.join(",")} (${r.procedencia})`);
+    }
+    return r.plataformas;
+  }, () => !fallo);
+  return res;
 }
 
 // El link del agregador para un título. Reusa el MISMO `cached` de providersOf
@@ -105,7 +179,10 @@ async function settleAll<T>(tareas: Promise<T>[], etiqueta: string): Promise<T[]
 }
 
 async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>): Promise<UITitle> {
-  const { codes } = await providersOf(type, t.id);
+  const prov = await providersOf(type, t.id);
+  // Camino central. Con proveedor de TMDB devuelve el MISMO array y no cuesta
+  // nada; sin proveedor consulta los respaldos. Ver `disponibilidadDe`.
+  const codes = await disponibilidadDe(type, t.id, prov);
   return {
     id: t.id, type, title: titleOf(t), year: yearOf(t),
     runtime: null, poster: img(t.poster_path),
@@ -283,9 +360,108 @@ export function listByCategoryCacheable(
 }
 
 // --- Últimos lanzamientos (por fecha de estreno, en tus plataformas) ---
+// Ventana FIJA por fuente para las series. Ver el encabezado de lib/ultimos.ts:
+// es lo que hace que las páginas no repitan ni salteen cuando hay que mezclar
+// dos consultas que TMDB no deja combinar en una sola.
+const ULTIMOS_PAGINAS = 3;
+const ULTIMOS_POR_PAGINA = 20;
+
+// Una página de discover con la reparación de idioma puesta, igual que
+// `listByCategory`. Sin esto el riel nuevo quedaría fuera del fallback.
+async function crudosConIdioma(
+  params: Parameters<typeof discover>[1], etiqueta: string, senal: { fallo: boolean },
+): Promise<RawTitle[]> {
+  const r = await discover("tv", params);
+  const rep = await adaptadorLista({
+    pedirBase: async () => r.results,
+    pedirRespaldo: () => pedirRespaldoIdioma(etiqueta, async () => (await discover("tv", {
+      ...params, extra: { ...(params?.extra ?? {}), language: IDIOMA_FALLBACK },
+    })).results),
+  });
+  if (rep.fallo) senal.fallo = true;
+  return rep.valor;
+}
+
+/**
+ * Candidatos de "Últimos lanzamientos · Series", de las DOS fuentes.
+ *
+ * 🔴 POR QUÉ NO ALCANZA LA FUENTE REGIONAL. Medido el 2026-08-30: el discover
+ * por proveedor Disney+/AR devuelve 1152 series y `tv:275224` no está en
+ * ninguna. Si no aparece como candidato, no hay resolución de disponibilidad
+ * que lo rescate — hacen falta las dos mitades.
+ *
+ * La consulta por red va SIN `with_watch_monetization_types` (ver
+ * `sinMonetizacion` en lib/tmdb.ts): con ese parámetro TMDB filtra a lo que ya
+ * sabe que está en flatrate argentino, que es justo el dato que falta. Medido:
+ * 304 resultados con el parámetro, 440 sin él, y el caso testigo sólo aparece
+ * sin él.
+ *
+ * Se enriquece SIN filtrar por plataformas: el filtro lo hace `combinarUltimos`
+ * DESPUÉS de que la resolución central haya decidido. Filtrar antes dejaría
+ * afuera justamente a los que vienen sin proveedor de TMDB, que son los que
+ * este riel existe para rescatar.
+ */
+async function candidatosUltimosSeries(
+  providers: PlatformCode[], senal: { fallo: boolean },
+): Promise<{ regionales: CandidatoUltimos[]; porRed: CandidatoUltimos[] }> {
+  const hoy = hoyAR();
+  const paginas = Array.from({ length: ULTIMOS_PAGINAS }, (_, i) => i + 1);
+  // Sólo las redes de las plataformas del usuario que estén habilitadas. La
+  // lista sale del MISMO registro que la evidencia oficial: no se puede pedir
+  // candidatos por una red que después no podría resolverse.
+  const redes = [...new Set(providers.flatMap(redesDePlataforma))];
+
+  const [regionalesRaw, porRedRaw] = await Promise.all([
+    Promise.all(paginas.map((p) => crudosConIdioma({
+      providers: codesToTmdbIds(providers), minVotes: 0, page: p,
+      sortBy: "first_air_date.desc", extra: { "first_air_date.lte": hoy },
+    }, `ultimos:reg:p${p}`, senal))),
+    redes.length
+      ? Promise.all(paginas.map((p) => crudosConIdioma({
+        minVotes: 0, page: p, sortBy: "first_air_date.desc", sinMonetizacion: true,
+        extra: { with_networks: redes.join("|"), "first_air_date.lte": hoy },
+      }, `ultimos:red:p${p}`, senal)))
+      : Promise.resolve([] as RawTitle[][]),
+  ]);
+
+  const pub = await publishedIds("tv");
+  const aCandidatos = async (paginasRaw: RawTitle[][]): Promise<CandidatoUltimos[]> => {
+    const planos = paginasRaw.flat();
+    const fecha = new Map(planos.map((t) => [t.id, t.first_air_date ?? ""]));
+    const items = await settleAll(planos.map((t) => toUITitle(t, "tv", pub)), "ultimos tv");
+    return items.map((i) => ({ ...i, fecha: fecha.get(i.id) ?? "" }));
+  };
+
+  return {
+    regionales: await aCandidatos(regionalesRaw),
+    porRed: await aCandidatos(porRedRaw),
+  };
+}
+
 export async function latestReleases(
   providers: PlatformCode[], tipo: MediaType = "movie", page = 1,
 ): Promise<UITitle[]> {
+  // --- Series: mezcla de las dos fuentes, cacheada ya paginada -------------
+  // Se cachea el resultado YA mezclado: la mitad cara es enriquecer ~120
+  // candidatos, y sin cache la página 2 los volvería a pagar todos.
+  // `cachedLocIf` NO guarda si el respaldo de idioma falló.
+  if (tipo === "tv") {
+    const senal = { fallo: false };
+    // Las plataformas ordenadas: "n,d" y "d,n" son la misma lista.
+    const orden = [...providers].sort().join(",");
+    return cachedLocIf(
+      claveUltimosSeries(hoyAR(), orden, page, HUELLA_IDIOMA), TTL.providers,
+      async () => {
+        const { regionales, porRed } = await candidatosUltimosSeries(providers, senal);
+        return combinarUltimos({
+          regionales, porRed, providers, page,
+          porPagina: ULTIMOS_POR_PAGINA, hoy: hoyAR(),
+        }).items;
+      },
+      () => !senal.fallo,
+    );
+  }
+
   const extra: Record<string, string> = tipo === "movie"
     ? { "primary_release_date.lte": today() }
     : { "first_air_date.lte": today() };
@@ -1089,7 +1265,7 @@ export async function detail(
   //    no dice que se pueda ver en Netflix Argentina; hay producciones de
   //    Netflix licenciadas a otros en la región, y otras que directamente no
   //    llegan. Lo único que se usa es el top de ESTE país.
-  const plataformas = await plataformasDeFicha(type, id, prov.codes, disponiblesEnTopOficial);
+  const plataformas = await disponibilidadDe(type, id, prov);
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
     pickTrailer((await titleVideos(type, id, lang)).results, lang));
@@ -1187,7 +1363,7 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
         runtime: null, poster: img(d.poster_path),
         country: primaryCountry(d),
         genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
-        platforms: prov.codes,
+        platforms: await disponibilidadDe(type, id, prov),
         tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
         hasEditorial: false,
       } as UITitle;
