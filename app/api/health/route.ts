@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cacheStatus, cachePing } from "@/lib/cache";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 // esperaba UPSTASH_REDIS_REST_*, y el cache estuvo apagado sin que nada avisara.
 //
 // No expone credenciales: solo el NOMBRE de la variable que se encontró.
-export async function GET() {
+async function manejar() {
   const estado = cacheStatus();
   const ping = await cachePing();
   return NextResponse.json(
@@ -27,3 +28,10 @@ export async function GET() {
     { status: estado.modo === "redis" && ping.ok ? 200 : 503 },
   );
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios:
+// `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
+// sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
+// puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
+export const GET = conCors(manejar, "GET");
+export const OPTIONS = opcionesCors("GET");

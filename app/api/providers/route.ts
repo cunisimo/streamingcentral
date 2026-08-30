@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { codeForTmdbId, platformByCode, platformOrder } from "@/lib/providers-ar";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ interface Row {
 // mostrar solo las soportadas por la app (las que tienen código interno),
 // ordenadas por display_priority. Devuelve `code` para que el header pueda
 // togglear "mis plataformas".
-export async function GET() {
+async function manejar() {
   const sb = supabaseServer();
   if (!sb) return NextResponse.json({ providers: [] });
   try {
@@ -71,3 +72,10 @@ export async function GET() {
     return NextResponse.json({ error: String(e), providers: [] }, { status: 500 });
   }
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios:
+// `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
+// sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
+// puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
+export const GET = conCors(manejar, "GET");
+export const OPTIONS = opcionesCors("GET");
