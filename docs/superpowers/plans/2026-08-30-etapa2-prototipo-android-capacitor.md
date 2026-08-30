@@ -122,11 +122,10 @@ final a `main`.** 🔵 La elección entre las dos opciones es del dueño.
 
 ---
 
-## ✅ CP3 — implementado el 30/08/2026, PENDIENTE DE AUDITORÍA
+## ✅ CP3 — completado y auditado el 30/08/2026
 
-⚠️ **Implementado, no integrado ni publicado.** Vive sólo en
-`spike/capacitor-android`, sin mergear y sin pushear. **Pendiente de auditoría
-del dueño / Codex.**
+**Auditado y cerrado.** Vive en `spike/capacitor-android`, **sin mergear y sin
+pushear**: eso es estado de la rama, no una tarea pendiente.
 
 `lib/api-base.ts` convierte rutas internas `/api/…` en absolutas cuando el build
 es nativo. Todo lo demás se devuelve intacto: URLs externas, rutas internas que
@@ -182,7 +181,7 @@ primer argumento sea la ruta literal `/api/…` sin pasar por `apiUrl`.
 > El resto del documento describe lo que falta.
 
 **Base:** `main = origin/main = 397842c` · **Next.js instalado: 14.2.35**
-**Rama propuesta (NO creada):** `spike/capacitor-android`
+**Rama de trabajo:** `spike/capacitor-android`, creada localmente, sin mergear ni pushear
 
 ---
 
