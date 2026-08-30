@@ -430,3 +430,95 @@ test("los extras cuentan para el límite superior", async () => {
   });
   assert.equal(r.items.length, 5, "los extras no entraron en la página 2");
 });
+
+// ============================================================================
+// 8. Lo que cubría `combinarUltimos`, ahora sobre el camino REAL
+// ============================================================================
+//
+// `combinarUltimos` se eliminó por ser código muerto —era un segundo camino para
+// la misma decisión— y el comentario de `lib/ultimos.test.ts` afirmó que su
+// cobertura ya estaba acá. **No era cierto todavía.** Estos son los contratos
+// que faltaban, trasladados a `paginarUltimos`: no se recrea un mezclador ni se
+// prueba un helper que reproduzca el resultado esperado.
+
+/** Una fuente de una sola página, para aislar el contrato que se prueba. */
+const unaPagina = (items: CandidatoUltimos[]) => async () => ({
+  items, totalPaginas: 1, totalResultados: items.length,
+});
+
+test("el caso testigo llega por EXTRAS y entra con Disney+ elegida", async () => {
+  // Equivalente a `tv:275224`: no está en el catálogo regional —el discover por
+  // proveedor no lo devuelve— y llega por la consulta por red, ya resuelto a
+  // `["d"]` por la resolución central.
+  const testigo = t(275224, dia(2), ["d"]);
+  const r = await paginarUltimos({
+    page: 1, porPagina: 20, providers: ["d"] as PlatformCode[], hoy: HOY,
+    traerRegional: unaPagina([t(1, dia(1), ["d"])]),
+    traerExtras: async () => [testigo],
+  });
+  assert.ok(r.items.some((x) => x.id === 275224), "el testigo no entró");
+  assert.deepEqual(r.items.map((x) => x.id), [1, 275224], "no respetó el orden por fecha");
+});
+
+test("ese mismo extra NO entra si la plataforma elegida es otra", async () => {
+  // Otra plataforma válida seleccionada, no una lista vacía: así se prueba el
+  // filtro y no el retorno temprano.
+  const testigo = t(275224, dia(2), ["d"]);
+  const r = await paginarUltimos({
+    page: 1, porPagina: 20, providers: ["n"] as PlatformCode[], hoy: HOY,
+    traerRegional: unaPagina([t(1, dia(1), ["n"])]),
+    traerExtras: async () => [testigo],
+  });
+  assert.equal(r.items.some((x) => x.id === 275224), false, "entró sin su plataforma elegida");
+  assert.deepEqual(r.items.map((x) => x.id), [1], "se llevó puesto lo que sí correspondía");
+});
+
+test("el mismo tv:id en la fuente regional y en extras aparece UNA vez", async () => {
+  const repetido = t(4242, dia(3), ["d"]);
+  const r = await paginarUltimos({
+    page: 1, porPagina: 20, providers: ["d"] as PlatformCode[], hoy: HOY,
+    traerRegional: unaPagina([t(1, dia(1), ["d"]), repetido]),
+    traerExtras: async () => [{ ...repetido }],
+  });
+  assert.equal(r.items.filter((x) => x.id === 4242).length, 1, "salió duplicado");
+  assert.deepEqual(r.items.map((x) => x.id), [1, 4242]);
+});
+
+test("un extra SIN plataformas no aparece", async () => {
+  // Es el candidato que llegó por red y al que la resolución central no le
+  // encontró evidencia: se descarta, que es todo el punto de resolver antes.
+  const r = await paginarUltimos({
+    page: 1, porPagina: 20, providers: ["d"] as PlatformCode[], hoy: HOY,
+    traerRegional: unaPagina([t(1, dia(1), ["d"])]),
+    traerExtras: async () => [t(999, dia(2), [])],
+  });
+  assert.deepEqual(r.items.map((x) => x.id), [1]);
+});
+
+test("un título en VARIAS plataformas entra si alguna coincide", async () => {
+  const r = await paginarUltimos({
+    page: 1, porPagina: 20, providers: ["d"] as PlatformCode[], hoy: HOY,
+    traerRegional: unaPagina([t(1, dia(1), ["n", "m", "d"])]),
+    traerExtras: async () => [t(2, dia(2), ["d", "n"])],
+  });
+  assert.deepEqual(r.items.map((x) => x.id), [1, 2]);
+});
+
+test("el dedup usa `type:id`, no el id solo", async () => {
+  // ⚠️ PRECISIÓN SOBRE EL ALCANCE: hoy `ultimosSeries` sólo alimenta esta
+  // función con series, así que un `movie` con el mismo id NO puede llegar por
+  // producción. Pero el dedup de `paginarUltimos` es por `type:id` y no por id,
+  // y eso se prueba acá para que nadie lo "simplifique" a `id` mirando que el
+  // llamador actual es tv-only: TMDB reutiliza los ids entre tipos, y el día que
+  // esta función reciba películas un dedup por id se comería títulos distintos.
+  const serie = t(700, dia(1), ["d"]);            // 2026-08-29, el más nuevo
+  const peli = { ...t(700, dia(2), ["d"]), type: "movie" as const }; // 2026-08-28
+  const r = await paginarUltimos({
+    page: 1, porPagina: 20, providers: ["d"] as PlatformCode[], hoy: HOY,
+    traerRegional: unaPagina([serie, peli]),
+    traerExtras: sinExtras,
+  });
+  assert.equal(r.items.length, 2, "confundió dos títulos distintos con el mismo id");
+  // El orden es por fecha descendente, así que la serie (más nueva) va primero.
+  assert.deepEqual(r.items.map((x) => `${x.type}:${x.id}`), ["tv:700", "movie:700"]);
+});

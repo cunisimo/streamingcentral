@@ -1005,10 +1005,15 @@ Verificado sobre el build local: `tv:275224` pasa de `[]` a `["d"]`, aparece
 primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
 títulos con proveedor de TMDB no cambian.
 
-**Estado de verificación al 2026-08-30 (commit final de la rama):** suite
-**771/771**, `tsc` 0, build OK. Los conteos anteriores de este documento (678)
-eran de una revisión intermedia y quedaron obsoletos al sumar los tests de
-propagación anidada, inventario de cachés y orquestación de la paginación.
+**Estado de verificación al 2026-08-30, con la rama todavía ABIERTA:** suite
+**751/751**, `tsc` 0, build OK.
+
+⚠️ **La rama no está terminada**: falta el Preview aislado y la prueba manual del
+dueño. Este conteo es del último commit verificado, no de un cierre.
+
+Los conteos anteriores de este documento (678) eran de una revisión intermedia.
+El 771 que figuró un rato acá **era incorrecto**: salió de contar antes de
+eliminar `combinarUltimos`, que era código muerto y se llevó sus ~24 tests.
 
 ⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix. Es
 el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide

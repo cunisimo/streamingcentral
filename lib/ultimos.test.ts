@@ -7,10 +7,21 @@
 // exportado, con sus tests en verde, y sin que nada lo llamara. Es la misma
 // forma del problema que tuvo `plataformasDeFicha`.
 //
-// Todo lo que aquellos tests fijaban —orden, dedup, filtros, paginación sin
-// repetidos ni salteos, extras que entran una sola vez, página posterior al
-// final vacía— lo fija ahora `lib/ultimos-paginacion.test.ts`, y lo hace mejor:
-// ejercitando el bucle que pide páginas en vez de recibir la lista ya armada.
+// ⚠️ Cuando se borró esa función, este comentario **afirmó que su cobertura ya
+// estaba en `lib/ultimos-paginacion.test.ts`, y no era cierto todavía**: seis
+// contratos habían quedado sin trasladar. Se agregaron ahí (sección 8), sobre
+// `paginarUltimos`, que es el camino real. Ahora la afirmación se sostiene:
+//
+//   - el caso testigo que llega por extras entra con su plataforma elegida;
+//   - y no entra cuando la elegida es otra;
+//   - el mismo `tv:id` en las dos fuentes aparece una sola vez;
+//   - un extra sin plataformas resueltas no aparece;
+//   - un título en varias plataformas entra si alguna coincide;
+//   - el dedup es por `type:id`, no por id.
+//
+// Más lo que ya estaba: orden, filtros, paginación sin repetidos ni salteos,
+// extras que entran una vez y en posición estable, y página posterior al final
+// vacía. Todo ejercitando el bucle que pide páginas, no una lista ya armada.
 //
 // Acá queda lo que es de este módulo y no de la orquestación: el comparador.
 import { test } from "node:test";
