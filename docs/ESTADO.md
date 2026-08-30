@@ -975,3 +975,73 @@ versionar — es una decisión pendiente del dueño, no un olvido.
 **Al preparar commits, agregar rutas explícitas y nunca `git add -A`**: fue así
 como se colaron en un commit de esta rama, y hubo que sacarlos con
 `git rm --cached` (que no toca la copia de trabajo).
+
+## Disponibilidad centralizada + selector en "Últimos lanzamientos" (2026-08-30)
+
+Rama `fix/disponibilidad-oficial`. **No mergeada al escribir esto.**
+
+- **Un solo resolvedor** decide "está en X" para toda la app
+  (`lib/disponibilidad.ts`). Antes cada superficie decidía sola: por eso el
+  arreglo de Moria vivía sólo en la ficha.
+- **Evidencia oficial estricta** para series cuyo dato regional TMDB no tiene
+  (`lib/enlace-oficial.ts`): red + enlace oficial específico + estrenada + sin
+  contradicción. **Sólo Disney+ habilitada**, verificada contra datos reales.
+- **Registro manual versionado** (`lib/excepciones-disponibilidad.ts`), **vacío**:
+  el caso testigo se resuelve por la regla general, no por una excepción.
+- **"Últimos lanzamientos · Series"** mezcla la fuente regional con candidatos
+  por red oficial (`lib/ultimos.ts`). El catálogo regional se pagina hasta
+  `total_pages` de TMDB —**sin ventana fija**, que fue una regresión corregida
+  dos veces—; lo acotado es sólo el suplemento por redes. Las páginas no repiten
+  ni saltean porque el orden regional es el de TMDB, estabilizado, y un extra
+  entra recién cuando el stream pasó su fecha.
+- **Guardas de entrada**: sin plataformas válidas no se pide una sola página, y
+  `page` se normaliza a un entero ≥ 1. Una página imposible se descarta con una
+  consulta, no recorriendo el catálogo.
+- **El riel estrenó selector Películas/Series.** Default Películas: el Home
+  inicial no cambia. Clave del Home **`v5` → `v6`**.
+- **Sin SQL, sin migraciones, sin escrituras en Supabase.**
+
+Verificado sobre el build local: `tv:275224` pasa de `[]` a `["d"]`, aparece
+primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
+títulos con proveedor de TMDB no cambian.
+
+**Estado de verificación al 2026-08-30:** suite **757/757**, `tsc` 0, build OK.
+
+✅ **Prueba manual APROBADA por el dueño**, sobre el build de producción corrido
+en local (`next start` en el 3100). Se verificó el recorrido completo: el Home
+abre, "Últimos lanzamientos" arranca en Películas, el selector cambia el
+contenido de verdad, "Gutiérrez Is mai neim" aparece con Disney+ elegida, su
+ficha muestra Disney+ y no dice "No está en streaming", volver atrás conserva la
+navegación, "Ver todas" funciona, y volver a Películas actualiza el riel. Sin
+regresiones visibles en una película y una serie conocidas.
+
+⚠️ **El Preview se OMITIÓ por decisión del dueño.** El aislamiento del Redis de
+Producción exige crear variables `KV_*` vacías acotadas a la rama, y se prefirió
+no tocar variables de Vercel. La prueba local cumplió la misma función con
+aislamiento verificado: `/api/health` devolvió `503` con `cache: "memoria"`,
+`fuente: null` y `credenciales: {url:false, token:false}`, o sea sin Redis de por
+medio.
+
+🔴 **Lo que la prueba local NO puede cubrir**, y hay que mirar después del
+deploy: el comportamiento con Redis real. Local corre en memoria, así que las
+claves nuevas (`home:…v6`, `pv2:`, `ultimos:`, `disp:`, `serie:oficial:`) no se
+ejercitaron contra Upstash. El primer Home de producción va a ser un arranque
+frío.
+
+**La rama queda LISTA PARA INTEGRAR.**
+
+Los conteos anteriores de este documento (678) eran de una revisión intermedia.
+El 771 que figuró un rato acá **era incorrecto**: salió de contar antes de
+eliminar `combinarUltimos`, que era código muerto y se llevó sus ~24 tests. Y el
+751 que lo reemplazó quedó corto por seis en el mismo commit que lo escribió, al
+trasladar la cobertura de esa función al orquestador real.
+
+⚠️ **Un conteo escrito a mano se desactualiza en el commit siguiente.** Vale como
+foto fechada de una verificación, no como dato vivo: el número real lo da
+`npm test`.
+
+⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix. Es
+el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide
+14 días desde `week` y el ranking más nuevo de Netflix es del 2026-08-16, así que
+volvió a vencer. **Moria NO está resuelta hoy**, ni acá ni en `main`. La regla
+está cubierta por 23 tests apuntados al resolvedor.

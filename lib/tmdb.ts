@@ -139,6 +139,18 @@ export interface DiscoverOpts {
   minVotes?: number;
   page?: number;
   extra?: Record<string, string>;
+  /**
+   * No mandar `with_watch_monetization_types`.
+   *
+   * 🔴 HACE FALTA PARA LA CONSULTA POR RED, y está medido. Con
+   * `watch_region=AR` puesto, ese parámetro filtra a lo que TMDB sabe que está
+   * en flatrate EN ARGENTINA — que es exactamente el dato que falta. Medido el
+   * 2026-08-30 sobre `with_networks=2739`: **304 resultados con el parámetro y
+   * 440 sin él**, y el caso testigo `tv:275224` sólo aparece sin él. El que
+   * estorba es éste, no `watch_region`: sacar la región no cambia nada (440 en
+   * los dos casos).
+   */
+  sinMonetizacion?: boolean;
 }
 
 export function discover(type: MediaType, o: DiscoverOpts = {}) {
@@ -159,6 +171,7 @@ export function discover(type: MediaType, o: DiscoverOpts = {}) {
     "vote_count.gte": String(o.minVotes ?? 60),
     page: String(o.page ?? 1),
   };
+  if (o.sinMonetizacion) delete p.with_watch_monetization_types;
   if (o.providers?.length) p.with_watch_providers = o.providers.join("|");
   if (o.genres?.length) p.with_genres = o.genres.join("|");
   if (o.withoutGenres?.length) p.without_genres = o.withoutGenres.join(",");
@@ -290,6 +303,11 @@ export interface RawDetail {
   // como "por estrenar".
   next_episode_to_air?: { air_date?: string; season_number?: number; episode_number?: number } | null;
   origin_country?: string[];
+  // Sólo en series. `networks` es la cadena/plataforma que la emite y `homepage`
+  // su sitio oficial. NO son disponibilidad por sí solos — ver lib/enlace-oficial.ts:
+  // la regla es que `networks` nunca se usa SOLA.
+  networks?: { id: number; name: string }[];
+  homepage?: string;
   // Coproducciones: origin_country y production_countries traen los mismos
   // países en ORDEN DISTINTO (ver lib/countries.ts → primaryCountry).
   production_countries?: { iso_3166_1: string }[];

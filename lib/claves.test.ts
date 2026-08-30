@@ -11,6 +11,7 @@ import { join } from "node:path";
 import {
   claveCard, claveCombinadaCache, claveHome, clavePeoplePopular, clavePoolCache,
   claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil, claveSearch, claveTopPop,
+  claveUltimosSeries,
 } from "./claves.ts";
 import { calcularHuella } from "./idioma.ts";
 
@@ -21,9 +22,9 @@ import { calcularHuella } from "./idioma.ts";
 // siendo el "antes" del rollback: son las claves que quedaron escritas en
 // Upstash con es-ES y que nadie tiene que volver a leer por accidente.
 
-test("modo compatible: las once familias producen los bytes pre-tanda-1", () => {
+test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => {
   const H = "";   // la huella vacía, que es lo que se pasaba en la tanda 1
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v5:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v6:3523671066:d,m,n:");
   assert.equal(
     clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
     "disc:v1:AR:2026-08-23:movie:n:pop.abc123:p2",
@@ -42,6 +43,7 @@ test("modo compatible: las once familias producen los bytes pre-tanda-1", () => 
   // La familia 11: `search:v2` SÍ es localizada, aunque `searchDeTipo` esté
   // clavado en es-MX — el `knownFor` de las personas sale del idioma base.
   assert.equal(claveSearch("matrix", "d,m,n", H), "search:v2:matrix:d,m,n");
+  assert.equal(claveUltimosSeries("2026-08-30", "d,n", "reg:p1", H), "ultimos:v1:tv:2026-08-30:d,n:reg:p1");
 });
 
 // ============================================================================
@@ -53,10 +55,10 @@ test("modo compatible: las once familias producen los bytes pre-tanda-1", () => 
 // familia que corresponde. La huella sale de `calcularHuella`, no de una
 // cadena a mano: si la fórmula cambia, este test cambia con ella.
 
-test("tanda 2: las once familias llevan la huella es-MX+f.r1", () => {
+test("tanda 2: las doce familias llevan la huella es-MX+f.r1", () => {
   const H = calcularHuella("es-MX", true);
   assert.equal(H, "es-MX+f.r1");
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v5:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v6:3523671066:d,m,n:");
   assert.equal(
     clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
     "disc:es-MX+f.r1:v1:AR:2026-08-23:movie:n:pop.abc123:p2",
@@ -73,6 +75,8 @@ test("tanda 2: las once familias llevan la huella es-MX+f.r1", () => {
   assert.equal(claveRecoPerfil("movie", 557, H), "reco:perfil:es-MX+f.r1:v2:movie:557");
   assert.equal(clavePeoplePopular(3, H), "people:popular:es-MX+f.r1:3");
   assert.equal(claveSearch("matrix", "d,m,n", H), "search:es-MX+f.r1:v2:matrix:d,m,n");
+  assert.equal(claveUltimosSeries("2026-08-30", "d,n", "reg:p1", H),
+    "ultimos:es-MX+f.r1:v1:tv:2026-08-30:d,n:reg:p1");
 });
 
 // El rollback tiene que devolver EXACTAMENTE las claves de es-ES, y esas no son
@@ -174,6 +178,7 @@ test("rollback es-MX+f → es-MX → es-ES → es-MX: nunca lee el espacio de ot
 
 const FAMILIAS_LOCALIZADAS = [
   "home:", "disc:", "card:", "top:pop:", "reco:", "people:popular:", "search:",
+  "ultimos:",
 ];
 // Empiezan igual que una familia localizada pero no lo son.
 const EXCEPCIONES_NO_LOCALIZADAS = ["people:directors"];
@@ -274,13 +279,24 @@ test("EN ROJO: detecta un `as ClaveLocalizada` sobre un literal", () => {
 
 test("EN ROJO: el barrido mira también cachedLoc y cachedLocIf", () => {
   assert.equal(claveManualEn("cachedLoc(`top:pop:${p}:${t}`, TTL.catalog, fn);").length, 1);
-  assert.equal(claveManualEn("cachedLocIf(`home:v5:${s}`, TTL.home, fn, ok);").length, 1);
+  assert.equal(claveManualEn("cachedLocIf(`home:v6:${s}`, TTL.home, fn, ok);").length, 1);
+  // CANARIO de la familia nueva. Es rojo→verde de verdad: antes de agregar
+  // "ultimos:" a FAMILIAS_LOCALIZADAS esta línea devolvía 0, o sea que una clave
+  // de esa familia escrita a mano se colaba sin que el barrido dijera nada.
+  assert.equal(
+    claveManualEn("cachedLocIf(`ultimos:v1:tv:${d}:${p}:p1`, TTL.providers, fn, ok);").length, 1,
+    "el barrido no detecta una clave manual de la familia `ultimos:`",
+  );
+  // Y que no marque de más: una clave que sólo EMPIEZA parecido no es de la familia.
+  assert.equal(claveManualEn("cached(`ultimosvistos:${u}`, TTL.catalog, fn);").length, 0);
 });
 
 test("EN VERDE: no marca constructores ni claves sin huella", () => {
   assert.deepEqual(claveManualEn("cached(claveCard(type, id, H), TTL.catalog, fn);"), []);
   assert.deepEqual(claveManualEn("cachedLoc(claveCard(type, id, H), TTL.catalog, fn);"), []);
-  assert.deepEqual(claveManualEn("cached(`pv:${type}:${id}`, TTL.providers, fn);"), []);
+  assert.deepEqual(claveManualEn("cached(`pv2:${type}:${id}`, TTL.providers, fn);"), []);
+  assert.deepEqual(claveManualEn("cachedIf(`disp:${type}:${id}`, TTL.editorial, fn, ok);"), []);
+  assert.deepEqual(claveManualEn("cached(`serie:oficial:${id}`, TTL.providers, fn);"), []);
   const noLocal = ["const k = `videos:${type}:${id}`;", "cached(k, TTL.providers, fn);"].join("\n");
   assert.deepEqual(claveManualEn(noLocal), []);
 });
@@ -312,17 +328,22 @@ function constructoresExportados(): string[] {
 }
 const CONSTRUCTORES = constructoresExportados();
 
-test("el barrido descubre los constructores solo, y hay once", () => {
+test("el barrido descubre los constructores solo, y hay doce", () => {
   // Si esto falla porque agregaste una familia: NO subas el numero sin mas. Una
   // familia localizada nueva significa un espacio de claves nuevo y, con el,
   // otro arranque frio. El numero esta aca para que esa decision se tome a
   // proposito y no de costado.
-  assert.equal(CONSTRUCTORES.length, 11, `constructores en lib/claves.ts: ${CONSTRUCTORES.join(", ")}`);
-  // Y que sean los que el resto del archivo prueba, no otros once.
+  //
+  // La 12 (`claveUltimosSeries`) se sumó a propósito en la corrección de
+  // disponibilidad: "Últimos lanzamientos · Series" mezcla dos consultas de TMDB
+  // y enriquece ~120 candidatos, así que sin clave propia la página 2 volvería a
+  // pagarlos todos. Es un espacio de claves nuevo y su arranque frío, decidido.
+  assert.equal(CONSTRUCTORES.length, 12, `constructores en lib/claves.ts: ${CONSTRUCTORES.join(", ")}`);
+  // Y que sean los que el resto del archivo prueba, no otros doce.
   assert.deepEqual([...CONSTRUCTORES].sort(), [
     "claveCard", "claveCombinadaCache", "claveHome", "clavePeoplePopular",
     "clavePoolCache", "claveReco", "claveRecoCruce", "claveRecoMismo",
-    "claveRecoPerfil", "claveSearch", "claveTopPop",
+    "claveRecoPerfil", "claveSearch", "claveTopPop", "claveUltimosSeries",
   ]);
 });
 
@@ -367,7 +388,7 @@ function llamadasAConstructores(src: string): { nombre: string; ultimo: string }
   return out;
 }
 
-test("los once call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
+test("los doce call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
   const infractores: string[] = [];
   const usos: Record<string, number> = {};
   let total = 0;
@@ -380,10 +401,17 @@ test("los once call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => 
   }
   assert.deepEqual(infractores, [],
     `constructores sin la huella real:\n${infractores.join("\n")}`);
-  // Las once familias, cableadas de una sola vez: es lo que provoca UN arranque
-  // frio y no once. El total se afirma para que agregar una familia obligue a
+  // Doce familias y TRECE call sites. La de más es `claveUltimosSeries`, que se
+  // llama en dos lugares —una página del catálogo regional y el suplemento por
+  // redes— y es a propósito: son dos TRAMOS del mismo espacio de claves, no dos
+  // espacios. Cachearlos por separado es lo que hace que pedir la página 2 no
+  // repita las consultas de la página 1.
+  //
+  // El total se afirma para que sumar una familia (o un tramo) obligue a
   // decidirlo, no para contar por contar.
-  assert.equal(total, 11, `se esperaban 11 llamadas a constructores, hay ${total}`);
+  assert.equal(total, 13, `se esperaban 13 llamadas a constructores, hay ${total}`);
+  assert.equal(usos["claveUltimosSeries"], 2,
+    "los dos tramos de `ultimos:` tienen que seguir cacheándose por separado");
   // Un constructor exportado que nadie llama es una familia declarada y sin
   // usar: o falta cablearla, o sobra. Las dos cosas hay que verlas.
   const sinUsar = CONSTRUCTORES.filter((c) => !(usos[c] > 0));

@@ -681,6 +681,38 @@ Verificado de paso que no hay un desfase sistemático: el TSV de Netflix todaví
 publica `2026-08-16` como su semana más nueva, así que la corrida de hoy se
 llevó lo más fresco que había.
 
+### Volvió a vencer — 2026-08-30
+
+Comprobado en la base, no deducido:
+
+| semana | primera escritura | filas |
+|---|---|--:|
+| `2026-08-16` | **2026-08-25 12:58:03 UTC** (martes) | 20 |
+| `2026-08-09` | 2026-08-12 18:10 UTC | 20 |
+| `2026-08-02` | 2026-08-09 17:27 UTC | 20 |
+
+**El cron corrió el 25/08 y entró en horario.** La semana `2026-08-16` es la más
+nueva que hay, y hoy tiene **exactamente 14 días**: la guarda mide desde `week`,
+no desde la ingesta, así que **la evidencia venció otra vez** — por horas.
+
+⚠️ **`week` es la semana del RANKING, no cuándo corrió la ingesta.** Que la fila
+diga `2026-08-16` no prueba que hayan faltado corridas: la del 25/08 existe y
+está fechada. Una versión anterior de esta nota afirmaba que faltaban las
+corridas del 18 y del 25, y **era falso** — salía de leer `week` como si fuera la
+fecha de ejecución.
+
+**Consecuencia hoy:** ningún título recibe el respaldo del top oficial, así que
+`/api/title/tv/322428` (Moria) devuelve `[]`. **Moria no está resuelta
+actualmente**, y no lo está en `main` tampoco: la regla de ventana no cambió.
+Esto NO lo arregla la rama `fix/disponibilidad-oficial` y no se intentó ahí — es
+este issue, que sigue abierto.
+
+Lo que hay que decidir acá (no en la rama de disponibilidad): si la guarda debe
+medir desde `week` o desde `updated_at`. Medir desde `week` es lo honesto para el
+rótulo "dato oficial" —el ranking es viejo aunque lo hayamos bajado hoy— pero
+condena al bloque a degradarse cada dos semanas mientras Netflix publique con 9
+días de retraso.
+
 
 ---
 
@@ -846,3 +878,36 @@ aperturas.
 Este issue queda abierto **sólo** por la demora, y se cierra el día que se
 midan diez aperturas calientes seguidas sin que ninguna imagen pase de un
 segundo — o el día que se decida que no vale la pena y se borre.
+
+## #16 — TMDB no publica el catálogo regional completo, y no hay forma de saber cuánto falta
+
+**Estado: MITIGADO, NO RESUELTO.** Integrado desde
+`fix/disponibilidad-oficial` (prueba manual aprobada por el dueño el
+2026-08-30). Ver `docs/medidas/2026-08-30-disponibilidad-informe.md`.
+
+⚠️ **Mitigado no es cerrado, y la diferencia importa acá.** De los 11 títulos sin
+proveedor `AR` de la muestra, la resolución recupera **4**. Los otros 7 siguen
+sin aparecer como disponibles, y ninguna medición dice cuántos títulos más
+faltan fuera de la red que se midió. Este issue **queda abierto**.
+
+Medido el 2026-08-30 sobre la red Disney+, 60 días de estrenos: **11 de 15
+series no tenían proveedor `AR`** en `watch/providers`, incluida una que
+JustWatch mostraba como #1 del país (`tv:275224`). La resolución centralizada
+recupera **4 de esas 11** con evidencia oficial estricta; las otras 7 no tienen
+enlace oficial, o lo tienen de otra región o de otro dominio, y **no se
+fuerzan**.
+
+**Lo que sigue abierto:**
+
+1. **Sólo Disney+ está habilitada** para la regla de enlace oficial. Las otras
+   plataformas necesitan que alguien mida sus redes, dominios y rutas antes de
+   sumarlas — no se habilitan a ojo.
+2. **No se puede medir el agujero completo.** Sabemos cuántas series de una red
+   conocida no tienen dato regional; no sabemos cuántos títulos faltan de redes
+   que ni siquiera consultamos.
+3. **El suplemento por redes tiene ventana fija.** El catálogo regional sí
+   pagina indefinidamente, pero los candidatos que llegan por red salen de una
+   ventana acotada: un título de red más viejo que esa ventana no aparece.
+
+**Lo que NO es una salida:** usar `networks` sola, o el `homepage` solo. Las dos
+producen afirmaciones falsas y hay tests que las rechazan.

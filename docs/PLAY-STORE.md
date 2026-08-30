@@ -358,7 +358,7 @@ verifiqué el plan.** Lo retiro.
   queden en logs de acceso ni en el historial del navegador.
 - `/api/cuenta/eliminar` no registra cuerpo, contraseña, token ni email.
 - Ninguna clave de Upstash lleva `user_id` ni email (auditadas las familias
-  `card:`, `pv:`, `videos:`, `home:`, `genre:covers:`, `blocklist:`, `people:`,
+  `card:`, `pv2:`, `videos:`, `home:`, `genre:covers:`, `blocklist:`, `people:`,
   `ed:`, `health:`, `node:`).
 
 ### Nivel E — Terceros que el NAVEGADOR contacta directamente
@@ -975,7 +975,7 @@ mecanismo que impida superar los seis meses.
 
 | Claves | TTL máximo |
 |---|---|
-| `card:`, `pv:`, `videos:`, `home:`, `genre:covers:`, `people:`, `blocklist:` | `pool: 30 h`, y es el más largo de toda la tabla `TTL` |
+| `card:`, `pv2:`, `videos:`, `home:`, `genre:covers:`, `people:`, `blocklist:` | `pool: 30 h`, y es el más largo de toda la tabla `TTL` |
 
 Nada puede sobrevivir más de 30 horas. ✅ Cumple con enorme margen.
 
