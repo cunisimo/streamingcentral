@@ -1484,8 +1484,15 @@ antes de tener veredicto.)*
 ## ✅ CP5 — 🚦 GATE A — auditada el 30/08/2026
 
 **Veredicto técnico: las 13 comprobaciones pasaron.** El detalle está en
-§"Evidencia de Gate A", abajo. 🔵 **La decisión de pasar a Gate B es del
-dueño y no está tomada.** CP6 no se empezó.
+§"Evidencia de Gate A", abajo.
+
+✅ **GATE A APROBADA POR EL DUEÑO el 30/08/2026, y Gate B autorizada.**
+El primer checkpoint de Gate B es **CP6**.
+
+🔴 **La autorización llega hasta CP6 y no más.** NO está autorizado todavía:
+instalar Capacitor ni ningún paquete `@capacitor/*`, instalar Android Studio,
+crear `android/`, `ios/` o `capacitor.config.*`, ni ejecutar `cap init`,
+`cap add`, `cap sync` o `cap run`. **CP7 requiere una autorización nueva.**
 
 **No se escribe código.** Gate A valida **export, navegación, helpers y contrato
 de CORS** por tests y `curl`. 🔴 **NO afirma consumo real desde el WebView**: el
@@ -1554,9 +1561,13 @@ ninguna necesidad.
 
 ---
 
-## CP6 — 🔴 Neutralizar la PWA ANTES del primer arranque nativo
+## ✅ CP6 — completado el 30/08/2026 — PWA neutralizada en el artefacto
 
-**Precondiciones:** Gate A aprobado. **Ningún `cap run` ejecutado todavía.**
+**Precondiciones:** Gate A aprobado ✅. **Ningún `cap run` ejecutado todavía** ✅
+— Capacitor sigue sin instalar y no existen `android/`, `ios/` ni
+`capacitor.config.*`.
+
+**Resultado medido en §"Cierre de CP6", al final de esta sección.**
 
 🔴 **Por qué va acá y no después.** En el primer `cap run android` el bundle ya
 es `production`, y `ServiceWorkerRegister.tsx:9` sólo sale con
@@ -1657,6 +1668,131 @@ PWA activa:
 ```
 
 **Estimación: 0,75 sesión.**
+
+---
+
+### Cierre de CP6 — medido el 30/08/2026
+
+**La decisión vive en un módulo propio: `lib/pwa-nativa.ts`** (`pwaActiva()` y
+`metadataPwa()`). No se repitió `ES_NATIVO` en cada componente, y el motivo es
+que así la decisión **se puede probar en un solo proceso**: la constante se
+resuelve al evaluar el módulo, y con la bandera cruda hacen falta dos procesos
+para ver los dos caminos. **Una sola bandera de build, sin `@capacitor/core` ni
+detección en runtime**, fijado por test.
+
+| Pieza | Qué se hizo | Dónde |
+|---|---|---|
+| `ServiceWorkerRegister` | `if (!pwaActiva()) return;` **antes** del guard de `NODE_ENV` | el propio componente |
+| `UpdateToast` | `return null` | el propio componente |
+| `InstallPrompt` | `return null`, **después** de los hooks | el propio componente |
+| `InstallRow` | `return null`, **después** de los hooks | el propio componente |
+| `AppleSplashLinks` | no se monta | `layout.tsx` — el archivo es **generado**, no se toca |
+| `PwaClient` | se conserva; en nativo monta **sólo** `StandaloneWelcome` | el propio componente |
+| `StandaloneWelcome` | **intacto** — ver la auditoría de abajo | — |
+| `OfflineState` | **intacto** | — |
+| `metadata` | `manifest` y `appleWebApp` salen por spread de `metadataPwa()` | `layout.tsx` |
+
+⚠️ **Los guards de `UpdateToast`, `InstallPrompt` e `InstallRow` son
+redundantes con el de `PwaClient`, a propósito.** Cada pieza queda apagada la
+monte quien la monte — y `InstallRow` no cuelga de `PwaClient`: la monta
+`app/cuenta/configuracion/page.tsx`, que es exactamente el caso que la rev. 4 se
+había perdido.
+
+⚠️ **En `InstallPrompt` e `InstallRow` el guard va DESPUÉS de los hooks.**
+`pwaActiva()` es una constante de build y nunca cambia entre renders, así que un
+return anticipado sería seguro — pero igual contradice las reglas de hooks de
+React. Colocarlo después no cuesta nada. ⚠️ **Este repo no tiene ESLint
+configurado** (`next lint` ofrece crearlo), así que la regla no la hace cumplir
+ninguna herramienta: se respeta a mano y por revisión.
+
+#### ✅ `StandaloneWelcome` — auditado por separado, y se CONSERVA
+
+No se apagó automáticamente. Su contenido visible completo es:
+
+> ¡Bienvenido a la app! · *Para empezar, elegí tus plataformas de streaming desde
+> el botón **Plataformas** arriba. Si ya tenías cuenta, ingresá de nuevo para ver
+> tus listas.* · **Empezar**
+
+**No dice una palabra sobre instalar, ni sobre PWA, ni sobre Safari.** Describe
+exactamente la situación del primer arranque del APK: **almacenamiento nuevo y
+vacío**, sin plataformas elegidas y sin sesión. Y su condición de disparo ya
+encaja sola — `isStandalone()` matchea `display-mode: standalone` dentro del
+contenedor, y sólo se muestra si además no hay plataformas elegidas.
+
+**Se conserva. No se reescribió ni se retocó**: no había ninguna decisión de
+producto que tomar acá.
+
+#### Verificación — los dos caminos, no sólo el nativo
+
+| Camino | Comprobación | Resultado |
+|---|---|---|
+| **Nativo** | `sw.js`, `sw/`, `manifest.webmanifest` en `out-capacitor/` | **ausentes** |
+| Nativo | `rel="manifest"` en los **36** HTML del artefacto | **0** |
+| Nativo | `apple-touch-startup-image` en los 36 HTML | **0** |
+| Nativo | `apple-mobile-web-app-capable` en los 36 HTML | **0** |
+| Nativo | `themeColor`, `viewport-fit=cover`, `interactive-widget`, `<title>` | **conservados** |
+| Nativo | 34 rutas, `/t/` y `/p/`, base HTTPS inlineada | **sin cambios vs Gate A** |
+| Nativo | secretos en el artefacto | **0** |
+| **Web** | `<link rel="manifest">` | **presente** |
+| Web | `apple-touch-startup-image` | **36 apariciones** (los 18 splash) |
+| Web | `apple-mobile-web-app-capable` | **presente** |
+| Web | `manifest.webmanifest` como ruta emitida | **presente** |
+| Web | `public/sw.js`, `public/sw/`, `app/manifest.ts` | **sin un solo byte de diferencia** |
+| Web | `SC_CACHE_VERSION` | **`v7`, sin subir** — el SW web no se tocó |
+| Ambos | suite · `tsc` · build web · export | **724/724** · **0** · **41/41** · **38/38** |
+| Ambos | `git diff --check` · residuos de staging | limpio · ninguno |
+
+🔴 **El bloque WEB de la tabla no es decorativo.** Sin él, todo lo demás se
+cumpliría igual si el guard hubiera apagado la PWA en **los dos** builds. Es la
+mitad que demuestra que la web no cambió.
+
+#### 🔴 Lo que un grep NO puede probar acá
+
+Las cadenas de la UI de instalación ("Instalar aplicación", "Hay una versión
+nueva de Yump") **siguen estando en el `.js` del artefacto nativo**, y eso **no
+es un fallo**. El guard es una constante importada de otro módulo, así que el
+minificador no puede eliminar la rama muerta. **Buscar esos textos y no
+encontrarlos sería suerte, no evidencia.** Por eso lo que se verifica es el
+comportamiento (`pwaActiva()` en los dos sentidos, en proceso y en procesos
+hijos) y el **HTML emitido**, que es donde la ausencia sí significa algo.
+
+#### 🟡 Dos hallazgos de peso muerto — reportados, NO corregidos
+
+Están **fuera del alcance aprobado de CP6** y no afectan ninguna comprobación.
+Se dejan anotados para que el dueño decida:
+
+1. **`out-capacitor/splash/` — 1,8 MB y cero referencias.** Después de CP6 nada
+   en el artefacto apunta a un `splash-*.png`: los 18 `<link>` desaparecieron.
+   Sacarlos del staging es una línea en `PUBLIC_FUERA`, pero es tocar el
+   contrato de copia y **eso no estaba autorizado acá**.
+2. **`out-capacitor/offline.html` viaja y nadie lo sirve.** Es el fallback que
+   servía el service worker; sin SW, es inalcanzable. ⚠️ **No confundirlo con
+   `OfflineState`**, que es el componente React de 9 vistas y **sí** lo necesita
+   CP8 #13. Son dos cosas distintas con nombres parecidos.
+
+⚠️ **`out-capacitor/icons/` (116 KB) SÍ se queda y no es peso muerto:**
+`StandaloneWelcome` usa `/icons/icon-192.png`, y esa pieza se conserva.
+
+#### Corrección al inventario del plan
+
+El inventario de arriba decía que `OfflineState` lo consumen **8** vistas. Son
+**9**: faltaba `components/upcoming/UpcomingAllView.tsx`. El test las verifica
+a las nueve.
+
+#### Pruebas nuevas — `lib/pwa-nativa.test.ts`, 30 casos
+
+Cuatro niveles, porque ninguno alcanza solo: la **decisión** pura en los dos
+sentidos · la **bandera real** en procesos hijos con y sin
+`NEXT_PUBLIC_YUMP_NATIVO`, incluida la no-contaminación en los dos órdenes · la
+**estructura**, con cinco canarios que prueban que el análisis detecta de
+verdad · el **artefacto y el HTML web**, que son los únicos que prueban el
+resultado y se saltan solos en un checkout sin builds.
+
+El inventario de los 8 archivos de `components/pwa/` **cierra por igualdad de
+conjuntos**: cuatro apagados, tres con exclusión y motivo registrado, y
+`PwaClient`. Un archivo nuevo sin clasificar rompe el test.
+
+**CP6 TERMINADO.** 🔴 CP7 **no se empezó** y requiere autorización nueva.
 
 ---
 
@@ -1941,7 +2077,7 @@ GATE B (teléfono, ventana de Preview por sesión)
 | # | Decisión | Cuándo | Estado |
 |---|---|---|---|
 | 1 | **Abrir Deployment Protection** — afecta **todos** los Preview del proyecto | **antes de CP4**, y **una vez por sesión** en Gate B | 🔵 **no es permanente** |
-| 2 | Seguir a Gate B | CP5 | 🔵 punto de corte |
+| 2 | Seguir a Gate B | CP5 | ✅ **APROBADA el 30/08/2026** — autorizado hasta **CP6 inclusive**; CP7 pide autorización nueva |
 | 3 | Integrar `lib/cors.ts` a Producción | Etapa 3, **después del veredicto** | 🔵 |
 | 4 | Si `app/admin` no se puede excluir y viaja en el APK | CP2 | 🔵 |
 | 5 | Si CP10 termina en Media Integrity: ¿se eleva a identificador definitivo? | CP10 | 🔵 no automático |

@@ -191,7 +191,7 @@ const ARCHIVOS = [
 /** Rutas de `app/` que NO viajan. */
 const APP_FUERA = new Set(["api", "admin", "titulo", "persona"]);
 /** De `public/`, lo que NO viaja: el service worker (defensa de build, CP6). */
-const PUBLIC_FUERA = new Set(["sw.js", "sw"]);
+export const PUBLIC_FUERA = new Set(["sw.js", "sw"]);
 
 /**
  * El núcleo de idioma que la app COMPARTE con la Edge Function.

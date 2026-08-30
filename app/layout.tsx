@@ -11,6 +11,7 @@ import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
 import PwaClient from "@/components/pwa/PwaClient";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import NavHistorial from "@/components/NavHistorial";
+import { metadataPwa, pwaActiva } from "@/lib/pwa-nativa";
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
@@ -45,15 +46,9 @@ export const metadata: Metadata = {
   title: "Yump",
   description: "Qué ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
   applicationName: "Yump",
-  // Next inyecta <link rel="manifest"> apuntando a la metadata route app/manifest.ts.
-  manifest: "/manifest.webmanifest",
-  // iOS ignora el manifest: estas son las que hacen que se abra en standalone,
-  // con la barra de estado translúcida y el título correcto bajo el ícono.
-  appleWebApp: {
-    capable: true,
-    title: "Yump",
-    statusBarStyle: "black-translucent",
-  },
+  // CP6: `manifest` y `appleWebApp` salen de acá SÓLO en el build nativo.
+  // En la web las dos siguen exactamente como estaban. Ver lib/pwa-nativa.ts.
+  ...metadataPwa(),
   formatDetection: { telephone: false },
 };
 
@@ -62,7 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={jakarta.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <AppleSplashLinks />
+        {/* CP6: 18 <link> a splash de iOS. Dentro del APK son inertes y peso
+            muerto, y los archivos ni siquiera viajan. */}
+        {pwaActiva() && <AppleSplashLinks />}
       </head>
       <body>
         <ThemeProvider>
