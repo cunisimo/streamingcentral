@@ -1481,7 +1481,11 @@ antes de tener veredicto.)*
 
 ---
 
-## CP5 — 🚦 GATE A
+## ✅ CP5 — 🚦 GATE A — auditada el 30/08/2026
+
+**Veredicto técnico: las 13 comprobaciones pasaron.** El detalle está en
+§"Evidencia de Gate A", abajo. 🔵 **La decisión de pasar a Gate B es del
+dueño y no está tomada.** CP6 no se empezó.
 
 **No se escribe código.** Gate A valida **export, navegación, helpers y contrato
 de CORS** por tests y `curl`. 🔴 **NO afirma consumo real desde el WebView**: el
@@ -1491,6 +1495,62 @@ allowlist y no se agrega**. La primera prueba integral es CP7.
 **Decisión 🔵:** ¿se pasa a Gate B? Si no, se cancela habiendo gastado ~6–7,5
 sesiones **sin instalar Android Studio**.
 **Estimación: 0,25 sesión.**
+
+### Evidencia de Gate A — ejecutada el 30/08/2026 sobre `2649d07`
+
+Auditoría de consolidación de CP1–CP4. **No se escribió ni se corrigió código.**
+
+| # | Comprobación | Resultado | Cómo se verificó |
+|:--:|---|:--:|---|
+| 1 | Export nativo completo | ✅ | **34** rutas con `index.html` |
+| 2 | `app/api` excluida | ✅ | `api`, `admin`, `titulo`, `persona`, `sw.js`, `manifest.webmanifest`: **ninguno** en el artefacto |
+| 3 | Rutas `/t/` y `/p/` | ✅ | presentes y con HTML propio |
+| 4 | Helpers y barra canónica | ✅ | el artefacto emite `"/t/?tipo="` y `/p/?` — barra **antes** de la query |
+| 5 | Fallback de Suspense visible | ✅ | `/t/` body 13.934 B, `/p/` 16.908 B, con texto real. **No en blanco** |
+| 6 | Base remota HTTPS | ✅ | `ES_NATIVO` inlineado como `!0` y la base como **literal** en el bundle |
+| 7 | La web conserva `/api/` relativo | ✅ | `.next/static` sin base absoluta ni URL de Preview |
+| 8 | CORS exacto en 23 rutas | ✅ | `cors.test.ts` **31/31** · `cors-inventario.test.ts` **16/16** |
+| 9 | Dos exclusiones justificadas | ✅ | el recuento cierra: **25 = 23 + 2**, sin huérfanas |
+| 10 | Preview protegida | ✅ | `302` → `vercel.com/sso-api`, sin seguir la redirección |
+| 11 | Suite · TS · build web · export | ✅ | **694/694** · `tsc` **0** · build web completo · export **38/38** |
+| 12 | Sin secretos en el artefacto | ✅ | ver la nota de abajo |
+| 13 | Sin residuos de staging | ✅ | `.capacitor-build` y `.capacitor-diagnostico` ausentes; `git status` limpio |
+
+**Criterio de no-regresión de la web (§1), punto por punto:** build completo ·
+suite y `tsc` verdes · `/titulo/[tipo]/[id]` y `/persona/[id]` siguen existiendo ·
+`SITIO_PUBLICO` sigue siendo `https://app.yump.ar` · `headers()` presente y
+**sólo** en la rama web del config · `/sw.js` y `manifest.webmanifest` emitidos ·
+ningún valor de Preview ni bandera nativa en `.next/static`.
+
+⚠️ **Los nombres `NEXT_PUBLIC_YUMP_NATIVO` y `NEXT_PUBLIC_YUMP_API_BASE` SÍ
+aparecen en el bundle web, y está bien.** Son la constante `VARIABLE` y el texto
+del mensaje de error, no valores. En la web `ES_NATIVO` resuelve `false` porque
+la variable no existe y el shim de `process.env` del navegador es `{}`. Se
+verificó que **el valor** no viaja: es lo que importa, y una lectura futura del
+grep no debe confundir el nombre con el valor.
+
+⚠️ **El único JWT del artefacto es la clave `anon` de Supabase, y no es una
+filtración.** Decodificado: `role: anon`. Es pública por diseño, la necesita el
+cliente, y **ya viaja igual en el bundle web** (5 archivos de `.next/static`), o
+sea que no la introduce el camino nativo. `TMDB_READ_TOKEN`,
+`SUPABASE_SERVICE_ROLE_KEY` y `CRON_SECRET`: **cero** apariciones — las dos
+allowlists separadas de `build-capacitor.mjs` hacen su trabajo.
+
+**El export se construyó con `--api-base=https://ejemplo.invalid`**, a propósito:
+Gate A sólo necesita que el export complete y que la base quede inlineada. Usar
+la URL de Preview habría horneado una URL real en un artefacto de auditoría sin
+ninguna necesidad.
+
+### 🔴 Lo que Gate A NO afirma
+
+- **No afirma consumo real desde el WebView.** Nada se ejecutó en un teléfono ni
+  en un contenedor. La primera prueba integral es **CP7**.
+- **No afirma compatibilidad con el servidor interno de Capacitor.** `trailingSlash`
+  es la mitigación elegida, **no una medición**: se verifica en **CP8 #16** (§9).
+  Capacitor no está instalado.
+- **No afirma que el `POST` autenticado funcione.** Eso es **CP8 #14**.
+- **No revierte la decisión abierta #1**: `/t` y `/p` siguen existiendo e
+  indexables en el build web. **Bloquea el merge a `main`, no Gate A.**
 
 ---
 
