@@ -178,10 +178,12 @@ primer argumento sea la ruta literal `/api/…` sin pasar por `apiUrl`.
 
 ---
 
-## 🟡 CP4 — implementación local completa, checkpoint ABIERTO
+## ✅ CP4 — completado el 30/08/2026, bajo criterio revisado y aprobado
 
-**Lo local está hecho. El checkpoint NO está cerrado**: falta la ventana de
-Preview y los siete `curl`, que necesitan autorización aparte del dueño.
+**Lo local está hecho y la ventana de Preview se ejecutó y se cerró.** El
+checkpoint cierra con **una prueba trasladada, no eliminada**: el `POST`
+autenticado con éxito se ejecuta en **CP8 #14**, en el entorno nativo real.
+Ver §"Resultado real de la ventana de Preview".
 
 ### Clasificación final: 25 = 23 + 2
 
@@ -236,18 +238,83 @@ cookies, headers ni entorno, y el mensaje de la excepción **no viaja en la
 respuesta**. Sin esto, los fallos no controlados de 23 rutas se habrían vuelto
 invisibles.
 
-### 🔵 Lo que falta para cerrar CP4
+### Resultado real de la ventana de Preview
 
-🔍 La ventana de Preview y los siete `curl` de §CP4. **Requiere autorización
-del dueño**, porque abrir Deployment Protection expone **todos** los deployments
-de Preview del proyecto (§5).
+**URL exacta utilizada** — la inmutable del deployment, no la de rama:
+
+```
+https://streamingcentral-l5p2agc8e-jfgalindez-gmailcoms-projects.vercel.app
+```
+
+🔴 **Ninguna prueba se ejecutó contra Producción.** Producción no se tocó
+en ningún momento de CP4: ni la app, ni las variables de Vercel, ni Supabase.
+
+| Grupo | Cuántas | Estado |
+|---|:--:|---|
+| `curl` obligatorios de §CP4 ejecutados | **6** | ✅ aprobados |
+| Rechazo sin sesión (`POST` sin JWT) | **1** | ✅ `401` **conservando CORS** |
+| Comprobaciones adicionales | **3** | ✅ aprobadas |
+| `POST` autenticado **con éxito** | **1** | ➡️ **trasladado a CP8 #14** |
+
+Los seis obligatorios son los `curl` **1, 2, 4, 5, 6 y 7** de §CP4. El **3**
+es el que se trasladó.
+
+**Al terminar, la protección se restauró y se verificó** sin seguir la
+redirección: la URL de arriba devuelve `302` a `vercel.com/sso-api`, con
+`X-Robots-Tag: noindex`. Reverificado al abrir esta sesión documental.
+
+### ➡️ El `POST` autenticado se trasladó a CP8 #14 — aprobado por el dueño
+
+**No se elimina ni se relaja: cambia de momento.** Motivo aprobado:
+
+- No existe una cuenta descartable ni un Bearer de prueba.
+- **No corresponde** usar la cuenta personal del dueño, extraer tokens del
+  navegador, ni crear credenciales sólo para un `curl`.
+- La respuesta autenticada exitosa se comprueba en el **entorno nativo real**,
+  que es donde la afirmación importa.
+
+**Lo que CP4 sí dejó demostrado del camino autenticado**, y por eso el traslado
+no deja un hueco:
+
+1. El **preflight con `Authorization`** funciona: el header viaja en
+   `Access-Control-Allow-Headers` y el navegador lo aceptaría.
+2. El **rechazo por falta de sesión conserva CORS**: `401` con el
+   `Access-Control-Allow-Origin` correcto — o sea que el camino autenticado
+   **está envuelto** por el helper, no sólo el camino feliz.
+3. `conCors` envuelve la **Response final** (§4.3), así que no hay salida sin
+   encabezados.
+4. El **contrato está fijado por pruebas unitarias**, no por el `curl`.
+
+🔴 **Lo que queda sin demostrar hasta CP8 #14, dicho sin adornos:** que una
+respuesta **`2xx` autenticada** lleve los encabezados correctos. Es una sola
+afirmación, y **CP8 no puede cerrarse sin ella**.
+
+### ⚠️ El `Access-Control-Allow-Origin: *` del HTML estático es de Vercel
+
+Durante la ventana se observó un `Access-Control-Allow-Origin: *` en respuestas
+de **HTML estático**. **Lo agrega Vercel en su capa de CDN, no `lib/cors.ts`**,
+y **no apareció en ninguna ruta `/api`** — que es el único alcance del helper
+(§4.1).
+
+**No es un fallo del helper y no debe registrarse como tal.** Queda documentado
+para que una lectura futura de esos encabezados no lo diagnostique al revés.
+
+### 🔴 Limitación de evidencia — la salida cruda no quedó persistida
+
+La salida de los `curl` **no se guardó en el repositorio**: vive en el registro
+de la sesión de CP4 y en el traspaso, no en un archivo. Los conteos de la tabla
+son los reportados por esa sesión.
+
+**No se puede reproducir sin volver a abrir la Preview**, y eso está prohibido
+fuera de una ventana aprobada. **Corrección aplicada hacia adelante:** CP8 #14
+exige dejar la evidencia **escrita en el repositorio**, con el token redactado.
 
 ---
 
 > El resto del documento describe lo que falta.
 
 **Base:** `main = origin/main = 397842c` · **Next.js instalado: 14.2.35**
-**Rama de trabajo:** `spike/capacitor-android`, creada localmente, sin mergear ni pushear
+**Rama de trabajo:** `spike/capacitor-android`, pusheada al remoto, **sin mergear a `main`**
 
 ---
 
@@ -1017,7 +1084,7 @@ en un 500 con CORS — así el navegador ve el status real en vez de un error de
 | 19 | `/api/mas-votados` | GET | no | no | CP8 recorrido |
 | 20 | `/api/hacete-cargo` | GET | no | no | CP8 recorrido |
 | 21 | `/api/health` | GET | no | no | CP4 curl 6 (sin `Origin`) |
-| 22 | `/api/te-va-a-gustar` | **POST** | **sí** (`:41`) | **sí** | CP4 curl 2 y 3 · CP8 #14 |
+| 22 | `/api/te-va-a-gustar` | **POST** | **sí** (`:41`) | **sí** | CP4 curl 2 + `401` sin JWT · **CP8 #14** (`POST` autenticado) |
 | 23 | `/api/cuenta/eliminar` | **POST** | **sí** (`:37`) | **sí** | CP4 curl 4 — 🔴 **sólo el preflight** |
 
 **Fuera, por inventario:**
@@ -1051,7 +1118,8 @@ sesión.**
  5. Confirmar la URL estable de rama EN EL PANEL del deploy
     (patrón <proyecto>-git-<rama>-<scope>.vercel.app; se confirma, no se deduce).
  6. 🔵 APROBACIÓN DEL DUEÑO → abrir Deployment Protection.
- 7. Ventana abierta: ejecutar los 7 curl de CP4.
+ 7. Ventana abierta: ejecutar los 6 curl obligatorios de CP4 + el 401 sin JWT.
+    (El POST autenticado con éxito NO va acá: es CP8 #14.)
  8. CERRAR la protección. Verificar que un curl sin credenciales ya no pasa.
  9. Gate A (CP5) — no necesita la Preview abierta.
 10. Gate B: 🔵 APROBACIÓN por cada sesión que necesite el teléfono →
@@ -1386,16 +1454,25 @@ rechazado) · `http://localhost` **no** permitido · no refleja parecidos · nun
 **Luego, la secuencia de §5** (commit → push → esperar Preview → confirmar URL →
 🔵 aprobación → abrir → curl → **cerrar**).
 
-**Los 7 `curl`** (`curl` viene con Git for Windows):
+**Los `curl`** (`curl` viene con Git for Windows) — **6 obligatorios acá + 1
+trasladado**:
 1. `GET /api/providers` con `Origin: https://localhost` → `Allow-Origin` + `Vary`.
 2. `OPTIONS /api/te-va-a-gustar` → `204`, métodos, headers, **la ruta no se ejecuta**.
-3. `POST /api/te-va-a-gustar` con Bearer de la **cuenta de prueba** → responde con CORS.
+3. ➡️ **TRASLADADO A CP8 #14.** `POST /api/te-va-a-gustar` con Bearer de una
+   cuenta de prueba. **No se elimina ni se relaja**: se ejecuta desde la app
+   Android con un usuario conectado, porque no existe cuenta descartable y no
+   corresponde crear credenciales para un `curl`. **En CP4 se ejecutó en su
+   lugar** el mismo `POST` **sin** JWT, que debe dar `401` **conservando CORS**
+   — y dio.
 4. `OPTIONS /api/cuenta/eliminar` → **sólo preflight**. 🔴 el POST real no se prueba.
 5. `GET` con `Origin: https://malicioso.com` → **sin** `Allow-Origin`, **con** `Vary`.
 6. `GET /api/health` sin `Origin` → normal.
 7. `GET /api/title/movie/278` con `Origin: https://localhost` → **habilita CP10**.
 
-**Aprobación:** los siete pasan **y la protección quedó cerrada** al terminar.
+**Aprobación:** pasan **los seis obligatorios (1, 2, 4, 5, 6, 7)** y el `401`
+con CORS del punto 3, **y la protección queda cerrada** al terminar. 🔴 El
+`POST` autenticado **con éxito** no es opcional: es **requisito de cierre de
+CP8**, no de CP4.
 **Artefactos:** `lib/cors.ts` es **candidato a integración posterior**, sujeto a
 aprobación después del veredicto. *(La rev. 3 decía "necesitará Producción"
 antes de tener veredicto.)*
@@ -1586,11 +1663,43 @@ la app abrió **sin** service worker ni caches.
 | 11 | Cierre forzado | reabre sin estado corrupto |
 | 12 | Red lenta | esqueletos, sin pantalla muerta |
 | 13 | **Modo avión** | la cáscara **abre** y muestra `OfflineState` |
-| 14 | **Sesión** | login → cerrar → reabrir → **sigue logueado** |
+| 14 | **Sesión + `POST` autenticado** | login → cerrar → reabrir → **sigue logueado**, **y** el `POST` real con Bearer responde con CORS exacto — ver abajo |
 | 15 | Plataformas | persisten entre reinicios |
 | 16 | **Navegación del export** | §9 |
 
-**Aprobación:** 3, 13 y 14 obligatorios. El resto se documenta aunque falle.
+### 🔴 CP8 #14 — requisito explícito de cierre, trasladado desde CP4
+
+Esta es la prueba que CP4 **no pudo** hacer por falta de una cuenta de prueba, y
+que el dueño aprobó mover acá **sin eliminarla ni relajarla**. **CP8 NO puede
+cerrarse sin ella.**
+
+Se ejecuta `POST /api/te-va-a-gustar` **desde la aplicación Android**, con un
+usuario realmente conectado, y **todo** lo siguiente tiene que darse:
+
+- [ ] **Usuario conectado en Android** — sesión real en la app, no un `curl`
+      desde la máquina de desarrollo.
+- [ ] **Request real con Bearer** — el JWT de esa sesión, emitido por Supabase.
+- [ ] **Respuesta normal** — un `2xx` con el cuerpo esperado de la ruta. 🔴 Un
+      `401` **no** cierra este punto: eso ya se demostró en CP4.
+- [ ] `Access-Control-Allow-Origin: https://localhost` — **el origen exacto**,
+      no otro.
+- [ ] `Vary: Origin` presente.
+- [ ] **Sin comodín**: `Access-Control-Allow-Origin: *` **no** debe aparecer.
+- [ ] **Sin** `Access-Control-Allow-Credentials` — en ningún valor.
+- [ ] **El token no se imprime ni se conserva**: no va a la consola, ni al log,
+      ni a un archivo, ni al repositorio. La evidencia se guarda **con el token
+      redactado**.
+
+**Cómo se observa** — la app es la que hace el request, así que los encabezados
+se leen desde `chrome://inspect` (pestaña Network del WebView), no reconstruyendo
+la llamada con `curl`. Reconstruirla probaría otra cosa.
+
+⚠️ **La evidencia se deja escrita en el repositorio**, con el token redactado.
+Corrige la limitación real de CP4, donde la salida cruda de los `curl` no quedó
+persistida y hoy no es reproducible sin reabrir la Preview.
+
+**Aprobación:** 3, 13 y 14 obligatorios — **y #14 exige las ocho casillas de
+arriba, la del `2xx` incluida**. El resto se documenta aunque falle.
 **Estimación: 1 sesión.**
 
 ---
@@ -1763,6 +1872,7 @@ GATE B (teléfono, ventana de Preview por sesión)
 | Ventana de Preview olvidada abierta | media | medio | cierre verificado al final de cada sesión |
 | El servidor de Capacitor no resuelve como `serve` | media | medio | CP8 #16, en el teléfono |
 | Sesión perdida en CP8 #14 | baja | alto | el adaptador es un mini-proyecto, se estima aparte |
+| **El `POST` autenticado falla recién en CP8** (trasladado de CP4) | baja | medio | CP4 ya demostró preflight, `401` con CORS y el envoltorio de la Response final; queda una sola afirmación por verificar |
 
 ---
 
@@ -1777,5 +1887,14 @@ GATE B (teléfono, ventana de Preview por sesión)
 | 5 | Si CP10 termina en Media Integrity: ¿se eleva a identificador definitivo? | CP10 | 🔵 no automático |
 | 6 | Si CP8 #14 falla: ¿se hace el adaptador de almacenamiento? | CP9 | 🔵 mini-proyecto aparte |
 | 7 | Qué se descarta al cerrar | CP11 | 🔵 **nada se borra sin esto** |
+| 8 | **Trasladar el `POST` autenticado de CP4 a CP8 #14** | 30/08/2026 | ✅ **APROBADA** — ver abajo |
+
+**Decisión 8 — aprobada formalmente por el dueño el 30/08/2026.** Cambia
+**únicamente el momento** de la prueba. **No la elimina ni la relaja:** el
+`POST /api/te-va-a-gustar` con un JWT válido pasa a ser **requisito de cierre de
+CP8 #14**, ejecutado desde la app Android con un usuario conectado. Motivo: no
+existe cuenta descartable ni Bearer de prueba, y no corresponde usar la cuenta
+personal del dueño, extraer tokens del navegador ni crear credenciales sólo para
+un `curl`. **CP8 no puede cerrarse sin esa comprobación exitosa.**
 
 **Producción no se toca en ningún checkpoint.**
