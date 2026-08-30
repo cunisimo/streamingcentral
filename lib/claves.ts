@@ -6,7 +6,7 @@
 // en varias): el rollback no revierte nada. Con la huella adentro de la clave,
 // cambiar la configuración selecciona otro espacio y el rollback es inmediato.
 //
-// TANDA 2 — LA HUELLA ESTÁ PUESTA. Las once familias se llaman con
+// TANDA 2 — LA HUELLA ESTÁ PUESTA. Las familias localizadas se llaman con
 // `HUELLA_IDIOMA` (lib/idioma.ts), así que hoy producen `card:es-MX+f.r1:movie:278`
 // y no `card:movie:278`. Ahí ocurrió la única invalidación del plan: un solo
 // arranque frío, todas las familias a la vez. Se hicieron juntas a propósito —
@@ -41,7 +41,9 @@ function pre(huella: string): string {
 
 const marcar = (s: string) => s as ClaveLocalizada;
 
-// --- Las once familias -------------------------------------------------------
+// --- Las doce familias localizadas --------------------------------------------
+// Eran once en la tanda 2. La doceava, `ultimos:`, entró con la corrección de
+// disponibilidad. El número vigente lo fija lib/claves.test.ts.
 // El orden y el formato de cada una reproducen el código anterior byte a byte.
 // Los tests fijan los literales de hoy: si alguna cambia, fallan.
 
@@ -138,9 +140,11 @@ export function clavePeoplePopular(page: number, huella: string): ClaveLocalizad
 // huella. Están acá para que la lista completa viva en un solo lugar y el
 // barrido pueda distinguir "no lleva huella" de "se olvidaron de ponerla".
 //
-//   pv2:<tipo>:<id>         códigos de plataforma + mapa de flatrate por región
-//                           (era `pv:`; la versión subió al sumar el mapa, ver
-//                           `providersOf` en lib/enrich.ts)
+//   pv2:<tipo>:<id>         códigos de plataforma, si AR tiene algún flatrate,
+//                           y los ids de proveedor DEDUPLICADOS de las otras
+//                           regiones (no un mapa por región: ver `providersOf`
+//                           en lib/enrich.ts). Era `pv:`; la versión subió al
+//                           sumar esos dos campos
 //   disp:<tipo>:<id>        disponibilidad ya resuelta de un título vacío en AR
 //   serie:oficial:<id>      redes/homepage/estreno para la regla de enlace oficial
 //   videos:<tipo>:<id>      key de YouTube; ya pide el idioma original

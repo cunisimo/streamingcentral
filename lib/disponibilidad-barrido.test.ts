@@ -17,6 +17,8 @@ import { PLATAFORMAS_OFICIALES } from "./enlace-oficial.ts";
 const raiz = path.resolve(import.meta.dirname, "..");
 const leer = (p: string) => fs.readFileSync(path.join(raiz, p), "utf8");
 
+const existeArchivo = (rel: string) => fs.existsSync(path.join(raiz, rel));
+
 /** El código sin comentarios: la prosa explica las reglas y no las infringe. */
 function codigo(rel: string): string {
   return leer(rel)
@@ -154,14 +156,13 @@ test("el adaptador REGISTRA el fallo, no se lo queda", () => {
     "disponibilidadDe perdió la señal: la card, el Home y la lista guardarían resultados incompletos");
 });
 
-test("las tres superficies cacheadas envuelven con el contexto de fallos", () => {
-  // Si una superficie que consume disponibilidad no envuelve, su `cachedLocIf`
-  // no puede enterarse y guarda contenido incompleto por horas.
-  const enrich = codigo("lib/enrich.ts");
-  const home = codigo("lib/home.ts");
-  assert.equal((enrich.match(/withFallosDisponibilidad\(/g) ?? []).length, 3,
-    "enrich tiene que envolver la card y los dos tramos de la lista de últimos");
-  assert.match(home, /withFallosDisponibilidad\(/, "el Home no envuelve");
+test("el contexto llega a todos los archivos que cachean títulos", () => {
+  // El conteo por superficie lo fija lib/cache-disponibilidad-inventario.test.ts,
+  // que obliga a clasificar CADA cachedLoc del proyecto. Acá sólo se comprueba
+  // que ningún archivo con superficies que enriquecen se quedó sin el contexto.
+  for (const a of ["lib/enrich.ts", "lib/home.ts", "lib/top.ts", "lib/reco.ts"]) {
+    assert.match(codigo(a), /withFallosDisponibilidad\(/, `${a} no envuelve`);
+  }
 });
 
 test("un fallo de disponibilidad degrada el payload del Home", () => {
@@ -196,13 +197,19 @@ test("el selector de `ultimos` está cableado al parámetro del Home", () => {
   assert.doesNotMatch(hook, /const TOGGLE_KEYS\s*=/, "el hook volvió a tener su propia lista");
 });
 
-test("la lista de últimos NO se trunca en una ventana fija", () => {
+test("la lista de últimos NO tiene ninguna ventana fija del catálogo regional", () => {
   const src = codigo("lib/enrich.ts");
-  // La regresión era mezclar N páginas por fuente y terminar ahí.
-  assert.doesNotMatch(src, /ULTIMOS_PAGINAS\b(?!_RED)/,
-    "volvió la ventana fija del catálogo regional");
-  assert.match(src, /hayMasRegional/, "no propaga si el catálogo regional sigue");
-  assert.match(src, /ULTIMOS_MAX_PAGINAS/, "no hay tope de seguridad para el bucle");
+  // Hubo DOS regresiones seguidas acá: primero mezclar 3 páginas por fuente y
+  // terminar, y después un tope de 12 "de seguridad", que era lo mismo con otro
+  // nombre. El único límite legítimo es `total_pages` de TMDB.
+  assert.doesNotMatch(src, /ULTIMOS_PAGINAS\b(?!_RED)/, "volvió la ventana fija");
+  assert.doesNotMatch(src, /ULTIMOS_MAX_PAGINAS/, "volvió un tope de páginas inventado");
+  assert.match(src, /totalPaginas/, "no usa el límite real de la fuente");
+  // Y el COMPORTAMIENTO —página 13, empates en el borde, agotamiento real— lo
+  // fija lib/ultimos-paginacion.test.ts con la fuente inyectada. Un regex sobre
+  // una constante no prueba nada de eso, y por eso no alcanza con este test.
+  assert.ok(existeArchivo("lib/ultimos-paginacion.test.ts"),
+    "se borró el test de comportamiento de la paginación");
 });
 
 test("cada tramo de la lista se cachea por separado", () => {

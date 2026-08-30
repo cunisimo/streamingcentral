@@ -454,12 +454,24 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 - **Un fallo de disponibilidad NO se congela en las cachés de afuera**
   (`lib/fallos-disponibilidad.ts`). `disponibilidadDe` no guardaba su `disp:`
   cuando la evidencia fallaba, pero devolvía sólo el array de plataformas y la
-  señal moría ahí: **más afuera sí se guardaba** —la card 24 h, el Home 6 h, la
-  lista de últimos 8 h—, así que una caída de dos segundos dejaba títulos en gris
-  por un día. La señal viaja por **contexto async**, como `withCacheMetrics`: si
-  se pasara por parámetro habría que enhebrarla por `toUITitle` → `enrichRaw` →
-  `listByCategory` → cada llamador, y alcanzaría con que uno se la olvidara.
-  Se responde con lo que hay, no se guarda, y el pedido siguiente reintenta.
+  señal moría ahí: **más afuera sí se guardaba**, así que una caída de dos
+  segundos dejaba títulos en gris por un día. La señal viaja por **contexto
+  async**, como `withCacheMetrics`: si se pasara por parámetro habría que
+  enhebrarla por `toUITitle` → `enrichRaw` → `listByCategory` → cada llamador, y
+  alcanzaría con que uno se la olvidara. Se responde con lo que hay, no se
+  guarda, y el pedido siguiente reintenta.
+  🔴 **EL CONTEXTO ANIDA, y esa fue la segunda mitad del bug.** La primera
+  versión creaba un contador por llamada y `registrar` tocaba sólo el más
+  interno: en la composición real —`homePayload` envuelve, y adentro la card y
+  los tramos de la lista vuelven a envolver— el hijo no guardaba su caché pero
+  **el padre no se enteraba y el Home se guardaba igual**. Ahora cada contador
+  conoce a su padre y le suma al salir, en `finally`: se cuenta una sola vez por
+  nivel, un hijo que lanza igual propaga, y la excepción no se toca.
+  **Siete superficies lo abren** —card, Home, búsqueda, Top por popularidad,
+  riel de recomendaciones y los dos tramos de "Últimos"—; el inventario completo
+  de qué caché necesita el contexto y cuál no (con el motivo escrito) lo fija
+  `lib/cache-disponibilidad-inventario.test.ts`, que falla si aparece un
+  `cachedLoc` sin clasificar.
 - **"TMDB no sabe nada" y "TMDB sabe algo que no mapeamos" NO son lo mismo**
   (`hayFlatrateAR`). `providersOf` descarta los `provider_id` argentinos que no
   están en `providers-ar.ts`, así que un título que TMDB ubica en una plataforma

@@ -18,8 +18,25 @@
 // haya — sólo que no se guarda.
 import { AsyncLocalStorage } from "node:async_hooks";
 
-interface Contador { fallos: number }
+/**
+ * Un contador, con el enlace a su padre.
+ *
+ * 🔴 EL `padre` NO ES UN DETALLE. Sin él, un contexto hijo se comía el fallo:
+ * `registrarFalloDisponibilidad` incrementa el store MÁS INTERNO, así que en la
+ * composición real —`homePayload` envuelve, y adentro `titleCard` y
+ * `ultimosRegionalPagina` vuelven a envolver— el hijo no guardaba su caché
+ * (bien) pero el padre no se enteraba y **el Home sí se guardaba**, con el
+ * contenido incompleto adentro, por 6 horas. La primera versión de este archivo
+ * tenía ese bug y sus tests, que sólo miraban UN contexto, pasaban igual.
+ */
+interface Contador {
+  fallos: number;
+  padre: Contador | null;
+}
 
+// El único estado es el del contexto async: no hay nada mutable a nivel de
+// módulo, así que dos requests que conviven en la misma instancia de Vercel no
+// pueden verse entre sí.
 const als = new AsyncLocalStorage<Contador>();
 
 /**
@@ -33,9 +50,22 @@ const als = new AsyncLocalStorage<Contador>();
 export async function withFallosDisponibilidad<T>(
   fn: () => Promise<T>,
 ): Promise<{ res: T; fallos: number }> {
-  const contador: Contador = { fallos: 0 };
-  const res = await als.run(contador, fn);
-  return { res, fallos: contador.fallos };
+  const padre = als.getStore() ?? null;
+  const contador: Contador = { fallos: 0, padre };
+  try {
+    const res = await als.run(contador, fn);
+    return { res, fallos: contador.fallos };
+  } finally {
+    // Se suma AL SALIR, y en `finally`: si el hijo lanza, su cuenta igual sube
+    // —el fallo pasó— y la excepción sigue viaje sin que este bloque la toque.
+    //
+    // Sumar acá y no en `registrar` es lo que garantiza que se cuente
+    // EXACTAMENTE UNA VEZ por nivel: si `registrar` caminara la cadena hacia
+    // arriba, cada ancestro sumaría por su cuenta y un nieto contaría doble en
+    // el padre. Y como el hijo se espera adentro del padre, cuando el predicado
+    // del padre corre la suma ya ocurrió.
+    if (padre) padre.fallos += contador.fallos;
+  }
 }
 
 /**
@@ -47,6 +77,8 @@ export async function withFallosDisponibilidad<T>(
  */
 export function registrarFalloDisponibilidad(): void {
   const c = als.getStore();
+  // Sólo el contexto más interno. La propagación hacia arriba la hace
+  // `withFallosDisponibilidad` al salir, no esta función.
   if (c) c.fallos++;
 }
 

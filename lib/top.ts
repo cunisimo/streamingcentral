@@ -1,5 +1,6 @@
 import "server-only";
 import { cardsByIds, listByCategoryCacheable } from "./enrich";
+import { withFallosDisponibilidad } from "./fallos-disponibilidad";
 import { latestWeekRows } from "./netflix-top10";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveTopPop } from "./claves";
@@ -42,8 +43,13 @@ export interface TopPayload {
 async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<TopBlock> {
   // Si la reparación de idioma falló, el bloque se devuelve igual pero NO se
   // guarda: si no, un top sin reparar quedaba congelado 24 h.
+  //
+  // Lo mismo vale para la disponibilidad: `senal.fallo` sólo cubría el idioma,
+  // así que un top con títulos en gris por una caída de la evidencia quedaba
+  // congelado 24 h. El contexto de abajo lo cierra.
   const senal = { fallo: false };
   const items = await cachedLocIf(claveTopPop(platform, tipo, HUELLA_IDIOMA), TTL.catalog, async () => {
+    const { res, fallos } = await withFallosDisponibilidad(async () => {
     const r = await listByCategoryCacheable({
       tipo, providers: [platform], sortBy: "popularity.desc",
       // Explícito, no el default de discover(): "lo más popular ahora" con
@@ -62,6 +68,9 @@ async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<To
     // lib/curated.ts con su propia blocklist.
     if (!r.length) throw new Error(`sin resultados para ${platform}/${tipo}`);
     return r;
+    });
+    if (fallos) senal.fallo = true;
+    return res;
   }, () => !senal.fallo);
   return {
     platform,

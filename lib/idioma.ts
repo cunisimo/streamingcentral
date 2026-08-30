@@ -47,7 +47,7 @@ export function calcularHuella(
 
 export const HUELLA_IDIOMA = calcularHuella(IDIOMA_BASE, FALLBACK_PEDIDO);
 
-// TANDA 2: se acabó el modo compatible. Las once familias localizadas reciben
+// TANDA 2: se acabó el modo compatible. Las familias localizadas reciben
 // `HUELLA_IDIOMA` directo (lib/claves.ts), así que el espacio de claves depende
 // de la configuración y el rollback a es-ES es inmediato en vez de esperar a que
 // expiren TTLs de hasta 30 h. `HUELLA_EN_CLAVES` —la constante vacía de la

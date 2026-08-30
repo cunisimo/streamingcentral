@@ -85,29 +85,25 @@ En una corrida completa del Home + listas, **7 títulos** se resolvieron por
 
 ### La secuencia que importa: página 1 fría → primera página 2 → repetición
 
-La primera versión metía `page` en la clave pero **cada MISS rearmaba la ventana
-entera**, así que "se paga una vez por día y combinación" era falso: se pagaba
-una vez por cada página pedida. Ahora cada tramo se cachea por separado —una
-clave por página regional, una para el suplemento por redes— y la mezcla es en
-memoria.
-
-Medido con `providers=n` (Netflix, sin red oficial habilitada), servidor recién
-levantado, cache en memoria:
+Medido con `providers=n` (Netflix, sin suplemento por red), servidor recién
+levantado, cache en memoria, **después del rediseño de la paginación**:
 
 | Pedido | Tiempo | Qué costó |
 |---|--:|---|
-| p1 fría | **1586 ms** | 1 discover regional + enriquecido de esa página |
-| **p2 primera vez** | **806 ms** | **sólo la página regional 2**; la 1 ya estaba |
-| p2 repetida | **420 ms** | todo HIT: sólo lectura y mezcla |
-| p3 primera vez | 783 ms | ídem: una página más |
-| p5 primera vez | 3393 ms | las páginas 4 y 5, que faltaban |
+| p1 fría | **3390 ms** | 1 página regional + su enriquecido |
+| **p2 primera vez** | **588 ms** | **sólo la página regional 2** |
+| p2 repetida | **266 ms** | todo HIT: lectura y mezcla |
+| p3 primera vez | 590 ms | una página más |
+| **p13 primera vez** | **10093 ms** | las 12 páginas que faltaban, de una |
 
-Con `providers=d` (Disney+, con suplemento por red) la página 1 fría cuesta
-además las 3 páginas de `with_networks`, que se cachean una sola vez por día y
-combinación y se reusan en todas las páginas.
+**La página 13 devuelve sus 20 títulos.** Antes volvía vacía: primero por la
+ventana de 3 páginas y después por el tope de 12. Cuesta 10 s la primera vez
+porque trae doce páginas nuevas de golpe; cada una queda cacheada por separado,
+así que las páginas intermedias que se pidan después ya están.
 
-**Lo que esto corrige:** antes, la primera página 2 repetía las 3 páginas
-regionales, las 3 por red y ~120 enriquecidos. Ahora cuesta **una página**.
+**Integridad, contra TMDB real:** páginas 1 a 6 con `n` y con `d` → **120
+títulos, 120 únicos, 0 repetidos** en las dos, y el caso testigo presente en
+`d`.
 
 ### Home
 
@@ -145,28 +141,53 @@ El tamaño de respuesta de `/api/home` **no cambia**: `porRegion`/
 `idsOtrasRegiones` viven en el cache de `pv2:` y nunca viajan en el payload —
 `UITitle` sólo lleva `platforms`.
 
-## Paginación — sin truncamiento
+## Paginación — sin ventana fija, y estable entre pedidos
 
-La primera versión mezclaba **3 páginas fijas por fuente y terminaba ahí**: con
-Netflix, Max o Prime la página 4 salía vacía aunque TMDB tuviera cientos de
-resultados. Era una **regresión** contra la lista paginada anterior. Se sacó: el
-catálogo regional se pagina de verdad y lo único acotado es el suplemento por
-redes, que por naturaleza son un puñado de estrenos recientes.
+Hubo **dos** intentos fallidos antes de éste:
 
-Verificado contra el build local, `providers=n`, páginas 1 a 6:
+1. Mezclar 3 páginas por fuente y terminar ahí. La página 4 salía vacía.
+2. Un tope de `ULTIMOS_MAX_PAGINAS = 12` "de seguridad". Era lo mismo con otro
+   nombre: la página 13 no podía juntar 260 resultados.
 
-| | |
-|---|--:|
-| Títulos servidos | **120** |
-| Únicos | **120** |
-| Repetidos | **0** |
-| Páginas cortas | **0** |
+**Ahora el único límite es `total_pages` de TMDB.** Una página enriquecida que
+queda vacía —porque el filtrado se la llevó entera— no corta el bucle si la
+fuente declara páginas posteriores.
 
-Y en los tests: 137 títulos regionales servidos completos en 7 páginas, las
-páginas 1–5 reproducen exactamente la clasificación completa, una plataforma sin
-red oficial pagina igual, Disney+ mezcla las dos fuentes a lo largo de 8 páginas
-sin perder ninguno de los extras, y una página posterior al final vuelve
-realmente vacía con `hayMas: false`.
+### El bug de estabilidad, que era más sutil
+
+La página pedida se clasificaba sobre una ventana **creciente**: la 1 con una
+página regional y la 2 con dos. Al ordenar todo por `(fecha, id desc)`, un
+título de la segunda página **empatado en fecha con el borde** y con id más alto
+se colaba ANTES del borde, lo empujaba a la página siguiente y producía un
+repetido y un salteo.
+
+Se arregló con dos reglas:
+
+- **El orden regional es el de TMDB**, estabilizado. Una página nueva sólo puede
+  agregar al final, nunca insertarse en el medio.
+- **Un extra por red entra sólo cuando el stream regional ya pasó su fecha.**
+  Antes de eso su posición no está decidida —una página regional posterior puede
+  traer títulos más nuevos que él y correrlo—, así que se retiene. Al agotarse
+  TMDB entran todos los que queden.
+
+### Verificado
+
+| Prueba | Resultado |
+|---|---|
+| 300 resultados regionales, página **13** | **20 títulos** |
+| Empate en el borde entre p1 y p2 | 40 títulos, **0 repetidos**, el borde de p1 no se movió |
+| Concatenar 7 páginas vs. clasificación completa | **idénticas** (137 títulos) |
+| Página enriquecida vacía en el medio | **no corta**: pide la siguiente |
+| Agotamiento real de TMDB | corta, y no pide páginas inexistentes |
+| Página después del final | **vacía**, `hayMas: false` |
+| Extra viejo a lo largo de 6 páginas | aparece **una sola vez** |
+| Pedir p2 dos veces | **no vuelve a pedir** a la fuente |
+| En vivo, `n` y `d`, páginas 1-6 | 120 títulos, 120 únicos, **0 repetidos** |
+
+⚠️ **No se afirma "paginación indefinida"**: se pagina hasta donde llega
+`total_pages` de TMDB, que es el límite de la fuente, no nuestro. El suplemento
+por redes sigue acotado a 3 páginas y eso es deliberado — es un suplemento de
+estrenos recientes, no la lista.
 
 ## 🔴 Lo que esta medición NO pudo verificar
 

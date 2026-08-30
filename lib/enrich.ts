@@ -37,7 +37,7 @@ import {
   hayFallosDisponibilidad, registrarFalloDisponibilidad, withFallosDisponibilidad,
 } from "./fallos-disponibilidad";
 import { redesDePlataforma } from "./enlace-oficial";
-import { combinarUltimos, type CandidatoUltimos } from "./ultimos";
+import { paginarUltimos, type CandidatoUltimos, type PaginaRegional } from "./ultimos";
 import type { DatosSerie } from "./enlace-oficial";
 import { excludedGenres, audienceRule } from "./audience";
 import { ordenarPorRelevancia } from "./busqueda-orden";
@@ -64,15 +64,23 @@ const onUserPlatforms = (i: UITitle, providers: PlatformCode[]) =>
   i.platforms.some((c) => providers.includes(c));
 
 // providers de un título en AR (cacheado)
-//   -> { codes, links, watchLink, porRegion }
+//   -> { codes, links, watchLink, hayFlatrateAR, idsOtrasRegiones }
 //
-// `porRegion` es el mapa de ids de `flatrate` de TODAS las regiones, y lo usa
-// SÓLO el chequeo de contradicción de `lib/enlace-oficial.ts`. Se guarda acá,
-// en la misma entrada, para no pagar un segundo `watch/providers` por título.
+// ⚠️ `idsOtrasRegiones` NO es un mapa por región: es el conjunto DEDUPLICADO de
+// `provider_id` de `flatrate` vistos en cualquier región que no sea AR. Lo usa
+// SÓLO el chequeo de contradicción de `lib/enlace-oficial.ts`, que deriva dos
+// booleanos y no necesita saber qué región dice qué. Se guarda acá, en la misma
+// entrada, para no pagar un segundo `watch/providers` por título.
+//
+// El mapa completo se midió y se descartó: **1273 B por título contra 296 B**
+// (+495% vs +38% sobre los 214 B originales), o sea 286 KB contra 66 KB por Home
+// frío. Si alguna regla futura necesita la granularidad por región hay que
+// volver al mapa **y subir la versión de la clave**: desde el conjunto plano no
+// se reconstruye.
 //
 // 🔴 LA CLAVE ES `pv2:` Y ESE CAMBIO ES DELIBERADO. Las entradas viejas no
-// tienen `porRegion`, y leerlas como "sin datos regionales" sería peor que
-// inútil: el chequeo de contradicción sólo RECHAZA, así que un mapa vacío lo
+// traen estos campos, y leerlas como "sin datos regionales" sería peor que
+// inútil: el chequeo de contradicción sólo RECHAZA, así que un conjunto vacío lo
 // vuelve permisivo y durante las 8 h del TTL podría afirmar una disponibilidad
 // que con los datos completos se habría rechazado. Un arranque frío de
 // proveedores es barato; una afirmación falsa no.
@@ -393,9 +401,10 @@ export function listByCategoryCacheable(
 // página por página pedida— y lo único acotado es el SUPLEMENTO por redes, que
 // por naturaleza es un puñado de títulos recientes.
 const ULTIMOS_POR_PAGINA = 20;
-// Tope duro por si el filtrado descarta mucho: sin esto, una combinación de
-// plataformas muy chica podría pedir decenas de páginas buscando llenar una.
-const ULTIMOS_MAX_PAGINAS = 12;
+// 🔴 NO HAY TOPE DE PÁGINAS. Hubo uno (12) y era otra ventana fija con nombre de
+// seguridad: para una plataforma sin suplemento por red, la página 13 no podía
+// juntar 260 resultados aunque TMDB tuviera más. El único límite es el real de
+// la fuente, `total_pages`, y lo aplica `paginarUltimos`.
 // Páginas del discover por RED. Es un suplemento de estrenos recientes, no la
 // lista: 3 páginas son ~60 candidatos por plataforma habilitada.
 const ULTIMOS_PAGINAS_RED = 3;
@@ -436,7 +445,7 @@ async function aCandidatosUltimos(raws: RawTitle[]): Promise<CandidatoUltimos[]>
  */
 async function ultimosRegionalPagina(
   providers: PlatformCode[], pagina: number, senal: { fallo: boolean },
-): Promise<{ items: CandidatoUltimos[]; hayMas: boolean }> {
+): Promise<PaginaRegional> {
   const hoy = hoyAR();
   const orden = [...providers].sort().join(",");
   return cachedLocIf(
@@ -447,7 +456,9 @@ async function ultimosRegionalPagina(
           providers: codesToTmdbIds(providers), minVotes: 0, page: pagina,
           sortBy: "first_air_date.desc", extra: { "first_air_date.lte": hoy },
         }, `ultimos:reg:p${pagina}`, senal);
-        return { items: await aCandidatosUltimos(items), hayMas: pagina < totalPaginas };
+        // Se devuelve `totalPaginas` tal cual: es el límite real de la fuente
+        // y lo único que puede cortar el bucle de `paginarUltimos`.
+        return { items: await aCandidatosUltimos(items), totalPaginas };
       });
       if (fallos) senal.fallo = true;
       return res;
@@ -506,39 +517,19 @@ async function ultimosExtrasPorRed(
 /**
  * "Últimos lanzamientos · Series", una página.
  *
- * Trae páginas regionales hasta cubrir la página pedida —cada una cacheada por
- * separado— y las mezcla con el suplemento por redes, que se calcula una sola
- * vez. El filtrado descarta títulos (plataformas, ficha incompleta, futuros),
- * así que puede hacer falta más de una página regional por página de lista: por
- * eso el bucle mira lo que quedó y no lo que se pidió.
+ * La orquestación vive en `paginarUltimos` (lib/ultimos.ts), que es pura y se
+ * prueba por comportamiento con la fuente inyectada. Acá sólo se le enchufan
+ * las dos puertas, cada una con SU cache: así pedir la página 2 no re-paga la 1.
  */
 async function ultimosSeries(
   providers: PlatformCode[], page: number, senal: { fallo: boolean },
 ): Promise<CandidatoUltimos[]> {
-  const extras = await ultimosExtrasPorRed(providers, senal);
-  const necesarios = page * ULTIMOS_POR_PAGINA;
-  const regionales: CandidatoUltimos[] = [];
-  let hayMasRegional = false;
-  let pagina = 1;
-
-  while (pagina <= ULTIMOS_MAX_PAGINAS) {
-    const r = await ultimosRegionalPagina(providers, pagina, senal);
-    regionales.push(...r.items);
-    hayMasRegional = r.hayMas;
-    // La cuenta se hace sobre la mezcla YA FILTRADA: es la única que dice si la
-    // página pedida se puede servir entera.
-    const cubierto = combinarUltimos({
-      regionales, porRed: extras, providers, page: 1,
-      porPagina: necesarios, hoy: hoyAR(),
-    }).items.length;
-    if (cubierto >= necesarios || !r.hayMas || !r.items.length) break;
-    pagina++;
-  }
-
-  return combinarUltimos({
-    regionales, porRed: extras, providers, page,
-    porPagina: ULTIMOS_POR_PAGINA, hoy: hoyAR(), hayMasRegional,
-  }).items;
+  const { items } = await paginarUltimos({
+    page, porPagina: ULTIMOS_POR_PAGINA, providers, hoy: hoyAR(),
+    traerRegional: (pagina) => ultimosRegionalPagina(providers, pagina, senal),
+    traerExtras: () => ultimosExtrasPorRed(providers, senal),
+  });
+  return items;
 }
 
 export async function latestReleases(
@@ -995,9 +986,16 @@ export async function search(query: string, providers: PlatformCode[] = []) {
     claveSearch(q.toLowerCase(), [...providers].sort().join(","), HUELLA_IDIOMA),
     TTL.search,
     async () => {
-      const r = await buscarYOrdenar(q, providers);
-      fallo = r.fallo;
-      return { titles: r.titles, people: r.people };
+      // El contexto de fallos de disponibilidad, además del de idioma. Son DOS
+      // señales distintas y ninguna tapa a la otra: `fallo` queda en true si
+      // falló cualquiera de las dos, y con eso alcanza para no guardar.
+      const { res, fallos } = await withFallosDisponibilidad(async () => {
+        const r = await buscarYOrdenar(q, providers);
+        fallo = r.fallo;
+        return { titles: r.titles, people: r.people };
+      });
+      if (fallos) fallo = true;
+      return res;
     },
     () => !fallo,
   );

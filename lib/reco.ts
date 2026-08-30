@@ -47,6 +47,7 @@ import { adaptadorRiel } from "./idioma-adaptadores";
 import { discover, titleDetails, tmdbKeywords, type RawDetail } from "./tmdb";
 import { crearSingleFlight } from "./single-flight";
 import { enrichRaw } from "./enrich";
+import { withFallosDisponibilidad } from "./fallos-disponibilidad";
 import { genreIdsToSlugs, resolveCategory } from "./categories";
 import { codesToTmdbIds } from "./providers-ar";
 import type { MediaType, PlatformCode, UITitle } from "./types";
@@ -325,14 +326,23 @@ export async function recomendaciones(opts: {
   // métricas del scope. Así los retornos tempranos —`sin-candidatos`,
   // `filtrado`— quedan cubiertos sin tener que acordarse de llamar a nada antes
   // de cada `return`.
+  //
+  // Y lo mismo con la disponibilidad: `armar()` llama a `enrichRaw`, o sea que
+  // este riel guarda títulos ya resueltos. Sin el contexto, una caída de la
+  // evidencia lo dejaba 6 h con títulos en gris — el mismo bug que el comentario
+  // de arriba describe para las métricas de idioma.
   let fallo = false;
   return cachedLocIf(clv, TTL.reco, async () => {
-    const rep = await adaptadorRiel({
-      armar: () => armar(opts),
-      conMetricas: withMetricasIdioma,
+    const { res, fallos } = await withFallosDisponibilidad(async () => {
+      const rep = await adaptadorRiel({
+        armar: () => armar(opts),
+        conMetricas: withMetricasIdioma,
+      });
+      fallo = rep.fallo;
+      return rep.valor;
     });
-    fallo = rep.fallo;
-    return rep.valor;
+    if (fallos) fallo = true;
+    return res;
   }, () => !fallo);
 }
 

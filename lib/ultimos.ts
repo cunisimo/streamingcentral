@@ -104,3 +104,142 @@ export function combinarUltimos(opts: {
   const sobran = desde + opts.porPagina < todos.length;
   return { items, hayMas: sobran || Boolean(opts.hayMasRegional) };
 }
+
+// ============================================================================
+// Orquestación: pedir páginas regionales hasta cubrir la pedida
+// ============================================================================
+
+/** Una página del catálogo regional, ya enriquecida, más lo que TMDB declara. */
+export interface PaginaRegional {
+  items: CandidatoUltimos[];
+  /** `total_pages` de TMDB. Es el ÚNICO límite real del bucle. */
+  totalPaginas: number;
+}
+
+/**
+ * Sirve una página de "Últimos lanzamientos · Series".
+ *
+ * 🔴 DOS COSAS QUE ESTA FUNCIÓN EXISTE PARA ARREGLAR, y las dos venían de
+ * intentos anteriores mal resueltos:
+ *
+ * **1. Nada de ventanas fijas.** Antes había un tope de 12 páginas "de
+ * seguridad": para una plataforma sin suplemento por red, la página 13 no podía
+ * juntar 260 resultados aunque TMDB tuviera más. El único límite es
+ * `total_pages`, que es el límite real de la fuente. Y una página enriquecida
+ * que queda vacía —porque el filtrado se la llevó entera— **no corta el bucle**
+ * si TMDB dice que hay páginas después.
+ *
+ * **2. Ampliar la ventana no puede mover lo ya servido.** Antes se juntaba todo
+ * y se ordenaba por `(fecha, id desc)`: un título de la página 2 empatado en
+ * fecha con el borde de la página 1 se colaba ANTES, desplazaba al borde a la
+ * página siguiente y producía un repetido y un salteo. Acá el orden regional es
+ * **el de TMDB** (que ya viene descendente por fecha), estabilizado: una página
+ * nueva sólo puede agregar al final, nunca insertarse en el medio.
+ *
+ * **La regla de los extras es la otra mitad.** Un candidato traído por red tiene
+ * fecha propia y hay que ubicarlo entre los regionales — pero si el stream
+ * regional todavía no llegó a su fecha, su posición NO ESTÁ DECIDIDA: una página
+ * regional posterior podría traer títulos más nuevos que él y correrlo. Si ya se
+ * había servido, aparecería dos veces. Entonces **un extra entra sólo cuando el
+ * stream regional pasó su fecha** (o cuando TMDB se agotó y ya no puede venir
+ * nada más viejo). Hasta ese momento se retiene, que es exactamente donde
+ * todavía no le toca.
+ *
+ * `traerRegional` y `traerExtras` se inyectan para poder probar la orquestación
+ * sin red: en producción cada uno está detrás de su propio `cachedLocIf`, así
+ * que el bucle no re-paga las páginas que ya trajo.
+ */
+export async function paginarUltimos(opts: {
+  page: number;
+  porPagina: number;
+  providers: PlatformCode[];
+  /** Fecha argentina, YYYY-MM-DD. */
+  hoy: string;
+  traerRegional: (pagina: number) => Promise<PaginaRegional>;
+  traerExtras: () => Promise<CandidatoUltimos[]>;
+}): Promise<{ items: CandidatoUltimos[]; hayMas: boolean }> {
+  const extras = ordenarExtras(filtrar(await opts.traerExtras(), opts));
+  const necesarios = opts.page * opts.porPagina;
+
+  const regionales: CandidatoUltimos[] = [];
+  let pagina = 1;
+  let totalPaginas = 1;
+  let agotado = false;
+
+  // Se pide de a una página hasta cubrir la pedida o agotar la fuente.
+  for (;;) {
+    const r = await opts.traerRegional(pagina);
+    totalPaginas = r.totalPaginas;
+    regionales.push(...filtrar(r.items, opts));
+    agotado = pagina >= totalPaginas;
+    // La cuenta se hace sobre la MEZCLA, que es lo que se sirve. Una página
+    // enriquecida vacía no corta: lo que corta es que TMDB no tenga más.
+    if (agotado) break;
+    if (mezclar(regionales, extras, agotado).length >= necesarios) break;
+    pagina++;
+  }
+
+  const todos = mezclar(regionales, extras, agotado);
+  const desde = (opts.page - 1) * opts.porPagina;
+  const items = todos.slice(desde, desde + opts.porPagina);
+  // Hay más si sobran títulos ya clasificados o si la fuente sigue teniendo
+  // páginas que no se pidieron.
+  return { items, hayMas: desde + opts.porPagina < todos.length || !agotado };
+}
+
+/** Los filtros de siempre: plataformas, ficha completa, fecha argentina. */
+function filtrar(
+  items: CandidatoUltimos[],
+  opts: { providers: PlatformCode[]; hoy: string },
+): CandidatoUltimos[] {
+  return items.filter((t) =>
+    Boolean(t.fecha)
+    && t.fecha <= opts.hoy
+    && Boolean(t.poster)
+    && t.platforms.some((c) => opts.providers.includes(c)));
+}
+
+/** Los extras, por fecha descendente y con desempate estable por id. */
+function ordenarExtras(items: CandidatoUltimos[]): CandidatoUltimos[] {
+  return [...items].sort((a, b) => (a.fecha === b.fecha ? b.id - a.id : (a.fecha < b.fecha ? 1 : -1)));
+}
+
+/**
+ * Mezcla el stream regional con los extras YA ASENTADOS.
+ *
+ * El regional conserva el orden en que lo devolvió TMDB —`sort` de JS es
+ * estable, así que ordenar por fecha no altera el orden de llegada entre
+ * empatados—, y por eso una página nueva sólo agrega al final.
+ *
+ * `frontera` es la fecha del último regional traído: un extra con fecha
+ * ESTRICTAMENTE mayor ya no puede ser alcanzado por una página posterior. El
+ * `>` estricto es lo que cubre los empates: un extra con la misma fecha que la
+ * frontera todavía podría convivir con regionales de esa fecha sin traer.
+ */
+function mezclar(
+  regionales: CandidatoUltimos[], extras: CandidatoUltimos[], agotado: boolean,
+): CandidatoUltimos[] {
+  const orden = [...regionales].sort((a, b) => (a.fecha === b.fecha ? 0 : (a.fecha < b.fecha ? 1 : -1)));
+  const frontera = orden.length ? orden[orden.length - 1].fecha : "9999-12-31";
+  const asentados = agotado ? extras : extras.filter((e) => e.fecha > frontera);
+
+  const vistos = new Set<string>();
+  const out: CandidatoUltimos[] = [];
+  let i = 0;
+  for (const e of asentados) {
+    // Los regionales de fecha mayor o IGUAL van antes: la regla de desempate es
+    // fija (el regional gana) y no depende de cuántas páginas se hayan traído.
+    while (i < orden.length && orden[i].fecha >= e.fecha) empujar(orden[i++], out, vistos);
+    empujar(e, out, vistos);
+  }
+  while (i < orden.length) empujar(orden[i++], out, vistos);
+  return out;
+}
+
+/** Dedup por `tipo:id`, nunca por nombre. */
+function empujar(t: CandidatoUltimos, out: CandidatoUltimos[], vistos: Set<string>): void {
+  const k = clave(t);
+  if (vistos.has(k)) return;
+  vistos.add(k);
+  out.push(t);
+}
