@@ -27,6 +27,31 @@ import type { Localizable } from "../supabase/functions/_shared/idioma-nucleo.ts
 export const IDIOMA_BASE = process.env.IDIOMA_TITULOS || "es-ES";
 export const IDIOMA_FALLBACK = "es-ES";
 
+/**
+ * El idioma con el que se lee la EVIDENCIA OFICIAL. Fijo a propósito.
+ *
+ * 🔴 NO SE DERIVA DE `IDIOMA_TITULOS` Y NO ES CONFIGURABLE. `homepage` es un
+ * campo localizado de TMDB, así que pedir el detalle con el idioma de la
+ * interfaz hacía que la DISPONIBILIDAD cambiara al cambiar cómo se escriben los
+ * títulos. Medido: `movie:1752041` devuelve `netflix.com/browse?jbv=81958141` en
+ * `es-ES` y **vacío** en `es-MX`, `en-US` y sin idioma. La misma película,
+ * Netflix o gris según una variable que no habla de disponibilidad.
+ *
+ * Ponerle huella de idioma a la clave `oficial:` habría arreglado la caché y
+ * dejado el bug: seguirían existiendo dos respuestas para el mismo título. Se
+ * arregla la fuente, y por eso esa clave puede seguir sin huella.
+ *
+ * **Por qué `es-ES` y no `en-US`.** Medido sobre 360 títulos de las seis
+ * plataformas, `en-US` da MÁS evidencia (248 identidades contra 217): gana 32
+ * —22 de Netflix y 10 de Disney+— y pierde 1. Se eligió `es-ES` igual porque es
+ * lo que la app resuelve hoy, así que fijarlo no cambia ni un título, y porque
+ * los casos que `en-US` pierde son justamente los del tipo de `movie:1752041`.
+ * Pasar a `en-US` es una mejora medida y disponible, pero es un cambio de
+ * cobertura, no esta corrección. Ver
+ * `docs/medidas/2026-08-31-idioma-evidencia.md`.
+ */
+export const IDIOMA_EVIDENCIA = "es-ES";
+
 const FALLBACK_PEDIDO = process.env.FALLBACK_IDIOMA !== "0";
 
 // El fallback SOLO puede cambiar la salida si el idioma base es otro. Con

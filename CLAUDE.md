@@ -570,12 +570,29 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   el camino de disponibilidad ya pidió.
   Se hace **sólo en la búsqueda**, que es donde el usuario ve las dos entradas
   una al lado de la otra; el dedup del Home es otro y es por `tipo:id`.
-  ⚠️ **`homepage` es un campo LOCALIZADO de TMDB** y la clave `oficial:` está en
-  `CLAVES_SIN_HUELLA`. Medido: 1 de 240 series cambia de `homepage` entre `es-ES`
-  y `es-MX` (0,4%), y el caso de Moria es justamente uno — en `es-MX` viene
-  vacío. Con el idioma actual (`es-ES`) la evidencia existe; **si algún día se
-  cambia `IDIOMA_TITULOS`, esa clave hay que pasarla a las familias con huella**,
-  o durante 8 h se sirve el `homepage` del idioma anterior. Sin decidir.
+- **La evidencia oficial se lee SIEMPRE en `IDIOMA_EVIDENCIA` (`es-ES`), que no
+  se deriva de `IDIOMA_TITULOS`** (`lib/idioma.ts`). `homepage` es un campo
+  **localizado** de TMDB, así que pedir el detalle con el idioma de la interfaz
+  hacía que cambiara la **disponibilidad**: `movie:1752041` devuelve
+  `netflix.com/browse?jbv=81958141` en `es-ES` y **vacío** en `es-MX`, `en-US` y
+  sin idioma. La misma película, Netflix o gris según una variable que sólo debía
+  decidir cómo se escriben los títulos.
+  🔴 **La solución NO fue ponerle huella de idioma a `oficial:`.** Eso arregla la
+  caché y deja el bug: seguirían existiendo dos respuestas para el mismo título y
+  la app elegiría una según el idioma visual. Se arregla la **fuente**, y por eso
+  esa clave **puede** seguir sin huella — es la única razón por la que puede.
+  Hay tests que atan las dos mitades: si alguien saca el idioma fijo, el que
+  vigila `CLAVES_SIN_HUELLA` falla.
+  **No cuesta una llamada más**: es la misma de siempre con el idioma explícito,
+  y es el ÚNICO uso de esa constante — títulos, sinopsis y todo lo visible siguen
+  en el idioma base.
+  ⚠️ **`en-US` daría MÁS cobertura y no se tomó.** Medido sobre 360 títulos de
+  las seis plataformas: `en-US` da **248** identidades y `es-ES` **217** (gana
+  32 —22 de Netflix, 10 de Disney+— y pierde 1). Se eligió `es-ES` porque es lo
+  que la app resuelve hoy, así que fijarlo no mueve ni un título, y porque lo que
+  `en-US` pierde son justamente los casos tipo `movie:1752041`. Pasar a `en-US`
+  es una mejora medida y disponible, pero es un cambio de cobertura y no esta
+  corrección. Ver `docs/medidas/2026-08-31-idioma-evidencia.md`.
 - **Corregir la ficha no alcanzaba: el `discover` por proveedor nunca devuelve
   el título.** Medido: 1152 series en Disney+/AR y el caso testigo en ninguna.
   Por eso "Últimos lanzamientos · Series" mezcla la fuente regional con

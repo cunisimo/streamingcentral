@@ -301,3 +301,73 @@ test("al volver atrás manda el snapshot, no la URL", () => {
   const src = codigo("components/UltimosView.tsx");
   assert.match(src, /if \(inicial\.extra\?\.tipo\) setTipo\(inicial\.extra\.tipo\)/);
 });
+
+// ============================================================================
+// La evidencia oficial NO puede depender del idioma visual
+// ============================================================================
+//
+// EL BUG. `homepage` es un campo LOCALIZADO de TMDB, y `datosTituloDe` lo pedía
+// con el idioma base de la app. Medido sobre 360 títulos: `es-ES` da 217
+// identidades y `en-US` 248, y hay títulos que sólo tienen enlace en uno de los
+// dos. El caso testigo es `movie:1752041`, donde `es-ES` devuelve
+// `netflix.com/browse?jbv=81958141` y `es-MX`, `en-US` y la consulta sin idioma
+// devuelven vacío.
+//
+// O sea: cambiar `IDIOMA_TITULOS` —que existe para elegir cómo se escriben los
+// títulos y las sinopsis— movía la DISPONIBILIDAD. Una película quedaba en
+// Netflix o en gris según el idioma de la interfaz.
+//
+// 🔴 LA SOLUCIÓN NO ES PONERLE HUELLA A `oficial:`. Eso arregla la caché y deja
+// el bug: seguirían existiendo dos respuestas distintas para el mismo título, y
+// la app elegiría una según una variable que no habla de disponibilidad. Lo que
+// se arregla es la FUENTE: la evidencia se pide siempre en el mismo idioma. Con
+// una sola respuesta posible, la clave no necesita huella.
+
+test("el idioma de la evidencia es un literal, no una variable de entorno", () => {
+  const src = codigo("lib/idioma.ts");
+  const m = /export const IDIOMA_EVIDENCIA\s*=\s*([^;]+);/.exec(src);
+  assert.ok(m, "no existe IDIOMA_EVIDENCIA");
+  assert.match(m![1].trim(), /^"[a-z]{2}-[A-Z]{2}"$/, "no es un literal fijo");
+  assert.doesNotMatch(m![1], /process\.env|IDIOMA_BASE|IDIOMA_TITULOS/,
+    "la evidencia volvió a depender del idioma visual");
+});
+
+test("el lector de evidencia pide el detalle con el idioma fijo", () => {
+  const src = codigo("lib/enrich.ts");
+  const m = /async function datosTituloDe\([\s\S]*?\n}/.exec(src);
+  assert.ok(m, "no se encontró datosTituloDe");
+  assert.match(m![0], /titleDetails\([^)]*IDIOMA_EVIDENCIA/,
+    "datosTituloDe volvió a pedir el detalle con el idioma base");
+});
+
+test("`oficial:` puede seguir sin huella PORQUE el idioma está fijo", () => {
+  // Las dos mitades de la misma decisión. Si alguien saca el idioma fijo, esta
+  // clave pasa a tener contenido localizado sin huella, que es el bug de
+  // rollback que la huella existe para impedir.
+  const claves = codigo("lib/claves.ts");
+  const enrich = codigo("lib/enrich.ts");
+  if (/CLAVES_SIN_HUELLA[\s\S]*?"oficial:"/.test(claves)) {
+    assert.match(enrich, /IDIOMA_EVIDENCIA/,
+      "`oficial:` está sin huella y ya nadie fija el idioma de la evidencia");
+  }
+});
+
+test("fijar la evidencia no cambia el idioma de nada visible", () => {
+  // `IDIOMA_EVIDENCIA` sólo puede usarse para leer la evidencia. Si apareciera
+  // en el camino de las cards o de la ficha estaría cambiando títulos y
+  // sinopsis, que es exactamente lo que no se quiere tocar.
+  // Sin las líneas de import, que no son un uso.
+  const enrich = codigo("lib/enrich.ts").replace(/^import[\s\S]*?from ".*?";$/gm, "");
+  const usos = [...enrich.matchAll(/IDIOMA_EVIDENCIA/g)].length;
+  assert.equal(usos, 1, `IDIOMA_EVIDENCIA se usa ${usos} veces; debe ser sólo en datosTituloDe`);
+});
+
+test("no se paga una llamada por idioma", () => {
+  // El arreglo es cambiarle el idioma a la llamada que ya existía, no sumar
+  // otra. Dos `titleDetails` en el lector de evidencia serían el doble de
+  // pedidos a TMDB por cada título sin proveedor argentino.
+  const src = codigo("lib/enrich.ts");
+  const m = /async function datosTituloDe\([\s\S]*?\n}/.exec(src);
+  assert.equal([...m![0].matchAll(/titleDetails\(/g)].length, 1,
+    "el lector de evidencia hace más de una llamada de detalle");
+});

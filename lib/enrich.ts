@@ -19,7 +19,7 @@ import { getEditorial, publishedIds } from "./reviews";
 import { cached, cachedIf, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
 import { claveCard, clavePeoplePopular, claveSearch, claveUltimosSeries } from "./claves";
 import {
-  HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
+  HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_EVIDENCIA, IDIOMA_FALLBACK, claveMixta, clavePorId,
   conRespuesto, indiceMixto, pedirRespaldoIdioma, repararLote,
 } from "./idioma";
 import { adaptadorCard, adaptadorLista } from "./idioma-adaptadores";
@@ -117,11 +117,20 @@ async function providersOf(type: MediaType, id: number) {
 // películas TMDB no publica `networks` y sólo sirve el `homepage` — la regla lo
 // sabe y decide por el enlace. Es la única llamada nueva que agrega esta
 // corrección, y sólo la pagan las películas sin proveedor argentino.
+//
+// 🔴 SE PIDE EN `IDIOMA_EVIDENCIA`, NO EN EL IDIOMA BASE. `homepage` está
+// localizado: con el idioma de la interfaz, cambiar `IDIOMA_TITULOS` movía la
+// disponibilidad. Es la MISMA llamada de siempre con el idioma explícito, así
+// que no cuesta un pedido más; y es el ÚNICO lugar que usa esa constante —
+// títulos, sinopsis y todo lo visible siguen en el idioma base.
+//
+// Esto es también lo que habilita que `oficial:` no lleve huella de idioma: con
+// una sola respuesta posible por título, no hay dos versiones que separar.
 async function datosTituloDe(
   type: MediaType, id: number, reg: ResumenRegional,
 ): Promise<DatosTitulo | null> {
   const d = await cached(`oficial:${type}:${id}`, TTL.providers, async () => {
-    const det = await titleDetails(type, id);
+    const det = await titleDetails(type, id, IDIOMA_EVIDENCIA);
     return {
       estreno: det.first_air_date ?? det.release_date ?? null,
       redes: (det.networks ?? []).map((n) => n.id),
