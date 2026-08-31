@@ -129,7 +129,25 @@ test("el dominio se compara por host completo, nunca con includes/endsWith", () 
 test("la regla exige https y una ruta de título", () => {
   const src = codigo("lib/enlace-oficial.ts");
   assert.match(src, /u\.protocol !== "https:"/);
-  assert.match(src, /def\.rutas\.some\(/, "dejó de exigir una ruta de título");
+  assert.match(src, /for \(const r of def\.rutas\)/, "dejó de exigir una ruta de título");
+  // La identidad sale del GRUPO, no de la ruta entera: si alguien volviera a
+  // `m[0]` dos títulos distintos de la misma forma compartirían identidad y la
+  // búsqueda escondería uno.
+  assert.match(src, /m\?\.\[1\]/, "la identidad dejó de salir del grupo de captura");
+});
+
+test("toda ruta oficial declara su grupo de identidad", () => {
+  // Una ruta sin grupo 1 no rompe la validación —seguiría aceptando el enlace—
+  // pero devolvería identidad vacía y el título no se podría deduplicar. Es la
+  // clase de error que no da síntoma: se detecta acá o no se detecta.
+  for (const a of ADAPTADORES_OFICIALES) {
+    for (const r of a.rutas) {
+      assert.equal(
+        new RegExp("|" + r.source).exec("")!.length - 1, 1,
+        `${a.code}: la ruta ${r} no tiene exactamente un grupo de captura`,
+      );
+    }
+  }
 });
 
 test("el locale ya NO se rechaza, y quitarlo no afloja la ruta", () => {

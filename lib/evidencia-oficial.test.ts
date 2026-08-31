@@ -18,7 +18,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  ADAPTADORES_OFICIALES, evidenciaOficialDe, hayContradiccionFuerte, resumenRegional,
+  ADAPTADORES_OFICIALES, dedupePorIdentidad, evidenciaOficialDe, hayContradiccionFuerte,
+  identidadOficial, resumenRegional,
   type DatosTitulo, type ResumenRegional,
 } from "./enlace-oficial.ts";
 import type { PlatformCode } from "./types";
@@ -445,4 +446,140 @@ test("pv3: sin datos regionales no hay contradicción posible", () => {
   assert.deepEqual(r, { rt: 0, rp: {}, ru: 0 });
   const n = ADAPTADORES_OFICIALES.find((a) => a.code === "n")!;
   assert.equal(hayContradiccionFuerte(r, n, []), null);
+});
+
+// ============================================================================
+// 11. Identidad oficial: `?jbv=` y deduplicación sin heurística
+// ============================================================================
+//
+// EL CASO. TMDB tiene el mismo programa cargado DOS veces: `tv:322428` y
+// `movie:1752041`, mismo día, misma productora y **el mismo id de Netflix**.
+// La búsqueda mostraba dos cards, una en color y otra en gris.
+//
+// La gris se rechazaba porque su `homepage` es `netflix.com/browse?jbv=<n>`: la
+// ruta es `/browse`, que es el canario de portada genérica. Pero el parámetro
+// `jbv` SÍ identifica un título concreto. Medido: de 80 series de Netflix con
+// homepage, 71 usan `/title/<n>` y **1** usa `/browse?jbv=<n>`.
+//
+// 🔴 LA DEDUPLICACIÓN NO USA NINGUNA HEURÍSTICA. No mira título, ni fecha, ni
+// productora, ni sinopsis, ni parecido textual: esas señales esconden obras
+// legítimamente distintas. Compara el IDENTIFICADOR OFICIAL de la plataforma,
+// que es un dato comprobable.
+
+test("`/browse?jbv=<n>` se acepta como ruta de título", () => {
+  assert.equal(inferir({
+    tipo: "movie", redes: [],
+    homepage: "https://www.netflix.com/browse?jbv=81958141",
+  }), "n");
+});
+
+test("`/browse` SIN jbv se sigue rechazando", () => {
+  for (const url of [
+    "https://www.netflix.com/browse",
+    "https://www.netflix.com/browse/",
+    "https://www.netflix.com/browse?foo=1",
+    "https://www.netflix.com/browse?jbv=",
+    "https://www.netflix.com/browse?jbv=abc",
+    "https://www.netflix.com/browse?jbv=12ab",
+    "https://www.netflix.com/browse?jbv=1&jbv=2",
+  ]) {
+    assert.equal(inferir({ tipo: "tv", redes: [213], homepage: url }), null, url);
+  }
+});
+
+test("identidadOficial extrae el mismo id de las DOS formas de Netflix", () => {
+  assert.equal(identidadOficial("https://www.netflix.com/title/81958141"), "n:81958141");
+  assert.equal(identidadOficial("https://www.netflix.com/browse?jbv=81958141"), "n:81958141");
+  // Y con locale, que también se acepta.
+  assert.equal(identidadOficial("https://www.netflix.com/es/title/81958141"), "n:81958141");
+});
+
+test("identidadOficial devuelve null donde no hay evidencia", () => {
+  for (const url of [
+    "", "https://www.netflix.com/browse", "https://www.netflix.com/",
+    "https://netflix-ar.com/title/123", "http://www.netflix.com/title/123",
+    "https://www.amazon.com/dp/B0H49C7NVH", "no-es-una-url",
+  ]) {
+    assert.equal(identidadOficial(url), null, url);
+  }
+});
+
+test("identidadOficial funciona en las seis plataformas", () => {
+  assert.equal(identidadOficial("https://www.netflix.com/title/80154610"), "n:80154610");
+  assert.equal(
+    identidadOficial("https://www.disneyplus.com/browse/entity-006b5808-ac23-4e0b-9a15-752c4f335220"),
+    "d:006b5808-ac23-4e0b-9a15-752c4f335220",
+  );
+  assert.equal(
+    identidadOficial("https://www.primevideo.com/detail/0OFXXAAGVI9TXFD5K1AJD34T5V"),
+    "p:0OFXXAAGVI9TXFD5K1AJD34T5V",
+  );
+  assert.equal(identidadOficial("https://www.hbo.com/content/task"), "m:task");
+  assert.equal(
+    identidadOficial("https://www.paramountplus.com/shows/the-real-wolf-of-wall-street"),
+    "pp:the-real-wolf-of-wall-street",
+  );
+  assert.equal(
+    identidadOficial("https://tv.apple.com/es/movie/umc.cmc.52sgmi3vdpedurrbtz6louqqo"),
+    "at:umc.cmc.52sgmi3vdpedurrbtz6louqqo",
+  );
+});
+
+test("dos plataformas distintas nunca comparten identidad", () => {
+  const a = identidadOficial("https://www.netflix.com/title/123");
+  const b = identidadOficial("https://www.primevideo.com/detail/0000000000000000123");
+  assert.notEqual(a, b);
+  assert.match(String(a), /^n:/);
+  assert.match(String(b), /^p:/);
+});
+
+// --- la deduplicación en sí ---
+
+test("dedupePorIdentidad junta movie y tv con el MISMO id oficial", () => {
+  // El caso real: mismo id de Netflix, dos entradas de TMDB.
+  const items = [
+    { type: "tv" as const, id: 322428, identidad: "n:81958141" },
+    { type: "movie" as const, id: 1629369, identidad: "n:99999999" },
+    { type: "movie" as const, id: 1752041, identidad: "n:81958141" },
+  ];
+  const r = dedupePorIdentidad(items);
+  assert.deepEqual(r.map((x) => `${x.type}:${x.id}`), ["tv:322428", "movie:1629369"]);
+});
+
+test("dedupePorIdentidad respeta el ORDEN ya calculado: gana el primero", () => {
+  // No inventa un criterio de calidad. El orden de relevancia ya existe y decide.
+  const items = [
+    { type: "movie" as const, id: 2, identidad: "n:1" },
+    { type: "tv" as const, id: 1, identidad: "n:1" },
+  ];
+  assert.deepEqual(dedupePorIdentidad(items).map((x) => x.id), [2]);
+});
+
+test("dedupePorIdentidad NO toca lo que no tiene identidad", () => {
+  // Sin identidad oficial no se deduplica: dos títulos sin evidencia son dos
+  // títulos, aunque se llamen parecido.
+  const items = [
+    { type: "tv" as const, id: 1, identidad: null },
+    { type: "movie" as const, id: 2, identidad: null },
+    { type: "movie" as const, id: 3, identidad: undefined },
+  ];
+  assert.equal(dedupePorIdentidad(items).length, 3);
+});
+
+test("dedupePorIdentidad no confunde `tipo:id` con identidad oficial", () => {
+  // Mismo id numérico en tipos distintos y SIN identidad: son dos títulos.
+  const items = [
+    { type: "tv" as const, id: 700, identidad: null },
+    { type: "movie" as const, id: 700, identidad: null },
+  ];
+  assert.equal(dedupePorIdentidad(items).length, 2);
+});
+
+test("no hay ningún id de Moria hardcodeado en la deduplicación", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(new URL("./enlace-oficial.ts", import.meta.url), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+  for (const id of ["1752041", "81958141", "322428"]) {
+    assert.equal(src.includes(id), false, `quedó hardcodeado ${id}`);
+  }
 });

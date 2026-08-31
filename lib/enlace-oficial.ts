@@ -86,8 +86,26 @@ export interface AdaptadorOficial {
   redes: number[];
   /** Hosts EXACTOS. Sin comodines, sin subdominios, sin sufijos. */
   hosts: string[];
-  /** Formas de ruta que apuntan a UN título. */
+  /**
+   * Formas de ruta que apuntan a UN título.
+   *
+   * 🔴 EL GRUPO 1 ES EL IDENTIFICADOR OFICIAL, y eso no es decorativo: la misma
+   * expresión valida y extrae, así que la identidad no puede divergir de lo que
+   * la regla acepta. Una ruta sin grupo 1 no compila el contrato de abajo.
+   */
   rutas: RegExp[];
+  /**
+   * Rutas que identifican por PARÁMETRO DE QUERY en vez de por la ruta.
+   *
+   * Existe por un caso medido: `netflix.com/browse?jbv=<n>`. La ruta es
+   * `/browse`, que es una portada genérica y se rechaza — pero `jbv` identifica
+   * un título concreto, el mismo número que usa `/title/<n>`. De 80 series de
+   * Netflix con `homepage`, 71 usan `/title/` y **1** usa esto.
+   *
+   * ⚠️ Es deliberadamente más angosto que `rutas`: ruta EXACTA, un único valor
+   * del parámetro y forma fija. `/browse` sin `jbv` se sigue rechazando.
+   */
+  porQuery?: { ruta: string; param: string; valor: RegExp }[];
   /** ¿Habilitada para series? */
   series: boolean;
   /** ¿Habilitada para películas? */
@@ -114,15 +132,18 @@ export const ADAPTADORES_OFICIALES: AdaptadorOficial[] = [
   {
     code: "n", redes: [213],
     hosts: ["netflix.com", "www.netflix.com"],
-    // `/title/<n>`. `/browse` y `/search` quedan afuera.
-    rutas: [/^\/title\/\d+$/],
+    // `/title/<n>`. `/browse` PELADO y `/search` quedan afuera.
+    rutas: [/^\/title\/(\d+)$/],
+    // `/browse?jbv=<n>`: el mismo id que `/title/<n>`, por eso las dos formas
+    // producen la MISMA identidad y se pueden deduplicar entre sí.
+    porQuery: [{ ruta: "/browse", param: "jbv", valor: /^\d+$/ }],
     series: true, peliculas: true,
     idsGlobales: [8, 1796],
   },
   {
     code: "d", redes: [2739],
     hosts: ["disneyplus.com", "www.disneyplus.com"],
-    rutas: [/^\/browse\/entity-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i],
+    rutas: [/^\/browse\/entity-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i],
     series: true, peliculas: true,
     idsGlobales: [337, 122],
   },
@@ -132,7 +153,7 @@ export const ADAPTADORES_OFICIALES: AdaptadorOficial[] = [
     // alquiler, una compra o un DVD. Cuesta 12 series de la muestra y se paga.
     hosts: ["primevideo.com", "www.primevideo.com"],
     // Las DOS formas verificadas.
-    rutas: [/^\/detail\/[0-9A-Z]{16,}$/, /^\/detail\/amzn1\.dv\.gti\.[0-9a-f-]+$/i],
+    rutas: [/^\/detail\/([0-9A-Z]{16,})$/, /^\/detail\/(amzn1\.dv\.gti\.[0-9a-f-]+)$/i],
     series: true, peliculas: true,
     idsGlobales: [119, 2100, 9],
   },
@@ -143,9 +164,9 @@ export const ADAPTADORES_OFICIALES: AdaptadorOficial[] = [
     // plataforma en AR, esta regla se equivocaría. Es el riesgo aceptado.
     hosts: ["max.com", "www.max.com", "play.max.com", "hbo.com", "www.hbo.com"],
     rutas: [
-      /^\/content\/[a-z0-9-]+$/i,
-      /^\/(shows|movies)\/[a-z0-9-]+\/[0-9a-f-]{8,}$/i,
-      /^\/[a-z0-9-]{3,}$/i,
+      /^\/content\/([a-z0-9-]+)$/i,
+      /^\/(?:shows|movies)\/([a-z0-9-]+\/[0-9a-f-]{8,})$/i,
+      /^\/([a-z0-9-]{3,})$/i,
     ],
     series: true, peliculas: false,
     idsGlobales: [1899, 1825, 384],
@@ -153,7 +174,7 @@ export const ADAPTADORES_OFICIALES: AdaptadorOficial[] = [
   {
     code: "pp", redes: [4330],
     hosts: ["paramountplus.com", "www.paramountplus.com"],
-    rutas: [/^\/shows\/[a-z0-9-]+$/i],
+    rutas: [/^\/shows\/([a-z0-9-]+)$/i],
     series: true, peliculas: false,
     idsGlobales: [531, 582, 1853],
   },
@@ -161,8 +182,8 @@ export const ADAPTADORES_OFICIALES: AdaptadorOficial[] = [
     code: "at", redes: [2552],
     hosts: ["tv.apple.com"],
     rutas: [
-      /^\/(show|movie)\/[a-z0-9-]+\/umc\.cmc\.[a-z0-9]+$/i,
-      /^\/(show|movie)\/umc\.cmc\.[a-z0-9]+$/i,
+      /^\/(?:show|movie)\/[a-z0-9-]+\/(umc\.cmc\.[a-z0-9]+)$/i,
+      /^\/(?:show|movie)\/(umc\.cmc\.[a-z0-9]+)$/i,
     ],
     series: true, peliculas: true,
     idsGlobales: [350, 2243],
@@ -234,13 +255,83 @@ export function sinLocale(pathname: string): string {
  * el dominio.
  */
 export function enlaceDeLaPlataforma(homepage: string, def: AdaptadorOficial): boolean {
-  if (!homepage) return false;
+  return tokenOficial(homepage, def) !== null;
+}
+
+/**
+ * El identificador que la plataforma le da a este título, o `null`.
+ *
+ * Es la MISMA comprobación que `enlaceDeLaPlataforma` —de hecho ésa llama a
+ * ésta—, así que un enlace aceptado siempre tiene identidad y uno rechazado
+ * nunca la tiene. Tenerlas separadas permitiría que divergieran.
+ */
+export function tokenOficial(homepage: string, def: AdaptadorOficial): string | null {
+  if (!homepage) return null;
   let u: URL;
-  try { u = new URL(homepage); } catch { return false; }
-  if (u.protocol !== "https:") return false;
-  if (!def.hosts.includes(u.hostname.toLowerCase())) return false;
+  try { u = new URL(homepage); } catch { return null; }
+  if (u.protocol !== "https:") return null;
+  if (!def.hosts.includes(u.hostname.toLowerCase())) return null;
   const p = sinLocale(u.pathname).replace(/\/+$/, "") || "/";
-  return def.rutas.some((r) => r.test(p));
+
+  for (const r of def.rutas) {
+    const m = r.exec(p);
+    // `m[1]` y no `m[0]`: el identificador es el grupo, no la ruta entera. Si
+    // alguna ruta se escribiera sin grupo, esto la descarta en vez de guardar
+    // `undefined` como identidad.
+    if (m?.[1]) return m[1];
+  }
+  for (const q of def.porQuery ?? []) {
+    if (p !== q.ruta) continue;
+    // `getAll` y no `get`: `?jbv=1&jbv=2` es ambiguo y no se resuelve tomando
+    // el primero. Un único valor, o nada.
+    const vs = u.searchParams.getAll(q.param);
+    if (vs.length === 1 && q.valor.test(vs[0])) return vs[0];
+  }
+  return null;
+}
+
+/**
+ * La identidad oficial de un título: `"<plataforma>:<id de la plataforma>"`.
+ *
+ * 🔴 PARA QUÉ EXISTE. TMDB a veces carga el mismo programa DOS veces, una como
+ * serie y otra como película, y la búsqueda muestra dos cards. Comparar por
+ * título, fecha, productora o parecido textual escondería obras legítimamente
+ * distintas; comparar el identificador que publica la plataforma es un dato
+ * comprobable. Caso medido: dos entradas de TMDB, una con
+ * `netflix.com/title/<n>` y otra con `netflix.com/browse?jbv=<n>`, el mismo `n`.
+ *
+ * No mira `series`/`peliculas`: eso decide si se puede AFIRMAR disponibilidad,
+ * y acá sólo se pregunta a qué título apunta el enlace.
+ */
+export function identidadOficial(
+  homepage: string, registro: AdaptadorOficial[] = ADAPTADORES_OFICIALES,
+): string | null {
+  for (const def of registro) {
+    const t = tokenOficial(homepage, def);
+    if (t) return `${def.code}:${t}`;
+  }
+  return null;
+}
+
+/**
+ * Saca los duplicados que comparten identidad oficial. Preserva el orden.
+ *
+ * **Gana el primero**, y eso no es un criterio de calidad inventado: la lista ya
+ * viene ordenada por relevancia, así que la decisión ya estaba tomada.
+ *
+ * ⚠️ Lo que NO tiene identidad NO se toca. Dos títulos sin evidencia oficial son
+ * dos títulos, se llamen como se llamen.
+ */
+export function dedupePorIdentidad<T extends { identidad?: string | null }>(items: T[]): T[] {
+  const vistas = new Set<string>();
+  const out: T[] = [];
+  for (const it of items) {
+    if (!it.identidad) { out.push(it); continue; }
+    if (vistas.has(it.identidad)) continue;
+    vistas.add(it.identidad);
+    out.push(it);
+  }
+  return out;
 }
 
 /**

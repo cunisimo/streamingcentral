@@ -36,7 +36,9 @@ import { resolverDisponibilidad } from "./disponibilidad";
 import {
   hayFallosDisponibilidad, registrarFalloDisponibilidad, withFallosDisponibilidad,
 } from "./fallos-disponibilidad";
-import { redesDePlataforma, resumenRegional } from "./enlace-oficial";
+import {
+  dedupePorIdentidad, identidadOficial, redesDePlataforma, resumenRegional,
+} from "./enlace-oficial";
 import {
   paginarUltimos, plataformasValidas, type CandidatoUltimos, type PaginaRegional,
 } from "./ultimos";
@@ -167,6 +169,27 @@ export async function disponibilidadDe(
     return r.plataformas;
   }, () => !fallo);
   return res;
+}
+
+/**
+ * La identidad oficial de un título, para deduplicar la búsqueda.
+ *
+ * 🔴 NO PAGA NINGUNA LLAMADA CUANDO TMDB YA SABE. Si el título tiene `flatrate`
+ * argentino, se corta antes de tocar el detalle: ese caso no necesita evidencia
+ * oficial y no tiene por qué costar nada.
+ *
+ * Para el resto, las dos lecturas son las MISMAS que ya hizo el camino de
+ * disponibilidad —`pv3:` la pidió `toUITitle`, `oficial:` la pidió el
+ * resolvedor—, así que en la práctica son aciertos de caché. La excepción es un
+ * título que resolvió por el top oficial de Netflix (prioridad 2, que corta
+ * antes de mirar el enlace): ahí `oficial:` puede estar vacía y se paga un
+ * detalle, que queda cacheado 8 h.
+ */
+async function identidadDeBusqueda(type: MediaType, id: number): Promise<string | null> {
+  const prov = await providersOf(type, id);
+  if (prov.codes.length || prov.hayFlatrateAR) return null;
+  const d = await datosTituloDe(type, id, prov.reg);
+  return d ? identidadOficial(d.homepage) : null;
 }
 
 // El link del agregador para un título. Reusa el MISMO `cached` de providersOf
@@ -1085,7 +1108,20 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
   //
   // Es una partición estable, no un orden nuevo: dentro de "disponible" y
   // dentro de "no disponible" se conserva el orden por relevancia de arriba.
-  const titles = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub)));
+  const crudosUI = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub)));
+
+  // TMDB a veces carga el MISMO programa dos veces, una como serie y otra como
+  // película, y acá salían dos cards del mismo título. Se juntan por el
+  // identificador que publica la plataforma —un dato comprobable— y nunca por
+  // nombre, fecha, productora ni parecido: esas señales esconden obras
+  // legítimamente distintas. Lo que no tiene identidad oficial no se toca.
+  //
+  // Se hace SÓLO acá: la búsqueda es donde el usuario ve las dos entradas una al
+  // lado de la otra. En el Home el dedup ya existe y es por `tipo:id`.
+  const ids = await Promise.all(crudosUI.map((t) => identidadDeBusqueda(t.type, t.id)));
+  const titles = dedupePorIdentidad(crudosUI.map((t, i) => ({ t, identidad: ids[i] })))
+    .map((x) => x.t);
+
   if (!providers.length) return { titles, people, fallo: falloIdioma };
   const disponibles: UITitle[] = [];
   const resto: UITitle[] = [];

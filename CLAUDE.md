@@ -540,6 +540,42 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 
   ⚠️ Los `idsGlobales` **no son** los `tmdbIds` de `providers-ar.ts` y no hay que
   unificarlos: allá definen qué considera cada plataforma el discover argentino.
+- **Cada ruta oficial VALIDA Y EXTRAE a la vez: el grupo 1 es el identificador.**
+  De ahí sale `identidadOficial()`, que devuelve `"<plataforma>:<id de la
+  plataforma>"`. Tenerlas separadas dejaría que la identidad y la regla
+  divergieran; un test falla si alguna ruta pierde su grupo de captura.
+  **`netflix.com/browse?jbv=<n>` cuenta como ruta de título** (`porQuery`), y es
+  la única excepción por query que hay. `/browse` pelado se sigue rechazando —
+  es una portada—, y el parámetro exige ruta exacta, un único valor y forma
+  numérica: `?jbv=1&jbv=2` es ambiguo y se rechaza. Medido: de 80 series de
+  Netflix con `homepage`, 71 usan `/title/<n>` y **1** usa `?jbv=`. El `n` es el
+  mismo número en las dos formas, y eso es lo que hace que se puedan deduplicar
+  entre sí.
+- **La búsqueda deduplica por identidad oficial, NUNCA por parecido**
+  (`dedupePorIdentidad`, cableado en `search()`). TMDB a veces carga el mismo
+  programa **dos veces, una como serie y otra como película**, y salían dos
+  cards del mismo título — una en color y otra en gris. El caso medido son dos
+  entradas con el mismo id de Netflix (`/title/<n>` en una, `?jbv=<n>` en la
+  otra).
+  🔴 **No se compara título, fecha, productora, sinopsis ni similitud textual.**
+  Esas señales esconden obras legítimamente distintas: secuelas, remakes,
+  documentales homónimos. Se compara el identificador que publica la
+  plataforma, que es un dato comprobable. **Lo que no tiene identidad oficial no
+  se toca.** Gana el primero, que no es un criterio nuevo: la lista ya viene
+  ordenada por relevancia. Medido sobre 540 títulos de las seis plataformas:
+  366 con identidad y **0 colisiones**, o sea que no junta nada que no sea el
+  mismo título.
+  **No paga ninguna llamada cuando TMDB ya informa proveedores argentinos**: se
+  corta antes de tocar el detalle. Para el resto reusa `pv3:` y `oficial:`, que
+  el camino de disponibilidad ya pidió.
+  Se hace **sólo en la búsqueda**, que es donde el usuario ve las dos entradas
+  una al lado de la otra; el dedup del Home es otro y es por `tipo:id`.
+  ⚠️ **`homepage` es un campo LOCALIZADO de TMDB** y la clave `oficial:` está en
+  `CLAVES_SIN_HUELLA`. Medido: 1 de 240 series cambia de `homepage` entre `es-ES`
+  y `es-MX` (0,4%), y el caso de Moria es justamente uno — en `es-MX` viene
+  vacío. Con el idioma actual (`es-ES`) la evidencia existe; **si algún día se
+  cambia `IDIOMA_TITULOS`, esa clave hay que pasarla a las familias con huella**,
+  o durante 8 h se sirve el `homepage` del idioma anterior. Sin decidir.
 - **Corregir la ficha no alcanzaba: el `discover` por proveedor nunca devuelve
   el título.** Medido: 1152 series en Disney+/AR y el caso testigo en ninguna.
   Por eso "Últimos lanzamientos · Series" mezcla la fuente regional con
