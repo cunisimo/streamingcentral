@@ -1049,7 +1049,8 @@ está cubierta por 23 tests apuntados al resolvedor.
 
 ## Evidencia oficial general — rama `feat/evidencia-oficial` (2026-08-31)
 
-**Sin mergear al escribir esto.** Falta prueba manual y autorización.
+**Prueba manual local APROBADA por el dueño el 2026-08-31. Lista para
+integrar.** Ver el bloque de cierre al final de esta sección.
 
 Generaliza lo que la tanda anterior había dejado atado a **una** plataforma y a
 **series**.
@@ -1075,3 +1076,64 @@ Generaliza lo que la tanda anterior había dejado atado a **una** plataforma y a
 vencer porque la guarda mide 14 días desde `week`. Que Moria ya no lo necesite
 para la ficha no arregla el bloque "Lo más visto esta semana", que sigue cayendo
 a "Lo más popular ahora" cuando la evidencia vence.
+
+### Identidad oficial y deduplicación de la búsqueda — APROBADO
+
+**El problema no era la disponibilidad: era que TMDB tiene el mismo programa
+cargado dos veces.** `tv:322428` y `movie:1752041` son la misma obra, una como
+serie y otra como película, y la búsqueda mostraba dos cards — una en color y
+otra en gris.
+
+- **`netflix.com/browse?jbv=<n>` cuenta como ruta de título.** `/browse` pelado
+  se sigue rechazando: es una portada. El parámetro exige ruta exacta, un único
+  valor y forma numérica. Medido: de 80 series de Netflix con `homepage`, 71
+  usan `/title/<n>` y **1** usa `?jbv=`. Es el mismo número en las dos formas.
+- **Cada ruta valida Y extrae**: el grupo 1 del regex es el identificador, así
+  que la identidad no puede divergir de lo que la regla acepta.
+- 🔴 **La deduplicación es por identidad oficial, NUNCA por parecido.** No se
+  compara título, fecha, productora, sinopsis ni similitud textual: esas señales
+  esconden obras legítimamente distintas. **Lo que no tiene identidad oficial no
+  se toca**, y gana el primero, que no es un criterio nuevo — la lista ya venía
+  ordenada por relevancia.
+- Medido sobre **540 títulos** de las seis plataformas: 366 con identidad y
+  **0 colisiones**.
+
+**Lo verificado a mano y aprobado por el dueño:** el duplicado `movie:1752041`
+desaparece; **`movie:401445` —otra película llamada "Moria", de 2018— PERMANECE**
+porque no comparte identidad, que es exactamente lo que tiene que pasar; Moria
+serie figura en Netflix; Gutiérrez (`tv:275224`) conserva Disney+; navegación y
+comportamiento general aprobados.
+
+### El idioma visual ya no mueve la disponibilidad — APROBADO
+
+`homepage` es un campo **localizado** de TMDB, y el lector de evidencia lo pedía
+con el idioma base. Es decir que `IDIOMA_TITULOS` —una variable que existe para
+elegir cómo se escriben títulos y sinopsis— **decidía si un título estaba en
+Netflix o quedaba en gris**.
+
+🔴 **No se arregló poniéndole huella de idioma a `oficial:`.** Eso arregla la
+caché y deja el bug: seguirían existiendo dos respuestas para el mismo título.
+Se arregló la **fuente** (`IDIOMA_EVIDENCIA = "es-ES"`, literal, sin leer el
+entorno), y por eso esa clave **puede** seguir sin huella. Hay tests que atan las
+dos mitades. Cuesta **cero llamadas nuevas**.
+
+⚠️ **`en-US` daría más cobertura y no se tomó**: 248 identidades contra 217
+(gana 32, pierde 1). Se eligió `es-ES` porque es lo que la app resuelve hoy —
+fijarlo no mueve ni un título— y porque lo que `en-US` pierde son los casos del
+tipo del testigo. **Queda como decisión abierta.** Ver
+`docs/medidas/2026-08-31-idioma-evidencia.md`.
+
+### Cierre: qué queda integrado y qué NO
+
+**Preview de Vercel OMITIDA**, por decisión del dueño y como en la tanda
+anterior: se probó en local en modo Producción, con caché en memoria y fecha
+argentina real.
+
+Lo que este trabajo **NO** arregla, y conviene no darlo por cerrado:
+
+| | Estado |
+|---|---|
+| **Issue #16** (catálogo regional incompleto) | **MITIGADO, no resuelto.** La regla cubre seis plataformas en vez de una, pero sigue sin poder medirse cuánto falta |
+| **Issue #13** (cron del Top 10) | **ABIERTO.** No se tocó |
+| **"Próximamente"** | **Bug propio, abierto**, con dos causas independientes — ver #8 |
+| **Capacitor** | **PAUSADO después de CP6.** `spike/capacitor-android` sigue en `e4d4a6f`; **CP7 sin empezar** |

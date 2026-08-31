@@ -363,6 +363,26 @@ criterio es la calidad y la cobertura, no la popularidad.
 detalle por corrida, porque cada serie descubierta necesita su propio
 `tvDetails` para el `next_episode_to_air`.
 
+### La SEGUNDA causa, medida el 2026-08-31 — son dos, no una
+
+Arreglar el descubrimiento **no alcanza**, y esto se confirmó siguiendo un caso
+concreto (`tv:310290`, "Mis muertos tristes") que no aparecía en la agenda:
+
+1. **Descubrimiento** — lo de arriba. Su popularidad es **1.761** contra un corte
+   de **69.99** en la página 3. No entra ni pidiendo la página 50 de 95.
+2. **Filtrado** — `sync-upcoming.ts:224`: `if (!provs[j].length) continue`. Un
+   título **sin proveedor `AR` en `watch/providers` se descarta**, y éste no
+   tiene `flatrate` en ninguna región.
+
+🔴 **La segunda causa es la misma que el issue #16**, y por eso importa: el
+catálogo regional de TMDB llega tarde en los estrenos, que es exactamente cuando
+la agenda de "Próximamente" tiene que mostrarlos. La resolución de
+disponibilidad ya sabe recuperar estos casos con evidencia oficial; **el sync no
+la usa**, porque corre en una Edge Function aparte.
+
+**Sigue abierto y no se tocó** — la corrección de disponibilidad del 2026-08-31
+no lo alcanza.
+
 **Criterio de cierre:** definir qué debería contener la agenda —¿todo lo que
 estrena en las plataformas soportadas? ¿un recorte con criterio?— y que la
 pertenencia no dependa del ranking de popularidad del día.
@@ -890,6 +910,13 @@ proveedor `AR` de la muestra, la resolución recupera **4**. Los otros 7 siguen
 sin aparecer como disponibles, y ninguna medición dice cuántos títulos más
 faltan fuera de la red que se midió. Este issue **queda abierto**.
 
+**Actualización 2026-08-31 (`feat/evidencia-oficial`, prueba manual aprobada).**
+La regla se generalizó a **seis plataformas en series y cuatro en películas**,
+con criterio de **cobertura sobre certeza** por decisión del dueño. Medido contra
+verdad de campo: **144 + 22 aciertos, cero falsos positivos**. El punto 1 de "lo
+que sigue abierto" quedó resuelto; **los puntos 2 y 3 no**, y el issue **sigue
+abierto** por el 2: no hay forma de medir el agujero completo.
+
 Medido el 2026-08-30 sobre la red Disney+, 60 días de estrenos: **11 de 15
 series no tenían proveedor `AR`** en `watch/providers`, incluida una que
 JustWatch mostraba como #1 del país (`tv:275224`). La resolución centralizada
@@ -899,9 +926,11 @@ fuerzan**.
 
 **Lo que sigue abierto:**
 
-1. **Sólo Disney+ está habilitada** para la regla de enlace oficial. Las otras
-   plataformas necesitan que alguien mida sus redes, dominios y rutas antes de
-   sumarlas — no se habilitan a ojo.
+1. ~~**Sólo Disney+ está habilitada** para la regla de enlace oficial.~~
+   **RESUELTO el 2026-08-31**: seis plataformas en series (Netflix, Disney+,
+   Prime Video, Max, Paramount+, Apple TV+) y cuatro en películas. Cada
+   combinación de red, dominio, ruta e ids globales se midió antes de entrar, y
+   un test falla si se agrega una sin actualizar el número.
 2. **No se puede medir el agujero completo.** Sabemos cuántas series de una red
    conocida no tienen dato regional; no sabemos cuántos títulos faltan de redes
    que ni siquiera consultamos.
