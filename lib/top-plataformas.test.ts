@@ -23,7 +23,7 @@ const plataformasDeFicha = async (
     tipo, id, deTmdb, hoy: "2026-08-30",
     leerTopOficial: leerEvidencia,
     // Sin datos de serie: acá se prueba el respaldo de Netflix, no el de enlace.
-    leerDatosSerie: async () => null,
+    leerDatosTitulo: async () => null,
   })).plataformas;
 
 const card = (platforms: PlatformCode[], type: MediaType = "tv"): UITitle => ({

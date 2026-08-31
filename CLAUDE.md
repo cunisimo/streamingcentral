@@ -398,8 +398,9 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   array cacheado de `providersOf`.
   ⚠️ **Esa regla del medio cambió y conviene leerla bien.** Antes decía
   "`networks` no se usa nunca". Ahora dice **"`networks` nunca se usa SOLA"**:
-  acompañada de un enlace oficial de la misma plataforma a ese título concreto,
-  y con las otras cuatro condiciones de la regla estricta, sí sirve. Ver
+  en SERIES, acompañada de un enlace oficial de la misma plataforma a ese título
+  concreto y sin contradicción fuerte, sí sirve. **En PELÍCULAS sigue sin usarse
+  nunca** — TMDB no lo publica para películas, y ahí decide sólo el enlace. Ver
   "Disponibilidad" abajo.
   **UNA consulta por MISS**, filtrada por fecha: el corte sale del reloj, no de
   una consulta previa que pregunte cuál es la última semana. La primera versión
@@ -444,7 +445,8 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   1. `watch/providers` de TMDB para AR, `flatrate` → `tmdb-ar`.
   2. Top oficial reciente de Netflix → `top-oficial` (reglas de ventana y
      `needs_review` intactas).
-  3. **Enlace oficial estricto** para series → `enlace-oficial`.
+  3. **Evidencia oficial de alta probabilidad** → `oficial-probable`.
+     Seis plataformas en series, cuatro en películas.
   4. Registro manual versionado (`lib/excepciones-disponibilidad.ts`, hoy
      **vacío**) → `manual`.
   🔴 **Los respaldos nunca contradicen a TMDB.** Si TMDB ubica el título en otra
@@ -494,24 +496,103 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   TMDB sólo conoce ID, MY y US. **No es cache.** El arreglo de Moria fue
   correcto pero no general: dependía del top oficial de Netflix, que sólo existe
   para Netflix. Informe: `docs/medidas/2026-08-30-disponibilidad-informe.md`.
-- **La evidencia oficial estricta exige SEIS cosas a la vez**
-  (`lib/enlace-oficial.ts`): serie ya estrenada en fecha argentina · exactamente
-  UNA red mapeada a una plataforma soportada · `homepage` HTTPS con el dominio
-  oficial EXACTO de esa misma plataforma · ruta que apunta a un título · sin
-  locale de otra región · sin datos regionales que contradigan.
-  **`networks` nunca se usa sola y `homepage` tampoco.** El host se compara
-  completo, nunca con `includes`: `disneyplus.com.evil.ru` y `disneyplus-ar.com`
-  contienen la cadena y no son el dominio. `/es-es/` se rechaza por ser España —
-  es un caso real de la muestra (`tv:325313`). **Películas nunca**: `networks` es
-  un campo de series.
-  **Hoy hay UNA sola plataforma habilitada, Disney+**, y un test falla si se
-  agrega otra sin actualizar el número: cada combinación de red, dominio, ruta e
-  ids globales hay que medirla. **Netflix NO está acá** a propósito — su respaldo
-  es el top semanal, que es mejor evidencia.
-  ⚠️ Los `idsGlobales` (337 y 122) **no son** los `tmdbIds` de
-  `providers-ar.ts` y no hay que unificarlos: allá el 337 es el único Disney+ de
-  Argentina, y meter el 122 cambiaría lo que el discover argentino considera
-  Disney+.
+- **La evidencia oficial cubre SEIS plataformas en series y CUATRO en
+  películas** (`lib/enlace-oficial.ts` → `ADAPTADORES_OFICIALES`).
+
+  | | Netflix | Disney+ | Prime | Max | Paramount+ | Apple TV+ |
+  |---|:--:|:--:|:--:|:--:|:--:|:--:|
+  | Series | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+  | Películas | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+
+  **Las series exigen red + enlace** de la misma plataforma. **Las películas
+  deciden sólo por el enlace**: TMDB no publica `networks` para películas, y si
+  algo lo poblara tampoco se usaría — hay un test que lo fija. Max y Paramount+
+  no se infieren para películas porque midieron **0 de 30** con dominio oficial:
+  habilitarlas sería aparentar una cobertura que no existe.
+
+  🔴 **EL CRITERIO ES COBERTURA, no certeza.** Decisión del dueño: es preferible
+  mostrar de vez en cuando un título que no esté, antes que ocultar muchos que sí
+  están. Por eso la regla admite un riesgo pequeño y sólo rechaza contradicciones
+  fuertes. Medida contra verdad de campo —tapando el dato de AR de títulos que sí
+  lo tienen— dio **144 aciertos en series y 22 en películas, con CERO falsos
+  positivos**. Ver `docs/medidas/2026-08-31-medicion-regla-final.md`.
+
+  **`networks` nunca se usa sola y `homepage` tampoco** (en series). El host se
+  compara completo, nunca con `includes`: `netflix.com.evil.ru` y
+  `netflix-ar.com` contienen la cadena y no son el dominio.
+
+  ⚠️ **`hbo.com` vale para Max, y es evidencia PROBABLE, no estructural.** El
+  argumento de que es "el canal, no el servicio" era razonable y los datos lo
+  desmintieron: 43 casos medidos, 35 en Max AR, 0 en otra plataforma. Si HBO
+  licenciara una serie a otra plataforma en AR, esta regla se equivocaría.
+
+  ⚠️ **`amazon.com/dp/` queda afuera**: es la tienda, no el servicio — un ASIN
+  puede ser un alquiler, una compra o un DVD. Cuesta 12 series de la muestra.
+
+  ⚠️ **Se acepta CUALQUIER locale** en una URL de título. Rechazar los
+  extranjeros costaba 4 series y el 100% de la señal de películas, y evitaba 0
+  falsos positivos: el locale identifica la tienda que generó el enlace, no dónde
+  está disponible. Quitar el prefijo **no** afloja la ruta: `/br/browse` sigue
+  siendo una portada.
+
+  ⚠️ **No hay tope de regiones.** Se propuso uno (≤3) y habría aceptado CERO
+  títulos sin evitar un solo error.
+
+  ⚠️ Los `idsGlobales` **no son** los `tmdbIds` de `providers-ar.ts` y no hay que
+  unificarlos: allá definen qué considera cada plataforma el discover argentino.
+- **Cada ruta oficial VALIDA Y EXTRAE a la vez: el grupo 1 es el identificador.**
+  De ahí sale `identidadOficial()`, que devuelve `"<plataforma>:<id de la
+  plataforma>"`. Tenerlas separadas dejaría que la identidad y la regla
+  divergieran; un test falla si alguna ruta pierde su grupo de captura.
+  **`netflix.com/browse?jbv=<n>` cuenta como ruta de título** (`porQuery`), y es
+  la única excepción por query que hay. `/browse` pelado se sigue rechazando —
+  es una portada—, y el parámetro exige ruta exacta, un único valor y forma
+  numérica: `?jbv=1&jbv=2` es ambiguo y se rechaza. Medido: de 80 series de
+  Netflix con `homepage`, 71 usan `/title/<n>` y **1** usa `?jbv=`. El `n` es el
+  mismo número en las dos formas, y eso es lo que hace que se puedan deduplicar
+  entre sí.
+- **La búsqueda deduplica por identidad oficial, NUNCA por parecido**
+  (`dedupePorIdentidad`, cableado en `search()`). TMDB a veces carga el mismo
+  programa **dos veces, una como serie y otra como película**, y salían dos
+  cards del mismo título — una en color y otra en gris. El caso medido son dos
+  entradas con el mismo id de Netflix (`/title/<n>` en una, `?jbv=<n>` en la
+  otra).
+  🔴 **No se compara título, fecha, productora, sinopsis ni similitud textual.**
+  Esas señales esconden obras legítimamente distintas: secuelas, remakes,
+  documentales homónimos. Se compara el identificador que publica la
+  plataforma, que es un dato comprobable. **Lo que no tiene identidad oficial no
+  se toca.** Gana el primero, que no es un criterio nuevo: la lista ya viene
+  ordenada por relevancia. Medido sobre 540 títulos de las seis plataformas:
+  366 con identidad y **0 colisiones**, o sea que no junta nada que no sea el
+  mismo título.
+  **No paga ninguna llamada cuando TMDB ya informa proveedores argentinos**: se
+  corta antes de tocar el detalle. Para el resto reusa `pv3:` y `oficial:`, que
+  el camino de disponibilidad ya pidió.
+  Se hace **sólo en la búsqueda**, que es donde el usuario ve las dos entradas
+  una al lado de la otra; el dedup del Home es otro y es por `tipo:id`.
+- **La evidencia oficial se lee SIEMPRE en `IDIOMA_EVIDENCIA` (`es-ES`), que no
+  se deriva de `IDIOMA_TITULOS`** (`lib/idioma.ts`). `homepage` es un campo
+  **localizado** de TMDB, así que pedir el detalle con el idioma de la interfaz
+  hacía que cambiara la **disponibilidad**: `movie:1752041` devuelve
+  `netflix.com/browse?jbv=81958141` en `es-ES` y **vacío** en `es-MX`, `en-US` y
+  sin idioma. La misma película, Netflix o gris según una variable que sólo debía
+  decidir cómo se escriben los títulos.
+  🔴 **La solución NO fue ponerle huella de idioma a `oficial:`.** Eso arregla la
+  caché y deja el bug: seguirían existiendo dos respuestas para el mismo título y
+  la app elegiría una según el idioma visual. Se arregla la **fuente**, y por eso
+  esa clave **puede** seguir sin huella — es la única razón por la que puede.
+  Hay tests que atan las dos mitades: si alguien saca el idioma fijo, el que
+  vigila `CLAVES_SIN_HUELLA` falla.
+  **No cuesta una llamada más**: es la misma de siempre con el idioma explícito,
+  y es el ÚNICO uso de esa constante — títulos, sinopsis y todo lo visible siguen
+  en el idioma base.
+  ⚠️ **`en-US` daría MÁS cobertura y no se tomó.** Medido sobre 360 títulos de
+  las seis plataformas: `en-US` da **248** identidades y `es-ES` **217** (gana
+  32 —22 de Netflix, 10 de Disney+— y pierde 1). Se eligió `es-ES` porque es lo
+  que la app resuelve hoy, así que fijarlo no mueve ni un título, y porque lo que
+  `en-US` pierde son justamente los casos tipo `movie:1752041`. Pasar a `en-US`
+  es una mejora medida y disponible, pero es un cambio de cobertura y no esta
+  corrección. Ver `docs/medidas/2026-08-31-idioma-evidencia.md`.
 - **Corregir la ficha no alcanzaba: el `discover` por proveedor nunca devuelve
   el título.** Medido: 1152 series en Disney+/AR y el caso testigo en ninguna.
   Por eso "Últimos lanzamientos · Series" mezcla la fuente regional con

@@ -8,7 +8,7 @@
 //
 //   1. `watch/providers` de TMDB para AR, `flatrate`.   → "tmdb-ar"
 //   2. Top oficial reciente de Netflix.                 → "top-oficial"
-//   3. Enlace oficial estricto (series).                → "enlace-oficial"
+//   3. Evidencia oficial de alta probabilidad.          → "oficial-probable"
 //   4. Registro manual versionado.                      → "manual"
 //
 // 🔴 LOS RESPALDOS SÓLO AGREGAN CUANDO TMDB NO SABE NADA. Nunca contradicen a
@@ -22,7 +22,7 @@
 // ficha rota justo después de haberla arreglado.
 //
 // Sin `server-only`: lógica pura, probable con `node --test`.
-import { evidenciaEnlaceOficial, type DatosSerie } from "./enlace-oficial.ts";
+import { evidenciaOficialDe, type DatosTitulo } from "./enlace-oficial.ts";
 import { EXCEPCIONES, type ExcepcionManual } from "./excepciones-disponibilidad.ts";
 import { claveTitulo } from "./top-plataformas.ts";
 import type { MediaType, PlatformCode } from "./types";
@@ -30,7 +30,15 @@ import type { MediaType, PlatformCode } from "./types";
 export type { ExcepcionManual };
 
 /** De dónde salió la decisión. Se registra internamente, no se muestra. */
-export type Procedencia = "tmdb-ar" | "top-oficial" | "enlace-oficial" | "manual";
+/**
+ * De dónde salió la decisión. Se registra internamente, no se muestra.
+ *
+ * `oficial-probable` reemplaza al viejo `enlace-oficial`, y el nombre importa:
+ * la regla ya no busca certeza sino **alta probabilidad**. Medida contra verdad
+ * de campo dio 0 falsos positivos en 194 casos, pero sigue siendo una
+ * inferencia, no una confirmación de la plataforma.
+ */
+export type Procedencia = "tmdb-ar" | "top-oficial" | "oficial-probable" | "manual";
 
 export interface Disponibilidad {
   plataformas: PlatformCode[];
@@ -81,8 +89,8 @@ export async function resolverDisponibilidad(opts: {
   hoy: string;
   /** Evidencia del top oficial de Netflix. Puede lanzar. */
   leerTopOficial: () => Promise<Set<string>>;
-  /** Datos crudos de la serie para la regla de enlace oficial. Puede lanzar. */
-  leerDatosSerie: () => Promise<DatosSerie | null>;
+  /** Datos crudos del título para la regla oficial. Puede lanzar. */
+  leerDatosTitulo: () => Promise<DatosTitulo | null>;
   excepciones?: ExcepcionManual[];
 }): Promise<Disponibilidad> {
   // --- 1. TMDB AR manda, y corta acá ---------------------------------------
@@ -114,12 +122,15 @@ export async function resolverDisponibilidad(opts: {
     fallo = true;
   }
 
-  // --- 3. Enlace oficial estricto ------------------------------------------
+  // --- 3. Evidencia oficial de alta probabilidad ---------------------------
+  // Series y películas. Los `arIds` van vacíos a propósito: si AR tuviera datos,
+  // la prioridad 1 ya habría cortado. Se pasan igual para que la regla pueda
+  // aplicar su chequeo de contradicción sin depender de ese orden.
   try {
-    const datos = await opts.leerDatosSerie();
+    const datos = await opts.leerDatosTitulo();
     if (datos) {
-      const code = evidenciaEnlaceOficial({ tipo: opts.tipo, datos, hoy: opts.hoy });
-      if (code) return { plataformas: [code], procedencia: "enlace-oficial", fallo };
+      const code = evidenciaOficialDe({ datos, arIds: [], hoy: opts.hoy });
+      if (code) return { plataformas: [code], procedencia: "oficial-probable", fallo };
     }
   } catch {
     fallo = true;

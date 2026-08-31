@@ -12,7 +12,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { PLATAFORMAS_OFICIALES } from "./enlace-oficial.ts";
+import { ADAPTADORES_OFICIALES } from "./enlace-oficial.ts";
 
 const raiz = path.resolve(import.meta.dirname, "..");
 const leer = (p: string) => fs.readFileSync(path.join(raiz, p), "utf8");
@@ -126,19 +126,53 @@ test("el dominio se compara por host completo, nunca con includes/endsWith", () 
   assert.doesNotMatch(src, /hostname\.endsWith\(/, "endsWith acepta subdominios ajenos");
 });
 
-test("la regla exige https, ruta de título y locale propio", () => {
+test("la regla exige https y una ruta de título", () => {
   const src = codigo("lib/enlace-oficial.ts");
   assert.match(src, /u\.protocol !== "https:"/);
-  assert.match(src, /rutaTitulo\.test\(/);
-  assert.match(src, /locale !== LOCALE_AR/);
+  assert.match(src, /for \(const r of def\.rutas\)/, "dejó de exigir una ruta de título");
+  // La identidad sale del GRUPO, no de la ruta entera: si alguien volviera a
+  // `m[0]` dos títulos distintos de la misma forma compartirían identidad y la
+  // búsqueda escondería uno.
+  assert.match(src, /m\?\.\[1\]/, "la identidad dejó de salir del grupo de captura");
+});
+
+test("toda ruta oficial declara su grupo de identidad", () => {
+  // Una ruta sin grupo 1 no rompe la validación —seguiría aceptando el enlace—
+  // pero devolvería identidad vacía y el título no se podría deduplicar. Es la
+  // clase de error que no da síntoma: se detecta acá o no se detecta.
+  for (const a of ADAPTADORES_OFICIALES) {
+    for (const r of a.rutas) {
+      assert.equal(
+        new RegExp("|" + r.source).exec("")!.length - 1, 1,
+        `${a.code}: la ruta ${r} no tiene exactamente un grupo de captura`,
+      );
+    }
+  }
+});
+
+test("el locale ya NO se rechaza, y quitarlo no afloja la ruta", () => {
+  // Medido: rechazar locales extranjeros costaba 4 series y el 100% de la señal
+  // de películas, y evitaba 0 falsos positivos. Lo que NO puede pasar es que
+  // quitar el prefijo deje pasar una portada, y eso lo fija el test funcional
+  // "el locale no puede tapar una ruta genérica" de evidencia-oficial.test.ts.
+  const src = codigo("lib/enlace-oficial.ts");
+  assert.doesNotMatch(src, /LOCALE_AR/, "volvió la allowlist de locales");
+  assert.match(src, /sinLocale\(u\.pathname\)/);
+  assert.ok(existeArchivo("lib/evidencia-oficial.test.ts"),
+    "se borró el test de comportamiento de la regla");
 });
 
 test("no se habilitó ninguna plataforma sin verificar", () => {
-  // Hoy hay UNA. El número está acá para que sumar otra sea una decisión y no
-  // un descuido: cada combinación de red, dominio y ruta hay que medirla.
-  assert.equal(PLATAFORMAS_OFICIALES.length, 1,
-    "se agregó una plataforma: verificá red, dominio, ruta e ids globales, y actualizá este número");
-  assert.equal(PLATAFORMAS_OFICIALES[0].code, "d");
+  // SEIS para series, CUATRO para películas. Los números están acá para que
+  // sumar una plataforma sea una decisión y no un descuido: cada combinación de
+  // red, dominio, ruta e ids globales hay que medirla contra datos reales.
+  // Ver docs/medidas/2026-08-31-medicion-regla-final.md.
+  assert.equal(ADAPTADORES_OFICIALES.length, 6,
+    "cambió el registro: verificá red, dominio, ruta e ids globales, y actualizá este número");
+  assert.deepEqual(ADAPTADORES_OFICIALES.filter((a) => a.series).map((a) => a.code).sort(),
+    ["at", "d", "m", "n", "p", "pp"]);
+  assert.deepEqual(ADAPTADORES_OFICIALES.filter((a) => a.peliculas).map((a) => a.code).sort(),
+    ["at", "d", "n", "p"]);
 });
 
 test("el caso testigo no está hardcodeado en ningún lado", () => {
@@ -266,4 +300,74 @@ test("al volver atrás manda el snapshot, no la URL", () => {
   // devolvía a Películas después de haber elegido Series.
   const src = codigo("components/UltimosView.tsx");
   assert.match(src, /if \(inicial\.extra\?\.tipo\) setTipo\(inicial\.extra\.tipo\)/);
+});
+
+// ============================================================================
+// La evidencia oficial NO puede depender del idioma visual
+// ============================================================================
+//
+// EL BUG. `homepage` es un campo LOCALIZADO de TMDB, y `datosTituloDe` lo pedía
+// con el idioma base de la app. Medido sobre 360 títulos: `es-ES` da 217
+// identidades y `en-US` 248, y hay títulos que sólo tienen enlace en uno de los
+// dos. El caso testigo es `movie:1752041`, donde `es-ES` devuelve
+// `netflix.com/browse?jbv=81958141` y `es-MX`, `en-US` y la consulta sin idioma
+// devuelven vacío.
+//
+// O sea: cambiar `IDIOMA_TITULOS` —que existe para elegir cómo se escriben los
+// títulos y las sinopsis— movía la DISPONIBILIDAD. Una película quedaba en
+// Netflix o en gris según el idioma de la interfaz.
+//
+// 🔴 LA SOLUCIÓN NO ES PONERLE HUELLA A `oficial:`. Eso arregla la caché y deja
+// el bug: seguirían existiendo dos respuestas distintas para el mismo título, y
+// la app elegiría una según una variable que no habla de disponibilidad. Lo que
+// se arregla es la FUENTE: la evidencia se pide siempre en el mismo idioma. Con
+// una sola respuesta posible, la clave no necesita huella.
+
+test("el idioma de la evidencia es un literal, no una variable de entorno", () => {
+  const src = codigo("lib/idioma.ts");
+  const m = /export const IDIOMA_EVIDENCIA\s*=\s*([^;]+);/.exec(src);
+  assert.ok(m, "no existe IDIOMA_EVIDENCIA");
+  assert.match(m![1].trim(), /^"[a-z]{2}-[A-Z]{2}"$/, "no es un literal fijo");
+  assert.doesNotMatch(m![1], /process\.env|IDIOMA_BASE|IDIOMA_TITULOS/,
+    "la evidencia volvió a depender del idioma visual");
+});
+
+test("el lector de evidencia pide el detalle con el idioma fijo", () => {
+  const src = codigo("lib/enrich.ts");
+  const m = /async function datosTituloDe\([\s\S]*?\n}/.exec(src);
+  assert.ok(m, "no se encontró datosTituloDe");
+  assert.match(m![0], /titleDetails\([^)]*IDIOMA_EVIDENCIA/,
+    "datosTituloDe volvió a pedir el detalle con el idioma base");
+});
+
+test("`oficial:` puede seguir sin huella PORQUE el idioma está fijo", () => {
+  // Las dos mitades de la misma decisión. Si alguien saca el idioma fijo, esta
+  // clave pasa a tener contenido localizado sin huella, que es el bug de
+  // rollback que la huella existe para impedir.
+  const claves = codigo("lib/claves.ts");
+  const enrich = codigo("lib/enrich.ts");
+  if (/CLAVES_SIN_HUELLA[\s\S]*?"oficial:"/.test(claves)) {
+    assert.match(enrich, /IDIOMA_EVIDENCIA/,
+      "`oficial:` está sin huella y ya nadie fija el idioma de la evidencia");
+  }
+});
+
+test("fijar la evidencia no cambia el idioma de nada visible", () => {
+  // `IDIOMA_EVIDENCIA` sólo puede usarse para leer la evidencia. Si apareciera
+  // en el camino de las cards o de la ficha estaría cambiando títulos y
+  // sinopsis, que es exactamente lo que no se quiere tocar.
+  // Sin las líneas de import, que no son un uso.
+  const enrich = codigo("lib/enrich.ts").replace(/^import[\s\S]*?from ".*?";$/gm, "");
+  const usos = [...enrich.matchAll(/IDIOMA_EVIDENCIA/g)].length;
+  assert.equal(usos, 1, `IDIOMA_EVIDENCIA se usa ${usos} veces; debe ser sólo en datosTituloDe`);
+});
+
+test("no se paga una llamada por idioma", () => {
+  // El arreglo es cambiarle el idioma a la llamada que ya existía, no sumar
+  // otra. Dos `titleDetails` en el lector de evidencia serían el doble de
+  // pedidos a TMDB por cada título sin proveedor argentino.
+  const src = codigo("lib/enrich.ts");
+  const m = /async function datosTituloDe\([\s\S]*?\n}/.exec(src);
+  assert.equal([...m![0].matchAll(/titleDetails\(/g)].length, 1,
+    "el lector de evidencia hace más de una llamada de detalle");
 });

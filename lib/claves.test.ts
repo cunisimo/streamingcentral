@@ -11,7 +11,7 @@ import { join } from "node:path";
 import {
   claveCard, claveCombinadaCache, claveHome, clavePeoplePopular, clavePoolCache,
   claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil, claveSearch, claveTopPop,
-  claveUltimosSeries,
+  claveUltimosSeries, CLAVES_SIN_HUELLA,
 } from "./claves.ts";
 import { calcularHuella } from "./idioma.ts";
 
@@ -294,9 +294,9 @@ test("EN ROJO: el barrido mira también cachedLoc y cachedLocIf", () => {
 test("EN VERDE: no marca constructores ni claves sin huella", () => {
   assert.deepEqual(claveManualEn("cached(claveCard(type, id, H), TTL.catalog, fn);"), []);
   assert.deepEqual(claveManualEn("cachedLoc(claveCard(type, id, H), TTL.catalog, fn);"), []);
-  assert.deepEqual(claveManualEn("cached(`pv2:${type}:${id}`, TTL.providers, fn);"), []);
+  assert.deepEqual(claveManualEn("cached(`pv3:${type}:${id}`, TTL.providers, fn);"), []);
   assert.deepEqual(claveManualEn("cachedIf(`disp:${type}:${id}`, TTL.editorial, fn, ok);"), []);
-  assert.deepEqual(claveManualEn("cached(`serie:oficial:${id}`, TTL.providers, fn);"), []);
+  assert.deepEqual(claveManualEn("cached(`oficial:${type}:${id}`, TTL.providers, fn);"), []);
   const noLocal = ["const k = `videos:${type}:${id}`;", "cached(k, TTL.providers, fn);"].join("\n");
   assert.deepEqual(claveManualEn(noLocal), []);
 });
@@ -442,4 +442,96 @@ test("EN VERDE: claveReco no matchea claveRecoMismo ni claveRecoPerfil", () => {
   const src = "claveReco(h, HUELLA_IDIOMA); claveRecoMismo(t, i, HUELLA_IDIOMA);";
   assert.deepEqual(llamadasAConstructores(src).map((l) => l.nombre).sort(),
     ["claveReco", "claveRecoMismo"]);
+});
+
+// ============================================================================
+// El inventario de claves SIN huella, ahora vigilado
+// ============================================================================
+//
+// 🔴 EL BLOQUEANTE QUE ESTO CIERRA. `CLAVES_SIN_HUELLA` era una constante
+// exportada que **no consumía nadie**: ni el código ni ningún test. Servía de
+// documentación y nada más, así que cuando `pv2:` pasó a `pv3:` y
+// `serie:oficial:` a `oficial:`, el barrido siguió en verde vigilando dos
+// familias que ya no existen.
+//
+// Ahora el inventario se hace valer: toda familia de clave que el código use de
+// verdad tiene que estar declarada, o como constructor localizado o acá.
+
+/** Los prefijos de familia que aparecen en llamadas de cache del código. */
+function familiasUsadas(): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const archivo of [...fuentes("lib"), ...fuentes("app"), ...fuentes("components")]) {
+    const src = readFileSync(archivo, "utf8");
+    for (const m of src.matchAll(/\bcached(?:Loc)?(?:If)?\s*\(\s*[`"']([a-z0-9:_-]+)/gi)) {
+      // El prefijo ESTÁTICO completo: todo lo anterior al `${`, que es donde
+      // empieza la parte variable. No se trunca en el primer `:` — hay familias
+      // de dos segmentos (`people:directors`, `genre:covers:`, `ed:pub:`) y
+      // cortarlas hacía que ninguna matcheara su declaración.
+      const familia = m[1];
+      const previos = out.get(familia) ?? [];
+      if (!previos.includes(archivo)) previos.push(archivo);
+      out.set(familia, previos);
+    }
+  }
+  return out;
+}
+
+test("toda familia usada en el código está declarada, localizada o no", () => {
+  const usadas = familiasUsadas();
+  const sinDeclarar: string[] = [];
+  for (const [familia, archivos] of usadas) {
+    // En los dos sentidos: el uso puede ser más largo que la declaración
+    // (`genre:covers:v2` contra `genre:covers:`) o exactamente igual.
+    const declarada = CLAVES_SIN_HUELLA.some((c) => familia.startsWith(c) || c.startsWith(familia))
+      || FAMILIAS_LOCALIZADAS.some((f) => familia.startsWith(f));
+    if (!declarada) sinDeclarar.push(`${familia} (${archivos.join(", ")})`);
+  }
+  assert.deepEqual(sinDeclarar, [],
+    "familias de clave que el código usa y nadie declaró:\n" + sinDeclarar.join("\n"));
+});
+
+test("ninguna familia DECLARADA sin huella quedó sin uso", () => {
+  // El otro lado del mismo problema: una entrada que sobrevive a la clave que
+  // describía es exactamente lo que pasó con `pv2:` y `serie:oficial:`.
+  const usadas = [...familiasUsadas().keys()];
+  const huerfanas = CLAVES_SIN_HUELLA.filter(
+    (c) => !usadas.some((u) => u.startsWith(c) || c.startsWith(u)),
+  );
+  assert.deepEqual(huerfanas, [],
+    "declaradas sin huella que ya no usa nadie: " + huerfanas.join(", "));
+});
+
+test("CANARIO: una clave manual `pv3:` se detecta como familia usada", () => {
+  const familias = [...familiasUsadas().keys()];
+  assert.ok(familias.includes("pv3:"), `no vio pv3:. Vio: ${familias.join(", ")}`);
+});
+
+test("CANARIO: una clave manual `oficial:` se detecta como familia usada", () => {
+  const familias = [...familiasUsadas().keys()];
+  assert.ok(familias.includes("oficial:"), `no vio oficial:. Vio: ${familias.join(", ")}`);
+});
+
+test("CANARIO: las familias viejas ya NO se usan en código ejecutable", () => {
+  const familias = [...familiasUsadas().keys()];
+  assert.equal(familias.includes("pv2:"), false, "quedó una clave pv2: viva");
+  assert.equal(familias.includes("serie:"), false, "quedó una clave serie:oficial: viva");
+});
+
+test("`pv3:` y `oficial:` NO llevan huella de idioma, y está verificado", () => {
+  // No se hereda del nombre anterior: se midió contra TMDB el 2026-08-31.
+  //
+  //  · `pv3:` guarda códigos de plataforma, el link agregador de TMDB, un
+  //    booleano y tres contadores. El link NO cambia con el idioma —su slug sale
+  //    del título ORIGINAL, en inglés, aunque se pida es-ES— y los contadores
+  //    son números.
+  //  · `oficial:` guarda fecha de estreno, ids de red y `homepage`. Medido en
+  //    tres títulos con es-ES, es-MX y en-US: el `homepage` es IDÉNTICO en los
+  //    tres. TMDB no lo traduce.
+  //
+  // Ponerles huella fabricaría espacios de caché por idioma para datos que no
+  // cambian con el idioma: más arranques fríos a cambio de nada.
+  for (const f of ["pv3:", "oficial:"] as const) {
+    assert.ok(CLAVES_SIN_HUELLA.includes(f), `${f} debería estar declarada sin huella`);
+    assert.equal(FAMILIAS_LOCALIZADAS.includes(f), false, `${f} no puede ser localizada`);
+  }
 });
