@@ -983,9 +983,10 @@ Rama `fix/disponibilidad-oficial`. **No mergeada al escribir esto.**
 - **Un solo resolvedor** decide "está en X" para toda la app
   (`lib/disponibilidad.ts`). Antes cada superficie decidía sola: por eso el
   arreglo de Moria vivía sólo en la ficha.
-- **Evidencia oficial estricta** para series cuyo dato regional TMDB no tiene
-  (`lib/enlace-oficial.ts`): red + enlace oficial específico + estrenada + sin
-  contradicción. **Sólo Disney+ habilitada**, verificada contra datos reales.
+- **Evidencia oficial** para títulos cuyo dato regional TMDB no tiene
+  (`lib/enlace-oficial.ts`). **Al integrarse cubría sólo Disney+ y sólo series**;
+  desde `feat/evidencia-oficial` cubre **seis plataformas en series y cuatro en
+  películas**, con procedencia `oficial-probable`. Ver el bloque de más abajo.
 - **Registro manual versionado** (`lib/excepciones-disponibilidad.ts`), **vacío**:
   el caso testigo se resuelve por la regla general, no por una excepción.
 - **"Últimos lanzamientos · Series"** mezcla la fuente regional con candidatos
@@ -1024,7 +1025,7 @@ medio.
 
 🔴 **Lo que la prueba local NO puede cubrir**, y hay que mirar después del
 deploy: el comportamiento con Redis real. Local corre en memoria, así que las
-claves nuevas (`home:…v6`, `pv2:`, `ultimos:`, `disp:`, `serie:oficial:`) no se
+claves nuevas (`home:…v6`, `pv3:`, `ultimos:`, `disp:`, `oficial:`) no se
 ejercitaron contra Upstash. El primer Home de producción va a ser un arranque
 frío.
 
@@ -1045,3 +1046,32 @@ el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide
 14 días desde `week` y el ranking más nuevo de Netflix es del 2026-08-16, así que
 volvió a vencer. **Moria NO está resuelta hoy**, ni acá ni en `main`. La regla
 está cubierta por 23 tests apuntados al resolvedor.
+
+## Evidencia oficial general — rama `feat/evidencia-oficial` (2026-08-31)
+
+**Sin mergear al escribir esto.** Falta prueba manual y autorización.
+
+Generaliza lo que la tanda anterior había dejado atado a **una** plataforma y a
+**series**.
+
+- **`tmdb-ar` sigue siendo la evidencia prioritaria.** Si TMDB informa cualquier
+  `flatrate` argentino —aunque Yump no mapee ese proveedor— **ningún respaldo se
+  consulta ni se aplica**.
+- **`oficial-probable`** (antes `enlace-oficial`) cubre **seis plataformas en
+  series** y **cuatro en películas**. Series: red + enlace. Películas: dominio y
+  ruta oficial específica, **sin `networks`**. Max y Paramount+ **no** se
+  infieren para películas: midieron 0 de 30.
+- **El criterio es cobertura, no certeza**, por decisión del dueño: mejor mostrar
+  ocasionalmente algo que no está, que ocultar mucho que sí está. Medido contra
+  verdad de campo: **144 + 22 aciertos, cero falsos positivos**.
+- **`pv3:`** guarda un resumen regional compacto —cuántas regiones hay, cuántas
+  informan cada plataforma, cuántas ninguna— en vez de ids deduplicados, que
+  perdían la frecuencia. Medido: **170 B/título contra 197**, o sea más chico.
+- **`oficial:`** reemplaza a `serie:oficial:` y cubre los dos tipos.
+- **Moria ya no depende del Top 10** para su disponibilidad: resuelve Netflix por
+  enlace oficial, que no vence.
+
+🔴 **El Top 10 NO se tocó, y su issue #13 sigue abierto**: el ranking vuelve a
+vencer porque la guarda mide 14 días desde `week`. Que Moria ya no lo necesite
+para la ficha no arregla el bloque "Lo más visto esta semana", que sigue cayendo
+a "Lo más popular ahora" cuando la evidencia vence.

@@ -170,7 +170,7 @@ export async function disponibilidadDe(
 }
 
 // El link del agregador para un título. Reusa el MISMO `cached` de providersOf
-// (clave `pv2:${type}:${id}`), así que en un listado ya enriquecido con
+// (clave `pv3:${type}:${id}`), así que en un listado ya enriquecido con
 // cardsByIds no cuesta ningún request extra a TMDB.
 export async function watchLinkFor(type: MediaType, id: number): Promise<string | null> {
   return (await providersOf(type, id)).watchLink;

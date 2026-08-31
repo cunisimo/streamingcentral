@@ -69,8 +69,9 @@ entra en la tanda 2 como en las otras diez (once en total, contándola).
 
 ## Superficies que NO producen títulos
 
-`pv2:` (códigos de plataforma y los ids de proveedor de otras regiones,
-deduplicados; era `pv:`),
+`pv3:` (códigos de plataforma y el resumen regional: tres contadores, no un
+mapa; antes `pv:` y `pv2:`), `oficial:` (redes, `homepage` y estreno; antes
+`serie:oficial:`),
 `videos:` (key de YouTube), `genre:covers:`
 (rutas de póster), `people:directors` (`knownFor` siempre vacío), `ed:pub:`
 (ids), `blocklist:` (ids).

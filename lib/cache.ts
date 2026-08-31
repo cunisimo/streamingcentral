@@ -77,7 +77,7 @@ export const TTL = {
   // Payload compuesto del Home.
   //
   // El número lo manda la cuota de Upstash, no el producto. Rearmar el Home
-  // cuesta 400-700 comandos de Redis (un `card:` y un `pv2:` por cada uno de los
+  // cuesta 400-700 comandos de Redis (un `card:` y un `pv3:` por cada uno de los
   // ~230 títulos); la visita que pega en cache cuesta 1. Con TTL de 1 hora eso
   // daba 24 rearmados por día ≈ 360.000 comandos al mes POR COMBINACIÓN de
   // plataformas: el 72% del plan gratuito (500.000/mes) consumido por una sola
@@ -156,7 +156,7 @@ function anotar(fn: (m: CacheMetrics) => void) {
 // se descarga en el siguiente microtask y sale un MGET por lote.
 //
 // Deduplicar la cola es parte del ahorro y no un extra: `titleCard` pide el
-// mismo `pv2:` que después vuelve a pedir `toUITitle`.
+// mismo `pv3:` que después vuelve a pedir `toUITitle`.
 //
 // 100 por lote: Upstash cobra el MGET como UN comando sin importar cuántas
 // claves lleve, así que el único límite real es el tamaño de la respuesta
@@ -281,7 +281,7 @@ async function guardar(key: string, data: unknown, ttl: number) {
 // pasaba el barrido.
 //
 // Por qué no se le puso el tipo a `cached` a secas: hay siete familias que NO
-// son localizadas (`pv2:`, `videos:`, `genre:covers:`…) y obligarlas a fabricar
+// son localizadas (`pv3:`, `videos:`, `genre:covers:`…) y obligarlas a fabricar
 // una marca que no les corresponde solo confundiría.
 export function cachedLoc<T>(
   key: ClaveLocalizada, ttl: number, fetcher: () => Promise<T>,

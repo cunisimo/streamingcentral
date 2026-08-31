@@ -892,10 +892,15 @@ segundo barre la red Disney+ de los últimos 60 días y escribe
    ⚠️ Si esa fecha tiene más de 14 días, **la evidencia está vencida y ningún
    título la recibe**. Es lo que pasaba el 2026-08-30 (issue #14). No es un bug
    de la resolución.
-3. **¿Es una serie con red y enlace oficial?** Se aplica la regla estricta de
-   `lib/enlace-oficial.ts`. Las seis condiciones son simultáneas, y la que más
-   sorprende es el **locale**: un `homepage` con `/es-es/` se rechaza por ser de
-   España.
+3. **¿Tiene enlace oficial?** Se aplica la regla de `lib/enlace-oficial.ts`.
+   **Series**: red + enlace de la misma plataforma, en las seis soportadas.
+   **Películas**: sólo el enlace, en Netflix, Disney+, Prime Video y Apple TV+ —
+   Max y Paramount+ no se infieren para películas.
+
+   Lo que más sorprende al depurar: **cualquier locale se acepta** (`/br/`,
+   `/es-es/`, `/ja-jp/`), porque identifica la tienda que generó el enlace y no
+   dónde está disponible. Lo que se rechaza es la RUTA genérica: `/browse`,
+   `/search`, la portada. Y `amazon.com/dp/` queda afuera por ser la tienda.
 4. **Si nada aplica**, la salida es el registro manual
    (`lib/excepciones-disponibilidad.ts`), con vencimiento obligatorio. Es la
    última opción, no la primera.
@@ -905,7 +910,7 @@ segundo barre la red Disney+ de los últimos 60 días y escribe
 El server loguea cada resolución que NO viene de TMDB:
 
 ```
-[disponibilidad] tv:275224 -> d (enlace-oficial)
+[disponibilidad] tv:275224 -> d (oficial-probable)
 ```
 
 Sin esa línea, la decisión fue `tmdb-ar` o no hubo evidencia.

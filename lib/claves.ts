@@ -140,21 +140,41 @@ export function clavePeoplePopular(page: number, huella: string): ClaveLocalizad
 // huella. Están acá para que la lista completa viva en un solo lugar y el
 // barrido pueda distinguir "no lleva huella" de "se olvidaron de ponerla".
 //
-//   pv2:<tipo>:<id>         códigos de plataforma, si AR tiene algún flatrate,
-//                           y los ids de proveedor DEDUPLICADOS de las otras
-//                           regiones (no un mapa por región: ver `providersOf`
-//                           en lib/enrich.ts). Era `pv:`; la versión subió al
-//                           sumar esos dos campos
+//   pv3:<tipo>:<id>         códigos de plataforma, si AR tiene algún flatrate,
+//                           y el RESUMEN REGIONAL: cuántas regiones hay, cuántas
+//                           informan cada plataforma soportada, y cuántas no
+//                           traen ninguna. No es un mapa por región — ver
+//                           `resumenRegional` en lib/enlace-oficial.ts.
+//                           Historia de la clave: `pv:` no tenía datos
+//                           regionales; `pv2:` guardaba ids DEDUPLICADOS, que
+//                           perdían la frecuencia y no servían para comprobar
+//                           la dominancia por regiones; `pv3:` cuenta regiones
 //   disp:<tipo>:<id>        disponibilidad ya resuelta de un título vacío en AR
-//   serie:oficial:<id>      redes/homepage/estreno para la regla de enlace oficial
+//   oficial:<tipo>:<id>     redes, homepage y estreno para la regla de evidencia
+//                           oficial. Era `serie:oficial:<id>` y sólo cubría
+//                           series; ahora cubre los dos tipos, y por eso lleva
+//                           el tipo en la clave
 //   videos:<tipo>:<id>      key de YouTube; ya pide el idioma original
 //   genre:covers:v2         rutas de póster
 //   people:directors        knownFor siempre vacío
 //   ed:pub:<tipo>           ids
 //   blocklist:<chip>        ids
+//
+// 🔴 ESTA LISTA SE HACE VALER. Era una constante que no consumía nadie —ni el
+// código ni un test— así que cuando `pv2:` pasó a `pv3:` y `serie:oficial:` a
+// `oficial:`, el barrido siguió en verde vigilando dos familias muertas.
+// `lib/claves.test.ts` ahora exige que toda familia usada esté declarada y que
+// ninguna declarada quede huérfana.
+//
+// ⚠️ QUE NO LLEVEN HUELLA ESTÁ MEDIDO, no heredado del nombre anterior
+// (2026-08-31, contra TMDB): el `link` de `watch/providers` no cambia con el
+// idioma —su slug sale del título ORIGINAL, en inglés, aunque se pida es-ES— y
+// el `homepage` de un título es IDÉNTICO en es-ES, es-MX y en-US. Ponerles
+// huella fabricaría un espacio de caché por idioma para datos que no cambian
+// con el idioma: más arranques fríos a cambio de nada.
 export const CLAVES_SIN_HUELLA = [
-  "pv2:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
-  // Las dos de disponibilidad guardan códigos de plataforma, ids de red y una
-  // URL: ningún título, ninguna sinopsis. No llevan huella y está verificado.
-  "disp:", "serie:oficial:",
+  "pv3:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
+  // Las dos de disponibilidad guardan códigos de plataforma, ids de red, una
+  // URL y contadores: ningún título, ninguna sinopsis.
+  "disp:", "oficial:",
 ] as const;
