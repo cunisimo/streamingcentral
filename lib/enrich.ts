@@ -36,11 +36,11 @@ import { resolverDisponibilidad } from "./disponibilidad";
 import {
   hayFallosDisponibilidad, registrarFalloDisponibilidad, withFallosDisponibilidad,
 } from "./fallos-disponibilidad";
-import { redesDePlataforma } from "./enlace-oficial";
+import { redesDePlataforma, resumenRegional } from "./enlace-oficial";
 import {
   paginarUltimos, plataformasValidas, type CandidatoUltimos, type PaginaRegional,
 } from "./ultimos";
-import type { DatosSerie } from "./enlace-oficial";
+import type { DatosTitulo, ResumenRegional } from "./enlace-oficial";
 import { excludedGenres, audienceRule } from "./audience";
 import { ordenarPorRelevancia } from "./busqueda-orden";
 import { primaryCountry } from "./countries";
@@ -66,28 +66,24 @@ const onUserPlatforms = (i: UITitle, providers: PlatformCode[]) =>
   i.platforms.some((c) => providers.includes(c));
 
 // providers de un título en AR (cacheado)
-//   -> { codes, links, watchLink, hayFlatrateAR, idsOtrasRegiones }
+//   -> { codes, links, watchLink, hayFlatrateAR, reg }
 //
-// ⚠️ `idsOtrasRegiones` NO es un mapa por región: es el conjunto DEDUPLICADO de
-// `provider_id` de `flatrate` vistos en cualquier región que no sea AR. Lo usa
-// SÓLO el chequeo de contradicción de `lib/enlace-oficial.ts`, que deriva dos
-// booleanos y no necesita saber qué región dice qué. Se guarda acá, en la misma
-// entrada, para no pagar un segundo `watch/providers` por título.
+// ⚠️ `reg` NO es un mapa por región: son tres contadores. Guardar
+// `watch/providers` entero cuesta **1214 B por título** contra **170** de esto,
+// medido sobre títulos con 93 regiones de promedio. Si alguna regla futura
+// necesita saber QUÉ región dice qué, hay que volver al mapa **y subir la
+// versión de la clave**: desde los contadores no se reconstruye.
 //
-// El mapa completo se midió y se descartó: **1273 B por título contra 296 B**
-// (+495% vs +38% sobre los 214 B originales), o sea 286 KB contra 66 KB por Home
-// frío. Si alguna regla futura necesita la granularidad por región hay que
-// volver al mapa **y subir la versión de la clave**: desde el conjunto plano no
-// se reconstruye.
+// 🔴 LA CLAVE ES `pv3:` Y ESE CAMBIO ES DELIBERADO. Las entradas de `pv2:`
+// traían ids deduplicados, que no sirven para el chequeo de dominancia por
+// regiones: leerlas como "sin datos" volvería permisivo un chequeo que sólo
+// rechaza. Un arranque frío de proveedores es barato; una afirmación falsa no.
 //
-// 🔴 LA CLAVE ES `pv2:` Y ESE CAMBIO ES DELIBERADO. Las entradas viejas no
-// traen estos campos, y leerlas como "sin datos regionales" sería peor que
-// inútil: el chequeo de contradicción sólo RECHAZA, así que un conjunto vacío lo
-// vuelve permisivo y durante las 8 h del TTL podría afirmar una disponibilidad
-// que con los datos completos se habría rechazado. Un arranque frío de
-// proveedores es barato; una afirmación falsa no.
+// Y medido, `pv3:` es **más chico** que `pv2:`: 170 B contra 197, o sea −6,1 KB
+// en un Home de 230 títulos. Los contadores son a lo sumo seis; el array de ids
+// crecía con los proveedores distintos de 93 regiones.
 async function providersOf(type: MediaType, id: number) {
-  return cached(`pv2:${type}:${id}`, TTL.providers, async () => {
+  return cached(`pv3:${type}:${id}`, TTL.providers, async () => {
     const r = await watchProviders(type, id);
     const ar = r.results?.["AR"];
     const codes = new Set<PlatformCode>();
@@ -101,18 +97,9 @@ async function providersOf(type: MediaType, id: number) {
     // esa diferencia decide si los respaldos pueden hablar. Ver el comentario de
     // `hayFlatrateAR` en lib/disponibilidad.ts.
     const hayFlatrateAR = (ar?.flatrate ?? []).length > 0;
-    // Ids de flatrate de las OTRAS regiones, deduplicados. No se guarda el mapa
-    // por región: medido, cuesta 1273 B por título contra 296 B de esto, y la
-    // única regla que lo consume deriva dos booleanos. Ver `idsOtrasRegiones`
-    // en lib/enlace-oficial.ts.
-    const otras = new Set<number>();
-    for (const [region, v] of Object.entries(r.results ?? {})) {
-      if (region === "AR") continue;
-      for (const x of v?.flatrate ?? []) otras.add(x.provider_id);
-    }
     return {
       codes: [...codes], links, watchLink: ar?.link ?? null,
-      hayFlatrateAR, idsOtrasRegiones: [...otras],
+      hayFlatrateAR, reg: resumenRegional(r.results ?? {}),
     };
   });
 }
@@ -121,21 +108,25 @@ async function providersOf(type: MediaType, id: number) {
 // Disponibilidad: el ÚNICO camino por el que la app decide "está en X".
 // ---------------------------------------------------------------------------
 
-// Los datos que la regla de enlace oficial necesita, cacheados aparte de la
-// ficha para no arrastrar el detalle entero. Sólo se piden cuando hacen falta.
-async function datosSerieDe(
-  type: MediaType, id: number, idsOtrasRegiones: number[],
-): Promise<DatosSerie | null> {
-  if (type !== "tv") return null;
-  const d = await cached(`serie:oficial:${id}`, TTL.providers, async () => {
-    const det = await titleDetails("tv", id);
+// Los datos que la regla oficial necesita, cacheados aparte de la ficha para no
+// arrastrar el detalle entero. Sólo se piden cuando hacen falta.
+//
+// Cubre los DOS tipos. Para series el detalle trae `networks` y `homepage`; para
+// películas TMDB no publica `networks` y sólo sirve el `homepage` — la regla lo
+// sabe y decide por el enlace. Es la única llamada nueva que agrega esta
+// corrección, y sólo la pagan las películas sin proveedor argentino.
+async function datosTituloDe(
+  type: MediaType, id: number, reg: ResumenRegional,
+): Promise<DatosTitulo | null> {
+  const d = await cached(`oficial:${type}:${id}`, TTL.providers, async () => {
+    const det = await titleDetails(type, id);
     return {
-      estreno: det.first_air_date ?? null,
+      estreno: det.first_air_date ?? det.release_date ?? null,
       redes: (det.networks ?? []).map((n) => n.id),
       homepage: det.homepage ?? "",
     };
   });
-  return { ...d, idsOtrasRegiones };
+  return { tipo: type, ...d, reg };
 }
 
 /**
@@ -154,7 +145,7 @@ export async function disponibilidadDe(
   prov: {
     codes: PlatformCode[];
     hayFlatrateAR?: boolean;
-    idsOtrasRegiones?: number[];
+    reg?: ResumenRegional;
   },
 ): Promise<PlatformCode[]> {
   if (prov.codes.length || prov.hayFlatrateAR) return prov.codes;
@@ -163,7 +154,7 @@ export async function disponibilidadDe(
     const r = await resolverDisponibilidad({
       tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR, hoy: hoyAR(),
       leerTopOficial: disponiblesEnTopOficial,
-      leerDatosSerie: () => datosSerieDe(type, id, prov.idsOtrasRegiones ?? []),
+      leerDatosTitulo: () => datosTituloDe(type, id, prov.reg ?? { rt: 0, rp: {}, ru: 0 }),
     });
     fallo = r.fallo;
     // La señal sale de esta función y llega a las cachés de AFUERA. Sin esto,

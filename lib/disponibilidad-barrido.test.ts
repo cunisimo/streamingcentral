@@ -12,7 +12,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { PLATAFORMAS_OFICIALES } from "./enlace-oficial.ts";
+import { ADAPTADORES_OFICIALES } from "./enlace-oficial.ts";
 
 const raiz = path.resolve(import.meta.dirname, "..");
 const leer = (p: string) => fs.readFileSync(path.join(raiz, p), "utf8");
@@ -126,19 +126,35 @@ test("el dominio se compara por host completo, nunca con includes/endsWith", () 
   assert.doesNotMatch(src, /hostname\.endsWith\(/, "endsWith acepta subdominios ajenos");
 });
 
-test("la regla exige https, ruta de título y locale propio", () => {
+test("la regla exige https y una ruta de título", () => {
   const src = codigo("lib/enlace-oficial.ts");
   assert.match(src, /u\.protocol !== "https:"/);
-  assert.match(src, /rutaTitulo\.test\(/);
-  assert.match(src, /locale !== LOCALE_AR/);
+  assert.match(src, /def\.rutas\.some\(/, "dejó de exigir una ruta de título");
+});
+
+test("el locale ya NO se rechaza, y quitarlo no afloja la ruta", () => {
+  // Medido: rechazar locales extranjeros costaba 4 series y el 100% de la señal
+  // de películas, y evitaba 0 falsos positivos. Lo que NO puede pasar es que
+  // quitar el prefijo deje pasar una portada, y eso lo fija el test funcional
+  // "el locale no puede tapar una ruta genérica" de evidencia-oficial.test.ts.
+  const src = codigo("lib/enlace-oficial.ts");
+  assert.doesNotMatch(src, /LOCALE_AR/, "volvió la allowlist de locales");
+  assert.match(src, /sinLocale\(u\.pathname\)/);
+  assert.ok(existeArchivo("lib/evidencia-oficial.test.ts"),
+    "se borró el test de comportamiento de la regla");
 });
 
 test("no se habilitó ninguna plataforma sin verificar", () => {
-  // Hoy hay UNA. El número está acá para que sumar otra sea una decisión y no
-  // un descuido: cada combinación de red, dominio y ruta hay que medirla.
-  assert.equal(PLATAFORMAS_OFICIALES.length, 1,
-    "se agregó una plataforma: verificá red, dominio, ruta e ids globales, y actualizá este número");
-  assert.equal(PLATAFORMAS_OFICIALES[0].code, "d");
+  // SEIS para series, CUATRO para películas. Los números están acá para que
+  // sumar una plataforma sea una decisión y no un descuido: cada combinación de
+  // red, dominio, ruta e ids globales hay que medirla contra datos reales.
+  // Ver docs/medidas/2026-08-31-medicion-regla-final.md.
+  assert.equal(ADAPTADORES_OFICIALES.length, 6,
+    "cambió el registro: verificá red, dominio, ruta e ids globales, y actualizá este número");
+  assert.deepEqual(ADAPTADORES_OFICIALES.filter((a) => a.series).map((a) => a.code).sort(),
+    ["at", "d", "m", "n", "p", "pp"]);
+  assert.deepEqual(ADAPTADORES_OFICIALES.filter((a) => a.peliculas).map((a) => a.code).sort(),
+    ["at", "d", "n", "p"]);
 });
 
 test("el caso testigo no está hardcodeado en ningún lado", () => {
