@@ -44,6 +44,54 @@
 // los 20 ids que Yump mapea dejaría afuera 7 series y 1 película de la ventana
 // medida. Se conserva la semántica que ya había.
 
+/**
+ * Una fila de la tabla `providers`, y la forma de `watch/providers`.
+ *
+ * Los tipos se declaran acá en vez de importarse de `lib/tmdb.ts` por el mismo
+ * motivo que en `reconciliar.ts`: importarlos, aunque fuera sólo el tipo, ataría
+ * este módulo a un archivo que lee `Deno.env` **en el scope del módulo**. Desde
+ * Node eso revienta al importar, y entonces esta lógica no se podría probar.
+ */
+export interface FilaProveedor {
+  id: number;
+  name: string;
+  logo_path: string | null;
+  display_priority: number | null;
+}
+
+export interface RespuestaProveedores {
+  results?: Record<string, {
+    link?: string;
+    flatrate?: {
+      provider_id: number;
+      provider_name: string;
+      logo_path?: string | null;
+      display_priority?: number | null;
+    }[];
+  } | undefined>;
+}
+
+/**
+ * Las filas de proveedor AR de una respuesta de `watch/providers`.
+ *
+ * 🔴 HAY UNA SOLA, Y ESE ES EL PUNTO. El sync lee los proveedores por DOS
+ * caminos: sueltos para películas (`/movie/{id}/watch/providers`) y dentro del
+ * detalle de la serie (`append_to_response=watch/providers`, que ahorra una
+ * llamada por serie). Las dos respuestas tienen la misma forma.
+ *
+ * El riesgo no es que difieran los datos —medido sobre 20 series reales:
+ * idénticos en 20 de 20— sino que alguien escriba un segundo extractor y con el
+ * tiempo se separen. Hay un test.
+ */
+export function arFlatrateDe(r: RespuestaProveedores): FilaProveedor[] {
+  return (r?.results?.["AR"]?.flatrate ?? []).map((p) => ({
+    id: p.provider_id,
+    name: p.provider_name,
+    logo_path: p.logo_path ?? null,
+    display_priority: p.display_priority ?? null,
+  }));
+}
+
 /** TMDB rechaza `page` por encima de 500. Es límite de la FUENTE, no una
  * decisión nuestra: no es un `MAX_PAGES` elegido, y pedir la 501 daría un error
  * en vez de menos cobertura. Con la ventana actual sobra —13 páginas— pero una

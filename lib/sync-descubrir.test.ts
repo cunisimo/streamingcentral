@@ -22,9 +22,11 @@
 // ninguna plataforma argentina sigue afuera, tenga la popularidad que tenga.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
-  TOPE_PAGINAS_TMDB, descubrirTodo, filtrarPorProveedorAR, ordenarPorFecha,
+  TOPE_PAGINAS_TMDB, arFlatrateDe, descubrirTodo, filtrarPorProveedorAR, ordenarPorFecha,
 } from "../supabase/functions/tmdb-sync/lib/descubrir.ts";
+
 
 /** Una fuente paginada de mentira, que además anota qué páginas le pidieron. */
 function fuente(paginas: { id: number; fecha: string }[][], total = paginas.length) {
@@ -175,4 +177,91 @@ test("una página que la reparación vacía NO corta la paginación", async () =
   const r = await descubrirTodo({ pedir, clave });
   assert.deepEqual(pedidas, [1, 2, 3], "cortó en la página que la reparación vació");
   assert.deepEqual(r.map((x) => x.id), [1, 3]);
+});
+
+// ============================================================================
+// Detalle y proveedores en UNA llamada
+// ============================================================================
+//
+// El sync pedía DOS cosas por serie: `/tv/{id}` para el `next_episode_to_air` y
+// `/tv/{id}/watch/providers` para el filtro argentino. TMDB permite traer las
+// dos con `append_to_response=watch/providers`, y eso baja el costo de 530
+// llamadas a 271 sin tocar la semántica.
+//
+// Medido sobre 20 series reales del propio discover del sync: **proveedores AR
+// idénticos en 20 de 20** y los campos que el sync usa —`air_date`,
+// `season_number`, `episode_number`, `name` del próximo episodio, y `status`—
+// idénticos en 20 de 20. Los bytes son los mismos (35.085 B sumando las dos
+// respuestas contra 35.094 B en una sola): se transfiere lo mismo en un pedido
+// en vez de dos.
+//
+// ⚠️ Una serie parecía diferir y NO era `append_to_response`: `vote_average` y
+// `vote_count` DEL PRÓXIMO EPISODIO cambiaron entre las dos llamadas, con
+// segundos de diferencia. Es un dato vivo, y el sync no lo usa. Conviene
+// saberlo antes de leer un diff contra una respuesta guardada.
+
+test("los proveedores AR se extraen con UNA sola función, sea cual sea la forma", () => {
+  // La respuesta separada y el bloque `watch/providers` de la combinada tienen
+  // LA MISMA forma. El riesgo no es que difieran los datos —están medidos—, es
+  // que alguien escriba dos extractores y con el tiempo se separen. Hay uno.
+  const respuesta = {
+    results: {
+      AR: { link: "x", flatrate: [
+        { provider_id: 8, provider_name: "Netflix", logo_path: "/n.jpg", display_priority: 3 },
+      ] },
+      US: { link: "y", flatrate: [{ provider_id: 15, provider_name: "Hulu" }] },
+    },
+  };
+  const filas = arFlatrateDe(respuesta);
+  assert.deepEqual(filas, [
+    { id: 8, name: "Netflix", logo_path: "/n.jpg", display_priority: 3 },
+  ]);
+  // Sin AR no hay filas: es el caso que descarta el título.
+  assert.deepEqual(arFlatrateDe({ results: { US: { link: "y", flatrate: [] } } }), []);
+  assert.deepEqual(arFlatrateDe({ results: {} }), []);
+  assert.deepEqual(arFlatrateDe({}), []);
+});
+
+test("una serie ya resuelta NO vuelve a pedir sus proveedores", async () => {
+  // El ahorro entero depende de esto: si el filtro final volviera a llamar por
+  // cada serie, traer los proveedores en el detalle no habría servido de nada.
+  const previos = new Map([["tv:1", [{ id: 8 }]]]);
+  const pedidos: string[] = [];
+  const leer = async (c: { media_type: string; tmdb_id: number }) => {
+    const k = `${c.media_type}:${c.tmdb_id}`;
+    const pre = previos.get(k);
+    if (pre) return pre;
+    pedidos.push(k);
+    return [{ id: 337 }];
+  };
+  const r = await filtrarPorProveedorAR(
+    [{ media_type: "tv", tmdb_id: 1 }, { media_type: "movie", tmdb_id: 2 }], leer,
+  );
+  assert.deepEqual(r.map((x) => x.item.tmdb_id), [1, 2]);
+  assert.deepEqual(pedidos, ["movie:2"], "volvió a pedir los proveedores de la serie");
+});
+
+test("la Edge Function no usa APIs exclusivas de Node", () => {
+  // No hay typechecker de Deno en el repo (ni `deno.json`, ni CI), así que esto
+  // es lo que sí se puede verificar sin instalar nada: que el código de la
+  // función no dependa de APIs que en Deno no existen. `descubrir.ts` además se
+  // ejecuta de verdad en estos tests, que es la mejor prueba de que importa y
+  // corre.
+  const raiz = new URL("../supabase/functions/tmdb-sync/", import.meta.url);
+  const archivos = [
+    "lib/descubrir.ts", "lib/providers.ts", "lib/tmdb.ts", "jobs/sync-upcoming.ts",
+  ];
+  for (const rel of archivos) {
+    const src = readFileSync(new URL(rel, raiz), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+    for (const [pat, que] of [
+      [/\brequire\(/, "require()"],
+      [/from "node:/, "import de node:"],
+      [/\bprocess\.env\b/, "process.env"],
+      [/\b__dirname\b/, "__dirname"],
+      [/\bBuffer\b/, "Buffer"],
+    ] as [RegExp, string][]) {
+      assert.doesNotMatch(src, pat, `${rel} usa ${que}, que en Deno no existe`);
+    }
+  }
 });

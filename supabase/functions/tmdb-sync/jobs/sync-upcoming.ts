@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   discover, episodeDetails, FALLBACK_ACTIVO, IDIOMA_BASE, IDIOMA_FALLBACK, MediaType,
-  providerList, RawTitle, tvDetails,
+  providerList, RawTitle, tvDetailsConProveedores,
 } from "../lib/tmdb.ts";
 import {
   descubrirTodo, filtrarPorProveedorAR, ordenarPorFecha,
@@ -11,7 +11,7 @@ import {
   sumarEpisodio, sumarLote,
 } from "../lib/reparar.ts";
 import { aBorrar } from "../lib/reconciliar.ts";
-import { arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
+import { arFlatrateDe, arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
 
 // Parámetros (env de la función, con defaults).
 const WINDOW_DAYS = Number(Deno.env.get("SYNC_WINDOW_DAYS") ?? "90");
@@ -159,6 +159,9 @@ async function collectMovies(
 // antes era invisible.
 async function collectSeries(
   from: string, to: string, metricas: MetricasIdioma, provAR: string,
+  // Los proveedores que el detalle ya trajo, para que el filtro final no vuelva
+  // a pedirlos. Sin esto, traerlos con `append_to_response` no ahorraría nada.
+  proveedores: Map<string, ProviderRow[]>,
 ): Promise<Candidate[]> {
   const shows = await recorrer("tv", {
     "air_date.gte": from,
@@ -171,11 +174,16 @@ async function collectSeries(
   const out: Candidate[] = [];
   for (let i = 0; i < shows.length; i += BATCH) {
     const slice = shows.slice(i, i + BATCH);
-    const details = await Promise.all(slice.map((t) => tvDetails(t.id).catch(() => null)));
+    // UNA llamada por serie: el detalle trae sus proveedores adentro.
+    const details = await Promise.all(
+      slice.map((t) => tvDetailsConProveedores(t.id).catch(() => null)),
+    );
     for (let j = 0; j < slice.length; j++) {
       const t = slice[j];
       const nx = details[j]?.next_episode_to_air;
       if (!nx?.air_date || nx.air_date < from || nx.air_date > to) continue;
+      const wp = details[j]?.["watch/providers"];
+      if (wp) proveedores.set(`tv:${t.id}`, arFlatrateDe(wp));
 
       // `episode_name` sale del DETALLE, así que su reparación es aparte de la
       // de la página. Si no se puede reparar, la serie se cae de la corrida: su
@@ -234,9 +242,10 @@ export async function syncUpcoming(sb: SupabaseClient) {
   const to = iso(new Date(now.getTime() + WINDOW_DAYS * DAY));
 
   const provAR = await idsProveedoresAR();
+  const proveedoresPrevios = new Map<string, ProviderRow[]>();
   const [movies, series] = await Promise.all([
     collectMovies(from, to, metricas, provAR),
-    collectSeries(from, to, metricas, provAR),
+    collectSeries(from, to, metricas, provAR, proveedoresPrevios),
   ]);
   // Orden TOTAL antes de escribir: fecha ascendente, `tmdb_id` como desempate.
   // El orden de llegada no sirve — TMDB reordena sus resultados y las páginas se
@@ -251,9 +260,14 @@ export async function syncUpcoming(sb: SupabaseClient) {
   // qué califica. Un título que TMDB todavía no asocia a ninguna plataforma
   // argentina sigue afuera, tenga la popularidad que tenga.
   const providerCatalog = new Map<number, ProviderRow>();
-  const kept = (await filtrarPorProveedorAR(
-    all, (c) => arFlatrateProviders(c.media_type, c.tmdb_id).catch(() => []), BATCH,
-  )).map(({ item, providers }) => {
+  // Las series ya traen sus proveedores del detalle; las películas se piden acá.
+  // El resultado es el mismo: la misma función extrae las filas en los dos
+  // caminos, y las respuestas tienen la misma forma.
+  const kept = (await filtrarPorProveedorAR(all, (c) => {
+    const pre = proveedoresPrevios.get(`${c.media_type}:${c.tmdb_id}`);
+    if (pre) return Promise.resolve(pre);
+    return arFlatrateProviders(c.media_type, c.tmdb_id).catch(() => []);
+  }, BATCH)).map(({ item, providers }) => {
     for (const p of providers) providerCatalog.set(p.id, p);
     return { cand: item, providers };
   });

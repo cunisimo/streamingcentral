@@ -365,18 +365,85 @@ argentino, y usar los 20 ids que Yump mapea dejaría afuera 7 series y 1 pelícu
 
 ### Costo medido (2026-08-31, ventana de 90 días)
 
-| | Antes | Ahora |
-|---|---|---|
-| Páginas de discover | 6 (3 + 3) | **14** (1 + 13) |
-| Llamadas a TMDB | ~186 | **530** |
-| Títulos crudos | 120 | 261 |
-| Únicos tras dedup | 120 | 255 |
-| **Filas escritas** | **36** | **255** |
-| Duración | — | **26,7 s** |
+| | Antes | Primera versión | **Optimizado** |
+|---|---|---|---|
+| Páginas de discover | 6 (3 + 3) | 14 (1 + 13) | **14** |
+| Llamadas a TMDB | ~186 | 530 | **277** |
+| Títulos crudos | 120 | 261 | 261 |
+| Únicos tras dedup | 120 | 255 | 255 |
+| **Filas escritas** | **36** | 255 | **255** |
+| Duración | sin medir | 26,7 s | **17,1 s** |
 
-Siete veces más agenda por 2,8 veces más llamadas. El filtro final aceptó
-**255 de 255**: no rechaza nada porque el `discover` ya filtró, pero no es
-redundante — es de donde salen los proveedores de cada fila para el join.
+Siete veces más agenda por 1,5 veces más llamadas que el camino viejo.
+
+**De dónde salió la mitad de las llamadas.** El sync pedía DOS cosas por serie:
+`/tv/{id}` para el `next_episode_to_air` y `/tv/{id}/watch/providers` para el
+filtro argentino. Con `append_to_response=watch/providers` vienen juntas, y con
+259 series eso son 259 pedidos en vez de 518.
+
+Se midió antes de tomarlo, sobre 20 series reales del propio discover del sync:
+**proveedores AR idénticos en 20 de 20**, y los campos que el sync usa
+—`air_date`, `season_number`, `episode_number` y `name` del próximo episodio,
+más `status`— idénticos en 20 de 20. Los bytes son los mismos (35.085 B sumando
+las dos respuestas contra 35.094 B en una): se transfiere lo mismo en un pedido
+en vez de dos.
+
+⚠️ **Una serie parecía diferir y NO era `append_to_response`.** `tv:615` daba
+`vote_average` 6 contra 5,5 y `vote_count` 1 contra 2 **del próximo episodio**,
+entre dos llamadas con segundos de diferencia. Es un dato vivo y el sync no lo
+usa; el control —dos llamadas separadas seguidas— dio idéntico. Conviene tenerlo
+presente antes de leer un diff contra una respuesta guardada.
+
+El filtro final acepta **255 de 255**: no rechaza nada porque el `discover` ya
+filtró, pero no es redundante — es de donde salen los proveedores de cada fila
+para el join, y ahora 253 de esos 255 ya vienen resueltos del detalle.
+
+### Qué escribe una corrida, y por qué NO se agregó un diff
+
+El cron corre **una vez por día** (`0 6 * * *`, pg_cron). Cada corrida:
+
+| Tabla | Operación | Filas |
+|---|---|---|
+| `providers` | upsert por `id` | ≤ 58 |
+| `upcoming_content` | upsert por `tmdb_id,media_type` | **255** |
+| `upcoming_content_providers` | delete de los links + insert | ~255 borrados + ~300 insertados |
+| `upcoming_content` | delete de lo que perdió sus proveedores (`aBorrar`) | variable |
+| `upcoming_content` | delete de lo vencido (`release_date < hoy − 2`) | variable |
+
+**Las filas NO se acumulan indefinidamente**: el conjunto está acotado por la
+ventana de 90 días y por el borrado de vencidos. Hoy la agenda tiene **44 filas**
+(medidas por la API pública, sin tocar la base); después del cambio quedaría en
+torno a **255**.
+
+**Se reescriben casi todas, todos los días.** Medido: de una ventana a la del día
+siguiente, **256 de 259 series son las mismas (98,8%)**; salen 3 y entran 2. Y
+como el payload lleva `updated_at`, cada fila es un UPDATE real aunque el
+contenido no haya cambiado.
+
+🔴 **Aun así no se agregó detección de cambios, a propósito.** El ahorro serían
+~250 UPDATE por día (~7.500 al mes), que es insignificante para Postgres, y
+`updated_at` es **el criterio de cierre del issue #7** ("ninguna fila con
+`updated_at` anterior a la última corrida"). Un diff lo volvería inútil. La
+complejidad no se paga.
+
+⚠️ Lo que **no** se pudo medir: cuántas de esas 255 tienen además el episodio
+cambiado. Requiere leer la tabla, y esta tanda no ejecuta SQL.
+
+### Presupuesto
+
+| | Antes | Optimizado | Margen |
+|---|---|---|---|
+| **TMDB** | ~186/día · ~5.580/mes | **277/día · ~8.310/mes** | el límite publicado es de ~50 req/s, no diario; **no pude verificar una cuota diaria** |
+| **Supabase Edge** — invocaciones | 1/día · 30/mes | **igual** | 30 sobre 500.000/mes del plan gratuito |
+| **Supabase Edge** — duración | sin medir | **17,1 s** | no pude verificar el tope de wall-clock del plan desde el repo |
+| **Supabase DB** — filas | 44 | **~255** | ~255 KB; acotado por la ventana, no crece sin fin |
+| **Supabase DB** — escrituras | ~36 upsert/día | **~255 upsert + ~555 de links por día** | ~24.000 operaciones al mes |
+| **Vercel** | — | **sin invocaciones nuevas** | `/api/upcoming` devuelve ~6× más filas: sube el payload, no la cantidad de pedidos |
+| **Upstash** | — | **cero** | `/api/upcoming` es `force-dynamic` y no cachea |
+
+**No es costo cero**: suben las llamadas a TMDB (1,5×), la duración y las
+escrituras. Lo que sí se puede afirmar es que nada de eso se acerca a un límite
+conocido; los dos límites que **no** pude verificar están marcados arriba.
 
 ### Limitación residual de la fuente
 

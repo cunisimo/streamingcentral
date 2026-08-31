@@ -81,14 +81,39 @@ export function discover(type: MediaType, params: Record<string, string>) {
   return tmdb<Paged<RawTitle>>(`/discover/${type}`, params);
 }
 
+export interface ProvidersResponse {
+  results?: Record<string, { link?: string; flatrate?: RawProvider[] } | undefined>;
+}
+
 export function watchProviders(type: MediaType, id: number) {
-  return tmdb<{ results: Record<string, { link: string; flatrate?: RawProvider[] }> }>(
-    `/${type}/${id}/watch/providers`,
-  );
+  return tmdb<ProvidersResponse>(`/${type}/${id}/watch/providers`);
 }
 
 export function tvDetails(id: number, language?: string) {
   return tmdb<TvDetail>(`/tv/${id}`, language ? { language } : {});
+}
+
+/**
+ * El detalle de una serie CON sus proveedores, en UNA sola llamada.
+ *
+ * El sync pedía dos cosas por serie —`/tv/{id}` para el `next_episode_to_air` y
+ * `/tv/{id}/watch/providers` para el filtro argentino— y con 259 series eso son
+ * 518 pedidos. `append_to_response` las trae juntas: 259.
+ *
+ * Medido sobre 20 series reales antes de tomarlo: proveedores AR **idénticos en
+ * 20 de 20**, y los campos que el sync usa (`air_date`, `season_number`,
+ * `episode_number` y `name` del próximo episodio, más `status`) idénticos en 20
+ * de 20. Los bytes son los mismos: se transfiere lo mismo en un pedido en vez
+ * de dos.
+ *
+ * ⚠️ La clave de la respuesta es literalmente `"watch/providers"`, con la
+ * barra. No es un typo.
+ */
+export function tvDetailsConProveedores(id: number, language?: string) {
+  return tmdb<TvDetail & { "watch/providers"?: ProvidersResponse }>(
+    `/tv/${id}`,
+    { ...(language ? { language } : {}), append_to_response: "watch/providers" },
+  );
 }
 
 /**
