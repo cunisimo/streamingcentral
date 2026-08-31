@@ -337,7 +337,71 @@ anterior a la última corrida del sync.
 
 ## #8 — `upcoming_content`: sesgo permanente hacia lo popular
 
-**Estado:** abierto · **Prioridad:** media · **Abierto:** 2026-08-15
+**Estado: CORREGIDO el 2026-08-31** en `fix/proximamente-sin-popularidad`, sin
+mergear al escribir esto · **Abierto:** 2026-08-15
+
+### El arreglo
+
+El descubrimiento **ya no ordena ni corta por popularidad**. Se recorre la
+ventana entera hasta `total_pages`, ordenando por fecha, y el filtro de
+proveedor argentino se aplica dentro del propio `discover`.
+
+🔴 **Lo que NO cambió, y es la decisión del dueño:** la exigencia de un
+`flatrate` confirmado para Argentina se conserva intacta. No se usa
+`oficial-probable` para títulos futuros, no se infiere disponibilidad por
+`network + homepage`, y no entra nada que TMDB todavía no asocie a un proveedor
+argentino. Esto corrige **qué se mira**, no qué califica.
+
+**Por qué el filtro va en el `discover` y no después.** Recorrer la ventana sin
+filtrar costaría 95 páginas + 1900 `tvDetails` + 1900 `watch/providers`. Con el
+filtro adentro son 13 páginas y 259 títulos. Sólo vale si no pierde nada, así
+que se midió contra el camino viejo: de las 36 series que conservaba pierde
+**0**, y de un muestreo de la COLA que el código viejo no miraba nunca —páginas
+20, 40, 60, 80 y 95— pierde **0** de las 20 con proveedor AR.
+
+⚠️ La lista de proveedores se le pide a TMDB en cada corrida (58 ids de AR), no
+se toma de `lib/providers-ar.ts`: el filtro final acepta CUALQUIER `flatrate`
+argentino, y usar los 20 ids que Yump mapea dejaría afuera 7 series y 1 película.
+
+### Costo medido (2026-08-31, ventana de 90 días)
+
+| | Antes | Ahora |
+|---|---|---|
+| Páginas de discover | 6 (3 + 3) | **14** (1 + 13) |
+| Llamadas a TMDB | ~186 | **530** |
+| Títulos crudos | 120 | 261 |
+| Únicos tras dedup | 120 | 255 |
+| **Filas escritas** | **36** | **255** |
+| Duración | — | **26,7 s** |
+
+Siete veces más agenda por 2,8 veces más llamadas. El filtro final aceptó
+**255 de 255**: no rechaza nada porque el `discover` ya filtró, pero no es
+redundante — es de donde salen los proveedores de cada fila para el join.
+
+### Limitación residual de la fuente
+
+- **TMDB rechaza `page` por encima de 500.** Es límite de la fuente, no una
+  decisión nuestra. Con la ventana actual sobra (13 páginas), pero **ampliar
+  `SYNC_WINDOW_DAYS` escala esto de forma lineal**: si alguna vez la ventana
+  llegara al tope habría que particionar por fechas, no subir un número.
+- **El filtro temprano depende del índice de proveedores del `discover`.** Si
+  TMDB atrasa ese índice respecto de `watch/providers`, se perderían títulos. Se
+  midieron 56 casos con proveedor AR (36 + 20) y **0 pérdidas**, pero no hay
+  forma de descartarlo del todo.
+- **Las películas siguen casi vacías, y NO es culpa de la paginación**: de 120
+  muestreadas a lo largo de las 130 páginas de la ventana, **0** tenían proveedor
+  argentino. La ventana entera tiene 2. Es el catálogo de TMDB, y es el mismo
+  agujero del issue #16.
+
+### `tv:310290` sigue AFUERA, y está bien
+
+"Mis muertos tristes" **no se resolvió** y no hay que presentarla como
+resuelta. Su popularidad (1.761) ya no la deja afuera —ese corte no existe más—
+pero **TMDB no le informa `flatrate` en ninguna región**, así que el filtro que
+el dueño decidió conservar la descarta. El día que TMDB publique su proveedor
+argentino entra sola, sin tocar una línea. Hay un test que usa sus datos como
+fixture para fijar las dos mitades; **no hay ningún id hardcodeado** en el
+código productivo.
 
 `collectSeries` descubre con `discover/tv` ordenado por **popularidad** y
 `MAX_PAGES = 3`. Medido el 2026-08-15 con la consulta exacta del sync:

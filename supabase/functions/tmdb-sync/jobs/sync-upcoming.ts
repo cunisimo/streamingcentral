@@ -1,8 +1,11 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   discover, episodeDetails, FALLBACK_ACTIVO, IDIOMA_BASE, IDIOMA_FALLBACK, MediaType,
-  RawTitle, tvDetails,
+  providerList, RawTitle, tvDetails,
 } from "../lib/tmdb.ts";
+import {
+  descubrirTodo, filtrarPorProveedorAR, ordenarPorFecha,
+} from "../lib/descubrir.ts";
 import {
   type MetricasIdioma, nuevasMetricas, repararLista, repararNombreEpisodio,
   sumarEpisodio, sumarLote,
@@ -12,8 +15,14 @@ import { arFlatrateProviders, ProviderRow } from "../lib/providers.ts";
 
 // Parámetros (env de la función, con defaults).
 const WINDOW_DAYS = Number(Deno.env.get("SYNC_WINDOW_DAYS") ?? "90");
-const MAX_PAGES = Number(Deno.env.get("SYNC_MAX_PAGES") ?? "3");
 const GRACE_DAYS = Number(Deno.env.get("SYNC_GRACE_DAYS") ?? "2");
+
+// ⚠️ `SYNC_MAX_PAGES` SE ELIMINÓ. Era el corte que definía el bug: con 3
+// páginas ordenadas por popularidad, el sync miraba 60 de 1900 series de la
+// ventana y un título de popularidad baja no entraba nunca. Ahora se recorre
+// hasta `total_pages`; el único tope es el de TMDB (`TOPE_PAGINAS_TMDB`), que
+// es de la fuente y no una decisión nuestra. Si la variable sigue puesta en el
+// entorno de la función, no hace nada.
 const BATCH = 10; // concurrencia de llamadas a TMDB por lote
 
 // Las metricas de idioma se crean POR INVOCACION y se pasan por parametro (ver
@@ -43,104 +52,121 @@ interface Candidate {
   status: string | null;
 }
 
-// Películas con estreno futuro dentro de la ventana. Se descubre por FECHA
-// (sin filtrar por provider en discover) y el filtro de plataforma AR se aplica
-// después con watch/providers, para no perder originales pre-listados.
+/**
+ * Los ids de TODOS los proveedores `flatrate` que TMDB publica para Argentina.
+ *
+ * Se piden en cada corrida (2 llamadas) en vez de tomarse de
+ * `lib/providers-ar.ts`, y es a propósito: el filtro final acepta CUALQUIER
+ * `flatrate` argentino, y usar los 20 ids que Yump mapea dejaría afuera 7
+ * series y 1 película de la ventana medida. Se conserva la semántica que ya
+ * había.
+ */
+async function idsProveedoresAR(): Promise<string> {
+  const [m, t] = await Promise.all([providerList("movie"), providerList("tv")]);
+  const ids = new Set<number>();
+  for (const p of [...m.results, ...t.results]) ids.add(p.provider_id);
+  return [...ids].sort((a, b) => a - b).join("|");
+}
+
+/**
+ * Recorre una consulta de `discover` ENTERA, reparando el idioma página por
+ * página.
+ *
+ * Le pasa a `descubrirTodo` los `crudos` —cuántos resultados trajo TMDB antes
+ * de reparar— porque `repararLista` descarta títulos ilegibles: si el corte por
+ * página vacía mirara lo reparado, una página así truncaría el recorrido en
+ * silencio, que es el mismo bug por otro camino.
+ *
+ * **Un fallo de TMDB sube.** El código viejo hacía `catch { break }` y seguía
+ * con lo recolectado: eso escribe una agenda incompleta como si estuviera
+ * completa, y el paso de reconciliación decide borrados con ella.
+ */
+async function recorrer(
+  tipo: MediaType, base: Record<string, string>, etiqueta: string,
+  metricas: MetricasIdioma,
+): Promise<RawTitle[]> {
+  return await descubrirTodo<RawTitle>({
+    clave: (t) => `${tipo}:${t.id}`,
+    pedir: async (page) => {
+      const params = { ...base, page: String(page) };
+      const res = await discover(tipo, params);
+      const rep = await repararLista(
+        res.results,
+        async () => (await discover(tipo, { ...params, language: IDIOMA_FALLBACK })).results,
+        `${etiqueta} p${page}`,
+        FALLBACK_ACTIVO,
+      );
+      sumarLote(metricas, rep);
+      return { results: rep.items, crudos: res.results.length, total_pages: res.total_pages };
+    },
+  });
+}
+
+// Películas con estreno futuro dentro de la ventana, ordenadas por FECHA y
+// filtradas por proveedor argentino en el propio `discover`.
+//
+// ⚠️ El filtro temprano se midió antes de tomarlo: de 120 películas muestreadas
+// a lo largo de las 130 páginas de la ventana sin filtrar, **0** tenían
+// proveedor `flatrate` argentino. Ese lado de la agenda está vacío por el
+// catálogo de TMDB, no por el corte de páginas — y el filtro final se conserva
+// igual, así que lo que entre acá todavía tiene que probarlo con
+// `watch/providers`.
 async function collectMovies(
-  from: string, to: string, metricas: MetricasIdioma,
+  from: string, to: string, metricas: MetricasIdioma, provAR: string,
 ): Promise<Candidate[]> {
   const out: Candidate[] = [];
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    let res;
-    try {
-      res = await discover("movie", {
-        "primary_release_date.gte": from,
-        "primary_release_date.lte": to,
-        sort_by: "primary_release_date.asc",
-        page: String(page),
-      });
-    } catch {
-      break; // fallo transitorio: seguimos con lo ya recolectado
-    }
-    // Reparación de idioma ANTES de construir el candidato: lo que se escribe
-    // en la base es lo reparado, no lo que vino en el idioma base. Cuesta UNA
-    // llamada por página, y solo si la página trae algún roto.
-    const params = {
-      "primary_release_date.gte": from,
-      "primary_release_date.lte": to,
-      sort_by: "primary_release_date.asc",
-      page: String(page),
-    };
-    const rep = await repararLista(
-      res.results,
-      async () => (await discover("movie", { ...params, language: IDIOMA_FALLBACK })).results,
-      `peliculas p${page}`,
-      FALLBACK_ACTIVO,
-    );
-
-    sumarLote(metricas, rep);
-    for (const t of rep.items) {
-      if (!t.release_date) continue;
-      out.push({
-        tmdb_id: t.id,
-        media_type: "movie",
-        title: t.title ?? t.name ?? "",
-        original_title: t.original_title ?? null,
-        overview: t.overview ?? null,
-        poster_path: t.poster_path,
-        backdrop_path: t.backdrop_path,
-        release_date: t.release_date,
-        season_number: null,
-        episode_number: null,
-        episode_name: null,
-        is_season_premiere: null,
-        tv_status: null,
-        genre_ids: t.genre_ids ?? [],
-        popularity: t.popularity ?? null,
-        vote_average: t.vote_average ?? null,
-        status: null,
-      });
-    }
-    if (page >= res.total_pages) break;
+  const crudos = await recorrer("movie", {
+    "primary_release_date.gte": from,
+    "primary_release_date.lte": to,
+    with_watch_monetization_types: "flatrate",
+    with_watch_providers: provAR,
+    sort_by: "primary_release_date.asc",
+  }, "peliculas", metricas);
+  for (const t of crudos) {
+    if (!t.release_date) continue;
+    out.push({
+      tmdb_id: t.id,
+      media_type: "movie",
+      title: t.title ?? t.name ?? "",
+      original_title: t.original_title ?? null,
+      overview: t.overview ?? null,
+      poster_path: t.poster_path,
+      backdrop_path: t.backdrop_path,
+      release_date: t.release_date,
+      season_number: null,
+      episode_number: null,
+      episode_name: null,
+      is_season_premiere: null,
+      tv_status: null,
+      genre_ids: t.genre_ids ?? [],
+      popularity: t.popularity ?? null,
+      vote_average: t.vote_average ?? null,
+      status: null,
+    });
   }
   return out;
 }
 
 // Series con episodios próximos (nuevas temporadas / vuelven al aire). Se
 // descubren por air_date y para cada una se pide el next_episode_to_air exacto.
+//
+// 🔴 ACÁ ESTABA EL BUG: `sort_by=popularity.desc` con 3 páginas miraba 60 de
+// 1900 series. Ahora ordena por FECHA y recorre la ventana entera; el filtro de
+// proveedor argentino va en el propio `discover`, lo que la deja en 13 páginas y
+// 259 títulos. Medido contra el camino viejo, el filtro temprano pierde **0** —
+// ni de las 36 que el código viejo conservaba, ni de las 20 con proveedor AR de
+// un muestreo de la cola (páginas 20, 40, 60, 80 y 95), que es justamente lo que
+// antes era invisible.
 async function collectSeries(
-  from: string, to: string, metricas: MetricasIdioma,
+  from: string, to: string, metricas: MetricasIdioma, provAR: string,
 ): Promise<Candidate[]> {
-  const seen = new Set<number>();
-  const shows: RawTitle[] = [];
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    let res;
-    try {
-      res = await discover("tv", {
-        "air_date.gte": from,
-        "air_date.lte": to,
-        sort_by: "popularity.desc",
-        page: String(page),
-      });
-    } catch {
-      break; // fallo transitorio: seguimos con lo ya recolectado
-    }
-    const rep = await repararLista(
-      res.results,
-      async () => (await discover("tv", {
-        "air_date.gte": from, "air_date.lte": to,
-        sort_by: "popularity.desc", page: String(page),
-        language: IDIOMA_FALLBACK,
-      })).results,
-      `series p${page}`,
-      FALLBACK_ACTIVO,
-    );
-    sumarLote(metricas, rep);
-    for (const t of rep.items) {
-      if (!seen.has(t.id)) { seen.add(t.id); shows.push(t); }
-    }
-    if (page >= res.total_pages) break;
-  }
+  const shows = await recorrer("tv", {
+    "air_date.gte": from,
+    "air_date.lte": to,
+    with_watch_monetization_types: "flatrate",
+    with_watch_providers: provAR,
+    sort_by: "first_air_date.asc",
+  }, "series", metricas);
 
   const out: Candidate[] = [];
   for (let i = 0; i < shows.length; i += BATCH) {
@@ -207,25 +233,30 @@ export async function syncUpcoming(sb: SupabaseClient) {
   const from = iso(now);
   const to = iso(new Date(now.getTime() + WINDOW_DAYS * DAY));
 
+  const provAR = await idsProveedoresAR();
   const [movies, series] = await Promise.all([
-    collectMovies(from, to, metricas), collectSeries(from, to, metricas),
+    collectMovies(from, to, metricas, provAR),
+    collectSeries(from, to, metricas, provAR),
   ]);
-  const all = [...movies, ...series];
+  // Orden TOTAL antes de escribir: fecha ascendente, `tmdb_id` como desempate.
+  // El orden de llegada no sirve — TMDB reordena sus resultados y las páginas se
+  // mueven entre pedidos, así que dos corridas del mismo día producirían agendas
+  // distintas.
+  const all = ordenarPorFecha(
+    [...movies, ...series], (c) => c.release_date, (c) => c.tmdb_id,
+  );
 
-  // Resolver providers AR por título (en lotes) y conservar solo los que tienen >=1.
-  const kept: { cand: Candidate; providers: ProviderRow[] }[] = [];
+  // Resolver providers AR por título (en lotes) y conservar solo los que tienen
+  // >=1. **Este filtro no cambió**: la corrección es sobre QUÉ SE MIRA, no sobre
+  // qué califica. Un título que TMDB todavía no asocia a ninguna plataforma
+  // argentina sigue afuera, tenga la popularidad que tenga.
   const providerCatalog = new Map<number, ProviderRow>();
-  for (let i = 0; i < all.length; i += BATCH) {
-    const slice = all.slice(i, i + BATCH);
-    const provs = await Promise.all(
-      slice.map((c) => arFlatrateProviders(c.media_type, c.tmdb_id).catch(() => [])),
-    );
-    for (let j = 0; j < slice.length; j++) {
-      if (!provs[j].length) continue; // regla: solo títulos con >=1 provider AR
-      kept.push({ cand: slice[j], providers: provs[j] });
-      for (const p of provs[j]) providerCatalog.set(p.id, p);
-    }
-  }
+  const kept = (await filtrarPorProveedorAR(
+    all, (c) => arFlatrateProviders(c.media_type, c.tmdb_id).catch(() => []), BATCH,
+  )).map(({ item, providers }) => {
+    for (const p of providers) providerCatalog.set(p.id, p);
+    return { cand: item, providers };
+  });
 
   const stamp = new Date().toISOString();
 
