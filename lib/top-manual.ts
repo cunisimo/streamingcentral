@@ -28,6 +28,22 @@ export const TTL_EVIDENCIA_MANUAL = 60 * 5;
  * una consulta propia. Va en `CLAVES_SIN_HUELLA`: no hay nada localizado acá. */
 export const CLAVE_EVIDENCIA_MANUAL = "disp:top-manual";
 
+/**
+ * Un minuto para la lista de publicaciones.
+ *
+ * ⚠️ ESTO NO ESTABA EN EL PLAN Y SE AGREGÓ AL MEDIR. `/api/top` es
+ * `force-dynamic`, así que sin cache esta consulta corría **en cada pedido** —
+ * y antes del cutover se sumaría a las dos que ya hace `latestWeekRows`,
+ * pasando de 2 a 3 consultas por request. Con el minuto, el techo son 60 por
+ * hora sin importar el tráfico.
+ *
+ * El precio es que un bloque recién publicado tarda hasta un minuto en
+ * aparecer, incluido el momento del cutover y el contador "X de 12" del
+ * dashboard. Es aceptable para algo que se publica una vez por semana.
+ */
+export const TTL_PUBLICACIONES = 60;
+export const CLAVE_PUBLICACIONES = "top:manual:publicaciones";
+
 export interface RankingFila {
   id: string;
   plataforma: PlatformCode;
@@ -66,20 +82,29 @@ const aFila = (r: CrudoRanking): RankingFila => ({
  * `top_rankings_publicados` la cubre.
  */
 export async function ultimasPublicaciones(): Promise<Map<string, RankingFila>> {
-  const db = supabaseServer();
-  if (!db) throw new Error("Supabase no configurado");
-  const { data, error } = await db
-    .from("top_rankings")
-    .select(SELECT_RANKING)
-    .eq("estado", "publicado")
-    .order("published_at", { ascending: false });
-  // Un error de query NO es "no hay publicaciones": supabase-js devuelve
-  // `{ data: null, error }` sin lanzar, y tratarlo como vacío haría que una
-  // caída se lea como "todavía no hay Top".
-  if (error) throw new Error(error.message);
+  const filas = await resolverConCache<CrudoRanking[]>({
+    clave: CLAVE_PUBLICACIONES,
+    ttl: TTL_PUBLICACIONES,
+    backend: backendCache,
+    producir: async () => {
+      const db = supabaseServer();
+      if (!db) return { valor: [], fallo: true };
+      const { data, error } = await db
+        .from("top_rankings")
+        .select(SELECT_RANKING)
+        .eq("estado", "publicado")
+        .order("published_at", { ascending: false });
+      // Un error de query NO es "no hay publicaciones": supabase-js devuelve
+      // `{ data: null, error }` sin lanzar, y tratarlo como vacío haría que una
+      // caída se lea como "todavía no hay Top" — o sea que apagaría el cutover.
+      // Se marca `fallo` para que NO se guarde y el pedido siguiente reintente.
+      if (error) return { valor: [], fallo: true };
+      return { valor: (data ?? []) as unknown as CrudoRanking[], fallo: false };
+    },
+  });
 
   const out = new Map<string, RankingFila>();
-  for (const r of (data ?? []) as unknown as CrudoRanking[]) {
+  for (const r of filas) {
     const k = claveBloque(r.plataforma, r.tipo);
     if (!out.has(k)) out.set(k, aFila(r)); // ya vienen ordenadas desc
   }
