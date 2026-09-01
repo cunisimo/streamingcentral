@@ -98,7 +98,14 @@ export async function ultimasPublicaciones(): Promise<Map<string, RankingFila>> 
       // `{ data: null, error }` sin lanzar, y tratarlo como vacío haría que una
       // caída se lea como "todavía no hay Top" — o sea que apagaría el cutover.
       // Se marca `fallo` para que NO se guarde y el pedido siguiente reintente.
-      if (error) return { valor: [], fallo: true };
+      if (error) {
+        // Se loguea porque si no, "la tabla no existe todavía" y "Supabase
+        // se cayó" son el mismo silencio: en los dos casos el gate no hace
+        // cutover y `/top` sigue con la fuente vieja, que es correcto pero
+        // no dice nada de por qué.
+        console.error("[top-manual] no se pudieron leer las publicaciones —", error.message);
+        return { valor: [], fallo: true };
+      }
       return { valor: (data ?? []) as unknown as CrudoRanking[], fallo: false };
     },
   });
