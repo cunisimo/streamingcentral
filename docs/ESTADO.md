@@ -1059,6 +1059,33 @@ para las reglas; acá va lo que hay que saber para operarlo.
 **Pendiente de ejecutar:** `supabase/migrations/007_top_manual.sql`. No se corrió
 en ningún entorno.
 
+### 🔴 EL PRÓXIMO GATE ES UNA BASE DE VERDAD, NO MÁS TESTS DE TEXTO
+
+Los tests de `npm test` barren el TEXTO del SQL: comprueban que una protección no
+desaparezca del archivo, **no que Postgres se comporte**. Tres auditorías
+encontraron cosas que un barrido no podía ver —la más clara, que
+`revoke select (columna)` no hace nada si el rol tiene `select` de tabla, porque
+los privilegios son aditivos—.
+
+Antes de mergear hay que aplicar la 007 en un **Supabase local o una rama
+descartable** y correr `supabase/verificar-007.sql`, que ejecuta consultas
+reales: privilegios de columna, la columna derivada, los triggers que desmarcan
+la revisión, el índice de un solo borrador y la inmutabilidad de lo publicado.
+Termina en "VERIFICACIÓN COMPLETA" o revienta.
+
+Ese archivo **no es una migración** y no se aplica solo. **No correrlo en
+Producción**: escribe y borra filas.
+
+Lo que ese script no puede probar —todo lo que necesita una sesión real, porque
+`auth.uid()` y `auth.jwt()` son nulos en el SQL editor— está listado al final del
+propio archivo y se verifica desde el dashboard: los dos factores TOTP, publicar,
+el borrador siguiente precargado, la atomicidad del reemplazo, la publicación
+parcial y `creado_por`.
+
+⚠️ En la máquina de desarrollo no hay Docker, `psql` ni Postgres local
+(verificado, no supuesto), así que este paso **no se pudo hacer todavía**. Hace
+falta Docker Desktop para `supabase start`, o una rama de Supabase.
+
 **Pendiente de configurar (lo hace el dueño):** habilitar TOTP en el panel de
 Supabase → Authentication → Multi-Factor Authentication. Sin eso, `/admin/mfa`
 no puede inscribir un factor y el dashboard queda inaccesible.

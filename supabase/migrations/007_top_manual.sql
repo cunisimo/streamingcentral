@@ -41,7 +41,13 @@ create table if not exists top_rankings (
 
   -- Quién lo armó y quién lo revisó. `revisado_por` nulo = todavía sin revisar,
   -- y es lo que decide qué bloques entran en "Publicar revisados".
-  creado_por    uuid        references auth.users(id) on delete set null,
+  -- `default auth.uid()` y no un campo que el código complete: los doce
+  -- borradores iniciales los crea `obtenerBorradores` con un insert que no lo
+  -- mandaba, así que la primera publicación de cada bloque quedaba sin autoría.
+  -- Con el default lo registra la base, y lo hace también para un insert
+  -- directo contra PostgREST — que es donde un campo opcional siempre se olvida.
+  creado_por    uuid        references auth.users(id) on delete set null
+                            default auth.uid(),
   revisado_por  uuid        references auth.users(id) on delete set null,
 
   -- De qué versión publicada salió este borrador. Permite reconstruir la cadena
@@ -298,10 +304,44 @@ $$ language sql stable security definer set search_path = public;
 -- `revisado_por`: los uuid de quién armó y quién firmó cada ranking. No los
 -- necesita nadie fuera del panel, y el panel usa la columna derivada `revisado`.
 --
--- Se revoca a `authenticated` además de `anon`: cualquier usuario con sesión
--- puede leer las filas publicadas, así que dejárselo a `authenticated` habría
--- cerrado la mitad de la puerta.
-revoke select (creado_por, revisado_por) on top_rankings from anon, authenticated;
+-- ⚠️ UN `revoke select (columna)` NO ALCANZA, y esto es lo que hacía la versión
+-- anterior. Los privilegios de PostgreSQL son **aditivos**: revocar a nivel
+-- columna quita el permiso de columna, pero el `grant select` de TABLA que
+-- Supabase le da a `anon` y `authenticated` sigue ahí y sigue alcanzando. La
+-- columna quedaba visible igual.
+--
+-- La forma que funciona es al revés: se saca el permiso de tabla y se conceden
+-- las columnas públicas una por una.
+--
+-- Efecto lateral que conviene conocer: **una columna nueva nace invisible**
+-- hasta que alguien la agregue a este `grant`. Es incómodo una vez y evita que
+-- el próximo campo sensible se publique por olvido.
+revoke select on top_rankings from anon, authenticated;
+grant select (
+  id, plataforma, tipo, estado, captured_at, published_at, revisado, copiado_de
+) on top_rankings to anon, authenticated;
+
+-- Y se comprueba acá mismo. Si algún día alguien vuelve a conceder la tabla
+-- entera, la migración falla al aplicarse en vez de dejar la fuga andando.
+do $$
+declare rol text; col text;
+begin
+  foreach rol in array array['anon', 'authenticated'] loop
+    foreach col in array array['creado_por', 'revisado_por'] loop
+      if has_column_privilege(rol, 'public.top_rankings', col, 'select') then
+        raise exception '% todavía puede leer top_rankings.%', rol, col;
+      end if;
+    end loop;
+    -- Y las públicas tienen que seguir siendo legibles: sin esto, un revoke de
+    -- más rompería la app en silencio hasta que alguien abriera /top.
+    foreach col in array array['id', 'plataforma', 'tipo', 'estado',
+                               'captured_at', 'published_at', 'revisado'] loop
+      if not has_column_privilege(rol, 'public.top_rankings', col, 'select') then
+        raise exception '% perdió el acceso a top_rankings.%', rol, col;
+      end if;
+    end loop;
+  end loop;
+end $$;
 
 drop policy if exists "top_rankings publicados son publicos" on top_rankings;
 create policy "top_rankings publicados son publicos" on top_rankings

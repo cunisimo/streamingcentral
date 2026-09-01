@@ -212,9 +212,22 @@ test("is_admin_mfa exige DOS factores, no sólo aal2", () => {
 // RLS filtra FILAS, no columnas: `anon` podía leer los uuid de quién creó y
 // quién revisó cada publicación.
 
-test("se revocan las columnas de autoría", () => {
-  assert.match(codigo, /revoke select \(creado_por, revisado_por\) on top_rankings from anon, authenticated/i,
-    "`anon` puede leer los uuid de autoría de las publicaciones");
+test("la migración se comprueba a sí misma los privilegios de columna", () => {
+  // ⚠️ UN `revoke select (columna)` NO ALCANZA: los privilegios de PostgreSQL
+  // son ADITIVOS, y el `grant select` de TABLA que Supabase le da a `anon` y
+  // `authenticated` sobrevive al revoke de columna. Hay que sacar el permiso
+  // de tabla y conceder las columnas públicas una por una.
+  assert.match(codigo, /revoke select on top_rankings from anon, authenticated/i,
+    "revoca por columna: el grant de tabla lo sigue permitiendo");
+  assert.match(codigo, /grant select \([\s\S]{0,200}\) on top_rankings to anon, authenticated/i,
+    "no concede las columnas públicas: la app se queda sin leer nada");
+
+  // 🔴 Y ÉSTA ES LA COMPROBACIÓN QUE IMPORTA, porque no es un barrido de
+  // texto: corre DENTRO de la migración. Si algún día alguien vuelve a
+  // conceder la tabla entera, la migración falla al aplicarse en vez de
+  // dejar la fuga andando.
+  assert.match(codigo, /has_column_privilege/,
+    "la migración no verifica los privilegios al aplicarse");
 });
 
 test("queda un booleano para lo único que el dashboard necesita saber", () => {

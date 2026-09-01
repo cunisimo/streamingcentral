@@ -200,6 +200,12 @@ export async function obtenerBorradores(sb: SupabaseClient): Promise<RankingFila
   }
   const faltan = BLOQUES.filter((b) => !hay.has(claveBloque(b.plataforma, b.tipo)));
   if (faltan.length) {
+    // `creado_por` NO se manda: lo pone la base con `default auth.uid()`.
+    // Antes tampoco se mandaba y la columna no tenía default, así que los
+    // doce borradores iniciales nacían sin autoría y la PRIMERA publicación
+    // de cada bloque quedaba sin firmar. Con el default lo registra la base,
+    // también para un insert directo contra PostgREST — que es donde un
+    // campo opcional siempre se olvida.
     const { error: e2 } = await sb.from("top_rankings").insert(
       faltan.map((b) => ({ plataforma: b.plataforma, tipo: b.tipo, captured_at: hoyAR() })),
     );
