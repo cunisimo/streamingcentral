@@ -349,8 +349,74 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   **única** plataforma, el carrusel "Animación para adultos" se oculta: todo el
   Home ya es anime y sería el mismo contenido con otro título. Con Crunchyroll +
   otra (Max, Netflix) se mantiene, porque esas también tienen animación adulta.
-- **El Top (`/top`) es la única sección con dato de consumo real, y solo para
-  Netflix.** Sale del TSV público de Netflix (`lib/netflix-top10.ts`), ingestado
+- **El Top (`/top`) pasa a cargarse A MANO, con cutover atómico.** Rama
+  `feat/top-manual`, **sin mergear ni ejecutar la migración al escribir esto**.
+  Doce bloques (seis plataformas × dos tipos) que el dueño arma, revisa y
+  publica desde `/admin/top`; tablas `top_rankings` (la VERSIÓN de un bloque) y
+  `top_ranking_entries` (sus diez posiciones), migración `007`.
+  🔴 **NADA SE SOBREESCRIBE AL PUBLICAR**: publicar crea una fila nueva y la
+  anterior queda intacta, así que el historial se conserva y una corrección es
+  una versión más que apunta a la previa con `copiado_de`. Lo garantizan dos
+  triggers, no la buena conducta del código. Un índice PARCIAL da un solo
+  borrador por bloque sin impedir publicar el mismo bloque muchas veces.
+  🔴 **EL CUTOVER ES ATÓMICO Y ESO ES UNA DECISIÓN DEL DUEÑO.** Mientras falte
+  cualquiera de los doce bloques publicados, `/top` **entero** sigue con la
+  implementación vieja (`hayCutover` en `lib/top-manual-nucleo.ts`). No se
+  mezclan fuentes por bloque: media página con ranking curado y media con
+  popularidad no le da al lector forma de saber qué mira. Un fallo al leer las
+  publicaciones tampoco cambia de fuente — que Supabase se caiga no puede vaciar
+  el Top.
+  **Publicar es una función de la base** (`publicar_top`, `security invoker`):
+  valida las diez posiciones y cambia el estado en una transacción. Si eso
+  viviera en la API, entre validar y escribir cabría cualquier cosa y una
+  llamada directa a PostgREST se saltearía la validación entera.
+  **El copy público se unifica en "Top semanal"** y las fechas de captura
+  quedan sólo en el dashboard. La nota que explicaba "dato oficial vs
+  popularidad" **no se borró**: antes del cutover esa distinción sigue siendo
+  real, así que se muestra sólo para los bloques de la fuente vieja.
+- **El segundo factor del admin se comprueba en TRES lugares, y sólo dos son
+  seguridad.** La sesión vive en `localStorage`, no en cookies, así que el
+  servidor no la ve: el guard de `/admin/layout.tsx` es **experiencia de
+  usuario** —no dibujar botones que la API va a rechazar— y un `curl` no lo ve
+  nunca. Los que rechazan son `adminDeToken` (`lib/admin-auth.ts`) en cada API e
+  `is_admin_mfa()` en las policies de RLS. **La segunda no es redundante**: sin
+  ella, un token de admin sin MFA escribe directo contra PostgREST con la anon
+  key y la API no se entera.
+  ⚠️ **El dashboard NO usa `service_role`.** Escribe con la sesión del admin
+  (`supabaseComoUsuario`), porque con la clave de servicio las policies no
+  correrían y la comprobación de MFA en la base sería decorativa.
+  ⚠️ **Hacen falta DOS factores TOTP.** Si se pierde el único, la cuenta queda
+  sin poder publicar y no hay forma de saltear `aal2` desde la app.
+  ⚠️ `/api/admin-search` **no validaba nada** antes de esta tanda: cualquiera
+  podía consumirla y gastar cuota de TMDB. Ahora exige admin con MFA.
+- **La carga manual es también evidencia de disponibilidad** (procedencia
+  `top-manual`, prioridad 3 del resolvedor). Cuando el dueño confirma que un
+  título está en una plataforma, eso resuelve el caso que TMDB tarda en publicar.
+  🔴 **Entra por `resolverDisponibilidad`, NO por un camino propio de `/top`.**
+  Si viviera sólo allá, la misma película saldría en color en el Top y en gris
+  en la ficha, la búsqueda y el Home — exactamente el bug que el resolvedor
+  central existe para impedir. Sale **sólo de rankings publicados**, vence a los
+  **14 días** (la misma ventana que la evidencia de Netflix y por lo mismo: una
+  captura vieja no dice dónde está hoy un título), los borradores no cuentan, y
+  un fallo de lectura es "no sé" — no niega y no se cachea.
+  Va **después** del top oficial de Netflix y **antes** del enlace probable:
+  entre dos hechos publicados gana la fuente primaria, y entre un hecho y una
+  inferencia gana el hecho. En `/top` se conserva además
+  `conPlataformaDeLaFuente`, porque ahí la plataforma la garantiza el bloque.
+- **El Top automático de Netflix queda ARCHIVADO, no eliminado.** `netflix_top10`,
+  el resolvedor título→TMDB, la ingesta y sus tests siguen vivos, **y el cron
+  semanal de Vercel sigue corriendo**. Es una decisión del dueño y tiene un
+  motivo concreto: esa tabla ya **no alimenta sólo a `/top`**, es la prioridad 2
+  del resolvedor de disponibilidad (`disponiblesEnTopOficial` en
+  `lib/enrich.ts`). Apagar el cron habría vaciado esa evidencia en 14 días y
+  devuelto a gris los títulos que dependen de ella — la misma regresión
+  programada que ya se corrigió una vez.
+  Lo que sí se desconecta es su uso como **fuente del ranking público**, y pasa
+  solo: en el cutover, `bloqueManual` reemplaza a `netflixBlock` y a
+  `popularBlock` para las seis plataformas. **El código viejo se retira en un
+  cambio posterior**, una vez probado el Top manual en producción.
+- **El Top (`/top`) era la única sección con dato de consumo real, y solo para
+  Netflix.** (Vigente **hasta el cutover**; lo de arriba lo reemplaza.) Sale del TSV público de Netflix (`lib/netflix-top10.ts`), ingestado
   por un cron semanal a la tabla `netflix_top10`, que hace de ranking **y** de
   mapa título→TMDB (el TSV solo trae el título en inglés). Las otras cinco
   plataformas van por popularidad de TMDB y se etiquetan distinto a propósito:

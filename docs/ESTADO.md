@@ -1047,6 +1047,43 @@ el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide
 volvió a vencer. **Moria NO está resuelta hoy**, ni acá ni en `main`. La regla
 está cubierta por 23 tests apuntados al resolvedor.
 
+## Top semanal manual — rama `feat/top-manual` (2026-09-01)
+
+**Sin mergear y SIN EJECUTAR LA MIGRACIÓN al escribir esto.** Falta la prueba
+manual del dueño.
+
+`/top` pasa a cargarse a mano: doce bloques (seis plataformas × dos tipos) que
+el dueño arma, revisa y publica desde `/admin/top`. Ver el bloque de `CLAUDE.md`
+para las reglas; acá va lo que hay que saber para operarlo.
+
+**Pendiente de ejecutar:** `supabase/migrations/007_top_manual.sql`. No se corrió
+en ningún entorno.
+
+**Pendiente de configurar (lo hace el dueño):** habilitar TOTP en el panel de
+Supabase → Authentication → Multi-Factor Authentication. Sin eso, `/admin/mfa`
+no puede inscribir un factor y el dashboard queda inaccesible.
+
+### El cutover, que es lo que hay que entender antes de tocar nada
+
+Mientras falte cualquiera de los doce bloques publicados, **`/top` entero sigue
+con la implementación vieja**. El dashboard muestra "Preparación inicial: X de
+12 publicados". Con los doce, `/api/top` cambia de fuente sin desplegar nada.
+
+Después del primer cutover los borradores pendientes no afectan: cada bloque
+conserva su última versión publicada.
+
+### Lo que NO cambia
+
+- El selector `Películas | Series`, `Tus plataformas`, `En otras plataformas`,
+  el carrusel por plataforma, el ranking numérico, `TitleCard`, la apertura de
+  la ficha, las acciones rápidas y la restauración de scroll vertical y
+  horizontal. **`TopBlock` conserva su forma** (`mine`, `others`, `fallos`,
+  `degradado`, `slots` 1–10); lo único que cambia es el valor de `source` y el
+  subtítulo.
+- El cron semanal de Netflix **sigue corriendo**: alimenta la evidencia de
+  disponibilidad, no el ranking. Ver `CLAUDE.md`.
+- Las reseñas editoriales siguen en standby y sus policies **no se tocaron**.
+
 ## Evidencia oficial general — rama `feat/evidencia-oficial` (2026-08-31)
 
 **Prueba manual local APROBADA por el dueño el 2026-08-31. Lista para
