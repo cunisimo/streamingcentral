@@ -240,8 +240,13 @@ begin
   -- borró el borrador, la fila padre ya no está: el update no encuentra nada y
   -- no pasa nada, que es lo correcto.
   r_id := case when tg_op = 'DELETE' then old.ranking_id else new.ranking_id end;
+  -- `estado = 'borrador'` no es decorativo: sin él, tocar las entradas de una
+  -- publicación intentaría actualizarla, y el trigger de inmutabilidad
+  -- rechazaría con un error confuso. En el uso normal no pasa —las entradas de
+  -- lo publicado no se tocan— pero sí al limpiar con los triggers de borrado
+  -- desactivados, que es lo que hace el verificador.
   update top_rankings set revisado_por = null
-   where id = r_id and revisado_por is not null;
+   where id = r_id and estado = 'borrador' and revisado_por is not null;
   return case when tg_op = 'DELETE' then old else new end;
 end;
 $$ language plpgsql security definer set search_path = public;

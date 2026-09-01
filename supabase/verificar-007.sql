@@ -23,15 +23,35 @@
 -- SQL editor no existen. Están escritos como comprobaciones a ejecutar desde la
 -- app, no desde acá, y el script lo dice en vez de fingir que los cubrió.
 
-\set ON_ERROR_STOP on
-
+-- ⚠️ SIN `\set ON_ERROR_STOP`: es una metaorden de `psql`, no SQL, y en el
+-- editor de Supabase da error de sintaxis. No hace falta — un `DO` falla entero
+-- ante una excepción no capturada, que es exactamente el comportamiento que se
+-- busca acá.
 do $$
 declare
   r_pub   uuid;
   r_bor   uuid;
-  n       integer;
+  u_admin uuid;
   ok      boolean;
 begin
+  -- 🔴 UN UUID INVENTADO NO SIRVE: `revisado_por` tiene FK contra `auth.users`,
+  -- así que asignarlo a mano rompe con violación de clave ajena y el script
+  -- muere en el paso 2 sin llegar a probar nada. Se toma un usuario real.
+  select id into u_admin from auth.users limit 1;
+  if u_admin is null then
+    raise exception
+      'No hay ningún usuario en auth.users. Creá primero el administrador de prueba (Authentication -> Users) y volvé a correr esto.';
+  end if;
+  raise notice 'Usando el usuario % como revisor de prueba', u_admin;
+
+  -- El script crea un borrador de `n/movie` y el índice parcial sólo admite
+  -- uno por bloque: con la tabla ya poblada choca en el paso 2 con un error
+  -- de unicidad que parece un fallo de la migración y no lo es.
+  if exists (select 1 from top_rankings) then
+    raise exception
+      'top_rankings ya tiene filas. Este verificador necesita la tabla vacía: corrélo en una base descartable recién migrada, antes de cargar bloques.';
+  end if;
+
   raise notice '--- 1. PRIVILEGIOS DE COLUMNA ---';
   -- Lo que la tercera auditoría encontró: `revoke select (columna)` no alcanza
   -- porque los privilegios son aditivos.
@@ -51,7 +71,7 @@ begin
   insert into top_rankings (plataforma, tipo) values ('n', 'movie') returning id into r_bor;
   select revisado into ok from top_rankings where id = r_bor;
   if ok then raise exception 'FALLA: un borrador nuevo nace revisado'; end if;
-  update top_rankings set revisado_por = '00000000-0000-0000-0000-000000000001' where id = r_bor;
+  update top_rankings set revisado_por = u_admin where id = r_bor;
   select revisado into ok from top_rankings where id = r_bor;
   if not ok then raise exception 'FALLA: `revisado` no sigue a `revisado_por`'; end if;
   raise notice 'OK: `revisado` deriva de `revisado_por`';
@@ -62,19 +82,19 @@ begin
   select revisado into ok from top_rankings where id = r_bor;
   if ok then raise exception 'FALLA: insertar una entrada no desmarcó la revisión'; end if;
 
-  update top_rankings set revisado_por = '00000000-0000-0000-0000-000000000001' where id = r_bor;
+  update top_rankings set revisado_por = u_admin where id = r_bor;
   update top_ranking_entries set titulo = 'Otro' where ranking_id = r_bor and posicion = 1;
   select revisado into ok from top_rankings where id = r_bor;
   if ok then raise exception 'FALLA: modificar una entrada no desmarcó'; end if;
 
-  update top_rankings set revisado_por = '00000000-0000-0000-0000-000000000001' where id = r_bor;
+  update top_rankings set revisado_por = u_admin where id = r_bor;
   delete from top_ranking_entries where ranking_id = r_bor and posicion = 1;
   select revisado into ok from top_rankings where id = r_bor;
   if ok then raise exception 'FALLA: borrar una entrada no desmarcó'; end if;
   raise notice 'OK: INSERT, UPDATE y DELETE desmarcan';
 
   raise notice '--- 4. LA FECHA DE CAPTURA TAMBIÉN DESMARCA ---';
-  update top_rankings set revisado_por = '00000000-0000-0000-0000-000000000001' where id = r_bor;
+  update top_rankings set revisado_por = u_admin where id = r_bor;
   update top_rankings set captured_at = captured_at + 7 where id = r_bor;
   select revisado into ok from top_rankings where id = r_bor;
   if ok then raise exception 'FALLA: cambiar la fecha dejó la revisión puesta'; end if;
@@ -92,7 +112,13 @@ begin
   -- Se publica a mano: `publicar_top` exige `is_admin_mfa()`, que acá no aplica.
   insert into top_ranking_entries (ranking_id, posicion, tipo, tmdb_id, titulo)
   select r_bor, g, 'movie', 600 + g, 'T' || g from generate_series(1, 10) g;
-  update top_rankings set estado = 'publicado', published_at = now() where id = r_bor;
+  -- Se publica con la revisión puesta, como lo haría `publicar_top`: así el
+  -- paso 7 limpia una publicación con `revisado_por` NO nulo, que es el caso
+  -- real. La versión anterior lo dejaba en null por casualidad y la limpieza
+  -- pasaba por un motivo que no era el correcto.
+  update top_rankings
+     set revisado_por = u_admin, estado = 'publicado', published_at = now()
+   where id = r_bor;
   r_pub := r_bor;
 
   begin
