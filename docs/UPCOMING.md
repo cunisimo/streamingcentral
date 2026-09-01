@@ -60,6 +60,9 @@ curl -X POST "https://<ref>.supabase.co/functions/v1/tmdb-sync" \
   Si la variable sigue puesta en el entorno de la función, no hace nada.
 - `SYNC_GRACE_DAYS` (default 2) — días de gracia antes de expirar un estreno pasado.
 
+**Versión desplegada:** `tmdb-sync` **v8** (2026-09-01), la primera con el
+descubrimiento sin corte por popularidad. Ver el issue #8.
+
 ## Read path (app)
 
 `GET /api/upcoming`:

@@ -474,6 +474,33 @@ la interfaz en esta tanda**. Costo aceptado: ~277 llamadas diarias, 10–17 s y
 ~255 filas. **Vercel y Upstash no cambian**: el endpoint es `force-dynamic`, no
 cachea, y el tope de 100 hace que el payload servido sea el mismo de antes.
 
+### Cómo salió en Producción (2026-09-01, función v8)
+
+Primera sincronización controlada, ventana `2026-09-01` → `2026-11-30`:
+
+| | |
+|---|---|
+| Candidatos evaluados / conservados | 251 / **251** |
+| Filas escritas (`upserted`) | 251 |
+| Proveedores distintos | 23 |
+| Borrados (`dropped` / `deleted`) | 0 / 0 |
+| Duración real | **23,3 s** |
+| Fallos de idioma | 0 |
+
+⚠️ **Duró 23,3 s, no 10–17.** Lo medido en local desde Argentina fue 10–17 s; la
+función corre en `us-west-2` y paga otra latencia contra TMDB. Sigue holgado,
+pero el número que hay que usar de referencia es el de Producción.
+
+⚠️ **251 escritas, 244 visibles.** `upcomingList` filtra por las 14 plataformas
+que la app mapea, y el sync acepta CUALQUIER `flatrate` argentino: 7 filas tienen
+sólo proveedores que Yump no muestra. Es la diferencia esperada entre los 58 ids
+de AR y los 20 soportados, y no es un error — son filas correctas sin logo que
+mostrar.
+
+⚠️ **`?limit=100` devuelve 97, no 100.** El tope se aplica en la consulta y el
+filtro de plataformas soportadas después, así que unas pocas de las 100 traídas
+se caen. Es comportamiento previo, no de esta tanda.
+
 ⚠️ Con el tope de 100, las filas 101–255 **hoy no las lee nadie**: las dos rutas
 que podrían leerlas (`?items=` de la watchlist y `?month=`) existen pero no están
 cableadas en ningún cliente. No cuestan casi nada y quedan listas; mientras
@@ -493,15 +520,17 @@ tanto, son inventario sin lector.
   muestreadas a lo largo de las 130 páginas de la ventana, **0** tenían proveedor
   argentino. La ventana entera tiene 2. Es el catálogo de TMDB, y es el mismo
   agujero del issue #16.
-- ⚠️ **Los tipos de la Edge Function no pasan por ningún typechecker.**
-  `tsconfig.json` excluye `supabase/functions`, no hay `deno.json` ni CI, y Deno
-  no está instalado en la máquina de desarrollo. Lo que SÍ se verifica: los
-  módulos sin dependencias de Deno (`descubrir.ts`, `reconciliar.ts`,
-  `reparar.ts`) se importan y **se ejecutan de verdad** en `npm test`, y un
-  barrido falla si la función usa `require`, `node:`, `process.env`, `__dirname`
-  o `Buffer`. Lo que NO: los tipos de `sync-upcoming.ts`. La red de seguridad
-  real es que el despliegue de Supabase compila la función y falla si algo no
-  cierra.
+- ⚠️ **Los tipos de la Edge Function no pasan por ningún typechecker LOCAL.**
+  `tsconfig.json` excluye `supabase/functions`, no hay CI, y Deno no está
+  instalado en la máquina de desarrollo. **Sí existe un
+  `supabase/functions/tmdb-sync/deno.json`**, pero es sólo el mapa de
+  importaciones (`@supabase/supabase-js` desde esm.sh); no configura un chequeo.
+  Lo que SÍ se verifica en local: los módulos sin dependencias de Deno
+  (`descubrir.ts`, `reconciliar.ts`, `reparar.ts`) se importan y **se ejecutan de
+  verdad** en `npm test`, y un barrido falla si la función usa `require`,
+  `node:`, `process.env`, `__dirname` o `Buffer`. Lo que NO: los tipos de
+  `sync-upcoming.ts`. La red de seguridad real es el despliegue, que compila la
+  función en Supabase y falla si algo no cierra.
 
 ### `tv:310290` sigue AFUERA, y está bien
 
