@@ -242,7 +242,13 @@ function BloqueEditor({ fila, token, onAccion }: {
         <h2>{nombre(fila.plataforma)} · {fila.tipo === "movie" ? "Películas" : "Series"}</h2>
         <label>
           Fecha de captura
-          <input type="date" defaultValue={fila.captured_at} readOnly />
+          {/* Editable: nace con el día en que se creó el borrador —automático
+              después de publicar— y hay que poder ajustarla a la semana que
+              corresponde. Era `readOnly` y quedaba la fecha accidental. */}
+          <input
+            type="date" value={fila.captured_at}
+            onChange={(e) => onAccion({ accion: "fecha", id: fila.id, fecha: e.target.value })}
+          />
         </label>
       </header>
 

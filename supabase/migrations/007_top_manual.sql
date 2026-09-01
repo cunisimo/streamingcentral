@@ -130,12 +130,18 @@ create or replace function top_ranking_publicado_inmutable()
 returns trigger as $$
 begin
   if old.estado = 'publicado' then
+    -- `creado_por` y `revisado_por` entran acá porque son el RASTRO de quién
+    -- firmó la publicación. Quedaban fuera, así que se podían reescribir
+    -- después: una publicación inmutable con autoría editable no sirve de nada
+    -- como historial.
     if new.estado is distinct from old.estado
        or new.plataforma is distinct from old.plataforma
        or new.tipo is distinct from old.tipo
        or new.captured_at is distinct from old.captured_at
        or new.published_at is distinct from old.published_at
-       or new.copiado_de is distinct from old.copiado_de then
+       or new.copiado_de is distinct from old.copiado_de
+       or new.creado_por is distinct from old.creado_por
+       or new.revisado_por is distinct from old.revisado_por then
       raise exception 'una publicación no se modifica: creá una corrección nueva';
     end if;
   end if;
@@ -148,6 +154,53 @@ drop trigger if exists top_rankings_inmutable on top_rankings;
 create trigger top_rankings_inmutable
   before update on top_rankings
   for each row execute function top_ranking_publicado_inmutable();
+
+-- 🔴 Y TAMPOCO SE BORRA. Los dos triggers de arriba cubren INSERT y UPDATE, y
+-- el borrado quedaba abierto: la policy de escritura es `for all`, así que un
+-- admin con MFA podía borrar una publicación entera —y con ella el historial
+-- que todo este diseño existe para conservar—. "No se sobrescribe" no vale de
+-- nada si se puede borrar.
+--
+-- Un BORRADOR sí se borra: es lo que hace `reemplazar_entradas` al limpiar las
+-- diez posiciones antes de volver a escribirlas.
+create or replace function top_rankings_no_borrar()
+returns trigger as $$
+begin
+  if old.estado = 'publicado' then
+    raise exception 'una publicación no se borra: el historial no se toca';
+  end if;
+  return old;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists top_rankings_sin_delete on top_rankings;
+create trigger top_rankings_sin_delete
+  before delete on top_rankings
+  for each row execute function top_rankings_no_borrar();
+
+-- Lo mismo para las entradas. Sin esto se podía vaciar una publicación posición
+-- por posición sin tocar su fila: quedaba "publicada" con cero títulos.
+--
+-- ⚠️ El borrado en CASCADA de un borrador pasa igual: la cascada dispara este
+-- trigger con el ranking padre ya evaluado, y un borrador no se rechaza.
+create or replace function top_entry_no_borrar()
+returns trigger as $$
+declare r_estado text;
+begin
+  select estado into r_estado from top_rankings where id = old.ranking_id;
+  -- Si el ranking ya no está, esto es la cascada de un borrador que se borró:
+  -- no hay nada que proteger.
+  if r_estado = 'publicado' then
+    raise exception 'no se pueden borrar las entradas de un ranking publicado';
+  end if;
+  return old;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists top_entries_sin_delete on top_ranking_entries;
+create trigger top_entries_sin_delete
+  before delete on top_ranking_entries
+  for each row execute function top_entry_no_borrar();
 
 -- ============================================================
 -- 3. RLS
@@ -193,7 +246,58 @@ create policy "top_entries las escribe el admin con MFA" on top_ranking_entries
   for all using (is_admin_mfa()) with check (is_admin_mfa());
 
 -- ============================================================
--- 4. Publicación transaccional
+-- 4. Reemplazo transaccional de las diez posiciones
+-- ============================================================
+-- 🔴 ESTO ERA DELETE Y DESPUÉS INSERT, EN DOS REQUESTS A PostgREST. Si el
+-- segundo fallaba —red, 500, token vencido entre uno y otro— el borrador
+-- quedaba VACÍO y lo cargado se perdía. Y no era un caso raro: reordenar pasa
+-- por ese camino en cada flecha.
+--
+-- Acá es una transacción: o quedan las diez nuevas, o quedan las diez viejas.
+--
+-- El borrado y la escritura tienen que ir juntos por otro motivo además:
+-- `unique (ranking_id, posicion)` rechaza cualquier estado intermedio con dos
+-- títulos en la misma posición, que es exactamente lo que produce un reordenamiento.
+create or replace function reemplazar_entradas(p_ranking uuid, p_entradas jsonb)
+returns void as $$
+declare r_tipo text; r_estado text;
+begin
+  if not is_admin_mfa() then
+    raise exception 'no autorizado';
+  end if;
+
+  select tipo, estado into r_tipo, r_estado from top_rankings where id = p_ranking;
+  if r_tipo is null then
+    raise exception 'ranking inexistente';
+  end if;
+  if r_estado <> 'borrador' then
+    raise exception 'sólo se editan borradores';
+  end if;
+
+  delete from top_ranking_entries where ranking_id = p_ranking;
+
+  if jsonb_array_length(coalesce(p_entradas, '[]'::jsonb)) > 0 then
+    insert into top_ranking_entries (ranking_id, posicion, tipo, tmdb_id, titulo)
+    select p_ranking,
+           (e ->> 'posicion')::smallint,
+           coalesce(e ->> 'tipo', r_tipo),
+           (e ->> 'tmdb_id')::integer,
+           e ->> 'titulo'
+      from jsonb_array_elements(p_entradas) e;
+  end if;
+
+  -- Cualquier cambio desmarca la revisión: la marca vale para el contenido que
+  -- había cuando se puso. Va acá y no en la API para que una llamada directa a
+  -- PostgREST tampoco pueda saltearlo.
+  update top_rankings set revisado_por = null where id = p_ranking;
+end;
+$$ language plpgsql security invoker set search_path = public;
+
+revoke all on function reemplazar_entradas(uuid, jsonb) from public, anon;
+grant execute on function reemplazar_entradas(uuid, jsonb) to authenticated;
+
+-- ============================================================
+-- 5. Publicación transaccional
 -- ============================================================
 -- 🔴 POR QUÉ ES UNA FUNCIÓN Y NO TRES LLAMADAS DESDE LA API. Publicar es
 -- validar diez posiciones y cambiar un estado; si eso se hace desde el cliente,
@@ -213,9 +317,10 @@ create or replace function publicar_top(p_ids uuid[])
 returns table (ranking_id uuid, plataforma text, tipo text, publicado boolean, motivo text)
 as $$
 declare
-  r      record;
-  n      integer;
-  nuevo  uuid;
+  r               record;
+  n               integer;
+  nuevo           uuid;
+  nuevo_borrador  uuid;
 begin
   if not is_admin_mfa() then
     raise exception 'no autorizado';
@@ -269,6 +374,31 @@ begin
     update top_rankings
        set estado = 'publicado', published_at = now()
      where id = r.id;
+
+    -- 🔴 Y SE CREA EL BORRADOR SIGUIENTE, YA CARGADO.
+    --
+    -- Publicar convierte el borrador EN la publicación, así que el bloque se
+    -- quedaba sin borrador y la próxima vez que entrabas al dashboard
+    -- `obtenerBorradores` te creaba uno vacío: la semana siguiente arrancaba de
+    -- cero en vez de arrancar de lo que ya estaba al aire. En un top que cambia
+    -- dos o tres puestos por semana, eso es volver a cargar diez títulos para
+    -- mover uno.
+    --
+    -- `captured_at` es HOY en hora argentina, no la fecha de la publicación:
+    -- heredarla haría nacer el bloque con la fecha de la semana pasada, y habría
+    -- que acordarse de corregirla siempre. Es editable desde el dashboard.
+    insert into top_rankings (plataforma, tipo, estado, captured_at, creado_por, copiado_de)
+    values (
+      r.plataforma, r.tipo, 'borrador',
+      (now() at time zone 'America/Argentina/Buenos_Aires')::date,
+      auth.uid(), r.id
+    )
+    returning id into nuevo_borrador;
+
+    insert into top_ranking_entries (ranking_id, posicion, tipo, tmdb_id, titulo)
+    select nuevo_borrador, e.posicion, e.tipo, e.tmdb_id, e.titulo
+      from top_ranking_entries e
+     where e.ranking_id = r.id;
 
     publicado := true; motivo := null;
     return next;

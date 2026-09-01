@@ -218,27 +218,41 @@ export async function copiarPublicado(sb: SupabaseClient, borradorId: string): P
 }
 
 /** Reemplaza las diez posiciones de un borrador en un solo paso. */
+/**
+ * Reemplaza las diez posiciones de un borrador.
+ *
+ * 🔴 UNA SOLA LLAMADA, Y ES UNA TRANSACCIÓN. Antes era `delete` y después
+ * `insert` en dos requests distintos a PostgREST: si el segundo fallaba —red,
+ * 500, token vencido entre uno y otro— el borrador quedaba **vacío** y lo
+ * cargado se perdía. Y no era un caso raro: reordenar pasa por acá en cada
+ * flecha.
+ *
+ * Borrar y escribir tienen que ir juntos por otro motivo además:
+ * `unique (ranking_id, posicion)` rechaza cualquier estado intermedio con dos
+ * títulos en la misma posición, que es justo lo que produce un reordenamiento.
+ *
+ * Desmarcar la revisión también pasó adentro de la función: así una llamada
+ * directa a PostgREST tampoco puede saltearlo.
+ */
 export async function reemplazarEntradas(
   sb: SupabaseClient, borradorId: string, entradas: EntradaTop[],
 ): Promise<void> {
-  // Borrar y volver a insertar, no actualizar: `unique (ranking_id, posicion)`
-  // rechazaría cualquier estado intermedio con dos títulos en la misma
-  // posición, que es justo lo que pasa al reordenar.
-  const { error: e1 } = await sb.from("top_ranking_entries")
-    .delete().eq("ranking_id", borradorId);
-  if (e1) throw new Error(e1.message);
-  if (!entradas.length) return;
-  const { error: e2 } = await sb.from("top_ranking_entries").insert(
-    entradas.map((e) => ({
-      ranking_id: borradorId, posicion: e.posicion,
-      tipo: e.tipo, tmdb_id: e.tmdb_id, titulo: e.titulo,
+  const { error } = await sb.rpc("reemplazar_entradas", {
+    p_ranking: borradorId,
+    p_entradas: entradas.map((e) => ({
+      posicion: e.posicion, tipo: e.tipo, tmdb_id: e.tmdb_id, titulo: e.titulo,
     })),
-  );
-  if (e2) throw new Error(e2.message);
-  await desmarcarRevisado(sb, borradorId);
+  });
+  if (error) throw new Error(error.message);
 }
 
-/** Guarda una sola posición del borrador. */
+/**
+ * Guarda una sola posición del borrador.
+ *
+ * No pasa por `reemplazar_entradas` porque no hay riesgo: un `upsert` de una
+ * fila es atómico de por sí, y el `unique` no se puede violar cambiando una
+ * posición que ya existe por su misma posición.
+ */
 export async function guardarPosicion(
   sb: SupabaseClient, borradorId: string, entrada: EntradaTop,
 ): Promise<void> {
@@ -281,6 +295,25 @@ export async function marcarRevisado(
 }
 
 const desmarcarRevisado = (sb: SupabaseClient, id: string) => marcarRevisado(sb, id, null);
+
+/**
+ * Cambia la fecha de captura de un borrador.
+ *
+ * ⚠️ Hace falta porque `captured_at` nace con la fecha del día en que se creó
+ * el borrador, que después de publicar es automática. Si quedara fija, un
+ * bloque cargado el viernes para la semana del jueves diría el día equivocado
+ * — y esa fecha es lo único que dice a qué semana corresponde el ranking.
+ *
+ * No desmarca la revisión: corregir la fecha no cambia los títulos.
+ */
+export async function cambiarFecha(
+  sb: SupabaseClient, borradorId: string, fecha: string,
+): Promise<void> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw new Error("fecha inválida");
+  const { error } = await sb.from("top_rankings")
+    .update({ captured_at: fecha }).eq("id", borradorId).eq("estado", "borrador");
+  if (error) throw new Error(error.message);
+}
 
 /** Deja el borrador como la última publicación, o vacío si no hay ninguna. */
 export async function restaurarBorrador(sb: SupabaseClient, borradorId: string): Promise<void> {

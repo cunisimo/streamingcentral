@@ -16,7 +16,9 @@ import { supabaseBrowser } from "@/lib/supabase";
 // que el servidor no la ve: lo que este hook hace es no dibujar un dashboard
 // que no vas a poder usar. Quien rechaza de verdad es `adminDeToken` en cada
 // API y `is_admin_mfa()` en las policies. Ver `lib/admin-auth.ts`.
-export type EstadoMfa = "cargando" | "sin-factor" | "falta-verificar" | "listo";
+import { estadoDeMfa, type EstadoMfa as EstadoBase } from "@/lib/admin-auth-nucleo";
+
+export type EstadoMfa = "cargando" | EstadoBase;
 
 export interface AdminSesion {
   estado: EstadoMfa;
@@ -43,10 +45,14 @@ export function useAdminSesion(): AdminSesion {
     setFactores(verificados.length);
 
     const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (!verificados.length) { setEstado("sin-factor"); return; }
-    // `currentLevel` es lo que tiene esta sesión; `nextLevel` es lo que la
-    // cuenta exige. Si exige aal2 y la sesión está en aal1, falta el código.
-    setEstado(aal?.currentLevel === "aal2" ? "listo" : "falta-verificar");
+    // 🔴 LA DECISIÓN VIVE EN `estadoDeMfa`, NO ACÁ. Antes esto miraba sólo el
+    // `aal`: con UN factor y la sesión elevada daba "listo", así que el layout
+    // dejaba entrar mientras `/admin/mfa` insistía en que hacían falta dos. El
+    // aviso quedaba como una sugerencia que nadie cumplía.
+    setEstado(estadoDeMfa({
+      factores: verificados.length,
+      aal: aal?.currentLevel ?? null,
+    }));
   }, []);
 
   useEffect(() => {

@@ -3,8 +3,8 @@ import {
   adminDeToken, supabaseComoUsuario, tokenDeHeader,
 } from "@/lib/admin-auth";
 import {
-  copiarPublicado, guardarPosicion, marcarRevisado, obtenerBorradores, publicar,
-  reordenar, restaurarBorrador,
+  cambiarFecha, copiarPublicado, guardarPosicion, marcarRevisado,
+  obtenerBorradores, publicar, reordenar, restaurarBorrador,
 } from "@/lib/top-manual";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +71,12 @@ export async function POST(req: NextRequest) {
         await reordenar(p.sb, id, desde, hasta);
         break;
       }
+      case "fecha":
+        // La fecha de captura es editable: nace con el día en que se creó el
+        // borrador —automático después de publicar— y el dueño la ajusta a la
+        // semana que corresponde.
+        await cambiarFecha(p.sb, id, String(body.fecha ?? ""));
+        break;
       case "revisar":
         // `uid` sale del token verificado, NUNCA del cuerpo: si viniera del
         // cliente, cualquiera podría firmar una revisión a nombre de otro.
