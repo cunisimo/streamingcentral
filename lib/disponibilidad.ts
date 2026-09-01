@@ -38,7 +38,8 @@ export type { ExcepcionManual };
  * de campo dio 0 falsos positivos en 194 casos, pero sigue siendo una
  * inferencia, no una confirmación de la plataforma.
  */
-export type Procedencia = "tmdb-ar" | "top-oficial" | "oficial-probable" | "manual";
+export type Procedencia =
+  | "tmdb-ar" | "top-oficial" | "top-manual" | "oficial-probable" | "manual";
 
 export interface Disponibilidad {
   plataformas: PlatformCode[];
@@ -91,6 +92,14 @@ export async function resolverDisponibilidad(opts: {
   leerTopOficial: () => Promise<Set<string>>;
   /** Datos crudos del título para la regla oficial. Puede lanzar. */
   leerDatosTitulo: () => Promise<DatosTitulo | null>;
+  /**
+   * Evidencia del Top semanal cargado a mano: `tipo:id` → plataformas.
+   *
+   * Sale SÓLO de rankings publicados y vence a los 14 días (ver
+   * `evidenciaDeRankings` en `top-manual-nucleo.ts`). Es opcional para que los
+   * llamadores que no la tengan no cambien de comportamiento. Puede lanzar.
+   */
+  leerTopManual?: () => Promise<Map<string, PlatformCode[]>>;
   excepciones?: ExcepcionManual[];
 }): Promise<Disponibilidad> {
   // --- 1. TMDB AR manda, y corta acá ---------------------------------------
@@ -122,7 +131,28 @@ export async function resolverDisponibilidad(opts: {
     fallo = true;
   }
 
-  // --- 3. Evidencia oficial de alta probabilidad ---------------------------
+  // --- 3. Top semanal cargado a mano ---------------------------------------
+  // El dueño eligió cada título y confirmó su plataforma. Es un dato verificado
+  // a mano, no una inferencia, y por eso va ANTES de la regla de enlace: cuando
+  // los dos discrepan, gana el dato.
+  //
+  // Va DESPUÉS del top oficial de Netflix porque ése es una publicación de la
+  // propia plataforma; entre dos hechos, el de la fuente primaria.
+  if (opts.leerTopManual) {
+    try {
+      const manual = await opts.leerTopManual();
+      const codes = manual.get(clave);
+      if (codes?.length) {
+        return { plataformas: [...codes], procedencia: "top-manual", fallo };
+      }
+    } catch {
+      // Igual que arriba: una caída de nuestra base no niega disponibilidad, y
+      // lo que se responda no se puede cachear.
+      fallo = true;
+    }
+  }
+
+  // --- 4. Evidencia oficial de alta probabilidad ---------------------------
   // Series y películas. Los `arIds` van vacíos a propósito: si AR tuviera datos,
   // la prioridad 1 ya habría cortado. Se pasan igual para que la regla pueda
   // aplicar su chequeo de contradicción sin depender de ese orden.
@@ -136,7 +166,7 @@ export async function resolverDisponibilidad(opts: {
     fallo = true;
   }
 
-  // --- 4. Registro manual versionado ---------------------------------------
+  // --- 5. Registro manual versionado ---------------------------------------
   const exc = (opts.excepciones ?? EXCEPCIONES).find(
     (e) => e.clave === clave && e.region === "AR" && vigente(e, opts.hoy),
   );

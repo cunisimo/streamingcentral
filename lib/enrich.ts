@@ -32,6 +32,7 @@ import {
 import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
 import { disponiblesEnTopOficial } from "./netflix-top10";
+import { evidenciaTopManual } from "./top-manual";
 import { resolverDisponibilidad } from "./disponibilidad";
 import {
   hayFallosDisponibilidad, registrarFalloDisponibilidad, withFallosDisponibilidad,
@@ -165,6 +166,11 @@ export async function disponibilidadDe(
     const r = await resolverDisponibilidad({
       tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR, hoy: hoyAR(),
       leerTopOficial: disponiblesEnTopOficial,
+      // El Top semanal cargado a mano. Va por el resolvedor central y no
+      // por un camino propio de : si viviera sólo allá, la misma
+      // película saldría en color en el Top y en gris en la ficha, la
+      // búsqueda y el Home — el bug que este resolvedor existe para impedir.
+      leerTopManual: evidenciaTopManual,
       leerDatosTitulo: () => datosTituloDe(type, id, prov.reg ?? { rt: 0, rp: {}, ru: 0 }),
     });
     fallo = r.fallo;

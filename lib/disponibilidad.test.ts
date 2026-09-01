@@ -259,3 +259,90 @@ test("toda excepción del repo está bien formada", async () => {
     assert.ok(e.vence > e.verificado, "vence antes de haberse verificado");
   }
 });
+
+// ============================================================================
+// Procedencia `top-manual`: el Top semanal cargado a mano
+// ============================================================================
+//
+// El dueño arma los doce bloques de `/top` eligiendo cada título y confirmando
+// en qué plataforma está. Esa confirmación es un dato verificado a mano, y es la
+// respuesta al agujero del issue #16: TMDB tarda en publicar el proveedor
+// argentino de un estreno, y mientras tanto el título se ve en gris.
+//
+// 🔴 ENTRA POR EL RESOLVEDOR CENTRAL, NO POR UN CAMINO PROPIO DE `/top`. Si
+// viviera sólo en `/top`, la misma película saldría en color ahí y en gris en la
+// ficha, la búsqueda y el Home — que es exactamente el bug que el resolvedor
+// central existe para impedir (ver el encabezado de este archivo).
+//
+// Las reglas de siempre valen igual: sólo habla cuando TMDB no sabe nada, nunca
+// contradice, y un fallo de lectura es "no sé" y no se cachea.
+
+const SIN_MANUAL = async () => new Map<string, PlatformCode[]>();
+
+test("el Top manual resuelve un título que TMDB no ubica", async () => {
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 322428, deTmdb: [], hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerTopManual: async () => new Map([["tv:322428", ["n"] as PlatformCode[]]]),
+  });
+  assert.deepEqual(r.plataformas, ["n"]);
+  assert.equal(r.procedencia, "top-manual");
+});
+
+test("🔴 el Top manual NO se consulta si TMDB sabe algo", async () => {
+  // Ni siquiera se pide: es la misma optimización que el resto de los respaldos,
+  // y a la vez la garantía de que no puede contradecir a TMDB.
+  for (const caso of [
+    { deTmdb: ["d"] as PlatformCode[], hayFlatrateAR: false },
+    { deTmdb: [] as PlatformCode[], hayFlatrateAR: true },
+  ]) {
+    let consultas = 0;
+    const r = await resolverDisponibilidad({
+      tipo: "tv", id: 322428, ...caso, hoy: HOY,
+      leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+      leerTopManual: async () => { consultas++; return new Map([["tv:322428", ["n"] as PlatformCode[]]]); },
+    });
+    assert.equal(consultas, 0, "consultó el Top manual teniendo dato de TMDB");
+    assert.equal(r.procedencia, "tmdb-ar");
+    assert.deepEqual(r.plataformas, caso.deTmdb);
+  }
+});
+
+test("un fallo del Top manual es «no sé»: no niega, y no se cachea", async () => {
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 322428, deTmdb: [], hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerTopManual: async () => { throw new Error("Supabase caído"); },
+  });
+  assert.deepEqual(r.plataformas, [], "una caída nuestra produjo una afirmación");
+  assert.equal(r.fallo, true, "no marcó el fallo: esto se iba a cachear");
+});
+
+test("sin lector de Top manual, todo sigue como antes", async () => {
+  // El parámetro es opcional a propósito: los tests y llamadores viejos no
+  // cambian de comportamiento por existir esta procedencia.
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 1, deTmdb: [], hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+  });
+  assert.equal(r.procedencia, null);
+  assert.equal(r.fallo, false);
+});
+
+test("el Top manual va DESPUÉS del top oficial y ANTES del enlace probable", async () => {
+  // Los dos primeros son hechos publicados; el tercero es una regla que infiere.
+  // El orden sólo importa cuando dos discrepan, que es raro, pero cuando pasa
+  // gana el dato sobre la inferencia.
+  const conTodo = {
+    tipo: "tv" as const, id: 275224, deTmdb: [] as PlatformCode[], hoy: HOY,
+    leerTopManual: async () => new Map([["tv:275224", ["n"] as PlatformCode[]]]),
+    leerDatosTitulo: async () => GUTIERREZ,
+  };
+  const gana = await resolverDisponibilidad({ ...conTodo, leerTopOficial: nadaTop });
+  assert.equal(gana.procedencia, "top-manual", "el enlace probable le ganó al dato manual");
+
+  const oficial = await resolverDisponibilidad({
+    ...conTodo, leerTopOficial: async () => new Set(["tv:275224"]),
+  });
+  assert.equal(oficial.procedencia, "top-oficial");
+});
