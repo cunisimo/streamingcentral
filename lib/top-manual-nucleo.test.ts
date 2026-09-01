@@ -137,3 +137,38 @@ test("una plataforma que no es de las seis se ignora", () => {
   const e = evidenciaDeRankings([fila({ plataforma: "zz" })], "2026-09-02");
   assert.equal(e.size, 0);
 });
+
+// --- reordenar sobre un bloque INCOMPLETO ------------------------------------
+//
+// 🔴 EL BUG DE LA SEGUNDA AUDITORÍA. Los botones mandan la posición VISUAL
+// (1..10) y la función trabajaba sobre los índices del arreglo presente. Con
+// cuatro títulos en las posiciones 1, 2, 5 y 7, una flecha sobre la 5 mandaba
+// `desde: 5`, que en un arreglo de cuatro es inválido — y el camino de "inválido"
+// devolvía la lista RENUMERADA 1..4. O sea que un gesto que no hacía nada
+// compactaba el bloque y movía tres títulos que nadie tocó.
+
+test("un movimiento inválido devuelve las posiciones INTACTAS", () => {
+  const parcial = [
+    { posicion: 1, tipo: "tv" as const, tmdb_id: 10, titulo: "A" },
+    { posicion: 2, tipo: "tv" as const, tmdb_id: 20, titulo: "B" },
+    { posicion: 5, tipo: "tv" as const, tmdb_id: 50, titulo: "C" },
+    { posicion: 7, tipo: "tv" as const, tmdb_id: 70, titulo: "D" },
+  ];
+  const r = posicionesDeReordenar(parcial, 5, 6);
+  assert.deepEqual(r.map((x) => x.posicion), [1, 2, 5, 7],
+    "renumeró un bloque incompleto por un movimiento que no era válido");
+  assert.deepEqual(r.map((x) => x.tmdb_id), [10, 20, 50, 70]);
+});
+
+test("un bloque incompleto no se compacta por un movimiento válido tampoco", () => {
+  // Con cuatro títulos, `desde: 1 → hasta: 2` SÍ es un movimiento posible sobre
+  // el arreglo. Aun así las posiciones reales no se pueden inventar: la función
+  // sólo renumera cuando el bloque está completo.
+  const parcial = [
+    { posicion: 1, tipo: "tv" as const, tmdb_id: 10, titulo: "A" },
+    { posicion: 9, tipo: "tv" as const, tmdb_id: 90, titulo: "B" },
+  ];
+  const r = posicionesDeReordenar(parcial, 1, 2);
+  assert.deepEqual(r.map((x) => x.posicion), [1, 9],
+    "compactó un bloque incompleto");
+});

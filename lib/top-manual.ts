@@ -51,21 +51,42 @@ export interface RankingFila {
   estado: "borrador" | "publicado";
   captured_at: string;
   published_at: string | null;
-  revisado_por: string | null;
+  /**
+   * ¿Está revisado? Columna DERIVADA de la base.
+   *
+   * 🔴 NO SE LEE `revisado_por`. Es un uuid revocado para `anon` y
+   * `authenticated`, porque RLS filtra filas y no columnas: sin revocarlo,
+   * cualquiera podía leer quién armó y quién firmó cada publicación. El panel
+   * sólo necesita saber SI está revisado, y para eso está este booleano.
+   */
+  revisado: boolean;
   copiado_de: string | null;
   entradas: EntradaTop[];
 }
 
-const SELECT_RANKING =
-  "id, plataforma, tipo, estado, captured_at, published_at, revisado_por, copiado_de, " +
+const COLUMNAS =
+  "id, plataforma, tipo, estado, captured_at, published_at, revisado, copiado_de";
+
+/** Lo que lee el PANEL: el bloque entero con sus posiciones. */
+const SELECT_RANKING = `${COLUMNAS}, top_ranking_entries(posicion, tipo, tmdb_id, titulo)`;
+
+/**
+ * Lo que lee la APP PÚBLICA. Sin `revisado` ni fechas de firma: el lector no
+ * audita el ranking, sólo lo ve.
+ */
+const SELECT_PUBLICO =
+  "id, plataforma, tipo, estado, captured_at, published_at, " +
   "top_ranking_entries(posicion, tipo, tmdb_id, titulo)";
 
-interface CrudoRanking extends Omit<RankingFila, "entradas"> {
+interface CrudoRanking extends Omit<RankingFila, "entradas" | "revisado"> {
+  revisado?: boolean;
   top_ranking_entries?: EntradaTop[] | null;
 }
 
 const aFila = (r: CrudoRanking): RankingFila => ({
   ...r,
+  // La app pública no pide `revisado`, así que puede no venir: se asume que no.
+  revisado: r.revisado ?? false,
   entradas: [...(r.top_ranking_entries ?? [])].sort((a, b) => a.posicion - b.posicion),
 });
 
@@ -91,7 +112,7 @@ export async function ultimasPublicaciones(): Promise<Map<string, RankingFila>> 
       if (!db) return { valor: [], fallo: true };
       const { data, error } = await db
         .from("top_rankings")
-        .select(SELECT_RANKING)
+        .select(SELECT_PUBLICO)
         .eq("estado", "publicado")
         .order("published_at", { ascending: false });
       // Un error de query NO es "no hay publicaciones": supabase-js devuelve
@@ -264,7 +285,11 @@ export async function guardarPosicion(
     { onConflict: "ranking_id,posicion" },
   );
   if (error) throw new Error(error.message);
-  await desmarcarRevisado(sb, borradorId);
+  // 🔴 YA NO SE DESMARCA DESDE ACÁ. Eran dos requests: si el segundo fallaba, el
+  // bloque quedaba modificado y marcado como revisado, y se podía publicar
+  // contenido que nadie revisó. Ahora lo hace un trigger
+  // (`top_entries_invalidan_revision`), así que tampoco puede saltearlo una
+  // llamada directa a PostgREST.
 }
 
 /** Mueve una posición y renumera. */
@@ -294,8 +319,6 @@ export async function marcarRevisado(
   if (error) throw new Error(error.message);
 }
 
-const desmarcarRevisado = (sb: SupabaseClient, id: string) => marcarRevisado(sb, id, null);
-
 /**
  * Cambia la fecha de captura de un borrador.
  *
@@ -304,7 +327,9 @@ const desmarcarRevisado = (sb: SupabaseClient, id: string) => marcarRevisado(sb,
  * bloque cargado el viernes para la semana del jueves diría el día equivocado
  * — y esa fecha es lo único que dice a qué semana corresponde el ranking.
  *
- * No desmarca la revisión: corregir la fecha no cambia los títulos.
+ * ⚠️ SÍ desmarca la revisión, y lo hace el trigger de la base: la fecha es
+ * parte de lo que se revisó. Un bloque revisado para la semana del 4 no está
+ * revisado para la del 11 sólo porque los títulos no cambiaron.
  */
 export async function cambiarFecha(
   sb: SupabaseClient, borradorId: string, fecha: string,

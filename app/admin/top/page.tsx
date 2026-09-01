@@ -32,7 +32,8 @@ interface RankingFila {
   tipo: MediaType;
   estado: "borrador" | "publicado";
   captured_at: string;
-  revisado_por: string | null;
+  /** Columna derivada de la base. El uuid de quién revisó está revocado. */
+  revisado: boolean;
   entradas: EntradaTop[];
 }
 
@@ -124,7 +125,7 @@ export default function AdminTopPage() {
     }
   }, [pedir]);
 
-  const revisados = borradores.filter((b) => b.revisado_por && !validarBloque(b.entradas).length);
+  const revisados = borradores.filter((b) => b.revisado && !validarBloque(b.entradas).length);
   const pendientes = BLOQUES.length - revisados.length;
 
   async function publicarRevisados() {
@@ -232,6 +233,7 @@ function BloqueEditor({ fila, token, onAccion }: {
 }) {
   const [buscandoPos, setBuscandoPos] = useState<number | null>(null);
   const motivos = validarBloque(fila.entradas);
+  const completo = !motivos.length;
 
   const porPos = new Map(fila.entradas.map((e) => [e.posicion, e]));
   const filas = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -266,10 +268,16 @@ function BloqueEditor({ fila, token, onAccion }: {
               ) : <span className="admin-vacio">— sin título —</span>}
 
               <button type="button" onClick={() => setBuscandoPos(pos)}>Cambiar</button>
-              <button type="button" disabled={pos === 1}
+              {/* 🔴 DESHABILITADAS HASTA QUE ESTÉN LAS DIEZ. Los botones mandan
+                  la posición VISUAL y el reordenamiento trabaja sobre las
+                  posiciones reales: con el bloque incompleto no hay forma de
+                  renumerar sin inventar dónde van los huecos. La función
+                  también lo rechaza, pero un botón que no hace nada es peor que
+                  un botón apagado. */}
+              <button type="button" disabled={!completo || pos === 1}
                 onClick={() => onAccion({ accion: "reordenar", id: fila.id, desde: pos, hasta: pos - 1 })}
                 aria-label={`Subir la posición ${pos}`}>↑</button>
-              <button type="button" disabled={pos === 10}
+              <button type="button" disabled={!completo || pos === 10}
                 onClick={() => onAccion({ accion: "reordenar", id: fila.id, desde: pos, hasta: pos + 1 })}
                 aria-label={`Bajar la posición ${pos}`}>↓</button>
             </li>
@@ -294,7 +302,7 @@ function BloqueEditor({ fila, token, onAccion }: {
       <div className="admin-acciones">
         <label>
           <input
-            type="checkbox" checked={!!fila.revisado_por} disabled={!!motivos.length}
+            type="checkbox" checked={fila.revisado} disabled={!!motivos.length}
             onChange={(ev) => onAccion({ accion: "revisar", id: fila.id, revisado: ev.target.checked })}
           />
           Bloque revisado
@@ -308,7 +316,10 @@ function BloqueEditor({ fila, token, onAccion }: {
       </div>
 
       {!!motivos.length && (
-        <p className="admin-nota">Falta para poder publicar: {motivos.join("; ")}.</p>
+        <p className="admin-nota">
+          Falta para poder publicar: {motivos.join("; ")}. Hasta completar las diez,
+          las flechas de orden quedan deshabilitadas.
+        </p>
       )}
     </section>
   );

@@ -73,19 +73,31 @@ export function validarBloque(entradas: EntradaTop[]): string[] {
  * diez de una y no hay estado intermedio con posiciones repetidas, que la base
  * rechazaría por el `unique (ranking_id, posicion)`.
  *
- * Un movimiento inválido devuelve la lista tal cual — no lanza. Es una interfaz
- * de arrastrar y soltar: un destino fuera de rango es un gesto fallido del
- * usuario, no un error del programa.
+ * 🔴 SÓLO REORDENA BLOQUES COMPLETOS, y esto es una corrección de la segunda
+ * auditoría. Los botones mandan la posición VISUAL (1..10) y esta función
+ * trabajaba sobre los índices del arreglo presente: con cuatro títulos en las
+ * posiciones 1, 2, 5 y 7, una flecha sobre la 5 mandaba `desde: 5`, que en un
+ * arreglo de cuatro es inválido — y el camino de "inválido" devolvía la lista
+ * RENUMERADA 1..4. Un gesto que no hacía nada compactaba el bloque y movía tres
+ * títulos que nadie tocó.
+ *
+ * Con el bloque incompleto se devuelven las posiciones **intactas**: no hay
+ * forma de renumerar sin inventar dónde van los huecos, y ésa es una decisión
+ * del dueño, no de una función. La interfaz además deshabilita las flechas
+ * hasta que estén las diez.
+ *
+ * Un movimiento inválido tampoco lanza: es una interfaz de arrastrar y soltar, y
+ * un destino fuera de rango es un gesto fallido del usuario.
  */
 export function posicionesDeReordenar(
   entradas: EntradaTop[], desde: number, hasta: number,
 ): EntradaTop[] {
   const orden = [...entradas].sort((a, b) => a.posicion - b.posicion);
-  const n = orden.length;
-  const ok = (x: number) => Number.isInteger(x) && x >= 1 && x <= n;
-  if (!ok(desde) || !ok(hasta) || desde === hasta) {
-    return orden.map((e, i) => ({ ...e, posicion: i + 1 }));
-  }
+  const completo = orden.length === 10
+    && orden.every((e, i) => e.posicion === i + 1);
+  const ok = (x: number) => Number.isInteger(x) && x >= 1 && x <= orden.length;
+  if (!completo || !ok(desde) || !ok(hasta) || desde === hasta) return orden;
+
   const [movido] = orden.splice(desde - 1, 1);
   orden.splice(hasta - 1, 0, movido);
   return orden.map((e, i) => ({ ...e, posicion: i + 1 }));

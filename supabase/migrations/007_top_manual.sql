@@ -48,6 +48,15 @@ create table if not exists top_rankings (
   -- de correcciones sin tocar las filas viejas.
   copiado_de    uuid        references top_rankings(id) on delete set null,
 
+  -- ¿Está revisado? Derivada, porque es lo ÚNICO que el dashboard necesita
+  -- saber: quién revisó es un uuid y no se muestra en ninguna pantalla.
+  --
+  -- 🔴 EXISTE PARA PODER REVOCAR `creado_por` y `revisado_por`. RLS filtra
+  -- FILAS, no columnas: sin esto, `anon` leía los uuid de autoría de cada
+  -- publicación con un `select`. Con el booleano, revocar los uuid no rompe ni
+  -- el dashboard ni `publicar_top`.
+  revisado      boolean generated always as (revisado_por is not null) stored,
+
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
 
@@ -145,6 +154,12 @@ begin
       raise exception 'una publicación no se modifica: creá una corrección nueva';
     end if;
   end if;
+  -- Cambiar la FECHA DE CAPTURA también desmarca. La fecha es parte de lo que
+  -- se revisó: un bloque revisado para la semana del 4 no está revisado para la
+  -- del 11 sólo porque los títulos no cambiaron.
+  if new.captured_at is distinct from old.captured_at then
+    new.revisado_por := null;
+  end if;
   new.updated_at := now();
   return new;
 end;
@@ -202,6 +217,34 @@ create trigger top_entries_sin_delete
   before delete on top_ranking_entries
   for each row execute function top_entry_no_borrar();
 
+-- 🔴 TOCAR UNA ENTRADA INVALIDA LA REVISIÓN, Y LO HACE LA BASE.
+--
+-- `guardarPosicion` cambiaba la entrada y desmarcaba en DOS requests. Si el
+-- segundo fallaba —red, 500, token vencido entre uno y otro— el bloque quedaba
+-- modificado y marcado como revisado: se podía publicar contenido que nadie
+-- revisó. Y una llamada directa a PostgREST se salteaba el segundo paso entero.
+--
+-- Con el trigger, la marca no puede sobrevivir a un cambio de contenido por
+-- ningún camino.
+create or replace function top_entry_invalida_revision()
+returns trigger as $$
+declare r_id uuid;
+begin
+  -- En un DELETE, `new` no existe. Y si el DELETE viene en CASCADA porque se
+  -- borró el borrador, la fila padre ya no está: el update no encuentra nada y
+  -- no pasa nada, que es lo correcto.
+  r_id := case when tg_op = 'DELETE' then old.ranking_id else new.ranking_id end;
+  update top_rankings set revisado_por = null
+   where id = r_id and revisado_por is not null;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists top_entries_invalidan_revision on top_ranking_entries;
+create trigger top_entries_invalidan_revision
+  after insert or update or delete on top_ranking_entries
+  for each row execute function top_entry_invalida_revision();
+
 -- ============================================================
 -- 3. RLS
 -- ============================================================
@@ -215,13 +258,50 @@ alter table top_ranking_entries enable row level security;
 -- `aal2` significa que la sesión pasó por el TOTP. Si sólo lo validara la API,
 -- un token de admin robado escribiría directo contra PostgREST y la API no se
 -- enteraría. Con esto, la clave anon + un JWT de admin sin MFA no alcanzan.
+-- Cuántos factores TOTP **verificados** tiene el usuario actual.
+--
+-- 🔴 HACE FALTA PORQUE EL `aal` NO ALCANZA. `aal2` dice que la sesión pasó por
+-- un segundo factor, no cuántos hay registrados: con UNO alcanza para llegar a
+-- `aal2`. El cliente exigía dos y la API y RLS aceptaban uno, así que
+-- "obligatorio" lo sostenía sólo el layout — la capa que un `curl` no ve.
+--
+-- `security definer` porque `auth.mfa_factors` no es legible por `authenticated`.
+create or replace function factores_totp_verificados()
+returns integer as $$
+  select count(*)::integer
+    from auth.mfa_factors
+   where user_id = auth.uid()
+     and factor_type = 'totp'
+     and status = 'verified';
+$$ language sql stable security definer set search_path = auth, public;
+
+revoke all on function factores_totp_verificados() from public, anon;
+grant execute on function factores_totp_verificados() to authenticated;
+
+-- Admin + sesión elevada + factor de respaldo. Las tres, y las tres acá: es la
+-- única capa que un pedido directo a PostgREST no puede saltear.
+--
+-- ⚠️ El segundo factor NO es una formalidad: si se pierde el único, la cuenta
+-- queda sin poder escribir nada —ni para arreglarlo— porque esta función
+-- devuelve false y no hay forma de saltearla desde la app.
 create or replace function is_admin_mfa()
 returns boolean as $$
   select coalesce(
     (select is_admin from public.profiles where id = auth.uid()),
     false
-  ) and coalesce(auth.jwt() ->> 'aal', '') = 'aal2';
+  ) and coalesce(auth.jwt() ->> 'aal', '') = 'aal2'
+    and factores_totp_verificados() >= 2;
 $$ language sql stable security definer set search_path = public;
+
+-- 🔴 RLS FILTRA FILAS, NO COLUMNAS. Las policies de abajo dejan que cualquiera
+-- lea las publicaciones, y con eso `anon` leía también `creado_por` y
+-- `revisado_por`: los uuid de quién armó y quién firmó cada ranking. No los
+-- necesita nadie fuera del panel, y el panel usa la columna derivada `revisado`.
+--
+-- Se revoca a `authenticated` además de `anon`: cualquier usuario con sesión
+-- puede leer las filas publicadas, así que dejárselo a `authenticated` habría
+-- cerrado la mitad de la puerta.
+revoke select (creado_por, revisado_por) on top_rankings from anon, authenticated;
 
 drop policy if exists "top_rankings publicados son publicos" on top_rankings;
 create policy "top_rankings publicados son publicos" on top_rankings
@@ -327,7 +407,12 @@ begin
   end if;
 
   foreach nuevo in array coalesce(p_ids, '{}'::uuid[]) loop
-    select * into r from top_rankings where id = nuevo;
+    -- Columnas EXPLÍCITAS, no `select *`: `creado_por` y `revisado_por` están
+    -- revocadas y esta función corre como el admin (`security invoker`), así
+    -- que un `*` fallaría al publicar. Se usa el booleano derivado.
+    select id, plataforma, tipo, estado, revisado
+      into r
+      from top_rankings where id = nuevo;
 
     if r.id is null then
       ranking_id := nuevo; plataforma := null; tipo := null;
@@ -343,8 +428,9 @@ begin
     end if;
 
     -- Sólo entran los revisados. Es lo que hace que "Publicar revisados" no
-    -- arrastre un bloque a medio cargar.
-    if r.revisado_por is null then
+    -- arrastre un bloque a medio cargar. `revisado` es la columna derivada: el
+    -- uuid está revocado.
+    if not r.revisado then
       publicado := false; motivo := 'sin revisar';
       return next; continue;
     end if;

@@ -68,6 +68,22 @@ export async function adminDeToken(token: string | null): Promise<ResultadoAdmin
   if (error) return { ok: false, status: 503, error: "no se pudo leer el perfil" };
   if (!data?.is_admin) return { ok: false, status: 403, error: "no sos administrador" };
 
+  // 🔴 EL FACTOR DE RESPALDO SE COMPRUEBA ACÁ TAMBIÉN, no sólo en el layout.
+  //
+  // `aal2` dice que la sesión pasó por un segundo factor, **no cuántos hay
+  // registrados**: con uno alcanza para llegar a `aal2`. El cliente exigía dos y
+  // la API aceptaba uno, así que "obligatorio" lo sostenía la única capa que un
+  // `curl` no ve.
+  //
+  // La base lo exige igual (`is_admin_mfa()` en la migración 007); esto está
+  // para devolver un 403 que se entiende, en vez de un error opaco de RLS.
+  const { data: factores, error: e2 } = await comoUsuario
+    .rpc("factores_totp_verificados");
+  if (e2) return { ok: false, status: 503, error: "no se pudieron leer los factores" };
+  if ((factores ?? 0) < 2) {
+    return { ok: false, status: 403, error: "falta el segundo factor de respaldo" };
+  }
+
   return { ok: true, id: uid, token };
 }
 

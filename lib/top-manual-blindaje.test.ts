@@ -157,3 +157,76 @@ test("sin `tipo`, la búsqueda administrativa vuelve a combinar movie y tv", () 
   assert.doesNotMatch(src, /:\s*MediaType\s*=\s*tipoRaw === "movie" \|\| tipoRaw === "tv" \? tipoRaw : "movie"/,
     "sigue cayendo a `movie` cuando no le mandan tipo");
 });
+
+// ============================================================================
+// SEGUNDA AUDITORÍA
+// ============================================================================
+
+// --- 6. la revisión la invalida la BASE, no el código ------------------------
+// `guardarPosicion` cambiaba la entrada y desmarcaba en DOS requests. Si el
+// segundo fallaba —o si alguien llamaba a PostgREST directo— el bloque quedaba
+// modificado y marcado como revisado: se publicaba contenido que nadie revisó.
+
+test("tocar una entrada desmarca la revisión desde un trigger", () => {
+  assert.match(codigo, /after insert or update or delete on top_ranking_entries/i,
+    "la revisión sigue dependiendo de que el código se acuerde de desmarcarla");
+  const fn = /function top_entry_invalida_revision[\s\S]*?\$\$[\s\S]*?\$\$/i.exec(codigo);
+  assert.ok(fn, "no existe la función que invalida la revisión");
+  assert.match(fn![0], /revisado_por = null/,
+    "el trigger no desmarca");
+  // En un DELETE en cascada la fila padre ya no está: actualizarla explotaría.
+  assert.match(fn![0], /tg_op = 'DELETE'/i,
+    "no distingue el DELETE, donde el padre puede no existir");
+});
+
+test("cambiar la fecha de captura también desmarca", () => {
+  const fn = /function top_ranking_publicado_inmutable[\s\S]*?\$\$[\s\S]*?\$\$/i.exec(codigo);
+  assert.match(fn![0], /captured_at is distinct from old\.captured_at[\s\S]{0,200}revisado_por := null/i,
+    "cambiar la fecha deja la revisión puesta");
+});
+
+// --- 7. el respaldo MFA se exige donde importa -------------------------------
+// El cliente pedía dos factores y la API y RLS aceptaban `aal2`, que se alcanza
+// con uno. O sea que "obligatorio" lo sostenía sólo el layout, que es la capa
+// que un `curl` no ve.
+
+test("la base cuenta los factores verificados, no sólo el aal", () => {
+  // Hasta el `;` final: `security definer` va DESPUÉS del `$$` de cierre, así
+  // que un regex que corte en el `$$` no lo ve y el test pasa sin mirarlo.
+  const fn = /function factores_totp_verificados[\s\S]*?\$\$[\s\S]*?\$\$[^;]*;/i.exec(codigo);
+  assert.ok(fn, "no existe la función que cuenta factores");
+  assert.match(fn![0], /auth\.mfa_factors/, "no mira los factores reales");
+  assert.match(fn![0], /verified/, "cuenta factores sin verificar");
+  assert.match(fn![0], /security definer/i, "no puede leer el esquema auth");
+});
+
+test("is_admin_mfa exige DOS factores, no sólo aal2", () => {
+  const fn = /function is_admin_mfa[\s\S]*?\$\$[\s\S]*?\$\$/i.exec(codigo);
+  assert.ok(fn);
+  assert.match(fn![0], /aal2/, "dejó de exigir la sesión elevada");
+  assert.match(fn![0], /factores_totp_verificados\(\) >= 2/,
+    "acepta un solo factor: el respaldo era obligatorio sólo en el layout");
+});
+
+// --- 8. ninguna columna de autoría para `anon` -------------------------------
+// RLS filtra FILAS, no columnas: `anon` podía leer los uuid de quién creó y
+// quién revisó cada publicación.
+
+test("se revocan las columnas de autoría", () => {
+  assert.match(codigo, /revoke select \(creado_por, revisado_por\) on top_rankings from anon, authenticated/i,
+    "`anon` puede leer los uuid de autoría de las publicaciones");
+});
+
+test("queda un booleano para lo único que el dashboard necesita saber", () => {
+  // El dashboard no necesita QUIÉN revisó, sólo SI está revisado. Con un
+  // booleano generado, revocar los uuid no rompe nada.
+  assert.match(codigo, /revisado\s+boolean\s+generated always as \(revisado_por is not null\) stored/i,
+    "sin columna derivada, revocar los uuid rompe el dashboard y publicar_top");
+});
+
+test("publicar_top no lee las columnas revocadas", () => {
+  const fn = /function publicar_top[\s\S]*?\$\$ language/i.exec(codigo);
+  assert.doesNotMatch(fn![0], /select \* into r/i,
+    "hace `select *`: leería columnas revocadas y fallaría al publicar");
+  assert.match(fn![0], /r\.revisado\b/, "no usa el booleano derivado");
+});
