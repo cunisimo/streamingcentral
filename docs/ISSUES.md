@@ -337,8 +337,13 @@ anterior a la última corrida del sync.
 
 ## #8 — `upcoming_content`: sesgo permanente hacia lo popular
 
-**Estado: CORREGIDO el 2026-08-31** en `fix/proximamente-sin-popularidad`, sin
-mergear al escribir esto · **Abierto:** 2026-08-15
+**Estado: CORREGIDO e INTEGRADO** el 2026-09-01 desde
+`fix/proximamente-sin-popularidad` · **Abierto:** 2026-08-15
+
+Corregido **en lo que este issue describe**: el descubrimiento ya no ordena ni
+corta por popularidad. Lo que el issue pedía definir —qué DEBERÍA contener la
+agenda— quedó decidido por el dueño: **todos los estrenos de la ventana de 90
+días que TMDB confirme con `flatrate` argentino**, unos 255.
 
 ### El arreglo
 
@@ -445,6 +450,35 @@ cambiado. Requiere leer la tabla, y esta tanda no ejecuta SQL.
 escrituras. Lo que sí se puede afirmar es que nada de eso se acerca a un límite
 conocido; los dos límites que **no** pude verificar están marcados arriba.
 
+### La decisión del dueño (2026-09-01), después de medir 255 contra 120
+
+Se evaluó acotar a los 120 estrenos más próximos y **se descartó con datos**. Ver
+`docs/medidas/2026-08-31-proximamente-255-vs-120.md`; lo esencial:
+
+- **El read-path ya está capado en 100** (`Math.min(limit, 100)` en la ruta,
+  `limit ?? 100` en `upcomingList`). Con 255 filas o con 120, el cliente recibe
+  exactamente lo mismo: **15 en el Home y 100 en `/proximamente`**. La
+  comparación de payload entre las dos alternativas es nula por construcción.
+- **Acotar a 120 no ahorra llamadas** si se respeta el criterio de fecha: hay que
+  evaluar los 259 para saber cuáles son los 120 más próximos.
+- La única variante que sí ahorra —cortar el recorrido en la página 7— **elige
+  por antigüedad de la serie**, no por fecha de estreno: `discover/tv` ordena por
+  `first_air_date` (el estreno ORIGINAL) y TMDB no tiene `sort_by` por
+  `next_episode_to_air`. Mediana 2020 contra 2024, sin películas, y sólo **56 de
+  sus 120** son de los realmente más próximos.
+
+**Queda decidido:** ventana de 90 días, sin corte por popularidad, sin corte
+anticipado del recorrido, sólo títulos con `flatrate` argentino confirmado,
+límites de lectura **15 / 100 sin tocar** y **sin paginación ni "Cargar más" en
+la interfaz en esta tanda**. Costo aceptado: ~277 llamadas diarias, 10–17 s y
+~255 filas. **Vercel y Upstash no cambian**: el endpoint es `force-dynamic`, no
+cachea, y el tope de 100 hace que el payload servido sea el mismo de antes.
+
+⚠️ Con el tope de 100, las filas 101–255 **hoy no las lee nadie**: las dos rutas
+que podrían leerlas (`?items=` de la watchlist y `?month=`) existen pero no están
+cableadas en ningún cliente. No cuestan casi nada y quedan listas; mientras
+tanto, son inventario sin lector.
+
 ### Limitación residual de la fuente
 
 - **TMDB rechaza `page` por encima de 500.** Es límite de la fuente, no una
@@ -459,6 +493,15 @@ conocido; los dos límites que **no** pude verificar están marcados arriba.
   muestreadas a lo largo de las 130 páginas de la ventana, **0** tenían proveedor
   argentino. La ventana entera tiene 2. Es el catálogo de TMDB, y es el mismo
   agujero del issue #16.
+- ⚠️ **Los tipos de la Edge Function no pasan por ningún typechecker.**
+  `tsconfig.json` excluye `supabase/functions`, no hay `deno.json` ni CI, y Deno
+  no está instalado en la máquina de desarrollo. Lo que SÍ se verifica: los
+  módulos sin dependencias de Deno (`descubrir.ts`, `reconciliar.ts`,
+  `reparar.ts`) se importan y **se ejecutan de verdad** en `npm test`, y un
+  barrido falla si la función usa `require`, `node:`, `process.env`, `__dirname`
+  o `Buffer`. Lo que NO: los tipos de `sync-upcoming.ts`. La red de seguridad
+  real es que el despliegue de Supabase compila la función y falla si algo no
+  cierra.
 
 ### `tv:310290` sigue AFUERA, y está bien
 
