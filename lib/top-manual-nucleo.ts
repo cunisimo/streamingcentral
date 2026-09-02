@@ -33,6 +33,50 @@ export function hayCutover(publicados: Set<string>): boolean {
   return BLOQUES.every((b) => publicados.has(claveBloque(b.plataforma, b.tipo)));
 }
 
+/** Cuántos bloques hay en total: seis plataformas por dos tipos. */
+export const TOTAL_BLOQUES = BLOQUES.length;
+
+export interface Preparacion {
+  /** Bloques con al menos una publicación. */
+  hechos: number;
+  total: number;
+  /** ¿Ya cambió la fuente pública? Es `hayCutover` con otro nombre. */
+  listo: boolean;
+  mensaje: string;
+}
+
+/**
+ * El resumen de preparación del panel: "X de 12 publicados".
+ *
+ * 🔴 CUENTA PUBLICACIONES, NO LA FUENTE QUE SIRVE `/top`. Antes el panel leía
+ * `/api/top` y contaba bloques con `source: "manual"`, pero como el cutover es
+ * ATÓMICO esa fuente sólo cambia cuando están los doce: con cuatro publicados
+ * el contador decía **0 de 12** y saltaba de 0 a 12 de golpe. Como indicador de
+ * progreso no servía, que es justamente para lo que está.
+ *
+ * ⚠️ ESTO NO TOCA EL CUTOVER. `listo` es `hayCutover` y sigue exigiendo los
+ * doce; lo único que cambia es qué número se muestra mientras tanto.
+ *
+ * Un bloque publicado dos veces (una corrección) cuenta UNA vez, y una clave
+ * que no sea de los doce no cuenta: doce claves no alcanzan, tienen que ser LAS
+ * doce.
+ */
+export function preparacion(publicados: readonly string[]): Preparacion {
+  const validas = new Set(
+    publicados.filter((k) =>
+      BLOQUES.some((b) => claveBloque(b.plataforma, b.tipo) === k)),
+  );
+  const listo = hayCutover(validas);
+  return {
+    hechos: validas.size,
+    total: TOTAL_BLOQUES,
+    listo,
+    mensaje: listo
+      ? "El Top público ya usa la carga manual."
+      : "Hasta que estén los doce, el Top público sigue con la fuente anterior.",
+  };
+}
+
 export interface EntradaTop {
   posicion: number;
   tipo: MediaType;

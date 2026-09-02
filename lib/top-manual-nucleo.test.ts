@@ -12,7 +12,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  BLOQUES, evidenciaDeRankings, hayCutover, posicionesDeReordenar, validarBloque,
+  BLOQUES, evidenciaDeRankings, hayCutover, posicionesDeReordenar, preparacion, validarBloque,
 } from "./top-manual-nucleo.ts";
 
 const diez = (n = 10) => Array.from({ length: n }, (_, i) => ({
@@ -171,4 +171,48 @@ test("un bloque incompleto no se compacta por un movimiento válido tampoco", ()
   const r = posicionesDeReordenar(parcial, 1, 2);
   assert.deepEqual(r.map((x) => x.posicion), [1, 9],
     "compactó un bloque incompleto");
+});
+
+// --- el contador de preparación ---------------------------------------------
+//
+// 🔴 EL BUG. El contador leía `/api/top` y contaba bloques con
+// `source: "manual"`. Como el cutover es ATÓMICO, esa fuente sólo cambia cuando
+// están los doce: con cuatro publicados el contador decía **0 de 12**, y saltaba
+// de 0 a 12 de golpe. Como indicador de progreso no servía para nada, que es
+// justamente para lo que está.
+//
+// Ahora cuenta las publicaciones que existen de verdad. Lo que NO cambia es el
+// cutover: sigue exigiendo los doce, y el mensaje sigue diciendo lo mismo.
+
+test("con cuatro publicaciones el contador dice 4, no 0", () => {
+  const p = preparacion(["n:movie", "n:tv", "d:movie", "d:tv"]);
+  assert.equal(p.hechos, 4);
+  assert.equal(p.total, 12);
+  assert.equal(p.listo, false, "hizo cutover con cuatro bloques");
+  assert.equal(p.mensaje,
+    "Hasta que estén los doce, el Top público sigue con la fuente anterior.");
+});
+
+test("con los doce cambia el mensaje y recién ahí está listo", () => {
+  const todos = BLOQUES.map((b) => `${b.plataforma}:${b.tipo}`);
+  const p = preparacion(todos);
+  assert.equal(p.hechos, 12);
+  assert.equal(p.listo, true);
+  assert.equal(p.mensaje, "El Top público ya usa la carga manual.");
+});
+
+test("sin publicaciones arranca en cero", () => {
+  const p = preparacion([]);
+  assert.equal(p.hechos, 0);
+  assert.equal(p.listo, false);
+});
+
+test("una clave repetida o inventada no infla el contador", () => {
+  // Repetida: un bloque con DOS publicaciones (una corrección) cuenta UNA vez.
+  assert.equal(preparacion(["n:movie", "n:movie", "n:tv"]).hechos, 2);
+  // Inventada: doce claves no alcanzan, tienen que ser LAS doce.
+  const raras = BLOQUES.slice(0, 11).map((b) => `${b.plataforma}:${b.tipo}`).concat("zz:movie");
+  const p = preparacion(raras);
+  assert.equal(p.hechos, 11, "contó una clave que no es un bloque");
+  assert.equal(p.listo, false);
 });

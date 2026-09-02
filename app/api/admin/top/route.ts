@@ -3,9 +3,10 @@ import {
   adminDeToken, supabaseComoUsuario, tokenDeHeader,
 } from "@/lib/admin-auth";
 import {
-  cambiarFecha, copiarPublicado, guardarPosicion, marcarRevisado,
-  obtenerBorradores, publicar, reordenar, restaurarBorrador,
+  bloquesConPublicacion, cambiarFecha, copiarPublicado, guardarPosicion,
+  marcarRevisado, obtenerBorradores, publicar, reordenar, restaurarBorrador,
 } from "@/lib/top-manual";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,26 @@ async function puerta(req: NextRequest) {
   return { sb, uid: r.id };
 }
 
+/**
+ * Lo que el panel necesita para dibujarse: los doce borradores y qué bloques ya
+ * tienen publicación.
+ *
+ * Van JUNTOS a propósito. El contador de preparación se actualiza después de
+ * cada acción sin pedir nada extra, porque toda respuesta de esta ruta ya lo
+ * trae. Antes salía de dos llamadas a `/api/top`, que arman el Top completo.
+ */
+async function estado(sb: SupabaseClient) {
+  const [borradores, publicados] = await Promise.all([
+    obtenerBorradores(sb), bloquesConPublicacion(sb),
+  ]);
+  return { borradores, publicados };
+}
+
 export async function GET(req: NextRequest) {
   const p = await puerta(req);
   if ("error" in p) return p.error;
   try {
-    return NextResponse.json({ borradores: await obtenerBorradores(p.sb) });
+    return NextResponse.json(await estado(p.sb));
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
@@ -95,14 +111,17 @@ export async function POST(req: NextRequest) {
         if (!ids.length) return NextResponse.json({ error: "sin bloques" }, { status: 400 });
         // La validación de las diez posiciones vive en `publicar_top`, del lado
         // de la base, y devuelve qué se publicó y qué se rechazó por bloque.
-        return NextResponse.json({ resultados: await publicar(p.sb, ids) });
+        const resultados = await publicar(p.sb, ids);
+        // El estado va en la MISMA respuesta: así el contador de preparación se
+        // actualiza tras publicar sin una consulta más.
+        return NextResponse.json({ resultados, ...(await estado(p.sb)) });
       }
       default:
         return NextResponse.json({ error: "acción desconocida" }, { status: 400 });
     }
-    // Se devuelven los borradores frescos: el dashboard no tiene que volver a
-    // pedirlos y no puede quedar mostrando un estado que ya cambió.
-    return NextResponse.json({ borradores: await obtenerBorradores(p.sb) });
+    // Se devuelve el estado fresco: el dashboard no tiene que volver a pedirlo
+    // y no puede quedar mostrando algo que ya cambió.
+    return NextResponse.json(await estado(p.sb));
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

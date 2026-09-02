@@ -254,3 +254,15 @@ test("publicar_top no lee las columnas revocadas", () => {
     "hace `select *`: leería columnas revocadas y fallaría al publicar");
   assert.match(fn![0], /r\.revisado\b/, "no usa el booleano derivado");
 });
+
+
+test("el contador de preparación no vuelve a leer `/api/top`", () => {
+  // No es un barrido decorativo: leer la fuente servida es EXACTAMENTE el bug.
+  // Como el cutover es atómico, `/api/top` sólo puede decir 0 o 12, así que
+  // cualquier contador derivado de ahí vuelve a saltar de golpe.
+  const src = readFileSync(new URL("../app/admin/top/page.tsx", import.meta.url), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ 	]*\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /["`']\/api\/top/,
+    "el panel volvió a pedir `/api/top` para el contador");
+  assert.match(src, /preparacion\(/, "no usa la función que cuenta publicaciones");
+});

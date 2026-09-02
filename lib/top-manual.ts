@@ -219,6 +219,31 @@ export async function obtenerBorradores(sb: SupabaseClient): Promise<RankingFila
   return [...hay.values()].map(aFila);
 }
 
+/**
+ * Qué bloques tienen AL MENOS UNA publicación. Devuelve claves `plataforma:tipo`.
+ *
+ * 🔴 UNA SOLA CONSULTA, Y DELIBERADAMENTE FLACA: dos columnas, sin traer las
+ * entradas. El historial de publicaciones crece —una fila por publicación, para
+ * siempre— así que cualquier cosa que lo lea entero se pone más cara cada
+ * semana. Acá se leen `plataforma` y `tipo`, se deduplica en memoria, y listo.
+ *
+ * Existe para el contador del panel. Antes ese contador salía de `/api/top`, o
+ * sea DOS pedidos que arman el Top entero —60 fichas incluidas— para terminar
+ * contando seis strings. Y encima daba mal: ver `preparacion()`.
+ */
+export async function bloquesConPublicacion(sb: SupabaseClient): Promise<string[]> {
+  const { data, error } = await sb
+    .from("top_rankings")
+    .select("plataforma, tipo")
+    .eq("estado", "publicado");
+  if (error) throw new Error(error.message);
+  const out = new Set<string>();
+  for (const r of (data ?? []) as { plataforma: string; tipo: string }[]) {
+    out.add(claveBloque(r.plataforma, r.tipo));
+  }
+  return [...out];
+}
+
 /** Copia la última publicación de un bloque dentro de su borrador. */
 export async function copiarPublicado(sb: SupabaseClient, borradorId: string): Promise<void> {
   const { data: b, error } = await sb

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminSesion } from "@/components/admin/useAdminSesion";
 import { PLATFORMS } from "@/lib/providers-ar";
 import {
-  BLOQUES, TOP_PLATAFORMAS, claveBloque, validarBloque,
+  BLOQUES, TOP_PLATAFORMAS, preparacion, validarBloque,
   type EntradaTop,
 } from "@/lib/top-manual-nucleo";
 import type { MediaType, PlatformCode } from "@/lib/types";
@@ -53,10 +53,13 @@ export default function AdminTopPage() {
   const [tipo, setTipo] = useState<MediaType>("movie");
   const [guardado, setGuardado] = useState<Guardado>("limpio");
   const [error, setError] = useState<string | null>(null);
-  const [publicados, setPublicados] = useState<Set<string>>(new Set());
+  const [publicados, setPublicados] = useState<string[]>([]);
   const [cargando, setCargando] = useState(true);
 
-  const pedir = useCallback(async (body?: unknown): Promise<RankingFila[] | null> => {
+  // Toda respuesta de `/api/admin/top` trae los borradores Y qué bloques tienen
+  // publicación, así que el contador se actualiza solo después de cada acción,
+  // sin un pedido extra.
+  const pedir = useCallback(async (body?: unknown) => {
     if (!token) return null;
     const res = await fetch("/api/admin/top", {
       method: body ? "POST" : "GET",
@@ -68,6 +71,7 @@ export default function AdminTopPage() {
     });
     const j = await res.json();
     if (!res.ok) throw new Error(j?.error ?? `error ${res.status}`);
+    if (Array.isArray(j.publicados)) setPublicados(j.publicados as string[]);
     return (j.borradores ?? null) as RankingFila[] | null;
   }, [token]);
 
@@ -84,29 +88,7 @@ export default function AdminTopPage() {
     return () => { vivo = false; };
   }, [estado, token, pedir]);
 
-  // Qué bloques ya tienen publicación. Sale del propio payload público, que es
-  // la misma fuente que decide el cutover: así el contador no puede decir 12/12
-  // mientras `/api/top` sigue sirviendo la fuente vieja.
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
-      try {
-        const r = await fetch("/api/top?tipo=movie&providers=");
-        const j = await r.json();
-        const conMarca = new Set<string>();
-        for (const b of [...(j.mine ?? []), ...(j.others ?? [])]) {
-          if (b.source === "manual") conMarca.add(claveBloque(b.platform, "movie"));
-        }
-        const r2 = await fetch("/api/top?tipo=tv&providers=");
-        const j2 = await r2.json();
-        for (const b of [...(j2.mine ?? []), ...(j2.others ?? [])]) {
-          if (b.source === "manual") conMarca.add(claveBloque(b.platform, "tv"));
-        }
-        if (vivo) setPublicados(conMarca);
-      } catch { /* el contador es informativo; su fallo no bloquea la edición */ }
-    })();
-    return () => { vivo = false; };
-  }, [borradores]);
+  const avance = useMemo(() => preparacion(publicados), [publicados]);
 
   const actual = useMemo(
     () => borradores.find((b) => b.plataforma === plataforma && b.tipo === tipo) ?? null,
@@ -160,13 +142,13 @@ export default function AdminTopPage() {
     <div className="admin admin-top">
       <h1>Top semanal</h1>
 
-      {/* Preparación inicial: hasta que estén los doce, `/top` sigue con la
-          fuente vieja. El cutover es atómico y esto es lo que lo hace visible. */}
+      {/* Preparación inicial. Cuenta PUBLICACIONES, no la fuente que sirve
+          `/top`: como el cutover es atómico, contar la fuente sólo podía dar 0 o
+          12 y saltaba de golpe. El cutover no cambió — sigue exigiendo los doce,
+          y el mensaje lo dice. Ver `preparacion()`. */}
       <p className="admin-nota">
-        Preparación inicial: <strong>{publicados.size} de 12 publicados</strong>.{" "}
-        {publicados.size === 12
-          ? "El Top público ya usa la carga manual."
-          : "Hasta que estén los doce, el Top público sigue con la fuente anterior."}
+        Preparación inicial:{" "}
+        <strong>{avance.hechos} de {avance.total} publicados</strong>. {avance.mensaje}
       </p>
 
       <div className="admin-filtros">
