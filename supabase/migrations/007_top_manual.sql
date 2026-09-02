@@ -455,9 +455,14 @@ begin
     -- Columnas EXPLÍCITAS, no `select *`: `creado_por` y `revisado_por` están
     -- revocadas y esta función corre como el admin (`security invoker`), así
     -- que un `*` fallaría al publicar. Se usa el booleano derivado.
-    select id, plataforma, tipo, estado, revisado
+    -- ⚠️ ALIAS OBLIGATORIO. `plataforma` y `tipo` son parámetros de SALIDA de
+    -- esta función, así que sin calificar quedan ambiguos contra las columnas
+    -- de la tabla y Postgres rechaza la consulta en tiempo de ejecución. El
+    -- `select *` original no lo sufría; apareció al pasar a columnas
+    -- explícitas, y sólo se ve corriendo la función.
+    select t.id, t.plataforma, t.tipo, t.estado, t.revisado
       into r
-      from top_rankings where id = nuevo;
+      from top_rankings t where t.id = nuevo;
 
     if r.id is null then
       ranking_id := nuevo; plataforma := null; tipo := null;
