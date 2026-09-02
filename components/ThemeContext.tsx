@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { COLOR_FONDO } from "@/lib/tema-colores";
 
 type Theme = "light" | "dark";
 interface Ctx {
@@ -10,9 +11,17 @@ interface Ctx {
 const ThemeCtx = createContext<Ctx | null>(null);
 const KEY = "sc:theme";
 
-// Colores de la barra de estado en app instalada. Tienen que coincidir con
-// --bg de cada tema en globals.css.
-const BAR: Record<Theme, string> = { light: "#F5F5F2", dark: "#16171B" };
+// 🔴 EL COLOR DE LA BARRA SALE DE `lib/tema-colores.ts`, NO DE UNA COPIA.
+//
+// Acá había una copia a mano con el comentario "tienen que coincidir con --bg
+// de cada tema en globals.css". No coincidían:
+//
+//     claro:  #F5F5F2  contra  --bg #FAFAFD
+//     oscuro: #16171B  contra  --bg #0F0E13
+//
+// En la PWA instalada de Android eso pinta la barra de estado de un tono
+// distinto al de la app, y por eso se veía la franja en los DOS temas: en claro
+// más oscura, en oscuro más clara. Un test ata ahora esos valores al CSS.
 
 function applyTheme(t: Theme) {
   document.documentElement.setAttribute("data-theme", t);
@@ -29,7 +38,7 @@ function applyTheme(t: Theme) {
   // el color resultante es el que eligió el usuario.
   try {
     const metas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-    metas.forEach((m) => { m.content = BAR[t]; });
+    metas.forEach((m) => { m.content = COLOR_FONDO[t]; });
   } catch { /* noop */ }
 }
 

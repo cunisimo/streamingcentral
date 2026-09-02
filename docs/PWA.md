@@ -411,6 +411,29 @@ Prueba offline real (más fiable que el modo offline de DevTools):
 
 ## 11. Errores que ya cometimos (para no repetirlos)
 
+0. **La franja de la barra de estado en Android.** El color de la barra sale de
+   `<meta name="theme-color">`, y tiene que ser **exactamente** `--bg`. Estaba
+   copiado a mano en cuatro lugares y las copias divergieron:
+
+   | tema | barra | `--bg` | resultado |
+   |---|---|---|---|
+   | claro | `#F5F5F2` | `#FAFAFD` | franja **más oscura** |
+   | oscuro | `#16171B` | `#0F0E13` | franja **más clara** |
+
+   Por eso se veía en los DOS temas, en direcciones opuestas — y por eso no era
+   una desincronización de tema, que es lo primero que uno supone.
+
+   Había un segundo defecto encima: las metas llevan `media`, así que **hasta
+   que hidrata React siguen a `prefers-color-scheme`, no al tema elegido**. Con
+   el sistema en oscuro y la app en claro, la barra arrancaba negra sobre una
+   app blanca en cada arranque en frío. El script inline ya fijaba `data-theme`;
+   ahora fija el color también, y puede hacerlo porque Next emite las metas
+   antes que el script.
+
+   🔴 **Ahora hay una sola fuente: `lib/tema-colores.ts`**, y un test la compara
+   contra el `--bg` de `globals.css`. El comentario viejo decía "tienen que
+   coincidir" y nada lo verificaba: por eso se rompió.
+
 1. **`const` duplicados entre módulos del SW.** `importScripts` comparte un único
    scope global: dos archivos con `const CACHE` rompen el SW entero con
    `Identifier 'CACHE' has already been declared`. **Cada módulo va envuelto en
