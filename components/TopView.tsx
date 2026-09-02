@@ -66,7 +66,7 @@ function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
           {/* `PlatformLogo` YA es el nombre de la plataforma en texto neutro,
               así que poner además `def.name` al lado lo duplicaría. El
               aria-label lo deja explícito para lectores de pantalla. */}
-          <h2 aria-label={def?.name ?? b.platform}><PlatformLogo code={b.platform} /></h2>
+          <h2 className="top-plat" aria-label={def?.name ?? b.platform}><PlatformLogo code={b.platform} /></h2>
           {b.source === "netflix" && (
             <button
               type="button" className="top-info" aria-label="De dónde sale este dato"

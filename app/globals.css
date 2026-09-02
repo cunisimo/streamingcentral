@@ -242,6 +242,17 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .top-group::after{content:"";flex:1;height:1px;background:var(--line-2)}
 .top-group:first-of-type{margin-top:22px}
 @media (max-width:620px){.top-group{font-size:15px;margin-top:28px}}
+/* El nombre de la plataforma en el encabezado de cada bloque del Top. Es el
+   título de la sección, pero venía con `.lg` (13px/600), que es el tamaño de
+   chip pensado para las cards. Acá el chip queda chico: es lo primero que se
+   lee de cada bloque. Va a 26px —el doble— y a 700.
+   Sólo el Top: `.lg` la sigue usando media docena de lugares (cards, ficha,
+   ruleta, selector) donde 13px está bien, y por eso esto va con clase propia en
+   vez de tocar `.lg`.
+   Mismo tamaño en móvil: bajarlo ahí lo dejaba en 1,7x. El nombre más largo
+   (Crunchyroll) entra a 26px junto a las flechas en 375px de ancho, y el
+   contenedor además tiene `flex-wrap`. */
+.top-plat .lg{font-size:26px;font-weight:700}
 .top-sub{color:var(--dim);font-size:13px;margin:-8px 0 12px}
 .top-nota{color:var(--dim);font-size:13px;line-height:1.5;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .top-info{width:20px;height:20px;border-radius:50%;border:1px solid var(--line-2);background:var(--surface);color:var(--dim);font-family:var(--display);font-size:12px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
