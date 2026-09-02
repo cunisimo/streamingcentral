@@ -137,12 +137,11 @@ Quedan dos fuentes de casi-blanco, y son distintas:
 
 `bc43a15` cierra A y abre B. **No se mergea así.**
 
-Lo que todavía no se puede decidir desde esta máquina es si Android usa las
-metas o el `theme_color` del manifest, y si actualiza la barra cuando cambian.
-Eso lo contesta `/diag-pwa` en el teléfono, con el botón rojo.
+Lo que no se puede decidir desde esta máquina es si Android usa las metas o el
+`theme_color` del manifest, y si actualiza la barra cuando cambian.
 
-No se tocó el Top, Supabase ni Capacitor. Sin push, merge ni despliegue. Los
-HTML instrumentados eran temporales y ya se borraron de los dos `public/`.
+No se tocó el Top, Supabase ni Capacitor. Los HTML instrumentados eran
+temporales y ya se borraron de los dos `public/`.
 
 ---
 
@@ -224,9 +223,18 @@ Service worker: los archivos tocados son `app/layout.tsx`,
 `components/ThemeContext.tsx` y los tests. **Ninguno es `public/sw*`, así que no
 corresponde subir `SC_CACHE_VERSION`**; el HTML va por `Network First`.
 
-## Lo que sigue faltando, y sólo lo da un teléfono
+## La pregunta que queda abierta, y por qué no bloquea
 
 Si Android **repinta** la barra cuando el color cambia después del arranque, o si
 **conserva** el del primer pintado. De eso depende si la ventana de 301 ms
-explica del todo la captura original. `/diag-pwa` lo contesta, y el botón rojo es
-el experimento que decide.
+explica del todo la captura original.
+
+**No bloquea el arreglo**, y por eso se cerró sin contestarla: la solución pone
+el color correcto **antes del primer pintado** (2,2–4,0 ms), así que las dos
+respuestas posibles dan lo mismo — si Android latea el color inicial, ya es el
+correcto; si repinta, también.
+
+Hubo una ruta de diagnóstico para preguntárselo a un teléfono (los commits
+`6c8d798` y `3ac21a4` la traen y la explican). **Se eliminó**: era código
+ejecutable temporal y quedarse en el árbol sin usarse no le hace bien a nadie.
+Si algún día hace falta, está en la historia.

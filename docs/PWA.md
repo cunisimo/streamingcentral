@@ -470,10 +470,11 @@ Prueba offline real (más fiable que el modo offline de DevTools):
    `themeColor` al `viewport` o si aparece la etiqueta en el JSX. El comentario
    viejo decía "tienen que coincidir" y nada lo verificaba: por eso se rompió.
 
-   Lo que todavía **no** está confirmado es si Android repinta la barra cuando el
-   color cambia después del arranque, o si conserva el del primer pintado. Eso
-   decide si la ventana de 301 ms explica del todo la captura original, y se
-   contesta con `/diag-pwa` en un teléfono.
+   Lo que **no** está confirmado es si Android repinta la barra cuando el color
+   cambia después del arranque, o si conserva el del primer pintado. **No hace
+   falta saberlo**: el color correcto queda puesto antes del primer pintado, así
+   que las dos respuestas posibles dan el mismo resultado. Importaría sólo si
+   alguna vez se quisiera cambiar el color de la barra sin recargar.
 
 1. **`const` duplicados entre módulos del SW.** `importScripts` comparte un único
    scope global: dos archivos con `const CACHE` rompen el SW entero con
