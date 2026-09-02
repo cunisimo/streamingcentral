@@ -652,3 +652,40 @@ $$ language plpgsql security invoker set search_path = public;
 
 revoke all on function publicar_top(uuid[]) from public, anon;
 grant execute on function publicar_top(uuid[]) to authenticated;
+
+-- ============================================================
+-- 6. Qué bloques tienen publicación (el contador del panel)
+-- ============================================================
+-- 🔴 EL `DISTINCT` LO HACE POSTGRES, NO JAVASCRIPT, y ésa es toda la razón de
+-- que esto sea una función.
+--
+-- La versión anterior hacía `select plataforma, tipo where estado='publicado'`
+-- y deduplicaba en el cliente: eso transfiere el HISTORIAL ENTERO, que crece una
+-- fila por publicación para siempre, cada vez que el editor guarda, reordena o
+-- publica. A las diez semanas son 120 filas para calcular un número que nunca
+-- pasa de 12.
+--
+-- Acá el tope es estructural: seis plataformas por dos tipos, **12 filas como
+-- máximo**, sin importar cuánto historial haya debajo.
+--
+-- ⚠️ ALIAS OBLIGATORIO en el `select`. `plataforma` y `tipo` son parámetros de
+-- SALIDA de esta función y sin calificar quedan ambiguos contra las columnas de
+-- la tabla — es exactamente el error que ya tuvo `publicar_top`, y sólo se ve
+-- ejecutándola.
+create or replace function bloques_publicados()
+returns table (plataforma text, tipo text) as $$
+begin
+  -- Rechaza en vez de devolver vacío: un contador en cero y un "no tenés
+  -- permiso" son cosas distintas, y el panel tiene que poder distinguirlas.
+  if not is_admin_mfa() then
+    raise exception 'no autorizado';
+  end if;
+  return query
+    select distinct r.plataforma, r.tipo
+      from top_rankings r
+     where r.estado = 'publicado';
+end;
+$$ language plpgsql stable security invoker set search_path = public;
+
+revoke all on function bloques_publicados() from public, anon;
+grant execute on function bloques_publicados() to authenticated;

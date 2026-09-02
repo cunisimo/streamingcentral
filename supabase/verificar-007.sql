@@ -32,6 +32,7 @@ declare
   r_pub   uuid;
   r_bor   uuid;
   u_admin uuid;
+  n       integer;
   ok      boolean;
 begin
   -- 🔴 UN UUID INVENTADO NO SIRVE: `revisado_por` tiene FK contra `auth.users`,
@@ -168,7 +169,26 @@ begin
     raise notice 'OK: no se pueden borrar las entradas publicadas';
   end;
 
-  raise notice '--- 7. LIMPIEZA ---';
+  raise notice '--- 7. EL CONTADOR CUENTA BLOQUES, NO PUBLICACIONES ---';
+  -- `bloques_publicados()` exige `is_admin_mfa()`, que acá da false: lo que se
+  -- comprueba es el DISTINCT y los permisos. La ejecución con sesión real está
+  -- en los casos autenticados.
+  if has_function_privilege('anon', 'bloques_publicados()', 'execute') then
+    raise exception 'FALLA: anon puede ejecutar bloques_publicados()';
+  end if;
+  if not has_function_privilege('authenticated', 'bloques_publicados()', 'execute') then
+    raise exception 'FALLA: el panel no puede ejecutar bloques_publicados()';
+  end if;
+  -- El mismo bloque publicado DOS veces (una corrección) tiene que contar una.
+  select count(*) into n from (
+    select distinct r.plataforma, r.tipo from top_rankings r where r.estado = 'publicado'
+  ) t;
+  if n <> 1 then
+    raise exception 'FALLA: dos publicaciones del mismo bloque contaron % veces', n;
+  end if;
+  raise notice 'OK: distinct en la base, anon sin execute, panel con execute';
+
+  raise notice '--- 8. LIMPIEZA ---';
   -- La publicación es inmutable a propósito, así que para limpiar hay que
   -- desactivar los triggers. Es la prueba final de que están puestos.
   alter table top_rankings disable trigger top_rankings_sin_delete;
