@@ -15,12 +15,34 @@ import { platformByCode } from "@/lib/providers-ar";
 import type { TopBlock, TopPayload } from "@/lib/top";
 import type { MediaType } from "@/lib/types";
 
+// La nota explicaba por qué Netflix decía una cosa y el resto otra. Con el Top
+// semanal cargado a mano esa distinción desapareció: las seis plataformas salen
+// de la misma fuente, así que no hay nada que aclarar.
+//
+// ⚠️ ANTES DEL CUTOVER la nota sigue haciendo falta: hasta que estén publicados
+// los doce bloques, `/top` sirve la implementación vieja y ahí Netflix y el
+// resto SÍ son cosas distintas. Por eso el texto no se borró — se muestra sólo
+// cuando el bloque viene de la fuente vieja.
 const NOTA =
   "El top de Netflix sale de los datos que la propia Netflix publica cada semana " +
   "para Argentina: son horas vistas reales, de la semana que cerró el domingo. " +
   "En el resto de las plataformas no hay dato público de consumo, así que " +
   "mostramos las más populares del momento — no es lo mismo, y por eso lo " +
   "aclaramos.";
+
+// El subtítulo de cada bloque.
+//
+// 🔴 CON LA CARGA MANUAL TODAS DICEN LO MISMO. La distinción "dato oficial" vs
+// "popularidad" existía porque las fuentes eran distintas de verdad; ahora las
+// seis las arma el dueño con el mismo criterio, y sostener dos rótulos sería
+// afirmar una diferencia que ya no existe.
+//
+// Las fechas de captura NO se muestran acá: viven en el dashboard. El lector no
+// tiene que auditar cuándo se cargó un ranking.
+function subtitulo(source: TopBlock["source"]): string {
+  if (source === "manual") return "Top semanal";
+  return source === "netflix" ? "Lo más visto esta semana · dato oficial" : "Lo más popular ahora";
+}
 
 // La clave del carrusel incluye el TIPO, y eso es lo que hace que al pasar de
 // Películas a Series cada riel arranque del principio: es una clave nueva, no
@@ -61,9 +83,7 @@ function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
           <button className="arrow" onClick={() => scroll(1)} aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg></button>
         </div>
       </div>
-      <p className="top-sub">
-        {b.source === "netflix" ? "Lo más visto esta semana · dato oficial" : "Lo más popular ahora"}
-      </p>
+      <p className="top-sub">{subtitulo(b.source)}</p>
       {nota && <p className="top-nota" id={`top-nota-${b.platform}`}>{NOTA}</p>}
       <div className="track" ref={track}>
         {b.slots.map((s) =>

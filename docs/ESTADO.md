@@ -1047,6 +1047,70 @@ el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide
 volvió a vencer. **Moria NO está resuelta hoy**, ni acá ni en `main`. La regla
 está cubierta por 23 tests apuntados al resolvedor.
 
+## Top semanal manual — rama `feat/top-manual` (2026-09-01)
+
+**Sin mergear y SIN EJECUTAR LA MIGRACIÓN al escribir esto.** Falta la prueba
+manual del dueño.
+
+`/top` pasa a cargarse a mano: doce bloques (seis plataformas × dos tipos) que
+el dueño arma, revisa y publica desde `/admin/top`. Ver el bloque de `CLAUDE.md`
+para las reglas; acá va lo que hay que saber para operarlo.
+
+**Pendiente de ejecutar:** `supabase/migrations/007_top_manual.sql`. No se corrió
+en ningún entorno.
+
+### 🔴 EL PRÓXIMO GATE ES UNA BASE DE VERDAD, NO MÁS TESTS DE TEXTO
+
+Los tests de `npm test` barren el TEXTO del SQL: comprueban que una protección no
+desaparezca del archivo, **no que Postgres se comporte**. Tres auditorías
+encontraron cosas que un barrido no podía ver —la más clara, que
+`revoke select (columna)` no hace nada si el rol tiene `select` de tabla, porque
+los privilegios son aditivos—.
+
+Antes de mergear hay que aplicar la 007 en un **Supabase local o una rama
+descartable** y correr `supabase/verificar-007.sql`, que ejecuta consultas
+reales: privilegios de columna, la columna derivada, los triggers que desmarcan
+la revisión, el índice de un solo borrador y la inmutabilidad de lo publicado.
+Termina en "VERIFICACIÓN COMPLETA" o revienta.
+
+Ese archivo **no es una migración** y no se aplica solo. **No correrlo en
+Producción**: escribe y borra filas.
+
+Lo que ese script no puede probar —todo lo que necesita una sesión real, porque
+`auth.uid()` y `auth.jwt()` son nulos en el SQL editor— está listado al final del
+propio archivo y se verifica desde el dashboard: los dos factores TOTP, publicar,
+el borrador siguiente precargado, la atomicidad del reemplazo, la publicación
+parcial y `creado_por`.
+
+⚠️ En la máquina de desarrollo no hay Docker, `psql` ni Postgres local
+(verificado, no supuesto), así que este paso **no se pudo hacer todavía**. Hace
+falta Docker Desktop para `supabase start`, o una rama de Supabase.
+
+**Pendiente de configurar (lo hace el dueño):** habilitar TOTP en el panel de
+Supabase → Authentication → Multi-Factor Authentication. Sin eso, `/admin/mfa`
+no puede inscribir un factor y el dashboard queda inaccesible.
+
+### El cutover, que es lo que hay que entender antes de tocar nada
+
+Mientras falte cualquiera de los doce bloques publicados, **`/top` entero sigue
+con la implementación vieja**. El dashboard muestra "Preparación inicial: X de
+12 publicados". Con los doce, `/api/top` cambia de fuente sin desplegar nada.
+
+Después del primer cutover los borradores pendientes no afectan: cada bloque
+conserva su última versión publicada.
+
+### Lo que NO cambia
+
+- El selector `Películas | Series`, `Tus plataformas`, `En otras plataformas`,
+  el carrusel por plataforma, el ranking numérico, `TitleCard`, la apertura de
+  la ficha, las acciones rápidas y la restauración de scroll vertical y
+  horizontal. **`TopBlock` conserva su forma** (`mine`, `others`, `fallos`,
+  `degradado`, `slots` 1–10); lo único que cambia es el valor de `source` y el
+  subtítulo.
+- El cron semanal de Netflix **sigue corriendo**: alimenta la evidencia de
+  disponibilidad, no el ranking. Ver `CLAUDE.md`.
+- Las reseñas editoriales siguen en standby y sus policies **no se tocaron**.
+
 ## Evidencia oficial general — rama `feat/evidencia-oficial` (2026-08-31)
 
 **Prueba manual local APROBADA por el dueño el 2026-08-31. Lista para
