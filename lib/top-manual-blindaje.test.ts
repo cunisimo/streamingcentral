@@ -217,10 +217,21 @@ test("la migración se comprueba a sí misma los privilegios de columna", () => 
   // son ADITIVOS, y el `grant select` de TABLA que Supabase le da a `anon` y
   // `authenticated` sobrevive al revoke de columna. Hay que sacar el permiso
   // de tabla y conceder las columnas públicas una por una.
-  assert.match(codigo, /revoke select on top_rankings from anon, authenticated/i,
-    "revoca por columna: el grant de tabla lo sigue permitiendo");
-  assert.match(codigo, /grant select \([\s\S]{0,200}\) on top_rankings to anon, authenticated/i,
-    "no concede las columnas públicas: la app se queda sin leer nada");
+  // Se parte de CERO: `revoke all`. Antes se revocaba sólo el SELECT y el
+  // resto se daba por sentado de las default privileges del entorno —
+  // medido, en el stack local esas tablas quedaban sin INSERT ni UPDATE.
+  assert.match(codigo, /revoke all on top_rankings from anon, authenticated/i,
+    "no parte de cero: depende de los permisos por defecto del entorno");
+  assert.match(codigo, /revoke all on top_ranking_entries from anon, authenticated/i,
+    "las entradas siguen dependiendo del entorno");
+  assert.match(codigo, /grant select \([\s\S]{0,200}\)\s*on top_rankings to anon;/i,
+    "no concede las columnas públicas a anon");
+  assert.match(codigo, /grant insert, update, delete on top_rankings to authenticated/i,
+    "el panel no puede escribir");
+  // Y la autoría no se puede suplantar por PostgREST: `grant insert` alcanza
+  // a todas las columnas, así que la fuerza un trigger.
+  assert.match(codigo, /function top_ranking_autoria/i,
+    "se puede mandar el uuid de otra persona en creado_por");
 
   // 🔴 Y ÉSTA ES LA COMPROBACIÓN QUE IMPORTA, porque no es un barrido de
   // texto: corre DENTRO de la migración. Si algún día alguien vuelve a

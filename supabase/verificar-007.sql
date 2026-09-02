@@ -61,11 +61,34 @@ begin
      or has_column_privilege('authenticated', 'public.top_rankings', 'revisado_por', 'select') then
     raise exception 'FALLA: la autoría es legible';
   end if;
+  -- `anon` lee las seis columnas del payload público. `revisado` y `copiado_de`
+  -- son del panel: `anon` NO tiene que poder leerlas.
   if not has_column_privilege('anon', 'public.top_rankings', 'plataforma', 'select')
-     or not has_column_privilege('anon', 'public.top_rankings', 'revisado', 'select') then
-    raise exception 'FALLA: se revocó de más y la app no puede leer';
+     or not has_column_privilege('anon', 'public.top_rankings', 'estado', 'select') then
+    raise exception 'FALLA: se revocó de más y la app pública no puede leer';
   end if;
-  raise notice 'OK: autoría oculta, columnas públicas legibles';
+  if has_column_privilege('anon', 'public.top_rankings', 'revisado', 'select') then
+    raise exception 'FALLA: anon puede leer `revisado`, que es del panel';
+  end if;
+  if not has_column_privilege('authenticated', 'public.top_rankings', 'revisado', 'select') then
+    raise exception 'FALLA: el panel no puede leer `revisado`';
+  end if;
+
+  -- Escritura: sólo el panel, y sólo las tres operaciones.
+  if has_table_privilege('anon', 'public.top_rankings', 'insert')
+     or has_table_privilege('anon', 'public.top_ranking_entries', 'insert') then
+    raise exception 'FALLA: anon puede escribir';
+  end if;
+  if not has_table_privilege('authenticated', 'public.top_rankings', 'insert')
+     or not has_table_privilege('authenticated', 'public.top_ranking_entries', 'delete') then
+    raise exception 'FALLA: el panel no puede escribir';
+  end if;
+  -- `truncate` saltearía los triggers que protegen las publicaciones.
+  if has_table_privilege('authenticated', 'public.top_rankings', 'truncate')
+     or has_table_privilege('anon', 'public.top_rankings', 'truncate') then
+    raise exception 'FALLA: alguien puede truncar la tabla';
+  end if;
+  raise notice 'OK: autoría oculta, lecturas y escrituras exactas';
 
   raise notice '--- 2. LA COLUMNA DERIVADA ---';
   insert into top_rankings (plataforma, tipo) values ('n', 'movie') returning id into r_bor;

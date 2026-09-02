@@ -223,6 +223,52 @@ create trigger top_entries_sin_delete
   before delete on top_ranking_entries
   for each row execute function top_entry_no_borrar();
 
+-- 🔴 LA AUTORÍA LA PONE LA BASE, NO EL QUE ESCRIBE.
+--
+-- `grant insert on top_rankings` alcanza a TODAS las columnas: un admin que
+-- hable directo con PostgREST podía mandar `creado_por` con el uuid de otra
+-- persona, o firmar una revisión a nombre ajeno con un `patch`. Revocar el
+-- SELECT de esas columnas no lo impide — los privilegios de lectura y escritura
+-- son independientes.
+--
+-- Acá se sobreescriben con `auth.uid()` en vez de rechazar: rechazar obligaría
+-- a que todo el mundo mande el campo exacto, y sobreescribir hace que mandar
+-- otro valor simplemente no sirva de nada.
+--
+-- ⚠️ SÓLO SE FUERZA SI HAY SESIÓN. Con `auth.uid()` nulo —el editor SQL, un
+-- script con service_role, esta misma migración— no se pisa nada, porque ahí no
+-- hay identidad que suplantar y forzar dejaría todo en null.
+--
+-- ⚠️ Y SÓLO CUANDO `revisado_por` CAMBIA A UN VALOR. Un update que no lo toca
+-- no puede reescribirlo: si no, publicar un bloque revisado por otro admin le
+-- robaría la firma al que publica. Ponerlo en null (desmarcar) se permite.
+create or replace function top_ranking_autoria()
+returns trigger as $$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if tg_op = 'INSERT' then
+    new.creado_por := auth.uid();
+    if new.revisado_por is not null then
+      new.revisado_por := auth.uid();
+    end if;
+  elsif new.revisado_por is distinct from old.revisado_por
+        and new.revisado_por is not null then
+    new.revisado_por := auth.uid();
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+-- El nombre importa: los triggers de un mismo evento corren en orden
+-- alfabético, y `autoria` tiene que ir antes que `inmutable` para que la
+-- comprobación de inmutabilidad vea el valor ya corregido.
+drop trigger if exists top_rankings_autoria on top_rankings;
+create trigger top_rankings_autoria
+  before insert or update on top_rankings
+  for each row execute function top_ranking_autoria();
+
 -- 🔴 TOCAR UNA ENTRADA INVALIDA LA REVISIÓN, Y LO HACE LA BASE.
 --
 -- `guardarPosicion` cambiaba la entrada y desmarcaba en DOS requests. Si el
@@ -321,31 +367,93 @@ $$ language sql stable security definer set search_path = public;
 -- Efecto lateral que conviene conocer: **una columna nueva nace invisible**
 -- hasta que alguien la agregue a este `grant`. Es incómodo una vez y evita que
 -- el próximo campo sensible se publique por olvido.
-revoke select on top_rankings from anon, authenticated;
-grant select (
-  id, plataforma, tipo, estado, captured_at, published_at, revisado, copiado_de
-) on top_rankings to anon, authenticated;
+-- 🔴 SE DECLARAN LOS PERMISOS COMPLETOS, SIN DEPENDER DEL ENTORNO. Antes esto
+-- revocaba el SELECT y daba por sentado que el resto venía de las default
+-- privileges de Supabase. Medido: en el stack local del CLI esas tablas quedan
+-- con `Dxtm` (DELETE, REFERENCES, TRIGGER, MAINTAIN) y **sin INSERT, SELECT ni
+-- UPDATE** — igual que todas las demás tablas del proyecto, así que no era un
+-- defecto de esta migración, pero sí una dependencia implícita del entorno.
+--
+-- Ahora se parte de cero y se concede sólo lo que hace falta. `truncate`,
+-- `references`, `trigger` y `maintain` NO se conceden: nada de la app los usa y
+-- `truncate` saltearía los triggers que protegen las publicaciones.
+revoke all on top_rankings from anon, authenticated;
+revoke all on top_ranking_entries from anon, authenticated;
+
+-- `anon` es la clave con la que la app lee del lado del servidor. Sólo lectura,
+-- y sólo de las columnas que el payload público usa: ni `revisado` ni
+-- `copiado_de`, que son del panel.
+grant select (id, plataforma, tipo, estado, captured_at, published_at)
+  on top_rankings to anon;
+grant select on top_ranking_entries to anon;
+
+-- `authenticated` es el admin del panel. Lee además las dos columnas del panel,
+-- y escribe. Las policies de RLS son las que deciden QUÉ filas — el grant sólo
+-- habilita la operación.
+grant select (id, plataforma, tipo, estado, captured_at, published_at, revisado, copiado_de)
+  on top_rankings to authenticated;
+grant insert, update, delete on top_rankings to authenticated;
+grant select, insert, update, delete on top_ranking_entries to authenticated;
 
 -- Y se comprueba acá mismo. Si algún día alguien vuelve a conceder la tabla
 -- entera, la migración falla al aplicarse en vez de dejar la fuga andando.
 do $$
-declare rol text; col text;
+declare rol text; col text; t text; priv text;
 begin
+  -- 1. La autoría, oculta para los dos roles.
   foreach rol in array array['anon', 'authenticated'] loop
     foreach col in array array['creado_por', 'revisado_por'] loop
       if has_column_privilege(rol, 'public.top_rankings', col, 'select') then
         raise exception '% todavía puede leer top_rankings.%', rol, col;
       end if;
     end loop;
-    -- Y las públicas tienen que seguir siendo legibles: sin esto, un revoke de
-    -- más rompería la app en silencio hasta que alguien abriera /top.
-    foreach col in array array['id', 'plataforma', 'tipo', 'estado',
-                               'captured_at', 'published_at', 'revisado'] loop
+  end loop;
+
+  -- 2. Lo que la app necesita leer, legible. Sin esto, un revoke de más
+  --    rompería la app en silencio hasta que alguien abriera /top.
+  foreach col in array array['id', 'plataforma', 'tipo', 'estado',
+                             'captured_at', 'published_at'] loop
+    foreach rol in array array['anon', 'authenticated'] loop
       if not has_column_privilege(rol, 'public.top_rankings', col, 'select') then
         raise exception '% perdió el acceso a top_rankings.%', rol, col;
       end if;
     end loop;
   end loop;
+  foreach col in array array['revisado', 'copiado_de'] loop
+    if not has_column_privilege('authenticated', 'public.top_rankings', col, 'select') then
+      raise exception 'el panel perdió el acceso a top_rankings.%', col;
+    end if;
+    if has_column_privilege('anon', 'public.top_rankings', col, 'select') then
+      raise exception 'anon puede leer top_rankings.%, que es del panel', col;
+    end if;
+  end loop;
+
+  -- 3. Escritura: sólo `authenticated`, y sólo las tres operaciones.
+  foreach t in array array['public.top_rankings', 'public.top_ranking_entries'] loop
+    foreach priv in array array['insert', 'update', 'delete'] loop
+      if has_table_privilege('anon', t, priv) then
+        raise exception 'anon puede % en %', priv, t;
+      end if;
+      if not has_table_privilege('authenticated', t, priv) then
+        raise exception 'el panel no puede % en %', priv, t;
+      end if;
+    end loop;
+    -- 4. Nada de lo que no se pidió. `truncate` es el que más importa:
+    --    saltearía los triggers que protegen las publicaciones.
+    foreach priv in array array['truncate', 'references', 'trigger', 'maintain'] loop
+      foreach rol in array array['anon', 'authenticated'] loop
+        if has_table_privilege(rol, t, priv) then
+          raise exception '% tiene % sobre %, que no se concedió', rol, priv, t;
+        end if;
+      end loop;
+    end loop;
+  end loop;
+
+  -- 5. `anon` lee las entradas (las policies filtran a lo publicado) pero no
+  --    escribe: eso ya quedó cubierto arriba.
+  if not has_table_privilege('anon', 'public.top_ranking_entries', 'select') then
+    raise exception 'anon no puede leer las entradas publicadas';
+  end if;
 end $$;
 
 drop policy if exists "top_rankings publicados son publicos" on top_rankings;
