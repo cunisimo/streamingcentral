@@ -337,7 +337,210 @@ anterior a la última corrida del sync.
 
 ## #8 — `upcoming_content`: sesgo permanente hacia lo popular
 
-**Estado:** abierto · **Prioridad:** media · **Abierto:** 2026-08-15
+**Estado: CORREGIDO e INTEGRADO** el 2026-09-01 desde
+`fix/proximamente-sin-popularidad` · **Abierto:** 2026-08-15
+
+Corregido **en lo que este issue describe**: el descubrimiento ya no ordena ni
+corta por popularidad. Lo que el issue pedía definir —qué DEBERÍA contener la
+agenda— quedó decidido por el dueño: **todos los estrenos de la ventana de 90
+días que TMDB confirme con `flatrate` argentino**, unos 255.
+
+### El arreglo
+
+El descubrimiento **ya no ordena ni corta por popularidad**. Se recorre la
+ventana entera hasta `total_pages`, ordenando por fecha, y el filtro de
+proveedor argentino se aplica dentro del propio `discover`.
+
+🔴 **Lo que NO cambió, y es la decisión del dueño:** la exigencia de un
+`flatrate` confirmado para Argentina se conserva intacta. No se usa
+`oficial-probable` para títulos futuros, no se infiere disponibilidad por
+`network + homepage`, y no entra nada que TMDB todavía no asocie a un proveedor
+argentino. Esto corrige **qué se mira**, no qué califica.
+
+**Por qué el filtro va en el `discover` y no después.** Recorrer la ventana sin
+filtrar costaría 95 páginas + 1900 `tvDetails` + 1900 `watch/providers`. Con el
+filtro adentro son 13 páginas y 259 títulos. Sólo vale si no pierde nada, así
+que se midió contra el camino viejo: de las 36 series que conservaba pierde
+**0**, y de un muestreo de la COLA que el código viejo no miraba nunca —páginas
+20, 40, 60, 80 y 95— pierde **0** de las 20 con proveedor AR.
+
+⚠️ La lista de proveedores se le pide a TMDB en cada corrida (58 ids de AR), no
+se toma de `lib/providers-ar.ts`: el filtro final acepta CUALQUIER `flatrate`
+argentino, y usar los 20 ids que Yump mapea dejaría afuera 7 series y 1 película.
+
+### Costo medido (2026-08-31, ventana de 90 días)
+
+| | Antes | Primera versión | **Optimizado** |
+|---|---|---|---|
+| Páginas de discover | 6 (3 + 3) | 14 (1 + 13) | **14** |
+| Llamadas a TMDB | ~186 | 530 | **277** |
+| Títulos crudos | 120 | 261 | 261 |
+| Únicos tras dedup | 120 | 255 | 255 |
+| **Filas escritas** | **36** | 255 | **255** |
+| Duración | sin medir | 26,7 s | **17,1 s** |
+
+Siete veces más agenda por 1,5 veces más llamadas que el camino viejo.
+
+**De dónde salió la mitad de las llamadas.** El sync pedía DOS cosas por serie:
+`/tv/{id}` para el `next_episode_to_air` y `/tv/{id}/watch/providers` para el
+filtro argentino. Con `append_to_response=watch/providers` vienen juntas, y con
+259 series eso son 259 pedidos en vez de 518.
+
+Se midió antes de tomarlo, sobre 20 series reales del propio discover del sync:
+**proveedores AR idénticos en 20 de 20**, y los campos que el sync usa
+—`air_date`, `season_number`, `episode_number` y `name` del próximo episodio,
+más `status`— idénticos en 20 de 20. Los bytes son los mismos (35.085 B sumando
+las dos respuestas contra 35.094 B en una): se transfiere lo mismo en un pedido
+en vez de dos.
+
+⚠️ **Una serie parecía diferir y NO era `append_to_response`.** `tv:615` daba
+`vote_average` 6 contra 5,5 y `vote_count` 1 contra 2 **del próximo episodio**,
+entre dos llamadas con segundos de diferencia. Es un dato vivo y el sync no lo
+usa; el control —dos llamadas separadas seguidas— dio idéntico. Conviene tenerlo
+presente antes de leer un diff contra una respuesta guardada.
+
+El filtro final acepta **255 de 255**: no rechaza nada porque el `discover` ya
+filtró, pero no es redundante — es de donde salen los proveedores de cada fila
+para el join, y ahora 253 de esos 255 ya vienen resueltos del detalle.
+
+### Qué escribe una corrida, y por qué NO se agregó un diff
+
+El cron corre **una vez por día** (`0 6 * * *`, pg_cron). Cada corrida:
+
+| Tabla | Operación | Filas |
+|---|---|---|
+| `providers` | upsert por `id` | ≤ 58 |
+| `upcoming_content` | upsert por `tmdb_id,media_type` | **255** |
+| `upcoming_content_providers` | delete de los links + insert | ~255 borrados + ~300 insertados |
+| `upcoming_content` | delete de lo que perdió sus proveedores (`aBorrar`) | variable |
+| `upcoming_content` | delete de lo vencido (`release_date < hoy − 2`) | variable |
+
+**Las filas NO se acumulan indefinidamente**: el conjunto está acotado por la
+ventana de 90 días y por el borrado de vencidos. Hoy la agenda tiene **44 filas**
+(medidas por la API pública, sin tocar la base); después del cambio quedaría en
+torno a **255**.
+
+**Se reescriben casi todas, todos los días.** Medido: de una ventana a la del día
+siguiente, **256 de 259 series son las mismas (98,8%)**; salen 3 y entran 2. Y
+como el payload lleva `updated_at`, cada fila es un UPDATE real aunque el
+contenido no haya cambiado.
+
+🔴 **Aun así no se agregó detección de cambios, a propósito.** El ahorro serían
+~250 UPDATE por día (~7.500 al mes), que es insignificante para Postgres, y
+`updated_at` es **el criterio de cierre del issue #7** ("ninguna fila con
+`updated_at` anterior a la última corrida"). Un diff lo volvería inútil. La
+complejidad no se paga.
+
+⚠️ Lo que **no** se pudo medir: cuántas de esas 255 tienen además el episodio
+cambiado. Requiere leer la tabla, y esta tanda no ejecuta SQL.
+
+### Presupuesto
+
+| | Antes | Optimizado | Margen |
+|---|---|---|---|
+| **TMDB** | ~186/día · ~5.580/mes | **277/día · ~8.310/mes** | el límite publicado es de ~50 req/s, no diario; **no pude verificar una cuota diaria** |
+| **Supabase Edge** — invocaciones | 1/día · 30/mes | **igual** | 30 sobre 500.000/mes del plan gratuito |
+| **Supabase Edge** — duración | sin medir | **17,1 s** | no pude verificar el tope de wall-clock del plan desde el repo |
+| **Supabase DB** — filas | 44 | **~255** | ~255 KB; acotado por la ventana, no crece sin fin |
+| **Supabase DB** — escrituras | ~36 upsert/día | **~255 upsert + ~555 de links por día** | ~24.000 operaciones al mes |
+| **Vercel** | — | **sin invocaciones nuevas** | `/api/upcoming` devuelve ~6× más filas: sube el payload, no la cantidad de pedidos |
+| **Upstash** | — | **cero** | `/api/upcoming` es `force-dynamic` y no cachea |
+
+**No es costo cero**: suben las llamadas a TMDB (1,5×), la duración y las
+escrituras. Lo que sí se puede afirmar es que nada de eso se acerca a un límite
+conocido; los dos límites que **no** pude verificar están marcados arriba.
+
+### La decisión del dueño (2026-09-01), después de medir 255 contra 120
+
+Se evaluó acotar a los 120 estrenos más próximos y **se descartó con datos**. Ver
+`docs/medidas/2026-08-31-proximamente-255-vs-120.md`; lo esencial:
+
+- **El read-path ya está capado en 100** (`Math.min(limit, 100)` en la ruta,
+  `limit ?? 100` en `upcomingList`). Con 255 filas o con 120, el cliente recibe
+  exactamente lo mismo: **15 en el Home y 100 en `/proximamente`**. La
+  comparación de payload entre las dos alternativas es nula por construcción.
+- **Acotar a 120 no ahorra llamadas** si se respeta el criterio de fecha: hay que
+  evaluar los 259 para saber cuáles son los 120 más próximos.
+- La única variante que sí ahorra —cortar el recorrido en la página 7— **elige
+  por antigüedad de la serie**, no por fecha de estreno: `discover/tv` ordena por
+  `first_air_date` (el estreno ORIGINAL) y TMDB no tiene `sort_by` por
+  `next_episode_to_air`. Mediana 2020 contra 2024, sin películas, y sólo **56 de
+  sus 120** son de los realmente más próximos.
+
+**Queda decidido:** ventana de 90 días, sin corte por popularidad, sin corte
+anticipado del recorrido, sólo títulos con `flatrate` argentino confirmado,
+límites de lectura **15 / 100 sin tocar** y **sin paginación ni "Cargar más" en
+la interfaz en esta tanda**. Costo aceptado: ~277 llamadas diarias, 10–17 s y
+~255 filas. **Vercel y Upstash no cambian**: el endpoint es `force-dynamic`, no
+cachea, y el tope de 100 hace que el payload servido sea el mismo de antes.
+
+### Cómo salió en Producción (2026-09-01, función v8)
+
+Primera sincronización controlada, ventana `2026-09-01` → `2026-11-30`:
+
+| | |
+|---|---|
+| Candidatos evaluados / conservados | 251 / **251** |
+| Filas escritas (`upserted`) | 251 |
+| Proveedores distintos | 23 |
+| Borrados (`dropped` / `deleted`) | 0 / 0 |
+| Duración real | **23,3 s** |
+| Fallos de idioma | 0 |
+
+⚠️ **Duró 23,3 s, no 10–17.** Lo medido en local desde Argentina fue 10–17 s; la
+función corre en `us-west-2` y paga otra latencia contra TMDB. Sigue holgado,
+pero el número que hay que usar de referencia es el de Producción.
+
+⚠️ **251 escritas, 244 visibles.** `upcomingList` filtra por las 14 plataformas
+que la app mapea, y el sync acepta CUALQUIER `flatrate` argentino: 7 filas tienen
+sólo proveedores que Yump no muestra. Es la diferencia esperada entre los 58 ids
+de AR y los 20 soportados, y no es un error — son filas correctas sin logo que
+mostrar.
+
+⚠️ **`?limit=100` devuelve 97, no 100.** El tope se aplica en la consulta y el
+filtro de plataformas soportadas después, así que unas pocas de las 100 traídas
+se caen. Es comportamiento previo, no de esta tanda.
+
+⚠️ Con el tope de 100, las filas 101–255 **hoy no las lee nadie**: las dos rutas
+que podrían leerlas (`?items=` de la watchlist y `?month=`) existen pero no están
+cableadas en ningún cliente. No cuestan casi nada y quedan listas; mientras
+tanto, son inventario sin lector.
+
+### Limitación residual de la fuente
+
+- **TMDB rechaza `page` por encima de 500.** Es límite de la fuente, no una
+  decisión nuestra. Con la ventana actual sobra (13 páginas), pero **ampliar
+  `SYNC_WINDOW_DAYS` escala esto de forma lineal**: si alguna vez la ventana
+  llegara al tope habría que particionar por fechas, no subir un número.
+- **El filtro temprano depende del índice de proveedores del `discover`.** Si
+  TMDB atrasa ese índice respecto de `watch/providers`, se perderían títulos. Se
+  midieron 56 casos con proveedor AR (36 + 20) y **0 pérdidas**, pero no hay
+  forma de descartarlo del todo.
+- **Las películas siguen casi vacías, y NO es culpa de la paginación**: de 120
+  muestreadas a lo largo de las 130 páginas de la ventana, **0** tenían proveedor
+  argentino. La ventana entera tiene 2. Es el catálogo de TMDB, y es el mismo
+  agujero del issue #16.
+- ⚠️ **Los tipos de la Edge Function no pasan por ningún typechecker LOCAL.**
+  `tsconfig.json` excluye `supabase/functions`, no hay CI, y Deno no está
+  instalado en la máquina de desarrollo. **Sí existe un
+  `supabase/functions/tmdb-sync/deno.json`**, pero es sólo el mapa de
+  importaciones (`@supabase/supabase-js` desde esm.sh); no configura un chequeo.
+  Lo que SÍ se verifica en local: los módulos sin dependencias de Deno
+  (`descubrir.ts`, `reconciliar.ts`, `reparar.ts`) se importan y **se ejecutan de
+  verdad** en `npm test`, y un barrido falla si la función usa `require`,
+  `node:`, `process.env`, `__dirname` o `Buffer`. Lo que NO: los tipos de
+  `sync-upcoming.ts`. La red de seguridad real es el despliegue, que compila la
+  función en Supabase y falla si algo no cierra.
+
+### `tv:310290` sigue AFUERA, y está bien
+
+"Mis muertos tristes" **no se resolvió** y no hay que presentarla como
+resuelta. Su popularidad (1.761) ya no la deja afuera —ese corte no existe más—
+pero **TMDB no le informa `flatrate` en ninguna región**, así que el filtro que
+el dueño decidió conservar la descarta. El día que TMDB publique su proveedor
+argentino entra sola, sin tocar una línea. Hay un test que usa sus datos como
+fixture para fijar las dos mitades; **no hay ningún id hardcodeado** en el
+código productivo.
 
 `collectSeries` descubre con `discover/tv` ordenado por **popularidad** y
 `MAX_PAGES = 3`. Medido el 2026-08-15 con la consulta exacta del sync:
@@ -362,6 +565,26 @@ criterio es la calidad y la cobertura, no la popularidad.
 **Lo que NO es el arreglo:** subir `MAX_PAGES` a 85. Serían 1696 llamadas de
 detalle por corrida, porque cada serie descubierta necesita su propio
 `tvDetails` para el `next_episode_to_air`.
+
+### La SEGUNDA causa, medida el 2026-08-31 — son dos, no una
+
+Arreglar el descubrimiento **no alcanza**, y esto se confirmó siguiendo un caso
+concreto (`tv:310290`, "Mis muertos tristes") que no aparecía en la agenda:
+
+1. **Descubrimiento** — lo de arriba. Su popularidad es **1.761** contra un corte
+   de **69.99** en la página 3. No entra ni pidiendo la página 50 de 95.
+2. **Filtrado** — `sync-upcoming.ts:224`: `if (!provs[j].length) continue`. Un
+   título **sin proveedor `AR` en `watch/providers` se descarta**, y éste no
+   tiene `flatrate` en ninguna región.
+
+🔴 **La segunda causa es la misma que el issue #16**, y por eso importa: el
+catálogo regional de TMDB llega tarde en los estrenos, que es exactamente cuando
+la agenda de "Próximamente" tiene que mostrarlos. La resolución de
+disponibilidad ya sabe recuperar estos casos con evidencia oficial; **el sync no
+la usa**, porque corre en una Edge Function aparte.
+
+**Sigue abierto y no se tocó** — la corrección de disponibilidad del 2026-08-31
+no lo alcanza.
 
 **Criterio de cierre:** definir qué debería contener la agenda —¿todo lo que
 estrena en las plataformas soportadas? ¿un recorte con criterio?— y que la
@@ -681,6 +904,38 @@ Verificado de paso que no hay un desfase sistemático: el TSV de Netflix todaví
 publica `2026-08-16` como su semana más nueva, así que la corrida de hoy se
 llevó lo más fresco que había.
 
+### Volvió a vencer — 2026-08-30
+
+Comprobado en la base, no deducido:
+
+| semana | primera escritura | filas |
+|---|---|--:|
+| `2026-08-16` | **2026-08-25 12:58:03 UTC** (martes) | 20 |
+| `2026-08-09` | 2026-08-12 18:10 UTC | 20 |
+| `2026-08-02` | 2026-08-09 17:27 UTC | 20 |
+
+**El cron corrió el 25/08 y entró en horario.** La semana `2026-08-16` es la más
+nueva que hay, y hoy tiene **exactamente 14 días**: la guarda mide desde `week`,
+no desde la ingesta, así que **la evidencia venció otra vez** — por horas.
+
+⚠️ **`week` es la semana del RANKING, no cuándo corrió la ingesta.** Que la fila
+diga `2026-08-16` no prueba que hayan faltado corridas: la del 25/08 existe y
+está fechada. Una versión anterior de esta nota afirmaba que faltaban las
+corridas del 18 y del 25, y **era falso** — salía de leer `week` como si fuera la
+fecha de ejecución.
+
+**Consecuencia hoy:** ningún título recibe el respaldo del top oficial, así que
+`/api/title/tv/322428` (Moria) devuelve `[]`. **Moria no está resuelta
+actualmente**, y no lo está en `main` tampoco: la regla de ventana no cambió.
+Esto NO lo arregla la rama `fix/disponibilidad-oficial` y no se intentó ahí — es
+este issue, que sigue abierto.
+
+Lo que hay que decidir acá (no en la rama de disponibilidad): si la guarda debe
+medir desde `week` o desde `updated_at`. Medir desde `week` es lo honesto para el
+rótulo "dato oficial" —el ranking es viejo aunque lo hayamos bajado hoy— pero
+condena al bloque a degradarse cada dos semanas mientras Netflix publique con 9
+días de retraso.
+
 
 ---
 
@@ -846,3 +1101,45 @@ aperturas.
 Este issue queda abierto **sólo** por la demora, y se cierra el día que se
 midan diez aperturas calientes seguidas sin que ninguna imagen pase de un
 segundo — o el día que se decida que no vale la pena y se borre.
+
+## #16 — TMDB no publica el catálogo regional completo, y no hay forma de saber cuánto falta
+
+**Estado: MITIGADO, NO RESUELTO.** Integrado desde
+`fix/disponibilidad-oficial` (prueba manual aprobada por el dueño el
+2026-08-30). Ver `docs/medidas/2026-08-30-disponibilidad-informe.md`.
+
+⚠️ **Mitigado no es cerrado, y la diferencia importa acá.** De los 11 títulos sin
+proveedor `AR` de la muestra, la resolución recupera **4**. Los otros 7 siguen
+sin aparecer como disponibles, y ninguna medición dice cuántos títulos más
+faltan fuera de la red que se midió. Este issue **queda abierto**.
+
+**Actualización 2026-08-31 (`feat/evidencia-oficial`, prueba manual aprobada).**
+La regla se generalizó a **seis plataformas en series y cuatro en películas**,
+con criterio de **cobertura sobre certeza** por decisión del dueño. Medido contra
+verdad de campo: **144 + 22 aciertos, cero falsos positivos**. El punto 1 de "lo
+que sigue abierto" quedó resuelto; **los puntos 2 y 3 no**, y el issue **sigue
+abierto** por el 2: no hay forma de medir el agujero completo.
+
+Medido el 2026-08-30 sobre la red Disney+, 60 días de estrenos: **11 de 15
+series no tenían proveedor `AR`** en `watch/providers`, incluida una que
+JustWatch mostraba como #1 del país (`tv:275224`). La resolución centralizada
+recupera **4 de esas 11** con evidencia oficial estricta; las otras 7 no tienen
+enlace oficial, o lo tienen de otra región o de otro dominio, y **no se
+fuerzan**.
+
+**Lo que sigue abierto:**
+
+1. ~~**Sólo Disney+ está habilitada** para la regla de enlace oficial.~~
+   **RESUELTO el 2026-08-31**: seis plataformas en series (Netflix, Disney+,
+   Prime Video, Max, Paramount+, Apple TV+) y cuatro en películas. Cada
+   combinación de red, dominio, ruta e ids globales se midió antes de entrar, y
+   un test falla si se agrega una sin actualizar el número.
+2. **No se puede medir el agujero completo.** Sabemos cuántas series de una red
+   conocida no tienen dato regional; no sabemos cuántos títulos faltan de redes
+   que ni siquiera consultamos.
+3. **El suplemento por redes tiene ventana fija.** El catálogo regional sí
+   pagina indefinidamente, pero los candidatos que llegan por red salen de una
+   ventana acotada: un título de red más viejo que esa ventana no aparece.
+
+**Lo que NO es una salida:** usar `networks` sola, o el `homepage` solo. Las dos
+producen afirmaciones falsas y hay tests que las rechazan.

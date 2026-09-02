@@ -186,9 +186,18 @@ test("el layout conserva lo que NO es PWA", () => {
   const src = leer("app/layout.tsx");
   assert.match(src, /viewportFit:\s*"cover"/, "se perdió viewportFit");
   assert.match(src, /interactiveWidget:\s*"resizes-content"/, "se perdió interactiveWidget");
-  assert.match(src, /themeColor:/, "se perdió themeColor");
   assert.match(src, /formatDetection:/, "se perdió formatDetection");
   assert.match(src, /applicationName:\s*"Yump"/, "se perdió applicationName");
+  // El color de la barra era `themeColor:` en el viewport y ahora NO está ahí a
+  // propósito: React duplicaba la meta al hidratar si el script de arranque le
+  // cambiaba el `content`, y la copia quedaba casi blanca sobre la app oscura.
+  // Ahora la crea el script. El contrato que este test cuida no cambió —la
+  // cirugía nativa toca `manifest` y `appleWebApp` y NADA más—, así que el
+  // testigo pasa a ser el script, que es donde vive el color hoy.
+  assert.match(src, /THEME_INIT_SCRIPT/, "se perdió el script de arranque del tema");
+  assert.match(src, /COLOR_FONDO/, "el script dejó de leer la fuente única de color");
+  assert.doesNotMatch(src, /themeColor:/,
+    "volvió `themeColor` al viewport: React vuelve a duplicar la meta al hidratar");
 });
 
 test("OfflineState sigue intacto y con sus 9 llamadores", () => {

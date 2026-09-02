@@ -239,6 +239,13 @@ const EXCEPCIONES = new Map([
     // sacarla: no alcanza con que el archivo exista.
     debeContener: "/api/admin-search",
   }],
+  // Llegó con el Top manual, después de CP4, y entra por el MISMO motivo que la
+  // de arriba: es una pantalla de `app/admin`. No es una excepción nueva de
+  // criterio, es el mismo criterio aplicado a un archivo nuevo.
+  ["app/admin/top/page.tsx", {
+    motivo: "app/admin NO viaja en el artefacto nativo: el staging lo excluye",
+    debeContener: "/api/admin/top",
+  }],
 ]);
 
 // ---------------------------------------------------------------- canarios

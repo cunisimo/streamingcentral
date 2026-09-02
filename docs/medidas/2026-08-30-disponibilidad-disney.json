@@ -1,0 +1,211 @@
+{
+  "generado": "2026-08-30T18:04:04.914Z",
+  "ventanaDias": 60,
+  "desde": "2026-07-01",
+  "hasta": "2026-08-30",
+  "red": 2739,
+  "totales": {
+    "candidatos": 15,
+    "conProveedorAR": 4,
+    "sinProveedorAR": 11,
+    "sinARconHomepageDisney": 5
+  },
+  "filas": [
+    {
+      "id": 331370,
+      "nombre": "วารี ๑๐๐ ศพ",
+      "estreno": "2026-08-28",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 0,
+      "homepage": "",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 332379,
+      "nombre": "Countdown to Avengers: Doomsday Official Podcast",
+      "estreno": "2026-08-27",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 3,
+      "homepage": "https://www.marvel.com/watch/digital-series/countdown-to-avengers-doomsday-official-podcast",
+      "redes": [
+        "YouTube(247)",
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 275224,
+      "nombre": "Gutiérrez Is mai neim",
+      "estreno": "2026-08-26",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 3,
+      "homepage": "https://www.disneyplus.com/browse/entity-bafb5cb7-91e5-4b20-85bb-6cf6b5fe2a00",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 333146,
+      "nombre": "Pod Meets World",
+      "estreno": "2026-08-24",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 0,
+      "homepage": "",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 331524,
+      "nombre": "THE ONE SHOT",
+      "estreno": "2026-08-12",
+      "tieneAR": true,
+      "proveedoresAR": [
+        "Disney Plus(337)"
+      ],
+      "regiones": 58,
+      "homepage": "https://www.disneyplus.com/ja-jp/browse/entity-3cd8b19e-d628-43a8-aa62-d0e7841929e0",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 331877,
+      "nombre": "Disney+ Hulu Throwbacks Podcast",
+      "estreno": "2026-08-06",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 22,
+      "homepage": "https://www.disneyplus.com/browse/entity-006b5808-ac23-4e0b-9a15-752c4f335220",
+      "redes": [
+        "YouTube(247)",
+        "Hulu(453)",
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 289324,
+      "nombre": "Star Wars: Visions presenta - La Jedi número 9",
+      "estreno": "2026-08-05",
+      "tieneAR": true,
+      "proveedoresAR": [
+        "Disney Plus(337)"
+      ],
+      "regiones": 61,
+      "homepage": "https://www.disneyplus.com/browse/entity-921588f0-9a3b-4cd6-80d6-0a7cc9ed388a",
+      "redes": [
+        "Hulu(453)",
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 320399,
+      "nombre": "ESPN Jeopardy!",
+      "estreno": "2026-07-31",
+      "tieneAR": true,
+      "proveedoresAR": [
+        "Disney Plus(337)"
+      ],
+      "regiones": 60,
+      "homepage": "https://www.espn.com/watch/series/64c69d21-9f34-4ee9-9cbd-151cafa69a40/espn-jeopardy",
+      "redes": [
+        "Hulu(453)",
+        "Disney+(2739)",
+        "ESPN App(8571)"
+      ]
+    },
+    {
+      "id": 330292,
+      "nombre": "20/20 Britain's Most Notorious Crime Investigations",
+      "estreno": "2026-07-30",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 0,
+      "homepage": "https://www.hulu.com/series/2020-britains-most-notorious-crimes-6447a767-6ad5-449a-a716-649eb3629639",
+      "redes": [
+        "Hulu(453)",
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 329903,
+      "nombre": "Mickey Mouse Clubhouse+: Mickey's Country Farm Songs",
+      "estreno": "2026-07-30",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 0,
+      "homepage": "",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 330160,
+      "nombre": "머더클럽",
+      "estreno": "2026-07-29",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 16,
+      "homepage": "https://www.disneyplus.com/browse/entity-02b192fc-8bd3-498e-ac64-65245666fc39",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 317374,
+      "nombre": "Locker Diaries: Descendants",
+      "estreno": "2026-07-25",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 3,
+      "homepage": "",
+      "redes": [
+        "YouTube(247)",
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 324434,
+      "nombre": "Soy Luna: Volver a rodar",
+      "estreno": "2026-07-24",
+      "tieneAR": true,
+      "proveedoresAR": [
+        "Disney Plus(337)"
+      ],
+      "regiones": 37,
+      "homepage": "https://www.disneyplus.com/browse/entity-255540c6-9aec-4a2d-999c-70df8fd846b4",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 328337,
+      "nombre": "Bluey Compilados",
+      "estreno": "2026-07-02",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 0,
+      "homepage": "https://www.disneyplus.com/browse/entity-e878689c-487f-4041-bd45-cc4551f0a2e5",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    },
+    {
+      "id": 325313,
+      "nombre": "Olivia",
+      "estreno": "2026-07-01",
+      "tieneAR": false,
+      "proveedoresAR": [],
+      "regiones": 1,
+      "homepage": "https://www.disneyplus.com/es-es/browse/entity-3c055b32-28f7-4c27-8a0b-7a8cd9109dd4",
+      "redes": [
+        "Disney+(2739)"
+      ]
+    }
+  ]
+}

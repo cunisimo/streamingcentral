@@ -168,39 +168,12 @@ export async function evidenciaCacheada(opts: {
   return new Set(ids);
 }
 
-/**
- * Las plataformas de una ficha: las de TMDB y, si TMDB no sabe nada, la
- * evidencia del top oficial como respaldo.
- *
- * EL ORDEN DE LOS CHEQUEOS ES LA OPTIMIZACIÓN. Si TMDB devolvió aunque sea una
- * plataforma, `leerEvidencia` NO SE LLAMA: no hay lectura a Supabase, no hay
- * cache que consultar, no hay nada. Eso deja el costo extra en las fichas donde
- * TMDB vino vacío, que son pocas y son exactamente las rotas.
- *
- * Y sólo se agrega `n` cuando TMDB no trajo NADA, por el mismo motivo que en el
- * bloque del Top: si TMDB conoce el título y lo ubica en otro lado, el dato en
- * conflicto es el nuestro, no el suyo.
- *
- * `leerEvidencia` puede LANZAR (Supabase caído). Ahí no se infiere nada y la
- * ficha queda como estaba: una caída de nuestra base no puede producir una
- * afirmación de disponibilidad. Nunca al revés.
- *
- * Devuelve el MISMO array si no hay nada que agregar. `providersOf` cachea
- * `{ codes, links, watchLink }` y `codes` es el array que quedó guardado en
- * Redis (o en el mapa en memoria): mutarlo le metería Netflix a todas las
- * superficies que compartan esa entrada.
- */
-export async function plataformasDeFicha(
-  tipo: MediaType, id: number,
-  deTmdb: PlatformCode[],
-  leerEvidencia: () => Promise<Set<string>>,
-): Promise<PlatformCode[]> {
-  if (deTmdb.length) return deTmdb;
-  let evidencia: Set<string>;
-  try {
-    evidencia = await leerEvidencia();
-  } catch {
-    return deTmdb;
-  }
-  return evidencia.has(claveTitulo(tipo, id)) ? ["n"] : deTmdb;
-}
+// `plataformasDeFicha` vivía acá y se ELIMINÓ en la corrección de
+// disponibilidad. Decidía plataformas por su cuenta, o sea que era un segundo
+// camino además del central — y esa duplicación es justo lo que dejó el
+// arreglo de Moria atado a la ficha mientras las cards seguían en gris.
+//
+// Lo que hacía ahora lo hace `resolverDisponibilidad` (lib/disponibilidad.ts),
+// que consume `evidenciaCacheada` de este mismo archivo con las MISMAS reglas
+// de ventana y de `needs_review`. Las pruebas que la cubrían siguen vivas,
+// apuntadas al resolvedor.

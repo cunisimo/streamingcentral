@@ -975,3 +975,229 @@ versionar — es una decisión pendiente del dueño, no un olvido.
 **Al preparar commits, agregar rutas explícitas y nunca `git add -A`**: fue así
 como se colaron en un commit de esta rama, y hubo que sacarlos con
 `git rm --cached` (que no toca la copia de trabajo).
+
+## Disponibilidad centralizada + selector en "Últimos lanzamientos" (2026-08-30)
+
+Rama `fix/disponibilidad-oficial`. **No mergeada al escribir esto.**
+
+- **Un solo resolvedor** decide "está en X" para toda la app
+  (`lib/disponibilidad.ts`). Antes cada superficie decidía sola: por eso el
+  arreglo de Moria vivía sólo en la ficha.
+- **Evidencia oficial** para títulos cuyo dato regional TMDB no tiene
+  (`lib/enlace-oficial.ts`). **Al integrarse cubría sólo Disney+ y sólo series**;
+  desde `feat/evidencia-oficial` cubre **seis plataformas en series y cuatro en
+  películas**, con procedencia `oficial-probable`. Ver el bloque de más abajo.
+- **Registro manual versionado** (`lib/excepciones-disponibilidad.ts`), **vacío**:
+  el caso testigo se resuelve por la regla general, no por una excepción.
+- **"Últimos lanzamientos · Series"** mezcla la fuente regional con candidatos
+  por red oficial (`lib/ultimos.ts`). El catálogo regional se pagina hasta
+  `total_pages` de TMDB —**sin ventana fija**, que fue una regresión corregida
+  dos veces—; lo acotado es sólo el suplemento por redes. Las páginas no repiten
+  ni saltean porque el orden regional es el de TMDB, estabilizado, y un extra
+  entra recién cuando el stream pasó su fecha.
+- **Guardas de entrada**: sin plataformas válidas no se pide una sola página, y
+  `page` se normaliza a un entero ≥ 1. Una página imposible se descarta con una
+  consulta, no recorriendo el catálogo.
+- **El riel estrenó selector Películas/Series.** Default Películas: el Home
+  inicial no cambia. Clave del Home **`v5` → `v6`**.
+- **Sin SQL, sin migraciones, sin escrituras en Supabase.**
+
+Verificado sobre el build local: `tv:275224` pasa de `[]` a `["d"]`, aparece
+primero por fecha en el riel en Series, no aparece sin Disney+ elegida, y los
+títulos con proveedor de TMDB no cambian.
+
+**Estado de verificación al 2026-08-30:** suite **757/757**, `tsc` 0, build OK.
+
+✅ **Prueba manual APROBADA por el dueño**, sobre el build de producción corrido
+en local (`next start` en el 3100). Se verificó el recorrido completo: el Home
+abre, "Últimos lanzamientos" arranca en Películas, el selector cambia el
+contenido de verdad, "Gutiérrez Is mai neim" aparece con Disney+ elegida, su
+ficha muestra Disney+ y no dice "No está en streaming", volver atrás conserva la
+navegación, "Ver todas" funciona, y volver a Películas actualiza el riel. Sin
+regresiones visibles en una película y una serie conocidas.
+
+⚠️ **El Preview se OMITIÓ por decisión del dueño.** El aislamiento del Redis de
+Producción exige crear variables `KV_*` vacías acotadas a la rama, y se prefirió
+no tocar variables de Vercel. La prueba local cumplió la misma función con
+aislamiento verificado: `/api/health` devolvió `503` con `cache: "memoria"`,
+`fuente: null` y `credenciales: {url:false, token:false}`, o sea sin Redis de por
+medio.
+
+🔴 **Lo que la prueba local NO puede cubrir**, y hay que mirar después del
+deploy: el comportamiento con Redis real. Local corre en memoria, así que las
+claves nuevas (`home:…v6`, `pv3:`, `ultimos:`, `disp:`, `oficial:`) no se
+ejercitaron contra Upstash. El primer Home de producción va a ser un arranque
+frío.
+
+**La rama queda LISTA PARA INTEGRAR.**
+
+Los conteos anteriores de este documento (678) eran de una revisión intermedia.
+El 771 que figuró un rato acá **era incorrecto**: salió de contar antes de
+eliminar `combinarUltimos`, que era código muerto y se llevó sus ~24 tests. Y el
+751 que lo reemplazó quedó corto por seis en el mismo commit que lo escribió, al
+trasladar la cobertura de esa función al orquestador real.
+
+⚠️ **Un conteo escrito a mano se desactualiza en el commit siguiente.** Vale como
+foto fechada de una verificación, no como dato vivo: el número real lo da
+`npm test`.
+
+⚠️ **Lo que no se pudo verificar en vivo:** el respaldo del top de Netflix. Es
+el issue **#13**: el cron corrió el 25/08 a las 12:58 UTC, pero la guarda mide
+14 días desde `week` y el ranking más nuevo de Netflix es del 2026-08-16, así que
+volvió a vencer. **Moria NO está resuelta hoy**, ni acá ni en `main`. La regla
+está cubierta por 23 tests apuntados al resolvedor.
+
+## Top semanal manual — rama `feat/top-manual` (2026-09-01)
+
+**Sin mergear y SIN EJECUTAR LA MIGRACIÓN al escribir esto.** Falta la prueba
+manual del dueño.
+
+`/top` pasa a cargarse a mano: doce bloques (seis plataformas × dos tipos) que
+el dueño arma, revisa y publica desde `/admin/top`. Ver el bloque de `CLAUDE.md`
+para las reglas; acá va lo que hay que saber para operarlo.
+
+**Pendiente de ejecutar:** `supabase/migrations/007_top_manual.sql`. No se corrió
+en ningún entorno.
+
+### 🔴 EL PRÓXIMO GATE ES UNA BASE DE VERDAD, NO MÁS TESTS DE TEXTO
+
+Los tests de `npm test` barren el TEXTO del SQL: comprueban que una protección no
+desaparezca del archivo, **no que Postgres se comporte**. Tres auditorías
+encontraron cosas que un barrido no podía ver —la más clara, que
+`revoke select (columna)` no hace nada si el rol tiene `select` de tabla, porque
+los privilegios son aditivos—.
+
+Antes de mergear hay que aplicar la 007 en un **Supabase local o una rama
+descartable** y correr `supabase/verificar-007.sql`, que ejecuta consultas
+reales: privilegios de columna, la columna derivada, los triggers que desmarcan
+la revisión, el índice de un solo borrador y la inmutabilidad de lo publicado.
+Termina en "VERIFICACIÓN COMPLETA" o revienta.
+
+Ese archivo **no es una migración** y no se aplica solo. **No correrlo en
+Producción**: escribe y borra filas.
+
+Lo que ese script no puede probar —todo lo que necesita una sesión real, porque
+`auth.uid()` y `auth.jwt()` son nulos en el SQL editor— está listado al final del
+propio archivo y se verifica desde el dashboard: los dos factores TOTP, publicar,
+el borrador siguiente precargado, la atomicidad del reemplazo, la publicación
+parcial y `creado_por`.
+
+⚠️ En la máquina de desarrollo no hay Docker, `psql` ni Postgres local
+(verificado, no supuesto), así que este paso **no se pudo hacer todavía**. Hace
+falta Docker Desktop para `supabase start`, o una rama de Supabase.
+
+**Pendiente de configurar (lo hace el dueño):** habilitar TOTP en el panel de
+Supabase → Authentication → Multi-Factor Authentication. Sin eso, `/admin/mfa`
+no puede inscribir un factor y el dashboard queda inaccesible.
+
+### El cutover, que es lo que hay que entender antes de tocar nada
+
+Mientras falte cualquiera de los doce bloques publicados, **`/top` entero sigue
+con la implementación vieja**. El dashboard muestra "Preparación inicial: X de
+12 publicados". Con los doce, `/api/top` cambia de fuente sin desplegar nada.
+
+Después del primer cutover los borradores pendientes no afectan: cada bloque
+conserva su última versión publicada.
+
+### Lo que NO cambia
+
+- El selector `Películas | Series`, `Tus plataformas`, `En otras plataformas`,
+  el carrusel por plataforma, el ranking numérico, `TitleCard`, la apertura de
+  la ficha, las acciones rápidas y la restauración de scroll vertical y
+  horizontal. **`TopBlock` conserva su forma** (`mine`, `others`, `fallos`,
+  `degradado`, `slots` 1–10); lo único que cambia es el valor de `source` y el
+  subtítulo.
+- El cron semanal de Netflix **sigue corriendo**: alimenta la evidencia de
+  disponibilidad, no el ranking. Ver `CLAUDE.md`.
+- Las reseñas editoriales siguen en standby y sus policies **no se tocaron**.
+
+## Evidencia oficial general — rama `feat/evidencia-oficial` (2026-08-31)
+
+**Prueba manual local APROBADA por el dueño el 2026-08-31. Lista para
+integrar.** Ver el bloque de cierre al final de esta sección.
+
+Generaliza lo que la tanda anterior había dejado atado a **una** plataforma y a
+**series**.
+
+- **`tmdb-ar` sigue siendo la evidencia prioritaria.** Si TMDB informa cualquier
+  `flatrate` argentino —aunque Yump no mapee ese proveedor— **ningún respaldo se
+  consulta ni se aplica**.
+- **`oficial-probable`** (antes `enlace-oficial`) cubre **seis plataformas en
+  series** y **cuatro en películas**. Series: red + enlace. Películas: dominio y
+  ruta oficial específica, **sin `networks`**. Max y Paramount+ **no** se
+  infieren para películas: midieron 0 de 30.
+- **El criterio es cobertura, no certeza**, por decisión del dueño: mejor mostrar
+  ocasionalmente algo que no está, que ocultar mucho que sí está. Medido contra
+  verdad de campo: **144 + 22 aciertos, cero falsos positivos**.
+- **`pv3:`** guarda un resumen regional compacto —cuántas regiones hay, cuántas
+  informan cada plataforma, cuántas ninguna— en vez de ids deduplicados, que
+  perdían la frecuencia. Medido: **170 B/título contra 197**, o sea más chico.
+- **`oficial:`** reemplaza a `serie:oficial:` y cubre los dos tipos.
+- **Moria ya no depende del Top 10** para su disponibilidad: resuelve Netflix por
+  enlace oficial, que no vence.
+
+🔴 **El Top 10 NO se tocó, y su issue #13 sigue abierto**: el ranking vuelve a
+vencer porque la guarda mide 14 días desde `week`. Que Moria ya no lo necesite
+para la ficha no arregla el bloque "Lo más visto esta semana", que sigue cayendo
+a "Lo más popular ahora" cuando la evidencia vence.
+
+### Identidad oficial y deduplicación de la búsqueda — APROBADO
+
+**El problema no era la disponibilidad: era que TMDB tiene el mismo programa
+cargado dos veces.** `tv:322428` y `movie:1752041` son la misma obra, una como
+serie y otra como película, y la búsqueda mostraba dos cards — una en color y
+otra en gris.
+
+- **`netflix.com/browse?jbv=<n>` cuenta como ruta de título.** `/browse` pelado
+  se sigue rechazando: es una portada. El parámetro exige ruta exacta, un único
+  valor y forma numérica. Medido: de 80 series de Netflix con `homepage`, 71
+  usan `/title/<n>` y **1** usa `?jbv=`. Es el mismo número en las dos formas.
+- **Cada ruta valida Y extrae**: el grupo 1 del regex es el identificador, así
+  que la identidad no puede divergir de lo que la regla acepta.
+- 🔴 **La deduplicación es por identidad oficial, NUNCA por parecido.** No se
+  compara título, fecha, productora, sinopsis ni similitud textual: esas señales
+  esconden obras legítimamente distintas. **Lo que no tiene identidad oficial no
+  se toca**, y gana el primero, que no es un criterio nuevo — la lista ya venía
+  ordenada por relevancia.
+- Medido sobre **540 títulos** de las seis plataformas: 366 con identidad y
+  **0 colisiones**.
+
+**Lo verificado a mano y aprobado por el dueño:** el duplicado `movie:1752041`
+desaparece; **`movie:401445` —otra película llamada "Moria", de 2018— PERMANECE**
+porque no comparte identidad, que es exactamente lo que tiene que pasar; Moria
+serie figura en Netflix; Gutiérrez (`tv:275224`) conserva Disney+; navegación y
+comportamiento general aprobados.
+
+### El idioma visual ya no mueve la disponibilidad — APROBADO
+
+`homepage` es un campo **localizado** de TMDB, y el lector de evidencia lo pedía
+con el idioma base. Es decir que `IDIOMA_TITULOS` —una variable que existe para
+elegir cómo se escriben títulos y sinopsis— **decidía si un título estaba en
+Netflix o quedaba en gris**.
+
+🔴 **No se arregló poniéndole huella de idioma a `oficial:`.** Eso arregla la
+caché y deja el bug: seguirían existiendo dos respuestas para el mismo título.
+Se arregló la **fuente** (`IDIOMA_EVIDENCIA = "es-ES"`, literal, sin leer el
+entorno), y por eso esa clave **puede** seguir sin huella. Hay tests que atan las
+dos mitades. Cuesta **cero llamadas nuevas**.
+
+⚠️ **`en-US` daría más cobertura y no se tomó**: 248 identidades contra 217
+(gana 32, pierde 1). Se eligió `es-ES` porque es lo que la app resuelve hoy —
+fijarlo no mueve ni un título— y porque lo que `en-US` pierde son los casos del
+tipo del testigo. **Queda como decisión abierta.** Ver
+`docs/medidas/2026-08-31-idioma-evidencia.md`.
+
+### Cierre: qué queda integrado y qué NO
+
+**Preview de Vercel OMITIDA**, por decisión del dueño y como en la tanda
+anterior: se probó en local en modo Producción, con caché en memoria y fecha
+argentina real.
+
+Lo que este trabajo **NO** arregla, y conviene no darlo por cerrado:
+
+| | Estado |
+|---|---|
+| **Issue #16** (catálogo regional incompleto) | **MITIGADO, no resuelto.** La regla cubre seis plataformas en vez de una, pero sigue sin poder medirse cuánto falta |
+| **Issue #13** (cron del Top 10) | **ABIERTO.** No se tocó |
+| **"Próximamente"** | **La causa de descubrimiento quedó corregida** el 2026-09-01 (issue #8). La segunda —el filtro de proveedor AR de `sync-upcoming.ts:224`— **se conserva a propósito**: es la decisión del dueño, no un pendiente |
+| **Capacitor** | **PAUSADO después de CP6.** `spike/capacitor-android` sigue en `e4d4a6f`; **CP7 sin empezar** |

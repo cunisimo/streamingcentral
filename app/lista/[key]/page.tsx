@@ -5,6 +5,7 @@ import ListaView from "@/components/ListaView";
 import UltimosView from "@/components/UltimosView";
 import MiniseriesView from "@/components/MiniseriesView";
 import { MINISERIES_LISTA_KEY } from "@/lib/miniseries";
+import { ES_NATIVO } from "@/lib/plataforma";
 
 const LISTAS: Record<string, { endpoint: string; title: string }> = {
   "mas-votados": { endpoint: "/api/mas-votados", title: "Lo más votados" },
@@ -28,9 +29,34 @@ export function generateStaticParams() {
   ];
 }
 
-export default function ListaPage({ params }: { params: { key: string } }) {
+export default function ListaPage(
+  { params, searchParams }: {
+    params: { key: string };
+    searchParams?: { tipo?: string };
+  },
+) {
   if (params.key === "ultimos") {
-    return (<><TopBar /><main><UltimosView /></main><BottomNav /></>);
+    // El `?tipo=` lo pone el "Ver todas" del riel del Home, para abrir la lista
+    // en el mismo tipo que se estaba mirando. Se valida acá: cualquier otra
+    // cosa cae en "movie", que es el default del riel.
+    //
+    // 🔴 EN NATIVO NO SE LEE, Y NO ES UN DESCUIDO. Con `output: export` esta
+    // ruta se prerenderiza una sola vez, y tocar `searchParams` durante el
+    // prerender aborta el export entero:
+    //
+    //     Route /lista/ultimos/ with `dynamic = "error"` couldn't be rendered
+    //     statically because it used `searchParams.tipo`
+    //
+    // `ES_NATIVO` es constante de build (ver lib/plataforma.ts), así que en el
+    // artefacto nativo la rama que lo lee no se ejecuta y el export completo de
+    // CP2 se conserva. En la web no cambia NADA: se sigue leyendo en el
+    // servidor, sin `useSearchParams` ni el <Suspense> que eso obligaría.
+    //
+    // El costo, declarado: dentro del contenedor un enlace con `?tipo=tv` abre
+    // en Películas. Hoy no hay navegación nativa —eso es CP7—, así que no se
+    // resuelve acá; queda anotado en el plan como pendiente de esa etapa.
+    const tipoInicial = ES_NATIVO ? "movie" : (searchParams?.tipo === "tv" ? "tv" : "movie");
+    return (<><TopBar /><main><UltimosView tipoInicial={tipoInicial} /></main><BottomNav /></>);
   }
   if (params.key === MINISERIES_LISTA_KEY) {
     return (<><TopBar /><main><MiniseriesView /></main><BottomNav /></>);

@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { COLOR_FONDO } from "@/lib/tema-colores";
 
 type Theme = "light" | "dark";
 interface Ctx {
@@ -10,26 +11,35 @@ interface Ctx {
 const ThemeCtx = createContext<Ctx | null>(null);
 const KEY = "sc:theme";
 
-// Colores de la barra de estado en app instalada. Tienen que coincidir con
-// --bg de cada tema en globals.css.
-const BAR: Record<Theme, string> = { light: "#F5F5F2", dark: "#16171B" };
+// 🔴 EL COLOR DE LA BARRA SALE DE `lib/tema-colores.ts`, NO DE UNA COPIA.
+//
+// Acá había una copia a mano con el comentario "tienen que coincidir con --bg
+// de cada tema en globals.css". No coincidían:
+//
+//     claro:  #F5F5F2  contra  --bg #FAFAFD
+//     oscuro: #16171B  contra  --bg #0F0E13
+//
+// En la PWA instalada de Android eso pinta la barra de estado de un tono
+// distinto al de la app, y por eso se veía la franja en los DOS temas: en claro
+// más oscura, en oscuro más clara. Un test ata ahora esos valores al CSS.
 
 function applyTheme(t: Theme) {
   document.documentElement.setAttribute("data-theme", t);
-  // Las meta theme-color con `media` (ver viewport en app/layout.tsx) siguen a
-  // prefers-color-scheme, no al toggle manual. Sin esto, alguien con el sistema
-  // en claro y la app en oscuro ve la barra de estado clara sobre una app oscura.
+  // La barra de estado de la PWA sigue a `theme-color`, y el tema lo elige el
+  // usuario, así que hay que reescribirla en cada toggle.
   //
-  // ⚠️ SOLO mutamos `content`; nunca remover ni recrear estos nodos. Los renderiza
-  // React y los administra como "hoistable resources": si los sacamos del DOM,
-  // cuando React va a desmontarlos hace parentNode.removeChild() sobre un nodo
-  // huérfano y tira "Cannot read properties of null (reading 'removeChild')".
-  //
-  // Poner el mismo color en TODAS alcanza: matchee la que matchee por su media,
-  // el color resultante es el que eligió el usuario.
+  // 🔴 ES UNA SOLA META Y NO LA RENDEREA REACT: la crea el script de arranque
+  // de `app/layout.tsx` (ahí está el porqué). Acá se muta la misma, o se crea
+  // si por lo que sea no está. Nunca declararla en el JSX ni en `viewport`:
+  // React repone con el valor original cualquier meta suya que hayamos mutado.
   try {
-    const metas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-    metas.forEach((m) => { m.content = BAR[t]; });
+    let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!m) {
+      m = document.createElement("meta");
+      m.name = "theme-color";
+      document.head.appendChild(m);
+    }
+    m.content = COLOR_FONDO[t];
   } catch { /* noop */ }
 }
 

@@ -653,8 +653,8 @@ otra.
 
 ## Runbook: precalentar el Home DESPUÉS de aprobar el Preview
 
-**El problema que resuelve.** La tanda 2 cambia la huella de las once familias de
-claves, así que el primer request después de activar `es-MX` en Production
+**El problema que resuelve.** La tanda 2 cambia la huella de las familias de
+claves (once en su momento, **doce desde 2026-08-30**), así que el primer request después de activar `es-MX` en Production
 encuentra el cache vacío y paga ~650 llamadas a TMDB y ~650 comandos de Upstash.
 Sin precalentar, esa cuenta la paga **el primer usuario que abra la app**, con la
 combinación de plataformas que tenga, y las demás combinaciones siguen frías.
@@ -858,3 +858,67 @@ lectura por MISS** y, con el TTL de 5 minutos, **12 por hora** como techo.
 Al verificar en `/titulo/tv/322428` tiene que decir **"Disponible en Netflix"**,
 y **sin** botón de "Ver en": el `watchLink` sale de TMDB y sigue siendo `null`.
 Eso es correcto — no se inventa un link a ningún lado.
+
+## Disponibilidad: cómo diagnosticar "no aparece / dice que no está"
+
+**Antes de tocar nada, medir.** Los dos comandos leen TMDB y no escriben en
+ningún lado:
+
+```bash
+node scripts/medir-disponibilidad.mjs caso
+```
+
+```bash
+node scripts/medir-disponibilidad.mjs muestra
+```
+
+El primero vuelca un título concreto (redes, homepage, regiones de
+`watch/providers`, y si el discover por proveedor y por red lo traen). El
+segundo barre la red Disney+ de los últimos 60 días y escribe
+`docs/medidas/<fecha>-disponibilidad-disney.json`.
+
+### El árbol de decisión
+
+1. **¿`watch/providers` tiene `AR` con `flatrate`?** Si sí, no hay nada que
+   investigar: eso manda y la app lo usa.
+2. **¿El título está en el top oficial de Netflix de los últimos 14 días, con
+   `tmdb_id` y sin `needs_review`?** Entonces debería resolverse como Netflix.
+   Si no lo hace, mirar primero si la ingesta está al día:
+
+   ```sql
+   select max(week) from netflix_top10;
+   ```
+
+   ⚠️ Si esa fecha tiene más de 14 días, **la evidencia está vencida y ningún
+   título la recibe**. Es lo que pasaba el 2026-08-30 (issue #14). No es un bug
+   de la resolución.
+3. **¿Tiene enlace oficial?** Se aplica la regla de `lib/enlace-oficial.ts`.
+   **Series**: red + enlace de la misma plataforma, en las seis soportadas.
+   **Películas**: sólo el enlace, en Netflix, Disney+, Prime Video y Apple TV+ —
+   Max y Paramount+ no se infieren para películas.
+
+   Lo que más sorprende al depurar: **cualquier locale se acepta** (`/br/`,
+   `/es-es/`, `/ja-jp/`), porque identifica la tienda que generó el enlace y no
+   dónde está disponible. Lo que se rechaza es la RUTA genérica: `/browse`,
+   `/search`, la portada. Y `amazon.com/dp/` queda afuera por ser la tienda.
+4. **Si nada aplica**, la salida es el registro manual
+   (`lib/excepciones-disponibilidad.ts`), con vencimiento obligatorio. Es la
+   última opción, no la primera.
+
+### Cómo ver por qué decidió lo que decidió
+
+El server loguea cada resolución que NO viene de TMDB:
+
+```
+[disponibilidad] tv:275224 -> d (oficial-probable)
+```
+
+Sin esa línea, la decisión fue `tmdb-ar` o no hubo evidencia.
+
+### Antes de habilitar otra plataforma
+
+**No se agrega a ojo.** Hay que verificar, con datos reales, sus ids de
+`networks`, el dominio exacto que sirve sus fichas, la forma de la ruta de un
+título, y qué ids de proveedor la representan en otras regiones. Hay un test que
+falla si se suma una entrada sin actualizar el conteo, justamente para que la
+decisión no pase de costado.

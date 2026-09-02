@@ -3,8 +3,14 @@
 **2026-08-23 · tanda 2.** Qué superficies producen títulos localizados, cuáles
 pasan por la reparación y qué pasa si el respaldo falla.
 
-**Desde la tanda 2 las once familias llevan la huella en la clave**
-(`card:es-MX+f.r1:movie:278`). En la tanda 1 corrían en modo compatible, con la
+**Desde la tanda 2 las familias localizadas llevan la huella en la clave**
+(`card:es-MX+f.r1:movie:278`).
+
+⚠️ **Eran once en la tanda 2; hoy son DOCE.** La duodécima es `ultimos:`, que
+entró con la corrección de disponibilidad (2026-08-30). Los documentos de la
+tanda 2 conservan el número original a propósito: describen lo que se midió
+entonces. El número vigente lo fija `lib/claves.test.ts`, que falla si no
+coincide. En la tanda 1 corrían en modo compatible, con la
 huella vacía. Lo que decide el espacio de claves es la configuración
 —`IDIOMA_TITULOS` y `FALLBACK_IDIOMA`—, así que un rollback selecciona otro
 espacio en vez de esperar a que expiren TTLs de hasta 30 h.
@@ -15,7 +21,10 @@ que divergieran.
 
 ---
 
-## Las ONCE familias de claves localizadas
+## Las familias de claves localizadas
+
+⚠️ Este listado describe las **once** de la tanda 2. Desde 2026-08-30 son
+**doce**: se sumó `ultimos:`. El número vigente lo fija `lib/claves.test.ts`.
 
 | Familia | Origen TMDB | ¿Repara? | Dónde | Campos | Coste extra |
 |---|---|---|---|---|---|
@@ -60,7 +69,10 @@ entra en la tanda 2 como en las otras diez (once en total, contándola).
 
 ## Superficies que NO producen títulos
 
-`pv:` (códigos de plataforma), `videos:` (key de YouTube), `genre:covers:`
+`pv3:` (códigos de plataforma y el resumen regional: tres contadores, no un
+mapa; antes `pv:` y `pv2:`), `oficial:` (redes, `homepage` y estreno; antes
+`serie:oficial:`),
+`videos:` (key de YouTube), `genre:covers:`
 (rutas de póster), `people:directors` (`knownFor` siempre vacío), `ed:pub:`
 (ids), `blocklist:` (ids).
 

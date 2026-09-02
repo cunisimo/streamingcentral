@@ -16,10 +16,10 @@ import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
 import { resolveCategory, genreIdsToSlugs, categoryLabel, categoryBySlug, CATEGORIES, type Category } from "./categories";
 import { curatedTitles, curatedBlocklist, intercalarEstratos } from "./curated";
 import { getEditorial, publishedIds } from "./reviews";
-import { cached, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
-import { claveCard, clavePeoplePopular, claveSearch } from "./claves";
+import { cached, cachedIf, cachedLoc, cachedLocIf, TTL, dailySeed, pickDaily } from "./cache";
+import { claveCard, clavePeoplePopular, claveSearch, claveUltimosSeries } from "./claves";
 import {
-  HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_FALLBACK, claveMixta, clavePorId,
+  HUELLA_IDIOMA, IDIOMA_BASE, IDIOMA_EVIDENCIA, IDIOMA_FALLBACK, claveMixta, clavePorId,
   conRespuesto, indiceMixto, pedirRespaldoIdioma, repararLote,
 } from "./idioma";
 import { adaptadorCard, adaptadorLista } from "./idioma-adaptadores";
@@ -32,10 +32,22 @@ import {
 import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
 import { disponiblesEnTopOficial } from "./netflix-top10";
-import { plataformasDeFicha } from "./top-plataformas";
+import { evidenciaTopManual } from "./top-manual";
+import { resolverDisponibilidad } from "./disponibilidad";
+import {
+  hayFallosDisponibilidad, registrarFalloDisponibilidad, withFallosDisponibilidad,
+} from "./fallos-disponibilidad";
+import {
+  dedupePorIdentidad, identidadOficial, redesDePlataforma, resumenRegional,
+} from "./enlace-oficial";
+import {
+  paginarUltimos, plataformasValidas, type CandidatoUltimos, type PaginaRegional,
+} from "./ultimos";
+import type { DatosTitulo, ResumenRegional } from "./enlace-oficial";
 import { excludedGenres, audienceRule } from "./audience";
 import { ordenarPorRelevancia } from "./busqueda-orden";
 import { primaryCountry } from "./countries";
+import { hoyAR } from "./fecha";
 import { pickTrailer } from "./trailer";
 import type {
   MediaType, MotivoVacio, PlatformCode, UITitle, UITitleDetail, UIPerson,
@@ -56,9 +68,25 @@ const today = () => new Date().toISOString().slice(0, 10);
 const onUserPlatforms = (i: UITitle, providers: PlatformCode[]) =>
   i.platforms.some((c) => providers.includes(c));
 
-// providers de un título en AR (cacheado) -> { codes, links, watchLink }
+// providers de un título en AR (cacheado)
+//   -> { codes, links, watchLink, hayFlatrateAR, reg }
+//
+// ⚠️ `reg` NO es un mapa por región: son tres contadores. Guardar
+// `watch/providers` entero cuesta **1214 B por título** contra **170** de esto,
+// medido sobre títulos con 93 regiones de promedio. Si alguna regla futura
+// necesita saber QUÉ región dice qué, hay que volver al mapa **y subir la
+// versión de la clave**: desde los contadores no se reconstruye.
+//
+// 🔴 LA CLAVE ES `pv3:` Y ESE CAMBIO ES DELIBERADO. Las entradas de `pv2:`
+// traían ids deduplicados, que no sirven para el chequeo de dominancia por
+// regiones: leerlas como "sin datos" volvería permisivo un chequeo que sólo
+// rechaza. Un arranque frío de proveedores es barato; una afirmación falsa no.
+//
+// Y medido, `pv3:` es **más chico** que `pv2:`: 170 B contra 197, o sea −6,1 KB
+// en un Home de 230 títulos. Los contadores son a lo sumo seis; el array de ids
+// crecía con los proveedores distintos de 93 regiones.
 async function providersOf(type: MediaType, id: number) {
-  return cached(`pv:${type}:${id}`, TTL.providers, async () => {
+  return cached(`pv3:${type}:${id}`, TTL.providers, async () => {
     const r = await watchProviders(type, id);
     const ar = r.results?.["AR"];
     const codes = new Set<PlatformCode>();
@@ -67,12 +95,120 @@ async function providersOf(type: MediaType, id: number) {
       const code = codeForTmdbId(p.provider_id);
       if (code) { codes.add(code); links[code] = ar.link; }
     }
-    return { codes: [...codes], links, watchLink: ar?.link ?? null };
+    // ¿AR tiene ALGÚN flatrate, mapeable o no? Se guarda aparte de `codes`
+    // porque `codes` pierde los provider_id que no están en providers-ar.ts, y
+    // esa diferencia decide si los respaldos pueden hablar. Ver el comentario de
+    // `hayFlatrateAR` en lib/disponibilidad.ts.
+    const hayFlatrateAR = (ar?.flatrate ?? []).length > 0;
+    return {
+      codes: [...codes], links, watchLink: ar?.link ?? null,
+      hayFlatrateAR, reg: resumenRegional(r.results ?? {}),
+    };
   });
 }
 
+// ---------------------------------------------------------------------------
+// Disponibilidad: el ÚNICO camino por el que la app decide "está en X".
+// ---------------------------------------------------------------------------
+
+// Los datos que la regla oficial necesita, cacheados aparte de la ficha para no
+// arrastrar el detalle entero. Sólo se piden cuando hacen falta.
+//
+// Cubre los DOS tipos. Para series el detalle trae `networks` y `homepage`; para
+// películas TMDB no publica `networks` y sólo sirve el `homepage` — la regla lo
+// sabe y decide por el enlace. Es la única llamada nueva que agrega esta
+// corrección, y sólo la pagan las películas sin proveedor argentino.
+//
+// 🔴 SE PIDE EN `IDIOMA_EVIDENCIA`, NO EN EL IDIOMA BASE. `homepage` está
+// localizado: con el idioma de la interfaz, cambiar `IDIOMA_TITULOS` movía la
+// disponibilidad. Es la MISMA llamada de siempre con el idioma explícito, así
+// que no cuesta un pedido más; y es el ÚNICO lugar que usa esa constante —
+// títulos, sinopsis y todo lo visible siguen en el idioma base.
+//
+// Esto es también lo que habilita que `oficial:` no lleve huella de idioma: con
+// una sola respuesta posible por título, no hay dos versiones que separar.
+async function datosTituloDe(
+  type: MediaType, id: number, reg: ResumenRegional,
+): Promise<DatosTitulo | null> {
+  const d = await cached(`oficial:${type}:${id}`, TTL.providers, async () => {
+    const det = await titleDetails(type, id, IDIOMA_EVIDENCIA);
+    return {
+      estreno: det.first_air_date ?? det.release_date ?? null,
+      redes: (det.networks ?? []).map((n) => n.id),
+      homepage: det.homepage ?? "",
+    };
+  });
+  return { tipo: type, ...d, reg };
+}
+
+/**
+ * Las plataformas de un título, resueltas por el camino central.
+ *
+ * ⚠️ CORTA ANTES DE TOCAR NADA si TMDB ya sabe. Ese `if` no es una
+ * micro-optimización: el Home enriquece ~300 títulos y casi todos tienen
+ * proveedor, así que sin él cada uno pagaría un round-trip a Redis de más.
+ * Devuelve el MISMO array que guardó `providersOf` — no se muta ni se copia.
+ *
+ * Un `fallo` NO se cachea: `cachedIf` deja pasar el valor y no lo guarda, así
+ * que una caída de Supabase no congela un "no está en ningún lado".
+ */
+export async function disponibilidadDe(
+  type: MediaType, id: number,
+  prov: {
+    codes: PlatformCode[];
+    hayFlatrateAR?: boolean;
+    reg?: ResumenRegional;
+  },
+): Promise<PlatformCode[]> {
+  if (prov.codes.length || prov.hayFlatrateAR) return prov.codes;
+  let fallo = false;
+  const res = await cachedIf(`disp:${type}:${id}`, TTL.editorial, async () => {
+    const r = await resolverDisponibilidad({
+      tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR, hoy: hoyAR(),
+      leerTopOficial: disponiblesEnTopOficial,
+      // El Top semanal cargado a mano. Va por el resolvedor central y no
+      // por un camino propio de : si viviera sólo allá, la misma
+      // película saldría en color en el Top y en gris en la ficha, la
+      // búsqueda y el Home — el bug que este resolvedor existe para impedir.
+      leerTopManual: evidenciaTopManual,
+      leerDatosTitulo: () => datosTituloDe(type, id, prov.reg ?? { rt: 0, rp: {}, ru: 0 }),
+    });
+    fallo = r.fallo;
+    // La señal sale de esta función y llega a las cachés de AFUERA. Sin esto,
+    // `disp:` no se guardaba pero la card, el Home y la lista sí — con el
+    // título en gris adentro, por 24 h, 6 h y 8 h respectivamente.
+    if (r.fallo) registrarFalloDisponibilidad();
+    if (r.procedencia && r.procedencia !== "tmdb-ar") {
+      console.log(`[disponibilidad] ${type}:${id} -> ${r.plataformas.join(",")} (${r.procedencia})`);
+    }
+    return r.plataformas;
+  }, () => !fallo);
+  return res;
+}
+
+/**
+ * La identidad oficial de un título, para deduplicar la búsqueda.
+ *
+ * 🔴 NO PAGA NINGUNA LLAMADA CUANDO TMDB YA SABE. Si el título tiene `flatrate`
+ * argentino, se corta antes de tocar el detalle: ese caso no necesita evidencia
+ * oficial y no tiene por qué costar nada.
+ *
+ * Para el resto, las dos lecturas son las MISMAS que ya hizo el camino de
+ * disponibilidad —`pv3:` la pidió `toUITitle`, `oficial:` la pidió el
+ * resolvedor—, así que en la práctica son aciertos de caché. La excepción es un
+ * título que resolvió por el top oficial de Netflix (prioridad 2, que corta
+ * antes de mirar el enlace): ahí `oficial:` puede estar vacía y se paga un
+ * detalle, que queda cacheado 8 h.
+ */
+async function identidadDeBusqueda(type: MediaType, id: number): Promise<string | null> {
+  const prov = await providersOf(type, id);
+  if (prov.codes.length || prov.hayFlatrateAR) return null;
+  const d = await datosTituloDe(type, id, prov.reg);
+  return d ? identidadOficial(d.homepage) : null;
+}
+
 // El link del agregador para un título. Reusa el MISMO `cached` de providersOf
-// (clave `pv:${type}:${id}`), así que en un listado ya enriquecido con
+// (clave `pv3:${type}:${id}`), así que en un listado ya enriquecido con
 // cardsByIds no cuesta ningún request extra a TMDB.
 export async function watchLinkFor(type: MediaType, id: number): Promise<string | null> {
   return (await providersOf(type, id)).watchLink;
@@ -105,7 +241,10 @@ async function settleAll<T>(tareas: Promise<T>[], etiqueta: string): Promise<T[]
 }
 
 async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>): Promise<UITitle> {
-  const { codes } = await providersOf(type, t.id);
+  const prov = await providersOf(type, t.id);
+  // Camino central. Con proveedor de TMDB devuelve el MISMO array y no cuesta
+  // nada; sin proveedor consulta los respaldos. Ver `disponibilidadDe`.
+  const codes = await disponibilidadDe(type, t.id, prov);
   return {
     id: t.id, type, title: titleOf(t), year: yearOf(t),
     runtime: null, poster: img(t.poster_path),
@@ -283,9 +422,174 @@ export function listByCategoryCacheable(
 }
 
 // --- Últimos lanzamientos (por fecha de estreno, en tus plataformas) ---
+// Cuántas páginas del catálogo regional se traen como máximo para servir una
+// página de la lista. NO es una ventana de contenido: es un tope de seguridad.
+//
+// 🔴 LA VENTANA FIJA ERA UNA REGRESIÓN Y SE SACÓ. La primera versión mezclaba 3
+// páginas por fuente y ahí terminaba: con Netflix, Max o Prime la página 4 salía
+// vacía aunque TMDB tuviera cientos de resultados, o sea peor que la lista
+// paginada que ya existía. Ahora el catálogo regional se pagina de verdad —una
+// página por página pedida— y lo único acotado es el SUPLEMENTO por redes, que
+// por naturaleza es un puñado de títulos recientes.
+const ULTIMOS_POR_PAGINA = 20;
+// 🔴 NO HAY TOPE DE PÁGINAS. Hubo uno (12) y era otra ventana fija con nombre de
+// seguridad: para una plataforma sin suplemento por red, la página 13 no podía
+// juntar 260 resultados aunque TMDB tuviera más. El único límite es el real de
+// la fuente, `total_pages`, y lo aplica `paginarUltimos`.
+// Páginas del discover por RED. Es un suplemento de estrenos recientes, no la
+// lista: 3 páginas son ~60 candidatos por plataforma habilitada.
+const ULTIMOS_PAGINAS_RED = 3;
+
+// Una página de discover con la reparación de idioma puesta, igual que
+// `listByCategory`. Sin esto el riel nuevo quedaría fuera del fallback.
+async function crudosConIdioma(
+  params: Parameters<typeof discover>[1], etiqueta: string, senal: { fallo: boolean },
+): Promise<{ items: RawTitle[]; totalPaginas: number; totalResultados: number }> {
+  const r = await discover("tv", params);
+  const rep = await adaptadorLista({
+    pedirBase: async () => r.results,
+    pedirRespaldo: () => pedirRespaldoIdioma(etiqueta, async () => (await discover("tv", {
+      ...params, extra: { ...(params?.extra ?? {}), language: IDIOMA_FALLBACK },
+    })).results),
+  });
+  if (rep.fallo) senal.fallo = true;
+  return {
+    items: rep.valor,
+    totalPaginas: r.total_pages ?? 1,
+    totalResultados: r.total_results ?? rep.valor.length,
+  };
+}
+
+/** Enriquece crudos de series y les pega la fecha con la que se ordenan. */
+async function aCandidatosUltimos(raws: RawTitle[]): Promise<CandidatoUltimos[]> {
+  if (!raws.length) return [];
+  const pub = await publishedIds("tv");
+  const fecha = new Map(raws.map((t) => [t.id, t.first_air_date ?? ""]));
+  const items = await settleAll(raws.map((t) => toUITitle(t, "tv", pub)), "ultimos tv");
+  return items.map((i) => ({ ...i, fecha: fecha.get(i.id) ?? "" }));
+}
+
+/**
+ * UNA página del catálogo regional, cacheada por su cuenta.
+ *
+ * 🔴 ES LA CLAVE DEL COSTO. Antes cada página de la lista rearmaba TODA la
+ * ventana —3 discover regionales, 3 por red y ~120 enriquecidos—, así que
+ * "se paga una vez por día" era falso: se pagaba una vez por CADA página
+ * pedida. Con la página cacheada por separado, pedir la 2 por primera vez
+ * cuesta una página y nada más; la 1 ya está.
+ */
+async function ultimosRegionalPagina(
+  providers: PlatformCode[], pagina: number, senal: { fallo: boolean },
+): Promise<PaginaRegional> {
+  // `providers` llega YA normalizado por `paginarUltimos`. El guard igual está
+  // acá: si alguna vez alguien llamara a esta función directamente, un `[]`
+  // haría que `discover` saliera sin `with_watch_providers`, o sea con el
+  // catálogo entero.
+  if (!providers.length) return { items: [], totalPaginas: 1, totalResultados: 0 };
+  const hoy = hoyAR();
+  const orden = [...providers].sort().join(",");
+  return cachedLocIf(
+    claveUltimosSeries(hoy, orden, `reg:p${pagina}`, HUELLA_IDIOMA), TTL.providers,
+    async () => {
+      const { res, fallos } = await withFallosDisponibilidad(async () => {
+        const { items, totalPaginas, totalResultados } = await crudosConIdioma({
+          providers: codesToTmdbIds(providers), minVotes: 0, page: pagina,
+          sortBy: "first_air_date.desc", extra: { "first_air_date.lte": hoy },
+        }, `ultimos:reg:p${pagina}`, senal);
+        // `totalPaginas` y `totalResultados` van tal cual: son el límite real de
+        // la fuente y la cota superior que permite descartar una página
+        // imposible sin recorrer el catálogo.
+        return { items: await aCandidatosUltimos(items), totalPaginas, totalResultados };
+      });
+      if (fallos) senal.fallo = true;
+      return res;
+    },
+    () => !senal.fallo,
+  );
+}
+
+/**
+ * El suplemento por redes oficiales, cacheado UNA vez por día y combinación.
+ *
+ * No se pagina: es un puñado de estrenos recientes que el catálogo regional no
+ * conoce todavía. Se calcula entero y se mezcla con cualquier página.
+ *
+ * 🔴 POR QUÉ EXISTE. Medido el 2026-08-30: el discover por proveedor Disney+/AR
+ * devuelve 1152 series y `tv:275224` no está en ninguna. Si no aparece como
+ * candidato, no hay resolución de disponibilidad que lo rescate.
+ *
+ * La consulta va SIN `with_watch_monetization_types` (ver `sinMonetizacion` en
+ * lib/tmdb.ts): con ese parámetro TMDB filtra a lo que ya sabe que está en
+ * flatrate argentino, que es justo el dato que falta. Medido: 304 resultados
+ * con el parámetro y 440 sin él.
+ *
+ * Se enriquece SIN filtrar por plataformas: el filtro lo hace `paginarUltimos`
+ * DESPUÉS de que la resolución central haya decidido. Filtrar antes dejaría
+ * afuera justamente a los que vienen sin proveedor de TMDB.
+ */
+async function ultimosExtrasPorRed(
+  providers: PlatformCode[], senal: { fallo: boolean },
+): Promise<CandidatoUltimos[]> {
+  if (!providers.length) return [];
+  // Sólo las redes de las plataformas del usuario que estén habilitadas. Salen
+  // del MISMO registro que la evidencia oficial: no se piden candidatos por una
+  // red que después no podría resolverse.
+  const redes = [...new Set(providers.flatMap(redesDePlataforma))];
+  if (!redes.length) return [];
+  const hoy = hoyAR();
+  const orden = [...providers].sort().join(",");
+  return cachedLocIf(
+    claveUltimosSeries(hoy, orden, "red", HUELLA_IDIOMA), TTL.providers,
+    async () => {
+      const { res, fallos } = await withFallosDisponibilidad(async () => {
+        const paginas = Array.from({ length: ULTIMOS_PAGINAS_RED }, (_, i) => i + 1);
+        const tandas = await Promise.all(paginas.map((p) => crudosConIdioma({
+          minVotes: 0, page: p, sortBy: "first_air_date.desc", sinMonetizacion: true,
+          extra: { with_networks: redes.join("|"), "first_air_date.lte": hoy },
+        }, `ultimos:red:p${p}`, senal)));
+        return aCandidatosUltimos(tandas.flatMap((t) => t.items));
+      });
+      if (fallos) senal.fallo = true;
+      return res;
+    },
+    () => !senal.fallo,
+  );
+}
+
+/**
+ * "Últimos lanzamientos · Series", una página.
+ *
+ * La orquestación vive en `paginarUltimos` (lib/ultimos.ts), que es pura y se
+ * prueba por comportamiento con la fuente inyectada. Acá sólo se le enchufan
+ * las dos puertas, cada una con SU cache: así pedir la página 2 no re-paga la 1.
+ */
+async function ultimosSeries(
+  providers: PlatformCode[], page: number, senal: { fallo: boolean },
+): Promise<CandidatoUltimos[]> {
+  const { items } = await paginarUltimos({
+    page, porPagina: ULTIMOS_POR_PAGINA, providers, hoy: hoyAR(),
+    // Las dos puertas reciben la lista YA normalizada que arma la orquestación,
+    // no la cruda: así un código desconocido no puede llegar a `discover`.
+    traerRegional: (pagina, validas) => ultimosRegionalPagina(validas, pagina, senal),
+    traerExtras: (validas) => ultimosExtrasPorRed(validas, senal),
+  });
+  return items;
+}
+
 export async function latestReleases(
   providers: PlatformCode[], tipo: MediaType = "movie", page = 1,
 ): Promise<UITitle[]> {
+  // Retorno temprano del CONTRATO PÚBLICO, además del de la orquestación.
+  // `listByCategory` lo tiene desde siempre y la rama de series lo perdió al
+  // dejar de pasar por ahí: con `providers: []` se pedía el catálogo entero
+  // para devolver cero. Se valida acá y adentro, sin confiar en que la
+  // interfaz mande datos correctos.
+  if (!plataformasValidas(providers).length) return [];
+  if (tipo === "tv") {
+    const senal = { fallo: false };
+    return ultimosSeries(providers, page, senal);
+  }
+
   const extra: Record<string, string> = tipo === "movie"
     ? { "primary_release_date.lte": today() }
     : { "first_air_date.lte": today() };
@@ -732,9 +1036,16 @@ export async function search(query: string, providers: PlatformCode[] = []) {
     claveSearch(q.toLowerCase(), [...providers].sort().join(","), HUELLA_IDIOMA),
     TTL.search,
     async () => {
-      const r = await buscarYOrdenar(q, providers);
-      fallo = r.fallo;
-      return { titles: r.titles, people: r.people };
+      // El contexto de fallos de disponibilidad, además del de idioma. Son DOS
+      // señales distintas y ninguna tapa a la otra: `fallo` queda en true si
+      // falló cualquiera de las dos, y con eso alcanza para no guardar.
+      const { res, fallos } = await withFallosDisponibilidad(async () => {
+        const r = await buscarYOrdenar(q, providers);
+        fallo = r.fallo;
+        return { titles: r.titles, people: r.people };
+      });
+      if (fallos) fallo = true;
+      return res;
     },
     () => !fallo,
   );
@@ -812,7 +1123,20 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
   //
   // Es una partición estable, no un orden nuevo: dentro de "disponible" y
   // dentro de "no disponible" se conserva el orden por relevancia de arriba.
-  const titles = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub)));
+  const crudosUI = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub)));
+
+  // TMDB a veces carga el MISMO programa dos veces, una como serie y otra como
+  // película, y acá salían dos cards del mismo título. Se juntan por el
+  // identificador que publica la plataforma —un dato comprobable— y nunca por
+  // nombre, fecha, productora ni parecido: esas señales esconden obras
+  // legítimamente distintas. Lo que no tiene identidad oficial no se toca.
+  //
+  // Se hace SÓLO acá: la búsqueda es donde el usuario ve las dos entradas una al
+  // lado de la otra. En el Home el dedup ya existe y es por `tipo:id`.
+  const ids = await Promise.all(crudosUI.map((t) => identidadDeBusqueda(t.type, t.id)));
+  const titles = dedupePorIdentidad(crudosUI.map((t, i) => ({ t, identidad: ids[i] })))
+    .map((x) => x.t);
+
   if (!providers.length) return { titles, people, fallo: falloIdioma };
   const disponibles: UITitle[] = [];
   const resto: UITitle[] = [];
@@ -1089,7 +1413,7 @@ export async function detail(
   //    no dice que se pueda ver en Netflix Argentina; hay producciones de
   //    Netflix licenciadas a otros en la región, y otras que directamente no
   //    llegan. Lo único que se usa es el top de ESTE país.
-  const plataformas = await plataformasDeFicha(type, id, prov.codes, disponiblesEnTopOficial);
+  const plataformas = await disponibilidadDe(type, id, prov);
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
     pickTrailer((await titleVideos(type, id, lang)).results, lang));
@@ -1176,6 +1500,9 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
   // votos —que se arman con `card:`— la servían hasta que expirara.
   let fallo = false;
   return cachedLocIf(claveCard(type, id, HUELLA_IDIOMA), TTL.catalog, async () => {
+    // El productor entero va adentro del contexto: `disponibilidadDe` corre
+    // acá abajo y su fallo tiene que llegar al predicado.
+    const { res, fallos } = await withFallosDisponibilidad(async () => {
     try {
       const [rep, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
       const d = rep.detalle;
@@ -1187,13 +1514,18 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
         runtime: null, poster: img(d.poster_path),
         country: primaryCountry(d),
         genres: [...new Set(genreIdsToSlugs(d.genres.map((g) => g.id)))],
-        platforms: prov.codes,
+        platforms: await disponibilidadDe(type, id, prov),
         tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
         hasEditorial: false,
       } as UITitle;
     } catch {
       return null;
     }
+    });
+    // Un fallo de disponibilidad cuenta igual que uno de reparación de
+    // idioma: la card se devuelve, pero no se guarda.
+    if (fallos) fallo = true;
+    return res;
   }, () => !fallo);
 }
 

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { COLOR_FONDO } from "@/lib/tema-colores";
 
 // Metadata route de Next: genera /manifest.webmanifest tipado.
 // iOS ignora casi todo esto (display, theme_color, shortcuts, screenshots,
@@ -19,8 +20,11 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     lang: "es-AR",
     dir: "ltr",
-    theme_color: "#FAFAFD",
-    background_color: "#FAFAFD",
+    // El color de instalación y el de la splash: el mismo `--bg` del tema claro,
+    // desde la fuente única. El manifest no admite variante oscura — de eso se
+    // encarga la meta `theme-color` en runtime.
+    theme_color: COLOR_FONDO.light,
+    background_color: COLOR_FONDO.light,
     categories: ["entertainment", "lifestyle"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

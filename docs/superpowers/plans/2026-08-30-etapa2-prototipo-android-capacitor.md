@@ -1,7 +1,10 @@
 # Etapa 2 — Prototipo Android con Capacitor (plan, revisión 7)
 
-> **CP1 está HECHO** (commit `d53883b` en `spike/capacitor-android`). El resto
-> no. Sin Capacitor, sin `android/`, sin staging, sin export.
+> **CP1 a CP6 están HECHOS** en `spike/capacitor-android`. **CP7 no empezó**, y
+> con él sigue sin haber Capacitor instalado, sin `android/`, sin
+> `capacitor.config.*` y sin `cap init`. El banner original de esta revisión
+> decía "CP1 está HECHO, el resto no": se actualiza el estado, no se reescribe
+> ninguna medición.
 
 ## ✅ CP1 — completado el 30/08/2026
 
@@ -1795,6 +1798,88 @@ conjuntos**: cuatro apagados, tres con exclusión y motivo registrado, y
 **CP6 TERMINADO.** 🔴 CP7 **no se empezó** y requiere autorización nueva.
 
 ---
+
+## 🔄 Sincronización con `main` — 2 de septiembre de 2026
+
+**Fin del paréntesis.** Entre CP6 y CP7 el trabajo se fue a producto: se
+integraron disponibilidad oficial probable, deduplicación por identidad oficial,
+Próximamente sin corte por popularidad, el Top manual con MFA, la corrección PWA
+de `theme-color` y dos ajustes visuales. Nada de eso pasó por el spike, y la
+rama había quedado 41 commits atrás.
+
+**`main` se incorporó al spike con un merge commit.** Hash sincronizado:
+**`5297e25`**. La dirección es `main` → spike, nunca al revés; los 14 commits de
+CP1–CP6 quedaron intactos y no se reescribió ninguno.
+
+### Qué pasa a formar parte de la base del spike
+
+| Lo que llegó | Qué le importa al contenedor |
+|---|---|
+| Disponibilidad oficial probable, dedup por identidad | nada: es servidor, viaja por la API |
+| Próximamente sin corte por popularidad | nada, misma razón |
+| Top manual + MFA | **sí**: sumó `app/admin/top` y `app/api/admin/top` |
+| Corrección PWA de `theme-color` | **sí**: cambió `app/layout.tsx` |
+| Top a 26 px, ficha con plataformas múltiples | nada: es CSS y un componente |
+
+**Ninguna pieza del contrato nativo cambió en `main`.** `next.config.mjs`,
+`scripts/build-capacitor.mjs`, `lib/pwa-nativa.ts`, `lib/api-base.ts`,
+`lib/plataforma.ts` y `public/sw.js` no fueron tocados por los 41 commits.
+
+### Los tres ajustes que exigió la integración
+
+Ninguno es un criterio nuevo: son inventarios y un testigo que el delta dejó
+viejos, y en los tres casos **el guard existente fue el que los encontró**.
+
+1. **`app/admin/top/page.tsx`** llama a `/api/admin/top` con URL relativa. Entra
+   en las excepciones de `api-base.test.ts` por el **mismo motivo** que la que ya
+   estaba: `app/admin` no viaja en el artefacto.
+2. **`app/api/admin/top/route.ts`** quedó sin clasificar en el inventario de
+   CORS. Se clasifica como **excluida**, mismo motivo que `admin-search`. El
+   recuento pasa de **25 = 23 + 2** a **26 = 23 + 3**. **Las 23 integradas de CP4
+   no se movieron.**
+3. **`pwa-nativa.test.ts`** verificaba que la cirugía nativa no borra metadata
+   ajena usando `themeColor:` del viewport como testigo. `main` lo sacó a
+   propósito. El contrato no cambió; el testigo pasa a ser `THEME_INIT_SCRIPT`,
+   que es donde vive el color ahora.
+
+### 🔴 La colisión real: `?tipo=` contra el export estático
+
+`main` agregó `?tipo=` a `/lista/ultimos`, leído en el **servidor**. Con
+`output: export` eso aborta el export entero:
+
+```
+Route /lista/ultimos/ with `dynamic = "error"` couldn't be rendered
+statically because it used `searchParams.tipo`
+```
+
+Es exactamente el bloqueante **§2.c** de `docs/CAPACITOR.md`, que la auditoría
+había previsto y que apareció recién ahora porque la ruta no existía.
+
+**Resuelto sin tocar la web:** la lectura queda detrás de `ES_NATIVO`, que es
+constante de build. En web se sigue leyendo en el servidor, sin
+`useSearchParams` ni el `<Suspense>` que eso obligaría; en el artefacto nativo la
+rama no se ejecuta y el export completo de CP2 se conserva.
+
+⚠️ **El costo, declarado y no resuelto acá:** dentro del contenedor un enlace con
+`?tipo=tv` abre en Películas. Hoy no hay navegación nativa —eso es CP7—, así que
+queda anotado como **pendiente de CP7**, no como algo ya resuelto.
+
+### Estado tras la sincronización
+
+- **CP1–CP6 continúan válidos.** No se repitieron sus mediciones históricas y
+  este documento no las reescribe: se verificó que **siguen pasando** después
+  del merge (los siete tests del contrato nativo, la suite completa, TypeScript,
+  los dos builds y el export).
+- **CP7 sigue sin empezar.**
+- **No se instaló Capacitor.** Sigue sin `@capacitor/*`, sin `android/`, sin
+  `capacitor.config.*` y sin ningún `cap init`/`add`/`sync`/`run`.
+
+### Pendiente ajeno que sigue abierto
+
+El **Top público por bloque**: el cutover del Top manual es atómico y todavía
+faltan los doce bloques publicados, así que `/top` sigue sirviéndose con la
+implementación vieja. No afecta al contenedor —`/top` se consume por API— pero
+conviene saberlo al leer la sección del Top.
 
 ## CP7 — Proyecto Android y primera prueba integral limpia
 

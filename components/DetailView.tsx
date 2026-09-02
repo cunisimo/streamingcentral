@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { hayHistorialInterno } from "./nav-historial";
@@ -130,8 +130,21 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           // verla, no una acción que no lleva a ningún lado. El bloque de
           // suscripción de más abajo sí sigue siendo link: ese `signupUrl` es
           // el alta real de la plataforma, no un agregador.
+          // 🔴 VAN TODAS LAS QUE TIENE EL USUARIO, NO SÓLO LA PRIMERA. Antes acá
+          // entraba `mine[0]` y el resto caía en un "También en" chico y gris
+          // debajo del recuadro: una serie que está en Netflix Y en Max se leía
+          // como si estuviera sólo en Netflix, y la segunda plataforma quedaba
+          // perdida. Es el mismo dato y va en el mismo lugar.
           <div className="dprimary have">
-            <span className="cap">Disponible en</span><PlatformLogo code={mine[0]} />
+            <span className="cap">Disponible en</span>
+            <span className="dplats">
+              {mine.map((p, i) => (
+                <Fragment key={p}>
+                  {i > 0 && (i === mine.length - 1 ? " y " : ", ")}
+                  <PlatformLogo code={p} />
+                </Fragment>
+              ))}
+            </span>
           </div>
         ) : t.platforms.length ? (
           // El bloque ya existía como texto muerto. Ahora, si conocemos la
@@ -150,9 +163,6 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           )
         ) : (
           <div className="dprimary none">No está en streaming</div>
-        )}
-        {mine.length > 1 && (
-          <div className="dalso">También en {mine.slice(1).map((p, i) => <span key={p}>{i > 0 && " · "}<PlatformLogo code={p} /></span>)}</div>
         )}
 
         {/* Ya viene resuelto del servidor: acá no se decide nada. */}

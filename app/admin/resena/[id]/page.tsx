@@ -2,11 +2,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase";
+import { useAdminSesion } from "@/components/admin/useAdminSesion";
 
-interface Hit { id: number; tipo: "movie" | "tv"; titulo: string; year: string; }
+// `year` puede venir `null` desde la ruta: un título sin fecha en TMDB.
+interface Hit { id: number; tipo: "movie" | "tv"; titulo: string; year: number | string | null; }
 
 export default function ResenaEditor({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { token } = useAdminSesion();
   const esNueva = params.id === "nueva";
   const [tmdbId, setTmdbId] = useState<number | null>(null);
   const [tipo, setTipo] = useState<"movie" | "tv">("movie");
@@ -29,17 +32,29 @@ export default function ResenaEditor({ params }: { params: { id: string } }) {
       });
   }, [esNueva, params.id]);
 
+  // ⚠️ SIN `Authorization` ESTO DEVUELVE 401. `/api/admin-search` no validaba
+  // nada y ahora exige admin con segundo factor; al protegerla, esta pantalla
+  // se quedó sin resultados y sin ningún mensaje que lo explicara.
+  //
+  // Se llama SIN `tipo` a propósito: acá se busca un título y da igual si es
+  // película o serie. La ruta devuelve la búsqueda combinada cuando no se lo
+  // mandan, y cada resultado trae su propio `tipo`.
   useEffect(() => {
-    if (!esNueva || !q.trim()) { setHits([]); return; }
+    if (!esNueva || !q.trim() || !token) { setHits([]); return; }
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       // Relativa a propósito, sin `apiUrl`: `app/admin` NO viaja en el
       // artefacto nativo —el staging de Capacitor lo excluye— así que este
       // fetch sólo corre en la web, donde `/api/...` es same-origin.
       // Ver lib/api-base.ts y el guard de lib/api-base.test.ts.
-      fetch(`/api/admin-search?q=${encodeURIComponent(q)}`).then((r) => r.json()).then((j) => setHits(j.items ?? []));
+      fetch(`/api/admin-search?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((j) => setHits(j.items ?? []))
+        .catch(() => setHits([]));
     }, 300);
-  }, [q, esNueva]);
+  }, [q, esNueva, token]);
 
   function pick(h: Hit) { setTmdbId(h.id); setTipo(h.tipo); setTitulo(h.titulo); setHits([]); setQ(""); }
 

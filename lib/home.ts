@@ -37,6 +37,7 @@ import {
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
 import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
+import { withFallosDisponibilidad } from "./fallos-disponibilidad";
 import { claveHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
 import { HUELLA_IDIOMA, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
@@ -423,6 +424,10 @@ export async function composeHome(opts: {
   // Tipo activo de cada riel de género, resuelto antes de pedir nada (define el
   // endpoint de discover de cada uno).
   const generosTipo = HOME_GENRES.map((g) => ({ g, tipo: types[g] ?? defaultTypeFor(g) }));
+  // "Últimos lanzamientos" tiene su propia clave de riel, `ultimos`, y su
+  // default es "movie": el Home que ve alguien que nunca tocó el selector es
+  // exactamente el de antes.
+  const tipoUltimos: MediaType = types["ultimos"] ?? "movie";
 
   // === Etapa 1: todas las fuentes en paralelo ===============================
   // Nadie de acá lee `used`, así que el orden de resolución no afecta la salida.
@@ -433,10 +438,12 @@ export async function composeHome(opts: {
       // son exploración puntual y no rearman el Home.
       safe(c, "hero", [] as UITitle[], async () =>
         (await recommendations({ tipo: "all", providers, n: 6, offset: 0 })).items),
-      // Últimos lanzamientos. Sin toggle (hoy es solo movie, por fecha de estreno).
-      // La página 2 es fallback y NO se prefetchea: cuesta 1 discover + 20
-      // providersOf y casi nunca hace falta (la página 1 alcanza para los 20).
-      safe(c, "ultimos p1", [] as UITitle[], () => latestReleases(providers, "movie", 1)),
+      // Últimos lanzamientos. AHORA CON TOGGLE: el default sigue siendo "movie",
+      // así que el Home inicial no cambia. En "tv" la fuente es otra —mezcla el
+      // discover regional con candidatos por red oficial— porque el regional no
+      // devuelve los estrenos cuyo dato de AR TMDB todavía no tiene (ver
+      // lib/ultimos.ts). La página 2 es fallback y NO se prefetchea.
+      safe(c, "ultimos p1", [] as UITitle[], () => latestReleases(providers, tipoUltimos, 1)),
       // Votos: se pide el conjunto AMPLIO (hasta VOTED_ROWS filas) para que el
       // dedup tenga de dónde rellenar. El corte final lo hace `take` acá abajo.
       safe(c, "mas-votados", [] as UITitle[], () => mostVoted(providers, VOTED_DAYS, VOTED_ROWS)),
@@ -485,7 +492,7 @@ export async function composeHome(opts: {
   const latest = take(latestP1, used, VISIBLE_CARDS);
   // Página 1 vacía = no hay más resultados; pedir la 2 sería un request al pedo.
   if (latestP1.length && latest.length < VISIBLE_CARDS) {
-    const p2 = await safe(c, "ultimos p2", [] as UITitle[], () => latestReleases(providers, "movie", 2));
+    const p2 = await safe(c, "ultimos p2", [] as UITitle[], () => latestReleases(providers, tipoUltimos, 2));
     latest.push(...take(p2, used, VISIBLE_CARDS - latest.length));
   }
 
@@ -575,7 +582,13 @@ export async function composeHome(opts: {
   const anime = ocultarAnime ? [] : take(animePool, used, AUDIENCE_CARDS);
 
   const rails: HomeRail[] = [
-    { key: "ultimos", title: "Últimos lanzamientos", items: latest, seeAllHref: "/lista/ultimos" },
+    // "Ver todas" lleva el tipo activo: entrar a la lista completa desde el riel
+    // en Series tiene que abrir en Series.
+    {
+      key: "ultimos", title: "Últimos lanzamientos", items: latest,
+      seeAllHref: `/lista/ultimos?tipo=${tipoUltimos}`,
+      typeToggle: "refetch", shelfKey: "ultimos", activeType: tipoUltimos,
+    },
     { key: "mas-votados", title: "Lo más votados", items: votados, seeAllHref: "/lista/mas-votados", typeToggle: "filter", shelfKey: "mas-votados", activeType: types["mas-votados"] ?? "movie" },
     { key: "hacete-cargo", title: "No gustaron", items: cargo, seeAllHref: "/lista/hacete-cargo", typeToggle: "filter", shelfKey: "hacete-cargo", activeType: types["hacete-cargo"] ?? "movie" },
     ...generos,
@@ -675,7 +688,18 @@ export async function homePayload(opts: {
     await withMetricasIdioma(() => withCacheMetrics(() => conRegistroDeEjes(() => cachedLocIf(
     key,
     TTL.home,
-    () => { miss = true; return composeHome({ providers: opts.providers, types }); },
+    async () => {
+      miss = true;
+      // Los fallos de disponibilidad cuentan como degradación del payload: un
+      // Home con títulos en gris porque Supabase parpadeó no puede quedar
+      // congelado 6 h para todos.
+      const { res, fallos } = await withFallosDisponibilidad(
+        () => composeHome({ providers: opts.providers, types }),
+      );
+      if (!fallos) return res;
+      console.error(`[home] payload degradado: ${fallos} fallo(s) de disponibilidad`);
+      return { ...res, fallos: res.fallos + fallos, degradado: true };
+    },
     // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
     // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
     // caso "sin plataformas", que no cuesta nada recalcular.

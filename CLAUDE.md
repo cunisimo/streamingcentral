@@ -27,7 +27,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 
 - **Next.js 14 App Router + TypeScript + Tailwind.** SSR/API routes en un solo
   proyecto, deploy directo a Vercel.
-- **TMDB** — fuente de verdad del catálogo: metadata, providers por región,
+- **TMDB** — fuente del catálogo: metadata, providers por región,
   búsqueda, recomendaciones, personas. Bearer token v4 (`TMDB_READ_TOKEN`),
   **no** el `api_key` v3.
 - **OMDB se sacó** (IMDb + Metacritic). Sus términos permiten uso personal y
@@ -349,8 +349,74 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   **única** plataforma, el carrusel "Animación para adultos" se oculta: todo el
   Home ya es anime y sería el mismo contenido con otro título. Con Crunchyroll +
   otra (Max, Netflix) se mantiene, porque esas también tienen animación adulta.
-- **El Top (`/top`) es la única sección con dato de consumo real, y solo para
-  Netflix.** Sale del TSV público de Netflix (`lib/netflix-top10.ts`), ingestado
+- **El Top (`/top`) pasa a cargarse A MANO, con cutover atómico.** Rama
+  `feat/top-manual`, **sin mergear ni ejecutar la migración al escribir esto**.
+  Doce bloques (seis plataformas × dos tipos) que el dueño arma, revisa y
+  publica desde `/admin/top`; tablas `top_rankings` (la VERSIÓN de un bloque) y
+  `top_ranking_entries` (sus diez posiciones), migración `007`.
+  🔴 **NADA SE SOBREESCRIBE AL PUBLICAR**: publicar crea una fila nueva y la
+  anterior queda intacta, así que el historial se conserva y una corrección es
+  una versión más que apunta a la previa con `copiado_de`. Lo garantizan dos
+  triggers, no la buena conducta del código. Un índice PARCIAL da un solo
+  borrador por bloque sin impedir publicar el mismo bloque muchas veces.
+  🔴 **EL CUTOVER ES ATÓMICO Y ESO ES UNA DECISIÓN DEL DUEÑO.** Mientras falte
+  cualquiera de los doce bloques publicados, `/top` **entero** sigue con la
+  implementación vieja (`hayCutover` en `lib/top-manual-nucleo.ts`). No se
+  mezclan fuentes por bloque: media página con ranking curado y media con
+  popularidad no le da al lector forma de saber qué mira. Un fallo al leer las
+  publicaciones tampoco cambia de fuente — que Supabase se caiga no puede vaciar
+  el Top.
+  **Publicar es una función de la base** (`publicar_top`, `security invoker`):
+  valida las diez posiciones y cambia el estado en una transacción. Si eso
+  viviera en la API, entre validar y escribir cabría cualquier cosa y una
+  llamada directa a PostgREST se saltearía la validación entera.
+  **El copy público se unifica en "Top semanal"** y las fechas de captura
+  quedan sólo en el dashboard. La nota que explicaba "dato oficial vs
+  popularidad" **no se borró**: antes del cutover esa distinción sigue siendo
+  real, así que se muestra sólo para los bloques de la fuente vieja.
+- **El segundo factor del admin se comprueba en TRES lugares, y sólo dos son
+  seguridad.** La sesión vive en `localStorage`, no en cookies, así que el
+  servidor no la ve: el guard de `/admin/layout.tsx` es **experiencia de
+  usuario** —no dibujar botones que la API va a rechazar— y un `curl` no lo ve
+  nunca. Los que rechazan son `adminDeToken` (`lib/admin-auth.ts`) en cada API e
+  `is_admin_mfa()` en las policies de RLS. **La segunda no es redundante**: sin
+  ella, un token de admin sin MFA escribe directo contra PostgREST con la anon
+  key y la API no se entera.
+  ⚠️ **El dashboard NO usa `service_role`.** Escribe con la sesión del admin
+  (`supabaseComoUsuario`), porque con la clave de servicio las policies no
+  correrían y la comprobación de MFA en la base sería decorativa.
+  ⚠️ **Hacen falta DOS factores TOTP.** Si se pierde el único, la cuenta queda
+  sin poder publicar y no hay forma de saltear `aal2` desde la app.
+  ⚠️ `/api/admin-search` **no validaba nada** antes de esta tanda: cualquiera
+  podía consumirla y gastar cuota de TMDB. Ahora exige admin con MFA.
+- **La carga manual es también evidencia de disponibilidad** (procedencia
+  `top-manual`, prioridad 3 del resolvedor). Cuando el dueño confirma que un
+  título está en una plataforma, eso resuelve el caso que TMDB tarda en publicar.
+  🔴 **Entra por `resolverDisponibilidad`, NO por un camino propio de `/top`.**
+  Si viviera sólo allá, la misma película saldría en color en el Top y en gris
+  en la ficha, la búsqueda y el Home — exactamente el bug que el resolvedor
+  central existe para impedir. Sale **sólo de rankings publicados**, vence a los
+  **14 días** (la misma ventana que la evidencia de Netflix y por lo mismo: una
+  captura vieja no dice dónde está hoy un título), los borradores no cuentan, y
+  un fallo de lectura es "no sé" — no niega y no se cachea.
+  Va **después** del top oficial de Netflix y **antes** del enlace probable:
+  entre dos hechos publicados gana la fuente primaria, y entre un hecho y una
+  inferencia gana el hecho. En `/top` se conserva además
+  `conPlataformaDeLaFuente`, porque ahí la plataforma la garantiza el bloque.
+- **El Top automático de Netflix queda ARCHIVADO, no eliminado.** `netflix_top10`,
+  el resolvedor título→TMDB, la ingesta y sus tests siguen vivos, **y el cron
+  semanal de Vercel sigue corriendo**. Es una decisión del dueño y tiene un
+  motivo concreto: esa tabla ya **no alimenta sólo a `/top`**, es la prioridad 2
+  del resolvedor de disponibilidad (`disponiblesEnTopOficial` en
+  `lib/enrich.ts`). Apagar el cron habría vaciado esa evidencia en 14 días y
+  devuelto a gris los títulos que dependen de ella — la misma regresión
+  programada que ya se corrigió una vez.
+  Lo que sí se desconecta es su uso como **fuente del ranking público**, y pasa
+  solo: en el cutover, `bloqueManual` reemplaza a `netflixBlock` y a
+  `popularBlock` para las seis plataformas. **El código viejo se retira en un
+  cambio posterior**, una vez probado el Top manual en producción.
+- **El Top (`/top`) era la única sección con dato de consumo real, y solo para
+  Netflix.** (Vigente **hasta el cutover**; lo de arriba lo reemplaza.) Sale del TSV público de Netflix (`lib/netflix-top10.ts`), ingestado
   por un cron semanal a la tabla `netflix_top10`, que hace de ranking **y** de
   mapa título→TMDB (el TSV solo trae el título en inglés). Las otras cinco
   plataformas van por popularidad de TMDB y se etiquetan distinto a propósito:
@@ -393,9 +459,15 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   invalida una anterior confiable del mismo `tipo:id`: la evidencia se acumula
   en un conjunto, no se resuelve por "la última gana".
   Tres cosas que NO se hacen: inventar `watchLink` (sale de TMDB; si no lo hay,
-  no hay a dónde mandar a nadie), usar `networks` como disponibilidad (que sea
-  "de Netflix" no dice que se vea en Netflix Argentina) y tocar el array
-  cacheado de `providersOf`.
+  no hay a dónde mandar a nadie), usar `networks` **solo** como disponibilidad
+  (que sea "de Netflix" no dice que se vea en Netflix Argentina) y tocar el
+  array cacheado de `providersOf`.
+  ⚠️ **Esa regla del medio cambió y conviene leerla bien.** Antes decía
+  "`networks` no se usa nunca". Ahora dice **"`networks` nunca se usa SOLA"**:
+  en SERIES, acompañada de un enlace oficial de la misma plataforma a ese título
+  concreto y sin contradicción fuerte, sí sirve. **En PELÍCULAS sigue sin usarse
+  nunca** — TMDB no lo publica para películas, y ahí decide sólo el enlace. Ver
+  "Disponibilidad" abajo.
   **UNA consulta por MISS**, filtrada por fecha: el corte sale del reloj, no de
   una consulta previa que pregunte cuál es la última semana. La primera versión
   hacía esas dos y por eso el techo real era 24 lecturas por hora, no 12.
@@ -428,6 +500,189 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de
   Next. Sin esa variable la ingesta no corre y el bloque de Netflix cae a
   popularidad como los otros cinco — la app no se rompe.
+- **La disponibilidad se resuelve en UN solo lugar** (`lib/disponibilidad.ts` →
+  `resolverDisponibilidad`, con el adaptador `disponibilidadDe` en `enrich.ts`).
+  Ficha, cards, búsqueda, relacionados, listas y Home pasan todos por ahí.
+  **Antes cada superficie decidía sola**, y por eso el arreglo de Moria quedó
+  atado a la ficha mientras las cards del mismo título seguían en gris. Un
+  barrido (`lib/disponibilidad-barrido.test.ts`) falla si una superficie nueva
+  lee `watchProviders` y se saltea el resolvedor.
+  **Prioridad de evidencia**, y sólo se AGREGA cuando TMDB no sabe nada:
+  1. `watch/providers` de TMDB para AR, `flatrate` → `tmdb-ar`.
+  2. Top oficial reciente de Netflix → `top-oficial` (reglas de ventana y
+     `needs_review` intactas).
+  3. **Evidencia oficial de alta probabilidad** → `oficial-probable`.
+     Seis plataformas en series, cuatro en películas.
+  4. Registro manual versionado (`lib/excepciones-disponibilidad.ts`, hoy
+     **vacío**) → `manual`.
+  🔴 **Los respaldos nunca contradicen a TMDB.** Si TMDB ubica el título en otra
+  plataforma, el dato en conflicto es el nuestro. Y **un fallo nunca es una
+  ausencia**: si Supabase o TMDB se caen se devuelve lo de TMDB y **no se
+  cachea** (`fallo` viaja hasta `cachedIf`).
+- **Un fallo de disponibilidad NO se congela en las cachés de afuera**
+  (`lib/fallos-disponibilidad.ts`). `disponibilidadDe` no guardaba su `disp:`
+  cuando la evidencia fallaba, pero devolvía sólo el array de plataformas y la
+  señal moría ahí: **más afuera sí se guardaba**, así que una caída de dos
+  segundos dejaba títulos en gris por un día. La señal viaja por **contexto
+  async**, como `withCacheMetrics`: si se pasara por parámetro habría que
+  enhebrarla por `toUITitle` → `enrichRaw` → `listByCategory` → cada llamador, y
+  alcanzaría con que uno se la olvidara. Se responde con lo que hay, no se
+  guarda, y el pedido siguiente reintenta.
+  🔴 **EL CONTEXTO ANIDA, y esa fue la segunda mitad del bug.** La primera
+  versión creaba un contador por llamada y `registrar` tocaba sólo el más
+  interno: en la composición real —`homePayload` envuelve, y adentro la card y
+  los tramos de la lista vuelven a envolver— el hijo no guardaba su caché pero
+  **el padre no se enteraba y el Home se guardaba igual**. Ahora cada contador
+  conoce a su padre y le suma al salir, en `finally`: se cuenta una sola vez por
+  nivel, un hijo que lanza igual propaga, y la excepción no se toca.
+  **Siete superficies lo abren** —card, Home, búsqueda, Top por popularidad,
+  riel de recomendaciones y los dos tramos de "Últimos"—; el inventario completo
+  de qué caché necesita el contexto y cuál no (con el motivo escrito) lo fija
+  `lib/cache-disponibilidad-inventario.test.ts`, que falla si aparece un
+  `cachedLoc` sin clasificar.
+- **"TMDB no sabe nada" y "TMDB sabe algo que no mapeamos" NO son lo mismo**
+  (`hayFlatrateAR`). `providersOf` descarta los `provider_id` argentinos que no
+  están en `providers-ar.ts`, así que un título que TMDB ubica en una plataforma
+  no soportada llegaba con `codes` vacío — indistinguible del caso que los
+  respaldos cubren, y la regla de enlace podía inferir Disney+ **contradiciendo a
+  TMDB**. Con la señal, el resultado visible sigue vacío (no hay código que
+  mostrar) pero **ningún respaldo se consulta ni se aplica**.
+- **El selector de un riel no existe hasta que entra en `TOGGLE_KEYS`**
+  (`hooks/home-types-nucleo.ts`). El riel puede declarar `typeToggle` en el
+  composer y el botón puede cambiar en pantalla: si la clave no está en la lista
+  del hook, el `t` que viaja a `/api/home` no cambia y el Home nunca se rearma.
+  Pasó con `ultimos`. El inventario, los defaults y la serialización viven en un
+  módulo **puro** justamente para poder probar el parámetro, que es lo único que
+  decide si hay refetch. El default de `ultimos` está **declarado** (`movie`), no
+  heredado de `defaultTypeFor`, que alterna por posición de género.
+- **El problema que resuelve: el catálogo regional de TMDB está incompleto.**
+  Medido el 2026-08-30 sobre las series de la red Disney+ estrenadas en 60 días:
+  **15 candidatos, 4 con proveedor AR y 11 sin ninguno**. El caso testigo es
+  `tv:275224` (Gutiérrez Is mai neim), #1 de Disney+ en JustWatch AR, del que
+  TMDB sólo conoce ID, MY y US. **No es cache.** El arreglo de Moria fue
+  correcto pero no general: dependía del top oficial de Netflix, que sólo existe
+  para Netflix. Informe: `docs/medidas/2026-08-30-disponibilidad-informe.md`.
+- **La evidencia oficial cubre SEIS plataformas en series y CUATRO en
+  películas** (`lib/enlace-oficial.ts` → `ADAPTADORES_OFICIALES`).
+
+  | | Netflix | Disney+ | Prime | Max | Paramount+ | Apple TV+ |
+  |---|:--:|:--:|:--:|:--:|:--:|:--:|
+  | Series | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+  | Películas | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+
+  **Las series exigen red + enlace** de la misma plataforma. **Las películas
+  deciden sólo por el enlace**: TMDB no publica `networks` para películas, y si
+  algo lo poblara tampoco se usaría — hay un test que lo fija. Max y Paramount+
+  no se infieren para películas porque midieron **0 de 30** con dominio oficial:
+  habilitarlas sería aparentar una cobertura que no existe.
+
+  🔴 **EL CRITERIO ES COBERTURA, no certeza.** Decisión del dueño: es preferible
+  mostrar de vez en cuando un título que no esté, antes que ocultar muchos que sí
+  están. Por eso la regla admite un riesgo pequeño y sólo rechaza contradicciones
+  fuertes. Medida contra verdad de campo —tapando el dato de AR de títulos que sí
+  lo tienen— dio **144 aciertos en series y 22 en películas, con CERO falsos
+  positivos**. Ver `docs/medidas/2026-08-31-medicion-regla-final.md`.
+
+  **`networks` nunca se usa sola y `homepage` tampoco** (en series). El host se
+  compara completo, nunca con `includes`: `netflix.com.evil.ru` y
+  `netflix-ar.com` contienen la cadena y no son el dominio.
+
+  ⚠️ **`hbo.com` vale para Max, y es evidencia PROBABLE, no estructural.** El
+  argumento de que es "el canal, no el servicio" era razonable y los datos lo
+  desmintieron: 43 casos medidos, 35 en Max AR, 0 en otra plataforma. Si HBO
+  licenciara una serie a otra plataforma en AR, esta regla se equivocaría.
+
+  ⚠️ **`amazon.com/dp/` queda afuera**: es la tienda, no el servicio — un ASIN
+  puede ser un alquiler, una compra o un DVD. Cuesta 12 series de la muestra.
+
+  ⚠️ **Se acepta CUALQUIER locale** en una URL de título. Rechazar los
+  extranjeros costaba 4 series y el 100% de la señal de películas, y evitaba 0
+  falsos positivos: el locale identifica la tienda que generó el enlace, no dónde
+  está disponible. Quitar el prefijo **no** afloja la ruta: `/br/browse` sigue
+  siendo una portada.
+
+  ⚠️ **No hay tope de regiones.** Se propuso uno (≤3) y habría aceptado CERO
+  títulos sin evitar un solo error.
+
+  ⚠️ Los `idsGlobales` **no son** los `tmdbIds` de `providers-ar.ts` y no hay que
+  unificarlos: allá definen qué considera cada plataforma el discover argentino.
+- **Cada ruta oficial VALIDA Y EXTRAE a la vez: el grupo 1 es el identificador.**
+  De ahí sale `identidadOficial()`, que devuelve `"<plataforma>:<id de la
+  plataforma>"`. Tenerlas separadas dejaría que la identidad y la regla
+  divergieran; un test falla si alguna ruta pierde su grupo de captura.
+  **`netflix.com/browse?jbv=<n>` cuenta como ruta de título** (`porQuery`), y es
+  la única excepción por query que hay. `/browse` pelado se sigue rechazando —
+  es una portada—, y el parámetro exige ruta exacta, un único valor y forma
+  numérica: `?jbv=1&jbv=2` es ambiguo y se rechaza. Medido: de 80 series de
+  Netflix con `homepage`, 71 usan `/title/<n>` y **1** usa `?jbv=`. El `n` es el
+  mismo número en las dos formas, y eso es lo que hace que se puedan deduplicar
+  entre sí.
+- **La búsqueda deduplica por identidad oficial, NUNCA por parecido**
+  (`dedupePorIdentidad`, cableado en `search()`). TMDB a veces carga el mismo
+  programa **dos veces, una como serie y otra como película**, y salían dos
+  cards del mismo título — una en color y otra en gris. El caso medido son dos
+  entradas con el mismo id de Netflix (`/title/<n>` en una, `?jbv=<n>` en la
+  otra).
+  🔴 **No se compara título, fecha, productora, sinopsis ni similitud textual.**
+  Esas señales esconden obras legítimamente distintas: secuelas, remakes,
+  documentales homónimos. Se compara el identificador que publica la
+  plataforma, que es un dato comprobable. **Lo que no tiene identidad oficial no
+  se toca.** Gana el primero, que no es un criterio nuevo: la lista ya viene
+  ordenada por relevancia. Medido sobre 540 títulos de las seis plataformas:
+  366 con identidad y **0 colisiones**, o sea que no junta nada que no sea el
+  mismo título.
+  **No paga ninguna llamada cuando TMDB ya informa proveedores argentinos**: se
+  corta antes de tocar el detalle. Para el resto reusa `pv3:` y `oficial:`, que
+  el camino de disponibilidad ya pidió.
+  Se hace **sólo en la búsqueda**, que es donde el usuario ve las dos entradas
+  una al lado de la otra; el dedup del Home es otro y es por `tipo:id`.
+- **La evidencia oficial se lee SIEMPRE en `IDIOMA_EVIDENCIA` (`es-ES`), que no
+  se deriva de `IDIOMA_TITULOS`** (`lib/idioma.ts`). `homepage` es un campo
+  **localizado** de TMDB, así que pedir el detalle con el idioma de la interfaz
+  hacía que cambiara la **disponibilidad**: `movie:1752041` devuelve
+  `netflix.com/browse?jbv=81958141` en `es-ES` y **vacío** en `es-MX`, `en-US` y
+  sin idioma. La misma película, Netflix o gris según una variable que sólo debía
+  decidir cómo se escriben los títulos.
+  🔴 **La solución NO fue ponerle huella de idioma a `oficial:`.** Eso arregla la
+  caché y deja el bug: seguirían existiendo dos respuestas para el mismo título y
+  la app elegiría una según el idioma visual. Se arregla la **fuente**, y por eso
+  esa clave **puede** seguir sin huella — es la única razón por la que puede.
+  Hay tests que atan las dos mitades: si alguien saca el idioma fijo, el que
+  vigila `CLAVES_SIN_HUELLA` falla.
+  **No cuesta una llamada más**: es la misma de siempre con el idioma explícito,
+  y es el ÚNICO uso de esa constante — títulos, sinopsis y todo lo visible siguen
+  en el idioma base.
+  ⚠️ **`en-US` daría MÁS cobertura y no se tomó.** Medido sobre 360 títulos de
+  las seis plataformas: `en-US` da **248** identidades y `es-ES` **217** (gana
+  32 —22 de Netflix, 10 de Disney+— y pierde 1). Se eligió `es-ES` porque es lo
+  que la app resuelve hoy, así que fijarlo no mueve ni un título, y porque lo que
+  `en-US` pierde son justamente los casos tipo `movie:1752041`. Pasar a `en-US`
+  es una mejora medida y disponible, pero es un cambio de cobertura y no esta
+  corrección. Ver `docs/medidas/2026-08-31-idioma-evidencia.md`.
+- **Corregir la ficha no alcanzaba: el `discover` por proveedor nunca devuelve
+  el título.** Medido: 1152 series en Disney+/AR y el caso testigo en ninguna.
+  Por eso "Últimos lanzamientos · Series" mezcla la fuente regional con
+  candidatos traídos por las **redes oficiales** (`lib/ultimos.ts`).
+  🔴 **`with_watch_monetization_types` es lo que rompía la consulta por red**, no
+  `watch_region`: medido, 304 resultados con ese parámetro y 440 sin él, y el
+  caso testigo sólo aparece sin él. De ahí sale `sinMonetizacion` en `tmdb.ts`.
+  **El catálogo regional se pagina de verdad; lo acotado es SÓLO el suplemento
+  por redes.** Una primera versión mezclaba 3 páginas fijas por fuente y ahí
+  terminaba: con Netflix, Max o Prime la página 4 salía vacía aunque TMDB tuviera
+  cientos de resultados — una regresión contra la lista que ya existía. Ahora se
+  traen páginas regionales hasta cubrir la pedida (cada una **cacheada por
+  separado**, así pedir la 2 no rearma la 1), se mezclan con el suplemento —que
+  se calcula una vez por día y combinación— y se ordena con un orden TOTAL (fecha
+  desc, id desc como desempate estable). `hayMasRegional` es lo que impide que la
+  lista se corte donde termina lo que se trajo.
+- **"Últimos lanzamientos" tiene selector Películas/Series** (`shelfKey:
+  "ultimos"`, `typeToggle: "refetch"`). **El default sigue siendo Películas**, así
+  que el Home inicial no cambió. El tipo entra en el `t` y por lo tanto en la
+  clave del payload: la versión subió a **`v6`** justamente porque un payload
+  `v5` cacheado no trae el selector y el cambio "no se vería" durante 6 h.
+  "Ver todas" lleva `?tipo=`, y `/lista/ultimos` lo recibe **desde el server**
+  (no con `useSearchParams`, que forzaría un `<Suspense>`). **Al volver atrás
+  manda el snapshot, no la URL**, igual que en `/categoria`.
 - **La ruleta sirve UNA recomendación por vez, nunca una lista.** Es el punto:
   una lista reconstruye la parálisis de elección que la feature resuelve. El pool
   es `roulette_titles` (curado offline, 2259 con texto de los 2401) y lo sirve la
@@ -605,7 +860,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |
 | `GET /api/hacete-cargo` | "No gustaron" (votos malaso, `top_voted` 1-1). La ruta y la clave siguen diciendo `hacete-cargo`: cambió el rótulo, no el riel |
 | `GET /api/search` | búsqueda (títulos + personas). `providers` **ordena, no filtra** |
-| `GET /api/latest` | últimos estrenos (solo movie, por fecha) |
+| `GET /api/latest` | últimos estrenos por fecha. `?tipo=movie` (default) o `tv`; en `tv` mezcla el catálogo regional con candidatos por red oficial. `?page=` se normaliza (entero ≥ 1, o 1) |
 | `GET /api/person/[id]` | filmografía de una persona (actor o director), filtrada a plataformas |
 | `GET /api/personas` | actores populares paginados (`?page=`) |
 | `GET /api/directores` | lista curada de directores (`DIRECTOR_IDS` en `lib/enrich.ts`) |

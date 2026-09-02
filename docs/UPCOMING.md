@@ -54,8 +54,14 @@ curl -X POST "https://<ref>.supabase.co/functions/v1/tmdb-sync" \
 ## Parámetros (env de la función, opcionales)
 
 - `SYNC_WINDOW_DAYS` (default 90) — ventana hacia adelante.
-- `SYNC_MAX_PAGES` (default 5) — páginas de discover por tipo.
+- ~~`SYNC_MAX_PAGES`~~ — **eliminada el 2026-08-31.** Era el corte que definía
+  el bug del descubrimiento: con 3 páginas ordenadas por popularidad, el sync
+  miraba 60 de 1900 series de la ventana. Ahora se recorre hasta `total_pages`.
+  Si la variable sigue puesta en el entorno de la función, no hace nada.
 - `SYNC_GRACE_DAYS` (default 2) — días de gracia antes de expirar un estreno pasado.
+
+**Versión desplegada:** `tmdb-sync` **v8** (2026-09-01), la primera con el
+descubrimiento sin corte por popularidad. Ver el issue #8.
 
 ## Read path (app)
 

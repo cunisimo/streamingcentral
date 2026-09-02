@@ -6,7 +6,7 @@
 // en varias): el rollback no revierte nada. Con la huella adentro de la clave,
 // cambiar la configuración selecciona otro espacio y el rollback es inmediato.
 //
-// TANDA 2 — LA HUELLA ESTÁ PUESTA. Las once familias se llaman con
+// TANDA 2 — LA HUELLA ESTÁ PUESTA. Las familias localizadas se llaman con
 // `HUELLA_IDIOMA` (lib/idioma.ts), así que hoy producen `card:es-MX+f.r1:movie:278`
 // y no `card:movie:278`. Ahí ocurrió la única invalidación del plan: un solo
 // arranque frío, todas las familias a la vez. Se hicieron juntas a propósito —
@@ -41,13 +41,22 @@ function pre(huella: string): string {
 
 const marcar = (s: string) => s as ClaveLocalizada;
 
-// --- Las once familias -------------------------------------------------------
+// --- Las doce familias localizadas --------------------------------------------
+// Eran once en la tanda 2. La doceava, `ultimos:`, entró con la corrección de
+// disponibilidad. El número vigente lo fija lib/claves.test.ts.
 // El orden y el formato de cada una reproducen el código anterior byte a byte.
 // Los tests fijan los literales de hoy: si alguna cambia, fallan.
 
-/** Payload compuesto del Home. La versión `v5` es del contenido, no del idioma. */
+/**
+ * Payload compuesto del Home. La versión `v6` es del contenido, no del idioma.
+ *
+ * `v6`: "Últimos lanzamientos" estrenó selector Películas/Series. Sube porque un
+ * payload `v5` cacheado NO trae `typeToggle` ni `shelfKey` en ese riel, así que
+ * durante las 6 h del TTL el selector no aparecería y el cambio "no se vería"
+ * después de deployar. Un solo cambio de versión y un solo arranque frío.
+ */
 export function claveHome(semilla: number, providers: string, tipos: string, huella: string): ClaveLocalizada {
-  return marcar(`home:${pre(huella)}v5:${semilla}:${providers}:${tipos}`);
+  return marcar(`home:${pre(huella)}v6:${semilla}:${providers}:${tipos}`);
 }
 
 /** Un pool de discover: una plataforma, una receta, una página. */
@@ -108,6 +117,19 @@ export function claveSearch(q: string, providers: string, huella: string): Clave
   return marcar(`search:${pre(huella)}v2:${q}:${providers}`);
 }
 
+/**
+ * "Últimos lanzamientos · Series", ya mezclado y paginado.
+ *
+ * Lleva la fecha argentina en la clave porque la ventana se corta en "hoy": sin
+ * eso, la lista del día anterior sobreviviría al cambio de día y el riel se
+ * quedaría sin los estrenos de la mañana.
+ */
+export function claveUltimosSeries(
+  dia: string, providers: string, tramo: string, huella: string,
+): ClaveLocalizada {
+  return marcar(`ultimos:${pre(huella)}v1:tv:${dia}:${providers}:${tramo}`);
+}
+
 /** Actores populares. Guarda `knownFor`, que son títulos localizados. */
 export function clavePeoplePopular(page: number, huella: string): ClaveLocalizada {
   return marcar(`people:popular:${pre(huella)}${page}`);
@@ -118,12 +140,41 @@ export function clavePeoplePopular(page: number, huella: string): ClaveLocalizad
 // huella. Están acá para que la lista completa viva en un solo lugar y el
 // barrido pueda distinguir "no lleva huella" de "se olvidaron de ponerla".
 //
-//   pv:<tipo>:<id>          códigos de plataforma
+//   pv3:<tipo>:<id>         códigos de plataforma, si AR tiene algún flatrate,
+//                           y el RESUMEN REGIONAL: cuántas regiones hay, cuántas
+//                           informan cada plataforma soportada, y cuántas no
+//                           traen ninguna. No es un mapa por región — ver
+//                           `resumenRegional` en lib/enlace-oficial.ts.
+//                           Historia de la clave: `pv:` no tenía datos
+//                           regionales; `pv2:` guardaba ids DEDUPLICADOS, que
+//                           perdían la frecuencia y no servían para comprobar
+//                           la dominancia por regiones; `pv3:` cuenta regiones
+//   disp:<tipo>:<id>        disponibilidad ya resuelta de un título vacío en AR
+//   oficial:<tipo>:<id>     redes, homepage y estreno para la regla de evidencia
+//                           oficial. Era `serie:oficial:<id>` y sólo cubría
+//                           series; ahora cubre los dos tipos, y por eso lleva
+//                           el tipo en la clave
 //   videos:<tipo>:<id>      key de YouTube; ya pide el idioma original
 //   genre:covers:v2         rutas de póster
 //   people:directors        knownFor siempre vacío
 //   ed:pub:<tipo>           ids
 //   blocklist:<chip>        ids
+//
+// 🔴 ESTA LISTA SE HACE VALER. Era una constante que no consumía nadie —ni el
+// código ni un test— así que cuando `pv2:` pasó a `pv3:` y `serie:oficial:` a
+// `oficial:`, el barrido siguió en verde vigilando dos familias muertas.
+// `lib/claves.test.ts` ahora exige que toda familia usada esté declarada y que
+// ninguna declarada quede huérfana.
+//
+// ⚠️ QUE NO LLEVEN HUELLA ESTÁ MEDIDO, no heredado del nombre anterior
+// (2026-08-31, contra TMDB): el `link` de `watch/providers` no cambia con el
+// idioma —su slug sale del título ORIGINAL, en inglés, aunque se pida es-ES— y
+// el `homepage` de un título es IDÉNTICO en es-ES, es-MX y en-US. Ponerles
+// huella fabricaría un espacio de caché por idioma para datos que no cambian
+// con el idioma: más arranques fríos a cambio de nada.
 export const CLAVES_SIN_HUELLA = [
-  "pv:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
+  "pv3:", "videos:", "genre:covers:", "people:directors", "ed:pub:", "blocklist:",
+  // Las dos de disponibilidad guardan códigos de plataforma, ids de red, una
+  // URL y contadores: ningún título, ninguna sinopsis.
+  "disp:", "oficial:",
 ] as const;

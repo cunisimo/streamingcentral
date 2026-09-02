@@ -122,10 +122,15 @@ export default function CatalogView() {
             // devuelve siempre 11. Con el "Cargando…" suelto el documento medía
             // 1688px en vez de 6275, y eso no era solo CLS — rompía la
             // restauración de scroll al volver de una ficha (ver ShelfSkeleton).
-            // Los 3 sin toggle son "Últimos lanzamientos" y los dos de audiencia.
+            //
+            // Los 2 sin toggle son los de audiencia, y van al final. El primero
+            // ("Últimos lanzamientos") SÍ lleva toggle desde que estrenó su
+            // selector: antes se lo excluía con `i !== 0`, y dejarlo así habría
+            // reservado 33px donde el riel real mide 66, o sea el salto de
+            // layout que este placeholder existe para evitar.
             <div className="home-rails">
               {Array.from({ length: RIELES }).map((_, i) => (
-                <ShelfSkeleton key={i} conToggle={i !== 0 && i < RIELES - 2} />
+                <ShelfSkeleton key={i} conToggle={i < RIELES - 2} />
               ))}
             </div>
           ) : sinPlataformas ? (

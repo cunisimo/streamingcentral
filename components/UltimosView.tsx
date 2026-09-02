@@ -8,9 +8,21 @@ import { useListaPaginada } from "@/hooks/useListaPaginada";
 import type { UITitle, MediaType } from "@/lib/types";
 import { apiUrl } from "@/lib/api-base";
 
-export default function UltimosView() {
+/**
+ * `tipoInicial` viene del `?tipo=` de la URL, resuelto EN EL SERVER y pasado
+ * como prop.
+ *
+ * No se lee con `useSearchParams` a propósito: eso obliga a un `<Suspense>` y a
+ * un bailout de render en el cliente, y acá el dato ya lo tiene la página.
+ *
+ * ⚠️ Es sólo el valor de ENTRADA. Al volver atrás manda el snapshot, igual que
+ * en `/categoria`: `inicial.extra.tipo` lo pisa más abajo. Si mandara la URL,
+ * volver desde una ficha te devolvía a Películas después de haber elegido
+ * Series.
+ */
+export default function UltimosView({ tipoInicial = "movie" }: { tipoInicial?: MediaType }) {
   const { platforms, ready } = usePlatforms();
-  const [tipo, setTipo] = useState<MediaType>("movie");
+  const [tipo, setTipo] = useState<MediaType>(tipoInicial);
   const [items, setItems] = useState<UITitle[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);

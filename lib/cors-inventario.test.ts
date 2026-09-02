@@ -95,6 +95,11 @@ const EXCLUIDAS = new Map([
    "server-to-server: la ejecuta Vercel Cron con el CRON_SECRET; el contenedor no la consume"],
   ["app/api/admin-search/route.ts",
    "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
+  // Llegó con el Top manual, después de CP4. Mismo motivo que la de arriba, no
+  // un criterio nuevo: la consume `app/admin/top`, que no viaja en el APK. Y
+  // además escribe: darle CORS sería abrirla al contenedor sin necesidad.
+  ["app/api/admin/top/route.ts",
+   "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
 ]);
 
 // ============================================================================
@@ -190,12 +195,14 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 25 rutas = 23 integradas + 2 excluidas", () => {
+test("el recuento cierra: 26 rutas = 23 integradas + 3 excluidas", () => {
+  // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
+  // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
   const integradas = todas.filter((r) => integraCors(leer(r)));
-  assert.equal(todas.length, 25, "cambió la cantidad de rutas: hay que reclasificar");
+  assert.equal(todas.length, 26, "cambió la cantidad de rutas: hay que reclasificar");
   assert.equal(integradas.length, 23);
-  assert.equal(EXCLUIDAS.size, 2);
+  assert.equal(EXCLUIDAS.size, 3);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });
 

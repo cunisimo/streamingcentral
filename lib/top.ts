@@ -1,6 +1,9 @@
 import "server-only";
 import { cardsByIds, listByCategoryCacheable } from "./enrich";
+import { withFallosDisponibilidad } from "./fallos-disponibilidad";
 import { latestWeekRows } from "./netflix-top10";
+import { ultimasPublicaciones, type RankingFila } from "./top-manual";
+import { claveBloque, hayCutover } from "./top-manual-nucleo";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveTopPop } from "./claves";
 import { HUELLA_IDIOMA } from "./idioma";
@@ -19,9 +22,25 @@ const TOPE = 10;
 // `item` en null = la posición existe pero no tenemos ficha (título de Netflix
 // sin resolver). Se renderiza igual: un top 9 se lee como un bug.
 export interface TopSlot { rank: number; item: UITitle | null; rawTitle: string }
+/**
+ * De dónde salió el bloque.
+ *
+ * ⚠️ `"netflix"` y `"popular"` son las fuentes VIEJAS y sólo se sirven antes del
+ * cutover. El copy público ya no las distingue —todo es "Top semanal"— pero el
+ * campo se conserva porque `TopView` lo usa para decidir si muestra el logo de
+ * la fuente, y borrarlo sería un cambio de contrato sin necesidad.
+ */
+export type TopSource = "netflix" | "popular" | "manual";
 export interface TopBlock {
   platform: PlatformCode;
-  source: "netflix" | "popular";
+  source: TopSource;
+  /**
+   * La fecha de captura del ranking.
+   *
+   * ⚠️ NO SE RENDERIZA en la app pública, y es una decisión de producto: las
+   * fechas de captura viven en el dashboard. Viaja en el payload porque el
+   * bloque manual la necesita para diagnosticar desde el dashboard.
+   */
   week?: string;
   slots: TopSlot[];
 }
@@ -42,8 +61,13 @@ export interface TopPayload {
 async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<TopBlock> {
   // Si la reparación de idioma falló, el bloque se devuelve igual pero NO se
   // guarda: si no, un top sin reparar quedaba congelado 24 h.
+  //
+  // Lo mismo vale para la disponibilidad: `senal.fallo` sólo cubría el idioma,
+  // así que un top con títulos en gris por una caída de la evidencia quedaba
+  // congelado 24 h. El contexto de abajo lo cierra.
   const senal = { fallo: false };
   const items = await cachedLocIf(claveTopPop(platform, tipo, HUELLA_IDIOMA), TTL.catalog, async () => {
+    const { res, fallos } = await withFallosDisponibilidad(async () => {
     const r = await listByCategoryCacheable({
       tipo, providers: [platform], sortBy: "popularity.desc",
       // Explícito, no el default de discover(): "lo más popular ahora" con
@@ -62,6 +86,9 @@ async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<To
     // lib/curated.ts con su propia blocklist.
     if (!r.length) throw new Error(`sin resultados para ${platform}/${tipo}`);
     return r;
+    });
+    if (fallos) senal.fallo = true;
+    return res;
   }, () => !senal.fallo);
   return {
     platform,
@@ -129,7 +156,65 @@ async function safe(c: Contador, etiqueta: string, fn: () => Promise<TopBlock>):
   }
 }
 
+/**
+ * Un bloque del Top cargado a mano.
+ *
+ * `conPlataformaDeLaFuente` se conserva y acá es todavía más claro que en el
+ * bloque de Netflix: la plataforma la eligió el dueño al armar el ranking, así
+ * que es un dato del bloque y no una deducción sobre TMDB. Sin eso, un estreno
+ * que TMDB no tiene fichado entraría al bloque en gris y con "No está en tus
+ * plataformas".
+ *
+ * La misma confirmación alimenta además la procedencia `top-manual` del
+ * resolvedor central, así que el título tampoco sale gris en la ficha ni en la
+ * búsqueda.
+ */
+async function bloqueManual(
+  plataforma: PlatformCode, r: RankingFila,
+): Promise<TopBlock> {
+  const cards = await cardsByIds(
+    r.entradas.map((e) => ({ tipo: e.tipo, id: e.tmdb_id })),
+  );
+  const porClave = new Map(
+    cards.map((c) => [`${c.type}:${c.id}`, conPlataformaDeLaFuente(c, plataforma)]),
+  );
+  return {
+    platform: plataforma,
+    source: "manual",
+    week: r.captured_at,
+    slots: r.entradas.slice(0, TOPE).map((e) => ({
+      rank: e.posicion,
+      // `null` = la posición existe y no tenemos ficha. Se renderiza igual con
+      // `rawTitle`: un top de 9 se lee como un bug.
+      item: porClave.get(`${e.tipo}:${e.tmdb_id}`) ?? null,
+      rawTitle: e.titulo,
+    })),
+  };
+}
+
+/**
+ * ¿Ya se puede servir el Top manual?
+ *
+ * 🔴 EL CUTOVER ES ATÓMICO, por decisión del dueño: mientras falte cualquiera de
+ * los doce bloques, `/top` ENTERO sigue con la implementación vieja. No se
+ * mezclan fuentes por bloque — media página con ranking curado y media con
+ * popularidad de TMDB no le da al lector ninguna forma de saber qué mira.
+ *
+ * Un fallo al leer las publicaciones tampoco cambia de fuente: se sigue con lo
+ * viejo. Que Supabase se caiga no puede vaciar el Top.
+ */
+async function publicacionesSiHayCutover(): Promise<Map<string, RankingFila> | null> {
+  try {
+    const pubs = await ultimasPublicaciones();
+    return hayCutover(new Set(pubs.keys())) ? pubs : null;
+  } catch (e) {
+    console.error("[top] no se pudieron leer las publicaciones manuales —", e);
+    return null;
+  }
+}
+
 export async function buildTop(tipo: MediaType, providers: PlatformCode[]): Promise<TopPayload> {
+  const manual = await publicacionesSiHayCutover();
   const elegidas = new Set(providers);
   const orden = (a: PlatformCode, b: PlatformCode) => platformOrder(a) - platformOrder(b);
   const mias = TOP_PLATFORMS.filter((p) => elegidas.has(p)).sort(orden);
@@ -137,7 +222,12 @@ export async function buildTop(tipo: MediaType, providers: PlatformCode[]): Prom
 
   const c: Contador = { fallos: 0 };
   const armar = (p: PlatformCode) =>
-    safe(c, `${tipo}:${p}`, () => (p === "n" ? netflixBlock(tipo) : popularBlock(p, tipo)));
+    safe(c, `${tipo}:${p}`, () => {
+      // Después del cutover, TODOS los bloques salen de la carga manual: el
+      // `hayCutover` de arriba ya garantizó que los doce están publicados.
+      if (manual) return bloqueManual(p, manual.get(claveBloque(p, tipo))!);
+      return p === "n" ? netflixBlock(tipo) : popularBlock(p, tipo);
+    });
   // Sin limitador propio: el semáforo de lib/tmdb.ts ya pone el techo global.
   const [mine, others] = await Promise.all([
     Promise.all(mias.map(armar)),
