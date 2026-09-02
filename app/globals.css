@@ -389,12 +389,24 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
    como en `.none`: acá la noticia es buena. */
 .dprimary.have{cursor:default}
 .dprimary.have:hover{border-color:var(--line-2)}
+/* "Disponible en Netflix y Max": las plataformas del usuario van TODAS acá
+   dentro (ver el comentario de DetailView), así que el recuadro tiene que poder
+   crecer. `height` fija cortaba el texto con tres o más; con `min-height` se ve
+   igual en el caso de una sola, que es el habitual. */
+.dprimary.have{height:auto;min-height:52px;padding:8px 14px;flex-wrap:wrap}
+.dplats{display:inline}
+/* El nombre a contraste pleno: es el dato que se viene a buscar. `.lg` lo pinta
+   con `--dim` porque nació como chip de card, donde acompaña; acá manda. En
+   oscuro `--text` es #F8F9FA —blanco—; en claro es casi negro, que es el blanco
+   equivalente cuando el fondo se invierte. */
+.dprimary.have .lg{color:var(--text)}
 /* La variante con link a suscribirse sí es clickeable: recupera el cursor y el
    contraste que `.none` apaga, porque ahí no hay nada que hacer y acá sí. */
 .dprimary.none.link{cursor:pointer;color:var(--text)}
 .dprimary.none.link:hover{border-color:var(--accent)}
 .dprimary.none.link::after{content:"↗";color:var(--dim);font-size:13px}
-.dalso{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--dim);flex-wrap:wrap}
+/* `.dalso` era el "También en …" chico y gris debajo del recuadro. Se eliminó:
+   ahora las plataformas del usuario van todas dentro de `.dprimary.have`. */
 .actions{display:flex;justify-content:space-around;margin-top:22px;padding:4px 0 2px}
 .act{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--text);font-size:12px;font-family:var(--body)}
 .act svg{width:26px;height:26px;stroke:var(--text);fill:none;stroke-width:1.8}
@@ -947,8 +959,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 
 /* --- "Buscala como…" en la ficha -------------------------------------------
    El nombre que mostramos no siempre encuentra el título en la plataforma; ver
-   components/AyudasBusqueda.tsx. Va debajo de .dalso y usa sus mismos tokens
-   para leerse como parte del mismo grupo. */
+   components/AyudasBusqueda.tsx. Va debajo del recuadro de disponibilidad y usa
+   los tokens del texto secundario, para leerse como parte del mismo grupo. */
 .ayudas{margin:10px 0 0;display:flex;flex-direction:column;gap:6px}
 .ayuda{margin:0;font-size:13px;line-height:1.45;color:var(--dim)}
 .ayuda b{color:var(--text);font-weight:600}
