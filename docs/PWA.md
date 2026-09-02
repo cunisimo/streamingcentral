@@ -423,16 +423,57 @@ Prueba offline real (más fiable que el modo offline de DevTools):
    Por eso se veía en los DOS temas, en direcciones opuestas — y por eso no era
    una desincronización de tema, que es lo primero que uno supone.
 
-   Había un segundo defecto encima: las metas llevan `media`, así que **hasta
-   que hidrata React siguen a `prefers-color-scheme`, no al tema elegido**. Con
-   el sistema en oscuro y la app en claro, la barra arrancaba negra sobre una
-   app blanca en cada arranque en frío. El script inline ya fijaba `data-theme`;
-   ahora fija el color también, y puede hacerlo porque Next emite las metas
-   antes que el script.
+   Había un segundo defecto encima, y es el grande: las metas de
+   `viewport.themeColor` llevan `media`, así que **siguen a
+   `prefers-color-scheme`, no al tema que eligió el usuario**. Con el sistema en
+   claro y la app en oscuro, la que aplicaba valía `#FAFAFD` —casi blanca— desde
+   que se parsea el HTML hasta que corre el efecto de `ThemeContext`. **Medido:
+   301 ms** en escritorio con todo cacheado; en un teléfono, más.
 
-   🔴 **Ahora hay una sola fuente: `lib/tema-colores.ts`**, y un test la compara
-   contra el `--bg` de `globals.css`. El comentario viejo decía "tienen que
-   coincidir" y nada lo verificaba: por eso se rompió.
+   🔴 **EL PRIMER INTENTO DE ARREGLO ESTABA MAL Y ES LA TRAMPA QUE HAY QUE
+   CONOCER.** Parecía obvio: que el script de arranque, que ya fijaba
+   `data-theme`, corrigiera también el `content` de las metas antes de hidratar.
+   Lo hace, y funciona… durante 250 ms.
+
+   React administra las metas que renderea como *hoistable resources*. Si al
+   hidratar encuentra un `content` distinto del que renderizó, **no adopta el
+   nodo: le agrega una copia con el valor original**. Instrumentado con el stack
+   en el chunk de `react-dom`, y la firma es inequívoca — se duplica exactamente
+   la meta que el script tocó:
+
+   | app | el script mutó | React inserta |
+   |---|---|---|
+   | oscura | la clara | **clara `#FAFAFD`** |
+   | clara | la oscura | **oscura `#0F0E13`** |
+
+   No remueve nada, **y no emite una sola advertencia**. `applyTheme` corre una
+   única vez (`useEffect` con `[]`): si la inserción llega después, la copia casi
+   blanca queda viva sobre una app oscura. O sea, el arreglo producía el color
+   del que veníamos escapando.
+
+   Se probaron las **dos** formas de declararla desde React —`viewport.themeColor`
+   y una etiqueta explícita en el JSX con `suppressHydrationWarning`— y **las dos
+   duplican**.
+
+   🔴 **LA SOLUCIÓN ES QUE REACT NO RENDEREE NINGUNA.** La crea el script de
+   arranque con `createElement`, y `applyTheme` muta esa misma. Lo que React no
+   rendereó, no lo repone. Verificado en las cuatro combinaciones de tema del
+   sistema × tema de la app: **una sola meta, igual a `--bg`, lista en 2–4 ms,
+   cero inserciones de React, cero remociones, cero advertencias.**
+
+   No se consideró leer una cookie y renderear el color en el servidor: **medido,
+   `cookies()` en el layout raíz baja de 23 páginas estáticas a 4**. La solución
+   por script cuesta cero.
+
+   🔴 **Ahora hay una sola fuente de color: `lib/tema-colores.ts`**, y un test la
+   compara contra el `--bg` de `globals.css`. Otros dos tests fallan si vuelve
+   `themeColor` al `viewport` o si aparece la etiqueta en el JSX. El comentario
+   viejo decía "tienen que coincidir" y nada lo verificaba: por eso se rompió.
+
+   Lo que todavía **no** está confirmado es si Android repinta la barra cuando el
+   color cambia después del arranque, o si conserva el del primer pintado. Eso
+   decide si la ventana de 301 ms explica del todo la captura original, y se
+   contesta con `/diag-pwa` en un teléfono.
 
 1. **`const` duplicados entre módulos del SW.** `importScripts` comparte un único
    scope global: dos archivos con `const CACHE` rompen el SW entero con

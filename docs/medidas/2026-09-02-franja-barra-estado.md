@@ -143,3 +143,90 @@ Eso lo contesta `/diag-pwa` en el teléfono, con el botón rojo.
 
 No se tocó el Top, Supabase ni Capacitor. Sin push, merge ni despliegue. Los
 HTML instrumentados eran temporales y ya se borraron de los dos `public/`.
+
+---
+
+# Los experimentos, y cuál quedó
+
+Cada variante se midió con el mismo instrumento —observador en la primerísima
+línea del `<head>`— en las **cuatro** combinaciones de tema del sistema × tema
+de la app.
+
+## Experimento 1 — meta explícita en el JSX con `suppressHydrationWarning`
+
+Se sacó `themeColor` del `viewport` y se declaró una sola meta a mano en el
+`<head>`, sin `media`, para que el script le corrigiera el `content`.
+
+| sistema | app | ¿el script cambió el valor? | metas al final | inserciones de React |
+|---|---|---|---|---|
+| claro | clara | no (`#FAFAFD`→`#FAFAFD`) | 1 | 0 |
+| claro | **oscura** | **sí** (`#FAFAFD`→`#0F0E13`) | **2** | **1** (`#FAFAFD`, t=130 ms) |
+| oscuro | clara | no | 1 | 0 |
+| oscuro | **oscura** | **sí** | **2** | **1** (`#FAFAFD`, t=339 ms) |
+
+🔴 **Descartado.** `suppressHydrationWarning` no evita la re-emisión: sólo
+silencia una advertencia que además nunca se emitía. Duplica siempre que el
+script cambia el valor de verdad, con cualquier tema del sistema.
+
+**La regla que queda:** mutar antes de hidratar **cualquier** meta que React
+renderee provoca la copia. No importa cómo se declare.
+
+## Experimento 2 — que React no renderee ninguna (la que quedó)
+
+Sin `themeColor` en el `viewport` y sin etiqueta en el JSX. La crea el script de
+arranque con `createElement`, y `applyTheme` muta esa misma.
+
+HTML servido: **0 metas**. Y en las cuatro combinaciones:
+
+| sistema | app | metas al final | valor | `--bg` | React inserta | remociones | advertencias | color listo |
+|---|---|---|---|---|---|---|---|---|
+| claro | clara | **1** | `#FAFAFD` | `#fafafd` | 0 | 0 | 0 | t=4,0 ms |
+| claro | oscura | **1** | `#0F0E13` | `#0f0e13` | 0 | 0 | 0 | t=3,5 ms |
+| oscuro | oscura | **1** | `#0F0E13` | `#0f0e13` | 0 | 0 | 0 | t=2,2 ms |
+| oscuro | clara | **1** | `#FAFAFD` | `#fafafd` | 0 | 0 | 0 | t=2,4 ms |
+
+Toggle en runtime, sobre la Home ya hidratada, tres cambios seguidos:
+
+```
+ANTES (dark): <meta name="theme-color" content="#0F0E13">
+toggle -> dark    --bg=#0f0e13   1 meta  #0F0E13
+toggle -> light   --bg=#fafafd   1 meta  #FAFAFD
+toggle -> dark    --bg=#0f0e13   1 meta  #0F0E13
+6 s después: 1 meta · inserciones/remociones/advertencias posteriores: 0
+```
+
+## Alternativa con cookies, medida antes de descartarla
+
+Leer el tema de una cookie y renderear el color en el servidor resolvería el
+problema sin JavaScript, pero `cookies()` en el layout raíz saca del prerender a
+**todo** el árbol:
+
+| | páginas estáticas | dinámicas |
+|---|---|---|
+| solución adoptada | **23** | 32 |
+| con `cookies()` en el layout raíz | **4** | 51 |
+
+19 páginas pierden el prerender. La solución adoptada cuesta **cero**: sigue
+siendo el mismo build estático.
+
+## Contra los criterios de aceptación
+
+| criterio | estado |
+|---|---|
+| una sola meta efectiva | ✅ 1 en las cuatro combinaciones |
+| color correcto antes del primer pintado | ✅ 2,2–4,0 ms, en el `<head>`, antes de pintar |
+| cero inserciones de React al hidratar | ✅ 0 en las cuatro |
+| cero advertencias | ✅ 0 |
+| cambio claro/oscuro en runtime | ✅ sigue a `--bg`, sin duplicar |
+| sin duplicar áreas seguras ni tocar Capacitor | ✅ `viewportFit` y el CSS de safe areas intactos |
+
+Service worker: los archivos tocados son `app/layout.tsx`,
+`components/ThemeContext.tsx` y los tests. **Ninguno es `public/sw*`, así que no
+corresponde subir `SC_CACHE_VERSION`**; el HTML va por `Network First`.
+
+## Lo que sigue faltando, y sólo lo da un teléfono
+
+Si Android **repinta** la barra cuando el color cambia después del arranque, o si
+**conserva** el del primer pintado. De eso depende si la ventana de 301 ms
+explica del todo la captura original. `/diag-pwa` lo contesta, y el botón rojo es
+el experimento que decide.

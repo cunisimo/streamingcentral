@@ -25,20 +25,21 @@ const KEY = "sc:theme";
 
 function applyTheme(t: Theme) {
   document.documentElement.setAttribute("data-theme", t);
-  // Las meta theme-color con `media` (ver viewport en app/layout.tsx) siguen a
-  // prefers-color-scheme, no al toggle manual. Sin esto, alguien con el sistema
-  // en claro y la app en oscuro ve la barra de estado clara sobre una app oscura.
+  // La barra de estado de la PWA sigue a `theme-color`, y el tema lo elige el
+  // usuario, así que hay que reescribirla en cada toggle.
   //
-  // ⚠️ SOLO mutamos `content`; nunca remover ni recrear estos nodos. Los renderiza
-  // React y los administra como "hoistable resources": si los sacamos del DOM,
-  // cuando React va a desmontarlos hace parentNode.removeChild() sobre un nodo
-  // huérfano y tira "Cannot read properties of null (reading 'removeChild')".
-  //
-  // Poner el mismo color en TODAS alcanza: matchee la que matchee por su media,
-  // el color resultante es el que eligió el usuario.
+  // 🔴 ES UNA SOLA META Y NO LA RENDEREA REACT: la crea el script de arranque
+  // de `app/layout.tsx` (ahí está el porqué). Acá se muta la misma, o se crea
+  // si por lo que sea no está. Nunca declararla en el JSX ni en `viewport`:
+  // React repone con el valor original cualquier meta suya que hayamos mutado.
   try {
-    const metas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-    metas.forEach((m) => { m.content = COLOR_FONDO[t]; });
+    let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!m) {
+      m = document.createElement("meta");
+      m.name = "theme-color";
+      document.head.appendChild(m);
+    }
+    m.content = COLOR_FONDO[t];
   } catch { /* noop */ }
 }
 

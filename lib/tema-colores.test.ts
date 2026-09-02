@@ -64,19 +64,67 @@ test("nadie vuelve a escribir el color a mano", () => {
   }
 });
 
-test("el script que corre antes de hidratar también arregla las metas", () => {
-  // 🔴 EL SEGUNDO DEFECTO. Las metas `theme-color` llevan `media`, así que hasta
-  // que React hidrata siguen a `prefers-color-scheme` y NO al tema elegido. Con
-  // el sistema en oscuro y la app en claro, la barra arrancaba negra sobre una
-  // app blanca en cada arranque en frío.
+test("el script que corre antes de hidratar CREA la meta y fija el tema", () => {
+  // Las metas de `viewport.themeColor` llevan `media`, así que siguen a
+  // `prefers-color-scheme` y NO al tema elegido. Con el sistema en claro y la
+  // app en oscuro, la que aplicaba valía #FAFAFD —casi blanca— desde el parseo
+  // hasta el efecto de ThemeContext: 301 ms medidos en escritorio.
   //
-  // El script inline ya ponía `data-theme`; tiene que poner el color también.
-  // Puede hacerlo porque Next emite las metas ANTES del script (verificado en
-  // el HTML servido: metas en 5062 y 5144, script en 5966).
+  // El script tiene que resolverlo antes del primer pintado, y tiene que
+  // CREARLA él (ver el test de abajo).
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const script = /const THEME_INIT_SCRIPT = `([\s\S]*?)`;/.exec(layout);
   assert.ok(script, "no se encontró el script de arranque");
-  assert.match(script![1], /theme-color/,
-    "el script no toca las metas: la barra sigue al sistema hasta que hidrata");
+  assert.match(script![1], /theme-color/, "el script no toca la meta");
+  assert.match(script![1], /createElement\("meta"\)/,
+    "el script no crea la meta: si la rendereara React, React la duplicaría");
   assert.match(script![1], /data-theme/, "dejó de fijar el tema");
+});
+
+test("React no renderea ninguna meta theme-color", () => {
+  // 🔴 EL DEFECTO QUE ESTE TEST EXISTE PARA IMPEDIR, Y ESTÁ MEDIDO.
+  //
+  // React administra las metas que rendereа como *hoistable resources*. Si
+  // antes de hidratar les cambiás el `content` —que es justo lo que hace el
+  // script de arranque—, al hidratar NO adopta el nodo: le agrega una COPIA con
+  // el valor original. Con la app en oscuro esa copia queda viva en #FAFAFD,
+  // casi blanca, que es el color de la queja original.
+  //
+  // Se probaron las dos formas de declararla en React y las DOS duplican, sin
+  // emitir una sola advertencia:
+  //
+  //     viewport.themeColor                          -> duplica
+  //     <meta ... suppressHydrationWarning /> en JSX -> duplica
+  //
+  // La única que no duplica es que React no renderee ninguna. Por eso acá se
+  // vigilan las dos puertas.
+  const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+
+  // Se recorta entre los dos `export` en vez de balancear llaves con una
+  // expresión regular: si vuelve `themeColor`, vuelve con objetos anidados.
+  const desde = layout.indexOf("export const viewport");
+  const hasta = layout.indexOf("export const metadata");
+  assert.ok(desde >= 0 && hasta > desde, "no se encontró el bloque del viewport");
+  assert.doesNotMatch(layout.slice(desde, hasta), /themeColor/,
+    "volvió `themeColor` al viewport: React va a duplicar la meta al hidratar");
+
+  for (const rel of ["../app/layout.tsx", "../components/ThemeContext.tsx"]) {
+    const src = readFileSync(new URL(rel, import.meta.url), "utf8");
+    assert.doesNotMatch(src, /<meta\s+name="theme-color"/,
+      `${rel} declara la meta en el JSX: React va a duplicarla al hidratar`);
+  }
+});
+
+test("el toggle busca la meta y la crea si falta, sin recrear la que hay", () => {
+  // `applyTheme` corre en cada cambio de tema. Tiene que mutar LA MISMA meta
+  // que creó el script, no agregar otra ni remover la existente.
+  const src = readFileSync(new URL("../components/ThemeContext.tsx", import.meta.url), "utf8");
+  const desde = src.indexOf("function applyTheme");
+  const hasta = src.indexOf("export function ThemeProvider");
+  assert.ok(desde >= 0 && hasta > desde, "no se encontró applyTheme");
+  const fn = src.slice(desde, hasta);
+  assert.match(fn, /querySelector</, "no busca la meta existente");
+  assert.match(fn, /createElement\("meta"\)/, "no la crea si falta");
+  assert.doesNotMatch(fn, /removeChild|\.remove\(\)/,
+    "remover la meta la deja huérfana y rompe el desmontaje");
 });

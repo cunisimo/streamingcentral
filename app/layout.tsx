@@ -13,21 +13,30 @@ import PwaClient from "@/components/pwa/PwaClient";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import NavHistorial from "@/components/NavHistorial";
 
-// Corre ANTES del primer pintado y hace DOS cosas.
+// Corre ANTES del primer pintado, fija `data-theme` y CREA la meta theme-color.
 //
-// La primera es la de siempre: fijar `data-theme` para que no haya un
-// parpadeo claro/oscuro al hidratar.
+// ============================================================================
+// POR QUÉ LA META NO LA RENDEREA REACT
+// ============================================================================
+// La barra de estado de la PWA instalada se pinta con `theme-color`. Antes
+// salía de `viewport.themeColor`, que emite dos metas con `media`: siguen a
+// `prefers-color-scheme` y NO al tema que el usuario eligió en la app. Con el
+// sistema en claro y la app en oscuro, la que aplicaba valía `#FAFAFD` —casi
+// blanca— desde que se parsea el HTML hasta que corre el efecto de
+// ThemeContext. Medido: 301 ms en escritorio con todo cacheado.
 //
-// 🔴 LA SEGUNDA ES EL ARREGLO DE LA FRANJA. Las metas `theme-color` llevan
-// `media`, así que siguen a `prefers-color-scheme` y NO al tema elegido a mano.
-// Con el sistema en oscuro y la app en claro, la barra de estado de la PWA
-// arrancaba negra sobre una app blanca en CADA arranque en frío, y recién se
-// corregía cuando hidrataba React. Acá se corrige antes de pintar.
+// 🔴 CORREGIRLAS DESDE ACÁ NO SE PUEDE, Y ESE FUE UN INTENTO FALLIDO. React
+// administra las metas que renderiza como *hoistable resources*: si antes de
+// hidratar les cambiás el `content`, al hidratar NO adopta el nodo, le agrega
+// una copia con el valor original. Medido con el stack en el chunk de
+// react-dom. Se probaron las dos formas —`viewport.themeColor` y una meta
+// explícita en el JSX con `suppressHydrationWarning`— y las dos duplican, sin
+// emitir ninguna advertencia. La copia queda viva y casi blanca.
 //
-// Puede hacerlo porque Next emite las metas antes que este script (verificado
-// en el HTML servido). Sólo se muta `content`: ver la advertencia de
-// ThemeContext sobre no sacar estos nodos del DOM.
-const THEME_INIT_SCRIPT = `(function(){try{var c=${JSON.stringify(COLOR_FONDO)};var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].content=c[t];}}catch(e){}})();`;
+// La salida es que React no renderee ninguna: la crea este script. Lo que
+// React no rendereó, no lo repone. Por eso NO hay `themeColor` en `viewport`
+// ni una etiqueta `theme-color` en el JSX, y hay un test que lo vigila.
+const THEME_INIT_SCRIPT = `(function(){try{var c=${JSON.stringify(COLOR_FONDO)};var t=localStorage.getItem("sc:theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m);}m.content=c[t];}catch(e){}})();`;
 
 // `optional` en vez de `swap`: con swap, el kicker del hero se pinta con la
 // fuente de respaldo en DOS renglones (39px) y al llegar Jakarta pasa a UNO
@@ -47,16 +56,9 @@ export const viewport: Viewport = {
   // El teclado virtual achica el viewport en vez de taparlo: el input enfocado
   // y la barra inferior quedan visibles sin necesidad de JS.
   interactiveWidget: "resizes-content",
-  // Dos entradas con media: la barra de estado sigue al tema del sistema.
-  // El toggle manual de ThemeContext además reescribe estas etiquetas en runtime,
-  // para el caso de sistema claro + app en oscuro (o viceversa).
-  // Los colores salen de `lib/tema-colores.ts`, que es la única copia y está
-  // atada al `--bg` de globals.css por un test. Escribirlos a mano acá fue
-  // parte de cómo se desincronizaron.
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: COLOR_FONDO.light },
-    { media: "(prefers-color-scheme: dark)", color: COLOR_FONDO.dark },
-  ],
+  // 🔴 ACÁ NO VA EL COLOR DE LA BARRA. La meta `theme-color` la crea el script
+  // de arranque (ver arriba): declararla desde React hace que React la duplique
+  // al hidratar. Hay un test que falla si vuelve.
 };
 
 export const metadata: Metadata = {
@@ -79,6 +81,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={jakarta.variable}>
       <head>
+        {/* 🔴 ACÁ NO VA LA ETIQUETA DE `theme-color`, ni en `viewport`: la crea
+            THEME_INIT_SCRIPT. Ver el comentario de arriba, y el test que falla
+            si alguien la vuelve a declarar desde React. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <AppleSplashLinks />
       </head>
