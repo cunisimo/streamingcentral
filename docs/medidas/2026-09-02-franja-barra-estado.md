@@ -1,117 +1,145 @@
-# La franja superior en Android: qué se probó y qué falta
+# La franja superior en Android: quién crea cada meta y cuándo
 
 Fecha: 2026-09-02 · Rama `fix/pwa-franja-superior` · Commit auditado: `bc43a15`
 
-## Resumen
+## Cómo se midió
 
-La auditoría rechazó `bc43a15` con razón. Su causa declarada no explica la
-captura del dueño, y midiendo se encontró algo peor: **`bc43a15` crea una meta
-`theme-color` casi blanca que antes no existía**. No se debe mergear como está.
+Emular un inset de safe-area no sirve: pinta un `div`, no la barra de Android.
+Y engancharse desde la consola llega tarde — el primer sondeo cayó con
+`readyState: complete`, con todo ya resuelto.
 
-Lo que sí quedó establecido es dónde NO está el blanco, y eso deja un solo
-candidato en pie.
+Lo que sí sirvió: pedirle al servidor el HTML real, **inyectarle un observador
+como primerísima línea del `<head>`** —antes que las metas y antes que el script
+inline— y servir esa copia desde el mismo origen. El observador parchea
+`insertBefore` / `appendChild` / `replaceChild` / `removeChild` para capturar el
+*stack* de quien inserta, envuelve `console.error`/`warn` y observa los cambios
+de atributo.
 
-## 1. Por qué la causa declarada no alcanzaba
+🔴 **Lo que crea el parser del HTML no pasa por esas funciones.** Esa es
+justamente la discriminación: si una meta aparece por `appendChild`, la puso un
+script, y el stack dice cuál.
 
-`bc43a15` unificó los colores de barra con `--bg`. La diferencia que corrige es
-`#16171B` contra `#0F0E13`: dos oscuros vecinos. Eso no produce una barra
-blanca. La unificación sigue siendo correcta como prevención, pero no es la
-explicación de la captura.
+Escenario de la captura del dueño en las dos builds: **app en oscuro, sistema en
+claro**.
 
-## 2. Lo que hay en el DOM de Producción (`main` sin el arreglo)
+## Corrección de lo que informé antes
 
-Servidor local del `main` previo, app en oscuro y sistema en claro — el
-escenario de la captura:
+Dije que en `main` el DOM nunca sostiene un valor casi blanco. **Era falso.** Esa
+medición se tomó después del efecto de `ThemeContext`, aunque la rotulé t=0.
+Instrumentado desde la primera línea, en `main` la meta clara —que es la que
+aplica con el sistema en claro— vale `#FAFAFD` **desde que se parsea hasta los
+301 ms**, con la app en oscuro.
 
-```
-metas = 2
-[0] (prefers-color-scheme: light) = #16171B
-[1] (prefers-color-scheme: dark)  = #16171B
-```
-
-Medido también a los 0 ms (antes de hidratar), 1,5 s y 5 s: **siempre los dos en
-`#16171B`**. En ningún instante hay un valor claro.
-
-🔴 **De acá sale la conclusión que importa.** En la build que corre en
-Producción, con la app en oscuro, todo el DOM dice oscuro — y la barra real
-salió casi blanca. **Entonces la barra no estaba siguiendo a las metas.**
-
-## 3. El defecto que introduce `bc43a15`
-
-El script de arranque que agrega `bc43a15` muta el `content` de las metas antes
-de hidratar. React administra esas metas como *hoistable resources*: al hidratar
-encuentra un `content` distinto al que renderizó y, en vez de adoptar el nodo,
-**inserta una copia nueva con el valor ORIGINAL**.
-
-Predicción hecha y confirmada — la duplicada es siempre la meta que el script
-tocó:
-
-| App | Sistema | Metas resultantes |
-|---|---|---|
-| oscura | claro | `[light]`, `[dark]`, **`[light]` de más** |
-| clara | claro | `[light]`, `[dark]`, **`[dark]` de más** |
-| clara | oscuro | `[light]`, `[dark]`, **`[dark]` de más** |
-
-En el `main` previo son **2**; con `bc43a15` son **3**. El HTML servido trae 2 en
-las dos builds, así que la tercera nace en el navegador.
-
-`applyTheme` normalmente corrige las tres, porque el efecto de montaje corre
-después de hidratar. Pero corre **una sola vez** (`[]` de dependencias) y nadie
-vuelve a mirar. En una captura quedó registrado el caso perdedor:
+## `main` (lo que corre en Producción)
 
 ```
-[0] (prefers-color-scheme: light) = #0F0E13
-[1] (prefers-color-scheme: dark)  = #0F0E13
-[2] (prefers-color-scheme: light) = #FAFAFD   <-- viva, casi blanca, app oscura
+t=0,2 ms  [loading]   observador instalado
+t=7,7 ms  [loading]   (light)=#FAFAFD   (dark)=#0F0E13     <- las 2 del parser
+t=37 ms   [interactive] DOMContentLoaded  ... sin cambios
+t=92 ms   [complete]  window load         ... sin cambios
+t=301 ms  [complete]  ATRIBUTO content (light) #FAFAFD -> #16171B
+t=301 ms  [complete]  ATRIBUTO content (dark)  #0F0E13 -> #16171B
+t=8 s                 (light)=#16171B   (dark)=#16171B
 ```
 
-Es una carrera, y el lado que pierde deja justo el color de la queja.
+- **Cero inserciones. Cero remociones. Cero advertencias de hidratación.** Dos
+  metas de punta a punta, las que vinieron en el HTML.
+- El único que las toca es `applyTheme`, en el `useEffect` de `ThemeContext`, a
+  los 301 ms.
+- 🔴 **Hay una ventana de 301 ms en la que la meta que aplica es `#FAFAFD`, casi
+  blanca, con la app en oscuro.** En una máquina de escritorio con todo
+  cacheado. En un teléfono es bastante más larga.
 
-## 4. El único casi-blanco que queda
+## `bc43a15` (con el arreglo)
 
-Barrido de todo el circuito PWA:
+```
+t=0,9 ms   [loading]   observador instalado
+t=4,3 ms   [loading]   ATRIBUTO content (light) #FAFAFD -> #0F0E13   <- script inline
+t=4,3 ms   [loading]   ATRIBUTO content (dark)  #0F0E13 -> #0F0E13   <- sin efecto
+t=9,5 ms   [interactive] DOMContentLoaded   -> 2 metas, las dos #0F0E13
+t=134 ms   [complete]  window load          -> 2 metas, las dos #0F0E13
+t=253,8 ms [complete]  >>> INSERCION via appendChild
+                       <meta media="(prefers-color-scheme: light)" content="#FAFAFD">
+                       STACK  at a5 (_next/static/chunks/fd9d1056-…js:1:80193)
+                              at a6 (_next/static/chunks/fd9d1056-…js:1:78371)
+                              at a5 (_next/static/chunks/fd9d1056-…js:1:83724)
+t=263,1 ms [complete]  ATRIBUTO content (light) #FAFAFD -> #0F0E13   <- applyTheme
+```
 
-| Fuente | Valor | ¿La toca `bc43a15`? |
-|---|---|---|
-| `manifest.theme_color` | `#FAFAFD` | no (salida idéntica byte a byte) |
-| `manifest.background_color` | `#FAFAFD` | no |
-| meta clara | `#FAFAFD` → `--bg` | sí |
-| meta oscura | `#0F0E13` | sí |
-| `offline.html` claro | `#FAFAFD` | no (sólo aplica sin red) |
+El script inline arregla la ventana de 301 ms: a los 4,3 ms la meta que aplica ya
+es `#0F0E13`. Ese era su objetivo y lo cumple.
 
-Con el punto 2 —en Producción las metas están en oscuro y la barra salió
-blanca— el **manifest** es el único candidato en pie. Es un valor claro fijo, sin
-variante oscura, y es lo que Android usa para la barra de la app instalada
-cuando no aplica una meta.
+**El precio es la tercera meta.** La inserta **React**, por `appendChild`, a los
+253,8 ms, con el valor **original** `#FAFAFD`.
 
-**Esto es una hipótesis, no un hecho.** Falta la mitad que sólo da un teléfono.
+### Quién es, con nombre
 
-## 5. Lo que no se puede probar desde esta máquina
+El stack cae entero en `_next/static/chunks/fd9d1056-*.js`, que es el chunk de
+`react-dom` (`a5`/`a6` son sus funciones minificadas). No es código de la app, no
+es Next emitiendo metadata en el servidor y no es el manifest: es React
+insertando durante la hidratación.
 
-Los pasos 1 a 5 del mandato piden un aparato real: versión de Android y WebView,
-si la barra cambia en vivo al togglear, y el arranque en frío. Acá no hay una
-PWA instalada. Emular un inset de safe-area pinta un `div` HTML y **no** dice de
-qué color pinta Android su barra de estado; no se presenta como equivalente.
+### La firma que confirma el mecanismo
 
-## 6. El despliegue de prueba (paso 7)
+Se predijo y se midió: **React repone exactamente la meta cuyo `content` dejó de
+coincidir con lo que él renderizó**, y la repone con el valor de
+`viewport.themeColor`.
 
-`app/diag-pwa/page.tsx`, sin enlazar desde ningún lado, para abrir **dentro de
-la PWA instalada**. Informa user agent, `display-mode`, tema del sistema y de la
-app, `sc:theme`, `--bg`, **todas** las metas con su `media` y su valor, y el
-`theme_color`/`background_color` del manifest.
+| App | Script inline mutó | React inserta | ¿Cuál queda sin duplicar? |
+|---|---|---|---|
+| oscura | la **clara** (`#FAFAFD`→`#0F0E13`) | **clara** `#FAFAFD` | la oscura (mutación nula) |
+| clara | la **oscura** (`#0F0E13`→`#FAFAFD`) | **oscura** `#0F0E13` | la clara (mutación nula) |
 
-🔴 **El botón rojo es el experimento que decide.** Pinta todas las metas de
-`#E5484D`:
+La meta que el script tocó de verdad es la que se duplica. La que quedó igual, no.
+No hay remociones: el nodo mutado se queda y el nuevo se suma.
 
-- **si la barra real se pone roja**, Android lee las metas y el camino de las
-  metas sirve;
-- **si no cambia**, manda el `theme_color` del manifest y hay que arreglarlo
-  ahí — y el manifest no admite variante oscura, así que sería otra solución,
-  no un ajuste de `bc43a15`.
+**React no avisa.** Ni un `console.error` ni un `warn` de hidratación en ninguna
+corrida: administra las metas como *hoistable resources* y las repone en
+silencio.
 
-## 7. Estado
+### Por qué importa
 
-- `bc43a15` **no se mergea**. Además de no explicar la captura, introduce la
-  meta duplicada del punto 3.
-- La ruta de diagnóstico es temporal y hay que borrarla al terminar.
-- No se tocó el Top, Supabase ni Capacitor. Sin push, merge ni despliegue.
+`applyTheme` corre **una sola vez** (`useEffect` con `[]`). Acá corrigió la
+tercera a los 263 ms porque llegó después. Si el orden se invierte —y ya quedó
+capturado— queda esto, vivo y estable:
+
+```
+[0] (light) #0F0E13
+[1] (dark)  #0F0E13
+[2] (light) #FAFAFD   <- casi blanca, aplicando, con la app en oscuro
+```
+
+## El manifest no puede insertar una meta
+
+Confirmado por tres vías:
+
+1. En `main` el DOM tiene exactamente las dos metas del HTML servido y **cero
+   inserciones**. El `theme_color` del manifest nunca se materializa como nodo.
+2. La meta que sí se inserta trae `media="(prefers-color-scheme: …)"`. El
+   manifest **no expresa esquema de color**: su `theme_color` es un color pelado
+   (`'#FAFAFD'`, sin campo `media`). Un nodo con `media` no puede venir de ahí.
+3. Los valores insertados son el par de `viewport.themeColor`
+   (`#FAFAFD` / `#0F0E13`): React re-emitiendo su propio render. Que el claro
+   coincida con el `theme_color` del manifest es porque los dos salen de
+   `COLOR_FONDO.light`, no porque uno alimente al otro.
+
+Barrido del repo: los únicos que escriben `theme-color` son `viewport` en
+`app/layout.tsx`, el script inline y `applyTheme`. Nadie más.
+
+## Estado
+
+Quedan dos fuentes de casi-blanco, y son distintas:
+
+| | Dónde | Cuándo | ¿Quién la introdujo? |
+|---|---|---|---|
+| A | meta clara sin corregir | del parseo hasta el `useEffect` (301 ms acá) | ya está en Producción |
+| B | tercera meta insertada por React | desde la hidratación; corregida sólo si `applyTheme` llega después | **`bc43a15`** |
+
+`bc43a15` cierra A y abre B. **No se mergea así.**
+
+Lo que todavía no se puede decidir desde esta máquina es si Android usa las
+metas o el `theme_color` del manifest, y si actualiza la barra cuando cambian.
+Eso lo contesta `/diag-pwa` en el teléfono, con el botón rojo.
+
+No se tocó el Top, Supabase ni Capacitor. Sin push, merge ni despliegue. Los
+HTML instrumentados eran temporales y ya se borraron de los dos `public/`.
