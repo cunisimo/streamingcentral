@@ -3,48 +3,98 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import UpcomingCard from "./UpcomingCard";
 import OfflineState from "../pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
-import { useEstadoSimple } from "@/hooks/useEstadoSimple";
+import { useListaPaginada } from "@/hooks/useListaPaginada";
+import {
+  decidirCambioDeFiltro, estadoFiltroInicial, iniciar, respuestaVigente,
+  type EstadoFiltro,
+} from "@/hooks/filtro-paginado-nucleo";
 import type { UIUpcoming } from "@/lib/types";
 
 type Filtro = "all" | "movie" | "tv";
 
-// "Ver todas" de Próximamente: grilla completa con filtro Todos/Películas/Series.
-// La agenda es un set acotado (solo títulos con provider AR), así que se trae
-// todo de una (limit alto) sin paginación.
+const ETIQUETAS: { valor: Filtro; texto: string }[] = [
+  { valor: "all", texto: "Todos" },
+  { valor: "movie", texto: "Películas" },
+  { valor: "tv", texto: "Series" },
+];
+
+/**
+ * "Ver todas" de Próximamente: grilla paginada de 20 en 20 con filtro
+ * Todos/Películas/Series.
+ *
+ * PAGINADA, no "todo de una". Antes pedía `limit=100` y mostraba lo que viniera,
+ * y eso eran 100 series de los primeros cinco días —de 50 con contenido—, el 51%
+ * anime. Ahora el servidor selecciona antes de paginar (`lib/proximamente.ts`) y
+ * acá se piden tandas de 20.
+ *
+ * Por eso pasó de `useEstadoSimple` a `useListaPaginada`: al dejar de traer todo
+ * de una, el estado que tiene que volver de una ficha ya no es "items + scroll"
+ * sino "items + página + scroll", que es exactamente lo que ese hook restaura.
+ * No hace falta inventar nada.
+ *
+ * ⚠️ EL FILTRO VA EN `extra`, NO EN LA FIRMA. La firma es lo que INVALIDA lo
+ * guardado, y el filtro es justamente lo que hay que RESTAURAR. Con el filtro en
+ * la firma, volver de una ficha con Series elegido no reconocería su propio
+ * snapshot. La firma queda vacía porque la agenda no depende de las plataformas
+ * del usuario: el motor ya la acota a títulos con proveedor argentino.
+ */
 export default function UpcomingAllView() {
   const [filtro, setFiltro] = useState<Filtro>("all");
   const [items, setItems] = useState<UIUpcoming[]>([]);
+  const [page, setPage] = useState(1);
+  const [hayMas, setHayMas] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const online = useOnline();
   const [failed, setFailed] = useState(false);
   const reqId = useRef(0);
+  // El filtro que produjo lo que está en pantalla. Ver `filtro-paginado-nucleo`:
+  // acá vivía el bug del selector.
+  const estadoFiltro = useRef<EstadoFiltro>(estadoFiltroInicial);
+  // Se lee dentro de `load` para comparar la respuesta contra el filtro VIGENTE
+  // en el momento en que llega, no contra el que había al pedirla.
+  const filtroVigente = useRef<Filtro>("all");
+  filtroVigente.current = filtro;
 
-  // Volver de una ficha tiene que devolver el filtro, los items y la posición.
-  // NO es una lista paginada —trae todo de una con `limit=100`—, así que va por
-  // el mecanismo simple y no por `useListaPaginada`.
-  //
-  // La firma queda vacía a propósito: la agenda no depende de las plataformas
-  // elegidas (el motor ya la acota a títulos con provider AR), así que no hay
-  // nada que la invalide. El filtro va en `extra`, que es lo que se restaura.
-  const { fase, inicial } = useEstadoSimple<UIUpcoming[], { filtro: Filtro }>({
+  const { fase, inicial, reiniciar } = useListaPaginada<
+    UIUpcoming, { filtro: Filtro; total: number | null }
+  >({
     clave: "proximamente",
     firma: "",
-    datos: items,
-    extra: { filtro },
+    items,
+    pagina: page,
+    hayMas,
+    extra: { filtro, total },
     listo: !loading && items.length > 0,
-    vacio: items.length === 0,
   });
 
-  const load = useCallback(async (f: Filtro) => {
+  const load = useCallback(async (f: Filtro, p: number) => {
     const myReq = ++reqId.current;
     setLoading(true);
     try {
       const mt = f === "all" ? "" : `mediaType=${f}&`;
-      const res = await fetch(`/api/upcoming?${mt}limit=100`);
+      const res = await fetch(`/api/upcoming?${mt}page=${p}`);
       const j = await res.json();
-      if (myReq !== reqId.current) return; // respuesta obsoleta
+      // Dos guardas, no una: el número descarta las respuestas fuera de orden y
+      // el filtro descarta una respuesta del filtro anterior que llegue con el
+      // número vigente. Ver `respuestaVigente`.
+      if (!respuestaVigente({
+        reqDeLaRespuesta: myReq, reqActual: reqId.current,
+        filtroDeLaRespuesta: f, filtroActual: filtroVigente.current,
+      })) return;
       if (!res.ok) throw new Error(j?.error ?? "error");
-      setItems(j.items ?? []);
+      const got: UIUpcoming[] = j.items ?? [];
+      // Al pedir la tanda siguiente NO se borra lo que ya está: se concatena.
+      // El dedup por `tipo:id` es una guarda permanente — la selección se
+      // reconstruye en cada pedido, y el sync de las 6am puede cambiar la tabla
+      // entre dos páginas.
+      setItems((prev) => {
+        if (p === 1) return got;
+        const vistos = new Set(prev.map((i) => `${i.type}:${i.id}`));
+        return [...prev, ...got.filter((i) => !vistos.has(`${i.type}:${i.id}`))];
+      });
+      setHayMas(!!j.hayMas);
+      if (typeof j.total === "number") setTotal(j.total);
       setFailed(false);
     } catch {
       if (myReq === reqId.current) setFailed(true);
@@ -53,53 +103,88 @@ export default function UpcomingAllView() {
     }
   }, []);
 
-  // Restaurar ANTES de pedir nada: sin esto se dispara el fetch del filtro por
-  // defecto y después lo pisa lo restaurado — dos cargas, un parpadeo y una
-  // llamada de red que no hacía falta.
-  const restaurado = useRef(false);
+  // Arranque: restaurar o pedir la página 1. Corre una sola vez, cuando el hook
+  // ya decidió. Si restauró, no se pide NADA: los títulos ya están.
+  //
+  // 🔴 `iniciar` registra el filtro aplicado SIEMPRE, restaure o no, y eso es el
+  // arreglo del bug: antes ese registro pasaba en otro efecto que no corría en
+  // este render, así que quedaba en null y se comía el primer clic.
+  const arrancado = useRef(false);
   useEffect(() => {
-    if (fase !== "listo" || restaurado.current) return;
-    restaurado.current = true;
+    if (fase !== "listo" || arrancado.current) return;
+    arrancado.current = true;
+
+    const filtroInicial: Filtro = inicial?.extra?.filtro ?? "all";
+    const r = iniciar(filtroInicial, !!inicial);
+    estadoFiltro.current = r.estado;
+
     if (inicial) {
-      setItems(inicial.datos);
+      setItems(inicial.items);
+      setPage(inicial.pagina);
+      setHayMas(inicial.hayMas);
+      setTotal(inicial.extra?.total ?? null);
       if (inicial.extra?.filtro) setFiltro(inicial.extra.filtro);
+      filtroVigente.current = filtroInicial;
       setLoading(false);
-      return;   // los items volvieron del snapshot: no se pide nada
+      return;
     }
-    load(filtro);
+    // Entrada por link: `decidirRestauracion` ya tiró lo guardado, pero volver
+    // arriba es la otra mitad — una navegación SPA puede llegar con el scroll
+    // heredado de la pantalla anterior.
+    reiniciar();
+    setPage(1);
+    if (r.accion.tipo === "recargar") load(filtroInicial, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase, inicial]);
 
-  // Los cambios de filtro POSTERIORES sí piden. El guard de `restaurado` evita
-  // que este efecto dispare la carga inicial por duplicado.
-  const filtroPrevio = useRef<Filtro | null>(null);
+  // Cambio de filtro: lista nueva, desde la página 1 y arriba de todo.
   useEffect(() => {
-    if (!restaurado.current) return;
-    if (filtroPrevio.current === null) { filtroPrevio.current = filtro; return; }
-    if (filtroPrevio.current === filtro) return;
-    filtroPrevio.current = filtro;
-    // Cambiar de filtro es una acción deliberada: lista nueva y arriba de todo.
-    window.scrollTo(0, 0);
-    load(filtro);
-  }, [filtro, load]);
+    if (!arrancado.current) return;
+    const r = decidirCambioDeFiltro(estadoFiltro.current, filtro);
+    estadoFiltro.current = r.estado;
+    if (r.accion.tipo !== "recargar") return;
+    reiniciar();
+    setItems([]);
+    setHayMas(false);
+    setTotal(null);
+    setPage(1);
+    load(filtro, 1);
+  }, [filtro, load, reiniciar]);
+
+  const more = () => { const next = page + 1; setPage(next); load(filtro, next); };
 
   if ((!online || failed) && !items.length) {
-    return <div className="wrap"><OfflineState onRetry={() => load(filtro)} /></div>;
+    return <div className="wrap"><OfflineState onRetry={() => load(filtro, 1)} /></div>;
   }
 
   return (
     <div className="wrap">
       <div className="compact-head"><h1>Próximamente en streaming</h1></div>
       <div className="tipo-toggle" role="tablist">
-        <button role="tab" aria-selected={filtro === "all"} className={`tt ${filtro === "all" ? "on" : ""}`} onClick={() => setFiltro("all")}>Todos</button>
-        <button role="tab" aria-selected={filtro === "movie"} className={`tt ${filtro === "movie" ? "on" : ""}`} onClick={() => setFiltro("movie")}>Películas</button>
-        <button role="tab" aria-selected={filtro === "tv"} className={`tt ${filtro === "tv" ? "on" : ""}`} onClick={() => setFiltro("tv")}>Series</button>
+        {ETIQUETAS.map(({ valor, texto }) => (
+          <button
+            key={valor}
+            role="tab"
+            aria-selected={filtro === valor}
+            className={`tt ${filtro === valor ? "on" : ""}`}
+            onClick={() => setFiltro(valor)}
+          >
+            {texto}
+          </button>
+        ))}
       </div>
       <div className="grid">
         {items.map((it) => <UpcomingCard key={`${it.type}-${it.id}`} item={it} />)}
-        {!loading && !items.length && <p className="empty-note">No hay estrenos próximos para mostrar.</p>}
+        {!loading && !items.length && (
+          <p className="empty-note">No hay estrenos próximos para mostrar.</p>
+        )}
       </div>
       {loading && <p className="loading">Cargando…</p>}
+      {hayMas && !loading && items.length > 0 && (
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <button className="btn ghost" onClick={more}>Cargar más</button>
+        </div>
+      )}
     </div>
   );
 }

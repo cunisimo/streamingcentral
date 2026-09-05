@@ -201,7 +201,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   | `/directores` | lista, texto del filtro, cuántos visibles, scroll |
   | `/categoria/[slug]` | tipo y scroll |
   | `/lista/[key]` simples | items y scroll |
-  | `/proximamente` | filtro, items y scroll |
+  | `/proximamente` | filtro, items, página y scroll (paginado) |
   | `/top` | payload, scroll vertical y horizontal de cada carrusel |
   | `/cuenta/*` | scroll horizontal de cada riel |
 
@@ -683,6 +683,66 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   "Ver todas" lleva `?tipo=`, y `/lista/ultimos` lo recibe **desde el server**
   (no con `useSearchParams`, que forzaría un `<Suspense>`). **Al volver atrás
   manda el snapshot, no la URL**, igual que en `/categoria`.
+- **"Próximamente" SELECCIONA antes de paginar, y el criterio vive en una función
+  pura** (`lib/proximamente.ts`). La sección pedía 100 filas ordenadas por fecha:
+  medido el 2026-09-04, eso eran 100 series de **5 días de los 50** con contenido,
+  99 de ellas episodios semanales y el **51% anime**. No era un problema de tope
+  sino de reparto — los primeros seis días concentran 141 de los 238 elementos, así
+  que cualquier corte por fecha se los come. Cortar en el cliente no lo arregla:
+  hay que ver la agenda entera antes de decidir qué entra, y **traerla entera es
+  gratis** (246 filas tardan lo mismo que 100, ~490 ms, porque se paga el
+  round-trip y no el tamaño).
+  La regla es **3 series por fecha como MÁXIMO**, con un lugar reservado para el
+  estreno de temporada más relevante del día (y si hay una temporada 1, es suyo);
+  los otros dos van a las más populares, premiere o episodio da igual. **Las
+  películas con plataforma AR confirmada entran todas y no consumen cupo.** Son 3
+  series TOTALES y no "3 episodios más las premieres que haya": esa fue la primera
+  versión y dejaba entrar las 81 premieres de la agenda, cambiando un ruido por
+  otro. Resultado: 97 elementos, **50 fechas**, 6,2% de anime.
+  🔴 **NO HAY PISO DE POPULARIDAD, y es decisión del dueño**: la popularidad
+  ORDENA dentro de cada fecha y nunca decide que un título deja de existir. El
+  07/09 el único premiere del día tiene popularidad **3** y se queda con su lugar
+  por delante de 21 episodios, varios de 100+.
+  **Anime no es animación**, y confundirlos era el bug a evitar: de los 100 con
+  género Animación, **19 no son anime** (los Simpson, South Park, Futurama, Masha y
+  el Oso, Super Wings). La clasificación es **Crunchyroll ∪ (Animación +
+  `original_language = "ja"`)**, que marca 81 de 81 — Crunchyroll es precisión
+  perfecta (67 de 67 tienen género Animación) y el idioma recupera los de título
+  romanizado (`BLEACH`, `BEYBLADE X`, `MAO`). **`origin_country` NO se agregó**:
+  se midió y aporta CERO títulos, los mismos 76 que el idioma.
+  El tope de anime del **20% se cumple en cada tanda acumulada**, no sólo al final,
+  y tiene dos mitades: el cupo global (`a ≤ M·0,25`) elige CUÁLES entran por
+  popularidad, y el recorrido garantiza el prefijo. ⚠️ **El tope NO es lo que baja
+  el ruido** — el cupo por fecha solo ya deja 10,5%, y el tope lleva a 6,2%: su
+  valor es ser una garantía para el día que TMDB publique una tanda grande de
+  anime. Un anime rechazado se descarta, no se posterga (postergarlo lo movería de
+  fecha y reintentarlo lo duplicaría entre páginas).
+  ⚠️ **La migración `008` va ANTES del deploy.** Sin la columna
+  `original_language`, PostgREST responde 400 y `/api/upcoming` **entero** devuelve
+  500 — riel del Home y watchlist incluidos. No necesita backfill: el sync hace
+  `upsert` de la fila entera, así que la corrida diaria la completa, y mientras
+  esté en NULL la clasificación queda sólo con Crunchyroll (83% de recall).
+  El riel del Home son los primeros 15 de la misma selección. Reemplazó a
+  `upcomingMix`, que pedía `ceil(limit/2)+3` de cada tipo asumiendo oferta en los
+  dos: con UNA película en la agenda devolvía **12 de 15** y ponía esa película
+  —del 30/09— en la **segunda** posición, entre dos títulos del 04/09.
+- **El selector de "Próximamente" se tragaba el primer clic, y no era una carrera
+  de respuestas: no se emitía ninguna petición** (`hooks/filtro-paginado-nucleo.ts`).
+  `filtroPrevio` era un `useRef(null)` que se inicializaba DENTRO del efecto que lo
+  leía, y en el render donde ocurría la carga inicial ese efecto no corría porque
+  sus dependencias no habían cambiado. Quedaba en `null` y el primer clic se
+  consumía como "la inicialización".
+  **Determinístico, no intermitente**: fallaba siempre que se llegaba con el filtro
+  en `Todos` y andaba al volver de una ficha con Películas o Series ya elegido
+  —ahí la restauración cambiaba el filtro y el efecto sí corría—, que es lo que se
+  reportaba como "a veces". **`reqId` estaba bien**: mirar la carrera de respuestas
+  no llevaba a nada.
+  Tenía una consecuencia peor: mientras el botón decía `movie` y los items eran de
+  `all`, el snapshot persistía ese par —en cada render, porque `extra` era un
+  objeto literal nuevo—, así que la vuelta siguiente restauraba Series bajo
+  Películas de forma **estable**. La lógica se extrajo a un módulo **puro** porque
+  suelta entre dos efectos no se podía probar (no hay arnés de DOM), y el test
+  reproduce la falla sobre la máquina de estados vieja antes de fijar la nueva.
 - **La ruleta sirve UNA recomendación por vez, nunca una lista.** Es el punto:
   una lista reconstruye la parálisis de elección que la feature resuelve. El pool
   es `roulette_titles` (curado offline, 2259 con texto de los 2401) y lo sirve la
@@ -838,6 +898,8 @@ lib/
   cache.ts            — wrapper Redis/memoria + el motor determinístico del indeciso
   supabase.ts          — clientes browser/server
   reviews.ts            — acceso a editorial_reviews
+  proximamente.ts        — selección editorial de la Agenda: función PURA (cupo por
+                            fecha, tope de anime, paginación). Ver docs/UPCOMING.md
   types.ts               — shape estable que consume toda la UI (UITitle, UITitleDetail, UIPerson)
 
 supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla vacía
@@ -854,7 +916,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/ruleta` | una tanda de 20 candidatos del pool curado (`roulette_titles`), vía `lib/roulette.ts`. `maxDuration = 60` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |
-| `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia) |
+| `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia). Pagina en el servidor sobre la selección editorial: `?page=` de 20, `{ items, hayMas, total, page }`. `?mix=1&limit=15` es el riel del Home |
 | `GET /api/providers` | catálogo de plataformas disponibles en AR (onboarding y selector) |
 | `GET /api/recomendaciones` | pool del "modo indeciso" (día + offset) |
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |

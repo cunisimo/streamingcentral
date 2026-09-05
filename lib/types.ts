@@ -112,6 +112,13 @@ export interface UIUpcoming {
   episodeNumber: number | null;
   episodeName: string | null;
   isSeasonPremiere: boolean | null;
+  // Idioma original de TMDB ("ja", "en", "ko"…). Lo usa la clasificación de anime
+  // de `lib/proximamente.ts`, que es su único consumidor.
+  //
+  // Es `null` mientras la columna esté vacía —entre la migración y la primera
+  // corrida del sync—, y eso NO rompe nada: sin idioma, un título sólo se cuenta
+  // como anime si está en Crunchyroll. Ver el comentario de `esAnime`.
+  originalLanguage: string | null;
 }
 
 // Por qué una lista del recomendador vino vacía. Existe porque el mensaje al

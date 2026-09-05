@@ -37,6 +37,7 @@ interface Candidate {
   media_type: MediaType;
   title: string;
   original_title: string | null;
+  original_language: string | null;
   overview: string | null;
   poster_path: string | null;
   backdrop_path: string | null;
@@ -129,6 +130,7 @@ async function collectMovies(
       media_type: "movie",
       title: t.title ?? t.name ?? "",
       original_title: t.original_title ?? null,
+      original_language: t.original_language ?? null,
       overview: t.overview ?? null,
       poster_path: t.poster_path,
       backdrop_path: t.backdrop_path,
@@ -214,6 +216,7 @@ async function collectSeries(
         media_type: "tv",
         title: t.name ?? t.title ?? "",
         original_title: t.original_name ?? null,
+        original_language: t.original_language ?? null,
         overview: t.overview ?? null,
         poster_path: t.poster_path,
         backdrop_path: t.backdrop_path,

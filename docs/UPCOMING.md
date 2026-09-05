@@ -16,6 +16,8 @@ consulte TMDB en vivo por estrenos. Lo consumirán Planner, Home y notificacione
 - **Read path** (`lib/upcoming.ts` + `app/api/upcoming/route.ts`): el UpcomingService
   que lee Supabase y expone la Agenda a la app. Es lo único que toca la app; la
   función es backend puro.
+- **Selección editorial** (`lib/proximamente.ts`): función PURA que decide qué se
+  muestra y en qué orden. Ver la sección "La selección editorial" abajo.
 
 ## Regla de negocio
 
@@ -124,3 +126,208 @@ tercio.
 
 **Solo `fallos` justifica reintentar.** Los demás son datos sobre el catálogo,
 no fallas.
+
+---
+
+# La selección editorial (rediseño del 2026-09-04)
+
+Diagnóstico y mediciones completas: `docs/medidas/2026-09-04-proximamente-diagnostico.md`.
+
+## El problema que resolvió
+
+`/proximamente` pedía 100 filas ordenadas por fecha y mostraba lo que viniera.
+Medido sobre las 238 filas vigentes del 2026-09-04, eso era:
+
+| | Antes | Después |
+|---|---|---|
+| Elementos | 100 | **97** |
+| Rango | 04/09 → 08/09 — **5 días de 50** | 04/09 → 01/12 — **50 días** |
+| Películas | 0 | 1 |
+| Estrenos de temporada | 1 | 71 |
+| Episodios semanales | 99 | 25 |
+| **Anime** | **51 (51%)** | **6 (6,2%)** |
+| Crunchyroll | 47% | 3,1% |
+
+**Los primeros seis días concentran 141 de los 238 elementos**, así que cualquier
+corte por fecha se los comía enteros. Por eso la selección va **antes** de
+paginar: cortar en el navegador no puede arreglar que los primeros días consuman
+el cupo.
+
+## La regla
+
+Por cada fecha, **3 series como máximo**:
+
+1. Un lugar **reservado** para el estreno de temporada más relevante del día.
+2. Si hay una **temporada 1**, ese lugar es suyo — aunque su popularidad sea más
+   baja. Una serie nueva es la noticia del día.
+3. Los lugares que sobran van a las series **más populares** de la fecha, sin
+   mirar si son premiere o episodio normal.
+4. Sin premieres, los tres lugares son de las tres series más populares.
+5. **Las películas con plataforma argentina confirmada entran TODAS** y no
+   consumen el cupo de series.
+
+⚠️ **Son 3 series TOTALES, no "3 episodios más las premieres que haya".** Esa fue
+la primera versión y cambiaba un ruido por otro: dejaba entrar las 81 premieres
+de la agenda, el 34% de las filas, con hasta 5 en un mismo día.
+
+⚠️ **No hay piso absoluto de popularidad**, y es una decisión explícita del dueño:
+la popularidad **ordena dentro de cada fecha** y nunca decide que un título deja
+de existir. Un día con una sola serie muestra esa serie, tenga la popularidad que
+tenga. El caso testigo es el 07/09: *The Real Housewives of London* (popularidad
+**3**) se queda con el lugar reservado por delante de 21 episodios, varios con
+popularidad de 100+, porque es el único estreno de temporada del día.
+
+⚠️ **Dentro de un mismo día, el orden de pantalla lo decide la POPULARIDAD, no el
+nivel editorial.** El lugar reservado del premiere es una regla de *selección*;
+usarla también para ordenar hacía que el riel del Home abriera el 07/09 con ese
+premiere de popularidad 3 por delante de *WWE Raw* (107). Los dos órdenes
+seleccionan exactamente lo mismo. Las películas sí van primero en su día: son el
+nivel 1 y lo escaso de la agenda.
+
+## Anime, que no es lo mismo que animación
+
+🔴 **La confusión es el bug que la clasificación existe para no cometer.** De los
+100 títulos con género Animación de la agenda, **19 no son anime**: *Los Simpson*,
+*South Park*, *Futurama*, *American Dad*, *Teen Titans Go!*, *Masha y el Oso*
+(rusa), *Super Wings* (coreana), *Tres Espías Sin Límite* (francesa). Topear
+"animación" al 20% habría estado sacando a los Simpson para dejar entrar anime.
+
+Dos señales, cualquiera alcanza:
+
+- **Proveedor Crunchyroll.** Verificado: de los 67 títulos de Crunchyroll en la
+  agenda, los 67 tienen género Animación. Cero excepciones, así que es señal de
+  precisión perfecta con recall de 67/100.
+- **Género Animación + `original_language = "ja"`.** Recupera los 33 de otras
+  plataformas, incluidos los tres de título romanizado que ninguna heurística
+  sobre el título original puede ver: `BLEACH`, `BEYBLADE X` y `MAO`.
+
+Juntas marcan 81 de 81.
+
+⚠️ **`origin_country` NO se agregó, y no es un olvido.** Se midió: aporta
+exactamente **CERO** títulos. La animación cuyo `origin_country` incluye JP son
+76, y los que tienen `original_language = "ja"` son los **mismos 76**. Habría
+sido una columna sin consumidor.
+
+### El tope del 20%
+
+Se aplica sobre el **acumulado de cada tanda**, no sólo sobre el total. Son dos
+mitades y hacen falta las dos:
+
+- **El cupo global** decide cuáles entran: si hay `M` títulos que no son anime,
+  la cantidad `a` de anime cumple `a ≤ 0,20·(M + a)`, o sea `a ≤ M·0,25`. Dentro
+  de ese cupo se conservan los más populares.
+- **El recorrido** garantiza el tope en cada prefijo: un anime entra si además
+  `(anime + 1) ≤ 0,20·(total + 1)`.
+
+Un anime rechazado se **descarta**, no se posterga: postergarlo lo movería de
+fecha y reintentarlo lo haría aparecer en dos páginas. La lista queda más corta,
+que es lo correcto — rellenar violaría el tope en silencio.
+
+⚠️ **El tope del 20% NO es lo que baja el ruido.** Medido: el cupo por fecha
+**solo**, sin ningún tope de anime, ya deja la lista en 10,5%; con el tope queda
+en 6,2%. El valor real del tope es ser una **garantía** para el día que TMDB
+publique una tanda grande de estrenos de anime.
+
+⚠️ **El anime más popular puede quedar afuera.** El cupo mira popularidad y el
+recorrido se gasta en orden cronológico, así que si los mejores están al final,
+los del medio consumen el tope primero. Lo que sí queda garantizado —y es lo que
+importa— es que **ningún anime de baja popularidad entra nunca**. Está fijado por
+un test. Se evaluó corregirlo con un intercambio y no se implementó: con 6 anime
+en 97 elementos (6,2% contra 20% permitido) los datos reales no lo ejercitan.
+
+## Paginación
+
+20 elementos por tanda, **paginado en el servidor** sobre la selección ya
+equilibrada. `GET /api/upcoming?page=2` (con `mediaType` opcional) devuelve
+`{ items, hayMas, total, page }`.
+
+`hayMas` sale del largo de la selección, no de si la página vino llena — la misma
+lección de `/lista/miniseries`: cortar por "vinieron menos de 20" es un bug
+silencioso en cuanto algo pueda achicar una página.
+
+**El filtro de tipo se aplica ANTES de seleccionar.** Al revés, "Películas"
+mostraría sólo las que hubieran sobrevivido compitiendo con series. Filtrando
+primero, cada solapa tiene su selección y su paginación coherentes: hoy Todos da
+97 (5 páginas), Series 96 (5 páginas) y Películas 1.
+
+**Limitación conocida:** la selección se reconstruye en cada pedido. Es
+determinística mientras la tabla no cambie, pero **el sync corre a las 6am** y una
+página pedida después podría salir de una selección distinta. Es la misma clase de
+limitación ya documentada para `/lista/miniseries`. El dedup por `tipo:id` al
+concatenar lo cubre.
+
+## El riel del Home
+
+`upcomingHome(15)` son los primeros 15 de la selección. Reemplaza a `upcomingMix`,
+que estaba roto de dos formas:
+
+- Pedía `per = ceil(limit/2) + 3` de cada tipo asumiendo que los dos tenían
+  oferta. Con **una** película en toda la agenda, devolvía **12** de las 15
+  pedidas y no había forma de que llegara a 15.
+- El intercalado ponía esa única película —del 30/09— en la **segunda** posición,
+  entre dos títulos del 04/09. Un riel que se presenta como cronológico no lo era.
+
+Que el Home no muestre ninguna película es el dato, no una falla: la única de la
+agenda es del 30/09 y hay 50 días con contenido antes.
+
+**El Home no espera a esta sección.** `UpcomingSection` se monta fuera del gate de
+carga de los rieles y hace su propio fetch, así que mientras carga muestra sus
+skeletons y el resto se pinta igual.
+
+## El bug del selector, y por qué el diagnóstico importaba
+
+Tocar Películas podía seguir mostrando Series. **No era una respuesta fuera de
+orden: no se emitía ninguna petición.** `filtroPrevio` era un `useRef(null)` que
+se inicializaba dentro del efecto que lo leía, y en el render donde ocurría la
+carga inicial ese efecto no corría —sus dependencias no habían cambiado—, así que
+quedaba en `null` y el primer clic se consumía como "la inicialización".
+
+Determinístico, no intermitente: fallaba siempre que se llegaba con el filtro en
+`Todos`, y andaba al volver de una ficha con Películas o Series ya elegido, porque
+ahí la restauración cambiaba el filtro y el efecto sí corría. Eso era el "a veces"
+del reporte. **`reqId` funcionaba bien**, así que un arreglo dirigido a la carrera
+de respuestas no habría cambiado nada.
+
+Tenía una consecuencia peor: mientras el botón decía `movie` y los items eran de
+`all`, el mecanismo de restauración persistía ese par —en cada render, porque
+`extra` era un objeto literal nuevo—, así que la vuelta siguiente restauraba
+series bajo Películas de forma **estable**.
+
+El arreglo vive en `hooks/filtro-paginado-nucleo.ts`, un módulo **puro**: la
+lógica estaba suelta entre dos efectos y ahí no se podía probar (este proyecto no
+tiene arnés de DOM). `hooks/filtro-paginado-nucleo.test.ts` reproduce la falla
+sobre la máquina de estados vieja antes de fijar el contrato nuevo, así que si
+alguien vuelve a esa forma, falla.
+
+## Rendimiento: dónde está y dónde no
+
+| | |
+|---|---|
+| Lectura de la agenda completa (246 filas, 1 consulta con join) | frío 951 ms, mediana **493 ms** |
+| Selección + paginado sobre 238 elementos | mediana **0,19 ms**, p95 0,43 ms |
+| El join de proveedores | **~3 ms** (268 vs 265 ms con 11 filas) |
+
+**La selección es el 0,04% del costo de la lectura.** Y traer la agenda entera
+cuesta lo mismo que traer 100 filas (~490 ms las dos), porque lo que se paga es
+el round-trip y no el tamaño: **el rediseño no cuesta más que lo que reemplazó.**
+
+Lo que queda es el **arranque en frío** de la lambda, ~1 s medido contra
+Producción (1543 ms la primera llamada contra 499 ms de mediana caliente, con
+`/api/health` en 550 ms como piso de latencia). Es de la plataforma, no del
+código. **Sin caché**: no arreglaría un arranque en frío.
+
+## 🔴 Orden de despliegue
+
+**La migración `008` va ANTES de deployar el código.** El `SELECT` del read-path
+pide `original_language`; sin la columna, PostgREST responde
+`400 column upcoming_content.original_language does not exist`, `upcomingList`
+lanza y **`/api/upcoming` entero devuelve 500** — no sólo la selección: también el
+riel del Home, `?month=` y el cruce con la watchlist. Verificado contra la base
+viva.
+
+La migración es incremental y no necesita backfill: es una columna nullable sin
+default (sólo metadata, sin reescribir filas), y `syncUpcoming` hace `upsert` de
+la fila **entera** para todos los candidatos que descubre, así que la corrida
+siguiente del cron diario completa el campo. Mientras esté en NULL, la
+clasificación de anime queda sólo con la señal de Crunchyroll: 83% de recall,
+degradación y no rotura.
