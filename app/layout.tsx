@@ -12,6 +12,8 @@ import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
 import PwaClient from "@/components/pwa/PwaClient";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import NavHistorial from "@/components/NavHistorial";
+import AtrasNativo from "@/components/nativo/AtrasNativo";
+import { metadataPwa, pwaActiva } from "@/lib/pwa-nativa";
 
 // Corre ANTES del primer pintado, fija `data-theme` y CREA la meta theme-color.
 //
@@ -65,15 +67,9 @@ export const metadata: Metadata = {
   title: "Yump",
   description: "Qué ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
   applicationName: "Yump",
-  // Next inyecta <link rel="manifest"> apuntando a la metadata route app/manifest.ts.
-  manifest: "/manifest.webmanifest",
-  // iOS ignora el manifest: estas son las que hacen que se abra en standalone,
-  // con la barra de estado translúcida y el título correcto bajo el ícono.
-  appleWebApp: {
-    capable: true,
-    title: "Yump",
-    statusBarStyle: "black-translucent",
-  },
+  // CP6: `manifest` y `appleWebApp` salen de acá SÓLO en el build nativo.
+  // En la web las dos siguen exactamente como estaban. Ver lib/pwa-nativa.ts.
+  ...metadataPwa(),
   formatDetection: { telephone: false },
 };
 
@@ -85,7 +81,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             THEME_INIT_SCRIPT. Ver el comentario de arriba, y el test que falla
             si alguien la vuelve a declarar desde React. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <AppleSplashLinks />
+        {/* CP6: 18 <link> a splash de iOS. Dentro del APK son inertes y peso
+            muerto, y los archivos ni siquiera viajan. */}
+        {pwaActiva() && <AppleSplashLinks />}
       </head>
       <body>
         <ThemeProvider>
@@ -97,6 +95,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <PwaClient />
                 <OnboardingGate />
                 <NavHistorial />
+                {/* Sólo hace algo en el contenedor; en web devuelve null. */}
+                <AtrasNativo />
               </PlatformsProvider>
             </MyListProvider>
           </AuthProvider>

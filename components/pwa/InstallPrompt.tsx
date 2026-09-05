@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { pwaActiva } from "@/lib/pwa-nativa";
 
 const DISMISS_KEY = "sc:pwa:dismissed"; // timestamp del último descarte
 const VISITS_KEY = "sc:visits";          // conteo de sesiones
@@ -62,6 +63,12 @@ export default function InstallPrompt() {
     setShow(true);
   }, [installed, platform, canPrompt]);
 
+  // CP6 — el banner de instalación no existe dentro del APK. En iOS diría
+  // "Compartir → Agregar a inicio" ADENTRO de una app ya instalada, que es el
+  // absurdo más visible de los tres. El guard va después de los hooks, por la
+  // misma razón que en InstallRow: los dos efectos de arriba ya corrieron y su
+  // orden no cambia entre renders.
+  if (!pwaActiva()) return null;
   if (!show || installed) return null;
 
   function dismiss() {

@@ -1,11 +1,17 @@
 "use client";
 import { useEffect } from "react";
+import { pwaActiva } from "@/lib/pwa-nativa";
 
 // Registra el Service Worker y avisa cuando hay una versión nueva.
 // NO registra en desarrollo: un SW cacheando bajo `next dev` produce horas de
 // depuración fantasma (cambiás código y no se refleja).
 export default function ServiceWorkerRegister({ onUpdate }: { onUpdate?: () => void }) {
   useEffect(() => {
+    // CP6 — segunda capa. La primera es que `public/sw.js` no viaja al
+    // artefacto; ésta es para que dentro del contenedor NI SIQUIERA se
+    // intente. Va antes que todo lo demás: si alguna vez el archivo llegara
+    // a viajar, este return sigue siendo el que impide registrarlo.
+    if (!pwaActiva()) return;
     if (process.env.NODE_ENV !== "production") return;
     if (!("serviceWorker" in navigator)) return;
 

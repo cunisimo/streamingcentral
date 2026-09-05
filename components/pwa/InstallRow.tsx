@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { pwaActiva } from "@/lib/pwa-nativa";
 
 // Fila "Instalar aplicación" para /cuenta/configuracion. Entrada permanente y no
 // intrusiva para quien descartó el banner y después la quiere. Se adapta al
@@ -8,6 +9,21 @@ import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 export default function InstallRow() {
   const { platform, canPrompt, installed, promptInstall } = useInstallPrompt();
   const [iosOpen, setIosOpen] = useState(false);
+
+  // CP6 — la fila entera desaparece del APK.
+  //
+  // 🔴 Dejarla era peor que inútil: adentro de Capacitor `isStandalone()`
+  // matchea `display-mode: standalone`, así que `installed` da true y el
+  // usuario vería "Ya la estás usando como app instalada 🎉" sobre una
+  // instalación de PWA que nunca hizo. Las otras dos ramas son peores todavía:
+  // ofrecerían INSTALAR una app que ya está instalada.
+  //
+  // El guard va DESPUÉS de los hooks, no antes: `pwaActiva()` es una constante
+  // de build y nunca cambia entre renders, así que un return anticipado sería
+  // seguro — pero igual contradice las reglas de hooks de React, y ponerlo
+  // acá no cuesta nada. (Este repo no tiene ESLint configurado, así que la
+  // regla no la hace cumplir ninguna herramienta: se respeta a mano.)
+  if (!pwaActiva()) return null;
 
   if (installed) {
     return (
