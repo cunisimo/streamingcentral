@@ -1,9 +1,9 @@
 # Etapa 2 — Prototipo Android con Capacitor (plan, revisión 7)
 
-> **CP1 a CP7 están HECHOS** en `spike/capacitor-android`: la app corre en un
-> Android físico. **CP8 no empezó**, y hereda un requisito bloqueante —
-> `/lista/ultimos?tipo=tv` en el contenedor, ver el final de CP7.
-> Sigue sin haber plugins, sin `ios/` y sin firma ni Play.
+> **CP1 a CP8 están HECHOS** en `spike/capacitor-android`: la app corre en un
+> Android físico y pasó la matriz móvil, con el bloqueante de CP7 resuelto y
+> comprobado en el teléfono. **CP9 no empezó.** Sigue sin haber plugins, sin
+> `ios/` y sin firma ni Play — y CP8 dejó tres candidatos concretos.
 
 ## ✅ CP1 — completado el 30/08/2026
 
@@ -2062,65 +2062,119 @@ la app abrió **sin** service worker ni caches.
 
 ---
 
-## CP8 — Matriz móvil, sin instalar un solo plugin
+## ✅ CP8 — completado el 5 de septiembre de 2026 — matriz móvil
 
-**Precondiciones:** CP7 aprobado. 🔵 Ventana de Preview de esta sesión.
+**Los cuatro requisitos obligatorios pasan.** Sin instalar un solo plugin, que
+era la condición.
 
-| # | Qué | Criterio |
+### El bloqueo heredado de CP7, resuelto
+
+`/lista/ultimos?tipo=tv`. El Server Component **dejó de leer `searchParams`** —y
+con eso desapareció el parche por `ES_NATIVO`—; ahora lo resuelve
+`components/UltimosDesdeQuery.tsx` con `useSearchParams()` dentro de un
+`<Suspense fallback={<div className="loading">Cargando…</div>}>`.
+
+🔴 **El fallback es visible y no `null` a propósito:** con `output: export` esa
+rama se prerenderiza CON el fallback puesto, así que un `null` deja la pantalla
+en blanco hasta hidratar.
+
+🔴 **Y no se lee en un `useEffect`**, que era la tentación obvia: un efecto corre
+después del primer render, así que `UltimosView` habría arrancado pidiendo
+películas y recién después cambiaría. `useSearchParams` da el valor en el primer
+render del cliente. Hay un guard que lo prohíbe.
+
+Comprobado **en el teléfono**, por el camino real del usuario (riel a Series →
+"Ver todas"):
+
+| Condición | Resultado |
+|---|---|
+| 1. Abre en Series | ✅ `Series [ACTIVO]` |
+| 2. Conserva el selector | ✅ |
+| 3. El selector modifica el pedido | ✅ |
+| 4. La red muestra `?tipo=tv` | ✅ `/api/latest?tipo=tv&page=1&providers=n,d,m` |
+| 5. Volver a Películas pide películas | ✅ y de nuevo `tv` al volver |
+| 6. Sin pedido inicial incorrecto | ✅ el **primero** fue `tv`, uno solo |
+
+⚠️ **Funciona por navegación SPA, no por URL directa** — ver el hallazgo #16.
+
+### La matriz, los 16 puntos
+
+| # | Punto | Resultado |
 |---|---|---|
-| 1 | Botón Atrás físico | ¿navega o cierra? |
-| 2 | Enlaces externos (legales, alta, Calendar, `.ics`) | ¿abren fuera, adentro, o nada? |
-| 3 | **Compartir** | lleva `https://app.yump.ar/titulo/...` — no Preview ni `localhost` |
-| 4 | Teclado en `/buscar` | ¿tapa el input? |
-| 5 | Barra de estado | legible en claro y oscuro |
-| 6 | Safe areas | nada bajo el gesture bar |
-| 7 | Orientación | rotar no rompe |
-| 8 | Suspensión 5 min | vuelve donde estaba |
-| 9 | Arranque frío | anotar tiempo |
-| 10 | Arranque caliente | idem |
-| 11 | Cierre forzado | reabre sin estado corrupto |
-| 12 | Red lenta | esqueletos, sin pantalla muerta |
-| 13 | **Modo avión** | la cáscara **abre** y muestra `OfflineState` |
-| 14 | **Sesión + `POST` autenticado** | login → cerrar → reabrir → **sigue logueado**, **y** el `POST` real con Bearer responde con CORS exacto — ver abajo |
-| 15 | Plataformas | persisten entre reinicios |
-| 16 | **Navegación del export** | §9 |
+| 1 | Botón Atrás | ❌ **sale al launcher** en vez de volver |
+| 2 | Enlaces externos | ✅ abren la app externa, la WebView no se secuestra · **`.ics` sin cubrir** |
+| 3 | Compartir | ✅ **obligatorio** — `https://app.yump.ar/titulo/tv/333408` |
+| 4 | Teclado | ✅ aparece con toque real; viewport 964 → 594 px (redimensiona, no tapa) |
+| 5 | Barra de estado | ⚠️ el fondo sigue al tema; **los íconos son siempre blancos** |
+| 6 | Safe areas | ✅ `--safe-t: 46px` aplicado, `viewport-fit=cover` |
+| 7 | Rotación | ✅ 433×964 ↔ 964×433, sobrevive y conserva la ruta |
+| 8 | Suspensión 5 min | ✅ mismo proceso (`pid` idéntico), ruta, 318 cards y sesión |
+| 9 | Arranque frío | ✅ **822 ms** (674 ms sin red) |
+| 10 | Arranque caliente | ✅ **58 ms** |
+| 11 | Cierre forzado y reapertura | ✅ 656 ms |
+| 12 | Red lenta | ✅ 45 s a ~50 kbps con 2 s de latencia: completo, sin falso offline |
+| 13 | Modo avión | ✅ **obligatorio** — la cáscara abre en 674 ms y muestra `OfflineState` |
+| 14 | Sesión y POST autenticado | ✅ **obligatorio** — ver `docs/medidas/2026-09-05-cp8-post-autenticado.md` |
+| 15 | Plataformas persisten | ✅ se agregó Crunchyroll → `["n","d","m","cr"]` sobrevive al reinicio |
+| 16 | Navegación del export | ⚠️ **la URL directa cae en la Home**; una ruta inexistente devuelve 200 |
 
-### 🔴 CP8 #14 — requisito explícito de cierre, trasladado desde CP4
+### 🔴 Los tres hallazgos que justifican plugins en CP9
 
-Esta es la prueba que CP4 **no pudo** hacer por falta de una cuenta de prueba, y
-que el dueño aprobó mover acá **sin eliminarla ni relajarla**. **CP8 NO puede
-cerrarse sin ella.**
+**#1 — El botón Atrás cierra la app.** Con navegación SPA real
+(`history.length: 2`, Home → `/top/`), Atrás va al launcher en vez de volver.
+Es el comportamiento por defecto sin `@capacitor/app`, cuyo listener
+`backButton` es exactamente lo que falta.
 
-Se ejecuta `POST /api/te-va-a-gustar` **desde la aplicación Android**, con un
-usuario realmente conectado, y **todo** lo siguiente tiene que darse:
+**#5 — Los íconos de la barra de estado no siguen al tema.** El fondo sí
+acompaña (`#0F0E13` / `#FAFAFD`), pero los íconos son blancos siempre: en oscuro
+se leen, en claro quedan casi invisibles. `styles.xml` no declara
+`windowLightStatusBar` y sin plugin no hay forma de cambiarlo por tema.
+Candidato: `@capacitor/status-bar`.
 
-- [ ] **Usuario conectado en Android** — sesión real en la app, no un `curl`
-      desde la máquina de desarrollo.
-- [ ] **Request real con Bearer** — el JWT de esa sesión, emitido por Supabase.
-- [ ] **Respuesta normal** — un `2xx` con el cuerpo esperado de la ruta. 🔴 Un
-      `401` **no** cierra este punto: eso ya se demostró en CP4.
-- [ ] `Access-Control-Allow-Origin: https://localhost` — **el origen exacto**,
-      no otro.
-- [ ] `Vary: Origin` presente.
-- [ ] **Sin comodín**: `Access-Control-Allow-Origin: *` **no** debe aparecer.
-- [ ] **Sin** `Access-Control-Allow-Credentials` — en ningún valor.
-- [ ] **El token no se imprime ni se conserva**: no va a la consola, ni al log,
-      ni a un archivo, ni al repositorio. La evidencia se guarda **con el token
-      redactado**.
+**#3 — No hay share sheet nativo.** `navigator.share` **no existe** en esta
+WebView, así que Compartir cae a `wa.me` por `window.open`. El destino es
+correcto, pero el usuario va directo a WhatsApp sin poder elegir.
+Candidato: `@capacitor/share`.
 
-**Cómo se observa** — la app es la que hace el request, así que los encabezados
-se leen desde `chrome://inspect` (pestaña Network del WebView), no reconstruyendo
-la llamada con `curl`. Reconstruirla probaría otra cosa.
+### ⚠️ Dos hallazgos que NO son de plugin
 
-⚠️ **La evidencia se deja escrita en el repositorio**, con el token redactado.
-Corrige la limitación real de CP4, donde la salida cruda de los `curl` no quedó
-persistida y hoy no es reproducible sin reabrir la Preview.
+**El servidor local no resuelve directorios a su `index.html`.** Medido con
+`fetch` contra el propio servidor de Capacitor:
 
-**Aprobación:** 3, 13 y 14 obligatorios — **y #14 exige las ocho casillas de
-arriba, la del `2xx` incluida**. El resto se documenta aunque falle.
-**Estimación: 1 sesión.**
+| Pedido | Estado | Bytes | Qué sirve |
+|---|---|---|---|
+| `/lista/ultimos/index.html` | 200 | 13.612 | la lista ✅ |
+| `/lista/ultimos/` | 200 | 50.134 | el `index.html` raíz ❌ |
+| `/lista/ultimos/?tipo=tv` | 200 | 50.134 | el `index.html` raíz ❌ |
+| `/lista/no-existe/` | 200 | — | el `index.html` raíz |
 
----
+O sea: **ninguna sub-ruta exportada carga por URL directa**, y una ruta
+inexistente devuelve 200 en vez de 404 — el `404.html` existe en el export pero
+no se sirve, y además es el de Next por defecto ("This page could not be found",
+en inglés y sin estilo). En la web la misma ruta da 404. No lo arregla un
+plugin: es configuración del servidor local, y el 404 propio es producto.
+
+**`navigator.onLine` miente en el contenedor.** En modo avión devuelve `true`,
+porque la WebView alcanza su servidor local. La app no depende de esa señal
+—detecta el fallo del `fetch`, y por eso `OfflineState` funciona— pero cualquier
+lógica futura que la use se equivocaría.
+
+### Verificación de cierre
+
+`npm test` **1010/1010** · `tsc` **0** · build web **43/43** · export nativo
+completo · secretos **0** en las dos copias del artefacto (el único JWT es la
+anon key, `role=anon`) · sin residuos · `git diff --check` limpio.
+
+Un test previo (`disponibilidad-barrido.test.ts`) fijaba la decisión
+**contraria** —que el tipo viniera del servidor, justamente para no pagar un
+`<Suspense>`—. Era correcta mientras la app fuera sólo web. Se reescribió
+explicando por qué cambió, conservando lo que sigue valiendo: `UltimosView` no
+lee el query, lo lee el envoltorio.
+
+Preview `streamingcentral-cd2tr86cd-…vercel.app` con el Redis aislado
+(`/api/health`: `503`, `cache: "memoria"`, credenciales ausentes) durante toda
+la matriz. Protección reactivada y verificada por HTTP al terminar.
+`stay_on_while_plugged_in` restaurado a `0` y modo avión a `0`.
 
 ## CP9 — Plugins, sólo los que CP8 demostró
 

@@ -199,12 +199,42 @@ líneas cada una. La web no cambia de URLs: los links compartidos siguen siendo
 
 ### 2.c `searchParams` en un Server Component — bloqueante chico
 
-✅ **CONFIRMADO.** `app/categoria/[slug]/page.tsx` lee `searchParams.tipo` en el
-servidor. Bajo `output: "export"` eso no está permitido. Se resuelve moviendo
-esa lectura al cliente — y **el cliente ya sabe hacerlo**:
-`hooks/categoria-generaciones.ts` restaura el tipo del snapshot, no de la URL
-(está documentado en `CLAUDE.md`). O sea que la lectura del servidor es casi
-decorativa.
+✅ **CONFIRMADO, y RESUELTO en CP8 para `/lista/ultimos`.** `app/categoria/[slug]/page.tsx`
+lee `searchParams.tipo` en el servidor. Bajo `output: "export"` eso no está
+permitido. Se resuelve moviendo esa lectura al cliente — y **el cliente ya sabe
+hacerlo**: `hooks/categoria-generaciones.ts` restaura el tipo del snapshot, no de
+la URL (está documentado en `CLAUDE.md`). O sea que la lectura del servidor es
+casi decorativa.
+
+🔴 **Apareció de verdad en `/lista/ultimos`, y el error es este:**
+
+```
+Route /lista/ultimos/ with `dynamic = "error"` couldn't be rendered
+statically because it used `searchParams.tipo`
+```
+
+No degrada esa ruta: **aborta el export entero**. Se resolvió leyendo el
+parámetro en el cliente con `useSearchParams()` dentro de un `<Suspense>`
+(`components/UltimosDesdeQuery.tsx`).
+
+Dos cosas que hay que saber antes de repetir el patrón en `/categoria`:
+
+- **El fallback del `Suspense` no puede ser `null`.** Con `output: export` esa
+  rama se prerenderiza CON el fallback puesto: es lo que viaja en el HTML del
+  artefacto, así que un `null` deja la pantalla en blanco hasta hidratar.
+- **No sirve leerlo en un `useEffect`.** Un efecto corre después del primer
+  render, así que la vista arranca pidiendo el tipo por defecto y recién después
+  cambia: dos pedidos, y el primero mal. `useSearchParams` devuelve el valor en
+  el primer render del cliente. Verificado en un Android físico: un solo
+  `/api/latest`, y con `tipo=tv`.
+
+⚠️ **Un intento previo que NO hay que repetir:** esconder la lectura detrás de
+`ES_NATIVO`. Salva el export y deja el bug — dentro del APK el parámetro se
+ignora en silencio.
+
+⚠️ Y **no alcanza con esto para la URL directa**: el servidor local de Capacitor
+no resuelve `/ruta/` a `/ruta/index.html`, así que escribir la URL a mano cae en
+la Home igual. Ver el hallazgo #16 de CP8.
 
 ### 2.d Vercel Analytics y Speed Insights — no bloquea, pero se muere callado
 
