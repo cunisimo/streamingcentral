@@ -1,10 +1,9 @@
 # Etapa 2 — Prototipo Android con Capacitor (plan, revisión 7)
 
-> **CP1 a CP6 están HECHOS** en `spike/capacitor-android`. **CP7 no empezó**, y
-> con él sigue sin haber Capacitor instalado, sin `android/`, sin
-> `capacitor.config.*` y sin `cap init`. El banner original de esta revisión
-> decía "CP1 está HECHO, el resto no": se actualiza el estado, no se reescribe
-> ninguna medición.
+> **CP1 a CP7 están HECHOS** en `spike/capacitor-android`: la app corre en un
+> Android físico. **CP8 no empezó**, y hereda un requisito bloqueante —
+> `/lista/ultimos?tipo=tv` en el contenedor, ver el final de CP7.
+> Sigue sin haber plugins, sin `ios/` y sin firma ni Play.
 
 ## ✅ CP1 — completado el 30/08/2026
 
@@ -1880,6 +1879,144 @@ El **Top público por bloque**: el cutover del Top manual es atómico y todavía
 faltan los doce bloques publicados, así que `/top` sigue sirviéndose con la
 implementación vieja. No afecta al contenedor —`/top` se consume por API— pero
 conviene saberlo al leer la sección del Top.
+
+## ✅ CP7 — completado el 5 de septiembre de 2026 — primer arranque nativo
+
+**Objetivo cumplido: la app corre en un Android físico, servida desde el bundle
+local y consumiendo la API de una Preview aislada.** Esta sección reemplaza el
+registro de pausa del 3/09.
+
+### Entorno
+
+| | |
+|---|---|
+| Teléfono | `motorola edge 60` (`ZY22LH4TD4`), Android 16, SDK 36, arm64-v8a, `device` |
+| Android Studio | build `261.26222.65` (mínimo de Capacitor 8: 2025.2.1) |
+| JDK | `~/.jdks/jbr-21.0.11` — **OpenJDK 21.0.11** |
+| Capacitor | `core`, `android`, `cli` en **8.5.1**; **0 plugins**, **0 iOS** |
+| Proyecto | `ar.yump.app.dev` · "Yump Dev" · `compileSdk`/`targetSdk` **36** · `minSdk` 24 |
+| Permisos | **uno solo: `INTERNET`**, que ya venía. No se agregó ninguno |
+
+🔴 **LA VENTANA DE JDK ES 21–24 Y NO ES OBVIA.** Falló con los dos JDK que
+había en la máquina: con el **25** de Android Studio, Gradle 8.14.3 corta con
+`Unsupported class file major version 69`; con el **17**, `capacitor-android`
+corta con `invalid source release: 21`
+(`node_modules/@capacitor/android/capacitor/build.gradle:66`). Hay que instalar
+un 21 aparte — Android Studio lo baja desde Gradle → Download JDK.
+
+⚠️ **`cap run android` no funciona en este entorno**: invoca `gradlew` sin
+`.bat`. Se rodea con `gradlew.bat assembleDebug` + `adb install -r` +
+`adb shell am start`, que además deja cada paso verificable por separado.
+
+### Preview aislada
+
+Deployment **`streamingcentral-cd2tr86cd-…vercel.app`**, correspondiente
+exactamente a `f655d888798c2bbfcfd33ee3bba00d76c529f61e`, construido **sin caché
+de build**. El aislamiento se demostró, no se supuso:
+
+```
+503   cache = "memoria"   fuente = null
+credenciales = { url: false, token: false }
+ping = { ok: false, detalle: "sin cliente redis (cache en memoria)" }
+```
+
+**Siete** variables vacías acotadas a `spike/capacitor-android`: las cuatro que
+`lib/cache.ts` lee (`UPSTASH_REDIS_REST_URL`/`_TOKEN`,
+`KV_REST_API_URL`/`_TOKEN`) más las tres que exige `MANTENIMIENTO.md`
+(`KV_REST_API_READ_ONLY_TOKEN`, `KV_URL`, `REDIS_URL`). Las `UPSTASH_*` **no
+existían** en el proyecto: se crearon igual porque el código las evalúa primero.
+
+⚠️ **El panel de Vercel rechaza valores vacíos ("Enter a value"); el CLI no.**
+Y las dos formas de acotar por rama son **asimétricas**: `env add` usa
+`--git-branch <rama>` y `env rm` la toma **posicional**. `MANTENIMIENTO.md`
+documenta la forma vieja para `add` — seguirla al pie crea las variables para
+**todas** las Previews.
+
+### Verificación del artefacto, dentro del APK
+
+`app-debug.apk`, 8,8 MB, 184 archivos en `assets/public/`.
+
+| Debe estar | | No debe estar | |
+|---|---|---|---|
+| `/index.html`, `/t/`, `/p/` | ✅ | `sw.js`, `manifest.webmanifest` | ausentes |
+| URL de la Preview inlineada | 2 chunks | `api/`, `admin/` | ausentes |
+| `OfflineState` | ✅ | `app.yump.ar/api` | **0 chunks** |
+
+### Comprobación limpia de PWA — el resultado obligatorio
+
+```
+navigator.serviceWorker.getRegistrations()  ->  []
+caches.keys()                                ->  []
+location.origin                              ->  https://localhost
+```
+
+Sin UI de instalar ni de actualizar, sin bienvenida standalone, sin
+`beforeinstallprompt`. **Una sola meta `theme-color`, sin `media`, en
+`#0F0E13`**: el arreglo de `d018d9e` también vale dentro del contenedor.
+
+### Los `href` nacen nativos y NO cambian al hidratar
+
+Se inyectó un observador **antes de cualquier script de la página**
+(`Page.addScriptToEvaluateOnNewDocument`) y se recargó:
+
+```
+cambios: []        <- ningún href de anchor cambió jamás
+titulo_visto: 0    <- ni un /titulo/ entró al DOM, ni por un instante
+t+4000ms: 304 cards -> 304 nativos, 0 web
+```
+
+Forma real: `/t/?tipo=tv&id=68595` — con la barra antes de la query (CP2).
+
+### Navegación y CORS
+
+Clic en la primera card → ficha montada ("Planeta Tierra II", "Disponible en
+Max"). `history.back()` → Home con las 304 cards.
+
+Los cuatro pedidos observados van al host de la Preview —ninguno a Producción— y
+los cuatro responden `access-control-allow-origin: https://localhost` con
+`vary: …, Origin`: `/api/title/tv/68595`, `/api/home`, `/api/upcoming`,
+`/api/providers`, todos `200`.
+
+**Logcat:** 0 errores de CORS o red; **0** apariciones de `eyJhbGciOi`,
+`service_role`, `SUPABASE_SERVICE`, `TMDB_READ_TOKEN`, `Bearer` o `CRON_SECRET`.
+
+**Recuperación de contraseña:** `NEXT_PUBLIC_SITE_URL` **está inlineada** en el
+artefacto nativo (`let t="https://app.yump.ar".replace(...)`), así que el destino
+es `https://app.yump.ar/cuenta/reset` y el respaldo a `window.location.origin`
+nunca corre. **No genera un destino bajo `https://localhost`.**
+
+### Verificación de cierre
+
+`npm test` **1005/1005** · `tsc` **0** · build web **43/43** · export nativo
+completo · secretos **0** en las dos copias del artefacto (el único JWT es la
+anon key, `role=anon`) · sin residuos de staging · `git diff --check` limpio.
+
+`android/.idea/` quedó excluido: la plantilla de Capacitor enumeraba sólo los
+volátiles. Verificado por diferencia de conjuntos — visibles para git 58 → 53,
+salieron exactamente los 5 de `.idea/`, entraron 0, y ningún archivo del proyecto
+generado se borró.
+
+## 🔴 CP8 — REQUISITO BLOQUEANTE HEREDADO DE CP7
+
+**`/lista/ultimos?tipo=tv` NO funciona en el contenedor y NO está resuelto.**
+
+Con `output: export`, leer `searchParams` en el servidor aborta el export entero
+(§2.c). La sincronización con `main` lo resolvió poniendo esa lectura detrás de
+`ES_NATIVO`, que es constante de build: la web sigue igual y el export se
+conserva. **El precio es que dentro del APK el parámetro se ignora.**
+
+Observado en el teléfono durante CP7: un enlace con `?tipo=tv` **abre en
+Películas**.
+
+**CP8 no puede cerrarse sin las tres cosas, comprobadas en el teléfono:**
+
+1. `/lista/ultimos?tipo=tv` **abre en Series**;
+2. el **selector Películas/Series se conserva** y sigue funcionando;
+3. el pedido que sale es el correcto (`/api/latest?tipo=tv&…`), verificado en la
+   red, no sólo en pantalla.
+
+No alcanza con que compile ni con que el export siga entero: hay que ver el
+tráfico. Mientras tanto **no se presenta como resuelto en ningún lado**.
 
 ## CP7 — Proyecto Android y primera prueba integral limpia
 
