@@ -1,9 +1,10 @@
 # Etapa 2 — Prototipo Android con Capacitor (plan, revisión 7)
 
-> **CP1 a CP10 están HECHOS** en `spike/capacitor-android`: la app corre en un
-> Android físico, pasó la matriz móvil, tiene los tres plugins que esa matriz
-> justificó y los tráileres de YouTube reproducen sin necesidad de arreglo.
-> **CP11 no empezó.** Sigue sin `ios/` y sin firma ni Play.
+> **ETAPA 2 TERMINADA.** CP1 a CP11 hechos en `spike/capacitor-android`.
+> **Veredicto: Capacitor es viable para Yump en Android y se recomienda avanzar
+> a una implementación publicable.** El detalle, en CP11. Sigue sin `ios/`, sin
+> firma de publicación y sin Play, y hay decisiones del dueño abiertas que
+> bloquean la integración a `main`.
 
 ## ✅ CP1 — completado el 30/08/2026
 
@@ -2409,7 +2410,135 @@ parámetro que hoy anda, para ver si sigue andando, no mide nada.
   deshabilitado o bloqueo por región, que es la limitación ya documentada del
   componente y no algo del contenedor.
 
-## CP11 — Veredicto y cierre
+## ✅ CP11 — completado el 5 de septiembre de 2026 — veredicto y cierre
+
+CP11 no agregó funciones ni repitió experimentos: consolida, dictamina y separa
+lo reutilizable del prototipo descartable.
+
+## 🟢 VEREDICTO: Capacitor es viable para Yump en Android
+
+**La arquitectura "cáscara local + API remota" funcionó, y se probó entera en un
+aparato físico** —motorola edge 60, Android 16, SDK 36— con `appId
+ar.yump.app.dev`, firma debug y **sin `server.url`**.
+
+**Recomendación: avanzar a una implementación publicable.** No quedó ningún
+bloqueante técnico sin respuesta; lo que queda son decisiones de producto y una
+verificación que sólo puede hacerse con la firma real.
+
+### Lo que funcionó en el teléfono
+
+| | Evidencia |
+|---|---|
+| **PWA neutralizada en Android, intacta en web** | en el artefacto: 0 `sw.js`, 0 `manifest.webmanifest`, 0 `<link rel=manifest>`, 0 splash de Apple; `getRegistrations()` → `[]` y `caches.keys()` → `[]`. En web siguen los cuatro |
+| **Export estático completo** | 38 rutas, incluidas `/t/` y `/p/`; las 6 keys de `/lista/` |
+| **Preview aislada de Redis** | `/api/health`: `503`, `cache: "memoria"`, `credenciales {url:false, token:false}`, `fuente: null` |
+| **CORS exacto desde `https://localhost`** | los pedidos responden `access-control-allow-origin: https://localhost` con `vary: …, Origin`; sin comodín y sin `Allow-Credentials` |
+| **Sesión persistente** | sobrevive a `am force-stop` + relanzar |
+| **POST autenticado `2xx`** | `POST /api/te-va-a-gustar` → **200**, `Bearer` enviado por la app. Evidencia redactada en `docs/medidas/2026-09-05-cp8-post-autenticado.md` |
+| **Modo avión y `OfflineState`** | modo avión real por `cmd connectivity`: la cáscara abre en **674 ms** y muestra `OfflineState` con "Reintentar" |
+| **Navegación SPA** | 304 cards nacen como `/t/?tipo=…&id=…`; cero cambios de `href` al hidratar y cero `/titulo/` en el DOM |
+| **Plugins** | Atrás vuelve al Home y sólo sale en la raíz · barra legible en los dos temas, cambia en el acto · Compartir abre `ChooserActivity` con `https://app.yump.ar/titulo/...` |
+| **Tráileres de YouTube** | **reproducen de verdad**: `videoplayback` 200 y el reloj avanza 8,5 s en dos títulos. Ningún error 153 |
+| **Sin secretos ni permisos sensibles** | 0 en las dos copias del artefacto; el único JWT es la anon key (`role=anon`). Permisos: `INTERNET` + el `DYNAMIC_RECEIVER` interno de AndroidX |
+
+### Rendimiento medido
+
+Arranque frío **822 ms** (674 sin red) · caliente **58 ms** · cierre forzado
+**656 ms** · suspensión de 5 min sin perder proceso, ruta ni sesión · red a
+~50 kbps con 2 s de latencia carga completo en 45 s sin falso offline.
+
+### ⚠️ Resultados que son SÓLO de debug y hay que repetir con firma de publicación
+
+- **Los tráileres de YouTube.** Se probaron con firma debug y `ar.yump.app.dev`.
+  Si WebView Media Integrity llegara a intervenir sería con la firma real o el
+  identificador definitivo.
+- **Todo lo que dependa del `appId`**: deep links, y cualquier allowlist que
+  alguna vez se ate al identificador.
+
+## 🔴 Limitaciones abiertas — NINGUNA está resuelta
+
+1. **Las subrutas directas caen en la Home.** El servidor local de Capacitor no
+   resuelve `/ruta/` a `/ruta/index.html`: medido, `/lista/ultimos/` devuelve el
+   `index.html` raíz de 50.134 bytes en vez del suyo de 13.612. La navegación SPA
+   funciona; la URL directa no.
+2. **Una ruta inexistente devuelve 200 con el shell**, no 404. El `404.html`
+   existe en el export pero no se sirve, y además es el de Next por defecto.
+3. **El `.ics` de "Recordarme" no quedó probado.** No se encontró una ficha con
+   fecha futura que ofreciera el botón durante la ventana de prueba.
+4. **`navigator.onLine` devuelve `true` en modo avión**, porque la WebView
+   alcanza su servidor local. La app no depende de esa señal —detecta el fallo
+   del `fetch`— pero cualquier lógica futura que la use se equivocaría.
+5. **YouTube hay que repetirlo** con identificador definitivo y firma de
+   publicación.
+6. **`/t` y `/p` requieren decidir `noindex` frente a `canonical`** antes de
+   cualquier integración a `main`.
+7. **`ar.yump.app` es irreversible** una vez publicado. Sigue sin decidirse.
+8. **Cuenta personal u organización de Play**: abierta.
+9. **Notificaciones locales para v1**: abiertas.
+10. **iOS**: se decide más adelante.
+
+## Inventario de reutilización
+
+### Reutilizable sin cambios
+
+| Pieza | Por qué |
+|---|---|
+| `lib/plataforma.ts` + test | la bandera `ES_NATIVO`. En web es `false` siempre |
+| `lib/api-base.ts` + test | `apiUrl()`: relativo en web, absoluto en nativo |
+| `lib/cors.ts`, `cors.test.ts`, `cors-inventario.test.ts` | **la web hoy no tiene CORS**; esto se lo agrega con inventario cerrado |
+| Las 24 rutas de `app/api/*` con `conCors` | 23 integradas + 3 excluidas, clasificación completa |
+| `lib/pwa-nativa.ts` + test | en web devuelve la metadata entera |
+| `lib/tipo-lista.ts` + test, `UltimosDesdeQuery.tsx`, `app/lista/[key]/page.tsx` | **arregla también la web**: el `?tipo=` deja de atar la ruta a render dinámico |
+| `CategoriaEntrada.tsx`, `CategoriaSkeleton.tsx`, `app/categoria/[slug]/page.tsx` | ídem |
+| Componentes que pasaron a `apiUrl()` | inertes en web |
+| `scripts/build-capacitor.mjs`, `config.test.mjs`, `entorno.test.mjs` | el staging y sus guards |
+| `next.config.mjs` condicional | sin la bandera, la web compila igual |
+| `.gitignore` | ignora los artefactos del contenedor |
+| Documentación y pruebas | la evidencia |
+
+### Reutilizable con adaptación
+
+| Pieza | Qué hay que decidir |
+|---|---|
+| `lib/rutas.ts` + test y los componentes que lo usan | sólo tiene sentido con `/t` y `/p` integradas |
+| `lib/barra-estado.ts`, `components/nativo/AtrasNativo.tsx`, el compartir de `DetailView.tsx`, `ThemeContext.tsx` | necesitan los tres plugins en `dependencies` |
+
+### Requiere decisión del dueño
+
+| Pieza | Decisión |
+|---|---|
+| `app/t/page.tsx`, `app/p/page.tsx`, `ParametrosInvalidos.tsx` | **`noindex` frente a `canonical`**, antes de integrar a `main` |
+| `@capacitor/app`, `@capacitor/status-bar`, `@capacitor/share` en `dependencies` | si `main` debe cargarlos antes de que exista una app publicada |
+
+### Exclusivo del prototipo descartable
+
+`capacitor.config.ts` y `android/` (53 archivos versionados). **Los dos llevan
+adentro `ar.yump.app.dev`**, y `android/` además se generó con la firma debug.
+Se regeneran en un minuto con `cap init` + `cap add android` una vez decidido el
+identificador definitivo, así que no hay nada que rescatar de ellos.
+
+⚠️ **`@capacitor/core`, `@capacitor/android` y `@capacitor/cli` NO son
+descartables** —una primera versión de este inventario los clasificó así y era
+un error—. Son el framework: cualquier implementación publicable los necesita, y
+`@capacitor/core` es además `peerDependency` de los tres plugins. Van en
+*reutilizable con adaptación*, junto a los plugins.
+
+### No debe integrarse
+
+El identificador `ar.yump.app.dev` · la firma debug · el APK · `out-capacitor/`
+y `.capacitor-build/` (ya ignorados).
+
+🔴 **NO se propone mergear el spike entero.** La extracción es selectiva y va a
+una rama candidata aparte, sin push ni merge.
+
+## Estado al cerrar la etapa
+
+El spike queda **completo y sin reescribir**: 14 commits propios de CP1–CP6, el
+merge de `main`, y los de CP7 a CP11. La app sigue instalada en el teléfono, las
+siete variables de aislamiento siguen acotadas a la rama, y la Preview quedó
+protegida.
+
+## CP11 — cierre (plan original)
 
 - [ ] Escribir el resultado en `docs/CAPACITOR.md`.
 - [ ] **Extraer y verificar** lo reutilizable en una rama limpia; recién después

@@ -30,6 +30,34 @@ que dependa de eso está marcado 🔍 y hay que confirmarlo en la Etapa 0.
 
 ---
 
+## 0. VEREDICTO — Etapa 2 cerrada el 5 de septiembre de 2026
+
+> 🟢 **Capacitor es viable para Yump en Android, y se recomienda avanzar a una
+> implementación publicable.** La arquitectura de este documento —cáscara local
+> en el binario + API remota en Vercel, **sin `server.url`**— se probó entera en
+> un motorola edge 60 con Android 16, `appId ar.yump.app.dev` y firma debug.
+>
+> Funcionó: PWA neutralizada en el APK y conservada en web · export estático
+> completo con `/t` y `/p` · Preview aislada de Redis · CORS exacto desde
+> `https://localhost` sin comodín ni `Allow-Credentials` · sesión persistente ·
+> `POST /api/te-va-a-gustar` **200** con `Bearer` de la app · modo avión con
+> `OfflineState` en 674 ms · navegación SPA con los `href` naciendo nativos ·
+> los tres plugins de CP9 · **los tráileres de YouTube reproduciendo de verdad**,
+> sin error 153 · cero secretos y sólo el permiso `INTERNET`.
+>
+> ⚠️ **Lo que es sólo de debug**: YouTube y todo lo atado al `appId` hay que
+> repetirlo con la firma de publicación y el identificador definitivo.
+>
+> 🔴 **Lo que sigue abierto y bloquea integrar a `main`**: la decisión `noindex`
+> frente a `canonical` para `/t` y `/p`, el identificador `ar.yump.app`
+> —irreversible—, la cuenta de Play, las notificaciones locales de v1 e iOS.
+> Además quedan cuatro limitaciones técnicas medidas y no resueltas: las
+> subrutas directas caen en la Home, una ruta inexistente devuelve 200,
+> `navigator.onLine` miente en modo avión y el `.ics` no llegó a probarse.
+>
+> El detalle completo, con la evidencia de cada checkpoint, está en
+> `docs/superpowers/plans/2026-08-30-etapa2-prototipo-android-capacitor.md`.
+
 ## 0. Resumen ejecutivo
 
 **Tres líneas.**
