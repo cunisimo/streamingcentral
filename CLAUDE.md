@@ -797,9 +797,18 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   ⚠️ **Ese test es un MODELO de la coordinación, no una prueba del componente**, y
   conviene no leerle más de lo que dice: no monta `UpcomingAllView`, no ejecuta
   `useListaPaginada` ni `sessionStorage`, no ejecuta React, y **no prueba la
-  restauración del scroll** —hace `scrollY = e.scrollY`, o sea que verifica su
-  propia contabilidad—. Fija la decisión de pedir o no pedir; la evidencia de punta
-  a punta es la del navegador, en el paso 6 del runbook.
+  restauración del scroll**. Fija la decisión de pedir o no pedir.
+  🔴 **Y el modelo NO alcanzó: la prueba en navegador real encontró que
+  `/proximamente` NO restaura al volver de una ficha.** Medido con el snapshot
+  correcto en `sessionStorage`: vuelve con Todos, 20 tarjetas, página 1 y una
+  petición que no debía existir. La traza muestra que el componente consulta la
+  marca de vuelta ~4 ms ANTES de que el `popstate` la escriba, así que
+  `decidirRestauracion` decide "entrada limpia" y de paso **borra el snapshot**.
+  Eso contradice el supuesto escrito en `lista-paginada-store.ts` ("popstate →
+  render → montaje"). **No está establecido si lo introdujo este cambio**: la
+  implementación anterior usaba `useEstadoSimple`, que consume la misma marca en un
+  efecto de montaje, y la corrida contra `main` que sí restauró encontró una marca
+  dejada por una vuelta ANTERIOR. Ver `docs/UPCOMING.md`, "el fallo abierto".
 - **En el App Router, Strict Mode está ACTIVO en desarrollo** si
   `next.config.mjs` no dice lo contrario, así que React invoca los efectos dos
   veces al montar. Dos cosas que podrían romperse y no lo hacen: la petición de

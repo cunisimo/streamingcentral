@@ -438,66 +438,110 @@ Lo que fija es la **decisión** de pedir o no pedir bajo un orden de efectos fie
 La verificación de punta a punta es la del navegador —paso 6 de
 `docs/medidas/2026-09-05-proximamente-salida.md`— y el modelo **no la reemplaza**.
 
-#### Lo que SÍ se verificó en un navegador real (2026-09-05)
+## La evidencia, en tres niveles
 
-Con el dev server corriendo sobre esta rama (`next dev` apuntado al worktree,
-puerto 3098) y midiendo con `performance.getEntriesByType("resource")`, que se
-reinicia en cada navegación:
+No son intercambiables y conviene no mezclarlas.
 
-| Comprobación | Resultado | Cómo |
+| Nivel | Qué cubre | Estado |
 |---|---|---|
-| Strict Mode activo en dev | **sí** | el chunk `main-app.js` servido contiene `StrictModeIfEnabled = true ? _react.default.StrictMode : 0` |
-| Entrada nueva a `/proximamente` | **1** llamada, `?page=1` | Performance API tras un reload limpio |
-| Strict Mode duplica el arranque | **no** | la medición de arriba se tomó con Strict Mode activo |
-| El 500 por la columna faltante | **reproducido** | `{"error":"Error: column upcoming_content.original_language does not exist","items":[]}` |
+| **1. Tests del modelo** | la DECISIÓN de pedir o no pedir, bajo un orden de efectos fiel | ✅ 962 pasan |
+| **2. Navegador real con respuestas interceptadas** | el comportamiento de la interfaz: cuántas peticiones, qué se muestra, qué se restaura | 🟡 **parcial — con un fallo abierto** |
+| **3. Integración real con Supabase** | que el read-path lea de verdad, con la columna y los datos reales | ⏳ **pendiente**: necesita la migración `008` |
 
-Ese último confirma el orden de despliegue con el código real, no por deducción.
+⚠️ El nivel 2 usa datos inventados servidos desde el navegador. **No prueba nada
+de Supabase ni de producción**, y no reemplaza al nivel 3.
 
-#### 🔴 Lo que queda PENDIENTE, y por qué
+### Nivel 2: cómo se corrió
 
-**No se pudo probar en el navegador**: la restauración al volver de una ficha
-(filtro, tarjetas, páginas y scroll con cero llamadas), el primer clic manual
-después de restaurar, y el clic sobre el filtro ya activo.
+`next dev` apuntado al worktree (puerto 3098), viewport 820×900, y un
+interceptor de `window.fetch` instalado **desde el navegador** que responde
+`/api/upcoming` con el formato real de la API —`{ items, hayMas, total, page }`—
+sobre un dataset de 60 elementos (45 series + 15 películas), 20 por página. La
+app no se modificó: sólo la red.
 
-**No es por falta de ganas ni de herramientas: está bloqueado por el orden de
-despliegue del propio cambio.** La cadena, verificada:
+**Endpoints interceptados: `/api/upcoming` únicamente** (todas sus variantes:
+`page`, `mediaType`, `mix`). La ficha se dejó REAL: la primera tarjeta usa un
+`tmdb_id` que existe (`tv/290193`), así que `/titulo/tv/290193` y su
+`/api/title/...` fueron a la API de verdad. En un intento anterior se interceptó
+también `/api/title/` devolviendo `{}` y eso **rompió `DetailView`** (`Cannot read
+properties of undefined (reading 'filter')`) dejando la página en blanco: esa
+corrida se descartó por contaminada.
 
-1. La migración `008` no está aplicada, así que `/api/upcoming` devuelve 500.
-2. Sin respuesta no hay items, y con `failed` y la lista vacía la vista renderiza
-   `OfflineState`: **los botones de filtro no se dibujan** (medido:
-   `document.querySelectorAll(".tipo-toggle .tt").length === 0`), así que no hay
-   nada que clickear.
-3. `useListaPaginada` no guarda snapshot sin items (`if (!items.length) return`),
-   así que tampoco hay nada que restaurar (medido:
-   `sessionStorage.getItem("yump:lista-paginada") === null`).
+Para entrar se navegó por SPA desde el Home —"Reintentar" del riel → "Ver
+todas"— para que el interceptor siguiera vivo al montar la vista.
 
-**Qué lo desbloquea:** el paso 1 de este runbook. Con la columna creada, la prueba
-del paso 6 se puede correr entera — en local contra la misma base, sin esperar al
-deploy del paso 5.
+⚠️ **Las peticiones se contaron con el log del propio interceptor, no con
+`performance.getEntriesByType("resource")`.** Esa API **no se reinicia en las
+navegaciones internas de Next**: sólo se limpia en una carga de documento, así
+que para medir ficha → atrás habría acumulado las de antes. Sirve para una
+entrada con recarga completa y nada más; para todo lo demás hace falta un
+registro propio, o una marca previa que delimite cada escenario.
 
-⚠️ **Esta evidencia no la reemplaza el modelo de
-`hooks/arranque-restauracion.test.ts`**, que no monta el componente, no ejecuta
-`useListaPaginada` ni React, y no prueba el scroll. Los conteos de restauración
-que ese test fija son del modelo; los del navegador siguen pendientes.
+### Nivel 2: lo que salió bien
 
-#### Strict Mode
+| Escenario | Esperado | Medido |
+|---|---|---|
+| Entrada nueva por SPA | 1 petición | ✅ **1** — `/api/upcoming?page=1` |
+| Tocar Series | 1 petición | ✅ **1** — `mediaType=tv&page=1`, 20 tarjetas |
+| "Cargar más" | 1 petición | ✅ **1** — `mediaType=tv&page=2`, 40 tarjetas |
+| Scroll efectivo | documento > viewport | ✅ 3927 px contra 900 |
+| Guardado del snapshot | página, items, filtro, scroll | ✅ `{pagina:2, items:40, filtro:"tv", scrollY:1000}` en `sessionStorage` |
+| Strict Mode duplica el arranque | no | ✅ no (activo: `StrictModeIfEnabled = true ? React.StrictMode : 0`) |
 
-En el App Router de Next, **Strict Mode está activo en desarrollo** cuando
-`next.config.mjs` no dice lo contrario (`__NEXT_STRICT_MODE_APP`: *"When
-next.config.js does not have reactStrictMode it's enabled by default"*). React
-invoca los efectos dos veces al montar, y las dos cosas que podrían romperse están
-cubiertas:
+### 🔴 Nivel 2: el fallo abierto
 
-- **La petición de arranque no se duplica**: la segunda pasada sale por
-  `arrancado.current`, que es un ref y sobrevive.
-- **La restauración no se pierde**, y por un detalle de `useListaPaginada` que vale
-  la pena conocer: la segunda pasada vuelve a llamar a `consumirVuelta`, que ya
-  gastó la marca, así que decide "no restaurar" — pero el hook hace
-  `if (e) { setInicial(e); … }`, o sea que con `e` en `null` **no** llama a
-  `setInicial` y el valor de la primera pasada queda. Escrito como `setInicial(e)`
-  a secas, la segunda pasada borraría la restauración y pediría la página 1.
+**Al volver de la ficha con Atrás, la vista NO restaura.** Medido, con el
+snapshot correcto en `sessionStorage`:
 
-Las dos están fijadas por tests.
+| | Antes de la ficha | Después de volver |
+|---|---|---|
+| Filtro | Series | **Todos** |
+| Tarjetas | 40 | **20** |
+| Página confirmada | 2 | **1** |
+| Peticiones a `/api/upcoming` | — | **1** (debía ser 0) |
+
+La traza instrumentada dice por qué:
+
+```
+55045  consumirVuelta? hay=false   @/proximamente
+55047  consumirVuelta? hay=false   @/proximamente   (2ª pasada de Strict Mode)
+55049  popstate                    @/proximamente
+55050  FETCH /api/upcoming?page=1
+```
+
+**El componente monta y consulta la marca de vuelta ~4 ms ANTES de que el
+`popstate` la escriba.** El listener del store la escribe en `popstate`, pero
+para entonces `useListaPaginada` ya decidió "entrada limpia" — y con
+`volvio:false`, `decidirRestauracion` además **borra el snapshot**
+(`olvidarLista`), así que la vuelta siguiente tampoco tiene qué restaurar.
+
+Eso contradice el supuesto escrito en `lista-paginada-store.ts`: *"al apretar
+atrás el orden es popstate → render de la ruta anterior → montaje de la vista"*.
+En esta medición el montaje llegó primero.
+
+**Qué NO está establecido todavía**, y no hay que darlo por sabido:
+
+* **Si lo introdujo este cambio.** La implementación anterior de `/proximamente`
+  usaba `useEstadoSimple`, que consume la MISMA marca en un efecto de montaje, así
+  que la carrera es estructuralmente la misma. En una corrida contra `main` la
+  restauración **sí** funcionó (filtro Series, 96 tarjetas, scroll 1200), pero su
+  traza muestra `consumirVuelta hay=true` **antes** del `popstate`, o sea que
+  encontró una marca **dejada por una vuelta anterior**, no por ésta. Es un
+  acierto por arrastre, no una prueba de que `main` no tenga la carrera.
+* **De qué depende el orden.** La hipótesis a medir es si el montaje es síncrono
+  cuando la ruta ya está en el caché del router de Next y asíncrono cuando hay que
+  pedir el RSC — lo que haría que la carrera dependa del caché y no del código de
+  la vista.
+
+Hasta resolverlo, **la restauración de `/proximamente` no está verificada y el
+requisito no se cumple**. Los escenarios que dependen de ella —el primer clic
+manual después de restaurar y el clic sobre el filtro ya activo— quedan sin
+medir, porque no hay restauración de la cual partir.
+
+⚠️ Esto NO se arregla tocando `lista-paginada-store` a las apuradas: lo comparten
+`/lista/miniseries`, `/lista/ultimos`, `/directores`, `/buscar`, `/categoria` y
+`/top`. Corresponde diagnosticarlo con el orden de eventos medido antes de
+proponer nada.
 
 ## Rendimiento: dónde está y dónde no
 
