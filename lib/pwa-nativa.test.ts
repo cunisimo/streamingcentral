@@ -217,12 +217,39 @@ test("OfflineState sigue intacto y con sus 9 llamadores", () => {
   for (const v of vistas) assert.match(leer(v), /OfflineState/, v + " perdió OfflineState");
 });
 
-test("no se agregó ninguna dependencia ni detección dinámica de Capacitor", () => {
+// Los ÚNICOS paquetes de Capacitor autorizados, y dónde va cada uno. En CP6
+// este test exigía que no hubiera NINGUNO, porque hasta CP7 no estaba aprobado
+// instalarlos. CP7 los aprobó, uno por uno, y la lista queda cerrada: la
+// prohibición no se aflojó, se volvió específica. Un plugin (`@capacitor/app`,
+// `@capacitor/browser`, …) sigue haciendo fallar este test, que es el punto:
+// los plugins son CP9 y sólo los que CP8 demuestre necesarios.
+const CAPACITOR_AUTORIZADOS: Record<string, "dependencies" | "devDependencies"> = {
+  "@capacitor/core": "dependencies",
+  "@capacitor/android": "dependencies",
+  "@capacitor/cli": "devDependencies",
+};
+
+test("sólo los tres paquetes de Capacitor autorizados en CP7, y en su sección", () => {
   const pkg = JSON.parse(leer("package.json"));
-  const todas = { ...pkg.dependencies, ...pkg.devDependencies };
-  for (const nombre of Object.keys(todas)) {
-    assert.doesNotMatch(nombre, /^@capacitor\//, "entró una dependencia de Capacitor: " + nombre);
+  const donde = (n: string) =>
+    pkg.dependencies?.[n] ? "dependencies" : pkg.devDependencies?.[n] ? "devDependencies" : null;
+
+  const presentes = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]
+    .filter((n) => n.startsWith("@capacitor/"));
+
+  for (const n of presentes) {
+    assert.ok(n in CAPACITOR_AUTORIZADOS, `paquete de Capacitor NO autorizado: ${n}`);
+    assert.equal(donde(n), CAPACITOR_AUTORIZADOS[n], `${n} está en la sección equivocada`);
   }
+  // Y ninguno de iOS, que no se instala en esta etapa.
+  assert.deepEqual(presentes.filter((n) => /ios/i.test(n)), []);
+});
+
+test("nadie usa detección dinámica de Capacitor", () => {
+  // 🔴 ESTA MITAD NO CAMBIA, Y AHORA IMPORTA MÁS: con `@capacitor/core` ya
+  // instalado, `isNativePlatform()` pasó de imposible a tentador. Sigue estando
+  // prohibido — es una bandera de BUILD, no una detección en runtime, porque en
+  // el prerender daría `false` y después de hidratar `true`. Ver lib/plataforma.ts.
   const tocados = [...APAGADAS, "components/pwa/PwaClient.tsx", "app/layout.tsx", "lib/pwa-nativa.ts"];
   for (const f of tocados) {
     assert.doesNotMatch(codigo(f), /@capacitor\/core|isNativePlatform/, f + " usa detección dinámica");
