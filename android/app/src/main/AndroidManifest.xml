@@ -1,8 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        enableOnBackInvokedCallback="false" — SIN ESTO EL BOTÓN ATRÁS NO FUNCIONA.
+
+        Con targetSdk 36 el atrás predictivo de Android queda activado por
+        defecto, y en un teléfono con navegación por gestos el sistema se lleva
+        el evento antes de que llegue al OnBackPressedDispatcher que usa
+        @capacitor/app (ver AppPlugin.load()). Medido en un motorola edge 60 con
+        Android 16: sin este atributo, ni el listener del plugin ni una sonda
+        registrada a mano detienen la salida — la app se va al launcher desde una
+        ficha aunque haya historial interno.
+
+        Se opta por salir del modelo predictivo, no por implementarlo: la app no
+        muestra animación de retroceso, así que no hay nada que ganar y sí una
+        navegación que arreglar. El día que se quiera el gesto animado, el camino
+        es registrar un OnBackInvokedCallback, no volver a quitar esto.
+    -->
     <application
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

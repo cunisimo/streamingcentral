@@ -12,6 +12,7 @@ import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
 import PwaClient from "@/components/pwa/PwaClient";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import NavHistorial from "@/components/NavHistorial";
+import AtrasNativo from "@/components/nativo/AtrasNativo";
 import { metadataPwa, pwaActiva } from "@/lib/pwa-nativa";
 
 // Corre ANTES del primer pintado, fija `data-theme` y CREA la meta theme-color.
@@ -94,6 +95,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <PwaClient />
                 <OnboardingGate />
                 <NavHistorial />
+                {/* Sólo hace algo en el contenedor; en web devuelve null. */}
+                <AtrasNativo />
               </PlatformsProvider>
             </MyListProvider>
           </AuthProvider>
