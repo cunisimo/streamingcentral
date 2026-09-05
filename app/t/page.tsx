@@ -1,42 +1,25 @@
-"use client";
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import BottomNav from "@/components/BottomNav";
-import DetailView from "@/components/DetailView";
-import DetailSkeleton from "@/components/DetailSkeleton";
-import ParametrosInvalidos from "@/components/ParametrosInvalidos";
-import { parseParamsTitulo } from "@/lib/rutas";
+import type { Metadata } from "next";
+import TituloDesdeQuery from "@/components/nativo/TituloDesdeQuery";
 
-// La ficha de un título, por QUERY en vez de por segmento dinámico.
+// 🔴 `noindex`, y NO canonical. Decisión del dueño, 5/09/2026.
 //
-// Existe por el export estático: `/titulo/[tipo]/[id]` cubre todo el catálogo de
-// TMDB, así que no hay `generateStaticParams` que la pueda enumerar y
-// `output: "export"` la rechaza. Esta ruta es estática —un solo archivo— y los
-// parámetros viajan en la query, que se lee en el cliente.
+// Esta ruta existe sólo para el contenedor: el export estático no puede enumerar
+// `/titulo/[tipo]/[id]`, que cubre todo TMDB. En la web nadie la enlaza
+// —`hrefTitulo` sigue devolviendo `/titulo/movie/278`— pero se despliega igual,
+// porque el build es uno solo.
 //
-// En la WEB no se usa: `hrefTitulo` sigue devolviendo `/titulo/movie/278`, las
-// URLs públicas no cambian y los links que ya circulan siguen funcionando. En el
-// contenedor, `hrefTitulo` devuelve `/t?tipo=movie&id=278` y entra por acá.
-
-function TDetalle() {
-  const params = parseParamsTitulo(useSearchParams());
-  if (!params) return <ParametrosInvalidos />;
-  return <DetailView tipo={params.tipo} id={params.id} />;
-}
+// Un `canonical` le pediría a Google que consolide señales hacia `/titulo/...`,
+// y eso supone que ésta es una alternativa legítima que se quiere servir. No lo
+// es. `noindex` dice lo que realmente pasa: esta URL no es para la web.
+//
+// ⚠️ La metadata va acá y la lectura de la query en un hijo de cliente. Un
+// componente marcado `"use client"` NO puede exportar `metadata`: si esta página
+// volviera a serlo, el `<meta>` desaparecería del HTML sin que nada falle en
+// tiempo de compilación. Hay un test que lee el HTML generado, no el código.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function TPage() {
-  // ⚠️ El <Suspense> NO es decorativo: `useSearchParams` lo EXIGE cuando la
-  // página se prerenderiza, y bajo `output: "export"` todas lo son. Sin él, el
-  // build falla. Es el primer Suspense del proyecto.
-  //
-  // El fallback es el mismo esqueleto que usa la ficha normal mientras carga,
-  // así que la transición se ve igual que en la web.
-  return (
-    <>
-      <Suspense fallback={<DetailSkeleton />}>
-        <TDetalle />
-      </Suspense>
-      <BottomNav sobreFicha />
-    </>
-  );
+  return <TituloDesdeQuery />;
 }

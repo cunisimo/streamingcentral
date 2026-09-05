@@ -1,38 +1,25 @@
-"use client";
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import TopBar from "@/components/TopBar";
-import BottomNav from "@/components/BottomNav";
-import PersonView from "@/components/PersonView";
-import ParametrosInvalidos from "@/components/ParametrosInvalidos";
-import ShelfSkeleton from "@/components/ShelfSkeleton";
-import { parseParamsPersona } from "@/lib/rutas";
+import type { Metadata } from "next";
+import PersonaDesdeQuery from "@/components/nativo/PersonaDesdeQuery";
 
-// La filmografía de una persona, por QUERY. Mismo motivo que `/t`: el universo
-// de `/persona/[id]` es todo TMDB y no se puede enumerar para el export.
-// Ver el comentario largo en `app/t/page.tsx`.
-
-function PDetalle() {
-  const params = parseParamsPersona(useSearchParams());
-  if (!params) return <ParametrosInvalidos />;
-  return <PersonView id={params.id} />;
-}
+// 🔴 `noindex`, y NO canonical. Decisión del dueño, 5/09/2026.
+//
+// Esta ruta existe sólo para el contenedor: el export estático no puede enumerar
+// `/persona/[id]`, que cubre todo TMDB. En la web nadie la enlaza
+// —`hrefPersona` sigue devolviendo `/persona/287`— pero se despliega igual,
+// porque el build es uno solo.
+//
+// Un `canonical` le pediría a Google que consolide señales hacia `/persona/...`,
+// y eso supone que ésta es una alternativa legítima que se quiere servir. No lo
+// es. `noindex` dice lo que realmente pasa: esta URL no es para la web.
+//
+// ⚠️ La metadata va acá y la lectura de la query en un hijo de cliente. Un
+// componente marcado `"use client"` NO puede exportar `metadata`: si esta página
+// volviera a serlo, el `<meta>` desaparecería del HTML sin que nada falle en
+// tiempo de compilación. Hay un test que lee el HTML generado, no el código.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function PPage() {
-  // `useSearchParams` exige Suspense al prerenderizar. Ver `app/t/page.tsx`.
-  return (
-    <>
-      <TopBar />
-      <main>
-        {/* Mismo motivo que en categoría: con `fallback={null}` la página sale
-            vacía del export. `PersonView` ya arranca con su propio encabezado y
-            sus tarjetas en carga, así que el esqueleto de tarjetas mantiene el
-            alto y evita el salto. */}
-        <Suspense fallback={<ShelfSkeleton />}>
-          <PDetalle />
-        </Suspense>
-      </main>
-      <BottomNav />
-    </>
-  );
+  return <PersonaDesdeQuery />;
 }
