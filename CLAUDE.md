@@ -771,6 +771,38 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   Películas de forma **estable**. La lógica se extrajo a un módulo **puro** porque
   suelta entre dos efectos no se podía probar (no hay arnés de DOM), y el test
   reproduce la falla sobre la máquina de estados vieja antes de fijar la nueva.
+- **En "Próximamente" el cambio de filtro es un HANDLER, no un efecto, porque
+  restaurar un snapshot y que el usuario toque un botón no se pueden distinguir
+  comparando estado.** Como efecto, la decisión salía de comparar el `filtro` del
+  cierre contra `estadoFiltro.current`, que el arranque acababa de escribir en la
+  MISMA ronda — y un efecto ve los valores del render en el que se creó. Al
+  restaurar un snapshot de Series, `setFiltro("tv")` no cambia el `filtro` que ve
+  el efecto de abajo: sigue viendo `"all"` mientras `aplicado` ya dice `"tv"`, o
+  sea `tv → all`, indistinguible de un clic en Todos. Reiniciaba la vista, pedía
+  Todos y en el render siguiente volvía a pedir Series: dos peticiones de más y la
+  restauración del scroll pisada.
+  ⚠️ **Eso no se disparaba, y por un motivo frágil**: el efecto no llegaba a correr
+  en esa ronda porque sus dependencias `[filtro, load, reiniciar]` no habían
+  cambiado. O sea que dependía de la **estabilidad referencial** de `useCallback`,
+  que nada verifica — bastaba agregarle una dependencia a `reiniciar` para que
+  corriera en cada render y el bug apareciera.
+  Como handler el problema no existe y **queda un solo efecto en la vista**, el de
+  arranque, que sale por `return` sin pedir cuando restauró. Peticiones: entrada
+  nueva **1**, vuelta con `all`/`movie`/`tv` **0**, primer clic manual **1**.
+  `hooks/arranque-restauracion.test.ts` modela el runtime de efectos —orden de
+  declaración, re-ejecución sólo por dependencias, **cierre del render en curso**,
+  refs que sobreviven— y fija las tres cosas: que la versión con efecto anda con
+  identidad estable, que se rompe con identidad inestable, y los conteos de la
+  versión con handler.
+- **En el App Router, Strict Mode está ACTIVO en desarrollo** si
+  `next.config.mjs` no dice lo contrario, así que React invoca los efectos dos
+  veces al montar. Dos cosas que podrían romperse y no lo hacen: la petición de
+  arranque no se duplica porque la segunda pasada sale por un ref, y la
+  restauración no se pierde porque `useListaPaginada` hace
+  `if (e) { setInicial(e); … }` — la segunda pasada ya gastó la marca de vuelta y
+  decide "no restaurar", pero al no llamar a `setInicial` el valor de la primera
+  queda. Escrito como `setInicial(e)` a secas, en dev se perdería la restauración
+  de TODAS las vistas paginadas.
 - **La ruleta sirve UNA recomendación por vez, nunca una lista.** Es el punto:
   una lista reconstruye la parálisis de elección que la feature resuelve. El pool
   es `roulette_titles` (curado offline, 2259 con texto de los 2401) y lo sirve la

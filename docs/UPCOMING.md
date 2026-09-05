@@ -374,6 +374,75 @@ tiene arnés de DOM). `hooks/filtro-paginado-nucleo.test.ts` reproduce la falla
 sobre la máquina de estados vieja antes de fijar el contrato nuevo, así que si
 alguien vuelve a esa forma, falla.
 
+### El cambio de filtro es un HANDLER, no un efecto
+
+🔴 **Restaurar un snapshot y que el usuario toque un botón no se pueden distinguir
+comparando estado.** Mientras el cambio de filtro vivió en un efecto, la decisión
+salía de comparar el `filtro` del cierre contra `estadoFiltro.current`, que el
+efecto de arranque acaba de escribir en la misma ronda. Y un efecto ve los valores
+del render en el que se creó: cuando el arranque restaura un snapshot de Series y
+hace `setFiltro("tv")`, el efecto de abajo sigue viendo `filtro === "all"` mientras
+`aplicado` ya dice `"tv"`. Eso es `tv → all`, indistinguible de un clic en Todos:
+reiniciaba la vista, pedía la página 1 de Todos, y en el render siguiente volvía a
+pedir Series. Dos peticiones que no había que hacer y la restauración del scroll
+pisada — justo lo contrario de "si restauró, no se pide nada".
+
+**Hoy eso no se dispara, y conviene decirlo con precisión.** El efecto no llegaba
+a correr en esa ronda porque sus dependencias —`[filtro, load, reiniciar]`— no
+habían cambiado: `filtro` todavía es el viejo y los dos callbacks son estables. O
+sea que la corrección dependía de la **estabilidad referencial** de `useCallback`,
+que nada verifica. Alcanzaba con agregarle una dependencia a `reiniciar` para que
+el efecto corriera en cada render y el bug apareciera.
+
+Como handler el problema no existe: la restauración escribe estado y nada más, y
+lo único que pide es un clic. Sin temporizadores y sin depender del orden de las
+respuestas. **Queda un solo efecto en la vista** —el de arranque— y sale por
+`return` sin llamar a `load` cuando restauró.
+
+#### Peticiones por escenario
+
+| Escenario | Peticiones |
+|---|---|
+| Entrada nueva por link | **1** (`all:1`) |
+| Vuelta con snapshot `all` | **0** |
+| Vuelta con snapshot `movie` | **0** |
+| Vuelta con snapshot `tv` | **0** |
+| Primer clic manual después de restaurar | **1** (sólo ese filtro) |
+| Clic en el filtro que ya estaba restaurado | **0** |
+
+#### Cómo se verifica sin arnés de DOM
+
+`hooks/arranque-restauracion.test.ts` modela el runtime de efectos con las cuatro
+reglas que importan: corren en orden de declaración, sólo si cambió una
+dependencia (comparación por identidad), **con el cierre del render en curso** — o
+sea que no ven los `set*` que otro efecto acaba de hacer en la misma ronda — y los
+refs sobreviven sin disparar renders.
+
+Con eso el test hace tres cosas que probar `iniciar()` y `decidirCambioDeFiltro()`
+por separado no puede: confirma que la versión con efecto **anda** mientras
+`reiniciar` sea estable, **reproduce la falla** —`["all:1", "tv:1"]` y la
+restauración borrada— en cuanto deja de serlo, y fija los conteos de la tabla de
+arriba para la versión con handler, con la identidad estable y con la inestable.
+
+#### Strict Mode
+
+En el App Router de Next, **Strict Mode está activo en desarrollo** cuando
+`next.config.mjs` no dice lo contrario (`__NEXT_STRICT_MODE_APP`: *"When
+next.config.js does not have reactStrictMode it's enabled by default"*). React
+invoca los efectos dos veces al montar, y las dos cosas que podrían romperse están
+cubiertas:
+
+- **La petición de arranque no se duplica**: la segunda pasada sale por
+  `arrancado.current`, que es un ref y sobrevive.
+- **La restauración no se pierde**, y por un detalle de `useListaPaginada` que vale
+  la pena conocer: la segunda pasada vuelve a llamar a `consumirVuelta`, que ya
+  gastó la marca, así que decide "no restaurar" — pero el hook hace
+  `if (e) { setInicial(e); … }`, o sea que con `e` en `null` **no** llama a
+  `setInicial` y el valor de la primera pasada queda. Escrito como `setInicial(e)`
+  a secas, la segunda pasada borraría la restauración y pediría la página 1.
+
+Las dos están fijadas por tests.
+
 ## Rendimiento: dónde está y dónde no
 
 | | |

@@ -43,10 +43,19 @@ Tiene que devolver **una** fila: `original_language | text | YES`.
 
 ## 2. Confirmar que se lee con los permisos REALES de la app
 
-⚠️ **No alcanza con el SQL editor**, que corre como owner. La app lee con la
-**anon key** por RLS, y una policy que enumere columnas dejaría la nueva afuera:
-el paso 1 pasaría y el paso 5 rompería igual. Hay que preguntarle a PostgREST con
-la misma clave que usa la app.
+⚠️ **No alcanza con el SQL editor**, que corre como owner y ve todo. La app lee
+con la **anon key**, que es otro rol y tiene otros privilegios.
+
+Y la distinción importa para no buscar el problema en el lugar equivocado: **RLS
+decide FILAS, no columnas.** Lo que gobierna si un rol puede leer una columna son
+los privilegios `SELECT` de tabla o de columna (`grant select on … to anon`, o
+`grant select (col1, col2) …`). Si el `grant` de la tabla es por columnas
+enumeradas, una columna nueva **no queda incluida automáticamente** y el rol no
+la ve, aunque la policy de RLS la deje pasar entera. En ese caso el paso 1
+pasaría y el paso 5 rompería igual.
+
+Por eso la comprobación que vale es preguntarle a PostgREST con la misma clave
+que usa la app, que ejercita rol, privilegios y RLS todos juntos:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' \
@@ -55,8 +64,20 @@ curl -s -o /dev/null -w '%{http_code}\n' \
   -H "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_ANON_KEY"
 ```
 
-**Tiene que dar `200`.** Un `400` es la columna que no está o que la policy no
-expone; un `401`/`403` es la clave.
+**Tiene que dar `200`.** Un `400` con `42703` es la columna que no existe o que el
+rol `anon` no tiene privilegio de leer; un `401`/`403` es la clave.
+
+Si diera `400` con la columna ya creada, esto dice si el privilegio está:
+
+```sql
+select table_name, column_name, privilege_type
+from information_schema.column_privileges
+where grantee = 'anon' and table_name = 'upcoming_content';
+```
+
+Con un `grant` a nivel de tabla la vista no lista columna por columna y no hay
+nada que arreglar. Si lista columnas enumeradas y falta `original_language`, hay
+que agregarla: `grant select (original_language) on public.upcoming_content to anon;`.
 
 Y el `SELECT` completo, que es el que la app realmente manda:
 
@@ -183,9 +204,14 @@ console.log(`servidos ${vistos.length} | unicos ${u.size} | ${vistos.length === 
    se tragaba y seguía mostrando series.
 2. Volver a Todos y tocar **Cargar más** cinco veces. Cada tanda suma 20 sin
    borrar lo anterior y sin repetir tarjetas; al final el botón desaparece.
-3. Entrar a una ficha y volver con atrás: tiene que volver el filtro, todas las
-   tarjetas cargadas y la posición del scroll.
-4. Con las herramientas de red en modo offline, tocar **Cargar más**: lo que está
+3. **Con Series elegido**, entrar a una ficha y volver con atrás. Tiene que volver
+   el filtro, todas las tarjetas cargadas y la posición del scroll — y en la
+   pestaña Red **no puede haber ninguna llamada a `/api/upcoming`**. Ése es el
+   bloqueo que cerró la auditoría: la restauración no pide nada. Repetir con
+   Películas.
+4. Inmediatamente después de esa vuelta, tocar **Películas**: tiene que pedir
+   `mediaType=movie&page=1` y **nada más** — una sola llamada, no dos.
+5. Con las herramientas de red en modo offline, tocar **Cargar más**: lo que está
    en pantalla **no se borra** y aparece "No se pudo cargar el resto ·
    Reintentar". Volver a poner red y tocar Reintentar: entra la misma tanda que
    había fallado, sin saltearla.

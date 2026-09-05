@@ -113,11 +113,23 @@ export default function UpcomingAllView() {
   }, []);
 
   // Arranque: restaurar o pedir la página 1. Corre una sola vez, cuando el hook
-  // ya decidió. Si restauró, no se pide NADA: los títulos ya están.
+  // ya decidió.
   //
-  // 🔴 `iniciar` registra el filtro aplicado SIEMPRE, restaure o no, y eso es el
-  // arreglo del bug: antes ese registro pasaba en otro efecto que no corría en
-  // este render, así que quedaba en null y se comía el primer clic.
+  // 🔴 SI RESTAURÓ NO SE PIDE NADA, y ahora eso es verdad por construcción: el
+  // ÚNICO efecto que queda es éste, y sale por `return` sin llamar a `load`. Lo
+  // que pide es un clic (`cambiarFiltro`) o el "Cargar más" (`more`), y los dos
+  // son handlers. Antes había un segundo efecto que podía leer la restauración
+  // como un cambio de filtro del usuario — ver el comentario de `cambiarFiltro`.
+  //
+  // `iniciar` registra el filtro aplicado SIEMPRE, restaure o no, y eso es el
+  // arreglo del bug original: antes ese registro pasaba en otro efecto que no
+  // corría en este render, así que quedaba en null y se comía el primer clic.
+  //
+  // ⚠️ Los dos `set*` de acá son seguros en Strict Mode, que en el App Router de
+  // Next está ACTIVO en desarrollo cuando `next.config.mjs` no dice lo
+  // contrario: React invoca los efectos dos veces al montar, y la segunda pasada
+  // sale por `arrancado.current`, que es un ref y sobrevive. Verificado en
+  // `hooks/arranque-restauracion.test.ts`.
   const arrancado = useRef(false);
   useEffect(() => {
     if (fase !== "listo" || arrancado.current) return;
@@ -146,19 +158,48 @@ export default function UpcomingAllView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase, inicial]);
 
-  // Cambio de filtro: lista nueva, desde la página 1 y arriba de todo.
-  useEffect(() => {
-    if (!arrancado.current) return;
-    const r = decidirCambioDeFiltro(estadoFiltro.current, filtro);
+  /**
+   * Cambio de filtro. **Es un handler, no un efecto**, y ésa es la corrección.
+   *
+   * 🔴 POR QUÉ NO PUEDE SER UN EFECTO. Como efecto, la decisión salía de comparar
+   * el `filtro` del cierre contra `estadoFiltro.current`, que el arranque acaba de
+   * escribir en la MISMA ronda. Y un efecto ve los valores del render en el que se
+   * creó: cuando el arranque restaura un snapshot de Series y hace
+   * `setFiltro("tv")`, el efecto de abajo sigue viendo `filtro === "all"` mientras
+   * `aplicado` ya dice `"tv"` — o sea `tv → all`, que es indistinguible de un clic
+   * del usuario en Todos. Ahí reiniciaba la vista, pedía la página 1 de Todos y en
+   * el render siguiente volvía a pedir Series: dos peticiones que no había que
+   * hacer y la restauración del scroll pisada.
+   *
+   * Hoy eso NO se dispara, y conviene decirlo con precisión: el efecto no llega a
+   * correr en esa ronda porque sus dependencias —`[filtro, load, reiniciar]`— no
+   * cambiaron, ya que `filtro` todavía es el viejo y los dos callbacks son
+   * estables. O sea que la corrección dependía de la ESTABILIDAD REFERENCIAL de
+   * `useCallback`, que nada verifica: alcanzaba con que alguien le agregara una
+   * dependencia a `reiniciar` para que el efecto corriera en cada render y el bug
+   * apareciera. Está fijado en `hooks/arranque-restauracion.test.ts`, que lo
+   * reproduce con la identidad inestable.
+   *
+   * Como handler el problema no existe: **restaurar y que el usuario toque un
+   * botón son dos cosas distintas por construcción**, no dos estados que haya que
+   * distinguir comparando. La restauración escribe estado y nada más; sólo un clic
+   * pide. Sin temporizadores y sin depender del orden de las respuestas.
+   */
+  const cambiarFiltro = useCallback((f: Filtro) => {
+    const r = decidirCambioDeFiltro(estadoFiltro.current, f);
     estadoFiltro.current = r.estado;
+    setFiltro(f);
     if (r.accion.tipo !== "recargar") return;
     reiniciar();
     setItems([]);
     setHayMas(false);
     setTotal(null);
     setTanda(estadoTandaInicial);
-    load(filtro, 1);
-  }, [filtro, load, reiniciar]);
+    // Se adelanta al render: `load` corre ahora y `respuestaVigente` compara
+    // contra este ref, que todavía tendría el filtro anterior.
+    filtroVigente.current = f;
+    load(f, 1);
+  }, [load, reiniciar]);
 
   // Avanzar y reintentar son la MISMA acción: pedir `confirmada + 1`. Como la
   // confirmada no se movió cuando falló, esto vuelve a pedir exactamente la
@@ -179,7 +220,7 @@ export default function UpcomingAllView() {
             role="tab"
             aria-selected={filtro === valor}
             className={`tt ${filtro === valor ? "on" : ""}`}
-            onClick={() => setFiltro(valor)}
+            onClick={() => cambiarFiltro(valor)}
           >
             {texto}
           </button>
