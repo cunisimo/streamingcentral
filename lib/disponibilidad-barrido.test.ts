@@ -288,11 +288,37 @@ test("los skeletons reservan el selector también en el primer riel", () => {
     "el primer riel quedó sin reservar el selector: vuelve el salto de layout");
 });
 
-test("`/lista/ultimos` recibe el tipo desde el server, no de useSearchParams", () => {
+test("`/lista/ultimos` recibe el tipo del CLIENTE, y UltimosView sigue siendo tonto", () => {
+  // 🔴 ESTE TEST DECÍA LO CONTRARIO, Y EL CAMBIO ESTÁ MEDIDO.
+  //
+  // Pedía que el tipo saliera del server (`searchParams`) justamente para NO
+  // pagar un `<Suspense>`. Era correcto mientras la app fuera sólo web; con el
+  // contenedor dejó de serlo: con `output: export`, tocar `searchParams` en el
+  // Server Component aborta el export ENTERO —
+  //
+  //     Route /lista/ultimos/ with `dynamic = "error"` couldn't be rendered
+  //     statically because it used `searchParams.tipo`
+  //
+  // — y esconderlo detrás de una bandera de plataforma salvaba el export pero
+  // dejaba el parámetro sin efecto dentro del APK: verificado en un Android
+  // físico, un enlace con `?tipo=tv` abría en Películas.
+  //
+  // Ahora lo lee `UltimosDesdeQuery` con `useSearchParams`, que devuelve el
+  // valor en el PRIMER render del cliente — así que sigue sin haber un pedido
+  // inicial de películas. Comprobado en el teléfono: un solo `/api/latest`, y
+  // con `tipo=tv`.
   const pagina = codigo("app/lista/[key]/page.tsx");
-  assert.match(pagina, /searchParams\?\.tipo === "tv" \? "tv" : "movie"/);
-  assert.match(pagina, /<UltimosView tipoInicial=/);
+  assert.doesNotMatch(pagina, /searchParams/,
+    "volvió `searchParams` al Server Component: el export nativo se rompe");
+  assert.match(pagina, /<UltimosDesdeQuery \/>/);
+  assert.match(pagina, /<Suspense fallback=/,
+    "sin Suspense, `useSearchParams` no deja prerenderizar la página");
+
+  // Lo que NO cambió: `UltimosView` sigue recibiendo el tipo por prop y no lee
+  // el query. Quien lo lee es el envoltorio, y por eso la vista se puede seguir
+  // montando desde otro lado sin arrastrar el router.
   assert.doesNotMatch(codigo("components/UltimosView.tsx"), /useSearchParams/);
+  assert.match(codigo("components/UltimosDesdeQuery.tsx"), /useSearchParams/);
 });
 
 test("al volver atrás manda el snapshot, no la URL", () => {

@@ -1,11 +1,11 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import ListaView from "@/components/ListaView";
-import UltimosView from "@/components/UltimosView";
+import UltimosDesdeQuery from "@/components/UltimosDesdeQuery";
 import MiniseriesView from "@/components/MiniseriesView";
 import { MINISERIES_LISTA_KEY } from "@/lib/miniseries";
-import { ES_NATIVO } from "@/lib/plataforma";
 
 const LISTAS: Record<string, { endpoint: string; title: string }> = {
   "mas-votados": { endpoint: "/api/mas-votados", title: "Lo más votados" },
@@ -29,34 +29,27 @@ export function generateStaticParams() {
   ];
 }
 
-export default function ListaPage(
-  { params, searchParams }: {
-    params: { key: string };
-    searchParams?: { tipo?: string };
-  },
-) {
+export default function ListaPage({ params }: { params: { key: string } }) {
   if (params.key === "ultimos") {
-    // El `?tipo=` lo pone el "Ver todas" del riel del Home, para abrir la lista
-    // en el mismo tipo que se estaba mirando. Se valida acá: cualquier otra
-    // cosa cae en "movie", que es el default del riel.
+    // El `?tipo=` lo lee el CLIENTE, no el servidor: ver el comentario de
+    // components/UltimosDesdeQuery.tsx. Leerlo acá aborta el export nativo
+    // entero, y esconderlo detrás de una bandera de plataforma dejaba el
+    // parámetro sin efecto dentro del APK.
     //
-    // 🔴 EN NATIVO NO SE LEE, Y NO ES UN DESCUIDO. Con `output: export` esta
-    // ruta se prerenderiza una sola vez, y tocar `searchParams` durante el
-    // prerender aborta el export entero:
-    //
-    //     Route /lista/ultimos/ with `dynamic = "error"` couldn't be rendered
-    //     statically because it used `searchParams.tipo`
-    //
-    // `ES_NATIVO` es constante de build (ver lib/plataforma.ts), así que en el
-    // artefacto nativo la rama que lo lee no se ejecuta y el export completo de
-    // CP2 se conserva. En la web no cambia NADA: se sigue leyendo en el
-    // servidor, sin `useSearchParams` ni el <Suspense> que eso obligaría.
-    //
-    // El costo, declarado: dentro del contenedor un enlace con `?tipo=tv` abre
-    // en Películas. Hoy no hay navegación nativa —eso es CP7—, así que no se
-    // resuelve acá; queda anotado en el plan como pendiente de esa etapa.
-    const tipoInicial = ES_NATIVO ? "movie" : (searchParams?.tipo === "tv" ? "tv" : "movie");
-    return (<><TopBar /><main><UltimosView tipoInicial={tipoInicial} /></main><BottomNav /></>);
+    // 🔴 EL FALLBACK NO PUEDE SER `null`. Con `output: export` esta rama se
+    // prerenderiza CON el fallback puesto —es lo que viaja en el HTML del
+    // artefacto—, así que un `null` deja la pantalla en blanco hasta hidratar.
+    return (
+      <>
+        <TopBar />
+        <main>
+          <Suspense fallback={<div className="loading">Cargando…</div>}>
+            <UltimosDesdeQuery />
+          </Suspense>
+        </main>
+        <BottomNav />
+      </>
+    );
   }
   if (params.key === MINISERIES_LISTA_KEY) {
     return (<><TopBar /><main><MiniseriesView /></main><BottomNav /></>);
