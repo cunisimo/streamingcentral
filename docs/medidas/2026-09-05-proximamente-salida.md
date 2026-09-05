@@ -254,104 +254,120 @@ No son intercambiables y conviene no mezclarlas.
 
 | Nivel | Qué cubre | Estado |
 |---|---|---|
-| **1. Tests del modelo** | la DECISIÓN de pedir o no pedir, bajo un orden de efectos fiel | ✅ 962 pasan |
-| **2. Navegador real con respuestas interceptadas** | el comportamiento de la interfaz: cuántas peticiones, qué se muestra, qué se restaura | 🟡 **parcial — con un fallo abierto** |
+| **1. Tests automáticos** | la decisión de pedir o no pedir, y las guardas estructurales | ✅ 966 pasan |
+| **2. Navegador real con respuestas interceptadas** | el comportamiento de la interfaz: peticiones, restauración, scroll | ✅ **todos los escenarios** |
 | **3. Integración real con Supabase** | que el read-path lea de verdad, con la columna y los datos reales | ⏳ **pendiente**: necesita la migración `008` |
 
 ⚠️ El nivel 2 usa datos inventados servidos desde el navegador. **No prueba nada
 de Supabase ni de producción**, y no reemplaza al nivel 3.
 
-### Nivel 2: cómo se corrió
+## El fallo de restauración, y su causa demostrada
 
-`next dev` apuntado al worktree (puerto 3098), viewport 820×900, y un
-interceptor de `window.fetch` instalado **desde el navegador** que responde
-`/api/upcoming` con el formato real de la API —`{ items, hayMas, total, page }`—
-sobre un dataset de 60 elementos (45 series + 15 películas), 20 por página. La
-app no se modificó: sólo la red.
+Al volver de una ficha, `/proximamente` no restauraba: volvía con Todos, 20
+tarjetas, página 1 y una petición que no debía existir.
 
-**Endpoints interceptados: `/api/upcoming` únicamente** (todas sus variantes:
-`page`, `mediaType`, `mix`). La ficha se dejó REAL: la primera tarjeta usa un
-`tmdb_id` que existe (`tv/290193`), así que `/titulo/tv/290193` y su
-`/api/title/...` fueron a la API de verdad. En un intento anterior se interceptó
-también `/api/title/` devolviendo `{}` y eso **rompió `DetailView`** (`Cannot read
-properties of undefined (reading 'filter')`) dejando la página en blanco: esa
-corrida se descartó por contaminada.
-
-Para entrar se navegó por SPA desde el Home —"Reintentar" del riel → "Ver
-todas"— para que el interceptor siguiera vivo al montar la vista.
-
-⚠️ **Las peticiones se contaron con el log del propio interceptor, no con
-`performance.getEntriesByType("resource")`.** Esa API **no se reinicia en las
-navegaciones internas de Next**: sólo se limpia en una carga de documento, así
-que para medir ficha → atrás habría acumulado las de antes. Sirve para una
-entrada con recarga completa y nada más; para todo lo demás hace falta un
-registro propio, o una marca previa que delimite cada escenario.
-
-### Nivel 2: lo que salió bien
-
-| Escenario | Esperado | Medido |
-|---|---|---|
-| Entrada nueva por SPA | 1 petición | ✅ **1** — `/api/upcoming?page=1` |
-| Tocar Series | 1 petición | ✅ **1** — `mediaType=tv&page=1`, 20 tarjetas |
-| "Cargar más" | 1 petición | ✅ **1** — `mediaType=tv&page=2`, 40 tarjetas |
-| Scroll efectivo | documento > viewport | ✅ 3927 px contra 900 |
-| Guardado del snapshot | página, items, filtro, scroll | ✅ `{pagina:2, items:40, filtro:"tv", scrollY:1000}` en `sessionStorage` |
-| Strict Mode duplica el arranque | no | ✅ no (activo: `StrictModeIfEnabled = true ? React.StrictMode : 0`) |
-
-### 🔴 Nivel 2: el fallo abierto
-
-**Al volver de la ficha con Atrás, la vista NO restaura.** Medido, con el
-snapshot correcto en `sessionStorage`:
-
-| | Antes de la ficha | Después de volver |
-|---|---|---|
-| Filtro | Series | **Todos** |
-| Tarjetas | 40 | **20** |
-| Página confirmada | 2 | **1** |
-| Peticiones a `/api/upcoming` | — | **1** (debía ser 0) |
-
-La traza instrumentada dice por qué:
+**La causa, medida con los stacks de cada acceso a `sessionStorage`** (no deducida
+de un listener de logging):
 
 ```
-55045  consumirVuelta? hay=false   @/proximamente
-55047  consumirVuelta? hay=false   @/proximamente   (2ª pasada de Strict Mode)
-55049  popstate                    @/proximamente
-55050  FETCH /api/upcoming?page=1
+67879.5  consumirVuelta      hay=false      <- la vista monta y DECIDE
+67879.8  leerLista           hay=true       <- el snapshot SÍ estaba
+67880.3  olvidarLista        {} olvidar     <- y lo BORRA
+67883.8  (listener de popstate agregado al final, o sea el ÚLTIMO)
+67884.0  marcarVuelta        MARCA          <- la marca llega 4,5 ms tarde
+67885.6  fetch /api/upcoming?page=1
 ```
 
-**El componente monta y consulta la marca de vuelta ~4 ms ANTES de que el
-`popstate` la escriba.** El listener del store la escribe en `popstate`, pero
-para entonces `useListaPaginada` ya decidió "entrada limpia" — y con
-`volvio:false`, `decidirRestauracion` además **borra el snapshot**
-(`olvidarLista`), así que la vuelta siguiente tampoco tiene qué restaurar.
+Tres hechos que fija esa traza:
 
-Eso contradice el supuesto escrito en `lista-paginada-store.ts`: *"al apretar
-atrás el orden es popstate → render de la ruta anterior → montaje de la vista"*.
-En esta medición el montaje llegó primero.
+1. **La marca se escribe después de que la vista decidió.** No es una hipótesis
+   sobre el orden: `marcarVuelta` aparece 4,5 ms más tarde que `consumirVuelta`,
+   y el stack dice que cada una vino de donde se espera.
+2. **El montaje ocurre DENTRO del evento `popstate`.** Un listener agregado al
+   final —o sea el último de la cola— corre a los 67883.8, después del montaje
+   (67879.5) y antes de `marcarVuelta` (67884.0). Next registra su `popstate` en
+   un `useEffect` de `AppRouter` y, adentro de ese handler, renderiza la ruta
+   restaurada.
+3. **El snapshot estaba y se perdió.** `leerLista` lo encontró; `decidirRestauracion`
+   con `volvio:false` llamó a `olvidarLista`.
 
-**Qué NO está establecido todavía**, y no hay que darlo por sabido:
+**Por qué el listener del store llegaba último:** se registraba al evaluar
+`hooks/lista-paginada-store.ts`, y ese módulo viaja en el chunk de cada ruta que
+lo importa. Se registraba recién cuando esa ruta se cargaba por primera vez — o
+sea después del de Next, que se registra al arrancar la app.
 
-* **Si lo introdujo este cambio.** La implementación anterior de `/proximamente`
-  usaba `useEstadoSimple`, que consume la MISMA marca en un efecto de montaje, así
-  que la carrera es estructuralmente la misma. En una corrida contra `main` la
-  restauración **sí** funcionó (filtro Series, 96 tarjetas, scroll 1200), pero su
-  traza muestra `consumirVuelta hay=true` **antes** del `popstate`, o sea que
-  encontró una marca **dejada por una vuelta anterior**, no por ésta. Es un
-  acierto por arrastre, no una prueba de que `main` no tenga la carrera.
-* **De qué depende el orden.** La hipótesis a medir es si el montaje es síncrono
-  cuando la ruta ya está en el caché del router de Next y asíncrono cuando hay que
-  pedir el RSC — lo que haría que la carrera dependa del caché y no del código de
-  la vista.
+**Por qué a veces parecía andar:** cuando quedaba una marca de una vuelta
+anterior sin consumir, la vista la encontraba y restauraba. Un acierto por
+arrastre. Las primeras corridas contra `main` que "funcionaron" eran justamente
+eso: su traza muestra `hay=true` **antes** del `popstate` de esa vuelta.
 
-Hasta resolverlo, **la restauración de `/proximamente` no está verificada y el
-requisito no se cumple**. Los escenarios que dependen de ella —el primer clic
-manual después de restaurar y el clic sobre el filtro ya activo— quedan sin
-medir, porque no hay restauración de la cual partir.
+### El arreglo
 
-⚠️ Esto NO se arregla tocando `lista-paginada-store` a las apuradas: lo comparten
-`/lista/miniseries`, `/lista/ultimos`, `/directores`, `/buscar`, `/categoria` y
-`/top`. Corresponde diagnosticarlo con el orden de eventos medido antes de
-proponer nada.
+`registrarVueltaAtras()`, idempotente, llamada en el **scope del módulo** de
+`components/NavHistorial.tsx` — un componente cliente del layout raíz, así que su
+módulo se evalúa al arrancar la app, **antes de cualquier efecto**, incluido el de
+`AppRouter`. El registro al evaluar el store se conserva como respaldo para quien
+lo importe sin pasar por el layout.
+
+Sin temporizadores, sin restaurar por el mero hecho de que exista un snapshot
+—entrar por link sigue empezando limpio— y sin tocar la invalidación por firma.
+
+⚠️ Es un arreglo del **mecanismo compartido**: lo usan `/lista/miniseries`,
+`/lista/ultimos`, `/directores`, `/buscar`, `/categoria` y `/top`. Los tres tipos
+de consumidor se verificaron en el navegador (abajo).
+
+## Nivel 2: cómo se corrió
+
+`next dev` apuntado al worktree (puerto 3098), viewport 820×900, e interceptor de
+`window.fetch` instalado desde el navegador que responde `/api/upcoming` con el
+formato real —`{ items, hayMas, total, page }`— sobre 60 elementos (45 series +
+15 películas), 20 por página. La app no se modificó: sólo la red.
+
+**Endpoint interceptado: `/api/upcoming` únicamente.** La ficha se dejó REAL: la
+primera tarjeta usa un `tmdb_id` que existe (`tv/290193`). Antes de cada recorrido
+se borraron **sólo** `yump:lista-paginada` y `yump:lista-vuelta`, y se verificó
+que no hubiera marca heredada.
+
+⚠️ Las peticiones se contaron con el log del interceptor. `performance
+.getEntriesByType("resource")` **no se reinicia en las navegaciones internas de
+Next**, así que no sirve para medir ficha → atrás.
+
+## Nivel 2: resultados, antes y después del arreglo
+
+| Escenario | Antes | Después |
+|---|---|---|
+| Entrada nueva por link | 1 petición ✅ | **1 petición** ✅ |
+| **Volver con Series** | 🔴 Todos, 20 tarjetas, 1 petición | ✅ **Series, 40 tarjetas, scroll 1100, 0 peticiones** |
+| **Volver con Todos** | 🔴 no restauraba | ✅ **Todos, 40 tarjetas, scroll 600, 0 peticiones** |
+| **Volver con Películas** | 🔴 no restauraba | ✅ **Películas, 15 tarjetas, scroll 400, 0 peticiones** |
+| Segunda vuelta seguida | — | ✅ **0 peticiones**, con la marca en `null` al irse |
+| Clic en el filtro activo | — | ✅ **0 peticiones** |
+| Primer cambio manual tras restaurar | — | ✅ **1**, `mediaType=movie&page=1` |
+| "Cargar más" tras restaurar | — | ✅ **1**, `mediaType=tv&page=3` (la siguiente a la confirmada) |
+| Entrada por link **con** snapshot previo | — | ✅ empieza limpio: Todos, 20, scroll 0, 1 petición |
+
+La traza después del arreglo, mismo recorrido:
+
+```
+63628.4  marcarVuelta    MARCA        <- ahora va PRIMERO
+63641.2  consumirVuelta  hay=true     <- y la vista la encuentra
+63642.2  DEL vuelta                   <- la consume
+63642.9  leerLista       hay=true     <- restaura
+```
+
+### Los otros consumidores del store
+
+| Vista | Mecanismo | Resultado |
+|---|---|---|
+| `/lista/miniseries` | `useListaPaginada` | ✅ 40 tarjetas y scroll 1300 restaurados (datos reales) |
+| `/categoria/terror` | store directo | ✅ tipo Series y scroll 900 restaurados |
+| `/top` | `useEstadoSimple` | ✅ 60 tarjetas y scroll 800 restaurados |
+
+⚠️ Queda una rareza **sólo de desarrollo**: con Strict Mode, la segunda pasada del
+efecto no encuentra la marca —la consumió la primera— y llama a `olvidarLista`,
+que borra el snapshot de `sessionStorage`. No rompe nada porque el estado de React
+ya tiene lo restaurado y el guardado siguiente lo reescribe, y en producción no
+hay doble invocación. Está anotado para que nadie lo persiga como un bug.
 
 ## 7. Confirmar que Home y `/proximamente` no devuelven 500
 

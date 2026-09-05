@@ -798,17 +798,28 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   conviene no leerle más de lo que dice: no monta `UpcomingAllView`, no ejecuta
   `useListaPaginada` ni `sessionStorage`, no ejecuta React, y **no prueba la
   restauración del scroll**. Fija la decisión de pedir o no pedir.
-  🔴 **Y el modelo NO alcanzó: la prueba en navegador real encontró que
-  `/proximamente` NO restaura al volver de una ficha.** Medido con el snapshot
-  correcto en `sessionStorage`: vuelve con Todos, 20 tarjetas, página 1 y una
-  petición que no debía existir. La traza muestra que el componente consulta la
-  marca de vuelta ~4 ms ANTES de que el `popstate` la escriba, así que
-  `decidirRestauracion` decide "entrada limpia" y de paso **borra el snapshot**.
-  Eso contradice el supuesto escrito en `lista-paginada-store.ts` ("popstate →
-  render → montaje"). **No está establecido si lo introdujo este cambio**: la
-  implementación anterior usaba `useEstadoSimple`, que consume la misma marca en un
-  efecto de montaje, y la corrida contra `main` que sí restauró encontró una marca
-  dejada por una vuelta ANTERIOR. Ver `docs/UPCOMING.md`, "el fallo abierto".
+  🔴 **El modelo no alcanzó: la prueba en navegador encontró que la restauración
+  estaba rota, y la causa era el ORDEN DE REGISTRO del listener de `popstate`.**
+  Medido con los stacks de cada acceso a `sessionStorage`: `consumirVuelta` corría
+  a los 67879.5 ms con `hay=false`, `leerLista` confirmaba que el snapshot SÍ
+  estaba, `olvidarLista` lo borraba, y `marcarVuelta` llegaba **4,5 ms después**.
+  Un listener agregado al final corría a los 67883.8, o sea que **el montaje pasa
+  DENTRO del evento popstate**: Next registra el suyo en un `useEffect` de
+  `AppRouter` y adentro de ese handler renderiza la ruta restaurada. El del store
+  se registraba al evaluar su módulo, que viaja en el chunk de cada ruta, así que
+  quedaba último. Cuando "andaba" era por arrastre: una marca sin consumir de una
+  vuelta anterior.
+  **Arreglo:** `registrarVueltaAtras()` idempotente, llamada en el SCOPE DEL MÓDULO
+  de `components/NavHistorial.tsx` —layout raíz, se evalúa al arrancar, antes de
+  cualquier efecto—. Sin temporizadores y sin restaurar por el solo hecho de que
+  haya snapshot: entrar por link sigue empezando limpio. Verificado en navegador:
+  volver con Todos, Películas y Series restaura filtro, tarjetas, página y scroll
+  con **0 peticiones**; el primer cambio manual pide 1; "Cargar más" tras restaurar
+  pide la siguiente a la confirmada. Y los tres consumidores del store compartido
+  —`/lista/miniseries`, `/categoria`, `/top`— restauran.
+  ⚠️ En desarrollo, la 2ª pasada de Strict Mode llama a `olvidarLista` y borra el
+  snapshot de `sessionStorage`; no rompe nada porque el estado de React ya tiene lo
+  restaurado y el guardado siguiente lo reescribe.
 - **En el App Router, Strict Mode está ACTIVO en desarrollo** si
   `next.config.mjs` no dice lo contrario, así que React invoca los efectos dos
   veces al montar. Dos cosas que podrían romperse y no lo hacen: la petición de
