@@ -5,8 +5,9 @@ import OfflineState from "../pwa/OfflineState";
 import { useOnline } from "@/hooks/useOnline";
 import { useListaPaginada } from "@/hooks/useListaPaginada";
 import {
-  decidirCambioDeFiltro, estadoFiltroInicial, iniciar, respuestaVigente,
-  type EstadoFiltro,
+  alFallarLaTanda, alLlegarLaTanda, decidirCambioDeFiltro, estadoFiltroInicial,
+  estadoTandaInicial, iniciar, paginaAPedir, respuestaVigente, unir,
+  type EstadoFiltro, type EstadoTanda,
 } from "@/hooks/filtro-paginado-nucleo";
 import type { UIUpcoming } from "@/lib/types";
 
@@ -41,7 +42,9 @@ const ETIQUETAS: { valor: Filtro; texto: string }[] = [
 export default function UpcomingAllView() {
   const [filtro, setFiltro] = useState<Filtro>("all");
   const [items, setItems] = useState<UIUpcoming[]>([]);
-  const [page, setPage] = useState(1);
+  // 🔴 `tanda.confirmada` es la página que YA LLEGÓ, no la que se pidió. Ver
+  // `EstadoTanda`: adelantarla antes de la respuesta salteaba la tanda que fallaba.
+  const [tanda, setTanda] = useState<EstadoTanda>(estadoTandaInicial);
   const [hayMas, setHayMas] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +65,10 @@ export default function UpcomingAllView() {
     clave: "proximamente",
     firma: "",
     items,
-    pagina: page,
+    // Se guarda la CONFIRMADA. Guardar una página pedida y no llegada dejaba el
+    // hueco escrito en el snapshot: al volver de una ficha, "Cargar más" seguía
+    // desde la siguiente y la tanda fallada no se recuperaba nunca.
+    pagina: tanda.confirmada,
     hayMas,
     extra: { filtro, total },
     listo: !loading && items.length > 0,
@@ -84,20 +90,23 @@ export default function UpcomingAllView() {
       })) return;
       if (!res.ok) throw new Error(j?.error ?? "error");
       const got: UIUpcoming[] = j.items ?? [];
-      // Al pedir la tanda siguiente NO se borra lo que ya está: se concatena.
-      // El dedup por `tipo:id` es una guarda permanente — la selección se
-      // reconstruye en cada pedido, y el sync de las 6am puede cambiar la tabla
-      // entre dos páginas.
-      setItems((prev) => {
-        if (p === 1) return got;
-        const vistos = new Set(prev.map((i) => `${i.type}:${i.id}`));
-        return [...prev, ...got.filter((i) => !vistos.has(`${i.type}:${i.id}`))];
-      });
+      // Al pedir la tanda siguiente NO se borra lo que ya está: se concatena sin
+      // repetir. `unir` cubre el reintento que devuelve la misma tanda, y también
+      // que la selección se reconstruya entre dos pedidos (el sync corre a las 6am).
+      setItems((prev) => (p === 1 ? got : unir(prev, got, (i) => `${i.type}:${i.id}`)));
       setHayMas(!!j.hayMas);
       if (typeof j.total === "number") setTotal(j.total);
       setFailed(false);
+      // Recién ACÁ avanza la página: la tanda llegó completa.
+      setTanda((t) => alLlegarLaTanda(t, p));
     } catch {
-      if (myReq === reqId.current) setFailed(true);
+      if (myReq === reqId.current) {
+        // La página confirmada no se mueve, así que el reintento pide esta misma.
+        setTanda((t) => alFallarLaTanda(t, p));
+        // El error a pantalla completa es sólo para la primera carga; una tanda
+        // adicional que falla no puede borrar lo que el usuario ya está mirando.
+        if (p === 1) setFailed(true);
+      }
     } finally {
       if (myReq === reqId.current) setLoading(false);
     }
@@ -120,7 +129,7 @@ export default function UpcomingAllView() {
 
     if (inicial) {
       setItems(inicial.items);
-      setPage(inicial.pagina);
+      setTanda({ confirmada: inicial.pagina, falloTanda: false });
       setHayMas(inicial.hayMas);
       setTotal(inicial.extra?.total ?? null);
       if (inicial.extra?.filtro) setFiltro(inicial.extra.filtro);
@@ -132,7 +141,7 @@ export default function UpcomingAllView() {
     // arriba es la otra mitad — una navegación SPA puede llegar con el scroll
     // heredado de la pantalla anterior.
     reiniciar();
-    setPage(1);
+    setTanda(estadoTandaInicial);
     if (r.accion.tipo === "recargar") load(filtroInicial, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase, inicial]);
@@ -147,11 +156,14 @@ export default function UpcomingAllView() {
     setItems([]);
     setHayMas(false);
     setTotal(null);
-    setPage(1);
+    setTanda(estadoTandaInicial);
     load(filtro, 1);
   }, [filtro, load, reiniciar]);
 
-  const more = () => { const next = page + 1; setPage(next); load(filtro, next); };
+  // Avanzar y reintentar son la MISMA acción: pedir `confirmada + 1`. Como la
+  // confirmada no se movió cuando falló, esto vuelve a pedir exactamente la
+  // página que falló, sin saltearla y sin tener que recordar cuál era.
+  const more = () => load(filtro, paginaAPedir(tanda));
 
   if ((!online || failed) && !items.length) {
     return <div className="wrap"><OfflineState onRetry={() => load(filtro, 1)} /></div>;
@@ -180,7 +192,16 @@ export default function UpcomingAllView() {
         )}
       </div>
       {loading && <p className="loading">Cargando…</p>}
-      {hayMas && !loading && items.length > 0 && (
+      {/* Aviso DISCRETO al pie: la tanda falló pero lo que ya está sigue en
+          pantalla, así que no corresponde el estado de error a pantalla completa.
+          El botón reintenta la misma página. */}
+      {tanda.falloTanda && !loading && (
+        <p className="empty-note" role="status" style={{ textAlign: "center" }}>
+          No se pudo cargar el resto.{" "}
+          <button className="up-retry" onClick={more}>Reintentar</button>
+        </p>
+      )}
+      {hayMas && !loading && !tanda.falloTanda && items.length > 0 && (
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <button className="btn ghost" onClick={more}>Cargar más</button>
         </div>

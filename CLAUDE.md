@@ -711,12 +711,27 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   romanizado (`BLEACH`, `BEYBLADE X`, `MAO`). **`origin_country` NO se agregó**:
   se midió y aporta CERO títulos, los mismos 76 que el idioma.
   El tope de anime del **20% se cumple en cada tanda acumulada**, no sólo al final,
-  y tiene dos mitades: el cupo global (`a ≤ M·0,25`) elige CUÁLES entran por
-  popularidad, y el recorrido garantiza el prefijo. ⚠️ **El tope NO es lo que baja
-  el ruido** — el cupo por fecha solo ya deja 10,5%, y el tope lleva a 6,2%: su
-  valor es ser una garantía para el día que TMDB publique una tanda grande de
-  anime. Un anime rechazado se descarta, no se posterga (postergarlo lo movería de
-  fecha y reintentarlo lo duplicaría entre páginas).
+  Y lo que entra es el conjunto de **máxima popularidad** que lo cumple. El despeje
+  es lo que lo vuelve tratable: si `m` no-anime van antes de un título, y ese
+  título termina siendo el `j`-ésimo anime, el tope pide `j/(m+j) ≤ 1/5`, o sea
+  **`j ≤ ⌊m/4⌋`** — cada anime tiene un puesto máximo y no hay que simular nada.
+  Eso es la factibilidad de un scheduling con plazos, cuyos conjuntos factibles
+  forman un **matroide**, así que el greedy por popularidad descendente devuelve el
+  óptimo (verificado contra fuerza bruta, 3.000 casos, 0 sub-óptimos).
+  ⚠️ **Se decide con la fracción `1/5`, no con `0.20`**: con 172 no-anime antes y
+  puesto 43, la cuenta en coma flotante da falso y `4·43 ≤ 172` da verdadero. Un
+  test ata las dos constantes.
+  ⚠️ **La versión anterior era incorrecta** y por eso la auditoría la rechazó:
+  elegía un cupo global por popularidad y lo gastaba en orden cronológico, así que
+  los anime del medio consumían el tope y el posterior más popular quedaba afuera.
+  ⚠️ **Un anime puede seguir quedando afuera por su FECHA, y no es el mismo
+  problema**: *Bleach* (el más popular de la agenda) cae el primer día con 2
+  no-anime delante, así que su puesto máximo es `⌊2/4⌋ = 0` — 1 de 3 elementos es
+  el 33%, o sea que NINGÚN conjunto que lo contenga cumple el 20%.
+  ⚠️ **El tope NO es lo que baja el ruido** — el cupo por fecha solo ya deja 10,5%,
+  y el tope lleva a 8,3%: su valor es ser una garantía para el día que TMDB publique
+  una tanda grande de anime. Un anime que no entra se descarta, no se posterga
+  (postergarlo lo movería de fecha y reintentarlo lo duplicaría entre páginas).
   ⚠️ **La migración `008` va ANTES del deploy.** Sin la columna
   `original_language`, PostgREST responde 400 y `/api/upcoming` **entero** devuelve
   500 — riel del Home y watchlist incluidos. No necesita backfill: el sync hace
@@ -726,6 +741,19 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `upcomingMix`, que pedía `ceil(limit/2)+3` de cada tipo asumiendo oferta en los
   dos: con UNA película en la agenda devolvía **12 de 15** y ponía esa película
   —del 30/09— en la **segunda** posición, entre dos títulos del 04/09.
+- **En "Cargar más", la página confirmada NO avanza hasta que la tanda llegó**
+  (`EstadoTanda` en `hooks/filtro-paginado-nucleo.ts`). La primera versión hacía
+  `const next = page + 1; setPage(next); load(next)`, o sea que adelantaba la
+  página antes de conocer el resultado: si la tanda 2 fallaba, el toque siguiente
+  pedía la 3 y la 2 quedaba **salteada para siempre**, con un hueco invisible en la
+  lista que ningún reintento recuperaba — y el snapshot lo guardaba, así que volver
+  de una ficha heredaba el hueco. Con la página confirmada, **reintentar y avanzar
+  son la misma cuenta**: pedir `confirmada + 1`. Un fallo de tanda adicional
+  conserva lo visible y muestra un aviso discreto al pie; el estado de error a
+  pantalla completa queda sólo para la primera carga, cuando no hay nada que
+  mostrar. `unir` deduplica por `tipo:id` (un reintento puede devolver la misma
+  tanda) y `alLlegarLaTanda` usa `Math.max`, así que una respuesta vieja no
+  retrocede la página.
 - **El selector de "Próximamente" se tragaba el primer clic, y no era una carrera
   de respuestas: no se emitía ninguna petición** (`hooks/filtro-paginado-nucleo.ts`).
   `filtroPrevio` era un `useRef(null)` que se inicializaba DENTRO del efecto que lo

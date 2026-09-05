@@ -225,20 +225,84 @@ test("ningún anime de baja popularidad entra: el cupo se reserva para los de ar
   }
 });
 
-test("el anime más popular PUEDE quedar afuera si llega último, y está documentado", () => {
-  // Fija la tensión entre las dos mitades del tope, para que nadie la descubra
-  // como si fuera un bug. El cupo global mira popularidad; el recorrido de
-  // prefijo se gasta en orden cronológico. Ver el comentario de
-  // `seleccionarProximamente`.
+/** El tope se cumple en TODO prefijo de la lista, no sólo al final. */
+function topeEnTodoPrefijo(l: UIUpcoming[]): { ok: boolean; detalle: string } {
+  for (let n = 1; n <= l.length; n++) {
+    const a = l.slice(0, n).filter(esAnime).length;
+    if (a > TOPE_ANIME * n) {
+      return { ok: false, detalle: `prefijo ${n}: ${a} anime = ${(a * 100 / n).toFixed(1)}%` };
+    }
+  }
+  return { ok: true, detalle: "" };
+}
+
+const esCronologico = (l: UIUpcoming[]) =>
+  l.every((x, i) => i === 0 || l[i - 1].releaseDate <= x.releaseDate);
+
+test("varios anime tempranos flojos NO le sacan el lugar a uno posterior más popular", () => {
+  // 🔴 EL CASO QUE LA VERSIÓN ANTERIOR FALLABA. El cupo se elegía por popularidad
+  // pero se gastaba en orden cronológico, así que los anime del medio lo
+  // consumían y el del día 10 —el más popular de todos— quedaba afuera: entraban
+  // anime6..anime9. Ahora entran anime7..anime10.
   const entrada: UIUpcoming[] = [];
   for (let d = 1; d <= 10; d++) {
     const f = `2026-10-${String(d).padStart(2, "0")}`;
     entrada.push(anime(f, d * 100, { title: `anime${d}` }), serie(f, 500, { title: `x${d}` }),
       serie(f, 400, { title: `y${d}` }));
   }
-  const cuales = titulos(seleccionarProximamente(entrada)).filter((t) => t.startsWith("anime"));
-  assert.deepEqual(cuales, ["anime6", "anime7", "anime8", "anime9"]);
-  assert.ok(!cuales.includes("anime10"), "cambió el comportamiento: revisar el comentario");
+  const l = seleccionarProximamente(entrada);
+  const cuales = titulos(l).filter((t) => t.startsWith("anime"));
+
+  assert.ok(cuales.includes("anime10"),
+    `quedó afuera el más popular; entraron ${cuales.join(",")}`);
+  assert.ok(!cuales.includes("anime6"),
+    `entró uno menos popular en lugar del mejor: ${cuales.join(",")}`);
+  assert.deepEqual(cuales, ["anime7", "anime8", "anime9", "anime10"]);
+
+  // Y el intercambio no rompió ninguna de las otras dos garantías.
+  const t = topeEnTodoPrefijo(l);
+  assert.ok(t.ok, `se violó el tope acumulado — ${t.detalle}`);
+  assert.ok(esCronologico(l), "el orden final dejó de ser cronológico");
+  // Mismo tamaño que antes: es un intercambio, no un aflojamiento del tope.
+  assert.equal(cuales.length, 4);
+});
+
+test("el intercambio elige el conjunto de MÁXIMA popularidad, no sólo uno mejor", () => {
+  // Cuatro anime tempranos de popularidad baja y uno final altísimo, con el tope
+  // tan justo que sólo cabe UNO. Tiene que ser el mejor.
+  const entrada: UIUpcoming[] = [];
+  for (let d = 1; d <= 5; d++) {
+    const f = `2026-11-${String(d).padStart(2, "0")}`;
+    entrada.push(serie(f, 500, { title: `x${d}` }));
+    entrada.push(anime(f, d === 5 ? 900 : d * 10, { title: `anime${d}` }));
+  }
+  const l = seleccionarProximamente(entrada);
+  const cuales = titulos(l).filter((t) => t.startsWith("anime"));
+  assert.deepEqual(cuales, ["anime5"], "no eligió el único anime que convenía");
+  assert.ok(topeEnTodoPrefijo(l).ok);
+  assert.ok(esCronologico(l));
+});
+
+test("con el tope holgado entran TODOS los anime, no sólo los mejores", () => {
+  // La otra dirección: el intercambio no puede volverse un recorte. Con mucho
+  // material no-anime delante, los dos anime del final caben los dos.
+  const entrada: UIUpcoming[] = [];
+  for (let d = 1; d <= 20; d++) {
+    const f = `2026-11-${String(d).padStart(2, "0")}`;
+    entrada.push(serie(f, 500, { title: `x${d}` }), serie(f, 400, { title: `y${d}` }));
+  }
+  entrada.push(anime("2026-11-21", 10, { title: "flojo" }));
+  entrada.push(anime("2026-11-22", 900, { title: "popular" }));
+  const cuales = titulos(seleccionarProximamente(entrada)).filter(
+    (t) => t === "flojo" || t === "popular");
+  assert.deepEqual(cuales, ["flojo", "popular"]);
+});
+
+test("el tope entero y TOPE_ANIME no pueden divergir", () => {
+  // `TOPE_ANIME` es el número documentado; la decisión se toma con la fracción
+  // 1/5 para no depender de coma flotante. Si alguien cambia uno y no el otro,
+  // esto falla.
+  assert.equal(TOPE_ANIME, 1 / 5);
 });
 
 test("sin material fuera de anime la lista queda CORTA, no se rellena con anime", () => {

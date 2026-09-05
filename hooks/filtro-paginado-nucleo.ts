@@ -94,3 +94,88 @@ export function respuestaVigente(opts: {
   return opts.reqDeLaRespuesta === opts.reqActual
     && opts.filtroDeLaRespuesta === opts.filtroActual;
 }
+
+// ============================================================================
+// "Cargar más": la página confirmada NO avanza hasta que la respuesta llegó bien
+// ============================================================================
+
+/**
+ * Estado de la paginación por tandas.
+ *
+ * 🔴 `confirmada` ES LA PÁGINA QUE YA LLEGÓ BIEN, no la que se pidió, y ésa es
+ * toda la corrección. La versión anterior hacía
+ *
+ *     const more = () => { const next = page + 1; setPage(next); load(f, next); }
+ *
+ * o sea que adelantaba la página ANTES de saber el resultado. Si la tanda 2
+ * fallaba, `page` ya valía 2, así que el siguiente toque pedía la 3: la tanda 2
+ * quedaba salteada para siempre y la lista tenía un hueco invisible. Y el
+ * snapshot que se guardaba decía "voy en la página 2" con los items de la 1, así
+ * que volver de una ficha heredaba el hueco.
+ *
+ * Con la página confirmada, reintentar no necesita recordar qué falló: pedir
+ * `confirmada + 1` **es** volver a pedir exactamente la misma página.
+ */
+export interface EstadoTanda {
+  /** Última página que llegó completa. 0 = todavía ninguna. */
+  confirmada: number;
+  /**
+   * Falló una tanda ADICIONAL. Se separa del fallo de la primera carga porque el
+   * remedio es distinto: sin nada en pantalla corresponde el estado de error a
+   * pantalla completa, y con la lista ya puesta corresponde un aviso discreto al
+   * pie que no tape lo que el usuario está mirando.
+   */
+  falloTanda: boolean;
+}
+
+export const estadoTandaInicial: EstadoTanda = { confirmada: 0, falloTanda: false };
+
+/** La página que hay que pedir ahora. Reintentar y avanzar son lo mismo acá. */
+export function paginaAPedir(e: EstadoTanda): number {
+  return e.confirmada + 1;
+}
+
+/**
+ * Llegó una tanda completa.
+ *
+ * `Math.max` y no una asignación: si una respuesta vieja se colara —el guard de
+ * `respuestaVigente` ya las descarta, esto es el cinturón— no puede hacer
+ * retroceder la página confirmada y provocar que se vuelva a pedir algo que ya
+ * está en pantalla.
+ */
+export function alLlegarLaTanda(e: EstadoTanda, pagina: number): EstadoTanda {
+  return { confirmada: Math.max(e.confirmada, pagina), falloTanda: false };
+}
+
+/**
+ * Falló una tanda. **`confirmada` no se toca**: es lo que hace que el reintento
+ * pida la misma página y que no quede ningún hueco.
+ */
+export function alFallarLaTanda(e: EstadoTanda, pagina: number): EstadoTanda {
+  return { confirmada: e.confirmada, falloTanda: pagina > 1 };
+}
+
+/** Volver a empezar: cambio de filtro, o entrada limpia por link. */
+export function reiniciarTanda(): EstadoTanda {
+  return estadoTandaInicial;
+}
+
+/**
+ * Concatena una tanda nueva sin repetir nada.
+ *
+ * Hace falta por tres caminos distintos y ninguno es hipotético: un reintento
+ * puede devolver la misma tanda que ya se pintó, la selección se reconstruye en
+ * cada pedido y el sync de las 6am puede cambiar la tabla entre dos páginas.
+ * También deduplica DENTRO de `nuevos`, no sólo contra `previos`.
+ */
+export function unir<T>(previos: T[], nuevos: T[], clave: (x: T) => string): T[] {
+  const vistos = new Set(previos.map(clave));
+  const salida = [...previos];
+  for (const n of nuevos) {
+    const k = clave(n);
+    if (vistos.has(k)) continue;
+    vistos.add(k);
+    salida.push(n);
+  }
+  return salida;
+}

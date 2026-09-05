@@ -29,8 +29,23 @@ import type { UIUpcoming } from "./types";
  */
 export const SERIES_POR_FECHA = 3;
 
-/** Tope de anime sobre el acumulado, en cada tanda. Ver `seleccionar`. */
+/** Tope de anime sobre el acumulado, en cada tanda. Ver `seleccionarProximamente`. */
 export const TOPE_ANIME = 0.20;
+
+/**
+ * El mismo tope como FRACCIÓN EXACTA, que es con lo que se decide.
+ *
+ * ⚠️ No es una duplicación decorativa: decidir con `0.20` da un resultado
+ * distinto en un caso real. Con 172 no-anime antes y rango 43, la cuenta
+ * `43 ≤ 172·0,20/0,80` es **falsa** en coma flotante —`0.2/0.8` sobre 172 da
+ * 43.00000000000001 en un lado y 43.000000000000004 en el otro— y `4·43 ≤ 172`
+ * es verdadera. Barrido de 400.080 combinaciones: la versión con flotantes
+ * discrepa en 1, la entera en 0.
+ *
+ * Hay un test que ata `TOPE_ANIME` a esta fracción para que no puedan divergir.
+ */
+const TOPE_NUM = 1;
+const TOPE_DEN = 5;
 
 /** Género "Animación" de TMDB. */
 const GENERO_ANIMACION = "animacion";
@@ -167,46 +182,87 @@ function cupoPorFecha(items: UIUpcoming[]): UIUpcoming[] {
 }
 
 /**
+ * El tope de rango de un anime: hasta qué puesto puede ocupar entre los anime.
+ *
+ * EL DESPEJE, que es lo que vuelve esto tratable. Sea `m` la cantidad de
+ * NO-anime que van antes de ese título en el orden cronológico final. Ese número
+ * es FIJO: no depende de qué anime se elijan, porque los anime no se cuentan
+ * entre sí. Si el título termina siendo el `j`-ésimo anime de la lista, su
+ * posición es `m + j`, y el tope pide que los anime no pasen de una fracción del
+ * acumulado hasta ahí:
+ *
+ *     j / (m + j) ≤ 1/5   ⟺   5j ≤ m + j   ⟺   4j ≤ m   ⟺   j ≤ ⌊m/4⌋
+ *
+ * O sea que **cada anime tiene un puesto máximo**, y no hace falta simular nada:
+ * un conjunto de anime cumple el tope en TODAS las tandas acumuladas si y sólo
+ * si, ordenado cronológicamente, el `j`-ésimo tiene tope de rango ≥ `j`.
+ *
+ * Alcanza con comprobarlo en las posiciones de los anime: agregar un no-anime
+ * alarga el prefijo sin sumar anime, así que sólo puede bajar la proporción.
+ */
+function topeDeRango(noAnimeAntes: number): number {
+  return Math.floor(TOPE_NUM * noAnimeAntes / (TOPE_DEN - TOPE_NUM));
+}
+
+/** ¿Este conjunto de anime, en orden cronológico, respeta todos los topes? */
+function respetaLosTopes(anime: UIUpcoming[], topes: Map<string, number>): boolean {
+  return anime.every((a, n) => (topes.get(clave(a)) ?? 0) >= n + 1);
+}
+
+/**
+ * Los anime que entran: el conjunto de MÁXIMA popularidad que respeta el tope.
+ *
+ * 🔴 LA VERSIÓN ANTERIOR ERA INCORRECTA y esto la reemplaza. Elegía un cupo
+ * global por popularidad y después recorría la lista en orden cronológico
+ * gastándolo, así que los anime del medio consumían el tope antes de que llegara
+ * uno posterior más popular. Con 10 fechas de un anime cada una y popularidad
+ * creciente, entraban los de los días 6 a 9 y **el del día 10 —el más popular de
+ * todos— se rechazaba**. Cumplía el tope, pero no cumplía "conservar los más
+ * populares", que es la mitad de la regla aprobada.
+ *
+ * POR QUÉ ESTE GREEDY ES ÓPTIMO, y no solamente mejor. Por el despeje de
+ * `topeDeRango`, la factibilidad es "el `j`-ésimo tiene tope ≥ `j`" — exactamente
+ * la condición de un scheduling con plazos, cuyos conjuntos factibles forman un
+ * **matroide**. Sobre un matroide, el greedy por peso descendente devuelve la
+ * base de peso máximo. Y el orden cronológico ya ordena por plazo, porque `m` es
+ * monótono creciente: cuanto más tarde cae un título, más no-anime tiene delante.
+ * Comprobado además contra fuerza bruta en 3.000 casos al azar: 0 sub-óptimos.
+ *
+ * Cambiar un anime temprano por otro posterior no puede romper el tope: sacarlo
+ * afloja todos los prefijos anteriores, y el que entra se comprueba igual.
+ *
+ * Un anime que no entra se DESCARTA, no se posterga: moverlo de fecha rompería
+ * el orden cronológico, y reintentarlo más adelante lo haría aparecer en dos
+ * páginas distintas. La lista queda más corta, que es lo correcto — rellenarla
+ * con más anime violaría el tope en silencio.
+ */
+function animeQueEntra(elegidos: UIUpcoming[]): Set<string> {
+  const topes = new Map<string, number>();
+  const candidatos: UIUpcoming[] = [];
+  let noAnimeAntes = 0;
+  // En orden cronológico, porque `m` se cuenta sobre ese orden.
+  for (const i of [...elegidos].sort(ordenCronologico)) {
+    if (!esAnime(i)) { noAnimeAntes++; continue; }
+    topes.set(clave(i), topeDeRango(noAnimeAntes));
+    candidatos.push(i);
+  }
+
+  // Greedy por popularidad descendente. `aceptados` se mantiene cronológico.
+  let aceptados: UIUpcoming[] = [];
+  for (const a of [...candidatos].sort(porRelevancia)) {
+    const prueba = [...aceptados, a].sort(ordenCronologico);
+    if (respetaLosTopes(prueba, topes)) aceptados = prueba;
+  }
+  return new Set(aceptados.map(clave));
+}
+
+/**
  * La selección completa, lista para paginar.
  *
  * DETERMINÍSTICA: con la misma entrada devuelve exactamente la misma salida, en
  * el mismo orden. Eso es lo que hace que paginar sea `slice(desde, hasta)` y que
  * dos páginas no puedan repetir ni saltear un título. Nada acá mira el reloj ni
  * usa `Math.random()`.
- *
- * El tope de anime tiene DOS mitades, y hacen falta las dos:
- *
- *  - **El cupo global** decide CUÁLES entran. Si el tope es el 20% del acumulado
- *    y hay `M` títulos que no son anime, entonces la cantidad `a` de anime
- *    cumple `a ≤ 0,20·(M + a)`, o sea `a ≤ M·0,20/0,80`. Con ese cupo se
- *    conservan los más populares, que es lo pedido.
- *  - **El recorrido** garantiza el tope en CADA tanda acumulada, no sólo al
- *    final. Un anime entra si además `(anime + 1) ≤ 0,20·(total + 1)`. Sin esto
- *    el total cerraría en 20% pero la primera página podía ser mitad anime.
- *
- * Un anime rechazado se DESCARTA, no se posterga: postergarlo lo movería a otra
- * fecha y rompería el orden cronológico, y reintentarlo más adelante lo haría
- * aparecer en dos páginas distintas. La lista queda más corta, que es lo que
- * corresponde — rellenar con más anime violaría el tope en silencio.
- *
- * ⚠️ LAS DOS MITADES PUEDEN TIRAR PARA LADOS DISTINTOS, y el resultado es que el
- * anime MÁS popular de todos puede quedar afuera. El cupo global mira
- * popularidad; el recorrido mira el orden cronológico y se va gastando. Si los
- * anime buenos están al final de la agenda, los del medio consumen el tope
- * primero. Trazado con 10 fechas de un anime cada una y el cupo en 5: entran los
- * de los días 6 a 9 y el del día 10 —el más popular— se rechaza, porque para
- * cuando llega ya hay 4 anime y `5 ≤ 0,20·23` es falso.
- *
- * Lo que SÍ queda garantizado, y es lo que importa: sólo los del cupo son
- * elegibles, así que **ningún anime de baja popularidad entra nunca**. En el
- * trazado, los días 1 a 5 no tienen ninguna chance.
- *
- * Se evaluó corregirlo con un intercambio —al rechazar uno, sacar a un admitido
- * menos popular de más atrás— y es correcto (quitar un anime temprano relaja
- * todos los prefijos, así que el tope se sigue cumpliendo). **No se implementó**
- * porque los datos reales no lo ejercitan: en la agenda del 2026-09-04 entran 6
- * anime en 97 elementos, un 6,2% contra el 20% permitido, así que el tope de
- * prefijo casi nunca aprieta. Sería complejidad para un caso que no ocurre.
  *
  * ⚠️ El tope del 20% NO es lo que baja el ruido, y conviene no atribuirle una
  * mejora ajena. Medido sobre la agenda del 2026-09-04: el cupo por fecha SOLO,
@@ -230,23 +286,10 @@ export function seleccionarProximamente(items: UIUpcoming[]): UIUpcoming[] {
   }
 
   const elegidos = cupoPorFecha(unicos);
-
-  const noAnime = elegidos.filter((i) => !esAnime(i)).length;
-  const cupoAnime = Math.floor(noAnime * TOPE_ANIME / (1 - TOPE_ANIME));
-  const permitidos = new Set(
-    elegidos.filter(esAnime).sort(porRelevancia).slice(0, cupoAnime).map(clave),
-  );
-
-  const salida: UIUpcoming[] = [];
-  let anime = 0;
-  for (const i of [...elegidos].sort(ordenCronologico)) {
-    if (!esAnime(i)) { salida.push(i); continue; }
-    if (!permitidos.has(clave(i))) continue;
-    if (anime + 1 > TOPE_ANIME * (salida.length + 1)) continue;
-    salida.push(i);
-    anime++;
-  }
-  return salida;
+  const permitidos = animeQueEntra(elegidos);
+  return elegidos
+    .filter((i) => !esAnime(i) || permitidos.has(clave(i)))
+    .sort(ordenCronologico);
 }
 
 /**

@@ -6,7 +6,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  decidirCambioDeFiltro, estadoFiltroInicial, iniciar, respuestaVigente,
+  alFallarLaTanda, alLlegarLaTanda, decidirCambioDeFiltro, estadoFiltroInicial,
+  estadoTandaInicial, iniciar, paginaAPedir, reiniciarTanda, respuestaVigente, unir,
 } from "./filtro-paginado-nucleo.ts";
 
 // ============================================================================
@@ -219,4 +220,176 @@ test("tres cambios seguidos: sólo la tercera respuesta es vigente", () => {
     filtroDeLaRespuesta: p.filtro, filtroActual: actual.filtro,
   }));
   assert.deepEqual(vigentes, [{ req: 3, filtro: "all" }]);
+});
+
+// ============================================================================
+// "Cargar más": la página confirmada no avanza si la tanda no llegó
+// ============================================================================
+
+interface Fila { id: number }
+const claveFila = (f: Fila) => `f:${f.id}`;
+
+/**
+ * La vista, reducida a lo que decide la paginación. Cada `tanda()` es un toque
+ * de "Cargar más" o de "Reintentar" — que acá es la MISMA acción, y ése es el
+ * punto: se pide `confirmada + 1`.
+ */
+function lista(porPagina = 3, totalFilas = 11) {
+  let estado = estadoTandaInicial;
+  let items: Fila[] = [];
+  const pedidas: number[] = [];
+  const servidor = (p: number): Fila[] => {
+    const desde = (p - 1) * porPagina;
+    return Array.from(
+      { length: Math.max(0, Math.min(porPagina, totalFilas - desde)) },
+      (_, n) => ({ id: desde + n + 1 }),
+    );
+  };
+  return {
+    /** Pide la página que corresponda. `falla` simula un error de red o un 500. */
+    tanda(falla = false) {
+      const p = paginaAPedir(estado);
+      pedidas.push(p);
+      if (falla) { estado = alFallarLaTanda(estado, p); return p; }
+      const got = servidor(p);
+      items = p === 1 ? got : unir(items, got, claveFila);
+      estado = alLlegarLaTanda(estado, p);
+      return p;
+    },
+    /** Una respuesta que llega repetida para la página que ya se confirmó. */
+    respuestaRepetida(p: number) {
+      items = unir(items, servidor(p), claveFila);
+      estado = alLlegarLaTanda(estado, p);
+    },
+    get ids() { return items.map((f) => f.id); },
+    get confirmada() { return estado.confirmada; },
+    get falloTanda() { return estado.falloTanda; },
+    get pedidas() { return pedidas; },
+  };
+}
+
+test("EL CASO PEDIDO: página 1 ok, 2 falla, reintento de 2 ok, después 3", () => {
+  const l = lista();
+
+  l.tanda();                                    // página 1
+  assert.deepEqual(l.ids, [1, 2, 3]);
+  assert.equal(l.confirmada, 1);
+
+  l.tanda(true);                                // página 2, falla
+  assert.deepEqual(l.ids, [1, 2, 3], "se perdieron los elementos ya visibles");
+  assert.equal(l.confirmada, 1, "avanzó la página confirmada con la tanda fallada");
+  assert.equal(l.falloTanda, true, "no marcó el fallo de la tanda adicional");
+
+  const reintento = l.tanda();                  // reintento
+  assert.equal(reintento, 2, `reintentó la página ${reintento} en vez de la 2`);
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6]);
+  assert.equal(l.confirmada, 2);
+  assert.equal(l.falloTanda, false, "quedó el aviso de error después de un reintento bueno");
+
+  l.tanda();                                    // página 3
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(l.confirmada, 3);
+
+  // Todo en orden, sin huecos y sin repetidos.
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(new Set(l.ids).size, l.ids.length, "hay repetidos");
+  assert.deepEqual(l.pedidas, [1, 2, 2, 3], "la secuencia de páginas pedidas no cierra");
+});
+
+test("una tanda que falla NO saltea la página: sin el arreglo quedaba un hueco", () => {
+  const l = lista();
+  l.tanda();          // 1
+  l.tanda(true);      // 2 falla
+  l.tanda();          // tiene que ser 2 otra vez, NO 3
+  assert.deepEqual(l.pedidas, [1, 2, 2]);
+  // El hueco que dejaba la versión vieja: [1,2,3, 7,8,9] sin el 4,5,6.
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6]);
+});
+
+test("dos fallos seguidos siguen reintentando la misma página", () => {
+  const l = lista();
+  l.tanda();
+  l.tanda(true);
+  l.tanda(true);
+  l.tanda(true);
+  assert.deepEqual(l.pedidas, [1, 2, 2, 2]);
+  assert.equal(l.confirmada, 1);
+  assert.deepEqual(l.ids, [1, 2, 3]);
+  l.tanda();
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6]);
+});
+
+test("una respuesta repetida no duplica nada ni retrocede la página", () => {
+  const l = lista();
+  l.tanda();
+  l.tanda();
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6]);
+  l.respuestaRepetida(2);       // llega otra vez la tanda 2
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6], "duplicó la tanda repetida");
+  assert.equal(l.confirmada, 2);
+  l.respuestaRepetida(1);       // y una vieja
+  assert.deepEqual(l.ids, [1, 2, 3, 4, 5, 6]);
+  assert.equal(l.confirmada, 2, "una respuesta vieja hizo retroceder la confirmada");
+});
+
+test("cinco cargas sucesivas: 20 + 20 hasta el final, sin huecos ni repetidos", () => {
+  const l = lista(20, 97);      // la selección real medida
+  const paginas = [l.tanda(), l.tanda(), l.tanda(), l.tanda(), l.tanda()];
+  assert.deepEqual(paginas, [1, 2, 3, 4, 5]);
+  assert.equal(l.ids.length, 97);
+  assert.deepEqual(l.ids, Array.from({ length: 97 }, (_, n) => n + 1));
+  assert.equal(new Set(l.ids).size, 97);
+});
+
+test("el fallo de la PRIMERA carga no es un fallo de tanda adicional", () => {
+  // Distinción que decide qué se muestra: sin nada en pantalla corresponde el
+  // estado de error a pantalla completa, no un aviso discreto al pie.
+  const l = lista();
+  l.tanda(true);
+  assert.equal(l.falloTanda, false, "marcó la primera carga como tanda adicional");
+  assert.equal(l.confirmada, 0);
+  assert.deepEqual(l.ids, []);
+});
+
+test("paginaAPedir: avanzar y reintentar son la misma cuenta", () => {
+  assert.equal(paginaAPedir(estadoTandaInicial), 1);
+  assert.equal(paginaAPedir({ confirmada: 3, falloTanda: false }), 4);
+  assert.equal(paginaAPedir({ confirmada: 3, falloTanda: true }), 4);
+});
+
+test("alFallarLaTanda no toca la página confirmada", () => {
+  const e = { confirmada: 4, falloTanda: false };
+  assert.equal(alFallarLaTanda(e, 5).confirmada, 4);
+  assert.equal(alFallarLaTanda(e, 5).falloTanda, true);
+});
+
+test("alLlegarLaTanda nunca retrocede", () => {
+  assert.equal(alLlegarLaTanda({ confirmada: 5, falloTanda: false }, 2).confirmada, 5);
+  assert.equal(alLlegarLaTanda({ confirmada: 5, falloTanda: false }, 6).confirmada, 6);
+});
+
+test("reiniciarTanda vuelve al estado inicial", () => {
+  assert.deepEqual(reiniciarTanda(), estadoTandaInicial);
+  assert.deepEqual(reiniciarTanda(), { confirmada: 0, falloTanda: false });
+});
+
+test("cambiar de filtro reinicia la paginación en 1", () => {
+  const l = lista();
+  l.tanda(); l.tanda(); l.tanda();
+  assert.equal(l.confirmada, 3);
+  // La vista llama a `setTanda(estadoTandaInicial)` y después pide la 1.
+  assert.equal(paginaAPedir(reiniciarTanda()), 1);
+});
+
+test("unir deduplica contra lo previo Y dentro de la tanda nueva", () => {
+  const previos = [{ id: 1 }, { id: 2 }];
+  const nuevos = [{ id: 2 }, { id: 3 }, { id: 3 }, { id: 4 }];
+  assert.deepEqual(unir(previos, nuevos, claveFila).map((f) => f.id), [1, 2, 3, 4]);
+});
+
+test("unir conserva el orden y no muta lo que recibe", () => {
+  const previos = [{ id: 5 }, { id: 1 }];
+  const nuevos = [{ id: 9 }, { id: 3 }];
+  assert.deepEqual(unir(previos, nuevos, claveFila).map((f) => f.id), [5, 1, 9, 3]);
+  assert.deepEqual(previos.map((f) => f.id), [5, 1], "mutó el array de entrada");
 });

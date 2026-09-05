@@ -140,13 +140,19 @@ Medido sobre las 238 filas vigentes del 2026-09-04, eso era:
 
 | | Antes | Después |
 |---|---|---|
-| Elementos | 100 | **97** |
-| Rango | 04/09 → 08/09 — **5 días de 50** | 04/09 → 01/12 — **50 días** |
+| Elementos | 100 | **96** |
+| Rango | 05/09 → 09/09 — **5 días de 50** | 05/09 → 01/12 — **50 días** |
 | Películas | 0 | 1 |
-| Estrenos de temporada | 1 | 71 |
+| Estrenos de temporada | 1 | 70 |
 | Episodios semanales | 99 | 25 |
-| **Anime** | **51 (51%)** | **6 (6,2%)** |
+| **Anime** | **51 (51%)** | **8 (8,3%)** |
 | Crunchyroll | 47% | 3,1% |
+
+⚠️ El diagnóstico original se midió el **04/09** y la columna "Después" está
+remedida el **05/09** con el algoritmo final. Los totales no son comparables al
+dígito entre dos días: el catálogo de TMDB deriva solo (238 filas vigentes contra
+239) y el sync corre a las 6am. Lo que no cambia entre corridas son las
+proporciones y los invariantes.
 
 **Los primeros seis días concentran 141 de los 238 elementos**, así que cualquier
 corte por fecha se los comía enteros. Por eso la selección va **antes** de
@@ -210,30 +216,61 @@ sido una columna sin consumidor.
 
 ### El tope del 20%
 
-Se aplica sobre el **acumulado de cada tanda**, no sólo sobre el total. Son dos
-mitades y hacen falta las dos:
+Se aplica sobre el **acumulado de cada tanda**, no sólo sobre el total. Y lo que
+entra es el conjunto de **máxima popularidad** que cumple eso — las dos mitades
+de la regla aprobada, sin ceder ninguna.
 
-- **El cupo global** decide cuáles entran: si hay `M` títulos que no son anime,
-  la cantidad `a` de anime cumple `a ≤ 0,20·(M + a)`, o sea `a ≤ M·0,25`. Dentro
-  de ese cupo se conservan los más populares.
-- **El recorrido** garantiza el tope en cada prefijo: un anime entra si además
-  `(anime + 1) ≤ 0,20·(total + 1)`.
+**El despeje es lo que lo vuelve tratable.** Sea `m` la cantidad de no-anime que
+van antes de un título en el orden cronológico final. Ese número es **fijo**: no
+depende de qué anime se elijan, porque los anime no se cuentan entre sí. Si ese
+título termina siendo el `j`-ésimo anime, su posición es `m + j`, y el tope pide:
 
-Un anime rechazado se **descarta**, no se posterga: postergarlo lo movería de
-fecha y reintentarlo lo haría aparecer en dos páginas. La lista queda más corta,
-que es lo correcto — rellenar violaría el tope en silencio.
+```
+j / (m + j) ≤ 1/5   ⟺   5j ≤ m + j   ⟺   4j ≤ m   ⟺   j ≤ ⌊m/4⌋
+```
+
+O sea que **cada anime tiene un puesto máximo** y no hay que simular nada: un
+conjunto cumple el tope en todas las tandas acumuladas si y sólo si, ordenado
+cronológicamente, el `j`-ésimo tiene puesto máximo ≥ `j`.
+
+Eso es exactamente la condición de factibilidad de un **scheduling con plazos**,
+cuyos conjuntos factibles forman un **matroide**. Sobre un matroide, el greedy
+por peso descendente devuelve la base de peso máximo, así que recorrer los
+candidatos por popularidad descendente y quedarse con cada uno que siga siendo
+factible da el conjunto **óptimo**, no simplemente uno bueno. Comprobado contra
+fuerza bruta en 3.000 casos al azar: 0 sub-óptimos.
+
+⚠️ **La decisión se toma con la fracción `1/5`, no con `0.20`.** No es
+duplicación decorativa: con 172 no-anime antes y puesto 43, `43 ≤ 172·0,20/0,80`
+es **falsa** en coma flotante y `4·43 ≤ 172` es verdadera. Barrido de 400.080
+combinaciones: la versión con flotantes discrepa en 1, la entera en 0. Un test
+ata las dos constantes para que no puedan divergir.
+
+Un anime que no entra se **descarta**, no se posterga: moverlo de fecha rompería
+el orden cronológico y reintentarlo lo haría aparecer en dos páginas. La lista
+queda más corta, que es lo correcto — rellenarla violaría el tope en silencio.
 
 ⚠️ **El tope del 20% NO es lo que baja el ruido.** Medido: el cupo por fecha
 **solo**, sin ningún tope de anime, ya deja la lista en 10,5%; con el tope queda
-en 6,2%. El valor real del tope es ser una **garantía** para el día que TMDB
+en 8,3%. El valor real del tope es ser una **garantía** para el día que TMDB
 publique una tanda grande de estrenos de anime.
 
-⚠️ **El anime más popular puede quedar afuera.** El cupo mira popularidad y el
-recorrido se gasta en orden cronológico, así que si los mejores están al final,
-los del medio consumen el tope primero. Lo que sí queda garantizado —y es lo que
-importa— es que **ningún anime de baja popularidad entra nunca**. Está fijado por
-un test. Se evaluó corregirlo con un intercambio y no se implementó: con 6 anime
-en 97 elementos (6,2% contra 20% permitido) los datos reales no lo ejercitan.
+#### La versión anterior era incorrecta
+
+Elegía un cupo global por popularidad y después lo gastaba recorriendo la lista
+en orden cronológico, así que los anime del medio consumían el tope antes de que
+llegara uno posterior más popular. Con 10 fechas de un anime cada una y
+popularidad creciente entraban los de los días 6 a 9 y **el del día 10 —el más
+popular de todos— se rechazaba**. Cumplía el tope y no cumplía "conservar los más
+populares". Hay un test con ese caso exacto que ahora exige `anime7..anime10`.
+
+⚠️ **Un anime puede seguir quedando afuera por su FECHA, y eso no es el mismo
+problema.** Medido el 2026-09-05: *Bleach* (popularidad 142, el más popular de la
+agenda) cae el **primer día**, con sólo 2 no-anime delante, así que su puesto
+máximo es `⌊2/4⌋ = 0` — ni siquiera puede ser el primer anime de la lista, porque
+1 de 3 elementos es el 33%. Es **imposible** bajo la regla del 20%, no una
+displacement: ningún conjunto que lo contenga es factible. Todos los demás
+candidatos —los 8 desde el 07/09— entraron.
 
 ## Paginación
 
@@ -255,6 +292,44 @@ determinística mientras la tabla no cambie, pero **el sync corre a las 6am** y 
 página pedida después podría salir de una selección distinta. Es la misma clase de
 limitación ya documentada para `/lista/miniseries`. El dedup por `tipo:id` al
 concatenar lo cubre.
+
+### "Cargar más": la página confirmada no avanza hasta que la tanda llegó
+
+🔴 **`tanda.confirmada` es la página que YA LLEGÓ, no la que se pidió.** La
+primera versión hacía
+
+```js
+const more = () => { const next = page + 1; setPage(next); load(f, next); };
+```
+
+o sea que adelantaba la página **antes** de conocer el resultado. Si la tanda 2
+fallaba, `page` ya valía 2 y el siguiente toque pedía la 3: la tanda 2 quedaba
+salteada para siempre y la lista tenía un **hueco invisible** —`[1..20, 41..60]`—
+que ninguna cantidad de reintentos recuperaba. Y el snapshot que se guardaba decía
+"voy en la página 2" con los items de la 1, así que volver de una ficha heredaba
+el hueco.
+
+Con la página confirmada, **reintentar y avanzar son la misma cuenta**: pedir
+`confirmada + 1`. No hay que recordar qué falló.
+
+Qué pasa cuando una tanda adicional falla:
+
+| | |
+|---|---|
+| Los elementos ya visibles | **se conservan** — no se borra nada |
+| La página confirmada | **no se mueve** |
+| El reintento | pide **exactamente la misma** página |
+| Lo que se muestra | aviso discreto al pie: "No se pudo cargar el resto · Reintentar" |
+| El estado de error a pantalla completa | **sólo** si falló la primera carga y no hay nada que mostrar |
+| Una respuesta repetida | `unir` deduplica por `tipo:id`; `alLlegarLaTanda` usa `Math.max` y no retrocede |
+
+La lógica vive en `hooks/filtro-paginado-nucleo.ts` —`EstadoTanda`,
+`paginaAPedir`, `alLlegarLaTanda`, `alFallarLaTanda`, `unir`— y no suelta dentro
+del componente, por el mismo motivo que el arreglo del selector: este proyecto no
+tiene arnés de DOM, así que un bug de coordinación sólo se descubriría usando la
+app. El test recorre la secuencia completa: página 1 bien, 2 falla, reintento de
+la 2 bien, después la 3 → los 9 elementos en orden, sin huecos ni repetidos, con
+la secuencia de páginas pedidas en `[1, 2, 2, 3]`.
 
 ## El riel del Home
 
