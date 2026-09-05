@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Yump Dev</string>
+    <string name="title_activity_main">Yump Dev</string>
+    <string name="package_name">ar.yump.app.dev</string>
+    <string name="custom_url_scheme">ar.yump.app.dev</string>
+</resources>
