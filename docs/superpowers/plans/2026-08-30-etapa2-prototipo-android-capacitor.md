@@ -1,9 +1,9 @@
 # Etapa 2 — Prototipo Android con Capacitor (plan, revisión 7)
 
-> **CP1 a CP9 están HECHOS** en `spike/capacitor-android`: la app corre en un
-> Android físico, pasó la matriz móvil y tiene los tres plugins que esa matriz
-> justificó, verificados en el teléfono. **CP10 no empezó.** Sigue sin `ios/` y
-> sin firma ni Play.
+> **CP1 a CP10 están HECHOS** en `spike/capacitor-android`: la app corre en un
+> Android físico, pasó la matriz móvil, tiene los tres plugins que esa matriz
+> justificó y los tráileres de YouTube reproducen sin necesidad de arreglo.
+> **CP11 no empezó.** Sigue sin `ios/` y sin firma ni Play.
 
 ## ✅ CP1 — completado el 30/08/2026
 
@@ -2320,29 +2320,94 @@ Preview `streamingcentral-cd2tr86cd-…vercel.app` con el Redis aislado
 (`/api/health`: `503`, `cache: "memoria"`, credenciales ausentes) durante las
 pruebas. Protección reactivada y verificada por HTTP al terminar.
 
-## CP10 — YouTube
+## ✅ CP10 — completado el 5 de septiembre de 2026 — el tráiler YA funciona
 
-**Precondiciones:** CP7 aprobado **y `/api/title/[tipo]/[id]` con CORS** (CP4).
-Sin ficha no hay tráiler. 🔵 Ventana de Preview de esta sesión.
+**Resultado: positivo, y sin cambiar una línea.** Los tráileres de YouTube
+reproducen dentro del WebView con `appId = ar.yump.app.dev`, firma debug,
+contenido local bajo `https://localhost`, API remota aislada y sin `server.url`.
 
-🔴 **Con `ar.yump.app.dev` y firma debug.**
+🔴 **NO SE APLICÓ NINGÚN ARREGLO, Y ESO ES EL RESULTADO.** Los experimentos 3 a 6
+del plan —Referer controlado, URL base, WebView Media Integrity y el parámetro
+`origin`— eran hipótesis para explicar un fallo. El fallo no ocurre, así que
+ejecutarlos habría sido fabricar un problema para justificar una solución.
 
-| # | Experimento | Observable |
+### Cómo se midió que REPRODUCE, no que carga
+
+El propio `TrailerPlayer` ya advierte que `onLoad` se dispara aunque YouTube
+muestre su página de error, así que cargar el iframe no prueba nada. Y la
+miniatura (`i.ytimg.com/.../maxresdefault.jpg`) también carga en ese caso.
+
+Lo que se midió:
+
+1. **El stream**: `rr3---sn-….googlevideo.com/videoplayback?…` devuelve **200**.
+   Eso son datos de video, no una imagen.
+2. **El reloj del reproductor**, por `postMessage` a la IFrame API
+   (`enablejsapi=1` ya estaba puesto), leído dos veces con 6 s de espera real:
+
+   | Ficha | t1 | t2 | avanzó |
+   |---|---|---|---|
+   | The Punisher: One Last Kill (`oSeqs_xeqv4`) | 89,68 s | 98,18 s | **8,5 s** |
+   | Along with the Gods (`5O5PVvHTWRo`) | 16,63 s | 25,14 s | **8,5 s** |
+
+   Avanza a velocidad real, en dos títulos distintos. `onError`: **ninguno**.
+3. **La pantalla**: la captura muestra un fotograma del tráiler con los controles
+   del reproductor, no una miniatura ni un cartel de error.
+
+### El error observado: NO hay ninguno
+
+Cero errores de YouTube en consola. Lo único que aparece son dos avisos benignos
+del propio reproductor —`accelerometer is not allowed in this document` y
+`deviceorientation events are blocked by permissions policy`—, que son de
+sensores y no afectan la reproducción, más dos 404 de los scripts de Vercel
+Analytics/Speed Insights, que es el §2.d ya previsto y ajeno a esto.
+
+**No se observó ningún "error 153"** ni "error de configuración del reproductor".
+
+### 🔴 El `Referer` medido: la auditoría se equivocaba
+
+`docs/CAPACITOR.md` §3.4 daba por sentado que en apps móviles el `Referer` viene
+vacío y que había que fijarlo con métodos nativos. **Medido en Network, no
+deducido de `location.origin`, y es falso en este contenedor.** El encabezado
+existe y cambia según quién pide:
+
+| Pedido | `Referer` | `Sec-Fetch-Site` |
 |---|---|---|
-| 1 | Abrir un tráiler sin tocar nada | el error exacto en consola remota |
-| 2 | **Medir si el `Referer` viaja** | Network de `chrome://inspect` |
-| 3 | Fijar `Referer: https://ar.yump.app.dev` | ¿desaparece el 153? |
-| 4 | URL base del contenido local | idem |
-| 5 | WebView Media Integrity | idem |
-| 6 | `origin=SITIO_PUBLICO` | 🔍 hipótesis adicional; **no** es la solución del `Referer` |
+| Documento del embed (navegación del iframe) | `https://localhost/` | `cross-site` |
+| Recursos internos de YouTube (css, js, `youtubei/v1/player`) | la URL completa del embed, con `origin=https%3A%2F%2Flocalhost` | `same-origin` |
+| Miniatura (`i.ytimg.com`) e íconos (`fonts.gstatic.com`) | `https://www.youtube-nocookie.com/` | `cross-site` |
+| `videoplayback` (googlevideo) | `https://www.youtube-nocookie.com/` + `Origin:` del mismo | `cross-site` |
 
-🔵 Si funciona el 5, **no implica adelantar identificador ni keystore**: se
-**eleva la pregunta** al dueño. El prototipo sigue con `.dev` y debug.
-🔴 Si ninguno funciona, **no se apagan los tráileres en silencio**: se documenta.
+O sea: el WebView **sí manda `Referer`**, y para el documento del embed es
+`https://localhost/`. YouTube lo acepta. La hipótesis de fijar
+`Referer: https://ar.yump.app.dev` no se probó porque no hay nada que arreglar, y
+probarla habría requerido intervención nativa sobre los encabezados — el límite
+que el plan pedía documentar antes de ampliar el alcance.
 
-**Estimación: 0,5–2 sesiones.**
+### Lo que el embed manda hoy
 
----
+```
+https://www.youtube-nocookie.com/embed/<key>
+  ?autoplay=1&mute=1&controls=1&rel=0&playsinline=1
+  &modestbranding=1&enablejsapi=1&cc_load_policy=1&cc_lang_pref=es
+  &origin=https://localhost
+```
+
+El `origin` sale de `window.location.origin` (`lib/trailer.ts:40`), que en el
+contenedor es el del servidor local. **Funciona así**, con el dominio
+`youtube-nocookie.com`. No se probó `origin=https://app.yump.ar`: cambiar un
+parámetro que hoy anda, para ver si sigue andando, no mide nada.
+
+### ⚠️ Lo que este resultado NO afirma
+
+- **No dice nada de la firma de publicación.** Se probó con firma **debug** y
+  `ar.yump.app.dev`, que es lo que CP10 autorizaba. Si WebView Media Integrity
+  llegara a intervenir, sería con otra firma o con el identificador definitivo —
+  hay que **volver a verificar esto** cuando se arme la build firmada.
+- **No se tocó WebView Media Integrity.** No hizo falta, y el plan pedía frenar
+  antes de cualquier decisión irreversible en ese terreno.
+- Se probaron **dos** tráileres. Un catálogo entero puede tener casos con embed
+  deshabilitado o bloqueo por región, que es la limitación ya documentada del
+  componente y no algo del contenedor.
 
 ## CP11 — Veredicto y cierre
 

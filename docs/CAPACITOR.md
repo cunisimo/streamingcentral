@@ -367,7 +367,34 @@ para arreglar el bug de compartir y expone `SITIO_PUBLICO`: es el ejemplo de la
 decisión 6, una pieza pensada para la web que sirve igual en los dos
 contenedores. **El segundo NO está resuelto**, y merece su propio apartado.
 
-### El tráiler de YouTube — ⚠️ ABIERTO, corregido el 30/08
+### El tráiler de YouTube — ✅ CERRADO el 5/09: FUNCIONA, y sin cambios
+
+> 🔴 **MEDIDO EN CP10, EN UN ANDROID FÍSICO. La preocupación de esta sección no
+> se materializó.** Con `appId = ar.yump.app.dev`, firma debug, contenido local
+> bajo `https://localhost` y sin `server.url`, los tráileres **reproducen**. Dos
+> títulos, con el reloj del reproductor leído por la IFrame API dos veces con 6 s
+> de espera: avanzó 8,5 s en los dos. `videoplayback` de googlevideo devuelve
+> 200. **Cero errores de YouTube en consola, y ningún "error 153".**
+>
+> 🔴 **Y ESTA SECCIÓN SE EQUIVOCABA EN SU PREMISA.** Daba por sentado que en una
+> app móvil el `Referer` viene vacío. Medido en Network —no deducido de
+> `location.origin`— el WebView **sí lo manda**: el documento del embed viaja con
+> `Referer: https://localhost/`, y los recursos internos de YouTube con la URL
+> completa del embed. YouTube lo acepta.
+>
+> No se fijó ningún `Referer` a mano, no se tocó WebView Media Integrity y no se
+> cambió el parámetro `origin`: no había nada que arreglar, y fabricar un arreglo
+> habría sido inventar el problema.
+>
+> ⚠️ **Lo que esto NO cierra:** se probó con firma **debug**. Si Media Integrity
+> llegara a intervenir sería con la firma de publicación o el identificador
+> definitivo, así que **hay que volver a verificarlo** cuando se arme la build
+> firmada. El detalle completo, en CP10 del plan de Etapa 2.
+
+Lo que sigue es la investigación previa, que se conserva porque explica el
+mecanismo y por qué se temía el problema.
+
+### El tráiler de YouTube — la preocupación original (30/08)
 
 **Acá había una afirmación mía que era falsa y conviene decirlo sin vueltas.**
 Este documento decía que el error 153 se arreglaba "con una línea", pasando
