@@ -683,6 +683,28 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   "Ver todas" lleva `?tipo=`, y `/lista/ultimos` lo recibe **desde el server**
   (no con `useSearchParams`, que forzaría un `<Suspense>`). **Al volver atrás
   manda el snapshot, no la URL**, igual que en `/categoria`.
+- **TRES COSTOS DISTINTOS, y mezclarlos lleva a conclusiones falsas**: llamadas
+  externas a **TMDB**, peticiones internas a **`/api/upcoming`** y consultas a
+  **Supabase**. En la Agenda de Estrenos, **`/api/upcoming` NO llama a TMDB ni una
+  vez** — verificado sobre el código: `lib/upcoming.ts` sólo importa
+  `supabaseServer`, y su única mención de TMDB es `TMDB_IMG`, que arma la URL de
+  una imagen sin tocar la red. **La agenda la escribe únicamente la Edge Function
+  `tmdb-sync`, y es la única que gasta cuota de TMDB.** O sea que menos peticiones
+  a `/api/upcoming` = menos consultas a Supabase y CERO efecto sobre TMDB.
+  El arreglo de restauración va en esa dirección: volver de una ficha pasó de 1
+  petición a **0** en los tres filtros, así que también son 0 consultas a Supabase.
+  ⚠️ **`original_language` no agregó ni una llamada**, y está verificado en el
+  camino de código, no supuesto: sale de `t`, que es el resultado de `discover` —
+  el mismo objeto del que ya salían `title` y `genre_ids`—; `discover/movie` y
+  `discover/tv` ya lo devolvían (comprobado contra la API); y `fusionarPorCampo`
+  hace `{ ...base }` pisando sólo título y sinopsis, así que la reparación de
+  idioma no lo pierde.
+  ⚠️ **Correr `syncUpcoming` a mano SÍ cuesta**, y es un costo de la corrida, no
+  del cambio: si se dispara el mismo día que el cron, se suma. El término que
+  domina es **una llamada por serie descubierta** (`tvDetailsConProveedores`), más
+  1 `discover` por página, 2 de `providerList` y los respaldos de idioma. El
+  desglose y los criterios de aceptación están en
+  `docs/medidas/2026-09-05-proximamente-salida.md`.
 - **"Próximamente" SELECCIONA antes de paginar, y el criterio vive en una función
   pura** (`lib/proximamente.ts`). La sección pedía 100 filas ordenadas por fecha:
   medido el 2026-09-04, eso eran 100 series de **5 días de los 50** con contenido,

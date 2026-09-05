@@ -411,3 +411,287 @@ posición, entre dos títulos del 04/09.
 
 ⚠️ **No revertir la migración con el código nuevo desplegado**: eso es
 exactamente el 500 del paso 1.
+
+---
+
+# Preparación del paso de integración (2026-09-05)
+
+**Nada de esto está ejecutado.** Es lo que hay que correr, con sus criterios de
+aceptación, y qué cuesta cada cosa.
+
+## 0. Las tres cosas que NO son lo mismo
+
+El costo de esta app tiene tres capas y mezclarlas lleva a conclusiones falsas:
+
+| | Qué es | Quién la paga | Cuota |
+|---|---|---|---|
+| **Llamada a TMDB** | tráfico saliente a `api.themoviedb.org` | **sólo la Edge Function `tmdb-sync`** | la de TMDB |
+| **Petición a `/api/upcoming`** | fetch del navegador a nuestra propia API | el cliente | invocaciones de Vercel |
+| **Consulta a Supabase** | `select` de PostgREST sobre `upcoming_content` | el server, por cada `/api/upcoming` | la de Supabase |
+
+**`/api/upcoming` NO llama a TMDB, ni una vez.** Verificado sobre el código:
+`lib/upcoming.ts` sólo importa `supabaseServer`, y su única mención de TMDB es
+`TMDB_IMG`, que arma la URL de una imagen — una cadena, sin red. La agenda la
+escribe únicamente el sync.
+
+De ahí la cadena que importa: **menos peticiones a `/api/upcoming` = menos
+consultas a Supabase, y CERO efecto sobre TMDB.**
+
+### El arreglo de restauración no agrega llamadas a TMDB
+
+No podría: no toca el sync. Y tampoco agrega peticiones internas — las quita.
+Medido en el navegador, volver de una ficha pasó de **1 petición** a
+`/api/upcoming` a **0** en los tres filtros. O sea:
+
+| | Antes | Después |
+|---|---|---|
+| Llamadas a TMDB al volver | 0 | **0** |
+| Peticiones a `/api/upcoming` al volver | 1 | **0** |
+| Consultas a Supabase al volver | 1 | **0** |
+
+El snapshot sale de `sessionStorage`. Es una mejora de costo, no un costo nuevo.
+
+---
+
+## 1. Aplicar la migración `008`
+
+```sql
+alter table public.upcoming_content
+  add column if not exists original_language text;
+```
+
+**Aceptación:** la sentencia termina sin error. Es `if not exists`, así que
+correrla dos veces también pasa.
+
+**Costo:** 0 TMDB · 0 `/api/upcoming` · 1 DDL. Columna nullable sin default: en
+Postgres es sólo metadata, no reescribe las ~250 filas ni toma un lock largo.
+
+## 2. Confirmar que la columna es `text` y nullable
+
+```sql
+select column_name, data_type, is_nullable
+from information_schema.columns
+where table_schema = 'public'
+  and table_name  = 'upcoming_content'
+  and column_name = 'original_language';
+```
+
+**Aceptación: exactamente una fila**, y `data_type = text`, `is_nullable = YES`.
+Cero filas = la migración no se aplicó. `is_nullable = NO` = alguien le puso un
+`not null`; hay que sacarlo, porque las filas viejas quedan en `NULL` hasta la
+próxima corrida del sync.
+
+## 3. Leerla con la anon key, por PostgREST
+
+⚠️ **Sin credenciales en la línea de comandos ni en logs**: las dos variables
+salen del entorno, y por eso los comandos no traen ningún valor literal. `-s -S`
+calla la barra de progreso pero deja pasar los errores.
+
+```bash
+# En una shell que ya tenga las variables cargadas desde .env.local.
+curl -s -S -w '\nHTTP %{http_code}\n' \
+  "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/upcoming_content?select=tmdb_id,original_language&limit=1" \
+  -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_ANON_KEY"
+```
+
+**Aceptación: `HTTP 200`** y un cuerpo que sea un array JSON con un objeto que
+tenga la clave `original_language` (su valor puede ser `null` antes del paso 5:
+eso es lo esperado, no un fallo).
+
+## 4. El SELECT COMPLETO del read-path
+
+Éste es el que decide, porque es literalmente el `select` que manda la app —
+incluido el join anidado a proveedores. El de arriba sólo prueba la columna suelta.
+
+```bash
+curl -s -S -w '\nHTTP %{http_code}\n' \
+  "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/upcoming_content?select=tmdb_id,media_type,title,poster_path,backdrop_path,overview,release_date,season_number,episode_number,episode_name,is_season_premiere,genre_ids,popularity,vote_average,original_language,upcoming_content_providers(provider_id)&limit=1" \
+  -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_ANON_KEY"
+```
+
+**Aceptación: `HTTP 200`** y el objeto trae `original_language` **y**
+`upcoming_content_providers` como array.
+
+⚠️ Si el select del código cambia, este comando queda viejo. La fuente de verdad
+es la constante `SELECT` de `lib/upcoming.ts`; conviene copiarla de ahí.
+
+### Ante un error, mirar el cuerpo — no el status solo
+
+| `code` | Qué es | Qué hacer |
+|---|---|---|
+| `42703` *undefined_column* | PostgREST no ve la columna | el paso 1 no se aplicó, o su caché de esquema está viejo: `notify pgrst, 'reload schema';` |
+| `42501` *insufficient_privilege* | el rol no puede leerla | `grant select on public.upcoming_content to anon;` |
+| otro / ninguno | **no se puede clasificar de antemano** | PostgREST tiene códigos propios, y la respuesta puede venir de un proxy o del gateway. Mirar **status, `code` y `message` juntos** |
+
+⚠️ `42501` llega como `401` **o** `403` según si la petición venía autenticada:
+**no todo `401`/`403` es una clave mal puesta.**
+Ver <https://docs.postgrest.org/en/v14/references/errors.html>.
+
+**Costo de los pasos 2 a 4:** 0 TMDB · 0 `/api/upcoming` · 3 consultas a Supabase.
+
+---
+
+## 5. Desplegar el sync, y su costo real en TMDB
+
+```bash
+supabase functions deploy tmdb-sync
+```
+
+### El deploy en sí: 0 llamadas a TMDB
+
+Desplegar no ejecuta nada. **El cambio tampoco agrega llamadas**, y esta vez está
+verificado sobre el camino de código, no supuesto:
+
+1. `original_language` se lee de `t`, que es el resultado de **`discover`** — el
+   mismo objeto del que ya salían `title`, `genre_ids` y `popularity`
+   (`sync-upcoming.ts`, películas y series). No hay un fetch nuevo.
+2. **`discover` ya devolvía el campo**, comprobado contra la API en las dos
+   formas: `discover/movie` y `discover/tv` lo traen en cada resultado.
+3. **La reparación de idioma no lo pierde**: `fusionarPorCampo`
+   (`_shared/idioma-nucleo.ts`) hace `{ ...base }` y sólo pisa `title`, `name` y
+   `overview`, así que el `original_language` del idioma base sobrevive la fusión
+   con el respaldo.
+4. Los cuatro sitios que llaman a TMDB en el sync —`discover`, su `discover` de
+   respaldo, `tvDetailsConProveedores` y `episodeDetails`— **no cambiaron**.
+
+### Ejecutar `syncUpcoming` a mano SÍ cuesta, y es aparte
+
+⚠️ **Es el costo de la corrida, no del cambio.** Una corrida manual gasta lo
+mismo que la del cron, y si se dispara el mismo día, se **suma** a ella.
+
+Estructura del gasto, leída del código (`SYNC_WINDOW_DAYS = 90`, sin
+`SYNC_MAX_PAGES`, tope de la fuente `TOPE_PAGINAS_TMDB = 500`, `BATCH = 10`):
+
+| Concepto | Llamadas |
+|---|---|
+| Catálogo de proveedores AR | **2** (`providerList` movie + tv) |
+| `discover` de películas | 1 por página de la ventana |
+| `discover` de series | 1 por página de la ventana |
+| `discover` de respaldo | 1 por página **que tenga títulos rotos** |
+| Detalle de cada serie descubierta | **1 por serie** (`tvDetailsConProveedores`, trae proveedores adentro) |
+| Nombre de episodio de respaldo | 1 por episodio que lo necesite |
+
+El término que domina es **una llamada por serie descubierta**. Como referencia
+del orden de magnitud, ya medido en este repo: la ventana tenía ~1900 series
+elegibles y `discover` pagina de a 20.
+
+🔴 **No se corrió para medirlo, y no se va a correr sin autorización.** Cuando se
+autorice, la propia respuesta de la función trae `{ candidates, kept, upserted,
+providers, dropped, deleted, window, durationMs }` y el log imprime
+`[idioma] fallback: N llamadas`, así que el número real queda registrado sin
+tener que estimarlo.
+
+**Aceptación del deploy:** `supabase functions list` muestra `tmdb-sync` con una
+versión mayor a la anterior (**v8** al escribir esto).
+
+## 6. Correr el sync y medir el llenado
+
+```bash
+curl -s -S -X POST "https://<ref>.supabase.co/functions/v1/tmdb-sync" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"job":"syncUpcoming"}'
+```
+
+⚠️ La service role key sale del entorno. **No pegar la respuesta con la clave en
+ningún lado**; el cuerpo de la respuesta no la trae, pero el comando sí.
+
+```sql
+select count(*) as filas,
+       count(original_language) as con_idioma,
+       count(*) - count(original_language) as nulas
+from public.upcoming_content
+where release_date >= (now() at time zone 'America/Argentina/Buenos_Aires')::date;
+```
+
+**Aceptación: `nulas = 0`.** `syncUpcoming` hace `upsert` con
+`onConflict: 'tmdb_id,media_type'` de la fila **entera**, así que toda fila
+vigente se reescribe con el idioma puesto.
+
+🟡 **Si quedan nulas, no es bloqueante**: son filas que el descubrimiento no
+volvió a ver y que la reconciliación borra a los `GRACE_DAYS` (2). Mientras
+estén, cuentan como anime sólo si están en Crunchyroll — 83% de recall en vez de
+100%. Anotar cuántas y seguir.
+
+Y el desglose, para ver que el dato tiene sentido:
+
+```sql
+select original_language, count(*)
+from public.upcoming_content
+where release_date >= (now() at time zone 'America/Argentina/Buenos_Aires')::date
+group by 1 order by 2 desc;
+```
+
+**Aceptación:** `ja` aparece con una cantidad del orden de las decenas. Medido el
+2026-09-04 sobre 238 filas: `en` 119, **`ja` 81**, `ko` 10, `es` 7, `zh` 5,
+`pt` 5, `fr` 4. Con `ja` en 0, la clasificación de anime quedaría sólo con
+Crunchyroll y habría que revisar el sync antes de seguir.
+
+---
+
+## 7. La prueba local contra Supabase real (después de la migración)
+
+Recién acá se puede probar el nivel 3. **En local, contra la misma base, sin
+desplegar la web.**
+
+```bash
+npm run dev     # o el preview del worktree
+```
+
+### Lo que hay que verificar, y con qué criterio
+
+| # | Qué | Aceptación |
+|---|---|---|
+| 1 | `/api/upcoming?page=1` | `200`, y el cuerpo trae `items`, `hayMas`, `total`, `page` |
+| 2 | Los tres filtros | `Todos` y `Series` con varias páginas; `Películas` con `hayMas:false`. Cada solapa, tipo puro |
+| 3 | Paginación | las páginas sucesivas no repiten ni saltean: servidos = únicos = `total` |
+| 4 | Anime | ≤ 20% en cada tanda acumulada |
+| 5 | Ninguna fecha con más de 3 series | contar por `releaseDate` |
+| 6 | **Restauración** | volver de una ficha con cada filtro: filtro, tarjetas, página y scroll, **0 peticiones a `/api/upcoming`** |
+| 7 | Primer cambio manual tras restaurar | **1** petición, `page=1` del filtro elegido |
+| 8 | Fallo y reintento de tanda | con la red cortada, "Cargar más" conserva lo visible y ofrece Reintentar; al volver la red, reintenta **la misma página**, sin hueco |
+| 9 | Home | `?mix=1&limit=15` devuelve **15** y en orden cronológico |
+
+**Costo de esta prueba: 0 llamadas a TMDB.** Todo el recorrido pega a
+`/api/upcoming`, que lee Supabase. Lo único que sube es el contador de consultas
+a Supabase: una por petición.
+
+⚠️ La ficha sí puede llamar a TMDB (`/api/title/...` pasa por `enrich`), así que
+conviene entrar a **la misma ficha** en las tres repeticiones: la segunda y la
+tercera salen del caché.
+
+## 8. La prueba manual del dueño — condición previa al merge
+
+**El merge no se propone hasta que el dueño pruebe la sección a mano.** Lo que
+conviene mirar, en este orden:
+
+1. Que `/proximamente` abra y muestre una agenda que **cubra semanas**, no cinco
+   días.
+2. Tocar **Películas** y que cambie **en el primer toque**.
+3. **Cargar más** cinco veces: suma de a 20, sin repetir, hasta que el botón se va.
+4. Entrar a una ficha y **volver con Atrás**: tiene que volver todo — filtro,
+   tarjetas y posición.
+5. Que el riel del Home muestre **15** y en orden de fecha.
+
+## Orden de ejecución, y qué bloquea qué
+
+```
+1 migración  ->  2 columna  ->  3 anon key  ->  4 SELECT completo
+                                                      |
+                                                      v
+                                    5 deploy sync -> 6 correr y medir
+                                                      |
+                                                      v
+                                              7 prueba local (nivel 3)
+                                                      |
+                                                      v
+                                              8 prueba manual del dueño
+                                                      |
+                                                      v
+                                                   MERGE
+```
+
+**Del 1 al 4 no se toca la web**: si algo falla ahí, nadie lo ve. El paso 5 es el
+primero que cambia algo que corre solo (el cron diario).

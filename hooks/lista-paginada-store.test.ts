@@ -225,9 +225,40 @@ test("REGRESIÓN: NavHistorial sigue montado en el layout raíz", () => {
     "si NavHistorial sale del layout, nadie registra el listener al arrancar");
 });
 
-test("el store expone el registro y es idempotente", async () => {
+test("sin window, registrarVueltaAtras no hace nada y no explota (el caso SSR)", async () => {
   const mod = await import("./lista-paginada-store.ts");
   assert.equal(typeof mod.registrarVueltaAtras, "function");
-  // Sin `window` (node) sale por el guard y no explota: es lo que corre en SSR.
+  assert.equal("window" in globalThis, false, "el entorno del test dejó de ser SSR-like");
   assert.doesNotThrow(() => { mod.registrarVueltaAtras(); mod.registrarVueltaAtras(); });
+});
+
+test("CON window, se registra UN solo listener de popstate por más que se llame de más", async () => {
+  // Lo que el test anterior NO probaba: que la idempotencia sirva para algo. Sin
+  // `window`, las dos llamadas salen por el guard y no dicen nada del navegador.
+  // Acá se monta un `window` mínimo y se CUENTA cuántas veces se registró, que es
+  // la propiedad que importa: el layout llama a `registrarVueltaAtras()` y el
+  // módulo también lo hace al evaluarse, así que sin la guarda habría dos.
+  const registros: string[] = [];
+  const g = globalThis as unknown as { window?: unknown };
+  g.window = {
+    addEventListener: (ev: string) => { registros.push(ev); },
+    location: { pathname: "/x" },
+  };
+  try {
+    // Hace falta una evaluación NUEVA del módulo para observar el registro que
+    // ocurre al importarlo; de ahí el parámetro que rompe la caché de módulos.
+    // El especificador va en una variable a propósito: así no es un import
+    // estático que `tsc` intente resolver.
+    const especificador = "./lista-paginada-store.ts?conWindow=1";
+    const mod = await import(especificador) as { registrarVueltaAtras: () => void };
+    assert.deepEqual(registros, ["popstate"],
+      "el módulo no registró al evaluarse, o registró de más");
+    mod.registrarVueltaAtras();
+    mod.registrarVueltaAtras();
+    mod.registrarVueltaAtras();
+    assert.deepEqual(registros, ["popstate"],
+      `quedaron ${registros.length} listeners: la guarda de idempotencia no sirve`);
+  } finally {
+    delete g.window;
+  }
 });
