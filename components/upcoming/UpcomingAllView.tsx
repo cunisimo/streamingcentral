@@ -128,8 +128,9 @@ export default function UpcomingAllView() {
   // ⚠️ Los dos `set*` de acá son seguros en Strict Mode, que en el App Router de
   // Next está ACTIVO en desarrollo cuando `next.config.mjs` no dice lo
   // contrario: React invoca los efectos dos veces al montar, y la segunda pasada
-  // sale por `arrancado.current`, que es un ref y sobrevive. Verificado en
-  // `hooks/arranque-restauracion.test.ts`.
+  // sale por `arrancado.current`, que es un ref y sobrevive. Modelado en
+  // `hooks/arranque-restauracion.test.ts` —que NO monta este componente— y a
+  // confirmar en el navegador, paso 6 del runbook.
   const arrancado = useRef(false);
   useEffect(() => {
     if (fase !== "listo" || arrancado.current) return;
@@ -178,7 +179,8 @@ export default function UpcomingAllView() {
    * `useCallback`, que nada verifica: alcanzaba con que alguien le agregara una
    * dependencia a `reiniciar` para que el efecto corriera en cada render y el bug
    * apareciera. Está fijado en `hooks/arranque-restauracion.test.ts`, que lo
-   * reproduce con la identidad inestable.
+   * reproduce con la identidad inestable — sobre un MODELO de estos efectos, no
+   * montando este componente.
    *
    * Como handler el problema no existe: **restaurar y que el usuario toque un
    * botón son dos cosas distintas por construcción**, no dos estados que haya que

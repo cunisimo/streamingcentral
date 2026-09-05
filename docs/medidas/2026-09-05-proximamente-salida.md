@@ -58,37 +58,62 @@ Por eso la comprobación que vale es preguntarle a PostgREST con la misma clave
 que usa la app, que ejercita rol, privilegios y RLS todos juntos:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' \
+curl -s -w '\nHTTP %{http_code}\n' \
   "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/upcoming_content?select=tmdb_id,original_language&limit=1" \
   -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
   -H "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_ANON_KEY"
 ```
 
-**Tiene que dar `200`.** Un `400` con `42703` es la columna que no existe o que el
-rol `anon` no tiene privilegio de leer; un `401`/`403` es la clave.
+**Tiene que dar `200`.** Se pide el cuerpo y no sólo el código a propósito: ante un
+error, **lo que dice qué pasó es el `code` y el `message` del JSON**, no el status.
 
-Si diera `400` con la columna ya creada, esto dice si el privilegio está:
+| Cuerpo | Qué es | Qué hacer |
+|---|---|---|
+| `42703` — *undefined_column* | la columna no existe para PostgREST | el paso 1 no se aplicó; o se aplicó y **el caché de esquema de PostgREST está viejo** (ver abajo) |
+| `42501` — *insufficient_privilege* | el rol no puede leer la columna | otorgar el `SELECT` (abajo) |
+| otro, sin `code` de Postgres | JWT / apikey | revisar la clave |
+
+⚠️ **`42501` llega como `401` o `403` según si la petición venía autenticada**, así
+que **no todo `401`/`403` es una clave mal puesta** — puede ser un privilegio que
+falta. Hay que leer el cuerpo para distinguirlos.
+Ver <https://docs.postgrest.org/en/v14/references/errors.html>.
+
+Si el cuerpo dice `42501`, el `grant` que falta:
 
 ```sql
-select table_name, column_name, privilege_type
-from information_schema.column_privileges
-where grantee = 'anon' and table_name = 'upcoming_content';
+-- Alcanza con el de tabla; el de columna es la alternativa más estrecha.
+grant select on public.upcoming_content to anon;
+-- o bien:  grant select (original_language) on public.upcoming_content to anon;
 ```
 
-Con un `grant` a nivel de tabla la vista no lista columna por columna y no hay
-nada que arreglar. Si lista columnas enumeradas y falta `original_language`, hay
-que agregarla: `grant select (original_language) on public.upcoming_content to anon;`.
+⚠️ **NO usar `information_schema.column_privileges` para saber si el permiso vino
+por tabla o por columnas: no sirve para eso.** Esa vista refleja los privilegios de
+tabla **como una fila por cada columna aplicable**, así que un `grant select on
+tabla` se ve exactamente igual que un `grant` columna por columna
+([docs](https://www.postgresql.org/docs/16/infoschema-column-privileges.html)). Si
+hiciera falta saber de dónde viene el privilegio, eso está en los ACL crudos —
+`pg_class.relacl` para la tabla y `pg_attribute.attacl` para la columna—, pero para
+este paso **no hace falta**: la comprobación que decide es el `curl` de arriba, y
+el remedio es el `grant`.
+
+🟡 **Si el paso 1 salió bien y esto igual da `42703`**, puede ser el caché de
+esquema de PostgREST, que no se enteró del `ALTER TABLE`:
+
+```sql
+notify pgrst, 'reload schema';
+```
 
 Y el `SELECT` completo, que es el que la app realmente manda:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' \
+curl -s -w '\nHTTP %{http_code}\n' \
   "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/upcoming_content?select=tmdb_id,media_type,title,poster_path,backdrop_path,overview,release_date,season_number,episode_number,episode_name,is_season_premiere,genre_ids,popularity,vote_average,original_language,upcoming_content_providers(provider_id)&limit=1" \
   -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
   -H "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_ANON_KEY"
 ```
 
-También `200`.
+También `200`. Éste es el que importa: el otro prueba la columna suelta, y este
+prueba el `select` textual del read-path, con el join anidado incluido.
 
 ## 3. Desplegar el sync
 
@@ -215,6 +240,48 @@ console.log(`servidos ${vistos.length} | unicos ${u.size} | ${vistos.length === 
    en pantalla **no se borra** y aparece "No se pudo cargar el resto ·
    Reintentar". Volver a poner red y tocar Reintentar: entra la misma tanda que
    había fallado, sin saltearla.
+
+#### Lo que SÍ se verificó en un navegador real (2026-09-05)
+
+Con el dev server corriendo sobre esta rama (`next dev` apuntado al worktree,
+puerto 3098) y midiendo con `performance.getEntriesByType("resource")`, que se
+reinicia en cada navegación:
+
+| Comprobación | Resultado | Cómo |
+|---|---|---|
+| Strict Mode activo en dev | **sí** | el chunk `main-app.js` servido contiene `StrictModeIfEnabled = true ? _react.default.StrictMode : 0` |
+| Entrada nueva a `/proximamente` | **1** llamada, `?page=1` | Performance API tras un reload limpio |
+| Strict Mode duplica el arranque | **no** | la medición de arriba se tomó con Strict Mode activo |
+| El 500 por la columna faltante | **reproducido** | `{"error":"Error: column upcoming_content.original_language does not exist","items":[]}` |
+
+Ese último confirma el orden de despliegue con el código real, no por deducción.
+
+#### 🔴 Lo que queda PENDIENTE, y por qué
+
+**No se pudo probar en el navegador**: la restauración al volver de una ficha
+(filtro, tarjetas, páginas y scroll con cero llamadas), el primer clic manual
+después de restaurar, y el clic sobre el filtro ya activo.
+
+**No es por falta de ganas ni de herramientas: está bloqueado por el orden de
+despliegue del propio cambio.** La cadena, verificada:
+
+1. La migración `008` no está aplicada, así que `/api/upcoming` devuelve 500.
+2. Sin respuesta no hay items, y con `failed` y la lista vacía la vista renderiza
+   `OfflineState`: **los botones de filtro no se dibujan** (medido:
+   `document.querySelectorAll(".tipo-toggle .tt").length === 0`), así que no hay
+   nada que clickear.
+3. `useListaPaginada` no guarda snapshot sin items (`if (!items.length) return`),
+   así que tampoco hay nada que restaurar (medido:
+   `sessionStorage.getItem("yump:lista-paginada") === null`).
+
+**Qué lo desbloquea:** el paso 1 de este runbook. Con la columna creada, la prueba
+del paso 6 se puede correr entera — en local contra la misma base, sin esperar al
+deploy del paso 5.
+
+⚠️ **Esta evidencia no la reemplaza el modelo de
+`hooks/arranque-restauracion.test.ts`**, que no monta el componente, no ejecuta
+`useListaPaginada` ni React, y no prueba el scroll. Los conteos de restauración
+que ese test fija son del modelo; los del navegador siguen pendientes.
 
 ## 7. Confirmar que Home y `/proximamente` no devuelven 500
 

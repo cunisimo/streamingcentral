@@ -410,7 +410,7 @@ respuestas. **Queda un solo efecto en la vista** —el de arranque— y sale por
 | Primer clic manual después de restaurar | **1** (sólo ese filtro) |
 | Clic en el filtro que ya estaba restaurado | **0** |
 
-#### Cómo se verifica sin arnés de DOM
+#### La tabla sale de un MODELO, y hay que saber qué cubre y qué no
 
 `hooks/arranque-restauracion.test.ts` modela el runtime de efectos con las cuatro
 reglas que importan: corren en orden de declaración, sólo si cambió una
@@ -418,11 +418,67 @@ dependencia (comparación por identidad), **con el cierre del render en curso** 
 sea que no ven los `set*` que otro efecto acaba de hacer en la misma ronda — y los
 refs sobreviven sin disparar renders.
 
-Con eso el test hace tres cosas que probar `iniciar()` y `decidirCambioDeFiltro()`
-por separado no puede: confirma que la versión con efecto **anda** mientras
+Con eso hace tres cosas que probar `iniciar()` y `decidirCambioDeFiltro()` por
+separado no puede: confirma que la versión con efecto **anda** mientras
 `reiniciar` sea estable, **reproduce la falla** —`["all:1", "tv:1"]` y la
 restauración borrada— en cuanto deja de serlo, y fija los conteos de la tabla de
 arriba para la versión con handler, con la identidad estable y con la inestable.
+
+🔴 **Pero es un modelo de la coordinación, no una prueba del componente**, y no hay
+que leerle más de lo que dice:
+
+| | |
+|---|---|
+| Monta `UpcomingAllView` | **no** — sus efectos están reescritos en el test, así que el componente puede cambiar sin que el modelo se entere |
+| Ejecuta `useListaPaginada` / `sessionStorage` | **no** — la restauración y la marca de vuelta están simuladas |
+| Ejecuta React | **no** — el planificador, el batching y el orden de renders son una aproximación |
+| Prueba la restauración del **scroll** | **no** — el modelo hace `scrollY = e.scrollY`, o sea que verifica su propia contabilidad. El `requestAnimationFrame` doble del hook, la altura real de la grilla y el scroll del navegador no participan |
+
+Lo que fija es la **decisión** de pedir o no pedir bajo un orden de efectos fiel.
+La verificación de punta a punta es la del navegador —paso 6 de
+`docs/medidas/2026-09-05-proximamente-salida.md`— y el modelo **no la reemplaza**.
+
+#### Lo que SÍ se verificó en un navegador real (2026-09-05)
+
+Con el dev server corriendo sobre esta rama (`next dev` apuntado al worktree,
+puerto 3098) y midiendo con `performance.getEntriesByType("resource")`, que se
+reinicia en cada navegación:
+
+| Comprobación | Resultado | Cómo |
+|---|---|---|
+| Strict Mode activo en dev | **sí** | el chunk `main-app.js` servido contiene `StrictModeIfEnabled = true ? _react.default.StrictMode : 0` |
+| Entrada nueva a `/proximamente` | **1** llamada, `?page=1` | Performance API tras un reload limpio |
+| Strict Mode duplica el arranque | **no** | la medición de arriba se tomó con Strict Mode activo |
+| El 500 por la columna faltante | **reproducido** | `{"error":"Error: column upcoming_content.original_language does not exist","items":[]}` |
+
+Ese último confirma el orden de despliegue con el código real, no por deducción.
+
+#### 🔴 Lo que queda PENDIENTE, y por qué
+
+**No se pudo probar en el navegador**: la restauración al volver de una ficha
+(filtro, tarjetas, páginas y scroll con cero llamadas), el primer clic manual
+después de restaurar, y el clic sobre el filtro ya activo.
+
+**No es por falta de ganas ni de herramientas: está bloqueado por el orden de
+despliegue del propio cambio.** La cadena, verificada:
+
+1. La migración `008` no está aplicada, así que `/api/upcoming` devuelve 500.
+2. Sin respuesta no hay items, y con `failed` y la lista vacía la vista renderiza
+   `OfflineState`: **los botones de filtro no se dibujan** (medido:
+   `document.querySelectorAll(".tipo-toggle .tt").length === 0`), así que no hay
+   nada que clickear.
+3. `useListaPaginada` no guarda snapshot sin items (`if (!items.length) return`),
+   así que tampoco hay nada que restaurar (medido:
+   `sessionStorage.getItem("yump:lista-paginada") === null`).
+
+**Qué lo desbloquea:** el paso 1 de este runbook. Con la columna creada, la prueba
+del paso 6 se puede correr entera — en local contra la misma base, sin esperar al
+deploy del paso 5.
+
+⚠️ **Esta evidencia no la reemplaza el modelo de
+`hooks/arranque-restauracion.test.ts`**, que no monta el componente, no ejecuta
+`useListaPaginada` ni React, y no prueba el scroll. Los conteos de restauración
+que ese test fija son del modelo; los del navegador siguen pendientes.
 
 #### Strict Mode
 

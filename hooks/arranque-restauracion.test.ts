@@ -17,6 +17,27 @@
 //   3. Cuando corre, usa el CIERRE DEL RENDER EN CURSO — no ve los `set*` que
 //      otro efecto acaba de hacer en la misma ronda.
 //   4. Los refs sobreviven a los renders y no los disparan.
+//
+// 🔴 QUÉ **NO** ES ESTO, para no leerle más de lo que dice.
+//
+// Es un modelo de la coordinación, no una prueba del componente. Concretamente:
+//
+//   * NO monta `UpcomingAllView`. Los efectos de acá son una reescritura de los
+//     suyos, y si el componente cambia sin que cambie este archivo, el modelo
+//     puede quedar desactualizado sin que ningún test lo note.
+//   * NO ejecuta `useListaPaginada` ni `lista-paginada-store`. La restauración,
+//     `sessionStorage`, la marca de vuelta y `consumirVuelta` están simulados.
+//   * NO ejecuta React. El planificador, el batching real y el orden exacto de
+//     los renders son una aproximación, no la implementación.
+//   * NO prueba la restauración del scroll. El modelo hace `scrollY = e.scrollY`,
+//     o sea que asignar un número — lo único que verifica es su propia
+//     contabilidad. El `requestAnimationFrame` doble del hook, la altura real de
+//     la grilla y el scroll del navegador no participan.
+//
+// Lo que sí fija, y es para lo que existe: que la DECISIÓN de pedir o no pedir
+// sea la correcta bajo un orden de efectos fiel. La verificación de punta a punta
+// es la del navegador, en el paso 6 de
+// `docs/medidas/2026-09-05-proximamente-salida.md`, y **no la reemplaza**.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {

@@ -794,6 +794,12 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   refs que sobreviven— y fija las tres cosas: que la versión con efecto anda con
   identidad estable, que se rompe con identidad inestable, y los conteos de la
   versión con handler.
+  ⚠️ **Ese test es un MODELO de la coordinación, no una prueba del componente**, y
+  conviene no leerle más de lo que dice: no monta `UpcomingAllView`, no ejecuta
+  `useListaPaginada` ni `sessionStorage`, no ejecuta React, y **no prueba la
+  restauración del scroll** —hace `scrollY = e.scrollY`, o sea que verifica su
+  propia contabilidad—. Fija la decisión de pedir o no pedir; la evidencia de punta
+  a punta es la del navegador, en el paso 6 del runbook.
 - **En el App Router, Strict Mode está ACTIVO en desarrollo** si
   `next.config.mjs` no dice lo contrario, así que React invoca los efectos dos
   veces al montar. Dos cosas que podrían romperse y no lo hacen: la petición de
