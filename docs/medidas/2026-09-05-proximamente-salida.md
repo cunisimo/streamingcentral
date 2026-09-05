@@ -60,15 +60,10 @@ El snapshot sale de `sessionStorage`. Es una mejora de costo, no un costo nuevo.
 
 ## 1. Aplicar la migración `008`
 
-🔴 **INTENTADO EL 2026-09-05 Y NO SE PUDO: falta una credencial con permiso de
-DDL.** El servidor MCP de Supabase responde *Unauthorized*, y el CLI —que sí
-encuentra un `SUPABASE_ACCESS_TOKEN` en el entorno— también: ese token no sirve.
-El `.env.local` sólo tiene la anon key, la service role key y la URL, y ninguna
-de las tres puede ejecutar un `alter table`: la service role key es un JWT para
-PostgREST, no una contraseña de Postgres.
-
-**Lo tiene que correr el dueño**, desde el SQL editor del panel de Supabase o con
-el CLI autenticado. Es una sola sentencia y es idempotente.
+✅ **APLICADA por el dueño el 2026-09-05.** No la corrí yo: el MCP de Supabase y
+el CLI responden *Unauthorized*, y las tres credenciales del `.env.local` —anon
+key, service role key y URL— no pueden ejecutar un `alter table`; la service role
+key es un JWT para PostgREST, no una contraseña de Postgres.
 
 ```sql
 alter table public.upcoming_content
@@ -95,21 +90,39 @@ where table_schema = 'public'
 Cero filas = la migración no se aplicó. `is_nullable = NO` = alguien le puso un
 `not null`; hay que sacarlo, porque las filas viejas quedan en `NULL` hasta la
 próxima corrida del sync.
+✅ **Comprobado el 2026-09-05, hasta donde llega la anon key.** No pude correr la
+consulta a `information_schema` —PostgREST no la expone y no tengo una conexión
+privilegiada—, así que lo verifiqué por comportamiento:
+
+* **Nullable**: las 261 filas vigentes tienen `original_language` en `null` y se
+  leen sin problema. Si la columna fuera `not null`, el `alter table` habría
+  fallado sobre una tabla con filas.
+* **Tipo texto**: un filtro `original_language=like.*a*` devuelve `200`. `like`
+  sólo aplica a texto; sobre otro tipo, PostgREST devolvería un error de operador.
+
+⚠️ Es evidencia indirecta. La comprobación autoritativa sigue siendo la consulta
+a `information_schema` de arriba, que corre el dueño con una conexión privilegiada.
+
+**Línea base para el paso 6**, medida ahora: **261 filas, 0 con idioma, 261 en
+`null`**. Después del sync tienen que ser 0 en `null`.
+
 
 ## 3. Leerla con la anon key, por PostgREST
 
-**Estado medido el 2026-09-05, ANTES de la migración** (sólo lectura, anon key):
+✅ **COMPROBADO el 2026-09-05, DESPUÉS de la migración** (sólo lectura, anon key):
 
-| Comprobación | Resultado |
-|---|---|
-| Columna suelta | `HTTP 400`, `code 42703`, *column upcoming_content.original_language does not exist* |
-| SELECT completo del read-path | `HTTP 400`, mismo `42703` |
-| **Control**: el mismo SELECT **sin** `original_language` | **`HTTP 200`** |
+| Comprobación | Antes | Después |
+|---|---|---|
+| Columna suelta | `400` · `42703` | **`200`**, `original_language` presente, valor `null` |
+| SELECT completo del read-path | `400` · `42703` | **`200`**, 16 claves, join `[{provider_id:283},{provider_id:1968}]` |
 
-El control es lo que aísla el problema: con la anon key se leen las otras 14
-columnas **y el join anidado devuelve un array**. O sea que los privilegios y el
-join ya funcionan, y lo único que falta es la columna. Cuando el paso 1 esté
-hecho, estas dos comprobaciones tienen que pasar a `200` sin tocar nada más.
+Las 16 claves son las 15 columnas del `SELECT` de `lib/upcoming.ts` más el join
+anidado, y el join devuelve un array — que era la otra mitad de lo que había que
+confirmar, porque el `select` de la app lo lleva adentro.
+
+**`original_language` viene en `null` y eso es lo esperado**: las filas se
+escribieron antes de que existiera la columna. Las completa la próxima corrida
+del sync (paso 6).
 
 ⚠️ **Sin credenciales en la línea de comandos ni en logs**: las dos variables
 salen del entorno, y por eso los comandos no traen ningún valor literal. `-s -S`
