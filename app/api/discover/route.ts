@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { listByCategory } from "@/lib/enrich";
 import { COUNTRY_LANG } from "@/lib/countries";
 import type { MediaType, PlatformCode } from "@/lib/types";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ const RUNTIME: Record<string, Record<string, string>> = {
   long: { "with_runtime.gte": "150" },
 };
 
-export async function GET(req: NextRequest) {
+async function manejar(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const tipo = (sp.get("tipo") || "movie") as MediaType;
   const genre = sp.get("genre") || undefined;
@@ -86,3 +87,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: String(e), items: [] }, { status: 500 });
   }
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios:
+// `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
+// sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
+// puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
+export const GET = conCors(manejar, "GET");
+export const OPTIONS = opcionesCors("GET");

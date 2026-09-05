@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { detail } from "@/lib/enrich";
 import type { MediaType, PlatformCode } from "@/lib/types";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest, { params }: { params: { tipo: string; id: string } }) {
+async function manejar(req: NextRequest, { params }: { params: { tipo: string; id: string } }) {
   // `providers` acota los relacionados ("También te puede interesar") a las
   // plataformas del usuario. La ficha en sí NO se filtra: se muestra completa
   // aunque el título no esté en ninguna (se llega por búsqueda, por Mi lista o
@@ -17,3 +18,10 @@ export async function GET(req: NextRequest, { params }: { params: { tipo: string
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios:
+// `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
+// sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
+// puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
+export const GET = conCors(manejar, "GET");
+export const OPTIONS = opcionesCors("GET");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recomendaciones, MAX_ORIGENES, type Senal } from "@/lib/reco";
 import { usuarioDeToken } from "@/lib/supabase";
 import type { MediaType, PlatformCode } from "@/lib/types";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 // Enriquece hasta 80 candidatos (1 providersOf cada uno). Con todo cacheado es
@@ -26,7 +27,7 @@ interface Cuerpo {
 
 const esTipo = (v: unknown): v is MediaType => v === "movie" || v === "tv";
 
-export async function POST(req: NextRequest) {
+async function manejar(req: NextRequest) {
   // SESIÓN OBLIGATORIA, y no por privacidad: por costo. El endpoint no lee datos
   // de nadie —las señales las manda quien pide— así que sin autenticar no se
   // filtraba nada. Lo que sí pasaba es que CADA pedido puede disparar hasta 80
@@ -78,3 +79,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ items: [], motivo: "sin-candidatos" }, { status: 500 });
   }
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios:
+// `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
+// sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
+// puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
+export const POST = conCors(manejar, "POST");
+export const OPTIONS = opcionesCors("POST");
