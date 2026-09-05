@@ -217,33 +217,13 @@ test("OfflineState sigue intacto y con sus 9 llamadores", () => {
   for (const v of vistas) assert.match(leer(v), /OfflineState/, v + " perdió OfflineState");
 });
 
-// Los ÚNICOS paquetes de Capacitor autorizados, y dónde va cada uno. En CP6
-// este test exigía que no hubiera NINGUNO, porque hasta CP7 no estaba aprobado
-// instalarlos. CP7 los aprobó, uno por uno, y la lista queda cerrada: la
-// prohibición no se aflojó, se volvió específica. Un plugin (`@capacitor/app`,
-// `@capacitor/browser`, …) sigue haciendo fallar este test, que es el punto:
-// los plugins son CP9 y sólo los que CP8 demuestre necesarios.
-const CAPACITOR_AUTORIZADOS: Record<string, "dependencies" | "devDependencies"> = {
-  "@capacitor/core": "dependencies",
-  "@capacitor/android": "dependencies",
-  "@capacitor/cli": "devDependencies",
-};
-
-test("sólo los tres paquetes de Capacitor autorizados en CP7, y en su sección", () => {
-  const pkg = JSON.parse(leer("package.json"));
-  const donde = (n: string) =>
-    pkg.dependencies?.[n] ? "dependencies" : pkg.devDependencies?.[n] ? "devDependencies" : null;
-
-  const presentes = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]
-    .filter((n) => n.startsWith("@capacitor/"));
-
-  for (const n of presentes) {
-    assert.ok(n in CAPACITOR_AUTORIZADOS, `paquete de Capacitor NO autorizado: ${n}`);
-    assert.equal(donde(n), CAPACITOR_AUTORIZADOS[n], `${n} está en la sección equivocada`);
-  }
-  // Y ninguno de iOS, que no se instala en esta etapa.
-  assert.deepEqual(presentes.filter((n) => /ios/i.test(n)), []);
-});
+// El inventario de paquetes de Capacitor NO se vigila acá.
+//
+// En CP7 sí: este test exigía que hubiera exactamente tres y ninguno más. CP9
+// sumó los tres plugins que CP8 justificó, y tener DOS listas de autorizados en
+// dos archivos es la receta para que se desincronicen. La lista vive ahora en un
+// solo lugar, `lib/plugins-nativos.test.ts`, que además explica por qué está
+// cada plugin. Lo que sigue vigilándose acá es lo de abajo, que es de la PWA.
 
 test("nadie usa detección dinámica de Capacitor", () => {
   // 🔴 ESTA MITAD NO CAMBIA, Y AHORA IMPORTA MÁS: con `@capacitor/core` ya

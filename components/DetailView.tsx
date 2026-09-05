@@ -12,6 +12,7 @@ import ListActions from "./ListActions";
 import RecordarButton from "./RecordarButton";
 import { platformByCode } from "@/lib/providers-ar";
 import { mensajeCompartir, enlaceWhatsapp } from "@/lib/compartir";
+import { ES_NATIVO } from "@/lib/plataforma";
 import ScScore from "./ScScore";
 import CastRail from "./CastRail";
 import HeroTrailer from "./HeroTrailer";
@@ -95,6 +96,25 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
     const nombre = (donde ? platformByCode(donde)?.name : null) ?? null;
     const m = mensajeCompartir(t, nombre);
     const whatsapp = () => window.open(enlaceWhatsapp(m), "_blank", "noopener");
+
+    // En el contenedor `navigator.share` NO existe (verificado en CP8), así que
+    // sin esto Compartir caía derecho a WhatsApp sin dejar elegir. El plugin
+    // abre el selector nativo de Android.
+    //
+    // 🔴 Se reusa `m`, que sale de `mensajeCompartir` (lib/compartir.ts): la url
+    // sigue siendo la canónica `https://app.yump.ar/titulo/...`. No se arma nada
+    // por otro lado, y NUNCA sale el origen del contenedor.
+    if (ES_NATIVO) {
+      void (async () => {
+        try {
+          const { Share } = await import("@capacitor/share");
+          await Share.share({ title: m.titulo, text: m.texto, url: m.url });
+        } catch {
+          whatsapp();
+        }
+      })();
+      return;
+    }
 
     if (!navigator.share) return whatsapp();
     navigator.share({ title: m.titulo, text: m.texto, url: m.url }).catch((err: unknown) => {
