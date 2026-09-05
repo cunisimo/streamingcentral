@@ -1200,4 +1200,4 @@ Lo que este trabajo **NO** arregla, y conviene no darlo por cerrado:
 | **Issue #16** (catálogo regional incompleto) | **MITIGADO, no resuelto.** La regla cubre seis plataformas en vez de una, pero sigue sin poder medirse cuánto falta |
 | **Issue #13** (cron del Top 10) | **ABIERTO.** No se tocó |
 | **"Próximamente"** | **La causa de descubrimiento quedó corregida** el 2026-09-01 (issue #8). La segunda —el filtro de proveedor AR de `sync-upcoming.ts:224`— **se conserva a propósito**: es la decisión del dueño, no un pendiente |
-| **Capacitor** | **PAUSADO después de CP6.** `spike/capacitor-android` sigue en `e4d4a6f`; **CP7 sin empezar** |
+| **Capacitor** | **ETAPA 2 TERMINADA (CP1-CP11).** Veredicto: viable en Android, se recomienda avanzar. El spike descartable queda archivado en `spike/capacitor-android` (`5d5180f`). **Etapa 3 EN CURSO** en `integracion/capacitor-base`, nacida de `main` — ver `docs/superpowers/plans/2026-09-05-etapa3-android-publicable.md` |

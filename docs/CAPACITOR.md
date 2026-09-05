@@ -1023,6 +1023,15 @@ existan en el WebView de Android, **no** asumir que el origen es `https://`, y
 
 ### Etapa 3 — Adaptación de la capa web para bundle local (3-5 sesiones)
 
+> ⚠️ **ESTA LISTA SE ESCRIBIÓ ANTES DEL PROTOTIPO Y YA NO ES LA COLA DE TRABAJO.**
+> De sus nueve ítems, **siete están hechos y dos resultaron innecesarios**:
+> `@capacitor/browser` no hace falta —los enlaces externos ya abren la app
+> externa sin secuestrar la WebView— y `@capacitor/preferences` tampoco —la
+> sesión y `sc:platforms` sobreviven a un cierre forzado con `localStorage`—.
+> El plan vigente es
+> `docs/superpowers/plans/2026-09-05-etapa3-android-publicable.md`.
+> Lo de abajo se conserva como historia de lo que se planeaba.
+
 Código de este repo, detrás de banderas, **sin romper la web**:
 
 - Base URL de la API + CORS (§3.5). **Acá se decide dónde vive el helper**,
