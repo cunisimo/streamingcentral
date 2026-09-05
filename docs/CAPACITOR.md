@@ -919,6 +919,20 @@ decidir:
 
 ## 8. Permisos — el mínimo real, sin preventivos
 
+> **Medido en CP9, con los tres plugins instalados.** El APK compilado declara
+> `android.permission.INTERNET` —el único de sistema, y ya venía en la
+> plantilla— más `ar.yump.app.dev.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,
+> que es interno de AndroidX, **de la propia app**, autogenerado al fusionar el
+> manifest y sin acceso a nada del dispositivo. `@capacitor/app`,
+> `@capacitor/status-bar` y `@capacitor/share` declaran **0 permisos** cada uno.
+>
+> ⚠️ CP9 sí agregó un atributo al manifest, y conviene saber por qué:
+> `android:enableOnBackInvokedCallback="false"`. Con `targetSdk 36` el atrás
+> predictivo queda activo por defecto y nadie lo implementa acá. **No era la
+> causa del botón Atrás roto** —eso fue `canGoBack`, ver CP9 en el plan— pero se
+> conserva para no dejar activo un modelo sin manejar.
+
+
 **Android** — sólo uno:
 
 ```

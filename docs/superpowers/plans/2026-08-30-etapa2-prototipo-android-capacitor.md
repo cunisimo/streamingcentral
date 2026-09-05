@@ -1,9 +1,9 @@
 # Etapa 2 — Prototipo Android con Capacitor (plan, revisión 7)
 
-> **CP1 a CP8 están HECHOS** en `spike/capacitor-android`: la app corre en un
-> Android físico y pasó la matriz móvil, con el bloqueante de CP7 resuelto y
-> comprobado en el teléfono. **CP9 no empezó.** Sigue sin haber plugins, sin
-> `ios/` y sin firma ni Play — y CP8 dejó tres candidatos concretos.
+> **CP1 a CP9 están HECHOS** en `spike/capacitor-android`: la app corre en un
+> Android físico, pasó la matriz móvil y tiene los tres plugins que esa matriz
+> justificó, verificados en el teléfono. **CP10 no empezó.** Sigue sin `ios/` y
+> sin firma ni Play.
 
 ## ✅ CP1 — completado el 30/08/2026
 
@@ -2176,29 +2176,149 @@ Preview `streamingcentral-cd2tr86cd-…vercel.app` con el Redis aislado
 la matriz. Protección reactivada y verificada por HTTP al terminar.
 `stay_on_while_plugged_in` restaurado a `0` y modo avión a `0`.
 
-## CP9 — Plugins, sólo los que CP8 demostró
+## ✅ CP9 — completado el 5 de septiembre de 2026 — los tres plugins
 
-**Todos van en `dependencies`** (son runtime), no en devDependencies.
+**Los tres resuelven en el teléfono el problema que justificó su instalación.**
+No entró ninguno más.
 
-| Plugin | Problema | Prueba previa | Permiso | Criterio |
-|---|---|---|---|---|
-| `@capacitor/app` | el back cierra la app | CP8 #1 | ninguno | si #1 falla |
-| `@capacitor/browser` | sitios ajenos adentro del WebView | CP8 #2 | ninguno | si #2 falla |
-| `@capacitor/share` | `navigator.share` no existe en WebView | CP8 #3 | ninguno | si #3 falla |
-| `@capacitor/status-bar` | barra ilegible | CP8 #5 | ninguno | si #5 falla |
-| `@capacitor/preferences` | sesión perdida | CP8 #14 | ninguno | **ver abajo** |
-| `@capacitor/splash-screen` | pantalla en blanco | CP8 #9 | ninguno | cosmético; **no** en el spike |
+| Plugin | Versión | Sección | Resuelve |
+|---|---|---|---|
+| `@capacitor/app` | **8.1.1** | `dependencies` | el botón Atrás salía al launcher |
+| `@capacitor/status-bar` | **8.0.3** | `dependencies` | iconos blancos ilegibles en tema claro |
+| `@capacitor/share` | **8.0.1** | `dependencies` | `navigator.share` no existe en la WebView |
 
-🔴 **`@capacitor/preferences` NO es una solución automática.** Instalarlo **no
-arregla nada por sí solo**: haría falta escribir un **adaptador de
-almacenamiento** y pasárselo a `createClient` como `auth.storage`, más decidir
-qué pasa con la sesión ya guardada en `localStorage` (migrar o perder) y
-verificar que sobreviva. **Si CP8 #14 falla, eso es un mini-proyecto**, no una
-instalación — y se estima aparte.
+⚠️ **No existe un 8.5.1 de los plugins.** Van desacoplados del core; los tres
+deduplican a `@capacitor/core@8.5.1`, que es lo que importa. Forzar la versión
+del core habría sido inventar una que no está publicada.
 
-**Estimación: 0,5–1,5 sesiones.**
+Lockfile: 257 → 260, **0 eliminados, 0 versiones ajenas cambiadas**.
 
----
+### 🔴 Atrás: DOS causas, y la primera no era la que parecía
+
+**Lo primero que se probó fue el atrás predictivo, y no alcanzó.** Con
+`targetSdk 36` Android lo activa por defecto y el teléfono usa navegación por
+gestos, así que la hipótesis era razonable. Se agregó
+`android:enableOnBackInvokedCallback="false"` al `<application>` —verificado en
+el APK compilado con `aapt2`— y **el botón siguió saliendo al launcher**.
+
+**Lo que lo destapó fue medir si el evento llegaba.** Una sonda que persistía en
+`localStorage` (para sobrevivir a la salida de la app) mostró que el evento
+**sí llega**, con `canGoBack: false`:
+
+```
+{"t":1788645760108,"canGoBack":false}
+```
+
+O sea que el plugin funcionaba y el que mandaba a salir era nuestro handler.
+
+🔴 **`canGoBack` viene de `WebView.canGoBack()` (Java), que mira el historial de
+DOCUMENTOS.** El router de Next navega con `pushState`, así que desde una ficha
+—Home → `/t/?tipo=movie&id=16237`, con `history.length: 2`— reporta `false`
+igual. Confiar sólo en él reproduce el bug de CP8 por otra causa.
+
+La condición usa una segunda señal, la ruta:
+
+```ts
+if (canGoBack || window.location.pathname !== "/") window.history.back();
+else App.exitApp();
+```
+
+En el contenedor la app **siempre** arranca en `/` —una URL directa a otra ruta
+cae en la Home, hallazgo #16 de CP8— así que estar fuera de `/` significa que
+hubo navegación interna.
+
+**El atributo del manifest se conserva** aunque no fuera la causa: sin él, el
+modelo predictivo queda activo sin que nadie lo implemente. El comentario del
+manifest deja escrito que quitarlo no es el camino si algún día se quiere el
+gesto animado.
+
+**Medido en el teléfono:** desde una ficha, Atrás **vuelve al Home** (317 cards,
+app en foco). El segundo Atrás, ya en la raíz, **sale** — el comportamiento
+elegido, que es lo que un usuario de Android espera.
+
+### 🔴 Barra de estado: el nombre del estilo es al revés
+
+En `@capacitor/status-bar`, `Style` describe el **texto**, no el fondo. Textual
+de sus tipos:
+
+```
+Dark  = "DARK"   → "Light text for dark backgrounds"
+Light = "LIGHT"  → "Dark text for light backgrounds"
+```
+
+El mapeo correcto es tema `dark` → `Style.Dark`, y hay un test que lo fija.
+Invertirlo reproduce exactamente el bug que CP8 midió.
+
+⚠️ **Sólo se llama `setStyle`.** `setBackgroundColor` obligaría a
+`setOverlaysWebView(false)` y mataría el edge-to-edge —que es lo que hace que
+`env(safe-area-inset-top)` valga 46 px—, y `setOverlaysWebView` está declarado
+**no disponible en Android 15+**; el aparato corre Android 16. El fondo ya
+acompaña al tema porque la WebView dibuja debajo de la barra.
+
+**Medido en el teléfono, con el toggle real de `/cuenta/configuracion`:**
+
+| Tema | Fondo | Iconos | |
+|---|---|---|---|
+| oscuro | `#0F0E13` | blancos | legibles ✅ |
+| claro | `#FAFAFD` | **oscuros** | legibles ✅ |
+
+El cambio se aplica **en el acto**, sin recargar, y el arranque en frío ya
+empieza con el estilo correcto. La única meta `theme-color` no se tocó.
+
+### Compartir: selector nativo, URL canónica
+
+`navigator.share` no existe en esta WebView, así que se llama al plugin detrás de
+`ES_NATIVO`. **`lib/compartir.ts` no se tocó**: se reusa el `m` que devuelve
+`mensajeCompartir`, y un test rechaza cualquier URL escrita a mano o armada con
+`location.origin`.
+
+Enganchando `androidBridge.postMessage` —el cable real, no el proxy del
+paquete— el payload observado fue:
+
+```json
+{ "pluginId": "Share", "methodName": "share",
+  "options": {
+    "title": "Jóvenes Titanes: Misión Tokio",
+    "text": "¡Mirá lo que encontré! … — en Max. La ficha en Yump:",
+    "url": "https://app.yump.ar/titulo/movie/16237" } }
+```
+
+Y el foco del sistema pasó a `com.android.intentresolver.ChooserActivity`: el
+selector nativo. La URL es la canónica, **ni Preview ni `https://localhost`**.
+
+### Permisos
+
+**Sin novedad.** Los tres plugins declaran **0 permisos** en sus manifests, y el
+APK compilado queda con:
+
+```
+android.permission.INTERNET                          (ya estaba)
+ar.yump.app.dev.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+```
+
+El segundo es interno de AndroidX, **de la propia app**, autogenerado al fusionar
+el manifest: no da acceso a nada del dispositivo.
+
+### La regla que no cambió
+
+Los tres imports son **dinámicos y detrás de `ES_NATIVO`**, así que los plugins no
+entran al bundle web y la web no cambió. Sigue sin haber
+`Capacitor.isNativePlatform()` en ningún lado: es una bandera de BUILD, porque en
+el prerender daría `false` y después de hidratar `true`.
+
+El inventario de plugins autorizados vivía en dos archivos y se habría
+desincronizado; ahora tiene un solo dueño, `lib/plugins-nativos.test.ts`. Canario
+ejecutado: con un `@capacitor/preferences` simulado, falla nombrándolo.
+
+### Verificación de cierre
+
+`npm test` **1021/1021** · `tsc` **0** · build web **43/43** · export nativo
+completo · secretos **0** en las dos copias del artefacto (el único JWT es la
+anon key, `role=anon`) · sin residuos · `git diff --check` limpio.
+
+Preview `streamingcentral-cd2tr86cd-…vercel.app` con el Redis aislado
+(`/api/health`: `503`, `cache: "memoria"`, credenciales ausentes) durante las
+pruebas. Protección reactivada y verificada por HTTP al terminar.
 
 ## CP10 — YouTube
 
