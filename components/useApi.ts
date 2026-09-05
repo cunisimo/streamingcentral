@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { usePlatforms } from "./PlatformsContext";
+import { apiUrl } from "@/lib/api-base";
 
 interface ApiState<T> {
   data: T | null;
@@ -61,7 +62,7 @@ export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseA
     // Limpiar ya (no solo en error) para que un consumidor sin keepPrevious no
     // muestre el contenido del recurso anterior mientras llega el nuevo.
     if (!keepPrevious) setData(null);
-    fetch(u)
+    fetch(apiUrl(u))
       .then(async (r) => {
         // Chequear r.ok ANTES de tomar el body como datos: r.json() resuelve
         // perfecto sobre un 500, así que sin esto el error pasaba por payload.

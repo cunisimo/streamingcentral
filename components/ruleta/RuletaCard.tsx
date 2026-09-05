@@ -9,6 +9,7 @@ import { genreLabel } from "../data";
 import { hasItem, setItem } from "@/lib/userdata";
 import { fraseAtencion } from "./frases";
 import type { RoulettePick } from "@/lib/roulette";
+import { hrefTitulo } from "@/lib/rutas";
 
 export default function RuletaCard({
   pick, onOtra, onCerrar,
@@ -74,14 +75,14 @@ export default function RuletaCard({
           que es donde el renglón largo se lee mejor. */}
       <div className="rlt-head">
         {pick.poster && (
-          <Link className="rlt-poster" href={`/titulo/${pick.type}/${pick.id}`}>
+          <Link className="rlt-poster" href={hrefTitulo(pick.type, pick.id)}>
             <img src={pick.poster} alt="" loading="lazy" />
           </Link>
         )}
         <div className="rlt-ident">
           <span className="chip-group-label">Te recomendamos</span>
           <h3 className="rlt-title">
-            <Link href={`/titulo/${pick.type}/${pick.id}`}>{pick.title}</Link>
+            <Link href={hrefTitulo(pick.type, pick.id)}>{pick.title}</Link>
           </h3>
           {meta && <p className="rlt-meta">{meta}</p>}
 
@@ -109,7 +110,7 @@ export default function RuletaCard({
             primero el `watchLink` de TMDB, que es su página agregadora y no la
             plataforma: mandaba al usuario fuera para nada. Mismo criterio que
             la ficha, ver el bloque `dprimary have` en DetailView. */}
-        <a className="rlt-btn rlt-btn-primary" href={`/titulo/${pick.type}/${pick.id}`}>
+        <a className="rlt-btn rlt-btn-primary" href={hrefTitulo(pick.type, pick.id)}>
           ▶ Verla
         </a>
         <button className="rlt-btn" onClick={onOtra}>Otra</button>

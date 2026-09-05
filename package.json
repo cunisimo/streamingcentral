@@ -9,9 +9,15 @@
     "lint": "next lint",
     "prebuild": "node scripts/stamp-sw.mjs",
     "pwa:assets": "node scripts/generate-pwa-assets.mjs",
-    "test": "node --test \"{lib,components,hooks}/**/*.test.ts\""
+    "test": "node --test \"{lib,components,hooks}/**/*.test.ts\"",
+    "build:capacitor": "node scripts/build-capacitor.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.3",
     "@supabase/supabase-js": "^2.45.4",
     "@upstash/redis": "^1.34.3",
     "@vercel/analytics": "^2.0.1",
@@ -22,6 +28,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

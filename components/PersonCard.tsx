@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import type { UIPerson } from "@/lib/types";
+import { hrefPersona } from "@/lib/rutas";
 
 export default function PersonCard({ p }: { p: UIPerson }) {
   const initials = p.name.split(" ").map((n) => n[0]).slice(0, 2).join("");
   return (
-    <Link href={`/persona/${p.id}`} className="pcard">
+    <Link href={hrefPersona(p.id)} className="pcard">
       <div className="av" style={p.profile ? { backgroundImage: `url(${p.profile})` } : { background: "#5A3340" }}>
         {!p.profile && initials}
       </div>
