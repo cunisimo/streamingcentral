@@ -1,8 +1,9 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import ListaView from "@/components/ListaView";
-import UltimosView from "@/components/UltimosView";
+import UltimosDesdeQuery from "@/components/UltimosDesdeQuery";
 import MiniseriesView from "@/components/MiniseriesView";
 import { MINISERIES_LISTA_KEY } from "@/lib/miniseries";
 
@@ -17,18 +18,38 @@ const LISTAS: Record<string, { endpoint: string; title: string }> = {
 // todo de una sola vez y estas dos paginan. El título de miniseries no se
 // escribe acá a propósito — sale de lib/miniseries.ts, que es de donde lo saca
 // también el riel, para que no puedan quedar distintos.
-export default function ListaPage(
-  { params, searchParams }: {
-    params: { key: string };
-    searchParams?: { tipo?: string };
-  },
-) {
+// Las SEIS keys son finitas y conocidas, asi que esta ruta dinamica se puede
+// enumerar para el export estatico: las cuatro de LISTAS, "ultimos" y
+// miniseries. Es la diferencia con /titulo y /persona, que cubren todo TMDB.
+export function generateStaticParams() {
+  return [
+    ...Object.keys(LISTAS).map((key) => ({ key })),
+    { key: "ultimos" },
+    { key: MINISERIES_LISTA_KEY },
+  ];
+}
+
+export default function ListaPage({ params }: { params: { key: string } }) {
   if (params.key === "ultimos") {
-    // El `?tipo=` lo pone el "Ver todas" del riel del Home, para abrir la lista
-    // en el mismo tipo que se estaba mirando. Se valida acá: cualquier otra
-    // cosa cae en "movie", que es el default del riel.
-    const tipoInicial = searchParams?.tipo === "tv" ? "tv" : "movie";
-    return (<><TopBar /><main><UltimosView tipoInicial={tipoInicial} /></main><BottomNav /></>);
+    // El `?tipo=` lo lee el CLIENTE, no el servidor: ver el comentario de
+    // components/UltimosDesdeQuery.tsx. Leerlo acá aborta el export nativo
+    // entero, y esconderlo detrás de una bandera de plataforma dejaba el
+    // parámetro sin efecto dentro del APK.
+    //
+    // 🔴 EL FALLBACK NO PUEDE SER `null`. Con `output: export` esta rama se
+    // prerenderiza CON el fallback puesto —es lo que viaja en el HTML del
+    // artefacto—, así que un `null` deja la pantalla en blanco hasta hidratar.
+    return (
+      <>
+        <TopBar />
+        <main>
+          <Suspense fallback={<div className="loading">Cargando…</div>}>
+            <UltimosDesdeQuery />
+          </Suspense>
+        </main>
+        <BottomNav />
+      </>
+    );
   }
   if (params.key === MINISERIES_LISTA_KEY) {
     return (<><TopBar /><main><MiniseriesView /></main><BottomNav /></>);
