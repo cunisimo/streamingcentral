@@ -4,6 +4,7 @@ import { googleCalendarUrl, icsUrl } from "@/lib/calendar-links";
 import { platformByCode } from "@/lib/providers-ar";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { apiUrl } from "@/lib/api-base";
+import { ES_NATIVO } from "@/lib/plataforma";
 
 // "Recordarme": agenda el estreno en el calendario del usuario.
 //
@@ -113,14 +114,48 @@ export default function RecordarButton({
           usuario, que no podemos fijar desde la URL. Sigue siendo un <a> con la
           URL real —así el menú contextual y "abrir en pestaña nueva" funcionan—
           pero el click pasa por `bajarIcs`, que chequea antes de navegar. */}
-      <a className="prow" href={ics} onClick={bajarIcs} aria-busy={bajando}>
-        <div className="left">{bajando ? "Preparando…" : "Apple Calendar / Outlook"}</div>
-      </a>
+      {/* 🔴 EN EL CONTENEDOR ESTA FILA NO EXISTE, y no llega a mostrarse nunca
+          porque en nativo ni siquiera se arma este menú (ver abajo). Queda
+          igualmente detrás de la bandera para que sea imposible ofrecerla desde
+          acá por accidente. Medido el 2026-09-06: el `.ics` termina abriendo
+          Chrome y dejando el archivo en Descargas. */}
+      {!ES_NATIVO && (
+        <a className="prow" href={ics} onClick={bajarIcs} aria-busy={bajando}>
+          <div className="left">{bajando ? "Preparando…" : "Apple Calendar / Outlook"}</div>
+        </a>
+      )}
       {error && <p className="panel-hint err" role="alert">{error}</p>}
     </div>
   );
 
   if (variant === "texto") {
+    // 🔴 EN EL CONTENEDOR NO HAY MENÚ: el botón va derecho a Google Calendar.
+    //
+    // Con una sola opción, un desplegable de una fila es peor que el enlace. Y
+    // la otra opción no se puede ofrecer: medido el 2026-09-06 en el teléfono,
+    // el `.ics` no lo abre la WebView —Android le pasa la URL a Chrome, que la
+    // baja a Descargas—, así que el usuario sale de Yump, pasa por un tercer
+    // programa y termina con un archivo que tiene que buscar y abrir a mano.
+    //
+    // Es el MISMO `google` que usa la web: misma fecha, mismo `resumen`, mismo
+    // `googleCalendarUrl`. Acá no se arma ninguna URL nueva — si se armara,
+    // la fecha que se agenda podría separarse de la que habilita el botón.
+    //
+    // Abre la pantalla de "crear evento" ya completa: **no guarda nada solo**,
+    // la decisión final sigue siendo del usuario. Y al volver, Yump sigue en la
+    // ficha (CP8 #2: un enlace externo no secuestra la WebView).
+    if (ES_NATIVO) {
+      return (
+        <a
+          className="act" href={google} target="_blank" rel="noreferrer"
+          aria-label="Agendar el estreno en Google Calendar"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {ico}<span className="lab">Recordarme</span>
+        </a>
+      );
+    }
+
     return (
       <div className="act-wrap" ref={ref}>
         <button
