@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por scripts/generate-android-assets.mjs. No editar a mano. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <!-- Android 13+: el sistema tiñe SÓLO el alfa de esta capa con el color del
+         tema del usuario. La silueta sale del calado de la flecha. -->
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
 </adaptive-icon>
