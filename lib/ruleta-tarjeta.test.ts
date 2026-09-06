@@ -163,35 +163,52 @@ test("🔴 el listener adelantado de NavHistorial sigue en pie", () => {
 test("🔴 al volver se restaura LA SECCION, no un desplazamiento del documento", () => {
   // Lo que ata el componente al modelo de `lib/ruleta-restauracion.test.ts`. La
   // ruleta es un bloque en el medio del Home, con el hero y los rieles arriba:
-  // un `scrollY` absoluto describe el documento y no la seccion.
+  // un `scrollY` absoluto describe el documento y no la sección.
   const src = sinComentarios(BANNER);
-  assert.match(src, /<div className="dsmp" ref=\{raiz\}>/, "la seccion no tiene su nodo");
-  assert.match(src, /objetivoDeScroll\(pos, dondeEsta\(\)\)/,
-    "volvio a restaurar un numero de scroll en vez de la posicion de la seccion");
-  assert.match(src, /ancla: pend \? pend\.ancla :/, "el snapshot dejo de guardar el ancla");
+  assert.match(src, /<div className="dsmp" ref=\{raiz\}>/, "la sección no tiene su nodo");
+  assert.match(src, /window\.scrollTo\(0, objetivoDeScroll\(pos, dondeEsta\(\)\)\)/,
+    "volvió a restaurar un número de scroll en vez de la posición de la sección");
+  assert.match(src, /ancla: pend \? pend\.ancla :/, "el snapshot dejó de guardar el ancla");
 });
 
-test("🔴 la posicion se SOSTIENE: un solo scrollTo pierde contra lo que pasa despues", () => {
+test("🔴 no volvió el bucle que sostenía el scroll", () => {
+  // Se retiró: nunca se lo vio funcionar (rAF no corre en el navegador de
+  // prueba) y no hay ninguna medición que lo justifique. Un solo intento.
   const src = sinComentarios(BANNER);
-  assert.match(src, /if \(Date\.now\(\) < hasta\) requestAnimationFrame\(paso\);/,
-    "quedo un intento unico: la restauracion nativa del navegador o el documento a medio medir lo pisan");
-  assert.match(src, /VENTANA_REACOMODO_MS/, "no hay ventana de reacomodo");
-  // Y el usuario siempre gana.
-  for (const gesto of ["wheel", "touchstart", "keydown"]) {
-    assert.match(src, new RegExp(`"${gesto}"`), `el gesto ${gesto} ya no corta el reacomodo`);
-  }
+  assert.doesNotMatch(src, /VENTANA_REACOMODO_MS/, "volvió la ventana de reacomodo");
+  assert.doesNotMatch(src, /Date\.now\(\) < hasta/, "volvió el bucle");
+  assert.equal((src.match(/requestAnimationFrame/g) ?? []).length, 3,
+    "los rAF esperados son los dos del acomodo y el del guardado al scrollear");
 });
 
 test("🔴 el snapshot guarda la posición PENDIENTE, no la del documento a medio restaurar", () => {
-  // El efecto de guardado corre en el mismo commit que la restauración y la
-  // sección recién se acomoda dos frames después: con lo que dice el documento
-  // escribía 0 encima del snapshot recién leído, y el viaje siguiente volvía
-  // arriba de todo.
   const src = sinComentarios(BANNER);
   assert.match(src, /scrollY: pend \? pend\.y : window\.scrollY/,
     "volvió a guardar la posición del documento mientras hay una restauración en vuelo");
-  // Y la pendiente tiene que seguir puesta hasta que la sección LLEGÓ: si se
-  // limpia al agendar, el guardado de ese mismo commit vuelve a ver 0.
+  // Y la pendiente sigue puesta hasta que la sección LLEGÓ: si se limpia al
+  // agendar, el guardado de ese mismo commit vuelve a ver 0.
   assert.doesNotMatch(src, /scrollPendiente\.current = null;\s*\n?\s*requestAnimationFrame/,
     "se limpia la pendiente antes de aplicarla");
+});
+
+// ------------------------------------- de dónde salió el usuario a la ficha
+
+test("🔴 los TRES accesos a la ficha anotan la intención de volver", () => {
+  // Sin esto, una ficha recargada vuelve al Home con la ruleta cerrada Y con el
+  // snapshot borrado. Medido en el navegador el 2026-09-06.
+  const src = sinComentarios(CARD);
+  assert.match(src, /registrarIntencion\(\{ origen: "ruleta", tipo: pick\.type, id: pick\.id, ruta: "\/" \}\)/,
+    "la tarjeta no registra de dónde salió el usuario");
+  assert.equal((src.match(/onClick=\{anotarVuelta\}/g) ?? []).length, 3,
+    "los tres accesos (póster, título y Más info) tienen que anotar la vuelta");
+});
+
+test("🔴 la ficha sólo marca la vuelta si la intención es de ESA ficha", () => {
+  // Marcarla siempre que el fallback corre sería peor que el bug: una ficha
+  // abierta desde WhatsApp resucitaría una sesión vieja de la ruleta.
+  const src = sinComentarios("components/DetailView.tsx");
+  assert.match(src, /decidirVuelta\(hayHistorialInterno\(\), consumirIntencion\(tipo, id\)\)/,
+    "la decisión dejó de mirar la intención de esta ficha");
+  assert.match(src, /if \(d\.marcarVuelta\) marcarVuelta\(d\.ruta\);/, "no marca la vuelta en el fallback");
+  assert.doesNotMatch(src, /marcarVuelta\("\/"\)/, "marca la vuelta incondicionalmente");
 });

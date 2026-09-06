@@ -62,14 +62,3 @@ export const TOLERANCIA_PX = 2;
 export function llego(actual: number, objetivo: number): boolean {
   return Math.abs(actual - objetivo) <= TOLERANCIA_PX;
 }
-
-// Cuánto tiempo se sostiene la posición después de restaurar.
-//
-// 🔴 NO ES UN `scrollTo` Y LISTO, Y ESA ES LA CORRECCIÓN. Un solo intento pierde
-// contra todo lo que pasa después de una vuelta atrás: la restauración nativa
-// del navegador, que llega tarde y con su propio número; el documento que
-// todavía no tiene su altura definitiva, así que el desplazamiento pedido se
-// recorta; y el contenido de arriba que sigue llegando. Mientras dura esta
-// ventana se vuelve a poner la sección en su lugar en cada frame, y CUALQUIER
-// gesto del usuario la corta: si tocó la pantalla, manda él.
-export const VENTANA_REACOMODO_MS = 1200;

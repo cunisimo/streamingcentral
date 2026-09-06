@@ -1,7 +1,7 @@
 // El anclaje de la sección al volver de una ficha.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { objetivoDeScroll, llego, TOLERANCIA_PX, VENTANA_REACOMODO_MS } from "./ruleta-scroll.ts";
+import { objetivoDeScroll, llego, TOLERANCIA_PX } from "./ruleta-scroll.ts";
 
 test("🔴 el objetivo deja la sección en el MISMO lugar de la pantalla", () => {
   // Se guardó con la sección a 36 px del borde de arriba, estando el scroll en
@@ -48,11 +48,4 @@ test("la tolerancia absorbe el redondeo del navegador, no un desvío real", () =
   assert.equal(llego(0, 880), false, "arriba de todo NO es haber llegado");
   assert.equal(llego(890, 880), false);
   assert.ok(TOLERANCIA_PX < 4, "una tolerancia grande esconde justamente el bug que se arregla");
-});
-
-test("la ventana de reacomodo es corta y existe", () => {
-  // Corta porque mientras dura se le gana al usuario si scrollea con el teclado
-  // (el gesto la corta, pero conviene que igual no sea eterna), y suficiente
-  // para cubrir la restauración nativa del navegador, que llega en cientos de ms.
-  assert.ok(VENTANA_REACOMODO_MS >= 600 && VENTANA_REACOMODO_MS <= 2000);
 });

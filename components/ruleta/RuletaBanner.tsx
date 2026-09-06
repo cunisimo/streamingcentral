@@ -6,9 +6,7 @@ import { itemRefs } from "@/lib/userdata";
 import { useRouletteSeen } from "@/hooks/useRouletteSeen";
 import { consumirVuelta, decidirRestauracionVista, guardarVista, olvidarLista } from "@/hooks/lista-paginada-store";
 import { contextoDe, snapshotVigente } from "@/hooks/restauracion-vigente";
-import {
-  objetivoDeScroll, llego, VENTANA_REACOMODO_MS, type PosicionRuleta,
-} from "@/lib/ruleta-scroll";
+import { objetivoDeScroll, type PosicionRuleta } from "@/lib/ruleta-scroll";
 import {
   iniciar, actual as actualDe, puedeVolver, atras, otra as otraDe, sumarTanda,
   valeGuardar, esEstadoValido,
@@ -88,7 +86,6 @@ export default function RuletaBanner() {
   // primer intento: en el medio corre el efecto que guarda el snapshot. Ver el
   // comentario del guardado.
   const scrollPendiente = useRef<PosicionRuleta | null>(null);
-  const scrollAgendado = useRef(false);
 
   /** Donde esta la seccion ahora, para el calculo del objetivo. */
   const dondeEsta = () => {
@@ -122,53 +119,30 @@ export default function RuletaBanner() {
   }, [platformsListas, decidido]);
 
   // ==========================================================================
-  // PONER LA SECCION DONDE ESTABA, Y SOSTENERLA
+  // PONER LA SECCION DONDE ESTABA
   // ==========================================================================
-  // El dueno lo pidio asi: volver de una ficha tiene que devolver la seccion, no
-  // solo su estado. Por eso el objetivo se recalcula contra la posicion REAL del
-  // bloque (ver lib/ruleta-scroll.ts) en vez de repetir un desplazamiento.
+  // El objetivo se calcula contra la posicion REAL de la seccion y no repitiendo
+  // un desplazamiento: la ruleta es un bloque en el medio del Home, con el hero
+  // y los rieles arriba, asi que un `scrollY` absoluto describe el documento y
+  // no la seccion. Ver lib/ruleta-scroll.ts.
   //
-  // Y UN SOLO `scrollTo` NO ALCANZA, por eso es un bucle corto. Despues de una
-  // vuelta atras hay por lo menos tres cosas que mueven la pagina DESPUES de
-  // nosotros: la restauracion nativa del navegador, que llega tarde y con su
-  // propio numero; el documento, que todavia no tiene su altura final, asi que
-  // un desplazamiento grande se recorta contra el fondo; y el contenido de
-  // arriba del Home, que sigue llegando. El intento unico ganaba o perdia segun
-  // el dispositivo, y de ahi salia el "me lleva al inicio del home".
+  // Un solo intento, con el rAF doble de siempre: la tarjeta ya esta montada y
+  // el documento termina de medirse en el frame siguiente. Hubo una version que
+  // sostenia la posicion durante 1,2 s corrigiendo en cada frame; se retiro
+  // porque nunca se la vio funcionar —`requestAnimationFrame` no corre en el
+  // navegador de prueba— y no hay ninguna medicion que la justifique.
   //
-  // Cualquier gesto del usuario lo corta: si tomo el control, manda el.
-  //
-  // La pendiente se suelta al terminar y no al agendar: en el medio corre el
-  // efecto de guardado, que necesita saber que la vista todavia no llego.
+  // La pendiente se limpia DENTRO del rAF y no al agendar: en el medio corre el
+  // efecto que guarda el snapshot, que necesita saber que la vista todavia no
+  // llego a su lugar.
   useEffect(() => {
     const pos = scrollPendiente.current;
-    if (!pos || !actual || scrollAgendado.current) return;
-    scrollAgendado.current = true;
-
-    let vivo = true;
-    const soltar = () => { vivo = false; };
-    const gestos = ["wheel", "touchstart", "keydown"];
-    for (const ev of gestos) window.addEventListener(ev, soltar, { passive: true });
-    const fin = () => {
-      for (const ev of gestos) window.removeEventListener(ev, soltar);
-      scrollAgendado.current = false;
-      if (scrollPendiente.current === pos) scrollPendiente.current = null;
-    };
-
-    const hasta = Date.now() + VENTANA_REACOMODO_MS;
-    const paso = () => {
-      // La vigencia pudo soltar la pendiente (cambiaron las plataformas), o el
-      // usuario pudo tomar el control.
-      if (!vivo || scrollPendiente.current !== pos) { fin(); return; }
-      const objetivo = objetivoDeScroll(pos, dondeEsta());
-      if (!llego(window.scrollY, objetivo)) window.scrollTo(0, objetivo);
-      if (Date.now() < hasta) requestAnimationFrame(paso);
-      else fin();
-    };
-    // Los dos frames de siempre: la tarjeta ya esta montada, pero el documento
-    // recien termina de medirse en el frame siguiente.
-    requestAnimationFrame(() => requestAnimationFrame(paso));
-    return fin;
+    if (!pos || !actual) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (scrollPendiente.current !== pos) return;
+      scrollPendiente.current = null;
+      window.scrollTo(0, objetivoDeScroll(pos, dondeEsta()));
+    }));
   }, [actual]);
 
   useEffect(() => {

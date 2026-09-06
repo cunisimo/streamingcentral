@@ -8,6 +8,7 @@ import { usePlatforms } from "../PlatformsContext";
 import PlatformLogo from "../PlatformLogo";
 import { genreLabel } from "../data";
 import { hasItem, setItem } from "@/lib/userdata";
+import { registrarIntencion } from "@/hooks/intencion-vuelta";
 import { fraseAtencion } from "./frases";
 import type { RoulettePick } from "@/lib/roulette";
 
@@ -87,6 +88,14 @@ export default function RuletaCard({
   const frase = fraseAtencion(pick.atencion, pick.id);
   const ficha = `/titulo/${pick.type}/${pick.id}`;
 
+  // Los TRES accesos a la ficha anotan de dónde salió el usuario. Es lo que
+  // permite que el "Volver" de la ficha devuelva la sesión cuando el back del
+  // navegador no está disponible —una ficha recargada, por ejemplo— sin que una
+  // ficha abierta desde WhatsApp resucite una sesión vieja. Ver
+  // `hooks/intencion-vuelta.ts`.
+  const anotarVuelta = () =>
+    registrarIntencion({ origen: "ruleta", tipo: pick.type, id: pick.id, ruta: "/" });
+
   // 🔴 "Mi lista" SALE DEL CONTEXTO COMPARTIDO, igual que en la ficha
   // (`components/ListActions.tsx`). No es sólo reuso: es lo que hace que al
   // volver de la ficha el estado esté al día sin pedir nada. Si la tarjeta
@@ -160,14 +169,14 @@ export default function RuletaCard({
           que la ancle se lee como un paredón. */}
       <div className="rlt-head">
         {pick.poster && (
-          <Link className="rlt-poster" href={ficha}>
+          <Link className="rlt-poster" href={ficha} onClick={anotarVuelta}>
             <img src={pick.poster} alt="" loading="lazy" />
           </Link>
         )}
         <div className="rlt-ident">
           <span className="chip-group-label">Te recomendamos</span>
           <h3 className="rlt-title">
-            <Link href={ficha}>{pick.title}</Link>
+            <Link href={ficha} onClick={anotarVuelta}>{pick.title}</Link>
           </h3>
           {meta && <p className="rlt-meta">{meta}</p>}
 
@@ -198,7 +207,7 @@ export default function RuletaCard({
         {/* Va a la ficha DENTRO de la app, nunca afuera. Antes decía "Verla" e
             intentaba primero el `watchLink` de TMDB, que es su página agregadora
             y no la plataforma: mandaba al usuario fuera para nada. */}
-        <Link className="act" href={ficha}>
+        <Link className="act" href={ficha} onClick={anotarVuelta}>
           {icoFicha}<span className="lab">Más info</span>
         </Link>
 
