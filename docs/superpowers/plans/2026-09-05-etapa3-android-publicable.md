@@ -638,3 +638,107 @@ la web.
 `integracion/capacitor-base`, nacida de `main` en `5297e25`, **local y sin
 pushear**. `main` y Producción sin un solo cambio. El spike descartable sigue
 archivado en `5d5180f` y no se tocó.
+
+## 16. Etapa 4 — íconos y pantalla de inicio nativos (6/09)
+
+Primera pieza de la Etapa 4. **Aprobada visualmente por el dueño** mirando las
+previews a tamaño real, no descrita.
+
+### 16.a La fuente, y una corrección a la documentación
+
+🔴 **`assets/brand/logo.svg` NO es la fuente de la marca, aunque `CLAUDE.md` lo
+llame "fuente única de verdad".** Es un placeholder anterior —un cuadrado naranja
+liso con un triángulo— que no se parece a la marca actual. Se nota hasta en el
+color: dice `#FF6A1A` afirmando ser "el mismo `--accent` de globals.css", y
+`--accent` es `#F58634`. Y tampoco es cierto que de ahí salgan los assets de la
+PWA: `scripts/generate-pwa-assets.mjs` lee `public/brand/yump-icon.png`.
+
+La fuente real son los cuatro archivos que pasó el dueño el 6/09, ahora en el
+repo:
+
+| Archivo | Tamaño | Qué es |
+|---|---|---|
+| `assets/brand/yump-simbolo.png` | 1200×1200 | el símbolo solo |
+| `assets/brand/yump-simbolo-circular.png` | 286×287 | el mismo, ya recortado en círculo |
+| `assets/brand/yump-logo.png` | 1000×1000 | símbolo + "yump" en gris oscuro |
+| `assets/brand/yump-logo-blanco.png` | 1000×1000 | símbolo + "yump" en blanco |
+
+**`logo.svg` se dejó sin tocar**: borrarlo o reemplazarlo es una decisión que el
+dueño todavía no tomó.
+
+### 16.b 🔴 La flecha es un calado, no pintura blanca
+
+Verificado muestreando píxeles: en el centro de la flecha el alfa es **0** en los
+cuatro archivos. **La flecha toma el color de lo que tenga detrás.** Eso ordena
+todo el generador: se aplana sobre blanco antes de componer, y el fondo del ícono
+adaptativo es blanco.
+
+Es también la explicación de un efecto visible: en el splash **oscuro** la flecha
+se ve oscura y no blanca. El dueño lo vio así y lo aprobó. Si alguna vez se la
+quiere blanca ahí, hace falta una versión del logo con la flecha pintada.
+
+### 16.c Qué va en cada lado, y por qué no es lo mismo
+
+| | Qué lleva | Por qué |
+|---|---|---|
+| **Ícono del lanzador** | **sólo el símbolo** | medido a tamaño real: con el texto adentro, a 48 px "yump" es una mancha ilegible. Y Android ya escribe *Yump* debajo del ícono, así que el nombre saldría dos veces |
+| **Pantalla de inicio** | **el bloque con "yump"** | ahí se ve grande, se lee perfecto, y es el único lugar donde la app dice su nombre |
+
+Las dos decisiones son del dueño, tomadas el 6/09 sobre la comparación a 48, 72,
+96, 144 y 192 px.
+
+### 16.d 🔴 Por qué el símbolo no va a sangre
+
+Se intentó el ícono de color de borde a borde —que es como se ven las dos piezas
+de marca que pasó el dueño— y **no funciona**: el sistema recorta los **72dp
+centrales** del ícono adaptativo **antes** de aplicar la máscara, así que una
+marca que llega justo al borde pierde el 33% exterior. Medido: la burbuja
+desaparecía y quedaba una flecha gigante partida.
+
+Un ícono a sangre necesitaría una fuente con **sangrado** —el degradado siguiendo
+más allá de la marca—, y estirarlo o inventarlo sería dibujar marca nueva. Así
+que el símbolo se inserta sobre blanco, al **50%** del lienzo: el máximo que deja
+los vértices redondeados justo en el borde del círculo garantizado, que es lo que
+da el aspecto lleno de las piezas de marca.
+
+Geometría: lienzo 432 px (108dp a xxxhdpi), área visible 288 (72dp), círculo
+garantizado 264 (66dp).
+
+### 16.e Lo que se generó
+
+`node scripts/generate-android-assets.mjs` escribe **44 archivos** y es
+re-ejecutable; `--previews <carpeta>` genera lo mismo sin tocar `android/`.
+
+- `ic_launcher.png` y `ic_launcher_round.png` heredados, 48 a 192 px;
+- `ic_launcher_foreground.png` adaptativo, 108 a 432 px;
+- **`ic_launcher_monochrome.png`**, que no existía;
+- `splash.png` en vertical y horizontal, cinco densidades, **en claro y en
+  oscuro** (`-night`), más el fallback sin densidad.
+
+Entra la capa `<monochrome>` en los dos XML adaptativos: Android 13+ la tiñe con
+el color del tema del usuario. **La silueta sale sola del calado de la flecha**,
+no se dibujó nada.
+
+El splash oscuro es un agregado sobre la plantilla, que sólo traía la variante
+clara: sin él, quien tenga el sistema en oscuro veía un destello blanco al abrir.
+
+### 16.f Verificación
+
+`BUILD SUCCESSFUL` · el APK declara `ar.yump.app` con etiqueta **Yump**,
+`targetSdk` 36 y **un solo permiso** (`INTERNET`) · el adaptativo empaquetado
+tiene `background`, `foreground` y `monochrome` · 25 entradas de `ic_launcher` y
+44 de `splash` dentro del APK.
+
+⚠️ **No se probó en el teléfono**: no estaba conectado. Las previews de control se
+hicieron desde los archivos que quedaron escritos en `android/`, que es lo que va
+en el APK, no desde la fuente. Falta la confirmación en pantalla real.
+
+**La PWA web no se tocó**: cero cambios en `public/`, `app/` y
+`generate-pwa-assets.mjs`. Son dos juegos de recursos y dos scripts.
+
+### 16.g Lo que sigue sin empezar
+
+Firma y keystore · Play App Signing · ficha de Play · `assetlinks.json` · deep
+links · notificaciones locales · 404 propio · iOS · y la integración de
+Próximamente y "¿No sabés qué ver?", que sigue pendiente antes del paquete
+publicable.
