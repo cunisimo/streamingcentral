@@ -1,5 +1,9 @@
 # Etapa 3 — Android publicable (plan, revisión 1)
 
+> ✅ **ETAPA 3 TERMINADA** el 6 de septiembre de 2026, en cuatro tandas. El
+> cierre y lo que queda abierto, en §15. La Etapa 4 (íconos y splash) arranca
+> desde acá.
+
 > Escrito el **5 de septiembre de 2026**, después de cerrar la Etapa 2. Reemplaza
 > operativamente la lista de "Etapa 3" de `docs/CAPACITOR.md`, que se escribió
 > **antes** del prototipo y quedó desactualizada. Ese texto se conserva ahí como
@@ -592,3 +596,45 @@ web sin un solo cambio.
 
 `MainActivity` sigue siendo la clase vacía de siempre, con el comentario que
 explica por qué no lleva un `RouteProcessor`.
+
+## 15. ✅ ETAPA 3 TERMINADA — 6 de septiembre de 2026
+
+Cuatro tandas, todas auditadas. Los criterios de §5 están satisfechos y las tres
+decisiones que la etapa tenía abiertas quedaron cerradas con medición, no con
+opinión. Lo que sigue pendiente pertenece a etapas posteriores.
+
+### Qué quedó resuelto
+
+| | Estado |
+|---|---|
+| **Subrutas directas** | ✅ **resueltas para el usuario**: abrir `/top/`, `/t/?tipo=movie&id=278` o `/lista/ultimos/?tipo=tv` carga la pantalla correcta, con query y hash. Recargar conserva la pantalla |
+| **404** | ⚠️ **se ve, pero responde HTTP 200.** Una ruta desconocida muestra el documento local de "no encontrado" en vez del Home; el código de estado no se puede controlar (§14.e) |
+| **Analytics y Speed Insights** | ✅ **apagados en nativo**: cero pedidos y cero 404 en Android, donde no medían nada. La web sin cambios |
+| **"Recordarme"** | ✅ en Android **abre Google Calendar**, sin `.ics`, sin descargas y sin plugins nuevos. En la web el `.ics` sigue igual |
+| **`sc_platforms`** | ✅ **se conserva sin cambios**, por decisión del dueño. Medido: no la lee nadie, y en el contenedor su dominio es `localhost` así que ni siquiera puede llegar a la API |
+| **Identificador** | ✅ **`ar.yump.app`** es el definitivo, con nombre visible **Yump**. Compilado, instalado y probado |
+| **`/t` y `/p`** | ✅ `noindex, nofollow` en el HTML de la web; presentes y funcionales en el artefacto nativo |
+| **Proyecto Android** | ✅ generado limpio: `compileSdk`/`targetSdk` 36, `minSdk` 24, **un solo permiso** (`INTERNET`), tres plugins |
+| **PWA** | ✅ intacta en la web, ausente del artefacto nativo |
+| **Higiene** | ✅ cero rastros de `ar.yump.app.dev`, cero rutas absolutas versionadas, cero secretos en el artefacto |
+
+### Lo que NO entra en Etapa 3 y hay que integrar antes del paquete publicable
+
+🔴 **Próximamente y "¿No sabés qué ver?" tienen cambios pendientes que todavía no
+se integraron a esta rama.** No son parte de la Etapa 3 y no se tocaron en
+ninguna de sus cuatro tandas. **Se integran antes de armar el paquete publicable**
+y conviene tenerlo presente: un AAB armado antes de esa integración no llevaría
+esos cambios.
+
+### Pendientes que pertenecen a etapas posteriores
+
+Tipo de cuenta de Google Play · keystore y Play App Signing · ficha de Play ·
+`assetlinks.json` · deep links · notificaciones locales en v1 · iOS · y el
+**404 propio**, que hoy es el de Next por defecto y cuyo arreglo tocaría también
+la web.
+
+### Estado de la rama al cerrar
+
+`integracion/capacitor-base`, nacida de `main` en `5297e25`, **local y sin
+pushear**. `main` y Producción sin un solo cambio. El spike descartable sigue
+archivado en `5d5180f` y no se tocó.

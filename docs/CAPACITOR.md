@@ -1160,6 +1160,7 @@ Las de arquitectura ya están tomadas (§0.a). Quedan estas:
 | 1 | ~~**Identificador**~~ | ✅ **DECIDIDO: `ar.yump.app`**, nombre visible `Yump` (5/09). Ya compilado y probado |
 | 2 | **Cuenta de Play: ¿personal u organización?** | antes de la Etapa 5. ±14 días de calendario |
 | 3 | **¿Entran las notificaciones locales en la v1?** | Etapa 4. Es el mejor argumento contra 4.2, y suma un permiso |
+| — | **Íconos y splash definitivos** | **Etapa 4, EN CURSO desde el 6/09**: candidatos preparados desde el logo oficial, esperando aprobación visual del dueño |
 | 4 | ~~**¿Se reemplaza Vercel Analytics en la app?**~~ | ✅ **CERRADO el 6/09**: no se reemplaza, se APAGA en nativo. En Android no medía nada (2 pedidos, 404, ningún beacon) y ahora no pide nada. La web sigue igual. Plan de Etapa 3 §8 y §13.a |
 | 5 | **¿Se saca la cookie `sc_platforms`?** | Etapa 3, **confirmado el 6/09**: nadie la lee, y en el contenedor su dominio es `localhost` así que ni siquiera puede llegar a la API. Ver el plan de Etapa 3 §9 |
 | — | **Subrutas directas del servidor local** | ✅ **RESUELTO el 6/09** desde el cliente (plan de Etapa 3 §14). El arreglo nativo con `RouteProcessor` se probó y NO sirve (§13.c). ⚠️ Sigue sin haber un HTTP 404 real: la página de "no encontrado" se ve, pero el servidor responde 200 |
