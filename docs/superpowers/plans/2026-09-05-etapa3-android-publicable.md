@@ -81,10 +81,10 @@ y compilado.
 | **Keystore y Play App Signing** | perder la clave de subida es un trámite con Google | antes del primer AAB |
 | **Íconos y splash definitivos** | hoy son los de la plantilla de Capacitor | antes de publicar |
 | **Notificaciones locales en v1** | define si entra un plugin más | antes de cerrar el alcance de v1 |
-| **Reemplazo de Vercel Analytics en Android** | 2 pedidos por arranque, 404, **0 bytes**; en Android no mide nada | medido, §8 |
+| ~~**Reemplazo de Vercel Analytics en Android**~~ | ✅ **RESUELTO el 6/09**: apagadas sólo en nativo. Cero pedidos, cero 404. La web intacta | §8 y §13.a |
 | **Destino de la cookie `sc_platforms`** | no la lee nadie y en el contenedor ni siquiera puede llegar al servidor | medido, §9 |
-| **Subrutas directas y 404 del servidor local** | toda ruta sin punto sirve el `index.html` raíz con 200 | medido, §11 |
-| **`.ics`** | anda, pero sale de la app: lo termina descargando Chrome | medido, §10 |
+| **Subrutas directas y 404 del servidor local** | 🔴 **SIGUE ABIERTO.** La alternativa B se probó entera y NO sirve: empeora el problema. Ver §13.c | §11 y §13.c |
+| ~~**`.ics`**~~ | ✅ **RESUELTO el 6/09**: en Android "Recordarme" va derecho a Google Calendar. En la web el `.ics` sigue igual | §10 y §13.b |
 | **iOS** | Mac remota y guideline 4.2 | Etapa 8 |
 
 ## 4. Tareas de etapas posteriores
@@ -337,3 +337,138 @@ Los tres hallazgos que exigen código y **no se tocaron**:
 1. Apagar Analytics y Speed Insights en nativo (§8, recomendación 1).
 2. El `.ics`, que hoy sale a Chrome (§10).
 3. La resolución de subrutas y el 404 (§11, alternativas B/C/D).
+
+## 13. Tercera tanda — 6 de septiembre de 2026
+
+Tres decisiones del dueño. Dos entraron; **la tercera se probó entera y se
+revirtió**, que era uno de los dos resultados previstos.
+
+### 13.a Analytics y Speed Insights, apagados sólo en nativo ✅
+
+`app/layout.tsx` monta las dos detrás de `{!ES_NATIVO && …}`.
+
+| | Antes | Después |
+|---|---|---|
+| Pedidos `_vercel` por arranque en Android | **2**, ambos 404 | **0** |
+| Errores de consola por arranque | 2 | 0 |
+| `<script>` de Vercel en el DOM | — | 0 |
+| Pedidos totales de una sesión de Home | 350 | 344 |
+| Bundle de la web | las dos presentes | **sin cambios** |
+
+⚠️ **Esto NO las saca del bundle nativo, y conviene no creer lo contrario.** Son
+componentes de CLIENTE importados por un layout de SERVIDOR: Next mete su
+implementación en el chunk por el solo hecho de estar importadas. Se midió dos
+veces —con el gate en el layout, el chunk salió byte a byte idéntico al de antes;
+y moviéndolo a un componente de cliente con el mismo corte adentro, igual—. Lo
+que el gate garantiza, y es lo que importa, es que **no se montan**: cero
+pedidos, cero 404. Sacarlas de verdad pediría sustituir el módulo en el staging
+del build nativo, y eso no se hizo.
+
+### 13.b "Recordarme" en Android: Google Calendar, sin `.ics` ✅
+
+En el contenedor la variante de texto deja de ser un menú de dos filas y pasa a
+ser un enlace directo al **mismo** `googleCalendarUrl` que ya usaba la web: mismo
+`resumen`, misma `fecha`, mismo constructor. No se duplicó una sola línea de
+fechas, títulos ni husos, y hay tests que lo fijan.
+
+Medido con **Futurama** (`tv/615`, Disney+, 2026-09-07):
+
+| | Resultado |
+|---|---|
+| Enlace | `calendar.google.com/calendar/render?action=TEMPLATE&…&dates=20260907%2F20260908` |
+| Pedidos a `/api/recordatorio` o `.ics` | **0** |
+| Qué abre | la app **Google Calendar**, en la pantalla de crear evento |
+| ¿Guarda solo? | **no**: ofrece × y Guardar, y la decisión queda en el usuario |
+| Evento guardado tras cancelar | **ninguno** (consultado el proveedor de calendario: *No result found*) |
+| Archivo en Descargas | **ninguno** nuevo |
+| Al volver | Yump sigue en `/t/?tipo=tv&id=615` con la ficha |
+| Plugins nuevos | **ninguno**. Sin `@capacitor/browser`, sin permisos nuevos |
+
+En la web no cambia nada: siguen las dos filas, el `.ics` sigue vivo, el endpoint
+`/api/recordatorio` no se tocó y `googleCalendarUrl` conserva sus parámetros.
+
+⚠️ Igual que en Analytics, la etiqueta de la fila del `.ics` **sigue en el
+bundle** nativo —misma causa, mismos 3 chunks antes y después—; lo que no ocurre
+es que se ofrezca.
+
+### 13.c 🔴 Alternativa B para subrutas: PROBADA Y REVERTIDA
+
+**No es apta.** Se implementó completa, se compiló, se instaló y se midió en el
+teléfono antes de descartarla.
+
+**El gate técnico lo pasaba.** El punto de extensión existe y es público en
+Capacitor Android 8.5.1: `RouteProcessor` y `ProcessedRoute` son interfaces
+públicas, `BridgeActivity.bridgeBuilder` es `protected`, y
+`Bridge.Builder.setRouteProcessor` y `CapConfig.Builder.setHTML5mode` son
+`public`. Nada de parchear `node_modules`, copiar `WebViewLocalServer`, forkear,
+reflexión ni `server.url`.
+
+**Lo que falla está ANTES del punto de extensión.** `handleLocalRequest` decide
+si responde antes de llamar al `PathHandler`, y su última rama es:
+
+```java
+int periodIndex = path.lastIndexOf(".");
+if (periodIndex >= 0) { ...responde... }
+return null;
+```
+
+Una ruta **sin ningún punto** —`/top/`, `/t/`, `/lista/ultimos/`— sale por ese
+`return null`. Para la WebView eso significa "resolvelo vos", y como
+`https://localhost` no existe fuera del contenedor, la navegación **falla**.
+
+Medido en el teléfono, con el resolvedor puesto:
+
+| Pedido | `html5mode` **apagado** (alternativa B) | `html5mode` prendido (como está) |
+|---|---|---|
+| `/` | 200, Home ✅ | 200, Home ✅ |
+| `/top/` | **`Failed to fetch`** ❌ | 200, **Home** (49.701 B) ❌ |
+| `/buscar/` | **`Failed to fetch`** ❌ | 200, **Home** ❌ |
+| `/lista/ultimos/?tipo=tv` | **`Failed to fetch`** ❌ | 200, **Home** ❌ |
+| `/t/?tipo=movie&id=278` | **`Failed to fetch`** ❌ | 200, **Home** ❌ |
+| `/p/?id=287` | **`Failed to fetch`** ❌ | — |
+| `/cuenta/configuracion/` | **`Failed to fetch`** ❌ | — |
+| `/no-existe-nada` | **`Failed to fetch`** ❌ | 200, **Home** ❌ |
+| `/lista/ultimos/index.html` | 200, la suya ✅ | 200, la suya ✅ |
+| `/404.html` | 200, la de Next ✅ | 200 ✅ |
+
+Los dos experimentos se corrieron sobre el mismo APK cambiando **sólo** esa
+bandera, así que la atribución es directa: con la bandera prendida el
+`RouteProcessor` ni llega a ver la ruta —esa rama lo llama con `"/index.html"`
+fijo—, y con la bandera apagada no hay respuesta.
+
+**O sea que la alternativa B no puede cumplir el contrato: lo empeora.** Deja seis
+de las siete rutas obligatorias sin cargar, en vez de cargarlas con la pantalla
+equivocada. Se revirtió entera —`RutasExportadas.java`, sus 23 tests JUnit,
+`MainActivity` y el guard de repositorio— y quedó, en su lugar, un comentario en
+`MainActivity` que explica por qué no se vuelve a intentar por ese camino.
+
+Se verificó después de revertir que las subrutas volvieron **exactamente** al
+estado documentado en §11, ni mejor ni peor.
+
+#### Lo que sí quedó aprendido, para la próxima vez
+
+- El resolvedor en sí era correcto: 23 casos JUnit en verde, con canario —al
+  quitar el rechazo de traversal fallaban 5—, cubriendo raíz, query, ruta
+  inexistente, archivo estático, barra final y sin barra, y traversal simple,
+  codificado, con barra invertida y hacia un archivo con extensión. La estrategia
+  era lista blanca **por existencia** (sólo se reescribe si el archivo está de
+  verdad en `assets/public`), con el rechazo de rutas peligrosas antes de la
+  regla que deja pasar los archivos con extensión.
+- **La única salida real es reemplazar `shouldInterceptRequest`**, o sea el
+  servidor local de Capacitor. Eso es exactamente lo que el dueño excluyó, y con
+  razón: sería código propio en el camino crítico de cada pedido, a mantener
+  contra cada versión de Capacitor.
+- Queda una alternativa que **no** se probó y que no toca Android: que la propia
+  app, al arrancar en la raíz con una URL que no es la raíz, se reencamine del
+  lado del cliente. No estaba en el alcance de esta tanda.
+
+### 13.d Estado de las decisiones
+
+| Decisión | Estado |
+|---|---|
+| Analytics/Speed Insights sólo en web | ✅ hecho y medido |
+| "Recordarme" nativo por Google Calendar | ✅ hecho y medido |
+| Alternativa B para subrutas | 🔴 **probada y revertida**: no apta |
+| `sc_platforms` | intacta, no se tocó |
+| `.ics` en la web | intacto |
+| `server.url` | no se usa |
