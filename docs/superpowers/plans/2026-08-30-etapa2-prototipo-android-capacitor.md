@@ -1,10 +1,14 @@
 # Etapa 2 — Prototipo Android con Capacitor (plan, revisión 6)
 
-> **No está empezado.** Sin Capacitor, sin `android/`, sin staging, sin export,
-> sin rama de spike, sin ningún checkpoint ejecutado.
+> 🔴 **ESTE ES EL PLAN, NO EL REGISTRO.** La Etapa 2 se ejecutó entera (CP1-CP11)
+> y terminó con veredicto positivo. **El registro de lo que pasó en cada
+> checkpoint vive en `spike/capacitor-android` (`5d5180f`)**, que es la rama del
+> prototipo descartable y no se mergea; acá quedó la versión previa a ejecutarlo.
+> Lo que sigue vigente y se está construyendo es la Etapa 3 — ver
+> `2026-09-05-etapa3-android-publicable.md`.
 
 **Base:** `main = origin/main = e9f8eaf` · **Next.js instalado: 14.2.35**
-**Rama propuesta (NO creada):** `spike/capacitor-android`
+**Rama del prototipo (creada y archivada):** `spike/capacitor-android` = `5d5180f`
 
 ---
 

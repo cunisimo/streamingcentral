@@ -1157,11 +1157,11 @@ Las de arquitectura ya están tomadas (§0.a). Quedan estas:
 
 | # | Decisión | Cuándo hace falta |
 |---|---|---|
-| 1 | **Identificador: ¿`ar.yump.app`?** | **antes de la primera subida**. Irreversible |
+| 1 | ~~**Identificador**~~ | ✅ **DECIDIDO: `ar.yump.app`**, nombre visible `Yump` (5/09). Ya compilado y probado |
 | 2 | **Cuenta de Play: ¿personal u organización?** | antes de la Etapa 5. ±14 días de calendario |
 | 3 | **¿Entran las notificaciones locales en la v1?** | Etapa 4. Es el mejor argumento contra 4.2, y suma un permiso |
-| 4 | **¿Se reemplaza Vercel Analytics en la app?** | Etapa 3. Si no, no hay métricas de la app instalada |
-| 5 | **¿Se saca la cookie `sc_platforms`?** | Etapa 3. En el contenedor no hace nada |
+| 4 | **¿Se reemplaza Vercel Analytics en la app?** | Etapa 3, **medido el 6/09**: en Android no mide nada (2 pedidos, 404, 0 bytes, ningún beacon). Ver el plan de Etapa 3 §8 |
+| 5 | **¿Se saca la cookie `sc_platforms`?** | Etapa 3, **confirmado el 6/09**: nadie la lee, y en el contenedor su dominio es `localhost` así que ni siquiera puede llegar a la API. Ver el plan de Etapa 3 §9 |
 | 6 | **¿iOS se hace?** | **Etapa 7**, contra resultados de Android |
 | 7 | **Apple: ¿individual u organización?** | sólo si la 6 es sí. Organización pide D-U-N-S |
 | 8 | **¿Se distribuye en la UE?** | sólo si la 6 es sí. Trader status |
