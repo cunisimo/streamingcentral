@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- El fondo de la pantalla de inicio. Es la variable `bg` de app/globals.css,
+     el mismo color con el que la app abre, para que no se note el cambio de
+     fase. -->
+<resources>
+    <color name="splash_bg">#FAFAFD</color>
+</resources>

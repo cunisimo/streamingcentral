@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- La variante oscura: la variable `bg` del tema oscuro. Sin esto, arrancar con
+     el sistema en oscuro daba un destello claro. -->
+<resources>
+    <color name="splash_bg">#0F0E13</color>
+</resources>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  La pantalla de inicio en Android 12+.
+
+  🔴 EL TEMA DE `values/` NO ALCANZA, Y ESTE ARCHIVO EXISTE POR ESO. Con
+  `targetSdk 36` el arranque lo maneja la SplashScreen API, que **ignora
+  `android:background`**: mira `windowSplashScreenBackground` y
+  `windowSplashScreenAnimatedIcon`. Como no estaban declarados, Android caía a su
+  default —el ícono del lanzador, o sea el símbolo suelto— y los `splash.png`
+  nunca se veían. Medido en el teléfono el 2026-09-06.
+
+  ⚠️ ACÁ SÍ VA LA PALABRA "yump", al revés que en el ícono del lanzador: en el
+  arranque la marca se ve grande y es el único lugar donde la app se presenta.
+
+  El logo se dimensiona al 46% de su lienzo (ver generate-android-assets.mjs):
+  Android enmascara esta ranura a un círculo, y ése es el tope que entra sin que
+  le corte las letras.
+
+  NO se declara `windowSplashScreenAnimationDuration`: eso sólo alargaría el
+  arranque para lucir el logo, y el arranque no se frena por estética.
+-->
+<resources>
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>

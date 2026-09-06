@@ -80,6 +80,11 @@ const ESCALA = 0.50;
 // igual.
 const RATIO_SPLASH = 0.34;
 
+// La ranura del ícono de la SplashScreen API: 288dp a xxxhdpi = 1152px, con un
+// círculo visible de 192dp. `PARTE_VISIBLE` es el tope que entra sin recorte.
+const LIENZO_SPLASH = 1152;
+const PARTE_VISIBLE = 0.46;
+
 const DENSIDADES = [
   ["mdpi", 48, 108, 320, 480],
   ["hdpi", 72, 162, 480, 800],
@@ -149,6 +154,29 @@ async function heredado(lado, forma) {
   return sharp(recortado).composite([{ input: mascara, blend: "dest-in" }]).png().toBuffer();
 }
 
+/**
+ * El logotipo de la PANTALLA DE INICIO, para la SplashScreen API de Android 12+.
+ *
+ * 🔴 EL 46% NO ES DECORATIVO: ES LO QUE EVITA QUE ANDROID LO RECORTE. La ranura
+ * del ícono del sistema es un lienzo de 288dp del que sólo se ve un CÍRCULO de
+ * 192dp (66,7%), y enmascara. El bloque de marca es casi cuadrado, así que manda
+ * su diagonal: para entrar entero, su ancho no puede pasar de 0,667 / 1,44 =
+ * 46% del lienzo. Verificado cuadro por cuadro en el teléfono, en claro y en
+ * oscuro: entra completo y se lee.
+ *
+ * ⚠️ Acá SÍ va la palabra "yump", al revés que en el ícono del lanzador. En el
+ * arranque la marca se ve grande y es el único lugar donde la app se presenta;
+ * en el lanzador, a 48px, esa misma palabra es una mancha y Android ya escribe
+ * el nombre debajo.
+ */
+async function logoDeArranque(oscuro) {
+  const marca = await sharp(oscuro ? LOGO_BLANCO : LOGO)
+    .resize({ width: Math.round(LIENZO_SPLASH * PARTE_VISIBLE) })
+    .png().toBuffer();
+  return lienzo(LIENZO_SPLASH, LIENZO_SPLASH)
+    .composite([{ input: marca, gravity: "centre" }]).png().toBuffer();
+}
+
 /** La pantalla de inicio: el bloque con "yump" centrado sobre el fondo de marca. */
 async function splash(ancho, alto, oscuro) {
   const fondo = oscuro ? FONDO_OSCURO : FONDO_CLARO;
@@ -194,6 +222,11 @@ async function main() {
     await escribir(`drawable-port-night-${d}/splash.png`, await splash(sw, sh, true));
     await escribir(`drawable-land-night-${d}/splash.png`, await splash(sh, sw, true));
   }
+  // El logotipo del arranque de Android 12+. Uno solo por tema: la SplashScreen
+  // API escala sola, no necesita una copia por densidad.
+  await escribir("drawable/splash_logo.png", await logoDeArranque(false));
+  await escribir("drawable-night/splash_logo.png", await logoDeArranque(true));
+
   // El fallback sin densidad: la plantilla lo trae en 480×320.
   await escribir("drawable/splash.png", await splash(480, 320, false));
   await escribir("drawable-night/splash.png", await splash(480, 320, true));

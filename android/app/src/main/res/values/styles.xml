@@ -13,6 +13,11 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- El hueco entre que se va la pantalla de inicio y la WebView pinta se
+             ve con ESTE color. Si no fuera el mismo del arranque, ahí habria un
+             destello. Medido: sin declararlo quedaba en manos del default de
+             AppCompat, que acertaba por casualidad. -->
+        <item name="android:windowBackground">@color/splash_bg</item>
     </style>
 
 
