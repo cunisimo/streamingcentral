@@ -839,3 +839,93 @@ web, así que **queda como decisión pendiente del dueño** y no se implementó.
 
 ⚠️ `assets/brand/yump-simbolo-circular.png` quedó versionado pero **ningún
 generador lo usa**. Se conserva como pieza de marca; no es una dependencia.
+
+## 18. Etapa 4 — la pantalla de inicio, resuelta (6/09)
+
+🟢 **La marca completa aparece al arrancar, en claro y en oscuro**, y el símbolo
+suelto no se ve nunca. Verificado grabando el arranque real y mirándolo cuadro a
+cuadro.
+
+### 18.a Ganó la Alternativa A, y eso fue una sorpresa
+
+El mandato preveía que la SplashScreen API podía no servir —que Android
+achicaría o recortaría el bloque dentro de su máscara circular— y dejaba
+preparada una Alternativa B con una fase propia encima. **No hizo falta: la A
+cumple todo.**
+
+La clave es el tamaño, y es aritmética, no gusto. La ranura del ícono del sistema
+es un lienzo de **288dp** del que sólo se ve un **círculo de 192dp** (66,7%), y
+Android enmascara. El bloque de marca es casi cuadrado, así que manda su
+diagonal: para entrar entero, su ancho no puede pasar de **0,667 / 1,44 = 46%**
+del lienzo. Con ese número entra completo y se lee.
+
+**Alternativa B quedó descartada por innecesaria**, no por mala. Habría pedido
+una capa nativa encima de la WebView con su propio ciclo de vida —cuándo
+mostrarla, cuándo sacarla, qué pasa si el JavaScript tarda o falla— y eso es más
+superficie de la que el problema justifica cuando el camino del sistema alcanza.
+
+### 18.b Qué se tocó
+
+| Archivo | Qué hace |
+|---|---|
+| `values-v31/styles.xml` y `values-night-v31/` | declaran `windowSplashScreenBackground`, `windowSplashScreenAnimatedIcon` y `postSplashScreenTheme`. **Son los únicos atributos que la SplashScreen API mira**; `android:background` lo ignora, que era la causa |
+| `values/colors_splash.xml` y `values-night/` | el color del arranque: `#FAFAFD` y `#0F0E13`, los mismos con los que abre la app |
+| `values/styles.xml` | se le agregó `android:windowBackground` al tema de la app |
+| `drawable/splash_logo.png` y `drawable-night/` | el bloque con "yump", generado al 46% |
+| `generate-android-assets.mjs` | genera esos dos, con el porqué del 46% escrito al lado |
+
+🔴 **`android:windowBackground` no es adorno.** Entre que la pantalla de inicio se
+va y la WebView pinta hay un hueco de unos 300 ms. Sin declararlo, ese hueco
+quedaba en manos del default de AppCompat —que acertaba de casualidad—; ahora es
+exactamente el mismo color, así que no hay destello posible en ninguno de los dos
+temas.
+
+⚠️ **No se declara `windowSplashScreenAnimationDuration`.** Ese atributo sólo
+alarga la pantalla para lucir el logo, y hay un guard que falla si alguien lo
+agrega. Tampoco se usa `windowSplashScreenBrandingImage`: Android la desaconseja
+y la pone **abajo**, no centrada — serviría para decir que "yump aparece" sin que
+la marca esté donde tiene que estar.
+
+### 18.c Medido en el teléfono, cuadro por cuadro
+
+Grabado a 10 cuadros por segundo en el motorola edge 60 con Android 16.
+
+| | Frío en oscuro | Frío en claro | Caliente / regreso |
+|---|---|---|---|
+| Marca completa "yump" | **sí**, ~600 ms | **sí**, ~500 ms | no hay pantalla de inicio |
+| Símbolo suelto | **nunca** | **nunca** | — |
+| Cuadrado de bordes duros | **no** | **no** | — |
+| Destello | **ninguno**: oscuro de punta a punta | **ninguno**: claro de punta a punta | va directo a la app |
+| Dos pantallas distintas | no | no | no |
+| Llega a la app | sí, ~2,4 s | sí, ~2,2 s | sí, ~100 ms |
+
+El arranque caliente **no muestra ninguna pantalla de inicio**: pasa directo a la
+app con su estado anterior. Era el riesgo de "dos splash seguidos" y no ocurre.
+
+⚠️ **Una cosa que se ve en las grabaciones y conviene entender.** Con el sistema
+en claro, la app puede abrir en oscuro: el fondo del arranque lo decide el
+**sistema**, y el tema de la app lo decide `sc:theme` en `localStorage`. Si el
+usuario eligió oscuro y su teléfono está en claro, va a ver un arranque claro y
+después la app oscura. **No tiene arreglo desde Android**: la pantalla de inicio
+corre antes de que exista JavaScript, así que no puede consultar esa preferencia.
+No es un defecto de este cambio.
+
+### 18.d Lo que NO se tocó
+
+🔴 **El ícono del lanzador quedó byte a byte idéntico**: los 20 PNG
+(`ic_launcher`, `_round`, `_foreground`, `_monochrome` × 5 densidades) tienen el
+mismo hash que en `e0b46c3`. Hay además un guard que falla si el ícono adaptativo
+llegara a apuntar al logotipo.
+
+🔴 **Los 44 `splash.png` heredados se conservan.** En Android 12+ son peso
+muerto, pero `minSdk` es 24 y no hay evidencia sobre Android 11 y anteriores.
+Borrarlos pediría probar todo ese rango, que no se hizo. Un guard falla si
+desaparecen.
+
+**Cero dependencias nuevas.** No se instaló `@capacitor/splash-screen`: sus
+opciones tradicionales no controlan el arranque bajo Android 12, así que habría
+agregado paquetes para no resolver el problema. **Cero permisos nuevos**: sigue
+habiendo uno solo, `INTERNET`.
+
+**La web y la PWA no se tocaron**: cero cambios en `public/`, `app/`,
+`components/` y `generate-pwa-assets.mjs`.
