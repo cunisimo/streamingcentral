@@ -83,7 +83,7 @@ y compilado.
 | **Notificaciones locales en v1** | define si entra un plugin más | antes de cerrar el alcance de v1 |
 | ~~**Reemplazo de Vercel Analytics en Android**~~ | ✅ **RESUELTO el 6/09**: apagadas sólo en nativo. Cero pedidos, cero 404. La web intacta | §8 y §13.a |
 | **Destino de la cookie `sc_platforms`** | no la lee nadie y en el contenedor ni siquiera puede llegar al servidor | medido, §9 |
-| **Subrutas directas y 404 del servidor local** | 🔴 **SIGUE ABIERTO.** La alternativa B se probó entera y NO sirve: empeora el problema. Ver §13.c | §11 y §13.c |
+| ~~**Subrutas directas**~~ | ✅ **RESUELTO el 6/09** desde el cliente: cada ruta directa carga su propio index.html, con query y hash. La alternativa B nativa se había probado y descartada. ⚠️ El 404 se ve pero el HTTP sigue siendo 200 | §11, §13.c y §14 |
 | ~~**`.ics`**~~ | ✅ **RESUELTO el 6/09**: en Android "Recordarme" va derecho a Google Calendar. En la web el `.ics` sigue igual | §10 y §13.b |
 | **iOS** | Mac remota y guideline 4.2 | Etapa 8 |
 
@@ -472,3 +472,123 @@ estado documentado en §11, ni mejor ni peor.
 | `sc_platforms` | intacta, no se tocó |
 | `.ics` en la web | intacto |
 | `server.url` | no se usa |
+
+## 14. Cuarta tanda — subrutas resueltas desde el cliente (6/09)
+
+🟢 **Las subrutas directas quedan RESUELTAS.** Después de que la alternativa B
+—nativa— se probara y se descartara (§13.c), quedaba una sola vía: recuperar la
+ruta del lado del cliente al arrancar. Funciona, y se verificó en el teléfono.
+
+### 14.a Cómo funciona
+
+Un `<script>` de 2,5 KB en el `<head>`, antes que cualquier recurso de Next, con
+dos fases:
+
+| Fase | Cuándo | Qué hace |
+|---|---|---|
+| **1. Saltar** | llegó el `index.html` raíz donde debía llegar otra página | `location.replace("/top/index.html?…#…")` — el servidor **sí** resuelve las rutas con punto |
+| **2. Limpiar** | ya llegó el documento correcto | `history.replaceState(…, "/top/?…#…")` antes de que Next hidrate |
+
+La fase 2 es la que hace que `usePathname()` lea `/top/` y que la pestaña de la
+barra inferior se marque sola. Y las dos usan `replace`, no `assign`: **no queda
+una entrada de más en el historial**, medido abajo.
+
+El arranque normal —`/`— sale por la primera regla sin hacer nada.
+
+**El orden de las reglas** (`scripts/rutas-nativas.mjs`):
+
+1. rechazo de rutas peligrosas — **antes que todo**;
+2. la vuelta (`…/index.html`): es la marca de que el salto ya ocurrió, y es lo
+   que hace **imposible el bucle**;
+3. la raíz;
+4. la lista blanca;
+5. los archivos con extensión, intactos —acá cae `/404.html`, que es lo que evita
+   que rebote sobre sí mismo—;
+6. todo lo demás, el 404 local.
+
+🔴 **El rechazo va primero, y eso no es prudencia: es un bug que ya pasó.** Estaba
+tercero, después de la regla de la vuelta, y `/top/./index.html` **termina** en
+`/index.html`: entraba por ahí y salía como `{limpiar, "/top/./"}`, o sea que un
+traversal se colaba a la barra de direcciones. Lo agarró un test antes de llegar
+al teléfono.
+
+### 14.b Dónde se inyecta, y por qué ahí
+
+En **`scripts/build-capacitor.mjs`, sobre el artefacto ya exportado**, justo
+después de publicarlo. Es el punto mínimo, y elige ese lugar por dos razones:
+
+- 🔴 **La lista de rutas sale de recorrer el artefacto**, buscando los
+  directorios que de verdad tienen un `index.html`. **No hay un segundo
+  inventario que se pueda desincronizar**: si mañana entra o sale una ruta, la
+  lista cambia sola en el mismo build. Hoy son 33 rutas en 36 archivos HTML, y un
+  test recalcula la lista desde el artefacto y la compara con la embebida.
+- 🔴 **La web no puede incluirlo ni por accidente.** No pasa por
+  `app/layout.tsx` ni por ningún bundle. Un test comprueba que el guion no
+  aparece en `.next/`.
+
+🔴 **El guion embebe las funciones reales con `toString()`**, no una copia escrita
+a mano. Lo que corre en el teléfono es exactamente lo que prueban los tests, y hay
+un test que **ejecuta el guion serializado** con un `location`/`history` de
+mentira y compara su comportamiento contra el módulo, caso por caso.
+
+### 14.c Contrato mínimo, medido en el teléfono
+
+| Pedido | Navegaciones | URL final | Resultado |
+|---|---|---|---|
+| `/` | 1 | `/` | Home, el guion no hace nada |
+| `/top/` | 2 | `/top/` | **Top Yump**, pestaña Top marcada |
+| `/buscar/` | 2 | `/buscar/` | **"¿Qué vemos hoy?"**, pestaña Buscador marcada |
+| `/lista/ultimos/?tipo=tv` | 2 | `/lista/ultimos/?tipo=tv` | **"Últimos lanzamientos"** con el toggle en **Series** y 20 series |
+| `/t/?tipo=movie&id=278` | 2 | `/t/?tipo=movie&id=278` | la ficha de **Cadena perpetua** |
+| `/p/?id=287` | 2 | `/p/?id=287` | la filmografía de **Brad Pitt** (El club de la lucha, Seven…) |
+| `/cuenta/configuracion/` | 2 | `/cuenta/` | carga y el guard de sesión de la app manda a "Ingresar" |
+| `/no-existe-nada` | 2 | `/404.html` | el **404 local**, no el Home |
+
+**El control que cierra la query**: `/lista/ultimos/` **sin** query abre en
+Películas, y con `?tipo=tv` abre en Series. No es que la query sobreviva en la
+barra: llega a la aplicación y la decide.
+
+### 14.d Lo demás que se comprobó
+
+| | Resultado |
+|---|---|
+| **Historial** | +1 por navegación, siempre (1→2→3…→9 en ocho aperturas directas). `location.replace` no agrega entradas |
+| **Recarga en `/lista/ultimos/?tipo=tv`** | conserva la pantalla y la query; **no** vuelve al Home; el historial no crece |
+| **Navegación SPA** | Home → ficha: `performance.getEntriesByType("navigation").length` sigue en **1**. El guion no se ejecuta de nuevo |
+| **Atrás** | ficha → Home sin recarga de documento; y desde el Home abierto directamente, Atrás vuelve al Top correcto |
+| **Bucles** | ninguno: abrir `/top/`, ir al Home por SPA y volver con Atrás da `Top Yump`, con una sola navegación de documento |
+| **Archivos estáticos** | `/brand/…png` 200 (73 KB), `/top/index.txt` 200 (el payload RSC que usa el prefetch), `/404.html` 200; un chunk inexistente sigue dando 404 |
+| **Consola** | sin errores |
+
+### 14.e ⚠️ Limitaciones reales
+
+1. 🔴 **NO hay un HTTP 404 de verdad.** Una ruta desconocida termina en
+   `/404.html`, que el servidor local sirve con **HTTP 200**. Lo que cambia es lo
+   que se VE: antes salía el Home, ahora sale el documento de "no encontrado".
+   El código HTTP no se puede controlar desde acá, y del lado nativo tampoco
+   (§13.c).
+2. **La URL de una ruta desconocida queda como `/404.html`**, no como la que se
+   pidió.
+3. ⚠️ **Ese 404 es el de Next por defecto**: dice *"This page could not be
+   found"*, en inglés, sin la tipografía ni la navegación de Yump, y sin forma de
+   volver. Funciona, pero desentona con una aplicación entera en castellano.
+   Arreglarlo es agregar `app/not-found.tsx`, y eso **cambiaría también la web**,
+   que esta tanda tenía prohibido tocar. Queda como pendiente aparte.
+4. **La apertura directa cuesta una navegación extra** (dos cargas de documento en
+   vez de una). Sólo en la apertura directa; el arranque normal no paga nada.
+5. La recuperación depende de que **cada ruta tenga su `index.html`** en el
+   artefacto, que es lo que produce `output: export` con `trailingSlash`. Un test
+   comprueba que no haya archivos sin extensión en el artefacto, que serían
+   inalcanzables.
+
+### 14.f Qué NO se tocó
+
+`server.url` sigue sin usarse · `node_modules` intacto · `WebViewLocalServer` sin
+copiar · sin reflexión ni APIs privadas · `trailingSlash` sin cambiar y ninguna
+URL pública convertida a `.html` · **cero** dependencias, plugins, permisos y
+llamadas externas nuevas · **cero** costo en Vercel, Supabase, Upstash o TMDB (el
+guion es un archivo local que ya viajaba en el APK) · `sc_platforms` intacta · la
+web sin un solo cambio.
+
+`MainActivity` sigue siendo la clase vacía de siempre, con el comentario que
+explica por qué no lleva un `RouteProcessor`.
