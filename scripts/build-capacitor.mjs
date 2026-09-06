@@ -21,11 +21,12 @@
 import { spawnSync } from "node:child_process";
 import { resolve, join, basename, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { guionDeArranque } from "./rutas-nativas.mjs";
 import { parseEnv } from "node:util";
 import ts from "typescript";
 import {
   existsSync, readFileSync, writeFileSync, rmSync, mkdirSync, cpSync,
-  symlinkSync, lstatSync, readlinkSync, unlinkSync,
+  symlinkSync, lstatSync, readlinkSync, unlinkSync, readdirSync,
 } from "node:fs";
 
 // ============================================================================
@@ -237,6 +238,58 @@ export function copiarAlStaging(dirStaging) {
 }
 
 // ============================================================================
+// Recuperación de rutas directas (ver scripts/rutas-nativas.mjs)
+// ============================================================================
+
+/** Todos los `.html` del artefacto, con su ruta absoluta. */
+function htmlsDelArtefacto(dir, acumulado = []) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) htmlsDelArtefacto(p, acumulado);
+    else if (e.name.endsWith(".html")) acumulado.push(p);
+  }
+  return acumulado;
+}
+
+/**
+ * Inyecta el guion de arranque en cada `.html` del artefacto.
+ *
+ * 🔴 LA LISTA DE RUTAS SALE DE ACÁ, DEL ARTEFACTO YA CONSTRUIDO, y no de un
+ * archivo escrito a mano: son los directorios que de verdad tienen un
+ * `index.html`. No hay un segundo inventario que se pueda desincronizar — si
+ * mañana entra o sale una ruta, la lista cambia sola en el mismo build.
+ *
+ * Va INMEDIATAMENTE después de `<head>`, antes que cualquier recurso de Next: si
+ * corriera después, Next ya habría empezado a hidratar el Home.
+ *
+ * Se hace acá, sobre el artefacto, y NO en `app/layout.tsx`, para que la web no
+ * pueda incluirlo ni por accidente: este código no pasa por ningún bundle.
+ */
+export function inyectarArranque(artefacto) {
+  const raiz = resolve(artefacto);
+  const archivos = htmlsDelArtefacto(raiz);
+
+  const rutas = archivos
+    .filter((f) => basename(f) === "index.html")
+    .map((f) => f.slice(raiz.length, f.length - "index.html".length).split(sep).join("/"))
+    .filter((r) => r !== "/");
+
+  const guion = `<script>${guionDeArranque(rutas)}</script>`;
+  const MARCA = "<head>";
+
+  let tocados = 0;
+  for (const f of archivos) {
+    const html = readFileSync(f, "utf8");
+    const i = html.indexOf(MARCA);
+    if (i < 0) throw new Error(`sin <head>: ${f}`);
+    if (html.includes("accionDeArranque")) continue; // idempotente
+    writeFileSync(f, html.slice(0, i + MARCA.length) + guion + html.slice(i + MARCA.length));
+    tocados++;
+  }
+  return { archivos: tocados, rutas: rutas.length };
+}
+
+// ============================================================================
 // Orquestación
 // ============================================================================
 
@@ -296,6 +349,9 @@ function main() {
 
   console.log("· publicando el artefacto en", ARTEFACTO);
   cpSync(salida, resolve(ARTEFACTO), { recursive: true });
+
+  const arranque = inyectarArranque(ARTEFACTO);
+  console.log(`· recuperación de rutas: ${arranque.rutas} rutas en ${arranque.archivos} html`);
 
   if (!conservar) borrarSeguro(STAGING);
   else console.log("· staging conservado (--keep-staging)");
