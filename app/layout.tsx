@@ -5,6 +5,7 @@ import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ES_NATIVO } from "@/lib/plataforma";
 import { ThemeProvider } from "@/components/ThemeContext";
 import { AuthProvider } from "@/components/AuthContext";
 import { MyListProvider } from "@/components/MyListContext";
@@ -103,11 +104,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </ThemeProvider>
         {/* Medición de uso real. Van FUERA de los providers a propósito: no
             dependen de ningún contexto y así no re-renderizan con ellos.
-            Analytics es sin cookies, así que no obliga a un banner de consentimiento.
-            Los dos se auto-desactivan fuera de Vercel, así que en `next dev`
-            no mandan nada. */}
-        <Analytics />
-        <SpeedInsights />
+            Analytics es sin cookies, así que no obliga a un banner de
+            consentimiento, y los dos se auto-desactivan fuera de Vercel, así que
+            en `next dev` no mandan nada.
+
+            🔴 EN EL CONTENEDOR NO SE MONTAN, Y NO ES POR PROLIJIDAD. Medido en
+            el teléfono el 2026-09-06: las dos piden su script al origen local
+            —`https://localhost/_vercel/…/script.js`—, el servidor de Capacitor
+            devuelve 404 con 0 bytes, y como el script nunca carga el beacon
+            `/_vercel/insights/view` NUNCA se dispara. O sea que en Android no
+            miden nada: lo único que dejan son dos errores de consola por
+            arranque. En la web siguen intactas, que es donde sí funcionan.
+
+            ⚠️ ESTO NO LAS SACA DEL BUNDLE, y conviene saberlo antes de creer que
+            sí: son componentes de CLIENTE importados por este layout, que es de
+            servidor, así que Next mete su implementación en el chunk por el solo
+            hecho de estar importadas. Se probó moverlas a un componente de
+            cliente con el mismo gate adentro y el resultado fue idéntico: las
+            librerías siguen en el artefacto. Lo que este gate garantiza —y es lo
+            que importa— es que **no se montan**, así que no se pide ningún
+            script y no hay ningún 404. Sacarlas de verdad pediría sustituir el
+            módulo en el staging del build nativo, y eso no se hizo.
+
+            La bandera es de BUILD: el prerender y el cliente coinciden desde el
+            primer render, sin montar y desmontar al hidratar. */}
+        {!ES_NATIVO && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );
