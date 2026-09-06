@@ -16,8 +16,14 @@
   Android enmascara esta ranura a un círculo, y ése es el tope que entra sin que
   le corte las letras.
 
-  NO se declara `windowSplashScreenAnimationDuration`: eso sólo alargaría el
-  arranque para lucir el logo, y el arranque no se frena por estética.
+  NO se declara `windowSplashScreenAnimationDuration`, y el motivo es que el logo
+  es un PNG estático: ese atributo le dice al sistema cuánto dura la ANIMACIÓN
+  del ícono (para un AnimatedVectorDrawable o similar), no cuánto tiempo se ve
+  la pantalla. Acá no hay animación que temporizar.
+
+  ⚠️ Que no esté NO demuestra que no haya una demora artificial: lo que alarga
+  la pantalla es retenerla desde el código con setKeepOnScreenCondition, y eso
+  no se hace. La duración real la marca lo que tarde la app en arrancar.
 -->
 <resources>
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">

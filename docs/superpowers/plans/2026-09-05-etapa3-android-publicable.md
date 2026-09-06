@@ -880,11 +880,21 @@ quedaba en manos del default de AppCompat —que acertaba de casualidad—; ahor
 exactamente el mismo color, así que no hay destello posible en ninguno de los dos
 temas.
 
-⚠️ **No se declara `windowSplashScreenAnimationDuration`.** Ese atributo sólo
-alarga la pantalla para lucir el logo, y hay un guard que falla si alguien lo
-agrega. Tampoco se usa `windowSplashScreenBrandingImage`: Android la desaconseja
-y la pone **abajo**, no centrada — serviría para decir que "yump aparece" sin que
-la marca esté donde tiene que estar.
+⚠️ **No se declara `windowSplashScreenAnimationDuration`, y antes se dijo mal por
+qué.** Se afirmó que ese atributo alargaría la pantalla. **Es falso**: le dice al
+sistema cuánto dura la ANIMACIÓN del ícono —para un `AnimatedVectorDrawable` o
+parecido—, no cuánto tiempo se ve el arranque. El motivo real de no declararlo es
+que el logo de Yump es un PNG estático: no hay animación que temporizar.
+
+🔴 **Y su ausencia no demuestra que no haya una demora artificial.** Lo que alarga
+la pantalla es retenerla desde el código con `setKeepOnScreenCondition`, y eso no
+se hace: `MainActivity` no llama a `installSplashScreen()` siquiera. La duración
+real la marca lo que tarde la app en arrancar, y hay un guard sobre **eso**, que
+es la decisión que sí existe.
+
+Tampoco se usa `windowSplashScreenBrandingImage`: Android la desaconseja y la pone
+**abajo**, no centrada — serviría para decir que "yump aparece" sin que la marca
+esté donde tiene que estar.
 
 ### 18.c Medido en el teléfono, cuadro por cuadro
 
