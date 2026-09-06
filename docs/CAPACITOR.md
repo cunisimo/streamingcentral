@@ -928,7 +928,7 @@ su SW. Lo de abajo es sólo sobre la cáscara empaquetada.
 | Pieza | En el contenedor |
 |---|---|
 | `app/manifest.ts` | inerte, inofensivo. **Se conserva** (lo usa la web) |
-| Íconos y splash (26 assets) | los de la web quedan; el contenedor usa los suyos, generados aparte de la misma `assets/brand/logo.svg` |
+| Íconos y splash (26 assets) | los de la web quedan; el contenedor usa los suyos. 🔴 **NO salen de la misma fuente, y esta línea decía que sí**: la web se genera de `public/brand/yump-icon.png` con `generate-pwa-assets.mjs`, y Android de `assets/brand/yump-simbolo.png` y `yump-logo*.png` con `generate-android-assets.mjs`. Ninguno de los dos lee `assets/brand/logo.svg`. Cambiar una fuente no actualiza la otra plataforma — ver `docs/PWA.md` §8 |
 | `AppleSplashLinks` (18 splash) | inerte. Lo reemplaza `@capacitor/splash-screen` |
 | Safe areas, `viewportFit`, `interactiveWidget` | ✅ **se conservan y son la parte que ya está bien** |
 | `public/sw.js` + `public/sw/*` | **no se registra en nativo** (§4.d). Se conserva para la web |

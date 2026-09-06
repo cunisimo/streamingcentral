@@ -61,7 +61,7 @@ scripts/
   generate-pwa-assets.mjs  Genera los 26 assets + AppleSplashLinks.tsx
   pwa-devices.mjs          Lista canónica de dispositivos iOS (fuente única)
 
-assets/brand/logo.svg      Fuente única de la marca
+public/brand/yump-icon.png  Fuente de la marca PARA LA WEB (ver §8)
 ```
 
 ---
@@ -313,9 +313,9 @@ agregar las features **sin refactorizar** la estructura:
 
 ---
 
-## 8. Assets: una sola fuente de verdad
+## 8. Assets: la fuente de la web, y por qué no es la única del proyecto
 
-Todo sale de `assets/brand/logo.svg`:
+Todo lo de la **web** sale de `public/brand/yump-icon.png`:
 
 ```bash
 node scripts/generate-pwa-assets.mjs
@@ -323,6 +323,31 @@ node scripts/generate-pwa-assets.mjs
 
 Genera 10 íconos + 18 splash + 4 screenshots **y reescribe**
 `components/pwa/AppleSplashLinks.tsx`. Si cambia el logo, se re-ejecuta y listo.
+
+🔴 **ESTA SECCIÓN DECÍA "todo sale de `assets/brand/logo.svg`" Y ERA FALSO.** Ese
+SVG es un placeholder anterior que **ningún script lee** —verificado: no aparece
+en ninguna ruta de `scripts/`, `app/`, `components/` ni `lib/`—. El generador
+siempre leyó `public/brand/yump-icon.png`. El archivo se conserva sin tocar
+porque qué hacer con él lo decide el dueño.
+
+### 🔴 Hay DOS fuentes de marca y DOS generadores
+
+| | Fuente | Comando | Escribe en |
+|---|---|---|---|
+| **Web / PWA** | `public/brand/yump-icon.png` | `node scripts/generate-pwa-assets.mjs` | `public/icons/`, `public/splash/` |
+| **Android** | `assets/brand/yump-simbolo.png`, `yump-logo.png`, `yump-logo-blanco.png` | `node scripts/generate-android-assets.mjs` | `android/app/src/main/res/` |
+
+Son el **mismo dibujo con encuadres distintos**: el de la web conserva la cola de
+la burbuja y el de Android la recorta en cuadrado. **Cambiar una fuente no
+actualiza la otra plataforma**: hay que tocar las dos y correr los dos comandos.
+
+⚠️ **Correr el generador de la PWA hoy NO rompe nada.** Se comprobó replicando su
+transformación sin escribir en `public/`: lo que produciría es **pixel a pixel
+idéntico** a lo que ya está publicado. No hay ningún placeholder esperando para
+pisar la marca; el riesgo real es sólo el de la **deriva** entre las dos fuentes.
+
+Unificarlas en una sola es posible, pero cambiaría los íconos de la web, así que
+es una decisión pendiente del dueño.
 
 La lista de dispositivos iOS vive en `scripts/pwa-devices.mjs` y la comparten el
 generador y el componente de `<link>`. **Es a propósito:** si las dos listas se
