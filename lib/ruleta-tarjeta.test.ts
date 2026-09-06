@@ -141,7 +141,7 @@ test("🔴 se decide la restauración ANTES de poder pedir nada, y con las plata
   const src = sinComentarios(BANNER);
   assert.match(src, /if \(!platformsListas \|\| decidido\) return;/,
     "decide antes de que PlatformsContext hidrate: la firma no sería la del usuario y el snapshot se borraría");
-  assert.match(src, /decidirRestauracionVista<EstadoRuleta>/, "no usa el mecanismo compartido");
+  assert.match(src, /decidirRestauracionVista<EstadoRuleta, ExtraRuleta>/, "no usa el mecanismo compartido");
   assert.match(src, /volvio: consumirVuelta\(/, "no consume la marca de vuelta");
 });
 
@@ -160,16 +160,38 @@ test("🔴 el listener adelantado de NavHistorial sigue en pie", () => {
     "el registro dejó de estar en el scope del módulo");
 });
 
-test("🔴 el snapshot guarda la posición PENDIENTE, no la del documento a medio restaurar", () => {
-  // Es lo que ata el componente al modelo de `lib/ruleta-restauracion.test.ts`.
-  // El efecto de guardado corre en el mismo commit que la restauración y el
-  // scroll se aplica dos frames después: con `window.scrollY` a secas escribía 0
-  // encima del snapshot recién leído, y el viaje siguiente volvía arriba de todo.
+test("🔴 al volver se restaura LA SECCION, no un desplazamiento del documento", () => {
+  // Lo que ata el componente al modelo de `lib/ruleta-restauracion.test.ts`. La
+  // ruleta es un bloque en el medio del Home, con el hero y los rieles arriba:
+  // un `scrollY` absoluto describe el documento y no la seccion.
   const src = sinComentarios(BANNER);
-  assert.match(src, /scrollY: scrollPendiente\.current \?\? window\.scrollY/,
-    "volvió a guardar la posición del documento mientras hay un scroll pendiente");
-  // Y la pendiente tiene que seguir puesta hasta que el scroll SE APLICÓ: si se
-  // limpia al agendar el rAF, el guardado de ese mismo commit vuelve a ver 0.
+  assert.match(src, /<div className="dsmp" ref=\{raiz\}>/, "la seccion no tiene su nodo");
+  assert.match(src, /objetivoDeScroll\(pos, dondeEsta\(\)\)/,
+    "volvio a restaurar un numero de scroll en vez de la posicion de la seccion");
+  assert.match(src, /ancla: pend \? pend\.ancla :/, "el snapshot dejo de guardar el ancla");
+});
+
+test("🔴 la posicion se SOSTIENE: un solo scrollTo pierde contra lo que pasa despues", () => {
+  const src = sinComentarios(BANNER);
+  assert.match(src, /if \(Date\.now\(\) < hasta\) requestAnimationFrame\(paso\);/,
+    "quedo un intento unico: la restauracion nativa del navegador o el documento a medio medir lo pisan");
+  assert.match(src, /VENTANA_REACOMODO_MS/, "no hay ventana de reacomodo");
+  // Y el usuario siempre gana.
+  for (const gesto of ["wheel", "touchstart", "keydown"]) {
+    assert.match(src, new RegExp(`"${gesto}"`), `el gesto ${gesto} ya no corta el reacomodo`);
+  }
+});
+
+test("🔴 el snapshot guarda la posición PENDIENTE, no la del documento a medio restaurar", () => {
+  // El efecto de guardado corre en el mismo commit que la restauración y la
+  // sección recién se acomoda dos frames después: con lo que dice el documento
+  // escribía 0 encima del snapshot recién leído, y el viaje siguiente volvía
+  // arriba de todo.
+  const src = sinComentarios(BANNER);
+  assert.match(src, /scrollY: pend \? pend\.y : window\.scrollY/,
+    "volvió a guardar la posición del documento mientras hay una restauración en vuelo");
+  // Y la pendiente tiene que seguir puesta hasta que la sección LLEGÓ: si se
+  // limpia al agendar, el guardado de ese mismo commit vuelve a ver 0.
   assert.doesNotMatch(src, /scrollPendiente\.current = null;\s*\n?\s*requestAnimationFrame/,
     "se limpia la pendiente antes de aplicarla");
 });

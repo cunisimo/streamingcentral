@@ -7,6 +7,9 @@ import { useRouletteSeen } from "@/hooks/useRouletteSeen";
 import { consumirVuelta, decidirRestauracionVista, guardarVista, olvidarLista } from "@/hooks/lista-paginada-store";
 import { contextoDe, snapshotVigente } from "@/hooks/restauracion-vigente";
 import {
+  objetivoDeScroll, llego, VENTANA_REACOMODO_MS, type PosicionRuleta,
+} from "@/lib/ruleta-scroll";
+import {
   iniciar, actual as actualDe, puedeVolver, atras, otra as otraDe, sumarTanda,
   valeGuardar, esEstadoValido,
   type SesionRuleta, type EstadoRuleta,
@@ -26,6 +29,9 @@ const MAX_EXCLUIR = 500;
 // que consume es la de "/".
 const CLAVE = "ruleta";
 const RUTA = "/";
+
+/** Lo que se restaura ademas del estado: donde estaba la seccion en la pantalla. */
+interface ExtraRuleta { ancla: number | null }
 
 // Tres escenarios, mutuamente excluyentes y definidos por duración. El subtítulo
 // dice el corte real en vez de una promesa vaga: el filtro ahora es un dato duro
@@ -73,12 +79,22 @@ export default function RuletaBanner() {
   // usuario: no coincidiría, y `decidirRestauracionVista` BORRA lo que no
   // coincide. O sea que decidir temprano no sólo falla: destruye el snapshot.
   const [decidido, setDecidido] = useState(false);
-  // La posición que hay que restaurar, MIENTRAS NO SE HAYA APLICADO. Y sigue
-  // puesta hasta que el scroll se movió de verdad, no hasta que se agenda: entre
-  // una cosa y la otra pasan dos frames, y en el medio corre el efecto que
-  // guarda el snapshot. Ver el comentario del guardado.
-  const scrollPendiente = useRef<number | null>(null);
+  // El nodo de la seccion. Es lo que se restaura: no un desplazamiento del
+  // documento, sino ESTE bloque puesto donde estaba en la pantalla. Ver
+  // `lib/ruleta-scroll.ts`.
+  const raiz = useRef<HTMLDivElement>(null);
+  // La posicion que hay que restaurar, MIENTRAS NO SE HAYA APLICADO. Y sigue
+  // puesta hasta que la seccion llego a su lugar, no hasta que se agenda el
+  // primer intento: en el medio corre el efecto que guarda el snapshot. Ver el
+  // comentario del guardado.
+  const scrollPendiente = useRef<PosicionRuleta | null>(null);
   const scrollAgendado = useRef(false);
+
+  /** Donde esta la seccion ahora, para el calculo del objetivo. */
+  const dondeEsta = () => {
+    const el = raiz.current;
+    return el ? { top: el.getBoundingClientRect().top, scrollY: window.scrollY } : null;
+  };
   const [ctxRestaurado, setCtxRestaurado] = useState<string | null>(null);
   const ctxActual = contextoDe([platformsKey]);
   // La firma de plataformas con la que se decidió. Es lo que distingue "el
@@ -87,7 +103,7 @@ export default function RuletaBanner() {
 
   useEffect(() => {
     if (!platformsListas || decidido) return;
-    const e = decidirRestauracionVista<EstadoRuleta>({
+    const e = decidirRestauracionVista<EstadoRuleta, ExtraRuleta>({
       clave: CLAVE,
       firma: platformsKey,
       // La marca sólo la pone un `popstate`, así que entrar al Home por un link
@@ -97,7 +113,7 @@ export default function RuletaBanner() {
     if (e && esEstadoValido(e.datos)) {
       setOpen(e.datos.abierto);
       setSesion(e.datos.sesion);
-      scrollPendiente.current = e.scrollY;
+      scrollPendiente.current = { y: e.scrollY, ancla: e.extra?.ancla ?? null };
       setCtxRestaurado(ctxActual);
     }
     keyAlDecidir.current = platformsKey;
@@ -105,24 +121,54 @@ export default function RuletaBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platformsListas, decidido]);
 
-  // El scroll, una vez que la tarjeta ya está montada y el documento tiene su
-  // altura. Mismo rAF doble que el resto de las vistas restauradas.
+  // ==========================================================================
+  // PONER LA SECCION DONDE ESTABA, Y SOSTENERLA
+  // ==========================================================================
+  // El dueno lo pidio asi: volver de una ficha tiene que devolver la seccion, no
+  // solo su estado. Por eso el objetivo se recalcula contra la posicion REAL del
+  // bloque (ver lib/ruleta-scroll.ts) en vez de repetir un desplazamiento.
   //
-  // La pendiente se limpia DENTRO del rAF, junto con el scroll, y no acá: entre
-  // agendar y aplicar corre el efecto de guardado, que necesita saber que la
-  // vista todavía no llegó a su lugar. `scrollAgendado` evita agendarlo dos
-  // veces si `actual` cambia en el medio, y la comparación de adentro descarta
-  // el que quedó viejo cuando la vigencia soltó la pendiente.
+  // Y UN SOLO `scrollTo` NO ALCANZA, por eso es un bucle corto. Despues de una
+  // vuelta atras hay por lo menos tres cosas que mueven la pagina DESPUES de
+  // nosotros: la restauracion nativa del navegador, que llega tarde y con su
+  // propio numero; el documento, que todavia no tiene su altura final, asi que
+  // un desplazamiento grande se recorta contra el fondo; y el contenido de
+  // arriba del Home, que sigue llegando. El intento unico ganaba o perdia segun
+  // el dispositivo, y de ahi salia el "me lleva al inicio del home".
+  //
+  // Cualquier gesto del usuario lo corta: si tomo el control, manda el.
+  //
+  // La pendiente se suelta al terminar y no al agendar: en el medio corre el
+  // efecto de guardado, que necesita saber que la vista todavia no llego.
   useEffect(() => {
-    const y = scrollPendiente.current;
-    if (y == null || !actual || scrollAgendado.current) return;
+    const pos = scrollPendiente.current;
+    if (!pos || !actual || scrollAgendado.current) return;
     scrollAgendado.current = true;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+
+    let vivo = true;
+    const soltar = () => { vivo = false; };
+    const gestos = ["wheel", "touchstart", "keydown"];
+    for (const ev of gestos) window.addEventListener(ev, soltar, { passive: true });
+    const fin = () => {
+      for (const ev of gestos) window.removeEventListener(ev, soltar);
       scrollAgendado.current = false;
-      if (scrollPendiente.current !== y) return;
-      scrollPendiente.current = null;
-      window.scrollTo(0, y);
-    }));
+      if (scrollPendiente.current === pos) scrollPendiente.current = null;
+    };
+
+    const hasta = Date.now() + VENTANA_REACOMODO_MS;
+    const paso = () => {
+      // La vigencia pudo soltar la pendiente (cambiaron las plataformas), o el
+      // usuario pudo tomar el control.
+      if (!vivo || scrollPendiente.current !== pos) { fin(); return; }
+      const objetivo = objetivoDeScroll(pos, dondeEsta());
+      if (!llego(window.scrollY, objetivo)) window.scrollTo(0, objetivo);
+      if (Date.now() < hasta) requestAnimationFrame(paso);
+      else fin();
+    };
+    // Los dos frames de siempre: la tarjeta ya esta montada, pero el documento
+    // recien termina de medirse en el frame siguiente.
+    requestAnimationFrame(() => requestAnimationFrame(paso));
+    return fin;
   }, [actual]);
 
   useEffect(() => {
@@ -217,18 +263,24 @@ export default function RuletaBanner() {
     const estado: EstadoRuleta = { abierto: open, sesion };
     if (!valeGuardar(estado)) { olvidarLista(CLAVE); return; }
     let pend = false;
-    const guardar = () => guardarVista<EstadoRuleta>(CLAVE, {
-      firma: platformsKey, datos: estado,
-      // 🔴 MIENTRAS HAY UN SCROLL PENDIENTE, LA POSICIÓN DE LA VISTA ES ESA Y NO
-      // LA DEL DOCUMENTO. Este efecto corre en el MISMO commit en el que se
-      // restauró —los tres efectos van juntos, en orden de declaración— y el
-      // scroll recién se aplica dos frames después. Con `window.scrollY` a
-      // secas, el guardado escribía 0 encima de la posición que se acababa de
-      // leer del snapshot: la vuelta siguiente devolvía la tarjeta correcta con
-      // la página arriba de todo. Medido en el navegador el 2026-09-06 y fijado
-      // en lib/ruleta-restauracion.test.ts.
-      scrollY: scrollPendiente.current ?? window.scrollY,
-    });
+    // MIENTRAS HAY UNA POSICION PENDIENTE, LA POSICION DE LA VISTA ES ESA Y NO
+    // LA DEL DOCUMENTO. Este efecto corre en el MISMO commit en el que se
+    // restauro y la seccion recien se acomoda dos frames despues: guardando lo
+    // que dice el documento, el snapshot recien leido quedaba pisado con un 0 y
+    // la vuelta SIGUIENTE devolvia la tarjeta correcta con la pagina arriba de
+    // todo. Medido en el navegador el 2026-09-06.
+    //
+    // El `ancla` es lo que se restaura de verdad: donde estaba la seccion dentro
+    // de la pantalla. Ver lib/ruleta-scroll.ts.
+    const guardar = () => {
+      const pend = scrollPendiente.current;
+      const el = raiz.current;
+      guardarVista<EstadoRuleta, ExtraRuleta>(CLAVE, {
+        firma: platformsKey, datos: estado,
+        scrollY: pend ? pend.y : window.scrollY,
+        extra: { ancla: pend ? pend.ancla : el ? Math.round(el.getBoundingClientRect().top) : null },
+      });
+    };
     guardar();
     const onScroll = () => {
       if (pend) return;
@@ -281,7 +333,7 @@ export default function RuletaBanner() {
   const cerrar = () => { setOpen(false); volver(); olvidarLista(CLAVE); };
 
   return (
-    <div className="dsmp">
+    <div className="dsmp" ref={raiz}>
       <button
         className={`dsmp-banner ${open ? "open" : ""}`}
         onClick={() => (open ? cerrar() : setOpen(true))}

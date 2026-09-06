@@ -27,6 +27,7 @@ import {
 import {
   iniciar, esEstadoValido, valeGuardar, type EstadoRuleta, type SesionRuleta,
 } from "./ruleta-historial.ts";
+import { objetivoDeScroll, llego, type PosicionRuleta } from "./ruleta-scroll.ts";
 import type { RoulettePick } from "./roulette.ts";
 
 // Mismo doble de sessionStorage que hooks/lista-paginada-store.test.ts.
@@ -164,113 +165,216 @@ test("un snapshot con la forma rota se ignora en vez de pintar una tarjeta vací
 });
 
 // ============================================================================
-// EL SNAPSHOT NO SE PISA A SÍ MISMO MIENTRAS SE RESTAURA
+// VOLVER TIENE QUE DEVOLVER LA SECCION, NO UN NUMERO DE SCROLL
 // ============================================================================
-// EL BUG. Al volver de la ficha, el efecto que guarda el snapshot corre en el
-// mismo commit que la restauración, y el scroll recién se aplica DOS FRAMES
-// DESPUÉS (rAF doble, para que el documento ya tenga su altura). O sea que ese
-// guardado veía `window.scrollY = 0` y escribía 0 encima de la posición que
-// acababa de leer.
+// EL REPORTE. "Si pongo volver desde una ficha, en vez de llevarme a la misma
+// ubicacion del viewport donde esta 'no se que ver', me lleva al inicio del
+// home": el estado volvia bien y la pagina quedaba arriba de todo.
 //
-// Medido en el navegador (2026-09-06, dev, Home con la ruleta abierta a 880 px):
-//   viaje 1: vuelve, restaura 880 … y el snapshot queda en 0
-//   viaje 2: vuelve, restaura **0** — la tarjeta correcta, la página arriba de
-//            todo. Es exactamente lo que reportó el dueño.
+// DOS CAUSAS, y la primera corregida sola no alcanzaba:
 //
-// La corrección es entender qué es "la posición de la vista" mientras hay una
-// restauración en vuelo: es la PENDIENTE, no la del documento. El documento
-// todavía no llegó ahí.
+//   1. El efecto que guarda el snapshot corre en el MISMO commit que la
+//      restauracion, y la posicion recien se aplica dos frames despues. Ese
+//      guardado veia `scrollY = 0` y lo escribia encima de lo que acababa de
+//      leer, asi que el viaje SIGUIENTE restauraba 0.
+//   2. Un solo `scrollTo` no sobrevive a lo que pasa despues de una vuelta
+//      atras: la restauracion nativa del navegador llega tarde con su propio
+//      numero, el documento todavia no tiene su altura final y el contenido de
+//      arriba sigue llegando. Cualquiera de los tres deja al usuario en otro
+//      lado, y el intento unico no se entera.
 //
-// ⚠️ Esto es un MODELO de la coordinación, igual que
-// `hooks/arranque-restauracion.test.ts`: no monta el componente ni ejecuta
-// React. Respeta el orden de declaración de los efectos —decidir, scroll,
-// guardar— y que un efecto ve el cierre de su render. Lo que ata el modelo al
-// componente es el guard de `lib/ruleta-tarjeta.test.ts`.
+// El modelo de abajo respeta el orden de declaracion de los efectos -decidir,
+// acomodar, guardar- y que un efecto ve el cierre de su render, igual que
+// `hooks/arranque-restauracion.test.ts`. NO monta el componente ni ejecuta
+// React: lo que ata el modelo al codigo real es el guard de
+// `lib/ruleta-tarjeta.test.ts`.
 
-/** El componente, modelado en lo único que decide la posición vertical. */
-function viajeDeVuelta(politica: "vieja" | "nueva") {
+/** Donde arranca la seccion dentro del documento, en el Home de la prueba. */
+const TOP_SECCION = 916;
+const ANCLA = 36;             // la seccion, a 36 px del borde de arriba
+const GUARDADO = TOP_SECCION - ANCLA;   // 880
+
+interface Opciones {
+  /** "vieja": guarda lo que dice el documento. "nueva": la posicion pendiente. */
+  politica: "vieja" | "nueva";
+  /** "unico": un solo scrollTo. "bucle": se sostiene la posicion. */
+  acomodo: "unico" | "bucle";
+  /** Algo mueve la pagina en ese frame (el navegador restaurando tarde, p.ej.). */
+  interferencia?: { frame: number; y: number };
+  /** El usuario toca la pantalla en ese frame. */
+  gestoEnFrame?: number;
+  /** La seccion se corre porque llego contenido arriba. */
+  seccionSeMueve?: { frame: number; top: number };
+}
+
+/** El componente, modelado en lo unico que decide donde queda la pagina. */
+function viajeDeVuelta(o: Opciones) {
   let open = false;
   let sesion: SesionRuleta | null = null;
   let decidido = false;
-  let scrollY = 0;                       // el documento
-  const scrollPendiente: { current: number | null } = { current: null };
+  let scrollY = 0;                  // el documento
+  let topSeccion = TOP_SECCION;     // su borde, medido desde el principio
+  const pendiente: { current: PosicionRuleta | null } = { current: null };
   const agendado = { current: false };
-  const frames: (() => void)[] = [];     // requestAnimationFrame
 
   const actual = () => (sesion && sesion.historial.length ? sesion.historial[sesion.pos] : null);
+  const dondeEsta = () => ({ top: topSeccion - scrollY, scrollY });
 
   const efectoDecidir = () => {
     if (decidido) return;
-    const e = decidirRestauracionVista<EstadoRuleta>({
+    const e = decidirRestauracionVista<EstadoRuleta, { ancla: number | null }>({
       clave: CLAVE, firma: FIRMA, volvio: consumirVuelta(RUTA),
     });
     if (e && esEstadoValido(e.datos)) {
       open = e.datos.abierto;
       sesion = e.datos.sesion;
-      scrollPendiente.current = e.scrollY;
+      pendiente.current = { y: e.scrollY, ancla: e.extra?.ancla ?? null };
     }
     decidido = true;
   };
 
-  const efectoScroll = () => {
-    const y = scrollPendiente.current;
-    if (y == null || !actual() || agendado.current) return;
+  // El bucle, desenrollado: 12 frames alcanzan para ver la interferencia.
+  //
+  // 🔴 LOS FRAMES CORREN DESPUES DE LOS EFECTOS DE LA RONDA, y eso no es un
+  // detalle del modelo: es la mitad del bug. El acomodo pasa dentro de un
+  // `requestAnimationFrame`, o sea DESPUES del efecto que guarda el snapshot, y
+  // por eso ese guardado veia la pagina todavia arriba de todo.
+  const FRAMES = 12;
+  const frames: { correr: (() => void) | null } = { correr: null };
+  const acomodar = () => {
+    const pos = pendiente.current;
+    if (!pos || !actual() || agendado.current) return;
     agendado.current = true;
-    frames.push(() => frames.push(() => {
+    frames.correr = () => {
+      // El mundo sigue pasando aunque nosotros dejemos de corregir: por eso el
+      // recorrido de frames no se corta, lo que se corta es la correccion.
+      let vivo = true;
+      let corregir = true;
+      for (let f = 0; f < FRAMES; f++) {
+        if (o.interferencia?.frame === f) scrollY = o.interferencia.y;
+        if (o.seccionSeMueve?.frame === f) topSeccion = o.seccionSeMueve.top;
+        if (o.gestoEnFrame === f) vivo = false;
+        if (!vivo || !corregir) continue;
+        const objetivo = objetivoDeScroll(pos, dondeEsta());
+        if (!llego(scrollY, objetivo)) scrollY = objetivo;
+        if (o.acomodo === "unico") corregir = false;
+      }
       agendado.current = false;
-      if (scrollPendiente.current !== y) return;
-      scrollPendiente.current = null;
-      scrollY = y;
-    }));
+      pendiente.current = null;
+    };
   };
 
   const efectoGuardar = () => {
     if (!decidido) return;
     const estado: EstadoRuleta = { abierto: open, sesion };
     if (!valeGuardar(estado)) { olvidarLista(CLAVE); return; }
-    guardarVista<EstadoRuleta>(CLAVE, {
+    const pend = pendiente.current;
+    guardarVista<EstadoRuleta, { ancla: number | null }>(CLAVE, {
       firma: FIRMA, datos: estado,
-      scrollY: politica === "nueva" ? scrollPendiente.current ?? scrollY : scrollY,
+      scrollY: o.politica === "nueva" && pend ? pend.y : scrollY,
+      extra: {
+        ancla: o.politica === "nueva" && pend ? pend.ancla : Math.round(topSeccion - scrollY),
+      },
     });
   };
 
-  // Ronda 1: el montaje. Los tres efectos, en orden de declaración.
-  efectoDecidir(); efectoScroll(); efectoGuardar();
+  // Ronda 1: el montaje. Los efectos, en orden de declaracion.
+  efectoDecidir(); acomodar(); efectoGuardar();
   // Ronda 2: cambiaron `open`, `sesion` y con ellos `actual`.
-  efectoDecidir(); efectoScroll(); efectoGuardar();
-  // Y los dos frames del rAF doble.
-  while (frames.length) frames.shift()!();
+  efectoDecidir(); acomodar(); efectoGuardar();
+  // Y recien ahora los frames.
+  frames.correr?.();
 
-  return { scrollY, guardado: () => JSON.parse(sessionStorage.getItem("yump:lista-paginada")!).ruleta.scrollY };
+  const guardado = () => JSON.parse(sessionStorage.getItem("yump:lista-paginada")!).ruleta;
+  return {
+    scrollY,
+    /** Donde quedo la seccion en la pantalla: 36 = donde estaba. */
+    enPantalla: topSeccion - scrollY,
+    guardado,
+  };
 }
 
-test("🔴 restaurar no puede dejar el snapshot en 0 (la política vieja lo hacía)", () => {
-  guardarSesion(FIRMA, 880);
+/** Deja un snapshot como el que escribe el componente al irse a la ficha. */
+function guardarConAncla() {
+  const estado: EstadoRuleta = { abierto: true, sesion: sesionDeEjemplo() };
+  guardarVista<EstadoRuleta, { ancla: number | null }>(CLAVE, {
+    firma: FIRMA, datos: estado, scrollY: GUARDADO, extra: { ancla: ANCLA },
+  });
   marcarVuelta(RUTA);
-  const v = viajeDeVuelta("vieja");
-  assert.equal(v.scrollY, 880, "la vista sí llegaba al lugar correcto");
-  assert.equal(v.guardado(), 0, "…y el snapshot quedaba en 0: es el bug reportado");
-  // Y de ahí sale el síntoma: el viaje siguiente restaura ese 0.
-  marcarVuelta(RUTA);
-  assert.equal(viajeDeVuelta("vieja").scrollY, 0,
-    "el segundo regreso tiene que caer arriba de todo, que es lo que se reportó");
+}
+
+const base: Opciones = { politica: "nueva", acomodo: "bucle" };
+
+// ------------------------------------------------- el caso que se reporto
+
+test("🔴 volver deja la seccion donde estaba, no el Home arriba de todo", () => {
+  guardarConAncla();
+  const v = viajeDeVuelta(base);
+  assert.equal(v.enPantalla, ANCLA, "la seccion tiene que quedar en el mismo lugar de la pantalla");
+  assert.equal(v.scrollY, GUARDADO);
 });
 
-test("🔴 mientras el scroll está pendiente, la posición que se guarda es la PENDIENTE", () => {
-  guardarSesion(FIRMA, 880);
+test("🔴 si algo mueve la pagina DESPUES de restaurar, la seccion vuelve a su lugar", () => {
+  // Es lo que hace la restauracion nativa del navegador cuando llega tarde con
+  // su propio numero, y lo que hacia fallar al intento unico.
+  guardarConAncla();
+  const conBucle = viajeDeVuelta({ ...base, interferencia: { frame: 3, y: 0 } });
+  assert.equal(conBucle.enPantalla, ANCLA, "quedo donde la dejo la interferencia");
+
+  guardarConAncla();
+  const conUnico = viajeDeVuelta({ ...base, acomodo: "unico", interferencia: { frame: 3, y: 0 } });
+  assert.equal(conUnico.scrollY, 0, "con un solo intento, esto es lo que veia el dueno");
+});
+
+test("🔴 si la seccion se corre porque llego contenido arriba, la sigue", () => {
+  guardarConAncla();
+  const v = viajeDeVuelta({ ...base, seccionSeMueve: { frame: 4, top: TOP_SECCION + 300 } });
+  assert.equal(v.enPantalla, ANCLA, "no siguio a la seccion");
+  assert.equal(v.scrollY, GUARDADO + 300, "el desplazamiento cambia; el resultado visual no");
+});
+
+test("un gesto del usuario corta el reacomodo: manda el", () => {
+  guardarConAncla();
+  const v = viajeDeVuelta({ ...base, gestoEnFrame: 2, interferencia: { frame: 1, y: 1500 } });
+  assert.equal(v.scrollY, GUARDADO, "el frame 1 corrigio la interferencia y el gesto freno ahi");
+  // Y lo importante: despues del gesto no se vuelve a tocar nada.
+  const w = viajeDeVuelta({ ...base, gestoEnFrame: 0 });
+  assert.equal(w.scrollY, 0, "acomodo la pagina despues de que el usuario tomo el control");
+});
+
+// ------------------------------------- el snapshot no se pisa a si mismo
+
+test("🔴 restaurar no puede dejar el snapshot en 0 (la politica vieja lo hacia)", () => {
+  guardarConAncla();
+  const v = viajeDeVuelta({ ...base, politica: "vieja", acomodo: "unico" });
+  assert.equal(v.guardado().scrollY, 0, "el snapshot quedaba en 0: es el bug reportado");
+  // Y de ahi sale el sintoma: el viaje siguiente restaura ese 0.
   marcarVuelta(RUTA);
-  const v = viajeDeVuelta("nueva");
-  assert.equal(v.scrollY, 880, "la vista tiene que quedar donde estaba");
-  assert.equal(v.guardado(), 880, "el snapshot se pisó con la posición del documento a medio restaurar");
+  const w = viajeDeVuelta({ ...base, politica: "vieja", acomodo: "unico" });
+  assert.equal(w.scrollY, 0, "el segundo regreso cae arriba de todo");
+});
+
+test("🔴 mientras la posicion esta pendiente, se guarda la PENDIENTE", () => {
+  guardarConAncla();
+  const v = viajeDeVuelta(base);
+  assert.equal(v.guardado().scrollY, GUARDADO);
+  assert.equal(v.guardado().extra.ancla, ANCLA);
 });
 
 test("🔴 dos viajes seguidos a la ficha restauran las dos veces al mismo lugar", () => {
-  // El caso del reporte: volver, mirar la tarjeta y entrar de nuevo a la ficha
-  // SIN scrollear. Si el primer viaje dejó el snapshot en 0, el segundo devuelve
-  // la tarjeta correcta con la página arriba de todo.
-  guardarSesion(FIRMA, 880);
+  guardarConAncla();
+  assert.equal(viajeDeVuelta(base).enPantalla, ANCLA);
   marcarVuelta(RUTA);
-  assert.equal(viajeDeVuelta("nueva").scrollY, 880);
+  assert.equal(viajeDeVuelta(base).enPantalla, ANCLA, "el segundo regreso perdio la posicion");
   marcarVuelta(RUTA);
-  assert.equal(viajeDeVuelta("nueva").scrollY, 880, "el segundo regreso perdió la posición");
+  assert.equal(viajeDeVuelta(base).enPantalla, ANCLA, "el tercero tambien");
+});
+
+test("un snapshot viejo, sin ancla, restaura el desplazamiento guardado", () => {
+  // Compatibilidad: los snapshots escritos antes de esta correccion no lo traen.
+  guardarVista<EstadoRuleta>(CLAVE, {
+    firma: FIRMA, datos: { abierto: true, sesion: sesionDeEjemplo() }, scrollY: GUARDADO,
+  });
+  marcarVuelta(RUTA);
+  assert.equal(viajeDeVuelta(base).scrollY, GUARDADO);
 });
