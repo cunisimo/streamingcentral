@@ -28,7 +28,9 @@ import {
   iniciar, esEstadoValido, valeGuardar, type EstadoRuleta, type SesionRuleta,
 } from "./ruleta-historial.ts";
 import { objetivoDeScroll, type PosicionRuleta } from "./ruleta-scroll.ts";
-import { registrarIntencion, consumirIntencion, decidirVuelta } from "../hooks/intencion-vuelta.ts";
+import {
+  registrarIntencion, consumirIntencion, decidirVuelta, olvidarIntencion,
+} from "../hooks/intencion-vuelta.ts";
 import type { RoulettePick } from "./roulette.ts";
 
 // Mismo doble de sessionStorage que hooks/lista-paginada-store.test.ts.
@@ -205,6 +207,8 @@ function montarHome(opts: { politicaGuardado?: "vieja" | "nueva" } = {}) {
       open = e.datos.abierto;
       sesion = e.datos.sesion;
       pendiente.current = { y: e.scrollY, ancla: e.extra?.ancla ?? null };
+      // Solo cuando la restauracion salio bien: ver el comentario del componente.
+      olvidarIntencion();
     }
     decidido = true;
   };
@@ -380,4 +384,47 @@ test("un snapshot viejo, sin ancla, restaura el desplazamiento guardado", () => 
   registrarIntencion({ origen: "ruleta", tipo: FICHA.tipo, id: FICHA.id, ruta: RUTA });
   volverDesdeLaFicha(true);
   assert.equal(montarHome().scrollY, GUARDADO);
+});
+
+// ------------------------------------- la intencion se consume SIEMPRE
+
+test("🔴 el Atrás del navegador restaura Y deja consumida la intención", () => {
+  // El Atrás del navegador (o el del sistema, en Android) no pasa por el botón
+  // "Volver" de la ficha, que es quien consume la intención. Si quedara
+  // guardada, habilitaría el fallback de una visita POSTERIOR a esa misma ficha
+  // abierta por un link, y ahí sí resucitaría una sesión que el usuario dejó.
+  alIrseALaFicha();
+  marcarVuelta(RUTA);                       // lo único que hace el popstate
+  const h = montarHome();
+  assert.equal(h.abierto, true, "no restauró con el Atrás del navegador");
+  assert.equal(h.id, 2);
+  assert.equal(consumirIntencion(FICHA.tipo, FICHA.id), null, "la intención quedó viva");
+});
+
+test("🔴 y después, la misma ficha abierta por un link NO revive la sesión", () => {
+  // Es el caso completo del punto anterior, de punta a punta.
+  alIrseALaFicha();
+  marcarVuelta(RUTA);
+  assert.equal(montarHome().abierto, true);
+  // Más tarde el usuario abre esa misma ficha por un link (sin pasar por la
+  // ruleta) y toca "Volver": sin historial interno, cae en el fallback.
+  assert.equal(volverDesdeLaFicha(false), "push /", "el fallback marcó una vuelta que nadie pidió");
+  assert.equal(montarHome().abierto, false, "revivió una sesión vieja");
+});
+
+test("🔴 una vuelta que NO restaura no gasta la intención", () => {
+  // Vuelta a otra ruta: la marca no es de la ruleta, no se restaura nada, y la
+  // intención tiene que seguir sirviendo para la vuelta que sí le corresponde.
+  alIrseALaFicha();
+  marcarVuelta("/top/");
+  assert.equal(montarHome().abierto, false, "restauró con una marca ajena");
+  assert.equal(consumirIntencion(FICHA.tipo, FICHA.id), "/", "se gastó una intención que no era suya");
+});
+
+test("🔴 un snapshot inválido tampoco gasta la intención", () => {
+  guardarVista(CLAVE, { firma: FIRMA, datos: { abierto: true, sesion: { escenario: "larga" } }, scrollY: 0 });
+  registrarIntencion({ origen: "ruleta", tipo: FICHA.tipo, id: FICHA.id, ruta: RUTA });
+  marcarVuelta(RUTA);
+  assert.equal(montarHome().abierto, false);
+  assert.equal(consumirIntencion(FICHA.tipo, FICHA.id), "/", "una restauración fallida se la llevó puesta");
 });

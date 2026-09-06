@@ -142,6 +142,13 @@ test("🔴 se decide la restauración ANTES de poder pedir nada, y con las plata
   assert.match(src, /if \(!platformsListas \|\| decidido\) return;/,
     "decide antes de que PlatformsContext hidrate: la firma no sería la del usuario y el snapshot se borraría");
   assert.match(src, /decidirRestauracionVista<EstadoRuleta, ExtraRuleta>/, "no usa el mecanismo compartido");
+  // Y al restaurar bien consume la intención de vuelta: el Atrás del navegador
+  // no pasa por el botón de la ficha, que es el otro lugar que la consume.
+  const iRestaura = src.indexOf("if (e && esEstadoValido(e.datos)) {");
+  const iCierra = src.indexOf("keyAlDecidir.current = platformsKey;", iRestaura);
+  const iOlvida = src.indexOf("olvidarIntencion();", iRestaura);
+  assert.ok(iOlvida > iRestaura && iOlvida < iCierra,
+    "la intención tiene que consumirse DENTRO de la restauración exitosa, no antes ni afuera");
   assert.match(src, /volvio: consumirVuelta\(/, "no consume la marca de vuelta");
 });
 

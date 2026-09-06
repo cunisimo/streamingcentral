@@ -7,6 +7,7 @@ import { useRouletteSeen } from "@/hooks/useRouletteSeen";
 import { consumirVuelta, decidirRestauracionVista, guardarVista, olvidarLista } from "@/hooks/lista-paginada-store";
 import { contextoDe, snapshotVigente } from "@/hooks/restauracion-vigente";
 import { objetivoDeScroll, type PosicionRuleta } from "@/lib/ruleta-scroll";
+import { olvidarIntencion } from "@/hooks/intencion-vuelta";
 import {
   iniciar, actual as actualDe, puedeVolver, atras, otra as otraDe, sumarTanda,
   valeGuardar, esEstadoValido,
@@ -112,6 +113,16 @@ export default function RuletaBanner() {
       setSesion(e.datos.sesion);
       scrollPendiente.current = { y: e.scrollY, ancla: e.extra?.ancla ?? null };
       setCtxRestaurado(ctxActual);
+      // La intencion de vuelta ya cumplio: se restauro por el camino normal (el
+      // `popstate`), sin pasar por el boton "Volver" de la ficha, que es quien
+      // la consume. Sin esto quedaria guardada hasta media hora y podria
+      // habilitar el fallback de una visita POSTERIOR a la misma ficha, esta vez
+      // abierta por un link.
+      //
+      // Va ACA y no antes: solo cuando la restauracion se decidio y salio bien.
+      // Una vuelta que no restaura -otra ruta, firma distinta, snapshot roto- no
+      // tiene por que gastar una intencion que no es suya.
+      olvidarIntencion();
     }
     keyAlDecidir.current = platformsKey;
     setDecidido(true);
