@@ -729,7 +729,7 @@ clara: sin él, quien tenga el sistema en oscuro veía un destello blanco al abr
 tiene `background`, `foreground` y `monochrome` · 25 entradas de `ic_launcher` y
 44 de `splash` dentro del APK.
 
-⚠️ **No se probó en el teléfono**: no estaba conectado. Las previews de control se
+⚠️ **Probado en el teléfono el 6/09 — ver §17.** El ícono salió bien; **la pantalla de inicio no**: Android muestra el ícono del lanzador, no el splash con "yump". Lo que sigue de este párrafo describe el estado de aquel momento. Las previews de control se
 hicieron desde los archivos que quedaron escritos en `android/`, que es lo que va
 en el APK, no desde la fuente. Falta la confirmación en pantalla real.
 
@@ -742,3 +742,100 @@ Firma y keystore · Play App Signing · ficha de Play · `assetlinks.json` · de
 links · notificaciones locales · 404 propio · iOS · y la integración de
 Próximamente y "¿No sabés qué ver?", que sigue pendiente antes del paquete
 publicable.
+
+## 17. Etapa 4 — prueba visual en el teléfono (6/09)
+
+Sobre el APK de `72be8a6`, **sin recompilar**: se comprobó que los 42 PNG del
+árbol están byte a byte dentro del APK, y que desde el commit de recursos
+(`1234682`) hasta HEAD sólo cambió documentación.
+
+motorola edge 60, Android 16. **No se abrió la API ni la Preview**: esta prueba
+es visual.
+
+### 17.a El ícono: ✅ correcto
+
+En el cajón de aplicaciones aparece **Yump** con el símbolo sobre blanco, con la
+máscara **cuadrada redondeada** que aplica el lanzador de Motorola. Idéntico a lo
+aprobado: nada recortado, tamaño correcto, sin rastro del ícono X de Capacitor.
+
+`Yump Dev` sigue con su ícono viejo y sin tocar (`lastUpdateTime` del 5/09).
+
+⚠️ **En el cajón hay TRES entradas llamadas "Yump"**, y no es un defecto de esta
+tanda: son la app nativa **más dos WebAPK de Chrome**
+(`org.chromium.webapk.a0e4563c9e8465aed_v2` y `…ad21783079edeeff7_v2`), o sea la
+PWA instalada dos veces. Se ven casi iguales porque comparten la marca. Cuando se
+publique conviene tenerlo presente.
+
+⚠️ **El ícono monocromático no se pudo activar.** La capa está bien: el
+`ic_launcher.xml` empaquetado declara `background`, `foreground` y `monochrome`,
+y el recurso renderizado se ve correcto. Pero el lanzador de Motorola no expone
+un interruptor de íconos tematizados por `adb`; hay que activarlo a mano en
+Personalizar. **Queda sin verificar en pantalla real.**
+
+### 17.b 🔴 El splash aprobado NO es el que muestra Android
+
+**Esto es una diferencia real respecto de lo aprobado, y por eso no se tocó ni un
+archivo.**
+
+Lo que se ve al abrir, en claro y en oscuro, es **el ícono del lanzador —sólo el
+símbolo— centrado sobre un fondo liso**. La pantalla con la palabra "yump" que el
+dueño aprobó **no aparece nunca**.
+
+La causa está en el tema y es anterior a esta tanda:
+
+```xml
+<style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+    <item name="android:background">@drawable/splash</item>
+</style>
+```
+
+Con `targetSdk 36`, la pantalla de inicio la maneja la **SplashScreen API**, que
+no mira `android:background`. Usa `windowSplashScreenBackground` y
+`windowSplashScreenAnimatedIcon`, **ninguno de los dos está declarado**, así que
+el sistema cae a su default: fondo liso del tema + **el ícono de la aplicación**.
+
+🔴 **Los 44 `splash.png` que se generaron son, en Android 12+, peso muerto** —
+igual que lo eran los de la plantilla, que tenían el mismo problema. No es una
+regresión introducida acá: es un defecto heredado que esta prueba destapó.
+
+Efectos secundarios visibles del mismo mecanismo: el sistema toma la capa
+**foreground** del ícono adaptativo, **sin** su fondo blanco, así que la flecha
+—que es un calado— toma el color del fondo del splash y se ve gris en vez de
+blanca; y el símbolo se recorta en un cuadrado de bordes duros.
+
+✅ **Lo que sí está bien: no hay destello blanco.** Con el sistema en oscuro el
+fondo del arranque es oscuro y la app entra en oscuro, sin ningún fogonazo. Con
+el sistema en claro, todo claro. La secuencia medida en las dos es: fondo del
+sistema con el ícono → fondo liso → la app.
+
+**No se corrigió nada**: arreglarlo pide tocar el tema y los recursos, y el
+mandato pedía frenar ante cualquier diferencia visual. La corrección mínima sería
+declarar `windowSplashScreenBackground` y `windowSplashScreenAnimatedIcon` en un
+`values-v31/styles.xml`, decidiendo antes si el ícono del arranque lleva o no la
+palabra "yump" — porque la SplashScreen API lo muestra dentro de un círculo
+chico, donde el texto volvería a ser ilegible.
+
+### 17.c El estado real de las dos fuentes de marca
+
+Verificado leyendo los dos generadores, no la documentación:
+
+| | Fuente real | Comando | Escribe en |
+|---|---|---|---|
+| **Web / PWA** | `public/brand/yump-icon.png` | `generate-pwa-assets.mjs` | `public/icons/`, `public/splash/` |
+| **Android** | `assets/brand/yump-simbolo.png`, `yump-logo.png`, `yump-logo-blanco.png` | `generate-android-assets.mjs` | `android/app/src/main/res/` |
+
+**`assets/brand/logo.svg` no lo lee nadie**: no aparece en ninguna ruta de
+`scripts/`, `app/`, `components/` ni `lib/`. Es un placeholder huérfano.
+
+⚠️ **No hay riesgo de que el generador de la PWA pise la marca con un
+placeholder.** Se comprobó replicando su transformación **sin escribir en
+`public/`**: lo que produciría hoy es **pixel a pixel idéntico** (diferencia media
+0,00/255) a lo que ya está publicado. El generador nunca leyó el SVG.
+
+**El riesgo real es la deriva**: son el mismo dibujo con encuadres distintos —el
+de la web conserva la cola de la burbuja, el de Android la recorta en cuadrado— y
+cambiar una fuente no actualiza la otra. Unificarlas tocaría los íconos de la
+web, así que **queda como decisión pendiente del dueño** y no se implementó.
+
+⚠️ `assets/brand/yump-simbolo-circular.png` quedó versionado pero **ningún
+generador lo usa**. Se conserva como pieza de marca; no es una dependencia.
