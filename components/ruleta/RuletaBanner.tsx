@@ -73,7 +73,12 @@ export default function RuletaBanner() {
   // usuario: no coincidiría, y `decidirRestauracionVista` BORRA lo que no
   // coincide. O sea que decidir temprano no sólo falla: destruye el snapshot.
   const [decidido, setDecidido] = useState(false);
+  // La posición que hay que restaurar, MIENTRAS NO SE HAYA APLICADO. Y sigue
+  // puesta hasta que el scroll se movió de verdad, no hasta que se agenda: entre
+  // una cosa y la otra pasan dos frames, y en el medio corre el efecto que
+  // guarda el snapshot. Ver el comentario del guardado.
   const scrollPendiente = useRef<number | null>(null);
+  const scrollAgendado = useRef(false);
   const [ctxRestaurado, setCtxRestaurado] = useState<string | null>(null);
   const ctxActual = contextoDe([platformsKey]);
   // La firma de plataformas con la que se decidió. Es lo que distingue "el
@@ -102,11 +107,22 @@ export default function RuletaBanner() {
 
   // El scroll, una vez que la tarjeta ya está montada y el documento tiene su
   // altura. Mismo rAF doble que el resto de las vistas restauradas.
+  //
+  // La pendiente se limpia DENTRO del rAF, junto con el scroll, y no acá: entre
+  // agendar y aplicar corre el efecto de guardado, que necesita saber que la
+  // vista todavía no llegó a su lugar. `scrollAgendado` evita agendarlo dos
+  // veces si `actual` cambia en el medio, y la comparación de adentro descarta
+  // el que quedó viejo cuando la vigencia soltó la pendiente.
   useEffect(() => {
     const y = scrollPendiente.current;
-    if (y == null || !actual) return;
-    scrollPendiente.current = null;
-    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+    if (y == null || !actual || scrollAgendado.current) return;
+    scrollAgendado.current = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      scrollAgendado.current = false;
+      if (scrollPendiente.current !== y) return;
+      scrollPendiente.current = null;
+      window.scrollTo(0, y);
+    }));
   }, [actual]);
 
   useEffect(() => {
@@ -202,7 +218,16 @@ export default function RuletaBanner() {
     if (!valeGuardar(estado)) { olvidarLista(CLAVE); return; }
     let pend = false;
     const guardar = () => guardarVista<EstadoRuleta>(CLAVE, {
-      firma: platformsKey, datos: estado, scrollY: window.scrollY,
+      firma: platformsKey, datos: estado,
+      // 🔴 MIENTRAS HAY UN SCROLL PENDIENTE, LA POSICIÓN DE LA VISTA ES ESA Y NO
+      // LA DEL DOCUMENTO. Este efecto corre en el MISMO commit en el que se
+      // restauró —los tres efectos van juntos, en orden de declaración— y el
+      // scroll recién se aplica dos frames después. Con `window.scrollY` a
+      // secas, el guardado escribía 0 encima de la posición que se acababa de
+      // leer del snapshot: la vuelta siguiente devolvía la tarjeta correcta con
+      // la página arriba de todo. Medido en el navegador el 2026-09-06 y fijado
+      // en lib/ruleta-restauracion.test.ts.
+      scrollY: scrollPendiente.current ?? window.scrollY,
     });
     guardar();
     const onScroll = () => {

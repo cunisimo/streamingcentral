@@ -159,3 +159,17 @@ test("🔴 el listener adelantado de NavHistorial sigue en pie", () => {
   assert.match(src, /^registrarVueltaAtras\(\);$/m,
     "el registro dejó de estar en el scope del módulo");
 });
+
+test("🔴 el snapshot guarda la posición PENDIENTE, no la del documento a medio restaurar", () => {
+  // Es lo que ata el componente al modelo de `lib/ruleta-restauracion.test.ts`.
+  // El efecto de guardado corre en el mismo commit que la restauración y el
+  // scroll se aplica dos frames después: con `window.scrollY` a secas escribía 0
+  // encima del snapshot recién leído, y el viaje siguiente volvía arriba de todo.
+  const src = sinComentarios(BANNER);
+  assert.match(src, /scrollY: scrollPendiente\.current \?\? window\.scrollY/,
+    "volvió a guardar la posición del documento mientras hay un scroll pendiente");
+  // Y la pendiente tiene que seguir puesta hasta que el scroll SE APLICÓ: si se
+  // limpia al agendar el rAF, el guardado de ese mismo commit vuelve a ver 0.
+  assert.doesNotMatch(src, /scrollPendiente\.current = null;\s*\n?\s*requestAnimationFrame/,
+    "se limpia la pendiente antes de aplicarla");
+});

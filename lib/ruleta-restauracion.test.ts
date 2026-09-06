@@ -24,7 +24,9 @@ import assert from "node:assert/strict";
 import {
   guardarVista, decidirRestauracionVista, marcarVuelta, consumirVuelta, olvidarLista,
 } from "../hooks/lista-paginada-store.ts";
-import { iniciar, esEstadoValido, valeGuardar, type EstadoRuleta } from "./ruleta-historial.ts";
+import {
+  iniciar, esEstadoValido, valeGuardar, type EstadoRuleta, type SesionRuleta,
+} from "./ruleta-historial.ts";
 import type { RoulettePick } from "./roulette.ts";
 
 // Mismo doble de sessionStorage que hooks/lista-paginada-store.test.ts.
@@ -159,4 +161,116 @@ test("un snapshot con la forma rota se ignora en vez de pintar una tarjeta vací
   // rechaza. Por eso el componente valida SIEMPRE antes de usarlo.
   assert.ok(e, "el almacén no es quien filtra la forma");
   assert.equal(esEstadoValido(e!.datos), false);
+});
+
+// ============================================================================
+// EL SNAPSHOT NO SE PISA A SÍ MISMO MIENTRAS SE RESTAURA
+// ============================================================================
+// EL BUG. Al volver de la ficha, el efecto que guarda el snapshot corre en el
+// mismo commit que la restauración, y el scroll recién se aplica DOS FRAMES
+// DESPUÉS (rAF doble, para que el documento ya tenga su altura). O sea que ese
+// guardado veía `window.scrollY = 0` y escribía 0 encima de la posición que
+// acababa de leer.
+//
+// Medido en el navegador (2026-09-06, dev, Home con la ruleta abierta a 880 px):
+//   viaje 1: vuelve, restaura 880 … y el snapshot queda en 0
+//   viaje 2: vuelve, restaura **0** — la tarjeta correcta, la página arriba de
+//            todo. Es exactamente lo que reportó el dueño.
+//
+// La corrección es entender qué es "la posición de la vista" mientras hay una
+// restauración en vuelo: es la PENDIENTE, no la del documento. El documento
+// todavía no llegó ahí.
+//
+// ⚠️ Esto es un MODELO de la coordinación, igual que
+// `hooks/arranque-restauracion.test.ts`: no monta el componente ni ejecuta
+// React. Respeta el orden de declaración de los efectos —decidir, scroll,
+// guardar— y que un efecto ve el cierre de su render. Lo que ata el modelo al
+// componente es el guard de `lib/ruleta-tarjeta.test.ts`.
+
+/** El componente, modelado en lo único que decide la posición vertical. */
+function viajeDeVuelta(politica: "vieja" | "nueva") {
+  let open = false;
+  let sesion: SesionRuleta | null = null;
+  let decidido = false;
+  let scrollY = 0;                       // el documento
+  const scrollPendiente: { current: number | null } = { current: null };
+  const agendado = { current: false };
+  const frames: (() => void)[] = [];     // requestAnimationFrame
+
+  const actual = () => (sesion && sesion.historial.length ? sesion.historial[sesion.pos] : null);
+
+  const efectoDecidir = () => {
+    if (decidido) return;
+    const e = decidirRestauracionVista<EstadoRuleta>({
+      clave: CLAVE, firma: FIRMA, volvio: consumirVuelta(RUTA),
+    });
+    if (e && esEstadoValido(e.datos)) {
+      open = e.datos.abierto;
+      sesion = e.datos.sesion;
+      scrollPendiente.current = e.scrollY;
+    }
+    decidido = true;
+  };
+
+  const efectoScroll = () => {
+    const y = scrollPendiente.current;
+    if (y == null || !actual() || agendado.current) return;
+    agendado.current = true;
+    frames.push(() => frames.push(() => {
+      agendado.current = false;
+      if (scrollPendiente.current !== y) return;
+      scrollPendiente.current = null;
+      scrollY = y;
+    }));
+  };
+
+  const efectoGuardar = () => {
+    if (!decidido) return;
+    const estado: EstadoRuleta = { abierto: open, sesion };
+    if (!valeGuardar(estado)) { olvidarLista(CLAVE); return; }
+    guardarVista<EstadoRuleta>(CLAVE, {
+      firma: FIRMA, datos: estado,
+      scrollY: politica === "nueva" ? scrollPendiente.current ?? scrollY : scrollY,
+    });
+  };
+
+  // Ronda 1: el montaje. Los tres efectos, en orden de declaración.
+  efectoDecidir(); efectoScroll(); efectoGuardar();
+  // Ronda 2: cambiaron `open`, `sesion` y con ellos `actual`.
+  efectoDecidir(); efectoScroll(); efectoGuardar();
+  // Y los dos frames del rAF doble.
+  while (frames.length) frames.shift()!();
+
+  return { scrollY, guardado: () => JSON.parse(sessionStorage.getItem("yump:lista-paginada")!).ruleta.scrollY };
+}
+
+test("🔴 restaurar no puede dejar el snapshot en 0 (la política vieja lo hacía)", () => {
+  guardarSesion(FIRMA, 880);
+  marcarVuelta(RUTA);
+  const v = viajeDeVuelta("vieja");
+  assert.equal(v.scrollY, 880, "la vista sí llegaba al lugar correcto");
+  assert.equal(v.guardado(), 0, "…y el snapshot quedaba en 0: es el bug reportado");
+  // Y de ahí sale el síntoma: el viaje siguiente restaura ese 0.
+  marcarVuelta(RUTA);
+  assert.equal(viajeDeVuelta("vieja").scrollY, 0,
+    "el segundo regreso tiene que caer arriba de todo, que es lo que se reportó");
+});
+
+test("🔴 mientras el scroll está pendiente, la posición que se guarda es la PENDIENTE", () => {
+  guardarSesion(FIRMA, 880);
+  marcarVuelta(RUTA);
+  const v = viajeDeVuelta("nueva");
+  assert.equal(v.scrollY, 880, "la vista tiene que quedar donde estaba");
+  assert.equal(v.guardado(), 880, "el snapshot se pisó con la posición del documento a medio restaurar");
+});
+
+test("🔴 dos viajes seguidos a la ficha restauran las dos veces al mismo lugar", () => {
+  // El caso del reporte: volver, mirar la tarjeta y entrar de nuevo a la ficha
+  // SIN scrollear. Si el primer viaje dejó el snapshot en 0, el segundo devuelve
+  // la tarjeta correcta con la página arriba de todo.
+  guardarSesion(FIRMA, 880);
+  marcarVuelta(RUTA);
+  assert.equal(viajeDeVuelta("nueva").scrollY, 880);
+  marcarVuelta(RUTA);
+  assert.equal(viajeDeVuelta("nueva").scrollY, 880, "el segundo regreso perdió la posición");
 });
