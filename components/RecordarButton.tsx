@@ -5,6 +5,9 @@ import { platformByCode } from "@/lib/providers-ar";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { apiUrl } from "@/lib/api-base";
 import { ES_NATIVO } from "@/lib/plataforma";
+import {
+  CANAL_ESTRENOS, extraDeAviso, idRecordatorio, momentoDeAviso, textoDeAviso,
+} from "@/lib/recordatorios";
 
 // "Recordarme": agenda el estreno en el calendario del usuario.
 //
@@ -33,6 +36,95 @@ export default function RecordarButton({
   const [error, setError] = useState<string | null>(null);
   const [bajando, setBajando] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // ==========================================================================
+  // EL AVISO DE ESTRENO EN ANDROID
+  // ==========================================================================
+  // En la web esto no existe: sigue el menú de Google Calendar / .ics de
+  // siempre, y este estado nunca sale de "no".
+  //
+  //   no        se puede agendar
+  //   listo     hay un aviso pendiente; el toque siguiente lo cancela
+  //   hoy       el estreno es hoy y las 10:00 ya pasaron
+  //   denegado  el usuario dijo que no a las notificaciones
+  const [aviso, setAviso] = useState<"no" | "listo" | "hoy" | "denegado">("no");
+  const [ocupado, setOcupado] = useState(false);
+  const idAviso = idRecordatorio(tipo, id);
+
+  // Al montar —y al cambiar de título— se pregunta por los pendientes. Sin esto
+  // el botón mostraría "Recordarme" sobre un aviso ya programado, y el toque
+  // siguiente intentaría programarlo de nuevo en vez de cancelarlo.
+  useEffect(() => {
+    if (!ES_NATIVO || idAviso === null) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const { LocalNotifications } = await import("@capacitor/local-notifications");
+        const { notifications } = await LocalNotifications.getPending();
+        if (vivo) setAviso(notifications.some((n) => n.id === idAviso) ? "listo" : "no");
+      } catch { /* sin plugin, queda el camino de Google Calendar */ }
+    })();
+    return () => { vivo = false; };
+  }, [idAviso]);
+
+  // 🔴 EL PERMISO SE PIDE ACÁ ADENTRO Y EN NINGÚN OTRO LADO: sólo después de que
+  // el usuario tocó "Recordarme". Pedirlo al arrancar la app es la forma más
+  // rápida de que lo rechacen para siempre.
+  const alternarAviso = async () => {
+    if (ocupado || idAviso === null) return;
+    setOcupado(true);
+    try {
+      const { LocalNotifications } = await import("@capacitor/local-notifications");
+
+      if (aviso === "listo") {
+        await LocalNotifications.cancel({ notifications: [{ id: idAviso }] });
+        setAviso("no");
+        return;
+      }
+
+      // Antes que el permiso: si el aviso no tiene futuro, no hay nada que pedir.
+      const cuando = momentoDeAviso(fecha);
+      if (cuando.estado !== "programable") {
+        setAviso(cuando.estado === "hoy-tarde" ? "hoy" : "denegado");
+        return;
+      }
+
+      let permiso = (await LocalNotifications.checkPermissions()).display;
+      if (permiso !== "granted") permiso = (await LocalNotifications.requestPermissions()).display;
+      if (permiso !== "granted") { setAviso("denegado"); return; }
+
+      // Un canal por si el sistema es Android 8+. Sonido por defecto: no se sube
+      // ningún audio al APK.
+      try { await LocalNotifications.createChannel(CANAL_ESTRENOS); } catch { /* < Android 8 */ }
+
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: idAviso,
+          title: "Yump",
+          body: textoDeAviso(titulo, nombrePlat),
+          schedule: {
+            at: cuando.at,
+            // 🔴 NO se usa alarma exacta. El permiso `SCHEDULE_EXACT_ALARM` es
+            // sensible, está sacado del manifest, y con el valor por defecto
+            // (`true`) el plugin abriría la pantalla de "Alarmas y recordatorios"
+            // del sistema en Android 12+. Unos minutos de diferencia en un aviso
+            // de estreno no cambian nada.
+            allowWhileIdle: false,
+          },
+          channelId: CANAL_ESTRENOS.id,
+          smallIcon: "ic_stat_yump",
+          extra: extraDeAviso(tipo, id),
+          isExactNotification: false,
+        }],
+      });
+      setAviso("listo");
+    } catch {
+      // El plugin puede no estar (web) o fallar: queda Google Calendar.
+      setAviso("denegado");
+    } finally {
+      setOcupado(false);
+    }
+  };
 
   const cerrar = useCallback(() => setOpen(false), []);
   useEffect(() => {
@@ -104,6 +196,16 @@ export default function RecordarButton({
     </svg>
   );
 
+  // El mismo calendario, con el tilde ya marcado: es el estado del contrato de
+  // la ficha (`.act.on`), no un ícono nuevo.
+  const icoListo = (
+    <svg className="chk" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+      <path d="M8.5 15.5l2.5 2.5 4.5-4.5" />
+    </svg>
+  );
+
   const menu = (
     <div className="panel panel-cal" onClick={(e) => e.stopPropagation()}>
       <h4>Agendar el estreno</h4>
@@ -144,15 +246,39 @@ export default function RecordarButton({
     // Abre la pantalla de "crear evento" ya completa: **no guarda nada solo**,
     // la decisión final sigue siendo del usuario. Y al volver, Yump sigue en la
     // ficha (CP8 #2: un enlace externo no secuestra la WebView).
+    // 🔴 EN EL CONTENEDOR EL BOTÓN PROGRAMA UN AVISO LOCAL, no abre el
+    // calendario. Un recordatorio que vive en el teléfono no depende de que el
+    // usuario tenga cuenta de Google ni de que salga de la app, y al tocarlo
+    // vuelve a la ficha exacta.
+    //
+    // Google Calendar sigue existiendo, pero como SALIDA: se ofrece —sin
+    // abrirlo— cuando el usuario rechazó las notificaciones. Ahí es lo único
+    // que queda, y abrirlo solo sería decidir por él dos veces seguidas.
     if (ES_NATIVO) {
+      if (aviso === "denegado") {
+        return (
+          <a
+            className="act" href={google} target="_blank" rel="noreferrer"
+            aria-label="Agendar el estreno en Google Calendar"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {ico}<span className="lab">Agendar en Google Calendar</span>
+          </a>
+        );
+      }
       return (
-        <a
-          className="act" href={google} target="_blank" rel="noreferrer"
-          aria-label="Agendar el estreno en Google Calendar"
-          onClick={(e) => e.stopPropagation()}
+        <button
+          type="button" className={`act ${aviso === "listo" ? "on" : ""}`}
+          disabled={ocupado}
+          aria-pressed={aviso === "listo"}
+          aria-label={aviso === "listo" ? "Cancelar el recordatorio" : "Recordarme este estreno"}
+          onClick={(e) => { e.stopPropagation(); void alternarAviso(); }}
         >
-          {ico}<span className="lab">Recordarme</span>
-        </a>
+          {aviso === "listo" ? icoListo : ico}
+          <span className="lab">
+            {aviso === "listo" ? "Recordatorio listo" : aviso === "hoy" ? "Este estreno es hoy" : "Recordarme"}
+          </span>
+        </button>
       );
     }
 
