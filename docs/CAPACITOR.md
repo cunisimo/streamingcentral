@@ -1194,6 +1194,97 @@ Para que nadie lo tome por confirmado:
 
 ---
 
+## 12.b Avisos de estreno en Android (v1) — implementado el 07/09/2026
+
+**Qué hace.** En el contenedor, "Recordarme" deja de abrir Google Calendar y
+programa una **notificación local** para las **10:00 del día del estreno, hora
+del teléfono**. Un segundo toque la cancela. Al tocar el aviso se abre la ficha
+exacta. No pide cuenta, no toca ningún backend y no cuesta nada: todo vive en el
+teléfono.
+
+**En la web no cambió nada**: sigue el menú con Google Calendar y el `.ics`.
+
+### Las tres cuentas que viven en `lib/recordatorios.ts`
+
+Son chicas y las tres fallan en silencio, así que están en un módulo puro y con
+tests, no repartidas en el componente.
+
+1. 🔴 **La fecha se arma con el constructor LOCAL.** `new Date("2026-09-20")` es
+   medianoche **UTC**, o sea el 19 a las 21:00 en Argentina: el aviso llegaría el
+   día anterior. `new Date(2026, 8, 20, 10, 0, 0)` son las 10 de la mañana del
+   teléfono, en el huso que sea.
+2. 🔴 **El identificador es `id*2` (película) e `id*2+1` (serie).** Tiene que ser
+   estable —si cambia, el segundo toque no cancela nada y el botón muestra un
+   estado que no existe— y distinguir los dos catálogos, porque TMDB reusa los
+   ids entre ellos (`movie:1399` y `tv:1399` son títulos distintos). Es una
+   biyección: no hay colisiones que justificar. Y entra en el entero de 32 bits
+   con signo que acepta Android — el id más alto de TMDB anda por 1,9 millones,
+   así que el doble sobra; igual se valida.
+3. **El `extra` lleva sólo `{tipo, id}` y se valida al leerlo.** Es un dato que
+   el sistema guardó durante días y que termina en una navegación.
+
+### Los permisos, y el que se saca
+
+| Permiso | De dónde sale | Qué es |
+|---|---|---|
+| `POST_NOTIFICATIONS` | el plugin | **Lo único que se le pide al usuario**, y recién cuando toca "Recordarme" |
+| `RECEIVE_BOOT_COMPLETED` | el plugin | Infraestructura: reprograma los avisos después de un reinicio |
+| `WAKE_LOCK` | el plugin | Infraestructura: despierta el teléfono para mostrar el aviso |
+| `ar.yump.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | AndroidX | Permiso que la app se declara a sí misma para sus receptores no exportados |
+| ~~`SCHEDULE_EXACT_ALARM`~~ | el plugin | 🔴 **SE SACA** con `tools:node="remove"` |
+
+🔴 **Por qué se saca la alarma exacta.** Un aviso de estreno no necesita
+precisión: se programa a las 10:00 y unos minutos no cambian nada. Es un permiso
+**sensible** —Google Play lo revisa aparte— y pedirlo para esto sería
+injustificable. Además se programa con **`isExactNotification: false`**: el
+plugin usa `true` por defecto, y con ese valor abriría la pantalla de "Alarmas y
+recordatorios" del sistema en Android 12+ apenas el usuario toca el botón.
+
+El plugin también suma tres receptores y un `FileProvider` propio. **No son
+acceso a datos personales**: son la maquinaria que hace que un aviso agendado
+para dentro de dos semanas siga existiendo.
+
+### Dónde vive cada pieza
+
+| Pieza | Archivo |
+|---|---|
+| Fecha, id, texto y payload | `lib/recordatorios.ts` |
+| Botón, permiso, programar y cancelar | `components/RecordarButton.tsx` |
+| Abrir la ficha al tocar el aviso | `components/nativo/AvisoNativo.tsx`, montado en el layout raíz |
+| Ícono chico (5 densidades) | `scripts/generate-android-assets.mjs` → `drawable-*/ic_stat_yump.png` |
+| Guards | `lib/recordatorios.test.ts`, `lib/avisos-nativos.test.ts` |
+
+**El permiso se pide dentro del handler del toque y en ningún otro lado.**
+Pedirlo al arrancar la app es la forma más rápida de que lo rechacen para
+siempre. Y se pide **después** de saber que hay algo que programar: si el estreno
+es hoy y las 10 ya pasaron, el botón dice "Este estreno es hoy" y no pide nada.
+
+**Si el usuario rechaza el permiso** se ofrece "Agendar en Google Calendar" como
+salida — **sin abrirlo solo**: ahí es lo único que queda y abrirlo sería decidir
+por él dos veces seguidas.
+
+**El listener va en el layout raíz** y no en la pantalla que programó el aviso:
+el aviso llega días después, con la app cerrada o en otra pantalla. Cubre los dos
+casos —app abierta y arranque desde el aviso— sin código aparte, porque el plugin
+emite el evento en cuanto hay alguien registrado.
+
+**El ícono no se redibujó.** Sale del mismo `yump-simbolo.png` que el resto de la
+marca, por el generador que ya existía. Android usa **sólo el alfa** y lo tiñe,
+así que es una silueta pura; ocupa el 86% del lienzo y no el 50% del adaptativo,
+porque a 24dp ese aire lo dejaría invisible en la barra de estado.
+
+### Lo que NO entró
+
+Sin push, sin Firebase/FCM, sin backend, sin tablas ni funciones de Supabase, sin
+service worker, sin llamadas nuevas a ninguna API y sin costo en Vercel, Supabase,
+Upstash ni TMDB.
+
+**Alcance de v1**: el flujo nuevo está en el botón **con texto de la ficha**. El
+ícono de calendario de las tarjetas de "Próximamente" sigue abriendo Google
+Calendar como hasta ahora — ahí no hay lugar para los estados ("Recordatorio
+listo", "Este estreno es hoy", el rechazo del permiso), y unificarlo es una
+decisión de producto, no un detalle de implementación.
+
 ## 13. Qué queda decidido en `docs/PLAY-STORE.md`
 
 Esta auditoría cierra la **decisión 10 de §4.c ("¿TWA o nativo?")**: TWA queda
