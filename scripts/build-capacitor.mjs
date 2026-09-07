@@ -3,6 +3,7 @@
 //   node scripts/build-capacitor.mjs --api-base=https://ejemplo.invalid
 //   node scripts/build-capacitor.mjs --diagnostico        (CP1: sin staging)
 //   node scripts/build-capacitor.mjs --api-base=... --keep-staging   (canarios)
+//   node scripts/build-capacitor.mjs --release --api-base=https://app.yump.ar
 //
 // EL PRINCIPIO QUE ORDENA TODO: nunca se mueve ni se borra nada del árbol
 // original. Se construye desde una COPIA. Si el proceso se interrumpe a mitad,
@@ -290,6 +291,34 @@ export function inyectarArranque(artefacto) {
 }
 
 // ============================================================================
+// El build de Google Play
+// ============================================================================
+
+/** La única API que puede quedar adentro de un artefacto publicable. */
+export const BASE_PRODUCCION = "https://app.yump.ar";
+
+/**
+ * ¿Se puede construir esta release con esta base?
+ *
+ * 🔴 EL RIESGO CONCRETO: el mismo comando arma el artefacto de desarrollo y el
+ * de Play, y lo único que cambia es una URL en la línea de comandos. Un AAB
+ * armado con la base de una Preview compila igual, se sube igual y falla recién
+ * en el teléfono de un tester — con un 302 al SSO de Vercel, que la app muestra
+ * como "sin conexión". Por eso `--release` exige la base de Producción EXACTA:
+ * ni con barra final, ni otro host, ni un subdominio parecido.
+ *
+ * Pura para poder probarla. Devuelve `null` si está bien, o el motivo.
+ */
+export function motivoParaNoConstruirRelease(apiBase, esRelease) {
+  if (!esRelease) return null;
+  if (apiBase !== BASE_PRODUCCION) {
+    return `una release para Google Play sólo puede apuntar a ${BASE_PRODUCCION}, `
+      + `y se pidió "${apiBase}". Sin --release se puede usar cualquier base HTTPS.`;
+  }
+  return null;
+}
+
+// ============================================================================
 // Orquestación
 // ============================================================================
 
@@ -322,6 +351,14 @@ function main() {
     console.error("falta --api-base=<url>");
     process.exit(1);
   }
+  const esRelease = process.argv.includes("--release");
+  const motivo = motivoParaNoConstruirRelease(apiBase, esRelease);
+  if (motivo) {
+    console.error(`no se puede construir la release: ${motivo}`);
+    process.exit(1);
+  }
+  if (esRelease) console.log("· RELEASE para Google Play ·", BASE_PRODUCCION);
+
   const conservar = process.argv.includes("--keep-staging");
 
   console.log("· limpiando");

@@ -47,9 +47,13 @@ captures/
 .idea/
 
 # Keystore files
-# Uncomment the following lines if you do not want to check your keystore files in.
-#*.jks
-#*.keystore
+# Descomentados a proposito: la clave de carga de Google Play es irremplazable y
+# no entra al repositorio por accidente.
+*.jks
+*.keystore
+
+# Contrasenas y ruta de la clave de carga. NUNCA se versiona.
+keystore.properties
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild

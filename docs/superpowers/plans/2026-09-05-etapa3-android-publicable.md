@@ -969,3 +969,121 @@ habiendo uno solo, `INTERNET`.
 
 **La web y la PWA no se tocaron**: cero cambios en `public/`, `app/`,
 `components/` y `generate-pwa-assets.mjs`.
+
+
+## 19. Etapa 5 — la release apunta a Producción, y no se firma sola (7/09)
+
+Primer tramo de la Etapa 5. Se preparó todo lo que **no** necesita la clave de
+carga, y el trabajo frena exactamente donde empieza el secreto del dueño.
+
+### 19.a El problema real: el mismo comando arma las dos cosas
+
+`node scripts/build-capacitor.mjs --api-base=<url>` arma el artefacto de
+desarrollo y el de publicación, y lo único que los distingue es una URL escrita
+a mano. Un AAB construido contra una Preview **compila igual, se sube igual** y
+falla recién en el teléfono de un tester: la Preview responde 302 al SSO de
+Vercel y la app lo muestra como "sin conexión". Nadie se entera antes.
+
+Y el paquete web queda en `android/app/src/main/assets/public`, que está
+gitignoreado: `bundleRelease` empaqueta lo que encuentre ahí, venga de un
+`cap sync` de ayer, de otra rama o de una copia a mano. **Por eso hay dos
+guards, no uno.**
+
+| Guard | Dónde | Qué mira | Cuándo corta |
+|---|---|---|---|
+| `motivoParaNoConstruirRelease` | `scripts/build-capacitor.mjs` | la **intención**: el `--api-base` que se pidió | antes de copiar el staging, o sea antes de pagar un build |
+| `verificarBaseDeApi` | `android/app/build.gradle` | el **resultado**: los bytes que se van a empaquetar | dependencia de `bundleRelease` y `assembleRelease` |
+
+`--release` exige `https://app.yump.ar` **exacto**: rechaza la barra final, el
+subdominio parecido, el sufijo, `http://` y otra capitalización. Sin `--release`
+no cambia nada — las Previews y los canarios se siguen construyendo igual.
+
+El guard de Gradle exige que la base de Producción aparezca en el paquete y que
+**`vercel.app` no aparezca en ninguno** de sus `.js/.mjs/.css/.html/.json/.txt`.
+⚠️ **Lo que este guard NO hace**: no valida todos los dominios del paquete —TMDB,
+Supabase y YouTube están ahí con todo derecho—. Ataca el error concreto que puede
+pasar, que es reusar un `out-capacitor` de Preview.
+
+**Probado en los dos estados**, no razonado:
+
+```
+(con el paquete de Preview que había)
+> el paquete web apunta a una Preview de Vercel (136-3dcf9bc6d8c1ae9d.js, …)
+
+(después de --release --api-base=https://app.yump.ar + cap sync)
+verificarBaseDeApi: el paquete web apunta a https://app.yump.ar
+BUILD SUCCESSFUL
+```
+
+### 19.b La firma: sin clave no hay release, y nunca se firma con debug
+
+Las credenciales salen de `android/keystore.properties`, **fuera de Git**
+(agregado al `.gitignore`, junto con `*.jks` y `*.keystore`, que la plantilla de
+Capacitor traía comentados). No hay valores por defecto y no hay ninguna ruta ni
+contraseña escrita en el repositorio.
+
+🔴 **No hay respaldo silencioso a la clave de depuración.** `signingConfigs.debug`
+no aparece en ningún lado, y la firma de release sólo se asigna si el archivo
+existe y trae las cuatro claves. La ausencia se convierte en un error temprano
+con el motivo escrito, en vez de un AAB sin firmar que parece bueno hasta que
+Play lo rechaza:
+
+```
+> Execution failed for task ':app:verificarFirmaDeCarga'.
+> falta …\android\keystore.properties (o esta incompleto). Una release necesita
+  la clave de carga y NO se firma con la clave de depuracion.
+```
+
+Verificado: `./gradlew :app:bundleRelease` con el paquete de Producción ya
+correcto **frena ahí y no genera ningún bundle**.
+
+### 19.c Configuración de release
+
+`versionCode 1`, `versionName "1.0.0"`, `debuggable false` explícito,
+`minifyEnabled false` (sin ofuscar en el primer envío: un crash de Play tiene que
+leerse sin mapping), `applicationId` y `namespace` en `ar.yump.app`.
+
+### 19.d 🔴 La dependencia de orden que hay que tener presente
+
+Producción **hoy no tiene CORS**: `lib/cors.ts` no existe en `origin/main`. El
+origen `https://localhost` ya está declarado en esta rama con comparación exacta,
+sin comodín y sin `Allow-Credentials`, pero **no estará vigente hasta que esta
+rama llegue a `main` y se deploye**.
+
+O sea: un AAB construido contra `https://app.yump.ar` **no va a funcionar en el
+teléfono** hasta ese deploy. No es un defecto del artefacto, es el orden de las
+cosas. La secuencia es: merge a `main` → deploy → recién ahí probar la release.
+
+### 19.e Lo que falta, y es del dueño
+
+El siguiente paso necesita un secreto que sólo él puede crear. Ver §19.f.
+
+### 19.f Crear la clave de carga (pasos del dueño)
+
+En Android Studio, **Build → Generate Signed App Bundle / APK → Android App
+Bundle → Create new…**
+
+| Campo | Valor |
+|---|---|
+| Key store path | `C:\Users\CUNO\keys\yump-upload.jks` |
+| Alias | `yump-upload` |
+| Tipo / tamaño | RSA, 2048 o más |
+| Validez | 30 años o más |
+| Contraseñas | **las elige y las escribe él**; no se dictan por chat ni por terminal |
+
+Después, `android/keystore.properties` (que ya está ignorado):
+
+```
+storeFile=C:\\Users\\CUNO\\keys\\yump-upload.jks
+storePassword=…
+keyAlias=yump-upload
+keyPassword=…
+```
+
+🔴 **Dos copias seguras antes de seguir.** La clave de carga es irremplazable por
+sí misma: sin ella, y sin Play App Signing activado, no se puede volver a
+publicar una actualización de `ar.yump.app`.
+
+⚠️ El `debug.keystore` de `C:\Users\CUNO\.android\` **se conserva y no se usa
+acá**. Es el que firmó el APK instalado en el teléfono, y borrarlo dejaría sin
+poder actualizar esa instalación.

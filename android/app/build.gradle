@@ -1,5 +1,26 @@
 apply plugin: 'com.android.application'
 
+// ============================================================================
+// La firma de carga
+// ============================================================================
+// Las contrasenas y la ruta del keystore viven en `android/keystore.properties`,
+// que esta fuera de Git. NO hay valores por defecto y NO hay respaldo a la firma
+// de depuracion: si el archivo no esta, la release falla en `verificarFirmaDeCarga`
+// con el motivo escrito, en vez de producir un AAB que Play rechaza o —peor— un
+// artefacto firmado con una clave de juguete.
+def archivoDeFirma = rootProject.file("keystore.properties")
+def firmaDeCarga = new Properties()
+def hayFirmaDeCarga = archivoDeFirma.exists()
+if (hayFirmaDeCarga) {
+    archivoDeFirma.withInputStream { firmaDeCarga.load(it) }
+    hayFirmaDeCarga = ["storeFile", "storePassword", "keyAlias", "keyPassword"].every {
+        firmaDeCarga.getProperty(it)?.trim()
+    }
+}
+
+// La unica API que puede viajar adentro de un artefacto publicable.
+def BASE_PRODUCCION = "https://app.yump.ar"
+
 android {
     namespace = "ar.yump.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -8,7 +29,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +37,105 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hayFirmaDeCarga) {
+            release {
+                storeFile file(firmaDeCarga.getProperty("storeFile"))
+                storePassword firmaDeCarga.getProperty("storePassword")
+                keyAlias firmaDeCarga.getProperty("keyAlias")
+                keyPassword firmaDeCarga.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Sin `keystore.properties` la release queda SIN firma: nunca cae a
+            // `signingConfigs.debug`. El artefacto sin firmar tampoco se llega a
+            // generar, porque `verificarFirmaDeCarga` corta antes.
+            if (hayFirmaDeCarga) {
+                signingConfig signingConfigs.release
+            }
         }
+    }
+}
+
+// ============================================================================
+// Los dos guards de la release
+// ============================================================================
+
+// 1. Que el paquete web no sea el de una Preview.
+//
+// El mismo comando arma el artefacto de desarrollo y el de Play, y lo unico que
+// cambia es una URL. Un AAB armado contra una Preview compila igual, se sube
+// igual y falla recien en el telefono de un tester: la Preview responde 302 al
+// SSO de Vercel y la app lo muestra como "sin conexion". Gradle empaqueta lo que
+// haya en `assets/public`, sin saber con que base se construyo, asi que se mira
+// el resultado y no la intencion.
+//
+// LO QUE ESTE GUARD NO HACE: no valida todos los dominios del paquete (TMDB,
+// Supabase y YouTube estan ahi con todo derecho). Ataca el error concreto que
+// puede pasar: reusar un `out-capacitor` de Preview.
+tasks.register("verificarBaseDeApi") {
+    description = "Falla si el paquete web no apunta exactamente a la API de Produccion."
+    doLast {
+        def web = file("src/main/assets/public")
+        if (!web.exists()) {
+            throw new GradleException(
+                "no hay paquete web en ${web}: corre " +
+                "`node scripts/build-capacitor.mjs --release --api-base=${BASE_PRODUCCION}` " +
+                "y despues `npx cap sync android`.")
+        }
+        def hayProduccion = false
+        def dePreview = [] as Set
+        web.eachFileRecurse { f ->
+            if (!f.isFile() || !(f.name ==~ /.*\.(js|mjs|css|html|json|txt)$/)) return
+            def texto = f.getText("UTF-8")
+            if (texto.contains(BASE_PRODUCCION)) hayProduccion = true
+            if (texto.contains("vercel.app")) dePreview << f.name
+        }
+        if (!dePreview.isEmpty()) {
+            throw new GradleException(
+                "el paquete web apunta a una Preview de Vercel (${dePreview.take(3).join(', ')}). " +
+                "Una release solo puede apuntar a ${BASE_PRODUCCION}: reconstrui con " +
+                "`node scripts/build-capacitor.mjs --release --api-base=${BASE_PRODUCCION}` " +
+                "y `npx cap sync android`.")
+        }
+        if (!hayProduccion) {
+            throw new GradleException(
+                "el paquete web no menciona ${BASE_PRODUCCION}: se construyo con otra base. " +
+                "Reconstrui con `--release --api-base=${BASE_PRODUCCION}`.")
+        }
+        logger.lifecycle("verificarBaseDeApi: el paquete web apunta a ${BASE_PRODUCCION}")
+    }
+}
+
+// 2. Que la release este firmada con la clave de carga, o no exista.
+//
+// El default de AGP para `release` es quedarse sin firma, no firmar con debug;
+// pero "sin firma" es un AAB que parece bueno hasta que Play lo rechaza. Este
+// guard convierte eso en un error temprano y explicito.
+tasks.register("verificarFirmaDeCarga") {
+    description = "Falla si falta android/keystore.properties: la release nunca se firma con debug."
+    doLast {
+        if (!hayFirmaDeCarga) {
+            throw new GradleException(
+                "falta ${archivoDeFirma} (o esta incompleto). Una release necesita la clave de " +
+                "carga y NO se firma con la clave de depuracion. El archivo va fuera de Git y " +
+                "necesita storeFile, storePassword, keyAlias y keyPassword.")
+        }
+        def jks = file(firmaDeCarga.getProperty("storeFile"))
+        if (!jks.exists()) {
+            throw new GradleException("keystore.properties apunta a ${jks}, que no existe.")
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
+        dependsOn("verificarFirmaDeCarga", "verificarBaseDeApi")
     }
 }
 
