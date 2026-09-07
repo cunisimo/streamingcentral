@@ -3,6 +3,8 @@ import { Fragment, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { hayHistorialInterno } from "./nav-historial";
+import { consumirIntencion, decidirVuelta } from "@/hooks/intencion-vuelta";
+import { marcarVuelta } from "@/hooks/lista-paginada-store";
 import { useApi } from "./useApi";
 import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
@@ -33,9 +35,20 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   // —así se conserva el scroll y el contexto del Home— y cae al inicio cuando
   // la ficha se abrió desde un link compartido. Sin el fallback, `router.back()`
   // en ese caso devolvía al usuario al sitio de donde vino: se iba de la app.
+  //
+  // 🔴 EL FALLBACK NO DISPARA `popstate`, así que sin la intención de vuelta no
+  // se escribe la marca y la vista de origen no sólo no restaura: el mecanismo
+  // compartido BORRA su snapshot por creer que se entró por un link. Eso es lo
+  // que dejaba la ruleta cerrada y sin sesión después de recargar la ficha. La
+  // marca se escribe únicamente cuando esta ficha exacta se abrió desde la
+  // ruleta; ver `hooks/intencion-vuelta.ts`.
+  //
+  // La intención se consume en los DOS caminos: vale para una vuelta.
   const volver = () => {
-    if (hayHistorialInterno()) router.back();
-    else router.push("/");
+    const d = decidirVuelta(hayHistorialInterno(), consumirIntencion(tipo, id));
+    if (d.tipo === "back") { router.back(); return; }
+    if (d.marcarVuelta) marcarVuelta(d.ruta);
+    router.push(d.ruta);
   };
 
   // `error` (500 del server) entra acá igual que `offline`: si no, el skeleton
