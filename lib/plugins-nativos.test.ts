@@ -1,4 +1,4 @@
-// Los tres plugins de CP9, y por qué está cada uno.
+// Los CUATRO plugins nativos, y por qué está cada uno.
 //
 // ============================================================================
 // LO QUE CP8 MIDIÓ EN UN ANDROID FÍSICO, Y QUE ESTOS PLUGINS VIENEN A ARREGLAR
@@ -11,8 +11,14 @@
 //      `wa.me` por `window.open`: el usuario iba directo a WhatsApp sin poder
 //      elegir a dónde.
 //
-// Ninguno de los tres se arregla desde la web, y por eso son plugins. Este test
-// vigila que sigan siendo TRES y que no se cuele un cuarto.
+// Ninguno de los tres se arregla desde la web, y por eso son plugins.
+//
+// El CUARTO llegó después y por otra razón, aprobada aparte: los avisos de
+// estreno. Un recordatorio que vive en el teléfono no necesita cuenta de Google
+// ni sacar al usuario de la app, y al tocarlo vuelve a la ficha exacta. Ver
+// `lib/recordatorios.ts` y `lib/avisos-nativos.test.ts`.
+//
+// Este test vigila que sean exactamente esos cuatro y que no se cuele un quinto.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -31,17 +37,19 @@ const AUTORIZADOS = [
   "@capacitor/app",
   "@capacitor/status-bar",
   "@capacitor/share",
+  "@capacitor/local-notifications",
 ];
 
-test("los plugins son exactamente los tres que CP8 justificó", () => {
+test("los plugins son exactamente los cuatro justificados", () => {
   const pkg = JSON.parse(leer("package.json"));
   const todos = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]
     .filter((n) => n.startsWith("@capacitor/"));
   for (const n of todos) {
     assert.ok(AUTORIZADOS.includes(n), `paquete de Capacitor NO autorizado: ${n}`);
   }
-  // Y los tres nuevos van en `dependencies`: son de runtime, no de build.
-  for (const n of ["@capacitor/app", "@capacitor/status-bar", "@capacitor/share"]) {
+  assert.equal(todos.length, 7, "son siete paquetes de Capacitor: seis de runtime y el CLI");
+  // Y los de runtime van en `dependencies`, no de build.
+  for (const n of ["@capacitor/app", "@capacitor/status-bar", "@capacitor/share", "@capacitor/local-notifications"]) {
     assert.ok(pkg.dependencies?.[n], `${n} tiene que estar en dependencies`);
     assert.ok(!pkg.devDependencies?.[n], `${n} no va en devDependencies`);
   }
@@ -143,6 +151,8 @@ test("ningún plugin trajo detección dinámica de plataforma", () => {
     "components/nativo/AtrasNativo.tsx",
     "components/DetailView.tsx",
     "components/ThemeContext.tsx",
+    "components/nativo/AvisoNativo.tsx",
+    "components/RecordarButton.tsx",
   ]) {
     assert.doesNotMatch(codigo(f), /isNativePlatform|getPlatform\(\)/, `${f} usa detección dinámica`);
   }
