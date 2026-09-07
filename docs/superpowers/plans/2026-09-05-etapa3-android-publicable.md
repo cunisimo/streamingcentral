@@ -1087,3 +1087,110 @@ publicar una actualización de `ar.yump.app`.
 ⚠️ El `debug.keystore` de `C:\Users\CUNO\.android\` **se conserva y no se usa
 acá**. Es el que firmó el APK instalado en el teléfono, y borrarlo dejaría sin
 poder actualizar esa instalación.
+
+
+## 20. Etapa 5 — el primer AAB firmado, y su auditoría (7/09)
+
+El dueño creó la clave de carga y `android/keystore.properties`. Se construyó el
+primer AAB de publicación y se auditó. **No se subió a Play, no hay push, no hay
+merge y no hay deploy.**
+
+### 20.a Antes de construir
+
+| Verificación | Resultado |
+|---|---|
+| `keystore.properties` existe y trae las cuatro propiedades | ✅ `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. **Su contenido no se leyó ni se imprimió** |
+| Git lo ignora | ✅ `android/.gitignore:56` |
+| El keystore está fuera del repositorio | ✅ ningún `.jks`/`.keystore` adentro del árbol |
+| `debug.keystore` conservado | ✅ intacto, y sin usar |
+| `git status` | ✅ limpio |
+
+⚠️ **Se encontró y se borró un archivo suelto**: `android/app/wt-integracion-capacitor`,
+**0 bytes**, sin seguimiento — el resto de un intento anterior en el que se cortó
+una ruta. Estaba vacío, así que no había nada que filtrar.
+
+### 20.b El artefacto
+
+```
+node scripts/build-capacitor.mjs --release --api-base=https://app.yump.ar
+npx cap sync android
+./gradlew :app:bundleRelease      → BUILD SUCCESSFUL
+```
+
+Los dos guards corrieron y pasaron: `verificarBaseDeApi: el paquete web apunta a
+https://app.yump.ar` y `verificarFirmaDeCarga`.
+
+| | |
+|---|---|
+| Archivo | `android/app/build/outputs/bundle/release/app-release.aab` |
+| Tamaño | 7.488.592 bytes |
+| SHA-256 | `ddf131b664d9ceab910acd311e42a04642032f019e3b95222ad5a2b57b2060df` |
+
+### 20.c La firma
+
+`jarsigner -verify` → **`jar verified.`**
+
+| | |
+|---|---|
+| Sujeto | `C=AR, ST=Córdoba, L=Valle Hermoso, O=Yump, OU=Desarrollo, CN=Yump` |
+| Algoritmo | SHA256withRSA, clave de 2048 bits |
+| Validez | 7/09/2026 → 30/08/2056 (casi 30 años) |
+| SHA-256 del certificado | `2D:18:A7:C1:F4:FC:AB:D4:09:79:B3:CB:EA:66:1F:E5:41:D4:92:89:7D:47:B2:C6:7E:CF:AB:9F:93:03:95:AE` |
+
+🔴 **No es la clave de depuración.** La huella del `debug.keystore` es
+`0F:61:06:5F:…:BB:7B:AD:52`, con sujeto `C=US, O=Android, CN=Android Debug`.
+Distinto sujeto y distinta huella.
+
+Los avisos de `jarsigner` —cadena de certificación inválida, certificado
+autofirmado, firma sin sello de tiempo— **son los esperados en una clave de
+carga** y no indican un problema: una clave de carga es autofirmada por
+definición, y Play vuelve a firmar los APK con la clave de publicación.
+
+**Certificado público exportado** (sin contraseñas, sin clave privada):
+`android/app/build/outputs/certificado-carga/yump-upload-public.pem`.
+
+### 20.d Auditoría del contenido
+
+| Punto | Resultado |
+|---|---|
+| Package | `ar.yump.app` |
+| Versión | `versionCode 1`, `versionName 1.0.0` |
+| SDK | `minSdk 24`, `targetSdk 36` |
+| `debuggable` | no declarado, o sea `false` |
+| `usesCleartextTraffic` | no declarado |
+| Permisos | `INTERNET`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`, más el `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` que genera AndroidX |
+| Alarma exacta | ✅ **ninguna**: ni `SCHEDULE_EXACT_ALARM` ni `USE_EXACT_ALARM` |
+| Componentes exportados | dos, los dos correctos: `MainActivity` (lanzador) y `ProfileInstallReceiver` (AndroidX) |
+| `capacitor.config.json` | `appId ar.yump.app`, `webDir out-capacitor`, **sin `server.url`** |
+| Recursos | 24 `ic_launcher*`, 5 `ic_stat_yump`, pantalla de inicio completa |
+| Entradas | 653 archivos, 6,8 MB de paquete web |
+
+**URLs salientes**: `https://app.yump.ar` (la API y el enlace canónico),
+`themoviedb.org` e imágenes de TMDB, Supabase, `youtube-nocookie.com`, los
+dominios de las plataformas y `fonts.googleapis.com`. **Cero `vercel.app`.** Las
+menciones de `nextjs.org`, `github.com`, `stackoverflow.com` y `chromium.org`
+son textos de error del runtime de Next, no llamadas.
+
+**Secretos**: cero. `TMDB_READ_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`,
+`CRON_SECRET` y los tokens de KV/Upstash **no aparecen en ningún archivo**. El
+único JWT del paquete es la clave `anon` de Supabase, que es pública por diseño.
+Tampoco hay source maps, `.env` ni claves adentro del AAB.
+
+### 20.e Un hallazgo menor, sin acción
+
+`@vercel/analytics` y `@vercel/speed-insights` viajan en el contenedor y piden
+`/_vercel/insights/script.js` y `/_vercel/speed-insights/script.js`. Son rutas
+**relativas**, así que adentro del contenedor resuelven contra `https://localhost`
+y dan 404: no sale ningún dato del teléfono, quedan dos pedidos muertos al
+arrancar. El literal `va.vercel-scripts.com` que aparece en el bundle es la rama
+de desarrollo de esas librerías, que en un build de producción no se usa.
+No se tocó: es cosmético y cambiarlo es tocar código funcional de la web.
+
+### 20.f Lo que sigue, y sigue frenado
+
+Sin hacer: push, merge a `main`, deploy, subida a Play Console, activación de
+Play App Signing, prueba interna o cerrada, invitación de testers.
+
+🔴 **Y sigue en pie el orden de §19.d**: Producción todavía no tiene CORS, así que
+este AAB no va a funcionar en un teléfono hasta que la rama llegue a `main` y se
+deploye.
