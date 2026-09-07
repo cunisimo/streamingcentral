@@ -5,6 +5,7 @@ import "./globals.css";
 import { PlatformsProvider } from "@/components/PlatformsContext";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ES_NATIVO } from "@/lib/plataforma";
 import { ThemeProvider } from "@/components/ThemeContext";
 import { AuthProvider } from "@/components/AuthContext";
 import { MyListProvider } from "@/components/MyListContext";
@@ -12,6 +13,9 @@ import AppleSplashLinks from "@/components/pwa/AppleSplashLinks";
 import PwaClient from "@/components/pwa/PwaClient";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import NavHistorial from "@/components/NavHistorial";
+import AtrasNativo from "@/components/nativo/AtrasNativo";
+import AvisoNativo from "@/components/nativo/AvisoNativo";
+import { metadataPwa, pwaActiva } from "@/lib/pwa-nativa";
 
 // Corre ANTES del primer pintado, fija `data-theme` y CREA la meta theme-color.
 //
@@ -65,15 +69,9 @@ export const metadata: Metadata = {
   title: "Yump",
   description: "Qué ver en tus plataformas de streaming, sin perder 45 minutos buscando.",
   applicationName: "Yump",
-  // Next inyecta <link rel="manifest"> apuntando a la metadata route app/manifest.ts.
-  manifest: "/manifest.webmanifest",
-  // iOS ignora el manifest: estas son las que hacen que se abra en standalone,
-  // con la barra de estado translúcida y el título correcto bajo el ícono.
-  appleWebApp: {
-    capable: true,
-    title: "Yump",
-    statusBarStyle: "black-translucent",
-  },
+  // CP6: `manifest` y `appleWebApp` salen de acá SÓLO en el build nativo.
+  // En la web las dos siguen exactamente como estaban. Ver lib/pwa-nativa.ts.
+  ...metadataPwa(),
   formatDetection: { telephone: false },
 };
 
@@ -85,7 +83,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             THEME_INIT_SCRIPT. Ver el comentario de arriba, y el test que falla
             si alguien la vuelve a declarar desde React. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <AppleSplashLinks />
+        {/* CP6: 18 <link> a splash de iOS. Dentro del APK son inertes y peso
+            muerto, y los archivos ni siquiera viajan. */}
+        {pwaActiva() && <AppleSplashLinks />}
       </head>
       <body>
         <ThemeProvider>
@@ -97,17 +97,45 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <PwaClient />
                 <OnboardingGate />
                 <NavHistorial />
+                {/* Sólo hace algo en el contenedor; en web devuelve null. */}
+                <AtrasNativo />
+                <AvisoNativo />
               </PlatformsProvider>
             </MyListProvider>
           </AuthProvider>
         </ThemeProvider>
         {/* Medición de uso real. Van FUERA de los providers a propósito: no
             dependen de ningún contexto y así no re-renderizan con ellos.
-            Analytics es sin cookies, así que no obliga a un banner de consentimiento.
-            Los dos se auto-desactivan fuera de Vercel, así que en `next dev`
-            no mandan nada. */}
-        <Analytics />
-        <SpeedInsights />
+            Analytics es sin cookies, así que no obliga a un banner de
+            consentimiento, y los dos se auto-desactivan fuera de Vercel, así que
+            en `next dev` no mandan nada.
+
+            🔴 EN EL CONTENEDOR NO SE MONTAN, Y NO ES POR PROLIJIDAD. Medido en
+            el teléfono el 2026-09-06: las dos piden su script al origen local
+            —`https://localhost/_vercel/…/script.js`—, el servidor de Capacitor
+            devuelve 404 con 0 bytes, y como el script nunca carga el beacon
+            `/_vercel/insights/view` NUNCA se dispara. O sea que en Android no
+            miden nada: lo único que dejan son dos errores de consola por
+            arranque. En la web siguen intactas, que es donde sí funcionan.
+
+            ⚠️ ESTO NO LAS SACA DEL BUNDLE, y conviene saberlo antes de creer que
+            sí: son componentes de CLIENTE importados por este layout, que es de
+            servidor, así que Next mete su implementación en el chunk por el solo
+            hecho de estar importadas. Se probó moverlas a un componente de
+            cliente con el mismo gate adentro y el resultado fue idéntico: las
+            librerías siguen en el artefacto. Lo que este gate garantiza —y es lo
+            que importa— es que **no se montan**, así que no se pide ningún
+            script y no hay ningún 404. Sacarlas de verdad pediría sustituir el
+            módulo en el staging del build nativo, y eso no se hizo.
+
+            La bandera es de BUILD: el prerender y el cliente coinciden desde el
+            primer render, sin montar y desmontar al hidratar. */}
+        {!ES_NATIVO && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );

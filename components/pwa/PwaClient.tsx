@@ -4,6 +4,7 @@ import ServiceWorkerRegister from "./ServiceWorkerRegister";
 import InstallPrompt from "./InstallPrompt";
 import UpdateToast from "./UpdateToast";
 import StandaloneWelcome from "./StandaloneWelcome";
+import { pwaActiva } from "@/lib/pwa-nativa";
 
 // Orquesta todo lo client de la PWA en un solo punto montado en el layout:
 // registro del SW, aviso de actualización, banner de instalación y bienvenida de
@@ -27,6 +28,14 @@ export default function PwaClient() {
       }
     });
   }, []);
+
+  // CP6 — el orquestador se conserva, sus piezas de PWA no se montan.
+  //
+  // StandaloneWelcome SÍ sobrevive, y no es un olvido: su texto es "elegí tus
+  // plataformas / si ya tenías cuenta, ingresá de nuevo", que es justo lo que
+  // necesita el primer arranque del APK, con almacenamiento vacío. No dice nada
+  // de instalar ni de PWA. Ver el inventario de CP6 en el plan.
+  if (!pwaActiva()) return <StandaloneWelcome />;
 
   return (
     <>

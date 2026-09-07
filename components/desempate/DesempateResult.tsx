@@ -4,6 +4,7 @@ import PlatformLogo from "../PlatformLogo";
 import { genreLabel } from "../data";
 import Confetti from "./Confetti";
 import type { UITitle } from "@/lib/types";
+import { hrefTitulo } from "@/lib/rutas";
 
 export default function DesempateResult({
   winner, onReplay,
@@ -35,7 +36,7 @@ export default function DesempateResult({
             </div>
           )}
           <div className="dsmp-result-actions">
-            <Link className="btn" href={`/titulo/${winner.type}/${winner.id}`}>Ver ficha</Link>
+            <Link className="btn" href={hrefTitulo(winner.type, winner.id)}>Ver ficha</Link>
             <button className="btn ghost" onClick={onReplay}>↻ Volver a jugar</button>
           </div>
         </div>

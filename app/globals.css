@@ -201,6 +201,11 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .quick-cal{top:48px}
 .quick-cal.solo{top:8px}
 .quick-cal svg{fill:none;stroke:currentColor;stroke-width:2}
+/* Los dos estados del recordatorio en el contenedor. "Programado" ya lo pinta
+   `.quick-add.on`; el estreno de hoy entra como texto porque a 32px es lo único
+   que se lee, y la oración va en la etiqueta accesible. */
+.quick-cal:disabled{opacity:.6;cursor:default}
+.quick-cal .hoy{font-size:9px;font-weight:800;letter-spacing:.02em}
 /* El menú "Google / Apple" existe SOLO en la ficha: en la card no entra (158px
    de ancho) y en el riel del Home lo recortaría el overflow-x del track. */
 .act-wrap{position:relative;display:flex}

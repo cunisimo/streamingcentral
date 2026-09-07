@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildTop } from "@/lib/top";
 import type { MediaType, PlatformCode } from "@/lib/types";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export async function GET(req: NextRequest) {
+async function manejar(req: NextRequest) {
   const q = req.nextUrl.searchParams;
   const tipo: MediaType = q.get("tipo") === "tv" ? "tv" : "movie";
   const providers = (q.get("providers") || "")
@@ -24,3 +25,10 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios:
+// `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
+// sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
+// puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
+export const GET = conCors(manejar, "GET");
+export const OPTIONS = opcionesCors("GET");

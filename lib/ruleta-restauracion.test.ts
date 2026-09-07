@@ -196,6 +196,10 @@ function montarHome(opts: { politicaGuardado?: "vieja" | "nueva" } = {}) {
   const frames: { correr: (() => void) | null } = { correr: null };
 
   const actual = () => (sesion && sesion.historial.length ? sesion.historial[sesion.pos] : null);
+  // Leer la sesion por una funcion y no directo: `sesion` se asigna dentro de un
+  // efecto, o sea en un cierre, y el analisis de flujo de TypeScript no lo ve.
+  // Sin esto la estrecha a `null` -y despues a `never`- en el return de abajo.
+  const laSesion = (): SesionRuleta | null => sesion;
   const dondeEsta = () => ({ top: TOP_SECCION - scrollY, scrollY });
 
   const efectoDecidir = () => {
@@ -242,9 +246,9 @@ function montarHome(opts: { politicaGuardado?: "vieja" | "nueva" } = {}) {
   return {
     abierto: open,
     id: actual()?.id ?? null,
-    historial: sesion?.historial.map((x) => x.id) ?? [],
-    pos: sesion?.pos ?? null,
-    cola: sesion?.cola.length ?? 0,
+    historial: laSesion()?.historial.map((x) => x.id) ?? [],
+    pos: laSesion()?.pos ?? null,
+    cola: laSesion()?.cola.length ?? 0,
     scrollY,
     enPantalla: TOP_SECCION - scrollY,
     snapshot: () => JSON.parse(sessionStorage.getItem("yump:lista-paginada") || "{}").ruleta ?? null,

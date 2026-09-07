@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { COLOR_FONDO } from "@/lib/tema-colores";
+import { aplicarBarraDeEstado } from "@/lib/barra-estado";
 
 type Theme = "light" | "dark";
 interface Ctx {
@@ -41,6 +42,11 @@ function applyTheme(t: Theme) {
     }
     m.content = COLOR_FONDO[t];
   } catch { /* noop */ }
+
+  // En el contenedor, la meta no alcanza: el FONDO de la barra sí acompaña
+  // —la WebView dibuja debajo—, pero los iconos quedaban blancos siempre y en
+  // tema claro eran ilegibles. Medido en CP8. En web esto no hace nada.
+  void aplicarBarraDeEstado(t);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

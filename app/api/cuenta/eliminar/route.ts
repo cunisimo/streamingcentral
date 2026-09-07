@@ -3,6 +3,7 @@ import { sesionDeToken } from "@/lib/supabase";
 import { eliminarCuenta } from "@/lib/eliminar-cuenta";
 import { bloqueado, minutosRestantes, registrarFallo, type Intentos } from "@/lib/intentos-eliminar";
 import { cuentaComoIntento } from "@/lib/eliminar-cuenta-flujo";
+import { conCors, opcionesCors } from "@/lib/cors";
 
 // Dinámica y sin caché: es una acción destructiva, no una lectura. Una respuesta
 // de esto guardada en cualquier lado no tiene ningún uso legítimo.
@@ -30,7 +31,7 @@ const intentos = new Map<string, Intentos>();
 // propósito.
 interface Cuerpo { password?: unknown }
 
-export async function POST(req: NextRequest) {
+async function manejar(req: NextRequest) {
   // NADA de esta función registra el cuerpo, la contraseña, el token ni el
   // email. Los errores se devuelven como códigos propios, no como el mensaje de
   // Supabase, que puede incluir el email en algunos casos.
@@ -76,3 +77,10 @@ export async function POST(req: NextRequest) {
   intentos.delete(sesion.id);
   return responder({ ok: true }, 200);
 }
+
+// CORS para el contenedor. `manejar` es el cuerpo de siempre, sin cambios:
+// `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
+// sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
+// puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
+export const POST = conCors(manejar, "POST");
+export const OPTIONS = opcionesCors("POST");

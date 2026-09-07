@@ -928,7 +928,7 @@ su SW. Lo de abajo es sólo sobre la cáscara empaquetada.
 | Pieza | En el contenedor |
 |---|---|
 | `app/manifest.ts` | inerte, inofensivo. **Se conserva** (lo usa la web) |
-| Íconos y splash (26 assets) | los de la web quedan; el contenedor usa los suyos, generados aparte de la misma `assets/brand/logo.svg` |
+| Íconos y splash (26 assets) | los de la web quedan; el contenedor usa los suyos. 🔴 **NO salen de la misma fuente, y esta línea decía que sí**: la web se genera de `public/brand/yump-icon.png` con `generate-pwa-assets.mjs`, y Android de `assets/brand/yump-simbolo.png` y `yump-logo*.png` con `generate-android-assets.mjs`. Ninguno de los dos lee `assets/brand/logo.svg`. Cambiar una fuente no actualiza la otra plataforma — ver `docs/PWA.md` §8 |
 | `AppleSplashLinks` (18 splash) | inerte. Lo reemplaza `@capacitor/splash-screen` |
 | Safe areas, `viewportFit`, `interactiveWidget` | ✅ **se conservan y son la parte que ya está bien** |
 | `public/sw.js` + `public/sw/*` | **no se registra en nativo** (§4.d). Se conserva para la web |
@@ -1022,6 +1022,15 @@ existan en el WebView de Android, **no** asumir que el origen es `https://`, y
 **no** meter ramas por plataforma donde alcance una constante compartida.
 
 ### Etapa 3 — Adaptación de la capa web para bundle local (3-5 sesiones)
+
+> ⚠️ **ESTA LISTA SE ESCRIBIÓ ANTES DEL PROTOTIPO Y YA NO ES LA COLA DE TRABAJO.**
+> De sus nueve ítems, **siete están hechos y dos resultaron innecesarios**:
+> `@capacitor/browser` no hace falta —los enlaces externos ya abren la app
+> externa sin secuestrar la WebView— y `@capacitor/preferences` tampoco —la
+> sesión y `sc:platforms` sobreviven a un cierre forzado con `localStorage`—.
+> El plan vigente es
+> `docs/superpowers/plans/2026-09-05-etapa3-android-publicable.md`.
+> Lo de abajo se conserva como historia de lo que se planeaba.
 
 Código de este repo, detrás de banderas, **sin romper la web**:
 
@@ -1148,11 +1157,13 @@ Las de arquitectura ya están tomadas (§0.a). Quedan estas:
 
 | # | Decisión | Cuándo hace falta |
 |---|---|---|
-| 1 | **Identificador: ¿`ar.yump.app`?** | **antes de la primera subida**. Irreversible |
+| 1 | ~~**Identificador**~~ | ✅ **DECIDIDO: `ar.yump.app`**, nombre visible `Yump` (5/09). Ya compilado y probado |
 | 2 | **Cuenta de Play: ¿personal u organización?** | antes de la Etapa 5. ±14 días de calendario |
 | 3 | **¿Entran las notificaciones locales en la v1?** | Etapa 4. Es el mejor argumento contra 4.2, y suma un permiso |
-| 4 | **¿Se reemplaza Vercel Analytics en la app?** | Etapa 3. Si no, no hay métricas de la app instalada |
-| 5 | **¿Se saca la cookie `sc_platforms`?** | Etapa 3. En el contenedor no hace nada |
+| — | ~~**Íconos y splash definitivos**~~ | ✅ **HECHOS y aprobados el 6/09**: ícono sólo con el símbolo, splash con la palabra "yump" en claro y oscuro, y capa monochrome. Falta verlos en el teléfono. Ver el plan de Etapa 3 §16 |
+| 4 | ~~**¿Se reemplaza Vercel Analytics en la app?**~~ | ✅ **CERRADO el 6/09**: no se reemplaza, se APAGA en nativo. En Android no medía nada (2 pedidos, 404, ningún beacon) y ahora no pide nada. La web sigue igual. Plan de Etapa 3 §8 y §13.a |
+| 5 | **¿Se saca la cookie `sc_platforms`?** | Etapa 3, **confirmado el 6/09**: nadie la lee, y en el contenedor su dominio es `localhost` así que ni siquiera puede llegar a la API. Ver el plan de Etapa 3 §9 |
+| — | **Subrutas directas del servidor local** | ✅ **RESUELTO el 6/09** desde el cliente (plan de Etapa 3 §14). El arreglo nativo con `RouteProcessor` se probó y NO sirve (§13.c). ⚠️ Sigue sin haber un HTTP 404 real: la página de "no encontrado" se ve, pero el servidor responde 200 |
 | 6 | **¿iOS se hace?** | **Etapa 7**, contra resultados de Android |
 | 7 | **Apple: ¿individual u organización?** | sólo si la 6 es sí. Organización pide D-U-N-S |
 | 8 | **¿Se distribuye en la UE?** | sólo si la 6 es sí. Trader status |
@@ -1182,6 +1193,108 @@ Para que nadie lo tome por confirmado:
   de lo que dependa de eso se dio por sentado.
 
 ---
+
+## 12.b Avisos de estreno en Android (v1) — implementado el 07/09/2026
+
+**Qué hace.** En el contenedor, "Recordarme" deja de abrir Google Calendar y
+programa una **notificación local** para las **10:00 del día del estreno, hora
+del teléfono**. Un segundo toque la cancela. Al tocar el aviso se abre la ficha
+exacta. No pide cuenta, no toca ningún backend y no cuesta nada: todo vive en el
+teléfono.
+
+**En la web no cambió nada**: sigue el menú con Google Calendar y el `.ics`.
+
+### Las tres cuentas que viven en `lib/recordatorios.ts`
+
+Son chicas y las tres fallan en silencio, así que están en un módulo puro y con
+tests, no repartidas en el componente.
+
+1. 🔴 **La fecha se arma con el constructor LOCAL.** `new Date("2026-09-20")` es
+   medianoche **UTC**, o sea el 19 a las 21:00 en Argentina: el aviso llegaría el
+   día anterior. `new Date(2026, 8, 20, 10, 0, 0)` son las 10 de la mañana del
+   teléfono, en el huso que sea.
+2. 🔴 **El identificador es `id*2` (película) e `id*2+1` (serie).** Tiene que ser
+   estable —si cambia, el segundo toque no cancela nada y el botón muestra un
+   estado que no existe— y distinguir los dos catálogos, porque TMDB reusa los
+   ids entre ellos (`movie:1399` y `tv:1399` son títulos distintos). Es una
+   biyección: no hay colisiones que justificar. Y entra en el entero de 32 bits
+   con signo que acepta Android — el id más alto de TMDB anda por 1,9 millones,
+   así que el doble sobra; igual se valida.
+3. **El `extra` lleva sólo `{tipo, id}` y se valida al leerlo.** Es un dato que
+   el sistema guardó durante días y que termina en una navegación.
+
+### Los permisos, y el que se saca
+
+| Permiso | De dónde sale | Qué es |
+|---|---|---|
+| `POST_NOTIFICATIONS` | el plugin | **Lo único que se le pide al usuario**, y recién cuando toca "Recordarme" |
+| `RECEIVE_BOOT_COMPLETED` | el plugin | Infraestructura: reprograma los avisos después de un reinicio |
+| `WAKE_LOCK` | el plugin | Infraestructura: despierta el teléfono para mostrar el aviso |
+| `ar.yump.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | AndroidX | Permiso que la app se declara a sí misma para sus receptores no exportados |
+| ~~`SCHEDULE_EXACT_ALARM`~~ | el plugin | 🔴 **SE SACA** con `tools:node="remove"` |
+
+🔴 **Por qué se saca la alarma exacta.** Un aviso de estreno no necesita
+precisión: se programa a las 10:00 y unos minutos no cambian nada. Es un permiso
+**sensible** —Google Play lo revisa aparte— y pedirlo para esto sería
+injustificable. Además se programa con **`isExactNotification: false`**: el
+plugin usa `true` por defecto, y con ese valor abriría la pantalla de "Alarmas y
+recordatorios" del sistema en Android 12+ apenas el usuario toca el botón.
+
+El plugin también suma tres receptores y un `FileProvider` propio. **No son
+acceso a datos personales**: son la maquinaria que hace que un aviso agendado
+para dentro de dos semanas siga existiendo.
+
+### Dónde vive cada pieza
+
+| Pieza | Archivo |
+|---|---|
+| Fecha, id, texto y payload | `lib/recordatorios.ts` |
+| Botón, permiso, programar y cancelar | `components/RecordarButton.tsx` |
+| Abrir la ficha al tocar el aviso | `components/nativo/AvisoNativo.tsx`, montado en el layout raíz |
+| Ícono chico (5 densidades) | `scripts/generate-android-assets.mjs` → `drawable-*/ic_stat_yump.png` |
+| Guards | `lib/recordatorios.test.ts`, `lib/avisos-nativos.test.ts` |
+
+**El permiso se pide dentro del handler del toque y en ningún otro lado.**
+Pedirlo al arrancar la app es la forma más rápida de que lo rechacen para
+siempre. Y se pide **después** de saber que hay algo que programar: si el estreno
+es hoy y las 10 ya pasaron, el botón dice "Este estreno es hoy" y no pide nada.
+
+**Si el usuario rechaza el permiso** se ofrece "Agendar en Google Calendar" como
+salida — **sin abrirlo solo**: ahí es lo único que queda y abrirlo sería decidir
+por él dos veces seguidas.
+
+**El listener va en el layout raíz** y no en la pantalla que programó el aviso:
+el aviso llega días después, con la app cerrada o en otra pantalla. Cubre los dos
+casos —app abierta y arranque desde el aviso— sin código aparte, porque el plugin
+emite el evento en cuanto hay alguien registrado.
+
+**El ícono no se redibujó.** Sale del mismo `yump-simbolo.png` que el resto de la
+marca, por el generador que ya existía. Android usa **sólo el alfa** y lo tiñe,
+así que es una silueta pura; ocupa el 86% del lienzo y no el 50% del adaptativo,
+porque a 24dp ese aire lo dejaría invisible en la barra de estado.
+
+### Lo que NO entró
+
+Sin push, sin Firebase/FCM, sin backend, sin tablas ni funciones de Supabase, sin
+service worker, sin llamadas nuevas a ninguna API y sin costo en Vercel, Supabase,
+Upstash ni TMDB.
+
+**Las dos superficies hacen lo mismo** — decisión del dueño del 07/09/2026. El
+ícono de calendario de las tarjetas de "Próximamente" (Home y `/proximamente`)
+usa el MISMO flujo que el botón de la ficha, y por eso quedan sincronizadas
+solas: es el mismo componente, el mismo `idRecordatorio` y la misma consulta de
+pendientes al plugin. Programar desde una tarjeta y abrir la ficha muestra
+"Recordatorio listo", y al revés.
+
+Lo único propio de la tarjeta es cómo se ven los dos estados que en la ficha son
+palabras: en 32 px no entra una oración, así que "programado" lo pinta
+`.quick-add.on` —que ya existía— y el estreno de hoy entra como **"HOY"**; la
+oración completa va en la etiqueta accesible.
+
+**Una consulta de pendientes por tanda**: la grilla monta hasta 40 tarjetas a la
+vez y sin eso le preguntaría al plugin cuarenta veces lo mismo en el mismo
+frame. La promesa compartida se suelta apenas resuelve, así que no hay caché que
+envejezca después de programar.
 
 ## 13. Qué queda decidido en `docs/PLAY-STORE.md`
 

@@ -5,6 +5,7 @@ import { usePlatforms } from "./PlatformsContext";
 import PlatformLogo from "./PlatformLogo";
 import { PLATFORMS } from "@/lib/providers-ar";
 import type { PlatformCode } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 // Lista de plataformas del panel: fuente única = /api/providers (la misma que el
 // onboarding). Si el fetch falla, cae a las 9 de providers-ar para no dejar el
@@ -26,7 +27,7 @@ export default function TopBar() {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/providers")
+    fetch(apiUrl("/api/providers"))
       .then((r) => r.json())
       .then((j: { providers?: { code: PlatformCode | null; name: string }[] }) => {
         const list = (j.providers ?? [])

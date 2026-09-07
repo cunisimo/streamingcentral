@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import type { UICastMember } from "@/lib/types";
+import { hrefPersona } from "@/lib/rutas";
 
 // Riel horizontal de reparto tipo TMDB: foto + nombre + personaje, cada uno
 // linkeando a la ficha de la persona. Sin loading="lazy" a propósito: son pocas
@@ -12,7 +13,7 @@ export default function CastRail({ cast }: { cast: UICastMember[] }) {
       <div className="dsec-h">Reparto</div>
       <div className="cast-rail">
         {cast.map((c) => (
-          <Link key={c.id} href={`/persona/${c.id}`} className="cast-card">
+          <Link key={c.id} href={hrefPersona(c.id)} className="cast-card">
             {c.profile
               ? <img className="cast-photo" src={c.profile} alt="" width={80} height={80} />
               : <span className="cast-photo cast-ph" aria-hidden>{c.name.charAt(0)}</span>}

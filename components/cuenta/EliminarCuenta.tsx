@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase";
 import { clavesABorrar } from "@/lib/limpieza-local";
+import { apiUrl } from "@/lib/api-base";
 
 // "Eliminar cuenta" — la acción irreversible de Cuenta → Configuración.
 //
@@ -40,7 +41,7 @@ export default function EliminarCuenta({ email }: { email: string }) {
       const token = data.session?.access_token;
       if (!token) { setError("Se cerró tu sesión. Volvé a entrar e intentá de nuevo."); setEnviando(false); return; }
 
-      const r = await fetch("/api/cuenta/eliminar", {
+      const r = await fetch(apiUrl("/api/cuenta/eliminar"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ password }),

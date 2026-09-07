@@ -10,6 +10,7 @@ import {
   type EstadoFiltro, type EstadoTanda,
 } from "@/hooks/filtro-paginado-nucleo";
 import type { UIUpcoming } from "@/lib/types";
+import { apiUrl } from "@/lib/api-base";
 
 type Filtro = "all" | "movie" | "tv";
 
@@ -79,7 +80,9 @@ export default function UpcomingAllView() {
     setLoading(true);
     try {
       const mt = f === "all" ? "" : `mediaType=${f}&`;
-      const res = await fetch(`/api/upcoming?${mt}page=${p}`);
+      // Paginado del servidor (main) + base de API del contenedor: en la web
+      // sigue siendo relativa y en el build nativo apunta al origen configurado.
+      const res = await fetch(apiUrl(`/api/upcoming?${mt}page=${p}`));
       const j = await res.json();
       // Dos guardas, no una: el número descarta las respuestas fuera de orden y
       // el filtro descarta una respuesta del filtro anterior que llegue con el

@@ -11,6 +11,7 @@ import { hasItem, setItem } from "@/lib/userdata";
 import { registrarIntencion } from "@/hooks/intencion-vuelta";
 import { fraseAtencion } from "./frases";
 import type { RoulettePick } from "@/lib/roulette";
+import { hrefTitulo } from "@/lib/rutas";
 
 // La tarjeta de "¿No sabés qué ver?".
 //
@@ -86,7 +87,10 @@ export default function RuletaCard({
   const [visto, setVisto] = useState(false);
   const [busy, setBusy] = useState(false);
   const frase = fraseAtencion(pick.atencion, pick.id);
-  const ficha = `/titulo/${pick.type}/${pick.id}`;
+  // La MISMA ruta para los tres accesos. `hrefTitulo` devuelve la ruta web de
+  // siempre en la web y `/t/?tipo=…&id=…` en el build nativo, donde no hay
+  // servidor que resuelva una ruta dinámica. Ver lib/rutas.ts.
+  const ficha = hrefTitulo(pick.type, pick.id);
 
   // Los TRES accesos a la ficha anotan de dónde salió el usuario. Es lo que
   // permite que el "Volver" de la ficha devuelva la sesión cuando el back del

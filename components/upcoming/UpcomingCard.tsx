@@ -6,6 +6,7 @@ import QuickAddButton from "../QuickAddButton";
 import RecordarButton from "../RecordarButton";
 import { formatReleaseDate } from "./format";
 import type { UIUpcoming } from "@/lib/types";
+import { hrefTitulo } from "@/lib/rutas";
 
 export default function UpcomingCard({ item }: { item: UIUpcoming }) {
   const { platforms } = usePlatforms();
@@ -21,7 +22,7 @@ export default function UpcomingCard({ item }: { item: UIUpcoming }) {
     <div className="card">
       <Link
         className="card-link"
-        href={`/titulo/${item.type}/${item.id}`}
+        href={hrefTitulo(item.type, item.id)}
         aria-label={`${item.title} — ${kind}${date ? `, estreno ${date}` : ""}`}
       >
         <div className="poster" style={bg}>

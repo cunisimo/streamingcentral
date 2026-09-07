@@ -1108,10 +1108,32 @@ La app es una PWA instalable en Android, iPhone y escritorio. Diseño completo e
 `docs/superpowers/specs/2026-07-21-pwa-design.md`. Piezas:
 
 - **Manifest**: `app/manifest.ts` (metadata route tipada). **Íconos/splash**: se
-  generan con `node scripts/generate-pwa-assets.mjs` desde `assets/brand/logo.svg`
-  (fuente única). Si cambia el logo, re-ejecutar ese script regenera los 26
-  assets **y** `components/pwa/AppleSplashLinks.tsx`. La lista de dispositivos iOS
-  vive en `scripts/pwa-devices.mjs` (compartida generador↔componente).
+  generan con `node scripts/generate-pwa-assets.mjs` desde
+  **`public/brand/yump-icon.png`**. Si cambia el logo, re-ejecutar ese script
+  regenera los 26 assets **y** `components/pwa/AppleSplashLinks.tsx`. La lista de
+  dispositivos iOS vive en `scripts/pwa-devices.mjs` (compartida
+  generador↔componente).
+
+  🔴 **NO SALE DE `assets/brand/logo.svg`, Y ESTE ARCHIVO DECÍA QUE SÍ.** Ese SVG
+  es un placeholder anterior —un cuadrado naranja liso con un triángulo— que
+  **ningún script lee**: verificado, no aparece en ningún `import` ni ruta de
+  `scripts/`, `app/`, `components/` ni `lib/`. Ni siquiera coincide su color
+  (dice `#FF6A1A` afirmando ser `--accent`, que es `#F58634`). Se conserva sin
+  tocar porque qué hacer con él es una decisión del dueño, pero **no es fuente
+  de nada**.
+
+- **🔴 HAY DOS JUEGOS DE MARCA Y DOS GENERADORES, Y NO SE SINCRONIZAN SOLOS.**
+
+  | | Fuente | Generador | Escribe en |
+  |---|---|---|---|
+  | **Web / PWA** | `public/brand/yump-icon.png` | `scripts/generate-pwa-assets.mjs` | `public/icons/`, `public/splash/` |
+  | **Android** | `assets/brand/yump-simbolo.png` y `yump-logo*.png` | `scripts/generate-android-assets.mjs` | `android/app/src/main/res/` |
+
+  Son el **mismo dibujo con encuadres distintos**: el de la web conserva la cola
+  de la burbuja, el de Android la recorta en cuadrado. Cambiar una fuente **no**
+  actualiza la otra plataforma, así que un cambio de marca hay que aplicarlo en
+  las dos y correr los dos comandos. Unificarlas es posible pero cambiaría los
+  íconos de la web, así que es una decisión pendiente del dueño.
 - **Service Worker**: `public/sw.js` + `public/sw/*` (propio, sin librerías,
   `importScripts` con un IIFE por módulo). Estrategias: HTML `Network First`;
   `/_next/static` e íconos `Cache First`; imágenes TMDB `Cache First` 30d/tope 300;
