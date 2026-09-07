@@ -639,6 +639,36 @@ la web.
 pushear**. `main` y Producción sin un solo cambio. El spike descartable sigue
 archivado en `5d5180f` y no se tocó.
 
+## 17. ✅ ETAPA 4 TERMINADA — 7 de septiembre de 2026
+
+La etapa se abrió por la identidad visual nativa y terminó con el contenedor al
+día con `main` y con los recordatorios locales andando en el teléfono. **No
+queda ningún requisito técnico abierto de esta etapa.**
+
+| Pieza | Estado |
+|---|---|
+| Ícono del lanzador | ✅ símbolo solo, con capa `monochrome`; aprobado mirando el teléfono |
+| Pantalla de inicio | ✅ la marca completa con "yump", claro y oscuro, sin destello ni símbolo suelto |
+| Integración con `main` | ✅ `8b422fa` mergeado: Próximamente y "¿No sabés qué ver?" ya viajan en el contenedor, con `apiUrl`, CORS y rutas nativas compuestos |
+| Recordatorios locales | ✅ v1 completa: permiso contextual, aviso a las 10:00 locales, cancelación, apertura de la ficha. Probado en el teléfono el 7/09 |
+| Tarjeta de Próximamente | ✅ el mismo flujo que la ficha; las dos superficies sincronizadas por el mismo id |
+| Permisos | ✅ `INTERNET`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`. **Sin alarma exacta** |
+
+### Lo que sigue abierto, y a qué etapa pertenece
+
+| Pendiente | Dónde va |
+|---|---|
+| El **404 propio**, que hoy se ve pero responde HTTP 200 | Web, no bloquea el paquete nativo: en el contenedor no hay servidor que devuelva un estado |
+| **`eec07fb`** (arreglo de `tsc` de un test) sin llevar a `main` | Próximo envío real a `main`; no justifica un deployment por sí solo |
+| **Base de API del build de Play**: hoy el artefacto apunta a la Preview | Etapa 5, y es una decisión del dueño (§18) |
+| Keystore, Play App Signing, ficha de Play, prueba cerrada | Etapa 5 |
+| `assetlinks.json`, deep links, iOS | Etapas posteriores |
+
+### Estado de la rama al cerrar
+
+`integracion/capacitor-base` en `991e656`, **local y sin pushear**. `main` sigue
+en `8b422fa` y Producción sin un solo cambio.
+
 ## 16. Etapa 4 — íconos y pantalla de inicio nativos (6/09)
 
 Primera pieza de la Etapa 4. **Aprobada visualmente por el dueño** mirando las
