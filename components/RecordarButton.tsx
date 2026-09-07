@@ -9,6 +9,35 @@ import {
   CANAL_ESTRENOS, extraDeAviso, idRecordatorio, momentoDeAviso, textoDeAviso,
 } from "@/lib/recordatorios";
 
+/**
+ * Los avisos ya programados, UNA consulta por tanda.
+ *
+ * La grilla de `/proximamente` monta hasta 40 tarjetas a la vez y el riel del
+ * Home unas quince, y todas necesitan la misma respuesta: qué ids están
+ * pendientes. Sin esto le preguntarían al plugin cuarenta veces lo mismo en el
+ * mismo frame.
+ *
+ * La promesa se suelta apenas resuelve, así que no hay caché que envejezca: las
+ * que montan juntas comparten la consulta y cualquier montaje posterior —o el
+ * de la ficha, después de programar desde una tarjeta— vuelve a preguntar.
+ */
+let enVuelo: Promise<number[]> | null = null;
+
+function idsPendientes(): Promise<number[]> {
+  if (!enVuelo) {
+    enVuelo = (async () => {
+      try {
+        const { LocalNotifications } = await import("@capacitor/local-notifications");
+        const { notifications } = await LocalNotifications.getPending();
+        return notifications.map((n) => n.id);
+      } catch {
+        return [];
+      }
+    })().finally(() => { enVuelo = null; });
+  }
+  return enVuelo;
+}
+
 // "Recordarme": agenda el estreno en el calendario del usuario.
 //
 // Ofrece DOS caminos en vez de adivinar, porque no hay uno solo que sirva:
@@ -57,13 +86,9 @@ export default function RecordarButton({
   useEffect(() => {
     if (!ES_NATIVO || idAviso === null) return;
     let vivo = true;
-    (async () => {
-      try {
-        const { LocalNotifications } = await import("@capacitor/local-notifications");
-        const { notifications } = await LocalNotifications.getPending();
-        if (vivo) setAviso(notifications.some((n) => n.id === idAviso) ? "listo" : "no");
-      } catch { /* sin plugin, queda el camino de Google Calendar */ }
-    })();
+    void idsPendientes().then((ids) => {
+      if (vivo) setAviso(ids.includes(idAviso) ? "listo" : "no");
+    });
     return () => { vivo = false; };
   }, [idAviso]);
 
@@ -295,7 +320,52 @@ export default function RecordarButton({
     );
   }
 
-  // En la card NO va menú: la tarjeta mide 158px y en el riel del Home vive
+  // 🔴 EN EL CONTENEDOR LA TARJETA HACE LO MISMO QUE LA FICHA. No hay una
+  // segunda implementación: el estado, el permiso, el identificador y el texto
+  // son los que este mismo componente ya calculó arriba, así que programar
+  // desde una tarjeta y abrir la ficha muestran lo mismo — las dos superficies
+  // le preguntan al plugin por el MISMO id.
+  //
+  // Lo único propio de la tarjeta es cómo se ven los dos estados que en la
+  // ficha son palabras: en 32 px no entra una oración, así que "programado" lo
+  // pinta `.quick-add.on` (ya existía) y el estreno de hoy entra como "HOY".
+  // La oración completa va en la etiqueta accesible, que es donde un lector de
+  // pantalla la busca.
+  if (ES_NATIVO && variant === "icono") {
+    if (aviso === "denegado") {
+      // Sin permiso queda Google Calendar, y se OFRECE: sigue siendo un enlace
+      // que el usuario decide tocar.
+      return (
+        <a
+          className={`quick-add quick-cal${solo ? " solo" : ""}`}
+          href={google} target="_blank" rel="noreferrer"
+          aria-label="Agendar el estreno en Google Calendar"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {ico}
+        </a>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className={`quick-add quick-cal${solo ? " solo" : ""}${aviso === "listo" ? " on" : ""}`}
+        disabled={ocupado}
+        aria-pressed={aviso === "listo"}
+        aria-label={
+          aviso === "listo" ? "Cancelar el recordatorio"
+            : aviso === "hoy" ? "Este estreno es hoy"
+              : "Recordarme este estreno"
+        }
+        // La card entera es un <Link>: sin esto el toque navega a la ficha.
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); void alternarAviso(); }}
+      >
+        {aviso === "hoy" ? <span className="hoy">HOY</span> : aviso === "listo" ? icoListo : ico}
+      </button>
+    );
+  }
+
+  // En la WEB la card NO lleva menú: mide 158px y en el riel del Home vive
   // dentro de un contenedor con overflow-x, que recortaría el desplegable. Un
   // toque va derecho a Google Calendar, que es lo que espera la mayoría (todo
   // Android y cualquiera con Gmail). Quien use Apple Calendar u Outlook tiene
