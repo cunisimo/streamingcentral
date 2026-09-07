@@ -7,15 +7,19 @@ import { supabaseServer } from "./supabase";
 import { TMDB_IMG } from "./tmdb";
 import { genreIdsToSlugs } from "./categories";
 import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
+import { paginarProximamente, seleccionarProximamente } from "./proximamente";
 import type { MediaType, PlatformCode, UIUpcoming } from "./types";
 
 const img = (p: string | null, size = "w500") => (p ? `${TMDB_IMG}/${size}${p}` : null);
 
 // Columnas + join anidado a providers en una sola query (sin N+1).
+// `original_language` lo consume SOLO la clasificación de anime de
+// `lib/proximamente.ts`. Es nullable y puede venir vacío en filas escritas antes
+// de la migración 008; `esAnime` está escrito para tolerarlo.
 const SELECT = `
   tmdb_id, media_type, title, poster_path, backdrop_path, overview, release_date,
   season_number, episode_number, episode_name, is_season_premiere,
-  genre_ids, popularity, vote_average,
+  genre_ids, popularity, vote_average, original_language,
   upcoming_content_providers ( provider_id )
 `;
 
@@ -34,6 +38,7 @@ interface Row {
   genre_ids: number[] | null;
   popularity: number | null;
   vote_average: number | null;
+  original_language: string | null;
   upcoming_content_providers: { provider_id: number }[] | null;
 }
 
@@ -59,6 +64,7 @@ function toUIUpcoming(row: Row): UIUpcoming {
     episodeNumber: row.episode_number,
     episodeName: row.episode_name,
     isSeasonPremiere: row.is_season_premiere,
+    originalLanguage: row.original_language ?? null,
   };
 }
 
@@ -156,27 +162,65 @@ export async function upcomingForRefs(
     .map(toUIUpcoming);
 }
 
-// Popurrí de películas y series para el slider del Home: trae cada tipo por
-// separado (date-asc) y los intercala, arrancando por el estreno más cercano.
-// Así el riel muestra variedad aunque un tipo domine el corto plazo (las series
-// tienen episodios semanales, las pelis con provider AR son más escasas).
-export async function upcomingMix(limit = 15): Promise<UIUpcoming[]> {
-  const per = Math.ceil(limit / 2) + 3; // margen para poder alternar
-  const [movies, series] = await Promise.all([
-    upcomingList({ mediaType: "movie", limit: per }),
-    upcomingList({ mediaType: "tv", limit: per }),
-  ]);
-  const out: UIUpcoming[] = [];
-  let i = 0, j = 0;
-  let takeMovie = (movies[0]?.releaseDate ?? "9999") <= (series[0]?.releaseDate ?? "9999");
-  while (out.length < limit && (i < movies.length || j < series.length)) {
-    if (takeMovie && i < movies.length) out.push(movies[i++]);
-    else if (!takeMovie && j < series.length) out.push(series[j++]);
-    else if (i < movies.length) out.push(movies[i++]);
-    else if (j < series.length) out.push(series[j++]);
-    takeMovie = !takeMovie;
-  }
-  return out;
+/**
+ * Tope de la lectura que alimenta la selección.
+ *
+ * Es un techo de seguridad, no una ventana: la agenda vigente son ~250 filas
+ * (246 el 2026-09-04) porque el sync mira 90 días. Y traerla entera es gratis
+ * comparado con traer 100: medido, 246 filas con el join de proveedores tardan
+ * ~490 ms y 100 filas tardan ~485 ms, porque lo que se paga es el round-trip.
+ */
+const TOPE_LECTURA = 1000;
+
+/**
+ * La agenda seleccionada: una sola consulta y el criterio editorial aplicado.
+ *
+ * 🔴 EL FILTRO DE TIPO VA ANTES DE SELECCIONAR. Al revés, "Películas" mostraría
+ * sólo las películas que hubieran sobrevivido a una selección donde compiten con
+ * series, y "Series" cambiaría según cuántas películas hubiera ese día. Filtrando
+ * primero, cada solapa tiene su propia selección coherente y su propia
+ * paginación.
+ *
+ * Para `tv` el resultado es casi idéntico a filtrar después, porque las
+ * películas no consumen el cupo de series; lo único que se mueve es el cupo de
+ * anime, que se calcula sobre los no-anime elegidos y baja en uno al sacar la
+ * película.
+ */
+export async function upcomingSeleccion(mediaType?: MediaType): Promise<UIUpcoming[]> {
+  const crudos = await upcomingList({ mediaType, limit: TOPE_LECTURA });
+  return seleccionarProximamente(crudos);
+}
+
+/** Una página de la selección. `porPagina` lo fija el llamador. */
+export async function upcomingPagina(opts: {
+  mediaType?: MediaType;
+  pagina: number;
+  porPagina: number;
+}): Promise<{ items: UIUpcoming[]; hayMas: boolean; total: number }> {
+  const seleccion = await upcomingSeleccion(opts.mediaType);
+  return paginarProximamente(seleccion, opts.pagina, opts.porPagina);
+}
+
+/**
+ * El riel del Home: los primeros `limit` de la selección, sin filtro de tipo.
+ *
+ * ⚠️ Reemplaza al viejo `upcomingMix`, que intercalaba películas y series y
+ * estaba roto de dos formas a la vez. Pedía `per = ceil(limit/2) + 3` de cada
+ * tipo asumiendo que los dos tenían oferta: con UNA película en toda la agenda,
+ * el riel devolvía 12 tarjetas de las 15 pedidas y no había forma de que llegara
+ * a 15. Y el intercalado ponía esa única película —del 30/09— en la SEGUNDA
+ * posición, entre dos títulos del 04/09, así que un riel que se presenta como
+ * cronológico no lo era.
+ *
+ * Acá los primeros `limit` de una lista ya ordenada por fecha son, por
+ * construcción, los `limit` estrenos más próximos. El equilibrio no lo pone un
+ * intercalado: ya lo puso el cupo por fecha.
+ *
+ * Que el Home no muestre ninguna película es el dato, no una falla: hoy la única
+ * de la agenda es del 30/09 y hay 50 días con contenido antes.
+ */
+export async function upcomingHome(limit = 15): Promise<UIUpcoming[]> {
+  return (await upcomingSeleccion()).slice(0, limit);
 }
 
 // Wrappers finos sobre upcomingList.

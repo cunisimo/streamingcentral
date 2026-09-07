@@ -32,6 +32,9 @@ export interface RawTitle {
   title?: string;
   name?: string;
   original_title?: string;
+  // `discover` lo devuelve en cada resultado desde siempre; se declara acá para
+  // poder persistirlo. Es la señal de anime de `lib/proximamente.ts`.
+  original_language?: string;
   original_name?: string;
   overview?: string;
   poster_path: string | null;

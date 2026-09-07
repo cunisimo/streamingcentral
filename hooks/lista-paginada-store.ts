@@ -126,9 +126,46 @@ interface Marca { ruta: string; t: number }
 //
 // `location.pathname` YA es el destino cuando corre el handler: el navegador
 // cambia la URL y recién después dispara popstate.
-if (typeof window !== "undefined") {
+// 🔴 EL ORDEN DE REGISTRO IMPORTA, Y NO ALCANZA CON REGISTRARLO AL IMPORTAR.
+//
+// Medido en un navegador real (2026-09-05, Next 14.2.35, dev con Strict Mode),
+// volviendo de una ficha a /proximamente, con los stacks de cada acceso a
+// sessionStorage:
+//
+//   67879.5  consumirVuelta      hay=false     <- la vista monta y DECIDE
+//   67879.8  leerLista           hay=true      <- el snapshot estaba ahí
+//   67880.3  olvidarLista        {} olvidar    <- y lo BORRA
+//   67883.8  (listener de popstate agregado al final, o sea el último)
+//   67884.0  marcarVuelta        MARCA         <- la marca llega 4,5 ms tarde
+//   67885.6  fetch /api/upcoming?page=1
+//
+// Next registra su `popstate` en un `useEffect` de `AppRouter` —arranque de la
+// app— y adentro del handler renderiza la ruta restaurada, así que el montaje y
+// sus efectos corren DENTRO del mismo evento, antes que los listeners que se
+// registraron después. Y este listener se registraba al evaluar el módulo, que
+// viaja en el chunk de la ruta: se registra recién cuando esa ruta se carga por
+// primera vez, o sea DESPUÉS del de Next.
+//
+// Resultado: la vista preguntaba "¿volví?" antes de que nadie hubiera contestado,
+// se respondía que no, y de paso `decidirRestauracion` tiraba el snapshot. La
+// restauración sólo funcionaba de casualidad, cuando quedaba una marca vieja de
+// una vuelta anterior.
+//
+// Por eso el registro es una función explícita que el layout llama al arrancar
+// (`components/NavHistorial.tsx`), en el scope del módulo: eso corre antes de
+// cualquier efecto, incluido el de `AppRouter`. La llamada de acá abajo se
+// conserva para quien importe el store sin pasar por el layout —los tests, y
+// cualquier vista futura— y el guard la vuelve idempotente.
+let listenerPuesto = false;
+
+/** Registra el listener de `popstate`. Idempotente: llamarla de más no duplica. */
+export function registrarVueltaAtras(): void {
+  if (typeof window === "undefined" || listenerPuesto) return;
+  listenerPuesto = true;
   window.addEventListener("popstate", () => marcarVuelta(window.location.pathname));
 }
+
+registrarVueltaAtras();
 
 export function marcarVuelta(ruta: string, ahora: number = Date.now()) {
   try {
