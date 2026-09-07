@@ -85,6 +85,18 @@ const RATIO_SPLASH = 0.34;
 const LIENZO_SPLASH = 1152;
 const PARTE_VISIBLE = 0.46;
 
+// El ícono chico de las notificaciones: 24dp, en las cinco densidades.
+//
+// Android lo trata como una MÁSCARA: usa sólo el alfa y lo tiñe con el color del
+// sistema. Por eso sale de la misma silueta monocromática de la marca que ya usa
+// el ícono tematizado de Android 13+ — no se dibuja nada nuevo.
+//
+// El símbolo ocupa el 86% del lienzo y no el 50% del adaptativo: acá no hay
+// máscara del sistema que recorte, y a 24dp el aire de sobra lo dejaría
+// invisible en la barra de estado.
+const LADOS_AVISO = [["mdpi", 24], ["hdpi", 36], ["xhdpi", 48], ["xxhdpi", 72], ["xxxhdpi", 96]];
+const ESCALA_AVISO = 0.86;
+
 const DENSIDADES = [
   ["mdpi", 48, 108, 320, 480],
   ["hdpi", 72, 162, 480, 800],
@@ -128,6 +140,23 @@ async function monocromo(lado = LIENZO) {
     negro[i * 4 + 3] = data[i * info.channels + 3];   // sólo el alfa; el RGB queda en 0
   }
   const pieza = await sharp(negro, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
+  return lienzo(lado, lado).composite([{ input: pieza, gravity: "centre" }]).png().toBuffer();
+}
+
+/**
+ * El ícono chico del aviso de estreno. Misma técnica que `monocromo`: se
+ * conserva sólo el alfa del símbolo, que es lo único que Android mira.
+ */
+async function iconoDeAviso(lado) {
+  const { data, info } = await sharp(SIMBOLO)
+    .resize({ width: Math.round(lado * ESCALA_AVISO) })
+    .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const solaSilueta = Buffer.alloc(info.width * info.height * 4);
+  for (let i = 0; i < info.width * info.height; i++) {
+    solaSilueta[i * 4 + 3] = data[i * info.channels + 3];
+  }
+  const pieza = await sharp(solaSilueta, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .png().toBuffer();
   return lienzo(lado, lado).composite([{ input: pieza, gravity: "centre" }]).png().toBuffer();
 }
 
@@ -222,6 +251,11 @@ async function main() {
     await escribir(`drawable-port-night-${d}/splash.png`, await splash(sw, sh, true));
     await escribir(`drawable-land-night-${d}/splash.png`, await splash(sh, sw, true));
   }
+  // El ícono chico de las notificaciones de estreno.
+  for (const [d, lado] of LADOS_AVISO) {
+    await escribir(`drawable-${d}/ic_stat_yump.png`, await iconoDeAviso(lado));
+  }
+
   // El logotipo del arranque de Android 12+. Uno solo por tema: la SplashScreen
   // API escala sola, no necesita una copia por densidad.
   await escribir("drawable/splash_logo.png", await logoDeArranque(false));
