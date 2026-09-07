@@ -73,8 +73,13 @@ test("🔴 'Más info' abre la ficha interna, no TMDB ni la plataforma", () => {
   const src = sinComentarios(CARD);
   assert.doesNotMatch(src, /Verla/, "quedó el texto viejo");
   assert.doesNotMatch(src, /watchLink/, "volvió a mandar al agregador de TMDB");
-  assert.match(src, /const ficha = `\/titulo\/\$\{pick\.type\}\/\$\{pick\.id\}`/,
+  // La ruta interna la arma `hrefTitulo` (lib/rutas.ts): la de siempre en la
+  // web y `/t/?tipo=…&id=…` en el build nativo, donde no hay servidor que
+  // resuelva una ruta dinámica. Sigue siendo interna: no sale de la app.
+  assert.match(src, /const ficha = hrefTitulo\(pick\.type, pick\.id\);/,
     "la ficha no se arma con la ruta interna");
+  assert.doesNotMatch(src, /href=\{`\/titulo\//,
+    "quedó un /titulo/ escrito a mano: en el artefacto nativo esa ruta no existe");
   // El póster y el título también van a la misma ficha: son los otros dos
   // accesos que el usuario usa, y tienen que conservar el estado igual.
   assert.equal((src.match(/href=\{ficha\}/g) ?? []).length, 3,
