@@ -4,6 +4,15 @@ import { usePlatforms } from "../PlatformsContext";
 import { useAuth } from "../AuthContext";
 import { itemRefs } from "@/lib/userdata";
 import { useRouletteSeen } from "@/hooks/useRouletteSeen";
+import { consumirVuelta, decidirRestauracionVista, guardarVista, olvidarLista } from "@/hooks/lista-paginada-store";
+import { contextoDe, snapshotVigente } from "@/hooks/restauracion-vigente";
+import { objetivoDeScroll, type PosicionRuleta } from "@/lib/ruleta-scroll";
+import { olvidarIntencion } from "@/hooks/intencion-vuelta";
+import {
+  iniciar, actual as actualDe, puedeVolver, atras, otra as otraDe, sumarTanda,
+  valeGuardar, esEstadoValido,
+  type SesionRuleta, type EstadoRuleta,
+} from "@/lib/ruleta-historial";
 import RuletaCard from "./RuletaCard";
 import type { Escenario, RoulettePick } from "@/lib/roulette";
 
@@ -15,6 +24,14 @@ import type { Escenario, RoulettePick } from "@/lib/roulette";
 // queda como red de contención, no como el límite real).
 const MAX_EXCLUIR = 500;
 
+// La clave del snapshot. La ruleta vive en el Home, así que la marca de vuelta
+// que consume es la de "/".
+const CLAVE = "ruleta";
+const RUTA = "/";
+
+/** Lo que se restaura ademas del estado: donde estaba la seccion en la pantalla. */
+interface ExtraRuleta { ancla: number | null }
+
 // Tres escenarios, mutuamente excluyentes y definidos por duración. El subtítulo
 // dice el corte real en vez de una promesa vaga: el filtro ahora es un dato duro
 // de TMDB, así que se puede prometer exactamente lo que se cumple.
@@ -25,7 +42,7 @@ const SITUACIONES: { id: Escenario; ico: string; tit: string; sub: string }[] = 
 ];
 
 export default function RuletaBanner() {
-  const { platforms } = usePlatforms();
+  const { platforms, ready: platformsListas } = usePlatforms();
   const { user } = useAuth();
   const { seen, add, reset } = useRouletteSeen();
   // Los "ya la vi" del usuario, que también van en p_excluir: la ruleta arranca
@@ -39,21 +56,106 @@ export default function RuletaBanner() {
   // hace `await` de esta promesa antes de armar el excluir.
   const vistos = useRef<Promise<number[]>>(Promise.resolve([]));
   const [open, setOpen] = useState(false);
-  const [escenario, setEscenario] = useState<Escenario | null>(null);
-  const [cola, setCola] = useState<RoulettePick[]>([]);
-  const [actual, setActual] = useState<RoulettePick | null>(null);
+  const [sesion, setSesion] = useState<SesionRuleta | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(false);
-  // Guarda contra el primer "cambio" de `platformsKey`: `PlatformsContext`
-  // arranca en DEFAULT_PLATFORMS y recién hidrata lo guardado en localStorage
-  // en un useEffect propio, después del montaje (ver PlatformsContext.tsx).
-  // Sin este guard, esa hidratación se lee como si el usuario hubiera tocado
-  // sus plataformas y dispara una query de más apenas se abre la ruleta.
-  const primerRenderPlatforms = useRef(true);
 
-  // Una query por tanda. `reintento` evita el bucle infinito: si tras limpiar
-  // los mostrados sigue sin venir nada, es que no hay pool y se muestra el
-  // estado vacío.
+  const platformsKey = platforms.join(",");
+  const escenario = sesion?.escenario ?? null;
+  const actual = sesion ? actualDe(sesion) : null;
+
+  // ==========================================================================
+  // RESTAURACIÓN AL VOLVER DE UNA FICHA
+  // ==========================================================================
+  // 🔴 SE DECIDE ANTES DE QUE SE PUEDA PEDIR NADA, igual que en `ListaView`. Si
+  // la decisión llegara después, el usuario vería un instante la ruleta cerrada
+  // —o peor, la primera recomendación de una tanda nueva— antes de que apareciera
+  // la suya.
+  //
+  // 🔴 Y SE ESPERA A `platformsListas`. `PlatformsContext` arranca en
+  // DEFAULT_PLATFORMS y recién hidrata lo guardado en un efecto propio. Decidir
+  // antes de eso compara el snapshot contra una firma que todavía no es la del
+  // usuario: no coincidiría, y `decidirRestauracionVista` BORRA lo que no
+  // coincide. O sea que decidir temprano no sólo falla: destruye el snapshot.
+  const [decidido, setDecidido] = useState(false);
+  // El nodo de la seccion. Es lo que se restaura: no un desplazamiento del
+  // documento, sino ESTE bloque puesto donde estaba en la pantalla. Ver
+  // `lib/ruleta-scroll.ts`.
+  const raiz = useRef<HTMLDivElement>(null);
+  // La posicion que hay que restaurar, MIENTRAS NO SE HAYA APLICADO. Y sigue
+  // puesta hasta que la seccion llego a su lugar, no hasta que se agenda el
+  // primer intento: en el medio corre el efecto que guarda el snapshot. Ver el
+  // comentario del guardado.
+  const scrollPendiente = useRef<PosicionRuleta | null>(null);
+
+  /** Donde esta la seccion ahora, para el calculo del objetivo. */
+  const dondeEsta = () => {
+    const el = raiz.current;
+    return el ? { top: el.getBoundingClientRect().top, scrollY: window.scrollY } : null;
+  };
+  const [ctxRestaurado, setCtxRestaurado] = useState<string | null>(null);
+  const ctxActual = contextoDe([platformsKey]);
+  // La firma de plataformas con la que se decidió. Es lo que distingue "el
+  // usuario cambió de plataformas" de "el contexto recién terminó de hidratar".
+  const keyAlDecidir = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!platformsListas || decidido) return;
+    const e = decidirRestauracionVista<EstadoRuleta, ExtraRuleta>({
+      clave: CLAVE,
+      firma: platformsKey,
+      // La marca sólo la pone un `popstate`, así que entrar al Home por un link
+      // o escribiendo la URL NO restaura: una sesión vieja no revive sola.
+      volvio: consumirVuelta(window.location.pathname || RUTA),
+    });
+    if (e && esEstadoValido(e.datos)) {
+      setOpen(e.datos.abierto);
+      setSesion(e.datos.sesion);
+      scrollPendiente.current = { y: e.scrollY, ancla: e.extra?.ancla ?? null };
+      setCtxRestaurado(ctxActual);
+      // La intencion de vuelta ya cumplio: se restauro por el camino normal (el
+      // `popstate`), sin pasar por el boton "Volver" de la ficha, que es quien
+      // la consume. Sin esto quedaria guardada hasta media hora y podria
+      // habilitar el fallback de una visita POSTERIOR a la misma ficha, esta vez
+      // abierta por un link.
+      //
+      // Va ACA y no antes: solo cuando la restauracion se decidio y salio bien.
+      // Una vuelta que no restaura -otra ruta, firma distinta, snapshot roto- no
+      // tiene por que gastar una intencion que no es suya.
+      olvidarIntencion();
+    }
+    keyAlDecidir.current = platformsKey;
+    setDecidido(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platformsListas, decidido]);
+
+  // ==========================================================================
+  // PONER LA SECCION DONDE ESTABA
+  // ==========================================================================
+  // El objetivo se calcula contra la posicion REAL de la seccion y no repitiendo
+  // un desplazamiento: la ruleta es un bloque en el medio del Home, con el hero
+  // y los rieles arriba, asi que un `scrollY` absoluto describe el documento y
+  // no la seccion. Ver lib/ruleta-scroll.ts.
+  //
+  // Un solo intento, con el rAF doble de siempre: la tarjeta ya esta montada y
+  // el documento termina de medirse en el frame siguiente. Hubo una version que
+  // sostenia la posicion durante 1,2 s corrigiendo en cada frame; se retiro
+  // porque nunca se la vio funcionar —`requestAnimationFrame` no corre en el
+  // navegador de prueba— y no hay ninguna medicion que la justifique.
+  //
+  // La pendiente se limpia DENTRO del rAF y no al agendar: en el medio corre el
+  // efecto que guarda el snapshot, que necesita saber que la vista todavia no
+  // llego a su lugar.
+  useEffect(() => {
+    const pos = scrollPendiente.current;
+    if (!pos || !actual) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (scrollPendiente.current !== pos) return;
+      scrollPendiente.current = null;
+      window.scrollTo(0, objetivoDeScroll(pos, dondeEsta()));
+    }));
+  }, [actual]);
+
   useEffect(() => {
     if (!open || !user) { vistos.current = Promise.resolve([]); return; }
     // Si falla (red, RLS, lo que sea) degradamos a "sin vistos" en vez de
@@ -96,61 +198,127 @@ export default function RuletaBanner() {
     return picks;
   }, [platforms, seen, reset]);
 
+  /** Arranca (o reinicia) una sesión: una consulta, y el historial empieza de cero. */
   const elegir = useCallback(async (e: Escenario) => {
-    setEscenario(e); setCargando(true); setError(false);
+    setCargando(true); setError(false);
     try {
       const picks = await pedirTanda(e);
-      const [primero, ...resto] = picks;
-      if (primero) add(e, [primero.id]);
-      setActual(primero ?? null);
-      setCola(resto);
+      const s = iniciar(e, picks);
+      if (s) add(e, [s.historial[0].id]);
+      setSesion(s ?? { escenario: e, historial: [], pos: 0, cola: [] });
     } catch {
-      setError(true); setActual(null); setCola([]);
+      setError(true); setSesion(null);
     } finally {
       setCargando(false);
     }
   }, [pedirTanda, add]);
 
-  // `platforms` es un array nuevo en cada render del contexto, así que
-  // compararlo directo dispararía el efecto todo el tiempo; el string sí es
-  // estable entre renders si el contenido no cambió.
-  const platformsKey = platforms.join(",");
-
-  // Si el usuario saca (o pone) una plataforma con el panel abierto y un
-  // escenario ya elegido, la `cola` en memoria puede tener picks de una
-  // plataforma que ya no tiene: "Otra" seguiría sirviéndolos hasta agotar
-  // la tanda vieja. Se descarta la cola y se repite la query con las
-  // plataformas nuevas. `elegir` ya limpia y vuelve a pedir, así que alcanza
-  // con llamarlo de nuevo para el escenario actual.
+  // Si el usuario saca (o pone) una plataforma con el panel abierto, la cola en
+  // memoria puede tener picks de una plataforma que ya no tiene, y el historial
+  // deja de corresponder al universo actual: se reinician los dos.
+  //
+  // ⚠️ Se compara contra la firma CON LA QUE SE DECIDIÓ, no contra un "primer
+  // render". Con un guard de primer render, la hidratación de
+  // `PlatformsContext` se leía como un cambio del usuario y disparaba una
+  // consulta de más apenas se abría la ruleta.
   useEffect(() => {
-    if (primerRenderPlatforms.current) {
-      primerRenderPlatforms.current = false;
-      return;
-    }
-    if (!escenario) return;
-    void elegir(escenario);
-    // Sólo nos interesa reaccionar a cambios de plataformas, no a que
-    // cambien `escenario`/`elegir` (eso ya lo maneja el click de la tarjeta).
+    if (!decidido || keyAlDecidir.current === null) return;
+    if (keyAlDecidir.current === platformsKey) return;
+    keyAlDecidir.current = platformsKey;
+    if (escenario) void elegir(escenario);
+    // Sólo nos interesa reaccionar a cambios de plataformas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [platformsKey]);
+  }, [platformsKey, decidido]);
 
+  // Si cambiaron las plataformas después de restaurar, lo restaurado ya no vale.
+  useEffect(() => {
+    if (snapshotVigente(ctxRestaurado, ctxActual)) return;
+    setCtxRestaurado(null);
+    scrollPendiente.current = null;
+  }, [ctxRestaurado, ctxActual]);
+
+  // ==========================================================================
+  // El snapshot
+  // ==========================================================================
+  // Se guarda con cada cambio y también al scrollear, con el mismo rAF que usan
+  // las listas: la posición que hay que restaurar es la del momento de irse, y
+  // nadie avisa cuándo es eso.
+  useEffect(() => {
+    if (!decidido) return;
+    const estado: EstadoRuleta = { abierto: open, sesion };
+    if (!valeGuardar(estado)) { olvidarLista(CLAVE); return; }
+    let pend = false;
+    // MIENTRAS HAY UNA POSICION PENDIENTE, LA POSICION DE LA VISTA ES ESA Y NO
+    // LA DEL DOCUMENTO. Este efecto corre en el MISMO commit en el que se
+    // restauro y la seccion recien se acomoda dos frames despues: guardando lo
+    // que dice el documento, el snapshot recien leido quedaba pisado con un 0 y
+    // la vuelta SIGUIENTE devolvia la tarjeta correcta con la pagina arriba de
+    // todo. Medido en el navegador el 2026-09-06.
+    //
+    // El `ancla` es lo que se restaura de verdad: donde estaba la seccion dentro
+    // de la pantalla. Ver lib/ruleta-scroll.ts.
+    const guardar = () => {
+      const pend = scrollPendiente.current;
+      const el = raiz.current;
+      guardarVista<EstadoRuleta, ExtraRuleta>(CLAVE, {
+        firma: platformsKey, datos: estado,
+        scrollY: pend ? pend.y : window.scrollY,
+        extra: { ancla: pend ? pend.ancla : el ? Math.round(el.getBoundingClientRect().top) : null },
+      });
+    };
+    guardar();
+    const onScroll = () => {
+      if (pend) return;
+      pend = true;
+      requestAnimationFrame(() => { pend = false; guardar(); });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [decidido, open, sesion, platformsKey]);
+
+  // ==========================================================================
+  // Navegación por el historial
+  // ==========================================================================
+  // 🔴 NINGUNO DE LOS DOS PIDE NADA MIENTRAS HAYA POR DÓNDE MOVERSE. "Otra"
+  // avanza por lo ya visto si el usuario había retrocedido, y sólo cuando llega
+  // al final consume de la cola. La consulta aparece únicamente cuando la cola
+  // se agota de verdad — igual que antes de este cambio.
   const otra = useCallback(async () => {
-    if (!escenario) return;
-    // Consume de la tanda que ya está en el cliente; sólo pide otra al agotarse.
-    if (cola.length) {
-      const [siguiente, ...resto] = cola;
-      add(escenario, [siguiente.id]);
-      setActual(siguiente); setCola(resto);
+    if (!sesion) return;
+    const r = otraDe(sesion);
+    if (r.tipo === "historial") { setSesion(r.sesion); return; }
+    if (r.tipo === "cola") {
+      add(sesion.escenario, [r.nuevo.id]);
+      setSesion(r.sesion);
       return;
     }
-    await elegir(escenario);
-  }, [escenario, cola, add, elegir]);
+    // Agotada: una consulta, y la tanda nueva se apila SIN perder el historial.
+    setCargando(true); setError(false);
+    try {
+      const picks = await pedirTanda(sesion.escenario);
+      const s = sumarTanda(sesion, picks);
+      if (s.tipo === "cola") {
+        add(sesion.escenario, [s.nuevo.id]);
+        setSesion(s.sesion);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setCargando(false);
+    }
+  }, [sesion, add, pedirTanda]);
 
-  const volver = () => { setEscenario(null); setActual(null); setCola([]); setError(false); };
-  const cerrar = () => { setOpen(false); volver(); };
+  // Retroceder NO toca `yump:ruleta-mostrados`: esos títulos ya fueron
+  // mostrados, y desmarcarlos los devolvería a la ruleta como si fueran nuevos.
+  const irAtras = useCallback(() => {
+    setSesion((s) => (s ? atras(s) : s));
+  }, []);
+
+  const volver = () => { setSesion(null); setError(false); };
+  const cerrar = () => { setOpen(false); volver(); olvidarLista(CLAVE); };
 
   return (
-    <div className="dsmp">
+    <div className="dsmp" ref={raiz}>
       <button
         className={`dsmp-banner ${open ? "open" : ""}`}
         onClick={() => (open ? cerrar() : setOpen(true))}
@@ -188,8 +356,14 @@ export default function RuletaBanner() {
             <p className="empty-note" role="status">
               No pudimos traer una recomendación. <button className="rlt-btn" onClick={() => void elegir(escenario)}>Reintentar</button>
             </p>
-          ) : actual ? (
-            <RuletaCard pick={actual} onOtra={() => void otra()} onCerrar={volver} />
+          ) : actual && sesion ? (
+            <RuletaCard
+              pick={actual}
+              onOtra={() => void otra()}
+              onAtras={irAtras}
+              puedeVolver={puedeVolver(sesion)}
+              onCerrar={volver}
+            />
           ) : (
             <p className="empty-note" role="status">
               No hay nada para esta situación en tus plataformas. <button className="rlt-btn" onClick={volver}>Probar otra</button>

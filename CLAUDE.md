@@ -201,7 +201,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   | `/directores` | lista, texto del filtro, cuántos visibles, scroll |
   | `/categoria/[slug]` | tipo y scroll |
   | `/lista/[key]` simples | items y scroll |
-  | `/proximamente` | filtro, items y scroll |
+  | `/proximamente` | filtro, items, página y scroll (paginado) |
   | `/top` | payload, scroll vertical y horizontal de cada carrusel |
   | `/cuenta/*` | scroll horizontal de cada riel |
 
@@ -683,6 +683,174 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   "Ver todas" lleva `?tipo=`, y `/lista/ultimos` lo recibe **desde el server**
   (no con `useSearchParams`, que forzaría un `<Suspense>`). **Al volver atrás
   manda el snapshot, no la URL**, igual que en `/categoria`.
+- **TRES COSTOS DISTINTOS, y mezclarlos lleva a conclusiones falsas**: llamadas
+  externas a **TMDB**, peticiones internas a **`/api/upcoming`** y consultas a
+  **Supabase**. En la Agenda de Estrenos, **`/api/upcoming` NO llama a TMDB ni una
+  vez** — verificado sobre el código: `lib/upcoming.ts` sólo importa
+  `supabaseServer`, y su única mención de TMDB es `TMDB_IMG`, que arma la URL de
+  una imagen sin tocar la red. **La agenda la escribe únicamente la Edge Function
+  `tmdb-sync`, y es la única que gasta cuota de TMDB.** O sea que menos peticiones
+  a `/api/upcoming` = menos consultas a Supabase y CERO efecto sobre TMDB.
+  El arreglo de restauración va en esa dirección: volver de una ficha pasó de 1
+  petición a **0** en los tres filtros, así que también son 0 consultas a Supabase.
+  ⚠️ **`original_language` no agregó ni una llamada**, y está verificado en el
+  camino de código, no supuesto: sale de `t`, que es el resultado de `discover` —
+  el mismo objeto del que ya salían `title` y `genre_ids`—; `discover/movie` y
+  `discover/tv` ya lo devolvían (comprobado contra la API); y `fusionarPorCampo`
+  hace `{ ...base }` pisando sólo título y sinopsis, así que la reparación de
+  idioma no lo pierde.
+  ⚠️ **Correr `syncUpcoming` a mano SÍ cuesta**, y es un costo de la corrida, no
+  del cambio: si se dispara el mismo día que el cron, se suma. El término que
+  domina es **una llamada por serie descubierta** (`tvDetailsConProveedores`), más
+  1 `discover` por página, 2 de `providerList` y los respaldos de idioma. El
+  desglose y los criterios de aceptación están en
+  `docs/medidas/2026-09-05-proximamente-salida.md`.
+- **"Próximamente" SELECCIONA antes de paginar, y el criterio vive en una función
+  pura** (`lib/proximamente.ts`). La sección pedía 100 filas ordenadas por fecha:
+  medido el 2026-09-04, eso eran 100 series de **5 días de los 50** con contenido,
+  99 de ellas episodios semanales y el **51% anime**. No era un problema de tope
+  sino de reparto — los primeros seis días concentran 141 de los 238 elementos, así
+  que cualquier corte por fecha se los come. Cortar en el cliente no lo arregla:
+  hay que ver la agenda entera antes de decidir qué entra, y **traerla entera es
+  gratis** (246 filas tardan lo mismo que 100, ~490 ms, porque se paga el
+  round-trip y no el tamaño).
+  La regla es **3 series por fecha como MÁXIMO**, con un lugar reservado para el
+  estreno de temporada más relevante del día (y si hay una temporada 1, es suyo);
+  los otros dos van a las más populares, premiere o episodio da igual. **Las
+  películas con plataforma AR confirmada entran todas y no consumen cupo.** Son 3
+  series TOTALES y no "3 episodios más las premieres que haya": esa fue la primera
+  versión y dejaba entrar las 81 premieres de la agenda, cambiando un ruido por
+  otro. Resultado: 97 elementos, **50 fechas**, 6,2% de anime.
+  🔴 **NO HAY PISO DE POPULARIDAD, y es decisión del dueño**: la popularidad
+  ORDENA dentro de cada fecha y nunca decide que un título deja de existir. El
+  07/09 el único premiere del día tiene popularidad **3** y se queda con su lugar
+  por delante de 21 episodios, varios de 100+.
+  **Anime no es animación**, y confundirlos era el bug a evitar: de los 100 con
+  género Animación, **19 no son anime** (los Simpson, South Park, Futurama, Masha y
+  el Oso, Super Wings). La clasificación es **Crunchyroll ∪ (Animación +
+  `original_language = "ja"`)**, que marca 81 de 81 — Crunchyroll es precisión
+  perfecta (67 de 67 tienen género Animación) y el idioma recupera los de título
+  romanizado (`BLEACH`, `BEYBLADE X`, `MAO`). **`origin_country` NO se agregó**:
+  se midió y aporta CERO títulos, los mismos 76 que el idioma.
+  El tope de anime del **20% se cumple en cada tanda acumulada**, no sólo al final,
+  Y lo que entra es el conjunto de **máxima popularidad** que lo cumple. El despeje
+  es lo que lo vuelve tratable: si `m` no-anime van antes de un título, y ese
+  título termina siendo el `j`-ésimo anime, el tope pide `j/(m+j) ≤ 1/5`, o sea
+  **`j ≤ ⌊m/4⌋`** — cada anime tiene un puesto máximo y no hay que simular nada.
+  Eso es la factibilidad de un scheduling con plazos, cuyos conjuntos factibles
+  forman un **matroide**, así que el greedy por popularidad descendente devuelve el
+  óptimo (verificado contra fuerza bruta, 3.000 casos, 0 sub-óptimos).
+  ⚠️ **Se decide con la fracción `1/5`, no con `0.20`**: con 172 no-anime antes y
+  puesto 43, la cuenta en coma flotante da falso y `4·43 ≤ 172` da verdadero. Un
+  test ata las dos constantes.
+  ⚠️ **La versión anterior era incorrecta** y por eso la auditoría la rechazó:
+  elegía un cupo global por popularidad y lo gastaba en orden cronológico, así que
+  los anime del medio consumían el tope y el posterior más popular quedaba afuera.
+  ⚠️ **Un anime puede seguir quedando afuera por su FECHA, y no es el mismo
+  problema**: *Bleach* (el más popular de la agenda) cae el primer día con 2
+  no-anime delante, así que su puesto máximo es `⌊2/4⌋ = 0` — 1 de 3 elementos es
+  el 33%, o sea que NINGÚN conjunto que lo contenga cumple el 20%.
+  ⚠️ **El tope NO es lo que baja el ruido** — el cupo por fecha solo ya deja 10,5%,
+  y el tope lleva a 8,3%: su valor es ser una garantía para el día que TMDB publique
+  una tanda grande de anime. Un anime que no entra se descarta, no se posterga
+  (postergarlo lo movería de fecha y reintentarlo lo duplicaría entre páginas).
+  ⚠️ **La migración `008` va ANTES del deploy.** Sin la columna
+  `original_language`, PostgREST responde 400 y `/api/upcoming` **entero** devuelve
+  500 — riel del Home y watchlist incluidos. No necesita backfill: el sync hace
+  `upsert` de la fila entera, así que la corrida diaria la completa, y mientras
+  esté en NULL la clasificación queda sólo con Crunchyroll (83% de recall).
+  El riel del Home son los primeros 15 de la misma selección. Reemplazó a
+  `upcomingMix`, que pedía `ceil(limit/2)+3` de cada tipo asumiendo oferta en los
+  dos: con UNA película en la agenda devolvía **12 de 15** y ponía esa película
+  —del 30/09— en la **segunda** posición, entre dos títulos del 04/09.
+- **En "Cargar más", la página confirmada NO avanza hasta que la tanda llegó**
+  (`EstadoTanda` en `hooks/filtro-paginado-nucleo.ts`). La primera versión hacía
+  `const next = page + 1; setPage(next); load(next)`, o sea que adelantaba la
+  página antes de conocer el resultado: si la tanda 2 fallaba, el toque siguiente
+  pedía la 3 y la 2 quedaba **salteada para siempre**, con un hueco invisible en la
+  lista que ningún reintento recuperaba — y el snapshot lo guardaba, así que volver
+  de una ficha heredaba el hueco. Con la página confirmada, **reintentar y avanzar
+  son la misma cuenta**: pedir `confirmada + 1`. Un fallo de tanda adicional
+  conserva lo visible y muestra un aviso discreto al pie; el estado de error a
+  pantalla completa queda sólo para la primera carga, cuando no hay nada que
+  mostrar. `unir` deduplica por `tipo:id` (un reintento puede devolver la misma
+  tanda) y `alLlegarLaTanda` usa `Math.max`, así que una respuesta vieja no
+  retrocede la página.
+- **El selector de "Próximamente" se tragaba el primer clic, y no era una carrera
+  de respuestas: no se emitía ninguna petición** (`hooks/filtro-paginado-nucleo.ts`).
+  `filtroPrevio` era un `useRef(null)` que se inicializaba DENTRO del efecto que lo
+  leía, y en el render donde ocurría la carga inicial ese efecto no corría porque
+  sus dependencias no habían cambiado. Quedaba en `null` y el primer clic se
+  consumía como "la inicialización".
+  **Determinístico, no intermitente**: fallaba siempre que se llegaba con el filtro
+  en `Todos` y andaba al volver de una ficha con Películas o Series ya elegido
+  —ahí la restauración cambiaba el filtro y el efecto sí corría—, que es lo que se
+  reportaba como "a veces". **`reqId` estaba bien**: mirar la carrera de respuestas
+  no llevaba a nada.
+  Tenía una consecuencia peor: mientras el botón decía `movie` y los items eran de
+  `all`, el snapshot persistía ese par —en cada render, porque `extra` era un
+  objeto literal nuevo—, así que la vuelta siguiente restauraba Series bajo
+  Películas de forma **estable**. La lógica se extrajo a un módulo **puro** porque
+  suelta entre dos efectos no se podía probar (no hay arnés de DOM), y el test
+  reproduce la falla sobre la máquina de estados vieja antes de fijar la nueva.
+- **En "Próximamente" el cambio de filtro es un HANDLER, no un efecto, porque
+  restaurar un snapshot y que el usuario toque un botón no se pueden distinguir
+  comparando estado.** Como efecto, la decisión salía de comparar el `filtro` del
+  cierre contra `estadoFiltro.current`, que el arranque acababa de escribir en la
+  MISMA ronda — y un efecto ve los valores del render en el que se creó. Al
+  restaurar un snapshot de Series, `setFiltro("tv")` no cambia el `filtro` que ve
+  el efecto de abajo: sigue viendo `"all"` mientras `aplicado` ya dice `"tv"`, o
+  sea `tv → all`, indistinguible de un clic en Todos. Reiniciaba la vista, pedía
+  Todos y en el render siguiente volvía a pedir Series: dos peticiones de más y la
+  restauración del scroll pisada.
+  ⚠️ **Eso no se disparaba, y por un motivo frágil**: el efecto no llegaba a correr
+  en esa ronda porque sus dependencias `[filtro, load, reiniciar]` no habían
+  cambiado. O sea que dependía de la **estabilidad referencial** de `useCallback`,
+  que nada verifica — bastaba agregarle una dependencia a `reiniciar` para que
+  corriera en cada render y el bug apareciera.
+  Como handler el problema no existe y **queda un solo efecto en la vista**, el de
+  arranque, que sale por `return` sin pedir cuando restauró. Peticiones: entrada
+  nueva **1**, vuelta con `all`/`movie`/`tv` **0**, primer clic manual **1**.
+  `hooks/arranque-restauracion.test.ts` modela el runtime de efectos —orden de
+  declaración, re-ejecución sólo por dependencias, **cierre del render en curso**,
+  refs que sobreviven— y fija las tres cosas: que la versión con efecto anda con
+  identidad estable, que se rompe con identidad inestable, y los conteos de la
+  versión con handler.
+  ⚠️ **Ese test es un MODELO de la coordinación, no una prueba del componente**, y
+  conviene no leerle más de lo que dice: no monta `UpcomingAllView`, no ejecuta
+  `useListaPaginada` ni `sessionStorage`, no ejecuta React, y **no prueba la
+  restauración del scroll**. Fija la decisión de pedir o no pedir.
+  🔴 **El modelo no alcanzó: la prueba en navegador encontró que la restauración
+  estaba rota, y la causa era el ORDEN DE REGISTRO del listener de `popstate`.**
+  Medido con los stacks de cada acceso a `sessionStorage`: `consumirVuelta` corría
+  a los 67879.5 ms con `hay=false`, `leerLista` confirmaba que el snapshot SÍ
+  estaba, `olvidarLista` lo borraba, y `marcarVuelta` llegaba **4,5 ms después**.
+  Un listener agregado al final corría a los 67883.8, o sea que **el montaje pasa
+  DENTRO del evento popstate**: Next registra el suyo en un `useEffect` de
+  `AppRouter` y adentro de ese handler renderiza la ruta restaurada. El del store
+  se registraba al evaluar su módulo, que viaja en el chunk de cada ruta, así que
+  quedaba último. Cuando "andaba" era por arrastre: una marca sin consumir de una
+  vuelta anterior.
+  **Arreglo:** `registrarVueltaAtras()` idempotente, llamada en el SCOPE DEL MÓDULO
+  de `components/NavHistorial.tsx` —layout raíz, se evalúa al arrancar, antes de
+  cualquier efecto—. Sin temporizadores y sin restaurar por el solo hecho de que
+  haya snapshot: entrar por link sigue empezando limpio. Verificado en navegador:
+  volver con Todos, Películas y Series restaura filtro, tarjetas, página y scroll
+  con **0 peticiones**; el primer cambio manual pide 1; "Cargar más" tras restaurar
+  pide la siguiente a la confirmada. Y los tres consumidores del store compartido
+  —`/lista/miniseries`, `/categoria`, `/top`— restauran.
+  ⚠️ En desarrollo, la 2ª pasada de Strict Mode llama a `olvidarLista` y borra el
+  snapshot de `sessionStorage`; no rompe nada porque el estado de React ya tiene lo
+  restaurado y el guardado siguiente lo reescribe.
+- **En el App Router, Strict Mode está ACTIVO en desarrollo** si
+  `next.config.mjs` no dice lo contrario, así que React invoca los efectos dos
+  veces al montar. Dos cosas que podrían romperse y no lo hacen: la petición de
+  arranque no se duplica porque la segunda pasada sale por un ref, y la
+  restauración no se pierde porque `useListaPaginada` hace
+  `if (e) { setInicial(e); … }` — la segunda pasada ya gastó la marca de vuelta y
+  decide "no restaurar", pero al no llamar a `setInicial` el valor de la primera
+  queda. Escrito como `setInicial(e)` a secas, en dev se perdería la restauración
+  de TODAS las vistas paginadas.
 - **La ruleta sirve UNA recomendación por vez, nunca una lista.** Es el punto:
   una lista reconstruye la parálisis de elección que la feature resuelve. El pool
   es `roulette_titles` (curado offline, 2259 con texto de los 2401) y lo sirve la
@@ -838,6 +1006,8 @@ lib/
   cache.ts            — wrapper Redis/memoria + el motor determinístico del indeciso
   supabase.ts          — clientes browser/server
   reviews.ts            — acceso a editorial_reviews
+  proximamente.ts        — selección editorial de la Agenda: función PURA (cupo por
+                            fecha, tope de anime, paginación). Ver docs/UPCOMING.md
   types.ts               — shape estable que consume toda la UI (UITitle, UITitleDetail, UIPerson)
 
 supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla vacía
@@ -854,7 +1024,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/ruleta` | una tanda de 20 candidatos del pool curado (`roulette_titles`), vía `lib/roulette.ts`. `maxDuration = 60` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |
-| `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia) |
+| `GET /api/upcoming` | agenda de estrenos "Próximamente" (motor tmdb-sync, tabla propia). Pagina en el servidor sobre la selección editorial: `?page=` de 20, `{ items, hayMas, total, page }`. `?mix=1&limit=15` es el riel del Home |
 | `GET /api/providers` | catálogo de plataformas disponibles en AR (onboarding y selector) |
 | `GET /api/recomendaciones` | pool del "modo indeciso" (día + offset) |
 | `GET /api/mas-votados` | "Lo más votados" (votos ta buena+petacular, `top_voted` 2-3) |

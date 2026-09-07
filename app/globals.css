@@ -694,6 +694,17 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .rlt-pero{border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:18px;background:var(--surface-2)}
 .rlt-pero-lab{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
 .rlt-pero p{margin:0;font-size:13.5px;line-height:1.5;color:var(--text)}
+/* La frase, sola y a lo ancho: entre los chips se leia como una etiqueta mas,
+   cuando es lo que mas define el tono de la recomendacion. */
+.rlt-frase{font-size:15.5px;line-height:1.45;font-style:italic;color:var(--text);margin:0 0 6px}
+/* Las acciones reusan .actions/.act de la ficha: mismo icono arriba, misma
+   etiqueta abajo, mismo alto tactil. Solo se ajusta el margen, porque aca
+   quedan ENTRE la frase y la razon y no al final de la tarjeta. */
+.rlt-actions{margin:6px 0 20px;padding:4px 0 2px}
+.rlt-actions .act{text-decoration:none;min-width:56px}
+.rlt-actions .act.on svg{stroke:var(--good)}
+.rlt-actions .act.on .lab{color:var(--good)}
+.rlt-actions .act:disabled{opacity:.55;cursor:default}
 .rlt-acciones{display:flex;gap:10px;flex-wrap:wrap}
 .rlt-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;font-weight:600;cursor:pointer}
 .rlt-btn:hover{border-color:var(--accent)}

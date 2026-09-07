@@ -1,5 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import {
   VENTANA_VUELTA_MS, consumirVuelta, decidirRestauracion, guardarLista, leerLista,
   marcarVuelta, olvidarLista,
@@ -174,4 +176,89 @@ test("volver atrás con otras plataformas no restaura", () => {
 
 test("volver atrás sin nada guardado no rompe", () => {
   assert.equal(decidirRestauracion({ clave: "lista:x", firma: "f", volvio: true }), null);
+});
+
+// ============================================================================
+// La regresión del 2026-09-05: el listener llegaba TARDE
+// ============================================================================
+//
+// ⚠️ Comprobación sobre el TEXTO de los archivos, no sobre la app montada — misma
+// nota y mismo motivo que `lib/cors-inventario.test.ts`: este proyecto no tiene
+// arnés de DOM. **Esto no reemplaza la prueba de navegador**, que es la que
+// demostró el fallo; fija la condición estructural que lo causaba, que es lo
+// único de esto que se puede probar sin un navegador.
+//
+// QUÉ PASABA. El listener de `popstate` se registraba al evaluar este módulo, y
+// este módulo viaja en el chunk de cada ruta que lo importa: se registraba recién
+// cuando esa ruta se cargaba, o sea DESPUÉS del listener de `AppRouter` de Next
+// —que se registra en un efecto de arranque y que, adentro de su propio handler,
+// monta la ruta restaurada—. Medido en el navegador: la vista preguntaba "¿volví?"
+// 4,5 ms ANTES de que la marca existiera, se respondía que no, y
+// `decidirRestauracion` además tiraba el snapshot.
+//
+// Lo que impide que vuelva: `registrarVueltaAtras()` llamado en el SCOPE DEL
+// MÓDULO de un componente del layout raíz. Si alguien lo mueve adentro de un
+// `useEffect`, o lo saca, la restauración se rompe otra vez en toda la app.
+
+const fuenteNavHistorial = fs.readFileSync(
+  path.join(process.cwd(), "components", "NavHistorial.tsx"), "utf8");
+
+test("REGRESIÓN: NavHistorial registra el listener de vuelta", () => {
+  assert.match(fuenteNavHistorial, /import \{[^}]*registrarVueltaAtras[^}]*\} from "@\/hooks\/lista-paginada-store"/,
+    "NavHistorial dejó de importar el registro: la marca de vuelta va a llegar tarde");
+  assert.match(fuenteNavHistorial, /^registrarVueltaAtras\(\);$/m,
+    "la llamada no está en el scope del módulo");
+});
+
+test("REGRESIÓN: la llamada NO puede estar dentro de un hook", () => {
+  // Adentro de `useEffect` correría después del efecto de `AppRouter`, que es
+  // exactamente el orden que causaba el fallo.
+  const dentroDeHook = /use(Effect|LayoutEffect)\([^)]*\{[^}]*registrarVueltaAtras/s.test(fuenteNavHistorial);
+  assert.equal(dentroDeHook, false,
+    "registrarVueltaAtras() quedó dentro de un efecto: vuelve el fallo de orden");
+});
+
+test("REGRESIÓN: NavHistorial sigue montado en el layout raíz", () => {
+  const layout = fs.readFileSync(path.join(process.cwd(), "app", "layout.tsx"), "utf8");
+  assert.match(layout, /import NavHistorial from "@\/components\/NavHistorial"/);
+  assert.match(layout, /<NavHistorial\s*\/>/,
+    "si NavHistorial sale del layout, nadie registra el listener al arrancar");
+});
+
+test("sin window, registrarVueltaAtras no hace nada y no explota (el caso SSR)", async () => {
+  const mod = await import("./lista-paginada-store.ts");
+  assert.equal(typeof mod.registrarVueltaAtras, "function");
+  assert.equal("window" in globalThis, false, "el entorno del test dejó de ser SSR-like");
+  assert.doesNotThrow(() => { mod.registrarVueltaAtras(); mod.registrarVueltaAtras(); });
+});
+
+test("CON window, se registra UN solo listener de popstate por más que se llame de más", async () => {
+  // Lo que el test anterior NO probaba: que la idempotencia sirva para algo. Sin
+  // `window`, las dos llamadas salen por el guard y no dicen nada del navegador.
+  // Acá se monta un `window` mínimo y se CUENTA cuántas veces se registró, que es
+  // la propiedad que importa: el layout llama a `registrarVueltaAtras()` y el
+  // módulo también lo hace al evaluarse, así que sin la guarda habría dos.
+  const registros: string[] = [];
+  const g = globalThis as unknown as { window?: unknown };
+  g.window = {
+    addEventListener: (ev: string) => { registros.push(ev); },
+    location: { pathname: "/x" },
+  };
+  try {
+    // Hace falta una evaluación NUEVA del módulo para observar el registro que
+    // ocurre al importarlo; de ahí el parámetro que rompe la caché de módulos.
+    // El especificador va en una variable a propósito: así no es un import
+    // estático que `tsc` intente resolver.
+    const especificador = "./lista-paginada-store.ts?conWindow=1";
+    const mod = await import(especificador) as { registrarVueltaAtras: () => void };
+    assert.deepEqual(registros, ["popstate"],
+      "el módulo no registró al evaluarse, o registró de más");
+    mod.registrarVueltaAtras();
+    mod.registrarVueltaAtras();
+    mod.registrarVueltaAtras();
+    assert.deepEqual(registros, ["popstate"],
+      `quedaron ${registros.length} listeners: la guarda de idempotencia no sirve`);
+  } finally {
+    delete g.window;
+  }
 });
