@@ -1279,11 +1279,22 @@ Sin push, sin Firebase/FCM, sin backend, sin tablas ni funciones de Supabase, si
 service worker, sin llamadas nuevas a ninguna API y sin costo en Vercel, Supabase,
 Upstash ni TMDB.
 
-**Alcance de v1**: el flujo nuevo está en el botón **con texto de la ficha**. El
-ícono de calendario de las tarjetas de "Próximamente" sigue abriendo Google
-Calendar como hasta ahora — ahí no hay lugar para los estados ("Recordatorio
-listo", "Este estreno es hoy", el rechazo del permiso), y unificarlo es una
-decisión de producto, no un detalle de implementación.
+**Las dos superficies hacen lo mismo** — decisión del dueño del 07/09/2026. El
+ícono de calendario de las tarjetas de "Próximamente" (Home y `/proximamente`)
+usa el MISMO flujo que el botón de la ficha, y por eso quedan sincronizadas
+solas: es el mismo componente, el mismo `idRecordatorio` y la misma consulta de
+pendientes al plugin. Programar desde una tarjeta y abrir la ficha muestra
+"Recordatorio listo", y al revés.
+
+Lo único propio de la tarjeta es cómo se ven los dos estados que en la ficha son
+palabras: en 32 px no entra una oración, así que "programado" lo pinta
+`.quick-add.on` —que ya existía— y el estreno de hoy entra como **"HOY"**; la
+oración completa va en la etiqueta accesible.
+
+**Una consulta de pendientes por tanda**: la grilla monta hasta 40 tarjetas a la
+vez y sin eso le preguntaría al plugin cuarenta veces lo mismo en el mismo
+frame. La promesa compartida se suelta apenas resuelve, así que no hay caché que
+envejezca después de programar.
 
 ## 13. Qué queda decidido en `docs/PLAY-STORE.md`
 
