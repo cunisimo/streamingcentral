@@ -1,5 +1,11 @@
 # Issues abiertos
 
+> **Revisión del 10/09 de los issues #17–#20:** conservar los riesgos abiertos,
+> pero leer [la revisión independiente](medidas/2026-09-10-revision-capacidad-codex.md)
+> antes de usar sus cifras o criterios de cierre. Corrige el conteo de claves,
+> las unidades de concurrencia y el alcance de las pruebas; amplía la caída de
+> Redis a fallos de escritura y documenta reintentos internos del SDK.
+
 Pendientes con dueño, causa identificada y criterio de cierre. Si algo se
 resuelve, se borra de acá (no se marca "hecho" y se deja).
 
@@ -825,120 +831,6 @@ número de cada una salga de una medición y no del default.
 
 ---
 
-## #13 — El cron semanal del Top 10 de Netflix nunca disparó
-
-**Detectado el 2026-08-25, reportado por el dueño**: "el Top 10 de Netflix me
-trae lo más popular; hasta hace dos días estaba bien".
-
-**No es un bug del código: es que dejaron de entrar datos.** `latestWeekRows()`
-devuelve `null` si la semana guardada tiene más de `SEMANA_VIEJA_MS` (14 días), y
-el bloque cae a popularidad. Esa guarda es deliberada — no sostener datos viejos
-bajo el sello "dato oficial" — e hizo exactamente lo que tenía que hacer.
-
-| | |
-|---|---|
-| Última semana guardada | **2026-08-09**, escrita el 2026-08-12 18:10 UTC |
-| Antigüedad al detectarlo | **16,4 días** (cruzó los 14 hace ~2,4) |
-| Última semana publicada por Netflix | **2026-08-16**, disponible desde el ~18/08 |
-
-### La causa raíz
-
-El cron es `0 12 * * 2` (martes 12:00 UTC), pero las dos escrituras que existen
-en la tabla son **fuera de horario**:
-
-- semana `2026-08-02` → **domingo** 09/08, 17:27 UTC
-- semana `2026-08-09` → **miércoles** 12/08, 18:10 UTC
-
-Ninguna coincide con un martes al mediodía. **Las dos ingestas fueron manuales**:
-el cron de Vercel no disparó nunca. La guarda de 14 días lo tapó durante dos
-semanas — mientras el dato aguantó, nadie se enteró.
-
-**Sospecha sin confirmar**: el scope de Vercel se llama
-`jfgalindez-gmailcom's projects`, que es el nombre de un plan Hobby, y ahí los
-cron jobs tienen límites. **No está verificado** y hay que mirarlo en
-Vercel → Settings → Cron Jobs, donde se ve si el cron está registrado y sus
-últimas ejecuciones. No dar por sentado cómo se comporta la plataforma: es el
-tipo de suposición que ya mordió en este proyecto.
-
-### Lo que NO es
-
-- **No tiene relación con el cambio de idioma a es-MX.** `latestWeekRows` no toca
-  claves de caché ni idioma. La coincidencia de fechas es casual.
-- **La interfaz no miente.** El copy es
-  `source === "netflix" ? "Lo más visto esta semana · dato oficial" : "Lo más popular ahora"`,
-  así que mientras sirve popularidad lo dice. Degradó con honestidad, y por eso
-  se pudo detectar mirando la pantalla.
-
-### Cómo se arregla
-
-Dos cosas separadas:
-
-1. **Recuperar la semana que falta**: una llamada a `/api/cron/netflix-top10`
-   con el `CRON_SECRET`. Es un upsert idempotente de 20 filas.
-2. **Arreglar el cron**, que es el problema de fondo. Sin eso, el bloque vuelve a
-   caer a popularidad en 14 días.
-
-### Lo que este issue enseña, más allá del cron
-
-**Una guarda que degrada en silencio esconde la falla que la disparó.** El bloque
-se venía degradando bien, pero nada avisaba que hacía dos semanas que no entraba
-un dato. Vale la pena un chequeo de frescura visible —en `/api/health`, por
-ejemplo— para las fuentes que dependen de un cron.
-
-### Desenlace parcial — 2026-08-25
-
-**El cron disparó.** La semana `2026-08-16` entró el **martes 2026-08-25 a las
-12:58 UTC**: el día que corresponde y dentro de la hora de su `0 12 * * 2`, que
-es el margen con el que Vercel dispara los cron. Es la primera escritura de esta
-tabla que parece automática. El bloque de Netflix volvió a "dato oficial".
-
-**Lo que sigue sin explicación**: esa semana tendría que haber entrado el martes
-**2026-08-18**, no siete días después. O el cron no disparó ese día o disparó y
-falló, y desde acá no hay forma de distinguirlo — hay que mirar los logs de
-Vercel.
-
-**Y la fragilidad de fondo no se movió**: la guarda mide la antigüedad desde la
-FECHA DE LA SEMANA, no desde la ingesta. La semana que tenemos hoy ya nació con
-9 días encima, así que **una sola corrida perdida vuelve a degradar el bloque**.
-Verificado de paso que no hay un desfase sistemático: el TSV de Netflix todavía
-publica `2026-08-16` como su semana más nueva, así que la corrida de hoy se
-llevó lo más fresco que había.
-
-### Volvió a vencer — 2026-08-30
-
-Comprobado en la base, no deducido:
-
-| semana | primera escritura | filas |
-|---|---|--:|
-| `2026-08-16` | **2026-08-25 12:58:03 UTC** (martes) | 20 |
-| `2026-08-09` | 2026-08-12 18:10 UTC | 20 |
-| `2026-08-02` | 2026-08-09 17:27 UTC | 20 |
-
-**El cron corrió el 25/08 y entró en horario.** La semana `2026-08-16` es la más
-nueva que hay, y hoy tiene **exactamente 14 días**: la guarda mide desde `week`,
-no desde la ingesta, así que **la evidencia venció otra vez** — por horas.
-
-⚠️ **`week` es la semana del RANKING, no cuándo corrió la ingesta.** Que la fila
-diga `2026-08-16` no prueba que hayan faltado corridas: la del 25/08 existe y
-está fechada. Una versión anterior de esta nota afirmaba que faltaban las
-corridas del 18 y del 25, y **era falso** — salía de leer `week` como si fuera la
-fecha de ejecución.
-
-**Consecuencia hoy:** ningún título recibe el respaldo del top oficial, así que
-`/api/title/tv/322428` (Moria) devuelve `[]`. **Moria no está resuelta
-actualmente**, y no lo está en `main` tampoco: la regla de ventana no cambió.
-Esto NO lo arregla la rama `fix/disponibilidad-oficial` y no se intentó ahí — es
-este issue, que sigue abierto.
-
-Lo que hay que decidir acá (no en la rama de disponibilidad): si la guarda debe
-medir desde `week` o desde `updated_at`. Medir desde `week` es lo honesto para el
-rótulo "dato oficial" —el ranking es viejo aunque lo hayamos bajado hoy— pero
-condena al bloque a degradarse cada dos semanas mientras Netflix publique con 9
-días de retraso.
-
-
----
-
 ## #14 — El avatar propio parpadea en cada carga
 
 **Estado:** abierto, **POSTERGADO** · **Prioridad:** baja · **Abierto:** 2026-08-27
@@ -1143,3 +1035,434 @@ fuerzan**.
 
 **Lo que NO es una salida:** usar `networks` sola, o el `homepage` solo. Las dos
 producen afirmaciones falsas y hay tests que las rechazan.
+
+
+---
+
+## #17 — Varias visitas al mismo Home frío lo rearman una vez cada una
+
+**Detectado el 2026-09-10**, auditoría de capacidad
+(`docs/medidas/2026-09-10-capacidad-trafico.md` §1 y §5). **Comprobado leyendo el
+código, no medido en carga.**
+
+`cached()` y `cachedIf()` hacen leer → si falta, producir → guardar, sin ningún
+mapa de promesas en vuelo (`lib/cache.ts:298-304`,
+`lib/reparar-y-cachear.ts:39-44`). Diez peticiones al mismo Home frío en el
+mismo proceso ejecutan **diez** `composeHome`. Entre instancias de Vercel no hay
+nada que coordine: no existe ningún `SET NX` en `main`.
+
+**Esto ya estaba escrito en el repositorio.** `lib/single-flight.ts:9-11` y
+`lib/reco.ts:138-139` dicen textualmente que *"`cached()` no hace single-flight:
+en un MISS concurrente los tres salen a TMDB"*. **El mecanismo existe, está
+probado y hoy se usa en dos lugares** (`lib/reco.ts:156`, `lib/idioma.ts:155`) —
+ninguno de ellos es el camino del Home.
+
+### 🔴 Y se aplica SÓLO al Home, no a `cached`/`cachedIf`
+
+Corregido el 10/09 a pedido del dueño. La primera versión decía "aplicarlo al
+camino de `cached`/`cachedIf`", o sea **a los 21 llamadores de una vez**, sin
+inventario. Al hacer el inventario apareció el motivo por el que no se puede:
+
+**Los contextos de degradación son `AsyncLocalStorage` por request**
+(`lib/fallos-disponibilidad.ts:40`, `lib/idioma.ts:120`), y de ahí sale el
+`degradado` que decide si un payload se guarda (`lib/home.ts:619-627`, `:696-706`).
+Con un single-flight profundo, el trabajo compartido corre en el contexto de
+**quien lo empezó**: el segundo vería su contador en cero, creería limpio un
+payload construido con fallos y **lo guardaría como bueno, hasta 6 h**. Es
+exactamente el bug que `cachedIf` existe para impedir.
+
+**En el Home no pasa, por construcción**: el single-flight envuelve la llamada
+entera (`lib/home.ts:688`), el verdicto de degradación ya viaja adentro del
+payload compartido, y el segundo no produce, no evalúa predicado y no escribe.
+
+**Y ahí está casi todo el beneficio**: una composición del Home es el trabajo más
+caro del sistema, y los otros 20 sitios son lecturas de grano fino que el batcher
+(`lib/cache.ts:166`) ya une entre requests concurrentes.
+
+El inventario (21 sitios, seis familias de TTL) y los cinco requisitos para que
+una integración global sea aprobable están en la Etapa 1 del informe. **No está
+prohibida: está sin demostrar.**
+
+### Lo que sí funciona, y no hay que romper
+
+Las **lecturas** sí se unen entre peticiones concurrentes: la cola del batcher es
+de módulo (`lib/cache.ts:166`), así que dos Homes simultáneos comparten los
+`MGET`. Lo que se multiplica es el trabajo del fetcher.
+
+### La segunda mitad: no hay "último bueno"
+
+Hay una sola copia por clave. Al vencer `TTL.home` (6 h, `lib/cache.ts:91`), la
+siguiente visita paga el rearmado completo — por cada combinación viva de
+plataformas y toggles. No hay servido de contenido vencido mientras se revalida.
+
+### El contrato del turno distribuido, que `SET NX` solo NO da
+
+Corregido el 10/09 por la revisión independiente
+(`medidas/2026-09-10-revision-capacidad-codex.md`, punto 6). La primera versión
+de este issue decía "turno con `SET NX` y vencimiento" y daba el resto por hecho.
+**No alcanza:** si la composición tarda más que el vencimiento, hay dos
+constructores. Con un Home frío que puede tardar segundos, no es un caso raro.
+
+Siete decisiones que hay que tomar antes de escribir código:
+
+1. **Propietario** — el valor del turno es un identificador único, no un `1`.
+2. **Duración inicial** — corta se vence en pleno trabajo; larga bloquea a todos
+   si la instancia muere.
+3. **Renovación** mientras se compone.
+4. **Liberación segura** — sólo si el propietario sigue siendo el mismo. Un `DEL`
+   a secas puede borrar el turno de otro que lo tomó después del vencimiento.
+5. **Muerte del constructor** (timeout, deploy, instancia reciclada) — el turno
+   tiene que vencer solo.
+6. **Espera SIN último bueno** (la primera vez, o tras invalidar) — ¿el que
+   espera aguarda, con qué tope, o compone también?
+7. **Redis no disponible** — no hay turno que pedir.
+
+🔴 **El turno es una optimización probabilística, no una garantía.** Reduce
+muchísimo las composiciones duplicadas; **no promete exclusión indefinida**.
+
+🔴 **Y el último bueno vive en Redis**: si Redis no está, no hay último bueno ni
+turno. **Esa copia no protege de una caída de Redis** — protege del vencimiento
+del TTL y de una caída de TMDB. Ver #21.
+
+### Criterio de cierre
+
+- 100 peticiones concurrentes al mismo Home frío, **con una composición que
+  termina dentro de la ventana de turno**, ejecutan **una** composición, en un
+  proceso y entre varios. Medido con el **contador de composiciones** del #20, no
+  deducido de HIT/MISS.
+- **El single-flight toca `lib/home.ts` y nada más.** Un barrido falla si aparece
+  en `cached`/`cachedIf` o en otro de los 20 sitios sin la demostración previa.
+- Dos peticiones concurrentes al mismo Home con un fallo de disponibilidad en el
+  medio: **ninguna de las dos guarda el payload degradado como sano**.
+- Con una composición que **excede** la ventana: o la renovación la sostiene, o
+  se documenta cuántas se permiten y por qué. Lo que no vale es no medirlo.
+- **Muerte del propietario a mitad del trabajo**: otro toma el turno al vencer y
+  el sistema converge sin intervención.
+- **Liberación segura** probada: un propietario tardío no borra turno ajeno.
+- Con la copia fresca vencida, la respuesta llega en el tiempo de un acierto de
+  caché, no de un rearmado.
+- **Sin último bueno**, el comportamiento del que espera está decidido,
+  documentado y con tope.
+
+### No confundir con
+
+`feat/dia-rotacion` tiene el diseño de `tomarTurno` (SET NX) que resuelve la
+mitad distribuida, pero **está divergida y su commit `50b2e75` introduce un
+`fresh=1` que en `main` no existe**. Se reimplementa sobre `main`, no se mergea.
+
+---
+
+## #18 — `/api/home` no canoniza sus parámetros: entradas equivalentes son claves distintas
+
+**Detectado el 2026-09-10**, auditoría de capacidad (§2). **Comprobado
+ejecutando el código de producción.**
+
+El handler toma los parámetros crudos (`app/api/home/route.ts:18-29`; el
+`as PlatformCode[]` es una afirmación de tipo, no una validación) y la clave sólo
+ordena (`lib/home.ts:642-644`).
+
+**[R7] La cifra se corrigió el 10/09.** La primera versión decía "14 pedidos → 11
+claves" pegando una salida de 13 filas y 10 claves: se había perdido una fila al
+copiar. El ensayo se rehízo, ampliado, y la salida íntegra más el arnés están en
+la §2.1 del informe. Ejecutado con `claveHome` real: **19 filas, 17 entradas
+distintas, 14 claves distintas**.
+
+| Bloque | Entrada | Resultado | Lectura |
+|---|---|---|---|
+| A | `n,d,m` / `d,m,n` / `m,n,d` / `n,,d,m` | una clave | ✅ orden y vacíos ya convergen |
+| B | `n` / `n,n` / `n,n,n` | tres claves | 🔴 duplicados |
+| C | `N,D,M` / `N,d,M` | dos claves, y ninguna es `d,m,n` | 🔴 mayúsculas, y el orden ASCII ni siquiera es consistente |
+| D | `zzz` / `___` / `n,zzz` | tres claves | 🔴 códigos inexistentes |
+| E | `t` ausente vs `t=accion:movie` | dos claves | 🔴 `movie` **es** el default de `accion` (`components/data.ts:19-20`): mismo Home, dos entradas |
+| F | `t=inventado:movie`, `t=a:…,b:…,c:…` | dos claves | 🔴 claves de riel arbitrarias, sin tope |
+| G | `n` / `n,d` / `d,m` | tres claves | ✅ **control**: son Homes distintos y tienen que serlo |
+
+**El orden ya converge**: ese no es el problema. Lo son los duplicados, las
+mayúsculas, los códigos inexistentes, las claves de riel arbitrarias y **los
+toggles por defecto frente a los explícitos**.
+
+### Lo que cuesta una clave inválida — y lo que NO cuesta
+
+**No** dispara un `discover` sin filtro: los tres caminos de pools cortan
+(`lib/pools.ts:147-148` y `230-231`, `lib/enrich.ts:876-877` y `587`). Esa
+hipótesis se verificó y se descartó.
+
+**Pero tampoco es gratis.** `composeHome` sólo guarda por `!providers.length`
+(`lib/home.ts:420-422`), y `votedCards` también (`lib/enrich.ts:1561`) — no por
+`plataformasValidas`. Así que una clave basura paga: 1 invocación serverless +
+**2 RPC a Supabase sin caché** (`lib/votes.ts:16-19`, la única fuente del Home
+sin caché propia) + hasta 120 `titleCard` + **una escritura en Redis de un
+payload inútil que vive 6 h** (el predicado de `lib/home.ts:706` sólo excluye
+`degradado` y `sinPlataformas`, y este no es ninguno de los dos).
+
+### El mismo agujero en otras dos rutas
+
+- `/api/search`: `q` **sin tope de longitud** (`app/api/search/route.ts:9`).
+  Normaliza `trim`+`toLowerCase` y ordena `providers` (`lib/enrich.ts:1022,1036`),
+  pero no deduplica ni valida códigos. Cada cadena distinta es una entrada de
+  caché nueva.
+- `/api/upcoming?items=`: **sin tope de cantidad** (`app/api/upcoming/route.ts:47-52`).
+
+### La pieza que ya existe
+
+`plataformasValidas()` (`lib/ultimos.ts:101-103`) hace el filtrado. Se usa en dos
+lugares y **no** donde se decide el costo: la construcción de la clave.
+
+### Criterio de cierre
+
+🔴 **[R1] Corregido el 10/09, y el error era grave.** La primera versión de este
+criterio pedía que `N,D,M` convergiera a la clave de `n`. **`N,D,M` son tres
+plataformas válidas mal escritas —Netflix, Disney+ y Max— y ese criterio le
+borraba dos al usuario.** Lo detectó la revisión independiente
+(`medidas/2026-09-10-revision-capacidad-codex.md`, punto 1). Canonizar no es
+descartar.
+
+El orden de la canonización importa, y es: **minúsculas → filtrar contra el
+catálogo → deduplicar → ordenar → tope de cantidad**. Bajar a minúsculas *antes*
+de filtrar es justamente lo que conserva `N,D,M`.
+
+| Entrada | Clave esperada | Por qué |
+|---|---|---|
+| `n,d,m` / `d,m,n` / `n,,d,m` | `d,m,n` | ya funciona, no romperlo |
+| **`N,D,M` / `N,d,M`** | **`d,m,n`** | 🔴 las **tres** plataformas |
+| `n,n` / `n,n,n` | `n` | duplicados |
+| `n,zzz` | `n` | descarta el desconocido, conserva el válido |
+| `zzz` / `___` | vacío → `sinPlataformas` | no queda ninguna válida |
+| `t` ausente vs `t=accion:movie` | la misma | una forma canónica única frente a los defaults |
+| **`n` / `n,d` / `d,m`** | **tres claves distintas** | 🔴 **control**: conjuntos válidos distintos NO convergen y conservan su contenido |
+
+Además: un `providers` que queda vacío después de canonizar responde como
+`sinPlataformas` y **no** consulta a Supabase. `q` e `items=` tienen tope.
+
+---
+
+## #19 — Una caída de TMDB se realimenta: cada visita rearma contra el servicio caído
+
+**Detectado el 2026-09-10**, auditoría de capacidad (§3 y §4). **Comprobado
+leyendo el código.**
+
+Cuatro piezas correctas por separado que juntas forman un lazo:
+
+1. `lib/tmdb.ts:56-67` — el cliente **no reintenta, no lee `Retry-After`, no
+   tiene circuito de protección**: `if (!res.ok) throw`. Un 429 es una excepción
+   inmediata.
+
+   ⚠️ **[R2] Esto vale para TMDB y sólo para TMDB.** La primera versión de este
+   issue decía "no hay reintentos en ningún lado", Redis incluido, y **es falso**.
+   `@upstash/redis` **1.38.0** hace **6 intentos** por defecto
+   (`node_modules/@upstash/redis/nodejs.js:152`, bucle en :191) y `lib/cache.ts:27`
+   lo instancia sin desactivarlos. El matiz que importa: **ese bucle envuelve sólo
+   el `fetch`**, o sea fallos de **transporte**; una respuesta HTTP de error sale
+   del bucle y no se reintenta. Backoff `Math.exp(i)*50` ms → hasta **~4,3 s** de
+   espera dentro del request antes de rendirse, latencia que hoy nadie ve.
+2. `lib/home.ts:123-135` — `safe()` degrada esa excepción a riel vacío.
+3. `lib/home.ts:706` + `lib/reparar-y-cachear.ts:43` — un payload degradado se
+   devuelve pero **no se guarda**.
+4. Por lo tanto la próxima visita rearma y vuelve a golpear a TMDB.
+
+**La decisión 3 es correcta** y está bien argumentada: congelar una caída 6 h para
+todos es peor. Lo que falta es la otra mitad — que mientras dure la caída no
+rearme *cada* visita. La carga contra el servicio que ya falla crece linealmente
+con el tráfico.
+
+Lo mismo, peor, con Redis caído (`lib/cache.ts:189-195` y `247-253`): todo es
+MISS y cada petición rearma el Home entero.
+
+### Y el techo de concurrencia no es el que dice ser
+
+`MAX_EN_VUELO = 24` es **estado de módulo** (`lib/tmdb.ts:38-40`), o sea por
+proceso, y es un default configurable (`TMDB_MAX_CONCURRENT`). En Vercel el techo
+de peticiones **en vuelo** es **24 × instancias activas**, y la cantidad de
+instancias la decide la carga: el techo crece justo cuando habría que contenerlo.
+
+⚠️ **[R4] Cuidado con las unidades, que la primera versión mezcló.** Decía: *"el
+comentario dice que TMDB throttlea cerca de 50 req/s; con tres instancias el techo
+ya está en 72"*. **Esa comparación no vale.** 24 son peticiones **en vuelo**
+(concurrencia); 50 req/s es una **tasa**. No se convierte una en otra sin la
+latencia media (`tasa ≈ concurrencia / latencia`): con respuestas de 200 ms, 24 en
+vuelo son ~120 req/s por instancia; con 2 s, ~12. **72 en vuelo no demuestra 72
+req/s ni que se pase de 50.**
+
+Lo que sí queda en pie: **el techo es por proceso y no hay ningún límite global**,
+ni de concurrencia ni de tasa. **Cuántas instancias levanta Vercel, cuál es la
+latencia media real y cuál es el límite verdadero de la cuenta de TMDB son tres
+mediciones distintas, y ninguna está hecha.**
+
+### Criterio de cierre
+
+Con un doble de TMDB devolviendo 429 con `Retry-After`: se respeta la espera, no
+se supera **ni el techo de concurrencia ni el de tasa declarados —los dos,
+medidos por separado—**, el sistema no entra en lazo y se recupera solo cuando el
+doble vuelve. Y con el último bueno del #17 presente, se sirve contenido anterior
+en vez de rearmar.
+
+⚠️ Eso verifica que el sistema **respeta el límite que se le declara**. **No**
+verifica cuál es el límite real de TMDB: eso hay que consultarlo en la cuenta, no
+medirlo con un doble.
+
+---
+
+## #20 — No se puede medir cuánto cuesta una petición hacia afuera
+
+**Detectado el 2026-09-10**, auditoría de capacidad (§7). **Comprobado.**
+
+Esto bloquea a los tres issues anteriores: sin esto se arreglan a ciegas.
+
+1. **No hay contador de llamadas a TMDB.** `CacheMetrics`
+   (`lib/cache.ts:123-131`) tiene `comandos`, `requests`, `claves`, `hits`,
+   `misses`, `lotes`, `msCache` — **todos de Redis**. Hoy no se puede responder
+   "cuántas llamadas a TMDB costó este Home". Las cifras que circulan (más de 600
+   llamadas, 5-10 s) son **históricas y no verificables con lo que hay**.
+2. **No hay contador de consultas a Supabase.**
+2b. **[R2] Lo que hoy se llama `requests` son tres cosas distintas.** `getSuelto`
+   y `flush` anotan `m.requests += 1` por **llamada lógica**
+   (`lib/cache.ts:184-188`, `242-245`), sin importar cuántos intentos HTTP hizo el
+   SDK por debajo — y el SDK reintenta hasta 6 veces. Hay que separar **llamadas
+   lógicas**, **intentos HTTP** y **comandos facturados**. Sin eso, la resistencia
+   del #19 se mide contra un número que miente.
+2c. **No hay contador de composiciones ejecutadas**, que es lo que arbitra el
+   criterio central del #17. Hoy sólo hay HIT/MISS, y **HIT/MISS no alcanza** en
+   cuanto entre el single-flight: un lector que espera una composición ajena va a
+   parecer un HIT.
+3. **Analytics mide visitas, no solicitudes** (`app/layout.tsx:135-136`). Un
+   usuario que toca cuatro toggles es una visita y cuatro reconstrucciones.
+4. **El tráfico de Android no genera ninguna medición del lado del cliente, y
+   es una decisión tomada.** `app/layout.tsx:133` monta Analytics y Speed Insights
+   sólo si `!ES_NATIVO`, con la medición que lo motivó escrita al lado (06/09: en
+   el contenedor los scripts recibían 404 y no medían nada). No es un defecto a
+   corregir: es una limitación que hay que rodear, justo para el tráfico que está
+   creciendo con la prueba cerrada de Play. Lo único que deja rastro son las
+   peticiones a la API, y hoy no se pueden separar por origen.
+5. **Los logs no fueron recuperables.** `vercel logs` sobre el deployment de
+   Producción devolvió `No logs found` el 10/09. El `[home] HIT/MISS`
+   (`lib/home.ts:711`) —el único instrumento de tasa de aciertos que tiene la
+   app— no se pudo leer a posteriori. **No hay serie histórica.**
+6. **`/api/health` cuesta 3 comandos de Redis por llamada** (`SET`+`GET`+`DBSIZE`,
+   `lib/cache.ts:62-65`). Un monitor externo cada minuto son ~130.000 comandos al
+   mes: contra el plan gratuito que cita `lib/cache.ts:83-85`, ~26% de la cuota
+   mensual gastada en monitorear. **No se verificó si hay un monitor
+   configurado.**
+
+### La trampa de medición que hay que resolver acá, no después
+
+Las métricas de Redis se le anotan **a quien programa el flush**, no a quien pidió
+la clave — está escrito en `lib/cache.ts:143-146` y es deliberado ("para
+diagnóstico está bien; no lo uses para facturar"). En cuanto entre el
+single-flight del #17, **HIT de caché, espera compartida y composición propia se
+vuelven indistinguibles**. Hay que separar los tres estados antes de tocar nada,
+o el criterio "una sola composición" queda incomprobable justo cuando hace falta.
+
+### Criterio de cierre
+
+Una petición al Home frío informa, **por separado**: llamadas a TMDB, consultas a
+Supabase, llamadas lógicas / intentos HTTP / comandos de Redis, y composiciones
+ejecutadas (distinguidas de HIT y de espera compartida). Y la tasa de aciertos del
+caché en Producción se puede leer sin depender de que los logs sigan ahí.
+
+⚠️ **Lo que este issue NO resuelve.** Instrumentar da los números **propios**. Los
+límites reales de TMDB, Upstash, Supabase y Vercel hay que **consultarlos en las
+cuentas**, y el tráfico real hay que **observarlo en Producción**. Ninguna de esas
+dos cosas la da un banco aislado — ver §10.0, §10.5 y §10.6 del informe.
+
+---
+
+## #21 — Si falla la escritura en Redis, un Home BUENO termina en 500
+
+**Detectado el 10/09/2026** por la revisión independiente
+(`medidas/2026-09-10-revision-capacidad-codex.md`, punto 3) y **reproducido**
+sobre el resolver real. Es el más chico de los cinco y **el más urgente**: es un
+`catch` que falta y no depende de medir nada.
+
+### La asimetría
+
+El camino de **lectura** de Redis está cuidado: `getSuelto` (`lib/cache.ts:189-195`)
+y `flush` (`247-253`) capturan el error, lo registran y devuelven `null`, o sea
+"no estaba". El contrato es explícito: *"seguí sin cache"*.
+
+El de **escritura** no. `guardar` (`lib/cache.ts:258-271`) es
+`try { await redis.set(...) } finally { … }` — **sin `catch`**. Y
+`resolverConCache` (`lib/reparar-y-cachear.ts:43`) **espera** la escritura antes
+de devolver:
+
+```ts
+const { valor, fallo } = await opts.producir();
+if (!fallo) await opts.backend.escribir(opts.clave, valor, opts.ttl);
+return valor;
+```
+
+Así que un rechazo de `redis.set` sube por `cachedIf` → `homePayload`. Ninguno de
+los tres envoltorios de métricas lo captura (`withMetricasIdioma`,
+`withCacheMetrics`, `conRegistroDeEjes`), y `safe()` tampoco: envuelve las fuentes
+**adentro** de `composeHome`, no el guardado. Termina en el `catch` del handler
+(`app/api/home/route.ts:32-42`) → **500** con `hero: []` y `rails: []`.
+
+### Reproducido
+
+Ejecutado sobre `resolverConCache` real con un backend cuyo `escribir()` rechaza:
+
+```
+RECHAZO: Redis caido
+-> el payload era correcto y el usuario no lo recibe
+control (degradado, no escribe): {"hero":["payload DEGRADADO"]}
+```
+
+🔴 **El control es la parte absurda.** Un payload **degradado** se sirve sin
+problema —porque nunca intenta escribir— y uno **completo y correcto** se pierde
+en un 500. **El sistema se porta peor cuanto mejor le salió el trabajo.**
+
+**Lo que NO se ejecutó:** el handler HTTP completo. La cadena hasta el 500 está
+comprobada leyendo las cinco piezas, no corriendo Next.
+
+### Los cuatro estados de Redis, que hay que tratar por separado
+
+| Estado | Hoy | Falta |
+|---|---|---|
+| Lectura caída | Cubierto | Nada |
+| **Escritura caída** | **500 con el payload bueno en la mano** | Decidir qué se sirve |
+| Redis totalmente caído | Todo MISS, cada petición rearma | Con qué freno: no hay ni turno ni último bueno (viven en Redis, ver #17) |
+| Recuperación | Sin definir | Que no haya estampida al volver |
+
+### La decisión — **APROBADA por el dueño el 10/09**
+
+> **Si el payload se produjo correctamente y sólo falla la escritura en Redis, se
+> entrega al usuario y se registra el error.**
+
+Era una de tres opciones posibles —entregar, reintentar, fallar— y estaba
+planteada como propuesta. Ya está elegida. Es además el mismo contrato que la
+**lectura** cumple desde siempre (`lib/cache.ts:189-195`: capturar, registrar,
+seguir): esto cierra la asimetría entre los dos caminos, no inventa una política
+nueva.
+
+### 🔴 Prioridad: ETAPA PREVIA, antes de la Etapa 0
+
+Este issue **no depende de ninguna medición** y es el único del expediente del
+que se puede decir eso. Estaba escrito como punto 5 de la Etapa 1, o sea detrás
+de toda la instrumentación, y el dueño lo corrigió el 10/09: pasa a ser una etapa
+propia, anterior a la Etapa 0. Ver la **Etapa PREVIA** en
+`medidas/2026-09-10-capacidad-trafico.md` §9.
+
+El arreglo es un `catch`; sus criterios se comprueban con el resolver real —igual
+que se reprodujo el problema— sin banco, sin contadores y sin Producción.
+
+### Alcance del arreglo
+
+1. `guardar` captura el fallo de escritura, lo registra y **no lo propaga**.
+2. El registro distingue "no pude leer el caché" de "armé un Home bueno y no lo
+   pude guardar". El segundo además implica que el próximo request va a rearmar.
+3. **No** cambia el resto del contrato: un degradado sigue sin guardarse, y una
+   lectura caída sigue siendo un MISS.
+
+### Criterio de cierre
+
+- Escritura fallando + payload **correcto** → el usuario **recibe el payload**,
+  con 200, y el fallo queda registrado.
+- Escritura fallando + payload **degradado** → idéntico a hoy: se entrega y no se
+  guarda. **No puede haber regresión acá.**
+- **Lectura** fallando → idéntico a hoy (MISS, sigue sin caché).
+- Un fallo de escritura y uno de lectura se distinguen en el registro.
+- Probados por separado: sólo lectura caída, sólo escritura caída, Redis entero
+  caído, y recuperación.
+
+⚠️ **Lo que este issue NO arregla:** no reduce una sola llamada externa, no
+coordina nada y no mejora la capacidad. Sólo deja de perder trabajo que ya estaba
+bien hecho.

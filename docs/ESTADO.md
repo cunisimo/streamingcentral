@@ -1,5 +1,266 @@
 # Estado de Yump
 
+> **Estado canónico. Actualizado el 10 de septiembre de 2026.**
+> Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
+> [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
+> No duplicar este estado en otros manuales: enlazarlo.
+
+## Evidencia y alcance de esta actualización
+
+- **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
+  de capacidad tienen sustento, pero **el plan requiere correcciones antes de
+  implementar**. [Dictamen y evidencia](medidas/2026-09-10-revision-capacidad-codex.md).
+  Pruebas locales sin red: 13 filas publicadas → 10 claves; 100 MISS concurrentes
+  → 100 productores en el resolver real; una escritura fallida hace rechazar su
+  retorno; SDK Redis instalado → seis intentos ante fallo de transporte simulado.
+  No son pruebas HTTP ni mediciones de capacidad de Producción. Corregir además
+  la equivalencia errónea `N,D,M` → `n`, la comparación de simultaneidad con req/s,
+  el contrato del bloqueo y la promesa de deducir cuentas/tráfico real de dobles.
+  Las etapas del informe son propuestas pendientes, no un plan aprobado.
+
+- **Comprobado localmente el 09/09:** rama `main`; HEAD y referencia local
+  `origin/main` coinciden en el hito `fd2cd23`, merge del contenedor Android y
+  CORS. No se hizo fetch ni se comprobó el deployment en Vercel en esta sesión.
+- **Informado por el dueño el 09/09:** el 08/09 agregó 20 testers en Google Play
+  y generó el enlace; desde el 09/09 están usando la aplicación. No afirmó que
+  los 20 hayan aceptado o instalado: esos conteos siguen por verificar.
+- **Heredado del chat anterior:** web/PWA en producción; Android firmado en
+  prueba cerrada Alpha, versión 1 (1.0.0), Argentina, publicación gestionada
+  desactivada, ficha y declaraciones principales completadas. No se abrió Play
+  Console en esta sesión. Esto NO acredita publicación pública en Producción.
+- **Comprobado en código el 09/09:** `app/layout.tsx` excluye Analytics y Speed
+  Insights del build nativo mediante `!ES_NATIVO`. Web/PWA conservan medición;
+  Android no registra visitantes/pantallas por esta integración. Sus llamadas a
+  las API remotas sí generan actividad de servidor; no equivalen a usuarios.
+
+- **Revisión independiente del 10/09:** la auditoría de capacidad fue revisada
+  por Codex sobre el mismo hito
+  ([`medidas/2026-09-10-revision-capacidad-codex.md`](medidas/2026-09-10-revision-capacidad-codex.md)).
+  Sostuvo los riesgos centrales y encontró **siete correcciones**, dos de ellas en
+  criterios de aceptación que, como estaban escritos, habrían roto el producto.
+  **Las siete se verificaron por cuenta propia y están incorporadas** al informe y
+  a los issues; el detalle de qué cambió está en la §12 del informe.
+- **Comprobado el 10/09, auditoría de capacidad y tráfico:** `git fetch`;
+  `main` = `origin/main` = `fd2cd23`. Se auditó ese árbol leyendo el código, con
+  evidencia por archivo y línea, y se ejecutó el constructor de claves real. **No
+  se corrió ninguna prueba de carga**, ni contra Producción ni contra nada, y no
+  se cambió una sola línea de código. Informe completo:
+  [`medidas/2026-09-10-capacidad-trafico.md`](medidas/2026-09-10-capacidad-trafico.md).
+- **Corrección de un informe propio (10/09):** el de la release del 07/09 (§20.e
+  de `superpowers/plans/2026-09-05-etapa3-android-publicable.md`) afirma que en
+  el contenedor Analytics y Speed Insights dejan "dos pedidos muertos al
+  arrancar". **Es incorrecto**: `app/layout.tsx:133` los gatea con `!ES_NATIVO` y
+  no se montan. Sigue siendo cierto que las librerías quedan adentro del bundle.
+
+## Estado de producto e integración
+
+Android ya está integrado en `main`; no queda pendiente mergear Capacitor ni
+agregar su CORS al código principal. Según el traspaso, la release consume
+`https://app.yump.ar`, usa paquete web local, firma de carga, guards de release,
+íconos propios, navegación/Atrás y compartir nativos, sesión persistente y
+recordatorios locales de estreno a las 10:00 locales, probados en teléfono.
+La PWA y su service worker se mantienen separados del contenedor.
+
+El traspaso da por integrados Top manual, Próximamente, ruleta rediseñada,
+evidencia oficial y últimos cambios de PWA. **El dueño confirma el 09/09 que ya usa el dashboard `/admin/top` para cargar películas y series de las plataformas del Top.** Su implementación y conexión al ranking se comprobaron en código. No volver a listar la carga manual ni la reparación del cron como pendientes del ranking. Esta sesión no inspeccionó la base; no ejecutar migraciones basándose en notas antiguas.
+
+iOS no está implementado según el traspaso: sin proyecto, TestFlight ni pruebas
+en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
+
+## Próximo trabajo, en orden
+
+1. **Prueba cerrada:** comprobar adhesiones efectivas y fecha que contabiliza
+   Play Console; verificar instalaciones y registrar feedback, dispositivos,
+   recorridos probados y correcciones. No calcular una fecha de acceso a
+   Producción sólo desde la creación de la lista o el primer uso informado.
+   El traspaso cita 12 testers durante 14 días para ciertas cuentas personales:
+   comprobar la aplicabilidad y exigencia vigente en la consola antes de actuar.
+2. **Operación de Play:** revisar informes previos al lanzamiento, fallos/ANR,
+   respuesta de anuncios/ID de publicidad y respaldo seguro de firma. Para un
+   nuevo AAB, incrementar `versionCode`. Solicitar acceso a Producción cuando la
+   consola lo habilite; lanzamiento público todavía pendiente.
+3. **Capacidad antes de difusión masiva — auditado y revisado el 10/09, ver más
+   abajo.** Sigue sin existir un máximo medido de usuarios simultáneos, y ahora
+   está escrito por qué no se puede deducir **ni siquiera con un banco aislado**.
+   Cinco problemas quedaron **comprobados** y registrados como issues **#17 a
+   #21**. El plan tiene **siete etapas** y el orden es:
+
+   | Etapa | Qué | Issue | ¿Depende de medir? |
+   |---|---|---|---|
+   | **PREVIA** | El 500 por escritura fallida en Redis | #21 | **No** |
+   | 0 | Poder medir | #20 | — |
+   | 1 | Canonizar entradas + single-flight **acotado al Home** | #18, #17 | Sí |
+   | 2 | Turno distribuido + último Home bueno | #17 | Sí |
+   | 3 | Resistencia frente a TMDB | #19 | Sí |
+   | 4 | CDN + límite por ruta | — | Sí |
+   | 5 | Observabilidad permanente | #20 | — |
+
+   La Etapa PREVIA va primera porque es la única que **no depende de ninguna
+   medición**: es un `catch` que falta y la decisión ya está tomada — *si el
+   payload se produjo correctamente y sólo falla la escritura en Redis, se
+   entrega al usuario y se registra el error*.
+
+   El single-flight de la Etapa 1 **se aplica sólo a `lib/home.ts`**, no a
+   `cached`/`cachedIf`: los contextos de degradación son `AsyncLocalStorage` por
+   request, y compartir en profundidad haría que el segundo guardara un payload
+   degradado como sano. La integración global no está prohibida, está **sin
+   demostrar** (inventario y requisitos en la Etapa 1 del informe).
+
+   `feat/dia-rotacion` está divergida y **su arreglo de `fresh=1` corrige un
+   agujero que ella misma abre y que `main` no tiene**: se reusa el diseño, no se
+   mergea.
+4. **Enlaces Android:** `assetlinks.json`, App Links y retorno desde correos de
+   confirmación/recuperación pendientes según el traspaso.
+5. **Analíticas Android:** pendientes de decidir e implementar. Analytics y
+   Speed Insights **no se montan en el contenedor por decisión**
+   (`app/layout.tsx:133`, con la medición del 06/09 escrita al lado), así que el
+   uso de los testers nativos no se puede contar ni seguir. Lo único que deja
+   rastro son las peticiones a la API, y hoy no se pueden separar por origen.
+   Entra dentro del issue #20.
+6. **Pendientes históricos:** semántica y actualización de
+   Próximamente, fechas UTC restantes, piso de cantidad de votos, rendimiento
+   móvil, pruebas reales offline, contraste y avatar. Consultar `ISSUES.md` y
+   contrastar con código antes de declarar algo resuelto o proponer arreglos.
+7. Con resultados reales de Android, decidir iOS. Vigilar costos y consumo de
+   Vercel, Upstash y Supabase y definir alertas operativas.
+
+## Auditoría de capacidad y tráfico — 10/09/2026
+
+Encargo del dueño: diagnóstico comprobado y plan priorizado, sin implementar
+cambios, con Android en prueba cerrada y antes de una difusión importante.
+Detalle completo en
+[`medidas/2026-09-10-capacidad-trafico.md`](medidas/2026-09-10-capacidad-trafico.md).
+
+**Revisada de forma independiente el mismo día** (ver el bloque de evidencia
+arriba). Lo que sigue ya incorpora las siete correcciones.
+
+### Lo comprobado — issues #17 a #21
+
+| # | Hallazgo | Cómo se comprobó |
+|---|---|---|
+| #17 | Ninguna unión de peticiones en vuelo ni bloqueo distribuido: N visitas al Home frío = N composiciones. Y no hay "último Home bueno": al vencer el TTL de 6 h alguien paga el rearmado completo | Lectura: `lib/cache.ts:298-304`, `lib/reparar-y-cachear.ts:39-44`. El propio repositorio ya lo dice en `lib/single-flight.ts:9-11` |
+| #18 | `/api/home` no canoniza sus parámetros. **19 filas, 17 entradas distintas, 14 claves distintas**, con el arnés y la salida íntegra publicados | **Ejecutado** con `claveHome` real |
+| #19 | Una caída de TMDB se realimenta: el cliente **de TMDB** no reintenta ni lee `Retry-After`, el degradado no se guarda, y cada visita rearma. El techo de peticiones en vuelo es por proceso, o sea 24 × instancias | Lectura: `lib/tmdb.ts:38-40` y `56-67`, `lib/home.ts:706` |
+| #20 | No hay contador de llamadas a TMDB ni a Supabase, ni de composiciones; lo que se llama `requests` mezcla tres unidades; `vercel logs` no devolvió nada el 10/09 | Lectura + ejecución |
+| **#21** | **Si falla la escritura en Redis, un Home BUENO termina en 500** — mientras que uno degradado se sirve sin problema, porque nunca intenta escribir | **Ejecutado** sobre el resolver real |
+
+**#21 es el más chico y el más urgente**: es un `catch` que falta y no depende de
+medir nada. Por eso es la **Etapa PREVIA** del plan, anterior a la Etapa 0, con la
+decisión ya aprobada por el dueño: *se entrega el payload y se registra el error*.
+
+### Lo que se revisó y **no** es un problema
+
+- El **orden** de `providers` ya converge: `n,d,m`, `d,m,n` y `n,,d,m` son la
+  misma clave. La afirmación contraria del traspaso del 09/09 es incorrecta.
+- Un código de plataforma inexistente **no** dispara un `discover` sin filtro:
+  los tres caminos de pools cortan. Hipótesis plausible, verificada y descartada.
+- Las **lecturas** de Redis sí se unen entre peticiones concurrentes, y además
+  **el cliente de Redis sí reintenta** fallos de transporte (6 intentos). La
+  primera versión del informe decía lo contrario y era falso.
+- La **lectura** de Redis está bien cubierta ante fallos. La escritura no (#21).
+- `page` está normalizada en las rutas paginadas.
+- `Vary: Origin` ya se emite siempre: es la condición previa de cualquier caché
+  compartida, y ya está cumplida. **No es autenticación ni sustituye un límite de
+  abuso.**
+
+### 🔴 Lo que un banco aislado NO puede responder
+
+**Corregido el 10/09.** La primera versión de este bloque decía que todas las
+incógnitas se responden con la Etapa 0 y la prueba de carga. **No es cierto**, y
+era la promesa más engañosa del informe: un banco con dobles verifica
+**comportamiento**, no revela hechos de Producción.
+
+Son cuatro fuentes distintas y no se sustituyen:
+
+| Fuente | Da |
+|---|---|
+| Pruebas de comportamiento (banco) | Que el sistema hace lo que debe |
+| Capacidad bajo condiciones declaradas (banco) | Un número comparable **contra sí mismo**, útil para el antes/después |
+| **Observación pasiva de Producción** | Tasa de aciertos real, tráfico real, fragmentación real, latencia real, escalado real |
+| **Consulta de las cuentas** | Los límites verdaderos de TMDB, Upstash, Supabase y Vercel |
+
+**Un máximo de usuarios simultáneos real NO sale del banco.** Sale de observar
+Producción, o de una prueba controlada contra Producción que hoy está prohibida.
+
+Sigue sin poder afirmarse: cuántos usuarios simultáneos aguanta; cuánto cuesta
+hoy un Home frío; la tasa de aciertos en Producción; cuántas instancias levanta
+Vercel; la latencia media real; si los 20 testers generan tráfico; y los límites
+reales de las cuatro cuentas.
+
+**Las cifras que circulan —150 ms cacheado, 5-10 s en frío, más de 600 llamadas a
+TMDB— son históricas y no se reprodujeron.** No usarlas como estado actual.
+
+⚠️ **Y una advertencia sobre el alcance:** esta auditoría leyó el **repositorio**.
+No puede afirmar que no exista un límite de tasa, una regla de firewall o un
+monitor configurados en un panel, fuera del código.
+
+### Único dato de infraestructura tomado hoy
+
+`dbsize` de Redis leído por `/api/health`: **1259 claves el 07/09** y **2382 el
+10/09**. `dbsize` no desglosa por familia y la mayoría de las claves son `card:`
+y `pv3:` por título: **no usar este número como evidencia de fragmentación**.
+
+## Corrección del pendiente del Top — 09/09/2026
+
+El dueño confirma que el problema del Top se resolvió con el dashboard manual.
+Comprobado en `app/admin/top/page.tsx`: doce bloques, películas y series para
+Netflix, Disney+, Max, Prime Video, Apple TV+ y Crunchyroll; edición de diez
+posiciones, fecha de captura, revisión y publicación por bloque. `lib/top.ts`
+consume las publicaciones con `source: "manual"` cuando están los doce bloques
+iniciales. No se comprobó el contenido actual de la API pública en esta sesión.
+
+El issue #13 se retiró de abiertos y se conservó su
+[historia y cierre](traspasos/2026-09-09-cierre-top-automatico.md).
+La lista del traspaso que pedía “resolver el cron y agregar observabilidad de
+frescura” queda superada como pendiente del ranking por esta confirmación.
+El cron sigue programado en `vercel.json` y su evidencia se sigue consultando
+para disponibilidad (`lib/enrich.ts`); no se afirma que esté reparado, eliminado
+ni que se hayan implementado alertas automáticas de frescura. Su mera presencia
+no justifica reabrir el problema del ranking ya resuelto por carga manual.
+
+## Registro de la prueba cerrada
+
+| Fecha | Hecho | Fuente | Falta comprobar |
+|---|---|---|---|
+| 08/09/2026 | 20 testers agregados y enlace generado | Dueño, conversación del 09/09 | Adhesiones efectivas en consola |
+| 09/09/2026 | Comenzaron a usar la app | Dueño, conversación del 09/09 | Cantidad, dispositivos, recorridos y feedback |
+
+Todavía no hay observaciones concretas de testers registradas en esta sesión.
+Agregar resultados con fecha y procedencia, sin publicar sus correos personales.
+
+## Evidencia histórica y procedimientos
+
+- [Traspaso completo recibido el 09/09](traspasos/2026-09-09-integral.md): copia
+  del relato del chat anterior, con estado de Play, declaraciones, pruebas,
+  riesgos, propuestas de capacidad y pendientes. **Es una foto histórica**, no
+  reemplaza este estado ni acredita verificaciones actuales. Sus cifras de
+  rendimiento y afirmaciones externas no se revalidaron en esta sesión.
+- [Implementación Android, etapas 3–5](superpowers/plans/2026-09-05-etapa3-android-publicable.md):
+  decisiones, procedimiento, verificaciones y release; leer junto a este estado.
+- [Diseño de Capacitor](CAPACITOR.md), [auditoría de Play](PLAY-STORE.md),
+  [PWA](PWA.md) y [medición/mantenimiento](MANTENIMIENTO.md).
+
+## Archivos del dueño y alcance de la sesión
+
+Sin seguimiento al comprobar Git: `avatares/`, `prompts/noticias-filtro.md`,
+`prompts/noticias-redaccion.md`, `supabase/migrations/004_news.sql`.
+Preservarlos; no usar `git add -A`. El estado real de la migración de noticias
+no se comprobó en la base. No guardar secretos de firma en Git.
+
+Esta sesión actualiza documentación por pedido explícito del dueño. No modifica
+código, ejecuta migraciones, genera AAB, despliega ni cambia paneles. Los cambios
+documentales quedan locales hasta que se revisen y se incorporen al repositorio;
+no asumir que ya están disponibles en otros clones o IAs remotas.
+
+## Antecedentes anteriores al 09/09/2026 — no usar como estado vigente
+
+Lo que sigue conserva mediciones y decisiones históricas. Las frases “hoy”,
+“sin mergear”, “no tiene CORS” o “pendiente de firma” describen el momento en
+que se escribieron y quedan reemplazadas, para el estado actual, por el bloque
+superior. No ejecutar tareas pendientes de estos antecedentes sin verificarlas.
+
+### Cabecera histórica (agosto de 2026)
+
 > Documento de traspaso. Se actualiza al cerrar una sesión de trabajo larga.
 > **Última actualización: 27 de agosto de 2026.**
 >
