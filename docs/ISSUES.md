@@ -1665,6 +1665,27 @@ que se reprodujo el problema— sin banco, sin contadores y sin Producción.
 3. **No** cambia el resto del contrato: un degradado sigue sin guardarse, y una
    lectura caída sigue siendo un MISS.
 
+### Estado: implementado en `fix/cache-escritura-no-rompe`, sin mergear ni desplegar
+
+Al 10/09/2026. La política vive en `lib/escritura-cache.ts` (módulo puro, por el
+mismo motivo que `lib/reparar-y-cachear.ts`: `lib/cache.ts` arrastra Upstash y no
+se puede importar desde `node --test`) y `guardar` delega en ella.
+
+**14 tests en `lib/escritura-cache.test.ts`**, repartidos a propósito en dos
+grupos que se necesitan mutuamente:
+
+- **Los cinco escenarios** componen la política con `resolverConCache` REAL.
+  ⚠️ Pasan **también contra el `lib/cache.ts` viejo** — se verificó —, así que
+  por sí solos no prueban el arreglo: prueban que la política es correcta.
+- **Los guards estructurales** atan producción a esa política, y **fallan 3 de 3
+  contra el código viejo**. Uno de ellos hubo que reescribirlo porque la primera
+  versión era vacua (miraba que no hubiera un `throw`, y el código viejo tampoco
+  tenía uno: el rechazo se propagaba solo).
+
+Pendiente: prueba manual del dueño, merge y deploy. **`npm test` 1287/1287 sin
+fallos; `tsc` idéntico a `main` (los 10 errores de `@capacitor/*` son previos y
+del entorno, no de este cambio).**
+
 ### Criterio de cierre
 
 - Escritura fallando + payload **correcto** → el usuario **recibe el payload**,
