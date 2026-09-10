@@ -28,7 +28,8 @@ interface Ctx {
   // persiste. Con dos parámetros del mismo tipo, además, invertirlos compilaba.
   updateAvatar: (eleccion: EleccionAvatar) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
-  updatePassword: (password: string) => Promise<{ error?: string }>;
+  /** `usuarioId` es la cuenta que Supabase actualizó: hay que comparar. Ver #22. */
+  updatePassword: (password: string) => Promise<{ error?: string; usuarioId?: string | null }>;
   updatePlatforms: (ids: number[]) => Promise<{ error?: string }>;
   completeOnboarding: () => Promise<{ error?: string }>;
 }
@@ -120,9 +121,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return error ? { error: error.message } : {};
   }, []);
 
+  // Devuelve TAMBIÉN el id de la cuenta que Supabase dice haber actualizado.
+  //
+  // 🔴 Sin ese dato, "salió bien" era sólo "no hubo error", y eso es lo que hizo
+  // creíble un cambio hecho en la cuenta equivocada (issue #22): con una sesión
+  // ajena abierta, la contraseña se cambiaba en esa cuenta y la pantalla decía
+  // que todo estaba listo. Quien llama compara contra la identidad del enlace.
   const updatePassword = useCallback(async (password: string) => {
-    const { error } = await supabaseBrowser().auth.updateUser({ password });
-    return error ? { error: error.message } : {};
+    const { data, error } = await supabaseBrowser().auth.updateUser({ password });
+    if (error) return { error: error.message };
+    return { usuarioId: data.user?.id ?? null };
   }, []);
 
   const updateDisplayName = useCallback(async (name: string) => {
