@@ -1,5 +1,47 @@
 # StreamingCentral — contexto del proyecto
 
+## Continuidad obligatoria entre sesiones e IAs
+
+**Antes de trabajar, leer `AGENTS.md`, este archivo y `docs/ESTADO.md`.**
+Consultar además `docs/ISSUES.md` y la documentación del área afectada.
+Para auditorías de mediciones, leer `docs/MANTENIMIENTO.md` §8.b y §8.b.2.
+Estas instrucciones valen para cualquier IA que trabaje en el repositorio.
+
+- **Estado actual:** se mantiene únicamente en `docs/ESTADO.md`. Los planes,
+  auditorías y traspasos fechados son antecedentes; no prueban el estado actual.
+- **Arquitectura y motivos:** este archivo; procedimientos y evidencia detallada
+  en el documento específico, enlazado desde acá o desde el estado.
+- **Al cerrar cada sesión con avances, decisiones o información del dueño:**
+  actualizar el estado y los documentos afectados antes de dar el trabajo por
+  terminado. Registrar qué se hizo, por qué, cómo se verificó, qué no se probó,
+  qué quedó pendiente y el siguiente paso. También los cambios manuales en paneles.
+- **Distinguir evidencia:** comprobado en código/Git, comprobado en panel o
+  dispositivo, informado por el dueño, heredado de un traspaso, y pendiente de
+  verificar. Una referencia local `origin/main` no prueba un deploy ni un fetch
+  reciente; código mergeado no prueba una migración aplicada.
+- Corregir o marcar como histórico cualquier estado anterior que quede
+  contradicho. No agregar otro resumen vigente que compita con `ESTADO.md`.
+- No guardar claves, contraseñas, tokens, keystores ni listas de correos de
+  testers en la documentación. Referenciar el procedimiento de resguardo.
+- Codex mantiene el rol de auditoría indicado en `AGENTS.md`: esta continuidad
+  documental no autoriza cambios de código. El dueño pidió expresamente mantener
+  el registro completo el 2026-09-09. No modificar `AGENTS.md` para duplicar reglas.
+
+### Implementación nativa y medición
+
+Android usa un bundle local de Capacitor y las API remotas. El diseño histórico
+está en `docs/CAPACITOR.md`; el procedimiento de implementación y release en
+`docs/superpowers/plans/2026-09-05-etapa3-android-publicable.md`. El estado de
+publicación y pruebas se consulta en `docs/ESTADO.md`.
+
+`app/layout.tsx` monta Vercel Analytics y Speed Insights sólo cuando
+`!ES_NATIVO`: miden web/PWA, no el contenedor Android. Allí intentaban cargar
+scripts desde `https://localhost/_vercel/...` y fallaban; se desactivaron tras
+probarlo en teléfono (ver explicación junto al guard). Las solicitudes Android
+a las API remotas sí llegan al servidor: sus logs no equivalen a usuarios,
+sesiones ni recorridos medidos. Incorporar analíticas nativas exige una decisión
+de implementación y revisar las declaraciones de privacidad correspondientes.
+
 Agregador de streaming para Argentina. Resuelve "no sé qué ver": agrega catálogo
 de las plataformas del usuario (Netflix, Disney+, Max, etc.), sin cine ni TV
 abierta.
@@ -349,8 +391,8 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   **única** plataforma, el carrusel "Animación para adultos" se oculta: todo el
   Home ya es anime y sería el mismo contenido con otro título. Con Crunchyroll +
   otra (Max, Netflix) se mantiene, porque esas también tienen animación adulta.
-- **El Top (`/top`) pasa a cargarse A MANO, con cutover atómico.** Rama
-  `feat/top-manual`, **sin mergear ni ejecutar la migración al escribir esto**.
+- **El Top (`/top`) se carga A MANO, con cutover atómico.** Implementación de la rama
+  `feat/top-manual`, integrada; estado operativo en `docs/ESTADO.md`. No usar el antiguo pendiente de merge/migración como instrucción de ejecución.
   Doce bloques (seis plataformas × dos tipos) que el dueño arma, revisa y
   publica desde `/admin/top`; tablas `top_rankings` (la VERSIÓN de un bloque) y
   `top_ranking_entries` (sus diez posiciones), migración `007`.

@@ -1,5 +1,12 @@
 # Google Play: auditoría y diseño legal
 
+> **Lectura actualizada el 09/09/2026:** este documento conserva la auditoría y
+> el diseño históricos. Sus inventarios y casillas pendientes no son el estado
+> actual de implementación/publicación. Consultar [ESTADO.md](ESTADO.md) antes
+> de actuar; allí se distinguen integración, pruebas y datos de Play Console.
+> Las afirmaciones de que no existe proyecto/build Android o falta integrar
+> Capacitor corresponden a la etapa original y ya no describen el repositorio.
+
 **Nació como etapa de auditoría y diseño.** Ese encabezado decía que no se había
 tocado código ni desplegado nada: **eso ya no es cierto y quedaba engañoso**. La
 tanda legal se construyó y se desplegó (`27669c0`), y las cuatro páginas de

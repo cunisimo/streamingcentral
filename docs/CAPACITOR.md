@@ -1,5 +1,12 @@
 # Capacitor: auditoría y diseño técnico (Android + iOS)
 
+> **Lectura actualizada el 09/09/2026:** este documento conserva la auditoría y
+> el diseño históricos. Sus inventarios y casillas pendientes no son el estado
+> actual de implementación/publicación. Consultar [ESTADO.md](ESTADO.md) antes
+> de actuar; allí se distinguen integración, pruebas y datos de Play Console.
+> Las afirmaciones de que no existe proyecto/build Android o falta integrar
+> Capacitor corresponden a la etapa original y ya no describen el repositorio.
+
 **Etapa de auditoría y diseño. No se instaló Capacitor, no se creó ningún
 proyecto Android ni iOS, no se tocó una línea de código de la app, no se
 desplegó nada y no se escribió en Supabase.** Lo único que cambia este trabajo
