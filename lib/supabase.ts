@@ -10,6 +10,19 @@ export function supabaseBrowser(): SupabaseClient {
   return browser;
 }
 
+// --- Observador de consultas (Etapa 0 de capacidad, #20) ---------------------
+// Cada `fetch` del cliente de SERVIDOR avisa acá cuánto tardó y qué estado
+// volvió (`null` = no hubo respuesta: red, DNS, timeout). Este archivo llega al
+// bundle del navegador por `supabaseBrowser`, así que NO puede importar
+// `node:async_hooks` ni el módulo de métricas: expone el gancho, y lib/cache.ts
+// —server-only— registra el que anota por solicitud. Sin observador registrado
+// no pasa nada. supabase-js no reintenta, así que cada consulta es un intento.
+export interface ConsultaSupabase { ms: number; estado: number | null }
+let observador: ((c: ConsultaSupabase) => void) | null = null;
+export function observarSupabase(fn: (c: ConsultaSupabase) => void): void {
+  observador = fn;
+}
+
 // Cliente para el servidor (lectura pública con RLS): sin sesión.
 // Next parchea el `fetch` global con su Data Cache. supabase-js usa ese fetch,
 // y las lecturas del server (sobre todo `.rpc()` POST) quedaban cacheadas:
@@ -22,8 +35,17 @@ export function supabaseServer(): SupabaseClient | null {
   return createClient(url, anon, {
     auth: { persistSession: false },
     global: {
-      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-        fetch(input, { ...init, cache: "no-store" }),
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const t0 = Date.now();
+        try {
+          const res = await fetch(input, { ...init, cache: "no-store" });
+          observador?.({ ms: Date.now() - t0, estado: res.status });
+          return res;
+        } catch (e) {
+          observador?.({ ms: Date.now() - t0, estado: null });
+          throw e;
+        }
+      },
     },
   });
 }

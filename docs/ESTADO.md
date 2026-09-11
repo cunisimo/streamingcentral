@@ -52,8 +52,38 @@
   real de Redis. **Esto no agrega capacidad, single-flight, bloqueo ni CDN:**
   únicamente evita perder un payload válido cuando falla su escritura. El #21
   se retiró de `ISSUES.md`; su detalle vive en la Etapa PREVIA del informe
-  (`medidas/2026-09-10-capacidad-trafico.md` §9). **La siguiente etapa es la
-  Etapa 0 (observabilidad: poder medir), no iniciada.**
+  (`medidas/2026-09-10-capacidad-trafico.md` §9).
+
+- **Etapa 0 de capacidad (#20, "poder medir"): IMPLEMENTADA en la rama
+  `feat/etapa0-medir` (worktree `wt-etapa0`, nacida de `main` = `aa7772e`),
+  pendiente de auditoría de Codex. Sin mergear, sin push, sin deploy.** La
+  primera auditoría (sobre `ceeed75`) no encontró bloqueos en la
+  instrumentación pero sí en el banco: dos escenarios solapados y una
+  coincidencia app ↔ dobles afirmada sin verificar. Corregido en la segunda
+  versión (informe §7.5): el corredor ya no empieza un escenario con trabajo
+  vivo en Next (reinicia y lo demuestra), atribuye cada línea por clave, valida
+  automáticamente las cuatro igualdades por escenario y termina con código 1 si
+  algo no cierra; la línea base se repitió entera y es válida. Métricas
+  por solicitud en `lib/metricas.ts` con unidades separadas: composiciones del
+  Home contadas donde corren (no deducidas del MISS), espera compartida como
+  campo propio (hoy 0), TMDB y Supabase por separado, y Redis en llamadas
+  lógicas / intentos HTTP / comandos (los reintentos del SDK se cuentan en su
+  `backoff`, cotejados con el doble en la recuperación controlada: 1.655
+  intentos = 1.655, 921 comandos = 921). Base de TMDB
+  configurable sólo con `YUMP_BANCO=1` y nunca en `VERCEL_ENV=production`,
+  ejecutado. Banco aislado (`scripts/banco/`) con tres dobles locales y una
+  línea base de 23 escenarios totales: 22 completos y 1 incompleto declarado.
+  **Primer número real:** un Home frío de `n,d,m` en el banco = 926 TMDB / 4
+  Supabase / 993-993-993 Redis. Dos hechos medidos que no son de esta etapa
+  arreglar: con Redis cortando el socket de forma sostenida, un Home frío no
+  completó en 60 s (en Vercel sería 504: inferido, no medido); con Supabase
+  inalcanzable el Home no se marca degradado y se guarda 6 h (bajo las
+  condiciones del banco). 44 tests nuevos escritos antes del código; suite
+  1399/1409 (0 fallos, 10 omitidos); `tsc` limpio; build fresco exit 0. **#20 sigue abierto**: falta la lectura de la
+  tasa de aciertos de Producción sin depender de los logs (Etapa 5). **Nada del
+  banco es capacidad de Producción.** Informe:
+  [`medidas/2026-09-11-etapa0-medir.md`](medidas/2026-09-11-etapa0-medir.md).
+  Etapas 1 a 5: no iniciadas.
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -174,7 +204,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | Etapa | Qué | Issue | ¿Depende de medir? |
    |---|---|---|---|
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
-   | 0 | Poder medir | #20 | — |
+   | 0 | Poder medir — **implementada en `feat/etapa0-medir`, pendiente de auditoría** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |

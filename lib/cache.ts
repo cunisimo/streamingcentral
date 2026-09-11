@@ -3,11 +3,15 @@
 // de Redis). tsc no caza esa regresión; esto la convierte en error de
 // compilación si algún "use client" importa un valor de acá.
 import "server-only";
-import { AsyncLocalStorage } from "node:async_hooks";
 import { Redis } from "@upstash/redis";
 import type { ClaveLocalizada } from "./claves";
 import { resolverConCache, type BackendCache } from "./reparar-y-cachear";
 import { guardarSinRomper } from "./escritura-cache";
+import {
+  anotar, anotarEn, backoffRedisInstrumentado, capturar, withMetricas,
+  type MetricasRequest,
+} from "./metricas";
+import { observarSupabase } from "./supabase";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
 // dependen de cómo se haya conectado la base:
@@ -25,8 +29,26 @@ const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_A
 // Si no hay credenciales, cae a un cache en memoria (dev sin Redis).
 let redis: Redis | null = null;
 try {
-  if (redisUrl && redisToken) redis = new Redis({ url: redisUrl, token: redisToken });
+  // `retry.backoff` es el ÚNICO punto donde el SDK anuncia un reintento sin
+  // que haya que envolver su transporte (llama al `fetch` global y no acepta
+  // uno propio). El instrumentado devuelve la misma espera por defecto y
+  // NO toca `retries`: la Etapa 0 mide, no cambia. Ver lib/metricas.ts.
+  if (redisUrl && redisToken) redis = new Redis({ url: redisUrl, token: redisToken, retry: { backoff: backoffRedisInstrumentado() } });
 } catch { redis = null; }
+
+// Las consultas a Supabase del cliente de servidor se cuentan desde acá:
+// lib/supabase.ts llega al bundle del navegador y no puede importar el módulo
+// de métricas, así que expone un observador y este módulo —que ya es
+// server-only y lo importa todo el lado del servidor— lo registra al cargar.
+observarSupabase((r) => {
+  anotar((m) => {
+    m.supabase.consultas += 1;
+    m.supabase.ms += r.ms;
+    if (r.estado === null) m.supabase.errores.red += 1;
+    else if (r.estado >= 200 && r.estado < 300) m.supabase.ok += 1;
+    else m.supabase.errores.http += 1;
+  });
+});
 
 const mem = new Map<string, { v: unknown; exp: number }>();
 
@@ -114,41 +136,22 @@ export const TTL = {
 } as const;
 
 // --- Métricas por operación --------------------------------------------------
-// Para poder comparar antes/después de un cambio en la estrategia de lectura
-// hace falta saber cuántos COMANDOS se mandaron (que es lo que cobra Upstash) y
-// cuántos VIAJES HTTP (que es lo que se paga en latencia). No son lo mismo: un
-// MGET de 100 claves es 1 comando y 1 viaje; 100 GET son 100 y 100.
+// El contador vive en lib/metricas.ts (Etapa 0 de capacidad, #20): un scope por
+// solicitud con AsyncLocalStorage, y las TRES unidades de Redis separadas:
 //
-// AsyncLocalStorage y no un contador global: en Vercel conviven varios requests
-// en la misma instancia y un contador de módulo mezclaría los números de todos.
-export interface CacheMetrics {
-  comandos: number;   // unidades que factura Upstash
-  requests: number;   // viajes HTTP (round-trips)
-  claves: number;     // claves pedidas (después de deduplicar)
-  hits: number;
-  misses: number;
-  lotes: number[];    // tamaño de cada MGET
-  msCache: number;    // tiempo dentro del cache
-}
-const alsMetrics = new AsyncLocalStorage<CacheMetrics>();
-const nuevasMetricas = (): CacheMetrics => ({
-  comandos: 0, requests: 0, claves: 0, hits: 0, misses: 0, lotes: [], msCache: 0,
-});
-
-// Corre `fn` con un contador propio y devuelve el resultado junto a las métricas.
-export async function withCacheMetrics<T>(fn: () => Promise<T>): Promise<{ res: T; metricas: CacheMetrics }> {
-  const metricas = nuevasMetricas();
-  const res = await alsMetrics.run(metricas, fn);
-  return { res, metricas };
-}
-
+//   llamadasLogicas  lo que este código pidió (cada GET, MGET o SET);
+//   intentosHttp     lo que salió al cable: 1 por llamada contra Redis más 1
+//                    por cada reintento del SDK (contado en su `backoff`);
+//   comandos         lo que Upstash confirmó, que es lo que factura. Un MGET de
+//                    100 claves es 1 comando y 1 intento; 100 GET son 100 y 100.
+//
 // El batcher es de módulo (las claves son globales), así que un lote puede
-// mezclar claves de dos requests concurrentes y las métricas se le anotan a
-// quien programó el flush. Para diagnóstico está bien; no lo uses para facturar.
-function anotar(fn: (m: CacheMetrics) => void) {
-  const m = alsMetrics.getStore();
-  if (m) fn(m);
-}
+// mezclar claves de dos requests concurrentes. Los hits/misses/claves se le
+// anotan a QUIEN PIDIÓ cada clave (se captura su contador al encolar); lo único
+// que queda a nombre de quien programó el flush es el viaje HTTP del MGET, que
+// es uno solo para todas.
+export { withMetricas };
+export type { MetricasRequest };
 
 // --- Lectura agrupada --------------------------------------------------------
 // Rearmar el Home hacía ~230 GET individuales, uno por título, porque cada
@@ -163,7 +166,9 @@ function anotar(fn: (m: CacheMetrics) => void) {
 // claves lleve, así que el único límite real es el tamaño de la respuesta
 // (una card ronda el KB; 100 son ~100 KB, cómodo).
 const LOTE = 100;
-type Espera = { resolve: (v: unknown) => void; reject: (e: unknown) => void };
+// `m` es el contador de la solicitud que PIDIÓ la clave, capturado al encolar:
+// el flush corre en el contexto de otra y le anota a ésta lo suyo.
+type Espera = { resolve: (v: unknown) => void; reject: (e: unknown) => void; m: MetricasRequest | null };
 let cola = new Map<string, Espera[]>();
 let programado = false;
 
@@ -176,32 +181,39 @@ async function getSuelto<T>(key: string): Promise<T | null> {
   if (!redis) {
     const hit = mem.get(key);
     const vivo = hit && hit.exp > Date.now();
-    anotar((m) => { m.comandos += 1; m.claves += 1; if (vivo) m.hits++; else m.misses++; });
+    anotar((m) => {
+      m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; m.redis.claves += 1;
+      if (vivo) m.redis.hits++; else m.redis.misses++;
+    });
     return vivo ? (hit!.v as T) : null;
   }
   const t0 = Date.now();
+  // La llamada lógica y su primer intento HTTP se anotan ANTES de salir: si el
+  // SDK reintenta, cada reintento suma uno más desde su `backoff`.
+  anotar((m) => { m.redis.modo = "redis"; m.redis.llamadasLogicas += 1; m.redis.intentosHttp += 1; });
   try {
     const v = await redis.get<T>(key);
     anotar((m) => {
-      m.comandos += 1; m.requests += 1; m.claves += 1;
-      if (v === null || v === undefined) m.misses++; else m.hits++;
+      m.redis.comandos += 1; m.redis.claves += 1;
+      if (v === null || v === undefined) m.redis.misses++; else m.redis.hits++;
     });
     return v ?? null;
   } catch (err) {
-    anotar((m) => { m.requests += 1; });
+    anotar((m) => { m.redis.fallos.lectura += 1; m.redis.claves += 1; m.redis.misses++; });
     console.error("[cache] get falló, sigue sin cache:", err);
     return null;
   } finally {
-    anotar((m) => { m.msCache += Date.now() - t0; });
+    anotar((m) => { m.redis.ms += Date.now() - t0; });
   }
 }
 
 function batchGet<T>(key: string): Promise<T | null> {
   if (!batchOn) return getSuelto<T>(key);
   return new Promise<T | null>((resolve, reject) => {
+    const m = capturar();
     const previos = cola.get(key);
-    if (previos) previos.push({ resolve: resolve as (v: unknown) => void, reject });
-    else cola.set(key, [{ resolve: resolve as (v: unknown) => void, reject }]);
+    if (previos) previos.push({ resolve: resolve as (v: unknown) => void, reject, m });
+    else cola.set(key, [{ resolve: resolve as (v: unknown) => void, reject, m }]);
     if (!programado) {
       programado = true;
       queueMicrotask(() => { void flush(); });
@@ -216,7 +228,11 @@ async function flush() {
   if (!actual.size) return;
   const claves = [...actual.keys()];
   const t0 = Date.now();
-  anotar((m) => { m.claves += claves.length; });
+  // Cada clave se le anota a quien la pidió (la primera espera de cada clave:
+  // las demás son la misma clave deduplicada, y una clave se cuenta una vez).
+  const dueño = (k: string) => actual.get(k)?.[0]?.m ?? null;
+  const anotarClave = (k: string, vivo: boolean) =>
+    anotarEn(dueño(k), (m) => { m.redis.claves += 1; if (vivo) m.redis.hits++; else m.redis.misses++; });
 
   // Sin Redis (desarrollo) se resuelve contra el Map de memoria, pero se cuenta
   // igual: la cantidad de comandos depende del PATRÓN de acceso —cuántas claves
@@ -226,11 +242,11 @@ async function flush() {
     const ahora = Date.now();
     for (let i = 0; i < claves.length; i += LOTE) {
       const lote = claves.slice(i, i + LOTE);
-      anotar((m) => { m.comandos += 1; m.lotes.push(lote.length); });
+      anotar((m) => { m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; m.redis.lotes.push(lote.length); });
       for (const k of lote) {
         const hit = mem.get(k);
-        const vivo = hit && hit.exp > ahora;
-        anotar((m) => { if (vivo) m.hits++; else m.misses++; });
+        const vivo = !!(hit && hit.exp > ahora);
+        anotarClave(k, vivo);
         for (const e of actual.get(k) ?? []) e.resolve(vivo ? hit!.v : null);
       }
     }
@@ -238,22 +254,26 @@ async function flush() {
   }
   for (let i = 0; i < claves.length; i += LOTE) {
     const lote = claves.slice(i, i + LOTE);
+    // El viaje del MGET es uno para todas las claves del lote y lo hizo quien
+    // programó el flush: se le anota a él. Los reintentos, desde el `backoff`.
+    anotar((m) => { m.redis.modo = "redis"; m.redis.llamadasLogicas += 1; m.redis.intentosHttp += 1; });
     try {
       const vals = await redis.mget<unknown[]>(...lote);
-      anotar((m) => {
-        m.comandos += 1; m.requests += 1; m.lotes.push(lote.length);
-        for (const v of vals) { if (v === null || v === undefined) m.misses++; else m.hits++; }
+      anotar((m) => { m.redis.comandos += 1; m.redis.lotes.push(lote.length); });
+      lote.forEach((k, j) => {
+        const v = vals[j];
+        anotarClave(k, !(v === null || v === undefined));
+        for (const e of actual.get(k) ?? []) e.resolve(v ?? null);
       });
-      lote.forEach((k, j) => { for (const e of actual.get(k) ?? []) e.resolve(vals[j] ?? null); });
     } catch (err) {
       // Un lote que falla NO puede tumbar el request: el contrato de `cached`
       // ante un Redis caído siempre fue "seguí sin cache", no "explotá".
-      anotar((m) => { m.requests += 1; });
+      anotar((m) => { m.redis.fallos.lectura += 1; });
       console.error("[cache] mget falló, sigue sin cache:", err);
-      for (const k of lote) for (const e of actual.get(k) ?? []) e.resolve(null);
+      for (const k of lote) { anotarClave(k, false); for (const e of actual.get(k) ?? []) e.resolve(null); }
     }
   }
-  anotar((m) => { m.msCache += Date.now() - t0; });
+  anotar((m) => { m.redis.ms += Date.now() - t0; });
 }
 
 // 🔴 UNA ESCRITURA QUE FALLA NO PUEDE TUMBAR EL REQUEST.
@@ -274,33 +294,32 @@ async function flush() {
 async function guardar(key: string, data: unknown, ttl: number) {
   if (!redis) {
     mem.set(key, { v: data, exp: Date.now() + ttl * 1000 });
-    anotar((m) => { m.comandos += 1; });
+    anotar((m) => { m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; });
     return;
   }
   const t0 = Date.now();
+  // La llamada lógica y su primer intento salen ANTES de escribir; el comando
+  // sólo se cuenta si Upstash lo confirmó, para no inflar lo facturado con lo
+  // que nunca ejecutó. Los reintentos se cuentan desde el `backoff` del SDK.
+  anotar((m) => { m.redis.modo = "redis"; m.redis.llamadasLogicas += 1; m.redis.intentosHttp += 1; });
   try {
     await guardarSinRomper({
       clave: key,
       escribir: async () => {
         await redis!.set(key, data, { ex: ttl });
-        // Sólo se contabiliza lo que SE ESCRIBIÓ. Contar acá y no afuera es lo
-        // que evita que un fallo de escritura infle `comandos` con algo que
-        // Upstash nunca ejecutó.
-        anotar((m) => { m.comandos += 1; m.requests += 1; });
+        anotar((m) => { m.redis.comandos += 1; });
       },
       // El aviso dice ESCRITURA, no "cache falló": son dos cosas distintas y la
       // diferencia importa para leer un incidente. Una lectura caída es un MISS
       // y ya; una escritura caída significa además que **el próximo request va a
       // rearmar**, y si eso pasa seguido el costo se multiplica en silencio.
       avisar: ({ clave, error }) => {
-        // El viaje SÍ ocurrió aunque no haya quedado nada guardado: se cuenta,
-        // igual que en el camino de lectura.
-        anotar((m) => { m.requests += 1; });
+        anotar((m) => { m.redis.fallos.escritura += 1; });
         console.error(`[cache] set falló, la respuesta se entrega igual: ${clave} —`, error);
       },
     });
   } finally {
-    anotar((m) => { m.msCache += Date.now() - t0; });
+    anotar((m) => { m.redis.ms += Date.now() - t0; });
   }
 }
 

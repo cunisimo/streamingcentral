@@ -1,0 +1,1764 @@
+{
+ "fecha": "2026-09-11T21:27:14.036Z",
+ "valida": true,
+ "invalidos": [],
+ "incompletos": [
+  "F5a"
+ ],
+ "app": "http://127.0.0.1:3000",
+ "dobles": {
+  "tmdb": "http://127.0.0.1:4801",
+  "supabase": "http://127.0.0.1:4802",
+  "redis": "http://127.0.0.1:4803"
+ },
+ "reinicios": [
+  {
+   "motivo": "1 solicitud(es) activa(s) al cerrar F5a",
+   "pidViejo": 40024,
+   "exit": {
+    "code": 1,
+    "signal": null
+   },
+   "puertoCerrado": true,
+   "activasQueQuedaban": 1,
+   "pidNuevo": 27080
+  }
+ ],
+ "cierre": {
+  "motivo": "fin de la corrida",
+  "pidViejo": 27080,
+  "exit": {
+   "code": 1,
+   "signal": null
+  },
+  "puertoCerrado": true,
+  "activasQueQuedaban": 0
+ },
+ "resultados": [
+  {
+   "id": "C0",
+   "titulo": "control: la app habla con los dobles (arrancan en cero y una solicitud los mueve)",
+   "query": "providers=n,d,m",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 2550,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 2550,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 2454ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 25450ms | supabase 4 consultas (4 ok) 325ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 29263ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,1,4,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 2454,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 926,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 43,
+     "GET /discover/tv": 51,
+     "GET /movie/{id}/watch/providers": 414,
+     "GET /tv/{id}/watch/providers": 418
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 4,
+    "redisHttp": 993,
+    "redisComandos": 993,
+    "redisPorComando": {
+     "MGET": 65,
+     "SET": 928
+    }
+   },
+   "validacion": {
+    "id": "C0",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 926,
+     "supabase": 4,
+     "redisHttp": 993,
+     "redisComandos": 993
+    }
+   }
+  },
+  {
+   "id": "B1",
+   "titulo": "Home FRÍO, una solicitud",
+   "query": "providers=n,d,m",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 1950,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 1950,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 1932ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 16817ms | supabase 4 consultas (4 ok) 95ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 21396ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 1932,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 926,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 43,
+     "GET /discover/tv": 51,
+     "GET /movie/{id}/watch/providers": 414,
+     "GET /tv/{id}/watch/providers": 418
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 4,
+    "redisHttp": 993,
+    "redisComandos": 993,
+    "redisPorComando": {
+     "MGET": 65,
+     "SET": 928
+    }
+   },
+   "validacion": {
+    "id": "B1",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 926,
+     "supabase": 4,
+     "redisHttp": 993,
+     "redisComandos": 993
+    }
+   }
+  },
+  {
+   "id": "B1b",
+   "titulo": "control de repetibilidad: el mismo Home frío otra vez",
+   "query": "providers=n,d,m",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 1804,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 1804,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 1783ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 15752ms | supabase 4 consultas (4 ok) 78ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 19905ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 1783,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 926,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 43,
+     "GET /discover/tv": 51,
+     "GET /movie/{id}/watch/providers": 414,
+     "GET /tv/{id}/watch/providers": 418
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 4,
+    "redisHttp": 993,
+    "redisComandos": 993,
+    "redisPorComando": {
+     "MGET": 65,
+     "SET": 928
+    }
+   },
+   "validacion": {
+    "id": "B1b",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 926,
+     "supabase": 4,
+     "redisHttp": 993,
+     "redisComandos": 993
+    }
+   }
+  },
+  {
+   "id": "B2",
+   "titulo": "Home CALIENTE, una solicitud (clave guardada por B1b)",
+   "query": "providers=n,d,m",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 20,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 20,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 13ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 13ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 13,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "B2",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "B3",
+   "titulo": "5 solicitudes IGUALES con caché fría (comportamiento actual, sin single-flight)",
+   "query": "providers=n,d,m",
+   "veces": 5,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 6473,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 6273,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    },
+    {
+     "estado": 200,
+     "ms": 6472,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    },
+    {
+     "estado": 200,
+     "ms": 6355,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    },
+    {
+     "estado": 200,
+     "ms": 6420,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    },
+    {
+     "estado": 200,
+     "ms": 6455,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 5,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 6260ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 26110ms | supabase 4 consultas (4 ok) 404ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 34170ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 6341ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 664 llamadas (664 ok) 31685ms | supabase 3 consultas (3 ok) 246ms | redis 729 llamadas / 729 intentos http / 729 comandos | 958 claves (293 hit / 665 miss) | 34179ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 6402ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 708 llamadas (708 ok) 27091ms | supabase 3 consultas (3 ok) 170ms | redis 773 llamadas / 773 intentos http / 773 comandos | 958 claves (249 hit / 709 miss) | 27496ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 6433ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 658 llamadas (658 ok) 23926ms | supabase 3 consultas (3 ok) 95ms | redis 723 llamadas / 723 intentos http / 723 comandos | 958 claves (299 hit / 659 miss) | 26067ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 6459ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 642 llamadas (642 ok) 26914ms | supabase 3 consultas (3 ok) 307ms | redis 707 llamadas / 707 intentos http / 707 comandos | 958 claves (315 hit / 643 miss) | 28755ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6260,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
+    },
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6341,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 664,
+     "supabase": 3,
+     "redisIntentos": 729,
+     "redisComandos": 729
+    },
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6402,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 708,
+     "supabase": 3,
+     "redisIntentos": 773,
+     "redisComandos": 773
+    },
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6433,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 658,
+     "supabase": 3,
+     "redisIntentos": 723,
+     "redisComandos": 723
+    },
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6459,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 642,
+     "supabase": 3,
+     "redisIntentos": 707,
+     "redisComandos": 707
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 3598,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 215,
+     "GET /discover/tv": 255,
+     "GET /movie/{id}/watch/providers": 1540,
+     "GET /tv/{id}/watch/providers": 1588
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 16,
+    "redisHttp": 3925,
+    "redisComandos": 3925,
+    "redisPorComando": {
+     "MGET": 321,
+     "SET": 3604
+    }
+   },
+   "validacion": {
+    "id": "B3",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "5/5 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 3598,
+     "supabase": 16,
+     "redisHttp": 3925,
+     "redisComandos": 3925
+    }
+   }
+  },
+  {
+   "id": "B4a",
+   "titulo": "variante equivalente: mismo conjunto en otro orden (d,m,n) → misma clave que B3",
+   "query": "providers=d,m,n",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 29,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 29,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] 15ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 15ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 15,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "B4a",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "B4b",
+   "titulo": "variante distinta: n,d → otra clave, rearma",
+   "query": "providers=n,d",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 1342,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 1342,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,n:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=2v/31 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,n:",
+    "[home] 1330ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 404 llamadas (404 ok) 6036ms | supabase 2 consultas (2 ok) 78ms | redis 471 llamadas / 471 intentos http / 471 comandos | 968 claves (565 hit / 403 miss) | 7323ms | lotes: 68 de [1,62,1,2,2,20,100,12,12,5,3,5,3,2,1,20,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,3] | clave home:es-ES.r1:v6:2345676558:d,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,n:",
+     "msTotal": 1330,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 404,
+     "supabase": 2,
+     "redisIntentos": 471,
+     "redisComandos": 471
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 404,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 2,
+     "GET /movie/{id}/watch/providers": 204,
+     "GET /tv/{id}/watch/providers": 198
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 2,
+    "redisHttp": 471,
+    "redisComandos": 471,
+    "redisPorComando": {
+     "MGET": 68,
+     "SET": 403
+    }
+   },
+   "validacion": {
+    "id": "B4b",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 404,
+     "supabase": 2,
+     "redisHttp": 471,
+     "redisComandos": 471
+    }
+   }
+  },
+  {
+   "id": "B4c",
+   "titulo": "variante por toggle: n,d,m con t=accion:tv → otra clave, rearma",
+   "query": "providers=n,d,m&t=accion:tv",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 852,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 852,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
+    "[home] VUELTAS accion=4v/106 scifi=4v/112 terror=4v/106 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
+    "[home] 833ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 119 llamadas (119 ok) 1000ms | supabase 2 consultas (2 ok) 34ms | redis 178 llamadas / 178 intentos http / 178 comandos | 956 claves (837 hit / 119 miss) | 2179ms | lotes: 59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo riel-accion/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
+     "msTotal": 833,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 119,
+     "supabase": 2,
+     "redisIntentos": 178,
+     "redisComandos": 178
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 119,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 1,
+     "GET /discover/tv": 9,
+     "GET /tv/{id}/watch/providers": 109
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 2,
+    "redisHttp": 178,
+    "redisComandos": 178,
+    "redisPorComando": {
+     "MGET": 59,
+     "SET": 119
+    }
+   },
+   "validacion": {
+    "id": "B4c",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 119,
+     "supabase": 2,
+     "redisHttp": 178,
+     "redisComandos": 178
+    }
+   }
+  },
+  {
+   "id": "B4d",
+   "titulo": "HOY (#18 abierto): n,d,m&t=accion:movie —el default escrito— es OTRA clave que sin `t`: MISS y rearma",
+   "query": "providers=n,d,m&t=accion:movie",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 794,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 794,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
+    "[home] 773ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 1 llamadas (1 ok) 3ms | supabase 2 consultas (2 ok) 32ms | redis 60 llamadas / 60 intentos http / 60 comandos | 956 claves (955 hit / 1 miss) | 773ms | lotes: 59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
+     "msTotal": 773,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 1,
+     "supabase": 2,
+     "redisIntentos": 60,
+     "redisComandos": 60
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 1,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 1
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 2,
+    "redisHttp": 60,
+    "redisComandos": 60,
+    "redisPorComando": {
+     "MGET": 59,
+     "SET": 1
+    }
+   },
+   "validacion": {
+    "id": "B4d",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 1,
+     "supabase": 2,
+     "redisHttp": 60,
+     "redisComandos": 60
+    }
+   }
+  },
+  {
+   "id": "F1",
+   "titulo": "TMDB responde 500: el Home sale DEGRADADO y no se guarda",
+   "query": "providers=n,d,m,p",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 463,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 463,
+     "hero": 0,
+     "rails": 11,
+     "degradado": true,
+     "fallos": 1
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] \"ultimos p1\" falló, se degrada a vacío — Error: TMDB 500 en /discover/movie",
+    "[home] miniseries: 0 < 15, se oculta",
+    "[home] VUELTAS accion=0v/0 scifi=0v/0 terror=0v/0 drama=0v/0 comedia=0v/0 documental=0v/0 miniseries=0v/0 (tope 4)",
+    "[home] payload degradado: 1 fuente(s) caída(s)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] 449ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 x5xx) 5716ms | supabase 6 consultas (6 ok) 41ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 558ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4] | clave home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,p:",
+     "msTotal": 449,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 277,
+     "supabase": 6,
+     "redisIntentos": 31,
+     "redisComandos": 31
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 277,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 125,
+     "GET /discover/tv": 152
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 6,
+    "redisHttp": 31,
+    "redisComandos": 31,
+    "redisPorComando": {
+     "MGET": 27,
+     "SET": 4
+    }
+   },
+   "validacion": {
+    "id": "F1",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 277,
+     "supabase": 6,
+     "redisHttp": 31,
+     "redisComandos": 31
+    }
+   }
+  },
+  {
+   "id": "F1r",
+   "titulo": "TMDB vuelve: la misma clave rearma y guarda",
+   "query": "providers=n,d,m,p",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 2154,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 2154,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] 2131ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 21456ms | supabase 2 consultas (2 ok) 28ms | redis 1022 llamadas / 1022 intentos http / 1022 comandos | 989 claves (32 hit / 957 miss) | 25381ms | lotes: 65 de [1,100,1,24,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,p:",
+     "msTotal": 2131,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 957,
+     "supabase": 2,
+     "redisIntentos": 1022,
+     "redisComandos": 1022
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 957,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 413,
+     "GET /tv/{id}/watch/providers": 419
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 2,
+    "redisHttp": 1022,
+    "redisComandos": 1022,
+    "redisPorComando": {
+     "MGET": 65,
+     "SET": 957
+    }
+   },
+   "validacion": {
+    "id": "F1r",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 2,
+     "redisHttp": 1022,
+     "redisComandos": 1022
+    }
+   }
+  },
+  {
+   "id": "F1h",
+   "titulo": "…y la siguiente es HIT",
+   "query": "providers=n,d,m,p",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 27,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 27,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,p:",
+    "[home] 14ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 14ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,p:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,p:",
+     "msTotal": 14,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "F1h",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "F2",
+   "titulo": "TMDB responde 429 con Retry-After",
+   "query": "providers=n,d,m,at",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 385,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 385,
+     "hero": 0,
+     "rails": 11,
+     "degradado": true,
+     "fallos": 1
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:at,d,m,n:",
+    "[home] \"ultimos p1\" falló, se degrada a vacío — Error: TMDB 429 en /discover/movie",
+    "[home] miniseries: 0 < 15, se oculta",
+    "[home] VUELTAS accion=0v/0 scifi=0v/0 terror=0v/0 drama=0v/0 comedia=0v/0 documental=0v/0 miniseries=0v/0 (tope 4)",
+    "[home] payload degradado: 1 fuente(s) caída(s)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:at,d,m,n:",
+    "[home] 369ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 x429) 3109ms | supabase 6 consultas (6 ok) 51ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 359ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4] | clave home:es-ES.r1:v6:2345676558:at,d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:at,d,m,n:",
+     "msTotal": 369,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 277,
+     "supabase": 6,
+     "redisIntentos": 31,
+     "redisComandos": 31
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 277,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 125,
+     "GET /discover/tv": 152
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 6,
+    "redisHttp": 31,
+    "redisComandos": 31,
+    "redisPorComando": {
+     "MGET": 27,
+     "SET": 4
+    }
+   },
+   "validacion": {
+    "id": "F2",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 277,
+     "supabase": 6,
+     "redisHttp": 31,
+     "redisComandos": 31
+    }
+   }
+  },
+  {
+   "id": "F3",
+   "titulo": "TMDB CAÍDO (corta el socket): fallos de red",
+   "query": "providers=n,d,m,cr",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 617,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 617,
+     "hero": 0,
+     "rails": 11,
+     "degradado": true,
+     "fallos": 1
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+    "[home] \"ultimos p1\" falló, se degrada a vacío — [TypeError: fetch failed] {",
+    "[home] miniseries: 0 < 15, se oculta",
+    "[home] VUELTAS accion=0v/0 scifi=0v/0 terror=0v/0 drama=0v/0 comedia=0v/0 documental=0v/0 miniseries=0v/0 (tope 4)",
+    "[home] payload degradado: 1 fuente(s) caída(s)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+    "[home] 602ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 red) 9717ms | supabase 6 consultas (6 ok) 76ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 570ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,4,4,4,12,4,1,1,1,1,4,4,4,4,4,4,4] | clave home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+    "[home] EJES hero-todos/tv=taquilla hero-todos/movie=taquilla riel-scifi/tv=hondo riel-accion/movie=nuevo riel-drama/tv=nuevo riel-terror/movie=taquilla riel-documental/tv=taquilla aud-adult-anime/movie=nuevo riel-comedia/movie=taquilla aud-family/movie=top aud-family/tv=top aud-adult-anime/tv=nuevo riel-mini-miniseries/tv=top"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+     "msTotal": 602,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 277,
+     "supabase": 6,
+     "redisIntentos": 31,
+     "redisComandos": 31
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 277,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 125,
+     "GET /discover/tv": 152
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 6,
+    "redisHttp": 31,
+    "redisComandos": 31,
+    "redisPorComando": {
+     "MGET": 27,
+     "SET": 4
+    }
+   },
+   "validacion": {
+    "id": "F3",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 277,
+     "supabase": 6,
+     "redisHttp": 31,
+     "redisComandos": 31
+    }
+   }
+  },
+  {
+   "id": "F3r",
+   "titulo": "TMDB vuelve",
+   "query": "providers=n,d,m,cr",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 2017,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 2017,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+    "[home] 1998ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 18736ms | supabase 2 consultas (2 ok) 54ms | redis 1022 llamadas / 1022 intentos http / 1022 comandos | 989 claves (32 hit / 957 miss) | 23271ms | lotes: 65 de [1,100,1,24,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+     "msTotal": 1998,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 957,
+     "supabase": 2,
+     "redisIntentos": 1022,
+     "redisComandos": 1022
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 957,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 413,
+     "GET /tv/{id}/watch/providers": 419
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 2,
+    "redisHttp": 1022,
+    "redisComandos": 1022,
+    "redisPorComando": {
+     "MGET": 65,
+     "SET": 957
+    }
+   },
+   "validacion": {
+    "id": "F3r",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 2,
+     "redisHttp": 1022,
+     "redisComandos": 1022
+    }
+   }
+  },
+  {
+   "id": "F4",
+   "titulo": "Supabase CAÍDO con TMDB sano",
+   "query": "providers=n,d,m,pp",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 8814,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 8814,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+    "[home] 8798ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 15406ms | supabase 30 consultas (0 ok, 30 red) 264ms | redis 1030 llamadas / 1030 intentos http / 1030 comandos | 989 claves (25 hit / 964 miss) | 18624ms | lotes: 66 de [1,100,1,24,2,1,1,1,1,20,7,5,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+     "msTotal": 8798,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 957,
+     "supabase": 30,
+     "redisIntentos": 1030,
+     "redisComandos": 1030
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 957,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 413,
+     "GET /tv/{id}/watch/providers": 419
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 30,
+    "redisHttp": 1030,
+    "redisComandos": 1030,
+    "redisPorComando": {
+     "MGET": 66,
+     "SET": 964
+    }
+   },
+   "validacion": {
+    "id": "F4",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 30,
+     "redisHttp": 1030,
+     "redisComandos": 1030
+    }
+   }
+  },
+  {
+   "id": "F4r",
+   "titulo": "Supabase vuelve",
+   "query": "providers=n,d,m,pp",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 30,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 30,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+    "[home] 14ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 14ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,pp:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+     "msTotal": 14,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "F4r",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "F5a",
+   "titulo": "Redis CAÍDO (corta el socket) durante una ventana de 60 s: ¿completa?",
+   "query": "providers=n,d,m,mb",
+   "veces": 1,
+   "timeoutMs": 60000,
+   "permiteIncompleto": true,
+   "msPared": 60014,
+   "respuestas": [
+    {
+     "estado": null,
+     "ms": 60014,
+     "error": "TimeoutError"
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 1,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,mb,n:"
+   ],
+   "terminales": [],
+   "lineasCacheError": 323,
+   "dobles": {
+    "tmdb": 297,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 111,
+     "GET /tv/{id}/watch/providers": 61
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 11,
+    "redisHttp": 1943,
+    "redisComandos": 0,
+    "redisPorComando": {}
+   },
+   "validacion": {
+    "id": "F5a",
+    "estado": "incompleto",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 1,
+    "igualdadesVerificadas": false,
+    "resumen": "no completó en más de 60000 ms: 0/1 completadas, 1 activa(s) en el servidor; actividad observada en los dobles sin igualdad exigible",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 0,
+     "redisComandos": 0
+    }
+   }
+  },
+  {
+   "id": "F5b",
+   "titulo": "recuperación CONTROLADA: Redis caído al pedir, vuelve a los 15 s, se espera a que la solicitud termine",
+   "query": "providers=n,d,m,ok",
+   "veces": 1,
+   "timeoutMs": 600000,
+   "permiteIncompleto": false,
+   "msPared": 17678,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 17678,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [
+    {
+     "que": "redis vuelve",
+     "ms": 15003
+    }
+   ],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] 17598ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 29145ms | supabase 5 consultas (5 ok) 149ms | redis 1026 llamadas / 1655 intentos http / 921 comandos | 989 claves (29 hit / 960 miss) | 4 fallo(s) lectura, 101 fallo(s) escritura | 602331ms | lotes: 62 de [2,7,5,20,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-documental/tv=taquilla riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo riel-mini-miniseries/tv=top"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+     "msTotal": 17598,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 957,
+     "supabase": 5,
+     "redisIntentos": 1655,
+     "redisComandos": 921
+    }
+   ],
+   "lineasCacheError": 105,
+   "dobles": {
+    "tmdb": 957,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 413,
+     "GET /tv/{id}/watch/providers": 419
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 5,
+    "redisHttp": 1655,
+    "redisComandos": 921,
+    "redisPorComando": {
+     "MGET": 62,
+     "SET": 859
+    }
+   },
+   "validacion": {
+    "id": "F5b",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 5,
+     "redisHttp": 1655,
+     "redisComandos": 921
+    }
+   }
+  },
+  {
+   "id": "F5c",
+   "titulo": "la solicitud SIGUIENTE a la recuperación",
+   "query": "providers=n,d,m,ok",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 32,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 32,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] 16ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 16ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,ok:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+     "msTotal": 16,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "F5c",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "F5d",
+   "titulo": "…y la siguiente",
+   "query": "providers=n,d,m,ok",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 37,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 37,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] 21ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 20ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,ok:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+     "msTotal": 21,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "F5d",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "F6",
+   "titulo": "Redis responde 500 (respuesta HTTP de error: el SDK NO reintenta)",
+   "query": "providers=n,d,m,un",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 3081,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 3081,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,un:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,un:",
+    "[home] 3069ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 20549ms | supabase 34 consultas (34 ok) 615ms | redis 1055 llamadas / 1055 intentos http / 0 comandos | 989 claves (0 hit / 989 miss) | 66 fallo(s) lectura, 989 fallo(s) escritura | 27977ms | lotes: ninguno | clave home:es-ES.r1:v6:2345676558:d,m,n,un:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,un:",
+     "msTotal": 3069,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 957,
+     "supabase": 34,
+     "redisIntentos": 1055,
+     "redisComandos": 0
+    }
+   ],
+   "lineasCacheError": 1055,
+   "dobles": {
+    "tmdb": 957,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 413,
+     "GET /tv/{id}/watch/providers": 419
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 34,
+    "redisHttp": 1055,
+    "redisComandos": 0,
+    "redisPorComando": {}
+   },
+   "validacion": {
+    "id": "F6",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 34,
+     "redisHttp": 1055,
+     "redisComandos": 0
+    }
+   }
+  },
+  {
+   "id": "L1",
+   "titulo": "latencia declarada: TMDB +100 ms por llamada, Home frío",
+   "query": "providers=n,d,m,vx",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 8052,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 8052,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,vx:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,vx:",
+    "[home] 8032ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 115325ms | supabase 4 consultas (4 ok) 33ms | redis 1025 llamadas / 1025 intentos http / 1025 comandos | 989 claves (30 hit / 959 miss) | 12397ms | lotes: 66 de [1,100,24,1,20,2,7,5,1,1,28,28,1,1,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,vx:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,vx:",
+     "msTotal": 8032,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 957,
+     "supabase": 4,
+     "redisIntentos": 1025,
+     "redisComandos": 1025
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 957,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 413,
+     "GET /tv/{id}/watch/providers": 419
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 4,
+    "redisHttp": 1025,
+    "redisComandos": 1025,
+    "redisPorComando": {
+     "MGET": 66,
+     "SET": 959
+    }
+   },
+   "validacion": {
+    "id": "L1",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 4,
+     "redisHttp": 1025,
+     "redisComandos": 1025
+    }
+   }
+  }
+ ]
+}
