@@ -40,17 +40,20 @@
   7. El rechazo de `fb89b45` y los diagnósticos previos al arreglo están al
      final de este bloque como **antecedentes históricos**, no como estado.
 
-- **Etapa PREVIA de capacidad (#21): MERGEADA en `main` (`3ad935d`), todavía
-  sin deploy.** Codex auditó `f8f42a5` sin bloqueos; la rama se rebaseó sobre
-  `07ccecf` y entró con `--no-ff`. Sobre el `main` mergeado, desde cero:
-  específicos 18/18, suite 1355/1365 (0 fallos, 10 omitidos), `tsc` limpio,
-  build fresco exit 0 (2 min 2 s, `.next` borrado antes). Alcance intacto: una escritura fallida en Redis ya no descarta un payload correcto
-  (`guardar` delega en `lib/escritura-cache.ts`). Se agregaron los dos escenarios
-  que faltaban del criterio de cierre —Redis entero caído y recuperación—
-  compuestos con `resolverConCache` real y con control contra el `guardar`
-  viejo. **Comprobado: el comportamiento del resolver. Inferido: el HTTP
-  200**, deducido del handler y no probado provocando una caída real de Redis.
-  Detalle en `ISSUES.md` #21. No es parte del #22 ni de Android.
+- **Etapa PREVIA de capacidad (#21): implementada, mergeada, pusheada y
+  DESPLEGADA. #21 resuelto en el alcance aprobado.** Merge `3ad935d` (rama
+  `fix/cache-escritura-no-rompe`, auditada por Codex en `f8f42a5`), en
+  `origin/main` y en Producción: deployment de Vercel `success` para `548ffb6`,
+  y `app.yump.ar` aliasado a ese deployment (`vercel inspect`). Verificado
+  desde cero sobre el `main` mergeado: específicos 18/18, suite 1355/1365 (0
+  fallos, 10 omitidos), `tsc` limpio, build fresco exit 0. **Comprobado: el
+  comportamiento del resolver** (siete escenarios con control y guards que atan
+  producción). **Inferido: el HTTP 200**, del handler; no se provocó una caída
+  real de Redis. **Esto no agrega capacidad, single-flight, bloqueo ni CDN:**
+  únicamente evita perder un payload válido cuando falla su escritura. El #21
+  se retiró de `ISSUES.md`; su detalle vive en la Etapa PREVIA del informe
+  (`medidas/2026-09-10-capacidad-trafico.md` §9). **La siguiente etapa es la
+  Etapa 0 (observabilidad: poder medir), no iniciada.**
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -170,7 +173,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
 
    | Etapa | Qué | Issue | ¿Depende de medir? |
    |---|---|---|---|
-   | **PREVIA** | El 500 por escritura fallida en Redis | #21 | **No** |
+   | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno | #17 | Sí |
@@ -217,7 +220,7 @@ Detalle completo en
 **Revisada de forma independiente el mismo día** (ver el bloque de evidencia
 arriba). Lo que sigue ya incorpora las siete correcciones.
 
-### Lo comprobado — issues #17 a #21
+### Lo comprobado — issues #17 a #21 (el #21, resuelto el 11/09)
 
 | # | Hallazgo | Cómo se comprobó |
 |---|---|---|
@@ -225,11 +228,12 @@ arriba). Lo que sigue ya incorpora las siete correcciones.
 | #18 | `/api/home` no canoniza sus parámetros. **19 filas, 17 entradas distintas, 14 claves distintas**, con el arnés y la salida íntegra publicados | **Ejecutado** con `claveHome` real |
 | #19 | Una caída de TMDB se realimenta: el cliente **de TMDB** no reintenta ni lee `Retry-After`, el degradado no se guarda, y cada visita rearma. El techo de peticiones en vuelo es por proceso, o sea 24 × instancias | Lectura: `lib/tmdb.ts:38-40` y `56-67`, `lib/home.ts:706` |
 | #20 | No hay contador de llamadas a TMDB ni a Supabase, ni de composiciones; lo que se llama `requests` mezcla tres unidades; `vercel logs` no devolvió nada el 10/09 | Lectura + ejecución |
-| **#21** | **Si falla la escritura en Redis, un Home BUENO termina en 500** — mientras que uno degradado se sirve sin problema, porque nunca intenta escribir | **Ejecutado** sobre el resolver real |
+| **#21** | **Si falla la escritura en Redis, un Home BUENO terminaba en 500** — mientras que uno degradado se servía sin problema, porque nunca intenta escribir. **Resuelto y desplegado el 11/09** (Etapa PREVIA) | **Ejecutado** sobre el resolver real; el arreglo, probado con el resolver real y guards |
 
-**#21 es el más chico y el más urgente**: es un `catch` que falta y no depende de
-medir nada. Por eso es la **Etapa PREVIA** del plan, anterior a la Etapa 0, con la
-decisión ya aprobada por el dueño: *se entrega el payload y se registra el error*.
+**#21 era el más chico y el más urgente**: un `catch` que faltaba y no dependía
+de medir nada. Por eso fue la **Etapa PREVIA** del plan, anterior a la Etapa 0,
+con la decisión aprobada por el dueño: *se entrega el payload y se registra el
+error*. **Hecha y desplegada el 11/09.** Lo que sigue es la Etapa 0.
 
 ### Lo que se revisó y **no** es un problema
 
@@ -240,7 +244,8 @@ decisión ya aprobada por el dueño: *se entrega el payload y se registra el err
 - Las **lecturas** de Redis sí se unen entre peticiones concurrentes, y además
   **el cliente de Redis sí reintenta** fallos de transporte (6 intentos). La
   primera versión del informe decía lo contrario y era falso.
-- La **lectura** de Redis está bien cubierta ante fallos. La escritura no (#21).
+- La **lectura** de Redis está bien cubierta ante fallos. La escritura, desde el
+  11/09, también (#21, Etapa PREVIA).
 - `page` está normalizada en las rutas paginadas.
 - `Vary: Origin` ya se emite siempre: es la condición previa de cualquier caché
   compartida, y ya está cumplida. **No es autenticación ni sustituye un límite de

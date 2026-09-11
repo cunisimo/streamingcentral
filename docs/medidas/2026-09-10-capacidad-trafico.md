@@ -672,7 +672,7 @@ llaman **#**. No son la misma numeración y conviene no confundirlas:
 | #18 — `/api/home` no canoniza | H5, H6, H10, H11 |
 | #19 — Caída de TMDB realimentada | H3, H4 |
 | #20 — No se puede medir el costo externo | H12, H13, H14, H17 |
-| **#21** — Escritura fallida en Redis → 500 | **H16** |
+| **#21** — Escritura fallida en Redis → 500 — **RESUELTO el 11/09** (Etapa PREVIA, §9) | **H16** |
 
 H8 (sin CDN), H9 (sin límite por ruta) y H15 (comentario obsoleto) no tienen
 issue propio: van en la Etapa 4 y en el margen.
@@ -702,7 +702,7 @@ fija un número definitivo sin medición.**
 
 | Etapa | Qué hace | ¿Depende de medir? |
 |---|---|---|
-| **PREVIA** | El 500 por escritura fallida en Redis (#21) | **No** |
+| **PREVIA** ✅ hecha el 11/09 | El 500 por escritura fallida en Redis (#21) | **No** |
 | 0 | Poder medir | — |
 | 1 | Canonizar entradas + single-flight **del Home** | Sí, para verificar |
 | 2 | Turno distribuido + último bueno | Sí |
@@ -775,6 +775,193 @@ instrumentación**, que es la parte más lenta del plan. No hay ninguna razón p
 esperar: el arreglo es un `catch`, la decisión ya está tomada, y sus criterios de
 aceptación se comprueban con el resolver real —igual que se reprodujo el
 problema— sin necesitar el banco, ni contadores, ni Producción.
+
+#### Cierre — 11/09/2026: implementada, mergeada, pusheada y desplegada
+
+- **Rama** `fix/cache-escritura-no-rompe`: `fix(cache)` + `test(cache)`, auditada
+  por Codex (`f8f42a5`) sin bloqueos técnicos; rebaseada sobre `07ccecf` y
+  mergeada en `main` con `--no-ff` como **`3ad935d`**. Documentales: `548ffb6`
+  (mergeado, sin deploy) y el commit que cierra esta sección.
+- **Verificado desde cero sobre el `main` mergeado:** `lib/escritura-cache.test.ts`
+  18/18; `npm test` 1355/1365, 0 fallos, 10 omitidos; `tsc --noEmit` limpio;
+  `npm run build` exit 0 en 2 min 2 s con `.next` borrado antes
+  (`BUILD_ID ZFfliiMz09Hs25ZLT5evT`); `git diff --check` limpio.
+- **Deploy:** push `adf7065..548ffb6`; deployment de Producción de Vercel para
+  `548ffb6` con estado `success` (GitHub Deployments API) y, por `vercel inspect
+  app.yump.ar`, el dominio **aliasado a ese mismo deployment**
+  (`streamingcentral-qdsh71vxj…`, `● Ready`). El cambio es de servidor
+  (`lib/cache.ts`), así que ningún byte del cliente lo distingue del deploy
+  anterior: la evidencia es el alias, no el bundle.
+- **Lo comprobado ejecutando:** el comportamiento del resolver con la política
+  compuesta (los siete escenarios y sus controles), y que producción entra por
+  `guardarSinRomper` (guards que fallan 3 de 3 contra el código anterior).
+- **Lo inferido:** el HTTP 200 al usuario. Se deduce del handler
+  (`NextResponse.json(await homePayload(...))` ya no entra al `catch` del 500);
+  **no se probó provocando una caída real de Redis**, ni en Producción ni en
+  un banco.
+- **Lo que esto NO hace:** no agrega capacidad, single-flight, bloqueo ni CDN.
+  Únicamente evita perder un payload válido cuando falla su escritura. La
+  siguiente etapa es la **Etapa 0** (poder medir), que no se inició.
+
+#### El issue #21, tal como estaba en `ISSUES.md` al retirarlo (11/09) — Si falla la escritura en Redis, un Home BUENO termina en 500
+
+**Detectado el 10/09/2026** por la revisión independiente
+(`medidas/2026-09-10-revision-capacidad-codex.md`, punto 3) y **reproducido**
+sobre el resolver real. Es el más chico de los cinco y **el más urgente**: es un
+`catch` que falta y no depende de medir nada.
+
+##### La asimetría
+
+El camino de **lectura** de Redis está cuidado: `getSuelto` (`lib/cache.ts:189-195`)
+y `flush` (`247-253`) capturan el error, lo registran y devuelven `null`, o sea
+"no estaba". El contrato es explícito: *"seguí sin cache"*.
+
+El de **escritura** no. `guardar` (`lib/cache.ts:258-271`) es
+`try { await redis.set(...) } finally { … }` — **sin `catch`**. Y
+`resolverConCache` (`lib/reparar-y-cachear.ts:43`) **espera** la escritura antes
+de devolver:
+
+```ts
+const { valor, fallo } = await opts.producir();
+if (!fallo) await opts.backend.escribir(opts.clave, valor, opts.ttl);
+return valor;
+```
+
+Así que un rechazo de `redis.set` sube por `cachedIf` → `homePayload`. Ninguno de
+los tres envoltorios de métricas lo captura (`withMetricasIdioma`,
+`withCacheMetrics`, `conRegistroDeEjes`), y `safe()` tampoco: envuelve las fuentes
+**adentro** de `composeHome`, no el guardado. Termina en el `catch` del handler
+(`app/api/home/route.ts:32-42`) → **500** con `hero: []` y `rails: []`.
+
+##### Reproducido
+
+Ejecutado sobre `resolverConCache` real con un backend cuyo `escribir()` rechaza:
+
+```
+RECHAZO: Redis caido
+-> el payload era correcto y el usuario no lo recibe
+control (degradado, no escribe): {"hero":["payload DEGRADADO"]}
+```
+
+🔴 **El control es la parte absurda.** Un payload **degradado** se sirve sin
+problema —porque nunca intenta escribir— y uno **completo y correcto** se pierde
+en un 500. **El sistema se porta peor cuanto mejor le salió el trabajo.**
+
+**Lo que NO se ejecutó:** el handler HTTP completo. La cadena hasta el 500 está
+comprobada leyendo las cinco piezas, no corriendo Next.
+
+##### Los cuatro estados de Redis, que hay que tratar por separado
+
+| Estado | Hoy | Falta |
+|---|---|---|
+| Lectura caída | Cubierto | Nada |
+| **Escritura caída** | **500 con el payload bueno en la mano** | Decidir qué se sirve |
+| Redis totalmente caído | Todo MISS, cada petición rearma | Con qué freno: no hay ni turno ni último bueno (viven en Redis, ver #17) |
+| Recuperación | Sin definir | Que no haya estampida al volver |
+
+##### La decisión — **APROBADA por el dueño el 10/09**
+
+> **Si el payload se produjo correctamente y sólo falla la escritura en Redis, se
+> entrega al usuario y se registra el error.**
+
+Era una de tres opciones posibles —entregar, reintentar, fallar— y estaba
+planteada como propuesta. Ya está elegida. Es además el mismo contrato que la
+**lectura** cumple desde siempre (`lib/cache.ts:189-195`: capturar, registrar,
+seguir): esto cierra la asimetría entre los dos caminos, no inventa una política
+nueva.
+
+##### 🔴 Prioridad: ETAPA PREVIA, antes de la Etapa 0
+
+Este issue **no depende de ninguna medición** y es el único del expediente del
+que se puede decir eso. Estaba escrito como punto 5 de la Etapa 1, o sea detrás
+de toda la instrumentación, y el dueño lo corrigió el 10/09: pasa a ser una etapa
+propia, anterior a la Etapa 0. Ver la **Etapa PREVIA** en
+`medidas/2026-09-10-capacidad-trafico.md` §9.
+
+El arreglo es un `catch`; sus criterios se comprueban con el resolver real —igual
+que se reprodujo el problema— sin banco, sin contadores y sin Producción.
+
+##### Alcance del arreglo
+
+1. `guardar` captura el fallo de escritura, lo registra y **no lo propaga**.
+2. El registro distingue "no pude leer el caché" de "armé un Home bueno y no lo
+   pude guardar". El segundo además implica que el próximo request va a rearmar.
+3. **No** cambia el resto del contrato: un degradado sigue sin guardarse, y una
+   lectura caída sigue siendo un MISS.
+
+##### Estado: MERGEADO en `main` (`3ad935d`), todavía sin deploy
+
+Al 11/09/2026. Codex auditó `f8f42a5` sin bloqueos técnicos; la rama
+`fix/cache-escritura-no-rompe` se rebaseó sobre `main` = `07ccecf` (`e4a9d52`) y
+entró con `--no-ff` como `3ad935d`. **Sin pushear ni desplegar todavía.** Sobre
+el `main` mergeado, desde cero: `lib/escritura-cache.test.ts` 18/18; `npm test`
+1355/1365, 0 fallos, 10 omitidos; `tsc --noEmit` limpio; `npm run build` exit 0
+en 2 min 2 s con `.next` borrado antes (`BUILD_ID ZFfliiMz09Hs25ZLT5evT`);
+`git diff --check adf7065..3ad935d` limpio. **Comprobado: el comportamiento del
+resolver. Inferido: el HTTP 200** — se deduce del handler, no se probó
+provocando una caída real de Redis. El alcance es el de siempre: `guardar` captura el fallo de escritura, lo registra y no lo
+propaga. Nada más — sin instrumentación, single-flight, bloqueo, CDN ni límites.
+
+La política vive en `lib/escritura-cache.ts` (módulo puro, por el mismo motivo
+que `lib/reparar-y-cachear.ts`: `lib/cache.ts` arrastra Upstash y no se puede
+importar desde `node --test`) y `guardar` delega en ella.
+
+**18 tests en `lib/escritura-cache.test.ts`**, en dos grupos que se necesitan:
+
+- **Los siete escenarios** componen la política con `resolverConCache` REAL —la
+  misma función que corre en producción—, cada uno con su control contra el
+  `guardar` viejo. Los dos que faltaban del criterio de cierre, agregados el
+  11/09:
+  - **Redis entero caído** (lectura y escritura fallan en el mismo recorrido):
+    el payload correcto se entrega, el productor corre una vez, la lectura
+    fallida cuenta como MISS, el fallo de escritura queda registrado con su
+    clave y **no queda nada guardado**. Control: el mismo recorrido con el
+    `guardar` viejo rechaza.
+  - **Recuperación:** la primera solicitud no puede leer ni guardar y entrega
+    el payload (1 producción, 1 aviso, nada guardado); Redis vuelve; la segunda
+    lee MISS, rearma y guarda (2 producciones, sin aviso nuevo); la tercera es
+    **HIT** — devuelve lo guardado por la segunda, **no ejecuta el productor**
+    (sigue en 2) y no intenta escribir. Control: con el `guardar` viejo la
+    primera rechaza; y se deja dicho que rearmar y guardar tras volver no es
+    mérito del arreglo — el código viejo también lo hace.
+  ⚠️ Los siete pasan **también contra el `lib/cache.ts` de `main`** (verificado
+  el 11/09 sustituyendo el archivo: 15 pasan, 3 fallan — los tres guards). No
+  importan `lib/cache.ts`, así que no pueden verlo: prueban que la política es
+  correcta, no que producción la use.
+- **Los guards estructurales** son los que atan producción: `guardar` delega en
+  `guardarSinRomper`, el `redis!.set` está adentro del callback que la política
+  envuelve, el camino de lectura quedó intacto y el aviso distingue escritura de
+  lectura. **Fallan 3 de 3 contra el código de `main`.**
+
+**Sobre "el usuario recibe el payload, con 200":** lo que se ejecuta es el
+resolver (`resolverConCache`) devolviendo el payload con la escritura fallando.
+**El handler HTTP no se ejecuta en ningún test**: `app/api/home/route.ts`
+importa `lib/home.ts` → Upstash y TMDB, y no se puede levantar aislado sin
+credenciales. El 200 se **deduce** del camino del handler: `manejar` hace
+`NextResponse.json(await homePayload(...))`, y con el resolver resolviendo en
+vez de rechazar ya no entra al `catch` que responde 500. Es una inferencia sobre
+código leído, no una prueba realizada, y queda como tal.
+
+Verificación del 11/09 sobre la rama antes del merge: `lib/escritura-cache.test.ts`
+18/18; `npm test` **1355/1365, 0 fallos, 10 omitidos** (con `.next` de
+producción; con el `.next` ausente omite 18); `tsc --noEmit` limpio; `npm run
+build` exit 0 en 2 min 16 s. Repetida sobre el `main` mergeado (arriba).
+Pendiente: push y deploy.
+
+##### Criterio de cierre
+
+- Escritura fallando + payload **correcto** → el usuario **recibe el payload**,
+  con 200, y el fallo queda registrado.
+- Escritura fallando + payload **degradado** → idéntico a hoy: se entrega y no se
+  guarda. **No puede haber regresión acá.**
+- **Lectura** fallando → idéntico a hoy (MISS, sigue sin caché).
+- Un fallo de escritura y uno de lectura se distinguen en el registro.
+- Probados por separado: sólo lectura caída, sólo escritura caída, Redis entero
+  caído, y recuperación.
+
+⚠️ **Lo que este issue NO arregla:** no reduce una sola llamada externa, no
+coordina nada y no mejora la capacidad. Sólo deja de perder trabajo que ya estaba
+bien hecho.
 
 ### Etapa 0 — Poder medir (antes de tocar el resto)
 
