@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { search } from "@/lib/enrich";
+import { acotarQ } from "@/lib/limites-entrada";
 import type { PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
 async function manejar(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get("q") || "";
-  if (!q.trim()) return NextResponse.json({ titles: [], people: [] });
+  // Con tope (Etapa 1, #18): sin él, cada cadena distinta de cualquier largo
+  // era una entrada de caché y hasta 7 llamadas a TMDB. Se trunca, no se
+  // rechaza; el número y los títulos que tienen que pasar están en el test.
+  const q = acotarQ(req.nextUrl.searchParams.get("q") || "");
+  if (!q) return NextResponse.json({ titles: [], people: [] });
   // `providers` NO filtra acá (buscás por nombre, querés verlo aunque no lo
   // tengas): solo ordena, poniendo primero lo que sí está en tus plataformas.
   const providers = (req.nextUrl.searchParams.get("providers")?.split(",").filter(Boolean)

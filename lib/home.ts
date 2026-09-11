@@ -36,7 +36,9 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withMetricas } from "./cache";
+import { backendCache, cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withMetricas } from "./cache";
+import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
+import { crearVueloHome } from "./home-vuelo";
 import { withFallosDisponibilidad } from "./fallos-disponibilidad";
 import { claveHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
@@ -640,10 +642,14 @@ export async function composeHome(opts: {
 // `personalize()` sigue siendo identidad y el hero usa la semilla compartida.
 // Si algún día el Home se personaliza de verdad, esta clave deja de alcanzar.
 function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): ClaveLocalizada {
-  // Ordenado en las dos partes: "n,d,m" y "d,m,n" son el mismo Home, y sin
-  // ordenar generarían dos entradas distintas con el mismo contenido.
+  // Recibe la lista y los tipos YA CANÓNICOS (lib/canonizar-home.ts): plataformas
+  // en minúsculas, del catálogo, sin repetir, ordenadas y acotadas; tipos sólo de
+  // rieles conocidos y sólo los que difieren de su default. Así "n,d,m", "d,m,n",
+  // "N,,d,M" y "n,zzz,d,m" son la misma clave, y `t` ausente es la misma clave
+  // que `t=accion:movie` (y que las siete claves en default que manda el
+  // cliente). Etapa 1 de capacidad, #18.
   const p = [...providers].sort().join(",");
-  const t = Object.keys(types).sort().map((k) => `${k}:${types[k]}`).join(",");
+  const t = claveDeTipos(types);
   // La versión de la clave se sube cuando cambia el CONTENIDO del payload, no
   // su forma: si no, lo que ya está cacheado sigue sirviéndose hasta que expire
   // el TTL (6 h) y el cambio "no se ve" después de deployar.
@@ -662,12 +668,36 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): C
   return claveHome(dailySeed(), p, t, HUELLA_IDIOMA);
 }
 
+// El vuelo compartido del Home (Etapa 1, #17): N solicitudes simultáneas a la
+// misma clave con caché fría = UNA composición, por proceso. Es de módulo
+// porque el mapa de promesas en vuelo tiene que ser uno por proceso. La
+// resolución es `cachedLocIf` entera —leer, producir, decidir, guardar— y por
+// eso el seguidor recibe el verdicto de degradación adentro del payload y
+// nunca escribe. Ver lib/home-vuelo.ts; NO se aplica a cached/cachedIf.
+const servirHome = crearVueloHome<HomePayload, ClaveLocalizada>({
+  leer: (clave) => backendCache.leer<HomePayload>(clave),
+  resolver: (clave, producir) => cachedLocIf(
+    clave,
+    TTL.home,
+    producir,
+    // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
+    // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
+    // caso "sin plataformas", que no cuesta nada recalcular.
+    (v) => !v.degradado && !v.sinPlataformas,
+  ),
+});
+
 export async function homePayload(opts: {
-  providers: PlatformCode[];
-  types?: Record<string, MediaType>;
+  /** Crudos, como llegan de la query: acá se canonizan. */
+  providers: readonly string[];
+  types?: Record<string, string>;
 }): Promise<HomePayload> {
-  const types = opts.types ?? {};
-  const key = homeKey(opts.providers, types);
+  // Canonizar ANTES de todo: la misma lista va a la clave y al contenido. Con
+  // sólo normalizar la clave, dos entradas equivalentes compartirían clave con
+  // contenidos distintos, que es peor que dos claves.
+  const providers = canonizarProviders(opts.providers);
+  const types = canonizarTipos(opts.types);
+  const key = homeKey(providers, types);
   // Una línea al ENTRAR y otra al salir: la diferencia entre las dos es la
   // cantidad de solicitudes que siguen corriendo. Abortar el `fetch` del lado
   // del cliente no cancela este handler, y sin esta línea eso es invisible.
@@ -691,34 +721,30 @@ export async function homePayload(opts: {
   // Métricas de idioma POR REQUEST, con el mismo mecanismo que el cache: con un
   // contador de módulo, dos Homes simultáneos en la misma instancia se
   // reiniciarían los números entre sí.
+  // El productor: sólo lo ejecuta el LÍDER del vuelo, en su propio scope, así
+  // que la composición se le cuenta a él y a nadie más.
+  const producirHome = async (): Promise<HomePayload> => {
+    anotar((m) => { m.home.cache = "miss"; m.home.composiciones += 1; });
+    // Los fallos de disponibilidad cuentan como degradación del payload: un
+    // Home con títulos en gris porque Supabase parpadeó no puede quedar
+    // congelado 6 h para todos.
+    const { res, fallos } = await withFallosDisponibilidad(
+      () => composeHome({ providers, types }),
+    );
+    if (!fallos) return res;
+    console.error(`[home] payload degradado: ${fallos} fallo(s) de disponibilidad`);
+    return { ...res, fallos: res.fallos + fallos, degradado: true };
+  };
   const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
-    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => cachedLocIf(
-    key,
-    TTL.home,
-    async () => {
-      anotar((m) => { m.home.cache = "miss"; m.home.composiciones += 1; });
-      // Los fallos de disponibilidad cuentan como degradación del payload: un
-      // Home con títulos en gris porque Supabase parpadeó no puede quedar
-      // congelado 6 h para todos.
-      const { res, fallos } = await withFallosDisponibilidad(
-        () => composeHome({ providers: opts.providers, types }),
-      );
-      if (!fallos) return res;
-      console.error(`[home] payload degradado: ${fallos} fallo(s) de disponibilidad`);
-      return { ...res, fallos: res.fallos + fallos, degradado: true };
-    },
-    // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
-    // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
-    // caso "sin plataformas", que no cuesta nada recalcular.
-    (v) => !v.degradado && !v.sinPlataformas,
-  ))));
+    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => servirHome(key, producirHome))));
   if (metricas.home.cache === null) metricas.home.cache = "hit";
   metricas.home.degradado = !!payload.degradado;
   metricas.home.fuentesCaidas = payload.fallos;
 
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
-  console.log(`[home] ${metricas.home.cache === "miss" ? "MISS" : "HIT "} ${key}`);
+  // COMPARTIDA = esperó la composición de otra solicitud (single-flight).
+  console.log(`[home] ${metricas.home.cache === "miss" ? "MISS" : metricas.home.cache === "compartida" ? "COMPARTIDA" : "HIT "} ${key}`);
   console.log(
     `[idioma] fallback: ${mIdioma.llamadas} llamadas | ${mIdioma.lotesConRotos} lotes con rotos | ` +
     `${mIdioma.titulosReparados} títulos reparados | ${mIdioma.fallos} fallos`,

@@ -95,7 +95,7 @@ export function parsearLineaHome(l: string): LineaTerminal {
   return {
     clave: s(/\| clave (\S+)\s*$/),
     msTotal: n(/^\[home\] (\d+)ms total/),
-    cache: s(/cache (HIT|MISS|\?)/),
+    cache: s(/cache (HIT|MISS|COMPARTIDA|\?)/),
     composiciones: n(/(\d+) composici/),
     tmdb: n(/tmdb (\d+) llamadas/) ?? 0,
     supabase: n(/supabase (\d+) consultas/) ?? 0,
