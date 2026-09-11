@@ -412,7 +412,9 @@ test("🔴 el `redis.set` está ADENTRO de la política, no suelto en un try", (
   assert.match(cuerpo.slice(iPolitica, iSet), /escribir:\s*async \(\) => \{/,
     "el redis.set no está dentro del callback `escribir` de la política");
   // El `finally` de las métricas se conserva: mide el tiempo pase lo que pase.
-  assert.match(cuerpo, /finally \{[\s\S]*msCache[\s\S]*\}/,
+  // (El campo se llamaba `msCache`; desde la Etapa 0 es `redis.ms`, en
+  // lib/metricas.ts.)
+  assert.match(cuerpo, /finally \{[\s\S]*redis\.ms[\s\S]*\}/,
     "se perdió la medición de tiempo del caché");
 });
 

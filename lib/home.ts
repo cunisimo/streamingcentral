@@ -36,11 +36,12 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withCacheMetrics } from "./cache";
+import { cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withMetricas } from "./cache";
 import { withFallosDisponibilidad } from "./fallos-disponibilidad";
 import { claveHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
 import { HUELLA_IDIOMA, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
+import { anotar, lineaHome } from "./metricas";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
   MINISERIES_KEY, MINISERIES_LISTA_HREF, MINISERIES_PISO, MINISERIES_TITULO, alcanzaElPiso,
@@ -674,9 +675,11 @@ export async function homePayload(opts: {
   // sin que suba el tráfico. Una tasa baja significa que los usuarios tienen
   // combinaciones de plataformas muy distintas, y eso NO se arregla con el TTL.
   //
-  // Se deduce de si el fetcher llegó a correr: exacto, y no cuesta un comando
-  // extra. Se lee en los logs de Vercel filtrando por "[home]".
-  let miss = false;
+  // Se anota en el contador de la solicitud (lib/metricas.ts): HIT o MISS es
+  // lo que decidió el resolver, y la COMPOSICIÓN se cuenta aparte, donde corre
+  // composeHome. No se deduce una de la otra: en cuanto haya single-flight, un
+  // MISS que espera una composición ajena no va a ser una composición propia.
+  // Se lee en los logs de Vercel filtrando por "[home]".
   const t0 = Date.now();
 
   // El scope de métricas envuelve TODO el armado, no solo el `cachedIf`: lo que
@@ -685,11 +688,11 @@ export async function homePayload(opts: {
   // contador de módulo, dos Homes simultáneos en la misma instancia se
   // reiniciarían los números entre sí.
   const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
-    await withMetricasIdioma(() => withCacheMetrics(() => conRegistroDeEjes(() => cachedLocIf(
+    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => cachedLocIf(
     key,
     TTL.home,
     async () => {
-      miss = true;
+      anotar((m) => { m.home.cache = "miss"; m.home.composiciones += 1; });
       // Los fallos de disponibilidad cuentan como degradación del payload: un
       // Home con títulos en gris porque Supabase parpadeó no puede quedar
       // congelado 6 h para todos.
@@ -705,23 +708,21 @@ export async function homePayload(opts: {
     // caso "sin plataformas", que no cuesta nada recalcular.
     (v) => !v.degradado && !v.sinPlataformas,
   ))));
+  if (metricas.home.cache === null) metricas.home.cache = "hit";
+  metricas.home.degradado = !!payload.degradado;
+  metricas.home.fuentesCaidas = payload.fallos;
 
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
-  console.log(`[home] ${miss ? "MISS" : "HIT "} ${key}`);
+  console.log(`[home] ${metricas.home.cache === "miss" ? "MISS" : "HIT "} ${key}`);
   console.log(
     `[idioma] fallback: ${mIdioma.llamadas} llamadas | ${mIdioma.lotesConRotos} lotes con rotos | ` +
     `${mIdioma.titulosReparados} títulos reparados | ${mIdioma.fallos} fallos`,
   );
-  // Comandos es lo que factura Upstash; requests es lo que se paga en latencia.
-  // Un MGET de 100 claves es 1 de cada uno; 100 GET sueltos son 100 y 100.
-  const lotes = metricas.lotes;
-  console.log(
-    `[home] ${Date.now() - t0}ms total | cache ${metricas.msCache}ms | ` +
-    `${metricas.comandos} comandos | ${metricas.requests} requests | ` +
-    `${metricas.claves} claves (${metricas.hits} hit / ${metricas.misses} miss) | ` +
-    `lotes: ${lotes.length ? `${lotes.length} de [${lotes.join(",")}]` : "ninguno"}`,
-  );
+  // Cada unidad con su nombre y por separado: composiciones, TMDB, Supabase y
+  // las tres de Redis (llamadas lógicas / intentos HTTP / comandos). El formato
+  // vive en lib/metricas.ts y está probado.
+  console.log(lineaHome(metricas, Date.now() - t0));
   // Qué eje le tocó a cada superficie hoy. Solo se loguea en un MISS: en un HIT
   // el payload viene del cache y no se eligió ningún eje.
   if (ejes.size) {

@@ -7,8 +7,18 @@
 import "server-only";
 import { IDIOMA_BASE } from "./idioma";
 import type { MediaType } from "./types";
+import { anotar, clasificarEstadoHttp } from "./metricas";
+import { baseTmdb } from "./tmdb-base";
 
-const BASE = "https://api.themoviedb.org/3";
+// La base es la oficial salvo que el BANCO aislado la apunte a un doble, y
+// nunca en Producción: hacen falta `TMDB_BASE_URL`, `YUMP_BANCO=1` y que
+// `VERCEL_ENV` no sea "production". La decisión es pura (lib/tmdb-base.ts) y
+// está probada; acá sólo se registra UNA vez si se ignoró una configuración.
+const decisionBase = baseTmdb({
+  base: process.env.TMDB_BASE_URL, banco: process.env.YUMP_BANCO, vercelEnv: process.env.VERCEL_ENV,
+});
+if (decisionBase.motivo) console.warn(`[tmdb] ${decisionBase.motivo}`);
+const BASE = decisionBase.base;
 export const TMDB_IMG = "https://image.tmdb.org/t/p";
 
 const HEADERS = {
@@ -54,14 +64,29 @@ function liberar(): void {
 async function tmdb<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const q = new URLSearchParams({ ...DEFAULTS, ...params });
   await adquirir();
+  // Se cuenta cada llamada y se clasifica su resultado por solicitud (Etapa 0,
+  // #20). Este cliente no reintenta, así que una llamada es un intento HTTP.
+  // El tiempo se mide DESPUÉS de obtener el permiso: es lo que tardó TMDB, no
+  // lo que se esperó en el semáforo.
+  const t0 = Date.now();
+  anotar((m) => { m.tmdb.llamadas += 1; });
   try {
-    const res = await fetch(`${BASE}${path}?${q}`, {
-      headers: HEADERS, cache: "no-store", signal: AbortSignal.timeout(8000),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${BASE}${path}?${q}`, {
+        headers: HEADERS, cache: "no-store", signal: AbortSignal.timeout(8000),
+      });
+    } catch (e) {
+      anotar((m) => { m.tmdb.errores.red += 1; });
+      throw e;
+    }
+    const clase = clasificarEstadoHttp(res.status);
+    anotar((m) => { if (clase === "ok") m.tmdb.ok += 1; else m.tmdb.errores[clase] += 1; });
     if (!res.ok) throw new Error(`TMDB ${res.status} en ${path}`);
     // El parseo del body va DENTRO del permiso: sigue siendo parte del request.
     return (await res.json()) as T;
   } finally {
+    anotar((m) => { m.tmdb.ms += Date.now() - t0; });
     liberar();
   }
 }

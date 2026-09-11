@@ -1,0 +1,198 @@
+// Métricas POR SOLICITUD, sin mezclar unidades. Etapa 0 de capacidad (#20).
+//
+// ============================================================================
+// POR QUÉ EXISTE, Y POR QUÉ ES UN MÓDULO APARTE
+// ============================================================================
+// Hasta la Etapa 0, `CacheMetrics` vivía en lib/cache.ts y contaba SÓLO Redis;
+// además llamaba `requests` a tres cosas distintas: la llamada lógica que hizo
+// el código, los intentos HTTP que salieron al cable (el SDK de Upstash
+// reintenta hasta 6 veces) y los comandos que factura Upstash. No había
+// contador de llamadas a TMDB, de consultas a Supabase ni de composiciones del
+// Home. Con eso, las etapas siguientes del plan de capacidad se evaluarían a
+// ciegas: "una sola composición por clave" no se puede comprobar contando
+// HIT/MISS, porque en cuanto entre el single-flight un lector que ESPERA a otro
+// va a parecer un HIT.
+//
+// Es un módulo sin `server-only` y sin imports de runtime salvo
+// `node:async_hooks` (igual que lib/idioma.ts): para poder EJECUTARLO desde
+// `node --test`. lib/cache.ts, lib/tmdb.ts y lib/home.ts sólo anotan acá.
+//
+// ============================================================================
+// EL MECANISMO: AsyncLocalStorage, Y SUS LÍMITES
+// ============================================================================
+// Un contador de módulo mezclaría los números de los requests que conviven en
+// la misma instancia. `AsyncLocalStorage` da un contador por scope y lo propaga
+// por `await`, promesas y `queueMicrotask`. Dos límites, medidos en
+// lib/metricas.test.ts:
+//
+//   1. Un callback hereda el contexto de QUIEN LO PROGRAMÓ, no de quien lo
+//      necesitaba. Es el caso del batcher de lib/cache.ts: el flush corre en el
+//      contexto de la solicitud que lo programó. Por eso existen `capturar` y
+//      `anotarEn`: quien pide una clave captura su contador al encolar, y el
+//      flush le anota a ÉL sus hits/misses. Lo que queda a nombre de quien
+//      programó es sólo el viaje HTTP del MGET, que es uno para todos.
+//   2. Lo que corre fuera de un scope no se anota (y no rompe). Las rutas que no
+//      abren un scope no miden nada.
+//
+// Lo que NO se cambia acá: la decisión de `cachedIf` (un Home degradado sigue
+// sin guardarse), las claves, el contenido del Home ni el contrato HTTP.
+import { AsyncLocalStorage } from "node:async_hooks";
+
+export type ClaseHttp = "ok" | "http429" | "http5xx" | "http4xx";
+
+export interface MetricasRequest {
+  home: {
+    /** Qué decidió el resolver para la clave del Home. `null` si no llegó a decidir. */
+    cache: "hit" | "miss" | null;
+    /** Composiciones del Home EJECUTADAS por esta solicitud. Se cuenta donde corre `composeHome`, no se deduce del MISS. */
+    composiciones: number;
+    /** Veces que esta solicitud ESPERÓ una composición ajena. Hoy siempre 0: no hay single-flight. El campo existe para que la Etapa 1 no tenga que redefinir el modelo. */
+    esperasCompartidas: number;
+    /** El payload salió degradado (alguna fuente cayó). */
+    degradado: boolean;
+    /** Fuentes del composer que fallaron (lo que ya viaja como `fallos` en el payload). */
+    fuentesCaidas: number;
+  };
+  tmdb: {
+    /** Llamadas a TMDB pedidas por el código. El cliente no reintenta, así que también son los intentos HTTP. */
+    llamadas: number;
+    ok: number;
+    errores: { http429: number; http5xx: number; http4xx: number; /** fallo de red, DNS o timeout: no hubo respuesta */ red: number };
+    /** Tiempo acumulado dentro de las llamadas (suma, no pared: las llamadas van en paralelo). */
+    ms: number;
+  };
+  supabase: {
+    /** Consultas del cliente de servidor (cada `fetch` de supabase-js). Sin reintentos propios: también son intentos HTTP. */
+    consultas: number;
+    ok: number;
+    errores: { http: number; red: number };
+    ms: number;
+  };
+  redis: {
+    modo: "redis" | "memoria" | null;
+    /** Lo que el código pidió: cada GET, MGET o SET. */
+    llamadasLogicas: number;
+    /** Lo que salió al cable: 1 por llamada lógica contra Redis + 1 por cada reintento del SDK. 0 en memoria. */
+    intentosHttp: number;
+    /** Lo que Upstash confirmó (y factura): sólo respuestas correctas. */
+    comandos: number;
+    /** Claves pedidas, deduplicadas por lote. */
+    claves: number;
+    hits: number;
+    misses: number;
+    /** Tamaño de cada MGET. */
+    lotes: number[];
+    fallos: { lectura: number; escritura: number };
+    /** Tiempo acumulado dentro del caché. */
+    ms: number;
+  };
+}
+
+export const nuevasMetricas = (): MetricasRequest => ({
+  home: { cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0 },
+  tmdb: { llamadas: 0, ok: 0, errores: { http429: 0, http5xx: 0, http4xx: 0, red: 0 }, ms: 0 },
+  supabase: { consultas: 0, ok: 0, errores: { http: 0, red: 0 }, ms: 0 },
+  redis: {
+    modo: null, llamadasLogicas: 0, intentosHttp: 0, comandos: 0,
+    claves: 0, hits: 0, misses: 0, lotes: [], fallos: { lectura: 0, escritura: 0 }, ms: 0,
+  },
+});
+
+const als = new AsyncLocalStorage<MetricasRequest>();
+
+/** Corre `fn` con un contador propio y devuelve el resultado junto a las métricas. */
+export async function withMetricas<T>(fn: () => Promise<T>): Promise<{ res: T; metricas: MetricasRequest }> {
+  const metricas = nuevasMetricas();
+  const res = await als.run(metricas, fn);
+  return { res, metricas };
+}
+
+/** Anota en el contador de la solicitud actual. Fuera de un scope no hace nada. */
+export function anotar(fn: (m: MetricasRequest) => void): void {
+  const m = als.getStore();
+  if (m) fn(m);
+}
+
+export function metricasActuales(): MetricasRequest | null {
+  return als.getStore() ?? null;
+}
+
+/**
+ * El contador de la solicitud actual, para anotarle DESPUÉS desde otro contexto.
+ * Es lo que usa el batcher: se captura al encolar la clave y se anota al
+ * resolverla, aunque el flush corra en el contexto de otra solicitud.
+ */
+export function capturar(): MetricasRequest | null {
+  return als.getStore() ?? null;
+}
+
+export function anotarEn(m: MetricasRequest | null, fn: (m: MetricasRequest) => void): void {
+  if (m) fn(m);
+}
+
+/**
+ * El `backoff` que se le pasa al cliente de Upstash. `@upstash/redis` 1.38.0 lo
+ * llama exactamente UNA vez antes de cada reintento (pkg/http.ts, `request`:
+ * `if (i < this.retry.attempts) await backoff(i)`), dentro del mismo contexto
+ * async del comando. Así cada llamada es un intento HTTP más, atribuido a la
+ * solicitud correcta, sin envolver el transporte. Devuelve la MISMA espera que
+ * el SDK usa por defecto (`Math.exp(i) * 50` ms): esto mide, no cambia.
+ *
+ * ⚠️ Lo que este punto NO ve: un intento que el SDK no reintenta (una respuesta
+ * HTTP de error sale del bucle sin backoff) cuenta como el único intento de su
+ * llamada lógica, que es correcto. Y si alguna versión futura del SDK dejara de
+ * llamar a `backoff` por reintento, los intentos volverían a subestimarse: el
+ * test de fuente en lib/metricas.test.ts ata la versión instalada.
+ */
+export function backoffRedisInstrumentado(): (reintento: number) => number {
+  return (reintento: number) => {
+    anotar((m) => { m.redis.intentosHttp += 1; });
+    return Math.exp(reintento) * 50;
+  };
+}
+
+export function clasificarEstadoHttp(estado: number): ClaseHttp {
+  if (estado >= 200 && estado < 300) return "ok";
+  if (estado === 429) return "http429";
+  if (estado >= 500) return "http5xx";
+  return "http4xx";
+}
+
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+/**
+ * La línea `[home]` de los logs. Cada unidad con su nombre, nunca sumadas.
+ * No lleva claves, tokens ni parámetros: sólo cuentas y tiempos.
+ */
+export function lineaHome(m: MetricasRequest, msTotal: number): string {
+  const t = m.tmdb;
+  const errTmdb = [
+    t.errores.http429 ? `${t.errores.http429} x429` : "",
+    t.errores.http5xx ? `${t.errores.http5xx} x5xx` : "",
+    t.errores.http4xx ? `${t.errores.http4xx} x4xx` : "",
+    t.errores.red ? `${t.errores.red} red` : "",
+  ].filter(Boolean);
+  const s = m.supabase;
+  const errSb = [
+    s.errores.http ? `${s.errores.http} http` : "",
+    s.errores.red ? `${s.errores.red} red` : "",
+  ].filter(Boolean);
+  const r = m.redis;
+  const fallosRedis = [
+    r.fallos.lectura ? `${r.fallos.lectura} fallo(s) lectura` : "",
+    r.fallos.escritura ? `${r.fallos.escritura} fallo(s) escritura` : "",
+  ].filter(Boolean);
+  const lotes = r.lotes.length ? `${r.lotes.length} de [${r.lotes.join(",")}]` : "ninguno";
+  const cache = m.home.cache ? m.home.cache.toUpperCase() : "?";
+  return (
+    `[home] ${msTotal}ms total | cache ${cache} | ` +
+    `${plural(m.home.composiciones, "composición", "composiciones")} | ` +
+    `${plural(m.home.esperasCompartidas, "espera compartida", "esperas compartidas")}` +
+    `${m.home.degradado ? ` | DEGRADADO (${m.home.fuentesCaidas} fuente(s))` : ""} | ` +
+    `tmdb ${t.llamadas} llamadas (${[`${t.ok} ok`, ...errTmdb].join(", ")}) ${t.ms}ms | ` +
+    `supabase ${s.consultas} consultas (${[`${s.ok} ok`, ...errSb].join(", ")}) ${s.ms}ms | ` +
+    `redis${r.modo === "memoria" ? "(memoria)" : ""} ${r.llamadasLogicas} llamadas / ${r.intentosHttp} intentos http / ${r.comandos} comandos` +
+    ` | ${r.claves} claves (${r.hits} hit / ${r.misses} miss)` +
+    `${fallosRedis.length ? ` | ${fallosRedis.join(", ")}` : ""} | ${r.ms}ms | lotes: ${lotes}`
+  );
+}
