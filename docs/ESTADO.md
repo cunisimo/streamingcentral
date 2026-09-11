@@ -11,8 +11,13 @@
   1. La corrección está **mergeada en `main`** mediante `be5ef1d` (rama
      `fix/recuperacion-password`, commits `fb89b45` → `0831b86` → `0d1b978` →
      `de45b56`).
-  2. **Todavía no fue pusheada ni desplegada**: `main` local está adelante de
-     `origin/main` (`fd2cd23`) y Producción sigue con la página vieja.
+  2. **Pusheada y desplegada.** `adf7065` está en `origin/main` y es el
+     deployment de Producción de Vercel del 11/09 (17:31Z, `success`);
+     `app.yump.ar` sirve la página nueva de recuperación — comprobado contra los
+     bytes: el HTML de `/cuenta/reset` dice "Cargando…" y los chunks traen
+     `PASSWORD_RECOVERY`, el cliente aislado y el reductor. **Sigue pendiente
+     la prueba real del dueño por correo** en Producción, que el buzón
+     descartable no reemplaza.
   3. La implementación fue **auditada** (cuatro rondas de Codex; la última,
      sobre `de45b56`, sin nuevos bloqueos técnicos y apta para mergear) y
      **verificada**: unitarios escritos antes de cada cambio, navegador sobre

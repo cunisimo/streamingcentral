@@ -2,9 +2,12 @@
 
 ## #22 — Recuperación desde Android: la contraseña nueva no permite ingresar
 
-**Estado (11/09): la corrección está MERGEADA en `main` (`be5ef1d`), sin
-deploy. El issue sigue ABIERTO exclusivamente por la causa desconocida del
-consumo del enlace original** (ver "Lo que sigue ABIERTO"). Codex auditó
+**Estado (11/09): la corrección está MERGEADA en `main` (`be5ef1d`),
+PUSHEADA (`adf7065` en `origin/main`) y DESPLEGADA en Producción**
+(deployment de Vercel `success`; `app.yump.ar` sirve la página nueva de
+`/cuenta/reset`, comprobado contra los bytes del build). **Pendiente: la prueba
+real del dueño por correo.** El issue sigue ABIERTO exclusivamente por la causa
+desconocida del consumo del enlace original (ver "Lo que sigue ABIERTO"). Codex auditó
 `de45b56` sin nuevos bloqueos técnicos y la consideró apta para mergear.
 
 **Antecedente — revisión de la primera propuesta `fb89b45` (10/09), superada:
@@ -40,8 +43,8 @@ y evento de actualización del intento que mostró éxito. No guardar tokens.
 
 **Estado (11/09, cuarta versión): ABIERTO sólo por la causa. Una causa posible
 reproducida y corregida en `fix/recuperacion-password`, mergeada en `main`
-(`be5ef1d`); el consumo del enlace original sigue sin explicación.** Sin
-desplegar todavía. Informe con toda la evidencia:
+(`be5ef1d`) y desplegada; el consumo del enlace original sigue sin
+explicación.** Informe con toda la evidencia:
 `medidas/2026-09-10-recuperacion-password.md` (en esa rama). Auditoría de la
 primera versión: `medidas/2026-09-10-auditoria-fb89b45.md`.
 
@@ -133,8 +136,9 @@ demás ya está verificado y mergeado (nueva entra, vieja se rechaza, enlace
 inválido y sesión previa manejados, cero escrituras sobre otra cuenta). El
 punto 3 no forma parte de este issue.
 
-**Prioridad: media. Estado: corrección mergeada sin deploy; abierto por la
-causa del consumo del enlace original.** Necesita un token vigente de Supabase
+**Prioridad: media. Estado: corrección mergeada y desplegada, a la espera de
+la prueba real del dueño por correo; abierto por la causa del consumo del
+enlace original.** Necesita un token vigente de Supabase
 para leer logs y configuración de Auth.
 
 ### Antecedente — diagnóstico original del 10/09, previo al arreglo (histórico)
