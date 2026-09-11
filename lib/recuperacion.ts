@@ -125,6 +125,10 @@ export type Pantalla =
 /**
  * La decisión. Fijate qué NO recibe: ninguna sesión, ningún `user`, ningún
  * `sub`. Sólo lo que vino en la URL y lo que Supabase aceptó.
+ *
+ * ⚠️ `aceptada` es la copia RECLAMADA por esta pantalla, no la pendiente global.
+ * Por eso puede mandar aunque la URL esté limpia: el montaje tardío legítimo es
+ * exactamente ese caso. La reutilización se impide en `reclamar`, no acá.
  */
 export function decidirPantalla(opts: {
   ready: boolean;
@@ -143,6 +147,75 @@ export function decidirPantalla(opts: {
   // aceptó, es un error — y no importa qué sesión haya.
   if (!ready) return { vista: "cargando" };
   return { vista: "error", mensaje: mensajeDeEnlace(null, null) };
+}
+
+// ============================================================================
+// EL CICLO DE VIDA: PENDIENTE (global) → RECLAMADA (de UNA pantalla)
+// ============================================================================
+// Tercer P1 de la auditoría. Con la aceptación guardada en el provider global y
+// limpiada sólo tras éxito o fallo de identidad, esta secuencia volvía a
+// habilitar el cambio de contraseña de B sin enlace: aceptación de B → salir de
+// /cuenta/reset sin guardar → cerrar sesión o entrar como A → volver a
+// /cuenta/reset sin hash. El provider raíz sigue montado al navegar.
+//
+// La solución separa dos estados que antes eran uno:
+//
+//   PENDIENTE — global. Nace con `PASSWORD_RECOVERY`. Vive sólo mientras la ruta
+//     sea /cuenta/reset y hasta que una pantalla la reclame. La descarta
+//     cualquier cambio de sesión a OTRA cuenta, un cierre de sesión, y una
+//     pantalla que llega con un error en la URL.
+//
+//   RECLAMADA — local a UNA instancia de la pantalla. Se toma de la pendiente
+//     una sola vez y la pendiente queda en null. Muere con la instancia. Es
+//     INMUNE a los eventos del singleton: si otra pestaña entra como A con el
+//     formulario de B abierto, la pantalla sigue escribiendo sobre B — el
+//     servidor es quien rechaza si la sesión de recuperación fue revocada.
+//
+// Lo que sobrevive el tiempo justo para un chunk tardío es la PENDIENTE (la
+// ruta sigue siendo /cuenta/reset y nadie la reclamó). Lo que no puede
+// reutilizarse es también la pendiente, porque reclamar la consume.
+
+export type Pendiente = RecuperacionAceptada | null;
+
+/** Los eventos que mueven la pendiente. Son los que de verdad llegan al provider. */
+export type EventoPendiente =
+  | { tipo: "aceptada"; r: RecuperacionAceptada }
+  | { tipo: "auth"; evento: string; userId: string | null }
+  | { tipo: "ruta"; pathname: string };
+
+const RUTA_RESET = "/cuenta/reset";
+
+/** El reductor de la pendiente. Puro, y es lo que el provider ejecuta. */
+export function siguientePendiente(actual: Pendiente, e: EventoPendiente): Pendiente {
+  switch (e.tipo) {
+    case "aceptada":
+      return e.r;
+    case "ruta":
+      // Fuera de /cuenta/reset no hay nadie que pueda reclamarla legítimamente.
+      return e.pathname === RUTA_RESET || e.pathname === RUTA_RESET + "/" ? actual : null;
+    case "auth":
+      if (!actual) return null;
+      // El arranque no es un cambio de cuenta, y PASSWORD_RECOVERY llega por
+      // "aceptada". Todo lo demás con OTRA cuenta —o sin cuenta— la descarta.
+      if (e.evento === "INITIAL_SESSION" || e.evento === "PASSWORD_RECOVERY") return actual;
+      if (e.evento === "SIGNED_OUT") return null;
+      return e.userId === actual.userId ? actual : null;
+  }
+}
+
+/**
+ * Lo que hace una pantalla al montar: intenta reclamar la pendiente.
+ *
+ * Con una URL en error no reclama nada Y descarta la pendiente: una URL que
+ * Supabase rechazó nunca se combina con una aceptación anterior. Con una URL
+ * limpia o con tokens, reclama — la limpia es el montaje tardío legítimo,
+ * después de que auth-js borró el hash.
+ */
+export function reclamar(
+  pendiente: Pendiente, enlace: Enlace,
+): { reclamada: RecuperacionAceptada | null; pendiente: Pendiente } {
+  if (enlace.tipo === "error") return { reclamada: null, pendiente: null };
+  return { reclamada: pendiente, pendiente: null };
 }
 
 // ============================================================================

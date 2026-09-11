@@ -90,10 +90,12 @@ test("tokens en la URL, Supabase terminó y NO aceptó: error, no formulario", (
   assert.equal(p.vista, "error");
 });
 
-test("aceptación sin nada en la URL también vale: es Supabase quien decide", () => {
-  // Después de que Supabase procesa el hash lo BORRA de la barra. Si la página se
-  // re-renderiza y vuelve a leer una URL limpia, la aceptación tiene que seguir
-  // mandando: si no, el formulario desaparecería al segundo render.
+test("una aceptación RECLAMADA manda aunque la URL esté limpia (montaje tardío)", () => {
+  // `aceptada` acá es la copia que ESTA pantalla reclamó, no la pendiente global.
+  // Después de que Supabase procesa el hash lo BORRA de la barra: el chunk que
+  // llega tarde ve una URL limpia y aun así tiene que mostrar el formulario.
+  // Lo que impide REUTILIZAR una aceptación vieja no es esta función sino
+  // `reclamar`, que la consume — ver lib/recuperacion-ciclo.test.ts.
   assert.equal(
     decidirPantalla({ ready: true, enlace: leerEnlace("", ""), aceptada: ACEPTADA_B }).vista,
     "formulario",
@@ -224,14 +226,14 @@ const ctx = sinComentarios("components/AuthContext.tsx");
 
 test("🔴 la aceptación sale del evento PASSWORD_RECOVERY, en el AuthProvider", () => {
   assert.match(ctx, /"PASSWORD_RECOVERY"/, "el AuthProvider no escucha PASSWORD_RECOVERY");
-  assert.match(ctx, /setRecuperacion\(\{[\s\S]{0,200}userId:\s*session\.user\.id/,
+  assert.match(ctx, /tipo:\s*"aceptada",\s*r:\s*\{[\s\S]{0,200}userId:\s*session\.user\.id/,
     "la aceptación no se construye con la sesión del evento");
 });
 
 test("🔴 la página NO usa `user`, `sujetoDelToken` ni la URL para habilitar el formulario", () => {
   assert.doesNotMatch(pagina, /sujetoDelToken/, "volvió el JWT decodificado sin verificar");
   assert.doesNotMatch(pagina, /!\s*user\s*\?/, "volvió el `!user ?`");
-  assert.match(pagina, /aceptada:\s*recuperacion/, "la decisión no recibe la recuperación aceptada");
+  assert.match(pagina, /aceptada:\s*reclamada/, "la decisión no recibe la recuperación RECLAMADA por esta pantalla");
 });
 
 test("🔴 la escritura va por cambiarPasswordDeRecuperacion, no por updatePassword", () => {
@@ -244,11 +246,11 @@ test("🔴 la escritura real usa un cliente AISLADO atado a los tokens aceptados
   // de la recuperación y que ninguna otra pestaña puede mover.
   const inicio = ctx.indexOf("const cambiarPasswordDeRecuperacion = useCallback");
   assert.notEqual(inicio, -1, "no existe cambiarPasswordDeRecuperacion en el AuthProvider");
-  const bloque = ctx.slice(inicio, ctx.indexOf("}, [recuperacion]);", inicio));
+  const bloque = ctx.slice(inicio, ctx.indexOf("}, []);", inicio));
   assert.match(bloque, /persistSession:\s*false/, "el cliente de escritura persiste sesión");
   assert.match(bloque, /autoRefreshToken:\s*false/);
   assert.match(bloque, /detectSessionInUrl:\s*false/);
-  assert.match(bloque, /setSession\(\{[\s\S]{0,120}access_token:\s*r\.accessToken/,
+  assert.match(bloque, /setSession\(\{[\s\S]{0,120}access_token:\s*rec\.accessToken/,
     "el cliente aislado no se ata a los tokens de la recuperación aceptada");
   assert.doesNotMatch(bloque, /supabaseBrowser\(\)/,
     "🔴 toca el singleton: la sesión del momento podría decidir la cuenta");
@@ -256,7 +258,12 @@ test("🔴 la escritura real usa un cliente AISLADO atado a los tokens aceptados
 
 test("🔴 la URL se lee en el RENDER, no en un efecto", () => {
   assert.match(pagina, /useState\(\(\) =>[\s\S]{0,200}leerEnlace\(/);
-  assert.equal(pagina.indexOf("useEffect"), -1, "apareció un useEffect: la URL puede llegar ya consumida");
+  // Hay un useEffect en la página (el que RECLAMA), y está bien: lo que no puede
+  // haber es un `leerEnlace` adentro de un efecto, porque ahí la URL ya puede
+  // estar borrada por auth-js.
+  for (const m of pagina.matchAll(/useEffect\(\(\) => \{([\s\S]*?)\}, \[/g)) {
+    assert.doesNotMatch(m[1], /leerEnlace\(|window\.location/, "la URL se lee dentro de un efecto: puede llegar ya consumida");
+  }
 });
 
 test("🔴 `ready` espera a la decisión de Supabase cuando la URL trae tokens", () => {

@@ -1,6 +1,6 @@
 # Incidente #22 — Recuperación de contraseña: causa reproducida, arreglo y pruebas
 
-**Fecha:** 2026-09-10 (segunda versión, después de la auditoría de `fb89b45`)
+**Fecha:** 2026-09-10 (tercera versión: ciclo de vida de la aceptación)
 **Rama:** `fix/recuperacion-password`, nacida de `main` = `ef2f83e`
 **Método:** reproducción ejecutada contra el proyecto Supabase real con cuentas de
 prueba creadas y borradas para esto; verificación en el navegador sobre un
@@ -8,9 +8,11 @@ prueba creadas y borradas para esto; verificación en el navegador sobre un
 descartable. Sin pruebas manuales del dueño.
 **No se registran contraseñas, tokens ni enlaces completos.**
 
-> **Versión anterior y su auditoría.** `fb89b45` fue auditado
+> **Versiones anteriores.** `fb89b45` fue auditado
 > ([`2026-09-10-auditoria-fb89b45.md`](2026-09-10-auditoria-fb89b45.md)) y
-> devuelto con dos P1 y dos P2. Los cuatro están resueltos acá; la §7 dice cómo.
+> devuelto con dos P1 y dos P2, resueltos en `0831b86` (§9). Codex confirmó esa
+> versión y encontró un **tercer P1, de ciclo de vida**: la aceptación quedaba
+> global y reutilizable. Resuelto en esta versión (§5.6, §6.4).
 
 ---
 
@@ -187,6 +189,54 @@ ramas; el caso "chunk lento" en navegador **no se pudo forzar** (no hay control
 de red en el panel) y queda como razonamiento sobre la tabla de decisión, no
 como medición.
 
+### 5.6 El ciclo de vida: PENDIENTE (global) → RECLAMADA (de una pantalla)
+
+**El tercer P1.** `recuperacion` vivía en el `AuthProvider` global y sólo se
+limpiaba tras éxito o fallo de identidad. El provider raíz sigue montado al
+navegar, así que: aceptación de B → salir de `/cuenta/reset` sin guardar →
+cerrar sesión o entrar como A → volver a `/cuenta/reset` sin hash →
+`decidirPantalla({ enlace: nada, aceptada: B })` → **formulario**. Y el test
+"aceptación sin nada en la URL también vale" lo exigía.
+
+**El diseño:** una autorización reclamable por una sola instancia de la pantalla.
+
+| | PENDIENTE | RECLAMADA |
+|---|---|---|
+| Dónde vive | provider (una `ref` + un booleano de estado) | `useState` de UNA instancia de la pantalla |
+| Nace | con `PASSWORD_RECOVERY` | al reclamar la pendiente, que queda en `null` |
+| Muere | al reclamarse; al salir de `/cuenta/reset`; con cualquier evento de sesión de OTRA cuenta o `SIGNED_OUT`; con una URL en error | con la instancia (abandonar la pantalla), o con el éxito |
+| Ante un cambio de sesión del singleton | se descarta | **inmune** — es lo que conserva el escenario 6 |
+| Se expone | sólo como `hayRecuperacionPendiente: boolean` | no sale de la pantalla |
+
+Por qué esto cumple cada requisito:
+
+- **Sobrevive lo justo para un chunk tardío:** la pendiente sigue viva mientras
+  la ruta sea `/cuenta/reset` y nadie la haya reclamado. El chunk que llega tarde
+  la encuentra y la reclama, aunque auth-js ya haya borrado el hash.
+- **Reclamada, no queda disponible:** `reclamar` la consume atómicamente (la
+  fuente de verdad es una `ref`, no estado).
+- **Abandonar sin guardar la descarta:** la copia reclamada muere con la
+  instancia; la pendiente ya era `null`. Y por si nunca se reclamó, el provider
+  la descarta al cambiar de ruta (`usePathname`).
+- **Cerrar sesión o cambiar de cuenta no deja tokens reutilizables:** el
+  reductor descarta la pendiente ante `SIGNED_OUT` y ante cualquier evento con
+  un `userId` distinto. `INITIAL_SESSION` no cuenta (llega antes que la
+  aceptación y puede traer la sesión previa de otra cuenta).
+- **Una URL ausente, malformada o rechazada nunca se combina con una aceptación
+  anterior:** con `error` en la URL, `reclamar` no devuelve nada y descarta.
+  Con URL limpia sí reclama — es el montaje tardío legítimo, y lo que impide
+  la reutilización no es la URL sino que reclamar consume.
+- **Escenario 6 conservado:** la copia reclamada no escucha al singleton. Si
+  otra pestaña entra como A, el provider descarta su pendiente (ya era `null`)
+  y la pantalla sigue con los tokens de B.
+
+**No se limpia "ante cualquier `SIGNED_IN`"**, como advirtió Codex: eso borraría
+la copia de la pantalla abierta y rompería el escenario 6. Se limpia la
+pendiente, y la pantalla tiene la suya.
+
+Todo el ciclo es un reductor puro (`siguientePendiente`) más `reclamar`, en
+`lib/recuperacion.ts`, y el provider sólo los ejecuta.
+
 ### 5.5 Archivos
 
 | Archivo | Qué cambia |
@@ -195,6 +245,7 @@ como medición.
 | `components/AuthContext.tsx` | `recuperacion` desde `PASSWORD_RECOVERY`; `ready` espera la decisión; `cambiarPasswordDeRecuperacion` con cliente aislado; `updatePassword` vuelve a ser sólo para sesión abierta |
 | `app/cuenta/reset/page.tsx` | cablea la decisión; muestra el email de la aceptación, no del singleton |
 | `lib/recuperacion.test.ts` | reescrito: 23 tests, escritos ANTES del cambio y fallando contra `fb89b45` |
+| `lib/recuperacion-ciclo.test.ts` | **nuevo** — 18 tests del ciclo de vida, escritos ANTES del cambio y fallando contra `0831b86` |
 
 ---
 
@@ -231,10 +282,40 @@ B (recuperación aceptada): nueva -> 200 | original -> 400
 A (sesión del singleton) : nueva -> 400 | original -> 200
 ```
 
-### 6.3 Suite completa
+### 6.3 Suite completa y build
 
-`npm test` → **1304/1304**, 0 fallos (con `.next` de producción; con uno de
+`npm test` → **1322/1322**, 0 fallos (con `.next` de producción; con uno de
 desarrollo un test del `.ics` mira donde no debe — §2). `tsc --noEmit` → limpio.
+
+**Build de producción, verificado de nuevo** porque el independiente de Codex se
+interrumpió sin resultado: `npm run build` → **exit 0 en 113 s**, "Compiled
+successfully", `/cuenta/reset` 3,38 kB, `BUILD_ID` generado.
+
+### 6.4 Los seis escenarios del ciclo de vida
+
+Unitarios (18, `lib/recuperacion-ciclo.test.ts`) modelan el provider con el
+reductor real y una instancia de pantalla por escenario. Los seis pedidos:
+
+| # | Escenario | Unitario | Navegador (build de producción) |
+|---|---|---|---|
+| 1 | Aceptación de B → salir → volver sin enlace | ✅ | ✅ Navegación **in-app** por `window.next.router` (mismo documento): vuelta a `/cuenta/reset` → "sin-enlace", sin formulario, con la sesión de recuperación de B todavía en el singleton |
+| 2 | Aceptación de B → `signOut` → volver | ✅ | — (ver nota) |
+| 3 | Aceptación de B → entrar como A → volver | ✅ | ✅ Misma secuencia con la sesión de A instalada antes de volver: "sin-enlace" |
+| 4 | Aceptación anterior + token malformado nuevo | ✅ | — (ver nota) |
+| 5 | Montaje tardío legítimo tras borrar el hash | ✅ | — (no se puede forzar un chunk lento desde el panel) |
+| 6 | Formulario de B abierto + singleton a A antes de Guardar | ✅ | ✅ **B: nueva 200 / vieja 400 — A: nueva 400 / vieja 200** |
+| + | Después del éxito, volver a `/cuenta/reset` | — | ✅ "sin-enlace" |
+
+**Nota sobre 2 y 4 en navegador:** exigen una pendiente **sin reclamar**, y en el
+recorrido real la pantalla está montada cuando llega la aceptación y la reclama
+en el acto; una pendiente sin reclamar sólo existe en la ventana del chunk
+tardío, que no se puede forzar desde el panel. Los dos están cubiertos por el
+reductor, que es el código que el provider ejecuta.
+
+⚠️ **Otra trampa de medición:** el `navigate back` del panel cambió la URL a
+`/cuenta/reset` pero el DOM siguió mostrando el Home varios segundos. Se
+reemplazó por `window.next.router.push`, que sí navega dentro del App Router; la
+navegación se comprobó como del mismo documento (`performance` con 1 entrada).
 
 ---
 
@@ -305,6 +386,13 @@ descartado con evidencia.
 | **P2** — causa afirmada con más certeza que la evidencia | Reescrito como "causa posible compatible con los síntomas" en informe, issue y comentarios de código. Sin "incidente cerrado" |
 | **P2** — faltaba el correo real | Hecho con buzón descartable (§7). Lo que ese buzón no puede ver queda explícito |
 | Guard textual del `useState` "prueba ubicación, no orden" | Aceptado: el orden se verificó en build de producción (§6.2) y el razonamiento de robustez está en §5.4, marcado como razonamiento donde no se pudo medir |
+
+### 9.b Tercera ronda: el P1 de ciclo de vida
+
+| Hallazgo | Estado |
+|---|---|
+| La aceptación quedaba global y reutilizable tras salir, cerrar sesión o cambiar de cuenta; el test "aceptación sin nada en la URL también vale" lo consolidaba | Pendiente (global, consumible, atada a la ruta y a la cuenta) separada de reclamada (local a una pantalla, inmune al singleton). 18 tests escritos antes del cambio, fallando contra `0831b86`. Escenarios 1, 3 y 6 verificados en navegador sobre build de producción; el test señalado se reescribió para decir que `aceptada` es la copia reclamada y que la reutilización se impide en `reclamar` |
+| El build independiente de Codex no terminó | Reejecutado: exit 0 en 113 s (§6.3) |
 
 ---
 

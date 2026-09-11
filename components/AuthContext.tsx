@@ -1,11 +1,12 @@
 "use client";
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase";
 import type { EleccionAvatar } from "@/lib/avatares";
 import {
-  cambiarPassword, hayTokensDeRecuperacion,
-  type RecuperacionAceptada, type Resultado as ResultadoRecuperacion,
+  cambiarPassword, hayTokensDeRecuperacion, reclamar, siguientePendiente,
+  type Enlace, type Pendiente, type RecuperacionAceptada, type Resultado as ResultadoRecuperacion,
 } from "@/lib/recuperacion";
 
 export interface Profile {
@@ -33,17 +34,23 @@ interface Ctx {
   updateAvatar: (eleccion: EleccionAvatar) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   /**
-   * La recuperación que Supabase ACEPTÓ en esta pestaña, o `null`. Sale del
-   * evento `PASSWORD_RECOVERY`, que auth-js emite sólo después de validar el
-   * token del enlace contra el servidor. Es la única prueba que vale. Ver #22.
+   * ¿Hay una recuperación aceptada por Supabase esperando que una pantalla la
+   * reclame? Sólo sirve para que la pantalla sepa que tiene que intentar
+   * reclamar; el valor no se expone. Ver #22.
    */
-  recuperacion: RecuperacionAceptada | null;
+  hayRecuperacionPendiente: boolean;
   /**
-   * Cambia la contraseña de la cuenta de `recuperacion`, y de ninguna otra: la
-   * escritura va con esos tokens en un cliente aislado, no con la sesión que
-   * tenga el singleton en ese momento. Sin recuperación aceptada, no escribe.
+   * Reclama la recuperación pendiente para UNA instancia de la pantalla. La
+   * consume: una segunda llamada devuelve `null`. Con una URL en error no
+   * reclama y además la descarta.
    */
-  cambiarPasswordDeRecuperacion: (password: string) => Promise<ResultadoRecuperacion>;
+  reclamarRecuperacion: (enlace: Enlace) => RecuperacionAceptada | null;
+  /**
+   * Cambia la contraseña de la cuenta de `r`, y de ninguna otra: la escritura va
+   * con esos tokens en un cliente aislado, no con la sesión que tenga el
+   * singleton en ese momento. Sin recuperación, no escribe.
+   */
+  cambiarPasswordDeRecuperacion: (r: RecuperacionAceptada | null, password: string) => Promise<ResultadoRecuperacion>;
   /** Cambio de contraseña con la sesión ABIERTA (configuración). No para recuperar. */
   updatePassword: (password: string) => Promise<{ error?: string }>;
   updatePlatforms: (ids: number[]) => Promise<{ error?: string }>;
@@ -77,7 +84,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
-  const [recuperacion, setRecuperacion] = useState<RecuperacionAceptada | null>(null);
+  // La PENDIENTE: una ref como fuente de verdad (para que reclamar sea atómico
+  // entre dos instancias) y un booleano de estado para que la pantalla reaccione
+  // cuando llega tarde. El valor no se expone: sólo se reclama.
+  const pendienteRef = useRef<Pendiente>(null);
+  const [hayRecuperacionPendiente, setHayPendiente] = useState(false);
+  const mover = useCallback((e: Parameters<typeof siguientePendiente>[1]) => {
+    pendienteRef.current = siguientePendiente(pendienteRef.current, e);
+    setHayPendiente(pendienteRef.current !== null);
+  }, []);
+
+  // Fuera de /cuenta/reset la pendiente no tiene a quién pertenecer: se
+  // descarta al navegar. Es lo que impide "aceptación → me voy → vuelvo".
+  const pathname = usePathname();
+  useEffect(() => { mover({ tipo: "ruta", pathname: pathname ?? "" }); }, [pathname, mover]);
 
   useEffect(() => {
     // ⚠️ ANTES de crear el cliente: auth-js borra el fragmento en cuanto acepta
@@ -110,13 +130,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // servidor validó el access_token del enlace (`_getUser`), y con la
         // sesión que ese servidor devolvió. Un token basura, vencido o consumido
         // nunca emite esto. Es la única prueba de recuperación que se acepta.
-        setRecuperacion({
+        mover({ tipo: "aceptada", r: {
           userId: session.user.id,
           email: session.user.email ?? null,
           accessToken: session.access_token,
           refreshToken: session.refresh_token,
-        });
+        } });
         setReady(true);
+      } else {
+        // Cualquier otro evento con OTRA cuenta —o sin cuenta— descarta la
+        // pendiente. La copia que una pantalla ya RECLAMÓ no vive acá y no se
+        // toca: eso es lo que mantiene el escenario "otra pestaña entra como A
+        // con el formulario de B abierto".
+        mover({ tipo: "auth", evento, userId: session?.user.id ?? null });
       }
       if (evento === "INITIAL_SESSION" && esperarRecuperacion) {
         // Había tokens y Supabase terminó de inicializar. Si los aceptó, el
@@ -194,26 +220,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // comparación posterior llegaría tarde, con la contraseña ya cambiada. Con el
   // cliente aislado la cuenta la fija el token, no el momento. Cero escrituras
   // sobre otra cuenta, por construcción.
-  const cambiarPasswordDeRecuperacion = useCallback(async (password: string) => {
-    const resultado = await cambiarPassword({
-      escribirCon: async (r, pass) => {
+  const reclamarRecuperacion = useCallback((enlace: Enlace) => {
+    const r = reclamar(pendienteRef.current, enlace);
+    pendienteRef.current = r.pendiente;
+    setHayPendiente(r.pendiente !== null);
+    return r.reclamada;
+  }, []);
+
+  // Recibe la recuperación RECLAMADA por la pantalla que llama. No lee ningún
+  // estado del provider: la cuenta la fija el token que viene en `r`.
+  const cambiarPasswordDeRecuperacion = useCallback(async (r: RecuperacionAceptada | null, password: string) => {
+    return cambiarPassword({
+      escribirCon: async (rec, pass) => {
         const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
         const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
         const aislado = createClient(url, anon, {
           auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
         });
-        const s = await aislado.auth.setSession({ access_token: r.accessToken, refresh_token: r.refreshToken });
+        const s = await aislado.auth.setSession({ access_token: rec.accessToken, refresh_token: rec.refreshToken });
         if (s.error) return { userId: null, error: s.error.message };
         const { data, error } = await aislado.auth.updateUser({ password: pass });
         if (error) return { userId: null, error: error.message };
         return { userId: data.user?.id ?? null };
       },
-    }, recuperacion, password);
-    // Una recuperación se usa UNA vez. Con éxito o con fallo de identidad, ya no
-    // sirve para otra escritura desde esta pestaña.
-    if (resultado.ok || resultado.motivo === "identidad") setRecuperacion(null);
-    return resultado;
-  }, [recuperacion]);
+    }, r, password);
+  }, []);
 
   const updateDisplayName = useCallback(async (name: string) => {
     if (!user) return { error: "No hay sesión" };
@@ -254,7 +285,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <AuthCtx.Provider value={{ user, profile, ready, recuperacion, signIn, signUp, signOut, updateDisplayName, updateAvatar, resetPassword, cambiarPasswordDeRecuperacion, updatePassword, updatePlatforms, completeOnboarding }}>
+    <AuthCtx.Provider value={{ user, profile, ready, hayRecuperacionPendiente, reclamarRecuperacion, signIn, signUp, signOut, updateDisplayName, updateAvatar, resetPassword, cambiarPasswordDeRecuperacion, updatePassword, updatePlatforms, completeOnboarding }}>
       {children}
     </AuthCtx.Provider>
   );

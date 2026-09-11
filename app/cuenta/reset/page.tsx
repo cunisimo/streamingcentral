@@ -1,12 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
 import PasswordInput from "@/components/PasswordInput";
-import { leerEnlace, decidirPantalla } from "@/lib/recuperacion";
+import { leerEnlace, decidirPantalla, type RecuperacionAceptada } from "@/lib/recuperacion";
 
 // A esta página se llega desde el enlace del mail de recuperación.
 //
@@ -28,7 +28,7 @@ import { leerEnlace, decidirPantalla } from "@/lib/recuperacion";
 // token— y la escritura va atada a esos tokens en un cliente aislado. Las reglas
 // viven en `lib/recuperacion.ts`, que es puro y tiene tests; acá se cablean.
 export default function ResetPassword() {
-  const { ready, recuperacion, cambiarPasswordDeRecuperacion } = useAuth();
+  const { ready, hayRecuperacionPendiente, reclamarRecuperacion, cambiarPasswordDeRecuperacion } = useAuth();
   const router = useRouter();
 
   // ⚠️ SE LEE EN EL RENDER, NO EN UN EFECTO: auth-js borra el fragmento apenas
@@ -42,13 +42,27 @@ export default function ResetPassword() {
       ? ({ tipo: "nada" } as const)
       : leerEnlace(window.location.hash, window.location.search));
 
+  // La copia RECLAMADA por ESTA instancia. Muere con ella: al abandonar la
+  // pantalla sin guardar no queda nada reutilizable. Y es inmune a lo que haga
+  // el singleton después: si otra pestaña entra como otra cuenta, esta pantalla
+  // sigue escribiendo sobre la cuenta del enlace.
+  const [reclamada, setReclamada] = useState<RecuperacionAceptada | null>(null);
+  useEffect(() => {
+    // Se reclama UNA vez, cuando la pendiente exista: puede ser ya al montar, o
+    // más tarde si este chunk cargó antes de que Supabase decidiera. Con una
+    // URL en error, `reclamar` no devuelve nada y descarta la pendiente.
+    if (reclamada || !hayRecuperacionPendiente) return;
+    const r = reclamarRecuperacion(enlace);
+    if (r) setReclamada(r);
+  }, [hayRecuperacionPendiente, reclamada, enlace, reclamarRecuperacion]);
+
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
   const [err, setErr] = useState("");
   const [ok, setOk] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const pantalla = decidirPantalla({ ready, enlace, aceptada: recuperacion });
+  const pantalla = decidirPantalla({ ready, enlace, aceptada: reclamada });
 
   async function guardar() {
     setErr("");
@@ -57,7 +71,7 @@ export default function ResetPassword() {
     setBusy(true);
     // Escribe con los tokens de la recuperación aceptada, y con nada más. Si no
     // hay recuperación aceptada, no escribe: ese es el contrato.
-    const r = await cambiarPasswordDeRecuperacion(pass);
+    const r = await cambiarPasswordDeRecuperacion(reclamada, pass);
     setBusy(false);
     if (!r.ok) {
       setErr(
@@ -69,6 +83,8 @@ export default function ResetPassword() {
       );
       return;
     }
+    // Una recuperación se usa una vez: la copia local se suelta con el éxito.
+    setReclamada(null);
     setOk(true);
     setTimeout(() => router.push("/cuenta"), 1600);
   }
