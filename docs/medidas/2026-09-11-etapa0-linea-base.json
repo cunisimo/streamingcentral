@@ -1,73 +1,81 @@
 {
- "fecha": "2026-09-11T20:17:52.983Z",
+ "fecha": "2026-09-11T21:27:14.036Z",
+ "valida": true,
+ "invalidos": [],
+ "incompletos": [
+  "F5a"
+ ],
  "app": "http://127.0.0.1:3000",
  "dobles": {
   "tmdb": "http://127.0.0.1:4801",
   "supabase": "http://127.0.0.1:4802",
   "redis": "http://127.0.0.1:4803"
  },
+ "reinicios": [
+  {
+   "motivo": "1 solicitud(es) activa(s) al cerrar F5a",
+   "pidViejo": 40024,
+   "exit": {
+    "code": 1,
+    "signal": null
+   },
+   "puertoCerrado": true,
+   "activasQueQuedaban": 1,
+   "pidNuevo": 27080
+  }
+ ],
+ "cierre": {
+  "motivo": "fin de la corrida",
+  "pidViejo": 27080,
+  "exit": {
+   "code": 1,
+   "signal": null
+  },
+  "puertoCerrado": true,
+  "activasQueQuedaban": 0
+ },
  "resultados": [
   {
    "id": "C0",
-   "titulo": "control: la app habla con los dobles (TMDB y Redis se mueven desde cero)",
+   "titulo": "control: la app habla con los dobles (arrancan en cero y una solicitud los mueve)",
    "query": "providers=n,d,m",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 2550,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 2618,
+     "ms": 2550,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 2618,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 2606ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 29353ms | supabase 4 consultas (4 ok) 251ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 33987ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 2454ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 25450ms | supabase 4 consultas (4 ok) 325ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 29263ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,1,4,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 2606,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 2454,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 926,
-      "ok": 926,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 29353
-     },
-     "supabase": {
-      "consultas": 4,
-      "ok": 4,
-      "http": null,
-      "red": null,
-      "ms": 251
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 993,
-      "intentosHttp": 993,
-      "comandos": 993,
-      "claves": 958,
-      "hits": 30,
-      "misses": 928,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 33987,
-      "lotes": "65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 926,
     "tmdbPorFamilia": {
@@ -83,73 +91,65 @@
     "redisPorComando": {
      "MGET": 65,
      "SET": 928
-    },
-    "redisClaves": 928
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "C0",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 926,
+     "supabase": 4,
+     "redisHttp": 993,
+     "redisComandos": 993
+    }
+   }
   },
   {
    "id": "B1",
    "titulo": "Home FRÍO, una solicitud",
    "query": "providers=n,d,m",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 1950,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 2582,
+     "ms": 1950,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 2582,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 2576ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 24389ms | supabase 4 consultas (4 ok) 123ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 30775ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 1932ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 16817ms | supabase 4 consultas (4 ok) 95ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 21396ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 2576,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 1932,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 926,
-      "ok": 926,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 24389
-     },
-     "supabase": {
-      "consultas": 4,
-      "ok": 4,
-      "http": null,
-      "red": null,
-      "ms": 123
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 993,
-      "intentosHttp": 993,
-      "comandos": 993,
-      "claves": 958,
-      "hits": 30,
-      "misses": 928,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 30775,
-      "lotes": "65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 926,
     "tmdbPorFamilia": {
@@ -165,73 +165,65 @@
     "redisPorComando": {
      "MGET": 65,
      "SET": 928
-    },
-    "redisClaves": 928
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B1",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 926,
+     "supabase": 4,
+     "redisHttp": 993,
+     "redisComandos": 993
+    }
+   }
   },
   {
    "id": "B1b",
    "titulo": "control de repetibilidad: el mismo Home frío otra vez",
    "query": "providers=n,d,m",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 1804,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 2155,
+     "ms": 1804,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 2155,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 2133ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 20456ms | supabase 4 consultas (4 ok) 97ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 25258ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 1783ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 15752ms | supabase 4 consultas (4 ok) 78ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 19905ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 2133,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 1783,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 926,
-      "ok": 926,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 20456
-     },
-     "supabase": {
-      "consultas": 4,
-      "ok": 4,
-      "http": null,
-      "red": null,
-      "ms": 97
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 993,
-      "intentosHttp": 993,
-      "comandos": 993,
-      "claves": 958,
-      "hits": 30,
-      "misses": 928,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 25258,
-      "lotes": "65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 926,
     "tmdbPorFamilia": {
@@ -247,71 +239,63 @@
     "redisPorComando": {
      "MGET": 65,
      "SET": 928
-    },
-    "redisClaves": 928
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B1b",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 926,
+     "supabase": 4,
+     "redisHttp": 993,
+     "redisComandos": 993
+    }
+   }
   },
   {
    "id": "B2",
-   "titulo": "Home CALIENTE, una solicitud (clave ya guardada por B1b)",
+   "titulo": "Home CALIENTE, una solicitud (clave guardada por B1b)",
    "query": "providers=n,d,m",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 20,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 288,
+     "ms": 20,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 288,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 266ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 265ms | lotes: 1 de [1]"
+    "[home] 13ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 13ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n:"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 266,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 13,
      "cache": "HIT",
      "composiciones": 0,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 0,
-      "ok": 0,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 0
-     },
-     "supabase": {
-      "consultas": 0,
-      "ok": 0,
-      "http": null,
-      "red": null,
-      "ms": 0
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1,
-      "intentosHttp": 1,
-      "comandos": 1,
-      "claves": 1,
-      "hits": 1,
-      "misses": 0,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 265,
-      "lotes": "1 de [1]"
-     }
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 0,
     "tmdbPorFamilia": {},
@@ -321,269 +305,157 @@
     "redisComandos": 1,
     "redisPorComando": {
      "MGET": 1
-    },
-    "redisClaves": 928
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B2",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
   },
   {
    "id": "B3",
    "titulo": "5 solicitudes IGUALES con caché fría (comportamiento actual, sin single-flight)",
    "query": "providers=n,d,m",
    "veces": 5,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 6473,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 9746,
+     "ms": 6273,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     },
     {
      "estado": 200,
-     "ms": 9872,
+     "ms": 6472,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     },
     {
      "estado": 200,
-     "ms": 9796,
+     "ms": 6355,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     },
     {
      "estado": 200,
-     "ms": 9837,
+     "ms": 6420,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     },
     {
      "estado": 200,
-     "ms": 9857,
+     "ms": 6455,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 9872,
+   "eventos": [],
+   "pedidos": 5,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 9685ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 40664ms | supabase 4 consultas (4 ok) 544ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 50677ms | lotes: 65 de [1,93,1,2,20,8,4,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 6260ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 926 llamadas (926 ok) 26110ms | supabase 4 consultas (4 ok) 404ms | redis 993 llamadas / 993 intentos http / 993 comandos | 958 claves (30 hit / 928 miss) | 34170ms | lotes: 65 de [1,93,1,2,20,8,1,1,1,4,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 9729ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 664 llamadas (664 ok) 39847ms | supabase 3 consultas (3 ok) 286ms | redis 729 llamadas / 729 intentos http / 729 comandos | 958 claves (293 hit / 665 miss) | 42822ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 6341ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 664 llamadas (664 ok) 31685ms | supabase 3 consultas (3 ok) 246ms | redis 729 llamadas / 729 intentos http / 729 comandos | 958 claves (293 hit / 665 miss) | 34179ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 9765ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 708 llamadas (708 ok) 48642ms | supabase 3 consultas (3 ok) 210ms | redis 773 llamadas / 773 intentos http / 773 comandos | 958 claves (249 hit / 709 miss) | 55399ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 6402ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 708 llamadas (708 ok) 27091ms | supabase 3 consultas (3 ok) 170ms | redis 773 llamadas / 773 intentos http / 773 comandos | 958 claves (249 hit / 709 miss) | 27496ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 9783ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 658 llamadas (658 ok) 38315ms | supabase 3 consultas (3 ok) 261ms | redis 723 llamadas / 723 intentos http / 723 comandos | 958 claves (299 hit / 659 miss) | 38660ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 6433ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 658 llamadas (658 ok) 23926ms | supabase 3 consultas (3 ok) 95ms | redis 723 llamadas / 723 intentos http / 723 comandos | 958 claves (299 hit / 659 miss) | 26067ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 9811ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 642 llamadas (642 ok) 43879ms | supabase 3 consultas (3 ok) 379ms | redis 707 llamadas / 707 intentos http / 707 comandos | 958 claves (315 hit / 643 miss) | 45335ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 6459ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 642 llamadas (642 ok) 26914ms | supabase 3 consultas (3 ok) 307ms | redis 707 llamadas / 707 intentos http / 707 comandos | 958 claves (315 hit / 643 miss) | 28755ms | lotes: 64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 9685,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6260,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 926,
-      "ok": 926,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 40664
-     },
-     "supabase": {
-      "consultas": 4,
-      "ok": 4,
-      "http": null,
-      "red": null,
-      "ms": 544
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 993,
-      "intentosHttp": 993,
-      "comandos": 993,
-      "claves": 958,
-      "hits": 30,
-      "misses": 928,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 50677,
-      "lotes": "65 de [1,93,1,2,20,8,4,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 926,
+     "supabase": 4,
+     "redisIntentos": 993,
+     "redisComandos": 993
     },
     {
-     "msTotal": 9729,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6341,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 664,
-      "ok": 664,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 39847
-     },
-     "supabase": {
-      "consultas": 3,
-      "ok": 3,
-      "http": null,
-      "red": null,
-      "ms": 286
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 729,
-      "intentosHttp": 729,
-      "comandos": 729,
-      "claves": 958,
-      "hits": 293,
-      "misses": 665,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 42822,
-      "lotes": "64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 664,
+     "supabase": 3,
+     "redisIntentos": 729,
+     "redisComandos": 729
     },
     {
-     "msTotal": 9765,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6402,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 708,
-      "ok": 708,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 48642
-     },
-     "supabase": {
-      "consultas": 3,
-      "ok": 3,
-      "http": null,
-      "red": null,
-      "ms": 210
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 773,
-      "intentosHttp": 773,
-      "comandos": 773,
-      "claves": 958,
-      "hits": 249,
-      "misses": 709,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 55399,
-      "lotes": "64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 708,
+     "supabase": 3,
+     "redisIntentos": 773,
+     "redisComandos": 773
     },
     {
-     "msTotal": 9783,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6433,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 658,
-      "ok": 658,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 38315
-     },
-     "supabase": {
-      "consultas": 3,
-      "ok": 3,
-      "http": null,
-      "red": null,
-      "ms": 261
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 723,
-      "intentosHttp": 723,
-      "comandos": 723,
-      "claves": 958,
-      "hits": 299,
-      "misses": 659,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 38660,
-      "lotes": "64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 658,
+     "supabase": 3,
+     "redisIntentos": 723,
+     "redisComandos": 723
     },
     {
-     "msTotal": 9811,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 6459,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 642,
-      "ok": 642,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 43879
-     },
-     "supabase": {
-      "consultas": 3,
-      "ok": 3,
-      "http": null,
-      "red": null,
-      "ms": 379
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 707,
-      "intentosHttp": 707,
-      "comandos": 707,
-      "claves": 958,
-      "hits": 315,
-      "misses": 643,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 45335,
-      "lotes": "64 de [1,93,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 642,
+     "supabase": 3,
+     "redisIntentos": 707,
+     "redisComandos": 707
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 3598,
     "tmdbPorFamilia": {
@@ -599,71 +471,63 @@
     "redisPorComando": {
      "MGET": 321,
      "SET": 3604
-    },
-    "redisClaves": 928
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B3",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "5/5 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 3598,
+     "supabase": 16,
+     "redisHttp": 3925,
+     "redisComandos": 3925
+    }
+   }
   },
   {
    "id": "B4a",
-   "titulo": "variante equivalente: mismo conjunto en otro orden (d,m,n) → tiene que ser HIT de B3",
+   "titulo": "variante equivalente: mismo conjunto en otro orden (d,m,n) → misma clave que B3",
    "query": "providers=d,m,n",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 29,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 30,
+     "ms": 29,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 30,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:",
     "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n:",
-    "[home] 12ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 11ms | lotes: 1 de [1]"
+    "[home] 15ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 15ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n:"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 12,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:",
+     "msTotal": 15,
      "cache": "HIT",
      "composiciones": 0,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 0,
-      "ok": 0,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 0
-     },
-     "supabase": {
-      "consultas": 0,
-      "ok": 0,
-      "http": null,
-      "red": null,
-      "ms": 0
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1,
-      "intentosHttp": 1,
-      "comandos": 1,
-      "claves": 1,
-      "hits": 1,
-      "misses": 0,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 11,
-      "lotes": "1 de [1]"
-     }
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 0,
     "tmdbPorFamilia": {},
@@ -673,73 +537,65 @@
     "redisComandos": 1,
     "redisPorComando": {
      "MGET": 1
-    },
-    "redisClaves": 928
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B4a",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
   },
   {
    "id": "B4b",
    "titulo": "variante distinta: n,d → otra clave, rearma",
    "query": "providers=n,d",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 1342,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 1280,
+     "ms": 1342,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 1280,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,n:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=2v/31 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,n:",
-    "[home] 1264ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 404 llamadas (404 ok) 4877ms | supabase 2 consultas (2 ok) 26ms | redis 471 llamadas / 471 intentos http / 471 comandos | 968 claves (565 hit / 403 miss) | 5594ms | lotes: 68 de [1,62,1,2,2,20,100,12,12,5,3,5,3,2,1,20,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,3]",
+    "[home] 1330ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 404 llamadas (404 ok) 6036ms | supabase 2 consultas (2 ok) 78ms | redis 471 llamadas / 471 intentos http / 471 comandos | 968 claves (565 hit / 403 miss) | 7323ms | lotes: 68 de [1,62,1,2,2,20,100,12,12,5,3,5,3,2,1,20,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,3] | clave home:es-ES.r1:v6:2345676558:d,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 1264,
+     "clave": "home:es-ES.r1:v6:2345676558:d,n:",
+     "msTotal": 1330,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 404,
-      "ok": 404,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 4877
-     },
-     "supabase": {
-      "consultas": 2,
-      "ok": 2,
-      "http": null,
-      "red": null,
-      "ms": 26
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 471,
-      "intentosHttp": 471,
-      "comandos": 471,
-      "claves": 968,
-      "hits": 565,
-      "misses": 403,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 5594,
-      "lotes": "68 de [1,62,1,2,2,20,100,12,12,5,3,5,3,2,1,20,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,3]"
-     }
+     "tmdb": 404,
+     "supabase": 2,
+     "redisIntentos": 471,
+     "redisComandos": 471
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 404,
     "tmdbPorFamilia": {
@@ -754,73 +610,65 @@
     "redisPorComando": {
      "MGET": 68,
      "SET": 403
-    },
-    "redisClaves": 1331
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B4b",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 404,
+     "supabase": 2,
+     "redisHttp": 471,
+     "redisComandos": 471
+    }
+   }
   },
   {
    "id": "B4c",
    "titulo": "variante por toggle: n,d,m con t=accion:tv → otra clave, rearma",
    "query": "providers=n,d,m&t=accion:tv",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 852,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 950,
+     "ms": 852,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 950,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
     "[home] VUELTAS accion=4v/106 scifi=4v/112 terror=4v/106 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
-    "[home] 932ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 119 llamadas (119 ok) 1687ms | supabase 2 consultas (2 ok) 51ms | redis 178 llamadas / 178 intentos http / 178 comandos | 956 claves (837 hit / 119 miss) | 2658ms | lotes: 59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 833ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 119 llamadas (119 ok) 1000ms | supabase 2 consultas (2 ok) 34ms | redis 178 llamadas / 178 intentos http / 178 comandos | 956 claves (837 hit / 119 miss) | 2179ms | lotes: 59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo riel-accion/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 932,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:accion:tv",
+     "msTotal": 833,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 119,
-      "ok": 119,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 1687
-     },
-     "supabase": {
-      "consultas": 2,
-      "ok": 2,
-      "http": null,
-      "red": null,
-      "ms": 51
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 178,
-      "intentosHttp": 178,
-      "comandos": 178,
-      "claves": 956,
-      "hits": 837,
-      "misses": 119,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 2658,
-      "lotes": "59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 119,
+     "supabase": 2,
+     "redisIntentos": 178,
+     "redisComandos": 178
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 119,
     "tmdbPorFamilia": {
@@ -835,73 +683,65 @@
     "redisPorComando": {
      "MGET": 59,
      "SET": 119
-    },
-    "redisClaves": 1450
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B4c",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 119,
+     "supabase": 2,
+     "redisHttp": 178,
+     "redisComandos": 178
+    }
+   }
   },
   {
    "id": "B4d",
-   "titulo": "control: n,d,m&t=accion:movie (el default) → la misma clave que B3, HIT",
+   "titulo": "HOY (#18 abierto): n,d,m&t=accion:movie —el default escrito— es OTRA clave que sin `t`: MISS y rearma",
    "query": "providers=n,d,m&t=accion:movie",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 794,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 813,
+     "ms": 794,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 813,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
-    "[home] 797ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 1 llamadas (1 ok) 12ms | supabase 2 consultas (2 ok) 78ms | redis 60 llamadas / 60 intentos http / 60 comandos | 956 claves (955 hit / 1 miss) | 774ms | lotes: 59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 773ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 1 llamadas (1 ok) 3ms | supabase 2 consultas (2 ok) 32ms | redis 60 llamadas / 60 intentos http / 60 comandos | 956 claves (955 hit / 1 miss) | 773ms | lotes: 59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 797,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n:accion:movie",
+     "msTotal": 773,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 1,
-      "ok": 1,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 12
-     },
-     "supabase": {
-      "consultas": 2,
-      "ok": 2,
-      "http": null,
-      "red": null,
-      "ms": 78
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 60,
-      "intentosHttp": 60,
-      "comandos": 60,
-      "claves": 956,
-      "hits": 955,
-      "misses": 1,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 774,
-      "lotes": "59 de [1,93,1,2,2,20,100,12,12,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 1,
+     "supabase": 2,
+     "redisIntentos": 60,
+     "redisComandos": 60
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 1,
     "tmdbPorFamilia": {
@@ -914,76 +754,68 @@
     "redisPorComando": {
      "MGET": 59,
      "SET": 1
-    },
-    "redisClaves": 1451
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "B4d",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 1,
+     "supabase": 2,
+     "redisHttp": 60,
+     "redisComandos": 60
+    }
+   }
   },
   {
    "id": "F1",
    "titulo": "TMDB responde 500: el Home sale DEGRADADO y no se guarda",
    "query": "providers=n,d,m,p",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 463,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 400,
+     "ms": 463,
      "hero": 0,
      "rails": 11,
      "degradado": true,
-     "fallos": 1,
-     "sinPlataformas": null
+     "fallos": 1
     }
    ],
-   "msPared": 400,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,p:",
     "[home] \"ultimos p1\" falló, se degrada a vacío — Error: TMDB 500 en /discover/movie",
     "[home] miniseries: 0 < 15, se oculta",
     "[home] VUELTAS accion=0v/0 scifi=0v/0 terror=0v/0 drama=0v/0 comedia=0v/0 documental=0v/0 miniseries=0v/0 (tope 4)",
     "[home] payload degradado: 1 fuente(s) caída(s)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,p:",
-    "[home] 383ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 x5xx) 3831ms | supabase 6 consultas (6 ok) 72ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 451ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4]",
+    "[home] 449ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 x5xx) 5716ms | supabase 6 consultas (6 ok) 41ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 558ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4] | clave home:es-ES.r1:v6:2345676558:d,m,n,p:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 383,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,p:",
+     "msTotal": 449,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": true,
-     "fuentesCaidas": 1,
-     "tmdb": {
-      "llamadas": 277,
-      "ok": 0,
-      "x429": null,
-      "x5xx": 277,
-      "red": null,
-      "ms": 3831
-     },
-     "supabase": {
-      "consultas": 6,
-      "ok": 6,
-      "http": null,
-      "red": null,
-      "ms": 72
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 31,
-      "intentosHttp": 31,
-      "comandos": 31,
-      "claves": 281,
-      "hits": 0,
-      "misses": 281,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 451,
-      "lotes": "27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4]"
-     }
+     "tmdb": 277,
+     "supabase": 6,
+     "redisIntentos": 31,
+     "redisComandos": 31
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 277,
     "tmdbPorFamilia": {
@@ -997,73 +829,65 @@
     "redisPorComando": {
      "MGET": 27,
      "SET": 4
-    },
-    "redisClaves": 2
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "F1",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 277,
+     "supabase": 6,
+     "redisHttp": 31,
+     "redisComandos": 31
+    }
+   }
   },
   {
    "id": "F1r",
    "titulo": "TMDB vuelve: la misma clave rearma y guarda",
    "query": "providers=n,d,m,p",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 2154,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 1850,
+     "ms": 2154,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 1850,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,p:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,p:",
-    "[home] 1831ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 17656ms | supabase 2 consultas (2 ok) 12ms | redis 1022 llamadas / 1022 intentos http / 1022 comandos | 989 claves (32 hit / 957 miss) | 21816ms | lotes: 65 de [1,100,1,24,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 2131ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 21456ms | supabase 2 consultas (2 ok) 28ms | redis 1022 llamadas / 1022 intentos http / 1022 comandos | 989 claves (32 hit / 957 miss) | 25381ms | lotes: 65 de [1,100,1,24,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,p:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 1831,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,p:",
+     "msTotal": 2131,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 957,
-      "ok": 957,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 17656
-     },
-     "supabase": {
-      "consultas": 2,
-      "ok": 2,
-      "http": null,
-      "red": null,
-      "ms": 12
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1022,
-      "intentosHttp": 1022,
-      "comandos": 1022,
-      "claves": 989,
-      "hits": 32,
-      "misses": 957,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 21816,
-      "lotes": "65 de [1,100,1,24,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 957,
+     "supabase": 2,
+     "redisIntentos": 1022,
+     "redisComandos": 1022
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 957,
     "tmdbPorFamilia": {
@@ -1079,71 +903,63 @@
     "redisPorComando": {
      "MGET": 65,
      "SET": 957
-    },
-    "redisClaves": 959
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "F1r",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 2,
+     "redisHttp": 1022,
+     "redisComandos": 1022
+    }
+   }
   },
   {
    "id": "F1h",
    "titulo": "…y la siguiente es HIT",
    "query": "providers=n,d,m,p",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 27,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 36,
+     "ms": 27,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 36,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,p:",
     "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,p:",
-    "[home] 16ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 16ms | lotes: 1 de [1]"
+    "[home] 14ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 14ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,p:"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 16,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,p:",
+     "msTotal": 14,
      "cache": "HIT",
      "composiciones": 0,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 0,
-      "ok": 0,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 0
-     },
-     "supabase": {
-      "consultas": 0,
-      "ok": 0,
-      "http": null,
-      "red": null,
-      "ms": 0
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1,
-      "intentosHttp": 1,
-      "comandos": 1,
-      "claves": 1,
-      "hits": 1,
-      "misses": 0,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 16,
-      "lotes": "1 de [1]"
-     }
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 0,
     "tmdbPorFamilia": {},
@@ -1153,76 +969,68 @@
     "redisComandos": 1,
     "redisPorComando": {
      "MGET": 1
-    },
-    "redisClaves": 959
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "F1h",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
   },
   {
    "id": "F2",
    "titulo": "TMDB responde 429 con Retry-After",
    "query": "providers=n,d,m,at",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 385,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 366,
+     "ms": 385,
      "hero": 0,
      "rails": 11,
      "degradado": true,
-     "fallos": 1,
-     "sinPlataformas": null
+     "fallos": 1
     }
    ],
-   "msPared": 366,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:at,d,m,n:",
     "[home] \"ultimos p1\" falló, se degrada a vacío — Error: TMDB 429 en /discover/movie",
     "[home] miniseries: 0 < 15, se oculta",
     "[home] VUELTAS accion=0v/0 scifi=0v/0 terror=0v/0 drama=0v/0 comedia=0v/0 documental=0v/0 miniseries=0v/0 (tope 4)",
     "[home] payload degradado: 1 fuente(s) caída(s)",
     "[home] MISS home:es-ES.r1:v6:2345676558:at,d,m,n:",
-    "[home] 351ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 x429) 3761ms | supabase 6 consultas (6 ok) 28ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 420ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4]",
+    "[home] 369ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 x429) 3109ms | supabase 6 consultas (6 ok) 51ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 359ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4] | clave home:es-ES.r1:v6:2345676558:at,d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 351,
+     "clave": "home:es-ES.r1:v6:2345676558:at,d,m,n:",
+     "msTotal": 369,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": true,
-     "fuentesCaidas": 1,
-     "tmdb": {
-      "llamadas": 277,
-      "ok": 0,
-      "x429": 277,
-      "x5xx": null,
-      "red": null,
-      "ms": 3761
-     },
-     "supabase": {
-      "consultas": 6,
-      "ok": 6,
-      "http": null,
-      "red": null,
-      "ms": 28
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 31,
-      "intentosHttp": 31,
-      "comandos": 31,
-      "claves": 281,
-      "hits": 0,
-      "misses": 281,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 420,
-      "lotes": "27 de [1,100,24,12,12,12,12,12,12,12,12,12,4,4,4,4,1,1,1,1,4,4,4,4,4,4,4]"
-     }
+     "tmdb": 277,
+     "supabase": 6,
+     "redisIntentos": 31,
+     "redisComandos": 31
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 277,
     "tmdbPorFamilia": {
@@ -1236,76 +1044,68 @@
     "redisPorComando": {
      "MGET": 27,
      "SET": 4
-    },
-    "redisClaves": 2
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "F2",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 277,
+     "supabase": 6,
+     "redisHttp": 31,
+     "redisComandos": 31
+    }
+   }
   },
   {
    "id": "F3",
    "titulo": "TMDB CAÍDO (corta el socket): fallos de red",
    "query": "providers=n,d,m,cr",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 617,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 538,
+     "ms": 617,
      "hero": 0,
      "rails": 11,
      "degradado": true,
-     "fallos": 1,
-     "sinPlataformas": null
+     "fallos": 1
     }
    ],
-   "msPared": 538,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:cr,d,m,n:",
     "[home] \"ultimos p1\" falló, se degrada a vacío — [TypeError: fetch failed] {",
     "[home] miniseries: 0 < 15, se oculta",
     "[home] VUELTAS accion=0v/0 scifi=0v/0 terror=0v/0 drama=0v/0 comedia=0v/0 documental=0v/0 miniseries=0v/0 (tope 4)",
     "[home] payload degradado: 1 fuente(s) caída(s)",
     "[home] MISS home:es-ES.r1:v6:2345676558:cr,d,m,n:",
-    "[home] 519ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 red) 7976ms | supabase 6 consultas (6 ok) 57ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 460ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,4,4,4,12,4,1,1,1,1,4,4,4,4,4,4,4]",
+    "[home] 602ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (1 fuente(s)) | tmdb 277 llamadas (0 ok, 277 red) 9717ms | supabase 6 consultas (6 ok) 76ms | redis 31 llamadas / 31 intentos http / 31 comandos | 281 claves (0 hit / 281 miss) | 570ms | lotes: 27 de [1,100,24,12,12,12,12,12,12,12,12,4,4,4,12,4,1,1,1,1,4,4,4,4,4,4,4] | clave home:es-ES.r1:v6:2345676558:cr,d,m,n:",
     "[home] EJES hero-todos/tv=taquilla hero-todos/movie=taquilla riel-scifi/tv=hondo riel-accion/movie=nuevo riel-drama/tv=nuevo riel-terror/movie=taquilla riel-documental/tv=taquilla aud-adult-anime/movie=nuevo riel-comedia/movie=taquilla aud-family/movie=top aud-family/tv=top aud-adult-anime/tv=nuevo riel-mini-miniseries/tv=top"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 519,
+     "clave": "home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+     "msTotal": 602,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": true,
-     "fuentesCaidas": 1,
-     "tmdb": {
-      "llamadas": 277,
-      "ok": 0,
-      "x429": null,
-      "x5xx": null,
-      "red": 277,
-      "ms": 7976
-     },
-     "supabase": {
-      "consultas": 6,
-      "ok": 6,
-      "http": null,
-      "red": null,
-      "ms": 57
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 31,
-      "intentosHttp": 31,
-      "comandos": 31,
-      "claves": 281,
-      "hits": 0,
-      "misses": 281,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 460,
-      "lotes": "27 de [1,100,24,12,12,12,12,12,12,12,12,4,4,4,12,4,1,1,1,1,4,4,4,4,4,4,4]"
-     }
+     "tmdb": 277,
+     "supabase": 6,
+     "redisIntentos": 31,
+     "redisComandos": 31
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 277,
     "tmdbPorFamilia": {
@@ -1319,73 +1119,65 @@
     "redisPorComando": {
      "MGET": 27,
      "SET": 4
-    },
-    "redisClaves": 2
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "F3",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 277,
+     "supabase": 6,
+     "redisHttp": 31,
+     "redisComandos": 31
+    }
+   }
   },
   {
    "id": "F3r",
    "titulo": "TMDB vuelve",
    "query": "providers=n,d,m,cr",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 2017,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 2122,
+     "ms": 2017,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 2122,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:cr,d,m,n:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:cr,d,m,n:",
-    "[home] 2102ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 19445ms | supabase 2 consultas (2 ok) 36ms | redis 1022 llamadas / 1022 intentos http / 1022 comandos | 989 claves (32 hit / 957 miss) | 23818ms | lotes: 65 de [1,100,24,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 1998ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 18736ms | supabase 2 consultas (2 ok) 54ms | redis 1022 llamadas / 1022 intentos http / 1022 comandos | 989 claves (32 hit / 957 miss) | 23271ms | lotes: 65 de [1,100,1,24,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:cr,d,m,n:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 2102,
+     "clave": "home:es-ES.r1:v6:2345676558:cr,d,m,n:",
+     "msTotal": 1998,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 957,
-      "ok": 957,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 19445
-     },
-     "supabase": {
-      "consultas": 2,
-      "ok": 2,
-      "http": null,
-      "red": null,
-      "ms": 36
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1022,
-      "intentosHttp": 1022,
-      "comandos": 1022,
-      "claves": 989,
-      "hits": 32,
-      "misses": 957,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 23818,
-      "lotes": "65 de [1,100,24,1,20,2,12,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 957,
+     "supabase": 2,
+     "redisIntentos": 1022,
+     "redisComandos": 1022
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 957,
     "tmdbPorFamilia": {
@@ -1401,73 +1193,65 @@
     "redisPorComando": {
      "MGET": 65,
      "SET": 957
-    },
-    "redisClaves": 959
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "F3r",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 2,
+     "redisHttp": 1022,
+     "redisComandos": 1022
+    }
+   }
   },
   {
    "id": "F4",
    "titulo": "Supabase CAÍDO con TMDB sano",
    "query": "providers=n,d,m,pp",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 8814,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 8979,
+     "ms": 8814,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 8979,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,pp:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,pp:",
-    "[home] 8963ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 18620ms | supabase 30 consultas (0 ok, 30 red) 392ms | redis 1030 llamadas / 1030 intentos http / 1030 comandos | 989 claves (25 hit / 964 miss) | 22021ms | lotes: 66 de [1,100,1,24,2,1,1,1,1,20,5,7,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 8798ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 15406ms | supabase 30 consultas (0 ok, 30 red) 264ms | redis 1030 llamadas / 1030 intentos http / 1030 comandos | 989 claves (25 hit / 964 miss) | 18624ms | lotes: 66 de [1,100,1,24,2,1,1,1,1,20,7,5,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,pp:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 8963,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+     "msTotal": 8798,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 957,
-      "ok": 957,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 18620
-     },
-     "supabase": {
-      "consultas": 30,
-      "ok": 0,
-      "http": null,
-      "red": 30,
-      "ms": 392
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1030,
-      "intentosHttp": 1030,
-      "comandos": 1030,
-      "claves": 989,
-      "hits": 25,
-      "misses": 964,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 22021,
-      "lotes": "66 de [1,100,1,24,2,1,1,1,1,20,5,7,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 957,
+     "supabase": 30,
+     "redisIntentos": 1030,
+     "redisComandos": 1030
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 957,
     "tmdbPorFamilia": {
@@ -1483,248 +1267,32 @@
     "redisPorComando": {
      "MGET": 66,
      "SET": 964
-    },
-    "redisClaves": 959
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "F4",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 30,
+     "redisHttp": 1030,
+     "redisComandos": 1030
+    }
+   }
   },
   {
    "id": "F4r",
    "titulo": "Supabase vuelve",
    "query": "providers=n,d,m,pp",
    "veces": 1,
-   "respuestas": [
-    {
-     "estado": 200,
-     "ms": 33,
-     "hero": 6,
-     "rails": 12,
-     "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
-    }
-   ],
-   "msPared": 33,
-   "lineas": [
-    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,pp:",
-    "[home] 17ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 17ms | lotes: 1 de [1]"
-   ],
-   "home": [
-    {
-     "msTotal": 17,
-     "cache": "HIT",
-     "composiciones": 0,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 0,
-      "ok": 0,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 0
-     },
-     "supabase": {
-      "consultas": 0,
-      "ok": 0,
-      "http": null,
-      "red": null,
-      "ms": 0
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1,
-      "intentosHttp": 1,
-      "comandos": 1,
-      "claves": 1,
-      "hits": 1,
-      "misses": 0,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 17,
-      "lotes": "1 de [1]"
-     }
-    }
-   ],
-   "dobles": {
-    "tmdb": 0,
-    "tmdbPorFamilia": {},
-    "tmdbDesconocidas": [],
-    "supabase": 0,
-    "redisHttp": 1,
-    "redisComandos": 1,
-    "redisPorComando": {
-     "MGET": 1
-    },
-    "redisClaves": 959
-   },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
-  },
-  {
-   "id": "F5",
-   "titulo": "Redis CAÍDO (corta el socket): el SDK reintenta; el Home se entrega igual",
-   "query": "providers=n,d,m,mb",
-   "veces": 1,
-   "respuestas": [
-    {
-     "estado": null,
-     "ms": 180032,
-     "error": "TimeoutError: The operation was aborted due to timeout"
-    }
-   ],
-   "msPared": 180032,
-   "lineas": [],
-   "home": [],
-   "dobles": {
-    "tmdb": 481,
-    "tmdbPorFamilia": {
-     "GET /discover/movie": 57,
-     "GET /discover/tv": 68,
-     "GET /movie/{id}/watch/providers": 189,
-     "GET /tv/{id}/watch/providers": 167
-    },
-    "tmdbDesconocidas": [],
-    "supabase": 17,
-    "redisHttp": 3167,
-    "redisComandos": 0,
-    "redisPorComando": {},
-    "redisClaves": 0
-   },
-   "lineasCacheError": 527,
-   "lineasCacheEjemplo": [
-    "[cache] mget falló, sigue sin cache: [TypeError: fetch failed] {"
-   ]
-  },
-  {
-   "id": "F5r",
-   "titulo": "Redis vuelve: rearma y guarda",
-   "query": "providers=n,d,m,mb",
-   "veces": 1,
-   "respuestas": [
-    {
-     "estado": 200,
-     "ms": 3044,
-     "hero": 6,
-     "rails": 12,
-     "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
-    }
-   ],
-   "msPared": 3044,
-   "lineas": [
-    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
-    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,mb,n:",
-    "[home] 3036ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 34982ms | supabase 4 consultas (4 ok) 192ms | redis 1025 llamadas / 1025 intentos http / 1025 comandos | 989 claves (30 hit / 959 miss) | 41395ms | lotes: 66 de [1,100,1,24,2,20,7,5,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
-    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo",
-    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
-    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,mb,n:",
-    "[home] 183516ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 705 llamadas (705 ok) 32398ms | supabase 17 consultas (17 ok) 199ms | redis 786 llamadas / 3426 intentos http / 259 comandos | 989 claves (269 hit / 720 miss) | 32 fallo(s) lectura, 495 fallo(s) escritura | 2479192ms | lotes: 34 de [1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
-    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top"
-   ],
-   "home": [
-    {
-     "msTotal": 3036,
-     "cache": "MISS",
-     "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 957,
-      "ok": 957,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 34982
-     },
-     "supabase": {
-      "consultas": 4,
-      "ok": 4,
-      "http": null,
-      "red": null,
-      "ms": 192
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1025,
-      "intentosHttp": 1025,
-      "comandos": 1025,
-      "claves": 989,
-      "hits": 30,
-      "misses": 959,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 41395,
-      "lotes": "66 de [1,100,1,24,2,20,7,5,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
-    },
-    {
-     "msTotal": 183516,
-     "cache": "MISS",
-     "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 705,
-      "ok": 705,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 32398
-     },
-     "supabase": {
-      "consultas": 17,
-      "ok": 17,
-      "http": null,
-      "red": null,
-      "ms": 199
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 786,
-      "intentosHttp": 3426,
-      "comandos": 259,
-      "claves": 989,
-      "hits": 269,
-      "misses": 720,
-      "fallosLectura": 32,
-      "fallosEscritura": 495,
-      "ms": 2479192,
-      "lotes": "34 de [1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
-    }
-   ],
-   "dobles": {
-    "tmdb": 1181,
-    "tmdbPorFamilia": {
-     "GET /discover/movie": 57,
-     "GET /discover/tv": 68,
-     "GET /movie/{id}/watch/providers": 497,
-     "GET /tv/{id}/watch/providers": 559
-    },
-    "tmdbDesconocidas": [],
-    "supabase": 4,
-    "redisHttp": 1284,
-    "redisComandos": 1284,
-    "redisPorComando": {
-     "MGET": 100,
-     "SET": 1184
-    },
-    "redisClaves": 959
-   },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
-  },
-  {
-   "id": "F5h",
-   "titulo": "…y la siguiente es HIT",
-   "query": "providers=n,d,m,mb",
-   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 30,
    "respuestas": [
     {
      "estado": 200,
@@ -1732,53 +1300,30 @@
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 30,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
-    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,mb,n:",
-    "[home] 17ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 16ms | lotes: 1 de [1]"
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+    "[home] 14ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 14ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,pp:"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 17,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,pp:",
+     "msTotal": 14,
      "cache": "HIT",
      "composiciones": 0,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 0,
-      "ok": 0,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 0
-     },
-     "supabase": {
-      "consultas": 0,
-      "ok": 0,
-      "http": null,
-      "red": null,
-      "ms": 0
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1,
-      "intentosHttp": 1,
-      "comandos": 1,
-      "claves": 1,
-      "hits": 1,
-      "misses": 0,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 16,
-      "lotes": "1 de [1]"
-     }
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 0,
     "tmdbPorFamilia": {},
@@ -1788,73 +1333,329 @@
     "redisComandos": 1,
     "redisPorComando": {
      "MGET": 1
-    },
-    "redisClaves": 959
+    }
    },
+   "validacion": {
+    "id": "F4r",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "F5a",
+   "titulo": "Redis CAÍDO (corta el socket) durante una ventana de 60 s: ¿completa?",
+   "query": "providers=n,d,m,mb",
+   "veces": 1,
+   "timeoutMs": 60000,
+   "permiteIncompleto": true,
+   "msPared": 60014,
+   "respuestas": [
+    {
+     "estado": null,
+     "ms": 60014,
+     "error": "TimeoutError"
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 1,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,mb,n:"
+   ],
+   "terminales": [],
+   "lineasCacheError": 323,
+   "dobles": {
+    "tmdb": 297,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 111,
+     "GET /tv/{id}/watch/providers": 61
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 11,
+    "redisHttp": 1943,
+    "redisComandos": 0,
+    "redisPorComando": {}
+   },
+   "validacion": {
+    "id": "F5a",
+    "estado": "incompleto",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 1,
+    "igualdadesVerificadas": false,
+    "resumen": "no completó en más de 60000 ms: 0/1 completadas, 1 activa(s) en el servidor; actividad observada en los dobles sin igualdad exigible",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 0,
+     "redisComandos": 0
+    }
+   }
+  },
+  {
+   "id": "F5b",
+   "titulo": "recuperación CONTROLADA: Redis caído al pedir, vuelve a los 15 s, se espera a que la solicitud termine",
+   "query": "providers=n,d,m,ok",
+   "veces": 1,
+   "timeoutMs": 600000,
+   "permiteIncompleto": false,
+   "msPared": 17678,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 17678,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [
+    {
+     "que": "redis vuelve",
+     "ms": 15003
+    }
+   ],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
+    "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] 17598ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 29145ms | supabase 5 consultas (5 ok) 149ms | redis 1026 llamadas / 1655 intentos http / 921 comandos | 989 claves (29 hit / 960 miss) | 4 fallo(s) lectura, 101 fallo(s) escritura | 602331ms | lotes: 62 de [2,7,5,20,1,1,1,1,28,28,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-documental/tv=taquilla riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo riel-mini-miniseries/tv=top"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+     "msTotal": 17598,
+     "cache": "MISS",
+     "composiciones": 1,
+     "tmdb": 957,
+     "supabase": 5,
+     "redisIntentos": 1655,
+     "redisComandos": 921
+    }
+   ],
+   "lineasCacheError": 105,
+   "dobles": {
+    "tmdb": 957,
+    "tmdbPorFamilia": {
+     "GET /discover/movie": 57,
+     "GET /discover/tv": 68,
+     "GET /movie/{id}/watch/providers": 413,
+     "GET /tv/{id}/watch/providers": 419
+    },
+    "tmdbDesconocidas": [],
+    "supabase": 5,
+    "redisHttp": 1655,
+    "redisComandos": 921,
+    "redisPorComando": {
+     "MGET": 62,
+     "SET": 859
+    }
+   },
+   "validacion": {
+    "id": "F5b",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 5,
+     "redisHttp": 1655,
+     "redisComandos": 921
+    }
+   }
+  },
+  {
+   "id": "F5c",
+   "titulo": "la solicitud SIGUIENTE a la recuperación",
+   "query": "providers=n,d,m,ok",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 32,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 32,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] 16ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 16ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,ok:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+     "msTotal": 16,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
    "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "F5c",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
+  },
+  {
+   "id": "F5d",
+   "titulo": "…y la siguiente",
+   "query": "providers=n,d,m,ok",
+   "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 37,
+   "respuestas": [
+    {
+     "estado": 200,
+     "ms": 37,
+     "hero": 6,
+     "rails": 12,
+     "degradado": false,
+     "fallos": 0
+    }
+   ],
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
+   "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] HIT  home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+    "[home] 21ms total | cache HIT | 0 composiciones | 0 esperas compartidas | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (1 hit / 0 miss) | 20ms | lotes: 1 de [1] | clave home:es-ES.r1:v6:2345676558:d,m,n,ok:"
+   ],
+   "terminales": [
+    {
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,ok:",
+     "msTotal": 21,
+     "cache": "HIT",
+     "composiciones": 0,
+     "tmdb": 0,
+     "supabase": 0,
+     "redisIntentos": 1,
+     "redisComandos": 1
+    }
+   ],
+   "lineasCacheError": 0,
+   "dobles": {
+    "tmdb": 0,
+    "tmdbPorFamilia": {},
+    "tmdbDesconocidas": [],
+    "supabase": 0,
+    "redisHttp": 1,
+    "redisComandos": 1,
+    "redisPorComando": {
+     "MGET": 1
+    }
+   },
+   "validacion": {
+    "id": "F5d",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 0,
+     "supabase": 0,
+     "redisHttp": 1,
+     "redisComandos": 1
+    }
+   }
   },
   {
    "id": "F6",
    "titulo": "Redis responde 500 (respuesta HTTP de error: el SDK NO reintenta)",
    "query": "providers=n,d,m,un",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 3081,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 3515,
+     "ms": 3081,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 3515,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,un:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,un:",
-    "[home] 3503ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 25197ms | supabase 34 consultas (34 ok) 643ms | redis 1055 llamadas / 1055 intentos http / 0 comandos | 989 claves (0 hit / 989 miss) | 66 fallo(s) lectura, 989 fallo(s) escritura | 35569ms | lotes: ninguno",
+    "[home] 3069ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 20549ms | supabase 34 consultas (34 ok) 615ms | redis 1055 llamadas / 1055 intentos http / 0 comandos | 989 claves (0 hit / 989 miss) | 66 fallo(s) lectura, 989 fallo(s) escritura | 27977ms | lotes: ninguno | clave home:es-ES.r1:v6:2345676558:d,m,n,un:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 3503,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,un:",
+     "msTotal": 3069,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 957,
-      "ok": 957,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 25197
-     },
-     "supabase": {
-      "consultas": 34,
-      "ok": 34,
-      "http": null,
-      "red": null,
-      "ms": 643
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1055,
-      "intentosHttp": 1055,
-      "comandos": 0,
-      "claves": 989,
-      "hits": 0,
-      "misses": 989,
-      "fallosLectura": 66,
-      "fallosEscritura": 989,
-      "ms": 35569,
-      "lotes": "ninguno"
-     }
+     "tmdb": 957,
+     "supabase": 34,
+     "redisIntentos": 1055,
+     "redisComandos": 0
     }
    ],
+   "lineasCacheError": 1055,
    "dobles": {
     "tmdb": 957,
     "tmdbPorFamilia": {
@@ -1867,75 +1668,65 @@
     "supabase": 34,
     "redisHttp": 1055,
     "redisComandos": 0,
-    "redisPorComando": {},
-    "redisClaves": 0
+    "redisPorComando": {}
    },
-   "lineasCacheError": 1055,
-   "lineasCacheEjemplo": [
-    "[cache] mget falló, sigue sin cache: c [UpstashError]: doble en modo 500, command was: [[\"mget\",\"home:es-ES.r1:v6:2345676558:d,m,n,un:\"]]"
-   ]
+   "validacion": {
+    "id": "F6",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 34,
+     "redisHttp": 1055,
+     "redisComandos": 0
+    }
+   }
   },
   {
    "id": "L1",
    "titulo": "latencia declarada: TMDB +100 ms por llamada, Home frío",
    "query": "providers=n,d,m,vx",
    "veces": 1,
+   "timeoutMs": 300000,
+   "permiteIncompleto": false,
+   "msPared": 8052,
    "respuestas": [
     {
      "estado": 200,
-     "ms": 8085,
+     "ms": 8052,
      "hero": 6,
      "rails": 12,
      "degradado": false,
-     "fallos": 0,
-     "sinPlataformas": null
+     "fallos": 0
     }
    ],
-   "msPared": 8085,
+   "eventos": [],
+   "pedidos": 1,
+   "activasAlCerrar": 0,
    "lineas": [
+    "[home] pedido home:es-ES.r1:v6:2345676558:d,m,n,vx:",
     "[home] VUELTAS accion=4v/106 scifi=4v/106 terror=4v/112 drama=4v/112 comedia=4v/112 documental=4v/112 miniseries=1v/28 (tope 4)",
     "[home] MISS home:es-ES.r1:v6:2345676558:d,m,n,vx:",
-    "[home] 8064ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 113982ms | supabase 4 consultas (4 ok) 46ms | redis 1025 llamadas / 1025 intentos http / 1025 comandos | 989 claves (30 hit / 959 miss) | 10741ms | lotes: 66 de [1,100,24,1,20,2,7,5,1,1,28,28,1,1,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]",
+    "[home] 8032ms total | cache MISS | 1 composición | 0 esperas compartidas | tmdb 957 llamadas (957 ok) 115325ms | supabase 4 consultas (4 ok) 33ms | redis 1025 llamadas / 1025 intentos http / 1025 comandos | 989 claves (30 hit / 959 miss) | 12397ms | lotes: 66 de [1,100,24,1,20,2,7,5,1,1,28,28,1,1,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2345676558:d,m,n,vx:",
     "[home] EJES hero-todos/movie=taquilla hero-todos/tv=taquilla riel-accion/movie=nuevo riel-scifi/tv=hondo riel-terror/movie=taquilla riel-drama/tv=nuevo riel-comedia/movie=taquilla riel-documental/tv=taquilla riel-mini-miniseries/tv=top aud-family/movie=top aud-family/tv=top aud-adult-anime/movie=nuevo aud-adult-anime/tv=nuevo"
    ],
-   "home": [
+   "terminales": [
     {
-     "msTotal": 8064,
+     "clave": "home:es-ES.r1:v6:2345676558:d,m,n,vx:",
+     "msTotal": 8032,
      "cache": "MISS",
      "composiciones": 1,
-     "esperasCompartidas": 0,
-     "degradado": false,
-     "fuentesCaidas": null,
-     "tmdb": {
-      "llamadas": 957,
-      "ok": 957,
-      "x429": null,
-      "x5xx": null,
-      "red": null,
-      "ms": 113982
-     },
-     "supabase": {
-      "consultas": 4,
-      "ok": 4,
-      "http": null,
-      "red": null,
-      "ms": 46
-     },
-     "redis": {
-      "modo": "redis",
-      "llamadasLogicas": 1025,
-      "intentosHttp": 1025,
-      "comandos": 1025,
-      "claves": 989,
-      "hits": 30,
-      "misses": 959,
-      "fallosLectura": null,
-      "fallosEscritura": null,
-      "ms": 10741,
-      "lotes": "66 de [1,100,24,1,20,2,7,5,1,1,28,28,1,1,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28]"
-     }
+     "tmdb": 957,
+     "supabase": 4,
+     "redisIntentos": 1025,
+     "redisComandos": 1025
     }
    ],
+   "lineasCacheError": 0,
    "dobles": {
     "tmdb": 957,
     "tmdbPorFamilia": {
@@ -1951,11 +1742,23 @@
     "redisPorComando": {
      "MGET": 66,
      "SET": 959
-    },
-    "redisClaves": 959
+    }
    },
-   "lineasCacheError": 0,
-   "lineasCacheEjemplo": []
+   "validacion": {
+    "id": "L1",
+    "estado": "completo",
+    "valida": true,
+    "problemas": [],
+    "activasEnServidor": 0,
+    "igualdadesVerificadas": true,
+    "resumen": "1/1 completadas; igualdades verificadas",
+    "sumas": {
+     "tmdb": 957,
+     "supabase": 4,
+     "redisHttp": 1025,
+     "redisComandos": 1025
+    }
+   }
   }
  ]
 }

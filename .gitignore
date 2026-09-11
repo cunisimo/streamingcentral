@@ -39,3 +39,6 @@ data/*
 .capacitor-diagnostico/
 .capacitor-build/
 out-capacitor/
+
+# logs de los procesos de Next que levanta el banco aislado (scripts/banco/correr.mjs)
+.banco-logs/
