@@ -137,6 +137,8 @@ punto 3 no forma parte de este issue.
 causa del consumo del enlace original.** Necesita un token vigente de Supabase
 para leer logs y configuración de Auth.
 
+### Antecedente — diagnóstico original del 10/09, previo al arreglo (histórico)
+
 Recorrido informado: Olvidé mi contraseña en la app de Play → llega el correo
 → el enlace abre la web → intenta cambiar la contraseña → Android no la acepta.
 La afirmación de que no impacta en la base es la interpretación del síntoma,
@@ -199,11 +201,13 @@ el esperado; ruta final sin tokens; estado/código de la respuesta de actualizac
 y del ingreso, identidad del proyecto Auth web/Android y validez de la sesión.
 No registrar contraseñas, tokens ni enlaces de recuperación completos.
 
-**Cierre:** reproducir con cuenta de prueba autorizada, documentar la causa,
-verificar que una recuperación nueva permite ingresar con la nueva contraseña
-en Android y web y rechaza la anterior, además de manejar enlace inválido/vencido
-y sesión previa. El retorno nativo se evalúa por separado; no dar por arreglado
-el guardado sólo por implementar App Links. Sin cambios de código en esta sesión.
+**Cierre propuesto entonces (superado por el "Criterio de cierre" de arriba):**
+reproducir con cuenta de prueba autorizada, documentar la causa, verificar que
+una recuperación nueva permite ingresar con la nueva contraseña en Android y web
+y rechaza la anterior, además de manejar enlace inválido/vencido y sesión previa.
+Todo eso ya está hecho y mergeado; queda sólo la causa. El retorno nativo se
+evalúa por separado; no dar por arreglado el guardado sólo por implementar App
+Links.
 
 > **Revisión del 10/09 de los issues #17–#20:** conservar los riesgos abiertos,
 > pero leer [la revisión independiente](medidas/2026-09-10-revision-capacidad-codex.md)

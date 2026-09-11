@@ -7,62 +7,33 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Recuperación de contraseña (#22): la corrección está MERGEADA en `main`
-  (`be5ef1d`, rama `fix/recuperacion-password`, cuatro rondas de auditoría).**
-  Codex auditó `de45b56` sin nuevos bloqueos técnicos y la consideró apta para
-  mergear. Lo que quedó: la única prueba de recuperación es el evento
-  `PASSWORD_RECOVERY` de Supabase; la escritura va atada a esos tokens en un
-  cliente aislado (cero escrituras sobre otra cuenta si cambia la sesión); la
-  aceptación es una autorización **pendiente → reclamada** por una sola
-  instancia de la pantalla, que nace sólo si la ruta real en ese instante es
-  `/cuenta/reset` y muere al reclamarse, al salir de la ruta, ante otra cuenta
-  o `SIGNED_OUT`; y la pantalla no pinta "sin enlace" ni "inválido" antes de
-  `ready` ni antes de reclamar (eso corrigió también un error de hidratación
-  medido en producción). Verificado en navegador sobre build de producción con
-  cuentas de prueba borradas y con **correo real**. **Sin deploy todavía.**
-  Informe completo: [`medidas/2026-09-10-recuperacion-password.md`](medidas/2026-09-10-recuperacion-password.md).
-  **#22 sigue ABIERTO por una sola cosa: qué consumió el enlace original del
-  dueño** — no demostrado ni descartado; el bloqueo es de acceso a logs y
-  configuración de Auth (Management API 401, MCP `Unauthorized`). La
-  reproducción A/B es una causa posible compatible con los síntomas, no la
-  causa histórica probada. Capacidad, App Links y Play Store siguen aparte.
-
-- **Auditoría de `fb89b45` (recuperación), 10/09 — SUPERADA por lo de arriba;
-  se conserva como antecedente.** No aprobado para merge entonces.
-  [Dictamen](medidas/2026-09-10-auditoria-fb89b45.md). Los 18 tests pasan, pero
-  una prueba independiente confirma formulario habilitado con token malformado
-  y sesión anterior. Además la identidad se compara después de escribir, sin
-  ligar la mutación a la recuperación esperada. El rechazo del enlace recién
-  recibido sigue sin explicación ni prueba completa con correo real. #22 abierto;
-  capacidad pausada. No se requieren más pruebas manuales del dueño.
-
-- **Evidencia nueva del #22:** captura de redirección con `access_denied` /
-  `otp_expired` (“Email link is invalid or has expired”). El dueño aclara que
-  copió el enlace recién recibido directamente del correo a incógnito, sin
-  abrirlo antes. Supabase rechaza la verificación; causa de invalidación aún no
-  determinada. No atribuirlo a reutilización manual ni a antigüedad sin evidencia.
-
-- **Captura del incidente #22:** Nueva contraseña muestra “El enlace no es
-  válido o ya venció”. El código usa ese texto ante ausencia de usuario después
-  de inicializar; no acredita expiración. Pendiente confirmar si el enlace era
-  nuevo y no había sido abierto antes. Se conserva el diagnóstico abierto.
-
-- **Ampliación del incidente #22 por el dueño:** la contraseña nueva tampoco
-  permite ingresar en la web en incógnito; revisó una tabla común de Supabase,
-  no Authentication, y no recuerda el correo del formulario. El síntoma no está
-  limitado a Android. Sigue pendiente comprobar la identidad de la sesión que
-  recibió el cambio y el error exacto del ingreso. Capacidad continúa pausada.
-
-- **Prioridad actual: recuperación de contraseña, reportada por el dueño.** Se
-  pausa capacidad y la revisión de `fix/cache-escritura-no-rompe` a pedido del
-  dueño. Informa que pedir recuperación desde Play envía el correo, el enlace
-  abre la web y la contraseña nueva luego no permite ingresar en Android.
-  Diagnóstico abierto en `ISSUES.md` #22. No está comprobado todavía que la
-  escritura haya fallado: faltan mensaje final, identidad de la sesión y
-  respuesta de Auth. No confundir la falta de App Links con fallo de guardado.
-  La entrega de Claude sobre `3612e3a` queda recibida, no auditada ni aprobada
-  por Codex en esta sesión. Los commits documentales `d38dbd8`, `4ae8823` y
-  `ef2f83e` sí figuran en el historial local comprobado.
+- **Recuperación de contraseña (#22) — estado vigente.**
+  1. La corrección está **mergeada en `main`** mediante `be5ef1d` (rama
+     `fix/recuperacion-password`, commits `fb89b45` → `0831b86` → `0d1b978` →
+     `de45b56`).
+  2. **Todavía no fue pusheada ni desplegada**: `main` local está adelante de
+     `origin/main` (`fd2cd23`) y Producción sigue con la página vieja.
+  3. La implementación fue **auditada** (cuatro rondas de Codex; la última,
+     sobre `de45b56`, sin nuevos bloqueos técnicos y apta para mergear) y
+     **verificada**: unitarios escritos antes de cada cambio, navegador sobre
+     build de producción con cuentas de prueba borradas, recorrido con correo
+     real, `npm test` 1337/1347 (10 omitidos), `tsc` limpio, `npm run build`
+     exit 0. Lo que quedó: la única prueba de recuperación es el evento
+     `PASSWORD_RECOVERY`; la escritura va atada a esos tokens en un cliente
+     aislado; la aceptación es una autorización pendiente → reclamada por una
+     sola instancia de la pantalla, sólo si la ruta real es `/cuenta/reset`.
+     Informe completo:
+     [`medidas/2026-09-10-recuperacion-password.md`](medidas/2026-09-10-recuperacion-password.md).
+  4. **#22 permanece abierto exclusivamente porque no se conoce qué consumió el
+     enlace original del dueño**: no demostrado ni descartado. El bloqueo es de
+     acceso a logs y configuración de Auth (Management API `401`, MCP
+     `Unauthorized`). La reproducción A/B es una causa posible compatible con
+     los síntomas, no la causa histórica probada.
+  5. **Prioridad actual: media.**
+  6. **Capacidad, App Links, Capacitor y Play Store son temas separados** y no
+     forman parte del #22.
+  7. El rechazo de `fb89b45` y los diagnósticos previos al arreglo están al
+     final de este bloque como **antecedentes históricos**, no como estado.
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -108,6 +79,44 @@
   el contenedor Analytics y Speed Insights dejan "dos pedidos muertos al
   arrancar". **Es incorrecto**: `app/layout.tsx:133` los gatea con `!ES_NATIVO` y
   no se montan. Sigue siendo cierto que las librerías quedan adentro del bundle.
+
+### Antecedentes del #22 — histórico, NO es el estado actual
+
+Lo que se sabía y se decía el 10/09, antes del arreglo. El estado vigente es
+el primer punto de este bloque; esto se conserva sólo para no perder el rastro
+de cómo se llegó.
+
+- **Auditoría de `fb89b45`, 10/09.** No aprobado para merge entonces.
+  [Dictamen](medidas/2026-09-10-auditoria-fb89b45.md). Los 18 tests pasan, pero
+  una prueba independiente confirma formulario habilitado con token malformado
+  y sesión anterior. Además la identidad se compara después de escribir, sin
+  ligar la mutación a la recuperación esperada. El rechazo del enlace recién
+  recibido seguía sin explicación ni prueba completa con correo real. (Los
+  cuatro puntos se resolvieron en `0831b86`; ver el informe.)
+
+- **Evidencia del 10/09:** captura de redirección con `access_denied` /
+  `otp_expired` (“Email link is invalid or has expired”). El dueño aclara que
+  copió el enlace recién recibido directamente del correo a incógnito, sin
+  abrirlo antes. Supabase rechazó la verificación; la causa de invalidación es
+  lo único que sigue abierto. No atribuirlo a reutilización manual ni a
+  antigüedad sin evidencia.
+
+- **Captura del incidente:** Nueva contraseña mostraba “El enlace no es
+  válido o ya venció”. El código de entonces usaba ese texto ante ausencia de
+  usuario después de inicializar; no acreditaba expiración. (Corregido: la
+  página nueva muestra el motivo que Supabase pone en la URL.)
+
+- **Ampliación del incidente por el dueño:** la contraseña nueva tampoco
+  permite ingresar en la web en incógnito; revisó una tabla común de Supabase,
+  no Authentication, y no recuerda el correo del formulario. El síntoma no está
+  limitado a Android. Quedaba por comprobar la identidad de la sesión que
+  recibió el cambio y el error exacto del ingreso.
+
+- **Reporte original del dueño (10/09), que entonces desplazó al resto del
+  trabajo.** Informó que pedir recuperación desde Play envía el correo, el enlace
+  abre la web y la contraseña nueva luego no permite ingresar en Android.
+  No estaba comprobado que la escritura hubiera fallado. No confundir la falta
+  de App Links con fallo de guardado.
 
 ## Estado de producto e integración
 
