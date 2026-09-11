@@ -1665,6 +1665,58 @@ que se reprodujo el problema— sin banco, sin contadores y sin Producción.
 3. **No** cambia el resto del contrato: un degradado sigue sin guardarse, y una
    lectura caída sigue siendo un MISS.
 
+### Estado: implementado y actualizado sobre `main`, pendiente de auditoría/merge
+
+Al 11/09/2026. Rama `fix/cache-escritura-no-rompe`, rebaseada sobre `main` =
+`adf7065` (antes nacía de `ef2f83e`). **Sin mergear ni desplegar.** El alcance es
+el de siempre: `guardar` captura el fallo de escritura, lo registra y no lo
+propaga. Nada más — sin instrumentación, single-flight, bloqueo, CDN ni límites.
+
+La política vive en `lib/escritura-cache.ts` (módulo puro, por el mismo motivo
+que `lib/reparar-y-cachear.ts`: `lib/cache.ts` arrastra Upstash y no se puede
+importar desde `node --test`) y `guardar` delega en ella.
+
+**18 tests en `lib/escritura-cache.test.ts`**, en dos grupos que se necesitan:
+
+- **Los siete escenarios** componen la política con `resolverConCache` REAL —la
+  misma función que corre en producción—, cada uno con su control contra el
+  `guardar` viejo. Los dos que faltaban del criterio de cierre, agregados el
+  11/09:
+  - **Redis entero caído** (lectura y escritura fallan en el mismo recorrido):
+    el payload correcto se entrega, el productor corre una vez, la lectura
+    fallida cuenta como MISS, el fallo de escritura queda registrado con su
+    clave y **no queda nada guardado**. Control: el mismo recorrido con el
+    `guardar` viejo rechaza.
+  - **Recuperación:** la primera solicitud no puede leer ni guardar y entrega
+    el payload (1 producción, 1 aviso, nada guardado); Redis vuelve; la segunda
+    lee MISS, rearma y guarda (2 producciones, sin aviso nuevo); la tercera es
+    **HIT** — devuelve lo guardado por la segunda, **no ejecuta el productor**
+    (sigue en 2) y no intenta escribir. Control: con el `guardar` viejo la
+    primera rechaza; y se deja dicho que rearmar y guardar tras volver no es
+    mérito del arreglo — el código viejo también lo hace.
+  ⚠️ Los siete pasan **también contra el `lib/cache.ts` de `main`** (verificado
+  el 11/09 sustituyendo el archivo: 15 pasan, 3 fallan — los tres guards). No
+  importan `lib/cache.ts`, así que no pueden verlo: prueban que la política es
+  correcta, no que producción la use.
+- **Los guards estructurales** son los que atan producción: `guardar` delega en
+  `guardarSinRomper`, el `redis!.set` está adentro del callback que la política
+  envuelve, el camino de lectura quedó intacto y el aviso distingue escritura de
+  lectura. **Fallan 3 de 3 contra el código de `main`.**
+
+**Sobre "el usuario recibe el payload, con 200":** lo que se ejecuta es el
+resolver (`resolverConCache`) devolviendo el payload con la escritura fallando.
+**El handler HTTP no se ejecuta en ningún test**: `app/api/home/route.ts`
+importa `lib/home.ts` → Upstash y TMDB, y no se puede levantar aislado sin
+credenciales. El 200 se **deduce** del camino del handler: `manejar` hace
+`NextResponse.json(await homePayload(...))`, y con el resolver resolviendo en
+vez de rechazar ya no entra al `catch` que responde 500. Es una inferencia sobre
+código leído, no una prueba realizada, y queda como tal.
+
+Verificación del 11/09 sobre la rama rebaseada: `lib/escritura-cache.test.ts`
+18/18; `npm test` **1355/1365, 0 fallos, 10 omitidos** (con `.next` de
+producción; con el `.next` ausente omite 18); `tsc --noEmit` limpio; `npm run
+build` exit 0 en 2 min 16 s. Pendiente: auditoría de Codex, merge y deploy.
+
 ### Criterio de cierre
 
 - Escritura fallando + payload **correcto** → el usuario **recibe el payload**,

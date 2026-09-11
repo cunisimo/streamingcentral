@@ -7,6 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { Redis } from "@upstash/redis";
 import type { ClaveLocalizada } from "./claves";
 import { resolverConCache, type BackendCache } from "./reparar-y-cachear";
+import { guardarSinRomper } from "./escritura-cache";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
 // dependen de cómo se haya conectado la base:
@@ -255,6 +256,21 @@ async function flush() {
   anotar((m) => { m.msCache += Date.now() - t0; });
 }
 
+// 🔴 UNA ESCRITURA QUE FALLA NO PUEDE TUMBAR EL REQUEST.
+//
+// Esto era `try { await redis.set(...) } finally {…}` —sin `catch`— y
+// `resolverConCache` espera la escritura antes de devolver, así que un rechazo
+// de `redis.set` subía hasta el `catch` del handler y salía como 500 con el Home
+// vacío. Un payload DEGRADADO se servía sin problema (nunca intenta escribir) y
+// uno COMPLETO Y CORRECTO se perdía: el sistema se portaba peor cuanto mejor le
+// había salido el trabajo.
+//
+// La política vive en `lib/escritura-cache.ts`, que es puro y por lo tanto se
+// puede EJECUTAR desde `node --test`; acá sólo se enchufa. Mismo criterio que
+// `cachedIf` con `resolverConCache` (ver lib/cache-delega.test.ts).
+//
+// El contrato ahora es simétrico con el de la LECTURA, que hace esto desde
+// siempre: capturar, registrar, seguir.
 async function guardar(key: string, data: unknown, ttl: number) {
   if (!redis) {
     mem.set(key, { v: data, exp: Date.now() + ttl * 1000 });
@@ -263,8 +279,26 @@ async function guardar(key: string, data: unknown, ttl: number) {
   }
   const t0 = Date.now();
   try {
-    await redis.set(key, data, { ex: ttl });
-    anotar((m) => { m.comandos += 1; m.requests += 1; });
+    await guardarSinRomper({
+      clave: key,
+      escribir: async () => {
+        await redis!.set(key, data, { ex: ttl });
+        // Sólo se contabiliza lo que SE ESCRIBIÓ. Contar acá y no afuera es lo
+        // que evita que un fallo de escritura infle `comandos` con algo que
+        // Upstash nunca ejecutó.
+        anotar((m) => { m.comandos += 1; m.requests += 1; });
+      },
+      // El aviso dice ESCRITURA, no "cache falló": son dos cosas distintas y la
+      // diferencia importa para leer un incidente. Una lectura caída es un MISS
+      // y ya; una escritura caída significa además que **el próximo request va a
+      // rearmar**, y si eso pasa seguido el costo se multiplica en silencio.
+      avisar: ({ clave, error }) => {
+        // El viaje SÍ ocurrió aunque no haya quedado nada guardado: se cuenta,
+        // igual que en el camino de lectura.
+        anotar((m) => { m.requests += 1; });
+        console.error(`[cache] set falló, la respuesta se entrega igual: ${clave} —`, error);
+      },
+    });
   } finally {
     anotar((m) => { m.msCache += Date.now() - t0; });
   }
