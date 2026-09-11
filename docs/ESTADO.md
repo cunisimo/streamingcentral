@@ -284,7 +284,8 @@ arriba). Lo que sigue ya incorpora las siete correcciones.
 **#21 era el más chico y el más urgente**: un `catch` que faltaba y no dependía
 de medir nada. Por eso fue la **Etapa PREVIA** del plan, anterior a la Etapa 0,
 con la decisión aprobada por el dueño: *se entrega el payload y se registra el
-error*. **Hecha y desplegada el 11/09.** Lo que sigue es la Etapa 0.
+error*. **Hecha y desplegada el 11/09.** La Etapa 0 también está hecha y
+desplegada (ver el estado vigente arriba); lo que sigue es la **Etapa 1**.
 
 ### Lo que se revisó y **no** es un problema
 
