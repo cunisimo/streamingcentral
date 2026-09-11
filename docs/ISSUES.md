@@ -1571,11 +1571,15 @@ o el criterio "una sola composición" queda incomprobable justo cuando hace falt
 Auditoría final de Codex sobre `81aa8fe` sin hallazgos pendientes; merge
 `--no-ff`, verificado desde cero sobre el `main` mergeado (suite 1399/1409, 0
 fallos; `tsc` limpio; build fresco exit 0). **Dos cosas distintas que este
-issue separa:** la *instrumentación* está implementada y mergeada (y desplegada
-cuando el deploy termine); la *observación real* de Producción —tasa de
-aciertos, costo real de un Home frío, fragmentación— todavía no está
-disponible: depende del deploy y de que los logs de Vercel se puedan leer, que
-el 10/09 no se pudo. La línea base aislada tiene **23 escenarios totales: 22
+issue separa:** la *instrumentación* está implementada, mergeada y
+**desplegada** (`9a4b7aa`, deployment `success`, `app.yump.ar` aliasado a él);
+la *observación real* de Producción está sólo **parcialmente** disponible: con
+`vercel logs` en vivo se vieron `[home] pedido <clave>` y la línea terminal con
+unidades separadas en una solicitud normal (un MISS de `d,m,n`: 24 TMDB / 10
+Supabase / Redis 67-67-67, 566 claves con 537 hit, 4,05 s; un HIT: 1 MGET, 270
+ms). No hay serie histórica ni tasa de aciertos acumulada: eso es la Etapa 5, y
+la lectura a posteriori que el 10/09 devolvió `No logs found` sigue sin
+resolverse. La línea base aislada tiene **23 escenarios totales: 22
 completos y 1 incompleto declarado**. Esto aporta medición; no agrega
 capacidad, single-flight, bloqueo distribuido, último Home bueno, CDN ni
 límites por ruta. Informe completo:

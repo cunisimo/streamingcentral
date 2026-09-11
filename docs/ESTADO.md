@@ -56,9 +56,20 @@
 
 - **Etapa 0 de capacidad (#20, "poder medir"): MERGEADA en `main` (`1073c70`,
   rama `feat/etapa0-medir` = `81aa8fe`, auditoría final de Codex sin hallazgos
-  pendientes). Todavía sin push ni deploy al escribir esto, y por lo tanto
-  SIN observación de tráfico real: la instrumentación existe, pero hasta
-  completar el deploy no mide nada de Producción.** Verificado sobre el `main`
+  pendientes), PUSHEADA (`9a4b7aa`) y DESPLEGADA.** Deployment de Producción
+  de Vercel para `9a4b7aa` con estado `success` (22:41:17Z); `vercel inspect
+  app.yump.ar` → aliasado a ese deployment (`streamingcentral-9dr90g2be…`, `●
+  Ready`); `/api/health` 200 con Redis `ping ok`; la página carga (200) y
+  `/api/home` responde 200 con hero y 12 rieles. **Comprobación pasiva de
+  logs (una solicitud normal, sin carga ni caídas provocadas):** en `vercel
+  logs` del deployment aparecen `[home] pedido <clave>` y la línea terminal con
+  las unidades separadas y `| clave …`. Primera lectura real, de UNA
+  solicitud: un MISS de `d,m,n` costó 24 TMDB / 10 Supabase / Redis 67
+  llamadas = 67 intentos = 67 comandos, 566 claves (537 hit), 4,05 s; un HIT
+  con toggles, 1 MGET y 270 ms. Es una foto, no una serie. **La observación
+  real sigue INCOMPLETA:** los logs se leyeron en vivo (`vercel logs` en
+  streaming); no hay serie histórica ni tasa de aciertos acumulada — eso es la
+  Etapa 5 y por eso #20 sigue abierto. Verificado sobre el `main`
   mergeado, desde cero: específicos 20/20 + 6/6 + 18/18 + 18/18, suite
   1399/1409 (0 fallos, 10 omitidos), `tsc` limpio, build fresco exit 0 en 2 min
   54 s (`BUILD_ID sjAjjCkyfoitMaI678TWp`, `.next` borrado antes y sin otro Next
@@ -91,9 +102,9 @@
   tasa de aciertos de Producción sin depender de los logs (Etapa 5). **Nada del
   banco es capacidad de Producción.** Informe:
   [`medidas/2026-09-11-etapa0-medir.md`](medidas/2026-09-11-etapa0-medir.md).
-  Etapas 1 a 5: no iniciadas. **#20 no se cierra por el merge:** "instrumentación
-  implementada y desplegada" y "observación real disponible" son dos cosas, y
-  la segunda depende del deploy y de que los logs de Vercel se puedan leer.
+  Etapas 1 a 5: no iniciadas. **#20 no se cierra por el deploy:**
+  "instrumentación implementada y desplegada" está hecho; "observación real
+  disponible" sólo en vivo y a mano (`vercel logs`), sin serie histórica.
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -214,7 +225,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | Etapa | Qué | Issue | ¿Depende de medir? |
    |---|---|---|---|
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
-   | 0 | Poder medir — **mergeada en `main` (`1073c70`); observación real pendiente del deploy** | #20 | — |
+   | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
