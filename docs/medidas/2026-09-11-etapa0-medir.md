@@ -1,8 +1,10 @@
 # Etapa 0 de capacidad — Poder medir: instrumentación por solicitud y banco aislado
 
 **Fecha:** 2026-09-11 (segunda versión, tras la auditoría de Codex de `ceeed75`: ver §7.5)
-**Rama:** `feat/etapa0-medir`, nacida de `main` = `aa7772e`. **Sin mergear, sin push,
-sin deploy.** Worktree `wt-etapa0`, sin `.env.local`: ninguna credencial real.
+**Rama:** `feat/etapa0-medir` = `81aa8fe`, nacida de `main` = `aa7772e`.
+**Mergeada en `main` como `1073c70`** tras la auditoría final de Codex (sin
+hallazgos pendientes); el estado de push y deploy vive en `docs/ESTADO.md`.
+Worktree `wt-etapa0`, sin `.env.local`: ninguna credencial real.
 **Alcance:** exclusivamente la Etapa 0 del plan
 ([`2026-09-10-capacidad-trafico.md`](2026-09-10-capacidad-trafico.md) §9) y el
 banco de la §10. **No** hay canonización, single-flight, turno distribuido,

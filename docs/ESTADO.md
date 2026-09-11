@@ -54,9 +54,17 @@
   se retiró de `ISSUES.md`; su detalle vive en la Etapa PREVIA del informe
   (`medidas/2026-09-10-capacidad-trafico.md` §9).
 
-- **Etapa 0 de capacidad (#20, "poder medir"): IMPLEMENTADA en la rama
-  `feat/etapa0-medir` (worktree `wt-etapa0`, nacida de `main` = `aa7772e`),
-  pendiente de auditoría de Codex. Sin mergear, sin push, sin deploy.** La
+- **Etapa 0 de capacidad (#20, "poder medir"): MERGEADA en `main` (`1073c70`,
+  rama `feat/etapa0-medir` = `81aa8fe`, auditoría final de Codex sin hallazgos
+  pendientes). Todavía sin push ni deploy al escribir esto, y por lo tanto
+  SIN observación de tráfico real: la instrumentación existe, pero hasta
+  completar el deploy no mide nada de Producción.** Verificado sobre el `main`
+  mergeado, desde cero: específicos 20/20 + 6/6 + 18/18 + 18/18, suite
+  1399/1409 (0 fallos, 10 omitidos), `tsc` limpio, build fresco exit 0 en 2 min
+  54 s (`BUILD_ID sjAjjCkyfoitMaI678TWp`, `.next` borrado antes y sin otro Next
+  compartiéndolo), `git diff --check` limpio. **Aporta medición; no agrega
+  capacidad, single-flight, bloqueo distribuido, último Home bueno, CDN ni
+  límites por ruta.** La
   primera auditoría (sobre `ceeed75`) no encontró bloqueos en la
   instrumentación pero sí en el banco: dos escenarios solapados y una
   coincidencia app ↔ dobles afirmada sin verificar. Corregido en la segunda
@@ -83,7 +91,9 @@
   tasa de aciertos de Producción sin depender de los logs (Etapa 5). **Nada del
   banco es capacidad de Producción.** Informe:
   [`medidas/2026-09-11-etapa0-medir.md`](medidas/2026-09-11-etapa0-medir.md).
-  Etapas 1 a 5: no iniciadas.
+  Etapas 1 a 5: no iniciadas. **#20 no se cierra por el merge:** "instrumentación
+  implementada y desplegada" y "observación real disponible" son dos cosas, y
+  la segunda depende del deploy y de que los logs de Vercel se puedan leer.
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -204,7 +214,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | Etapa | Qué | Issue | ¿Depende de medir? |
    |---|---|---|---|
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
-   | 0 | Poder medir — **implementada en `feat/etapa0-medir`, pendiente de auditoría** | #20 | — |
+   | 0 | Poder medir — **mergeada en `main` (`1073c70`); observación real pendiente del deploy** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |

@@ -1566,9 +1566,19 @@ single-flight del #17, **HIT de caché, espera compartida y composición propia 
 vuelven indistinguibles**. Hay que separar los tres estados antes de tocar nada,
 o el criterio "una sola composición" queda incomprobable justo cuando hace falta.
 
-### Estado (11/09): la Etapa 0 está implementada en `feat/etapa0-medir`, pendiente de auditoría — el issue sigue ABIERTO
+### Estado (11/09): la Etapa 0 está MERGEADA en `main` (`1073c70`) — el issue sigue ABIERTO
 
-Sin mergear ni desplegar. Informe completo:
+Auditoría final de Codex sobre `81aa8fe` sin hallazgos pendientes; merge
+`--no-ff`, verificado desde cero sobre el `main` mergeado (suite 1399/1409, 0
+fallos; `tsc` limpio; build fresco exit 0). **Dos cosas distintas que este
+issue separa:** la *instrumentación* está implementada y mergeada (y desplegada
+cuando el deploy termine); la *observación real* de Producción —tasa de
+aciertos, costo real de un Home frío, fragmentación— todavía no está
+disponible: depende del deploy y de que los logs de Vercel se puedan leer, que
+el 10/09 no se pudo. La línea base aislada tiene **23 escenarios totales: 22
+completos y 1 incompleto declarado**. Esto aporta medición; no agrega
+capacidad, single-flight, bloqueo distribuido, último Home bueno, CDN ni
+límites por ruta. Informe completo:
 [`medidas/2026-09-11-etapa0-medir.md`](medidas/2026-09-11-etapa0-medir.md).
 
 - **Puntos 1, 2, 2b y 2c: cumplidos y ejecutados en el banco aislado.**
