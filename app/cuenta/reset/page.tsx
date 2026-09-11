@@ -6,41 +6,41 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/components/AuthContext";
 import PasswordInput from "@/components/PasswordInput";
-import { leerEnlace, decidirPantalla, sujetoDelToken } from "@/lib/recuperacion";
+import { leerEnlace, decidirPantalla } from "@/lib/recuperacion";
 
-// A esta página se llega desde el enlace del mail de recuperación. Supabase
-// (detectSessionInUrl) canjea el token del hash por una sesión de recovery al
-// montar, y recién ahí se habilita el formulario.
+// A esta página se llega desde el enlace del mail de recuperación.
 //
 // ============================================================================
-// 🔴 UNA SESIÓN ABIERTA NO ES UNA PRUEBA DE RECUPERACIÓN
+// 🔴 NI UNA SESIÓN ABIERTA NI LA URL SON PRUEBA DE RECUPERACIÓN
 // ============================================================================
-// La versión anterior decidía con `ready && !user`: si había CUALQUIER sesión en
-// el navegador, mostraba el formulario. Reproducido el 2026-09-10 con dos
-// cuentas de prueba: con una sesión de la cuenta A abierta y un enlace YA
-// CONSUMIDO de la cuenta B, la página ignoraba el error del enlace, ofrecía el
-// formulario para A, decía "Listo, tu contraseña se actualizó" y le cambiaba la
-// contraseña a A. B quedaba intacta.
+// La versión original decidía con `ready && !user`: cualquier sesión en el
+// navegador habilitaba el formulario. Reproducido el 2026-09-10 con dos cuentas
+// de prueba: con una sesión de A abierta y un enlace YA CONSUMIDO de B, la
+// página ofrecía el formulario para A y le cambiaba la contraseña a A.
 //
-// Eso explica el síntoma reportado —"la web dijo que salió bien y después no
-// puedo entrar"—: la contraseña sí cambió, pero en otra cuenta.
+// La primera corrección decidía con `type=recovery` en la URL y con el `sub` de
+// un JWT decodificado sin verificar. La auditoría lo desarmó:
+// `#type=recovery&access_token=basura` con sesión abierta seguía habilitando el
+// formulario.
 //
-// Las reglas viven en `lib/recuperacion.ts`, que es puro y tiene tests. Acá sólo
-// se cablean.
+// Ahora la única prueba es la ACEPTACIÓN de Supabase —el evento
+// `PASSWORD_RECOVERY`, que llega sólo después de que el servidor validó el
+// token— y la escritura va atada a esos tokens en un cliente aislado. Las reglas
+// viven en `lib/recuperacion.ts`, que es puro y tiene tests; acá se cablean.
 export default function ResetPassword() {
-  const { user, ready, updatePassword } = useAuth();
+  const { ready, recuperacion, cambiarPasswordDeRecuperacion } = useAuth();
   const router = useRouter();
 
-  // ⚠️ SE LEE EN EL RENDER, NO EN UN EFECTO, y el orden importa: Supabase borra
-  // el fragmento en cuanto lo procesa, y su arranque vive en un efecto del
-  // `AuthProvider`. Los efectos corren después del render de los hijos, así que
-  // este inicializador ve la URL entera; un `useEffect` acá llegaría tarde.
+  // ⚠️ SE LEE EN EL RENDER, NO EN UN EFECTO: auth-js borra el fragmento apenas
+  // acepta los tokens, y su arranque vive en un efecto del `AuthProvider`. El
+  // inicializador de `useState` corre durante el render, antes de cualquier
+  // efecto, así que ve la URL entera. Y lo que lee sólo sirve para dos cosas:
+  // mostrar de inmediato un error que Supabase puso en la URL, y saber si vale
+  // la pena esperar. NO habilita el formulario.
   const [enlace] = useState(() =>
     typeof window === "undefined"
       ? ({ tipo: "nada" } as const)
       : leerEnlace(window.location.hash, window.location.search));
-  const [sujeto] = useState(() =>
-    enlace.tipo === "recuperacion" ? sujetoDelToken(enlace.accessToken) : null);
 
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
@@ -48,26 +48,25 @@ export default function ResetPassword() {
   const [ok, setOk] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const pantalla = decidirPantalla({
-    ready, enlace, usuarioId: user?.id ?? null, sujetoDelEnlace: sujeto,
-  });
+  const pantalla = decidirPantalla({ ready, enlace, aceptada: recuperacion });
 
   async function guardar() {
     setErr("");
     if (pass.length < 6) { setErr("La contraseña tiene que tener al menos 6 caracteres."); return; }
     if (pass !== pass2) { setErr("Las contraseñas no coinciden."); return; }
     setBusy(true);
-    const { error, usuarioId } = await updatePassword(pass);
+    // Escribe con los tokens de la recuperación aceptada, y con nada más. Si no
+    // hay recuperación aceptada, no escribe: ese es el contrato.
+    const r = await cambiarPasswordDeRecuperacion(pass);
     setBusy(false);
-    if (error) { setErr(error); return; }
-    // 🔴 NO SE FESTEJA SIN CONFIRMAR SOBRE QUÉ CUENTA SE ESCRIBIÓ. El éxito
-    // antes era "no hubo error", y eso es lo que hacía creíble un cambio hecho
-    // en la cuenta equivocada. Supabase devuelve el usuario actualizado: si no
-    // es el del enlace, esto no salió bien aunque no haya tirado error.
-    const esperado = sujeto ?? user?.id ?? null;
-    if (!usuarioId || (esperado && usuarioId !== esperado)) {
-      setErr("No pudimos confirmar sobre qué cuenta se guardó el cambio. "
-        + "Por seguridad no lo damos por hecho: pedí la recuperación de nuevo.");
+    if (!r.ok) {
+      setErr(
+        r.motivo === "sin-recuperacion"
+          ? "Esta recuperación ya no está activa. Pedí un enlace nuevo desde tu cuenta."
+          : r.motivo === "identidad"
+            ? "No pudimos confirmar sobre qué cuenta se guardó el cambio. Por seguridad no lo damos por hecho: pedí la recuperación de nuevo."
+            : (r.detalle ?? "No se pudo guardar la contraseña."),
+      );
       return;
     }
     setOk(true);
@@ -99,16 +98,14 @@ export default function ResetPassword() {
           ) : pantalla.vista === "error" ? (
             aviso(pantalla.mensaje)
           ) : pantalla.vista === "sin-enlace" ? (
-            // Antes acá se mostraba el formulario si había sesión. Ese era el bug.
             aviso("Para elegir una contraseña nueva entrá desde el enlace que te "
               + "mandamos por mail. Si ya tenés la sesión abierta, podés cambiarla "
               + "desde la configuración de tu cuenta.")
-          ) : pantalla.vista === "identidad" ? (
-            aviso("Este enlace es de otra cuenta distinta de la que tenés abierta en "
-              + "este navegador. Cerrá la sesión y volvé a abrir el enlace del mail.")
           ) : (
             <>
-              <p className="section-sub">Elegí una contraseña nueva para {user!.email}.</p>
+              <p className="section-sub">
+                Elegí una contraseña nueva para {pantalla.aceptada.email ?? "tu cuenta"}.
+              </p>
               <PasswordInput
                 label="Nueva contraseña"
                 value={pass}

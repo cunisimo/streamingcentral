@@ -1,8 +1,12 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import type { Session, User } from "@supabase/supabase-js";
+import { createClient, type Session, type User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase";
 import type { EleccionAvatar } from "@/lib/avatares";
+import {
+  cambiarPassword, hayTokensDeRecuperacion,
+  type RecuperacionAceptada, type Resultado as ResultadoRecuperacion,
+} from "@/lib/recuperacion";
 
 export interface Profile {
   id: string;
@@ -28,8 +32,20 @@ interface Ctx {
   // persiste. Con dos parámetros del mismo tipo, además, invertirlos compilaba.
   updateAvatar: (eleccion: EleccionAvatar) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
-  /** `usuarioId` es la cuenta que Supabase actualizó: hay que comparar. Ver #22. */
-  updatePassword: (password: string) => Promise<{ error?: string; usuarioId?: string | null }>;
+  /**
+   * La recuperación que Supabase ACEPTÓ en esta pestaña, o `null`. Sale del
+   * evento `PASSWORD_RECOVERY`, que auth-js emite sólo después de validar el
+   * token del enlace contra el servidor. Es la única prueba que vale. Ver #22.
+   */
+  recuperacion: RecuperacionAceptada | null;
+  /**
+   * Cambia la contraseña de la cuenta de `recuperacion`, y de ninguna otra: la
+   * escritura va con esos tokens en un cliente aislado, no con la sesión que
+   * tenga el singleton en ese momento. Sin recuperación aceptada, no escribe.
+   */
+  cambiarPasswordDeRecuperacion: (password: string) => Promise<ResultadoRecuperacion>;
+  /** Cambio de contraseña con la sesión ABIERTA (configuración). No para recuperar. */
+  updatePassword: (password: string) => Promise<{ error?: string }>;
   updatePlatforms: (ids: number[]) => Promise<{ error?: string }>;
   completeOnboarding: () => Promise<{ error?: string }>;
 }
@@ -61,8 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
+  const [recuperacion, setRecuperacion] = useState<RecuperacionAceptada | null>(null);
 
   useEffect(() => {
+    // ⚠️ ANTES de crear el cliente: auth-js borra el fragmento en cuanto acepta
+    // los tokens. Con esto se decide si `ready` tiene que ESPERAR (ver abajo).
+    const esperarRecuperacion = hayTokensDeRecuperacion(window.location.hash, window.location.search);
+
     const sb = supabaseBrowser();
     let alive = true;
 
@@ -71,11 +92,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!alive) return;
       setUser(u);
       setProfile(u ? await loadProfile(u) : null);
-      if (alive) setReady(true);
     }
 
-    sb.auth.getSession().then(({ data }) => sync(data.session));
-    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { sync(session); });
+    // `ready` con `getSession()`, como siempre — salvo que la URL traiga tokens
+    // de recuperación. Ahí `ready` llegaría UN TICK ANTES que `PASSWORD_RECOVERY`
+    // (auth-js lo emite con `setTimeout(0)` después de terminar de inicializar)
+    // y la página mostraría "enlace inválido" un instante antes del formulario.
+    sb.auth.getSession().then(({ data }) => {
+      void sync(data.session);
+      if (alive && !esperarRecuperacion) setReady(true);
+    });
+
+    const { data: sub } = sb.auth.onAuthStateChange((evento, session) => {
+      if (!alive) return;
+      if (evento === "PASSWORD_RECOVERY" && session) {
+        // La ACEPTACIÓN. auth-js 2.108.2 llega acá sólo después de que el
+        // servidor validó el access_token del enlace (`_getUser`), y con la
+        // sesión que ese servidor devolvió. Un token basura, vencido o consumido
+        // nunca emite esto. Es la única prueba de recuperación que se acepta.
+        setRecuperacion({
+          userId: session.user.id,
+          email: session.user.email ?? null,
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+        });
+        setReady(true);
+      }
+      if (evento === "INITIAL_SESSION" && esperarRecuperacion) {
+        // Había tokens y Supabase terminó de inicializar. Si los aceptó, el
+        // `PASSWORD_RECOVERY` ya está en la cola de timers —se programó ANTES
+        // que este— y llega primero. Si no los aceptó, no llega nada, y este
+        // tick es lo que deja a la página decir que el enlace no sirvió.
+        setTimeout(() => { if (alive) setReady(true); }, 0);
+      }
+      void sync(session);
+    });
     return () => { alive = false; sub.subscription.unsubscribe(); };
   }, []);
 
@@ -121,17 +172,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return error ? { error: error.message } : {};
   }, []);
 
-  // Devuelve TAMBIÉN el id de la cuenta que Supabase dice haber actualizado.
-  //
-  // 🔴 Sin ese dato, "salió bien" era sólo "no hubo error", y eso es lo que hizo
-  // creíble un cambio hecho en la cuenta equivocada (issue #22): con una sesión
-  // ajena abierta, la contraseña se cambiaba en esa cuenta y la pantalla decía
-  // que todo estaba listo. Quien llama compara contra la identidad del enlace.
+  // Cambio de contraseña con la sesión abierta, desde configuración. NO se usa
+  // para recuperar: para eso está `cambiarPasswordDeRecuperacion`, que no
+  // depende de qué sesión tenga el singleton.
   const updatePassword = useCallback(async (password: string) => {
-    const { data, error } = await supabaseBrowser().auth.updateUser({ password });
-    if (error) return { error: error.message };
-    return { usuarioId: data.user?.id ?? null };
+    const { error } = await supabaseBrowser().auth.updateUser({ password });
+    return error ? { error: error.message } : {};
   }, []);
+
+  // La escritura de la recuperación, ATADA a lo que Supabase aceptó.
+  //
+  // CLIENTE AISLADO, mismo patrón y mismas tres opciones que
+  // `lib/eliminar-cuenta.ts`: nace con los tokens de la recuperación y muere con
+  // la escritura. `persistSession: false` no guarda nada; `autoRefreshToken:
+  // false` no deja un temporizador vivo; `detectSessionInUrl: false` no vuelve a
+  // leer la barra.
+  //
+  // 🔴 POR QUÉ NO `supabaseBrowser().auth.updateUser`: ese cliente escribe sobre
+  // "la sesión que tenga AHORA". Si otra pestaña entró como otra cuenta entre
+  // abrir el formulario y pulsar Guardar, ahora es esa otra cuenta — y la
+  // comparación posterior llegaría tarde, con la contraseña ya cambiada. Con el
+  // cliente aislado la cuenta la fija el token, no el momento. Cero escrituras
+  // sobre otra cuenta, por construcción.
+  const cambiarPasswordDeRecuperacion = useCallback(async (password: string) => {
+    const resultado = await cambiarPassword({
+      escribirCon: async (r, pass) => {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+        const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+        const aislado = createClient(url, anon, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+        });
+        const s = await aislado.auth.setSession({ access_token: r.accessToken, refresh_token: r.refreshToken });
+        if (s.error) return { userId: null, error: s.error.message };
+        const { data, error } = await aislado.auth.updateUser({ password: pass });
+        if (error) return { userId: null, error: error.message };
+        return { userId: data.user?.id ?? null };
+      },
+    }, recuperacion, password);
+    // Una recuperación se usa UNA vez. Con éxito o con fallo de identidad, ya no
+    // sirve para otra escritura desde esta pestaña.
+    if (resultado.ok || resultado.motivo === "identidad") setRecuperacion(null);
+    return resultado;
+  }, [recuperacion]);
 
   const updateDisplayName = useCallback(async (name: string) => {
     if (!user) return { error: "No hay sesión" };
@@ -172,7 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <AuthCtx.Provider value={{ user, profile, ready, signIn, signUp, signOut, updateDisplayName, updateAvatar, resetPassword, updatePassword, updatePlatforms, completeOnboarding }}>
+    <AuthCtx.Provider value={{ user, profile, ready, recuperacion, signIn, signUp, signOut, updateDisplayName, updateAvatar, resetPassword, cambiarPasswordDeRecuperacion, updatePassword, updatePlatforms, completeOnboarding }}>
       {children}
     </AuthCtx.Provider>
   );

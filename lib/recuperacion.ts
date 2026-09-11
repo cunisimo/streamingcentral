@@ -1,87 +1,103 @@
-// Qué prueba que alguien llegó de verdad desde un enlace de recuperación.
+// Qué prueba que alguien llegó de verdad desde un enlace de recuperación, y con
+// qué credenciales se escribe la contraseña nueva.
 //
 // ============================================================================
-// EL INCIDENTE QUE ESTE MÓDULO CIERRA (issue #22)
+// EL DEFECTO REPRODUCIDO (issue #22)
 // ============================================================================
 // Reproducido el 2026-09-10 con dos cuentas de prueba, en el navegador y contra
-// el proyecto Supabase real:
+// el proyecto Supabase real: con una sesión abierta de la cuenta A y un enlace
+// YA CONSUMIDO de la cuenta B (`error=access_denied&error_code=otp_expired`), la
+// página vieja ignoraba el error, mostraba el formulario para A, decía "Listo"
+// y le cambiaba la contraseña a A. B quedaba intacta.
 //
-//   1. El navegador tenía una sesión abierta de la cuenta A.
-//   2. Se llegó a `/cuenta/reset` con un enlace de recuperación de la cuenta B
-//      YA CONSUMIDO — el fragmento traía
-//      `error=access_denied&error_code=otp_expired`.
-//   3. La página **ignoró el error por completo**, mostró el formulario para
-//      **A**, dijo "Listo, tu contraseña se actualizó" y le cambió la
-//      contraseña a **A**.
-//   4. B quedó intacta: `updated_at` sin mover y su contraseña original seguía
-//      entrando.
-//
-// Por eso el dueño veía "el cambio fue correcto" y después no podía entrar: la
-// contraseña se cambió, pero en OTRA cuenta.
-//
-// La causa está en una sola línea del formulario viejo: decidía con
-// `ready && !user`, o sea que **cualquier sesión previa alcanzaba como prueba de
-// recuperación**. Una sesión no es una prueba de nada: prueba que alguien entró
-// alguna vez en este navegador, no que tenga el enlace del mail.
+// ⚠️ Eso es UNA causa posible, compatible con los síntomas que reportó el dueño.
+// No está demostrado que su cuenta real haya pasado por esa secuencia ni qué
+// consumió su enlace original. Ver el informe.
 //
 // ============================================================================
-// LAS TRES REGLAS QUE SALEN DE AHÍ
+// LO QUE ESTÁ MAL EN DECIDIR CON LA URL O CON LA SESIÓN
 // ============================================================================
-// 1. **El enlace manda, no la sesión.** Sin `type=recovery` en la URL no hay
-//    formulario, aunque haya sesión.
-// 2. **Un error del enlace se muestra, no se traga.** Y con su motivo: no es lo
-//    mismo "ya lo usaste" que "se venció" que "vino roto".
-// 3. **La identidad se compara.** La sesión que quedó activa tiene que ser la
-//    del token del enlace; si no coinciden, no se toca nada.
+// La primera corrección (`fb89b45`) decidía con `type=recovery` en la URL y con
+// el `sub` de un JWT decodificado sin verificar. La auditoría lo desarmó en una
+// línea: `#type=recovery&access_token=basura` con una sesión abierta habilitaba
+// el formulario. Un texto en la URL no prueba nada; un JWT sin verificar tampoco.
 //
-// Módulo PURO y sin imports de runtime, por la misma razón que
-// `lib/reparar-y-cachear.ts`: así estas tres reglas se pueden ejecutar en un
-// test en vez de vigilarse leyendo el fuente.
-
-/** Lo que trae la URL con la que se llegó a `/cuenta/reset`. */
-export type Enlace =
-  /** Supabase rechazó la verificación: viene `error` en el fragmento. */
-  | { tipo: "error"; codigo: string | null; descripcion: string | null }
-  /** Verificación OK: vienen los tokens de la sesión de recuperación. */
-  | { tipo: "recuperacion"; accessToken: string }
-  /** No hay enlace: se entró de memoria, por historial o desde un menú. */
-  | { tipo: "nada" };
+// **La única prueba es la de Supabase.** En `@supabase/auth-js` 2.108.2,
+// `_getSessionFromURL` hace `_getUser(access_token)` —un viaje al servidor— y
+// sólo si el servidor acepta el token guarda la sesión y emite
+// `PASSWORD_RECOVERY` con ella. Un token basura, vencido o consumido no llega a
+// emitir nada. Ese evento es la aceptación; acá se lo llama así.
+//
+// Y la escritura va ATADA a esa aceptación: se hace con un cliente aislado que
+// nace con los tokens que Supabase entregó, no con "la sesión que tenga el
+// singleton en ese momento". Si otra pestaña cambió de cuenta entre abrir el
+// formulario y pulsar Guardar, el singleton apunta a otra persona; el cliente
+// aislado no. Cero escrituras sobre otra cuenta, por construcción.
+//
+// Módulo PURO, sin imports de runtime, misma razón que `lib/reparar-y-cachear.ts`
+// y `lib/eliminar-cuenta-flujo.ts`: para que estas reglas se ejecuten en un test.
 
 /**
- * Lee el resultado del enlace de la URL.
- *
- * ⚠️ **HAY QUE LLAMARLA ANTES DE QUE ARRANQUE SUPABASE.** `detectSessionInUrl`
- * consume el fragmento y lo borra de la barra de direcciones, así que si esto
- * corre después ya no queda nada que leer. En la página se llama en el
- * inicializador de un `useState`, que corre durante el render — y los efectos,
- * incluido el del `AuthProvider`, corren después.
- *
- * Mira el fragmento y TAMBIÉN la query: Supabase manda el error en el hash en
- * el flujo implícito, pero algunas configuraciones lo devuelven como query.
- * Leer los dos no cuesta nada y evita un caso mudo.
+ * Lo que Supabase ACEPTÓ. Viene del evento `PASSWORD_RECOVERY`, nunca de la URL.
+ * Los tokens son los que el servidor entregó para esa recuperación.
  */
-export function leerEnlace(hash: string, query: string): Enlace {
+export interface RecuperacionAceptada {
+  userId: string;
+  /** Para mostrarle a la persona QUÉ cuenta va a cambiar. Viene de la sesión que Supabase devolvió, no del singleton. */
+  email: string | null;
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** Lo que trae la URL con la que se llegó. SÓLO CLASIFICA; no decide nada. */
+export type Enlace =
+  /** Supabase rechazó la verificación y lo dijo en la URL. */
+  | { tipo: "error"; codigo: string | null; descripcion: string | null }
+  /** Hay tokens con forma de recuperación: vale la pena ESPERAR a Supabase. */
+  | { tipo: "posible-recuperacion" }
+  /** Nada: se entró de memoria, por historial o desde un menú. */
+  | { tipo: "nada" };
+
+const params = (hash: string, query: string) => {
   const h = new URLSearchParams(hash.replace(/^#/, ""));
   const q = new URLSearchParams(query.replace(/^\?/, ""));
-  const de = (k: string) => h.get(k) ?? q.get(k);
+  return (k: string) => h.get(k) ?? q.get(k);
+};
 
+/**
+ * ¿La URL trae algo que Supabase pueda llegar a aceptar como recuperación?
+ *
+ * Es la condición para ESPERAR su decisión en vez de contestar de inmediato.
+ * Acepta también tokens basura a propósito: quien los rechaza es Supabase, no
+ * este módulo, y la respuesta es la misma —sin aceptación no hay formulario—.
+ */
+export function hayTokensDeRecuperacion(hash: string, query = ""): boolean {
+  const de = params(hash, query);
+  return de("type") === "recovery" && de("access_token") !== null && !de("error") && !de("error_code");
+}
+
+/**
+ * Lee la URL. ⚠️ **ANTES de que arranque Supabase**: `detectSessionInUrl` borra
+ * el fragmento apenas lo procesa. En la página se llama en el inicializador de
+ * un `useState`, que corre durante el render; los efectos corren después.
+ *
+ * Mira el fragmento y la query: el flujo implícito usa el hash, pero un error
+ * puede volver como query según la configuración.
+ */
+export function leerEnlace(hash: string, query: string): Enlace {
+  const de = params(hash, query);
   const error = de("error") ?? de("error_code");
   if (error) {
     return { tipo: "error", codigo: de("error_code") ?? de("error"), descripcion: de("error_description") };
   }
-  // El `type` tiene que decir `recovery`: un enlace de confirmación de mail
-  // también deja tokens en el hash y NO habilita cambiar la contraseña.
-  const accessToken = de("access_token");
-  if (de("type") === "recovery" && accessToken) return { tipo: "recuperacion", accessToken };
+  if (hayTokensDeRecuperacion(hash, query)) return { tipo: "posible-recuperacion" };
   return { tipo: "nada" };
 }
 
 /**
- * El motivo, en castellano y sin jerga.
- *
- * El texto viejo era uno solo —"El enlace no es válido o ya venció"— para
- * cualquier causa, y esa ambigüedad es parte del incidente: el dueño no podía
- * distinguir "lo abrió alguien antes" de "se venció" ni reportarlo.
+ * El motivo, en castellano. El texto viejo era uno solo para todo, y esa
+ * ambigüedad fue parte del incidente: no se podía distinguir "lo abrió alguien
+ * antes" de "se venció" ni reportarlo.
  */
 export function mensajeDeEnlace(codigo: string | null, descripcion: string | null): string {
   switch (codigo) {
@@ -101,69 +117,67 @@ export function mensajeDeEnlace(codigo: string | null, descripcion: string | nul
 /** Qué se muestra en `/cuenta/reset`. */
 export type Pantalla =
   | { vista: "cargando" }
-  /** El enlace falló: se muestra el motivo real. */
   | { vista: "error"; mensaje: string }
-  /** Se llegó sin enlace. Que haya sesión NO alcanza. */
+  /** Se llegó sin enlace. Que haya sesión no cambia nada. */
   | { vista: "sin-enlace" }
-  /** El enlace verificó, pero la sesión activa es de OTRA cuenta. */
-  | { vista: "identidad" }
-  | { vista: "formulario" };
+  | { vista: "formulario"; aceptada: RecuperacionAceptada };
 
 /**
- * La decisión, en un solo lugar y sin React.
- *
- * 🔴 **`hayUsuario` NO habilita nada por sí solo.** Es la lección del incidente:
- * el formulario viejo entraba por `!user` y por eso una sesión ajena servía de
- * llave. Acá el orden es al revés — primero se mira el enlace, y la sesión sólo
- * decide si ya está lista.
+ * La decisión. Fijate qué NO recibe: ninguna sesión, ningún `user`, ningún
+ * `sub`. Sólo lo que vino en la URL y lo que Supabase aceptó.
  */
 export function decidirPantalla(opts: {
   ready: boolean;
   enlace: Enlace;
-  usuarioId: string | null;
-  /** `sub` del token del enlace, para comparar identidad. */
-  sujetoDelEnlace: string | null;
+  aceptada: RecuperacionAceptada | null;
 }): Pantalla {
-  const { ready, enlace, usuarioId, sujetoDelEnlace } = opts;
-
-  // El error del enlace se puede contestar sin esperar a Supabase: no depende
-  // de que haya sesión, y hacerlo esperar sólo alarga un "Cargando…" inútil.
+  const { ready, enlace, aceptada } = opts;
   if (enlace.tipo === "error") {
     return { vista: "error", mensaje: mensajeDeEnlace(enlace.codigo, enlace.descripcion) };
   }
+  // La aceptación manda, con o sin URL: Supabase borra el hash al procesarlo, y
+  // un re-render que vuelva a leer la barra ya no ve nada.
+  if (aceptada) return { vista: "formulario", aceptada };
   if (enlace.tipo === "nada") return { vista: "sin-enlace" };
-
+  // Había tokens. Si Supabase todavía no decidió, se espera; si decidió y no
+  // aceptó, es un error — y no importa qué sesión haya.
   if (!ready) return { vista: "cargando" };
-  if (!usuarioId) {
-    // El enlace traía tokens pero no quedó sesión: la verificación no cerró.
-    return { vista: "error", mensaje: mensajeDeEnlace(null, null) };
-  }
-  // La sesión activa tiene que ser la del enlace. Si el navegador tenía otra
-  // abierta y Supabase no llegó a reemplazarla, esto lo caza.
-  if (sujetoDelEnlace && sujetoDelEnlace !== usuarioId) return { vista: "identidad" };
-  return { vista: "formulario" };
+  return { vista: "error", mensaje: mensajeDeEnlace(null, null) };
+}
+
+// ============================================================================
+// LA ESCRITURA
+// ============================================================================
+
+export type MotivoFallo = "sin-recuperacion" | "identidad" | "fallo";
+export type Resultado =
+  | { ok: true }
+  | { ok: false; motivo: MotivoFallo; detalle?: string };
+
+export interface DepsEscritura {
+  /**
+   * Escribe la contraseña **con los tokens de `r`**, en un cliente que nadie más
+   * pueda mover. Devuelve el id de la cuenta que Supabase dice haber actualizado.
+   */
+  escribirCon: (r: RecuperacionAceptada, password: string) => Promise<{ userId: string | null; error?: string }>;
 }
 
 /**
- * El `sub` de un JWT, **sin verificar la firma**.
+ * Cambia la contraseña de la cuenta de la recuperación aceptada, y de ninguna otra.
  *
- * ⚠️ Esto NO autentica nada y no hay que usarlo para autorizar: sólo compara
- * dos identidades que ya vinieron por caminos confiables (el token del enlace y
- * la sesión que Supabase dejó activa). La verificación de verdad la hace
- * Supabase del otro lado.
+ * Sin aceptación no se escribe: ese `return` temprano es el criterio de "cero
+ * escrituras sobre otra cuenta". Y aun con el cliente atado, se compara lo que
+ * Supabase devolvió: el costo de equivocarse es cambiarle la contraseña a otra
+ * persona, y una comparación de más no cuesta nada.
  */
-export function sujetoDelToken(jwt: string | null): string | null {
-  if (!jwt) return null;
-  const partes = jwt.split(".");
-  if (partes.length < 2) return null;
-  try {
-    const base = partes[1].replace(/-/g, "+").replace(/_/g, "/");
-    const json = typeof atob === "function"
-      ? atob(base.padEnd(base.length + ((4 - (base.length % 4)) % 4), "="))
-      : Buffer.from(base, "base64").toString("utf8");
-    const carga = JSON.parse(json) as { sub?: unknown };
-    return typeof carga.sub === "string" ? carga.sub : null;
-  } catch {
-    return null;
-  }
+export async function cambiarPassword(
+  deps: DepsEscritura,
+  aceptada: RecuperacionAceptada | null,
+  password: string,
+): Promise<Resultado> {
+  if (!aceptada) return { ok: false, motivo: "sin-recuperacion" };
+  const { userId, error } = await deps.escribirCon(aceptada, password);
+  if (error) return { ok: false, motivo: "fallo", detalle: error };
+  if (userId !== aceptada.userId) return { ok: false, motivo: "identidad" };
+  return { ok: true };
 }

@@ -1,98 +1,171 @@
 // Las reglas de la pantalla de recuperación (issue #22).
 //
 // ============================================================================
-// EL CASO QUE HAY QUE PROBAR PRIMERO, PORQUE ES EL QUE PASÓ
+// QUÉ PRUEBA ESTE ARCHIVO, Y QUÉ NO
 // ============================================================================
-// Reproducido el 2026-09-10 en el navegador, contra el Supabase real y con dos
-// cuentas de prueba: con una sesión de la cuenta A abierta y un enlace YA
-// CONSUMIDO de la cuenta B, la página vieja mostraba el formulario para A,
-// decía "Listo, tu contraseña se actualizó" y le cambiaba la contraseña a A.
-// B quedaba intacta — `updated_at` sin mover y su contraseña original entrando.
+// Prueba las DECISIONES —qué se muestra, qué se escribe y con qué credenciales—
+// con dependencias inyectadas. No monta React, no habla con Supabase. Lo que
+// pasa en el navegador de verdad está en
+// `docs/medidas/2026-09-10-recuperacion-password.md`, ejecutado sobre un build
+// de producción.
 //
-// El primer test de este archivo es exactamente esa combinación.
+// ============================================================================
+// LOS DOS AGUJEROS QUE LA AUDITORÍA DE `fb89b45` ENCONTRÓ, Y QUE ACÁ FALLAN
+// PRIMERO
+// ============================================================================
+// 1. `#type=recovery&access_token=basura` con una sesión abierta habilitaba el
+//    formulario: un `type=recovery` escrito en la URL y un JWT decodificado sin
+//    verificar NO son prueba de nada. La prueba es el evento `PASSWORD_RECOVERY`
+//    de Supabase, que sólo se emite DESPUÉS de que el servidor validó el token.
+// 2. La identidad se comprobaba DESPUÉS de escribir. La escritura tiene que ir
+//    atada a la recuperación aceptada, en un cliente que nadie más pueda mover.
+//
+// Estos tests se escribieron ANTES del cambio y fallaron contra `fb89b45`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  leerEnlace, decidirPantalla, mensajeDeEnlace, sujetoDelToken, type Enlace,
+  leerEnlace, decidirPantalla, mensajeDeEnlace, hayTokensDeRecuperacion,
+  cambiarPassword, type RecuperacionAceptada, type DepsEscritura,
 } from "./recuperacion.ts";
 
-// El fragmento tal cual lo devolvió Supabase en la reproducción.
+// El fragmento tal cual lo devolvió Supabase en la reproducción del 10/09.
 const HASH_CONSUMIDO =
   "#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired";
-// Un access_token de juguete: sólo la parte del medio importa y no está firmado.
-const jwtDe = (sub: string) =>
-  `x.${Buffer.from(JSON.stringify({ sub })).toString("base64url")}.y`;
-const HASH_OK = (sub: string) =>
-  `#access_token=${jwtDe(sub)}&expires_in=3600&refresh_token=r&token_type=bearer&type=recovery`;
+const HASH_CON_TOKENS =
+  "#access_token=lo-que-sea&expires_in=3600&refresh_token=r&token_type=bearer&type=recovery";
+
+const ACEPTADA_B: RecuperacionAceptada = {
+  userId: "cuenta-B", email: "b@ejemplo", accessToken: "token-de-B", refreshToken: "refresh-de-B",
+};
 
 // ===========================================================================
-// EL INCIDENTE
+// P1 — LA URL NO ES PRUEBA. LA SESIÓN TAMPOCO. SÓLO LO QUE SUPABASE ACEPTÓ.
 // ===========================================================================
 
-test("🔴 enlace consumido + sesión ajena abierta: NO hay formulario", () => {
-  const enlace = leerEnlace(HASH_CONSUMIDO, "");
-  assert.equal(enlace.tipo, "error");
-  const p = decidirPantalla({
-    ready: true, enlace,
-    usuarioId: "cuenta-A-que-ya-estaba-abierta",   // la víctima
-    sujetoDelEnlace: null,
-  });
-  assert.equal(p.vista, "error", "con el enlace vencido se seguía ofreciendo el formulario");
-  assert.match(p.vista === "error" ? p.mensaje : "", /venció|abrió antes/,
-    "el mensaje no explica el motivo real");
+test("🔴 P1: type=recovery con token basura y sesión abierta: NO hay formulario", () => {
+  // El caso exacto de la auditoría. Antes: `formulario`.
+  for (const hash of [
+    "#type=recovery&access_token=basura",
+    "#type=recovery&access_token=a.b.c",
+    "#type=recovery&access_token=",
+    HASH_CON_TOKENS,   // tokens con la forma correcta, pero que Supabase NUNCA aceptó
+  ]) {
+    const p = decidirPantalla({ ready: true, enlace: leerEnlace(hash, ""), aceptada: null });
+    assert.notEqual(p.vista, "formulario", `habilitó el formulario con ${hash}`);
+  }
 });
 
-test("🔴 sin enlace, una sesión abierta NO habilita el formulario", () => {
-  // Es la regla de fondo: una sesión prueba que alguien entró en este navegador,
-  // no que tenga el mail. La página vieja entraba por `!user` y por eso alcanzaba.
-  const p = decidirPantalla({
-    ready: true, enlace: leerEnlace("", ""), usuarioId: "cualquiera", sujetoDelEnlace: null,
+test("🔴 P1: el formulario sólo aparece con una recuperación ACEPTADA por Supabase", () => {
+  // La aceptación viene del evento PASSWORD_RECOVERY, que el AuthProvider recibe
+  // sólo después de que Supabase validó el token contra /user. La URL sirve para
+  // saber si hay que esperar; no decide nada.
+  const conAceptacion = decidirPantalla({
+    ready: true, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: ACEPTADA_B,
   });
-  assert.equal(p.vista, "sin-enlace");
+  assert.equal(conAceptacion.vista, "formulario");
+  assert.equal(conAceptacion.vista === "formulario" ? conAceptacion.aceptada.userId : null, "cuenta-B");
 });
 
-test("🔴 el enlace es de una cuenta y la sesión de otra: no se toca nada", () => {
-  const enlace = leerEnlace(HASH_OK("cuenta-B"), "");
-  const p = decidirPantalla({
-    ready: true, enlace, usuarioId: "cuenta-A", sujetoDelEnlace: sujetoDelToken(
-      enlace.tipo === "recuperacion" ? enlace.accessToken : null),
-  });
-  assert.equal(p.vista, "identidad");
+test("🔴 enlace consumido: error con motivo, aunque haya recuperación previa colgada", () => {
+  const p = decidirPantalla({ ready: true, enlace: leerEnlace(HASH_CONSUMIDO, ""), aceptada: null });
+  assert.equal(p.vista, "error");
+  assert.match(p.vista === "error" ? p.mensaje : "", /venció|abrió antes/);
 });
 
-// ===========================================================================
-// EL CAMINO BUENO
-// ===========================================================================
-
-test("enlace válido y sesión de la misma cuenta: formulario", () => {
-  const enlace = leerEnlace(HASH_OK("cuenta-B"), "");
-  assert.equal(enlace.tipo, "recuperacion");
-  const p = decidirPantalla({
-    ready: true, enlace, usuarioId: "cuenta-B",
-    sujetoDelEnlace: sujetoDelToken(enlace.tipo === "recuperacion" ? enlace.accessToken : null),
-  });
-  assert.equal(p.vista, "formulario");
+test("sin nada en la URL y sin aceptación: sin-enlace, aunque haya sesión", () => {
+  // No hay parámetro de sesión: la sesión ya no participa de esta decisión.
+  assert.equal(decidirPantalla({ ready: true, enlace: leerEnlace("", ""), aceptada: null }).vista, "sin-enlace");
 });
 
-test("con enlace válido pero Supabase todavía arrancando: Cargando", () => {
-  const enlace = leerEnlace(HASH_OK("cuenta-B"), "");
+test("tokens en la URL y Supabase todavía decidiendo: cargando, no error", () => {
   assert.equal(
-    decidirPantalla({ ready: false, enlace, usuarioId: null, sujetoDelEnlace: "cuenta-B" }).vista,
+    decidirPantalla({ ready: false, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: null }).vista,
     "cargando",
   );
 });
 
-test("enlace válido que no dejó sesión: error, no formulario", () => {
-  const enlace = leerEnlace(HASH_OK("cuenta-B"), "");
+test("tokens en la URL, Supabase terminó y NO aceptó: error, no formulario", () => {
+  const p = decidirPantalla({ ready: true, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: null });
+  assert.equal(p.vista, "error");
+});
+
+test("aceptación sin nada en la URL también vale: es Supabase quien decide", () => {
+  // Después de que Supabase procesa el hash lo BORRA de la barra. Si la página se
+  // re-renderiza y vuelve a leer una URL limpia, la aceptación tiene que seguir
+  // mandando: si no, el formulario desaparecería al segundo render.
   assert.equal(
-    decidirPantalla({ ready: true, enlace, usuarioId: null, sujetoDelEnlace: "cuenta-B" }).vista,
-    "error",
+    decidirPantalla({ ready: true, enlace: leerEnlace("", ""), aceptada: ACEPTADA_B }).vista,
+    "formulario",
   );
 });
 
 // ===========================================================================
-// LECTURA DE LA URL
+// P1 — LA ESCRITURA VA ATADA A LA RECUPERACIÓN ACEPTADA, NO A LA SESIÓN DEL
+// MOMENTO. CERO ESCRITURAS SOBRE OTRA CUENTA.
+// ===========================================================================
+
+/** Un doble de las dependencias que anota TODO lo que se le pide. */
+function deps(opts: { escribeComo?: string | null; falla?: string } = {}) {
+  const registro = { escrituras: [] as { conToken: string; password: string }[], singletonLeido: 0 };
+  const d: DepsEscritura = {
+    escribirCon: async (r, password) => {
+      registro.escrituras.push({ conToken: r.accessToken, password });
+      if (opts.falla) return { userId: null, error: opts.falla };
+      return { userId: opts.escribeComo === undefined ? r.userId : opts.escribeComo };
+    },
+  };
+  return { d, registro };
+}
+
+test("🔴 P1: sin recuperación aceptada NO se escribe, aunque haya sesión", async () => {
+  const { d, registro } = deps();
+  const r = await cambiarPassword(d, null, "nueva-clave");
+  assert.equal(r.ok, false);
+  assert.equal(r.ok ? "" : r.motivo, "sin-recuperacion");
+  assert.equal(registro.escrituras.length, 0, "🔴 escribió sin recuperación aceptada");
+});
+
+test("🔴 P1: la escritura usa EL TOKEN DE LA RECUPERACIÓN, no la sesión que haya", async () => {
+  // Modela el escenario de la auditoría: entre abrir el formulario y pulsar
+  // Guardar, otra pestaña entró como la cuenta A. El singleton de Supabase ahora
+  // tiene la sesión de A. La escritura tiene que ir con el token de B igual.
+  const { d, registro } = deps();
+  const r = await cambiarPassword(d, ACEPTADA_B, "nueva-clave");
+  assert.equal(r.ok, true);
+  assert.equal(registro.escrituras.length, 1);
+  assert.equal(registro.escrituras[0].conToken, "token-de-B",
+    "🔴 la escritura no fue con el token de la recuperación aceptada");
+});
+
+test("🔴 P1: si lo escrito no es la cuenta aceptada, se informa fallo — y fue una sola escritura", async () => {
+  // Con el cliente atado esto no puede pasar; se verifica igual porque el costo
+  // de equivocarse es cambiarle la contraseña a otra persona.
+  const { d, registro } = deps({ escribeComo: "cuenta-A" });
+  const r = await cambiarPassword(d, ACEPTADA_B, "nueva-clave");
+  assert.equal(r.ok, false);
+  assert.equal(r.ok ? "" : r.motivo, "identidad");
+  assert.equal(registro.escrituras.length, 1);
+});
+
+test("un fallo de Supabase al escribir se informa como fallo, no como éxito", async () => {
+  const { d } = deps({ falla: "New password should be different from the old password." });
+  const r = await cambiarPassword(d, ACEPTADA_B, "nueva-clave");
+  assert.equal(r.ok, false);
+  assert.equal(r.ok ? "" : r.motivo, "fallo");
+  assert.match(r.ok ? "" : r.detalle ?? "", /different/);
+});
+
+test("la contraseña no se valida acá: eso es de la pantalla", async () => {
+  // El flujo escribe lo que le dan. Longitud y coincidencia las decide el
+  // formulario antes de llamar; mezclarlas acá escondería un camino sin escritura.
+  const { d, registro } = deps();
+  await cambiarPassword(d, ACEPTADA_B, "x");
+  assert.equal(registro.escrituras.length, 1);
+});
+
+// ===========================================================================
+// LECTURA DE LA URL — sólo clasifica. Nunca decide.
 // ===========================================================================
 
 test("el error se lee del fragmento Y de la query", () => {
@@ -103,19 +176,17 @@ test("el error se lee del fragmento Y de la query", () => {
   }
 });
 
-test("🔴 un enlace de confirmación de mail NO habilita cambiar la contraseña", () => {
-  // Deja tokens en el hash igual que el de recovery, pero `type` dice otra cosa.
-  const e = leerEnlace(`#access_token=${jwtDe("x")}&type=signup`, "");
-  assert.equal(e.tipo, "nada", "un enlace de signup se aceptó como recuperación");
+test("hayTokensDeRecuperacion: lo que hace que valga la pena ESPERAR a Supabase", () => {
+  assert.equal(hayTokensDeRecuperacion(HASH_CON_TOKENS), true);
+  assert.equal(hayTokensDeRecuperacion("#type=recovery&access_token=basura"), true, "basura también se espera: Supabase la rechaza, no nosotros");
+  assert.equal(hayTokensDeRecuperacion("#access_token=x&type=signup"), false, "un enlace de signup no es una recuperación");
+  assert.equal(hayTokensDeRecuperacion("#access_token=x"), false);
+  assert.equal(hayTokensDeRecuperacion(HASH_CONSUMIDO), false);
+  assert.equal(hayTokensDeRecuperacion(""), false);
 });
 
-test("tokens sin `type` tampoco alcanzan", () => {
-  assert.equal(leerEnlace(`#access_token=${jwtDe("x")}`, "").tipo, "nada");
-});
-
-test("una URL limpia es 'nada', no un error", () => {
-  assert.equal(leerEnlace("", "").tipo, "nada");
-  assert.equal(leerEnlace("#", "?").tipo, "nada");
+test("un enlace de confirmación de mail se clasifica como 'nada'", () => {
+  assert.equal(leerEnlace("#access_token=x&type=signup", "").tipo, "nada");
 });
 
 // ===========================================================================
@@ -128,86 +199,71 @@ test("cada causa tiene su mensaje, y ninguno es el genérico de antes", () => {
   const otro = mensajeDeEnlace("algo_nuevo", "Se rompió algo raro");
   assert.notEqual(vencido, denegado);
   assert.notEqual(vencido, otro);
-  assert.match(otro, /Se rompió algo raro/, "un código desconocido pierde la descripción de Supabase");
-  // El texto viejo servía para todo y no dejaba distinguir nada. Que no vuelva.
+  assert.match(otro, /Se rompió algo raro/);
   for (const m of [vencido, denegado, otro]) {
     assert.notEqual(m, "El enlace no es válido o ya venció. Volvé a pedir la recuperación desde tu cuenta.");
   }
 });
 
 test("el mensaje del vencido nombra las dos causas posibles", () => {
-  // Al dueño le importó no poder distinguir "se venció" de "lo abrió alguien":
-  // en la evidencia del incidente el token se consumió 15 s antes de que él
-  // llegara. El texto tiene que decir las dos.
   const m = mensajeDeEnlace("otp_expired", null);
   assert.match(m, /venció/);
   assert.match(m, /abrió antes/);
 });
 
 // ===========================================================================
-// IDENTIDAD
+// QUE PRODUCCIÓN ENTRE POR ACÁ
 // ===========================================================================
+// Componentes de React: no se montan con `node --test`. Se inspecciona el fuente
+// sin comentarios, mismo recurso que `lib/cache-delega.test.ts`.
 
-test("sujetoDelToken saca el sub sin verificar, y aguanta basura", () => {
-  assert.equal(sujetoDelToken(jwtDe("abc-123")), "abc-123");
-  for (const malo of [null, "", "x", "a.b", "a.@@@.c", "a.eyJ9.c"]) {
-    assert.equal(sujetoDelToken(malo), null, `no devolvió null con ${JSON.stringify(malo)}`);
-  }
+const sinComentarios = (rel: string) => readFileSync(rel, "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+const pagina = sinComentarios("app/cuenta/reset/page.tsx");
+const ctx = sinComentarios("components/AuthContext.tsx");
+
+test("🔴 la aceptación sale del evento PASSWORD_RECOVERY, en el AuthProvider", () => {
+  assert.match(ctx, /"PASSWORD_RECOVERY"/, "el AuthProvider no escucha PASSWORD_RECOVERY");
+  assert.match(ctx, /setRecuperacion\(\{[\s\S]{0,200}userId:\s*session\.user\.id/,
+    "la aceptación no se construye con la sesión del evento");
 });
 
-test("si el token no trae sub, no se inventa una identidad", () => {
-  const sin = `x.${Buffer.from(JSON.stringify({ otro: 1 })).toString("base64url")}.y`;
-  assert.equal(sujetoDelToken(sin), null);
-  // Y sin sujeto, la comparación no puede bloquear: se sigue con la sesión.
-  const enlace: Enlace = { tipo: "recuperacion", accessToken: sin };
-  assert.equal(
-    decidirPantalla({ ready: true, enlace, usuarioId: "cuenta-B", sujetoDelEnlace: null }).vista,
-    "formulario",
-  );
+test("🔴 la página NO usa `user`, `sujetoDelToken` ni la URL para habilitar el formulario", () => {
+  assert.doesNotMatch(pagina, /sujetoDelToken/, "volvió el JWT decodificado sin verificar");
+  assert.doesNotMatch(pagina, /!\s*user\s*\?/, "volvió el `!user ?`");
+  assert.match(pagina, /aceptada:\s*recuperacion/, "la decisión no recibe la recuperación aceptada");
 });
 
-// ===========================================================================
-// QUE LA PÁGINA ENTRE POR ACÁ
-// ===========================================================================
-// La página es un componente de React y no se puede montar con `node --test`;
-// se inspecciona el fuente, mismo recurso que `lib/cache-delega.test.ts`.
+test("🔴 la escritura va por cambiarPasswordDeRecuperacion, no por updatePassword", () => {
+  assert.doesNotMatch(pagina, /updatePassword\(/, "la página sigue escribiendo con la sesión del momento");
+  assert.match(pagina, /cambiarPasswordDeRecuperacion\(/);
+});
 
-const pagina = readFileSync("app/cuenta/reset/page.tsx", "utf8");
-// Sin comentarios: el mismo recurso que usan los otros barridos del repo. La
-// primera version de estos guards miraba el archivo entero y se disparo con la
-// palabra `useEffect` escrita en un COMENTARIO que explicaba por que no hay uno.
-const codigo = pagina.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ 	]*\/\/.*$/gm, "");
-
-test("🔴 la página ya NO decide con `!user`", () => {
-  assert.doesNotMatch(codigo, /!\s*user\s*\?/,
-    "volvió el `!user ?` que dejaba entrar con cualquier sesión");
-  assert.match(codigo, /decidirPantalla\(/, "la página no usa la decisión probada");
-  assert.match(codigo, /leerEnlace\(/, "la página no lee el resultado del enlace");
+test("🔴 la escritura real usa un cliente AISLADO atado a los tokens aceptados", () => {
+  // Mismo patrón que lib/eliminar-cuenta.ts: un cliente que nace con los tokens
+  // de la recuperación y que ninguna otra pestaña puede mover.
+  const inicio = ctx.indexOf("const cambiarPasswordDeRecuperacion = useCallback");
+  assert.notEqual(inicio, -1, "no existe cambiarPasswordDeRecuperacion en el AuthProvider");
+  const bloque = ctx.slice(inicio, ctx.indexOf("}, [recuperacion]);", inicio));
+  assert.match(bloque, /persistSession:\s*false/, "el cliente de escritura persiste sesión");
+  assert.match(bloque, /autoRefreshToken:\s*false/);
+  assert.match(bloque, /detectSessionInUrl:\s*false/);
+  assert.match(bloque, /setSession\(\{[\s\S]{0,120}access_token:\s*r\.accessToken/,
+    "el cliente aislado no se ata a los tokens de la recuperación aceptada");
+  assert.doesNotMatch(bloque, /supabaseBrowser\(\)/,
+    "🔴 toca el singleton: la sesión del momento podría decidir la cuenta");
 });
 
 test("🔴 la URL se lee en el RENDER, no en un efecto", () => {
-  // Supabase borra el fragmento apenas lo procesa, y su arranque está en un
-  // efecto del AuthProvider. Leerlo en un `useEffect` acá llegaría tarde.
-  assert.match(codigo, /useState\(\(\) =>[\s\S]{0,200}leerEnlace\(/,
-    "leerEnlace dejó de correr en el inicializador del useState");
-  const iEfecto = codigo.indexOf("useEffect");
-  assert.equal(iEfecto, -1, "apareció un useEffect: la URL puede llegar ya consumida");
+  assert.match(pagina, /useState\(\(\) =>[\s\S]{0,200}leerEnlace\(/);
+  assert.equal(pagina.indexOf("useEffect"), -1, "apareció un useEffect: la URL puede llegar ya consumida");
 });
 
-test("🔴 el éxito se confirma contra la cuenta del enlace", () => {
-  assert.match(codigo, /const \{ error, usuarioId \} = await updatePassword\(/,
-    "la página ignora sobre qué cuenta se guardó");
-  assert.match(codigo, /usuarioId !== esperado/, "no compara la identidad devuelta");
-  const iOk = codigo.indexOf("setOk(true)");
-  const iComparacion = codigo.indexOf("usuarioId !== esperado");
-  assert.ok(iComparacion > 0 && iComparacion < iOk,
-    "se festeja antes de confirmar la cuenta");
-});
-
-test("el contrato de updatePassword devuelve la cuenta actualizada", () => {
-  const ctx = readFileSync("components/AuthContext.tsx", "utf8");
-  assert.match(ctx, /updatePassword: \(password: string\) => Promise<\{ error\?: string; usuarioId\?: string \| null \}>/,
-    "cambió el contrato de updatePassword");
-  assert.match(ctx, /return \{ usuarioId: data\.user\?\.id \?\? null \}/,
-    "updatePassword dejó de devolver el id que informó Supabase");
+test("🔴 `ready` espera a la decisión de Supabase cuando la URL trae tokens", () => {
+  // Si `ready` se pusiera con getSession(), llegaría un tick ANTES que el evento
+  // PASSWORD_RECOVERY (que Supabase emite con setTimeout 0) y la página mostraría
+  // un error un instante antes de mostrar el formulario.
+  assert.match(ctx, /hayTokensDeRecuperacion\(/, "el AuthProvider no mira si hay que esperar");
+  assert.match(ctx, /"INITIAL_SESSION"[\s\S]{0,300}setTimeout\(/,
+    "no espera un tick después de INITIAL_SESSION para dar por perdida la recuperación");
 });
