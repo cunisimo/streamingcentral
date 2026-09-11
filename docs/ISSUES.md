@@ -1566,12 +1566,43 @@ single-flight del #17, **HIT de caché, espera compartida y composición propia 
 vuelven indistinguibles**. Hay que separar los tres estados antes de tocar nada,
 o el criterio "una sola composición" queda incomprobable justo cuando hace falta.
 
+### Estado (11/09): la Etapa 0 está implementada en `feat/etapa0-medir`, pendiente de auditoría — el issue sigue ABIERTO
+
+Sin mergear ni desplegar. Informe completo:
+[`medidas/2026-09-11-etapa0-medir.md`](medidas/2026-09-11-etapa0-medir.md).
+
+- **Puntos 1, 2, 2b y 2c: cumplidos y ejecutados en el banco aislado.**
+  `lib/metricas.ts` cuenta por solicitud, con `AsyncLocalStorage` y sus límites
+  auditados: TMDB (llamadas, ok, 429/5xx/4xx/red, tiempo), Supabase (consultas,
+  ok, http/red, tiempo), Redis en **llamadas lógicas / intentos HTTP / comandos
+  confirmados** —la palabra `requests` ya no existe—, y el Home en `cache`
+  (hit/miss), **`composiciones`** (contadas donde corre `composeHome`) y
+  `esperasCompartidas` (campo propio, 0 hasta que haya single-flight). Los
+  intentos HTTP de Redis salen del `backoff` del SDK (`@upstash/redis` 1.38.0
+  lo llama una vez por reintento; no acepta un `fetch` propio) y se cotejaron
+  con el doble: 3.426 = 3.167 + 259. La línea `[home]` muestra cada unidad con
+  su nombre. Un Home frío de `n,d,m` en el banco: **926 TMDB / 4 Supabase /
+  993-993-993 Redis**; 5 solicitudes iguales sobre caché fría: **5
+  composiciones**.
+- **La trampa del batcher, resuelta:** hits/misses/claves se le anotan a quien
+  pidió cada clave (captura al encolar), no a quien programó el flush; sólo el
+  viaje del MGET queda a nombre de éste.
+- **Segunda mitad del criterio, NO cumplida:** la tasa de aciertos de
+  Producción legible sin depender de los logs es serie histórica (Etapa 5).
+- **Puntos 3 a 6: sin cambios** (no eran de la Etapa 0).
+- **Comprobado ejecutando:** todo lo anterior en el banco, con controles
+  (repetibilidad, app ↔ dobles en cada escenario, variantes que se distinguen).
+  **Inferido:** que en Vercel un Redis inalcanzable termina en 504 (183,5 s
+  medidos localmente contra `maxDuration = 60`). **No verificable desde el
+  cliente:** comandos facturados vs confirmados.
+
 ### Criterio de cierre
 
 Una petición al Home frío informa, **por separado**: llamadas a TMDB, consultas a
 Supabase, llamadas lógicas / intentos HTTP / comandos de Redis, y composiciones
-ejecutadas (distinguidas de HIT y de espera compartida). Y la tasa de aciertos del
-caché en Producción se puede leer sin depender de que los logs sigan ahí.
+ejecutadas (distinguidas de HIT y de espera compartida). ✅ *(cumplido el 11/09
+en la rama, ver arriba)*. Y la tasa de aciertos del caché en Producción se puede
+leer sin depender de que los logs sigan ahí. ❌ *(pendiente: Etapa 5)*.
 
 ⚠️ **Lo que este issue NO resuelve.** Instrumentar da los números **propios**. Los
 límites reales de TMDB, Upstash, Supabase y Vercel hay que **consultarlos en las
