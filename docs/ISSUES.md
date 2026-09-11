@@ -1,5 +1,210 @@
 # Issues abiertos
 
+## #22 — Recuperación desde Android: la contraseña nueva no permite ingresar
+
+**Estado (11/09): la corrección está MERGEADA en `main` (`be5ef1d`), sin
+deploy. El issue sigue ABIERTO exclusivamente por la causa desconocida del
+consumo del enlace original** (ver "Lo que sigue ABIERTO"). Codex auditó
+`de45b56` sin nuevos bloqueos técnicos y la consideró apta para mergear.
+
+**Antecedente — revisión de la primera propuesta `fb89b45` (10/09), superada:
+no cerrado ni aprobado para merge entonces.** Ver [auditoría independiente](medidas/2026-09-10-auditoria-fb89b45.md).
+18 tests verdes, pero el token sin sujeto habilita formulario con sesión previa;
+la identidad de escritura se comprueba sólo después de mutar. La reproducción
+A/B de Claude prueba un defecto posible, no la causa histórica del intento del
+dueño. Sigue pendiente el recorrido con correo real y el rechazo del enlace nuevo.
+
+**Detalle del evento exitoso aportado posteriormente:** GET `/verify`, 303,
+`auth_event.action=login`, timestamp explícito `2026-09-10T21:25:53Z`
+(18:25:53 Argentina), referencia a `/cuenta/reset`. Incluye identidad de cuenta
+e IP, omitidas aquí deliberadamente. `headers_user_agent` es null y no aparece
+el tipo de verificación. Acredita un login registrado para una cuenta, no una
+actualización de contraseña ni la recepción de sesión por el navegador del dueño.
+No prueba scanner, tipo recovery ni correlación con el 403 posterior. Próximo
+control: confirmar que la identidad del evento es la cuenta que se recuperaba;
+buscar el evento PUT `/user` del intento que mostró éxito, con resultado y hora.
+
+**Captura de Logs Auth aportada por el dueño (horas tal como aparecen en el
+panel, sin asumir zona horaria):** 10/09 18:25:18 POST `/recover` 200;
+18:25:53 GET `/verify` 303 con “Login: request completed” y evento Login;
+18:26:08 GET `/verify` 403 “One-time token not found” y redirección 303;
+18:26:39 y 18:26:46 POST `/token` 400 “Invalid login credentials”.
+La secuencia es compatible con consumo previo del token, pero el listado no
+permite correlacionar identidad/token entre eventos ni atribuir la primera
+solicitud a un usuario, cliente de correo o scanner. No contradice la aclaración
+del dueño de que no abrió antes el enlace. En el tramo visible no aparece una
+actualización de contraseña (`PUT /user`); eso no demuestra que no haya ocurrido
+en otro tramo o bajo un filtro. Próxima evidencia: detalles sanitizados de las
+dos verificaciones (User-Agent, tipo recovery, identificadores de correlación)
+y evento de actualización del intento que mostró éxito. No guardar tokens.
+
+**Estado (11/09, cuarta versión): ABIERTO sólo por la causa. Una causa posible
+reproducida y corregida en `fix/recuperacion-password`, mergeada en `main`
+(`be5ef1d`); el consumo del enlace original sigue sin explicación.** Sin
+desplegar todavía. Informe con toda la evidencia:
+`medidas/2026-09-10-recuperacion-password.md` (en esa rama). Auditoría de la
+primera versión: `medidas/2026-09-10-auditoria-fb89b45.md`.
+
+### Una causa posible, reproducida — no LA causa del incidente
+
+`app/cuenta/reset/page.tsx` decidía con `ready && !user`: **cualquier sesión
+abierta alcanzaba como prueba de recuperación**, y el error del enlace no se leía.
+Con una sesión de la cuenta **A** en el navegador y un enlace **ya consumido de
+B**, la página ofreció el formulario **para A** y le cambió la contraseña a A.
+Verificado contra Auth: la original de A dejó de servir, la tipeada abre A, y B
+quedó intacta.
+
+⚠️ **Eso es compatible con los síntomas del dueño** ("la web dijo que salió bien
+y la nueva no entra"), **pero no está demostrado que su cuenta haya pasado por esa
+secuencia.** No hay `PUT /user` en el tramo visible de los logs y no se pudo
+correlacionar cuenta ni token entre eventos.
+
+### Lo que NO era, comprobado ejecutando
+
+Mismo proyecto Supabase en web y Android; `NEXT_PUBLIC_SITE_URL` correcto;
+`/cuenta/reset` en la allowlist; el cambio por API funciona; y **la plantilla del
+correo es correcta, verificado con un correo real** (buzón descartable): un solo
+enlace `/auth/v1/verify`, `type=recovery`, `redirect_to=https://app.yump.ar/cuenta/reset`,
+SMTP propio `send.yump.ar`. Primera apertura entrega sesión; segunda devuelve
+`otp_expired`, byte por byte la captura del dueño.
+
+### El arreglo (segunda versión, tras la auditoría)
+
+La primera versión (`fb89b45`) decidía con `type=recovery` en la URL y un JWT
+decodificado sin verificar; la auditoría lo desarmó con
+`#type=recovery&access_token=basura`, y comprobaba la identidad después de
+escribir. Ahora:
+
+- **La única prueba es el evento `PASSWORD_RECOVERY` de Supabase**, que auth-js
+  2.108.2 emite sólo después de validar el token contra el servidor (`_getUser`).
+  Ni la URL ni la sesión deciden.
+- **La escritura va atada a esos tokens en un cliente aislado** (mismo patrón que
+  `lib/eliminar-cuenta.ts`). Si otra pestaña cambia de cuenta antes de Guardar,
+  el singleton apunta a otra persona y el cliente aislado no. Sin aceptación, no
+  se escribe.
+
+Verificado en navegador sobre **build de producción**: enlace válido sin sesión;
+enlace válido de B con sesión de A; vencido/consumido; token basura con sesión;
+doble apertura; y **cambio de sesión a A antes de Guardar → escribió en B, A
+intacta**.
+
+**Tercera ronda (10/09), tras la confirmación de Codex y un nuevo P1 de ciclo de
+vida:** la aceptación quedaba en el provider global y se reutilizaba al volver a
+`/cuenta/reset` sin enlace (tras salir, cerrar sesión o entrar como A). Ahora es
+una autorización **reclamable por una sola instancia de la pantalla**: una
+PENDIENTE global que muere al reclamarse, al salir de la ruta, ante cualquier
+sesión de otra cuenta o `SIGNED_OUT`, y ante una URL en error; y una RECLAMADA
+local a la pantalla, inmune al singleton (lo que conserva el escenario de la
+otra pestaña). 18 tests nuevos escritos antes del cambio; escenarios 1, 3 y 6
+verificados en navegador con navegación in-app real. `npm test` **1322/1322**;
+`tsc` limpio; **build de producción exit 0 en 113 s** (el de Codex se había
+interrumpido).
+
+**Cuarta ronda (11/09), tras un nuevo P1 de Codex:** `PASSWORD_RECOVERY` creaba
+la pendiente sin mirar la ruta — con la app en `/` (que es donde cae el hash en
+el fallback histórico al Site URL) quedaba una pendiente que la navegación
+posterior a `/cuenta/reset` conservaba y una pantalla sin enlace reclamaba.
+Ahora la ruta viaja **en el evento de aceptación**, leída de
+`window.location.pathname` en el instante de emitirlo (no de un cierre viejo),
+y fuera de `/cuenta/reset` el reductor no deja nada. También se corrigió el
+parpadeo previo a la reclamación (la pantalla sigue "cargando" mientras haya
+una pendiente sin reclamar) y, al buscarlo, un parpadeo de hidratación medido:
+el HTML servido decía "sin enlace" y un hard load con hash daba React #425/#418/#423;
+ahora la decisión es "cargando" hasta `ready`. 13 tests antes del cambio;
+verificado en navegador con el hash cayendo en `/` y en `/cuenta` (sin
+formulario) y el control legítimo con cambio real (B nueva 200 / anteriores
+400, A intacta). `npm test` **1337/1347** (10 omitidos); `tsc` limpio;
+**build exit 0**, `BUILD_ID bQZrKvRAcxSMCBW8b9vKi`. Informe: §5.7 y §6.5.
+
+### 🔴 Lo que sigue ABIERTO — y por qué no se cierra
+
+1. **Qué consumió el enlace original del dueño.** No demostrado ni descartado. Un
+   buzón descartable no tiene escáner ni vista previa; no se le pide al dueño que
+   pruebe. **No se afirma escáner** por un `User-Agent` nulo.
+2. **Bloqueo concreto de acceso:** la Management API (`/v1/projects/{ref}/config/auth`)
+   devuelve `401` con el `SUPABASE_ACCESS_TOKEN` del entorno, y el MCP de Supabase
+   responde `Unauthorized` en `query_logs` y `execute_sql`. Sin un token vigente no
+   se puede leer `mailer_otp_exp`, la plantilla ni los logs de Auth con identidad
+   y User-Agent por evento.
+3. **El retorno nativo y los App Links** siguen siendo un problema aparte.
+
+**Criterio de cierre:** el punto 1 demostrado o descartado con evidencia. Lo
+demás ya está verificado y mergeado (nueva entra, vieja se rechaza, enlace
+inválido y sesión previa manejados, cero escrituras sobre otra cuenta). El
+punto 3 no forma parte de este issue.
+
+**Prioridad: media. Estado: corrección mergeada sin deploy; abierto por la
+causa del consumo del enlace original.** Necesita un token vigente de Supabase
+para leer logs y configuración de Auth.
+
+Recorrido informado: Olvidé mi contraseña en la app de Play → llega el correo
+→ el enlace abre la web → intenta cambiar la contraseña → Android no la acepta.
+La afirmación de que no impacta en la base es la interpretación del síntoma,
+no una escritura fallida verificada por esta auditoría.
+
+**Ampliación del dueño:** la web mostró que el cambio fue correcto, pero la
+contraseña no permite ingresar en Android. Revisó Supabase y no vio un pedido
+en la tabla del usuario; falta identificar si consultó Authentication/Users o
+Table Editor. Este flujo no crea una fila de pedido en `profiles`. Pendientes:
+ingreso nuevo en web en incógnito, mismo correo en ambos clientes y correo
+mostrado por el formulario. No se solicitaron contraseñas ni enlaces con tokens.
+
+**Segunda confirmación del dueño:** la contraseña nueva tampoco funciona al
+ingresar desde la web en incógnito. La consulta de Supabase fue a una tabla común,
+no Authentication. No recuerda qué correo mostraba el formulario. Esto descarta
+que el síntoma esté limitado al ingreso Android; no demuestra aún un fallo de
+escritura en Auth. Falta identificar la cuenta/sesión realmente actualizada y
+el mensaje exacto del rechazo al ingresar. No afirmar una causa por falta de
+una fila en la tabla común.
+
+**Comprobado en código:**
+
+**Corrección explícita del dueño y evidencia de URL:** copió el enlace directamente
+del correo recién solicitado y lo abrió en incógnito, SIN abrirlo previamente en
+una ventana normal. Descartar la explicación anterior de trasladar una URL ya
+consumida. La captura final muestra `/cuenta/reset#error=access_denied` con
+`error_code=otp_expired` y `error_description=Email link is invalid or has expired`.
+Esto acredita rechazo de verificación de Supabase antes de establecer sesión,
+no acredita expiración por tiempo ni consumo por el usuario. Investigar plantilla
+del correo, configuración Auth, registros de verificación y eventual inspección
+automática del enlace. Ninguna de esas causas está confirmada. Este intento no
+llega a actualizar contraseña y debe distinguirse del primer intento con éxito
+informado. No registrar tokens ni enlaces completos.
+
+**Captura posterior del dueño:** la pantalla Nueva contraseña muestra “El enlace
+no es válido o ya venció”. En el código esa rama sólo comprueba `ready && !user`;
+no distingue expiración, token consumido, redirección incorrecta ni otros fallos
+de inicialización. La captura acredita el mensaje, no su causa. Falta confirmar
+si era un correo nuevo abierto por primera vez directamente en incógnito o un
+enlace ya abierto antes. La hipótesis de sesión previa del intento original
+sigue sin confirmarse.
+
+- `components/AuthContext.tsx:115-119` construye el retorno con
+  `NEXT_PUBLIC_SITE_URL` y `/cuenta/reset` (origin como fallback).
+- El manifest Android sólo declara MAIN/LAUNCHER, sin filtro VIEW para esos
+  enlaces. La apertura web concuerda con los App Links pendientes.
+- `app/cuenta/reset/page.tsx:23-33` espera `updatePassword`, muestra el error si
+  lo recibe y sólo muestra éxito si no hay error.
+- `AuthContext.tsx:123-125` llama `auth.updateUser({ password })`: el cambio
+  corresponde a Supabase Auth, no a una columna de `profiles`.
+- El formulario habilita el cambio con cualquier `user` de Auth; no verifica
+  un evento PASSWORD_RECOVERY ni muestra los errores del enlace explícitamente.
+  Una sesión previa es una hipótesis a verificar, no la causa confirmada.
+- `lib/supabase.ts:3-9` configura Auth con variables públicas del build. Que
+  Android use la API de producción no demuestra por sí solo que sus variables
+  de Supabase coincidan con las del deployment web.
+
+**Evidencia faltante:** mensaje después de guardar y si el correo mostrado era
+el esperado; ruta final sin tokens; estado/código de la respuesta de actualización
+y del ingreso, identidad del proyecto Auth web/Android y validez de la sesión.
+No registrar contraseñas, tokens ni enlaces de recuperación completos.
+
+**Cierre:** reproducir con cuenta de prueba autorizada, documentar la causa,
+verificar que una recuperación nueva permite ingresar con la nueva contraseña
+en Android y web y rechaza la anterior, además de manejar enlace inválido/vencido
+y sesión previa. El retorno nativo se evalúa por separado; no dar por arreglado
+el guardado sólo por implementar App Links. Sin cambios de código en esta sesión.
+
 > **Revisión del 10/09 de los issues #17–#20:** conservar los riesgos abiertos,
 > pero leer [la revisión independiente](medidas/2026-09-10-revision-capacidad-codex.md)
 > antes de usar sus cifras o criterios de cierre. Corrige el conteo de claves,

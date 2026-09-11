@@ -1,11 +1,68 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 10 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 11 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
+
+- **Recuperación de contraseña (#22): la corrección está MERGEADA en `main`
+  (`be5ef1d`, rama `fix/recuperacion-password`, cuatro rondas de auditoría).**
+  Codex auditó `de45b56` sin nuevos bloqueos técnicos y la consideró apta para
+  mergear. Lo que quedó: la única prueba de recuperación es el evento
+  `PASSWORD_RECOVERY` de Supabase; la escritura va atada a esos tokens en un
+  cliente aislado (cero escrituras sobre otra cuenta si cambia la sesión); la
+  aceptación es una autorización **pendiente → reclamada** por una sola
+  instancia de la pantalla, que nace sólo si la ruta real en ese instante es
+  `/cuenta/reset` y muere al reclamarse, al salir de la ruta, ante otra cuenta
+  o `SIGNED_OUT`; y la pantalla no pinta "sin enlace" ni "inválido" antes de
+  `ready` ni antes de reclamar (eso corrigió también un error de hidratación
+  medido en producción). Verificado en navegador sobre build de producción con
+  cuentas de prueba borradas y con **correo real**. **Sin deploy todavía.**
+  Informe completo: [`medidas/2026-09-10-recuperacion-password.md`](medidas/2026-09-10-recuperacion-password.md).
+  **#22 sigue ABIERTO por una sola cosa: qué consumió el enlace original del
+  dueño** — no demostrado ni descartado; el bloqueo es de acceso a logs y
+  configuración de Auth (Management API 401, MCP `Unauthorized`). La
+  reproducción A/B es una causa posible compatible con los síntomas, no la
+  causa histórica probada. Capacidad, App Links y Play Store siguen aparte.
+
+- **Auditoría de `fb89b45` (recuperación), 10/09 — SUPERADA por lo de arriba;
+  se conserva como antecedente.** No aprobado para merge entonces.
+  [Dictamen](medidas/2026-09-10-auditoria-fb89b45.md). Los 18 tests pasan, pero
+  una prueba independiente confirma formulario habilitado con token malformado
+  y sesión anterior. Además la identidad se compara después de escribir, sin
+  ligar la mutación a la recuperación esperada. El rechazo del enlace recién
+  recibido sigue sin explicación ni prueba completa con correo real. #22 abierto;
+  capacidad pausada. No se requieren más pruebas manuales del dueño.
+
+- **Evidencia nueva del #22:** captura de redirección con `access_denied` /
+  `otp_expired` (“Email link is invalid or has expired”). El dueño aclara que
+  copió el enlace recién recibido directamente del correo a incógnito, sin
+  abrirlo antes. Supabase rechaza la verificación; causa de invalidación aún no
+  determinada. No atribuirlo a reutilización manual ni a antigüedad sin evidencia.
+
+- **Captura del incidente #22:** Nueva contraseña muestra “El enlace no es
+  válido o ya venció”. El código usa ese texto ante ausencia de usuario después
+  de inicializar; no acredita expiración. Pendiente confirmar si el enlace era
+  nuevo y no había sido abierto antes. Se conserva el diagnóstico abierto.
+
+- **Ampliación del incidente #22 por el dueño:** la contraseña nueva tampoco
+  permite ingresar en la web en incógnito; revisó una tabla común de Supabase,
+  no Authentication, y no recuerda el correo del formulario. El síntoma no está
+  limitado a Android. Sigue pendiente comprobar la identidad de la sesión que
+  recibió el cambio y el error exacto del ingreso. Capacidad continúa pausada.
+
+- **Prioridad actual: recuperación de contraseña, reportada por el dueño.** Se
+  pausa capacidad y la revisión de `fix/cache-escritura-no-rompe` a pedido del
+  dueño. Informa que pedir recuperación desde Play envía el correo, el enlace
+  abre la web y la contraseña nueva luego no permite ingresar en Android.
+  Diagnóstico abierto en `ISSUES.md` #22. No está comprobado todavía que la
+  escritura haya fallado: faltan mensaje final, identidad de la sesión y
+  respuesta de Auth. No confundir la falta de App Links con fallo de guardado.
+  La entrega de Claude sobre `3612e3a` queda recibida, no auditada ni aprobada
+  por Codex en esta sesión. Los commits documentales `d38dbd8`, `4ae8823` y
+  `ef2f83e` sí figuran en el historial local comprobado.
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
