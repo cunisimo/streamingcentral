@@ -1580,8 +1580,10 @@ Sin mergear ni desplegar. Informe completo:
   `esperasCompartidas` (campo propio, 0 hasta que haya single-flight). Los
   intentos HTTP de Redis salen del `backoff` del SDK (`@upstash/redis` 1.38.0
   lo llama una vez por reintento; no acepta un `fetch` propio) y se cotejaron
-  con el doble: 3.426 = 3.167 + 259. La línea `[home]` muestra cada unidad con
-  su nombre. Un Home frío de `n,d,m` en el banco: **926 TMDB / 4 Supabase /
+  con el doble en la recuperación controlada del banco: 1.655 intentos =
+  1.655, 921 comandos = 921. La línea `[home]` muestra cada unidad con su
+  nombre y termina con la clave; cada solicitud deja además `[home] pedido
+  <clave>` al entrar. Un Home frío de `n,d,m` en el banco: **926 TMDB / 4 Supabase /
   993-993-993 Redis**; 5 solicitudes iguales sobre caché fría: **5
   composiciones**.
 - **La trampa del batcher, resuelta:** hits/misses/claves se le anotan a quien
@@ -1590,11 +1592,16 @@ Sin mergear ni desplegar. Informe completo:
 - **Segunda mitad del criterio, NO cumplida:** la tasa de aciertos de
   Producción legible sin depender de los logs es serie histórica (Etapa 5).
 - **Puntos 3 a 6: sin cambios** (no eran de la Etapa 0).
-- **Comprobado ejecutando:** todo lo anterior en el banco, con controles
-  (repetibilidad, app ↔ dobles en cada escenario, variantes que se distinguen).
-  **Inferido:** que en Vercel un Redis inalcanzable termina en 504 (183,5 s
-  medidos localmente contra `maxDuration = 60`). **No verificable desde el
-  cliente:** comandos facturados vs confirmados.
+- **Comprobado ejecutando:** todo lo anterior en el banco, con la
+  coincidencia app ↔ dobles **verificada automáticamente por escenario**
+  (`lib/banco-validacion.ts`; una diferencia invalida la corrida), repetibilidad
+  y variantes que se distinguen. La primera corrida publicada (`ceeed75`)
+  había solapado dos escenarios y afirmado la coincidencia sin verificarla; la
+  auditoría de Codex lo detectó y la línea base se repitió entera (informe
+  §7.5). **Inferido:** que en Vercel un Redis caído de forma sostenida termina
+  en 504 (en el banco la solicitud no completó en 60 s, contra `maxDuration =
+  60`). **No verificable desde el cliente:** comandos facturados vs
+  confirmados.
 
 ### Criterio de cierre
 

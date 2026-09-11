@@ -56,21 +56,30 @@
 
 - **Etapa 0 de capacidad (#20, "poder medir"): IMPLEMENTADA en la rama
   `feat/etapa0-medir` (worktree `wt-etapa0`, nacida de `main` = `aa7772e`),
-  pendiente de auditoría de Codex. Sin mergear, sin push, sin deploy.** Métricas
+  pendiente de auditoría de Codex. Sin mergear, sin push, sin deploy.** La
+  primera auditoría (sobre `ceeed75`) no encontró bloqueos en la
+  instrumentación pero sí en el banco: dos escenarios solapados y una
+  coincidencia app ↔ dobles afirmada sin verificar. Corregido en la segunda
+  versión (informe §7.5): el corredor ya no empieza un escenario con trabajo
+  vivo en Next (reinicia y lo demuestra), atribuye cada línea por clave, valida
+  automáticamente las cuatro igualdades por escenario y termina con código 1 si
+  algo no cierra; la línea base se repitió entera y es válida. Métricas
   por solicitud en `lib/metricas.ts` con unidades separadas: composiciones del
   Home contadas donde corren (no deducidas del MISS), espera compartida como
   campo propio (hoy 0), TMDB y Supabase por separado, y Redis en llamadas
   lógicas / intentos HTTP / comandos (los reintentos del SDK se cuentan en su
-  `backoff`, cotejados con el doble: 3.426 = 3.167 + 259). Base de TMDB
+  `backoff`, cotejados con el doble en la recuperación controlada: 1.655
+  intentos = 1.655, 921 comandos = 921). Base de TMDB
   configurable sólo con `YUMP_BANCO=1` y nunca en `VERCEL_ENV=production`,
   ejecutado. Banco aislado (`scripts/banco/`) con tres dobles locales y una
-  línea base de 24 escenarios. **Primer número real:** un Home frío de `n,d,m`
-  en el banco = 926 TMDB / 4 Supabase / 993-993-993 Redis. Dos hechos medidos
-  que no son de esta etapa arreglar: con Redis inalcanzable un Home frío tardó
-  183,5 s (en Vercel sería 504); con Supabase inalcanzable el Home no se marca
-  degradado y se guarda 6 h (bajo las condiciones del banco). 24 tests nuevos
-  escritos antes del código; suite 1379/1389 (0 fallos, 10 omitidos); `tsc`
-  limpio; build fresco exit 0. **#20 sigue abierto**: falta la lectura de la
+  línea base de 24 escenarios (23 completos, 1 incompleto declarado).
+  **Primer número real:** un Home frío de `n,d,m` en el banco = 926 TMDB / 4
+  Supabase / 993-993-993 Redis. Dos hechos medidos que no son de esta etapa
+  arreglar: con Redis cortando el socket de forma sostenida, un Home frío no
+  completó en 60 s (en Vercel sería 504: inferido, no medido); con Supabase
+  inalcanzable el Home no se marca degradado y se guarda 6 h (bajo las
+  condiciones del banco). 44 tests nuevos escritos antes del código; suite
+  1399/1409 (0 fallos, 10 omitidos); `tsc` limpio; build fresco exit 0. **#20 sigue abierto**: falta la lectura de la
   tasa de aciertos de Producción sin depender de los logs (Etapa 5). **Nada del
   banco es capacidad de Producción.** Informe:
   [`medidas/2026-09-11-etapa0-medir.md`](medidas/2026-09-11-etapa0-medir.md).
