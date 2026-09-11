@@ -162,9 +162,12 @@ const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno
 
 /**
  * La línea `[home]` de los logs. Cada unidad con su nombre, nunca sumadas.
- * No lleva claves, tokens ni parámetros: sólo cuentas y tiempos.
+ * No lleva tokens ni parámetros: sólo cuentas y tiempos, y al final la clave
+ * del Home si se la pasa —la misma que ya viaja en `[home] MISS/HIT <clave>`—,
+ * para que cada línea se pueda atribuir a UNA solicitud aunque haya varias
+ * concurrentes (el banco aislado las reparte por clave).
  */
-export function lineaHome(m: MetricasRequest, msTotal: number): string {
+export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): string {
   const t = m.tmdb;
   const errTmdb = [
     t.errores.http429 ? `${t.errores.http429} x429` : "",
@@ -193,6 +196,7 @@ export function lineaHome(m: MetricasRequest, msTotal: number): string {
     `supabase ${s.consultas} consultas (${[`${s.ok} ok`, ...errSb].join(", ")}) ${s.ms}ms | ` +
     `redis${r.modo === "memoria" ? "(memoria)" : ""} ${r.llamadasLogicas} llamadas / ${r.intentosHttp} intentos http / ${r.comandos} comandos` +
     ` | ${r.claves} claves (${r.hits} hit / ${r.misses} miss)` +
-    `${fallosRedis.length ? ` | ${fallosRedis.join(", ")}` : ""} | ${r.ms}ms | lotes: ${lotes}`
+    `${fallosRedis.length ? ` | ${fallosRedis.join(", ")}` : ""} | ${r.ms}ms | lotes: ${lotes}` +
+    `${clave ? ` | clave ${clave}` : ""}`
   );
 }

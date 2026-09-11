@@ -668,6 +668,10 @@ export async function homePayload(opts: {
 }): Promise<HomePayload> {
   const types = opts.types ?? {};
   const key = homeKey(opts.providers, types);
+  // Una línea al ENTRAR y otra al salir: la diferencia entre las dos es la
+  // cantidad de solicitudes que siguen corriendo. Abortar el `fetch` del lado
+  // del cliente no cancela este handler, y sin esta línea eso es invisible.
+  console.log(`[home] pedido ${key}`);
 
   // Tasa de aciertos del cache: la métrica que ningún panel da y que para esta
   // app es la que más importa. Rearmar cuesta 400-700 comandos de Redis y
@@ -722,7 +726,7 @@ export async function homePayload(opts: {
   // Cada unidad con su nombre y por separado: composiciones, TMDB, Supabase y
   // las tres de Redis (llamadas lógicas / intentos HTTP / comandos). El formato
   // vive en lib/metricas.ts y está probado.
-  console.log(lineaHome(metricas, Date.now() - t0));
+  console.log(lineaHome(metricas, Date.now() - t0, key));
   // Qué eje le tocó a cada superficie hoy. Solo se loguea en un MISS: en un HIT
   // el payload viene del cache y no se eligió ningún eje.
   if (ejes.size) {

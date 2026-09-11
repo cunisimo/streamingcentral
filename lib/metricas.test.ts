@@ -199,6 +199,22 @@ test("la línea [home] con un HIT es corta y dice que no hubo composición", () 
   assert.match(linea, /tmdb 0 llamadas/);
 });
 
+test("🔴 la línea [home] termina con su CLAVE cuando se la pasa, para poder atribuirla a una solicitud", () => {
+  // El banco lee las líneas del log y las atribuye por clave a cada escenario;
+  // con solicitudes concurrentes, sin clave las líneas no se pueden repartir.
+  const m = nuevasMetricas();
+  m.home.cache = "hit"; m.redis.modo = "redis";
+  const con = lineaHome(m, 5, "home:es-ES.r1:v6:123:d,m,n:");
+  assert.match(con, /\| clave home:es-ES\.r1:v6:123:d,m,n:$/);
+  const sin = lineaHome(m, 5);
+  assert.doesNotMatch(sin, /\| clave /);  // ("claves (0 hit …)" sí está: es otra palabra)
+});
+
+test("🔴 el Home anuncia cada solicitud al ENTRAR (`[home] pedido <clave>`): pedidos sin terminal = solicitudes activas", () => {
+  assert.match(home, /console\.log\(`\[home\] pedido \$\{key\}`\)/, "no hay línea de entrada: un timeout del cliente sería invisible en el servidor");
+  assert.match(home, /lineaHome\(metricas, [^,]+, key\)/, "la línea terminal no lleva la clave");
+});
+
 test("en memoria (sin Redis) los intentos HTTP son 0 y la línea lo dice", () => {
   const m = nuevasMetricas();
   m.home.cache = "miss"; m.home.composiciones = 1; m.redis.modo = "memoria";
