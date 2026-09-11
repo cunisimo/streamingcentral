@@ -40,9 +40,9 @@ banco de la §10. **No** hay canonización, single-flight, turno distribuido,
   distintas cuya suma de TMDB es exactamente lo que el doble recibió).
 - **La coincidencia app ↔ dobles la verifica el corredor, escenario por
   escenario, y una diferencia invalida la corrida** (`lib/banco-validacion.ts`,
-  con tests). La corrida publicada es válida: 23 escenarios completos con las
-  cuatro igualdades cerradas, y **uno declarado incompleto** (F5a), sin
-  igualdades que no puede cumplir. La primera versión de este informe afirmó
+  con tests). La corrida publicada es válida: **23 escenarios totales: 22
+  completos** con las cuatro igualdades cerradas **y 1 incompleto declarado**
+  (F5a), sin igualdades que no puede cumplir. La primera versión de este informe afirmó
   la coincidencia sin verificarla y era falsa en dos escenarios (§7.5).
 - **Dos hechos de comportamiento que el banco puso sobre la mesa** (§7): con
   Redis cortando el socket de forma sostenida, un Home frío **no completó en 60
@@ -450,8 +450,9 @@ el diagnóstico de la auditoría.
 
 ### Ejecutado y comprobado
 - Todo lo de §7 (línea base), con la coincidencia app ↔ dobles **verificada
-  automáticamente en los 23 escenarios completos** y la repetibilidad; el
-  escenario incompleto (F5a) está declarado como tal y no afirma coincidencia.
+  automáticamente en los 22 escenarios completos** (de 23 totales) y la
+  repetibilidad; el escenario incompleto (F5a) está declarado como tal y no
+  afirma coincidencia.
 - Que el defecto del primer corredor era real (§7.5): reproducido sobre el JSON
   viejo y detectado por el módulo nuevo.
 - Aislamiento entre solicitudes: unitario (concurrencia entrelazada, microtask,
@@ -500,11 +501,11 @@ Sobre la rama, en `wt-etapa0`, sin `.env.local`:
 |---|---|
 | `node --test lib/metricas.test.ts lib/tmdb-base.test.ts` antes de escribir los módulos | **RED**: `ERR_MODULE_NOT_FOUND` en los dos |
 | Lo mismo con los módulos puros pero sin cablear producción | 17/24: los 7 guards de fuente en rojo |
-| `node --test lib/metricas.test.ts lib/tmdb-base.test.ts` final | **24/24** |
+| `node --test lib/metricas.test.ts lib/tmdb-base.test.ts` final | **26/26** (24/24 en la primera versión; la segunda sumó los dos tests de la clave en la línea y de `[home] pedido`) |
 | `node --test lib/banco-validacion.test.ts` antes de escribir el módulo | **RED**: `ERR_MODULE_NOT_FOUND` |
 | `node --test lib/banco-validacion.test.ts` | **18/18** |
 | Módulo nuevo aplicado al JSON de `ceeed75` | inválidos F5 y F5r; válidos los otros 22 |
-| `node scripts/banco/correr.mjs` (corrida publicada) | **corrida VÁLIDA**, exit 0: 23 completos, 1 incompleto declarado, 1 reinicio de Next |
+| `node scripts/banco/correr.mjs` (corrida publicada) | **corrida VÁLIDA**, exit 0: 23 escenarios totales — 22 completos y 1 incompleto declarado (F5a) —, 1 reinicio de Next |
 | `node --test lib/escritura-cache.test.ts` (#21, tras ajustar el nombre del campo de tiempo) | 18/18 |
 | `npm test` (con `.next` de producción fresco) | **1409 tests: 1399 pasan, 0 fallos, 10 omitidos** (segunda versión; la primera: 1389/1379) |
 | `npx tsc --noEmit` | limpio |

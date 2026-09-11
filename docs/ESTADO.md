@@ -72,7 +72,7 @@
   intentos = 1.655, 921 comandos = 921). Base de TMDB
   configurable sólo con `YUMP_BANCO=1` y nunca en `VERCEL_ENV=production`,
   ejecutado. Banco aislado (`scripts/banco/`) con tres dobles locales y una
-  línea base de 24 escenarios (23 completos, 1 incompleto declarado).
+  línea base de 23 escenarios totales: 22 completos y 1 incompleto declarado.
   **Primer número real:** un Home frío de `n,d,m` en el banco = 926 TMDB / 4
   Supabase / 993-993-993 Redis. Dos hechos medidos que no son de esta etapa
   arreglar: con Redis cortando el socket de forma sostenida, un Home frío no
