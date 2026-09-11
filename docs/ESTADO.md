@@ -40,17 +40,17 @@
   7. El rechazo de `fb89b45` y los diagnósticos previos al arreglo están al
      final de este bloque como **antecedentes históricos**, no como estado.
 
-- **Etapa PREVIA de capacidad (#21): implementada y actualizada sobre `main`,
-  pendiente de auditoría/merge.** Rama `fix/cache-escritura-no-rompe`, rebaseada
-  el 11/09 sobre `main` = `adf7065`; **sin mergear ni desplegar.** Alcance
-  intacto: una escritura fallida en Redis ya no descarta un payload correcto
+- **Etapa PREVIA de capacidad (#21): MERGEADA en `main` (`3ad935d`), todavía
+  sin deploy.** Codex auditó `f8f42a5` sin bloqueos; la rama se rebaseó sobre
+  `07ccecf` y entró con `--no-ff`. Sobre el `main` mergeado, desde cero:
+  específicos 18/18, suite 1355/1365 (0 fallos, 10 omitidos), `tsc` limpio,
+  build fresco exit 0 (2 min 2 s, `.next` borrado antes). Alcance intacto: una escritura fallida en Redis ya no descarta un payload correcto
   (`guardar` delega en `lib/escritura-cache.ts`). Se agregaron los dos escenarios
   que faltaban del criterio de cierre —Redis entero caído y recuperación—
   compuestos con `resolverConCache` real y con control contra el `guardar`
-  viejo: 18/18 en `lib/escritura-cache.test.ts`, suite 1355/1365 (0 fallos, 10
-  omitidos), `tsc` limpio, build de producción exit 0. **Lo que sigue siendo
-  inferencia:** el 200 al usuario; ningún test ejecuta el handler HTTP. Detalle
-  en `ISSUES.md` #21. No es parte del #22 ni de Android.
+  viejo. **Comprobado: el comportamiento del resolver. Inferido: el HTTP
+  200**, deducido del handler y no probado provocando una caída real de Redis.
+  Detalle en `ISSUES.md` #21. No es parte del #22 ni de Android.
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de

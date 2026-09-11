@@ -1665,11 +1665,17 @@ que se reprodujo el problema— sin banco, sin contadores y sin Producción.
 3. **No** cambia el resto del contrato: un degradado sigue sin guardarse, y una
    lectura caída sigue siendo un MISS.
 
-### Estado: implementado y actualizado sobre `main`, pendiente de auditoría/merge
+### Estado: MERGEADO en `main` (`3ad935d`), todavía sin deploy
 
-Al 11/09/2026. Rama `fix/cache-escritura-no-rompe`, rebaseada sobre `main` =
-`adf7065` (antes nacía de `ef2f83e`). **Sin mergear ni desplegar.** El alcance es
-el de siempre: `guardar` captura el fallo de escritura, lo registra y no lo
+Al 11/09/2026. Codex auditó `f8f42a5` sin bloqueos técnicos; la rama
+`fix/cache-escritura-no-rompe` se rebaseó sobre `main` = `07ccecf` (`e4a9d52`) y
+entró con `--no-ff` como `3ad935d`. **Sin pushear ni desplegar todavía.** Sobre
+el `main` mergeado, desde cero: `lib/escritura-cache.test.ts` 18/18; `npm test`
+1355/1365, 0 fallos, 10 omitidos; `tsc --noEmit` limpio; `npm run build` exit 0
+en 2 min 2 s con `.next` borrado antes (`BUILD_ID ZFfliiMz09Hs25ZLT5evT`);
+`git diff --check adf7065..3ad935d` limpio. **Comprobado: el comportamiento del
+resolver. Inferido: el HTTP 200** — se deduce del handler, no se probó
+provocando una caída real de Redis. El alcance es el de siempre: `guardar` captura el fallo de escritura, lo registra y no lo
 propaga. Nada más — sin instrumentación, single-flight, bloqueo, CDN ni límites.
 
 La política vive en `lib/escritura-cache.ts` (módulo puro, por el mismo motivo
@@ -1712,10 +1718,11 @@ credenciales. El 200 se **deduce** del camino del handler: `manejar` hace
 vez de rechazar ya no entra al `catch` que responde 500. Es una inferencia sobre
 código leído, no una prueba realizada, y queda como tal.
 
-Verificación del 11/09 sobre la rama rebaseada: `lib/escritura-cache.test.ts`
+Verificación del 11/09 sobre la rama antes del merge: `lib/escritura-cache.test.ts`
 18/18; `npm test` **1355/1365, 0 fallos, 10 omitidos** (con `.next` de
 producción; con el `.next` ausente omite 18); `tsc --noEmit` limpio; `npm run
-build` exit 0 en 2 min 16 s. Pendiente: auditoría de Codex, merge y deploy.
+build` exit 0 en 2 min 16 s. Repetida sobre el `main` mergeado (arriba).
+Pendiente: push y deploy.
 
 ### Criterio de cierre
 
