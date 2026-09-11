@@ -35,8 +35,12 @@ export default function ResetPassword() {
   // acepta los tokens, y su arranque vive en un efecto del `AuthProvider`. El
   // inicializador de `useState` corre durante el render, antes de cualquier
   // efecto, así que ve la URL entera. Y lo que lee sólo sirve para dos cosas:
-  // mostrar de inmediato un error que Supabase puso en la URL, y saber si vale
-  // la pena esperar. NO habilita el formulario.
+  // mostrar un error que Supabase puso en la URL (apenas termine de arrancar),
+  // y saber si vale la pena esperar. NO habilita el formulario.
+  //
+  // En el servidor no hay `window` y el valor es "nada": por eso la decisión
+  // contesta "cargando" mientras `ready` sea false — el HTML servido y el
+  // primer render del cliente tienen que coincidir, con o sin hash.
   const [enlace] = useState(() =>
     typeof window === "undefined"
       ? ({ tipo: "nada" } as const)
@@ -62,7 +66,9 @@ export default function ResetPassword() {
   const [ok, setOk] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const pantalla = decidirPantalla({ ready, enlace, aceptada: reclamada });
+  // `pendiente` evita el parpadeo: en el render en que la pendiente aparece la
+  // copia local sigue en null hasta que corra el efecto de arriba.
+  const pantalla = decidirPantalla({ ready, enlace, aceptada: reclamada, pendiente: hayRecuperacionPendiente });
 
   async function guardar() {
     setErr("");

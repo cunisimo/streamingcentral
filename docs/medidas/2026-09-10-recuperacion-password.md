@@ -1,6 +1,6 @@
 # Incidente #22 — Recuperación de contraseña: causa reproducida, arreglo y pruebas
 
-**Fecha:** 2026-09-10 (tercera versión: ciclo de vida de la aceptación)
+**Fecha:** 2026-09-11 (cuarta versión: la ruta al aceptar y el parpadeo)
 **Rama:** `fix/recuperacion-password`, nacida de `main` = `ef2f83e`
 **Método:** reproducción ejecutada contra el proyecto Supabase real con cuentas de
 prueba creadas y borradas para esto; verificación en el navegador sobre un
@@ -12,7 +12,10 @@ descartable. Sin pruebas manuales del dueño.
 > ([`2026-09-10-auditoria-fb89b45.md`](2026-09-10-auditoria-fb89b45.md)) y
 > devuelto con dos P1 y dos P2, resueltos en `0831b86` (§9). Codex confirmó esa
 > versión y encontró un **tercer P1, de ciclo de vida**: la aceptación quedaba
-> global y reutilizable. Resuelto en esta versión (§5.6, §6.4).
+> global y reutilizable, resuelto en `0d1b978` (§5.6, §6.4). Sobre esa versión
+> encontró un **cuarto P1**: una aceptación fuera de `/cuenta/reset` creaba una
+> pendiente que la navegación posterior conservaba. Resuelto en esta versión
+> (§5.7, §6.5), junto con el parpadeo previo a la reclamación.
 
 ---
 
@@ -203,7 +206,7 @@ cerrar sesión o entrar como A → volver a `/cuenta/reset` sin hash →
 | | PENDIENTE | RECLAMADA |
 |---|---|---|
 | Dónde vive | provider (una `ref` + un booleano de estado) | `useState` de UNA instancia de la pantalla |
-| Nace | con `PASSWORD_RECOVERY` | al reclamar la pendiente, que queda en `null` |
+| Nace | con `PASSWORD_RECOVERY`, **sólo si la ruta real en ese instante es `/cuenta/reset`** (§5.7) | al reclamar la pendiente, que queda en `null` |
 | Muere | al reclamarse; al salir de `/cuenta/reset`; con cualquier evento de sesión de OTRA cuenta o `SIGNED_OUT`; con una URL en error | con la instancia (abandonar la pantalla), o con el éxito |
 | Ante un cambio de sesión del singleton | se descarta | **inmune** — es lo que conserva el escenario 6 |
 | Se expone | sólo como `hayRecuperacionPendiente: boolean` | no sale de la pantalla |
@@ -237,6 +240,44 @@ pendiente, y la pantalla tiene la suya.
 Todo el ciclo es un reductor puro (`siguientePendiente`) más `reclamar`, en
 `lib/recuperacion.ts`, y el provider sólo los ejecuta.
 
+### 5.7 La ruta en el momento de la aceptación, y el parpadeo antes de reclamar
+
+**El cuarto P1** (Codex, sobre `0d1b978`, reproducido con el reductor real):
+`case "aceptada"` devolvía `e.r` sin mirar dónde estaba la app. Con la ruta en
+`/`, el efecto de ruta ya había corrido (y no vuelve a correr si el pathname no
+cambia), llegaba la aceptación, quedaba una pendiente, y la transición posterior
+a `/cuenta/reset` la **conservaba**: una pantalla sin enlace la reclamaba. No es
+sólo teórico: el fallback histórico al Site URL deja el hash exactamente en `/`.
+
+**El cambio:** la ruta viaja **en el evento** —`{ tipo: "aceptada", r, pathname }`—
+y el reductor sólo crea la pendiente si `pathname` es `/cuenta/reset` (con o sin
+barra final); fuera de ahí devuelve `null`, y tampoco conserva una anterior.
+El provider llena `pathname` con **`window.location.pathname` en el instante
+del evento**, no con el `pathname` de `usePathname` que ve el cierre del
+listener: ese cierre se registró en un render y quedaría obsoleto durante una
+navegación SPA. Con la ruta adentro del evento la regla es verificable en un
+test, que es lo que se pidió.
+
+Adentro de Reset nada cambia: la pendiente nace igual, y el montaje tardío la
+reclama igual.
+
+**El parpadeo, dos veces.** (1) Entre el render en que `hayRecuperacionPendiente`
+pasa a `true` y el efecto que reclama, la copia local sigue en `null` y la
+decisión contestaba "sin enlace" o "enlace inválido" durante un render.
+`decidirPantalla` recibe ahora `pendiente` y contesta "cargando" mientras haya
+una sin reclamar. (2) Buscando ese parpadeo apareció otro, anterior a la
+hidratación y **medido**: en SSR no hay `window`, así que el HTML servido de
+`/cuenta/reset` decía "sin enlace" para todo el mundo, y con cualquier hash el
+primer render del cliente decía otra cosa. En la consola del build de
+producción, un hard load con hash daba `React #425 ×6, #418, #423` (texto que
+no coincide → React descarta la raíz y la vuelve a renderizar en el cliente);
+sin hash, ninguno. Ahora la decisión es **"cargando" mientras `ready` sea
+false**, sea lo que sea la URL: el servidor y el primer render del cliente
+coinciden, y el error de un enlace consumido aparece apenas Supabase termina de
+arrancar (`getSession`, milisegundos). Verificado en el build final: el HTML
+servido dice "Cargando…", el hard load con hash de error no agrega ningún error
+de hidratación, y el error se muestra.
+
 ### 5.5 Archivos
 
 | Archivo | Qué cambia |
@@ -245,7 +286,7 @@ Todo el ciclo es un reductor puro (`siguientePendiente`) más `reclamar`, en
 | `components/AuthContext.tsx` | `recuperacion` desde `PASSWORD_RECOVERY`; `ready` espera la decisión; `cambiarPasswordDeRecuperacion` con cliente aislado; `updatePassword` vuelve a ser sólo para sesión abierta |
 | `app/cuenta/reset/page.tsx` | cablea la decisión; muestra el email de la aceptación, no del singleton |
 | `lib/recuperacion.test.ts` | reescrito: 23 tests, escritos ANTES del cambio y fallando contra `fb89b45` |
-| `lib/recuperacion-ciclo.test.ts` | **nuevo** — 18 tests del ciclo de vida, escritos ANTES del cambio y fallando contra `0831b86` |
+| `lib/recuperacion-ciclo.test.ts` | **nuevo** — 18 tests del ciclo de vida, escritos ANTES del cambio y fallando contra `0831b86`; +13 en la cuarta ronda, fallando contra `0d1b978` |
 
 ---
 
@@ -316,6 +357,29 @@ reductor, que es el código que el provider ejecuta.
 `/cuenta/reset` pero el DOM siguió mostrando el Home varios segundos. Se
 reemplazó por `window.next.router.push`, que sí navega dentro del App Router; la
 navegación se comprobó como del mismo documento (`performance` con 1 entrada).
+
+### 6.5 Cuarta ronda: la ruta al aceptar y el parpadeo
+
+Unitarios (13 nuevos en `lib/recuperacion-ciclo.test.ts`, escritos antes del
+cambio; 9 fallaban contra `0d1b978` y 2 eran controles que tenían que seguir
+pasando; los dos del parpadeo de hidratación se escribieron al medirlo y
+también fallaron antes del cambio):
+
+| Caso pedido | Unitario | Navegador (build de producción, in-app por `window.next.router`, mismo documento) |
+|---|---|---|
+| Aceptación estando en `/` | ✅ falló antes | ✅ Enlace de B con `redirect_to` en la raíz local (Supabase lo honró: 303 a `/#access_token…&type=recovery`). auth-js lo aceptó en `/` (hash borrado, sesión de B instalada). Navegación a `/cuenta/reset` → **"sin enlace", sin formulario** |
+| Aceptación estando en `/cuenta` | ✅ falló antes | ✅ Misma secuencia con `redirect_to` en `/cuenta` → "sin enlace" |
+| Aceptación estando en `/cuenta/reset` (control) | ✅ | ✅ Enlace legítimo → formulario para B → Guardar → "Listo" → `/cuenta`. **B: nueva 200, original 400, la del cambio anterior 400 — A: original 200, la nueva de B 400** |
+| Fallback histórico al Site URL con hash válido | ✅ falló antes | ✅ Es el caso de la primera fila: el hash cae en `/` |
+| Aceptación en Reset + montaje tardío legítimo | ✅ | — (no se puede forzar un chunk lento desde el panel; el control de arriba cubre el montaje a tiempo) |
+| Cambio de ruta concurrente con la aceptación | ✅ falló antes (las dos direcciones) | — (no reproducible a mano: es una carrera de milisegundos) |
+| Parpadeo: pendiente sin reclamar → cargando | ✅ falló antes | — (un render; no observable desde el panel) |
+| Parpadeo de hidratación: antes de `ready` siempre cargando | ✅ falló antes | ✅ HTML servido: "Cargando…". Hard load con hash de error: **0 errores de hidratación nuevos** (antes: 8 por carga) y el mensaje de enlace consumido se muestra |
+| Vuelta a Reset tras el éxito | — | ✅ "sin enlace" |
+
+`npm test` → **1337/1347**, 0 fallos, 10 omitidos. `tsc --noEmit` limpio.
+`npm run build` → **exit 0** (97 s en frío y 44 s el segundo, tras el cambio de
+la decisión), `BUILD_ID bQZrKvRAcxSMCBW8b9vKi`.
 
 ---
 
@@ -393,6 +457,13 @@ descartado con evidencia.
 |---|---|
 | La aceptación quedaba global y reutilizable tras salir, cerrar sesión o cambiar de cuenta; el test "aceptación sin nada en la URL también vale" lo consolidaba | Pendiente (global, consumible, atada a la ruta y a la cuenta) separada de reclamada (local a una pantalla, inmune al singleton). 18 tests escritos antes del cambio, fallando contra `0831b86`. Escenarios 1, 3 y 6 verificados en navegador sobre build de producción; el test señalado se reescribió para decir que `aceptada` es la copia reclamada y que la reutilización se impide en `reclamar` |
 | El build independiente de Codex no terminó | Reejecutado: exit 0 en 113 s (§6.3) |
+
+### 9.c Cuarta ronda: la ruta al aceptar
+
+| Hallazgo | Estado |
+|---|---|
+| `case "aceptada"` devolvía `e.r` sin comprobar la ruta: con la app en `/`, una aceptación creaba una pendiente que la transición a `/cuenta/reset` conservaba y una pantalla sin enlace reclamaba | La ruta viaja en el evento, leída de `window.location.pathname` en el instante de emitirlo; fuera de `/cuenta/reset` el reductor devuelve `null`. 13 tests antes del cambio (§6.5); verificado en navegador con el hash cayendo en `/` y en `/cuenta`, y el control legítimo con cambio de contraseña real |
+| Parpadeo previo a la reclamación | `decidirPantalla` recibe `pendiente` y contesta "cargando" mientras haya una sin reclamar. Al buscarlo apareció y se corrigió el parpadeo de hidratación (§5.7): "cargando" mientras `ready` sea false, medido con la consola del build de producción |
 
 ---
 

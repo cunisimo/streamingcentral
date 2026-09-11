@@ -51,7 +51,7 @@ test("🔴 P1: type=recovery con token basura y sesión abierta: NO hay formular
     "#type=recovery&access_token=",
     HASH_CON_TOKENS,   // tokens con la forma correcta, pero que Supabase NUNCA aceptó
   ]) {
-    const p = decidirPantalla({ ready: true, enlace: leerEnlace(hash, ""), aceptada: null });
+    const p = decidirPantalla({ ready: true, enlace: leerEnlace(hash, ""), aceptada: null, pendiente: false });
     assert.notEqual(p.vista, "formulario", `habilitó el formulario con ${hash}`);
   }
 });
@@ -61,32 +61,32 @@ test("🔴 P1: el formulario sólo aparece con una recuperación ACEPTADA por Su
   // sólo después de que Supabase validó el token contra /user. La URL sirve para
   // saber si hay que esperar; no decide nada.
   const conAceptacion = decidirPantalla({
-    ready: true, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: ACEPTADA_B,
+    ready: true, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: ACEPTADA_B, pendiente: false,
   });
   assert.equal(conAceptacion.vista, "formulario");
   assert.equal(conAceptacion.vista === "formulario" ? conAceptacion.aceptada.userId : null, "cuenta-B");
 });
 
 test("🔴 enlace consumido: error con motivo, aunque haya recuperación previa colgada", () => {
-  const p = decidirPantalla({ ready: true, enlace: leerEnlace(HASH_CONSUMIDO, ""), aceptada: null });
+  const p = decidirPantalla({ ready: true, enlace: leerEnlace(HASH_CONSUMIDO, ""), aceptada: null, pendiente: false });
   assert.equal(p.vista, "error");
   assert.match(p.vista === "error" ? p.mensaje : "", /venció|abrió antes/);
 });
 
 test("sin nada en la URL y sin aceptación: sin-enlace, aunque haya sesión", () => {
   // No hay parámetro de sesión: la sesión ya no participa de esta decisión.
-  assert.equal(decidirPantalla({ ready: true, enlace: leerEnlace("", ""), aceptada: null }).vista, "sin-enlace");
+  assert.equal(decidirPantalla({ ready: true, enlace: leerEnlace("", ""), aceptada: null, pendiente: false }).vista, "sin-enlace");
 });
 
 test("tokens en la URL y Supabase todavía decidiendo: cargando, no error", () => {
   assert.equal(
-    decidirPantalla({ ready: false, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: null }).vista,
+    decidirPantalla({ ready: false, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: null, pendiente: false }).vista,
     "cargando",
   );
 });
 
 test("tokens en la URL, Supabase terminó y NO aceptó: error, no formulario", () => {
-  const p = decidirPantalla({ ready: true, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: null });
+  const p = decidirPantalla({ ready: true, enlace: leerEnlace(HASH_CON_TOKENS, ""), aceptada: null, pendiente: false });
   assert.equal(p.vista, "error");
 });
 
@@ -97,7 +97,7 @@ test("una aceptación RECLAMADA manda aunque la URL esté limpia (montaje tardí
   // Lo que impide REUTILIZAR una aceptación vieja no es esta función sino
   // `reclamar`, que la consume — ver lib/recuperacion-ciclo.test.ts.
   assert.equal(
-    decidirPantalla({ ready: true, enlace: leerEnlace("", ""), aceptada: ACEPTADA_B }).vista,
+    decidirPantalla({ ready: true, enlace: leerEnlace("", ""), aceptada: ACEPTADA_B, pendiente: false }).vista,
     "formulario",
   );
 });
@@ -226,7 +226,7 @@ const ctx = sinComentarios("components/AuthContext.tsx");
 
 test("🔴 la aceptación sale del evento PASSWORD_RECOVERY, en el AuthProvider", () => {
   assert.match(ctx, /"PASSWORD_RECOVERY"/, "el AuthProvider no escucha PASSWORD_RECOVERY");
-  assert.match(ctx, /tipo:\s*"aceptada",\s*r:\s*\{[\s\S]{0,200}userId:\s*session\.user\.id/,
+  assert.match(ctx, /tipo:\s*"aceptada",[\s\S]{0,80}r:\s*\{[\s\S]{0,200}userId:\s*session\.user\.id/,
     "la aceptación no se construye con la sesión del evento");
 });
 

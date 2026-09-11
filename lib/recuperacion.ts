@@ -134,18 +134,29 @@ export function decidirPantalla(opts: {
   ready: boolean;
   enlace: Enlace;
   aceptada: RecuperacionAceptada | null;
+  /** ¿Hay una pendiente que esta pantalla todavía no reclamó? Entre el render que la ve y el efecto que la reclama hay un render: ahí no se contesta. */
+  pendiente: boolean;
 }): Pantalla {
-  const { ready, enlace, aceptada } = opts;
+  const { ready, enlace, aceptada, pendiente } = opts;
+  // Antes de que Supabase termine de arrancar no se contesta NADA, ni siquiera
+  // un error que ya está en la URL. Es también lo que hace coincidir el HTML
+  // del servidor (sin `window`: enlace "nada", ready false) con el primer
+  // render del cliente: si acá saliera "sin enlace", ese texto se pintaría en
+  // todo enlace de recuperación hasta hidratar, y la hidratación fallaría
+  // (medido: React #425/#418/#423 y re-render de la raíz).
+  if (!ready) return { vista: "cargando" };
   if (enlace.tipo === "error") {
     return { vista: "error", mensaje: mensajeDeEnlace(enlace.codigo, enlace.descripcion) };
   }
   // La aceptación manda, con o sin URL: Supabase borra el hash al procesarlo, y
   // un re-render que vuelva a leer la barra ya no ve nada.
   if (aceptada) return { vista: "formulario", aceptada };
+  // Hay una pendiente y esta instancia aún no la reclamó (el efecto corre
+  // después del render). Ni "sin enlace" ni "inválido": se espera a reclamar.
+  if (pendiente) return { vista: "cargando" };
   if (enlace.tipo === "nada") return { vista: "sin-enlace" };
-  // Había tokens. Si Supabase todavía no decidió, se espera; si decidió y no
-  // aceptó, es un error — y no importa qué sesión haya.
-  if (!ready) return { vista: "cargando" };
+  // Había tokens, Supabase ya decidió y no aceptó: es un error — y no importa
+  // qué sesión haya.
   return { vista: "error", mensaje: mensajeDeEnlace(null, null) };
 }
 
@@ -160,8 +171,11 @@ export function decidirPantalla(opts: {
 //
 // La solución separa dos estados que antes eran uno:
 //
-//   PENDIENTE — global. Nace con `PASSWORD_RECOVERY`. Vive sólo mientras la ruta
-//     sea /cuenta/reset y hasta que una pantalla la reclame. La descarta
+//   PENDIENTE — global. Nace con `PASSWORD_RECOVERY` **si en ese momento la
+//     ruta real es /cuenta/reset** (cuarto P1: una aceptación en "/" —el
+//     fallback histórico al Site URL— creaba una pendiente que la navegación
+//     posterior a Reset conservaba). Vive sólo mientras la ruta siga siendo
+//     /cuenta/reset y hasta que una pantalla la reclame. La descarta
 //     cualquier cambio de sesión a OTRA cuenta, un cierre de sesión, y una
 //     pantalla que llega con un error en la URL.
 //
@@ -179,20 +193,29 @@ export type Pendiente = RecuperacionAceptada | null;
 
 /** Los eventos que mueven la pendiente. Son los que de verdad llegan al provider. */
 export type EventoPendiente =
-  | { tipo: "aceptada"; r: RecuperacionAceptada }
+  /**
+   * `pathname` es la ruta REAL en el momento del evento (`window.location`),
+   * no la que vio un efecto anterior: el efecto de ruta no vuelve a correr si
+   * el pathname no cambió, y un cierre viejo mentiría durante una navegación.
+   */
+  | { tipo: "aceptada"; r: RecuperacionAceptada; pathname: string }
   | { tipo: "auth"; evento: string; userId: string | null }
   | { tipo: "ruta"; pathname: string };
 
 const RUTA_RESET = "/cuenta/reset";
+// Con barra final también: el export de Capacitor usa `trailingSlash`.
+const enReset = (pathname: string) => pathname === RUTA_RESET || pathname === RUTA_RESET + "/";
 
 /** El reductor de la pendiente. Puro, y es lo que el provider ejecuta. */
 export function siguientePendiente(actual: Pendiente, e: EventoPendiente): Pendiente {
   switch (e.tipo) {
     case "aceptada":
-      return e.r;
+      // Fuera de /cuenta/reset una aceptación NUNCA genera una pendiente
+      // reclamable — ni conserva una anterior. Adentro, reemplaza.
+      return enReset(e.pathname) ? e.r : null;
     case "ruta":
       // Fuera de /cuenta/reset no hay nadie que pueda reclamarla legítimamente.
-      return e.pathname === RUTA_RESET || e.pathname === RUTA_RESET + "/" ? actual : null;
+      return enReset(e.pathname) ? actual : null;
     case "auth":
       if (!actual) return null;
       // El arranque no es un cambio de cuenta, y PASSWORD_RECOVERY llega por

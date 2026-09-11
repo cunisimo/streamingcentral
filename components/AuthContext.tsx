@@ -130,7 +130,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // servidor validó el access_token del enlace (`_getUser`), y con la
         // sesión que ese servidor devolvió. Un token basura, vencido o consumido
         // nunca emite esto. Es la única prueba de recuperación que se acepta.
-        mover({ tipo: "aceptada", r: {
+        //
+        // La ruta va con el evento y es la REAL de este instante, leída del
+        // navegador: el `pathname` de `usePathname` que ve este cierre es el
+        // del render en que se registró el listener, y el efecto de ruta no
+        // vuelve a correr si la ruta no cambió. Fuera de /cuenta/reset (el
+        // fallback histórico al Site URL cae en "/") la aceptación no deja nada.
+        mover({ tipo: "aceptada", pathname: window.location.pathname, r: {
           userId: session.user.id,
           email: session.user.email ?? null,
           accessToken: session.access_token,
