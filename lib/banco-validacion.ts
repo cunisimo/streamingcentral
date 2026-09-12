@@ -29,6 +29,8 @@
 // "no completó en más de X ms", sin igualdades —que no pueden cumplir— y sin
 // duración ni respuesta final inventadas.
 
+import { canonizarProviders, claveDeTipos, tiposDesdeParam } from "./canonizar-home.ts";
+
 export interface Respuesta { estado: number | null; ms: number; error?: string }
 
 export interface LineaTerminal {
@@ -36,6 +38,7 @@ export interface LineaTerminal {
   msTotal: number | null;
   cache: string | null;
   composiciones: number | null;
+  esperas: number | null;
   tmdb: number;
   supabase: number;
   redisIntentos: number;
@@ -58,6 +61,8 @@ export interface EscenarioObservado {
   /** Puede terminar sin completar (p. ej. Redis caído en una ventana limitada). */
   permiteIncompleto?: boolean;
   ventanaMs?: number;
+  /** Lo que el escenario AFIRMA sobre la app (Etapa 1): se comprueba y, si no cierra, invalida. */
+  esperado?: { composiciones?: number; esperas?: number; cacheDeTodas?: string; tmdb?: number; supabase?: number };
 }
 
 export interface Validacion {
@@ -71,18 +76,20 @@ export interface Validacion {
   igualdadesVerificadas: boolean;
   resumen?: string;
   sumas?: DeltasDobles;
+  /** Sumas de la app que no tienen contraparte en los dobles: composiciones y esperas compartidas. */
+  home?: { composiciones: number; esperas: number; caches: Record<string, number> };
 }
 
 /**
- * El sufijo `:<plataformas ordenadas>:<toggles>` con el que termina la clave
- * del Home para una query, tal como la arma `claveHome` (lib/claves.ts):
- * plataformas deduplicadas y ordenadas, toggles `riel:tipo` unidos por coma.
+ * El sufijo `:<plataformas>:<toggles>` con el que termina la clave del Home para
+ * una query, con la MISMA canonización que producción (lib/canonizar-home.ts,
+ * Etapa 1): `N,,d,zzz,M` → `d,m,n`; `t=accion:movie` → vacío. Usar la función
+ * de producción acá es a propósito: lo que el banco comprueba de forma
+ * independiente son los contadores de los dobles, no la forma de la clave.
  */
 export function sufijoDeClave(query: string): string {
   const sp = new URLSearchParams(query);
-  const prov = [...new Set((sp.get("providers") ?? "").split(",").filter(Boolean))].sort();
-  const t = (sp.get("t") ?? "").split(",").filter(Boolean).sort().join(",");
-  return `:${prov.join(",")}:${t}`;
+  return `:${canonizarProviders(sp.get("providers")).join(",")}:${claveDeTipos(tiposDesdeParam(sp.get("t")))}`;
 }
 
 export const esLineaPedido = (l: string): boolean => /^\[home\] pedido /.test(l);
@@ -97,6 +104,7 @@ export function parsearLineaHome(l: string): LineaTerminal {
     msTotal: n(/^\[home\] (\d+)ms total/),
     cache: s(/cache (HIT|MISS|COMPARTIDA|\?)/),
     composiciones: n(/(\d+) composici/),
+    esperas: n(/(\d+) esperas? compartida/),
     tmdb: n(/tmdb (\d+) llamadas/) ?? 0,
     supabase: n(/supabase (\d+) consultas/) ?? 0,
     redisIntentos: n(/(\d+) intentos http/) ?? 0,
@@ -136,6 +144,19 @@ export function validarEscenario(e: EscenarioObservado): Validacion {
 
   const estado: Validacion["estado"] = completadas === e.veces && activas === 0 ? "completo" : "incompleto";
   let igualdadesVerificadas = false;
+  const home = {
+    composiciones: e.terminales.reduce((a, t) => a + (t.composiciones ?? 0), 0),
+    esperas: e.terminales.reduce((a, t) => a + (t.esperas ?? 0), 0),
+    caches: e.terminales.reduce<Record<string, number>>((a, t) => { const k = t.cache ?? "?"; a[k] = (a[k] ?? 0) + 1; return a; }, {}),
+  };
+  if (estado === "completo" && e.esperado) {
+    const x = e.esperado;
+    if (x.composiciones !== undefined && home.composiciones !== x.composiciones) problemas.push(`composiciones: se esperaban ${x.composiciones} y hubo ${home.composiciones}`);
+    if (x.esperas !== undefined && home.esperas !== x.esperas) problemas.push(`esperas compartidas: se esperaban ${x.esperas} y hubo ${home.esperas}`);
+    if (x.cacheDeTodas !== undefined && (Object.keys(home.caches).length !== 1 || home.caches[x.cacheDeTodas] !== e.terminales.length)) problemas.push(`cache: se esperaba ${x.cacheDeTodas} en todas y hubo ${JSON.stringify(home.caches)}`);
+    if (x.tmdb !== undefined && sumas.tmdb !== x.tmdb) problemas.push(`tmdb: se esperaban ${x.tmdb} llamadas y hubo ${sumas.tmdb}`);
+    if (x.supabase !== undefined && sumas.supabase !== x.supabase) problemas.push(`supabase: se esperaban ${x.supabase} consultas y hubo ${sumas.supabase}`);
+  }
 
   if (estado === "completo") {
     const comparar = (nombre: string, app: number, doble: number) => {
@@ -154,7 +175,7 @@ export function validarEscenario(e: EscenarioObservado): Validacion {
     ? `${completadas}/${e.veces} completadas; igualdades ${igualdadesVerificadas ? "verificadas" : "NO cierran"}`
     : `no completó en más de ${e.ventanaMs ?? Math.max(...e.respuestas.map((r) => r.ms), 0)} ms: ${completadas}/${e.veces} completadas, ${activas} activa(s) en el servidor; actividad observada en los dobles sin igualdad exigible`;
 
-  return { id: e.id, estado, valida: problemas.length === 0, problemas, activasEnServidor: activas, igualdadesVerificadas, resumen, sumas };
+  return { id: e.id, estado, valida: problemas.length === 0, problemas, activasEnServidor: activas, igualdadesVerificadas, resumen, sumas, home };
 }
 
 export function validarCorrida(vs: Validacion[]): { valida: boolean; invalidos: string[]; incompletos: string[] } {
