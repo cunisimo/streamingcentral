@@ -1258,6 +1258,12 @@ producen afirmaciones falsas y hay tests que las rechazan.
 (`docs/medidas/2026-09-10-capacidad-trafico.md` §1 y §5). **Comprobado leyendo el
 código, no medido en carga.**
 
+> **Antecedente:** lo que sigue describe el código del 10/09, ANTES de la
+> Etapa 1. Desde el 12/09 el Home sí une las peticiones en vuelo dentro de una
+> instancia (`lib/home-vuelo.ts`); el estado actual está en "Estado (12/09)",
+> más abajo. Lo que sigue abierto es la coordinación ENTRE instancias y el
+> último Home bueno.
+
 `cached()` y `cachedIf()` hacen leer → si falta, producir → guardar, sin ningún
 mapa de promesas en vuelo (`lib/cache.ts:298-304`,
 `lib/reparar-y-cachear.ts:39-44`). Diez peticiones al mismo Home frío en el
@@ -1461,7 +1467,13 @@ medirlo con un doble.
 
 **Detectado el 2026-09-10**, auditoría de capacidad (§7). **Comprobado.**
 
-Esto bloquea a los tres issues anteriores: sin esto se arreglan a ciegas.
+> **Antecedente:** los puntos 1, 2, 2b y 2c describen el código del 10/09,
+> ANTES de la Etapa 0. Los contadores existen y están desplegados desde el
+> 11/09, y el single-flight del Home desde el 12/09; el estado actual está en
+> "Estado (11/09)", más abajo. Lo que sigue abierto es la observabilidad
+> histórica.
+
+Esto bloqueaba a los tres issues anteriores: sin esto se arreglaban a ciegas.
 
 1. **No hay contador de llamadas a TMDB.** `CacheMetrics`
    (`lib/cache.ts:123-131`) tiene `comandos`, `requests`, `claves`, `hits`,
@@ -1532,7 +1544,8 @@ límites por ruta. Informe completo:
   ok, http/red, tiempo), Redis en **llamadas lógicas / intentos HTTP / comandos
   confirmados** —la palabra `requests` ya no existe—, y el Home en `cache`
   (hit/miss), **`composiciones`** (contadas donde corre `composeHome`) y
-  `esperasCompartidas` (campo propio, 0 hasta que haya single-flight). Los
+  `esperasCompartidas` (campo propio: 0 en la Etapa 0; desde la Etapa 1, 1 en
+  cada seguidor del single-flight del Home). Los
   intentos HTTP de Redis salen del `backoff` del SDK (`@upstash/redis` 1.38.0
   lo llama una vez por reintento; no acepta un `fetch` propio) y se cotejaron
   con el doble en la recuperación controlada del banco: 1.655 intentos =

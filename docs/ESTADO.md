@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 11 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 12 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -85,7 +85,8 @@
   algo no cierra; la línea base se repitió entera y es válida. Métricas
   por solicitud en `lib/metricas.ts` con unidades separadas: composiciones del
   Home contadas donde corren (no deducidas del MISS), espera compartida como
-  campo propio (hoy 0), TMDB y Supabase por separado, y Redis en llamadas
+  campo propio (durante la Etapa 0 valía 0; desde la Etapa 1 vale 1 en cada
+  seguidor del single-flight del Home), TMDB y Supabase por separado, y Redis en llamadas
   lógicas / intentos HTTP / comandos (los reintentos del SDK se cuentan en su
   `backoff`, cotejados con el doble en la recuperación controlada: 1.655
   intentos = 1.655, 921 comandos = 921). Base de TMDB
@@ -137,11 +138,14 @@
   Redis y 2,7 s**; `N,D,M`, duplicados, códigos inexistentes, `t` por defecto y
   rieles desconocidos son HIT de la clave de `n,d,m` sin tocar TMDB ni Supabase;
   `n` / `n,d` / `d,m` siguen siendo tres Homes; `zzz` no consulta a nadie.
-  Corrida VÁLIDA (40 escenarios, 39 completos, 1 incompleto declarado). 40
-  tests nuevos escritos antes del código; suite 1439/1449 (0 fallos, 10
-  omitidos); `tsc` limpio; build fresco exit 0. **Sólo por proceso:** entre
+  Corrida VÁLIDA (40 escenarios, 39 completos, 1 incompleto declarado).
+  Cifras vigentes (sobre el `main` mergeado, `e4bf75a`): **suite 1455 tests,
+  1445 aprobados, 0 fallos, 10 omitidos**; `tsc` limpio; build fresco exit 0.
+  (Las cifras de la rama antes de `af8d7c6` —1439/1449, 40 tests nuevos— son
+  antecedente y ya no describen el estado.) **Sólo por proceso:** entre
   instancias de Vercel no coordina nada — eso, y el último Home bueno, son la
-  Etapa 2. No cierra #17 ni #18 más allá de lo comprobado. Informe:
+  Etapa 2. **#18 resuelto; #17 abierto únicamente por la coordinación entre
+  instancias y el último Home bueno.** Informe:
   [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
   Etapas 2 a 5: no iniciadas.
 
@@ -310,21 +314,22 @@ Detalle completo en
 **Revisada de forma independiente el mismo día** (ver el bloque de evidencia
 arriba). Lo que sigue ya incorpora las siete correcciones.
 
-### Lo comprobado — issues #17 a #21 (el #21, resuelto el 11/09)
+### Lo comprobado — issues #17 a #21 (antecedente del 10/09; #21 resuelto el 11/09, #18 el 12/09)
 
 | # | Hallazgo | Cómo se comprobó |
 |---|---|---|
-| #17 | Ninguna unión de peticiones en vuelo ni bloqueo distribuido: N visitas al Home frío = N composiciones. Y no hay "último Home bueno": al vencer el TTL de 6 h alguien paga el rearmado completo | Lectura: `lib/cache.ts:298-304`, `lib/reparar-y-cachear.ts:39-44`. El propio repositorio ya lo dice en `lib/single-flight.ts:9-11` |
-| #18 | `/api/home` no canoniza sus parámetros. **19 filas, 17 entradas distintas, 14 claves distintas**, con el arnés y la salida íntegra publicados | **Ejecutado** con `claveHome` real |
+| #17 | *(10/09, antes de la Etapa 1)* Ninguna unión de peticiones en vuelo ni bloqueo distribuido: N visitas al Home frío = N composiciones. Y no hay "último Home bueno": al vencer el TTL de 6 h alguien paga el rearmado completo. **Desde el 12/09 hay unión por proceso (single-flight del Home); sigue faltando la coordinación entre instancias y el último bueno — Etapa 2** | Lectura: `lib/cache.ts:298-304`, `lib/reparar-y-cachear.ts:39-44`. El propio repositorio ya lo dice en `lib/single-flight.ts:9-11` |
+| #18 | *(10/09)* `/api/home` no canoniza sus parámetros. **19 filas, 17 entradas distintas, 14 claves distintas**, con el arnés y la salida íntegra publicados. **Resuelto y desplegado el 12/09** | **Ejecutado** con `claveHome` real |
 | #19 | Una caída de TMDB se realimenta: el cliente **de TMDB** no reintenta ni lee `Retry-After`, el degradado no se guarda, y cada visita rearma. El techo de peticiones en vuelo es por proceso, o sea 24 × instancias | Lectura: `lib/tmdb.ts:38-40` y `56-67`, `lib/home.ts:706` |
-| #20 | No hay contador de llamadas a TMDB ni a Supabase, ni de composiciones; lo que se llama `requests` mezcla tres unidades; `vercel logs` no devolvió nada el 10/09 | Lectura + ejecución |
+| #20 | *(10/09)* No hay contador de llamadas a TMDB ni a Supabase, ni de composiciones; lo que se llama `requests` mezcla tres unidades; `vercel logs` no devolvió nada el 10/09. **Los contadores existen desde la Etapa 0 (11/09); sigue abierto por la observabilidad histórica** | Lectura + ejecución |
 | **#21** | **Si falla la escritura en Redis, un Home BUENO terminaba en 500** — mientras que uno degradado se servía sin problema, porque nunca intenta escribir. **Resuelto y desplegado el 11/09** (Etapa PREVIA) | **Ejecutado** sobre el resolver real; el arreglo, probado con el resolver real y guards |
 
 **#21 era el más chico y el más urgente**: un `catch` que faltaba y no dependía
 de medir nada. Por eso fue la **Etapa PREVIA** del plan, anterior a la Etapa 0,
 con la decisión aprobada por el dueño: *se entrega el payload y se registra el
-error*. **Hecha y desplegada el 11/09.** La Etapa 0 también está hecha y
-desplegada (ver el estado vigente arriba); lo que sigue es la **Etapa 1**.
+error*. **Hecha y desplegada el 11/09.** Las Etapas **PREVIA, 0 y 1** están
+desplegadas (ver el estado vigente arriba); lo que sigue es la **Etapa 2**:
+turno distribuido y último Home bueno.
 
 ### Lo que se revisó y **no** es un problema
 
