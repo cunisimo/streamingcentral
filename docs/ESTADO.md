@@ -107,9 +107,13 @@
   disponible" sólo en vivo y a mano (`vercel logs`), sin serie histórica.
 
 - **Etapa 1 de capacidad (#18 canonización, #17 single-flight acotado al
-  Home): IMPLEMENTADA en la rama `feat/etapa1-canonizar-single-flight`
-  (worktree `wt-etapa1`, nacida de `main` = `dd1ffd0`), pendiente de auditoría
-  de Codex. Sin mergear, sin push, sin deploy.** `providers` se canoniza en
+  Home): MERGEADA en `main` (`e4bf75a`, rama `feat/etapa1-canonizar-single-flight`
+  = `af8d7c6`, auditoría final de Codex sin nuevos hallazgos). Todavía SIN
+  DEPLOY al escribir esto.** Verificado sobre el `main` mergeado, desde cero:
+  específicos 27/27 + 12/12 + 6/6 + 19/19 + 20/20 + 18/18, suite 1445/1455 (0
+  fallos, 10 omitidos), `tsc` limpio, build fresco exit 0 en 3 min 26 s
+  (`BUILD_ID 6-g4NRsNXohqO72t7qKkw`, sólo el `.next` de este checkout borrado,
+  sin otro Next usándolo), `git diff --check` limpio. `providers` se canoniza en
   `homePayload` (minúsculas → catálogo → deduplicar → ordenar → tope = tamaño
   del catálogo) y la lista canónica va a la clave Y al contenido; `t` sólo
   admite rieles de `TOGGLE_KEYS` y tipos válidos, última ocurrencia gana, y va
@@ -254,7 +258,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    |---|---|---|---|
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
-   | 1 | Canonizar entradas + single-flight **acotado al Home** — **implementada en `feat/etapa1-canonizar-single-flight`, pendiente de auditoría** | #18, #17 | Sí |
+   | 1 | Canonizar entradas + single-flight **acotado al Home** — **mergeada en `main` (`e4bf75a`), sin deploy todavía** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |

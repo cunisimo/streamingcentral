@@ -1338,9 +1338,12 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (11/09): la mitad POR PROCESO está implementada en `feat/etapa1-canonizar-single-flight`, pendiente de auditoría — el issue sigue ABIERTO
+### Estado (12/09): la mitad POR PROCESO está MERGEADA en `main` (`e4bf75a`), sin deploy todavía — el issue sigue ABIERTO
 
-Sin mergear ni desplegar. Informe:
+Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos. Lo que este
+merge resuelve es **sólo la coordinación dentro de una instancia**; el turno
+distribuido y el último Home bueno (Etapa 2) siguen sin hacerse, y por eso el
+issue no se cierra. Informe:
 [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
 
 - **Hecho, y medido en el banco:** `crearSingleFlight` alrededor del Home
@@ -1441,9 +1444,11 @@ payload inútil que vive 6 h** (el predicado de `lib/home.ts:706` sólo excluye
 `plataformasValidas()` (`lib/ultimos.ts:101-103`) hace el filtrado. Se usa en dos
 lugares y **no** donde se decide el costo: la construcción de la clave.
 
-### Estado (11/09): implementado en `feat/etapa1-canonizar-single-flight`, pendiente de auditoría — el issue sigue ABIERTO hasta mergear y desplegar
+### Estado (12/09): MERGEADO en `main` (`e4bf75a`), sin deploy todavía — resoluble sólo cuando el despliegue quede comprobado
 
-Sin mergear ni desplegar. Informe:
+Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos; verificado
+desde cero sobre el `main` mergeado (suite 1445/1455, `tsc`, build fresco).
+Informe:
 [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
 Cada fila de la tabla de cierre está ejecutada en unitario
 (`lib/canonizar-home.test.ts`) y en el banco (escenarios E4a–E4n, validados
