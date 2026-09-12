@@ -1338,6 +1338,25 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
+### Estado (11/09): la mitad POR PROCESO está implementada en `feat/etapa1-canonizar-single-flight`, pendiente de auditoría — el issue sigue ABIERTO
+
+Sin mergear ni desplegar. Informe:
+[`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
+
+- **Hecho, y medido en el banco:** `crearSingleFlight` alrededor del Home
+  completo en `homePayload` y en ningún otro lado (`lib/home-vuelo.ts`; un test
+  barre `lib/cache.ts` y los otros llamadores). 100 solicitudes simultáneas a
+  la misma clave con caché fría: **1 composición + 99 esperas compartidas**,
+  medido con `home.composiciones` (antes: 100 composiciones, 91.106 llamadas a
+  TMDB, 162 s). Dos claves distintas no se bloquean; caliente = todas HIT;
+  rechazo compartido que se limpia; degradado que nadie guarda; escritura
+  fallida que sigue entregando (#21).
+- **NO hecho, y no se afirma:** la coordinación **entre instancias** (turno
+  distribuido con propietario, duración, renovación, liberación segura, muerte
+  del constructor) y el **último Home bueno**. Dos instancias con la misma clave
+  fría siguen componiendo las dos. Es la Etapa 2, con las siete decisiones de
+  abajo todavía por tomar.
+
 ### Criterio de cierre
 
 - 100 peticiones concurrentes al mismo Home frío, **con una composición que
@@ -1421,6 +1440,21 @@ payload inútil que vive 6 h** (el predicado de `lib/home.ts:706` sólo excluye
 
 `plataformasValidas()` (`lib/ultimos.ts:101-103`) hace el filtrado. Se usa en dos
 lugares y **no** donde se decide el costo: la construcción de la clave.
+
+### Estado (11/09): implementado en `feat/etapa1-canonizar-single-flight`, pendiente de auditoría — el issue sigue ABIERTO hasta mergear y desplegar
+
+Sin mergear ni desplegar. Informe:
+[`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
+Cada fila de la tabla de cierre está ejecutada en unitario
+(`lib/canonizar-home.test.ts`) y en el banco (escenarios E4a–E4n, validados
+contra los dobles): `N,D,M` → `d,m,n` conservando las tres; `n,n,n` → `n`;
+`n,zzz` → `n`; `zzz`/`___` → sin plataformas y **0 consultas a TMDB y a
+Supabase**; `t` ausente = `t=accion:movie` = las siete claves en default;
+`n` / `n,d` / `d,m` siguen siendo tres. La lista canónica va a la clave Y al
+contenido. `q` con tope de 120 caracteres (truncado; el título más largo del
+pool curado mide 91) e `items` de `/api/upcoming` con tope de 100 (el mismo que
+`limit`; ninguna vista lo manda hoy). `/api/cards?items=` queda fuera de este
+alcance.
 
 ### Criterio de cierre
 

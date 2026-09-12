@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { homePayload } from "@/lib/home";
-import type { MediaType, PlatformCode } from "@/lib/types";
+import { tiposDesdeParam } from "@/lib/canonizar-home";
 import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
@@ -14,21 +14,17 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // `t` serializa el toggle Películas/Series de cada riel: "accion:movie,scifi:tv".
-// Cambiar cualquiera reconstruye el Home entero (misma URL, otro valor de `t`).
-function parseTypes(raw: string | null): Record<string, MediaType> {
-  const out: Record<string, MediaType> = {};
-  for (const par of raw?.split(",").filter(Boolean) ?? []) {
-    const [k, v] = par.split(":");
-    if (k && (v === "movie" || v === "tv")) out[k] = v;
-  }
-  return out;
-}
-
+// Cambiar un toggle NO default reconstruye el Home entero (otra clave). Los
+// parámetros llegan CRUDOS a `homePayload`, que los canoniza (Etapa 1, #18):
+// acá no se valida nada, y el `as PlatformCode[]` que había era una afirmación
+// de tipo, no una validación.
 async function manejar(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const providers = (sp.get("providers")?.split(",").filter(Boolean) ?? []) as PlatformCode[];
+  const providers = sp.get("providers")?.split(",").filter(Boolean) ?? [];
   try {
-    return NextResponse.json(await homePayload({ providers, types: parseTypes(sp.get("t")) }));
+    // `getAll`, no `get`: con un `t` repetido en la query, `get` devuelve la
+    // PRIMERA aparición y la política es que gane la última.
+    return NextResponse.json(await homePayload({ providers, types: tiposDesdeParam(sp.getAll("t")) }));
   } catch (e) {
     // composeHome envuelve cada fuente en `safe`, así que en producción no
     // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con 200.

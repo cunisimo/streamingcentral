@@ -44,6 +44,10 @@ const APP = "http://127.0.0.1:3000";
 const PUERTO = 3000;
 const DOBLES = { tmdb: "http://127.0.0.1:4801", supabase: "http://127.0.0.1:4802", redis: "http://127.0.0.1:4803" };
 const SALIDA = process.argv[2] ?? "docs/medidas/2026-09-11-etapa0-linea-base.json";
+// BANCO_SOLO=E1,E1h corre sólo esos escenarios (más el control C0): sirve para
+// medir un "antes" sobre un build viejo sin pasar por escenarios que ese build
+// no puede cumplir. Sin la variable, corre todo.
+const SOLO = process.env.BANCO_SOLO ? new Set(process.env.BANCO_SOLO.split(",")) : null;
 const LOGS = process.env.BANCO_LOGS ?? ".banco-logs";
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -176,7 +180,8 @@ const delta = (a, b) => ({
 const resultados = [];
 const validaciones = [];
 async function escenario(id, titulo, query, opts = {}) {
-  const { veces = 1, timeoutMs = 300000, preparar, durante, permiteIncompleto = false, quiescenciaMs = 5000 } = opts;
+  if (SOLO && id !== "C0" && !SOLO.has(id)) return null;
+  const { veces = 1, timeoutMs = 300000, preparar, durante, permiteIncompleto = false, quiescenciaMs = 5000, esperado } = opts;
   // 1. Nada activo antes de empezar. Si quedó algo (una solicitud abortada por
   //    timeout sigue viva en Next), se reinicia y se demuestra. Recién DESPUÉS
   //    se ponen sanos los dobles: rehabilitar Redis con una solicitud vieja
@@ -205,13 +210,16 @@ async function escenario(id, titulo, query, opts = {}) {
   const pedidos = ls.filter(esLineaPedido).map(claveDePedido);
   const terminales = ls.filter(esLineaTerminal).map(parsearLineaHome);
   const cacheErrores = ls.filter((l) => l.startsWith("[cache]")).length;
-  const observado = { id, query, veces, claveSufijo: sufijoDeClave(query), respuestas: r.respuestas, pedidos, terminales, dobles: delta(antes, despues), permiteIncompleto, ventanaMs: timeoutMs };
+  const observado = { id, query, veces, claveSufijo: sufijoDeClave(query), respuestas: r.respuestas, pedidos, terminales, dobles: delta(antes, despues), permiteIncompleto, ventanaMs: timeoutMs, esperado };
   const v = validarEscenario(observado);
   validaciones.push(v);
   const salida = { id, titulo, query, veces, timeoutMs, permiteIncompleto, msPared: r.msPared, respuestas: r.respuestas, eventos, pedidos: pedidos.length, activasAlCerrar: activas, lineas: nuevas, terminales, lineasCacheError: cacheErrores, dobles: observado.dobles, validacion: v };
   resultados.push(salida);
   console.log(`\n== ${id} ${titulo}\n   ${veces}× ${query} → ${r.respuestas.map((x) => x.estado ?? `abortada(${x.error})`).join(",")} en ${r.msPared}ms de pared${eventos.length ? ` | eventos: ${eventos.map((e) => `${e.que}@${e.ms}ms`).join(", ")}` : ""}`);
-  for (const x of terminales) console.log(`   app: cache ${x.cache} | comp ${x.composiciones} | tmdb ${x.tmdb} | supabase ${x.supabase} | redis ${x.redisIntentos} intentos / ${x.redisComandos} comandos | ${x.msTotal}ms | …${x.clave?.slice(-14)}`);
+  // Con muchas solicitudes (E1) se resume: las cien líneas van al JSON.
+  const mostrar = terminales.length > 6 ? terminales.slice(0, 3) : terminales;
+  for (const x of mostrar) console.log(`   app: cache ${x.cache} | comp ${x.composiciones} | esperas ${x.esperas} | tmdb ${x.tmdb} | supabase ${x.supabase} | redis ${x.redisIntentos} intentos / ${x.redisComandos} comandos | ${x.msTotal}ms | …${x.clave?.slice(-14)}`);
+  if (terminales.length > 6) console.log(`   … ${terminales.length} líneas: ${JSON.stringify(v.home)}; suma tmdb ${v.sumas?.tmdb} | supabase ${v.sumas?.supabase} | redis ${v.sumas?.redisHttp} intentos / ${v.sumas?.redisComandos} comandos`);
   console.log(`   dobles: tmdb ${observado.dobles.tmdb} | supabase ${observado.dobles.supabase} | redis http ${observado.dobles.redisHttp} / comandos ${observado.dobles.redisComandos} ${JSON.stringify(observado.dobles.redisPorComando)}`);
   console.log(`   ${v.valida ? "✅" : "🔴"} ${v.estado}: ${v.resumen}${v.problemas.length ? "\n      - " + v.problemas.join("\n      - ") : ""}`);
   // 3. Si quedó algo activo, el escenario siguiente arranca con un Next nuevo.
@@ -239,7 +247,19 @@ await escenario("B3", "5 solicitudes IGUALES con caché fría (comportamiento ac
 await escenario("B4a", "variante equivalente: mismo conjunto en otro orden (d,m,n) → misma clave que B3", "providers=d,m,n");
 await escenario("B4b", "variante distinta: n,d → otra clave, rearma", "providers=n,d");
 await escenario("B4c", "variante por toggle: n,d,m con t=accion:tv → otra clave, rearma", "providers=n,d,m&t=accion:tv");
-await escenario("B4d", "HOY (#18 abierto): n,d,m&t=accion:movie —el default escrito— es OTRA clave que sin `t`: MISS y rearma", "providers=n,d,m&t=accion:movie");
+await escenario("B4d", "n,d,m&t=accion:movie (el default escrito) frente a sin `t`: en la Etapa 0 era OTRA clave (MISS); con la Etapa 1 es la misma (HIT)", "providers=n,d,m&t=accion:movie");
+
+// ----------------------------------------------------------------- ETAPA 1: E1, cien solicitudes iguales sobre caché fría
+// El criterio central del #17, por proceso: composiciones = 1, medido con el
+// contador de la Etapa 0 y no deducido de HIT/MISS. En la Etapa 0 (B3, cinco
+// solicitudes) daba cinco composiciones. Se afirma lo esperado y el validador
+// lo comprueba; sobre un build de la Etapa 0 este escenario sale INVÁLIDO, que
+// es lo que un "antes" tiene que decir.
+await escenario("E1", "100 solicitudes IGUALES y simultáneas con caché fría: ¿cuántas composiciones?", NDM, {
+  veces: 100, timeoutMs: 600000, quiescenciaMs: 15000, preparar: () => resetear("redis"),
+  esperado: process.env.BANCO_ETAPA === "0" ? undefined : { composiciones: 1, esperas: 99 },
+});
+await escenario("E1h", "…y la siguiente es HIT", NDM, { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
 
 // Fallo y recuperación, cada uno con una combinación EXCLUSIVA de plataformas.
 await escenario("F1", "TMDB responde 500: el Home sale DEGRADADO y no se guarda", "providers=n,d,m,p", { preparar: async () => { await resetear("redis"); await configurar("tmdb", { modo: "500" }); } });
@@ -271,6 +291,26 @@ await escenario("F5c", "la solicitud SIGUIENTE a la recuperación", "providers=n
 await escenario("F5d", "…y la siguiente", "providers=n,d,m,ok");
 await escenario("F6", "Redis responde 500 (respuesta HTTP de error: el SDK NO reintenta)", "providers=n,d,m,un", { preparar: async () => { await resetear("redis"); await configurar("redis", { modo: "500" }); } });
 await escenario("L1", "latencia declarada: TMDB +100 ms por llamada, Home frío", "providers=n,d,m,vx", { preparar: async () => { await resetear("redis"); await configurar("tmdb", { latenciaMs: 100 }); } });
+
+// ----------------------------------------------------------------- ETAPA 1: E4, canonización (#18)
+// Todas contra la clave de `n,d,m` recién compuesta: las equivalentes tienen
+// que ser HIT sin tocar TMDB ni Supabase; las distintas, MISS; y la que queda
+// sin plataformas válidas no consulta a nadie.
+await escenario("E4-0", "base: n,d,m frío (compone)", NDM, { preparar: () => resetear("redis"), esperado: { composiciones: 1 } });
+await escenario("E4a", "N,D,M → la misma clave que n,d,m: HIT, conserva las TRES plataformas", "providers=N,D,M", { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
+await escenario("E4b", "n,,d,m (vacío en el medio) → HIT", "providers=n,,d,m", { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
+await escenario("E4c", "n,n,d,m,m (duplicados) → HIT", "providers=n,n,d,m,m", { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
+await escenario("E4d", "n,d,m,zzz (código inexistente) → HIT: se descarta el desconocido", "providers=n,d,m,zzz", { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
+await escenario("E4e", "t=accion:movie (default escrito) → HIT", "providers=n,d,m&t=accion:movie", { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
+await escenario("E4f", "las 7 claves en default, como manda el cliente → HIT", "providers=n,d,m&t=accion:movie,comedia:movie,documental:tv,drama:tv,scifi:tv,terror:movie,ultimos:movie", { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
+await escenario("E4g", "t=inventado:tv (riel desconocido) → HIT: no multiplica entradas", "providers=n,d,m&t=inventado:tv", { esperado: { cacheDeTodas: "HIT", tmdb: 0, supabase: 0 } });
+await escenario("E4h", "t=accion:tv (toggle NO default) → otra clave: MISS y compone", "providers=n,d,m&t=accion:tv", { esperado: { composiciones: 1 } });
+await escenario("E4i", "zzz → sin plataformas: NO consulta TMDB ni Supabase", "providers=zzz", { esperado: { tmdb: 0, supabase: 0 } });
+await escenario("E4j", "___ → sin plataformas: NO consulta TMDB ni Supabase", "providers=___", { esperado: { tmdb: 0, supabase: 0 } });
+await escenario("E4k", "CONTROL: n → conjunto distinto, compone", "providers=n", { preparar: () => resetear("redis"), esperado: { composiciones: 1 } });
+await escenario("E4l", "CONTROL: n,d → conjunto distinto, compone", "providers=n,d", { esperado: { composiciones: 1 } });
+await escenario("E4m", "CONTROL: d,m → conjunto distinto, compone", "providers=d,m", { esperado: { composiciones: 1 } });
+await escenario("E4n", "CONTROL: n de nuevo → HIT (los tres conjuntos conservan su contenido)", "providers=n", { esperado: { cacheDeTodas: "HIT", tmdb: 0 } });
 
 await sanos();
 const corrida = validarCorrida(validaciones);

@@ -42,11 +42,21 @@ export type ClaseHttp = "ok" | "http429" | "http5xx" | "http4xx";
 
 export interface MetricasRequest {
   home: {
-    /** Qué decidió el resolver para la clave del Home. `null` si no llegó a decidir. */
-    cache: "hit" | "miss" | null;
+    /**
+     * Qué pasó con la clave del Home: `"hit"` (estaba en caché), `"miss"` (esta
+     * solicitud la produjo), `"compartida"` (esperó la composición de OTRA
+     * solicitud del mismo proceso: single-flight, Etapa 1) o `null` si no llegó
+     * a decidir. Son estados distintos y ninguno se deduce de otro.
+     */
+    cache: "hit" | "miss" | "compartida" | null;
     /** Composiciones del Home EJECUTADAS por esta solicitud. Se cuenta donde corre `composeHome`, no se deduce del MISS. */
     composiciones: number;
-    /** Veces que esta solicitud ESPERÓ una composición ajena. Hoy siempre 0: no hay single-flight. El campo existe para que la Etapa 1 no tenga que redefinir el modelo. */
+    /**
+     * Veces que esta solicitud ESPERÓ una composición ajena: 0 si no esperó
+     * (HIT, o compuso ella misma); 1 en los seguidores del single-flight del
+     * Home (Etapa 1, lib/home-vuelo.ts), que reciben la promesa del líder sin
+     * producir ni escribir. Se anota explícitamente; no se deduce de HIT/MISS.
+     */
     esperasCompartidas: number;
     /** El payload salió degradado (alguna fuente cayó). */
     degradado: boolean;

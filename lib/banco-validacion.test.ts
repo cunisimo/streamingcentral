@@ -26,7 +26,7 @@ import {
 } from "./banco-validacion.ts";
 
 const linea = (o: Partial<LineaTerminal> = {}): LineaTerminal => ({
-  clave: "home:es-ES.r1:v6:123:d,m,n:", msTotal: 100, cache: "MISS", composiciones: 1,
+  clave: "home:es-ES.r1:v6:123:d,m,n:", msTotal: 100, cache: "MISS", composiciones: 1, esperas: 0,
   tmdb: 926, supabase: 4, redisIntentos: 993, redisComandos: 993, ...o,
 });
 const pedido = (clave = "home:es-ES.r1:v6:123:d,m,n:") => clave;
@@ -207,11 +207,32 @@ test("🔴 REGRESIÓN: los F5 y F5r publicados en ceeed75 tienen que salir INVÁ
 // LO QUE SE LEE DEL LOG
 // ===========================================================================
 
-test("la clave esperada sale de la query: plataformas ordenadas y toggles", () => {
+test("la clave esperada sale de la query con la canonización de producción (Etapa 1)", () => {
   assert.equal(sufijoDeClave("providers=n,d,m"), ":d,m,n:");
   assert.equal(sufijoDeClave("providers=d,m,n"), ":d,m,n:");
+  assert.equal(sufijoDeClave("providers=N,,D,zzz,M"), ":d,m,n:");
   assert.equal(sufijoDeClave("providers=n,d,m&t=accion:tv"), ":d,m,n:accion:tv");
+  assert.equal(sufijoDeClave("providers=n,d,m&t=accion:movie"), ":d,m,n:", "el default escrito no entra en la clave");
   assert.equal(sufijoDeClave("providers=n,d,m,mb"), ":d,m,mb,n:");
+  assert.equal(sufijoDeClave("providers=zzz"), "::");
+});
+
+test("🔴 lo ESPERADO por un escenario (composiciones, esperas, cache) se comprueba y una diferencia invalida", () => {
+  const cien = Array.from({ length: 100 }, (_, i) => linea(i === 0 ? {} : { cache: "COMPARTIDA", composiciones: 0, esperas: 1, tmdb: 0, supabase: 0, redisIntentos: 1, redisComandos: 1 }));
+  const base = escenario({
+    veces: 100, respuestas: cien.map(() => ({ estado: 200, ms: 1 })), pedidos: cien.map(() => pedido()), terminales: cien,
+    dobles: { tmdb: 926, supabase: 4, redisHttp: 993 + 99, redisComandos: 993 + 99 },
+  });
+  const ok = validarEscenario({ ...base, esperado: { composiciones: 1, esperas: 99 } });
+  assert.equal(ok.valida, true, ok.problemas.join("; "));
+  assert.deepEqual(ok.home, { composiciones: 1, esperas: 99, caches: { MISS: 1, COMPARTIDA: 99 } });
+  const mal = validarEscenario({ ...base, esperado: { composiciones: 1, esperas: 98 } });
+  assert.equal(mal.valida, false);
+  assert.match(mal.problemas.join("\n"), /esperas.*98.*99/);
+  const hit = validarEscenario(escenario({ terminales: [linea({ cache: "HIT", composiciones: 0, tmdb: 0, supabase: 0, redisIntentos: 1, redisComandos: 1 })], dobles: { tmdb: 0, supabase: 0, redisHttp: 1, redisComandos: 1 }, esperado: { cacheDeTodas: "HIT", tmdb: 0 } }));
+  assert.equal(hit.valida, true, hit.problemas.join("; "));
+  const noHit = validarEscenario(escenario({ esperado: { cacheDeTodas: "HIT" } }));
+  assert.equal(noHit.valida, false);
 });
 
 test("se reconocen las líneas de pedido y las terminales, y la terminal trae su clave", () => {
@@ -221,6 +242,8 @@ test("se reconocen las líneas de pedido y las terminales, y la terminal trae su
   assert.equal(esLineaTerminal(t), true);
   assert.equal(esLineaTerminal(p), false);
   const l = parsearLineaHome(t);
+  assert.equal(l.esperas, 0);
+  assert.equal(parsearLineaHome("[home] 12ms total | cache COMPARTIDA | 0 composiciones | 1 espera compartida | tmdb 0 llamadas (0 ok) 0ms | supabase 0 consultas (0 ok) 0ms | redis 1 llamadas / 1 intentos http / 1 comandos | 1 claves (0 hit / 1 miss) | 5ms | lotes: 1 de [1] | clave k").cache, "COMPARTIDA");
   assert.equal(l.clave, "home:es-ES.r1:v6:123:d,m,n:");
   assert.deepEqual([l.tmdb, l.supabase, l.redisIntentos, l.redisComandos, l.cache, l.composiciones, l.msTotal], [926, 4, 993, 993, "MISS", 1, 2576]);
 });

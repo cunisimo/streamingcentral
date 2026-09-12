@@ -4,6 +4,7 @@ import {
 } from "@/lib/upcoming";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { acotarRefs } from "@/lib/limites-entrada";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,8 @@ async function manejar(req: NextRequest) {
           return { tipo: tipo as MediaType, tmdb_id: Number(id) };
         })
         .filter((r) => (r.tipo === "movie" || r.tipo === "tv") && Number.isFinite(r.tmdb_id));
-      return NextResponse.json({ items: await upcomingForRefs(refs) });
+      // Con tope (Etapa 1, #18): los primeros MAX_ITEMS_UPCOMING, en orden.
+      return NextResponse.json({ items: await upcomingForRefs(acotarRefs(refs)) });
     }
     if (month) {
       return NextResponse.json({ items: await upcomingThisMonth(month, mediaType) });

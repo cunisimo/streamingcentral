@@ -102,9 +102,37 @@
   tasa de aciertos de Producción sin depender de los logs (Etapa 5). **Nada del
   banco es capacidad de Producción.** Informe:
   [`medidas/2026-09-11-etapa0-medir.md`](medidas/2026-09-11-etapa0-medir.md).
-  Etapas 1 a 5: no iniciadas. **#20 no se cierra por el deploy:**
+  **#20 no se cierra por el deploy:**
   "instrumentación implementada y desplegada" está hecho; "observación real
   disponible" sólo en vivo y a mano (`vercel logs`), sin serie histórica.
+
+- **Etapa 1 de capacidad (#18 canonización, #17 single-flight acotado al
+  Home): IMPLEMENTADA en la rama `feat/etapa1-canonizar-single-flight`
+  (worktree `wt-etapa1`, nacida de `main` = `dd1ffd0`), pendiente de auditoría
+  de Codex. Sin mergear, sin push, sin deploy.** `providers` se canoniza en
+  `homePayload` (minúsculas → catálogo → deduplicar → ordenar → tope = tamaño
+  del catálogo) y la lista canónica va a la clave Y al contenido; `t` sólo
+  admite rieles de `TOGGLE_KEYS` y tipos válidos, última ocurrencia gana, y va
+  en forma mínima: `t` ausente, `t=accion:movie` y las siete claves en default
+  del cliente son la misma clave. `q` se trunca a 120 (el título más largo del
+  pool curado mide 91) e `items` de `/api/upcoming` a 100 (el tope que el
+  handler ya aplicaba a `limit`; ninguna vista lo manda hoy). El vuelo
+  compartido vive sólo en `homePayload` (`lib/home-vuelo.ts`): lectura previa,
+  y si no está, `crearSingleFlight` por clave con `cachedLocIf` entero como
+  resolución; el líder cuenta la composición, los seguidores `cache =
+  "compartida"` y `esperasCompartidas`. **Banco, antes → después:** 100
+  solicitudes simultáneas con caché fría pasan de **100 composiciones, 91.106
+  TMDB, 97.548 Redis y 162 s** a **1 composición + 99 esperas, 926 TMDB, 1.093
+  Redis y 2,7 s**; `N,D,M`, duplicados, códigos inexistentes, `t` por defecto y
+  rieles desconocidos son HIT de la clave de `n,d,m` sin tocar TMDB ni Supabase;
+  `n` / `n,d` / `d,m` siguen siendo tres Homes; `zzz` no consulta a nadie.
+  Corrida VÁLIDA (40 escenarios, 39 completos, 1 incompleto declarado). 40
+  tests nuevos escritos antes del código; suite 1439/1449 (0 fallos, 10
+  omitidos); `tsc` limpio; build fresco exit 0. **Sólo por proceso:** entre
+  instancias de Vercel no coordina nada — eso, y el último Home bueno, son la
+  Etapa 2. No cierra #17 ni #18 más allá de lo comprobado. Informe:
+  [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
+  Etapas 2 a 5: no iniciadas.
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -226,7 +254,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    |---|---|---|---|
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
-   | 1 | Canonizar entradas + single-flight **acotado al Home** | #18, #17 | Sí |
+   | 1 | Canonizar entradas + single-flight **acotado al Home** — **implementada en `feat/etapa1-canonizar-single-flight`, pendiente de auditoría** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
