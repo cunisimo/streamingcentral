@@ -108,8 +108,15 @@
 
 - **Etapa 1 de capacidad (#18 canonización, #17 single-flight acotado al
   Home): MERGEADA en `main` (`e4bf75a`, rama `feat/etapa1-canonizar-single-flight`
-  = `af8d7c6`, auditoría final de Codex sin nuevos hallazgos). Todavía SIN
-  DEPLOY al escribir esto.** Verificado sobre el `main` mergeado, desde cero:
+  = `af8d7c6`, auditoría final de Codex sin nuevos hallazgos), PUSHEADA
+  (`f76d9ca`) y DESPLEGADA.** Deployment de Producción `success` para
+  `f76d9ca`; `app.yump.ar` aliasado a él (`vercel inspect`); `/api/health` 200;
+  la Home carga; `?providers=N,D,M&t=accion:movie` devuelve el mismo Home que
+  `n,d,m` (comprobación pasiva). **#18 resuelto y retirado de `ISSUES.md`** (su
+  texto quedó en el informe, §10). **#17 sigue abierto**: resuelta sólo la
+  coordinación dentro de una instancia; **la Etapa 2 (turno distribuido y
+  último Home bueno) es el siguiente trabajo.** #20 sigue abierto por la
+  observabilidad histórica. Verificado sobre el `main` mergeado, desde cero:
   específicos 27/27 + 12/12 + 6/6 + 19/19 + 20/20 + 18/18, suite 1445/1455 (0
   fallos, 10 omitidos), `tsc` limpio, build fresco exit 0 en 3 min 26 s
   (`BUILD_ID 6-g4NRsNXohqO72t7qKkw`, sólo el `.next` de este checkout borrado,
@@ -258,7 +265,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    |---|---|---|---|
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
-   | 1 | Canonizar entradas + single-flight **acotado al Home** — **mergeada en `main` (`e4bf75a`), sin deploy todavía** | #18, #17 | Sí |
+   | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |

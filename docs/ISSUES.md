@@ -1338,12 +1338,15 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (12/09): la mitad POR PROCESO está MERGEADA en `main` (`e4bf75a`), sin deploy todavía — el issue sigue ABIERTO
+### Estado (12/09): la mitad POR PROCESO está MERGEADA y DESPLEGADA (`e4bf75a`, deploy de `f76d9ca`) — el issue sigue ABIERTO; lo siguiente es la Etapa 2
 
-Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos. Lo que este
-merge resuelve es **sólo la coordinación dentro de una instancia**; el turno
-distribuido y el último Home bueno (Etapa 2) siguen sin hacerse, y por eso el
-issue no se cierra. Informe:
+Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos; deployment de
+Producción `success` y `app.yump.ar` aliasado a él. Lo que quedó resuelto es
+**sólo la coordinación dentro de una instancia**: dos instancias de Vercel con
+la misma clave fría siguen componiendo las dos, y al vencer el TTL la primera
+solicitud de cada instancia paga el rearmado. **El siguiente trabajo es la
+Etapa 2**: turno distribuido (las siete decisiones de abajo) y último Home
+bueno. Informe:
 [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
 
 - **Hecho, y medido en el banco:** `crearSingleFlight` alrededor del Home
@@ -1385,107 +1388,6 @@ issue no se cierra. Informe:
 `feat/dia-rotacion` tiene el diseño de `tomarTurno` (SET NX) que resuelve la
 mitad distribuida, pero **está divergida y su commit `50b2e75` introduce un
 `fresh=1` que en `main` no existe**. Se reimplementa sobre `main`, no se mergea.
-
----
-
-## #18 — `/api/home` no canoniza sus parámetros: entradas equivalentes son claves distintas
-
-**Detectado el 2026-09-10**, auditoría de capacidad (§2). **Comprobado
-ejecutando el código de producción.**
-
-El handler toma los parámetros crudos (`app/api/home/route.ts:18-29`; el
-`as PlatformCode[]` es una afirmación de tipo, no una validación) y la clave sólo
-ordena (`lib/home.ts:642-644`).
-
-**[R7] La cifra se corrigió el 10/09.** La primera versión decía "14 pedidos → 11
-claves" pegando una salida de 13 filas y 10 claves: se había perdido una fila al
-copiar. El ensayo se rehízo, ampliado, y la salida íntegra más el arnés están en
-la §2.1 del informe. Ejecutado con `claveHome` real: **19 filas, 17 entradas
-distintas, 14 claves distintas**.
-
-| Bloque | Entrada | Resultado | Lectura |
-|---|---|---|---|
-| A | `n,d,m` / `d,m,n` / `m,n,d` / `n,,d,m` | una clave | ✅ orden y vacíos ya convergen |
-| B | `n` / `n,n` / `n,n,n` | tres claves | 🔴 duplicados |
-| C | `N,D,M` / `N,d,M` | dos claves, y ninguna es `d,m,n` | 🔴 mayúsculas, y el orden ASCII ni siquiera es consistente |
-| D | `zzz` / `___` / `n,zzz` | tres claves | 🔴 códigos inexistentes |
-| E | `t` ausente vs `t=accion:movie` | dos claves | 🔴 `movie` **es** el default de `accion` (`components/data.ts:19-20`): mismo Home, dos entradas |
-| F | `t=inventado:movie`, `t=a:…,b:…,c:…` | dos claves | 🔴 claves de riel arbitrarias, sin tope |
-| G | `n` / `n,d` / `d,m` | tres claves | ✅ **control**: son Homes distintos y tienen que serlo |
-
-**El orden ya converge**: ese no es el problema. Lo son los duplicados, las
-mayúsculas, los códigos inexistentes, las claves de riel arbitrarias y **los
-toggles por defecto frente a los explícitos**.
-
-### Lo que cuesta una clave inválida — y lo que NO cuesta
-
-**No** dispara un `discover` sin filtro: los tres caminos de pools cortan
-(`lib/pools.ts:147-148` y `230-231`, `lib/enrich.ts:876-877` y `587`). Esa
-hipótesis se verificó y se descartó.
-
-**Pero tampoco es gratis.** `composeHome` sólo guarda por `!providers.length`
-(`lib/home.ts:420-422`), y `votedCards` también (`lib/enrich.ts:1561`) — no por
-`plataformasValidas`. Así que una clave basura paga: 1 invocación serverless +
-**2 RPC a Supabase sin caché** (`lib/votes.ts:16-19`, la única fuente del Home
-sin caché propia) + hasta 120 `titleCard` + **una escritura en Redis de un
-payload inútil que vive 6 h** (el predicado de `lib/home.ts:706` sólo excluye
-`degradado` y `sinPlataformas`, y este no es ninguno de los dos).
-
-### El mismo agujero en otras dos rutas
-
-- `/api/search`: `q` **sin tope de longitud** (`app/api/search/route.ts:9`).
-  Normaliza `trim`+`toLowerCase` y ordena `providers` (`lib/enrich.ts:1022,1036`),
-  pero no deduplica ni valida códigos. Cada cadena distinta es una entrada de
-  caché nueva.
-- `/api/upcoming?items=`: **sin tope de cantidad** (`app/api/upcoming/route.ts:47-52`).
-
-### La pieza que ya existe
-
-`plataformasValidas()` (`lib/ultimos.ts:101-103`) hace el filtrado. Se usa en dos
-lugares y **no** donde se decide el costo: la construcción de la clave.
-
-### Estado (12/09): MERGEADO en `main` (`e4bf75a`), sin deploy todavía — resoluble sólo cuando el despliegue quede comprobado
-
-Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos; verificado
-desde cero sobre el `main` mergeado (suite 1445/1455, `tsc`, build fresco).
-Informe:
-[`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
-Cada fila de la tabla de cierre está ejecutada en unitario
-(`lib/canonizar-home.test.ts`) y en el banco (escenarios E4a–E4n, validados
-contra los dobles): `N,D,M` → `d,m,n` conservando las tres; `n,n,n` → `n`;
-`n,zzz` → `n`; `zzz`/`___` → sin plataformas y **0 consultas a TMDB y a
-Supabase**; `t` ausente = `t=accion:movie` = las siete claves en default;
-`n` / `n,d` / `d,m` siguen siendo tres. La lista canónica va a la clave Y al
-contenido. `q` con tope de 120 caracteres (truncado; el título más largo del
-pool curado mide 91) e `items` de `/api/upcoming` con tope de 100 (el mismo que
-`limit`; ninguna vista lo manda hoy). `/api/cards?items=` queda fuera de este
-alcance.
-
-### Criterio de cierre
-
-🔴 **[R1] Corregido el 10/09, y el error era grave.** La primera versión de este
-criterio pedía que `N,D,M` convergiera a la clave de `n`. **`N,D,M` son tres
-plataformas válidas mal escritas —Netflix, Disney+ y Max— y ese criterio le
-borraba dos al usuario.** Lo detectó la revisión independiente
-(`medidas/2026-09-10-revision-capacidad-codex.md`, punto 1). Canonizar no es
-descartar.
-
-El orden de la canonización importa, y es: **minúsculas → filtrar contra el
-catálogo → deduplicar → ordenar → tope de cantidad**. Bajar a minúsculas *antes*
-de filtrar es justamente lo que conserva `N,D,M`.
-
-| Entrada | Clave esperada | Por qué |
-|---|---|---|
-| `n,d,m` / `d,m,n` / `n,,d,m` | `d,m,n` | ya funciona, no romperlo |
-| **`N,D,M` / `N,d,M`** | **`d,m,n`** | 🔴 las **tres** plataformas |
-| `n,n` / `n,n,n` | `n` | duplicados |
-| `n,zzz` | `n` | descarta el desconocido, conserva el válido |
-| `zzz` / `___` | vacío → `sinPlataformas` | no queda ninguna válida |
-| `t` ausente vs `t=accion:movie` | la misma | una forma canónica única frente a los defaults |
-| **`n` / `n,d` / `d,m`** | **tres claves distintas** | 🔴 **control**: conjuntos válidos distintos NO convergen y conservan su contenido |
-
-Además: un `providers` que queda vacío después de canonizar responde como
-`sinPlataformas` y **no** consulta a Supabase. `q` e `items=` tienen tope.
 
 ---
 
