@@ -51,7 +51,12 @@ export interface MetricasRequest {
     cache: "hit" | "miss" | "compartida" | null;
     /** Composiciones del Home EJECUTADAS por esta solicitud. Se cuenta donde corre `composeHome`, no se deduce del MISS. */
     composiciones: number;
-    /** Veces que esta solicitud ESPERÓ una composición ajena. Hoy siempre 0: no hay single-flight. El campo existe para que la Etapa 1 no tenga que redefinir el modelo. */
+    /**
+     * Veces que esta solicitud ESPERÓ una composición ajena: 0 si no esperó
+     * (HIT, o compuso ella misma); 1 en los seguidores del single-flight del
+     * Home (Etapa 1, lib/home-vuelo.ts), que reciben la promesa del líder sin
+     * producir ni escribir. Se anota explícitamente; no se deduce de HIT/MISS.
+     */
     esperasCompartidas: number;
     /** El payload salió degradado (alguna fuente cayó). */
     degradado: boolean;

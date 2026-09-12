@@ -59,17 +59,27 @@ export function canonizarProviders(raw: string | readonly string[] | null | unde
 const esTipo = (v: unknown): v is MediaType => v === "movie" || v === "tv";
 
 /**
- * Parsea `t` (`"accion:tv,terror:movie"`) a un objeto. Sólo parsea: la
- * canonización es `canonizarTipos`. Duplicados: la ÚLTIMA ocurrencia gana —
- * política determinista, y la misma que aplica `URLSearchParams.get` a un
- * parámetro repetido en la query.
+ * Parsea `t` a un objeto. Sólo parsea: la canonización es `canonizarTipos`.
+ *
+ * Acepta un valor (`"accion:tv,terror:movie"`) o TODOS los valores de un `t`
+ * repetido en la query (`searchParams.getAll("t")`), en orden. Duplicados: la
+ * ÚLTIMA ocurrencia gana, tanto dentro de un valor separado por comas como
+ * entre parámetros repetidos: `?t=accion:movie&t=accion:tv` → `accion:tv`.
+ *
+ * ⚠️ `URLSearchParams.get` devuelve la PRIMERA aparición de un parámetro
+ * repetido, no la última: por eso la ruta tiene que pasar `getAll`, y por eso
+ * la primera versión de este módulo, que comparaba esta política con `get`,
+ * estaba mal (auditoría de Codex sobre `325e085`).
  */
-export function tiposDesdeParam(raw: string | null | undefined): Record<string, string> {
+export function tiposDesdeParam(raw: string | readonly string[] | null | undefined): Record<string, string> {
+  const valores = raw == null ? [] : typeof raw === "string" ? [raw] : raw;
   const out: Record<string, string> = {};
-  for (const par of (raw ?? "").split(",")) {
-    const i = par.indexOf(":");
-    if (i <= 0) continue;
-    out[par.slice(0, i).trim()] = par.slice(i + 1).trim();
+  for (const valor of valores) {
+    for (const par of valor.split(",")) {
+      const i = par.indexOf(":");
+      if (i <= 0) continue;
+      out[par.slice(0, i).trim()] = par.slice(i + 1).trim();
+    }
   }
   return out;
 }

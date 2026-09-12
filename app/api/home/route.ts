@@ -22,7 +22,9 @@ async function manejar(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const providers = sp.get("providers")?.split(",").filter(Boolean) ?? [];
   try {
-    return NextResponse.json(await homePayload({ providers, types: tiposDesdeParam(sp.get("t")) }));
+    // `getAll`, no `get`: con un `t` repetido en la query, `get` devuelve la
+    // PRIMERA aparición y la política es que gane la última.
+    return NextResponse.json(await homePayload({ providers, types: tiposDesdeParam(sp.getAll("t")) }));
   } catch (e) {
     // composeHome envuelve cada fuente en `safe`, así que en producción no
     // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con 200.

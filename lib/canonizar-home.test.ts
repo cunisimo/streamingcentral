@@ -132,6 +132,46 @@ test("🔴 duplicados en `t`: política determinista, la ÚLTIMA ocurrencia gana
   assert.deepEqual(canonizarTipos(tiposDesdeParam("accion:movie,accion:tv")), { accion: "tv" });
 });
 
+// ---------------------------------------------------------------------------
+// `t` REPETIDO en la query (auditoría de Codex sobre 325e085): la ruta usaba
+// `searchParams.get("t")`, que devuelve la PRIMERA aparición, así que
+// `?t=accion:movie&t=accion:tv` terminaba en `movie` y contradecía la política
+// escrita. La última ocurrencia tiene que ganar también ENTRE parámetros.
+// Escritos antes del cambio: fallaban contra 325e085.
+// ---------------------------------------------------------------------------
+
+test("🔴 `?t=accion:movie&t=accion:tv` → accion:tv (la última ocurrencia gana entre parámetros repetidos)", () => {
+  assert.deepEqual(canonizarTipos(tiposDesdeParam(["accion:movie", "accion:tv"])), { accion: "tv" });
+});
+
+test("🔴 el orden inverso → default movie: accion desaparece de la forma mínima", () => {
+  assert.deepEqual(canonizarTipos(tiposDesdeParam(["accion:tv", "accion:movie"])), {});
+  assert.equal(claveDeTipos(tiposDesdeParam(["accion:tv", "accion:movie"])), "");
+});
+
+test("🔴 duplicados dentro de un mismo valor y entre parámetros: siempre la última", () => {
+  assert.deepEqual(canonizarTipos(tiposDesdeParam(["accion:tv,accion:movie", "terror:tv,terror:movie,terror:tv"])), { terror: "tv" });
+  assert.deepEqual(canonizarTipos(tiposDesdeParam(["accion:movie,accion:tv", "accion:tv,accion:movie"])), {});
+});
+
+test("🔴 valores desconocidos o inválidos entre parámetros repetidos no generan claves", () => {
+  assert.deepEqual(canonizarTipos(tiposDesdeParam(["inventado:tv", "accion:pelis", "x:y", ""])), {});
+  assert.deepEqual(canonizarTipos(tiposDesdeParam(["accion:tv", "inventado:movie"])), { accion: "tv" });
+});
+
+test("🔴 con parámetros repetidos, como máximo una entrada por clave de TOGGLE_KEYS", () => {
+  const muchos = Array.from({ length: 300 }, (_, i) => `${TOGGLE_KEYS[i % TOGGLE_KEYS.length]}:${i % 3 ? "tv" : "movie"},x${i}:tv`);
+  const out = canonizarTipos(tiposDesdeParam(muchos));
+  assert.ok(Object.keys(out).length <= TOGGLE_KEYS.length);
+  for (const k of Object.keys(out)) assert.ok(TOGGLE_KEYS.includes(k), k);
+});
+
+test("un solo string sigue valiendo (es lo que manda el cliente), y sin `t` no hay nada", () => {
+  assert.deepEqual(canonizarTipos(tiposDesdeParam("accion:tv")), { accion: "tv" });
+  assert.deepEqual(canonizarTipos(tiposDesdeParam([])), {});
+  assert.deepEqual(canonizarTipos(tiposDesdeParam(null)), {});
+});
+
 test("🔴 no hay crecimiento ilimitado: como máximo una entrada por clave de TOGGLE_KEYS", () => {
   const raw = Array.from({ length: 1000 }, (_, i) => `${i % 2 ? "accion" : `x${i}`}:tv`).join(",");
   const out = canonizarTipos(tiposDesdeParam(raw));
@@ -172,7 +212,8 @@ test("🔴 la clave usa claveDeTipos (forma mínima) y no serializa el objeto a 
   assert.doesNotMatch(home, /Object\.keys\(types\)\.sort\(\)\.map/, "homeKey sigue serializando a mano");
 });
 
-test("🔴 la ruta parsea `t` con tiposDesdeParam y ya no tiene su propio parseTypes", () => {
-  assert.match(ruta, /tiposDesdeParam\(sp\.get\("t"\)\)/);
+test("🔴 la ruta usa TODOS los parámetros `t` (getAll), no sólo el primero, y ya no tiene su propio parseTypes", () => {
+  assert.match(ruta, /tiposDesdeParam\(sp\.getAll\("t"\)\)/, "la ruta sigue con get(\"t\"): un `t` repetido pierde la última ocurrencia");
+  assert.doesNotMatch(ruta, /sp\.get\("t"\)/);
   assert.doesNotMatch(ruta, /function parseTypes/);
 });

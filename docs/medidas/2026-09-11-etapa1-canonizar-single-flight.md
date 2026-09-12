@@ -46,12 +46,12 @@ N veces por la misma clave en el mismo proceso y por variantes equivalentes.
 | `lib/home-vuelo.ts` | **nuevo**, puro. `crearVueloHome`: lectura previa + `crearSingleFlight` por clave + métricas (líder/seguidor) |
 | `lib/limites-entrada.ts` | **nuevo**, puro. `MAX_Q = 120`, `MAX_ITEMS_UPCOMING = 100`, `acotarQ`, `acotarRefs` |
 | `lib/home.ts` | `homePayload` recibe crudos y canoniza; la lista canónica va a `homeKey` **y** a `composeHome`; `homeKey` usa `claveDeTipos`; el productor sólo lo ejecuta el líder del vuelo; línea `[home] COMPARTIDA <clave>` |
-| `app/api/home/route.ts` | ya no parsea ni afirma tipos: pasa `providers` crudo y `tiposDesdeParam(t)` |
+| `app/api/home/route.ts` | ya no parsea ni afirma tipos: pasa `providers` crudo y `tiposDesdeParam(sp.getAll("t"))` — todos los `t`, no sólo el primero |
 | `app/api/search/route.ts` | `acotarQ` antes de buscar (y por lo tanto antes de la clave de caché) |
 | `app/api/upcoming/route.ts` | `acotarRefs` antes de consultar |
-| `lib/metricas.ts` | `home.cache` admite `"compartida"`; la línea imprime `cache COMPARTIDA` |
+| `lib/metricas.ts` | `home.cache` admite `"compartida"`; la línea imprime `cache COMPARTIDA`; el comentario de `esperasCompartidas` deja de decir "siempre 0" |
 | `lib/banco-validacion.ts`, `scripts/banco/correr.mjs` | expectativas por escenario, clave esperada con la canonización real, `BANCO_SOLO`, escenarios E1/E4 |
-| Tests nuevos | `canonizar-home` (21), `home-vuelo` (12), `limites-entrada` (6), +1 en `banco-validacion` |
+| Tests nuevos | `canonizar-home` (27: 21 + 6 de `t` repetido), `home-vuelo` (12), `limites-entrada` (6), +1 en `banco-validacion` |
 
 **No se tocó:** `lib/cache.ts` (`cached`/`cachedIf`/`cachedLocIf` intactos, y un
 test lo barre), `lib/reparar-y-cachear.ts`, `lib/escritura-cache.ts`,
@@ -87,8 +87,17 @@ la misma clave y contenidos distintos.
   `ultimos`); los de filtro (`mas-votados`, `hacete-cargo`) no entran — el
   cliente nunca los manda.
 - Sólo `movie` / `tv`, comparación exacta.
-- Duplicados: **la última ocurrencia gana** (determinista; es lo mismo que hace
-  `URLSearchParams.get` con un parámetro repetido).
+- Duplicados: **la última ocurrencia gana**, tanto dentro de un valor separado
+  por comas como entre parámetros `t` repetidos: la ruta pasa
+  `searchParams.getAll("t")` y `tiposDesdeParam` los recorre en orden. ⚠️ La
+  primera versión de esta rama usaba `get("t")` y comparaba la política con
+  `URLSearchParams.get` — que devuelve la **primera** aparición—: con
+  `?t=accion:movie&t=accion:tv` ganaba `movie`. Lo detectó la auditoría de
+  Codex sobre `325e085`; corregido con seis tests que fallaban contra ese
+  commit (`?t=accion:movie&t=accion:tv` → `accion:tv`; el orden inverso →
+  default, `accion` desaparece de la forma mínima; inválidos entre repetidos
+  no generan claves; como máximo una entrada por clave de `TOGGLE_KEYS`; la
+  ruta usa `getAll`).
 - **Forma mínima**: sólo los que difieren de su default (`tipoDe`). Así `t`
   ausente, `t=accion:movie` y las **siete claves en default que el cliente manda
   siempre** (`paramDeTipos`) son la misma clave. El Home inicial de todo el
@@ -207,9 +216,10 @@ degradado → nadie guarda; escritura fallida → todos reciben.
 | Qué | Resultado |
 |---|---|
 | `canonizar-home.test.ts` antes del módulo | RED: `ERR_MODULE_NOT_FOUND`; con el módulo puro y sin cablear: 18/21 (3 guards en rojo) |
+| `canonizar-home.test.ts`, los 6 de `t` repetido + el guard de `getAll`, contra `325e085` | **RED: 7 fallan** (`tiposDesdeParam` no aceptaba la lista; la ruta usaba `get`) |
 | `home-vuelo.test.ts` antes del módulo | RED: `ERR_MODULE_NOT_FOUND`; con el módulo puro y sin cablear: 11/12 (el guard de `lib/home.ts` en rojo) |
 | `limites-entrada.test.ts` antes del módulo | RED; con el módulo y sin cablear las rutas: 4/6 |
-| Todos, cableados | **21/21, 12/12, 6/6**; `banco-validacion` 19/19; `metricas` 20/20; `escritura-cache` 18/18 |
+| Todos, cableados | **27/27, 12/12, 6/6**; `banco-validacion` 19/19; `metricas` 20/20; `escritura-cache` 18/18 |
 | `npm test` (con `.next` fresco) | **1449 tests: 1439 pasan, 0 fallos, 10 omitidos** |
 | `npx tsc --noEmit` | limpio |
 | `npm run build` sin entorno de banco, `.next` borrado, sin otro Next | **exit 0 en 1 min 44 s**, `BUILD_ID aJiq1sMrb5KkBFiYB0Zsw` |

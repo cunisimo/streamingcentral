@@ -89,7 +89,7 @@ export interface Validacion {
  */
 export function sufijoDeClave(query: string): string {
   const sp = new URLSearchParams(query);
-  return `:${canonizarProviders(sp.get("providers")).join(",")}:${claveDeTipos(tiposDesdeParam(sp.get("t")))}`;
+  return `:${canonizarProviders(sp.get("providers")).join(",")}:${claveDeTipos(tiposDesdeParam(sp.getAll("t")))}`;
 }
 
 export const esLineaPedido = (l: string): boolean => /^\[home\] pedido /.test(l);
