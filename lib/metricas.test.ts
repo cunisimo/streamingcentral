@@ -299,6 +299,7 @@ test("🔴 Etapa 2: el contador del Home tiene turno, origen, publicación y los
   assert.equal(m.home.degradadoDescartado, false);
   assert.equal(m.home.enfriado, false);
   assert.equal(m.home.cancelada, false);
+  assert.equal(m.home.errorProductor, false);
   assert.equal(m.home.propietario, null);
 });
 
@@ -318,6 +319,8 @@ test("🔴 Etapa 2: la línea [home] imprime el turno, el origen y la publicaci�
   assert.match(conTodo, /ENFRIADO/);
   assert.match(conTodo, /CANCELADA/);
   assert.match(conTodo, /DEGRADADO DESCARTADO/);
+  m.home.errorProductor = true;
+  assert.match(lineaHome(m, 5200, "home:v6:1:n:"), /ERROR PRODUCTOR/);
   assert.match(conTodo, /espera 1500ms/);
   assert.match(conTodo, /\| clave home:v6:1:n:$/, "la clave sigue al final");
   // Los valores nuevos de `cache` salen en mayúsculas como los de siempre.

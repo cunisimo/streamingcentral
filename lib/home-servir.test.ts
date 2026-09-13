@@ -16,7 +16,7 @@
 // Escrito ANTES del módulo: fallaba al importar.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { servirConTurno, CONSTANTES, type Constantes, type DepsServir } from "./home-servir.ts";
+import { servirConTurno, dormirCancelable, CONSTANTES, type Constantes, type DepsServir } from "./home-servir.ts";
 import { crearTurno, type OpsTurno } from "./turno.ts";
 import { crearOpsEnMemoria, type Entrada } from "./turno-memoria.ts";
 import { crearVueloHome } from "./home-vuelo.ts";
@@ -31,7 +31,14 @@ function relojVirtual(inicio = 1_000_000) {
   let t = inicio;
   const durmiendo: { en: number; r: () => void }[] = [];
   const ahora = () => t;
-  const dormir = (ms: number) => new Promise<void>((r) => { durmiendo.push({ en: t + ms, r }); });
+  // Como `dormirCancelable` de producción: una señal abortada despierta en el
+  // acto y saca al durmiente de la lista (ningún temporizador queda vivo).
+  const dormir = (ms: number, senal?: AbortSignal) => new Promise<void>((r) => {
+    if (senal?.aborted) { r(); return; }
+    const d = { en: t + ms, r };
+    durmiendo.push(d);
+    senal?.addEventListener("abort", () => { const i = durmiendo.indexOf(d); if (i >= 0) { durmiendo.splice(i, 1); r(); } }, { once: true });
+  });
   /** Corre `p` avanzando el tiempo al próximo despertar cada vez que nadie tiene nada que hacer. */
   async function correr<T>(p: Promise<T>): Promise<T> {
     let listo = false;
@@ -52,7 +59,7 @@ function relojVirtual(inicio = 1_000_000) {
     }
     return p;
   }
-  return { ahora, dormir, correr, avanzar: (ms: number) => { t += ms; }, get t() { return t; } };
+  return { ahora, dormir, correr, avanzar: (ms: number) => { t += ms; }, get t() { return t; }, get durmiendo() { return durmiendo.length; } };
 }
 
 // ----------------------------------------------------------------- el mundo: un backend compartido y N solicitudes
@@ -546,4 +553,94 @@ test("las métricas del propietario cuentan la composición donde corre (anotar 
   const r = await w.reloj.correr(w.solicitud(w.deps("A", { producir: async () => { anotar((m: MetricasRequest) => { m.home.composiciones += 1; }); return { valor: { hero: [], degradado: false, de: "A" }, fallo: false }; } })));
   assert.equal(r.m.home.composiciones, 1);
   assert.equal(r.m.home.cache, "miss");
+});
+
+// ============================================================================
+// 10. Auditoría de Codex sobre fb3a3f1: el productor que RECHAZA, y el ciclo de renovación
+// ============================================================================
+test("🔴 productor que rechaza CON UB: se libera el turno, se sirve el UB y se registra el error; sin PUBLICAR ni ENFRIAR", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: { hero: ["ub"], degradado: false, de: "ub" }, exp: 0 });
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { producir: async () => { throw new Error("composeHome explotó"); } })));
+  assert.equal(r.valor.de, "ub");
+  assert.equal(r.m.home.origen, "ultimo-bueno");
+  assert.equal(r.m.home.errorProductor, true);
+  assert.equal(r.m.home.publicacion, null);
+  assert.equal(r.m.home.enfriado, false);
+  assert.equal(w.store.has(K.turno), false, "LIBERAR: el turno no queda huérfano 15 s");
+  assert.equal(w.store.has(K.fresca), false);
+  assert.equal(w.store.has(K.degradado), false);
+  assert.equal(w.reloj.durmiendo, 0, "ningún temporizador de renovación vivo");
+});
+
+test("🔴 productor que rechaza SIN UB: el error se propaga (semántica de siempre: 500 en la ruta), pero el turno queda liberado y sin renovación viva", async () => {
+  const w = mundo();
+  const p = w.solicitud(w.deps("A", { producir: async () => { throw new Error("composeHome explotó"); } }));
+  await assert.rejects(w.reloj.correr(p), /composeHome explotó/);
+  assert.equal(w.store.has(K.turno), false, "el turno se liberó igual");
+  assert.equal(w.store.has(K.fresca), false);
+  assert.equal(w.reloj.durmiendo, 0);
+});
+
+test("🔴 el productor rechaza a mitad de una renovación en curso: la renovación termina antes de devolver y no queda nada vivo", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: { hero: ["ub"], degradado: false, de: "ub" }, exp: 0 });
+  const renovaciones: number[] = [];
+  const ops: OpsTurno = { ...w.ops, evalRenovar: async (k, p, px) => { await w.reloj.dormir(300); renovaciones.push(w.reloj.t); return w.ops.evalRenovar(k, p, px); } };
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { ops, producir: async () => { await w.reloj.dormir(5100); throw new Error("tarde y mal"); } })));
+  assert.equal(r.valor.de, "ub");
+  assert.equal(w.reloj.durmiendo, 0);
+  const cuantas = renovaciones.length;
+  for (let i = 0; i < 10; i++) await tick();
+  assert.equal(renovaciones.length, cuantas, "ninguna renovación después de devolver");
+});
+
+test("🔴 composición rápida (< RENOVACION_MS): al resolver no queda ningún temporizador ni renovación activa, y ninguna renovación corre después", async () => {
+  const w = mundo();
+  let renovarLlamadas = 0;
+  const ops: OpsTurno = { ...w.ops, evalRenovar: async (k, p, px) => { renovarLlamadas++; return w.ops.evalRenovar(k, p, px); } };
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { ops, tarda: 1000 })));
+  assert.equal(r.m.home.publicacion, "publicado");
+  assert.equal(w.reloj.durmiendo, 0, "el temporizador de 5 s no puede seguir vivo");
+  assert.equal(renovarLlamadas, 0);
+  // Avanzar el reloj 30 s más: no aparece ninguna renovación tardía.
+  const fantasma = w.reloj.correr((async () => { await w.reloj.dormir(30000); })());
+  await fantasma;
+  assert.equal(renovarLlamadas, 0, "renovación ejecutada después de devolver");
+});
+
+test("🔴 las métricas NO cambian después de la línea terminal (ninguna renovación en vuelo le anota a la solicitud ya devuelta)", async () => {
+  const w = mundo();
+  // Una renovación que tarda 2 s en responder, y una composición que termina a los 5,5 s: la
+  // renovación de los 5 s está EN VUELO cuando termina la composición.
+  const ops: OpsTurno = { ...w.ops, evalRenovar: async (k, p, px) => { await w.reloj.dormir(2000); return w.ops.evalRenovar(k, p, px); } };
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { ops, tarda: 5500 })));
+  const foto = JSON.stringify(r.m);
+  const fantasma = w.reloj.correr((async () => { await w.reloj.dormir(30000); })());
+  await fantasma;
+  for (let i = 0; i < 10; i++) await tick();
+  assert.equal(JSON.stringify(r.m), foto, "las métricas cambiaron después de devolver");
+  assert.equal(w.reloj.durmiendo, 0);
+});
+
+test("las renovaciones largas legítimas siguen funcionando: composición de 12 s → 2 renovaciones, turno vivo hasta publicar", async () => {
+  const w = mundo();
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { tarda: 12000 })));
+  assert.equal(r.m.home.renovaciones, 2);
+  assert.equal(r.m.home.publicacion, "publicado");
+  assert.equal(r.m.home.turnoPerdido, false);
+  assert.equal(w.reloj.durmiendo, 0);
+});
+
+test("dormirCancelable (el `dormir` real): una señal abortada lo despierta en el acto y limpia el temporizador", async () => {
+  const c = new AbortController();
+  const t0 = Date.now();
+  const p = dormirCancelable(5000, c.signal);
+  c.abort();
+  await p;
+  assert.ok(Date.now() - t0 < 200, "no esperó los 5 s");
+  // Ya abortada: resuelve sin programar nada.
+  const t1 = Date.now();
+  await dormirCancelable(5000, c.signal);
+  assert.ok(Date.now() - t1 < 200);
 });

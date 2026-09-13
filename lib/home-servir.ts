@@ -29,8 +29,19 @@
 //         iniciada que un proceso asesinado sí alcanza a dejar.
 //     4b  renovar cada RENOVACION_MS mientras se compone; `perdido` (el script
 //         devolvió 0) → seguir componiendo, no publicar; `indeterminado` → nada.
+//         El ciclo es CANCELABLE y se ESPERA: cuando la composición termina
+//         (bien o mal) se aborta su señal —el `dormir` despierta en el acto y no
+//         queda temporizador— y se aguarda la promesa, así que ninguna
+//         renovación corre ni anota métricas después de devolver (auditoría de
+//         Codex sobre fb3a3f1: `void renovacion` dejaba un temporizador vivo
+//         hasta 5 s y una renovación en vuelo podía anotar después de la línea
+//         terminal).
 //     4c  componer (la señal de la solicitud llega a TMDB y Supabase por
-//         lib/senal-solicitud.ts)
+//         lib/senal-solicitud.ts). Si el productor RECHAZA: se corta la
+//         renovación, se LIBERA el turno (compare-and-delete) y, con UB, se
+//         sirve el UB registrando `errorProductor`; sin UB, el error se
+//         propaga como siempre (la ruta responde 500) — pero ya sin turno
+//         huérfano ni temporizador vivo.
 //     4d  cancelada por la señal → LIBERAR (no ENFRIAR), UB si hay o vacío
 //     4e  degradado → ENFRIAR: el turno pasa a `enfriando:<yo>` por
 //         ENFRIAMIENTO_MS y el degradado va a su clave aparte (nunca a la fresca
@@ -91,18 +102,27 @@ export interface DepsServir<T> {
   vacio: (motivo: "espera-agotada" | "cancelada") => T;
   senal?: AbortSignal;
   ahora?: () => number;
-  dormir?: (ms: number) => Promise<void>;
+  /** Dormir cancelable: con la señal abortada resuelve en el acto y no deja temporizador. */
+  dormir?: (ms: number, senal?: AbortSignal) => Promise<void>;
   constantes?: Partial<Constantes>;
   /** Dónde va la línea `[home] compone …`. Default: console.log. */
   log?: (linea: string) => void;
 }
 
-const dormirReal = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+/** El `dormir` real: un `setTimeout` que la señal cancela (y limpia) en el acto. */
+export function dormirCancelable(ms: number, senal?: AbortSignal): Promise<void> {
+  return new Promise<void>((r) => {
+    if (senal?.aborted) { r(); return; }
+    const alAbortar = () => { clearTimeout(timer); r(); };
+    const timer = setTimeout(() => { senal?.removeEventListener("abort", alAbortar); r(); }, ms);
+    senal?.addEventListener("abort", alAbortar, { once: true });
+  });
+}
 
 export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   const c: Constantes = { ...CONSTANTES, ...deps.constantes };
   const ahora = deps.ahora ?? Date.now;
-  const dormir = deps.dormir ?? dormirReal;
+  const dormir = deps.dormir ?? dormirCancelable;
   const log = deps.log ?? ((l: string) => console.log(l));
   const publicable = deps.publicable ?? (() => true);
   const { claves: K, propietario, senal } = deps;
@@ -144,23 +164,38 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     // 4a
     log(`[home] compone ${K.fresca} ${propietario}`);
     anotar((m) => { m.home.cache = "miss"; });
-    // 4b La renovación corre al lado de la composición y se corta con ella.
-    let componiendo = true;
-    let perdido = false;
+    // 4b La renovación corre al lado de la composición y se corta con ella:
+    // `fin` la despierta si duerme; `await renovacion` espera la que esté en
+    // vuelo. Nada de esto sobrevive a `componer`.
+    const fin = new AbortController();
     const renovacion = (async () => {
-      while (componiendo) {
-        await dormir(c.RENOVACION_MS);
-        if (!componiendo || abortada()) return;
+      while (!fin.signal.aborted) {
+        await dormir(c.RENOVACION_MS, fin.signal);
+        if (fin.signal.aborted || abortada()) return;
         const r = await deps.turno.renovar({ clave: K.turno, propietario, px: c.TURNO_MS });
         if (r === "renovado") anotar((m) => { m.home.renovaciones += 1; });
-        else if (r === "perdido") { perdido = true; anotar((m) => { m.home.turnoPerdido = true; }); return; }
+        else if (r === "perdido") { anotar((m) => { m.home.turnoPerdido = true; }); return; }
         // indeterminado: se reintenta en la vuelta siguiente, no marca perdido.
       }
     })();
+    const cortarRenovacion = async () => { fin.abort(); await renovacion; };
     // 4c
     let producido: { valor: T; fallo: boolean };
-    try { producido = await deps.producir(); } finally { componiendo = false; }
-    void renovacion;
+    try {
+      producido = await deps.producir();
+    } catch (error) {
+      await cortarRenovacion();
+      await deps.turno.liberar({ clave: K.turno, propietario });
+      anotar((m) => { m.home.errorProductor = true; });
+      if (ub != null) {
+        console.error(`[home] el productor rechazó; se sirve el último bueno (${K.fresca}):`, error);
+        return servirUb(ub);
+      }
+      // Sin UB no hay nada mejor que dar: la semántica de siempre (el error
+      // sube a la ruta → 500), ahora con el turno liberado.
+      throw error;
+    }
+    await cortarRenovacion();
     // 4d Cancelada por la señal: no es un degradado de TMDB.
     if (abortada()) {
       await deps.turno.liberar({ clave: K.turno, propietario });
@@ -181,7 +216,6 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
       return producido.valor;
     }
     // 4f Publicar, con fencing. Si perdí el turno, el script lo rechaza solo.
-    void perdido;
     const r = await deps.turno.publicar({
       claves: { turno: K.turno, fresca: K.fresca, ub: K.ub, gen: K.gen },
       propietario, payload: JSON.stringify(producido.valor), ttlFresca: deps.ttl.fresca, ttlUb: deps.ttl.ub, dia: deps.dia,
@@ -215,7 +249,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   const tEspera = ahora();
   const anotarEspera = () => { const e = ahora() - tEspera; anotar((m) => { m.home.esperaMs = e; }); };
   while (!abortada() && ahora() - tEspera < c.TOPE_ESPERA_MS) {
-    await dormir(c.ESPERA_MS);
+    await dormir(c.ESPERA_MS, senal);   // la señal de la solicitud despierta la espera en el acto
     if (abortada()) break;
     const [f, u, d] = await deps.leer([K.fresca, K.ub, K.degradado]);
     if (f != null) { anotarEspera(); anotar((m) => { m.home.cache = "esperada"; m.home.origen = "esperada"; }); return f; }

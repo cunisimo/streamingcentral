@@ -81,6 +81,8 @@ export interface MetricasRequest {
     enfriado: boolean;
     /** La señal de la solicitud abortó la composición. */
     cancelada: boolean;
+    /** El productor RECHAZÓ (no degradó): se liberó el turno y se sirvió UB si había. */
+    errorProductor: boolean;
     propietario: string | null;
   };
   tmdb: {
@@ -122,7 +124,7 @@ export const nuevasMetricas = (): MetricasRequest => ({
   home: {
     cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0,
     turno: null, origen: null, publicacion: null, renovaciones: 0, turnoPerdido: false, esperaMs: 0,
-    degradadoDescartado: false, enfriado: false, cancelada: false, propietario: null,
+    degradadoDescartado: false, enfriado: false, cancelada: false, errorProductor: false, propietario: null,
   },
   tmdb: { llamadas: 0, ok: 0, errores: { http429: 0, http5xx: 0, http4xx: 0, red: 0 }, ms: 0 },
   supabase: { consultas: 0, ok: 0, errores: { http: 0, red: 0 }, ms: 0 },
@@ -226,7 +228,7 @@ export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): 
   const h = m.home;
   const turno = h.turno || h.origen || h.publicacion
     ? ` | turno ${h.turno ?? "?"} | origen ${h.origen ?? "?"} | publicacion ${h.publicacion ?? "no"} | renovaciones ${h.renovaciones} | propietario ${h.propietario ?? "?"} |`
-      + `${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}`
+      + `${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.errorProductor ? " ERROR PRODUCTOR |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}`
     : "";
   return (
     `[home] ${msTotal}ms total | cache ${cache} | ` +
