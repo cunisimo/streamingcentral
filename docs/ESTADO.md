@@ -150,11 +150,23 @@
   Etapas 3 a 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
-  Home bueno): DISEÑO REVISADO (v2, tras la auditoría de Codex de `7cfc979`),
-  pendiente de NUEVA auditoría. NO está implementada.** Rama
+  Home bueno): DISEÑO REVISADO (v3, tras las auditorías de Codex de `7cfc979`
+  y de `c8fc235`), pendiente de NUEVA auditoría. NO está implementada.** Rama
   `diseno/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2`, nacida de `main` =
-  `b60f985`), sólo documentación, sin merge ni push. La v2 resuelve los diez
-  hallazgos: el seguidor sin último bueno reintenta el turno en cada vuelta y
+  `b60f985`), sólo documentación, sin merge ni push. **La v3 corrige los cuatro
+  hallazgos sobre la v2:** el camino `sin-redis` sirve y **no guarda** (nada de
+  fresca/UB/generación sin fencing; escenario E-sinredis-vuelve); un degradado
+  **no libera** el turno sino que lo convierte en enfriamiento (`ENFRIAR`
+  atómico, `ENFRIAMIENTO_MS`, degradado compartido en clave aparte que nunca se
+  promociona; ráfaga escalonada con y sin UB); el deadline es una
+  **cancelación real** por `AbortSignal` (espera, renovación, TMDB y Supabase)
+  con **promesa reducida**: vale con Redis respondiendo, y con Redis caído la
+  solicitud puede seguir hasta `maxDuration` como en F5a (los reintentos del
+  SDK no se cancelan por solicitud; Etapa 3); **una sola `VERSION_HOME`** en
+  `lib/claves.ts` para fresca, UB, generación, degradado y turno, con turnos
+  separados por versión en un despliegue gradual y tests de invalidación
+  conjunta. La v2 resolvía los diez
+  hallazgos anteriores: el seguidor sin último bueno reintenta el turno en cada vuelta y
   nunca compone sin turno; deadline integral del request contra `maxDuration`
   fijado por test y con máximos que salen del banco; degradado con último
   bueno devuelve el último bueno; **publicación con fencing atómico**
@@ -162,7 +174,7 @@
   estados `adquirido/ocupado/indeterminado` con reconciliación de la
   respuesta perdida; `EVAL` es condición obligatoria (sin variante insegura);
   integración explícita con `lib/home-vuelo.ts` y costos recalculados;
-  evidencia de "composición iniciada" para E-muere; ocho controles RED; TTL de
+  evidencia de "composición iniciada" para E-muere; controles RED; TTL de
   36 h enunciado como lo que garantiza. **Decisión del dueño aprobada:** se
   sirve el Home anterior durante la reconstrucción. Sigue sin verificarse
   `EVAL` contra la base real (credenciales sólo en Vercel): es la condición de

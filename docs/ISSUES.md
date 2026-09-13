@@ -1344,11 +1344,19 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (13/09): la Etapa 2 tiene DISEÑO REVISADO (v2), pendiente de nueva auditoría — no implementación
+### Estado (13/09): la Etapa 2 tiene DISEÑO REVISADO (v3), pendiente de nueva auditoría — no implementación
 
 Rama `diseno/etapa2-turno-ultimo-bueno` (sólo documentación, sin merge ni
-push). La primera versión (`7cfc979`) fue auditada por Codex y devuelta con
-diez hallazgos; la v2 los resuelve (espera que reintenta el turno y nunca
+push). La v2 (`c8fc235`) fue auditada por Codex y devuelta con cuatro
+hallazgos; la v3 los corrige: el camino `sin-redis` sirve y no guarda (sin
+escritura directa sin fencing), el degradado enfría el turno en vez de
+liberarlo (una composición degradada por `ENFRIAMIENTO_MS`, degradado
+compartido aparte, nunca promocionado), el deadline es una cancelación real
+por `AbortSignal` con promesa reducida (vale con Redis respondiendo; con Redis
+caído se sigue en F5a hasta `maxDuration`), y una sola `VERSION_HOME` para
+todas las familias del Home con turnos separados por versión en el rollout.
+La primera versión (`7cfc979`) había sido devuelta con
+diez hallazgos; la v2 los resolvía (espera que reintenta el turno y nunca
 compone sin él; deadline integral; degradado con último bueno → último bueno;
 publicación atómica con fencing por propietario y por día; estados
 diferenciados con reconciliación; `EVAL` obligatorio; integración con

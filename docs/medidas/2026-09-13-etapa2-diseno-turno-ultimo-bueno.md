@@ -1,9 +1,9 @@
 # Etapa 2 de capacidad — Turno distribuido y último Home bueno: auditoría y diseño
 
-**Fecha:** 2026-09-13 — **versión 2**, revisada tras la auditoría de Codex de `7cfc979` (§0).
+**Fecha:** 2026-09-13 — **versión 3**, revisada tras las auditorías de Codex de `7cfc979` (v1 → v2) y de `c8fc235` (v2 → v3), ver §0.
 **Rama:** `diseno/etapa2-turno-ultimo-bueno`, nacida de `main` = `b60f985`
 (worktree `wt-etapa2`). **Sólo documentación: sin código productivo, sin
-infraestructura, sin variables, sin merge ni push.** Diseño **revisado,
+infraestructura, sin variables, sin merge ni push.** Diseño **revisado (v3),
 pendiente de nueva auditoría**; nada de lo que sigue está implementado.
 **Antecedentes:** Etapa PREVIA (#21, [`2026-09-10-capacidad-trafico.md` §9](2026-09-10-capacidad-trafico.md)),
 Etapa 0 ([`2026-09-11-etapa0-medir.md`](2026-09-11-etapa0-medir.md)),
@@ -21,7 +21,22 @@ a un payload degradado.
 
 ---
 
-## 0. Qué cambió respecto de la versión 1 (auditoría de Codex sobre `7cfc979`)
+## 0. Qué cambió en cada versión
+
+### 0.a Versión 3 (auditoría de Codex sobre `c8fc235`)
+
+| # | Hallazgo | Dónde se resolvió | Afirmación anterior descartada |
+|---|---|---|---|
+| 1 | El camino `sin-redis` terminaba en una escritura directa sin fencing: si Redis volvía durante la composición, A podía pisar la fresca, el UB y la generación publicados por B | §3.7: **no se guarda** ese resultado; sólo se sirve. Escenario E-sinredis-vuelve | "compone (single-flight local intacto), escribe por `guardarSinRomper`" (v2 §3.7 y §5.1 paso 3) |
+| 2 | Liberar el turno apenas sale un degradado permitía, con solicitudes escalonadas, una reconstrucción degradada tras otra | §3.10: **enfriamiento**: el degradado convierte el turno en una marca de enfriamiento (`ENFRIAR`, atómico) que dura `ENFRIAMIENTO_MS`, y guarda el degradado en una clave aparte de vida corta que nunca se promociona. Escenarios E-rafaga con y sin UB | "Degradado → LIBERAR" (v2 §3.4, §3.9, §5.1 4d) y "una composición degradada por ventana de turno" sin mecanismo que lo sostuviera |
+| 3 | La desigualdad de tiempos no era un deadline: nada cancelaba la espera ni la composición (F5a de la Etapa 0 dejó una composición viva pasados los 60 s) | §3.8: `AbortSignal` por solicitud que cancela la espera, la renovación y las llamadas a TMDB; qué NO se puede cancelar (los reintentos del SDK de Redis por solicitud) y **la promesa reducida**: el deadline vale con Redis respondiendo; con Redis caído se sigue en F5a hasta `maxDuration`. Escenario E-cancelacion | "ninguna solicitud completa supera `PRESUPUESTO_REQUEST_MS`" (v2 §6.14) como criterio universal |
+| 4 | Fresca `v6`, UB `homeub…v1` y `gen` con versiones independientes de un mismo contrato de payload | §4.1: una sola `VERSION_HOME` en `lib/claves.ts` de la que derivan fresca, UB, generación, degradado y turno; subirla invalida las cinco familias juntas; los turnos quedan separados por versión durante un despliegue gradual. Tests en §9 | "`homeub:<huella>v1:…`" (v2 §4.1) |
+
+Se conservan de la v2: adquisición durante la espera, fencing atómico de
+publicación, estados diferenciados con reconciliación, UB ante degradación,
+liberación segura y `EVAL` como condición obligatoria.
+
+### 0.b Versión 2 (auditoría de Codex sobre `7cfc979`)
 
 | # | Hallazgo | Dónde se resolvió |
 |---|---|---|
@@ -98,7 +113,9 @@ perdido: se reintenta en la siguiente vuelta (§4.4).
 
 Ya no hay `LIBERAR` suelto en el camino feliz: la liberación es parte de
 `PUBLICAR` (§4.3), atómica con la escritura. `LIBERAR` queda para los caminos
-sin publicación (degradado, error): compare-and-delete, nunca `DEL` a secas.
+sin publicación **que no son un degradado** (cancelación, error interno):
+compare-and-delete, nunca `DEL` a secas. El degradado no libera: **enfría**
+(`ENFRIAR`, §3.10), que también es compare-and-set sobre el propietario.
 
 ### 3.5 Muerte del constructor, y el propietario que termina tarde
 
@@ -113,8 +130,9 @@ probabilístico; lo que ya no es probabilístico es **quién publica**.
 ### 3.6 Sin último bueno: esperar reintentando el turno, con presupuesto; nunca componer sin turno
 
 Quien no obtuvo el turno y no tiene UB entra en un bucle con período
-`ESPERA_MS`: (a) `MGET [fresca, ub]` — si aparece la fresca la sirve
-(`esperada`); si apareció un UB (otro publicó) lo sirve; (b) intenta **adquirir
+`ESPERA_MS`: (a) `MGET [fresca, ub, degradado]` — si aparece la fresca la sirve
+(`esperada`); si apareció un UB (otro publicó) lo sirve; si apareció un
+degradado compartido (§3.10) lo sirve; (b) intenta **adquirir
 el turno** (`SET NX PX`) — si lo obtiene, **es el nuevo propietario y compone**
 (un solo rescatista, por construcción); si está ocupado, sigue. El bucle
 termina al agotarse el presupuesto de espera (§3.8): en ese punto, **si el
@@ -127,13 +145,23 @@ pasa en el banco. Alternativas descartadas: componer todos al tope (lo que la
 auditoría señaló: estampida sin turno), esperar sin tope (cuelgue hasta
 `maxDuration`), 503 (rompe la experiencia sin dar nada más que el vacío).
 
-### 3.7 Redis no disponible: componer sin coordinar, marcado
+### 3.7 Redis no disponible: componer sin coordinar, servir, y NO guardar
 
-Si `tomar` da `indeterminado` (transporte o error del servidor) y la
-reconciliación tampoco responde, la solicitud compone (single-flight local
-intacto), escribe por `guardarSinRomper`, y anota `turno = "sin-redis"`. Es el
-comportamiento actual (Etapa 0, F5a/F6) con una etiqueta. Cuando Redis
-"flapea", esto puede producir composiciones duplicadas: se acepta y se mide.
+Si `tomar` da `indeterminado` y la reconciliación tampoco responde, la solicitud
+compone (single-flight local intacto), **sirve** lo compuesto y anota
+`turno = "sin-redis"`. **No escribe fresca, UB ni generación.** La carrera que
+lo exige (reproducida en el banco, E-sinredis-vuelve): A no puede tomar el turno
+y compone; Redis vuelve; B toma el turno y publica; A termina después. Con una
+escritura directa, A pisaría lo de B sin ningún fencing. Alternativa evaluada y
+descartada: que A, al terminar, intente `tomar` y publique por `PUBLICAR` — es
+segura contra el turno pero **no** contra la generación del mismo día: A
+tomaría el turno ya libre y `PUBLICAR` aceptaría su payload más viejo sobre el
+de B. Sin un número de generación por composición (fuera de alcance), lo
+correcto es no guardar. Costo: mientras Redis está caído nada queda cacheado,
+que es lo que pasa hoy (`guardar` falla igual). Con Redis "flapeando" puede
+haber composiciones duplicadas: se aceptan y se miden. Las lecturas de grano
+fino del composer (`pv3:` etc., `cached()`) siguen escribiendo como siempre: no
+son el contrato del Home.
 
 ### 3.8 Deadline integral del request
 
@@ -156,26 +184,95 @@ TOPE_ESPERA_MS + COMPOSICION_MAX_MS + PUBLICACION_MAX_MS ≤ PRESUPUESTO_REQUEST
   propio presupuesto restante: si `restante < COMPOSICION_MAX_MS`, no compone
   y responde vacío degradado (no arranca algo que va a morir en 504).
 
+**La desigualdad no es un deadline: hace falta una cancelación.** F5a (Etapa 0)
+lo mostró: con Redis caído, una composición siguió viva más allá de los 60 s.
+Lo que cancela, y hasta dónde llega:
+
+| Qué | Cómo se cancela | Alcance |
+|---|---|---|
+| La espera del seguidor (§3.6) | `AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)` creado en `homePayload`; el bucle lo consulta en cada vuelta y `dormir` lo respeta | Total |
+| La renovación del turno | el temporizador se limpia al abortar | Total |
+| Las llamadas a TMDB de la composición | `lib/tmdb.ts` recibe la señal de la solicitud por el scope (`AsyncLocalStorage`, como las métricas) y la combina con su timeout propio (`AbortSignal.any([solicitud, timeout(8000)])`); al abortar, cada `fetch` rechaza, `safe()` cuenta el fallo y la composición **termina degradada en el orden de milisegundos**, sin publicar | Total (cambio mecánico de una línea en `tmdb()`, dentro del alcance) |
+| Las consultas a Supabase | el `fetch` del cliente de servidor puede recibir la misma señal | Total |
+| **Los reintentos del SDK de Redis** | **no cancelables por solicitud**: el cliente acepta una `signal` sólo global (`nodejs.js:130`, `:165`), no por comando, y cada comando reintenta hasta 6 veces con backoff | **Ninguno** en esta etapa |
+
+Una composición abortada por la señal **no** es un degradado de TMDB: no
+enfría (§3.10), libera el turno (`LIBERAR`), no escribe, y responde UB si hay o
+vacío marcado `motivo = "cancelada"`. Las promesas que queden en vuelo (un
+`fetch` abortando, un `SET` de grano fino) terminan solas; nada las espera.
+
+🔴 **Promesa reducida, y así queda escrita:** el deadline integral se cumple
+**cuando Redis responde** (bien o con error HTTP, que el SDK no reintenta).
+**Con Redis caído o flapeando, la solicitud puede seguir hasta `maxDuration`**
+exactamente como en F5a: las cadenas de reintentos del SDK (hasta ~4,3 s por
+comando, cientos de comandos por composición) no se pueden cortar desde una
+solicitud sin un cliente por solicitud o un `retry` global más corto — y
+cambiar la política de reintentos de Redis es de la Etapa 3, no de esta. El
+criterio de aceptación §6.14 dice eso y no otra cosa.
+
 ### 3.9 Degradado con último bueno: se entrega el último bueno
 
-El propietario lee `[fresca, ub]` antes de tomar el turno. Si su composición
-sale degradada y **había UB**, responde el UB (`origen = "ultimo-bueno"`,
-`degradadoDescartado: true` en las métricas), no escribe nada y libera. Sólo si
-no hay UB se entrega el degradado. Es la decisión del dueño aplicada también al
-que compuso.
+El propietario lee `[fresca, ub, degradado]` antes de tomar el turno. Si su
+composición sale degradada y **había UB**, responde el UB (`origen =
+"ultimo-bueno"`, `degradadoDescartado: true`), no publica nada y **enfría**
+(§3.10). Sólo si no hay UB se entrega el degradado. Es la decisión del dueño
+aplicada también al que compuso.
+
+### 3.10 Enfriamiento tras un degradado: el turno no se libera, se convierte
+
+Liberar el turno apenas sale un degradado (v2) no sostenía "una composición
+degradada por ventana": con solicitudes **escalonadas** —una cada segundo, TMDB
+caído— cada una encontraba el turno libre y volvía a componer. Ahora, ante un
+degradado, el propietario ejecuta `ENFRIAR` (§4.3): en una operación atómica y
+sólo si el turno sigue siendo suyo, (a) reescribe el turno con el valor
+`enfriando:<propietario>` y `PX ENFRIAMIENTO_MS`, y (b) guarda el payload
+degradado en `home:degradado:…` con el mismo vencimiento. Efectos:
+
+- `SET NX` de cualquier otro **falla** durante el enfriamiento (la clave existe)
+  y la reconciliación (`GET turno` ≠ mío) devuelve `ocupado`: nadie compone.
+- Quien encuentra `ocupado` sirve, en este orden, fresca → UB → **degradado
+  compartido** (`origen = "degradado-compartido"`): con UB se ve el Home
+  anterior; sin UB se ve el mismo degradado que compuso el propietario, no un
+  Home vacío ni una espera.
+- El degradado **nunca se promociona**: vive en su clave, con vida corta, y
+  `PUBLICAR` no lo mira.
+- `ENFRIAMIENTO_MS = TURNO_MS` (15 s) como valor inicial, **a medir** en
+  E-rafaga: cota superior de composiciones degradadas = ⌈duración de la caída /
+  `ENFRIAMIENTO_MS`⌉ por clave. No es la política de reintentos de la Etapa 3
+  (`Retry-After`, circuito, backoff creciente): es sólo el freno mínimo que
+  hace verdadera la frase "una por ventana".
+- Una composición **cancelada** por la señal (§3.8) no enfría: libera.
 
 ---
 
 ## 4. Representación, claves, TTL y operaciones
 
-### 4.1 Cuatro claves
+### 4.1 Cinco claves, una sola versión
 
-| Copia | Clave (constructores nuevos en `lib/claves.ts`) | Vive | Quién la escribe |
+Hoy la versión del contrato del payload está escrita adentro de `claveHome`
+(`lib/claves.ts:59`: el literal `v6`). Pasa a una constante única,
+`VERSION_HOME = 6`, y **todas** las familias del Home la toman de ahí:
+
+| Copia | Clave (constructores en `lib/claves.ts`) | Vive | Quién la escribe |
 |---|---|---|---|
-| **Fresca** | `home:<huella>v6:<semilla>:<providers>:<tipos>` — sin cambios | `TTL.home` = 6 h | `PUBLICAR` |
-| **Último bueno (UB)** | `homeub:<huella>v1:<providers>:<tipos>` — **sin semilla** | `TTL.homeUltimoBueno` (§4.2) | `PUBLICAR` |
-| **Generación del UB** | `homeub:gen:<huella>v1:<providers>:<tipos>` = `"<YYYY-MM-DD>:<propietario>"` | igual que el UB | `PUBLICAR` |
-| **Turno** | `home:turno:<huella>v6:<semilla>:<providers>:<tipos>` = `<propietario>` | `TURNO_MS`, renovado | `SET NX PX`; `RENOVAR`; `PUBLICAR`/`LIBERAR` lo borran |
+| **Fresca** | `home:<huella>v${VERSION_HOME}:<semilla>:<providers>:<tipos>` — bytes idénticos a hoy | `TTL.home` = 6 h | `PUBLICAR` |
+| **Último bueno (UB)** | `home:ub:<huella>v${VERSION_HOME}:<providers>:<tipos>` — **sin semilla** | `TTL.homeUltimoBueno` (§4.2) | `PUBLICAR` |
+| **Generación del UB** | `home:gen:<huella>v${VERSION_HOME}:<providers>:<tipos>` = `"<YYYY-MM-DD>:<propietario>"` | igual que el UB | `PUBLICAR` |
+| **Degradado compartido** | `home:degradado:<huella>v${VERSION_HOME}:<semilla>:<providers>:<tipos>` | `ENFRIAMIENTO_MS` | `ENFRIAR` |
+| **Turno** | `home:turno:<huella>v${VERSION_HOME}:<semilla>:<providers>:<tipos>` = `<propietario>` o `enfriando:<propietario>` | `TURNO_MS` / `ENFRIAMIENTO_MS` | `SET NX PX`; `RENOVAR`; `PUBLICAR`/`LIBERAR` lo borran; `ENFRIAR` lo convierte |
+
+**Por qué una sola versión:** el UB y el degradado son el **mismo contrato de
+payload** que la fresca; si cambia el contenido (v7), un UB v6 servido a un
+cliente que espera v7 es exactamente el bug que la versión existe para
+impedir. Subir `VERSION_HOME` invalida las cinco familias juntas (test en §9).
+La v2 tenía `homeub…v1` aparte: **descartado**.
+
+**Despliegue gradual con dos versiones coexistiendo:** durante un rollout de
+Vercel conviven instancias v6 y v7. Cada versión tiene **su** turno
+(`home:turno:…v6…` y `…v7…`), su fresca, su UB y su degradado: las v6
+coordinan entre ellas y las v7 entre ellas; ninguna lee ni publica claves de la
+otra. El costo es una composición extra por versión durante el rollout (como
+hoy con la fresca), y ningún cruce de contratos.
 
 **Por qué el UB no lleva la semilla:** la semilla cambia a la medianoche
 argentina y con ella la clave fresca de todas las combinaciones (`lib/home.ts:667`);
@@ -186,14 +283,16 @@ familias (rollback de idioma).
 
 **Por qué hace falta la generación:** el UB sin semilla es compartido entre
 días, así que un propietario de ayer que termina tarde podría pisar el UB de
-hoy. `homeub:gen` guarda el **día** (`hoyAR()`, `YYYY-MM-DD`, monotónico —la
-semilla es un hash y no sirve para comparar) y el propietario que publicó;
-`PUBLICAR` rechaza si el día guardado es mayor que el suyo. El propietario en
+hoy. La generación (`home:gen`, §4.1) guarda el **día** (`hoyAR()`,
+`YYYY-MM-DD`, monotónico —la semilla es un hash y no sirve para comparar) y el
+propietario que publicó; `PUBLICAR` rechaza si el día guardado es mayor que el suyo. El propietario en
 `gen` es además lo que permite reconciliar una publicación con respuesta
 perdida (§4.4).
 
-**Por qué el turno sí lleva la semilla:** coordina la composición de **esa**
-clave fresca; a la medianoche la composición de hoy no espera a un turno de ayer.
+**Por qué el turno y el degradado sí llevan la semilla:** coordinan (o
+sustituyen por unos segundos) la composición de **esa** clave fresca; a la
+medianoche la composición de hoy no espera a un turno de ayer ni sirve un
+degradado de ayer — para eso está el UB.
 
 ### 4.2 TTL del último bueno: 36 h, y lo que garantiza
 
@@ -211,8 +310,9 @@ la cuota (§7) y E3 lo ejercitan.
 | Reconciliar | `GET turno` | Sí | `== propietario` → mío |
 | Renovar | `EVAL RENOVAR 1 turno <propietario> <TURNO_MS>` | **No** | `1` renovado; `0` perdido |
 | **Publicar** | `EVAL PUBLICAR 4 turno fresca ub gen <propietario> <fresca_json> <ttl_fresca> <ub_json> <ttl_ub> <dia>` | **No** | `1` publicado (fresca, UB y gen escritos, turno borrado); `0` rechazado (turno ajeno, o gen de un día posterior); `-1` publicada sólo la fresca porque gen es de un día posterior (ver script) |
-| Liberar (sin publicar) | `EVAL LIBERAR 1 turno <propietario>` | **No** | `1` liberado; `0` no era mío |
-| Leer | `MGET fresca ub` | Sí | Un comando, batcheado con el resto de la solicitud |
+| Liberar (cancelación, error) | `EVAL LIBERAR 1 turno <propietario>` | **No** | `1` liberado; `0` no era mío |
+| **Enfriar** (degradado) | `EVAL ENFRIAR 2 turno degradado <propietario> <degradado_json> <enfriamiento_ms>` | **No** | `1` enfriado; `0` no era mío (nada escrito) |
+| Leer | `MGET fresca ub degradado` | Sí | Un comando, batcheado con el resto de la solicitud |
 
 ```lua
 -- RENOVAR: KEYS[1]=turno · ARGV[1]=propietario · ARGV[2]=ms
@@ -220,6 +320,12 @@ if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('PEXPIRE', KEYS[
 
 -- LIBERAR: KEYS[1]=turno · ARGV[1]=propietario
 if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end
+
+-- ENFRIAR: KEYS[1]=turno, KEYS[2]=degradado · ARGV[1]=propietario · ARGV[2]=degradado_json · ARGV[3]=ms
+if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+redis.call('SET', KEYS[1], 'enfriando:' .. ARGV[1], 'PX', ARGV[3])
+redis.call('SET', KEYS[2], ARGV[2], 'PX', ARGV[3])
+return 1
 
 -- PUBLICAR: KEYS = turno, fresca, ub, gen · ARGV = propietario, fresca_json, ttl_fresca_s, ub_json, ttl_ub_s, dia
 if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end            -- fencing por propietario
@@ -241,7 +347,7 @@ Notas: `fresca_json` y `ub_json` son el **mismo** payload serializado (dos
 argumentos para no depender de que Lua lo copie: ~100–150 KB estimados, **a
 medir**; el límite de tamaño de petición de Upstash para el plan real hay que
 consultarlo en el panel, no está en el repositorio). La comparación de días es
-lexicográfica sobre `YYYY-MM-DD`, que ordena bien. Los tres scripts se cargan
+lexicográfica sobre `YYYY-MM-DD`, que ordena bien. Los cuatro scripts se cargan
 con `redis.createScript(...)` una vez por proceso y se ejecutan con `.exec()`
 (`EVALSHA`; ante `NOSCRIPT` el propio cliente reintenta con `EVAL`,
 `nodejs.js:4389-4395`). Las cuatro claves de `PUBLICAR` viven en la misma base
@@ -265,6 +371,7 @@ nunca se confunde con "ocupado" ni con "perdí":
 | `renovar` | `renovado` | `perdido` (script devolvió `0`) | `indeterminado` | Seguir componiendo; reintentar en la vuelta siguiente; **no** marcar perdido. Sólo `0` marca perdido |
 | `publicar` | `publicado` / `publicada-solo-fresca` | `rechazado` (`0`) | `indeterminado` | Reconciliar: `GET gen`; si termina en `:<propietario>` → publicado; si no y `GET turno == propietario` → el script no corrió: reintentar `PUBLICAR` una vez; si el turno no es mío y gen no es mío → rechazado |
 | `liberar` | `liberado` | `no-era-mio` | `indeterminado` | Nada: el turno vence solo |
+| `enfriar` | `enfriado` | `no-era-mio` (`0`) | `indeterminado` | Nada: el turno vence solo; el degradado se sirve igual al usuario que lo compuso |
 
 Un `indeterminado` en `renovar`, `publicar` o `liberar` **nunca habilita una
 operación insegura** (no hay `SET XX` ni `DEL` de respaldo): lo peor que pasa es
@@ -290,7 +397,7 @@ está y lo que no:
   una de ellas; el resultado se pega en el informe de implementación. Si falla,
   la etapa se detiene y se elige otra primitiva atómica (por ejemplo
   `SET … GET`, o Upstash `JSON`), en una ronda de diseño nueva.
-- **El doble de Redis del banco** implementa **exactamente esos tres scripts**
+- **El doble de Redis del banco** implementa **exactamente esos cuatro scripts**
   por texto (no un intérprete Lua): prueba la lógica de carreras, no la
   compatibilidad con Upstash.
 
@@ -301,27 +408,29 @@ está y lo que no:
 ### 5.1 Secuencia de una solicitud (el líder del single-flight local)
 
 ```
- 0. t0 = ahora; presupuesto = PRESUPUESTO_REQUEST_MS
- 1. MGET [fresca, ub]                                   (1 comando, batcheado)
+ 0. t0 = ahora; señal = AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)          (§3.8)
+ 1. MGET [fresca, ub, degradado]                          (1 comando, batcheado)
  2. fresca            → servir; cache=hit; fin
  3. tomar (SET NX PX) → adquirido | ocupado | indeterminado→reconciliar (§4.4)
-    sin-redis         → componer sin coordinar; guardar por guardarSinRomper; turno="sin-redis"; fin
+    sin-redis         → componer sin coordinar; SERVIR; NO guardar nada; turno="sin-redis"; fin   (§3.7)
  4. adquirido:
-    4a. log "[home] compone <clave> <propietario>"      (evidencia de composición iniciada, §6)
+    4a. log "[home] compone <clave> <propietario>"       (evidencia de composición iniciada, §6)
     4b. renovación cada TURNO_MS/3 (RENOVAR); `perdido` → seguir componiendo, no publicar
-    4c. componer (single-flight local delante)
-    4d. degradado → si ub: servir ub (origen=ultimo-bueno, degradadoDescartado) ; si no: servir degradado.
-                    LIBERAR. fin (nada escrito)
-    4e. bueno → PUBLICAR: publicado → servir (origen=propia)
+    4c. componer (single-flight local delante; la señal llega a TMDB y Supabase)
+    4d. cancelada (señal) → LIBERAR; servir ub si hay, si no vacío (motivo=cancelada); nada escrito
+    4e. degradado → ENFRIAR (turno → enfriando, degradado guardado aparte, §3.10);
+                    servir ub si hay (origen=ultimo-bueno, degradadoDescartado), si no el degradado
+    4f. bueno → PUBLICAR: publicado → servir (origen=propia)
                           rechazado → servir (origen=propia-sin-publicar)   ← perdió el turno: no pisa nada
                           indeterminado → reconciliar por gen/turno (§4.4); servir
- 5. ocupado:
-    5a. ub → servir ub; cache=ultimo-bueno; fin           (no espera, no compone: +1 comando)
-    5b. sin ub → bucle cada ESPERA_MS mientras ahora − t0 < TOPE_ESPERA_MS:
-          MGET [fresca, ub]: fresca → servir (esperada); ub → servir (ultimo-bueno)
+ 5. ocupado (turno ajeno o enfriando):
+    5a. ub → servir ub; cache=ultimo-bueno; fin            (no espera, no compone)
+    5b. degradado compartido → servir (origen=degradado-compartido); fin
+    5c. sin nada → bucle cada ESPERA_MS mientras !señal.aborted && ahora − t0 < TOPE_ESPERA_MS:
+          MGET [fresca, ub, degradado]: fresca → servir (esperada); ub → servir; degradado → servir
           tomar: adquirido → ir a 4 si el presupuesto restante ≥ COMPOSICION_MAX_MS,
                               si no: LIBERAR y responder vacío degradado (espera-agotada)
-        al agotarse: responder 200 vacío degradado (motivo espera-agotada), sin escribir
+        al agotarse o abortar: responder 200 vacío degradado (motivo espera-agotada | cancelada), sin escribir
 ```
 
 Los seguidores del single-flight local reciben lo que el líder sirvió y anotan
@@ -335,8 +444,9 @@ Los seguidores del single-flight local reciben lo que el líder sirvió y anotan
       ▲                            │ │                                  │
       │  PUBLICAR=1 / LIBERAR=1    │ │ vence sin renovar / RENOVAR=0    │
       └────────────────────────────┘ └──────────▶ [perdido] ────────────┘ (otro puede tomarlo)
-                                                    │
-                                                    └─ sigo componiendo; PUBLICAR=0 (no escribo); sirvo a mi usuario
+      ▲                            │                │
+      │ vence ENFRIAMIENTO_MS      │ ENFRIAR=1      └─ sigo componiendo; PUBLICAR=0 / ENFRIAR=0 (no escribo); sirvo a mi usuario
+      └──────── [enfriando] ◀──────┘   (degradado; SET NX de otros = null; sirven UB o degradado compartido)
    indeterminado en cualquier arista: reconciliar; nunca cambia de estado por sí solo
 ```
 
@@ -350,8 +460,11 @@ Los seguidores del single-flight local reciben lo que el líder sirvió y anotan
 | Propietario de ayer termina después de que el de hoy publicó el UB | `PUBLICAR` ve `gen` con día mayor → **no toca el UB**; escribe sólo su fresca (clave de ayer, ya inútil) y devuelve `-1` | fencing por generación (§4.3); medido en E-medianoche |
 | Propietario muere antes de publicar | turno vence; con UB, se sirve UB y el siguiente que adquiere compone; sin UB, los que esperan reintentan `tomar` cada vuelta y **exactamente uno** lo adquiere al vencer | §3.6; medido en E-muere |
 | Todos sin UB y el propietario vivo tarda más que el tope | responden vacío degradado; **nadie compone sin turno** | §3.6; medido |
-| Degradado con UB | el propietario sirve UB; nada se escribe; turno liberado | §3.9 |
-| Degradado sin UB, TMDB caído | una composición degradada por ventana de turno; los demás esperan y al vencer uno rescata (y degrada otra vez) | acotado a una por ventana; el resto es #19 / Etapa 3 |
+| Degradado con UB | el propietario sirve UB; nada se publica; el turno pasa a `enfriando` | §3.9, §3.10 |
+| Degradado sin UB, TMDB caído, solicitudes **escalonadas** | la primera compone y enfría; las siguientes encuentran `ocupado` y sirven el degradado compartido; al vencer el enfriamiento, **una** vuelve a componer | §3.10; medido en E-rafaga (con y sin UB) |
+| `sin-redis`: A compone sin turno, Redis vuelve, B toma el turno y publica, A termina después | A sirve lo suyo y **no escribe nada**; la fresca, el UB y la generación siguen siendo de B | §3.7; medido en E-sinredis-vuelve |
+| La señal de la solicitud aborta en plena composición | TMDB/Supabase rechazan, la composición termina degradada en ms, se marca `cancelada`, se libera (no enfría), se sirve UB o vacío | §3.8; medido en E-cancelacion |
+| Rollout con dos versiones | cada versión coordina y publica en sus propias claves | §4.1; test de familias en §9 |
 | `PUBLICAR` con respuesta perdida | reconciliación por `gen` (`:<propietario>`) o reintento idempotente | §4.4 |
 | Escritura falla dentro de `PUBLICAR` (Redis responde error) | el script no corrió: nada escrito, turno sigue mío hasta vencer; la solicitud sirve lo compuesto; el siguiente vuelve a intentar | `guardarSinRomper` en el wrapper; Etapa PREVIA |
 | Dos claves distintas | turnos distintos | no se bloquean |
@@ -363,7 +476,7 @@ Los seguidores del single-flight local reciben lo que el líder sirvió y anotan
   comandos se anotan a él. Los seguidores locales no ven nada de esto.
 - Comandos nuevos por `anotar` (`llamadasLogicas`, `intentosHttp`, `comandos`);
   el `backoff` instrumentado cubre sus reintentos.
-- `SET NX`, `RENOVAR`, `PUBLICAR`, `LIBERAR` y la reconciliación entran por un
+- `SET NX`, `RENOVAR`, `PUBLICAR`, `ENFRIAR`, `LIBERAR` y la reconciliación entran por un
   wrapper con la misma política que `guardarSinRomper`: un fallo se registra en
   `redis.fallos` y devuelve `indeterminado`; nunca sube al handler.
 - Campos nuevos en `MetricasRequest.home`: `turno: "adquirido" | "ocupado" |
@@ -371,9 +484,14 @@ Los seguidores del single-flight local reciben lo que el líder sirvió y anotan
   `publicacion: "publicado" | "publicada-solo-fresca" | "rechazado" |
   "indeterminado" | null`, `origen: "fresca" | "ultimo-bueno" | "esperada" |
   "propia" | "propia-sin-publicar" | "vacio-espera-agotada" | "compartida"`,
-  `esperaMs`, `degradadoDescartado`. `cache` conserva `hit | miss | compartida`
-  y suma `ultimo-bueno`, `esperada`, `vacio`. La línea `[home]` los imprime, y
-  la línea `[home] compone <clave> <propietario>` sale al iniciar la composición.
+  `esperaMs`, `degradadoDescartado`, `enfriado: boolean`, `cancelada: boolean`.
+  `origen` suma `degradado-compartido` y `sin-redis`. `cache` conserva `hit |
+  miss | compartida` y suma `ultimo-bueno`, `esperada`, `vacio`. La línea
+  `[home]` los imprime, y la línea `[home] compone <clave> <propietario>` sale al
+  iniciar la composición.
+- La señal de cancelación viaja por el mismo scope (`AsyncLocalStorage`) que
+  las métricas: `lib/tmdb.ts` y el `fetch` de `supabaseServer()` la leen de ahí
+  sin cambiar sus firmas.
 
 ### 5.5 Integración con `lib/home-vuelo.ts`: dónde se lee qué, y qué archivo cambia
 
@@ -383,11 +501,12 @@ vuelo local con `deps.resolver` = `cachedLocIf` (`lib/home.ts:679-689`).
 
 | Archivo | Cambio |
 |---|---|
-| `lib/home-vuelo.ts` | La lectura previa pasa a `deps.leer(claveFresca, claveUb)` → **dos `batchGet` en el mismo tick = un MGET**. Si hay fresca: hit. Si no, el vuelo local sigue igual; lo que cambia es **qué resuelve el líder**: en vez de `cachedLocIf`, `servirConTurno` (abajo) recibiendo el UB ya leído (para §3.9 y §5.1-5a) |
+| `lib/home-vuelo.ts` | La lectura previa pasa a `deps.leer(fresca, ub, degradado)` → **tres `batchGet` en el mismo tick = un MGET**. Si hay fresca: hit. Si no, el vuelo local sigue igual; lo que cambia es **qué resuelve el líder**: en vez de `cachedLocIf` (que escribiría la fresca sin fencing), `home-servir` recibiendo lo leído |
+| `lib/tmdb.ts`, `lib/supabase.ts` | `AbortSignal.any([señalDeLaSolicitud, timeout(8000)])` en el `fetch`, leyendo la señal del scope; sin señal en el scope, comportamiento idéntico al actual |
 | `lib/home-servir.ts` (**nuevo**, puro) | La secuencia §5.1 con deps inyectadas: `tomar`, `renovar`, `publicar`, `liberar`, `leer`, `producir`, `ahora`, `dormir`. Es lo que se prueba en RED |
 | `lib/turno.ts` (**nuevo**, puro) | Estados y reconciliación de §4.4 sobre deps `setNx`, `get`, `eval` |
 | `lib/cache.ts` | `tomarTurno`, `renovarTurno`, `publicarHome`, `liberarTurno`, `leerTurno` sobre el cliente real (con emulación sobre `mem` sin Redis), todo por `anotar` y por el wrapper de fallos; `TTL.homeUltimoBueno` |
-| `lib/claves.ts` | `claveHomeUltimoBueno`, `claveHomeGeneracion`, `claveTurnoHome` (+ `lib/claves.test.ts`) |
+| `lib/claves.ts` | `VERSION_HOME` única; `claveHome` la usa; `claveHomeUltimoBueno`, `claveHomeGeneracion`, `claveHomeDegradado`, `claveTurnoHome` (+ `lib/claves.test.ts`, §9) |
 | `lib/home.ts` | `servirHome` cablea las deps reales; `homeKey` sin cambios; el productor emite la línea `compone` |
 | `lib/metricas.ts` | campos de §5.4 y la línea |
 | `lib/reparar-y-cachear.ts`, `lib/escritura-cache.ts`, `lib/single-flight.ts` | **sin cambios** |
@@ -396,13 +515,15 @@ vuelo local con `deps.resolver` = `cachedLocIf` (`lib/home.ts:679-689`).
 
 | Camino | MGET | Otros comandos |
 |---|---|---|
-| HIT de la fresca | 1 (fresca+ub en el mismo lote) | 0 |
+| HIT de la fresca | 1 (fresca+ub+degradado en el mismo lote) | 0 |
 | Propietario, sin renovar | 1 | `SET NX` 1 + `PUBLICAR` 1 |
 | Propietario con renovaciones | 1 | + `RENOVAR` × r |
 | Ocupado con UB | 1 | `SET NX` 1 + `GET turno` 1 (reconciliación del `null`) |
 | Espera sin UB, `k` vueltas | 1 + k | `SET NX` (1 + k) + `GET turno` (1 + k) |
-| Degradado con turno | 1 | `SET NX` 1 + `LIBERAR` 1 (+ renovaciones) |
-| Redis caído | 0 confirmados | intentos fallidos (Etapa 0) |
+| Degradado con turno | 1 | `SET NX` 1 + `ENFRIAR` 1 (+ renovaciones) |
+| Ocupado por enfriamiento | 1 | `SET NX` 1 + `GET turno` 1; sirve UB o degradado compartido |
+| Cancelada | 1 | `SET NX` 1 + `LIBERAR` 1 (+ renovaciones) |
+| Redis caído | 0 confirmados; **nada escrito** | intentos fallidos (Etapa 0) |
 
 ### 5.6 Una instancia, varias, y Redis en memoria
 
@@ -421,7 +542,8 @@ compartido entre procesos.
 | Fresca vencida, con UB | rearmado (2–8 s) | **UB en tiempo de HIT**; el que tomó el turno paga el rearmado y recibe lo nuevo |
 | Misma clave fría en varias instancias | K rearmados | 1 rearmado; los demás UB, o espera acotada sin UB |
 | Medianoche | todos rearman | UB de ayer hasta que uno publica el de hoy (aprobado) |
-| TMDB caído | degradado por solicitud | quien compuso: UB si hay, degradado si no; los demás: UB; sin UB: una composición degradada por ventana, el resto espera |
+| TMDB caído | degradado por solicitud | quien compuso: UB si hay, degradado si no; los demás durante el enfriamiento: UB, o el mismo degradado compartido (sin espera); una composición degradada por `ENFRIAMIENTO_MS` |
+| Redis caído y vuelve a mitad | lo compuesto se guardaba sin fencing | lo compuesto se sirve y no se guarda; el siguiente con turno publica |
 | Sin UB y el propietario tarda más que el tope | — | Home vacío marcado degradado, una vez; la siguiente carga encuentra fresca o UB |
 | Redis caído | rearmado por solicitud, lento | igual, marcado |
 
@@ -434,7 +556,7 @@ Cada proceso de Next escribe su log; el corredor cuenta por proceso
 terminales con `composiciones = 1`) e **interrumpidas** (iniciadas −
 terminadas), y las coteja con los dobles: el de TMDB cuenta llamadas por
 ventana, y el de Redis registra **cada** `SET NX` (con su propietario y si fue
-`OK`/`null`), `RENOVAR`, `PUBLICAR`, `LIBERAR` y expiraciones.
+`OK`/`null`), `RENOVAR`, `PUBLICAR`, `ENFRIAR`, `LIBERAR` y expiraciones.
 
 1. **E2 — 3 procesos × 34 simultáneas, misma clave fría, composición dentro de la ventana:** iniciadas = terminadas = **1**; `PUBLICAR = 1` en el doble; los otros 101: `compartida`, `ultimo-bueno` o `esperada`; TMDB = las llamadas de una composición.
 2. **E3 — fresca expirada por control del doble, UB presente:** las primeras solicitudes sin turno responden `ultimo-bueno` en ≤ 3× el HIT de B2; exactamente una compone y publica; el UB nuevo reemplaza al viejo (gen sube de propietario).
@@ -444,14 +566,19 @@ ventana, y el de Redis registra **cada** `SET NX` (con su propietario y si fue
 6. **E-medianoche — el corredor cambia `YUMP_FECHA` del proceso nuevo (fecha forzada, `lib/fecha.ts`) mientras el viejo compone:** el viejo termina con `PUBLICAR = -1`: su fresca (clave de ayer) escrita, **`gen` y UB con el día nuevo intactos**.
 7. **E-primera-vez — sin UB, 3 procesos:** un propietario compone; los demás sirven `esperada` con latencia ≈ la composición; se mide `esperaMs`, vueltas y comandos de espera; con el propietario matado: **uno** rescata al vencer el turno, los demás sirven lo que él publica.
 8. **E-agotada — sin UB, propietario vivo con composición > `TOPE_ESPERA_MS` (latencia declarada alta):** los que esperan responden 200 vacío `degradado` con `motivo = espera-agotada` **sin componer**; ninguna línea `compone` sin turno; la siguiente ronda es HIT.
-9. **E-degradado — TMDB 500 con UB presente:** el doble no recibe `PUBLICAR` ni `SET` de fresca/UB; el propietario responde UB (`degradadoDescartado`); los demás UB; turno liberado (`LIBERAR = 1`). **E-degradado-sin-UB:** el propietario responde degradado; nada escrito.
+9. **E-degradado — TMDB 500 con UB presente:** el doble no recibe `PUBLICAR`; el propietario responde UB (`degradadoDescartado`); `ENFRIAR = 1` y el turno queda `enfriando:` con `PX`; los demás UB. **E-degradado-sin-UB:** el propietario responde degradado; el degradado va a `home:degradado`, no a fresca ni UB.
+9b. **E-rafaga — TMDB 500, una solicitud por segundo durante 40 s, 2 procesos, con UB y sin UB:** composiciones iniciadas ≤ ⌈40 / `ENFRIAMIENTO_MS`⌉ + 1 (= 4 con 15 s); las demás responden UB (con UB) o `degradado-compartido` (sin UB) sin componer y sin esperar; cero `SET NX = OK` durante cada enfriamiento; ningún `PUBLICAR`.
+9c. **E-sinredis-vuelve — el doble de Redis está caído cuando A pide (A compone sin turno); el doble vuelve a mitad; B toma el turno y publica; A termina después:** A responde `origen = sin-redis`; el doble **no** recibe de A ningún `SET` de fresca/UB/gen ni `PUBLICAR`; fresca, UB y gen quedan con el propietario B; la siguiente solicitud es HIT del payload de B.
+9d. **E-cancelacion — TMDB con latencia declarada tal que la composición supera `PRESUPUESTO_REQUEST_MS`:** la solicitud propietaria responde antes de `maxDuration` con `cancelada` (UB si hay, vacío si no), `LIBERAR = 1`, ningún `ENFRIAR` ni `PUBLICAR`; el doble de TMDB deja de recibir llamadas de esa solicitud en < 1 s desde el aborto. **Control E-cancelacion-redis:** con el doble de Redis caído, la solicitud **sigue** más allá del presupuesto (F5a): es la promesa reducida de §3.8, y el escenario existe para que nadie la afirme.
+9e. **E-version — con `VERSION_HOME` subida en un proceso y no en otro (rollout simulado):** cada proceso publica y lee sólo sus claves (`…v6…` / `…v7…`); dos turnos, dos frescas, dos UB; ninguna solicitud del proceso v7 sirve un payload v6.
 10. **E-perdida — el doble simula respuesta perdida en `SET NX` (ejecuta y corta el socket):** el SDK reintenta, recibe `null`, y `tomar` reconcilia a `adquirido` con `GET turno`; una sola composición; `turno = reconciliado`.
-11. **E-eval-falla — el doble devuelve error en `RENOVAR`/`PUBLICAR`/`LIBERAR`:** el resultado es `indeterminado`; no aparece ningún `DEL` ni `SET XX` en el doble; el turno vence solo; la solicitud sirve igual.
-12. **E-redis — Redis caído y vuelve:** `turno = sin-redis`, todos componen (como hoy), 200; al volver, la ventana siguiente vuelve a 1.
+11. **E-eval-falla — el doble devuelve error en `RENOVAR`/`PUBLICAR`/`ENFRIAR`/`LIBERAR`:** el resultado es `indeterminado`; no aparece ningún `DEL` ni `SET XX` en el doble; el turno vence solo; la solicitud sirve igual.
+12. **E-redis — Redis caído y vuelve:** `turno = sin-redis`, todos componen (como hoy), 200, y el doble **no recibe ninguna escritura de fresca/UB/gen** de esas solicitudes (§3.7); al volver, la ventana siguiente vuelve a 1 composición con `PUBLICAR = 1`.
 13. **E-claves — dos claves, dos procesos:** dos composiciones en paralelo (pared < suma).
-14. **Deadline:** en todos los escenarios, ninguna solicitud completa supera `PRESUPUESTO_REQUEST_MS`; el test puro de la desigualdad de §3.8 pasa con las constantes finales.
+14. **Deadline (promesa reducida):** en todos los escenarios **con Redis respondiendo**, ninguna solicitud completa supera `PRESUPUESTO_REQUEST_MS`, y una composición que lo excedería se cancela (9d); con Redis caído **no se afirma** (control 9d-redis). El test puro de la desigualdad de §3.8 pasa con las constantes finales.
 15. **Etapa 1 intacta:** E1 (100 en un proceso) sigue 1 + 99; barrido de `cached`/`cachedIf`.
 16. **Costo:** un HIT no suma comandos; una composición suma ≤ 2 + renovaciones (+1 por reconciliación de `null`); medido contra el doble.
+17. **Subir la versión invalida las familias juntas:** con `VERSION_HOME` subida, la primera solicitud no encuentra fresca, UB ni degradado de la versión anterior y compone; el doble muestra las cinco familias nuevas con `v7` y ninguna lectura de `v6`.
 
 ---
 
@@ -469,9 +596,11 @@ mirarlo en el panel, no está en el repositorio.
 | Propietario con renovaciones | +2 + r | `RENOVAR` cada 5 s |
 | Ocupado con UB | **+2** | `SET NX` rechazado, `GET turno` de reconciliación |
 | Espera sin UB, `k` vueltas de 500 ms | +2 + 3k | `MGET` + `SET NX` + `GET` por vuelta (≈ 6 comandos/s por instancia que espera, acotado por el tope) |
-| Degradado con turno | +2 (+ r) | `SET NX`, `LIBERAR` |
+| Degradado con turno | +2 (+ r) | `SET NX`, `ENFRIAR` |
+| Ocupado por enfriamiento | +2 | `SET NX` rechazado, `GET turno`; sirve UB o degradado compartido |
+| Cancelada | +2 (+ r) | `SET NX`, `LIBERAR` |
 | Propietario tardío | +2 (+ r) | `PUBLICAR` rechazado cuenta igual |
-| Redis caído | 0 confirmados | intentos fallidos aparte |
+| Redis caído | 0 confirmados, nada escrito | intentos fallidos aparte |
 
 Contra el ahorro: cada composición evitada son ~1.000 comandos y ~900 llamadas
 a TMDB. La espera sin UB es lo único que escala con los procesos, y por eso
@@ -491,9 +620,15 @@ capacidad).**
   dobles; suma iniciadas/terminadas/interrumpidas; nuevas expectativas
   (`publicaciones`, `setNxOk`, `interrumpidas`, `sinTurno = 0`).
 - `scripts/banco/dobles.mjs` (Redis): TTL real y expiración; `EVAL` **de los
-  tres scripts por texto**; registro por comando de turno con propietario y
+  cuatro scripts por texto**; registro por comando de turno con propietario y
   resultado; controles `expirar`, `borrar`, `perderRespuesta` (ejecuta y corta),
-  `fallarEval`.
+  `fallarEval`, y `caido`/`ok` cambiable a mitad de una solicitud
+  (E-sinredis-vuelve). El doble de TMDB respeta el aborto del `fetch`
+  (E-cancelacion).
+- `scripts/banco/correr.mjs`: solicitudes **escalonadas** (`cadaMs`) además de
+  simultáneas (E-rafaga); `VERSION_HOME` sobreescribible por proceso sólo en el
+  banco (E-version); la cancelación se ejercita con latencia declarada en el
+  doble de TMDB.
 - La línea `[home] compone <clave> <propietario>` es la evidencia que un
   proceso asesinado sí alcanza a dejar: sin ella, E-muere sólo vería la
   ausencia de una línea terminal.
@@ -521,23 +656,45 @@ Módulos puros nuevos, probados **antes** del cableado:
    - **propietario viejo que cruza medianoche no pisa el UB nuevo**
      (`publicar` con gen de día mayor → `-1`, UB intacto);
    - **degradado con UB devuelve UB; sin UB se devuelve el degradado**;
-   - **espera + composición nunca excede el deadline** (reloj inyectado; test
-     de la desigualdad de constantes);
+   - **espera + composición nunca excede el deadline con Redis respondiendo**
+     (reloj y señal inyectados; test de la desigualdad de constantes); y el
+     **control** de que con el backend de Redis "caído" (que nunca responde) la
+     secuencia **no** promete terminar — el test fija la promesa reducida;
+   - **`sin-redis` no escribe**: con Redis vuelto a mitad y B publicando, el
+     backend no recibe ninguna escritura de A (fresca, UB, gen) y lo publicado
+     sigue siendo de B;
+   - **enfriamiento**: tras un degradado el turno queda `enfriando:` y una
+     ráfaga escalonada de N solicitudes con TMDB caído produce ≤ ⌈duración /
+     `ENFRIAMIENTO_MS`⌉ + 1 composiciones, con y sin UB; con UB las demás
+     reciben UB, sin UB el degradado compartido; ninguna espera;
+   - **cancelación**: al abortar la señal, `producir` termina (el doble de
+     TMDB rechaza con `AbortError`), se llama a `liberar` y **no** a `enfriar`
+     ni `publicar`, y se sirve UB o vacío `cancelada`;
    - fresca → hit sin turno; ocupado + UB → UB sin componer; espera → sirve
      `esperada`; Redis caído → compone marcado; dos claves independientes;
      escritura fallida → sirve igual; single-flight local delante.
-3. `lib/claves.ts` — tres constructores; **RED** en `claves.test.ts`.
-4. `lib/cache.ts` — operaciones reales + emulación en memoria; guards: sin
-   `DEL` suelto, sin `SET … XX` para el turno; `cached`/`cachedIf` intactos.
+3. `lib/claves.ts` — `VERSION_HOME` y cuatro constructores; **RED** en
+   `claves.test.ts`: (a) `claveHome` produce los mismos bytes que hoy con
+   `VERSION_HOME = 6`; (b) las cinco familias comparten el segmento `v<N>`
+   (se parsea de cada clave); (c) **subir `VERSION_HOME` cambia las cinco
+   claves a la vez** y ninguna conserva `v6`; (d) los turnos de dos versiones
+   son claves distintas.
+4. `lib/cache.ts` — operaciones reales (`tomar`, `renovar`, `publicar`,
+   `enfriar`, `liberar`, `leerTurno`) + emulación en memoria; guards: sin `DEL`
+   suelto, sin `SET … XX` para el turno, **sin ninguna escritura directa de la
+   fresca/UB/gen fuera de `publicar`** (el camino `sin-redis` no puede llamar a
+   `guardar` con esas claves); `cached`/`cachedIf` intactos.
 5. `lib/home.ts` + `lib/home-vuelo.ts` — cableado (§5.5); guard del
    single-flight sólo ahí.
-6. Banco (§8) y corrida antes/después; los 16 criterios de §6.
+6. Banco (§8) y corrida antes/después; los 21 criterios de §6 (16 de la v2 + 9b–9e y 17).
 7. Verificación: específicos, suite, `tsc`, build fresco, `git diff --check`.
 
 **Condición de entrada al paso 1:** la verificación de `EVAL` de §4.5 hecha y
-pegada. **Sin cambiar la versión de la clave fresca**: ni la forma ni el
-contenido del payload cambian; `homeub`/`gen`/`turno` son familias nuevas. Si
-la implementación agregara un campo al payload, ahí sí `v7`.
+pegada. **Sin subir `VERSION_HOME`**: ni la forma ni el contenido del payload
+cambian, así que la fresca sigue siendo `…v6…` byte a byte y `ub`/`gen`/
+`degradado`/`turno` son familias nuevas bajo la misma versión. Si la
+implementación agregara un campo al payload, ahí sí `VERSION_HOME = 7`, y las
+cinco familias se renuevan juntas.
 
 ---
 
@@ -562,6 +719,16 @@ la implementación agregara un campo al payload, ahí sí `v7`.
 - **El presupuesto integral es una desigualdad sobre máximos medidos en el
   banco**, no en Producción; un TMDB real más lento que el doble se cubre con el
   factor de seguridad, que también hay que declarar y revisar.
+- **La cancelación no alcanza a los reintentos del SDK de Redis** (señal sólo
+  global en el cliente): con Redis caído la solicitud puede seguir hasta
+  `maxDuration`, como en F5a. Es una promesa reducida a propósito y cambiarla
+  (cliente por solicitud o `retry` global más corto) es de la Etapa 3.
+- **Con Redis caído no se guarda nada del Home** (antes se intentaba y fallaba;
+  ahora no se intenta): mientras dure la caída, cada instancia compone por
+  solicitud, como hoy.
+- **El enfriamiento es un freno mínimo, no una política**: con TMDB caído sigue
+  habiendo una composición degradada por `ENFRIAMIENTO_MS` y por clave; el
+  backoff creciente y el circuito son de la Etapa 3.
 
 ---
 
@@ -571,9 +738,10 @@ Cerraría: composición única entre procesos dentro de la ventana; renovación 
 sostiene o duplicación documentada y medida; muerte del propietario con
 convergencia; liberación y **publicación** seguras; UB en tiempo de HIT con la
 fresca vencida; espera sin UB decidida, con tope y presupuesto; TMDB caído con
-UB acotado a una composición por ventana. **No cierra:** protección ante Redis
-caído (que #17 ya declara fuera) ni observación del número real de instancias
-(#20). #17 se cerraría al desplegar y medir los criterios de §6.
+UB acotado a una composición por `ENFRIAMIENTO_MS`. **No cierra:** protección
+ante Redis caído (que #17 ya declara fuera; y con la promesa reducida de §3.8
+tampoco el deadline con Redis caído) ni observación del número real de
+instancias (#20). #17 se cerraría al desplegar y medir los criterios de §6.
 
 ## 12. Relación con la Etapa 3 y lo que queda separado
 
@@ -587,10 +755,14 @@ separado; E-degradado lo va a mostrar (cada ventana vuelve a intentar).
 ## 13. Conclusión para la nueva auditoría
 
 Implementable con lo instalado **si** la base real acepta `EVAL` con cuatro
-claves (condición obligatoria, no verificada todavía). Toca `lib/claves.ts`,
-`lib/cache.ts`, `lib/home.ts`, `lib/home-vuelo.ts`, `lib/metricas.ts`, dos
+claves (condición obligatoria, no verificada todavía). Toca `lib/claves.ts`
+(versión única), `lib/cache.ts`, `lib/home.ts`, `lib/home-vuelo.ts`,
+`lib/tmdb.ts` y `lib/supabase.ts` (una línea: la señal), `lib/metricas.ts`, dos
 módulos puros nuevos y el banco; conserva el single-flight local, la regla del
-degradado y la Etapa PREVIA. Los números (15 s, 5 s, 500 ms, 20 s, 36 h, margen
-de 10 s) son cálculos con su evidencia y quedan sujetos al banco; el deadline
-integral es una desigualdad fijada por test. La decisión de servir el Home
+degradado y la Etapa PREVIA. Los números (15 s de turno y de enfriamiento, 5 s,
+500 ms, 20 s, 36 h, margen de 10 s) son cálculos con su evidencia y quedan
+sujetos al banco. **Lo que esta versión deja de prometer:** que toda solicitud
+termine antes de `maxDuration` — vale con Redis respondiendo; con Redis caído
+sigue F5a. **Lo que deja de hacer:** guardar el resultado de una composición
+sin turno, y liberar el turno tras un degradado. La decisión de servir el Home
 anterior está aprobada.
