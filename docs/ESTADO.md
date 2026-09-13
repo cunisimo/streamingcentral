@@ -150,21 +150,23 @@
   Etapas 3 a 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
-  Home bueno): DISEÑO escrito, pendiente de auditoría de Codex. NO está
-  implementada.** Rama `diseno/etapa2-turno-ultimo-bueno` (worktree
-  `wt-etapa2`, nacida de `main` = `b60f985`), sólo documentación, sin merge ni
-  push. El diseño resuelve las siete decisiones del #17 (propietario único por
-  composición; turno de 15 s justificado con la única medida real y el banco;
-  renovación cada 5 s sólo si sigo siendo el propietario; liberación con
-  compare-and-delete; muerte del constructor por vencimiento; sin último bueno
-  se espera con tope y después se compone; Redis caído = componer sin
-  coordinar, marcado), separa fresca / último bueno / turno en tres claves (el
-  último bueno SIN semilla del día, para cruzar la medianoche), y define el
-  banco multiproceso con diez escenarios y criterios verificables. Dos cosas
-  quedan antes de implementar: **`EVAL` no está verificado contra la base real
-  de Upstash** (las credenciales de Redis viven sólo en Vercel) y la decisión
-  del dueño sobre servir el Home de ayer durante los segundos de
-  reconstrucción. Informe: [`medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md`](medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md).
+  Home bueno): DISEÑO REVISADO (v2, tras la auditoría de Codex de `7cfc979`),
+  pendiente de NUEVA auditoría. NO está implementada.** Rama
+  `diseno/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2`, nacida de `main` =
+  `b60f985`), sólo documentación, sin merge ni push. La v2 resuelve los diez
+  hallazgos: el seguidor sin último bueno reintenta el turno en cada vuelta y
+  nunca compone sin turno; deadline integral del request contra `maxDuration`
+  fijado por test y con máximos que salen del banco; degradado con último
+  bueno devuelve el último bueno; **publicación con fencing atómico**
+  (`PUBLICAR` compara propietario y generación por día, cubre la medianoche);
+  estados `adquirido/ocupado/indeterminado` con reconciliación de la
+  respuesta perdida; `EVAL` es condición obligatoria (sin variante insegura);
+  integración explícita con `lib/home-vuelo.ts` y costos recalculados;
+  evidencia de "composición iniciada" para E-muere; ocho controles RED; TTL de
+  36 h enunciado como lo que garantiza. **Decisión del dueño aprobada:** se
+  sirve el Home anterior durante la reconstrucción. Sigue sin verificarse
+  `EVAL` contra la base real (credenciales sólo en Vercel): es la condición de
+  entrada a la implementación. Informe: [`medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md`](medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md).
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
