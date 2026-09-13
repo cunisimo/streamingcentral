@@ -114,9 +114,9 @@
   `f76d9ca`; `app.yump.ar` aliasado a él (`vercel inspect`); `/api/health` 200;
   la Home carga; `?providers=N,D,M&t=accion:movie` devuelve el mismo Home que
   `n,d,m` (comprobación pasiva). **#18 resuelto y retirado de `ISSUES.md`** (su
-  texto quedó en el informe, §10). **#17 sigue abierto**: resuelta sólo la
-  coordinación dentro de una instancia; **la Etapa 2 (turno distribuido y
-  último Home bueno) es el siguiente trabajo.** #20 sigue abierto por la
+  texto quedó en el informe, §10). **#17 quedó abierto en ese momento** por la
+  coordinación entre instancias y el último Home bueno, que resolvió la Etapa
+  2 el 13/09 (ver arriba). #20 sigue abierto por la
   observabilidad histórica. Verificado sobre el `main` mergeado, desde cero:
   específicos 27/27 + 12/12 + 6/6 + 19/19 + 20/20 + 18/18, suite 1445/1455 (0
   fallos, 10 omitidos), `tsc` limpio, build fresco exit 0 en 3 min 26 s
@@ -145,15 +145,27 @@
   (Las cifras de la rama antes de `af8d7c6` —1439/1449, 40 tests nuevos— son
   antecedente y ya no describen el estado.) **Sólo por proceso:** entre
   instancias de Vercel no coordina nada — eso, y el último Home bueno, son la
-  Etapa 2. **#18 resuelto; #17 abierto únicamente por la coordinación entre
-  instancias y el último Home bueno.** Informe:
+  Etapa 2. **#18 resuelto el 12/09; #17 resuelto el 13/09 con la Etapa 2.** Informe:
   [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
   Etapas 3 a 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
   Home bueno): MERGEADA EN `main` (`cd1f393`, `--no-ff` de
-  `feat/etapa2-turno-ultimo-bueno` = `87c0c6f`, fork `8dfa49b`), PENDIENTE DE
-  PUSH Y DEPLOY.** Auditoría final de Codex sin hallazgos bloqueantes (166
+  `feat/etapa2-turno-ultimo-bueno` = `87c0c6f`, fork `8dfa49b`), PUSHEADA
+  (`c7a3ce1`) y DESPLEGADA el 13/09.** Deployment de Producción `success` para
+  `c7a3ce1`; `app.yump.ar` aliasado a `streamingcentral-3s6aqw73w…`;
+  `/api/health` 200 con `ping ok`; la Home 200; `/api/home?providers=n,d,m`
+  200 (6 hero, 12 rieles, no degradado) y la equivalente `N,D,M&t=accion:movie`
+  con el mismo hero (misma clave canónica). En los logs reales: el primer MISS
+  tras el deploy con `turno adquirido | origen propia | publicacion publicado`
+  y el propietario con el UUID completo; una combinación fría con
+  `renovaciones 1`; los HIT en 230 ms con 1 comando; dos instancias distintas
+  de Vercel publicando por el camino nuevo. **No se observó** coordinación
+  entre instancias reales (`esperada`/`ultimo-bueno`): exige solicitudes
+  frías simultáneas o una fresca vencida, que no ocurrieron ni se provocan;
+  está comprobada en el banco multiproceso. **#17 resuelto y retirado de
+  `ISSUES.md`** (texto en el informe, §18); **#20 sigue abierto** por la
+  observabilidad histórica. Auditoría final de Codex sin hallazgos bloqueantes (166
   pruebas específicas, suite 1.543/1.533/0/10, `tsc`, `git diff --check`).
   Verificado sobre el `main` fusionado, desde cero: específicos 7+5+34+20+15+
   8+2+6+26+22+18+24+2+6+27, suite 1.543 (1.533 aprobados, 0 fallos, 10
@@ -358,7 +370,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
-   | 2 | Turno distribuido + último Home bueno — **mergeada en `main` (`cd1f393`), pendiente de push/deploy** | #17 | Sí |
+   | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
@@ -402,11 +414,11 @@ Detalle completo en
 **Revisada de forma independiente el mismo día** (ver el bloque de evidencia
 arriba). Lo que sigue ya incorpora las siete correcciones.
 
-### Lo comprobado — issues #17 a #21 (antecedente del 10/09; #21 resuelto el 11/09, #18 el 12/09)
+### Lo comprobado — issues #17 a #21 (antecedente del 10/09; #21 resuelto el 11/09, #18 el 12/09, #17 el 13/09)
 
 | # | Hallazgo | Cómo se comprobó |
 |---|---|---|
-| #17 | *(10/09, antes de la Etapa 1)* Ninguna unión de peticiones en vuelo ni bloqueo distribuido: N visitas al Home frío = N composiciones. Y no hay "último Home bueno": al vencer el TTL de 6 h alguien paga el rearmado completo. **Desde el 12/09 hay unión por proceso (single-flight del Home); sigue faltando la coordinación entre instancias y el último bueno — Etapa 2** | Lectura: `lib/cache.ts:298-304`, `lib/reparar-y-cachear.ts:39-44`. El propio repositorio ya lo dice en `lib/single-flight.ts:9-11` |
+| #17 | *(10/09, antes de la Etapa 1)* Ninguna unión de peticiones en vuelo ni bloqueo distribuido: N visitas al Home frío = N composiciones. Y no hay "último Home bueno": al vencer el TTL de 6 h alguien paga el rearmado completo. **Desde el 12/09 hay unión por proceso (single-flight del Home) y desde el 13/09 turno distribuido y último bueno (Etapa 2): resuelto** | Lectura: `lib/cache.ts:298-304`, `lib/reparar-y-cachear.ts:39-44`. El propio repositorio ya lo dice en `lib/single-flight.ts:9-11` |
 | #18 | *(10/09)* `/api/home` no canoniza sus parámetros. **19 filas, 17 entradas distintas, 14 claves distintas**, con el arnés y la salida íntegra publicados. **Resuelto y desplegado el 12/09** | **Ejecutado** con `claveHome` real |
 | #19 | Una caída de TMDB se realimenta: el cliente **de TMDB** no reintenta ni lee `Retry-After`, el degradado no se guarda, y cada visita rearma. El techo de peticiones en vuelo es por proceso, o sea 24 × instancias | Lectura: `lib/tmdb.ts:38-40` y `56-67`, `lib/home.ts:706` |
 | #20 | *(10/09)* No hay contador de llamadas a TMDB ni a Supabase, ni de composiciones; lo que se llama `requests` mezcla tres unidades; `vercel logs` no devolvió nada el 10/09. **Los contadores existen desde la Etapa 0 (11/09); sigue abierto por la observabilidad histórica** | Lectura + ejecución |

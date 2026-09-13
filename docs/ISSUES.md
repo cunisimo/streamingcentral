@@ -213,7 +213,8 @@ Todo eso ya está hecho y mergeado; queda sólo la causa. El retorno nativo se
 evalúa por separado; no dar por arreglado el guardado sólo por implementar App
 Links.
 
-> **Revisión del 10/09 de los issues #17–#20:** conservar los riesgos abiertos,
+> **Revisión del 10/09 de los issues #17–#20** (#17 y #18 ya resueltos; el texto
+> del #17 quedó en el informe de la Etapa 2, §18): conservar los riesgos abiertos,
 > pero leer [la revisión independiente](medidas/2026-09-10-revision-capacidad-codex.md)
 > antes de usar sus cifras o criterios de cierre. Corrige el conteo de claves,
 > las unidades de concurrencia y el alcance de las pruebas; amplía la caída de
@@ -1252,217 +1253,6 @@ producen afirmaciones falsas y hay tests que las rechazan.
 
 ---
 
-## #17 — Varias visitas al mismo Home frío lo rearman una vez cada una
-
-**Detectado el 2026-09-10**, auditoría de capacidad
-(`docs/medidas/2026-09-10-capacidad-trafico.md` §1 y §5). **Comprobado leyendo el
-código, no medido en carga.**
-
-> **Antecedente:** lo que sigue describe el código del 10/09, ANTES de la
-> Etapa 1. Desde el 12/09 el Home sí une las peticiones en vuelo dentro de una
-> instancia (`lib/home-vuelo.ts`); el estado actual está en "Estado (12/09)",
-> más abajo. Lo que sigue abierto es la coordinación ENTRE instancias y el
-> último Home bueno.
-
-`cached()` y `cachedIf()` hacen leer → si falta, producir → guardar, sin ningún
-mapa de promesas en vuelo (`lib/cache.ts:298-304`,
-`lib/reparar-y-cachear.ts:39-44`). Diez peticiones al mismo Home frío en el
-mismo proceso ejecutan **diez** `composeHome`. Entre instancias de Vercel no hay
-nada que coordine: no existe ningún `SET NX` en `main`.
-
-**Esto ya estaba escrito en el repositorio.** `lib/single-flight.ts:9-11` y
-`lib/reco.ts:138-139` dicen textualmente que *"`cached()` no hace single-flight:
-en un MISS concurrente los tres salen a TMDB"*. **El mecanismo existe, está
-probado y hoy se usa en dos lugares** (`lib/reco.ts:156`, `lib/idioma.ts:155`) —
-ninguno de ellos es el camino del Home.
-
-### 🔴 Y se aplica SÓLO al Home, no a `cached`/`cachedIf`
-
-Corregido el 10/09 a pedido del dueño. La primera versión decía "aplicarlo al
-camino de `cached`/`cachedIf`", o sea **a los 21 llamadores de una vez**, sin
-inventario. Al hacer el inventario apareció el motivo por el que no se puede:
-
-**Los contextos de degradación son `AsyncLocalStorage` por request**
-(`lib/fallos-disponibilidad.ts:40`, `lib/idioma.ts:120`), y de ahí sale el
-`degradado` que decide si un payload se guarda (`lib/home.ts:619-627`, `:696-706`).
-Con un single-flight profundo, el trabajo compartido corre en el contexto de
-**quien lo empezó**: el segundo vería su contador en cero, creería limpio un
-payload construido con fallos y **lo guardaría como bueno, hasta 6 h**. Es
-exactamente el bug que `cachedIf` existe para impedir.
-
-**En el Home no pasa, por construcción**: el single-flight envuelve la llamada
-entera (`lib/home.ts:688`), el verdicto de degradación ya viaja adentro del
-payload compartido, y el segundo no produce, no evalúa predicado y no escribe.
-
-**Y ahí está casi todo el beneficio**: una composición del Home es el trabajo más
-caro del sistema, y los otros 20 sitios son lecturas de grano fino que el batcher
-(`lib/cache.ts:166`) ya une entre requests concurrentes.
-
-El inventario (21 sitios, seis familias de TTL) y los cinco requisitos para que
-una integración global sea aprobable están en la Etapa 1 del informe. **No está
-prohibida: está sin demostrar.**
-
-### Lo que sí funciona, y no hay que romper
-
-Las **lecturas** sí se unen entre peticiones concurrentes: la cola del batcher es
-de módulo (`lib/cache.ts:166`), así que dos Homes simultáneos comparten los
-`MGET`. Lo que se multiplica es el trabajo del fetcher.
-
-### La segunda mitad: no hay "último bueno"
-
-Hay una sola copia por clave. Al vencer `TTL.home` (6 h, `lib/cache.ts:91`), la
-siguiente visita paga el rearmado completo — por cada combinación viva de
-plataformas y toggles. No hay servido de contenido vencido mientras se revalida.
-
-### El contrato del turno distribuido, que `SET NX` solo NO da
-
-Corregido el 10/09 por la revisión independiente
-(`medidas/2026-09-10-revision-capacidad-codex.md`, punto 6). La primera versión
-de este issue decía "turno con `SET NX` y vencimiento" y daba el resto por hecho.
-**No alcanza:** si la composición tarda más que el vencimiento, hay dos
-constructores. Con un Home frío que puede tardar segundos, no es un caso raro.
-
-Siete decisiones que hay que tomar antes de escribir código:
-
-1. **Propietario** — el valor del turno es un identificador único, no un `1`.
-2. **Duración inicial** — corta se vence en pleno trabajo; larga bloquea a todos
-   si la instancia muere.
-3. **Renovación** mientras se compone.
-4. **Liberación segura** — sólo si el propietario sigue siendo el mismo. Un `DEL`
-   a secas puede borrar el turno de otro que lo tomó después del vencimiento.
-5. **Muerte del constructor** (timeout, deploy, instancia reciclada) — el turno
-   tiene que vencer solo.
-6. **Espera SIN último bueno** (la primera vez, o tras invalidar) — ¿el que
-   espera aguarda, con qué tope, o compone también?
-7. **Redis no disponible** — no hay turno que pedir.
-
-🔴 **El turno es una optimización probabilística, no una garantía.** Reduce
-muchísimo las composiciones duplicadas; **no promete exclusión indefinida**.
-
-🔴 **Y el último bueno vive en Redis**: si Redis no está, no hay último bueno ni
-turno. **Esa copia no protege de una caída de Redis** — protege del vencimiento
-del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
-(`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
-
-### Estado (13/09): la Etapa 2 está MERGEADA en `main` (`cd1f393`), PENDIENTE DE PUSH Y DEPLOY — el issue sigue abierto hasta comprobar el despliegue
-
-Auditoría final de Codex sin hallazgos bloqueantes; `git merge --no-ff` de
-`feat/etapa2-turno-ultimo-bueno` = `87c0c6f`; verificado desde cero sobre el
-`main` fusionado (suite 1.543/1.533/0/10, `tsc`, build fresco, `git diff
---check` desde `b60f985`); árbol idéntico a la rama. Sin push ni deploy al
-escribir esto. Lo que sigue: push, deploy, comprobaciones pasivas, y recién
-entonces decidir el cierre según los criterios de abajo.
-
-Segunda ronda (informe §17): `homePayload` leía el reloj tres veces y con la
-medianoche entre lecturas la clave del vuelo, las cinco claves y el día de la
-generación podían ser de días distintos; ahora UN instante por solicitud
-(`lib/home-instante.ts`, 7 tests RED contra `82842a5`), banco completo
-repetido VÁLIDO con E-medianoche intacto. Suite 1.543 / 1.533 / 0 fallos.
-
-Codex auditó `fb3a3f1` (62 pruebas específicas, todas en verde) y encontró
-cinco puntos, corregidos en la misma rama con RED → GREEN (informe §16): el
-productor que rechaza ahora libera el turno y sirve el UB (o propaga el error
-sin turno huérfano); la renovación es cancelable y se espera (sin temporizador
-vivo ni métricas después de la línea terminal); el contexto del vuelo viaja
-por solicitud (sin mapa global); el propietario lleva el UUID completo; los
-comentarios describen la resolución vigente. Serialización real verificada por
-el camino de producción con claves efímeras (§16.1); banco completo repetido,
-mismo resultado (§16.2). **Nada mergeado ni desplegado.** Rama
-`feat/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2-impl`, fork
-`8dfa49b`). Turno distribuido por clave (SET NX PX + los cuatro scripts
-verificados), último bueno servido en tiempo de HIT, enfriamiento tras un
-degradado, cancelación real por presupuesto, `VERSION_HOME` única, segunda
-lectura tras adquirir el turno, lecturas escalonadas (el HIT transfiere una
-sola copia: idéntico a la Etapa 1 en el banco). RED → GREEN con +70 tests
-(suite 1.525 / 1.515 / 0 fallos en `fb3a3f1`, la implementación anterior a las
-correcciones; hoy 1.543 / 1.533), banco multiproceso de 27 escenarios VÁLIDO
-contra los dobles (E2: 3 → 1 composición entre procesos). Informe §15.
-**Nada mergeado ni desplegado.** Antecedente: diseño v3 aprobado y
-**precondición de Upstash (informe §14):** ejecutada el 13/09 desde un
-Preview descartable y protegido contra la misma base que usa Producción, sólo
-con claves `precond-etapa2:<corrida>:*` (TTL ≤ 60 s, borradas al final;
-`SCAN` 0 antes y después, `DBSIZE` igual): `SET NX PX` y los cuatro scripts
-reales con el payload real del Home (85 KB; `PUBLICAR` de 195 KB de cuerpo),
-positivos y negativos (propiedad perdida, generación de un día posterior,
-enfriamiento), lectura posterior con contenido y TTL: **48/48 correctos**.
-Desconocido: facturación de `EVAL` y límite de petición del plan. Hallazgo
-pendiente de decisión: el `MGET` de tres copias en el HIT triplica los bytes
-(§14.6). Correcciones documentales del mismo día: promesa real del deadline,
-timeout posible con Redis caído, período de adopción del UB (ventana
-aceptada, sin escrituras en los HIT), caso RED del líder cancelado con
-seguidores. **Nada implementado, ni mergeado, ni desplegado en Producción.**
-La v2 (`c8fc235`) fue auditada por Codex y devuelta con cuatro
-hallazgos; la v3 los corrige: el camino `sin-redis` sirve y no guarda (sin
-escritura directa sin fencing), el degradado enfría el turno en vez de
-liberarlo (una composición degradada por `ENFRIAMIENTO_MS`, degradado
-compartido aparte, nunca promocionado), el deadline es una cancelación real
-por `AbortSignal` con promesa reducida (vale con Redis respondiendo; con Redis
-caído se sigue en F5a hasta `maxDuration`), y una sola `VERSION_HOME` para
-todas las familias del Home con turnos separados por versión en el rollout.
-La primera versión (`7cfc979`) había sido devuelta con
-diez hallazgos; la v2 los resolvía (espera que reintenta el turno y nunca
-compone sin él; deadline integral; degradado con último bueno → último bueno;
-publicación atómica con fencing por propietario y por día; estados
-diferenciados con reconciliación; `EVAL` obligatorio; integración con
-`home-vuelo` y costos; evidencia de composición iniciada; controles RED; TTL
-enunciado con precisión): [`medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md`](medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md).
-Decisión del dueño aprobada: servir el Home anterior durante la
-reconstrucción. Condición de entrada a la implementación: verificar `EVAL`
-contra la base real de Upstash. **Nada de esto está en `main` ni desplegado.**
-
-### Estado (12/09): la mitad POR PROCESO está MERGEADA y DESPLEGADA (`e4bf75a`, deploy de `f76d9ca`) — el issue sigue ABIERTO; lo siguiente es la Etapa 2
-
-Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos; deployment de
-Producción `success` y `app.yump.ar` aliasado a él. Lo que quedó resuelto es
-**sólo la coordinación dentro de una instancia**: dos instancias de Vercel con
-la misma clave fría siguen componiendo las dos, y al vencer el TTL la primera
-solicitud de cada instancia paga el rearmado. **El siguiente trabajo es la
-Etapa 2**: turno distribuido (las siete decisiones de abajo) y último Home
-bueno. Informe:
-[`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
-
-- **Hecho, y medido en el banco:** `crearSingleFlight` alrededor del Home
-  completo en `homePayload` y en ningún otro lado (`lib/home-vuelo.ts`; un test
-  barre `lib/cache.ts` y los otros llamadores). 100 solicitudes simultáneas a
-  la misma clave con caché fría: **1 composición + 99 esperas compartidas**,
-  medido con `home.composiciones` (antes: 100 composiciones, 91.106 llamadas a
-  TMDB, 162 s). Dos claves distintas no se bloquean; caliente = todas HIT;
-  rechazo compartido que se limpia; degradado que nadie guarda; escritura
-  fallida que sigue entregando (#21).
-- **NO hecho, y no se afirma:** la coordinación **entre instancias** (turno
-  distribuido con propietario, duración, renovación, liberación segura, muerte
-  del constructor) y el **último Home bueno**. Dos instancias con la misma clave
-  fría siguen componiendo las dos. Es la Etapa 2, con las siete decisiones de
-  abajo todavía por tomar.
-
-### Criterio de cierre
-
-- 100 peticiones concurrentes al mismo Home frío, **con una composición que
-  termina dentro de la ventana de turno**, ejecutan **una** composición, en un
-  proceso y entre varios. Medido con el **contador de composiciones** del #20, no
-  deducido de HIT/MISS.
-- **El single-flight toca `lib/home.ts` y nada más.** Un barrido falla si aparece
-  en `cached`/`cachedIf` o en otro de los 20 sitios sin la demostración previa.
-- Dos peticiones concurrentes al mismo Home con un fallo de disponibilidad en el
-  medio: **ninguna de las dos guarda el payload degradado como sano**.
-- Con una composición que **excede** la ventana: o la renovación la sostiene, o
-  se documenta cuántas se permiten y por qué. Lo que no vale es no medirlo.
-- **Muerte del propietario a mitad del trabajo**: otro toma el turno al vencer y
-  el sistema converge sin intervención.
-- **Liberación segura** probada: un propietario tardío no borra turno ajeno.
-- Con la copia fresca vencida, la respuesta llega en el tiempo de un acierto de
-  caché, no de un rearmado.
-- **Sin último bueno**, el comportamiento del que espera está decidido,
-  documentado y con tope.
-
-### No confundir con
-
-`feat/dia-rotacion` tiene el diseño de `tomarTurno` (SET NX) que resuelve la
-mitad distribuida, pero **está divergida y su commit `50b2e75` introduce un
-`fresh=1` que en `main` no existe**. Se reimplementa sobre `main`, no se mergea.
-
----
-
 ## #19 — Una caída de TMDB se realimenta: cada visita rearma contra el servicio caído
 
 **Detectado el 2026-09-10**, auditoría de capacidad (§3 y §4). **Comprobado
@@ -1535,9 +1325,11 @@ medirlo con un doble.
 
 > **Antecedente:** los puntos 1, 2, 2b y 2c describen el código del 10/09,
 > ANTES de la Etapa 0. Los contadores existen y están desplegados desde el
-> 11/09, y el single-flight del Home desde el 12/09; el estado actual está en
-> "Estado (11/09)", más abajo. Lo que sigue abierto es la observabilidad
-> histórica.
+> 11/09, el single-flight del Home desde el 12/09 y el turno distribuido con
+> último bueno (Etapa 2, con `turno`, `origen`, `publicacion`, `renovaciones`
+> y `propietario` en la línea `[home]`) desde el 13/09; el estado actual está
+> en "Estado (11/09)", más abajo. Lo que sigue abierto es la observabilidad
+> histórica: `vercel logs` sólo entrega lo reciente y no hay serie temporal.
 
 Esto bloqueaba a los tres issues anteriores: sin esto se arreglaban a ciegas.
 
