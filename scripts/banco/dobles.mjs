@@ -21,6 +21,8 @@
 // el Home. El doble de TMDB responde a cualquier ruta con algo plausible y
 // registra las que no conoce, para que se vea qué pidió la app.
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
+import { LUA } from "../../lib/turno-lua.ts";
 
 // ----------------------------------------------------------------- utilidades
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
@@ -32,24 +34,36 @@ function json(res, estado, cuerpo, headers = {}) {
   const body = JSON.stringify(cuerpo);
   res.writeHead(estado, { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body), ...headers });
   res.end(body);
+  return Buffer.byteLength(body);
 }
 
 // Un doble = servidor + estado de control + contadores. `atender` hace lo
 // específico; el control y los modos de fallo son comunes.
 function doble(nombre, puerto, atender, extra = {}) {
   const estado = { modo: "ok", latenciaMs: 0, retryAfter: 2 };
-  const cuenta = { peticiones: 0, porFamilia: {}, desconocidas: [] };
+  // `bytes`: lo que entró y salió por el cable en las peticiones atendidas (sin
+  // el control). Es lo que mide el costo en BYTES del camino caliente (Etapa 2,
+  // §14.6): un HIT tiene que transferir UNA copia del Home, no dos ni tres.
+  const cuenta = { peticiones: 0, porFamilia: {}, desconocidas: [], bytes: { recibidos: 0, enviados: 0 } };
   const familia = (metodo, url) => (extra.familia ? extra.familia(metodo, url) : `${metodo} ${url.split("?")[0]}`);
   const srv = createServer(async (req, res) => {
     const url = req.url ?? "/";
     if (url.startsWith("/__banco/")) {
       if (url === "/__banco/estado") return json(res, 200, { nombre, estado, cuenta, ...(extra.estado?.() ?? {}) });
       if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); return json(res, 200, estado); }
-      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; extra.reset?.(); return json(res, 200, { ok: true }); }
+      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; extra.reset?.(); return json(res, 200, { ok: true }); }
+      // Controles propios del doble (Etapa 2: expirar, borrar, perder la
+      // respuesta, fallar EVAL, listar claves).
+      if (extra.control) { const r = await extra.control(url, await leerCuerpo(req)); if (r !== undefined) return json(res, 200, r); }
       return json(res, 404, { error: "control desconocido" });
     }
     const cuerpo = await leerCuerpo(req);
     cuenta.peticiones += 1;
+    cuenta.bytes.recibidos += Buffer.byteLength(cuerpo);
+    // Lo enviado se mide al cerrar la respuesta, que es cuando se sabe.
+    const escribirOriginal = res.write.bind(res), endOriginal = res.end.bind(res);
+    res.write = (chunk, ...a) => { if (chunk) cuenta.bytes.enviados += Buffer.byteLength(chunk); return escribirOriginal(chunk, ...a); };
+    res.end = (chunk, ...a) => { if (chunk && typeof chunk !== "function") cuenta.bytes.enviados += Buffer.byteLength(chunk); return endOriginal(chunk, ...a); };
     const f = familia(req.method, url, cuerpo);
     cuenta.porFamilia[f] = (cuenta.porFamilia[f] ?? 0) + 1;
     if (estado.latenciaMs) await dormir(estado.latenciaMs);
@@ -131,19 +145,99 @@ doble("supabase", 4802, async (req, res, url) => {
 // con una lista de comandos. Responde `{ result }` (o una lista de ellos). Con
 // `Upstash-Encoding: base64` los resultados de texto van en base64, que es lo
 // que pide el cliente por defecto. Valores con vencimiento (SET … EX n).
+// ETAPA 2: además de GET/MGET/SET … EX, el doble entiende SET … NX PX, PTTL/TTL,
+// y EVAL/EVALSHA de los CUATRO scripts del turno, POR TEXTO (lib/turno-lua.ts:
+// los mismos bytes que producción y que la precondición verificada contra la
+// base real). Un EVALSHA con un sha que nunca pasó por EVAL responde NOSCRIPT,
+// como Redis. Registra cada comando de turno con propietario y resultado
+// (`registro`), y cuenta los COMANDOS CONFIRMADOS aparte de los que devolvieron
+// error (un EVALSHA rechazado con NOSCRIPT no es un comando confirmado: así lo
+// cuenta la app, y así lo compara el validador).
 const base = new Map();
+const registro = [];           // { t, op, clave, propietario, resultado }
+const scriptsCargados = new Map(); // sha1 → texto
+const sha1 = (t) => createHash("sha1").update(t).digest("hex");
+const NOMBRE_POR_TEXTO = new Map(Object.entries(LUA).map(([n, t]) => [t, n]));
+const fallos = { perderRespuesta: { comando: null, veces: 0 }, fallarEval: 0 };
+const vivo = (k) => {
+  const v = base.get(k); if (!v) return null;
+  if (v.exp && v.exp < Date.now()) { base.delete(k); if (k.includes(":turno:")) registro.push({ t: Date.now(), op: "EXPIRA", clave: k, propietario: v.v, resultado: null }); return null; }
+  return v.v;
+};
+const anotarTurno = (op, clave, propietario, resultado) => { if (clave.includes(":turno:")) registro.push({ t: Date.now(), op, clave, propietario, resultado }); };
+function correrScript(texto, keys, argv) {
+  const nombre = NOMBRE_POR_TEXTO.get(texto);
+  if (!nombre) throw new Error("ERR el doble sólo ejecuta los cuatro scripts del turno, por texto");
+  if (fallos.fallarEval > 0) { fallos.fallarEval -= 1; anotarTurno(nombre, keys[0], argv[0], "ERROR"); throw new Error("ERR doble en modo fallarEval"); }
+  let r;
+  switch (nombre) {
+    case "RENOVAR": {
+      if (vivo(keys[0]) !== argv[0]) r = 0; else { base.set(keys[0], { v: argv[0], exp: Date.now() + Number(argv[1]) }); r = 1; }
+      break;
+    }
+    case "LIBERAR": {
+      if (vivo(keys[0]) !== argv[0]) r = 0; else { base.delete(keys[0]); r = 1; }
+      break;
+    }
+    case "ENFRIAR": {
+      if (vivo(keys[0]) !== argv[0]) r = 0; else {
+        base.set(keys[0], { v: `enfriando:${argv[0]}`, exp: Date.now() + Number(argv[2]) });
+        base.set(keys[1], { v: String(argv[1]), exp: Date.now() + Number(argv[2]) });
+        r = 1;
+      }
+      break;
+    }
+    case "PUBLICAR": {
+      const [turno, fresca, ub, gen] = keys;
+      const [propietario, frescaJson, ttlF, ubJson, ttlUb, dia] = argv;
+      if (vivo(turno) !== propietario) { r = 0; break; }
+      const g = vivo(gen); const diaGuardado = g ? String(g).slice(0, 10) : "";
+      if (diaGuardado > dia) {
+        base.set(fresca, { v: String(frescaJson), exp: Date.now() + Number(ttlF) * 1000 }); base.delete(turno); r = -1; break;
+      }
+      base.set(fresca, { v: String(frescaJson), exp: Date.now() + Number(ttlF) * 1000 });
+      base.set(ub, { v: String(ubJson), exp: Date.now() + Number(ttlUb) * 1000 });
+      base.set(gen, { v: `${dia}:${propietario}`, exp: Date.now() + Number(ttlUb) * 1000 });
+      base.delete(turno); r = 1;
+      break;
+    }
+  }
+  anotarTurno(nombre, keys[0], argv[0], r);
+  return r;
+}
 function ejecutar(cmd) {
   const [c, ...a] = cmd;
   const op = String(c).toUpperCase();
-  const vivo = (k) => { const v = base.get(k); if (!v) return null; if (v.exp && v.exp < Date.now()) { base.delete(k); return null; } return v.v; };
   switch (op) {
     case "GET": return vivo(a[0]);
     case "MGET": return a.map(vivo);
     case "SET": {
-      let exp = 0;
-      for (let i = 2; i < a.length; i++) if (String(a[i]).toUpperCase() === "EX") exp = Date.now() + Number(a[i + 1]) * 1000;
-      base.set(a[0], { v: String(a[1]), exp }); return "OK";
+      let exp = 0, nx = false;
+      for (let i = 2; i < a.length; i++) {
+        const f = String(a[i]).toUpperCase();
+        if (f === "EX") exp = Date.now() + Number(a[i + 1]) * 1000;
+        if (f === "PX") exp = Date.now() + Number(a[i + 1]);
+        if (f === "NX") nx = true;
+      }
+      if (nx && vivo(a[0]) !== null) { anotarTurno("SETNX", a[0], String(a[1]), null); return null; }
+      base.set(a[0], { v: String(a[1]), exp });
+      if (nx) anotarTurno("SETNX", a[0], String(a[1]), "OK");
+      return "OK";
     }
+    case "PTTL": { const v = base.get(a[0]); if (vivo(a[0]) === null) return -2; return v.exp ? Math.max(0, v.exp - Date.now()) : -1; }
+    case "TTL": { const v = base.get(a[0]); if (vivo(a[0]) === null) return -2; return v.exp ? Math.max(0, Math.ceil((v.exp - Date.now()) / 1000)) : -1; }
+    case "EVAL": {
+      const [texto, n, ...resto] = a; const nk = Number(n);
+      scriptsCargados.set(sha1(String(texto)), String(texto));
+      return correrScript(String(texto), resto.slice(0, nk).map(String), resto.slice(nk).map(String));
+    }
+    case "EVALSHA": {
+      const [sha, n, ...resto] = a; const nk = Number(n);
+      const texto = scriptsCargados.get(String(sha));
+      if (!texto) throw new Error("NOSCRIPT No matching script. Please use EVAL.");
+      return correrScript(texto, resto.slice(0, nk).map(String), resto.slice(nk).map(String));
+    }
+    case "SCRIPT": { if (String(a[0]).toUpperCase() === "LOAD") { const h = sha1(String(a[1])); scriptsCargados.set(h, String(a[1])); return h; } throw new Error("ERR SCRIPT: sólo LOAD"); }
     case "DEL": { let n = 0; for (const k of a) if (base.delete(k)) n++; return n; }
     case "EXISTS": return a.filter((k) => vivo(k) !== null).length;
     case "DBSIZE": return base.size;
@@ -153,23 +247,49 @@ function ejecutar(cmd) {
   }
 }
 const b64 = (v) => typeof v === "string" ? Buffer.from(v).toString("base64") : Array.isArray(v) ? v.map(b64) : v;
-const comandosRedis = { total: 0, porComando: {} };
+const comandosRedis = { total: 0, errores: 0, porComando: {} };
 doble("redis", 4803, async (req, res, url, cuerpo) => {
   const codificar = (req.headers["upstash-encoding"] === "base64") ? b64 : (v) => v;
   const uno = (cmd) => {
-    comandosRedis.total += 1;
     const op = String(cmd[0]).toUpperCase();
-    comandosRedis.porComando[op] = (comandosRedis.porComando[op] ?? 0) + 1;
-    try { return { result: codificar(ejecutar(cmd)) }; } catch (e) { return { error: String(e.message) }; }
+    try {
+      const r = ejecutar(cmd);
+      comandosRedis.total += 1;
+      comandosRedis.porComando[op] = (comandosRedis.porComando[op] ?? 0) + 1;
+      return { result: codificar(r) };
+    } catch (e) {
+      comandosRedis.errores += 1;
+      return { error: String(e.message) };
+    }
   };
   const parsed = JSON.parse(cuerpo || "[]");
-  if (url.split("?")[0] === "/pipeline") return json(res, 200, parsed.map(uno));
-  return json(res, 200, uno(parsed));
+  const respuesta = url.split("?")[0] === "/pipeline" ? parsed.map(uno) : uno(parsed);
+  // perderRespuesta: el comando EJECUTÓ; el socket se corta sin responder. Es
+  // la "respuesta perdida" que la reconciliación del turno tiene que cubrir.
+  const primero = Array.isArray(parsed[0]) ? parsed[0][0] : parsed[0];
+  if (fallos.perderRespuesta.veces > 0 && String(primero).toUpperCase() === fallos.perderRespuesta.comando) {
+    fallos.perderRespuesta.veces -= 1; req.socket.destroy(); return;
+  }
+  return json(res, 200, respuesta);
 }, {
   familia: (metodo, url, cuerpo) => {
     if (url.startsWith("/pipeline")) return "POST /pipeline";
     try { return `POST / ${String(JSON.parse(cuerpo)[0]).toUpperCase()}`; } catch { return "POST /"; }
   },
-  estado: () => ({ comandos: comandosRedis, claves: base.size }),
-  reset: () => { base.clear(); comandosRedis.total = 0; comandosRedis.porComando = {}; },
+  estado: () => ({ comandos: comandosRedis, claves: base.size, registro, cargados: scriptsCargados.size }),
+  reset: () => { base.clear(); comandosRedis.total = 0; comandosRedis.errores = 0; comandosRedis.porComando = {}; registro.length = 0; fallos.perderRespuesta = { comando: null, veces: 0 }; fallos.fallarEval = 0; },
+  // POST /__banco/redis  { accion: "borrar", patron } | { accion: "expirar", patron }
+  //                      | { accion: "perderRespuesta", comando: "SET", veces: 1 }
+  //                      | { accion: "fallarEval", veces } | { accion: "claves", patron }
+  control: async (url, cuerpo) => {
+    if (url !== "/__banco/redis") return undefined;
+    const c = JSON.parse(cuerpo || "{}");
+    const re = c.patron ? new RegExp(c.patron) : /./;
+    const claves = [...base.keys()].filter((k) => re.test(k));
+    if (c.accion === "claves") return claves.map((k) => ({ clave: k, valor: String(base.get(k).v).slice(0, 60), pttl: base.get(k).exp ? base.get(k).exp - Date.now() : -1 }));
+    if (c.accion === "borrar" || c.accion === "expirar") { for (const k of claves) { if (k.includes(":turno:")) registro.push({ t: Date.now(), op: c.accion.toUpperCase(), clave: k, propietario: String(base.get(k).v), resultado: null }); base.delete(k); } return { borradas: claves }; }
+    if (c.accion === "perderRespuesta") { fallos.perderRespuesta = { comando: String(c.comando).toUpperCase(), veces: Number(c.veces ?? 1) }; return fallos; }
+    if (c.accion === "fallarEval") { fallos.fallarEval = Number(c.veces ?? 1); return fallos; }
+    return { error: "acción desconocida" };
+  },
 });

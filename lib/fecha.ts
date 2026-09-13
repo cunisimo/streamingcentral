@@ -17,14 +17,23 @@ export const TZ = "America/Argentina/Buenos_Aires";
 // catálogo de TMDB, que no depende de nosotros).
 //
 // Dos candados:
-//  - No corre en producción. Ni siquiera lee la variable.
+//  - No corre en producción. Ni siquiera lee la variable. La ÚNICA excepción es
+//    el banco aislado (Etapa 2, E-medianoche): `next start` fija
+//    NODE_ENV=production, así que el banco declara `YUMP_BANCO=1` —la misma
+//    marca explícita que lib/tmdb-base.ts— y nunca con `VERCEL_ENV=production`.
 //  - Solo aplica cuando NADIE pasó una fecha. `hoyAR(unaFecha)` es formateo de
 //    una fecha dada —el `.ics` de "Recordarme", por ejemplo— y ahí el override
 //    sería un bug; el único caso que intercepta es la pregunta "¿qué día es hoy?".
-function fechaForzada(): string | null {
-  if (process.env.NODE_ENV === "production") return null;
-  const v = process.env.YUMP_FECHA;
+export function fechaForzadaSegun(env: { nodeEnv?: string; banco?: string; vercelEnv?: string; fecha?: string }): string | null {
+  if (env.vercelEnv === "production") return null;
+  if (env.nodeEnv === "production" && env.banco !== "1") return null;
+  const v = env.fecha;
   return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+}
+function fechaForzada(): string | null {
+  return fechaForzadaSegun({
+    nodeEnv: process.env.NODE_ENV, banco: process.env.YUMP_BANCO, vercelEnv: process.env.VERCEL_ENV, fecha: process.env.YUMP_FECHA,
+  });
 }
 
 // Fecha de hoy en Argentina, en formato YYYY-MM-DD.

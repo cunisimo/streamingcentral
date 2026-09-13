@@ -64,6 +64,10 @@ function liberar(): void {
 
 async function tmdb<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const q = new URLSearchParams({ ...DEFAULTS, ...params });
+  // Si la solicitud ya fue cancelada (Etapa 2, §3.8), no se sale ni se ocupa el
+  // semáforo: no es una llamada, así que tampoco se cuenta como tal. Las que
+  // ya estaban en vuelo rechazan por su propia señal y sí cuentan.
+  if (senalActual()?.aborted) throw new DOMException("solicitud cancelada", "AbortError");
   await adquirir();
   // Se cuenta cada llamada y se clasifica su resultado por solicitud (Etapa 0,
   // #20). Este cliente no reintenta, así que una llamada es un intento HTTP.

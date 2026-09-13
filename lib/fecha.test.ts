@@ -1,6 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dailySeed, hoyAR } from "./fecha.ts";
+import { dailySeed, fechaForzadaSegun, hoyAR } from "./fecha.ts";
+
+test("la fecha forzada no corre en producción, salvo en el banco aislado (YUMP_BANCO=1) y nunca con VERCEL_ENV=production", () => {
+  assert.equal(fechaForzadaSegun({ nodeEnv: "development", fecha: "2026-08-15" }), "2026-08-15");
+  assert.equal(fechaForzadaSegun({ nodeEnv: "production", fecha: "2026-08-15" }), null);
+  // El banco: `next start` pone NODE_ENV=production; la marca explícita lo habilita.
+  assert.equal(fechaForzadaSegun({ nodeEnv: "production", banco: "1", fecha: "2026-08-15" }), "2026-08-15");
+  // Y la última red: en Vercel Producción se ignora todo.
+  assert.equal(fechaForzadaSegun({ nodeEnv: "production", banco: "1", vercelEnv: "production", fecha: "2026-08-15" }), null);
+  assert.equal(fechaForzadaSegun({ nodeEnv: "development", fecha: "ayer" }), null, "sólo YYYY-MM-DD");
+});
 
 // Implementación ANTERIOR, la que calculaba en UTC. Está acá a propósito: sin
 // ella el test no demuestra nada. Un test que pasa con las dos versiones no

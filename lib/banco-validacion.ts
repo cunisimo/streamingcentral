@@ -43,7 +43,19 @@ export interface LineaTerminal {
   supabase: number;
   redisIntentos: number;
   redisComandos: number;
+  // Etapa 2 (#17): el segmento del turno de la línea. `null` en una línea de la Etapa 1.
+  turno: string | null;
+  origen: string | null;
+  publicacion: string | null;
+  renovaciones: number | null;
+  propietario: string | null;
+  turnoPerdido: boolean;
 }
+
+/** Una línea `[home] compone <clave> <propietario>[ (sin-redis)]`: composición INICIADA. */
+export interface Compone { clave: string; propietario: string; sinRedis: boolean }
+/** Lo que el doble de Redis registró sobre el turno (SETNX, RENOVAR, PUBLICAR, ENFRIAR, LIBERAR, EXPIRA…). */
+export interface RegistroTurno { op: string; clave: string; propietario: string; resultado: unknown }
 
 export interface DeltasDobles { tmdb: number; supabase: number; redisHttp: number; redisComandos: number }
 
@@ -61,13 +73,41 @@ export interface EscenarioObservado {
   /** Puede terminar sin completar (p. ej. Redis caído en una ventana limitada). */
   permiteIncompleto?: boolean;
   ventanaMs?: number;
-  /** Lo que el escenario AFIRMA sobre la app (Etapa 1): se comprueba y, si no cierra, invalida. */
-  esperado?: { composiciones?: number; esperas?: number; cacheDeTodas?: string; tmdb?: number; supabase?: number };
+  /** Lo que el escenario AFIRMA sobre la app (Etapas 1 y 2): se comprueba y, si no cierra, invalida. */
+  esperado?: {
+    composiciones?: number; esperas?: number; cacheDeTodas?: string; tmdb?: number; supabase?: number;
+    /** Etapa 2: cota superior de composiciones (ráfagas con enfriamiento). */
+    composicionesMax?: number;
+    /** Etapa 2: cuántas líneas terminales por origen, exacto. */
+    origenes?: Record<string, number>;
+    /** Etapa 2: PUBLICAR con resultado 1 (o -1 si `publicacionesParciales`) en el registro del doble. */
+    publicaciones?: number;
+    publicacionesParciales?: number;
+    /** Etapa 2: SET NX que devolvieron OK en el doble. */
+    setNxOk?: number;
+    enfriadas?: number;
+    /** Etapa 2: cuántas líneas por estado del turno (adquirido/reconciliado/ocupado/sin-redis), exacto. */
+    turnos?: Record<string, number>;
+    /** Etapa 2: al menos una línea con esta cantidad de renovaciones o más. */
+    renovacionesMin?: number;
+  };
+  /** Etapa 2: las líneas `compone` de la ventana. */
+  compone?: Compone[];
+  /** Etapa 2: el registro del turno en el doble (delta de la ventana). */
+  registroTurno?: RegistroTurno[];
+  /**
+   * Etapa 2 (E-muere): solicitudes cuyo proceso fue ASESINADO por el corredor.
+   * No completan ni siguen activas: su composición quedó interrumpida. Con
+   * ellas declaradas, el escenario puede comprobar lo que AFIRMA (origenes,
+   * publicaciones, sin turno) pero NO las igualdades con los dobles: el
+   * proceso muerto consumió TMDB y Redis sin dejar su línea terminal.
+   */
+  interrumpidas?: number;
 }
 
 export interface Validacion {
   id: string;
-  estado: "completo" | "incompleto";
+  estado: "completo" | "incompleto" | "completo-con-interrupciones";
   valida: boolean;
   problemas: string[];
   /** Pedidos vistos menos líneas terminales: solicitudes que siguen corriendo en Next. */
@@ -78,6 +118,8 @@ export interface Validacion {
   sumas?: DeltasDobles;
   /** Sumas de la app que no tienen contraparte en los dobles: composiciones y esperas compartidas. */
   home?: { composiciones: number; esperas: number; caches: Record<string, number> };
+  /** Etapa 2: la composición iniciada contra el turno del doble. */
+  turno?: { compone: number; sinTurno: number; sinRedis: number; setNxOk: number; publicaciones: number; enfriadas: number; liberadas: number; origenes: Record<string, number> };
 }
 
 /**
@@ -95,6 +137,12 @@ export function sufijoDeClave(query: string): string {
 export const esLineaPedido = (l: string): boolean => /^\[home\] pedido /.test(l);
 export const esLineaTerminal = (l: string): boolean => /^\[home\] \d+ms total/.test(l);
 export const claveDePedido = (l: string): string => l.replace(/^\[home\] pedido /, "").trim();
+export const esLineaCompone = (l: string): boolean => /^\[home\] compone /.test(l);
+export function propietarioDeCompone(l: string): Compone {
+  const m = l.match(/^\[home\] compone (\S+) (\S+)( \(sin-redis\))?\s*$/);
+  if (!m) throw new Error(`no es una línea compone: ${l}`);
+  return { clave: m[1], propietario: m[2], sinRedis: !!m[3] };
+}
 
 export function parsearLineaHome(l: string): LineaTerminal {
   const n = (re: RegExp) => { const m = l.match(re); return m ? Number(m[1]) : null; };
@@ -102,13 +150,19 @@ export function parsearLineaHome(l: string): LineaTerminal {
   return {
     clave: s(/\| clave (\S+)\s*$/),
     msTotal: n(/^\[home\] (\d+)ms total/),
-    cache: s(/cache (HIT|MISS|COMPARTIDA|\?)/),
+    cache: s(/cache (HIT|MISS|COMPARTIDA|ULTIMO-BUENO|ESPERADA|VACIO|DEGRADADO-COMPARTIDA|\?)/),
     composiciones: n(/(\d+) composici/),
     esperas: n(/(\d+) esperas? compartida/),
     tmdb: n(/tmdb (\d+) llamadas/) ?? 0,
     supabase: n(/supabase (\d+) consultas/) ?? 0,
     redisIntentos: n(/(\d+) intentos http/) ?? 0,
     redisComandos: n(/(\d+) comandos/) ?? 0,
+    turno: s(/\| turno (\S+) \|/),
+    origen: s(/\| origen (\S+) \|/),
+    publicacion: s(/\| publicacion (\S+) \|/),
+    renovaciones: n(/\| renovaciones (\d+) \|/),
+    propietario: s(/\| propietario (\S+)/),
+    turnoPerdido: /\| TURNO PERDIDO/.test(l),
   };
 }
 
@@ -142,15 +196,58 @@ export function validarEscenario(e: EscenarioObservado): Validacion {
     redisComandos: e.terminales.reduce((a, t) => a + t.redisComandos, 0),
   };
 
-  const estado: Validacion["estado"] = completadas === e.veces && activas === 0 ? "completo" : "incompleto";
+  const interrumpidas = e.interrumpidas ?? 0;
+  const estado: Validacion["estado"] = completadas === e.veces && activas === 0
+    ? "completo"
+    : interrumpidas > 0 && completadas + interrumpidas === e.veces && activas === interrumpidas
+      ? "completo-con-interrupciones"
+      : "incompleto";
   let igualdadesVerificadas = false;
   const home = {
     composiciones: e.terminales.reduce((a, t) => a + (t.composiciones ?? 0), 0),
     esperas: e.terminales.reduce((a, t) => a + (t.esperas ?? 0), 0),
     caches: e.terminales.reduce<Record<string, number>>((a, t) => { const k = t.cache ?? "?"; a[k] = (a[k] ?? 0) + 1; return a; }, {}),
   };
-  if (estado === "completo" && e.esperado) {
+  // Etapa 2: composiciones iniciadas contra el turno del doble. Una línea
+  // `compone` cuyo propietario no obtuvo SET NX = OK ni figura como reconciliado
+  // en su línea terminal es una composición SIN TURNO: inválida siempre, salvo
+  // que la propia línea diga `(sin-redis)` (Redis caído, a propósito).
+  const reg = e.registroTurno ?? [];
+  const compone = e.compone ?? [];
+  const conSetNx = new Set(reg.filter((r) => r.op === "SETNX" && r.resultado === "OK").map((r) => r.propietario));
+  const reconciliados = new Set(e.terminales.filter((t) => t.turno === "reconciliado").map((t) => t.propietario));
+  const sinTurno = compone.filter((c) => !c.sinRedis && !conSetNx.has(c.propietario) && !reconciliados.has(c.propietario));
+  for (const c of sinTurno) problemas.push(`composición sin turno: ${c.propietario} compuso ${c.clave} sin SET NX = OK ni reconciliación`);
+  const turno = {
+    compone: compone.length,
+    sinTurno: sinTurno.length,
+    sinRedis: compone.filter((c) => c.sinRedis).length,
+    setNxOk: reg.filter((r) => r.op === "SETNX" && r.resultado === "OK").length,
+    publicaciones: reg.filter((r) => r.op === "PUBLICAR" && r.resultado === 1).length,
+    enfriadas: reg.filter((r) => r.op === "ENFRIAR" && r.resultado === 1).length,
+    liberadas: reg.filter((r) => r.op === "LIBERAR" && r.resultado === 1).length,
+    origenes: e.terminales.reduce<Record<string, number>>((a, t) => { if (t.origen) a[t.origen] = (a[t.origen] ?? 0) + 1; return a; }, {}),
+  };
+
+  if ((estado === "completo" || estado === "completo-con-interrupciones") && e.esperado) {
     const x = e.esperado;
+    if (x.composicionesMax !== undefined && home.composiciones > x.composicionesMax) problemas.push(`composiciones: se esperaban a lo sumo ${x.composicionesMax} y hubo ${home.composiciones}`);
+    if (x.origenes !== undefined) {
+      const claves = new Set([...Object.keys(x.origenes), ...Object.keys(turno.origenes)]);
+      for (const o of claves) if ((x.origenes[o] ?? 0) !== (turno.origenes[o] ?? 0)) problemas.push(`origenes: ${o} se esperaba ${x.origenes[o] ?? 0} y hubo ${turno.origenes[o] ?? 0}`);
+    }
+    if (x.publicaciones !== undefined && turno.publicaciones !== x.publicaciones) problemas.push(`publicaciones (PUBLICAR = 1 en el doble): se esperaban ${x.publicaciones} y hubo ${turno.publicaciones}`);
+    if (x.publicacionesParciales !== undefined) {
+      const p = reg.filter((r) => r.op === "PUBLICAR" && r.resultado === -1).length;
+      if (p !== x.publicacionesParciales) problemas.push(`publicaciones parciales (PUBLICAR = -1): se esperaban ${x.publicacionesParciales} y hubo ${p}`);
+    }
+    if (x.setNxOk !== undefined && turno.setNxOk !== x.setNxOk) problemas.push(`SET NX = OK: se esperaban ${x.setNxOk} y hubo ${turno.setNxOk}`);
+    if (x.enfriadas !== undefined && turno.enfriadas !== x.enfriadas) problemas.push(`ENFRIAR = 1: se esperaban ${x.enfriadas} y hubo ${turno.enfriadas}`);
+    if (x.turnos !== undefined) {
+      const vistos = e.terminales.reduce<Record<string, number>>((a, t) => { if (t.turno) a[t.turno] = (a[t.turno] ?? 0) + 1; return a; }, {});
+      for (const k of new Set([...Object.keys(x.turnos), ...Object.keys(vistos)])) if ((x.turnos[k] ?? 0) !== (vistos[k] ?? 0)) problemas.push(`turnos: ${k} se esperaba ${x.turnos[k] ?? 0} y hubo ${vistos[k] ?? 0}`);
+    }
+    if (x.renovacionesMin !== undefined && !e.terminales.some((t) => (t.renovaciones ?? 0) >= x.renovacionesMin!)) problemas.push(`renovaciones: ninguna línea llegó a ${x.renovacionesMin}`);
     if (x.composiciones !== undefined && home.composiciones !== x.composiciones) problemas.push(`composiciones: se esperaban ${x.composiciones} y hubo ${home.composiciones}`);
     if (x.esperas !== undefined && home.esperas !== x.esperas) problemas.push(`esperas compartidas: se esperaban ${x.esperas} y hubo ${home.esperas}`);
     if (x.cacheDeTodas !== undefined && (Object.keys(home.caches).length !== 1 || home.caches[x.cacheDeTodas] !== e.terminales.length)) problemas.push(`cache: se esperaba ${x.cacheDeTodas} en todas y hubo ${JSON.stringify(home.caches)}`);
@@ -167,15 +264,21 @@ export function validarEscenario(e: EscenarioObservado): Validacion {
     comparar("redis intentos http", sumas.redisHttp, e.dobles.redisHttp);
     comparar("redis comandos", sumas.redisComandos, e.dobles.redisComandos);
     igualdadesVerificadas = problemas.length === 0;
+  } else if (estado === "completo-con-interrupciones") {
+    // Las igualdades con los dobles no son exigibles: el proceso asesinado
+    // consumió sin dejar su línea. Lo afirmado (arriba) sí se comprobó.
+    igualdadesVerificadas = false;
   } else if (!e.permiteIncompleto) {
     problemas.push(`incompleto sin permiso: ${completadas}/${e.veces} completadas, ${activas} solicitud(es) activa(s) en el servidor`);
   }
 
   const resumen = estado === "completo"
     ? `${completadas}/${e.veces} completadas; igualdades ${igualdadesVerificadas ? "verificadas" : "NO cierran"}`
-    : `no completó en más de ${e.ventanaMs ?? Math.max(...e.respuestas.map((r) => r.ms), 0)} ms: ${completadas}/${e.veces} completadas, ${activas} activa(s) en el servidor; actividad observada en los dobles sin igualdad exigible`;
+    : estado === "completo-con-interrupciones"
+      ? `${completadas}/${e.veces} completadas y ${interrumpidas} interrumpida(s) por el corredor; afirmaciones comprobadas, igualdades con los dobles NO exigibles`
+      : `no completó en más de ${e.ventanaMs ?? Math.max(...e.respuestas.map((r) => r.ms), 0)} ms: ${completadas}/${e.veces} completadas, ${activas} activa(s) en el servidor; actividad observada en los dobles sin igualdad exigible`;
 
-  return { id: e.id, estado, valida: problemas.length === 0, problemas, activasEnServidor: activas, igualdadesVerificadas, resumen, sumas, home };
+  return { id: e.id, estado, valida: problemas.length === 0, problemas, activasEnServidor: activas, igualdadesVerificadas, resumen, sumas, home, turno };
 }
 
 export function validarCorrida(vs: Validacion[]): { valida: boolean; invalidos: string[]; incompletos: string[] } {
