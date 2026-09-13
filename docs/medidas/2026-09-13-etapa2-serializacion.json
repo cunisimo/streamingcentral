@@ -1,0 +1,112 @@
+{
+ "ok": true,
+ "corrida": "mu0cud0t-7ksaqx",
+ "prefijo": "precond-etapa2-serial:mu0cud0t-7ksaqx:",
+ "propietario": "serial-mu0cud0t-7ksaqx",
+ "bytesPayload": 140987,
+ "msTotal": 3054,
+ "pasos": [
+  {
+   "paso": "1 tomar (SET NX PX real)",
+   "esperado": "adquirido",
+   "resultado": {
+    "estado": "adquirido",
+    "reconciliado": false
+   },
+   "ok": true
+  },
+  {
+   "paso": "2 PUBLICAR por Lua con JSON.stringify(payload) — la misma llamada de lib/home-servir.ts",
+   "esperado": "publicado",
+   "resultado": "publicado",
+   "ok": true
+  },
+  {
+   "paso": "3 leerVarias([fresca, ub]) — batchGet/MGET con la deserialización predeterminada",
+   "esperado": "las dos == payload, estructuralmente iguales",
+   "resultado": {
+    "frescaIgual": true,
+    "ubIgual": true,
+    "tipoFresca": "object",
+    "bytes": 140987,
+    "marca": "fresca-mu0cud0t-7ksaqx"
+   },
+   "ok": true
+  },
+  {
+   "paso": "4 los strings 'peligrosos' vuelven como strings, no parseados",
+   "esperado": "'007', '{\"a\":1}', 'true' intactos; null/''/0/false intactos",
+   "resultado": {
+    "comoNumero": "007",
+    "comoJson": "{\"a\":1}",
+    "comoBool": "true",
+    "nulo": null,
+    "vacio": "",
+    "cero": 0,
+    "falso": false,
+    "title": "Título 0 — \"comillas\", \\barra, salto\nde línea, acentos áéíóú"
+   },
+   "ok": true
+  },
+  {
+   "paso": "5 GET gen y GET turno por la primitiva real (get)",
+   "esperado": "gen == '2026-09-13:serial-mu0cud0t-7ksaqx', turno null",
+   "resultado": {
+    "gen": "2026-09-13:serial-mu0cud0t-7ksaqx",
+    "turno": null
+   },
+   "ok": true
+  },
+  {
+   "paso": "6 tomar de nuevo y ENFRIAR con el payload degradado",
+   "esperado": "enfriado",
+   "resultado": "enfriado",
+   "ok": true
+  },
+  {
+   "paso": "7 leerVarias([degradado]) y GET turno",
+   "esperado": "degradado == payload degradado; turno == 'enfriando:<propietario>'",
+   "resultado": {
+    "degradadoIgual": true,
+    "turno": "enfriando:serial-mu0cud0t-7ksaqx"
+   },
+   "ok": true
+  },
+  {
+   "paso": "8 lectura de las tres copias en UN MGET (leerVarias([fresca, ub, degradado]))",
+   "esperado": "tres objetos, los tres iguales a lo publicado",
+   "resultado": [
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "paso": "9 TTLs de lo publicado (TTL.home / TTL.homeUltimoBueno son los de producción; acá se usaron 60 s)",
+   "esperado": "60 s aquí; producción 21600 / 129600",
+   "resultado": {
+    "aquiFresca": 58,
+    "aquiUb": 58,
+    "produccion": {
+     "fresca": 21600,
+     "ub": 129600
+    }
+   },
+   "ok": true
+  },
+  {
+   "paso": "10 DEL de las cinco claves temporales",
+   "esperado": "5",
+   "resultado": 5,
+   "ok": true
+  },
+  {
+   "paso": "11 SCAN precond-etapa2-serial:* después",
+   "esperado": "0",
+   "resultado": 0,
+   "ok": true
+  }
+ ],
+ "deployment": "Preview streamingcentral-rx9anxcfw (target preview), rama descartable tmp/etapa2-serializacion = 8aae8c8 (nacida de ef05e55), ruta /api/precondicion-etapa2-serial, llamada con vercel curl + secreto propio; borrada después"
+}
