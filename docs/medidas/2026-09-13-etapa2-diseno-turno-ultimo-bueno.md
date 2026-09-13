@@ -6,7 +6,8 @@
 infraestructura, sin variables, sin merge ni push.** Diseño **v3 aprobado por Codex**, precondición de Upstash **superada**
 (§14) y **la Etapa 2 IMPLEMENTADA en la rama `feat/etapa2-turno-ultimo-bueno`
 (§15), auditada por Codex y CORREGIDA en la misma rama dos veces (§16 y §17),
-pendiente de auditoría final. Sin merge, sin push, sin deploy.**
+auditada sin hallazgos bloqueantes y **MERGEADA en `main` (`cd1f393`),
+pendiente de push y deploy** (§18).**
 **Antecedentes:** Etapa PREVIA (#21, [`2026-09-10-capacidad-trafico.md` §9](2026-09-10-capacidad-trafico.md)),
 Etapa 0 ([`2026-09-11-etapa0-medir.md`](2026-09-11-etapa0-medir.md)),
 Etapa 1 ([`2026-09-11-etapa1-canonizar-single-flight.md`](2026-09-11-etapa1-canonizar-single-flight.md)),

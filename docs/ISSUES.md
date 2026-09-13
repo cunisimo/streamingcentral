@@ -1344,7 +1344,14 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (13/09): la Etapa 2 está IMPLEMENTADA y CORREGIDA (dos rondas) en la rama `feat/etapa2-turno-ultimo-bueno`, PENDIENTE DE AUDITORÍA FINAL — sin merge, sin push, sin deploy
+### Estado (13/09): la Etapa 2 está MERGEADA en `main` (`cd1f393`), PENDIENTE DE PUSH Y DEPLOY — el issue sigue abierto hasta comprobar el despliegue
+
+Auditoría final de Codex sin hallazgos bloqueantes; `git merge --no-ff` de
+`feat/etapa2-turno-ultimo-bueno` = `87c0c6f`; verificado desde cero sobre el
+`main` fusionado (suite 1.543/1.533/0/10, `tsc`, build fresco, `git diff
+--check` desde `b60f985`); árbol idéntico a la rama. Sin push ni deploy al
+escribir esto. Lo que sigue: push, deploy, comprobaciones pasivas, y recién
+entonces decidir el cierre según los criterios de abajo.
 
 Segunda ronda (informe §17): `homePayload` leía el reloj tres veces y con la
 medianoche entre lecturas la clave del vuelo, las cinco claves y el día de la

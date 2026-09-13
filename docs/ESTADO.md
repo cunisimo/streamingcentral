@@ -151,13 +151,22 @@
   Etapas 3 a 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
-  Home bueno): IMPLEMENTADA EN LA RAMA `feat/etapa2-turno-ultimo-bueno`
-  (worktree `wt-etapa2-impl`, fork `8dfa49b`) y CORREGIDA EN RAMA tras la
-  auditoría de Codex sobre `fb3a3f1` (cinco puntos: productor que rechaza
-  libera el turno y sirve UB; renovación cancelable y esperada, sin
-  temporizadores ni métricas tardías; contexto del vuelo por solicitud en vez
-  de un mapa global; UUID completo del propietario; comentarios al día),
-  PENDIENTE DE AUDITORÍA FINAL. Sin merge, sin push, sin deploy.** Serialización
+  Home bueno): MERGEADA EN `main` (`cd1f393`, `--no-ff` de
+  `feat/etapa2-turno-ultimo-bueno` = `87c0c6f`, fork `8dfa49b`), PENDIENTE DE
+  PUSH Y DEPLOY.** Auditoría final de Codex sin hallazgos bloqueantes (166
+  pruebas específicas, suite 1.543/1.533/0/10, `tsc`, `git diff --check`).
+  Verificado sobre el `main` fusionado, desde cero: específicos 7+5+34+20+15+
+  8+2+6+26+22+18+24+2+6+27, suite 1.543 (1.533 aprobados, 0 fallos, 10
+  omitidos), `tsc` limpio, build fresco exit 0 en 2 min 18 s (`BUILD_ID
+  obVjaH4sRLnzjeS90yEQz`, sólo el `.next` de este checkout borrado, ningún
+  Next corriendo), `git diff --check b60f985..HEAD` limpio; el árbol
+  fusionado es idéntico a `87c0c6f` (los JSON del banco y la evidencia, mismo
+  blob). Antes del merge: implementada en la rama (worktree `wt-etapa2-impl`)
+  y corregida en dos rondas (auditorías de Codex sobre `fb3a3f1` —productor
+  que rechaza libera el turno y sirve UB; renovación cancelable y esperada;
+  contexto del vuelo por solicitud; UUID completo; comentarios al día— y sobre
+  `82842a5` —un instante por solicitud: día, semilla, cinco claves y clave del
+  vuelo de la misma lectura del reloj—). Serialización
   real verificada por el camino de producción (informe §16.1); banco completo
   repetido con el mismo resultado (§16.2); suite 1.536 (1.526 aprobados, 0
   fallos, 10 omitidos) tras esa primera corrección, y **1.543 (1.533 aprobados,
@@ -349,7 +358,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
-   | 2 | Turno distribuido + último Home bueno — **diseño pendiente de auditoría (`diseno/etapa2-turno-ultimo-bueno`); no implementada** | #17 | Sí |
+   | 2 | Turno distribuido + último Home bueno — **mergeada en `main` (`cd1f393`), pendiente de push/deploy** | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
