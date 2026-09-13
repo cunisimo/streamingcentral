@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 12 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 13 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -147,7 +147,24 @@
   Etapa 2. **#18 resuelto; #17 abierto únicamente por la coordinación entre
   instancias y el último Home bueno.** Informe:
   [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
-  Etapas 2 a 5: no iniciadas.
+  Etapas 3 a 5: no iniciadas.
+
+- **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
+  Home bueno): DISEÑO escrito, pendiente de auditoría de Codex. NO está
+  implementada.** Rama `diseno/etapa2-turno-ultimo-bueno` (worktree
+  `wt-etapa2`, nacida de `main` = `b60f985`), sólo documentación, sin merge ni
+  push. El diseño resuelve las siete decisiones del #17 (propietario único por
+  composición; turno de 15 s justificado con la única medida real y el banco;
+  renovación cada 5 s sólo si sigo siendo el propietario; liberación con
+  compare-and-delete; muerte del constructor por vencimiento; sin último bueno
+  se espera con tope y después se compone; Redis caído = componer sin
+  coordinar, marcado), separa fresca / último bueno / turno en tres claves (el
+  último bueno SIN semilla del día, para cruzar la medianoche), y define el
+  banco multiproceso con diez escenarios y criterios verificables. Dos cosas
+  quedan antes de implementar: **`EVAL` no está verificado contra la base real
+  de Upstash** (las credenciales de Redis viven sólo en Vercel) y la decisión
+  del dueño sobre servir el Home de ayer durante los segundos de
+  reconstrucción. Informe: [`medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md`](medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md).
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -270,7 +287,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
-   | 2 | Turno distribuido + último Home bueno | #17 | Sí |
+   | 2 | Turno distribuido + último Home bueno — **diseño pendiente de auditoría (`diseno/etapa2-turno-ultimo-bueno`); no implementada** | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |

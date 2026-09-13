@@ -1344,6 +1344,16 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
+### Estado (13/09): la Etapa 2 tiene DISEÑO pendiente de auditoría, no implementación
+
+Rama `diseno/etapa2-turno-ultimo-bueno` (sólo documentación, sin merge ni
+push). Las siete decisiones de abajo están resueltas por escrito, con las
+carreras, el costo en comandos (cálculo, no medición) y el banco multiproceso
+con criterios verificables: [`medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md`](medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md). Pendiente antes de
+implementar: verificar `EVAL` contra la base real de Upstash y la decisión del
+dueño sobre servir el Home de ayer mientras uno reconstruye. **Nada de esto
+está en `main` ni desplegado.**
+
 ### Estado (12/09): la mitad POR PROCESO está MERGEADA y DESPLEGADA (`e4bf75a`, deploy de `f76d9ca`) — el issue sigue ABIERTO; lo siguiente es la Etapa 2
 
 Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos; deployment de
