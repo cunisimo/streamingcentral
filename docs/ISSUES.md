@@ -1361,7 +1361,8 @@ verificados), último bueno servido en tiempo de HIT, enfriamiento tras un
 degradado, cancelación real por presupuesto, `VERSION_HOME` única, segunda
 lectura tras adquirir el turno, lecturas escalonadas (el HIT transfiere una
 sola copia: idéntico a la Etapa 1 en el banco). RED → GREEN con +70 tests
-(suite 1.525 / 1.515 / 0 fallos), banco multiproceso de 27 escenarios VÁLIDO
+(suite 1.525 / 1.515 / 0 fallos en `fb3a3f1`, la implementación anterior a las
+correcciones; hoy 1.543 / 1.533), banco multiproceso de 27 escenarios VÁLIDO
 contra los dobles (E2: 3 → 1 composición entre procesos). Informe §15.
 **Nada mergeado ni desplegado.** Antecedente: diseño v3 aprobado y
 **precondición de Upstash (informe §14):** ejecutada el 13/09 desde un

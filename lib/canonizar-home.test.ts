@@ -201,15 +201,18 @@ test("🔴 homePayload canoniza providers y tipos, y la lista canonizada va al C
   assert.match(home, /canonizarProviders\(opts\.providers\)/, "homePayload no canoniza providers");
   assert.match(home, /canonizarTipos\(opts\.types/, "homePayload no canoniza los tipos");
   // La clave se arma con lo canonizado, no con lo crudo.
-  assert.match(home, /const key = homeKey\(providers, types\)/, "la clave no se arma con la lista canonizada");
+  // Etapa 2: las claves salen de UN instante (lib/home-instante.ts) con la lista
+  // canonizada; la clave del vuelo es `claves.fresca`.
+  assert.match(home, /const claves = clavesDeLaSolicitud\(providers, types\)/, "la clave no se arma con la lista canonizada");
+  assert.match(home, /const key = claves\.fresca/, "la clave del vuelo no es la fresca del instante");
   // Y composeHome recibe lo mismo.
   assert.match(home, /composeHome\(\{ providers, types \}\)/, "composeHome no recibe la lista canonizada");
   assert.doesNotMatch(home, /composeHome\(\{ providers: opts\.providers/, "composeHome sigue recibiendo lo crudo");
 });
 
 test("🔴 la clave usa claveDeTipos (forma mínima) y no serializa el objeto a mano", () => {
-  assert.match(home, /claveDeTipos\(types\)/, "homeKey no usa la forma canónica de los tipos");
-  assert.doesNotMatch(home, /Object\.keys\(types\)\.sort\(\)\.map/, "homeKey sigue serializando a mano");
+  assert.match(home, /claveDeTipos\(types\)/, "las claves no usan la forma canónica de los tipos");
+  assert.doesNotMatch(home, /Object\.keys\(types\)\.sort\(\)\.map/, "se sigue serializando a mano");
 });
 
 test("🔴 la ruta usa TODOS los parámetros `t` (getAll), no sólo el primero, y ya no tiene su propio parseTypes", () => {

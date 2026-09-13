@@ -25,12 +25,16 @@ test("🔴 lib/home.ts resuelve el Home por servirConTurno, ya no por cachedLocI
 });
 
 test("🔴 lib/home.ts arma las CINCO claves con los constructores y la huella real, y la señal de la solicitud", () => {
+  // Las cinco claves se construyen en lib/home-instante.ts, desde UN instante.
+  const instante = sinComentarios("lib/home-instante.ts");
   for (const c of ["claveHome(", "claveHomeUltimoBueno(", "claveHomeGeneracion(", "claveHomeDegradado(", "claveTurnoHome("]) {
-    assert.ok(home.includes(c), `falta ${c}`);
+    assert.ok(instante.includes(c), `falta ${c} en lib/home-instante.ts`);
   }
+  assert.match(home, /clavesDeLaSolicitud\(providers, types\)/);
   assert.match(home, /AbortSignal\.timeout\(CONSTANTES\.PRESUPUESTO_REQUEST_MS\)/, "el deadline no es una señal real");
   assert.match(home, /conSenal\(/, "la señal no viaja por el scope de la solicitud");
-  assert.match(home, /hoyAR\(\)/, "la generación del UB tiene que ser el día argentino");
+  assert.match(instante, /hoyAR\(ahora\)/, "la generación del UB tiene que ser el día argentino del instante");
+  assert.match(home, /dia: claves\.dia/, "el día del contexto tiene que ser el del instante, no otra lectura del reloj");
   // La evidencia de composición iniciada la emite la secuencia (default: console.log).
   assert.match(sinComentarios("lib/home-servir.ts"), /\[home\] compone \$\{K\.fresca\} \$\{propietario\}/, "no hay evidencia de composición iniciada");
 });

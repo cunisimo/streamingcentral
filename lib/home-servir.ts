@@ -35,7 +35,12 @@
 //         renovación corre ni anota métricas después de devolver (auditoría de
 //         Codex sobre fb3a3f1: `void renovacion` dejaba un temporizador vivo
 //         hasta 5 s y una renovación en vuelo podía anotar después de la línea
-//         terminal).
+//         terminal). ⚠️ LÍMITE: `await renovacion` espera también a un RENOVAR
+//         ya enviado a Redis; si esa operación no responde, la respuesta se
+//         demora lo que tarde el SDK (sus reintentos no se cancelan por
+//         solicitud: la promesa reducida de §3.8). No es una garantía absoluta
+//         de deadline ni de "ninguna promesa viva" con Redis colgado; el
+//         cliente de Redis no se rediseña acá.
 //     4c  componer (la señal de la solicitud llega a TMDB y Supabase por
 //         lib/senal-solicitud.ts). Si el productor RECHAZA: se corta la
 //         renovación, se LIBERA el turno (compare-and-delete) y, con UB, se

@@ -160,12 +160,16 @@
   PENDIENTE DE NUEVA AUDITORÍA. Sin merge, sin push, sin deploy.** Serialización
   real verificada por el camino de producción (informe §16.1); banco completo
   repetido con el mismo resultado (§16.2); suite 1.536 (1.526 aprobados, 0
-  fallos, 10 omitidos). Módulos puros nuevos (`lib/turno.ts`,
+  fallos, 10 omitidos) tras esa primera corrección, y **1.543 (1.533 aprobados,
+  0 fallos, 10 omitidos) tras la segunda: UN instante por solicitud** (la
+  clave del vuelo, las cinco claves y el día de la generación salen de la misma
+  lectura del reloj; informe §17). Módulos puros nuevos (`lib/home-instante.ts`, `lib/turno.ts`,
   `lib/turno-memoria.ts`, `lib/turno-lua.ts`, `lib/home-servir.ts`,
   `lib/senal-solicitud.ts`), `VERSION_HOME` única en `lib/claves.ts`, cableado
   en `lib/cache.ts`/`lib/home.ts`/`lib/tmdb.ts`/`lib/supabase.ts`, banco
   multiproceso (`scripts/banco/correr-etapa2.mjs`). RED → GREEN: +70 tests;
-  suite 1.525 (1.515 aprobados, 0 fallos, 10 omitidos); `tsc` limpio; build
+  suite 1.525 (1.515 aprobados, 0 fallos, 10 omitidos) **en la implementación
+  anterior a las correcciones** (`fb3a3f1`); `tsc` limpio; build
   fresco exit 0. **Banco (3 procesos, corrida VÁLIDA, 27 escenarios):** HIT
   idéntico a la Etapa 1 (1 comando, 40.505 B, mismo corredor); frío 994 → 997
   comandos; E2 3 → **1 composición entre procesos**; fresca vencida con UB →

@@ -51,8 +51,16 @@ export function hoyAR(date?: Date): string {
 // La consumen el Home (clave de cache y mezcla de rieles), el recomendador, los
 // chips curados y la ruleta: todo lo que rota una vez por día.
 export function dailySeed(date?: Date): number {
-  const s = hoyAR(date);
+  return semillaDeDia(hoyAR(date));
+}
+
+/**
+ * La semilla de UN día ya calculado (`YYYY-MM-DD`). Existe aparte para que
+ * quien capturó el día una vez (lib/home-instante.ts) derive la semilla de ESE
+ * día y no vuelva a consultar el reloj: día y semilla de un mismo instante.
+ */
+export function semillaDeDia(dia: string): number {
   let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  for (let i = 0; i < dia.length; i++) { h ^= dia.charCodeAt(i); h = Math.imul(h, 16777619); }
   return h >>> 0;
 }

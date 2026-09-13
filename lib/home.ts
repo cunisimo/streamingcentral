@@ -40,14 +40,13 @@ import { backendCache, dailySeed, leerVarias, opsTurnoHome, pickDaily, TTL, with
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
 import { withFallosDisponibilidad } from "./fallos-disponibilidad";
-import { claveHome, claveHomeDegradado, claveHomeGeneracion, claveHomeUltimoBueno, claveTurnoHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import { hoyAR } from "./fecha";
-import { CONSTANTES, servirConTurno, type ClavesHome } from "./home-servir";
+import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
+import { CONSTANTES, servirConTurno } from "./home-servir";
 import { conSenal, senalActual } from "./senal-solicitud";
 import { crearTurno } from "./turno";
 import { randomUUID } from "node:crypto";
-import { HUELLA_IDIOMA, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
+import { metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
 import { anotar, lineaHome } from "./metricas";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
@@ -652,46 +651,37 @@ export async function composeHome(opts: {
 // La salida es idéntica para todos los que pidan lo mismo el mismo día:
 // `personalize()` sigue siendo identidad y el hero usa la semilla compartida.
 // Si algún día el Home se personaliza de verdad, esta clave deja de alcanzar.
-function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): ClaveLocalizada {
-  // Recibe la lista y los tipos YA CANÓNICOS (lib/canonizar-home.ts): plataformas
-  // en minúsculas, del catálogo, sin repetir, ordenadas y acotadas; tipos sólo de
-  // rieles conocidos y sólo los que difieren de su default. Así "n,d,m", "d,m,n",
-  // "N,,d,M" y "n,zzz,d,m" son la misma clave, y `t` ausente es la misma clave
-  // que `t=accion:movie` (y que las siete claves en default que manda el
-  // cliente). Etapa 1 de capacidad, #18.
-  const p = [...providers].sort().join(",");
-  const t = claveDeTipos(types);
-  // La versión de la clave se sube cuando cambia el CONTENIDO del payload, no
-  // su forma: si no, lo que ya está cacheado sigue sirviéndose hasta que expire
-  // el TTL (6 h) y el cambio "no se ve" después de deployar.
-  // v2 = ventana de votos de 7 a 90 días.
-  // v3 = el riel "Hacete cargo" pasó a llamarse "No gustaron". Los TÍTULOS de
-  //      los rieles viajan dentro del payload, así que cambiar un texto de la
-  //      interfaz es cambiar el contenido: sin subir la versión, el nombre
-  //      viejo se sigue sirviendo hasta 6 h después del deploy.
-  // v4 = entró el riel "Miniseries para ansiosos". Es un riel más en el payload
-  //      y además corre el dedup: los de abajo pueden quedar distintos aunque
-  //      nadie los toque. Un payload v3 cacheado no lo tiene, y sin subir la
-  //      versión el riel "no aparecía" hasta 6 h después del deploy.
-  // v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
-  //      tarjeta más, pero es contenido del payload igual: sin subir la versión
-  //      el botón no aparecía hasta 6 h después. Mismo caso que v3.
-  return clavesDelHome(p, t).fresca;
-}
-
-// Las CINCO claves de una combinación (Etapa 2, #17), derivadas de UNA versión
-// (`VERSION_HOME`, lib/claves.ts): la fresca de siempre, el último bueno y su
-// generación (sin semilla: sobreviven a la medianoche), el degradado compartido
-// y el turno (con semilla: son de la composición de UNA fresca).
-function clavesDelHome(p: string, t: string): ClavesHome & { fresca: ClaveLocalizada } {
-  const semilla = dailySeed();
-  return {
-    fresca: claveHome(semilla, p, t, HUELLA_IDIOMA),
-    ub: claveHomeUltimoBueno(p, t, HUELLA_IDIOMA),
-    gen: claveHomeGeneracion(p, t, HUELLA_IDIOMA),
-    degradado: claveHomeDegradado(semilla, p, t, HUELLA_IDIOMA),
-    turno: claveTurnoHome(semilla, p, t, HUELLA_IDIOMA),
-  };
+//
+// Las claves las construye lib/home-instante.ts a partir de UN instante
+// capturado al entrar en `homePayload` (Etapa 2): el día, la semilla, las cinco
+// claves y la clave del vuelo salen de la misma lectura del reloj. Recibe la
+// lista y los tipos YA CANÓNICOS (lib/canonizar-home.ts): plataformas en
+// minúsculas, del catálogo, sin repetir, ordenadas y acotadas; tipos sólo de
+// rieles conocidos y sólo los que difieren de su default. Así "n,d,m", "d,m,n",
+// "N,,d,M" y "n,zzz,d,m" son la misma clave, y `t` ausente es la misma clave
+// que `t=accion:movie` (y que las siete claves en default que manda el
+// cliente). Etapa 1 de capacidad, #18.
+//
+// La versión de la clave (`VERSION_HOME`, lib/claves.ts) se sube cuando cambia
+// el CONTENIDO del payload, no su forma: si no, lo que ya está cacheado sigue
+// sirviéndose hasta que expire el TTL (6 h) y el cambio "no se ve" después de
+// deployar.
+// v2 = ventana de votos de 7 a 90 días.
+// v3 = el riel "Hacete cargo" pasó a llamarse "No gustaron". Los TÍTULOS de
+//      los rieles viajan dentro del payload, así que cambiar un texto de la
+//      interfaz es cambiar el contenido: sin subir la versión, el nombre
+//      viejo se sigue sirviendo hasta 6 h después del deploy.
+// v4 = entró el riel "Miniseries para ansiosos". Es un riel más en el payload
+//      y además corre el dedup: los de abajo pueden quedar distintos aunque
+//      nadie los toque. Un payload v3 cacheado no lo tiene, y sin subir la
+//      versión el riel "no aparecía" hasta 6 h después del deploy.
+// v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
+//      tarjeta más, pero es contenido del payload igual: sin subir la versión
+//      el botón no aparecía hasta 6 h después. Mismo caso que v3.
+// v6 = "Últimos lanzamientos" estrenó selector Películas/Series (ver lib/claves.ts).
+function clavesDeLaSolicitud(providers: PlatformCode[], types: Record<string, MediaType>): ClavesDelHome {
+  const instante = instanteHome();
+  return clavesDelHome(instante, [...providers].sort().join(","), claveDeTipos(types));
 }
 
 // El vuelo compartido del Home (Etapa 1, #17): N solicitudes simultáneas a la
@@ -716,15 +706,18 @@ function clavesDelHome(p: string, t: string): ClavesHome & { fresca: ClaveLocali
 const INSTANCIA = randomUUID();
 let composicionesDeEsteProceso = 0;
 const turnoHome = crearTurno(opsTurnoHome);
-// El vuelo coordina SOLO por la clave fresca; las otras cuatro claves viajan
-// como contexto de cada solicitud y el resolver usa las del líder (misma
-// clave = mismas cinco claves). Sin mapas de módulo: nada que retener.
-const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesHome>({
+// El vuelo coordina SOLO por la clave fresca; las otras cuatro claves y el DÍA
+// de la generación viajan como contexto de cada solicitud —todo derivado del
+// mismo instante— y el resolver usa lo del líder (misma clave = mismas cinco
+// claves y mismo día). Sin mapas de módulo: nada que retener. Y sin volver a
+// leer el reloj acá: con la medianoche entre la clave y el día, el fencing
+// diario quedaría del lado equivocado.
+const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>({
   leer: (clave) => backendCache.leer<HomePayload>(clave),
   resolver: (_clave, producir, claves) => servirConTurno<HomePayload>({
     claves,
     propietario: `${INSTANCIA}:${process.pid}:${++composicionesDeEsteProceso}`,
-    dia: hoyAR(),
+    dia: claves.dia,
     ttl: { fresca: TTL.home, ub: TTL.homeUltimoBueno },
     leer: (claves) => leerVarias<HomePayload>(claves),
     turno: turnoHome,
@@ -746,10 +739,11 @@ export async function homePayload(opts: {
   // contenidos distintos, que es peor que dos claves.
   const providers = canonizarProviders(opts.providers);
   const types = canonizarTipos(opts.types);
-  const key = homeKey(providers, types);
-  // Las cinco claves de esta combinación viajan con la solicitud (contexto del
-  // vuelo); `key` es la fresca, la única clave de coordinación.
-  const claves = clavesDelHome([...providers].sort().join(","), claveDeTipos(types));
+  // UN instante para toda la solicitud: el día, la semilla, las cinco claves y
+  // la clave del vuelo (`claves.fresca`) salen de la misma lectura del reloj.
+  // Las cinco claves y el día viajan con la solicitud como contexto del vuelo.
+  const claves = clavesDeLaSolicitud(providers, types);
+  const key = claves.fresca;
   // Una línea al ENTRAR y otra al salir: la diferencia entre las dos es la
   // cantidad de solicitudes que siguen corriendo. Abortar el `fetch` del lado
   // del cliente no cancela este handler, y sin esta línea eso es invisible.
@@ -792,7 +786,7 @@ export async function homePayload(opts: {
   // no corta son los reintentos del SDK de Redis (promesa reducida).
   const senal = AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS);
   const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
-    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(key, producirHome, claves)))));
+    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(claves.fresca, producirHome, claves)))));
   if (metricas.home.cache === null) metricas.home.cache = "hit";
   metricas.home.degradado = !!payload.degradado;
   metricas.home.fuentesCaidas = payload.fallos;
