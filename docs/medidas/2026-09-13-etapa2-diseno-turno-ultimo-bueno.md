@@ -5,8 +5,8 @@
 (worktree `wt-etapa2`). **Sólo documentación: sin código productivo, sin
 infraestructura, sin variables, sin merge ni push.** Diseño **v3 aprobado por Codex**, precondición de Upstash **superada**
 (§14) y **la Etapa 2 IMPLEMENTADA en la rama `feat/etapa2-turno-ultimo-bueno`
-(§15), auditada por Codex y CORREGIDA en la misma rama (§16), pendiente de
-nueva auditoría. Sin merge, sin push, sin deploy.**
+(§15), auditada por Codex y CORREGIDA en la misma rama dos veces (§16 y §17),
+pendiente de auditoría final. Sin merge, sin push, sin deploy.**
 **Antecedentes:** Etapa PREVIA (#21, [`2026-09-10-capacidad-trafico.md` §9](2026-09-10-capacidad-trafico.md)),
 Etapa 0 ([`2026-09-11-etapa0-medir.md`](2026-09-11-etapa0-medir.md)),
 Etapa 1 ([`2026-09-11-etapa1-canonizar-single-flight.md`](2026-09-11-etapa1-canonizar-single-flight.md)),
@@ -1202,7 +1202,7 @@ comandos del frío y cada vuelta de espera (3 comandos cada 500 ms).
 
 ---
 
-## 16. Corrección tras la auditoría de Codex sobre `fb3a3f1` — pendiente de nueva auditoría
+## 16. Corrección tras la auditoría de Codex sobre `fb3a3f1` — superada por §17
 
 Codex ejecutó 62 pruebas específicas (todas pasaron) y encontró cinco puntos.
 Cada uno se corrigió con RED → GREEN en la misma rama; **`main` = `origin/main`
@@ -1212,7 +1212,7 @@ push, sin deploy.**
 | # | Hallazgo | Corrección | RED contra `fb3a3f1` | Commit |
 |---|---|---|---|---|
 | 1 | Si `producir()` rechazaba, el `finally` sólo apagaba la renovación: el turno quedaba huérfano hasta vencer | `lib/home-servir.ts`: `catch` → cortar y esperar la renovación → `LIBERAR` (compare-and-delete por script) → `errorProductor` en las métricas; **con UB** se sirve el UB y se registra el error (`console.error`); **sin UB** el error se propaga (la ruta responde 500, como antes de la Etapa 2) pero ya sin turno huérfano ni temporizador vivo. Ni `DEL` suelto ni `SET XX` | "productor que rechaza CON UB", "SIN UB", "rechaza a mitad de una renovación" | `46016eb` |
-| 2 | `void renovacion` dejaba un temporizador de 5 s vivo tras una composición rápida, y una renovación en vuelo podía anotar métricas después de la línea terminal | La renovación duerme con una señal propia (`dormirCancelable`: `setTimeout` que la señal limpia en el acto) y al terminar la composición —bien o mal— se aborta **y se espera** la promesa. La espera sin UB también duerme con la señal de la solicitud | "composición rápida: ningún temporizador ni renovación activa", "las métricas NO cambian después de la línea terminal", "renovaciones largas legítimas (12 s → 2)", `dormirCancelable` | `46016eb` |
+| 2 | `void renovacion` dejaba un temporizador de 5 s vivo tras una composición rápida, y una renovación en vuelo podía anotar métricas después de la línea terminal | La renovación duerme con una señal propia (`dormirCancelable`: `setTimeout` que la señal limpia en el acto) y al terminar la composición —bien o mal— se aborta **y se espera** la promesa. La espera sin UB también duerme con la señal de la solicitud. ⚠️ **Límite:** `await renovacion` espera también a un `RENOVAR` ya enviado a Redis; si esa operación no responde, la respuesta se demora lo que tarde el SDK (sus reintentos no se cancelan por solicitud: la promesa reducida de §3.8). No es una garantía absoluta de deadline ni de "ninguna promesa viva" con Redis colgado; el cliente de Redis no se rediseña acá | "composición rápida: ningún temporizador ni renovación activa", "las métricas NO cambian después de la línea terminal", "renovaciones largas legítimas (12 s → 2)", `dormirCancelable` | `46016eb` |
 | 3 | `clavesEnVuelo`: un `Map` global de `lib/home.ts` que crecía con cada combinación y nunca se vaciaba | `crearVueloHome<T, K, C>` recibe un **contexto por solicitud** y le pasa al resolver el del líder; la clave de coordinación sigue siendo sólo la fresca; `servir.enVuelo()` (sobre `crearSingleFlight.enVuelo`) demuestra cero al terminar. Sin mapas de módulo | "el vuelo pasa el contexto del líder", "no queda estado acumulado (misma clave y claves distintas)", "lib/home.ts ya no retiene un mapa" | `ef05e55` |
 | 4 | `randomUUID().slice(0, 8)` recortaba la identidad del propietario, que es parte del fencing | UUID completo; guard en `lib/home-turno-cableado.test.ts` (falla si vuelve `.slice`/`.substring`) | "el propietario lleva el UUID COMPLETO" | `ef05e55` |
 | 5 | `lib/home-vuelo.ts` y su test seguían describiendo `cachedLocIf` como la resolución vigente | Comentarios al día (la resolución es `servirConTurno`; `cachedLocIf` queda como antecedente de la Etapa 1); `docs/ESTADO.md` aclara que en `main` sigue `cachedLocIf` | — | `ef05e55` |
@@ -1289,5 +1289,80 @@ emulación en memoria (con UB, sin UB, y a mitad de una renovación).
 - **Desconocido:** lo mismo que en §15.6 (facturación de Upstash, instancias
   reales de Vercel, constantes óptimas en Producción).
 
-**Estado: corregida en rama, pendiente de nueva auditoría. Nada mergeado,
+**Estado tras §16: corregida en rama; ver §17 para la corrección siguiente.**
+
+---
+
+## 17. Corrección final: UN instante por solicitud (auditoría de Codex sobre `82842a5`) — pendiente de auditoría final
+
+**Hallazgo bloqueante:** `homePayload` consultaba el reloj tres veces para una
+misma solicitud — `homeKey` → `dailySeed()` para la clave del vuelo,
+`clavesDelHome` → otro `dailySeed()` para las cinco claves del contexto, y el
+resolver → `hoyAR()` para el día de la generación. Con la medianoche argentina
+entre dos de esas lecturas, la clave de coordinación, la fresca/turno/degradado
+y el `dia` podían ser de días distintos: identidad de coordinación rota (dos
+solicitudes del mismo instante con claves distintas esquivan el single-flight),
+logs falsos y fencing diario debilitado justo en el límite que la Etapa 2
+protege.
+
+**Corrección (`fbae88c`), RED → GREEN:**
+
+- `lib/fecha.ts`: `semillaDeDia(dia)` — la cuenta de `dailySeed` extraída,
+  para derivar la semilla de un día ya capturado sin volver al reloj
+  (`dailySeed` la usa).
+- `lib/home-instante.ts` (nuevo, puro): `instanteHome(ahora?)` captura el día
+  (`hoyAR(ahora)`; sin fecha, `hoyAR()` a secas honra `YUMP_FECHA` en el
+  banco) y su semilla; `clavesDelHome(instante, providers, tipos)` construye
+  las cinco claves con **esa** semilla (los cinco constructores con
+  `HUELLA_IDIOMA`, como exige el barrido de `lib/claves.test.ts`) y devuelve
+  `dia` y `semilla` junto con ellas.
+- `lib/home.ts`: `clavesDeLaSolicitud()` = **una sola** `instanteHome()`; la
+  clave del vuelo es exactamente `claves.fresca`; el resolver usa `dia:
+  claves.dia` del contexto del líder; `homeKey` desaparece (ya no hay un camino
+  separado para la fresca). `dailySeed()` sigue existiendo dentro de
+  `composeHome` (semillas de los rieles): es contenido, no identidad de
+  coordinación, y es anterior a la Etapa 2 — no se toca.
+- `lib/home-instante.test.ts` (7 tests, **RED contra `82842a5`**: el módulo no
+  existía y el test estructural sobre `lib/home.ts` fallaba —`instanteHome()`
+  0 veces, `dia: hoyAR()` presente, `function homeKey(` presente—): un
+  instante = día + semilla iguales a `hoyAR`/`dailySeed` de esa fecha; las
+  cinco claves **byte a byte** contra los constructores con la semilla del
+  instante, fresca/turno/degradado con la misma semilla y ub/gen sin ella;
+  el cruce de medianoche entre lecturas reproducido con dos fechas (23:59:59
+  y 00:00:00 AR) e imposible con un instante; una solicitud iniciada **antes**
+  publica `gen = 2026-09-13:A` aunque el reloj cruce durante la composición;
+  una iniciada **después** usa otra fresca/turno/degradado, el mismo UB y
+  `gen = 2026-09-14:B`, y el propietario viejo termina con `-1` sin pisar UB
+  ni gen (E-medianoche en puro); `instanteHome()` sin fecha = `hoyAR()`.
+- Guards actualizados: `lib/canonizar-home.test.ts` (la clave se arma con la
+  lista canonizada vía `clavesDeLaSolicitud` y es `claves.fresca`),
+  `lib/home-vuelo.test.ts`, `lib/home-turno-cableado.test.ts` (los cinco
+  constructores viven en `lib/home-instante.ts`; el día del contexto es el del
+  instante).
+
+**GREEN:** específicos instante 7, fecha 5, servicio 34, vuelo 15, turno 20,
+claves 6 + 26, canonización 27, cableado 6, métricas 22, validación 24; **suite
+1.543 tests, 1.533 aprobados, 0 fallos, 10 omitidos** (antes de esta ronda
+1.536 / 1.526; en `fb3a3f1` 1.525 / 1.515); `tsc --noEmit` limpio; build fresco
+exit 0; `git diff --check` limpio.
+
+**Banco (la construcción de claves cambió → corrida completa):**
+[`2026-09-13-etapa2-banco.json`](2026-09-13-etapa2-banco.json) — **VÁLIDA**,
+28 escenarios, 27 completos + 1 incompleto declarado (E-cancelacion-redis).
+Escenario por escenario, mismas composiciones, orígenes, publicaciones y
+renovaciones que la corrida de `82842a5` (21 idénticos hasta en comandos; en
+los otros 7 sólo difiere el orden de las claves del objeto `origenes` o el
+conteo de comandos/TMDB de los que esperan, que depende de los milisegundos).
+**E-medianoche** conservado: el proceso con `YUMP_FECHA` de mañana publica
+(`gen` nueva) y el propietario de hoy termina después con `PUBLICAR = -1`
+(fresca de su semilla `2312121320`, distinta de la de mañana `2429564653`);
+E2 1 composición (1 `propia`, 2 `esperada`); E3 UB en el acto; E-renueva 3
+renovaciones; E-cancelacion 50,5 s con `LIBERAR = 1` y TMDB en 0 después.
+
+**Comprobado:** todo lo anterior. **Inferido:** que el cruce entre lecturas
+ocurría en Producción con probabilidad proporcional a los microsegundos entre
+las tres lecturas (nunca se observó; se eliminó la posibilidad). **Desconocido:**
+lo de §15.6.
+
+**Estado: corregida en rama, pendiente de auditoría final. Nada mergeado,
 pusheado ni desplegado.**

@@ -157,7 +157,7 @@
   libera el turno y sirve UB; renovación cancelable y esperada, sin
   temporizadores ni métricas tardías; contexto del vuelo por solicitud en vez
   de un mapa global; UUID completo del propietario; comentarios al día),
-  PENDIENTE DE NUEVA AUDITORÍA. Sin merge, sin push, sin deploy.** Serialización
+  PENDIENTE DE AUDITORÍA FINAL. Sin merge, sin push, sin deploy.** Serialización
   real verificada por el camino de producción (informe §16.1); banco completo
   repetido con el mismo resultado (§16.2); suite 1.536 (1.526 aprobados, 0
   fallos, 10 omitidos) tras esa primera corrección, y **1.543 (1.533 aprobados,

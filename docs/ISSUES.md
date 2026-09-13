@@ -1344,7 +1344,13 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (13/09): la Etapa 2 está IMPLEMENTADA y CORREGIDA en la rama `feat/etapa2-turno-ultimo-bueno`, PENDIENTE DE NUEVA AUDITORÍA — sin merge, sin push, sin deploy
+### Estado (13/09): la Etapa 2 está IMPLEMENTADA y CORREGIDA (dos rondas) en la rama `feat/etapa2-turno-ultimo-bueno`, PENDIENTE DE AUDITORÍA FINAL — sin merge, sin push, sin deploy
+
+Segunda ronda (informe §17): `homePayload` leía el reloj tres veces y con la
+medianoche entre lecturas la clave del vuelo, las cinco claves y el día de la
+generación podían ser de días distintos; ahora UN instante por solicitud
+(`lib/home-instante.ts`, 7 tests RED contra `82842a5`), banco completo
+repetido VÁLIDO con E-medianoche intacto. Suite 1.543 / 1.533 / 0 fallos.
 
 Codex auditó `fb3a3f1` (62 pruebas específicas, todas en verde) y encontró
 cinco puntos, corregidos en la misma rama con RED → GREEN (informe §16): el
