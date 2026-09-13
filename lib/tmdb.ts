@@ -69,6 +69,10 @@ async function tmdb<T>(path: string, params: Record<string, string> = {}): Promi
   // ya estaban en vuelo rechazan por su propia señal y sí cuentan.
   if (senalActual()?.aborted) throw new DOMException("solicitud cancelada", "AbortError");
   await adquirir();
+  // Y otra vez DESPUÉS del semáforo: la solicitud pudo cancelarse mientras esta
+  // llamada esperaba su permiso, y salir igual sería contar una llamada que el
+  // servidor nunca recibe (medido en el banco: 4 de 565 en E-cancelacion).
+  if (senalActual()?.aborted) { liberar(); throw new DOMException("solicitud cancelada", "AbortError"); }
   // Se cuenta cada llamada y se clasifica su resultado por solicitud (Etapa 0,
   // #20). Este cliente no reintenta, así que una llamada es un intento HTTP.
   // El tiempo se mide DESPUÉS de obtener el permiso: es lo que tardó TMDB, no

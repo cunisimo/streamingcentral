@@ -54,7 +54,8 @@ const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 // ----------------------------------------------------------------- el entorno, del mismo archivo que el build
 function entornoDelBanco() {
   const env = { ...process.env };
-  for (const l of readFileSync("scripts/banco/entorno.sh", "utf8").split("\n")) {
+  // `\r`: un checkout de Windows convierte el archivo a CRLF, y `.` no lo matchea.
+  for (const l of readFileSync("scripts/banco/entorno.sh", "utf8").split("\n").map((x) => x.replace(/\r$/, ""))) {
     const m = l.match(/^export ([A-Z_]+)=(.*)$/);
     if (m) env[m[1]] = m[2].trim();
     const u = l.match(/^unset (.+)$/);

@@ -247,7 +247,11 @@ function ejecutar(cmd) {
   }
 }
 const b64 = (v) => typeof v === "string" ? Buffer.from(v).toString("base64") : Array.isArray(v) ? v.map(b64) : v;
-const comandosRedis = { total: 0, errores: 0, porComando: {} };
+// `perdidos`: ejecutados por el doble pero cuya respuesta se cortó a propósito
+// (perderRespuesta). No entran en `total`, que es lo que el cliente pudo
+// CONFIRMAR —la misma unidad que cuenta la app—; se informan aparte porque
+// Upstash sí los ejecutó (y presumiblemente los factura).
+const comandosRedis = { total: 0, errores: 0, perdidos: 0, porComando: {} };
 doble("redis", 4803, async (req, res, url, cuerpo) => {
   const codificar = (req.headers["upstash-encoding"] === "base64") ? b64 : (v) => v;
   const uno = (cmd) => {
@@ -263,12 +267,18 @@ doble("redis", 4803, async (req, res, url, cuerpo) => {
     }
   };
   const parsed = JSON.parse(cuerpo || "[]");
-  const respuesta = url.split("?")[0] === "/pipeline" ? parsed.map(uno) : uno(parsed);
+  const esPipeline = url.split("?")[0] === "/pipeline";
+  const antes = comandosRedis.total;
+  const respuesta = esPipeline ? parsed.map(uno) : uno(parsed);
   // perderRespuesta: el comando EJECUTÓ; el socket se corta sin responder. Es
   // la "respuesta perdida" que la reconciliación del turno tiene que cubrir.
   const primero = Array.isArray(parsed[0]) ? parsed[0][0] : parsed[0];
   if (fallos.perderRespuesta.veces > 0 && String(primero).toUpperCase() === fallos.perderRespuesta.comando) {
-    fallos.perderRespuesta.veces -= 1; req.socket.destroy(); return;
+    fallos.perderRespuesta.veces -= 1;
+    const ejecutados = comandosRedis.total - antes;
+    comandosRedis.total = antes; comandosRedis.perdidos += ejecutados;
+    for (const cmd of (esPipeline ? parsed : [parsed])) { const op = String(cmd[0]).toUpperCase(); comandosRedis.porComando[op] = (comandosRedis.porComando[op] ?? 0) - 1; }
+    req.socket.destroy(); return;
   }
   return json(res, 200, respuesta);
 }, {
@@ -277,7 +287,7 @@ doble("redis", 4803, async (req, res, url, cuerpo) => {
     try { return `POST / ${String(JSON.parse(cuerpo)[0]).toUpperCase()}`; } catch { return "POST /"; }
   },
   estado: () => ({ comandos: comandosRedis, claves: base.size, registro, cargados: scriptsCargados.size }),
-  reset: () => { base.clear(); comandosRedis.total = 0; comandosRedis.errores = 0; comandosRedis.porComando = {}; registro.length = 0; fallos.perderRespuesta = { comando: null, veces: 0 }; fallos.fallarEval = 0; },
+  reset: () => { base.clear(); comandosRedis.total = 0; comandosRedis.errores = 0; comandosRedis.perdidos = 0; comandosRedis.porComando = {}; registro.length = 0; fallos.perderRespuesta = { comando: null, veces: 0 }; fallos.fallarEval = 0; },
   // POST /__banco/redis  { accion: "borrar", patron } | { accion: "expirar", patron }
   //                      | { accion: "perderRespuesta", comando: "SET", veces: 1 }
   //                      | { accion: "fallarEval", veces } | { accion: "claves", patron }

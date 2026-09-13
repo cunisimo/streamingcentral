@@ -41,7 +41,8 @@ const mananaAR = () => hoyAR(new Date(Date.now() + 86400000));
 
 function entornoDelBanco(extra = {}) {
   const env = { ...process.env };
-  for (const l of readFileSync("scripts/banco/entorno.sh", "utf8").split("\n")) {
+  // `\r`: un checkout de Windows convierte el archivo a CRLF, y `.` no lo matchea.
+  for (const l of readFileSync("scripts/banco/entorno.sh", "utf8").split("\n").map((x) => x.replace(/\r$/, ""))) {
     const m = l.match(/^export ([A-Z_]+)=(.*)$/);
     if (m) env[m[1]] = m[2].trim();
     const u = l.match(/^unset (.+)$/);
@@ -189,6 +190,7 @@ const delta = (a, b) => ({
   redisHttp: b.redis.cuenta.peticiones - a.redis.cuenta.peticiones,
   redisComandos: b.redis.comandos.total - a.redis.comandos.total,
   redisErrores: b.redis.comandos.errores - a.redis.comandos.errores,
+  redisPerdidos: (b.redis.comandos.perdidos ?? 0) - (a.redis.comandos.perdidos ?? 0),
   redisPorComando: Object.fromEntries(Object.entries(b.redis.comandos.porComando).map(([k, v]) => [k, v - (a.redis.comandos.porComando[k] ?? 0)]).filter(([, v]) => v)),
   redisBytes: { recibidos: b.redis.cuenta.bytes.recibidos - a.redis.cuenta.bytes.recibidos, enviados: b.redis.cuenta.bytes.enviados - a.redis.cuenta.bytes.enviados },
   registroTurno: b.redis.registro.slice(a.redis.registro.length),
@@ -242,7 +244,7 @@ async function escenario(id, titulo, query, opts = {}) {
   for (const x of mostrar) console.log(`   app: cache ${x.cache} | comp ${x.composiciones} | esperas ${x.esperas} | turno ${x.turno ?? "-"} | origen ${x.origen ?? "-"} | pub ${x.publicacion ?? "-"} | renov ${x.renovaciones ?? "-"} | tmdb ${x.tmdb} | redis ${x.redisIntentos}/${x.redisComandos} | ${x.msTotal}ms`);
   if (terminales.length > 6) console.log(`   … ${terminales.length} líneas: ${JSON.stringify(v.home)}`);
   console.log(`   turno: ${JSON.stringify(v.turno)}`);
-  console.log(`   dobles: tmdb ${d.tmdb} | supabase ${d.supabase} | redis http ${d.redisHttp} / comandos ${d.redisComandos} (+${d.redisErrores} err) ${JSON.stringify(d.redisPorComando)} | bytes redis ${d.redisBytes.recibidos}↑ ${d.redisBytes.enviados}↓`);
+  console.log(`   dobles: tmdb ${d.tmdb} | supabase ${d.supabase} | redis http ${d.redisHttp} / comandos ${d.redisComandos} (+${d.redisErrores} err, ${d.redisPerdidos} con respuesta perdida) ${JSON.stringify(d.redisPorComando)} | bytes redis ${d.redisBytes.recibidos}↑ ${d.redisBytes.enviados}↓`);
   console.log(`   ${v.valida ? "✅" : "🔴"} ${v.estado}: ${v.resumen}${v.problemas.length ? "\n      - " + v.problemas.join("\n      - ") : ""}`);
   if (activasAlCerrar > 0) await reiniciarTodos(`${activasAlCerrar} solicitud(es) activa(s) al cerrar ${id}`);
   return salida;
@@ -285,16 +287,18 @@ await escenario("E3", "fresca expirada por control del doble, UB presente: uno c
 await escenario("E3h", "…y la siguiente es HIT del payload nuevo", "providers=n,d,m,pp", { veces: 1, esperado: { cacheDeTodas: "HIT", tmdb: 0 } });
 
 // --- E-renueva: composición más larga que TURNO_MS → renovaciones, sigue siendo una
-await escenario("E-renueva", "TMDB +400 ms por llamada (composición > 15 s): el propietario renueva; ningún SET NX ajeno prospera", "providers=n,d,m,vx", {
+await escenario("E-renueva", "TMDB +250 ms por llamada (composición > 5 s de renovación y < 20 s de tope): el propietario renueva; ningún SET NX ajeno prospera; los demás esperan", "providers=n,d,m,vx", {
   veces: K, timeoutMs: 120000, quiescenciaMs: 10000,
-  preparar: async () => { await resetear("redis"); await configurar("tmdb", { latenciaMs: 400 }); },
+  preparar: async () => { await resetear("redis"); await configurar("tmdb", { latenciaMs: 250 }); },
   esperado: E2({ composiciones: 1, publicaciones: 1, setNxOk: 1, renovacionesMin: 1, origenes: { propia: 1, esperada: K - 1 } }),
 });
 
 // --- E-muere: matar al propietario al ver su línea `compone`; otro rescata al vencer el turno
 await escenario("E-muere", "el corredor mata el proceso propietario tras ver `compone`: el turno vence, EXACTAMENTE UNO rescata, nadie compone sin turno", "providers=n,d,m,mb", {
   veces: K, timeoutMs: 120000, quiescenciaMs: 10000,
-  preparar: async () => { await resetear("redis"); await configurar("tmdb", { latenciaMs: 200 }); },
+  // Sin latencia: el turno del muerto vence a los 15 s y el rescate (~2 s)
+  // tiene que terminar antes del tope de espera (20 s) del tercero.
+  preparar: () => resetear("redis"),
   durante: async () => {
     const t = Date.now();
     const c = await esperarCompone(30000);
@@ -324,7 +328,8 @@ await escenario("E-tarde", "el doble borra el turno a mitad; otro proceso lo tom
 });
 
 // --- E-medianoche: un proceso con la fecha de mañana publica el UB nuevo mientras el de hoy compone
-await reiniciar(K - 1, "E-medianoche: el proceso de MAÑANA", { YUMP_FECHA: mananaAR() });
+const corre = (id) => !SOLO || SOLO.has(id);
+if (corre("E-medianoche")) await reiniciar(K - 1, "E-medianoche: el proceso de MAÑANA", { YUMP_FECHA: mananaAR() });
 await escenario("E-medianoche", "el proceso de mañana publica primero; el propietario de hoy termina después: PUBLICAR = -1 (sólo su fresca), gen y UB del día nuevo intactos", "providers=n,d,m,ok", {
   veces: 1, en: [K - 1], timeoutMs: 120000, quiescenciaMs: 40000,
   preparar: async () => { await resetear("redis"); await configurar("tmdb", { latenciaMs: 400 }); },
@@ -337,7 +342,7 @@ await escenario("E-medianoche", "el proceso de mañana publica primero; el propi
   },
   esperado: E2({ composiciones: 2, publicaciones: 1, publicacionesParciales: 1 }),
 });
-await reiniciar(K - 1, "E-medianoche: vuelve a hoy");
+if (corre("E-medianoche")) await reiniciar(K - 1, "E-medianoche: vuelve a hoy");
 
 // --- E-agotada: propietario vivo más lento que el tope de espera, sin UB
 await escenario("E-agotada", "sin UB, composición > TOPE_ESPERA (TMDB +700 ms): los que esperan responden 200 vacío `espera-agotada` sin componer", "providers=n,d,m,cr", {
@@ -347,25 +352,28 @@ await escenario("E-agotada", "sin UB, composición > TOPE_ESPERA (TMDB +700 ms):
 });
 await escenario("E-agotada-h", "…la siguiente ronda es HIT", "providers=n,d,m,cr", { veces: K, esperado: { cacheDeTodas: "HIT", tmdb: 0 } });
 
-// --- E-degradado: TMDB 500 con UB presente → UB para todos, ENFRIAR, nada publicado
-await escenario("E-degradado", "TMDB 500 con UB presente: el propietario compone degradado y sirve UB (descartado); enfría; los demás UB; nada publicado", "providers=n,d,m,pp", {
-  veces: K, preparar: async () => { await expirarFresca(); await configurar("tmdb", { modo: "500" }); },
-  esperado: E2({ composiciones: 1, publicaciones: 0, enfriadas: 1, origenes: { "ultimo-bueno": K } }),
-});
+// --- Degradado SIN UB, y la ráfaga sin UB
 await escenario("E-degradado-sinUB", "TMDB 500 sin UB: el propietario sirve su degradado; los demás, el degradado COMPARTIDO; nada en fresca ni UB", "providers=n,d,m,at", {
   veces: K, preparar: async () => { await resetear("redis"); await configurar("tmdb", { modo: "500" }); },
   esperado: E2({ composiciones: 1, publicaciones: 0, enfriadas: 1, origenes: { "degradado-propio": 1, "degradado-compartido": K - 1 } }),
 });
-// --- E-rafaga: escalonada, 1/s × 40 s, TMDB 500, con y sin UB → ≤ ⌈40/15⌉+1 composiciones
-await escenario("E-rafaga-sinUB", "ráfaga escalonada 1/s × 40 s con TMDB 500, sin UB: ≤ 4 composiciones degradadas; las demás degradado compartido", "providers=n,d,m,mb", {
+await escenario("E-rafaga-sinUB", "ráfaga escalonada 1/s × 40 s con TMDB 500, sin UB: ≤ 4 composiciones degradadas; las demás degradado compartido; ninguna espera", "providers=n,d,m,mb", {
   veces: 40, cadaMs: 1000, timeoutMs: 120000, quiescenciaMs: 20000,
   preparar: async () => { await resetear("redis"); await configurar("tmdb", { modo: "500" }); },
   esperado: E2({ composicionesMax: 4, publicaciones: 0 }),
 });
-await escenario("E-rafaga-conUB", "ráfaga escalonada 1/s × 40 s con TMDB 500, CON UB: ≤ 4 composiciones; las demás UB", "providers=n,d,m,pp", {
+// --- Con UB: primero se fabrica el UB (una composición sana), después TMDB cae
+await escenario("E-ub-0", "base para los dos siguientes: una composición sana deja fresca + UB + gen", "providers=n,d,m,pp", {
+  veces: 1, en: [0], preparar: () => resetear("redis"), esperado: { composiciones: 1, ...E2({ publicaciones: 1 }) },
+});
+await escenario("E-degradado", "TMDB 500 con UB presente (fresca expirada): el propietario compone degradado y sirve UB (descartado); enfría; los demás UB; nada publicado", "providers=n,d,m,pp", {
+  veces: K, preparar: async () => { await expirarFresca(); await configurar("tmdb", { modo: "500" }); },
+  esperado: E2({ composiciones: 1, publicaciones: 0, enfriadas: 1, origenes: { "ultimo-bueno": K } }),
+});
+await escenario("E-rafaga-conUB", "ráfaga escalonada 1/s × 40 s con TMDB 500, CON UB: ≤ 4 composiciones; TODAS responden UB; nada publicado", "providers=n,d,m,pp", {
   veces: 40, cadaMs: 1000, timeoutMs: 120000, quiescenciaMs: 20000,
   preparar: async () => { await expirarFresca(); await configurar("tmdb", { modo: "500" }); },
-  esperado: E2({ composicionesMax: 4, publicaciones: 0 }),
+  esperado: E2({ composicionesMax: 4, publicaciones: 0, origenes: { "ultimo-bueno": 40 } }),
 });
 
 // --- E-perdida: respuesta perdida en SET NX → reconciliación; E-eval-falla
@@ -379,27 +387,30 @@ await escenario("E-eval-falla", "EVAL falla dos veces (PUBLICAR y su reintento):
 });
 
 // --- E-sinredis-vuelve: Redis caído cuando A pide; vuelve; B publica; A termina y NO escribe
-await escenario("E-sinredis-vuelve", "Redis caído cuando #0 pide (compone sin turno); vuelve a los 20 s; #1 toma el turno y publica; #0 termina después y NO escribe", "providers=n,d,m,ok", {
+await escenario("E-sinredis-vuelve", "Redis caído cuando #0 pide (compone sin turno); vuelve a los 35 s; #1 toma el turno y publica; #0 termina después y NO escribe", "providers=n,d,m,ok", {
   veces: 1, en: [0], timeoutMs: 600000, quiescenciaMs: 60000,
   preparar: async () => { await resetear("redis"); await configurar("redis", { modo: "caido" }); },
   durante: async (extras) => {
     // Redis vuelve a los 20 s: para entonces #0 ya agotó los reintentos del SDK
     // en `tomar` (~13 s) y está componiendo SIN turno; #1 pide un segundo
     // después, toma el turno y publica mientras #0 sigue componiendo.
+    // Medido: con Redis caído, `tomar` de #0 tarda ~26 s en agotar los
+    // reintentos del SDK (lectura, respaldo, SET NX, GET, segundo SET NX, ~4,3 s
+    // cada uno) antes de decidir `sin-redis`. Redis vuelve a los 35 s.
     const t = Date.now();
-    await dormir(20000);
+    await dormir(35000);
     await configurar("redis", { modo: "ok" });
     await dormir(1000);
     const r = await pedir("providers=n,d,m,ok", 1, 120000, { en: [1] });
     extras.push(...r.respuestas);
-    return [{ que: "redis vuelve", ms: 20000 }, { que: `#1 → ${r.respuestas[0].estado}`, ms: Date.now() - t }];
+    return [{ que: "redis vuelve", ms: 35000 }, { que: `#1 → ${r.respuestas[0].estado}`, ms: Date.now() - t }];
   },
   esperado: E2({ publicaciones: 1, origenes: { "sin-redis": 1, propia: 1 } }),
 });
 await escenario("E-sinredis-h", "…la siguiente es HIT (de lo que publicó #1)", "providers=n,d,m,ok", { veces: 1, en: [2 % K], esperado: { cacheDeTodas: "HIT", tmdb: 0 } });
 
 // --- E-cancelacion: composición que excede el presupuesto → cancelada; TMDB deja de recibir
-await escenario("E-cancelacion", "TMDB +1500 ms (composición > 50 s de presupuesto): la propietaria responde `cancelada` antes de 60 s, LIBERAR, sin ENFRIAR ni PUBLICAR; TMDB deja de recibir", "providers=n,d,m,mb", {
+await escenario("E-cancelacion", "TMDB +1500 ms (composición > 50 s de presupuesto): la propietaria responde `cancelada` antes de 60 s, LIBERAR, sin ENFRIAR ni PUBLICAR; TMDB deja de recibir", "providers=n,d,m,dg", {
   veces: 1, en: [0], timeoutMs: 120000, quiescenciaMs: 30000,
   preparar: async () => { await resetear("redis"); await configurar("tmdb", { latenciaMs: 1500 }); },
   tras: async () => {
@@ -412,20 +423,20 @@ await escenario("E-cancelacion", "TMDB +1500 ms (composición > 50 s de presupue
   },
   esperado: E2({ publicaciones: 0, enfriadas: 0, origenes: { "vacio-cancelada": 1 } }),
 });
-await escenario("E-cancelacion-redis", "CONTROL (promesa reducida): Redis caído en una ventana de 60 s: la solicitud NO termina (F5a); se registra y se reinicia", "providers=n,d,m,zz", {
+await escenario("E-cancelacion-redis", "CONTROL (promesa reducida): Redis caído en una ventana de 60 s: la solicitud NO termina (F5a); se registra y se reinicia", "providers=n,d,m,cv", {
   veces: 1, en: [0], timeoutMs: 60000, permiteIncompleto: true,
   preparar: async () => { await resetear("redis"); await configurar("redis", { modo: "caido" }); },
 });
 
 // --- E-version: un proceso con VERSION_HOME = 7 (rollout simulado)
-await reiniciar(K - 1, "E-version: el proceso con VERSION_HOME = 7", { YUMP_BANCO_VERSION_HOME: "7" });
-await escenario("E-version", "v6 en #0 y v7 en el último proceso, misma combinación: dos turnos, dos frescas, dos UB; ninguno lee al otro", "providers=n,d,m,vv", {
+if (corre("E-version")) await reiniciar(K - 1, "E-version: el proceso con VERSION_HOME = 7", { YUMP_BANCO_VERSION_HOME: "7" });
+await escenario("E-version", "v6 en #0 y v7 en el último proceso, misma combinación: dos turnos, dos frescas, dos UB; ninguno lee al otro", "providers=n,d,m,mv", {
   veces: 2, en: [0, K - 1], timeoutMs: 120000, preparar: () => resetear("redis"),
-  tras: async () => ({ claves: await redis({ accion: "claves", patron: "d,m,n,vv" }) }),
+  tras: async () => ({ claves: await redis({ accion: "claves", patron: "d,m,mv,n" }) }),
   esperado: E2({ composiciones: 2, publicaciones: 2 }),
 });
-await escenario("E-version-h", "…cada proceso es HIT de SU versión", "providers=n,d,m,vv", { veces: 2, en: [0, K - 1], esperado: { cacheDeTodas: "HIT", tmdb: 0 } });
-await reiniciar(K - 1, "E-version: vuelve a v6");
+await escenario("E-version-h", "…cada proceso es HIT de SU versión", "providers=n,d,m,mv", { veces: 2, en: [0, K - 1], esperado: { cacheDeTodas: "HIT", tmdb: 0 } });
+if (corre("E-version")) await reiniciar(K - 1, "E-version: vuelve a v6");
 
 // (E-claves —dos claves en dos procesos, pared < suma— no entra en este corredor: la
 // atribución por clave es de UNA clave por escenario. Lo cubre el test puro
