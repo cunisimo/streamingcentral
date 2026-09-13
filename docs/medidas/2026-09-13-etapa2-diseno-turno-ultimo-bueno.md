@@ -79,8 +79,10 @@ liberación segura y `EVAL` como condición obligatoria.
 
 Entra: turno distribuido por clave del Home; segunda copia "último bueno" (UB);
 conservar el single-flight local; ningún degradado guardado ni promovido; Redis
-caído no tumba la app; servir el Home anterior mientras uno reconstruye
-(aprobado). **No entra** (Etapa 3 y siguientes): reintentos de TMDB,
+caído **no produce un error lógico** (ninguna operación nueva lanza al handler,
+§5.4) **pero sí puede terminar en timeout** (F5a: la solicitud agota
+`maxDuration` y responde 504) — no se afirma que "no tumba la app"; servir el
+Home anterior mientras uno reconstruye (aprobado). **No entra** (Etapa 3 y siguientes): reintentos de TMDB,
 `Retry-After`, circuit breaker, CDN, límites por ruta. Tampoco `fresh=1`.
 
 ---
@@ -165,7 +167,12 @@ son el contrato del Home.
 
 ### 3.8 Deadline integral del request
 
-Todo cabe dentro de `maxDuration = 60`:
+**La promesa real, antes que la desigualdad:** el deadline se cumple **cuando
+Redis responde**. Con Redis caído o flapeando **sigue existiendo el
+comportamiento F5a** (Etapa 0): la solicitud puede agotar `maxDuration = 60` y
+terminar en 504, porque los reintentos del SDK no se cancelan por solicitud
+(tabla más abajo). La desigualdad que sigue acota espera + composición +
+publicación **dentro de esa promesa**, no la reemplaza:
 
 ```
 PRESUPUESTO_REQUEST_MS = 60_000 − MARGEN_MS                      (MARGEN_MS = 10_000: arranque frío, red, serialización)
@@ -295,6 +302,23 @@ medianoche la composición de hoy no espera a un turno de ayer ni sirve un
 degradado de ayer — para eso está el UB.
 
 ### 4.2 TTL del último bueno: 36 h, y lo que garantiza
+
+**Período de adopción tras el deploy.** Las frescas `…v6…` que ya existan en
+Redis siguen siendo HIT (bytes idénticos, §4.1) y **no crean un UB por sí
+solas**: el UB sólo lo escribe `PUBLICAR`, y `PUBLICAR` sólo corre al final de
+una composición con turno. Cada combinación obtiene su UB **en su primera
+reconstrucción posterior al deploy** (cuando venza su fresca, ≤ 6 h; o en su
+primer MISS si no estaba cacheada). Hasta entonces, para esa combinación, la
+Etapa 2 se comporta como la Etapa 1 más el turno: quien vence la fresca
+compone; los demás esperan (§3.6) en vez de recibir un UB. **Decisión: se
+acepta esa ventana.** No hay regresión respecto de hoy (hoy tampoco hay UB) y
+dura como mucho un TTL de la fresca. **No se agrega ninguna escritura a los
+HIT** para "sembrar" el UB: un HIT sigue costando 0 comandos de escritura
+(§7), y sembrar desde un HIT significaría copiar a UB un payload cuya
+generación no se conoce. Si el dueño quiere acortar la ventana para las
+combinaciones principales, el instrumento ya existe y es una decisión aparte:
+`scripts/precalentar-home.mjs --aplicar` después del deploy (compone con turno
+y por lo tanto publica UB); no forma parte de esta etapa.
 
 36 h = 6 h de la fresca + 24 h de un día entero + 6 h de margen. **Garantiza que
 haya UB durante 36 h desde la última publicación válida de esa combinación, y
@@ -464,6 +488,7 @@ Los seguidores del single-flight local reciben lo que el líder sirvió y anotan
 | Degradado sin UB, TMDB caído, solicitudes **escalonadas** | la primera compone y enfría; las siguientes encuentran `ocupado` y sirven el degradado compartido; al vencer el enfriamiento, **una** vuelve a componer | §3.10; medido en E-rafaga (con y sin UB) |
 | `sin-redis`: A compone sin turno, Redis vuelve, B toma el turno y publica, A termina después | A sirve lo suyo y **no escribe nada**; la fresca, el UB y la generación siguen siendo de B | §3.7; medido en E-sinredis-vuelve |
 | La señal de la solicitud aborta en plena composición | TMDB/Supabase rechazan, la composición termina degradada en ms, se marca `cancelada`, se libera (no enfría), se sirve UB o vacío | §3.8; medido en E-cancelacion |
+| El líder del single-flight local es cancelado con seguidores en vuelo | todos reciben el mismo resultado compartido; nadie recompone; el turno queda libre para la siguiente solicitud | §9.2; E-cancelacion con N simultáneas |
 | Rollout con dos versiones | cada versión coordina y publica en sus propias claves | §4.1; test de familias en §9 |
 | `PUBLICAR` con respuesta perdida | reconciliación por `gen` (`:<propietario>`) o reintento idempotente | §4.4 |
 | Escritura falla dentro de `PUBLICAR` (Redis responde error) | el script no corrió: nada escrito, turno sigue mío hasta vencer; la solicitud sirve lo compuesto; el siguiente vuelve a intentar | `guardarSinRomper` en el wrapper; Etapa PREVIA |
@@ -545,7 +570,7 @@ compartido entre procesos.
 | TMDB caído | degradado por solicitud | quien compuso: UB si hay, degradado si no; los demás durante el enfriamiento: UB, o el mismo degradado compartido (sin espera); una composición degradada por `ENFRIAMIENTO_MS` |
 | Redis caído y vuelve a mitad | lo compuesto se guardaba sin fencing | lo compuesto se sirve y no se guarda; el siguiente con turno publica |
 | Sin UB y el propietario tarda más que el tope | — | Home vacío marcado degradado, una vez; la siguiente carga encuentra fresca o UB |
-| Redis caído | rearmado por solicitud, lento | igual, marcado |
+| Redis caído | rearmado por solicitud, lento; puede agotar `maxDuration` (504, F5a) | igual, marcado, y sin guardar nada; **el 504 por timeout sigue siendo posible** |
 
 ---
 
@@ -670,6 +695,16 @@ Módulos puros nuevos, probados **antes** del cableado:
    - **cancelación**: al abortar la señal, `producir` termina (el doble de
      TMDB rechaza con `AbortError`), se llama a `liberar` y **no** a `enfriar`
      ni `publicar`, y se sirve UB o vacío `cancelada`;
+   - **cancelación del líder con seguidores del single-flight local**
+     (`crearVueloHome` con 1 líder + N seguidores en vuelo sobre la misma
+     clave, y la señal del líder aborta): **todos** reciben el mismo resultado
+     compartido (UB si hay, vacío `cancelada` si no) con `cache = compartida`;
+     `producir` corre **una sola vez** (cero composiciones duplicadas: ningún
+     seguidor arranca la suya al ver fallar la del líder); `liberar` se llama
+     una vez; y una solicitud **posterior** al vuelo encuentra el turno libre y
+     lo adquiere (`setNx` del doble devuelve `OK`). Control: con la señal de
+     un **seguidor** abortada, el líder sigue y publica — la señal de un
+     seguidor no cancela el vuelo compartido;
    - fresca → hit sin turno; ocupado + UB → UB sin componer; espera → sirve
      `esperada`; Redis caído → compone marcado; dos claves independientes;
      escritura fallida → sirve igual; single-flight local delante.
