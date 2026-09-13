@@ -58,3 +58,11 @@ test("🔴 lib/supabase.ts recibe la señal por un proveedor registrado desde el
   assert.match(supabase, /proveedorSenal\?\.\(/, "el fetch del cliente de servidor no pide la señal");
   assert.match(cache, /proveerSenalSupabase\(/, "lib/cache.ts no registra el proveedor de la señal");
 });
+
+test("🔴 el propietario del turno lleva el UUID COMPLETO de la instancia: la identidad es parte del fencing y no se recorta", () => {
+  // Auditoría de Codex sobre fb3a3f1: `randomUUID().slice(0, 8)` reducía la
+  // identidad que RENOVAR/PUBLICAR/ENFRIAR/LIBERAR comparan.
+  assert.match(home, /const INSTANCIA = randomUUID\(\);/, "la instancia no es el UUID completo");
+  assert.doesNotMatch(home, /randomUUID\(\)\s*\.(slice|substring|substr|slice)\(/, "volvió a recortarse el UUID");
+  assert.match(home, /propietario: `\$\{INSTANCIA\}:\$\{process\.pid\}:\$\{\+\+composicionesDeEsteProceso\}`/, "el propietario no es <instancia>:<pid>:<n>");
+});

@@ -15,21 +15,25 @@
 // inventario de la Etapa 1 del informe: los contextos de degradación son
 // AsyncLocalStorage por request, y un single-flight profundo haría que el
 // segundo guardara como sano un payload construido con fallos). En el Home no
-// pasa por construcción: se comparte el resultado ENTERO de `cachedLocIf`, con
-// su verdicto de degradación adentro; el que llega segundo no produce, no
-// evalúa ningún predicado y no escribe.
+// pasa por construcción: se comparte el resultado ENTERO de la resolución del
+// líder, con su verdicto de degradación adentro; el que llega segundo no
+// produce, no evalúa ningún predicado y no escribe. (En la Etapa 1 esa
+// resolución era `cachedLocIf`; desde la Etapa 2 es `servirConTurno`, y acá
+// los tests la simulan con `resolverConCache`, que conserva la misma forma
+// leer → producir → decidir.)
 //
 // Dos fases, y la primera es para no crear esperas innecesarias con caché
 // caliente: (1) una lectura previa del caché — si hay HIT, se devuelve y no se
 // comparte nada; (2) si no, se entra al vuelo por clave: el primero resuelve
-// (`cachedLocIf`: leer de nuevo → producir → guardar UNA vez), los demás esperan
-// esa misma promesa. Métricas: el líder anota `composiciones += 1` y `cache =
-// "miss"` (adentro del productor, en su propio scope); cada seguidor anota
+// (leer de nuevo → producir → publicar UNA vez), los demás esperan esa misma
+// promesa. Métricas: el líder anota `composiciones += 1` y `cache = "miss"`
+// (adentro del productor, en su propio scope); cada seguidor anota
 // `esperasCompartidas += 1` y `cache = "compartida"` en el SUYO. Nada se deduce
 // de HIT/MISS.
 //
-// ⚠️ Es por PROCESO. Entre instancias de Vercel no coordina nada: eso es la
-// Etapa 2 (turno distribuido). Escrito ANTES del módulo: fallaba al importar.
+// Por PROCESO: entre instancias de Vercel coordina el turno de la Etapa 2
+// (lib/home-servir.ts), no este vuelo. Escrito ANTES del módulo: fallaba al
+// importar.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -198,13 +202,13 @@ const sinComentarios = (rel: string) => readFileSync(rel, "utf8")
 const home = sinComentarios("lib/home.ts");
 
 test("🔴 homePayload sirve el Home por el vuelo compartido, con la lectura previa y la resolución real", () => {
-  assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada");
+  assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada, ClavesHome>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada y las cinco claves como contexto");
   assert.match(home, /leer:\s*\(clave\) => backendCache\.leer<HomePayload>\(clave\)/, "la lectura previa no usa el backend real");
   // Etapa 2: el líder resuelve por la secuencia con turno (lib/home-servir.ts),
   // que decide qué se publica; `cachedLocIf` escribiría la fresca sin fencing.
-  assert.match(home, /resolver:\s*\(clave, producir\) => servirConTurno<HomePayload>\(/, "el vuelo no resuelve por la secuencia con turno");
+  assert.match(home, /resolver:\s*\(_clave, producir, claves\) => servirConTurno<HomePayload>\(/, "el vuelo no resuelve por la secuencia con turno, con las cinco claves del contexto");
   assert.doesNotMatch(home, /cachedLocIf\s*\(/, "volvió cachedLocIf en el Home");
-  assert.match(home, /servirHome\(key, producirHome\)/, "homePayload no entra por el vuelo");
+  assert.match(home, /servirHome\(key, producirHome, claves\)/, "homePayload no entra por el vuelo con las cinco claves");
 });
 
 test("🔴 el single-flight NO se agrega a cached/cachedIf/cachedLocIf ni a otros llamadores", () => {
@@ -217,4 +221,56 @@ test("🔴 el single-flight NO se agrega a cached/cachedIf/cachedLocIf ni a otro
   }
   assert.doesNotMatch(sinComentarios("lib/reco.ts"), /crearVueloHome/);
   assert.doesNotMatch(sinComentarios("lib/idioma.ts"), /crearVueloHome/);
+});
+
+// ===========================================================================
+// Auditoría de Codex sobre fb3a3f1, punto 3: el contexto del vuelo viaja con la
+// solicitud, no en un mapa global que nadie borra
+// ===========================================================================
+// lib/home.ts tenía `clavesEnVuelo`, un Map de módulo clave fresca → cinco
+// claves que crecía con cada combinación pedida y nunca se vaciaba. Ahora el
+// vuelo acepta un CONTEXTO por solicitud y se lo pasa al resolver; la clave de
+// coordinación sigue siendo únicamente la fresca. El líder aporta el contexto
+// que se usa; los seguidores reciben el resultado del líder.
+test("🔴 el vuelo pasa el contexto del LÍDER al resolver; la clave de coordinación sigue siendo la fresca", async () => {
+  const be = backend();
+  const vistos: string[] = [];
+  const servir = crearVueloHome<Payload, string, { claves: string[] }>({
+    leer: (clave) => be.b.leer<Payload>(clave),
+    resolver: async (clave, prod, contexto) => { vistos.push(`${clave}|${contexto.claves.join(",")}`); await dormir(20); return prod(); },
+  });
+  const producir = async (): Promise<Payload> => ({ hero: [], degradado: false, n: 1 });
+  const rs = await Promise.all([
+    servir("home:x", producir, { claves: ["home:x", "ub:x"] }),
+    servir("home:x", producir, { claves: ["home:x", "ub:x-seguidor"] }),
+    servir("home:y", producir, { claves: ["home:y", "ub:y"] }),
+  ]);
+  assert.equal(rs.length, 3);
+  assert.deepEqual(vistos.sort(), ["home:x|home:x,ub:x", "home:y|home:y,ub:y"], "un resolver por clave, con el contexto del líder");
+});
+
+test("🔴 no queda estado acumulado tras finalizar: cero vuelos en curso con la misma clave y con claves distintas", async () => {
+  const be = backend();
+  const servir = crearVueloHome<Payload, string, { n: number }>({
+    leer: (clave) => be.b.leer<Payload>(clave),
+    resolver: async (_clave, prod) => { await dormir(10); return prod(); },
+  });
+  const producir = async (): Promise<Payload> => ({ hero: [], degradado: false, n: 1 });
+  const enCurso = Promise.all(Array.from({ length: 20 }, (_, i) => servir(`home:${i % 4}`, producir, { n: i })));
+  await dormir(1);   // la lectura previa es asíncrona: recién después se entra al vuelo
+  assert.ok(servir.enVuelo() > 0 && servir.enVuelo() <= 4, `en vuelo: ${servir.enVuelo()}`);
+  await enCurso;
+  assert.equal(servir.enVuelo(), 0, "quedó estado acumulado después de terminar");
+  // Y una solicitud posterior con la misma clave NO reusa nada: vuelve a resolver.
+  let resueltas = 0;
+  const servir2 = crearVueloHome<Payload, string, null>({ leer: () => Promise.resolve(null), resolver: async (_c, prod) => { resueltas++; return prod(); } });
+  await servir2("home:z", producir, null);
+  await servir2("home:z", producir, null);
+  assert.equal(resueltas, 2);
+  assert.equal(servir2.enVuelo(), 0);
+});
+
+test("🔴 lib/home.ts ya no retiene un mapa global de claves en vuelo", () => {
+  assert.doesNotMatch(home, /clavesEnVuelo/, "volvió el Map global que nunca se vacía");
+  assert.match(home, /servirHome\(key, producirHome, claves\)/, "las cinco claves tienen que viajar como contexto de la solicitud");
 });

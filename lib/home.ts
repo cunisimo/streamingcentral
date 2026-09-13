@@ -709,17 +709,20 @@ function clavesDelHome(p: string, t: string): ClavesHome & { fresca: ClaveLocali
 // se publica (enfría); "sin plataformas" no se publica y no cuesta nada.
 //
 // El propietario del turno identifica esta instancia y esta composición
-// (§3.1): Vercel no expone un id de instancia estable al runtime.
-const INSTANCIA = randomUUID().slice(0, 8);
+// (§3.1): Vercel no expone un id de instancia estable al runtime. El UUID va
+// COMPLETO: la identidad del propietario es parte del fencing (RENOVAR,
+// PUBLICAR, ENFRIAR y LIBERAR comparan contra ella) y no se recorta
+// (auditoría de Codex sobre fb3a3f1; lib/home-turno-cableado.test.ts lo fija).
+const INSTANCIA = randomUUID();
 let composicionesDeEsteProceso = 0;
 const turnoHome = crearTurno(opsTurnoHome);
-// El vuelo sólo conoce la clave fresca; las otras cuatro se dejan acá antes de
-// entrar y el resolver las recoge. Misma clave = mismas cinco claves.
-const clavesEnVuelo = new Map<ClaveLocalizada, ClavesHome>();
-const servirHome = crearVueloHome<HomePayload, ClaveLocalizada>({
+// El vuelo coordina SOLO por la clave fresca; las otras cuatro claves viajan
+// como contexto de cada solicitud y el resolver usa las del líder (misma
+// clave = mismas cinco claves). Sin mapas de módulo: nada que retener.
+const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesHome>({
   leer: (clave) => backendCache.leer<HomePayload>(clave),
-  resolver: (clave, producir) => servirConTurno<HomePayload>({
-    claves: clavesEnVuelo.get(clave)!,
+  resolver: (_clave, producir, claves) => servirConTurno<HomePayload>({
+    claves,
     propietario: `${INSTANCIA}:${process.pid}:${++composicionesDeEsteProceso}`,
     dia: hoyAR(),
     ttl: { fresca: TTL.home, ub: TTL.homeUltimoBueno },
@@ -744,7 +747,9 @@ export async function homePayload(opts: {
   const providers = canonizarProviders(opts.providers);
   const types = canonizarTipos(opts.types);
   const key = homeKey(providers, types);
-  clavesEnVuelo.set(key, clavesDelHome([...providers].sort().join(","), claveDeTipos(types)));
+  // Las cinco claves de esta combinación viajan con la solicitud (contexto del
+  // vuelo); `key` es la fresca, la única clave de coordinación.
+  const claves = clavesDelHome([...providers].sort().join(","), claveDeTipos(types));
   // Una línea al ENTRAR y otra al salir: la diferencia entre las dos es la
   // cantidad de solicitudes que siguen corriendo. Abortar el `fetch` del lado
   // del cliente no cancela este handler, y sin esta línea eso es invisible.
@@ -787,7 +792,7 @@ export async function homePayload(opts: {
   // no corta son los reintentos del SDK de Redis (promesa reducida).
   const senal = AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS);
   const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
-    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(key, producirHome)))));
+    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(key, producirHome, claves)))));
   if (metricas.home.cache === null) metricas.home.cache = "hit";
   metricas.home.degradado = !!payload.degradado;
   metricas.home.fuentesCaidas = payload.fallos;

@@ -131,7 +131,8 @@
   handler ya aplicaba a `limit`; ninguna vista lo manda hoy). El vuelo
   compartido vive sólo en `homePayload` (`lib/home-vuelo.ts`): lectura previa,
   y si no está, `crearSingleFlight` por clave con `cachedLocIf` entero como
-  resolución; el líder cuenta la composición, los seguidores `cache =
+  resolución (así está en `main`; en la rama de la Etapa 2 la resolución del
+  líder pasa a `servirConTurno`); el líder cuenta la composición, los seguidores `cache =
   "compartida"` y `esperasCompartidas`. **Banco, antes → después:** 100
   solicitudes simultáneas con caché fría pasan de **100 composiciones, 91.106
   TMDB, 97.548 Redis y 162 s** a **1 composición + 99 esperas, 926 TMDB, 1.093
