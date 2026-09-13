@@ -36,12 +36,17 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { backendCache, cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withMetricas } from "./cache";
+import { backendCache, dailySeed, leerVarias, opsTurnoHome, pickDaily, TTL, withMetricas } from "./cache";
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
 import { withFallosDisponibilidad } from "./fallos-disponibilidad";
-import { claveHome } from "./claves";
+import { claveHome, claveHomeDegradado, claveHomeGeneracion, claveHomeUltimoBueno, claveTurnoHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
+import { hoyAR } from "./fecha";
+import { CONSTANTES, servirConTurno, type ClavesHome } from "./home-servir";
+import { conSenal, senalActual } from "./senal-solicitud";
+import { crearTurno } from "./turno";
+import { randomUUID } from "node:crypto";
 import { HUELLA_IDIOMA, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
 import { anotar, lineaHome } from "./metricas";
 import { conRegistroDeEjes, type Eje } from "./pools";
@@ -90,6 +95,12 @@ export interface HomePayload {
   // sin forma de reintentar.
   fallos: number;
   degradado: boolean;
+  // Sólo en los dos finales SIN contenido de la Etapa 2 (lib/home-servir.ts):
+  // la espera sin último bueno se agotó, o la solicitud se canceló por
+  // presupuesto. Un payload con `motivo` es vacío, degradado y NUNCA se
+  // publica ni se cachea; por eso no cambia el contrato de lo cacheado ni la
+  // versión de la clave.
+  motivo?: "espera-agotada" | "cancelada";
 }
 
 const keyOf = (t: { id: number; type: MediaType }) => `${t.type}:${t.id}`;
@@ -665,26 +676,61 @@ function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): C
   // v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
   //      tarjeta más, pero es contenido del payload igual: sin subir la versión
   //      el botón no aparecía hasta 6 h después. Mismo caso que v3.
-  return claveHome(dailySeed(), p, t, HUELLA_IDIOMA);
+  return clavesDelHome(p, t).fresca;
+}
+
+// Las CINCO claves de una combinación (Etapa 2, #17), derivadas de UNA versión
+// (`VERSION_HOME`, lib/claves.ts): la fresca de siempre, el último bueno y su
+// generación (sin semilla: sobreviven a la medianoche), el degradado compartido
+// y el turno (con semilla: son de la composición de UNA fresca).
+function clavesDelHome(p: string, t: string): ClavesHome & { fresca: ClaveLocalizada } {
+  const semilla = dailySeed();
+  return {
+    fresca: claveHome(semilla, p, t, HUELLA_IDIOMA),
+    ub: claveHomeUltimoBueno(p, t, HUELLA_IDIOMA),
+    gen: claveHomeGeneracion(p, t, HUELLA_IDIOMA),
+    degradado: claveHomeDegradado(semilla, p, t, HUELLA_IDIOMA),
+    turno: claveTurnoHome(semilla, p, t, HUELLA_IDIOMA),
+  };
 }
 
 // El vuelo compartido del Home (Etapa 1, #17): N solicitudes simultáneas a la
 // misma clave con caché fría = UNA composición, por proceso. Es de módulo
-// porque el mapa de promesas en vuelo tiene que ser uno por proceso. La
-// resolución es `cachedLocIf` entera —leer, producir, decidir, guardar— y por
-// eso el seguidor recibe el verdicto de degradación adentro del payload y
-// nunca escribe. Ver lib/home-vuelo.ts; NO se aplica a cached/cachedIf.
+// porque el mapa de promesas en vuelo tiene que ser uno por proceso. Ver
+// lib/home-vuelo.ts; NO se aplica a cached/cachedIf.
+//
+// Etapa 2 (#17): lo que resuelve el LÍDER ya no es `cachedLocIf` (que
+// escribiría la fresca sin fencing) sino la secuencia con TURNO distribuido y
+// ÚLTIMO BUENO de lib/home-servir.ts: una composición por clave ENTRE
+// instancias, el Home anterior servido en tiempo de HIT mientras uno
+// reconstruye, y ninguna escritura del Home fuera de PUBLICAR/ENFRIAR. El
+// seguidor local sigue recibiendo el resultado entero del líder, con su
+// verdicto adentro, y nunca escribe. Un payload degradado se DEVUELVE pero no
+// se publica (enfría); "sin plataformas" no se publica y no cuesta nada.
+//
+// El propietario del turno identifica esta instancia y esta composición
+// (§3.1): Vercel no expone un id de instancia estable al runtime.
+const INSTANCIA = randomUUID().slice(0, 8);
+let composicionesDeEsteProceso = 0;
+const turnoHome = crearTurno(opsTurnoHome);
+// El vuelo sólo conoce la clave fresca; las otras cuatro se dejan acá antes de
+// entrar y el resolver las recoge. Misma clave = mismas cinco claves.
+const clavesEnVuelo = new Map<ClaveLocalizada, ClavesHome>();
 const servirHome = crearVueloHome<HomePayload, ClaveLocalizada>({
   leer: (clave) => backendCache.leer<HomePayload>(clave),
-  resolver: (clave, producir) => cachedLocIf(
-    clave,
-    TTL.home,
-    producir,
-    // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
-    // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
-    // caso "sin plataformas", que no cuesta nada recalcular.
-    (v) => !v.degradado && !v.sinPlataformas,
-  ),
+  resolver: (clave, producir) => servirConTurno<HomePayload>({
+    claves: clavesEnVuelo.get(clave)!,
+    propietario: `${INSTANCIA}:${process.pid}:${++composicionesDeEsteProceso}`,
+    dia: hoyAR(),
+    ttl: { fresca: TTL.home, ub: TTL.homeUltimoBueno },
+    leer: (claves) => leerVarias<HomePayload>(claves),
+    turno: turnoHome,
+    producir: async () => { const valor = await producir(); return { valor, fallo: !!valor.degradado }; },
+    publicable: (v) => !v.sinPlataformas,
+    vacio: (motivo) => ({ hero: [], rails: [], fallos: 0, degradado: true, motivo }),
+    // La señal del líder: el resolver corre en su contexto async.
+    senal: senalActual() ?? undefined,
+  }),
 });
 
 export async function homePayload(opts: {
@@ -698,6 +744,7 @@ export async function homePayload(opts: {
   const providers = canonizarProviders(opts.providers);
   const types = canonizarTipos(opts.types);
   const key = homeKey(providers, types);
+  clavesEnVuelo.set(key, clavesDelHome([...providers].sort().join(","), claveDeTipos(types)));
   // Una línea al ENTRAR y otra al salir: la diferencia entre las dos es la
   // cantidad de solicitudes que siguen corriendo. Abortar el `fetch` del lado
   // del cliente no cancela este handler, y sin esta línea eso es invisible.
@@ -735,8 +782,12 @@ export async function homePayload(opts: {
     console.error(`[home] payload degradado: ${fallos} fallo(s) de disponibilidad`);
     return { ...res, fallos: res.fallos + fallos, degradado: true };
   };
+  // El deadline de la solicitud (Etapa 2, §3.8): una señal real que corta la
+  // espera, la renovación del turno y las llamadas a TMDB y Supabase. Lo que
+  // no corta son los reintentos del SDK de Redis (promesa reducida).
+  const senal = AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS);
   const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
-    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => servirHome(key, producirHome))));
+    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(key, producirHome)))));
   if (metricas.home.cache === null) metricas.home.cache = "hit";
   metricas.home.degradado = !!payload.degradado;
   metricas.home.fuentesCaidas = payload.fallos;
@@ -744,7 +795,7 @@ export async function homePayload(opts: {
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
   // COMPARTIDA = esperó la composición de otra solicitud (single-flight).
-  console.log(`[home] ${metricas.home.cache === "miss" ? "MISS" : metricas.home.cache === "compartida" ? "COMPARTIDA" : "HIT "} ${key}`);
+  console.log(`[home] ${metricas.home.cache === "hit" ? "HIT " : metricas.home.cache.toUpperCase()} ${key}`);
   console.log(
     `[idioma] fallback: ${mIdioma.llamadas} llamadas | ${mIdioma.lotesConRotos} lotes con rotos | ` +
     `${mIdioma.titulosReparados} títulos reparados | ${mIdioma.fallos} fallos`,

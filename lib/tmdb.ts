@@ -8,6 +8,7 @@ import "server-only";
 import { IDIOMA_BASE } from "./idioma";
 import type { MediaType } from "./types";
 import { anotar, clasificarEstadoHttp } from "./metricas";
+import { combinarSenales, senalActual } from "./senal-solicitud";
 import { baseTmdb } from "./tmdb-base";
 
 // La base es la oficial salvo que el BANCO aislado la apunte a un doble, y
@@ -73,8 +74,12 @@ async function tmdb<T>(path: string, params: Record<string, string> = {}): Promi
   try {
     let res: Response;
     try {
+      // El timeout propio de 8 s, combinado con la señal de la solicitud (Etapa
+      // 2, §3.8): al agotarse el presupuesto del request, cada `fetch` en vuelo
+      // rechaza y la composición termina degradada en milisegundos. Sin señal
+      // en el scope es exactamente el timeout de siempre.
       res = await fetch(`${BASE}${path}?${q}`, {
-        headers: HEADERS, cache: "no-store", signal: AbortSignal.timeout(8000),
+        headers: HEADERS, cache: "no-store", signal: combinarSenales(senalActual(), AbortSignal.timeout(8000)),
       });
     } catch (e) {
       anotar((m) => { m.tmdb.errores.red += 1; });

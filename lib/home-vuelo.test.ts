@@ -200,7 +200,10 @@ const home = sinComentarios("lib/home.ts");
 test("🔴 homePayload sirve el Home por el vuelo compartido, con la lectura previa y la resolución real", () => {
   assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada");
   assert.match(home, /leer:\s*\(clave\) => backendCache\.leer<HomePayload>\(clave\)/, "la lectura previa no usa el backend real");
-  assert.match(home, /resolver:\s*\(clave, producir\) => cachedLocIf\(/, "el vuelo no resuelve por cachedLocIf: se perdería la decisión de guardar");
+  // Etapa 2: el líder resuelve por la secuencia con turno (lib/home-servir.ts),
+  // que decide qué se publica; `cachedLocIf` escribiría la fresca sin fencing.
+  assert.match(home, /resolver:\s*\(clave, producir\) => servirConTurno<HomePayload>\(/, "el vuelo no resuelve por la secuencia con turno");
+  assert.doesNotMatch(home, /cachedLocIf\s*\(/, "volvió cachedLocIf en el Home");
   assert.match(home, /servirHome\(key, producirHome\)/, "homePayload no entra por el vuelo");
 });
 

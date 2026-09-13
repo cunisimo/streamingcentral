@@ -11,7 +11,12 @@ import {
   anotar, anotarEn, backoffRedisInstrumentado, capturar, withMetricas,
   type MetricasRequest,
 } from "./metricas";
-import { observarSupabase } from "./supabase";
+import { observarSupabase, proveerSenalSupabase } from "./supabase";
+import { LUA } from "./turno-lua";
+import type { OpsTurno } from "./turno";
+import { crearOpsEnMemoria, type Entrada } from "./turno-memoria";
+import { combinarSenales, senalActual } from "./senal-solicitud";
+import { createHash } from "node:crypto";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
 // dependen de cómo se haya conectado la base:
@@ -50,7 +55,13 @@ observarSupabase((r) => {
   });
 });
 
-const mem = new Map<string, { v: unknown; exp: number }>();
+const mem = new Map<string, Entrada>();
+
+// La señal de la solicitud (Etapa 2, §3.8) llega al `fetch` del cliente de
+// servidor de Supabase por el mismo camino que el observador: lib/supabase.ts
+// no puede importar node:async_hooks, así que pide la señal a un proveedor y
+// este módulo —server-only— se la da combinada con la propia que traiga.
+proveerSenalSupabase((propia) => combinarSenales(senalActual(), propia));
 
 // --- Diagnóstico (lo consume GET /api/health) --------------------------------
 // Este cache falla EN SILENCIO: si las credenciales no llegan, todo sigue
@@ -133,6 +144,10 @@ export const TTL = {
   // sesión larga no lo rearme, y de paso acota cuánto vive una entrada que quedó
   // huérfana porque el usuario cambió sus señales.
   reco: 60 * 60 * 6,
+  // Último Home bueno (Etapa 2, #17, informe §4.2): 6 h de la fresca + 24 h de
+  // un día entero + 6 h de margen. Garantiza que haya UB durante 36 h desde la
+  // última publicación válida de esa combinación, y nada más.
+  homeUltimoBueno: 60 * 60 * 36,
 } as const;
 
 // --- Métricas por operación --------------------------------------------------
@@ -393,6 +408,75 @@ export async function cachedIf<T>(
       return { valor, fallo: !vale(valor) };
     },
   });
+}
+
+// --- El turno del Home (Etapa 2, #17) ----------------------------------------
+// Las SEIS primitivas de lib/turno.ts sobre el cliente real: `SET NX PX`, `GET`
+// y los cuatro scripts Lua de lib/turno-lua.ts (los verificados contra la base,
+// §14). Cada script va por EVALSHA; ante NOSCRIPT se manda por EVAL (que además
+// lo deja cacheado en el servidor). Se cuentan las tres unidades igual que las
+// lecturas: la llamada lógica y su primer intento antes de salir, el comando
+// sólo si Redis lo confirmó; los reintentos del SDK, desde su `backoff`. Un
+// EVALSHA rechazado con NOSCRIPT es un intento HTTP más de la misma llamada
+// lógica y NO un comando confirmado.
+//
+// Sin credenciales, las mismas primitivas se emulan sobre `mem` con la misma
+// semántica (lib/turno-memoria.ts): sólo prueba la secuencia, no coordina
+// entre procesos.
+//
+// 🔴 Acá NO hay `DEL` ni `SET … XX`: liberar y publicar son compare-and-delete
+// dentro de los scripts, y este módulo no conoce otra forma de soltar un turno.
+const sha1 = (s: string) => createHash("sha1").update(s).digest("hex");
+const SHA = { RENOVAR: sha1(LUA.RENOVAR), LIBERAR: sha1(LUA.LIBERAR), ENFRIAR: sha1(LUA.ENFRIAR), PUBLICAR: sha1(LUA.PUBLICAR) };
+
+async function comandoTurno<T>(fn: () => Promise<T>): Promise<T> {
+  const t0 = Date.now();
+  anotar((m) => { m.redis.modo = "redis"; m.redis.llamadasLogicas += 1; m.redis.intentosHttp += 1; });
+  try {
+    const v = await fn();
+    anotar((m) => { m.redis.comandos += 1; });
+    return v;
+  } finally {
+    anotar((m) => { m.redis.ms += Date.now() - t0; });
+  }
+}
+async function script(r: Redis, nombre: keyof typeof LUA, claves: string[], args: string[]): Promise<number> {
+  try {
+    return Number(await comandoTurno(() => r.evalsha<string[], number>(SHA[nombre], claves, args)));
+  } catch (e) {
+    if (!/NOSCRIPT/i.test(String(e))) throw e;
+    // El mismo pedido lógico, un intento HTTP más; el EVAL confirma el comando.
+    anotar((m) => { m.redis.intentosHttp += 1; });
+    return Number(await r.eval<string[], number>(LUA[nombre], claves, args).then((v) => { anotar((m) => { m.redis.comandos += 1; }); return v; }));
+  }
+}
+function opsTurnoRedis(r: Redis): OpsTurno {
+  return {
+    setNx: (clave, valor, px) => comandoTurno(async () => ((await r.set(clave, valor, { nx: true, px })) === "OK" ? "OK" : null)),
+    get: (clave) => comandoTurno(async () => { const v = await r.get<string>(clave); return v === null || v === undefined ? null : String(v); }),
+    evalRenovar: (clave, propietario, px) => script(r, "RENOVAR", [clave], [propietario, String(px)]),
+    evalPublicar: (claves, args) => script(r, "PUBLICAR", claves, args),
+    evalEnfriar: (claves, args) => script(r, "ENFRIAR", claves, args),
+    evalLiberar: (clave, propietario) => script(r, "LIBERAR", [clave], [propietario]),
+  };
+}
+function opsTurnoMemoria(): OpsTurno {
+  const base = crearOpsEnMemoria(mem);
+  const contar = <A extends unknown[], R>(fn: (...a: A) => Promise<R>) => async (...a: A) => {
+    anotar((m) => { m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; });
+    return fn(...a);
+  };
+  return {
+    setNx: contar(base.setNx), get: contar(base.get), evalRenovar: contar(base.evalRenovar),
+    evalPublicar: contar(base.evalPublicar), evalEnfriar: contar(base.evalEnfriar), evalLiberar: contar(base.evalLiberar),
+  };
+}
+/** Las primitivas del turno del Home, reales o emuladas. Las consume lib/home.ts por `crearTurno`. */
+export const opsTurnoHome: OpsTurno = redis ? opsTurnoRedis(redis) : opsTurnoMemoria();
+
+/** Varias claves en UN comando: N `batchGet` en el mismo tick son un MGET. */
+export function leerVarias<T>(claves: string[]): Promise<(T | null)[]> {
+  return Promise.all(claves.map((k) => batchGet<T>(k)));
 }
 
 // --- Motor "del día": determinístico por fecha ---

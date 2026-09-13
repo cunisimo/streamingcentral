@@ -64,8 +64,11 @@ const SUPERFICIES: Superficie[] = [
     ancla: 'claveUltimosSeries(hoy, orden, "red"', ttl: "TTL.providers (8 h)", enriquece: true,
   },
   {
+    // Etapa 2 (#17): el Home ya no entra por `cachedLocIf`; lo guarda PUBLICAR
+    // dentro de la secuencia con turno. Sigue cacheando títulos enriquecidos y
+    // sigue abriendo el contexto de fallos en su productor.
     nombre: "payload del Home", archivo: "lib/home.ts",
-    ancla: "cachedLocIf(", ttl: "TTL.home (6 h)", enriquece: true,
+    ancla: "servirConTurno<HomePayload>(", ttl: "TTL.home (6 h) / TTL.homeUltimoBueno (36 h)", enriquece: true,
   },
   {
     nombre: "Top por popularidad", archivo: "lib/top.ts",
@@ -126,7 +129,9 @@ function llamadasCache(): { archivo: string; total: number }[] {
       if (e.isDirectory()) { rec(p); continue; }
       if (!/\.ts$/.test(e.name) || /\.test\.ts$/.test(e.name)) continue;
       const rel = path.relative(raiz, p).split(path.sep).join("/");
-      const n = (codigo(rel).match(/\bcachedLoc(?:If)?\s*\(/g) ?? []).length;
+      // `servirConTurno` es la caché del Home desde la Etapa 2: cuenta como superficie.
+      // (`(?<!function )` deja afuera la declaración en lib/home-servir.ts.)
+      const n = (codigo(rel).match(/(?<!function )\b(?:cachedLoc(?:If)?|servirConTurno(?:<[^>]*>)?)\s*\(/g) ?? []).length;
       if (n) out.push({ archivo: rel, total: n });
     }
   };

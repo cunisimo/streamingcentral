@@ -278,8 +278,9 @@ test("la fuente del riel usa el tipo elegido, no `movie` fijo", () => {
 
 test("la versión de la clave del Home subió a v6", () => {
   // Un payload v5 cacheado no trae el selector: sin subir la versión, el cambio
-  // no se vería hasta que expirara el TTL de 6 h.
-  assert.match(codigo("lib/claves.ts"), /home:\$\{pre\(huella\)\}v6:/);
+  // no se vería hasta que expirara el TTL de 6 h. Desde la Etapa 2 la versión
+  // es UNA constante para las cinco familias del Home (lib/claves-home.test.ts).
+  assert.match(codigo("lib/claves.ts"), /export const VERSION_HOME: number =[\s\S]*?: 6;/);
 });
 
 test("los skeletons reservan el selector también en el primer riel", () => {

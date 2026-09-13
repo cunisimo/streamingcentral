@@ -16,7 +16,7 @@
 // Escrito ANTES del módulo: fallaba al importar.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { servirConTurno, CONSTANTES, type DepsServir } from "./home-servir.ts";
+import { servirConTurno, CONSTANTES, type Constantes, type DepsServir } from "./home-servir.ts";
 import { crearTurno, type OpsTurno } from "./turno.ts";
 import { crearOpsEnMemoria, type Entrada } from "./turno-memoria.ts";
 import { crearVueloHome } from "./home-vuelo.ts";
@@ -56,7 +56,7 @@ function relojVirtual(inicio = 1_000_000) {
 }
 
 // ----------------------------------------------------------------- el mundo: un backend compartido y N solicitudes
-function mundo(opts: { constantes?: Partial<typeof CONSTANTES>; inicio?: number } = {}) {
+function mundo(opts: { constantes?: Partial<Constantes>; inicio?: number } = {}) {
   const store = new Map<string, Entrada>();
   const reloj = relojVirtual(opts.inicio);
   const opsBase = crearOpsEnMemoria(store, reloj.ahora);
@@ -64,7 +64,7 @@ function mundo(opts: { constantes?: Partial<typeof CONSTANTES>; inicio?: number 
   const log: string[] = [];
   const vivo = (k: string) => { const e = store.get(k); return e && (!e.exp || e.exp > reloj.ahora()) ? (e.v as Payload) : null; };
   const leer = async (claves: string[]) => { lecturas.push([...claves]); return claves.map(vivo); };
-  const constantes = { ...CONSTANTES, ...opts.constantes };
+  const constantes: Constantes = { ...CONSTANTES, ...opts.constantes };
 
   function deps(nombre: string, extra: Partial<DepsServir<Payload>> & { ops?: OpsTurno; payload?: Payload; fallo?: boolean; tarda?: number } = {}): DepsServir<Payload> {
     const ops = extra.ops ?? opsBase;
