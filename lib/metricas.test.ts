@@ -284,3 +284,45 @@ test("🔴 el Home cuenta la composición EXPLÍCITAMENTE y registra la línea n
   assert.match(home, /lineaHome\(/, "la línea [home] no sale del formateador probado");
   assert.doesNotMatch(home, /withCacheMetrics/, "sigue el scope viejo, sólo de Redis");
 });
+
+// ============================================================================
+// Etapa 2 (#17): el turno distribuido y el último bueno, en el contador y en la línea
+// ============================================================================
+test("🔴 Etapa 2: el contador del Home tiene turno, origen, publicación y los indicadores de la secuencia", () => {
+  const m = nuevasMetricas();
+  assert.equal(m.home.turno, null);
+  assert.equal(m.home.origen, null);
+  assert.equal(m.home.publicacion, null);
+  assert.equal(m.home.renovaciones, 0);
+  assert.equal(m.home.turnoPerdido, false);
+  assert.equal(m.home.esperaMs, 0);
+  assert.equal(m.home.degradadoDescartado, false);
+  assert.equal(m.home.enfriado, false);
+  assert.equal(m.home.cancelada, false);
+  assert.equal(m.home.propietario, null);
+});
+
+test("🔴 Etapa 2: la línea [home] imprime el turno, el origen y la publicación con nombre; y un HIT sigue diciendo cache HIT", () => {
+  const m = nuevasMetricas();
+  m.home.cache = "miss"; m.home.composiciones = 1;
+  m.home.turno = "adquirido"; m.home.origen = "propia"; m.home.publicacion = "publicado";
+  m.home.renovaciones = 2; m.home.propietario = "i1:7:3";
+  const linea = lineaHome(m, 5200, "home:v6:1:n:");
+  assert.match(linea, /\| turno adquirido \| origen propia \| publicacion publicado \| renovaciones 2 \| propietario i1:7:3 \|/);
+  // Los indicadores booleanos sólo aparecen cuando valen, para que la línea del
+  // caso normal no crezca.
+  assert.doesNotMatch(linea, /perdido|enfriado|cancelada|descartado/);
+  m.home.turnoPerdido = true; m.home.enfriado = true; m.home.cancelada = true; m.home.degradadoDescartado = true; m.home.esperaMs = 1500;
+  const conTodo = lineaHome(m, 5200, "home:v6:1:n:");
+  assert.match(conTodo, /TURNO PERDIDO/);
+  assert.match(conTodo, /ENFRIADO/);
+  assert.match(conTodo, /CANCELADA/);
+  assert.match(conTodo, /DEGRADADO DESCARTADO/);
+  assert.match(conTodo, /espera 1500ms/);
+  assert.match(conTodo, /\| clave home:v6:1:n:$/, "la clave sigue al final");
+  // Los valores nuevos de `cache` salen en mayúsculas como los de siempre.
+  for (const c of ["ultimo-bueno", "esperada", "vacio", "degradado-compartida"] as const) {
+    const h = nuevasMetricas(); h.home.cache = c;
+    assert.match(lineaHome(h, 1), new RegExp(`cache ${c.toUpperCase()}`));
+  }
+});

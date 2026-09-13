@@ -48,7 +48,7 @@ export interface MetricasRequest {
      * solicitud del mismo proceso: single-flight, Etapa 1) o `null` si no llegó
      * a decidir. Son estados distintos y ninguno se deduce de otro.
      */
-    cache: "hit" | "miss" | "compartida" | null;
+    cache: "hit" | "miss" | "compartida" | "ultimo-bueno" | "esperada" | "vacio" | "degradado-compartida" | null;
     /** Composiciones del Home EJECUTADAS por esta solicitud. Se cuenta donde corre `composeHome`, no se deduce del MISS. */
     composiciones: number;
     /**
@@ -62,6 +62,26 @@ export interface MetricasRequest {
     degradado: boolean;
     /** Fuentes del composer que fallaron (lo que ya viaja como `fallos` en el payload). */
     fuentesCaidas: number;
+    // --- Etapa 2 (#17): turno distribuido y último bueno (lib/home-servir.ts) ---
+    /** Qué pasó con el turno de composición de la clave. `reconciliado` = adquirido tras una respuesta perdida. */
+    turno: "adquirido" | "reconciliado" | "ocupado" | "sin-redis" | null;
+    /** De dónde salió lo que se sirvió. */
+    origen: "fresca" | "fresca-tras-turno" | "ultimo-bueno" | "esperada" | "propia" | "propia-sin-publicar"
+      | "degradado-propio" | "degradado-compartido" | "sin-redis" | "vacio-espera-agotada" | "vacio-cancelada" | "compartida" | null;
+    /** Resultado de PUBLICAR, si se intentó. */
+    publicacion: "publicado" | "publicada-solo-fresca" | "rechazado" | "indeterminado" | null;
+    renovaciones: number;
+    /** RENOVAR devolvió 0 durante la composición: se siguió componiendo sin publicar. */
+    turnoPerdido: boolean;
+    /** Cuánto esperó una solicitud sin turno y sin último bueno. */
+    esperaMs: number;
+    /** Compuso un degradado pero había último bueno: se sirvió el último bueno. */
+    degradadoDescartado: boolean;
+    /** El turno pasó a `enfriando:` (ENFRIAR) tras un degradado. */
+    enfriado: boolean;
+    /** La señal de la solicitud abortó la composición. */
+    cancelada: boolean;
+    propietario: string | null;
   };
   tmdb: {
     /** Llamadas a TMDB pedidas por el código. El cliente no reintenta, así que también son los intentos HTTP. */
@@ -99,7 +119,11 @@ export interface MetricasRequest {
 }
 
 export const nuevasMetricas = (): MetricasRequest => ({
-  home: { cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0 },
+  home: {
+    cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0,
+    turno: null, origen: null, publicacion: null, renovaciones: 0, turnoPerdido: false, esperaMs: 0,
+    degradadoDescartado: false, enfriado: false, cancelada: false, propietario: null,
+  },
   tmdb: { llamadas: 0, ok: 0, errores: { http429: 0, http5xx: 0, http4xx: 0, red: 0 }, ms: 0 },
   supabase: { consultas: 0, ok: 0, errores: { http: 0, red: 0 }, ms: 0 },
   redis: {
@@ -197,11 +221,18 @@ export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): 
   ].filter(Boolean);
   const lotes = r.lotes.length ? `${r.lotes.length} de [${r.lotes.join(",")}]` : "ninguno";
   const cache = m.home.cache ? m.home.cache.toUpperCase() : "?";
+  // Etapa 2: el turno y el origen sólo aparecen cuando la secuencia los anotó
+  // (un HIT no pasa por el turno); los indicadores booleanos, sólo cuando valen.
+  const h = m.home;
+  const turno = h.turno || h.origen || h.publicacion
+    ? ` | turno ${h.turno ?? "?"} | origen ${h.origen ?? "?"} | publicacion ${h.publicacion ?? "no"} | renovaciones ${h.renovaciones} | propietario ${h.propietario ?? "?"} |`
+      + `${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}`
+    : "";
   return (
     `[home] ${msTotal}ms total | cache ${cache} | ` +
     `${plural(m.home.composiciones, "composición", "composiciones")} | ` +
     `${plural(m.home.esperasCompartidas, "espera compartida", "esperas compartidas")}` +
-    `${m.home.degradado ? ` | DEGRADADO (${m.home.fuentesCaidas} fuente(s))` : ""} | ` +
+    `${m.home.degradado ? ` | DEGRADADO (${m.home.fuentesCaidas} fuente(s))` : ""}${turno.replace(/ \|$/, "")} | ` +
     `tmdb ${t.llamadas} llamadas (${[`${t.ok} ok`, ...errTmdb].join(", ")}) ${t.ms}ms | ` +
     `supabase ${s.consultas} consultas (${[`${s.ok} ok`, ...errSb].join(", ")}) ${s.ms}ms | ` +
     `redis${r.modo === "memoria" ? "(memoria)" : ""} ${r.llamadasLogicas} llamadas / ${r.intentosHttp} intentos http / ${r.comandos} comandos` +
