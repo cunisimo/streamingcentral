@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import { Redis } from "@upstash/redis";
+import { leerVarias, opsTurnoHome, TTL } from "@/lib/cache";
+import { crearTurno } from "@/lib/turno";
+
+// RUTA TEMPORAL — comprobación del RECORRIDO DE SERIALIZACIÓN REAL de la Etapa 2
+// (auditoría de Codex sobre fb3a3f1): PUBLICAR/ENFRIAR por los scripts Lua a
+// través de las primitivas REALES de lib/cache.ts (`opsTurnoHome`), y lectura
+// posterior por `leerVarias` (el `batchGet` de producción, MGET con la
+// deserialización predeterminada del cliente de Upstash). Vive sólo en la rama
+// descartable `tmp/etapa2-serializacion`, desplegada como Preview; NUNCA se
+// mergea. Usa exclusivamente claves `precond-etapa2-serial:<corrida>:*` con
+// TTL <= 60 s, las borra al final, y NO toca claves reales del Home ni pide
+// nada a Producción (el payload es sintético, con la forma del Home).
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+function secretoValido(header: string | null, secret: string): boolean {
+  if (!header) return false;
+  const recibido = Buffer.from(header);
+  const esperado = Buffer.from(`Bearer ${secret}`);
+  if (recibido.length !== esperado.length) return false;
+  return timingSafeEqual(recibido, esperado);
+}
+
+/** Un payload con la forma del Home (~85 KB) y los casos que más rompen una serialización. */
+function payloadSintetico(marca: string) {
+  const titulo = (i: number) => ({
+    id: 1000 + i, type: i % 2 ? "tv" : "movie",
+    title: `Título ${i} — "comillas", \\barra, salto\nde línea, acentos áéíóú ñ, emoji 🎬, y un número "${i}"`,
+    overview: "x".repeat(200), poster: `/p${i}.jpg`, year: 2000 + (i % 26), score: (i % 100) / 10,
+    platforms: ["n", "d", "m"].slice(0, 1 + (i % 3)), genres: [18, 28], available: i % 3 === 0,
+    nulo: null, vacio: "", cero: 0, falso: false, comoNumero: "007", comoJson: "{\"a\":1}", comoBool: "true",
+  });
+  return {
+    marca, hero: Array.from({ length: 6 }, (_, i) => titulo(i)),
+    rails: Array.from({ length: 12 }, (_, r) => ({ key: `riel-${r}`, title: `Riel ${r} · Películas`, items: Array.from({ length: 20 }, (_, i) => titulo(r * 100 + i)) })),
+    fallos: 0, degradado: false,
+  };
+}
+
+export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  const propio = req.headers.get("x-precond-secret");
+  const header = propio ? `Bearer ${propio}` : req.headers.get("authorization");
+  if (!secret) return NextResponse.json({ ok: false, error: "no autorizado", motivo: "sin CRON_SECRET" }, { status: 401 });
+  if (!header) return NextResponse.json({ ok: false, error: "no autorizado", motivo: "sin encabezado" }, { status: 401 });
+  if (!secretoValido(header, secret)) return NextResponse.json({ ok: false, error: "no autorizado", motivo: "no coincide" }, { status: 401 });
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (!url || !token) return NextResponse.json({ ok: false, error: "sin credenciales de Redis" }, { status: 503 });
+
+  const corrida = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const P = `precond-etapa2-serial:${corrida}:`;
+  const K = { turno: `${P}turno`, fresca: `${P}fresca`, ub: `${P}ub`, gen: `${P}gen`, degradado: `${P}degradado` };
+  const propietario = `serial-${corrida}`;
+  const turno = crearTurno(opsTurnoHome);
+  const payload = payloadSintetico(`fresca-${corrida}`);
+  const degradado = { ...payloadSintetico(`degradado-${corrida}`), degradado: true, fallos: 3 };
+  const json = JSON.stringify(payload);
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+
+  const pasos: { paso: string; esperado: string; resultado: unknown; ok: boolean }[] = [];
+  const paso = async (nombre: string, esperado: string, fn: () => Promise<unknown>, cmp: (r: unknown) => boolean) => {
+    let resultado: unknown; let ok = false;
+    try { resultado = await fn(); ok = cmp(resultado); } catch (e) { resultado = `EXCEPCION: ${String(e)}`; }
+    pasos.push({ paso: nombre, esperado, resultado, ok });
+    return resultado;
+  };
+  const igual = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const inicio = Date.now();
+  // Cliente directo SÓLO para borrar al final (lib/cache.ts no conoce DEL a propósito).
+  const limpiador = new Redis({ url, token, retry: false });
+  try {
+    await paso("1 tomar (SET NX PX real)", "adquirido", () => turno.tomar({ clave: K.turno, propietario, px: 15000 }), (r) => (r as { estado: string }).estado === "adquirido");
+    await paso("2 PUBLICAR por Lua con JSON.stringify(payload) — la misma llamada de lib/home-servir.ts", "publicado", () => turno.publicar({ claves: { turno: K.turno, fresca: K.fresca, ub: K.ub, gen: K.gen }, propietario, payload: json, ttlFresca: 60, ttlUb: 60, dia: hoy }), (r) => r === "publicado");
+    await paso("3 leerVarias([fresca, ub]) — batchGet/MGET con la deserialización predeterminada", "las dos == payload, estructuralmente iguales", async () => {
+      const [f, u] = await leerVarias<unknown>([K.fresca, K.ub]);
+      return { frescaIgual: igual(f, payload), ubIgual: igual(u, payload), tipoFresca: typeof f, bytes: Buffer.byteLength(json), marca: (f as { marca?: string })?.marca };
+    }, (r) => { const o = r as { frescaIgual: boolean; ubIgual: boolean; tipoFresca: string }; return o.frescaIgual && o.ubIgual && o.tipoFresca === "object"; });
+    await paso("4 los strings 'peligrosos' vuelven como strings, no parseados", "'007', '{\"a\":1}', 'true' intactos; null/''/0/false intactos", async () => {
+      const [f] = await leerVarias<{ hero: Array<Record<string, unknown>> }>([K.fresca]);
+      const t = f!.hero[0];
+      return { comoNumero: t.comoNumero, comoJson: t.comoJson, comoBool: t.comoBool, nulo: t.nulo, vacio: t.vacio, cero: t.cero, falso: t.falso, title: String(t.title).slice(0, 60) };
+    }, (r) => { const o = r as Record<string, unknown>; return o.comoNumero === "007" && o.comoJson === '{"a":1}' && o.comoBool === "true" && o.nulo === null && o.vacio === "" && o.cero === 0 && o.falso === false; });
+    await paso("5 GET gen y GET turno por la primitiva real (get)", `gen == '${hoy}:${propietario}', turno null`, async () => ({ gen: await opsTurnoHome.get(K.gen), turno: await opsTurnoHome.get(K.turno) }), (r) => { const o = r as { gen: string; turno: string | null }; return o.gen === `${hoy}:${propietario}` && o.turno === null; });
+    await paso("6 tomar de nuevo y ENFRIAR con el payload degradado", "enfriado", async () => { await turno.tomar({ clave: K.turno, propietario, px: 15000 }); return turno.enfriar({ claves: { turno: K.turno, degradado: K.degradado }, propietario, payload: JSON.stringify(degradado), px: 15000 }); }, (r) => r === "enfriado");
+    await paso("7 leerVarias([degradado]) y GET turno", "degradado == payload degradado; turno == 'enfriando:<propietario>'", async () => {
+      const [d] = await leerVarias<unknown>([K.degradado]);
+      return { degradadoIgual: igual(d, degradado), turno: await opsTurnoHome.get(K.turno) };
+    }, (r) => { const o = r as { degradadoIgual: boolean; turno: string }; return o.degradadoIgual && o.turno === `enfriando:${propietario}`; });
+    await paso("8 lectura de las tres copias en UN MGET (leerVarias([fresca, ub, degradado]))", "tres objetos, los tres iguales a lo publicado", async () => {
+      const [f, u, d] = await leerVarias<unknown>([K.fresca, K.ub, K.degradado]);
+      return [igual(f, payload), igual(u, payload), igual(d, degradado)];
+    }, (r) => (r as boolean[]).every(Boolean));
+    await paso("9 TTLs de lo publicado (TTL.home / TTL.homeUltimoBueno son los de producción; acá se usaron 60 s)", "60 s aquí; producción 21600 / 129600", async () => ({ aquiFresca: await limpiador.ttl(K.fresca), aquiUb: await limpiador.ttl(K.ub), produccion: { fresca: TTL.home, ub: TTL.homeUltimoBueno } }), (r) => { const o = r as { aquiFresca: number; aquiUb: number }; return o.aquiFresca > 0 && o.aquiFresca <= 60 && o.aquiUb > 0 && o.aquiUb <= 60; });
+  } finally {
+    await paso("10 DEL de las cinco claves temporales", "5", () => limpiador.del(K.turno, K.fresca, K.ub, K.gen, K.degradado), (r) => r === 5);
+    await paso("11 SCAN precond-etapa2-serial:* después", "0", async () => { const [, ks] = await limpiador.scan(0, { match: "precond-etapa2-serial:*", count: 1000 }); return ks.length; }, (r) => r === 0);
+  }
+  return NextResponse.json({ ok: pasos.every((p) => p.ok), corrida, prefijo: P, propietario, bytesPayload: Buffer.byteLength(json), msTotal: Date.now() - inicio, pasos });
+}

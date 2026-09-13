@@ -48,15 +48,71 @@ const marcar = (s: string) => s as ClaveLocalizada;
 // Los tests fijan los literales de hoy: si alguna cambia, fallan.
 
 /**
- * Payload compuesto del Home. La versión `v6` es del contenido, no del idioma.
+ * LA versión del contrato del payload del Home. Es del contenido, no del idioma.
  *
  * `v6`: "Últimos lanzamientos" estrenó selector Películas/Series. Sube porque un
  * payload `v5` cacheado NO trae `typeToggle` ni `shelfKey` en ese riel, así que
  * durante las 6 h del TTL el selector no aparecería y el cambio "no se vería"
  * después de deployar. Un solo cambio de versión y un solo arranque frío.
+ *
+ * Etapa 2 (#17): las CINCO familias del Home la comparten —fresca, último
+ * bueno, generación, degradado compartido y turno—, porque el último bueno y el
+ * degradado son el MISMO contrato de payload que la fresca. Subirla las
+ * invalida a todas juntas (lib/claves-home.test.ts); durante un despliegue
+ * gradual, cada versión coordina con su propio turno y publica en sus propias
+ * claves. Sólo el banco aislado puede sobreescribirla por proceso (E-version),
+ * y sólo con `YUMP_BANCO=1`: en cualquier otro entorno es la constante.
  */
+export const VERSION_HOME: number =
+  process.env.YUMP_BANCO === "1" && /^\d+$/.test(process.env.YUMP_BANCO_VERSION_HOME ?? "")
+    ? Number(process.env.YUMP_BANCO_VERSION_HOME)
+    : 6;
+
+/**
+ * Las cinco claves de una combinación del Home, derivadas de UNA versión.
+ * `version` es un parámetro sólo para poder probar el salto de versión sin
+ * recargar el módulo; producción no lo pasa.
+ */
+export function familiasHome(p: {
+  semilla: number; providers: string; tipos: string; huella: string; version?: number;
+}): { fresca: ClaveLocalizada; ub: ClaveLocalizada; gen: string; degradado: ClaveLocalizada; turno: string } {
+  const v = `${pre(p.huella)}v${p.version ?? VERSION_HOME}`;
+  const combinacion = `${p.providers}:${p.tipos}`;
+  return {
+    // Byte a byte la clave de siempre: un payload ya cacheado sigue siendo HIT.
+    fresca: marcar(`home:${v}:${p.semilla}:${combinacion}`),
+    // Sin semilla: el último bueno sobrevive a la medianoche, para eso existe.
+    ub: marcar(`home:ub:${v}:${combinacion}`),
+    gen: `home:gen:${v}:${combinacion}`,
+    // Con semilla: sustituye por unos segundos la composición de UNA fresca.
+    degradado: marcar(`home:degradado:${v}:${p.semilla}:${combinacion}`),
+    turno: `home:turno:${v}:${p.semilla}:${combinacion}`,
+  };
+}
+
+/** Payload compuesto del Home (la "fresca"). */
 export function claveHome(semilla: number, providers: string, tipos: string, huella: string): ClaveLocalizada {
-  return marcar(`home:${pre(huella)}v6:${semilla}:${providers}:${tipos}`);
+  return familiasHome({ semilla, providers, tipos, huella }).fresca;
+}
+
+/** Último Home bueno de la combinación: el mismo contrato que la fresca, sin semilla. */
+export function claveHomeUltimoBueno(providers: string, tipos: string, huella: string): ClaveLocalizada {
+  return familiasHome({ semilla: 0, providers, tipos, huella }).ub;
+}
+
+/** Generación del último bueno: `"<YYYY-MM-DD>:<propietario>"`. No guarda contenido. */
+export function claveHomeGeneracion(providers: string, tipos: string, huella: string): string {
+  return familiasHome({ semilla: 0, providers, tipos, huella }).gen;
+}
+
+/** Degradado compartido durante un enfriamiento: mismo contrato, nunca se promociona. */
+export function claveHomeDegradado(semilla: number, providers: string, tipos: string, huella: string): ClaveLocalizada {
+  return familiasHome({ semilla, providers, tipos, huella }).degradado;
+}
+
+/** El turno de composición de UNA fresca. Vale `<propietario>` o `enfriando:<propietario>`. */
+export function claveTurnoHome(semilla: number, providers: string, tipos: string, huella: string): string {
+  return familiasHome({ semilla, providers, tipos, huella }).turno;
 }
 
 /** Un pool de discover: una plataforma, una receta, una página. */

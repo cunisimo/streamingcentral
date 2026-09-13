@@ -1,0 +1,868 @@
+{
+ "ok": true,
+ "corrida": "mu00bddh-v1j4n2",
+ "prefijo": "precond-etapa2:mu00bddh-v1j4n2:",
+ "hoy": "2026-09-13",
+ "manana": "2026-09-14",
+ "hostRedis": "<redactado>.upstash.io",
+ "sdk": "@upstash/redis (el instalado en el proyecto)",
+ "payloadBytes": 85328,
+ "msTotal": 27883,
+ "comandosHttp": 60,
+ "bytesEnviadosTotal": 1371352,
+ "bytesRecibidosTotal": 1139270,
+ "pasos": [
+  {
+   "paso": "0 payload real de /api/home (n,d,m) desde app.yump.ar",
+   "esperado": "200 y > 50 KB",
+   "resultado": {
+    "estado": 200,
+    "bytes": 85328
+   },
+   "ok": true,
+   "http": []
+  },
+  {
+   "paso": "1 PING",
+   "esperado": "PONG",
+   "resultado": "PONG",
+   "ok": true,
+   "http": [
+    {
+     "comando": "PING",
+     "estado": 200,
+     "ms": 135.9,
+     "bytesEnviados": 10,
+     "bytesRecibidos": 23
+    }
+   ]
+  },
+  {
+   "paso": "2 DBSIZE antes",
+   "esperado": "numero",
+   "resultado": 2923,
+   "ok": true,
+   "http": [
+    {
+     "comando": "DBSIZE",
+     "estado": 200,
+     "ms": 122.8,
+     "bytesEnviados": 10,
+     "bytesRecibidos": 15
+    }
+   ]
+  },
+  {
+   "paso": "3 SCAN precond-etapa2:* antes",
+   "esperado": "0 claves, completo",
+   "resultado": {
+    "claves": [],
+    "vueltas": 1,
+    "completo": true
+   },
+   "ok": true,
+   "http": [
+    {
+     "comando": "SCAN",
+     "estado": 200,
+     "ms": 140,
+     "bytesEnviados": 52,
+     "bytesRecibidos": 22
+    }
+   ]
+  },
+  {
+   "paso": "4 EVAL 'return 1' 0",
+   "esperado": "1",
+   "resultado": 1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVAL",
+     "estado": 200,
+     "ms": 118.6,
+     "bytesEnviados": 23,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "5 SET turno A NX PX",
+   "esperado": "OK",
+   "resultado": "OK",
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 117.7,
+     "bytesEnviados": 84,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "6 SET turno B NX PX (ocupado)",
+   "esperado": "null",
+   "resultado": null,
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 118.1,
+     "bytesEnviados": 84,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "7 GET turno (reconciliacion)",
+   "esperado": "A",
+   "resultado": "A-mu00bddh-v1j4n2",
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 118.1,
+     "bytesEnviados": 48,
+     "bytesRecibidos": 39
+    }
+   ]
+  },
+  {
+   "paso": "8 PTTL turno",
+   "esperado": "en (0, 15000]",
+   "resultado": 14645,
+   "ok": true,
+   "http": [
+    {
+     "comando": "PTTL",
+     "estado": 200,
+     "ms": 118,
+     "bytesEnviados": 49,
+     "bytesRecibidos": 18
+    }
+   ]
+  },
+  {
+   "paso": "9 RENOVAR (B) - propiedad ajena",
+   "esperado": "0",
+   "resultado": 0,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 117.3,
+     "bytesEnviados": 125,
+     "bytesRecibidos": 59
+    },
+    {
+     "comando": "EVAL",
+     "estado": 200,
+     "ms": 117.4,
+     "bytesEnviados": 192,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "10 RENOVAR (A)",
+   "esperado": "1",
+   "resultado": 1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 119.2,
+     "bytesEnviados": 125,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "11 PTTL turno renovado",
+   "esperado": "> 14000",
+   "resultado": 14883,
+   "ok": true,
+   "http": [
+    {
+     "comando": "PTTL",
+     "estado": 200,
+     "ms": 117.7,
+     "bytesEnviados": 49,
+     "bytesRecibidos": 18
+    }
+   ]
+  },
+  {
+   "paso": "12 RENOVAR (A) otra vez (EVALSHA directo)",
+   "esperado": "1",
+   "resultado": 1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 117.1,
+     "bytesEnviados": 125,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "13 PUBLICAR (A, payload real, gen vacia)",
+   "esperado": "1",
+   "resultado": 1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 129.4,
+     "bytesEnviados": 195211,
+     "bytesRecibidos": 59
+    },
+    {
+     "comando": "EVAL",
+     "estado": 200,
+     "ms": 351.3,
+     "bytesEnviados": 195669,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "14 GET turno tras publicar",
+   "esperado": "null (borrado)",
+   "resultado": null,
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 117.1,
+     "bytesEnviados": 48,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "15 MGET fresca ub == payload",
+   "esperado": "ambas iguales byte a byte",
+   "resultado": [
+    "{\"hero\":[{\"id\":60625,\"type\":\"tv\",\"title\"...(85246 chars)",
+    "{\"hero\":[{\"id\":60625,\"type\":\"tv\",\"title\"...(85246 chars)"
+   ],
+   "ok": true,
+   "http": [
+    {
+     "comando": "MGET",
+     "estado": 200,
+     "ms": 231.7,
+     "bytesEnviados": 86,
+     "bytesRecibidos": 227564
+    }
+   ]
+  },
+  {
+   "paso": "16 GET gen",
+   "esperado": "2026-09-13:A",
+   "resultado": "2026-09-13:A-mu00bddh-v1j4n2",
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 117.1,
+     "bytesEnviados": 46,
+     "bytesRecibidos": 55
+    }
+   ]
+  },
+  {
+   "paso": "17 TTL fresca/ub/gen",
+   "esperado": "cada uno en (50, 60]",
+   "resultado": [
+    59,
+    59,
+    59
+   ],
+   "ok": true,
+   "http": [
+    {
+     "comando": "TTL",
+     "estado": 200,
+     "ms": 116.3,
+     "bytesEnviados": 49,
+     "bytesRecibidos": 15
+    },
+    {
+     "comando": "TTL",
+     "estado": 200,
+     "ms": 118.8,
+     "bytesEnviados": 45,
+     "bytesRecibidos": 15
+    },
+    {
+     "comando": "TTL",
+     "estado": 200,
+     "ms": 117.4,
+     "bytesEnviados": 46,
+     "bytesRecibidos": 15
+    }
+   ]
+  },
+  {
+   "paso": "18 SET turno B NX PX (turno libre)",
+   "esperado": "OK",
+   "resultado": "OK",
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 118.6,
+     "bytesEnviados": 84,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "19 PUBLICAR (A) con turno de B - propiedad perdida",
+   "esperado": "0",
+   "resultado": 0,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 129.6,
+     "bytesEnviados": 195253,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "20 fresca/ub/gen/turno intactos tras el rechazo",
+   "esperado": "fresca==payload, ub==payload, gen==hoy:A, turno==B",
+   "resultado": {
+    "fresca": true,
+    "ub": true,
+    "gen": "2026-09-13:A-mu00bddh-v1j4n2",
+    "turno": "B-mu00bddh-v1j4n2"
+   },
+   "ok": true,
+   "http": [
+    {
+     "comando": "MGET",
+     "estado": 200,
+     "ms": 233.7,
+     "bytesEnviados": 162,
+     "bytesRecibidos": 227634
+    }
+   ]
+  },
+  {
+   "paso": "21 LIBERAR (A) - no era mio",
+   "esperado": "0",
+   "resultado": 0,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 117.4,
+     "bytesEnviados": 117,
+     "bytesRecibidos": 59
+    },
+    {
+     "comando": "EVAL",
+     "estado": 200,
+     "ms": 118.5,
+     "bytesEnviados": 171,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "22 LIBERAR (B)",
+   "esperado": "1",
+   "resultado": 1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 117.7,
+     "bytesEnviados": 117,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "23 GET turno liberado",
+   "esperado": "null",
+   "resultado": null,
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 118.8,
+     "bytesEnviados": 48,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "24 SET gen = manana:otro (publicador de un dia posterior)",
+   "esperado": "OK",
+   "resultado": "OK",
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 118.8,
+     "bytesEnviados": 72,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "25 SET turno A NX PX",
+   "esperado": "OK",
+   "resultado": "OK",
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 118.9,
+     "bytesEnviados": 84,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "26 PUBLICAR (A, hoy) con gen de manana",
+   "esperado": "-1 (solo fresca)",
+   "resultado": -1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 130.2,
+     "bytesEnviados": 195253,
+     "bytesRecibidos": 15
+    }
+   ]
+  },
+  {
+   "paso": "27 fresca==payload2, ub==payload (intacto), gen==manana:otro, turno null",
+   "esperado": "todo cierto",
+   "resultado": {
+    "fresca2": true,
+    "ubIntacto": true,
+    "gen": "2026-09-14:otro",
+    "turno": null
+   },
+   "ok": true,
+   "http": [
+    {
+     "comando": "MGET",
+     "estado": 200,
+     "ms": 234.3,
+     "bytesEnviados": 162,
+     "bytesRecibidos": 227616
+    }
+   ]
+  },
+  {
+   "paso": "28 SET gen = hoy:otro (mismo dia)",
+   "esperado": "OK",
+   "resultado": "OK",
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 117.4,
+     "bytesEnviados": 72,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "29 SET turno A NX PX",
+   "esperado": "OK",
+   "resultado": "OK",
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 116.8,
+     "bytesEnviados": 84,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "30 PUBLICAR (A, hoy) con gen del mismo dia",
+   "esperado": "1",
+   "resultado": 1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 129,
+     "bytesEnviados": 195211,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "31 gen == hoy:A",
+   "esperado": "2026-09-13:A",
+   "resultado": "2026-09-13:A-mu00bddh-v1j4n2",
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 117.9,
+     "bytesEnviados": 46,
+     "bytesRecibidos": 55
+    }
+   ]
+  },
+  {
+   "paso": "32 SET turno A NX PX",
+   "esperado": "OK",
+   "resultado": "OK",
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 117.4,
+     "bytesEnviados": 84,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "33 ENFRIAR (B) - no era mio",
+   "esperado": "0",
+   "resultado": 0,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 122.3,
+     "bytesEnviados": 97675,
+     "bytesRecibidos": 59
+    },
+    {
+     "comando": "EVAL",
+     "estado": 200,
+     "ms": 124.3,
+     "bytesEnviados": 97820,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "34 GET degradado tras el rechazo",
+   "esperado": "null (nada escrito)",
+   "resultado": null,
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 118.5,
+     "bytesEnviados": 52,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "35 ENFRIAR (A, payload degradado real)",
+   "esperado": "1",
+   "resultado": 1,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 123.5,
+     "bytesEnviados": 97675,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "36 GET turno",
+   "esperado": "enfriando:A",
+   "resultado": "enfriando:A-mu00bddh-v1j4n2",
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 117.5,
+     "bytesEnviados": 48,
+     "bytesRecibidos": 51
+    }
+   ]
+  },
+  {
+   "paso": "37 PTTL turno y degradado",
+   "esperado": "ambos en (10000, 15000]",
+   "resultado": [
+    14763,
+    14644
+   ],
+   "ok": true,
+   "http": [
+    {
+     "comando": "PTTL",
+     "estado": 200,
+     "ms": 118.2,
+     "bytesEnviados": 49,
+     "bytesRecibidos": 18
+    },
+    {
+     "comando": "PTTL",
+     "estado": 200,
+     "ms": 118.3,
+     "bytesEnviados": 53,
+     "bytesRecibidos": 18
+    }
+   ]
+  },
+  {
+   "paso": "38 GET degradado == payloadDeg",
+   "esperado": "igual byte a byte",
+   "resultado": "{\"__precond\":\"degradado\",\"hero\":[{\"id\":6...(85270 chars)",
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 232.5,
+     "bytesEnviados": 52,
+     "bytesRecibidos": 113819
+    }
+   ]
+  },
+  {
+   "paso": "39 SET turno C NX PX durante el enfriamiento",
+   "esperado": "null (ocupado)",
+   "resultado": null,
+   "ok": true,
+   "http": [
+    {
+     "comando": "SET",
+     "estado": 200,
+     "ms": 116.7,
+     "bytesEnviados": 84,
+     "bytesRecibidos": 17
+    }
+   ]
+  },
+  {
+   "paso": "40 RENOVAR (A) durante el enfriamiento",
+   "esperado": "0 (el valor ya no es A)",
+   "resultado": 0,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 118.6,
+     "bytesEnviados": 125,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "41 ENFRIAR (A) otra vez",
+   "esperado": "0",
+   "resultado": 0,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 122,
+     "bytesEnviados": 97675,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "42 LIBERAR (A) durante el enfriamiento",
+   "esperado": "0",
+   "resultado": 0,
+   "ok": true,
+   "http": [
+    {
+     "comando": "EVALSHA",
+     "estado": 200,
+     "ms": 117.2,
+     "bytesEnviados": 117,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "43 lectura final MGET fresca ub degradado",
+   "esperado": "fresca==payload, ub==payload, degradado==payloadDeg",
+   "resultado": [
+    "{\"hero\":[{\"id\":60625,\"type\":\"tv\",\"title\"...(85246 chars)",
+    "{\"hero\":[{\"id\":60625,\"type\":\"tv\",\"title\"...(85246 chars)",
+    "{\"__precond\":\"degradado\",\"hero\":[{\"id\":6...(85270 chars)"
+   ],
+   "ok": true,
+   "http": [
+    {
+     "comando": "MGET",
+     "estado": 200,
+     "ms": 348.2,
+     "bytesEnviados": 129,
+     "bytesRecibidos": 341371
+    }
+   ]
+  },
+  {
+   "paso": "44 lectura final GET gen, GET turno, TTL/PTTL de las cinco",
+   "esperado": "gen hoy:A; turno enfriando:A; TTL > 0",
+   "resultado": {
+    "gen": "2026-09-13:A-mu00bddh-v1j4n2",
+    "turno": "enfriando:A-mu00bddh-v1j4n2",
+    "ttl": {
+     "fresca": 57,
+     "ub": 57,
+     "gen": 57
+    },
+    "pttl": {
+     "turno": 12879,
+     "degradado": 12762
+    }
+   },
+   "ok": true,
+   "http": [
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 116.5,
+     "bytesEnviados": 46,
+     "bytesRecibidos": 55
+    },
+    {
+     "comando": "GET",
+     "estado": 200,
+     "ms": 116.6,
+     "bytesEnviados": 48,
+     "bytesRecibidos": 51
+    },
+    {
+     "comando": "TTL",
+     "estado": 200,
+     "ms": 116.7,
+     "bytesEnviados": 49,
+     "bytesRecibidos": 15
+    },
+    {
+     "comando": "TTL",
+     "estado": 200,
+     "ms": 116.6,
+     "bytesEnviados": 45,
+     "bytesRecibidos": 15
+    },
+    {
+     "comando": "TTL",
+     "estado": 200,
+     "ms": 118,
+     "bytesEnviados": 46,
+     "bytesRecibidos": 15
+    },
+    {
+     "comando": "PTTL",
+     "estado": 200,
+     "ms": 116.8,
+     "bytesEnviados": 49,
+     "bytesRecibidos": 18
+    },
+    {
+     "comando": "PTTL",
+     "estado": 200,
+     "ms": 117.2,
+     "bytesEnviados": 53,
+     "bytesRecibidos": 18
+    }
+   ]
+  },
+  {
+   "paso": "45 DEL de las cinco claves temporales",
+   "esperado": "5",
+   "resultado": 5,
+   "ok": true,
+   "http": [
+    {
+     "comando": "DEL",
+     "estado": 200,
+     "ms": 117,
+     "bytesEnviados": 204,
+     "bytesRecibidos": 14
+    }
+   ]
+  },
+  {
+   "paso": "46 SCAN precond-etapa2:* despues",
+   "esperado": "0 claves, completo",
+   "resultado": {
+    "claves": [],
+    "vueltas": 1,
+    "completo": true
+   },
+   "ok": true,
+   "http": [
+    {
+     "comando": "SCAN",
+     "estado": 200,
+     "ms": 118.1,
+     "bytesEnviados": 52,
+     "bytesRecibidos": 22
+    }
+   ]
+  },
+  {
+   "paso": "47 DBSIZE despues",
+   "esperado": "numero",
+   "resultado": 2923,
+   "ok": true,
+   "http": [
+    {
+     "comando": "DBSIZE",
+     "estado": 200,
+     "ms": 116.8,
+     "bytesEnviados": 10,
+     "bytesRecibidos": 15
+    }
+   ]
+  }
+ ],
+ "deployment": "Preview streamingcentral-77qg89zsx (target preview), rama descartable tmp/etapa2-precondicion-upstash = d2ccb45, ruta /api/precondicion-etapa2, llamada con vercel curl (bypass autenticado del CLI) + secreto propio",
+ "nota": "Derivado de la respuesta cruda (1,38 MB): en cada http.comando se conserva sólo el nombre del comando; los resultados largos ya venían recortados por la ruta."
+}

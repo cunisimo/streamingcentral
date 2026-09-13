@@ -31,7 +31,7 @@ export function crearSingleFlight<T>(opts: {
 } = {}) {
   const enVuelo = new Map<string, Promise<T>>();
 
-  return function compartir(clave: string, pedir: () => Promise<T>): Promise<T> {
+  function compartir(clave: string, pedir: () => Promise<T>): Promise<T> {
     const ya = enVuelo.get(clave);
     if (ya) return ya;
     opts.alPedir?.();
@@ -41,5 +41,8 @@ export function crearSingleFlight<T>(opts: {
     const p = pedir().finally(() => { enVuelo.delete(clave); });
     enVuelo.set(clave, p);
     return p;
-  };
+  }
+  /** Cuántas claves están en vuelo ahora. Es lo que prueba que no queda estado acumulado. */
+  compartir.enVuelo = () => enVuelo.size;
+  return compartir;
 }

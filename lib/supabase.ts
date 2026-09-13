@@ -23,6 +23,16 @@ export function observarSupabase(fn: (c: ConsultaSupabase) => void): void {
   observador = fn;
 }
 
+// --- La señal de la solicitud (Etapa 2 de capacidad, #17, informe §3.8) ------
+// Por el mismo motivo que el observador, este archivo no puede leer la señal
+// del scope de la solicitud (AsyncLocalStorage): pide a un proveedor —que
+// lib/cache.ts registra— la señal ya combinada con la que traiga el `init`.
+// Sin proveedor, o sin señal en el scope, el `fetch` va exactamente como hoy.
+let proveedorSenal: ((propia: AbortSignal | null | undefined) => AbortSignal | undefined) | null = null;
+export function proveerSenalSupabase(fn: (propia: AbortSignal | null | undefined) => AbortSignal | undefined): void {
+  proveedorSenal = fn;
+}
+
 // Cliente para el servidor (lectura pública con RLS): sin sesión.
 // Next parchea el `fetch` global con su Data Cache. supabase-js usa ese fetch,
 // y las lecturas del server (sobre todo `.rpc()` POST) quedaban cacheadas:
@@ -37,8 +47,11 @@ export function supabaseServer(): SupabaseClient | null {
     global: {
       fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
         const t0 = Date.now();
+        // La señal de la solicitud (si hay) corta esta consulta con el resto de
+        // la composición; `init.signal` propio se conserva combinado.
+        const senal = proveedorSenal?.(init?.signal) ?? init?.signal ?? undefined;
         try {
-          const res = await fetch(input, { ...init, cache: "no-store" });
+          const res = await fetch(input, { ...init, cache: "no-store", signal: senal });
           observador?.({ ms: Date.now() - t0, estado: res.status });
           return res;
         } catch (e) {

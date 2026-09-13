@@ -1344,6 +1344,65 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
+### Estado (13/09): la Etapa 2 está IMPLEMENTADA y CORREGIDA (dos rondas) en la rama `feat/etapa2-turno-ultimo-bueno`, PENDIENTE DE AUDITORÍA FINAL — sin merge, sin push, sin deploy
+
+Segunda ronda (informe §17): `homePayload` leía el reloj tres veces y con la
+medianoche entre lecturas la clave del vuelo, las cinco claves y el día de la
+generación podían ser de días distintos; ahora UN instante por solicitud
+(`lib/home-instante.ts`, 7 tests RED contra `82842a5`), banco completo
+repetido VÁLIDO con E-medianoche intacto. Suite 1.543 / 1.533 / 0 fallos.
+
+Codex auditó `fb3a3f1` (62 pruebas específicas, todas en verde) y encontró
+cinco puntos, corregidos en la misma rama con RED → GREEN (informe §16): el
+productor que rechaza ahora libera el turno y sirve el UB (o propaga el error
+sin turno huérfano); la renovación es cancelable y se espera (sin temporizador
+vivo ni métricas después de la línea terminal); el contexto del vuelo viaja
+por solicitud (sin mapa global); el propietario lleva el UUID completo; los
+comentarios describen la resolución vigente. Serialización real verificada por
+el camino de producción con claves efímeras (§16.1); banco completo repetido,
+mismo resultado (§16.2). **Nada mergeado ni desplegado.** Rama
+`feat/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2-impl`, fork
+`8dfa49b`). Turno distribuido por clave (SET NX PX + los cuatro scripts
+verificados), último bueno servido en tiempo de HIT, enfriamiento tras un
+degradado, cancelación real por presupuesto, `VERSION_HOME` única, segunda
+lectura tras adquirir el turno, lecturas escalonadas (el HIT transfiere una
+sola copia: idéntico a la Etapa 1 en el banco). RED → GREEN con +70 tests
+(suite 1.525 / 1.515 / 0 fallos en `fb3a3f1`, la implementación anterior a las
+correcciones; hoy 1.543 / 1.533), banco multiproceso de 27 escenarios VÁLIDO
+contra los dobles (E2: 3 → 1 composición entre procesos). Informe §15.
+**Nada mergeado ni desplegado.** Antecedente: diseño v3 aprobado y
+**precondición de Upstash (informe §14):** ejecutada el 13/09 desde un
+Preview descartable y protegido contra la misma base que usa Producción, sólo
+con claves `precond-etapa2:<corrida>:*` (TTL ≤ 60 s, borradas al final;
+`SCAN` 0 antes y después, `DBSIZE` igual): `SET NX PX` y los cuatro scripts
+reales con el payload real del Home (85 KB; `PUBLICAR` de 195 KB de cuerpo),
+positivos y negativos (propiedad perdida, generación de un día posterior,
+enfriamiento), lectura posterior con contenido y TTL: **48/48 correctos**.
+Desconocido: facturación de `EVAL` y límite de petición del plan. Hallazgo
+pendiente de decisión: el `MGET` de tres copias en el HIT triplica los bytes
+(§14.6). Correcciones documentales del mismo día: promesa real del deadline,
+timeout posible con Redis caído, período de adopción del UB (ventana
+aceptada, sin escrituras en los HIT), caso RED del líder cancelado con
+seguidores. **Nada implementado, ni mergeado, ni desplegado en Producción.**
+La v2 (`c8fc235`) fue auditada por Codex y devuelta con cuatro
+hallazgos; la v3 los corrige: el camino `sin-redis` sirve y no guarda (sin
+escritura directa sin fencing), el degradado enfría el turno en vez de
+liberarlo (una composición degradada por `ENFRIAMIENTO_MS`, degradado
+compartido aparte, nunca promocionado), el deadline es una cancelación real
+por `AbortSignal` con promesa reducida (vale con Redis respondiendo; con Redis
+caído se sigue en F5a hasta `maxDuration`), y una sola `VERSION_HOME` para
+todas las familias del Home con turnos separados por versión en el rollout.
+La primera versión (`7cfc979`) había sido devuelta con
+diez hallazgos; la v2 los resolvía (espera que reintenta el turno y nunca
+compone sin él; deadline integral; degradado con último bueno → último bueno;
+publicación atómica con fencing por propietario y por día; estados
+diferenciados con reconciliación; `EVAL` obligatorio; integración con
+`home-vuelo` y costos; evidencia de composición iniciada; controles RED; TTL
+enunciado con precisión): [`medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md`](medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md).
+Decisión del dueño aprobada: servir el Home anterior durante la
+reconstrucción. Condición de entrada a la implementación: verificar `EVAL`
+contra la base real de Upstash. **Nada de esto está en `main` ni desplegado.**
+
 ### Estado (12/09): la mitad POR PROCESO está MERGEADA y DESPLEGADA (`e4bf75a`, deploy de `f76d9ca`) — el issue sigue ABIERTO; lo siguiente es la Etapa 2
 
 Auditoría final de Codex sobre `af8d7c6` sin nuevos hallazgos; deployment de

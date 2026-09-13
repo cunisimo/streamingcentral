@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 12 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 13 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -131,7 +131,8 @@
   handler ya aplicaba a `limit`; ninguna vista lo manda hoy). El vuelo
   compartido vive sólo en `homePayload` (`lib/home-vuelo.ts`): lectura previa,
   y si no está, `crearSingleFlight` por clave con `cachedLocIf` entero como
-  resolución; el líder cuenta la composición, los seguidores `cache =
+  resolución (así está en `main`; en la rama de la Etapa 2 la resolución del
+  líder pasa a `servirConTurno`); el líder cuenta la composición, los seguidores `cache =
   "compartida"` y `esperasCompartidas`. **Banco, antes → después:** 100
   solicitudes simultáneas con caché fría pasan de **100 composiciones, 91.106
   TMDB, 97.548 Redis y 162 s** a **1 composición + 99 esperas, 926 TMDB, 1.093
@@ -147,7 +148,85 @@
   Etapa 2. **#18 resuelto; #17 abierto únicamente por la coordinación entre
   instancias y el último Home bueno.** Informe:
   [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
-  Etapas 2 a 5: no iniciadas.
+  Etapas 3 a 5: no iniciadas.
+
+- **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
+  Home bueno): IMPLEMENTADA EN LA RAMA `feat/etapa2-turno-ultimo-bueno`
+  (worktree `wt-etapa2-impl`, fork `8dfa49b`) y CORREGIDA EN RAMA tras la
+  auditoría de Codex sobre `fb3a3f1` (cinco puntos: productor que rechaza
+  libera el turno y sirve UB; renovación cancelable y esperada, sin
+  temporizadores ni métricas tardías; contexto del vuelo por solicitud en vez
+  de un mapa global; UUID completo del propietario; comentarios al día),
+  PENDIENTE DE AUDITORÍA FINAL. Sin merge, sin push, sin deploy.** Serialización
+  real verificada por el camino de producción (informe §16.1); banco completo
+  repetido con el mismo resultado (§16.2); suite 1.536 (1.526 aprobados, 0
+  fallos, 10 omitidos) tras esa primera corrección, y **1.543 (1.533 aprobados,
+  0 fallos, 10 omitidos) tras la segunda: UN instante por solicitud** (la
+  clave del vuelo, las cinco claves y el día de la generación salen de la misma
+  lectura del reloj; informe §17). Módulos puros nuevos (`lib/home-instante.ts`, `lib/turno.ts`,
+  `lib/turno-memoria.ts`, `lib/turno-lua.ts`, `lib/home-servir.ts`,
+  `lib/senal-solicitud.ts`), `VERSION_HOME` única en `lib/claves.ts`, cableado
+  en `lib/cache.ts`/`lib/home.ts`/`lib/tmdb.ts`/`lib/supabase.ts`, banco
+  multiproceso (`scripts/banco/correr-etapa2.mjs`). RED → GREEN: +70 tests;
+  suite 1.525 (1.515 aprobados, 0 fallos, 10 omitidos) **en la implementación
+  anterior a las correcciones** (`fb3a3f1`); `tsc` limpio; build
+  fresco exit 0. **Banco (3 procesos, corrida VÁLIDA, 27 escenarios):** HIT
+  idéntico a la Etapa 1 (1 comando, 40.505 B, mismo corredor); frío 994 → 997
+  comandos; E2 3 → **1 composición entre procesos**; fresca vencida con UB →
+  los demás **último bueno en el acto**; propietario asesinado → un rescate;
+  turno borrado a mitad → un solo publicado; medianoche → `-1` con UB intacto;
+  TMDB caído → 1 degradado + enfriamiento (ráfaga 1/s × 40 s: 3 composiciones
+  sin UB, 2 con UB y 40 UB); respuesta perdida → reconciliación; EVAL fallido
+  → nada inseguro; Redis caído y vuelve → `sin-redis` no escribe; composición
+  > presupuesto → `cancelada` a los 50,4 s y TMDB deja de recibir; control con
+  Redis caído → no termina (promesa reducida); rollout v6/v7 → familias
+  separadas. Informe §15. Antecedente del mismo día: diseño v3 aprobado por
+  Codex y **precondición
+  (informe §14):** desde un Preview descartable y protegido (rama temporal
+  nunca pusheada, subida con `vercel deploy`, borrada después; las credenciales
+  de Redis son *Sensitive* y el CLI no las baja), contra **la misma base de
+  Upstash que usa Producción**, con claves `precond-etapa2:<corrida>:*` de TTL
+  ≤ 60 s: `SET NX PX` y los cuatro scripts reales (`RENOVAR`, `LIBERAR`,
+  `ENFRIAR`, `PUBLICAR`) con el payload real del Home (85.328 B; `PUBLICAR` de
+  195 KB de cuerpo), resultados positivos y negativos (propiedad perdida → 0,
+  generación de un día posterior → −1 con UB intacto, `enfriando:` bloquea a
+  todos), lectura posterior con contenido y TTL, 48/48 pasos correctos, 60
+  comandos HTTP (mediana 118 ms), `SCAN` del prefijo 0 antes y 0 después,
+  `DBSIZE` 2.923 antes y después. **Desconocido:** cómo factura Upstash un
+  `EVAL` (sin acceso al panel) y el límite de tamaño de petición (≥ 195 KB
+  pasa). **Hallazgo para la implementación (§14.6):** leer tres copias en el
+  HIT triplica los bytes del camino caliente; queda como decisión pendiente
+  con recomendación (leer sólo la fresca y pedir UB/degradado en el MISS).
+  Correcciones documentales del 13/09: promesa real del deadline antes de la
+  desigualdad; "Redis caído puede terminar en timeout" en vez de "no tumba la
+  app"; período de adopción del UB (las frescas v6 siguen HIT y no crean UB;
+  cada combinación lo obtiene en su primera reconstrucción; ventana aceptada,
+  sin escrituras en los HIT); caso RED de cancelación del líder con seguidores.
+  **La v3 corrige los cuatro hallazgos sobre la v2:** el camino `sin-redis` sirve y **no guarda** (nada de
+  fresca/UB/generación sin fencing; escenario E-sinredis-vuelve); un degradado
+  **no libera** el turno sino que lo convierte en enfriamiento (`ENFRIAR`
+  atómico, `ENFRIAMIENTO_MS`, degradado compartido en clave aparte que nunca se
+  promociona; ráfaga escalonada con y sin UB); el deadline es una
+  **cancelación real** por `AbortSignal` (espera, renovación, TMDB y Supabase)
+  con **promesa reducida**: vale con Redis respondiendo, y con Redis caído la
+  solicitud puede seguir hasta `maxDuration` como en F5a (los reintentos del
+  SDK no se cancelan por solicitud; Etapa 3); **una sola `VERSION_HOME`** en
+  `lib/claves.ts` para fresca, UB, generación, degradado y turno, con turnos
+  separados por versión en un despliegue gradual y tests de invalidación
+  conjunta. La v2 resolvía los diez
+  hallazgos anteriores: el seguidor sin último bueno reintenta el turno en cada vuelta y
+  nunca compone sin turno; deadline integral del request contra `maxDuration`
+  fijado por test y con máximos que salen del banco; degradado con último
+  bueno devuelve el último bueno; **publicación con fencing atómico**
+  (`PUBLICAR` compara propietario y generación por día, cubre la medianoche);
+  estados `adquirido/ocupado/indeterminado` con reconciliación de la
+  respuesta perdida; `EVAL` es condición obligatoria (sin variante insegura);
+  integración explícita con `lib/home-vuelo.ts` y costos recalculados;
+  evidencia de "composición iniciada" para E-muere; controles RED; TTL de
+  36 h enunciado como lo que garantiza. **Decisión del dueño aprobada:** se
+  sirve el Home anterior durante la reconstrucción. Sigue sin verificarse
+  `EVAL` contra la base real (credenciales sólo en Vercel): es la condición de
+  entrada a la implementación. Informe: [`medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md`](medidas/2026-09-13-etapa2-diseno-turno-ultimo-bueno.md).
 
 - **Revisión independiente de Codex, 10/09:** los riesgos centrales del informe
   de capacidad tienen sustento, pero **el plan requiere correcciones antes de
@@ -270,7 +349,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
-   | 2 | Turno distribuido + último Home bueno | #17 | Sí |
+   | 2 | Turno distribuido + último Home bueno — **diseño pendiente de auditoría (`diseno/etapa2-turno-ultimo-bueno`); no implementada** | #17 | Sí |
    | 3 | Resistencia frente a TMDB | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |

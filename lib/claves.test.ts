@@ -328,7 +328,7 @@ function constructoresExportados(): string[] {
 }
 const CONSTRUCTORES = constructoresExportados();
 
-test("el barrido descubre los constructores solo, y hay doce", () => {
+test("el barrido descubre los constructores solo, y hay dieciséis", () => {
   // Si esto falla porque agregaste una familia: NO subas el numero sin mas. Una
   // familia localizada nueva significa un espacio de claves nuevo y, con el,
   // otro arranque frio. El numero esta aca para que esa decision se tome a
@@ -338,12 +338,22 @@ test("el barrido descubre los constructores solo, y hay doce", () => {
   // disponibilidad: "Últimos lanzamientos · Series" mezcla dos consultas de TMDB
   // y enriquece ~120 candidatos, así que sin clave propia la página 2 volvería a
   // pagarlos todos. Es un espacio de claves nuevo y su arranque frío, decidido.
-  assert.equal(CONSTRUCTORES.length, 12, `constructores en lib/claves.ts: ${CONSTRUCTORES.join(", ")}`);
-  // Y que sean los que el resto del archivo prueba, no otros doce.
+  //
+  // 13–16 (Etapa 2 de capacidad, #17): las otras cuatro familias del Home —
+  // último bueno, su generación, el degradado compartido y el turno—. Comparten
+  // `VERSION_HOME` con la fresca y NO son un arranque frío nuevo: la fresca
+  // sigue siendo byte a byte la misma clave (lib/claves-home.test.ts). Sólo el
+  // último bueno y el degradado guardan contenido localizado; la generación y
+  // el turno llevan la huella igual para vivir en el mismo espacio y caer con
+  // la misma versión.
+  assert.equal(CONSTRUCTORES.length, 16, `constructores en lib/claves.ts: ${CONSTRUCTORES.join(", ")}`);
+  // Y que sean los que el resto del archivo prueba, no otros dieciséis.
   assert.deepEqual([...CONSTRUCTORES].sort(), [
-    "claveCard", "claveCombinadaCache", "claveHome", "clavePeoplePopular",
+    "claveCard", "claveCombinadaCache", "claveHome", "claveHomeDegradado",
+    "claveHomeGeneracion", "claveHomeUltimoBueno", "clavePeoplePopular",
     "clavePoolCache", "claveReco", "claveRecoCruce", "claveRecoMismo",
-    "claveRecoPerfil", "claveSearch", "claveTopPop", "claveUltimosSeries",
+    "claveRecoPerfil", "claveSearch", "claveTopPop", "claveTurnoHome",
+    "claveUltimosSeries",
   ]);
 });
 
@@ -388,7 +398,7 @@ function llamadasAConstructores(src: string): { nombre: string; ultimo: string }
   return out;
 }
 
-test("los doce call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
+test("los diecisiete call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
   const infractores: string[] = [];
   const usos: Record<string, number> = {};
   let total = 0;
@@ -401,7 +411,8 @@ test("los doce call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => 
   }
   assert.deepEqual(infractores, [],
     `constructores sin la huella real:\n${infractores.join("\n")}`);
-  // Doce familias y TRECE call sites. La de más es `claveUltimosSeries`, que se
+  // Dieciséis familias y DIECISIETE call sites: las cinco del Home se llaman
+  // una vez cada una en lib/home.ts (Etapa 2). La de más es `claveUltimosSeries`, que se
   // llama en dos lugares —una página del catálogo regional y el suplemento por
   // redes— y es a propósito: son dos TRAMOS del mismo espacio de claves, no dos
   // espacios. Cachearlos por separado es lo que hace que pedir la página 2 no
@@ -409,7 +420,7 @@ test("los doce call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => 
   //
   // El total se afirma para que sumar una familia (o un tramo) obligue a
   // decidirlo, no para contar por contar.
-  assert.equal(total, 13, `se esperaban 13 llamadas a constructores, hay ${total}`);
+  assert.equal(total, 17, `se esperaban 17 llamadas a constructores, hay ${total}`);
   assert.equal(usos["claveUltimosSeries"], 2,
     "los dos tramos de `ultimos:` tienen que seguir cacheándose por separado");
   // Un constructor exportado que nadie llama es una familia declarada y sin

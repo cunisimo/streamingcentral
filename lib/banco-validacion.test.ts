@@ -27,7 +27,8 @@ import {
 
 const linea = (o: Partial<LineaTerminal> = {}): LineaTerminal => ({
   clave: "home:es-ES.r1:v6:123:d,m,n:", msTotal: 100, cache: "MISS", composiciones: 1, esperas: 0,
-  tmdb: 926, supabase: 4, redisIntentos: 993, redisComandos: 993, ...o,
+  tmdb: 926, supabase: 4, redisIntentos: 993, redisComandos: 993,
+  turno: null, origen: null, publicacion: null, renovaciones: null, propietario: null, turnoPerdido: false, ...o,
 });
 const pedido = (clave = "home:es-ES.r1:v6:123:d,m,n:") => clave;
 
@@ -252,4 +253,104 @@ test("una línea terminal SIN clave no se puede atribuir: inválido", () => {
   const v = validarEscenario(escenario({ terminales: [linea({ clave: null })] }));
   assert.equal(v.valida, false);
   assert.match(v.problemas.join("\n"), /sin clave/);
+});
+
+// ===========================================================================
+// ETAPA 2: turno, origen, publicación y la evidencia de composición iniciada
+// ===========================================================================
+import { esLineaCompone, propietarioDeCompone } from "./banco-validacion.ts";
+
+const lineaE2 = (extra: string, cache = "MISS") =>
+  `[home] 2576ms total | cache ${cache} | 1 composición | 0 esperas compartidas${extra} | tmdb 926 llamadas (926 ok) 24389ms | supabase 4 consultas (4 ok) 123ms | redis 997 llamadas / 997 intentos http / 997 comandos | 958 claves (30 hit / 928 miss) | 30775ms | lotes: 65 de [1,93] | clave home:es-ES.r1:v6:123:d,m,n:`;
+
+test("🔴 Etapa 2: la línea terminal trae turno, origen, publicación y renovaciones, y los nuevos valores de cache", () => {
+  const l = parsearLineaHome(lineaE2(" | turno adquirido | origen propia | publicacion publicado | renovaciones 2 | propietario i1:7:3 | TURNO PERDIDO"));
+  assert.equal(l.turno, "adquirido");
+  assert.equal(l.origen, "propia");
+  assert.equal(l.publicacion, "publicado");
+  assert.equal(l.renovaciones, 2);
+  assert.equal(l.propietario, "i1:7:3");
+  assert.equal(l.turnoPerdido, true);
+  assert.equal(l.cache, "MISS");
+  for (const c of ["ULTIMO-BUENO", "ESPERADA", "VACIO", "DEGRADADO-COMPARTIDA"]) {
+    assert.equal(parsearLineaHome(lineaE2(" | turno ocupado | origen x | publicacion no | renovaciones 0 | propietario p", c)).cache, c);
+  }
+  // Una línea de la Etapa 1 (sin el segmento) sigue parseando: los campos quedan en null.
+  const vieja = parsearLineaHome(lineaE2(""));
+  assert.equal(vieja.turno, null);
+  assert.equal(vieja.origen, null);
+});
+
+test("🔴 Etapa 2: la línea `[home] compone <clave> <propietario>` es la evidencia de composición iniciada", () => {
+  assert.equal(esLineaCompone("[home] compone home:v6:1:n: i1:7:3"), true);
+  assert.equal(esLineaCompone("[home] pedido home:v6:1:n:"), false);
+  assert.deepEqual(propietarioDeCompone("[home] compone home:v6:1:n: i1:7:3"), { clave: "home:v6:1:n:", propietario: "i1:7:3", sinRedis: false });
+  assert.deepEqual(propietarioDeCompone("[home] compone home:v6:1:n: i1:7:3 (sin-redis)"), { clave: "home:v6:1:n:", propietario: "i1:7:3", sinRedis: true });
+});
+
+test("🔴 Etapa 2: lo esperado suma origenes, publicaciones y setNxOk, y NINGUNA composición sin turno", () => {
+  const registro = [
+    { op: "SETNX", clave: "home:turno:x", propietario: "p1", resultado: "OK" },
+    { op: "SETNX", clave: "home:turno:x", propietario: "p2", resultado: null },
+    { op: "PUBLICAR", clave: "home:turno:x", propietario: "p1", resultado: 1 },
+  ];
+  const t1 = parsearLineaHome(lineaE2(" | turno adquirido | origen propia | publicacion publicado | renovaciones 0 | propietario p1"));
+  const t2 = parsearLineaHome(lineaE2(" | turno ocupado | origen esperada | publicacion no | renovaciones 0 | propietario p2", "ESPERADA").replace("1 composición", "0 composiciones").replace("tmdb 926 llamadas (926 ok)", "tmdb 0 llamadas (0 ok)").replace("supabase 4 consultas (4 ok)", "supabase 0 consultas (0 ok)").replace("997 llamadas / 997 intentos http / 997 comandos", "8 llamadas / 8 intentos http / 8 comandos"));
+  const base = escenario({
+    veces: 2, respuestas: [{ estado: 200, ms: 1 }, { estado: 200, ms: 1 }], pedidos: [pedido(), pedido()], terminales: [t1, t2],
+    dobles: { tmdb: 926, supabase: 4, redisHttp: 1005, redisComandos: 1005 },
+    compone: [{ clave: "home:es-ES.r1:v6:123:d,m,n:", propietario: "p1", sinRedis: false }],
+    registroTurno: registro,
+  });
+  const ok = validarEscenario({ ...base, esperado: { composiciones: 1, origenes: { propia: 1, esperada: 1 }, publicaciones: 1, setNxOk: 1 } });
+  assert.equal(ok.valida, true, ok.problemas.join("; "));
+  assert.deepEqual(ok.turno, { compone: 1, sinTurno: 0, sinRedis: 0, setNxOk: 1, publicaciones: 1, enfriadas: 0, liberadas: 0, origenes: { propia: 1, esperada: 1 } });
+  const malOrigen = validarEscenario({ ...base, esperado: { origenes: { propia: 2 } } });
+  assert.equal(malOrigen.valida, false);
+  assert.match(malOrigen.problemas.join("\n"), /origenes/);
+  const malPub = validarEscenario({ ...base, esperado: { publicaciones: 2 } });
+  assert.equal(malPub.valida, false);
+  // Una línea `compone` cuyo propietario no tiene SET NX OK ni reconciliación es una composición SIN turno: inválida siempre.
+  const sinTurno = validarEscenario({ ...base, compone: [...base.compone!, { clave: "home:es-ES.r1:v6:123:d,m,n:", propietario: "intruso", sinRedis: false }] });
+  assert.equal(sinTurno.valida, false);
+  assert.match(sinTurno.problemas.join("\n"), /sin turno/);
+  // Salvo que la propia línea diga `sin-redis` (Redis caído: se compone sin coordinar, a propósito).
+  const sinRedis = validarEscenario({ ...base, compone: [...base.compone!, { clave: "home:es-ES.r1:v6:123:d,m,n:", propietario: "solo", sinRedis: true }] });
+  assert.equal(sinRedis.valida, true, sinRedis.problemas.join("; "));
+  assert.equal(sinRedis.turno?.sinRedis, 1);
+});
+
+test("🔴 Etapa 2 (E-muere): una interrupción DECLARADA deja comprobar lo afirmado sin exigir las igualdades", () => {
+  const t1 = parsearLineaHome(lineaE2(" | turno adquirido | origen propia | publicacion publicado | renovaciones 0 | propietario p2"));
+  const registro = [
+    { op: "SETNX", clave: "home:turno:x", propietario: "p1", resultado: "OK" },
+    { op: "EXPIRA", clave: "home:turno:x", propietario: "p1", resultado: null },
+    { op: "SETNX", clave: "home:turno:x", propietario: "p2", resultado: "OK" },
+    { op: "PUBLICAR", clave: "home:turno:x", propietario: "p2", resultado: 1 },
+  ];
+  const base = escenario({
+    veces: 2, respuestas: [{ estado: null, ms: 5000, error: "TypeError" }, { estado: 200, ms: 20000 }],
+    pedidos: [pedido(), pedido()], terminales: [t1],
+    dobles: { tmdb: 1500, supabase: 8, redisHttp: 1500, redisComandos: 1500 },   // el muerto también consumió: no cierra y no tiene que cerrar
+    compone: [{ clave: pedido(), propietario: "p1", sinRedis: false }, { clave: pedido(), propietario: "p2", sinRedis: false }],
+    registroTurno: registro, interrumpidas: 1,
+  });
+  const v = validarEscenario({ ...base, esperado: { publicaciones: 1, origenes: { propia: 1 } } });
+  assert.equal(v.estado, "completo-con-interrupciones");
+  assert.equal(v.valida, true, v.problemas.join("; "));
+  assert.equal(v.igualdadesVerificadas, false);
+  assert.equal(v.turno?.compone, 2);
+  // Sin la declaración es un incompleto sin permiso.
+  assert.equal(validarEscenario({ ...base, interrumpidas: undefined }).valida, false);
+  // Y una composición sin turno se detecta igual.
+  const intruso = validarEscenario({ ...base, compone: [...base.compone!, { clave: pedido(), propietario: "x", sinRedis: false }] });
+  assert.equal(intruso.valida, false);
+});
+
+test("Etapa 2: `turnos` y `renovacionesMin` se comprueban", () => {
+  const t = parsearLineaHome(lineaE2(" | turno reconciliado | origen propia | publicacion publicado | renovaciones 3 | propietario p1"));
+  const base = escenario({ terminales: [t], dobles: { tmdb: 926, supabase: 4, redisHttp: 997, redisComandos: 997 }, compone: [{ clave: t.clave!, propietario: "p1", sinRedis: false }], registroTurno: [] });
+  assert.equal(validarEscenario({ ...base, esperado: { turnos: { reconciliado: 1 }, renovacionesMin: 3 } }).valida, true);
+  assert.equal(validarEscenario({ ...base, esperado: { turnos: { adquirido: 1 } } }).valida, false);
+  assert.equal(validarEscenario({ ...base, esperado: { renovacionesMin: 4 } }).valida, false);
 });

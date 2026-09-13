@@ -36,13 +36,17 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { backendCache, cachedIf, cachedLocIf, dailySeed, pickDaily, TTL, withMetricas } from "./cache";
+import { backendCache, dailySeed, leerVarias, opsTurnoHome, pickDaily, TTL, withMetricas } from "./cache";
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
 import { withFallosDisponibilidad } from "./fallos-disponibilidad";
-import { claveHome } from "./claves";
 import type { ClaveLocalizada } from "./claves";
-import { HUELLA_IDIOMA, metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
+import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
+import { CONSTANTES, servirConTurno } from "./home-servir";
+import { conSenal, senalActual } from "./senal-solicitud";
+import { crearTurno } from "./turno";
+import { randomUUID } from "node:crypto";
+import { metricasIdiomaActuales, withMetricasIdioma } from "./idioma";
 import { anotar, lineaHome } from "./metricas";
 import { conRegistroDeEjes, type Eje } from "./pools";
 import {
@@ -90,6 +94,12 @@ export interface HomePayload {
   // sin forma de reintentar.
   fallos: number;
   degradado: boolean;
+  // Sólo en los dos finales SIN contenido de la Etapa 2 (lib/home-servir.ts):
+  // la espera sin último bueno se agotó, o la solicitud se canceló por
+  // presupuesto. Un payload con `motivo` es vacío, degradado y NUNCA se
+  // publica ni se cachea; por eso no cambia el contrato de lo cacheado ni la
+  // versión de la clave.
+  motivo?: "espera-agotada" | "cancelada";
 }
 
 const keyOf = (t: { id: number; type: MediaType }) => `${t.type}:${t.id}`;
@@ -641,50 +651,82 @@ export async function composeHome(opts: {
 // La salida es idéntica para todos los que pidan lo mismo el mismo día:
 // `personalize()` sigue siendo identidad y el hero usa la semilla compartida.
 // Si algún día el Home se personaliza de verdad, esta clave deja de alcanzar.
-function homeKey(providers: PlatformCode[], types: Record<string, MediaType>): ClaveLocalizada {
-  // Recibe la lista y los tipos YA CANÓNICOS (lib/canonizar-home.ts): plataformas
-  // en minúsculas, del catálogo, sin repetir, ordenadas y acotadas; tipos sólo de
-  // rieles conocidos y sólo los que difieren de su default. Así "n,d,m", "d,m,n",
-  // "N,,d,M" y "n,zzz,d,m" son la misma clave, y `t` ausente es la misma clave
-  // que `t=accion:movie` (y que las siete claves en default que manda el
-  // cliente). Etapa 1 de capacidad, #18.
-  const p = [...providers].sort().join(",");
-  const t = claveDeTipos(types);
-  // La versión de la clave se sube cuando cambia el CONTENIDO del payload, no
-  // su forma: si no, lo que ya está cacheado sigue sirviéndose hasta que expire
-  // el TTL (6 h) y el cambio "no se ve" después de deployar.
-  // v2 = ventana de votos de 7 a 90 días.
-  // v3 = el riel "Hacete cargo" pasó a llamarse "No gustaron". Los TÍTULOS de
-  //      los rieles viajan dentro del payload, así que cambiar un texto de la
-  //      interfaz es cambiar el contenido: sin subir la versión, el nombre
-  //      viejo se sigue sirviendo hasta 6 h después del deploy.
-  // v4 = entró el riel "Miniseries para ansiosos". Es un riel más en el payload
-  //      y además corre el dedup: los de abajo pueden quedar distintos aunque
-  //      nadie los toque. Un payload v3 cacheado no lo tiene, y sin subir la
-  //      versión el riel "no aparecía" hasta 6 h después del deploy.
-  // v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
-  //      tarjeta más, pero es contenido del payload igual: sin subir la versión
-  //      el botón no aparecía hasta 6 h después. Mismo caso que v3.
-  return claveHome(dailySeed(), p, t, HUELLA_IDIOMA);
+//
+// Las claves las construye lib/home-instante.ts a partir de UN instante
+// capturado al entrar en `homePayload` (Etapa 2): el día, la semilla, las cinco
+// claves y la clave del vuelo salen de la misma lectura del reloj. Recibe la
+// lista y los tipos YA CANÓNICOS (lib/canonizar-home.ts): plataformas en
+// minúsculas, del catálogo, sin repetir, ordenadas y acotadas; tipos sólo de
+// rieles conocidos y sólo los que difieren de su default. Así "n,d,m", "d,m,n",
+// "N,,d,M" y "n,zzz,d,m" son la misma clave, y `t` ausente es la misma clave
+// que `t=accion:movie` (y que las siete claves en default que manda el
+// cliente). Etapa 1 de capacidad, #18.
+//
+// La versión de la clave (`VERSION_HOME`, lib/claves.ts) se sube cuando cambia
+// el CONTENIDO del payload, no su forma: si no, lo que ya está cacheado sigue
+// sirviéndose hasta que expire el TTL (6 h) y el cambio "no se ve" después de
+// deployar.
+// v2 = ventana de votos de 7 a 90 días.
+// v3 = el riel "Hacete cargo" pasó a llamarse "No gustaron". Los TÍTULOS de
+//      los rieles viajan dentro del payload, así que cambiar un texto de la
+//      interfaz es cambiar el contenido: sin subir la versión, el nombre
+//      viejo se sigue sirviendo hasta 6 h después del deploy.
+// v4 = entró el riel "Miniseries para ansiosos". Es un riel más en el payload
+//      y además corre el dedup: los de abajo pueden quedar distintos aunque
+//      nadie los toque. Un payload v3 cacheado no lo tiene, y sin subir la
+//      versión el riel "no aparecía" hasta 6 h después del deploy.
+// v5 = ese riel sumó su "Ver todas" (`seeAllHref`). Son 30 bytes y ninguna
+//      tarjeta más, pero es contenido del payload igual: sin subir la versión
+//      el botón no aparecía hasta 6 h después. Mismo caso que v3.
+// v6 = "Últimos lanzamientos" estrenó selector Películas/Series (ver lib/claves.ts).
+function clavesDeLaSolicitud(providers: PlatformCode[], types: Record<string, MediaType>): ClavesDelHome {
+  const instante = instanteHome();
+  return clavesDelHome(instante, [...providers].sort().join(","), claveDeTipos(types));
 }
 
 // El vuelo compartido del Home (Etapa 1, #17): N solicitudes simultáneas a la
 // misma clave con caché fría = UNA composición, por proceso. Es de módulo
-// porque el mapa de promesas en vuelo tiene que ser uno por proceso. La
-// resolución es `cachedLocIf` entera —leer, producir, decidir, guardar— y por
-// eso el seguidor recibe el verdicto de degradación adentro del payload y
-// nunca escribe. Ver lib/home-vuelo.ts; NO se aplica a cached/cachedIf.
-const servirHome = crearVueloHome<HomePayload, ClaveLocalizada>({
+// porque el mapa de promesas en vuelo tiene que ser uno por proceso. Ver
+// lib/home-vuelo.ts; NO se aplica a cached/cachedIf.
+//
+// Etapa 2 (#17): lo que resuelve el LÍDER ya no es `cachedLocIf` (que
+// escribiría la fresca sin fencing) sino la secuencia con TURNO distribuido y
+// ÚLTIMO BUENO de lib/home-servir.ts: una composición por clave ENTRE
+// instancias, el Home anterior servido en tiempo de HIT mientras uno
+// reconstruye, y ninguna escritura del Home fuera de PUBLICAR/ENFRIAR. El
+// seguidor local sigue recibiendo el resultado entero del líder, con su
+// verdicto adentro, y nunca escribe. Un payload degradado se DEVUELVE pero no
+// se publica (enfría); "sin plataformas" no se publica y no cuesta nada.
+//
+// El propietario del turno identifica esta instancia y esta composición
+// (§3.1): Vercel no expone un id de instancia estable al runtime. El UUID va
+// COMPLETO: la identidad del propietario es parte del fencing (RENOVAR,
+// PUBLICAR, ENFRIAR y LIBERAR comparan contra ella) y no se recorta
+// (auditoría de Codex sobre fb3a3f1; lib/home-turno-cableado.test.ts lo fija).
+const INSTANCIA = randomUUID();
+let composicionesDeEsteProceso = 0;
+const turnoHome = crearTurno(opsTurnoHome);
+// El vuelo coordina SOLO por la clave fresca; las otras cuatro claves y el DÍA
+// de la generación viajan como contexto de cada solicitud —todo derivado del
+// mismo instante— y el resolver usa lo del líder (misma clave = mismas cinco
+// claves y mismo día). Sin mapas de módulo: nada que retener. Y sin volver a
+// leer el reloj acá: con la medianoche entre la clave y el día, el fencing
+// diario quedaría del lado equivocado.
+const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>({
   leer: (clave) => backendCache.leer<HomePayload>(clave),
-  resolver: (clave, producir) => cachedLocIf(
-    clave,
-    TTL.home,
-    producir,
-    // Un payload degradado se DEVUELVE pero no se guarda: si no, una caída
-    // pasajera de TMDB queda congelada una hora para todos. Lo mismo con el
-    // caso "sin plataformas", que no cuesta nada recalcular.
-    (v) => !v.degradado && !v.sinPlataformas,
-  ),
+  resolver: (_clave, producir, claves) => servirConTurno<HomePayload>({
+    claves,
+    propietario: `${INSTANCIA}:${process.pid}:${++composicionesDeEsteProceso}`,
+    dia: claves.dia,
+    ttl: { fresca: TTL.home, ub: TTL.homeUltimoBueno },
+    leer: (claves) => leerVarias<HomePayload>(claves),
+    turno: turnoHome,
+    producir: async () => { const valor = await producir(); return { valor, fallo: !!valor.degradado }; },
+    publicable: (v) => !v.sinPlataformas,
+    vacio: (motivo) => ({ hero: [], rails: [], fallos: 0, degradado: true, motivo }),
+    // La señal del líder: el resolver corre en su contexto async.
+    senal: senalActual() ?? undefined,
+  }),
 });
 
 export async function homePayload(opts: {
@@ -697,7 +739,11 @@ export async function homePayload(opts: {
   // contenidos distintos, que es peor que dos claves.
   const providers = canonizarProviders(opts.providers);
   const types = canonizarTipos(opts.types);
-  const key = homeKey(providers, types);
+  // UN instante para toda la solicitud: el día, la semilla, las cinco claves y
+  // la clave del vuelo (`claves.fresca`) salen de la misma lectura del reloj.
+  // Las cinco claves y el día viajan con la solicitud como contexto del vuelo.
+  const claves = clavesDeLaSolicitud(providers, types);
+  const key = claves.fresca;
   // Una línea al ENTRAR y otra al salir: la diferencia entre las dos es la
   // cantidad de solicitudes que siguen corriendo. Abortar el `fetch` del lado
   // del cliente no cancela este handler, y sin esta línea eso es invisible.
@@ -735,8 +781,12 @@ export async function homePayload(opts: {
     console.error(`[home] payload degradado: ${fallos} fallo(s) de disponibilidad`);
     return { ...res, fallos: res.fallos + fallos, degradado: true };
   };
+  // El deadline de la solicitud (Etapa 2, §3.8): una señal real que corta la
+  // espera, la renovación del turno y las llamadas a TMDB y Supabase. Lo que
+  // no corta son los reintentos del SDK de Redis (promesa reducida).
+  const senal = AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS);
   const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
-    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => servirHome(key, producirHome))));
+    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(claves.fresca, producirHome, claves)))));
   if (metricas.home.cache === null) metricas.home.cache = "hit";
   metricas.home.degradado = !!payload.degradado;
   metricas.home.fuentesCaidas = payload.fallos;
@@ -744,7 +794,7 @@ export async function homePayload(opts: {
   // La clave va en el log a propósito: contando claves distintas se ve cuánto
   // se fragmenta el cache por combinación de plataformas y por toggles.
   // COMPARTIDA = esperó la composición de otra solicitud (single-flight).
-  console.log(`[home] ${metricas.home.cache === "miss" ? "MISS" : metricas.home.cache === "compartida" ? "COMPARTIDA" : "HIT "} ${key}`);
+  console.log(`[home] ${metricas.home.cache === "hit" ? "HIT " : metricas.home.cache.toUpperCase()} ${key}`);
   console.log(
     `[idioma] fallback: ${mIdioma.llamadas} llamadas | ${mIdioma.lotesConRotos} lotes con rotos | ` +
     `${mIdioma.titulosReparados} títulos reparados | ${mIdioma.fallos} fallos`,

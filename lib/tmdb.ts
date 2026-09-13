@@ -8,6 +8,7 @@ import "server-only";
 import { IDIOMA_BASE } from "./idioma";
 import type { MediaType } from "./types";
 import { anotar, clasificarEstadoHttp } from "./metricas";
+import { combinarSenales, senalActual } from "./senal-solicitud";
 import { baseTmdb } from "./tmdb-base";
 
 // La base es la oficial salvo que el BANCO aislado la apunte a un doble, y
@@ -63,7 +64,15 @@ function liberar(): void {
 
 async function tmdb<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const q = new URLSearchParams({ ...DEFAULTS, ...params });
+  // Si la solicitud ya fue cancelada (Etapa 2, §3.8), no se sale ni se ocupa el
+  // semáforo: no es una llamada, así que tampoco se cuenta como tal. Las que
+  // ya estaban en vuelo rechazan por su propia señal y sí cuentan.
+  if (senalActual()?.aborted) throw new DOMException("solicitud cancelada", "AbortError");
   await adquirir();
+  // Y otra vez DESPUÉS del semáforo: la solicitud pudo cancelarse mientras esta
+  // llamada esperaba su permiso, y salir igual sería contar una llamada que el
+  // servidor nunca recibe (medido en el banco: 4 de 565 en E-cancelacion).
+  if (senalActual()?.aborted) { liberar(); throw new DOMException("solicitud cancelada", "AbortError"); }
   // Se cuenta cada llamada y se clasifica su resultado por solicitud (Etapa 0,
   // #20). Este cliente no reintenta, así que una llamada es un intento HTTP.
   // El tiempo se mide DESPUÉS de obtener el permiso: es lo que tardó TMDB, no
@@ -73,8 +82,12 @@ async function tmdb<T>(path: string, params: Record<string, string> = {}): Promi
   try {
     let res: Response;
     try {
+      // El timeout propio de 8 s, combinado con la señal de la solicitud (Etapa
+      // 2, §3.8): al agotarse el presupuesto del request, cada `fetch` en vuelo
+      // rechaza y la composición termina degradada en milisegundos. Sin señal
+      // en el scope es exactamente el timeout de siempre.
       res = await fetch(`${BASE}${path}?${q}`, {
-        headers: HEADERS, cache: "no-store", signal: AbortSignal.timeout(8000),
+        headers: HEADERS, cache: "no-store", signal: combinarSenales(senalActual(), AbortSignal.timeout(8000)),
       });
     } catch (e) {
       anotar((m) => { m.tmdb.errores.red += 1; });

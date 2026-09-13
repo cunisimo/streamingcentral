@@ -17,14 +17,23 @@ export const TZ = "America/Argentina/Buenos_Aires";
 // catálogo de TMDB, que no depende de nosotros).
 //
 // Dos candados:
-//  - No corre en producción. Ni siquiera lee la variable.
+//  - No corre en producción. Ni siquiera lee la variable. La ÚNICA excepción es
+//    el banco aislado (Etapa 2, E-medianoche): `next start` fija
+//    NODE_ENV=production, así que el banco declara `YUMP_BANCO=1` —la misma
+//    marca explícita que lib/tmdb-base.ts— y nunca con `VERCEL_ENV=production`.
 //  - Solo aplica cuando NADIE pasó una fecha. `hoyAR(unaFecha)` es formateo de
 //    una fecha dada —el `.ics` de "Recordarme", por ejemplo— y ahí el override
 //    sería un bug; el único caso que intercepta es la pregunta "¿qué día es hoy?".
-function fechaForzada(): string | null {
-  if (process.env.NODE_ENV === "production") return null;
-  const v = process.env.YUMP_FECHA;
+export function fechaForzadaSegun(env: { nodeEnv?: string; banco?: string; vercelEnv?: string; fecha?: string }): string | null {
+  if (env.vercelEnv === "production") return null;
+  if (env.nodeEnv === "production" && env.banco !== "1") return null;
+  const v = env.fecha;
   return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+}
+function fechaForzada(): string | null {
+  return fechaForzadaSegun({
+    nodeEnv: process.env.NODE_ENV, banco: process.env.YUMP_BANCO, vercelEnv: process.env.VERCEL_ENV, fecha: process.env.YUMP_FECHA,
+  });
 }
 
 // Fecha de hoy en Argentina, en formato YYYY-MM-DD.
@@ -42,8 +51,16 @@ export function hoyAR(date?: Date): string {
 // La consumen el Home (clave de cache y mezcla de rieles), el recomendador, los
 // chips curados y la ruleta: todo lo que rota una vez por día.
 export function dailySeed(date?: Date): number {
-  const s = hoyAR(date);
+  return semillaDeDia(hoyAR(date));
+}
+
+/**
+ * La semilla de UN día ya calculado (`YYYY-MM-DD`). Existe aparte para que
+ * quien capturó el día una vez (lib/home-instante.ts) derive la semilla de ESE
+ * día y no vuelva a consultar el reloj: día y semilla de un mismo instante.
+ */
+export function semillaDeDia(dia: string): number {
   let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  for (let i = 0; i < dia.length; i++) { h ^= dia.charCodeAt(i); h = Math.imul(h, 16777619); }
   return h >>> 0;
 }
