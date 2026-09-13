@@ -49,6 +49,24 @@ precondición **corrige** del diseño: el payload real de `n,d,m` mide **85.328
 B** (no "100–150 KB"); y hay un **hallazgo de costo** para la implementación
 (§14.6: leer tres copias en el HIT triplica los bytes del camino caliente).
 
+### 0.a-ter Antes de implementar (13/09, tras la aprobación de la precondición)
+
+Tres correcciones pedidas por el dueño: (1) **una carrera nueva, lectura →
+turno** (§5.3, §5.1 paso 4.0): entre la lectura inicial y el `SET NX` otro
+puede publicar la fresca y liberar; sin una segunda lectura, quien adquiere
+recompone algo que ya existe. Después de **cada** adquisición —directa o
+reconciliada— se vuelve a leer la fresca antes de componer; si apareció, no se
+compone, se libera con `LIBERAR`, se sirve esa fresca y se anota
+`origen = "fresca-tras-turno"`. Test RED que intercala exactamente esa
+publicación (§9.2). (2) **Lecturas escalonadas** (§5.1, §5.5, §7): el camino
+caliente lee **sólo la fresca**; `[ub, degradado]` se leen únicamente en el
+MISS; la segunda lectura tras adquirir es sólo de la fresca; la espera sin
+contenido conserva la lectura de las tres. Un HIT transfiere una sola copia.
+(3) **Afirmación de aislamiento corregida** (§14.1): las operaciones Lua usaron
+sólo claves temporales, pero el payload representativo salió de una solicitud
+**normal** a Producción (`/api/home?providers=n,d,m`), que sí leyó —y, si la
+clave hubiera estado fría, habría reconstruido— una clave normal del Home.
+
 ### 0.b Versión 2 (auditoría de Codex sobre `7cfc979`)
 
 | # | Hallazgo | Dónde se resolvió |
@@ -444,11 +462,14 @@ cuatro claves: no existe variante sin liberación y publicación seguras.
 
 ```
  0. t0 = ahora; señal = AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)          (§3.8)
- 1. MGET [fresca, ub, degradado]                          (1 comando, batcheado)
+ 1. GET fresca                                            (UNA copia: el camino caliente)
  2. fresca            → servir; cache=hit; fin
+ 2b. MISS → MGET [ub, degradado]                          (1 comando, sólo acá)
  3. tomar (SET NX PX) → adquirido | ocupado | indeterminado→reconciliar (§4.4)
     sin-redis         → componer sin coordinar; SERVIR; NO guardar nada; turno="sin-redis"; fin   (§3.7)
- 4. adquirido:
+ 4. adquirido (directo o reconciliado):
+    4.0 GET fresca otra vez (carrera lectura → turno, §5.3): si apareció →
+        LIBERAR; servir esa fresca; origen=fresca-tras-turno; NO componer; fin
     4a. log "[home] compone <clave> <propietario>"       (evidencia de composición iniciada, §6)
     4b. renovación cada TURNO_MS/3 (RENOVAR); `perdido` → seguir componiendo, no publicar
     4c. componer (single-flight local delante; la señal llega a TMDB y Supabase)
@@ -463,7 +484,7 @@ cuatro claves: no existe variante sin liberación y publicación seguras.
     5b. degradado compartido → servir (origen=degradado-compartido); fin
     5c. sin nada → bucle cada ESPERA_MS mientras !señal.aborted && ahora − t0 < TOPE_ESPERA_MS:
           MGET [fresca, ub, degradado]: fresca → servir (esperada); ub → servir; degradado → servir
-          tomar: adquirido → ir a 4 si el presupuesto restante ≥ COMPOSICION_MAX_MS,
+          tomar: adquirido → ir a 4 (con su 4.0) si el presupuesto restante ≥ COMPOSICION_MAX_MS,
                               si no: LIBERAR y responder vacío degradado (espera-agotada)
         al agotarse o abortar: responder 200 vacío degradado (motivo espera-agotada | cancelada), sin escribir
 ```
@@ -490,6 +511,7 @@ Los seguidores del single-flight local reciben lo que el líder sirvió y anotan
 | Carrera | Qué pasa | Por qué no rompe |
 |---|---|---|
 | Dos instancias `SET NX` a la vez | una `OK`, otra `null` | atómico |
+| **Lectura → turno:** A lee fresca ausente; B publica la fresca y libera; A hace `SET NX`, lo obtiene y compondría de nuevo | tras **cada** adquisición (directa o reconciliada) A vuelve a leer la fresca; si apareció, `LIBERAR`, sirve esa fresca, `origen = fresca-tras-turno`, cero composiciones | §5.1 paso 4.0; test RED que intercala exactamente esa publicación entre la lectura y el `SET NX`, y su variante con adquisición reconciliada tras respuesta perdida |
 | `SET NX` ejecutó, respuesta perdida, el SDK reintentó y recibió `null` | `tomar` reconcilia con `GET turno == propietario` → adquirido | §4.4; sin reconciliación el turno propio quedaría huérfano 15 s |
 | El turno vence a mitad (renovaciones perdidas) y otro lo toma | dos composiciones; **una sola publica** (`PUBLICAR` compara propietario) | fencing; medido en E-tarde |
 | Propietario de ayer termina después de que el de hoy publicó el UB | `PUBLICAR` ve `gen` con día mayor → **no toca el UB**; escribe sólo su fresca (clave de ayer, ya inútil) y devuelve `-1` | fencing por generación (§4.3); medido en E-medianoche |
@@ -537,7 +559,7 @@ vuelo local con `deps.resolver` = `cachedLocIf` (`lib/home.ts:679-689`).
 
 | Archivo | Cambio |
 |---|---|
-| `lib/home-vuelo.ts` | La lectura previa pasa a `deps.leer(fresca, ub, degradado)` → **tres `batchGet` en el mismo tick = un MGET**. Si hay fresca: hit. Si no, el vuelo local sigue igual; lo que cambia es **qué resuelve el líder**: en vez de `cachedLocIf` (que escribiría la fresca sin fencing), `home-servir` recibiendo lo leído |
+| `lib/home-vuelo.ts` | La lectura previa **sigue siendo sólo la fresca** (una copia). Si hay fresca: hit. Si no, el vuelo local sigue igual; lo que cambia es **qué resuelve el líder**: en vez de `cachedLocIf` (que escribiría la fresca sin fencing), `home-servir`, que lee `[ub, degradado]` recién en el MISS |
 | `lib/tmdb.ts`, `lib/supabase.ts` | `AbortSignal.any([señalDeLaSolicitud, timeout(8000)])` en el `fetch`, leyendo la señal del scope; sin señal en el scope, comportamiento idéntico al actual |
 | `lib/home-servir.ts` (**nuevo**, puro) | La secuencia §5.1 con deps inyectadas: `tomar`, `renovar`, `publicar`, `liberar`, `leer`, `producir`, `ahora`, `dormir`. Es lo que se prueba en RED |
 | `lib/turno.ts` (**nuevo**, puro) | Estados y reconciliación de §4.4 sobre deps `setNx`, `get`, `eval` |
@@ -551,14 +573,15 @@ vuelo local con `deps.resolver` = `cachedLocIf` (`lib/home.ts:679-689`).
 
 | Camino | MGET | Otros comandos |
 |---|---|---|
-| HIT de la fresca | 1 (fresca+ub+degradado en el mismo lote) — **ver §14.6: en bytes no es gratis** | 0 |
-| Propietario, sin renovar | 1 | `SET NX` 1 + `PUBLICAR` 1 |
-| Propietario con renovaciones | 1 | + `RENOVAR` × r |
-| Ocupado con UB | 1 | `SET NX` 1 + `GET turno` 1 (reconciliación del `null`) |
-| Espera sin UB, `k` vueltas | 1 + k | `SET NX` (1 + k) + `GET turno` (1 + k) |
-| Degradado con turno | 1 | `SET NX` 1 + `ENFRIAR` 1 (+ renovaciones) |
-| Ocupado por enfriamiento | 1 | `SET NX` 1 + `GET turno` 1; sirve UB o degradado compartido |
-| Cancelada | 1 | `SET NX` 1 + `LIBERAR` 1 (+ renovaciones) |
+| HIT de la fresca | 1 lectura de **una** copia (§14.6 aplicado) | 0 |
+| Propietario, sin renovar | 1 (fresca) + 1 (`[ub, degradado]`) + 1 (fresca, paso 4.0) | `SET NX` 1 + `PUBLICAR` 1 |
+| Propietario con renovaciones | 3 | + `RENOVAR` × r |
+| Adquirió pero la fresca ya estaba (`fresca-tras-turno`) | 3 | `SET NX` 1 + `LIBERAR` 1; **0 composiciones** |
+| Ocupado con UB | 2 | `SET NX` 1 + `GET turno` 1 (reconciliación del `null`) |
+| Espera sin UB, `k` vueltas | 2 + k (las tres copias por vuelta) | `SET NX` (1 + k) + `GET turno` (1 + k) |
+| Degradado con turno | 3 | `SET NX` 1 + `ENFRIAR` 1 (+ renovaciones) |
+| Ocupado por enfriamiento | 2 | `SET NX` 1 + `GET turno` 1; sirve UB o degradado compartido |
+| Cancelada | 3 | `SET NX` 1 + `LIBERAR` 1 (+ renovaciones) |
 | Redis caído | 0 confirmados; **nada escrito** | intentos fallidos (Etapa 0) |
 
 ### 5.6 Una instancia, varias, y Redis en memoria
@@ -627,15 +650,16 @@ mirarlo en el panel, no está en el repositorio.
 
 | Caso | Comandos extra (cliente) | Detalle |
 |---|---|---|
-| HIT de la fresca | **0** | el UB va en el mismo MGET |
-| Propietario, sin renovar | **+2** | `SET NX`, `PUBLICAR` |
-| Propietario con renovaciones | +2 + r | `RENOVAR` cada 5 s |
-| Ocupado con UB | **+2** | `SET NX` rechazado, `GET turno` de reconciliación |
-| Espera sin UB, `k` vueltas de 500 ms | +2 + 3k | `MGET` + `SET NX` + `GET` por vuelta (≈ 6 comandos/s por instancia que espera, acotado por el tope) |
-| Degradado con turno | +2 (+ r) | `SET NX`, `ENFRIAR` |
-| Ocupado por enfriamiento | +2 | `SET NX` rechazado, `GET turno`; sirve UB o degradado compartido |
-| Cancelada | +2 (+ r) | `SET NX`, `LIBERAR` |
-| Propietario tardío | +2 (+ r) | `PUBLICAR` rechazado cuenta igual |
+| HIT de la fresca | **0** comandos, **0 bytes extra**: una sola copia, como hoy | la lectura de `[ub, degradado]` se paga sólo en el MISS |
+| Propietario, sin renovar | **+4** | `MGET [ub, degradado]`, `SET NX`, `GET fresca` (paso 4.0), `PUBLICAR` |
+| Propietario con renovaciones | +4 + r | `RENOVAR` cada 5 s |
+| `fresca-tras-turno` | +4 | `MGET`, `SET NX`, `GET fresca`, `LIBERAR`; ahorra una composición entera (~1.000 comandos) |
+| Ocupado con UB | **+3** | `MGET [ub, degradado]`, `SET NX` rechazado, `GET turno` de reconciliación |
+| Espera sin UB, `k` vueltas de 500 ms | +3 + 3k | `MGET` (tres copias) + `SET NX` + `GET` por vuelta (≈ 6 comandos/s por instancia que espera, acotado por el tope) |
+| Degradado con turno | +4 (+ r) | `MGET`, `SET NX`, `GET fresca`, `ENFRIAR` |
+| Ocupado por enfriamiento | +3 | `MGET`, `SET NX` rechazado, `GET turno`; sirve UB o degradado compartido |
+| Cancelada | +4 (+ r) | `MGET`, `SET NX`, `GET fresca`, `LIBERAR` |
+| Propietario tardío | +4 (+ r) | `PUBLICAR` rechazado cuenta igual |
 | Redis caído | 0 confirmados, nada escrito | intentos fallidos aparte |
 
 Contra el ahorro: cada composición evitada son ~1.000 comandos y ~900 llamadas
@@ -683,6 +707,17 @@ Módulos puros nuevos, probados **antes** del cableado:
    `setXx` y el test falla si se los llama).
 2. `lib/home-servir.ts` (secuencia §5.1) con `resolverConCache`, las métricas
    reales y un reloj inyectado — **RED:**
+   - **lectura → turno** (la carrera de §5.3): entre la lectura inicial de A
+     (fresca ausente) y su `SET NX`, el test hace que B publique la fresca y
+     libere; A obtiene el turno, **vuelve a leer**, encuentra la fresca, llama
+     a `liberar` (no a `publicar`), sirve esa fresca con
+     `origen = fresca-tras-turno`, y `producir` **no corre**: una sola
+     composición/publicación total (la de B). Variante: la adquisición de A es
+     **reconciliada** (`setNx` lanza, `GET turno == A`) y la segunda lectura
+     igual ocurre. Control: sin la publicación intercalada, A compone;
+   - **lecturas escalonadas**: en un HIT sólo se lee la fresca (cero lecturas
+     de `[ub, degradado]`); en el MISS se leen una vez; tras adquirir se lee
+     sólo la fresca; en la espera se leen las tres por vuelta;
    - **propietario muerto → exactamente un seguidor vuelve a tomar el turno**
      (3 seguidores esperando, turno que expira, `setNx` del doble atómico);
    - **los demás no arrancan rescates simultáneos** (cero `producir` sin
@@ -856,7 +891,14 @@ claves: `precond-etapa2:mu00bddh-v1j4n2:` (`turno`, `fresca`, `ub`, `gen`,
   son una sola fila para "Production, Preview". Lo que aísla es el prefijo, el
   TTL ≤ 60 s y el `DEL` final: `SCAN MATCH precond-etapa2:*` devolvió **0
   claves antes y 0 después** (cursor a 0 en una vuelta), `DBSIZE` = **2.923
-  antes y 2.923 después**. Ninguna clave normal de Yump se leyó ni escribió.
+  antes y 2.923 después**. **Qué estuvo aislado y qué no:** todas las
+  operaciones Lua, el `SET NX PX` y las lecturas/borrados de la prueba usaron
+  **exclusivamente** las cinco claves temporales del prefijo. Pero el payload
+  representativo se obtuvo con **una solicitud normal a Producción**
+  (`GET https://app.yump.ar/api/home?providers=n,d,m`, paso 0 de la ruta),
+  que **sí leyó una clave normal del Home** (`home:…v6:…:d,m,n:`) y, de haber
+  estado fría, la habría reconstruido y escrito como cualquier visita. Fue una
+  solicitud normal, no una operación aislada; no se repite para corregir esto.
 - Limpieza (**ejecutada**): `vercel remove` de los dos deployments (`inspect`
   del segundo: "Can't find the deployment"); worktree y rama descartable
   borrados; el archivo de variables bajado (sin credenciales de Redis) borrado.
@@ -988,4 +1030,5 @@ comando y pedir `[ub, degradado]` únicamente en el MISS (un round-trip más,
 ~120 ms, en el camino frío, que ya cuesta segundos), manteniendo en el HIT los
 bytes de hoy. El costo en comandos de §7 pasa a "MISS: +1 lectura", el HIT
 queda en 0 escrituras y 1 lectura como hoy. Queda escrito como alternativa;
-la elige Codex/el dueño en la auditoría de la implementación, no esta ronda.
+**Decisión del dueño (13/09): aplicada** — §5.1, §5.5 y §7 ya describen las
+lecturas escalonadas; el banco compara el HIT antes/después.
