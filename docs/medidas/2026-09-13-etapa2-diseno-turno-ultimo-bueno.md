@@ -3,8 +3,9 @@
 **Fecha:** 2026-09-13 — **versión 3**, revisada tras las auditorías de Codex de `7cfc979` (v1 → v2) y de `c8fc235` (v2 → v3), ver §0.
 **Rama:** `diseno/etapa2-turno-ultimo-bueno`, nacida de `main` = `b60f985`
 (worktree `wt-etapa2`). **Sólo documentación: sin código productivo, sin
-infraestructura, sin variables, sin merge ni push.** Diseño **revisado (v3),
-pendiente de nueva auditoría**; nada de lo que sigue está implementado.
+infraestructura, sin variables, sin merge ni push.** Diseño **v3 aprobado condicionalmente por Codex** (los cuatro defectos
+de la v2 resueltos); **precondición de Upstash EJECUTADA y superada el 13/09**
+(§14); nada de lo que sigue está implementado.
 **Antecedentes:** Etapa PREVIA (#21, [`2026-09-10-capacidad-trafico.md` §9](2026-09-10-capacidad-trafico.md)),
 Etapa 0 ([`2026-09-11-etapa0-medir.md`](2026-09-11-etapa0-medir.md)),
 Etapa 1 ([`2026-09-11-etapa1-canonizar-single-flight.md`](2026-09-11-etapa1-canonizar-single-flight.md)),
@@ -35,6 +36,18 @@ a un payload degradado.
 Se conservan de la v2: adquisición durante la espera, fencing atómico de
 publicación, estados diferenciados con reconciliación, UB ante degradación,
 liberación segura y `EVAL` como condición obligatoria.
+
+### 0.a-bis Tras la aprobación condicional (13/09)
+
+Cuatro correcciones documentales mínimas pedidas por el dueño (§3.8 promesa
+real antes de la desigualdad; §2/§5.7 "Redis caído puede terminar en timeout";
+§4.2 período de adopción del UB; §5.3/§9.2 cancelación del líder con
+seguidores) y la **precondición de Upstash ejecutada** (§14): `SET NX PX` y los
+cuatro scripts reales contra la base real, con el payload real del Home,
+resultados positivos y negativos, lectura posterior y limpieza. Lo que la
+precondición **corrige** del diseño: el payload real de `n,d,m` mide **85.328
+B** (no "100–150 KB"); y hay un **hallazgo de costo** para la implementación
+(§14.6: leer tres copias en el HIT triplica los bytes del camino caliente).
 
 ### 0.b Versión 2 (auditoría de Codex sobre `7cfc979`)
 
@@ -368,9 +381,10 @@ return 1
 ```
 
 Notas: `fresca_json` y `ub_json` son el **mismo** payload serializado (dos
-argumentos para no depender de que Lua lo copie: ~100–150 KB estimados, **a
-medir**; el límite de tamaño de petición de Upstash para el plan real hay que
-consultarlo en el panel, no está en el repositorio). La comparación de días es
+argumentos para no depender de que Lua lo copie: **medido el 13/09: 85.328 B**
+el payload real de `n,d,m`, o sea un `PUBLICAR` de **195.211 B** de cuerpo, que
+la base real aceptó — §14; el límite de tamaño de petición del plan sigue sin
+conocerse: sólo se sabe que es ≥ 195 KB). La comparación de días es
 lexicográfica sobre `YYYY-MM-DD`, que ordena bien. Los cuatro scripts se cargan
 con `redis.createScript(...)` una vez por proceso y se ejecutan con `.exec()`
 (`EVALSHA`; ante `NOSCRIPT` el propio cliente reintenta con `EVAL`,
@@ -403,24 +417,21 @@ un turno que vence solo o una publicación reintentada por el mismo script
 idempotente (si ya publicó, la segunda ejecución encuentra el turno borrado y
 devuelve `0`, y la reconciliación por `gen` lo aclara).
 
-### 4.5 `EVAL` es condición obligatoria — sin fallback
+### 4.5 `EVAL` es condición obligatoria — sin fallback — **VERIFICADA el 13/09**
 
 Este diseño **no se implementa** si la base real no acepta `EVAL`/`EVALSHA` con
-cuatro claves: no existe variante sin liberación y publicación seguras. Lo que
-está y lo que no:
+cuatro claves: no existe variante sin liberación y publicación seguras.
 
 - **Verificado (código):** el cliente 1.38.0 envía `SET … NX PX`, `EVAL`,
   `EVALSHA`, `SCRIPT LOAD`, y `Script.exec` maneja `NOSCRIPT`.
-- **NO verificado (ejecutado):** que la base de Producción acepte `EVAL` con
-  varias claves. Las credenciales de Redis no están en local (`.env.local` sin
-  `UPSTASH_*`/`KV_*`; el cache local corre en memoria) y esta ronda no toca
-  variables.
-- **Verificación obligatoria antes del RED de la implementación:** desde un
-  Preview o con credenciales que el dueño exponga, `EVAL "return 1" 0`, `EVAL`
-  con 4 claves efímeras propias (`health:eval:*`, 5 s) y `SET … NX PX` sobre
-  una de ellas; el resultado se pega en el informe de implementación. Si falla,
-  la etapa se detiene y se elige otra primitiva atómica (por ejemplo
-  `SET … GET`, o Upstash `JSON`), en una ronda de diseño nueva.
+- **Verificado (ejecutado, §14):** la base real que usa Producción acepta
+  `EVAL "return 1" 0`, `EVALSHA` con `NOSCRIPT` → `EVAL` de respaldo, y los
+  cuatro scripts del diseño **tal como están escritos en §4.3** (`PUBLICAR` con
+  cuatro claves y un cuerpo de 195 KB), con los resultados positivos y
+  negativos esperados: 48 pasos, 48 correctos, 60 comandos HTTP, ningún error.
+  Las credenciales de Redis son variables *Sensitive* de Vercel (el CLI no las
+  puede bajar: `vercel env pull` escribe `[SENSITIVE]`), así que la única vía
+  fue un Preview descartable y protegido; el detalle está en §14.
 - **El doble de Redis del banco** implementa **exactamente esos cuatro scripts**
   por texto (no un intérprete Lua): prueba la lógica de carreras, no la
   compatibilidad con Upstash.
@@ -540,7 +551,7 @@ vuelo local con `deps.resolver` = `cachedLocIf` (`lib/home.ts:679-689`).
 
 | Camino | MGET | Otros comandos |
 |---|---|---|
-| HIT de la fresca | 1 (fresca+ub+degradado en el mismo lote) | 0 |
+| HIT de la fresca | 1 (fresca+ub+degradado en el mismo lote) — **ver §14.6: en bytes no es gratis** | 0 |
 | Propietario, sin renovar | 1 | `SET NX` 1 + `PUBLICAR` 1 |
 | Propietario con renovaciones | 1 | + `RENOVAR` × r |
 | Ocupado con UB | 1 | `SET NX` 1 + `GET turno` 1 (reconciliación del `null`) |
@@ -789,8 +800,9 @@ separado; E-degradado lo va a mostrar (cada ventana vuelve a intentar).
 
 ## 13. Conclusión para la nueva auditoría
 
-Implementable con lo instalado **si** la base real acepta `EVAL` con cuatro
-claves (condición obligatoria, no verificada todavía). Toca `lib/claves.ts`
+Implementable con lo instalado: la base real **acepta** `EVAL` con cuatro
+claves y los cuatro scripts del diseño (condición obligatoria, **verificada el
+13/09**, §14). Toca `lib/claves.ts`
 (versión única), `lib/cache.ts`, `lib/home.ts`, `lib/home-vuelo.ts`,
 `lib/tmdb.ts` y `lib/supabase.ts` (una línea: la señal), `lib/metricas.ts`, dos
 módulos puros nuevos y el banco; conserva el single-flight local, la regla del
@@ -801,3 +813,179 @@ termine antes de `maxDuration` — vale con Redis respondiendo; con Redis caído
 sigue F5a. **Lo que deja de hacer:** guardar el resultado de una composición
 sin turno, y liberar el turno tras un degradado. La decisión de servir el Home
 anterior está aprobada.
+
+---
+
+## 14. Precondición de Upstash — ejecutada el 13/09/2026
+
+**Evidencia:** [`2026-09-13-etapa2-precondicion-upstash.json`](2026-09-13-etapa2-precondicion-upstash.json)
+(la respuesta de la ruta, reducida: en cada comando HTTP se conserva sólo el
+nombre del comando; los resultados largos ya venían recortados por la ruta) y
+[`2026-09-13-etapa2-precondicion-upstash.route.ts.txt`](2026-09-13-etapa2-precondicion-upstash.route.ts.txt)
+(el código exacto que corrió). Corrida `mu00bddh-v1j4n2`; prefijo de todas las
+claves: `precond-etapa2:mu00bddh-v1j4n2:` (`turno`, `fresca`, `ub`, `gen`,
+`degradado`).
+
+### 14.1 Cómo se ejecutó, y por qué así
+
+- Las credenciales de Redis (`KV_REST_API_URL`/`KV_REST_API_TOKEN`) son
+  variables **Sensitive** de Vercel: `vercel env pull` para `production`,
+  `preview` y `preview@spike/capacitor-android` escribió `[SENSITIVE]` en las
+  tres (**ejecutado**). No existe camino local sin exponer credenciales, y no
+  se buscó otro.
+- Se creó una rama **descartable** `tmp/etapa2-precondicion-upstash` desde
+  `main` = `b60f985`, en un worktree aparte, con **una sola ruta temporal**
+  `app/api/precondicion-etapa2/route.ts` (`b8f768f`, luego `d2ccb45`: el
+  secreto pasó a un encabezado propio porque `vercel curl` ocupa
+  `Authorization`). `tsc` limpio. **Nunca se pusheó**: se subió con
+  `vercel deploy --yes` (el CLI sube los archivos; target `preview`).
+- Deployments: `streamingcentral-3ytonv63s…` (descartado por lo del encabezado)
+  y `streamingcentral-77qg89zsx…` (el de la corrida), ambos `target preview`,
+  `● Ready`. **Aislamiento a nivel app, demostrado:** una petición anónima a la
+  URL del Preview devuelve el HTML de login de Vercel (Deployment Protection
+  activa; **ejecutado**: 200 con `text/html` de 339.531 B, no la ruta); la
+  ruta sólo se alcanzó con `vercel curl` (bypass autenticado del CLI) **y**
+  además exige un secreto propio comparado en tiempo constante contra
+  `CRON_SECRET` (variable existente; **ejecutado**: sin encabezado → 401 "sin
+  encabezado"; con valor equivocado → 401 "no coincide"). `app.yump.ar` siguió
+  aliasado al mismo deployment de Producción antes y después
+  (`streamingcentral-fsda4ubk5…`, creado el 12/09 16:02 -03; **ejecutado** con
+  `vercel inspect`).
+- **Aislamiento a nivel datos:** la base es **la misma que usa Producción** —
+  eso es lo que había que verificar; en `vercel env ls` las variables `KV_*`
+  son una sola fila para "Production, Preview". Lo que aísla es el prefijo, el
+  TTL ≤ 60 s y el `DEL` final: `SCAN MATCH precond-etapa2:*` devolvió **0
+  claves antes y 0 después** (cursor a 0 en una vuelta), `DBSIZE` = **2.923
+  antes y 2.923 después**. Ninguna clave normal de Yump se leyó ni escribió.
+- Limpieza (**ejecutada**): `vercel remove` de los dos deployments (`inspect`
+  del segundo: "Can't find the deployment"); worktree y rama descartable
+  borrados; el archivo de variables bajado (sin credenciales de Redis) borrado.
+  No se cambió ninguna variable ni configuración del proyecto.
+- Comandos ejecutados, en orden: `vercel env ls` · `vercel env pull` ×3 (→
+  `[SENSITIVE]`) · `git worktree add -b tmp/… ../wt-precond b60f985` · edición
+  de la ruta · `npx tsc --noEmit` · `git commit` ×2 · `vercel link --yes
+  --project streamingcentral` · `vercel deploy --yes` ×2 · `vercel inspect` ·
+  `vercel curl /api/precondicion-etapa2 --deployment … -- -s -H
+  "x-precond-secret: <secreto>" -o resultado.json` · `vercel remove` ×2 ·
+  `vercel inspect app.yump.ar` · `git worktree remove` · `git branch -D`.
+
+### 14.2 Resultado de cada operación (48 pasos, 48 correctos; `ok: true`)
+
+Latencia por comando: **mediana 118,1 ms**, mínimo 116,3, máximo 351,3 (n =
+60). El payload representativo es el Home real de `n,d,m` de Producción (GET
+pasivo a `app.yump.ar/api/home`, 200, **85.328 B**).
+
+| # | Operación | Esperado | Resultado | HTTP (comando · estado · ms · bytes enviados/recibidos) |
+|---|---|---|---|---|
+| 1 | `PING` | PONG | PONG | 200 · 135,9 · 10/23 |
+| 2 | `DBSIZE` antes | número | 2.923 | 200 · 122,8 |
+| 3 | `SCAN precond-etapa2:*` antes | 0 claves | 0 (1 vuelta, completo) | 200 · 140 |
+| 4 | `EVAL "return 1" 0` | 1 | 1 | 200 · 118,6 · 23/14 |
+| 5 | `SET turno A NX PX 15000` | OK | OK | 200 · 117,7 · 84/17 |
+| 6 | `SET turno B NX PX` (ocupado) | null | null | 200 · 118,1 |
+| 7 | `GET turno` (reconciliación) | A | A | 200 · 118,1 |
+| 8 | `PTTL turno` | (0, 15000] | 14.645 | 200 · 118 |
+| 9 | `RENOVAR` (B, propiedad ajena) | 0 | 0 | EVALSHA 200 (NOSCRIPT, 59 B) → EVAL 200 · 117,4 · 192/14 |
+| 10 | `RENOVAR` (A) | 1 | 1 | EVALSHA 200 · 119,2 · 125/14 |
+| 11 | `PTTL turno` renovado | > 14000 | 14.883 | 200 · 117,7 |
+| 12 | `RENOVAR` (A) otra vez | 1 | 1 | EVALSHA 200 · 117,1 |
+| 13 | **`PUBLICAR` (A, payload real, gen vacía)** | 1 | 1 | EVALSHA 200 (NOSCRIPT) → **EVAL 200 · 351,3 · 195.669/14** |
+| 14 | `GET turno` tras publicar | null | null | 200 · 117,1 |
+| 15 | `MGET fresca ub` | == payload, byte a byte | igual, igual | 200 · 231,7 · 86/227.564 |
+| 16 | `GET gen` | `2026-09-13:A` | `2026-09-13:A-mu00bddh-v1j4n2` | 200 · 117,1 |
+| 17 | `TTL fresca/ub/gen` | (50, 60] | 59 / 59 / 59 | 3 × 200 · ~117 |
+| 18 | `SET turno B NX PX` (turno libre) | OK | OK | 200 · 118,6 |
+| 19 | **`PUBLICAR` (A) con turno de B — propiedad perdida** | 0 | 0 | EVALSHA 200 · 129,6 · 195.253/14 |
+| 20 | fresca/ub/gen/turno tras el rechazo | intactos; turno == B | fresca == payload, ub == payload, gen `…:A`, turno B | MGET 200 · 233,7 |
+| 21 | `LIBERAR` (A, no era mío) | 0 | 0 | EVALSHA (NOSCRIPT) → EVAL 200 · 118,5 |
+| 22 | `LIBERAR` (B) | 1 | 1 | EVALSHA 200 · 117,7 |
+| 23 | `GET turno` liberado | null | null | 200 · 118,8 |
+| 24 | `SET gen = 2026-09-14:otro EX 60` (publicador de un día posterior) | OK | OK | 200 · 118,8 |
+| 25 | `SET turno A NX PX` | OK | OK | 200 · 118,9 |
+| 26 | **`PUBLICAR` (A, hoy) con gen de mañana** | −1 (sólo fresca) | −1 | EVALSHA 200 · 130,2 · 195.253/15 |
+| 27 | tras el −1 | fresca == payload2, ub == payload (intacto), gen de mañana intacta, turno borrado | todo cierto | MGET 200 · 234,3 |
+| 28 | `SET gen = 2026-09-13:otro` (mismo día) | OK | OK | 200 · 117,4 |
+| 29 | `SET turno A NX PX` | OK | OK | 200 · 116,8 |
+| 30 | `PUBLICAR` (A, hoy) con gen del mismo día | 1 | 1 | EVALSHA 200 · 129 · 195.211/14 |
+| 31 | `GET gen` | `2026-09-13:A` | `2026-09-13:A-…` | 200 · 117,9 |
+| 32 | `SET turno A NX PX` | OK | OK | 200 · 117,4 |
+| 33 | `ENFRIAR` (B, no era mío) | 0 | 0 | EVALSHA (NOSCRIPT) → EVAL 200 · 124,3 · 97.820/14 |
+| 34 | `GET degradado` tras el rechazo | null (nada escrito) | null | 200 · 118,5 |
+| 35 | **`ENFRIAR` (A, payload degradado real)** | 1 | 1 | EVALSHA 200 · 123,5 · 97.675/14 |
+| 36 | `GET turno` | `enfriando:A` | `enfriando:A-mu00bddh-v1j4n2` | 200 · 117,5 |
+| 37 | `PTTL turno`, `PTTL degradado` | (10000, 15000] | 14.763 / 14.644 | 2 × 200 · ~118 |
+| 38 | `GET degradado` | == payloadDeg byte a byte | igual (85.270 chars) | 200 · 232,5 · 52/113.819 |
+| 39 | `SET turno C NX PX` durante el enfriamiento | null (ocupado) | null | 200 · 116,7 |
+| 40 | `RENOVAR` (A) durante el enfriamiento | 0 | 0 | EVALSHA 200 · 118,6 |
+| 41 | `ENFRIAR` (A) otra vez | 0 | 0 | EVALSHA 200 · 122 |
+| 42 | `LIBERAR` (A) durante el enfriamiento | 0 | 0 | EVALSHA 200 · 117,2 |
+| 43 | lectura final `MGET fresca ub degradado` | payload, payload, payloadDeg | igual, igual, igual | 200 · **348,2 · 129/341.371** |
+| 44 | lectura final gen, turno, TTL/PTTL | gen `hoy:A`; turno `enfriando:A`; TTL > 0 | gen `2026-09-13:A-…`; turno `enfriando:A-…`; TTL 57/57/57; PTTL turno 12.879, degradado 12.762 | 7 × 200 · ~117 |
+| 45 | `DEL` de las cinco claves | 5 | 5 | 200 · 117 · 204/14 |
+| 46 | `SCAN precond-etapa2:*` después | 0 claves | 0 (completo) | 200 · 118,1 |
+| 47 | `DBSIZE` después | número | 2.923 | 200 · 116,8 |
+
+Totales de la corrida: **60 comandos HTTP, 1.371.352 B enviados, 1.139.270 B
+recibidos, 27.883 ms dentro de la función** (respuesta HTTP completa en
+28,9 s, dentro de `maxDuration = 60`).
+
+### 14.3 Comprobado
+
+- `SET … NX PX` adquiere y rechaza; `PTTL` refleja `PX`.
+- **Los cuatro scripts corren tal como están en §4.3** y devuelven lo que el
+  diseño espera en cada rama: `RENOVAR` 1/0; `LIBERAR` 1/0; `ENFRIAR` 1/0 (sin
+  escribir nada en el 0); `PUBLICAR` 1 (gen vacía y mismo día), 0 (propiedad
+  perdida, sin tocar fresca/UB/gen) y −1 (gen de un día posterior: fresca
+  escrita, UB y gen intactos, turno borrado).
+- `EVALSHA` con `NOSCRIPT` cae a `EVAL` dentro del propio cliente 1.38.0
+  (pasos 9, 13, 21, 33) y las ejecuciones siguientes son `EVALSHA` directo.
+- **Con el payload real:** `PUBLICAR` acepta un cuerpo de 195 KB (351 ms la
+  primera vez con el texto del script, ~129 ms después); `ENFRIAR` 97,7 KB en
+  ~123 ms; `MGET` de tres copias de 85 KB = 341 KB en 348 ms; `GET` de una
+  copia 232 ms.
+- El estado `enfriando:` bloquea `SET NX` de terceros y también `RENOVAR`,
+  `ENFRIAR` y `LIBERAR` del propietario original (el valor ya no es suyo): el
+  enfriamiento dura lo que dice su `PX` y nadie lo acorta — coherente con
+  §3.10.
+- Lectura posterior de fresca, UB, generación, degradado y turno con contenido
+  y TTL correctos (pasos 43–44).
+- Limpieza total: 5 borradas, 0 restantes bajo el prefijo, `DBSIZE` igual.
+
+### 14.4 Desconocido (y así queda)
+
+- **Facturación de `EVAL`:** si Upstash cuenta un `EVAL` como un comando o
+  como los comandos que ejecuta adentro. No hay acceso al panel de Upstash
+  desde esta sesión y la API REST no lo informa: **desconocido**.
+- **Límite de tamaño de petición del plan:** sólo se sabe que ≥ 195 KB pasa.
+- **Región de la función del Preview:** la ruta no la registró. El build corrió
+  en `iad1` y el proyecto no fija región en `vercel.json`, así que la latencia
+  de ~117 ms por comando se **infiere** como Vercel-`iad1` → Upstash; la
+  región de la base tampoco se conoce.
+
+### 14.5 Correcciones al diseño que salen de la corrida
+
+- Tamaño del payload: **85.328 B** medidos para `n,d,m` (§4.3 decía "~100–150
+  KB estimados, a medir").
+- **El SDK instalado activa `enableAutoPipelining` por defecto**
+  (`nodejs.js:4503`: `opts?.enableAutoPipelining ?? true`) y `lib/cache.ts` no
+  lo desactiva: los cuerpos de esta corrida fueron `[[…]]` (endpoint
+  `/pipeline`, 84 B contra 82 B del formato plano). En la corrida cada paso
+  esperó al anterior, así que 60 comandos = 60 peticiones; en la app, comandos
+  emitidos en el mismo tick viajan juntos. No cambia el diseño; cambia cómo se
+  leen `llamadasLogicas` contra `intentosHttp` de la Etapa 0 (nota para ese
+  informe, no para éste).
+
+### 14.6 Hallazgo para la implementación: el `MGET` de tres copias en el HIT
+
+El diseño lee `[fresca, ub, degradado]` en **un** comando también en el camino
+caliente (§5.1 paso 1, §5.5). En comandos es gratis; **en bytes no**: con UB
+presente (lo normal después de la adopción, §4.2) cada HIT transfiere **dos
+copias de 85 KB** en vez de una, y tres durante un enfriamiento. Medido acá:
+`GET` de una copia 232 ms, `MGET` de tres 348 ms (+116 ms, +50 %), a lo que se
+suma el ancho de banda de Upstash. **Decisión pendiente para la
+implementación**, con recomendación: leer **sólo la fresca** en el primer
+comando y pedir `[ub, degradado]` únicamente en el MISS (un round-trip más,
+~120 ms, en el camino frío, que ya cuesta segundos), manteniendo en el HIT los
+bytes de hoy. El costo en comandos de §7 pasa a "MISS: +1 lectura", el HIT
+queda en 0 escrituras y 1 lectura como hoy. Queda escrito como alternativa;
+la elige Codex/el dueño en la auditoría de la implementación, no esta ronda.

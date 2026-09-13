@@ -1344,10 +1344,23 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (13/09): la Etapa 2 tiene DISEÑO REVISADO (v3), pendiente de nueva auditoría — no implementación
+### Estado (13/09): diseño v3 APROBADO CONDICIONALMENTE por Codex; precondición de Upstash EJECUTADA y superada — sigue sin implementación
 
 Rama `diseno/etapa2-turno-ultimo-bueno` (sólo documentación, sin merge ni
-push). La v2 (`c8fc235`) fue auditada por Codex y devuelta con cuatro
+push). **Precondición de Upstash (informe §14):** ejecutada el 13/09 desde un
+Preview descartable y protegido contra la misma base que usa Producción, sólo
+con claves `precond-etapa2:<corrida>:*` (TTL ≤ 60 s, borradas al final;
+`SCAN` 0 antes y después, `DBSIZE` igual): `SET NX PX` y los cuatro scripts
+reales con el payload real del Home (85 KB; `PUBLICAR` de 195 KB de cuerpo),
+positivos y negativos (propiedad perdida, generación de un día posterior,
+enfriamiento), lectura posterior con contenido y TTL: **48/48 correctos**.
+Desconocido: facturación de `EVAL` y límite de petición del plan. Hallazgo
+pendiente de decisión: el `MGET` de tres copias en el HIT triplica los bytes
+(§14.6). Correcciones documentales del mismo día: promesa real del deadline,
+timeout posible con Redis caído, período de adopción del UB (ventana
+aceptada, sin escrituras en los HIT), caso RED del líder cancelado con
+seguidores. **Nada implementado, ni mergeado, ni desplegado en Producción.**
+La v2 (`c8fc235`) fue auditada por Codex y devuelta con cuatro
 hallazgos; la v3 los corrige: el camino `sin-redis` sirve y no guarda (sin
 escritura directa sin fencing), el degradado enfría el turno en vez de
 liberarlo (una composición degradada por `ENFRIAMIENTO_MS`, degradado

@@ -150,11 +150,31 @@
   Etapas 3 a 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
-  Home bueno): DISEÑO REVISADO (v3, tras las auditorías de Codex de `7cfc979`
-  y de `c8fc235`), pendiente de NUEVA auditoría. NO está implementada.** Rama
-  `diseno/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2`, nacida de `main` =
-  `b60f985`), sólo documentación, sin merge ni push. **La v3 corrige los cuatro
-  hallazgos sobre la v2:** el camino `sin-redis` sirve y **no guarda** (nada de
+  Home bueno): DISEÑO v3 APROBADO CONDICIONALMENTE por Codex (13/09) y
+  PRECONDICIÓN DE UPSTASH EJECUTADA Y SUPERADA (13/09). NO está implementada.**
+  Rama `diseno/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2`, nacida de
+  `main` = `b60f985`), sólo documentación, sin merge ni push. **Precondición
+  (informe §14):** desde un Preview descartable y protegido (rama temporal
+  nunca pusheada, subida con `vercel deploy`, borrada después; las credenciales
+  de Redis son *Sensitive* y el CLI no las baja), contra **la misma base de
+  Upstash que usa Producción**, con claves `precond-etapa2:<corrida>:*` de TTL
+  ≤ 60 s: `SET NX PX` y los cuatro scripts reales (`RENOVAR`, `LIBERAR`,
+  `ENFRIAR`, `PUBLICAR`) con el payload real del Home (85.328 B; `PUBLICAR` de
+  195 KB de cuerpo), resultados positivos y negativos (propiedad perdida → 0,
+  generación de un día posterior → −1 con UB intacto, `enfriando:` bloquea a
+  todos), lectura posterior con contenido y TTL, 48/48 pasos correctos, 60
+  comandos HTTP (mediana 118 ms), `SCAN` del prefijo 0 antes y 0 después,
+  `DBSIZE` 2.923 antes y después. **Desconocido:** cómo factura Upstash un
+  `EVAL` (sin acceso al panel) y el límite de tamaño de petición (≥ 195 KB
+  pasa). **Hallazgo para la implementación (§14.6):** leer tres copias en el
+  HIT triplica los bytes del camino caliente; queda como decisión pendiente
+  con recomendación (leer sólo la fresca y pedir UB/degradado en el MISS).
+  Correcciones documentales del 13/09: promesa real del deadline antes de la
+  desigualdad; "Redis caído puede terminar en timeout" en vez de "no tumba la
+  app"; período de adopción del UB (las frescas v6 siguen HIT y no crean UB;
+  cada combinación lo obtiene en su primera reconstrucción; ventana aceptada,
+  sin escrituras en los HIT); caso RED de cancelación del líder con seguidores.
+  **La v3 corrige los cuatro hallazgos sobre la v2:** el camino `sin-redis` sirve y **no guarda** (nada de
   fresca/UB/generación sin fencing; escenario E-sinredis-vuelve); un degradado
   **no libera** el turno sino que lo convierte en enfriamiento (`ENFRIAR`
   atómico, `ENFRIAMIENTO_MS`, degradado compartido en clave aparte que nunca se

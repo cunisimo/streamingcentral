@@ -1,0 +1,329 @@
+import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import { Redis } from "@upstash/redis";
+
+// RUTA TEMPORAL — precondición de la Etapa 2 (diseño v3, §4.5). Vive sólo en
+// la rama descartable `tmp/etapa2-precondicion-upstash`, desplegada como
+// Preview; NUNCA se mergea. Ejecuta contra la base real de Upstash los cuatro
+// scripts Lua del diseño (RENOVAR, LIBERAR, ENFRIAR, PUBLICAR) y `SET NX PX`,
+// exclusivamente sobre claves con el prefijo `precond-etapa2:<corrida>:` y TTL
+// <= 60 s, y las borra al final. No toca ninguna clave normal de Yump.
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+const RENOVAR = `if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('PEXPIRE', KEYS[1], ARGV[2]) else return 0 end`;
+const LIBERAR = `if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end`;
+const ENFRIAR = `if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+redis.call('SET', KEYS[1], 'enfriando:' .. ARGV[1], 'PX', ARGV[3])
+redis.call('SET', KEYS[2], ARGV[2], 'PX', ARGV[3])
+return 1`;
+const PUBLICAR = `if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+local gen = redis.call('GET', KEYS[4])
+local diaGuardado = gen and string.sub(gen, 1, 10) or ''
+if diaGuardado > ARGV[6] then
+  redis.call('SET', KEYS[2], ARGV[2], 'EX', ARGV[3])
+  redis.call('DEL', KEYS[1])
+  return -1
+end
+redis.call('SET', KEYS[2], ARGV[2], 'EX', ARGV[3])
+redis.call('SET', KEYS[3], ARGV[4], 'EX', ARGV[5])
+redis.call('SET', KEYS[4], ARGV[6] .. ':' .. ARGV[1], 'EX', ARGV[5])
+redis.call('DEL', KEYS[1])
+return 1`;
+
+type Http = {
+  comando: string;
+  estado: number;
+  ms: number;
+  bytesEnviados: number;
+  bytesRecibidos: number;
+  cuerpoError?: string;
+};
+type Paso = { paso: string; esperado: string; resultado: unknown; ok: boolean; http: Http[] };
+
+function secretoValido(header: string | null, secret: string): boolean {
+  if (!header) return false;
+  const recibido = Buffer.from(header);
+  const esperado = Buffer.from(`Bearer ${secret}`);
+  if (recibido.length !== esperado.length) return false;
+  return timingSafeEqual(recibido, esperado);
+}
+
+export async function GET(req: NextRequest) {
+  // `vercel curl` usa `Authorization` para el bypass de protección, así que el
+  // secreto de la ruta viaja en un encabezado propio (o en Authorization si se
+  // llama sin el CLI). Nunca por query: quedaría en los logs.
+  const secret = process.env.CRON_SECRET;
+  const propio = req.headers.get("x-precond-secret");
+  const header = propio ? `Bearer ${propio}` : req.headers.get("authorization");
+  if (!secret) return NextResponse.json({ ok: false, error: "no autorizado", motivo: "sin CRON_SECRET" }, { status: 401 });
+  if (!header) return NextResponse.json({ ok: false, error: "no autorizado", motivo: "sin encabezado" }, { status: 401 });
+  if (!secretoValido(header, secret)) {
+    return NextResponse.json({ ok: false, error: "no autorizado", motivo: "no coincide" }, { status: 401 });
+  }
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (!url || !token) {
+    return NextResponse.json({ ok: false, error: "sin credenciales de Redis" }, { status: 503 });
+  }
+  const host = new URL(url).host;
+
+  // Instrumentación: el SDK usa el fetch global; se envuelve SÓLO para el host
+  // de Redis y se restaura en finally. Mide bytes, estado y duración por comando.
+  const httpLog: Http[] = [];
+  const fetchOriginal = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const u = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (!u.includes(host)) return fetchOriginal(input, init);
+    const body = typeof init?.body === "string" ? init.body : "";
+    let comando = "?";
+    try {
+      const arr = JSON.parse(body);
+      comando = Array.isArray(arr) ? String(arr[0]).toUpperCase() : "?";
+    } catch {
+      comando = "?";
+    }
+    const t0 = performance.now();
+    const res = await fetchOriginal(input, init);
+    const texto = await res.text();
+    const ms = Math.round((performance.now() - t0) * 10) / 10;
+    const entrada: Http = {
+      comando,
+      estado: res.status,
+      ms,
+      bytesEnviados: Buffer.byteLength(body),
+      bytesRecibidos: Buffer.byteLength(texto),
+    };
+    if (res.status !== 200 || texto.startsWith('{"error"')) entrada.cuerpoError = texto.slice(0, 200);
+    httpLog.push(entrada);
+    // El cuerpo ya está decodificado: se quitan los encabezados de transporte.
+    const headers = new Headers(res.headers);
+    headers.delete("content-encoding");
+    headers.delete("content-length");
+    return new Response(texto, { status: res.status, statusText: res.statusText, headers });
+  };
+
+  const pasos: Paso[] = [];
+  let cursorHttp = 0;
+  async function paso(nombre: string, esperado: string, fn: () => Promise<unknown>, cmp: (r: unknown) => boolean) {
+    let resultado: unknown;
+    let ok = false;
+    try {
+      resultado = await fn();
+      ok = cmp(resultado);
+    } catch (e) {
+      resultado = `EXCEPCION: ${String(e)}`;
+    }
+    const http = httpLog.slice(cursorHttp);
+    cursorHttp = httpLog.length;
+    pasos.push({ paso: nombre, esperado, resultado, ok, http });
+    return resultado;
+  }
+  const recorte = (v: unknown) =>
+    typeof v === "string" && v.length > 80 ? `${v.slice(0, 40)}...(${v.length} chars)` : v;
+
+  const redis = new Redis({ url, token, retry: false, automaticDeserialization: false });
+  const corrida = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const P = `precond-etapa2:${corrida}:`;
+  const K = {
+    turno: `${P}turno`,
+    fresca: `${P}fresca`,
+    ub: `${P}ub`,
+    gen: `${P}gen`,
+    degradado: `${P}degradado`,
+  };
+  const A = `A-${corrida}`;
+  const B = `B-${corrida}`;
+  const C = `C-${corrida}`;
+  const TURNO_MS = 15000;
+  const ENFRIAMIENTO_MS = 15000;
+  const TTL_S = 60;
+  // Los ARGV viajan como strings (así los recibe Redis; el tipo de `Script.exec` lo exige).
+  const TURNO = String(TURNO_MS);
+  const ENFRIAMIENTO = String(ENFRIAMIENTO_MS);
+  const TTL = String(TTL_S);
+  const zona = { timeZone: "America/Argentina/Buenos_Aires" };
+  const hoy = new Date().toLocaleDateString("en-CA", zona);
+  const manana = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", zona);
+
+  const sRenovar = redis.createScript<number>(RENOVAR);
+  const sLiberar = redis.createScript<number>(LIBERAR);
+  const sEnfriar = redis.createScript<number>(ENFRIAR);
+  const sPublicar = redis.createScript<number>(PUBLICAR);
+  const KP = [K.turno, K.fresca, K.ub, K.gen];
+
+  // SCAN completo del prefijo, acotado a 60 vueltas de 1000 para no comerse el
+  // presupuesto de la función; `completo` dice si el cursor volvió a 0.
+  async function scanPrefijo(): Promise<{ claves: string[]; vueltas: number; completo: boolean }> {
+    const claves: string[] = [];
+    let cursor = "0";
+    let vueltas = 0;
+    do {
+      const [c, ks] = await redis.scan(cursor, { match: "precond-etapa2:*", count: 1000 });
+      cursor = String(c);
+      vueltas++;
+      claves.push(...(ks as string[]));
+    } while (cursor !== "0" && vueltas < 60);
+    return { claves, vueltas, completo: cursor === "0" };
+  }
+  const scanVacio = (x: unknown) => {
+    const o = x as { claves: string[]; completo: boolean };
+    return o.completo && o.claves.length === 0;
+  };
+  const esNum = (x: unknown): x is number => typeof x === "number";
+  const enRango = (x: unknown, min: number, max: number) => esNum(x) && x > min && x <= max;
+
+  const inicio = Date.now();
+  let payload = "";
+  let payload2 = "";
+  let payloadDeg = "";
+  try {
+    // 0. Payload representativo: el Home real (GET pasivo a Producción, HIT).
+    const r = await fetchOriginal("https://app.yump.ar/api/home?providers=n,d,m", {
+      headers: { "user-agent": "precond-etapa2" },
+    });
+    payload = await r.text();
+    payload2 = payload.replace(/^\{/, '{"__precond":"v2",');
+    payloadDeg = payload.replace(/^\{/, '{"__precond":"degradado",');
+    pasos.push({
+      paso: "0 payload real de /api/home (n,d,m) desde app.yump.ar",
+      esperado: "200 y > 50 KB",
+      resultado: { estado: r.status, bytes: Buffer.byteLength(payload) },
+      ok: r.status === 200 && payload.length > 50000,
+      http: [],
+    });
+
+    await paso("1 PING", "PONG", () => redis.ping(), (x) => x === "PONG");
+    await paso("2 DBSIZE antes", "numero", () => redis.dbsize(), esNum);
+    await paso("3 SCAN precond-etapa2:* antes", "0 claves, completo", () => scanPrefijo(), scanVacio);
+    await paso("4 EVAL 'return 1' 0", "1", () => redis.eval("return 1", [], []), (x) => x === 1);
+
+    await paso("5 SET turno A NX PX", "OK", () => redis.set(K.turno, A, { nx: true, px: TURNO_MS }), (x) => x === "OK");
+    await paso("6 SET turno B NX PX (ocupado)", "null", () => redis.set(K.turno, B, { nx: true, px: TURNO_MS }), (x) => x === null);
+    await paso("7 GET turno (reconciliacion)", "A", () => redis.get(K.turno), (x) => x === A);
+    await paso("8 PTTL turno", "en (0, 15000]", () => redis.pttl(K.turno), (x) => enRango(x, 0, TURNO_MS));
+    await paso("9 RENOVAR (B) - propiedad ajena", "0", () => sRenovar.exec([K.turno], [B, TURNO]), (x) => x === 0);
+    await paso("10 RENOVAR (A)", "1", () => sRenovar.exec([K.turno], [A, TURNO]), (x) => x === 1);
+    await paso("11 PTTL turno renovado", "> 14000", () => redis.pttl(K.turno), (x) => enRango(x, 14000, TURNO_MS));
+    await paso("12 RENOVAR (A) otra vez (EVALSHA directo)", "1", () => sRenovar.exec([K.turno], [A, TURNO]), (x) => x === 1);
+
+    await paso("13 PUBLICAR (A, payload real, gen vacia)", "1", () => sPublicar.exec(KP, [A, payload, TTL, payload, TTL, hoy]), (x) => x === 1);
+    await paso("14 GET turno tras publicar", "null (borrado)", () => redis.get(K.turno), (x) => x === null);
+    await paso("15 MGET fresca ub == payload", "ambas iguales byte a byte", () => redis.mget<string[]>(K.fresca, K.ub), (x) => Array.isArray(x) && x[0] === payload && x[1] === payload);
+    await paso("16 GET gen", `${hoy}:A`, () => redis.get(K.gen), (x) => x === `${hoy}:${A}`);
+    await paso(
+      "17 TTL fresca/ub/gen",
+      "cada uno en (50, 60]",
+      async () => [await redis.ttl(K.fresca), await redis.ttl(K.ub), await redis.ttl(K.gen)],
+      (x) => (x as number[]).every((t) => enRango(t, 50, TTL_S)),
+    );
+
+    await paso("18 SET turno B NX PX (turno libre)", "OK", () => redis.set(K.turno, B, { nx: true, px: TURNO_MS }), (x) => x === "OK");
+    await paso("19 PUBLICAR (A) con turno de B - propiedad perdida", "0", () => sPublicar.exec(KP, [A, payload2, TTL, payload2, TTL, hoy]), (x) => x === 0);
+    await paso(
+      "20 fresca/ub/gen/turno intactos tras el rechazo",
+      "fresca==payload, ub==payload, gen==hoy:A, turno==B",
+      async () => {
+        const [f, u, g, t] = await redis.mget<string[]>(K.fresca, K.ub, K.gen, K.turno);
+        return { fresca: f === payload, ub: u === payload, gen: g, turno: t };
+      },
+      (x) => {
+        const o = x as { fresca: boolean; ub: boolean; gen: string; turno: string };
+        return o.fresca && o.ub && o.gen === `${hoy}:${A}` && o.turno === B;
+      },
+    );
+    await paso("21 LIBERAR (A) - no era mio", "0", () => sLiberar.exec([K.turno], [A]), (x) => x === 0);
+    await paso("22 LIBERAR (B)", "1", () => sLiberar.exec([K.turno], [B]), (x) => x === 1);
+    await paso("23 GET turno liberado", "null", () => redis.get(K.turno), (x) => x === null);
+
+    await paso("24 SET gen = manana:otro (publicador de un dia posterior)", "OK", () => redis.set(K.gen, `${manana}:otro`, { ex: TTL_S }), (x) => x === "OK");
+    await paso("25 SET turno A NX PX", "OK", () => redis.set(K.turno, A, { nx: true, px: TURNO_MS }), (x) => x === "OK");
+    await paso("26 PUBLICAR (A, hoy) con gen de manana", "-1 (solo fresca)", () => sPublicar.exec(KP, [A, payload2, TTL, payload2, TTL, hoy]), (x) => x === -1);
+    await paso(
+      "27 fresca==payload2, ub==payload (intacto), gen==manana:otro, turno null",
+      "todo cierto",
+      async () => {
+        const [f, u, g, t] = await redis.mget<string[]>(K.fresca, K.ub, K.gen, K.turno);
+        return { fresca2: f === payload2, ubIntacto: u === payload, gen: g, turno: t };
+      },
+      (x) => {
+        const o = x as { fresca2: boolean; ubIntacto: boolean; gen: string; turno: string | null };
+        return o.fresca2 && o.ubIntacto && o.gen === `${manana}:otro` && o.turno === null;
+      },
+    );
+
+    await paso("28 SET gen = hoy:otro (mismo dia)", "OK", () => redis.set(K.gen, `${hoy}:otro`, { ex: TTL_S }), (x) => x === "OK");
+    await paso("29 SET turno A NX PX", "OK", () => redis.set(K.turno, A, { nx: true, px: TURNO_MS }), (x) => x === "OK");
+    await paso("30 PUBLICAR (A, hoy) con gen del mismo dia", "1", () => sPublicar.exec(KP, [A, payload, TTL, payload, TTL, hoy]), (x) => x === 1);
+    await paso("31 gen == hoy:A", `${hoy}:A`, () => redis.get(K.gen), (x) => x === `${hoy}:${A}`);
+
+    await paso("32 SET turno A NX PX", "OK", () => redis.set(K.turno, A, { nx: true, px: TURNO_MS }), (x) => x === "OK");
+    await paso("33 ENFRIAR (B) - no era mio", "0", () => sEnfriar.exec([K.turno, K.degradado], [B, payloadDeg, ENFRIAMIENTO]), (x) => x === 0);
+    await paso("34 GET degradado tras el rechazo", "null (nada escrito)", () => redis.get(K.degradado), (x) => x === null);
+    await paso("35 ENFRIAR (A, payload degradado real)", "1", () => sEnfriar.exec([K.turno, K.degradado], [A, payloadDeg, ENFRIAMIENTO]), (x) => x === 1);
+    await paso("36 GET turno", "enfriando:A", () => redis.get(K.turno), (x) => x === `enfriando:${A}`);
+    await paso(
+      "37 PTTL turno y degradado",
+      "ambos en (10000, 15000]",
+      async () => [await redis.pttl(K.turno), await redis.pttl(K.degradado)],
+      (x) => (x as number[]).every((t) => enRango(t, 10000, ENFRIAMIENTO_MS)),
+    );
+    await paso("38 GET degradado == payloadDeg", "igual byte a byte", () => redis.get(K.degradado), (x) => x === payloadDeg);
+    await paso("39 SET turno C NX PX durante el enfriamiento", "null (ocupado)", () => redis.set(K.turno, C, { nx: true, px: TURNO_MS }), (x) => x === null);
+    await paso("40 RENOVAR (A) durante el enfriamiento", "0 (el valor ya no es A)", () => sRenovar.exec([K.turno], [A, TURNO]), (x) => x === 0);
+    await paso("41 ENFRIAR (A) otra vez", "0", () => sEnfriar.exec([K.turno, K.degradado], [A, payloadDeg, ENFRIAMIENTO]), (x) => x === 0);
+    await paso("42 LIBERAR (A) durante el enfriamiento", "0", () => sLiberar.exec([K.turno], [A]), (x) => x === 0);
+
+    await paso(
+      "43 lectura final MGET fresca ub degradado",
+      "fresca==payload, ub==payload, degradado==payloadDeg",
+      () => redis.mget<string[]>(K.fresca, K.ub, K.degradado),
+      (x) => Array.isArray(x) && x[0] === payload && x[1] === payload && x[2] === payloadDeg,
+    );
+    await paso(
+      "44 lectura final GET gen, GET turno, TTL/PTTL de las cinco",
+      "gen hoy:A; turno enfriando:A; TTL > 0",
+      async () => ({
+        gen: await redis.get(K.gen),
+        turno: await redis.get(K.turno),
+        ttl: { fresca: await redis.ttl(K.fresca), ub: await redis.ttl(K.ub), gen: await redis.ttl(K.gen) },
+        pttl: { turno: await redis.pttl(K.turno), degradado: await redis.pttl(K.degradado) },
+      }),
+      (x) => {
+        const o = x as { gen: string; turno: string; ttl: Record<string, number>; pttl: Record<string, number> };
+        return (
+          o.gen === `${hoy}:${A}` &&
+          o.turno === `enfriando:${A}` &&
+          Object.values(o.ttl).every((t) => enRango(t, 0, TTL_S)) &&
+          Object.values(o.pttl).every((t) => enRango(t, 0, ENFRIAMIENTO_MS))
+        );
+      },
+    );
+  } finally {
+    await paso("45 DEL de las cinco claves temporales", "5", () => redis.del(K.turno, K.fresca, K.ub, K.gen, K.degradado), (x) => x === 5);
+    await paso("46 SCAN precond-etapa2:* despues", "0 claves, completo", () => scanPrefijo(), scanVacio);
+    await paso("47 DBSIZE despues", "numero", () => redis.dbsize(), esNum);
+    globalThis.fetch = fetchOriginal;
+  }
+
+  const todosOk = pasos.every((p) => p.ok);
+  return NextResponse.json({
+    ok: todosOk,
+    corrida,
+    prefijo: P,
+    hoy,
+    manana,
+    hostRedis: host.replace(/^[^.]+/, "<redactado>"),
+    sdk: "@upstash/redis (el instalado en el proyecto)",
+    payloadBytes: Buffer.byteLength(payload),
+    msTotal: Date.now() - inicio,
+    comandosHttp: httpLog.length,
+    bytesEnviadosTotal: httpLog.reduce((a, h) => a + h.bytesEnviados, 0),
+    bytesRecibidosTotal: httpLog.reduce((a, h) => a + h.bytesRecibidos, 0),
+    pasos: pasos.map((p) => ({
+      ...p,
+      resultado: Array.isArray(p.resultado) ? p.resultado.map(recorte) : recorte(p.resultado),
+    })),
+  });
+}
