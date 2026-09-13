@@ -5,7 +5,8 @@
 (worktree `wt-etapa2`). **Sólo documentación: sin código productivo, sin
 infraestructura, sin variables, sin merge ni push.** Diseño **v3 aprobado por Codex**, precondición de Upstash **superada**
 (§14) y **la Etapa 2 IMPLEMENTADA en la rama `feat/etapa2-turno-ultimo-bueno`
-(§15), pendiente de auditoría. Sin merge, sin push, sin deploy.**
+(§15), auditada por Codex y CORREGIDA en la misma rama (§16), pendiente de
+nueva auditoría. Sin merge, sin push, sin deploy.**
 **Antecedentes:** Etapa PREVIA (#21, [`2026-09-10-capacidad-trafico.md` §9](2026-09-10-capacidad-trafico.md)),
 Etapa 0 ([`2026-09-11-etapa0-medir.md`](2026-09-11-etapa0-medir.md)),
 Etapa 1 ([`2026-09-11-etapa1-canonizar-single-flight.md`](2026-09-11-etapa1-canonizar-single-flight.md)),
@@ -1198,3 +1199,95 @@ comandos del frío y cada vuelta de espera (3 comandos cada 500 ms).
   (los iniciales pasaron el banco; se miden después del deploy).
 
 **Nada de esto está mergeado, pusheado ni desplegado.**
+
+---
+
+## 16. Corrección tras la auditoría de Codex sobre `fb3a3f1` — pendiente de nueva auditoría
+
+Codex ejecutó 62 pruebas específicas (todas pasaron) y encontró cinco puntos.
+Cada uno se corrigió con RED → GREEN en la misma rama; **`main` = `origin/main`
+= `b60f985` intacto**; los cuatro archivos ajenos sin tocar. **Sin merge, sin
+push, sin deploy.**
+
+| # | Hallazgo | Corrección | RED contra `fb3a3f1` | Commit |
+|---|---|---|---|---|
+| 1 | Si `producir()` rechazaba, el `finally` sólo apagaba la renovación: el turno quedaba huérfano hasta vencer | `lib/home-servir.ts`: `catch` → cortar y esperar la renovación → `LIBERAR` (compare-and-delete por script) → `errorProductor` en las métricas; **con UB** se sirve el UB y se registra el error (`console.error`); **sin UB** el error se propaga (la ruta responde 500, como antes de la Etapa 2) pero ya sin turno huérfano ni temporizador vivo. Ni `DEL` suelto ni `SET XX` | "productor que rechaza CON UB", "SIN UB", "rechaza a mitad de una renovación" | `46016eb` |
+| 2 | `void renovacion` dejaba un temporizador de 5 s vivo tras una composición rápida, y una renovación en vuelo podía anotar métricas después de la línea terminal | La renovación duerme con una señal propia (`dormirCancelable`: `setTimeout` que la señal limpia en el acto) y al terminar la composición —bien o mal— se aborta **y se espera** la promesa. La espera sin UB también duerme con la señal de la solicitud | "composición rápida: ningún temporizador ni renovación activa", "las métricas NO cambian después de la línea terminal", "renovaciones largas legítimas (12 s → 2)", `dormirCancelable` | `46016eb` |
+| 3 | `clavesEnVuelo`: un `Map` global de `lib/home.ts` que crecía con cada combinación y nunca se vaciaba | `crearVueloHome<T, K, C>` recibe un **contexto por solicitud** y le pasa al resolver el del líder; la clave de coordinación sigue siendo sólo la fresca; `servir.enVuelo()` (sobre `crearSingleFlight.enVuelo`) demuestra cero al terminar. Sin mapas de módulo | "el vuelo pasa el contexto del líder", "no queda estado acumulado (misma clave y claves distintas)", "lib/home.ts ya no retiene un mapa" | `ef05e55` |
+| 4 | `randomUUID().slice(0, 8)` recortaba la identidad del propietario, que es parte del fencing | UUID completo; guard en `lib/home-turno-cableado.test.ts` (falla si vuelve `.slice`/`.substring`) | "el propietario lleva el UUID COMPLETO" | `ef05e55` |
+| 5 | `lib/home-vuelo.ts` y su test seguían describiendo `cachedLocIf` como la resolución vigente | Comentarios al día (la resolución es `servirConTurno`; `cachedLocIf` queda como antecedente de la Etapa 1); `docs/ESTADO.md` aclara que en `main` sigue `cachedLocIf` | — | `ef05e55` |
+
+**RED (ejecutado contra el módulo de `fb3a3f1`):** los seis tests nuevos de
+`lib/home-servir.test.ts` fallaron (los cinco del productor/renovación más
+"renovaciones largas", que exige cero durmientes al terminar); los tres de
+`lib/home-vuelo.test.ts` fallaron; el guard del UUID falló con el `lib/home.ts`
+de `fb3a3f1` (comprobado con ese archivo repuesto por `git stash`, con tag y
+SHA, y vuelto a aplicar). **GREEN:** específicos turno 20, servicio 34, vuelo
+15, single-flight 8, señal 2, claves 6 + 26, métricas 22, escritura 18,
+validación del banco 24, Lua 2, cableado 6; **suite 1.536 tests, 1.526
+aprobados, 0 fallos, 10 omitidos** (antes de la corrección 1.525 / 1.515);
+`tsc --noEmit` limpio; build fresco (`.next` borrado, sin entorno del banco)
+exit 0; `git diff --check` limpio.
+
+### 16.1 Serialización real (Preview descartable, claves efímeras, sin claves reales)
+
+[`2026-09-13-etapa2-serializacion.json`](2026-09-13-etapa2-serializacion.json)
+y el código exacto en
+[`2026-09-13-etapa2-serializacion.route.ts.txt`](2026-09-13-etapa2-serializacion.route.ts.txt).
+Rama descartable `tmp/etapa2-serializacion` (`8aae8c8`, desde `ef05e55`) con
+una sola ruta temporal, subida con `vercel deploy` (Preview protegido por
+Vercel Authentication + secreto propio), **borrada** con el deployment después;
+ninguna ruta temporal queda en la rama. Lo que corrió es **el camino de
+producción**: `crearTurno(opsTurnoHome)` de `lib/cache.ts` (SET NX PX real,
+`PUBLICAR` y `ENFRIAR` por EVALSHA/EVAL con `JSON.stringify(payload)`, la misma
+llamada de `lib/home-servir.ts`) y la lectura por `leerVarias` (`batchGet` →
+MGET con la deserialización predeterminada del cliente). Payload **sintético**
+con la forma del Home (140.987 B; ningún pedido a Producción), con títulos que
+traen comillas, barras, saltos de línea, acentos y emoji, y strings que parecen
+número, JSON y booleano. Claves `precond-etapa2-serial:mu0cud0t-7ksaqx:*` de
+60 s, borradas al final (`DEL` = 5, `SCAN` = 0). **11 pasos, 11 correctos:**
+fresca y UB vuelven como **objetos** estructuralmente iguales al publicado;
+`"007"`, `'{"a":1}'` y `"true"` vuelven como **strings** (la deserialización
+sólo actúa sobre el valor entero, que es un objeto); `null`, `""`, `0` y
+`false` intactos; `gen` vuelve `"2026-09-13:serial-…"` y el turno `null` tras
+publicar y `"enfriando:serial-…"` tras enfriar; las tres copias en un MGET
+iguales a lo publicado; TTL 58 s en la base (aquí 60; en producción
+`TTL.home` 21.600 y `TTL.homeUltimoBueno` 129.600). `app.yump.ar` siguió en el
+mismo deployment de Producción antes y después.
+
+### 16.2 Banco, antes y después de la corrección
+
+Corrida completa nueva (el código de la app cambió; el corredor no):
+[`2026-09-13-etapa2-banco.json`](2026-09-13-etapa2-banco.json) — **VÁLIDA**, 27
+escenarios, 26 completos + 1 incompleto declarado (E-cancelacion-redis).
+Comparada escenario por escenario con la corrida de `fb3a3f1`: **mismos
+resultados en todos** (composiciones, orígenes, publicaciones, TMDB, comandos,
+renovaciones): B2 HIT 1 comando / 40.505 B; E2 1 composición (1 `propia`, 2
+`esperada`); E3 UB en el acto; E-renueva 3 renovaciones; E-muere 1 rescate;
+E-cancelacion 50,5 s con `LIBERAR = 1` y TMDB en 0 después; E-perdida
+`reconciliado`; E-sinredis-vuelve sin escribir; E-version separada. Es lo
+esperado: las correcciones tocan el camino de error del productor y el ciclo de
+vida del temporizador, que el banco no ejercita.
+
+**El error del productor NO tiene escenario en el banco, y así queda dicho:**
+`composeHome` envuelve cada fuente en `safe()` y no rechaza con ninguna
+configuración de los dobles (TMDB 500/429/caído, Supabase caído, Redis caído
+degradan, no lanzan). Provocarlo exigiría un gancho artificial en código de
+producción, que no se agrega. Está cubierto por los tres tests puros con la
+emulación en memoria (con UB, sin UB, y a mitad de una renovación).
+
+### 16.3 Comprobado, inferido, desconocido (de esta corrección)
+
+- **Comprobado:** los cinco puntos en tests que fallaban contra `fb3a3f1` y
+  pasan ahora; el banco completo con el mismo resultado; la serialización real
+  por el camino de producción contra la base real; ninguna ruta temporal en
+  la rama.
+- **Inferido:** que en Producción el temporizador huérfano de `fb3a3f1` no
+  llegaba a anotar métricas fuera de la línea (una composición rápida deja el
+  `setTimeout` de 5 s vivo, pero la renovación que dispara sólo anota si el
+  turno sigue siendo suyo); no se midió, se corrigió.
+- **Desconocido:** lo mismo que en §15.6 (facturación de Upstash, instancias
+  reales de Vercel, constantes óptimas en Producción).
+
+**Estado: corregida en rama, pendiente de nueva auditoría. Nada mergeado,
+pusheado ni desplegado.**

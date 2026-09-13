@@ -1344,9 +1344,18 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (13/09): la Etapa 2 está IMPLEMENTADA en la rama `feat/etapa2-turno-ultimo-bueno`, PENDIENTE DE AUDITORÍA — sin merge, sin push, sin deploy
+### Estado (13/09): la Etapa 2 está IMPLEMENTADA y CORREGIDA en la rama `feat/etapa2-turno-ultimo-bueno`, PENDIENTE DE NUEVA AUDITORÍA — sin merge, sin push, sin deploy
 
-Rama `feat/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2-impl`, fork
+Codex auditó `fb3a3f1` (62 pruebas específicas, todas en verde) y encontró
+cinco puntos, corregidos en la misma rama con RED → GREEN (informe §16): el
+productor que rechaza ahora libera el turno y sirve el UB (o propaga el error
+sin turno huérfano); la renovación es cancelable y se espera (sin temporizador
+vivo ni métricas después de la línea terminal); el contexto del vuelo viaja
+por solicitud (sin mapa global); el propietario lleva el UUID completo; los
+comentarios describen la resolución vigente. Serialización real verificada por
+el camino de producción con claves efímeras (§16.1); banco completo repetido,
+mismo resultado (§16.2). **Nada mergeado ni desplegado.** Rama
+`feat/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2-impl`, fork
 `8dfa49b`). Turno distribuido por clave (SET NX PX + los cuatro scripts
 verificados), último bueno servido en tiempo de HIT, enfriamiento tras un
 degradado, cancelación real por presupuesto, `VERSION_HOME` única, segunda

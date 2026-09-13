@@ -152,8 +152,15 @@
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
   Home bueno): IMPLEMENTADA EN LA RAMA `feat/etapa2-turno-ultimo-bueno`
-  (worktree `wt-etapa2-impl`, fork `8dfa49b`), PENDIENTE DE AUDITORÍA. Sin
-  merge, sin push, sin deploy.** Módulos puros nuevos (`lib/turno.ts`,
+  (worktree `wt-etapa2-impl`, fork `8dfa49b`) y CORREGIDA EN RAMA tras la
+  auditoría de Codex sobre `fb3a3f1` (cinco puntos: productor que rechaza
+  libera el turno y sirve UB; renovación cancelable y esperada, sin
+  temporizadores ni métricas tardías; contexto del vuelo por solicitud en vez
+  de un mapa global; UUID completo del propietario; comentarios al día),
+  PENDIENTE DE NUEVA AUDITORÍA. Sin merge, sin push, sin deploy.** Serialización
+  real verificada por el camino de producción (informe §16.1); banco completo
+  repetido con el mismo resultado (§16.2); suite 1.536 (1.526 aprobados, 0
+  fallos, 10 omitidos). Módulos puros nuevos (`lib/turno.ts`,
   `lib/turno-memoria.ts`, `lib/turno-lua.ts`, `lib/home-servir.ts`,
   `lib/senal-solicitud.ts`), `VERSION_HOME` única en `lib/claves.ts`, cableado
   en `lib/cache.ts`/`lib/home.ts`/`lib/tmdb.ts`/`lib/supabase.ts`, banco
