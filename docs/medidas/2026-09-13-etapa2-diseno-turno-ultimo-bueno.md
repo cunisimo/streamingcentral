@@ -3,9 +3,9 @@
 **Fecha:** 2026-09-13 — **versión 3**, revisada tras las auditorías de Codex de `7cfc979` (v1 → v2) y de `c8fc235` (v2 → v3), ver §0.
 **Rama:** `diseno/etapa2-turno-ultimo-bueno`, nacida de `main` = `b60f985`
 (worktree `wt-etapa2`). **Sólo documentación: sin código productivo, sin
-infraestructura, sin variables, sin merge ni push.** Diseño **v3 aprobado condicionalmente por Codex** (los cuatro defectos
-de la v2 resueltos); **precondición de Upstash EJECUTADA y superada el 13/09**
-(§14); nada de lo que sigue está implementado.
+infraestructura, sin variables, sin merge ni push.** Diseño **v3 aprobado por Codex**, precondición de Upstash **superada**
+(§14) y **la Etapa 2 IMPLEMENTADA en la rama `feat/etapa2-turno-ultimo-bueno`
+(§15), pendiente de auditoría. Sin merge, sin push, sin deploy.**
 **Antecedentes:** Etapa PREVIA (#21, [`2026-09-10-capacidad-trafico.md` §9](2026-09-10-capacidad-trafico.md)),
 Etapa 0 ([`2026-09-11-etapa0-medir.md`](2026-09-11-etapa0-medir.md)),
 Etapa 1 ([`2026-09-11-etapa1-canonizar-single-flight.md`](2026-09-11-etapa1-canonizar-single-flight.md)),
@@ -1032,3 +1032,169 @@ bytes de hoy. El costo en comandos de §7 pasa a "MISS: +1 lectura", el HIT
 queda en 0 escrituras y 1 lectura como hoy. Queda escrito como alternativa;
 **Decisión del dueño (13/09): aplicada** — §5.1, §5.5 y §7 ya describen las
 lecturas escalonadas; el banco compara el HIT antes/después.
+
+---
+
+## 15. Implementación — rama `feat/etapa2-turno-ultimo-bueno`, pendiente de auditoría
+
+**Fork point:** `8dfa49b` (la punta de `diseno/etapa2-turno-ultimo-bueno`, que
+a su vez nace de `main` = `b60f985`). **Worktree:** `wt-etapa2-impl`, sin
+`.env.local`. **Sin merge, sin push, sin deploy.** Los cuatro archivos ajenos
+del checkout principal no se tocaron; todos los commits van con rutas
+explícitas.
+
+### 15.1 Qué se implementó (y en qué archivo)
+
+| Módulo | Qué | Tests (escritos antes, RED → GREEN) |
+|---|---|---|
+| `lib/claves.ts` | `VERSION_HOME` única (6); `familiasHome()`; `claveHomeUltimoBueno`, `claveHomeGeneracion`, `claveHomeDegradado`, `claveTurnoHome`; la fresca byte a byte igual | `lib/claves-home.test.ts` (6); el barrido de `lib/claves.test.ts` pasa a 16 constructores / 17 call sites |
+| `lib/turno-lua.ts` | los cuatro scripts, **los mismos bytes** que la precondición verificada contra Upstash | `lib/turno-lua.test.ts` (2): compara contra la evidencia de §14 |
+| `lib/turno.ts` | estados y reconciliación (§4.4) sobre seis primitivas inyectadas; ningún `DEL` ni `SET XX` | `lib/turno.test.ts` (20; deps Proxy que lanza ante cualquier otra operación) |
+| `lib/turno-memoria.ts` | las seis primitivas sobre un `Map` con la semántica de los scripts (desarrollo sin Redis, y backend de los tests) | en `lib/turno.test.ts` |
+| `lib/home-servir.ts` | la secuencia §5.1 con lecturas escalonadas y la segunda lectura tras adquirir; renovación; ENFRIAR; cancelación; espera con tope; rescatista tardío | `lib/home-servir.test.ts` (27; emulación en memoria + reloj virtual) |
+| `lib/senal-solicitud.ts` | la señal de la solicitud por `AsyncLocalStorage`; `combinarSenales` | `lib/senal-solicitud.test.ts` (2) |
+| `lib/metricas.ts` | `turno`, `origen`, `publicacion`, `renovaciones`, `turnoPerdido`, `esperaMs`, `degradadoDescartado`, `enfriado`, `cancelada`, `propietario`; la línea `[home]` los imprime | `lib/metricas.test.ts` (+2) |
+| `lib/cache.ts` | `opsTurnoHome` real (SET NX PX, GET, EVALSHA → EVAL ante NOSCRIPT, tres unidades contadas) o emulado; `leerVarias`; `TTL.homeUltimoBueno = 36 h`; proveedor de la señal para Supabase | `lib/home-turno-cableado.test.ts` (5, estructural) |
+| `lib/home.ts` | las cinco claves; el resolver del vuelo es `servirConTurno` (ya no `cachedLocIf`); `AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)` por solicitud; propietario `<instancia>:<pid>:<n>`; `hoyAR()` como día; payload vacío con `motivo` | ídem + `lib/home-vuelo.test.ts`, inventario de cachés, barrido de disponibilidad actualizados |
+| `lib/tmdb.ts`, `lib/supabase.ts` | la señal combinada con el timeout propio; una solicitud ya cancelada no sale ni se cuenta | ídem |
+| `lib/fecha.ts` | la fecha forzada vale también en el banco (`YUMP_BANCO=1`, nunca con `VERCEL_ENV=production`) | `lib/fecha.test.ts` (+1) |
+| Banco | `scripts/banco/dobles.mjs` (scripts por texto, NX/PX, PTTL, registro del turno, bytes, controles), `scripts/banco/correr-etapa2.mjs` (K procesos), `lib/banco-validacion.ts` (turno/origen/publicaciones, composición sin turno = inválida, interrupciones declaradas) | `lib/banco-validacion.test.ts` (+5) |
+
+**RED comprobado:** cada archivo de tests falló al importar el módulo que no
+existía (`ERR_MODULE_NOT_FOUND` / `does not provide an export named …`) antes de
+escribirlo; los estructurales fallaron sobre el `lib/home.ts` y `lib/cache.ts`
+previos. **GREEN:** suite completa **1.525 tests, 1.515 aprobados, 0 fallos,
+10 omitidos** (los 10 de siempre: artefacto nativo); antes de la etapa eran
+1.455 / 1.445 / 10 → **+70 tests**. `tsc --noEmit` limpio. Build fresco
+(`.next` borrado antes): exit 0. `git diff --check` limpio.
+
+### 15.2 Los controles RED del diseño, uno por uno
+
+| Control (§9) | Test | Resultado |
+|---|---|---|
+| Lectura → turno (directa y reconciliada), y su control | `home-servir.test.ts` "lectura → turno…" ×3 | A no compone, `LIBERAR`, sirve la fresca de B, `origen = fresca-tras-turno`; una sola composición/publicación total |
+| Lecturas escalonadas | "HIT: sólo se lee la fresca…", "MISS frío…" | HIT = `[fresca]`; MISS = `[fresca], [ub, degradado], [fresca]`; espera = las tres por vuelta |
+| Propietario muerto → exactamente un rescatista | "propietario muerto…" | 3 seguidores, 1 `producir`, cero `compone` sin turno |
+| Perdido no modifica fresca ni UB | "propietario perdido…" | `PUBLICAR` rechazado, `propia-sin-publicar`, fresca y UB de B |
+| Medianoche | "propietario viejo que cruza la medianoche…" | `-1`, UB y gen del día nuevo intactos |
+| Degradado con/sin UB, enfriamiento, ráfaga escalonada con y sin UB | 4 tests | ≤ ⌈40/15⌉+1 composiciones; con UB todas UB; sin UB degradado compartido; ninguna espera |
+| `sin-redis` no escribe | "sin-redis: compone, sirve y no escribe…" | lo de B queda |
+| Cancelación (composición, espera, líder con seguidores) y su control | 4 tests | `LIBERAR`, no `ENFRIAR`, UB o vacío `cancelada`; todos los seguidores reciben lo mismo; una composición; el turno queda libre |
+| Deadline con Redis respondiendo + promesa reducida | "desigualdad…", "PROMESA REDUCIDA (control)…" | con Redis colgado la secuencia NO termina: fijado |
+| Claves: (a)–(d) | `claves-home.test.ts` | byte a byte, `v<N>` común, salto conjunto, turnos distintos por versión |
+| `cache.ts`: sin `DEL` suelto, sin `SET XX`, sin escritura directa fuera de PUBLICAR | `home-turno-cableado.test.ts` + Proxy en `turno.test.ts` | pasa |
+
+### 15.3 El banco multiproceso (3 procesos de Next contra los mismos dobles)
+
+**Evidencia:** [`2026-09-13-etapa2-banco.json`](2026-09-13-etapa2-banco.json)
+(corrida **VÁLIDA**: 27 escenarios, 26 completos + 1 incompleto **declarado**;
+las igualdades app ↔ dobles verificadas en todos los completos salvo E-muere,
+donde el proceso asesinado consumió sin dejar su línea y la validación lo
+declara) y [`2026-09-13-etapa2-banco-antes-E1.json`](2026-09-13-etapa2-banco-antes-E1.json)
+(el build de la Etapa 1 —`wt-etapa1` = `af8d7c6`, código idéntico a `8dfa49b`
+fuera de `docs/`— con **el mismo corredor y los mismos dobles**). Build del
+banco con `entorno.sh`, doble de TMDB en 4801, Supabase 4802, Redis 4803.
+Constantes medidas: `TURNO_MS = ENFRIAMIENTO_MS = 15 s`, `RENOVACION_MS = 5 s`,
+`ESPERA_MS = 500 ms`, `TOPE_ESPERA_MS = 20 s`, `PRESUPUESTO_REQUEST_MS = 50 s`.
+
+**El camino caliente no empeoró (antes / después, mismo corredor):**
+
+| | Etapa 1 (`antes`) | Etapa 2 |
+|---|---|---|
+| B2 HIT, un proceso | 1 comando (`MGET`), **40.505 B** bajados, 16 ms | 1 comando (`MGET`), **40.505 B**, 15 ms |
+| B2b HIT desde otro proceso | 1 comando, 40.505 B | 1 comando, 40.505 B |
+| B1 frío, un proceso | 926 TMDB, **994** comandos, 1,6 s | 926 TMDB, **997** comandos (+3: `MGET [ub, degradado]`, `SET NX`, `GET` fresca del paso 4.0; `PUBLICAR` reemplaza al `SET` de la fresca), 1,8 s |
+| E1: 100 simultáneas en un proceso | 1 composición + 99 esperas compartidas | 1 + 99 (Etapa 1 intacta) |
+| **E2: 3 procesos × 34 simultáneas, clave fría** | **3 composiciones** (2.110 TMDB, 2.412 comandos, 3,0 s) | **1 composición** (957 TMDB, 1.155 comandos, 2,6 s): 1 `propia`, 2 `esperada`, 99 `compartida` |
+| E3: fresca expirada, con UB | 3 composiciones | 1 composición; los otros 2 **`ultimo-bueno`** en el acto (886 ms de pared) |
+| E-degradado-sinUB: TMDB 500 | 3 composiciones degradadas (651 TMDB) | 1 (217 TMDB), `ENFRIAR = 1`, los otros 2 `degradado-compartido` |
+
+**Los escenarios de la Etapa 2 (todos ✅ salvo el control incompleto):**
+
+| Escenario | Qué afirmaba (§6) | Medido |
+|---|---|---|
+| E-renueva (TMDB +250 ms) | renovaciones ≥ 1, 1 composición, ningún `SET NX` ajeno prospera | composición 17,7 s, **3 renovaciones**, `setNxOk = 1`, 2 `esperada` |
+| E-muere (propietario asesinado a los 644 ms de su `compone`) | el turno vence, **exactamente uno** rescata, nadie compone sin turno | `compone = 2` (1 interrumpido + 1 rescate), `setNxOk = 2`, `PUBLICAR = 1`, 1 `esperada`, cero sin turno; 17,7 s de pared |
+| E-tarde (turno borrado a mitad, otro lo toma) | 2 composiciones, 1 publicada, el viejo `propia-sin-publicar` | exacto; el viejo con 4 renovaciones (la última devolvió 0: `TURNO PERDIDO`) |
+| E-medianoche (proceso de mañana publica primero) | `PUBLICAR = -1` del de hoy; UB y gen del día nuevo intactos | 1 publicada + 1 parcial; ambas `propia` |
+| E-agotada (TMDB +700 ms, sin UB) | los que esperan → vacío `espera-agotada`, sin componer | 1 composición (45 s, 9 renovaciones); 2 `vacio-espera-agotada`; siguiente ronda HIT |
+| E-degradado (TMDB 500, UB presente) | UB para todos, `ENFRIAR = 1`, nada publicado | `ultimo-bueno = 3`, 1 composición, enfriadas 1, publicaciones 0 |
+| E-rafaga-sinUB (1/s × 40 s) | ≤ 4 composiciones; las demás degradado compartido; ninguna espera | **3** composiciones, 37 `degradado-compartido`, máx 510 ms por solicitud |
+| E-rafaga-conUB | ≤ 4; **todas** UB | **2** composiciones, **40 `ultimo-bueno`**, máx 871 ms |
+| E-perdida (SET NX ejecuta, socket cortado) | reconciliación → 1 composición | `turno = reconciliado`, 1 publicada, 1 comando con respuesta perdida en el doble |
+| E-eval-falla (EVAL falla 2×) | indeterminado, nada inseguro, se sirve | `propia-sin-publicar`, publicaciones 0, 2 errores en el doble, ningún `DEL` |
+| E-sinredis-vuelve (Redis vuelve a los 35 s; #1 publica) | #0 `sin-redis`, no escribe; lo de #1 queda | `origenes {sin-redis: 1, propia: 1}`, `setNxOk = 1` (el de #1), 1 publicada; la siguiente es HIT |
+| E-cancelacion (TMDB +1.500 ms) | responde `cancelada` antes de 60 s; `LIBERAR`; TMDB deja de recibir | **50,4 s**, `vacio-cancelada`, liberadas 1, 0 enfriadas/publicadas, 9 renovaciones; TMDB recibió **0** llamadas en los 4 s posteriores (561 en total) |
+| E-cancelacion-redis (control) | NO termina en 60 s (F5a) | incompleto declarado, 60,0 s, reinicio demostrado |
+| E-version (v6 en #0, v7 en #2) | dos turnos, dos frescas, dos UB; nadie lee al otro | 2 composiciones, 2 publicadas; en el doble las familias `…v6…` y `…v7…` de fresca/ub/gen; después cada proceso HIT de su versión |
+
+**Lo que el banco NO cubre:** E-claves (dos claves en dos procesos, pared <
+suma) — la atribución del corredor es de una clave por escenario; lo cubre el
+test puro "dos claves distintas no se bloquean". Y todo lo que es Producción:
+la latencia real de Upstash (~117 ms por comando, §14) multiplica los +3
+comandos del frío y cada vuelta de espera (3 comandos cada 500 ms).
+
+### 15.4 Costo del camino caliente nuevo
+
+- **HIT: 0 comandos extra, 0 bytes extra** — medido idéntico a la Etapa 1
+  (1 `MGET`, 40.505 B en el banco; en Producción sería una copia de ~85 KB, la
+  misma que hoy).
+- **MISS con turno:** +3 comandos sobre la Etapa 1 (997 vs 994) y una lectura
+  más de `[ub, degradado]`; ~+350 ms en Producción por la latencia por comando
+  de §14, sobre una composición de 2–4 s.
+- **Ocupado con UB:** 2 lecturas + `SET NX` + `GET turno` y se responde en
+  tiempo de HIT (886 ms de pared en E3 con tres procesos, incluida la
+  composición del propietario).
+- **Espera sin UB:** 3 comandos por vuelta de 500 ms por instancia que espera,
+  acotado por `TOPE_ESPERA_MS`.
+
+### 15.5 Desviaciones respecto del diseño v3, y por qué
+
+1. `tomar` con `SET NX = null` y `GET = null` (nadie lo tiene: el propietario
+   publicó y borró el turno entre las dos) devuelve `ocupado` con valor vacío;
+   la vuelta siguiente del bucle encuentra la fresca. El diseño no cubría ese
+   intersticio.
+2. `tomar` con `SET NX` que lanza y `GET = null` hace **un segundo** `SET NX`
+   (acotado a uno); si también lanza, `sin-redis`. El diseño sólo reconciliaba.
+3. El payload vacío de los dos finales sin contenido lleva `motivo:
+   "espera-agotada" | "cancelada"`; nunca se publica ni se cachea, así que no
+   cambia el contrato de lo cacheado ni `VERSION_HOME`.
+4. `lib/fecha.ts` cambió (no estaba en la lista de §5.5): `next start` fija
+   `NODE_ENV=production` y sin la excepción del banco E-medianoche no se podía
+   medir. La excepción exige `YUMP_BANCO=1` y nunca `VERCEL_ENV=production`.
+5. `lib/tmdb.ts`: una solicitud ya cancelada no sale ni se cuenta como llamada
+   (dos chequeos: antes y después del semáforo). Sin el segundo, 4 de 565
+   llamadas contadas no llegaban al doble y la igualdad no cerraba.
+6. `crearVueloHome` no cambió: la lectura previa ya era sólo la fresca; lo que
+   cambió es el `resolver` en `lib/home.ts`. Las otras cuatro claves llegan al
+   resolver por un `Map` clave fresca → cinco claves.
+7. "Sin plataformas" (payload no publicable, no degradado): se sirve y se
+   libera el turno; ni `PUBLICAR` ni `ENFRIAR`.
+8. Nombres de origen finales: `fresca`, `fresca-tras-turno`, `ultimo-bueno`,
+   `esperada`, `propia`, `propia-sin-publicar`, `degradado-propio`,
+   `degradado-compartido`, `sin-redis`, `vacio-espera-agotada`,
+   `vacio-cancelada`; `cache` suma `ultimo-bueno`, `esperada`, `vacio`,
+   `degradado-compartida`.
+9. El doble de Redis cuenta como `comandos` sólo los confirmados al cliente
+   (errores y respuestas perdidas aparte), que es la unidad de la app; lo que
+   Upstash factura en esos casos sigue siendo desconocido (§14.4).
+10. `VERSION_HOME` se puede sobreescribir por proceso **sólo** con
+    `YUMP_BANCO=1` (`YUMP_BANCO_VERSION_HOME`), para E-version.
+11. E-claves no está en el banco (arriba).
+
+### 15.6 Comprobado, inferido, desconocido
+
+- **Comprobado (ejecutado):** todo lo de §15.1–15.4 en el banco aislado y en
+  los tests; que los scripts que corren son los verificados contra Upstash
+  (test de bytes); que el HIT no empeoró contra la Etapa 1 con el mismo
+  corredor.
+- **Inferido:** el costo en Producción del MISS (+3 comandos ≈ +350 ms) sale de
+  la latencia por comando medida en §14, no de una corrida en Producción; los
+  tiempos del banco (composición ~2 s) no son los de Producción (~4 s).
+- **Desconocido:** cómo factura Upstash los comandos de los scripts y los de
+  respuesta perdida; el comportamiento con varias instancias REALES de Vercel
+  (el banco usa tres procesos en una máquina contra un doble local); el valor
+  óptimo de `TOPE_ESPERA_MS`, `TURNO_MS` y `ENFRIAMIENTO_MS` en Producción
+  (los iniciales pasaron el banco; se miden después del deploy).
+
+**Nada de esto está mergeado, pusheado ni desplegado.**

@@ -1344,10 +1344,18 @@ turno. **Esa copia no protege de una caída de Redis** — protege del vencimien
 del TTL y de una caída de TMDB. Ver la Etapa PREVIA del informe de capacidad
 (`medidas/2026-09-10-capacidad-trafico.md` §9), que era el #21 y se resolvió el 11/09.
 
-### Estado (13/09): diseño v3 APROBADO CONDICIONALMENTE por Codex; precondición de Upstash EJECUTADA y superada — sigue sin implementación
+### Estado (13/09): la Etapa 2 está IMPLEMENTADA en la rama `feat/etapa2-turno-ultimo-bueno`, PENDIENTE DE AUDITORÍA — sin merge, sin push, sin deploy
 
-Rama `diseno/etapa2-turno-ultimo-bueno` (sólo documentación, sin merge ni
-push). **Precondición de Upstash (informe §14):** ejecutada el 13/09 desde un
+Rama `feat/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2-impl`, fork
+`8dfa49b`). Turno distribuido por clave (SET NX PX + los cuatro scripts
+verificados), último bueno servido en tiempo de HIT, enfriamiento tras un
+degradado, cancelación real por presupuesto, `VERSION_HOME` única, segunda
+lectura tras adquirir el turno, lecturas escalonadas (el HIT transfiere una
+sola copia: idéntico a la Etapa 1 en el banco). RED → GREEN con +70 tests
+(suite 1.525 / 1.515 / 0 fallos), banco multiproceso de 27 escenarios VÁLIDO
+contra los dobles (E2: 3 → 1 composición entre procesos). Informe §15.
+**Nada mergeado ni desplegado.** Antecedente: diseño v3 aprobado y
+**precondición de Upstash (informe §14):** ejecutada el 13/09 desde un
 Preview descartable y protegido contra la misma base que usa Producción, sólo
 con claves `precond-etapa2:<corrida>:*` (TTL ≤ 60 s, borradas al final;
 `SCAN` 0 antes y después, `DBSIZE` igual): `SET NX PX` y los cuatro scripts

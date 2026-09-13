@@ -150,10 +150,26 @@
   Etapas 3 a 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
-  Home bueno): DISEÑO v3 APROBADO CONDICIONALMENTE por Codex (13/09) y
-  PRECONDICIÓN DE UPSTASH EJECUTADA Y SUPERADA (13/09). NO está implementada.**
-  Rama `diseno/etapa2-turno-ultimo-bueno` (worktree `wt-etapa2`, nacida de
-  `main` = `b60f985`), sólo documentación, sin merge ni push. **Precondición
+  Home bueno): IMPLEMENTADA EN LA RAMA `feat/etapa2-turno-ultimo-bueno`
+  (worktree `wt-etapa2-impl`, fork `8dfa49b`), PENDIENTE DE AUDITORÍA. Sin
+  merge, sin push, sin deploy.** Módulos puros nuevos (`lib/turno.ts`,
+  `lib/turno-memoria.ts`, `lib/turno-lua.ts`, `lib/home-servir.ts`,
+  `lib/senal-solicitud.ts`), `VERSION_HOME` única en `lib/claves.ts`, cableado
+  en `lib/cache.ts`/`lib/home.ts`/`lib/tmdb.ts`/`lib/supabase.ts`, banco
+  multiproceso (`scripts/banco/correr-etapa2.mjs`). RED → GREEN: +70 tests;
+  suite 1.525 (1.515 aprobados, 0 fallos, 10 omitidos); `tsc` limpio; build
+  fresco exit 0. **Banco (3 procesos, corrida VÁLIDA, 27 escenarios):** HIT
+  idéntico a la Etapa 1 (1 comando, 40.505 B, mismo corredor); frío 994 → 997
+  comandos; E2 3 → **1 composición entre procesos**; fresca vencida con UB →
+  los demás **último bueno en el acto**; propietario asesinado → un rescate;
+  turno borrado a mitad → un solo publicado; medianoche → `-1` con UB intacto;
+  TMDB caído → 1 degradado + enfriamiento (ráfaga 1/s × 40 s: 3 composiciones
+  sin UB, 2 con UB y 40 UB); respuesta perdida → reconciliación; EVAL fallido
+  → nada inseguro; Redis caído y vuelve → `sin-redis` no escribe; composición
+  > presupuesto → `cancelada` a los 50,4 s y TMDB deja de recibir; control con
+  Redis caído → no termina (promesa reducida); rollout v6/v7 → familias
+  separadas. Informe §15. Antecedente del mismo día: diseño v3 aprobado por
+  Codex y **precondición
   (informe §14):** desde un Preview descartable y protegido (rama temporal
   nunca pusheada, subida con `vercel deploy`, borrada después; las credenciales
   de Redis son *Sensitive* y el CLI no las baja), contra **la misma base de
