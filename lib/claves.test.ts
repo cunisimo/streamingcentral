@@ -473,7 +473,15 @@ function familiasUsadas(): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const archivo of [...fuentes("lib"), ...fuentes("app"), ...fuentes("components")]) {
     const src = readFileSync(archivo, "utf8");
-    for (const m of src.matchAll(/\bcached(?:Loc)?(?:If)?\s*\(\s*[`"']([a-z0-9:_-]+)/gi)) {
+    // Dos formas de nombrar una clave con literal: `cached("familia:…")` y,
+    // desde la Etapa 3.a, `resolverConCache({ clave: o.clave ?? "familia" })`
+    // en los lotes tolerantes (lib/lotes-tolerantes.ts), que usan el resolver
+    // directamente para decidir no guardar un resultado parcial.
+    const literales = [
+      ...src.matchAll(/\bcached(?:Loc)?(?:If)?\s*\(\s*[`"']([a-z0-9:_-]+)/gi),
+      ...src.matchAll(/resolverConCache(?:<[^(]*)?\(\s*\{\s*clave:\s*(?:o\.clave\s*\?\?\s*)?[`"']([a-z0-9:_-]+)/gi),
+    ];
+    for (const m of literales) {
       // El prefijo ESTÁTICO completo: todo lo anterior al `${`, que es donde
       // empieza la parte variable. No se trunca en el primer `:` — hay familias
       // de dos segmentos (`people:directors`, `genre:covers:`, `ed:pub:`) y

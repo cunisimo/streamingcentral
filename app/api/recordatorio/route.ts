@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase";
 // nombre que termina en el .ics es el mismo que el usuario vio en la ficha.
 // (El camino que lee `upcoming_content` NO se repara acá — ver abajo.)
 import { detalleReparado } from "@/lib/enrich";
+import { registrarDescarteTmdb } from "@/lib/fallos-tmdb";
 // El texto vive en un módulo puro para poder probarlo: es lo que fija qué
 // nombre termina en el archivo que el usuario agenda.
 import { resumen, type DatosRecordatorio as Datos } from "@/lib/recordatorio-texto";
@@ -54,7 +55,10 @@ async function digitalAR(id: number): Promise<string | null> {
     const { detalle: d } = await detalleReparado("movie", id);
     const ar = d.release_dates?.results.find((r) => r.iso_3166_1 === "AR");
     return ar?.release_dates?.find((x) => x.type === 4)?.release_date?.slice(0, 10) || null;
-  } catch {
+  } catch (e) {
+    // Fecha digital opcional: sin ella no se agenda (404), como siempre. La
+    // causa, si es de TMDB, se registra (Etapa 3.a).
+    registrarDescarteTmdb(e, "recordatorio:digitalAR");
     return null;
   }
 }
@@ -101,7 +105,8 @@ async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
       episode: tipo === "tv" ? (d.next_episode_to_air?.episode_number ?? null) : null,
       premiere: false,
     };
-  } catch {
+  } catch (e) {
+    registrarDescarteTmdb(e, "recordatorio:datosDe");
     return null;
   }
 }

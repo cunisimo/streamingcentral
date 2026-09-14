@@ -41,8 +41,11 @@ import { hayFallosDisponibilidad, registrarFalloDisponibilidad } from "./fallos-
 import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import { esErrorTmdb } from "./tmdb-error";
 import { settleAll } from "./settle-all";
+import { producirBusquedaConFallos } from "./busqueda-enriquecido";
+import { resolverDirectores, resolverPortadas } from "./lotes-tolerantes";
+import { backendCache } from "./cache";
 import {
-  dedupePorIdentidad, identidadOficial, redesDePlataforma, resumenRegional,
+  identidadOficial, redesDePlataforma, resumenRegional,
 } from "./enlace-oficial";
 import {
   paginarUltimos, plataformasValidas, type CandidatoUltimos, type PaginaRegional,
@@ -1018,24 +1021,47 @@ export async function search(query: string, providers: PlatformCode[] = []) {
     claveSearch(q.toLowerCase(), [...providers].sort().join(","), HUELLA_IDIOMA),
     TTL.search,
     async () => {
-      // El contexto de fallos de disponibilidad, además del de idioma. Son DOS
-      // señales distintas y ninguna tapa a la otra: `fallo` queda en true si
-      // falló cualquiera de las dos, y con eso alcanza para no guardar.
-      const { res, fallos } = await withFallosDeFuentes(async () => {
-        const r = await buscarYOrdenar(q, providers);
-        fallo = r.fallo;
-        // `degradacion` viaja al cliente sólo cuando algún proveedor falló;
-        // el resultado, en ese caso, no se guarda (`fallos` lo marca).
-        return { titles: r.titles, people: r.people, ...(r.degradacion ? { degradacion: r.degradacion } : {}) };
+      // El productor y su verdicto viven en lib/busqueda-enriquecido.ts (puro,
+      // probado con dobles): las páginas son el dato principal (si fallan,
+      // propaga y la ruta responde 503); el `providersOf` de cada elegido es
+      // opcional (sale sin plataformas, se registra, y el resultado no se
+      // guarda); y la identidad para deduplicar NO se pide a un título cuyo
+      // `providersOf` ya falló — era el segundo pedido contra el mismo 429.
+      // El contexto compuesto (idioma + disponibilidad + descartes de TMDB) lo
+      // abre el productor; acá sólo se decide guardar o no.
+      const r = await producirBusquedaConFallos({
+        paginas: () => paginasDeBusqueda(q),
+        enriquecer: (c) => toUITitle(c.raw, c.tipo, c.pub),
+        sinPlataformas: (c) => tituloSinPlataformas(c.raw, c.tipo, c.pub),
+        identidadDe: identidadDeBusqueda,
+        partir: (titles) => partirPorPlataformas(titles, providers),
       });
-      if (fallos) fallo = true;
-      return res;
+      fallo = r.fallo;
+      return r.valor;
     },
     () => !fallo,
   );
 }
 
-async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
+// No se filtra por plataforma: si buscás algo por nombre, querés verlo aunque
+// no lo tengas, y la card indica disponibilidad. Pero sí se ORDENA: lo que
+// está en tus plataformas va primero. Antes salía mezclado, y encontrar lo
+// que podés ver esta noche era ir cazándolo entre lo que no.
+//
+// Es una partición estable, no un orden nuevo: dentro de "disponible" y
+// dentro de "no disponible" se conserva el orden por relevancia.
+function partirPorPlataformas(titles: UITitle[], providers: PlatformCode[]): UITitle[] {
+  if (!providers.length) return titles;
+  const disponibles: UITitle[] = [];
+  const resto: UITitle[] = [];
+  for (const t of titles) (onUserPlatforms(t, providers) ? disponibles : resto).push(t);
+  return [...disponibles, ...resto];
+}
+
+// Fase 1 de la búsqueda: las páginas (el dato PRINCIPAL), las personas y la
+// relevancia. Devuelve los elegidos sin enriquecer; el enriquecido tolerante y
+// la deduplicación son de lib/busqueda-enriquecido.ts.
+async function paginasDeBusqueda(q: string) {
   let falloIdioma = false;
   const paginas = <T>(n: number, fn: (p: number) => Promise<{ results: T[] }>) =>
     Promise.all(Array.from({ length: n }, (_, i) => fn(i + 1)))
@@ -1100,43 +1126,12 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
     conservarAlias: true,  // "La jungla de cristal" tiene que encontrar la 562
   }).slice(0, BUSQUEDA_TITULOS);
 
-  // No se filtra por plataforma: si buscás algo por nombre, querés verlo aunque
-  // no lo tengas, y la card indica disponibilidad. Pero sí se ORDENA: lo que
-  // está en tus plataformas va primero. Antes salía mezclado, y encontrar lo
-  // que podés ver esta noche era ir cazándolo entre lo que no.
-  //
-  // Es una partición estable, no un orden nuevo: dentro de "disponible" y
-  // dentro de "no disponible" se conserva el orden por relevancia de arriba.
-  // Etapa 3.a (§12): las PÁGINAS de búsqueda son el dato principal (si fallan,
-  // la ruta responde 503); el `providersOf` de cada elegido es opcional: si
-  // falla por TMDB el título sale SIN plataformas y se registra, así el
-  // resultado no se cachea y el orden "primero lo tuyo" queda marcado.
-  let sinProveedores = 0;
-  const crudosUI = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub).catch((e: unknown) => {
-    if (!esErrorTmdb(e)) throw e;
-    registrarDescarteTmdb(e, "search:providersOf");
-    sinProveedores++;
-    return tituloSinPlataformas(c.raw, c.tipo, pub);
-  })));
-
   // TMDB a veces carga el MISMO programa dos veces, una como serie y otra como
-  // película, y acá salían dos cards del mismo título. Se juntan por el
-  // identificador que publica la plataforma —un dato comprobable— y nunca por
-  // nombre, fecha, productora ni parecido: esas señales esconden obras
-  // legítimamente distintas. Lo que no tiene identidad oficial no se toca.
-  //
-  // Se hace SÓLO acá: la búsqueda es donde el usuario ve las dos entradas una al
-  // lado de la otra. En el Home el dedup ya existe y es por `tipo:id`.
-  const ids = await Promise.all(crudosUI.map((t) => identidadDeBusqueda(t.type, t.id)));
-  const titles = dedupePorIdentidad(crudosUI.map((t, i) => ({ t, identidad: ids[i] })))
-    .map((x) => x.t);
-
-  const degradacion = sinProveedores ? { degradacion: { proveedores: sinProveedores } } : {};
-  if (!providers.length) return { titles, people, fallo: falloIdioma, ...degradacion };
-  const disponibles: UITitle[] = [];
-  const resto: UITitle[] = [];
-  for (const t of titles) (onUserPlatforms(t, providers) ? disponibles : resto).push(t);
-  return { titles: [...disponibles, ...resto], people, fallo: falloIdioma, ...degradacion };
+  // película: la deduplicación por identidad oficial —un dato comprobable, nunca
+  // el nombre ni el parecido— la hace `enriquecerElegidos`, sólo acá (en el
+  // Home el dedup es por `tipo:id`). `pub` viaja con cada elegido para que el
+  // enriquecido lo use sin cerrar sobre esta función.
+  return { elegidos: elegidos.map((c) => ({ ...c, pub })), people, falloIdioma };
 }
 
 // La card de un resultado de búsqueda cuyo `watch/providers` falló por TMDB:
@@ -1242,39 +1237,32 @@ const DIRECTOR_IDS = [
   56208,   // Lucrecia Martel
 ];
 export async function directorCards(): Promise<UIPerson[]> {
-  return cached("people:directors", TTL.catalog, async () => {
-    const settled = await Promise.allSettled(DIRECTOR_IDS.map((id) => personDetails(id)));
-    for (const s of settled) if (s.status === "rejected") registrarDescarteTmdb(s.reason, "directorCards");
-    return settled
-      .filter((s): s is PromiseFulfilledResult<Awaited<ReturnType<typeof personDetails>>> => s.status === "fulfilled")
-      .map((s) => ({ id: s.value.id, name: s.value.name, profile: img(s.value.profile_path, "w185"), knownFor: [] }));
+  // Etapa 3.a (corrección tras la auditoría): un director que falla por TMDB
+  // se descarta como siempre, pero la lista corta NO se guarda 24 h; la
+  // siguiente llamada vuelve a intentar (lib/lotes-tolerantes.ts).
+  return resolverDirectores<UIPerson>({
+    ids: DIRECTOR_IDS, ttl: TTL.catalog, cache: backendCache,
+    pedirDetalle: async (id) => {
+      const d = await personDetails(id);
+      return { id: d.id, name: d.name, profile: img(d.profile_path, "w185"), knownFor: [] };
+    },
   });
 }
 
 // --- Un póster representativo por género (para los tiles de "Explorar todo") ---
 export async function genreCovers(): Promise<Record<string, string | null>> {
-  return cached("genre:covers:v2", TTL.catalog, async () => {
-    const slugs = CATEGORIES.map((c) => c.slug);
-    // 1) Candidatos (posters) por género, en paralelo.
-    const candidates = await Promise.all(slugs.map(async (slug) => {
+  // Etapa 3.a (corrección tras la auditoría): un género cuyo `discover` falla
+  // por TMDB usa el fallback visual de siempre (sin póster), pero el mapa
+  // incompleto NO se guarda 24 h; al recuperarse TMDB, la siguiente llamada
+  // trae las portadas (lib/lotes-tolerantes.ts).
+  return resolverPortadas({
+    slugs: CATEGORIES.map((c) => c.slug), ttl: TTL.catalog, cache: backendCache,
+    pedirPosters: async (slug) => {
       const rule = resolveCategory(slug, "movie");
-      try {
-        const res = await discover("movie", { genres: rule.genres, keywords: rule.keywords, minVotes: 300 });
-        const posters = res.results.map((t) => t.poster_path).filter((p): p is string => !!p);
-        return [slug, posters] as const;
-      } catch {
-        return [slug, [] as string[]] as const;
-      }
-    }));
-    // 2) Asignación secuencial: cada género toma el primer poster no usado por
-    //    otro (evita imágenes repetidas entre tiles). Fallback: su primer poster.
-    const used = new Set<string>();
-    const entries = candidates.map(([slug, posters]) => {
-      const pick = posters.find((p) => !used.has(p)) ?? posters[0] ?? null;
-      if (pick) used.add(pick);
-      return [slug, img(pick, "w342")] as const;
-    });
-    return Object.fromEntries(entries);
+      const res = await discover("movie", { genres: rule.genres, keywords: rule.keywords, minVotes: 300 });
+      return res.results.map((t) => t.poster_path).filter((p): p is string => !!p);
+    },
+    img: (p) => img(p, "w342"),
   });
 }
 

@@ -141,9 +141,43 @@ async function escenarios(nombre, p) {
       frescaReescrita: frescaB.length, ubIntacto: ubB.length === ubAntes.length && ubB.every((k, i) => k.valor === ubAntes[i].valor),
     },
   };
+  // --- C. BÚSQUEDA (corrección tras la auditoría, hallazgo 2) ---------------
+  // Páginas sanas + providersOf en 429 parcial persistente → 200 con títulos
+  // degradados, SIN repetir la consulta en la deduplicación y SIN guardar el
+  // resultado (la segunda búsqueda vuelve a pedir providers). Páginas caídas
+  // (429 total) → 503 con Retry-After.
+  await vaciar(base); await parcial(base); terminales(p);
+  const buscar = async () => {
+    const r = await fetch(`http://127.0.0.1:${p.puerto}/api/search?q=matrix&providers=${COMBO}`, { signal: AbortSignal.timeout(120000) });
+    return { status: r.status, retryAfter: r.headers.get("retry-after"), json: await r.json() };
+  };
+  const b1 = await buscar();
+  const parcialesB1 = (await control(base, "tmdb", "estado")).cuenta.parciales429 ?? 0;
+  const cuenta0 = (await control(base, "tmdb", "estado")).cuenta;
+  const providersB1 = Object.entries(cuenta0.porFamilia ?? {}).filter(([k]) => k.includes("watch/providers")).reduce((a, [, v]) => a + v, 0);
+  const b2 = await buscar();
+  const parcialesB2 = (await control(base, "tmdb", "estado")).cuenta.parciales429 ?? 0;
+  const claveBusqueda = await claves(base, "^search:");
+  await control(base, "tmdb", "config", { modo: "429", retryAfter: 3 });
+  await control(base, "redis", "reset");
+  const b3 = await buscar();
+  out.busqueda = {
+    parcial: {
+      http: b1.status, titulos: (b1.json.titles ?? []).length, degradacion: b1.json.degradacion ?? null,
+      sinPlataformas: (b1.json.titles ?? []).filter((t) => !(t.platforms ?? []).length).length,
+      parciales429: parcialesB1, providersPedidos: providersB1,
+      // Si el resultado degradado se hubiera guardado, la segunda búsqueda sería HIT y NO sumaría 429 nuevos.
+      segundaVolvioAPedir: parcialesB2 > parcialesB1, guardado: claveBusqueda.length,
+    },
+    total429: { http: b3.status, retryAfter: b3.retryAfter, error: b3.json.error ?? null },
+  };
+  await sano(base);
   // Verdicto por versión.
   out.verde = out.sinUB.http === 200 && out.sinUB.degradado === true && out.sinUB.escrito.fresca === 0 && out.sinUB.escrito.ub === 0
-    && out.sinUB.parciales429 > 0 && out.conUB.parcial.sirvioElUBCorrecto && out.conUB.parcial.frescaReescrita === 0 && out.conUB.parcial.ubIntacto;
+    && out.sinUB.parciales429 > 0 && out.conUB.parcial.sirvioElUBCorrecto && out.conUB.parcial.frescaReescrita === 0 && out.conUB.parcial.ubIntacto
+    && out.busqueda.parcial.http === 200 && out.busqueda.parcial.parciales429 > 0 && (out.busqueda.parcial.degradacion?.proveedores ?? 0) > 0
+    && out.busqueda.parcial.segundaVolvioAPedir && out.busqueda.parcial.guardado === 0
+    && out.busqueda.total429.http === 503 && out.busqueda.total429.retryAfter === "3";
   await sano(base);
   return out;
 }
@@ -158,6 +192,7 @@ try {
   for (const v of ["antes", "despues"]) {
     const s = salida[v];
     console.log(`[parcial] ${s.version} | sin UB: http ${s.sinUB.http}, degradado ${s.sinUB.degradado}, ${s.sinUB.titulos} títulos, ${s.sinUB.parciales429} x429 parciales, descartes ${s.sinUB.linea.descartes}, origen ${s.sinUB.linea.origen}, publicacion ${s.sinUB.linea.publicacion}, escrito fresca ${s.sinUB.escrito.fresca} ub ${s.sinUB.escrito.ub} degradadoCompartido ${s.sinUB.escrito.degradadoCompartido}`);
+    console.log(`[parcial] ${s.version} | búsqueda parcial: http ${s.busqueda.parcial.http}, ${s.busqueda.parcial.titulos} títulos (${s.busqueda.parcial.sinPlataformas} sin plataformas), degradacion ${JSON.stringify(s.busqueda.parcial.degradacion)}, ${s.busqueda.parcial.parciales429} x429, segunda volvió a pedir ${s.busqueda.parcial.segundaVolvioAPedir}, guardado ${s.busqueda.parcial.guardado} | búsqueda 429 total: http ${s.busqueda.total429.http}, Retry-After ${s.busqueda.total429.retryAfter}, error ${s.busqueda.total429.error}`);
     console.log(`[parcial] ${s.version} | con UB: sano ${s.conUB.sano.titulos} títulos (publicacion ${s.conUB.sano.publicacion}); parcial → degradado ${s.conUB.parcial.degradado}, ${s.conUB.parcial.titulos} títulos, origen ${s.conUB.parcial.linea.origen}, sirvió el UB correcto: ${s.conUB.parcial.sirvioElUBCorrecto}, fresca reescrita ${s.conUB.parcial.frescaReescrita}, UB intacto ${s.conUB.parcial.ubIntacto} → ${s.verde ? "VERDE" : "ROJO"}`);
   }
   salida.resumen = { antesRojo: !salida.antes.verde, despuesVerde: salida.despues.verde, ok: !salida.antes.verde && salida.despues.verde };

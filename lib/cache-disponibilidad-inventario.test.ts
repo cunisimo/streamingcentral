@@ -37,6 +37,8 @@ interface Superficie {
   enriquece: boolean;
   /** Si no enriquece: por qué. */
   motivo?: string;
+  /** Si el contexto de fallos se abre en OTRO archivo (un productor puro): cuál. */
+  archivoContexto?: string;
 }
 
 /**
@@ -54,6 +56,9 @@ const SUPERFICIES: Superficie[] = [
   {
     nombre: "búsqueda", archivo: "lib/enrich.ts",
     ancla: "claveSearch(q.toLowerCase()", ttl: "TTL.search (1 h)", enriquece: true,
+    // Etapa 3.a (corrección tras la auditoría): el productor de la búsqueda
+    // es puro y abre el contexto compuesto él mismo.
+    archivoContexto: "lib/busqueda-enriquecido.ts",
   },
   {
     nombre: "últimos · página regional", archivo: "lib/enrich.ts",
@@ -187,8 +192,10 @@ test("toda superficie con TTL tiene el TTL declarado", () => {
 const ABRE_CONTEXTO = /withFallos(?:Disponibilidad|DeFuentes)\s*\(/;
 const ABRE_CONTEXTO_G = /withFallos(?:Disponibilidad|DeFuentes)\s*\(/g;
 
+const archivoDelContexto = (s: Superficie) => s.archivoContexto ?? s.archivo;
+
 test("cada archivo con superficies que enriquecen abre el contexto", () => {
-  const archivos = [...new Set(SUPERFICIES.filter((s) => s.enriquece).map((s) => s.archivo))];
+  const archivos = [...new Set(SUPERFICIES.filter((s) => s.enriquece).map(archivoDelContexto))];
   for (const a of archivos) {
     assert.match(codigo(a), ABRE_CONTEXTO,
       `${a} cachea títulos enriquecidos y no abre el contexto de fallos`);
@@ -198,7 +205,7 @@ test("cada archivo con superficies que enriquecen abre el contexto", () => {
 test("hay un contexto por cada superficie que enriquece", () => {
   const porArchivo = new Map<string, number>();
   for (const s of SUPERFICIES.filter((x) => x.enriquece)) {
-    porArchivo.set(s.archivo, (porArchivo.get(s.archivo) ?? 0) + 1);
+    porArchivo.set(archivoDelContexto(s), (porArchivo.get(archivoDelContexto(s)) ?? 0) + 1);
   }
   for (const [archivo, esperados] of porArchivo) {
     const hay = (codigo(archivo).match(ABRE_CONTEXTO_G) ?? []).length;
@@ -209,8 +216,8 @@ test("hay un contexto por cada superficie que enriquece", () => {
 
 test("los archivos que enriquecen importan la señal", () => {
   for (const s of SUPERFICIES.filter((x) => x.enriquece)) {
-    assert.match(codigo(s.archivo), /from "\.\/fallos-(?:disponibilidad|tmdb)"/,
-      `${s.archivo} no importa el módulo de la señal (ni el compuesto que la envuelve)`);
+    assert.match(codigo(archivoDelContexto(s)), /from "\.\/fallos-(?:disponibilidad|tmdb)(?:\.ts)?"/,
+      `${archivoDelContexto(s)} no importa el módulo de la señal (ni el compuesto que la envuelve)`);
   }
 });
 

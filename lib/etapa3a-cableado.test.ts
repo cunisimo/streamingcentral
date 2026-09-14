@@ -69,7 +69,12 @@ test("S3 lib/enrich.ts titleCard: una card que falla por TMDB no se guarda", () 
 });
 
 test("S4 directorCards, S5 pools, S6 top, S7 netflix, S8 idioma registran la causa", () => {
-  assert.match(codigo("lib/enrich.ts"), /registrarDescarteTmdb\(s\.reason, "directorCards"\)/);
+  // Corrección tras la auditoría: directores y portadas viven en
+  // lib/lotes-tolerantes.ts, con el resultado parcial SIN guardar.
+  assert.match(codigo("lib/lotes-tolerantes.ts"), /registrarDescarteTmdb\(s\.reason, "directorCards"\)/);
+  assert.match(codigo("lib/lotes-tolerantes.ts"), /registrarDescarteTmdb\(e, "genreCovers"\)/);
+  assert.match(codigo("lib/enrich.ts"), /resolverDirectores<UIPerson>\(/);
+  assert.match(codigo("lib/enrich.ts"), /resolverPortadas\(/);
   assert.match(codigo("lib/pools.ts"), /registrarDescarteTmdb\(r\.reason, "pool"\)/);
   assert.match(codigo("lib/top.ts"), /registrarDescarteTmdb\(e, /);
   assert.match(codigo("lib/netflix-top10.ts"), /registrarDescarteTmdb\(e, "enNetflixAR"\)/);
@@ -93,7 +98,11 @@ test("ningún cachedLocIf abre sólo withFallosDisponibilidad: todos usan withFa
   for (const rel of ["lib/enrich.ts", "lib/home.ts", "lib/reco.ts", "lib/top.ts"]) {
     assert.doesNotMatch(codigo(rel), /withFallosDisponibilidad\(/, rel);
   }
-  assert.equal((codigo("lib/enrich.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 4);
+  // Tres en enrich.ts (card y los dos tramos de últimos); el de la búsqueda
+  // vive en lib/busqueda-enriquecido.ts (`producirBusquedaConFallos`).
+  assert.equal((codigo("lib/enrich.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 3);
+  assert.equal((codigo("lib/busqueda-enriquecido.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);
+  assert.match(codigo("lib/enrich.ts"), /producirBusquedaConFallos\(\{/);
   assert.equal((codigo("lib/reco.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);
   assert.equal((codigo("lib/top.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);
   assert.equal((codigo("lib/home.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);

@@ -22,6 +22,7 @@
 // ficha rota justo después de haberla arreglado.
 //
 // Sin `server-only`: lógica pura, probable con `node --test`.
+import { registrarDescarteTmdb } from "./fallos-tmdb.ts";
 import { evidenciaOficialDe, type DatosTitulo } from "./enlace-oficial.ts";
 import { EXCEPCIONES, type ExcepcionManual } from "./excepciones-disponibilidad.ts";
 import { claveTitulo } from "./top-plataformas.ts";
@@ -162,7 +163,10 @@ export async function resolverDisponibilidad(opts: {
       const code = evidenciaOficialDe({ datos, arIds: [], hoy: opts.hoy });
       if (code) return { plataformas: [code], procedencia: "oficial-probable", fallo };
     }
-  } catch {
+  } catch (e) {
+    // El detalle en IDIOMA_EVIDENCIA es TMDB: la causa se registra (Etapa 3.a)
+    // y, como siempre, nada de esto se cachea.
+    registrarDescarteTmdb(e, "disponibilidad:leerDatosTitulo");
     fallo = true;
   }
 

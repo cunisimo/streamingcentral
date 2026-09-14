@@ -36,7 +36,7 @@
         "http": 200,
         "degradado": false,
         "titulos": 130,
-        "parciales429": 186,
+        "parciales429": 93,
         "linea": {
           "cache": "MISS",
           "origen": "propia",
@@ -47,6 +47,23 @@
         "sirvioElUBCorrecto": false,
         "frescaReescrita": 1,
         "ubIntacto": true
+      }
+    },
+    "busqueda": {
+      "parcial": {
+        "http": 500,
+        "titulos": 0,
+        "degradacion": null,
+        "sinPlataformas": 0,
+        "parciales429": 1,
+        "providersPedidos": 24,
+        "segundaVolvioAPedir": true,
+        "guardado": 0
+      },
+      "total429": {
+        "http": 500,
+        "retryAfter": null,
+        "error": "Error: TMDB 429 en /search/person"
       }
     },
     "verde": false
@@ -85,7 +102,7 @@
         "http": 200,
         "degradado": false,
         "titulos": 130,
-        "parciales429": 186,
+        "parciales429": 93,
         "linea": {
           "cache": "ULTIMO-BUENO",
           "origen": "ultimo-bueno",
@@ -96,6 +113,25 @@
         "sirvioElUBCorrecto": true,
         "frescaReescrita": 0,
         "ubIntacto": true
+      }
+    },
+    "busqueda": {
+      "parcial": {
+        "http": 200,
+        "titulos": 24,
+        "degradacion": {
+          "proveedores": 1
+        },
+        "sinPlataformas": 1,
+        "parciales429": 1,
+        "providersPedidos": 24,
+        "segundaVolvioAPedir": true,
+        "guardado": 0
+      },
+      "total429": {
+        "http": 503,
+        "retryAfter": "3",
+        "error": "tmdb-no-disponible"
       }
     },
     "verde": true

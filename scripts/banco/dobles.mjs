@@ -58,7 +58,7 @@ function doble(nombre, puerto, atender, extra = {}) {
     if (url.startsWith("/__banco/")) {
       if (url === "/__banco/estado") return json(res, 200, { nombre, estado, cuenta, ...(extra.estado?.() ?? {}) });
       if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); return json(res, 200, estado); }
-      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; extra.reset?.(); return json(res, 200, { ok: true }); }
+      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; extra.reset?.(); return json(res, 200, { ok: true }); }
       // Controles propios del doble (Etapa 2: expirar, borrar, perder la
       // respuesta, fallar EVAL, listar claves).
       if (extra.control) { const r = await extra.control(url, await leerCuerpo(req)); if (r !== undefined) return json(res, 200, r); }
@@ -137,6 +137,18 @@ doble("tmdb", PUERTO_BASE + 0, async (req, res, url, _cuerpo, cuenta) => {
   if ((m = p.match(/^\/(movie|tv)\/(\d+)$/))) {
     const t = titulo(m[1], Number(m[2]), [18]);
     return json(res, 200, { ...t, genres: [{ id: 18, name: "Drama" }], runtime: 100, episode_run_time: [45], number_of_seasons: 1, status: "Released", homepage: "", networks: [], credits: { cast: [], crew: [] }, external_ids: {}, release_dates: { results: [] }, content_ratings: { results: [] }, recommendations: { results: [] }, seasons: [] });
+  }
+  // Búsqueda de títulos: 20 resultados cuyo nombre CONTIENE la consulta, para
+  // que la relevancia de la app los acepte (Etapa 3.a: el banco de búsqueda
+  // con providersOf en 429 parcial necesita elegidos). Personas: ninguna.
+  if ((m = p.match(/^\/search\/(movie|tv)$/))) {
+    const consulta = u.searchParams.get("query") ?? "";
+    const base = 5000 + (hash(`${m[1]}|${consulta}`) % 1000) * 20;
+    const results = Array.from({ length: 20 }, (_, i) => {
+      const t = titulo(m[1], base + i, [18]);
+      return m[1] === "movie" ? { ...t, title: `${consulta} ${i + 1}` } : { ...t, name: `${consulta} ${i + 1}` };
+    });
+    return json(res, 200, { page: 1, results, total_pages: 1, total_results: 20 });
   }
   if (p.startsWith("/search/")) return json(res, 200, { page: 1, results: [], total_pages: 0, total_results: 0 });
   if (p.startsWith("/person/")) return json(res, 200, { id: 1, name: "Persona", profile_path: null, cast: [], crew: [], results: [] });
