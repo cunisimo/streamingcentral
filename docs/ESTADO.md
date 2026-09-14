@@ -7,12 +7,28 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA, pendiente de
-  auditoría de Codex; reintentos APAGADOS; limitador, circuito, `waitUntil` y
-  membresía NO implementados.** Rama `feat/etapa3a-clasificacion-tmdb`
-  (worktree `wt-etapa3a`), creada desde `main` = `origin/main` = `b7be927`;
-  commits `dedee6a` (código + tests, RED → GREEN), `b7a4a6a` (banco y
-  evidencia) y el de esta documentación. **Sin merge, push ni deploy; sin
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA tras la
+  auditoría de Codex sobre `e930a1d`; pendiente de NUEVA auditoría;
+  reintentos APAGADOS; limitador, circuito, `waitUntil` y membresía NO
+  implementados.** Rama `feat/etapa3a-clasificacion-tmdb` (worktree
+  `wt-etapa3a`), creada desde `main` = `origin/main` = `b7be927`; commits
+  `dedee6a` (código + tests), `b7a4a6a` (banco y evidencia), `e930a1d` (docs)
+  y los de la corrección (código y docs; ver el informe §23). **Corrección
+  (informe §23):** cuatro hallazgos reproducidos con pruebas funcionales que
+  fallan contra `e930a1d` — (1) `directorCards` registraba fuera de contexto y
+  cacheaba la lista parcial 24 h; (2) la búsqueda, tras tolerar un fallo de
+  `providersOf`, volvía a pedirlo en la deduplicación y un 429 persistente la
+  convertía en 503; (3) `genreCovers` tragaba el fallo y cacheaba el mapa
+  incompleto 24 h; (4) `SearchView` conservaba el aviso de TMDB tras un fallo
+  de red, una cancelación o un cambio de término — y un **barrido completo**
+  (`lib/descartes-tmdb-inventario.test.ts`) de todo `catch`/`allSettled` en
+  `lib/` y rutas, clasificado, que encontró tres sitios más para registrar
+  (`disponibilidad`, `netflix-resolver`, `recordatorio`) y reemplaza al
+  inventario "de once". Verificado: suite 1.621 (1.611 ok, 0 fallos, 10
+  omitidos), `tsc`, build fresco, `diff --check`; banco de identidad del Home
+  con cachés separadas 16/16 idénticos; banco de 429 parcial con búsqueda
+  (`b7be927` → 500; rama → 200 degradado sin guardar, y 503 con `Retry-After`
+  ante 429 total). **Sin merge, push ni deploy; sin
   TMDB real ni credenciales productivas.** Qué trae: clasificación de
   respuestas de TMDB por causa (429, 5xx, 4xx, red, timeout, cuerpo inválido,
   cancelación), parser de `Retry-After`, política y bucle de reintentos
@@ -457,7 +473,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a implementada en rama (14/09), pendiente de auditoría, reintentos apagados; limitador, circuito, `waitUntil` y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a implementada en rama y corregida tras la auditoría (14/09), pendiente de nueva auditoría, reintentos apagados; limitador, circuito, `waitUntil` y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

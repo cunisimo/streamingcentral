@@ -1259,10 +1259,15 @@ producen afirmaciones falsas y hay tests que las rechazan.
 leyendo el código.**
 
 > **Estado (14/09): Etapa 3.a IMPLEMENTADA EN RAMA
-> (`feat/etapa3a-clasificacion-tmdb`, desde `b7be927`), pendiente de auditoría
-> de Codex; reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador,
-> circuito, `waitUntil` y membresía NO implementados. Sin merge, push ni
-> deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
+> (`feat/etapa3a-clasificacion-tmdb`, desde `b7be927`) y CORREGIDA tras la
+> auditoría de Codex sobre `e930a1d` (cuatro huecos: `directorCards` y
+> `genreCovers` cacheaban resultados parciales; la búsqueda repetía
+> `providersOf` en la deduplicación y un 429 persistente la volvía 503; el
+> aviso de TMDB de la búsqueda sobrevivía a fallos de red, cancelaciones y
+> cambios de término — informe §23), más un barrido completo de sitios que
+> atrapan errores; pendiente de NUEVA auditoría; reintentos APAGADOS
+> (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
+> implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),
 > `titleCard` sin `null` por TMDB, ficha/búsqueda con `503`/`degradacion`.
 > Banco de identidad del Home con cachés aisladas: 16/16 idénticos y válidos;

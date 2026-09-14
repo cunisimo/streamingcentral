@@ -1,7 +1,8 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA, pendiente de
-> auditoría de Codex (§22). Reintentos apagados (`TMDB_REINTENTOS` ausente).
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA tras la
+> auditoría de Codex sobre `e930a1d` (§22, §23); pendiente de NUEVA auditoría.
+> Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
 > sobre la v4 (`d76f0ce`) consideró aprobable únicamente la sub-etapa segura
@@ -812,3 +813,65 @@ Limitador y cadencias (3.c), pausa distribuida, AIMD y circuito (3.b),
 `waitUntil` y `COMPOSICION_MAX_MS` (3.e), membresía (3.d, no aprobada),
 presupuesto por `getDeadline` (sin dependencia nueva), cliente Deno (3.f),
 retries del SDK de Redis (3.R). **Los reintentos quedan apagados hasta 3.c'.**
+
+---
+
+## 23. Corrección de la 3.a tras la auditoría de Codex sobre `e930a1d` — pendiente de nueva auditoría
+
+Cuatro huecos, reproducidos con pruebas **funcionales** (composición real con
+dobles inyectados, no búsqueda de expresiones) que fallan contra `e930a1d` y
+pasan en la rama; más un barrido que reemplaza al inventario "de once".
+
+### 23.1 Los hallazgos y su corrección
+
+| # | Hallazgo (Codex) | Reproducción (RED contra `e930a1d`) | Corrección | Archivo |
+|---|---|---|---|---|
+| 1 | `directorCards()` registraba el descarte **fuera** de todo contexto (no hacía nada) y `cached` incondicional guardaba la lista parcial `TTL.catalog` (24 h) | `lib/lotes-tolerantes.test.ts`: con `resolverConCache` real y un doble que devuelve 429 para un id, en `e930a1d` el módulo no existe; el **control** reproduce el comportamiento viejo (guarda la lista corta y la segunda llamada no reintenta al caído) | `resolverDirectores` (puro): responde con los que llegaron, **no guarda**, la siguiente llamada vuelve a intentar y guarda sólo cuando llegan todos; la causa TMDB se registra en el contexto que la envuelva | `lib/lotes-tolerantes.ts`, `lib/enrich.ts` `directorCards` |
+| 2 | En la búsqueda, tras recuperar un fallo de `providersOf` con `tituloSinPlataformas`, `identidadDeBusqueda()` volvía a pedir `providersOf()` sin protección: con 429 persistente, el dato opcional convertía toda la búsqueda en 503 | `lib/busqueda-enriquecido.test.ts`: doble con 429 persistente en un título; el **control** ("identidad para todos, como antes") rechaza con 429; el módulo no existe en `e930a1d` | `enriquecerElegidos` (puro): la identidad **no se pide** a un título cuyo `providersOf` ya falló (queda sin deduplicar, como todo lo que no tiene identidad); `producirBusquedaConFallos` abre el contexto compuesto y devuelve el verdicto de caché (`fallo` si idioma, disponibilidad o descartes). `search()` lo entrega a `cachedLocIf`; el test lo entrega a `resolverConCache` — la misma función y el mismo verdicto (`cachedIf` = `resolverConCache`, fijado por `lib/cache-delega.test.ts`) | `lib/busqueda-enriquecido.ts`, `lib/enrich.ts` `search`/`paginasDeBusqueda`/`partirPorPlataformas` |
+| 3 | `genreCovers()` convertía el fallo de un género en `[]` y `cached` guardaba el mapa incompleto 24 h — un doceavo sitio que el inventario de once no tenía | `lib/lotes-tolerantes.test.ts` (portadas): el género caído usa el fallback visual (`null`) y el mapa **no se guarda**; al volver TMDB, la siguiente llamada trae la portada y guarda | `resolverPortadas` (puro) | `lib/lotes-tolerantes.ts`, `lib/enrich.ts` `genreCovers` |
+| 3′ | "No sigas afirmando once sitios si el barrido encuentra más" | `lib/descartes-tmdb-inventario.test.ts`: barrido de **todo** `catch`/`.catch(`/`allSettled` en `lib/*.ts` y `app/api/**/route.ts` (sin comentarios; el `\r` de CRLF se quita antes, porque es terminador de línea para `.` y `$` y dejaba pasar comentarios), emparejado en orden con un inventario clasificado (`tmdb-registra` / `tmdb-propaga` / `no-tmdb`); los `tmdb-registra` tienen que registrar la causa en las 14 líneas siguientes. Contra `e930a1d`: sitios sin clasificar | El barrido encontró, además de `genreCovers`, tres sitios que podían recibir un `ErrorTmdb` sin registrarlo: `lib/disponibilidad.ts` (`leerDatosTitulo`, el detalle en `IDIOMA_EVIDENCIA`), `lib/netflix-resolver.ts` (`buscar`, dos veces) y `app/api/recordatorio/route.ts` (`digitalAR`, `datosDe`). Los cuatro registran la causa; **ninguno cambia de comportamiento** (ya no cacheaban o ya respondían `null`/`sinMatch`). Total del barrido: **79 sitios**, todos clasificados — 22 que pueden recibir un `ErrorTmdb` y registran la causa (o la relanzan clasificada), 25 catch de rutas y envoltorios que propagan como estado HTTP, 32 que no pueden ser TMDB (Supabase, Redis, JSON del cliente, URL, navegador) | `lib/disponibilidad.ts`, `lib/netflix-resolver.ts`, `app/api/recordatorio/route.ts` |
+| 4 | `SearchView` conservaba `fuenteCaida = true` cuando la búsqueda siguiente fallaba por red, se cancelaba o cambiaba de término | `components/busqueda-estado.test.ts`: reductor puro; 503 → aviso; después red / nuevo término / respuesta no vigente / término corto → sin aviso. El módulo no existe en `e930a1d` | `reducirBusqueda` (puro) + un número de pedido (`pedidoVigente`) en `SearchView`: una respuesta de un pedido superado se descarta entera, aviso incluido | `components/busqueda-estado.ts`, `components/SearchView.tsx` |
+
+### 23.2 Verificación
+
+- **RED contra `e930a1d`** (worktree detached, los cuatro archivos de test
+  copiados): `lotes-tolerantes`, `busqueda-enriquecido` y `busqueda-estado`
+  fallan por módulo inexistente; `descartes-tmdb-inventario` falla por sitios
+  sin clasificar. 4 de 6 casos fallan; los 2 que pasan son comprobaciones del
+  propio inventario que en el árbol viejo quedan vacías.
+- **GREEN**: suite **1.621 tests, 1.611 aprobados, 0 fallos, 10 omitidos**;
+  `tsc` limpio; build fresco exit 0 (`.next` borrado; `BUILD_ID
+  YvPdy_raIppKkZ6u_-aBf`); `git diff --check` limpio. Dos barridos existentes
+  se ajustaron sin aflojarlos: el inventario de cachés admite que el contexto
+  de la búsqueda se abra en `lib/busqueda-enriquecido.ts` (`archivoContexto`),
+  y el barrido de familias de claves reconoce `resolverConCache({ clave:
+  o.clave ?? "…" })` además de `cached("…")`.
+- **Banco de identidad del Home** (cachés totalmente separadas, mismo
+  procedimiento de §22.4): **16/16 válidos e idénticos**, controles
+  correctos (`docs/medidas/2026-09-14-etapa3a-identidad-home.json`, corrida
+  final con el doble actual).
+- **Banco de 429 parcial** (`docs/medidas/2026-09-14-etapa3a-parcial.json`),
+  ahora con **búsqueda**: el doble de TMDB responde `/search/{movie,tv}` con
+  20 títulos que contienen la consulta (antes devolvía vacío y la búsqueda no
+  probaba nada — MANTENIMIENTO 8.b). Con páginas sanas y 429 parcial en
+  `watch/providers`: `b7be927` → **500**; la rama → **200**, 24 títulos, 1
+  sin plataformas, `degradacion { proveedores: 1 }`, **no guardado** (0 claves
+  `search:`; la segunda búsqueda vuelve a pedir proveedores). Con 429 total:
+  `b7be927` → 500; la rama → **503** con `Retry-After: 3` y motivo. Home sin
+  UB y con UB: como en §22.5 (RED en `b7be927`, GREEN en la rama).
+
+### 23.3 Comprobado / inferido / pendiente
+
+- **Comprobado (ejecutado):** los cuatro RED y sus GREEN; el barrido completo
+  y su clasificación; que el contenido sano del Home sigue idéntico (16/16);
+  la búsqueda con 429 parcial y total en el banco; que el resultado parcial de
+  directores y portadas no se guarda y la llamada siguiente reintenta (con el
+  resolver real).
+- **Inferido:** que en `e930a1d` la búsqueda con 429 parcial persistente daba
+  503 en Producción (se reproduce con el control puro; el banco corrió
+  `b7be927`, no `e930a1d`, y ahí es 500).
+- **Pendiente:** nueva auditoría de Codex; las rutas que no son ficha ni
+  búsqueda siguen respondiendo `500` ante un fallo principal de TMDB
+  (clasificadas `tmdb-propaga`; traducirlas a `503` no estaba en el mandato);
+  `netflix-resolver` sigue tratando "no sé" como `sinMatch` (contrato
+  conservado a propósito).
