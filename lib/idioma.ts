@@ -17,6 +17,7 @@
 // NO IMPORTA NADA DE `./tmdb`, ni siquiera un tipo: `tmdb.ts` importa de acá
 // para el idioma base, y devolver el favor cerraba un ciclo.
 import { AsyncLocalStorage } from "node:async_hooks";
+import { registrarDescarteTmdb } from "./fallos-tmdb.ts";
 import { crearSingleFlight } from "./single-flight.ts";
 import {
   fusionarPorCampo, necesitaReparacion, queReparar,
@@ -279,6 +280,7 @@ export async function repararLote<T extends Localizable>(
     respaldo = await pedirRespaldo();
   } catch (e) {
     anotar((m) => { m.fallos++; });
+    registrarDescarteTmdb(e, "respaldo-idioma");
     console.error(`[idioma] fallback falló en ${etiqueta}; se sirve sin reparar y NO se cachea:`, e);
     return { items: base, fallo: true };
   }
@@ -335,6 +337,7 @@ export async function repararUno<T extends Localizable>(
     respaldo = await pedirRespaldo();
   } catch (e) {
     anotar((m) => { m.fallos++; });
+    registrarDescarteTmdb(e, "respaldo-idioma");
     console.error(`[idioma] fallback falló en ${etiqueta}; se sirve sin reparar y NO se cachea:`, e);
     return { item: base, fallo: true };
   }

@@ -10,6 +10,9 @@ import type { MediaType } from "./types";
 import { anotar, clasificarEstadoHttp } from "./metricas";
 import { combinarSenales, senalActual } from "./senal-solicitud";
 import { baseTmdb } from "./tmdb-base";
+import { ErrorTmdb, clasificarError } from "./tmdb-error";
+import { parsearRetryAfter } from "./retry-after";
+import { conReintentos, reintentosActivos, TIMEOUT_LLAMADA_MS } from "./tmdb-politica";
 
 // La base es la oficial salvo que el BANCO aislado la apunte a un doble, y
 // nunca en Producción: hacen falta `TMDB_BASE_URL`, `YUMP_BANCO=1` y que
@@ -62,23 +65,63 @@ function liberar(): void {
   else enVuelo--;
 }
 
+// --- Reintentos: presentes y APAGADOS (Etapa 3.a) -------------------------------
+// La política y el bucle viven en lib/tmdb-politica.ts, puros y probados. Con
+// `TMDB_REINTENTOS` ausente o "0" —el default— cada llamada es exactamente un
+// intento, sin ninguna espera: el comportamiento de siempre. Encenderlo ("1")
+// es de la sub-etapa 3.c', DESPUÉS del circuito y del limitador: reintentar sin
+// ellos multiplica una caída de TMDB hasta ×3 (auditoría de Codex, diseño v4).
+const REINTENTOS = reintentosActivos(process.env.TMDB_REINTENTOS);
+const dormir = (ms: number, senal?: AbortSignal) => new Promise<void>((resolve, reject) => {
+  if (senal?.aborted) { reject(new DOMException("solicitud cancelada", "AbortError")); return; }
+  const t = setTimeout(() => { senal?.removeEventListener("abort", alAbortar); resolve(); }, ms);
+  const alAbortar = () => { clearTimeout(t); reject(new DOMException("solicitud cancelada", "AbortError")); };
+  senal?.addEventListener("abort", alAbortar, { once: true });
+});
+
 async function tmdb<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const q = new URLSearchParams({ ...DEFAULTS, ...params });
   // Si la solicitud ya fue cancelada (Etapa 2, §3.8), no se sale ni se ocupa el
   // semáforo: no es una llamada, así que tampoco se cuenta como tal. Las que
   // ya estaban en vuelo rechazan por su propia señal y sí cuentan.
   if (senalActual()?.aborted) throw new DOMException("solicitud cancelada", "AbortError");
+  // Una llamada LÓGICA (Etapa 0, #20). Los intentos HTTP se cuentan adentro,
+  // uno por `fetch`: con los reintentos apagados son la misma cuenta, y la
+  // igualdad se verifica en el banco en vez de suponerse.
+  anotar((m) => { m.tmdb.llamadas += 1; });
+  const senal = senalActual() ?? undefined;
+  return conReintentos((timeoutMs) => intento<T>(path, q, timeoutMs ?? TIMEOUT_LLAMADA_MS), {
+    activa: REINTENTOS,
+    // Presupuesto restante para decidir si un reintento cabe (§7.2). En la 3.a
+    // no hay reintentos, así que no hay nada que acotar: infinito. Cuando se
+    // enciendan (3.c'), acá entra el vencimiento de la señal de la solicitud.
+    restante: () => Number.POSITIVE_INFINITY,
+    dormir, azar: Math.random, senal,
+    alReintentar: (d) => anotar((m) => { m.tmdb.reintentos += 1; m.tmdb.esperaReintentosMs += d.esperaMs; }),
+    alNoCaber: () => anotar((m) => { m.tmdb.reintentoNoCupo += 1; }),
+  });
+}
+
+// UN intento: permiso del semáforo, fetch, clasificación, liberación. Entre dos
+// intentos no se retiene el permiso: cada uno lo pide y lo devuelve.
+async function intento<T>(path: string, q: URLSearchParams, timeoutMs: number): Promise<T> {
+  if (senalActual()?.aborted) {
+    anotar((m) => { m.tmdb.canceladas.enCola += 1; });
+    throw new DOMException("solicitud cancelada", "AbortError");
+  }
   await adquirir();
   // Y otra vez DESPUÉS del semáforo: la solicitud pudo cancelarse mientras esta
-  // llamada esperaba su permiso, y salir igual sería contar una llamada que el
+  // llamada esperaba su permiso, y salir igual sería contar un intento que el
   // servidor nunca recibe (medido en el banco: 4 de 565 en E-cancelacion).
-  if (senalActual()?.aborted) { liberar(); throw new DOMException("solicitud cancelada", "AbortError"); }
-  // Se cuenta cada llamada y se clasifica su resultado por solicitud (Etapa 0,
-  // #20). Este cliente no reintenta, así que una llamada es un intento HTTP.
+  if (senalActual()?.aborted) {
+    liberar();
+    anotar((m) => { m.tmdb.canceladas.enCola += 1; });
+    throw new DOMException("solicitud cancelada", "AbortError");
+  }
   // El tiempo se mide DESPUÉS de obtener el permiso: es lo que tardó TMDB, no
   // lo que se esperó en el semáforo.
   const t0 = Date.now();
-  anotar((m) => { m.tmdb.llamadas += 1; });
+  anotar((m) => { m.tmdb.intentos += 1; });
   try {
     let res: Response;
     try {
@@ -87,17 +130,39 @@ async function tmdb<T>(path: string, params: Record<string, string> = {}): Promi
       // rechaza y la composición termina degradada en milisegundos. Sin señal
       // en el scope es exactamente el timeout de siempre.
       res = await fetch(`${BASE}${path}?${q}`, {
-        headers: HEADERS, cache: "no-store", signal: combinarSenales(senalActual(), AbortSignal.timeout(8000)),
+        headers: HEADERS, cache: "no-store", signal: combinarSenales(senalActual(), AbortSignal.timeout(timeoutMs)),
       });
     } catch (e) {
-      anotar((m) => { m.tmdb.errores.red += 1; });
-      throw e;
+      // Por CAUSA (Etapa 3.a, H7): el timeout propio y el fallo de red eran la
+      // misma clase; la cancelación de la solicitud no es un fallo de TMDB.
+      const clase = clasificarError(e, { senalCancelada: !!senalActual()?.aborted });
+      if (clase === "cancelada") { anotar((m) => { m.tmdb.canceladas.enVuelo += 1; }); throw e; }
+      if (clase === "timeout") { anotar((m) => { m.tmdb.errores.timeout += 1; }); }
+      else { anotar((m) => { m.tmdb.errores.red += 1; }); }
+      // Un `desconocido` es un bug propio: sube tal cual, sin disfrazarse de TMDB.
+      if (clase === "desconocido") throw e;
+      throw new ErrorTmdb({ estado: null, clase, path, causa: e });
     }
     const clase = clasificarEstadoHttp(res.status);
-    anotar((m) => { if (clase === "ok") m.tmdb.ok += 1; else m.tmdb.errores[clase] += 1; });
-    if (!res.ok) throw new Error(`TMDB ${res.status} en ${path}`);
+    if (clase !== "ok") {
+      anotar((m) => { m.tmdb.errores[clase] += 1; });
+      throw new ErrorTmdb({
+        estado: res.status, clase, path,
+        retryAfterMs: parsearRetryAfter(res.headers.get("retry-after"), Date.now()),
+      });
+    }
     // El parseo del body va DENTRO del permiso: sigue siendo parte del request.
-    return (await res.json()) as T;
+    // Y el `ok` se anota DESPUÉS de parsear (Etapa 3.a, H6): un 200 con JSON
+    // roto contaba como éxito.
+    let cuerpo: T;
+    try {
+      cuerpo = (await res.json()) as T;
+    } catch (e) {
+      anotar((m) => { m.tmdb.errores.cuerpo += 1; });
+      throw new ErrorTmdb({ estado: res.status, clase: "cuerpo", path, causa: e });
+    }
+    anotar((m) => { m.tmdb.ok += 1; });
+    return cuerpo;
   } finally {
     anotar((m) => { m.tmdb.ms += Date.now() - t0; });
     liberar();

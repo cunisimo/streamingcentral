@@ -34,9 +34,13 @@ import { topVotedRows } from "./votes";
 import { disponiblesEnTopOficial } from "./netflix-top10";
 import { evidenciaTopManual } from "./top-manual";
 import { resolverDisponibilidad } from "./disponibilidad";
-import {
-  hayFallosDisponibilidad, registrarFalloDisponibilidad, withFallosDisponibilidad,
-} from "./fallos-disponibilidad";
+import { hayFallosDisponibilidad, registrarFalloDisponibilidad } from "./fallos-disponibilidad";
+// Etapa 3.a (#19, H2): el contexto de descartes de causa TMDB, compuesto con el
+// de disponibilidad. Las cuatro superficies cacheadas de este archivo abren
+// `withFallosDeFuentes`, y `settleAll` vive en su módulo puro.
+import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
+import { esErrorTmdb } from "./tmdb-error";
+import { settleAll } from "./settle-all";
 import {
   dedupePorIdentidad, identidadOficial, redesDePlataforma, resumenRegional,
 } from "./enlace-oficial";
@@ -214,31 +218,9 @@ export async function watchLinkFor(type: MediaType, id: number): Promise<string 
   return (await providersOf(type, id)).watchLink;
 }
 
-// Enriquecido tolerante a fallos. `toUITitle` hace 1 request a TMDB por título
-// (providersOf): en un listado de 20 basta un 429 o un timeout para que el
-// Promise.all entero rechace y se caiga el riel/endpoint completo. Acá el título
-// que falla se descarta y el resto sobrevive — mismo criterio que `titleCard`,
-// que ya devolvía null. En el camino feliz la salida es idéntica a Promise.all.
-// Nunca falla en silencio: lo descartado se loguea en server.
-async function settleAll<T>(tareas: Promise<T>[], etiqueta: string): Promise<T[]> {
-  const r = await Promise.allSettled(tareas);
-  const ok = r
-    .filter((s): s is PromiseFulfilledResult<Awaited<T>> => s.status === "fulfilled")
-    .map((s) => s.value);
-  if (ok.length < r.length) {
-    const motivo = r.find((s): s is PromiseRejectedResult => s.status === "rejected")?.reason;
-    // El error COMPLETO (con stack), no solo `.message`: si no, un TypeError
-    // propio queda indistinguible de un 429 de TMDB.
-    console.error(
-      `[enrich] ${etiqueta}: ${r.length - ok.length}/${r.length} título(s) descartados —`,
-      motivo,
-    );
-    // Fuera de producción no se traga nada: un bug propio tiene que explotar en
-    // desarrollo en vez de convertirse en un riel corto y silencioso.
-    if (process.env.NODE_ENV !== "production") throw motivo;
-  }
-  return ok;
-}
+// `settleAll` (enriquecido tolerante a fallos) vive en lib/settle-all.ts desde
+// la Etapa 3.a: mismo comportamiento, y cada descarte de causa TMDB queda
+// registrado en el contexto de fallos (H2).
 
 async function toUITitle(t: RawTitle, type: MediaType, published?: Set<string>): Promise<UITitle> {
   const prov = await providersOf(type, t.id);
@@ -491,7 +473,7 @@ async function ultimosRegionalPagina(
   return cachedLocIf(
     claveUltimosSeries(hoy, orden, `reg:p${pagina}`, HUELLA_IDIOMA), TTL.providers,
     async () => {
-      const { res, fallos } = await withFallosDisponibilidad(async () => {
+      const { res, fallos } = await withFallosDeFuentes(async () => {
         const { items, totalPaginas, totalResultados } = await crudosConIdioma({
           providers: codesToTmdbIds(providers), minVotes: 0, page: pagina,
           sortBy: "first_air_date.desc", extra: { "first_air_date.lte": hoy },
@@ -541,7 +523,7 @@ async function ultimosExtrasPorRed(
   return cachedLocIf(
     claveUltimosSeries(hoy, orden, "red", HUELLA_IDIOMA), TTL.providers,
     async () => {
-      const { res, fallos } = await withFallosDisponibilidad(async () => {
+      const { res, fallos } = await withFallosDeFuentes(async () => {
         const paginas = Array.from({ length: ULTIMOS_PAGINAS_RED }, (_, i) => i + 1);
         const tandas = await Promise.all(paginas.map((p) => crudosConIdioma({
           minVotes: 0, page: p, sortBy: "first_air_date.desc", sinMonetizacion: true,
@@ -1039,10 +1021,12 @@ export async function search(query: string, providers: PlatformCode[] = []) {
       // El contexto de fallos de disponibilidad, además del de idioma. Son DOS
       // señales distintas y ninguna tapa a la otra: `fallo` queda en true si
       // falló cualquiera de las dos, y con eso alcanza para no guardar.
-      const { res, fallos } = await withFallosDisponibilidad(async () => {
+      const { res, fallos } = await withFallosDeFuentes(async () => {
         const r = await buscarYOrdenar(q, providers);
         fallo = r.fallo;
-        return { titles: r.titles, people: r.people };
+        // `degradacion` viaja al cliente sólo cuando algún proveedor falló;
+        // el resultado, en ese caso, no se guarda (`fallos` lo marca).
+        return { titles: r.titles, people: r.people, ...(r.degradacion ? { degradacion: r.degradacion } : {}) };
       });
       if (fallos) fallo = true;
       return res;
@@ -1123,7 +1107,17 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
   //
   // Es una partición estable, no un orden nuevo: dentro de "disponible" y
   // dentro de "no disponible" se conserva el orden por relevancia de arriba.
-  const crudosUI = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub)));
+  // Etapa 3.a (§12): las PÁGINAS de búsqueda son el dato principal (si fallan,
+  // la ruta responde 503); el `providersOf` de cada elegido es opcional: si
+  // falla por TMDB el título sale SIN plataformas y se registra, así el
+  // resultado no se cachea y el orden "primero lo tuyo" queda marcado.
+  let sinProveedores = 0;
+  const crudosUI = await Promise.all(elegidos.map((c) => toUITitle(c.raw, c.tipo, pub).catch((e: unknown) => {
+    if (!esErrorTmdb(e)) throw e;
+    registrarDescarteTmdb(e, "search:providersOf");
+    sinProveedores++;
+    return tituloSinPlataformas(c.raw, c.tipo, pub);
+  })));
 
   // TMDB a veces carga el MISMO programa dos veces, una como serie y otra como
   // película, y acá salían dos cards del mismo título. Se juntan por el
@@ -1137,11 +1131,26 @@ async function buscarYOrdenar(q: string, providers: PlatformCode[]) {
   const titles = dedupePorIdentidad(crudosUI.map((t, i) => ({ t, identidad: ids[i] })))
     .map((x) => x.t);
 
-  if (!providers.length) return { titles, people, fallo: falloIdioma };
+  const degradacion = sinProveedores ? { degradacion: { proveedores: sinProveedores } } : {};
+  if (!providers.length) return { titles, people, fallo: falloIdioma, ...degradacion };
   const disponibles: UITitle[] = [];
   const resto: UITitle[] = [];
   for (const t of titles) (onUserPlatforms(t, providers) ? disponibles : resto).push(t);
-  return { titles: [...disponibles, ...resto], people, fallo: falloIdioma };
+  return { titles: [...disponibles, ...resto], people, fallo: falloIdioma, ...degradacion };
+}
+
+// La card de un resultado de búsqueda cuyo `watch/providers` falló por TMDB:
+// los mismos campos que `toUITitle` sin la parte de disponibilidad.
+function tituloSinPlataformas(t: RawTitle, type: MediaType, published?: Set<string>): UITitle {
+  return {
+    id: t.id, type, title: titleOf(t), year: yearOf(t),
+    runtime: null, poster: img(t.poster_path),
+    country: t.origin_country?.[0] ?? null,
+    genres: genreIdsToSlugs(t.genre_ids ?? []),
+    platforms: [],
+    tmdb: t.vote_average ? Number(t.vote_average.toFixed(1)) : null,
+    hasEditorial: published ? published.has(`${t.id}:${type}`) : false,
+  };
 }
 
 // --- Actores populares paginados (pestaña Actores del buscador) ---
@@ -1235,6 +1244,7 @@ const DIRECTOR_IDS = [
 export async function directorCards(): Promise<UIPerson[]> {
   return cached("people:directors", TTL.catalog, async () => {
     const settled = await Promise.allSettled(DIRECTOR_IDS.map((id) => personDetails(id)));
+    for (const s of settled) if (s.status === "rejected") registrarDescarteTmdb(s.reason, "directorCards");
     return settled
       .filter((s): s is PromiseFulfilledResult<Awaited<ReturnType<typeof personDetails>>> => s.status === "fulfilled")
       .map((s) => ({ id: s.value.id, name: s.value.name, profile: img(s.value.profile_path, "w185"), knownFor: [] }));
@@ -1393,8 +1403,23 @@ async function detalleYRelacionadosReparados(
 export async function detail(
   type: MediaType, id: number, providers: PlatformCode[] = [],
 ): Promise<UITitleDetail> {
-  const [rep, prov] = await Promise.all([detalleYRelacionadosReparados(type, id), providersOf(type, id)]);
+  // Etapa 3.a (§12): el DETALLE es el dato principal —si falla, la ficha no
+  // existe y la ruta responde 503/404—; los proveedores, el trailer y los
+  // relacionados son opcionales: si fallan por TMDB se sirve el resto y se
+  // marca en `degradacion`. Con TMDB sano el resultado es byte a byte el de
+  // siempre (`degradacion` no viaja).
+  const degradacion: NonNullable<UITitleDetail["degradacion"]> = {};
+  const [rep, provOpcional] = await Promise.all([
+    detalleYRelacionadosReparados(type, id),
+    providersOf(type, id).catch((e: unknown) => {
+      if (!esErrorTmdb(e)) throw e;
+      registrarDescarteTmdb(e, "detail:providersOf");
+      degradacion.proveedores = true;
+      return null;
+    }),
+  ]);
   const d = rep.detalle;
+  const prov = provOpcional ?? { codes: [] as PlatformCode[], links: {} as Partial<Record<PlatformCode, string>>, watchLink: null as string | null, hayFlatrateAR: false, reg: undefined };
   // DESPUÉS de leer el cache de proveedores, y sin tocarlo. Si TMDB no informa
   // ninguna plataforma en AR, se mira si el título está en el top oficial
   // vigente de Netflix: esa lista la publica Netflix y dice, literalmente, qué
@@ -1413,10 +1438,17 @@ export async function detail(
   //    no dice que se pueda ver en Netflix Argentina; hay producciones de
   //    Netflix licenciadas a otros en la región, y otras que directamente no
   //    llegan. Lo único que se usa es el top de ESTE país.
-  const plataformas = await disponibilidadDe(type, id, prov);
+  // Sin proveedores (TMDB falló) no hay evidencia que resolver: plataformas
+  // vacías y la marca. Con proveedores, el camino central de siempre.
+  const plataformas = provOpcional ? await disponibilidadDe(type, id, prov) : [];
   const lang = d.original_language ?? "en";
   const trailer = await cached(`videos:${type}:${id}`, TTL.providers, async () =>
-    pickTrailer((await titleVideos(type, id, lang)).results, lang));
+    pickTrailer((await titleVideos(type, id, lang)).results, lang)).catch((e: unknown) => {
+      if (!esErrorTmdb(e)) throw e;
+      registrarDescarteTmdb(e, "detail:trailer");
+      degradacion.trailer = true;
+      return null;
+    });
   const editorial = await getEditorial(id, type);
   const pub = await publishedIds();
 
@@ -1427,6 +1459,7 @@ export async function detail(
   const relatedTodos = await settleAll(
     recs.map((r) => toUITitle(r, type, pub)), `related ${type}/${id}`,
   );
+  if (relatedTodos.length < recs.length) degradacion.relacionados = recs.length - relatedTodos.length;
   const related = (providers.length
     ? relatedTodos.filter((r) => onUserPlatforms(r, providers))
     : relatedTodos
@@ -1487,6 +1520,8 @@ export async function detail(
     ...(original && original !== titulo ? { originalTitle: original } : {}),
     ...(ayudas ? { ayudas } : {}),
     ...(ayudaOriginal ? { ayudaOriginal } : {}),
+    // Sólo si algo opcional falló: con TMDB sano el JSON no cambia.
+    ...(Object.keys(degradacion).length ? { degradacion } : {}),
   };
 }
 
@@ -1502,7 +1537,7 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
   return cachedLocIf(claveCard(type, id, HUELLA_IDIOMA), TTL.catalog, async () => {
     // El productor entero va adentro del contexto: `disponibilidadDe` corre
     // acá abajo y su fallo tiene que llegar al predicado.
-    const { res, fallos } = await withFallosDisponibilidad(async () => {
+    const { res, fallos } = await withFallosDeFuentes(async () => {
     try {
       const [rep, prov] = await Promise.all([detalleReparado(type, id), providersOf(type, id)]);
       const d = rep.detalle;
@@ -1518,7 +1553,12 @@ async function titleCard(type: MediaType, id: number): Promise<UITitle | null> {
         tmdb: d.vote_average ? Number(d.vote_average.toFixed(1)) : null,
         hasEditorial: false,
       } as UITitle;
-    } catch {
+    } catch (e) {
+      // Etapa 3.a (H2, S3): una card que falló por TMDB (429, 5xx, timeout) se
+      // descarta como siempre, pero se REGISTRA —para que el riel o el Home
+      // que la contiene salga marcado— y no se intenta guardar `null` 24 h.
+      // Un error que no es de TMDB sigue el camino de siempre.
+      if (esErrorTmdb(e)) { registrarDescarteTmdb(e, "titleCard"); fallo = true; }
       return null;
     }
     });

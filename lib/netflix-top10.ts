@@ -1,5 +1,6 @@
 import "server-only";
 import { searchTitles, watchProviders } from "./tmdb";
+import { registrarDescarteTmdb } from "./fallos-tmdb";
 import { supabaseServer } from "./supabase";
 import { supabaseAdmin } from "./supabase-admin";
 import { resolverTitulo } from "./netflix-resolver";
@@ -134,7 +135,11 @@ async function enNetflixAR(type: MediaType, id: number): Promise<boolean> {
   try {
     const r = await watchProviders(type, id);
     return (r.results?.AR?.flatrate ?? []).some((p) => p.provider_id === NETFLIX_PROVIDER_ID);
-  } catch {
+  } catch (e) {
+    // Etapa 3.a (S7): la causa queda registrada. El contrato no cambia: "no
+    // sé" sigue siendo "no acepto por proveedor", y la fila termina como
+    // `sinMatch` (needs_review), nunca como un "no está" persistido.
+    registrarDescarteTmdb(e, "enNetflixAR");
     return false;
   }
 }

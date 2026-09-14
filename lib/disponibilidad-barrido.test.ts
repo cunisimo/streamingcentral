@@ -194,8 +194,10 @@ test("el contexto llega a todos los archivos que cachean títulos", () => {
   // El conteo por superficie lo fija lib/cache-disponibilidad-inventario.test.ts,
   // que obliga a clasificar CADA cachedLoc del proyecto. Acá sólo se comprueba
   // que ningún archivo con superficies que enriquecen se quedó sin el contexto.
+  // Etapa 3.a: el contexto se abre a través del compuesto `withFallosDeFuentes`
+  // (lib/fallos-tmdb.ts), que envuelve a `withFallosDisponibilidad`.
   for (const a of ["lib/enrich.ts", "lib/home.ts", "lib/top.ts", "lib/reco.ts"]) {
-    assert.match(codigo(a), /withFallosDisponibilidad\(/, `${a} no envuelve`);
+    assert.match(codigo(a), /withFallos(?:Disponibilidad|DeFuentes)\(/, `${a} no envuelve`);
   }
 });
 

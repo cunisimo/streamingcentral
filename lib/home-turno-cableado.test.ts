@@ -53,7 +53,13 @@ test("🔴 lib/cache.ts enchufa las seis primitivas sobre el cliente real y las 
 });
 
 test("🔴 lib/tmdb.ts combina la señal de la solicitud con su timeout de 8 s", () => {
-  assert.match(tmdb, /combinarSenales\(senalActual\(\), AbortSignal\.timeout\(8000\)\)/);
+  // Etapa 3.a: el timeout del intento es un parámetro (`timeoutMs`) cuyo valor
+  // por defecto es `TIMEOUT_LLAMADA_MS` = 8000 (lib/tmdb-politica.ts); con los
+  // reintentos apagados nunca vale otra cosa.
+  assert.match(tmdb, /combinarSenales\(senalActual\(\), AbortSignal\.timeout\(timeoutMs\)\)/);
+  assert.match(tmdb, /timeoutMs \?\? TIMEOUT_LLAMADA_MS/);
+  const politica = sinComentarios("lib/tmdb-politica.ts");
+  assert.match(politica, /export const TIMEOUT_LLAMADA_MS = 8000;/);
 });
 
 test("🔴 lib/supabase.ts recibe la señal por un proveedor registrado desde el servidor, sin importar async_hooks", () => {

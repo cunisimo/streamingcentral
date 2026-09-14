@@ -178,10 +178,19 @@ test("toda superficie con TTL tiene el TTL declarado", () => {
 // Las que enriquecen ABREN el contexto
 // ============================================================================
 
+// Desde la Etapa 3.a (#19, H2) las superficies abren el contexto COMPUESTO
+// `withFallosDeFuentes` (lib/fallos-tmdb.ts), que envuelve a
+// `withFallosDisponibilidad` y suma los descartes de causa TMDB: el contexto
+// de disponibilidad se sigue abriendo una vez por superficie, a través del
+// compuesto. Un `withFallosDisponibilidad` suelto también contaría (no se
+// prohíbe), pero hoy no queda ninguno fuera de lib/fallos-tmdb.ts.
+const ABRE_CONTEXTO = /withFallos(?:Disponibilidad|DeFuentes)\s*\(/;
+const ABRE_CONTEXTO_G = /withFallos(?:Disponibilidad|DeFuentes)\s*\(/g;
+
 test("cada archivo con superficies que enriquecen abre el contexto", () => {
   const archivos = [...new Set(SUPERFICIES.filter((s) => s.enriquece).map((s) => s.archivo))];
   for (const a of archivos) {
-    assert.match(codigo(a), /withFallosDisponibilidad\s*\(/,
+    assert.match(codigo(a), ABRE_CONTEXTO,
       `${a} cachea títulos enriquecidos y no abre el contexto de fallos`);
   }
 });
@@ -192,7 +201,7 @@ test("hay un contexto por cada superficie que enriquece", () => {
     porArchivo.set(s.archivo, (porArchivo.get(s.archivo) ?? 0) + 1);
   }
   for (const [archivo, esperados] of porArchivo) {
-    const hay = (codigo(archivo).match(/withFallosDisponibilidad\s*\(/g) ?? []).length;
+    const hay = (codigo(archivo).match(ABRE_CONTEXTO_G) ?? []).length;
     assert.equal(hay, esperados,
       `${archivo}: ${esperados} superficie(s) que enriquecen y ${hay} contexto(s)`);
   }
@@ -200,8 +209,8 @@ test("hay un contexto por cada superficie que enriquece", () => {
 
 test("los archivos que enriquecen importan la señal", () => {
   for (const s of SUPERFICIES.filter((x) => x.enriquece)) {
-    assert.match(codigo(s.archivo), /from "\.\/fallos-disponibilidad"/,
-      `${s.archivo} no importa el módulo de la señal`);
+    assert.match(codigo(s.archivo), /from "\.\/fallos-(?:disponibilidad|tmdb)"/,
+      `${s.archivo} no importa el módulo de la señal (ni el compuesto que la envuelve)`);
   }
 });
 

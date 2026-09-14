@@ -1,6 +1,6 @@
 import "server-only";
 import { cardsByIds, listByCategoryCacheable } from "./enrich";
-import { withFallosDisponibilidad } from "./fallos-disponibilidad";
+import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import { latestWeekRows } from "./netflix-top10";
 import { ultimasPublicaciones, type RankingFila } from "./top-manual";
 import { claveBloque, hayCutover } from "./top-manual-nucleo";
@@ -67,7 +67,7 @@ async function popularBlock(platform: PlatformCode, tipo: MediaType): Promise<To
   // congelado 24 h. El contexto de abajo lo cierra.
   const senal = { fallo: false };
   const items = await cachedLocIf(claveTopPop(platform, tipo, HUELLA_IDIOMA), TTL.catalog, async () => {
-    const { res, fallos } = await withFallosDisponibilidad(async () => {
+    const { res, fallos } = await withFallosDeFuentes(async () => {
     const r = await listByCategoryCacheable({
       tipo, providers: [platform], sortBy: "popularity.desc",
       // Explícito, no el default de discover(): "lo más popular ahora" con
@@ -146,6 +146,7 @@ async function safe(c: Contador, etiqueta: string, fn: () => Promise<TopBlock>):
     return await fn();
   } catch (e) {
     c.fallos++;
+    registrarDescarteTmdb(e, `top:${etiqueta}`);
     // Error completo (con stack): con solo `.message` un bug propio se
     // confunde con un 429 de TMDB, igual que en home.ts.
     console.error(`[top] "${etiqueta}" falló, se descarta el bloque —`, e);

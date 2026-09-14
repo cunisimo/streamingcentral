@@ -18,6 +18,9 @@ export default function SearchView() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("todo");
   const [res, setRes] = useState<{ titles: UITitle[]; people: UIPerson[] }>({ titles: [], people: [] });
+  // Etapa 3.a (#19): la búsqueda respondió 503 porque TMDB no responde. Se
+  // muestra un aviso en vez de "Sin resultados", que sería falso.
+  const [fuenteCaida, setFuenteCaida] = useState(false);
   const [loading, setLoading] = useState(false);
   const [explore, setExplore] = useState<{ country: string } | null>(null);
   const [covers, setCovers] = useState<Record<string, string | null>>({});
@@ -114,8 +117,12 @@ export default function SearchView() {
       // Las plataformas van para ORDENAR, no para filtrar: los resultados que
       // sí podés ver van arriba y el resto sigue apareciendo abajo.
       fetch(apiUrl(`/api/search?q=${encodeURIComponent(term)}&providers=${platforms.join(",")}`))
-        .then((r) => r.json())
-        .then((j) => { setRes({ titles: j.titles ?? [], people: j.people ?? [] }); setLoading(false); })
+        .then(async (r) => ({ ok: r.ok, j: await r.json() }))
+        .then(({ ok, j }) => {
+          setFuenteCaida(!ok && j?.error === "tmdb-no-disponible");
+          setRes({ titles: j.titles ?? [], people: j.people ?? [] });
+          setLoading(false);
+        })
         .catch(() => setLoading(false));
     }, 250);
   }, [q, ready, platforms, fase]);
@@ -193,7 +200,10 @@ export default function SearchView() {
               <div className="grid">{showTitles.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}</div>
             </>
           )}
-          {!loading && showTitles.length === 0 && showPeople.length === 0 && (
+          {!loading && fuenteCaida && (
+            <p className="empty-note">La fuente de datos (TMDB) no responde. Reintentá en unos segundos.</p>
+          )}
+          {!loading && !fuenteCaida && showTitles.length === 0 && showPeople.length === 0 && (
             <p className="empty-note">Sin resultados para “{q}”.</p>
           )}
         </>

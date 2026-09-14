@@ -29,7 +29,7 @@ const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6
 export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }) {
   const router = useRouter();
   const { platforms } = usePlatforms();
-  const { data, loading, offline, error, retry } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
+  const { data, loading, offline, error, motivo, retry } = useApi<UITitleDetail>(() => `/api/title/${tipo}/${id}?providers=${platforms.join(",")}`, [tipo, id]);
   const relTrack = useRef<HTMLDivElement>(null);
 
   // "Volver" usa el back del navegador cuando hay una página nuestra atrás
@@ -52,6 +52,19 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
     router.push(d.ruta);
   };
 
+  // Etapa 3.a (#19, H8): si la ruta dijo que el que no responde es TMDB (503
+  // con motivo), no se le dice al usuario que revise SU conexión.
+  if (error && motivo === "tmdb-no-disponible" && !data) {
+    return (
+      <div className="detail-inner">
+        <div className="offline-state" role="status">
+          <h3>La fuente no responde</h3>
+          <p>TMDB, de donde salen los datos, no está respondiendo. Reintentá en unos segundos.</p>
+          <button className="btn" onClick={retry}>Reintentar</button>
+        </div>
+      </div>
+    );
+  }
   // `error` (500 del server) entra acá igual que `offline`: si no, el skeleton
   // quedaría girando para siempre.
   if ((offline || error) && !data) return <div className="detail-inner"><OfflineState onRetry={retry} /></div>;
