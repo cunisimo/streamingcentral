@@ -1258,6 +1258,49 @@ producen afirmaciones falsas y hay tests que las rechazan.
 **Detectado el 2026-09-10**, auditoría de capacidad (§3 y §4). **Comprobado
 leyendo el código.**
 
+> **Estado (14/09): Etapa 3.a IMPLEMENTADA EN RAMA
+> (`feat/etapa3a-clasificacion-tmdb`, desde `b7be927`), pendiente de auditoría
+> de Codex; reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador,
+> circuito, `waitUntil` y membresía NO implementados. Sin merge, push ni
+> deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
+> descarte parcial de causa TMDB marca el Home degradado y no se publica),
+> `titleCard` sin `null` por TMDB, ficha/búsqueda con `503`/`degradacion`.
+> Banco de identidad del Home con cachés aisladas: 16/16 idénticos y válidos;
+> 429 parcial: `b7be927` publica el Home mutilado (RED), la rama no (GREEN).
+> Informe §22. **El diseño del resto (v4.1) sigue pendiente de auditoría.
+> Restricción del dueño: la Etapa 3 no puede alterar el contenido correcto
+> del Home.** v1 (`a15b650`) → v2 (`209bda1`) → v3 (`ced36de`) → v4
+> (`d76f0ce`) → v4.1 (`0d06826`). La v4 convierte la restricción en criterio bloqueante
+> (informe §1): con TMDB sano, hero, títulos, orden, cantidad, dedup,
+> plataformas, badges, enlaces, toggles y contrato JSON idénticos, verificados
+> por un banco de **diferencia cero** con control del comparador (§14); la
+> membresía por pool queda **no aprobada** (gate de descarte, §12) y la
+> capacidad se resuelve sin tocar el Home. Corrige la v3: la cota de ventana
+> móvil sobre `fetch` no valía con latencias de Redis asimétricas; el contrato
+> pasa a dos niveles (demostrado sobre reservas ≤ 28/s; demostrado sobre
+> `fetch` sólo bajo RTT ≤ 250 ms verificado por reserva: ≤ 36/s móvil, ≤ 12
+> por 100 ms; medido con latencia 5/30/150/300 ms), dos cadencias por clase
+> con préstamo (equidad global ≥ 14/s por clase, sin inanición), tres esperas
+> de la ficha separadas y modelo de tráfico mixto (bajo carga sostenida el
+> Home frío sirve UB hasta que baje la carga). **Alcance del cierre:** la
+> aplicación en Vercel con Redis respondiendo; no la cuenta entera de TMDB ni
+> Redis caído. No implementar nada hasta una nueva auditoría. Informe:
+> [`medidas/2026-09-14-etapa3-diseno-resistencia-tmdb.md`](medidas/2026-09-14-etapa3-diseno-resistencia-tmdb.md).
+>
+> **Antecedente:** lo que sigue describe el código del 10/09. Desde la Etapa
+> 2 (13/09) la pieza 4 está **mitigada para el Home, por clave**: un
+> degradado ejecuta `ENFRIAR` y nadie recompone esa clave durante
+> `ENFRIAMIENTO_MS` (15 s); se sirve el último bueno o el degradado
+> compartido. La pieza 1 (cliente sin reintentos ni `Retry-After` ni
+> circuito) sigue **sin cambios**, y el lazo sigue intacto en ficha,
+> búsqueda y las demás rutas, que no tienen enfriamiento ni último bueno.
+> Además, una composición degradada sigue pagando ~277 llamadas contra el
+> servicio caído (banco F2), o sea ~18 llamadas/s por clave de Home bajo
+> enfriamiento. Y el 14/09 se encontró por lectura que la degradación
+> **parcial** (429 en algunos `watch/providers`) se descarta título por
+> título sin marcar el payload, que se publica corto como fresca y como
+> último bueno (informe §2.2, H2). El estado vigente es el del informe.
+
 Cuatro piezas correctas por separado que juntas forman un lazo:
 
 1. `lib/tmdb.ts:56-67` — el cliente **no reintenta, no lee `Retry-After`, no
@@ -1312,6 +1355,15 @@ se supera **ni el techo de concurrencia ni el de tasa declarados —los dos,
 medidos por separado—**, el sistema no entra en lazo y se recupera solo cuando el
 doble vuelve. Y con el último bueno del #17 presente, se sirve contenido anterior
 en vez de rearmar.
+
+*(14/09, v4: los criterios del banco —informe §15— distinguen lo demostrado
+sobre reservas (≤ 28/s, ≤ 4 por 100 ms, exacto) de lo demostrado sobre
+`fetch` bajo RTT ≤ 250 ms verificado (≤ 36/s móvil, ≤ 12 por 100 ms) y lo
+medido con latencia de Redis asimétrica (E-latencia-asimetrica, tres
+instantes por reserva); la concurrencia se mide aparte; se suman
+E-home-identico (diferencia cero del Home, con control del comparador),
+E-equidad (el Home progresa ≥ 14/s bajo fichas continuas), E2 desglosado en
+tres esperas y E-mixto. Ninguno se corrió todavía.)*
 
 ⚠️ Eso verifica que el sistema **respeta el límite que se le declara**. **No**
 verifica cuál es el límite real de TMDB: eso hay que consultarlo en la cuenta, no

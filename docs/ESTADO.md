@@ -1,11 +1,94 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 13 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 14 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
+
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA, pendiente de
+  auditoría de Codex; reintentos APAGADOS; limitador, circuito, `waitUntil` y
+  membresía NO implementados.** Rama `feat/etapa3a-clasificacion-tmdb`
+  (worktree `wt-etapa3a`), creada desde `main` = `origin/main` = `b7be927`;
+  commits `dedee6a` (código + tests, RED → GREEN), `b7a4a6a` (banco y
+  evidencia) y el de esta documentación. **Sin merge, push ni deploy; sin
+  TMDB real ni credenciales productivas.** Qué trae: clasificación de
+  respuestas de TMDB por causa (429, 5xx, 4xx, red, timeout, cuerpo inválido,
+  cancelación), parser de `Retry-After`, política y bucle de reintentos
+  **presentes y apagados** (`TMDB_REINTENTOS` sólo "1" enciende; apagado, un
+  intento por llamada y ninguna espera — control fijado por test), causas
+  propagadas por los once sitios inventariados, **H2 corregido** (un descarte
+  parcial de causa TMDB marca el Home como degradado y no se publica como
+  fresca ni como último bueno), `titleCard` no guarda `null` por un fallo de
+  TMDB, ficha y búsqueda distinguen dato principal (`503` + `Retry-After`, o
+  `404`) de contenido opcional (`degradacion`, aditivo), métricas nuevas. RED
+  contra `b7be927`: 18 de 21 casos fallan (los 3 que pasan son controles del
+  comportamiento actual). GREEN: suite 1.602 (1.592 ok, 0 fallos, 10
+  omitidos), `tsc` limpio, build fresco exit 0, `diff --check` limpio.
+  **Banco de identidad del Home con cachés aisladas** (dos juegos de dobles y
+  dos `next start`, Redis vaciado por corrida, `compone` + MISS + TMDB iguales
+  exigidos en las dos versiones, `VERSION_HOME` 6 en ambas): **16/16
+  escenarios válidos e idénticos** —5 combinaciones × 3 toggles, frío y
+  caliente, más 3 claves concurrentes—, JSON completo y por riel (ids, orden,
+  cantidad, plataformas: 0 diferencias); los cuatro controles de mutación
+  hacen fallar al comparador y la corrida con caché compartida es rechazada.
+  **Banco de 429 parcial (10 % de `watch/providers`):** `b7be927` publica un
+  Home con 93 descartes como sano y, con UB, lo pisa (RED); la rama lo marca
+  degradado, no lo publica y sirve el UB correcto (GREEN). Evidencia:
+  `medidas/2026-09-14-etapa3a-identidad-home.json`,
+  `medidas/2026-09-14-etapa3a-parcial.json`; detalle en el informe §22.
+  Corrección a la v2: un 429 en `enNetflixAR` no persistía un "no está" sino
+  una fila sin resolver (`needs_review`).
+
+- **Diseño de la Etapa 3 (v4.1): pendiente de auditoría; sólo 3.a
+  aprobada. Restricción del dueño (14/09): la Etapa 3 no puede alterar el
+  contenido correcto del Home.** Rama de documentación
+  `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`): v1 `a15b650` → v2
+  `209bda1` → v3 `ced36de` → v4 `d76f0ce` → v4.1 `0d06826` (cuatro
+  correcciones de la auditoría sobre la v4: reconstrucción fría bajo tráfico
+  sostenido y condición del futuro limitador; aislamiento total de cachés en
+  el comparador; Redis lento sostenido; garantías por cadencia física y total,
+  no por clase). El informe vigente es el de la rama de implementación (misma
+  v4.1 + §22). Informe único:
+  [`medidas/2026-09-14-etapa3-diseno-resistencia-tmdb.md`](medidas/2026-09-14-etapa3-diseno-resistencia-tmdb.md).
+  **La restricción, como criterio bloqueante (informe §1):** con TMDB sano,
+  cualquier implementación conserva hero, títulos, orden, cantidad, dedup,
+  plataformas, badges, enlaces, toggles, contenido por fecha/plataformas/tipos
+  y contrato JSON (salvo campos aditivos de diagnóstico); ante una caída se
+  prefiere el último Home correcto. **Consecuencias:** la membresía por pool
+  (A) **no está aprobada** y la medición pasa a ser un **gate de descarte con
+  criterio de diferencia cero** (ids, orden, cantidad, plataformas, badges,
+  disponibilidad, por riel y hero); A' sólo si preserva exactamente títulos,
+  orden y disponibilidad; si no, ambas se descartan y la capacidad se
+  resuelve **sin tocar la lógica del Home**. H16 corregido: el margen del 40 %
+  prueba que el código contempla descartes posibles, **no su frecuencia, que
+  sigue desconocida**. Banco obligatorio de diferencia cero (§14: mismo
+  snapshot, misma fecha AR, mismas plataformas y toggles, frío/caliente,
+  individual/concurrente, comparación estructural completa, control que hace
+  fallar al comparador con cuatro mutaciones, kill switch sin migraciones,
+  `VERSION_HOME` sin subir). **Correcciones a la v3 (auditoría de Codex):** la
+  cota de ventana móvil sobre inicios de `fetch` **era falsa con latencias de
+  Redis distintas por proceso**; ahora el contrato tiene dos niveles —
+  **demostrado sobre reservas** (≤ 28/s, ≤ 4 por 100 ms, exacto en el reloj de
+  Redis) y **demostrado sobre `fetch` sólo bajo `RTT ≤ 250 ms` verificado por
+  reserva** (ranuras absolutas con vencimiento: se queman las que llegan
+  tarde; ≤ 36 por segundo móvil, ≤ 12 por 100 ms) — y se **mide** en
+  E-latencia-asimetrica (5/30/150/300 ms, tres instantes por reserva); cinco
+  alternativas comparadas (el único límite estricto sería un coordinador
+  único, fuera de alcance); tasa declarada **28/s**; **dos cadencias por clase
+  (14/s cada una) con préstamo sólo si la ajena está ociosa** → equidad global
+  demostrable (ninguna clase por debajo de 14/s, primera ranura ≤ 321 ms,
+  inanición imposible), reemplazando el horizonte que podía dejar al Home sin
+  ranuras; las tres esperas de una ficha separadas; modelo de **tráfico
+  mixto** (`s_m = tasa − min(λ_i, tasa/2)`): con C = 926 sin reducción, un
+  Home frío sólo se reconstruye a tiempo en fondo y con poca competencia, y
+  bajo carga mixta sostenida **sirve UB hasta que baje la carga**. Orden de
+  despliegue: 3.a (reintentos OFF) → 3.b → 3.e (`waitUntil`) → 3.c
+  (limitador) → 3.c' (reintentos ON); 3.d sólo si el gate da cero. **Alcance
+  del cierre:** la aplicación en Vercel, con Redis respondiendo; no la cuenta
+  entera ni Redis caído. **Nada de esto cambia el comportamiento desplegado.**
+  No implementar nada hasta una nueva auditoría de Codex.
 
 - **Recuperación de contraseña (#22) — estado vigente.**
   1. La corrección está **mergeada en `main`** mediante `be5ef1d` (rama
@@ -147,7 +230,10 @@
   instancias de Vercel no coordina nada — eso, y el último Home bueno, son la
   Etapa 2. **#18 resuelto el 12/09; #17 resuelto el 13/09 con la Etapa 2.** Informe:
   [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
-  Etapas 3 a 5: no iniciadas.
+  Etapa 3: 3.a implementada en rama (pendiente de auditoría, reintentos
+  apagados); diseño v4.1 pendiente de auditoría para el resto; restricción del
+  dueño: no puede alterar el contenido correcto del Home (ver arriba). Etapas
+  4 y 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
   Home bueno): MERGEADA EN `main` (`cd1f393`, `--no-ff` de
@@ -371,7 +457,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a implementada en rama (14/09), pendiente de auditoría, reintentos apagados; limitador, circuito, `waitUntil` y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 
@@ -428,8 +514,9 @@ arriba). Lo que sigue ya incorpora las siete correcciones.
 de medir nada. Por eso fue la **Etapa PREVIA** del plan, anterior a la Etapa 0,
 con la decisión aprobada por el dueño: *se entrega el payload y se registra el
 error*. **Hecha y desplegada el 11/09.** Las Etapas **PREVIA, 0 y 1** están
-desplegadas (ver el estado vigente arriba); lo que sigue es la **Etapa 2**:
-turno distribuido y último Home bueno.
+desplegadas (ver el estado vigente arriba). *(Antecedente: cuando se escribió,
+lo que seguía era la Etapa 2; está desplegada desde el 13/09 y la Etapa 3
+tiene diseño v4.1 y la sub-etapa 3.a implementada en rama, sin mergear.)*
 
 ### Lo que se revisó y **no** es un problema
 
