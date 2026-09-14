@@ -1,0 +1,108 @@
+{
+  "fecha": "2026-09-14",
+  "combo": "n,d,m",
+  "parcialP": 0.1,
+  "antes": {
+    "version": "antes (b7be927)",
+    "sinUB": {
+      "http": 200,
+      "degradado": false,
+      "fallos": 0,
+      "titulos": 130,
+      "parciales429": 93,
+      "linea": {
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "degradadoEnLinea": false,
+        "descartes": 0,
+        "tmdb": 947
+      },
+      "escrito": {
+        "fresca": 1,
+        "ub": 1,
+        "degradadoCompartido": 0
+      }
+    },
+    "conUB": {
+      "sano": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "publicacion": "publicado",
+        "ubEscrito": 1
+      },
+      "parcial": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "parciales429": 186,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0
+        },
+        "sirvioElUBCorrecto": false,
+        "frescaReescrita": 1,
+        "ubIntacto": true
+      }
+    },
+    "verde": false
+  },
+  "despues": {
+    "version": "despues (3.a)",
+    "sinUB": {
+      "http": 200,
+      "degradado": true,
+      "fallos": 93,
+      "titulos": 130,
+      "parciales429": 93,
+      "linea": {
+        "cache": "MISS",
+        "origen": "degradado-propio",
+        "publicacion": "no",
+        "degradadoEnLinea": true,
+        "descartes": 93,
+        "tmdb": 947
+      },
+      "escrito": {
+        "fresca": 0,
+        "ub": 0,
+        "degradadoCompartido": 1
+      }
+    },
+    "conUB": {
+      "sano": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "publicacion": "publicado",
+        "ubEscrito": 1
+      },
+      "parcial": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "parciales429": 186,
+        "linea": {
+          "cache": "ULTIMO-BUENO",
+          "origen": "ultimo-bueno",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 0
+        },
+        "sirvioElUBCorrecto": true,
+        "frescaReescrita": 0,
+        "ubIntacto": true
+      }
+    },
+    "verde": true
+  },
+  "resumen": {
+    "antesRojo": true,
+    "despuesVerde": true,
+    "ok": true
+  }
+}

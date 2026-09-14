@@ -3,6 +3,9 @@
 // habla con nada real: no hay credenciales, no hay red hacia afuera.
 //
 //   node scripts/banco/dobles.mjs            → 4801 TMDB · 4802 Supabase · 4803 Redis
+//   BANCO_PUERTO_BASE=4811 node …            → 4811 · 4812 · 4813 (un SEGUNDO juego de
+//        dobles, para que dos versiones de la app corran cada una contra sus
+//        propias cachés: el comparador de identidad del Home, Etapa 3.a)
 //
 // Cada doble expone, además de lo que imita, un control en `/__banco`:
 //
@@ -10,6 +13,8 @@
 //   POST /__banco/config          { modo, latenciaMs, retryAfter }
 //        modo: "ok" | "429" | "500" | "caido"   ("caido" corta el socket: fallo
 //        de transporte, que es lo único que el SDK de Upstash reintenta)
+//        modo: "429-parcial" + { parcialP: 0.1, familiaParcial: "/watch/providers" }
+//        (429 determinístico en una fracción de esa familia: Etapa 3.a, H2)
 //   POST /__banco/reset           contadores a cero (y, en Redis, borra la base)
 //
 // El contador de cada doble es el ÁRBITRO: lo que la app dice que hizo (línea
@@ -25,6 +30,8 @@ import { createHash } from "node:crypto";
 import { LUA } from "../../lib/turno-lua.ts";
 
 // ----------------------------------------------------------------- utilidades
+// Puerto base configurable: el comparador del Home levanta dos juegos de dobles.
+const PUERTO_BASE = Number(process.env.BANCO_PUERTO_BASE) || 4801;
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 function leerCuerpo(req) {
@@ -70,6 +77,15 @@ function doble(nombre, puerto, atender, extra = {}) {
     if (estado.modo === "caido") { req.socket.destroy(); return; }
     if (estado.modo === "500") return json(res, 500, { error: "doble en modo 500" });
     if (estado.modo === "429") return json(res, 429, { error: "doble en modo 429" }, { "Retry-After": String(estado.retryAfter) });
+    // Etapa 3.a (H2): 429 PARCIAL y determinístico —sólo en la familia
+    // `familiaParcial` (por defecto `watch/providers`) y sólo para la fracción
+    // `parcialP` de las rutas, elegida por hash de la URL— para reproducir el
+    // límite de tasa real: no rechaza todo, rechaza lo que pasa del cupo.
+    if (estado.modo === "429-parcial" && url.includes(estado.familiaParcial ?? "/watch/providers")
+      && (hash(url.split("?")[0]) % 1000) < Math.round((estado.parcialP ?? 0.1) * 1000)) {
+      cuenta.parciales429 = (cuenta.parciales429 ?? 0) + 1;
+      return json(res, 429, { error: "doble en modo 429-parcial" }, { "Retry-After": String(estado.retryAfter) });
+    }
     try {
       await atender(req, res, url, cuerpo, cuenta);
     } catch (e) {
@@ -105,7 +121,7 @@ function pagina(tipo, q) {
   const base = 1000 + semilla * 100 + (page - 1) * 20;
   return { page, results: Array.from({ length: 20 }, (_, i) => titulo(tipo, base + i, generos)), total_pages: 10, total_results: 200 };
 }
-doble("tmdb", 4801, async (req, res, url, _cuerpo, cuenta) => {
+doble("tmdb", PUERTO_BASE + 0, async (req, res, url, _cuerpo, cuenta) => {
   const u = new URL(url, "http://x");
   const p = u.pathname;
   let m;
@@ -132,7 +148,7 @@ doble("tmdb", 4801, async (req, res, url, _cuerpo, cuenta) => {
 // ----------------------------------------------------------------- Supabase
 // PostgREST: toda lectura devuelve una lista vacía con la forma correcta;
 // todo RPC devuelve una lista vacía. Datos fijos, nunca Producción.
-doble("supabase", 4802, async (req, res, url) => {
+doble("supabase", PUERTO_BASE + 1, async (req, res, url) => {
   const p = url.split("?")[0];
   if (p.startsWith("/rest/v1/rpc/")) return json(res, 200, []);
   if (p.startsWith("/rest/v1/")) return json(res, 200, [], { "Content-Range": "*/0" });
@@ -252,7 +268,7 @@ const b64 = (v) => typeof v === "string" ? Buffer.from(v).toString("base64") : A
 // CONFIRMAR —la misma unidad que cuenta la app—; se informan aparte porque
 // Upstash sí los ejecutó (y presumiblemente los factura).
 const comandosRedis = { total: 0, errores: 0, perdidos: 0, porComando: {} };
-doble("redis", 4803, async (req, res, url, cuerpo) => {
+doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
   const codificar = (req.headers["upstash-encoding"] === "base64") ? b64 : (v) => v;
   const uno = (cmd) => {
     const op = String(cmd[0]).toUpperCase();
