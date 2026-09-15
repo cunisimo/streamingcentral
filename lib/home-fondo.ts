@@ -7,12 +7,18 @@
 // se inyecta, así que se prueba con `node --test`.
 //
 // 🔴 LAS REGLAS:
-//   - PEREZOSO. `iniciar` no se invoca hasta que la tarea quedó REGISTRADA. La
-//     tarea espera un microtick y sólo compone si el registro terminó sin
-//     lanzar. Si el fondo no está disponible, el kill switch está apagado o el
-//     registro lanza, `programarEnFondo` devuelve `false` SIN haber iniciado
-//     nada, y el que llama compone en línea: UNA composición, la bloqueante,
-//     y ni una tarea huérfana ni una segunda composición.
+//   - PEREZOSO, Y DETRÁS DE LA RESPUESTA. `iniciar` no se invoca hasta que la
+//     tarea quedó REGISTRADA y, además, hasta que la COMPUERTA de la solicitud
+//     se abrió: la compuerta (lib/fondo-frontera.ts) se abre cuando el handler
+//     ya devolvió su respuesta construida. "Registrada en waitUntil" no es
+//     "respondida" (auditoría de Codex sobre c84996e: con un microtick,
+//     composeHome arrancaba antes de que la ruta construyera su NextResponse
+//     y se metía en el camino crítico). Sin compuerta —el handler no declaró
+//     la frontera— no hay fondo. Si el fondo no está disponible, el kill
+//     switch está apagado, no hay compuerta o el registro lanza,
+//     `programarEnFondo` devuelve `false` SIN haber iniciado nada, y el que
+//     llama compone en línea: UNA composición, la bloqueante, y ni una tarea
+//     huérfana ni una segunda composición.
 //   - LA TAREA SIEMPRE RESUELVE. Un rechazo de `iniciar` se contiene y se
 //     loguea; un fallo del propio log también. Ninguna promesa registrada en
 //     `waitUntil` puede rechazar.
@@ -31,6 +37,8 @@
 export interface DepsFondo {
   /** `waitUntil` (o un doble): sostiene la promesa después de responder. Puede lanzar. */
   registrar: (tarea: Promise<unknown>) => void;
+  /** La compuerta de la solicitud actual (`compuertaDeFondo`): resuelve cuando la respuesta ya se construyó; `null` si no hay frontera. */
+  compuerta: () => Promise<void> | null;
   /** Hay fondo real (Vercel) o el banco lo simula. */
   disponible: boolean;
   /** `HOME_UB_PRIMERO=0`. */
@@ -55,12 +63,15 @@ export function crearProgramadorDeFondo(deps: DepsFondo): ProgramarEnFondo {
   };
   return (iniciar, senal) => {
     if (deps.apagado || !deps.disponible) return false;
+    const compuerta = deps.compuerta();
+    if (!compuerta) return false;   // sin frontera declarada no hay "después de responder"
     let registrado = false;
-    // No inicia en este tick: espera un microtick y sólo compone si el
-    // registro quedó hecho. Como `registrar` es sincrónico, cuando la tarea
-    // despierta `registrado` ya vale true o false definitivamente.
+    // No inicia ahora: espera la compuerta (la respuesta ya construida) y sólo
+    // compone si el registro quedó hecho. `registrar` es sincrónico y la
+    // compuerta se abre después, así que al despertar `registrado` ya vale
+    // true o false definitivamente.
     const tarea = (async () => {
-      await Promise.resolve();
+      await compuerta;
       if (!registrado) return;
       try {
         await iniciar(senal);

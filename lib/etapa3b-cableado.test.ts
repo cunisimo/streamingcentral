@@ -65,6 +65,18 @@ test("🔴 el fondo abre sus PROPIOS contextos (idioma, métricas, ejes, señal)
   assert.match(tramo, /\[home-fondo\]/, "falta la línea terminal [home-fondo]");
 });
 
+test("🔴 la FRONTERA: la ruta envuelve el handler ENTERO con conFrontera (conCors incluido) y el adaptador espera compuertaDeFondo", () => {
+  const ruta = codigo("app/api/home/route.ts");
+  assert.match(ruta, /import \{ conFrontera \} from "@\/lib\/fondo-frontera"/);
+  assert.match(ruta, /export const GET = conFrontera\(conCors\(manejar, "GET"\)\);/, "GET tiene que ser conFrontera(conCors(...)): la compuerta se abre con la respuesta construida, cabeceras incluidas");
+  const home = codigo("lib/home.ts");
+  assert.match(home, /import \{ compuertaDeFondo \} from "\.\/fondo-frontera"/);
+  assert.match(home, /compuerta: compuertaDeFondo/, "el programador tiene que esperar la compuerta de la solicitud");
+  const fondo = codigo("lib/home-fondo.ts");
+  assert.doesNotMatch(fondo, /await Promise\.resolve\(\)/, "ni un microtick: la frontera es la compuerta");
+  assert.match(fondo, /await compuerta;/);
+});
+
 test("🔴 lib/home-fondo.ts es puro: no importa server-only, next ni @vercel/functions (el waitUntil se inyecta)", () => {
   const s = codigo("lib/home-fondo.ts");
   assert.doesNotMatch(s, /server-only|from "next|@vercel\/functions/);

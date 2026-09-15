@@ -46,6 +46,7 @@ import type { ClaveLocalizada } from "./claves";
 import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
 import { CONSTANTES, servirConTurno } from "./home-servir";
 import { crearProgramadorDeFondo, estadoDelFondo } from "./home-fondo";
+import { compuertaDeFondo } from "./fondo-frontera";
 // La API PÚBLICA de Vercel para sostener trabajo después de responder (Next
 // anterior a 15.1). Sin contexto de solicitud (local, banco) devuelve sin hacer
 // nada: por eso la disponibilidad se decide antes, en `estadoDelFondo`.
@@ -733,7 +734,9 @@ const turnoHome = crearTurno(opsTurnoHome);
 // el proceso (corte a `maxDuration` desde el inicio de la solicitud) no hay
 // línea: ese estado no es observable; el turno vence solo y el pedido
 // siguiente lo retoma (§33.3).
-const programadorDeFondo = crearProgramadorDeFondo({ registrar: waitUntil, ...estadoDelFondo(process.env) });
+// La composición arranca DESPUÉS de que la ruta construyó su respuesta: la
+// compuerta la abre `conFrontera` en app/api/home/route.ts (lib/fondo-frontera.ts).
+const programadorDeFondo = crearProgramadorDeFondo({ registrar: waitUntil, compuerta: compuertaDeFondo, ...estadoDelFondo(process.env) });
 function programarComposicionEnFondo(clave: string, iniciar: (senal?: AbortSignal) => Promise<void>): boolean {
   return programadorDeFondo(async () => {
     const t0 = Date.now();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { homePayload } from "@/lib/home";
 import { tiposDesdeParam } from "@/lib/canonizar-home";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { conFrontera } from "@/lib/fondo-frontera";
 
 export const dynamic = "force-dynamic";
 
@@ -43,5 +44,8 @@ async function manejar(req: NextRequest) {
 // `conCors` envuelve la Response FINAL, así que ningún camino de salida queda
 // sin encabezados. `opcionesCors` NO recibe el handler, así que el preflight no
 // puede ejecutar la lógica de la ruta. Ver lib/cors.ts.
-export const GET = conCors(manejar, "GET");
+// Etapa 3.b: la FRONTERA del fondo envuelve el handler ENTERO (conCors incluido):
+// la composición en fondo del "último bueno primero" recién arranca cuando
+// esta función ya devolvió la respuesta construida, cabeceras incluidas.
+export const GET = conFrontera(conCors(manejar, "GET"));
 export const OPTIONS = opcionesCors("GET");

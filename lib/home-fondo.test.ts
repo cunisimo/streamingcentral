@@ -13,11 +13,14 @@ import { crearProgramadorDeFondo } from "./home-fondo.ts";
 
 const tick = () => new Promise<void>((r) => setImmediate(r));
 
-function arnes(o: { disponible?: boolean; apagado?: boolean; registrar?: (p: Promise<unknown>) => void } = {}) {
+function arnes(o: { disponible?: boolean; apagado?: boolean; registrar?: (p: Promise<unknown>) => void; compuerta?: () => Promise<void> | null } = {}) {
   const registradas: Promise<unknown>[] = [];
   const errores: unknown[][] = [];
   const programar = crearProgramadorDeFondo({
     registrar: o.registrar ?? ((p) => { registradas.push(p); }),
+    // Compuerta ya abierta (la respuesta ya construida) salvo que el test diga otra cosa;
+    // el orden real con la compuerta cerrada está en home-fondo-orden.test.ts.
+    compuerta: o.compuerta ?? (() => Promise.resolve()),
     disponible: o.disponible ?? true,
     apagado: o.apagado ?? false,
     error: (...a) => { errores.push(a); },
@@ -39,12 +42,31 @@ async function sinRechazosSueltos(fn: () => Promise<void>) {
 test("🔴 perezoso: `iniciar` NO corre en el mismo tick del registro; corre recién después de que la tarea quedó registrada", async () => {
   const a = arnes();
   let cuandoSeRegistro = -1;
-  a.programar = crearProgramadorDeFondo({ registrar: (p) => { a.registradas.push(p); cuandoSeRegistro = a.cuantas(); }, disponible: true, apagado: false, error: () => {} });
+  a.programar = crearProgramadorDeFondo({ registrar: (p) => { a.registradas.push(p); cuandoSeRegistro = a.cuantas(); }, compuerta: () => Promise.resolve(), disponible: true, apagado: false, error: () => {} });
   assert.equal(a.programar(a.iniciar), true);
   assert.equal(cuandoSeRegistro, 0, "al registrar, `iniciar` todavía no había corrido");
   assert.equal(a.cuantas(), 0, "tampoco en el mismo tick");
   await a.registradas[0];
   assert.equal(a.cuantas(), 1, "corrió una vez, después del registro");
+});
+
+test("🔴 compuerta CERRADA: la tarea queda registrada pero `iniciar` no corre hasta que la compuerta se abre (la respuesta ya construida)", async () => {
+  let abrir: () => void = () => {};
+  const a = arnes({ compuerta: () => new Promise<void>((r) => { abrir = r; }) });
+  assert.equal(a.programar(a.iniciar), true);
+  for (let i = 0; i < 20; i++) await tick();
+  assert.equal(a.cuantas(), 0, "ni veinte ticks alcanzan: sólo la compuerta");
+  abrir();
+  await a.registradas[0];
+  assert.equal(a.cuantas(), 1);
+});
+
+test("🔴 sin compuerta (ningún handler declaró la frontera): devuelve false, no registra y no inicia", async () => {
+  const a = arnes({ compuerta: () => null });
+  assert.equal(a.programar(a.iniciar), false);
+  await tick(); await tick();
+  assert.equal(a.registradas.length, 0);
+  assert.equal(a.cuantas(), 0);
 });
 
 test("🔴 fondo no disponible (fuera de Vercel): devuelve false, no registra y no inicia", async () => {
@@ -86,7 +108,7 @@ test("🔴 `iniciar` rechaza: la tarea registrada resuelve igual (contenida) y e
 
 test("🔴 un fallo del propio log no rompe la tarea ni rechaza", async () => {
   await sinRechazosSueltos(async () => {
-    const programar = crearProgramadorDeFondo({ registrar: () => {}, disponible: true, apagado: false, error: () => { throw new Error("el log explotó"); } });
+    const programar = crearProgramadorDeFondo({ registrar: () => {}, compuerta: () => Promise.resolve(), disponible: true, apagado: false, error: () => { throw new Error("el log explotó"); } });
     let corrio = false;
     // El registrador no guarda la promesa: la tomamos por el efecto (corrió) y por la ausencia de rechazos.
     assert.equal(programar(async () => { corrio = true; throw new Error("y la composición también"); }), true);

@@ -78,13 +78,17 @@ async function escenarios(p, o = { esperaFondo: true }) {
     const prep = await prepararUB(p);
     const r = await pedirHome(p, COMBO);
     const t = await unaTerminal(p);
+    // Orden (auditoría sobre c84996e): con el fondo, NINGÚN `[home] compone` puede
+    // preceder a la línea terminal de la solicitud: la composición arranca después
+    // de construida la respuesta. En el antes, la composición en línea sí la precede (1).
+    const componeAntesDeTerminal = t.compone.length;
     const fondo = o.esperaFondo ? await esperarFondo(p, 60000) : null;
     t.compone.push(...lineasNuevas(p).compone);   // el `[home] compone` del fondo sale DESPUÉS de la terminal de la solicitud
     const frescaTrasFondo = (await claves(base, FRESCA)).length;
     const siguiente = await pedirHome(p, COMBO);
     const tSig = await unaTerminal(p);
     out.ubPresente = {
-      msPared: r.msPared, origen: t.terminales[0].origen, fondoEnLinea: /fondo programado/.test(t.terminales[0].linea ?? ""), compone: t.compone.length,
+      msPared: r.msPared, origen: t.terminales[0].origen, fondoEnLinea: /fondo programado/.test(t.terminales[0].linea ?? ""), compone: t.compone.length, componeAntesDeTerminal,
       esElUB: canon(ids(r.json)) === canon(ids(prep.sano.json)), degradado: !!r.json.degradado,
       fondo: fondo ? { publicacion: fondo.publicacion, ms: fondo.msTotal, propietario: fondo.propietario, tmdb: fondo.tmdb, mismaClave: fondo.clave === t.terminales[0].clave, mismoPropietario: fondo.propietario === t.terminales[0].propietario } : null,
       frescaTrasFondo, siguiente: { msPared: siguiente.msPared, cache: tSig.terminales[0].cache, origen: tSig.terminales[0].origen },
@@ -180,7 +184,8 @@ try {
     antesBloquea: a.ubPresente.origen === "propia" && a.ubPresente.msPared >= 3000,
     ubPresente: d.ubPresente.msPared < RAPIDO_MS && d.ubPresente.origen === "ultimo-bueno-fondo" && d.ubPresente.fondoEnLinea && d.ubPresente.esElUB && !d.ubPresente.degradado
       && d.ubPresente.compone === 1 && d.ubPresente.fondo?.publicacion === "publicado" && d.ubPresente.fondo?.mismaClave && d.ubPresente.fondo?.mismoPropietario
-      && d.ubPresente.frescaTrasFondo === 1 && d.ubPresente.siguiente.cache === "HIT",
+      && d.ubPresente.frescaTrasFondo === 1 && d.ubPresente.siguiente.cache === "HIT" && d.ubPresente.componeAntesDeTerminal === 0,
+    antesComponeEnLinea: a.ubPresente.componeAntesDeTerminal === 1,
     frescaIdentica: canon(d.ubPresente.frescaIds) === canon(a.ubPresente.frescaIds) && canon(d.ubPresente.frescaIds) === canon(d.ubPresente.sanoIds),
     concurrentes: d.concurrentes.msPared.every((ms) => ms < RAPIDO_MS) && d.concurrentes.compone === 1 && d.concurrentes.fondos === 1 && d.concurrentes.propietariosDistintos
       && canon(d.concurrentes.caches) === canon(["COMPARTIDA", "ULTIMO-BUENO"]) && d.concurrentes.origenes.includes("ultimo-bueno-fondo"),
