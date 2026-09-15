@@ -48,8 +48,10 @@ test("🔴 el símbolo interno del runtime (@vercel/request-context) NO aparece 
 
 test("🔴 el adaptador comprueba kill switch y disponibilidad ANTES de registrar, y pasa `programarEnFondo` a servirConTurno", () => {
   const s = codigo("lib/home.ts");
-  assert.match(s, /HOME_UB_PRIMERO/, "falta el kill switch");
-  assert.match(s, /process\.env\.VERCEL === "1"/, "la disponibilidad se decide por la variable pública VERCEL");
+  const f = codigo("lib/home-fondo.ts");
+  assert.match(f, /HOME_UB_PRIMERO/, "falta el kill switch");
+  assert.match(f, /env\.VERCEL === "1"/, "la disponibilidad se decide por la variable pública VERCEL");
+  assert.match(s, /estadoDelFondo\(process\.env\)/, "el adaptador no lee el entorno por estadoDelFondo");
   assert.match(s, /programarEnFondo/, "servirConTurno no recibe programarEnFondo");
   assert.match(s, /crearProgramadorDeFondo\(/, "el registro perezoso vive en lib/home-fondo.ts");
 });

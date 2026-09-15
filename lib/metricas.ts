@@ -66,8 +66,10 @@ export interface MetricasRequest {
     /** Qué pasó con el turno de composición de la clave. `reconciliado` = adquirido tras una respuesta perdida. */
     turno: "adquirido" | "reconciliado" | "ocupado" | "sin-redis" | null;
     /** De dónde salió lo que se sirvió. */
-    origen: "fresca" | "fresca-tras-turno" | "ultimo-bueno" | "esperada" | "propia" | "propia-sin-publicar"
+    origen: "fresca" | "fresca-tras-turno" | "ultimo-bueno" | "ultimo-bueno-fondo" | "esperada" | "propia" | "propia-sin-publicar"
       | "degradado-propio" | "degradado-compartido" | "sin-redis" | "vacio-espera-agotada" | "vacio-cancelada" | "compartida" | null;
+    /** Etapa 3.b: la solicitud respondió el UB y dejó la composición registrada en fondo. */
+    fondo: "programado" | null;
     /** Resultado de PUBLICAR, si se intentó. */
     publicacion: "publicado" | "publicada-solo-fresca" | "rechazado" | "indeterminado" | null;
     renovaciones: number;
@@ -148,7 +150,7 @@ export interface MetricasRequest {
 export const nuevasMetricas = (): MetricasRequest => ({
   home: {
     cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0,
-    turno: null, origen: null, publicacion: null, renovaciones: 0, turnoPerdido: false, esperaMs: 0,
+    turno: null, origen: null, publicacion: null, renovaciones: 0, turnoPerdido: false, esperaMs: 0, fondo: null,
     degradadoDescartado: false, enfriado: false, cancelada: false, errorProductor: false, propietario: null,
     descartesTmdb: 0,
   },
@@ -275,7 +277,7 @@ export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): 
   const h = m.home;
   const turno = h.turno || h.origen || h.publicacion
     ? ` | turno ${h.turno ?? "?"} | origen ${h.origen ?? "?"} | publicacion ${h.publicacion ?? "no"} | renovaciones ${h.renovaciones} | propietario ${h.propietario ?? "?"} |`
-      + `${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.errorProductor ? " ERROR PRODUCTOR |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}`
+      + `${h.fondo ? ` fondo ${h.fondo} |` : ""}${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.errorProductor ? " ERROR PRODUCTOR |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}`
     : "";
   return (
     `[home] ${msTotal}ms total | cache ${cache} | ` +

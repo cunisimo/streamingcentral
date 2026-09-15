@@ -494,6 +494,7 @@ const INVENTARIO: Fila[] = [
       consumo: [/degradado: true/, /fallosTmdb/] } },
   { archivo: "lib/home.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto",
     estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome", cadena: ["lib/home.ts#composeHome", "lib/home.ts#safe"], consumo: [/degradado: true/, /fallosTmdb/] } },
+  { archivo: "lib/home.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "3.b: la línea [home-fondo] no se pudo escribir; la composición ya terminó" },
   { archivo: "lib/top.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "ruta", ruta: "app/api/top/route.ts", operacion: "buildTop", cadena: ["lib/top.ts#buildTop", "lib/top.ts#safe"] },
   { archivo: "lib/idioma.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "idiomaLote" },
   { archivo: "lib/idioma.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "idiomaUno" },
@@ -513,6 +514,14 @@ const INVENTARIO: Fila[] = [
     .map((r) => ({ archivo: `app/api/${r}/route.ts`, ancla: "} catch (e) {", clase: "tmdb-propaga" as const })),
   { archivo: "lib/cors.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "envoltorio de rutas: 500 con CORS" },
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "productor rechazado: libera el turno y sirve UB o propaga" },
+  // Etapa 3.b: el fondo. Con UB, un rechazo del productor ya lo atrapó el catch de arriba (sirve el UB);
+  // lo que llega acá son errores de turno/Redis: se anota, se libera y se relanza al programador, que lo contiene y lo loguea entero.
+  { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "no-tmdb", motivo: "fondo 3.b: errores de turno/Redis tras componer; se relanzan al programador que los loguea" },
+  { archivo: "lib/home-servir.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "liberar el turno en el fondo: Redis" },
+  { archivo: "lib/home-servir.ts", ancla: "catch { registrado = false; }", clase: "no-tmdb", motivo: "el registro en waitUntil lanzó: se compone en línea" },
+  { archivo: "lib/home-fondo.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "el propio log" },
+  { archivo: "lib/home-fondo.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "la tarea de fondo rechazó: se loguea entero (console.error con el error), la promesa registrada resuelve" },
+  { archivo: "lib/home-fondo.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "waitUntil lanzó al registrar: se loguea y se compone en línea" },
   // --- no pueden ser errores de TMDB -----------------------------------------
   { archivo: "lib/disponibilidad.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "top oficial: Supabase" },
   { archivo: "lib/disponibilidad.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "top manual: Supabase" },

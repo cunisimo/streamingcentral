@@ -106,6 +106,15 @@ export interface DepsServir<T> {
   /** El payload vacío marcado degradado, para los dos finales sin contenido. */
   vacio: (motivo: "espera-agotada" | "cancelada") => T;
   senal?: AbortSignal;
+  /**
+   * Etapa 3.b, "último bueno primero" (§33): cuando el líder tiene un UB, el
+   * adaptador intenta registrar la composición en fondo (`waitUntil`). Devuelve
+   * `true` si la registró —y entonces la solicitud responde el UB en el acto y
+   * `iniciar` corre después, con la señal de fondo que el adaptador le pasa— o
+   * `false` sin haber iniciado nada, y el líder compone en línea como siempre.
+   * Ausente: comportamiento de siempre.
+   */
+  programarEnFondo?: (iniciar: (senal?: AbortSignal) => Promise<void>) => boolean;
   ahora?: () => number;
   /** Dormir cancelable: con la señal abortada resuelve en el acto y no deja temporizador. */
   dormir?: (ms: number, senal?: AbortSignal) => Promise<void>;
@@ -132,7 +141,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   const publicable = deps.publicable ?? (() => true);
   const { claves: K, propietario, senal } = deps;
   const t0 = ahora();
-  const abortada = () => !!senal?.aborted;
+  const abortada = (s: AbortSignal | undefined = senal) => !!s?.aborted;
   anotar((m) => { m.home.propietario = propietario; });
 
   // 1. La fresca, y nada más.
@@ -144,8 +153,8 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   // 2. Sólo en el MISS: las dos copias de respaldo.
   let [ub, degradado] = await deps.leer([K.ub, K.degradado]);
 
-  const servirUb = (v: T, cache: "ultimo-bueno" = "ultimo-bueno") => {
-    anotar((m) => { m.home.cache = cache; m.home.origen = "ultimo-bueno"; });
+  const servirUb = (v: T, cache: "ultimo-bueno" = "ultimo-bueno", origen: "ultimo-bueno" | "ultimo-bueno-fondo" = "ultimo-bueno") => {
+    anotar((m) => { m.home.cache = cache; m.home.origen = origen; });
     return v;
   };
   const servirDegradadoCompartido = (v: T) => {
@@ -158,7 +167,8 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   };
 
   // 4. Con el turno en la mano.
-  const componer = async (): Promise<T> => {
+  // `senalActiva`: la de la solicitud en línea, o la del fondo (3.b).
+  const componer = async (senalActiva: AbortSignal | undefined = senal): Promise<T> => {
     // 4.0 Carrera lectura → turno: ¿alguien publicó mientras tanto?
     const [yaEsta] = await deps.leer([K.fresca]);
     if (yaEsta != null) {
@@ -176,7 +186,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     const renovacion = (async () => {
       while (!fin.signal.aborted) {
         await dormir(c.RENOVACION_MS, fin.signal);
-        if (fin.signal.aborted || abortada()) return;
+        if (fin.signal.aborted || abortada(senalActiva)) return;
         const r = await deps.turno.renovar({ clave: K.turno, propietario, px: c.TURNO_MS });
         if (r === "renovado") anotar((m) => { m.home.renovaciones += 1; });
         else if (r === "perdido") { anotar((m) => { m.home.turnoPerdido = true; }); return; }
@@ -202,7 +212,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     }
     await cortarRenovacion();
     // 4d Cancelada por la señal: no es un degradado de TMDB.
-    if (abortada()) {
+    if (abortada(senalActiva)) {
       await deps.turno.liberar({ clave: K.turno, propietario });
       return ub != null ? (anotar((m) => { m.home.cancelada = true; }), servirUb(ub)) : servirVacio("cancelada");
     }
@@ -246,7 +256,39 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     const p = await deps.producir();
     return p.valor;
   }
-  if (r.estado === "adquirido") return componer();
+  if (r.estado === "adquirido") {
+    // Etapa 3.b: con UB y fondo registrado, el UB sale ya y la fresca se
+    // compone después de responder. `programarEnFondo` es perezoso: si devuelve
+    // false no inició nada, y el camino es el de siempre (una composición, en
+    // línea). Sin UB no hay nada que servir primero: como siempre.
+    if (ub != null && deps.programarEnFondo) {
+      const ubServido = ub;
+      const iniciar = async (senalFondo?: AbortSignal) => {
+        // El fondo corre en SUS contextos (los abre el adaptador): la
+        // correlación con la solicitud es por clave y propietario. Con UB, un
+        // productor que rechaza no propaga: `componer` libera y devuelve el UB.
+        // Lo que sí llegue hasta acá se anota, se libera y se relanza: lo
+        // contiene el programador, así que la tarea registrada resuelve igual.
+        anotar((m) => { m.home.propietario = propietario; m.home.turno = "adquirido"; });
+        try {
+          await componer(senalFondo);
+        } catch (error) {
+          anotar((m) => { m.home.errorProductor = true; });
+          try { await deps.turno.liberar({ clave: K.turno, propietario }); } catch { /* ya liberado o sin Redis */ }
+          throw error;
+        }
+      };
+      // El programador es perezoso y contiene sus errores; por las dudas, un
+      // registro que lance también cuenta como "sin fondo".
+      let registrado = false;
+      try { registrado = deps.programarEnFondo(iniciar); } catch { registrado = false; }
+      if (registrado) {
+        anotar((m) => { m.home.fondo = "programado"; });
+        return servirUb(ubServido, "ultimo-bueno", "ultimo-bueno-fondo");
+      }
+    }
+    return componer();
+  }
 
   // 5. Ocupado.
   if (ub != null) return servirUb(ub);

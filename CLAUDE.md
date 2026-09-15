@@ -150,6 +150,24 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "No gustaron" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **Último bueno primero (Etapa 3.b, `lib/home-fondo.ts` + `servirConTurno`).**
+  Cuando el que toma el turno del Home encuentra un **último bueno** (UB) de
+  la misma combinación, lo responde en el acto y la fresca se compone
+  **después de responder**, sostenida por `waitUntil` de `@vercel/functions`
+  (la API pública de Vercel para Next anterior a 15.1; el símbolo interno
+  `@vercel/request-context` no se usa, y un test lo prohíbe). Sin UB, el
+  camino es el de siempre: el líder compone en línea. El registro es
+  **perezoso**: `programarEnFondo(iniciar)` comprueba el kill switch y la
+  disponibilidad (`VERCEL=1`; `YUMP_BANCO_FONDO=1` en el banco) antes de
+  iniciar nada; si no hay fondo o el registro lanza, se compone en línea, una
+  sola vez. El fondo corre con **sus propios contextos** (métricas, idioma,
+  ejes, señal) y termina en una línea **`[home-fondo]`** con la misma clave y
+  propietario que la `[home]` de la solicitud, que queda congelada al
+  responder. Si Vercel mata el proceso (a `maxDuration` desde el inicio de la
+  solicitud) no hay línea: el turno vence solo y el siguiente pedido lo
+  retoma. Kill switch **`HOME_UB_PRIMERO=0`**: vuelve al camino de siempre sin
+  tocar código, pero **cambiar una variable en Vercel se aplica recién en el
+  siguiente deployment**.
 - **El idioma de los títulos sale de una variable, y la configuración va DENTRO
   de la clave de cache** (`lib/idioma.ts` → `HUELLA_IDIOMA`, `lib/claves.ts`).
   `IDIOMA_TITULOS` decide el idioma base (default `es-ES`) y `FALLBACK_IDIOMA`
