@@ -44,6 +44,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { conDescartesRegistrados, withFallosTmdb } from "./fallos-tmdb.ts";
 import { ErrorTmdb } from "./tmdb-error.ts";
@@ -786,7 +787,24 @@ test("CONTROL mutado (contexto): apertura quitada, sitio sacado del callback, op
 // Un call site nuevo sin clasificar hace fallar el barrido de abajo.
 // ============================================================================
 
-type Cobertura = "ejecutada" | "estructural" | "inferida";
+/**
+ * Cuatro categorías EXCLUYENTES (auditoría sobre 37f1ca1):
+ *   identificada  ejecutada en el banco con la consulta de ESE recorrido
+ *                 rechazada y sus descartes contados individualmente
+ *   agregada      el recorrido corre en una corrida del banco cuyo descarte
+ *                 total se cuenta sin atribución por recorrido (no se sabe si
+ *                 un 429 cayó en SU consulta)
+ *   estructural   sólo la cadena de llamadas verificada sobre el fuente
+ *   inferida      ni ejecutado ni verificado estructuralmente
+ */
+type Cobertura = "identificada" | "agregada" | "estructural" | "inferida";
+const ORDEN_COBERTURA: Cobertura[] = ["identificada", "agregada", "estructural", "inferida"];
+/** Una categoría por recorrido (la suma da los nueve, sin contar ninguno dos veces). */
+const COBERTURA_RECORRIDOS: Record<string, Cobertura> = {
+  "con-ejes": "agregada", "sin-ejes": "agregada", "hero": "agregada", "audiencia-inicial": "agregada",
+  "extra-genero-ejeFijo": "identificada", "extra-genero-sin-ejes": "identificada",
+  "extra-miniseries-ejeFijo": "estructural", "extra-miniseries-sin-ejes": "estructural", "audiencia-paginas": "estructural",
+};
 interface CallSite {
   archivo: string;
   funcion: string;
@@ -810,15 +828,15 @@ const CALL_SITES: CallSite[] = [
   { archivo: "lib/pools.ts", funcion: "candidatosConEje", ancla: "const traer = (r: { receta: Receta; startPage: number }) => candidatosDePools({", llamada: "candidatosDePools",
     consumidor: "toda adquisición con eje (rieles, hero, audiencia): la ventana del eje del día y el suelo `pop`", desdeComposeHome: true, condicion: "ejes activos (superficie presente) y POOL_CACHE≠0",
     contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/recomendaciones y /api/audience", llegada: "contador → `degradado: true` → no se publica (cachedIf / UB)",
-    recorridos: ["con-ejes", "hero", "audiencia-inicial"], cobertura: "ejecutada", evidencia: "banco D conEjes: 8 × 429 en /discover (EJES_RIELES=1), 8 descartes, degradado, sin publicar (agregado: no distingue riel/hero/audiencia)" },
+    recorridos: ["con-ejes", "hero", "audiencia-inicial"], cobertura: "agregada", evidencia: "banco D conEjes: 8 × 429 en /discover (EJES_RIELES=1), 8 descartes, degradado, sin publicar (agregado: no distingue riel/hero/audiencia)" },
   { archivo: "lib/enrich.ts", funcion: "candidatosDeSuperficie", ancla: "const candidatos = await candidatosDePools({", llamada: "candidatosDePools",
     consumidor: "página extra de genreRail / miniseriesRail con el eje ya resuelto (`opts.ejeFijo`)", desdeComposeHome: true, condicion: "ejes activos + el riel no llenó su ventana (armarRiel pide la extra)",
     contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
-    recorridos: ["extra-genero-ejeFijo", "extra-miniseries-ejeFijo"], cobertura: "ejecutada", evidencia: "banco E conEjes: 429 sólo en la consulta de la página extra (page=4 de una receta que no pidió la 5), 3 rechazadas = 3 descartes, degradado, sin publicar (riel de género; el de miniseries sólo estructural)" },
+    recorridos: ["extra-genero-ejeFijo", "extra-miniseries-ejeFijo"], cobertura: "identificada", evidencia: "banco E conEjes: 429 sólo en la consulta de la página extra (page=4 de una receta que no pidió la 5), 3 rechazadas = 3 descartes, degradado, sin publicar (riel de género; el de miniseries sólo estructural)" },
   { archivo: "lib/enrich.ts", funcion: "candidatosDeSuperficie", ancla: "const candidatos = await candidatosDePools({\n    tipo: opts.tipo,", llamada: "candidatosDePools",
     consumidor: "rieles y páginas extra sin `superficie` (EJES_RIELES=0)", desdeComposeHome: true, condicion: "EJES_RIELES=0 y POOL_CACHE≠0",
     contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
-    recorridos: ["sin-ejes", "extra-genero-sin-ejes", "extra-miniseries-sin-ejes"], cobertura: "ejecutada", evidencia: "banco D sinEjes (7 × 429 parciales) y banco E sinEjes (página extra identificada: 3 = 3), degradado, sin publicar" },
+    recorridos: ["sin-ejes", "extra-genero-sin-ejes", "extra-miniseries-sin-ejes"], cobertura: "identificada", evidencia: "banco D sinEjes (7 × 429 parciales) y banco E sinEjes (página extra identificada: 3 = 3), degradado, sin publicar" },
   { archivo: "lib/enrich.ts", funcion: "audienceTitles", ancla: "? await candidatosDePools({ tipo: tp, providers, receta, pages: 1, startPage: pagina })", llamada: "candidatosDePools",
     consumidor: "carruseles de audiencia: páginas siguientes a la adquisición", desdeComposeHome: true, condicion: "POOL_CACHE≠0 y el carrusel no llenó con la primera tanda",
     contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/audience", llegada: "contador → `degradado: true` → no se publica",
@@ -826,44 +844,200 @@ const CALL_SITES: CallSite[] = [
   { archivo: "lib/enrich.ts", funcion: "candidatosDeSuperficie", ancla: "const r = await candidatosConEje({", llamada: "candidatosConEje",
     consumidor: "rieles con `superficie` y el hero (tandaAncha)", desdeComposeHome: true, condicion: "ejes activos (superficie presente, sin ejeFijo) y POOL_CACHE≠0",
     contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/recomendaciones", llegada: "contador → `degradado: true` → no se publica",
-    recorridos: ["con-ejes", "hero"], ruta: "app/api/recomendaciones/route.ts", cobertura: "ejecutada", evidencia: "banco D conEjes (agregado; no distingue riel de hero)" },
+    recorridos: ["con-ejes", "hero"], ruta: "app/api/recomendaciones/route.ts", cobertura: "agregada", evidencia: "banco D conEjes (agregado; no distingue riel de hero)" },
   { archivo: "lib/enrich.ts", funcion: "audienceTitles", ancla: "const r = await candidatosConEje({", llamada: "candidatosConEje",
     consumidor: "carruseles de audiencia: adquisición con eje", desdeComposeHome: true, condicion: "POOL_CACHE≠0",
     contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/audience", llegada: "contador → `degradado: true` → no se publica",
-    recorridos: ["audiencia-inicial"], ruta: "app/api/audience/route.ts", cobertura: "estructural", evidencia: "cadena y bloque verificados sobre el fuente; el banco D agrega sin distinguir audiencia (inferido en ejecución)" },
+    recorridos: ["audiencia-inicial"], ruta: "app/api/audience/route.ts", cobertura: "agregada", evidencia: "cadena y bloque verificados sobre el fuente; el banco D agrega sin distinguir audiencia (inferido en ejecución)" },
   { archivo: "lib/enrich.ts", funcion: "tandaAncha", ancla: "const crudos = await categoryCandidates({", llamada: "categoryCandidates",
     consumidor: "hero (recommendations con HERO_ANCHO≠0 y sin enriquecido especial)", desdeComposeHome: true, condicion: "HERO_ANCHO≠0; `superficie: \"hero\"` siempre → candidatosConEje",
     contexto: "producirHome (withFallosDeFuentes) — desde /api/recomendaciones NINGUNO: el registro queda fuera de contexto (línea `[tmdb] descarte sin contexto sitio=pool`)", llegada: "Home: contador → `degradado: true`; ruta: sólo la línea de log, la respuesta sale con lo que hay",
-    recorridos: ["hero"], ruta: "app/api/recomendaciones/route.ts", cobertura: "estructural", evidencia: "cadena verificada sobre el fuente; la ruta independiente no abre conDescartesRegistrados (envolverla es un cambio productivo, fuera de esta corrección): inferido" },
+    recorridos: ["hero"], ruta: "app/api/recomendaciones/route.ts", cobertura: "agregada", evidencia: "cadena verificada sobre el fuente; la ruta independiente no abre conDescartesRegistrados (envolverla es un cambio productivo, fuera de esta corrección): inferido" },
   { archivo: "lib/home.ts", funcion: "genreRail", ancla: "categoryCandidates({", llamada: "categoryCandidates",
     consumidor: "página extra de un riel de género", desdeComposeHome: true, condicion: "el riel no llenó su ventana; con ejes lleva `ejeFijo`, sin ejes va directo",
     contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
-    recorridos: ["extra-genero-ejeFijo", "extra-genero-sin-ejes"], cobertura: "ejecutada", evidencia: "banco E conEjes y sinEjes (with_genres=28)" },
+    recorridos: ["extra-genero-ejeFijo", "extra-genero-sin-ejes"], cobertura: "identificada", evidencia: "banco E conEjes y sinEjes (with_genres=28)" },
   { archivo: "lib/home.ts", funcion: "miniseriesRail", ancla: "categoryCandidates({", llamada: "categoryCandidates",
     consumidor: "página extra del riel de miniseries", desdeComposeHome: true, condicion: "el riel no llenó su ventana; con ejes `ejeFijo`, sin ejes directo",
     contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
     recorridos: ["extra-miniseries-ejeFijo", "extra-miniseries-sin-ejes"], cobertura: "estructural", evidencia: "cadena verificada sobre el fuente; el banco E eligió una receta de /discover/movie (género), no la de miniseries (inferido en ejecución)" },
 ];
 
-/** Todas las llamadas productivas a las tres funciones, con su línea (base 1). */
-function llamadasAPools(): { archivo: string; linea: number; llamada: CallSite["llamada"]; texto: string; offset: number }[] {
-  const out: { archivo: string; linea: number; llamada: CallSite["llamada"]; texto: string; offset: number }[] = [];
-  for (const rel of archivos()) {
-    const f = limpio(rel);
-    for (const m of f.matchAll(/(?<![\w.])(candidatosDePools|candidatosConEje|categoryCandidates)\(/g)) {
-      if (/function\s+$/.test(f.slice(Math.max(0, m.index - 12), m.index))) continue;   // la definición, no una llamada
-      const linea = f.slice(0, m.index).split("\n").length;
-      out.push({ archivo: rel, linea, llamada: m[1] as CallSite["llamada"], texto: f.split("\n")[linea - 1].trim(), offset: m.index });
+// ----------------------------------------------------------------------------
+// DESCUBRIMIENTO de call sites (auditoría de Codex sobre 37f1ca1): función pura
+// sobre un mapa `ruta → fuente`, para poder probarla con fuentes inyectados. En
+// producción se alimenta con `archivosProductivos()`, que recorre RECURSIVAMENTE
+// lib/, app/, components/, hooks/ y supabase/ (.ts .tsx .mts .js .mjs), sin
+// tests (*.test.*), sin declaraciones (*.d.ts), sin node_modules ni .next; los
+// scripts del banco (scripts/) y docs/ quedan afuera por no ser productivos.
+//
+// LO QUE GARANTIZA (sobre el fuente sin comentarios):
+//   - detecta toda llamada directa con el nombre canónico: `candidatosDePools(`,
+//     `candidatosConEje(`, `categoryCandidates(` (no precedida de `.`, `$` ni
+//     de `function `);
+//   - RECHAZA (hace fallar el inventario, no las clasifica) las formas por las
+//     que una llamada podría escapar al nombre canónico:
+//       · import/export con alias: `{ candidatosDePools as x }`;
+//       · import de namespace o dinámico de los módulos que las definen
+//         (`import * as p from "…/pools"`, `import("…/enrich")`);
+//       · acceso por miembro: `p.candidatosDePools(`;
+//       · desestructuración con renombre: `const { candidatosDePools: x } = …`;
+//       · cualquier referencia SIN llamar (pasarla como valor: `f = candidatosDePools`),
+//         salvo dentro de un import/export.
+// LO QUE NO ES: un parser de TypeScript. Limitaciones estructurales aceptadas:
+//   - una aparición dentro de un string o template literal se toma como llamada
+//     o referencia (falso positivo: obliga a clasificar o a reescribir);
+//   - el acceso computado (`mod["candidatosDePools"]`) y el `require()` no se
+//     reconocen (no se usan en este repo: sólo módulos ES con imports estáticos);
+//   - un módulo que re-exporte la función con OTRO nombre y otro archivo que
+//     llame a ese otro nombre no se ve (el re-export con alias sí se rechaza,
+//     así que esa cadena no puede armarse sin fallar acá).
+// ----------------------------------------------------------------------------
+
+const NOMBRES_POOLS = ["candidatosDePools", "candidatosConEje", "categoryCandidates"] as const;
+type NombrePools = (typeof NOMBRES_POOLS)[number];
+const RAICES_PRODUCTIVAS = ["lib", "app", "components", "hooks", "supabase"];
+const EXTENSIONES = [".ts", ".tsx", ".mts", ".js", ".mjs"];
+const DIRECTORIOS_EXCLUIDOS = new Set(["node_modules", ".next"]);
+
+/** Todos los archivos productivos, recursivamente, desde `raizRepo`. */
+function archivosProductivos(raizRepo: string = raiz): string[] {
+  const out: string[] = [];
+  const recorrer = (rel: string) => {
+    const abs = path.join(raizRepo, rel);
+    if (!fs.existsSync(abs)) return;
+    for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
+      const hijo = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) { if (!DIRECTORIOS_EXCLUIDOS.has(e.name)) recorrer(hijo); continue; }
+      if (!EXTENSIONES.some((x) => e.name.endsWith(x))) continue;
+      if (/\.test\.[cm]?[jt]sx?$/.test(e.name) || e.name.endsWith(".d.ts")) continue;
+      out.push(hijo);
+    }
+  };
+  for (const r of RAICES_PRODUCTIVAS) recorrer(r);
+  return out.sort();
+}
+
+/** El fuente sin comentarios (líneas intactas), a partir de un texto en vez de un archivo. */
+function limpiarFuente(texto: string): string {
+  return texto.replace(/\r/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(^|[\s;{}(),])\/\/.*$/gm, "$1");
+}
+
+interface LlamadaDescubierta { archivo: string; linea: number; llamada: NombrePools; texto: string; offset: number }
+interface Descubrimiento {
+  llamadas: LlamadaDescubierta[];
+  /** Formas alternativas de llegar a las funciones: cada una hace fallar el inventario. */
+  alternativas: string[];
+}
+
+function descubrirCallSites(fuentes: Record<string, string>): Descubrimiento {
+  const llamadas: LlamadaDescubierta[] = [];
+  const alternativas: string[] = [];
+  const nombres = NOMBRES_POOLS.join("|");
+  const modulos = "(?:pools|enrich)(?:\\.[mc]?[jt]s)?";
+  for (const [archivo, crudo] of Object.entries(fuentes).sort(([a], [b]) => (a < b ? -1 : 1))) {
+    const f = limpiarFuente(crudo);
+    const lineaDe = (i: number) => f.slice(0, i).split("\n").length;
+    const anotar = (i: number, que: string) => alternativas.push(`${archivo}:${lineaDe(i)} ${que}`);
+    // Import/export con alias, namespace o dinámico.
+    for (const m of f.matchAll(new RegExp(`(?<![\\w.$])(${nombres})\\s+as\\s+\\w+`, "g"))) anotar(m.index, `alias de ${m[1]} (\`${m[0]}\`)`);
+    for (const m of f.matchAll(new RegExp(`\\b(?:import|export)\\s*\\*\\s*as\\s+\\w+\\s+from\\s+["'][^"']*\\/${modulos}["']`, "g"))) anotar(m.index, `namespace (\`${m[0]}\`)`);
+    for (const m of f.matchAll(new RegExp(`\\bimport\\(\\s*["'][^"']*\\/${modulos}["']\\s*\\)`, "g"))) anotar(m.index, `import dinámico (\`${m[0]}\`)`);
+    // Desestructuración con renombre.
+    for (const m of f.matchAll(new RegExp(`\\{[^}]*\\b(${nombres})\\s*:\\s*\\w+[^}]*\\}\\s*=`, "g"))) anotar(m.index, `desestructuración con renombre de ${m[1]}`);
+    // Acceso por miembro.
+    for (const m of f.matchAll(new RegExp(`\\.(${nombres})\\s*\\(`, "g"))) anotar(m.index, `acceso por miembro .${m[1]}(`);
+    // Llamadas directas canónicas y referencias sueltas (fuera de import/export).
+    const sinImports = f.replace(/\b(?:import|export)\s*(?:\{[^}]*\}|\*\s*as\s+\w+|[\w$]+)?\s*(?:,\s*\{[^}]*\})?\s*from\s+["'][^"']+["'];?/g, (m) => m.replace(/[^\n]/g, " "));
+    for (const m of sinImports.matchAll(new RegExp(`(?<![\\w.$])(${nombres})(?![\\w$])`, "g"))) {
+      if (/function\s+$/.test(sinImports.slice(Math.max(0, m.index - 12), m.index))) continue;   // la definición
+      const resto = sinImports.slice(m.index + m[1].length);
+      if (/^\s*\(/.test(resto)) {
+        const linea = lineaDe(m.index);
+        llamadas.push({ archivo, linea, llamada: m[1] as NombrePools, texto: f.split("\n")[linea - 1].trim(), offset: m.index });
+      } else {
+        anotar(m.index, `referencia sin llamar a ${m[1]}`);
+      }
     }
   }
-  return out;
+  return { llamadas, alternativas };
 }
+
+/** Los call sites productivos reales (disco), con su línea (base 1). */
+function llamadasAPools(): Descubrimiento {
+  const fuentes: Record<string, string> = {};
+  for (const rel of archivosProductivos()) fuentes[rel] = fs.readFileSync(path.join(raiz, rel), "utf8");
+  return descubrirCallSites(fuentes);
+}
+
+test("descubrimiento: recorre recursivamente los directorios productivos (subcarpetas de lib/, archivos servidor de app/) y excluye tests, declaraciones, .next, node_modules y scripts", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "descubrimiento-"));
+  const escribir = (rel: string) => { fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true }); fs.writeFileSync(path.join(dir, rel), "export const x = candidatosDePools({});\n"); };
+  for (const rel of ["lib/a.ts", "lib/sub/nuevo.ts", "lib/sub/hondo/mas.tsx", "app/api/x/route.ts", "app/servidor.ts", "app/(grupo)/page.tsx", "components/C.tsx", "hooks/h.ts", "supabase/functions/f/index.ts",
+    "lib/a.test.ts", "lib/tipos.d.ts", "lib/node_modules/p/i.ts", "app/.next/s.js", "scripts/banco/dobles.mjs", "docs/x.ts", "lib/notas.md"]) escribir(rel);
+  const vistos = archivosProductivos(dir);
+  assert.deepEqual(vistos, ["app/(grupo)/page.tsx", "app/api/x/route.ts", "app/servidor.ts", "components/C.tsx", "hooks/h.ts", "lib/a.ts", "lib/sub/hondo/mas.tsx", "lib/sub/nuevo.ts", "supabase/functions/f/index.ts"]);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("🔴 descubrimiento: un call site directo en una subcarpeta de lib/ o en un archivo servidor de app/ ya no escapa", () => {
+  const d = descubrirCallSites({
+    "lib/sub/nuevo.ts": 'import { candidatosDePools } from "../pools";\nexport const nuevo = () => candidatosDePools({} as never);\n',
+    "app/servidor.ts": 'import { candidatosConEje } from "@/lib/pools";\nexport const servidor = async () => {\n  return candidatosConEje({} as never);\n};\n',
+    "app/(grupo)/page.tsx": 'import { categoryCandidates } from "@/lib/enrich";\nexport default async function Page() { const c = await categoryCandidates({} as never); return c; }\n',
+  });
+  assert.deepEqual(d.llamadas.map((l) => `${l.archivo}:${l.linea} ${l.llamada}`), ["app/(grupo)/page.tsx:2 categoryCandidates", "app/servidor.ts:3 candidatosConEje", "lib/sub/nuevo.ts:2 candidatosDePools"]);
+  assert.deepEqual(d.alternativas, []);
+});
+
+test("🔴 descubrimiento: las importaciones con alias, namespace o dinámicas, el acceso por miembro, el renombre y la referencia sin llamar se RECHAZAN", () => {
+  const d = descubrirCallSites({
+    "lib/alias.ts": 'import { categoryCandidates as cc } from "./enrich";\nexport const alias = () => cc({} as never);\n',
+    "lib/ns.ts": 'import * as pools from "./pools";\nexport const ns = () => pools.candidatosDePools({} as never);\n',
+    "lib/dinamico.ts": 'export const din = async () => (await import("./pools")).candidatosConEje({} as never);\n',
+    "lib/renombre.ts": 'import * as todo from "@/lib/pools";\nconst { candidatosDePools: traer } = todo;\nexport const r = () => traer({} as never);\n',
+    "lib/valor.ts": 'import { candidatosDePools } from "./pools";\nexport const pedir = candidatosDePools;\n',
+    "lib/reexport.ts": 'export { candidatosConEje as conEje } from "./pools";\n',
+  });
+  assert.deepEqual(d.llamadas, [], "ninguna es una llamada canónica");
+  assert.deepEqual(d.alternativas, [
+    "lib/alias.ts:1 alias de categoryCandidates (`categoryCandidates as cc`)",
+    "lib/dinamico.ts:1 import dinámico (`import(\"./pools\")`)",
+    "lib/dinamico.ts:1 acceso por miembro .candidatosConEje(",
+    "lib/ns.ts:1 namespace (`import * as pools from \"./pools\"`)",
+    "lib/ns.ts:2 acceso por miembro .candidatosDePools(",
+    "lib/reexport.ts:1 alias de candidatosConEje (`candidatosConEje as conEje`)",
+    "lib/renombre.ts:1 namespace (`import * as todo from \"@/lib/pools\"`)",
+    "lib/renombre.ts:2 desestructuración con renombre de candidatosDePools",
+    "lib/renombre.ts:2 referencia sin llamar a candidatosDePools",
+    "lib/valor.ts:2 referencia sin llamar a candidatosDePools",
+  ]);
+});
+
+test("descubrimiento: la importación canónica, la definición y los comentarios no cuentan; una aparición en un string sí (limitación aceptada)", () => {
+  const d = descubrirCallSites({
+    "lib/pools.ts": "export async function candidatosDePools(o: unknown) { return o; }\nexport async function candidatosConEje(o: unknown) { return candidatosDePools(o); }\n",
+    "lib/uso.ts": 'import {\n  candidatosConEje, candidatosDePools,\n} from "./pools";\n// candidatosDePools( en un comentario\n/* candidatosConEje( en bloque */\nexport const u = () => candidatosConEje({});\nexport const s = "candidatosDePools(";\n',
+  });
+  assert.deepEqual(d.llamadas.map((l) => `${l.archivo}:${l.linea} ${l.llamada}`), ["lib/pools.ts:2 candidatosDePools", "lib/uso.ts:6 candidatosConEje", "lib/uso.ts:7 candidatosDePools"]);
+  assert.deepEqual(d.alternativas, []);
+});
+
+test("descubrimiento sobre el repo real: sólo los nueve call sites clasificados, y ninguna importación alternativa", () => {
+  const d = llamadasAPools();
+  assert.deepEqual(d.alternativas, [], "importaciones alternativas en código productivo");
+  assert.equal(d.llamadas.length, CALL_SITES.length);
+});
 
 test("🔴 inventario de call sites: cada llamada productiva a candidatosDePools/candidatosConEje/categoryCandidates está clasificada, y cada fila corresponde a una llamada", () => {
   const usadas = new Set<CallSite>();
   const sinClasificar: string[] = [];
-  const pares: { sitio: ReturnType<typeof llamadasAPools>[number]; fila: CallSite }[] = [];
-  for (const sitio of llamadasAPools()) {
+  const pares: { sitio: LlamadaDescubierta; fila: CallSite }[] = [];
+  const descubierto = llamadasAPools();
+  assert.deepEqual(descubierto.alternativas, [], `formas alternativas de llegar a las funciones de pools (alias, namespace, miembro, referencia sin llamar):\n${descubierto.alternativas.join("\n")}`);
+  for (const sitio of descubierto.llamadas) {
     const f = limpio(sitio.archivo);
     const fila = CALL_SITES.find((c) => !usadas.has(c) && c.archivo === sitio.archivo && c.llamada === sitio.llamada
       && dentro(cuerpoDe(f, c.funcion), sitio.offset) && f.slice(sitio.offset - 200, sitio.offset + 200).includes(c.ancla.split("\n")[0]));
@@ -896,6 +1070,16 @@ test("🔴 inventario de call sites: cada llamada productiva a candidatosDePools
   // Todo recorrido declarado en la fila de pools tiene al menos un call site que lo reclama.
   const reclamados = new Set(CALL_SITES.flatMap((c) => c.recorridos ?? []));
   assert.deepEqual(Object.keys(recorridos).filter((r) => !reclamados.has(r)), [], "recorridos de la fila de pools sin call site");
+  // Cobertura: una categoría por recorrido, los nueve, y la de cada call site es
+  // la mejor entre sus recorridos (lo que el informe resume).
+  assert.deepEqual(Object.keys(COBERTURA_RECORRIDOS).sort(), Object.keys(recorridos).sort(), "cada recorrido tiene exactamente una categoría de cobertura");
+  const cuenta = Object.fromEntries(ORDEN_COBERTURA.map((c) => [c, Object.values(COBERTURA_RECORRIDOS).filter((x) => x === c).length]));
+  assert.deepEqual(cuenta, { identificada: 2, agregada: 4, estructural: 3, inferida: 0 });
+  assert.equal(Object.values(cuenta).reduce((a, b) => a + b, 0), 9);
+  for (const c of CALL_SITES) {
+    const mejor = ORDEN_COBERTURA.find((k) => (c.recorridos ?? []).some((r) => COBERTURA_RECORRIDOS[r] === k));
+    assert.equal(c.cobertura, mejor, `${c.archivo}#${c.funcion} ${c.llamada}: la cobertura declarada no es la mejor de sus recorridos`);
+  }
 });
 
 test("CONTROL mutado (pools, los nueve recorridos inventariados): cada tipo de rama real se corta por separado y falla SÓLO el recorrido que le corresponde", () => {
