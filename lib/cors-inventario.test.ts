@@ -48,7 +48,9 @@ export interface Integracion {
 }
 
 export function leerIntegracion(src: string): Integracion {
-  const env = src.match(/export const (GET|POST) = conCors\([^,]+,\s*"(GET|POST)"\s*\)/);
+  // Etapa 3.b: el Home envuelve el handler ENTERO con la frontera del fondo,
+  // `conFrontera(conCors(manejar, "GET"))`; conCors sigue adentro, con su método.
+  const env = src.match(/export const (GET|POST) = (?:conFrontera\()?conCors\([^,]+,\s*"(GET|POST)"\s*\)\)?/);
   const opt = src.match(/export const OPTIONS = opcionesCors\("(GET|POST)"\s*\)/);
   return {
     export: env?.[1] ?? null,
@@ -112,6 +114,14 @@ const bien = (m: string) =>
 test("CANARIO 1: GET + conCors GET + opcionesCors GET es válido", () => {
   assert.equal(integraCors(bien("GET")), true);
   assert.deepEqual(leerIntegracion(bien("GET")), { export: "GET", conCors: "GET", opciones: "GET" });
+});
+
+test("CANARIO 1b (Etapa 3.b): GET envuelto por la frontera del fondo, conFrontera(conCors(manejar, GET)), es válido y conserva el método", () => {
+  const src = 'export const GET = conFrontera(conCors(manejar, "GET"));\nexport const OPTIONS = opcionesCors("GET");';
+  assert.deepEqual(leerIntegracion(src), { export: "GET", conCors: "GET", opciones: "GET" });
+  assert.equal(integraCors(src), true);
+  // Y la frontera NO esconde una divergencia de método.
+  assert.equal(integraCors('export const GET = conFrontera(conCors(manejar, "POST"));\nexport const OPTIONS = opcionesCors("GET");'), false);
 });
 
 test("CANARIO 2: POST + conCors POST + opcionesCors POST es válido", () => {
