@@ -353,7 +353,9 @@ doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
     const c = JSON.parse(cuerpo || "{}");
     const re = c.patron ? new RegExp(c.patron) : /./;
     const claves = [...base.keys()].filter((k) => re.test(k));
-    if (c.accion === "claves") return claves.map((k) => ({ clave: k, valor: String(base.get(k).v).slice(0, 60), pttl: base.get(k).exp ? base.get(k).exp - Date.now() : -1 }));
+    // `sha1`: del valor ENTERO, para comprobar que una clave (p. ej. el último
+    // bueno) quedó byte a byte intacta; `valor` es sólo un vistazo.
+    if (c.accion === "claves") return claves.map((k) => ({ clave: k, valor: String(base.get(k).v).slice(0, 60), sha1: createHash("sha1").update(String(base.get(k).v)).digest("hex"), pttl: base.get(k).exp ? base.get(k).exp - Date.now() : -1 }));
     if (c.accion === "borrar" || c.accion === "expirar") { for (const k of claves) { if (k.includes(":turno:")) registro.push({ t: Date.now(), op: c.accion.toUpperCase(), clave: k, propietario: String(base.get(k).v), resultado: null }); base.delete(k); } return { borradas: claves }; }
     if (c.accion === "perderRespuesta") { fallos.perderRespuesta = { comando: String(c.comando).toUpperCase(), veces: Number(c.veces ?? 1) }; return fallos; }
     if (c.accion === "fallarEval") { fallos.fallarEval = Number(c.veces ?? 1); return fallos; }

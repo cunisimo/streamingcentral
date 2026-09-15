@@ -759,7 +759,11 @@ const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>({
     ttl: { fresca: TTL.home, ub: TTL.homeUltimoBueno },
     leer: (claves) => leerVarias<HomePayload>(claves),
     turno: turnoHome,
-    producir: async () => { const valor = await producir(); return { valor, fallo: !!valor.degradado }; },
+    // Lo producido se anota acá (fuentes caídas, degradado) para que la línea
+    // del FONDO (3.b) lo muestre: en el fondo nadie ve el payload producido —
+    // con UB, `componer` sirve el UB y descarta el degradado—. En la solicitud,
+    // homePayload vuelve a fijar estos dos campos con lo que SIRVIÓ.
+    producir: async () => { const valor = await producir(); anotar((m) => { m.home.fuentesCaidas = valor.fallos; m.home.degradado = !!valor.degradado; }); return { valor, fallo: !!valor.degradado }; },
     publicable: (v) => !v.sinPlataformas,
     vacio: (motivo) => ({ hero: [], rails: [], fallos: 0, degradado: true, motivo }),
     // La señal del líder: el resolver corre en su contexto async.
