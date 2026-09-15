@@ -2,7 +2,7 @@
   "fecha": "2026-09-14",
   "versiones": {
     "antes": {
-      "dir": "D:/DESARROLLO/stream central/wt-etapa3-antes",
+      "dir": "../wt-etapa3-antes",
       "versionHome": "6",
       "dobles": 4801,
       "puerto": 3000
@@ -265,8 +265,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 3767,
-          "despues": 3845
+          "antes": 4691,
+          "despues": 4772
         }
       },
       "caliente": {
@@ -505,8 +505,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 13,
-          "despues": 40
+          "antes": 25,
+          "despues": 27
         }
       },
       "frioVsCalienteAntes": true,
@@ -763,8 +763,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 3027,
-          "despues": 3103
+          "antes": 3037,
+          "despues": 3073
         }
       },
       "caliente": {
@@ -1003,7 +1003,7 @@
           "identico": true
         },
         "msPared": {
-          "antes": 36,
+          "antes": 21,
           "despues": 35
         }
       },
@@ -1261,8 +1261,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2621,
-          "despues": 2770
+          "antes": 2642,
+          "despues": 2673
         }
       },
       "caliente": {
@@ -1501,8 +1501,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 36,
-          "despues": 36
+          "antes": 17,
+          "despues": 15
         }
       },
       "frioVsCalienteAntes": true,
@@ -1759,8 +1759,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2307,
-          "despues": 2485
+          "antes": 2721,
+          "despues": 2835
         }
       },
       "caliente": {
@@ -1999,8 +1999,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 21,
-          "despues": 38
+          "antes": 35,
+          "despues": 22
         }
       },
       "frioVsCalienteAntes": true,
@@ -2257,8 +2257,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2721,
-          "despues": 2885
+          "antes": 2316,
+          "despues": 2321
         }
       },
       "caliente": {
@@ -2497,8 +2497,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 39,
-          "despues": 39
+          "antes": 20,
+          "despues": 36
         }
       },
       "frioVsCalienteAntes": true,
@@ -2755,8 +2755,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2739,
-          "despues": 2907
+          "antes": 2603,
+          "despues": 2538
         }
       },
       "caliente": {
@@ -2995,8 +2995,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 25,
-          "despues": 26
+          "antes": 19,
+          "despues": 20
         }
       },
       "frioVsCalienteAntes": true,
@@ -3253,8 +3253,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2634,
-          "despues": 2710
+          "antes": 2420,
+          "despues": 2438
         }
       },
       "caliente": {
@@ -3493,8 +3493,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 36,
-          "despues": 36
+          "antes": 20,
+          "despues": 27
         }
       },
       "frioVsCalienteAntes": true,
@@ -3751,8 +3751,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2784,
-          "despues": 2804
+          "antes": 2668,
+          "despues": 2620
         }
       },
       "caliente": {
@@ -3991,8 +3991,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 22,
-          "despues": 38
+          "antes": 27,
+          "despues": 28
         }
       },
       "frioVsCalienteAntes": true,
@@ -4249,8 +4249,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2331,
-          "despues": 2400
+          "antes": 2805,
+          "despues": 2737
         }
       },
       "caliente": {
@@ -4489,8 +4489,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 19,
-          "despues": 23
+          "antes": 41,
+          "despues": 40
         }
       },
       "frioVsCalienteAntes": true,
@@ -4747,8 +4747,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2402,
-          "despues": 2504
+          "antes": 2189,
+          "despues": 2391
         }
       },
       "caliente": {
@@ -4987,8 +4987,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 23,
-          "despues": 22
+          "antes": 22,
+          "despues": 21
         }
       },
       "frioVsCalienteAntes": true,
@@ -5245,8 +5245,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2839,
-          "despues": 2855
+          "antes": 2701,
+          "despues": 2723
         }
       },
       "caliente": {
@@ -5485,8 +5485,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 21,
-          "despues": 22
+          "antes": 35,
+          "despues": 34
         }
       },
       "frioVsCalienteAntes": true,
@@ -5743,8 +5743,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2387,
-          "despues": 2402
+          "antes": 2463,
+          "despues": 2432
         }
       },
       "caliente": {
@@ -5983,8 +5983,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 38,
-          "despues": 37
+          "antes": 39,
+          "despues": 23
         }
       },
       "frioVsCalienteAntes": true,
@@ -6241,8 +6241,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2199,
-          "despues": 2234
+          "antes": 2641,
+          "despues": 2703
         }
       },
       "caliente": {
@@ -6481,8 +6481,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 34,
-          "despues": 32
+          "antes": 36,
+          "despues": 35
         }
       },
       "frioVsCalienteAntes": true,
@@ -6739,8 +6739,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2236,
-          "despues": 2319
+          "antes": 3118,
+          "despues": 3185
         }
       },
       "caliente": {
@@ -6979,8 +6979,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 17,
-          "despues": 16
+          "antes": 22,
+          "despues": 38
         }
       },
       "frioVsCalienteAntes": true,
@@ -7237,8 +7237,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2986,
-          "despues": 2872
+          "antes": 2319,
+          "despues": 2353
         }
       },
       "caliente": {
@@ -7477,8 +7477,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 21,
-          "despues": 20
+          "antes": 35,
+          "despues": 35
         }
       },
       "frioVsCalienteAntes": true,

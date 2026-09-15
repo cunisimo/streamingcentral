@@ -13,8 +13,11 @@
 //   POST /__banco/config          { modo, latenciaMs, retryAfter }
 //        modo: "ok" | "429" | "500" | "caido"   ("caido" corta el socket: fallo
 //        de transporte, que es lo único que el SDK de Upstash reintenta)
-//        modo: "429-parcial" + { parcialP: 0.1, familiaParcial: "/watch/providers" }
-//        (429 determinístico en una fracción de esa familia: Etapa 3.a, H2)
+//        modo: "429-parcial" + { parcialP: 0.1, familiaParcial: "/watch/providers", parcialPorQuery?: true }
+//        (429 determinístico en una fracción de esa familia: Etapa 3.a, H2; el
+//        hash es del path —un título, una ruta— o, con `parcialPorQuery`, de la
+//        URL entera, para familias como `/discover` donde el path es siempre el
+//        mismo y lo que distingue un pool es la query)
 //   POST /__banco/reset           contadores a cero (y, en Redis, borra la base)
 //
 // El contador de cada doble es el ÁRBITRO: lo que la app dice que hizo (línea
@@ -82,7 +85,7 @@ function doble(nombre, puerto, atender, extra = {}) {
     // `parcialP` de las rutas, elegida por hash de la URL— para reproducir el
     // límite de tasa real: no rechaza todo, rechaza lo que pasa del cupo.
     if (estado.modo === "429-parcial" && url.includes(estado.familiaParcial ?? "/watch/providers")
-      && (hash(url.split("?")[0]) % 1000) < Math.round((estado.parcialP ?? 0.1) * 1000)) {
+      && (hash(estado.parcialPorQuery ? url : url.split("?")[0]) % 1000) < Math.round((estado.parcialP ?? 0.1) * 1000)) {
       cuenta.parciales429 = (cuenta.parciales429 ?? 0) + 1;
       return json(res, 429, { error: "doble en modo 429-parcial" }, { "Retry-After": String(estado.retryAfter) });
     }

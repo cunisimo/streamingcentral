@@ -18,14 +18,16 @@ import { settleAll } from "./settle-all.ts";
 
 const e429 = () => new ErrorTmdb({ estado: 429, clase: "http429", path: "/x" });
 
-test("registrar un ErrorTmdb dentro del contexto lo cuenta; fuera, no hace nada ni lanza", async () => {
+test("registrar un ErrorTmdb dentro del contexto lo cuenta; fuera, loguea una línea (no lanza y no es inerte)", async () => {
   const { fallos } = await withFallosTmdb(async () => {
     assert.equal(hayFallosTmdb(), false);
     registrarDescarteTmdb(e429(), "test");
     assert.equal(hayFallosTmdb(), true);
   });
   assert.equal(fallos, 1);
-  assert.doesNotThrow(() => registrarDescarteTmdb(e429(), "fuera"));
+  const lineas: unknown[][] = [];
+  assert.equal(registrarDescarteTmdb(e429(), "fuera", { log: (...a) => { lineas.push(a); } }), "logueado");
+  assert.equal(lineas.length, 1);
 });
 
 test("un error que NO es de TMDB (bug propio) no cuenta como descarte de TMDB", async () => {

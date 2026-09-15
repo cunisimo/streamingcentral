@@ -66,6 +66,26 @@
         "error": "Error: TMDB 429 en /search/person"
       }
     },
+    "pools": {
+      "familia": "/discover",
+      "http": 200,
+      "degradado": false,
+      "fallos": 0,
+      "titulos": 130,
+      "parciales429": 8,
+      "linea": {
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "degradadoEnLinea": false,
+        "descartes": 0,
+        "tmdb": 926
+      },
+      "escrito": {
+        "fresca": 1,
+        "ub": 1
+      }
+    },
     "verde": false
   },
   "despues": {
@@ -132,6 +152,26 @@
         "http": 503,
         "retryAfter": "3",
         "error": "tmdb-no-disponible"
+      }
+    },
+    "pools": {
+      "familia": "/discover",
+      "http": 200,
+      "degradado": true,
+      "fallos": 8,
+      "titulos": 130,
+      "parciales429": 8,
+      "linea": {
+        "cache": "MISS",
+        "origen": "degradado-propio",
+        "publicacion": "no",
+        "degradadoEnLinea": true,
+        "descartes": 8,
+        "tmdb": 926
+      },
+      "escrito": {
+        "fresca": 0,
+        "ub": 0
       }
     },
     "verde": true

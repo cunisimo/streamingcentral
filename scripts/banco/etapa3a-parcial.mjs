@@ -1,5 +1,6 @@
 // El escenario de FALLO PARCIAL de la Etapa 3.a (H2, informe v4.1 §1 y §14):
-// con TMDB devolviendo 429 en una fracción de los `watch/providers`, el Home
+// con TMDB devolviendo 429 en una fracción de los `watch/providers` (y, en el
+// escenario D, de los `/discover`: el recorrido real del sitio de pools), el Home
 //
 //   - puede variar respecto del sano (títulos descartados): es esperable;
 //   - TIENE que salir marcado `degradado: true`;
@@ -78,7 +79,9 @@ async function control(base, doble, accion, cuerpo) {
 const claves = async (base, patron) => control(base, "redis", "redis", { accion: "claves", patron });
 async function vaciar(base) { await control(base, "redis", "reset"); await control(base, "tmdb", "reset"); await control(base, "supabase", "reset"); }
 const sano = (base) => control(base, "tmdb", "config", { modo: "ok", latenciaMs: 0 });
-const parcial = (base) => control(base, "tmdb", "config", { modo: "429-parcial", parcialP: P, familiaParcial: "/watch/providers", retryAfter: 2 });
+// En `/discover` el path es siempre el mismo (`/discover/movie|tv`): la fracción
+// se elige por la URL entera, que es lo que distingue un pool de otro.
+const parcial = (base, familia = "/watch/providers") => control(base, "tmdb", "config", { modo: "429-parcial", parcialP: P, familiaParcial: familia, parcialPorQuery: familia === "/discover", retryAfter: 2 });
 function terminales(p) {
   const todo = readFileSync(p.log, "utf8");
   const nuevas = todo.slice(p.leido).split("\n").map((l) => l.trim());
@@ -171,13 +174,29 @@ async function escenarios(nombre, p) {
     },
     total429: { http: b3.status, retryAfter: b3.retryAfter, error: b3.json.error ?? null },
   };
+  // --- D. POOLS: 429 parcial en /discover (auditoría sobre 708bce0, hallazgo 2) ---
+  // El sitio de lib/pools.ts (un pool caído se descarta y se registra) no se
+  // puede importar en node: éste es su recorrido real. Sin último bueno, con
+  // Redis vacío y el doble devolviendo 429 en una fracción de los `/discover`,
+  // el Home tiene que salir degradado y sin publicar, con descartes contados.
+  await vaciar(base); await parcial(base, "/discover"); terminales(p);
+  const d = await pedir(p);
+  const tD = await terminal(p);
+  const parcialesD = (await control(base, "tmdb", "estado")).cuenta.parciales429 ?? 0;
+  out.pools = {
+    familia: "/discover",
+    http: d.status, degradado: !!d.json.degradado, fallos: d.json.fallos ?? null, titulos: cuentaTitulos(d.json),
+    parciales429: parcialesD, linea: { cache: tD.cache, origen: tD.origen, publicacion: tD.publicacion, degradadoEnLinea: tD.degradadoEnLinea, descartes: tD.descartes, tmdb: tD.tmdb },
+    escrito: { fresca: (await claves(base, "^home:[^:]+:v\\d+:")).length, ub: (await claves(base, "^home:ub:")).length },
+  };
   await sano(base);
   // Verdicto por versión.
   out.verde = out.sinUB.http === 200 && out.sinUB.degradado === true && out.sinUB.escrito.fresca === 0 && out.sinUB.escrito.ub === 0
     && out.sinUB.parciales429 > 0 && out.conUB.parcial.sirvioElUBCorrecto && out.conUB.parcial.frescaReescrita === 0 && out.conUB.parcial.ubIntacto
     && out.busqueda.parcial.http === 200 && out.busqueda.parcial.parciales429 > 0 && (out.busqueda.parcial.degradacion?.proveedores ?? 0) > 0
     && out.busqueda.parcial.segundaVolvioAPedir && out.busqueda.parcial.guardado === 0
-    && out.busqueda.total429.http === 503 && out.busqueda.total429.retryAfter === "3";
+    && out.busqueda.total429.http === 503 && out.busqueda.total429.retryAfter === "3"
+    && out.pools.http === 200 && out.pools.degradado === true && out.pools.parciales429 > 0 && out.pools.linea.descartes > 0 && out.pools.escrito.fresca === 0 && out.pools.escrito.ub === 0;
   await sano(base);
   return out;
 }
@@ -193,6 +212,7 @@ try {
     const s = salida[v];
     console.log(`[parcial] ${s.version} | sin UB: http ${s.sinUB.http}, degradado ${s.sinUB.degradado}, ${s.sinUB.titulos} títulos, ${s.sinUB.parciales429} x429 parciales, descartes ${s.sinUB.linea.descartes}, origen ${s.sinUB.linea.origen}, publicacion ${s.sinUB.linea.publicacion}, escrito fresca ${s.sinUB.escrito.fresca} ub ${s.sinUB.escrito.ub} degradadoCompartido ${s.sinUB.escrito.degradadoCompartido}`);
     console.log(`[parcial] ${s.version} | búsqueda parcial: http ${s.busqueda.parcial.http}, ${s.busqueda.parcial.titulos} títulos (${s.busqueda.parcial.sinPlataformas} sin plataformas), degradacion ${JSON.stringify(s.busqueda.parcial.degradacion)}, ${s.busqueda.parcial.parciales429} x429, segunda volvió a pedir ${s.busqueda.parcial.segundaVolvioAPedir}, guardado ${s.busqueda.parcial.guardado} | búsqueda 429 total: http ${s.busqueda.total429.http}, Retry-After ${s.busqueda.total429.retryAfter}, error ${s.busqueda.total429.error}`);
+    console.log(`[parcial] ${s.version} | pools (429 parcial en /discover): http ${s.pools.http}, degradado ${s.pools.degradado}, ${s.pools.titulos} títulos, ${s.pools.parciales429} x429 parciales, descartes ${s.pools.linea.descartes}, origen ${s.pools.linea.origen}, publicacion ${s.pools.linea.publicacion}, escrito fresca ${s.pools.escrito.fresca} ub ${s.pools.escrito.ub}`);
     console.log(`[parcial] ${s.version} | con UB: sano ${s.conUB.sano.titulos} títulos (publicacion ${s.conUB.sano.publicacion}); parcial → degradado ${s.conUB.parcial.degradado}, ${s.conUB.parcial.titulos} títulos, origen ${s.conUB.parcial.linea.origen}, sirvió el UB correcto: ${s.conUB.parcial.sirvioElUBCorrecto}, fresca reescrita ${s.conUB.parcial.frescaReescrita}, UB intacto ${s.conUB.parcial.ubIntacto} → ${s.verde ? "VERDE" : "ROJO"}`);
   }
   salida.resumen = { antesRojo: !salida.antes.verde, despuesVerde: salida.despues.verde, ok: !salida.antes.verde && salida.despues.verde };
