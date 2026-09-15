@@ -43,15 +43,41 @@ export async function withFallosTmdb<T>(fn: () => Promise<T>): Promise<{ res: T;
   }
 }
 
+export type EfectoRegistro = "contado" | "logueado" | "ignorado";
+type Log = (...args: unknown[]) => void;
+
 /**
- * Anota que un título, pool, bloque o card se descartó por un error de TMDB.
- * Con cualquier otra causa no cuenta. Fuera de un contexto no hace nada y no
- * lanza. `sitio` es sólo para el log de quien registra.
+ * Anota que un título, pool, bloque o card se descartó por un error de TMDB, y
+ * DICE qué hizo con eso. Con cualquier otra causa: `ignorado`.
+ *
+ * 🔴 NUNCA ES INERTE (auditoría de Codex sobre 09b9dbe, hallazgo 2). Dentro de
+ * un contexto cuenta y calla (`contado`): el contador lo consume el predicado
+ * de la caché o el `degradado` del Home, y no hay una línea por cada título.
+ * FUERA de un contexto —una ruta o tarea independiente que no lo abrió— deja
+ * UNA línea estructurada por descarte (`logueado`), para que la causa quede en
+ * los logs en vez de perderse. Las rutas independientes deberían abrir el
+ * contexto con `conDescartesRegistrados`, que resume en una sola línea.
  */
-export function registrarDescarteTmdb(e: unknown, _sitio: string): void {
-  if (!esErrorTmdb(e)) return;
+export function registrarDescarteTmdb(e: unknown, sitio: string, o: { log?: Log } = {}): EfectoRegistro {
+  if (!esErrorTmdb(e)) return "ignorado";
   const c = als.getStore();
-  if (c) c.fallos++;
+  if (c) { c.fallos++; return "contado"; }
+  const log = o.log ?? ((...a: unknown[]) => console.error(...a));
+  log(`[tmdb] descarte sin contexto sitio=${sitio} clase=${e.clase} estado=${e.estado ?? "-"} path=${e.path}`);
+  return "logueado";
+}
+
+/**
+ * Para rutas y tareas independientes (directores, portadas, recordatorio, el
+ * cron de Netflix, el Top): abre el contexto y, si hubo descartes, deja UNA
+ * línea de resumen `[tmdb] <nombre>: N descarte(s)`. No cambia lo que la
+ * función devuelve ni lo que responde la ruta.
+ */
+export async function conDescartesRegistrados<T>(nombre: string, fn: () => Promise<T>, o: { log?: Log } = {}): Promise<T> {
+  const log = o.log ?? ((...a: unknown[]) => console.error(...a));
+  const { res, fallos } = await withFallosTmdb(fn);
+  if (fallos) log(`[tmdb] ${nombre}: ${fallos} descarte(s) por error de TMDB`);
+  return res;
 }
 
 export function hayFallosTmdb(): boolean {

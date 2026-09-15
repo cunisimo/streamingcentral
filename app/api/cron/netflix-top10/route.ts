@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { conDescartesRegistrados } from "@/lib/fallos-tmdb";
 import { timingSafeEqual } from "node:crypto";
 import { ingestLatestWeek } from "@/lib/netflix-top10";
 
@@ -47,7 +48,9 @@ export async function GET(req: NextRequest) {
     }, { status: 401 });
   }
   try {
-    return NextResponse.json({ ok: true, ...(await ingestLatestWeek()) });
+    // Etapa 3.a: los `enNetflixAR`/`buscar` que fallen por TMDB quedan
+    // resumidos en UNA línea al final de la ingesta.
+    return NextResponse.json({ ok: true, ...(await conDescartesRegistrados("cron/netflix-top10", () => ingestLatestWeek())) });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
   }

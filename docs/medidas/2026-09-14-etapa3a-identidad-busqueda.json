@@ -1,0 +1,1090 @@
+{
+  "fecha": "2026-09-14",
+  "escenarios": [
+    {
+      "id": "B1",
+      "q": "matrix",
+      "providers": "",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B2",
+      "q": "matrix",
+      "providers": "n",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B3",
+      "q": "matrix",
+      "providers": "n,d,m",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B4",
+      "q": "el padrino",
+      "providers": "",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B5",
+      "q": "el padrino",
+      "providers": "n",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B6",
+      "q": "el padrino",
+      "providers": "n,d,m",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B7",
+      "q": "harry",
+      "providers": "",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B8",
+      "q": "harry",
+      "providers": "n",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B9",
+      "q": "harry",
+      "providers": "n,d,m",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B10",
+      "q": "amor",
+      "providers": "",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B11",
+      "q": "amor",
+      "providers": "n",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B12",
+      "q": "amor",
+      "providers": "n,d,m",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B13",
+      "q": "xyzzy",
+      "providers": "",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B14",
+      "q": "xyzzy",
+      "providers": "n",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    },
+    {
+      "id": "B15",
+      "q": "xyzzy",
+      "providers": "n,d,m",
+      "claves": {
+        "antes": 0,
+        "despues": 0
+      },
+      "llamadas": {
+        "antes": 31,
+        "despues": 31
+      },
+      "llamadasCaliente": {
+        "antes": 0,
+        "despues": 0
+      },
+      "frio": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "caliente": {
+        "jsonCompletoIgual": true,
+        "titulos": {
+          "riel": "titles",
+          "cantidad": {
+            "antes": 24,
+            "despues": 24
+          },
+          "ordenIgual": true,
+          "anadidos": [],
+          "eliminados": [],
+          "movidos": [],
+          "plataformasCambiadas": [],
+          "jsonIgual": true,
+          "identico": true
+        },
+        "personas": {
+          "identico": true,
+          "cantidad": {
+            "antes": 0,
+            "despues": 0
+          }
+        },
+        "identico": true
+      },
+      "titulos": 24,
+      "problemas": [],
+      "valido": true,
+      "identico": true
+    }
+  ],
+  "controles": {
+    "mutaciones": {
+      "detectadas": {
+        "eliminar": true,
+        "agregar": true,
+        "mover": true,
+        "plataforma": true
+      },
+      "todasDetectadas": true
+    }
+  },
+  "resumen": {
+    "escenarios": 15,
+    "validos": 15,
+    "identicos": 15,
+    "diferencias": [],
+    "invalidos": [],
+    "controlMutaciones": true,
+    "verde": true
+  }
+}

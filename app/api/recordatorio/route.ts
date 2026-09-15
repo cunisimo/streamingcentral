@@ -5,7 +5,6 @@ import { supabaseServer } from "@/lib/supabase";
 // nombre que termina en el .ics es el mismo que el usuario vio en la ficha.
 // (El camino que lee `upcoming_content` NO se repara acá — ver abajo.)
 import { detalleReparado } from "@/lib/enrich";
-import { registrarDescarteTmdb } from "@/lib/fallos-tmdb";
 // El texto vive en un módulo puro para poder probarlo: es lo que fija qué
 // nombre termina en el archivo que el usuario agenda.
 import { resumen, type DatosRecordatorio as Datos } from "@/lib/recordatorio-texto";
@@ -14,6 +13,7 @@ import { platformByCode } from "@/lib/providers-ar";
 import { SITIO_PUBLICO } from "@/lib/compartir";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { conDescartesRegistrados, registrarDescarteTmdb } from "@/lib/fallos-tmdb";
 
 export const dynamic = "force-dynamic";
 
@@ -129,7 +129,9 @@ async function manejar(req: NextRequest) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
-  const d = await datosDe(tipo, id);
+  // Etapa 3.a: ruta independiente; un detalle de TMDB caído (digitalAR o
+  // datosDe) queda resumido en UNA línea; la respuesta (404) no cambia.
+  const d = await conDescartesRegistrados("api/recordatorio", () => datosDe(tipo, id));
   if (!d) return NextResponse.json({ error: "sin fecha de estreno" }, { status: 404 });
   // Red de seguridad para cualquier fecha vencida que se cuele por otro lado:
   // `upcoming_content` puede quedar desactualizada entre corridas del sync y

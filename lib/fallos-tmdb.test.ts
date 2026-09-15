@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  hayFallosTmdb, registrarDescarteTmdb, withFallosDeFuentes, withFallosTmdb,
+  conDescartesRegistrados, hayFallosTmdb, registrarDescarteTmdb, withFallosDeFuentes, withFallosTmdb,
 } from "./fallos-tmdb.ts";
 import { registrarFalloDisponibilidad } from "./fallos-disponibilidad.ts";
 import { ErrorTmdb } from "./tmdb-error.ts";
@@ -91,4 +91,62 @@ test("settleAll fuera de producción relanza el motivo, como siempre", async () 
     settleAll([Promise.reject(new TypeError("propio"))], "prueba", { relanzar: true, log: () => {} }),
     TypeError,
   );
+});
+
+// ============================================================================
+// Registrar SIN contexto no puede ser inerte (auditoría de Codex sobre 09b9dbe,
+// hallazgo 2): las rutas y tareas independientes (directores, portadas,
+// recordatorio, cron de Netflix) no abren `withFallosTmdb`, así que el
+// registro se perdía. Ahora el registrador DICE qué hizo, y fuera de contexto
+// deja UNA línea estructurada por descarte; adentro cuenta y calla (sin ruido
+// por cada título del Home).
+// ============================================================================
+
+test("🔴 dentro de un contexto: cuenta, devuelve `contado` y NO loguea", async () => {
+  const lineas: unknown[][] = [];
+  const { fallos, res } = await withFallosTmdb(async () => registrarDescarteTmdb(e429(), "sitio-x", { log: (...a) => { lineas.push(a); } }));
+  assert.equal(res, "contado");
+  assert.equal(fallos, 1);
+  assert.deepEqual(lineas, []);
+});
+
+test("🔴 fuera de contexto: devuelve `logueado` y deja UNA línea estructurada con sitio, clase, estado y path", () => {
+  const lineas: unknown[][] = [];
+  const r = registrarDescarteTmdb(new ErrorTmdb({ estado: 429, clase: "http429", path: "/person/1", retryAfterMs: 2000 }), "directorCards", { log: (...a) => { lineas.push(a); } });
+  assert.equal(r, "logueado");
+  assert.equal(lineas.length, 1);
+  const texto = String(lineas[0][0]);
+  assert.match(texto, /^\[tmdb\] descarte sin contexto/);
+  assert.match(texto, /sitio=directorCards/);
+  assert.match(texto, /clase=http429/);
+  assert.match(texto, /estado=429/);
+  assert.match(texto, /path=\/person\/1/);
+});
+
+test("🔴 un error que no es de TMDB: `ignorado`, sin contar ni loguear", async () => {
+  const lineas: unknown[][] = [];
+  assert.equal(registrarDescarteTmdb(new TypeError("propio"), "x", { log: (...a) => { lineas.push(a); } }), "ignorado");
+  const { fallos } = await withFallosTmdb(async () => registrarDescarteTmdb(new TypeError("propio"), "x", { log: (...a) => { lineas.push(a); } }));
+  assert.equal(fallos, 0);
+  assert.deepEqual(lineas, []);
+});
+
+test("🔴 conDescartesRegistrados: una ruta independiente abre el contexto y deja UNA línea de resumen sólo si hubo descartes", async () => {
+  const lineas: unknown[][] = [];
+  const log = (...a: unknown[]) => { lineas.push(a); };
+  const r1 = await conDescartesRegistrados("api/directores", async () => { registrarDescarteTmdb(e429(), "directorCards", { log }); registrarDescarteTmdb(e429(), "directorCards", { log }); return 42; }, { log });
+  assert.equal(r1, 42);
+  assert.equal(lineas.length, 1, "un resumen, no una línea por descarte");
+  assert.match(String(lineas[0][0]), /^\[tmdb\] api\/directores: 2 descarte\(s\)/);
+  lineas.length = 0;
+  await conDescartesRegistrados("api/directores", async () => "sano", { log });
+  assert.deepEqual(lineas, [], "sin descartes, sin línea");
+});
+
+test("CONTROL: una función que traga un ErrorTmdb sin registrarlo no deja rastro — es lo que el inventario tiene que impedir", async () => {
+  const lineas: unknown[][] = [];
+  const tragaSinRegistrar = async () => { try { throw e429(); } catch { return null; } };
+  const { fallos } = await withFallosTmdb(tragaSinRegistrar);
+  assert.equal(fallos, 0);
+  assert.deepEqual(lineas, []);
 });

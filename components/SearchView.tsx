@@ -10,7 +10,8 @@ import { crearTicket, esParaMi, invalidar, type Ticket } from "@/hooks/ticket-vu
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
 import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 import { apiUrl } from "@/lib/api-base";
-import { ESTADO_INICIAL, reducirBusqueda, type EstadoBusqueda, type Resultados } from "./busqueda-estado";
+import { ESTADO_INICIAL, type EstadoBusqueda, type Resultados } from "./busqueda-estado";
+import { crearControladorBusqueda } from "./busqueda-controlador";
 
 type Filter = "todo" | "movie" | "tv" | "actores" | "directores";
 
@@ -18,18 +19,31 @@ export default function SearchView() {
   const { platforms, ready } = usePlatforms();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("todo");
-  // Resultados + aviso "la fuente no responde", con un reductor puro
-  // (components/busqueda-estado.ts): el aviso corresponde SÓLO a la respuesta
-  // vigente, y un pedido superado por otro no toca nada (`pedidoVigente`).
+  // Resultados + carga + aviso "la fuente no responde", con el controlador
+  // puro de components/busqueda-controlador.ts: la generación sube en el
+  // instante en que cambia el término, así que una respuesta vieja que llegue
+  // durante el debounce del término nuevo se descarta entera (resultados,
+  // aviso y carga). El estado lo lleva el reductor de busqueda-estado.ts.
   const [busqueda, setBusqueda] = useState<EstadoBusqueda>(ESTADO_INICIAL);
   const res = busqueda.res;
   const fuenteCaida = busqueda.fuenteCaida;
-  const setRes = (r: Resultados) => setBusqueda((b) => reducirBusqueda(b, { tipo: "restaurado", res: r }));
-  const pedidoVigente = useRef(0);
-  const [loading, setLoading] = useState(false);
+  const loading = busqueda.cargando;
+  const controlador = useRef<ReturnType<typeof crearControladorBusqueda> | null>(null);
+  if (!controlador.current) {
+    controlador.current = crearControladorBusqueda({
+      // Las plataformas van para ORDENAR, no para filtrar: los resultados que
+      // sí podés ver van arriba y el resto sigue apareciendo abajo.
+      pedir: async (term, plataformas, senal) => {
+        const r = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(term)}&providers=${plataformas.join(",")}`), { signal: senal });
+        return { ok: r.ok, body: await r.json() };
+      },
+      programar: (fn, ms) => { const t = setTimeout(fn, ms); return () => clearTimeout(t); },
+      emitir: setBusqueda,
+    });
+  }
+  const setRes = (r: Resultados) => controlador.current!.restaurar(r);
   const [explore, setExplore] = useState<{ country: string } | null>(null);
   const [covers, setCovers] = useState<Record<string, string | null>>({});
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // --- Volver de una ficha --------------------------------------------------
@@ -110,41 +124,18 @@ export default function SearchView() {
     // la grilla vacía.
     if (qRestaurado.current !== null) {
       if (term !== qRestaurado.current.trim()) return;   // todavía no llegó el texto
-      // Ya llegó: los resultados vinieron con él, así que no hay nada que pedir.
+      // Ya llegó: los resultados vinieron con él (`restaurar`), así que no hay
+      // nada que pedir.
       qRestaurado.current = null;
-      setLoading(false);
       return;
     }
-    if (term.length < 2) {
-      pedidoVigente.current += 1;
-      setBusqueda((b) => reducirBusqueda(b, { tipo: "termino-corto" }));
-      setLoading(false);
-      return;
-    }
-    if (timer.current) clearTimeout(timer.current);
-    setLoading(true);
-    timer.current = setTimeout(() => {
-      // Cada pedido lleva su número: una respuesta que llega para un pedido ya
-      // superado (el usuario siguió escribiendo) se descarta entera, aviso
-      // incluido. Al empezar, el aviso del pedido anterior se apaga.
-      const mio = ++pedidoVigente.current;
-      setBusqueda((b) => reducirBusqueda(b, { tipo: "nuevo-termino" }));
-      // Las plataformas van para ORDENAR, no para filtrar: los resultados que
-      // sí podés ver van arriba y el resto sigue apareciendo abajo.
-      fetch(apiUrl(`/api/search?q=${encodeURIComponent(term)}&providers=${platforms.join(",")}`))
-        .then(async (r) => ({ ok: r.ok, j: await r.json() }))
-        .then(({ ok, j }) => {
-          const vigente = mio === pedidoVigente.current;
-          setBusqueda((b) => reducirBusqueda(b, { tipo: "respuesta", ok, body: j, vigente }));
-          if (vigente) setLoading(false);
-        })
-        .catch(() => {
-          if (mio !== pedidoVigente.current) return;
-          setBusqueda((b) => reducirBusqueda(b, { tipo: "fallo-red" }));
-          setLoading(false);
-        });
-    }, 250);
+    // Término corto, término nuevo o plataformas nuevas: el controlador
+    // invalida lo pendiente en el acto y programa (o no) el pedido.
+    controlador.current!.cambiarTermino(term, platforms);
   }, [q, ready, platforms, fase]);
+
+  // Al desmontar: nada pendiente puede emitir sobre una vista que ya no está.
+  useEffect(() => () => { controlador.current?.desmontar(); }, []);
 
   const hasQuery = q.trim().length >= 2;
   const showTitles = filter === "actores" || filter === "directores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);

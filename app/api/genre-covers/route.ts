@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { genreCovers } from "@/lib/enrich";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { conDescartesRegistrados } from "@/lib/fallos-tmdb";
 
 export const dynamic = "force-dynamic";
 
 async function manejar() {
   try {
-    return NextResponse.json({ covers: await genreCovers() });
+    // Etapa 3.a: ídem directores.
+    return NextResponse.json({ covers: await conDescartesRegistrados("api/genre-covers", () => genreCovers()) });
   } catch (e) {
     return NextResponse.json({ error: String(e), covers: {} }, { status: 500 });
   }
