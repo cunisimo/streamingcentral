@@ -8,8 +8,21 @@
 ## Evidencia y alcance de esta actualización
 
 - **Etapa 3.b de capacidad (#19) — "último bueno primero, reconstrucción en
-  fondo": IMPLEMENTADA EN RAMA (`feat/etapa3b-ub-primero`), PENDIENTE DE
-  AUDITORÍA; NO MERGEADA NI DESPLEGADA** (informe §34). Con UB, el líder
+  fondo": IMPLEMENTADA EN RAMA (`feat/etapa3b-ub-primero`) y CORREGIDA tras
+  la auditoría de Codex sobre `c84996e` (informe §35); PENDIENTE DE NUEVA
+  AUDITORÍA; NO MERGEADA NI DESPLEGADA.** Corrección: el fondo esperaba un
+  microtick tras registrar en `waitUntil` y `composeHome` arrancaba antes de
+  que la ruta construyera su `NextResponse`; ahora espera la **compuerta**
+  de la solicitud (`lib/fondo-frontera.ts`), que `conFrontera(conCors(manejar,
+  "GET"))` abre cuando el handler entero devolvió la respuesta (cabeceras
+  incluidas); sin frontera no hay fondo (bloqueante). RED contra `c84996e`
+  atravesando una frontera equivalente al handler (traza: la composición
+  terminaba antes de la respuesta); GREEN con el orden completo, banco con
+  `componeAntesDeTerminal = 0` en la rama (1 en el antes), suite 1.701
+  (1.691 ok, 0 fallos, 10 omitidos), `tsc`, build fresco, identidad 16/16.
+  **En Producción (`903832e`) el líder con UB todavía compone en línea y no
+  hay `waitUntil`; en la rama, no.** (Lo que sigue describe la
+  implementación de `c84996e`.) Con UB, el líder
   responde el UB en el acto y compone en fondo con `waitUntil` de
   `@vercel/functions` 3.9.7 (única importación, en `lib/home.ts`; el símbolo
   interno queda prohibido por test); `lib/home-fondo.ts` (puro) registra de
@@ -45,8 +58,9 @@
   Diseño previo (§32): Causa comprobada de los
   15,1 s observados tras el deploy de la 3.a: la clave fresca lleva la
   semilla del día, así que cada combinación empieza cada día sin fresca; y en
-  `servirConTurno` **quien adquiere el turno compone en línea aunque exista
-  un último bueno** (el UB sólo va a los que no son líderes); el líder corre
+  `servirConTurno` de `903832e` **quien adquiere el turno compone en línea
+  aunque exista un último bueno** (el UB sólo va a los que no son líderes) —
+  comportamiento ANTERIOR a la 3.b, el que está en Producción; el líder corre
   bajo 50 s (`PRESUPUESTO_REQUEST_MS`), no bajo los 16 s de
   `COMPOSICION_MAX_MS`. Ni Redis ni TMDB estaban degradados (250/250 ok). Si
   existía UB en ese instante no es verificable hoy (la línea `[home]` no lo
@@ -74,8 +88,9 @@
   evidencia existente** (banco de cachés aisladas `b7be927` vs rama: 16/16
   válidos e idénticos; búsqueda 15/15) — no se reabrió. **Reintentos siguen
   APAGADOS** (`TMDB_REINTENTOS` ausente en Producción). **Limitador,
-  circuito, `waitUntil` y membresía siguen NO implementados** (subetapas
-  restantes de la Etapa 3, diseñadas y no aprobadas). **#19 sigue abierto por
+  circuito y membresía siguen NO implementados** (subetapas restantes de la
+  Etapa 3, diseñadas y no aprobadas); **`waitUntil` no está en Producción**
+  (sí en la rama de la 3.b, sólo para el fondo del Home). **#19 sigue abierto por
   esas subetapas, no por la 3.a.** Sin cambios de variables ni de
   infraestructura; sin 429 provocados ni cachés externas vaciadas.
   Verificado sobre el `main` fusionado: árbol idéntico al de la rama;

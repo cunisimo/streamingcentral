@@ -7,9 +7,11 @@
 > DESPLEGADA** (§34).** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
-> final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito,
-> `waitUntil` y membresía NO implementados: las subetapas restantes de la
-> Etapa 3 siguen diseñadas y no aprobadas, y por ellas #19 sigue abierto.
+> final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
+> membresía NO implementados: las subetapas restantes de la Etapa 3 siguen
+> diseñadas y no aprobadas, y por ellas #19 sigue abierto. **`waitUntil` SÍ
+> está implementado en la rama de la 3.b** (sólo para la composición de
+> fondo del Home; §34-§35), no en Producción.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -1663,7 +1665,11 @@ TMDB y de Upstash de ese minuto.
 
 ### 32.2 Por qué esa solicitud no recibió el último bueno — causa comprobada y límite de lo verificable
 
-**Comprobado en el código** (`lib/home-servir.ts`, `servirConTurno`):
+> ⚠️ Esta sección describe el código **anterior a la 3.b** (`903832e`, lo
+> que está en Producción). En la rama `feat/etapa3b-ub-primero` el líder con
+> UB ya **no** compone en línea: responde el UB y compone en fondo (§34-§35).
+
+**Comprobado en el código de `903832e`** (`lib/home-servir.ts`, `servirConTurno`):
 
 1. Se lee la fresca: ausente (`MISS`). La clave fresca lleva la **semilla del
    día** (`clavesDelHome`: `claveHome(instante.semilla, …)`), así que **cada
@@ -1698,7 +1704,7 @@ para la causa:** con o sin UB, el camino del líder compone en línea. Si había
 UB, la espera de 15,1 s fue **evitable** con el diseño de §32.7; si no lo
 había (combinación nueva en 36 h), hoy no hay nada que servir y aplica §32.8.
 
-### 32.3 Los cuatro casos, diferenciados (código actual)
+### 32.3 Los cuatro casos, diferenciados (código anterior a la 3.b, `903832e`)
 
 | Caso | Qué encuentra `servirConTurno` | Quién espera y cuánto | Contenido servido |
 |---|---|---|---|
@@ -2277,3 +2283,116 @@ intactos y sin seguimiento.
   primer visitante del día ve el UB sin la rotación de ese día (decisión
   aprobada); el kill switch se aplica con el siguiente deployment; el `[home]
   VUELTAS` del fondo sale con prefijo `[home]` (lo imprime `composeHome`).
+
+---
+
+## 35. Corrección de la 3.b tras la auditoría de Codex sobre `c84996e` — pendiente de nueva auditoría; no mergeada ni desplegada
+
+### 35.1 Causa exacta
+
+`lib/home-fondo.ts` hacía `await Promise.resolve()` antes de `iniciar`. Eso
+sólo garantiza que `waitUntil` ya había **registrado** la tarea; no que la
+ruta hubiera **construido su respuesta**. El orden real era: `servirConTurno`
+devuelve el UB → la tarea despierta en el microtick siguiente y `composeHome`
+**arranca** → `homePayload` sigue (lecturas, línea `[home]`) → la ruta recién
+construye el `NextResponse`. La composición se metía en el camino crítico de
+la respuesta rápida.
+
+### 35.2 RED contra `c84996e`
+
+`lib/home-fondo-orden.test.ts` (`792d717`) atraviesa una frontera
+equivalente al handler real: el handler corre dentro de `conFrontera`, llama
+al `servirConTurno` real (turno en memoria, UB presente), sigue trabajando
+como `homePayload` (ticks, 30 ms, la línea `[home] terminal`), construye la
+respuesta —equivalente a `NextResponse.json(payload)`— y devuelve. Contra el
+programador de `c84996e` la traza fue:
+
+```
+["[home] compone", "iniciar", "servir-devolvio:ultimo-bueno-fondo", "[home-fondo] publicado", "[home] terminal", "respuesta-construida"]
+```
+
+es decir, **la composición entera terminó antes de que existiera la
+respuesta**. El test falla con «iniciar comenzó antes de construir la
+respuesta». También fallaban "sin frontera declarada → no hay fondo" y "dos
+handlers concurrentes: cada fondo detrás de SU respuesta". El control que
+modela el microtick reproduce el agujero.
+
+### 35.3 Solución
+
+- **`lib/fondo-frontera.ts`** (puro, `AsyncLocalStorage`): `conFrontera(handler)`
+  corre el handler con una frontera propia y **abre la compuerta cuando el
+  handler devolvió** (o lanzó: `finally`, para que ninguna tarea registrada
+  quede colgada de `waitUntil`); `compuertaDeFondo()` devuelve la promesa de
+  esa compuerta, o `null` si no hay frontera.
+- **`lib/home-fondo.ts`**: nueva dependencia `compuerta`; sin compuerta (el
+  handler no declaró la frontera) `programarEnFondo` devuelve `false` sin
+  iniciar → bloqueante. La tarea hace `await compuerta` (ni microticks ni
+  milisegundos) y sólo compone si el registro quedó hecho.
+- **`app/api/home/route.ts`**: `export const GET = conFrontera(conCors(manejar,
+  "GET"))` — la compuerta se abre cuando el handler **entero** devolvió la
+  respuesta, **cabeceras de CORS incluidas**. La frontera envuelve por fuera a
+  propósito: si envolviera sólo a `manejar`, las continuaciones del fondo se
+  encolarían antes de que `conCors` fijara sus cabeceras.
+- **`lib/home.ts`**: el programador recibe `compuertaDeFondo`.
+- Fallbacks conservados y probados: `waitUntil` no disponible, kill switch,
+  registro que lanza, sin UB, sin frontera → exactamente una composición
+  bloqueante, cero huérfanas, cero rechazos sin manejar.
+- `lib/cors-inventario.test.ts` acepta la forma envuelta y comprueba que la
+  frontera no esconde una divergencia de método.
+
+### 35.4 GREEN — evidencia del orden completo
+
+- `home-fondo-orden.test.ts`: traza con la frontera:
+  `servir-devolvio:ultimo-bueno-fondo → [home] terminal → respuesta-construida
+  → [home] compone → iniciar → [home-fondo] publicado`; una sola composición;
+  la fresca publicada por el fondo; turno liberado; métricas de la solicitud
+  sin `publicacion`; sin `unhandledRejection`. Sin frontera → `false`, cero
+  inicios. Handler que lanza → la compuerta se abre en `finally` y la tarea
+  corre. Dos handlers concurrentes → cada fondo arranca después de **su**
+  respuesta y el de B no espera la de A.
+- `home-fondo.test.ts`: compuerta cerrada → ni veinte ticks arrancan
+  `iniciar`; se abre → corre una vez. Sin compuerta → `false`.
+- `etapa3b-cableado.test.ts`: `GET = conFrontera(conCors(manejar, "GET"))`,
+  el adaptador pasa `compuertaDeFondo`, y `lib/home-fondo.ts` no contiene
+  `await Promise.resolve()`.
+- Repetidos: aislamiento de métricas/señal/ALS, publicación segura,
+  renovación, fencing, ENFRIAR, liberación y UB intacto ante degradación,
+  error y cancelación (`home-servir.test.ts`, 44/44).
+- **Banco 3.b** (dobles con latencia, antes `903832e` vs rama; verde): nueva
+  medida `componeAntesDeTerminal` por posición en el log — **0 en la rama**
+  (ningún `[home] compone` precede a la línea terminal de la solicitud; en
+  el log: `[home] 55ms total … ultimo-bueno-fondo` y recién después
+  `[home] compone …`) y **1 en el antes** (compone en línea). UB presente:
+  80 ms con el UB, fondo 5.336 ms publicado, siguiente HIT 17 ms, fresca
+  idéntica; concurrentes 43/43 ms; sin UB 5,7 s; degradado en fondo (8
+  descartes, UB intacto); 5xx total (degradado vía `safe()`); cancelado a
+  50,5 s; kill switch y sin fondo como el antes.
+- Suite **1.701 tests, 1.691 aprobados, 0 fallos, 10 omitidos**; `tsc
+  --noEmit` limpio; build fresco (`BUILD_ID gyBDPIpEGVqCAHimXFrDK`); `git
+  diff --check` limpio; cliente sin rastro del paquete ni de la frontera;
+  identidad del Home **16/16**.
+
+### 35.5 Contradicciones documentales corregidas
+
+- El encabezado del informe, `ESTADO.md` e `ISSUES.md` decían que `waitUntil`
+  **no** estaba implementado: ahora distinguen **Producción (`903832e`, sin
+  `waitUntil`)** de la **rama de la 3.b (con `waitUntil`, sólo para el fondo
+  del Home)**.
+- §32.2/§32.3 describían en presente que el líder con UB compone en línea:
+  quedan marcados como **comportamiento anterior a la 3.b**; el
+  implementado en la rama es §34-§35.
+
+### 35.6 Comprobado / inferido / desconocido
+
+- **Comprobado:** §35.2 (RED), §35.4 (GREEN, banco, identidad, build, suite).
+- **Inferido:** que en Vercel la compuerta se abre en el mismo punto que en
+  el arnés (cuando el handler devuelve su `Response`): la frontera es ALS y
+  no depende del runtime; no se verificó en Preview esta corrección (la
+  sonda del gate §34.6 validó `waitUntil`, no la frontera). Que "respuesta
+  construida" en Vercel implica "respuesta enviada" sigue en manos de Next:
+  la serialización ocurre al devolver el handler.
+- **Desconocido:** el coste de iniciar el fondo unos microtasks más tarde
+  (nulo en el banco: 80 ms de respuesta y 5,3 s de fondo).
+
+Estado: **corregida en rama, pendiente de una nueva auditoría de Codex; no
+mergeada ni desplegada.**
