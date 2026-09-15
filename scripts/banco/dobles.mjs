@@ -18,6 +18,11 @@
 //        hash es del path —un título, una ruta— o, con `parcialPorQuery`, de la
 //        URL entera, para familias como `/discover` donde el path es siempre el
 //        mismo y lo que distingue un pool es la query)
+//        modo: "429-consulta" + { consulta429: { path: "/discover/movie", params: { page: "4", … } } }
+//        (429 sólo en las consultas cuyo path y parámetros coinciden; las URLs
+//        rechazadas quedan en cuenta.consultas429)
+//        discoverPorPagina: 20   (resultados por página de /discover; con menos
+//        un riel no llena su ventana y pide su página extra)
 //   POST /__banco/reset           contadores a cero (y, en Redis, borra la base)
 //
 // El contador de cada doble es el ÁRBITRO: lo que la app dice que hizo (línea
@@ -61,7 +66,7 @@ function doble(nombre, puerto, atender, extra = {}) {
     if (url.startsWith("/__banco/")) {
       if (url === "/__banco/estado") return json(res, 200, { nombre, estado, cuenta, ...(extra.estado?.() ?? {}) });
       if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); return json(res, 200, estado); }
-      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; extra.reset?.(); return json(res, 200, { ok: true }); }
+      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; cuenta.consultas429 = []; cuenta.discovers = []; extra.reset?.(); return json(res, 200, { ok: true }); }
       // Controles propios del doble (Etapa 2: expirar, borrar, perder la
       // respuesta, fallar EVAL, listar claves).
       if (extra.control) { const r = await extra.control(url, await leerCuerpo(req)); if (r !== undefined) return json(res, 200, r); }
@@ -89,8 +94,21 @@ function doble(nombre, puerto, atender, extra = {}) {
       cuenta.parciales429 = (cuenta.parciales429 ?? 0) + 1;
       return json(res, 429, { error: "doble en modo 429-parcial" }, { "Retry-After": String(estado.retryAfter) });
     }
+    // Etapa 3.a (auditoría sobre c6b299e): 429 sobre UNA consulta identificada
+    // por sus parámetros (`consulta429: { path, params }`; todos los `params`
+    // tienen que coincidir). Es lo que distingue la página extra de un riel de
+    // las páginas de su ventana: mismo path y misma receta, otro `page`. Las
+    // URLs rechazadas quedan en `cuenta.consultas429`.
+    if (estado.modo === "429-consulta" && estado.consulta429) {
+      const u = new URL(url, "http://x");
+      const c = estado.consulta429;
+      if (u.pathname === c.path && Object.entries(c.params ?? {}).every(([k, v]) => u.searchParams.get(k) === String(v))) {
+        (cuenta.consultas429 ??= []).push(url);
+        return json(res, 429, { error: "doble en modo 429-consulta" }, { "Retry-After": String(estado.retryAfter) });
+      }
+    }
     try {
-      await atender(req, res, url, cuerpo, cuenta);
+      await atender(req, res, url, cuerpo, cuenta, estado);
     } catch (e) {
       json(res, 500, { error: String(e) });
     }
@@ -115,20 +133,28 @@ function titulo(tipo, id, generos) {
     genre_ids: generos.length ? generos : [18], original_language: "en", origin_country: ["US"], adult: false,
   };
 }
-function pagina(tipo, q) {
+// `porPagina`: cuántos resultados trae cada página (20, como TMDB). Con menos,
+// un riel no llena su ventana y pide la página extra — es cómo el banco fuerza
+// ese recorrido.
+function pagina(tipo, q, porPagina = 20) {
   const generos = (q.get("with_genres") ?? "").split(/[,|]/).filter(Boolean).map(Number);
   const page = Number(q.get("page") ?? "1");
   // La semilla depende de TODO lo que distingue una consulta: así dos rieles
   // distintos traen títulos distintos y dos plataformas también.
   const semilla = hash(`${tipo}|${q.get("with_genres")}|${q.get("with_keywords")}|${q.get("with_watch_providers")}|${q.get("sort_by")}|${q.get("with_type")}|${q.get("without_genres")}|${q.get("primary_release_date.gte") ?? q.get("first_air_date.gte") ?? ""}`) % 100000;
   const base = 1000 + semilla * 100 + (page - 1) * 20;
-  return { page, results: Array.from({ length: 20 }, (_, i) => titulo(tipo, base + i, generos)), total_pages: 10, total_results: 200 };
+  return { page, results: Array.from({ length: porPagina }, (_, i) => titulo(tipo, base + i, generos)), total_pages: 10, total_results: 200 };
 }
-doble("tmdb", PUERTO_BASE + 0, async (req, res, url, _cuerpo, cuenta) => {
+doble("tmdb", PUERTO_BASE + 0, async (req, res, url, _cuerpo, cuenta, estado) => {
   const u = new URL(url, "http://x");
   const p = u.pathname;
   let m;
-  if ((m = p.match(/^\/discover\/(movie|tv)$/))) return json(res, 200, pagina(m[1], u.searchParams));
+  if ((m = p.match(/^\/discover\/(movie|tv)$/))) {
+    // Registro de cada `discover` atendido (path + query), para que el banco
+    // pueda elegir una consulta concreta (p. ej. la página extra de un riel).
+    if ((cuenta.discovers ??= []).length < 5000) cuenta.discovers.push(url);
+    return json(res, 200, pagina(m[1], u.searchParams, estado.discoverPorPagina ?? 20));
+  }
   if ((m = p.match(/^\/trending\/(movie|tv|all)\/(day|week)$/))) return json(res, 200, pagina(m[1] === "all" ? "movie" : m[1], u.searchParams));
   if ((m = p.match(/^\/(movie|tv)\/(\d+)\/watch\/providers$/))) {
     const id = Number(m[2]);

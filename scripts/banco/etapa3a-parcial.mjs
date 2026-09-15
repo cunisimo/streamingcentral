@@ -202,13 +202,63 @@ async function escenarios(nombre, p, pSinEjes) {
   };
   out.pools = { conEjes: await escenarioPools(p), sinEjes: await escenarioPools(pSinEjes) };
   await sano(base);
+  // --- E. PÁGINA EXTRA de un riel (auditoría sobre c6b299e) ------------------
+  // El recorrido composeHome → genreRail → categoryCandidates →
+  // candidatosDeSuperficie (rama `opts.ejeFijo`, con ejes; la llamada directa,
+  // sin ejes) → candidatosDePools. Un 429 "parcial en /discover" agrega todas
+  // las llamadas y no dice qué rama llegó al descarte; acá se fuerza la extra y
+  // se identifica ESA consulta por sus parámetros:
+  //   1. con el doble devolviendo 2 resultados por página, ningún riel llena su
+  //      ventana de 3 páginas y todos piden la extra (página 4 para las recetas
+  //      que arrancan en la 1); una corrida sana registra qué `discover` pidió;
+  //   2. se elige una consulta (género + sort) que pidió la página 4 y NO la 5
+  //      —o sea, la 4 fue su extra, no parte de una ventana `hondo` 4-6—;
+  //   3. cachés vaciadas, el doble en modo 429-consulta sobre exactamente esa
+  //      consulta (path + page + with_genres + sort_by: coincide para las tres
+  //      plataformas), y el Home tiene que salir degradado, con tantos
+  //      descartes como consultas rechazadas, y sin publicar.
+  const escenarioExtra = async (proceso) => {
+    const config = (c) => control(base, "tmdb", "config", c);
+    await vaciar(base); await config({ modo: "ok", latenciaMs: 0, discoverPorPagina: 2 }); terminales(proceso);
+    const sanoCorto = await pedir(proceso);
+    await terminal(proceso);
+    const discovers = (await control(base, "tmdb", "estado")).cuenta.discovers ?? [];
+    // Consultas de /discover/movie agrupadas por (with_genres, sort_by) → páginas pedidas.
+    const porReceta = new Map();
+    for (const u of discovers) {
+      const x = new URL(u, "http://x");
+      if (x.pathname !== "/discover/movie") continue;
+      const k = `${x.searchParams.get("with_genres")}|${x.searchParams.get("sort_by")}`;
+      if (!porReceta.has(k)) porReceta.set(k, new Set());
+      porReceta.get(k).add(Number(x.searchParams.get("page")));
+    }
+    const elegida = [...porReceta.entries()].find(([k, pags]) => k.split("|")[0] && pags.has(4) && !pags.has(5));
+    const r = { discoverPorPagina: 2, ejesRieles: proceso.ejesRieles, sanoCorto: { http: sanoCorto.status, titulos: cuentaTitulos(sanoCorto.json), recetas: porReceta.size }, consulta: null };
+    if (!elegida) { r.valido = false; r.motivo = "ninguna receta pidió la página 4 sin la 5"; await config({ modo: "ok", discoverPorPagina: 20 }); return r; }
+    const [withGenres, sortBy] = elegida[0].split("|");
+    r.consulta = { path: "/discover/movie", params: { page: "4", with_genres: withGenres, sort_by: sortBy } };
+    await vaciar(base); await config({ modo: "429-consulta", consulta429: r.consulta, discoverPorPagina: 2 }); terminales(proceso);
+    const d = await pedir(proceso);
+    const tD = await terminal(proceso);
+    const cuenta = (await control(base, "tmdb", "estado")).cuenta;
+    r.valido = true;
+    r.http = d.status; r.degradado = !!d.json.degradado; r.fallos = d.json.fallos ?? null; r.titulos = cuentaTitulos(d.json);
+    r.consultas429 = (cuenta.consultas429 ?? []).length;
+    r.linea = { cache: tD.cache, origen: tD.origen, publicacion: tD.publicacion, degradadoEnLinea: tD.degradadoEnLinea, descartes: tD.descartes, tmdb: tD.tmdb };
+    r.escrito = { fresca: (await claves(base, "^home:[^:]+:v\\d+:")).length, ub: (await claves(base, "^home:ub:")).length };
+    r.verde = r.http === 200 && r.consultas429 > 0 && r.linea.descartes === r.consultas429 && r.degradado === true && r.escrito.fresca === 0 && r.escrito.ub === 0;
+    await config({ modo: "ok", latenciaMs: 0, discoverPorPagina: 20 });
+    return r;
+  };
+  out.paginaExtra = { conEjes: await escenarioExtra(p), sinEjes: await escenarioExtra(pSinEjes) };
   // Verdicto por versión.
   out.verde = out.sinUB.http === 200 && out.sinUB.degradado === true && out.sinUB.escrito.fresca === 0 && out.sinUB.escrito.ub === 0
     && out.sinUB.parciales429 > 0 && out.conUB.parcial.sirvioElUBCorrecto && out.conUB.parcial.frescaReescrita === 0 && out.conUB.parcial.ubIntacto
     && out.busqueda.parcial.http === 200 && out.busqueda.parcial.parciales429 > 0 && (out.busqueda.parcial.degradacion?.proveedores ?? 0) > 0
     && out.busqueda.parcial.segundaVolvioAPedir && out.busqueda.parcial.guardado === 0
     && out.busqueda.total429.http === 503 && out.busqueda.total429.retryAfter === "3"
-    && out.pools.conEjes.verde && out.pools.sinEjes.verde;
+    && out.pools.conEjes.verde && out.pools.sinEjes.verde
+    && out.paginaExtra.conEjes.verde === true && out.paginaExtra.sinEjes.verde === true;
   await sano(base);
   return out;
 }
@@ -231,6 +281,10 @@ try {
     console.log(`[parcial] ${s.version} | búsqueda parcial: http ${s.busqueda.parcial.http}, ${s.busqueda.parcial.titulos} títulos (${s.busqueda.parcial.sinPlataformas} sin plataformas), degradacion ${JSON.stringify(s.busqueda.parcial.degradacion)}, ${s.busqueda.parcial.parciales429} x429, segunda volvió a pedir ${s.busqueda.parcial.segundaVolvioAPedir}, guardado ${s.busqueda.parcial.guardado} | búsqueda 429 total: http ${s.busqueda.total429.http}, Retry-After ${s.busqueda.total429.retryAfter}, error ${s.busqueda.total429.error}`);
     for (const [k, q] of Object.entries(s.pools)) {
       console.log(`[parcial] ${s.version} | pools ${k} (EJES_RIELES=${q.ejesRieles}, 429 parcial en /discover): http ${q.http}, degradado ${q.degradado}, ${q.titulos} títulos, ${q.parciales429} x429 parciales, descartes ${q.linea.descartes}, origen ${q.linea.origen}, publicacion ${q.linea.publicacion}, escrito fresca ${q.escrito.fresca} ub ${q.escrito.ub} → ${q.verde ? "verde" : "rojo"}`);
+    }
+    for (const [k, q] of Object.entries(s.paginaExtra)) {
+      if (!q.valido) { console.log(`[parcial] ${s.version} | página extra ${k}: INVÁLIDO — ${q.motivo}`); continue; }
+      console.log(`[parcial] ${s.version} | página extra ${k} (EJES_RIELES=${q.ejesRieles}, 429 sólo en ${q.consulta.path} page=${q.consulta.params.page} with_genres=${q.consulta.params.with_genres} sort_by=${q.consulta.params.sort_by}): http ${q.http}, degradado ${q.degradado}, ${q.consultas429} consultas rechazadas, descartes ${q.linea.descartes}, origen ${q.linea.origen}, publicacion ${q.linea.publicacion}, escrito fresca ${q.escrito.fresca} ub ${q.escrito.ub} → ${q.verde ? "verde" : "rojo"}`);
     }
     console.log(`[parcial] ${s.version} | con UB: sano ${s.conUB.sano.titulos} títulos (publicacion ${s.conUB.sano.publicacion}); parcial → degradado ${s.conUB.parcial.degradado}, ${s.conUB.parcial.titulos} títulos, origen ${s.conUB.parcial.linea.origen}, sirvió el UB correcto: ${s.conUB.parcial.sirvioElUBCorrecto}, fresca reescrita ${s.conUB.parcial.frescaReescrita}, UB intacto ${s.conUB.parcial.ubIntacto} → ${s.verde ? "VERDE" : "ROJO"}`);
   }

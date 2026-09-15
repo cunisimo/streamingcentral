@@ -435,6 +435,10 @@ const RECORDATORIO = "app/api/recordatorio/route.ts";
 /** Los dos bloques de `candidatosDeSuperficie` que deciden el recorrido. */
 const BLOQUE_EJES = "if (opts.superficie && poolsHabilitados) {";
 const BLOQUE_SIN_POOLS = "if (!poolsHabilitados) {";
+/** La rama de la página extra con el eje ya resuelto (dentro de BLOQUE_EJES). */
+const BLOQUE_EJE_FIJO = "if (opts.ejeFijo) {";
+/** En audienceTitles: la adquisición con eje (adentro) vs. las páginas siguientes (afuera). */
+const BLOQUE_AUD_POOLS = "if (poolsHabilitados) {";
 
 /** EL INVENTARIO: un ancla (fragmento único de la línea) por sitio, en orden de aparición. */
 const INVENTARIO: Fila[] = [
@@ -449,22 +453,42 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/lotes-tolerantes.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "portadas" },
   { archivo: "lib/busqueda-enriquecido.ts", ancla: "deps.enriquecer(c).then((t) => ({ t, degradado: false })).catch", clase: "tmdb-registra", efecto: "contexto", ejecucion: "busqueda" },
   { archivo: "lib/settle-all.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", ejecucion: "settleAll" },
-  // pools: el contexto lo abre el Home (por contexto async) y hay DOS recorridos
-  // soportados que llegan al mismo sitio, los dos cruzando archivos:
-  //   con-ejes  composeHome → candidatosDeSuperficie (con `superficie`: entra al
-  //             bloque de ejes) → candidatosConEje → candidatosDePools
-  //   sin-ejes  EJES_RIELES=0: home.ts no pasa `superficie`, y
-  //             candidatosDeSuperficie llama a candidatosDePools DIRECTO, fuera
-  //             del bloque de ejes (deliberado y documentado en enrich.ts)
-  // Cada enlace se verifica cuerpo por cuerpo; el banco con 429 en /discover
-  // (con EJES_RIELES encendido y en 0) es evidencia ADICIONAL. Con POOL_CACHE=0
-  // este sitio NO se alcanza (candidatosDeSuperficie va a `discover` directo y un
-  // fallo lo atrapa el `safe()` del Home): queda fuera de este recorrido.
+  // pools: el contexto lo abre el Home (por contexto async) y hay VARIOS
+  // recorridos soportados desde composeHome que llegan al mismo sitio, todos
+  // cruzando archivos (el inventario de call sites de abajo, CALL_SITES, lista
+  // cada llamada productiva y a qué recorrido pertenece):
+  //   con-ejes            rieles con `superficie`: candidatosDeSuperficie entra al
+  //                       bloque de ejes → candidatosConEje → candidatosDePools
+  //   sin-ejes            EJES_RIELES=0: home.ts no pasa `superficie` y
+  //                       candidatosDeSuperficie llama a candidatosDePools DIRECTO
+  //   extra-*-ejeFijo     página extra de genreRail / miniseriesRail con el eje ya
+  //                       resuelto: categoryCandidates → candidatosDeSuperficie,
+  //                       rama `opts.ejeFijo` → candidatosDePools directo, SIN
+  //                       pasar por candidatosConEje
+  //   extra-*-sin-ejes    la misma página extra con EJES_RIELES=0: llamada directa
+  //   hero                recommendations → tandaAncha → categoryCandidates con
+  //                       `superficie: "hero"` (siempre) → candidatosConEje
+  //   audiencia-inicial   audienceTitles → candidatosConEje (adquisición)
+  //   audiencia-paginas   audienceTitles → candidatosDePools directo (páginas
+  //                       siguientes, fuera del bloque de candidatosConEje)
+  // Cada enlace se verifica cuerpo por cuerpo. El banco (429 parcial en
+  // /discover con EJES_RIELES encendido y en 0; página extra identificada por
+  // sus parámetros, con y sin ejes) es evidencia ADICIONAL de algunos de ellos,
+  // no de todos: ver `cobertura` en CALL_SITES. Con POOL_CACHE=0 este sitio NO
+  // se alcanza (candidatosDeSuperficie y audienceTitles van a `discover` directo
+  // y un fallo lo atrapa el `safe()` del Home): queda fuera de estos recorridos.
   { archivo: "lib/pools.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", banco: "discover",
     estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome",
       recorridos: {
         "con-ejes": ["lib/home.ts#composeHome", { ref: "lib/enrich.ts#candidatosDeSuperficie", dentroDe: BLOQUE_EJES }, "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"],
         "sin-ejes": ["lib/home.ts#composeHome", { ref: "lib/enrich.ts#candidatosDeSuperficie", fueraDe: [BLOQUE_EJES, BLOQUE_SIN_POOLS] }, "lib/pools.ts#candidatosDePools"],
+        "extra-genero-ejeFijo": ["lib/home.ts#composeHome", "lib/home.ts#genreRail", "lib/enrich.ts#categoryCandidates", { ref: "lib/enrich.ts#candidatosDeSuperficie", dentroDe: BLOQUE_EJE_FIJO }, "lib/pools.ts#candidatosDePools"],
+        "extra-miniseries-ejeFijo": ["lib/home.ts#composeHome", "lib/home.ts#miniseriesRail", "lib/enrich.ts#categoryCandidates", { ref: "lib/enrich.ts#candidatosDeSuperficie", dentroDe: BLOQUE_EJE_FIJO }, "lib/pools.ts#candidatosDePools"],
+        "extra-genero-sin-ejes": ["lib/home.ts#composeHome", "lib/home.ts#genreRail", "lib/enrich.ts#categoryCandidates", { ref: "lib/enrich.ts#candidatosDeSuperficie", fueraDe: [BLOQUE_EJES, BLOQUE_SIN_POOLS] }, "lib/pools.ts#candidatosDePools"],
+        "extra-miniseries-sin-ejes": ["lib/home.ts#composeHome", "lib/home.ts#miniseriesRail", "lib/enrich.ts#categoryCandidates", { ref: "lib/enrich.ts#candidatosDeSuperficie", fueraDe: [BLOQUE_EJES, BLOQUE_SIN_POOLS] }, "lib/pools.ts#candidatosDePools"],
+        "hero": ["lib/home.ts#composeHome", "lib/enrich.ts#recommendations", "lib/enrich.ts#tandaAncha", "lib/enrich.ts#categoryCandidates", { ref: "lib/enrich.ts#candidatosDeSuperficie", dentroDe: BLOQUE_EJES }, "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"],
+        "audiencia-inicial": ["lib/home.ts#composeHome", { ref: "lib/enrich.ts#audienceTitles", dentroDe: BLOQUE_AUD_POOLS }, "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"],
+        "audiencia-paginas": ["lib/home.ts#composeHome", { ref: "lib/enrich.ts#audienceTitles", fueraDe: [BLOQUE_AUD_POOLS] }, "lib/pools.ts#candidatosDePools"],
       },
       consumo: [/degradado: true/, /fallosTmdb/] } },
   { archivo: "lib/home.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto",
@@ -667,6 +691,23 @@ test("banco: los sitios que sólo se ejercitan con dobles tienen su escenario de
       assert.equal(esc.escrito.fresca, 0, `${nombre}: se publicó como fresca`);
       assert.equal(esc.escrito.ub, 0, `${nombre}: se publicó como último bueno`);
     }
+    if (fila.banco !== "discover") continue;
+    // La PÁGINA EXTRA (rama `opts.ejeFijo` con ejes; llamada directa sin ejes):
+    // el doble rechazó SÓLO la consulta identificada por sus parámetros, y esa
+    // consulta ocurrió (≥ 1 rechazo), produjo exactamente esos descartes, marcó
+    // el Home degradado y no escribió fresca ni último bueno.
+    type Extra = { valido: boolean; http: number; consulta: { path: string; params: Record<string, string> }; consultas429: number; degradado: boolean; linea: { descartes: number }; escrito: { fresca: number; ub: number } } | undefined;
+    const extras: [string, Extra][] = [["paginaExtra.conEjes (rama ejeFijo)", ev.despues.paginaExtra?.conEjes], ["paginaExtra.sinEjes (llamada directa)", ev.despues.paginaExtra?.sinEjes]];
+    for (const [nombre, ex] of extras) {
+      assert.ok(ex, `${sitio.archivo}:${sitio.linea}: falta el escenario ${nombre} en la evidencia`);
+      assert.equal(ex.valido, true, `${nombre}: el banco no pudo identificar la consulta de la página extra`);
+      assert.equal(ex.consulta.path, "/discover/movie");
+      assert.equal(ex.consulta.params.page, "4", `${nombre}: la consulta identificada no es la página extra`);
+      assert.ok(ex.consultas429 >= 1, `${nombre}: la consulta de la página extra no ocurrió`);
+      assert.equal(ex.linea.descartes, ex.consultas429, `${nombre}: los descartes contados no son exactamente las consultas rechazadas`);
+      assert.equal(ex.http, 200); assert.equal(ex.degradado, true, `${nombre}: el Home no salió degradado`);
+      assert.equal(ex.escrito.fresca, 0, `${nombre}: se publicó como fresca`); assert.equal(ex.escrito.ub, 0, `${nombre}: se publicó como último bueno`);
+    }
   }
 });
 
@@ -736,58 +777,206 @@ test("CONTROL mutado (contexto): apertura quitada, sitio sacado del callback, op
   assert.throws(() => verificarContexto(estHome, { archivo: "lib/home.ts", linea: lineaSafe }, { "lib/home.ts": desenvuelto }), /no envuelve composeHome\(/);
 });
 
-test("CONTROL mutado (pools, DOS recorridos entre archivos): cada corte invalida el recorrido que le corresponde, nombrando el enlace perdido", () => {
-  // Auditoría de Codex sobre 03ad4b9 y sobre 6ef35c5. La fila de pools tiene
-  // que representar TODOS los recorridos soportados hasta el sitio, no sólo el
-  // de ejes: con EJES_RIELES=0 home.ts no pasa `superficie` y
-  // candidatosDeSuperficie llama a candidatosDePools directo. Ese recorrido no
-  // es un error —es deliberado— pero tiene que conservar el contexto: acá se
-  // muta el fuente REAL y se verifica LA FILA del inventario.
+// ============================================================================
+// INVENTARIO DE CALL SITES que pueden llegar al descarte de pools (auditoría de
+// Codex sobre c6b299e). Cada llamada productiva a `candidatosDePools(`,
+// `candidatosConEje(` y `categoryCandidates(` (en lib/ y en las rutas API) está
+// clasificada: consumidor, si se ejecuta desde composeHome, condición, dónde se
+// abre el contexto, cómo llega el descarte al consumidor y qué cobertura tiene.
+// Un call site nuevo sin clasificar hace fallar el barrido de abajo.
+// ============================================================================
+
+type Cobertura = "ejecutada" | "estructural" | "inferida";
+interface CallSite {
+  archivo: string;
+  funcion: string;
+  /** Fragmento único de la línea de la llamada. */
+  ancla: string;
+  llamada: "candidatosDePools" | "candidatosConEje" | "categoryCandidates";
+  consumidor: string;
+  desdeComposeHome: boolean;
+  condicion: string;
+  contexto: string;
+  llegada: string;
+  /** Recorridos de la fila de pools que pasan por esta llamada (si desdeComposeHome). */
+  recorridos?: string[];
+  /** Ruta API independiente que también la alcanza (sin contexto abierto). */
+  ruta?: string;
+  cobertura: Cobertura;
+  evidencia: string;
+}
+
+const CALL_SITES: CallSite[] = [
+  { archivo: "lib/pools.ts", funcion: "candidatosConEje", ancla: "const traer = (r: { receta: Receta; startPage: number }) => candidatosDePools({", llamada: "candidatosDePools",
+    consumidor: "toda adquisición con eje (rieles, hero, audiencia): la ventana del eje del día y el suelo `pop`", desdeComposeHome: true, condicion: "ejes activos (superficie presente) y POOL_CACHE≠0",
+    contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/recomendaciones y /api/audience", llegada: "contador → `degradado: true` → no se publica (cachedIf / UB)",
+    recorridos: ["con-ejes", "hero", "audiencia-inicial"], cobertura: "ejecutada", evidencia: "banco D conEjes: 8 × 429 en /discover (EJES_RIELES=1), 8 descartes, degradado, sin publicar (agregado: no distingue riel/hero/audiencia)" },
+  { archivo: "lib/enrich.ts", funcion: "candidatosDeSuperficie", ancla: "const candidatos = await candidatosDePools({", llamada: "candidatosDePools",
+    consumidor: "página extra de genreRail / miniseriesRail con el eje ya resuelto (`opts.ejeFijo`)", desdeComposeHome: true, condicion: "ejes activos + el riel no llenó su ventana (armarRiel pide la extra)",
+    contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
+    recorridos: ["extra-genero-ejeFijo", "extra-miniseries-ejeFijo"], cobertura: "ejecutada", evidencia: "banco E conEjes: 429 sólo en la consulta de la página extra (page=4 de una receta que no pidió la 5), 3 rechazadas = 3 descartes, degradado, sin publicar (riel de género; el de miniseries sólo estructural)" },
+  { archivo: "lib/enrich.ts", funcion: "candidatosDeSuperficie", ancla: "const candidatos = await candidatosDePools({\n    tipo: opts.tipo,", llamada: "candidatosDePools",
+    consumidor: "rieles y páginas extra sin `superficie` (EJES_RIELES=0)", desdeComposeHome: true, condicion: "EJES_RIELES=0 y POOL_CACHE≠0",
+    contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
+    recorridos: ["sin-ejes", "extra-genero-sin-ejes", "extra-miniseries-sin-ejes"], cobertura: "ejecutada", evidencia: "banco D sinEjes (7 × 429 parciales) y banco E sinEjes (página extra identificada: 3 = 3), degradado, sin publicar" },
+  { archivo: "lib/enrich.ts", funcion: "audienceTitles", ancla: "? await candidatosDePools({ tipo: tp, providers, receta, pages: 1, startPage: pagina })", llamada: "candidatosDePools",
+    consumidor: "carruseles de audiencia: páginas siguientes a la adquisición", desdeComposeHome: true, condicion: "POOL_CACHE≠0 y el carrusel no llenó con la primera tanda",
+    contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/audience", llegada: "contador → `degradado: true` → no se publica",
+    recorridos: ["audiencia-paginas"], ruta: "app/api/audience/route.ts", cobertura: "estructural", evidencia: "cadena y bloque verificados sobre el fuente; ningún banco identifica esta consulta (inferido en ejecución)" },
+  { archivo: "lib/enrich.ts", funcion: "candidatosDeSuperficie", ancla: "const r = await candidatosConEje({", llamada: "candidatosConEje",
+    consumidor: "rieles con `superficie` y el hero (tandaAncha)", desdeComposeHome: true, condicion: "ejes activos (superficie presente, sin ejeFijo) y POOL_CACHE≠0",
+    contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/recomendaciones", llegada: "contador → `degradado: true` → no se publica",
+    recorridos: ["con-ejes", "hero"], ruta: "app/api/recomendaciones/route.ts", cobertura: "ejecutada", evidencia: "banco D conEjes (agregado; no distingue riel de hero)" },
+  { archivo: "lib/enrich.ts", funcion: "audienceTitles", ancla: "const r = await candidatosConEje({", llamada: "candidatosConEje",
+    consumidor: "carruseles de audiencia: adquisición con eje", desdeComposeHome: true, condicion: "POOL_CACHE≠0",
+    contexto: "producirHome (withFallosDeFuentes) — o ninguno desde /api/audience", llegada: "contador → `degradado: true` → no se publica",
+    recorridos: ["audiencia-inicial"], ruta: "app/api/audience/route.ts", cobertura: "estructural", evidencia: "cadena y bloque verificados sobre el fuente; el banco D agrega sin distinguir audiencia (inferido en ejecución)" },
+  { archivo: "lib/enrich.ts", funcion: "tandaAncha", ancla: "const crudos = await categoryCandidates({", llamada: "categoryCandidates",
+    consumidor: "hero (recommendations con HERO_ANCHO≠0 y sin enriquecido especial)", desdeComposeHome: true, condicion: "HERO_ANCHO≠0; `superficie: \"hero\"` siempre → candidatosConEje",
+    contexto: "producirHome (withFallosDeFuentes) — desde /api/recomendaciones NINGUNO: el registro queda fuera de contexto (línea `[tmdb] descarte sin contexto sitio=pool`)", llegada: "Home: contador → `degradado: true`; ruta: sólo la línea de log, la respuesta sale con lo que hay",
+    recorridos: ["hero"], ruta: "app/api/recomendaciones/route.ts", cobertura: "estructural", evidencia: "cadena verificada sobre el fuente; la ruta independiente no abre conDescartesRegistrados (envolverla es un cambio productivo, fuera de esta corrección): inferido" },
+  { archivo: "lib/home.ts", funcion: "genreRail", ancla: "categoryCandidates({", llamada: "categoryCandidates",
+    consumidor: "página extra de un riel de género", desdeComposeHome: true, condicion: "el riel no llenó su ventana; con ejes lleva `ejeFijo`, sin ejes va directo",
+    contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
+    recorridos: ["extra-genero-ejeFijo", "extra-genero-sin-ejes"], cobertura: "ejecutada", evidencia: "banco E conEjes y sinEjes (with_genres=28)" },
+  { archivo: "lib/home.ts", funcion: "miniseriesRail", ancla: "categoryCandidates({", llamada: "categoryCandidates",
+    consumidor: "página extra del riel de miniseries", desdeComposeHome: true, condicion: "el riel no llenó su ventana; con ejes `ejeFijo`, sin ejes directo",
+    contexto: "producirHome (withFallosDeFuentes)", llegada: "contador → `degradado: true` → no se publica",
+    recorridos: ["extra-miniseries-ejeFijo", "extra-miniseries-sin-ejes"], cobertura: "estructural", evidencia: "cadena verificada sobre el fuente; el banco E eligió una receta de /discover/movie (género), no la de miniseries (inferido en ejecución)" },
+];
+
+/** Todas las llamadas productivas a las tres funciones, con su línea (base 1). */
+function llamadasAPools(): { archivo: string; linea: number; llamada: CallSite["llamada"]; texto: string; offset: number }[] {
+  const out: { archivo: string; linea: number; llamada: CallSite["llamada"]; texto: string; offset: number }[] = [];
+  for (const rel of archivos()) {
+    const f = limpio(rel);
+    for (const m of f.matchAll(/(?<![\w.])(candidatosDePools|candidatosConEje|categoryCandidates)\(/g)) {
+      if (/function\s+$/.test(f.slice(Math.max(0, m.index - 12), m.index))) continue;   // la definición, no una llamada
+      const linea = f.slice(0, m.index).split("\n").length;
+      out.push({ archivo: rel, linea, llamada: m[1] as CallSite["llamada"], texto: f.split("\n")[linea - 1].trim(), offset: m.index });
+    }
+  }
+  return out;
+}
+
+test("🔴 inventario de call sites: cada llamada productiva a candidatosDePools/candidatosConEje/categoryCandidates está clasificada, y cada fila corresponde a una llamada", () => {
+  const usadas = new Set<CallSite>();
+  const sinClasificar: string[] = [];
+  const pares: { sitio: ReturnType<typeof llamadasAPools>[number]; fila: CallSite }[] = [];
+  for (const sitio of llamadasAPools()) {
+    const f = limpio(sitio.archivo);
+    const fila = CALL_SITES.find((c) => !usadas.has(c) && c.archivo === sitio.archivo && c.llamada === sitio.llamada
+      && dentro(cuerpoDe(f, c.funcion), sitio.offset) && f.slice(sitio.offset - 200, sitio.offset + 200).includes(c.ancla.split("\n")[0]));
+    if (!fila) { sinClasificar.push(`${sitio.archivo}:${sitio.linea} ${sitio.llamada}( — ${sitio.texto}`); continue; }
+    usadas.add(fila); pares.push({ sitio, fila });
+  }
+  assert.deepEqual(sinClasificar, [], `call sites sin clasificar:\n${sinClasificar.join("\n")}`);
+  assert.deepEqual(CALL_SITES.filter((c) => !usadas.has(c)).map((c) => `${c.archivo}#${c.funcion} ${c.llamada}`), [], "filas del inventario de call sites sin llamada (ancla muerta)");
+  // Cada call site desde composeHome está en los recorridos que declara, y en el
+  // lugar que el recorrido exige (el bloque `dentroDe`/`fueraDe` del enlace).
+  const filaPools = INVENTARIO.find((x) => x.archivo === "lib/pools.ts" && x.clase === "tmdb-registra");
+  assert.ok(filaPools && filaPools.clase === "tmdb-registra" && filaPools.efecto === "contexto" && "estructura" in filaPools);
+  const recorridos = filaPools.estructura.recorridos ?? {};
+  for (const { sitio, fila } of pares) {
+    if (!fila.desdeComposeHome) continue;
+    assert.ok(fila.recorridos?.length, `${sitio.archivo}:${sitio.linea}: desde composeHome sin recorrido declarado`);
+    for (const nombre of fila.recorridos) {
+      const cadena = recorridos[nombre];
+      assert.ok(cadena, `${sitio.archivo}:${sitio.linea}: el recorrido ${nombre} no existe en la fila de pools`);
+      const i = cadena.findIndex((e) => refDe(e) === `${fila.archivo}#${fila.funcion}`);
+      assert.ok(i >= 0 && i + 1 < cadena.length && nombreDe(cadena[i + 1]) === fila.llamada, `${sitio.archivo}:${sitio.linea}: el recorrido ${nombre} no pasa por ${fila.funcion} → ${fila.llamada}(`);
+      const enlace = cadena[i];
+      const f = limpio(fila.archivo);
+      const cuerpo = cuerpoDe(f, fila.funcion);
+      if (typeof enlace !== "string" && enlace.dentroDe) assert.ok(dentro(bloque(f, cuerpo, enlace.dentroDe), sitio.offset), `${sitio.archivo}:${sitio.linea}: el recorrido ${nombre} exige la llamada dentro de \`${enlace.dentroDe}\` y ésta está afuera`);
+      if (typeof enlace !== "string" && enlace.fueraDe) assert.ok(enlace.fueraDe.every((c) => !dentro(bloque(f, cuerpo, c), sitio.offset)), `${sitio.archivo}:${sitio.linea}: el recorrido ${nombre} exige la llamada fuera de los bloques y ésta está adentro`);
+    }
+    if (fila.ruta) assert.match(limpio(fila.ruta), new RegExp(`(?<![\\w.])(recommendations|audienceTitles)\\(`), `${fila.ruta} no llama al consumidor`);
+  }
+  // Todo recorrido declarado en la fila de pools tiene al menos un call site que lo reclama.
+  const reclamados = new Set(CALL_SITES.flatMap((c) => c.recorridos ?? []));
+  assert.deepEqual(Object.keys(recorridos).filter((r) => !reclamados.has(r)), [], "recorridos de la fila de pools sin call site");
+});
+
+test("CONTROL mutado (pools, los nueve recorridos inventariados): cada tipo de rama real se corta por separado y falla SÓLO el recorrido que le corresponde", () => {
   const fila = INVENTARIO.find((f) => f.archivo === "lib/pools.ts" && f.clase === "tmdb-registra");
   assert.ok(fila && fila.clase === "tmdb-registra" && fila.efecto === "contexto" && "estructura" in fila, "la fila de pools declara estructura");
   const est = fila.estructura;
-  assert.deepEqual(Object.keys(est.recorridos ?? {}), ["con-ejes", "sin-ejes"], "la fila declara los dos recorridos soportados");
+  const todos = Object.keys(est.recorridos ?? {});
+  assert.deepEqual(todos, ["con-ejes", "sin-ejes", "extra-genero-ejeFijo", "extra-miniseries-ejeFijo", "extra-genero-sin-ejes", "extra-miniseries-sin-ejes", "hero", "audiencia-inicial", "audiencia-paginas"]);
   const pools = limpio("lib/pools.ts");
   const sitio = { archivo: "lib/pools.ts", linea: lineaDelCatch(pools, 'registrarDescarteTmdb(r.reason, "pool")', /allSettled\(/) };
-  assert.doesNotThrow(() => verificarContexto(est, sitio), "el fuente real pasa por los dos recorridos");
+  assert.doesNotThrow(() => verificarContexto(est, sitio), "el fuente real pasa por los nueve recorridos inventariados");
   const home = limpio("lib/home.ts");
   const enrich = limpio("lib/enrich.ts");
+  const solo = (nombres: string[]): Estructura => ({ ...est, recorridos: Object.fromEntries(nombres.map((n) => [n, est.recorridos![n]])) });
   const cortar = (f: string, funcion: string, llamada: string, region?: (r: Rango) => Rango) => {
     const r = region ? region(cuerpoDe(f, funcion)) : cuerpoDe(f, funcion);
     const mutado = f.slice(0, r.inicio) + texto(f, r).replace(new RegExp(`(?<![\\w.])${llamada}\\(`, "g"), `${llamada}Cortada(`) + f.slice(r.fin);
     assert.notEqual(mutado, f, `${funcion} no llamaba a ${llamada}( en esa región — la mutación no muta`);
     return mutado;
   };
+  /** El corte `fuentes` tiene que invalidar EXACTAMENTE `caen` (cada uno con su mensaje) y dejar vivos los demás. */
+  const esperar = (etiqueta: string, fuentes: Record<string, string>, caen: Record<string, RegExp>) => {
+    for (const [nombre, mensaje] of Object.entries(caen)) {
+      assert.throws(() => verificarContexto(solo([nombre]), sitio, fuentes), mensaje, `${etiqueta}: ${nombre} tenía que caer`);
+    }
+    const vivos = todos.filter((n) => !(n in caen));
+    assert.doesNotThrow(() => verificarContexto(solo(vivos), sitio, fuentes), `${etiqueta}: ${vivos.join(", ")} tenían que seguir vivos`);
+  };
   const superficie = cuerpoDe(enrich, "candidatosDeSuperficie");
   const ejes = bloque(enrich, superficie, BLOQUE_EJES);
-  // 1) Corte COMÚN: composeHome → candidatosDeSuperficie. Invalida los dos.
-  const sinComun = { "lib/home.ts": cortar(home, "composeHome", "candidatosDeSuperficie") };
-  assert.throws(() => verificarContexto(est, sitio, sinComun), /recorrido con-ejes: lib\/home\.ts#composeHome no llama a candidatosDeSuperficie\(/);
-  assert.throws(() => verificarContexto({ ...est, recorridos: { "sin-ejes": est.recorridos!["sin-ejes"] } }, sitio, sinComun), /recorrido sin-ejes: lib\/home\.ts#composeHome no llama a candidatosDeSuperficie\(/);
-  // 2) Corte del camino CON ejes: candidatosConEje → candidatosDePools. El de sin ejes sigue vivo.
-  const sinEjeAPools = { "lib/pools.ts": cortar(pools, "candidatosConEje", "candidatosDePools") };
-  assert.throws(() => verificarContexto(est, sitio, sinEjeAPools), /recorrido con-ejes: lib\/pools\.ts#candidatosConEje no llama a candidatosDePools\(/);
-  assert.doesNotThrow(() => verificarContexto({ ...est, recorridos: { "sin-ejes": est.recorridos!["sin-ejes"] } }, sitio, sinEjeAPools), "el recorrido sin ejes no depende de candidatosConEje");
-  // 3) Corte del camino SIN ejes: la llamada DIRECTA candidatosDeSuperficie → candidatosDePools
-  //    (la que está fuera del bloque de ejes). El de con ejes sigue vivo: su
-  //    candidatosDePools( está dentro del bloque (página extra con ejeFijo) y en candidatosConEje.
-  const sinDirecta = { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosDePools", () => ({ inicio: ejes.fin, fin: superficie.fin })) };
-  assert.throws(() => verificarContexto(est, sitio, sinDirecta), /recorrido sin-ejes: lib\/enrich\.ts#candidatosDeSuperficie no llama a candidatosDePools\( fuera de `if \(opts\.superficie && poolsHabilitados\) \{` y `if \(!poolsHabilitados\) \{`/);
-  assert.doesNotThrow(() => verificarContexto({ ...est, recorridos: { "con-ejes": est.recorridos!["con-ejes"] } }, sitio, sinDirecta), "el recorrido con ejes no depende de la llamada directa");
-  // 4) Corte del enlace de ejes dentro del bloque: candidatosDeSuperficie → candidatosConEje.
-  assert.throws(() => verificarContexto(est, sitio, { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosConEje") }), /recorrido con-ejes: lib\/enrich\.ts#candidatosDeSuperficie no llama a candidatosConEje\( dentro de `if \(opts\.superficie && poolsHabilitados\) \{`/);
-  // 5) El sitio mudado fuera de candidatosDePools: fallan los dos.
+  const ejeFijo = bloque(enrich, superficie, BLOQUE_EJE_FIJO);
+  const audiencia = cuerpoDe(enrich, "audienceTitles");
+  const audPools = bloque(enrich, audiencia, BLOQUE_AUD_POOLS);
+  // 1) corte común composeHome → candidatosDeSuperficie: los dos de rieles.
+  esperar("composeHome→candidatosDeSuperficie", { "lib/home.ts": cortar(home, "composeHome", "candidatosDeSuperficie") },
+    { "con-ejes": /recorrido con-ejes: .*composeHome no llama a candidatosDeSuperficie\(/, "sin-ejes": /recorrido sin-ejes: .*composeHome no llama a candidatosDeSuperficie\(/ });
+  // 2) vía candidatosConEje: candidatosConEje → candidatosDePools (traer): con-ejes, hero y audiencia-inicial.
+  esperar("candidatosConEje→candidatosDePools", { "lib/pools.ts": cortar(pools, "candidatosConEje", "candidatosDePools") },
+    { "con-ejes": /recorrido con-ejes: .*candidatosConEje no llama a candidatosDePools\(/, "hero": /recorrido hero: .*candidatosConEje no llama a candidatosDePools\(/, "audiencia-inicial": /recorrido audiencia-inicial: .*candidatosConEje no llama a candidatosDePools\(/ });
+  // 3) directa SIN ejes (fuera del bloque de ejes): sin-ejes y las extras sin ejes.
+  esperar("directa sin ejes", { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosDePools", () => ({ inicio: ejes.fin, fin: superficie.fin })) },
+    { "sin-ejes": /recorrido sin-ejes: .*no llama a candidatosDePools\( fuera de/, "extra-genero-sin-ejes": /recorrido extra-genero-sin-ejes: .*no llama a candidatosDePools\( fuera de/, "extra-miniseries-sin-ejes": /recorrido extra-miniseries-sin-ejes: .*no llama a candidatosDePools\( fuera de/ });
+  // 4) directa CON ejeFijo (dentro de `if (opts.ejeFijo) {`): sólo las extras con eje.
+  esperar("directa ejeFijo", { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosDePools", () => ejeFijo) },
+    { "extra-genero-ejeFijo": /recorrido extra-genero-ejeFijo: .*no llama a candidatosDePools\( dentro de `if \(opts\.ejeFijo\) \{`/, "extra-miniseries-ejeFijo": /recorrido extra-miniseries-ejeFijo: .*no llama a candidatosDePools\( dentro de `if \(opts\.ejeFijo\) \{`/ });
+  // 5) directa adicional: audienceTitles → candidatosDePools (páginas siguientes).
+  esperar("audienceTitles→candidatosDePools", { "lib/enrich.ts": cortar(enrich, "audienceTitles", "candidatosDePools", () => ({ inicio: audPools.fin, fin: audiencia.fin })) },
+    { "audiencia-paginas": /recorrido audiencia-paginas: .*audienceTitles no llama a candidatosDePools\( fuera de/ });
+  // 6) audienceTitles → candidatosConEje (adquisición).
+  esperar("audienceTitles→candidatosConEje", { "lib/enrich.ts": cortar(enrich, "audienceTitles", "candidatosConEje", () => audPools) },
+    { "audiencia-inicial": /recorrido audiencia-inicial: .*audienceTitles no llama a candidatosConEje\( dentro de/ });
+  // 7) candidatosDeSuperficie → candidatosConEje (dentro del bloque de ejes): con-ejes y hero.
+  esperar("candidatosDeSuperficie→candidatosConEje", { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosConEje") },
+    { "con-ejes": /recorrido con-ejes: .*no llama a candidatosConEje\( dentro de/, "hero": /recorrido hero: .*no llama a candidatosConEje\( dentro de/ });
+  // 8) categoryCandidates en cada consumidor: genreRail, miniseriesRail, tandaAncha.
+  esperar("genreRail→categoryCandidates", { "lib/home.ts": cortar(home, "genreRail", "categoryCandidates") },
+    { "extra-genero-ejeFijo": /recorrido extra-genero-ejeFijo: .*genreRail no llama a categoryCandidates\(/, "extra-genero-sin-ejes": /recorrido extra-genero-sin-ejes: .*genreRail no llama a categoryCandidates\(/ });
+  esperar("miniseriesRail→categoryCandidates", { "lib/home.ts": cortar(home, "miniseriesRail", "categoryCandidates") },
+    { "extra-miniseries-ejeFijo": /recorrido extra-miniseries-ejeFijo: .*miniseriesRail no llama a categoryCandidates\(/, "extra-miniseries-sin-ejes": /recorrido extra-miniseries-sin-ejes: .*miniseriesRail no llama a categoryCandidates\(/ });
+  esperar("tandaAncha→categoryCandidates", { "lib/enrich.ts": cortar(enrich, "tandaAncha", "categoryCandidates") },
+    { "hero": /recorrido hero: .*tandaAncha no llama a categoryCandidates\(/ });
+  // 9) composeHome → recommendations / audienceTitles / genreRail / miniseriesRail.
+  esperar("composeHome→recommendations", { "lib/home.ts": cortar(home, "composeHome", "recommendations") }, { "hero": /recorrido hero: .*composeHome no llama a recommendations\(/ });
+  esperar("composeHome→audienceTitles", { "lib/home.ts": cortar(home, "composeHome", "audienceTitles") },
+    { "audiencia-inicial": /recorrido audiencia-inicial: .*composeHome no llama a audienceTitles\(/, "audiencia-paginas": /recorrido audiencia-paginas: .*composeHome no llama a audienceTitles\(/ });
+  esperar("composeHome→genreRail", { "lib/home.ts": cortar(home, "composeHome", "genreRail") },
+    { "extra-genero-ejeFijo": /recorrido extra-genero-ejeFijo: .*composeHome no llama a genreRail\(/, "extra-genero-sin-ejes": /recorrido extra-genero-sin-ejes: .*composeHome no llama a genreRail\(/ });
+  // 10) el sitio mudado fuera de candidatosDePools: caen TODOS.
   const sitioAjeno = { archivo: "lib/pools.ts", linea: lineaDelCatch(pools, "export async function candidatosCombinados", /function/) };
-  assert.throws(() => verificarContexto(est, sitioAjeno), /recorrido con-ejes: .*no está dentro de lib\/pools\.ts#candidatosDePools/);
-  assert.throws(() => verificarContexto({ ...est, recorridos: { "sin-ejes": est.recorridos!["sin-ejes"] } }, sitioAjeno), /recorrido sin-ejes: .*no está dentro de lib\/pools\.ts#candidatosDePools/);
-  // 6) CONTROL del verificador: un recorrido que no arranca en la operación envuelta
-  //    (la fila de 03ad4b9) no pasa aunque el wrapper y el sitio existan; y la
-  //    fila de 6ef35c5 (sólo con-ejes) no representa el recorrido sin ejes: con la
-  //    llamada directa cortada seguía verde.
+  for (const n of todos) assert.throws(() => verificarContexto(solo([n]), sitioAjeno), new RegExp(`recorrido ${n}: .*no está dentro de lib/pools\\.ts#candidatosDePools`));
+  // 11) CONTROL del verificador y de las filas anteriores: 03ad4b9 (no arranca en
+  //     composeHome), 6ef35c5 (sólo con ejes: no distingue la llamada directa) y
+  //     c6b299e (con y sin ejes: no distingue la rama ejeFijo ni audiencia).
   assert.throws(() => verificarContexto({ ...est, recorridos: undefined, cadena: ["lib/pools.ts#candidatosDePools"] }, sitio), /la cadena no arranca en composeHome/);
   const filaDe6ef35c5: Estructura = { ...est, recorridos: undefined, cadena: ["lib/home.ts#composeHome", "lib/enrich.ts#candidatosDeSuperficie", "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"] };
-  assert.doesNotThrow(() => verificarContexto(filaDe6ef35c5, sitio, sinDirecta), "la fila de 6ef35c5 no distingue el recorrido sin ejes");
+  assert.doesNotThrow(() => verificarContexto(filaDe6ef35c5, sitio, { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosDePools", () => ({ inicio: ejes.fin, fin: superficie.fin })) }), "la fila de 6ef35c5 no distingue el recorrido sin ejes");
+  const filaDeC6b299e = solo(["con-ejes", "sin-ejes"]);
+  assert.doesNotThrow(() => verificarContexto(filaDeC6b299e, sitio, { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosDePools", () => ejeFijo) }), "la fila de c6b299e no distingue la rama ejeFijo");
+  assert.doesNotThrow(() => verificarContexto(filaDeC6b299e, sitio, { "lib/enrich.ts": cortar(enrich, "audienceTitles", "candidatosDePools", () => ({ inicio: audPools.fin, fin: audiencia.fin })) }), "la fila de c6b299e no distingue las páginas de audiencia");
 });
+
 test("el inventario cubre los doce sitios del informe (S1-S11 + genreCovers) y no afirma que sean sólo once", () => {
   const registranArchivos = new Set(INVENTARIO.filter((i) => i.clase === "tmdb-registra").map((i) => i.archivo));
   for (const a of ["lib/home.ts", "lib/settle-all.ts", "lib/enrich.ts", "lib/lotes-tolerantes.ts", "lib/pools.ts", "lib/top.ts", "lib/netflix-top10.ts", "lib/idioma.ts", "lib/busqueda-enriquecido.ts", "lib/disponibilidad.ts", "lib/netflix-resolver.ts", RECORDATORIO]) {

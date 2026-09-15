@@ -112,6 +112,80 @@
         "verde": false
       }
     },
+    "paginaExtra": {
+      "conEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "1",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 13
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "primary_release_date.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 504
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
+      },
+      "sinEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "0",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 10
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "popularity.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 441
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
+      }
+    },
     "verde": false
   },
   "despues": {
@@ -218,6 +292,80 @@
           "degradadoEnLinea": true,
           "descartes": 7,
           "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
+      }
+    },
+    "paginaExtra": {
+      "conEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "1",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 13
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "primary_release_date.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": true,
+        "fallos": 3,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 3,
+          "tmdb": 504
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
+      },
+      "sinEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "0",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 10
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "popularity.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": true,
+        "fallos": 3,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 3,
+          "tmdb": 441
         },
         "escrito": {
           "fresca": 0,
