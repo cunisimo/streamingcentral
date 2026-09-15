@@ -75,6 +75,18 @@ function limpio(rel: string): string {
     .replace(/(^|[\s;{}(),])\/\/.*$/gm, "$1");
 }
 const offsetDeLinea = (f: string, linea: number) => f.split("\n").slice(0, linea - 1).reduce((a, l) => a + l.length + 1, 0);
+/**
+ * Línea (BASADA EN 1, como `sitios()`) del sitio que atrapa: la línea más
+ * cercana hacia arriba desde `marcador` (el registro) que cumpla `patron`
+ * (por defecto, un `catch`). `findIndex` devuelve base 0: acá se convierte.
+ */
+function lineaDelCatch(f: string, marcador: string, patron: RegExp = /\bcatch\b/): number {
+  const lineas = f.split("\n");
+  const i = lineas.findIndex((l) => l.includes(marcador));
+  if (i < 0) throw new Error(`no está el marcador ${marcador}`);
+  for (let k = i; k >= 0; k--) if (patron.test(lineas[k])) return k + 1;
+  throw new Error(`sin ${patron} arriba de ${marcador}`);
+}
 
 interface Rango { inicio: number; fin: number }
 const dentro = (r: Rango, i: number) => i >= r.inicio && i < r.fin;
@@ -195,7 +207,14 @@ function verificarContexto(est: Estructura, sitio: { archivo: string; linea: num
   if (est.operacion) {
     const conOp = aperturas.filter((r) => new RegExp(`(?<![\\w.])${est.operacion}\\(`).test(texto(f, r)));
     assert.equal(conOp.length, 1, `${est.apertura} no envuelve ${est.operacion}( en ${est.contenedor ?? archivo}`);
-    verificarCadena(est.cadena ?? [], sitio, fuentes);
+    // 🔴 La cadena tiene que ARRANCAR en la operación envuelta y terminar en el
+    // sitio, enlace por enlace, aunque cruce archivos. Si arrancara más abajo
+    // (auditoría sobre 03ad4b9: la fila de pools declaraba sólo la función del
+    // sitio), el wrapper y el sitio se verificarían por separado y un enlace
+    // perdido en el medio quedaría verde.
+    const cadena = est.cadena ?? [];
+    assert.equal(cadena[0]?.split("#")[1], est.operacion, `la cadena no arranca en ${est.operacion} (arranca en ${cadena[0] ?? "nada"})`);
+    verificarCadena(cadena, sitio, fuentes);
   } else {
     assert.equal(archivo, sitio.archivo);
     assert.ok(aperturas.some((r) => dentro(r, offsetDeLinea(f, sitio.linea))), `${sitio.archivo}:${sitio.linea} no está dentro del callback de ${est.apertura}`);
@@ -384,10 +403,14 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/lotes-tolerantes.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "portadas" },
   { archivo: "lib/busqueda-enriquecido.ts", ancla: "deps.enriquecer(c).then((t) => ({ t, degradado: false })).catch", clase: "tmdb-registra", efecto: "contexto", ejecucion: "busqueda" },
   { archivo: "lib/settle-all.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", ejecucion: "settleAll" },
-  // pools: el contexto lo abre el Home (producirHome → composeHome → … → enrich → pools,
-  // por contexto async); el recorrido real con 429 en /discover lo ejercita.
+  // pools: el contexto lo abre el Home (por contexto async) y la cadena REAL
+  // cruza tres archivos: composeHome → candidatosDeSuperficie (enrich) →
+  // candidatosConEje → candidatosDePools (pools). Cada enlace se verifica
+  // cuerpo por cuerpo; el banco con 429 en /discover es evidencia ADICIONAL.
   { archivo: "lib/pools.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", banco: "discover",
-    estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome", cadena: ["lib/pools.ts#candidatosDePools"], consumo: [/degradado: true/, /fallosTmdb/] } },
+    estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome",
+      cadena: ["lib/home.ts#composeHome", "lib/enrich.ts#candidatosDeSuperficie", "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"],
+      consumo: [/degradado: true/, /fallosTmdb/] } },
   { archivo: "lib/home.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto",
     estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome", cadena: ["lib/home.ts#composeHome", "lib/home.ts#safe"], consumo: [/degradado: true/, /fallosTmdb/] } },
   { archivo: "lib/top.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "ruta", ruta: "app/api/top/route.ts", operacion: "buildTop", cadena: ["lib/top.ts#buildTop", "lib/top.ts#safe"] },
@@ -601,7 +624,7 @@ test("CONTROL mutado (ruta): wrapper corrido fuera de la operación, operación 
   assert.throws(() => verificarWrapperDeRuta(top.replace(wrapper, "buildTop(tipo, providers)"), "buildTop"), /no envuelve buildTop\(/);
   // 4) la cadena se corta: buildTop deja de pasar por safe.
   const topLib = limpio("lib/top.ts");
-  const sitio = { archivo: "lib/top.ts", linea: topLib.split("\n").findIndex((l, i) => i > 140 && /\} catch \(e\) \{/.test(l)) + 1 };
+  const sitio = { archivo: "lib/top.ts", linea: lineaDelCatch(topLib, "registrarDescarteTmdb(e, `top:") };
   assert.doesNotThrow(() => verificarCadena(["lib/top.ts#buildTop", "lib/top.ts#safe"], sitio));
   const buildTop = cuerpoDe(topLib, "buildTop");
   const sinSafe = topLib.slice(0, buildTop.inicio) + texto(topLib, buildTop).replace(/(?<![\w.])safe\(/g, "directo(") + topLib.slice(buildTop.fin);
@@ -610,20 +633,21 @@ test("CONTROL mutado (ruta): wrapper corrido fuera de la operación, operación 
   const nt = limpio("lib/netflix-top10.ts");
   const ingest = cuerpoDe(nt, "ingestLatestWeek");
   const sinResolver = nt.slice(0, ingest.inicio) + texto(nt, ingest).replace("resolveTitle(", "resolverAparte(") + nt.slice(ingest.fin);
-  const sitioNetflix = { archivo: "lib/netflix-top10.ts", linea: nt.split("\n").findIndex((l) => l.includes('registrarDescarteTmdb(e, "enNetflixAR")')) };
+  const sitioNetflix = { archivo: "lib/netflix-top10.ts", linea: lineaDelCatch(nt, 'registrarDescarteTmdb(e, "enNetflixAR")') };
+  assert.doesNotThrow(() => verificarCadena(["lib/netflix-top10.ts#ingestLatestWeek", "lib/netflix-top10.ts#resolveTitle", "lib/netflix-top10.ts#enNetflixAR"], sitioNetflix));
   assert.throws(() => verificarCadena(["lib/netflix-top10.ts#ingestLatestWeek", "lib/netflix-top10.ts#resolveTitle", "lib/netflix-top10.ts#enNetflixAR"], sitioNetflix, { "lib/netflix-top10.ts": sinResolver }), /ingestLatestWeek no llama a resolveTitle\(/);
   // 6) recordatorio: datosDe deja de pasar por digitalAR.
   const rec = limpio(RECORDATORIO);
   const datosDe = cuerpoDe(rec, "datosDe");
   const sinDigital = rec.slice(0, datosDe.inicio) + texto(rec, datosDe).replace(/digitalAR\(/g, "fechaFija(") + rec.slice(datosDe.fin);
-  const sitioDigital = { archivo: RECORDATORIO, linea: rec.split("\n").findIndex((l) => l.includes('"recordatorio:digitalAR"')) };
+  const sitioDigital = { archivo: RECORDATORIO, linea: lineaDelCatch(rec, '"recordatorio:digitalAR"') };
+  assert.doesNotThrow(() => verificarCadena([`${RECORDATORIO}#datosDe`, `${RECORDATORIO}#digitalAR`], sitioDigital));
   assert.throws(() => verificarCadena([`${RECORDATORIO}#datosDe`, `${RECORDATORIO}#digitalAR`], sitioDigital, { [RECORDATORIO]: sinDigital }), /datosDe no llama a digitalAR\(/);
 });
 
 test("CONTROL mutado (contexto): apertura quitada, sitio sacado del callback, operación desenvuelta, consumo quitado", () => {
   const enrich = limpio("lib/enrich.ts");
-  const lineaCard = enrich.split("\n").findIndex((l) => l.includes('registrarDescarteTmdb(e, "titleCard")')) + 1;
-  const sitio = { archivo: "lib/enrich.ts", linea: lineaCard };
+  const sitio = { archivo: "lib/enrich.ts", linea: lineaDelCatch(enrich, 'registrarDescarteTmdb(e, "titleCard")') };
   const est: Estructura = { contenedor: "lib/enrich.ts#titleCard", apertura: "withFallosDeFuentes(", consumo: [/if \(fallos\) fallo = true/, /\(\) => !fallo\)/] };
   assert.doesNotThrow(() => verificarContexto(est, sitio), "el fuente real pasa");
   const card = cuerpoDe(enrich, "titleCard");
@@ -640,12 +664,47 @@ test("CONTROL mutado (contexto): apertura quitada, sitio sacado del callback, op
   assert.throws(() => verificarContexto(est, sitio, mutar((c) => c.replace("if (fallos) fallo = true;", ""))), /no consume el contador/);
   // 4) Home: composeHome desenvuelto (la apertura queda, con otra cosa adentro).
   const home = limpio("lib/home.ts");
-  const lineaSafe = home.split("\n").findIndex((l) => l.includes("registrarDescarteTmdb(e, `home:")) + 1;
+  const lineaSafe = lineaDelCatch(home, "registrarDescarteTmdb(e, `home:");
   const estHome: Estructura = { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome", cadena: ["lib/home.ts#composeHome", "lib/home.ts#safe"], consumo: [/degradado: true/, /fallosTmdb/] };
   assert.doesNotThrow(() => verificarContexto(estHome, { archivo: "lib/home.ts", linea: lineaSafe }));
   const desenvuelto = home.replace("() => composeHome({ providers, types }),", "async () => ({ hero: [], rails: [], fallos: 0, degradado: false }),");
   assert.notEqual(desenvuelto, home);
   assert.throws(() => verificarContexto(estHome, { archivo: "lib/home.ts", linea: lineaSafe }, { "lib/home.ts": desenvuelto }), /no envuelve composeHome\(/);
+});
+
+test("CONTROL mutado (cadena de pools, entre archivos): cada enlace cortado hace fallar la fila REAL nombrando el enlace perdido", () => {
+  // Auditoría de Codex sobre 03ad4b9: la fila de pools declaraba sólo
+  // `lib/pools.ts#candidatosDePools`, así que el wrapper (composeHome envuelto)
+  // y el sitio (dentro de candidatosDePools) se verificaban por separado y la
+  // cadena real —composeHome → candidatosDeSuperficie → candidatosConEje →
+  // candidatosDePools— no se probaba: cortar cualquiera de esos enlaces dejaba
+  // el test verde. Acá se muta el fuente REAL y se verifica LA FILA del
+  // inventario (no una cadena escrita a mano en el control).
+  const fila = INVENTARIO.find((f) => f.archivo === "lib/pools.ts" && f.clase === "tmdb-registra");
+  assert.ok(fila && fila.clase === "tmdb-registra" && fila.efecto === "contexto" && "estructura" in fila, "la fila de pools declara estructura");
+  const est = fila.estructura;
+  const pools = limpio("lib/pools.ts");
+  const sitio = { archivo: "lib/pools.ts", linea: lineaDelCatch(pools, 'registrarDescarteTmdb(r.reason, "pool")', /allSettled\(/) };
+  assert.doesNotThrow(() => verificarContexto(est, sitio), "el fuente real pasa");
+  const home = limpio("lib/home.ts");
+  const enrich = limpio("lib/enrich.ts");
+  const cortar = (f: string, funcion: string, llamada: string) => {
+    const r = cuerpoDe(f, funcion);
+    const mutado = f.slice(0, r.inicio) + texto(f, r).replace(new RegExp(`(?<![\\w.])${llamada}\\(`, "g"), `${llamada}Cortada(`) + f.slice(r.fin);
+    assert.notEqual(mutado, f, `${funcion} no llamaba a ${llamada}( — la mutación no muta`);
+    return mutado;
+  };
+  // 1) composeHome → candidatosDeSuperficie
+  assert.throws(() => verificarContexto(est, sitio, { "lib/home.ts": cortar(home, "composeHome", "candidatosDeSuperficie") }), /composeHome no llama a candidatosDeSuperficie\(/);
+  // 2) candidatosDeSuperficie → candidatosConEje
+  assert.throws(() => verificarContexto(est, sitio, { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosConEje") }), /candidatosDeSuperficie no llama a candidatosConEje\(/);
+  // 3) candidatosConEje → candidatosDePools
+  assert.throws(() => verificarContexto(est, sitio, { "lib/pools.ts": cortar(pools, "candidatosConEje", "candidatosDePools") }), /candidatosConEje no llama a candidatosDePools\(/);
+  // 4) el sitio se muda fuera de candidatosDePools (la cadena llega, pero a otra función).
+  assert.throws(() => verificarContexto(est, { archivo: "lib/pools.ts", linea: lineaDelCatch(pools, "export async function candidatosCombinados", /function/) }), /no está dentro de lib\/pools\.ts#candidatosDePools/);
+  // 5) CONTROL del verificador: una cadena que no arranca en la operación envuelta
+  //    (la fila de 03ad4b9) no puede pasar aunque el wrapper y el sitio existan.
+  assert.throws(() => verificarContexto({ ...est, cadena: ["lib/pools.ts#candidatosDePools"] }, sitio), /la cadena no arranca en composeHome/);
 });
 
 test("el inventario cubre los doce sitios del informe (S1-S11 + genreCovers) y no afirma que sean sólo once", () => {
