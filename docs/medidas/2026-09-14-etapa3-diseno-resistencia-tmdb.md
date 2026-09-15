@@ -1,9 +1,10 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
 > **Estado: DISEÑO v4.1 + ETAPA 3.a MERGEADA, PUSHEADA Y DESPLEGADA
-> (2026-09-15; §31). Subetapa siguiente (3.b, "último bueno primero y
-> reconstrucción en fondo"): decisión de producto APROBADA por el dueño;
-> DISEÑO REVISADO (§33) PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO.** Ocho correcciones en rama (auditorías de Codex sobre
+> (2026-09-15; §31). Subetapa 3.b, "último bueno primero y reconstrucción
+> en fondo": decisión de producto APROBADA; diseño §33; **IMPLEMENTADA EN
+> RAMA (`feat/etapa3b-ub-primero`), PENDIENTE DE AUDITORÍA; NO MERGEADA NI
+> DESPLEGADA** (§34).** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito,
@@ -2135,3 +2136,144 @@ worktrees separados con dobles y Redis del banco propios, como en §14.
 Diseño revisado, **pendiente de aprobación; no implementado**. Sin cambios
 de código, dependencias, variables ni infraestructura. La rama
 `spike/waituntil-preview` (sonda) queda local y no se mergea.
+
+---
+
+## 34. Etapa 3.b implementada en rama — pendiente de auditoría; no mergeada ni desplegada (2026-09-15)
+
+### 34.1 Git
+
+Rama `feat/etapa3b-ub-primero` (worktree `wt-etapa3b-impl`), creada desde el
+diseño `diseno/etapa3b-ub-primero` (`4501f01`, sobre `main = 903832e`).
+`spike/waituntil-preview` (`707e3d0`) es sólo antecedente y no se fusiona.
+Commits: `670ad17` (criterio 9 separado), `cdd4ab8` (RED), `3f4babe`
+(implementación), `c402174` (banco + evidencia) y el documental de esta
+sección. Sin merge, push ni deploy de Producción.
+
+### 34.2 Corrección previa del criterio 9
+
+Un 5xx **total** de TMDB dentro de `composeHome` lo atrapa `safe()` en
+Producción y produce un payload **degradado**: no es un rechazo del productor.
+Quedan dos escenarios (§33.7, filas 9.1 y 9.2): el 5xx total en el banco
+(degradado, ENFRIAR, fresca no publicada, UB intacto) y el productor que
+**realmente lanza**, sólo reproducible con `producir` inyectado en la prueba
+pura de `servirConTurno`.
+
+### 34.3 Arquitectura final
+
+| Pieza | Qué hace |
+|---|---|
+| `lib/home-fondo.ts` (**puro**) | `crearProgramadorDeFondo({ registrar, disponible, apagado })` → `programarEnFondo(iniciar, senal)`. **Perezoso**: si `apagado` (`HOME_UB_PRIMERO=0`) o no `disponible` (`VERCEL !== "1"`, salvo `YUMP_BANCO_FONDO=1` en el banco) devuelve `false` sin iniciar. La tarea espera **un microtick** y sólo compone si `registrado` quedó en `true` tras `registrar(tarea)`; un `throw` del registro deja `registrado = false`, la tarea resuelve sin componer y se devuelve `false`. La tarea **siempre resuelve**: un rechazo de `iniciar` se loguea y se contiene; un fallo del propio log también. `estadoDelFondo(env)` decide disponibilidad y kill switch. |
+| `lib/home-servir.ts` | `DepsServir.programarEnFondo?`. Cuando el líder **adquiere el turno y `ub != null`**, llama a `programarEnFondo` **una vez** con `iniciar(senalFondo)` = anotar propietario + `componer(senalFondo)`; si registró: `cache ultimo-bueno`, `origen ultimo-bueno-fondo`, `fondo programado`, y responde el UB en el acto. Si devuelve `false` (o lanza): `componer()` en línea, **exactamente el camino de siempre**. Sin UB: no se llama. `componer(senalActiva)` usa la señal que le den (la de la solicitud en línea; la del fondo en fondo) para cancelar y para la renovación. Renovación, fencing por propietario, ENFRIAR, publicación atómica y liberación segura **sin cambios**; en el fondo, un error posterior a `componer` se anota (`ERROR PRODUCTOR`), libera el turno (con `try`) y se relanza al programador, que lo contiene. |
+| `lib/home.ts` (adaptador) | `import { waitUntil } from "@vercel/functions"` — **única** importación del paquete, sólo en este archivo; el símbolo interno queda prohibido por test. `programarComposicionEnFondo(clave, iniciar)` abre para el fondo **sus propios cuatro contextos** (`withMetricasIdioma` → `withMetricas` → `conRegistroDeEjes` → `conSenal(AbortSignal.timeout(PRESUPUESTO_REQUEST_MS = 50 s))`) y al terminar imprime **`[home-fondo] <ms>ms total | … | propietario <p> | … | clave <k>`** (la misma `lineaHome`, prefijo distinto) más `[home-fondo] [idioma] …` y `[home-fondo] EJES …`, dentro de un `try` cuyo fallo sólo se loguea. `producir` anota fuentes caídas y `degradado` al producir, para que la línea del fondo muestre `DEGRADADO (N fuente(s), K descarte(s) tmdb)` aunque el fondo haya servido el UB. |
+| `lib/metricas.ts` | `origen: "ultimo-bueno-fondo"`, campo `fondo: "programado" \| null`, segmento ` fondo programado \|` en la línea. |
+| `CLAUDE.md` | la decisión, el kill switch y que aplicarlo en Vercel requiere un nuevo deployment. |
+
+**Lo que no cambia:** `composeHome`, pools, selección, orden, cantidad,
+plataformas, badges, enlaces, toggles, claves, TTLs, `VERSION_HOME`, contrato
+JSON (el UB ya es un payload válido). Sin limitador, circuito, pausa,
+reintentos (`TMDB_REINTENTOS` sigue apagado), membresía, cron ni "preparando
++ sondeo". Limitación conocida: `[home] VUELTAS` lo imprime `composeHome`
+(no se toca) también cuando corre en fondo; la línea terminal del fondo es
+`[home-fondo]` y es la que correlaciona por clave y propietario.
+
+### 34.4 Dependencia añadida
+
+`@vercel/functions` **3.9.7** (exacta, `--save-exact`). `package.json`: una
+línea. `package-lock.json`: +220/−7, **18 paquetes** nuevos
+(`@vercel/functions`, `@vercel/oidc`, `@vercel/cli-config`,
+`@vercel/cli-exec`, `execa`, `get-stream`, `human-signals`, `is-stream`,
+`jose`, `merge-stream`, `mimic-fn`, `npm-run-path`, `onetime`, `os-paths`,
+`strip-final-newline`, `xdg-app-paths`, `xdg-portable`, `zod`): son las
+dependencias del subpath `@vercel/functions/oidc`, que la app **no importa**.
+`index.js` del paquete sólo requiere `headers`, `get-env`, `deadline`,
+`wait-until`, `metric`, `middleware`, `cache`, `db-connections`, `purge`,
+`addcachetag`, `websocket`; `wait-until` es `getContext().waitUntil?.(p)`
+(sin contexto **no lanza y no hace nada**: por eso la disponibilidad se
+decide antes por `VERCEL=1`).
+
+**Inspección del bundle** (`npm run build` fresco): `.next/static` (cliente)
+no contiene `@vercel/functions`, `waitUntil`, `HOME_UB_PRIMERO`, `home-fondo`
+ni `request-context` (0 archivos). `.next/server/app/api/home/route.js`
+(37,8 KB) inlina `wait-until`/`get-context` del paquete (el string
+`waitUntil can only be called with a Promise` aparece 1 vez; el símbolo
+`@vercel/request-context` aparece 1 vez **dentro del código inlinado del
+paquete**, no en el nuestro) y **no** contiene `jose`, `execa` ni `oidc`; el
+`route.js.nft.json` no rastrea ningún archivo de `@vercel/functions`,
+`@vercel/oidc`, `jose` ni `execa`.
+
+### 34.5 RED → GREEN (TDD, contra `903832e`)
+
+RED (`cdd4ab8`, antes de implementar): `lib/home-fondo.test.ts` no encuentra
+el módulo (8 tests); en `lib/home-servir.test.ts` 8 de los 9 tests de 3.b
+fallan —los que esperan la respuesta en el acto vencen su `timeout` de 4 s
+porque el líder compone en línea sobre el reloj virtual; "fondo no
+disponible" y "sin UB" fallan en `fondo`/`cuantasLlamadas`—; en
+`lib/etapa3b-cableado.test.ts` 6 de 7 fallan (sin paquete, sin import, sin
+adaptador, sin `[home-fondo]`, sin `lib/home-fondo.ts`, sin doc del kill
+switch). GREEN: los tres archivos pasan (8 + 44 + 7); suite completa
+**1.691 tests, 1.681 aprobados, 0 fallos, 10 omitidos**; `tsc --noEmit`
+limpio; build fresco exit 0; `git diff --check` limpio.
+
+Cobertura de los 13 criterios de §33.7 (con 9.1/9.2):
+
+| # | Criterio | Dónde | Resultado |
+|---|---|---|---|
+| 1 | UB presente: rápido, una composición en fondo, fresca idéntica | test puro + banco | banco: antes 5.563 ms en línea (`origen propia`); rama **111 ms**, `origen ultimo-bueno-fondo`, `fondo programado`, es el UB, 1 `[home] compone`, `[home-fondo]` 5.445 ms `publicado` (833 llamadas a TMDB) con la misma clave y propietario, fresca escrita, siguiente `HIT` en 17 ms; **fresca idéntica** a la del antes y a la sana |
+| 2 | Fondo ausente: una bloqueante, cero huérfanas | test puro (`registra: false`) + banco (proceso sin `YUMP_BANCO_FONDO`: 5.426 ms, `propia`, 0 `[home-fondo]`) | ✓ |
+| 3 | Registro rechazado: cero duplicados | `home-fondo.test.ts` (`iniciar` 0 veces, `false`, sin `unhandledRejection`) + `home-servir.test.ts` (programador que lanza → una composición en línea) | ✓ |
+| 4 | Métricas de la respuesta congeladas | `home-servir.test.ts`: `JSON.stringify(r.m)` igual antes y después del fondo; renovaciones 0 en la solicitud y 1 en el fondo | ✓ |
+| 5 | Métricas del fondo separadas y correlacionadas | test puro (`mf.home.propietario === "A"`, `publicacion` sólo en el fondo) + banco (`mismaClave`, `mismoPropietario`) | ✓ |
+| 6 | Dos concurrentes: una composición, sin cruce | test puro (líder + `ocupado`) + banco (23/23 ms; en un proceso el segundo es `COMPARTIDA` del single-flight local y el primero `ULTIMO-BUENO`; 1 compone; 1 fondo; propietarios distintos) | ✓ |
+| 7 | Fondo sano | banco (publica; siguiente HIT) | ✓ |
+| 8 | Fondo degradado (429 parcial en `/discover`) | test puro + banco (8 descartes, `DEGRADADO`, ENFRIAR, fresca 0, degradado compartido 1, **UB intacto por sha1 del valor entero**) | ✓ |
+| 9.1 | TMDB 5xx total en fondo | banco (doble en modo 500: `DEGRADADO`, `ENFRIADO`, sin `ERROR PRODUCTOR`, publicación no, fresca 0, UB intacto; el turno queda en enfriamiento 15 s, como hoy) | ✓ |
+| 9.2 | Productor que lanza | `home-servir.test.ts` con `producir` inyectado que rechaza a los 5,5 s: `ERROR PRODUCTOR` en el fondo, renovación detenida, turno liberado, UB intacto, la tarea resuelve, sin `unhandledRejection` | ✓ |
+| 10 | Fondo cancelado | test puro (señal abortada: LIBERAR, sin PUBLICAR ni ENFRIAR, `CANCELADA`) + banco (latencia 1,5 s: `CANCELADA` a los 50.421 ms, fresca 0, turno 0, UB intacto). El corte duro de Vercel: gate del Preview (§34.6) | ✓ |
+| 11 | Kill switch | test puro (`apagado`) + banco (proceso con `HOME_UB_PRIMERO=0`: 5.282 ms, `propia`, sin fondo) | ✓ |
+| 12 | Identidad del Home | comparador de cachés aisladas `b7be927` vs rama: **16/16** válidos e idénticos, controles ok | ✓ |
+| 13 | Uso estructural de `@vercel/functions` | `etapa3b-cableado.test.ts`: importado sólo en `lib/home.ts`; símbolo interno ausente en `lib/`, `app/`, `components/`, `hooks/`; versión exacta en `package.json` y lock | ✓ |
+
+Evidencia: `docs/medidas/2026-09-15-etapa3b-ub-primero.json` (verde) y
+`docs/medidas/2026-09-14-etapa3a-identidad-home.json` (16/16, regenerada).
+
+### 34.6 Gate del Preview con la API pública
+
+Rama descartable `spike/etapa3b-preview-gate` (desde la rama de
+implementación) con `app/api/spike-waituntil-publico/route.ts`, que usa
+**`waitUntil` de `@vercel/functions`** con el mismo registro perezoso;
+desplegada con `vercel deploy` como Preview del proyecto `streamingcentral`
+(protección SSO, bypass existente), ejecutada y **borrada** (deployment,
+worktree y rama; producción sin tocar: health 200).
+
+| Caso | Respuesta | Fondo |
+|---|---|---|
+| 20 s | 200 en 0,8 s, `registrado: true`, `VERCEL=1`, `iad1` | 20 ticks, **`DONE +20019ms`** |
+| 50 s | 200 en 0,5 s | 50 ticks, **`DONE +50017ms`** |
+| 120 s | 200 en 0,5 s | 59 ticks (`+59021ms`), sin `DONE`, **`Task timed out after 60 seconds`** |
+| 2 concurrentes de 30 s | 200 en 0,5 s las dos | las dos: 30 ticks, **`DONE +30018ms` / `+30019ms`** |
+
+### 34.7 Verificación final en la rama
+
+Tests específicos 8 + 44 + 7 + inventario 21; suite 1.691 / 1.681 ok / 0
+fallos / 10 omitidos; `tsc --noEmit`; build fresco (`BUILD_ID
+AOWvJvDr8YVOqYjJXuA8r`); `git diff --check`; banco 3.b verde; identidad 16/16;
+bundle inspeccionado (§34.4); árbol limpio; los cuatro archivos ajenos
+intactos y sin seguimiento.
+
+### 34.8 Limitaciones y comprobado / inferido
+
+- **Comprobado:** todo §34.5 y §34.6; que el fondo en Vercel corre y muere a
+  `maxDuration` con la API pública; que fuera de Vercel (banco) el mismo
+  código, con `YUMP_BANCO_FONDO=1`, publica la fresca idéntica.
+- **Inferido:** que en Producción, con la latencia real de TMDB
+  (~527 ms/llamada observados, §32.4), una composición de fondo de ~250
+  llamadas termina en ~15 s dentro del presupuesto de 50 s — no se midió
+  en Producción (no se despliega); que una fría de 926 puede cancelarse y
+  converger por el progreso cacheado (no demostrado; E-fria-sostenida).
+- **Limitaciones:** el fondo sólo existe en Vercel (o con
+  `YUMP_BANCO_FONDO=1`); si Vercel mata el proceso no hay línea
+  `[home-fondo]` (estado no observable: el turno vence y se retoma); el
+  primer visitante del día ve el UB sin la rotación de ese día (decisión
+  aprobada); el kill switch se aplica con el siguiente deployment; el `[home]
+  VUELTAS` del fondo sale con prefijo `[home]` (lo imprime `composeHome`).

@@ -8,9 +8,27 @@
 ## Evidencia y alcance de esta actualización
 
 - **Etapa 3.b de capacidad (#19) — "último bueno primero, reconstrucción en
-  fondo": decisión de producto APROBADA por el dueño; DISEÑO REVISADO
-  (informe §33), PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO** (rama documental
-  `diseno/etapa3b-ub-primero`). Revisión: la implementación usará
+  fondo": IMPLEMENTADA EN RAMA (`feat/etapa3b-ub-primero`), PENDIENTE DE
+  AUDITORÍA; NO MERGEADA NI DESPLEGADA** (informe §34). Con UB, el líder
+  responde el UB en el acto y compone en fondo con `waitUntil` de
+  `@vercel/functions` 3.9.7 (única importación, en `lib/home.ts`; el símbolo
+  interno queda prohibido por test); `lib/home-fondo.ts` (puro) registra de
+  forma perezosa (kill switch `HOME_UB_PRIMERO=0` y `VERCEL=1` antes de
+  iniciar; un registro que lanza deja el camino bloqueante, sin huérfanas ni
+  duplicados; la tarea siempre resuelve); el fondo corre con sus propios
+  contextos y termina en `[home-fondo]` correlacionada por clave y
+  propietario, con `[home]` congelada; sin UB, sin fondo o con el kill
+  switch: exactamente el camino de hoy. TDD contra `903832e` (RED
+  `cdd4ab8`); suite 1.691 (1.681 ok, 0 fallos, 10 omitidos); `tsc`; build
+  fresco; `diff --check`; banco 3.b verde (UB presente: antes 5,6 s en
+  línea, rama 111 ms + fondo publicado 5,4 s, fresca idéntica; concurrentes
+  23/23 ms; sin UB igual; degradado, 5xx total y cancelado en fondo con UB
+  intacto por sha1; kill switch y sin fondo iguales al antes); identidad del
+  Home 16/16; bundle: nada del paquete llega al cliente ni `jose`/`execa`
+  al servidor; gate del Preview con la API pública (20 y 50 s completos,
+  corte a 60 s, dos concurrentes) borrado al terminar. Reintentos siguen
+  apagados; limitador, circuito, `waitUntil` fuera del Home y membresía NO
+  implementados. Diseño previo: Revisión: la implementación usará
   `waitUntil` de `@vercel/functions` (API pública para Next 14.2; el
   símbolo interno del runtime queda prohibido por test; gate de
   instalación, tipado, build y Preview); interfaz perezosa

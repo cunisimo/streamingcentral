@@ -1298,8 +1298,9 @@ leyendo el código.**
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito,
 > `waitUntil` y membresía NO implementados — **#19 sigue abierto por esas
 > subetapas restantes, no por la 3.a.** **Subetapa 3.b ("último bueno
-> primero, reconstrucción en fondo"): decisión de producto APROBADA; DISEÑO
-> REVISADO (informe §33), PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO**: el
+> primero, reconstrucción en fondo"): IMPLEMENTADA EN RAMA
+> `feat/etapa3b-ub-primero`, PENDIENTE DE AUDITORÍA; NO MERGEADA NI
+> DESPLEGADA** (informe §34; diseño §33): el
 > líder compone en línea aunque haya UB (15,1 s observados); `waitUntil`
 > comprobado en Preview (fondo hasta 60 s desde el inicio de la solicitud);
 > implementación con `@vercel/functions`, `programarEnFondo` perezoso,
