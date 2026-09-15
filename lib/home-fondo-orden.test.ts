@@ -18,7 +18,7 @@ import { crearTurno } from "./turno.ts";
 import { crearOpsEnMemoria, type Entrada } from "./turno-memoria.ts";
 import { withMetricas, type MetricasRequest } from "./metricas.ts";
 import { crearProgramadorDeFondo } from "./home-fondo.ts";
-import { conFrontera, compuertaDeFondo, estadoDeLaFrontera } from "./fondo-frontera.ts";
+import { conFrontera, compuertaDeFondo, estadoDeLaFrontera, type OpcionesFrontera } from "./fondo-frontera.ts";
 
 type Payload = { hero: string[]; degradado: boolean; de: string };
 const K = { fresca: "home:v6:1:n:", ub: "home:ub:v6:n:", gen: "home:gen:v6:n:", degradado: "home:degradado:v6:1:n:", turno: "home:turno:v6:1:n:" };
@@ -254,4 +254,68 @@ test("CONTROL (3a057fc): abrir la compuerta en el finally del handler entrega el
   eventos.push("caller-recibio-response");
   await fondo;
   assert.deepEqual(eventos, ["respuesta-construida", "fondo-inicia", "caller-recibio-response"], "el modelo viejo no reproduce el agujero");
+});
+
+test("🔴 la cesión es inyectable y ocurre ENTRE la entrega al llamador y el fondo: con `ceder` instrumentado, el orden es respuesta → caller → cedido → fondo", async () => {
+  await sinRechazosSueltos(async () => {
+    const eventos: string[] = [];
+    const registradas: Promise<unknown>[] = [];
+    const programar = crearProgramadorDeFondo({ registrar: (p) => { registradas.push(p); }, compuerta: compuertaDeFondo, disponible: true, apagado: false });
+    const ceder = () => new Promise<void>((r) => setImmediate(() => { eventos.push("cedido"); r(); }));
+    const GET = conFrontera(async () => {
+      assert.equal(programar(async () => { eventos.push("fondo-inicia"); }), true);
+      eventos.push("respuesta-construida");
+      return { status: 200 };
+    }, { ceder });
+    await GET();
+    eventos.push("caller-recibio-response");
+    await Promise.all(registradas);
+    assert.deepEqual(eventos, ["respuesta-construida", "caller-recibio-response", "cedido", "fondo-inicia"]);
+  });
+});
+
+test("CONTROL: una cesión de UN microtask (Promise.resolve) depende de cuántos `await` haya entre el handler y su llamador; setImmediate no", async () => {
+  // Cada capa async intermedia (conCors, el runtime de Next…) suma un hop de
+  // microtask a la entrega. Con una cesión de microtask el orden se invierte en
+  // cuanto hay capas; con la cesión por defecto (setImmediate) no importa cuántas.
+  const envolver = <R>(h: () => Promise<R>, capas: number): (() => Promise<R>) => {
+    let fn = h;
+    for (let k = 0; k < capas; k++) { const interno = fn; fn = async () => await interno(); }
+    return fn;
+  };
+  const correr = async (ceder: OpcionesFrontera["ceder"], capas: number) => {
+    const eventos: string[] = [];
+    const registradas: Promise<unknown>[] = [];
+    const programar = crearProgramadorDeFondo({ registrar: (p) => { registradas.push(p); }, compuerta: compuertaDeFondo, disponible: true, apagado: false });
+    const GET = envolver(conFrontera(async () => {
+      programar(async () => { eventos.push("fondo-inicia"); });
+      eventos.push("respuesta-construida");
+      return { status: 200 };
+    }, ceder ? { ceder } : {}), capas);
+    await GET();
+    eventos.push("caller-recibio-response");
+    await Promise.all(registradas);
+    return eventos;
+  };
+  const bien = ["respuesta-construida", "caller-recibio-response", "fondo-inicia"];
+  const malosConMicrotask: number[] = [];
+  for (let capas = 0; capas <= 4; capas++) {
+    assert.deepEqual(await correr(undefined, capas), bien, `setImmediate, ${capas} capas`);
+    const conMicrotask = await correr(() => Promise.resolve(), capas);
+    if (JSON.stringify(conMicrotask) !== JSON.stringify(bien)) malosConMicrotask.push(capas);
+  }
+  assert.ok(malosConMicrotask.length > 0, "un microtask tendría que fallar con alguna profundidad de capas");
+  assert.ok(!malosConMicrotask.includes(0), "sin capas, un microtask alcanza; el problema es que depende de las capas");
+});
+
+test("si `ceder` rechaza, la compuerta se abre igual: ninguna tarea queda colgada", async () => {
+  await sinRechazosSueltos(async () => {
+    const registradas: Promise<unknown>[] = [];
+    let corrio = false;
+    const programar = crearProgramadorDeFondo({ registrar: (p) => { registradas.push(p); }, compuerta: compuertaDeFondo, disponible: true, apagado: false });
+    const GET = conFrontera(async () => { programar(async () => { corrio = true; }); return 1; }, { ceder: () => Promise.reject(new Error("no se pudo ceder")) });
+    await GET();
+    await Promise.all(registradas);
+    assert.equal(corrio, true);
+  });
 });

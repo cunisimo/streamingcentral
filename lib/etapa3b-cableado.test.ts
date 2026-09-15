@@ -75,6 +75,12 @@ test("🔴 la FRONTERA: la ruta envuelve el handler ENTERO con conFrontera (conC
   const fondo = codigo("lib/home-fondo.ts");
   assert.doesNotMatch(fondo, /await Promise\.resolve\(\)/, "ni un microtick: la frontera es la compuerta");
   assert.match(fondo, /await compuerta;/);
+  // Y la frontera cede al event loop (setImmediate, fase check) antes de abrir la
+  // compuerta: sin eso el fondo se encola antes de que el llamador reciba el Response.
+  const frontera = codigo("lib/fondo-frontera.ts");
+  assert.match(frontera, /setImmediate\(r\)/, "la cesión por defecto es setImmediate");
+  assert.match(frontera, /void ceder\(\)\.then\(\(\) => abrir\(f\), \(\) => abrir\(f\)\);/, "abrir sólo después de ceder, y aunque ceder falle");
+  assert.doesNotMatch(frontera, /finally \{\s*abrir\(f\);/, "abrir en el finally, sin ceder, entrega el fondo antes que la respuesta");
 });
 
 test("🔴 lib/home-fondo.ts es puro: no importa server-only, next ni @vercel/functions (el waitUntil se inyecta)", () => {
