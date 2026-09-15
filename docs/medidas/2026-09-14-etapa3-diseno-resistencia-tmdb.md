@@ -1,9 +1,9 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA cinco
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA seis
 > veces (auditorías de Codex sobre `e930a1d` §23, `09b9dbe` §24, `708bce0`
-> §25, `03ad4b9` §26 y `6ef35c5` §27); corregida en rama, pendiente de
-> auditoría FINAL. No está terminada.
+> §25, `03ad4b9` §26, `6ef35c5` §27 y `c6b299e` §28); corregida en rama,
+> pendiente de auditoría FINAL. No está terminada.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -1208,6 +1208,10 @@ estructural del código actual).
 
 ### 27.1 El hueco
 
+> ⚠️ Lo que sigue quedó **incompleto**: los "dos recorridos" de esta sección
+> no eran todos los que llegan al descarte de pools desde `composeHome`. §28
+> los inventaría (nueve) y dice cuáles están ejecutados y cuáles no.
+
 La fila de pools exigía un único recorrido, `composeHome →
 candidatosDeSuperficie → candidatosConEje → candidatosDePools`. Pero hay un
 **segundo recorrido soportado y deliberado**: con `EJES_RIELES=0`, `home.ts`
@@ -1298,3 +1302,134 @@ degradado no se publique.
   del fuente, no ejecutado).
 - **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
   está terminada**.
+
+---
+
+## 28. Sexta corrección de la 3.a — auditoría de Codex sobre `c6b299e`; corregida en rama, pendiente de auditoría final
+
+### 28.1 El hueco
+
+Los dos recorridos de §27 (`con-ejes`, `sin-ejes`) no eran todos los que
+alcanzan `candidatosDePools` desde `composeHome`. Faltaba, al menos, la
+**página extra** de un riel: `composeHome → genreRail | miniseriesRail →
+categoryCandidates → candidatosDeSuperficie` (rama `opts.ejeFijo`) `→
+candidatosDePools`, que llama directo dentro del bloque de ejes sin pasar por
+`candidatosConEje`. Y el banco de 429 parcial en `/discover` agrega todas las
+llamadas, así que no decía qué rama llegó al descarte.
+
+**RED contra `c6b299e`** (worktree detached, un corte por vez en el fuente
+real): cortada sólo la llamada de la rama `opts.ejeFijo` (`enrich.ts:1737`)
+→ inventario **14/14 verde**; cortada la llamada directa de `audienceTitles`
+(`enrich.ts:916`) → **14/14 verde**; cortado `candidatosConEje` de
+`audienceTitles` (`enrich.ts:888`) → **14/14 verde**.
+
+### 28.2 Inventario de call sites (verificable: un call site nuevo sin clasificar hace fallar el test)
+
+Todas las llamadas productivas a `candidatosDePools(`, `candidatosConEje(` y
+`categoryCandidates(` en `lib/` y `app/api/**` (barrido automático en
+`lib/descartes-tmdb-inventario.test.ts`, tabla `CALL_SITES`; líneas al
+`c6b299e`, el código productivo no cambió):
+
+| # | Call site | Consumidor | ¿Desde `composeHome`? | Condición | Contexto | Llegada del descarte | Recorridos | Cobertura |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `lib/pools.ts:485` `candidatosConEje` → `candidatosDePools` (`traer`) | toda adquisición con eje: ventana del eje del día y suelo `pop` | sí | ejes activos (`superficie`), `POOL_CACHE≠0` | `producirHome` (`withFallosDeFuentes`); desde `/api/recomendaciones` y `/api/audience`: ninguno | contador → `degradado: true` → no se publica | con-ejes, hero, audiencia-inicial | **ejecutada** (banco D conEjes, agregado) |
+| 2 | `lib/enrich.ts:1737` `candidatosDeSuperficie` rama `opts.ejeFijo` → `candidatosDePools` | página extra de `genreRail` / `miniseriesRail` | sí | ejes activos + el riel no llenó su ventana | `producirHome` | contador → `degradado: true` | extra-genero-ejeFijo, extra-miniseries-ejeFijo | **ejecutada** (banco E conEjes: consulta identificada; género) / miniseries **estructural** |
+| 3 | `lib/enrich.ts:1762` `candidatosDeSuperficie` directa (fuera del bloque de ejes) → `candidatosDePools` | rieles y páginas extra sin `superficie` | sí | `EJES_RIELES=0`, `POOL_CACHE≠0` | `producirHome` | contador → `degradado: true` | sin-ejes, extra-genero-sin-ejes, extra-miniseries-sin-ejes | **ejecutada** (banco D sinEjes; banco E sinEjes: consulta identificada) |
+| 4 | `lib/enrich.ts:916` `audienceTitles` páginas siguientes → `candidatosDePools` | carruseles de audiencia | sí | `POOL_CACHE≠0` y la primera tanda no llenó | `producirHome`; desde `/api/audience`: ninguno | contador → `degradado: true` | audiencia-paginas | **estructural** (ningún banco identifica esta consulta) |
+| 5 | `lib/enrich.ts:1742` `candidatosDeSuperficie` → `candidatosConEje` | rieles con `superficie` y hero | sí | ejes activos sin `ejeFijo` | `producirHome`; desde `/api/recomendaciones`: ninguno | contador → `degradado: true` | con-ejes, hero | **ejecutada** (banco D conEjes, agregado: no distingue riel de hero) |
+| 6 | `lib/enrich.ts:888` `audienceTitles` → `candidatosConEje` | adquisición de audiencia | sí | `POOL_CACHE≠0` | `producirHome`; desde `/api/audience`: ninguno | contador → `degradado: true` | audiencia-inicial | **estructural** |
+| 7 | `lib/enrich.ts:736` `tandaAncha` → `categoryCandidates` | hero (`recommendations`, `HERO_ANCHO≠0`) | sí | `superficie: "hero"` siempre → `candidatosConEje` | `producirHome`; desde `/api/recomendaciones`: **ninguno** (el registro queda fuera de contexto: línea `[tmdb] descarte sin contexto sitio=pool`) | Home: contador; ruta: sólo el log, la respuesta sale con lo que hay | hero | **estructural** / ruta **inferida** |
+| 8 | `lib/home.ts:365` `genreRail` → `categoryCandidates` | página extra de un riel de género | sí | el riel no llenó; con ejes `ejeFijo`, sin ejes directo | `producirHome` | contador → `degradado: true` | extra-genero-ejeFijo, extra-genero-sin-ejes | **ejecutada** (banco E, `with_genres=28`) |
+| 9 | `lib/home.ts:407` `miniseriesRail` → `categoryCandidates` | página extra de miniseries | sí | ídem | `producirHome` | contador → `degradado: true` | extra-miniseries-ejeFijo, extra-miniseries-sin-ejes | **estructural** (el banco E eligió una receta de `/discover/movie`) |
+
+Rutas API que alcanzan estos sitios **sin** contexto: `/api/recomendaciones`
+(#5, #7 vía `recommendations`) y `/api/audience` (#1, #4, #6 vía
+`audienceTitles`). Ahí `registrarDescarteTmdb` **no es inerte** (deja la
+línea estructurada, §24) pero nadie consume el contador: envolverlas con
+`conDescartesRegistrados` es un cambio productivo y queda **fuera** de esta
+corrección (pendiente). `POOL_CACHE=0` no alcanza ningún call site de pools
+(`candidatosDeSuperficie` y `audienceTitles` van a `discover` directo; un fallo
+lo atrapa el `safe()` del Home).
+
+Resumen honesto de cobertura: de los 9 recorridos desde `composeHome`, **5
+ejecutados** en banco (con-ejes, sin-ejes, extra-genero-ejeFijo,
+extra-genero-sin-ejes y hero/audiencia-inicial sólo en agregado con
+con-ejes), **4 estructurales** (extra-miniseries ×2, audiencia-inicial,
+audiencia-paginas), y las dos rutas API **inferidas**.
+
+### 28.3 Corrección (test del inventario + banco; sin código productivo)
+
+- **Fila de pools:** nueve `recorridos` con nombre, todos desde `composeHome`
+  bajo `producirHome`, con enlaces calificados (`dentroDe` `if
+  (opts.ejeFijo) {` para la extra con eje; `fueraDe` para las directas;
+  `dentroDe`/`fueraDe` `if (poolsHabilitados) {` en `audienceTitles`).
+- **Inventario de call sites** (`CALL_SITES`): barrido automático de las tres
+  llamadas; cada hit tiene que corresponder a una fila (por archivo, función
+  contenedora y ancla) y cada fila a un hit; cada call site desde
+  `composeHome` tiene que estar en los recorridos que declara **en el bloque
+  que el recorrido exige**; todo recorrido tiene al menos un call site.
+  Probado: un call site nuevo (`candidatosDePools(` en `lib/reco.ts`) hace
+  fallar el test («call sites sin clasificar»).
+- **Controles mutados independientes** sobre la fila real, uno por tipo de
+  rama: vía `candidatosConEje` (caen con-ejes, hero, audiencia-inicial);
+  directa sin ejes (sin-ejes + extras sin ejes); directa con `ejeFijo`
+  (extras con eje); directa de `audienceTitles` (audiencia-paginas);
+  `audienceTitles → candidatosConEje`; `candidatosDeSuperficie →
+  candidatosConEje`; `categoryCandidates` en `genreRail`, `miniseriesRail` y
+  `tandaAncha`; `composeHome →` `recommendations` / `audienceTitles` /
+  `genreRail` / `candidatosDeSuperficie`; sitio mudado (caen los nueve). En
+  cada corte se exige que caigan **exactamente** los recorridos esperados con
+  su mensaje y que **los demás sigan vivos**. Controles de las filas
+  anteriores: la de `03ad4b9`, la de `6ef35c5` y la de `c6b299e` no
+  distinguen (respectivamente) el arranque, la directa sin ejes, y la rama
+  `ejeFijo` ni las páginas de audiencia.
+- **Banco E (página extra, con y sin ejes, cachés vaciadas por corrida):** el
+  doble devuelve 2 resultados por página (`discoverPorPagina`), así ningún
+  riel llena su ventana de 3 páginas y pide la extra; una corrida sana
+  registra cada `discover` (`cuenta.discovers`); se elige una receta
+  (`with_genres` + `sort_by`) de `/discover/movie` que pidió la página 4 y
+  **no** la 5 (la 4 fue su extra, no una ventana `hondo` 4-6); nuevo modo del
+  doble `429-consulta` que rechaza **sólo** las consultas cuyo path y
+  parámetros coinciden (`page=4`, `with_genres`, `sort_by`: las tres
+  plataformas) y las registra (`cuenta.consultas429`). Resultado en la rama:
+  con ejes (`with_genres=28`, `sort_by=primary_release_date.desc` = eje
+  `nuevo`, ventana 1-3, extra 4 con `ejeFijo`): **3 consultas rechazadas = 3
+  descartes**, `degradado: true`, fresca 0, UB 0; sin ejes (`popularity.desc`,
+  llamada directa): **3 = 3**, degradado, sin publicar. `b7be927`: rojo en los
+  dos (3 rechazadas, 0 descartes, publicado). Se conservan los escenarios D
+  con `EJES_RIELES` encendido y en 0.
+
+### 28.4 GREEN
+
+- Inventario 15/15; con cada corte real en el fuente, por separado, falla
+  nombrando el recorrido (p. ej. «recorrido extra-genero-ejeFijo:
+  lib/enrich.ts#candidatosDeSuperficie no llama a candidatosDePools( dentro de
+  `if (opts.ejeFijo) {`», «recorrido audiencia-paginas: … fuera de `if
+  (poolsHabilitados) {`», «recorrido hero: lib/enrich.ts#tandaAncha no llama a
+  categoryCandidates(»).
+- Suite **1.660 tests, 1.650 aprobados, 0 fallos, 10 omitidos**; `tsc
+  --noEmit` limpio; build fresco exit 0 (`BUILD_ID 4JaZjaHBmbS0bAahLL-0z`);
+  `git diff --check` limpio.
+- Identidad del Home (cachés aisladas, `b7be927` vs rama, build final):
+  **16/16 válidos e idénticos**.
+- **Sin cambios en código productivo**: el diff contra `c6b299e` toca el test
+  del inventario, el doble y el script del banco, las dos evidencias JSON y
+  los tres documentos.
+
+### 28.5 Comprobado / inferido / pendiente
+
+- **Comprobado:** §28.1 (RED) y §28.4; los nueve recorridos verificados
+  cuerpo por cuerpo; el barrido detecta un call site nuevo; la página extra
+  ejecutada e identificada (con y sin ejes) produce exactamente los descartes
+  rechazados y no se publica; `b7be927` la tragaba.
+- **Inferido:** la ejecución de los recorridos marcados *estructural*
+  (extra-miniseries ×2, audiencia-inicial, audiencia-paginas: ningún banco
+  identifica sus consultas; el banco D los incluye sin distinguirlos); que
+  hero y audiencia-inicial pasan por `traer` en el banco D (todas las ventanas
+  con eje lo hacen, pero el conteo es agregado); que "la llamada está dentro
+  del bloque" equivale a "es la que se ejecuta con esa condición" mientras la
+  forma de `candidatosDeSuperficie` y `audienceTitles` se mantenga.
+- **Pendiente:** auditoría final de Codex; envolver `/api/recomendaciones` y
+  `/api/audience` con `conDescartesRegistrados` (cambio productivo); un banco
+  que identifique las consultas de miniseries y de audiencia. Corregida en
+  rama; **la etapa no está terminada**.

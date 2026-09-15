@@ -7,11 +7,29 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA CINCO
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA SEIS
   VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0`,
-  `03ad4b9` y `6ef35c5`); corregida en rama, pendiente de auditoría FINAL —
-  NO está terminada; reintentos APAGADOS; limitador, circuito, `waitUntil` y
-  membresía NO implementados.**
+  `03ad4b9`, `6ef35c5` y `c6b299e`); corregida en rama, pendiente de
+  auditoría FINAL — NO está terminada; reintentos APAGADOS; limitador,
+  circuito, `waitUntil` y membresía NO implementados.**
+  **Sexta corrección (informe §28, sin código productivo):** los "dos
+  recorridos" de la quinta no eran todos: faltaban, al menos, la página extra
+  de un riel (rama `opts.ejeFijo`, directa dentro del bloque de ejes), las
+  páginas de audiencia y el hero (con esas llamadas cortadas, el inventario de
+  `c6b299e` seguía 14/14 verde). Ahora hay un inventario verificable de los
+  nueve call sites productivos de `candidatosDePools` / `candidatosConEje` /
+  `categoryCandidates` (consumidor, condición, contexto, llegada del
+  descarte, cobertura; un call site nuevo sin clasificar hace fallar el
+  test), la fila de pools declara nueve recorridos desde `composeHome` con
+  controles mutados independientes por tipo de rama, y el banco fuerza la
+  página extra y la identifica por sus parámetros (con ejes: 3 rechazadas = 3
+  descartes; sin ejes: 3 = 3; degradado y sin publicar; `b7be927` rojo).
+  Cobertura honesta: 5 recorridos ejecutados, 4 estructurales
+  (miniseries ×2, audiencia ×2) y las rutas `/api/recomendaciones` y
+  `/api/audience` sólo inferidas (registran fuera de contexto; envolverlas es
+  un cambio productivo pendiente). Verificado: suite 1.660 (1.650 ok, 0
+  fallos, 10 omitidos), `tsc`, build fresco, `diff --check`; identidad del
+  Home 16/16.
   **Quinta corrección (informe §27, sin código productivo):** la fila de
   pools exigía un solo recorrido y no representaba el segundo, deliberado:
   con `EJES_RIELES=0` `candidatosDeSuperficie` llama a `candidatosDePools`

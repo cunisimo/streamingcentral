@@ -1277,9 +1277,14 @@ leyendo el código.**
 > cadena completa `composeHome → candidatosDeSuperficie → candidatosConEje →
 > candidatosDePools` con controles mutados por enlace — informe §26), y por
 > quinta vez tras la auditoría sobre `6ef35c5` (la fila de pools representa
-> los DOS recorridos soportados, con ejes y `EJES_RIELES=0`, y el banco de 429
-> parcial los ejecuta a ambos — informe §27); corregida en rama, pendiente de
-> auditoría FINAL, no terminada; reintentos APAGADOS
+> los recorridos con ejes y `EJES_RIELES=0`, y el banco de 429 parcial los
+> ejecuta a ambos — informe §27; esos dos NO eran todos), y por sexta vez tras
+> la auditoría sobre `c6b299e` (inventario verificable de los nueve call sites
+> que llegan al descarte de pools, nueve recorridos desde `composeHome` con
+> controles mutados por tipo de rama, banco de página extra identificada por
+> sus parámetros con y sin ejes; 5 recorridos ejecutados, 4 estructurales,
+> rutas `/api/recomendaciones` y `/api/audience` inferidas — informe §28);
+> corregida en rama, pendiente de auditoría FINAL, no terminada; reintentos APAGADOS
 > (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
 > implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),
