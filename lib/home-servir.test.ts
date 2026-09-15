@@ -644,3 +644,184 @@ test("dormirCancelable (el `dormir` real): una señal abortada lo despierta en e
   await dormirCancelable(5000, c.signal);
   assert.ok(Date.now() - t1 < 200);
 });
+
+// ============================================================================
+// Etapa 3.b — "último bueno primero": el líder con UB responde el UB en el acto
+// y compone en fondo (diseño §33). Sin UB, sin fondo disponible, con el kill
+// switch apagado o con el registro rechazado: EXACTAMENTE el camino de hoy.
+// ============================================================================
+
+/** Un programador de fondo de prueba: registra la tarea en su PROPIO scope de métricas (como el adaptador real). */
+function fondoDePrueba(w: ReturnType<typeof mundo>, o: { registra?: boolean; lanza?: boolean; senal?: AbortSignal } = {}) {
+  const tareas: Promise<{ res: void; metricas: MetricasRequest }>[] = [];
+  let llamadas = 0;
+  const programarEnFondo = (iniciar: (senal?: AbortSignal) => Promise<void>) => {
+    llamadas++;
+    if (o.lanza) throw new Error("waitUntil no disponible");
+    if (o.registra === false) return false;
+    tareas.push(withMetricas(() => iniciar(o.senal)));
+    return true;
+  };
+  return { programarEnFondo, tareas, cuantasLlamadas: () => llamadas, fondo: () => w.reloj.correr(tareas[0]) };
+}
+const UB: Payload = { hero: ["ub"], degradado: false, de: "ub" };
+
+test("🔴 3.b — líder con UB y fondo registrado: responde el UB en el acto (sin esperar la composición), origen ultimo-bueno-fondo, y UNA composición en fondo que publica", { timeout: 4000 }, async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const f = fondoDePrueba(w);
+  const r = await w.solicitud(w.deps("A", { tarda: 5000, programarEnFondo: f.programarEnFondo }));   // sin correr el reloj: si esperara la composición, no volvería
+  assert.equal(r.valor.de, "ub");
+  assert.equal(r.m.home.cache, "ultimo-bueno");
+  assert.equal(r.m.home.origen, "ultimo-bueno-fondo");
+  assert.equal(r.m.home.fondo, "programado");
+  assert.equal(r.m.home.turno, "adquirido");
+  assert.equal(r.m.home.publicacion, null, "la solicitud no publica nada: publica el fondo");
+  assert.equal(f.cuantasLlamadas(), 1);
+  assert.equal(w.store.has(K.fresca), false, "todavía no hay fresca: el fondo no terminó");
+  const { metricas: mf } = await f.fondo();
+  assert.equal(w.cuantasComposiciones(), 1, "una sola composición");
+  assert.equal(w.vivo(K.fresca)?.de, "A", "el fondo publicó la fresca");
+  assert.equal(mf.home.publicacion, "publicado");
+  assert.equal(mf.home.propietario, "A", "correlación por propietario");
+  assert.equal(w.store.has(K.turno), false);
+  assert.equal(w.reloj.durmiendo, 0);
+});
+
+test("🔴 3.b — las métricas de la solicitud quedan CONGELADAS: iguales antes y después de que termine el fondo", { timeout: 4000 }, async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const f = fondoDePrueba(w);
+  const r = await w.solicitud(w.deps("A", { tarda: 6000, programarEnFondo: f.programarEnFondo }));
+  const foto = JSON.stringify(r.m);
+  const { metricas: mf } = await f.fondo();
+  for (let i = 0; i < 10; i++) await tick();
+  assert.equal(JSON.stringify(r.m), foto, "el fondo anotó en las métricas de la solicitud");
+  assert.equal(mf.home.publicacion, "publicado");
+  assert.equal(mf.home.renovaciones, 1, "la renovación se contó en el fondo, no en la solicitud");
+  assert.equal(r.m.home.renovaciones, 0);
+});
+
+test("🔴 3.b — dos solicitudes concurrentes con UB: las dos reciben el UB en el acto, UNA composición, sin cruce de métricas", { timeout: 4000 }, async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const f = fondoDePrueba(w);
+  const a = await w.solicitud(w.deps("A", { tarda: 5000, programarEnFondo: f.programarEnFondo }));
+  const b = await w.solicitud(w.deps("B", { tarda: 5000, programarEnFondo: f.programarEnFondo }));
+  assert.equal(a.valor.de, "ub"); assert.equal(b.valor.de, "ub");
+  assert.equal(a.m.home.origen, "ultimo-bueno-fondo");
+  assert.equal(b.m.home.origen, "ultimo-bueno", "B no lideró: UB de siempre");
+  assert.equal(b.m.home.turno, "ocupado");
+  assert.equal(b.m.home.fondo, null);
+  assert.equal(f.cuantasLlamadas(), 1, "sólo el líder programa");
+  assert.notEqual(a.m.home.propietario, b.m.home.propietario);
+  await f.fondo();
+  assert.equal(w.cuantasComposiciones(), 1);
+  assert.equal(w.vivo(K.fresca)?.de, "A");
+});
+
+test("🔴 3.b — fondo NO disponible (programarEnFondo devuelve false): el líder compone EN LÍNEA, una sola composición, cero tareas", { timeout: 4000 }, async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const f = fondoDePrueba(w, { registra: false });
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { tarda: 5000, programarEnFondo: f.programarEnFondo })));
+  assert.equal(r.valor.de, "A", "la fresca recién compuesta, como hoy");
+  assert.equal(r.m.home.origen, "propia");
+  assert.equal(r.m.home.publicacion, "publicado");
+  assert.equal(r.m.home.fondo, null);
+  assert.equal(f.cuantasLlamadas(), 1);
+  assert.equal(f.tareas.length, 0);
+  assert.equal(w.cuantasComposiciones(), 1);
+});
+
+test("🔴 3.b — el registro del fondo LANZA: el líder compone en línea, una sola composición, cero duplicados, ninguna promesa suelta", { timeout: 4000 }, async () => {
+  const sueltos: unknown[] = [];
+  const h = (e: unknown) => { sueltos.push(e); };
+  process.on("unhandledRejection", h);
+  try {
+    const w = mundo();
+    w.store.set(K.ub, { v: UB, exp: 0 });
+    const f = fondoDePrueba(w, { lanza: true });
+    const r = await w.reloj.correr(w.solicitud(w.deps("A", { tarda: 5000, programarEnFondo: f.programarEnFondo })));
+    assert.equal(r.valor.de, "A");
+    assert.equal(r.m.home.publicacion, "publicado");
+    assert.equal(w.cuantasComposiciones(), 1);
+    for (let i = 0; i < 5; i++) await tick();
+  } finally { process.off("unhandledRejection", h); }
+  assert.deepEqual(sueltos, []);
+});
+
+test("🔴 3.b — sin UB: programarEnFondo NO se llama y el camino es el de hoy (bloqueante)", { timeout: 4000 }, async () => {
+  const w = mundo();
+  const f = fondoDePrueba(w);
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { tarda: 5000, programarEnFondo: f.programarEnFondo })));
+  assert.equal(r.valor.de, "A");
+  assert.equal(f.cuantasLlamadas(), 0, "sin UB no hay nada que servir primero");
+  assert.equal(r.m.home.fondo, null);
+});
+
+test("🔴 3.b — fondo DEGRADADO: ENFRIAR + degradado compartido, fresca NO publicada, UB byte a byte intacto", { timeout: 4000 }, async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const ubAntes = JSON.stringify(w.store.get(K.ub));
+  const f = fondoDePrueba(w);
+  const r = await w.solicitud(w.deps("A", { tarda: 3000, fallo: true, programarEnFondo: f.programarEnFondo }));
+  assert.equal(r.valor.de, "ub");
+  const { metricas: mf } = await f.fondo();
+  assert.equal(mf.home.enfriado, true);
+  assert.equal(mf.home.degradadoDescartado, true);
+  assert.equal(mf.home.publicacion, null);
+  assert.equal(w.store.has(K.fresca), false);
+  assert.equal(w.store.has(K.degradado), true);
+  assert.equal(JSON.stringify(w.store.get(K.ub)), ubAntes, "el UB no se tocó");
+});
+
+test("🔴 3.b — el PRODUCTOR RECHAZA en el fondo (producir inyectado): error anotado en el fondo, renovación detenida, turno liberado, UB intacto, la tarea resuelve", { timeout: 4000 }, async () => {
+  const sueltos: unknown[] = [];
+  const h = (e: unknown) => { sueltos.push(e); };
+  process.on("unhandledRejection", h);
+  try {
+    const w = mundo();
+    w.store.set(K.ub, { v: UB, exp: 0 });
+    const ubAntes = JSON.stringify(w.store.get(K.ub));
+    const f = fondoDePrueba(w);
+    const r = await w.solicitud(w.deps("A", { programarEnFondo: f.programarEnFondo, producir: async () => { await w.reloj.dormir(5500); throw new Error("composeHome explotó en fondo"); } }));
+    assert.equal(r.valor.de, "ub");
+    assert.equal(r.m.home.errorProductor, false, "la solicitud ya respondió: el error es del fondo");
+    await assert.doesNotReject(f.fondo());
+    const { metricas: mf } = await f.tareas[0];
+    assert.equal(mf.home.errorProductor, true);
+    assert.equal(mf.home.publicacion, null);
+    assert.equal(w.store.has(K.turno), false, "LIBERAR");
+    assert.equal(w.store.has(K.fresca), false);
+    assert.equal(JSON.stringify(w.store.get(K.ub)), ubAntes);
+    assert.equal(w.reloj.durmiendo, 0, "ninguna renovación viva");
+    for (let i = 0; i < 5; i++) await tick();
+  } finally { process.off("unhandledRejection", h); }
+  assert.deepEqual(sueltos, []);
+});
+
+test("🔴 3.b — fondo CANCELADO por su señal: LIBERAR, sin PUBLICAR ni ENFRIAR, UB intacto, cancelada anotada en el fondo", { timeout: 4000 }, async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const ubAntes = JSON.stringify(w.store.get(K.ub));
+  const ctl = new AbortController();
+  const f = fondoDePrueba(w, { senal: ctl.signal });
+  const r = await w.solicitud(w.deps("A", { programarEnFondo: f.programarEnFondo, producir: async () => { await w.reloj.dormir(2000); ctl.abort(); await w.reloj.dormir(100); return { valor: { hero: ["A"], degradado: false, de: "A" }, fallo: false }; } }));
+  assert.equal(r.valor.de, "ub");
+  const { metricas: mf } = await f.fondo();
+  assert.equal(mf.home.cancelada, true);
+  assert.equal(mf.home.publicacion, null);
+  assert.equal(mf.home.enfriado, false);
+  assert.equal(w.store.has(K.turno), false);
+  assert.equal(w.store.has(K.fresca), false);
+  assert.equal(JSON.stringify(w.store.get(K.ub)), ubAntes);
+});
+
+test("3.b — sin programarEnFondo en las deps (o kill switch en el adaptador): comportamiento actual, el líder compone en línea aunque haya UB", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const r = await w.reloj.correr(w.solicitud(w.deps("A", { tarda: 5000 })));
+  assert.equal(r.valor.de, "A");
+  assert.equal(r.m.home.origen, "propia");
+});
