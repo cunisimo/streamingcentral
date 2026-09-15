@@ -1267,8 +1267,13 @@ leyendo el código.**
 > cambios de término — informe §23), más un barrido completo de sitios que
 > atrapan errores, y CORREGIDA de nuevo tras la auditoría sobre `09b9dbe`
 > (carrera del debounce de la búsqueda; registrador inerte fuera de contexto;
-> comparador antes/después de la búsqueda sana 15/15 — informe §24);
-> pendiente de NUEVA auditoría; reintentos APAGADOS
+> comparador antes/después de la búsqueda sana 15/15 — informe §24), y
+> CORREGIDA por tercera vez tras la auditoría sobre `708bce0` (carrera real
+> entre `onChange` y `useEffect`, resuelta con un adaptador que invalida en el
+> evento; inventario de descartes con evidencia ejecutada/estructural/de banco
+> en vez de referencias documentales, con controles mutados; escenario D del
+> banco: pools con 429 en `/discover` — informe §25); pendiente de auditoría
+> FINAL, no terminada; reintentos APAGADOS
 > (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
 > implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),

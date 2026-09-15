@@ -7,10 +7,28 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA DOS
-  VECES (auditorías de Codex sobre `e930a1d` y sobre `09b9dbe`); pendiente de
-  NUEVA auditoría; reintentos APAGADOS; limitador, circuito, `waitUntil` y
-  membresía NO implementados.** **Segunda corrección (informe §24):** (1) la
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA TRES
+  VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe` y `708bce0`);
+  pendiente de auditoría FINAL — NO está terminada; reintentos APAGADOS;
+  limitador, circuito, `waitUntil` y membresía NO implementados.**
+  **Tercera corrección (informe §25):** (1) quedaba una carrera REAL entre el
+  `onChange` (sólo `setQ`) y el `useEffect` que llamaba al controlador: una
+  respuesta vieja que llegara en ese render se pintaba sobre el texto nuevo.
+  Adaptador puro (`components/busqueda-adaptador.ts`) que modela las dos
+  fases de React —`escribir` en el evento, `efecto` en el efecto, sin
+  programar B dos veces— cableado en `SearchView` con guard de fuente que
+  prohíbe volver al `onChange` limitado a `setQ`; el fetch que ignora la señal
+  igual se descarta por generación. (2) El inventario de descartes tenía
+  falsos verdes (demostrado: con el wrapper corrido, la card sin contexto y la
+  cadena del cron cortada seguía 5/5 verde): ahora cada sitio trae evidencia
+  ejecutada (9 sitios corren con su dependencia caída y el consumidor actúa;
+  control: fuera de contexto, la línea con su nombre), estructural con
+  cadena de llamadas por cuerpo de función y controles mutados (8 sitios
+  `server-only`), y de banco (escenario D nuevo: 429 parcial en `/discover`
+  → pools; `b7be927` lo tragaba y publicaba, la rama degrada y no publica).
+  Verificado: suite 1.658 (1.648 ok, 0 fallos, 10 omitidos), `tsc`, build
+  fresco, `diff --check`; identidad del Home 16/16; búsqueda 15/15; 429
+  parcial RED/GREEN. **Segunda corrección (informe §24):** (1) la
   carrera del debounce de la búsqueda —la generación subía recién dentro del
   temporizador y una respuesta vieja que llegaba en esa ventana se aceptaba—
   reproducida con un controlador puro probado con reloj y fetch inyectados

@@ -1,8 +1,8 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA dos veces
-> (auditorías de Codex sobre `e930a1d` §23 y sobre `09b9dbe` §24); pendiente de
-> NUEVA auditoría.
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA tres veces
+> (auditorías de Codex sobre `e930a1d` §23, sobre `09b9dbe` §24 y sobre
+> `708bce0` §25); pendiente de auditoría FINAL. No está terminada.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -986,3 +986,134 @@ títulos, HIT/HIT), controles correctos
   búsqueda siguen respondiendo `500` ante un fallo principal (clasificadas
   `tmdb-propaga`); el resumen por ruta es un log, no una métrica persistente
   (#20).
+
+---
+
+## 25. Tercera corrección de la 3.a — auditoría de Codex sobre `708bce0`; pendiente de auditoría final
+
+### 25.1 Hallazgo 1 — la carrera real entre `onChange` y `useEffect`
+
+**El hueco.** El controlador de §24 invalidaba bien, pero `SearchView` lo
+llamaba recién desde el `useEffect`; el `onChange` sólo hacía `setQ`. Entre
+el evento y el efecto hay un render de React: una respuesta de A que llegaba
+en ese intervalo seguía siendo "vigente" y se pintaba (resultados o aviso de
+TMDB) sobre el texto B.
+
+**Reproducción (RED contra `708bce0`):**
+- `components/busqueda-adaptador.test.ts` modela explícitamente las DOS fases
+  de React: `evento(texto)` es exactamente lo que hace el `onChange` real
+  (`setQ` + `escribir`) y `render()` exactamente lo que hace el `useEffect`
+  (`efecto` con el estado actual); entre uno y otro el test hace llegar la
+  respuesta de A. El `pedir` inyectado **ignora la señal de cancelación** a
+  propósito: la generación tiene que descartar la respuesta aunque el fetch
+  no honre el abort. Casos: A responde entre `onChange(B)` y el efecto (nada
+  se emite; el efecto no programa B dos veces); B sale una sola vez aunque el
+  efecto corra varias veces; A→B→C con renders desfasados; término corto en
+  el evento; cambio de plataformas (llega por el efecto, no por el evento);
+  restauración (el efecto con el q restaurado no pide; renders posteriores
+  tampoco; escribir después sí pide); desmontaje; vista no lista (el evento
+  no pide, el efecto pide una vez); fallo de red de A en el intervalo. El
+  **control** cablea el controlador real como en `708bce0` (evento = sólo
+  `setQ`; controlador sólo desde el efecto) y muestra que "pinta A".
+  Contra `708bce0` el módulo no existe: el archivo entero falla.
+- `components/busqueda-cableado.test.ts` es el **guard de fuente**: extrae el
+  `onChange={…}` balanceado del input del buscador y exige `setQ(` **y**
+  `adaptador.current!.escribir(` en el mismo handler; prohíbe literalmente el
+  cableado `onChange={(e) => { setQ(e.target.value); setExplore(null); }}`;
+  exige que la vista use `efecto`, `restaurar` y `desmontar` del adaptador y
+  que no llame a `cambiarTermino(` ni tenga `qRestaurado`. Contra `708bce0`:
+  «el handler sólo hace setQ: la invalidación queda para el efecto».
+
+**Corrección:** `components/busqueda-adaptador.ts` (puro) sobre el
+controlador: `escribir(texto, { plataformas, listo })` —el evento— invalida y
+programa en el acto; `efecto({ q, plataformas, listo })` —el `useEffect`—
+sólo cubre lo que el evento no pudo (plataformas nuevas, la vista recién
+lista, el q que llega de un snapshot) y **no repite un pedido ya aceptado**
+(clave texto+plataformas del último aceptado); `restaurar(q, res)` deja la
+marca del snapshot; `desmontar()`. `SearchView`: el `onChange` llama a
+`escribir` en el mismo handler que `setQ`; el efecto sólo llama a `efecto`;
+la marca `qRestaurado` se mudó al adaptador.
+
+### 25.2 Hallazgo 2 — inventario con falsos verdes
+
+**El hueco.** `efecto: contexto` verificaba que existiera un archivo de
+prueba; `efecto: ruta`, que `conDescartesRegistrados` apareciera en cualquier
+lugar del archivo. **Demostrado contra `708bce0`** (worktree separado, fuente
+mutado): con el wrapper corrido fuera de `buildTop` en `/api/top`, la card
+sin `withFallosDeFuentes` y `resolveTitle` sin llamar a `enNetflixAR`, el
+inventario de `708bce0` seguía **5/5 verde**; el nuevo falla nombrando cada
+mutación («conDescartesRegistrados no envuelve buildTop(»; «titleCard no
+abre withFallosDeFuentes(»; «resolveTitle no llama a enNetflixAR(»).
+
+**Corrección** (`lib/descartes-tmdb-inventario.test.ts`): cada fila
+`tmdb-registra` trae la EVIDENCIA de su efecto, de tres tipos:
+
+| Evidencia | Sitios | Qué hace el test |
+|---|---|---|
+| **ejecución** (9) | directores, portadas, búsqueda, `settleAll`, idioma ×2, disponibilidad, resolver ×2 | corre el sitio con su dependencia caída por `ErrorTmdb` dentro de `withFallosTmdb`: el contexto ve el descarte y el **consumidor** actúa (el parcial no se guarda; `fallo: true`; 'no sé' y no 'no está'); los del cron, además, por `conDescartesRegistrados` → una línea `1 descarte(s)`; **control**: fuera de todo contexto cada uno deja la línea `sin contexto sitio=<nombre>` |
+| **estructura** (8) | `titleCard`, `safe()` del Home, pools, `safe()` del Top, `enNetflixAR`, `digitalAR`, `datosDe`, y la cadena del resolver | sobre el fuente sin comentarios (líneas intactas), con paréntesis y llaves balanceados: el wrapper de la ruta envuelve **exactamente** `operacion(` (una envoltura con ella y ninguna llamada fuera); la **cadena** función por función (`buildTop → safe`, `ingestLatestWeek → resolveTitle → enNetflixAR`, `datosDe → digitalAR`) termina con la línea del sitio dentro del cuerpo de la última; la apertura del contexto envuelve la operación y el contenedor **consume** el contador (`if (fallos) fallo = true` + `() => !fallo`; `degradado: true` + `fallosTmdb`) |
+| **banco** (3) | `titleCard`, `settleAll`, pools | además del guard, el recorrido real con dobles: se lee la evidencia y se exige `degradado`, descartes > 0 y sin publicar |
+| observable (2) / relanza (3) | ficha; cliente y política | el registro y `degradacion.<campo> = true` en el **mismo** `.catch(` de `detail()`, que devuelve `{ degradacion }`; `throw` dentro del bloque `catch` |
+
+**Controles mutados** (sobre el fuente real, en el mismo archivo): wrapper
+corrido fuera de la operación, operación llamada también fuera, wrapper
+quitado, cadena cortada (`buildTop` sin `safe`, `ingestLatestWeek` sin
+`resolveTitle`, `datosDe` sin `digitalAR`); apertura quitada, sitio sacado
+del callback, consumo quitado, `composeHome` desenvuelto — todos hacen fallar
+el guard.
+
+**Banco nuevo (escenario D, pools):** `scripts/banco/etapa3a-parcial.mjs`
+ahora también pide el Home con 429 parcial en `/discover` (el doble elige la
+fracción por la URL entera, `parcialPorQuery`, porque en `/discover` el path
+es siempre el mismo). `b7be927`: 8 × 429 tragados por los pools, `degradado:
+false`, publicado como fresca y UB (**el hueco S5, reproducido**). Rama:
+`degradado: true`, 8 descartes, sin publicar.
+
+Se corrigió el nombre del test de `lib/fallos-tmdb.test.ts` ("fuera, no hace
+nada" → "fuera, loguea una línea") y ahora afirma `logueado` con una línea.
+`registrarDescarteTmdb` no cambió: dentro de contexto cuenta y calla; fuera,
+una línea estructurada.
+
+### 25.3 Verificación
+
+- **RED contra `708bce0`** (worktree detached `wt-708b`, tests copiados):
+  `busqueda-adaptador.test.ts` (módulo inexistente), `busqueda-cableado.test.ts`
+  (2/2 fallan con el mensaje exacto). El inventario nuevo sobre el fuente
+  **sin mutar** de `708bce0` pasa 12/13 (el código ya era correcto; falla
+  sólo el escenario de banco que aún no existía) — y sobre el fuente
+  **mutado** falla donde el viejo seguía verde (§25.2).
+- **GREEN**: suite **1.658 tests, 1.648 aprobados, 0 fallos, 10 omitidos**;
+  `tsc --noEmit` limpio; build fresco exit 0 (`.next` borrado, `BUILD_ID
+  kZjClDe8HCDjqlI-LfIEW`); `git diff --check` limpio.
+- **Identidad del Home** (cachés aisladas, `b7be927` vs rama, build final):
+  **16/16 válidos e idénticos**, controles de mutación y de caché compartida
+  correctos.
+- **Identidad de la búsqueda sana**: **15/15**, 4 mutaciones detectadas.
+- **429 parcial** (`docs/medidas/2026-09-14-etapa3a-parcial.json`):
+  `antesRojo`, `despuesVerde`, con el escenario D nuevo.
+- Sin TMDB real; sin limitador, cadencias, pausa, circuito, `waitUntil` ni
+  membresía; ningún cambio en `lib/home.ts`, `lib/pools.ts`, `lib/enrich.ts`
+  ni en el contrato JSON (el diff toca `SearchView`, el adaptador, tests y el
+  banco).
+
+### 25.4 Comprobado / inferido / pendiente
+
+- **Comprobado (ejecutado):** todo §25.3; la carrera evento→efecto
+  reproducida con el cableado de `708bce0` y ausente con el adaptador; que
+  el fetch que ignora la señal igual se descarta por generación; que el
+  inventario viejo era verde con tres mutaciones reales y el nuevo las
+  nombra; que los nueve sitios importables cuentan en el contexto y su
+  consumidor actúa; que pools llega al `degradado` del Home por el
+  recorrido real (escenario D) y que `b7be927` no lo hacía.
+- **Inferido:** que el arnés del adaptador equivale al orden real de React
+  (evento sincrónico, efecto tras el commit) — el arnés no ejecuta React; que
+  la verificación estructural (cadena de llamadas por cuerpo de función)
+  equivale a la ejecución para los ocho sitios `server-only`/`next/server`
+  que no se pueden importar en `node --test`; que el `safe()` del Home
+  registra por el mismo camino que los pools (el banco D lo ejercita sólo si
+  un `discover` fuera de pools cae, cosa que no se mide por sitio).
+- **Pendiente:** auditoría final de Codex; la atribución **por sitio** de
+  los descartes del banco (la línea `[home]` cuenta el total, no el sitio);
+  las rutas distintas de ficha y búsqueda siguen respondiendo `500` ante un
+  fallo principal (`tmdb-propaga`); el resumen por ruta es un log, no una
+  métrica persistente (#20). **La etapa no está terminada.**
