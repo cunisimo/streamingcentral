@@ -7,11 +7,27 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA CUATRO
-  VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0` y
-  `03ad4b9`); corregida en rama, pendiente de auditoría FINAL — NO está
-  terminada; reintentos APAGADOS; limitador, circuito, `waitUntil` y
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA CINCO
+  VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0`,
+  `03ad4b9` y `6ef35c5`); corregida en rama, pendiente de auditoría FINAL —
+  NO está terminada; reintentos APAGADOS; limitador, circuito, `waitUntil` y
   membresía NO implementados.**
+  **Quinta corrección (informe §27, sin código productivo):** la fila de
+  pools exigía un solo recorrido y no representaba el segundo, deliberado:
+  con `EJES_RIELES=0` `candidatosDeSuperficie` llama a `candidatosDePools`
+  directo (con esa llamada cortada, el inventario de `6ef35c5` seguía 14/14
+  verde). Ahora la fila declara los dos recorridos (`con-ejes` por
+  `candidatosConEje` dentro del bloque de ejes; `sin-ejes` por la llamada
+  directa fuera de ese bloque), los dos arrancan en `composeHome` bajo el
+  contexto de `producirHome` y terminan en el mismo sitio; controles mutados
+  cortan cada recorrido por separado y el común. El banco de 429 parcial
+  corre el escenario de pools con `EJES_RIELES` encendido y en 0 (dos `next
+  start` por versión, cachés vaciadas por corrida): `b7be927` rojo en los dos
+  (8/7 × 429 tragados y publicados), la rama verde en los dos (degradado,
+  descartes contados, sin publicar). `POOL_CACHE=0` no alcanza este sitio y
+  queda documentado fuera del recorrido. Verificado: suite 1.659 (1.649 ok, 0
+  fallos, 10 omitidos), `tsc`, build fresco, `diff --check`; identidad del
+  Home 16/16.
   **Cuarta corrección (informe §26, sólo el test del inventario):** la fila de
   pools declaraba únicamente la función del sitio, así que el wrapper y el
   sitio se verificaban por separado y la cadena real `composeHome →

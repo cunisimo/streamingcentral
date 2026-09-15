@@ -1,9 +1,9 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA cuatro
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA cinco
 > veces (auditorías de Codex sobre `e930a1d` §23, `09b9dbe` §24, `708bce0`
-> §25 y `03ad4b9` §26); corregida en rama, pendiente de auditoría FINAL. No
-> está terminada.
+> §25, `03ad4b9` §26 y `6ef35c5` §27); corregida en rama, pendiente de
+> auditoría FINAL. No está terminada.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -1199,5 +1199,102 @@ estructural del código actual).
   camino con eje, que es el que rota); que "el cuerpo de A contiene `B(`"
   equivale a "A llama a B" — un `B(` dentro de un string o de código muerto
   del cuerpo pasaría (el fuente se limpia de comentarios, no de strings).
+- **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
+  está terminada**.
+
+---
+
+## 27. Quinta corrección de la 3.a — auditoría de Codex sobre `6ef35c5`; corregida en rama, pendiente de auditoría final
+
+### 27.1 El hueco
+
+La fila de pools exigía un único recorrido, `composeHome →
+candidatosDeSuperficie → candidatosConEje → candidatosDePools`. Pero hay un
+**segundo recorrido soportado y deliberado**: con `EJES_RIELES=0`, `home.ts`
+no pasa `superficie`, y `candidatosDeSuperficie` llama a `candidatosDePools`
+**directo**, fuera del bloque de ejes. Ese camino no es un error; lo que hay
+que garantizar es que **todo recorrido soportado que llegue al descarte de
+pools conserve el contexto abierto por `producirHome`** y que el Home
+degradado no se publique.
+
+### 27.2 RED contra `6ef35c5` (worktree detached)
+
+- Cortada **sólo la llamada directa** `candidatosDeSuperficie →
+  candidatosDePools` (la de `EJES_RIELES=0`): inventario **14/14 verde** — el
+  recorrido sin ejes no estaba representado.
+- Cortado `candidatosConEje → candidatosDePools`: 12/14 — sólo el camino con
+  ejes se distinguía.
+- La evidencia del banco tenía un solo escenario de pools (con ejes).
+
+### 27.3 Corrección (test del inventario + banco; sin código productivo)
+
+- **Enlaces calificados:** un enlace de la cadena puede exigir que la llamada
+  a la función siguiente esté `dentroDe` un bloque `if (…) {` dado, o
+  `fueraDe` todos los bloques dados (llaves balanceadas sobre el fuente). Es
+  lo que distingue dos recorridos que pasan por la misma función.
+- **Recorridos:** la fila declara `recorridos` con nombre y **todos** tienen
+  que arrancar en la operación envuelta y terminar en el sitio:
+  - `con-ejes`: `composeHome → candidatosDeSuperficie` (llamada a
+    `candidatosConEje` **dentro de** `if (opts.superficie &&
+    poolsHabilitados) {`) `→ candidatosConEje → candidatosDePools`;
+  - `sin-ejes`: `composeHome → candidatosDeSuperficie` (llamada a
+    `candidatosDePools` **fuera de** ese bloque y de `if (!poolsHabilitados)
+    {`) `→ candidatosDePools`.
+  Quitar `superficie` no se exige como fallo: activa el camino directo válido.
+- **Controles mutados sobre la fila real**, cada uno con el mensaje que nombra
+  el recorrido y el enlace: el corte común `composeHome →
+  candidatosDeSuperficie` invalida **los dos**; `candidatosConEje →
+  candidatosDePools` invalida `con-ejes` y deja vivo `sin-ejes`; la llamada
+  directa cortada invalida `sin-ejes` y deja vivo `con-ejes`;
+  `candidatosDeSuperficie → candidatosConEje` (dentro del bloque) invalida
+  `con-ejes`; el sitio mudado a otra función hace fallar los dos; la fila de
+  `03ad4b9` no arranca en `composeHome`; y la fila de `6ef35c5` (sólo con
+  ejes) **no distingue** la llamada directa cortada (control del hueco).
+- **Banco (escenario D, dos recorridos, cachés aisladas):** un segundo
+  `next start` por versión con `EJES_RIELES=0` (la variable se lee del
+  entorno del proceso), mismos dobles, Redis del banco vaciado antes de cada
+  corrida. Resultado: `b7be927` **rojo** en los dos (con ejes: 8 × 429
+  tragados; sin ejes: 7 × 429 tragados; `degradado: false`, publicado como
+  fresca y UB). Rama **verde** en los dos: 429 provocado (8 / 7), descartes
+  contados (8 / 7), `degradado: true`, fresca 0, UB 0. Los conteos distintos
+  confirman que los dos procesos recorrieron consultas distintas.
+- **`POOL_CACHE=0`:** con los pools apagados `candidatosDeSuperficie` va a
+  `discover` directo y un fallo lo atrapa el `safe()` del Home (sitio
+  `home:`): el sitio de pools **no se alcanza**. Queda documentado como fuera
+  de este recorrido; no se inventó cobertura.
+- El test del banco lee **ambos** escenarios (`pools.conEjes`,
+  `pools.sinEjes`) como evidencia adicional; la relación estructural la
+  verifica la fila.
+
+### 27.4 GREEN
+
+- Inventario 14/14; con cada corte real en el fuente, por separado:
+  «recorrido con-ejes: lib/home.ts#composeHome no llama a
+  candidatosDeSuperficie(»; «recorrido con-ejes: lib/pools.ts#candidatosConEje
+  no llama a candidatosDePools(»; «recorrido sin-ejes:
+  lib/enrich.ts#candidatosDeSuperficie no llama a candidatosDePools( fuera
+  de `if (opts.superficie && poolsHabilitados) {` y `if (!poolsHabilitados)
+  {`»; «recorrido con-ejes: lib/enrich.ts#candidatosDeSuperficie no llama a
+  candidatosConEje( dentro de `if (opts.superficie && poolsHabilitados) {`».
+- Suite **1.659 tests, 1.649 aprobados, 0 fallos, 10 omitidos**; `tsc
+  --noEmit` limpio; build fresco exit 0 (`BUILD_ID fl5EFQfwgaz8KOYqCNaGa`);
+  `git diff --check` limpio.
+- Identidad del Home (cachés aisladas, `b7be927` vs rama, build final):
+  **16/16 válidos e idénticos**.
+- **Sin cambios en código productivo**: el diff contra `6ef35c5` toca el
+  test del inventario, el script y la evidencia del banco, la evidencia del
+  Home y los tres documentos.
+
+### 27.5 Comprobado / inferido / pendiente
+
+- **Comprobado:** todo §27.2 y §27.4; que `EJES_RIELES=0` recorre el camino
+  directo y conserva el contexto (banco); que `b7be927` tragaba los 429 de
+  pools por los dos caminos.
+- **Inferido:** que la equivalencia "la llamada está fuera del bloque" ⇔
+  "es la que se ejecuta sin `superficie`" vale mientras la estructura de
+  `candidatosDeSuperficie` siga siendo `if (superficie && pools) {…} if
+  (!pools) {…} directo` (el guard falla si cambian los encabezados, no si
+  cambia la semántica); que con `POOL_CACHE=0` el sitio no se alcanza (leído
+  del fuente, no ejecutado).
 - **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
   está terminada**.
