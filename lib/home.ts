@@ -47,7 +47,7 @@ import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante
 import { CONSTANTES, servirConTurno } from "./home-servir";
 import { crearProgramadorDeFondo, estadoDelFondo } from "./home-fondo";
 import { compuertaDeFondo } from "./fondo-frontera";
-// La API PÚBLICA de Vercel para sostener trabajo después de responder (Next
+// La API PÚBLICA de Vercel para sostener trabajo más allá de la respuesta (Next
 // anterior a 15.1). Sin contexto de solicitud (local, banco) devuelve sin hacer
 // nada: por eso la disponibilidad se decide antes, en `estadoDelFondo`.
 import { waitUntil } from "@vercel/functions";

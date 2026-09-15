@@ -1,0 +1,26 @@
+{
+  "fecha": "2026-09-15",
+  "que": "Preview aislado de la rama feat/etapa3b-ub-primero (33d2ea2) + sonda spike (064b131). Frontera con cesión setImmediate vs control de un microtask, con la API PÚBLICA waitUntil de @vercel/functions 3.9.7. Borrado al terminar; Producción no se tocó.",
+  "deployment": { "id": "dpl_BjiwdfGkHQVQ5vnSQuYHVicPRmJG", "target": "preview", "region": "iad1", "borrado": true },
+  "sonda": "/api/sonda-frontera?modo=<setImmediate|microtask>&s=8&b=3000 — el fondo (registrado en waitUntil detrás de compuertaDeFondo) arranca con 3000 ms SÍNCRONOS; si corriera antes de que salgan los bytes, el cliente vería >= 3 s",
+  "cliente": [
+    { "modo": "setImmediate", "id": "mu3b7urs-y7my", "ttfbMs": 807, "cuerpoMs": 816, "respuestaConstruidaMs": 1, "nota": "primer pedido, arranque frío" },
+    { "modo": "setImmediate", "id": "mu3b86p7-yfcj", "ttfbMs": 425, "cuerpoMs": 426, "respuestaConstruidaMs": 0 },
+    { "modo": "microtask",    "id": "mu3b8ilx-5lzl", "ttfbMs": 3472, "cuerpoMs": 3474, "respuestaConstruidaMs": 1 },
+    { "modo": "setImmediate", "id": "mu3b8wv5-vj4x", "ttfbMs": 424, "cuerpoMs": 426, "respuestaConstruidaMs": 0 },
+    { "modo": "microtask",    "id": "mu3b98of-oyej", "ttfbMs": 3306, "cuerpoMs": 3309, "respuestaConstruidaMs": 1 }
+  ],
+  "logsRuntime": {
+    "mu3b7urs-y7my": ["respuesta-construida +1ms", "fondo-inicia +18ms", "fondo-sincrono-termino +3018ms", "tick 8/8 +11026ms", "DONE +11027ms"],
+    "mu3b86p7-yfcj": ["respuesta-construida +0ms", "fondo-inicia +2ms", "fondo-sincrono-termino +3003ms", "tick 8/8 +11005ms", "DONE +11006ms"],
+    "mu3b8ilx-5lzl": ["respuesta-construida +0ms", "fondo-inicia +1ms", "fondo-sincrono-termino +3001ms", "tick 8/8 +11007ms", "DONE +11007ms"],
+    "mu3b8wv5-vj4x": ["respuesta-construida +0ms", "fondo-inicia +2ms", "fondo-sincrono-termino +3002ms", "tick 8/8 +11008ms", "DONE +11008ms"],
+    "mu3b98of-oyej": ["respuesta-construida +0ms", "fondo-inicia +1ms", "fondo-sincrono-termino +3001ms", "tick 8/8 +11004ms", "DONE +11004ms"]
+  },
+  "lectura": {
+    "respuestaConstruida": "en el handler, +0/1 ms en los cinco (nivel 1: se ve en el log)",
+    "promesaEntregadaAlLlamador": "lo prueba lib/home-fondo-orden.test.ts (nivel 2: caller-recibio-response antes de fondo-inicia); los logs del runtime no lo distinguen: fondo-inicia sale +1..18 ms en los dos modos",
+    "bytesEnviados": "nivel 3, sólo observable desde afuera: con setImmediate el cuerpo llega en ~425 ms (RTT de red) aunque el fondo tenga 3 s síncronos por delante; con la cesión de un microtask llega a 3.3-3.5 s, o sea que el fondo corrió ANTES de que salieran los bytes. En el runtime real de Vercel un microtask NO es frontera; setImmediate sí.",
+    "fondoSobrevive": "DONE a +11 s en los cinco: waitUntil (API pública) mantuvo viva la función después de responder"
+  }
+}

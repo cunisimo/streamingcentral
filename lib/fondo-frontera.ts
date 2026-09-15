@@ -71,8 +71,8 @@ export async function conFronteraDeFondo<T>(fn: () => Promise<T>, o: OpcionesFro
   try {
     return await als.run(f, fn);
   } finally {
-    // No se espera: la respuesta sale ya; la compuerta se abre en la vuelta
-    // siguiente del event loop. Si `ceder` fallara, la compuerta se abre igual.
+    // No se espera: el valor ya se entrega al llamador; la compuerta se abre
+    // en la vuelta siguiente del event loop. Si `ceder` fallara, se abre igual.
     void ceder().then(() => abrir(f), () => abrir(f));
   }
 }

@@ -35,9 +35,9 @@
 // → redeploy del mismo commit → verificar `[home]` sin `ultimo-bueno-fondo`.
 
 export interface DepsFondo {
-  /** `waitUntil` (o un doble): sostiene la promesa después de responder. Puede lanzar. */
+  /** `waitUntil` (o un doble): mantiene viva la función hasta que la promesa resuelva (semántica de Vercel). Puede lanzar. */
   registrar: (tarea: Promise<unknown>) => void;
-  /** La compuerta de la solicitud actual (`compuertaDeFondo`): resuelve cuando la respuesta ya se construyó; `null` si no hay frontera. */
+  /** La compuerta de la solicitud actual (`compuertaDeFondo`): resuelve cuando la respuesta ya se construyó y el handler cedió al event loop (su promesa ya llegó al llamador); `null` si no hay frontera. */
   compuerta: () => Promise<void> | null;
   /** Hay fondo real (Vercel) o el banco lo simula. */
   disponible: boolean;
@@ -64,7 +64,7 @@ export function crearProgramadorDeFondo(deps: DepsFondo): ProgramarEnFondo {
   return (iniciar, senal) => {
     if (deps.apagado || !deps.disponible) return false;
     const compuerta = deps.compuerta();
-    if (!compuerta) return false;   // sin frontera declarada no hay "después de responder"
+    if (!compuerta) return false;   // sin frontera declarada no hay "detrás de la respuesta"
     let registrado = false;
     // No inicia ahora: espera la compuerta (la respuesta ya construida) y sólo
     // compone si el registro quedó hecho. `registrar` es sincrónico y la

@@ -258,7 +258,8 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   }
   if (r.estado === "adquirido") {
     // Etapa 3.b: con UB y fondo registrado, el UB sale ya y la fresca se
-    // compone después de responder. `programarEnFondo` es perezoso: si devuelve
+    // compone detrás de la frontera (`lib/fondo-frontera.ts`: recién cuando la
+    // promesa del handler ya llegó a su llamador). `programarEnFondo` es perezoso: si devuelve
     // false no inició nada, y el camino es el de siempre (una composición, en
     // línea). Sin UB no hay nada que servir primero: como siempre.
     if (ub != null && deps.programarEnFondo) {

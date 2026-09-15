@@ -4,7 +4,7 @@
   "latenciaMs": 60,
   "antes": {
     "ubPresente": {
-      "msPared": 5279,
+      "msPared": 5721,
       "origen": "propia",
       "fondoEnLinea": false,
       "compone": 1,
@@ -14,7 +14,7 @@
       "fondo": null,
       "frescaTrasFondo": 1,
       "siguiente": {
-        "msPared": 12,
+        "msPared": 29,
         "cache": "HIT",
         "origen": null
       },
@@ -329,8 +329,8 @@
     },
     "concurrentes": {
       "msPared": [
-        5234,
-        5235
+        5393,
+        5395
       ],
       "origenes": [
         null,
@@ -345,7 +345,7 @@
       "propietariosDistintos": true
     },
     "sinUB": {
-      "msPared": 5730,
+      "msPared": 5343,
       "origen": "propia",
       "publicacion": "publicado",
       "fondos": 0,
@@ -354,7 +354,7 @@
   },
   "despues": {
     "ubPresente": {
-      "msPared": 80,
+      "msPared": 71,
       "origen": "ultimo-bueno-fondo",
       "fondoEnLinea": true,
       "compone": 1,
@@ -363,15 +363,15 @@
       "degradado": false,
       "fondo": {
         "publicacion": "publicado",
-        "ms": 5336,
-        "propietario": "ef946853-3858-4359-aefd-7655fe108c13:43852:2",
+        "ms": 5148,
+        "propietario": "3d3e5886-e29b-441c-9da6-6bddd9ebc133:3892:2",
         "tmdb": 833,
         "mismaClave": true,
         "mismoPropietario": true
       },
       "frescaTrasFondo": 1,
       "siguiente": {
-        "msPared": 17,
+        "msPared": 25,
         "cache": "HIT",
         "origen": null
       },
@@ -686,8 +686,8 @@
     },
     "concurrentes": {
       "msPared": [
-        43,
-        43
+        55,
+        54
       ],
       "origenes": [
         null,
@@ -702,14 +702,14 @@
       "propietariosDistintos": true
     },
     "sinUB": {
-      "msPared": 5716,
+      "msPared": 5402,
       "origen": "propia",
       "publicacion": "publicado",
       "fondos": 0,
       "compone": 1
     },
     "degradadoEnFondo": {
-      "msPared": 98,
+      "msPared": 75,
       "origen": "ultimo-bueno-fondo",
       "fondo": {
         "degradado": true,
@@ -722,7 +722,7 @@
       "ubIntacto": true
     },
     "cincoXXTotalEnFondo": {
-      "msPared": 69,
+      "msPared": 52,
       "origen": "ultimo-bueno-fondo",
       "fondo": {
         "degradado": true,
@@ -735,12 +735,12 @@
       "turno": 1
     },
     "canceladoEnFondo": {
-      "msPared": 82,
+      "msPared": 77,
       "origen": "ultimo-bueno-fondo",
       "fondo": {
         "cancelada": true,
         "publicacion": "no",
-        "ms": 50518
+        "ms": 50514
       },
       "fresca": 0,
       "ubIntacto": true,
@@ -749,7 +749,7 @@
   },
   "killSwitch": {
     "ubPresente": {
-      "msPared": 5455,
+      "msPared": 5257,
       "origen": "propia",
       "fondoEnLinea": false,
       "compone": 1,
@@ -759,7 +759,7 @@
       "fondo": null,
       "frescaTrasFondo": 1,
       "siguiente": {
-        "msPared": 15,
+        "msPared": 27,
         "cache": "HIT",
         "origen": null
       },
@@ -1074,8 +1074,8 @@
     },
     "concurrentes": {
       "msPared": [
-        5317,
-        5317
+        5351,
+        5350
       ],
       "origenes": [
         null,
@@ -1090,7 +1090,7 @@
       "propietariosDistintos": true
     },
     "sinUB": {
-      "msPared": 5567,
+      "msPared": 5680,
       "origen": "propia",
       "publicacion": "publicado",
       "fondos": 0,
@@ -1099,7 +1099,7 @@
   },
   "sinFondo": {
     "ubPresente": {
-      "msPared": 5430,
+      "msPared": 5370,
       "origen": "propia",
       "fondoEnLinea": false,
       "compone": 1,
@@ -1109,7 +1109,7 @@
       "fondo": null,
       "frescaTrasFondo": 1,
       "siguiente": {
-        "msPared": 28,
+        "msPared": 41,
         "cache": "HIT",
         "origen": null
       },
@@ -1424,8 +1424,8 @@
     },
     "concurrentes": {
       "msPared": [
-        5282,
-        5282
+        5248,
+        5248
       ],
       "origenes": [
         null,
@@ -1440,7 +1440,7 @@
       "propietariosDistintos": true
     },
     "sinUB": {
-      "msPared": 5800,
+      "msPared": 5695,
       "origen": "propia",
       "publicacion": "publicado",
       "fondos": 0,

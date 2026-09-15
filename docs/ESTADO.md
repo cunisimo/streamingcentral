@@ -8,14 +8,29 @@
 ## Evidencia y alcance de esta actualización
 
 - **Etapa 3.b de capacidad (#19) — "último bueno primero, reconstrucción en
-  fondo": IMPLEMENTADA EN RAMA (`feat/etapa3b-ub-primero`) y CORREGIDA tras
-  la auditoría de Codex sobre `c84996e` (informe §35); PENDIENTE DE NUEVA
-  AUDITORÍA; NO MERGEADA NI DESPLEGADA.** Corrección: el fondo esperaba un
+  fondo": IMPLEMENTADA EN RAMA (`feat/etapa3b-ub-primero`, `33d2ea2`) y
+  CORREGIDA tras las auditorías de Codex sobre `c84996e` (informe §35) y
+  `3a057fc` (§36); PENDIENTE DE NUEVA AUDITORÍA; NO MERGEADA NI
+  DESPLEGADA.** Segunda corrección (§36): abrir la compuerta en el `finally`
+  del handler encolaba el fondo ANTES de que el llamador de `GET` recibiera
+  la promesa (RED con el llamador real: `respuesta-construida → fondo-inicia
+  → caller-recibio-response`); ahora la frontera cede al event loop
+  (`setImmediate`, inyectable) y abre después: GREEN `respuesta-construida →
+  caller-recibio-response → fondo-inicia`, también con dos llamadores
+  concurrentes; un microtask NO alcanza (se invierte con una capa async).
+  Tres niveles, cada uno con su evidencia: respuesta construida (log),
+  promesa entregada al llamador (test), bytes enviados (sólo Preview:
+  aislado, `dpl_BjiwdfGkHQVQ5vnSQuYHVicPRmJG`, borrado; cuerpo en 425 ms con
+  3 s síncronos de fondo por delante, 3,3 s con el control de un microtask;
+  `waitUntil` público sostuvo el fondo hasta +11 s). Suite 1.707 (1.697 ok,
+  0 fallos, 10 omitidos), `tsc`, build fresco, `diff --check`, banco 3.b
+  verde (UB presente 71 ms + fondo 5,1 s publicado; `componeAntesDeTerminal`
+  0), identidad 16/16. Primera corrección (§35): el fondo esperaba un
   microtick tras registrar en `waitUntil` y `composeHome` arrancaba antes de
   que la ruta construyera su `NextResponse`; ahora espera la **compuerta**
   de la solicitud (`lib/fondo-frontera.ts`), que `conFrontera(conCors(manejar,
-  "GET"))` abre cuando el handler entero devolvió la respuesta (cabeceras
-  incluidas); sin frontera no hay fondo (bloqueante). RED contra `c84996e`
+  "GET"))` abre con la respuesta construida (cabeceras incluidas) y —desde
+  §36— sólo tras ceder al event loop; sin frontera no hay fondo (bloqueante). RED contra `c84996e`
   atravesando una frontera equivalente al handler (traza: la composición
   terminaba antes de la respuesta); GREEN con el orden completo, banco con
   `componeAntesDeTerminal = 0` en la rama (1 en el antes), suite 1.701

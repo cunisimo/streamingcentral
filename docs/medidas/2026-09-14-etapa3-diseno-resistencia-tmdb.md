@@ -11,7 +11,9 @@
 > membresía NO implementados: las subetapas restantes de la Etapa 3 siguen
 > diseñadas y no aprobadas, y por ellas #19 sigue abierto. **`waitUntil` SÍ
 > está implementado en la rama de la 3.b** (sólo para la composición de
-> fondo del Home; §34-§35), no en Producción.
+> fondo del Home; §34-§36), no en Producción. Corregida dos veces tras las
+> auditorías sobre `c84996e` (§35) y `3a057fc` (§36: la compuerta se abre
+> tras ceder al event loop con `setImmediate`; Preview aislado en §36.5).
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -2322,7 +2324,9 @@ modela el microtick reproduce el agujero.
 - **`lib/fondo-frontera.ts`** (puro, `AsyncLocalStorage`): `conFrontera(handler)`
   corre el handler con una frontera propia y **abre la compuerta cuando el
   handler devolvió** (o lanzó: `finally`, para que ninguna tarea registrada
-  quede colgada de `waitUntil`); `compuertaDeFondo()` devuelve la promesa de
+  quede colgada de `waitUntil`) — **corregido en §36: abrir en el `finally`
+  encola el fondo antes de que el llamador reciba la promesa; ahora se cede
+  al event loop (`setImmediate`) y se abre después**; `compuertaDeFondo()` devuelve la promesa de
   esa compuerta, o `null` si no hay frontera.
 - **`lib/home-fondo.ts`**: nueva dependencia `compuerta`; sin compuerta (el
   handler no declaró la frontera) `programarEnFondo` devuelve `false` sin
@@ -2394,5 +2398,157 @@ modela el microtick reproduce el agujero.
 - **Desconocido:** el coste de iniciar el fondo unos microtasks más tarde
   (nulo en el banco: 80 ms de respuesta y 5,3 s de fondo).
 
-Estado: **corregida en rama, pendiente de una nueva auditoría de Codex; no
-mergeada ni desplegada.**
+Estado: superado por §36 (la auditoría sobre `3a057fc` mostró que "handler
+devolvió" no es "llamador recibió").
+
+## 36. Corrección de la 3.b tras la auditoría de Codex sobre `3a057fc` — pendiente de nueva auditoría; no mergeada ni desplegada
+
+### 36.1 Causa exacta
+
+La compuerta de `3a057fc` se abría en el `finally` de `conFronteraDeFondo`,
+es decir, **en el mismo microtask en que el handler devolvía**. Abrirla
+resuelve la promesa de la compuerta, y la continuación de la tarea de fondo
+(`await compuerta` en `lib/home-fondo.ts`) queda encolada como microtask
+**antes** de que la promesa que `GET` devuelve se resuelva para su llamador:
+ese llamador (`const r = await GET(req)`, o el runtime de Next) recibe el
+`Response` en un microtask posterior. Orden real: `respuesta-construida →
+fondo-inicia → caller-recibio-response`. Lo que §35 llamó "compuerta abierta
+con la respuesta construida" era cierto, pero **"construida" no es
+"entregada"**: el primer tramo síncrono de `composeHome` seguía dentro del
+camino crítico de la entrega.
+
+### 36.2 RED contra `3a057fc`
+
+`lib/home-fondo-orden.test.ts` (`e89e99a`) atraviesa la **frontera externa
+real**: el test es el llamador de `GET`:
+
+```ts
+const promesa = GET({});
+const response = await promesa;
+eventos.push("caller-recibio-response");
+```
+
+con el programador real (`crearProgramadorDeFondo` + `compuertaDeFondo`), el
+`servirConTurno` real con UB presente y un `programarEnFondo` cuyo arranque
+es observable de forma síncrona (`eventos.push("fondo-inicia")` antes de
+`withMetricas(iniciar)`). Exige estrictamente
+`["respuesta-construida", "caller-recibio-response", "fondo-inicia"]`.
+Contra `3a057fc` falló con exactamente
+`["respuesta-construida", "fondo-inicia", "caller-recibio-response"]`, y
+también en la variante con **dos llamadores concurrentes** (A 60 ms, B 5 ms):
+en cada uno el fondo precedía a su `caller-recibio`. El control que modela la
+apertura en el `finally` reproduce el agujero.
+
+### 36.3 Solución: ceder al event loop antes de abrir (`lib/fondo-frontera.ts`, `33d2ea2`)
+
+`conFronteraDeFondo` ya no abre la compuerta en el `finally`: en el `finally`
+**cede** (`ceder`, por defecto `setImmediate`) y abre en la continuación de
+esa cesión (`void ceder().then(() => abrir(f), () => abrir(f))`). El valor —o
+el error— del handler se entrega al llamador sin esperar la cesión.
+
+Por qué `setImmediate` garantiza que la promesa del handler llega primero al
+llamador en Node (y en el runtime Node de Vercel): la cola de microtasks
+(continuaciones de promesas y `process.nextTick`) se vacía **por completo**
+antes de la fase `check` del event loop, que es donde corre `setImmediate`.
+Cada `await` intermedio entre el handler y su llamador —`conCors`, la capa
+del runtime— es un microtask más de esa misma cola, así que para cuando la
+compuerta se abre, todos ya corrieron. Es una frontera de **fase**, no una
+cantidad de microticks. Medido con el arnés (`node`): una cesión de **un
+microtask** (`Promise.resolve()`) da el orden correcto sólo con **0 capas**
+async entre el handler y el llamador y **se invierte con 1..4 capas**
+(`conCors` ya es una); `setImmediate` da el orden correcto con 0..4. No se
+usó `setTimeout(0)` (fase de timers, granularidad de 1 ms, orden relativo a
+`setImmediate` no determinista fuera de I/O) ni `scheduler.yield` (no
+disponible como frontera de fase en Node 24 estable). `ceder` es inyectable
+(`OpcionesFrontera`) sólo para probarlo; si rechaza, la compuerta se abre
+igual.
+
+Garantías de la compuerta conservadas: `NextResponse` con cabeceras de CORS
+construido (la frontera sigue envolviendo por fuera a `conCors`); sin
+frontera no hay fondo (`false`, bloqueante); un handler que lanza deja la
+compuerta abierta tras la cesión y ninguna tarea colgada; frontera por
+solicitud (`AsyncLocalStorage`).
+
+### 36.4 GREEN — traza con `caller-recibio-response`
+
+- Orden externo simple (arnés real, UB presente), eventos filtrados:
+  `respuesta-construida → caller-recibio-response → fondo-inicia`; una sola
+  composición; fresca publicada por el fondo. Traza completa:
+  `servir-devolvio:ultimo-bueno-fondo → [home] terminal →
+  respuesta-construida → caller-recibio-response → fondo-inicia → [home]
+  compone → iniciar → [home-fondo] publicado`.
+- Dos llamadores concurrentes: para cada uno
+  `respuesta-construida:X < caller-recibio:X < fondo-inicia:X`, y
+  `fondo-inicia:B < respuesta-construida:A` (B no espera a A).
+- Cesión instrumentada: `respuesta-construida → caller-recibio-response →
+  cedido → fondo-inicia`.
+- Control por profundidad (0..4 capas): `setImmediate` correcto en todas;
+  un microtask correcto sólo con 0 y mal con 1..4.
+- `ceder` que rechaza: la tarea corre igual; sin `unhandledRejection`.
+- Conservados: sin frontera → `false`; handler que lanza → tarea corre;
+  fallbacks (`waitUntil` ausente, kill switch, registro que lanza, sin UB)
+  → exactamente una composición bloqueante; aislamiento ALS/métricas/señal;
+  renovación, fencing, ENFRIAR, liberación y UB intacto
+  (`home-servir.test.ts` 44/44; `home-fondo.test.ts`; `etapa3b-cableado`
+  fija `setImmediate(r)`, la apertura tras `ceder` y prohíbe `finally {
+  abrir(f)`). Archivos de la etapa: **125/125**.
+- Suite **1.707 tests, 1.697 aprobados, 0 fallos, 10 omitidos**; `tsc
+  --noEmit` limpio; build fresco (`BUILD_ID jhA53XB4nl_MXIibePibx`);
+  `@vercel/functions` sólo en el bundle de `/api/home`, nada en el cliente;
+  `git diff --check` limpio.
+- **Banco 3.b** (antes `903832e` vs rama, verde): UB presente antes 5.721
+  ms en línea, rama **71 ms** `ultimo-bueno-fondo` + fondo 5.148 ms
+  publicado (833 llamadas a TMDB de dobles), siguiente HIT 25 ms, fresca
+  idéntica; `componeAntesDeTerminal` 0 en la rama; concurrentes 55/54 ms;
+  sin UB 5.402 ms como el antes; degradado en fondo (8 descartes, UB
+  intacto), 5xx total degradado, cancelado a 50,5 s; kill switch 5.257 ms
+  y sin fondo 5.370 ms como el antes.
+- **Identidad del Home 16/16** (`b7be927` vs rama), control de mutaciones
+  y control compartido rechazado.
+
+### 36.5 Preview aislado: los tres niveles
+
+El mecanismo cambió respecto del Preview de §34.6, así que se hizo un Preview
+aislado de la rama (`33d2ea2` + sonda `064b131`, `dpl_BjiwdfGkHQVQ5vnSQuYHVicPRmJG`,
+target `preview`, `iad1`, **borrado al terminar; Producción no se tocó**;
+evidencia en `docs/medidas/2026-09-15-etapa3b-preview-frontera.json`). La
+sonda usa la MISMA maquinaria que `/api/home` —`conFrontera`,
+`crearProgramadorDeFondo` con `compuertaDeFondo` y el `waitUntil` **público**
+de `@vercel/functions`— y su fondo arranca con **3.000 ms síncronos**: si
+corriera antes de que salgan los bytes, el cliente lo vería.
+
+| Nivel | Qué es | Quién lo observa | Resultado |
+|---|---|---|---|
+| 1. Respuesta construida en el handler | `NextResponse` listo, CORS incluido | log `[home]` / test | +0/1 ms en los cinco pedidos |
+| 2. Promesa del handler entregada al llamador | `await GET(req)` volvió | **sólo el test** (`caller-recibio-response`); los logs del runtime no lo distinguen: `fondo-inicia` sale +1..18 ms en los dos modos | orden probado en §36.4 |
+| 3. Bytes enviados al usuario | el cliente tiene el cuerpo | **sólo el Preview** | con `setImmediate`: cuerpo en **424-425 ms** (807 ms el primero, frío) pese a los 3 s síncronos del fondo; control de un microtask: **3.306-3.472 ms** = el fondo corrió ANTES de que salieran los bytes |
+
+En los cinco pedidos el fondo llegó a `DONE` a +11 s: `waitUntil` mantuvo
+viva la función después de la respuesta. **En el runtime real de Vercel un
+microtask no es frontera; `setImmediate` sí.**
+
+### 36.6 Contradicciones documentales corregidas
+
+- §35.3/§35.6 hablaban de "compuerta abierta cuando el handler devolvió" y
+  daban por inferido que eso equivalía a "respuesta enviada": quedan
+  superados por §36 (ver nota en §35.3).
+- `CLAUDE.md`, `ESTADO.md`, `ISSUES.md` y los comentarios de `lib/home.ts`,
+  `lib/home-fondo.ts` y `lib/home-servir.ts` decían "después de responder":
+  ahora dicen lo que se prueba en cada nivel — la composición arranca
+  cuando la promesa del handler ya fue **entregada a su llamador** (test), y
+  que los bytes ya salieron sólo lo observa un Preview (§36.5).
+
+### 36.7 Comprobado / inferido / desconocido
+
+- **Comprobado:** §36.2 (RED), §36.4 (GREEN, banco, identidad, build,
+  suite), §36.5 (Preview: bytes antes del fondo con `setImmediate`, después
+  con un microtask).
+- **Inferido:** que el runtime de Next 14.2 en Vercel no introduce ninguna
+  macrotask entre recibir el `Response` y escribir los bytes que pudiera
+  quedar detrás de `setImmediate`; la medida de §36.5 (424 ms vs 3.3 s) lo
+  respalda para el caso medido, no lo demuestra en general.
+- **Desconocido:** el coste de la cesión en Producción (en el Preview y en
+  el banco es de milisegundos: `fondo-inicia` +2 ms).
+
+Estado: **corregida en rama (`33d2ea2`), pendiente de una nueva auditoría de
+Codex; no mergeada ni desplegada.**
