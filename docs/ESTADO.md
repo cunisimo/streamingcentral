@@ -7,10 +7,23 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA TRES
-  VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe` y `708bce0`);
-  pendiente de auditoría FINAL — NO está terminada; reintentos APAGADOS;
-  limitador, circuito, `waitUntil` y membresía NO implementados.**
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA CUATRO
+  VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0` y
+  `03ad4b9`); corregida en rama, pendiente de auditoría FINAL — NO está
+  terminada; reintentos APAGADOS; limitador, circuito, `waitUntil` y
+  membresía NO implementados.**
+  **Cuarta corrección (informe §26, sólo el test del inventario):** la fila de
+  pools declaraba únicamente la función del sitio, así que el wrapper y el
+  sitio se verificaban por separado y la cadena real `composeHome →
+  candidatosDeSuperficie → candidatosConEje → candidatosDePools` no se
+  probaba (demostrado: con cada enlace cortado en el fuente, el inventario
+  de `03ad4b9` seguía 13/13 verde). Ahora la cadena tiene que arrancar en la
+  operación envuelta y llegar al sitio enlace por enlace, cruzando archivos;
+  un control muta el fuente real y exige el mensaje con el enlace perdido; el
+  banco queda como evidencia adicional; los números de línea de los controles
+  salen de `lineaDelCatch` (base 1). Verificado: suite 1.659 (1.649 ok, 0
+  fallos, 10 omitidos), `tsc`, build fresco, `diff --check`; identidad del
+  Home 16/16; sin cambios en archivos productivos ni en el contrato JSON.
   **Tercera corrección (informe §25):** (1) quedaba una carrera REAL entre el
   `onChange` (sólo `setQ`) y el `useEffect` que llamaba al controlador: una
   respuesta vieja que llegara en ese render se pintaba sobre el texto nuevo.

@@ -1272,8 +1272,11 @@ leyendo el código.**
 > entre `onChange` y `useEffect`, resuelta con un adaptador que invalida en el
 > evento; inventario de descartes con evidencia ejecutada/estructural/de banco
 > en vez de referencias documentales, con controles mutados; escenario D del
-> banco: pools con 429 en `/discover` — informe §25); pendiente de auditoría
-> FINAL, no terminada; reintentos APAGADOS
+> banco: pools con 429 en `/discover` — informe §25), y por cuarta vez tras la
+> auditoría sobre `03ad4b9` (la fila de pools del inventario verifica ahora la
+> cadena completa `composeHome → candidatosDeSuperficie → candidatosConEje →
+> candidatosDePools` con controles mutados por enlace — informe §26);
+> corregida en rama, pendiente de auditoría FINAL, no terminada; reintentos APAGADOS
 > (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
 > implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),

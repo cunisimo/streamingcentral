@@ -1,8 +1,9 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA tres veces
-> (auditorías de Codex sobre `e930a1d` §23, sobre `09b9dbe` §24 y sobre
-> `708bce0` §25); pendiente de auditoría FINAL. No está terminada.
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA cuatro
+> veces (auditorías de Codex sobre `e930a1d` §23, `09b9dbe` §24, `708bce0`
+> §25 y `03ad4b9` §26); corregida en rama, pendiente de auditoría FINAL. No
+> está terminada.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -1121,3 +1122,82 @@ una línea estructurada.
   las rutas distintas de ficha y búsqueda siguen respondiendo `500` ante un
   fallo principal (`tmdb-propaga`); el resumen por ruta es un log, no una
   métrica persistente (#20). **La etapa no está terminada.**
+
+---
+
+## 26. Cuarta corrección de la 3.a — auditoría de Codex sobre `03ad4b9`; corregida en rama, pendiente de auditoría final
+
+### 26.1 El bloqueante
+
+La fila de `pools` del inventario declaraba `cadena:
+["lib/pools.ts#candidatosDePools"]`. `verificarContexto()` confirmaba por
+separado que `withFallosDeFuentes(` envolviera `composeHome(` y que el sitio
+estuviera dentro de `candidatosDePools`, pero la cadena real —`composeHome`
+→ `candidatosDeSuperficie` (enrich) → `candidatosConEje` → `candidatosDePools`
+(pools)— no se probaba: un enlace perdido en el medio quedaba verde, y el JSON
+del banco no lo reemplaza (es una foto de una corrida, no la relación
+estructural del código actual).
+
+### 26.2 RED contra `03ad4b9`
+
+- **Control nuevo sobre la fila/verificador de `03ad4b9`** (aplicado en el
+  árbol antes de tocar la fila): cortar `composeHome → candidatosDeSuperficie`
+  en el fuente no hace fallar nada → «Missing expected exception» (13/14).
+- **Inventario de `03ad4b9` con los tres enlaces reales cortados** (worktree
+  detached, `sed` por rango de líneas de la función, un enlace por vez):
+  `composeHome→candidatosDeSuperficie` **13/13 verde**;
+  `candidatosDeSuperficie→candidatosConEje` **13/13 verde**;
+  `candidatosConEje→candidatosDePools` **13/13 verde**. Falso verde
+  reproducido.
+
+### 26.3 Corrección (sólo `lib/descartes-tmdb-inventario.test.ts`)
+
+- **Verificador:** con `operacion` declarada, la cadena tiene que **arrancar
+  en esa operación** (`cadena[0]` = `composeHome`) y terminar con la línea del
+  sitio dentro del cuerpo de la última función; cada enlace se verifica
+  cuerpo por cuerpo con los fuentes que correspondan a cada archivo
+  (`fuentes[archivo] ?? limpio(archivo)`), así que cruza archivos. Una
+  cadena que arranque más abajo falla: «la cadena no arranca en composeHome».
+- **Fila de pools:** `cadena: [lib/home.ts#composeHome,
+  lib/enrich.ts#candidatosDeSuperficie, lib/pools.ts#candidatosConEje,
+  lib/pools.ts#candidatosDePools]`. El banco (`discover`) queda como evidencia
+  **adicional**; no sustituye la relación estructural.
+- **Control mutado nuevo** sobre **la fila real** (no una cadena escrita a
+  mano): corta cada enlace en el fuente real y exige el mensaje con el enlace
+  perdido; muda el sitio a otra función («no está dentro de
+  lib/pools.ts#candidatosDePools»); y prueba que la cadena de `03ad4b9`
+  (`[candidatosDePools]`) ya no pasa.
+- **Números de línea:** `lineaDelCatch(fuente, marcador)` devuelve la línea
+  **basada en 1** del `catch`/`allSettled` más cercano hacia arriba del
+  registro; reemplaza los cinco `findIndex()` de los controles (dos de ellos
+  —`enNetflixAR` y `digitalAR`— estaban en base 0, y el de `top.ts` dependía
+  de `i > 140`). Los controles de esas cadenas ahora también afirman que el
+  fuente sin mutar pasa.
+
+### 26.4 GREEN
+
+- Inventario 14/14. Con cada enlace real cortado (por separado):
+  «lib/home.ts#composeHome no llama a candidatosDeSuperficie(»;
+  «lib/enrich.ts#candidatosDeSuperficie no llama a candidatosConEje(»;
+  «lib/pools.ts#candidatosConEje no llama a candidatosDePools(» — siempre
+  sobre `lib/pools.ts:288`.
+- Suite **1.659 tests, 1.649 aprobados, 0 fallos, 10 omitidos**; `tsc
+  --noEmit` limpio; build fresco exit 0 (`BUILD_ID a3F7MAG8PGs_0Nfa6iQjs`);
+  `git diff --check` limpio.
+- Identidad del Home (cachés aisladas, `b7be927` vs rama, build final):
+  **16/16 válidos e idénticos**, controles correctos.
+- **Ningún archivo productivo ni el contrato JSON cambió**: el diff contra
+  `03ad4b9` toca sólo el test del inventario, la evidencia JSON del Home
+  (regenerada, idéntica en veredicto) y los tres documentos.
+
+### 26.5 Comprobado / inferido / pendiente
+
+- **Comprobado:** todo §26.2 y §26.4.
+- **Inferido:** que la cadena declarada es la única por la que el Home llega
+  a `candidatosDePools` con eje (también hay una llamada directa de
+  `candidatosDeSuperficie` a `candidatosDePools` sin eje; la fila fija el
+  camino con eje, que es el que rota); que "el cuerpo de A contiene `B(`"
+  equivale a "A llama a B" — un `B(` dentro de un string o de código muerto
+  del cuerpo pasaría (el fuente se limpia de comentarios, no de strings).
+- **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
+  está terminada**.
