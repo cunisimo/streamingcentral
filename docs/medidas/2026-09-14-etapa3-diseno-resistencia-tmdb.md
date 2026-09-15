@@ -2,8 +2,8 @@
 
 > **Estado: DISEÑO v4.1 + ETAPA 3.a MERGEADA, PUSHEADA Y DESPLEGADA
 > (2026-09-15; §31). Subetapa siguiente (3.b, "último bueno primero y
-> reconstrucción en fondo"): DISEÑO PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO
-> (§32).** Ocho correcciones en rama (auditorías de Codex sobre
+> reconstrucción en fondo"): decisión de producto APROBADA por el dueño;
+> DISEÑO REVISADO (§33) PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO.** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito,
@@ -1905,3 +1905,232 @@ prende antes, porque hoy todas alargarían esa espera sin dar nada a cambio.
   la precisión horaria de los crons en Hobby; el comportamiento de
   `waitUntil` bajo N solicitudes concurrentes en la misma instancia Fluid
   (la sonda corrió una tarea por vez).
+
+---
+
+## 33. Etapa 3.b — diseño revisado tras la revisión del dueño sobre `8790db5` — **diseño revisado, pendiente de aprobación; no implementado**
+
+**Decisión de producto aprobada:** cuando exista un último Home correcto
+(UB) para esa misma combinación, el líder lo sirve inmediatamente y
+reconstruye el Home nuevo en segundo plano; el contenido final del Home no
+cambia; sin UB, se conserva el comportamiento actual.
+
+Lo que sigue corrige cinco puntos de §32.10 y fija los criterios de
+aceptación. §32 queda como registro de la causa, la sonda y las
+alternativas; donde contradiga a §33, **vale §33**.
+
+### 33.1 API pública de Vercel: `waitUntil` de `@vercel/functions`
+
+- La implementación usa **`import { waitUntil } from "@vercel/functions"`**,
+  la API pública que Vercel recomienda para Next.js anterior a 15.1 (el
+  proyecto está en 14.2). **En Producción no se accede a
+  `globalThis[Symbol.for("@vercel/request-context")]`**: la sonda de §32.6
+  lo hizo para no agregar una dependencia a una rama descartable y **sigue
+  valiendo como evidencia de duración** (fondo hasta `maxDuration` desde el
+  inicio de la solicitud; sin fondo, la tarea muere con la respuesta), pero
+  **no define la API de implementación**.
+- `waitUntil` de `@vercel/functions` hace por dentro esa misma lectura del
+  contexto y, cuando no hay contexto (local, `next start`, banco), **no
+  registra nada y no lanza**: por eso la disponibilidad se comprueba antes
+  con una función propia (§33.2) y no se infiere de que "no explotó".
+- **Gate de la dependencia** (antes de escribir `servirConTurno`):
+  1. `npm install @vercel/functions` en la rama de implementación (versión
+     fijada en `package.json`/`package-lock.json`; sin otras dependencias
+     transitivas nuevas de peso — se revisa el diff del lock);
+  2. **tipado**: `tsc --noEmit` limpio con el import real;
+  3. **build**: `npm run build` fresco limpio (el paquete no puede llegar al
+     bundle del navegador: se verifica que sólo lo importe código servidor);
+  4. **Preview** del proyecto con la rama de implementación y una
+     verificación equivalente a la sonda **pero usando la API pública**:
+     respuesta inmediata + fondo de 20 s y de 50 s completos + corte a
+     60 s; sin esa evidencia, 3.b no se mergea. El Preview se borra al
+     terminar.
+- **Uso estructural fijado por test** (RED→GREEN, §33.7): en `lib/` y
+  `app/` no aparece `Symbol.for("@vercel/request-context")` ni
+  `@vercel/request-context`; `waitUntil` sólo se importa desde
+  `@vercel/functions` y sólo en el adaptador de la ruta del Home.
+
+### 33.2 Inicio realmente diferido: `programarEnFondo(iniciar)`
+
+`enFondo(tarea: Promise)` de §32.10 tenía el defecto señalado: la promesa
+ya habría empezado antes de saber si el fondo existe, y un rechazo del
+registro dejaría una composición huérfana o duplicada. Interfaz corregida:
+
+```ts
+// lib/home-servir.ts — dependencia nueva, opcional
+programarEnFondo?: (iniciar: () => Promise<void>) => boolean;
+```
+
+Contrato:
+
+1. **Perezosa:** `iniciar` no se invoca hasta que el adaptador decidió que
+   el fondo está disponible. El adaptador (`lib/home.ts`), en este orden:
+
+   ```ts
+   function programarEnFondo(iniciar: () => Promise<void>): boolean {
+     if (process.env.HOME_UB_PRIMERO === "0") return false;   // kill switch
+     if (process.env.VERCEL !== "1") return false;            // fuera de Vercel no hay fondo (local, next start, banco)
+     let registrado = false;
+     // La tarea NO inicia en este tick: espera un microtick y sólo entonces,
+     // si el registro quedó hecho, invoca a `iniciar`.
+     const tarea = (async () => { await Promise.resolve(); if (registrado) await iniciar(); })();
+     try { waitUntil(tarea); registrado = true; return true; }
+     catch (e) { console.error("[home] waitUntil rechazó el registro; se compone en línea", e); return false; }
+   }
+   ```
+
+   `VERCEL=1` es una variable pública del runtime de Vercel (no un símbolo
+   interno). Si cualquiera de las comprobaciones falla, devuelve **`false`
+   sin haber iniciado** la composición.
+2. **Una sola composición:** `servirConTurno` llama a `programarEnFondo`
+   **una vez**, en el punto en que el líder adquirió el turno y `ub != null`.
+   Si devuelve `true`: responde el UB (`origen ultimo-bueno-fondo`) y no
+   compone en línea. Si devuelve `false`: ejecuta **exactamente el camino
+   bloqueante actual** (`componer()` en línea, el mismo código que hoy),
+   con **cero** tareas huérfanas y **cero** segundas composiciones. No hay
+   un tercer estado.
+3. **Excepción sincrónica del registro** (`waitUntil` lanza): como `waitUntil`
+   es sincrónico y la tarea sólo mira `registrado` en el microtick
+   siguiente, un `throw` deja `registrado = false`, la tarea despierta, no
+   invoca a `iniciar` y resuelve; `programarEnFondo` devuelve `false` y el
+   líder compone en línea: **una** composición, la bloqueante, y ninguna
+   promesa rechazada (la tarea resolvió). El test lo fija con un `waitUntil`
+   inyectado que lanza y un contador de invocaciones de `iniciar` en 0.
+4. Sin UB: `programarEnFondo` **no se llama**; el camino es el actual.
+5. Los no líderes: sin cambios (UB en tiempo de HIT; espera si no hay UB).
+
+### 33.3 Contextos y métricas separados: `[home]` y `[home-fondo]`
+
+Hoy `homePayload` abre cuatro contextos por solicitud —métricas
+(`withMetricas`), idioma (`withMetricasIdioma`), ejes (`conRegistroDeEjes`)
+y señal (`conSenal`)— y al devolver el payload imprime la línea terminal
+`[home]`. Una composición de fondo termina **después** de esa línea: no
+puede anotar en las métricas ya publicadas de la solicitud.
+
+Diseño:
+
+- **La solicitud** (contextos de hoy) registra sólo: `cache
+  "ultimo-bueno"`, `origen "ultimo-bueno-fondo"`, `fondo "programado"`, el
+  turno adquirido y el propietario. Su línea `[home]` se imprime al
+  responder, como siempre, y **queda congelada**: el fondo no la toca.
+- **El fondo** corre dentro de `iniciar` con **sus propios cuatro
+  contextos**, abiertos por el adaptador: `withMetricasIdioma(() =>
+  withMetricas(() => conRegistroDeEjes(() => conSenal(senalFondo, () =>
+  componer()))))`, donde `senalFondo = AbortSignal.timeout(PRESUPUESTO_FONDO_MS)`
+  con `PRESUPUESTO_FONDO_MS = PRESUPUESTO_REQUEST_MS` (50 s; el corte duro
+  de Vercel es a 60 s desde el inicio de la solicitud, §32.6). Dentro de
+  `componer()` corre `producirHome` con `withFallosDeFuentes`, como hoy.
+  Como los cuatro contextos son `AsyncLocalStorage`, **dos solicitudes
+  concurrentes no comparten nada**: cada fondo tiene su propio almacén y
+  cada solicitud el suyo.
+- **Línea terminal separada** al terminar el fondo: `[home-fondo] <clave>
+  <propietario> | <ms> total | composición 1 | publicacion
+  publicado|publicada-solo-fresca|rechazado|indeterminado|no |
+  degradado sí|no | cancelada sí|no | error <nombre>|no | tmdb N llamadas (M
+  ok) | supabase … | redis … | descartes tmdb K` — la misma `lineaHome` con
+  prefijo `[home-fondo]` y las mismas piezas (`[idioma]`, `EJES`, `VUELTAS`)
+  con ese prefijo. **Correlación:** clave + propietario (`<instancia>:<pid>:
+  <contador>`) son los mismos en la línea `[home]` de la solicitud y en la
+  `[home-fondo]`, y el banco los cruza.
+- **Estado no observable directamente:** si Vercel mata el proceso (corte a
+  60 s), el fondo **no escribe ninguna línea**: no hay evento "fondo
+  muerto" y **no se lo llama métrica**. Lo único comprobable es indirecto:
+  el pedido siguiente encuentra el turno vencido (`TURNO_MS` sin
+  renovación) y lo retoma; su línea `[home]` lleva `turno adquirido` sin
+  `[home-fondo]` previa para ese propietario. El banco lo verifica por
+  ausencia de la línea y por el turno retomado, y se documenta así.
+- Ninguna de estas líneas ni contadores cambia el payload ni el contrato
+  JSON.
+
+### 33.4 Errores del trabajo de fondo
+
+- **Ninguna promesa rechazada sin manejar:** `iniciar` devuelve una promesa
+  que **siempre resuelve**: envuelve `componer()` en `try/catch/finally`;
+  un rechazo se anota (`error <nombre>`) y se registra en la línea
+  `[home-fondo]`; el `finally` corta la renovación y, si el turno sigue
+  siendo nuestro y no se publicó, lo libera.
+- **Se conservan** tal cual: renovación del turno cada `RENOVACION_MS`
+  mientras compone; **fencing** por propietario en `renovar`, `publicar`,
+  `enfriar` y `liberar` (un turno perdido no publica); **ENFRIAR** con
+  degradado compartido si la composición salió degradada (y el UB **no se
+  toca**); **publicación sólo de payload sano y publicable** (`publicar`
+  atómico en Lua: fresca + UB + generación, o nada). Con la señal abortada
+  (presupuesto de fondo), `componer()` libera el turno y no publica.
+- **Corte de Vercel a 60 s:** el fondo desaparece sin `finally`. El UB
+  **permanece intacto** (sólo `publicar` lo escribe y es atómico); el turno
+  **vence solo** (`TURNO_MS` 15 s sin renovación) y el pedido siguiente lo
+  retoma; el progreso cacheado (`disc:`, `pv3:`) queda y abarata el intento
+  siguiente. No hay estado a medias posible.
+- **Un fallo del log o de las métricas no convierte un Home correcto en
+  error:** la línea `[home-fondo]` se arma en un `try` propio (como la
+  `[home]` de hoy) y un error al formatearla o al `console.log` se traga
+  con un `console.error` de una línea; `publicar` ya ocurrió antes de
+  loguear. Lo mismo en la solicitud: la anotación `fondo "programado"` no
+  está en el camino que devuelve el UB.
+
+### 33.5 Kill switch
+
+`HOME_UB_PRIMERO=0` desactiva 3.b y deja **exactamente** el camino actual.
+Es una **reversión sin modificar código**, pero **cambiar una variable de
+entorno en Vercel se aplica en el siguiente deployment** (las funciones ya
+desplegadas conservan su entorno): no se promete activación instantánea. La
+secuencia de reversión es: poner la variable → **redeploy** (del mismo
+commit) → verificar `[home]` sin `ultimo-bueno-fondo`. La reversión total
+sigue siendo el revert del merge.
+
+### 33.6 Diff conceptual respecto de §32.10
+
+| §32.10 | §33 |
+|---|---|
+| `enFondo(tarea: Promise)` | `programarEnFondo(iniciar: () => Promise<void>): boolean`, perezosa; comprueba kill switch y contexto antes de invocar; `false` sin haber iniciado |
+| adaptador con el símbolo del runtime | `waitUntil` de `@vercel/functions`; símbolo prohibido por test; gate de instalación, tipado, build y Preview |
+| el fondo anota en las métricas de la solicitud | contextos propios del fondo; `[home]` congelada al responder; `[home-fondo]` separada y correlacionada por clave + propietario |
+| "fondo muerto" como métrica | estado no observable; se comprueba por ausencia de línea y por el turno vencido/retomado |
+| errores implícitos | promesa que siempre resuelve; excepción sincrónica del registro → bloqueante; corte de Vercel → UB intacto, turno vence |
+| kill switch "sin redeploy" | reversión sin código, aplicada con el siguiente deployment |
+
+### 33.7 Criterios de aceptación RED → GREEN (banco aislado con dobles; sin TMDB real)
+
+| # | Escenario | RED (código actual, `903832e`) | GREEN (3.b) |
+|---|---|---|---|
+| 1 | UB presente, fresca ausente, un pedido | responde tras la composición completa (con latencia inyectada ≥ 5 s en el doble) con la fresca | responde el UB en < 1 s, `origen ultimo-bueno-fondo`, `fondo programado`; **una** línea `[home] compone`; **una** `[home-fondo]` con `publicacion publicado`; el pedido siguiente es `HIT` con una fresca **idéntica** a la del RED (comparador, 0 diferencias) |
+| 2 | Mecanismo de fondo ausente (`programarEnFondo` devuelve `false`: sin contexto) | bloqueante | **idéntico al RED**: una composición en línea, cero `[home-fondo]`, cero tareas huérfanas (el doble cuenta exactamente las llamadas de una composición) |
+| 3 | Registro de fondo rechazado (`waitUntil` inyectado que lanza) | — | `programarEnFondo` devuelve `false`, `iniciar` **no** corrió (contador 0), el líder compone en línea: **una** composición, cero duplicados, cero rechazos sin manejar (`process.on("unhandledRejection")` armado en el test) |
+| 4 | Métricas de la respuesta congeladas | — | la línea `[home]` se imprime antes de que termine el fondo y **no cambia** después; el objeto de métricas de la solicitud es igual antes y después de que el fondo termine (snapshot comparado) |
+| 5 | Métricas del fondo separadas y correlacionadas | — | `[home-fondo]` lleva la misma clave y el mismo propietario que su `[home]`; sus contadores (tmdb, redis, supabase, descartes, idioma, ejes) son los de la composición y **no** aparecen en la `[home]` de la solicitud |
+| 6 | Dos solicitudes concurrentes con UB | una espera la composición, la otra recibe UB | las dos reciben UB en < 1 s; **una** `[home] compone`; **una** `[home-fondo]`; los propietarios de las dos `[home]` son distintos y ninguna suma llamadas de la otra (los contadores de la que no lideró son 0 en tmdb) |
+| 7 | Fondo sano | — | publica fresca + UB + generación; pedido siguiente `HIT` idéntico |
+| 8 | Fondo degradado (429 parcial en `/discover` durante el fondo) | — | `[home-fondo] … degradado sí publicacion no`; ENFRIAR + degradado compartido; **el UB no cambia** (mismo blob antes y después); el pedido siguiente sirve el UB |
+| 9 | Fondo rechazado (el productor lanza: doble en modo 500 total) | — | `[home-fondo] … error …`; turno liberado; UB intacto; sin rechazo sin manejar |
+| 10 | Fondo cancelado (latencia del doble que supera el presupuesto de fondo) | — | `[home-fondo] … cancelada sí publicacion no`; turno liberado; UB intacto. Y el corte duro de Vercel (no reproducible en banco): documentado como no observable; se comprueba en el Preview del gate §33.1 (tarea de 120 s: sin `[home-fondo]`, turno vencido y retomado por el pedido siguiente) |
+| 11 | Kill switch `HOME_UB_PRIMERO=0` | — | idéntico al RED (una composición en línea, cero `[home-fondo]`) |
+| 12 | Identidad completa del Home | 16/16 | **16/16** con cachés aisladas (`b7be927` vs rama), controles de mutación y de caché compartida |
+| 13 | Uso estructural de `@vercel/functions` | — | test de fuente: `waitUntil` importado sólo de `@vercel/functions` y sólo en el adaptador; `Symbol.for("@vercel/request-context")` y `@vercel/request-context` ausentes en `lib/`, `app/`, `components/`, `hooks/`; `package.json` lo declara con versión fijada |
+
+Cada escenario se corre sobre `903832e` (RED) y sobre la rama (GREEN) en
+worktrees separados con dobles y Redis del banco propios, como en §14.
+
+### 33.8 Riesgos restantes
+
+- **Rotación diaria diferida para el primer visitante** (aprobado como
+  producto): ve el Home correcto de ayer; el de hoy, en su próxima visita.
+- **Presupuesto de fondo:** con la concurrencia efectiva observada (§32.4),
+  una reconstrucción de 926 llamadas puede no caber en 50 s; el fondo se
+  cancela, el UB sigue sirviéndose y el intento siguiente arranca con el
+  progreso cacheado. No está demostrado que converja: se mide en banco con
+  latencia inyectada (E-fria-sostenida, §15) antes de tocar presupuestos.
+- **Vencimiento del UB (36 h):** si durante 36 h ningún fondo termina para
+  una combinación, esa combinación vuelve al caso "sin UB" (bloqueante).
+- **`waitUntil` bajo concurrencia en una instancia Fluid:** la sonda corrió
+  una tarea por vez; el gate del Preview (§33.1) agrega dos solicitudes
+  concurrentes con fondo.
+- **Costo:** ninguna llamada nueva a TMDB ni a Redis: la misma composición,
+  en otro momento. Una línea de log más por composición de fondo.
+- **Sin UB no cambia nada:** la espera de hoy se mantiene; "preparando +
+  sondeo" (§32.8 E) sigue siendo un diseño aparte.
+
+### 33.9 Estado
+
+Diseño revisado, **pendiente de aprobación; no implementado**. Sin cambios
+de código, dependencias, variables ni infraestructura. La rama
+`spike/waituntil-preview` (sonda) queda local y no se mergea.

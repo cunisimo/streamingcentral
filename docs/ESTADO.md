@@ -8,8 +8,23 @@
 ## Evidencia y alcance de esta actualización
 
 - **Etapa 3.b de capacidad (#19) — "último bueno primero, reconstrucción en
-  fondo": DISEÑO PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO** (informe §32,
-  rama documental `diseno/etapa3b-ub-primero`). Causa comprobada de los
+  fondo": decisión de producto APROBADA por el dueño; DISEÑO REVISADO
+  (informe §33), PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO** (rama documental
+  `diseno/etapa3b-ub-primero`). Revisión: la implementación usará
+  `waitUntil` de `@vercel/functions` (API pública para Next 14.2; el
+  símbolo interno del runtime queda prohibido por test; gate de
+  instalación, tipado, build y Preview); interfaz perezosa
+  `programarEnFondo(iniciar)` que comprueba kill switch y contexto antes de
+  iniciar, con una sola composición y camino bloqueante exacto si el fondo
+  no está o el registro lanza; contextos propios del fondo (métricas,
+  idioma, ejes, señal) con línea `[home-fondo]` separada y correlacionada
+  por clave + propietario, `[home]` congelada al responder; "fondo muerto"
+  no es métrica (sólo se comprueba el turno vencido); promesa de fondo que
+  siempre resuelve, fencing/ENFRIAR/publicación sana conservados, UB
+  intacto ante el corte de Vercel; kill switch `HOME_UB_PRIMERO=0` como
+  reversión sin código aplicada con el siguiente deployment. Trece criterios
+  RED→GREEN en §33.7, identidad del Home 16/16 incluida.
+  Diseño previo (§32): Causa comprobada de los
   15,1 s observados tras el deploy de la 3.a: la clave fresca lleva la
   semilla del día, así que cada combinación empieza cada día sin fresca; y en
   `servirConTurno` **quien adquiere el turno compone en línea aunque exista
