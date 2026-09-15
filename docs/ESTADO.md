@@ -14,8 +14,11 @@
   limitador, circuito, `waitUntil` y membresía NO implementados.**
   **Octava corrección (informe §30, sólo el test):** el detector de acceso
   por miembro exigía la llamada inmediata, así que `const traer =
-  api.candidatosDePools; traer(…)` (barrel + namespace) escapaba (RED con
-  siete casos: variable y valor para las tres funciones). Ahora un `.`
+  api.candidatosDePools; traer(…)` (barrel + namespace) escapaba (RED: siete
+  fuentes inyectadas —una es el `barrel.ts` que prepara el escenario— que
+  contienen seis casos de acceso por miembro, variable y valor para las tres
+  funciones; los seis escapaban con el detector anterior y ahora son
+  rechazados). Ahora un `.`
   seguido del nombre exacto se rechaza con o sin `(`; el acceso computado y
   `require()` siguen como limitaciones documentadas; el repo real conserva
   nueve llamadas canónicas y cero alternativas. Verificado: suite 1.666

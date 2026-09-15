@@ -1551,11 +1551,14 @@ const traer = api.candidatosDePools;
 traer(…);
 ```
 
-**RED contra `2886212`** (control escrito antes de tocar el detector): con
-siete fuentes inyectados —el caso exacto, y los equivalentes para
-`candidatosConEje` y `categoryCandidates` asignados a una variable y pasados
-como valor (argumento, propiedad de objeto, elemento de array)— el detector
-devolvía `alternativas: []` (y `llamadas: []`): los siete escapaban.
+**RED contra `2886212`** (control escrito antes de tocar el detector): siete
+fuentes inyectadas —una es `barrel.ts`, necesario para preparar el
+escenario— que contienen **seis casos de acceso por miembro**: el caso
+exacto, y los equivalentes para `candidatosConEje` y `categoryCandidates`
+asignados a una variable y pasados como valor (argumento, propiedad de
+objeto, elemento de array). El detector devolvía `alternativas: []` (y
+`llamadas: []`): los seis escapaban con el detector anterior y ahora son
+rechazados.
 
 ### 30.2 Corrección mínima (sólo el test)
 
