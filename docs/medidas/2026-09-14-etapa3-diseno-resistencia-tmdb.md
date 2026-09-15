@@ -1,9 +1,10 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA siete
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA ocho
 > veces (auditorías de Codex sobre `e930a1d` §23, `09b9dbe` §24, `708bce0`
-> §25, `03ad4b9` §26, `6ef35c5` §27, `c6b299e` §28 y `37f1ca1` §29);
-> corregida en rama, pendiente de auditoría FINAL. No está terminada.
+> §25, `03ad4b9` §26, `6ef35c5` §27, `c6b299e` §28, `37f1ca1` §29 y
+> `2886212` §30); corregida en rama, pendiente de auditoría FINAL. No está
+> terminada.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -1468,9 +1469,9 @@ cuatro escapan.
   `categoryCandidates(`; y **rechaza** —hace fallar el inventario, no las
   clasifica— las formas por las que una llamada podría escapar al nombre
   canónico: import/export con alias (`{ x as y }`), import de namespace o
-  dinámico de `pools`/`enrich`, acceso por miembro (`p.candidatosDePools(`),
-  desestructuración con renombre, y cualquier referencia sin llamar (pasar la
-  función como valor).
+  dinámico de `pools`/`enrich`, acceso por miembro (`p.candidatosDePools`,
+  con o sin llamada inmediata — corregido en §30), desestructuración con
+  renombre, y cualquier referencia sin llamar (pasar la función como valor).
 - **Lo que no es:** un parser de TypeScript. Limitaciones aceptadas: una
   aparición en un string o template literal cuenta como llamada/referencia
   (falso positivo que obliga a clasificar o reescribir); el acceso computado
@@ -1529,5 +1530,55 @@ cuatro escapan.
 - **Inferido:** que las cinco raíces cubren todo el código productivo que
   puede importar `lib/pools` o `lib/enrich` (el repo no tiene otras raíces con
   código servidor; `scripts/` sólo tiene el banco y herramientas).
+- **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
+  está terminada**.
+
+---
+
+## 30. Octava corrección de la 3.a — auditoría final sobre `2886212`; corregida en rama, pendiente de auditoría final
+
+### 30.1 El falso verde (acotado)
+
+El detector de acceso por miembro exigía la llamada inmediata
+(`\.NOMBRE\s*\(`). Esta cadena escapaba:
+
+```ts
+// barrel.ts
+export { candidatosDePools } from "./pools";
+// consumidor.ts
+import * as api from "./barrel";
+const traer = api.candidatosDePools;
+traer(…);
+```
+
+**RED contra `2886212`** (control escrito antes de tocar el detector): con
+siete fuentes inyectados —el caso exacto, y los equivalentes para
+`candidatosConEje` y `categoryCandidates` asignados a una variable y pasados
+como valor (argumento, propiedad de objeto, elemento de array)— el detector
+devolvía `alternativas: []` (y `llamadas: []`): los siete escapaban.
+
+### 30.2 Corrección mínima (sólo el test)
+
+El patrón pasa a `\.(NOMBRE)(?![\w$])`: un `.` seguido del nombre exacto se
+rechaza, con o sin `(`. No se amplía el alcance ni se agregan patrones; el
+acceso computado (`mod["candidatosDePools"]`) y `require()` siguen como
+limitaciones aceptadas y documentadas. GREEN: el control nuevo pasa (seis
+rechazos con su línea — la del barrel no menciona el nombre por miembro);
+sobre la rama, el caso exacto en disco falla con «lib/consumidor.ts:2 acceso
+por miembro .candidatosDePools». El repo real sigue con **nueve llamadas
+canónicas y cero formas alternativas** (test existente).
+
+### 30.3 Verificación
+
+- Inventario **21/21**; suite **1.666 tests, 1.656 aprobados, 0 fallos, 10
+  omitidos**; `tsc --noEmit` limpio; build fresco exit 0 (`BUILD_ID
+  FIUf1c_5hu6iPZw_5uAgY`); `git diff --check` limpio.
+- Delta desde `2886212`: sólo el test del inventario y los tres documentos;
+  los tres JSON de evidencia byte a byte iguales (sha1 antes y después); sin
+  código productivo, sin bancos, sin identidad del Home.
+
+### 30.4 Comprobado / pendiente
+
+- **Comprobado:** todo lo anterior, ejecutado.
 - **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
   está terminada**.

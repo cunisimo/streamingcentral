@@ -1287,8 +1287,11 @@ leyendo el código.**
 > sobre `37f1ca1` (descubrimiento de call sites recursivo sobre todo el código
 > productivo, con rechazo de alias/namespace/miembro/referencia sin llamar, y
 > cobertura recontada en una categoría por recorrido: 2 identificados, 4
-> agregados, 3 estructurales, 0 inferidos — informe §29); corregida en rama,
-> pendiente de auditoría FINAL, no terminada; reintentos APAGADOS
+> agregados, 3 estructurales, 0 inferidos — informe §29), y por octava vez tras
+> la auditoría final sobre `2886212` (el acceso por miembro sin llamada
+> inmediata —`const traer = api.candidatosDePools`— también se rechaza —
+> informe §30); corregida en rama, pendiente de auditoría FINAL, no
+> terminada; reintentos APAGADOS
 > (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
 > implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),

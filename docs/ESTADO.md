@@ -7,11 +7,20 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA SIETE
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA OCHO
   VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0`,
-  `03ad4b9`, `6ef35c5`, `c6b299e` y `37f1ca1`); corregida en rama, pendiente
-  de auditoría FINAL — NO está terminada; reintentos APAGADOS; limitador,
-  circuito, `waitUntil` y membresía NO implementados.**
+  `03ad4b9`, `6ef35c5`, `c6b299e`, `37f1ca1` y `2886212`); corregida en rama,
+  pendiente de auditoría FINAL — NO está terminada; reintentos APAGADOS;
+  limitador, circuito, `waitUntil` y membresía NO implementados.**
+  **Octava corrección (informe §30, sólo el test):** el detector de acceso
+  por miembro exigía la llamada inmediata, así que `const traer =
+  api.candidatosDePools; traer(…)` (barrel + namespace) escapaba (RED con
+  siete casos: variable y valor para las tres funciones). Ahora un `.`
+  seguido del nombre exacto se rechaza con o sin `(`; el acceso computado y
+  `require()` siguen como limitaciones documentadas; el repo real conserva
+  nueve llamadas canónicas y cero alternativas. Verificado: suite 1.666
+  (1.656 ok, 0 fallos, 10 omitidos), `tsc`, build fresco, `diff --check`;
+  evidencias intactas byte a byte.
   **Séptima corrección (informe §29, sólo el test):** el barrido de call sites
   sólo miraba `lib/*.ts` y `app/api/**/route.ts` con el nombre canónico (una
   llamada en `lib/sub/`, en un archivo servidor de `app/`, o por alias/namespace
