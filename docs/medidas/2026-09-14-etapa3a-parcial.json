@@ -67,23 +67,49 @@
       }
     },
     "pools": {
-      "familia": "/discover",
-      "http": 200,
-      "degradado": false,
-      "fallos": 0,
-      "titulos": 130,
-      "parciales429": 8,
-      "linea": {
-        "cache": "MISS",
-        "origen": "propia",
-        "publicacion": "publicado",
-        "degradadoEnLinea": false,
-        "descartes": 0,
-        "tmdb": 926
+      "conEjes": {
+        "familia": "/discover",
+        "ejesRieles": "1",
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 130,
+        "parciales429": 8,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
       },
-      "escrito": {
-        "fresca": 1,
-        "ub": 1
+      "sinEjes": {
+        "familia": "/discover",
+        "ejesRieles": "0",
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 130,
+        "parciales429": 7,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
       }
     },
     "verde": false
@@ -155,23 +181,49 @@
       }
     },
     "pools": {
-      "familia": "/discover",
-      "http": 200,
-      "degradado": true,
-      "fallos": 8,
-      "titulos": 130,
-      "parciales429": 8,
-      "linea": {
-        "cache": "MISS",
-        "origen": "degradado-propio",
-        "publicacion": "no",
-        "degradadoEnLinea": true,
-        "descartes": 8,
-        "tmdb": 926
+      "conEjes": {
+        "familia": "/discover",
+        "ejesRieles": "1",
+        "http": 200,
+        "degradado": true,
+        "fallos": 8,
+        "titulos": 130,
+        "parciales429": 8,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 8,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
       },
-      "escrito": {
-        "fresca": 0,
-        "ub": 0
+      "sinEjes": {
+        "familia": "/discover",
+        "ejesRieles": "0",
+        "http": 200,
+        "degradado": true,
+        "fallos": 7,
+        "titulos": 130,
+        "parciales429": 7,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 7,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
       }
     },
     "verde": true

@@ -169,17 +169,50 @@ function verificarWrapperDeRuta(fuenteRuta: string, operacion: string): Rango {
  * CADENA: `a#f1 → b#f2 → …`: el cuerpo de cada función llama a la siguiente, y
  * el cuerpo de la última contiene la línea del sitio.
  */
-function verificarCadena(cadena: string[], sitio: { archivo: string; linea: number }, fuentes: Record<string, string> = {}) {
+/**
+ * Un enlace de la cadena: `archivo#funcion`, o el mismo con una condición sobre
+ * DÓNDE tiene que estar la llamada a la función siguiente dentro del cuerpo:
+ * `dentroDe` un bloque `if (…) {` dado, o `fueraDe` todos los bloques dados.
+ * Es lo que distingue dos recorridos que pasan por la misma función: en
+ * `candidatosDeSuperficie`, con `superficie` se entra al bloque de ejes
+ * (`candidatosConEje`) y sin ella (EJES_RIELES=0) se llama a
+ * `candidatosDePools` directo, fuera de ese bloque.
+ */
+type Enlace = string | { ref: string; dentroDe?: string; fueraDe?: string[] };
+const refDe = (e: Enlace) => (typeof e === "string" ? e : e.ref);
+const nombreDe = (e: Enlace) => refDe(e).split("#")[1];
+
+/** El rango `{…}` del bloque cuyo encabezado (`if (…) {`) es `cabecera`, dentro de `r`. */
+function bloque(f: string, r: Rango, cabecera: string): Rango {
+  const i = texto(f, r).indexOf(cabecera);
+  if (i < 0) throw new Error(`no está el bloque ${cabecera}`);
+  const abre = r.inicio + i + cabecera.length - 1;
+  return { inicio: abre, fin: cerrar(f, abre) + 1 };
+}
+
+function verificarCadena(cadena: Enlace[], sitio: { archivo: string; linea: number }, fuentes: Record<string, string> = {}, recorrido = "") {
+  const donde = recorrido ? `recorrido ${recorrido}: ` : "";
   for (let i = 0; i < cadena.length; i++) {
-    const [archivo, nombre] = cadena[i].split("#");
+    const enlace = cadena[i];
+    const [archivo, nombre] = refDe(enlace).split("#");
     const f = fuentes[archivo] ?? limpio(archivo);
     const r = cuerpoDe(f, nombre);
     if (i + 1 < cadena.length) {
-      const siguiente = cadena[i + 1].split("#")[1];
-      assert.match(texto(f, r), new RegExp(`(?<![\\w.])${siguiente}\\(`), `${cadena[i]} no llama a ${siguiente}(`);
+      const siguiente = nombreDe(cadena[i + 1]);
+      const llamada = new RegExp(`(?<![\\w.])${siguiente}\\(`, "g");
+      const posiciones = [...texto(f, r).matchAll(llamada)].map((m) => r.inicio + m.index);
+      if (typeof enlace === "string") {
+        assert.ok(posiciones.length > 0, `${donde}${refDe(enlace)} no llama a ${siguiente}(`);
+      } else if (enlace.dentroDe) {
+        const b = bloque(f, r, enlace.dentroDe);
+        assert.ok(posiciones.some((p) => dentro(b, p)), `${donde}${enlace.ref} no llama a ${siguiente}( dentro de \`${enlace.dentroDe}\``);
+      } else {
+        const bloques = (enlace.fueraDe ?? []).map((c) => bloque(f, r, c));
+        assert.ok(posiciones.some((p) => bloques.every((b) => !dentro(b, p))), `${donde}${enlace.ref} no llama a ${siguiente}( fuera de ${(enlace.fueraDe ?? []).map((c) => `\`${c}\``).join(" y ")}`);
+      }
     } else {
-      assert.equal(archivo, sitio.archivo, `la cadena termina en ${archivo} y el sitio está en ${sitio.archivo}`);
-      assert.ok(dentro(r, offsetDeLinea(f, sitio.linea)), `${sitio.archivo}:${sitio.linea} no está dentro de ${cadena[i]}`);
+      assert.equal(archivo, sitio.archivo, `${donde}la cadena termina en ${archivo} y el sitio está en ${sitio.archivo}`);
+      assert.ok(dentro(r, offsetDeLinea(f, sitio.linea)), `${donde}${sitio.archivo}:${sitio.linea} no está dentro de ${refDe(enlace)}`);
     }
   }
 }
@@ -191,8 +224,15 @@ interface Estructura {
   apertura: string;
   /** La operación que la apertura envuelve; si se omite, el sitio está inline en el callback. */
   operacion?: string;
-  /** De la operación al sitio, función por función. */
-  cadena?: string[];
+  /** De la operación al sitio, función por función (un solo recorrido). */
+  cadena?: Enlace[];
+  /**
+   * Varios recorridos SOPORTADOS que llegan al mismo sitio (por nombre): TODOS
+   * tienen que arrancar en la operación y terminar en el sitio. Un recorrido
+   * distinto no es un error (EJES_RIELES=0 es deliberado): lo que se exige es
+   * que cada uno conserve el contexto abierto por el contenedor.
+   */
+  recorridos?: Record<string, Enlace[]>;
   /** Cómo el contenedor consume el contador. */
   consumo: RegExp[];
 }
@@ -212,9 +252,12 @@ function verificarContexto(est: Estructura, sitio: { archivo: string; linea: num
     // (auditoría sobre 03ad4b9: la fila de pools declaraba sólo la función del
     // sitio), el wrapper y el sitio se verificarían por separado y un enlace
     // perdido en el medio quedaría verde.
-    const cadena = est.cadena ?? [];
-    assert.equal(cadena[0]?.split("#")[1], est.operacion, `la cadena no arranca en ${est.operacion} (arranca en ${cadena[0] ?? "nada"})`);
-    verificarCadena(cadena, sitio, fuentes);
+    const recorridos: [string, Enlace[]][] = est.recorridos ? Object.entries(est.recorridos) : [["", est.cadena ?? []]];
+    for (const [nombre, cadena] of recorridos) {
+      const donde = nombre ? `recorrido ${nombre}: ` : "";
+      assert.equal(cadena[0] ? nombreDe(cadena[0]) : undefined, est.operacion, `${donde}la cadena no arranca en ${est.operacion} (arranca en ${cadena[0] ? refDe(cadena[0]) : "nada"})`);
+      verificarCadena(cadena, sitio, fuentes, nombre);
+    }
   } else {
     assert.equal(archivo, sitio.archivo);
     assert.ok(aperturas.some((r) => dentro(r, offsetDeLinea(f, sitio.linea))), `${sitio.archivo}:${sitio.linea} no está dentro del callback de ${est.apertura}`);
@@ -389,6 +432,9 @@ type Fila = { archivo: string; ancla: string; motivo?: string } & (
 
 const CRON = "app/api/cron/netflix-top10/route.ts";
 const RECORDATORIO = "app/api/recordatorio/route.ts";
+/** Los dos bloques de `candidatosDeSuperficie` que deciden el recorrido. */
+const BLOQUE_EJES = "if (opts.superficie && poolsHabilitados) {";
+const BLOQUE_SIN_POOLS = "if (!poolsHabilitados) {";
 
 /** EL INVENTARIO: un ancla (fragmento único de la línea) por sitio, en orden de aparición. */
 const INVENTARIO: Fila[] = [
@@ -403,13 +449,23 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/lotes-tolerantes.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "portadas" },
   { archivo: "lib/busqueda-enriquecido.ts", ancla: "deps.enriquecer(c).then((t) => ({ t, degradado: false })).catch", clase: "tmdb-registra", efecto: "contexto", ejecucion: "busqueda" },
   { archivo: "lib/settle-all.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", ejecucion: "settleAll" },
-  // pools: el contexto lo abre el Home (por contexto async) y la cadena REAL
-  // cruza tres archivos: composeHome → candidatosDeSuperficie (enrich) →
-  // candidatosConEje → candidatosDePools (pools). Cada enlace se verifica
-  // cuerpo por cuerpo; el banco con 429 en /discover es evidencia ADICIONAL.
+  // pools: el contexto lo abre el Home (por contexto async) y hay DOS recorridos
+  // soportados que llegan al mismo sitio, los dos cruzando archivos:
+  //   con-ejes  composeHome → candidatosDeSuperficie (con `superficie`: entra al
+  //             bloque de ejes) → candidatosConEje → candidatosDePools
+  //   sin-ejes  EJES_RIELES=0: home.ts no pasa `superficie`, y
+  //             candidatosDeSuperficie llama a candidatosDePools DIRECTO, fuera
+  //             del bloque de ejes (deliberado y documentado en enrich.ts)
+  // Cada enlace se verifica cuerpo por cuerpo; el banco con 429 en /discover
+  // (con EJES_RIELES encendido y en 0) es evidencia ADICIONAL. Con POOL_CACHE=0
+  // este sitio NO se alcanza (candidatosDeSuperficie va a `discover` directo y un
+  // fallo lo atrapa el `safe()` del Home): queda fuera de este recorrido.
   { archivo: "lib/pools.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", banco: "discover",
     estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome",
-      cadena: ["lib/home.ts#composeHome", "lib/enrich.ts#candidatosDeSuperficie", "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"],
+      recorridos: {
+        "con-ejes": ["lib/home.ts#composeHome", { ref: "lib/enrich.ts#candidatosDeSuperficie", dentroDe: BLOQUE_EJES }, "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"],
+        "sin-ejes": ["lib/home.ts#composeHome", { ref: "lib/enrich.ts#candidatosDeSuperficie", fueraDe: [BLOQUE_EJES, BLOQUE_SIN_POOLS] }, "lib/pools.ts#candidatosDePools"],
+      },
       consumo: [/degradado: true/, /fallosTmdb/] } },
   { archivo: "lib/home.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto",
     estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome", cadena: ["lib/home.ts#composeHome", "lib/home.ts#safe"], consumo: [/degradado: true/, /fallosTmdb/] } },
@@ -595,14 +651,22 @@ test("banco: los sitios que sólo se ejercitan con dobles tienen su escenario de
   const ev = JSON.parse(fs.readFileSync(path.join(raiz, "docs/medidas/2026-09-14-etapa3a-parcial.json"), "utf8"));
   for (const { sitio, fila } of registran()) {
     if (fila.efecto !== "contexto" || !("banco" in fila) || !fila.banco) continue;
-    const esc = fila.banco === "sinUB" ? ev.despues.sinUB : ev.despues.pools;
-    assert.ok(esc, `${sitio.archivo}:${sitio.linea}: falta el escenario ${fila.banco} en la evidencia`);
-    assert.equal(esc.http, 200, `${fila.banco}: http`);
-    assert.equal(esc.degradado, true, `${fila.banco}: el Home no salió degradado`);
-    assert.ok(esc.parciales429 > 0, `${fila.banco}: el doble no devolvió ningún 429`);
-    assert.ok(esc.linea.descartes > 0, `${fila.banco}: la línea [home] no cuenta descartes`);
-    assert.equal(esc.escrito.fresca, 0, `${fila.banco}: se publicó como fresca`);
-    assert.equal(esc.escrito.ub, 0, `${fila.banco}: se publicó como último bueno`);
+    // pools: los DOS recorridos (EJES_RIELES encendido y en 0), cada uno con su
+    // corrida y sus cachés vaciadas; el banco es evidencia ADICIONAL de la
+    // relación estructural que verifica la fila, no un sustituto.
+    type Escenario = { http: number; degradado: boolean; parciales429: number; linea: { descartes: number }; escrito: { fresca: number; ub: number } } | undefined;
+    const escenarios: [string, Escenario][] = fila.banco === "sinUB"
+      ? [["sinUB", ev.despues.sinUB]]
+      : [["pools.conEjes (EJES_RIELES=1)", ev.despues.pools?.conEjes], ["pools.sinEjes (EJES_RIELES=0)", ev.despues.pools?.sinEjes]];
+    for (const [nombre, esc] of escenarios) {
+      assert.ok(esc, `${sitio.archivo}:${sitio.linea}: falta el escenario ${nombre} en la evidencia`);
+      assert.equal(esc.http, 200, `${nombre}: http`);
+      assert.equal(esc.degradado, true, `${nombre}: el Home no salió degradado`);
+      assert.ok(esc.parciales429 > 0, `${nombre}: el doble no devolvió ningún 429`);
+      assert.ok(esc.linea.descartes > 0, `${nombre}: la línea [home] no cuenta descartes`);
+      assert.equal(esc.escrito.fresca, 0, `${nombre}: se publicó como fresca`);
+      assert.equal(esc.escrito.ub, 0, `${nombre}: se publicó como último bueno`);
+    }
   }
 });
 
@@ -672,41 +736,58 @@ test("CONTROL mutado (contexto): apertura quitada, sitio sacado del callback, op
   assert.throws(() => verificarContexto(estHome, { archivo: "lib/home.ts", linea: lineaSafe }, { "lib/home.ts": desenvuelto }), /no envuelve composeHome\(/);
 });
 
-test("CONTROL mutado (cadena de pools, entre archivos): cada enlace cortado hace fallar la fila REAL nombrando el enlace perdido", () => {
-  // Auditoría de Codex sobre 03ad4b9: la fila de pools declaraba sólo
-  // `lib/pools.ts#candidatosDePools`, así que el wrapper (composeHome envuelto)
-  // y el sitio (dentro de candidatosDePools) se verificaban por separado y la
-  // cadena real —composeHome → candidatosDeSuperficie → candidatosConEje →
-  // candidatosDePools— no se probaba: cortar cualquiera de esos enlaces dejaba
-  // el test verde. Acá se muta el fuente REAL y se verifica LA FILA del
-  // inventario (no una cadena escrita a mano en el control).
+test("CONTROL mutado (pools, DOS recorridos entre archivos): cada corte invalida el recorrido que le corresponde, nombrando el enlace perdido", () => {
+  // Auditoría de Codex sobre 03ad4b9 y sobre 6ef35c5. La fila de pools tiene
+  // que representar TODOS los recorridos soportados hasta el sitio, no sólo el
+  // de ejes: con EJES_RIELES=0 home.ts no pasa `superficie` y
+  // candidatosDeSuperficie llama a candidatosDePools directo. Ese recorrido no
+  // es un error —es deliberado— pero tiene que conservar el contexto: acá se
+  // muta el fuente REAL y se verifica LA FILA del inventario.
   const fila = INVENTARIO.find((f) => f.archivo === "lib/pools.ts" && f.clase === "tmdb-registra");
   assert.ok(fila && fila.clase === "tmdb-registra" && fila.efecto === "contexto" && "estructura" in fila, "la fila de pools declara estructura");
   const est = fila.estructura;
+  assert.deepEqual(Object.keys(est.recorridos ?? {}), ["con-ejes", "sin-ejes"], "la fila declara los dos recorridos soportados");
   const pools = limpio("lib/pools.ts");
   const sitio = { archivo: "lib/pools.ts", linea: lineaDelCatch(pools, 'registrarDescarteTmdb(r.reason, "pool")', /allSettled\(/) };
-  assert.doesNotThrow(() => verificarContexto(est, sitio), "el fuente real pasa");
+  assert.doesNotThrow(() => verificarContexto(est, sitio), "el fuente real pasa por los dos recorridos");
   const home = limpio("lib/home.ts");
   const enrich = limpio("lib/enrich.ts");
-  const cortar = (f: string, funcion: string, llamada: string) => {
-    const r = cuerpoDe(f, funcion);
+  const cortar = (f: string, funcion: string, llamada: string, region?: (r: Rango) => Rango) => {
+    const r = region ? region(cuerpoDe(f, funcion)) : cuerpoDe(f, funcion);
     const mutado = f.slice(0, r.inicio) + texto(f, r).replace(new RegExp(`(?<![\\w.])${llamada}\\(`, "g"), `${llamada}Cortada(`) + f.slice(r.fin);
-    assert.notEqual(mutado, f, `${funcion} no llamaba a ${llamada}( — la mutación no muta`);
+    assert.notEqual(mutado, f, `${funcion} no llamaba a ${llamada}( en esa región — la mutación no muta`);
     return mutado;
   };
-  // 1) composeHome → candidatosDeSuperficie
-  assert.throws(() => verificarContexto(est, sitio, { "lib/home.ts": cortar(home, "composeHome", "candidatosDeSuperficie") }), /composeHome no llama a candidatosDeSuperficie\(/);
-  // 2) candidatosDeSuperficie → candidatosConEje
-  assert.throws(() => verificarContexto(est, sitio, { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosConEje") }), /candidatosDeSuperficie no llama a candidatosConEje\(/);
-  // 3) candidatosConEje → candidatosDePools
-  assert.throws(() => verificarContexto(est, sitio, { "lib/pools.ts": cortar(pools, "candidatosConEje", "candidatosDePools") }), /candidatosConEje no llama a candidatosDePools\(/);
-  // 4) el sitio se muda fuera de candidatosDePools (la cadena llega, pero a otra función).
-  assert.throws(() => verificarContexto(est, { archivo: "lib/pools.ts", linea: lineaDelCatch(pools, "export async function candidatosCombinados", /function/) }), /no está dentro de lib\/pools\.ts#candidatosDePools/);
-  // 5) CONTROL del verificador: una cadena que no arranca en la operación envuelta
-  //    (la fila de 03ad4b9) no puede pasar aunque el wrapper y el sitio existan.
-  assert.throws(() => verificarContexto({ ...est, cadena: ["lib/pools.ts#candidatosDePools"] }, sitio), /la cadena no arranca en composeHome/);
+  const superficie = cuerpoDe(enrich, "candidatosDeSuperficie");
+  const ejes = bloque(enrich, superficie, BLOQUE_EJES);
+  // 1) Corte COMÚN: composeHome → candidatosDeSuperficie. Invalida los dos.
+  const sinComun = { "lib/home.ts": cortar(home, "composeHome", "candidatosDeSuperficie") };
+  assert.throws(() => verificarContexto(est, sitio, sinComun), /recorrido con-ejes: lib\/home\.ts#composeHome no llama a candidatosDeSuperficie\(/);
+  assert.throws(() => verificarContexto({ ...est, recorridos: { "sin-ejes": est.recorridos!["sin-ejes"] } }, sitio, sinComun), /recorrido sin-ejes: lib\/home\.ts#composeHome no llama a candidatosDeSuperficie\(/);
+  // 2) Corte del camino CON ejes: candidatosConEje → candidatosDePools. El de sin ejes sigue vivo.
+  const sinEjeAPools = { "lib/pools.ts": cortar(pools, "candidatosConEje", "candidatosDePools") };
+  assert.throws(() => verificarContexto(est, sitio, sinEjeAPools), /recorrido con-ejes: lib\/pools\.ts#candidatosConEje no llama a candidatosDePools\(/);
+  assert.doesNotThrow(() => verificarContexto({ ...est, recorridos: { "sin-ejes": est.recorridos!["sin-ejes"] } }, sitio, sinEjeAPools), "el recorrido sin ejes no depende de candidatosConEje");
+  // 3) Corte del camino SIN ejes: la llamada DIRECTA candidatosDeSuperficie → candidatosDePools
+  //    (la que está fuera del bloque de ejes). El de con ejes sigue vivo: su
+  //    candidatosDePools( está dentro del bloque (página extra con ejeFijo) y en candidatosConEje.
+  const sinDirecta = { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosDePools", () => ({ inicio: ejes.fin, fin: superficie.fin })) };
+  assert.throws(() => verificarContexto(est, sitio, sinDirecta), /recorrido sin-ejes: lib\/enrich\.ts#candidatosDeSuperficie no llama a candidatosDePools\( fuera de `if \(opts\.superficie && poolsHabilitados\) \{` y `if \(!poolsHabilitados\) \{`/);
+  assert.doesNotThrow(() => verificarContexto({ ...est, recorridos: { "con-ejes": est.recorridos!["con-ejes"] } }, sitio, sinDirecta), "el recorrido con ejes no depende de la llamada directa");
+  // 4) Corte del enlace de ejes dentro del bloque: candidatosDeSuperficie → candidatosConEje.
+  assert.throws(() => verificarContexto(est, sitio, { "lib/enrich.ts": cortar(enrich, "candidatosDeSuperficie", "candidatosConEje") }), /recorrido con-ejes: lib\/enrich\.ts#candidatosDeSuperficie no llama a candidatosConEje\( dentro de `if \(opts\.superficie && poolsHabilitados\) \{`/);
+  // 5) El sitio mudado fuera de candidatosDePools: fallan los dos.
+  const sitioAjeno = { archivo: "lib/pools.ts", linea: lineaDelCatch(pools, "export async function candidatosCombinados", /function/) };
+  assert.throws(() => verificarContexto(est, sitioAjeno), /recorrido con-ejes: .*no está dentro de lib\/pools\.ts#candidatosDePools/);
+  assert.throws(() => verificarContexto({ ...est, recorridos: { "sin-ejes": est.recorridos!["sin-ejes"] } }, sitioAjeno), /recorrido sin-ejes: .*no está dentro de lib\/pools\.ts#candidatosDePools/);
+  // 6) CONTROL del verificador: un recorrido que no arranca en la operación envuelta
+  //    (la fila de 03ad4b9) no pasa aunque el wrapper y el sitio existan; y la
+  //    fila de 6ef35c5 (sólo con-ejes) no representa el recorrido sin ejes: con la
+  //    llamada directa cortada seguía verde.
+  assert.throws(() => verificarContexto({ ...est, recorridos: undefined, cadena: ["lib/pools.ts#candidatosDePools"] }, sitio), /la cadena no arranca en composeHome/);
+  const filaDe6ef35c5: Estructura = { ...est, recorridos: undefined, cadena: ["lib/home.ts#composeHome", "lib/enrich.ts#candidatosDeSuperficie", "lib/pools.ts#candidatosConEje", "lib/pools.ts#candidatosDePools"] };
+  assert.doesNotThrow(() => verificarContexto(filaDe6ef35c5, sitio, sinDirecta), "la fila de 6ef35c5 no distingue el recorrido sin ejes");
 });
-
 test("el inventario cubre los doce sitios del informe (S1-S11 + genreCovers) y no afirma que sean sólo once", () => {
   const registranArchivos = new Set(INVENTARIO.filter((i) => i.clase === "tmdb-registra").map((i) => i.archivo));
   for (const a of ["lib/home.ts", "lib/settle-all.ts", "lib/enrich.ts", "lib/lotes-tolerantes.ts", "lib/pools.ts", "lib/top.ts", "lib/netflix-top10.ts", "lib/idioma.ts", "lib/busqueda-enriquecido.ts", "lib/disponibilidad.ts", "lib/netflix-resolver.ts", RECORDATORIO]) {

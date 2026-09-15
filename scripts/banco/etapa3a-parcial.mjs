@@ -63,11 +63,11 @@ async function levantarDobles(base) {
   hijos.push(spawn(process.execPath, ["scripts/banco/dobles.mjs"], { env: { ...process.env, BANCO_PUERTO_BASE: String(base) }, stdio: ["ignore", fd, fd], windowsHide: true }));
   if (!await esperar(() => puertoAbierto(base + 2), 20000)) throw new Error(`dobles ${base} no levantaron`);
 }
-async function levantarNext(nombre, dir, puerto, base) {
+async function levantarNext(nombre, dir, puerto, base, envExtra = {}) {
   if (await puertoAbierto(puerto)) throw new Error(`puerto ${puerto} ocupado`);
   const log = join(LOGS, `parcial-next-${nombre}.log`);
   const fd = openSync(log, "w");
-  hijos.push(spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(puerto)], { cwd: dir, env: entornoDelBanco(base), stdio: ["ignore", fd, fd], windowsHide: true }));
+  hijos.push(spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(puerto)], { cwd: dir, env: { ...entornoDelBanco(base), ...envExtra }, stdio: ["ignore", fd, fd], windowsHide: true }));
   if (!await esperar(async () => { try { return (await fetch(`http://127.0.0.1:${puerto}/api/health`, { signal: AbortSignal.timeout(20000) })).ok; } catch { return false; } }, 120000, 500)) throw new Error(`next ${nombre} no levantó`);
   return { nombre, puerto, base, log, leido: 0 };
 }
@@ -101,7 +101,7 @@ const ids = (payload) => ({ hero: (payload.hero ?? []).map((i) => `${i.type}:${i
 const canon = (v) => JSON.stringify(v, (_k, x) => (x && typeof x === "object" && !Array.isArray(x)) ? Object.fromEntries(Object.entries(x).sort()) : x);
 const cuentaTitulos = (payload) => (payload.hero ?? []).length + (payload.rails ?? []).reduce((a, r) => a + (r.items ?? []).length, 0);
 
-async function escenarios(nombre, p) {
+async function escenarios(nombre, p, pSinEjes) {
   const out = { version: nombre };
   const base = p.base;
   // --- A. SIN último bueno: Redis vacío, TMDB con 429 parcial ---------------
@@ -174,21 +174,33 @@ async function escenarios(nombre, p) {
     },
     total429: { http: b3.status, retryAfter: b3.retryAfter, error: b3.json.error ?? null },
   };
-  // --- D. POOLS: 429 parcial en /discover (auditoría sobre 708bce0, hallazgo 2) ---
-  // El sitio de lib/pools.ts (un pool caído se descarta y se registra) no se
-  // puede importar en node: éste es su recorrido real. Sin último bueno, con
-  // Redis vacío y el doble devolviendo 429 en una fracción de los `/discover`,
-  // el Home tiene que salir degradado y sin publicar, con descartes contados.
-  await vaciar(base); await parcial(base, "/discover"); terminales(p);
-  const d = await pedir(p);
-  const tD = await terminal(p);
-  const parcialesD = (await control(base, "tmdb", "estado")).cuenta.parciales429 ?? 0;
-  out.pools = {
-    familia: "/discover",
-    http: d.status, degradado: !!d.json.degradado, fallos: d.json.fallos ?? null, titulos: cuentaTitulos(d.json),
-    parciales429: parcialesD, linea: { cache: tD.cache, origen: tD.origen, publicacion: tD.publicacion, degradadoEnLinea: tD.degradadoEnLinea, descartes: tD.descartes, tmdb: tD.tmdb },
-    escrito: { fresca: (await claves(base, "^home:[^:]+:v\\d+:")).length, ub: (await claves(base, "^home:ub:")).length },
+  // --- D. POOLS: 429 parcial en /discover, por los DOS recorridos soportados ---
+  // (auditorías sobre 708bce0 y 6ef35c5). El sitio de lib/pools.ts (un pool
+  // caído se descarta y se registra) no se puede importar en node: éste es su
+  // recorrido real. Con EJES_RIELES encendido el Home llega por
+  // candidatosConEje; con EJES_RIELES=0 home.ts no pasa `superficie` y
+  // candidatosDeSuperficie llama a candidatosDePools directo. Los dos tienen
+  // que conservar el contexto: sin último bueno, con Redis vacío (cachés
+  // aisladas por corrida) y el doble devolviendo 429 en una fracción de los
+  // `/discover`, el Home sale degradado, con descartes contados y sin publicar.
+  // Con POOL_CACHE=0 este sitio NO se alcanza (va a `discover` directo y un
+  // fallo lo atrapa el `safe()` del Home): queda fuera de este escenario.
+  const escenarioPools = async (proceso) => {
+    await vaciar(base); await parcial(base, "/discover"); terminales(proceso);
+    const d = await pedir(proceso);
+    const tD = await terminal(proceso);
+    const parcialesD = (await control(base, "tmdb", "estado")).cuenta.parciales429 ?? 0;
+    const r = {
+      familia: "/discover", ejesRieles: proceso.ejesRieles,
+      http: d.status, degradado: !!d.json.degradado, fallos: d.json.fallos ?? null, titulos: cuentaTitulos(d.json),
+      parciales429: parcialesD, linea: { cache: tD.cache, origen: tD.origen, publicacion: tD.publicacion, degradadoEnLinea: tD.degradadoEnLinea, descartes: tD.descartes, tmdb: tD.tmdb },
+      escrito: { fresca: (await claves(base, "^home:[^:]+:v\\d+:")).length, ub: (await claves(base, "^home:ub:")).length },
+    };
+    r.verde = r.http === 200 && r.degradado === true && r.parciales429 > 0 && r.linea.descartes > 0 && r.escrito.fresca === 0 && r.escrito.ub === 0;
+    await sano(base);
+    return r;
   };
+  out.pools = { conEjes: await escenarioPools(p), sinEjes: await escenarioPools(pSinEjes) };
   await sano(base);
   // Verdicto por versión.
   out.verde = out.sinUB.http === 200 && out.sinUB.degradado === true && out.sinUB.escrito.fresca === 0 && out.sinUB.escrito.ub === 0
@@ -196,7 +208,7 @@ async function escenarios(nombre, p) {
     && out.busqueda.parcial.http === 200 && out.busqueda.parcial.parciales429 > 0 && (out.busqueda.parcial.degradacion?.proveedores ?? 0) > 0
     && out.busqueda.parcial.segundaVolvioAPedir && out.busqueda.parcial.guardado === 0
     && out.busqueda.total429.http === 503 && out.busqueda.total429.retryAfter === "3"
-    && out.pools.http === 200 && out.pools.degradado === true && out.pools.parciales429 > 0 && out.pools.linea.descartes > 0 && out.pools.escrito.fresca === 0 && out.pools.escrito.ub === 0;
+    && out.pools.conEjes.verde && out.pools.sinEjes.verde;
   await sano(base);
   return out;
 }
@@ -206,13 +218,20 @@ try {
   await levantarDobles(VERSIONES.antes.base); await levantarDobles(VERSIONES.despues.base);
   const pA = await levantarNext("antes", VERSIONES.antes.dir, 3000, VERSIONES.antes.base);
   const pB = await levantarNext("despues", VERSIONES.despues.dir, 3001, VERSIONES.despues.base);
-  salida.antes = await escenarios("antes (b7be927)", pA);
-  salida.despues = await escenarios("despues (3.a)", pB);
+  // Un segundo `next start` por versión con EJES_RIELES=0 (la variable se lee
+  // del entorno del proceso): mismos dobles, Redis vaciado antes de cada corrida.
+  const pA0 = { ...(await levantarNext("antes-sin-ejes", VERSIONES.antes.dir, 3002, VERSIONES.antes.base, { EJES_RIELES: "0" })), ejesRieles: "0" };
+  const pB0 = { ...(await levantarNext("despues-sin-ejes", VERSIONES.despues.dir, 3003, VERSIONES.despues.base, { EJES_RIELES: "0" })), ejesRieles: "0" };
+  pA.ejesRieles = "1"; pB.ejesRieles = "1";
+  salida.antes = await escenarios("antes (b7be927)", pA, pA0);
+  salida.despues = await escenarios("despues (3.a)", pB, pB0);
   for (const v of ["antes", "despues"]) {
     const s = salida[v];
     console.log(`[parcial] ${s.version} | sin UB: http ${s.sinUB.http}, degradado ${s.sinUB.degradado}, ${s.sinUB.titulos} títulos, ${s.sinUB.parciales429} x429 parciales, descartes ${s.sinUB.linea.descartes}, origen ${s.sinUB.linea.origen}, publicacion ${s.sinUB.linea.publicacion}, escrito fresca ${s.sinUB.escrito.fresca} ub ${s.sinUB.escrito.ub} degradadoCompartido ${s.sinUB.escrito.degradadoCompartido}`);
     console.log(`[parcial] ${s.version} | búsqueda parcial: http ${s.busqueda.parcial.http}, ${s.busqueda.parcial.titulos} títulos (${s.busqueda.parcial.sinPlataformas} sin plataformas), degradacion ${JSON.stringify(s.busqueda.parcial.degradacion)}, ${s.busqueda.parcial.parciales429} x429, segunda volvió a pedir ${s.busqueda.parcial.segundaVolvioAPedir}, guardado ${s.busqueda.parcial.guardado} | búsqueda 429 total: http ${s.busqueda.total429.http}, Retry-After ${s.busqueda.total429.retryAfter}, error ${s.busqueda.total429.error}`);
-    console.log(`[parcial] ${s.version} | pools (429 parcial en /discover): http ${s.pools.http}, degradado ${s.pools.degradado}, ${s.pools.titulos} títulos, ${s.pools.parciales429} x429 parciales, descartes ${s.pools.linea.descartes}, origen ${s.pools.linea.origen}, publicacion ${s.pools.linea.publicacion}, escrito fresca ${s.pools.escrito.fresca} ub ${s.pools.escrito.ub}`);
+    for (const [k, q] of Object.entries(s.pools)) {
+      console.log(`[parcial] ${s.version} | pools ${k} (EJES_RIELES=${q.ejesRieles}, 429 parcial en /discover): http ${q.http}, degradado ${q.degradado}, ${q.titulos} títulos, ${q.parciales429} x429 parciales, descartes ${q.linea.descartes}, origen ${q.linea.origen}, publicacion ${q.linea.publicacion}, escrito fresca ${q.escrito.fresca} ub ${q.escrito.ub} → ${q.verde ? "verde" : "rojo"}`);
+    }
     console.log(`[parcial] ${s.version} | con UB: sano ${s.conUB.sano.titulos} títulos (publicacion ${s.conUB.sano.publicacion}); parcial → degradado ${s.conUB.parcial.degradado}, ${s.conUB.parcial.titulos} títulos, origen ${s.conUB.parcial.linea.origen}, sirvió el UB correcto: ${s.conUB.parcial.sirvioElUBCorrecto}, fresca reescrita ${s.conUB.parcial.frescaReescrita}, UB intacto ${s.conUB.parcial.ubIntacto} → ${s.verde ? "VERDE" : "ROJO"}`);
   }
   salida.resumen = { antesRojo: !salida.antes.verde, despuesVerde: salida.despues.verde, ok: !salida.antes.verde && salida.despues.verde };
