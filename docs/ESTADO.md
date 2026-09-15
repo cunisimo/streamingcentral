@@ -7,11 +7,34 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA OCHO
-  VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0`,
-  `03ad4b9`, `6ef35c5`, `c6b299e`, `37f1ca1` y `2886212`); corregida en rama,
-  pendiente de auditoría FINAL — NO está terminada; reintentos APAGADOS;
-  limitador, circuito, `waitUntil` y membresía NO implementados.**
+- **Etapa 3.a de capacidad (#19): MERGEADA, PUSHEADA Y DESPLEGADA
+  (2026-09-15).** Merge `--no-ff` `7b2fc8f` en `main` (rama
+  `feat/etapa3a-clasificacion-tmdb` en `858f73e`, aprobada técnicamente por la
+  auditoría final de Codex sobre `8177d2a` tras ocho correcciones); push a
+  `origin/main`; deployment de Vercel `dpl_2GLbFXDt4271mS5wTo7MegkN6bnn`
+  READY, target production, `githubCommitSha = 7b2fc8f…`, aliasado a
+  `app.yump.ar`. Comprobación pasiva tras el deploy: `/api/health` 200
+  (Redis OK, 744 claves); Home frío 200 en 15,1 s (250 llamadas a TMDB, 250
+  ok, 0 fallos, publicado, `degradado: false`, 6 hero + 12 rieles + 309
+  títulos) y caliente 200 en 0,8 s (HIT); búsqueda 200 (24 títulos, 18
+  personas, sin `degradacion`); ficha 200; sin líneas `[tmdb] descarte` ni
+  errores nuevos en los logs. **Identidad del Home preservada según la
+  evidencia existente** (banco de cachés aisladas `b7be927` vs rama: 16/16
+  válidos e idénticos; búsqueda 15/15) — no se reabrió. **Reintentos siguen
+  APAGADOS** (`TMDB_REINTENTOS` ausente en Producción). **Limitador,
+  circuito, `waitUntil` y membresía siguen NO implementados** (subetapas
+  restantes de la Etapa 3, diseñadas y no aprobadas). **#19 sigue abierto por
+  esas subetapas, no por la 3.a.** Sin cambios de variables ni de
+  infraestructura; sin 429 provocados ni cachés externas vaciadas.
+  Verificado sobre el `main` fusionado: árbol idéntico al de la rama;
+  inventario 21/21; suite 1.666 (1.656 ok, 0 fallos, 10 omitidos); `tsc`;
+  build fresco (`BUILD_ID SDIx8lZebm-0fD5lIV0jY`); `git diff --check`; los
+  tres JSON de evidencia con los mismos blobs que en la rama.
+  Lo que sigue es la historia de la rama antes del merge.
+- **Etapa 3.a de capacidad (#19), historia en rama: IMPLEMENTADA y CORREGIDA
+  OCHO VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0`,
+  `03ad4b9`, `6ef35c5`, `c6b299e`, `37f1ca1` y `2886212`); reintentos
+  APAGADOS; limitador, circuito, `waitUntil` y membresía NO implementados.**
   **Octava corrección (informe §30, sólo el test):** el detector de acceso
   por miembro exigía la llamada inmediata, así que `const traer =
   api.candidatosDePools; traer(…)` (barrel + namespace) escapaba (RED: siete

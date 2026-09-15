@@ -1,10 +1,12 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA ocho
-> veces (auditorías de Codex sobre `e930a1d` §23, `09b9dbe` §24, `708bce0`
-> §25, `03ad4b9` §26, `6ef35c5` §27, `c6b299e` §28, `37f1ca1` §29 y
-> `2886212` §30); corregida en rama, pendiente de auditoría FINAL. No está
-> terminada.
+> **Estado: DISEÑO v4.1 + ETAPA 3.a MERGEADA, PUSHEADA Y DESPLEGADA
+> (2026-09-15; §31).** Ocho correcciones en rama (auditorías de Codex sobre
+> `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
+> `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
+> final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito,
+> `waitUntil` y membresía NO implementados: las subetapas restantes de la
+> Etapa 3 siguen diseñadas y no aprobadas, y por ellas #19 sigue abierto.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -1585,3 +1587,39 @@ canónicas y cero formas alternativas** (test existente).
 - **Comprobado:** todo lo anterior, ejecutado.
 - **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
   está terminada**.
+
+---
+
+## 31. Etapa 3.a mergeada, pusheada y desplegada (2026-09-15)
+
+- **Corrección documental previa** (`858f73e`): el RED de §30 son siete
+  fuentes inyectadas —una es `barrel.ts`— con seis casos de acceso por
+  miembro; los seis escapaban y ahora se rechazan. `ISSUES.md` no tenía el
+  recuento incorrecto.
+- **Merge** `--no-ff` `7b2fc8f` de `feat/etapa3a-clasificacion-tmdb`
+  (`858f73e`) en `main` (desde `b7be927`), sin squash ni rebase. Árbol
+  fusionado idéntico al de la rama (`git diff` vacío, código productivo
+  incluido); los tres JSON de evidencia con los mismos blobs.
+- **Verificación sobre el `main` fusionado:** inventario 21/21; suite 1.666
+  (1.656 ok, 0 fallos, 10 omitidos); `tsc --noEmit` limpio; build fresco
+  exit 0 (`BUILD_ID SDIx8lZebm-0fD5lIV0jY`); `git diff --check` limpio.
+- **Push** `b7be927..7b2fc8f main -> main`.
+- **Deployment automático de Vercel:** `dpl_2GLbFXDt4271mS5wTo7MegkN6bnn`,
+  READY, target production, `githubCommitSha 7b2fc8f8810f…`, 44 s de build,
+  aliases `app.yump.ar`, `streamingcentral.vercel.app`, …
+- **Comprobación pasiva** (sin 429 provocados, sin vaciar cachés, sin carga,
+  sin TMDB real para bancos, sin variables ni infraestructura):
+  `/api/health` 200 (`cache: redis`, ping OK, 744 claves); Home frío 200 en
+  15,1 s — `[home] MISS`, 1 composición, turno adquirido, origen propia,
+  publicación publicado, 250 llamadas a TMDB (250 ok), 0 fallos, 6 hero + 12
+  rieles + 309 títulos, `degradado: false` — y caliente 200 en 0,8 s (`[home]
+  HIT`, 167 ms); búsqueda `matrix` 200 (24 títulos, 18 personas, sin
+  `degradacion`); ficha `movie/603` 200 (plataformas `mv, m`, sin
+  `degradacion`); logs sin líneas `[tmdb] descarte` ni errores nuevos.
+- **Identidad del Home preservada según la evidencia existente** (§22-§29:
+  cachés aisladas `b7be927` vs rama, 16/16 válidos e idénticos; búsqueda
+  15/15). No se reabrió ni se regeneró.
+- **Lo que NO cambia:** reintentos APAGADOS (`TMDB_REINTENTOS` ausente en
+  Producción); limitador, cadencias, pausa, circuito, `waitUntil` y
+  membresía NO implementados. **#19 sigue abierto por esas subetapas
+  restantes, no por la 3.a.**

@@ -1290,10 +1290,14 @@ leyendo el código.**
 > agregados, 3 estructurales, 0 inferidos — informe §29), y por octava vez tras
 > la auditoría final sobre `2886212` (el acceso por miembro sin llamada
 > inmediata —`const traer = api.candidatosDePools`— también se rechaza —
-> informe §30); corregida en rama, pendiente de auditoría FINAL, no
-> terminada; reintentos APAGADOS
-> (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
-> implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
+> informe §30); aprobada por la auditoría final sobre `8177d2a`; **MERGEADA
+> (`7b2fc8f`, `--no-ff`), PUSHEADA Y DESPLEGADA el 2026-09-15**
+> (`dpl_2GLbFXDt4271mS5wTo7MegkN6bnn`, `app.yump.ar`; comprobación pasiva:
+> health, Home frío y caliente, búsqueda y ficha en 200, sin descartes ni
+> errores nuevos; identidad del Home preservada según la evidencia existente);
+> reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito,
+> `waitUntil` y membresía NO implementados — **#19 sigue abierto por esas
+> subetapas restantes, no por la 3.a.**** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),
 > `titleCard` sin `null` por TMDB, ficha/búsqueda con `503`/`degradacion`.
 > Banco de identidad del Home con cachés aisladas: 16/16 idénticos y válidos;
