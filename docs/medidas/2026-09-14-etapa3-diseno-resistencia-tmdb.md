@@ -1083,8 +1083,12 @@ una línea estructurada.
   sólo el escenario de banco que aún no existía) — y sobre el fuente
   **mutado** falla donde el viejo seguía verde (§25.2).
 - **GREEN**: suite **1.658 tests, 1.648 aprobados, 0 fallos, 10 omitidos**;
-  `tsc --noEmit` limpio; build fresco exit 0 (`.next` borrado, `BUILD_ID
-  kZjClDe8HCDjqlI-LfIEW`); `git diff --check` limpio.
+  `tsc --noEmit` limpio; build fresco exit 0 (`.next` borrado; `BUILD_ID`
+  final `1ywvZTpx9vpG1EbcA9WA0`, tras corregir un byte NUL que la escritura
+  del adaptador había dejado en el fuente — el runtime era idéntico —; los
+  bancos de 429 parcial y de búsqueda corrieron sobre el build previo
+  `kZjClDe8HCDjqlI-LfIEW`, con el mismo código de servidor; el del Home se
+  repitió sobre el final); `git diff --check` limpio.
 - **Identidad del Home** (cachés aisladas, `b7be927` vs rama, build final):
   **16/16 válidos e idénticos**, controles de mutación y de caché compartida
   correctos.

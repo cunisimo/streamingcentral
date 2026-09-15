@@ -265,8 +265,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 4691,
-          "despues": 4772
+          "antes": 3755,
+          "despues": 3949
         }
       },
       "caliente": {
@@ -505,8 +505,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 25,
-          "despues": 27
+          "antes": 20,
+          "despues": 21
         }
       },
       "frioVsCalienteAntes": true,
@@ -763,8 +763,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 3037,
-          "despues": 3073
+          "antes": 3070,
+          "despues": 3102
         }
       },
       "caliente": {
@@ -1003,8 +1003,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 21,
-          "despues": 35
+          "antes": 20,
+          "despues": 36
         }
       },
       "frioVsCalienteAntes": true,
@@ -1261,8 +1261,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2642,
-          "despues": 2673
+          "antes": 2658,
+          "despues": 2685
         }
       },
       "caliente": {
@@ -1501,8 +1501,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 17,
-          "despues": 15
+          "antes": 34,
+          "despues": 20
         }
       },
       "frioVsCalienteAntes": true,
@@ -1759,8 +1759,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2721,
-          "despues": 2835
+          "antes": 2804,
+          "despues": 2969
         }
       },
       "caliente": {
@@ -1999,8 +1999,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 35,
-          "despues": 22
+          "antes": 16,
+          "despues": 40
         }
       },
       "frioVsCalienteAntes": true,
@@ -2257,8 +2257,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2316,
-          "despues": 2321
+          "antes": 2753,
+          "despues": 2720
         }
       },
       "caliente": {
@@ -2497,8 +2497,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 20,
-          "despues": 36
+          "antes": 19,
+          "despues": 20
         }
       },
       "frioVsCalienteAntes": true,
@@ -2755,8 +2755,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2603,
-          "despues": 2538
+          "antes": 2785,
+          "despues": 2753
         }
       },
       "caliente": {
@@ -2996,7 +2996,7 @@
         },
         "msPared": {
           "antes": 19,
-          "despues": 20
+          "despues": 36
         }
       },
       "frioVsCalienteAntes": true,
@@ -3253,8 +3253,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2420,
-          "despues": 2438
+          "antes": 3142,
+          "despues": 3251
         }
       },
       "caliente": {
@@ -3493,8 +3493,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 20,
-          "despues": 27
+          "antes": 37,
+          "despues": 33
         }
       },
       "frioVsCalienteAntes": true,
@@ -3751,8 +3751,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2668,
-          "despues": 2620
+          "antes": 2873,
+          "despues": 2941
         }
       },
       "caliente": {
@@ -3991,8 +3991,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 27,
-          "despues": 28
+          "antes": 41,
+          "despues": 39
         }
       },
       "frioVsCalienteAntes": true,
@@ -4249,8 +4249,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2805,
-          "despues": 2737
+          "antes": 2802,
+          "despues": 2719
         }
       },
       "caliente": {
@@ -4489,8 +4489,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 41,
-          "despues": 40
+          "antes": 20,
+          "despues": 37
         }
       },
       "frioVsCalienteAntes": true,
@@ -4747,8 +4747,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2189,
-          "despues": 2391
+          "antes": 2556,
+          "despues": 2655
         }
       },
       "caliente": {
@@ -4987,8 +4987,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 22,
-          "despues": 21
+          "antes": 37,
+          "despues": 36
         }
       },
       "frioVsCalienteAntes": true,
@@ -5245,8 +5245,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2701,
-          "despues": 2723
+          "antes": 2102,
+          "despues": 2102
         }
       },
       "caliente": {
@@ -5485,8 +5485,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 35,
-          "despues": 34
+          "antes": 22,
+          "despues": 22
         }
       },
       "frioVsCalienteAntes": true,
@@ -5743,8 +5743,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2463,
-          "despues": 2432
+          "antes": 2298,
+          "despues": 2224
         }
       },
       "caliente": {
@@ -5983,8 +5983,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 39,
-          "despues": 23
+          "antes": 36,
+          "despues": 34
         }
       },
       "frioVsCalienteAntes": true,
@@ -6241,8 +6241,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2641,
-          "despues": 2703
+          "antes": 2907,
+          "despues": 3037
         }
       },
       "caliente": {
@@ -6481,8 +6481,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 36,
-          "despues": 35
+          "antes": 22,
+          "despues": 23
         }
       },
       "frioVsCalienteAntes": true,
@@ -6739,8 +6739,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 3118,
-          "despues": 3185
+          "antes": 2991,
+          "despues": 3048
         }
       },
       "caliente": {
@@ -7237,8 +7237,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 2319,
-          "despues": 2353
+          "antes": 2501,
+          "despues": 2417
         }
       },
       "caliente": {
@@ -7477,8 +7477,8 @@
           "identico": true
         },
         "msPared": {
-          "antes": 35,
-          "despues": 35
+          "antes": 38,
+          "despues": 37
         }
       },
       "frioVsCalienteAntes": true,
