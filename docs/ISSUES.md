@@ -1282,9 +1282,13 @@ leyendo el código.**
 > la auditoría sobre `c6b299e` (inventario verificable de los nueve call sites
 > que llegan al descarte de pools, nueve recorridos desde `composeHome` con
 > controles mutados por tipo de rama, banco de página extra identificada por
-> sus parámetros con y sin ejes; 5 recorridos ejecutados, 4 estructurales,
-> rutas `/api/recomendaciones` y `/api/audience` inferidas — informe §28);
-> corregida en rama, pendiente de auditoría FINAL, no terminada; reintentos APAGADOS
+> sus parámetros con y sin ejes; rutas `/api/recomendaciones` y
+> `/api/audience` inferidas — informe §28), y por séptima vez tras la auditoría
+> sobre `37f1ca1` (descubrimiento de call sites recursivo sobre todo el código
+> productivo, con rechazo de alias/namespace/miembro/referencia sin llamar, y
+> cobertura recontada en una categoría por recorrido: 2 identificados, 4
+> agregados, 3 estructurales, 0 inferidos — informe §29); corregida en rama,
+> pendiente de auditoría FINAL, no terminada; reintentos APAGADOS
 > (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
 > implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),

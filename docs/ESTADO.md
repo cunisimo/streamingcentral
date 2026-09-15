@@ -7,11 +7,27 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA SEIS
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA SIETE
   VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0`,
-  `03ad4b9`, `6ef35c5` y `c6b299e`); corregida en rama, pendiente de
-  auditoría FINAL — NO está terminada; reintentos APAGADOS; limitador,
+  `03ad4b9`, `6ef35c5`, `c6b299e` y `37f1ca1`); corregida en rama, pendiente
+  de auditoría FINAL — NO está terminada; reintentos APAGADOS; limitador,
   circuito, `waitUntil` y membresía NO implementados.**
+  **Séptima corrección (informe §29, sólo el test):** el barrido de call sites
+  sólo miraba `lib/*.ts` y `app/api/**/route.ts` con el nombre canónico (una
+  llamada en `lib/sub/`, en un archivo servidor de `app/`, o por alias/namespace
+  escapaba: demostrado contra `37f1ca1`). Ahora el descubrimiento es una
+  función pura probable con fuentes inyectados, recorre recursivamente `lib/`,
+  `app/`, `components/`, `hooks/` y `supabase/` (sin tests, `.d.ts`,
+  `node_modules`, `.next`, `scripts/`), detecta toda llamada directa canónica y
+  RECHAZA alias, namespace, import dinámico, acceso por miembro, renombre y
+  referencia sin llamar; no es un parser (un string con el nombre cuenta;
+  acceso computado y `require` no se reconocen). Cobertura de los nueve
+  recorridos en una sola categoría cada uno, verificada en el test: 2
+  identificadas, 4 agregadas, 3 estructurales, 0 inferidas (las rutas
+  `/api/recomendaciones` y `/api/audience` quedan inferidas aparte).
+  Verificado: suite 1.665 (1.655 ok, 0 fallos, 10 omitidos), `tsc`, build
+  fresco, `diff --check`; evidencias del Home y del banco intactas byte a
+  byte.
   **Sexta corrección (informe §28, sin código productivo):** los "dos
   recorridos" de la quinta no eran todos: faltaban, al menos, la página extra
   de un riel (rama `opts.ejeFijo`, directa dentro del bloque de ejes), las
@@ -24,10 +40,10 @@
   controles mutados independientes por tipo de rama, y el banco fuerza la
   página extra y la identifica por sus parámetros (con ejes: 3 rechazadas = 3
   descartes; sin ejes: 3 = 3; degradado y sin publicar; `b7be927` rojo).
-  Cobertura honesta: 5 recorridos ejecutados, 4 estructurales
-  (miniseries ×2, audiencia ×2) y las rutas `/api/recomendaciones` y
-  `/api/audience` sólo inferidas (registran fuera de contexto; envolverlas es
-  un cambio productivo pendiente). Verificado: suite 1.660 (1.650 ok, 0
+  Cobertura (recontada en la séptima corrección): 2 recorridos identificados,
+  4 ejecutados sólo en agregado, 3 estructurales, 0 inferidos; las rutas
+  `/api/recomendaciones` y `/api/audience` sólo inferidas (registran fuera de
+  contexto; envolverlas es un cambio productivo pendiente). Verificado: suite 1.660 (1.650 ok, 0
   fallos, 10 omitidos), `tsc`, build fresco, `diff --check`; identidad del
   Home 16/16.
   **Quinta corrección (informe §27, sin código productivo):** la fila de

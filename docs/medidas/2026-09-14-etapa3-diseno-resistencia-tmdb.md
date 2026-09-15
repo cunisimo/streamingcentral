@@ -1,9 +1,9 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA seis
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA siete
 > veces (auditorías de Codex sobre `e930a1d` §23, `09b9dbe` §24, `708bce0`
-> §25, `03ad4b9` §26, `6ef35c5` §27 y `c6b299e` §28); corregida en rama,
-> pendiente de auditoría FINAL. No está terminada.
+> §25, `03ad4b9` §26, `6ef35c5` §27, `c6b299e` §28 y `37f1ca1` §29);
+> corregida en rama, pendiente de auditoría FINAL. No está terminada.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -1328,7 +1328,9 @@ real): cortada sólo la llamada de la rama `opts.ejeFijo` (`enrich.ts:1737`)
 Todas las llamadas productivas a `candidatosDePools(`, `candidatosConEje(` y
 `categoryCandidates(` en `lib/` y `app/api/**` (barrido automático en
 `lib/descartes-tmdb-inventario.test.ts`, tabla `CALL_SITES`; líneas al
-`c6b299e`, el código productivo no cambió):
+`c6b299e`, el código productivo no cambió). ⚠️ El alcance del barrido de esta
+sección era `lib/*.ts` y `app/api/**/route.ts` y sólo llamadas con el nombre
+canónico: §29 lo corrige.
 
 | # | Call site | Consumidor | ¿Desde `composeHome`? | Condición | Contexto | Llegada del descarte | Recorridos | Cobertura |
 |---|---|---|---|---|---|---|---|---|
@@ -1351,11 +1353,12 @@ corrección (pendiente). `POOL_CACHE=0` no alcanza ningún call site de pools
 (`candidatosDeSuperficie` y `audienceTitles` van a `discover` directo; un fallo
 lo atrapa el `safe()` del Home).
 
-Resumen honesto de cobertura: de los 9 recorridos desde `composeHome`, **5
-ejecutados** en banco (con-ejes, sin-ejes, extra-genero-ejeFijo,
-extra-genero-sin-ejes y hero/audiencia-inicial sólo en agregado con
-con-ejes), **4 estructurales** (extra-miniseries ×2, audiencia-inicial,
-audiencia-paginas), y las dos rutas API **inferidas**.
+Resumen de cobertura (corregido en §29: una sola categoría por recorrido, la
+suma da nueve): **identificada individualmente 2** (extra-genero-ejeFijo,
+extra-genero-sin-ejes), **ejecutada sólo en agregado 4** (con-ejes,
+sin-ejes, hero, audiencia-inicial), **estructural 3** (extra-miniseries
+×2, audiencia-paginas), **inferida 0**. Las dos rutas API (`/api/recomendaciones`,
+`/api/audience`) no son recorridos de `composeHome`: quedan inferidas aparte.
 
 ### 28.3 Corrección (test del inventario + banco; sin código productivo)
 
@@ -1433,3 +1436,98 @@ audiencia-paginas), y las dos rutas API **inferidas**.
   `/api/audience` con `conDescartesRegistrados` (cambio productivo); un banco
   que identifique las consultas de miniseries y de audiencia. Corregida en
   rama; **la etapa no está terminada**.
+
+---
+
+## 29. Séptima corrección de la 3.a — auditoría de Codex sobre `37f1ca1`; corregida en rama, pendiente de auditoría final
+
+### 29.1 El bloqueante
+
+`archivos()` sólo miraba `lib/*.ts` (sin subcarpetas) y `app/api/**/route.ts`,
+y el patrón sólo reconocía llamadas directas con el nombre canónico. La
+afirmación «un call site productivo nuevo sin clasificar hace fallar el
+inventario» era más amplia que el barrido.
+
+**RED contra `37f1ca1`** (worktree detached): con `lib/sub/nuevo.ts`
+(llamada directa a `candidatosDePools`), `app/servidor.ts` (llamada directa a
+`candidatosConEje`, archivo servidor que no es `route.ts`), y en `lib/reco.ts`
+un `import { categoryCandidates as cc }` usado como `cc(` más un `import * as
+pools` usado como `pools.candidatosDePools(` → inventario **15/15 verde**: los
+cuatro escapan.
+
+### 29.2 Corrección (sólo el test; sin código productivo)
+
+- **Descubrimiento extraído** a `descubrirCallSites(fuentes)`, función pura
+  sobre un mapa `ruta → fuente` (probable con fuentes inyectados), alimentada
+  en el repo por `archivosProductivos(raíz)`: recorre **recursivamente**
+  `lib/`, `app/`, `components/`, `hooks/` y `supabase/` (`.ts .tsx .mts .js
+  .mjs`), excluye `*.test.*`, `*.d.ts`, `node_modules`, `.next`; `scripts/`
+  (banco) y `docs/` quedan fuera por no ser productivos.
+- **Lo que garantiza** (sobre el fuente sin comentarios): detecta toda llamada
+  directa canónica `candidatosDePools(` / `candidatosConEje(` /
+  `categoryCandidates(`; y **rechaza** —hace fallar el inventario, no las
+  clasifica— las formas por las que una llamada podría escapar al nombre
+  canónico: import/export con alias (`{ x as y }`), import de namespace o
+  dinámico de `pools`/`enrich`, acceso por miembro (`p.candidatosDePools(`),
+  desestructuración con renombre, y cualquier referencia sin llamar (pasar la
+  función como valor).
+- **Lo que no es:** un parser de TypeScript. Limitaciones aceptadas: una
+  aparición en un string o template literal cuenta como llamada/referencia
+  (falso positivo que obliga a clasificar o reescribir); el acceso computado
+  (`mod["candidatosDePools"]`) y `require()` no se reconocen (no se usan en el
+  repo: módulos ES con imports estáticos); un re-export con alias sí se
+  rechaza, así que una cadena "otro nombre en otro archivo" no puede armarse
+  sin fallar.
+- **Controles** (fuentes inyectados y disco temporal): el recorrido recursivo
+  ve `lib/sub/hondo/mas.tsx`, `app/servidor.ts`, `app/(grupo)/page.tsx`,
+  `components/`, `hooks/`, `supabase/functions/` y no ve tests, `.d.ts`,
+  `node_modules`, `.next`, `scripts/`, `docs/`; un call site en subcarpeta de
+  `lib/` y en un archivo servidor de `app/` se detecta; alias, namespace,
+  import dinámico, miembro, renombre y referencia sin llamar se rechazan con su
+  línea; la importación canónica, la definición y los comentarios no cuentan;
+  el string cuenta (limitación fijada). Sobre el repo real: nueve llamadas y
+  cero alternativas.
+- **GREEN físico** (los mismos cuatro escapes del RED, sobre la rama):
+  «formas alternativas de llegar a las funciones de pools: lib/reco.ts:490
+  alias de categoryCandidates; :492 namespace; :493 acceso por miembro» y
+  «call sites sin clasificar: app/servidor.ts:2 candidatosConEje(;
+  lib/sub/nuevo.ts:2 candidatosDePools(».
+- **Cobertura, una sola categoría por recorrido** (`COBERTURA_RECORRIDOS`,
+  verificada en el test: las claves son exactamente los nueve recorridos, la
+  cuenta es `{ identificada: 2, agregada: 4, estructural: 3, inferida: 0 }`,
+  y la cobertura de cada call site es la mejor entre sus recorridos):
+
+  | Categoría | Recorridos | Significado |
+  |---|---|---|
+  | **identificada** (2) | extra-genero-ejeFijo, extra-genero-sin-ejes | banco E: la consulta de ese recorrido rechazada y sus descartes contados individualmente |
+  | **agregada** (4) | con-ejes, sin-ejes, hero, audiencia-inicial | corren en la corrida del banco D; el descarte total se cuenta sin atribución por recorrido — no se sabe si un 429 cayó en SU consulta |
+  | **estructural** (3) | extra-miniseries-ejeFijo, extra-miniseries-sin-ejes, audiencia-paginas | sólo la cadena verificada sobre el fuente |
+  | **inferida** (0) | — | (las rutas `/api/recomendaciones` y `/api/audience` quedan inferidas, pero no son recorridos de `composeHome`) |
+
+  El resumen anterior («5 ejecutados / 4 estructurales») contaba hero y
+  audiencia-inicial dos veces; queda corregido en §28.2.
+- El barrido de sitios que **atrapan errores** (§23, `catch`/`allSettled`)
+  conserva su alcance declarado —`lib/*.ts` y `app/api/**/route.ts`— y no
+  cambia acá; su afirmación se lee con ese alcance.
+
+### 29.3 Verificación
+
+- Inventario **20/20**; suite **1.665 tests, 1.655 aprobados, 0 fallos, 10
+  omitidos**; `tsc --noEmit` limpio; build fresco exit 0 (`BUILD_ID
+  WSl7G2ZSVAYelQCXHVQeT`); `git diff --check` limpio.
+- Diff desde `37f1ca1`: sólo el test del inventario y los tres documentos.
+  Las evidencias del Home y del banco **no se regeneraron** y están byte a
+  byte intactas (sha1 de los tres JSON idénticos antes y después); los
+  nueve recorridos aprobados no se tocaron.
+- Sin merge, push, deploy, TMDB real, cachés externas, variables ni
+  infraestructura.
+
+### 29.4 Comprobado / inferido / pendiente
+
+- **Comprobado:** §29.1 (RED), los controles de descubrimiento y el GREEN
+  físico; la cuenta 2+4+3+0 = 9 verificada en el test.
+- **Inferido:** que las cinco raíces cubren todo el código productivo que
+  puede importar `lib/pools` o `lib/enrich` (el repo no tiene otras raíces con
+  código servidor; `scripts/` sólo tiene el banco y herramientas).
+- **Pendiente:** auditoría final de Codex. Corregida en rama; **la etapa no
+  está terminada**.
