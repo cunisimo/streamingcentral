@@ -40,7 +40,8 @@ function lineasNuevas(p) {
   const todo = readFileSync(p.log, "utf8");
   const nuevas = todo.slice(p.leido ?? 0).split("\n").map((l) => l.trim()).filter((l) => l.startsWith("[home] "));
   p.leido = todo.length;
-  return { compone: nuevas.filter(esLineaCompone), terminales: nuevas.filter(esLineaTerminal).map((l) => ({ ...parsearLineaHome(l), linea: l })) };
+  // `orden`: las líneas [home] en el orden del log (compone y terminales), para comprobar precedencias.
+  return { compone: nuevas.filter(esLineaCompone), terminales: nuevas.filter(esLineaTerminal).map((l) => ({ ...parsearLineaHome(l), linea: l })), orden: nuevas.filter((l) => esLineaCompone(l) || esLineaTerminal(l)).map((l) => (esLineaCompone(l) ? "compone" : "terminal")) };
 }
 /** Las líneas [home-fondo] nuevas del log (misma forma que [home], prefijo distinto). */
 function fondosNuevos(p) {
@@ -56,10 +57,12 @@ async function esperarFondo(p, ms = 90000) {
 }
 const fondoOrigen = (t) => t.origen;
 async function unaTerminal(p) {
-  const acc = { compone: [], terminales: [] };
-  await esperar(() => { const n = lineasNuevas(p); acc.compone.push(...n.compone); acc.terminales.push(...n.terminales); return acc.terminales.length >= 1; }, 90000, 200);
+  const acc = { compone: [], terminales: [], orden: [] };
+  await esperar(() => { const n = lineasNuevas(p); acc.compone.push(...n.compone); acc.terminales.push(...n.terminales); acc.orden.push(...n.orden); return acc.terminales.length >= 1; }, 90000, 200);
   return acc;
 }
+/** Cuántas líneas `[home] compone` preceden, EN EL LOG, a la primera terminal. */
+const componeAntesDeLaTerminal = (acc) => { const i = acc.orden.indexOf("terminal"); return acc.orden.slice(0, i < 0 ? acc.orden.length : i).filter((x) => x === "compone").length; };
 
 /** Deja la combinación con fresca + UB publicados (composición sana) y luego vence la fresca. */
 async function prepararUB(p) {
@@ -81,7 +84,7 @@ async function escenarios(p, o = { esperaFondo: true }) {
     // Orden (auditoría sobre c84996e): con el fondo, NINGÚN `[home] compone` puede
     // preceder a la línea terminal de la solicitud: la composición arranca después
     // de construida la respuesta. En el antes, la composición en línea sí la precede (1).
-    const componeAntesDeTerminal = t.compone.length;
+    const componeAntesDeTerminal = componeAntesDeLaTerminal(t);
     const fondo = o.esperaFondo ? await esperarFondo(p, 60000) : null;
     t.compone.push(...lineasNuevas(p).compone);   // el `[home] compone` del fondo sale DESPUÉS de la terminal de la solicitud
     const frescaTrasFondo = (await claves(base, FRESCA)).length;
