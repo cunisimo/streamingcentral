@@ -880,7 +880,8 @@ const CALL_SITES: CallSite[] = [
 //       · import/export con alias: `{ candidatosDePools as x }`;
 //       · import de namespace o dinámico de los módulos que las definen
 //         (`import * as p from "…/pools"`, `import("…/enrich")`);
-//       · acceso por miembro: `p.candidatosDePools(`;
+//       · acceso por miembro: `p.candidatosDePools`, con o sin llamada
+//         inmediata (asignarla a una variable o pasarla como valor también);
 //       · desestructuración con renombre: `const { candidatosDePools: x } = …`;
 //       · cualquier referencia SIN llamar (pasarla como valor: `f = candidatosDePools`),
 //         salvo dentro de un import/export.
@@ -947,8 +948,10 @@ function descubrirCallSites(fuentes: Record<string, string>): Descubrimiento {
     for (const m of f.matchAll(new RegExp(`\\bimport\\(\\s*["'][^"']*\\/${modulos}["']\\s*\\)`, "g"))) anotar(m.index, `import dinámico (\`${m[0]}\`)`);
     // Desestructuración con renombre.
     for (const m of f.matchAll(new RegExp(`\\{[^}]*\\b(${nombres})\\s*:\\s*\\w+[^}]*\\}\\s*=`, "g"))) anotar(m.index, `desestructuración con renombre de ${m[1]}`);
-    // Acceso por miembro.
-    for (const m of f.matchAll(new RegExp(`\\.(${nombres})\\s*\\(`, "g"))) anotar(m.index, `acceso por miembro .${m[1]}(`);
+    // Acceso por miembro, CON o SIN llamada inmediata (auditoría final sobre
+    // 2886212: `const traer = api.candidatosDePools` permitía llamar después
+    // con otro nombre). Un `.` seguido del nombre exacto basta.
+    for (const m of f.matchAll(new RegExp(`\\.(${nombres})(?![\\w$])`, "g"))) anotar(m.index, `acceso por miembro .${m[1]}`);
     // Llamadas directas canónicas y referencias sueltas (fuera de import/export).
     const sinImports = f.replace(/\b(?:import|export)\s*(?:\{[^}]*\}|\*\s*as\s+\w+|[\w$]+)?\s*(?:,\s*\{[^}]*\})?\s*from\s+["'][^"']+["'];?/g, (m) => m.replace(/[^\n]/g, " "));
     for (const m of sinImports.matchAll(new RegExp(`(?<![\\w.$])(${nombres})(?![\\w$])`, "g"))) {
@@ -1005,14 +1008,38 @@ test("🔴 descubrimiento: las importaciones con alias, namespace o dinámicas, 
   assert.deepEqual(d.alternativas, [
     "lib/alias.ts:1 alias de categoryCandidates (`categoryCandidates as cc`)",
     "lib/dinamico.ts:1 import dinámico (`import(\"./pools\")`)",
-    "lib/dinamico.ts:1 acceso por miembro .candidatosConEje(",
+    "lib/dinamico.ts:1 acceso por miembro .candidatosConEje",
     "lib/ns.ts:1 namespace (`import * as pools from \"./pools\"`)",
-    "lib/ns.ts:2 acceso por miembro .candidatosDePools(",
+    "lib/ns.ts:2 acceso por miembro .candidatosDePools",
     "lib/reexport.ts:1 alias de candidatosConEje (`candidatosConEje as conEje`)",
     "lib/renombre.ts:1 namespace (`import * as todo from \"@/lib/pools\"`)",
     "lib/renombre.ts:2 desestructuración con renombre de candidatosDePools",
     "lib/renombre.ts:2 referencia sin llamar a candidatosDePools",
     "lib/valor.ts:2 referencia sin llamar a candidatosDePools",
+  ]);
+});
+
+test("🔴 descubrimiento: el acceso por miembro SIN llamada inmediata (barrel + namespace, asignado a una variable o pasado como valor) también se rechaza", () => {
+  // Auditoría final sobre 2886212: `.candidatosDePools(` exigía el paréntesis
+  // inmediato, así que `const traer = api.candidatosDePools; traer(…)` escapaba
+  // aunque después permitiera llamar a la función con otro nombre.
+  const d = descubrirCallSites({
+    "lib/barrel.ts": 'export { candidatosDePools, candidatosConEje, categoryCandidates } from "./pools";\n',
+    "lib/consumidor.ts": 'import * as api from "./barrel";\nconst traer = api.candidatosDePools;\nexport const usa = () => traer({} as never);\n',
+    "lib/variable-eje.ts": 'import * as api from "./barrel";\nexport const conEje = () => { const f = api.candidatosConEje; return f({} as never); };\n',
+    "lib/variable-cat.ts": 'import * as api from "./barrel";\nlet cat = api.categoryCandidates;\nexport const usaCat = () => cat({} as never);\n',
+    "lib/valor-pools.ts": 'import * as api from "./barrel";\nexport const pedir = (fn: (o: unknown) => unknown) => fn({});\nexport const v = () => pedir(api.candidatosDePools);\n',
+    "lib/valor-eje.ts": 'import * as api from "./barrel";\nexport const opciones = { traer: api.candidatosConEje };\n',
+    "lib/valor-cat.ts": 'import * as api from "./barrel";\nexport const lista = [api.categoryCandidates];\n',
+  });
+  assert.deepEqual(d.llamadas, [], "ninguna es una llamada canónica");
+  assert.deepEqual(d.alternativas, [
+    "lib/consumidor.ts:2 acceso por miembro .candidatosDePools",
+    "lib/valor-cat.ts:2 acceso por miembro .categoryCandidates",
+    "lib/valor-eje.ts:2 acceso por miembro .candidatosConEje",
+    "lib/valor-pools.ts:3 acceso por miembro .candidatosDePools",
+    "lib/variable-cat.ts:2 acceso por miembro .categoryCandidates",
+    "lib/variable-eje.ts:2 acceso por miembro .candidatosConEje",
   ]);
 });
 
