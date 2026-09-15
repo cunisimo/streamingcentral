@@ -47,8 +47,10 @@ function mundo(o: { tarda?: number; fallo?: boolean; producir?: () => Promise<{ 
     producir: o.producir ?? (async () => { eventos.push("iniciar"); await ms(o.tarda ?? 30); return { valor: { hero: ["A"], degradado: !!o.fallo, de: "A" }, fallo: !!o.fallo }; }),
     vacio: (motivo) => ({ hero: [], degradado: true, de: `vacio:${motivo}` }),
     log, constantes: { ...CONSTANTES, RENOVACION_MS: 10, TURNO_MS: 200 },
-    // Como el adaptador real: el fondo corre en SU scope de métricas.
-    programarEnFondo: (iniciar) => programar(async (senal) => { const { metricas } = await withMetricas(() => iniciar(senal)); eventos.push(`[home-fondo] ${metricas.home.publicacion}`); }),
+    // Como el adaptador real: el fondo corre en SU scope de métricas. El PRIMER
+    // tramo de `iniciar` es síncrono y observable ("fondo-inicia"): es lo que
+    // compite con la entrega de la respuesta si arranca demasiado pronto.
+    programarEnFondo: (iniciar) => programar(async (senal) => { eventos.push("fondo-inicia"); const { metricas } = await withMetricas(() => iniciar(senal)); eventos.push(`[home-fondo] ${metricas.home.publicacion}`); }),
   });
   /** El handler: lo que hace la ruta real, con una respuesta construida explícitamente. */
   const manejar = conFrontera(async (opts: { trabajoTrasServir?: () => Promise<void> } = {}) => {
@@ -185,4 +187,71 @@ test("CONTROL (c84996e): un programador que sólo espera un microtick arranca la
   await manejar();
   await Promise.all(registradas);
   assert.ok(eventos.indexOf("iniciar") < eventos.indexOf("respuesta-construida"), `el modelo viejo no reproduce el agujero: ${JSON.stringify(eventos)}`);
+});
+
+// ============================================================================
+// La FRONTERA EXTERNA (auditoría de Codex sobre 3a057fc): no alcanza con que
+// `iniciar` corra después de "respuesta-construida" DENTRO del handler. Abrir
+// la compuerta en el `finally` del handler encola la continuación del fondo
+// antes de que la promesa exportada por `GET` se resuelva para su LLAMADOR:
+// el fondo arrancaba entre la respuesta construida y el llamador recibiéndola.
+// Lo que se exige acá es estrictamente:
+//   respuesta-construida → caller-recibio-response → fondo-inicia
+// atravesando el llamador real de la ruta: `const r = await GET(req)`.
+// ============================================================================
+
+test("🔴 FRONTERA EXTERNA: el llamador de GET recibe el Response ANTES de que el fondo inicie (respuesta-construida → caller-recibio-response → fondo-inicia)", async () => {
+  await sinRechazosSueltos(async () => {
+    const w = mundo({ tarda: 40 });
+    const GET = w.manejar;                        // lo que exporta la ruta: conFrontera(conCors(manejar))
+    const promesa = GET({});                      // el runtime llama a GET y espera su promesa
+    const { respuesta } = await promesa;
+    w.eventos.push("caller-recibio-response");    // el runtime ya tiene el Response
+    const i = (e: string) => w.eventos.indexOf(e);
+    assert.equal(respuesta.status, 200);
+    assert.ok(i("respuesta-construida") >= 0);
+    assert.ok(i("fondo-inicia") === -1 || i("fondo-inicia") > i("caller-recibio-response"),
+      `el fondo inició antes de que el llamador recibiera la respuesta: ${JSON.stringify(w.eventos.filter((e) => ["respuesta-construida", "fondo-inicia", "caller-recibio-response"].includes(e)))}`);
+    await w.fondoTermino();
+    assert.deepEqual(w.eventos.filter((e) => ["respuesta-construida", "caller-recibio-response", "fondo-inicia"].includes(e)), ["respuesta-construida", "caller-recibio-response", "fondo-inicia"]);
+    assert.equal(w.cuantas("iniciar"), 1, "una sola composición");
+    assert.equal(w.cuantas("fondo-inicia"), 1);
+    assert.equal(w.vivo(K.fresca)?.de, "A", "el fondo publicó la fresca");
+  });
+});
+
+test("🔴 FRONTERA EXTERNA, dos llamadores concurrentes: el fondo de cada handler empieza después de que SU llamador recibió SU respuesta, sin depender de la otra", async () => {
+  await sinRechazosSueltos(async () => {
+    const eventos: string[] = [];
+    const registradas: Promise<unknown>[] = [];
+    const programar = crearProgramadorDeFondo({ registrar: (p) => { registradas.push(p); }, compuerta: compuertaDeFondo, disponible: true, apagado: false });
+    const GET = (nombre: string, espera: number) => conFrontera(async () => {
+      assert.equal(programar(async () => { eventos.push(`fondo-inicia:${nombre}`); }), true);
+      await ms(espera);
+      eventos.push(`respuesta-construida:${nombre}`);
+      return { status: 200, nombre };
+    });
+    const llamador = async (nombre: string, espera: number) => { const r = await GET(nombre, espera)(); eventos.push(`caller-recibio:${nombre}`); return r; };
+    await Promise.all([llamador("A", 60), llamador("B", 5)]);
+    await Promise.all(registradas);
+    const i = (e: string) => eventos.indexOf(e);
+    for (const n of ["A", "B"]) {
+      assert.ok(i(`respuesta-construida:${n}`) < i(`caller-recibio:${n}`) && i(`caller-recibio:${n}`) < i(`fondo-inicia:${n}`), `${n}: ${JSON.stringify(eventos)}`);
+    }
+    assert.ok(i("fondo-inicia:B") < i("respuesta-construida:A"), "el fondo de B no esperó la respuesta de A: fronteras independientes");
+  });
+});
+
+test("CONTROL (3a057fc): abrir la compuerta en el finally del handler entrega el fondo ANTES que la respuesta al llamador", async () => {
+  // Modelo del defecto: el `finally` resuelve a los que esperan la compuerta
+  // (microtasks) y recién después se resuelve la promesa del handler.
+  const eventos: string[] = [];
+  let abrir: () => void = () => {};
+  const compuerta = new Promise<void>((r) => { abrir = r; });
+  const fondo = (async () => { await compuerta; eventos.push("fondo-inicia"); })();
+  const GETviejo = async () => { try { eventos.push("respuesta-construida"); return { status: 200 }; } finally { abrir(); } };
+  await GETviejo();
+  eventos.push("caller-recibio-response");
+  await fondo;
+  assert.deepEqual(eventos, ["respuesta-construida", "fondo-inicia", "caller-recibio-response"], "el modelo viejo no reproduce el agujero");
 });
