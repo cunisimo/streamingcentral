@@ -1,7 +1,8 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
-> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA tras la
-> auditoría de Codex sobre `e930a1d` (§22, §23); pendiente de NUEVA auditoría.
+> **Estado: DISEÑO v4.1 + ETAPA 3.a IMPLEMENTADA EN RAMA Y CORREGIDA dos veces
+> (auditorías de Codex sobre `e930a1d` §23 y sobre `09b9dbe` §24); pendiente de
+> NUEVA auditoría.
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
 > Limitador, cadencias, pausa distribuida, AIMD/circuito, `waitUntil`,
 > `COMPOSICION_MAX_MS` y membresía: NO implementados.** La auditoría de Codex
@@ -875,3 +876,113 @@ pasan en la rama; más un barrido que reemplaza al inventario "de once".
   (clasificadas `tmdb-propaga`; traducirlas a `503` no estaba en el mandato);
   `netflix-resolver` sigue tratando "no sé" como `sinMatch` (contrato
   conservado a propósito).
+
+---
+
+## 24. Segunda corrección de la 3.a — auditoría de Codex sobre `09b9dbe`; pendiente de nueva auditoría
+
+### 24.1 Hallazgo 1 — carrera durante el debounce de la búsqueda
+
+**Reproducción (RED contra `09b9dbe`):** `components/busqueda-controlador.test.ts`
+prueba el **controlador** —generación, debounce y respuesta— con reloj y
+fetch inyectados, no sólo el reductor. La secuencia exacta: empieza el pedido A
+(vence su debounce, sale el fetch); el usuario cambia a un término válido B;
+**antes** de que venza el debounce de B responde A → A no emite ningún estado
+(ni resultados, ni aviso de TMDB, ni "cargando" de B); después vence el
+debounce de B, sale B y completa. Cubre además cambios consecutivos (A→B→C:
+sólo C sale, una vez), término corto (invalida y aborta el fetch en vuelo),
+desmontaje (cancela el timer, aborta, una respuesta tardía no emite nada),
+cambio de plataformas con el mismo término (nueva generación), fallo de red
+del pedido vigente y de uno superado, y restaurar desde una ficha. El
+**control** modela el código de `09b9dbe` con las mismas piezas —el número de
+pedido tomado dentro del temporizador— y muestra que "pinta A" aunque el
+usuario ya escribió B. Contra `09b9dbe` el módulo no existe: 4 de 7 casos del
+lote fallan.
+
+**Corrección:** `components/busqueda-controlador.ts` (puro): `cambiarTermino`,
+`restaurar` y `desmontar` **invalidan en el acto** (generación, timer
+pendiente, `AbortController` del fetch en vuelo) y una respuesta de una
+generación anterior se descarta entera. `SearchView` crea el controlador una
+vez (`useRef`), le pasa `setBusqueda` como `emitir`, y el efecto sólo llama a
+`cambiarTermino(term, platforms)`; `loading` sale del estado del controlador;
+al desmontar, `desmontar()`.
+
+### 24.2 Hallazgo 2 — registros de TMDB sin contexto
+
+**Auditoría de los sitios `tmdb-registra`** (22), por efecto real:
+
+| Efecto | Sitios | Qué garantiza |
+|---|---|---|
+| **contexto** (el contador lo consume un predicado de caché o el `degradado` del Home) | `titleCard`, directores y portadas (`resolverConCache` no guarda con `fallo`), búsqueda (`producirBusquedaConFallos`), `settleAll`, pools y `safe()` del Home (`producirHome`), los dos respaldos de idioma, `leerDatosTitulo` de disponibilidad | prueba funcional citada en la fila (`lotes-tolerantes`, `busqueda-enriquecido`, `fallos-tmdb`, `fallos-disponibilidad`, banco de 429 parcial) |
+| **observable** (además del contexto, la respuesta lo dice) | proveedores y trailer de la ficha (`degradacion.proveedores`, `degradacion.trailer`) | el campo existe y se escribe |
+| **ruta** (ruta o tarea independiente que abre `conDescartesRegistrados`) | `safe()` del Top (`/api/top`), `enNetflixAR` y los dos `buscar` del resolver (`/api/cron/netflix-top10`), `digitalAR` y `datosDe` (`/api/recordatorio`) — y también `/api/directores` y `/api/genre-covers` | **una línea de resumen** por solicitud (`[tmdb] <ruta>: N descarte(s)`), sin cambiar la respuesta ni el contrato HTTP |
+| **relanza** | los dos `catch` del cliente y el del bucle de reintentos | clasifican y relanzan `ErrorTmdb` |
+
+**Reproducción (RED contra `09b9dbe`):** `lib/fallos-tmdb.test.ts` — fuera de
+contexto, `registrarDescarteTmdb` devolvía `undefined` y no dejaba rastro
+(inerte). `lib/descartes-tmdb-inventario.test.ts` — las rutas independientes no
+abrían ningún contexto.
+
+**Corrección:**
+- `registrarDescarteTmdb` **nunca es inerte** y dice qué hizo: `contado`
+  (dentro de un contexto: cuenta y calla, sin ruido por título), `logueado`
+  (fuera de contexto: **una** línea estructurada `[tmdb] descarte sin contexto
+  sitio=… clase=… estado=… path=…`) o `ignorado` (no es de TMDB).
+- `conDescartesRegistrados(nombre, fn)`: abre el contexto y resume en una sola
+  línea si hubo descartes. Lo abren las cinco rutas independientes
+  (`directores`, `genre-covers`, `top`, `cron/netflix-top10`, `recordatorio`).
+  Sin duplicar conteos: adentro del contexto el registrador cuenta y no
+  loguea; el resumen es una línea por solicitud.
+- El inventario ya no acepta "el nombre de la función aparece cerca": cada
+  fila `tmdb-registra` declara su **efecto** (`contexto` + prueba funcional
+  existente, `ruta` + archivo que abre `conDescartesRegistrados`,
+  `observable` + campo escrito, `relanza` + `throw`), y el test lo verifica.
+  Dos tests nuevos fijan que las cinco rutas resumen y que el registrador
+  fuera de contexto loguea (control: una función que traga un `ErrorTmdb`
+  sin registrar no deja rastro).
+
+### 24.3 Comparación antes/después de la búsqueda sana (nueva)
+
+`scripts/banco/comparar-busqueda.mjs` (los helpers comunes a los dos
+comparadores viven ahora en `scripts/banco/comparar-comun.mjs`): dos juegos de
+dobles, dos `next start`, Redis vaciado por corrida fría, JSON completo de
+`/api/search` comparado (títulos: ids, orden, cantidad, plataformas; personas),
+5 consultas × 3 listas de plataformas, frío y caliente, llamadas a TMDB iguales
+en las dos versiones y 0 en caliente, y cuatro mutaciones que el comparador
+detecta. **Resultado: 15/15 válidos e idénticos** (31/31 llamadas en frío, 24
+títulos, HIT/HIT), controles correctos
+(`docs/medidas/2026-09-14-etapa3a-identidad-busqueda.json`).
+
+### 24.4 Verificación
+
+- RED contra `09b9dbe` (worktree detached, tests copiados): `busqueda-controlador`
+  (módulo inexistente), `fallos-tmdb` (sin `conDescartesRegistrados`; el
+  registrador devolvía `undefined`), inventario (rutas sin resumen y filas sin
+  efecto) — 4 de 7 lotes fallan; los 3 que pasan son casos que en el árbol
+  viejo quedan vacíos.
+- GREEN: suite **1.637 tests, 1.627 aprobados, 0 fallos, 10 omitidos**; `tsc`
+  limpio; build fresco exit 0 (`.next` borrado, `BUILD_ID
+  4_DM_66ObNrLGHOn1tenZ`); `git diff --check` limpio.
+- **Banco de identidad del Home** con cachés aisladas: **16/16 válidos e
+  idénticos**, controles correctos (repetido con el build final).
+- **Banco de 429 parcial** (Home y búsqueda): `b7be927` RED (publica el Home
+  mutilado; búsqueda 500), rama GREEN (degradado sin publicar, UB correcto;
+  búsqueda 200 degradada sin guardar; 503 + `Retry-After` ante 429 total).
+- **Banco de identidad de la búsqueda**: 15/15.
+
+### 24.5 Comprobado / inferido / pendiente
+
+- **Comprobado (ejecutado):** todo §24.4; la carrera del debounce reproducida
+  con el modelo del código viejo y ausente en el controlador nuevo; que fuera
+  de contexto el registrador deja una línea y dentro cuenta sin loguear; que
+  las cinco rutas resumen; que el Home sano y la búsqueda sana son idénticos a
+  `b7be927`.
+- **Inferido:** que el controlador se comporta igual dentro de React que en
+  el arnés (el arnés inyecta reloj y fetch; React sólo aporta `setState` y el
+  ciclo de vida, y no se ejecuta en `node --test`); que en Producción una
+  respuesta tardía real cae dentro de la ventana del debounce con la misma
+  frecuencia que en el modelo.
+- **Pendiente:** nueva auditoría de Codex; las rutas distintas de ficha y
+  búsqueda siguen respondiendo `500` ante un fallo principal (clasificadas
+  `tmdb-propaga`); el resumen por ruta es un log, no una métrica persistente
+  (#20).

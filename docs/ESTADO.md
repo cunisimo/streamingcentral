@@ -7,10 +7,23 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA tras la
-  auditoría de Codex sobre `e930a1d`; pendiente de NUEVA auditoría;
-  reintentos APAGADOS; limitador, circuito, `waitUntil` y membresía NO
-  implementados.** Rama `feat/etapa3a-clasificacion-tmdb` (worktree
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA DOS
+  VECES (auditorías de Codex sobre `e930a1d` y sobre `09b9dbe`); pendiente de
+  NUEVA auditoría; reintentos APAGADOS; limitador, circuito, `waitUntil` y
+  membresía NO implementados.** **Segunda corrección (informe §24):** (1) la
+  carrera del debounce de la búsqueda —la generación subía recién dentro del
+  temporizador y una respuesta vieja que llegaba en esa ventana se aceptaba—
+  reproducida con un controlador puro probado con reloj y fetch inyectados
+  (`components/busqueda-controlador.ts`): la invalidación ocurre al cambiar el
+  término, y cubre cambios consecutivos, término corto, desmontaje y cambio de
+  plataformas; (2) `registrarDescarteTmdb` era inerte fuera de contexto: ahora
+  dice qué hizo (`contado` / `logueado` con una línea estructurada / `ignorado`),
+  las cinco rutas independientes (directores, portadas, top, cron de Netflix,
+  recordatorio) abren `conDescartesRegistrados` y resumen en una línea, y el
+  inventario exige un efecto verificable por sitio. Nuevo comparador
+  antes/después de la **búsqueda sana** con cachés aisladas: 15/15 idénticos.
+  Verificado: suite 1.637 (1.627 ok, 0 fallos, 10 omitidos), `tsc`, build
+  fresco, `diff --check`; identidad del Home 16/16; 429 parcial RED/GREEN. Rama `feat/etapa3a-clasificacion-tmdb` (worktree
   `wt-etapa3a`), creada desde `main` = `origin/main` = `b7be927`; commits
   `dedee6a` (código + tests), `b7a4a6a` (banco y evidencia), `e930a1d` (docs)
   y los de la corrección (código y docs; ver el informe §23). **Corrección

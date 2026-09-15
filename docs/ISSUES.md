@@ -1265,7 +1265,10 @@ leyendo el código.**
 > `providersOf` en la deduplicación y un 429 persistente la volvía 503; el
 > aviso de TMDB de la búsqueda sobrevivía a fallos de red, cancelaciones y
 > cambios de término — informe §23), más un barrido completo de sitios que
-> atrapan errores; pendiente de NUEVA auditoría; reintentos APAGADOS
+> atrapan errores, y CORREGIDA de nuevo tras la auditoría sobre `09b9dbe`
+> (carrera del debounce de la búsqueda; registrador inerte fuera de contexto;
+> comparador antes/después de la búsqueda sana 15/15 — informe §24);
+> pendiente de NUEVA auditoría; reintentos APAGADOS
 > (`TMDB_REINTENTOS` ausente); limitador, circuito, `waitUntil` y membresía NO
 > implementados. Sin merge, push ni deploy.** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),
