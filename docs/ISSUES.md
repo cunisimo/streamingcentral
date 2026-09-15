@@ -1297,7 +1297,11 @@ leyendo el código.**
 > errores nuevos; identidad del Home preservada según la evidencia existente);
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito,
 > `waitUntil` y membresía NO implementados — **#19 sigue abierto por esas
-> subetapas restantes, no por la 3.a.**** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
+> subetapas restantes, no por la 3.a.** **Subetapa 3.b ("último bueno
+> primero, reconstrucción en fondo"): DISEÑO PENDIENTE DE APROBACIÓN; NO
+> IMPLEMENTADO** (informe §32): el líder compone en línea aunque haya UB
+> (15,1 s observados); `waitUntil` comprobado en Preview (fondo hasta 60 s
+> desde el inicio de la solicitud).** Clasificación por causa, `Retry-After` parseado, H2 corregido (un
 > descarte parcial de causa TMDB marca el Home degradado y no se publica),
 > `titleCard` sin `null` por TMDB, ficha/búsqueda con `503`/`degradacion`.
 > Banco de identidad del Home con cachés aisladas: 16/16 idénticos y válidos;

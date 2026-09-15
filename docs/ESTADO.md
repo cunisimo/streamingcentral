@@ -7,6 +7,25 @@
 
 ## Evidencia y alcance de esta actualización
 
+- **Etapa 3.b de capacidad (#19) — "último bueno primero, reconstrucción en
+  fondo": DISEÑO PENDIENTE DE APROBACIÓN; NO IMPLEMENTADO** (informe §32,
+  rama documental `diseno/etapa3b-ub-primero`). Causa comprobada de los
+  15,1 s observados tras el deploy de la 3.a: la clave fresca lleva la
+  semilla del día, así que cada combinación empieza cada día sin fresca; y en
+  `servirConTurno` **quien adquiere el turno compone en línea aunque exista
+  un último bueno** (el UB sólo va a los que no son líderes); el líder corre
+  bajo 50 s (`PRESUPUESTO_REQUEST_MS`), no bajo los 16 s de
+  `COMPOSICION_MAX_MS`. Ni Redis ni TMDB estaban degradados (250/250 ok). Si
+  existía UB en ese instante no es verificable hoy (la línea `[home]` no lo
+  imprime; no hace falta para la causa). `waitUntil` **comprobado en un
+  Preview aislado** (Fluid, Hobby): tareas de 20 y 50 s completan; a los
+  **60 s desde el inicio de la solicitud** el proceso se mata (`Task timed
+  out`) aunque la respuesta ya salió; sin `waitUntil`, la tarea muere con la
+  respuesta. Recomendación: servir el UB en el acto al líder y componer en
+  fondo; sin UB, igual que hoy; kill switch `HOME_UB_PRIMERO=0`; ningún
+  limitador/reintento/circuito antes (hoy alargarían la espera sin
+  alternativa). Necesita autorización del dueño (§32.12). Sin código, sin
+  variables, sin infraestructura; los dos Previews de la sonda se borraron.
 - **Etapa 3.a de capacidad (#19): MERGEADA, PUSHEADA Y DESPLEGADA
   (2026-09-15).** Merge `--no-ff` `7b2fc8f` en `main` (rama
   `feat/etapa3a-clasificacion-tmdb` en `858f73e`, aprobada técnicamente por la
