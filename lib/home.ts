@@ -39,7 +39,9 @@ import { soloAnimePlatform } from "./audience";
 import { backendCache, dailySeed, leerVarias, opsTurnoHome, pickDaily, TTL, withMetricas } from "./cache";
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
-import { withFallosDisponibilidad } from "./fallos-disponibilidad";
+// Etapa 3.a (#19, H2): el contexto compuesto —disponibilidad + descartes de
+// causa TMDB— y el registro de la causa en `safe()`.
+import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import type { ClaveLocalizada } from "./claves";
 import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
 import { CONSTANTES, servirConTurno } from "./home-servir";
@@ -138,6 +140,9 @@ async function safe<T>(c: Contador, etiqueta: string, vacio: T, fn: () => Promis
     return await fn();
   } catch (e) {
     c.fallos++;
+    // Etapa 3.a (S1): si la causa fue TMDB, queda registrada en el contexto
+    // de descartes además del contador de fuentes caídas de siempre.
+    registrarDescarteTmdb(e, `home:${etiqueta}`);
     // El error COMPLETO (con stack): con solo `.message`, un TypeError propio
     // era indistinguible de un 429 de TMDB.
     console.error(`[home] "${etiqueta}" falló, se degrada a vacío —`, e);
@@ -773,12 +778,18 @@ export async function homePayload(opts: {
     anotar((m) => { m.home.cache = "miss"; m.home.composiciones += 1; });
     // Los fallos de disponibilidad cuentan como degradación del payload: un
     // Home con títulos en gris porque Supabase parpadeó no puede quedar
-    // congelado 6 h para todos.
-    const { res, fallos } = await withFallosDisponibilidad(
+    // congelado 6 h para todos. Y desde la Etapa 3.a (H2), TAMBIÉN los
+    // descartes por título de causa TMDB —un riel corto por un 429 en algunos
+    // `watch/providers`— que hasta acá salían con `degradado: false` y se
+    // publicaban 6 h como fresca y 36 h como último bueno. Un payload
+    // degradado no se publica: ENFRIAR + último bueno (Etapa 2).
+    const { res, fallos, fallosDisponibilidad, fallosTmdb } = await withFallosDeFuentes(
       () => composeHome({ providers, types }),
     );
+    anotar((m) => { m.home.descartesTmdb = fallosTmdb; });
     if (!fallos) return res;
-    console.error(`[home] payload degradado: ${fallos} fallo(s) de disponibilidad`);
+    if (fallosDisponibilidad) console.error(`[home] payload degradado: ${fallosDisponibilidad} fallo(s) de disponibilidad`);
+    if (fallosTmdb) console.error(`[home] payload degradado: ${fallosTmdb} descarte(s) por error de TMDB`);
     return { ...res, fallos: res.fallos + fallos, degradado: true };
   };
   // El deadline de la solicitud (Etapa 2, §3.8): una señal real que corta la

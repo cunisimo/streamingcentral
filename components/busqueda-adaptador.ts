@@ -1,0 +1,78 @@
+// El adaptador entre React y el controlador de la búsqueda (auditoría de Codex
+// sobre 708bce0, hallazgo 1).
+//
+// 🔴 LA REGLA: la invalidación del pedido en vuelo ocurre en el EVENTO que
+// acepta el texto nuevo (`escribir`, llamado desde el `onChange`), no en el
+// efecto que React corre después del render. En 708bce0 el `onChange` sólo
+// hacía `setQ` y el controlador se enteraba recién en el `useEffect`: entre
+// los dos, una respuesta del pedido viejo seguía siendo "vigente" y se
+// pintaba sobre el texto nuevo.
+//
+// React tiene dos fases y este módulo las modela explícitamente:
+//   escribir(texto)   el evento: sincrónico, invalida y programa (si la vista está lista)
+//   efecto(estado)    el useEffect [q, ready, platforms, fase]: diferido; sólo actúa
+//                     sobre lo que el evento NO pudo (plataformas nuevas, la vista
+//                     que recién se puso lista) y nunca repite lo que el evento ya
+//                     aceptó — B se programa una sola vez.
+// La marca "lo que hay en el input vino de un snapshot" también vive acá:
+// `restaurar` la pone, el efecto con ese mismo texto la consume sin pedir, y
+// escribir la borra (el usuario ya siguió).
+import { crearControladorBusqueda, type DepsControlador } from "./busqueda-controlador.ts";
+import type { Resultados } from "./busqueda-estado.ts";
+
+export interface EstadoVista {
+  /** El texto del input tal como está en el estado de React. */
+  q: string;
+  plataformas: string[];
+  /** `ready && fase === "listo"`: hay plataformas y la restauración ya se decidió. */
+  listo: boolean;
+}
+
+export function crearAdaptadorBusqueda(deps: DepsControlador) {
+  const ctl = crearControladorBusqueda(deps);
+  // El último pedido ACEPTADO (texto + plataformas): con la misma clave, el
+  // efecto no vuelve a programar lo que el evento ya programó.
+  let aceptado: string | null = null;
+  let qRestaurado: string | null = null;
+  const clave = (q: string, plataformas: string[]) => `${q.trim()}\u0000${plataformas.join(",")}`;
+  const aceptar = (q: string, plataformas: string[]) => {
+    const k = clave(q, plataformas);
+    if (k === aceptado) return;
+    aceptado = k;
+    ctl.cambiarTermino(q, plataformas);
+  };
+  return {
+    /** El `onChange` del input: en el mismo handler que `setQ`. */
+    escribir(texto: string, vista: { plataformas: string[]; listo: boolean }) {
+      qRestaurado = null;
+      // Sin plataformas o con la restauración sin decidir no se pide todavía:
+      // lo hará el efecto cuando la vista esté lista. Tampoco hay nada en
+      // vuelo que invalidar, porque nada pudo haber salido.
+      if (!vista.listo) return;
+      aceptar(texto, vista.plataformas);
+    },
+    /** El `useEffect([q, ready, platforms, fase])`. */
+    efecto(vista: EstadoVista) {
+      if (!vista.listo) return;
+      if (qRestaurado !== null) {
+        // Corre una vez con el q viejo (React todavía no aplicó el setQ del
+        // snapshot): no toca nada. Con el q restaurado: los resultados vinieron
+        // con él, no hay nada que pedir — y queda como aceptado para que un
+        // render posterior tampoco pida.
+        if (vista.q.trim() !== qRestaurado.trim()) return;
+        qRestaurado = null;
+        aceptado = clave(vista.q, vista.plataformas);
+        return;
+      }
+      aceptar(vista.q, vista.plataformas);
+    },
+    /** Volver de una ficha: los resultados vienen del snapshot; nada pendiente puede pisarlos. */
+    restaurar(q: string, res: Resultados) {
+      qRestaurado = q;
+      aceptado = null;
+      ctl.restaurar(res);
+    },
+    desmontar() { ctl.desmontar(); },
+    estado: ctl.estado,
+  };
+}

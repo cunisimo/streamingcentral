@@ -1,4 +1,5 @@
 "use client";
+import { motivoDeRespuesta, type MotivoApi } from "./api-motivo";
 import { useEffect, useState, useCallback } from "react";
 import { usePlatforms } from "./PlatformsContext";
 import { apiUrl } from "@/lib/api-base";
@@ -18,6 +19,10 @@ interface ApiState<T> {
   // En este caso `data` conserva el último payload bueno (semántica tipo SWR),
   // para que un fallo de refetch no borre lo que ya está en pantalla.
   error: boolean;
+  // Etapa 3.a (#19): el motivo que la ruta declaró en el cuerpo de un error
+  // ("tmdb-no-disponible", "no-encontrado"), o null. Permite que una vista no
+  // diga "Sin conexión" cuando el que no responde es TMDB.
+  motivo: MotivoApi | null;
   retry: () => void;
 }
 
@@ -45,6 +50,7 @@ export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseA
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
+  const [motivo, setMotivo] = useState<MotivoApi | null>(null);
   const [nonce, setNonce] = useState(0);
 
   const retry = useCallback(() => setNonce((n) => n + 1), []);
@@ -59,6 +65,7 @@ export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseA
     setLoading(true);
     setOffline(false);
     setError(false);
+    setMotivo(null);
     // Limpiar ya (no solo en error) para que un consumidor sin keepPrevious no
     // muestre el contenido del recurso anterior mientras llega el nuevo.
     if (!keepPrevious) setData(null);
@@ -74,6 +81,7 @@ export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseA
         // false, un estado imposible que cuelga el skeleton para siempre.
         if (!r.ok || body === PARSE_FAILED) {
           setError(true);
+          setMotivo(motivoDeRespuesta(r.ok, body === PARSE_FAILED ? null : body));
           setLoading(false);
           if (!keepPrevious) setData(null);
           return;
@@ -96,7 +104,7 @@ export function useApi<T>(url: () => string, deps: unknown[] = [], options: UseA
   // Sin esto, un consumidor que pasa URL vacía hasta estar listo (el Home, los
   // rieles controlados) recibía loading=false con data=null y pintaba por un
   // frame su estado de error o de vacío, con la app perfectamente sana.
-  return { data, loading: loading || !ready, offline, error, retry };
+  return { data, loading: loading || !ready, offline, error, motivo, retry };
 }
 
 export const provParam = (platforms: string[]) => platforms.join(",");

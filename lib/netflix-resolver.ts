@@ -10,6 +10,7 @@
 // TMDB: sabe pedir "buscá esto" y "¿está en Netflix AR?".
 
 /** Un resultado de búsqueda, ya aplanado (TMDB usa `title` en cine y `name` en TV). */
+import { registrarDescarteTmdb } from "./fallos-tmdb.ts";
 export interface Candidato { id: number; title: string }
 
 export interface Puertos {
@@ -112,7 +113,10 @@ export async function resolverTitulo(rawTitle: string, p: Puertos): Promise<Reso
   let completos: Candidato[];
   try {
     completos = await p.buscar(rawTitle);
-  } catch {
+  } catch (e) {
+    // "No sé" (no "no encontré"): la fila queda sin resolver. La causa, si es
+    // de TMDB, se registra (Etapa 3.a).
+    registrarDescarteTmdb(e, "netflix-resolver:buscar");
     return sinMatch;
   }
 
@@ -131,7 +135,8 @@ export async function resolverTitulo(rawTitle: string, p: Puertos): Promise<Reso
   let cortos: Candidato[];
   try {
     cortos = await p.buscar(reducida);
-  } catch {
+  } catch (e) {
+    registrarDescarteTmdb(e, "netflix-resolver:buscar-reducida");
     return sinMatch;
   }
   if (cortos.length !== 1) return sinMatch;

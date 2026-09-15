@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { detail } from "@/lib/enrich";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { respuestaDeErrorTmdb } from "@/lib/tmdb-http";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,11 @@ async function manejar(req: NextRequest, { params }: { params: { tipo: string; i
     const d = await detail(params.tipo as MediaType, Number(params.id), providers);
     return NextResponse.json(d);
   } catch (e) {
+    // Etapa 3.a (#19, H8): si el DATO PRINCIPAL falló por TMDB, la respuesta
+    // lo dice —503 con Retry-After, o 404— y el cliente distingue "TMDB no
+    // responde" de "sin conexión". Un error propio sigue siendo 500.
+    const r = respuestaDeErrorTmdb(e);
+    if (r) return NextResponse.json(r.body, { status: r.status, headers: r.headers });
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }

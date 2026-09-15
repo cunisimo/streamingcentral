@@ -1,5 +1,6 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { registrarDescarteTmdb } from "./fallos-tmdb";
 import { discover, type DiscoverOpts, type RawTitle } from "./tmdb";
 import { cached, cachedLoc, cachedLocIf, TTL } from "./cache";
 import { claveCombinadaCache, clavePoolCache } from "./claves";
@@ -286,7 +287,13 @@ export async function candidatosDePools(opts: {
   // Un pool que se cae no tumba al resto: el riel se arma con lo que haya.
   const partes = await Promise.allSettled(tareas);
   const todos: Candidato[] = [];
-  for (const r of partes) if (r.status === "fulfilled") todos.push(...r.value);
+  // Etapa 3.a (S5): un pool caído por TMDB se registra —el riel que lo consume
+  // sale marcado y no se publica— y se sigue armando con lo que haya, igual
+  // que siempre.
+  for (const r of partes) {
+    if (r.status === "fulfilled") todos.push(...r.value);
+    else registrarDescarteTmdb(r.reason, "pool");
+  }
 
   // Dedup: un título en Netflix y en Disney+ viene en los dos pools.
   const vistos = new Set<number>();

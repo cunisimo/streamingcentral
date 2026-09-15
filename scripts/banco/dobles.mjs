@@ -3,6 +3,9 @@
 // habla con nada real: no hay credenciales, no hay red hacia afuera.
 //
 //   node scripts/banco/dobles.mjs            → 4801 TMDB · 4802 Supabase · 4803 Redis
+//   BANCO_PUERTO_BASE=4811 node …            → 4811 · 4812 · 4813 (un SEGUNDO juego de
+//        dobles, para que dos versiones de la app corran cada una contra sus
+//        propias cachés: el comparador de identidad del Home, Etapa 3.a)
 //
 // Cada doble expone, además de lo que imita, un control en `/__banco`:
 //
@@ -10,6 +13,16 @@
 //   POST /__banco/config          { modo, latenciaMs, retryAfter }
 //        modo: "ok" | "429" | "500" | "caido"   ("caido" corta el socket: fallo
 //        de transporte, que es lo único que el SDK de Upstash reintenta)
+//        modo: "429-parcial" + { parcialP: 0.1, familiaParcial: "/watch/providers", parcialPorQuery?: true }
+//        (429 determinístico en una fracción de esa familia: Etapa 3.a, H2; el
+//        hash es del path —un título, una ruta— o, con `parcialPorQuery`, de la
+//        URL entera, para familias como `/discover` donde el path es siempre el
+//        mismo y lo que distingue un pool es la query)
+//        modo: "429-consulta" + { consulta429: { path: "/discover/movie", params: { page: "4", … } } }
+//        (429 sólo en las consultas cuyo path y parámetros coinciden; las URLs
+//        rechazadas quedan en cuenta.consultas429)
+//        discoverPorPagina: 20   (resultados por página de /discover; con menos
+//        un riel no llena su ventana y pide su página extra)
 //   POST /__banco/reset           contadores a cero (y, en Redis, borra la base)
 //
 // El contador de cada doble es el ÁRBITRO: lo que la app dice que hizo (línea
@@ -25,6 +38,8 @@ import { createHash } from "node:crypto";
 import { LUA } from "../../lib/turno-lua.ts";
 
 // ----------------------------------------------------------------- utilidades
+// Puerto base configurable: el comparador del Home levanta dos juegos de dobles.
+const PUERTO_BASE = Number(process.env.BANCO_PUERTO_BASE) || 4801;
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 function leerCuerpo(req) {
@@ -51,7 +66,7 @@ function doble(nombre, puerto, atender, extra = {}) {
     if (url.startsWith("/__banco/")) {
       if (url === "/__banco/estado") return json(res, 200, { nombre, estado, cuenta, ...(extra.estado?.() ?? {}) });
       if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); return json(res, 200, estado); }
-      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; extra.reset?.(); return json(res, 200, { ok: true }); }
+      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; cuenta.consultas429 = []; cuenta.discovers = []; extra.reset?.(); return json(res, 200, { ok: true }); }
       // Controles propios del doble (Etapa 2: expirar, borrar, perder la
       // respuesta, fallar EVAL, listar claves).
       if (extra.control) { const r = await extra.control(url, await leerCuerpo(req)); if (r !== undefined) return json(res, 200, r); }
@@ -70,8 +85,30 @@ function doble(nombre, puerto, atender, extra = {}) {
     if (estado.modo === "caido") { req.socket.destroy(); return; }
     if (estado.modo === "500") return json(res, 500, { error: "doble en modo 500" });
     if (estado.modo === "429") return json(res, 429, { error: "doble en modo 429" }, { "Retry-After": String(estado.retryAfter) });
+    // Etapa 3.a (H2): 429 PARCIAL y determinístico —sólo en la familia
+    // `familiaParcial` (por defecto `watch/providers`) y sólo para la fracción
+    // `parcialP` de las rutas, elegida por hash de la URL— para reproducir el
+    // límite de tasa real: no rechaza todo, rechaza lo que pasa del cupo.
+    if (estado.modo === "429-parcial" && url.includes(estado.familiaParcial ?? "/watch/providers")
+      && (hash(estado.parcialPorQuery ? url : url.split("?")[0]) % 1000) < Math.round((estado.parcialP ?? 0.1) * 1000)) {
+      cuenta.parciales429 = (cuenta.parciales429 ?? 0) + 1;
+      return json(res, 429, { error: "doble en modo 429-parcial" }, { "Retry-After": String(estado.retryAfter) });
+    }
+    // Etapa 3.a (auditoría sobre c6b299e): 429 sobre UNA consulta identificada
+    // por sus parámetros (`consulta429: { path, params }`; todos los `params`
+    // tienen que coincidir). Es lo que distingue la página extra de un riel de
+    // las páginas de su ventana: mismo path y misma receta, otro `page`. Las
+    // URLs rechazadas quedan en `cuenta.consultas429`.
+    if (estado.modo === "429-consulta" && estado.consulta429) {
+      const u = new URL(url, "http://x");
+      const c = estado.consulta429;
+      if (u.pathname === c.path && Object.entries(c.params ?? {}).every(([k, v]) => u.searchParams.get(k) === String(v))) {
+        (cuenta.consultas429 ??= []).push(url);
+        return json(res, 429, { error: "doble en modo 429-consulta" }, { "Retry-After": String(estado.retryAfter) });
+      }
+    }
     try {
-      await atender(req, res, url, cuerpo, cuenta);
+      await atender(req, res, url, cuerpo, cuenta, estado);
     } catch (e) {
       json(res, 500, { error: String(e) });
     }
@@ -96,20 +133,28 @@ function titulo(tipo, id, generos) {
     genre_ids: generos.length ? generos : [18], original_language: "en", origin_country: ["US"], adult: false,
   };
 }
-function pagina(tipo, q) {
+// `porPagina`: cuántos resultados trae cada página (20, como TMDB). Con menos,
+// un riel no llena su ventana y pide la página extra — es cómo el banco fuerza
+// ese recorrido.
+function pagina(tipo, q, porPagina = 20) {
   const generos = (q.get("with_genres") ?? "").split(/[,|]/).filter(Boolean).map(Number);
   const page = Number(q.get("page") ?? "1");
   // La semilla depende de TODO lo que distingue una consulta: así dos rieles
   // distintos traen títulos distintos y dos plataformas también.
   const semilla = hash(`${tipo}|${q.get("with_genres")}|${q.get("with_keywords")}|${q.get("with_watch_providers")}|${q.get("sort_by")}|${q.get("with_type")}|${q.get("without_genres")}|${q.get("primary_release_date.gte") ?? q.get("first_air_date.gte") ?? ""}`) % 100000;
   const base = 1000 + semilla * 100 + (page - 1) * 20;
-  return { page, results: Array.from({ length: 20 }, (_, i) => titulo(tipo, base + i, generos)), total_pages: 10, total_results: 200 };
+  return { page, results: Array.from({ length: porPagina }, (_, i) => titulo(tipo, base + i, generos)), total_pages: 10, total_results: 200 };
 }
-doble("tmdb", 4801, async (req, res, url, _cuerpo, cuenta) => {
+doble("tmdb", PUERTO_BASE + 0, async (req, res, url, _cuerpo, cuenta, estado) => {
   const u = new URL(url, "http://x");
   const p = u.pathname;
   let m;
-  if ((m = p.match(/^\/discover\/(movie|tv)$/))) return json(res, 200, pagina(m[1], u.searchParams));
+  if ((m = p.match(/^\/discover\/(movie|tv)$/))) {
+    // Registro de cada `discover` atendido (path + query), para que el banco
+    // pueda elegir una consulta concreta (p. ej. la página extra de un riel).
+    if ((cuenta.discovers ??= []).length < 5000) cuenta.discovers.push(url);
+    return json(res, 200, pagina(m[1], u.searchParams, estado.discoverPorPagina ?? 20));
+  }
   if ((m = p.match(/^\/trending\/(movie|tv|all)\/(day|week)$/))) return json(res, 200, pagina(m[1] === "all" ? "movie" : m[1], u.searchParams));
   if ((m = p.match(/^\/(movie|tv)\/(\d+)\/watch\/providers$/))) {
     const id = Number(m[2]);
@@ -122,6 +167,18 @@ doble("tmdb", 4801, async (req, res, url, _cuerpo, cuenta) => {
     const t = titulo(m[1], Number(m[2]), [18]);
     return json(res, 200, { ...t, genres: [{ id: 18, name: "Drama" }], runtime: 100, episode_run_time: [45], number_of_seasons: 1, status: "Released", homepage: "", networks: [], credits: { cast: [], crew: [] }, external_ids: {}, release_dates: { results: [] }, content_ratings: { results: [] }, recommendations: { results: [] }, seasons: [] });
   }
+  // Búsqueda de títulos: 20 resultados cuyo nombre CONTIENE la consulta, para
+  // que la relevancia de la app los acepte (Etapa 3.a: el banco de búsqueda
+  // con providersOf en 429 parcial necesita elegidos). Personas: ninguna.
+  if ((m = p.match(/^\/search\/(movie|tv)$/))) {
+    const consulta = u.searchParams.get("query") ?? "";
+    const base = 5000 + (hash(`${m[1]}|${consulta}`) % 1000) * 20;
+    const results = Array.from({ length: 20 }, (_, i) => {
+      const t = titulo(m[1], base + i, [18]);
+      return m[1] === "movie" ? { ...t, title: `${consulta} ${i + 1}` } : { ...t, name: `${consulta} ${i + 1}` };
+    });
+    return json(res, 200, { page: 1, results, total_pages: 1, total_results: 20 });
+  }
   if (p.startsWith("/search/")) return json(res, 200, { page: 1, results: [], total_pages: 0, total_results: 0 });
   if (p.startsWith("/person/")) return json(res, 200, { id: 1, name: "Persona", profile_path: null, cast: [], crew: [], results: [] });
   if (p.startsWith("/watch/providers/")) return json(res, 200, { results: PROVEEDORES.map((id) => ({ provider_id: id, provider_name: `Prov ${id}`, logo_path: "/l.png" })) });
@@ -132,7 +189,7 @@ doble("tmdb", 4801, async (req, res, url, _cuerpo, cuenta) => {
 // ----------------------------------------------------------------- Supabase
 // PostgREST: toda lectura devuelve una lista vacía con la forma correcta;
 // todo RPC devuelve una lista vacía. Datos fijos, nunca Producción.
-doble("supabase", 4802, async (req, res, url) => {
+doble("supabase", PUERTO_BASE + 1, async (req, res, url) => {
   const p = url.split("?")[0];
   if (p.startsWith("/rest/v1/rpc/")) return json(res, 200, []);
   if (p.startsWith("/rest/v1/")) return json(res, 200, [], { "Content-Range": "*/0" });
@@ -252,7 +309,7 @@ const b64 = (v) => typeof v === "string" ? Buffer.from(v).toString("base64") : A
 // CONFIRMAR —la misma unidad que cuenta la app—; se informan aparte porque
 // Upstash sí los ejecutó (y presumiblemente los factura).
 const comandosRedis = { total: 0, errores: 0, perdidos: 0, porComando: {} };
-doble("redis", 4803, async (req, res, url, cuerpo) => {
+doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
   const codificar = (req.headers["upstash-encoding"] === "base64") ? b64 : (v) => v;
   const uno = (cmd) => {
     const op = String(cmd[0]).toUpperCase();

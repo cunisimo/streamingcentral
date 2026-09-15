@@ -84,14 +84,39 @@ export interface MetricasRequest {
     /** El productor RECHAZÓ (no degradó): se liberó el turno y se sirvió UB si había. */
     errorProductor: boolean;
     propietario: string | null;
+    // --- Etapa 3.a (#19, H2) ---
+    /** Títulos, pools, bloques o cards descartados por un error de TMDB (lib/fallos-tmdb.ts). Marcan el payload como degradado. */
+    descartesTmdb: number;
   };
   tmdb: {
-    /** Llamadas a TMDB pedidas por el código. El cliente no reintenta, así que también son los intentos HTTP. */
+    /** Llamadas LÓGICAS a TMDB pedidas por el código. */
     llamadas: number;
+    /**
+     * Intentos HTTP: cada `fetch` que salió al cable. Con los reintentos
+     * apagados (`TMDB_REINTENTOS` ausente, Etapa 3.a) vale lo mismo que
+     * `llamadas` menos las que no salieron (canceladas en cola, rechazadas);
+     * la igualdad se verifica, no se supone.
+     */
+    intentos: number;
+    /** Intentos posteriores al primero de una llamada. Se anota explícitamente; no se deduce. */
+    reintentos: number;
+    /** Reintentos que la política habría hecho pero no cabían en el presupuesto. */
+    reintentoNoCupo: number;
+    /** Llamadas que no salieron por circuito abierto o pausa (Etapa 3.b; en 3.a siempre 0). */
+    rechazadas: number;
+    /** Llamadas que la señal de la solicitud abortó: esperando el semáforo, durmiendo un reintento, o con el `fetch` en vuelo. */
+    canceladas: { enCola: number; enEspera: number; enVuelo: number };
     ok: number;
-    errores: { http429: number; http5xx: number; http4xx: number; /** fallo de red, DNS o timeout: no hubo respuesta */ red: number };
-    /** Tiempo acumulado dentro de las llamadas (suma, no pared: las llamadas van en paralelo). */
+    errores: {
+      http429: number; http5xx: number; http4xx: number;
+      /** fallo de red o DNS: el `fetch` rechazó sin respuesta */ red: number;
+      /** el timeout propio de 8 s abortó el `fetch` (antes contaba como `red`) */ timeout: number;
+      /** 200 con un cuerpo que no parsea (antes contaba como `ok`) */ cuerpo: number;
+    };
+    /** Tiempo acumulado dentro de los intentos (suma, no pared: van en paralelo). */
     ms: number;
+    /** Acumulado dormido entre intentos (0 con los reintentos apagados). */
+    esperaReintentosMs: number;
   };
   supabase: {
     /** Consultas del cliente de servidor (cada `fetch` de supabase-js). Sin reintentos propios: también son intentos HTTP. */
@@ -125,8 +150,13 @@ export const nuevasMetricas = (): MetricasRequest => ({
     cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0,
     turno: null, origen: null, publicacion: null, renovaciones: 0, turnoPerdido: false, esperaMs: 0,
     degradadoDescartado: false, enfriado: false, cancelada: false, errorProductor: false, propietario: null,
+    descartesTmdb: 0,
   },
-  tmdb: { llamadas: 0, ok: 0, errores: { http429: 0, http5xx: 0, http4xx: 0, red: 0 }, ms: 0 },
+  tmdb: {
+    llamadas: 0, intentos: 0, reintentos: 0, reintentoNoCupo: 0, rechazadas: 0,
+    canceladas: { enCola: 0, enEspera: 0, enVuelo: 0 },
+    ok: 0, errores: { http429: 0, http5xx: 0, http4xx: 0, red: 0, timeout: 0, cuerpo: 0 }, ms: 0, esperaReintentosMs: 0,
+  },
   supabase: { consultas: 0, ok: 0, errores: { http: 0, red: 0 }, ms: 0 },
   redis: {
     modo: null, llamadasLogicas: 0, intentosHttp: 0, comandos: 0,
@@ -210,7 +240,24 @@ export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): 
     t.errores.http5xx ? `${t.errores.http5xx} x5xx` : "",
     t.errores.http4xx ? `${t.errores.http4xx} x4xx` : "",
     t.errores.red ? `${t.errores.red} red` : "",
+    t.errores.timeout ? `${t.errores.timeout} timeout` : "",
+    t.errores.cuerpo ? `${t.errores.cuerpo} cuerpo` : "",
   ].filter(Boolean);
+  // Etapa 3.a: intentos y reintentos sólo se muestran cuando difieren de las
+  // llamadas (o sea, cuando hubo reintentos, canceladas o rechazadas); si no,
+  // la línea es la de siempre y lo que ya se lee no cambia.
+  const c = t.canceladas;
+  const totalCanceladas = c.enCola + c.enEspera + c.enVuelo;
+  const detalleCanceladas = [
+    c.enCola ? `${c.enCola} en cola` : "", c.enEspera ? `${c.enEspera} en espera` : "", c.enVuelo ? `${c.enVuelo} en vuelo` : "",
+  ].filter(Boolean).join(", ");
+  const intentos = t.reintentos || t.reintentoNoCupo
+    ? ` / ${t.intentos} intentos (${t.reintentos} reintentos${t.reintentoNoCupo ? `, ${t.reintentoNoCupo} no cupieron` : ""})`
+    : "";
+  const canceladas = totalCanceladas ? ` | ${totalCanceladas} canceladas (${detalleCanceladas})` : "";
+  const rechazadas = t.rechazadas ? ` | ${t.rechazadas} rechazadas` : "";
+  const esperaReintentos = t.esperaReintentosMs ? ` | espera reintentos ${t.esperaReintentosMs}ms` : "";
+  const descartes = m.home.descartesTmdb ? `, ${m.home.descartesTmdb} descarte(s) tmdb` : "";
   const s = m.supabase;
   const errSb = [
     s.errores.http ? `${s.errores.http} http` : "",
@@ -234,8 +281,8 @@ export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): 
     `[home] ${msTotal}ms total | cache ${cache} | ` +
     `${plural(m.home.composiciones, "composición", "composiciones")} | ` +
     `${plural(m.home.esperasCompartidas, "espera compartida", "esperas compartidas")}` +
-    `${m.home.degradado ? ` | DEGRADADO (${m.home.fuentesCaidas} fuente(s))` : ""}${turno.replace(/ \|$/, "")} | ` +
-    `tmdb ${t.llamadas} llamadas (${[`${t.ok} ok`, ...errTmdb].join(", ")}) ${t.ms}ms | ` +
+    `${m.home.degradado ? ` | DEGRADADO (${m.home.fuentesCaidas} fuente(s)${descartes})` : ""}${turno.replace(/ \|$/, "")} | ` +
+    `tmdb ${t.llamadas} llamadas${intentos} (${[`${t.ok} ok`, ...errTmdb].join(", ")}) ${t.ms}ms${canceladas}${rechazadas}${esperaReintentos} | ` +
     `supabase ${s.consultas} consultas (${[`${s.ok} ok`, ...errSb].join(", ")}) ${s.ms}ms | ` +
     `redis${r.modo === "memoria" ? "(memoria)" : ""} ${r.llamadasLogicas} llamadas / ${r.intentosHttp} intentos http / ${r.comandos} comandos` +
     ` | ${r.claves} claves (${r.hits} hit / ${r.misses} miss)` +

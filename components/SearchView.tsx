@@ -10,6 +10,8 @@ import { crearTicket, esParaMi, invalidar, type Ticket } from "@/hooks/ticket-vu
 import { GENRES, GENRE_COLOR, COUNTRIES, genreLabel } from "./data";
 import type { UITitle, UIPerson, MediaType } from "@/lib/types";
 import { apiUrl } from "@/lib/api-base";
+import { ESTADO_INICIAL, type EstadoBusqueda, type Resultados } from "./busqueda-estado";
+import { crearAdaptadorBusqueda } from "./busqueda-adaptador";
 
 type Filter = "todo" | "movie" | "tv" | "actores" | "directores";
 
@@ -17,11 +19,35 @@ export default function SearchView() {
   const { platforms, ready } = usePlatforms();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("todo");
-  const [res, setRes] = useState<{ titles: UITitle[]; people: UIPerson[] }>({ titles: [], people: [] });
-  const [loading, setLoading] = useState(false);
+  // Resultados + carga + aviso "la fuente no responde", con el adaptador puro
+  // de components/busqueda-adaptador.ts sobre el controlador de
+  // busqueda-controlador.ts. 🔴 La invalidación del pedido en vuelo ocurre en
+  // el `onChange` (`escribir`), en el MISMO handler que `setQ`: si quedara para
+  // el efecto, entre el texto nuevo y el efecto hay un render de React, y una
+  // respuesta vieja que llegue ahí se pintaría sobre el texto nuevo. El efecto
+  // sólo cubre lo que el evento no puede (plataformas nuevas, la vista recién
+  // lista) y nunca repite un pedido ya aceptado. El estado lo lleva el
+  // reductor de busqueda-estado.ts.
+  const [busqueda, setBusqueda] = useState<EstadoBusqueda>(ESTADO_INICIAL);
+  const res = busqueda.res;
+  const fuenteCaida = busqueda.fuenteCaida;
+  const loading = busqueda.cargando;
+  const adaptador = useRef<ReturnType<typeof crearAdaptadorBusqueda> | null>(null);
+  if (!adaptador.current) {
+    adaptador.current = crearAdaptadorBusqueda({
+      // Las plataformas van para ORDENAR, no para filtrar: los resultados que
+      // sí podés ver van arriba y el resto sigue apareciendo abajo.
+      pedir: async (term, plataformas, senal) => {
+        const r = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(term)}&providers=${plataformas.join(",")}`), { signal: senal });
+        return { ok: r.ok, body: await r.json() };
+      },
+      programar: (fn, ms) => { const t = setTimeout(fn, ms); return () => clearTimeout(t); },
+      emitir: setBusqueda,
+    });
+  }
+  const restaurarBusqueda = (q: string, r: Resultados) => adaptador.current!.restaurar(q, r);
   const [explore, setExplore] = useState<{ country: string } | null>(null);
   const [covers, setCovers] = useState<Record<string, string | null>>({});
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // --- Volver de una ficha --------------------------------------------------
@@ -53,20 +79,19 @@ export default function SearchView() {
   // Lo restaurado se aplica una sola vez, y el ticket se emite recién después de
   // haber puesto el modo: el hijo que monte es el que estaba abierto.
   const aplicado = useRef(false);
-  const qRestaurado = useRef<string | null>(null);
   useEffect(() => {
     if (fase !== "listo" || aplicado.current) return;
     aplicado.current = true;
     if (!inicial?.extra) return;
     const e = inicial.extra;
-    // `qRestaurado` evita que el debounce vuelva a buscar lo mismo que acaba de
-    // volver del snapshot: sin esto, restaurar el texto dispara la llamada a
-    // /api/search que el snapshot justamente hacía innecesaria.
-    qRestaurado.current = e.q;
+    // `restaurar` deja marcado el texto que vino del snapshot: así el efecto de
+    // búsqueda no vuelve a pedir lo mismo que acaba de volver — sin esto,
+    // restaurar el texto dispara la llamada a /api/search que el snapshot
+    // justamente hacía innecesaria.
+    restaurarBusqueda(e.q, inicial.datos);
     setQ(e.q);
     setFilter(e.filter);
     setExplore(e.explore);
-    setRes(inicial.datos);
     // EL TICKET SOLO SE EMITE SI VA A MONTAR UN HIJO QUE PUEDA CONSUMIRLO.
     // Con texto de búsqueda los resultados los pinta el padre y no monta
     // ninguno, así que el ticket quedaba abierto para siempre: bastaba con
@@ -88,37 +113,20 @@ export default function SearchView() {
     fetch(apiUrl("/api/genre-covers")).then((r) => r.json()).then((j) => setCovers(j.covers ?? {})).catch(() => {});
   }, []);
 
-  // búsqueda con debounce (desde 2 caracteres)
+  // La vista está lista para pedir cuando hay plataformas y la restauración ya
+  // se decidió: si no, se dispararía la búsqueda del estado inicial y después
+  // la pisaría lo restaurado — dos cargas y un parpadeo.
+  const listaParaBuscar = ready && fase === "listo";
+
+  // El efecto de búsqueda: plataformas nuevas, la vista recién lista, o el q
+  // que llega de un snapshot (ahí no pide). Lo que el usuario escribe ya lo
+  // aceptó el `onChange`; el adaptador no lo programa dos veces.
   useEffect(() => {
-    if (!ready) return;
-    // Esperar a que se decida la restauración: si no, se dispara la búsqueda del
-    // estado inicial y después la pisa lo restaurado — dos cargas y un parpadeo.
-    if (fase !== "listo") return;
-    const term = q.trim();
-    // Mientras se está restaurando, este efecto NO puede tocar nada. Corre una
-    // vez con el `q` viejo —React todavía no aplicó el `setQ` del snapshot— y
-    // ahí el `term.length < 2` de abajo limpiaba `res`, borrando los resultados
-    // restaurados justo antes de pintarlos: volvía el texto y la pestaña, con
-    // la grilla vacía.
-    if (qRestaurado.current !== null) {
-      if (term !== qRestaurado.current.trim()) return;   // todavía no llegó el texto
-      // Ya llegó: los resultados vinieron con él, así que no hay nada que pedir.
-      qRestaurado.current = null;
-      setLoading(false);
-      return;
-    }
-    if (term.length < 2) { setRes({ titles: [], people: [] }); setLoading(false); return; }
-    if (timer.current) clearTimeout(timer.current);
-    setLoading(true);
-    timer.current = setTimeout(() => {
-      // Las plataformas van para ORDENAR, no para filtrar: los resultados que
-      // sí podés ver van arriba y el resto sigue apareciendo abajo.
-      fetch(apiUrl(`/api/search?q=${encodeURIComponent(term)}&providers=${platforms.join(",")}`))
-        .then((r) => r.json())
-        .then((j) => { setRes({ titles: j.titles ?? [], people: j.people ?? [] }); setLoading(false); })
-        .catch(() => setLoading(false));
-    }, 250);
-  }, [q, ready, platforms, fase]);
+    adaptador.current!.efecto({ q, plataformas: platforms, listo: listaParaBuscar });
+  }, [q, platforms, listaParaBuscar]);
+
+  // Al desmontar: nada pendiente puede emitir sobre una vista que ya no está.
+  useEffect(() => () => { adaptador.current?.desmontar(); }, []);
 
   const hasQuery = q.trim().length >= 2;
   const showTitles = filter === "actores" || filter === "directores" ? [] : filter === "todo" ? res.titles : res.titles.filter((t) => t.type === filter);
@@ -132,7 +140,19 @@ export default function SearchView() {
       <h1 className="buscar-title">¿Qué vemos hoy?</h1>
       <div className="bsearch">
         <svg className="ico" viewBox="0 0 24 24" fill="none" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-        <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setExplore(null); }} placeholder="¿Qué querés ver?" />
+        <input
+          ref={inputRef}
+          value={q}
+          // 🔴 Invalida el pedido en vuelo ACÁ, en el mismo evento que acepta el
+          // texto, no en el efecto que corre después del render.
+          onChange={(e) => {
+            const texto = e.target.value;
+            setQ(texto);
+            setExplore(null);
+            adaptador.current!.escribir(texto, { plataformas: platforms, listo: listaParaBuscar });
+          }}
+          placeholder="¿Qué querés ver?"
+        />
       </div>
       <div className="bchips">
         {((filter === "movie" || filter === "tv" ? ["todo", "movie", "tv"] : ["todo", "movie", "tv", "actores", "directores"]) as Filter[]).map((f) => (
@@ -193,7 +213,10 @@ export default function SearchView() {
               <div className="grid">{showTitles.map((t) => <TitleCard key={`${t.type}-${t.id}`} t={t} />)}</div>
             </>
           )}
-          {!loading && showTitles.length === 0 && showPeople.length === 0 && (
+          {!loading && fuenteCaida && (
+            <p className="empty-note">La fuente de datos (TMDB) no responde. Reintentá en unos segundos.</p>
+          )}
+          {!loading && !fuenteCaida && showTitles.length === 0 && showPeople.length === 0 && (
             <p className="empty-note">Sin resultados para “{q}”.</p>
           )}
         </>

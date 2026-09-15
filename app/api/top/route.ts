@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildTop } from "@/lib/top";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { conDescartesRegistrados } from "@/lib/fallos-tmdb";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -12,7 +13,9 @@ async function manejar(req: NextRequest) {
   const providers = (q.get("providers") || "")
     .split(",").map((s) => s.trim()).filter(Boolean) as PlatformCode[];
   try {
-    return NextResponse.json(await buildTop(tipo, providers));
+    // Etapa 3.a: el `safe()` de cada bloque registra la causa; el resumen
+    // sale en UNA línea por solicitud.
+    return NextResponse.json(await conDescartesRegistrados("api/top", () => buildTop(tipo, providers)));
   } catch (e) {
     // buildTop envuelve cada bloque en `safe`, así que en producción no
     // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con

@@ -13,6 +13,7 @@ import { platformByCode } from "@/lib/providers-ar";
 import { SITIO_PUBLICO } from "@/lib/compartir";
 import type { MediaType, PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { conDescartesRegistrados, registrarDescarteTmdb } from "@/lib/fallos-tmdb";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,10 @@ async function digitalAR(id: number): Promise<string | null> {
     const { detalle: d } = await detalleReparado("movie", id);
     const ar = d.release_dates?.results.find((r) => r.iso_3166_1 === "AR");
     return ar?.release_dates?.find((x) => x.type === 4)?.release_date?.slice(0, 10) || null;
-  } catch {
+  } catch (e) {
+    // Fecha digital opcional: sin ella no se agenda (404), como siempre. La
+    // causa, si es de TMDB, se registra (Etapa 3.a).
+    registrarDescarteTmdb(e, "recordatorio:digitalAR");
     return null;
   }
 }
@@ -101,7 +105,8 @@ async function datosDe(tipo: MediaType, id: number): Promise<Datos | null> {
       episode: tipo === "tv" ? (d.next_episode_to_air?.episode_number ?? null) : null,
       premiere: false,
     };
-  } catch {
+  } catch (e) {
+    registrarDescarteTmdb(e, "recordatorio:datosDe");
     return null;
   }
 }
@@ -124,7 +129,9 @@ async function manejar(req: NextRequest) {
     return NextResponse.json({ error: "id inválido" }, { status: 400 });
   }
 
-  const d = await datosDe(tipo, id);
+  // Etapa 3.a: ruta independiente; un detalle de TMDB caído (digitalAR o
+  // datosDe) queda resumido en UNA línea; la respuesta (404) no cambia.
+  const d = await conDescartesRegistrados("api/recordatorio", () => datosDe(tipo, id));
   if (!d) return NextResponse.json({ error: "sin fecha de estreno" }, { status: 404 });
   // Red de seguridad para cualquier fecha vencida que se cuele por otro lado:
   // `upcoming_content` puede quedar desactualizada entre corridas del sync y

@@ -1,0 +1,384 @@
+{
+  "fecha": "2026-09-14",
+  "combo": "n,d,m",
+  "parcialP": 0.1,
+  "antes": {
+    "version": "antes (b7be927)",
+    "sinUB": {
+      "http": 200,
+      "degradado": false,
+      "fallos": 0,
+      "titulos": 130,
+      "parciales429": 93,
+      "linea": {
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "degradadoEnLinea": false,
+        "descartes": 0,
+        "tmdb": 947
+      },
+      "escrito": {
+        "fresca": 1,
+        "ub": 1,
+        "degradadoCompartido": 0
+      }
+    },
+    "conUB": {
+      "sano": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "publicacion": "publicado",
+        "ubEscrito": 1
+      },
+      "parcial": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "parciales429": 93,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0
+        },
+        "sirvioElUBCorrecto": false,
+        "frescaReescrita": 1,
+        "ubIntacto": true
+      }
+    },
+    "busqueda": {
+      "parcial": {
+        "http": 500,
+        "titulos": 0,
+        "degradacion": null,
+        "sinPlataformas": 0,
+        "parciales429": 1,
+        "providersPedidos": 24,
+        "segundaVolvioAPedir": true,
+        "guardado": 0
+      },
+      "total429": {
+        "http": 500,
+        "retryAfter": null,
+        "error": "Error: TMDB 429 en /search/person"
+      }
+    },
+    "pools": {
+      "conEjes": {
+        "familia": "/discover",
+        "ejesRieles": "1",
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 130,
+        "parciales429": 8,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
+      },
+      "sinEjes": {
+        "familia": "/discover",
+        "ejesRieles": "0",
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 130,
+        "parciales429": 7,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
+      }
+    },
+    "paginaExtra": {
+      "conEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "1",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 13
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "primary_release_date.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 504
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
+      },
+      "sinEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "0",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 10
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "popularity.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": false,
+        "fallos": 0,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "degradadoEnLinea": false,
+          "descartes": 0,
+          "tmdb": 441
+        },
+        "escrito": {
+          "fresca": 1,
+          "ub": 1
+        },
+        "verde": false
+      }
+    },
+    "verde": false
+  },
+  "despues": {
+    "version": "despues (3.a)",
+    "sinUB": {
+      "http": 200,
+      "degradado": true,
+      "fallos": 93,
+      "titulos": 130,
+      "parciales429": 93,
+      "linea": {
+        "cache": "MISS",
+        "origen": "degradado-propio",
+        "publicacion": "no",
+        "degradadoEnLinea": true,
+        "descartes": 93,
+        "tmdb": 947
+      },
+      "escrito": {
+        "fresca": 0,
+        "ub": 0,
+        "degradadoCompartido": 1
+      }
+    },
+    "conUB": {
+      "sano": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "publicacion": "publicado",
+        "ubEscrito": 1
+      },
+      "parcial": {
+        "http": 200,
+        "degradado": false,
+        "titulos": 130,
+        "parciales429": 93,
+        "linea": {
+          "cache": "ULTIMO-BUENO",
+          "origen": "ultimo-bueno",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 0
+        },
+        "sirvioElUBCorrecto": true,
+        "frescaReescrita": 0,
+        "ubIntacto": true
+      }
+    },
+    "busqueda": {
+      "parcial": {
+        "http": 200,
+        "titulos": 24,
+        "degradacion": {
+          "proveedores": 1
+        },
+        "sinPlataformas": 1,
+        "parciales429": 1,
+        "providersPedidos": 24,
+        "segundaVolvioAPedir": true,
+        "guardado": 0
+      },
+      "total429": {
+        "http": 503,
+        "retryAfter": "3",
+        "error": "tmdb-no-disponible"
+      }
+    },
+    "pools": {
+      "conEjes": {
+        "familia": "/discover",
+        "ejesRieles": "1",
+        "http": 200,
+        "degradado": true,
+        "fallos": 8,
+        "titulos": 130,
+        "parciales429": 8,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 8,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
+      },
+      "sinEjes": {
+        "familia": "/discover",
+        "ejesRieles": "0",
+        "http": 200,
+        "degradado": true,
+        "fallos": 7,
+        "titulos": 130,
+        "parciales429": 7,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 7,
+          "tmdb": 926
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
+      }
+    },
+    "paginaExtra": {
+      "conEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "1",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 13
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "primary_release_date.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": true,
+        "fallos": 3,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 3,
+          "tmdb": 504
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
+      },
+      "sinEjes": {
+        "discoverPorPagina": 2,
+        "ejesRieles": "0",
+        "sanoCorto": {
+          "http": 200,
+          "titulos": 114,
+          "recetas": 10
+        },
+        "consulta": {
+          "path": "/discover/movie",
+          "params": {
+            "page": "4",
+            "with_genres": "28",
+            "sort_by": "popularity.desc"
+          }
+        },
+        "valido": true,
+        "http": 200,
+        "degradado": true,
+        "fallos": 3,
+        "titulos": 114,
+        "consultas429": 3,
+        "linea": {
+          "cache": "MISS",
+          "origen": "degradado-propio",
+          "publicacion": "no",
+          "degradadoEnLinea": true,
+          "descartes": 3,
+          "tmdb": 441
+        },
+        "escrito": {
+          "fresca": 0,
+          "ub": 0
+        },
+        "verde": true
+      }
+    },
+    "verde": true
+  },
+  "resumen": {
+    "antesRojo": true,
+    "despuesVerde": true,
+    "ok": true
+  }
+}

@@ -1,11 +1,216 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 13 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 14 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
+
+- **Etapa 3.a de capacidad (#19): IMPLEMENTADA EN RAMA y CORREGIDA OCHO
+  VECES (auditorías de Codex sobre `e930a1d`, `09b9dbe`, `708bce0`,
+  `03ad4b9`, `6ef35c5`, `c6b299e`, `37f1ca1` y `2886212`); corregida en rama,
+  pendiente de auditoría FINAL — NO está terminada; reintentos APAGADOS;
+  limitador, circuito, `waitUntil` y membresía NO implementados.**
+  **Octava corrección (informe §30, sólo el test):** el detector de acceso
+  por miembro exigía la llamada inmediata, así que `const traer =
+  api.candidatosDePools; traer(…)` (barrel + namespace) escapaba (RED: siete
+  fuentes inyectadas —una es el `barrel.ts` que prepara el escenario— que
+  contienen seis casos de acceso por miembro, variable y valor para las tres
+  funciones; los seis escapaban con el detector anterior y ahora son
+  rechazados). Ahora un `.`
+  seguido del nombre exacto se rechaza con o sin `(`; el acceso computado y
+  `require()` siguen como limitaciones documentadas; el repo real conserva
+  nueve llamadas canónicas y cero alternativas. Verificado: suite 1.666
+  (1.656 ok, 0 fallos, 10 omitidos), `tsc`, build fresco, `diff --check`;
+  evidencias intactas byte a byte.
+  **Séptima corrección (informe §29, sólo el test):** el barrido de call sites
+  sólo miraba `lib/*.ts` y `app/api/**/route.ts` con el nombre canónico (una
+  llamada en `lib/sub/`, en un archivo servidor de `app/`, o por alias/namespace
+  escapaba: demostrado contra `37f1ca1`). Ahora el descubrimiento es una
+  función pura probable con fuentes inyectados, recorre recursivamente `lib/`,
+  `app/`, `components/`, `hooks/` y `supabase/` (sin tests, `.d.ts`,
+  `node_modules`, `.next`, `scripts/`), detecta toda llamada directa canónica y
+  RECHAZA alias, namespace, import dinámico, acceso por miembro, renombre y
+  referencia sin llamar; no es un parser (un string con el nombre cuenta;
+  acceso computado y `require` no se reconocen). Cobertura de los nueve
+  recorridos en una sola categoría cada uno, verificada en el test: 2
+  identificadas, 4 agregadas, 3 estructurales, 0 inferidas (las rutas
+  `/api/recomendaciones` y `/api/audience` quedan inferidas aparte).
+  Verificado: suite 1.665 (1.655 ok, 0 fallos, 10 omitidos), `tsc`, build
+  fresco, `diff --check`; evidencias del Home y del banco intactas byte a
+  byte.
+  **Sexta corrección (informe §28, sin código productivo):** los "dos
+  recorridos" de la quinta no eran todos: faltaban, al menos, la página extra
+  de un riel (rama `opts.ejeFijo`, directa dentro del bloque de ejes), las
+  páginas de audiencia y el hero (con esas llamadas cortadas, el inventario de
+  `c6b299e` seguía 14/14 verde). Ahora hay un inventario verificable de los
+  nueve call sites productivos de `candidatosDePools` / `candidatosConEje` /
+  `categoryCandidates` (consumidor, condición, contexto, llegada del
+  descarte, cobertura; un call site nuevo sin clasificar hace fallar el
+  test), la fila de pools declara nueve recorridos desde `composeHome` con
+  controles mutados independientes por tipo de rama, y el banco fuerza la
+  página extra y la identifica por sus parámetros (con ejes: 3 rechazadas = 3
+  descartes; sin ejes: 3 = 3; degradado y sin publicar; `b7be927` rojo).
+  Cobertura (recontada en la séptima corrección): 2 recorridos identificados,
+  4 ejecutados sólo en agregado, 3 estructurales, 0 inferidos; las rutas
+  `/api/recomendaciones` y `/api/audience` sólo inferidas (registran fuera de
+  contexto; envolverlas es un cambio productivo pendiente). Verificado: suite 1.660 (1.650 ok, 0
+  fallos, 10 omitidos), `tsc`, build fresco, `diff --check`; identidad del
+  Home 16/16.
+  **Quinta corrección (informe §27, sin código productivo):** la fila de
+  pools exigía un solo recorrido y no representaba el segundo, deliberado:
+  con `EJES_RIELES=0` `candidatosDeSuperficie` llama a `candidatosDePools`
+  directo (con esa llamada cortada, el inventario de `6ef35c5` seguía 14/14
+  verde). Ahora la fila declara los dos recorridos (`con-ejes` por
+  `candidatosConEje` dentro del bloque de ejes; `sin-ejes` por la llamada
+  directa fuera de ese bloque), los dos arrancan en `composeHome` bajo el
+  contexto de `producirHome` y terminan en el mismo sitio; controles mutados
+  cortan cada recorrido por separado y el común. El banco de 429 parcial
+  corre el escenario de pools con `EJES_RIELES` encendido y en 0 (dos `next
+  start` por versión, cachés vaciadas por corrida): `b7be927` rojo en los dos
+  (8/7 × 429 tragados y publicados), la rama verde en los dos (degradado,
+  descartes contados, sin publicar). `POOL_CACHE=0` no alcanza este sitio y
+  queda documentado fuera del recorrido. Verificado: suite 1.659 (1.649 ok, 0
+  fallos, 10 omitidos), `tsc`, build fresco, `diff --check`; identidad del
+  Home 16/16.
+  **Cuarta corrección (informe §26, sólo el test del inventario):** la fila de
+  pools declaraba únicamente la función del sitio, así que el wrapper y el
+  sitio se verificaban por separado y la cadena real `composeHome →
+  candidatosDeSuperficie → candidatosConEje → candidatosDePools` no se
+  probaba (demostrado: con cada enlace cortado en el fuente, el inventario
+  de `03ad4b9` seguía 13/13 verde). Ahora la cadena tiene que arrancar en la
+  operación envuelta y llegar al sitio enlace por enlace, cruzando archivos;
+  un control muta el fuente real y exige el mensaje con el enlace perdido; el
+  banco queda como evidencia adicional; los números de línea de los controles
+  salen de `lineaDelCatch` (base 1). Verificado: suite 1.659 (1.649 ok, 0
+  fallos, 10 omitidos), `tsc`, build fresco, `diff --check`; identidad del
+  Home 16/16; sin cambios en archivos productivos ni en el contrato JSON.
+  **Tercera corrección (informe §25):** (1) quedaba una carrera REAL entre el
+  `onChange` (sólo `setQ`) y el `useEffect` que llamaba al controlador: una
+  respuesta vieja que llegara en ese render se pintaba sobre el texto nuevo.
+  Adaptador puro (`components/busqueda-adaptador.ts`) que modela las dos
+  fases de React —`escribir` en el evento, `efecto` en el efecto, sin
+  programar B dos veces— cableado en `SearchView` con guard de fuente que
+  prohíbe volver al `onChange` limitado a `setQ`; el fetch que ignora la señal
+  igual se descarta por generación. (2) El inventario de descartes tenía
+  falsos verdes (demostrado: con el wrapper corrido, la card sin contexto y la
+  cadena del cron cortada seguía 5/5 verde): ahora cada sitio trae evidencia
+  ejecutada (9 sitios corren con su dependencia caída y el consumidor actúa;
+  control: fuera de contexto, la línea con su nombre), estructural con
+  cadena de llamadas por cuerpo de función y controles mutados (8 sitios
+  `server-only`), y de banco (escenario D nuevo: 429 parcial en `/discover`
+  → pools; `b7be927` lo tragaba y publicaba, la rama degrada y no publica).
+  Verificado: suite 1.658 (1.648 ok, 0 fallos, 10 omitidos), `tsc`, build
+  fresco, `diff --check`; identidad del Home 16/16; búsqueda 15/15; 429
+  parcial RED/GREEN. **Segunda corrección (informe §24):** (1) la
+  carrera del debounce de la búsqueda —la generación subía recién dentro del
+  temporizador y una respuesta vieja que llegaba en esa ventana se aceptaba—
+  reproducida con un controlador puro probado con reloj y fetch inyectados
+  (`components/busqueda-controlador.ts`): la invalidación ocurre al cambiar el
+  término, y cubre cambios consecutivos, término corto, desmontaje y cambio de
+  plataformas; (2) `registrarDescarteTmdb` era inerte fuera de contexto: ahora
+  dice qué hizo (`contado` / `logueado` con una línea estructurada / `ignorado`),
+  las cinco rutas independientes (directores, portadas, top, cron de Netflix,
+  recordatorio) abren `conDescartesRegistrados` y resumen en una línea, y el
+  inventario exige un efecto verificable por sitio. Nuevo comparador
+  antes/después de la **búsqueda sana** con cachés aisladas: 15/15 idénticos.
+  Verificado: suite 1.637 (1.627 ok, 0 fallos, 10 omitidos), `tsc`, build
+  fresco, `diff --check`; identidad del Home 16/16; 429 parcial RED/GREEN. Rama `feat/etapa3a-clasificacion-tmdb` (worktree
+  `wt-etapa3a`), creada desde `main` = `origin/main` = `b7be927`; commits
+  `dedee6a` (código + tests), `b7a4a6a` (banco y evidencia), `e930a1d` (docs)
+  y los de la corrección (código y docs; ver el informe §23). **Corrección
+  (informe §23):** cuatro hallazgos reproducidos con pruebas funcionales que
+  fallan contra `e930a1d` — (1) `directorCards` registraba fuera de contexto y
+  cacheaba la lista parcial 24 h; (2) la búsqueda, tras tolerar un fallo de
+  `providersOf`, volvía a pedirlo en la deduplicación y un 429 persistente la
+  convertía en 503; (3) `genreCovers` tragaba el fallo y cacheaba el mapa
+  incompleto 24 h; (4) `SearchView` conservaba el aviso de TMDB tras un fallo
+  de red, una cancelación o un cambio de término — y un **barrido completo**
+  (`lib/descartes-tmdb-inventario.test.ts`) de todo `catch`/`allSettled` en
+  `lib/` y rutas, clasificado, que encontró tres sitios más para registrar
+  (`disponibilidad`, `netflix-resolver`, `recordatorio`) y reemplaza al
+  inventario "de once". Verificado: suite 1.621 (1.611 ok, 0 fallos, 10
+  omitidos), `tsc`, build fresco, `diff --check`; banco de identidad del Home
+  con cachés separadas 16/16 idénticos; banco de 429 parcial con búsqueda
+  (`b7be927` → 500; rama → 200 degradado sin guardar, y 503 con `Retry-After`
+  ante 429 total). **Sin merge, push ni deploy; sin
+  TMDB real ni credenciales productivas.** Qué trae: clasificación de
+  respuestas de TMDB por causa (429, 5xx, 4xx, red, timeout, cuerpo inválido,
+  cancelación), parser de `Retry-After`, política y bucle de reintentos
+  **presentes y apagados** (`TMDB_REINTENTOS` sólo "1" enciende; apagado, un
+  intento por llamada y ninguna espera — control fijado por test), causas
+  propagadas por los once sitios inventariados, **H2 corregido** (un descarte
+  parcial de causa TMDB marca el Home como degradado y no se publica como
+  fresca ni como último bueno), `titleCard` no guarda `null` por un fallo de
+  TMDB, ficha y búsqueda distinguen dato principal (`503` + `Retry-After`, o
+  `404`) de contenido opcional (`degradacion`, aditivo), métricas nuevas. RED
+  contra `b7be927`: 18 de 21 casos fallan (los 3 que pasan son controles del
+  comportamiento actual). GREEN: suite 1.602 (1.592 ok, 0 fallos, 10
+  omitidos), `tsc` limpio, build fresco exit 0, `diff --check` limpio.
+  **Banco de identidad del Home con cachés aisladas** (dos juegos de dobles y
+  dos `next start`, Redis vaciado por corrida, `compone` + MISS + TMDB iguales
+  exigidos en las dos versiones, `VERSION_HOME` 6 en ambas): **16/16
+  escenarios válidos e idénticos** —5 combinaciones × 3 toggles, frío y
+  caliente, más 3 claves concurrentes—, JSON completo y por riel (ids, orden,
+  cantidad, plataformas: 0 diferencias); los cuatro controles de mutación
+  hacen fallar al comparador y la corrida con caché compartida es rechazada.
+  **Banco de 429 parcial (10 % de `watch/providers`):** `b7be927` publica un
+  Home con 93 descartes como sano y, con UB, lo pisa (RED); la rama lo marca
+  degradado, no lo publica y sirve el UB correcto (GREEN). Evidencia:
+  `medidas/2026-09-14-etapa3a-identidad-home.json`,
+  `medidas/2026-09-14-etapa3a-parcial.json`; detalle en el informe §22.
+  Corrección a la v2: un 429 en `enNetflixAR` no persistía un "no está" sino
+  una fila sin resolver (`needs_review`).
+
+- **Diseño de la Etapa 3 (v4.1): pendiente de auditoría; sólo 3.a
+  aprobada. Restricción del dueño (14/09): la Etapa 3 no puede alterar el
+  contenido correcto del Home.** Rama de documentación
+  `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`): v1 `a15b650` → v2
+  `209bda1` → v3 `ced36de` → v4 `d76f0ce` → v4.1 `0d06826` (cuatro
+  correcciones de la auditoría sobre la v4: reconstrucción fría bajo tráfico
+  sostenido y condición del futuro limitador; aislamiento total de cachés en
+  el comparador; Redis lento sostenido; garantías por cadencia física y total,
+  no por clase). El informe vigente es el de la rama de implementación (misma
+  v4.1 + §22). Informe único:
+  [`medidas/2026-09-14-etapa3-diseno-resistencia-tmdb.md`](medidas/2026-09-14-etapa3-diseno-resistencia-tmdb.md).
+  **La restricción, como criterio bloqueante (informe §1):** con TMDB sano,
+  cualquier implementación conserva hero, títulos, orden, cantidad, dedup,
+  plataformas, badges, enlaces, toggles, contenido por fecha/plataformas/tipos
+  y contrato JSON (salvo campos aditivos de diagnóstico); ante una caída se
+  prefiere el último Home correcto. **Consecuencias:** la membresía por pool
+  (A) **no está aprobada** y la medición pasa a ser un **gate de descarte con
+  criterio de diferencia cero** (ids, orden, cantidad, plataformas, badges,
+  disponibilidad, por riel y hero); A' sólo si preserva exactamente títulos,
+  orden y disponibilidad; si no, ambas se descartan y la capacidad se
+  resuelve **sin tocar la lógica del Home**. H16 corregido: el margen del 40 %
+  prueba que el código contempla descartes posibles, **no su frecuencia, que
+  sigue desconocida**. Banco obligatorio de diferencia cero (§14: mismo
+  snapshot, misma fecha AR, mismas plataformas y toggles, frío/caliente,
+  individual/concurrente, comparación estructural completa, control que hace
+  fallar al comparador con cuatro mutaciones, kill switch sin migraciones,
+  `VERSION_HOME` sin subir). **Correcciones a la v3 (auditoría de Codex):** la
+  cota de ventana móvil sobre inicios de `fetch` **era falsa con latencias de
+  Redis distintas por proceso**; ahora el contrato tiene dos niveles —
+  **demostrado sobre reservas** (≤ 28/s, ≤ 4 por 100 ms, exacto en el reloj de
+  Redis) y **demostrado sobre `fetch` sólo bajo `RTT ≤ 250 ms` verificado por
+  reserva** (ranuras absolutas con vencimiento: se queman las que llegan
+  tarde; ≤ 36 por segundo móvil, ≤ 12 por 100 ms) — y se **mide** en
+  E-latencia-asimetrica (5/30/150/300 ms, tres instantes por reserva); cinco
+  alternativas comparadas (el único límite estricto sería un coordinador
+  único, fuera de alcance); tasa declarada **28/s**; **dos cadencias por clase
+  (14/s cada una) con préstamo sólo si la ajena está ociosa** → equidad global
+  demostrable (ninguna clase por debajo de 14/s, primera ranura ≤ 321 ms,
+  inanición imposible), reemplazando el horizonte que podía dejar al Home sin
+  ranuras; las tres esperas de una ficha separadas; modelo de **tráfico
+  mixto** (`s_m = tasa − min(λ_i, tasa/2)`): con C = 926 sin reducción, un
+  Home frío sólo se reconstruye a tiempo en fondo y con poca competencia, y
+  bajo carga mixta sostenida **sirve UB hasta que baje la carga**. Orden de
+  despliegue: 3.a (reintentos OFF) → 3.b → 3.e (`waitUntil`) → 3.c
+  (limitador) → 3.c' (reintentos ON); 3.d sólo si el gate da cero. **Alcance
+  del cierre:** la aplicación en Vercel, con Redis respondiendo; no la cuenta
+  entera ni Redis caído. **Nada de esto cambia el comportamiento desplegado.**
+  No implementar nada hasta una nueva auditoría de Codex.
 
 - **Recuperación de contraseña (#22) — estado vigente.**
   1. La corrección está **mergeada en `main`** mediante `be5ef1d` (rama
@@ -147,7 +352,10 @@
   instancias de Vercel no coordina nada — eso, y el último Home bueno, son la
   Etapa 2. **#18 resuelto el 12/09; #17 resuelto el 13/09 con la Etapa 2.** Informe:
   [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
-  Etapas 3 a 5: no iniciadas.
+  Etapa 3: 3.a implementada en rama (pendiente de auditoría, reintentos
+  apagados); diseño v4.1 pendiente de auditoría para el resto; restricción del
+  dueño: no puede alterar el contenido correcto del Home (ver arriba). Etapas
+  4 y 5: no iniciadas.
 
 - **Etapa 2 de capacidad (#17: turno distribuido entre instancias y último
   Home bueno): MERGEADA EN `main` (`cd1f393`, `--no-ff` de
@@ -371,7 +579,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a implementada en rama y corregida tras la auditoría (14/09), pendiente de nueva auditoría, reintentos apagados; limitador, circuito, `waitUntil` y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 
@@ -428,8 +636,9 @@ arriba). Lo que sigue ya incorpora las siete correcciones.
 de medir nada. Por eso fue la **Etapa PREVIA** del plan, anterior a la Etapa 0,
 con la decisión aprobada por el dueño: *se entrega el payload y se registra el
 error*. **Hecha y desplegada el 11/09.** Las Etapas **PREVIA, 0 y 1** están
-desplegadas (ver el estado vigente arriba); lo que sigue es la **Etapa 2**:
-turno distribuido y último Home bueno.
+desplegadas (ver el estado vigente arriba). *(Antecedente: cuando se escribió,
+lo que seguía era la Etapa 2; está desplegada desde el 13/09 y la Etapa 3
+tiene diseño v4.1 y la sub-etapa 3.a implementada en rama, sin mergear.)*
 
 ### Lo que se revisó y **no** es un problema
 

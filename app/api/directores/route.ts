@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { directorCards } from "@/lib/enrich";
 import { conCors, opcionesCors } from "@/lib/cors";
+import { conDescartesRegistrados } from "@/lib/fallos-tmdb";
 
 export const dynamic = "force-dynamic";
 
 async function manejar() {
   try {
-    return NextResponse.json({ people: await directorCards() });
+    // Etapa 3.a: ruta independiente; los descartes de TMDB (si los hubo)
+    // quedan resumidos en UNA línea, sin cambiar la respuesta.
+    return NextResponse.json({ people: await conDescartesRegistrados("api/directores", () => directorCards()) });
   } catch (e) {
     return NextResponse.json({ error: String(e), people: [] }, { status: 500 });
   }

@@ -35,6 +35,11 @@ export interface UICastMember {
 }
 
 export interface UITitleDetail extends UITitle {
+  // Etapa 3.a (#19): qué contenido OPCIONAL de la ficha faltó porque TMDB falló
+  // (429, 5xx, timeout). Aditivo: sólo viaja cuando algo falló, así que con
+  // TMDB sano el JSON no cambia y un cliente viejo lo ignora. El dato
+  // principal (el detalle) no se degrada: si falla, la ruta responde 503/404.
+  degradacion?: { proveedores?: boolean; relacionados?: number; trailer?: boolean };
   // ISO YYYY-MM-DD. Lo necesita "Recordarme": la ficha tiene que saber si el
   // título todavía no salió. `year` no alcanza — un estreno de diciembre y uno
   // de enero del mismo año son casos distintos.
