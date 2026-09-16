@@ -1,91 +1,51 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 15 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 16 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB: §40 (auditoría
-  sobre `1ad1025`, 2026-09-16): siete correcciones sobre §39; 3.c.1 lista
-  para auditoría de DISEÑO (no de implementación); 3.c.2 NO aprobada; NADA
-  implementado; PENDIENTE DE NUEVA AUDITORÍA.** (1) `PAUSAR` no era
-  idempotente (un reintento con respuesta perdida alargaba la pausa: RED
-  ejecutado y visto fallar, `PTTL=8000`); rediseñado con identidad estable
-  por evento y marcador atómico en el mismo script — 15/15 en
-  `lib/tmdb-pausa-diseno.test.ts` (modelo de Redis, no código productivo):
-  respuesta perdida, reintentos múltiples, 1→8, 8→1, 50 concurrentes,
-  expiración, reintento tardío. (2) 3.c.0 reclasificada: modelo de
-  SENSIBILIDAD ajustado con las mismas dos muestras, no calibración
-  predictiva; semilla determinista en el doble y tres repeticiones
-  (dispersión ≤ 3 %; frío total 27,3 s en línea / 27,7 s en fondo; tres
-  claves 87/s y 230 en un segundo); "926 ≈ 26 s en Producción" pasa a
-  extrapolación NO validada y se retira "lo que cabe en el banco cabe en
-  Producción". (3) `t_inicio_fondo` = 0,30-0,37 s (se sumaba dos veces la
-  respuesta); el mínimo del presupuesto sigue siendo el interno de 50 s.
-  (4) 3.c.1 SÍ toca el camino sano: la relectura pasa a ser NO bloqueante y
-  se fija a priori el criterio antes/después (JSON idéntico, mismas
-  llamadas, Redis extra ≤ ⌈llamadas/24⌉+2, duración ≤ +5 % mediana / +10 %
-  máx., publicación ≤ +1 op, 1/2/3 reconstrucciones, Redis normal/lento/
-  caído). (5) La carrera leer-pausa → componer se cierra DENTRO del script
-  de adquisición del turno (atómico) más relectura en cola; `pausado` con
-  UB sirve UB sin componer, sin UB `503` + `Retry-After`; RED listados. (6)
-  Observabilidad por evento (`tmdb:eventos`, escrito en el mismo script que
-  pausa) y cubos por minuto para deltas; las líneas `[home]` son efímeras.
-  (7) Retirada la propuesta de provocar un frío total en Producción; sólo
-  observación pasiva si ocurre. Antes de la auditoría de implementación de
-  3.c.1 faltan: aceptación de §40, precondición de Preview del `EVAL`, RED
-  propio para el cambio del script del turno (Etapa 2) y umbrales
-  aceptados por el dueño. Historia previa (§39): DISEÑO CORREGIDO tras la
-  auditoría sobre `f7282a8` y MEDICIÓN 3.c.0 EJECUTADA (2026-09-16) (rama `diseno/etapa3c-proteccion-tmdb`;
-  sin código productivo, variables, cachés ni Producción; sólo
-  documentación, `scripts/banco/etapa3c0-medir.mjs` y dos capacidades del
-  doble: latencia log-normal y marcas por petición). Correcciones: el
-  presupuesto del fondo es `min(50 s, 60 s − t_inicio_fondo)` con
-  componentes medidos (t_inicio 0,6-0,7 s; publicación 0,13-0,15 s; cierre
-  0); la propagación del 429 pasa a dos niveles con cota de sobrepaso
-  (`≤ en vuelo + admitidas durante la propagación`), la pausa se escribe con
-  un script Lua que conserva el vencimiento máximo (`escrito`/`ya-mayor`/
-  `indeterminado`, precondición de Preview), `programarEnFondo` pasa a
-  estados explícitos (`programado`/`no-disponible`/`pausado`, con RED que
-  prueba que `pausado` no cae en `componer()`), la recuperación deja de
-  llamarse "gradual" y se acota con permisos compartidos, el rollback se
-  apoya en contadores en Redis leídos por `/api/health` (no en logs que
-  Vercel no conserva) y el alcance excluye `tmdb-sync`/scripts. **3.c.0:**
-  el banco sólo reproduce Producción tras calibrarlo (dos pasadas falsas
-  documentadas; el promedio de Redis de 138 ms no vale para la cadena
-  secuencial → 40 ms efectivos; cola de TMDB 1,5×; queda pesimista 15-28 %):
-  con ese modelo el frío total de 926 compone en **26 s** de los 50 del
-  fondo (margen ≈ 24 s), con un modelo 50 % más lento en 40 s, y con 527
-  ms/llamada + cola larga o Redis a 300 ms **no cabe** (cancelado, UB
-  intacto). Una reconstrucción sola ráfaga a 80/s; dos simultáneas
-  promedian 64/s (156 en un segundo) y tres 90/s (222), concurrencia
-  `24 × procesos`; `tmdb-sync` simulado 10/s (hipótesis) sólo suma. La
-  condición bloqueante de §5.5 **no queda decidida por el banco**: hace
-  falta observar un frío total real en Producción (una solicitud, sin
-  vaciar nada, con autorización). Recomendación: 3.c.1 primero, sin tasa
-  fija; 3.c.2 sólo con cota compartida; techo de tasa ≥ 36/s y sobre
-  ráfagas, nunca las dos cadencias de 14/s. Medidas en
-  `docs/medidas/2026-09-16-etapa3c0-*.json`.
-  Historia previa (§38): Lo que Producción muestra tras la 3.b: una sola generación
-  observada (la del 15/09, §37), correcta de punta a punta; **no hay serie**:
-  la API de logs devolvió 0 filas para la ventana del 15/09 donde con
-  certeza hubo ≥ 6 Homes, y 1 fila estática en 7 h del 16/09 — la ausencia
-  no se cuenta como cero. Sin señales de fondo duplicado, Home incompleto,
-  UB pisado por degradado, errores ni cambio de contrato en lo observado.
-  Hallazgos sobre el diseño vigente: el presupuesto real del fondo es 50 s
-  (no 55) → ≈ 47 s útiles; la cadencia efectiva en Producción es 16,6-20,5/s
-  (no "~200/s": eso era el banco), así que una reconstrucción totalmente
-  fría (926) está cerca del borde **sin** limitador, y cualquier tasa fija
-  < ~20/s la condena. Propuesta: **3.c.0** medir el frío total en un doble
-  con latencia realista (condición de paso), **3.c.1** pausa compartida
-  ante 429 (`TMDB_PAUSA_429=0`), **3.c.2** circuito del fondo + recuperación
-  por concurrencia (`TMDB_CIRCUITO=0`); limitador de tasa fija sólo si 3.c.0
-  mide que hace falta, y entonces con prioridad a la reconstrucción.
-  Reintentos siguen apagados. Criterios RED→GREEN, banco multiproceso,
-  identidad 16/16 y condición de rollback en §38.8. Listo para auditoría de
-  Codex; implementación bloqueada por 3.c.0 y por autorización del dueño.
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §41,
+  2026-09-16): 3.c.1 "pausa compartida ante 429" con DISEÑO CERRADO, LISTO
+  PARA AUDITORÍA DE IMPLEMENTACIÓN; NO APROBADA; NO IMPLEMENTADA. 3.c.2
+  fuera de alcance.** Rama `diseno/etapa3c-proteccion-tmdb`; sin código
+  productivo, variables, cachés ni Producción; sólo documentación, un test
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 28/28) y
+  herramientas del banco. Lo vigente: (a) la comprobación de pausa va
+  **dentro del script atómico de adquisición del turno** — con pausa
+  preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
+  después: **sobrepaso explícito** `≤ enVuelo + admitidas durante Δt + RTT`
+  (61 por proceso, 183 con tres; no se promete cero); (b) relectura **no
+  bloqueante**, ≤ 1 en curso por proceso, una por `Δt = 1 s` desde el
+  inicio, timeout 1 s, 3 fallos seguidos → 30 s de enfriamiento (≤ 6
+  lecturas/min con Redis colgado, lento o caído; un resultado no entero es
+  `indeterminado`); (c) `PAUSAR` idempotente por identidad de evento con
+  marcador `PX 120 s` (2 × `maxDuration`; el SDK reintenta ≤ 6 veces dentro
+  de la invocación) **y** marca de agua por proceso: un evento viejo nunca
+  reabre una pausa, ni a los 130 s; (d) Lua completo de 5 claves con
+  eventos y cubos por minuto sellados con `TIME` de Redis, escritos en el
+  mismo script que el 429 (atómico); `/api/health` expone sólo agregados
+  de 60 min, sin uuid, rutas ni eventos crudos; (e) Home sin UB durante la
+  pausa → **`503` + `Retry-After` inmediato** en vez del `200` vacío tras
+  esperar hasta 50 s; el cliente ya muestra "No pudimos cargar el inicio" +
+  Reintentar — **cambio de experiencia pendiente de aprobación del
+  dueño**; (f) umbrales antes/después fijados y sin tocar (JSON 0
+  diferencias, llamadas 0 diferencia, Redis extra ≤ ⌈llamadas/24⌉+2,
+  duración ≤ +5 %/+10 %, publicación ≤ +1 op, UB ≤ +50 ms; 1/2/3
+  reconstrucciones; Redis normal/lento/caído). **3.c.0** queda como modelo
+  de sensibilidad ajustado con las mismas dos muestras de Producción (no
+  predictivo; semillas y 3 repeticiones, dispersión ≤ 3 %): reproduce 926
+  llamadas, `t_inicio_fondo` 0,30-0,37 s, publicación 0,13-0,15 s, ráfaga
+  ~80/s por proceso y `24 × N` de concurrencia; "926 en ~26 s" es
+  extrapolación NO validada; no se pide ni se autoriza ningún frío total
+  en Producción. Para pasar a implementación: aceptación de §41 por Codex,
+  precondición de Preview del `EVAL` (`TIME`, `cjson`, `PTTL`, tupla vía
+  SDK), aprobación del dueño del `503` y de los umbrales, y RED propio para
+  el script de adquisición del turno (Etapa 2). Reintentos siguen apagados.
+  Antecedentes superados: §38 (observación pasiva), §39 (3.c.0 y diseño),
+  §40 (primera corrección) — cifras allí no vigentes.
 - **Etapa 3.b de capacidad (#19): MERGEADA, PUSHEADA Y DESPLEGADA
   (2026-09-15).** Aprobada técnicamente por la auditoría final de Codex
   sobre `c5fab20` (más `ae6902f`, dos correcciones documentales: clave del
@@ -792,7 +752,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c: §40 — `PAUSAR` idempotente por evento (RED→GREEN), 3.c.0 reclasificada como sensibilidad ajustada (semillas, 3 rep.), carrera cerrada en el script del turno; 3.c.1 lista para auditoría de diseño, 3.c.2 no aprobada, nada implementado; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§41): 3.c.1 con diseño cerrado —pausa idempotente por evento, adquisición atómica con sobrepaso explícito, lector no bloqueante sin tormenta, observabilidad por evento, `503` pendiente de aprobación del dueño—, lista para auditoría de implementación, NO aprobada, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

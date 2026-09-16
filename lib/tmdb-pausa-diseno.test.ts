@@ -13,6 +13,7 @@
 // DURACIONES y una IDENTIDAD de evento.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { motivoDeRespuesta } from "../components/api-motivo.ts";
 
 // ----------------------------------------------------------------- modelo de Redis
 class RedisModelo {
@@ -228,4 +229,233 @@ test("🔴 CONTROL (contrato actual, §39.7): si `pausado` se mapeara al `false`
   const contratoViejo = (resultado: boolean) => (resultado ? { fondo: 1, componer: 0 } : { fondo: 0, componer: 1 });
   const conPausaMapeadaAFalse = contratoViejo(false);
   assert.equal(conPausaMapeadaAFalse.componer, 1, "el contrato booleano no puede expresar 'pausado': cae en composición bloqueante");
+});
+
+// =============================================================================
+// §41 (auditoría sobre 21cbf18) — segunda tanda de propiedades, sobre modelo.
+// =============================================================================
+
+// ----------------------------------------------------------------- 5. PAUSAR v2: marcador 120 s + marca de agua por proceso + observabilidad en el mismo script
+// KEYS[1]=tmdb:pausa  KEYS[2]=tmdb:pausa:ev:<id>  KEYS[3]=tmdb:pausa:proc (hash uuid→contador)
+// KEYS[4]=tmdb:eventos (lista)  KEYS[5]=tmdb:cubos (hash "<minuto>:<campo>" → n)
+// ARGV: id, ms, uuid, contador, familia, retryAfterMs
+const MARCADOR_MS = 120_000;   // 2 × maxDuration: ningún reintento del SDK sobrevive a la invocación (≤ 60 s)
+class RedisModelo2 extends RedisModelo {
+  hashes = new Map<string, Map<string, string>>();
+  listas = new Map<string, string[]>();
+  ops: string[] = [];
+  hget(k: string, f: string) { return this.hashes.get(k)?.get(f) ?? null; }
+  hset(k: string, f: string, v: string) { if (!this.hashes.has(k)) this.hashes.set(k, new Map()); this.hashes.get(k)!.set(f, v); }
+  hincrby(k: string, f: string, n: number) { const v = Number(this.hget(k, f) ?? 0) + n; this.hset(k, f, String(v)); return v; }
+  lpush(k: string, v: string) { if (!this.listas.has(k)) this.listas.set(k, []); this.listas.get(k)!.unshift(v); }
+  ltrim(k: string, n: number) { const l = this.listas.get(k); if (l) l.length = Math.min(l.length, n + 1); }
+}
+type Res2 = { estado: "escrito" | "ya-mayor" | "ya-aplicada"; restanteMs: number };
+function pausarV2(r: RedisModelo2, a: { id: string; ms: number; uuid: string; contador: number; familia: string; retryAfterMs: number | null }): Res2 {
+  const [K1, K2, K3, K4, K5] = [PAUSA, `${PAUSA}:ev:${a.id}`, `${PAUSA}:proc`, "tmdb:eventos", "tmdb:cubos"];
+  const op = (s: string) => r.ops.push(s);
+  const minuto = Math.floor(r.ahora / 60_000);                       // TIME de Redis, dentro del script
+  const cubo = (campo: string) => { op(`HINCRBY tmdb:cubos ${minuto}:${campo}`); r.hincrby(K5, `${minuto}:${campo}`, 1); };
+  op("EXISTS ev"); if (r.exists(K2)) { cubo("ya-aplicada"); return { estado: "ya-aplicada", restanteMs: r.pttl(K1) }; }
+  op("HGET proc"); const hw = Number(r.hget(K3, a.uuid) ?? -1);
+  if (a.contador <= hw) { cubo("ya-aplicada"); return { estado: "ya-aplicada", restanteMs: r.pttl(K1) }; }
+  op("SET ev PX 120000"); r.set(K2, "1", MARCADOR_MS);
+  op("HSET proc"); r.hset(K3, a.uuid, String(a.contador));
+  cubo("429");
+  op("PTTL pausa"); let restante = r.pttl(K1); let estado: Res2["estado"];
+  if (restante >= a.ms) { estado = "ya-mayor"; cubo("ya-mayor"); }
+  else { op("SET pausa PX"); r.set(K1, a.id, a.ms); estado = "escrito"; restante = a.ms; cubo("pausas"); }
+  op("LPUSH eventos"); r.lpush(K4, JSON.stringify({ id: a.id, t: r.ahora, familia: a.familia, retryAfterMs: a.retryAfterMs, estado, restante }));
+  op("LTRIM eventos 0 199"); r.ltrim(K4, 199);
+  return { estado, restanteMs: restante };
+}
+const ev = (uuid: string, contador: number, ms: number) => ({ id: `${uuid}:${contador}`, ms, uuid, contador, familia: "/watch/providers", retryAfterMs: ms });
+
+test("🟢 horizonte de reintento: SDK de Upstash = 6 intentos con backoff Σ e^i·50 ms = 4,29 s de espera, acotado por la invocación (≤ 60 s); marcador 120 s; reintento a los 61 s → ya-aplicada", () => {
+  const backoff = (i: number) => Math.exp(i) * 50;                     // lib/metricas.ts backoffRedisInstrumentado; nodejs.js: i < attempts (5)
+  const esperaTotal = [0, 1, 2, 3, 4].reduce((a, i) => a + backoff(i), 0);
+  assert.ok(esperaTotal > 4200 && esperaTotal < 4300, `Σ backoff = ${esperaTotal}`);
+  const r = new RedisModelo2();
+  conRespuestaPerdida(() => pausarV2(r, ev("p1", 1, 8000)));
+  r.avanzar(61_000);   // el peor reintento posible: al borde de maxDuration
+  assert.equal(pausarV2(r, ev("p1", 1, 8000)).estado, "ya-aplicada");
+  assert.equal(r.pttl(PAUSA), -2, "la pausa de 8 s ya venció y el reintento tardío no la reabrió");
+});
+
+test("🟢 un evento VIEJO nunca reabre una pausa, ni después de que venza el marcador: la marca de agua por proceso lo rechaza (reintento a los 130 s)", () => {
+  const r = new RedisModelo2();
+  conRespuestaPerdida(() => pausarV2(r, ev("p1", 7, 8000)));
+  r.avanzar(130_000);
+  assert.equal(r.exists(`${PAUSA}:ev:p1:7`), 0, "el marcador de 120 s venció");
+  assert.deepEqual(pausarV2(r, ev("p1", 7, 8000)), { estado: "ya-aplicada", restanteMs: -2 });
+  assert.equal(r.pttl(PAUSA), -2);
+  // El evento SIGUIENTE del mismo proceso sí escribe; uno anterior (contador 6, en vuelo y demorado) no.
+  assert.equal(pausarV2(r, ev("p1", 8, 3000)).estado, "escrito");
+  assert.equal(pausarV2(r, ev("p1", 6, 9000)).estado, "ya-aplicada");
+  assert.equal(r.pttl(PAUSA), 3000, "el evento 6, más viejo, no alargó la pausa del 8");
+  // Un proceso nuevo (otro uuid) arranca su propia serie.
+  assert.equal(pausarV2(r, ev("p2", 1, 5000)).estado, "escrito");
+});
+
+test("🟢 orden exacto del script y qué escribe cada resultado: `ya-aplicada` no toca pausa, marcador, marca de agua ni eventos; `escrito`/`ya-mayor` registran UN evento y UN 429", () => {
+  const r = new RedisModelo2();
+  pausarV2(r, ev("p1", 1, 8000));
+  assert.deepEqual(r.ops, ["EXISTS ev", "HGET proc", "SET ev PX 120000", "HSET proc", "HINCRBY tmdb:cubos 16:429", "PTTL pausa", "SET pausa PX", "HINCRBY tmdb:cubos 16:pausas", "LPUSH eventos", "LTRIM eventos 0 199"]);
+  r.ops = []; r.avanzar(100);
+  assert.equal(pausarV2(r, ev("p1", 1, 8000)).estado, "ya-aplicada");
+  assert.deepEqual(r.ops, ["EXISTS ev", "HINCRBY tmdb:cubos 16:ya-aplicada"]);
+  assert.equal(r.listas.get("tmdb:eventos")!.length, 1);
+  assert.equal(r.hget("tmdb:cubos", "16:429"), "1");
+  r.ops = []; r.avanzar(100);
+  assert.equal(pausarV2(r, ev("p2", 1, 1000)).estado, "ya-mayor");
+  assert.ok(r.ops.includes("HINCRBY tmdb:cubos 16:ya-mayor") && !r.ops.includes("SET pausa PX"));
+  assert.equal(r.listas.get("tmdb:eventos")!.length, 2);
+  assert.equal(r.hget("tmdb:cubos", "16:429"), "2");
+});
+
+test("🟢 el cubo se sella con el reloj de REDIS (TIME dentro del script), no con el del cliente: dos instancias con relojes distintos caen en el mismo minuto", () => {
+  const r = new RedisModelo2();
+  pausarV2(r, ev("p1", 1, 1000));                  // "instancia A"
+  pausarV2(r, ev("p2", 1, 1000));                  // "instancia B", su reloj local no participa
+  const minuto = Math.floor(r.ahora / 60_000);
+  assert.equal(r.hget("tmdb:cubos", `${minuto}:429`), "2");
+  assert.equal([...r.hashes.get("tmdb:cubos")!.keys()].filter((k) => k.endsWith(":429")).length, 1);
+});
+
+// ----------------------------------------------------------------- 6. /api/health: sólo agregados
+function agregadosSalud(r: RedisModelo2) {
+  const minuto = Math.floor(r.ahora / 60_000);
+  const cubos = r.hashes.get("tmdb:cubos") ?? new Map<string, string>();
+  const suma = (campo: string) => { let s = 0; for (let m = minuto - 59; m <= minuto; m++) s += Number(cubos.get(`${m}:${campo}`) ?? 0); return s; };
+  return { pausaVigenteMs: Math.max(0, r.pttl(PAUSA)), ultimos60min: { "429": suma("429"), pausas: suma("pausas"), yaMayor: suma("ya-mayor"), yaAplicada: suma("ya-aplicada"), pausaNoLeida: suma("pausaNoLeida"), pausadosUB: suma("pausadosUB"), pausados503: suma("pausados503") } };
+}
+test("🟢 /api/health expone agregados de 60 minutos y la pausa vigente; ningún uuid, id de evento, ruta ni evento crudo", () => {
+  const r = new RedisModelo2();
+  pausarV2(r, { ...ev("proc-uuid-secreto", 1, 5000), familia: "/search/movie?query=privado" });
+  r.avanzar(1000);
+  const salida = JSON.stringify(agregadosSalud(r));
+  assert.doesNotMatch(salida, /proc-uuid-secreto|privado|tmdb:eventos|familia|"id"/);
+  assert.deepEqual(JSON.parse(salida), { pausaVigenteMs: 4000, ultimos60min: { "429": 1, pausas: 1, yaMayor: 0, yaAplicada: 0, pausaNoLeida: 0, pausadosUB: 0, pausados503: 0 } });
+  // Pausa espuria = pausas > 0 con 429 = 0 en la ventana: por construcción, imposible (el mismo script suma ambos).
+  const a = agregadosSalud(r).ultimos60min; assert.ok(!(a.pausas > 0 && a["429"] === 0));
+});
+
+// ----------------------------------------------------------------- 7. el LECTOR no bloqueante sin tormenta (punto 2)
+// Modelo con reloj virtual: `permiso()` se llama cada vez que el semáforo concede uno; el
+// lector decide si inicia una lectura. Redis: normal (RTT), lento, colgado (nunca responde) o caído (error inmediato).
+type Redis = { tipo: "normal" | "lento" | "colgado" | "caido"; rttMs: number };
+interface Lector { permiso(): void; avanzar(ms: number): void; iniciadas: number; enCurso: number; maxEnCurso: number; fallidas: number; resultados: number; }
+const CFG = { K: 24 /* sólo el control ingenuo */, deltaMs: 1000, timeoutMs: 1000, fallosMax: 3, enfriamientoMs: 30_000 };
+function crearLector(redis: Redis, cfg = CFG, ingenuo = false): Lector {
+  let ahora = 0, permisos = 0, inicioUltima = -Infinity, fallosSeguidos = 0, enfriadoHasta = -Infinity;
+  const vuelo: { inicio: number; vence: number; falla: boolean }[] = [];
+  const L: Lector = {
+    iniciadas: 0, enCurso: 0, maxEnCurso: 0, fallidas: 0, resultados: 0,
+    permiso() {
+      permisos += 1;
+      if (ingenuo) { if (permisos % cfg.K === 0) iniciar(); return; }                 // CONTROL: sin guardia de vuelo ni enfriamiento
+      if (vuelo.length > 0) return;                                                   // ≤ 1 lectura en curso: los permisos concurrentes la COMPARTEN
+      if (ahora < enfriadoHasta) return;                                              // Redis caído/colgado: no se intenta en cada permiso
+      if (ahora - inicioUltima < cfg.deltaMs) return;                                // una lectura por Δt, contado desde el INICIO de la anterior (K no hace falta: Δt domina)
+      iniciar();
+    },
+    avanzar(ms) {
+      ahora += ms;
+      for (const v of vuelo.splice(0)) {
+        if (ahora < v.vence) { vuelo.push(v); continue; }
+        L.enCurso -= 1;
+        if (v.falla) { L.fallidas += 1; fallosSeguidos += 1; if (fallosSeguidos >= cfg.fallosMax) { enfriadoHasta = ahora + cfg.enfriamientoMs; fallosSeguidos = 0; } }
+        else { L.resultados += 1; fallosSeguidos = 0; }
+      }
+    },
+  };
+  function iniciar() {
+    inicioUltima = ahora; L.iniciadas += 1; L.enCurso += 1; L.maxEnCurso = Math.max(L.maxEnCurso, L.enCurso);
+    const dur = redis.tipo === "normal" || redis.tipo === "lento" ? redis.rttMs : redis.tipo === "caido" ? 0 : Infinity;
+    // El ingenuo no tiene timeout propio: una lectura colgada queda colgada (como un fetch sin señal).
+    vuelo.push({ inicio: ahora, vence: ingenuo ? ahora + dur : ahora + Math.min(dur, cfg.timeoutMs), falla: redis.tipo === "caido" || redis.tipo === "colgado" || dur > cfg.timeoutMs });
+  }
+  return L;
+}
+/** Simula `segundos` de composición a ~35 permisos/s (la cadencia medida), en pasos de 100 ms. */
+function correr(L: Lector, segundos: number, permisosPorS = 35) {
+  for (let t = 0; t < segundos * 10; t++) { for (let i = 0; i < permisosPorS / 10; i++) L.permiso(); L.avanzar(100); }
+}
+
+test("🔴 RED (control): un lector ingenuo con Redis COLGADO acumula lecturas en vuelo — tormenta", () => {
+  const L = crearLector({ tipo: "colgado", rttMs: 0 }, CFG, true);
+  correr(L, 30);
+  assert.ok(L.maxEnCurso > 1, `ingenuo: ${L.maxEnCurso} lecturas en vuelo a la vez`);
+  assert.equal(L.iniciadas, 50, `ingenuo: ${L.iniciadas} lecturas iniciadas en 30 s`);
+  assert.equal(L.maxEnCurso, 50, "todas colgadas a la vez: ninguna termina");
+});
+
+test("🟢 Redis normal (40 ms): ≤ 1 lectura en curso, una por Δt aunque haya 35 permisos/s (los permisos comparten la lectura)", () => {
+  const L = crearLector({ tipo: "normal", rttMs: 40 });
+  correr(L, 30);
+  assert.equal(L.maxEnCurso, 1);
+  assert.ok(L.iniciadas >= 29 && L.iniciadas <= 31, `iniciadas ${L.iniciadas} (≈ 30 s / Δt)`);
+  assert.equal(L.fallidas, 0);
+});
+
+test("🟢 Redis LENTO (RTT 3 s > timeout 1 s): nunca más de una en curso; el intervalo cuenta desde el inicio; cada lectura vence al timeout y cuenta como fallida; tras 3 seguidas, enfriamiento de 30 s", () => {
+  const L = crearLector({ tipo: "lento", rttMs: 3000 });
+  correr(L, 60);
+  assert.equal(L.maxEnCurso, 1);
+  // t=0..1 falla 1, t=1..2 falla 2, t=2..3 falla 3 → enfriado hasta 33; 33..36 otras 3 → enfriado hasta 66.
+  assert.equal(L.fallidas, 6, `fallidas ${L.fallidas}`);
+  assert.equal(L.iniciadas, 6);
+});
+
+test("🟢 Redis COLGADO (nunca responde): exactamente fallosMax lecturas por ventana de enfriamiento; con timeout 1 s y enfriamiento 30 s son 6 en 60 s, no 2.100", () => {
+  const L = crearLector({ tipo: "colgado", rttMs: 0 });
+  correr(L, 60);
+  assert.equal(L.maxEnCurso, 1);
+  assert.equal(L.iniciadas, 6);
+  assert.equal(L.fallidas, 6);
+});
+
+test("🟢 Redis CAÍDO (error inmediato): tampoco una lectura por permiso — el máximo exacto es fallosMax por ventana", () => {
+  const L = crearLector({ tipo: "caido", rttMs: 0 });
+  correr(L, 60);
+  assert.equal(L.iniciadas, 6, `iniciadas ${L.iniciadas}`);
+  assert.equal(L.maxEnCurso, 1);
+});
+
+test("🟢 Redis se recupera: al terminar el enfriamiento vuelve a leer y, con respuesta, el contador de fallos se reinicia", () => {
+  const redis: Redis = { tipo: "colgado", rttMs: 0 };
+  const L = crearLector(redis);
+  correr(L, 33);                     // 3 fallidas + enfriamiento de 30 s
+  redis.tipo = "normal"; redis.rttMs = 40;
+  correr(L, 10);
+  assert.ok(L.resultados >= 9, `resultados ${L.resultados}`);
+  assert.equal(L.fallidas, 3);
+});
+
+// ----------------------------------------------------------------- 8. sobrepaso EXPLÍCITO cuando la pausa aparece después de adquirir (punto 1)
+test("🟢 contrato: pausa preexistente → 0 llamadas (adquisición atómica); pausa posterior → sobrepaso ≤ enVuelo + admitidas durante Δt + RTT", () => {
+  const enVuelo = 24, cadencia = 35, deltaMs = 1000, rttMs = 40;
+  const cota = enVuelo + Math.ceil(cadencia * (deltaMs + rttMs) / 1000);   // 24 + 37 = 61 por proceso
+  assert.equal(cota, 61);
+  // Modelo: la pausa aparece en t=0 justo después de una lectura; la próxima lectura sale a Δt y responde a Δt+RTT;
+  // mientras tanto el proceso admite `cadencia` permisos/s y tiene `enVuelo` en el aire.
+  const admitidasHastaVer = Math.ceil(cadencia * (deltaMs + rttMs) / 1000);
+  assert.ok(enVuelo + admitidasHastaVer <= cota);
+  // Con 3 procesos: ≤ 183 llamadas globales después de una pausa aparecida tras las adquisiciones. No es cero y no se promete cero.
+  assert.equal(3 * cota, 183);
+});
+
+// ----------------------------------------------------------------- 9. Home sin UB durante la pausa: 503 y el cliente (punto 5, modelo del contrato existente)
+test("🟢 sin UB y pausado: la ruta responde 503 + Retry-After con el motivo que el cliente YA reconoce; useApi lo toma como error (data null) y CatalogView muestra 'No pudimos cargar el inicio' con Reintentar, nunca un Home vacío válido", () => {
+  const restanteMs = 4200;
+  const respuesta = { status: 503, headers: { "Retry-After": String(Math.ceil(restanteMs / 1000)) }, body: { error: "tmdb-no-disponible", motivo: "pausa", reintentarEnMs: restanteMs } };
+  assert.equal(respuesta.headers["Retry-After"], "5");
+  // useApi (components/useApi.ts): `!r.ok` ⇒ error=true, data=null (sin keepPrevious), motivo leído del cuerpo.
+  const ok = respuesta.status >= 200 && respuesta.status < 300;
+  const estadoCliente = { error: !ok, data: ok ? respuesta.body : null, motivo: motivoDeRespuesta(ok, respuesta.body) };
+  assert.deepEqual(estadoCliente, { error: true, data: null, motivo: "tmdb-no-disponible" });
+  // CatalogView: hayContenido=false, cargando=false, online ⇒ rama "No pudimos cargar el inicio." + botón Reintentar; un payload vacío 200 NO se produce.
+  const hayContenido = !!(estadoCliente.data as { rails?: unknown[] } | null)?.rails?.length;
+  assert.equal(hayContenido, false);
+  assert.notEqual(respuesta.status, 200, "un Home vacío con 200 se leería como 'nada en tus plataformas'; por eso es 503");
 });

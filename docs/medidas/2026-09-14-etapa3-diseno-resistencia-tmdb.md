@@ -26,7 +26,13 @@
 > carrera cerrada dentro del script de adquisición del turno, observabilidad
 > por evento y deltas, retirada la idea de provocar un frío total en
 > Producción. 3.c.1 lista para auditoría de DISEÑO, no de implementación;
-> 3.c.2 no aprobada.** Ocho correcciones en rama (auditorías de Codex sobre
+> 3.c.2 no aprobada. **§41 (16/09, auditoría sobre `21cbf18`) — ESTADO
+> VIGENTE de la 3.c:** contrato con sobrepaso explícito, lector no
+> bloqueante sin tormenta (28/28 sobre modelo), marcador 120 s + marca de
+> agua, Lua completo con observabilidad, `/api/health` sólo agregados,
+> `503` explícito para aprobación del dueño; **3.c.1: diseño cerrado, listo
+> para auditoría de implementación, NO aprobada, NO implementada; 3.c.2
+> fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -2922,6 +2928,13 @@ requiere autorización del dueño; no se cambia automáticamente.
 
 ## 39. Etapa 3.c — diseño corregido tras la auditoría sobre `f7282a8` y medición 3.c.0 ejecutada — **3.c.0 aprobada y ejecutada; 3.c.1/3.c.2 NO aprobadas, no implementadas; pendiente de nueva auditoría** (2026-09-16)
 
+> **ANTECEDENTE SUPERADO por §40 y §41.** Lo que sigue conserva cifras que ya
+> no son vigentes: "banco calibrado" (es un modelo de sensibilidad ajustado,
+> §40.2), `t_inicio_fondo` 0,6-0,7 s (es 0,30-0,37 s, §40.3), "926 en 26 s /
+> margen 24 s" (extrapolación no validada, §40.2), y la propuesta de observar
+> un frío total real en Producción con autorización (retirada, §40.7). El
+> estado vigente de la 3.c es **§41**.
+
 Rama `diseno/etapa3c-proteccion-tmdb`, sobre `f7282a8`. Sin código productivo,
 sin merge, push ni deploy. Lo único ejecutado es el banco de medición 3.c.0
 (`scripts/banco/etapa3c0-medir.mjs`, más dos capacidades nuevas del doble:
@@ -3294,6 +3307,11 @@ push ni deploy.
 
 ## 40. Etapa 3.c — auditoría y corrección de §39 sobre `1ad1025` — **3.c.1 y 3.c.2 NO aprobadas; sin código productivo; pendiente de nueva auditoría** (2026-09-16)
 
+> **ANTECEDENTE SUPERADO por §41** en: §40.4/§40.5 (contrato con sobrepaso
+> explícito; se elimina `K`), §40.1 (marcador 60 s → 120 s + marca de agua
+> por proceso), §40.6 (Lua completo y `/api/health` sólo agregados). Lo no
+> corregido por §41 sigue vigente. El estado vigente de la 3.c es **§41**.
+
 Rama `diseno/etapa3c-proteccion-tmdb`, sobre `1ad1025`. Cambios: documentación,
 un test de diseño (`lib/tmdb-pausa-diseno.test.ts`, sobre un modelo de Redis,
 no sobre código productivo), y dos herramientas del banco (semilla
@@ -3553,3 +3571,232 @@ que el cambio al **script de adquisición del turno** (Etapa 2, `lib/turno-lua.t
 se diseñe con su propio RED, porque toca fencing y generación; (4) que los
 umbrales de 40.4 queden aceptados por el dueño **antes** de medir. 3.c.2:
 no aprobada (40.8). Ninguna prueba en Producción se pide.
+
+> **§40 queda corregido por §41** (auditoría de Codex sobre `21cbf18`):
+> contrato con sobrepaso explícito (no "0 llamadas" tras adquirir), lector
+> no bloqueante sin tormenta (Δt desde el inicio, ≤ 1 en curso, F_max = 3 +
+> enfriamiento), marcador 120 s + marca de agua por proceso, Lua completo con
+> observabilidad y `/api/health` sólo agregados, `503` explícito para el
+> dueño, estado canónico limpio.
+
+## 41. Etapa 3.c — auditoría y corrección de §40 sobre `21cbf18` — **ESTADO VIGENTE de la 3.c: 3.c.1 con diseño cerrado y listo para auditoría de implementación (NO aprobada, NO implementada); 3.c.2 fuera de alcance** (2026-09-16)
+
+Rama `diseno/etapa3c-proteccion-tmdb`, sobre `21cbf18`. Cambios: documentación
+y `lib/tmdb-pausa-diseno.test.ts` (modelo; 13 propiedades nuevas, **28/28**).
+Sin código productivo, merge, push, deploy, Producción, variables ni
+infraestructura. **Este §41 es el único estado vigente de la 3.c; §38, §39 y
+§40 quedan como antecedentes superados en lo que §41 corrige.** Los umbrales
+de rendimiento de §40.4 **no se tocan**.
+
+### 41.1 Punto 1 — la contradicción §40.4/§40.5: contrato con sobrepaso explícito
+
+§40.5 afirmaba "la primera relectura ocurre antes de la llamada 1" y §40.4
+hacía la relectura no bloqueante: incompatible. Contrato corregido:
+
+| Cuándo existe la pausa | Garantía | Llamadas iniciadas después |
+|---|---|---|
+| **Antes de adquirir el turno** | la comprobación va dentro del script atómico de adquisición: **no se adquiere, no se compone, no se programa el fondo** | **0** (demostrable: no hay instante entre comprobar y adquirir) |
+| **Después de adquirir** (en cola o en composición) | la ve el nivel 1 (429 propio) o el nivel 2 (relectura no bloqueante, una por `Δt`); la composición se cancela y no se publica; el turno se libera en el acto | **sobrepaso explícito y medible**: `≤ enVuelo + admitidas durante (Δt + RTT_lectura)` = `24 + ⌈35 × 1,04⌉ = 61` por proceso [derivado con la cadencia del banco]; `≤ 183` con tres procesos. **No se promete cero.** |
+
+No se agrega una lectura bloqueante tras adquirir: costaría una operación
+de Redis en el camino crítico de **toda** composición sana (40-138 ms) y no
+cerraría ninguna ventana — entre esa lectura y la primera llamada seguiría
+habiendo un instante. El banco de 3.c.1 mide el sobrepaso real (llamadas
+recibidas por el doble después del primer 429, por proceso y global) contra
+esa cota.
+
+### 41.2 Punto 2 — el lector no bloqueante, sin tormenta de Redis (RED→GREEN sobre modelo)
+
+Diseño (`lib/tmdb-pausa.ts`, futuro; un lector por **proceso**):
+
+- **Una sola lectura en curso por proceso.** Los permisos del semáforo que
+  llegan mientras hay una en vuelo **no inician otra**: comparten la que
+  está (su resultado fija la bandera local para todos).
+- **Intervalo desde el inicio**: la siguiente lectura sale en el primer
+  permiso posterior a `Δt = 1.000 ms` **contados desde el inicio** de la
+  anterior, no desde su respuesta. El `K` de §39.5/§40 **se elimina**: con
+  `Δt` contado así, `K = 24` permisos nunca llegan antes que `Δt` a ninguna
+  cadencia por proceso (habría que superar 24 permisos/s sostenidos… y aun
+  así `Δt` es el tope). Queda sólo `Δt`.
+- **Timeout propio** `T_lectura = 1.000 ms` (`AbortSignal.timeout` del
+  lector, independiente de la señal de la solicitud). Ojo con el SDK de
+  Upstash: con una señal **abortada** devuelve un `200` sintético con
+  `{ result: "Aborted" }` (`nodejs.js`, rama `requestOptions.signal?.aborted`):
+  cualquier resultado que **no sea un entero** se trata como
+  `indeterminado`, nunca como "sin pausa".
+- **Máximo exacto de fallos**: `F_max = 3` fallos **seguidos** (timeout,
+  error de red, resultado no entero) → `enfriamiento = 30 s` sin leer (el
+  nivel 1 sigue vivo); después, una lectura más; una respuesta válida
+  reinicia la cuenta. Con Redis colgado, lento (> `T_lectura`) o caído: **6
+  lecturas por minuto como máximo**, no una por permiso.
+
+**RED (control, ejecutado):** un lector ingenuo (una lectura cada 24
+permisos, sin guardia de vuelo ni timeout propio) con Redis colgado, a 35
+permisos/s: **50 lecturas iniciadas en 30 s y las 50 colgadas a la vez**
+— tormenta. **GREEN**
+(`crearLector`): Redis normal (40 ms) → `maxEnCurso = 1`, 30 lecturas en 30
+s (una por `Δt`), 0 fallidas; Redis lento (RTT 3 s) → `maxEnCurso = 1`,
+exactamente 6 iniciadas y 6 fallidas en 60 s; Redis colgado → 6 y 6; Redis
+caído (error inmediato) → 6, `maxEnCurso = 1`; recuperación: tras el
+enfriamiento vuelve a leer y con respuesta el contador se reinicia (3
+fallidas en total, ≥ 9 resultados en los 10 s siguientes).
+
+Consecuencia sobre el umbral de operaciones de Redis de §40.4: el esperado
+pasa a `≤ ⌈duración / Δt⌉ + 2` (frío total ≈ 27 s → ≤ 29), **por debajo**
+del umbral fijado (`≤ ⌈llamadas / 24⌉ + 2 = 41`), que **se mantiene como
+está** hasta medir.
+
+### 41.3 Punto 3 — horizonte real del reintento y marcador conservador; un evento viejo nunca reabre
+
+Horizonte [medido en el código del SDK `@upstash/redis` 1.38.0, `nodejs.js`
+y `lib/metricas.ts`]: `attempts = 5` ⇒ hasta **6 intentos**, con
+`backoff(i) = e^i × 50 ms` ⇒ esperas `Σ_{i=0..4} = 4,29 s`; cada intento es
+un `fetch` **sin timeout propio**, así que el horizonte no lo fija el SDK
+sino la **invocación**: en Vercel muere a `maxDuration = 60 s` desde el
+inicio de la solicitud, y un evento se crea dentro de ella ⇒ **ningún
+reintento del mismo evento ocurre más de 60 s después de crearlo**.
+Marcador: **`PX 120.000`** (2 × `maxDuration`), conservador, no "60 s por
+suficiente".
+
+Y para que un evento viejo **nunca** reabra una pausa, ni siquiera si el
+marcador venciera: **marca de agua por proceso** —`tmdb:pausa:proc`, hash
+`uuid → último contador aplicado`, `EXPIRE 86400`— dentro del mismo script;
+un evento con `contador ≤ marca` es `ya-aplicada`. Para que la marca sea
+exacta, cada proceso **serializa** sus `PAUSAR`: uno en vuelo por vez; un
+429 que llega mientras hay uno en vuelo no crea un evento nuevo sino que se
+funde con el siguiente (se toma el `Retry-After` mayor).
+
+**GREEN:** reintento a los **61 s** → `ya-aplicada` (marcador vivo), la
+pausa de 8 s ya venció y no se reabre; reintento a los **130 s** (marcador
+vencido) → `ya-aplicada` por la marca de agua, `PTTL = -2`; el evento
+siguiente del mismo proceso escribe; un evento anterior demorado
+(`contador 6` después del `8`) no alarga; un proceso nuevo (otro uuid)
+arranca su serie.
+
+### 41.4 Punto 4 — el Lua completo, con observabilidad, en orden
+
+```lua
+-- KEYS[1] tmdb:pausa          (string: id del evento vigente, PX = duración)
+-- KEYS[2] tmdb:pausa:ev:<id>  (marcador de idempotencia, PX 120000)
+-- KEYS[3] tmdb:pausa:proc     (hash uuid → último contador aplicado, EXPIRE 86400)
+-- KEYS[4] tmdb:eventos        (lista, 200 últimos, EXPIRE 604800; sólo para diagnóstico con credenciales)
+-- KEYS[5] tmdb:cubos          (hash "<minuto de Redis>:<campo>" → n, EXPIRE 172800)
+-- ARGV[1] id  ARGV[2] ms  ARGV[3] uuid  ARGV[4] contador  ARGV[5] familia  ARGV[6] retryAfterMs
+local t = redis.call('TIME'); local minuto = math.floor(tonumber(t[1]) / 60); local ahoraMs = tonumber(t[1]) * 1000 + math.floor(tonumber(t[2]) / 1000)
+local function cubo(campo) redis.call('HINCRBY', KEYS[5], minuto .. ':' .. campo, 1); redis.call('EXPIRE', KEYS[5], 172800) end
+if redis.call('EXISTS', KEYS[2]) == 1 then cubo('ya-aplicada'); return {'ya-aplicada', redis.call('PTTL', KEYS[1])} end
+local marca = tonumber(redis.call('HGET', KEYS[3], ARGV[3]) or '-1')
+if tonumber(ARGV[4]) <= marca then cubo('ya-aplicada'); return {'ya-aplicada', redis.call('PTTL', KEYS[1])} end
+redis.call('SET', KEYS[2], '1', 'PX', 120000)
+redis.call('HSET', KEYS[3], ARGV[3], ARGV[4]); redis.call('EXPIRE', KEYS[3], 86400)
+cubo('429')
+local restante = redis.call('PTTL', KEYS[1]); local estado
+if restante >= tonumber(ARGV[2]) then estado = 'ya-mayor'; cubo('ya-mayor')
+else redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]); estado = 'escrito'; restante = tonumber(ARGV[2]); cubo('pausas') end
+redis.call('LPUSH', KEYS[4], cjson.encode({ id = ARGV[1], t = ahoraMs, familia = ARGV[5], retryAfterMs = ARGV[6], estado = estado, restante = restante }))
+redis.call('LTRIM', KEYS[4], 0, 199); redis.call('EXPIRE', KEYS[4], 604800)
+return { estado, restante }
+```
+
+- **Orden exacto** (probado sobre el modelo): `EXISTS ev → HGET proc → SET ev
+  → HSET proc → HINCRBY 429 → PTTL → (SET pausa | nada) → HINCRBY pausas |
+  ya-mayor → LPUSH → LTRIM`. En **`ya-aplicada`** sólo se incrementa
+  `ya-aplicada`: no toca pausa, marcador, marca de agua ni eventos.
+  `escrito` y `ya-mayor` registran **un** evento y **un** 429 cada uno;
+  los reintentos no duplican nada.
+- **Reloj**: `TIME` de Redis dentro del script sella el evento y elige el
+  cubo (`minuto`): dos instancias con relojes distintos caen en el mismo
+  cubo (probado). Los clientes que suman `pausaNoLeida`, `pausadosUB` y
+  `pausados503` lo hacen con `HINCRBY tmdb:cubos <minuto>:<campo>` donde el
+  minuto también sale de Redis: un `EVAL` mínimo `TIME + HINCRBY`, o —más
+  barato— el mismo script con un ARGV de modo. **Ninguna clave se deriva
+  del reloj local.**
+- **Compatibilidad `EVAL`**: cinco claves declaradas (nada de claves
+  construidas dentro del script, salvo campos de hash); `TIME` y `cjson`
+  dentro de scripts son estándar desde Redis 3.2, pero **en Upstash quedan
+  como precondición de Preview** (junto con la tupla de retorno vía SDK).
+- **`/api/health`** (probado sobre el modelo): **sólo agregados** —
+  `pausaVigenteMs` y, para los últimos 60 cubos, las sumas de `429`,
+  `pausas`, `ya-mayor`, `ya-aplicada`, `pausaNoLeida`, `pausadosUB`,
+  `pausados503`. **Ningún uuid, id de evento, ruta ni evento crudo**
+  (aserción sobre el JSON). `tmdb:eventos` guarda la **familia** de la ruta
+  (`/watch/providers`, `/discover/movie`), nunca la URL con parámetros, y
+  sólo se lee con credenciales de Redis (o un endpoint de admin con MFA,
+  fuera de esta etapa). Una pausa espuria (`pausas > 0` con `429 = 0` en la
+  ventana) es imposible por construcción; verla en `/api/health` delata un
+  bug.
+
+### 41.5 Punto 5 — Home sin UB durante la pausa: `503`, `Retry-After`, y el cliente real
+
+Contrato de la ruta (reutiliza el que la 3.a ya definió en
+`lib/tmdb-http.ts`): **`503`**, `Retry-After: ⌈PTTL / 1000⌉`, cuerpo `{
+error: "tmdb-no-disponible", motivo: "pausa", reintentarEnMs: PTTL }`. Lo
+que hoy hace el cliente con eso [medido en el código]: `useApi` toma
+`!r.ok` ⇒ `error = true`, `data = null`, `motivo = "tmdb-no-disponible"`
+(`motivoDeRespuesta`, ya probado en `lib/tmdb-http.test.ts`); `CatalogView`
+con `hayContenido = false`, `cargando = false` y en línea renderiza **"No
+pudimos cargar el inicio."** con el botón **Reintentar** (`up-retry`). El
+modelo del recorrido está en el test (`motivoDeRespuesta` real). Lo que
+**no** ocurre: un Home vacío con `200` que la vista leería como "Nada en tus
+plataformas" — por eso es `503` y no el `200` vacío de hoy para
+`cancelada`.
+
+**Cambio de experiencia, explícito para aprobación del dueño:**
+
+| | Hoy (`37d4707`) sin UB y TMDB caído | Con 3.c.1, sin UB y pausa vigente |
+|---|---|---|
+| Status | `200` con `hero: [], rails: [], degradado: true, motivo: "cancelada"` tras esperar hasta 50 s | **`503`** inmediato con `Retry-After` |
+| Mensaje | "No pudimos cargar el inicio." + Reintentar | **el mismo** |
+| Espera del usuario | hasta 50 s (la composición que se cancela) | **< 1 s** |
+| Reintento | manual | manual (opcional, no en 3.c.1: reintento automático a los `reintentarEnMs`) |
+| Contenido | ninguno | ninguno |
+
+La prueba **con la ruta y el cliente reales** (Preview del banco: `next
+start` + navegador contra los dobles con 429 total) es parte de la
+implementación de 3.c.1; hoy sólo hay modelo.
+
+### 41.6 Punto 6 — estado canónico limpio
+
+`docs/ESTADO.md` pasa a **16/09/2026** y su bloque de la 3.c es sólo el de
+§41; los antecedentes (§38-§40) se citan como superados sin repetir sus
+cifras. Textos retirados del estado vigente: "`t_inicio` 0,6-0,7 s" (→
+0,30-0,37 s), "banco calibrado" (→ modelo de sensibilidad ajustado), "26 s
+en Producción" (→ extrapolación no validada), "provocar/autorizar un frío
+total en Producción" (→ sólo observación pasiva si ocurre). En el informe,
+§39 y §40 llevan un rótulo de superados al inicio.
+
+### 41.7 Umbrales (sin cambios respecto de §40.4)
+
+JSON completo **0 diferencias**; llamadas a TMDB **0 de diferencia**;
+operaciones de Redis adicionales **≤ ⌈llamadas / 24⌉ + 2** (Redis caído: ≤
+1 intento fallido — con el lector de 41.2 serán ≤ 3 por ventana de 30 s:
+si eso supera el umbral, el umbral **no se mueve**, se discute con el
+número medido); duración **≤ +5 % mediana / +10 % máx.**; publicación **≤
++1 operación**; 1/2/3 reconstrucciones; Redis normal/lento/caído; UB **≤
++50 ms**. Se miden con semillas fijas y tres repeticiones (banco de 40.2).
+
+### 41.8 RED → GREEN de esta tanda (todo sobre modelo, `node --test lib/tmdb-pausa-diseno.test.ts`, 28/28)
+
+| Propiedad | RED (control) | GREEN |
+|---|---|---|
+| Idempotencia de `PAUSAR` (§40.1) | ingenuo: `PTTL = 8000` tras reintento | 6 tests |
+| Estados del Home (§40.5) | contrato booleano ⇒ `componer = 1` | 4 tests |
+| Horizonte y marcador 120 s; evento viejo nunca reabre (41.3) | — | reintento a 61 s y a 130 s; contador viejo; proceso nuevo |
+| Orden del script y escrituras por resultado (41.4) | — | secuencia exacta; `ya-aplicada` sólo suma su cubo |
+| Cubo por reloj de Redis (41.4) | — | dos "instancias" en el mismo minuto |
+| `/api/health` sólo agregados (41.4) | — | sin uuid/ruta/evento en el JSON |
+| Lector sin tormenta (41.2) | ingenuo colgado: 50 iniciadas, 50 en vuelo | normal 30/30 s; lento 6/60 s; colgado 6/60 s; caído 6/60 s; recuperación |
+| Sobrepaso explícito (41.1) | — | 61 por proceso, 183 con tres |
+| `503` + cliente (41.5) | — | `motivoDeRespuesta` real → error, data null; nunca `200` vacío |
+
+### 41.9 Conclusión: ¿queda listo para pasar a implementación?
+
+**El diseño de 3.c.1 queda cerrado y listo para auditoría de
+implementación.** No está aprobada: pasar a código exige (1) que Codex
+acepte §41; (2) la precondición de Preview del `EVAL` (`TIME`, `cjson`,
+`PTTL`, tupla de retorno vía SDK) contra un Preview aislado, sin tocar
+Producción; (3) la aprobación del dueño de dos cosas explícitas: el `503`
+de 41.5 y los umbrales de 41.7; (4) que la implementación empiece por el
+RED del script de adquisición del turno (Etapa 2, `lib/turno-lua.ts`),
+porque toca fencing y generación. **3.c.2 sigue fuera de alcance** (§40.8).
+Ninguna prueba en Producción se pide.

@@ -1298,28 +1298,18 @@ leyendo el código.**
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
 > restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c (protección frente
-> a TMDB): observación pasiva de Producción + diseño revisado en el informe
-> §38 (16/09): sin serie en los logs (retención), sin señales negativas en
-> lo observado; se propone SIN limitador de tasa fija —3.c.0 medir el frío
-> total de 926 en el banco (condición de paso), 3.c.1 pausa compartida ante
-> 429, 3.c.2 circuito del fondo + recuperación por concurrencia—, con kill
-> switches, banco multiproceso, identidad 16/16 y condición de rollback;
-> corregido en §39 tras la auditoría sobre `f7282a8` (presupuesto del fondo
-> por componentes, propagación del 429 en dos niveles con cota de
-> sobrepaso, pausa con vencimiento máximo en Lua, estados explícitos del
-> fondo, recuperación acotada entre instancias, rollback sobre señales
-> medibles, alcance sin `tmdb-sync`) y **3.c.0 EJECUTADA** (banco calibrado
-> contra las dos observaciones de Producción, pesimista 15-28 %: el frío
-> total de 926 compone en 26 s de los 50 del fondo; con modelos lentos no
-> cabe; una reconstrucción ráfaga a 80/s y dos simultáneas promedian 64/s);
-> 3.c.1/3.c.2 NO APROBADAS; NO IMPLEMENTADA. §40 (auditoría sobre
-> `1ad1025`): `PAUSAR` idempotente por identidad de evento (RED→GREEN, 15/15
-> sobre modelo), 3.c.0 reclasificada como sensibilidad ajustada con semillas
-> y repeticiones (extrapolación a Producción NO validada), `t_inicio_fondo`
-> 0,30-0,37 s, umbrales antes/después a priori, carrera cerrada en el script
-> de adquisición, observabilidad por evento, sin "frío total provocado";
-> 3.c.1 lista para auditoría de DISEÑO, no de implementación; PENDIENTE DE
-> NUEVA AUDITORÍA.** **Subetapa 3.b ("último bueno
+> a TMDB) — estado vigente en el informe §41 (16/09): 3.c.1 "pausa
+> compartida ante 429" con diseño cerrado (adquisición atómica del turno
+> con la pausa adentro y sobrepaso explícito si aparece después; lector no
+> bloqueante sin tormenta; `PAUSAR` idempotente por identidad de evento con
+> marcador 120 s y marca de agua por proceso; observabilidad por evento y
+> cubos con reloj de Redis; `/api/health` sólo agregados; `503` +
+> `Retry-After` sin UB — cambio de experiencia pendiente de aprobación del
+> dueño; umbrales antes/después fijados), probado sobre modelo (28/28),
+> LISTA PARA AUDITORÍA DE IMPLEMENTACIÓN, NO APROBADA, NO IMPLEMENTADA;
+> 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no
+> predictivo; ningún frío total se pide en Producción. Antecedentes §38-§40
+> superados.** **Subetapa 3.b ("último bueno
 > primero, reconstrucción en fondo"): MERGEADA, PUSHEADA Y DESPLEGADA el
 > 2026-09-15** — aprobada por la auditoría final de Codex sobre `c5fab20`;
 > merge `--no-ff` `5604750` (rama en `ae6902f`), deployment
