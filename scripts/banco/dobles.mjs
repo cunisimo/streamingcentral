@@ -10,7 +10,13 @@
 // Cada doble expone, además de lo que imita, un control en `/__banco`:
 //
 //   GET  /__banco/estado          contadores: peticiones recibidas, por familia
-//   POST /__banco/config          { modo, latenciaMs, retryAfter }
+//   POST /__banco/config          { modo, latenciaMs, latenciaP95Ms?, retryAfter }
+//        latenciaMs es la MEDIANA; con latenciaP95Ms la latencia se sortea de una
+//        log-normal con esa mediana y ese p95 (Etapa 3.c.0: calibrar el banco
+//        contra las latencias observadas en Producción; sin p95, es constante)
+//   GET  /__banco/marcas          una marca por petición atendida: { t: llegada,
+//        fin: respuesta terminada, f: familia, k?: clave (Redis) } — de ahí salen
+//        la cadencia efectiva, la ráfaga máxima, la concurrencia y las fases
 //        modo: "ok" | "429" | "500" | "caido"   ("caido" corta el socket: fallo
 //        de transporte, que es lo único que el SDK de Upstash reintenta)
 //        modo: "429-parcial" + { parcialP: 0.1, familiaParcial: "/watch/providers", parcialPorQuery?: true }
@@ -42,6 +48,15 @@ import { LUA } from "../../lib/turno-lua.ts";
 const PUERTO_BASE = Number(process.env.BANCO_PUERTO_BASE) || 4801;
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+// Log-normal con mediana `m` y percentil 95 `p95` (Box-Muller); sin p95, constante.
+function sortearLatencia(m, p95) {
+  if (!m) return 0;
+  if (!p95 || p95 <= m) return m;
+  const sigma = Math.log(p95 / m) / 1.6449;
+  const u = 1 - Math.random(), v = Math.random();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return Math.round(m * Math.exp(sigma * z));
+}
 function leerCuerpo(req) {
   return new Promise((resolve) => { let b = ""; req.on("data", (c) => { b += c; }); req.on("end", () => resolve(b)); });
 }
@@ -55,18 +70,21 @@ function json(res, estado, cuerpo, headers = {}) {
 // Un doble = servidor + estado de control + contadores. `atender` hace lo
 // específico; el control y los modos de fallo son comunes.
 function doble(nombre, puerto, atender, extra = {}) {
-  const estado = { modo: "ok", latenciaMs: 0, retryAfter: 2 };
+  const estado = { modo: "ok", latenciaMs: 0, latenciaP95Ms: 0, retryAfter: 2 };
   // `bytes`: lo que entró y salió por el cable en las peticiones atendidas (sin
   // el control). Es lo que mide el costo en BYTES del camino caliente (Etapa 2,
   // §14.6): un HIT tiene que transferir UNA copia del Home, no dos ni tres.
   const cuenta = { peticiones: 0, porFamilia: {}, desconocidas: [], bytes: { recibidos: 0, enviados: 0 } };
+  // Marcas por petición (3.c.0); tope para que un banco largo no crezca sin fin.
+  const marcas = [];
   const familia = (metodo, url) => (extra.familia ? extra.familia(metodo, url) : `${metodo} ${url.split("?")[0]}`);
   const srv = createServer(async (req, res) => {
     const url = req.url ?? "/";
     if (url.startsWith("/__banco/")) {
       if (url === "/__banco/estado") return json(res, 200, { nombre, estado, cuenta, ...(extra.estado?.() ?? {}) });
+      if (url === "/__banco/marcas") return json(res, 200, marcas);
       if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); return json(res, 200, estado); }
-      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; cuenta.consultas429 = []; cuenta.discovers = []; extra.reset?.(); return json(res, 200, { ok: true }); }
+      if (url === "/__banco/reset") { marcas.length = 0; cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; cuenta.consultas429 = []; cuenta.discovers = []; extra.reset?.(); return json(res, 200, { ok: true }); }
       // Controles propios del doble (Etapa 2: expirar, borrar, perder la
       // respuesta, fallar EVAL, listar claves).
       if (extra.control) { const r = await extra.control(url, await leerCuerpo(req)); if (r !== undefined) return json(res, 200, r); }
@@ -81,7 +99,17 @@ function doble(nombre, puerto, atender, extra = {}) {
     res.end = (chunk, ...a) => { if (chunk && typeof chunk !== "function") cuenta.bytes.enviados += Buffer.byteLength(chunk); return endOriginal(chunk, ...a); };
     const f = familia(req.method, url, cuerpo);
     cuenta.porFamilia[f] = (cuenta.porFamilia[f] ?? 0) + 1;
-    if (estado.latenciaMs) await dormir(estado.latenciaMs);
+    let marca = null;
+    if (marcas.length < 200000) {
+      marca = { t: Date.now(), fin: 0, f };
+      // El SDK de Upstash manda CADA comando como un /pipeline de uno: se
+      // registra el primer comando del lote (nombre y clave) y cuántos trae.
+      if (nombre === "redis") { try { const c = JSON.parse(cuerpo); const primero = url.startsWith("/pipeline") ? c[0] : c; marca.c = String(primero?.[0] ?? "").toUpperCase(); marca.k = String(primero?.[1] ?? ""); marca.n = url.startsWith("/pipeline") ? c.length : 1; } catch { /* sin clave */ } }
+      marcas.push(marca);
+      res.on("finish", () => { marca.fin = Date.now(); });
+      res.on("close", () => { if (!marca.fin) marca.fin = Date.now(); });
+    }
+    if (estado.latenciaMs) await dormir(sortearLatencia(estado.latenciaMs, estado.latenciaP95Ms));
     if (estado.modo === "caido") { req.socket.destroy(); return; }
     if (estado.modo === "500") return json(res, 500, { error: "doble en modo 500" });
     if (estado.modo === "429") return json(res, 429, { error: "doble en modo 429" }, { "Retry-After": String(estado.retryAfter) });

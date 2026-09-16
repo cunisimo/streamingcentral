@@ -12,7 +12,13 @@
 > los logs (retención), sin señales negativas en lo observado; la 3.c se
 > propone SIN limitador de tasa fija —medir (3.c.0), pausa compartida ante
 > 429 (3.c.1), circuito del fondo (3.c.2)—; pendiente de aprobación y de
-> auditoría; no implementada.** Ocho correcciones en rama (auditorías de Codex sobre
+> auditoría; no implementada. **§39 (16/09, auditoría sobre `f7282a8`):
+> diseño corregido en los ocho puntos y 3.c.0 EJECUTADA: el banco, una vez
+> calibrado (pesimista 15-28 % frente a Producción), compone el frío total
+> de 926 en 26 s de los 50 del fondo; con modelos más lentos, 40 s o
+> cancelación. Una reconstrucción sola emite ráfagas de 80/s y dos
+> simultáneas promedian 64/s. 3.c.1/3.c.2 NO aprobadas; pendiente de nueva
+> auditoría.** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -2899,3 +2905,374 @@ requiere autorización del dueño; no se cambia automáticamente.
   listo para auditoría de Codex**; la implementación sigue bloqueada por
   3.c.0 y por la autorización del dueño (§19.2 queda sin efecto: no se
   propone tasa declarada en esta etapa).
+
+> **§38 queda corregido por §39** (auditoría de Codex sobre `f7282a8`): el
+> presupuesto del fondo, la calibración del banco, la propagación del 429, la
+> escritura de la pausa, el estado "pausado", la recuperación multiproceso,
+> el rollback y el alcance se reescriben ahí; la medición 3.c.0 está
+> ejecutada en §39.2-39.4.
+
+## 39. Etapa 3.c — diseño corregido tras la auditoría sobre `f7282a8` y medición 3.c.0 ejecutada — **3.c.0 aprobada y ejecutada; 3.c.1/3.c.2 NO aprobadas, no implementadas; pendiente de nueva auditoría** (2026-09-16)
+
+Rama `diseno/etapa3c-proteccion-tmdb`, sobre `f7282a8`. Sin código productivo,
+sin merge, push ni deploy. Lo único ejecutado es el banco de medición 3.c.0
+(`scripts/banco/etapa3c0-medir.mjs`, más dos capacidades nuevas del doble:
+latencia log-normal y marcas por petición), contra dobles locales, sin
+credenciales ni servicios de Producción. Marcas: [medido] / [derivado] /
+[propuesto] / [desconocido] / **[hipótesis]** para lo simulado.
+
+### 39.1 Diff conceptual respecto de §38 (los ocho puntos de la auditoría)
+
+| # | §38 decía | §39 corrige |
+|---|---|---|
+| 1 | presupuesto del fondo "50 s desde el inicio de la solicitud → ≈ 47 s útiles" | la señal se crea **cuando el fondo ya empezó** (`AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)` en `iniciar`, `lib/home.ts`), y Vercel mata a `maxDuration` **desde el inicio de la solicitud**: `composición + publicación + cierre ≤ min(50 s, 60 s − t_inicio_fondo)`. Los tres sumandos y `t_inicio_fondo` se miden por separado (39.3); **no se fija 47 s** |
+| 2 | doble de TMDB "con latencia realista (p50 ≈ 350 ms)" | calibración obligatoria contra las dos observaciones (250/15,1 s y 342/16,7 s) con latencias por llamada leídas de las líneas de Producción (TMDB 527 y 348 ms; Redis 138 ms; Supabase 604 y 355 ms), corrida de control de ~340 llamadas y criterio explícito de "reproduce razonablemente" (39.2) antes de usar el modelo para 926 |
+| 3 | "una lectura de pausa por composición; tras el primer 429 nadie inicia llamadas nuevas" | **no puede cumplirse**: dos niveles — reacción local inmediata (por proceso) y propagación compartida periódica/por lotes — con cota honesta de sobrepaso: `sobrepaso ≤ en_vuelo + admitidas_durante_el_intervalo_de_propagación`, medida en el banco con tres procesos y colas grandes (39.5) |
+| 4 | `SET tmdb:pausa … NX` | operación atómica que **conserva el vencimiento máximo** (extiende, nunca acorta), con duraciones y reloj de Redis, tolerante a respuesta perdida, con resultado `escrito` / `ya-mayor` / `indeterminado` (39.6); Lua sólo en diseño, con precondición de Preview |
+| 5 | "con pausa, `programarEnFondo` devuelve `false`, sirve UB y libera el turno" | **falso con el contrato actual**: `false` = "no disponible" = `componer()` en línea. Estados explícitos `programado` / `no-disponible` / `pausado` con semántica fijada por caso y criterios RED que prueban que `pausado` nunca cae en `componer()` (39.7) |
+| 6 | recuperación "gradual" `4 → 24` por proceso | no es global: con `N` instancias desconocidas la concurrencia total tras la pausa es `N × piso` y sube a `N × 24`; se rediseña con una cota compartida y se agregan los seis escenarios pedidos (39.8) |
+| 7 | rollback por "línea con `pausa vigente` sin 429" o "`pausaNoLeida` sostenido" | esas señales no se pueden buscar después: Vercel no conserva los logs. Se separan verificación en vivo, observación histórica (bloqueada por #20) y señales realmente medibles (39.9) |
+| 8 | "protección de la cuenta" implícita | la pausa protege **sólo a la app en Vercel**; `tmdb-sync` y los scripts usan el mismo token fuera del mecanismo (39.10) |
+
+### 39.2 Calibración del banco (3.c.0, ejecutada)
+
+**Instrumento** (`scripts/banco/etapa3c0-medir.mjs` + `dobles.mjs`): los
+tres dobles en un juego (4801-4803) y **tres** `next start` de la rama
+(3001-3003) compartiendo el mismo Redis del banco; el doble de TMDB sortea
+la latencia de una log-normal (mediana, p95) y guarda una **marca por
+petición** (llegada, fin, familia; en Redis, comando y clave del `/pipeline`
+de uno que manda el SDK de Upstash). De las marcas salen cadencia, ráfaga
+por segundo móvil y por 100 ms, concurrencia real y fases. Lo que la app
+dice (`tmdb N llamadas`) se comprobó igual a lo que el doble recibió en
+todos los escenarios (926 = 926, 338 = 338, 259 = 259).
+
+**Targets** [medido en Producción, líneas de §32.1 y §37]: (a) 3.a, en
+línea: **250 llamadas / 15.091 ms**, TMDB 527 ms/llamada de promedio, Redis
+279 ops / 138 ms de promedio, Supabase 6 / 604 ms; (b) 3.b, en fondo: **342
+/ 16.682 ms**, TMDB 348 ms, Supabase 11 / 355 ms; (c) histórico "todo
+cacheado" ≈ 2,9 s (CLAUDE.md, antes del payload cacheado). La parcialidad de
+Redis se reproduce venciendo un subconjunto de `pv3:<tipo>:<id>` por el
+último dígito del id (0-3 → 338 llamadas; 0-2 → 259).
+
+**Tres pasadas, dos falsas y una válida** (MANTENIMIENTO 8.b.2: el
+instrumento primero):
+
+| Pasada | Modelo | ~340 llamadas (target 16,7 s) | ~260 (target 15,1 s) | todo cacheado (≈ 2,9 s) | Veredicto |
+|---|---|---|---|---|---|
+| 1 (`…-pasada1.json`) | mediana = promedio (TMDB 348, Redis 138), p95 2,3× | 833 llamadas (venció **todo** `pv3:`): no comparable | ídem | 9,1 s | **instrumento roto**: el vencimiento no reproducía la parcialidad; además el promedio de la log-normal es 1,137 × mediana |
+| 2 (`…-pasada2.json`) | mediana = promedio / 1,137, p95 2,3×, Redis 138 | 338 → **32,5 s** (+95 %) | 259 → **32,1 s** (+113 %) | 9,8 s (+240 %) | **no reproduce**: la cadena secuencial de Redis (65 ops con todo cacheado) domina; el promedio de 138 ms lo infla la fase paralela de `pv3:`, no vale para la cadena |
+| Barrido de Redis (`…-calibracion-redis.json`), p95 2,3× | Redis 20 / 40 / 60 / 90 | 21,8 / 22,5 / 27,4 / 30,0 s | 21,9 / 23,6 / 25,2 / 28,3 s | 2,9 / 4,0 / 4,5 / 6,9 s | ni a 20 ms alcanza (+30 %): el segundo parámetro libre es la **cola** de TMDB |
+| Sensibilidad de cola (`…-calibracion-p95-1.5.json`) | Redis 40, **p95 1,5×** | 338 → **19,7 s (+18 %)** | 259 → **17,8 s (+18 %)** | **3,7 s (+28 %)** | **reproduce razonablemente**, del lado pesimista |
+| 3, matriz (`…-medicion.json`) | **calibrado**: TMDB promedio 348 (mediana 338), Redis 40 (39), Supabase 355, p95 1,5× | 338 → 19,2 s (+15 %) | 259 → 19,3 s (+28 %) | 3,5 s | el modelo usado para todo lo que sigue |
+
+Con el promedio de la 3.a (527 ms) **ningún** modelo reproduce sus 15,1 s
+(a Redis 40 y p95 1,5×: 24,7 s, +64 %): se infiere que ese promedio lo
+inflaba una cola larga en pocas llamadas, no la mediana [inferido]. El
+modelo calibrado es **pesimista en 15-28 %** frente a Producción en los
+tamaños observados: lo que cabe en el banco, cabe en Producción con más
+margen; lo que no cabe en el banco queda **indeterminado**, no condenado.
+Parámetros que siguen sin medir: distribución real de Redis por tipo de
+operación y cola real de TMDB [desconocido].
+
+### 39.3 Presupuesto del fondo, por componentes (3.c.0)
+
+Modelo (auditoría): `composición + publicación + cierre ≤ min(50 s, 60 s −
+t_inicio_fondo)`. Componentes del **frío total (926) en fondo** con el
+modelo calibrado (`…-fases.json`, dos repeticiones) [medido en el doble]:
+
+| Componente | Cómo se mide | Medida | Nota |
+|---|---|---|---|
+| `t_inicio_fondo` | respuesta del UB al cliente + hasta la primera llamada a TMDB | 0,23-0,30 s + 0,30-0,37 s ≈ **0,6-0,7 s** | en Producción la respuesta del UB fue 0,64 s [medido §37]; la frontera cede con `setImmediate` (§36) |
+| composición | primera → última llamada a TMDB (llegada) + latencia de la última | **25,4-25,6 s + 0,35-0,42 s** | 926 llamadas, 1.003 ops de Redis, cadencia 36,6/s |
+| publicación | fin de la última llamada → script Lua de publicación respondido | **0,13-0,15 s** | una operación atómica (fresca + UB + generación + DEL turno) |
+| cierre | publicación → última operación de Redis | **0 s** | la liberación va dentro del script |
+| **total** `[home-fondo]` | línea | **25,9-26,2 s** | |
+
+Presupuesto disponible: `min(50 s, 60 − 0,7 s) = 50 s` (el mínimo lo pone
+`PRESUPUESTO_REQUEST_MS`, no `maxDuration`). **Margen con el modelo
+calibrado: ≈ 24 s** [derivado]. Con los modelos pesimistas descartados por
+la calibración, para acotar el riesgo: p95 2,3× y Redis 121 → 40,1 s en
+fondo (margen ≈ 10 s); TMDB 527 ms con p95 2,3× y Redis 121 → **51,3 s,
+CANCELADA** (`ULTIMO-BUENO`, `publicacion no`, UB intacto); Redis a 300 ms
+con el modelo calibrado → 49,3 s (publicada por 0,7 s); Redis a 300 ms con
+p95 2,3× → 54,1 s, cancelada.
+
+**Respuesta a "¿926 llamadas caben realmente?":** **sí con el modelo que
+reproduce Producción (26 s de 50), y también con un modelo un 50 % más
+lento (40 s); no caben si la latencia por llamada se acerca a los 527 ms
+de promedio con cola larga, ni con Redis a 300 ms.** El banco no puede
+decir cuál de esas condiciones rige en Producción una madrugada cualquiera:
+la cola de TMDB y la distribución de Upstash son [desconocido]. Lo que sí
+queda fijado: **cualquier tasa fija por debajo de la cadencia natural de
+36/s alarga la composición proporcionalmente** — a 28/s serían ≈ 33 s
+[derivado], todavía dentro; a 14/s (la cadencia masiva del diseño §8.4),
+≈ 66 s, fuera.
+
+### 39.4 Efecto de 1, 2 y 3 reconstrucciones simultáneas, Redis frío/caliente/lento, `tmdb-sync` simulado
+
+Modelo calibrado, Redis vacío, procesos distintos compartiendo Redis
+(`…-medicion.json`) [medido en el doble]:
+
+| Escenario | Por proceso (llamadas / total / cadencia) | Global: cadencia media | ráfaga máx. 1 s | ráfaga máx. 100 ms | concurrencia máx. | Resultado |
+|---|---|---|---|---|---|---|
+| 1 clave fría, en línea (S1) | 926 / 27,1 s / 34,1/s | 35,5/s | **79** | 24 | 24 | publicada |
+| 1 clave fría, en fondo (S3) | 926 / 25,3 s / 36,6/s | 37,4/s | **80** | 24 | 24 | publicada; UB servido en 0,27 s |
+| 2 claves (`n,d,m` + `n,d`), 2 procesos (S4) | 818 / 24,2 s / 33,8 · 724 / 24,7 s / 29,3 | **64,4/s** | **156** | 48 | 48 | las dos publicadas |
+| 3 claves (+ `d,m`), 3 procesos (S5) | 782 / 23,9 · 657 / 24,3 · 661 / 24,1 s | **89,7/s** | **222** | 72 | 72 | las tres publicadas |
+| Redis 30 ms (S6) | 926 / 25,3 s / 36,5 | 37,8/s | 78 | 24 | 24 | publicada |
+| Redis 300 ms (S6) | 926 / 49,3 s / 18,8 | 19,9/s | 78 | 24 | 24 | publicada al límite |
+| `tmdb-sync` simulado 10/s **[hipótesis]** (S8) | 926 / 26,7 s / 34,6 | 43,7/s (= Home + 10) | 87 | 26 | 30 | publicada; el doble no limita, sólo suma |
+| MISS intradía, todo cacheado (S7) | 1 / 3,5 s | — | 1 | 1 | 1 | 64 ops secuenciales de Redis: **el piso del pipeline** |
+
+Lecturas: (1) el doble **no limita**, así que "publicada" con 2-3 claves
+sólo dice que el tiempo no crece (cada proceso tiene su semáforo de 24);
+lo que crece es la **tasa global**: 64/s con dos y 90/s con tres, con
+ráfagas de 156 y 222 en un segundo — **por encima de los ~40-50/s que TMDB
+publica** [documentación, no medido] ya con dos reconstrucciones, y una sola
+reconstrucción llega a 80 en un segundo (24 en vuelo / 0,3 s). Que
+Producción no haya visto un 429 con esas ráfagas (342/342 y 250/250 ok)
+dice que el límite efectivo de TMDB no se aplica como un tope por segundo
+estricto, o es mayor: **[desconocido]**. (2) La concurrencia total es `24 ×
+procesos` sin ninguna cota compartida: 72 con tres. (3) El pipeline tiene
+un piso de ~3,5 s (calibrado) a ~9,8 s (Redis 121) que es **secuencial**
+(64-65 idas y vueltas a Redis una detrás de otra): ningún limitador de TMDB
+lo toca; sí lo toca la latencia de Upstash. (4) El `tmdb-sync` sólo suma su
+tasa; con 10/s hipotéticos una reconstrucción sola ya promedia 44/s.
+
+### 39.5 Propagación del 429 en dos niveles (diseño, no implementado)
+
+**Nivel 1 — reacción local inmediata, por proceso.** El primer 429 que ve un
+proceso (clase `http429`, `lib/tmdb-error.ts`) fija en memoria
+`pausaLocalHasta = ahora + retryAfter` (o el backoff acotado si no hay
+cabecera). A partir de ese instante, en **ese proceso**: (a) las llamadas que
+esperan el semáforo `MAX_EN_VUELO` **no se inician** — salen con `AbortError`
+de clase `pausa`, contadas como `canceladas.enCola` (contador que ya existe);
+(b) las llamadas en vuelo terminan solas (no se abortan: ya cuentan para
+TMDB). La composición afectada queda cancelada/degradada como hoy ante una
+caída: **no se publica**, UB intacto. Cota local: `sobrepaso_proceso ≤
+enVuelo ≤ 24` [derivado del semáforo]. Sin Redis en este nivel.
+
+**Nivel 2 — propagación entre instancias.** El mismo primer 429 escribe la
+pausa compartida (39.6). Los demás procesos **no** leen Redis por llamada:
+leen la pausa (a) al empezar una composición/consulta, y (b) **por lote**:
+cada `K` permisos del semáforo concedidos, o cada `Δt` ms, lo que ocurra
+antes, releen `tmdb:pausa` (una operación `GET`, ~138 ms en Producción
+[medido]). Con `K` y `Δt` [propuesto: `K = 24`, `Δt = 1.000 ms`; se fijan en
+el banco]. Cota honesta:
+
+```
+sobrepaso_global ≤ Σ_procesos ( enVuelo_p + admitidas_p(Δt_propagación) )
+Δt_propagación = escritura de la pausa + Δt (o K permisos) + lectura
+```
+
+Con `N = 3`, `enVuelo = 24`, cadencia por proceso ≈ 20/s [medido en 39.4] y
+`Δt = 1 s`: `sobrepaso ≤ 3 × (24 + ~20 + 138 ms × 20/s ≈ 3) ≈ 141` llamadas
+[derivado]; **no es cero y no se promete cero**. El banco lo mide con tres
+procesos, colas grandes (tres Homes fríos a la vez) y un 429 total inyectado
+en el doble: `llamadas recibidas por el doble después del primer 429`, por
+proceso y global, contra la cota.
+
+Con Redis lento (> `Δt`): la propagación se degrada a la reacción local de
+cada proceso (cada uno se pausa cuando ve **su** primer 429); con Redis
+caído: ídem, contado (`pausaNoLeida`). No se introduce cadencia local.
+
+### 39.6 Escritura segura de la pausa (diseño, no implementado)
+
+Requisitos: conservar el **vencimiento máximo**; sin relojes locales entre
+instancias; tolerar respuesta perdida y reintento; resultado en tres
+valores. Diseño:
+
+- La clave `tmdb:pausa` guarda **sólo un marcador** (`"1"`) y lleva su
+  vencimiento en el **TTL de Redis**: la duración viaja como `PX <ms>`, y "qué
+  hora es" lo decide Redis. Ninguna instancia compara instantes propios con
+  ajenos.
+- Operación atómica `PAUSAR(ms)` en Lua (única forma de leer el TTL y
+  escribir sin carrera):
+
+  ```lua
+  local restante = redis.call('PTTL', KEYS[1])   -- -2 sin clave, -1 sin TTL
+  if restante >= tonumber(ARGV[1]) then return {'ya-mayor', restante} end
+  redis.call('SET', KEYS[1], '1', 'PX', ARGV[1])
+  return {'escrito', tonumber(ARGV[1])}
+  ```
+
+  Extiende (1 → 8) y nunca acorta (8 → 1 devuelve `ya-mayor`, 8.000). Dos
+  escritores concurrentes: el script es atómico; el resultado final es el
+  máximo de ambos. Idempotente ante reintento: repetir `PAUSAR(8000)` con 7.900
+  restantes devuelve `ya-mayor`, no alarga.
+- Respuesta perdida (el SDK de Upstash reintenta; el doble del banco ya
+  simula `perderRespuesta`): el reintento es seguro por idempotencia; si la
+  segunda también se pierde, el llamador informa **`indeterminado`** y actúa
+  como si la pausa estuviera escrita (nivel 1 ya rige localmente).
+- Lectura: `PTTL tmdb:pausa` → `> 0` pausa vigente por esos ms; `-2` sin
+  pausa; error/timeout → `indeterminado` (`pausaNoLeida`), comportamiento
+  actual.
+- **Precondición de Preview antes de implementar:** el mismo gate que el
+  `EVAL` del turno (Etapa 2): probar `PAUSAR` contra un Preview aislado con
+  Upstash real —`EVAL` + `PTTL` + `SET PX`— y comprobar que el SDK devuelve
+  la tupla, no `null`. Hasta entonces, Lua sólo en diseño.
+- Pruebas (puras, `lib/tmdb-pausa.test.ts`, contra el doble de Redis del
+  banco): 1 → 8 extiende; 8 → 1 devuelve `ya-mayor` con el restante; 50
+  llamadas concurrentes con duraciones distintas terminan con el máximo;
+  respuesta perdida en la primera y reintento → una sola pausa, sin alargar;
+  `PTTL` tras vencer → `-2`.
+
+### 39.7 Estado "pausado" del Home (diseño, no implementado)
+
+Contrato actual [medido en código]: `programarEnFondo(iniciar) → boolean`, y
+en `servirConTurno` `false` ⇒ `componer()` en línea. Nuevo contrato:
+
+```ts
+type ResultadoFondo = "programado" | "no-disponible" | "pausado";
+```
+
+y la comprobación de pausa **antes de adquirir el turno** (una lectura, en
+`servirConTurno`, inyectada como `deps.pausaVigente(): Promise<boolean |
+"indeterminado">`), con semántica fijada:
+
+| Caso | Turno | Respuesta | Composición | Publicación | Métrica |
+|---|---|---|---|---|---|
+| sin pausa, fondo `programado` | adquirido | UB (`ultimo-bueno-fondo`) | en fondo | si sana | como hoy |
+| sin pausa, `no-disponible` | adquirido | resultado de `componer()` en línea | en línea | si sana | como hoy |
+| **pausado, con UB** | **no se adquiere** (o se libera en el acto si ya se tenía) | UB, `origen ultimo-bueno-pausa` | **ninguna** | ninguna | `pausa vigente` |
+| **pausado, sin UB** | no se adquiere | `503` + `Retry-After: <PTTL/1000>` con cuerpo `{ motivo: "pausa" }` (vacío marcado, como el cancelado de hoy) | ninguna | ninguna | `pausa vigente`, `cache VACIO` |
+| pausa **indeterminada** (Redis) | como sin pausa | como sin pausa | como sin pausa | como sin pausa | `pausaNoLeida` |
+
+Criterios RED (contra `37d4707`, con un doble de `pausaVigente` que devuelve
+`true`): (1) "pausado con UB: `componer` se llama 0 veces, el turno no queda
+adquirido, la respuesta es el UB"; (2) "pausado sin UB: `componer` 0 veces,
+`503` con `Retry-After`, nada publicado (sha1 de fresca y UB iguales)"; (3)
+"`programarEnFondo` devuelve `"pausado"` ⇒ `componer` 0 veces" (hoy `false`
+⇒ 1 vez: el RED falla justo ahí); (4) "indeterminado ⇒ exactamente el
+comportamiento de hoy y `pausaNoLeida = 1`"; (5) cableado: el `switch` sobre
+`ResultadoFondo` es exhaustivo (`never` en `default`), así que un estado
+nuevo sin caso no compila.
+
+### 39.8 Recuperación multiproceso acotada (diseño, no implementado)
+
+Lo que §38 llamaba "gradual" (`4 → 8 → 16 → 24` por proceso) da `N × 4 → N ×
+24` con `N` desconocido: con tres instancias, 12 → 72 concurrentes, **más**
+que antes de la pausa. Rediseño:
+
+- **Cota compartida de concurrencia post-pausa** [propuesto]: al vencer la
+  pausa, la clave `tmdb:recuperacion` (Lua atómico, `PX` = ventana de
+  recuperación [propuesto: 10 s]) reparte **permisos totales** `P(t)` que
+  crecen con el tiempo desde el vencimiento (`P(t) = min(24 × N_max,
+  P0 × 2^(t/1 s))` con `P0` y `N_max` [propuesto: 8 y 3]); cada proceso pide
+  permisos de a lotes (`INCRBY` acotado por Lua) y los devuelve al terminar.
+  Sin Redis: cada proceso arranca en `piso = 4` y crece a 24 — la
+  degradación es la misma que hoy, contada.
+- **Sin estampida al vencer**: los procesos releen la pausa con `Δt` [39.5]
+  y un jitter [propuesto: 0-500 ms]; el primero que ve `-2` arranca la
+  recuperación; los demás entran con los permisos que queden.
+- **Nuevo 429 durante la recuperación**: `PAUSAR` de nuevo (extiende: 39.6),
+  `P(t)` vuelve a `P0`.
+- **Ningún fondo duplicado por clave**: no cambia — lo garantiza el turno
+  (SET NX + fencing por generación), que la pausa no toca.
+- **Sin inanición permanente**: la ventana de recuperación vence sola
+  (`PX`); pasado ese tiempo sin 429, el techo vuelve a `24 × N` (= hoy).
+
+Escenarios del banco (3.c.2, cuando se apruebe): tres procesos retomando a
+la vez tras una pausa de 2 s → concurrencia global máxima observada en el
+doble ≤ `P(t)` en cada segundo; ausencia de estampida (ráfaga en el primer
+100 ms tras el vencimiento ≤ `P0`); nuevo 429 a los 500 ms de la
+recuperación → pausa extendida y `P(t)` reiniciado, sin ráfaga; extensión
+inmediata (`Retry-After: 8` tras una pausa de 1 s → `PTTL ≥ 7.900`); tres
+claves distintas en tres procesos → una `[home-fondo]` por clave;
+inanición: ninguna composición espera más que la ventana.
+
+### 39.9 Observabilidad y rollback — lo que de verdad se puede medir
+
+| Nivel | Qué | Cómo | Estado |
+|---|---|---|---|
+| **Verificación en vivo durante el deployment** | health, Home, búsqueda, ficha; `[home]` con `pausa no` en la ventana; un Preview aislado con el doble de TMDB **no es posible** (Producción usa TMDB real), así que el 429 sólo se prueba en el banco | `vercel logs --follow` (tope 5 min por consulta [medido]) durante y justo después del deploy | **posible** |
+| **Observación histórica** | frecuencia de pausas, `pausaNoLeida` sostenido, pausas sin 429 | requiere un canal persistente (contadores en Redis con TTL largo o un sink externo): **#20, Etapa 5** | **bloqueada** |
+| **Señales realmente medibles hoy** | (a) contadores acumulados en Redis: `tmdb:cont:pausas`, `tmdb:cont:429`, `tmdb:cont:pausaNoLeida` (INCR, TTL 7 d; una operación por evento, no por llamada) leídos por `/api/health`; (b) la línea `[home]`/`[home-fondo]` leída en vivo | `/api/health` ya existe; agregar los tres contadores es parte de 3.c.1 | **propuesta** (vale como rollback si se implementa con 3.c.1) |
+
+**Condición de rollback, reescrita:** sobre las señales medibles: (i)
+`/api/health` muestra `pausas > 0` con `429 = 0` (pausa sin causa); (ii)
+`pausaNoLeida` creciendo con Redis sano en `/api/health`; (iii) `503`
+interactivos con `429 = 0`; (iv) en la verificación en vivo, cualquier
+`[home]` con `pausa vigente` sin un `[tmdb] descarte http429` previo.
+Acción: `TMDB_PAUSA_429=0` (+ `TMDB_CIRCUITO=0`) y redeploy, **con
+autorización del dueño**. Lo que no se promete: detección sostenida de nada
+que no esté en (a).
+
+### 39.10 Alcance
+
+La pausa, el circuito y la recuperación protegen **únicamente a la
+aplicación en Vercel**. `tmdb-sync` (Edge Function de Supabase) y los
+scripts manuales usan el mismo token **fuera** del mecanismo: el límite
+total de la cuenta **no** queda protegido. Que compartan token es
+[desconocido] (se asume). Incorporarlos exigiría que leyeran `tmdb:pausa` en
+Upstash, fuera del alcance de la 3.c.
+
+### 39.11 Cifras: medidas, derivadas, propuestas, desconocidas
+
+| Cifra | Valor | Marca |
+|---|---|---|
+| Llamadas de un Home frío total (`n,d,m`) | 926 | medido en el doble (y en las tres pasadas) |
+| Llamadas de las dos observaciones de Producción | 250 y 342 | medido (Producción) |
+| TMDB ms/llamada (promedio) en Producción | 527 (3.a), 348 (3.b) | medido |
+| Redis ms/op (promedio) en Producción | 138 | medido; **no vale para la cadena secuencial** (calibración) |
+| Redis efectivo para la cadena secuencial | ≈ 40 ms | **derivado por calibración** (reproduce 3,5-3,7 s vs 2,9 s histórico) |
+| Cola de TMDB (p95/mediana) | 1,5× | **propuesto por calibración**; real [desconocido] |
+| Cadencia de un Home frío total, calibrado | 34-37/s | medido en el doble |
+| Duración del frío total en fondo, calibrado | 25,9-26,2 s | medido en el doble |
+| Idem, modelos pesimistas | 40,1 s / 51,3 s (cancelada) | medido en el doble; qué modelo rige en Producción [desconocido] |
+| `t_inicio_fondo` | 0,6-0,7 s | medido en el doble; 0,64 s de respuesta del UB en Producción |
+| Publicación / cierre | 0,13-0,15 s / 0 | medido en el doble |
+| Presupuesto del fondo | `min(50, 60 − t_inicio) = 50 s` | derivado del código |
+| Margen del frío total | ≈ 24 s (calibrado); ≈ 10 s (pesimista); < 0 (527 ms + cola larga) | derivado |
+| Ráfaga máxima de un proceso | 79-80 llamadas en 1 s; 24 en 100 ms | medido en el doble |
+| Tasa global con 2 / 3 reconstrucciones | 64 / 90 por s de promedio; 156 / 222 en un segundo | medido en el doble |
+| Concurrencia total | 24 × procesos (48, 72) | medido en el doble; `N` en Producción [desconocido] |
+| Límite real de TMDB | "~40-50/s" | documentación; nunca medido; ningún 429 visto en Producción |
+| Tasa del `tmdb-sync` | 10/s | **hipótesis** |
+| Piso secuencial del pipeline (todo cacheado) | 3,5 s (calibrado); 2,9 s (histórico) | medido en el doble / medido histórico |
+| `K`, `Δt`, `P0`, `N_max`, backoff sin `Retry-After` | 24, 1.000 ms, 8, 3, 1→8 s | propuesto (39.5, 39.8) |
+| Sobrepaso tras un 429 con 3 procesos | ≤ 3 × (24 + ~35 + ~1) ≈ 180 llamadas con la cadencia calibrada | derivado; se mide cuando exista la pausa |
+
+### 39.12 Recomendación revisada para 3.c.1 / 3.c.2
+
+1. **La condición bloqueante de §5.5 no se puede dar por cumplida ni por
+   incumplida con el banco solo.** Con el modelo que reproduce Producción,
+   926 caben con 24 s de margen; con una cola larga o Redis lento, no. Lo
+   que hace falta antes de cualquier limitador es **una observación real
+   de un frío total en Producción**: la primera solicitud de una
+   combinación tras > 8 h sin `pv3:` y > 30 h sin pools (Redis vacío de
+   esa combinación), leída en vivo (`vercel logs --follow`) — una sola
+   solicitud, sin vaciar nada, con autorización del dueño. Hasta entonces,
+   la 3.c **no introduce ninguna tasa fija**.
+2. **3.c.1 (pausa compartida ante 429) sigue siendo la primera protección
+   recomendada**, con el diseño corregido de 39.5-39.7: es la única que no
+   cambia nada con TMDB sano y por lo tanto no puede empeorar el margen
+   anterior. Su valor no es teórico: una sola reconstrucción ya emite
+   ráfagas de 80/s y dos simultáneas promedian 64/s, por encima del límite
+   publicado; si TMDB empieza a responder 429, hoy cada 429 es un descarte
+   sin memoria y sin propagación. **No aprobada todavía**: exige la
+   precondición de Preview de 39.6 (Lua `PAUSAR`) y los estados de 39.7.
+3. **3.c.2 (circuito + recuperación) sólo con la cota compartida de 39.8.**
+   Sin ella, "gradual" era falso. Y la parte de "recuperación por
+   concurrencia" tiene una razón medida: la concurrencia total sin cota es
+   `24 × N`, con ráfagas de 222/s a `N = 3`.
+4. **Un techo de tasa (§8), si alguna vez se propone, tiene que ser ≥ la
+   cadencia natural (≈ 36/s) para no alargar el frío**, y acotar
+   **ráfagas** (24 por 100 ms por proceso), no promedios: el promedio ya es
+   bajo; el riesgo son los picos de la fase `providersOf`. Eso invalida
+   las dos cadencias de 14/s de §8.4 como diseño de la 3.c'': quedan
+   fuera hasta tener el límite real de TMDB medido (un 429 real con su
+   `Retry-After`, que hoy no existe).
+5. **Fuera de la 3.c, un hallazgo del banco que vale por sí mismo:** el
+   piso secuencial del pipeline (64 idas y vueltas a Redis, 3,5-9,8 s
+   según latencia) es lo que hace que un MISS intradía con todo cacheado
+   cueste segundos; no es de esta etapa (no toca la protección de TMDB) y
+   se anota para el #19/#20 como candidato a medición propia.
+
+### 39.13 Estado
+
+3.c.0 ejecutada y publicada (`docs/medidas/2026-09-16-etapa3c0-medicion.json`).
+3.c.1 y 3.c.2: **diseño corregido, NO aprobadas, NO implementadas.** Sin
+código productivo; los cambios de esta tanda son documentación, el script
+del banco y el doble. Rama pendiente de nueva auditoría de Codex; sin merge,
+push ni deploy.

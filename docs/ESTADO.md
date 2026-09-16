@@ -7,11 +7,40 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB: OBSERVACIÓN
-  PASIVA + DISEÑO REVISADO (informe §38, 2026-09-16); PENDIENTE DE
-  APROBACIÓN Y DE AUDITORÍA; NO IMPLEMENTADA** (rama documental
-  `diseno/etapa3c-proteccion-tmdb`; sin código, variables, cachés ni
-  Producción). Lo que Producción muestra tras la 3.b: una sola generación
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB: DISEÑO
+  CORREGIDO (§39) tras la auditoría sobre `f7282a8` y MEDICIÓN 3.c.0
+  EJECUTADA (2026-09-16); 3.c.1/3.c.2 NO APROBADAS, NO IMPLEMENTADAS;
+  PENDIENTE DE NUEVA AUDITORÍA** (rama `diseno/etapa3c-proteccion-tmdb`;
+  sin código productivo, variables, cachés ni Producción; sólo
+  documentación, `scripts/banco/etapa3c0-medir.mjs` y dos capacidades del
+  doble: latencia log-normal y marcas por petición). Correcciones: el
+  presupuesto del fondo es `min(50 s, 60 s − t_inicio_fondo)` con
+  componentes medidos (t_inicio 0,6-0,7 s; publicación 0,13-0,15 s; cierre
+  0); la propagación del 429 pasa a dos niveles con cota de sobrepaso
+  (`≤ en vuelo + admitidas durante la propagación`), la pausa se escribe con
+  un script Lua que conserva el vencimiento máximo (`escrito`/`ya-mayor`/
+  `indeterminado`, precondición de Preview), `programarEnFondo` pasa a
+  estados explícitos (`programado`/`no-disponible`/`pausado`, con RED que
+  prueba que `pausado` no cae en `componer()`), la recuperación deja de
+  llamarse "gradual" y se acota con permisos compartidos, el rollback se
+  apoya en contadores en Redis leídos por `/api/health` (no en logs que
+  Vercel no conserva) y el alcance excluye `tmdb-sync`/scripts. **3.c.0:**
+  el banco sólo reproduce Producción tras calibrarlo (dos pasadas falsas
+  documentadas; el promedio de Redis de 138 ms no vale para la cadena
+  secuencial → 40 ms efectivos; cola de TMDB 1,5×; queda pesimista 15-28 %):
+  con ese modelo el frío total de 926 compone en **26 s** de los 50 del
+  fondo (margen ≈ 24 s), con un modelo 50 % más lento en 40 s, y con 527
+  ms/llamada + cola larga o Redis a 300 ms **no cabe** (cancelado, UB
+  intacto). Una reconstrucción sola ráfaga a 80/s; dos simultáneas
+  promedian 64/s (156 en un segundo) y tres 90/s (222), concurrencia
+  `24 × procesos`; `tmdb-sync` simulado 10/s (hipótesis) sólo suma. La
+  condición bloqueante de §5.5 **no queda decidida por el banco**: hace
+  falta observar un frío total real en Producción (una solicitud, sin
+  vaciar nada, con autorización). Recomendación: 3.c.1 primero, sin tasa
+  fija; 3.c.2 sólo con cota compartida; techo de tasa ≥ 36/s y sobre
+  ráfagas, nunca las dos cadencias de 14/s. Medidas en
+  `docs/medidas/2026-09-16-etapa3c0-*.json`.
+  Historia previa (§38): Lo que Producción muestra tras la 3.b: una sola generación
   observada (la del 15/09, §37), correcta de punta a punta; **no hay serie**:
   la API de logs devolvió 0 filas para la ventana del 15/09 donde con
   certeza hubo ≥ 6 Homes, y 1 fila estática en 7 h del 16/09 — la ausencia
@@ -735,7 +764,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c diseñada sin tasa fija (medir → pausa ante 429 → circuito; informe §38), pendiente de aprobación; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c: diseño corregido (§39) y medición 3.c.0 ejecutada (frío total 926 en 26 s de 50 con el banco calibrado; no cabe con modelos lentos), 3.c.1/3.c.2 no aprobadas; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

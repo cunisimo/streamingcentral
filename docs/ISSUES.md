@@ -1304,7 +1304,15 @@ leyendo el código.**
 > total de 926 en el banco (condición de paso), 3.c.1 pausa compartida ante
 > 429, 3.c.2 circuito del fondo + recuperación por concurrencia—, con kill
 > switches, banco multiproceso, identidad 16/16 y condición de rollback;
-> PENDIENTE DE APROBACIÓN Y AUDITORÍA; NO IMPLEMENTADA.** **Subetapa 3.b ("último bueno
+> corregido en §39 tras la auditoría sobre `f7282a8` (presupuesto del fondo
+> por componentes, propagación del 429 en dos niveles con cota de
+> sobrepaso, pausa con vencimiento máximo en Lua, estados explícitos del
+> fondo, recuperación acotada entre instancias, rollback sobre señales
+> medibles, alcance sin `tmdb-sync`) y **3.c.0 EJECUTADA** (banco calibrado
+> contra las dos observaciones de Producción, pesimista 15-28 %: el frío
+> total de 926 compone en 26 s de los 50 del fondo; con modelos lentos no
+> cabe; una reconstrucción ráfaga a 80/s y dos simultáneas promedian 64/s);
+> 3.c.1/3.c.2 NO APROBADAS; PENDIENTE DE NUEVA AUDITORÍA; NO IMPLEMENTADA.** **Subetapa 3.b ("último bueno
 > primero, reconstrucción en fondo"): MERGEADA, PUSHEADA Y DESPLEGADA el
 > 2026-09-15** — aprobada por la auditoría final de Codex sobre `c5fab20`;
 > merge `--no-ff` `5604750` (rama en `ae6902f`), deployment
