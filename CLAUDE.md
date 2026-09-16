@@ -122,13 +122,14 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:<huella de idioma>:v5:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  `home:<huella de idioma>:v6:<semilla>:<plataformas ordenadas>:<tipos>` (`VERSION_HOME` en `lib/claves.ts`), TTL 6 h — el número lo
   manda la cuota de Upstash, ver el comentario de `TTL.home`). La versión de la
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
   ve" después de deployar (`v2` = ventana de votos de 7 a 90 días; `v3` = el
   riel "Hacete cargo" pasó a llamarse "No gustaron"; `v4` = entró el riel
-  "Miniseries para ansiosos"; `v5` = ese riel sumó su "Ver todas").
+  "Miniseries para ansiosos"; `v5` = ese riel sumó su "Ver todas"; `v6` = "Últimos
+  lanzamientos" sumó el toggle Películas/Series, que entra en el `t` de la clave).
   **Los títulos de los
   rieles viajan adentro del payload**, así que hasta cambiar un texto de la
   interfaz obliga a subir la versión. Los `cached()`
