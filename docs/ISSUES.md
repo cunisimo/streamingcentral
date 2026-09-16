@@ -1297,7 +1297,14 @@ leyendo el código.**
 > errores nuevos; identidad del Home preservada según la evidencia existente);
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
-> restantes, no por la 3.a ni la 3.b.** **Subetapa 3.b ("último bueno
+> restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c (protección frente
+> a TMDB): observación pasiva de Producción + diseño revisado en el informe
+> §38 (16/09): sin serie en los logs (retención), sin señales negativas en
+> lo observado; se propone SIN limitador de tasa fija —3.c.0 medir el frío
+> total de 926 en el banco (condición de paso), 3.c.1 pausa compartida ante
+> 429, 3.c.2 circuito del fondo + recuperación por concurrencia—, con kill
+> switches, banco multiproceso, identidad 16/16 y condición de rollback;
+> PENDIENTE DE APROBACIÓN Y AUDITORÍA; NO IMPLEMENTADA.** **Subetapa 3.b ("último bueno
 > primero, reconstrucción en fondo"): MERGEADA, PUSHEADA Y DESPLEGADA el
 > 2026-09-15** — aprobada por la auditoría final de Codex sobre `c5fab20`;
 > merge `--no-ff` `5604750` (rama en `ae6902f`), deployment

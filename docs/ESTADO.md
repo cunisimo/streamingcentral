@@ -7,6 +7,28 @@
 
 ## Evidencia y alcance de esta actualización
 
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB: OBSERVACIÓN
+  PASIVA + DISEÑO REVISADO (informe §38, 2026-09-16); PENDIENTE DE
+  APROBACIÓN Y DE AUDITORÍA; NO IMPLEMENTADA** (rama documental
+  `diseno/etapa3c-proteccion-tmdb`; sin código, variables, cachés ni
+  Producción). Lo que Producción muestra tras la 3.b: una sola generación
+  observada (la del 15/09, §37), correcta de punta a punta; **no hay serie**:
+  la API de logs devolvió 0 filas para la ventana del 15/09 donde con
+  certeza hubo ≥ 6 Homes, y 1 fila estática en 7 h del 16/09 — la ausencia
+  no se cuenta como cero. Sin señales de fondo duplicado, Home incompleto,
+  UB pisado por degradado, errores ni cambio de contrato en lo observado.
+  Hallazgos sobre el diseño vigente: el presupuesto real del fondo es 50 s
+  (no 55) → ≈ 47 s útiles; la cadencia efectiva en Producción es 16,6-20,5/s
+  (no "~200/s": eso era el banco), así que una reconstrucción totalmente
+  fría (926) está cerca del borde **sin** limitador, y cualquier tasa fija
+  < ~20/s la condena. Propuesta: **3.c.0** medir el frío total en un doble
+  con latencia realista (condición de paso), **3.c.1** pausa compartida
+  ante 429 (`TMDB_PAUSA_429=0`), **3.c.2** circuito del fondo + recuperación
+  por concurrencia (`TMDB_CIRCUITO=0`); limitador de tasa fija sólo si 3.c.0
+  mide que hace falta, y entonces con prioridad a la reconstrucción.
+  Reintentos siguen apagados. Criterios RED→GREEN, banco multiproceso,
+  identidad 16/16 y condición de rollback en §38.8. Listo para auditoría de
+  Codex; implementación bloqueada por 3.c.0 y por autorización del dueño.
 - **Etapa 3.b de capacidad (#19): MERGEADA, PUSHEADA Y DESPLEGADA
   (2026-09-15).** Aprobada técnicamente por la auditoría final de Codex
   sobre `c5fab20` (más `ae6902f`, dos correcciones documentales: clave del
@@ -713,7 +735,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c diseñada sin tasa fija (medir → pausa ante 429 → circuito; informe §38), pendiente de aprobación; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 
