@@ -7,11 +7,40 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.b de capacidad (#19) — "último bueno primero, reconstrucción en
-  fondo": IMPLEMENTADA EN RAMA (`feat/etapa3b-ub-primero`, `33d2ea2`) y
-  CORREGIDA tras las auditorías de Codex sobre `c84996e` (informe §35) y
-  `3a057fc` (§36); PENDIENTE DE NUEVA AUDITORÍA; NO MERGEADA NI
-  DESPLEGADA.** Segunda corrección (§36): abrir la compuerta en el `finally`
+- **Etapa 3.b de capacidad (#19): MERGEADA, PUSHEADA Y DESPLEGADA
+  (2026-09-15).** Aprobada técnicamente por la auditoría final de Codex
+  sobre `c5fab20` (más `ae6902f`, dos correcciones documentales: clave del
+  Home `v6` y fecha canónica). Merge `--no-ff` **`5604750`** en `main`
+  (rama `feat/etapa3b-ub-primero` en `ae6902f`; árbol del merge idéntico al
+  de la rama); push a `origin/main`; deployment automático de Vercel
+  **`dpl_A9oAnbXKBqbBTGiKC6kMMLdFz3oB`** READY, target production,
+  `githubCommitSha = 5604750…`, aliasado a `app.yump.ar`. Verificado sobre
+  el `main` fusionado antes del push: pruebas de frontera, fondo, servicio,
+  CORS y cableado (125/125), suite **1.707 (1.697 ok, 0 fallos, 10
+  omitidos)**, `tsc --noEmit`, build fresco (`6qYrjMyN9TMw0Pw6uYzlN`;
+  `@vercel/functions` sólo en el bundle de `/api/home`, nada en el cliente),
+  `git diff --check`. Comprobación pasiva tras el deploy (sin vaciar cachés
+  ni forzar nada): `/api/health` 200 (Redis OK, 345 claves); búsqueda 200
+  (24 títulos, 18 personas, sin `degradacion`); ficha 200 (Matrix, `mv,m`);
+  Home 200. **El camino UB-primero apareció naturalmente en el primer Home
+  tras el deploy** (la fresca de 6 h había vencido y había UB): línea
+  `[home] 643ms total | cache ULTIMO-BUENO | turno adquirido | origen
+  ultimo-bueno-fondo | fondo programado | tmdb 0 llamadas`, y recién
+  DESPUÉS `[home] compone …`; los dos pedidos siguientes, `turno ocupado →
+  ultimo-bueno` (701/735 ms); una única línea **`[home-fondo] 16682ms total
+  | 1 composición | origen propia | publicacion publicado | renovaciones 3
+  | tmdb 342 llamadas (342 ok)`** con la misma clave y propietario
+  (`…:4:1`); el pedido siguiente `cache HIT` en 269 ms sobre la fresca
+  publicada por el fondo. Sin `Task timed out`, sin `[tmdb] descarte`, sin
+  errores nuevos en los logs. **Identidad del Home preservada** (banco
+  16/16 `b7be927` vs rama sobre `33d2ea2`; en Producción 6 hero + 12 rieles
+  + 309 títulos, `degradado: false`, `fallos: 0`). Reversión disponible sin
+  código: `HOME_UB_PRIMERO=0` + redeployment (requiere autorización; no se
+  usó). **#19 sigue abierto** por limitador, circuito, cadencias, pausa
+  distribuida y membresía, que siguen diseñados y no aprobados.
+- **Historia en rama de la 3.b (antes del merge):** IMPLEMENTADA EN RAMA
+  (`feat/etapa3b-ub-primero`, `33d2ea2`) y CORREGIDA tras las auditorías de
+  Codex sobre `c84996e` (informe §35) y `3a057fc` (§36). Segunda corrección (§36): abrir la compuerta en el `finally`
   del handler encolaba el fondo ANTES de que el llamador de `GET` recibiera
   la promesa (RED con el llamador real: `respuesta-construida → fondo-inicia
   → caller-recibio-response`); ahora la frontera cede al event loop
@@ -684,7 +713,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a implementada en rama y corregida tras la auditoría (14/09), pendiente de nueva auditoría, reintentos apagados; limitador, circuito, `waitUntil` y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

@@ -1296,19 +1296,28 @@ leyendo el código.**
 > health, Home frío y caliente, búsqueda y ficha en 200, sin descartes ni
 > errores nuevos; identidad del Home preservada según la evidencia existente);
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
-> membresía NO implementados; `waitUntil` NO está en Producción — **#19 sigue
-> abierto por esas subetapas restantes, no por la 3.a.** **Subetapa 3.b
-> ("último bueno primero, reconstrucción en fondo"): IMPLEMENTADA EN RAMA
+> membresía NO implementados — **#19 sigue abierto por esas subetapas
+> restantes, no por la 3.a ni la 3.b.** **Subetapa 3.b ("último bueno
+> primero, reconstrucción en fondo"): MERGEADA, PUSHEADA Y DESPLEGADA el
+> 2026-09-15** — aprobada por la auditoría final de Codex sobre `c5fab20`;
+> merge `--no-ff` `5604750` (rama en `ae6902f`), deployment
+> `dpl_A9oAnbXKBqbBTGiKC6kMMLdFz3oB` READY con `githubCommitSha = 5604750`,
+> alias `app.yump.ar`; health, Home, búsqueda y ficha en 200; **camino
+> UB-primero observado naturalmente en Producción** en el primer Home tras
+> el deploy (`643 ms | ultimo-bueno-fondo | fondo programado` antes de
+> `[home] compone`; una única `[home-fondo] 16682ms | publicado | 342/342
+> TMDB ok`; siguiente pedido HIT 269 ms); sin errores nuevos; identidad del
+> Home preservada (16/16). Reversión sin código: `HOME_UB_PRIMERO=0` +
+> redeployment, con autorización. Historia previa: IMPLEMENTADA EN RAMA
 > `feat/etapa3b-ub-primero` (`33d2ea2`) y CORREGIDA tras las auditorías
 > sobre `c84996e` (§35: la composición de fondo espera la compuerta de la
 > solicitud) y `3a057fc` (§36: la compuerta se abre recién tras ceder al
 > event loop con `setImmediate`, probado con el llamador real de `GET`:
 > `respuesta-construida → caller-recibio-response → fondo-inicia`; Preview
 > aislado borrado: bytes en 425 ms con 3 s síncronos de fondo por delante);
-> PENDIENTE DE NUEVA AUDITORÍA; NO MERGEADA NI DESPLEGADA** (informe §34;
-> diseño §33). En Producción
-> (`903832e`) el líder compone en línea aunque haya UB (15,1 s observados);
-> en la rama responde el UB y compone en fondo con `waitUntil` de
+> (informe §34-§37; diseño §33). En Producción hasta `903832e` el líder
+> componía en línea aunque hubiera UB (15,1 s observados); desde `5604750`
+> responde el UB y compone en fondo con `waitUntil` de
 > `@vercel/functions` (comprobado en Preview: fondo hasta 60 s desde el
 > inicio de la solicitud);
 > implementación con `@vercel/functions`, `programarEnFondo` perezoso,

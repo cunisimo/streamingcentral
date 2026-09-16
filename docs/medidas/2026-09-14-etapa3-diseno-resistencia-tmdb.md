@@ -1,17 +1,20 @@
 # Etapa 3 de capacidad — Resistencia frente a TMDB: auditoría y diseño (v4.1)
 
 > **Estado: DISEÑO v4.1 + ETAPA 3.a MERGEADA, PUSHEADA Y DESPLEGADA
-> (2026-09-15; §31). Subetapa 3.b, "último bueno primero y reconstrucción
-> en fondo": decisión de producto APROBADA; diseño §33; **IMPLEMENTADA EN
-> RAMA (`feat/etapa3b-ub-primero`), PENDIENTE DE AUDITORÍA; NO MERGEADA NI
-> DESPLEGADA** (§34).** Ocho correcciones en rama (auditorías de Codex sobre
+> (2026-09-15; §31) + ETAPA 3.b MERGEADA, PUSHEADA Y DESPLEGADA
+> (2026-09-15; merge `5604750`, deployment
+> `dpl_A9oAnbXKBqbBTGiKC6kMMLdFz3oB`; §37). Subetapa 3.b, "último bueno
+> primero y reconstrucción en fondo": decisión de producto APROBADA; diseño
+> §33; implementada (§34), corregida dos veces (§35, §36), aprobada por la
+> auditoría final sobre `c5fab20` y desplegada; **camino UB-primero
+> observado naturalmente en Producción** (§37).** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
 > membresía NO implementados: las subetapas restantes de la Etapa 3 siguen
 > diseñadas y no aprobadas, y por ellas #19 sigue abierto. **`waitUntil` SÍ
-> está implementado en la rama de la 3.b** (sólo para la composición de
-> fondo del Home; §34-§36), no en Producción. Corregida dos veces tras las
+> está implementado y desplegado con la 3.b** (sólo para la composición de
+> fondo del Home; §34-§37). Corregida dos veces tras las
 > auditorías sobre `c84996e` (§35) y `3a057fc` (§36: la compuerta se abre
 > tras ceder al event loop con `setImmediate`; Preview aislado en §36.5).
 > Reintentos apagados (`TMDB_REINTENTOS` ausente).
@@ -2550,5 +2553,65 @@ microtask no es frontera; `setImmediate` sí.**
 - **Desconocido:** el coste de la cesión en Producción (en el Preview y en
   el banco es de milisegundos: `fondo-inicia` +2 ms).
 
-Estado: **corregida en rama (`33d2ea2`), pendiente de una nueva auditoría de
-Codex; no mergeada ni desplegada.**
+Estado: aprobada por la auditoría final sobre `c5fab20`; mergeada y
+desplegada en §37.
+
+## 37. Etapa 3.b mergeada, pusheada y desplegada (2026-09-15)
+
+- **Aprobación:** auditoría final de Codex sobre `c5fab20`: orden
+  `respuesta-construida → caller-recibio-response → fondo-inicia` cumplido;
+  Preview distingue el mecanismo nuevo (~425 ms) del microtask (~3,3 s);
+  sin regresiones de contenido, sin composiciones duplicadas, sin problemas
+  de aislamiento. Dos correcciones documentales previas al merge
+  (`ae6902f`): clave del Home `v6` en `CLAUDE.md` (`VERSION_HOME = 6`; v6 =
+  toggle de "Últimos lanzamientos") y fecha canónica de `ESTADO.md`.
+- **Precondiciones verificadas:** rama en `ae6902f` (padre `c5fab20`);
+  `main = origin/main = 903832e`; árbol trackeado limpio; los cuatro
+  archivos ajenos intactos y sin seguimiento.
+- **Merge:** `git merge --no-ff` → **`5604750`** (sin squash ni rebase);
+  árbol del merge idéntico al de la rama (`rev-parse ^{tree}` iguales).
+- **Verificación sobre el `main` fusionado:** `npm ci`
+  (`@vercel/functions` 3.9.7); frontera/fondo/servicio/CORS/cableado
+  **125/125**; suite **1.707 tests, 1.697 ok, 0 fallos, 10 omitidos**;
+  `tsc --noEmit` limpio; build fresco `6qYrjMyN9TMw0Pw6uYzlN` (`waitUntil`
+  sólo en `.next/server/app/api/home/route.js`, nada en `.next/static`);
+  `git diff --check` limpio.
+- **Push y deployment:** `903832e..5604750 main -> main`; deployment
+  automático **`dpl_A9oAnbXKBqbBTGiKC6kMMLdFz3oB`** READY, target
+  production, `githubCommitSha = 5604750c71078185b6a553841b693213c27895f9`,
+  ref `main`, alias `app.yump.ar` (y `streamingcentral.vercel.app`).
+- **Comprobación pasiva** (sin vaciar cachés, sin forzar expiraciones, 429,
+  caídas ni carga): `/api/health` 200 en 1,3 s (Redis OK, 345 claves);
+  `/api/search?q=matrix` 200 (24 títulos, 18 personas, sin `degradacion`);
+  `/api/title/movie/603` 200 (Matrix, plataformas `mv,m`); Home 200 (6
+  hero, 12 rieles, 309 títulos, `degradado: false`, `fallos: 0`).
+- **Camino 3.b observado naturalmente en Producción**, en el primer Home
+  tras el deploy (la fresca de 6 h había vencido; existía UB):
+  1. `[home] 643ms total | cache ULTIMO-BUENO | 0 composiciones | turno
+     adquirido | origen ultimo-bueno-fondo | publicacion no | propietario
+     …:4:1 | fondo programado | tmdb 0 llamadas` — y recién **después** en
+     el log, `[home] compone home:es-MX+f.r1:v6:…:d,m,n: …:4:1` y sus
+     `VUELTAS`/`EJES`.
+  2. Dos pedidos siguientes (`…:4:2`, `…:4:3`): `turno ocupado | origen
+     ultimo-bueno`, 735 y 701 ms, 0 composiciones.
+  3. Una única **`[home-fondo] 16682ms total | cache MISS | 1 composición |
+     turno adquirido | origen propia | publicacion publicado | renovaciones
+     3 | propietario …:4:1 | tmdb 342 llamadas (342 ok) | supabase 11 (11
+     ok)`**, misma clave y propietario que la `[home]` de 643 ms.
+  4. Pedido siguiente: `[home] 269ms total | cache HIT` sobre la fresca
+     publicada por el fondo (861 ms medidos desde el cliente).
+  Sin `Task timed out` (el fondo terminó a ~17 s de los 60), sin `[tmdb]
+  descarte`, sin `unhandled`/`TypeError`/`ERR_` en la ventana. Nada de esto
+  se provocó: fueron los pedidos de verificación del propio deploy.
+- **Identidad del Home preservada:** banco 16/16 (`b7be927` vs `33d2ea2`,
+  `docs/medidas/2026-09-14-etapa3a-identidad-home.json`); el contenido del
+  Home en Producción coincide en forma (hero 6, 12 rieles, 309 títulos) con
+  el observado tras la 3.a.
+- **Reversión:** `HOME_UB_PRIMERO=0` + redeployment; requiere autorización
+  del dueño; no se usó ni se tocó ninguna variable.
+- **#19 sigue abierto** por limitador, cadencias, pausa distribuida,
+  AIMD/circuito y membresía: diseñados (§9-§13), no aprobados, no
+  implementados. `COMPOSICION_MAX_MS` sigue como está.
+
+Estado: **Etapa 3.b MERGEADA (`5604750`), PUSHEADA y DESPLEGADA
+(`dpl_A9oAnbXKBqbBTGiKC6kMMLdFz3oB`).**
