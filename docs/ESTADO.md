@@ -7,21 +7,37 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §43,
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §44,
   estado vigente, 2026-09-16): 3.c.1 "pausa compartida ante 429" con diseño
-  corregido en diez puntos tras la auditoría sobre `5405cbd`; NO APROBADA;
-  NO IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de alcance.**
+  corregido (§43: diez puntos; §44: tres más tras la auditoría sobre
+  `122f1a6`); NO APROBADA; NO IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA.
+  3.c.2 fuera de alcance.** Correcciones de §44: (1) **cancelación** con las
+  primitivas reales — `dormirCancelable` RESUELVE al abortar y la ruta
+  convierte una excepción en `500` + `console.error`; semántica única: tras
+  `dormir`, si la señal abortó, se devuelve el centinela 4d
+  `vacio("cancelada")` de hoy (sin readquirir, sin componer, sin `503`, sin
+  error falso), probado con el `dormir` real y el `catch` real; (2) **UB y
+  Redis caído** sin caché en memoria: `ub` es una variable por solicitud
+  leída una vez en el paso 2; si Redis falla antes, es `null` aunque el UB
+  exista; si falla después, se sirve lo leído (matriz completa); (3)
+  **sobrepaso** parametrizado y rotulado como estimación (94 / 184 / 528
+  por proceso con cadencia 35 / 80 / 252), porque la cadencia no está
+  acotada por diseño — sólo `enVuelo = 24`; **línea base medida hoy** (banco,
+  modo `sobrepaso`, 3 semillas): tras el primer 429 con respuestas
+  inmediatas un proceso emite 750-778 llamadas más en 3,4-4,4 s, pico
+  224-252 por segundo. Modelo 57/57.
   Correcciones de §43 sobre §41/§42: sin UB, **un solo sueño y una sola
   readquisición (≤ 2 `EVAL`)**, nunca un segundo sueño; la cancelación del
-  cliente **se propaga** (no es un `503` ni un error); **la pausa local manda
+  cliente sale por el centinela 4d de hoy (§44.1; no es un `503` ni un error); **la pausa local manda
   sobre Redis caído/indeterminado** (nunca se compone contra TMDB con pausa
   local vigente; sin pausa local, el degradado de hoy); el presupuesto
   previo al sueño incluye `restante + jitter máx. + timeout de la
   readquisición + 16 s`; `Retry-After` con readquisición indeterminada =
   `max(5 s, restante − dormido)`; `K = 24` se alcanza a los 686 ms a 35/s —
   se elige **sólo `Δt`** con números (27 vs 40 lecturas por frío total); la
-  cota de sobrepaso con timeout de lectura de 1 s es **94 por proceso / 282
-  con tres**, y **sin cota compartida si la lectura falla** (sólo local);
+  fórmula de sobrepaso queda parametrizada (§44.3: 94 / 184 / 528 por
+  proceso según la cadencia; estimaciones, no cotas) y **sin cota compartida
+  si la lectura falla** (sólo local);
   `F_max = 1` (alineado con el umbral "≤ 1 intento fallido": 2 lecturas por
   minuto con Redis colgado); marca de agua **por proceso** con `PX 24 h`
   propio (sin hash global); el Lua **valida antes de mutar** y escribe la
@@ -29,7 +45,7 @@
   sin pausa; telemetría en `pcall`). Modelo 49/49.
   Lo que sigue vigente de §41/§42: Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 49/49) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 57/57) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
@@ -779,7 +795,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§43, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso explícito (94/282), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§44, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso explícito (estimado, no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), cancelación por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

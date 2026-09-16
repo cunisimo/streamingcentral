@@ -1311,8 +1311,13 @@ leyendo el código.**
 > una readquisición, cancelación propagada, pausa local sobre Redis caído,
 > presupuesto completo, fallback del `Retry-After`, sólo `Δt`, cota 94/282
 > con timeout y sin cota si la lectura falla, `F_max = 1`, marca de agua
-> por proceso con TTL, Lua que valida antes de mutar), probada sobre modelo
-> (49/49), NO APROBADA, NO IMPLEMENTADA, PENDIENTE DE NUEVA AUDITORÍA;
+> por proceso con TTL, Lua que valida antes de mutar) y en §44 (auditoría
+> sobre `122f1a6`: cancelación con el `dormir` y el handler reales →
+> centinela 4d, sin `503` ni error falso; UB × Redis caído sin caché en
+> memoria; sobrepaso parametrizado y rotulado como estimación, con línea
+> base medida: 750-778 llamadas tras el primer 429 rápido, pico 224-252/s),
+> probada sobre modelo (57/57), NO APROBADA, NO IMPLEMENTADA, PENDIENTE DE
+> NUEVA AUDITORÍA;
 > 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no
 > predictivo; ningún frío total se pide en Producción. Antecedentes §38-§40
 > superados.** **Subetapa 3.b ("último bueno

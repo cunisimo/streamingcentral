@@ -198,6 +198,38 @@ async function main() {
   const B = await levantarNext("3c0-B", DIR, 3002, BASE, { YUMP_BANCO_FONDO: "1" });
   const C = await levantarNext("3c0-C", DIR, 3003, BASE, { YUMP_BANCO_FONDO: "1" });
   const log = (k, v) => { salida.escenarios[k] = v; console.log(`[3c0] ${k}:`, JSON.stringify(v.resumen ?? v).slice(0, 600)); };
+  if (process.env.BANCO_MODO === "sobrepaso") {
+    // §44.3 — CONTROL del sobrepaso HOY (sin pausa): un frío total arranca; a los
+    // `BANCO_429_A_LOS_MS` el doble pasa a 429 TOTAL con respuestas INMEDIATAS
+    // (latencia 0), que es cuando la cola local drena a la máxima cadencia que
+    // el pipeline puede reproducir. Se cuentan las llamadas que el doble recibe
+    // DESPUÉS del primer 429, por ventanas, y la cadencia pico. Es la línea base
+    // contra la que el banco de 3.c.1 medirá el sobrepaso con pausa.
+    const semillas = (process.env.BANCO_SEMILLAS ?? "11,22,33").split(",").map(Number);
+    const aLosMs = Number(process.env.BANCO_429_A_LOS_MS ?? "5000");
+    for (const semilla of semillas) {
+      await modelo("prod-3b", semilla);
+      await vaciar(BASE); lineas(A);
+      await control(BASE, "tmdb", "reset");
+      const t0 = Date.now();
+      const pedido = pedirHome(A, "n,d,m");
+      await dormir(aLosMs);
+      await control(BASE, "tmdb", "config", { modo: "429", latenciaMs: 0, latenciaP95Ms: 0, retryAfter: 2 });
+      const r = await pedido;
+      const ls = await esperarLineas(A, (a) => a.home.length >= 1, 60000);
+      const mt = await marcas("tmdb");
+      const primer429 = mt.filter((m) => m.s === 429).map((m) => m.t).sort((a, b) => a - b)[0] ?? null;
+      const despues = primer429 ? mt.filter((m) => m.t >= primer429) : [];
+      const ventana = (ms) => despues.filter((m) => m.t < primer429 + ms).length;
+      const ts = despues.map((m) => m.t).sort((a, b) => a - b);
+      const maxPor = (w) => { let mx = 0, j = 0; for (let i = 0; i < ts.length; i++) { while (ts[i] - ts[j] >= w) j++; mx = Math.max(mx, i - j + 1); } return mx; };
+      log(`sobrepaso/semilla-${semilla}`, { semilla, cuandoMs: aLosMs, status: r.status, linea: ls.home[0]?.linea?.slice(0, 200) ?? null, antesDel429: mt.length - despues.length, tras429: { total: despues.length, en1s: ventana(1000), en2s: ventana(2000), en5s: ventana(5000), spanMs: ts.length ? ts.at(-1) - ts[0] : 0, picoPor1s: maxPor(1000), picoPor100ms: maxPor(100) } });
+    }
+    for (const h of hijos) matar(h);
+    writeFileSync(SALIDA, JSON.stringify(salida, null, 2));
+    console.log(`[3c0] → ${SALIDA}`);
+    return;
+  }
   if (process.env.BANCO_MODO === "repeticiones") {
     // Varias semillas → mediana y rango por escenario (auditoría sobre 1ad1025):
     // frío total en línea y en fondo, las dos calibraciones, y 2/3 claves.

@@ -38,9 +38,14 @@
 > de Redis caído, presupuesto con jitter y timeout, fallback conservador del
 > `Retry-After`, sólo `Δt` (elección con números), cota 94/282 con timeout
 > y sin cota si la lectura falla, `F_max = 1`, marca de agua por proceso con
-> TTL propio, Lua que valida antes de mutar y falla seguro; modelo 49/49;
-> 3.c.1 NO aprobada, NO implementada, pendiente de nueva auditoría; 3.c.2
-> fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
+> TTL propio, Lua que valida antes de mutar y falla seguro. **§44 (auditoría
+> sobre `122f1a6`) — ESTADO VIGENTE:** cancelación con las primitivas reales
+> (`dormirCancelable` resuelve; centinela 4d, sin `503` ni error falso),
+> matriz UB × Redis sin caché en memoria, sobrepaso parametrizado (94 / 184
+> / 528 según cadencia 35 / 80 / 252 — estimaciones, no cotas) y línea base
+> medida con 429 rápidas (750-778 llamadas tras el primer 429, pico
+> 224-252/s); modelo 57/57; 3.c.1 NO aprobada, NO implementada, pendiente de
+> nueva auditoría; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -3964,7 +3969,14 @@ condiciones de §41.9 (aceptación de §41+§42, precondición de Preview del
 `EVAL`, umbrales, RED del script del turno) — ya **sin** el punto "aprobación
 del `503` inmediato", que queda sin efecto. 3.c.2 fuera de alcance.
 
-## 43. Etapa 3.c.1 — corrección de §41 y §42 sobre `5405cbd` (diez puntos) — **ESTADO VIGENTE de la 3.c; NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-16)
+## 43. Etapa 3.c.1 — corrección de §41 y §42 sobre `5405cbd` (diez puntos) — **NO aprobada, NO implementada** (2026-09-16)
+
+> **CORREGIDO por §44** en: 43.2 (la cancelación no "propaga un
+> `AbortError`": `dormirCancelable` resuelve y la ruta convertiría la
+> excepción en `500`; semántica única = centinela 4d), 43.3 (no hay UB "en
+> memoria": matriz por instante del fallo de Redis) y 43.7 (94/282 no es
+> cota: fórmula parametrizada; línea base medida con 429 rápidas: 750-778
+> llamadas tras el primer 429, pico 224-252/s). El estado vigente es **§44**.
 
 Rama `diseno/etapa3c-proteccion-tmdb`. Sin código productivo, merge, push ni
 deploy. Modelo: `lib/tmdb-pausa-diseno.test.ts`, **49/49**. Este §43
@@ -4123,3 +4135,105 @@ precondición de Preview del `EVAL` (`TIME`, `cjson`, tupla vía SDK; ahora en
 `pcall`, así que su falta degrada la telemetría, no la protección), umbrales
 de §40.4 aceptados (sin tocar), RED del script de adquisición del turno.
 **3.c.2 sigue fuera de alcance.**
+
+## 44. Etapa 3.c.1 — corrección de §43 sobre `122f1a6` (tres puntos) — **ESTADO VIGENTE de la 3.c; NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-16)
+
+Rama `diseno/etapa3c-proteccion-tmdb`. Sin código productivo, merge, push ni
+deploy. Modelo `lib/tmdb-pausa-diseno.test.ts` **57/57**; nueva medida de
+línea base `docs/medidas/2026-09-16-etapa3c0-sobrepaso-hoy.json` (modo
+`sobrepaso` del banco; el doble registra ahora el status de cada respuesta).
+Se conserva de §43: un solo sueño, ≤ 2 adquisiciones, `F_max = 1`, marca de
+agua por proceso con TTL, orden seguro del Lua, sólo `Δt`, `ESPERA_MAX = 5 s`
+provisional sin datos reales.
+
+### 44.1 Cancelación — una sola semántica, con las primitivas reales
+
+**Hechos [medido en código]:** `dormirCancelable` (`lib/home-servir.ts`)
+**resuelve** al abortarse (no rechaza); `app/api/home/route.ts` convierte
+cualquier excepción en `500` + `console.error("[api/home] composeHome
+rechazó …")`. §43.2 ("el `AbortError` se propaga") era falso en las dos
+puntas.
+
+**RED (tres controles, ejecutados):** (a) `dormirCancelable(10 s, señal)` +
+`abort()` → "resolvió"; (b) la versión de §43, que esperaba un rechazo, con
+el `dormir` real **readquiere y compone después del abandono** (2
+adquisiciones, 1 composición); (c) lanzar un `AbortError` desde el cuerpo
+del handler real → `500` y **un `console.error` falso**.
+
+**Semántica única (GREEN):** después de `dormir`, mirar `senal.aborted`; si
+abortó, **devolver el centinela `vacio("cancelada")` que `servirConTurno`
+ya usa en 4d** (línea `[home] … CANCELADA`, `origen vacio-cancelada`): **no
+readquiere, no compone, no lanza, no `503`, no error registrado**; el
+handler responde como responde hoy a cualquier solicitud abandonada (esa
+respuesta no tiene receptor). Probado con el `dormirCancelable` real y el
+modelo fiel del `catch` de la ruta: `status 200`, `adquisiciones 1`,
+`composiciones 0`, sueño de 5 s cortado en < 1 s, registro vacío. La regla
+del dueño "nunca un Home vacío con `200`" rige para solicitudes con cliente
+esperando; la respuesta a una solicitud abandonada es la de hoy (4d) y
+cambiarle el status sería otra decisión, fuera de 3.c.1.
+
+### 44.2 Último bueno y Redis caído — sin caché en memoria
+
+No existe copia persistente del UB en el proceso: `servirConTurno` lee la
+fresca (paso 1) y, en el MISS, `[ub, degradado]` (paso 2) **una vez por
+solicitud**; `ub` es una variable de esa solicitud. Matriz corregida
+(sustituye a §43.3):
+
+| Cuándo falla Redis | `ub` en esta solicitud | Pausa local vigente | Resultado |
+|---|---|---|---|
+| **antes del paso 2** (el MGET falla) | `null`, aunque el UB exista en Redis | sí | espera con el `restante` **local**; si sigue → `503`; **nunca compone** |
+| antes del paso 2 | `null` | no | degradado de hoy (compone sin turno, no publica) |
+| **después del paso 2** (adquisición o composición) | lo leído | sí | **el UB leído, sin componer** (como 4c ya sirve `ub` ante un productor que rechaza) |
+| después del paso 2 | lo leído | no | como hoy: `sin-redis` → compone sin turno; si el productor falla, `ub` |
+| nunca | lo leído | — | el script decide (pausado → UB si hay; si no, espera breve) |
+
+No se agrega ninguna caché en memoria ni entra en el alcance.
+
+### 44.3 Sobrepaso — fórmula parametrizada, estimaciones rotuladas, y la línea base medida
+
+`sobrepaso_proceso ≤ enVuelo + cadencia × (Δt + T_lectura)`; **lo único
+fijado por diseño es `enVuelo = 24`**; la cadencia no está acotada por
+ningún mecanismo actual, así que **ningún número es cota dura**:
+
+| Cadencia usada | Origen | Estimación por proceso (Δt 1 s, T 1 s) | ×3 |
+|---|---|---|---|
+| 35/s | media del frío total en el banco | 94 | 282 |
+| 80/s | pico por segundo de un proceso (banco) | 184 | 552 |
+| **252/s** | **429 rápidas, medido hoy** (abajo) | 528 | 1.584 |
+
+**Control nuevo (sin pausa, es decir HOY):** frío total; a los 5 s el doble
+pasa a `429` total con respuesta **inmediata**. Tras el primer 429, el
+proceso emitió **750 / 776 / 778 llamadas más en 3,4-4,4 s**, con **pico
+224-252 por segundo** y 28-56 por 100 ms (semillas 11/22/33) [medido en el
+doble]: con 429 rápidas el semáforo de 24 rota casi sin latencia y la cola
+drena entera. Eso es lo que 3.c.1 tiene que cortar, y es la **línea base**
+contra la que su banco medirá el sobrepaso real (mismo escenario, con
+pausa; criterio: llamadas tras el primer 429 por proceso ≈ `enVuelo +
+admitidas hasta ver el primer 429`, que con 429 rápidas es del orden de
+24-50 [estimación], y global ≈ Σ por proceso). Lo que el nivel 2 aporta es
+para 429 **parciales**, donde un proceso puede tardar en ver el suyo.
+
+### 44.4 RED → GREEN de esta tanda
+
+| Punto | RED (control) | GREEN |
+|---|---|---|
+| 1 cancelación | `dormir` real resuelve; §43 readquiere y compone tras abortar; `AbortError` → `500` + error falso | centinela 4d con el `dormir` real y el `catch` real: 1 adquisición, 0 composiciones, 200 de hoy, registro vacío; sin abandono, 2 adquisiciones y 1 composición |
+| 2 UB × Redis | §43.3 asumía UB "en memoria" | matriz por instante del fallo; sin caché |
+| 3 sobrepaso | 94/282 como cota | fórmula parametrizada (35/80/252 → 94/184/528); línea base medida 750-778 tras el 429 |
+
+### 44.5 Comprobado / inferido / desconocido
+
+- **Comprobado:** `dormirCancelable` resuelve al abortar; el `catch` de la
+  ruta registra y devuelve `500`; `ub` es una variable por solicitud
+  (`lib/home-servir.ts`); la línea base de 44.3 (tres semillas).
+- **Inferido:** que con el nivel 1 el sobrepaso por proceso baje a `enVuelo
+  + admitidas hasta el primer 429` — se mide cuando exista la pausa.
+- **Desconocido:** la cadencia real de Producción durante un 429 (nunca
+  visto), `N` instancias, la distribución real de `Retry-After`.
+
+### 44.6 Estado
+
+3.c.1: **NO aprobada, NO implementada**; pendiente de **nueva auditoría de
+Codex**. Condiciones para implementar: §41-§44 aceptados; precondición de
+Preview del `EVAL`; umbrales de §40.4 sin tocar y aceptados; RED del script
+de adquisición del turno. **3.c.2 fuera de alcance.**

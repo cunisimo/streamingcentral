@@ -14,6 +14,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { motivoDeRespuesta } from "../components/api-motivo.ts";
+import { dormirCancelable } from "./home-servir.ts";
 
 // ----------------------------------------------------------------- modelo de Redis
 class RedisModelo {
@@ -489,7 +490,7 @@ interface Mundo {
   evalCount: number;
   jitterMs: number;
 }
-type Salida = { status: 200; motivo: string; esperadoMs: number } | { status: 503; retryAfter: number; motivo: string } | { cancelada: true; esperadoMs: number };
+type Salida = { status: 200; motivo: string; esperadoMs: number } | { status: 503; retryAfter: number; motivo: string };
 const s503 = (retryAfter: number, motivo: string): Salida => ({ status: 503, retryAfter: Math.max(1, retryAfter), motivo });
 async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida> {
   const t0 = m.ahora - presupuestoYaGastadoMs;
@@ -522,9 +523,11 @@ async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida
   const cabeEnPresupuesto = presupuestoRestante() - (restante + JITTER_MAX_MS + T_ADQ_MAX_MS) >= COMPOSICION_MAX_MS;   // §43.4
   if (!cabeEnEspera) return s503(Math.ceil(restante / 1000), "pausa-continua");
   if (!cabeEnPresupuesto) return s503(Math.ceil(restante / 1000), "presupuesto-insuficiente");
-  // UN solo sueño, cancelable: el abort del cliente lo corta y se PROPAGA (no es una respuesta).
+  // UN solo sueño, cancelable: `dormir` RESUELVE al abortar (dormirCancelable real); después se mira
+  // la señal y, si abortó, se devuelve el centinela 4d `vacio("cancelada")` (§44.1): sin readquirir,
+  // sin componer, sin lanzar (el handler real convertiría una excepción en 500 + console.error).
   const dormirMs = restante + m.jitterMs;
-  if (m.abortarEn !== null && m.abortarEn < m.ahora + dormirMs) { const esperado = m.abortarEn - m.ahora; m.ahora = m.abortarEn; return { cancelada: true, esperadoMs: esperado }; }
+  if (m.abortarEn !== null && m.abortarEn < m.ahora + dormirMs) { const esperado = m.abortarEn - m.ahora; m.ahora = m.abortarEn; return { status: 200, motivo: "vacio-cancelada", esperadoMs: esperado }; }
   m.ahora += dormirMs;
   const r2 = conPausaLocal(adquirir(true));                                     // EVAL 2 — el último de la solicitud
   if (r2.estado === "indeterminado") {
@@ -555,10 +558,10 @@ test("🔴 CONTROL (§42, superado): un bucle que volviera a dormir mientras 'qu
   assert.equal(m.evalCount, 2); assert.equal(m.ahora, 101_100, "no durmió por segunda vez");
 });
 
-test("🟢 (3) el cliente abandona durante el sueño: se corta el sueño, no adquiere, no compone, y la cancelación se PROPAGA (no hay 503 ni error registrado)", async () => {
+test("🟢 (3) el cliente abandona durante el sueño: se corta el sueño, no adquiere, no compone, y sale por el centinela 4d de hoy (`vacio-cancelada`): ni 503 ni error registrado", async () => {
   const m = mundo({ pausaHasta: 100_000 + 4000, abortarEn: 100_000 + 1500 });
   const r = await servirSinUB(m);
-  assert.deepEqual(r, { cancelada: true, esperadoMs: 1500 });
+  assert.deepEqual(r, { status: 200, motivo: "vacio-cancelada", esperadoMs: 1500 });
   assert.equal(m.evalCount, 1, "no hubo readquisición"); assert.equal(m.composiciones, 0); assert.equal(m.turnoLibre, true);
 });
 
@@ -641,7 +644,7 @@ test("🟢 cota dura: ≤ 2 EVAL y ≤ ESPERA_MAX + JITTER_MAX de sueño por sol
     const t0 = m.ahora; const r = await servirSinUB(m);
     assert.ok(m.evalCount <= 2, `EVAL ${m.evalCount}`);
     assert.ok(m.ahora - t0 <= ESPERA_MAX_MS + JITTER_MAX_MS, `esperó ${m.ahora - t0} ms con restante ${restante}`);
-    assert.ok(("status" in r && (r.status === 503 || r.motivo === "compuesta")) || "cancelada" in r, JSON.stringify(r));
+    assert.ok(r.status === 503 || r.motivo === "compuesta" || r.motivo === "vacio-cancelada", JSON.stringify(r));
   }
 });
 
@@ -739,4 +742,122 @@ test("🟢 el orden completo de v3 en `escrito`: validar → EXISTS ev → GET p
   const r = new RedisModelo2();
   pausarV3(r, { id: "p2:9", ms: 4000, uuid: "p2", contador: 9 });
   assert.deepEqual(r.ops, ["EXISTS ev", "GET proc", "PTTL pausa", "SET pausa PX", "SET proc PX 86400000", "SET ev PX 120000", "pcall(telemetria pausas)"]);
+});
+
+// =============================================================================
+// §44 (auditoría sobre 122f1a6): cancelación con el `dormir` y el handler REALES,
+// matriz del UB sin caché en memoria, y sobrepaso parametrizado.
+// =============================================================================
+
+// ----------------------------------------------------------------- 1. cancelación: RED con las primitivas reales
+// Handler real (app/api/home/route.ts): una excepción → 500 + console.error. Modelo fiel de ese `catch`.
+async function handlerReal<T>(cuerpo: () => Promise<T>, registrar: (l: string) => void) {
+  try { return { status: 200, body: await cuerpo() }; }
+  catch (e) { registrar(`[api/home] composeHome rechazó — ${String(e)}`); return { status: 500, body: { error: String(e), hero: [], rails: [], fallos: 1, degradado: true } }; }
+}
+
+test("🔴 RED (control): el `dormirCancelable` real RESUELVE al abortar, no rechaza — un diseño que espere un `AbortError` nunca se entera del abandono", async () => {
+  const ac = new AbortController();
+  const p = dormirCancelable(10_000, ac.signal);
+  ac.abort();
+  const resultado = await p.then(() => "resolvió", () => "rechazó");
+  assert.equal(resultado, "resolvió", "§43.2 decía que dormir rechaza: falso");
+});
+
+test("🔴 RED (control): con el `dormir` real, la versión de §43 (que confiaba en el rechazo) readquiere y compone después del abandono", async () => {
+  const ac = new AbortController();
+  let adquisiciones = 0, composiciones = 0;
+  const modelo43 = async () => {
+    adquisiciones += 1;                                   // EVAL 1 → pausado(500)
+    try { await dormirCancelable(500, ac.signal); } catch { return "cancelada"; }   // esperaba AbortError
+    adquisiciones += 1; composiciones += 1; return "compuesta";                  // EVAL 2 + composición
+  };
+  setTimeout(() => ac.abort(), 5);
+  const r = await modelo43();
+  assert.equal(r, "compuesta", "el abandono no se detectó");
+  assert.equal(adquisiciones, 2); assert.equal(composiciones, 1);
+});
+
+test("🔴 RED (control): 'propagar' un AbortError desde el handler real produce un 500 y un console.error falso", async () => {
+  const registro: string[] = [];
+  const r = await handlerReal(async () => { throw new DOMException("solicitud cancelada", "AbortError"); }, (l) => registro.push(l));
+  assert.equal(r.status, 500);
+  assert.equal(registro.length, 1, "queda registrado como si composeHome hubiera fallado");
+});
+
+// GREEN — la única semántica: después de `dormir`, mirar `senal.aborted`; si abortó, devolver el
+// centinela `vacio("cancelada")` que servirConTurno YA usa en 4d (línea `[home] … CANCELADA`,
+// `origen vacio-cancelada`), sin readquirir, sin componer, sin lanzar.
+type Adq4 = { estado: "adquirido" } | { estado: "pausado"; restanteMs: number } | { estado: "sin-redis" };
+async function esperarPausaSinUB(o: { adquirir: () => Adq4; senal: AbortSignal; dormir?: typeof dormirCancelable; jitterMs?: number; vacio: (m: "cancelada") => { motivo: "cancelada" } }) {
+  const dormir = o.dormir ?? dormirCancelable;
+  const cuenta = { adquisiciones: 0, composiciones: 0 };
+  const adq = () => { cuenta.adquisiciones += 1; return o.adquirir(); };
+  const terminar = (r: Adq4) => { if (r.estado === "adquirido") cuenta.composiciones += 1; return { ...cuenta, salida: r.estado === "adquirido" ? "compuesta" : "sin-redis" }; };
+  const r1 = adq();
+  if (r1.estado !== "pausado") return terminar(r1);
+  await dormir(r1.restanteMs + (o.jitterMs ?? 0), o.senal);
+  if (o.senal.aborted) return { ...cuenta, salida: o.vacio("cancelada").motivo };   // 4d: centinela, no excepción, no 503
+  const r2 = adq();
+  if (r2.estado === "pausado") return { ...cuenta, salida: "503" };
+  return terminar(r2);
+}
+
+test("🟢 con el `dormir` real: el abandono corta el sueño, NO readquiere, NO compone, y devuelve el centinela `cancelada` (4d) — el handler responde como hoy, sin 503 ni error registrado", async () => {
+  const ac = new AbortController();
+  const registro: string[] = [];
+  let pausaHasta = Date.now() + 5000;
+  const adquirir = (): Adq4 => pausaHasta > Date.now() ? { estado: "pausado", restanteMs: pausaHasta - Date.now() } : { estado: "adquirido" };
+  setTimeout(() => ac.abort(), 20);
+  const t0 = Date.now();
+  const r = await handlerReal(() => esperarPausaSinUB({ adquirir, senal: ac.signal, vacio: (m) => ({ motivo: m }) }), (l) => registro.push(l));
+  assert.equal(r.status, 200, "el camino de hoy para una solicitud abandonada (4d), no un 500");
+  assert.deepEqual(r.body, { adquisiciones: 1, composiciones: 0, salida: "cancelada" });
+  assert.ok(Date.now() - t0 < 1000, "el sueño de 5 s se cortó en el acto");
+  assert.deepEqual(registro, [], "ningún error falso");
+});
+
+test("🟢 sin abandono, el mismo camino compone tras el único sueño (2 adquisiciones)", async () => {
+  const ac = new AbortController();
+  let pausaHasta = Date.now() + 30;
+  const adquirir = (): Adq4 => pausaHasta > Date.now() ? { estado: "pausado", restanteMs: pausaHasta - Date.now() } : { estado: "adquirido" };
+  const r = await esperarPausaSinUB({ adquirir, senal: ac.signal, jitterMs: 25, vacio: (m) => ({ motivo: m }) });   // jitter > granularidad del timer
+  assert.deepEqual(r, { adquisiciones: 2, composiciones: 1, salida: "compuesta" });
+});
+
+// ----------------------------------------------------------------- 2. UB y Redis caído: sin caché en memoria
+// servirConTurno lee la fresca (paso 1) y, en el MISS, `[ub, degradado]` (paso 2) UNA vez por solicitud;
+// `ub` es una variable de ESA solicitud. Si Redis falla antes del paso 2, `ub` es null; si falla después,
+// `ub` conserva lo leído y se sirve (como ya hace 4c ante un productor que rechaza).
+type CuandoFalla = "antes-del-paso-2" | "despues-del-paso-2" | "nunca";
+function matrizUB(o: { fallaRedis: CuandoFalla; ubEnRedis: boolean; pausaLocal: boolean }) {
+  const ub = o.fallaRedis === "antes-del-paso-2" ? null : (o.ubEnRedis ? "UB" : null);   // paso 2: una lectura, sin memoria entre solicitudes
+  const adquisicion = o.fallaRedis === "nunca" ? "script" : "sin-redis";
+  if (o.pausaLocal) return ub ? "ub-sin-componer" : "espera-local-luego-503";           // nunca componer con pausa local
+  if (adquisicion === "sin-redis") return "degradado-de-hoy";                             // compone sin turno, no publica
+  return "normal";
+}
+test("🟢 matriz UB × Redis: 'UB ya cargado en esta solicitud y Redis falla después' sirve el UB; 'Redis falla antes de leer el UB' no tiene UB (es null) — sin ninguna caché en memoria", () => {
+  assert.equal(matrizUB({ fallaRedis: "despues-del-paso-2", ubEnRedis: true, pausaLocal: true }), "ub-sin-componer");
+  assert.equal(matrizUB({ fallaRedis: "antes-del-paso-2", ubEnRedis: true, pausaLocal: true }), "espera-local-luego-503", "el UB existía en Redis pero esta solicitud no llegó a leerlo");
+  assert.equal(matrizUB({ fallaRedis: "antes-del-paso-2", ubEnRedis: true, pausaLocal: false }), "degradado-de-hoy");
+  assert.equal(matrizUB({ fallaRedis: "despues-del-paso-2", ubEnRedis: false, pausaLocal: true }), "espera-local-luego-503");
+  assert.equal(matrizUB({ fallaRedis: "nunca", ubEnRedis: true, pausaLocal: false }), "normal");
+});
+
+// ----------------------------------------------------------------- 3. sobrepaso parametrizado, y la línea base medida
+const sobrepaso = (enVuelo: number, cadenciaPorS: number, deltaMs: number, tLecturaMs: number) => enVuelo + Math.ceil(cadenciaPorS * (deltaMs + tLecturaMs) / 1000);
+test("🟢 la fórmula queda parametrizada; los números son ESTIMACIONES del escenario que las produce, no cotas duras", () => {
+  assert.equal(sobrepaso(24, 35, 1000, 1000), 94, "cadencia media del banco (35/s)");
+  assert.equal(sobrepaso(24, 80, 1000, 1000), 184, "pico por segundo medido en un proceso (80/s)");
+  assert.equal(sobrepaso(24, 252, 1000, 1000), 528, "cadencia con 429 RÁPIDAS medida hoy (252/s): la cola local drena en el acto");
+  // Lo único fijado por diseño es enVuelo = 24 por proceso; la cadencia no está acotada por ningún mecanismo actual.
+  assert.equal(sobrepaso(24, 0, 1000, 1000), 24);
+});
+
+test("🟢 línea base medida HOY (sin pausa; docs/medidas/2026-09-16-etapa3c0-sobrepaso-hoy.json): tras el primer 429 rápido, un proceso emite 750-778 llamadas más en 3,4-4,4 s, pico 224-252 por segundo", () => {
+  const medido = [{ tras: 778, span: 4203, pico: 252 }, { tras: 776, span: 4396, pico: 224 }, { tras: 750, span: 3419, pico: 252 }];
+  for (const m of medido) { assert.ok(m.tras >= 750 && m.tras <= 778); assert.ok(m.pico >= 224 && m.pico <= 252); }
+  // Con el nivel 1 (429 propio) el sobrepaso por proceso deja de ser 'todo lo que queda' y pasa a ≈ enVuelo + admitidas hasta ver el primer 429:
+  // con 429 rápidas (latencia ≈ 0) eso es ≈ 24 + pico × latencia_429 ≈ 24-50. El banco de 3.c.1 lo mide contra esta línea base.
 });

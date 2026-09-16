@@ -114,7 +114,7 @@ function doble(nombre, puerto, atender, extra = {}) {
       // registra el primer comando del lote (nombre y clave) y cuántos trae.
       if (nombre === "redis") { try { const c = JSON.parse(cuerpo); const primero = url.startsWith("/pipeline") ? c[0] : c; marca.c = String(primero?.[0] ?? "").toUpperCase(); marca.k = String(primero?.[1] ?? ""); marca.n = url.startsWith("/pipeline") ? c.length : 1; } catch { /* sin clave */ } }
       marcas.push(marca);
-      res.on("finish", () => { marca.fin = Date.now(); });
+      res.on("finish", () => { marca.fin = Date.now(); marca.s = res.statusCode; });
       res.on("close", () => { if (!marca.fin) marca.fin = Date.now(); });
     }
     if (estado.latenciaMs) await dormir(sortearLatencia(estado.latenciaMs, estado.latenciaP95Ms, rng));
