@@ -48,12 +48,19 @@ import { LUA } from "../../lib/turno-lua.ts";
 const PUERTO_BASE = Number(process.env.BANCO_PUERTO_BASE) || 4801;
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+// Generador DETERMINISTA (mulberry32) por doble: `semilla` en /__banco/config
+// (3.c.0, auditoría sobre 1ad1025: sin semilla, dos corridas no son
+// comparables). La secuencia de sorteos es fija; el ORDEN en que llegan las
+// peticiones sigue siendo del sistema, así que dos corridas con la misma
+// semilla asignan las mismas latencias en el mismo orden de llegada, no
+// necesariamente a las mismas URLs.
+function mulberry32(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 // Log-normal con mediana `m` y percentil 95 `p95` (Box-Muller); sin p95, constante.
-function sortearLatencia(m, p95) {
+function sortearLatencia(m, p95, rng = Math.random) {
   if (!m) return 0;
   if (!p95 || p95 <= m) return m;
   const sigma = Math.log(p95 / m) / 1.6449;
-  const u = 1 - Math.random(), v = Math.random();
+  const u = 1 - rng(), v = rng();
   const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   return Math.round(m * Math.exp(sigma * z));
 }
@@ -70,7 +77,8 @@ function json(res, estado, cuerpo, headers = {}) {
 // Un doble = servidor + estado de control + contadores. `atender` hace lo
 // específico; el control y los modos de fallo son comunes.
 function doble(nombre, puerto, atender, extra = {}) {
-  const estado = { modo: "ok", latenciaMs: 0, latenciaP95Ms: 0, retryAfter: 2 };
+  const estado = { modo: "ok", latenciaMs: 0, latenciaP95Ms: 0, retryAfter: 2, semilla: 0 };
+  let rng = Math.random;
   // `bytes`: lo que entró y salió por el cable en las peticiones atendidas (sin
   // el control). Es lo que mide el costo en BYTES del camino caliente (Etapa 2,
   // §14.6): un HIT tiene que transferir UNA copia del Home, no dos ni tres.
@@ -83,7 +91,7 @@ function doble(nombre, puerto, atender, extra = {}) {
     if (url.startsWith("/__banco/")) {
       if (url === "/__banco/estado") return json(res, 200, { nombre, estado, cuenta, ...(extra.estado?.() ?? {}) });
       if (url === "/__banco/marcas") return json(res, 200, marcas);
-      if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); return json(res, 200, estado); }
+      if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); rng = estado.semilla ? mulberry32(Number(estado.semilla)) : Math.random; return json(res, 200, estado); }
       if (url === "/__banco/reset") { marcas.length = 0; cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; cuenta.consultas429 = []; cuenta.discovers = []; extra.reset?.(); return json(res, 200, { ok: true }); }
       // Controles propios del doble (Etapa 2: expirar, borrar, perder la
       // respuesta, fallar EVAL, listar claves).
@@ -109,7 +117,7 @@ function doble(nombre, puerto, atender, extra = {}) {
       res.on("finish", () => { marca.fin = Date.now(); });
       res.on("close", () => { if (!marca.fin) marca.fin = Date.now(); });
     }
-    if (estado.latenciaMs) await dormir(sortearLatencia(estado.latenciaMs, estado.latenciaP95Ms));
+    if (estado.latenciaMs) await dormir(sortearLatencia(estado.latenciaMs, estado.latenciaP95Ms, rng));
     if (estado.modo === "caido") { req.socket.destroy(); return; }
     if (estado.modo === "500") return json(res, 500, { error: "doble en modo 500" });
     if (estado.modo === "429") return json(res, 429, { error: "doble en modo 429" }, { "Retry-After": String(estado.retryAfter) });

@@ -52,11 +52,12 @@ const MODELOS = {
 };
 const MODELOS_A_CORRER = (process.env.BANCO_MODELOS ?? "prod-3b,prod-3a").split(",");
 const lat = (promedio) => { const m = Math.round(promedio / PROMEDIO_SOBRE_MEDIANA); return { latenciaMs: m, latenciaP95Ms: Math.round(m * FACTOR_P95) }; };
-async function modelo(nombre) {
+async function modelo(nombre, semilla = Number(process.env.BANCO_SEMILLA ?? "0")) {
   const m = MODELOS[nombre];
-  await control(BASE, "tmdb", "config", { modo: "ok", ...lat(m.tmdb) });
-  await control(BASE, "redis", "config", { modo: "ok", ...lat(m.redis) });
-  await control(BASE, "supabase", "config", { modo: "ok", ...lat(m.supabase) });
+  // Semillas distintas por doble (derivadas de una), para que TMDB y Redis no sorteen la misma secuencia.
+  await control(BASE, "tmdb", "config", { modo: "ok", ...lat(m.tmdb), semilla: semilla ? semilla * 3 + 1 : 0 });
+  await control(BASE, "redis", "config", { modo: "ok", ...lat(m.redis), semilla: semilla ? semilla * 3 + 2 : 0 });
+  await control(BASE, "supabase", "config", { modo: "ok", ...lat(m.supabase), semilla: semilla ? semilla * 3 + 3 : 0 });
   return { nombre, promedios: m, medianasConfiguradas: { tmdb: lat(m.tmdb).latenciaMs, redis: lat(m.redis).latenciaMs, supabase: lat(m.supabase).latenciaMs }, factorP95: FACTOR_P95, promedioSobreMediana: +PROMEDIO_SOBRE_MEDIANA.toFixed(3) };
 }
 const expirar = (patron) => control(BASE, "redis", "redis", { accion: "expirar", patron });
@@ -197,6 +198,33 @@ async function main() {
   const B = await levantarNext("3c0-B", DIR, 3002, BASE, { YUMP_BANCO_FONDO: "1" });
   const C = await levantarNext("3c0-C", DIR, 3003, BASE, { YUMP_BANCO_FONDO: "1" });
   const log = (k, v) => { salida.escenarios[k] = v; console.log(`[3c0] ${k}:`, JSON.stringify(v.resumen ?? v).slice(0, 600)); };
+  if (process.env.BANCO_MODO === "repeticiones") {
+    // Varias semillas → mediana y rango por escenario (auditoría sobre 1ad1025):
+    // frío total en línea y en fondo, las dos calibraciones, y 2/3 claves.
+    const semillas = (process.env.BANCO_SEMILLAS ?? "11,22,33").split(",").map(Number);
+    const resumenR = (m) => ({ cache: m.linea?.cache, cancelada: m.linea?.cancelada, msTotal: m.linea?.msTotal, tmdbLinea: m.linea?.tmdb, cadenciaLineaPorS: m.linea?.tmdb && m.linea?.msTotal ? +(m.linea.tmdb / (m.linea.msTotal / 1000)).toFixed(1) : null, maxPor1s: m.doble.maxPor1s, concurrenciaMax: m.doble.concurrenciaMax, redisOps: m.redisOps, fases: m.fases });
+    for (const semilla of semillas) {
+      await modelo("prod-3b", semilla);
+      await vaciar(BASE); lineas(A);
+      const s1 = await medir(A, "n,d,m"); log(`rep/semilla-${semilla}/S1-frio-total-en-linea`, { semilla, resumen: resumenR(s1) });
+      await expirar(FRESCA); await expirar("^pv3:.*[0-3]$");
+      const cal = await medir(A, "n,d,m", { esperaFondo: true }); log(`rep/semilla-${semilla}/CAL-342-fondo`, { semilla, objetivo: { llamadas: 342, ms: 16682 }, resumen: resumenR(cal) });
+      await expirar(FRESCA); await expirar(UB); await expirar("^pv3:.*[0-2]$");
+      const calL = await medir(A, "n,d,m"); log(`rep/semilla-${semilla}/CAL-250-linea`, { semilla, objetivo: { llamadas: 250, ms: 15091 }, resumen: resumenR(calL) });
+      await expirar(FRESCA);
+      const s7 = await medir(A, "n,d,m", { esperaFondo: true }); log(`rep/semilla-${semilla}/S7-miss-intradia-fondo`, { semilla, resumen: resumenR(s7) });
+      await expirar("^(?!home:ub:).*");
+      const s3 = await medir(A, "n,d,m", { esperaFondo: true }); log(`rep/semilla-${semilla}/S3-frio-total-en-fondo`, { semilla, resumen: resumenR(s3) });
+      await vaciar(BASE); lineas(A); lineas(B); lineas(C); await control(BASE, "tmdb", "reset");
+      const [a5, b5, c5] = await Promise.all([medir(A, "n,d,m", { sinReset: true }), medir(B, "n,d", { sinReset: true }), medir(C, "d,m", { sinReset: true })]);
+      const g5 = resumenTmdb(await marcas("tmdb"), Math.min(...[a5, b5, c5].map((x) => x.doble.primera ?? Infinity)) - 1, Date.now());
+      log(`rep/semilla-${semilla}/S5-tres-claves-tres-procesos`, { semilla, A: resumenR(a5), B: resumenR(b5), C: resumenR(c5), global: g5 });
+    }
+    for (const h of hijos) matar(h);
+    writeFileSync(SALIDA, JSON.stringify(salida, null, 2));
+    console.log(`[3c0] → ${SALIDA}`);
+    return;
+  }
   if (process.env.BANCO_MODO === "fases") {
     // Sólo los dos fríos totales, para el desglose por componentes (39.3).
     const resumenF = (m) => ({ respuestaMs: m.respuestaMs, cache: m.linea?.cache, cancelada: m.linea?.cancelada, msTotal: m.linea?.msTotal, tmdbLinea: m.linea?.tmdb, redisOps: m.redisOps, fases: m.fases });

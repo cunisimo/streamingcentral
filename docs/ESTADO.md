@@ -7,10 +7,38 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB: DISEÑO
-  CORREGIDO (§39) tras la auditoría sobre `f7282a8` y MEDICIÓN 3.c.0
-  EJECUTADA (2026-09-16); 3.c.1/3.c.2 NO APROBADAS, NO IMPLEMENTADAS;
-  PENDIENTE DE NUEVA AUDITORÍA** (rama `diseno/etapa3c-proteccion-tmdb`;
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB: §40 (auditoría
+  sobre `1ad1025`, 2026-09-16): siete correcciones sobre §39; 3.c.1 lista
+  para auditoría de DISEÑO (no de implementación); 3.c.2 NO aprobada; NADA
+  implementado; PENDIENTE DE NUEVA AUDITORÍA.** (1) `PAUSAR` no era
+  idempotente (un reintento con respuesta perdida alargaba la pausa: RED
+  ejecutado y visto fallar, `PTTL=8000`); rediseñado con identidad estable
+  por evento y marcador atómico en el mismo script — 15/15 en
+  `lib/tmdb-pausa-diseno.test.ts` (modelo de Redis, no código productivo):
+  respuesta perdida, reintentos múltiples, 1→8, 8→1, 50 concurrentes,
+  expiración, reintento tardío. (2) 3.c.0 reclasificada: modelo de
+  SENSIBILIDAD ajustado con las mismas dos muestras, no calibración
+  predictiva; semilla determinista en el doble y tres repeticiones
+  (dispersión ≤ 3 %; frío total 27,3 s en línea / 27,7 s en fondo; tres
+  claves 87/s y 230 en un segundo); "926 ≈ 26 s en Producción" pasa a
+  extrapolación NO validada y se retira "lo que cabe en el banco cabe en
+  Producción". (3) `t_inicio_fondo` = 0,30-0,37 s (se sumaba dos veces la
+  respuesta); el mínimo del presupuesto sigue siendo el interno de 50 s.
+  (4) 3.c.1 SÍ toca el camino sano: la relectura pasa a ser NO bloqueante y
+  se fija a priori el criterio antes/después (JSON idéntico, mismas
+  llamadas, Redis extra ≤ ⌈llamadas/24⌉+2, duración ≤ +5 % mediana / +10 %
+  máx., publicación ≤ +1 op, 1/2/3 reconstrucciones, Redis normal/lento/
+  caído). (5) La carrera leer-pausa → componer se cierra DENTRO del script
+  de adquisición del turno (atómico) más relectura en cola; `pausado` con
+  UB sirve UB sin componer, sin UB `503` + `Retry-After`; RED listados. (6)
+  Observabilidad por evento (`tmdb:eventos`, escrito en el mismo script que
+  pausa) y cubos por minuto para deltas; las líneas `[home]` son efímeras.
+  (7) Retirada la propuesta de provocar un frío total en Producción; sólo
+  observación pasiva si ocurre. Antes de la auditoría de implementación de
+  3.c.1 faltan: aceptación de §40, precondición de Preview del `EVAL`, RED
+  propio para el cambio del script del turno (Etapa 2) y umbrales
+  aceptados por el dueño. Historia previa (§39): DISEÑO CORREGIDO tras la
+  auditoría sobre `f7282a8` y MEDICIÓN 3.c.0 EJECUTADA (2026-09-16) (rama `diseno/etapa3c-proteccion-tmdb`;
   sin código productivo, variables, cachés ni Producción; sólo
   documentación, `scripts/banco/etapa3c0-medir.mjs` y dos capacidades del
   doble: latencia log-normal y marcas por petición). Correcciones: el
@@ -764,7 +792,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c: diseño corregido (§39) y medición 3.c.0 ejecutada (frío total 926 en 26 s de 50 con el banco calibrado; no cabe con modelos lentos), 3.c.1/3.c.2 no aprobadas; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c: §40 — `PAUSAR` idempotente por evento (RED→GREEN), 3.c.0 reclasificada como sensibilidad ajustada (semillas, 3 rep.), carrera cerrada en el script del turno; 3.c.1 lista para auditoría de diseño, 3.c.2 no aprobada, nada implementado; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

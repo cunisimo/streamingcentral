@@ -18,7 +18,15 @@
 > de 926 en 26 s de los 50 del fondo; con modelos más lentos, 40 s o
 > cancelación. Una reconstrucción sola emite ráfagas de 80/s y dos
 > simultáneas promedian 64/s. 3.c.1/3.c.2 NO aprobadas; pendiente de nueva
-> auditoría.** Ocho correcciones en rama (auditorías de Codex sobre
+> auditoría. §40 (16/09, auditoría sobre `1ad1025`): siete correcciones —
+> `PAUSAR` idempotente por identidad de evento (RED→GREEN sobre modelo),
+> 3.c.0 reclasificada como sensibilidad ajustada (semillas, 3 repeticiones,
+> dispersión ≤ 3 %; "926 ≈ 26 s" es extrapolación NO validada),
+> `t_inicio_fondo` 0,30-0,37 s, umbrales antes/después fijados a priori,
+> carrera cerrada dentro del script de adquisición del turno, observabilidad
+> por evento y deltas, retirada la idea de provocar un frío total en
+> Producción. 3.c.1 lista para auditoría de DISEÑO, no de implementación;
+> 3.c.2 no aprobada.** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -3276,3 +3284,272 @@ Upstash, fuera del alcance de la 3.c.
 código productivo; los cambios de esta tanda son documentación, el script
 del banco y el doble. Rama pendiente de nueva auditoría de Codex; sin merge,
 push ni deploy.
+
+> **§39 queda corregido por §40** (auditoría de Codex sobre `1ad1025`, siete
+> puntos): `PAUSAR` con identidad por evento (RED→GREEN), 3.c.0 reclasificada
+> como sensibilidad ajustada (con semillas y repeticiones), `t_inicio_fondo`
+> 0,30-0,37 s, criterio antes/después con umbrales previos, carrera cerrada
+> en el script de adquisición, observabilidad por evento y retiro del
+> "frío total provocado".
+
+## 40. Etapa 3.c — auditoría y corrección de §39 sobre `1ad1025` — **3.c.1 y 3.c.2 NO aprobadas; sin código productivo; pendiente de nueva auditoría** (2026-09-16)
+
+Rama `diseno/etapa3c-proteccion-tmdb`, sobre `1ad1025`. Cambios: documentación,
+un test de diseño (`lib/tmdb-pausa-diseno.test.ts`, sobre un modelo de Redis,
+no sobre código productivo), y dos herramientas del banco (semilla
+determinista en el doble; modo `repeticiones`). Sin merge, push, deploy,
+Producción, variables ni cachés. Marcas: [medido en Producción] / [reproducido
+por el banco] / [parámetro ajustado] / [sensibilidad] / [extrapolación no
+validada] / [propuesto] / [desconocido].
+
+### 40.1 Punto 1 — `PAUSAR` no era idempotente: RED → GREEN
+
+**RED (exacto, ejecutado y visto fallar):** sobre un modelo de Redis con reloj
+virtual, la versión de §39.6 ejecuta `PAUSAR(8000)`, el cliente pierde la
+respuesta, reintenta 100 ms después: `PTTL = 7900 < 8000` ⇒ vuelve a escribir
+8000. Aserción "el PTTL sigue en 7900" → `AssertionError: extendió: PTTL=8000
+resultado=escrito`. Queda como **control** en el archivo (la versión ingenua
+tiene que seguir fallando ahí, MANTENIMIENTO 8.b).
+
+**Rediseño: identidad estable por evento.** Cada 429 genera **un** id de
+evento `<uuid del proceso>:<contador>` (identidad, no instante: ninguna
+instancia compara relojes) que viaja igual en todos los reintentos. El script
+escribe, en la **misma operación atómica**, un marcador por evento y la pausa:
+
+```lua
+-- KEYS[1] = tmdb:pausa   KEYS[2] = tmdb:pausa:ev:<id>   ARGV[1] = id   ARGV[2] = ms
+if redis.call('EXISTS', KEYS[2]) == 1 then return {'ya-aplicada', redis.call('PTTL', KEYS[1])} end
+redis.call('SET', KEYS[2], '1', 'PX', math.max(tonumber(ARGV[2]), 60000))
+local restante = redis.call('PTTL', KEYS[1])
+if restante >= tonumber(ARGV[2]) then return {'ya-mayor', restante} end
+redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
+return {'escrito', tonumber(ARGV[2])}
+```
+
+Vencimiento estable: la pausa lleva su vencimiento en el **TTL de Redis**
+(`PX`), y un evento sólo puede escribirla **una vez** (marcador con TTL ≥ 60 s,
+que cubre cualquier ventana de reintento del SDK). Lo que sí extiende es un
+evento **nuevo** (otro 429, en la misma u otra instancia) cuyo `Retry-After`
+termina más tarde: es la semántica de `Retry-After` ("desde este 429"), no
+una extensión espuria. Cota: `fin de la pausa = max sobre los 429 reales de
+(instante del 429 + Retry-After)`; los reintentos aportan **0**.
+
+**GREEN (15/15, `lib/tmdb-pausa-diseno.test.ts`):** la secuencia del RED →
+`ya-aplicada`, PTTL 7900; reintentos múltiples (tres respuestas perdidas y
+una vista) → una escritura, PTTL `8000 − 450`; el reintento de un evento
+viejo no pisa a un evento nuevo de otra instancia; 1 → 8 extiende; 8 → 1
+`ya-mayor` con el restante y su reintento `ya-aplicada`; 50 eventos
+concurrentes en tres órdenes pseudoaleatorios deterministas → máximo;
+expiración (`PTTL = -2`, evento nuevo escribe de cero); reintento tardío
+después de vencida la pausa → `ya-aplicada`, **no la reabre**; lectura por
+`PTTL`. Lo que el modelo NO prueba: el SDK de Upstash devolviendo la tupla
+del `EVAL` (precondición de Preview, como el turno de la Etapa 2) y el
+`EXISTS`/`PTTL` reales — se prueban contra el doble de Redis del banco
+cuando exista `lib/tmdb-pausa.ts`.
+
+### 40.2 Punto 2 — 3.c.0 reclasificada: sensibilidad ajustada, no calibración predictiva
+
+Lo que §39.2 llamó "calibrado" es un **modelo de sensibilidad ajustado con
+las mismas dos muestras** que después "reproduce": no predice Producción.
+El vencimiento por último dígito de `pv3:` iguala el **total** de llamadas
+(338 ≈ 342, 259 ≈ 250) pero no demuestra que reproduzca **qué** claves
+faltaban ni su **dependencia temporal** (en Producción las 242 ausentes de
+la 3.a eran las que vencieron juntas por TTL; acá son un tercio uniforme de
+cada riel). Y el doble sorteaba con `Math.random` sin semilla: dos corridas
+no eran comparables. Corrección: semilla determinista por doble
+(`mulberry32`, `semilla` en `/__banco/config`; la secuencia de sorteos es
+fija, el orden de llegada sigue siendo del sistema) y tres repeticiones
+por escenario (`…-repeticiones.json`).
+
+**Resultados con semillas 11 / 22 / 33** (modelo `prod-3b`, Redis 40, p95 1,5×) — mediana [rango]:
+
+| Escenario | llamadas | total, mediana [rango] | cadencia | ráfaga máx. 1 s | `t_inicio` | composición | publicación |
+|---|---|---|---|---|---|---|---|
+| S1 frío total, en línea | 926 (×3) | **27,3 s** [26,8-27,5] | 33,9/s [33,6-34,5] | 76 [74-79] | 0,45 s [0,40-1,76] | 26,4 s [25,8-26,7] | 0,12 s [0,11-0,20] |
+| S3 frío total, en fondo | 926 (×3) | **27,7 s** [27,0-28,5] | 33,4/s [32,5-34,3] | 80 [76-82] | **0,36 s [0,32-0,38]** | 27,0 s [26,3-27,8] | 0,14 s [0,11-0,16] |
+| CAL-342 (target 16,7 s) | 338 (×3) | **19,5 s** [19,3-19,7] (+17 %) | 17,4/s | 59 | 0,39 s | 18,6 s | 0,15 s |
+| CAL-250 (target 15,1 s) | 259 (×3) | **19,0 s** [18,9-19,8] (+26 %) | 13,7/s | 45 | 0,34 s | 18,1 s | 0,13 s |
+| S7 MISS intradía (todo cacheado) | 1 (×3) | **4,1 s** [3,9-4,2] | — | 1 | 0,36 s | 0 | (n/a: con una sola llamada la "publicación" medida abarca la cadena secuencial entera, 3,5 s) |
+| S5 tres claves, tres procesos | 742/731/711 · 734/670/729 · 753/664/707 | A **25,1 s** [24,2-26,0] · B 25,2 [25,2-25,4] · C 24,5 [24,4-24,5]; ninguna cancelada | global **87/s** [86-88] | **230** [218-241]; 100 ms: 64-72; concurrencia 72 | | | |
+
+La dispersión entre semillas es ≤ 3 % en los totales (el 1,76 s de
+`t_inicio` en una semilla de S1 es el primer pedido tras reiniciar el
+proceso, no la cesión). Las cifras de §39.2-39.4 (una sola corrida) caen
+dentro de estos rangos.
+
+**Clasificación honesta de cada cifra de 3.c.0:**
+
+| Categoría | Qué entra |
+|---|---|
+| **Medido en Producción** | 250 llamadas / 15,1 s (en línea, 3.a); 342 / 16,7 s (fondo, 3.b); promedios por llamada de esas dos líneas (TMDB 527 y 348 ms; Redis 138 ms; Supabase 604 y 355 ms); respuesta del UB 0,64 s; 0 × 429 |
+| **Reproducido por el banco** | que el mismo pipeline, con los mismos totales de llamadas, tarda **+15-28 %** respecto de las dos observaciones bajo el modelo ajustado; 926 llamadas con Redis vacío; la ráfaga de un proceso (≤ 24 en 100 ms, ~80 en 1 s); la concurrencia `24 × procesos`; el piso secuencial de ~64 operaciones de Redis |
+| **Parámetro ajustado** (con esas mismas muestras) | Redis efectivo 40 ms; cola de TMDB p95 = 1,5 × mediana; mediana de TMDB = promedio / 1,031 |
+| **Sensibilidad** | duración del frío total según Redis (30 / 40 / 121 / 300 ms) y según cola (1,5× / 2,3×): 25-54 s; con 527 ms de promedio: 37-52 s |
+| **Extrapolación no validada** | **que 926 llamadas tarden ~26 s en Producción**; el margen de ~24 s; que dos reconstrucciones simultáneas promedien 64/s en Producción; el `tmdb-sync` a 10/s. **Se retira la frase "lo que cabe en el banco, cabe en Producción".** |
+
+Lo que el banco sí permite afirmar sin extrapolar: **una tasa fija menor que
+la cadencia natural alarga la reconstrucción en proporción** (a 14/s, ≥ 66 s
+para 926: fuera del presupuesto en cualquier modelo), y **la ráfaga de un
+solo proceso ya supera los 40-50/s publicados** (80 en un segundo), con
+Producción mostrando 0 × 429 a esa ráfaga.
+
+### 40.3 Punto 3 — `t_inicio_fondo` corregido
+
+`hastaPrimeraLlamadaMs = primeraMarca − t0` se mide desde el **envío de la
+solicitud** al cliente, así que ya contiene la respuesta del UB y la cesión:
+§39.3 lo sumaba dos veces. Con la evidencia (`…-fases.json`: 365 y 297 ms;
+matriz: 354 ms; repeticiones: 0,32-0,38 s en fondo): **`t_inicio_fondo ≈ 0,30-0,37 s`**
+[reproducido por el banco]; en Producción, la respuesta del UB fue 0,64 s y
+la primera llamada del fondo no se mide (no hay marca) [medido parcial].
+
+| Componente | Medida (banco, frío total en fondo) | Categoría |
+|---|---|---|
+| `t_inicio_fondo` (solicitud → primera llamada a TMDB del fondo) | **0,30-0,37 s** | reproducido |
+| composición (primera → última llamada, + latencia de la última) | 25,4-25,6 s + 0,35-0,42 s | extrapolación no validada en Producción |
+| publicación (fin de la última llamada → script Lua respondido) | 0,13-0,15 s | reproducido (una operación) |
+| cierre | 0 | reproducido (el `DEL` va dentro del script) |
+| total `[home-fondo]` | 25,9-26,2 s | extrapolación no validada |
+
+Presupuesto: `min(50 s, 60 s − 0,37 s) = 50 s`: **el mínimo sigue siendo el
+interno** (`PRESUPUESTO_REQUEST_MS`), con 9,6 s de holgura respecto de
+`maxDuration`. El margen de "≈ 24 s" pasa a la categoría de extrapolación.
+
+### 40.4 Punto 4 — 3.c.1 SÍ cambia cosas con TMDB sano: criterio antes/después, umbrales fijados ANTES de medir
+
+La relectura compartida cada `K` permisos o `Δt` agrega operaciones de Redis
+y, si estuviera en el camino crítico, latencia. **Decisión de diseño que
+sale de este punto:** la relectura es **asíncrona y no bloqueante** — el
+semáforo no espera el `PTTL`; el resultado, cuando llega, fija la bandera
+local. Con Redis lento o caído, la relectura tarda o falla **sin frenar la
+composición**; a lo sumo la propagación se degrada al nivel local (39.5).
+La única lectura bloqueante es la que va **dentro del script de
+adquisición del turno** (40.5), que ya existe hoy como operación.
+
+Criterio obligatorio (banco §14, dos instancias de dobles, semillas fijas,
+tres repeticiones por celda), **con TMDB sano** y 3.c.1 encendida vs
+`37d4707`, umbrales definidos ahora:
+
+| Medida | Umbral de regresión (falla si se supera) | Por qué ese número |
+|---|---|---|
+| JSON completo del Home (comparador §14, 16 combinaciones, frío/caliente, individual/concurrente) | **0 diferencias** | restricción del dueño (§1) |
+| llamadas a TMDB por composición | **0 de diferencia** (926 = 926; 338 = 338; MISS intradía 1 = 1) | la pausa no toca qué se pide |
+| operaciones de Redis adicionales por composición | **≤ ⌈llamadas / K⌉ + 2** (K = 24: 926 → ≤ 41; 338 → ≤ 17; MISS intradía → ≤ 3) — y en Redis caído, **≤ 1** intento fallido (después no se reintenta en esa composición) | una relectura por lote más la de adquisición y la de cierre |
+| duración de la composición (mediana de 3 semillas) | **≤ +5 %**, y ninguna repetición **> +10 %** | ruido medido entre semillas (40.2) < 5 %; la relectura no bloquea |
+| publicación | **≤ +1 operación** de Redis (≤ +200 ms con Redis a 138 ms) | el script de publicación no cambia |
+| 1, 2 y 3 reconstrucciones simultáneas (3 procesos) | los mismos umbrales por proceso; tasa global **igual ± 5 %** | la pausa no actúa sin 429 |
+| Redis normal (40 ms) / lento (300 ms) / caído | los mismos umbrales de duración en los tres; en caído, `pausaNoLeida = 1` por composición y **0 s** de espera añadida | la relectura no bloquea |
+| respuesta del UB con fondo (`respuestaMs`) | **≤ +50 ms** | la adquisición del turno ya era una operación |
+
+Si cualquier celda supera su umbral, 3.c.1 **no se aprueba** aunque el
+resto pase; el umbral no se mueve después de ver el número.
+
+### 40.5 Punto 5 — la carrera "leer pausa → componer", cerrada por construcción
+
+Tres ventanas y qué las cierra:
+
+| Ventana | Cierre | Turno |
+|---|---|---|
+| **Antes del turno** (la pausa aparece después de una lectura previa y antes de adquirir) | la comprobación va **dentro del script Lua de adquisición** (`PTTL tmdb:pausa > 0 ⇒ return 'pausado'` antes del `SET NX`): no existe instante entre "leer" y "adquirir" | **no se adquiere** |
+| **Tras adquirir** (la pausa aparece después del script, antes de la primera llamada) | equivale a "durante la cola": la bandera local del nivel 1 y la relectura por lote la ven; la primera relectura ocurre en el **primer lote** de permisos (antes de la llamada 1 si `K` se cuenta desde 0) | se libera en el acto (`liberar` en el `finally` que ya existe) |
+| **Durante la cola / composición** | nivel 1 (429 propio) o nivel 2 (relectura): las llamadas en cola no se inician (`AbortError`, clase `pausa`), las en vuelo terminan; la composición queda **cancelada, no publicada** (`cachedIf` ya no publica lo cancelado); UB intacto | se libera en el acto |
+
+Semántica fijada (sustituye a §39.7): `programarEnFondo` → `"programado" |
+"no-disponible" | "pausado"`; pero la decisión primaria **no la toma el
+programador**: la toma el script de adquisición. Cuadro:
+
+| Adquisición dice | UB | Respuesta | Composición | Publicación |
+|---|---|---|---|---|
+| `adquirido` + fondo programado | sí | UB (`ultimo-bueno-fondo`) | fondo | si sana |
+| `adquirido` + fondo no disponible | — | `componer()` en línea (hoy) | línea | si sana |
+| **`pausado`** | sí | UB, `origen ultimo-bueno-pausa` | **ninguna** | ninguna |
+| **`pausado`** | no | **`503` + `Retry-After: ⌈PTTL/1000⌉`**, cuerpo `{ motivo: "pausa" }`, `cache VACIO` | ninguna | ninguna |
+| `indeterminado` (Redis) | — | como hoy (sin Redis: composición sin turno, no publicada) | línea | no (ya es así sin Redis) |
+
+**RED para la implementación** (en `home-servir.test.ts`/`home-fondo.test.ts`
+con dobles inyectados; hoy fallan por construcción porque el contrato es
+booleano): (1) adquisición `pausado` con UB ⇒ `componer` 0, `programar` 0,
+turno nunca adquirido, respuesta UB; (2) `pausado` sin UB ⇒ `componer` 0,
+`503` con `Retry-After`, sha1 de fresca y UB iguales; (3) pausa que aparece
+en la cola ⇒ `AbortError` clase `pausa`, `publicacion no`, `liberar` llamado
+exactamente una vez, ≤ `enVuelo` llamadas iniciadas después de la pausa;
+(4) `indeterminado` ⇒ igual a `37d4707` y `pausaNoLeida = 1`; (5) el
+`switch` sobre el resultado del programador es exhaustivo (`never`); (6)
+**`pausado` nunca llega a `componer()` ni a `iniciar()`**: el test cuenta
+ambas con un espía en las tres ventanas. El **modelo** de estas seis
+propiedades está en `lib/tmdb-pausa-diseno.test.ts` (cuatro tests + control
+del contrato booleano), explícitamente como modelo.
+
+### 40.6 Punto 6 — observabilidad correlacionada por evento, y atómica
+
+Contadores acumulados (`pausas`, `429`, `pausaNoLeida`) no atribuyen
+causas: tras el primer 429 no distinguen una pausa espuria posterior.
+Rediseño:
+
+- **Registro por evento, en el mismo script** que crea/extiende la pausa
+  (atomicidad entre "registrar el 429" y "pausar"): `PAUSAR` hace además
+  `LPUSH tmdb:eventos <json>` + `LTRIM tmdb:eventos 0 199` + `EXPIRE
+  tmdb:eventos 604800`. El evento: `{ id, tRedis (TIME dentro del script),
+  ruta, retryAfterMs, resultado: escrito|ya-mayor|ya-aplicada, ptllTras }`.
+  `TIME` en Lua es sólo para **sellar** el evento con el reloj de Redis (no
+  se compara con ningún reloj local).
+- **Deltas por intervalo:** cubos por minuto `tmdb:min:<yyyymmddhhmm>` (hash
+  con `429`, `pausas`, `pausaNoLeida`, `pausadosUB`, `pausados503`; `EXPIRE`
+  24 h). `/api/health` devuelve los últimos 20 eventos y los últimos 60 cubos:
+  una pausa **espuria** es un cubo o intervalo con `pausas > 0` y `429 = 0`,
+  o un evento `pausa` sin id de 429 — imposible por construcción, así que su
+  aparición delata un bug.
+- **Lo que es efímero y se declara así:** las líneas `[home]`/`[home-fondo]`
+  con `pausa vigente` sólo valen leídas **en vivo**; no son observación
+  histórica. La histórica sale de `tmdb:eventos` y los cubos, que viven en
+  Redis 7 días / 24 h, hasta que exista #20.
+- Rollback (sustituye a §39.9): (i) `/api/health` con `pausas > 0` y `429 =
+  0` en el mismo minuto; (ii) `pausaNoLeida` creciendo con `/api/health`
+  reportando Redis OK; (iii) `pausados503 > 0` con `429 = 0`; (iv) cualquier
+  celda de 40.4 fuera de umbral en el banco antes del deploy. Acción:
+  `TMDB_PAUSA_429=0` + redeploy, con autorización.
+
+### 40.7 Punto 7 — retirada la propuesta de "provocar un frío total" en Producción
+
+Esperar 8 h (`pv3:`) o 30 h (pools) no demuestra que las cachés internas
+estén frías ni garantiza 926 llamadas (el resto de las familias, la caché en
+memoria del proceso y las combinaciones vecinas comparten claves). Queda
+**sólo como observación pasiva**: si alguna vez una línea de Producción,
+leída en vivo, muestra `cache MISS` con `tmdb ≈ 926 llamadas`, esa línea es
+la medida — no se pide, no se programa y no queda como autorización
+pendiente del dueño.
+
+### 40.8 3.c.2 — sigue NO aprobada; lo que su diseño debe resolver antes de proponerse
+
+Permisos en lotes (quién los pide, cuántos, cuándo); respuesta perdida al
+pedir (¿se descuentan?); devolución duplicada (idempotencia por lote, igual
+que 40.1); muerte del proceso con permisos tomados (vencimiento por `PX`
+del lote, no del total); vencimiento de la ventana con llamadas aún activas
+(las en vuelo terminan; las en cola no reciben permiso); Redis caído (piso
+local, contado); todo con pruebas multiproceso en el banco (3 procesos,
+semillas fijas). Nada de eso está diseñado con ese detalle: **no se propone
+para implementación.**
+
+### 40.9 Qué quedó medido, ajustado, inferido o desconocido
+
+| | |
+|---|---|
+| **Medido en Producción** | 250/15,1 s; 342/16,7 s; promedios por llamada; UB en 0,64 s; 0 × 429 |
+| **Reproducido por el banco** (con semillas, 3 rep.) | 926 llamadas; ráfaga ≤ 24/100 ms y ~80/s por proceso; `24 × N`; `t_inicio_fondo` 0,30-0,37 s; publicación 0,13-0,15 s; piso secuencial de 64 ops; +15-28 % sobre las dos observaciones bajo el modelo ajustado; el RED/GREEN de `PAUSAR` (modelo) |
+| **Parámetro ajustado** | Redis 40 ms; p95 1,5×; K = 24, Δt = 1 s; marcador ≥ 60 s |
+| **Sensibilidad** | 25-54 s de frío total según Redis y cola |
+| **Inferido** | que el promedio de 527 ms de la 3.a lo inflaba una cola; que el límite efectivo de TMDB no es un tope estricto por segundo |
+| **Extrapolación no validada** | 926 ≈ 26 s en Producción; margen 24 s; 64/s con dos reconstrucciones |
+| **Desconocido** | distribución real de Upstash por operación; cola real de TMDB; `N` instancias; límite real de TMDB; tasa del `tmdb-sync`; si el SDK devuelve la tupla del `EVAL` de `PAUSAR` |
+
+### 40.10 Conclusión: ¿3.c.1 queda lista para auditoría de implementación?
+
+**No todavía.** Queda lista para **auditoría de diseño** (este §40): los
+siete puntos tienen corrección escrita, y cinco tienen prueba ejecutable
+sobre modelo (`PAUSAR`, estados). Para pasar a auditoría de
+**implementación** faltan, en este orden: (1) que Codex acepte §40; (2) la
+precondición de Preview del script (`EVAL` con `PTTL`/`EXISTS`/`SET PX`/
+`LPUSH` y la tupla de retorno a través del SDK), sin tocar Producción; (3)
+que el cambio al **script de adquisición del turno** (Etapa 2, `lib/turno-lua.ts`)
+se diseñe con su propio RED, porque toca fencing y generación; (4) que los
+umbrales de 40.4 queden aceptados por el dueño **antes** de medir. 3.c.2:
+no aprobada (40.8). Ninguna prueba en Producción se pide.

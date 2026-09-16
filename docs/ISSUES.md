@@ -1312,7 +1312,14 @@ leyendo el código.**
 > contra las dos observaciones de Producción, pesimista 15-28 %: el frío
 > total de 926 compone en 26 s de los 50 del fondo; con modelos lentos no
 > cabe; una reconstrucción ráfaga a 80/s y dos simultáneas promedian 64/s);
-> 3.c.1/3.c.2 NO APROBADAS; PENDIENTE DE NUEVA AUDITORÍA; NO IMPLEMENTADA.** **Subetapa 3.b ("último bueno
+> 3.c.1/3.c.2 NO APROBADAS; NO IMPLEMENTADA. §40 (auditoría sobre
+> `1ad1025`): `PAUSAR` idempotente por identidad de evento (RED→GREEN, 15/15
+> sobre modelo), 3.c.0 reclasificada como sensibilidad ajustada con semillas
+> y repeticiones (extrapolación a Producción NO validada), `t_inicio_fondo`
+> 0,30-0,37 s, umbrales antes/después a priori, carrera cerrada en el script
+> de adquisición, observabilidad por evento, sin "frío total provocado";
+> 3.c.1 lista para auditoría de DISEÑO, no de implementación; PENDIENTE DE
+> NUEVA AUDITORÍA.** **Subetapa 3.b ("último bueno
 > primero, reconstrucción en fondo"): MERGEADA, PUSHEADA Y DESPLEGADA el
 > 2026-09-15** — aprobada por la auditoría final de Codex sobre `c5fab20`;
 > merge `--no-ff` `5604750` (rama en `ae6902f`), deployment
