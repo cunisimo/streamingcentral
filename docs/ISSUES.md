@@ -1307,8 +1307,12 @@ leyendo el código.**
 > breve y acotada `min(restante, 5 s)` sin sondeo y cancelable, y `503` +
 > `Retry-After` sólo si la pausa continúa — §42, decisión del dueño, que
 > reemplaza al `503` inmediato no aprobado; umbrales antes/después
-> fijados), probado sobre modelo (40/40),
-> LISTA PARA AUDITORÍA DE IMPLEMENTACIÓN, NO APROBADA, NO IMPLEMENTADA;
+> fijados), corregida en §43 (auditoría sobre `5405cbd`: un solo sueño y
+> una readquisición, cancelación propagada, pausa local sobre Redis caído,
+> presupuesto completo, fallback del `Retry-After`, sólo `Δt`, cota 94/282
+> con timeout y sin cota si la lectura falla, `F_max = 1`, marca de agua
+> por proceso con TTL, Lua que valida antes de mutar), probada sobre modelo
+> (49/49), NO APROBADA, NO IMPLEMENTADA, PENDIENTE DE NUEVA AUDITORÍA;
 > 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no
 > predictivo; ningún frío total se pide en Producción. Antecedentes §38-§40
 > superados.** **Subetapa 3.b ("último bueno

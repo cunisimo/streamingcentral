@@ -7,38 +7,58 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §41,
-  2026-09-16): 3.c.1 "pausa compartida ante 429" con DISEÑO CERRADO, LISTO
-  PARA AUDITORÍA DE IMPLEMENTACIÓN; NO APROBADA; NO IMPLEMENTADA. 3.c.2
-  fuera de alcance.** Rama `diseno/etapa3c-proteccion-tmdb`; sin código
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §43,
+  estado vigente, 2026-09-16): 3.c.1 "pausa compartida ante 429" con diseño
+  corregido en diez puntos tras la auditoría sobre `5405cbd`; NO APROBADA;
+  NO IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de alcance.**
+  Correcciones de §43 sobre §41/§42: sin UB, **un solo sueño y una sola
+  readquisición (≤ 2 `EVAL`)**, nunca un segundo sueño; la cancelación del
+  cliente **se propaga** (no es un `503` ni un error); **la pausa local manda
+  sobre Redis caído/indeterminado** (nunca se compone contra TMDB con pausa
+  local vigente; sin pausa local, el degradado de hoy); el presupuesto
+  previo al sueño incluye `restante + jitter máx. + timeout de la
+  readquisición + 16 s`; `Retry-After` con readquisición indeterminada =
+  `max(5 s, restante − dormido)`; `K = 24` se alcanza a los 686 ms a 35/s —
+  se elige **sólo `Δt`** con números (27 vs 40 lecturas por frío total); la
+  cota de sobrepaso con timeout de lectura de 1 s es **94 por proceso / 282
+  con tres**, y **sin cota compartida si la lectura falla** (sólo local);
+  `F_max = 1` (alineado con el umbral "≤ 1 intento fallido": 2 lecturas por
+  minuto con Redis colgado); marca de agua **por proceso** con `PX 24 h`
+  propio (sin hash global); el Lua **valida antes de mutar** y escribe la
+  pausa antes que el marcador (un fallo intermedio sobre-protege, nunca deja
+  sin pausa; telemetría en `pcall`). Modelo 49/49.
+  Lo que sigue vigente de §41/§42: Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 40/40) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 49/49) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
   después: **sobrepaso explícito** `≤ enVuelo + admitidas durante Δt + RTT`
-  (61 por proceso, 183 con tres; no se promete cero); (b) relectura **no
+  (94 por proceso, 282 con tres, con timeout de lectura de 1 s; sin cota
+  compartida si la lectura falla; no se promete cero); (b) relectura **no
   bloqueante**, ≤ 1 en curso por proceso, una por `Δt = 1 s` desde el
-  inicio, timeout 1 s, 3 fallos seguidos → 30 s de enfriamiento (≤ 6
+  inicio, timeout 1 s, `F_max = 1` → 30 s de enfriamiento (≤ 2
   lecturas/min con Redis colgado, lento o caído; un resultado no entero es
   `indeterminado`); (c) `PAUSAR` idempotente por identidad de evento con
   marcador `PX 120 s` (2 × `maxDuration`; el SDK reintenta ≤ 6 veces dentro
   de la invocación) **y** marca de agua por proceso: un evento viejo nunca
-  reabre una pausa, ni a los 130 s; (d) Lua completo de 5 claves con
-  eventos y cubos por minuto sellados con `TIME` de Redis, escritos en el
-  mismo script que el 429 (atómico); `/api/health` expone sólo agregados
+  reabre una pausa, ni a los 130 s (marca de agua por proceso con TTL
+  propio); (d) Lua completo de 5 claves con eventos y cubos por minuto
+  sellados con `TIME` de Redis en el mismo script (telemetría en `pcall`,
+  después de la protección); `/api/health` expone sólo agregados
   de 60 min, sin uuid, rutas ni eventos crudos; (e) Home sin UB durante la
   pausa (§42, **decisión del dueño**, reemplaza al `503` inmediato que NO
   quedó aprobado): **espera breve y acotada** = `min(restante de la pausa,
-  ESPERA_MAX 5 s)` + jitter, sin sondeo (la adquisición del turno ya trae
-  el PTTL; 2 `EVAL` por solicitud, 0 durante el sueño), cancelable por la
-  señal del cliente, condicionada a que quede presupuesto para componer
-  (≥ 16 s); si la pausa termina, readquiere y compone normalmente (una sola
-  composición: `SET NX`); si continúa, **`503` + `Retry-After` fresco** con
-  "No pudimos cargar el inicio" + Reintentar; nunca 50 s ni `200` vacío.
-  `ESPERA_MAX = 5 s` derivado de `REINTENTAR_POR_DEFECTO_MS` (sin
-  distribución real de pausas; se revisa con los cubos). Modelo 40/40 con
-  los ocho casos pedidos; (f) umbrales antes/después fijados y sin tocar (JSON 0
+  ESPERA_MAX 5 s)` + jitter, **un solo sueño y una sola readquisición**
+  (2 `EVAL` por solicitud, 0 durante el sueño), cancelable (la cancelación
+  se propaga), condicionada a que quede presupuesto para el sueño, la
+  readquisición y componer (≥ 16 s); si la pausa terminó, compone
+  normalmente (una sola composición: `SET NX`); si continúa o la
+  readquisición es indeterminada, **`503` + `Retry-After`** (fresco, o el
+  fallback conservador de 5 s) con "No pudimos cargar el inicio" +
+  Reintentar; nunca 50 s ni `200` vacío. `ESPERA_MAX = 5 s` es **propuesta
+  provisional sin datos reales** (derivada de `REINTENTAR_POR_DEFECTO_MS`;
+  se revisa con los cubos). Modelo con los ocho casos pedidos; (f) umbrales antes/después fijados y sin tocar (JSON 0
   diferencias, llamadas 0 diferencia, Redis extra ≤ ⌈llamadas/24⌉+2,
   duración ≤ +5 %/+10 %, publicación ≤ +1 op, UB ≤ +50 ms; 1/2/3
   reconstrucciones; Redis normal/lento/caído). **3.c.0** queda como modelo
@@ -759,7 +779,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§41): 3.c.1 con diseño cerrado —pausa idempotente por evento, adquisición atómica con sobrepaso explícito, lector no bloqueante sin tormenta, observabilidad por evento, espera breve acotada sin UB (§42, decisión del dueño)—, lista para auditoría de implementación, NO aprobada, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§43, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso explícito (94/282), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

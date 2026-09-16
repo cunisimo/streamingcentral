@@ -32,9 +32,15 @@
 > agua, Lua completo con observabilidad, `/api/health` sólo agregados,
 > **§42: por decisión del dueño, sin UB NO hay `503` inmediato — espera
 > breve y acotada (`min(restante, 5 s)`, sin sondeo, cancelable, 2 `EVAL`) y
-> `503` + `Retry-After` sólo si la pausa continúa; modelo 40/40; 3.c.1:
-> diseño cerrado, listo para auditoría de implementación, NO aprobada, NO
-> implementada; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
+> `503` + `Retry-After` sólo si la pausa continúa. **§43 (auditoría sobre
+> `5405cbd`, diez puntos) — ESTADO VIGENTE:** un solo sueño y una sola
+> readquisición (≤ 2 `EVAL`), cancelación propagada, pausa local por encima
+> de Redis caído, presupuesto con jitter y timeout, fallback conservador del
+> `Retry-After`, sólo `Δt` (elección con números), cota 94/282 con timeout
+> y sin cota si la lectura falla, `F_max = 1`, marca de agua por proceso con
+> TTL propio, Lua que valida antes de mutar y falla seguro; modelo 49/49;
+> 3.c.1 NO aprobada, NO implementada, pendiente de nueva auditoría; 3.c.2
+> fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -3581,7 +3587,14 @@ no aprobada (40.8). Ninguna prueba en Producción se pide.
 > observabilidad y `/api/health` sólo agregados, `503` explícito para el
 > dueño, estado canónico limpio.
 
-## 41. Etapa 3.c — auditoría y corrección de §40 sobre `21cbf18` — **ESTADO VIGENTE de la 3.c: 3.c.1 con diseño cerrado y listo para auditoría de implementación (NO aprobada, NO implementada); 3.c.2 fuera de alcance** (2026-09-16)
+## 41. Etapa 3.c — auditoría y corrección de §40 sobre `21cbf18` — **3.c.1: diseño cerrado (NO aprobada, NO implementada); 3.c.2 fuera de alcance** (2026-09-16)
+
+> **CORREGIDO por §42 y §43** en: 41.5 (`503` inmediato → espera breve, §42),
+> 41.1 (cota 61/183 → 94/282 con `T_lectura`, y sin cota si la lectura
+> falla, §43.7), 41.2 ("`Δt` domina" → elección explícita de sólo `Δt` con
+> números, §43.6; `F_max` 3 → 1, §43.8), 41.3/41.4 (hash global de marcas →
+> clave por proceso, §43.9; orden del Lua que falla seguro y telemetría en
+> `pcall`, §43.10). El estado vigente de la 3.c es **§43**.
 
 Rama `diseno/etapa3c-proteccion-tmdb`, sobre `21cbf18`. Cambios: documentación
 y `lib/tmdb-pausa-diseno.test.ts` (modelo; 13 propiedades nuevas, **28/28**).
@@ -3811,6 +3824,13 @@ Ninguna prueba en Producción se pide.
 
 ## 42. Etapa 3.c.1 — decisión del dueño: sin UB, ESPERA BREVE Y ACOTADA antes del `503` (reemplaza a §41.5) — **diseño + modelo 40/40; NO aprobada, NO implementada** (2026-09-16)
 
+> **CORREGIDO por §43** en: el bucle de espera (ahora un solo sueño y una
+> sola readquisición, ≤ 2 `EVAL`), la cancelación (se propaga, no es un
+> `503`), la precedencia con Redis caído, el presupuesto (incluye jitter y
+> timeout de la readquisición) y el `Retry-After` con readquisición
+> indeterminada. La decisión del dueño (42.1) y la comparación de
+> `ESPERA_MAX` (42.3, propuesta sin datos reales) siguen vigentes.
+
 Rama `diseno/etapa3c-proteccion-tmdb`, sobre `2246b2e`. Sin código productivo,
 merge, push ni deploy. **Este §42 reemplaza §41.5 y cualquier texto que diga
 que el dueño aprobó el `503` inmediato**: no lo aprobó.
@@ -3943,3 +3963,163 @@ NO implementada**; lista para auditoría de implementación bajo las mismas
 condiciones de §41.9 (aceptación de §41+§42, precondición de Preview del
 `EVAL`, umbrales, RED del script del turno) — ya **sin** el punto "aprobación
 del `503` inmediato", que queda sin efecto. 3.c.2 fuera de alcance.
+
+## 43. Etapa 3.c.1 — corrección de §41 y §42 sobre `5405cbd` (diez puntos) — **ESTADO VIGENTE de la 3.c; NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-16)
+
+Rama `diseno/etapa3c-proteccion-tmdb`. Sin código productivo, merge, push ni
+deploy. Modelo: `lib/tmdb-pausa-diseno.test.ts`, **49/49**. Este §43
+corrige §41 y §42 en lo que sigue; lo no corregido de ellos sigue vigente.
+`ESPERA_MAX = 5 s` sigue siendo **propuesta provisional sin datos reales**
+(0 × 429 en Producción).
+
+### 43.1 Punto 1 — sin bucle: un solo sueño, una sola readquisición, ≤ 2 `EVAL`
+
+```
+r1 = ADQUIRIR()                                            -- EVAL 1 (atómico: pausa + SET NX)
+r1 ≠ pausado → como hoy (adquirido / ocupado / sin-redis)
+restante = r1.restante
+si restante > ESPERA_MAX                                   → 503, Retry-After = ⌈restante⌉
+si presupuesto_restante − (restante + JITTER_MAX + T_ADQ_MAX) < COMPOSICION_MAX_MS
+                                                           → 503, Retry-After = ⌈restante⌉
+dormir(restante + jitter, señal)                           -- UNA vez, ≤ ESPERA_MAX + JITTER_MAX
+r2 = ADQUIRIR()                                            -- EVAL 2, el último de la solicitud
+r2 = pausado   → 503, Retry-After = ⌈r2.restante⌉  (nunca se vuelve a dormir)
+r2 = indeterminado → 503 con el fallback de 43.5
+r2 ≠ pausado   → como hoy
+```
+
+Cota **obligatoria y probada**: ≤ 2 `EVAL` de adquisición y ≤ `ESPERA_MAX +
+JITTER_MAX` = 5,25 s de sueño por solicitud, para cualquier `restante`. El
+control del bucle superado: una extensión corta que "cabría" (1 s + 1 s) hoy
+da `503` con el `Retry-After` nuevo y **no** un segundo sueño.
+
+### 43.2 Punto 2 — la cancelación se propaga, no es un `503`
+
+Si la señal de la solicitud aborta durante el sueño, `dormir` rechaza con
+`AbortError`: la solicitud **no readquiere, no compone, no toma turno** y el
+`AbortError` **se propaga** al handler, que cierra la respuesta como hace hoy
+con cualquier solicitud abandonada (la línea `[home]` anota `CANCELADA`, no
+un error; nada se cuenta como fallo de TMDB ni de Redis). Modelo: `{
+cancelada: true }`, 1 `EVAL`, turno libre.
+
+### 43.3 Punto 3 — precedencia entre la pausa local y Redis
+
+| Pausa local (nivel 1) | Redis | Sin UB | Con UB |
+|---|---|---|---|
+| **vigente** | caído / indeterminado | **no se compone contra TMDB**: se aplica la misma regla de 43.1 con el `restante` **local** (duración medida por el propio proceso); si al despertar sigue vigente → `503`; si venció y Redis sigue caído → degradado de hoy | el UB en el acto (el que haya en memoria/Redis), **sin componer** |
+| **vigente** | ok | igual que sin pausa local: manda el script (que también la ve) | UB en el acto, sin componer |
+| ausente | caído / indeterminado | comportamiento degradado **de hoy** (compone sin turno, no publica) | ídem hoy |
+
+Regla que no admite excepción: **con pausa local vigente nunca se compone
+contra TMDB**, con o sin Redis. Probado en los cuatro cuadrantes.
+
+### 43.4 Punto 4 — presupuesto previo al sueño, completo
+
+`presupuesto_restante − (restante + JITTER_MAX + T_ADQ_MAX) ≥ COMPOSICION_MAX_MS`,
+con `JITTER_MAX = 250 ms`, `T_ADQ_MAX = 2.000 ms` [propuesto: timeout propio
+de la readquisición, `AbortSignal.timeout`], `COMPOSICION_MAX_MS = 16 s`.
+Probado: con 30 s gastados y 2 s de pausa, `50 − 30 − 2,25 − 2 = 15,75 < 16`
+→ `503` sin dormir; con 29 s gastados cabe y compone.
+
+### 43.5 Punto 5 — `Retry-After` con readquisición indeterminada
+
+`Retry-After = max(5 s, ⌈(restante_inicial − dormido) / 1000⌉)`: el fallback
+es el `REINTENTAR_POR_DEFECTO_MS` de la app (5 s), **explícito y
+conservador**, porque la pausa pudo extenderse mientras dormíamos y no
+tenemos el PTTL fresco. Probado: pausa de 3 s, readquisición indeterminada →
+`Retry-After: 5` (no 0 ni 1).
+
+### 43.6 Punto 6 — `K` o `Δt` frente a sólo `Δt`, con números
+
+A 35 permisos/s, `K = 24` se alcanza a los **686 ms**, antes que `Δt = 1 s`;
+no es cierto que `Δt` "siempre domine". Comparación:
+
+| Regla | Lecturas/s a cadencia plena | Lecturas por frío total (~27 s) | Latencia de propagación máx. | Frente al umbral fijado (≤ 41 ops extra para 926) |
+|---|---|---|---|---|
+| `K` o `Δt` | ~1,46 | ~40 | 686 ms + RTT | roza el umbral |
+| **sólo `Δt`** | 1 | ~27 | 1 s + RTT | deja margen (≤ 29) |
+
+**Elegida: sólo `Δt`** — tasa de lecturas predecible e independiente de la
+cadencia, 314 ms más de propagación en el peor caso a cambio de un tercio
+menos de operaciones. Queda escrito como decisión, no como "domina".
+
+### 43.7 Punto 7 — la cota de sobrepaso con el timeout de lectura
+
+La cota 61/183 de §41.1 sólo valía con Redis a 40 ms. Con `T_lectura = 1 s`:
+`sobrepaso ≤ enVuelo + cadencia × (Δt + T_lectura) = 24 + 35 × 2 = 94` por
+proceso, **282 con tres** [derivado, cadencia del banco]. Si la lectura
+**falla** (timeout, error, no entero): **no hay cota compartida** — sólo la
+protección local, que acota el sobrepaso de cada proceso a "hasta su propio
+primer 429" más `enVuelo`. Declarado así, sin número.
+
+### 43.8 Punto 8 — `F_max` alineado con el umbral
+
+El umbral de §40.4 exige "Redis caído: ≤ 1 intento fallido por composición";
+`F_max = 3` lo incumplía por construcción. **Elegido `F_max = 1`**: un fallo
+(timeout, error, no entero) → 30 s de enfriamiento sin leer (nivel 1 sigue) →
+una lectura más. Probado: Redis lento/colgado/caído → **2 lecturas en 60 s**
+y **exactamente 1 fallida en una composición de 27 s**. El precio: un timeout
+transitorio deja 30 s sin propagación compartida; con `F_max = 3` el umbral
+tendría que cambiar a ≤ 3, y **no se cambia**.
+
+### 43.9 Punto 9 — marca de agua por proceso con TTL propio
+
+Se reemplaza el hash global `tmdb:pausa:proc` por **una clave por proceso**
+`tmdb:pausa:proc:<uuid>` (`SET … PX 86400000`, valor = último contador):
+cada una vence sola 24 h después del último evento de ese proceso; no hay
+estructura que crezca bajo actividad continua ni limpieza que demostrar.
+`KEYS[3]` del script pasa a ser esa clave (declarada por llamada). Probado:
+la clave vence sola; no existe hash global.
+
+### 43.10 Punto 10 — Lua no revierte: validar antes de mutar y fallar seguro
+
+Lua garantiza que nada se **intercala**, pero un error a mitad del script
+**deja escritas** las llamadas anteriores. Orden de v3:
+
+```
+validar ARGV (ms entero > 0, contador entero)         -- sin mutar nada
+EXISTS marcador → ya-aplicada                          -- lecturas
+GET proc → contador ≤ marca → ya-aplicada
+PTTL pausa → decidir escrito | ya-mayor
+SET pausa PX ms            ← la PROTECCIÓN primero
+SET proc:<uuid> PX 86400000
+SET marcador PX 120000     ← la idempotencia después
+pcall(telemetría: TIME, HINCRBY cubos, LPUSH/LTRIM/EXPIRE eventos)   ← al final, nunca bloquea la protección
+```
+
+Por qué ese orden y no otro (probado con controles): si el script falla
+**después** de `SET pausa` y antes del marcador, la pausa quedó puesta y el
+reintento del mismo evento vuelve a escribirla (`escrito`): sobre-protección
+acotada a la brecha del reintento (100 ms en el modelo), **nunca** una pausa
+ausente. Con el orden inverso (marcador antes que pausa) un error entre
+medio hace que el reintento diga `ya-aplicada` y **la pausa nunca se
+escriba** — control que lo demuestra. La telemetría va en `pcall`: si
+`TIME`/`cjson`/`HINCRBY` fallan (Upstash: precondición de Preview), la pausa,
+la marca y el marcador ya están escritos y el resultado se devuelve igual;
+sólo se pierde telemetría. El "orden exacto" de §41.4 queda superado por el
+de arriba.
+
+### 43.11 RED → GREEN de esta tanda (modelo, 49/49)
+
+| Punto | RED (control) | GREEN |
+|---|---|---|
+| 1 sin bucle | §42: bucle que podía encadenar sueños | 1 sueño, 2 `EVAL`, extensión corta → `503`; cota dura para 8 restantes |
+| 2 cancelación | §42: `503 cancelada` | `{ cancelada }`, 1 `EVAL`, sin turno, sin composición |
+| 3 precedencia | — | 4 cuadrantes (local × Redis × UB) |
+| 4 presupuesto | sólo `restante` | `restante + jitter + T_adq + composición`; 30 s → `503`, 29 s → compone |
+| 5 fallback | `restanteInicial − esperado` → 0 | `max(5 s, …)` → 5 |
+| 6 `K` vs `Δt` | "Δt siempre domina" | 686 ms medidos; elección explícita de sólo `Δt` |
+| 7 cota | 61/183 (RTT 40 ms) | 94/282 con `T_lectura`; sin cota si falla |
+| 8 `F_max` | 3 (incumplía el umbral) | 1: 2 lecturas/60 s, 1 fallida por composición |
+| 9 marca de agua | hash global | clave por proceso con `PX` propio; vence sola |
+| 10 orden del Lua | marcador antes que pausa → pausa nunca escrita | validar → leer → pausa → proc → marcador → `pcall(telemetría)` |
+
+### 43.12 Estado
+
+3.c.1: diseño con los diez puntos corregidos; **NO aprobada, NO
+implementada**; pendiente de **nueva auditoría de Codex** antes de cualquier
+código. Condiciones para implementar: las de §41.9 con §42 y §43 aceptados,
+precondición de Preview del `EVAL` (`TIME`, `cjson`, tupla vía SDK; ahora en
+`pcall`, así que su falta degrada la telemetría, no la protección), umbrales
+de §40.4 aceptados (sin tocar), RED del script de adquisición del turno.
+**3.c.2 sigue fuera de alcance.**
