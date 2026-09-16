@@ -459,3 +459,174 @@ test("🟢 sin UB y pausado: la ruta responde 503 + Retry-After con el motivo qu
   assert.equal(hayContenido, false);
   assert.notEqual(respuesta.status, 200, "un Home vacío con 200 se leería como 'nada en tus plataformas'; por eso es 503");
 });
+
+// =============================================================================
+// §42 (decisión del dueño): sin UB y con pausa NO se responde 503 en el acto —
+// se espera un período BREVE y ACOTADO a que la pausa termine. Modelo con reloj
+// virtual de la decisión que irá en `servirConTurno`.
+// =============================================================================
+//
+// Regla (§42.2): la espera NO es un sondeo: la adquisición del turno (script
+// atómico) ya devuelve `pausado` con el PTTL restante. Si `restante` cabe en
+// lo que queda de ESPERA_MAX y el presupuesto de la solicitud deja lugar para
+// esperar Y componer, se duerme exactamente `restante + jitter` (cancelable
+// por la señal) y se vuelve a ADQUIRIR (que re-comprueba la pausa en el mismo
+// script). Redis: 1 EVAL por intento de adquisición, ninguno durante el sueño.
+const ESPERA_MAX_MS = 5_000;          // = REINTENTAR_POR_DEFECTO_MS de lib/tmdb-http.ts (§42.3)
+const COMPOSICION_MAX_MS = 16_000;    // CONSTANTES.COMPOSICION_MAX_MS
+const PRESUPUESTO_MS = 50_000;        // CONSTANTES.PRESUPUESTO_REQUEST_MS
+type Adq = { estado: "adquirido" } | { estado: "ocupado" } | { estado: "sin-redis" } | { estado: "pausado"; restanteMs: number };
+interface Mundo {
+  ahora: number;                                  // reloj virtual (ms)
+  pausaHasta: number | null;                      // instante en que la pausa vence (reloj de "Redis" del modelo)
+  turnoLibre: boolean;
+  redis: "ok" | "caido" | "lento";               // lento: la adquisición tarda 3 s
+  composiciones: number;
+  abortarEn: number | null;                       // instante en que el cliente abandona
+  evalCount: number;
+  jitterMs: number;
+}
+const SALIDA_503 = (retryAfterS: number, motivo: string) => ({ status: 503, retryAfter: retryAfterS, motivo });
+async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0) {
+  const t0 = m.ahora - presupuestoYaGastadoMs;
+  const senalAbortada = () => m.abortarEn !== null && m.ahora >= m.abortarEn;
+  const adquirir = (): Adq => {
+    m.evalCount += 1;
+    if (m.redis === "caido") return { estado: "sin-redis" };
+    if (m.redis === "lento") m.ahora += 3000;
+    if (m.pausaHasta !== null && m.pausaHasta > m.ahora) return { estado: "pausado", restanteMs: m.pausaHasta - m.ahora };
+    if (!m.turnoLibre) return { estado: "ocupado" };
+    m.turnoLibre = false; return { estado: "adquirido" };
+  };
+  let esperadoMs = 0;
+  let r = adquirir();
+  for (;;) {
+    if (r.estado === "adquirido") {
+      if (PRESUPUESTO_MS - (m.ahora - t0) < COMPOSICION_MAX_MS) { m.turnoLibre = true; return SALIDA_503(1, "espera-agotada"); }
+      m.composiciones += 1; m.turnoLibre = true; return { status: 200, motivo: "compuesta", esperadoMs };
+    }
+    if (r.estado === "ocupado") return { status: 200, motivo: "compartida", esperadoMs };       // el bucle de espera compartida de hoy (esperada/UB)
+    if (r.estado === "sin-redis") return { status: 200, motivo: "sin-redis", esperadoMs };      // hoy: compone sin turno, no publica
+    // pausado
+    const restante = r.restanteMs;
+    const cabeEnEspera = esperadoMs + restante <= ESPERA_MAX_MS;
+    const cabeEnPresupuesto = PRESUPUESTO_MS - (m.ahora - t0) - restante >= COMPOSICION_MAX_MS;
+    if (!cabeEnEspera || !cabeEnPresupuesto) return SALIDA_503(Math.max(1, Math.ceil(restante / 1000)), !cabeEnEspera ? "pausa-continua" : "presupuesto-insuficiente");
+    // dormir(restante + jitter, señal): cancelable
+    const dormirMs = restante + m.jitterMs;
+    if (m.abortarEn !== null && m.abortarEn < m.ahora + dormirMs) { m.ahora = m.abortarEn; return SALIDA_503(Math.max(1, Math.ceil((m.pausaHasta! - m.ahora) / 1000)), "cancelada"); }   // el cliente ya no está: el Retry-After es sólo por contrato
+    m.ahora += dormirMs; esperadoMs += dormirMs;
+    if (senalAbortada()) return SALIDA_503(1, "cancelada");
+    r = adquirir();   // re-comprueba la pausa en el MISMO script; el Retry-After que siga sale de este PTTL fresco
+  }
+}
+const mundo = (o: Partial<Mundo> = {}): Mundo => ({ ahora: 100_000, pausaHasta: null, turnoLibre: true, redis: "ok", composiciones: 0, abortarEn: null, evalCount: 0, jitterMs: 100, ...o });
+
+test("🟢 (1) la pausa termina durante la espera: se duerme exactamente lo que faltaba (+jitter), se readquiere y se compone; 2 EVAL, ninguna lectura durante el sueño", async () => {
+  const m = mundo({ pausaHasta: 100_000 + 2300 });
+  const r = await servirSinUB(m);
+  assert.deepEqual(r, { status: 200, motivo: "compuesta", esperadoMs: 2400 });
+  assert.equal(m.composiciones, 1);
+  assert.equal(m.evalCount, 2);
+});
+
+test("🟢 (2) la pausa continúa (restante > ESPERA_MAX): 503 en el acto con Retry-After = ⌈restante⌉, sin dormir, 1 EVAL", async () => {
+  const m = mundo({ pausaHasta: 100_000 + 8000 });
+  assert.deepEqual(await servirSinUB(m), SALIDA_503(8, "pausa-continua"));
+  assert.equal(m.evalCount, 1);
+  assert.equal(m.composiciones, 0);
+});
+
+test("🟢 (2b) la pausa se EXTIENDE durante la espera (otro 429): tras dormir, la readquisición la ve con más restante; si ya no cabe en lo que queda de ESPERA_MAX → 503 con el Retry-After NUEVO", async () => {
+  const m = mundo({ pausaHasta: 100_000 + 2000 });
+  // Simular la extensión: al despertar (t=102.100), la pausa vence a 102.100 + 4.000.
+  const original = m.pausaHasta!;
+  const adquirirExtendida = { hecho: false };
+  const mm: Mundo = new Proxy(m, { get(t, k) { if (k === "pausaHasta" && t.ahora > original && !adquirirExtendida.hecho) { adquirirExtendida.hecho = true; t.pausaHasta = t.ahora + 4000; } return (t as any)[k]; } });
+  const r = await servirSinUB(mm);
+  assert.deepEqual(r, SALIDA_503(4, "pausa-continua"));   // esperó 2,1 s; 2,1 + 4 > 5
+  assert.equal(m.composiciones, 0);
+});
+
+test("🟢 (3) el cliente abandona mientras espera: la espera se corta en el acto (dormir con señal), sin componer y sin 200 vacío", async () => {
+  const m = mundo({ pausaHasta: 100_000 + 4000, abortarEn: 100_000 + 1500 });
+  const r = await servirSinUB(m);
+  assert.equal(r.status, 503);
+  assert.equal(r.motivo, "cancelada");
+  assert.equal(m.ahora, 101_500, "no siguió durmiendo después del abort");
+  assert.equal(m.composiciones, 0);
+});
+
+test("🟢 (4a) Redis CAÍDO: la adquisición devuelve sin-redis y se sigue el camino de hoy (componer sin turno, no publicar); no hay espera", async () => {
+  const m = mundo({ redis: "caido", pausaHasta: 100_000 + 2000 });
+  assert.deepEqual(await servirSinUB(m), { status: 200, motivo: "sin-redis", esperadoMs: 0 });
+});
+
+test("🟢 (4b) Redis LENTO (3 s por EVAL): la espera cuenta contra el presupuesto; la regla sigue siendo 2 EVAL como máximo por pausa", async () => {
+  const m = mundo({ redis: "lento", pausaHasta: 100_000 + 5000 });
+  const r = await servirSinUB(m);
+  // t=103.000 tras el 1er EVAL: restante 2.000 → cabe; duerme 2.100 → 105.100; 2º EVAL tarda 3 s → 108.100; pausa vencida → adquiere y compone.
+  assert.equal(r.status, 200); assert.equal(r.motivo, "compuesta");
+  assert.equal(m.evalCount, 2);
+});
+
+test("🟢 (4c) indeterminado: un `restante` que no es un entero (SDK con señal abortada devuelve 'Aborted') se trata como sin-redis, nunca como 'sin pausa'", () => {
+  const interpretar = (v: unknown): Adq => Number.isInteger(v) ? (v as number) > 0 ? { estado: "pausado", restanteMs: v as number } : { estado: "adquirido" } : { estado: "sin-redis" };
+  assert.deepEqual(interpretar("Aborted"), { estado: "sin-redis" });
+  assert.deepEqual(interpretar(null), { estado: "sin-redis" });
+  assert.deepEqual(interpretar(-2), { estado: "adquirido" });
+  assert.deepEqual(interpretar(1500), { estado: "pausado", restanteMs: 1500 });
+});
+
+test("🟢 (5) varias solicitudes sin UB esperando a la vez: todas duermen lo mismo (+jitter propio), una adquiere y compone, las demás caen en la espera compartida — UNA composición", async () => {
+  const comp = { total: 0 };
+  const base: Mundo = mundo({ pausaHasta: 100_000 + 1500 });
+  const resultados = [];
+  for (const jitter of [0, 50, 100, 150]) {
+    const m: Mundo = { ...base, jitterMs: jitter, composiciones: 0 };
+    // Comparten el turno y la pausa: se emula con el mismo objeto de turno.
+    Object.defineProperty(m, "turnoLibre", { get: () => base.turnoLibre, set: (v) => { base.turnoLibre = v; } });
+    const r = await servirSinUB(m);
+    // El primero que despierta adquiere (turno libre → false) y compone; en este modelo secuencial libera al terminar,
+    // así que para reproducir la concurrencia real se cuenta la composición sólo si el turno estaba libre al despertar.
+    resultados.push(r.motivo);
+    if (r.motivo === "compuesta") { comp.total += 1; base.turnoLibre = false; }   // el ganador retiene el turno hasta publicar
+  }
+  assert.deepEqual(resultados, ["compuesta", "compartida", "compartida", "compartida"]);
+  assert.equal(comp.total, 1);
+});
+
+test("🟢 (6) presupuesto insuficiente para esperar y componer: 503 en el acto con Retry-After = ⌈restante⌉ aunque la pausa sea corta", async () => {
+  const m = mundo({ pausaHasta: 100_000 + 2000 });
+  const r = await servirSinUB(m, 33_000);   // ya gastó 33 s: 50 − 33 − 2 = 15 < 16
+  assert.deepEqual(r, SALIDA_503(2, "presupuesto-insuficiente"));
+  assert.equal(m.composiciones, 0);
+});
+
+test("🟢 (7) Retry-After descuenta lo esperado: es el PTTL FRESCO de la readquisición, no el inicial", async () => {
+  // Pausa de 4 s; ESPERA_MAX 5 s ⇒ se espera; al despertar apareció otra pausa de 6 s (extensión) ⇒ 503 con Retry-After 6, no 4 ni 10.
+  const m = mundo({ pausaHasta: 100_000 + 4000 });
+  let readquisiciones = 0;
+  const mm = new Proxy(m, { get(t, k) { if (k === "pausaHasta" && t.ahora >= 104_000 && readquisiciones === 0) { readquisiciones += 1; t.pausaHasta = t.ahora + 6000; } return (t as any)[k]; } });
+  const r = await servirSinUB(mm);
+  assert.deepEqual(r, SALIDA_503(6, "pausa-continua"));
+});
+
+test("🟢 (8) ninguna composición duplicada cuando termina la pausa: la readquisición es el mismo SET NX de siempre", async () => {
+  const base = mundo({ pausaHasta: 100_000 + 1000 });
+  const a: Mundo = { ...base }, b: Mundo = { ...base };
+  Object.defineProperty(b, "turnoLibre", { get: () => a.turnoLibre, set: (v) => { a.turnoLibre = v; } });
+  const ra = await servirSinUB(a); a.turnoLibre = false;   // A retiene el turno mientras compone
+  const rb = await servirSinUB(b);
+  assert.equal(ra.motivo, "compuesta"); assert.equal(rb.motivo, "compartida");
+  assert.equal(a.composiciones + b.composiciones, 1);
+});
+
+test("🟢 nunca 50 s ni un Home vacío con 200: la espera máxima es ESPERA_MAX + jitter, y todo lo que no compone es 503", async () => {
+  for (const restante of [500, 2000, 4999, 5000, 5001, 8000, 30_000]) {
+    const m = mundo({ pausaHasta: 100_000 + restante, jitterMs: 250 });
+    const t0 = m.ahora; const r = await servirSinUB(m);
+    assert.ok(m.ahora - t0 <= ESPERA_MAX_MS + 250, `esperó ${m.ahora - t0} ms con restante ${restante}`);
+    assert.ok(r.status === 503 || r.motivo === "compuesta", JSON.stringify(r));
+  }
+});

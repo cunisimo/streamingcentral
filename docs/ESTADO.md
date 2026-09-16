@@ -12,7 +12,7 @@
   PARA AUDITORÍA DE IMPLEMENTACIÓN; NO APROBADA; NO IMPLEMENTADA. 3.c.2
   fuera de alcance.** Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 28/28) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 40/40) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
@@ -28,10 +28,17 @@
   eventos y cubos por minuto sellados con `TIME` de Redis, escritos en el
   mismo script que el 429 (atómico); `/api/health` expone sólo agregados
   de 60 min, sin uuid, rutas ni eventos crudos; (e) Home sin UB durante la
-  pausa → **`503` + `Retry-After` inmediato** en vez del `200` vacío tras
-  esperar hasta 50 s; el cliente ya muestra "No pudimos cargar el inicio" +
-  Reintentar — **cambio de experiencia pendiente de aprobación del
-  dueño**; (f) umbrales antes/después fijados y sin tocar (JSON 0
+  pausa (§42, **decisión del dueño**, reemplaza al `503` inmediato que NO
+  quedó aprobado): **espera breve y acotada** = `min(restante de la pausa,
+  ESPERA_MAX 5 s)` + jitter, sin sondeo (la adquisición del turno ya trae
+  el PTTL; 2 `EVAL` por solicitud, 0 durante el sueño), cancelable por la
+  señal del cliente, condicionada a que quede presupuesto para componer
+  (≥ 16 s); si la pausa termina, readquiere y compone normalmente (una sola
+  composición: `SET NX`); si continúa, **`503` + `Retry-After` fresco** con
+  "No pudimos cargar el inicio" + Reintentar; nunca 50 s ni `200` vacío.
+  `ESPERA_MAX = 5 s` derivado de `REINTENTAR_POR_DEFECTO_MS` (sin
+  distribución real de pausas; se revisa con los cubos). Modelo 40/40 con
+  los ocho casos pedidos; (f) umbrales antes/después fijados y sin tocar (JSON 0
   diferencias, llamadas 0 diferencia, Redis extra ≤ ⌈llamadas/24⌉+2,
   duración ≤ +5 %/+10 %, publicación ≤ +1 op, UB ≤ +50 ms; 1/2/3
   reconstrucciones; Redis normal/lento/caído). **3.c.0** queda como modelo
@@ -42,7 +49,7 @@
   extrapolación NO validada; no se pide ni se autoriza ningún frío total
   en Producción. Para pasar a implementación: aceptación de §41 por Codex,
   precondición de Preview del `EVAL` (`TIME`, `cjson`, `PTTL`, tupla vía
-  SDK), aprobación del dueño del `503` y de los umbrales, y RED propio para
+  SDK), aprobación del dueño de los umbrales, y RED propio para
   el script de adquisición del turno (Etapa 2). Reintentos siguen apagados.
   Antecedentes superados: §38 (observación pasiva), §39 (3.c.0 y diseño),
   §40 (primera corrección) — cifras allí no vigentes.
@@ -752,7 +759,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§41): 3.c.1 con diseño cerrado —pausa idempotente por evento, adquisición atómica con sobrepaso explícito, lector no bloqueante sin tormenta, observabilidad por evento, `503` pendiente de aprobación del dueño—, lista para auditoría de implementación, NO aprobada, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§41): 3.c.1 con diseño cerrado —pausa idempotente por evento, adquisición atómica con sobrepaso explícito, lector no bloqueante sin tormenta, observabilidad por evento, espera breve acotada sin UB (§42, decisión del dueño)—, lista para auditoría de implementación, NO aprobada, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

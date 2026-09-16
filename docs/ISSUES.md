@@ -1303,9 +1303,11 @@ leyendo el código.**
 > con la pausa adentro y sobrepaso explícito si aparece después; lector no
 > bloqueante sin tormenta; `PAUSAR` idempotente por identidad de evento con
 > marcador 120 s y marca de agua por proceso; observabilidad por evento y
-> cubos con reloj de Redis; `/api/health` sólo agregados; `503` +
-> `Retry-After` sin UB — cambio de experiencia pendiente de aprobación del
-> dueño; umbrales antes/después fijados), probado sobre modelo (28/28),
+> cubos con reloj de Redis; `/api/health` sólo agregados; sin UB, espera
+> breve y acotada `min(restante, 5 s)` sin sondeo y cancelable, y `503` +
+> `Retry-After` sólo si la pausa continúa — §42, decisión del dueño, que
+> reemplaza al `503` inmediato no aprobado; umbrales antes/después
+> fijados), probado sobre modelo (40/40),
 > LISTA PARA AUDITORÍA DE IMPLEMENTACIÓN, NO APROBADA, NO IMPLEMENTADA;
 > 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no
 > predictivo; ningún frío total se pide en Producción. Antecedentes §38-§40

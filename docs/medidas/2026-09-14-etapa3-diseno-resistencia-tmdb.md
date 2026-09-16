@@ -30,9 +30,11 @@
 > VIGENTE de la 3.c:** contrato con sobrepaso explícito, lector no
 > bloqueante sin tormenta (28/28 sobre modelo), marcador 120 s + marca de
 > agua, Lua completo con observabilidad, `/api/health` sólo agregados,
-> `503` explícito para aprobación del dueño; **3.c.1: diseño cerrado, listo
-> para auditoría de implementación, NO aprobada, NO implementada; 3.c.2
-> fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
+> **§42: por decisión del dueño, sin UB NO hay `503` inmediato — espera
+> breve y acotada (`min(restante, 5 s)`, sin sondeo, cancelable, 2 `EVAL`) y
+> `503` + `Retry-After` sólo si la pausa continúa; modelo 40/40; 3.c.1:
+> diseño cerrado, listo para auditoría de implementación, NO aprobada, NO
+> implementada; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -3728,6 +3730,11 @@ return { estado, restante }
 
 ### 41.5 Punto 5 — Home sin UB durante la pausa: `503`, `Retry-After`, y el cliente real
 
+> **REEMPLAZADO por §42 (decisión del dueño):** el `503` inmediato sin UB
+> **no quedó aprobado**. Sin UB se espera un período breve y acotado a que
+> la pausa termine; el `503` sólo si continúa. Lo que sigue de 41.5 vale
+> como contrato del `503` cuando ocurre y como modelo del cliente.
+
 Contrato de la ruta (reutiliza el que la 3.a ya definió en
 `lib/tmdb-http.ts`): **`503`**, `Retry-After: ⌈PTTL / 1000⌉`, cuerpo `{
 error: "tmdb-no-disponible", motivo: "pausa", reintentarEnMs: PTTL }`. Lo
@@ -3795,8 +3802,144 @@ número medido); duración **≤ +5 % mediana / +10 % máx.**; publicación **�
 implementación.** No está aprobada: pasar a código exige (1) que Codex
 acepte §41; (2) la precondición de Preview del `EVAL` (`TIME`, `cjson`,
 `PTTL`, tupla de retorno vía SDK) contra un Preview aislado, sin tocar
-Producción; (3) la aprobación del dueño de dos cosas explícitas: el `503`
-de 41.5 y los umbrales de 41.7; (4) que la implementación empiece por el
+Producción; (3) la aprobación del dueño de los umbrales de 41.7 (el `503`
+inmediato de 41.5 quedó reemplazado por la espera breve de §42, decidida
+por el dueño); (4) que la implementación empiece por el
 RED del script de adquisición del turno (Etapa 2, `lib/turno-lua.ts`),
 porque toca fencing y generación. **3.c.2 sigue fuera de alcance** (§40.8).
 Ninguna prueba en Producción se pide.
+
+## 42. Etapa 3.c.1 — decisión del dueño: sin UB, ESPERA BREVE Y ACOTADA antes del `503` (reemplaza a §41.5) — **diseño + modelo 40/40; NO aprobada, NO implementada** (2026-09-16)
+
+Rama `diseno/etapa3c-proteccion-tmdb`, sobre `2246b2e`. Sin código productivo,
+merge, push ni deploy. **Este §42 reemplaza §41.5 y cualquier texto que diga
+que el dueño aprobó el `503` inmediato**: no lo aprobó.
+
+### 42.1 Comportamiento decidido por el dueño
+
+| Situación | Respuesta |
+|---|---|
+| Pausa vigente, **con** último Home bueno | el UB, en el acto (`origen ultimo-bueno-pausa`), sin componer |
+| Pausa vigente, **sin** UB | **esperar un período breve y acotado** a que la pausa termine |
+| La pausa termina dentro del período | intentar adquirir el turno y componer normalmente, respetando el presupuesto restante |
+| La pausa continúa | **`503` + `Retry-After`**, el cliente muestra "No pudimos cargar el inicio" + Reintentar |
+| Siempre | **nunca** esperar hasta 50 s; **nunca** un Home vacío con `200` |
+
+### 42.2 La regla (verificable, cancelable, sin sondeo)
+
+La espera **no sondea Redis**: el script atómico de adquisición del turno
+(§41.1) ya devuelve `pausado` **con el PTTL restante**. Con eso:
+
+```
+esperado = 0
+r = ADQUIRIR()                                   -- 1 EVAL
+mientras r = pausado(restante):
+  si esperado + restante > ESPERA_MAX            → 503, Retry-After = ⌈restante / 1000⌉   (pausa-continua)
+  si presupuesto_restante − restante < COMPOSICION_MAX_MS
+                                                  → 503, Retry-After = ⌈restante / 1000⌉   (presupuesto-insuficiente)
+  dormir(restante + jitter, señal)                -- cancelable: el abort del cliente corta el sueño en el acto
+  esperado += lo dormido
+  r = ADQUIRIR()                                  -- re-comprueba la pausa EN EL MISMO SCRIPT; si se extendió, trae el PTTL fresco
+adquirido → componer (con el chequeo de presupuesto de hoy) · ocupado → espera compartida de hoy · sin-redis → camino de hoy
+```
+
+- **Cuánto se espera:** exactamente lo que la pausa dice que falta
+  (`restante`), más un jitter de 0-250 ms para que varias solicitudes no
+  despierten en el mismo milisegundo; **sólo** si cabe en `ESPERA_MAX` y en
+  el presupuesto. Una pausa más larga que `ESPERA_MAX` no se espera: `503`
+  en el acto con su `Retry-After` real.
+- **Redis:** 1 `EVAL` por intento de adquisición; **cero** operaciones
+  durante el sueño; una pausa extendida cuesta a lo sumo un `EVAL` más, y
+  la extensión que ya no cabe corta el bucle. Cota: `≤ 1 + ⌈ESPERA_MAX /
+  restante_mínimo⌉` — en la práctica **2** `EVAL` por solicitud.
+- **`Retry-After` correcto:** sale del PTTL **fresco** que devolvió la
+  readquisición, así que descuenta lo ya esperado por construcción; con
+  Redis indeterminado en ese punto se usa `restante_inicial − esperado`
+  (duraciones locales, no instantes), piso 1 s.
+- **Cancelación:** `dormir(ms, señal)` es el `dormir` que `servirConTurno`
+  ya usa en la espera compartida (rechaza al abortar la señal de la
+  solicitud); la solicitud cancelada termina sin componer y sin `200`.
+- **Presupuesto:** `presupuesto_restante = PRESUPUESTO_REQUEST_MS − (ahora −
+  t0)`; se exige que después de esperar quede `≥ COMPOSICION_MAX_MS` (16 s),
+  el mismo umbral que hoy protege al rescate tardío ("un rescate que va a
+  morir en 504 no se empieza").
+- **Sin composición duplicada:** la readquisición es el `SET NX` + fencing
+  de siempre; las solicitudes que despiertan y encuentran el turno ocupado
+  caen en la **espera compartida existente** y reciben la fresca (o el UB)
+  cuando el ganador publica.
+
+### 42.3 `ESPERA_MAX`: alternativas comparadas, no un número arbitrario
+
+No hay duraciones reales de pausa: Producción no vio un solo 429 (§38-§40),
+así que **no existe distribución de `Retry-After` medida**. Lo que sí hay:
+(a) el único `Retry-After` que la app **fabrica** cuando TMDB no lo manda:
+`REINTENTAR_POR_DEFECTO_MS = 5.000` (`lib/tmdb-http.ts`, 3.a); (b) el
+backoff sin cabecera propuesto para la pausa (§39.5): 1 → 8 s; (c) el doble
+del banco: `retryAfter = 2` por defecto; (d) el presupuesto: 50 s − espera −
+16 s de composición; (e) lo que el usuario ya tolera hoy: un Home frío de
+15-17 s [medido].
+
+| `ESPERA_MAX` | Pausas que cubre (por defecto 5 s / doble 2 s / backoff 1-8 s) | Latencia máxima añadida | Presupuesto tras esperar | `EVAL` | Juicio |
+|---|---|---|---|---|---|
+| 1 s | sólo las que ya casi vencen; ninguna pausa por defecto entera | 1,25 s | 49 − 16 = 33 s | ≤ 2 | casi siempre `503`: la espera no sirve |
+| 2 s | las del doble; las por defecto sólo en su último tercio | 2,25 s | 32 s | ≤ 2 | cubre el banco, no la app |
+| 3 s | ídem, más de la mitad de una por defecto | 3,25 s | 31 s | ≤ 2 | intermedio sin ancla |
+| **5 s** | **toda pausa por defecto (5 s) y todo `Retry-After ≤ 5`**; del backoff 1-8, los escalones 1, 2, 4 | **5,25 s** (< el Home frío de 15 s) | **29 s ≥ 16** | ≤ 2 | **elegida**: es la única constante de pausa que la app ya genera, y cabe con margen |
+| > 5 s | los `Retry-After` explícitos largos (8 s) | ≥ 8 s | ≤ 26 s | ≤ 2 | acerca la espera a lo que hoy es una composición; sin dato que lo justifique |
+
+**`ESPERA_MAX = 5 s`** [propuesto, derivado de `REINTENTAR_POR_DEFECTO_MS`;
+sin distribución real]. Como la espera real es `min(restante, ESPERA_MAX)`,
+la constante sólo decide el corte para pausas **más largas** que ella; una
+pausa de 1,2 s se espera 1,2 s. Cuando existan cubos de pausas (§41.4), la
+duración real de las pausas vistas revisa este valor con datos.
+
+### 42.4 Modelo RED→GREEN (`lib/tmdb-pausa-diseno.test.ts`, sección §42, **40/40** en total)
+
+| # | Caso pedido | Resultado del modelo |
+|---|---|---|
+| 1 | pausa que termina durante la espera (2,3 s) | duerme 2,4 s (restante + jitter), readquiere, compone; **2 `EVAL`**, 0 lecturas durante el sueño |
+| 2 | pausa que continúa (8 s > 5) | `503` en el acto, `Retry-After: 8`, 1 `EVAL`, 0 composiciones |
+| 2b | pausa **extendida** durante la espera (2 s → +4 s) | tras dormir 2,1 s la readquisición ve 4 s: `2,1 + 4 > 5` → `503`, `Retry-After: 4` (el nuevo) |
+| 3 | cliente abandona a 1,5 s de una espera de 4 s | el sueño se corta a los 1,5 s, 0 composiciones, sin `200` |
+| 4a | Redis caído | `sin-redis` → camino de hoy (compone sin turno, no publica); no espera |
+| 4b | Redis lento (3 s por `EVAL`) | la espera cuenta contra el presupuesto; sigue siendo 2 `EVAL`; compone |
+| 4c | indeterminado (`"Aborted"`, `null`) | se interpreta como `sin-redis`, nunca como "sin pausa" |
+| 5 | cuatro solicitudes sin UB esperando a la vez (jitter 0/50/100/150) | una `compuesta`, tres `compartida`; **una** composición |
+| 6 | presupuesto insuficiente (ya gastó 33 s; 50 − 33 − 2 < 16) | `503` en el acto, `Retry-After: 2`, sin esperar |
+| 7 | `Retry-After` tras esperar 4 s con pausa nueva de 6 s | `Retry-After: 6` (el PTTL fresco), no 4 ni 10 |
+| 8 | dos solicitudes al terminar la pausa | A compone, B `compartida`; **una** composición (`SET NX`) |
+| — | cota global | con restantes 0,5 / 2 / 4,999 / 5 / 5,001 / 8 / 30 s: espera `≤ 5,25 s` siempre; todo lo que no compone es `503` |
+
+### 42.5 Cambio de experiencia, explícito para el dueño (reemplaza la tabla de §41.5)
+
+| | Hoy (`37d4707`), sin UB y TMDB caído | Con 3.c.1 (§42), sin UB y pausa vigente |
+|---|---|---|
+| Espera del usuario | hasta 50 s (la composición que se cancela) | **≤ `restante` de la pausa, tope 5,25 s**; si la pausa termina antes, la composición normal (15-17 s hoy) |
+| Status | `200` vacío con `motivo: "cancelada"` | `200` con el Home si la pausa terminó; **`503` + `Retry-After`** si continúa |
+| Mensaje | "No pudimos cargar el inicio." + Reintentar | el mismo, sólo en el `503` |
+| Contenido | ninguno | el Home completo cuando la pausa terminó |
+
+### 42.6 Criterios RED para la implementación (además de los de §40.5/§41)
+
+En `home-servir.test.ts` con reloj virtual y deps inyectadas (`adquirir`
+devolviendo `pausado(restante)`, `dormir` con señal): (1) `pausado(2300)` →
+`dormir` llamado una vez con `2300 + jitter` y `adquirir` dos veces; `leer`
+**0** veces durante el sueño; (2) `pausado(8000)` → `503` sin `dormir`; (3)
+abort durante el sueño → `dormir` rechaza, `componer` 0, `liberar` 0 (no
+había turno), respuesta `503 cancelada`; (4) `adquirir` que lanza →
+`sin-redis` como hoy; resultado no entero → `sin-redis`; (5) N `servirConTurno`
+concurrentes sobre el turno en memoria → `componer` 1; (6) `ahora()` avanzado
+33 s antes → `503` sin `dormir`; (7) `Retry-After` = ⌈PTTL de la segunda
+adquisición⌉; (8) fencing: el ganador publica; el segundo `adquirir` de otro
+propietario tras la publicación → `HIT`/`esperada`, no `compone`. Y en la
+ruta: el `503` lleva `Retry-After` y el cuerpo `{ error: "tmdb-no-disponible",
+motivo: "pausa", reintentarEnMs }`; el cliente real (Preview del banco con
+navegador) muestra el mensaje y el botón.
+
+### 42.7 Estado
+
+3.c.1: diseño cerrado con la decisión del dueño incorporada; **NO aprobada,
+NO implementada**; lista para auditoría de implementación bajo las mismas
+condiciones de §41.9 (aceptación de §41+§42, precondición de Preview del
+`EVAL`, umbrales, RED del script del turno) — ya **sin** el punto "aprobación
+del `503` inmediato", que queda sin efecto. 3.c.2 fuera de alcance.
