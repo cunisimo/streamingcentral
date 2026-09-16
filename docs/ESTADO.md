@@ -1,12 +1,93 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 14 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 15 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
+- **Etapa 3.b de capacidad (#19) — "último bueno primero, reconstrucción en
+  fondo": IMPLEMENTADA EN RAMA (`feat/etapa3b-ub-primero`, `33d2ea2`) y
+  CORREGIDA tras las auditorías de Codex sobre `c84996e` (informe §35) y
+  `3a057fc` (§36); PENDIENTE DE NUEVA AUDITORÍA; NO MERGEADA NI
+  DESPLEGADA.** Segunda corrección (§36): abrir la compuerta en el `finally`
+  del handler encolaba el fondo ANTES de que el llamador de `GET` recibiera
+  la promesa (RED con el llamador real: `respuesta-construida → fondo-inicia
+  → caller-recibio-response`); ahora la frontera cede al event loop
+  (`setImmediate`, inyectable) y abre después: GREEN `respuesta-construida →
+  caller-recibio-response → fondo-inicia`, también con dos llamadores
+  concurrentes; un microtask NO alcanza (se invierte con una capa async).
+  Tres niveles, cada uno con su evidencia: respuesta construida (log),
+  promesa entregada al llamador (test), bytes enviados (sólo Preview:
+  aislado, `dpl_BjiwdfGkHQVQ5vnSQuYHVicPRmJG`, borrado; cuerpo en 425 ms con
+  3 s síncronos de fondo por delante, 3,3 s con el control de un microtask;
+  `waitUntil` público sostuvo el fondo hasta +11 s). Suite 1.707 (1.697 ok,
+  0 fallos, 10 omitidos), `tsc`, build fresco, `diff --check`, banco 3.b
+  verde (UB presente 71 ms + fondo 5,1 s publicado; `componeAntesDeTerminal`
+  0), identidad 16/16. Primera corrección (§35): el fondo esperaba un
+  microtick tras registrar en `waitUntil` y `composeHome` arrancaba antes de
+  que la ruta construyera su `NextResponse`; ahora espera la **compuerta**
+  de la solicitud (`lib/fondo-frontera.ts`), que `conFrontera(conCors(manejar,
+  "GET"))` abre con la respuesta construida (cabeceras incluidas) y —desde
+  §36— sólo tras ceder al event loop; sin frontera no hay fondo (bloqueante). RED contra `c84996e`
+  atravesando una frontera equivalente al handler (traza: la composición
+  terminaba antes de la respuesta); GREEN con el orden completo, banco con
+  `componeAntesDeTerminal = 0` en la rama (1 en el antes), suite 1.701
+  (1.691 ok, 0 fallos, 10 omitidos), `tsc`, build fresco, identidad 16/16.
+  **En Producción (`903832e`) el líder con UB todavía compone en línea y no
+  hay `waitUntil`; en la rama, no.** (Lo que sigue describe la
+  implementación de `c84996e`.) Con UB, el líder
+  responde el UB en el acto y compone en fondo con `waitUntil` de
+  `@vercel/functions` 3.9.7 (única importación, en `lib/home.ts`; el símbolo
+  interno queda prohibido por test); `lib/home-fondo.ts` (puro) registra de
+  forma perezosa (kill switch `HOME_UB_PRIMERO=0` y `VERCEL=1` antes de
+  iniciar; un registro que lanza deja el camino bloqueante, sin huérfanas ni
+  duplicados; la tarea siempre resuelve); el fondo corre con sus propios
+  contextos y termina en `[home-fondo]` correlacionada por clave y
+  propietario, con `[home]` congelada; sin UB, sin fondo o con el kill
+  switch: exactamente el camino de hoy. TDD contra `903832e` (RED
+  `cdd4ab8`); suite 1.691 (1.681 ok, 0 fallos, 10 omitidos); `tsc`; build
+  fresco; `diff --check`; banco 3.b verde (UB presente: antes 5,6 s en
+  línea, rama 111 ms + fondo publicado 5,4 s, fresca idéntica; concurrentes
+  23/23 ms; sin UB igual; degradado, 5xx total y cancelado en fondo con UB
+  intacto por sha1; kill switch y sin fondo iguales al antes); identidad del
+  Home 16/16; bundle: nada del paquete llega al cliente ni `jose`/`execa`
+  al servidor; gate del Preview con la API pública (20 y 50 s completos,
+  corte a 60 s, dos concurrentes) borrado al terminar. Reintentos siguen
+  apagados; limitador, circuito, `waitUntil` fuera del Home y membresía NO
+  implementados. Diseño previo: Revisión: la implementación usará
+  `waitUntil` de `@vercel/functions` (API pública para Next 14.2; el
+  símbolo interno del runtime queda prohibido por test; gate de
+  instalación, tipado, build y Preview); interfaz perezosa
+  `programarEnFondo(iniciar)` que comprueba kill switch y contexto antes de
+  iniciar, con una sola composición y camino bloqueante exacto si el fondo
+  no está o el registro lanza; contextos propios del fondo (métricas,
+  idioma, ejes, señal) con línea `[home-fondo]` separada y correlacionada
+  por clave + propietario, `[home]` congelada al responder; "fondo muerto"
+  no es métrica (sólo se comprueba el turno vencido); promesa de fondo que
+  siempre resuelve, fencing/ENFRIAR/publicación sana conservados, UB
+  intacto ante el corte de Vercel; kill switch `HOME_UB_PRIMERO=0` como
+  reversión sin código aplicada con el siguiente deployment. Trece criterios
+  RED→GREEN en §33.7, identidad del Home 16/16 incluida.
+  Diseño previo (§32): Causa comprobada de los
+  15,1 s observados tras el deploy de la 3.a: la clave fresca lleva la
+  semilla del día, así que cada combinación empieza cada día sin fresca; y en
+  `servirConTurno` de `903832e` **quien adquiere el turno compone en línea
+  aunque exista un último bueno** (el UB sólo va a los que no son líderes) —
+  comportamiento ANTERIOR a la 3.b, el que está en Producción; el líder corre
+  bajo 50 s (`PRESUPUESTO_REQUEST_MS`), no bajo los 16 s de
+  `COMPOSICION_MAX_MS`. Ni Redis ni TMDB estaban degradados (250/250 ok). Si
+  existía UB en ese instante no es verificable hoy (la línea `[home]` no lo
+  imprime; no hace falta para la causa). `waitUntil` **comprobado en un
+  Preview aislado** (Fluid, Hobby): tareas de 20 y 50 s completan; a los
+  **60 s desde el inicio de la solicitud** el proceso se mata (`Task timed
+  out`) aunque la respuesta ya salió; sin `waitUntil`, la tarea muere con la
+  respuesta. Recomendación: servir el UB en el acto al líder y componer en
+  fondo; sin UB, igual que hoy; kill switch `HOME_UB_PRIMERO=0`; ningún
+  limitador/reintento/circuito antes (hoy alargarían la espera sin
+  alternativa). Necesita autorización del dueño (§32.12). Sin código, sin
+  variables, sin infraestructura; los dos Previews de la sonda se borraron.
 - **Etapa 3.a de capacidad (#19): MERGEADA, PUSHEADA Y DESPLEGADA
   (2026-09-15).** Merge `--no-ff` `7b2fc8f` en `main` (rama
   `feat/etapa3a-clasificacion-tmdb` en `858f73e`, aprobada técnicamente por la
@@ -22,8 +103,9 @@
   evidencia existente** (banco de cachés aisladas `b7be927` vs rama: 16/16
   válidos e idénticos; búsqueda 15/15) — no se reabrió. **Reintentos siguen
   APAGADOS** (`TMDB_REINTENTOS` ausente en Producción). **Limitador,
-  circuito, `waitUntil` y membresía siguen NO implementados** (subetapas
-  restantes de la Etapa 3, diseñadas y no aprobadas). **#19 sigue abierto por
+  circuito y membresía siguen NO implementados** (subetapas restantes de la
+  Etapa 3, diseñadas y no aprobadas); **`waitUntil` no está en Producción**
+  (sí en la rama de la 3.b, sólo para el fondo del Home). **#19 sigue abierto por
   esas subetapas, no por la 3.a.** Sin cambios de variables ni de
   infraestructura; sin 429 provocados ni cachés externas vaciadas.
   Verificado sobre el `main` fusionado: árbol idéntico al de la rama;

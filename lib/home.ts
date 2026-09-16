@@ -45,6 +45,12 @@ import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import type { ClaveLocalizada } from "./claves";
 import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
 import { CONSTANTES, servirConTurno } from "./home-servir";
+import { crearProgramadorDeFondo, estadoDelFondo } from "./home-fondo";
+import { compuertaDeFondo } from "./fondo-frontera";
+// La API PÚBLICA de Vercel para sostener trabajo más allá de la respuesta (Next
+// anterior a 15.1). Sin contexto de solicitud (local, banco) devuelve sin hacer
+// nada: por eso la disponibilidad se decide antes, en `estadoDelFondo`.
+import { waitUntil } from "@vercel/functions";
 import { conSenal, senalActual } from "./senal-solicitud";
 import { crearTurno } from "./turno";
 import { randomUUID } from "node:crypto";
@@ -717,6 +723,36 @@ const turnoHome = crearTurno(opsTurnoHome);
 // claves y mismo día). Sin mapas de módulo: nada que retener. Y sin volver a
 // leer el reloj acá: con la medianoche entre la clave y el día, el fencing
 // diario quedaría del lado equivocado.
+// --- Etapa 3.b: "último bueno primero", la composición en fondo -------------
+// Cuando el líder tiene un UB, `servirConTurno` responde el UB y deja la
+// composición registrada en `waitUntil`. El fondo corre con SUS PROPIOS cuatro
+// contextos —idioma, métricas, ejes y señal—, así que no toca las métricas de
+// la solicitud (cuya línea `[home]` ya salió y queda congelada) ni las de otra
+// solicitud concurrente, y termina con su propia línea `[home-fondo]`, con la
+// misma clave y el mismo propietario para correlacionar. Un fallo al armar o
+// escribir esa línea se traga: la publicación ya ocurrió antes. Si Vercel mata
+// el proceso (corte a `maxDuration` desde el inicio de la solicitud) no hay
+// línea: ese estado no es observable; el turno vence solo y el pedido
+// siguiente lo retoma (§33.3).
+// La composición arranca DESPUÉS de que la ruta construyó su respuesta: la
+// compuerta la abre `conFrontera` en app/api/home/route.ts (lib/fondo-frontera.ts).
+const programadorDeFondo = crearProgramadorDeFondo({ registrar: waitUntil, compuerta: compuertaDeFondo, ...estadoDelFondo(process.env) });
+function programarComposicionEnFondo(clave: string, iniciar: (senal?: AbortSignal) => Promise<void>): boolean {
+  return programadorDeFondo(async () => {
+    const t0 = Date.now();
+    const senalFondo = AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS);
+    const { res: { res: { ejes }, metricas }, metricas: mIdioma } =
+      await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senalFondo, () => iniciar(senalFondo)))));
+    try {
+      console.log(lineaHome(metricas, Date.now() - t0, clave).replace(/^\[home\]/, "[home-fondo]"));
+      console.log(`[home-fondo] [idioma] fallback: ${mIdioma.llamadas} llamadas | ${mIdioma.lotesConRotos} lotes con rotos | ${mIdioma.titulosReparados} títulos reparados | ${mIdioma.fallos} fallos`);
+      if (ejes.size) console.log(`[home-fondo] EJES ${[...ejes].map(([s, e]) => `${s}=${e}`).join(" ")}`);
+    } catch (e) {
+      console.error("[home-fondo] no se pudo escribir la línea terminal (la composición ya terminó):", e);
+    }
+  });
+}
+
 const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>({
   leer: (clave) => backendCache.leer<HomePayload>(clave),
   resolver: (_clave, producir, claves) => servirConTurno<HomePayload>({
@@ -726,11 +762,17 @@ const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>({
     ttl: { fresca: TTL.home, ub: TTL.homeUltimoBueno },
     leer: (claves) => leerVarias<HomePayload>(claves),
     turno: turnoHome,
-    producir: async () => { const valor = await producir(); return { valor, fallo: !!valor.degradado }; },
+    // Lo producido se anota acá (fuentes caídas, degradado) para que la línea
+    // del FONDO (3.b) lo muestre: en el fondo nadie ve el payload producido —
+    // con UB, `componer` sirve el UB y descarta el degradado—. En la solicitud,
+    // homePayload vuelve a fijar estos dos campos con lo que SIRVIÓ.
+    producir: async () => { const valor = await producir(); anotar((m) => { m.home.fuentesCaidas = valor.fallos; m.home.degradado = !!valor.degradado; }); return { valor, fallo: !!valor.degradado }; },
     publicable: (v) => !v.sinPlataformas,
     vacio: (motivo) => ({ hero: [], rails: [], fallos: 0, degradado: true, motivo }),
     // La señal del líder: el resolver corre en su contexto async.
     senal: senalActual() ?? undefined,
+    // El propietario lo anota el propio `iniciar` en las métricas del fondo.
+    programarEnFondo: (iniciar) => programarComposicionEnFondo(claves.fresca, iniciar),
   }),
 });
 

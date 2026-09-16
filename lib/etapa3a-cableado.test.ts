@@ -127,10 +127,12 @@ test("useApi expone `motivo` y DetailView lo usa para no decir 'Sin conexión' c
 // Lo que la 3.a NO trae (la restricción del dueño y la auditoría)
 // ============================================================================
 
-test("no hay limitador, cadencias, pausa distribuida, circuito ni waitUntil, y COMPOSICION_MAX_MS sigue en 16 s", () => {
+test("no hay limitador, cadencias, pausa distribuida ni circuito, y COMPOSICION_MAX_MS sigue en 16 s (waitUntil entró con la 3.b, sólo en lib/home.ts)", () => {
   for (const rel of ["lib/tmdb.ts", "lib/home.ts", "lib/home-servir.ts", "lib/cache.ts"]) {
     const s = codigo(rel);
-    assert.doesNotMatch(s, /waitUntil|RESERVAR|tmdb:cadencia|tmdb:pausa|circuito|AIMD/i, rel);
+    assert.doesNotMatch(s, /RESERVAR|tmdb:cadencia|tmdb:pausa|circuito|AIMD/i, rel);
+    // Etapa 3.b: `waitUntil` es deliberado y vive sólo en el adaptador del Home (lib/etapa3b-cableado.test.ts lo fija).
+    if (rel !== "lib/home.ts") assert.doesNotMatch(s, /waitUntil/, rel);
   }
   assert.match(codigo("lib/home-servir.ts"), /COMPOSICION_MAX_MS: 16_000/);
   assert.equal(fs.existsSync(path.join(raiz, "lib/tmdb-tasa.ts")), false);

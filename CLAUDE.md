@@ -122,13 +122,14 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   — los chips y "Mostrame otras" no rearman el Home. `rotate()` y `personalize()`
   están cableados como identidad: son los puntos de extensión, no implementados.
   **El payload compuesto se cachea entero** (`homePayload()`, clave
-  `home:<huella de idioma>:v5:<semilla>:<plataformas ordenadas>:<tipos>`, TTL 6 h — el número lo
+  `home:<huella de idioma>:v6:<semilla>:<plataformas ordenadas>:<tipos>` (`VERSION_HOME` en `lib/claves.ts`), TTL 6 h — el número lo
   manda la cuota de Upstash, ver el comentario de `TTL.home`). La versión de la
   clave se sube cuando cambia el **contenido** del payload, no su forma: si no,
   lo ya cacheado se sigue sirviendo hasta que expire el TTL y el cambio "no se
   ve" después de deployar (`v2` = ventana de votos de 7 a 90 días; `v3` = el
   riel "Hacete cargo" pasó a llamarse "No gustaron"; `v4` = entró el riel
-  "Miniseries para ansiosos"; `v5` = ese riel sumó su "Ver todas").
+  "Miniseries para ansiosos"; `v5` = ese riel sumó su "Ver todas"; `v6` = "Últimos
+  lanzamientos" sumó el toggle Películas/Series, que entra en el `t` de la clave).
   **Los títulos de los
   rieles viajan adentro del payload**, así que hasta cambiar un texto de la
   interfaz obliga a subir la versión. Los `cached()`
@@ -150,6 +151,35 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `AUDIENCE_CARDS` (40 tarjetas), no `VISIBLE_CARDS`. "Lo más votados" y
   "No gustaron" no se rellenan tras el dedup — su tope lo pone la cantidad de
   votos en la base, no el algoritmo de relleno.
+- **Último bueno primero (Etapa 3.b, `lib/home-fondo.ts` + `servirConTurno`).**
+  Cuando el que toma el turno del Home encuentra un **último bueno** (UB) de
+  la misma combinación, lo responde en el acto y la fresca se compone en
+  fondo, sostenida por `waitUntil` de `@vercel/functions`
+  (la API pública de Vercel para Next anterior a 15.1; el símbolo interno
+  `@vercel/request-context` no se usa, y un test lo prohíbe). Sin UB, el
+  camino es el de siempre: el líder compone en línea. **El fondo arranca
+  detrás de una FRONTERA** (`lib/fondo-frontera.ts`; la ruta exporta
+  `conFrontera(conCors(manejar, "GET"))`): la compuerta se abre recién
+  después de ceder al event loop con `setImmediate`, porque la cola de
+  microtasks se vacía entera antes de esa fase y ahí ya corrieron todos los
+  `await` entre el handler y su llamador. Lo que eso PRUEBA (test con el
+  llamador real) es que la promesa del handler fue **entregada al llamador**
+  antes de que la composición empiece; abrir la compuerta en el `finally`
+  o esperar un microtask NO alcanza (medido: se invierte con una sola capa
+  async, y `conCors` ya es una). Que los **bytes** ya salieron sólo lo
+  observa un Preview (medido: 425 ms de cuerpo con 3 s síncronos de fondo
+  por delante; 3,3 s con un microtask). Sin frontera declarada no hay fondo.
+  El registro es **perezoso**: `programarEnFondo(iniciar)` comprueba el kill switch y la
+  disponibilidad (`VERCEL=1`; `YUMP_BANCO_FONDO=1` en el banco) antes de
+  iniciar nada; si no hay fondo o el registro lanza, se compone en línea, una
+  sola vez. El fondo corre con **sus propios contextos** (métricas, idioma,
+  ejes, señal) y termina en una línea **`[home-fondo]`** con la misma clave y
+  propietario que la `[home]` de la solicitud, que queda congelada al
+  responder. Si Vercel mata el proceso (a `maxDuration` desde el inicio de la
+  solicitud) no hay línea: el turno vence solo y el siguiente pedido lo
+  retoma. Kill switch **`HOME_UB_PRIMERO=0`**: vuelve al camino de siempre sin
+  tocar código, pero **cambiar una variable en Vercel se aplica recién en el
+  siguiente deployment**.
 - **El idioma de los títulos sale de una variable, y la configuración va DENTRO
   de la clave de cache** (`lib/idioma.ts` → `HUELLA_IDIOMA`, `lib/claves.ts`).
   `IDIOMA_TITULOS` decide el idioma base (default `es-ES`) y `FALLBACK_IDIOMA`
