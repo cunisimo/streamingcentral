@@ -1034,7 +1034,8 @@ interface FondoMundo {
   ahora: number; inicioRuta: number; composicionMs: number; eventos: string[];
   turnoRedis: { propietario: string | null; venceEn: number | null; generacion: number };   // el estado EN REDIS (fencing por propietario + generación)
   fresca: string | null; ub: string;                                                          // contenido publicado; el UB sano NUNCA se pisa con algo parcial
-  fondo: string | null; ops: OpRedis[]; rttRedisMs: number; liberarFalla: boolean; publicarRespuestaPerdida: boolean; corteDuroEn: number | null; llamadasTmdbTrasPlazo: number;
+  fondo: string | null; ops: OpRedis[]; rttRedisMs: number; liberarFalla: boolean; liberarRespuestaPerdida: boolean; liberarIntentos: number; publicarRespuestaPerdida: boolean; corteDuroEn: number | null; llamadasTmdbTrasPlazo: number;
+  deteccionMs: number;   // §49: en ejecución real la composición devuelve/detecta la señal unos ms DESPUÉS del plazo
 }
 const enviar = (f: FondoMundo, op: OpRedis["op"], perdida = false, aplicar = () => {}) => {
   const o: OpRedis = { op, enviadaEn: f.ahora, completaEn: f.ahora + f.rttRedisMs, respuestaPerdida: perdida, aplicada: false };
@@ -1047,9 +1048,16 @@ function iniciarFondo(f: FondoMundo) {
   const { plazoEfectivo, limitadoPor } = plazosDelFondo(f.inicioRuta, f.ahora);
   const restante = plazoEfectivo - f.ahora;
   f.eventos.push(`plazo-efectivo:${limitadoPor}:${restante}`);
-  const liberar = () => {   // best effort: si responde, liberado; si falla o el proceso muere, el turno vence por TTL
-    if (f.liberarFalla) { f.eventos.push("LIBERAR:fallo"); return; }
-    enviar(f, "LIBERAR", false, () => { if (f.turnoRedis.propietario === "yo") { f.turnoRedis.propietario = null; f.turnoRedis.venceEn = null; } });
+  // §49: LIBERAR es la ÚNICA excepción de cierre: un solo intento, best effort, permitido incluso
+  // después del plazo efectivo pero sólo dentro del margen externo de cierre (hasta inicioRuta +
+  // MAX_DURATION_MS); nunca publica, enfría, renueva ni toca el UB; si no hay margen, Redis está
+  // caído, falla o se pierde la respuesta, no se insiste: el turno vence por TTL.
+  const liberar = () => {
+    if (f.liberarIntentos >= 1) { f.eventos.push("LIBERAR:omitido-ya-intentado"); return; }
+    f.liberarIntentos += 1;
+    if (f.ahora > f.inicioRuta + FONDO.MAX_DURATION_MS) { f.eventos.push("LIBERAR:omitido-sin-margen->TTL"); return; }
+    if (f.liberarFalla) { f.eventos.push("LIBERAR:fallo->TTL"); return; }
+    enviar(f, "LIBERAR", f.liberarRespuestaPerdida, () => { if (f.turnoRedis.propietario === "yo") { f.turnoRedis.propietario = null; f.turnoRedis.venceEn = null; } });
   };
   if (restante < FONDO.COMPOSICION_MAX_MS + FONDO.RESERVA_PUBLICACION_MS) { f.fondo = "no-iniciado-presupuesto"; liberar(); return "ub-servido-sin-fondo"; }
   f.fondo = "programado";
@@ -1057,7 +1065,9 @@ function iniciarFondo(f: FondoMundo) {
   const finComposicion = f.ahora + f.composicionMs;
   if (f.corteDuroEn !== null && finComposicion >= f.corteDuroEn) { f.ahora = f.corteDuroEn; f.eventos.push("CORTE-DURO"); return "no-observable"; }
   if (finComposicion > plazoEfectivo) {
-    f.ahora = plazoEfectivo; f.eventos.push("señal:vencida→no se inician llamadas ni PUBLICAR");
+    // La señal vence en plazoEfectivo; la composición DEVUELVE (o detecta) unos ms después: ahí ya no
+    // se inicia nada productivo; sólo la limpieza LIBERAR (excepción de §49).
+    f.ahora = plazoEfectivo + f.deteccionMs; f.eventos.push(`señal:vencida->detectada+${f.deteccionMs}ms; sin llamadas, RENOVAR, ENFRIAR ni PUBLICAR`);
     liberar(); return "cancelada";
   }
   f.ahora = finComposicion;
@@ -1070,7 +1080,7 @@ function iniciarFondo(f: FondoMundo) {
   f.ahora = pub.completaEn; f.eventos.push("PUBLICAR:ok");
   return "publicada";
 }
-const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => ({ ahora: 100_000, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turnoRedis: { propietario: "yo", venceEn: 100_000 + 15_000, generacion: 1 }, fresca: null, ub: "ub-sano", fondo: null, ops: [], rttRedisMs: 140, liberarFalla: false, publicarRespuestaPerdida: false, corteDuroEn: null, llamadasTmdbTrasPlazo: 0, ...o });
+const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => ({ ahora: 100_000, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turnoRedis: { propietario: "yo", venceEn: 100_000 + 15_000, generacion: 1 }, fresca: null, ub: "ub-sano", fondo: null, ops: [], rttRedisMs: 140, liberarFalla: false, liberarRespuestaPerdida: false, liberarIntentos: 0, publicarRespuestaPerdida: false, corteDuroEn: null, llamadasTmdbTrasPlazo: 0, deteccionMs: 0, ...o });
 
 test("🔴 RED (control): con plazoFondo = inicioFondo + 50 s a secas, un fondo iniciado a los 15 s cree tener hasta t = 65 s — Vercel mata la invocación a los 60 s", () => {
   const inicioRuta = 100_000, inicioFondo = inicioRuta + 15_000;
@@ -1104,7 +1114,7 @@ test("🟢 (4) composición que cruza el plazo efectivo: al vencer la señal NO 
   assert.equal(iniciarFondo(f), "cancelada");
   assert.equal(f.fresca, null); assert.equal(f.ub, "ub-sano");
   assert.ok(!f.ops.some((o) => o.op === "PUBLICAR"), "ningún PUBLICAR iniciado después del plazo");
-  assert.ok(f.ops.every((o) => o.enviadaEn <= 155_000), "ninguna operación de Redis NUEVA se envía después del plazo efectivo");
+  assert.ok(f.ops.filter((o) => o.op !== "LIBERAR").every((o) => o.enviadaEn <= 155_000), "ninguna operación PRODUCTIVA o de publicación después del plazo efectivo (§49: la limpieza LIBERAR es la única excepción)");
   const g = fondoMundo({ ahora: 120_000, composicionMs: 34_500 });
   assert.equal(iniciarFondo(g), "cancelada"); assert.ok(g.eventos.includes("sin-reserva-para-PUBLICAR")); assert.equal(g.fresca, null);
 });
@@ -1154,12 +1164,66 @@ test("🟢 (9) corte duro de Vercel a los 60 s: el resultado NO es observable �
   if (r === "no-observable") { assert.ok(!f.eventos.some((e) => e.startsWith("LIBERAR:enviado")), "sin afirmar liberación"); assert.equal(f.ub, "ub-sano"); }
 });
 
-test("🟢 (10) ninguna operación de Redis NUEVA se inicia después del plazo efectivo, en ninguno de los caminos", () => {
-  for (const m of [fondoMundo({ ahora: 100_400 }), fondoMundo({ ahora: 115_000 }), fondoMundo({ ahora: 140_000 }), fondoMundo({ ahora: 120_000, composicionMs: 40_000 }), fondoMundo({ ahora: 120_000, composicionMs: 33_900, rttRedisMs: 1_500 })]) {
+// ----------------------------------------------------------------- §49: la limpieza LIBERAR después del plazo
+test("🔴 RED (control, §48 superado): 'ninguna operación de Redis nueva después del plazo' es FALSO en ejecución real — la composición detecta la señal a plazo + 100 ms y la limpieza LIBERAR sale después del plazo", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100 });   // plazo efectivo 155 s; detecta a 155,1
+  const plazo = plazosDelFondo(f.inicioRuta, f.ahora).plazoEfectivo;
+  assert.equal(iniciarFondo(f), "cancelada");
+  const lib = f.ops.find((o) => o.op === "LIBERAR")!;
+  assert.ok(lib.enviadaEn > plazo, `LIBERAR enviado a plazo + ${lib.enviadaEn - plazo} ms: el criterio universal de §48 no se cumple`);
+  assert.equal(f.ops.every((o) => o.enviadaEn <= plazo), false, "§48 (control) queda refutado: hace falta la excepción de cierre");
+});
+
+test("🟢 (10) criterio de §49: después del plazo efectivo CERO PUBLICAR, ENFRIAR, RENOVAR, TMDB o Supabase; como única excepción, a lo sumo UN LIBERAR dentro del margen externo (<= inicioRuta + 60 s)", () => {
+  for (const m of [fondoMundo({ ahora: 100_400 }), fondoMundo({ ahora: 115_000 }), fondoMundo({ ahora: 140_000 }), fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100 }), fondoMundo({ ahora: 120_000, composicionMs: 33_900, rttRedisMs: 1_500 })]) {
     const plazo = plazosDelFondo(m.inicioRuta, m.ahora).plazoEfectivo;
     iniciarFondo(m);
-    assert.ok(m.ops.every((o) => o.enviadaEn <= plazo), `op enviada después del plazo: ${JSON.stringify(m.ops)}`);
+    const productivas = m.ops.filter((o) => o.op !== "LIBERAR");
+    assert.ok(productivas.every((o) => o.enviadaEn <= plazo), `productiva/publicación después del plazo: ${JSON.stringify(m.ops)}`);
+    assert.equal(m.llamadasTmdbTrasPlazo, 0);
+    const liberaciones = m.ops.filter((o) => o.op === "LIBERAR");
+    assert.ok(liberaciones.length <= 1, "no más de un intento de LIBERAR");
+    assert.ok(liberaciones.every((o) => o.enviadaEn <= m.inicioRuta + FONDO.MAX_DURATION_MS), "LIBERAR sólo dentro del margen externo de cierre");
   }
+});
+
+test("🟢 (11) exactamente UN LIBERAR si todavía queda margen (detección a plazo + 100 ms, margen hasta +5 s): el turno queda liberado; nada publicado, nada enfriado, UB intacto", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100 });
+  assert.equal(iniciarFondo(f), "cancelada");
+  assert.deepEqual(f.ops.map((o) => o.op), ["LIBERAR"]); assert.equal(f.liberarIntentos, 1);
+  assert.equal(f.turnoRedis.propietario, null); assert.equal(f.fresca, null); assert.equal(f.ub, "ub-sano"); assert.equal(f.turnoRedis.generacion, 1);
+});
+
+test("🟢 (12) CERO LIBERAR si ya se alcanzó el límite externo (detección a plazo + 5,1 s = inicioRuta + 60,1 s): no se insiste; el turno se recupera por TTL", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 5_100 });
+  assert.equal(iniciarFondo(f), "cancelada");
+  assert.deepEqual(f.ops, [], "ninguna operación de Redis");
+  assert.ok(f.eventos.includes("LIBERAR:omitido-sin-margen->TTL"));
+  assert.equal(f.turnoRedis.propietario, "yo"); assert.ok(f.turnoRedis.venceEn! < f.ahora, "el turno ya venció por TTL: otro puede adquirirlo");
+  assert.equal(f.ub, "ub-sano");
+});
+
+test("🟢 (13) LIBERAR falla o pierde la respuesta: UB intacto, nada publicado, un solo intento, recuperación por TTL", () => {
+  const a = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
+  assert.equal(iniciarFondo(a), "cancelada"); assert.deepEqual(a.ops, []); assert.equal(a.liberarIntentos, 1); assert.equal(a.ub, "ub-sano"); assert.equal(a.turnoRedis.propietario, "yo");
+  const b = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarRespuestaPerdida: true });
+  assert.equal(iniciarFondo(b), "cancelada"); assert.equal(b.ops.length, 1); assert.equal(b.ops[0].respuestaPerdida, true); assert.equal(b.ub, "ub-sano");
+  assert.equal(b.liberarIntentos, 1, "en ningún caso se reintenta");
+});
+
+test("🟢 (14) ninguna tormenta ni repetición: un segundo pedido de limpieza no envía nada (guardia por intentos)", () => {
+  const f = fondoMundo({ ahora: 140_000 });
+  assert.equal(iniciarFondo(f), "ub-servido-sin-fondo");
+  assert.equal(f.liberarIntentos, 1); assert.equal(f.ops.length, 1);
+  // Un segundo `finally` que volviera a pedir liberar: la guardia lo omite.
+  f.liberarIntentos >= 1 ? f.eventos.push("LIBERAR:omitido-ya-intentado") : f.eventos.push("ERROR");
+  assert.equal(f.ops.length, 1); assert.ok(f.eventos.includes("LIBERAR:omitido-ya-intentado"));
+});
+
+test("🟢 (15) PUBLICAR aceptado antes del plazo conserva la semántica atómica ya definida (§48): fresca + UB + generación + DEL, entero o nada; y tras un PUBLICAR no hay LIBERAR aparte", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 33_900, rttRedisMs: 1_500 });
+  assert.equal(iniciarFondo(f), "publicada");
+  assert.deepEqual(f.ops.map((o) => o.op), ["PUBLICAR"]); assert.equal(f.turnoRedis.propietario, null); assert.equal(f.turnoRedis.generacion, 2);
 });
 
 test("🟢 el mismo `inicio` alimenta los tres plazos: plazo de la solicitud (§46), plazo externo del fondo y señal — un solo instante, tomado antes de la lectura previa", () => {

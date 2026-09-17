@@ -8,12 +8,24 @@
 ## Evidencia y alcance de esta actualización
 
 - **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §45 a
-  §48, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
+  §49, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
   diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el
   presupuesto interno; §46: un solo deadline absoluto; §47: el fondo con dos
-  límites; §48: la señal limita el trabajo nuevo, no las operaciones de
-  Redis ya enviadas); NO APROBADA; NO IMPLEMENTADA; PENDIENTE DE NUEVA
-  AUDITORÍA. 3.c.2 fuera de alcance.** **§48:** `plazoEfectivo` es el
+  límites; §48: la señal limita el trabajo nuevo; §49: la limpieza
+  `LIBERAR` como única excepción tras el plazo); NO APROBADA; NO
+  IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de alcance.**
+  **§49:** "ninguna operación de Redis nueva tras el plazo" (§48) era
+  falso: la composición detecta la señal unos ms después del plazo y ahí
+  sale la limpieza (RED con detección a +100 ms). Criterio vigente:
+  **ninguna operación productiva o de publicación** (TMDB/Supabase,
+  `RENOVAR`, `ENFRIAR`, `PUBLICAR`) después del plazo efectivo; **como
+  única excepción, un solo `LIBERAR` best effort**, incluso después del
+  plazo, pero sólo dentro del margen externo de cierre (≤ `inicioRuta` +
+  60 s); sin margen, Redis caído, fallo, respuesta perdida o corte de
+  Vercel → no se insiste, el turno vence por TTL; nunca publica, enfría,
+  renueva ni toca el UB; nunca más de un intento. La tabla de §47 queda
+  rotulada como semántica superada ("exactamente", "turno liberado").
+  Modelo 83/83. **§48:** `plazoEfectivo` es el
   límite para INICIAR trabajo nuevo (llamadas a TMDB/Supabase y el inicio de
   `PUBLICAR`), no una garantía de que ninguna promesa de Redis sobreviva:
   un `RENOVAR`/`PUBLICAR`/`ENFRIAR`/`LIBERAR` ya enviado completa después
@@ -28,8 +40,8 @@
   escritura parcial o degradada. Modelos: publicación iniciada antes y
   completada después del plazo; respuesta de publicación perdida;
   liberación fallida con UB intacto y turno por TTL; corte duro de Vercel
-  (no observable, sin afirmar liberación); ninguna operación de Redis
-  nueva tras el plazo. Modelo 77/77. **§47 — el fondo con dos límites absolutos:**
+  (no observable, sin afirmar liberación); tras el plazo, ninguna operación
+  productiva o de publicación (§49 corrige "ninguna operación nueva"). **§47 — el fondo con dos límites absolutos:**
   `inicioFondo + 50 s` no siempre queda debajo de `maxDuration` (Vercel
   cuenta 60 s desde la solicitud): un fondo iniciado a los 15 s creería
   tener hasta t = 65 s. Contrato: `plazoInterno = inicioFondo + 50 s`,
@@ -99,7 +111,7 @@
   sin pausa; telemetría en `pcall`). Modelo 49/49.
   Lo que sigue vigente de §41/§42: Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 77/77) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 83/83) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
@@ -851,7 +863,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§45-§48, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso estimado (no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), un solo deadline absoluto `plazo − ahora` (la lectura previa cuenta) y el fondo con `min(interno, externo)` sin composiciones condenadas (la señal limita el trabajo nuevo; Redis ya enviado completa o pierde la respuesta; `LIBERAR` best effort por TTL), vencimiento interno por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§45-§48, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso estimado (no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), un solo deadline absoluto `plazo − ahora` (la lectura previa cuenta) y el fondo con `min(interno, externo)` sin composiciones condenadas (la señal limita el trabajo nuevo; Redis ya enviado completa o pierde la respuesta; tras el plazo sólo un `LIBERAR` de limpieza, una vez, dentro del margen externo, con TTL), vencimiento interno por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

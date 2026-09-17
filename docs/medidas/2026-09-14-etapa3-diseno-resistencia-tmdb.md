@@ -30,7 +30,7 @@
 > §41 (contrato con sobrepaso, lector, marcador), §42 (decisión del dueño:
 > espera breve sin UB — la decisión sigue vigente, su bucle no), §43 (diez
 > correcciones), §44 (tres correcciones). ESTADO VIGENTE de la 3.c: §45 +
-> §46 + §47 + §48** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
+> §46 + §47 + §48 + §49** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
 > sin `req.signal`) y el vencimiento sale por el centinela 4d; **un solo
 > deadline absoluto `plazo` creado con la señal, `plazo − ahora` en lectura
 > previa, espera, readquisición y composición** (§46, que además detecta el
@@ -42,11 +42,12 @@
 > `EVAL`), `F_max = 1`, sólo `Δt`, marca de agua por proceso con TTL, Lua que
 > falla seguro, sobrepaso parametrizado (estimaciones, no cotas) con línea
 > base medida, matriz UB × Redis sin caché, `ESPERA_MAX = 5 s` provisional;
-> modelo 77/77; ESTADO VIGENTE: §45 + §46 + §47 + §48 (la señal limita el
-> trabajo nuevo; Redis ya enviado completa o pierde la respuesta, atómico y
-> con fencing; `LIBERAR` best effort por TTL; reservas, no máximos); 3.c.1
-> NO aprobada, NO implementada, pendiente de nueva auditoría; 3.c.2 fuera
-> de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
+> modelo 83/83; ESTADO VIGENTE: §45 a §49 (la señal limita el trabajo
+> nuevo; Redis ya enviado completa o pierde la respuesta, atómico y con
+> fencing; tras el plazo sólo un `LIBERAR` de limpieza, una vez, dentro
+> del margen externo, con recuperación por TTL; reservas, no máximos);
+> 3.c.1 NO aprobada, NO implementada, pendiente de nueva auditoría; 3.c.2
+> fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -4432,13 +4433,19 @@ caso: sólo cuándo se compone y qué métrica lo cuenta.
 
 ### 47.3 RED → GREEN (modelo)
 
+> **Tabla con SEMÁNTICA SUPERADA por §48/§49** en lo que dice "exactamente"
+> y "turno liberado": la señal limita el trabajo nuevo (no detiene lo ya
+> enviado a Redis) y la liberación es best effort, un solo intento, dentro
+> del margen externo, con recuperación por TTL. Los plazos y los casos
+> siguen vigentes.
+
 | # | Caso | Resultado |
 |---|---|---|
 | RED | `inicioFondo + 50 s` a secas, fondo a los 15 s | 65 s desde la ruta > `maxDuration` |
-| 1 | fondo a 0,4 s | limitado por el interno: **50 s** (efectivo 50,4 s < 55 s); publica; turno liberado |
+| 1 | fondo a 0,4 s | limitado por el interno: **50 s** (efectivo 50,4 s < 55 s); publica (el `DEL` del turno va dentro del `PUBLICAR`) |
 | 2 | fondo a 15 s | limitado por el **externo**: **40 s**, no 50; publica dentro del margen |
-| 3 | fondo a 40 s (quedan 15 s < 17) | **UB ya servido, cero composición, turno liberado, `fondo: no-iniciado-presupuesto`** |
-| 4 | composición que cruza el plazo efectivo (fondo a 20 s, 40 s de composición) | cancelada por la señal exactamente en el plazo efectivo; no publica; turno liberado. Variante: termina 0,5 s antes → sin tiempo para publicar → no publica |
+| 3 | fondo a 40 s (quedan 15 s < 17) | **UB ya servido, cero composición, `LIBERAR` best effort, `fondo: no-iniciado-presupuesto`** |
+| 4 | composición que cruza el plazo efectivo (fondo a 20 s, 40 s de composición) | ~~cancelada exactamente en el plazo; turno liberado~~ → al detectar la señal (unos ms después del plazo) no se inicia nada productivo ni `PUBLICAR`; un `LIBERAR` best effort si queda margen (§49). Variante: termina 0,5 s antes → sin reserva para `PUBLICAR` → no publica |
 | 5 | lectura previa 35 s + fondo a 35,4 s | externo desde la **ruta**: quedan 19,6 s (arranca, limitado por el externo); control: con el inicio tomado después de la lectura previa serían 50 s ficticios que mueren a los 60 |
 | — | un solo `inicio` | alimenta el plazo de la solicitud (50 s), el plazo externo del fondo (55 s) y la señal |
 
@@ -4470,7 +4477,13 @@ igual al `maxDuration` exportado por la ruta (guard estructural).
   empezar > 10 s después de la ruta (nunca observado: 0,3-0,64 s medidos).
 - **Pendiente:** implementación (3.c.1, no aprobada) con los RED de 47.4.
 
-## 48. Corrección de §47 sobre `4724111` — la señal limita el trabajo NUEVO; las operaciones de Redis ya enviadas no se cancelan — **ESTADO VIGENTE de la 3.c (con §45-§47); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+## 48. Corrección de §47 sobre `4724111` — la señal limita el trabajo NUEVO; las operaciones de Redis ya enviadas no se cancelan — **ESTADO VIGENTE de la 3.c (con §45-§47 y §49); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+> **§49 corrige de aquí el criterio universal** "ninguna operación de Redis
+> nueva después del plazo efectivo" (falso: la limpieza `LIBERAR` sale al
+> detectar la señal, unos ms después). Criterio vigente: ninguna operación
+> productiva o de publicación tras el plazo; sólo un `LIBERAR` best effort,
+> una vez, dentro del margen externo de cierre.
 
 Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **77/77**). Sin
 código productivo, merge, push ni deploy. Se conservan los dos deadlines
@@ -4526,7 +4539,7 @@ de Redis".
 | 7 | respuesta de `PUBLICAR` perdida | Redis la aplicó entera (o no la aplicó): nunca parcial; el proceso informa `publicacion indeterminada`; variante "no aplicada" (el proceso muere al enviar): UB intacto, turno por TTL |
 | 8 | `LIBERAR` falla (Redis caído al liberar) | UB intacto, nada publicado, el turno sigue del proceso hasta que **vence por TTL**; otro lo adquiere |
 | 9 | corte duro de Vercel a los 60 s con trabajo en vuelo | resultado **no observable**; no se afirma liberación; el turno vence por TTL; un `PUBLICAR` ya aceptado puede haberse aplicado entero |
-| 10 | los cinco caminos (0,4 s; 15 s; 40 s; cruce; publicación tardía) | **ninguna operación de Redis nueva se envía después del plazo efectivo** |
+| 10 | los cinco caminos (0,4 s; 15 s; 40 s; cruce; publicación tardía) | ~~ninguna operación de Redis nueva se envía después del plazo efectivo~~ — **superado por §49:** ninguna productiva o de publicación; sólo un `LIBERAR` de limpieza dentro del margen externo |
 
 Los casos 1-5 de §47 se mantienen: 0,4 s → 50 s; 15 s → 40 s por el
 externo; 40 s → UB sin fondo, `LIBERAR` enviado, `fondo:
@@ -4556,3 +4569,82 @@ intacto; (4) un `RENOVAR` en vuelo al vencer la señal no se aborta
 - **Desconocido:** precisión del corte de Vercel a `maxDuration`; RTT p95
   real de Upstash desde `iad1`; cuánto sobreviven a un corte duro las
   peticiones ya en vuelo.
+
+## 49. Corrección de §48 sobre `ee9da01` — la limpieza `LIBERAR` como única excepción después del plazo efectivo — **ESTADO VIGENTE de la 3.c (con §45-§48); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **83/83**). Sin
+código productivo, merge, push ni deploy.
+
+### 49.1 La contradicción
+
+§48 afirmaba "ninguna operación de Redis nueva después del plazo efectivo",
+pero su propio camino cancelado enviaba `LIBERAR` como limpieza. El modelo
+lo escondía asignando `ahora = plazoEfectivo` y aceptando `enviadaEn ≤
+plazo`; en ejecución real la composición **devuelve o detecta la señal
+algunos milisegundos después** del plazo. **RED (ejecutado y visto
+fallar):** composición que termina en `plazoEfectivo + 100 ms` → `LIBERAR
+enviado a plazo + 100 ms` — el criterio universal de §48 es falso. Queda como
+control en el archivo.
+
+### 49.2 Contrato corregido
+
+1. **Después del plazo efectivo no se inicia trabajo productivo nuevo:**
+   llamadas a TMDB/Supabase, `RENOVAR`, `ENFRIAR` ni `PUBLICAR`.
+2. **Única excepción de cierre: un solo `LIBERAR` best effort**, permitido
+   incluso después del plazo efectivo, pero **sólo dentro del margen externo
+   de cierre**: hasta `inicioRuta + MAX_DURATION_MS` (los 5 s de
+   `MARGEN_CIERRE_MS`).
+3. Si ya no queda margen, Redis está caído, la operación falla, la respuesta
+   se pierde o Vercel corta el proceso: **no se insiste**; el turno se
+   recupera por su TTL.
+4. Esa excepción **nunca** publica, enfría, renueva ni altera el UB (es un
+   compare-and-delete del turno propio).
+5. **Un solo intento** de `LIBERAR` por composición (guardia por intentos:
+   un segundo `finally` no envía nada).
+
+Criterio que reemplaza al de §48: **"ninguna operación productiva o de
+publicación después del plazo efectivo; sólo puede intentarse la limpieza
+`LIBERAR`, una vez, dentro del margen externo"**.
+
+### 49.3 GREEN (modelo)
+
+| # | Control | Resultado |
+|---|---|---|
+| 10 | los cinco caminos (0,4 s; 15 s; 40 s; cruce con detección +100 ms; publicación tardía) | 0 `PUBLICAR`/`ENFRIAR`/`RENOVAR`/TMDB/Supabase tras el plazo; ≤ 1 `LIBERAR`, y sólo ≤ `inicioRuta + 60 s` |
+| 11 | queda margen (detección +100 ms) | **exactamente un** `LIBERAR`; turno liberado; nada publicado ni enfriado; UB intacto; generación sin cambio |
+| 12 | sin margen (detección +5,1 s = `inicioRuta + 60,1 s`) | **cero** `LIBERAR`; `omitido-sin-margen→TTL`; el turno ya venció por TTL |
+| 13 | `LIBERAR` falla / respuesta perdida | UB intacto, nada publicado, **un solo intento**, recuperación por TTL |
+| 14 | segundo pedido de limpieza | omitido por la guardia; sin tormenta |
+| 15 | `PUBLICAR` aceptado antes del plazo | semántica atómica de §48 intacta (fresca + UB + generación + `DEL`, entero o nada); tras un `PUBLICAR` no hay `LIBERAR` aparte |
+
+Los casos 1-9 de §47/§48 siguen en verde con el criterio nuevo (el 4 ya no
+afirma "turno liberado": afirma "sin `PUBLICAR`; `LIBERAR` best effort").
+
+### 49.4 Tabla de §47 — semántica superada
+
+La tabla de §47.3 decía "cancelada por la señal exactamente en el plazo" y
+garantizaba "turno liberado": queda rotulada como **semántica superada** por
+§48/§49 (la señal limita el trabajo nuevo; la liberación es best effort y
+por TTL).
+
+### 49.5 RED para la implementación (se suman a 47.4/48.4)
+
+(1) `componer` en fondo con reloj virtual y `producir` que devuelve 100 ms
+después de vencer la señal: `liberar` se llama **una** vez, `publicar`,
+`enfriar` y `renovar` **cero**; (2) el mismo caso con `ahora()` ya más allá
+de `inicioRuta + MAX_DURATION_MS` al devolver: `liberar` **cero** veces,
+métrica `turno liberado: no (sin margen)`; (3) `liberar` que rechaza o cuya
+promesa nunca resuelve dentro del margen: un solo intento, la línea
+`[home-fondo]` sale igual; (4) guard estructural: el `finally` de `componer`
+en fondo pasa por una única función de limpieza con guardia por intentos.
+
+### 49.6 Comprobado / inferido
+
+- **Comprobado:** el RED (con detección +100 ms el `LIBERAR` sale después
+  del plazo); los seis controles nuevos y los nueve anteriores; que
+  `LIBERAR` es un compare-and-delete del turno propio que no toca fresca,
+  UB ni generación (Etapa 2, `lib/turno-lua.ts`).
+- **Inferido:** que la detección de la señal en el código real cae dentro de
+  los 5 s de margen (una vuelta de event loop más la última llamada en
+  vuelo, abortada por su propia señal) — no medido; si no cayera, el
+  contrato ya lo cubre: cero `LIBERAR` y recuperación por TTL.
