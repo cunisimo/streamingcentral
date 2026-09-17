@@ -45,7 +45,10 @@
 > / 528 según cadencia 35 / 80 / 252 — estimaciones, no cotas) y línea base
 > medida con 429 rápidas (750-778 llamadas tras el primer 429, pico
 > 224-252/s); modelo 57/57; 3.c.1 NO aprobada, NO implementada, pendiente de
-> nueva auditoría; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
+> nueva auditoría; 3.c.2 fuera de alcance. **§45:** la señal del Home es el
+> presupuesto interno (`AbortSignal.timeout`), no el cliente (`req.signal`
+> no se usa ni se agrega): "cancelación" = vencimiento interno → centinela
+> 4d; guard estructural sobre la ruta (58/58); estado canónico limpio.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -4146,31 +4149,43 @@ Se conserva de §43: un solo sueño, ≤ 2 adquisiciones, `F_max = 1`, marca de
 agua por proceso con TTL, orden seguro del Lua, sólo `Δt`, `ESPERA_MAX = 5 s`
 provisional sin datos reales.
 
-### 44.1 Cancelación — una sola semántica, con las primitivas reales
+### 44.1 Vencimiento por presupuesto interno — una sola semántica, con las primitivas reales (reescrito en §45)
 
-**Hechos [medido en código]:** `dormirCancelable` (`lib/home-servir.ts`)
-**resuelve** al abortarse (no rechaza); `app/api/home/route.ts` convierte
-cualquier excepción en `500` + `console.error("[api/home] composeHome
-rechazó …")`. §43.2 ("el `AbortError` se propaga") era falso en las dos
-puntas.
+**Qué señal existe hoy [medido en código, con guard estructural]:**
+`app/api/home/route.ts` **no usa `req.signal`**; `homePayload` (`lib/home.ts`)
+crea `AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS)` para la
+solicitud y otra para el fondo. Por lo tanto "la señal abortó" significa
+**"venció el presupuesto interno de 50 s"** y **nunca** "el cliente
+abandonó". La cancelación real del cliente **no está cableada**;
+incorporarla (`req.signal`) sería otra decisión y **queda fuera de
+alcance**. Además: `dormirCancelable` (`lib/home-servir.ts`) **resuelve** al
+vencer la señal (no rechaza), y el `catch` de la ruta convierte cualquier
+excepción en `500` + `console.error("[api/home] composeHome rechazó …")`.
+§43.2 ("el `AbortError` se propaga") era falso en las dos puntas y, además,
+hablaba de un abandono que la ruta no puede ver.
 
-**RED (tres controles, ejecutados):** (a) `dormirCancelable(10 s, señal)` +
-`abort()` → "resolvió"; (b) la versión de §43, que esperaba un rechazo, con
-el `dormir` real **readquiere y compone después del abandono** (2
-adquisiciones, 1 composición); (c) lanzar un `AbortError` desde el cuerpo
-del handler real → `500` y **un `console.error` falso**.
+**RED (tres controles, ejecutados; `modeloDelCatchDeLaRuta` es un MODELO FIEL
+del `catch`, no el handler importado):** (a) `dormirCancelable(10 s, señal)` +
+`abort()` → "resolvió"; (b) la versión de §43, que esperaba un rechazo, con el
+`dormir` real **readquiere y compone después del vencimiento** (2
+adquisiciones, 1 composición); (c) lanzar un `AbortError` hasta el `catch` →
+`500` y **un `console.error` falso**.
 
 **Semántica única (GREEN):** después de `dormir`, mirar `senal.aborted`; si
-abortó, **devolver el centinela `vacio("cancelada")` que `servirConTurno`
-ya usa en 4d** (línea `[home] … CANCELADA`, `origen vacio-cancelada`): **no
-readquiere, no compone, no lanza, no `503`, no error registrado**; el
-handler responde como responde hoy a cualquier solicitud abandonada (esa
-respuesta no tiene receptor). Probado con el `dormirCancelable` real y el
-modelo fiel del `catch` de la ruta: `status 200`, `adquisiciones 1`,
-`composiciones 0`, sueño de 5 s cortado en < 1 s, registro vacío. La regla
-del dueño "nunca un Home vacío con `200`" rige para solicitudes con cliente
-esperando; la respuesta a una solicitud abandonada es la de hoy (4d) y
-cambiarle el status sería otra decisión, fuera de 3.c.1.
+venció el presupuesto interno, **devolver el centinela `vacio("cancelada")`
+que `servirConTurno` ya usa en 4d** (línea `[home] … CANCELADA`, `origen
+vacio-cancelada`): **no readquiere, no compone, no lanza, no `503`, no error
+registrado**. Probado con el `dormirCancelable` real y el modelo fiel del
+`catch`: `status 200`, `adquisiciones 1`, `composiciones 0`, sueño cortado en
+< 1 s, registro vacío. **Por 43.4 esa rama es inalcanzable dentro del sueño**
+(antes de dormir se exige `restante + jitter + T_adq + 16 s ≤ presupuesto
+restante`): queda como defensa. **Guard estructural** (en el test): la ruta
+no contiene `req.signal`, `lib/home.ts` crea exactamente dos
+`AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS)`, el `catch` responde
+`500` y registra, y `servirVacio("cancelada")`/`dormirCancelable` existen. La
+implementación de 3.c.1 **deberá agregar una prueba de cableado contra la
+ruta verdadera** (que el centinela de la espera llegue a la respuesta por el
+camino de 4d y nunca como excepción) — no alcanza con el modelo.
 
 ### 44.2 Último bueno y Redis caído — sin caché en memoria
 
@@ -4217,15 +4232,18 @@ para 429 **parciales**, donde un proceso puede tardar en ver el suyo.
 
 | Punto | RED (control) | GREEN |
 |---|---|---|
-| 1 cancelación | `dormir` real resuelve; §43 readquiere y compone tras abortar; `AbortError` → `500` + error falso | centinela 4d con el `dormir` real y el `catch` real: 1 adquisición, 0 composiciones, 200 de hoy, registro vacío; sin abandono, 2 adquisiciones y 1 composición |
+| 1 vencimiento interno | `dormir` real resuelve; §43 readquiere y compone tras el vencimiento; `AbortError` → `500` + error falso | centinela 4d con el `dormir` real y el modelo fiel del `catch`: 1 adquisición, 0 composiciones, 200 de hoy, registro vacío; sin vencimiento, 2 adquisiciones y 1 composición; guard estructural sobre la ruta (sin `req.signal`) |
 | 2 UB × Redis | §43.3 asumía UB "en memoria" | matriz por instante del fallo; sin caché |
 | 3 sobrepaso | 94/282 como cota | fórmula parametrizada (35/80/252 → 94/184/528); línea base medida 750-778 tras el 429 |
 
 ### 44.5 Comprobado / inferido / desconocido
 
-- **Comprobado:** `dormirCancelable` resuelve al abortar; el `catch` de la
-  ruta registra y devuelve `500`; `ub` es una variable por solicitud
-  (`lib/home-servir.ts`); la línea base de 44.3 (tres semillas).
+- **Comprobado:** la ruta no usa `req.signal` y la señal es
+  `AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)` (guard estructural);
+  `dormirCancelable` resuelve al vencer; el `catch` de la ruta registra y
+  devuelve `500` (modelo fiel, no el handler importado); `ub` es una
+  variable por solicitud (`lib/home-servir.ts`); la línea base de 44.3
+  (tres semillas).
 - **Inferido:** que con el nivel 1 el sobrepaso por proceso baje a `enVuelo
   + admitidas hasta el primer 429` — se mide cuando exista la pausa.
 - **Desconocido:** la cadencia real de Producción durante un 429 (nunca
@@ -4234,6 +4252,24 @@ para 429 **parciales**, donde un proceso puede tardar en ver el suyo.
 ### 44.6 Estado
 
 3.c.1: **NO aprobada, NO implementada**; pendiente de **nueva auditoría de
-Codex**. Condiciones para implementar: §41-§44 aceptados; precondición de
+Codex**. Condiciones para implementar: §41-§45 aceptados; precondición de
 Preview del `EVAL`; umbrales de §40.4 sin tocar y aceptados; RED del script
-de adquisición del turno. **3.c.2 fuera de alcance.**
+de adquisición del turno; prueba de cableado del centinela contra la ruta
+verdadera. **3.c.2 fuera de alcance.**
+
+## 45. Corrección de §44 sobre `82ee412` — la señal es el presupuesto interno, no el cliente; estado canónico limpio (2026-09-16)
+
+Sólo documentación y tests; sin código productivo, merge, push ni deploy.
+(1) §44.1 reescrito: "abandono del cliente" → **"vencimiento/cancelación
+por presupuesto interno"**, porque la ruta no usa `req.signal` y la única
+señal es `AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)`; `req.signal` **no se
+agrega** (otra decisión, fuera de alcance); `handlerReal` pasa a llamarse
+`modeloDelCatchDeLaRuta` y se declara modelo fiel, no el handler importado;
+se agrega un **guard estructural** sobre la ruta real (58/58) y se exige una
+prueba de cableado para la implementación. (2) `ESTADO.md` e `ISSUES.md`
+quedan con **un único estado vigente, §44**: fórmula de sobrepaso
+parametrizada con cifras rotuladas como estimaciones (nada de 94/282 como
+vigente), y el vencimiento interno devuelve el centinela 4d sin readquirir,
+componer, lanzar ni registrar un falso error. Se conservan la matriz UB ×
+Redis (44.2) y la línea base de sobrepaso (44.3); los bancos no se
+regeneran (su lógica no cambió).

@@ -486,7 +486,7 @@ interface Mundo {
   turnoLibre: boolean;
   redis: "ok" | "caido" | "lento" | "indeterminado-en-2a";   // lento: cada EVAL tarda 1,5 s; indeterminado-en-2a: la segunda adquisición no responde
   composiciones: number;
-  abortarEn: number | null;
+  venceEn: number | null;               // instante en que VENCE la señal de presupuesto interno (`AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)`); la ruta NO usa `req.signal`
   evalCount: number;
   jitterMs: number;
 }
@@ -523,11 +523,14 @@ async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida
   const cabeEnPresupuesto = presupuestoRestante() - (restante + JITTER_MAX_MS + T_ADQ_MAX_MS) >= COMPOSICION_MAX_MS;   // §43.4
   if (!cabeEnEspera) return s503(Math.ceil(restante / 1000), "pausa-continua");
   if (!cabeEnPresupuesto) return s503(Math.ceil(restante / 1000), "presupuesto-insuficiente");
-  // UN solo sueño, cancelable: `dormir` RESUELVE al abortar (dormirCancelable real); después se mira
-  // la señal y, si abortó, se devuelve el centinela 4d `vacio("cancelada")` (§44.1): sin readquirir,
-  // sin componer, sin lanzar (el handler real convertiría una excepción en 500 + console.error).
+  // UN solo sueño. La señal es la de PRESUPUESTO INTERNO (`AbortSignal.timeout`), no el abandono del
+  // cliente (la ruta no usa `req.signal`; incorporarlo sería otra decisión). `dormir` RESUELVE al
+  // vencer (dormirCancelable real); después se mira la señal y, si venció, se devuelve el centinela
+  // 4d `vacio("cancelada")` (§44.1): sin readquirir, sin componer, sin lanzar (la ruta convertiría
+  // una excepción en 500 + console.error). Por 43.4 el vencimiento no puede caer dentro del sueño
+  // (queda ≥ 16 s + T_adq + jitter); la rama es defensiva.
   const dormirMs = restante + m.jitterMs;
-  if (m.abortarEn !== null && m.abortarEn < m.ahora + dormirMs) { const esperado = m.abortarEn - m.ahora; m.ahora = m.abortarEn; return { status: 200, motivo: "vacio-cancelada", esperadoMs: esperado }; }
+  if (m.venceEn !== null && m.venceEn < m.ahora + dormirMs) { const esperado = m.venceEn - m.ahora; m.ahora = m.venceEn; return { status: 200, motivo: "vacio-cancelada", esperadoMs: esperado }; }
   m.ahora += dormirMs;
   const r2 = conPausaLocal(adquirir(true));                                     // EVAL 2 — el último de la solicitud
   if (r2.estado === "indeterminado") {
@@ -536,7 +539,7 @@ async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida
   }
   return terminar(r2, dormirMs);
 }
-const mundo = (o: Partial<Mundo> = {}): Mundo => ({ ahora: 100_000, pausaHasta: null, pausaLocalHasta: null, hayUB: false, turnoLibre: true, redis: "ok", composiciones: 0, abortarEn: null, evalCount: 0, jitterMs: 100, ...o });
+const mundo = (o: Partial<Mundo> = {}): Mundo => ({ ahora: 100_000, pausaHasta: null, pausaLocalHasta: null, hayUB: false, turnoLibre: true, redis: "ok", composiciones: 0, venceEn: null, evalCount: 0, jitterMs: 100, ...o });
 
 test("🟢 (1) la pausa termina durante el único sueño: duerme restante + jitter, readquiere UNA vez y compone; exactamente 2 EVAL", async () => {
   const m = mundo({ pausaHasta: 100_000 + 2300 });
@@ -558,8 +561,8 @@ test("🔴 CONTROL (§42, superado): un bucle que volviera a dormir mientras 'qu
   assert.equal(m.evalCount, 2); assert.equal(m.ahora, 101_100, "no durmió por segunda vez");
 });
 
-test("🟢 (3) el cliente abandona durante el sueño: se corta el sueño, no adquiere, no compone, y sale por el centinela 4d de hoy (`vacio-cancelada`): ni 503 ni error registrado", async () => {
-  const m = mundo({ pausaHasta: 100_000 + 4000, abortarEn: 100_000 + 1500 });
+test("🟢 (3) VENCIMIENTO por presupuesto interno durante el sueño (rama defensiva; 43.4 lo hace inalcanzable): se corta el sueño, no readquiere, no compone, y sale por el centinela 4d de hoy (`vacio-cancelada`): ni 503 ni error registrado", async () => {
+  const m = mundo({ pausaHasta: 100_000 + 4000, venceEn: 100_000 + 1500 });
   const r = await servirSinUB(m);
   assert.deepEqual(r, { status: 200, motivo: "vacio-cancelada", esperadoMs: 1500 });
   assert.equal(m.evalCount, 1, "no hubo readquisición"); assert.equal(m.composiciones, 0); assert.equal(m.turnoLibre, true);
@@ -644,7 +647,7 @@ test("🟢 cota dura: ≤ 2 EVAL y ≤ ESPERA_MAX + JITTER_MAX de sueño por sol
     const t0 = m.ahora; const r = await servirSinUB(m);
     assert.ok(m.evalCount <= 2, `EVAL ${m.evalCount}`);
     assert.ok(m.ahora - t0 <= ESPERA_MAX_MS + JITTER_MAX_MS, `esperó ${m.ahora - t0} ms con restante ${restante}`);
-    assert.ok(r.status === 503 || r.motivo === "compuesta" || r.motivo === "vacio-cancelada", JSON.stringify(r));
+    assert.ok(r.status === 503 || r.motivo === "compuesta" || r.motivo === "vacio-cancelada", JSON.stringify(r));   // vacio-cancelada sólo por vencimiento interno, inalcanzable acá
   }
 });
 
@@ -749,14 +752,19 @@ test("🟢 el orden completo de v3 en `escrito`: validar → EXISTS ev → GET p
 // matriz del UB sin caché en memoria, y sobrepaso parametrizado.
 // =============================================================================
 
-// ----------------------------------------------------------------- 1. cancelación: RED con las primitivas reales
-// Handler real (app/api/home/route.ts): una excepción → 500 + console.error. Modelo fiel de ese `catch`.
-async function handlerReal<T>(cuerpo: () => Promise<T>, registrar: (l: string) => void) {
+// ----------------------------------------------------------------- 1. vencimiento por presupuesto interno: RED con las primitivas reales
+// Qué señal existe HOY [medido en código]: `app/api/home/route.ts` NO usa `req.signal`; `homePayload`
+// crea `AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS)`. O sea que "la señal abortó" significa
+// "venció el presupuesto interno de 50 s", NUNCA "el cliente abandonó" (eso queda fuera de alcance).
+// `modeloDelCatchDeLaRuta` es un MODELO FIEL del `catch` de la ruta (excepción → 500 + console.error),
+// NO el handler importado: la implementación deberá traer un guard estructural contra la ruta real
+// (abajo hay uno para los hechos de hoy).
+async function modeloDelCatchDeLaRuta<T>(cuerpo: () => Promise<T>, registrar: (l: string) => void) {
   try { return { status: 200, body: await cuerpo() }; }
   catch (e) { registrar(`[api/home] composeHome rechazó — ${String(e)}`); return { status: 500, body: { error: String(e), hero: [], rails: [], fallos: 1, degradado: true } }; }
 }
 
-test("🔴 RED (control): el `dormirCancelable` real RESUELVE al abortar, no rechaza — un diseño que espere un `AbortError` nunca se entera del abandono", async () => {
+test("🔴 RED (control): el `dormirCancelable` real RESUELVE al vencer la señal, no rechaza — un diseño que espere un `AbortError` nunca se entera del vencimiento", async () => {
   const ac = new AbortController();
   const p = dormirCancelable(10_000, ac.signal);
   ac.abort();
@@ -764,7 +772,7 @@ test("🔴 RED (control): el `dormirCancelable` real RESUELVE al abortar, no rec
   assert.equal(resultado, "resolvió", "§43.2 decía que dormir rechaza: falso");
 });
 
-test("🔴 RED (control): con el `dormir` real, la versión de §43 (que confiaba en el rechazo) readquiere y compone después del abandono", async () => {
+test("🔴 RED (control): con el `dormir` real, la versión de §43 (que confiaba en el rechazo) readquiere y compone después del vencimiento", async () => {
   const ac = new AbortController();
   let adquisiciones = 0, composiciones = 0;
   const modelo43 = async () => {
@@ -774,20 +782,20 @@ test("🔴 RED (control): con el `dormir` real, la versión de §43 (que confiab
   };
   setTimeout(() => ac.abort(), 5);
   const r = await modelo43();
-  assert.equal(r, "compuesta", "el abandono no se detectó");
+  assert.equal(r, "compuesta", "el vencimiento no se detectó");
   assert.equal(adquisiciones, 2); assert.equal(composiciones, 1);
 });
 
-test("🔴 RED (control): 'propagar' un AbortError desde el handler real produce un 500 y un console.error falso", async () => {
+test("🔴 RED (control): 'propagar' un AbortError hasta el `catch` de la ruta (modelo fiel) produce un 500 y un console.error falso", async () => {
   const registro: string[] = [];
-  const r = await handlerReal(async () => { throw new DOMException("solicitud cancelada", "AbortError"); }, (l) => registro.push(l));
+  const r = await modeloDelCatchDeLaRuta(async () => { throw new DOMException("solicitud cancelada", "AbortError"); }, (l) => registro.push(l));
   assert.equal(r.status, 500);
   assert.equal(registro.length, 1, "queda registrado como si composeHome hubiera fallado");
 });
 
-// GREEN — la única semántica: después de `dormir`, mirar `senal.aborted`; si abortó, devolver el
-// centinela `vacio("cancelada")` que servirConTurno YA usa en 4d (línea `[home] … CANCELADA`,
-// `origen vacio-cancelada`), sin readquirir, sin componer, sin lanzar.
+// GREEN — la única semántica: después de `dormir`, mirar `senal.aborted` (presupuesto interno vencido);
+// si venció, devolver el centinela `vacio("cancelada")` que servirConTurno YA usa en 4d (línea
+// `[home] … CANCELADA`, `origen vacio-cancelada`), sin readquirir, sin componer, sin lanzar.
 type Adq4 = { estado: "adquirido" } | { estado: "pausado"; restanteMs: number } | { estado: "sin-redis" };
 async function esperarPausaSinUB(o: { adquirir: () => Adq4; senal: AbortSignal; dormir?: typeof dormirCancelable; jitterMs?: number; vacio: (m: "cancelada") => { motivo: "cancelada" } }) {
   const dormir = o.dormir ?? dormirCancelable;
@@ -803,21 +811,21 @@ async function esperarPausaSinUB(o: { adquirir: () => Adq4; senal: AbortSignal; 
   return terminar(r2);
 }
 
-test("🟢 con el `dormir` real: el abandono corta el sueño, NO readquiere, NO compone, y devuelve el centinela `cancelada` (4d) — el handler responde como hoy, sin 503 ni error registrado", async () => {
+test("🟢 con el `dormir` real: el vencimiento del presupuesto interno corta el sueño, NO readquiere, NO compone, y devuelve el centinela `cancelada` (4d) — el `catch` de la ruta (modelo fiel) no interviene: sin 503 ni error registrado", async () => {
   const ac = new AbortController();
   const registro: string[] = [];
   let pausaHasta = Date.now() + 5000;
   const adquirir = (): Adq4 => pausaHasta > Date.now() ? { estado: "pausado", restanteMs: pausaHasta - Date.now() } : { estado: "adquirido" };
   setTimeout(() => ac.abort(), 20);
   const t0 = Date.now();
-  const r = await handlerReal(() => esperarPausaSinUB({ adquirir, senal: ac.signal, vacio: (m) => ({ motivo: m }) }), (l) => registro.push(l));
-  assert.equal(r.status, 200, "el camino de hoy para una solicitud abandonada (4d), no un 500");
+  const r = await modeloDelCatchDeLaRuta(() => esperarPausaSinUB({ adquirir, senal: ac.signal, vacio: (m) => ({ motivo: m }) }), (l) => registro.push(l));
+  assert.equal(r.status, 200, "el camino de hoy para un presupuesto vencido (4d), no un 500");
   assert.deepEqual(r.body, { adquisiciones: 1, composiciones: 0, salida: "cancelada" });
   assert.ok(Date.now() - t0 < 1000, "el sueño de 5 s se cortó en el acto");
   assert.deepEqual(registro, [], "ningún error falso");
 });
 
-test("🟢 sin abandono, el mismo camino compone tras el único sueño (2 adquisiciones)", async () => {
+test("🟢 sin vencimiento, el mismo camino compone tras el único sueño (2 adquisiciones)", async () => {
   const ac = new AbortController();
   let pausaHasta = Date.now() + 30;
   const adquirir = (): Adq4 => pausaHasta > Date.now() ? { estado: "pausado", restanteMs: pausaHasta - Date.now() } : { estado: "adquirido" };
@@ -860,4 +868,24 @@ test("🟢 línea base medida HOY (sin pausa; docs/medidas/2026-09-16-etapa3c0-s
   for (const m of medido) { assert.ok(m.tras >= 750 && m.tras <= 778); assert.ok(m.pico >= 224 && m.pico <= 252); }
   // Con el nivel 1 (429 propio) el sobrepaso por proceso deja de ser 'todo lo que queda' y pasa a ≈ enVuelo + admitidas hasta ver el primer 429:
   // con 429 rápidas (latencia ≈ 0) eso es ≈ 24 + pico × latencia_429 ≈ 24-50. El banco de 3.c.1 lo mide contra esta línea base.
+});
+
+// ----------------------------------------------------------------- 4. guard estructural contra la ruta REAL (hechos de hoy)
+// Lo que §44 afirma sobre `app/api/home/route.ts` y `lib/home.ts` se comprueba sobre el fuente, no
+// se recuerda: si alguien incorpora `req.signal` o cambia el `catch`, este test lo delata y §44
+// deja de ser cierto. La implementación de 3.c.1 tendrá que sumar el cableado real (ver §45).
+import fs from "node:fs";
+import path from "node:path";
+const fuente = (rel: string) => fs.readFileSync(path.resolve(import.meta.dirname, "..", rel), "utf8").replace(/\r/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+test("🟢 guard: la ruta del Home NO usa `req.signal`, la señal es `AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS)`, y el `catch` de la ruta responde 500 y registra", () => {
+  const ruta = fuente("app/api/home/route.ts");
+  assert.doesNotMatch(ruta, /req\.signal|request\.signal/, "la cancelación real del cliente NO está cableada: incorporarla es otra decisión");
+  assert.match(ruta, /console\.error\("\[api\/home\] composeHome rechazó/);
+  assert.match(ruta, /\{ status: 500 \}/);
+  const home = fuente("lib/home.ts");
+  assert.equal((home.match(/AbortSignal\.timeout\(CONSTANTES\.PRESUPUESTO_REQUEST_MS\)/g) ?? []).length, 2, "la señal de la solicitud y la del fondo son de presupuesto interno");
+  // Y el centinela 4d existe tal como §44 lo describe.
+  const servir = fuente("lib/home-servir.ts");
+  assert.match(servir, /servirVacio\("cancelada"\)/);
+  assert.match(servir, /export function dormirCancelable/);
 });

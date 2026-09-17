@@ -1298,29 +1298,29 @@ leyendo el código.**
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
 > restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c (protección frente
-> a TMDB) — estado vigente en el informe §41 (16/09): 3.c.1 "pausa
-> compartida ante 429" con diseño cerrado (adquisición atómica del turno
-> con la pausa adentro y sobrepaso explícito si aparece después; lector no
-> bloqueante sin tormenta; `PAUSAR` idempotente por identidad de evento con
-> marcador 120 s y marca de agua por proceso; observabilidad por evento y
-> cubos con reloj de Redis; `/api/health` sólo agregados; sin UB, espera
-> breve y acotada `min(restante, 5 s)` sin sondeo y cancelable, y `503` +
-> `Retry-After` sólo si la pausa continúa — §42, decisión del dueño, que
-> reemplaza al `503` inmediato no aprobado; umbrales antes/después
-> fijados), corregida en §43 (auditoría sobre `5405cbd`: un solo sueño y
-> una readquisición, cancelación propagada, pausa local sobre Redis caído,
-> presupuesto completo, fallback del `Retry-After`, sólo `Δt`, cota 94/282
-> con timeout y sin cota si la lectura falla, `F_max = 1`, marca de agua
-> por proceso con TTL, Lua que valida antes de mutar) y en §44 (auditoría
-> sobre `122f1a6`: cancelación con el `dormir` y el handler reales →
-> centinela 4d, sin `503` ni error falso; UB × Redis caído sin caché en
-> memoria; sobrepaso parametrizado y rotulado como estimación, con línea
-> base medida: 750-778 llamadas tras el primer 429 rápido, pico 224-252/s),
-> probada sobre modelo (57/57), NO APROBADA, NO IMPLEMENTADA, PENDIENTE DE
-> NUEVA AUDITORÍA;
+> a TMDB) — estado vigente en el informe §44 (+§45, 16/09): 3.c.1 "pausa
+> compartida ante 429" con diseño corregido: adquisición atómica del turno
+> con la pausa adentro; sobrepaso por fórmula parametrizada (`enVuelo +
+> cadencia × (Δt + T_lectura)`; 94 / 184 / 528 por proceso según cadencia
+> 35 / 80 / 252 son ESTIMACIONES, no cotas; sin cota compartida si la
+> lectura falla) con línea base medida hoy (750-778 llamadas tras el primer
+> 429 rápido, pico 224-252/s); lector no bloqueante (sólo `Δt`, `F_max = 1`);
+> `PAUSAR` idempotente por identidad de evento, marcador 120 s, marca de
+> agua por proceso con TTL propio, Lua que valida antes de mutar y falla
+> seguro, telemetría en `pcall`; `/api/health` sólo agregados; sin UB,
+> espera breve y acotada `min(restante, 5 s)` con UN solo sueño y UNA
+> readquisición (≤ 2 `EVAL`) y `503` + `Retry-After` sólo si la pausa
+> continúa (§42, decisión del dueño; `ESPERA_MAX = 5 s` provisional sin
+> datos reales); el vencimiento del presupuesto interno (la única señal: la
+> ruta no usa `req.signal`) sale por el centinela 4d sin readquirir,
+> componer, lanzar ni registrar un falso error; pausa local por encima de
+> Redis caído/indeterminado; UB sin caché en memoria (matriz por instante
+> del fallo); umbrales antes/después fijados y sin tocar. Modelo 58/58 con
+> guard estructural sobre la ruta. NO APROBADA, NO IMPLEMENTADA, PENDIENTE
+> DE NUEVA AUDITORÍA;
 > 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no
 > predictivo; ningún frío total se pide en Producción. Antecedentes §38-§40
-> superados.** **Subetapa 3.b ("último bueno
+> superados (§41-§43: corregidos por §44/§45).** **Subetapa 3.b ("último bueno
 > primero, reconstrucción en fondo"): MERGEADA, PUSHEADA Y DESPLEGADA el
 > 2026-09-15** — aprobada por la auditoría final de Codex sobre `c5fab20`;
 > merge `--no-ff` `5604750` (rama en `ae6902f`), deployment
