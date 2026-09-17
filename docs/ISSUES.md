@@ -1298,7 +1298,7 @@ leyendo el código.**
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
 > restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c (protección frente
-> a TMDB) — estado vigente en el informe §45 + §46 + §47 (17/09): 3.c.1 "pausa
+> a TMDB) — estado vigente en el informe §45 a §48 (17/09): 3.c.1 "pausa
 > compartida ante 429" con diseño corregido: adquisición atómica del turno
 > con la pausa adentro; sobrepaso por fórmula parametrizada (`enVuelo +
 > cadencia × (Δt + T_lectura)`; 94 / 184 / 528 por proceso según cadencia
@@ -1322,8 +1322,12 @@ leyendo el código.**
 > de la Etapa 2 hoy en Producción, `home-servir.ts:315`, y viaja con la
 > implementación); **el fondo con dos límites absolutos, `min(inicioFondo +
 > 50 s, inicioRuta + 60 s − 5 s)`, y sin composiciones condenadas: si no
-> quedan 16 s + 1 s, UB servido, turno liberado y `fondo:
-> no-iniciado-presupuesto`** (§47). Modelo 72/72 con
+> quedan 16 s + 1 s de reserva, UB servido, `LIBERAR` best effort y `fondo:
+> no-iniciado-presupuesto`** (§47); **la señal limita el trabajo NUEVO: una
+> operación de Redis ya enviada completa después del plazo o pierde su
+> respuesta (atómica, con fencing), no se inicia `PUBLICAR` tras el plazo,
+> el turno vence por TTL si `LIBERAR` falla o Vercel corta, y un `PUBLICAR`
+> aceptado publica un payload completo o nada** (§48). Modelo 77/77 con
 > guard estructural sobre la ruta. NO APROBADA, NO IMPLEMENTADA, PENDIENTE
 > DE NUEVA AUDITORÍA;
 > 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no

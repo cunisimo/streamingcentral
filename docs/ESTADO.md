@@ -7,12 +7,29 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §45 +
-  §46 + §47, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429"
-  con diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §45 a
+  §48, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
+  diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el
   presupuesto interno; §46: un solo deadline absoluto; §47: el fondo con dos
-  límites); NO APROBADA; NO IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA.
-  3.c.2 fuera de alcance.** **§47 — el fondo con dos límites absolutos:**
+  límites; §48: la señal limita el trabajo nuevo, no las operaciones de
+  Redis ya enviadas); NO APROBADA; NO IMPLEMENTADA; PENDIENTE DE NUEVA
+  AUDITORÍA. 3.c.2 fuera de alcance.** **§48:** `plazoEfectivo` es el
+  límite para INICIAR trabajo nuevo (llamadas a TMDB/Supabase y el inicio de
+  `PUBLICAR`), no una garantía de que ninguna promesa de Redis sobreviva:
+  un `RENOVAR`/`PUBLICAR`/`ENFRIAR`/`LIBERAR` ya enviado completa después
+  del plazo o pierde su respuesta, conservando atomicidad y fencing (el
+  SDK de Redis no obedece la señal, como ya documenta `home-servir.ts`);
+  si la composición cruza el plazo se cancelan las llamadas controlables y
+  no se inicia `PUBLICAR`; `LIBERAR` es best effort (si falla o Vercel mata
+  el proceso, el turno vence por TTL); `MARGEN_CIERRE_MS = 5 s` y
+  `RESERVA_PUBLICACION_MS = 1 s` (antes `PUBLICACION_MAX_MS`) son reservas
+  propuestas, no máximos; un `PUBLICAR` aceptado por Redis puede publicar
+  un payload completo y sano aunque se pierda la respuesta — nunca una
+  escritura parcial o degradada. Modelos: publicación iniciada antes y
+  completada después del plazo; respuesta de publicación perdida;
+  liberación fallida con UB intacto y turno por TTL; corte duro de Vercel
+  (no observable, sin afirmar liberación); ninguna operación de Redis
+  nueva tras el plazo. Modelo 77/77. **§47 — el fondo con dos límites absolutos:**
   `inicioFondo + 50 s` no siempre queda debajo de `maxDuration` (Vercel
   cuenta 60 s desde la solicitud): un fondo iniciado a los 15 s creería
   tener hasta t = 65 s. Contrato: `plazoInterno = inicioFondo + 50 s`,
@@ -21,8 +38,9 @@
   (composición + publicación), **no se compone: el UB ya fue servido, el
   turno se libera y la métrica es `fondo: no-iniciado-presupuesto`** (el
   contenido del Home no cambia); la señal del fondo dura `plazoEfectivo −
-  ahora` y nunca publica pasado el plazo; `inicioRuta` es el `inicio` de
-  §46, tomado antes de la lectura previa. Modelo 72/72 (fondo a 0,4 s: 50 s;
+  ahora` y no se INICIA `PUBLICAR` pasado el plazo (§48: lo ya enviado a
+  Redis completa o pierde la respuesta); `inicioRuta` es el `inicio` de
+  §46, tomado antes de la lectura previa. Modelo (fondo a 0,4 s: 50 s;
   a 15 s: 40 s por el externo; a 40 s: UB sin fondo; composición que cruza:
   cancelada sin publicar; lectura previa 35 s: externo desde la ruta). El
   modelo vigente de la espera sin UB usa el plazo absoluto; el cálculo con
@@ -81,7 +99,7 @@
   sin pausa; telemetría en `pcall`). Modelo 49/49.
   Lo que sigue vigente de §41/§42: Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 72/72) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 77/77) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
@@ -833,7 +851,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§45-§47, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso estimado (no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), un solo deadline absoluto `plazo − ahora` (la lectura previa cuenta) y el fondo con `min(interno, externo)` sin composiciones condenadas, vencimiento interno por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§45-§48, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso estimado (no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), un solo deadline absoluto `plazo − ahora` (la lectura previa cuenta) y el fondo con `min(interno, externo)` sin composiciones condenadas (la señal limita el trabajo nuevo; Redis ya enviado completa o pierde la respuesta; `LIBERAR` best effort por TTL), vencimiento interno por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

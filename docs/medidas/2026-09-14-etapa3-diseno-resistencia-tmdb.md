@@ -30,7 +30,7 @@
 > §41 (contrato con sobrepaso, lector, marcador), §42 (decisión del dueño:
 > espera breve sin UB — la decisión sigue vigente, su bucle no), §43 (diez
 > correcciones), §44 (tres correcciones). ESTADO VIGENTE de la 3.c: §45 +
-> §46 + §47** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
+> §46 + §47 + §48** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
 > sin `req.signal`) y el vencimiento sale por el centinela 4d; **un solo
 > deadline absoluto `plazo` creado con la señal, `plazo − ahora` en lectura
 > previa, espera, readquisición y composición** (§46, que además detecta el
@@ -42,8 +42,11 @@
 > `EVAL`), `F_max = 1`, sólo `Δt`, marca de agua por proceso con TTL, Lua que
 > falla seguro, sobrepaso parametrizado (estimaciones, no cotas) con línea
 > base medida, matriz UB × Redis sin caché, `ESPERA_MAX = 5 s` provisional;
-> modelo 72/72; ESTADO VIGENTE: §45 + §46 + §47; 3.c.1 NO aprobada, NO
-> implementada, pendiente de nueva auditoría; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
+> modelo 77/77; ESTADO VIGENTE: §45 + §46 + §47 + §48 (la señal limita el
+> trabajo nuevo; Redis ya enviado completa o pierde la respuesta, atómico y
+> con fencing; `LIBERAR` best effort por TTL; reservas, no máximos); 3.c.1
+> NO aprobada, NO implementada, pendiente de nueva auditoría; 3.c.2 fuera
+> de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -4379,7 +4382,14 @@ el comentario "la cancelación se propaga" queda reemplazado por "el
 vencimiento del presupuesto interno sale por el centinela 4d". `ESTADO.md`
 e `ISSUES.md` apuntan a §46.
 
-## 47. Corrección de §46 sobre `c5a2619` — el fondo con DOS límites absolutos — **ESTADO VIGENTE de la 3.c (con §45 y §46); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+## 47. Corrección de §46 sobre `c5a2619` — el fondo con DOS límites absolutos — **ESTADO VIGENTE de la 3.c (con §45, §46 y §48); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+> **§48 corrige de aquí la fuerza de la cancelación:** `plazoEfectivo` limita
+> el trabajo NUEVO; una operación de Redis ya enviada completa después o
+> pierde su respuesta (atómica, con fencing); `LIBERAR` es best effort
+> (TTL); `MARGEN_CIERRE_MS` y `RESERVA_PUBLICACION_MS` (antes
+> `PUBLICACION_MAX_MS`) son reservas propuestas, no máximos. Los dos
+> deadlines quedan aprobados y vigentes.
 
 Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **72/72**). Sin
 código productivo, merge, push ni deploy. Se conserva el resto de §46 (plazo
@@ -4409,9 +4419,9 @@ al iniciar el fondo:
       `origen ultimo-bueno-fondo | fondo programado`; la línea [home-fondo] sale con
       `fondo no-iniciado-presupuesto | publicacion no`, 0 llamadas)
   si no:
-      senalFondo = AbortSignal.timeout(restante)        (no 50 s fijos)
+      senalFondo = AbortSignal.timeout(restante)        (no 50 s fijos; corta TMDB/Supabase, NO Redis: §48)
       componer(senalFondo, plazoEfectivo)
-      publicar sólo si ahora() + PUBLICACION_MAX_MS ≤ plazoEfectivo; si no, liberar sin publicar
+      INICIAR publicar sólo si ahora() + RESERVA_PUBLICACION_MS ≤ plazoEfectivo; si no, liberar (best effort) sin publicar
 ```
 
 `MARGEN_CIERRE_MS = 5 s` [propuesto]: cubre la publicación medida (0,13-0,15
@@ -4459,3 +4469,90 @@ igual al `maxDuration` exportado por la ruta (guard estructural).
 - **Inferido/propuesto:** `MARGEN_CIERRE_MS = 5 s`; que el fondo pueda
   empezar > 10 s después de la ruta (nunca observado: 0,3-0,64 s medidos).
 - **Pendiente:** implementación (3.c.1, no aprobada) con los RED de 47.4.
+
+## 48. Corrección de §47 sobre `4724111` — la señal limita el trabajo NUEVO; las operaciones de Redis ya enviadas no se cancelan — **ESTADO VIGENTE de la 3.c (con §45-§47); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **77/77**). Sin
+código productivo, merge, push ni deploy. Se conservan los dos deadlines
+(§47), la experiencia del usuario y el contenido del Home.
+
+### 48.1 Lo que §47 prometía de más
+
+"La señal del fondo dura exactamente `plazoEfectivo − ahora`; la composición
+no puede seguir después" y "se detuvo exactamente en el plazo efectivo"
+[modelo de §47] afirmaban una cancelación que el cliente de Redis actual no
+da. [Comprobado en código] `lib/home-servir.ts` (4b) ya lo documenta: la
+señal de la solicitud llega a TMDB y Supabase (`lib/senal-solicitud.ts`),
+pero **los reintentos del SDK de Redis no se cancelan por solicitud**
+("promesa reducida", §3.8) y un `RENOVAR` ya enviado se espera hasta que el
+SDK responda; `lib/home.ts:839`: "lo que no corta son los reintentos del SDK
+de Redis".
+
+### 48.2 Contrato corregido (sustituye a 47.2 en lo que difiere)
+
+1. **`plazoEfectivo` es el límite para INICIAR trabajo nuevo** — llamadas a
+   TMDB y Supabase (las corta la señal) y el inicio de `PUBLICAR` (se decide
+   antes de enviarlo). **No es** una garantía de que ninguna promesa de
+   Redis sobreviva al plazo.
+2. **Si la composición cruza el plazo:** la señal cancela lo controlable (no
+   se inician más llamadas; las en vuelo terminan o fallan por su propio
+   abort), **no se inicia `PUBLICAR`**, y se envía `LIBERAR` (best effort).
+   Resultado: `cancelada`, nada publicado, UB intacto.
+3. **Una operación de Redis ya en curso** (`RENOVAR`, `PUBLICAR`, `ENFRIAR`,
+   `LIBERAR`) **puede completar después del plazo o perder su respuesta**.
+   Conserva su atomicidad (Lua) y su fencing (propietario + generación): la
+   ejecuta Redis entera o no la ejecuta. No se afirma "se detuvo
+   exactamente".
+4. **`LIBERAR` es best effort:** si responde, el turno queda liberado; si
+   falla o Vercel mata el proceso, **el turno vence por su TTL** (15 s sin
+   renovar) y el siguiente pedido lo adquiere. El UB no se toca.
+5. **`MARGEN_CIERRE_MS = 5 s` y `RESERVA_PUBLICACION_MS = 1 s` son
+   RESERVAS propuestas**, no máximos garantizados: `PUBLICACION_MAX_MS` pasa
+   a llamarse **`RESERVA_PUBLICACION_MS`** (lo que se exige que quede antes
+   de *iniciar* `PUBLICAR`, no una cota de cuánto tarda). En el código de
+   hoy la constante se llama `PUBLICACION_MAX_MS` (`home-servir.ts:80`); el
+   renombre es parte de la implementación.
+6. **Un `PUBLICAR` ya aceptado por Redis puede terminar publicando un
+   payload completo y sano aunque la respuesta se pierda.** Es correcto: el
+   script escribe fresca + UB + generación + `DEL` del turno **todo o nada**;
+   nunca existe una escritura parcial o degradada (lo degradado no llega a
+   `PUBLICAR`: `cachedIf`/`producir` lo descartan antes).
+
+### 48.3 Modelos RED → GREEN (los nuevos, además de 1-5 de §47 reescritos sin "exactamente")
+
+| # | Caso | Resultado |
+|---|---|---|
+| 6 | `PUBLICAR` iniciado antes del plazo (con la reserva) y completado después (RTT 1,5 s) | la señal no lo cancela; Redis lo ejecuta entero: fresca y UB = payload completo y sano, generación +1 |
+| 7 | respuesta de `PUBLICAR` perdida | Redis la aplicó entera (o no la aplicó): nunca parcial; el proceso informa `publicacion indeterminada`; variante "no aplicada" (el proceso muere al enviar): UB intacto, turno por TTL |
+| 8 | `LIBERAR` falla (Redis caído al liberar) | UB intacto, nada publicado, el turno sigue del proceso hasta que **vence por TTL**; otro lo adquiere |
+| 9 | corte duro de Vercel a los 60 s con trabajo en vuelo | resultado **no observable**; no se afirma liberación; el turno vence por TTL; un `PUBLICAR` ya aceptado puede haberse aplicado entero |
+| 10 | los cinco caminos (0,4 s; 15 s; 40 s; cruce; publicación tardía) | **ninguna operación de Redis nueva se envía después del plazo efectivo** |
+
+Los casos 1-5 de §47 se mantienen: 0,4 s → 50 s; 15 s → 40 s por el
+externo; 40 s → UB sin fondo, `LIBERAR` enviado, `fondo:
+no-iniciado-presupuesto`; cruce → `cancelada` sin `PUBLICAR`; lectura previa
+35 s → externo desde la ruta.
+
+### 48.4 RED para la implementación (se suman a 47.4)
+
+(1) `componer` en fondo con reloj virtual: al vencer la señal, `producir`
+no inicia llamadas nuevas y `publicar` **no se llama**; `liberar` se llama
+una vez; (2) `liberar` que rechaza → la línea `[home-fondo]` sale igual,
+sin excepción, con `turno liberado: no`; (3) `publicar` cuya promesa
+rechaza por red → métrica `publicacion indeterminada` (no `no`), UB
+intacto; (4) un `RENOVAR` en vuelo al vencer la señal no se aborta
+(`cortarRenovacion` lo espera, como hoy); (5) renombre
+`PUBLICACION_MAX_MS → RESERVA_PUBLICACION_MS` con guard estructural.
+
+### 48.5 Comprobado / inferido / desconocido
+
+- **Comprobado:** que la señal no corta los reintentos del SDK de Redis ni
+  una operación ya enviada (`home-servir.ts` 4b, `home.ts:839`); que
+  `PUBLICAR` es un script atómico con fencing (Etapa 2); los diez modelos.
+- **Inferido:** que "no iniciar `PUBLICAR` después del plazo" más la
+  reserva de 1 s deja el corte de Vercel fuera del camino de publicación
+  en la práctica (publicación medida 0,13-0,15 s; RTT p95 de Upstash
+  desconocido).
+- **Desconocido:** precisión del corte de Vercel a `maxDuration`; RTT p95
+  real de Upstash desde `iad1`; cuánto sobreviven a un corte duro las
+  peticiones ya en vuelo.

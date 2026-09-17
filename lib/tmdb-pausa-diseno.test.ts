@@ -1007,39 +1007,70 @@ test("🟢 el recorrido del plazo entre módulos: nace con la señal, viaja en e
 });
 
 // =============================================================================
-// §47 (auditoría sobre c5a2619): el FONDO con DOS límites absolutos.
+// §47/§48 (auditorías sobre c5a2619 y 4724111): el FONDO con DOS límites absolutos.
 //   plazoInterno  = inicioFondo + PRESUPUESTO_REQUEST_MS                 (50 s desde que el fondo empieza)
 //   plazoExterno  = inicioRuta  + MAX_DURATION_MS − MARGEN_CIERRE_MS     (Vercel cuenta los 60 s desde la solicitud)
-//   plazoEfectivo = min(plazoInterno, plazoExterno)
-// Al iniciar el fondo: si plazoEfectivo − ahora < COMPOSICION_MAX_MS + PUBLICACION_MAX_MS, NO se
-// compone: el UB ya fue servido; se libera el turno y se anota `fondo: "no-iniciado-presupuesto"`.
-// La señal del fondo dura exactamente plazoEfectivo − ahora; la publicación se salta si ya venció.
+//   plazoEfectivo = min(plazoInterno, plazoExterno)   ← límite para INICIAR trabajo nuevo, no una garantía
+//                                                        de que ninguna promesa de Redis sobreviva (§48)
+// Al iniciar el fondo: si plazoEfectivo − ahora < COMPOSICION_MAX_MS + RESERVA_PUBLICACION_MS, NO se
+// compone: el UB ya fue servido; LIBERAR best effort y `fondo: "no-iniciado-presupuesto"`.
 // =============================================================================
-const FONDO = { PRESUPUESTO_MS: 50_000, MAX_DURATION_MS: 60_000, MARGEN_CIERRE_MS: 5_000 /* propuesto: publicación 0,13-0,15 s medida + línea + asentar waitUntil */, COMPOSICION_MAX_MS: 16_000, PUBLICACION_MAX_MS: 1_000 };
+const FONDO = {
+  PRESUPUESTO_MS: 50_000, MAX_DURATION_MS: 60_000,
+  MARGEN_CIERRE_MS: 5_000,         // RESERVA propuesta (publicación 0,13-0,15 s medida + línea + asentar waitUntil + precisión del corte, desconocida); NO es un máximo garantizado
+  COMPOSICION_MAX_MS: 16_000,
+  RESERVA_PUBLICACION_MS: 1_000,   // antes "PUBLICACION_MAX_MS": es lo que se RESERVA antes de iniciar PUBLICAR, no una cota de cuánto tarda
+};
 function plazosDelFondo(inicioRuta: number, inicioFondo: number) {
   const plazoInterno = inicioFondo + FONDO.PRESUPUESTO_MS;
   const plazoExterno = inicioRuta + FONDO.MAX_DURATION_MS - FONDO.MARGEN_CIERRE_MS;
   return { plazoInterno, plazoExterno, plazoEfectivo: Math.min(plazoInterno, plazoExterno), limitadoPor: plazoInterno <= plazoExterno ? "interno" : "externo" as "interno" | "externo" };
 }
-interface FondoMundo { ahora: number; inicioRuta: number; composicionMs: number; eventos: string[]; turno: "adquirido" | "liberado"; publicada: boolean; fondo: string | null; }
+// §48: qué controla la señal y qué no. Una operación de Redis ya ENVIADA (RENOVAR, PUBLICAR,
+// ENFRIAR, LIBERAR) no se cancela: completa cuando Redis la atienda (o su respuesta se pierde);
+// la señal sólo impide INICIAR trabajo nuevo (llamadas a TMDB/Supabase, un PUBLICAR nuevo).
+type OpRedis = { op: "RENOVAR" | "PUBLICAR" | "LIBERAR"; enviadaEn: number; completaEn: number; respuestaPerdida: boolean; aplicada: boolean };
+interface FondoMundo {
+  ahora: number; inicioRuta: number; composicionMs: number; eventos: string[];
+  turnoRedis: { propietario: string | null; venceEn: number | null; generacion: number };   // el estado EN REDIS (fencing por propietario + generación)
+  fresca: string | null; ub: string;                                                          // contenido publicado; el UB sano NUNCA se pisa con algo parcial
+  fondo: string | null; ops: OpRedis[]; rttRedisMs: number; liberarFalla: boolean; publicarRespuestaPerdida: boolean; corteDuroEn: number | null; llamadasTmdbTrasPlazo: number;
+}
+const enviar = (f: FondoMundo, op: OpRedis["op"], perdida = false, aplicar = () => {}) => {
+  const o: OpRedis = { op, enviadaEn: f.ahora, completaEn: f.ahora + f.rttRedisMs, respuestaPerdida: perdida, aplicada: false };
+  f.ops.push(o); f.eventos.push(`${op}:enviado@${f.ahora - f.inicioRuta}`);
+  // Redis la ejecuta (atómica) cuando la atiende, aunque el proceso muera o pierda la respuesta:
+  if (f.corteDuroEn === null || o.enviadaEn < f.corteDuroEn) { o.aplicada = true; aplicar(); }
+  return o;
+};
 function iniciarFondo(f: FondoMundo) {
   const { plazoEfectivo, limitadoPor } = plazosDelFondo(f.inicioRuta, f.ahora);
   const restante = plazoEfectivo - f.ahora;
   f.eventos.push(`plazo-efectivo:${limitadoPor}:${restante}`);
-  if (restante < FONDO.COMPOSICION_MAX_MS + FONDO.PUBLICACION_MAX_MS) {
-    f.turno = "liberado"; f.fondo = "no-iniciado-presupuesto"; f.eventos.push("liberar", "fondo:no-iniciado-presupuesto");
-    return "ub-servido-sin-fondo";
-  }
+  const liberar = () => {   // best effort: si responde, liberado; si falla o el proceso muere, el turno vence por TTL
+    if (f.liberarFalla) { f.eventos.push("LIBERAR:fallo"); return; }
+    enviar(f, "LIBERAR", false, () => { if (f.turnoRedis.propietario === "yo") { f.turnoRedis.propietario = null; f.turnoRedis.venceEn = null; } });
+  };
+  if (restante < FONDO.COMPOSICION_MAX_MS + FONDO.RESERVA_PUBLICACION_MS) { f.fondo = "no-iniciado-presupuesto"; liberar(); return "ub-servido-sin-fondo"; }
   f.fondo = "programado";
-  // señal del fondo = AbortSignal.timeout(restante): la composición no puede seguir después de plazoEfectivo
+  // La composición: sólo INICIA llamadas nuevas mientras ahora < plazoEfectivo (la señal las corta al vencer).
   const finComposicion = f.ahora + f.composicionMs;
-  if (finComposicion > plazoEfectivo) { f.ahora = plazoEfectivo; f.turno = "liberado"; f.eventos.push("señal:cancelada", "liberar"); return "cancelada"; }
+  if (f.corteDuroEn !== null && finComposicion >= f.corteDuroEn) { f.ahora = f.corteDuroEn; f.eventos.push("CORTE-DURO"); return "no-observable"; }
+  if (finComposicion > plazoEfectivo) {
+    f.ahora = plazoEfectivo; f.eventos.push("señal:vencida→no se inician llamadas ni PUBLICAR");
+    liberar(); return "cancelada";
+  }
   f.ahora = finComposicion;
-  if (f.ahora + FONDO.PUBLICACION_MAX_MS > plazoEfectivo) { f.turno = "liberado"; f.eventos.push("sin-tiempo-para-publicar", "liberar"); return "cancelada"; }
-  f.publicada = true; f.turno = "liberado"; f.eventos.push("publicada", "liberar");
+  if (f.ahora + FONDO.RESERVA_PUBLICACION_MS > plazoEfectivo) { f.eventos.push("sin-reserva-para-PUBLICAR"); liberar(); return "cancelada"; }
+  // PUBLICAR se INICIA antes del plazo; puede COMPLETAR después (Redis la ejecuta entera o no la ejecuta).
+  const pub = enviar(f, "PUBLICAR", f.publicarRespuestaPerdida, () => {
+    if (f.turnoRedis.propietario === "yo") { f.fresca = "payload-completo-sano"; f.ub = "payload-completo-sano"; f.turnoRedis.propietario = null; f.turnoRedis.generacion += 1; }   // fencing: sólo si sigo siendo el dueño; todo o nada
+  });
+  if (pub.respuestaPerdida) { f.eventos.push("PUBLICAR:respuesta-perdida"); f.ahora = pub.completaEn; return "publicacion-indeterminada"; }
+  f.ahora = pub.completaEn; f.eventos.push("PUBLICAR:ok");
   return "publicada";
 }
-const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => ({ ahora: 100_000, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turno: "adquirido", publicada: false, fondo: null, ...o });
+const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => ({ ahora: 100_000, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turnoRedis: { propietario: "yo", venceEn: 100_000 + 15_000, generacion: 1 }, fresca: null, ub: "ub-sano", fondo: null, ops: [], rttRedisMs: 140, liberarFalla: false, publicarRespuestaPerdida: false, corteDuroEn: null, llamadasTmdbTrasPlazo: 0, ...o });
 
 test("🔴 RED (control): con plazoFondo = inicioFondo + 50 s a secas, un fondo iniciado a los 15 s cree tener hasta t = 65 s — Vercel mata la invocación a los 60 s", () => {
   const inicioRuta = 100_000, inicioFondo = inicioRuta + 15_000;
@@ -1048,11 +1079,10 @@ test("🔴 RED (control): con plazoFondo = inicioFondo + 50 s a secas, un fondo 
   assert.ok(plazoSoloInterno > inicioRuta + FONDO.MAX_DURATION_MS, "§46 sólo cubría inicioFondo = 0,4 s");
 });
 
-test("🟢 (1) fondo iniciado a 0,4 s: limitado por el interno; conserva 50 s (efectivo 50,4 s desde la ruta < 55 s externo)", () => {
+test("🟢 (1) fondo iniciado a 0,4 s: limitado por el interno; conserva 50 s; PUBLICAR se inicia dentro del plazo y el turno se libera dentro del propio PUBLICAR", () => {
   const f = fondoMundo({ ahora: 100_400 });
-  const p = plazosDelFondo(f.inicioRuta, f.ahora);
-  assert.equal(p.limitadoPor, "interno"); assert.equal(p.plazoEfectivo - f.ahora, 50_000);
-  assert.equal(iniciarFondo(f), "publicada"); assert.equal(f.fondo, "programado"); assert.equal(f.turno, "liberado");
+  assert.equal(plazosDelFondo(f.inicioRuta, f.ahora).limitadoPor, "interno"); assert.equal(plazosDelFondo(f.inicioRuta, f.ahora).plazoEfectivo - f.ahora, 50_000);
+  assert.equal(iniciarFondo(f), "publicada"); assert.equal(f.fresca, "payload-completo-sano"); assert.equal(f.turnoRedis.propietario, null);
 });
 
 test("🟢 (2) fondo iniciado a 15 s: limitado por el techo externo (55 s desde la ruta): le quedan 40 s, no 50", () => {
@@ -1060,43 +1090,81 @@ test("🟢 (2) fondo iniciado a 15 s: limitado por el techo externo (55 s desde 
   const p = plazosDelFondo(f.inicioRuta, f.ahora);
   assert.equal(p.limitadoPor, "externo"); assert.equal(p.plazoEfectivo - f.ahora, 40_000);
   assert.equal(iniciarFondo(f), "publicada");
-  assert.ok(f.ahora + FONDO.PUBLICACION_MAX_MS <= f.inicioRuta + FONDO.MAX_DURATION_MS - FONDO.MARGEN_CIERRE_MS);
 });
 
-test("🟢 (3) presupuesto efectivo insuficiente (fondo a los 40 s: quedan 15 s < 16 + 1): UB ya servido, CERO composición, turno liberado, `fondo: no-iniciado-presupuesto`", () => {
+test("🟢 (3) presupuesto efectivo insuficiente (fondo a los 40 s: quedan 15 s < 16 + 1 de reserva): UB ya servido, CERO composición, LIBERAR enviado (best effort), `fondo: no-iniciado-presupuesto`; el Home no cambia", () => {
   const f = fondoMundo({ ahora: 140_000 });
   assert.equal(iniciarFondo(f), "ub-servido-sin-fondo");
-  assert.equal(f.publicada, false); assert.equal(f.turno, "liberado"); assert.equal(f.fondo, "no-iniciado-presupuesto");
-  assert.deepEqual(f.eventos, ["plazo-efectivo:externo:15000", "liberar", "fondo:no-iniciado-presupuesto"]);
-  // El contenido del Home no cambia: el UB servido es el mismo; sólo la métrica/origen lo cuenta.
+  assert.equal(f.fresca, null); assert.equal(f.ub, "ub-sano"); assert.equal(f.fondo, "no-iniciado-presupuesto");
+  assert.deepEqual(f.ops.map((o) => o.op), ["LIBERAR"]); assert.equal(f.turnoRedis.propietario, null);
 });
 
-test("🟢 (4) el fondo nunca publica ni sigue trabajando después del plazo efectivo: composición que lo cruza → cancelada por la señal, sin publicar, turno liberado", () => {
+test("🟢 (4) composición que cruza el plazo efectivo: al vencer la señal NO se inician llamadas nuevas ni PUBLICAR; LIBERAR best effort; nada publicado — sin afirmar que 'todo se detuvo exactamente'", () => {
   const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000 });   // efectivo: externo 155 s → 35 s; la composición pediría 40
   assert.equal(iniciarFondo(f), "cancelada");
-  assert.equal(f.ahora, 155_000, "se detuvo exactamente en el plazo efectivo");
-  assert.equal(f.publicada, false); assert.equal(f.turno, "liberado");
-  // Y si termina justo antes pero no cabe la publicación: tampoco publica.
+  assert.equal(f.fresca, null); assert.equal(f.ub, "ub-sano");
+  assert.ok(!f.ops.some((o) => o.op === "PUBLICAR"), "ningún PUBLICAR iniciado después del plazo");
+  assert.ok(f.ops.every((o) => o.enviadaEn <= 155_000), "ninguna operación de Redis NUEVA se envía después del plazo efectivo");
   const g = fondoMundo({ ahora: 120_000, composicionMs: 34_500 });
-  assert.equal(iniciarFondo(g), "cancelada"); assert.ok(g.eventos.includes("sin-tiempo-para-publicar")); assert.equal(g.publicada, false);
+  assert.equal(iniciarFondo(g), "cancelada"); assert.ok(g.eventos.includes("sin-reserva-para-PUBLICAR")); assert.equal(g.fresca, null);
 });
 
-test("🟢 (5) el plazo externo nace al COMIENZO REAL de la ruta, no después de la lectura previa: lectura previa de 35 s + fondo a 35,4 s → externo 55 s desde la ruta (quedan 19,6 s), no 55 s desde la lectura", () => {
-  const inicioRuta = 100_000;
-  const inicioFondo = inicioRuta + 35_400;                              // 35 s de lectura previa + 0,4 s
+test("🟢 (5) el plazo externo nace al COMIENZO REAL de la ruta: lectura previa 35 s + fondo a 35,4 s → externo desde la ruta (quedan 19,6 s)", () => {
+  const inicioRuta = 100_000, inicioFondo = inicioRuta + 35_400;
   const p = plazosDelFondo(inicioRuta, inicioFondo);
   assert.equal(p.limitadoPor, "externo"); assert.equal(p.plazoEfectivo - inicioFondo, 19_600);
-  const f = fondoMundo({ ahora: inicioFondo, inicioRuta, composicionMs: 18_000 });
-  assert.equal(iniciarFondo(f), "publicada");                         // 19,6 ≥ 17: arranca, limitado por el externo
-  // CONTROL: si el "inicio de la ruta" se tomara después de la lectura previa, el fondo creería tener 50 s y moriría a los 60 s reales.
+  assert.equal(iniciarFondo(fondoMundo({ ahora: inicioFondo, inicioRuta, composicionMs: 18_000 })), "publicada");
   const pMal = plazosDelFondo(inicioRuta + 35_000, inicioFondo);
-  assert.equal(pMal.plazoEfectivo - inicioFondo, 50_000, "control: con el inicio mal tomado, 50 s ficticios");
-  assert.ok(pMal.plazoEfectivo > inicioRuta + FONDO.MAX_DURATION_MS);
+  assert.equal(pMal.plazoEfectivo - inicioFondo, 50_000, "control: con el inicio mal tomado, 50 s ficticios"); assert.ok(pMal.plazoEfectivo > inicioRuta + FONDO.MAX_DURATION_MS);
+});
+
+// ----------------------------------------------------------------- §48: lo que la señal NO controla
+test("🟢 (6) PUBLICAR iniciado ANTES del plazo y completado DESPUÉS: la señal no lo cancela; Redis lo ejecuta entero (fresca + UB + generación + DEL) — atómico y con fencing; el resultado es un Home completo y sano", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 33_900, rttRedisMs: 1_500 });   // termina a 153,9 s; la reserva de 1 s cabe (154,9 ≤ 155) → PUBLICAR se envía a 153,9; Redis tarda 1,5 s → completa a 155,4 > plazo 155
+  assert.equal(iniciarFondo(f), "publicada");
+  const pub = f.ops.find((o) => o.op === "PUBLICAR")!;
+  assert.ok(pub.enviadaEn < 155_000 && pub.completaEn > 155_000, "iniciada antes, completada después del plazo efectivo");
+  assert.equal(f.fresca, "payload-completo-sano"); assert.equal(f.ub, "payload-completo-sano"); assert.equal(f.turnoRedis.generacion, 2);
+});
+
+test("🟢 (7) respuesta de PUBLICAR perdida: Redis la aplicó entera (o no la aplicó): nunca hay escritura parcial ni degradada; el proceso informa `publicacion indeterminada`", () => {
+  const f = fondoMundo({ ahora: 100_400, publicarRespuestaPerdida: true });
+  assert.equal(iniciarFondo(f), "publicacion-indeterminada");
+  const pub = f.ops.find((o) => o.op === "PUBLICAR")!;
+  assert.equal(pub.aplicada, true); assert.equal(f.fresca, "payload-completo-sano"); assert.equal(f.ub, "payload-completo-sano");
+  // El caso "no aplicada" (la petición nunca llegó): el UB sano queda intacto y el turno vence por TTL.
+  const g = fondoMundo({ ahora: 100_400, publicarRespuestaPerdida: true, corteDuroEn: 100_400 + 27_000 });   // muere justo al enviar
+  assert.equal(iniciarFondo(g), "no-observable"); assert.equal(g.fresca, null); assert.equal(g.ub, "ub-sano");
+});
+
+test("🟢 (8) LIBERAR falla (Redis caído al liberar): el UB queda intacto, nada publicado, y el turno se recupera por TTL (vence solo); el siguiente pedido lo adquiere", () => {
+  const f = fondoMundo({ ahora: 140_000, liberarFalla: true });
+  assert.equal(iniciarFondo(f), "ub-servido-sin-fondo");
+  assert.equal(f.ub, "ub-sano"); assert.equal(f.fresca, null);
+  assert.equal(f.turnoRedis.propietario, "yo", "no se pudo liberar");
+  f.ahora = f.turnoRedis.venceEn! + 1;                                              // TTL del turno (15 s sin renovar)
+  const vencido = f.turnoRedis.venceEn! < f.ahora; assert.equal(vencido, true, "el turno venció por TTL: otro puede adquirirlo");
+});
+
+test("🟢 (9) corte duro de Vercel a los 60 s: el resultado NO es observable — no se afirma liberación; el turno vence por TTL; un PUBLICAR ya aceptado por Redis puede haberse aplicado entero", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 45_000, corteDuroEn: 160_000 });
+  // La señal vencería a 155 s (externo); pero modelamos que el margen falló y el proceso murió a 160 s con trabajo en vuelo.
+  const r = iniciarFondo(f);
+  assert.ok(r === "cancelada" || r === "no-observable");
+  if (r === "no-observable") { assert.ok(!f.eventos.some((e) => e.startsWith("LIBERAR:enviado")), "sin afirmar liberación"); assert.equal(f.ub, "ub-sano"); }
+});
+
+test("🟢 (10) ninguna operación de Redis NUEVA se inicia después del plazo efectivo, en ninguno de los caminos", () => {
+  for (const m of [fondoMundo({ ahora: 100_400 }), fondoMundo({ ahora: 115_000 }), fondoMundo({ ahora: 140_000 }), fondoMundo({ ahora: 120_000, composicionMs: 40_000 }), fondoMundo({ ahora: 120_000, composicionMs: 33_900, rttRedisMs: 1_500 })]) {
+    const plazo = plazosDelFondo(m.inicioRuta, m.ahora).plazoEfectivo;
+    iniciarFondo(m);
+    assert.ok(m.ops.every((o) => o.enviadaEn <= plazo), `op enviada después del plazo: ${JSON.stringify(m.ops)}`);
+  }
 });
 
 test("🟢 el mismo `inicio` alimenta los tres plazos: plazo de la solicitud (§46), plazo externo del fondo y señal — un solo instante, tomado antes de la lectura previa", () => {
   const inicio = 100_000;
   const plazoSolicitud = inicio + FONDO.PRESUPUESTO_MS, plazoExterno = inicio + FONDO.MAX_DURATION_MS - FONDO.MARGEN_CIERRE_MS;
   assert.equal(plazoSolicitud, 150_000); assert.equal(plazoExterno, 155_000);
-  assert.ok(plazoExterno > plazoSolicitud, "el fondo puede vivir hasta 5 s más que la solicitud, nunca más allá del margen de cierre");
+  assert.ok(plazoExterno > plazoSolicitud, "el fondo puede vivir hasta 5 s más que la solicitud, nunca más allá de la reserva de cierre");
 });
