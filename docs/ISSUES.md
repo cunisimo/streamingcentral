@@ -1298,7 +1298,7 @@ leyendo el código.**
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
 > restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c (protección frente
-> a TMDB) — estado vigente en el informe §45 a §50 (17/09): 3.c.1 "pausa
+> a TMDB) — estado vigente en el informe §45 a §51 (17/09): 3.c.1 "pausa
 > compartida ante 429" con diseño corregido: adquisición atómica del turno
 > con la pausa adentro; sobrepaso por fórmula parametrizada (`enVuelo +
 > cadencia × (Δt + T_lectura)`; 94 / 184 / 528 por proceso según cadencia
@@ -1333,8 +1333,13 @@ leyendo el código.**
 > externo (`ahora < inicio + 60 s`), que nunca publica, enfría, renueva ni
 > toca el UB; sin margen, con fallo o con respuesta perdida no aplicada,
 > recuperación EVENTUAL por TTL (≤ 15 s desde la última renovación); con
-> respuesta perdida aplicada, ya liberado; sin reintento** (§49-§50).
-> Modelo 88/88 con
+> respuesta perdida aplicada, ya liberado; sin reintento** (§49-§50);
+> **las renovaciones las produce el modelo, no el test** (§51: el bucle 4b
+> real — primer `RENOVAR` a +5 s, luego cada 5 s + RTT, sólo con `t <
+> plazo`, cada uno extiende 15 s desde esa renovación — y el TTL restante
+> se deriva de ellas: 5,6-10,6 s en los casos modelados; el modelo de
+> `7dc1f44` no renovaba nunca y su aserción era vacua).
+> Modelo 90/90 con
 > guard estructural sobre la ruta. NO APROBADA, NO IMPLEMENTADA, PENDIENTE
 > DE NUEVA AUDITORÍA;
 > 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no

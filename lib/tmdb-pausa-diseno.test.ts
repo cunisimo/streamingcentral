@@ -1036,9 +1036,29 @@ interface FondoMundo {
   fresca: string | null; ub: string;                                                          // contenido publicado; el UB sano NUNCA se pisa con algo parcial
   fondo: string | null; ops: OpRedis[]; rttRedisMs: number; liberarFalla: boolean; liberarPerdida: null | "aplicada" | "no-aplicada"; liberarIntentos: number; publicarRespuestaPerdida: boolean; corteDuroEn: number | null; llamadasTmdbTrasPlazo: number;
   deteccionMs: number;   // §49: en ejecución real la composición devuelve/detecta la señal unos ms DESPUÉS del plazo
-  ultimaRenovacionEn: number | null;   // §50: RENOVAR cada 5 s extiende el turno 15 s desde ESA renovación (TURNO_MS); la señal corta las renovaciones
+  ultimaRenovacionEn: number | null;   // §51: SALIDA del modelo (no entrada): instante del último RENOVAR que el bucle 4b envió
 }
 const TURNO_MS = 15_000, RENOVACION_MS = 5_000;   // CONSTANTES de lib/home-servir.ts
+// §51: el bucle de renovación REAL (home-servir.ts 4b, el mismo que corre el fondo vía `componer`):
+//   while (!fin) { await dormir(RENOVACION_MS); if (fin || abortada(señal)) return; await renovar(px: TURNO_MS) }
+// → cada tick cae RENOVACION_MS después de que la renovación ANTERIOR completó (el RTT se acumula);
+// → un tick en el que la señal YA venció no envía nada: la señal vence en plazoEfectivo, así que sólo
+//   se envía con `t < plazoEfectivo` (ESTRICTO, como el borde de §50.4); `renovarEnElPlazo` es el RED;
+// → cada RENOVAR aplicado extiende el turno a `t + TURNO_MS` desde ESA renovación (PX en el script).
+// El bucle termina con la composición (`cortarRenovacion`) o con el proceso (corte duro). No modela
+// `perdido`/`indeterminado` del script de RENOVAR (fuera de §51).
+function renovarMientrasCompone(f: FondoMundo, plazoEfectivo: number, finComposicion: number, o: { renovarEnElPlazo?: boolean }) {
+  const t0 = f.ahora;
+  for (let t = t0 + RENOVACION_MS; t < finComposicion; t += RENOVACION_MS + f.rttRedisMs) {
+    if (f.corteDuroEn !== null && t >= f.corteDuroEn) break;                                   // el proceso ya no existe
+    const senalVencida = o.renovarEnElPlazo ? t > plazoEfectivo : !(t < plazoEfectivo);
+    if (senalVencida) { f.eventos.push(`RENOVAR:no-enviado@${t - f.inicioRuta}:señal-vencida`); break; }
+    f.ahora = t;
+    enviar(f, "RENOVAR", false, () => { if (f.turnoRedis.propietario === "yo") f.turnoRedis.venceEn = t + TURNO_MS; });
+    f.ultimaRenovacionEn = t;
+  }
+  f.ahora = t0;
+}
 // §50: la limpieza REAL, una sola función (la misma que usa iniciarFondo). Guardia por intentos,
 // comparación ESTRICTA contra el corte externo duro (inicioRuta + MAX_DURATION_MS), best effort.
 function limpiarTurno(f: FondoMundo, o: { sinGuardia?: boolean } = {}) {
@@ -1059,7 +1079,7 @@ const enviar = (f: FondoMundo, op: OpRedis["op"], perdida = false, aplicar = () 
   if (!noLlego && (f.corteDuroEn === null || o.enviadaEn < f.corteDuroEn)) { o.aplicada = true; aplicar(); }
   return o;
 };
-function iniciarFondo(f: FondoMundo) {
+function iniciarFondo(f: FondoMundo, o: { renovarEnElPlazo?: boolean } = {}) {
   const { plazoEfectivo, limitadoPor } = plazosDelFondo(f.inicioRuta, f.ahora);
   const restante = plazoEfectivo - f.ahora;
   f.eventos.push(`plazo-efectivo:${limitadoPor}:${restante}`);
@@ -1071,6 +1091,8 @@ function iniciarFondo(f: FondoMundo) {
   f.fondo = "programado";
   // La composición: sólo INICIA llamadas nuevas mientras ahora < plazoEfectivo (la señal las corta al vencer).
   const finComposicion = f.ahora + f.composicionMs;
+  // §51: 4b corre AL LADO de la composición y se corta con ella o con la señal (renovaciones reales).
+  renovarMientrasCompone(f, plazoEfectivo, finComposicion, o);
   if (f.corteDuroEn !== null && finComposicion >= f.corteDuroEn) { f.ahora = f.corteDuroEn; f.eventos.push("CORTE-DURO"); return "no-observable"; }
   if (finComposicion > plazoEfectivo) {
     // La señal vence en plazoEfectivo; la composición DEVUELVE (o detecta) unos ms después: ahí ya no
@@ -1088,7 +1110,9 @@ function iniciarFondo(f: FondoMundo) {
   f.ahora = pub.completaEn; f.eventos.push("PUBLICAR:ok");
   return "publicada";
 }
-const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => ({ ahora: 100_000, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turnoRedis: { propietario: "yo", venceEn: 100_000 + 15_000, generacion: 1 }, fresca: null, ub: "ub-sano", fondo: null, ops: [], rttRedisMs: 140, liberarFalla: false, liberarPerdida: null, liberarIntentos: 0, publicarRespuestaPerdida: false, corteDuroEn: null, llamadasTmdbTrasPlazo: 0, deteccionMs: 0, ultimaRenovacionEn: null, ...o });
+// §51: el turno se TOMA (SET NX, PX TURNO_MS) al adquirir, instantes antes de que el fondo arranque detrás
+// de la compuerta: su vencimiento inicial es `ahora + TURNO_MS`, y de ahí en más lo mueven sólo los RENOVAR.
+const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => { const ahora = o.ahora ?? 100_000; return { ahora, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turnoRedis: { propietario: "yo", venceEn: ahora + TURNO_MS, generacion: 1 }, fresca: null, ub: "ub-sano", fondo: null, ops: [], rttRedisMs: 140, liberarFalla: false, liberarPerdida: null, liberarIntentos: 0, publicarRespuestaPerdida: false, corteDuroEn: null, llamadasTmdbTrasPlazo: 0, deteccionMs: 0, ultimaRenovacionEn: null, ...o }; };
 
 test("🔴 RED (control): con plazoFondo = inicioFondo + 50 s a secas, un fondo iniciado a los 15 s cree tener hasta t = 65 s — Vercel mata la invocación a los 60 s", () => {
   const inicioRuta = 100_000, inicioFondo = inicioRuta + 15_000;
@@ -1122,7 +1146,8 @@ test("🟢 (4) composición que cruza el plazo efectivo: al vencer la señal NO 
   assert.equal(iniciarFondo(f), "cancelada");
   assert.equal(f.fresca, null); assert.equal(f.ub, "ub-sano");
   assert.ok(!f.ops.some((o) => o.op === "PUBLICAR"), "ningún PUBLICAR iniciado después del plazo");
-  assert.ok(f.ops.filter((o) => o.op !== "LIBERAR").every((o) => o.enviadaEn <= 155_000), "ninguna operación PRODUCTIVA o de publicación después del plazo efectivo (§49: la limpieza LIBERAR es la única excepción)");
+  assert.ok(f.ops.filter((o) => o.op !== "LIBERAR").every((o) => o.enviadaEn < 155_000), "ninguna operación PRODUCTIVA o de publicación en el plazo efectivo ni después (§49; §51: estricto, como el borde de §50.4 — la limpieza LIBERAR es la única excepción)");
+  assert.ok(f.ops.some((o) => o.op === "RENOVAR"), "y las renovaciones ANTERIORES al plazo sí existen (§51: el modelo las produce)");
   const g = fondoMundo({ ahora: 120_000, composicionMs: 34_500 });
   assert.equal(iniciarFondo(g), "cancelada"); assert.ok(g.eventos.includes("sin-reserva-para-PUBLICAR")); assert.equal(g.fresca, null);
 });
@@ -1187,7 +1212,7 @@ test("🟢 (10) criterio de §49: después del plazo efectivo CERO PUBLICAR, ENF
     const plazo = plazosDelFondo(m.inicioRuta, m.ahora).plazoEfectivo;
     iniciarFondo(m);
     const productivas = m.ops.filter((o) => o.op !== "LIBERAR");
-    assert.ok(productivas.every((o) => o.enviadaEn <= plazo), `productiva/publicación después del plazo: ${JSON.stringify(m.ops)}`);
+    assert.ok(productivas.every((o) => o.enviadaEn < plazo), `productiva/publicación en el plazo o después: ${JSON.stringify(m.ops)}`);
     assert.equal(m.llamadasTmdbTrasPlazo, 0);
     const liberaciones = m.ops.filter((o) => o.op === "LIBERAR");
     assert.ok(liberaciones.length <= 1, "no más de un intento de LIBERAR");
@@ -1198,19 +1223,24 @@ test("🟢 (10) criterio de §49: después del plazo efectivo CERO PUBLICAR, ENF
 test("🟢 (11) exactamente UN LIBERAR si todavía queda margen (detección a plazo + 100 ms, margen hasta +5 s): el turno queda liberado; nada publicado, nada enfriado, UB intacto", () => {
   const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100 });
   assert.equal(iniciarFondo(f), "cancelada");
-  assert.deepEqual(f.ops.map((o) => o.op), ["LIBERAR"]); assert.equal(f.liberarIntentos, 1);
+  assert.deepEqual(f.ops.filter((o) => o.op !== "RENOVAR").map((o) => o.op), ["LIBERAR"]); assert.equal(f.liberarIntentos, 1);
   assert.equal(f.turnoRedis.propietario, null); assert.equal(f.fresca, null); assert.equal(f.ub, "ub-sano"); assert.equal(f.turnoRedis.generacion, 1);
 });
 
-test("🟢 (12) CERO LIBERAR si ya se alcanzó el corte externo duro (detección a plazo + 5,1 s = inicioRuta + 60,1 s): no se insiste; el turno se recupera EVENTUALMENTE por TTL", () => {
-  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 5_100, ultimaRenovacionEn: 150_000 });
-  f.turnoRedis.venceEn = f.ultimaRenovacionEn! + TURNO_MS;                     // 165 s: la última renovación (150 s) lo extendió 15 s
+// §51: helper de lectura — el TTL RESTANTE del turno lo DERIVA el modelo de sus propias renovaciones.
+const ttlRestante = (f: FondoMundo) => ({ ultima: f.ultimaRenovacionEn!, venceEn: f.turnoRedis.venceEn!, restante: f.turnoRedis.venceEn! - f.ahora });
+
+test("🟢 (12) CERO LIBERAR si ya se alcanzó el corte externo duro (detección a plazo + 5,1 s = inicioRuta + 60,1 s): no se insiste; el turno se recupera EVENTUALMENTE por TTL — el TTL restante sale de las renovaciones que el modelo envió", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 5_100 });
   assert.equal(iniciarFondo(f), "cancelada");
-  assert.deepEqual(f.ops, [], "ninguna operación de Redis");
+  assert.deepEqual(f.ops.filter((o) => o.op !== "RENOVAR"), [], "ninguna operación de Redis además de las renovaciones ANTERIORES al plazo");
   assert.ok(f.eventos.includes("LIBERAR:omitido-sin-margen->TTL"));
   assert.equal(f.turnoRedis.propietario, "yo"); assert.equal(f.ub, "ub-sano");
-  assert.ok(f.turnoRedis.venceEn! > f.ahora, "NO está vencido en el acto: sigue del proceso hasta 165 s");
-  assert.equal(f.turnoRedis.venceEn! - f.ahora, 4_900, "se recupera 4,9 s después (TTL restante desde la última renovación)");
+  const { ultima, venceEn, restante } = ttlRestante(f);
+  assert.equal(ultima, 150_700, "última renovación enviada por el bucle (primer tick a 125 s; después 5 s + RTT 140 ms): 150,7 s < plazo 155 s");
+  assert.equal(venceEn, ultima + TURNO_MS, "el turno vence 15 s después de ESA renovación, no de la toma inicial (135 s)");
+  assert.ok(restante > 0, "NO está vencido en el acto: sigue del proceso");
+  assert.equal(restante, 5_600, "se recupera 5,6 s después de la detección (160,1 s → 165,7 s)");
 });
 
 test("🔴 RED (control): sin guardia, un segundo pedido de limpieza envía un SEGUNDO LIBERAR (misma función que usa iniciarFondo)", () => {
@@ -1228,46 +1258,72 @@ test("🟢 (14) con la guardia, dos pedidos de limpieza (dos `finally`) producen
   assert.ok(f.eventos.includes("LIBERAR:omitido-ya-intentado"));
 });
 
-test("🟢 (13a) LIBERAR falla (Redis caído): UB, fresca y generación intactos; un solo intento; el turno sigue del proceso y se recupera al vencer el TTL restante", () => {
-  const a = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, ultimaRenovacionEn: 154_000 });
-  a.turnoRedis.venceEn = a.ultimaRenovacionEn! + TURNO_MS;                     // 169 s
-  assert.equal(iniciarFondo(a), "cancelada"); assert.deepEqual(a.ops, []); assert.equal(a.liberarIntentos, 1);
+const soloLiberar = (f: FondoMundo) => f.ops.filter((o) => o.op === "LIBERAR");
+
+test("🟢 (13a) LIBERAR falla (Redis caído): UB, fresca y generación intactos; un solo intento; el turno sigue del proceso y se recupera al vencer el TTL restante que dejaron las renovaciones", () => {
+  const a = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
+  assert.equal(iniciarFondo(a), "cancelada"); assert.deepEqual(soloLiberar(a), []); assert.equal(a.liberarIntentos, 1);
   assert.equal(a.ub, "ub-sano"); assert.equal(a.fresca, null); assert.equal(a.turnoRedis.generacion, 1); assert.equal(a.turnoRedis.propietario, "yo");
-  assert.equal(a.turnoRedis.venceEn! - a.ahora, 13_900, "recuperación eventual: vence 13,9 s después de la detección");
+  const { ultima, venceEn, restante } = ttlRestante(a);
+  assert.equal(venceEn, ultima + TURNO_MS); assert.equal(restante, TURNO_MS - (a.ahora - ultima));
+  assert.equal(restante, 10_600, "recuperación eventual: vence 10,6 s después de la detección (155,1 s → 165,7 s)");
 });
 
 test("🟢 (13b) respuesta de LIBERAR perdida, variante APLICADA: Redis la ejecutó → el turno ya quedó liberado; sin reintento; fresca, UB y generación intactos", () => {
   const b = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarPerdida: "aplicada" });
   assert.equal(iniciarFondo(b), "cancelada");
-  assert.equal(b.ops.length, 1); assert.equal(b.ops[0].respuestaPerdida, true); assert.equal(b.ops[0].aplicada, true);
+  const [lib] = soloLiberar(b); assert.equal(soloLiberar(b).length, 1); assert.equal(lib.respuestaPerdida, true); assert.equal(lib.aplicada, true);
   assert.equal(b.turnoRedis.propietario, null, "liberado aunque el proceso no lo sepa");
   assert.equal(b.liberarIntentos, 1); assert.equal(b.ub, "ub-sano"); assert.equal(b.fresca, null); assert.equal(b.turnoRedis.generacion, 1);
 });
 
 test("🟢 (13c) respuesta de LIBERAR perdida, variante NO APLICADA (la petición no llegó): el turno permanece hasta vencer por TTL; sin reintento; fresca, UB y generación intactos — no toda respuesta perdida termina en TTL, pero ésta sí", () => {
-  const c = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarPerdida: "no-aplicada", ultimaRenovacionEn: 154_000 });
-  c.turnoRedis.venceEn = c.ultimaRenovacionEn! + TURNO_MS;
+  const c = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarPerdida: "no-aplicada" });
   assert.equal(iniciarFondo(c), "cancelada");
-  assert.equal(c.ops.length, 1); assert.equal(c.ops[0].respuestaPerdida, true); assert.equal(c.ops[0].aplicada, false);
+  const [lib] = soloLiberar(c); assert.equal(soloLiberar(c).length, 1); assert.equal(lib.respuestaPerdida, true); assert.equal(lib.aplicada, false);
   assert.equal(c.turnoRedis.propietario, "yo", "no liberado: nadie lo sabe");
   assert.equal(c.liberarIntentos, 1); assert.equal(c.ub, "ub-sano"); assert.equal(c.fresca, null); assert.equal(c.turnoRedis.generacion, 1);
-  assert.ok(c.turnoRedis.venceEn! > c.ahora); assert.equal(c.turnoRedis.venceEn! - c.ahora, 13_900);
+  const { ultima, venceEn, restante } = ttlRestante(c);
+  assert.ok(restante > 0); assert.equal(venceEn, ultima + TURNO_MS); assert.equal(restante, 10_600);
 });
 
-test("🟢 (16) renovaciones reales: RENOVAR cada 5 s extiende el turno 15 s desde esa renovación; la última exitosa poco antes del plazo → demora máxima de recuperación = TURNO_MS (15 s) desde ella; la señal corta las renovaciones siguientes", () => {
-  // Composición desde 120 s; renovaciones a 125, 130, …, 150 (≤ plazo 155); la de 155 no sale: la señal ya venció.
-  const inicioFondo = 120_000, plazo = 155_000;
-  const renovaciones: number[] = []; for (let t = inicioFondo + RENOVACION_MS; t <= plazo; t += RENOVACION_MS) renovaciones.push(t);
-  assert.deepEqual(renovaciones, [125_000, 130_000, 135_000, 140_000, 145_000, 150_000, 155_000].filter((t) => t <= plazo));
-  const ultima = renovaciones.at(-1)!;                                          // 155 s (justo en el plazo; una renovación enviada antes del plazo puede completar)
-  const venceEn = ultima + TURNO_MS;                                             // 170 s
-  const f = fondoMundo({ ahora: inicioFondo, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, ultimaRenovacionEn: ultima });
-  f.turnoRedis.venceEn = venceEn;
+// ----------------------------------------------------------------- §51: las renovaciones las produce el MODELO
+test("🔴 RED (control, §50 superado): un bucle que renueva mientras `t <= plazo` envía un RENOVAR EXACTAMENTE en el plazo — con la señal ya vencida", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, rttRedisMs: 0 });   // RTT 0 para que un tick caiga justo en 155 s
+  const plazo = plazosDelFondo(f.inicioRuta, f.ahora).plazoEfectivo;
+  assert.equal(iniciarFondo(f, { renovarEnElPlazo: true }), "cancelada");
+  const renovaciones = f.ops.filter((o) => o.op === "RENOVAR").map((o) => o.enviadaEn);
+  assert.deepEqual(renovaciones, [125_000, 130_000, 135_000, 140_000, 145_000, 150_000, 155_000]);
+  assert.ok(renovaciones.some((t) => !(t < plazo)), "hay un RENOVAR iniciado sin `t < plazo`: viola el contrato de §49 (ningún RENOVAR después del plazo)");
+});
+
+test("🟢 (16) renovaciones REALES producidas por el modelo: RENOVAR cada 5 s (+ RTT) mientras se compone, sólo con `t < plazo` (estricto); cada una extiende el turno 15 s desde ESA renovación; la última cae ≤ 5 s + RTT antes del plazo → recuperación eventual ≤ TURNO_MS desde ella", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, rttRedisMs: 0 });
+  const plazo = plazosDelFondo(f.inicioRuta, f.ahora).plazoEfectivo;                                       // 155 s
   assert.equal(iniciarFondo(f), "cancelada");
-  assert.ok(!f.ops.some((o) => o.op === "RENOVAR"), "después del plazo no se inicia ningún RENOVAR");
+  const renovaciones = f.ops.filter((o) => o.op === "RENOVAR");
+  assert.deepEqual(renovaciones.map((o) => o.enviadaEn), [125_000, 130_000, 135_000, 140_000, 145_000, 150_000], "seis renovaciones; la de 155 s NO sale: la señal vence en 155 s");
+  assert.ok(renovaciones.every((o) => o.enviadaEn < plazo), "ninguna renovación iniciada en el plazo ni después (estricto)");
+  assert.ok(f.eventos.includes("RENOVAR:no-enviado@55000:señal-vencida"), "el tick de 155 s se despierta y NO envía");
+  assert.ok(renovaciones.every((o) => o.aplicada), "cada una extendió el turno en Redis");
   assert.equal(f.turnoRedis.propietario, "yo");
-  assert.equal(venceEn - f.ahora, 14_900, "demora esperable desde la detección: TTL restante");
-  assert.ok(venceEn - ultima === TURNO_MS, "cota documentada: a lo sumo TURNO_MS (15 s) desde la ÚLTIMA renovación exitosa");
+  const { ultima, venceEn, restante } = ttlRestante(f);
+  assert.equal(ultima, 150_000); assert.equal(venceEn, 165_000, "vence 15 s después de la ÚLTIMA renovación, no 170 s (que suponía una renovación en el plazo)");
+  assert.equal(restante, 9_900, "TTL restante desde la detección (155,1 s)");
+  assert.ok(plazo - ultima <= RENOVACION_MS + f.rttRedisMs, "la última renovación cae a lo sumo 5 s + RTT antes del plazo");
+  assert.equal(venceEn - ultima, TURNO_MS, "cota: a lo sumo TURNO_MS (15 s) desde la ÚLTIMA renovación exitosa");
+  // Con el RTT real (140 ms) los ticks se corren: 125,00 / 130,14 … 150,70; el siguiente (155,84) ya no sale. La cota no cambia.
+  const g = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
+  assert.equal(iniciarFondo(g), "cancelada");
+  assert.deepEqual(g.ops.filter((o) => o.op === "RENOVAR").map((o) => o.enviadaEn), [125_000, 130_140, 135_280, 140_420, 145_560, 150_700]);
+  assert.equal(ttlRestante(g).venceEn, 150_700 + TURNO_MS); assert.equal(ttlRestante(g).restante, 10_600);
+});
+
+test("🟢 (16b) sin composición (presupuesto insuficiente) o con una composición más corta que 5 s no hay ninguna renovación, y el turno vence 15 s después de tomarlo", () => {
+  const sinFondo = fondoMundo({ ahora: 140_000 });
+  assert.equal(iniciarFondo(sinFondo), "ub-servido-sin-fondo"); assert.equal(sinFondo.ops.filter((o) => o.op === "RENOVAR").length, 0); assert.equal(sinFondo.ultimaRenovacionEn, null);
+  const corta = fondoMundo({ ahora: 100_400, composicionMs: 4_000 });
+  assert.equal(iniciarFondo(corta), "publicada"); assert.equal(corta.ops.filter((o) => o.op === "RENOVAR").length, 0);
 });
 
 test("🟢 (17) borde de maxDuration, comparación ESTRICTA: a límite − 1 ms se envía LIBERAR; exactamente en el límite y a +1 ms no", () => {
@@ -1284,7 +1340,8 @@ test("🟢 (17) borde de maxDuration, comparación ESTRICTA: a límite − 1 ms 
 test("🟢 (15) PUBLICAR aceptado antes del plazo conserva la semántica atómica ya definida (§48): fresca + UB + generación + DEL, entero o nada; y tras un PUBLICAR no hay LIBERAR aparte", () => {
   const f = fondoMundo({ ahora: 120_000, composicionMs: 33_900, rttRedisMs: 1_500 });
   assert.equal(iniciarFondo(f), "publicada");
-  assert.deepEqual(f.ops.map((o) => o.op), ["PUBLICAR"]); assert.equal(f.turnoRedis.propietario, null); assert.equal(f.turnoRedis.generacion, 2);
+  assert.deepEqual(f.ops.filter((o) => o.op !== "RENOVAR").map((o) => o.op), ["PUBLICAR"]); assert.equal(f.turnoRedis.propietario, null); assert.equal(f.turnoRedis.generacion, 2);
+  assert.deepEqual(f.ops.filter((o) => o.op === "RENOVAR").map((o) => o.enviadaEn), [125_000, 131_500, 138_000, 144_500, 151_000], "las renovaciones de la composición (5 s + RTT 1,5 s), todas antes del PUBLICAR y del plazo");
 });
 
 test("🟢 el mismo `inicio` alimenta los tres plazos: plazo de la solicitud (§46), plazo externo del fondo y señal — un solo instante, tomado antes de la lectura previa", () => {

@@ -4657,7 +4657,16 @@ en fondo pasa por una única función de limpieza con guardia por intentos.
   vuelo, abortada por su propia señal) — no medido; si no cayera, el
   contrato ya lo cubre: cero `LIBERAR` y recuperación por TTL.
 
-## 50. Corrección de §49 sobre `c2b72f7` — los últimos falsos verdes de la limpieza `LIBERAR` — **ESTADO VIGENTE de la 3.c (con §45-§49); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+## 50. Corrección de §49 sobre `c2b72f7` — los últimos falsos verdes de la limpieza `LIBERAR` — **ESTADO VIGENTE de la 3.c (con §45-§49 y §51); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+> **§51 corrige de aquí el punto 3:** el modelo de `7dc1f44` **nunca
+> emitía `RENOVAR`**, así que "después del plazo no se inicia ningún
+> `RENOVAR`" (16) era una aserción vacua, el calendario de renovaciones y
+> `venceEn` los fijaba el test a mano, y ese calendario incluía una
+> renovación **exactamente en el plazo** (`t <= plazo`, 155 s) mientras el
+> comentario decía que no salía. Los puntos 1, 2 y 4 resistieron mutación
+> y quedan como están. Las cifras "14,9 s" / "4,9-14,9 s" de 50.3 quedan
+> superadas por las derivadas en §51.
 
 Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **88/88**). Sin
 código productivo, merge, push ni deploy. El contrato de §49 se conserva;
@@ -4734,3 +4743,138 @@ renovación + 15 s`; (4) borde: `ahora()` = límite − 1 / límite / límite + 
 - **Inferido:** que la última renovación real cae ≤ 5 s antes del plazo
   (el bucle de renovación es periódico y la señal lo corta), de donde sale
   la demora máxima de 15 s desde ella.
+
+## 51. Corrección de §50 sobre `7dc1f44` — las renovaciones las produce el MODELO, no el test — **ESTADO VIGENTE de la 3.c (con §45-§50); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **90/90**). Sin
+código productivo, merge, push ni deploy. El contrato de §49/§50 no cambia;
+cambia que el punto 3 (TTL restante tras una renovación reciente) pasa a
+estar **derivado por el modelo** y con el mismo borde estricto que el punto 4.
+
+### 51.1 Estado verificado antes de tocar nada
+
+- Worktree `wt-etapa3c`, rama `diseno/etapa3c-proteccion-tmdb`, HEAD
+  `7dc1f44` (§50), **no** `c2b72f7` como decía el último informe: `c2b72f7`
+  es su ancestro directo; `7dc1f44` es un commit posterior de otra sesión
+  (2026-09-17 19:17 −03:00), sólo docs y este test.
+- Fork point `37d4707` = `main` = `origin/main` (fetch hecho; 0/0). 13
+  commits sobre `main`, todos `docs(etapa 3.c)`. Árbol limpio.
+- **Ningún archivo de `medicion/sync-upcoming` en esta rama**: ausentes
+  `supabase/functions/tmdb-sync/lib/medicion.ts`, `lib/sync-medicion.test.ts`,
+  `lib/sync-recorrido.test.ts`, `types/deno.d.ts`, `tsconfig.functions.json`
+  y `docs/medidas/2026-09-05-sync-medicion.md`. Esa rama queda en
+  `a7a223d` en su worktree, **no desplegada** (ver `docs/ESTADO.md`).
+
+### 51.2 Auditoría de §50, punto por punto (mutaciones ejecutadas)
+
+| Punto | Mutación sobre el modelo de `7dc1f44` | Resultado |
+|---|---|---|
+| 1 guardia real | guardia por intentos desactivada | cae (14): 87/88 |
+| 2 perdida aplicada / no aplicada | "no aplicada" tratada como aplicada | cae (13c): 87/88 |
+| 4 borde `maxDuration` | `>` en lugar de `!(ahora < límite)` | cae (17): 87/88 |
+| 3 TTL tras renovación | `venceEn` fijo (ignora la última renovación) | cae (12): 87/88 — **pero sólo porque el test lo fijaba a mano** |
+
+**RED del punto 3 (ejecutado y visto fallar sobre `7dc1f44`):** "una
+composición de 30 s desde 120 s (plazo 155 s) tiene que `RENOVAR` al menos
+una vez" → **falla**: el modelo no tenía ningún `enviar(f, "RENOVAR", …)`;
+la única aparición de `"RENOVAR"` era el tipo y la aserción de (16). O sea
+que (16) afirmaba "ningún `RENOVAR` después del plazo" sobre un fondo que
+no renovaba ni antes ni después; el calendario `[125 … 155]` lo armaba el
+test con `t <= plazo` (una renovación **en** el plazo, contradiciendo su
+propio comentario "la de 155 no sale" y el criterio estricto de §50.4), y
+`venceEn = 170 s` salía de esa renovación inexistente.
+
+### 51.3 GREEN: el bucle 4b real, en el modelo
+
+`renovarMientrasCompone` reproduce `lib/home-servir.ts` 4b, que es el
+mismo bucle que corre el fondo (el camino UB-primero llama a
+`componer(senalFondo)`):
+
+```
+while (!fin) { await dormir(RENOVACION_MS); if (fin || abortada(señal)) return; await renovar(px: TURNO_MS) }
+```
+
+- Primer tick a `inicioFondo + 5 s`; los siguientes cada `5 s + RTT`
+  (el sueño arranca cuando la renovación anterior completó).
+- Un tick sólo envía con **`t < plazoEfectivo`** (estricto: la señal vence
+  en el plazo; a esa altura `abortada(señal)` ya es verdadera). Un tick que
+  despierta con la señal vencida no envía y deja el evento
+  `RENOVAR:no-enviado@…:señal-vencida`.
+- Cada `RENOVAR` aplicado extiende el turno a **`t + TURNO_MS`** desde esa
+  renovación (`PX` del script), sólo si el propietario sigue siendo el
+  proceso.
+- El bucle termina con la composición o con el corte duro. El vencimiento
+  inicial del turno es `tomar + 15 s` (el turno se toma instantes antes de
+  que el fondo arranque detrás de la compuerta).
+
+Los tests **derivan** el TTL restante del modelo (`ttlRestante`): `venceEn
+= últimaRenovación + TURNO_MS` y `restante = TURNO_MS − (detección −
+últimaRenovación)`, y recién después fijan la cifra.
+
+| # | Caso (fondo a 120 s, plazo efectivo 155 s) | Renovaciones enviadas | `venceEn` | TTL restante |
+|---|---|---|---|---|
+| 16 | RTT 0, detección 155,1 s | 125, 130, 135, 140, 145, 150 s; **155 s no sale** | 165 s | 9,9 s |
+| 16 | RTT 140 ms, detección 155,1 s | 125,00 / 130,14 / 135,28 / 140,42 / 145,56 / 150,70 s | 165,7 s | 10,6 s |
+| 12 | RTT 140 ms, detección 160,1 s (sin margen: cero `LIBERAR`) | ídem | 165,7 s | 5,6 s |
+| 13a / 13c | `LIBERAR` falla / perdida no aplicada, detección 155,1 s | ídem | 165,7 s | 10,6 s |
+| 16b | sin composición, o composición < 5 s | ninguna | `tomar + 15 s` | — |
+| 15 | RTT 1,5 s, publica a 153,9 s | 125 / 131,5 / 138 / 144,5 / 151 s, todas antes del `PUBLICAR` | — | — |
+
+**RED de borde (control, conservado):** con `renovarEnElPlazo` (`t <=
+plazo`) y RTT 0 salen **siete** renovaciones y la última es exactamente en
+155 s = plazo → viola "ningún `RENOVAR` después del plazo". GREEN: seis.
+
+(4) y (10) pasan a exigir **`enviadaEn < plazo`** para toda operación
+productiva (antes `<=`), coherente con §50.4, y (4) exige además que las
+renovaciones anteriores al plazo **existan**: la aserción ya no puede ser
+vacua.
+
+### 51.4 Mutaciones sobre el modelo nuevo (todas caen)
+
+| Mutación | Cae |
+|---|---|
+| M1 guardia por intentos desactivada | (14) |
+| M2 borde `LIBERAR` con `>` | (17) |
+| M3 perdida no aplicada tratada como aplicada | (13c) |
+| M5 el bucle renueva también con `t == plazo` | (16) |
+| **M6 el bucle no renueva nunca (= modelo de `7dc1f44`)** | (4), (12), (13a), (13c), (15), (16) y el RED de borde: **7** |
+| M7 `RENOVAR` no extiende el turno (`PX` ignorado) | (12), (13a), (13c), (16) |
+| M8 la renovación ignora la señal | (4), (10), (12), (13a), (13c), (16) |
+| M9 primer tick en `t0`, sin dormir | 7 tests |
+
+### 51.5 Contrato (sin cambios de fondo; cifras corregidas)
+
+- Después del plazo efectivo no se inicia TMDB, Supabase, `RENOVAR`,
+  `ENFRIAR` ni `PUBLICAR`; **"después" incluye el instante del plazo**
+  (estricto, igual que el corte externo para `LIBERAR`).
+- Si `LIBERAR` no se envía, falla o no se aplica, el turno se recupera
+  **eventualmente**: a lo sumo `TURNO_MS` = 15 s desde la última renovación
+  exitosa, que cae a lo sumo `RENOVACION_MS + RTT` antes del plazo; desde
+  la detección, `15 s − (detección − última renovación)`. En los casos
+  modelados: **5,6 s a 10,6 s** (antes se decía 4,9-14,9 s, con una
+  renovación en el plazo que no existe).
+
+### 51.6 RED para la implementación (reemplaza 50.6 (3))
+
+(3) reloj virtual con el `componer` real y un doble de `renovar` que
+registra `(t, px)`: renovaciones a `t0 + 5 s`, luego cada `5 s + RTT`,
+**ninguna con `t ≥ plazo`**; el doble de Redis vence a `última + 15 s`; la
+detección a plazo + 100 ms deja un TTL restante igual a `15 s − (detección
+− última)`; y un caso con RTT 0 cuyo tick cae exactamente en el plazo, que
+debe **no** enviarse.
+
+### 51.7 Comprobado / inferido / pendiente
+
+- **Comprobado:** el RED de vacuidad sobre `7dc1f44` (ejecutado, falló);
+  los 90 controles; las 8 mutaciones; que el fondo pasa por `componer` y
+  por lo tanto por el bucle 4b (`home-servir.ts`, camino `adquirido` con
+  UB); que 4b duerme antes de renovar y no envía con la señal vencida;
+  `tsc --noEmit` 0 errores.
+- **Inferido:** que en el runtime, con un tick y el vencimiento de la señal
+  en el mismo milisegundo, `abortada(señal)` ya es verdadera cuando el
+  sueño despierta (el `AbortSignal.timeout` se registró antes que ese
+  sueño). El modelo lo toma como estricto; si no fuera así, saldría una
+  renovación más y la cota de 15 s desde ella sigue valiendo.
+- **No modelado:** `perdido` / `indeterminado` del script de `RENOVAR`.
+- **Pendiente:** nueva auditoría de 3.c.1 sobre este estado. Sin
+  implementación.

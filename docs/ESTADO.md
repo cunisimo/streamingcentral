@@ -1,20 +1,52 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 16 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 17 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
+- **`medicion/sync-upcoming` (`a7a223d`, worktree `wt-sync-medicion`) — DETENIDA
+  por el dueño el 2026-09-17, NO desplegada, antecedente aislado.** Es una
+  tarea separada (instrumentación de la Edge Function `tmdb-sync`, cron de
+  próximos estrenos, idiomas, clasificación de anime) y **no forma parte de
+  la Etapa 3.c.1**. Comprobado en Git: la Edge Function de esa rama nunca se
+  desplegó (el intento de deploy quedó bloqueado por credenciales inválidas
+  de la CLI/MCP de Supabase y no se reintentó); ningún archivo de esa rama
+  está en `diseno/etapa3c-proteccion-tmdb` (verificado por ausencia de
+  `supabase/functions/tmdb-sync/lib/medicion.ts`, `lib/sync-medicion.test.ts`,
+  `lib/sync-recorrido.test.ts`, `types/deno.d.ts`, `tsconfig.functions.json`
+  y `docs/medidas/2026-09-05-sync-medicion.md`). Lo que Producción tiene de
+  `tmdb-sync` es lo que dice la tabla de despliegue más abajo, no esta rama.
+  No retomar sin pedido explícito del dueño.
 - **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §45 a
-  §50, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
+  §51, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
   diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el
   presupuesto interno; §46: un solo deadline absoluto; §47: el fondo con dos
   límites; §48: la señal limita el trabajo nuevo; §49: la limpieza
-  `LIBERAR` como única excepción tras el plazo; §50: sus falsos verdes); NO
-  APROBADA; NO IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de
-  alcance.** **§50:** la limpieza es una función expuesta del modelo
+  `LIBERAR` como única excepción tras el plazo; §50: sus falsos verdes;
+  §51: las renovaciones las produce el modelo); NO APROBADA; NO
+  IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de alcance.**
+  **§51 (sobre `7dc1f44`, que era el HEAD real de la rama — no `c2b72f7`
+  como decía el último informe; `7dc1f44` es un commit posterior de otra
+  sesión):** de los cuatro puntos de §50, el 1 (guardia real llamada dos
+  veces), el 2 (perdida aplicada / no aplicada) y el 4 (borde estricto)
+  resisten mutación y quedan; el **3 era un falso verde**: el modelo de
+  `7dc1f44` **nunca emitía `RENOVAR`** (la aserción "ningún `RENOVAR` tras
+  el plazo" era vacua), el calendario de renovaciones y `venceEn` los
+  fijaba el test a mano, e incluía una renovación exactamente en el plazo.
+  Ahora el modelo reproduce el bucle 4b real de `home-servir.ts` (el fondo
+  pasa por `componer`): primer tick a `+5 s`, luego cada `5 s + RTT`, sólo
+  con **`t < plazo`** (estricto, como el corte de `LIBERAR`), cada uno
+  extiende el turno 15 s desde esa renovación; los tests **derivan** el TTL
+  restante (`15 s − (detección − última renovación)`): **5,6-10,6 s** en
+  los casos modelados (antes se decía 4,9-14,9 s); RED de borde conservado
+  (`t <= plazo` → renovación en el plazo); (4) y (10) exigen `< plazo` para
+  toda operación productiva. RED de vacuidad ejecutado y visto fallar sobre
+  `7dc1f44`; 8 mutaciones caen (la que reproduce `7dc1f44` rompe 7 tests).
+  Modelo **90/90**, `tsc --noEmit` 0 errores. Sin código productivo, merge,
+  push ni deploy. **§50:** la limpieza es una función expuesta del modelo
   (`limpiarTurno`, la misma que usa `iniciarFondo`): RED sin guardia →
   dos `LIBERAR`; GREEN → uno; la respuesta perdida de `LIBERAR` tiene dos
   resultados — **aplicada** (el turno ya quedó liberado) y **no aplicada**
@@ -26,7 +58,7 @@
   `TURNO_MS` = 15 s desde la última renovación exitosa; borde de
   `maxDuration` cerrado con comparación **estricta** (`ahora < inicioRuta +
   60 s`; controles a −1 ms, exacto y +1 ms; RED: con `>` salía en el
-  límite). Modelo 88/88.
+  límite). Modelo 88/88 (superado por §51: 90/90).
   **§49:** "ninguna operación de Redis nueva tras el plazo" (§48) era
   falso: la composición detecta la señal unos ms después del plazo y ahí
   sale la limpieza (RED con detección a +100 ms). Criterio vigente:
@@ -124,7 +156,7 @@
   sin pausa; telemetría en `pcall`). Modelo 49/49.
   Lo que sigue vigente de §41/§42: Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 88/88) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 90/90) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
