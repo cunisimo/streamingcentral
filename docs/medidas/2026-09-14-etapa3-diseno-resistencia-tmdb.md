@@ -30,17 +30,20 @@
 > §41 (contrato con sobrepaso, lector, marcador), §42 (decisión del dueño:
 > espera breve sin UB — la decisión sigue vigente, su bucle no), §43 (diez
 > correcciones), §44 (tres correcciones). ESTADO VIGENTE de la 3.c: §45 +
-> §46** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
+> §46 + §47** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
 > sin `req.signal`) y el vencimiento sale por el centinela 4d; **un solo
 > deadline absoluto `plazo` creado con la señal, `plazo − ahora` en lectura
-> previa, espera, readquisición y composición; el fondo con su propio
-> `plazoFondo`** (§46, que además detecta el mismo defecto en el rescate de
-> la Etapa 2 hoy en Producción); un solo sueño y una readquisición (≤ 2
+> previa, espera, readquisición y composición** (§46, que además detecta el
+> mismo defecto en el rescate de la Etapa 2 hoy en Producción); **el fondo
+> con DOS límites absolutos — `min(inicioFondo + 50 s, inicioRuta + 60 s −
+> margen de cierre)` — y, si no queda lugar para componer y publicar, UB
+> servido sin fondo, turno liberado y `fondo: no-iniciado-presupuesto`**
+> (§47); un solo sueño y una readquisición (≤ 2
 > `EVAL`), `F_max = 1`, sólo `Δt`, marca de agua por proceso con TTL, Lua que
 > falla seguro, sobrepaso parametrizado (estimaciones, no cotas) con línea
 > base medida, matriz UB × Redis sin caché, `ESPERA_MAX = 5 s` provisional;
-> modelo 65/65; 3.c.1 NO aprobada, NO implementada, pendiente de nueva
-> auditoría; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
+> modelo 72/72; ESTADO VIGENTE: §45 + §46 + §47; 3.c.1 NO aprobada, NO
+> implementada, pendiente de nueva auditoría; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -4272,7 +4275,12 @@ componer, lanzar ni registrar un falso error. Se conservan la matriz UB ×
 Redis (44.2) y la línea base de sobrepaso (44.3); los bancos no se
 regeneran (su lógica no cambió).
 
-## 46. Corrección de §45 sobre `7b410ee` — un solo deadline absoluto: la lectura previa también consume el presupuesto — **ESTADO VIGENTE de la 3.c (con §45); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-16)
+## 46. Corrección de §45 sobre `7b410ee` — un solo deadline absoluto: la lectura previa también consume el presupuesto — **ESTADO VIGENTE de la 3.c (con §45 y §47); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-16)
+
+> **§47 corrige de aquí el plazo del fondo:** `plazoFondo = inicioFondo + 50 s`
+> no basta (Vercel cuenta 60 s desde la solicitud); el fondo pasa a
+> `min(inicioFondo + 50 s, inicioRuta + 60 s − margen)`. El plazo absoluto del
+> camino en línea (46.3) queda aprobado y vigente.
 
 Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **65/65**). Sin
 código productivo, merge, push ni deploy.
@@ -4370,3 +4378,84 @@ Encabezado del informe: sólo **§45 y §46** figuran como estado vigente;
 el comentario "la cancelación se propaga" queda reemplazado por "el
 vencimiento del presupuesto interno sale por el centinela 4d". `ESTADO.md`
 e `ISSUES.md` apuntan a §46.
+
+## 47. Corrección de §46 sobre `c5a2619` — el fondo con DOS límites absolutos — **ESTADO VIGENTE de la 3.c (con §45 y §46); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **72/72**). Sin
+código productivo, merge, push ni deploy. Se conserva el resto de §46 (plazo
+absoluto del camino en línea, aprobado por la auditoría).
+
+### 47.1 El límite pendiente
+
+`plazoFondo = inicioFondo + 50 s` (§46.3) **no siempre queda debajo de
+`maxDuration`**: Vercel cuenta los 60 s **desde el inicio de la solicitud**,
+y el fondo puede empezar tarde (lectura previa lenta, adquisición lenta,
+cesión). El test de §46 sólo cubría `inicioFondo = solicitud + 0,4 s`.
+**RED (control):** fondo iniciado a los 15 s → `inicioFondo + 50 s = 65 s
+desde la ruta` > 60 s: Vercel lo mataría antes de su plazo interno.
+
+### 47.2 Contrato: dos límites absolutos y el efectivo
+
+```
+inicioRuta     = ahora() al COMIENZO REAL de la ruta (antes de la lectura previa) — el mismo `inicio` de §46
+plazoInterno   = inicioFondo + PRESUPUESTO_REQUEST_MS               (50 s desde que el fondo empieza)
+plazoExterno   = inicioRuta  + MAX_DURATION_MS − MARGEN_CIERRE_MS   (60 s − 5 s [propuesto] = 55 s desde la ruta)
+plazoEfectivo  = min(plazoInterno, plazoExterno)
+al iniciar el fondo:
+  restante = plazoEfectivo − ahora()
+  si restante < COMPOSICION_MAX_MS + PUBLICACION_MAX_MS (16 s + 1 s):
+      NO se compone; el UB ya fue servido; LIBERAR el turno (mismo camino que la cancelación);
+      métrica `fondo: "no-iniciado-presupuesto"` (la línea [home] de la solicitud no cambia:
+      `origen ultimo-bueno-fondo | fondo programado`; la línea [home-fondo] sale con
+      `fondo no-iniciado-presupuesto | publicacion no`, 0 llamadas)
+  si no:
+      senalFondo = AbortSignal.timeout(restante)        (no 50 s fijos)
+      componer(senalFondo, plazoEfectivo)
+      publicar sólo si ahora() + PUBLICACION_MAX_MS ≤ plazoEfectivo; si no, liberar sin publicar
+```
+
+`MARGEN_CIERRE_MS = 5 s` [propuesto]: cubre la publicación medida (0,13-0,15
+s), la línea de log y el asentamiento de `waitUntil`, con holgura sobre la
+precisión del corte de Vercel (desconocida). Se fija antes de medir y se
+revisa con el banco de 3.c.1. **El contenido del Home no cambia** en ningún
+caso: sólo cuándo se compone y qué métrica lo cuenta.
+
+### 47.3 RED → GREEN (modelo)
+
+| # | Caso | Resultado |
+|---|---|---|
+| RED | `inicioFondo + 50 s` a secas, fondo a los 15 s | 65 s desde la ruta > `maxDuration` |
+| 1 | fondo a 0,4 s | limitado por el interno: **50 s** (efectivo 50,4 s < 55 s); publica; turno liberado |
+| 2 | fondo a 15 s | limitado por el **externo**: **40 s**, no 50; publica dentro del margen |
+| 3 | fondo a 40 s (quedan 15 s < 17) | **UB ya servido, cero composición, turno liberado, `fondo: no-iniciado-presupuesto`** |
+| 4 | composición que cruza el plazo efectivo (fondo a 20 s, 40 s de composición) | cancelada por la señal exactamente en el plazo efectivo; no publica; turno liberado. Variante: termina 0,5 s antes → sin tiempo para publicar → no publica |
+| 5 | lectura previa 35 s + fondo a 35,4 s | externo desde la **ruta**: quedan 19,6 s (arranca, limitado por el externo); control: con el inicio tomado después de la lectura previa serían 50 s ficticios que mueren a los 60 |
+| — | un solo `inicio` | alimenta el plazo de la solicitud (50 s), el plazo externo del fondo (55 s) y la señal |
+
+Y en el modelo vigente de la espera sin UB (§43) el presupuesto pasa a
+`plazo − ahora` (§46); el cálculo con reloj local **sólo sobrevive como
+RED/antecedente rotulado en la sección §46 del test**; la frase
+"inalcanzable" desaparece del modelo: el vencimiento durante el sueño es una
+defensa real.
+
+### 47.4 RED para la implementación
+
+(1) `programarComposicionEnFondo` recibe `inicioRuta` (el `inicio` de §46)
+y calcula `plazoEfectivo` al iniciar; con `ahora()` avanzado 40 s antes de
+iniciar → `componer` 0 veces, `liberar` 1 vez, métrica
+`fondo = "no-iniciado-presupuesto"`, `[home-fondo]` con `publicacion no`;
+(2) con `ahora()` avanzado 15 s → la señal del fondo dura 40 s (no 50);
+(3) publicación saltada si `ahora() + PUBLICACION_MAX_MS > plazoEfectivo`;
+(4) cableado: `lib/home.ts` construye `senalFondo` con `AbortSignal.timeout(plazoEfectivo − ahora())`
+y ya no con `PRESUPUESTO_REQUEST_MS` fijo; `MAX_DURATION_MS` del contrato
+igual al `maxDuration` exportado por la ruta (guard estructural).
+
+### 47.5 Comprobado / inferido / pendiente
+
+- **Comprobado:** `maxDuration = 60` en la ruta y que Vercel lo cuenta
+  desde la solicitud (§32.6, sonda: "Task timed out" a los 60 s desde el
+  inicio de la solicitud aunque la respuesta ya salió); los seis casos del
+  modelo.
+- **Inferido/propuesto:** `MARGEN_CIERRE_MS = 5 s`; que el fondo pueda
+  empezar > 10 s después de la ruta (nunca observado: 0,3-0,64 s medidos).
+- **Pendiente:** implementación (3.c.1, no aprobada) con los RED de 47.4.

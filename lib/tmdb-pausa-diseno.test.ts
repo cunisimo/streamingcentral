@@ -487,15 +487,17 @@ interface Mundo {
   turnoLibre: boolean;
   redis: "ok" | "caido" | "lento" | "indeterminado-en-2a";   // lento: cada EVAL tarda 1,5 s; indeterminado-en-2a: la segunda adquisición no responde
   composiciones: number;
-  venceEn: number | null;               // instante en que VENCE la señal de presupuesto interno (`AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)`); la ruta NO usa `req.signal`
+  plazo: number;                        // §46: deadline absoluto creado junto con la señal (`inicio + PRESUPUESTO_REQUEST_MS`), antes de la lectura previa
+  venceEn: number | null;               // instante en que VENCE la señal de presupuesto interno (= plazo, salvo en el RED de §46 que los separa); la ruta NO usa `req.signal`
   evalCount: number;
   jitterMs: number;
 }
 type Salida = { status: 200; motivo: string; esperadoMs: number } | { status: 503; retryAfter: number; motivo: string };
 const s503 = (retryAfter: number, motivo: string): Salida => ({ status: 503, retryAfter: Math.max(1, retryAfter), motivo });
-async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida> {
-  const t0 = m.ahora - presupuestoYaGastadoMs;
-  const presupuestoRestante = () => PRESUPUESTO_MS - (m.ahora - t0);
+async function servirSinUB(m: Mundo): Promise<Salida> {
+  // §46: UN plazo absoluto creado con la señal (m.plazo); todo es `plazo − ahora`. El cálculo con
+  // reloj local (`PRESUPUESTO − (ahora − t0)`) sobrevive sólo como RED/antecedente en la sección §46.
+  const presupuestoRestante = () => m.plazo - m.ahora;
   const pausaLocalRestante = () => m.pausaLocalHasta !== null && m.pausaLocalHasta > m.ahora ? m.pausaLocalHasta - m.ahora : 0;
   const adquirir = (segunda = false): Adq => {
     m.evalCount += 1;
@@ -528,8 +530,9 @@ async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida
   // cliente (la ruta no usa `req.signal`; incorporarlo sería otra decisión). `dormir` RESUELVE al
   // vencer (dormirCancelable real); después se mira la señal y, si venció, se devuelve el centinela
   // 4d `vacio("cancelada")` (§44.1): sin readquirir, sin componer, sin lanzar (la ruta convertiría
-  // una excepción en 500 + console.error). Por 43.4 el vencimiento no puede caer dentro del sueño
-  // (queda ≥ 16 s + T_adq + jitter); la rama es defensiva.
+  // una excepción en 500 + console.error). Con el plazo absoluto de §46 el vencimiento durante el
+  // sueño es improbable pero NO imposible (reloj, señal y plazo son cosas distintas): la rama es
+  // una defensa REAL, no decorativa (§45 decía "inalcanzable": falso, §46).
   const dormirMs = restante + m.jitterMs;
   if (m.venceEn !== null && m.venceEn < m.ahora + dormirMs) { const esperado = m.venceEn - m.ahora; m.ahora = m.venceEn; return { status: 200, motivo: "vacio-cancelada", esperadoMs: esperado }; }
   m.ahora += dormirMs;
@@ -540,7 +543,7 @@ async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida
   }
   return terminar(r2, dormirMs);
 }
-const mundo = (o: Partial<Mundo> = {}): Mundo => ({ ahora: 100_000, pausaHasta: null, pausaLocalHasta: null, hayUB: false, turnoLibre: true, redis: "ok", composiciones: 0, venceEn: null, evalCount: 0, jitterMs: 100, ...o });
+const mundo = (o: Partial<Mundo> = {}): Mundo => ({ ahora: 100_000, plazo: 100_000 + PRESUPUESTO_MS, pausaHasta: null, pausaLocalHasta: null, hayUB: false, turnoLibre: true, redis: "ok", composiciones: 0, venceEn: null, evalCount: 0, jitterMs: 100, ...o });
 
 test("🟢 (1) la pausa termina durante el único sueño: duerme restante + jitter, readquiere UNA vez y compone; exactamente 2 EVAL", async () => {
   const m = mundo({ pausaHasta: 100_000 + 2300 });
@@ -562,7 +565,7 @@ test("🔴 CONTROL (§42, superado): un bucle que volviera a dormir mientras 'qu
   assert.equal(m.evalCount, 2); assert.equal(m.ahora, 101_100, "no durmió por segunda vez");
 });
 
-test("🟢 (3) VENCIMIENTO por presupuesto interno durante el sueño (rama defensiva; 43.4 lo hace inalcanzable): se corta el sueño, no readquiere, no compone, y sale por el centinela 4d de hoy (`vacio-cancelada`): ni 503 ni error registrado", async () => {
+test("🟢 (3) VENCIMIENTO por presupuesto interno durante el sueño (defensa real, §46): se corta el sueño, no readquiere, no compone, y sale por el centinela 4d de hoy (`vacio-cancelada`): ni 503 ni error registrado", async () => {
   const m = mundo({ pausaHasta: 100_000 + 4000, venceEn: 100_000 + 1500 });
   const r = await servirSinUB(m);
   assert.deepEqual(r, { status: 200, motivo: "vacio-cancelada", esperadoMs: 1500 });
@@ -612,13 +615,13 @@ test("🟢 (5) varias solicitudes sin UB esperando a la vez: una compone, las de
   assert.deepEqual(motivos, ["compuesta", "compartida", "compartida", "compartida"]); assert.equal(total, 1);
 });
 
-test("🟢 (6) presupuesto: incluye restante + jitter máximo + timeout de la readquisición + composición; con 30 s gastados y 2 s de pausa: 50 − 30 − (2 + 0,25 + 2) = 15,75 < 16 → 503 sin dormir", async () => {
-  const m = mundo({ pausaHasta: 100_000 + 2000 });
-  assert.deepEqual(await servirSinUB(m, 30_000), s503(2, "presupuesto-insuficiente"));
+test("🟢 (6) presupuesto contra el PLAZO ABSOLUTO: restante + jitter máximo + timeout de la readquisición + composición; con el plazo a 20 s (30 s ya consumidos, lectura previa incluida) y 2 s de pausa: 20 − (2 + 0,25 + 2) = 15,75 < 16 → 503 sin dormir", async () => {
+  const m = mundo({ pausaHasta: 100_000 + 2000, plazo: 100_000 + 20_000 });
+  assert.deepEqual(await servirSinUB(m), s503(2, "presupuesto-insuficiente"));
   assert.equal(m.evalCount, 1);
-  // Con 29 s gastados sí cabe (16,75 ≥ 16): duerme y compone.
-  const m2 = mundo({ pausaHasta: 100_000 + 2000 });
-  assert.equal((await servirSinUB(m2, 29_000) as any).motivo, "compuesta");
+  // Con el plazo a 21 s sí cabe (16,75 ≥ 16): duerme y compone.
+  const m2 = mundo({ pausaHasta: 100_000 + 2000, plazo: 100_000 + 21_000 });
+  assert.equal((await servirSinUB(m2) as any).motivo, "compuesta");
 });
 
 test("🟢 (7) Retry-After tras esperar: el PTTL FRESCO de la readquisición (pausa nueva de 6 s) → 6, no 4 ni 10", async () => {
@@ -648,7 +651,7 @@ test("🟢 cota dura: ≤ 2 EVAL y ≤ ESPERA_MAX + JITTER_MAX de sueño por sol
     const t0 = m.ahora; const r = await servirSinUB(m);
     assert.ok(m.evalCount <= 2, `EVAL ${m.evalCount}`);
     assert.ok(m.ahora - t0 <= ESPERA_MAX_MS + JITTER_MAX_MS, `esperó ${m.ahora - t0} ms con restante ${restante}`);
-    assert.ok(r.status === 503 || r.motivo === "compuesta" || r.motivo === "vacio-cancelada", JSON.stringify(r));   // vacio-cancelada sólo por vencimiento interno, inalcanzable acá
+    assert.ok(r.status === 503 || r.motivo === "compuesta" || r.motivo === "vacio-cancelada", JSON.stringify(r));   // vacio-cancelada sólo por vencimiento interno (defensa real, §46); no ocurre con estos mundos porque venceEn es null
   }
 });
 
@@ -1001,4 +1004,99 @@ test("🟢 el recorrido del plazo entre módulos: nace con la señal, viaja en e
   assert.equal(modulos.length, 4);
   assert.ok(modulos.every((m) => /plazo/.test(m.hace)));
   assert.ok(!modulos.some((m) => /t0 = ahora/.test(m.hace)), "ningún módulo vuelve a arrancar un reloj propio para el presupuesto");
+});
+
+// =============================================================================
+// §47 (auditoría sobre c5a2619): el FONDO con DOS límites absolutos.
+//   plazoInterno  = inicioFondo + PRESUPUESTO_REQUEST_MS                 (50 s desde que el fondo empieza)
+//   plazoExterno  = inicioRuta  + MAX_DURATION_MS − MARGEN_CIERRE_MS     (Vercel cuenta los 60 s desde la solicitud)
+//   plazoEfectivo = min(plazoInterno, plazoExterno)
+// Al iniciar el fondo: si plazoEfectivo − ahora < COMPOSICION_MAX_MS + PUBLICACION_MAX_MS, NO se
+// compone: el UB ya fue servido; se libera el turno y se anota `fondo: "no-iniciado-presupuesto"`.
+// La señal del fondo dura exactamente plazoEfectivo − ahora; la publicación se salta si ya venció.
+// =============================================================================
+const FONDO = { PRESUPUESTO_MS: 50_000, MAX_DURATION_MS: 60_000, MARGEN_CIERRE_MS: 5_000 /* propuesto: publicación 0,13-0,15 s medida + línea + asentar waitUntil */, COMPOSICION_MAX_MS: 16_000, PUBLICACION_MAX_MS: 1_000 };
+function plazosDelFondo(inicioRuta: number, inicioFondo: number) {
+  const plazoInterno = inicioFondo + FONDO.PRESUPUESTO_MS;
+  const plazoExterno = inicioRuta + FONDO.MAX_DURATION_MS - FONDO.MARGEN_CIERRE_MS;
+  return { plazoInterno, plazoExterno, plazoEfectivo: Math.min(plazoInterno, plazoExterno), limitadoPor: plazoInterno <= plazoExterno ? "interno" : "externo" as "interno" | "externo" };
+}
+interface FondoMundo { ahora: number; inicioRuta: number; composicionMs: number; eventos: string[]; turno: "adquirido" | "liberado"; publicada: boolean; fondo: string | null; }
+function iniciarFondo(f: FondoMundo) {
+  const { plazoEfectivo, limitadoPor } = plazosDelFondo(f.inicioRuta, f.ahora);
+  const restante = plazoEfectivo - f.ahora;
+  f.eventos.push(`plazo-efectivo:${limitadoPor}:${restante}`);
+  if (restante < FONDO.COMPOSICION_MAX_MS + FONDO.PUBLICACION_MAX_MS) {
+    f.turno = "liberado"; f.fondo = "no-iniciado-presupuesto"; f.eventos.push("liberar", "fondo:no-iniciado-presupuesto");
+    return "ub-servido-sin-fondo";
+  }
+  f.fondo = "programado";
+  // señal del fondo = AbortSignal.timeout(restante): la composición no puede seguir después de plazoEfectivo
+  const finComposicion = f.ahora + f.composicionMs;
+  if (finComposicion > plazoEfectivo) { f.ahora = plazoEfectivo; f.turno = "liberado"; f.eventos.push("señal:cancelada", "liberar"); return "cancelada"; }
+  f.ahora = finComposicion;
+  if (f.ahora + FONDO.PUBLICACION_MAX_MS > plazoEfectivo) { f.turno = "liberado"; f.eventos.push("sin-tiempo-para-publicar", "liberar"); return "cancelada"; }
+  f.publicada = true; f.turno = "liberado"; f.eventos.push("publicada", "liberar");
+  return "publicada";
+}
+const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => ({ ahora: 100_000, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turno: "adquirido", publicada: false, fondo: null, ...o });
+
+test("🔴 RED (control): con plazoFondo = inicioFondo + 50 s a secas, un fondo iniciado a los 15 s cree tener hasta t = 65 s — Vercel mata la invocación a los 60 s", () => {
+  const inicioRuta = 100_000, inicioFondo = inicioRuta + 15_000;
+  const plazoSoloInterno = inicioFondo + FONDO.PRESUPUESTO_MS;
+  assert.equal(plazoSoloInterno - inicioRuta, 65_000, "65 s > maxDuration");
+  assert.ok(plazoSoloInterno > inicioRuta + FONDO.MAX_DURATION_MS, "§46 sólo cubría inicioFondo = 0,4 s");
+});
+
+test("🟢 (1) fondo iniciado a 0,4 s: limitado por el interno; conserva 50 s (efectivo 50,4 s desde la ruta < 55 s externo)", () => {
+  const f = fondoMundo({ ahora: 100_400 });
+  const p = plazosDelFondo(f.inicioRuta, f.ahora);
+  assert.equal(p.limitadoPor, "interno"); assert.equal(p.plazoEfectivo - f.ahora, 50_000);
+  assert.equal(iniciarFondo(f), "publicada"); assert.equal(f.fondo, "programado"); assert.equal(f.turno, "liberado");
+});
+
+test("🟢 (2) fondo iniciado a 15 s: limitado por el techo externo (55 s desde la ruta): le quedan 40 s, no 50", () => {
+  const f = fondoMundo({ ahora: 115_000 });
+  const p = plazosDelFondo(f.inicioRuta, f.ahora);
+  assert.equal(p.limitadoPor, "externo"); assert.equal(p.plazoEfectivo - f.ahora, 40_000);
+  assert.equal(iniciarFondo(f), "publicada");
+  assert.ok(f.ahora + FONDO.PUBLICACION_MAX_MS <= f.inicioRuta + FONDO.MAX_DURATION_MS - FONDO.MARGEN_CIERRE_MS);
+});
+
+test("🟢 (3) presupuesto efectivo insuficiente (fondo a los 40 s: quedan 15 s < 16 + 1): UB ya servido, CERO composición, turno liberado, `fondo: no-iniciado-presupuesto`", () => {
+  const f = fondoMundo({ ahora: 140_000 });
+  assert.equal(iniciarFondo(f), "ub-servido-sin-fondo");
+  assert.equal(f.publicada, false); assert.equal(f.turno, "liberado"); assert.equal(f.fondo, "no-iniciado-presupuesto");
+  assert.deepEqual(f.eventos, ["plazo-efectivo:externo:15000", "liberar", "fondo:no-iniciado-presupuesto"]);
+  // El contenido del Home no cambia: el UB servido es el mismo; sólo la métrica/origen lo cuenta.
+});
+
+test("🟢 (4) el fondo nunca publica ni sigue trabajando después del plazo efectivo: composición que lo cruza → cancelada por la señal, sin publicar, turno liberado", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000 });   // efectivo: externo 155 s → 35 s; la composición pediría 40
+  assert.equal(iniciarFondo(f), "cancelada");
+  assert.equal(f.ahora, 155_000, "se detuvo exactamente en el plazo efectivo");
+  assert.equal(f.publicada, false); assert.equal(f.turno, "liberado");
+  // Y si termina justo antes pero no cabe la publicación: tampoco publica.
+  const g = fondoMundo({ ahora: 120_000, composicionMs: 34_500 });
+  assert.equal(iniciarFondo(g), "cancelada"); assert.ok(g.eventos.includes("sin-tiempo-para-publicar")); assert.equal(g.publicada, false);
+});
+
+test("🟢 (5) el plazo externo nace al COMIENZO REAL de la ruta, no después de la lectura previa: lectura previa de 35 s + fondo a 35,4 s → externo 55 s desde la ruta (quedan 19,6 s), no 55 s desde la lectura", () => {
+  const inicioRuta = 100_000;
+  const inicioFondo = inicioRuta + 35_400;                              // 35 s de lectura previa + 0,4 s
+  const p = plazosDelFondo(inicioRuta, inicioFondo);
+  assert.equal(p.limitadoPor, "externo"); assert.equal(p.plazoEfectivo - inicioFondo, 19_600);
+  const f = fondoMundo({ ahora: inicioFondo, inicioRuta, composicionMs: 18_000 });
+  assert.equal(iniciarFondo(f), "publicada");                         // 19,6 ≥ 17: arranca, limitado por el externo
+  // CONTROL: si el "inicio de la ruta" se tomara después de la lectura previa, el fondo creería tener 50 s y moriría a los 60 s reales.
+  const pMal = plazosDelFondo(inicioRuta + 35_000, inicioFondo);
+  assert.equal(pMal.plazoEfectivo - inicioFondo, 50_000, "control: con el inicio mal tomado, 50 s ficticios");
+  assert.ok(pMal.plazoEfectivo > inicioRuta + FONDO.MAX_DURATION_MS);
+});
+
+test("🟢 el mismo `inicio` alimenta los tres plazos: plazo de la solicitud (§46), plazo externo del fondo y señal — un solo instante, tomado antes de la lectura previa", () => {
+  const inicio = 100_000;
+  const plazoSolicitud = inicio + FONDO.PRESUPUESTO_MS, plazoExterno = inicio + FONDO.MAX_DURATION_MS - FONDO.MARGEN_CIERRE_MS;
+  assert.equal(plazoSolicitud, 150_000); assert.equal(plazoExterno, 155_000);
+  assert.ok(plazoExterno > plazoSolicitud, "el fondo puede vivir hasta 5 s más que la solicitud, nunca más allá del margen de cierre");
 });
