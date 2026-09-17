@@ -26,29 +26,21 @@
 > carrera cerrada dentro del script de adquisición del turno, observabilidad
 > por evento y deltas, retirada la idea de provocar un frío total en
 > Producción. 3.c.1 lista para auditoría de DISEÑO, no de implementación;
-> 3.c.2 no aprobada. **§41 (16/09, auditoría sobre `21cbf18`) — ESTADO
-> VIGENTE de la 3.c:** contrato con sobrepaso explícito, lector no
-> bloqueante sin tormenta (28/28 sobre modelo), marcador 120 s + marca de
-> agua, Lua completo con observabilidad, `/api/health` sólo agregados,
-> **§42: por decisión del dueño, sin UB NO hay `503` inmediato — espera
-> breve y acotada (`min(restante, 5 s)`, sin sondeo, cancelable, 2 `EVAL`) y
-> `503` + `Retry-After` sólo si la pausa continúa. **§43 (auditoría sobre
-> `5405cbd`, diez puntos) — ESTADO VIGENTE:** un solo sueño y una sola
-> readquisición (≤ 2 `EVAL`), cancelación propagada, pausa local por encima
-> de Redis caído, presupuesto con jitter y timeout, fallback conservador del
-> `Retry-After`, sólo `Δt` (elección con números), cota 94/282 con timeout
-> y sin cota si la lectura falla, `F_max = 1`, marca de agua por proceso con
-> TTL propio, Lua que valida antes de mutar y falla seguro. **§44 (auditoría
-> sobre `122f1a6`) — ESTADO VIGENTE:** cancelación con las primitivas reales
-> (`dormirCancelable` resuelve; centinela 4d, sin `503` ni error falso),
-> matriz UB × Redis sin caché en memoria, sobrepaso parametrizado (94 / 184
-> / 528 según cadencia 35 / 80 / 252 — estimaciones, no cotas) y línea base
-> medida con 429 rápidas (750-778 llamadas tras el primer 429, pico
-> 224-252/s); modelo 57/57; 3.c.1 NO aprobada, NO implementada, pendiente de
-> nueva auditoría; 3.c.2 fuera de alcance. **§45:** la señal del Home es el
-> presupuesto interno (`AbortSignal.timeout`), no el cliente (`req.signal`
-> no se usa ni se agrega): "cancelación" = vencimiento interno → centinela
-> 4d; guard estructural sobre la ruta (58/58); estado canónico limpio.**** Ocho correcciones en rama (auditorías de Codex sobre
+> 3.c.2 no aprobada. **Antecedentes superados (rotulados en cada sección):
+> §41 (contrato con sobrepaso, lector, marcador), §42 (decisión del dueño:
+> espera breve sin UB — la decisión sigue vigente, su bucle no), §43 (diez
+> correcciones), §44 (tres correcciones). ESTADO VIGENTE de la 3.c: §45 +
+> §46** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
+> sin `req.signal`) y el vencimiento sale por el centinela 4d; **un solo
+> deadline absoluto `plazo` creado con la señal, `plazo − ahora` en lectura
+> previa, espera, readquisición y composición; el fondo con su propio
+> `plazoFondo`** (§46, que además detecta el mismo defecto en el rescate de
+> la Etapa 2 hoy en Producción); un solo sueño y una readquisición (≤ 2
+> `EVAL`), `F_max = 1`, sólo `Δt`, marca de agua por proceso con TTL, Lua que
+> falla seguro, sobrepaso parametrizado (estimaciones, no cotas) con línea
+> base medida, matriz UB × Redis sin caché, `ESPERA_MAX = 5 s` provisional;
+> modelo 65/65; 3.c.1 NO aprobada, NO implementada, pendiente de nueva
+> auditoría; 3.c.2 fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
 > `c6b299e` §28, `37f1ca1` §29 y `2886212` §30), aprobada por la auditoría
 > final sobre `8177d2a`. Reintentos APAGADOS; limitador, circuito y
@@ -4139,7 +4131,12 @@ precondición de Preview del `EVAL` (`TIME`, `cjson`, tupla vía SDK; ahora en
 de §40.4 aceptados (sin tocar), RED del script de adquisición del turno.
 **3.c.2 sigue fuera de alcance.**
 
-## 44. Etapa 3.c.1 — corrección de §43 sobre `122f1a6` (tres puntos) — **ESTADO VIGENTE de la 3.c; NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-16)
+## 44. Etapa 3.c.1 — corrección de §43 sobre `122f1a6` (tres puntos) — **NO aprobada, NO implementada** (2026-09-16)
+
+> **ANTECEDENTE, corregido por §45 (la señal es el presupuesto interno, no el
+> cliente) y §46 (un solo deadline absoluto; "inalcanzable" era falso).**
+> Siguen vigentes de aquí la matriz UB × Redis (44.2) y la línea base de
+> sobrepaso (44.3). El estado vigente es **§45 + §46**.
 
 Rama `diseno/etapa3c-proteccion-tmdb`. Sin código productivo, merge, push ni
 deploy. Modelo `lib/tmdb-pausa-diseno.test.ts` **57/57**; nueva medida de
@@ -4177,9 +4174,10 @@ que `servirConTurno` ya usa en 4d** (línea `[home] … CANCELADA`, `origen
 vacio-cancelada`): **no readquiere, no compone, no lanza, no `503`, no error
 registrado**. Probado con el `dormirCancelable` real y el modelo fiel del
 `catch`: `status 200`, `adquisiciones 1`, `composiciones 0`, sueño cortado en
-< 1 s, registro vacío. **Por 43.4 esa rama es inalcanzable dentro del sueño**
-(antes de dormir se exige `restante + jitter + T_adq + 16 s ≤ presupuesto
-restante`): queda como defensa. **Guard estructural** (en el test): la ruta
+< 1 s, registro vacío. ~~Por 43.4 esa rama es inalcanzable dentro del sueño~~
+— **falso (§46):** el cálculo de 43.4 usaba el reloj local de
+`servirConTurno`, que no ve la lectura previa; con el deadline absoluto de
+§46 la rama sigue siendo necesaria como defensa real. **Guard estructural** (en el test): la ruta
 no contiene `req.signal`, `lib/home.ts` crea exactamente dos
 `AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS)`, el `catch` responde
 `500` y registra, y `servirVacio("cancelada")`/`dormirCancelable` existen. La
@@ -4273,3 +4271,102 @@ vigente), y el vencimiento interno devuelve el centinela 4d sin readquirir,
 componer, lanzar ni registrar un falso error. Se conservan la matriz UB ×
 Redis (44.2) y la línea base de sobrepaso (44.3); los bancos no se
 regeneran (su lógica no cambió).
+
+## 46. Corrección de §45 sobre `7b410ee` — un solo deadline absoluto: la lectura previa también consume el presupuesto — **ESTADO VIGENTE de la 3.c (con §45); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-16)
+
+Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **65/65**). Sin
+código productivo, merge, push ni deploy.
+
+### 46.1 El defecto: dos relojes
+
+[Comprobado en código] `homePayload` crea la señal
+(`AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS)`, `lib/home.ts:840`);
+después `crearVueloHome.servir` hace la **lectura previa** del caché
+(`await deps.leer(clave)`, `lib/home-vuelo.ts:70`); y recién `servirConTurno`
+fija `t0 = ahora()` (`lib/home-servir.ts:143`). Todo cálculo de la forma
+`PRESUPUESTO_REQUEST_MS − (ahora() − t0)` **ignora lo consumido antes de
+`t0`**: una lectura previa lenta (Redis lento, los 6 reintentos del SDK con
+4,29 s de backoff, un `fetch` colgado) no cuenta. Consecuencias: (a) el
+cálculo de §43.4 permitía dormir y componer con presupuesto que ya no
+existía, y la afirmación de §45 "el vencimiento durante el sueño es
+inalcanzable" **era falsa**; (b) **el rescate de la espera compartida que
+está hoy en Producción** (`home-servir.ts:315`, Etapa 2) tiene el mismo
+defecto: puede empezar un rescate que la señal mata a los 50 s (→ `vacío`
+cancelado), justo lo que su comentario dice evitar. (b) no es un riesgo de
+contenido (nada incorrecto se publica) pero sí de un Home vacío evitable;
+se corrige con el mismo contrato, dentro de la implementación de 3.c.1.
+
+### 46.2 RED (dos controles, ejecutados)
+
+1. Señal en `t = 0`; lectura previa de **35 s**; `servirConTurno` arranca su
+   reloj a los 35 s; aparece `pausado(2000)`. Cálculo viejo: `50 − 0 − 4,25 ≥
+   16` → **"cabe"**. Real: `plazo − ahora = 15 s` → **no cabe**. Con el viejo,
+   sueño 2,1 s + readquisición + composición de 16 s terminan **después del
+   plazo**: la señal corta la composición.
+2. El rescate de hoy: lectura previa 30 s + espera compartida 5 s →
+   `PRESUPUESTO − (ahora − t0) = 45 s` "restantes"; reales: **10 s**.
+
+### 46.3 Contrato: un deadline absoluto, creado junto con la señal
+
+```
+homePayload:            inicio = ahora(); plazo = inicio + PRESUPUESTO_REQUEST_MS
+                        senal  = AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)      -- mismo instante, misma duración
+                        servirHome(clave, producir, { ...claves, plazo })
+crearVueloHome.servir:  lectura previa; pasa el contexto (con `plazo`) a `resolver` SIN tocarlo
+servirConTurno:         restante() = plazo − ahora()      -- sin t0 propio para el presupuesto
+                          · rescate de la espera compartida:  restante() ≥ COMPOSICION_MAX_MS
+                          · espera por pausa (43.1/43.4):     restante() − (pausa + JITTER_MAX + T_ADQ_MAX) ≥ COMPOSICION_MAX_MS
+                          · antes de componer:                restante() ≥ COMPOSICION_MAX_MS
+fondo (programarComposicionEnFondo):
+                        inicioFondo = ahora(); plazoFondo = inicioFondo + PRESUPUESTO_REQUEST_MS
+                        senalFondo  = AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)  -- ya es así (lib/home.ts:743)
+                        componer(senalFondo, plazoFondo)                            -- el fondo NO hereda el plazo de la solicitud
+```
+
+`t0` de `servirConTurno` puede quedar para las métricas (`msTotal` de la
+espera), **nunca** para decidir presupuesto. `ahora` sigue inyectable
+(reloj virtual en tests). El techo externo (`maxDuration` 60 s desde la
+solicitud) sigue por encima de los dos plazos: `plazoFondo ≈ solicitud + 50,4
+s < 60 s`.
+
+### 46.4 GREEN (modelo)
+
+Con el plazo único: lectura previa 35 s + pausa 2 s → `503
+presupuesto-insuficiente` **sin dormir**; lectura previa 0,3 s + pausa 2 s →
+sueño, readquisición, composición **dentro del plazo** (aserción: nunca se
+compone después del plazo); rescate con lectura previa 30 s + espera 5 s →
+`503 espera-agotada`; el fondo tiene su plazo propio (50 s desde su inicio,
+no desde la solicitud; no hereda los 15 s que le quedarían a la solicitud);
+recorrido del plazo entre los cuatro módulos sin ningún `t0 = ahora()` para
+presupuesto.
+
+### 46.5 RED para la implementación (además de los anteriores)
+
+En `home-servir.test.ts` con reloj virtual: (1) `deps.plazo` inyectado;
+`ahora()` avanzado 35 s **antes** de llamar a `servirConTurno` (la lectura
+previa) → con `pausado(2000)`, `dormir` **no** se llama y sale `503`; (2) el
+mismo avance → la espera compartida rescata sólo si `plazo − ahora ≥ 16 s`;
+(3) cableado (`etapa3c-cableado.test.ts`): `lib/home.ts` crea `plazo` en la
+misma línea que la señal y lo pasa en el contexto; `home-servir.ts` no
+contiene `PRESUPUESTO_REQUEST_MS − (` ni `ahora() - t0` en decisiones de
+presupuesto; el fondo crea `plazoFondo` junto a `senalFondo`.
+
+### 46.6 Comprobado / inferido / pendiente
+
+- **Comprobado:** los tres puntos del recorrido (señal → lectura previa →
+  `t0` local) en el código; el defecto del rescate actual (línea 315); los
+  dos RED sobre modelo.
+- **Inferido:** que una lectura previa pueda tardar decenas de segundos en
+  Producción (el SDK reintenta 6 veces sin timeout propio: 4,29 s de
+  backoff más los `fetch`; nunca observado — 0 líneas con `intentos http`
+  ≫ llamadas). El contrato no depende de que ocurra.
+- **Pendiente:** la implementación (3.c.1, no aprobada) y sus RED de 46.5;
+  la corrección del rescate de Producción viaja con ella.
+
+### 46.7 Limpieza documental
+
+Encabezado del informe: sólo **§45 y §46** figuran como estado vigente;
+§41, §43 y §44 pasan a antecedentes superados. `lib/tmdb-pausa-diseno.test.ts`:
+el comentario "la cancelación se propaga" queda reemplazado por "el
+vencimiento del presupuesto interno sale por el centinela 4d". `ESTADO.md`
+e `ISSUES.md` apuntan a §46.

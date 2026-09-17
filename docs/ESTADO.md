@@ -7,11 +7,25 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §44,
-  estado vigente, 2026-09-16): 3.c.1 "pausa compartida ante 429" con diseño
-  corregido (§43: diez puntos; §44: tres más tras la auditoría sobre
-  `122f1a6`; §45: corrección de §44); NO APROBADA; NO IMPLEMENTADA;
-  PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de alcance.** Correcciones de
+- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §45 +
+  §46, estado vigente, 2026-09-16): 3.c.1 "pausa compartida ante 429" con
+  diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el
+  presupuesto interno; §46: un solo deadline absoluto); NO APROBADA; NO
+  IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de alcance.**
+  **§46 — dos relojes:** la señal nace en `homePayload`, la lectura previa
+  del caché corre después (`crearVueloHome`) y `servirConTurno` recién ahí
+  fija `t0`; todo `PRESUPUESTO − (ahora − t0)` ignora lo consumido antes.
+  RED: lectura previa de 35 s + pausa de 2 s → el cálculo viejo "cabe" con
+  15 s reales (la composición moriría en la señal: "inalcanzable" de §45 era
+  falso). Contrato: **un deadline absoluto `plazo` creado junto con la
+  señal**, en el contexto hasta `servirConTurno`, y siempre `plazo − ahora`
+  para el rescate de la espera compartida, la espera por pausa y el arranque
+  de la composición; **el fondo con su propio `plazoFondo`** creado al
+  iniciar el fondo. Hallazgo colateral: **el rescate de la Etapa 2 hoy en
+  Producción (`home-servir.ts:315`) tiene el mismo defecto** (puede empezar
+  un rescate que la señal mata → vacío); no publica nada incorrecto; se
+  corrige con el mismo contrato en la implementación de 3.c.1. Modelo
+  65/65. Correcciones de
   §44/§45: (1) **vencimiento por presupuesto interno**, no abandono del
   cliente: la ruta no usa `req.signal` (y no se agrega: otra decisión, fuera
   de alcance); la única señal es `AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)`;
@@ -20,8 +34,9 @@
   venció, se devuelve el centinela 4d `vacio("cancelada")` de hoy (sin
   readquirir, sin componer, sin lanzar, sin `503`, sin error falso),
   probado con el `dormir` real y un modelo fiel del `catch`, con guard
-  estructural sobre la ruta real; por el presupuesto previo al sueño esa
-  rama es inalcanzable dentro del sueño; (2) **UB y
+  estructural sobre la ruta real; esa rama NO es inalcanzable (§46: la
+  lectura previa consume presupuesto que el reloj local no ve) y queda
+  como defensa real; (2) **UB y
   Redis caído** sin caché en memoria: `ub` es una variable por solicitud
   leída una vez en el paso 2; si Redis falla antes, es `null` aunque el UB
   exista; si falla después, se sirve lo leído (matriz completa); (3)
@@ -51,7 +66,7 @@
   sin pausa; telemetría en `pcall`). Modelo 49/49.
   Lo que sigue vigente de §41/§42: Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 58/58) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 65/65) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida
@@ -803,7 +818,7 @@ en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
    | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
    | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
    | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§44 + §45, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso estimado (no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), vencimiento interno por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
+   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§45 + §46, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso estimado (no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), un solo deadline absoluto `plazo − ahora` (la lectura previa cuenta; el fondo con plazo propio), vencimiento interno por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
    | 4 | CDN + límite por ruta | — | Sí |
    | 5 | Observabilidad permanente | #20 | — |
 

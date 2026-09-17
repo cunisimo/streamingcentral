@@ -466,8 +466,9 @@ test("🟢 sin UB y pausado: la ruta responde 503 + Retry-After con el motivo qu
 
 // =============================================================================
 // §42/§43 (decisión del dueño + auditoría sobre 5405cbd): sin UB y con pausa,
-// UN solo sueño acotado, UNA sola readquisición, ≤ 2 EVAL por solicitud; la
-// cancelación se propaga (no es un 503); la pausa LOCAL manda si Redis no
+// UN solo sueño acotado, UNA sola readquisición, ≤ 2 EVAL por solicitud; el
+// vencimiento del presupuesto interno sale por el centinela 4d (§44.1/§45: la
+// ruta no usa `req.signal`; no es un 503 ni un error); la pausa LOCAL manda si Redis no
 // responde; el presupuesto incluye jitter y el timeout de la readquisición;
 // Retry-After con fallback conservador si la readquisición queda indeterminada.
 // =============================================================================
@@ -520,7 +521,7 @@ async function servirSinUB(m: Mundo, presupuestoYaGastadoMs = 0): Promise<Salida
   if (r1.estado !== "pausado") return terminar(r1, 0);
   const restante = r1.restanteMs;
   const cabeEnEspera = restante <= ESPERA_MAX_MS;
-  const cabeEnPresupuesto = presupuestoRestante() - (restante + JITTER_MAX_MS + T_ADQ_MAX_MS) >= COMPOSICION_MAX_MS;   // §43.4
+  const cabeEnPresupuesto = presupuestoRestante() - (restante + JITTER_MAX_MS + T_ADQ_MAX_MS) >= COMPOSICION_MAX_MS;   // §43.4 — OJO: acá `t0` es local al modelo; §46 exige `plazo − ahora` con el plazo creado junto con la señal (la lectura previa no entra en este t0)
   if (!cabeEnEspera) return s503(Math.ceil(restante / 1000), "pausa-continua");
   if (!cabeEnPresupuesto) return s503(Math.ceil(restante / 1000), "presupuesto-insuficiente");
   // UN solo sueño. La señal es la de PRESUPUESTO INTERNO (`AbortSignal.timeout`), no el abandono del
@@ -888,4 +889,116 @@ test("🟢 guard: la ruta del Home NO usa `req.signal`, la señal es `AbortSigna
   const servir = fuente("lib/home-servir.ts");
   assert.match(servir, /servirVacio\("cancelada"\)/);
   assert.match(servir, /export function dormirCancelable/);
+});
+
+// =============================================================================
+// §46 (auditoría sobre 7b410ee): DOS RELOJES. La señal nace en `homePayload`
+// (`AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)`, lib/home.ts:840); después
+// `crearVueloHome.servir` hace la LECTURA PREVIA (lib/home-vuelo.ts:70); y recién
+// `servirConTurno` fija `t0 = ahora()` (lib/home-servir.ts:143). Todo lo que se
+// calcula como `PRESUPUESTO − (ahora − t0)` ignora lo consumido antes de t0.
+// Contrato nuevo: UN deadline absoluto `plazo`, creado junto con la señal, y
+// siempre `plazo − ahora()`. El fondo tiene su propio `plazoFondo` creado
+// cuando el fondo empieza (junto con su señal, lib/home.ts:743).
+// =============================================================================
+const RELOJ = { PRESUPUESTO_MS: 50_000, COMPOSICION_MAX_MS: 16_000, JITTER_MAX_MS: 250, T_ADQ_MAX_MS: 2_000 };
+
+/** El cálculo VIEJO (§43.4 y también el rescate de hoy en home-servir.ts:315): con el reloj local de servirConTurno. */
+function cabeConRelojLocal(o: { ahora: number; t0Local: number; restantePausaMs: number }) {
+  const presupuestoRestante = RELOJ.PRESUPUESTO_MS - (o.ahora - o.t0Local);
+  return presupuestoRestante - (o.restantePausaMs + RELOJ.JITTER_MAX_MS + RELOJ.T_ADQ_MAX_MS) >= RELOJ.COMPOSICION_MAX_MS;
+}
+/** El cálculo NUEVO: contra el deadline absoluto creado con la señal. */
+function cabeConPlazo(o: { ahora: number; plazo: number; restantePausaMs: number }) {
+  const presupuestoRestante = o.plazo - o.ahora;
+  return presupuestoRestante - (o.restantePausaMs + RELOJ.JITTER_MAX_MS + RELOJ.T_ADQ_MAX_MS) >= RELOJ.COMPOSICION_MAX_MS;
+}
+
+test("🔴 RED (control): la señal nace en t=0; la lectura previa consume 35 s; servirConTurno arranca su reloj a los 35 s; pausa de 2 s → el cálculo viejo dice 'cabe' aunque quedan 15 s", () => {
+  const inicioSenal = 100_000;
+  const plazo = inicioSenal + RELOJ.PRESUPUESTO_MS;      // deadline real: t = 50 s
+  const trasLecturaPrevia = inicioSenal + 35_000;        // 35 s de lectura previa (Redis lento, reintentos del SDK…)
+  const t0Local = trasLecturaPrevia;                     // servirConTurno: t0 = ahora()
+  const ahora = trasLecturaPrevia;                       // aparece pausado(2000)
+  assert.equal(cabeConRelojLocal({ ahora, t0Local, restantePausaMs: 2000 }), true, "viejo: cree que tiene 50 s");
+  assert.equal(plazo - ahora, 15_000, "real: quedan 15 s");
+  assert.equal(cabeConPlazo({ ahora, plazo, restantePausaMs: 2000 }), false, "nuevo: 15 − 4,25 < 16 → no cabe");
+  // Lo que pasaría con el cálculo viejo: dormir 2,1 s, readquirir, componer 16 s → la señal vence a los 50 s en plena composición → cancelada (vacío).
+  const finComposicionVieja = ahora + 2100 + RELOJ.T_ADQ_MAX_MS + RELOJ.COMPOSICION_MAX_MS;
+  assert.ok(finComposicionVieja > plazo, "la composición muere en la señal: 'inalcanzable' (§45) era falso");
+});
+
+test("🔴 RED (control): el mismo defecto está HOY en el rescate de la espera compartida (home-servir.ts:315): `PRESUPUESTO − (ahora − t0)` con t0 local", () => {
+  const rescateViejo = (ahora: number, t0Local: number) => RELOJ.PRESUPUESTO_MS - (ahora - t0Local) >= RELOJ.COMPOSICION_MAX_MS;
+  const rescateNuevo = (ahora: number, plazo: number) => plazo - ahora >= RELOJ.COMPOSICION_MAX_MS;
+  const inicio = 0, plazo = 50_000, t0Local = 35_000, ahora = 40_000;   // 35 s de lectura previa + 5 s de espera compartida
+  assert.equal(rescateViejo(ahora, t0Local), true, "viejo: 45 s 'restantes'");
+  assert.equal(rescateNuevo(ahora, plazo), false, "real: 10 s");
+  void inicio;
+});
+
+// ----------------------------------------------------------------- el contrato: un plazo, un recorrido
+// homePayload: inicio = ahora(); plazo = inicio + PRESUPUESTO; senal = AbortSignal.timeout(PRESUPUESTO)
+//   → servirHome(clave, producir, { ...claves, plazo })          (crearVueloHome pasa el contexto sin tocarlo)
+//   → resolver(clave, producir, contexto) → servirConTurno({ …, plazo: contexto.plazo })
+//   → dentro: restante() = plazo − ahora(); se usa en la espera compartida (rescate), en la espera por pausa
+//     (43.1/43.4), y antes de componer. El fondo: plazoFondo = ahoraAlIniciarElFondo + PRESUPUESTO, junto
+//     con su señal (lib/home.ts:743), y componer(senalFondo, plazoFondo).
+interface Recorrido { ahora: number; plazo: number; eventos: string[]; composiciones: number; }
+function servirConPlazo(r: Recorrido, o: { lecturaPreviaMs: number; pausaRestanteMs: number | null; esperaCompartidaMs?: number }) {
+  r.ahora += o.lecturaPreviaMs; r.eventos.push(`lectura-previa:${o.lecturaPreviaMs}`);
+  const restante = () => r.plazo - r.ahora;
+  if (o.esperaCompartidaMs) { r.ahora += o.esperaCompartidaMs; r.eventos.push(`espera-compartida:${o.esperaCompartidaMs}`); if (restante() < RELOJ.COMPOSICION_MAX_MS) { r.eventos.push("rescate:503-espera-agotada"); return "espera-agotada"; } }
+  if (o.pausaRestanteMs !== null) {
+    if (o.pausaRestanteMs > 5000) { r.eventos.push("503:pausa-continua"); return "503"; }
+    if (restante() - (o.pausaRestanteMs + RELOJ.JITTER_MAX_MS + RELOJ.T_ADQ_MAX_MS) < RELOJ.COMPOSICION_MAX_MS) { r.eventos.push("503:presupuesto-insuficiente"); return "503"; }
+    r.ahora += o.pausaRestanteMs + 100; r.eventos.push("sueño"); r.ahora += 50; r.eventos.push("readquisición");
+  }
+  if (restante() < RELOJ.COMPOSICION_MAX_MS) { r.eventos.push("rescate:503-espera-agotada"); return "espera-agotada"; }
+  r.ahora += RELOJ.COMPOSICION_MAX_MS; r.composiciones += 1; r.eventos.push("compuesta");
+  assert.ok(r.ahora <= r.plazo, `la composición terminó después del plazo: ${r.ahora - r.plazo} ms tarde`);
+  return "compuesta";
+}
+const recorrido = (): Recorrido => ({ ahora: 100_000, plazo: 100_000 + RELOJ.PRESUPUESTO_MS, eventos: [], composiciones: 0 });
+
+test("🟢 con el plazo único, la lectura previa de 35 s + pausa de 2 s → 503 presupuesto-insuficiente, sin dormir; nada se compone después del plazo", () => {
+  const r = recorrido();
+  assert.equal(servirConPlazo(r, { lecturaPreviaMs: 35_000, pausaRestanteMs: 2000 }), "503");
+  assert.deepEqual(r.eventos, ["lectura-previa:35000", "503:presupuesto-insuficiente"]);
+});
+
+test("🟢 con lectura previa corta (0,3 s) la misma pausa cabe: sueño, readquisición, composición dentro del plazo", () => {
+  const r = recorrido();
+  assert.equal(servirConPlazo(r, { lecturaPreviaMs: 300, pausaRestanteMs: 2000 }), "compuesta");
+  assert.ok(r.ahora <= r.plazo);
+});
+
+test("🟢 el rescate de la espera compartida también usa el plazo: lectura previa 30 s + espera compartida 5 s → 503 espera-agotada (hoy diría que quedan 45 s)", () => {
+  const r = recorrido();
+  assert.equal(servirConPlazo(r, { lecturaPreviaMs: 30_000, pausaRestanteMs: null, esperaCompartidaMs: 5000 }), "espera-agotada");
+  assert.ok(r.eventos.includes("rescate:503-espera-agotada"));
+});
+
+test("🟢 el fondo tiene su PROPIO plazo, creado al iniciar el fondo: 50 s desde ese instante, no desde la solicitud", () => {
+  const inicioSolicitud = 100_000;
+  const inicioFondo = inicioSolicitud + 400;                                   // t_inicio_fondo ≈ 0,3-0,4 s (§40.3)
+  const plazoFondo = inicioFondo + RELOJ.PRESUPUESTO_MS;
+  assert.equal(plazoFondo - inicioSolicitud, 50_400);
+  // El techo externo sigue siendo maxDuration desde la solicitud: min(plazoFondo, inicioSolicitud + 60 s) = plazoFondo (50,4 < 60).
+  assert.equal(Math.min(plazoFondo, inicioSolicitud + 60_000), plazoFondo);
+  // Y NO hereda el plazo de la solicitud: si el fondo usara `plazo` de la solicitud, con lectura previa de 35 s tendría 15 s.
+  const plazoSolicitud = inicioSolicitud + RELOJ.PRESUPUESTO_MS;
+  assert.ok(plazoFondo > plazoSolicitud);
+});
+
+test("🟢 el recorrido del plazo entre módulos: nace con la señal, viaja en el contexto y todos los cálculos son `plazo − ahora`", () => {
+  const modulos = [
+    { modulo: "lib/home.ts homePayload", hace: "inicio = ahora(); plazo = inicio + PRESUPUESTO_REQUEST_MS; senal = AbortSignal.timeout(PRESUPUESTO_REQUEST_MS)" },
+    { modulo: "lib/home-vuelo.ts servir", hace: "lectura previa; pasa el contexto (con plazo) a resolver sin tocarlo" },
+    { modulo: "lib/home-servir.ts servirConTurno", hace: "restante() = plazo − ahora(); rescate de la espera compartida, espera por pausa (43.1/43.4) y arranque de la composición usan restante()" },
+    { modulo: "lib/home.ts programarComposicionEnFondo", hace: "plazoFondo = ahora() + PRESUPUESTO_REQUEST_MS junto con senalFondo; componer(senalFondo, plazoFondo)" },
+  ];
+  assert.equal(modulos.length, 4);
+  assert.ok(modulos.every((m) => /plazo/.test(m.hace)));
+  assert.ok(!modulos.some((m) => /t0 = ahora/.test(m.hace)), "ningún módulo vuelve a arrancar un reloj propio para el presupuesto");
 });
