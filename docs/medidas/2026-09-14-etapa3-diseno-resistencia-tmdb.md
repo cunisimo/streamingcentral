@@ -30,7 +30,7 @@
 > §41 (contrato con sobrepaso, lector, marcador), §42 (decisión del dueño:
 > espera breve sin UB — la decisión sigue vigente, su bucle no), §43 (diez
 > correcciones), §44 (tres correcciones). ESTADO VIGENTE de la 3.c: §45 +
-> §46 + §47 + §48 + §49** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
+> §46 + §47 + §48 + §49 + §50** — la señal del Home es el presupuesto interno (`AbortSignal.timeout`,
 > sin `req.signal`) y el vencimiento sale por el centinela 4d; **un solo
 > deadline absoluto `plazo` creado con la señal, `plazo − ahora` en lectura
 > previa, espera, readquisición y composición** (§46, que además detecta el
@@ -42,10 +42,12 @@
 > `EVAL`), `F_max = 1`, sólo `Δt`, marca de agua por proceso con TTL, Lua que
 > falla seguro, sobrepaso parametrizado (estimaciones, no cotas) con línea
 > base medida, matriz UB × Redis sin caché, `ESPERA_MAX = 5 s` provisional;
-> modelo 83/83; ESTADO VIGENTE: §45 a §49 (la señal limita el trabajo
+> modelo 88/88; ESTADO VIGENTE: §45 a §50 (la señal limita el trabajo
 > nuevo; Redis ya enviado completa o pierde la respuesta, atómico y con
-> fencing; tras el plazo sólo un `LIBERAR` de limpieza, una vez, dentro
-> del margen externo, con recuperación por TTL; reservas, no máximos);
+> fencing; tras el plazo sólo un `LIBERAR` de limpieza, una vez,
+> estrictamente antes del corte externo, con recuperación EVENTUAL por
+> TTL — ≤ 15 s desde la última renovación —; respuesta perdida aplicada o
+> no aplicada, sin reintento; reservas, no máximos);
 > 3.c.1 NO aprobada, NO implementada, pendiente de nueva auditoría; 3.c.2
 > fuera de alcance.**** Ocho correcciones en rama (auditorías de Codex sobre
 > `e930a1d` §23, `09b9dbe` §24, `708bce0` §25, `03ad4b9` §26, `6ef35c5` §27,
@@ -4570,7 +4572,13 @@ intacto; (4) un `RENOVAR` en vuelo al vencer la señal no se aborta
   real de Upstash desde `iad1`; cuánto sobreviven a un corte duro las
   peticiones ya en vuelo.
 
-## 49. Corrección de §48 sobre `ee9da01` — la limpieza `LIBERAR` como única excepción después del plazo efectivo — **ESTADO VIGENTE de la 3.c (con §45-§48); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+## 49. Corrección de §48 sobre `ee9da01` — la limpieza `LIBERAR` como única excepción después del plazo efectivo — **ESTADO VIGENTE de la 3.c (con §45-§48 y §50); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+> **§50 corrige de aquí:** el test (14) no probaba una segunda llamada; la
+> respuesta perdida tiene dos resultados (aplicada / no aplicada); el TTL
+> se modela con las renovaciones reales (recuperación EVENTUAL, ≤ 15 s
+> desde la última renovación); y el borde de `maxDuration` se cierra con
+> comparación estricta (`ahora < límite`).
 
 Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **83/83**). Sin
 código productivo, merge, push ni deploy.
@@ -4612,9 +4620,9 @@ publicación después del plazo efectivo; sólo puede intentarse la limpieza
 |---|---|---|
 | 10 | los cinco caminos (0,4 s; 15 s; 40 s; cruce con detección +100 ms; publicación tardía) | 0 `PUBLICAR`/`ENFRIAR`/`RENOVAR`/TMDB/Supabase tras el plazo; ≤ 1 `LIBERAR`, y sólo ≤ `inicioRuta + 60 s` |
 | 11 | queda margen (detección +100 ms) | **exactamente un** `LIBERAR`; turno liberado; nada publicado ni enfriado; UB intacto; generación sin cambio |
-| 12 | sin margen (detección +5,1 s = `inicioRuta + 60,1 s`) | **cero** `LIBERAR`; `omitido-sin-margen→TTL`; el turno ya venció por TTL |
-| 13 | `LIBERAR` falla / respuesta perdida | UB intacto, nada publicado, **un solo intento**, recuperación por TTL |
-| 14 | segundo pedido de limpieza | omitido por la guardia; sin tormenta |
+| 12 | sin margen (detección +5,1 s = `inicioRuta + 60,1 s`) | **cero** `LIBERAR`; `omitido-sin-margen→TTL`; ~~el turno ya venció por TTL~~ → se recupera EVENTUALMENTE al vencer el TTL restante (§50.3) |
+| 13 | `LIBERAR` falla / respuesta perdida | UB intacto, nada publicado, **un solo intento**; ~~recuperación por TTL~~ → §50.2: perdida **aplicada** = ya liberado; **no aplicada** o fallo = TTL eventual |
+| 14 | segundo pedido de limpieza | ~~omitido por la guardia~~ → §50.1: probado con la función real `limpiarTurno` llamada dos veces (RED sin guardia: dos envíos) |
 | 15 | `PUBLICAR` aceptado antes del plazo | semántica atómica de §48 intacta (fresca + UB + generación + `DEL`, entero o nada); tras un `PUBLICAR` no hay `LIBERAR` aparte |
 
 Los casos 1-9 de §47/§48 siguen en verde con el criterio nuevo (el 4 ya no
@@ -4648,3 +4656,81 @@ en fondo pasa por una única función de limpieza con guardia por intentos.
   los 5 s de margen (una vuelta de event loop más la última llamada en
   vuelo, abortada por su propia señal) — no medido; si no cayera, el
   contrato ya lo cubre: cero `LIBERAR` y recuperación por TTL.
+
+## 50. Corrección de §49 sobre `c2b72f7` — los últimos falsos verdes de la limpieza `LIBERAR` — **ESTADO VIGENTE de la 3.c (con §45-§49); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **88/88**). Sin
+código productivo, merge, push ni deploy. El contrato de §49 se conserva;
+lo que cambia es que ahora está **probado de verdad** y con el borde
+cerrado.
+
+### 50.1 Punto 1 — el test (14) no probaba una segunda llamada
+
+Evaluaba a mano `liberarIntentos >= 1` y agregaba el evento esperado.
+Ahora la limpieza es **una función expuesta del modelo, `limpiarTurno`, la
+misma que usa `iniciarFondo`**. **RED (ejecutado):** dos llamadas con
+`sinGuardia` → **dos** `LIBERAR` enviados. **GREEN:** `iniciarFondo` (primer
+pedido) + `limpiarTurno` (segundo `finally`) → **un** envío, el segundo
+`omitido-ya-intentado`.
+
+### 50.2 Punto 2 — la respuesta perdida tiene DOS resultados
+
+`liberarPerdida: "aplicada" | "no-aplicada"`. (13b) **aplicada**: Redis
+ejecutó el `DEL` → el turno ya quedó liberado aunque el proceso no lo sepa;
+(13c) **no aplicada** (la petición no llegó): el turno permanece hasta
+vencer por su TTL. En ambos: **sin reintento**; fresca, UB y generación
+intactos. **No** se afirma que toda respuesta perdida termine en TTL: sólo
+la variante no aplicada.
+
+### 50.3 Punto 3 — el TTL con las renovaciones reales
+
+`RENOVAR` corre cada `RENOVACION_MS = 5 s` mientras se compone y extiende
+el turno `TURNO_MS = 15 s` **desde esa renovación**; la señal corta las
+siguientes (ninguna se inicia después del plazo). Si `LIBERAR` no se envía,
+falla o no se aplica, **el turno no tiene por qué estar vencido en el
+acto**: con la última renovación exitosa poco antes del plazo (150-155 s),
+al detectar la señal (155,1 s) el turno sigue del proceso y **se recupera
+eventualmente** al vencer el TTL restante (4,9-14,9 s después, según el
+caso modelado). **Demora máxima esperable desde la última renovación
+exitosa: `TURNO_MS` = 15 s** [derivado de las constantes]; desde la
+detección, ≤ 15 s − (detección − última renovación). Probado en (12),
+(13a), (13c) y (16); (12) ya no afirma "ya venció".
+
+### 50.4 Punto 4 — el borde de `maxDuration`, cerrado con comparación estricta
+
+`LIBERAR` sólo se inicia si **`ahora < inicioRuta + MAX_DURATION_MS`**
+(antes `>` para omitir, que dejaba pasar el instante exacto). **RED
+(ejecutado):** con `>` el `LIBERAR` sale exactamente en `maxDuration`.
+**GREEN (17):** a límite − 1 ms se envía; exactamente en el límite y a
++1 ms **no** (`omitido-sin-margen→TTL`).
+
+### 50.5 Contrato (sin cambios respecto de §49, ahora probado)
+
+- Después del plazo efectivo no empieza TMDB, Supabase, `RENOVAR`, `ENFRIAR`
+  ni `PUBLICAR`.
+- Sólo puede intentarse **una vez** `LIBERAR`, **estrictamente antes** del
+  corte externo duro.
+- Si no puede ejecutarse (sin margen, Redis caído, fallo, no aplicada, corte
+  de Vercel), el turno se recupera **eventualmente** por TTL: a lo sumo
+  15 s desde la última renovación exitosa.
+- Nunca se altera el contenido del Home ni el UB (fresca, UB y generación
+  intactos en todos los casos modelados).
+
+### 50.6 RED para la implementación (se suman a 49.5)
+
+(1) la limpieza del fondo es una única función con guardia por intentos,
+llamada desde el `finally`; un test la invoca dos veces y cuenta un `DEL`;
+(2) `liberar` con promesa que rechaza vs. promesa perdida: dos tests, uno
+por resultado indeterminado, sin reintento; (3) reloj virtual con
+renovaciones cada 5 s hasta el plazo y detección +100 ms: `RENOVAR` cero
+veces después del plazo y el turno del doble de Redis vence a `última
+renovación + 15 s`; (4) borde: `ahora()` = límite − 1 / límite / límite + 1.
+
+### 50.7 Comprobado / inferido
+
+- **Comprobado:** los dos RED (doble envío sin guardia; `>` en el borde) y
+  los diecisiete controles del modelo; las constantes `TURNO_MS = 15 s` y
+  `RENOVACION_MS = 5 s` (`lib/home-servir.ts`).
+- **Inferido:** que la última renovación real cae ≤ 5 s antes del plazo
+  (el bucle de renovación es periódico y la señal lo corta), de donde sale
+  la demora máxima de 15 s desde ella.
