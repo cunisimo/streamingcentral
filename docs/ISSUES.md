@@ -1298,7 +1298,7 @@ leyendo el código.**
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
 > restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c (protección frente
-> a TMDB) — estado vigente en el informe §45 a §51 (17/09): 3.c.1 "pausa
+> a TMDB) — estado vigente en el informe §45 a §52 (17/09): 3.c.1 "pausa
 > compartida ante 429" con diseño corregido: adquisición atómica del turno
 > con la pausa adentro; sobrepaso por fórmula parametrizada (`enVuelo +
 > cadencia × (Δt + T_lectura)`; 94 / 184 / 528 por proceso según cadencia
@@ -1337,11 +1337,19 @@ leyendo el código.**
 > **las renovaciones las produce el modelo, no el test** (§51: el bucle 4b
 > real — primer `RENOVAR` a +5 s, luego cada 5 s + RTT, sólo con `t <
 > plazo`, cada uno extiende 15 s desde esa renovación — y el TTL restante
-> se deriva de ellas: 5,6-10,6 s en los casos modelados; el modelo de
-> `7dc1f44` no renovaba nunca y su aserción era vacua).
-> Modelo 90/90 con
+> se deriva de ellas; el modelo de `7dc1f44` no renovaba nunca y su
+> aserción era vacua); **envío, aplicación en Redis y recepción son tres
+> instantes** (§52: el `PEXPIRE` corre cuando Redis atiende, no al enviar;
+> un `RENOVAR` aplicado vence 15 s después de ESA aplicación —
+> garantizado —; con respuesta recibida el cliente acota `[envío + 15 s,
+> recepción + 15 s]`, con respuesta perdida no conoce el restante exacto;
+> la vuelta siguiente se programa al terminar la anterior; el restante en
+> los casos modelados es un intervalo para el RTT modelado de 140 ms —
+> [10,60; 10,74] s a 155,1 s, [5,60; 5,74] s a 160,1 s —, estimación, no
+> cota; "5,6-10,6 s" de §51 superado).
+> Modelo 97/97 con
 > guard estructural sobre la ruta. NO APROBADA, NO IMPLEMENTADA, PENDIENTE
-> DE NUEVA AUDITORÍA;
+> DE APROBACIÓN FINAL;
 > 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no
 > predictivo; ningún frío total se pide en Producción. Antecedentes §38-§40
 > superados (§41-§43: corregidos por §44/§45).** **Subetapa 3.b ("último bueno

@@ -4744,7 +4744,14 @@ renovación + 15 s`; (4) borde: `ahora()` = límite − 1 / límite / límite + 
   (el bucle de renovación es periódico y la señal lo corta), de donde sale
   la demora máxima de 15 s desde ella.
 
-## 51. Corrección de §50 sobre `7dc1f44` — las renovaciones las produce el MODELO, no el test — **ESTADO VIGENTE de la 3.c (con §45-§50); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+## 51. Corrección de §50 sobre `7dc1f44` — las renovaciones las produce el MODELO, no el test — **ESTADO VIGENTE de la 3.c (con §45-§50 y §52); NO aprobada, NO implementada; pendiente de nueva auditoría** (2026-09-17)
+
+> **§52 corrige de aquí la precisión:** el modelo fijaba `venceEn = envío +
+> 15 s`, pero el `PEXPIRE` del script corre cuando **Redis atiende** el
+> comando, en algún punto del RTT que el cliente no observa. Las cifras
+> "5,6-10,6 s" de 51.3/51.5 no estaban demostradas: pasan a ser
+> **intervalos para el RTT modelado**, rotulados como estimaciones. Lo
+> garantizado sigue: 15 s desde la última renovación **aplicada**.
 
 Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **90/90**). Sin
 código productivo, merge, push ni deploy. El contrato de §49/§50 no cambia;
@@ -4878,3 +4885,126 @@ debe **no** enviarse.
 - **No modelado:** `perdido` / `indeterminado` del script de `RENOVAR`.
 - **Pendiente:** nueva auditoría de 3.c.1 sobre este estado. Sin
   implementación.
+
+## 52. Corrección de §51 sobre `105e440` — envío, aplicación en Redis y recepción son TRES instantes — **ESTADO VIGENTE de la 3.c (con §45-§51); NO aprobada, NO implementada; pendiente de aprobación final** (2026-09-17)
+
+Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **97/97**). Sin
+código productivo, merge, push ni deploy. El contrato no cambia; cambia qué
+cifras se afirman y con qué rótulo.
+
+### 52.1 El problema
+
+§51 fijaba `venceEn = enviadaEn + TURNO_MS`. El script real
+(`lib/turno-lua.ts`, `RENOVAR`: `GET == propietario → PEXPIRE`) ejecuta el
+`PEXPIRE` **cuando Redis atiende el comando**, en algún punto entre el
+envío y la respuesta; el cliente sólo ve el envío y la recepción. Al mismo
+tiempo el modelo usaba el RTT para programar la vuelta siguiente. Con eso,
+"5,6-10,6 s" eran cifras exactas de un instante que el modelo no
+representaba.
+
+**RED (ejecutado sobre `105e440`, visto fallar):** "la operación registra
+cuándo Redis la aplicó, y con Redis aplicando al final del RTT el turno
+vence más tarde que aplicando al comienzo" → falla: `OpRedis` no tenía
+`aplicadaEn` y `venceEn` era el mismo en los dos casos. Queda como control
+en el archivo.
+
+### 52.2 El modelo
+
+`OpRedis` lleva `enviadaEn`, **`aplicadaEn`** (null si no se aplicó) y
+`completaEn` (respuesta recibida, o el cliente se rindió). Entradas nuevas
+de `FondoMundo`:
+
+- `aplicacionRedisMs` — dónde dentro del RTT ejecuta Redis (0 = al recibir
+  el comando; `= rtt` = justo antes de responder). **Desconocido en la
+  realidad**: los tests barren los extremos y el medio.
+- `renovacionesPerdidas` — ticks cuya respuesta se pierde (`indeterminado`
+  en `lib/turno.ts`), con la verdad de Redis: `aplicada` / `no-aplicada`.
+- `demoraFalloMs` — cuánto tarda el cliente en rendirse (el SDK reintenta;
+  su backoff exacto no se modela).
+- `cliente: { venceEnMin, venceEnMax | null }` — lo que el **proceso**
+  puede afirmar con lo que recibió.
+
+Reglas: un `RENOVAR` aplicado extiende el turno a **`aplicadaEn + 15 s`**;
+con respuesta recibida el cliente acota `[enviadaEn + 15 s, completaEn +
+15 s]`; con respuesta perdida conserva el mínimo anterior y **pierde la
+cota superior** (`null`); la vuelta siguiente se programa en **`completaEn
++ 5 s`** (el bucle real duerme después de que `renovar` resolvió, con
+respuesta o con excepción); ningún envío con `t ≥ plazoEfectivo`.
+
+### 52.3 Casos (fondo a 120 s, plazo efectivo 155 s, detección 155,1 s salvo (12))
+
+| # | Caso | Resultado |
+|---|---|---|
+| RED | `venceEn = envío + 15 s` | refutado: con aplicación al final del RTT vence 140 ms más tarde |
+| 18a | Redis aplica al comienzo del RTT | `venceEn = envío + 15 s`; cliente `[165,7; 165,84]` s; la verdad en el extremo inferior |
+| 18b | Redis aplica justo antes de responder | `venceEn = recepción + 15 s`; mismo intervalo del cliente; la verdad en el extremo superior; **el calendario de envíos no cambia** (depende de cuándo vuelve la respuesta) |
+| 18c | respuesta exitosa, aplicación en 7 puntos del RTT | la verdad siempre en `[envío + 15 s, recepción + 15 s]`; ancho = RTT de esa renovación; con RTT 1 s el intervalo es otro (el RTT modelado no es cota) |
+| 18d | respuesta perdida, `aplicada` / `no-aplicada` × aplicación al comienzo / al final | cliente: `venceEnMax = null`, `venceEnMin` = el de la última respuesta recibida (5.º RENOVAR); Redis: aplicada → 15 s desde ESA aplicación (que el cliente no conoce); no aplicada → 15 s desde la aplicación anterior; en ambos, turno del proceso y recuperación eventual |
+| 18e | vuelta siguiente al terminar la anterior | respuesta perdida con 1 s de rendición → los ticks siguientes se corren +860 ms; RTT 1,5 s → cinco renovaciones a 6,5 s de intervalo |
+| 18f | ningún `RENOVAR` en el plazo ni después | RTT 0 / 140 / 1 000 / 4 290 ms × aplicación al comienzo / al final × con y sin pérdida: todos los envíos `< plazo` |
+| 12, 13a, 13c, 16 | cifras | reescritas como intervalos (abajo) |
+
+### 52.4 Cifras: qué se garantiza y qué es estimación
+
+**Garantizado (independiente del RTT):**
+
+- Si una renovación fue **aplicada**, el turno vence **15 s después de esa
+  aplicación** (`venceEn = aplicadaEn + TURNO_MS`, probado en todos los
+  casos).
+- Si `LIBERAR` no se aplica (sin margen, fallo, perdida no aplicada, corte
+  de Vercel), la recuperación es **eventual por TTL**.
+- Con respuesta recibida, la verdad cae en `[envío + 15 s, recepción + 15
+  s]`; con respuesta **indeterminada, el cliente no conoce el restante
+  exacto** (sin cota superior).
+
+**Estimación para el RTT modelado (140 ms, constante), según dónde dentro
+del RTT ejecute Redis — no una cota, y otro RTT da otro intervalo:**
+
+| Caso | Restante desde la detección |
+|---|---|
+| detección 155,1 s (13a, 13c, 16) | **[10,60; 10,74] s** |
+| detección 160,1 s (12) | **[5,60; 5,74] s** |
+| RTT 0 (16, control aritmético) | 9,9 s exacto, sólo porque envío y aplicación coinciden |
+
+Las cifras "5,6-10,6 s" de §51 quedan superadas: eran el extremo inferior
+presentado como valor exacto.
+
+### 52.5 RED para la implementación (reemplaza 51.6 (3))
+
+(3) reloj virtual con el `componer` real y un doble de Redis que registra
+**tres** instantes por comando (recepción del comando, ejecución del
+script, envío de la respuesta), con la ejecución colocable en cualquier
+punto: renovaciones a `t0 + 5 s` y luego `respuesta anterior + 5 s`,
+ninguna con `t ≥ plazo`; el doble vence a `última ejecución + 15 s`; una
+respuesta perdida deja al cliente sin cota superior y la implementación
+**no** la usa para decidir nada (§48: un `indeterminado` nunca habilita una
+operación insegura); un caso con RTT 0 cuyo tick cae en el plazo, que debe
+no enviarse.
+
+### 52.6 Mutaciones (todas caen)
+
+| Mutación | Cae |
+|---|---|
+| MA aplicación = envío (ignora dónde ejecuta Redis) | RED, (12), (13a), (13c), (16), (18b), (18c) |
+| MB `venceEn` desde el envío | ídem + (18d) |
+| MC respuesta perdida conserva la cota superior | (18d) |
+| MD vuelta siguiente desde el envío, no desde el fin de la anterior | (18e) |
+| ME perdida no aplicada tratada como aplicada | (18d) |
+| MF renueva también con `t == plazo` | (16), (18f) |
+
+### 52.7 Comprobado / inferido / no modelado
+
+- **Comprobado:** el RED sobre `105e440`; los 97 controles; las 6
+  mutaciones; `tsc --noEmit` 0 errores; `git diff --check` limpio; que
+  `RENOVAR` es `GET == propietario → PEXPIRE` en `lib/turno-lua.ts` y que
+  `lib/turno.ts` devuelve `indeterminado` ante excepción y `perdido` sólo
+  ante el 0 del script; que el bucle 4b duerme después de que `renovar`
+  resolvió.
+- **Inferido:** que en Upstash el instante de ejecución cae dentro del RTT
+  medido por el cliente (no hay cola que lo retrase más allá de la
+  respuesta): es lo que hace que `[envío, recepción]` sea el intervalo
+  correcto para una respuesta recibida.
+- **No modelado:** `perdido` del script (turno ajeno); el backoff real del
+  SDK (se reemplaza por `demoraFalloMs`); variación del RTT entre
+  renovaciones (constante por escenario).
+- **Estado:** 3.c.1 **no implementada, pendiente de aprobación final**.

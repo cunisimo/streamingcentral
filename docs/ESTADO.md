@@ -21,13 +21,33 @@
   `tmdb-sync` es lo que dice la tabla de despliegue más abajo, no esta rama.
   No retomar sin pedido explícito del dueño.
 - **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §45 a
-  §51, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
+  §52, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
   diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el
   presupuesto interno; §46: un solo deadline absoluto; §47: el fondo con dos
   límites; §48: la señal limita el trabajo nuevo; §49: la limpieza
   `LIBERAR` como única excepción tras el plazo; §50: sus falsos verdes;
-  §51: las renovaciones las produce el modelo); NO APROBADA; NO
-  IMPLEMENTADA; PENDIENTE DE NUEVA AUDITORÍA. 3.c.2 fuera de alcance.**
+  §51: las renovaciones las produce el modelo; §52: envío, aplicación en
+  Redis y recepción son tres instantes); NO APROBADA; NO IMPLEMENTADA;
+  PENDIENTE DE APROBACIÓN FINAL. 3.c.2 fuera de alcance.**
+  **§52 (sobre `105e440`):** el modelo fijaba `venceEn = envío + 15 s`,
+  pero el `PEXPIRE` del script corre cuando **Redis atiende** el comando,
+  en un punto del RTT que el cliente no ve. RED ejecutado y visto fallar;
+  ahora cada operación registra envío, **aplicación** y recepción, un
+  `RENOVAR` aplicado vence en `aplicación + 15 s`, el cliente acota
+  `[envío + 15 s, recepción + 15 s]` con respuesta recibida y **pierde la
+  cota superior** con respuesta perdida (`indeterminado`: aplicada / no
+  aplicada distinguidas en Redis, no desde el cliente), la vuelta
+  siguiente se programa al terminar la anterior (`respuesta + 5 s`) y
+  ningún `RENOVAR` se inicia en el plazo ni después (barrido de RTT
+  0/140/1000/4290 ms). **Garantizado:** 15 s desde la última renovación
+  **aplicada**; recuperación eventual por TTL si `LIBERAR` no se aplica;
+  con respuesta indeterminada el cliente **no conoce** el restante exacto.
+  **Estimación para el RTT modelado (140 ms), no cota:** restante
+  **[10,60; 10,74] s** con detección a 155,1 s y **[5,60; 5,74] s** a
+  160,1 s, según dónde dentro del RTT ejecute Redis; otro RTT da otro
+  intervalo. Las cifras "5,6-10,6 s" de §51 quedan superadas (eran el
+  extremo inferior presentado como exacto). 6 mutaciones caen. Modelo
+  **97/97**, `tsc` 0 errores, `git diff --check` limpio.
   **§51 (sobre `7dc1f44`, que era el HEAD real de la rama — no `c2b72f7`
   como decía el último informe; `7dc1f44` es un commit posterior de otra
   sesión):** de los cuatro puntos de §50, el 1 (guardia real llamada dos
@@ -40,12 +60,12 @@
   pasa por `componer`): primer tick a `+5 s`, luego cada `5 s + RTT`, sólo
   con **`t < plazo`** (estricto, como el corte de `LIBERAR`), cada uno
   extiende el turno 15 s desde esa renovación; los tests **derivan** el TTL
-  restante (`15 s − (detección − última renovación)`): **5,6-10,6 s** en
-  los casos modelados (antes se decía 4,9-14,9 s); RED de borde conservado
+  restante (`15 s − (detección − última renovación)`): 5,6-10,6 s en
+  los casos modelados (antes se decía 4,9-14,9 s; §52 las reemplaza por intervalos); RED de borde conservado
   (`t <= plazo` → renovación en el plazo); (4) y (10) exigen `< plazo` para
   toda operación productiva. RED de vacuidad ejecutado y visto fallar sobre
   `7dc1f44`; 8 mutaciones caen (la que reproduce `7dc1f44` rompe 7 tests).
-  Modelo **90/90**, `tsc --noEmit` 0 errores. Sin código productivo, merge,
+  Modelo 90/90 (§52: 97/97), `tsc --noEmit` 0 errores. Sin código productivo, merge,
   push ni deploy. **§50:** la limpieza es una función expuesta del modelo
   (`limpiarTurno`, la misma que usa `iniciarFondo`): RED sin guardia →
   dos `LIBERAR`; GREEN → uno; la respuesta perdida de `LIBERAR` tiene dos
@@ -58,7 +78,7 @@
   `TURNO_MS` = 15 s desde la última renovación exitosa; borde de
   `maxDuration` cerrado con comparación **estricta** (`ahora < inicioRuta +
   60 s`; controles a −1 ms, exacto y +1 ms; RED: con `>` salía en el
-  límite). Modelo 88/88 (superado por §51: 90/90).
+  límite). Modelo 88/88 (superado por §51/§52: 97/97).
   **§49:** "ninguna operación de Redis nueva tras el plazo" (§48) era
   falso: la composición detecta la señal unos ms después del plazo y ahí
   sale la limpieza (RED con detección a +100 ms). Criterio vigente:
@@ -156,7 +176,7 @@
   sin pausa; telemetría en `pcall`). Modelo 49/49.
   Lo que sigue vigente de §41/§42: Rama `diseno/etapa3c-proteccion-tmdb`; sin código
   productivo, variables, cachés ni Producción; sólo documentación, un test
-  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 90/90) y
+  de diseño sobre modelo (`lib/tmdb-pausa-diseno.test.ts`, 97/97) y
   herramientas del banco. Lo vigente: (a) la comprobación de pausa va
   **dentro del script atómico de adquisición del turno** — con pausa
   preexistente: 0 llamadas, sin turno, sin fondo; con pausa aparecida

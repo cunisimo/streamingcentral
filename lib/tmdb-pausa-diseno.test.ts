@@ -1029,33 +1029,51 @@ function plazosDelFondo(inicioRuta: number, inicioFondo: number) {
 // §48: qué controla la señal y qué no. Una operación de Redis ya ENVIADA (RENOVAR, PUBLICAR,
 // ENFRIAR, LIBERAR) no se cancela: completa cuando Redis la atienda (o su respuesta se pierde);
 // la señal sólo impide INICIAR trabajo nuevo (llamadas a TMDB/Supabase, un PUBLICAR nuevo).
-type OpRedis = { op: "RENOVAR" | "PUBLICAR" | "LIBERAR"; enviadaEn: number; completaEn: number; respuestaPerdida: boolean; aplicada: boolean };
+// §52: TRES instantes por operación. `enviadaEn` (el cliente la envía), `aplicadaEn` (Redis la ejecuta:
+// el PEXPIRE del script corre AHÍ, no al enviar) y `completaEn` (el cliente recibe la respuesta, o se
+// rinde). El cliente sólo observa el primero y el tercero; el segundo está en algún punto entre ambos.
+type OpRedis = { op: "RENOVAR" | "PUBLICAR" | "LIBERAR"; enviadaEn: number; aplicadaEn: number | null; completaEn: number; respuestaPerdida: boolean; aplicada: boolean };
 interface FondoMundo {
   ahora: number; inicioRuta: number; composicionMs: number; eventos: string[];
   turnoRedis: { propietario: string | null; venceEn: number | null; generacion: number };   // el estado EN REDIS (fencing por propietario + generación)
   fresca: string | null; ub: string;                                                          // contenido publicado; el UB sano NUNCA se pisa con algo parcial
   fondo: string | null; ops: OpRedis[]; rttRedisMs: number; liberarFalla: boolean; liberarPerdida: null | "aplicada" | "no-aplicada"; liberarIntentos: number; publicarRespuestaPerdida: boolean; corteDuroEn: number | null; llamadasTmdbTrasPlazo: number;
   deteccionMs: number;   // §49: en ejecución real la composición devuelve/detecta la señal unos ms DESPUÉS del plazo
-  ultimaRenovacionEn: number | null;   // §51: SALIDA del modelo (no entrada): instante del último RENOVAR que el bucle 4b envió
+  ultimaRenovacionEn: number | null;   // §51: SALIDA del modelo: instante de ENVÍO del último RENOVAR que el bucle 4b envió
+  aplicacionRedisMs: number;           // §52: dónde dentro del RTT ejecuta Redis (0 = al recibir el comando; = rtt = justo antes de responder). Desconocido en la realidad: los tests barren los extremos
+  renovacionesPerdidas: Record<number, "aplicada" | "no-aplicada">;   // §52: ticks (1 = el primero) cuya respuesta se pierde → `indeterminado` para el cliente; Redis pudo haberla ejecutado o no
+  demoraFalloMs: number;               // §52: cuánto tarda el cliente en rendirse con una respuesta perdida (el SDK reintenta; no se modela su backoff exacto)
+  cliente: { venceEnMin: number; venceEnMax: number | null };   // §52: lo que el PROCESO puede afirmar del vencimiento con lo que recibió; `venceEnMax: null` = no acotado desde el cliente
 }
 const TURNO_MS = 15_000, RENOVACION_MS = 5_000;   // CONSTANTES de lib/home-servir.ts
-// §51: el bucle de renovación REAL (home-servir.ts 4b, el mismo que corre el fondo vía `componer`):
+// §51/§52: el bucle de renovación REAL (home-servir.ts 4b, el mismo que corre el fondo vía `componer`):
 //   while (!fin) { await dormir(RENOVACION_MS); if (fin || abortada(señal)) return; await renovar(px: TURNO_MS) }
-// → cada tick cae RENOVACION_MS después de que la renovación ANTERIOR completó (el RTT se acumula);
+// → la vuelta siguiente se programa cuando la anterior TERMINÓ (respuesta recibida o dada por perdida):
+//   próximo envío = completaEn + RENOVACION_MS;
 // → un tick en el que la señal YA venció no envía nada: la señal vence en plazoEfectivo, así que sólo
 //   se envía con `t < plazoEfectivo` (ESTRICTO, como el borde de §50.4); `renovarEnElPlazo` es el RED;
-// → cada RENOVAR aplicado extiende el turno a `t + TURNO_MS` desde ESA renovación (PX en el script).
-// El bucle termina con la composición (`cortarRenovacion`) o con el proceso (corte duro). No modela
-// `perdido`/`indeterminado` del script de RENOVAR (fuera de §51).
+// → cada RENOVAR que Redis aplica extiende el turno a `aplicadaEn + TURNO_MS` (PEXPIRE corre en Redis,
+//   cuando Redis lo atiende — no cuando el cliente lo envió);
+// → con respuesta recibida el cliente sabe que se aplicó en [enviadaEn, completaEn] y acota el
+//   vencimiento a [enviadaEn + 15 s, completaEn + 15 s]; con respuesta perdida (`indeterminado` en
+//   lib/turno.ts) no sabe si se aplicó: conserva el mínimo anterior y pierde la cota superior.
+// El bucle termina con la composición (`cortarRenovacion`) o con el proceso (corte duro). No modela el
+// `perdido` del script (GET ≠ propietario → 0), que es otra rama.
 function renovarMientrasCompone(f: FondoMundo, plazoEfectivo: number, finComposicion: number, o: { renovarEnElPlazo?: boolean }) {
   const t0 = f.ahora;
-  for (let t = t0 + RENOVACION_MS; t < finComposicion; t += RENOVACION_MS + f.rttRedisMs) {
+  let proximoEnvio = t0 + RENOVACION_MS, tick = 0;
+  while (proximoEnvio < finComposicion) {
+    const t = proximoEnvio; tick += 1;
     if (f.corteDuroEn !== null && t >= f.corteDuroEn) break;                                   // el proceso ya no existe
     const senalVencida = o.renovarEnElPlazo ? t > plazoEfectivo : !(t < plazoEfectivo);
     if (senalVencida) { f.eventos.push(`RENOVAR:no-enviado@${t - f.inicioRuta}:señal-vencida`); break; }
     f.ahora = t;
-    enviar(f, "RENOVAR", false, () => { if (f.turnoRedis.propietario === "yo") f.turnoRedis.venceEn = t + TURNO_MS; });
+    const perdida = f.renovacionesPerdidas[tick];
+    const op = enviar(f, "RENOVAR", perdida !== undefined, (op) => { if (f.turnoRedis.propietario === "yo") f.turnoRedis.venceEn = op.aplicadaEn! + TURNO_MS; }, perdida === "no-aplicada", perdida !== undefined ? t + f.demoraFalloMs : undefined);
+    if (!op.respuestaPerdida) f.cliente = { venceEnMin: t + TURNO_MS, venceEnMax: op.completaEn + TURNO_MS };
+    else { f.cliente = { venceEnMin: f.cliente.venceEnMin, venceEnMax: null }; f.eventos.push(`RENOVAR:indeterminado@${t - f.inicioRuta}`); }
     f.ultimaRenovacionEn = t;
+    proximoEnvio = op.completaEn + RENOVACION_MS;                                             // (5) la vuelta siguiente, al terminar la anterior
   }
   f.ahora = t0;
 }
@@ -1071,12 +1089,13 @@ function limpiarTurno(f: FondoMundo, o: { sinGuardia?: boolean } = {}) {
   const o2 = enviar(f, "LIBERAR", f.liberarPerdida !== null, aplicar, f.liberarPerdida === "no-aplicada");
   return o2.respuestaPerdida ? "indeterminado" : "liberado";
 }
-const enviar = (f: FondoMundo, op: OpRedis["op"], perdida = false, aplicar = () => {}, noLlego = false) => {
-  const o: OpRedis = { op, enviadaEn: f.ahora, completaEn: f.ahora + f.rttRedisMs, respuestaPerdida: perdida, aplicada: false };
+const enviar = (f: FondoMundo, op: OpRedis["op"], perdida = false, aplicar: (o: OpRedis) => void = () => {}, noLlego = false, completaEn?: number) => {
+  const o: OpRedis = { op, enviadaEn: f.ahora, aplicadaEn: null, completaEn: completaEn ?? f.ahora + f.rttRedisMs, respuestaPerdida: perdida, aplicada: false };
   f.ops.push(o); f.eventos.push(`${op}:enviado@${f.ahora - f.inicioRuta}`);
-  // Redis la ejecuta (atómica) cuando la atiende, aunque el proceso muera o pierda la respuesta —
-  // salvo que la petición NUNCA llegue (`noLlego`): entonces no se aplica y nadie lo sabe.
-  if (!noLlego && (f.corteDuroEn === null || o.enviadaEn < f.corteDuroEn)) { o.aplicada = true; aplicar(); }
+  // Redis la ejecuta (atómica) cuando la ATIENDE — en algún punto del RTT (`aplicacionRedisMs`) —, aunque
+  // el proceso muera o pierda la respuesta; salvo que la petición NUNCA llegue (`noLlego`): entonces no
+  // se aplica y nadie lo sabe.
+  if (!noLlego && (f.corteDuroEn === null || o.enviadaEn < f.corteDuroEn)) { o.aplicada = true; o.aplicadaEn = o.enviadaEn + Math.min(f.aplicacionRedisMs, f.rttRedisMs); aplicar(o); }
   return o;
 };
 function iniciarFondo(f: FondoMundo, o: { renovarEnElPlazo?: boolean } = {}) {
@@ -1110,9 +1129,14 @@ function iniciarFondo(f: FondoMundo, o: { renovarEnElPlazo?: boolean } = {}) {
   f.ahora = pub.completaEn; f.eventos.push("PUBLICAR:ok");
   return "publicada";
 }
-// §51: el turno se TOMA (SET NX, PX TURNO_MS) al adquirir, instantes antes de que el fondo arranque detrás
-// de la compuerta: su vencimiento inicial es `ahora + TURNO_MS`, y de ahí en más lo mueven sólo los RENOVAR.
-const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => { const ahora = o.ahora ?? 100_000; return { ahora, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turnoRedis: { propietario: "yo", venceEn: ahora + TURNO_MS, generacion: 1 }, fresca: null, ub: "ub-sano", fondo: null, ops: [], rttRedisMs: 140, liberarFalla: false, liberarPerdida: null, liberarIntentos: 0, publicarRespuestaPerdida: false, corteDuroEn: null, llamadasTmdbTrasPlazo: 0, deteccionMs: 0, ultimaRenovacionEn: null, ...o }; };
+// §51/§52: el turno se TOMA (SET NX, PX TURNO_MS) al adquirir, instantes antes de que el fondo arranque
+// detrás de la compuerta. Redis aplica ese SET en `toma + aplicacionRedisMs` (el PX corre ahí); el cliente,
+// que vio la respuesta, sólo puede acotar el vencimiento a [toma + 15 s, toma + rtt + 15 s]. De ahí en más
+// lo mueven sólo los RENOVAR.
+const fondoMundo = (o: Partial<FondoMundo> = {}): FondoMundo => {
+  const ahora = o.ahora ?? 100_000, rtt = o.rttRedisMs ?? 140, aplicacion = Math.min(o.aplicacionRedisMs ?? 0, rtt);
+  return { ahora, inicioRuta: 100_000, composicionMs: 27_000, eventos: [], turnoRedis: { propietario: "yo", venceEn: ahora + aplicacion + TURNO_MS, generacion: 1 }, fresca: null, ub: "ub-sano", fondo: null, ops: [], rttRedisMs: rtt, liberarFalla: false, liberarPerdida: null, liberarIntentos: 0, publicarRespuestaPerdida: false, corteDuroEn: null, llamadasTmdbTrasPlazo: 0, deteccionMs: 0, ultimaRenovacionEn: null, aplicacionRedisMs: aplicacion, renovacionesPerdidas: {}, demoraFalloMs: 1_000, cliente: { venceEnMin: ahora + TURNO_MS, venceEnMax: ahora + rtt + TURNO_MS }, ...o };
+};
 
 test("🔴 RED (control): con plazoFondo = inicioFondo + 50 s a secas, un fondo iniciado a los 15 s cree tener hasta t = 65 s — Vercel mata la invocación a los 60 s", () => {
   const inicioRuta = 100_000, inicioFondo = inicioRuta + 15_000;
@@ -1227,20 +1251,36 @@ test("🟢 (11) exactamente UN LIBERAR si todavía queda margen (detección a pl
   assert.equal(f.turnoRedis.propietario, null); assert.equal(f.fresca, null); assert.equal(f.ub, "ub-sano"); assert.equal(f.turnoRedis.generacion, 1);
 });
 
-// §51: helper de lectura — el TTL RESTANTE del turno lo DERIVA el modelo de sus propias renovaciones.
-const ttlRestante = (f: FondoMundo) => ({ ultima: f.ultimaRenovacionEn!, venceEn: f.turnoRedis.venceEn!, restante: f.turnoRedis.venceEn! - f.ahora });
+// §51/§52: helper de lectura — el TTL RESTANTE del turno lo DERIVA el modelo de sus propias renovaciones.
+// `venceEn` es la VERDAD en Redis (= última APLICACIÓN + 15 s); `cliente` es lo que el proceso puede afirmar.
+const ttlRestante = (f: FondoMundo) => {
+  const aplicadas = f.ops.filter((o) => o.op === "RENOVAR" && o.aplicada);
+  const ultimaAplicacion = aplicadas.length ? aplicadas[aplicadas.length - 1].aplicadaEn! : null;
+  return { ultimoEnvio: f.ultimaRenovacionEn!, ultimaAplicacion, venceEn: f.turnoRedis.venceEn!, restante: f.turnoRedis.venceEn! - f.ahora, cliente: f.cliente };
+};
+// §52: el mismo escenario con Redis aplicando al COMIENZO del RTT y JUSTO ANTES de responder: devuelve el
+// intervalo de `restante` que el modelo produce entre los dos extremos (y comprueba que sea monótono).
+const intervaloRestante = (base: Partial<FondoMundo>) => {
+  const rtt = base.rttRedisMs ?? 140;
+  const corridas = [0, Math.floor(rtt / 2), rtt].map((aplicacionRedisMs) => { const f = fondoMundo({ ...base, aplicacionRedisMs }); iniciarFondo(f); return ttlRestante(f); });
+  const restantes = corridas.map((c) => c.restante);
+  assert.ok(restantes[0] <= restantes[1] && restantes[1] <= restantes[2], "cuanto más tarde aplica Redis, más tarde vence");
+  return { min: restantes[0], max: restantes[2], corridas };
+};
 
-test("🟢 (12) CERO LIBERAR si ya se alcanzó el corte externo duro (detección a plazo + 5,1 s = inicioRuta + 60,1 s): no se insiste; el turno se recupera EVENTUALMENTE por TTL — el TTL restante sale de las renovaciones que el modelo envió", () => {
+test("🟢 (12) CERO LIBERAR si ya se alcanzó el corte externo duro (detección a plazo + 5,1 s = inicioRuta + 60,1 s): no se insiste; el turno se recupera EVENTUALMENTE por TTL — el TTL restante sale de las renovaciones que el modelo envió y depende de cuándo las aplicó Redis", () => {
   const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 5_100 });
   assert.equal(iniciarFondo(f), "cancelada");
   assert.deepEqual(f.ops.filter((o) => o.op !== "RENOVAR"), [], "ninguna operación de Redis además de las renovaciones ANTERIORES al plazo");
   assert.ok(f.eventos.includes("LIBERAR:omitido-sin-margen->TTL"));
   assert.equal(f.turnoRedis.propietario, "yo"); assert.equal(f.ub, "ub-sano");
-  const { ultima, venceEn, restante } = ttlRestante(f);
-  assert.equal(ultima, 150_700, "última renovación enviada por el bucle (primer tick a 125 s; después 5 s + RTT 140 ms): 150,7 s < plazo 155 s");
-  assert.equal(venceEn, ultima + TURNO_MS, "el turno vence 15 s después de ESA renovación, no de la toma inicial (135 s)");
+  const { ultimoEnvio, ultimaAplicacion, venceEn, restante } = ttlRestante(f);
+  assert.equal(ultimoEnvio, 150_700, "última renovación enviada por el bucle (primer tick a 125 s; después 5 s + RTT 140 ms): 150,7 s < plazo 155 s");
+  assert.equal(venceEn, ultimaAplicacion! + TURNO_MS, "GARANTIZADO: el turno vence 15 s después de la APLICACIÓN de esa renovación, no de la toma inicial ni del envío");
   assert.ok(restante > 0, "NO está vencido en el acto: sigue del proceso");
-  assert.equal(restante, 5_600, "se recupera 5,6 s después de la detección (160,1 s → 165,7 s)");
+  // Cifra: ESTIMACIÓN para el RTT modelado (140 ms), según dónde dentro del RTT ejecute Redis — no una cota.
+  const { min, max } = intervaloRestante({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 5_100 });
+  assert.equal(min, 5_600); assert.equal(max, 5_740, "160,1 s → vence entre 165,7 s (aplicó al recibir) y 165,84 s (aplicó al responder)");
 });
 
 test("🔴 RED (control): sin guardia, un segundo pedido de limpieza envía un SEGUNDO LIBERAR (misma función que usa iniciarFondo)", () => {
@@ -1264,9 +1304,11 @@ test("🟢 (13a) LIBERAR falla (Redis caído): UB, fresca y generación intactos
   const a = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
   assert.equal(iniciarFondo(a), "cancelada"); assert.deepEqual(soloLiberar(a), []); assert.equal(a.liberarIntentos, 1);
   assert.equal(a.ub, "ub-sano"); assert.equal(a.fresca, null); assert.equal(a.turnoRedis.generacion, 1); assert.equal(a.turnoRedis.propietario, "yo");
-  const { ultima, venceEn, restante } = ttlRestante(a);
-  assert.equal(venceEn, ultima + TURNO_MS); assert.equal(restante, TURNO_MS - (a.ahora - ultima));
-  assert.equal(restante, 10_600, "recuperación eventual: vence 10,6 s después de la detección (155,1 s → 165,7 s)");
+  const { ultimaAplicacion, venceEn, restante, cliente } = ttlRestante(a);
+  assert.equal(venceEn, ultimaAplicacion! + TURNO_MS); assert.equal(restante, TURNO_MS - (a.ahora - ultimaAplicacion!));
+  assert.ok(cliente.venceEnMin <= venceEn && venceEn <= cliente.venceEnMax!, "la verdad de Redis cae dentro de lo que el cliente acotó con la última respuesta recibida");
+  const { min, max } = intervaloRestante({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
+  assert.equal(min, 10_600); assert.equal(max, 10_740, "ESTIMACIÓN (RTT 140 ms): recuperación eventual entre 10,6 y 10,74 s después de la detección, según cuándo aplicó Redis");
 });
 
 test("🟢 (13b) respuesta de LIBERAR perdida, variante APLICADA: Redis la ejecutó → el turno ya quedó liberado; sin reintento; fresca, UB y generación intactos", () => {
@@ -1283,8 +1325,10 @@ test("🟢 (13c) respuesta de LIBERAR perdida, variante NO APLICADA (la petició
   const [lib] = soloLiberar(c); assert.equal(soloLiberar(c).length, 1); assert.equal(lib.respuestaPerdida, true); assert.equal(lib.aplicada, false);
   assert.equal(c.turnoRedis.propietario, "yo", "no liberado: nadie lo sabe");
   assert.equal(c.liberarIntentos, 1); assert.equal(c.ub, "ub-sano"); assert.equal(c.fresca, null); assert.equal(c.turnoRedis.generacion, 1);
-  const { ultima, venceEn, restante } = ttlRestante(c);
-  assert.ok(restante > 0); assert.equal(venceEn, ultima + TURNO_MS); assert.equal(restante, 10_600);
+  const { ultimaAplicacion, venceEn, restante } = ttlRestante(c);
+  assert.ok(restante > 0); assert.equal(venceEn, ultimaAplicacion! + TURNO_MS);
+  const { min, max } = intervaloRestante({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarPerdida: "no-aplicada" });
+  assert.equal(min, 10_600); assert.equal(max, 10_740, "ESTIMACIÓN (RTT 140 ms), no cota");
 });
 
 // ----------------------------------------------------------------- §51: las renovaciones las produce el MODELO
@@ -1307,16 +1351,104 @@ test("🟢 (16) renovaciones REALES producidas por el modelo: RENOVAR cada 5 s (
   assert.ok(f.eventos.includes("RENOVAR:no-enviado@55000:señal-vencida"), "el tick de 155 s se despierta y NO envía");
   assert.ok(renovaciones.every((o) => o.aplicada), "cada una extendió el turno en Redis");
   assert.equal(f.turnoRedis.propietario, "yo");
-  const { ultima, venceEn, restante } = ttlRestante(f);
-  assert.equal(ultima, 150_000); assert.equal(venceEn, 165_000, "vence 15 s después de la ÚLTIMA renovación, no 170 s (que suponía una renovación en el plazo)");
-  assert.equal(restante, 9_900, "TTL restante desde la detección (155,1 s)");
-  assert.ok(plazo - ultima <= RENOVACION_MS + f.rttRedisMs, "la última renovación cae a lo sumo 5 s + RTT antes del plazo");
-  assert.equal(venceEn - ultima, TURNO_MS, "cota: a lo sumo TURNO_MS (15 s) desde la ÚLTIMA renovación exitosa");
-  // Con el RTT real (140 ms) los ticks se corren: 125,00 / 130,14 … 150,70; el siguiente (155,84) ya no sale. La cota no cambia.
+  const { ultimoEnvio, ultimaAplicacion, venceEn, restante } = ttlRestante(f);
+  assert.equal(ultimoEnvio, 150_000); assert.equal(ultimaAplicacion, 150_000, "con RTT 0 envío y aplicación coinciden");
+  assert.equal(venceEn, 165_000, "vence 15 s después de la ÚLTIMA aplicación, no 170 s (que suponía una renovación en el plazo)");
+  assert.equal(restante, 9_900, "TTL restante desde la detección (155,1 s) — exacto SÓLO porque el RTT modelado es 0");
+  assert.ok(plazo - ultimoEnvio <= RENOVACION_MS + f.rttRedisMs, "con este RTT, la última renovación se envía a lo sumo 5 s + RTT antes del plazo");
+  assert.equal(venceEn - ultimaAplicacion!, TURNO_MS, "GARANTIZADO: a lo sumo TURNO_MS (15 s) desde la ÚLTIMA renovación APLICADA");
+  // Con el RTT modelado (140 ms) los ticks se corren: 125,00 / 130,14 … 150,70; el siguiente (155,84) ya no sale. La garantía no cambia; la cifra pasa a ser un intervalo.
   const g = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
   assert.equal(iniciarFondo(g), "cancelada");
   assert.deepEqual(g.ops.filter((o) => o.op === "RENOVAR").map((o) => o.enviadaEn), [125_000, 130_140, 135_280, 140_420, 145_560, 150_700]);
-  assert.equal(ttlRestante(g).venceEn, 150_700 + TURNO_MS); assert.equal(ttlRestante(g).restante, 10_600);
+  assert.equal(ttlRestante(g).venceEn, ttlRestante(g).ultimaAplicacion! + TURNO_MS);
+  const { min, max } = intervaloRestante({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
+  assert.equal(min, 10_600); assert.equal(max, 10_740, "ESTIMACIÓN para RTT 140 ms: [10,60; 10,74] s, según dónde dentro del RTT ejecute Redis");
+});
+
+// ----------------------------------------------------------------- §52: envío ≠ aplicación en Redis ≠ recepción
+test("🔴 RED (control, §51 superado): `venceEn = envío + 15 s` supone que PEXPIRE corre al enviar; el script corre cuando Redis lo ATIENDE — con Redis aplicando al final del RTT, el turno vence más tarde", () => {
+  const alComienzo = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, aplicacionRedisMs: 0 });
+  const alFinal = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, aplicacionRedisMs: 140 });
+  iniciarFondo(alComienzo); iniciarFondo(alFinal);
+  const r = alComienzo.ops.find((o) => o.op === "RENOVAR")!;
+  assert.equal(typeof r.aplicadaEn, "number", "la operación registra CUÁNDO Redis la aplicó, además de cuándo se envió y cuándo volvió");
+  assert.ok(r.enviadaEn <= r.aplicadaEn! && r.aplicadaEn! <= r.completaEn, "aplicación dentro de [envío, recepción]");
+  assert.equal(alFinal.turnoRedis.venceEn! - alComienzo.turnoRedis.venceEn!, 140, "mismo envío, 140 ms más tarde de vencimiento: `envío + 15 s` no lo modelaba (RED)");
+});
+
+test("🟢 (18a) Redis aplica al COMIENZO del RTT: el turno vence en envío + 15 s; el cliente, que sólo ve envío y recepción, acota [envío + 15 s, recepción + 15 s] y la verdad cae en el extremo inferior", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, aplicacionRedisMs: 0 });
+  iniciarFondo(f);
+  const { ultimoEnvio, ultimaAplicacion, venceEn, cliente } = ttlRestante(f);
+  assert.equal(ultimaAplicacion, ultimoEnvio); assert.equal(venceEn, ultimoEnvio + TURNO_MS);
+  assert.deepEqual(cliente, { venceEnMin: 150_700 + TURNO_MS, venceEnMax: 150_840 + TURNO_MS }); assert.equal(venceEn, cliente.venceEnMin);
+});
+
+test("🟢 (18b) Redis aplica JUSTO ANTES de responder: el turno vence en recepción + 15 s; misma cota del cliente, y la verdad cae en el extremo superior", () => {
+  const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, aplicacionRedisMs: 140 });
+  iniciarFondo(f);
+  const { ultimoEnvio, ultimaAplicacion, venceEn, cliente } = ttlRestante(f);
+  assert.equal(ultimaAplicacion, ultimoEnvio + 140); assert.equal(venceEn, ultimoEnvio + 140 + TURNO_MS);
+  assert.deepEqual(cliente, { venceEnMin: 150_700 + TURNO_MS, venceEnMax: 150_840 + TURNO_MS }); assert.equal(venceEn, cliente.venceEnMax);
+  assert.deepEqual(f.ops.filter((o) => o.op === "RENOVAR").map((o) => o.enviadaEn), [125_000, 130_140, 135_280, 140_420, 145_560, 150_700], "el calendario de envíos no depende de dónde aplique Redis: depende de cuándo VUELVE la respuesta");
+});
+
+test("🟢 (18c) respuesta exitosa: para CUALQUIER instante de aplicación dentro del RTT, la verdad de Redis cae en [envío + 15 s, recepción + 15 s]; ese intervalo es lo único que el cliente puede afirmar", () => {
+  for (const aplicacionRedisMs of [0, 1, 35, 70, 105, 139, 140]) {
+    const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, aplicacionRedisMs });
+    iniciarFondo(f);
+    const { venceEn, cliente, ultimoEnvio } = ttlRestante(f);
+    assert.ok(cliente.venceEnMin <= venceEn && venceEn <= cliente.venceEnMax!, `aplicación a +${aplicacionRedisMs} ms: ${venceEn} ∉ [${cliente.venceEnMin}, ${cliente.venceEnMax}]`);
+    assert.equal(cliente.venceEnMax! - cliente.venceEnMin, f.rttRedisMs, "el ancho del intervalo es exactamente el RTT de ESA renovación");
+    assert.equal(cliente.venceEnMin, ultimoEnvio + TURNO_MS);
+  }
+  // Y el intervalo del TTL restante para el RTT modelado (140 ms), detección a 155,1 s: [10,60; 10,74] s — estimación, no cota.
+  const { min, max } = intervaloRestante({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
+  assert.equal(min, 10_600); assert.equal(max, 10_740);
+  // Con otro RTT el intervalo es OTRO: el RTT modelado no es una cota de nada.
+  const lento = intervaloRestante({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, rttRedisMs: 1_000 });
+  assert.notEqual(lento.min, min); assert.equal(lento.max - lento.min, 1_000);
+});
+
+test("🟢 (18d) respuesta de RENOVAR perdida (`indeterminado`): el cliente NO puede afirmar un TTL exacto — conserva el mínimo de la última respuesta recibida y pierde la cota superior; en Redis la renovación se aplicó o no, y el modelo distingue las dos", () => {
+  for (const variante of ["aplicada", "no-aplicada"] as const) {
+    for (const aplicacionRedisMs of [0, 140]) {
+      const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, aplicacionRedisMs, renovacionesPerdidas: { 6: variante } });
+      assert.equal(iniciarFondo(f), "cancelada");
+      const rs = f.ops.filter((o) => o.op === "RENOVAR");
+      assert.equal(rs.length, 6); assert.equal(rs[5].respuestaPerdida, true); assert.equal(rs[5].aplicada, variante === "aplicada");
+      assert.ok(f.eventos.includes("RENOVAR:indeterminado@50700"));
+      const { venceEn, cliente } = ttlRestante(f);
+      assert.equal(cliente.venceEnMax, null, "sin cota superior desde el cliente: no sabe si el sexto RENOVAR se aplicó ni cuándo");
+      assert.equal(cliente.venceEnMin, rs[4].enviadaEn + TURNO_MS, "el mínimo es el de la ÚLTIMA respuesta recibida (el quinto RENOVAR)");
+      assert.ok(cliente.venceEnMin <= venceEn, "la verdad nunca está por debajo de lo que el cliente afirma");
+      if (variante === "aplicada") assert.equal(venceEn, rs[5].aplicadaEn! + TURNO_MS, "aplicada: vence 15 s después de ESA aplicación, que el cliente no conoce");
+      else assert.equal(venceEn, rs[4].aplicadaEn! + TURNO_MS, "no aplicada: vence 15 s después de la aplicación ANTERIOR");
+      assert.equal(f.turnoRedis.propietario, "yo"); assert.ok(venceEn > f.ahora, "recuperación eventual por TTL en los dos casos");
+    }
+  }
+});
+
+test("🟢 (18e) la vuelta siguiente se programa al TERMINAR la anterior (respuesta recibida o dada por perdida), como en el bucle real: con una respuesta perdida que tarda 1 s en rendirse, el tick siguiente se corre 1 s", () => {
+  const normal = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true });
+  const conPerdida = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, renovacionesPerdidas: { 2: "aplicada" }, demoraFalloMs: 1_000 });
+  iniciarFondo(normal); iniciarFondo(conPerdida);
+  const envios = (f: FondoMundo) => f.ops.filter((o) => o.op === "RENOVAR").map((o) => o.enviadaEn);
+  assert.deepEqual(envios(normal), [125_000, 130_140, 135_280, 140_420, 145_560, 150_700]);
+  assert.deepEqual(envios(conPerdida), [125_000, 130_140, 136_140, 141_280, 146_420, 151_560], "desde el tercero, +860 ms (1 s de espera en vez de 140 ms de RTT); todos siguen antes del plazo");
+  const lento = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, rttRedisMs: 1_500 });
+  iniciarFondo(lento);
+  assert.deepEqual(envios(lento), [125_000, 131_500, 138_000, 144_500, 151_000], "RTT 1,5 s: cinco renovaciones, cada una 6,5 s después del envío anterior");
+});
+
+test("🟢 (18f) ningún RENOVAR se inicia en el plazo efectivo ni después, con cualquier RTT, demora de fallo o instante de aplicación", () => {
+  for (const rttRedisMs of [0, 140, 1_000, 4_290]) for (const aplicacionRedisMs of [0, rttRedisMs]) for (const perdidas of [{}, { 3: "no-aplicada" }] as Record<number, "aplicada" | "no-aplicada">[]) {
+    const f = fondoMundo({ ahora: 120_000, composicionMs: 40_000, deteccionMs: 100, liberarFalla: true, rttRedisMs, aplicacionRedisMs, renovacionesPerdidas: perdidas, demoraFalloMs: 4_290 });
+    const plazo = plazosDelFondo(f.inicioRuta, f.ahora).plazoEfectivo;
+    iniciarFondo(f);
+    assert.ok(f.ops.filter((o) => o.op === "RENOVAR").every((o) => o.enviadaEn < plazo), `rtt ${rttRedisMs}: ${JSON.stringify(f.ops.map((o) => o.enviadaEn))}`);
+  }
 });
 
 test("🟢 (16b) sin composición (presupuesto insuficiente) o con una composición más corta que 5 s no hay ninguna renovación, y el turno vence 15 s después de tomarlo", () => {
