@@ -270,9 +270,11 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   // 2b. Con la pausa LOCAL vigente, las lecturas llevan tope: Redis puede
   // estar caído (es lo esperable junto a un 429 masivo) y no hay nada que
   // componer mientras la pausa rija.
+  // El tope se decide POR LECTURA, no sólo al entrar: la pausa puede nacer
+  // entre una lectura y la siguiente (un 429 de otra solicitud del proceso).
   const localAlEntrar = pausaLocal();
   const leerAcotada = async (claves: string[]): Promise<(T | null)[]> => {
-    if (localAlEntrar <= 0) return deps.leer(claves);
+    if (pausaLocal() <= 0) return deps.leer(claves);
     const r = await conTope(deps.leer(claves), c.T_LECTURA_PAUSA_MS, dormir);
     if (r === null) anotar((m) => { m.home.lecturasAcotadas += 1; });
     return r ?? claves.map(() => null);
@@ -437,7 +439,12 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   // es `pausado` con el restante local. Sin UB, abajo rige la espera breve y
   // la ÚNICA readquisición, ya con su timeout.
   let r: Awaited<ReturnType<typeof tomar>>;
-  if (localAlEntrar > 0) { r = { estado: "pausado", restanteMs: Math.max(1, pausaLocal()) }; anotar((m) => { m.home.turno = "pausado"; }); }   // el restante FRESCO: las lecturas acotadas consumieron tiempo
+  // Si la pausa regía al entrar o nació durante las lecturas, el pedido sigue el
+  // camino acotado aunque la pausa haya vencido justo ahora: un TOMAR sin tope
+  // contra un Redis caído sería volver a la promesa reducida. El restante es el
+  // FRESCO (las lecturas acotadas consumieron tiempo); vencido, vale 1 ms y la
+  // ÚNICA readquisición (con su timeout) decide.
+  if (localAlEntrar > 0 || pausaLocal() > 0) { r = { estado: "pausado", restanteMs: Math.max(1, pausaLocal()) }; anotar((m) => { m.home.turno = "pausado"; }); }
   else r = await tomar();
   if (r.estado === "sin-redis") {
     // §3.7: componer sin coordinar, servir, y no escribir nada.

@@ -1241,3 +1241,17 @@ test("punto 1 — pausa local vigente con Redis SANO: fresca presente → HIT; U
   const rc = await c.reloj.correr(c.solicitud(depsPausa(c, "A").d));
   assert.equal(rc.valor.de, "A"); assert.equal(rc.m.home.publicacion, "publicado");
 });
+
+test("🔴 punto 1 — la pausa local aparece ENTRE la primera lectura y la segunda (Redis ya colgado): la segunda lectura también lleva tope, decidido por lectura y no sólo al entrar", async () => {
+  const w = mundo();
+  const p = pausaDePrueba(w);
+  const colgado = () => new Promise<never>(() => {});
+  let lecturas = 0;
+  const leer = async (claves: string[]) => { lecturas++; if (lecturas === 1) { p.fijar(w.reloj.ahora() + 8000); return w.leer(claves); } return colgado(); };   // la fresca responde y la pausa nace ahí; el UB cuelga
+  const ops: OpsTurno = { ...w.ops, evalTomar: colgado, get: colgado, setNx: colgado };
+  const t0 = w.reloj.ahora();
+  const { d } = depsPausa(w, "A", { leer, turno: crearTurno(ops, PAUSA_CFG), producir: async () => { throw new Error("no compone"); } }, p);
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "vacio:pausa");
+  assert.ok(w.reloj.ahora() - t0 <= CONSTANTES.T_LECTURA_PAUSA_MS, `tardó ${w.reloj.ahora() - t0} ms: la lectura del UB esperó a Redis`);
+});

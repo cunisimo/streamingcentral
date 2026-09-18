@@ -47,7 +47,7 @@ function lineas(p) {
   p.leido = todo.length;
   const term = (pref) => nuevas.filter((l) => l.startsWith(pref) && esLineaTerminal(l.replace(pref, "[home]")))
     .map((l) => ({ ...parsearLineaHome(l.replace(pref, "[home]")), cancelada: /CANCELADA/.test(l), pausaMs: Number((l.match(/PAUSA (\d+)ms/) ?? [])[1] ?? 0), esperaPausaMs: Number((l.match(/espera pausa (\d+)ms/) ?? [])[1] ?? 0), liberacion: (l.match(/liberacion ([a-z-]+)/) ?? [])[1] ?? null, rechazadas: Number((l.match(/(\d+) rechazadas/) ?? [])[1] ?? 0), x429: Number((l.match(/(\d+) x429/) ?? [])[1] ?? 0), linea: l }));
-  return { home: term("[home]"), fondo: term("[home-fondo]"), compone: nuevas.filter(esLineaCompone).length, pausa: nuevas.filter((l) => l.startsWith("[tmdb] pausa")) };
+  return { home: term("[home]"), fondo: term("[home-fondo]"), compone: nuevas.filter(esLineaCompone).length, pausa: nuevas.filter((l) => l.startsWith("[tmdb] pausa")), x429: nuevas.filter((l) => /TMDB 429 en/.test(l)).length };
 }
 async function esperarLineas(p, cond, ms = 90000) {
   const acc = { home: [], fondo: [], compone: 0, pausa: [] };
@@ -172,9 +172,15 @@ async function main() {
   await control(BASE, "redis", "config", { modo: "caido" }); await tmdb429({ retryAfter: 20 });
   const desde4b = marcasDesde();
   const p4b = pedir(A, "n,d,m", "", 240000);   // Redis caído + 429 total desde el inicio; su duración es la promesa reducida de la Etapa 2
-  await dormir(5000);
-  const p4c = pedir(A, "n,d", "", 240000);     // OTRA clave, 5 s después, en plena pausa LOCAL (20 s), Redis caído, sin UB: precedencia §43.3 → 503 sin componer
+  // El segundo pedido sale recién cuando el PROCESO ya vio su 429 (línea `[tmdb] pausa`): pausa LOCAL conocida al entrar.
+  // La línea `[tmdb] pausa` sale cuando PAUSAR termina (con Redis caído, tras los reintentos del SDK); la pausa LOCAL
+  // rige desde el primer 429 VISTO, que el composer registra al degradar la fuente ("… ErrorTmdb: TMDB 429 en …").
+  let x429 = 0;
+  const vioLaPausa = await esperar(() => { x429 += lineas(A).x429; return x429 > 0; }, 120000, 50);
+  const tPausaConocida = Date.now();
+  const p4c = pedir(A, "n,d", "", 240000);     // OTRA clave, con la pausa LOCAL (20 s) conocida, Redis caído, sin UB: precedencia §43.3 → 503 acotado, sin componer
   const [s4b, s4c] = await Promise.all([p4b, p4c]);
+  s4c.pausaConocidaAlPedir = vioLaPausa; s4c.msDesdeQueSeVioLaPausa = Date.now() - tPausaConocida;
   const l4bc = await esperarLineas(A, (a) => a.home.length >= 2);
   const l4b = { home: l4bc.home.filter((l) => /:d,m,n:\s*$/.test(l.linea)), compone: l4bc.compone };
   const l4c = { home: l4bc.home.filter((l) => /:d,n:\s*$/.test(l.linea)), compone: l4bc.home.filter((l) => /:d,n:\s*$/.test(l.linea) && /1 composici/.test(l.linea)).length };
@@ -182,7 +188,7 @@ async function main() {
   const mr4b = await marcas("redis");
   await control(BASE, "redis", "config", { modo: "ok", ...lat(40) });
   const tras = mr4b.filter((m) => m.t >= desde4b);
-  log("S4b-redis-caido-con-429", { primero: { status: s4b.status, motivo: s4b.motivo, contenido: s4b.contenido, msPared: s4b.msPared, linea: l4b.home[0]?.linea.slice(0, 300) }, duranteLaPausaLocal: { status: s4c.status, motivo: s4c.motivo, contenido: s4c.contenido, msPared: s4c.msPared, compone: l4c.compone, composiciones: l4c.home[0]?.composiciones, pausaMs: l4c.home[0]?.pausaMs, linea: l4c.home[0]?.linea.slice(0, 300) }, marcasRedisTrasCaida: tras.length, porComandoTrasCaida: tras.reduce((o, m) => { o[m.c] = (o[m.c] ?? 0) + 1; return o; }, {}), lecturasPTTLTrasCaida: tras.filter((m) => m.c === "PTTL").length });
+  log("S4b-redis-caido-con-429", { primero: { status: s4b.status, motivo: s4b.motivo, contenido: s4b.contenido, msPared: s4b.msPared, linea: l4b.home[0]?.linea.slice(0, 300) }, duranteLaPausaLocal: { pausaConocidaAlPedir: s4c.pausaConocidaAlPedir, status: s4c.status, motivo: s4c.motivo, contenido: s4c.contenido, msPared: s4c.msPared, compone: l4c.compone, composiciones: l4c.home[0]?.composiciones, pausaMs: l4c.home[0]?.pausaMs, lecturasAcotadas: Number((l4c.home[0]?.linea.match(/(\d+) lectura\(s\) acotada/) ?? [])[1] ?? 0), linea: l4c.home[0]?.linea.slice(0, 300) }, marcasRedisTrasCaida: tras.length, porComandoTrasCaida: tras.reduce((o, m) => { o[m.c] = (o[m.c] ?? 0) + 1; return o; }, {}), lecturasPTTLTrasCaida: tras.filter((m) => m.c === "PTTL").length });
   await dormir(21000); await tmdbOk(semilla);
 
   // S5 — tres procesos fríos a la vez con 429 total a los 3 s: sobrepaso GLOBAL contra la línea base (sin pausa: ~750 por proceso).
@@ -217,7 +223,7 @@ async function main() {
     "4-429-nunca-publica-un-Home-mutilado": { ok: !e["S1-429-total-sin-UB"].frescaEscrita && !e["S1-429-total-sin-UB"].degradadoEscrito && !e["S2-429-total-con-UB"].frescaEscrita && !e["S5-tres-procesos-frios-429-total"].frescaEscrita && !e["S5-tres-procesos-frios-429-total"].degradadoEscrito, detalle: "fresca/degradado en Redis tras un 429 total (S1, S2, S5)" },
     "5-con-UB-inmediato": { ok: e["S2-429-total-con-UB"].status === 200 && e["S2-429-total-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].status === 200 && e["S2b-pedido-durante-la-pausa-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].msPared < 2000, msPared: [e["S2-429-total-con-UB"].msPared, e["S2b-pedido-durante-la-pausa-con-UB"].msPared] },
     "6-sin-UB-nunca-50s-ni-200-vacio": { ok: [e["S1-429-total-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.status === 503 && x.retryAfter && x.contenido === 0) && e["S1b-pedido-durante-la-pausa-sin-UB"].status === 200 && e["S1b-pedido-durante-la-pausa-sin-UB"].contenido > 0 && [e["S1-429-total-sin-UB"], e["S1b-pedido-durante-la-pausa-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.msPared < 30000), msPared: [e["S1-429-total-sin-UB"].msPared, e["S1b-pedido-durante-la-pausa-sin-UB"].msPared, e["S1c-pausa-larga-sin-UB-503-inmediato"].msPared] },
-    "7-redis-lento-caido-sin-tormenta": { ok: e["S4a-redis-lento-300ms-con-429"].lecturasPTTL <= 40 && e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida <= 6 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.status === 503 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.compone === 0, lecturas: [e["S4a-redis-lento-300ms-con-429"].lecturasPTTL, e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida], porComando: e["S4b-redis-caido-con-429"].porComandoTrasCaida, nota: "la duración del primer pedido con Redis caído es la promesa reducida de la Etapa 2 (reintentos del SDK por lectura), no la 3.c.1" },
+    "7-redis-lento-caido-sin-tormenta": { ok: e["S4a-redis-lento-300ms-con-429"].lecturasPTTL <= 40 && e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida <= 6 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.status === 503 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.compone === 0 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.pausaConocidaAlPedir === true && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.msPared <= 4000, limiteLocalMs: 3000 + 1000, msParedPausaLocal: e["S4b-redis-caido-con-429"].duranteLaPausaLocal.msPared, lecturas: [e["S4a-redis-lento-300ms-con-429"].lecturasPTTL, e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida], porComando: e["S4b-redis-caido-con-429"].porComandoTrasCaida, nota: "la duración del primer pedido con Redis caído es la promesa reducida de la Etapa 2 (reintentos del SDK por lectura), no la 3.c.1" },
     "propagacion-entre-procesos": { ok: e["S3-propagacion-tres-procesos"].B.x429 === 0 && e["S3-propagacion-tres-procesos"].B.rechazadas > 0 && e["S3-propagacion-tres-procesos"].C.x429 === 0 && e["S3-propagacion-tres-procesos"].C.pausaMs > 0 && e["S3-propagacion-tres-procesos"].C.status === 200, detalle: "B (sin 429 propio) cortado por el lector; C (frío) pausado por TOMAR y luego compuesto" },
     "sobrepaso-vs-linea-base": { conPausa: { S1: e["S1-429-total-sin-UB"].sobrepaso.tras429.total, S2: e["S2-429-total-con-UB"].sobrepaso.tras429.total, S5global: e["S5-tres-procesos-frios-429-total"].sobrepasoGlobal.tras429.total }, controlSinPausa: e["S6-CONTROL-kill-switch-apagado"].sobrepaso.tras429.total, lineaBase: "750-778 por proceso" },
   };

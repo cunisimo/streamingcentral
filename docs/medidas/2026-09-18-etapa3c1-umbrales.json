@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-09-18T19:50:05.634Z",
+  "fecha": "2026-09-18T21:44:07.273Z",
   "antes": "37d4707",
   "despues": "feat/etapa3c1-pausa-tmdb",
   "semillas": [
@@ -13,8 +13,8 @@
       "antes": {
         "frio": {
           "status": 200,
-          "msPared": 30372,
-          "msTotal": 30291,
+          "msPared": 30858,
+          "msTotal": 30700,
           "tmdb": 926,
           "redisComandos": 1002,
           "redisOpsDoble": 1004,
@@ -23,11 +23,11 @@
         },
         "ub": {
           "status": 200,
-          "msPared": 275,
-          "msTotalSolicitud": 235,
+          "msPared": 303,
+          "msTotalSolicitud": 262,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 4277,
+            "msTotal": 4511,
             "tmdb": 1,
             "redisComandos": 60,
             "publicacion": "publicado",
@@ -39,21 +39,21 @@
       "despues": {
         "frio": {
           "status": 200,
-          "msPared": 30824,
-          "msTotal": 30735,
+          "msPared": 31218,
+          "msTotal": 31086,
           "tmdb": 926,
-          "redisComandos": 1029,
-          "redisOpsDoble": 1032,
+          "redisComandos": 1030,
+          "redisOpsDoble": 1033,
           "publicacion": "publicado",
           "cache": "MISS"
         },
         "ub": {
           "status": 200,
-          "msPared": 241,
-          "msTotalSolicitud": 228,
+          "msPared": 310,
+          "msTotalSolicitud": 303,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 4421,
+            "msTotal": 4577,
             "tmdb": 1,
             "redisComandos": 61,
             "publicacion": "publicado",
@@ -68,21 +68,21 @@
       "antes": {
         "frio": {
           "status": 200,
-          "msPared": 31559,
-          "msTotal": 31544,
+          "msPared": 31950,
+          "msTotal": 31946,
           "tmdb": 926,
           "redisComandos": 1004,
-          "redisOpsDoble": 1003,
+          "redisOpsDoble": 1004,
           "publicacion": "publicado",
           "cache": "MISS"
         },
         "ub": {
           "status": 200,
-          "msPared": 307,
-          "msTotalSolicitud": 285,
+          "msPared": 319,
+          "msTotalSolicitud": 309,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3657,
+            "msTotal": 4042,
             "tmdb": 1,
             "redisComandos": 60,
             "publicacion": "publicado",
@@ -94,21 +94,21 @@
       "despues": {
         "frio": {
           "status": 200,
-          "msPared": 31238,
-          "msTotal": 31201,
+          "msPared": 32163,
+          "msTotal": 32157,
           "tmdb": 926,
-          "redisComandos": 1028,
-          "redisOpsDoble": 1027,
+          "redisComandos": 1031,
+          "redisOpsDoble": 1031,
           "publicacion": "publicado",
           "cache": "MISS"
         },
         "ub": {
           "status": 200,
-          "msPared": 375,
-          "msTotalSolicitud": 250,
+          "msPared": 224,
+          "msTotalSolicitud": 206,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3844,
+            "msTotal": 4013,
             "tmdb": 1,
             "redisComandos": 61,
             "publicacion": "publicado",
@@ -123,8 +123,8 @@
       "antes": {
         "frio": {
           "status": 200,
-          "msPared": 33837,
-          "msTotal": 33804,
+          "msPared": 33762,
+          "msTotal": 33749,
           "tmdb": 926,
           "redisComandos": 1005,
           "redisOpsDoble": 1005,
@@ -133,11 +133,11 @@
         },
         "ub": {
           "status": 200,
-          "msPared": 227,
-          "msTotalSolicitud": 212,
+          "msPared": 243,
+          "msTotalSolicitud": 230,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3847,
+            "msTotal": 3877,
             "tmdb": 1,
             "redisComandos": 60,
             "publicacion": "publicado",
@@ -149,8 +149,8 @@
       "despues": {
         "frio": {
           "status": 200,
-          "msPared": 33755,
-          "msTotal": 33732,
+          "msPared": 33856,
+          "msTotal": 33850,
           "tmdb": 926,
           "redisComandos": 1031,
           "redisOpsDoble": 1031,
@@ -159,11 +159,11 @@
         },
         "ub": {
           "status": 200,
-          "msPared": 221,
-          "msTotalSolicitud": 201,
+          "msPared": 208,
+          "msTotalSolicitud": 197,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3716,
+            "msTotal": 3862,
             "tmdb": 1,
             "redisComandos": 61,
             "publicacion": "publicado",
@@ -211,14 +211,14 @@
       "frio": [
         {
           "antes": 1004,
-          "despues": 1032,
-          "extra": 28,
+          "despues": 1033,
+          "extra": 29,
           "tope": 41
         },
         {
-          "antes": 1003,
-          "despues": 1027,
-          "extra": 24,
+          "antes": 1004,
+          "despues": 1031,
+          "extra": 27,
           "tope": 41
         },
         {
@@ -252,43 +252,43 @@
     "duracion-mediana-≤+5%-y-ninguna->+10%": {
       "ok": true,
       "frio": {
-        "antes": 31544,
-        "despues": 31201
+        "antes": 31946,
+        "despues": 32157
       },
       "fondo": {
-        "antes": 3847,
-        "despues": 3844
+        "antes": 4042,
+        "despues": 4013
       },
-      "peorRepeticion": 1.051,
+      "peorRepeticion": 1.015,
       "porSemilla": [
         {
           "frio": [
-            30291,
-            30735
+            30700,
+            31086
           ],
           "fondo": [
-            4277,
-            4421
+            4511,
+            4577
           ]
         },
         {
           "frio": [
-            31544,
-            31201
+            31946,
+            32157
           ],
           "fondo": [
-            3657,
-            3844
+            4042,
+            4013
           ]
         },
         {
           "frio": [
-            33804,
-            33732
+            33749,
+            33850
           ],
           "fondo": [
-            3847,
-            3716
+            3877,
+            3862
           ]
         }
       ]
@@ -327,21 +327,21 @@
     "respuesta-UB-≤+50ms": {
       "ok": true,
       "mediana": {
-        "antes": 275,
-        "despues": 241
+        "antes": 303,
+        "despues": 224
       },
       "porSemilla": [
         [
-          275,
-          241
+          303,
+          310
         ],
         [
-          307,
-          375
+          319,
+          224
         ],
         [
-          227,
-          221
+          243,
+          208
         ]
       ]
     }
