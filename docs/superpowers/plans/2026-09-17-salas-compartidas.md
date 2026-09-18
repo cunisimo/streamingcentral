@@ -12,7 +12,7 @@
 
 - Copy en español rioplatense. Nombres de producto exactos: "¡Nuestro match!", "¡HAY MATCH!", "¡Tenemos empate!", "Esta vez no coincidieron", "Desempatar", "Esperando al organizador", "Compartir nuestro match", "Crear sala", "Otra tanda".
 - Participantes: mínimo **2**, máximo **6** (organizador incluido). Lobby vence a los **15 min** de crear la sala. Ventanas posteriores a empate/resultado: **5 min**. Preparación colgada: **90 s** (se aborta, nunca se borra la sala). Borrado físico: **sólo** salas en estado `vencida` con `expires_at` pasado, o sea 5 min después del último estado terminal; `sala_cerrar` **no** borra en el acto, marca `vencida` y conserva los 5 min. "Otra tanda" renueva `expires_at`.
-- Contador local de **10 s** por card, con el comienzo persistido en `localStorage` por sala/ronda/posición: recargar no lo reinicia; se borra al registrar el voto.
+- Contador local de **10 s** por card, con el comienzo persistido en `localStorage` por sala/ronda/posición: recargar no lo reinicia; se borra sólo cuando el servidor confirmó el avance (un fallo de red lo conserva). Los botones de voto usan el atributo real `disabled` durante la solicitud.
 - Tandas: **5 → 120 s**, **10 → 180 s**, **20 → 300 s**. Default **10** y **Cualquiera**. Duraciones: `cualquiera` (unión estricta de `corta` ∪ `larga`), `corta` (`runtime <= 90`), `larga` (`runtime > 90`). **Siempre** `apto_chicos = false`, `media_type = 'movie'`, `razon` y `advertencia` no nulos, `runtime > 0`.
 - Contador local **10 s** por card → registra `pass`. El servidor sólo conoce el plazo global.
 - Votos: `yes` | `no` | `pass`. Sólo la siguiente `pos` pendiente. Idempotente. El `participant_id` **siempre** se deriva del token; ninguna RPC lo acepta como parámetro.
@@ -659,9 +659,14 @@ begin
     select * into r from room_rounds where room_id = p_room and estado = 'preparando' order by numero desc limit 1;
     if found and r.created_at < now() - interval '90 seconds' then
       delete from room_rounds where id = r.id;
+      -- Misma regla que sala_abortar_preparacion: al volver al lobby se renueva
+      -- también lobby_expires_at por 5 min, acotado.
       update rooms set estado = coalesce(estado_previo, 'lobby'), estado_previo = null,
         round_actual = (select id from room_rounds where room_id = p_room order by numero desc limit 1),
-        expires_at = greatest(expires_at, now() + interval '5 minutes') where id = p_room;
+        expires_at = greatest(expires_at, now() + interval '5 minutes'),
+        lobby_expires_at = case when coalesce(estado_previo, 'lobby') = 'lobby'
+                                then greatest(lobby_expires_at, now() + interval '5 minutes') else lobby_expires_at end
+      where id = p_room;
       perform sala_tocar(p_room);
     end if;
     -- Una sala en `preparando` NUNCA se marca vencida ni se borra desde acá.
@@ -849,7 +854,7 @@ begin
   if p_pos < mios then
     select voto into previo from room_votes where round_id = r.id and participant_id = yo.id and pos = p_pos;
     if previo = p_voto then return jsonb_build_object('ok', true, 'idempotente', true, 'termine', mios >= r.size, 'estado', s.estado); end if;
-    return jsonb_build_object('ok', false, 'motivo', 'ya_votado');
+    return jsonb_build_object('ok', false, 'motivo', 'ya_votado', 'siguiente', mios);
   end if;
   if p_pos > mios or p_pos >= r.size then return jsonb_build_object('ok', false, 'motivo', 'fuera_de_orden', 'siguiente', mios); end if;
 
@@ -1069,9 +1074,15 @@ begin
   -- Vuelve al estado anterior con una ventana fresca de 5 min: el organizador
   -- tiene que poder leer el motivo y reintentar. round_actual apunta a la
   -- ronda cerrada anterior si la hubo (para seguir mostrando su resultado).
+  -- Si vuelve al LOBBY, también se renueva `lobby_expires_at` por 5 min: si
+  -- los 15 originales ya pasaron, la siguiente sala_estado la vencería en el
+  -- acto y el reintentar que se promete no existiría.
   update rooms set estado = coalesce(estado_previo, 'lobby'), estado_previo = null,
     round_actual = (select id from room_rounds where room_id = rid order by numero desc limit 1),
-    expires_at = greatest(expires_at, now() + interval '5 minutes') where id = rid;
+    expires_at = greatest(expires_at, now() + interval '5 minutes'),
+    lobby_expires_at = case when coalesce(estado_previo, 'lobby') = 'lobby'
+                            then greatest(lobby_expires_at, now() + interval '5 minutes') else lobby_expires_at end
+  where id = rid;
   perform sala_tocar(rid);
 end;
 $$;
@@ -1437,6 +1448,30 @@ await prueba("27. una sala en `preparando` nunca es eliminada por el barrido, au
   await rpc(admin, "sala_barrido");
   assert.equal((await admin.from("rooms").select("id").eq("id", s.room)).data.length, 0);
 });
+
+await prueba("28. preparación desde el lobby abortada con los 15 min ya vencidos: el lobby se renueva 5 min y se puede reintentar", async () => {
+  const h = await usuario(`h28-${Date.now()}@sala.test`);
+  const s = await salaPreparando(h.jwt, h.id);  // estado_previo = 'lobby'
+  // Los 15 minutos originales ya pasaron mientras se preparaba.
+  await admin.from("rooms").update({ lobby_expires_at: new Date(Date.now() - 30_000).toISOString() }).eq("id", s.room);
+  await rpc(admin, "sala_abortar_preparacion", { p_round: s.ini.round_id, p_prep_token: s.ini.prep_token });
+  const { data: fila } = await admin.from("rooms").select("estado, lobby_expires_at, expires_at").eq("id", s.room).single();
+  assert.equal(fila.estado, "lobby");
+  const lobbyMs = new Date(fila.lobby_expires_at).getTime() - Date.now();
+  assert.ok(lobbyMs > 4 * 60_000 && lobbyMs <= 5 * 60_000 + 2000, `lobby_expires_at renovado fuera de la ventana acotada: ${lobbyMs} ms`);
+  // La siguiente lectura NO la vence, y el organizador puede reintentar.
+  const e = await rpc(anon(), "sala_estado", { p_room: s.room, p_token: s.tB });
+  assert.equal(e.estado, "lobby");
+  const ini2 = await rpc(admin, "sala_iniciar_preparacion", { p_room: s.room, p_host: h.id, p_size: 5, p_duracion: "cualquiera" });
+  assert.ok(ini2.round_id);
+  // Mismo caso por la vía del barrido (preparación colgada > 90 s con lobby vencido).
+  await admin.from("rooms").update({ lobby_expires_at: new Date(Date.now() - 30_000).toISOString() }).eq("id", s.room);
+  await admin.from("room_rounds").update({ created_at: new Date(Date.now() - 120_000).toISOString() }).eq("id", ini2.round_id);
+  await rpc(admin, "sala_barrido");
+  const e2 = await rpc(anon(), "sala_estado", { p_room: s.room, p_token: s.tB });
+  assert.equal(e2.estado, "lobby");
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: s.room });
+});
 ```
 
 - [ ] **Step 3:** `node --env-file=.env.sala-local scripts/sala/pruebas-rls.mjs` → `Todo verde`. Guardar la salida en `docs/medidas/2026-09-XX-salas-rls-local.txt`.
@@ -1599,7 +1634,7 @@ export const OPTIONS = opcionesCors("POST");
 **Files:**
 - Create: `lib/sala/estado.ts` (tipo `EstadoSala` = forma del JSON de `sala_estado`, con `esTerminal(e)`, `venceEnSeg(e, ahora)`)
 - Create: `lib/sala/token-store.ts` (`leerToken(roomId)`, `guardarToken(roomId, tok)`, `borrarToken(roomId)`; clave `yump:sala:<id>`; try/catch alrededor de `localStorage`)
-- Create: `hooks/temporizador-card.ts` (máquina pura + persistencia inyectable): `arrancar(store, clave, ahoraMs) → { arrancoEn }` lee `store.get(clave)` y, si no hay nada, guarda `ahoraMs`; `restante(arrancoEn, ahoraMs)` en s (10 − transcurridos, mínimo 0); `vencio(arrancoEn, ahoraMs)` a los 10.000 ms; `cerrar(store, clave)` borra la entrada. `clave = \`yump:sala:${room}:${round}:${pos}:inicio\``. **Recargar la página no reinicia los 10 s**: el comienzo persiste en `localStorage` por sala, ronda y posición y se borra al registrar el voto (incluido el `pass` automático). Si al volver ya venció, se registra `pass` de inmediato. El plazo global sigue siendo el del servidor: esto sólo evita que el contador local se regale con F5.
+- Create: `hooks/temporizador-card.ts` (máquina pura + persistencia inyectable): `arrancar(store, clave, ahoraMs) → { arrancoEn }` lee `store.get(clave)` y, si no hay nada, guarda `ahoraMs`; `restante(arrancoEn, ahoraMs)` en s (10 − transcurridos, mínimo 0); `vencio(arrancoEn, ahoraMs)` a los 10.000 ms; `cerrar(store, clave)` borra la entrada. `clave = \`yump:sala:${room}:${round}:${pos}:inicio\``. **Recargar la página no reinicia los 10 s**: el comienzo persiste en `localStorage` por sala, ronda y posición y **se borra sólo cuando el servidor confirmó el avance** (`sala_votar` aceptado, o `sala_estado` con `mi_siguiente_pos > pos`). Un fallo de red conserva el comienzo, vencido o no: al volver, si ya venció, se reintenta el `pass` de inmediato. El plazo global sigue siendo el del servidor: esto sólo evita que el contador local se regale con F5.
 - Tests: `lib/sala/estado.test.ts`, `lib/sala/token-store.test.ts` (con un `localStorage` doble), `hooks/temporizador-card.test.ts` (casos: arranque nuevo guarda; segundo `arrancar` con la misma clave conserva el comienzo original y `restante` sigue bajando; `cerrar` borra y un `arrancar` posterior arranca de cero; `vencio` exacto a 10.000 ms; store que lanza → se comporta como sin persistencia)
 
 - [ ] **Step 1:** Tests que fallan → implementación mínima → PASS → commit `feat(salas): contratos de estado, token local y temporizador`.
@@ -1639,10 +1674,10 @@ export const OPTIONS = opcionesCors("POST");
 - Modify: `app/globals.css`
 
 **Detalle de `CardSala`:** póster (`.rlt-poster` sin `Link`), título, `runtime` formateado `Xh Ym`, `generos.map(genreLabel)`, `PlatformLogo` por cada `platforms` (destacando las de la unión), "Por qué verla" (`.rlt-razon`) y "Pero" (`.rlt-pero`). **Sin** enlace a la ficha.
-**`BotonesVoto`:** tres `<button type="button" className="act sala-act" aria-label="No|Paso|Sí">` con **sólo el ícono** (sin `.lab` visible; el texto va únicamente en `aria-label`): cruz = `M18 6L6 18M6 6l12 12`; salto = `M5 4l10 8-10 8V4zM19 5v14`; corazón = `M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z`. Mismo trazo `1.8` y `viewBox 0 0 24 24` que `.act svg`; el corazón se rellena con `var(--accent)` en `:active`. CSS: `.sala-act { min-width: 64px; min-height: 64px; border-radius: 999px; border: 1px solid var(--line-2) } .sala-act svg { width: 30px; height: 30px } .sala-act:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }`; deshabilitados (`aria-disabled`) mientras hay un `sala_votar` en vuelo.
-**Contador:** `temporizador-card` con `setInterval` de 250 ms y **persistencia por sala/ronda/pos** (Tarea 3.1): al montar la card se llama `arrancar(localStorage, clave, Date.now())`, que reusa el comienzo guardado si existe; al registrar el voto (manual o `pass` automático) se llama `cerrar`. Si al montar `vencio` ya es verdadero, se registra `pass` sin mostrar la card. Al montar con `mi_siguiente_pos` del estado se retoma desde ahí. Tras el último voto: pantalla "Listo, esperando a los demás (k de N)". Al llegar `estado ≠ votando` → `Resultado*`.
+**`BotonesVoto`:** tres `<button type="button" className="act sala-act" aria-label="No|Paso|Sí">` con **sólo el ícono** (sin `.lab` visible; el texto va únicamente en `aria-label`): cruz = `M18 6L6 18M6 6l12 12`; salto = `M5 4l10 8-10 8V4zM19 5v14`; corazón = `M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z`. Mismo trazo `1.8` y `viewBox 0 0 24 24` que `.act svg`; el corazón se rellena con `var(--accent)` en `:active`. CSS: `.sala-act { min-width: 64px; min-height: 64px; border-radius: 999px; border: 1px solid var(--line-2) } .sala-act svg { width: 30px; height: 30px } .sala-act:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }`. Mientras hay un `sala_votar` en vuelo los tres llevan el atributo real **`disabled`** (es lo único que impide pulsaciones nuevas; `aria-disabled` puede acompañarlo pero no lo reemplaza) y `.sala-act:disabled { opacity: .5; cursor: default }`.
+**Contador:** `temporizador-card` con `setInterval` de 250 ms y **persistencia por sala/ronda/pos** (Tarea 3.1): al montar la card se llama `arrancar(localStorage, clave, Date.now())`, que reusa el comienzo guardado si existe. **`cerrar` se llama únicamente cuando el servidor confirmó el avance**: cuando `sala_votar` devolvió `ok: true` (incluido `idempotente`), o devolvió `motivo: "ya_votado"` / `"fuera_de_orden"` con `siguiente > pos`, o cuando un `sala_estado` posterior trae `mi_siguiente_pos > pos`. Si la solicitud falla (red, 5xx, timeout) el comienzo persistido **se conserva**, aunque ya esté vencido: al recargar, `vencio` es verdadero y se reintenta el `pass` de inmediato en vez de regalar otros 10 s. Si al montar `vencio` ya es verdadero, se registra `pass` sin mostrar la card. Al montar con `mi_siguiente_pos` del estado se retoma desde ahí y se limpian las claves de posiciones anteriores a ésa. Tras el último voto: pantalla "Listo, esperando a los demás (k de N)". Al llegar `estado ≠ votando` → `Resultado*`.
 
-- [ ] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, **recargar a los 6 s deja 4 s (no vuelve a 10)**, recarga tras votar retoma en la siguiente con 10 s, voto tardío tras deadline muestra resultado. Con un lector de pantalla (TalkBack/VoiceOver) los tres botones se anuncian "No", "Paso", "Sí".
+- [ ] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, **recargar a los 6 s deja 4 s (no vuelve a 10)**, recarga tras votar retoma en la siguiente con 10 s, voto tardío tras deadline muestra resultado. **Con la red cortada (DevTools → Offline):** al votar, los tres botones quedan con `disabled` real (un segundo toque no dispara nada), la solicitud falla, el comienzo persistido sigue ahí; recargar sin red no reinicia los 10 s y, si venció, intenta el `pass` en cuanto vuelve la red. Con un lector de pantalla (TalkBack/VoiceOver) los tres botones se anuncian "No", "Paso", "Sí".
 - [ ] **Step 2:** Commit `feat(salas): votación con tres botones, contador local y reanudación`.
 
 ---
