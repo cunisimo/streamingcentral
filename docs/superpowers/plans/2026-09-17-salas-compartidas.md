@@ -11,7 +11,8 @@
 ## Global Constraints
 
 - Copy en español rioplatense. Nombres de producto exactos: "¡Nuestro match!", "¡HAY MATCH!", "¡Tenemos empate!", "Esta vez no coincidieron", "Desempatar", "Esperando al organizador", "Compartir nuestro match", "Crear sala", "Otra tanda".
-- Participantes: mínimo **2**, máximo **6** (organizador incluido). Lobby vence a los **15 min** de crear la sala. Ventanas posteriores a empate/resultado: **5 min**. Preparación colgada: **90 s**. Borrado físico: **5 min** después del último estado terminal.
+- Participantes: mínimo **2**, máximo **6** (organizador incluido). Lobby vence a los **15 min** de crear la sala. Ventanas posteriores a empate/resultado: **5 min**. Preparación colgada: **90 s** (se aborta, nunca se borra la sala). Borrado físico: **sólo** salas en estado `vencida` con `expires_at` pasado, o sea 5 min después del último estado terminal; `sala_cerrar` **no** borra en el acto, marca `vencida` y conserva los 5 min. "Otra tanda" renueva `expires_at`.
+- Contador local de **10 s** por card, con el comienzo persistido en `localStorage` por sala/ronda/posición: recargar no lo reinicia; se borra al registrar el voto.
 - Tandas: **5 → 120 s**, **10 → 180 s**, **20 → 300 s**. Default **10** y **Cualquiera**. Duraciones: `cualquiera` (unión estricta de `corta` ∪ `larga`), `corta` (`runtime <= 90`), `larga` (`runtime > 90`). **Siempre** `apto_chicos = false`, `media_type = 'movie'`, `razon` y `advertencia` no nulos, `runtime > 0`.
 - Contador local **10 s** por card → registra `pass`. El servidor sólo conoce el plazo global.
 - Votos: `yes` | `no` | `pass`. Sólo la siguiente `pos` pendiente. Idempotente. El `participant_id` **siempre** se deriva del token; ninguna RPC lo acepta como parámetro.
@@ -556,13 +557,17 @@ language sql volatile set search_path = public, extensions, pg_temp as $$
 $$;
 revoke execute on function sala_nuevo_token() from public, anon, authenticated;
 
+-- Deduplica y ordena, pero RECHAZA el array entero si trae un código
+-- desconocido: ["n","zz","d"] no se convierte en silencio en ["n","d"].
 create or replace function sala_plataformas_validas(p text[]) returns text[]
 language plpgsql immutable set search_path = public, extensions, pg_temp as $$
-declare v text[];
+declare v text[]; desconocidos text[];
 begin
-  select array_agg(distinct c order by c) into v
-  from unnest(coalesce(p, '{}')) c where c = any (sala_codigos_permitidos());
-  if v is null or cardinality(v) < 1 then raise exception 'sala_sin_plataformas' using errcode = '22023'; end if;
+  if p is null or cardinality(p) < 1 then raise exception 'sala_sin_plataformas' using errcode = '22023'; end if;
+  if cardinality(p) > 14 then raise exception 'sala_demasiadas_plataformas' using errcode = '22023'; end if;
+  select array_agg(c) into desconocidos from unnest(p) c where c is null or not (c = any (sala_codigos_permitidos()));
+  if desconocidos is not null then raise exception 'sala_plataforma_desconocida: %', array_to_string(desconocidos, ',') using errcode = '22023'; end if;
+  select array_agg(distinct c order by c) into v from unnest(p) c;
   return v;
 end;
 $$;
@@ -654,9 +659,12 @@ begin
     select * into r from room_rounds where room_id = p_room and estado = 'preparando' order by numero desc limit 1;
     if found and r.created_at < now() - interval '90 seconds' then
       delete from room_rounds where id = r.id;
-      update rooms set estado = coalesce(estado_previo, 'lobby'), estado_previo = null, round_actual = null where id = p_room;
+      update rooms set estado = coalesce(estado_previo, 'lobby'), estado_previo = null,
+        round_actual = (select id from room_rounds where room_id = p_room order by numero desc limit 1),
+        expires_at = greatest(expires_at, now() + interval '5 minutes') where id = p_room;
       perform sala_tocar(p_room);
     end if;
+    -- Una sala en `preparando` NUNCA se marca vencida ni se borra desde acá.
     return;
   end if;
 
@@ -716,7 +724,7 @@ begin
   return jsonb_build_object('room_id', rid, 'token', tok);
 end;
 $$;
-revoke execute on function sala_crear(text, text[]) from public, anon;
+revoke execute on function sala_crear(text, text[]) from public, anon, authenticated;
 grant execute on function sala_crear(text, text[]) to authenticated;
 
 create or replace function sala_unirse(p_room uuid, p_nombre text, p_platforms text[]) returns jsonb
@@ -745,7 +753,7 @@ begin
   return jsonb_build_object('token', tok);
 end;
 $$;
-revoke execute on function sala_unirse(uuid, text, text[]) from public;
+revoke execute on function sala_unirse(uuid, text, text[]) from public, anon, authenticated;
 grant execute on function sala_unirse(uuid, text, text[]) to anon, authenticated;
 
 -- Recuperar la participación (organizador u invitado con cuenta) desde otro
@@ -762,7 +770,7 @@ begin
   return jsonb_build_object('token', tok);
 end;
 $$;
-revoke execute on function sala_reclamar(uuid) from public, anon;
+revoke execute on function sala_reclamar(uuid) from public, anon, authenticated;
 grant execute on function sala_reclamar(uuid) to authenticated;
 
 -- Lo que ESTE participante puede ver. Aplica vencimientos antes de leer.
@@ -819,7 +827,7 @@ begin
   return res;
 end;
 $$;
-revoke execute on function sala_estado(uuid, text) from public;
+revoke execute on function sala_estado(uuid, text) from public, anon, authenticated;
 grant execute on function sala_estado(uuid, text) to anon, authenticated;
 
 create or replace function sala_votar(p_room uuid, p_token text, p_round uuid, p_pos int, p_voto text) returns jsonb
@@ -869,7 +877,7 @@ begin
   return jsonb_build_object('ok', true, 'termine', mios >= r.size, 'estado', (select estado from rooms where id = p_room));
 end;
 $$;
-revoke execute on function sala_votar(uuid, text, uuid, int, text) from public;
+revoke execute on function sala_votar(uuid, text, uuid, int, text) from public, anon, authenticated;
 grant execute on function sala_votar(uuid, text, uuid, int, text) to anon, authenticated;
 ```
 
@@ -911,7 +919,7 @@ begin
   return jsonb_build_object('ganador_pos', g);
 end;
 $$;
-revoke execute on function sala_desempatar(uuid) from public, anon;
+revoke execute on function sala_desempatar(uuid) from public, anon, authenticated;
 grant execute on function sala_desempatar(uuid) to authenticated;
 
 create or replace function sala_cerrar(p_room uuid) returns void
@@ -920,11 +928,14 @@ declare s rooms;
 begin
   select * into s from rooms where id = p_room for update;
   if not found or s.host_user_id <> auth.uid() then raise exception 'sala_no_es_host' using errcode = '42501'; end if;
-  update rooms set estado = 'vencida', expires_at = now() where id = p_room;
+  if s.estado = 'preparando' then raise exception 'sala_preparando' using errcode = '55000'; end if;  -- primero termina o aborta la preparación
+  -- Cerrar NO borra en el acto: la sala queda `vencida` y conserva los 5 min
+  -- para que los participantes vean "el organizador cerró la sala".
+  update rooms set estado = 'vencida', expires_at = now() + interval '5 minutes' where id = p_room;
   perform sala_tocar(p_room);
 end;
 $$;
-revoke execute on function sala_cerrar(uuid) from public, anon;
+revoke execute on function sala_cerrar(uuid) from public, anon, authenticated;
 grant execute on function sala_cerrar(uuid) to authenticated;
 
 -- ── Preparación: sólo service_role (la llama Vercel tras verificar el JWT) ──
@@ -943,7 +954,10 @@ begin
   select coalesce(max(numero), 0) + 1 into num from room_rounds where room_id = p_room;
   insert into room_rounds (room_id, numero, size, duracion, limite_seg)
   values (p_room, num, p_size, p_duracion, sala_limite_seg(p_size)) returning id, prep_token into rid, ptok;
-  update rooms set estado = 'preparando', estado_previo = s.estado, platforms_frozen = u, round_actual = rid where id = p_room;
+  -- "Otra tanda" cancela y reemplaza el vencimiento anterior: una sala en
+  -- `preparando` nunca puede quedar con `expires_at` en el pasado.
+  update rooms set estado = 'preparando', estado_previo = s.estado, platforms_frozen = u, round_actual = rid,
+    expires_at = greatest(s.expires_at, now() + interval '5 minutes') where id = p_room;
   perform sala_tocar(p_room);
   return jsonb_build_object('round_id', rid, 'prep_token', ptok, 'numero', num, 'union', to_jsonb(u),
     'excluir', (select coalesce(jsonb_agg(distinct t.tmdb_id), '[]') from room_titles t join room_rounds rr on rr.id = t.round_id where rr.room_id = p_room));
@@ -1052,7 +1066,12 @@ begin
   select * into r from room_rounds where id = p_round for update;
   if not found or r.prep_token <> p_prep_token or r.estado <> 'preparando' then return; end if;
   delete from room_rounds where id = p_round;
-  update rooms set estado = coalesce(estado_previo, 'lobby'), estado_previo = null, round_actual = null where id = rid;
+  -- Vuelve al estado anterior con una ventana fresca de 5 min: el organizador
+  -- tiene que poder leer el motivo y reintentar. round_actual apunta a la
+  -- ronda cerrada anterior si la hubo (para seguir mostrando su resultado).
+  update rooms set estado = coalesce(estado_previo, 'lobby'), estado_previo = null,
+    round_actual = (select id from room_rounds where room_id = rid order by numero desc limit 1),
+    expires_at = greatest(expires_at, now() + interval '5 minutes') where id = rid;
   perform sala_tocar(rid);
 end;
 $$;
@@ -1070,7 +1089,11 @@ begin
                                     or (estado in ('empate','resultado') and now() > expires_at) loop
     perform sala_aplicar_vencimientos(rid); tocadas := tocadas + 1;
   end loop;
-  delete from rooms where expires_at < now();
+  -- El borrado físico es SÓLO para el estado terminal `vencida`. Todo lo demás
+  -- llega a `vencida` por sala_aplicar_vencimientos (lobby vencido, ventana de
+  -- resultado/empate agotada, cierre manual) y recién ahí, 5 min después, se
+  -- borra. Una sala en `preparando` o `votando` jamás se borra por acá.
+  delete from rooms where estado = 'vencida' and expires_at < now();
   get diagnostics borradas = row_count;
   return jsonb_build_object('revisadas', tocadas, 'borradas', borradas);
 end;
@@ -1147,7 +1170,9 @@ await prueba("1. lectura y escritura directa rechazadas", async () => {
 });
 await prueba("2. crear sala exige sesión y devuelve token una vez", async () => {
   await debeFallar(anon().rpc("sala_crear", { p_nombre: "X", p_platforms: ["n"] }));
-  const r = await rpc(como(host.jwt), "sala_crear", { p_nombre: "  Facu  ", p_platforms: ["n", "n", "zz", "d"] });
+  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Facu", p_platforms: ["n", "zz", "d"] }), /sala_plataforma_desconocida/); // no se limpia en silencio
+  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Facu", p_platforms: [] }), /sala_sin_plataformas/);
+  const r = await rpc(como(host.jwt), "sala_crear", { p_nombre: "  Facu  ", p_platforms: ["n", "n", "d"] });
   sala = r.room_id; tokHost = r.token; assert.equal(tokHost.length, 43);
 });
 await prueba("3. una sola sala activa por organizador", async () => {
@@ -1156,7 +1181,9 @@ await prueba("3. una sola sala activa por organizador", async () => {
 await prueba("4. plataformas: dedup, lista permitida, nombre normalizado", async () => {
   const e = await rpc(anon(), "sala_estado", { p_room: sala, p_token: tokHost });
   assert.deepEqual(e.soy.platforms, ["d", "n"]); assert.equal(e.soy.nombre, "Facu");
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["zz"] }), /sala_sin_plataformas/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["zz"] }), /sala_plataforma_desconocida/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["n", "zz"] }), /sala_plataforma_desconocida/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: [] }), /sala_sin_plataformas/);
   await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "x".repeat(25), p_platforms: ["n"] }), /sala_nombre_invalido/);
 });
 let tokA, tokB, tokInv;
@@ -1358,6 +1385,58 @@ await prueba("25. kill switch en la base: con activas='false' no se crea ni se e
   await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"] }), /sala_desactivadas/);
   await admin.from("sala_config").update({ valor: "true" }).eq("clave", "activas");
 });
+
+await prueba("26. 'Otra tanda' iniciada a segundos del vencimiento renueva expires_at y el barrido no la toca", async () => {
+  const h = await usuario(`h26-${Date.now()}@sala.test`);
+  const s = await salaPreparando(h.jwt, h.id);
+  await rpc(admin, "sala_publicar_ronda", { p_round: s.ini.round_id, p_prep_token: s.ini.prep_token, p_titulos: s.cards });
+  // Ronda 1 termina "sin coincidencias": ambos votan no a todo.
+  for (let pos = 0; pos < 5; pos++) for (const t of [s.tokHost, s.tB]) await rpc(anon(), "sala_votar", { p_room: s.room, p_token: t, p_round: s.ini.round_id, p_pos: pos, p_voto: "no" });
+  let e = await rpc(anon(), "sala_estado", { p_room: s.room, p_token: s.tB });
+  assert.equal(e.estado, "resultado"); assert.equal(e.resultado.tipo, "sin_coincidencias");
+  // La ventana está por vencer: 2 s.
+  await admin.from("rooms").update({ expires_at: new Date(Date.now() + 2000).toISOString() }).eq("id", s.room);
+  const ini2 = await rpc(admin, "sala_iniciar_preparacion", { p_room: s.room, p_host: h.id, p_size: 5, p_duracion: "cualquiera" });
+  assert.deepEqual(ini2.excluir.sort(), s.cards.map((c) => c.tmdb_id).sort());
+  const { data: fila } = await admin.from("rooms").select("estado, expires_at").eq("id", s.room).single();
+  assert.equal(fila.estado, "preparando");
+  assert.ok(new Date(fila.expires_at).getTime() > Date.now() + 4 * 60_000, "expires_at no se renovó");
+  await new Promise((r) => setTimeout(r, 2500));
+  await rpc(admin, "sala_barrido");
+  e = await rpc(anon(), "sala_estado", { p_room: s.room, p_token: s.tB });
+  assert.equal(e.estado, "preparando", "el barrido tocó una sala en preparación");
+  // Publicar la ronda 2 con títulos NO usados en la 1
+  const cand = await rpc(admin, "sala_candidatos", { p_providers: ["Netflix", "Disney Plus", "HBO Max"], p_duracion: "cualquiera", p_excluir: ini2.excluir, p_seed: "s2", p_limit: 80 });
+  assert.ok(cand.every((c) => !ini2.excluir.includes(c.tmdb_id)));
+  const cards2 = cand.slice(0, 5).map((c, pos) => ({ pos, tmdb_id: c.tmdb_id, titulo: "T" + c.tmdb_id, anio: 2000, runtime: c.runtime, poster: null, generos: ["drama"], platforms: ["n"], razon: c.razon, advertencia: c.advertencia }));
+  await debeFallar(admin.rpc("sala_publicar_ronda", { p_round: ini2.round_id, p_prep_token: ini2.prep_token, p_titulos: [{ ...cards2[0], tmdb_id: s.cards[0].tmdb_id }, ...cards2.slice(1)] }), /sala_card_invalida/);
+  const pub2 = await rpc(admin, "sala_publicar_ronda", { p_round: ini2.round_id, p_prep_token: ini2.prep_token, p_titulos: cards2 });
+  assert.ok(pub2.ok);
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: s.room });
+});
+
+await prueba("27. una sala en `preparando` nunca es eliminada por el barrido, aun con expires_at en el pasado", async () => {
+  const h = await usuario(`h27-${Date.now()}@sala.test`);
+  const s = await salaPreparando(h.jwt, h.id);
+  // Forzamos el peor caso: expires_at vencido Y preparación de más de 90 s.
+  await admin.from("rooms").update({ expires_at: new Date(Date.now() - 60_000).toISOString() }).eq("id", s.room);
+  await admin.from("room_rounds").update({ created_at: new Date(Date.now() - 120_000).toISOString() }).eq("id", s.ini.round_id);
+  await rpc(admin, "sala_barrido");
+  const { data: fila } = await admin.from("rooms").select("estado, expires_at, round_actual").eq("id", s.room).single();
+  assert.ok(fila, "la sala fue borrada");
+  // Se abortó la preparación colgada y volvió al lobby con ventana renovada; no se borró.
+  assert.equal(fila.estado, "lobby");
+  assert.ok(new Date(fila.expires_at).getTime() > Date.now());
+  const { data: rondas } = await admin.from("room_rounds").select("id").eq("room_id", s.room);
+  assert.equal(rondas.length, 0);
+  // Control: `sala_cerrar` conserva 5 min (no borra en el acto) y recién después el barrido la elimina.
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: s.room });
+  await rpc(admin, "sala_barrido");
+  assert.ok((await admin.from("rooms").select("id").eq("id", s.room).single()).data, "cerrar borró en el acto");
+  await admin.from("rooms").update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq("id", s.room);
+  await rpc(admin, "sala_barrido");
+  assert.equal((await admin.from("rooms").select("id").eq("id", s.room)).data.length, 0);
+});
 ```
 
 - [ ] **Step 3:** `node --env-file=.env.sala-local scripts/sala/pruebas-rls.mjs` → `Todo verde`. Guardar la salida en `docs/medidas/2026-09-XX-salas-rls-local.txt`.
@@ -1520,8 +1599,8 @@ export const OPTIONS = opcionesCors("POST");
 **Files:**
 - Create: `lib/sala/estado.ts` (tipo `EstadoSala` = forma del JSON de `sala_estado`, con `esTerminal(e)`, `venceEnSeg(e, ahora)`)
 - Create: `lib/sala/token-store.ts` (`leerToken(roomId)`, `guardarToken(roomId, tok)`, `borrarToken(roomId)`; clave `yump:sala:<id>`; try/catch alrededor de `localStorage`)
-- Create: `hooks/temporizador-card.ts` (máquina pura: `crear(pos, ahoraMs) → {pos, arrancoEn}`, `restante(t, ahoraMs)` en s, `vencio(t, ahoraMs)` a los 10.000 ms)
-- Tests: `lib/sala/estado.test.ts`, `lib/sala/token-store.test.ts` (con un `localStorage` doble), `hooks/temporizador-card.test.ts`
+- Create: `hooks/temporizador-card.ts` (máquina pura + persistencia inyectable): `arrancar(store, clave, ahoraMs) → { arrancoEn }` lee `store.get(clave)` y, si no hay nada, guarda `ahoraMs`; `restante(arrancoEn, ahoraMs)` en s (10 − transcurridos, mínimo 0); `vencio(arrancoEn, ahoraMs)` a los 10.000 ms; `cerrar(store, clave)` borra la entrada. `clave = \`yump:sala:${room}:${round}:${pos}:inicio\``. **Recargar la página no reinicia los 10 s**: el comienzo persiste en `localStorage` por sala, ronda y posición y se borra al registrar el voto (incluido el `pass` automático). Si al volver ya venció, se registra `pass` de inmediato. El plazo global sigue siendo el del servidor: esto sólo evita que el contador local se regale con F5.
+- Tests: `lib/sala/estado.test.ts`, `lib/sala/token-store.test.ts` (con un `localStorage` doble), `hooks/temporizador-card.test.ts` (casos: arranque nuevo guarda; segundo `arrancar` con la misma clave conserva el comienzo original y `restante` sigue bajando; `cerrar` borra y un `arrancar` posterior arranca de cero; `vencio` exacto a 10.000 ms; store que lanza → se comporta como sin persistencia)
 
 - [ ] **Step 1:** Tests que fallan → implementación mínima → PASS → commit `feat(salas): contratos de estado, token local y temporizador`.
 
@@ -1560,10 +1639,10 @@ export const OPTIONS = opcionesCors("POST");
 - Modify: `app/globals.css`
 
 **Detalle de `CardSala`:** póster (`.rlt-poster` sin `Link`), título, `runtime` formateado `Xh Ym`, `generos.map(genreLabel)`, `PlatformLogo` por cada `platforms` (destacando las de la unión), "Por qué verla" (`.rlt-razon`) y "Pero" (`.rlt-pero`). **Sin** enlace a la ficha.
-**`BotonesVoto`:** tres `<button className="act sala-act">` con SVG (cruz = `M18 6L6 18M6 6l12 12`; salto = `M5 4l10 8-10 8V4zM19 5v14`; corazón = `M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z`), `aria-label` "No" / "Paso" / "Sí", `.lab` visible, `min-width/height: 56px`, `:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }`, deshabilitados mientras hay un `sala_votar` en vuelo.
-**Contador:** `temporizador-card` con `setInterval` de 250 ms; al `vencio` → votar `pass`. Al montar con `mi_siguiente_pos` del estado se retoma desde ahí. Tras el último voto: pantalla "Listo, esperando a los demás (k de N)". Al llegar `estado ≠ votando` → `Resultado*`.
+**`BotonesVoto`:** tres `<button type="button" className="act sala-act" aria-label="No|Paso|Sí">` con **sólo el ícono** (sin `.lab` visible; el texto va únicamente en `aria-label`): cruz = `M18 6L6 18M6 6l12 12`; salto = `M5 4l10 8-10 8V4zM19 5v14`; corazón = `M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z`. Mismo trazo `1.8` y `viewBox 0 0 24 24` que `.act svg`; el corazón se rellena con `var(--accent)` en `:active`. CSS: `.sala-act { min-width: 64px; min-height: 64px; border-radius: 999px; border: 1px solid var(--line-2) } .sala-act svg { width: 30px; height: 30px } .sala-act:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }`; deshabilitados (`aria-disabled`) mientras hay un `sala_votar` en vuelo.
+**Contador:** `temporizador-card` con `setInterval` de 250 ms y **persistencia por sala/ronda/pos** (Tarea 3.1): al montar la card se llama `arrancar(localStorage, clave, Date.now())`, que reusa el comienzo guardado si existe; al registrar el voto (manual o `pass` automático) se llama `cerrar`. Si al montar `vencio` ya es verdadero, se registra `pass` sin mostrar la card. Al montar con `mi_siguiente_pos` del estado se retoma desde ahí. Tras el último voto: pantalla "Listo, esperando a los demás (k de N)". Al llegar `estado ≠ votando` → `Resultado*`.
 
-- [ ] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, recarga retoma en la siguiente, voto tardío tras deadline muestra resultado.
+- [ ] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, **recargar a los 6 s deja 4 s (no vuelve a 10)**, recarga tras votar retoma en la siguiente con 10 s, voto tardío tras deadline muestra resultado. Con un lector de pantalla (TalkBack/VoiceOver) los tres botones se anuncian "No", "Paso", "Sí".
 - [ ] **Step 2:** Commit `feat(salas): votación con tres botones, contador local y reanudación`.
 
 ---
