@@ -727,6 +727,8 @@ let composicionesDeEsteProceso = 0;
 const turnoHome = crearTurno(opsTurnoHome, pausaActiva(process.env) ? { pausa: { clave: CLAVES_PAUSA.pausa } } : {});
 /** El contexto de una solicitud del Home: sus cinco claves más el plazo absoluto (§46) y el comienzo real de la ruta (§47). */
 type ContextoHome = ClavesDelHome & { inicioRuta: number; plazo: number };
+/** La métrica `rechazadas` del contexto actual (llamadas que la pausa no dejó salir); 0 fuera de un scope. */
+function rechazadasHastaAhora(): number { let n = 0; anotar((m) => { n = m.tmdb.rechazadas; }); return n; }
 // El vuelo coordina SOLO por la clave fresca; las otras cuatro claves y el DÍA
 // de la generación viajan como contexto de cada solicitud —todo derivado del
 // mismo instante— y el resolver usa lo del líder (misma clave = mismas cinco
@@ -786,7 +788,16 @@ const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>({
     // del FONDO (3.b) lo muestre: en el fondo nadie ve el payload producido —
     // con UB, `componer` sirve el UB y descarta el degradado—. En la solicitud,
     // homePayload vuelve a fijar estos dos campos con lo que SIRVIÓ.
-    producir: async () => { const valor = await producir(); anotar((m) => { m.home.fuentesCaidas = valor.fallos; m.home.degradado = !!valor.degradado; }); return { valor, fallo: !!valor.degradado }; },
+    // Etapa 3.c.1: `pausada` = alguna llamada a TMDB de ESTA composición salió
+    // rechazada por la pausa (delta de la métrica `rechazadas`, que anota
+    // lib/tmdb.ts en el mismo contexto): el resultado está mutilado por un 429
+    // aunque la pausa ya haya vencido al devolver, y se trata como cancelado.
+    producir: async () => {
+      const rechazadasAntes = rechazadasHastaAhora();
+      const valor = await producir();
+      anotar((m) => { m.home.fuentesCaidas = valor.fallos; m.home.degradado = !!valor.degradado; });
+      return { valor, fallo: !!valor.degradado, pausada: rechazadasHastaAhora() > rechazadasAntes };
+    },
     publicable: (v) => !v.sinPlataformas,
     vacio: (motivo, extra) => ({ hero: [], rails: [], fallos: 0, degradado: true, motivo, ...(extra ? { reintentarEnMs: extra.reintentarEnMs } : {}) }),
     // La señal del líder: el resolver corre en su contexto async.

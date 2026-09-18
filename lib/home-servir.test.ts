@@ -1164,3 +1164,18 @@ test("🔴 3.c.1 — crearLimpieza (el mecanismo real de servirConTurno): dos ll
   }
   assert.equal(await mk(() => 150_000, async () => { throw new Error("redis"); })(), "indeterminado");
 });
+
+test("🔴 3.c.1 — la pausa VENCIÓ antes de que la composición devolviera, pero alguna llamada fue RECHAZADA por ella (`pausada`): la composición está mutilada → LIBERAR, nunca ENFRIAR ni servir el degradado; con UB → UB; sin UB → 503 pausa (Retry-After mínimo 1 s)", async () => {
+  for (const conUb of [true, false]) {
+    const w = mundo();
+    if (conUb) w.store.set(K.ub, { v: UB, exp: 0 });
+    const p = pausaDePrueba(w);   // nunca vigente al volver
+    const { d } = depsPausa(w, "A", { producir: async () => { await w.reloj.dormir(1000); return { valor: { hero: [], degradado: true, de: "A" }, fallo: true, pausada: true }; } }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, conUb ? "ub" : "vacio:pausa");
+    if (!conUb) assert.equal(r.valor.reintentarEnMs, 1000);
+    assert.equal(r.m.home.origen, conUb ? "ultimo-bueno-pausa" : "vacio-pausa");
+    assert.equal(r.m.home.enfriado, false); assert.equal(w.store.has(K.degradado), false, "un Home mutilado por la pausa NO se enfría ni se comparte");
+    assert.equal(w.store.has(K.turno), false); assert.equal(w.store.has(K.fresca), false);
+  }
+});

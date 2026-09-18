@@ -1,0 +1,349 @@
+{
+  "fecha": "2026-09-18T19:50:05.634Z",
+  "antes": "37d4707",
+  "despues": "feat/etapa3c1-pausa-tmdb",
+  "semillas": [
+    11,
+    22,
+    33
+  ],
+  "corridas": [
+    {
+      "semilla": 11,
+      "antes": {
+        "frio": {
+          "status": 200,
+          "msPared": 30372,
+          "msTotal": 30291,
+          "tmdb": 926,
+          "redisComandos": 1002,
+          "redisOpsDoble": 1004,
+          "publicacion": "publicado",
+          "cache": "MISS"
+        },
+        "ub": {
+          "status": 200,
+          "msPared": 275,
+          "msTotalSolicitud": 235,
+          "cache": "ULTIMO-BUENO",
+          "fondo": {
+            "msTotal": 4277,
+            "tmdb": 1,
+            "redisComandos": 60,
+            "publicacion": "publicado",
+            "redisOpsDoble": 64,
+            "evalsDoble": 1
+          }
+        }
+      },
+      "despues": {
+        "frio": {
+          "status": 200,
+          "msPared": 30824,
+          "msTotal": 30735,
+          "tmdb": 926,
+          "redisComandos": 1029,
+          "redisOpsDoble": 1032,
+          "publicacion": "publicado",
+          "cache": "MISS"
+        },
+        "ub": {
+          "status": 200,
+          "msPared": 241,
+          "msTotalSolicitud": 228,
+          "cache": "ULTIMO-BUENO",
+          "fondo": {
+            "msTotal": 4421,
+            "tmdb": 1,
+            "redisComandos": 61,
+            "publicacion": "publicado",
+            "redisOpsDoble": 65,
+            "evalsDoble": 2
+          }
+        }
+      }
+    },
+    {
+      "semilla": 22,
+      "antes": {
+        "frio": {
+          "status": 200,
+          "msPared": 31559,
+          "msTotal": 31544,
+          "tmdb": 926,
+          "redisComandos": 1004,
+          "redisOpsDoble": 1003,
+          "publicacion": "publicado",
+          "cache": "MISS"
+        },
+        "ub": {
+          "status": 200,
+          "msPared": 307,
+          "msTotalSolicitud": 285,
+          "cache": "ULTIMO-BUENO",
+          "fondo": {
+            "msTotal": 3657,
+            "tmdb": 1,
+            "redisComandos": 60,
+            "publicacion": "publicado",
+            "redisOpsDoble": 64,
+            "evalsDoble": 1
+          }
+        }
+      },
+      "despues": {
+        "frio": {
+          "status": 200,
+          "msPared": 31238,
+          "msTotal": 31201,
+          "tmdb": 926,
+          "redisComandos": 1028,
+          "redisOpsDoble": 1027,
+          "publicacion": "publicado",
+          "cache": "MISS"
+        },
+        "ub": {
+          "status": 200,
+          "msPared": 375,
+          "msTotalSolicitud": 250,
+          "cache": "ULTIMO-BUENO",
+          "fondo": {
+            "msTotal": 3844,
+            "tmdb": 1,
+            "redisComandos": 61,
+            "publicacion": "publicado",
+            "redisOpsDoble": 65,
+            "evalsDoble": 2
+          }
+        }
+      }
+    },
+    {
+      "semilla": 33,
+      "antes": {
+        "frio": {
+          "status": 200,
+          "msPared": 33837,
+          "msTotal": 33804,
+          "tmdb": 926,
+          "redisComandos": 1005,
+          "redisOpsDoble": 1005,
+          "publicacion": "publicado",
+          "cache": "MISS"
+        },
+        "ub": {
+          "status": 200,
+          "msPared": 227,
+          "msTotalSolicitud": 212,
+          "cache": "ULTIMO-BUENO",
+          "fondo": {
+            "msTotal": 3847,
+            "tmdb": 1,
+            "redisComandos": 60,
+            "publicacion": "publicado",
+            "redisOpsDoble": 64,
+            "evalsDoble": 1
+          }
+        }
+      },
+      "despues": {
+        "frio": {
+          "status": 200,
+          "msPared": 33755,
+          "msTotal": 33732,
+          "tmdb": 926,
+          "redisComandos": 1031,
+          "redisOpsDoble": 1031,
+          "publicacion": "publicado",
+          "cache": "MISS"
+        },
+        "ub": {
+          "status": 200,
+          "msPared": 221,
+          "msTotalSolicitud": 201,
+          "cache": "ULTIMO-BUENO",
+          "fondo": {
+            "msTotal": 3716,
+            "tmdb": 1,
+            "redisComandos": 61,
+            "publicacion": "publicado",
+            "redisOpsDoble": 65,
+            "evalsDoble": 2
+          }
+        }
+      }
+    }
+  ],
+  "umbrales": {
+    "tmdb-0-diferencia": {
+      "ok": true,
+      "frio": [
+        [
+          926,
+          926
+        ],
+        [
+          926,
+          926
+        ],
+        [
+          926,
+          926
+        ]
+      ],
+      "fondo": [
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    "redis-extra-≤-⌈llamadas/24⌉+2": {
+      "ok": true,
+      "frio": [
+        {
+          "antes": 1004,
+          "despues": 1032,
+          "extra": 28,
+          "tope": 41
+        },
+        {
+          "antes": 1003,
+          "despues": 1027,
+          "extra": 24,
+          "tope": 41
+        },
+        {
+          "antes": 1005,
+          "despues": 1031,
+          "extra": 26,
+          "tope": 41
+        }
+      ],
+      "fondo": [
+        {
+          "antes": 64,
+          "despues": 65,
+          "extra": 1,
+          "tope": 3
+        },
+        {
+          "antes": 64,
+          "despues": 65,
+          "extra": 1,
+          "tope": 3
+        },
+        {
+          "antes": 64,
+          "despues": 65,
+          "extra": 1,
+          "tope": 3
+        }
+      ]
+    },
+    "duracion-mediana-≤+5%-y-ninguna->+10%": {
+      "ok": true,
+      "frio": {
+        "antes": 31544,
+        "despues": 31201
+      },
+      "fondo": {
+        "antes": 3847,
+        "despues": 3844
+      },
+      "peorRepeticion": 1.051,
+      "porSemilla": [
+        {
+          "frio": [
+            30291,
+            30735
+          ],
+          "fondo": [
+            4277,
+            4421
+          ]
+        },
+        {
+          "frio": [
+            31544,
+            31201
+          ],
+          "fondo": [
+            3657,
+            3844
+          ]
+        },
+        {
+          "frio": [
+            33804,
+            33732
+          ],
+          "fondo": [
+            3847,
+            3716
+          ]
+        }
+      ]
+    },
+    "publicacion-≤+1-op": {
+      "ok": true,
+      "evals": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "publicacion": [
+        [
+          "publicado",
+          "publicado"
+        ],
+        [
+          "publicado",
+          "publicado"
+        ],
+        [
+          "publicado",
+          "publicado"
+        ]
+      ]
+    },
+    "respuesta-UB-≤+50ms": {
+      "ok": true,
+      "mediana": {
+        "antes": 275,
+        "despues": 241
+      },
+      "porSemilla": [
+        [
+          275,
+          241
+        ],
+        [
+          307,
+          375
+        ],
+        [
+          227,
+          221
+        ]
+      ]
+    }
+  }
+}

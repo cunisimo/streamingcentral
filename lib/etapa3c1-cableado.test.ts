@@ -119,3 +119,9 @@ test("🔴 scripts/banco/dobles.mjs ejecuta los cuatro scripts de la pausa por T
   assert.match(s, /crearOpsEnMemoria/);
   for (const nombre of Object.keys(LUA_PAUSA)) assert.ok(s.includes(`${nombre}: (k, a) => emulacionPausa`), `el doble no delega ${nombre} en la emulación`);
 });
+
+test("🔴 lib/home.ts: el productor informa `pausada` (alguna llamada rechazada por la pausa durante ESTA composición) leyendo la métrica `rechazadas` antes y después de componer", () => {
+  const s = codigo("lib/home.ts");
+  assert.match(s, /rechazadasHastaAhora\(\)/, "falta la lectura de la métrica rechazadas");
+  assert.match(s, /pausada: rechazadasHastaAhora\(\) > /, "el productor no calcula `pausada` como delta de rechazadas");
+});

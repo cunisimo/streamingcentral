@@ -182,8 +182,13 @@ export interface DepsServir<T> {
   /** Lee esas claves en UN comando (en producción: N `batchGet` en el mismo tick = un MGET). */
   leer: (claves: string[]) => Promise<(T | null)[]>;
   turno: Turno;
-  /** La composición. `fallo` = degradado (alguna fuente cayó). */
-  producir: () => Promise<{ valor: T; fallo: boolean }>;
+  /**
+   * La composición. `fallo` = degradado (alguna fuente cayó). `pausada` (3.c.1)
+   * = alguna llamada a TMDB fue RECHAZADA por la pausa durante esta composición:
+   * el resultado está mutilado por un 429 aunque la pausa ya haya vencido al
+   * devolver, y se trata como cancelada (LIBERAR), nunca como degradado.
+   */
+  producir: () => Promise<{ valor: T; fallo: boolean; pausada?: boolean }>;
   /** Si un resultado bueno merece publicarse (p. ej. "sin plataformas" no). Default: siempre. */
   publicable?: (v: T) => boolean;
   /**
@@ -317,7 +322,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     })();
     const cortarRenovacion = async () => { fin.abort(); await renovacion; };
     // 4c
-    let producido: { valor: T; fallo: boolean };
+    let producido: { valor: T; fallo: boolean; pausada?: boolean };
     try {
       producido = await deps.producir();
     } catch (error) {
@@ -339,13 +344,15 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
       await limpiar();
       return ub != null ? (anotar((m) => { m.home.cancelada = true; }), servirUb(ub)) : servirVacio("cancelada");
     }
-    // 4d' La pausa apareció durante la cola (429 propio o propagado): la
-    // composición está mutilada. LIBERAR, nunca ENFRIAR ni PUBLICAR (§40.5).
+    // 4d' La pausa apareció durante la cola (429 propio o propagado) o alguna
+    // llamada salió rechazada por ella aunque ya haya vencido: la composición
+    // está mutilada. LIBERAR, nunca ENFRIAR ni PUBLICAR (§40.5). Sin UB, el 503
+    // lleva lo que resta de la pausa, o 1 s si ya venció (reintentar ya).
     const pausaAlVolver = pausaLocal();
-    if (pausaAlVolver > 0) {
+    if (pausaAlVolver > 0 || producido.pausada) {
       await limpiar();
       anotar((m) => { m.home.cancelada = true; m.home.pausaMs = pausaAlVolver; });
-      return ub != null ? servirUbPausado(ub) : servirPausa("pausa", pausaAlVolver);
+      return ub != null ? servirUbPausado(ub) : servirPausa("pausa", Math.max(pausaAlVolver, 1000));
     }
     // 4e Degradado: enfriar, y servir el UB si hay.
     if (producido.fallo) {
