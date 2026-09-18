@@ -6,7 +6,7 @@
 --
 -- Con Netflix + Disney Plus + HBO Max quedan 41 candidatas `cualquiera`
 -- (5 `corta`, 36 `larga`): las 40 "Ficticia" más "Sin pero" (90000042), que
--- tiene `razon` y `advertencia` NULL y ES servible desde el 2026-09-18 (el
+-- tiene `razon` presente y `advertencia` NULL y ES servible desde el 2026-09-18 (el
 -- "pero" es opcional; la card no muestra esa sección). Alcanza para una tanda
 -- de 20 y para probar `insuficientes` pidiendo 20 en `corta`. La 90000041 es
 -- exclusiva de MUBI. Los controles negativos (900001xx) no pueden salir NUNCA
@@ -40,10 +40,12 @@ insert into roulette_titles (tmdb_id, media_type, title, runtime, apto_chicos, r
   (90000104, 'movie', 'Sin razón',    95,   false, false, null, 'a'),
   (90000105, 'movie', 'Secuela',      100,  false, true,  'r', 'a'),
   (90000106, 'tv',    'Serie',        45,   false, false, 'r', 'a'),
-  (90000107, 'movie', 'Sin AR',       100,  false, false, 'r', 'a')
+  (90000107, 'movie', 'Sin AR',       100,  false, false, 'r', 'a'),
+  (90000108, 'movie', 'Razón en blanco', 100, false, false, '   ', 'a')
 on conflict (tmdb_id, media_type) do nothing;
 
--- Disponibilidad en AR para todo salvo 90000107 ("Sin AR").
+-- Disponibilidad en AR para todo salvo 90000107 ("Sin AR"). La 90000108 (razón de
+-- sólo espacios) SÍ tiene disponibilidad: prueba que el filtro de texto real la saca igual.
 insert into title_availability (tmdb_id, media_type, region, providers, rent_only, checked_at)
 select t.tmdb_id, t.media_type, 'AR',
        case when t.tmdb_id = 90000041 then array['MUBI']
@@ -53,5 +55,5 @@ select t.tmdb_id, t.media_type, 'AR',
             else array['HBO Max'] end,
        false, now()
 from roulette_titles t
-where t.tmdb_id between 90000001 and 90000106
+where t.tmdb_id between 90000001 and 90000106 or t.tmdb_id = 90000108
 on conflict (tmdb_id, media_type, region) do update set providers = excluded.providers, checked_at = now();

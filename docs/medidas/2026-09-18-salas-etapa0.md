@@ -49,14 +49,17 @@ actualizó (consultas 1, 3 y 5) y se volvió a correr en local:
 (Con la regla anterior —ambos textos— `n,d,m` daba 825 / 107 / 718: el "pero"
 opcional abre ~22 % más de pool en esa unión.)
 
-Pool local: **2449** filas `movie` = **2401** de `data/carga-ruleta-*.sql` +
-**48** películas ficticias (49 fixtures, una es `tv`; la 48.ª es "Sin pero",
-servible desde el cambio de regla). Con `razon`: 2306; con `razon` y
-`advertencia`: 1828 = 1782 reales + 46 ficticias — el 1782 es exactamente el
-"con advertencia" de MANTENIMIENTO §9 (11/08), así que `data/` es la misma
-foto que Producción a esa fecha. Servibles para sala con la regla nueva:
-**1922** (antes 1600); la consulta 5 cuenta **478** títulos con razón y sin
-pero, que ahora se admiten, y 143 sin razón, que siguen afuera.
+Pool local: **2450** filas `movie` = **2401** de `data/carga-ruleta-*.sql` +
+**49** películas ficticias (50 fixtures, una es `tv`). Con `razon` con texto
+real: 2306; con `razon` y `advertencia` con texto real: 1828 = 1782 reales +
+46 ficticias — el 1782 coincide con el "con advertencia" de MANTENIMIENTO §9
+(11/08): **totales consistentes con la foto documentada de Producción al
+11/08**, lo que no demuestra que todas las filas sean idénticas. Servibles para
+sala con la regla nueva: **1922** (antes 1600). Consulta 5: **478** con razón y
+sin pero (admitidas), **144** sin razón (143 NULL + 1 vacía —la fixture de sólo
+espacios—), 0 advertencias vacías. En el snapshot real no hay ninguna `razon`
+ni `advertencia` de sólo espacios (verificado aparte con `btrim`); el criterio
+`nullif(btrim(...), '')` está para que eso siga siendo cierto por construcción.
 
 **Corrección de un número publicado en esta sesión:** un conteo anterior dijo
 "2212 títulos en `data/`". Era otra magnitud: `count(*) where tmdb_id <
@@ -113,10 +116,13 @@ MANTENIMIENTO §5, a revisar contra la salida de Producción.
   `p_limit 999` → 40 filas (cap); `corta` con n,d,m → 6 (las 5 fixtures cortas
   **más la serie 900106**: `get_roulette_picks` no filtra `media_type`, lo que
   confirma que `sala_candidatos` tiene que hacerlo); MUBI → sólo 90000041.
-- Fixtures tras el cambio de regla: 41 "Ficticia" + "Sin pero" (90000042,
-  `advertencia` NULL, HBO Max) = **41 candidatas** con `n,d,m`; el control
-  negativo por texto pasa a ser "Sin razón" (90000104). Recargado y verificado:
-  2401 + 48 = 2449 películas.
+- Fixtures tras el cambio de regla: 40 "Ficticia" en n/d/m + "Sin pero"
+  (90000042, `razon` presente y `advertencia` NULL, HBO Max) = **41
+  candidatas** con `n,d,m`; controles negativos por texto: "Sin razón"
+  (90000104, NULL) y "Razón en blanco" (90000108, sólo espacios, con
+  disponibilidad). Recargado y verificado: 2401 + 49 = 2450 películas; la
+  auditoría local da los mismos 1005 en `n,d,m` con o sin la fixture de
+  espacios, o sea que el filtro `btrim` la excluye.
 - `.env.sala-local` (ignorado) con las claves locales; `.env.sala-local.example`
   versionado.
 

@@ -13,7 +13,7 @@
 - Copy en español rioplatense. Nombres de producto exactos: "¡Nuestro match!", "¡HAY MATCH!", "¡Tenemos empate!", "Esta vez no coincidieron", "Desempatar", "Esperando al organizador", "Compartir nuestro match", "Crear sala", "Otra tanda".
 - Participantes: mínimo **2**, máximo **6** (organizador incluido). Lobby vence a los **15 min** de crear la sala. Ventanas posteriores a empate/resultado: **5 min**. Preparación colgada: **90 s** (se aborta, nunca se borra la sala). Borrado físico: **sólo** salas en estado `vencida` con `expires_at` pasado, o sea 5 min después del último estado terminal; `sala_cerrar` **no** borra en el acto, marca `vencida` y conserva los 5 min. "Otra tanda" renueva `expires_at`.
 - Contador local de **10 s** por card, con el comienzo persistido en `localStorage` por sala/ronda/posición: recargar no lo reinicia; se borra sólo cuando el servidor confirmó el avance (un fallo de red lo conserva). Los botones de voto usan el atributo real `disabled` durante la solicitud.
-- Tandas: **5 → 120 s**, **10 → 180 s**, **20 → 300 s**. Default **10** y **Cualquiera**. Duraciones: `cualquiera` (unión estricta de `corta` ∪ `larga`), `corta` (`runtime <= 90`), `larga` (`runtime > 90`). **Siempre** `apto_chicos = false`, `media_type = 'movie'`, `razon` no nula, `runtime > 0`. **`advertencia` ("Pero") es OPCIONAL** (decisión del dueño, 2026-09-18): una película sin "pero" entra igual, no se genera ningún texto de reemplazo, y `CardSala` no renderiza la sección "Pero" cuando no hay contenido.
+- Tandas: **5 → 120 s**, **10 → 180 s**, **20 → 300 s**. Default **10** y **Cualquiera**. Duraciones: `cualquiera` (unión estricta de `corta` ∪ `larga`), `corta` (`runtime <= 90`), `larga` (`runtime > 90`). **Siempre** `apto_chicos = false`, `media_type = 'movie'`, `razon` con texto real (`nullif(btrim(razon), '') is not null`: ni NULL, ni vacía, ni sólo espacios), `runtime > 0`. **`advertencia` ("Pero") es OPCIONAL** — "sin pero" = NULL, vacía o sólo espacios; "con pero" = texto real tras `btrim` — (decisión del dueño, 2026-09-18): una película sin "pero" entra igual, no se genera ningún texto de reemplazo, y `CardSala` no renderiza la sección "Pero" cuando no hay contenido.
 - Contador local **10 s** por card → registra `pass`. El servidor sólo conoce el plazo global.
 - Votos: `yes` | `no` | `pass`. Sólo la siguiente `pos` pendiente. Idempotente. El `participant_id` **siempre** se deriva del token; ninguna RPC lo acepta como parámetro.
 - El cliente **nunca** calcula match/empate/ganador; la réplica TS de `sala_computar` existe **sólo en tests**.
@@ -177,7 +177,7 @@ for (const f of ARCHIVOS) {
 }
 ```
 
-- [ ] **Step 6: `scripts/sala/fixtures-local.sql` (ya en la rama; es la referencia).** Todo con ids ≥ 90000001, un rango que TMDB no alcanza (el catálogo real llega a 1.668.364). **41 servibles** con `n,d,m`: 40 "Ficticia" (`runtime` 82..160; las 5 primeras son `corta`) repartidas entre Netflix / Disney Plus / HBO Max, más **"Sin pero" (90000042)**, con `razon` y `advertencia` NULL, en HBO Max — servible desde el 2026-09-18 porque el "pero" es opcional. **Una** exclusiva de MUBI (90000041). Controles negativos que **nunca** salen de `sala_candidatos`: 2 `apto_chicos` (90000101-102), 1 sin duración (90000103), 1 **sin `razon`** (90000104), 1 con `requiere_contexto` (90000105), 1 serie `tv` (90000106) y 1 sin disponibilidad en AR (90000107). El archivo además enciende `sala_config.activas` en local si la tabla existe.
+- [ ] **Step 6: `scripts/sala/fixtures-local.sql` (ya en la rama; es la referencia).** Todo con ids ≥ 90000001, un rango que TMDB no alcanza (el catálogo real llega a 1.668.364). **41 servibles** con `n,d,m`: 40 "Ficticia" (`runtime` 82..160; las 5 primeras son `corta`) repartidas entre Netflix / Disney Plus / HBO Max, más **"Sin pero" (90000042)**, con `razon` presente y `advertencia` NULL, en HBO Max — servible desde el 2026-09-18 porque el "pero" es opcional. **Una** exclusiva de MUBI (90000041). Controles negativos que **nunca** salen de `sala_candidatos`: 2 `apto_chicos` (90000101-102), 1 sin duración (90000103), 1 **sin `razon`** (90000104), 1 con `requiere_contexto` (90000105), 1 serie `tv` (90000106), 1 sin disponibilidad en AR (90000107) y 1 con `razon` de **sólo espacios** (90000108, con disponibilidad: prueba el criterio `btrim`). El archivo además enciende `sala_config.activas` en local si la tabla existe.
 
 Con `n,d,m` quedan **41** candidatas `cualquiera` (5 `corta`, 36 `larga`): alcanza para 20 y para probar `insuficientes` pidiendo 20 en `corta`.
 
@@ -902,7 +902,7 @@ revoke execute on function sala_iniciar_preparacion(uuid, uuid, int, text) from 
 grant execute on function sala_iniciar_preparacion(uuid, uuid, int, text) to service_role;
 
 -- Candidatas del pool curado. Cualquiera = corta ∪ larga, estrictamente. Nunca
--- apto_chicos, nunca sin duración, nunca sin "por qué" (razon). El "pero" (advertencia) es OPCIONAL. Orden por
+-- apto_chicos, nunca sin duración, nunca sin "por qué" (razon con texto real tras btrim). El "pero" (advertencia) es OPCIONAL: NULL, vacío o sólo espacios se sirven igual. Orden por
 -- semilla de sala: sin popularidad ni nota.
 create or replace function sala_candidatos(p_providers text[], p_duracion text, p_excluir int[], p_seed text, p_limit int)
 returns table (tmdb_id int, runtime int, razon text, advertencia text, year int, genres text[])
@@ -911,7 +911,7 @@ language sql stable security definer set search_path = public, extensions, pg_te
   from roulette_titles rt
   join title_availability ta on ta.tmdb_id = rt.tmdb_id and ta.media_type = rt.media_type and ta.region = 'AR'
   where rt.media_type = 'movie'
-    and rt.razon is not null
+    and nullif(btrim(rt.razon), '') is not null   -- razón con texto real: ni NULL, ni '', ni espacios
     and rt.runtime is not null and rt.runtime > 0
     and not rt.apto_chicos
     and not rt.requiere_contexto
@@ -1054,7 +1054,7 @@ test("sala_candidatos excluye apto_chicos y exige duración y razón (no adverte
   const cuerpo = sql.match(/function sala_candidatos[\s\S]*?\$\$;/)![0];
   assert.match(cuerpo, /not rt\.apto_chicos/);
   assert.match(cuerpo, /rt\.runtime > 0/);
-  assert.match(cuerpo, /rt\.razon is not null/);
+  assert.match(cuerpo, /nullif\(btrim\(rt\.razon\), ''\) is not null/, "la razón vale sólo con texto real");
   assert.doesNotMatch(cuerpo, /advertencia is not null/, "el pero es opcional: no puede filtrarse");
   assert.match(cuerpo, /order by md5\(p_seed/);
   assert.doesNotMatch(cuerpo, /popularity|vote_average/);
@@ -1161,7 +1161,7 @@ await prueba("9. publicar ronda atómica; tanda incompleta no publica", async ()
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: sala, p_host: host.id, p_size: 5, p_duracion: "cualquiera" });
   const cand = await rpc(admin, "sala_candidatos", { p_providers: ["Netflix", "Disney Plus", "HBO Max", "Amazon Prime Video"], p_duracion: "cualquiera", p_excluir: [], p_seed: "s", p_limit: 80 });
   // Controles negativos de las fixtures: infantiles, sin duración, SIN RAZÓN, con contexto, serie, sin AR y la exclusiva de MUBI.
-  assert.ok(cand.every((c) => c.runtime > 0 && c.razon && ![90000101, 90000102, 90000103, 90000104, 90000105, 90000106, 90000107, 90000041].includes(c.tmdb_id)));
+  assert.ok(cand.every((c) => c.runtime > 0 && c.razon && ![90000101, 90000102, 90000103, 90000104, 90000105, 90000106, 90000107, 90000108, 90000041].includes(c.tmdb_id)));
   // "Sin pero" (90000042) SÍ entra: la advertencia es opcional.
   assert.ok(cand.some((c) => c.tmdb_id === 90000042 && c.advertencia === null), "la película sin pero tiene que ser candidata");
   assert.equal(cand.length, 41);
