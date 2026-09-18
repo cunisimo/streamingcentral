@@ -125,7 +125,7 @@ test("las salas nacen apagadas: sala_config.activas = 'false' en la migración",
 
 test("la reversión (009_salas_down.sql) borra las 24 funciones, las seis tablas y el cron", () => {
   const down = fs.readFileSync(path.join(process.cwd(), "supabase/migrations/009_salas_down.sql"), "utf8").replace(/\r\n/g, "\n");
-  for (const fn of Object.keys(EXPOSICION)) assert.match(down, new RegExp(`drop function if exists ${fn}\(`), `${fn}: falta en el down`);
+  for (const fn of Object.keys(EXPOSICION)) assert.match(down, new RegExp(`drop function if exists ${fn}\\(`), `${fn}: falta en el down`);
   for (const t of ["rooms", "room_participants", "room_rounds", "room_titles", "room_votes", "sala_config"]) assert.match(down, new RegExp(`drop table if exists ${t} cascade;`));
   assert.match(down, /cron\.unschedule\('sala-barrido'\)/);
   // No toca nada ajeno a la feature.
