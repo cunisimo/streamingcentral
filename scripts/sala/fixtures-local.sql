@@ -48,11 +48,16 @@ on conflict (tmdb_id, media_type) do nothing;
 -- sólo espacios) SÍ tiene disponibilidad: prueba que el filtro de texto real la saca igual.
 insert into title_availability (tmdb_id, media_type, region, providers, rent_only, checked_at)
 select t.tmdb_id, t.media_type, 'AR',
+       -- Todas llevan además el proveedor sintético "Pruebas": la batería de RLS
+       -- pide candidatas con p_providers = [Pruebas] y así queda aislada del
+       -- catálogo real aunque esté cargado (--catalogo-real). La exclusiva de MUBI
+       -- no lo lleva, para poder probar que una plataforma fuera de la unión no
+       -- entra.
        case when t.tmdb_id = 90000041 then array['MUBI']
-            when t.tmdb_id = 90000042 then array['HBO Max']
-            when t.tmdb_id % 3 = 0 then array['Netflix']
-            when t.tmdb_id % 3 = 1 then array['Disney Plus']
-            else array['HBO Max'] end,
+            when t.tmdb_id = 90000042 then array['HBO Max', 'Pruebas']
+            when t.tmdb_id % 3 = 0 then array['Netflix', 'Pruebas']
+            when t.tmdb_id % 3 = 1 then array['Disney Plus', 'Pruebas']
+            else array['HBO Max', 'Pruebas'] end,
        false, now()
 from roulette_titles t
 where t.tmdb_id between 90000001 and 90000106 or t.tmdb_id = 90000108

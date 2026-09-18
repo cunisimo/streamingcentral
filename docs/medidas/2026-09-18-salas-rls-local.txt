@@ -1,0 +1,32 @@
+Base: http://127.0.0.1:54321
+
+✔ 1. lectura y escritura directa rechazadas con anon y con JWT
+✔ 2. crear sala exige sesión, valida plataformas y devuelve un token de 43 caracteres
+✔ 3. una sola sala activa por organizador
+✔ 4. plataformas deduplicadas y ordenadas; nombre normalizado; desconocidas y vacías rechazadas
+✔ 5. unirse anónimo y autenticado; una cuenta no ocupa dos lugares (rota el token)
+✔ 6. el token de una sala no sirve en otra
+✔ 7. máximo seis participantes
+✔ 8. un invitado no ejecuta acciones del organizador; anon no ejecuta la preparación
+✔ 9. candidatas correctas y publicación atómica con validación estricta
+✔ 10. lobby cerrado: no entran participantes nuevos
+✔ 11. voto: sólo la siguiente pos; idempotente; distinto voto sobre pos ya votada rechazado; pos fuera de la ronda rechazada
+✔ 12. nadie ve votos ajenos; el estado no expone participant_id ajenos ni tokens
+✔ 13. seis participantes; el último voto de cada uno se manda a la vez; un único resultado 'ganador'
+✔ 14. sala de 2: dos Sí simultáneos sobre la misma película → un único match, y la ronda se detiene
+✔ 15. sala de 3 con empate: sólo el host desempata; repetir devuelve el mismo ganador; la ventana se renueva
+✔ 16. voto posterior al cierre rechazado con 'ronda_cerrada'
+✔ 18. otra tanda excluye los títulos de la ronda anterior (y una card repetida es rechazada)
+✔ 19. un payload falso en el tópico público NO cambia version ni estado
+✔ 20. una sola sala activa por creador, bajo concurrencia (10 sala_crear a la vez)
+✔ 21. publicar y abortar a la vez: un solo desenlace, nunca un estado intermedio
+✔ 22. publicar contra el vencimiento de la preparación (barrido): sin deadlock, un solo desenlace
+✔ 23. voto contra el cierre por plazo: o entra antes del cierre o es 'ronda_cerrada'; nunca los dos
+✔ 24. las funciones internas no se pueden ejecutar con anon ni con authenticated
+✔ 25. kill switch en la base: con activas='false' no se crea ni se entra; con 'true' vuelve
+✔ 26. 'Otra tanda' iniciada a segundos del vencimiento renueva expires_at y el barrido no la toca
+✔ 27. una sala en `preparando` nunca es eliminada por el barrido; `sala_cerrar` conserva 5 min
+✔ 28. preparación desde el lobby abortada con los 15 min ya vencidos: el lobby se renueva 5 min y se puede reintentar
+✔ 17. el barrido elimina la sala completa (seis tablas) 5 min después del estado terminal
+
+Todo verde (28 pruebas)

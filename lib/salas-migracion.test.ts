@@ -29,7 +29,7 @@ const EXPOSICION: Record<string, "interna" | "participante" | "cuenta" | "servid
   sala_codigos_permitidos: "interna", sala_activas: "interna", sala_hash: "interna", sala_nuevo_token: "interna",
   sala_plataformas_validas: "interna", sala_nombre_valido: "interna", sala_participante: "interna",
   sala_limite_seg: "interna", sala_tocar: "interna", rooms_publicar_cambio: "interna",
-  sala_computar: "interna", sala_aplicar_vencimientos: "interna", sala_barrido: "interna",
+  sala_computar: "interna", sala_aplicar_vencimientos: "interna", sala_barrido: "servidor",
   sala_unirse: "participante", sala_estado: "participante", sala_votar: "participante",
   sala_crear: "cuenta", sala_reclamar: "cuenta", sala_desempatar: "cuenta", sala_cerrar: "cuenta",
   sala_iniciar_preparacion: "servidor", sala_candidatos: "servidor", sala_publicar_ronda: "servidor", sala_abortar_preparacion: "servidor",
@@ -58,6 +58,7 @@ test("las seis tablas tienen RLS y sin privilegios para anon/authenticated", () 
   for (const t of ["rooms", "room_participants", "room_rounds", "room_titles", "room_votes", "sala_config"]) {
     assert.match(sql, new RegExp(`alter table ${t} enable row level security`));
     assert.match(sql, new RegExp(`revoke all on ${t} from anon, authenticated`));
+    assert.match(sql, new RegExp(`grant all on ${t} to service_role`), `${t}: el servidor necesita privilegios explícitos`);
     assert.doesNotMatch(sql, new RegExp(`create policy [^\\n]* on ${t}\\b`), `${t} no debe tener policies`);
   }
 });

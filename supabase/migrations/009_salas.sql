@@ -131,6 +131,16 @@ revoke all on room_rounds from anon, authenticated;
 revoke all on room_titles from anon, authenticated;
 revoke all on room_votes from anon, authenticated;
 revoke all on sala_config from anon, authenticated;
+-- El servidor (service_role, sólo desde lib/supabase-admin.ts) sí tiene
+-- privilegios explícitos: no se depende de los default privileges del proyecto,
+-- que difieren entre el stack local (sin SELECT para service_role) y Producción.
+-- service_role bypassa RLS, pero sin GRANT no puede ni leer.
+grant all on rooms to service_role;
+grant all on room_participants to service_role;
+grant all on room_rounds to service_role;
+grant all on room_titles to service_role;
+grant all on room_votes to service_role;
+grant all on sala_config to service_role;
 
 -- ── Helpers internos ───────────────────────────────────────────────────────
 
@@ -703,6 +713,9 @@ begin
 end;
 $$;
 revoke execute on function sala_barrido() from public, anon, authenticated;
+-- La corre pg_cron como postgres (owner). service_role también puede: es el
+-- rol del servidor y de la batería local, que fuerza relojes y barre a mano.
+grant execute on function sala_barrido() to service_role;
 
 -- Cron: cada minuto (pg_cron). Con Postgres >= 15.1.1.61 se podría bajar a
 -- '30 seconds'; no hace falta para una ventana de 5 minutos.
