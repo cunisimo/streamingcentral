@@ -7,7 +7,7 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapa 0 hecha; sin
+- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 y 1 hechas; sin
   merge, push, deploy ni cambios en Producción (2026-09-18).** Plan aprobado
   por el dueño con tres rondas de correcciones:
   [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
@@ -26,8 +26,14 @@
   GO para la Etapa 1** — `servibles_sala` 1742; `n,d,m` 868 / `n` 272 / `n,d`
   547 / `n,d,m,p` 1097 (umbrales 20/10/20/20); 477 admitidas sin "pero"; 0
   textos vacíos. Confirma capacidad del pool, no frescura de la disponibilidad
-  (consulta 2 y Apéndice A sin correr). **Etapa 1 en curso** en la rama y la
-  base local. **No autorizado todavía:** migraciones en Producción, deploy,
+  (consulta 2 y Apéndice A sin correr). **Etapa 1 HECHA en la rama y la base
+  local (18/09):** `009_salas.sql` (seis tablas cerradas, 24 funciones con
+  permisos por inventario, trigger `realtime.send`, cron por minuto) y
+  `009_salas_down.sql` (rollback probado dos veces); 12 guards textuales y
+  **28 pruebas con la anon key local en verde** (RLS, concurrencia, plazos,
+  kill switch); suite 1718/1708/0/10; `tsc` limpio. Evidencia:
+  [`medidas/2026-09-18-salas-etapa1.md`](medidas/2026-09-18-salas-etapa1.md).
+  Sigue la Etapa 2 (preparación en Vercel). **No autorizado todavía:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:
   [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).
