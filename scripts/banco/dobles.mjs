@@ -42,6 +42,8 @@
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";
 import { LUA } from "../../lib/turno-lua.ts";
+import { LUA_PAUSA } from "../../lib/pausa-lua.ts";
+import { crearOpsEnMemoria } from "../../lib/turno-memoria.ts";
 
 // ----------------------------------------------------------------- utilidades
 // Puerto base configurable: el comparador del Home levanta dos juegos de dobles.
@@ -247,10 +249,24 @@ doble("supabase", PUERTO_BASE + 1, async (req, res, url) => {
 // error (un EVALSHA rechazado con NOSCRIPT no es un comando confirmado: así lo
 // cuenta la app, y así lo compara el validador).
 const base = new Map();
+const pttlDe = (m, k) => { const e = m.get(k); if (!e) return -2; if (!e.exp) return -1; return e.exp <= Date.now() ? -2 : e.exp - Date.now(); };
+const cubosDe = (m) => { const e = m.get("tmdb:cubos"); return e && e.v instanceof Map ? Object.fromEntries(e.v) : {}; };
 const registro = [];           // { t, op, clave, propietario, resultado }
 const scriptsCargados = new Map(); // sha1 → texto
 const sha1 = (t) => createHash("sha1").update(t).digest("hex");
-const NOMBRE_POR_TEXTO = new Map(Object.entries(LUA).map(([n, t]) => [t, n]));
+const NOMBRE_POR_TEXTO = new Map([...Object.entries(LUA), ...Object.entries(LUA_PAUSA)].map(([n, t]) => [t, n]));
+// Etapa 3.c.1: los cuatro scripts de la PAUSA (TOMAR, PAUSAR, CUBO, SALUD) corren
+// por texto delegando en la MISMA emulación en memoria que usan producción sin
+// Redis y los tests (lib/turno-memoria.ts), sobre el mismo Map `base`. Así el
+// doble no reimplementa el contrato: si la emulación cambia, el banco cambia.
+const emulacionPausa = crearOpsEnMemoria(base, Date.now);
+const SCRIPTS_PAUSA = {
+  TOMAR: (k, a) => emulacionPausa.evalTomar(k, a),
+  PAUSAR: (k, a) => emulacionPausa.evalPausar(k, a),
+  CUBO: (k, a) => emulacionPausa.evalCubo(k, a),
+  SALUD: (k, a) => emulacionPausa.evalSalud(k, a),
+};
+const comandosPausa = { TOMAR: 0, PAUSAR: 0, CUBO: 0, SALUD: 0, pausados: 0 };
 const fallos = { perderRespuesta: { comando: null, veces: 0 }, fallarEval: 0 };
 const vivo = (k) => {
   const v = base.get(k); if (!v) return null;
@@ -258,10 +274,16 @@ const vivo = (k) => {
   return v.v;
 };
 const anotarTurno = (op, clave, propietario, resultado) => { if (clave.includes(":turno:")) registro.push({ t: Date.now(), op, clave, propietario, resultado }); };
-function correrScript(texto, keys, argv) {
+async function correrScript(texto, keys, argv) {
   const nombre = NOMBRE_POR_TEXTO.get(texto);
-  if (!nombre) throw new Error("ERR el doble sólo ejecuta los cuatro scripts del turno, por texto");
+  if (!nombre) throw new Error("ERR el doble sólo ejecuta los scripts del turno y de la pausa, por texto");
   if (fallos.fallarEval > 0) { fallos.fallarEval -= 1; anotarTurno(nombre, keys[0], argv[0], "ERROR"); throw new Error("ERR doble en modo fallarEval"); }
+  if (nombre in SCRIPTS_PAUSA) {
+    comandosPausa[nombre] += 1;
+    const r = await SCRIPTS_PAUSA[nombre](keys, argv);
+    if (nombre === "TOMAR") { anotarTurno("TOMAR", keys[0], argv[0], Array.isArray(r) ? r[0] : r); if (Array.isArray(r) && r[0] === "pausado") comandosPausa.pausados += 1; }
+    return r;
+  }
   let r;
   switch (nombre) {
     case "RENOVAR": {
@@ -347,10 +369,10 @@ const b64 = (v) => typeof v === "string" ? Buffer.from(v).toString("base64") : A
 const comandosRedis = { total: 0, errores: 0, perdidos: 0, porComando: {} };
 doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
   const codificar = (req.headers["upstash-encoding"] === "base64") ? b64 : (v) => v;
-  const uno = (cmd) => {
+  const uno = async (cmd) => {
     const op = String(cmd[0]).toUpperCase();
     try {
-      const r = ejecutar(cmd);
+      const r = await ejecutar(cmd);
       comandosRedis.total += 1;
       comandosRedis.porComando[op] = (comandosRedis.porComando[op] ?? 0) + 1;
       return { result: codificar(r) };
@@ -362,7 +384,9 @@ doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
   const parsed = JSON.parse(cuerpo || "[]");
   const esPipeline = url.split("?")[0] === "/pipeline";
   const antes = comandosRedis.total;
-  const respuesta = esPipeline ? parsed.map(uno) : uno(parsed);
+  // Secuencial, como Redis: un comando del pipeline ve los efectos del anterior.
+  const respuesta = esPipeline ? [] : await uno(parsed);
+  if (esPipeline) for (const cmd of parsed) respuesta.push(await uno(cmd));
   // perderRespuesta: el comando EJECUTÓ; el socket se corta sin responder. Es
   // la "respuesta perdida" que la reconciliación del turno tiene que cubrir.
   const primero = Array.isArray(parsed[0]) ? parsed[0][0] : parsed[0];
@@ -379,8 +403,8 @@ doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
     if (url.startsWith("/pipeline")) return "POST /pipeline";
     try { return `POST / ${String(JSON.parse(cuerpo)[0]).toUpperCase()}`; } catch { return "POST /"; }
   },
-  estado: () => ({ comandos: comandosRedis, claves: base.size, registro, cargados: scriptsCargados.size }),
-  reset: () => { base.clear(); comandosRedis.total = 0; comandosRedis.errores = 0; comandosRedis.perdidos = 0; comandosRedis.porComando = {}; registro.length = 0; fallos.perderRespuesta = { comando: null, veces: 0 }; fallos.fallarEval = 0; },
+  estado: () => ({ comandos: comandosRedis, claves: base.size, registro, cargados: scriptsCargados.size, pausa: { ...comandosPausa, pttl: pttlDe(base, "tmdb:pausa"), cubos: cubosDe(base) } }),
+  reset: () => { base.clear(); for (const k of Object.keys(comandosPausa)) comandosPausa[k] = 0; comandosRedis.total = 0; comandosRedis.errores = 0; comandosRedis.perdidos = 0; comandosRedis.porComando = {}; registro.length = 0; fallos.perderRespuesta = { comando: null, veces: 0 }; fallos.fallarEval = 0; },
   // POST /__banco/redis  { accion: "borrar", patron } | { accion: "expirar", patron }
   //                      | { accion: "perderRespuesta", comando: "SET", veces: 1 }
   //                      | { accion: "fallarEval", veces } | { accion: "claves", patron }

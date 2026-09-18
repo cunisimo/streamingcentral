@@ -48,6 +48,15 @@ export const CONSTANTES_PAUSA = {
 
 export type CampoCubo = "pausaNoLeida" | "pausadosUB" | "pausados503";
 
+/**
+ * Kill switch `TMDB_PAUSA_429=0` (§39.9/§40.6): apaga los dos niveles y el
+ * script TOMAR vuelve al SET NX de la Etapa 2. Como toda variable de Vercel,
+ * se aplica recién en el deployment siguiente.
+ */
+export function pausaActiva(env: Record<string, string | undefined>): boolean {
+  return env.TMDB_PAUSA_429 !== "0";
+}
+
 export interface DepsPausa {
   ops: OpsPausa;
   /** Identidad del proceso: parte del id de evento y de la marca de agua. */

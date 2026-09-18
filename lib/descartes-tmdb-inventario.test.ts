@@ -538,6 +538,8 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
+  { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "3.c.1: el cliente aparte del lector de la pausa no se pudo crear; Redis" },
+  { archivo: "app/api/health/route.ts", ancla: "catch { return null; }", clase: "no-tmdb", motivo: "3.c.1: SALUD de la pausa no se pudo leer → null (nunca ceros); Redis" },
   { archivo: "lib/escritura-cache.ts", ancla: "} catch (error) {", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/turno.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/turno.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },

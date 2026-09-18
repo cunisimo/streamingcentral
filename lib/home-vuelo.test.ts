@@ -202,13 +202,14 @@ const sinComentarios = (rel: string) => readFileSync(rel, "utf8")
 const home = sinComentarios("lib/home.ts");
 
 test("🔴 homePayload sirve el Home por el vuelo compartido, con la lectura previa y la resolución real", () => {
-  assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada y las cinco claves (y el día) como contexto");
+  assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada y el contexto (las cinco claves, el día, el plazo y el inicio de la ruta) como contexto");
+  assert.ok(home.includes("type ContextoHome = ClavesDelHome & { inicioRuta: number; plazo: number };"), "el contexto extiende las cinco claves del instante (3.c.1)");
   assert.match(home, /leer:\s*\(clave\) => backendCache\.leer<HomePayload>\(clave\)/, "la lectura previa no usa el backend real");
   // Etapa 2: el líder resuelve por la secuencia con turno (lib/home-servir.ts),
   // que decide qué se publica; `cachedLocIf` escribiría la fresca sin fencing.
   assert.match(home, /resolver:\s*\(_clave, producir, claves\) => servirConTurno<HomePayload>\(/, "el vuelo no resuelve por la secuencia con turno, con las cinco claves del contexto");
   assert.doesNotMatch(home, /cachedLocIf\s*\(/, "volvió cachedLocIf en el Home");
-  assert.match(home, /servirHome\(claves\.fresca, producirHome, claves\)/, "homePayload no entra por el vuelo con la fresca del instante y las cinco claves");
+  assert.match(home, /servirHome\(claves\.fresca, producirHome, contexto\)/, "homePayload no entra por el vuelo con la fresca del instante y las cinco claves");
 });
 
 test("🔴 el single-flight NO se agrega a cached/cachedIf/cachedLocIf ni a otros llamadores", () => {
@@ -272,5 +273,6 @@ test("🔴 no queda estado acumulado tras finalizar: cero vuelos en curso con la
 
 test("🔴 lib/home.ts ya no retiene un mapa global de claves en vuelo", () => {
   assert.doesNotMatch(home, /clavesEnVuelo/, "volvió el Map global que nunca se vacía");
-  assert.match(home, /servirHome\(claves\.fresca, producirHome, claves\)/, "las cinco claves tienen que viajar como contexto de la solicitud");
+  assert.match(home, /servirHome\(claves\.fresca, producirHome, contexto\)/, "las cinco claves tienen que viajar como contexto de la solicitud (3.c.1: más el plazo y el inicio de la ruta)");
+  assert.match(home, /...claves, inicioRuta: inicio, plazo:/);
 });

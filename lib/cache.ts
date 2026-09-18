@@ -13,8 +13,11 @@ import {
 } from "./metricas";
 import { observarSupabase, proveerSenalSupabase } from "./supabase";
 import { LUA } from "./turno-lua";
-import type { OpsTurno } from "./turno";
+import { LUA_PAUSA } from "./pausa-lua";
+import type { OpsTurno, OpsPausa } from "./turno";
 import { crearOpsEnMemoria, type Entrada } from "./turno-memoria";
+import { CONSTANTES_PAUSA, crearPausa, pausaActiva } from "./tmdb-pausa";
+import { randomUUID } from "node:crypto";
 import { combinarSenales, senalActual } from "./senal-solicitud";
 import { createHash } from "node:crypto";
 
@@ -40,6 +43,17 @@ try {
   // NO toca `retries`: la Etapa 0 mide, no cambia. Ver lib/metricas.ts.
   if (redisUrl && redisToken) redis = new Redis({ url: redisUrl, token: redisToken, retry: { backoff: backoffRedisInstrumentado() } });
 } catch { redis = null; }
+// El LECTOR de la pausa (3.c.1, §41.2/§43.8) va por un cliente APARTE: timeout
+// propio por petición (`signal` como función: una señal nueva por comando) y
+// SIN reintentos del SDK. Con el cliente principal, una lectura colgada
+// arrastraría 6 intentos y 4,29 s de backoff; acá vence al segundo y
+// lib/tmdb-pausa.ts decide (F_max = 1 → 30 s sin leer). Con una señal abortada
+// el SDK devuelve un 200 sintético `{ result: "Aborted" }`: no es un entero, y
+// el lector lo trata como indeterminado, nunca como "sin pausa".
+let redisLector: Redis | null = null;
+try {
+  if (redisUrl && redisToken) redisLector = new Redis({ url: redisUrl, token: redisToken, retry: { retries: 0 }, signal: () => AbortSignal.timeout(CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS) });
+} catch { redisLector = null; }
 
 // Las consultas a Supabase del cliente de servidor se cuentan desde acá:
 // lib/supabase.ts llega al bundle del navegador y no puede importar el módulo
@@ -427,7 +441,8 @@ export async function cachedIf<T>(
 // 🔴 Acá NO hay `DEL` ni `SET … XX`: liberar y publicar son compare-and-delete
 // dentro de los scripts, y este módulo no conoce otra forma de soltar un turno.
 const sha1 = (s: string) => createHash("sha1").update(s).digest("hex");
-const SHA = { RENOVAR: sha1(LUA.RENOVAR), LIBERAR: sha1(LUA.LIBERAR), ENFRIAR: sha1(LUA.ENFRIAR), PUBLICAR: sha1(LUA.PUBLICAR) };
+const TODOS_LOS_SCRIPTS = { ...LUA, ...LUA_PAUSA } as const;
+const SHA = Object.fromEntries(Object.entries(TODOS_LOS_SCRIPTS).map(([n, t]) => [n, sha1(t)])) as Record<keyof typeof TODOS_LOS_SCRIPTS, string>;
 
 async function comandoTurno<T>(fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now();
@@ -440,20 +455,27 @@ async function comandoTurno<T>(fn: () => Promise<T>): Promise<T> {
     anotar((m) => { m.redis.ms += Date.now() - t0; });
   }
 }
-async function script(r: Redis, nombre: keyof typeof LUA, claves: string[], args: string[]): Promise<number> {
+// Un script por EVALSHA; ante NOSCRIPT, el mismo pedido por EVAL. `crudo` devuelve
+// lo que vino del transporte SIN convertir: los scripts de la pausa responden
+// tuplas que lib/turno.ts y lib/tmdb-pausa.ts validan; los del turno, un número.
+async function scriptCrudo(r: Redis, nombre: keyof typeof TODOS_LOS_SCRIPTS, claves: string[], args: string[]): Promise<unknown> {
   try {
-    return Number(await comandoTurno(() => r.evalsha<string[], number>(SHA[nombre], claves, args)));
+    return await comandoTurno(() => r.evalsha<string[], unknown>(SHA[nombre], claves, args));
   } catch (e) {
     if (!/NOSCRIPT/i.test(String(e))) throw e;
     // El mismo pedido lógico, un intento HTTP más; el EVAL confirma el comando.
     anotar((m) => { m.redis.intentosHttp += 1; });
-    return Number(await r.eval<string[], number>(LUA[nombre], claves, args).then((v) => { anotar((m) => { m.redis.comandos += 1; }); return v; }));
+    return r.eval<string[], unknown>(TODOS_LOS_SCRIPTS[nombre], claves, args).then((v) => { anotar((m) => { m.redis.comandos += 1; }); return v; });
   }
+}
+async function script(r: Redis, nombre: keyof typeof LUA, claves: string[], args: string[]): Promise<number> {
+  return Number(await scriptCrudo(r, nombre, claves, args));
 }
 function opsTurnoRedis(r: Redis): OpsTurno {
   return {
     setNx: (clave, valor, px) => comandoTurno(async () => ((await r.set(clave, valor, { nx: true, px })) === "OK" ? "OK" : null)),
     get: (clave) => comandoTurno(async () => { const v = await r.get<string>(clave); return v === null || v === undefined ? null : String(v); }),
+    evalTomar: (claves, args) => scriptCrudo(r, "TOMAR", claves, args),
     evalRenovar: (clave, propietario, px) => script(r, "RENOVAR", [clave], [propietario, String(px)]),
     evalPublicar: (claves, args) => script(r, "PUBLICAR", claves, args),
     evalEnfriar: (claves, args) => script(r, "ENFRIAR", claves, args),
@@ -467,12 +489,42 @@ function opsTurnoMemoria(): OpsTurno {
     return fn(...a);
   };
   return {
-    setNx: contar(base.setNx), get: contar(base.get), evalRenovar: contar(base.evalRenovar),
+    setNx: contar(base.setNx), get: contar(base.get), evalTomar: contar(base.evalTomar), evalRenovar: contar(base.evalRenovar),
     evalPublicar: contar(base.evalPublicar), evalEnfriar: contar(base.evalEnfriar), evalLiberar: contar(base.evalLiberar),
   };
 }
 /** Las primitivas del turno del Home, reales o emuladas. Las consume lib/home.ts por `crearTurno`. */
 export const opsTurnoHome: OpsTurno = redis ? opsTurnoRedis(redis) : opsTurnoMemoria();
+
+// --- La pausa compartida ante 429 (Etapa 3.c.1, #19) ------------------------
+// PAUSAR, CUBO y SALUD van por el cliente principal (reintentos del SDK: el
+// script es idempotente por evento). La LECTURA del lector va por
+// `redisLector` (timeout propio, sin reintentos) y devuelve lo crudo: la
+// validación es del lector.
+function opsPausaRedis(r: Redis, lector: Redis): OpsPausa {
+  return {
+    evalPausar: (claves, args) => scriptCrudo(r, "PAUSAR", claves, args),
+    pttl: (clave) => comandoTurno(() => lector.pttl(clave)),
+    evalCubo: (claves, args) => scriptCrudo(r, "CUBO", claves, args),
+    evalSalud: (claves, args) => scriptCrudo(r, "SALUD", claves, args),
+  };
+}
+function opsPausaMemoria(): OpsPausa {
+  const base = crearOpsEnMemoria(mem);
+  const contar = <A extends unknown[], R>(fn: (...a: A) => Promise<R>) => async (...a: A) => {
+    anotar((m) => { m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; });
+    return fn(...a);
+  };
+  return { evalPausar: contar(base.evalPausar), pttl: contar(base.pttl), evalCubo: contar(base.evalCubo), evalSalud: contar(base.evalSalud) };
+}
+/** Las primitivas de la pausa, reales o emuladas. Las consumen `pausaTmdb` y /api/health. */
+export const opsPausaHome: OpsPausa = redis && redisLector ? opsPausaRedis(redis, redisLector) : opsPausaMemoria();
+/**
+ * LA pausa de este proceso (un uuid por proceso: parte del id de evento y de
+ * la marca de agua). lib/tmdb.ts la alimenta (429, permisos del semáforo) y
+ * lib/home-servir.ts la consulta. Kill switch: `TMDB_PAUSA_429=0`.
+ */
+export const pausaTmdb = crearPausa({ ops: opsPausaHome, uuid: randomUUID(), activa: pausaActiva(process.env) });
 
 /** Varias claves en UN comando: N `batchGet` en el mismo tick son un MGET. */
 export function leerVarias<T>(claves: string[]): Promise<(T | null)[]> {

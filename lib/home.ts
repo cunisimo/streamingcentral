@@ -36,7 +36,7 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { backendCache, dailySeed, leerVarias, opsTurnoHome, pickDaily, TTL, withMetricas } from "./cache";
+import { backendCache, dailySeed, leerVarias, opsTurnoHome, pausaTmdb, pickDaily, TTL, withMetricas } from "./cache";
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
 // Etapa 3.a (#19, H2): el contexto compuesto —disponibilidad + descartes de
@@ -44,7 +44,9 @@ import { crearVueloHome } from "./home-vuelo";
 import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import type { ClaveLocalizada } from "./claves";
 import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
-import { CONSTANTES, servirConTurno } from "./home-servir";
+import { CONSTANTES, plazosDelFondo, servirConTurno, type MotivoVacio } from "./home-servir";
+import { pausaActiva } from "./tmdb-pausa";
+import { CLAVES_PAUSA } from "./pausa-lua";
 import { crearProgramadorDeFondo, estadoDelFondo } from "./home-fondo";
 import { compuertaDeFondo } from "./fondo-frontera";
 // La API PÚBLICA de Vercel para sostener trabajo más allá de la respuesta (Next
@@ -102,12 +104,16 @@ export interface HomePayload {
   // sin forma de reintentar.
   fallos: number;
   degradado: boolean;
-  // Sólo en los dos finales SIN contenido de la Etapa 2 (lib/home-servir.ts):
-  // la espera sin último bueno se agotó, o la solicitud se canceló por
-  // presupuesto. Un payload con `motivo` es vacío, degradado y NUNCA se
-  // publica ni se cachea; por eso no cambia el contrato de lo cacheado ni la
-  // versión de la clave.
-  motivo?: "espera-agotada" | "cancelada";
+  // Sólo en los finales SIN contenido (lib/home-servir.ts): la espera sin
+  // último bueno se agotó, la solicitud se canceló por presupuesto, o —Etapa
+  // 3.c.1— la pausa ante 429 está vigente y no hay último bueno (`pausa`,
+  // `pausa-indeterminada`, `presupuesto-insuficiente`: la ruta los responde
+  // como 503 + Retry-After, lib/home-http.ts). Un payload con `motivo` es
+  // vacío, degradado y NUNCA se publica ni se cachea; por eso no cambia el
+  // contrato de lo cacheado ni la versión de la clave.
+  motivo?: MotivoVacio;
+  /** Con los motivos de la pausa: cuánto sugerir reintentar (el PTTL de la pausa, o el fallback conservador). */
+  reintentarEnMs?: number;
 }
 
 const keyOf = (t: { id: number; type: MediaType }) => `${t.type}:${t.id}`;
@@ -716,7 +722,11 @@ function clavesDeLaSolicitud(providers: PlatformCode[], types: Record<string, Me
 // (auditoría de Codex sobre fb3a3f1; lib/home-turno-cableado.test.ts lo fija).
 const INSTANCIA = randomUUID();
 let composicionesDeEsteProceso = 0;
-const turnoHome = crearTurno(opsTurnoHome);
+// Etapa 3.c.1: con la pausa encendida, la adquisición es el script TOMAR
+// (pausa + SET NX atómicos, §40.5); con TMDB_PAUSA_429=0, el SET NX de siempre.
+const turnoHome = crearTurno(opsTurnoHome, pausaActiva(process.env) ? { pausa: { clave: CLAVES_PAUSA.pausa } } : {});
+/** El contexto de una solicitud del Home: sus cinco claves más el plazo absoluto (§46) y el comienzo real de la ruta (§47). */
+type ContextoHome = ClavesDelHome & { inicioRuta: number; plazo: number };
 // El vuelo coordina SOLO por la clave fresca; las otras cuatro claves y el DÍA
 // de la generación viajan como contexto de cada solicitud —todo derivado del
 // mismo instante— y el resolver usa lo del líder (misma clave = mismas cinco
@@ -736,15 +746,25 @@ const turnoHome = crearTurno(opsTurnoHome);
 // siguiente lo retoma (§33.3).
 // La composición arranca DESPUÉS de que la ruta construyó su respuesta: la
 // compuerta la abre `conFrontera` en app/api/home/route.ts (lib/fondo-frontera.ts).
+// Etapa 3.c.1 (§47/§48): el fondo tiene DOS límites absolutos —el interno,
+// 50 s desde que empieza, y el externo, `maxDuration` de la ruta desde el
+// COMIENZO REAL de la solicitud menos el margen de cierre— y la señal dura
+// exactamente hasta el efectivo. Con eso, un fondo que arranca tarde (lectura
+// previa o adquisición lentas) no cree tener 50 s que Vercel no le va a dar.
+// `iniciar` recibe el plazo efectivo: si no le alcanza para componer y
+// publicar, no compone (`fondo no-iniciado-presupuesto`). La señal corta
+// TMDB/Supabase; lo ya enviado a Redis completa o pierde su respuesta (§48).
 const programadorDeFondo = crearProgramadorDeFondo({ registrar: waitUntil, compuerta: compuertaDeFondo, ...estadoDelFondo(process.env) });
-function programarComposicionEnFondo(clave: string, iniciar: (senal?: AbortSignal) => Promise<void>): boolean {
+function programarComposicionEnFondo(clave: string, iniciar: (senal?: AbortSignal, plazoEfectivo?: number) => Promise<void>, inicioRuta: number): boolean {
   return programadorDeFondo(async () => {
     const t0 = Date.now();
-    const senalFondo = AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS);
+    const inicioFondo = t0;
+    const { plazoEfectivo, limitadoPor } = plazosDelFondo(inicioRuta, inicioFondo, CONSTANTES);
+    const senalFondo = AbortSignal.timeout(Math.max(0, plazoEfectivo - inicioFondo));
     const { res: { res: { ejes }, metricas }, metricas: mIdioma } =
-      await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senalFondo, () => iniciar(senalFondo)))));
+      await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senalFondo, () => iniciar(senalFondo, plazoEfectivo)))));
     try {
-      console.log(lineaHome(metricas, Date.now() - t0, clave).replace(/^\[home\]/, "[home-fondo]"));
+      console.log(lineaHome(metricas, Date.now() - t0, clave).replace(/^\[home\]/, "[home-fondo]") + ` | plazo ${limitadoPor} +${plazoEfectivo - inicioRuta}ms desde la ruta`);
       console.log(`[home-fondo] [idioma] fallback: ${mIdioma.llamadas} llamadas | ${mIdioma.lotesConRotos} lotes con rotos | ${mIdioma.titulosReparados} títulos reparados | ${mIdioma.fallos} fallos`);
       if (ejes.size) console.log(`[home-fondo] EJES ${[...ejes].map(([s, e]) => `${s}=${e}`).join(" ")}`);
     } catch (e) {
@@ -753,7 +773,7 @@ function programarComposicionEnFondo(clave: string, iniciar: (senal?: AbortSigna
   });
 }
 
-const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>({
+const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>({
   leer: (clave) => backendCache.leer<HomePayload>(clave),
   resolver: (_clave, producir, claves) => servirConTurno<HomePayload>({
     claves,
@@ -768,11 +788,15 @@ const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>({
     // homePayload vuelve a fijar estos dos campos con lo que SIRVIÓ.
     producir: async () => { const valor = await producir(); anotar((m) => { m.home.fuentesCaidas = valor.fallos; m.home.degradado = !!valor.degradado; }); return { valor, fallo: !!valor.degradado }; },
     publicable: (v) => !v.sinPlataformas,
-    vacio: (motivo) => ({ hero: [], rails: [], fallos: 0, degradado: true, motivo }),
+    vacio: (motivo, extra) => ({ hero: [], rails: [], fallos: 0, degradado: true, motivo, ...(extra ? { reintentarEnMs: extra.reintentarEnMs } : {}) }),
     // La señal del líder: el resolver corre en su contexto async.
     senal: senalActual() ?? undefined,
+    // Etapa 3.c.1: el plazo absoluto y el comienzo real de la ruta (§46/§47), del contexto del líder; la pausa del proceso.
+    plazo: claves.plazo,
+    inicioRuta: claves.inicioRuta,
+    pausa: pausaTmdb,
     // El propietario lo anota el propio `iniciar` en las métricas del fondo.
-    programarEnFondo: (iniciar) => programarComposicionEnFondo(claves.fresca, iniciar),
+    programarEnFondo: (iniciar) => programarComposicionEnFondo(claves.fresca, iniciar, claves.inicioRuta),
   }),
 });
 
@@ -837,9 +861,16 @@ export async function homePayload(opts: {
   // El deadline de la solicitud (Etapa 2, §3.8): una señal real que corta la
   // espera, la renovación del turno y las llamadas a TMDB y Supabase. Lo que
   // no corta son los reintentos del SDK de Redis (promesa reducida).
+  // Etapa 3.c.1 (§46): junto con la señal nace el PLAZO ABSOLUTO, del mismo
+  // instante y con la misma duración, ANTES de la lectura previa del caché
+  // (crearVueloHome.servir): todo presupuesto es `plazo − ahora`, y la lectura
+  // previa también consume. `inicio` es además el comienzo real de la ruta
+  // para el techo externo del fondo (§47).
+  const inicio = Date.now();
   const senal = AbortSignal.timeout(CONSTANTES.PRESUPUESTO_REQUEST_MS);
+  const contexto: ContextoHome = { ...claves, inicioRuta: inicio, plazo: inicio + CONSTANTES.PRESUPUESTO_REQUEST_MS };
   const { res: { res: { res: payload, ejes }, metricas }, metricas: mIdioma } =
-    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(claves.fresca, producirHome, claves)))));
+    await withMetricasIdioma(() => withMetricas(() => conRegistroDeEjes(() => conSenal(senal, () => servirHome(claves.fresca, producirHome, contexto)))));
   if (metricas.home.cache === null) metricas.home.cache = "hit";
   metricas.home.degradado = !!payload.degradado;
   metricas.home.fuentesCaidas = payload.fallos;

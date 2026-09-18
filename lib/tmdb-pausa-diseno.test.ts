@@ -887,7 +887,10 @@ test("🟢 guard: la ruta del Home NO usa `req.signal`, la señal es `AbortSigna
   assert.match(ruta, /console\.error\("\[api\/home\] composeHome rechazó/);
   assert.match(ruta, /\{ status: 500 \}/);
   const home = fuente("lib/home.ts");
-  assert.equal((home.match(/AbortSignal\.timeout\(CONSTANTES\.PRESUPUESTO_REQUEST_MS\)/g) ?? []).length, 2, "la señal de la solicitud y la del fondo son de presupuesto interno");
+  // Implementación de la 3.c.1 (§47.4): la señal de la solicitud sigue siendo de 50 s fijos; la del FONDO dura
+  // `plazoEfectivo − inicioFondo` (min(interno, externo)), ya no 50 s fijos. Las dos siguen siendo de presupuesto interno.
+  assert.equal((home.match(/AbortSignal\.timeout\(CONSTANTES\.PRESUPUESTO_REQUEST_MS\)/g) ?? []).length, 1, "la señal de la solicitud es de presupuesto interno (50 s fijos)");
+  assert.match(home, /AbortSignal\.timeout\(Math\.max\(0, plazoEfectivo - inicioFondo\)\)/, "la del fondo, del plazo efectivo");
   // Y el centinela 4d existe tal como §44 lo describe.
   const servir = fuente("lib/home-servir.ts");
   assert.match(servir, /servirVacio\("cancelada"\)/);

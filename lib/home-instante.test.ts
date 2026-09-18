@@ -138,7 +138,8 @@ test("🔴 lib/home.ts captura UN instante por solicitud y deriva de él las cla
   assert.equal((home.match(/\binstanteHome\(\)/g) ?? []).length, 1, "tiene que haber exactamente una lectura del reloj por solicitud");
   assert.match(home, /const instante = instanteHome\(\);\s*return clavesDelHome\(instante, /, "las cinco claves no salen del instante capturado");
   assert.match(home, /const claves = clavesDeLaSolicitud\(providers, types\);\s*const key = claves\.fresca;/, "la clave de coordinación no es la fresca del instante");
-  assert.match(home, /servirHome\(claves\.fresca, producirHome, claves\)/, "la clave de coordinación tiene que ser exactamente claves.fresca");
+  assert.match(home, /servirHome\(claves\.fresca, producirHome, contexto\)/, "la clave de coordinación tiene que ser exactamente claves.fresca");
+  assert.ok(home.includes("const contexto: ContextoHome = { ...claves, inicioRuta: inicio, plazo: inicio + CONSTANTES.PRESUPUESTO_REQUEST_MS };"), "el contexto son las cinco claves del instante más el plazo y el inicio de la ruta (3.c.1)");
   assert.match(home, /dia: claves\.dia/, "el día del contexto tiene que ser el del instante");
   assert.doesNotMatch(home, /dia: hoyAR\(\)/, "el resolver vuelve a leer el reloj");
   assert.doesNotMatch(home, /function homeKey\(/, "queda un camino separado para la clave fresca");
