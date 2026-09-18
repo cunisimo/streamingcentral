@@ -5442,9 +5442,15 @@ Específicas: `home-servir` 75/75, `etapa3c1-cableado`, `home-vuelo`,
 `home-turno-cableado`, `home-fondo-orden`, `home-instante`,
 `descartes-tmdb-inventario` verdes. Suite completa **1881/1891 (10 omitidos
 preexistentes) × 2**. `tsc --noEmit` 0. Build fresco controlado (0 puertos del
-banco en escucha, sin variables del banco, `.next` borrado): **116 s, exit 0,
-"Compiled successfully", 0 errores, `BUILD_ID` `ryOY8nDhnkldv8thUQ-gl`**.
-`git diff --check` limpio.
+banco en escucha, sin variables del banco, `.next` borrado): sobre `f8769e1`
+**116 s, exit 0, "Compiled successfully", 0 errores, `BUILD_ID`
+`ryOY8nDhnkldv8thUQ-gl`**; repetido sobre el commit final (`7c5bcc0`, sólo
+cambia el conteo de `lecturasAcotadas`): **100 s, exit 0, 0 errores,
+`BUILD_ID` `fCRCsm-dcpnrTyMTs3GkT`**. Suite 1881/1891 ×3 en total (la tercera
+sobre el commit final). `git diff --check` limpio. Las medidas del banco
+(§55.3, §55.4) se tomaron con el build de `f8769e1`, cuyo comportamiento de
+lectura es idéntico al final. Commits: `f8769e1` (lector acotado + banco),
+`7bf9ac2` (docs §55), `7c5bcc0` (métrica).
 
 ### 55.6 Comprobado / inferido / desconocido
 

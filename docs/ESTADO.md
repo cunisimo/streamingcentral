@@ -54,7 +54,8 @@
   ahora 6/6 pasan); build controlado sin Next activo ni entorno del banco:
   130 s, exit 0, `BUILD_ID` `XX_-UqA5fcZbIJisArQWs`. **Tras §55:** suite
   1881/1891 (10 omitidos preexistentes) ×2, `tsc` 0, build fresco controlado
-  116 s exit 0 (`BUILD_ID` `ryOY8nDhnkldv8thUQ-gl`), `git diff --check`
+  116 s exit 0 (`BUILD_ID` `ryOY8nDhnkldv8thUQ-gl`; sobre el commit final
+  100 s, `fCRCsm-dcpnrTyMTs3GkT`), `git diff --check`
   limpio, identidad 16/16, umbrales dentro, criterios 4-8 verdes. Qué hay [comprobado en Git y en el banco]: los cuatro
   scripts Lua (`lib/pausa-lua.ts`: `TOMAR` con la pausa dentro de la
   adquisición, `PAUSAR` v3 idempotente por evento con telemetría en `pcall`,
