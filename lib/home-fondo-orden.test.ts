@@ -52,7 +52,7 @@ function mundo(o: { tarda?: number; fallo?: boolean; producir?: () => Promise<{ 
   const vivo = (k: string) => { const e = store.get(k); return e && (!e.exp || e.exp > ahoraFijo()) ? (e.v as Payload) : null; };
   const deps = (): DepsServir<Payload> => ({
     claves: K, propietario: `A:${++contador}`, dia: "2026-09-15", ttl: { fresca: 21600, ub: 129600 },
-    leer: async (claves) => claves.map(vivo), turno: crearTurno(ops),
+    leer: async (claves) => claves.map(vivo), leerAcotada: async (claves) => claves.map(vivo), turno: crearTurno(ops),
     producir: o.producir ?? (async () => { eventos.push("iniciar"); await ms(o.tarda ?? 30); return { valor: { hero: ["A"], degradado: !!o.fallo, de: "A" }, fallo: !!o.fallo }; }),
     vacio: (motivo) => ({ hero: [], degradado: true, de: `vacio:${motivo}` }),
     log, ahora: ahoraFijo, constantes: { ...CONSTANTES, RENOVACION_MS: 10, TURNO_MS: 200 },

@@ -36,7 +36,7 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { backendCache, dailySeed, leerVarias, opsTurnoHome, pausaTmdb, pickDaily, TTL, withMetricas } from "./cache";
+import { backendCache, dailySeed, leerAcotadasHome, leerVarias, opsTurnoHome, pausaTmdb, pickDaily, TTL, withMetricas } from "./cache";
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
 // Etapa 3.a (#19, H2): el contexto compuesto —disponibilidad + descartes de
@@ -46,7 +46,6 @@ import type { ClaveLocalizada } from "./claves";
 import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
 import { CONSTANTES, plazosDelFondo, servirConTurno, type MotivoVacio } from "./home-servir";
 import { pausaActiva } from "./tmdb-pausa";
-import { conTope } from "./lectura-acotada";
 import { CLAVES_PAUSA } from "./pausa-lua";
 import { crearProgramadorDeFondo, estadoDelFondo } from "./home-fondo";
 import { compuertaDeFondo } from "./fondo-frontera";
@@ -777,16 +776,19 @@ function programarComposicionEnFondo(clave: string, iniciar: (senal?: AbortSigna
 }
 
 const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>({
-  // Etapa 3.c.1 (auditoría sobre 6fc63b5, punto 1): con la pausa LOCAL vigente
-  // la lectura previa lleva tope; lo que no llega se da por ausente y el
-  // resolver decide (UB acotado o 503). Sin pausa, la lectura de siempre.
-  leer: (clave) => (pausaTmdb.vigente() > 0 ? conTope(backendCache.leer<HomePayload>(clave), CONSTANTES.T_LECTURA_PAUSA_MS) : backendCache.leer<HomePayload>(clave)),
+  // Etapa 3.c.1 (auditorías sobre 6fc63b5 y d322282): con la pausa LOCAL
+  // vigente la lectura previa va por el LECTOR ACOTADO (cliente aparte, sin
+  // reintentos, señal de 1 s por petición: cancela de verdad, no queda nada
+  // reintentando); lo que no llega se da por ausente y el resolver decide (UB
+  // acotado o 503). Sin pausa, la lectura de siempre con el cliente principal.
+  leer: (clave) => (pausaTmdb.vigente() > 0 ? leerAcotadasHome<HomePayload>([clave]).then((v) => v[0] ?? null) : backendCache.leer<HomePayload>(clave)),
   resolver: (_clave, producir, claves) => servirConTurno<HomePayload>({
     claves,
     propietario: `${INSTANCIA}:${process.pid}:${++composicionesDeEsteProceso}`,
     dia: claves.dia,
     ttl: { fresca: TTL.home, ub: TTL.homeUltimoBueno },
     leer: (claves) => leerVarias<HomePayload>(claves),
+    leerAcotada: (claves) => leerAcotadasHome<HomePayload>(claves),
     turno: turnoHome,
     // Lo producido se anota acá (fuentes caídas, degradado) para que la línea
     // del FONDO (3.b) lo muestre: en el fondo nadie ve el payload producido —

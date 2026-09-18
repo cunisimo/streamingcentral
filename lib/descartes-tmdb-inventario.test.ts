@@ -518,6 +518,7 @@ const INVENTARIO: Fila[] = [
   // lo que llega acá son errores de turno/Redis: se anota, se libera y se relanza al programador, que lo contiene y lo loguea entero.
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "no-tmdb", motivo: "fondo 3.b: errores de turno/Redis tras componer; se relanzan al programador que los loguea" },
   { archivo: "lib/home-servir.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "3.c.1: la única limpieza LIBERAR de la composición (best effort): Redis" },
+  { archivo: "lib/home-servir.ts", ancla: ".catch(() => null)", clase: "no-tmdb", motivo: "3.c.1 (d322282): el lector acotado lanzó (señal abortada o Redis caído, sin reintento) → la lectura se da por ausente; Redis" },
   { archivo: "lib/home-servir.ts", ancla: ".catch(() => {})", clase: "no-tmdb", motivo: "3.c.1: readquisición que respondió DESPUÉS de su timeout y adquirió: se suelta el turno; Redis" },
   { archivo: "lib/home-servir.ts", ancla: "catch { registrado = false; }", clase: "no-tmdb", motivo: "el registro en waitUntil lanzó: se compone en línea" },
   // Etapa 3.c.1: la pausa compartida. Las tres son operaciones de Redis (PAUSAR, PTTL del lector, CUBO): nunca un error de TMDB.
@@ -539,6 +540,7 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "3.c.1: el cliente aparte del lector de la pausa no se pudo crear; Redis" },
+  { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "3.c.1 (d322282): el MGET del lector acotado del Home falló o abortó por su señal → null para todas las claves, sin reintento; Redis" },
   { archivo: "app/api/health/route.ts", ancla: "catch { return null; }", clase: "no-tmdb", motivo: "3.c.1: SALUD de la pausa no se pudo leer → null (nunca ceros); Redis" },
   { archivo: "lib/escritura-cache.ts", ancla: "} catch (error) {", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/turno.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },

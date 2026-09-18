@@ -23,8 +23,10 @@
 //  2b. PAUSA LOCAL vigente (3.c.1, §43.3; auditoría sobre 6fc63b5, punto 1): este
 //     proceso vio un 429 y su pausa todavía rige. No se compone contra TMDB
 //     pase lo que pase con Redis, y el pedido NO espera los reintentos del
-//     SDK: la fresca y el UB se leen con un tope propio (T_LECTURA_PAUSA_MS) y
-//     lo que no llega se da por ausente. Fresca → HIT; UB → `ultimo-bueno-pausa`;
+//     SDK: la fresca y el UB se leen por el LECTOR ACOTADO (`deps.leerAcotada`:
+//     cliente aparte, sin reintentos, señal de T_LECTURA_PAUSA_MS por
+//     petición — cancela de verdad, no queda nada vivo después de responder)
+//     y lo que no llega se da por ausente. Fresca → HIT; UB → `ultimo-bueno-pausa`;
 //     sin UB → la misma regla de 3 (espera breve acotada + UNA readquisición
 //     con su timeout) o el 503. Límite del recorrido: 2 lecturas acotadas +
 //     ESPERA_PAUSA_MAX + JITTER + T_ADQ_MAX (≈ 10,25 s; con UB, ≈ 2 s).
@@ -111,7 +113,6 @@
 // las deps. Es puro: reloj, `dormir` y las lecturas se inyectan, y se prueba
 // con la emulación en memoria y un reloj virtual (lib/home-servir.test.ts).
 import { anotar } from "./metricas.ts";
-import { conTope } from "./lectura-acotada.ts";
 import type { Turno } from "./turno.ts";
 import type { CampoCubo } from "./tmdb-pausa.ts";
 
@@ -148,11 +149,14 @@ export const CONSTANTES = {
   RETRY_AFTER_FALLBACK_MS: 5_000,
   /**
    * Con la pausa LOCAL vigente, tope de cada lectura de Redis de esta secuencia
-   * (auditoría sobre 6fc63b5, punto 1): sin él, un Redis caído dejaba al pedido
-   * esperando los 6 reintentos del SDK por lectura (medido: 23,1 s hasta el
-   * 503). Con la pausa vigente no hay nada que componer, así que lo que no
-   * llega en este tope se da por ausente. Sólo rige con pausa local; el camino
-   * sano no lo toca.
+   * (auditoría sobre 6fc63b5, punto 1; sobre d322282: el tope CANCELA el
+   * trabajo, no sólo ignora el resultado): sin él, un Redis caído dejaba al
+   * pedido esperando los 6 reintentos del SDK por lectura (medido: 23,1 s
+   * hasta el 503). El tope lo aplica el LECTOR ACOTADO (`deps.leerAcotada`: un
+   * cliente de Redis aparte, sin reintentos, con una señal de esta duración
+   * por petición — lib/cache.ts), no una carrera acá: lo que no llega no
+   * sigue reintentando después de responder. Sólo rige con pausa local; el
+   * camino sano no lo toca.
    */
   T_LECTURA_PAUSA_MS: 1_000,
 } as const;
@@ -199,6 +203,14 @@ export interface DepsServir<T> {
   ttl: { fresca: number; ub: number };
   /** Lee esas claves en UN comando (en producción: N `batchGet` en el mismo tick = un MGET). */
   leer: (claves: string[]) => Promise<(T | null)[]>;
+  /**
+   * La misma lectura, ACOTADA (3.c.1, auditoría sobre d322282): un MGET por un
+   * cliente aparte que no reintenta y aborta cada petición a los
+   * T_LECTURA_PAUSA_MS. Lo que no llega es `null` (o un rechazo: el cliente
+   * real lanza al abortar; acá se trata igual), y nada sigue vivo después.
+   * Sólo se usa con la pausa LOCAL vigente; sin pausa, `leer` de siempre.
+   */
+  leerAcotada: (claves: string[]) => Promise<(T | null)[]>;
   turno: Turno;
   /**
    * La composición. `fallo` = degradado (alguna fuente cayó). `pausada` (3.c.1)
@@ -267,16 +279,20 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   const jitter = deps.jitter ?? (() => Math.floor(Math.random() * c.JITTER_MAX_MS));
   anotar((m) => { m.home.propietario = propietario; });
 
-  // 2b. Con la pausa LOCAL vigente, las lecturas llevan tope: Redis puede
-  // estar caído (es lo esperable junto a un 429 masivo) y no hay nada que
-  // componer mientras la pausa rija.
-  // El tope se decide POR LECTURA, no sólo al entrar: la pausa puede nacer
-  // entre una lectura y la siguiente (un 429 de otra solicitud del proceso).
+  // 2b. Con la pausa LOCAL vigente, las lecturas van por el LECTOR ACOTADO:
+  // Redis puede estar caído (es lo esperable junto a un 429 masivo) y no hay
+  // nada que componer mientras la pausa rija. El lector cancela su propia
+  // petición al tope; nada queda reintentando después de responder.
+  // Se decide POR LECTURA, no sólo al entrar: la pausa puede nacer entre una
+  // lectura y la siguiente (un 429 de otra solicitud del proceso).
   const localAlEntrar = pausaLocal();
   const leerAcotada = async (claves: string[]): Promise<(T | null)[]> => {
     if (pausaLocal() <= 0) return deps.leer(claves);
-    const r = await conTope(deps.leer(claves), c.T_LECTURA_PAUSA_MS, dormir);
-    if (r === null) anotar((m) => { m.home.lecturasAcotadas += 1; });
+    // El lector acotado LANZA cuando su señal aborta o Redis falla (así se
+    // comporta el cliente real sin reintentos): acá eso es "no llegó", nunca
+    // un error del Home, y se cuenta como lectura acotada.
+    const r = await deps.leerAcotada(claves).catch(() => null);
+    if (r === null || r.every((v) => v == null)) anotar((m) => { m.home.lecturasAcotadas += 1; });
     return r ?? claves.map(() => null);
   };
   if (localAlEntrar > 0) anotar((m) => { m.home.pausaMs = localAlEntrar; });

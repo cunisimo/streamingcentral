@@ -211,8 +211,8 @@ const home = sinComentarios("lib/home.ts");
 test("🔴 homePayload sirve el Home por el vuelo compartido, con la lectura previa y la resolución real", () => {
   assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada y el contexto (las cinco claves, el día, el plazo y el inicio de la ruta) como contexto");
   assert.ok(home.includes("type ContextoHome = ClavesDelHome & { inicioRuta: number; plazo: number };"), "el contexto extiende las cinco claves del instante (3.c.1)");
-  // 3.c.1: con la pausa local vigente la lectura previa lleva tope (conTope); sin pausa es la lectura de siempre.
-  assert.ok(home.includes("leer: (clave) => (pausaTmdb.vigente() > 0 ? conTope(backendCache.leer<HomePayload>(clave), CONSTANTES.T_LECTURA_PAUSA_MS) : backendCache.leer<HomePayload>(clave)),"), "la lectura previa no usa el backend real (con tope sólo bajo pausa local)");
+  // 3.c.1: con la pausa local vigente la lectura previa va por el lector acotado (leerAcotadasHome); sin pausa es la lectura de siempre.
+  assert.ok(home.includes("leer: (clave) => (pausaTmdb.vigente() > 0 ? leerAcotadasHome<HomePayload>([clave]).then((v) => v[0] ?? null) : backendCache.leer<HomePayload>(clave)),"), "la lectura previa no usa el backend real (con tope sólo bajo pausa local)");
   // Etapa 2: el líder resuelve por la secuencia con turno (lib/home-servir.ts),
   // que decide qué se publica; `cachedLocIf` escribiría la fresca sin fencing.
   assert.match(home, /resolver:\s*\(_clave, producir, claves\) => servirConTurno<HomePayload>\(/, "el vuelo no resuelve por la secuencia con turno, con las cinco claves del contexto");

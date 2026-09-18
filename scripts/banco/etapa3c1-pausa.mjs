@@ -59,7 +59,7 @@ async function pedir(p, providers, t, timeoutMs = 120000) {
   const t0 = Date.now();
   const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   const json = await r.json();
-  return { status: r.status, retryAfter: r.headers.get("retry-after"), msPared: Date.now() - t0, json, contenido: (json.hero?.length ?? 0) + (json.rails?.length ?? 0), motivo: json.motivo ?? null, error: json.error ?? null, reintentarEnMs: json.reintentarEnMs ?? null };
+  return { status: r.status, retryAfter: r.headers.get("retry-after"), msPared: Date.now() - t0, tFin: Date.now(), json, contenido: (json.hero?.length ?? 0) + (json.rails?.length ?? 0), motivo: json.motivo ?? null, error: json.error ?? null, reintentarEnMs: json.reintentarEnMs ?? null };
 }
 async function salud(p) { const r = await fetch(`http://127.0.0.1:${p.puerto}/api/health`); return (await r.json()).pausa ?? null; }
 
@@ -74,6 +74,26 @@ function sobrepaso(mt, desde) {
   return { antesDel429: en.length - despues.length, primer429, tras429: { total: despues.length, en1s: ventana(1000), en2s: ventana(2000), en5s: ventana(5000), spanMs: ts.length ? ts.at(-1) - ts[0] : 0, picoPor1s: maxPor(1000), picoPor100ms: maxPor(100) } };
 }
 const lecturasPttl = (mr, desde) => mr.filter((m) => m.t >= desde && m.c === "PTTL").length;
+// Trabajo RESIDUAL de una solicitud (auditoría sobre d322282): sobre las marcas
+// del doble de Redis, los comandos cuya clave es de ESA solicitud (`patronClave`),
+// separados en tres cuentas contra el instante en que respondió (`tFin`):
+// iniciados antes y terminados antes; iniciados antes y terminados DESPUÉS;
+// iniciados DESPUÉS de responder (tardíos). `ventanaMs` dice cuánto después de
+// la respuesta se miró: tiene que ser ≥ 10 s para que la ausencia signifique algo.
+function residual(mr, desde, tFin, patronClave, tMarcas) {
+  const propias = mr.filter((m) => m.t >= desde && patronClave.test(m.k ?? ""));
+  const iniciadas = propias.filter((m) => m.t <= tFin);
+  const tardias = propias.filter((m) => m.t > tFin);
+  return {
+    ventanaMs: tMarcas - tFin,
+    iniciadasAntesDeResponder: iniciadas.length,
+    completadasAntes: iniciadas.filter((m) => m.fin && m.fin <= tFin).length,
+    completadasDespues: iniciadas.filter((m) => !m.fin || m.fin > tFin).length,
+    tardias: tardias.length,
+    tardiasMsTrasRespuesta: tardias.map((m) => m.t - tFin).sort((a, b) => a - b),
+    porComando: propias.reduce((o, m) => { o[m.c] = (o[m.c] ?? 0) + 1; return o; }, {}),
+  };
+}
 const marcasDesde = () => Date.now();
 
 // ----------------------------------------------------------------- escenarios
@@ -184,11 +204,18 @@ async function main() {
   const l4bc = await esperarLineas(A, (a) => a.home.length >= 2);
   const l4b = { home: l4bc.home.filter((l) => /:d,m,n:\s*$/.test(l.linea)), compone: l4bc.compone };
   const l4c = { home: l4bc.home.filter((l) => /:d,n:\s*$/.test(l.linea)), compone: l4bc.home.filter((l) => /:d,n:\s*$/.test(l.linea) && /1 composici/.test(l.linea)).length };
+  // Trabajo residual (auditoría sobre d322282): las marcas se leen recién ≥ 10 s
+  // después de que el pedido con pausa local respondió (el primero tarda ≈ 75 s,
+  // así que la ventana sobra; se registra igual). Con d322282 el MGET y sus
+  // reintentos del cliente principal seguían llegando al doble tras el 503.
+  await esperar(() => Date.now() - s4c.tFin >= 10000, 30000, 200);
   await dormir(3000);
   const mr4b = await marcas("redis");
+  const tMarcas4b = Date.now();
   await control(BASE, "redis", "config", { modo: "ok", ...lat(40) });
   const tras = mr4b.filter((m) => m.t >= desde4b);
-  log("S4b-redis-caido-con-429", { primero: { status: s4b.status, motivo: s4b.motivo, contenido: s4b.contenido, msPared: s4b.msPared, linea: l4b.home[0]?.linea.slice(0, 300) }, duranteLaPausaLocal: { pausaConocidaAlPedir: s4c.pausaConocidaAlPedir, status: s4c.status, motivo: s4c.motivo, contenido: s4c.contenido, msPared: s4c.msPared, compone: l4c.compone, composiciones: l4c.home[0]?.composiciones, pausaMs: l4c.home[0]?.pausaMs, lecturasAcotadas: Number((l4c.home[0]?.linea.match(/(\d+) lectura\(s\) acotada/) ?? [])[1] ?? 0), linea: l4c.home[0]?.linea.slice(0, 300) }, marcasRedisTrasCaida: tras.length, porComandoTrasCaida: tras.reduce((o, m) => { o[m.c] = (o[m.c] ?? 0) + 1; return o; }, {}), lecturasPTTLTrasCaida: tras.filter((m) => m.c === "PTTL").length });
+  const residual4c = residual(mr4b, desde4b, s4c.tFin, /:d,n:/, tMarcas4b);
+  log("S4b-redis-caido-con-429", { primero: { status: s4b.status, motivo: s4b.motivo, contenido: s4b.contenido, msPared: s4b.msPared, linea: l4b.home[0]?.linea.slice(0, 300) }, duranteLaPausaLocal: { pausaConocidaAlPedir: s4c.pausaConocidaAlPedir, status: s4c.status, motivo: s4c.motivo, contenido: s4c.contenido, msPared: s4c.msPared, compone: l4c.compone, composiciones: l4c.home[0]?.composiciones, pausaMs: l4c.home[0]?.pausaMs, lecturasAcotadas: Number((l4c.home[0]?.linea.match(/(\d+) lectura\(s\) acotada/) ?? [])[1] ?? 0), linea: l4c.home[0]?.linea.slice(0, 300), residual: residual4c }, marcasRedisTrasCaida: tras.length, porComandoTrasCaida: tras.reduce((o, m) => { o[m.c] = (o[m.c] ?? 0) + 1; return o; }, {}), lecturasPTTLTrasCaida: tras.filter((m) => m.c === "PTTL").length });
   await dormir(21000); await tmdbOk(semilla);
 
   // S5 — tres procesos fríos a la vez con 429 total a los 3 s: sobrepaso GLOBAL contra la línea base (sin pausa: ~750 por proceso).
@@ -224,6 +251,7 @@ async function main() {
     "5-con-UB-inmediato": { ok: e["S2-429-total-con-UB"].status === 200 && e["S2-429-total-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].status === 200 && e["S2b-pedido-durante-la-pausa-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].msPared < 2000, msPared: [e["S2-429-total-con-UB"].msPared, e["S2b-pedido-durante-la-pausa-con-UB"].msPared] },
     "6-sin-UB-nunca-50s-ni-200-vacio": { ok: [e["S1-429-total-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.status === 503 && x.retryAfter && x.contenido === 0) && e["S1b-pedido-durante-la-pausa-sin-UB"].status === 200 && e["S1b-pedido-durante-la-pausa-sin-UB"].contenido > 0 && [e["S1-429-total-sin-UB"], e["S1b-pedido-durante-la-pausa-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.msPared < 30000), msPared: [e["S1-429-total-sin-UB"].msPared, e["S1b-pedido-durante-la-pausa-sin-UB"].msPared, e["S1c-pausa-larga-sin-UB-503-inmediato"].msPared] },
     "7-redis-lento-caido-sin-tormenta": { ok: e["S4a-redis-lento-300ms-con-429"].lecturasPTTL <= 40 && e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida <= 6 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.status === 503 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.compone === 0 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.pausaConocidaAlPedir === true && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.msPared <= 4000, limiteLocalMs: 3000 + 1000, msParedPausaLocal: e["S4b-redis-caido-con-429"].duranteLaPausaLocal.msPared, lecturas: [e["S4a-redis-lento-300ms-con-429"].lecturasPTTL, e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida], porComando: e["S4b-redis-caido-con-429"].porComandoTrasCaida, nota: "la duración del primer pedido con Redis caído es la promesa reducida de la Etapa 2 (reintentos del SDK por lectura), no la 3.c.1" },
+    "8-sin-trabajo-residual-tras-responder": { ok: e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual.ventanaMs >= 10000 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual.tardias === 0 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual.completadasDespues === 0, residual: e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual, detalle: "comandos de Redis con las claves del pedido pausado: ninguno iniciado ni completado después del 503 (ventana ≥ 10 s)" },
     "propagacion-entre-procesos": { ok: e["S3-propagacion-tres-procesos"].B.x429 === 0 && e["S3-propagacion-tres-procesos"].B.rechazadas > 0 && e["S3-propagacion-tres-procesos"].C.x429 === 0 && e["S3-propagacion-tres-procesos"].C.pausaMs > 0 && e["S3-propagacion-tres-procesos"].C.status === 200, detalle: "B (sin 429 propio) cortado por el lector; C (frío) pausado por TOMAR y luego compuesto" },
     "sobrepaso-vs-linea-base": { conPausa: { S1: e["S1-429-total-sin-UB"].sobrepaso.tras429.total, S2: e["S2-429-total-con-UB"].sobrepaso.tras429.total, S5global: e["S5-tres-procesos-frios-429-total"].sobrepasoGlobal.tras429.total }, controlSinPausa: e["S6-CONTROL-kill-switch-apagado"].sobrepaso.tras429.total, lineaBase: "750-778 por proceso" },
   };

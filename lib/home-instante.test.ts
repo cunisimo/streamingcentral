@@ -85,7 +85,7 @@ test("🔴 una solicitud iniciada ANTES de medianoche conserva el día anterior 
   const c = clavesDelHome(instante, "d,m,n", "");
   let relojDuranteLaComposicion = ANTES;
   const valor = await servirConTurno<{ de: string }>({
-    claves: c, propietario: "A", dia: c.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, turno: w.turno,
+    claves: c, propietario: "A", dia: c.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, leerAcotada: w.leer, turno: w.turno,
     producir: async () => { relojDuranteLaComposicion = DESPUES; return { valor: { de: "A" }, fallo: false }; },
     vacio: () => ({ de: "vacio" }),
   });
@@ -106,7 +106,7 @@ test("🔴 una solicitud iniciada DESPUÉS usa coherentemente el nuevo día: otr
   assert.notEqual(hoy.degradado, ayer.degradado);
   assert.equal(hoy.ub, ayer.ub, "el UB no lleva semilla: sobrevive a la medianoche");
   assert.equal(hoy.gen, ayer.gen);
-  await servirConTurno<{ de: string }>({ claves: hoy, propietario: "B", dia: hoy.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, turno: w.turno, producir: async () => ({ valor: { de: "B" }, fallo: false }), vacio: () => ({ de: "vacio" }) });
+  await servirConTurno<{ de: string }>({ claves: hoy, propietario: "B", dia: hoy.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, leerAcotada: w.leer, turno: w.turno, producir: async () => ({ valor: { de: "B" }, fallo: false }), vacio: () => ({ de: "vacio" }) });
   assert.equal(w.vivo(hoy.gen), "2026-09-14:B");
   // E-medianoche del banco, en puro: el propietario viejo termina después y no pisa el UB ni la gen nuevos.
   const r = await w.turno.publicar({ claves: { turno: ayer.turno, fresca: ayer.fresca, ub: ayer.ub, gen: ayer.gen }, propietario: "A", payload: '{"de":"A"}', ttlFresca: 60, ttlUb: 60, dia: ayer.dia });

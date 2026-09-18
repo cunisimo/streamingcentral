@@ -531,6 +531,47 @@ export function leerVarias<T>(claves: string[]): Promise<(T | null)[]> {
   return Promise.all(claves.map((k) => batchGet<T>(k)));
 }
 
+/**
+ * Las mismas claves, por el LECTOR ACOTADO (3.c.1, auditoría sobre d322282):
+ * UN MGET real por `redisLector` —el cliente sin reintentos y con señal de
+ * `CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS` por petición, el mismo que lee el PTTL
+ * de la pausa; no se crea ningún cliente por lectura—. Lo que no llega
+ * —timeout, Redis caído, forma inesperada— es `null` para todas las claves, y
+ * nada sigue reintentando después: si la señal aborta, el SDK 1.38.0 lanza
+ * sin reintentar. Sin Redis, el mismo Map de memoria que `batchGet`.
+ * SÓLO para el camino con pausa LOCAL vigente: el camino sano usa `batchGet`
+ * con el cliente principal y su política de siempre.
+ */
+export async function leerAcotadasHome<T>(claves: string[]): Promise<(T | null)[]> {
+  if (!claves.length) return [];
+  if (!redisLector) {
+    const ahora = Date.now();
+    anotar((m) => { m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; m.redis.lotes.push(claves.length); });
+    return claves.map((k) => {
+      const hit = mem.get(k); const vivo = !!(hit && hit.exp > ahora);
+      anotar((m) => { m.redis.claves += 1; if (vivo) m.redis.hits++; else m.redis.misses++; });
+      return vivo ? (hit!.v as T) : null;
+    });
+  }
+  const t0 = Date.now();
+  anotar((m) => { m.redis.modo = "redis"; m.redis.llamadasLogicas += 1; m.redis.intentosHttp += 1; });
+  try {
+    const vals = await redisLector.mget<unknown[]>(...claves);
+    if (!Array.isArray(vals) || vals.length !== claves.length) throw new Error("respuesta inesperada del MGET acotado");
+    anotar((m) => { m.redis.comandos += 1; m.redis.lotes.push(claves.length); });
+    return vals.map((v) => {
+      const vivo = !(v === null || v === undefined);
+      anotar((m) => { m.redis.claves += 1; if (vivo) m.redis.hits++; else m.redis.misses++; });
+      return vivo ? (v as T) : null;
+    });
+  } catch {
+    anotar((m) => { m.redis.fallos.lectura += 1; m.redis.claves += claves.length; m.redis.misses += claves.length; });
+    return claves.map(() => null);
+  } finally {
+    anotar((m) => { m.redis.ms += Date.now() - t0; });
+  }
+}
+
 // --- Motor "del día": determinístico por fecha ---
 // `dailySeed` se mudó a `lib/fecha.ts` (función pura, sin `server-only`) para
 // poder testearla y para que el día argentino sea uno solo en toda la app. Se

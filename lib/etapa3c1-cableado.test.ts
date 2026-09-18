@@ -11,6 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { CONSTANTES } from "./home-servir.ts";
 import { LUA_PAUSA } from "./pausa-lua.ts";
+import { CONSTANTES_PAUSA } from "./tmdb-pausa.ts";
 
 const raiz = path.resolve(import.meta.dirname, "..");
 const leer = (rel: string) => fs.readFileSync(path.join(raiz, rel), "utf8").replace(/\r/g, "");
@@ -126,9 +127,28 @@ test("🔴 lib/home.ts: el productor informa `pausada` (alguna llamada rechazada
   assert.match(s, /pausada: rechazadasHastaAhora\(\) > /, "el productor no calcula `pausada` como delta de rechazadas");
 });
 
-test("🔴 punto 1 (auditoría sobre 6fc63b5): la LECTURA PREVIA del vuelo (lib/home.ts) también lleva tope con la pausa local vigente, con el mismo `conTope` que usa servirConTurno", () => {
+const LINEA_LECTURA_PREVIA = "leer: (clave) => (pausaTmdb.vigente() > 0 ? leerAcotadasHome<HomePayload>([clave]).then((v) => v[0] ?? null) : backendCache.leer<HomePayload>(clave)),";
+
+test("🔴 punto 1 (auditorías sobre 6fc63b5 y d322282): con la pausa local vigente, la lectura previa del vuelo y las de servirConTurno van por el LECTOR ACOTADO (`leerAcotadasHome`), no por una carrera sobre el cliente principal", () => {
   const s = codigo("lib/home.ts");
-  assert.match(s, /conTope\(backendCache\.leer<HomePayload>\(clave\), CONSTANTES\.T_LECTURA_PAUSA_MS\)/, "la lectura previa no lleva tope");
-  assert.match(s, /pausaTmdb\.vigente\(\) > 0 \? conTope\(/, "el tope sólo rige con la pausa local vigente: el camino sano no cambia");
-  assert.match(codigo("lib/home-servir.ts"), /conTope\(deps\.leer\(claves\), c\.T_LECTURA_PAUSA_MS, dormir\)/, "servirConTurno usa el mismo conTope");
+  assert.ok(s.includes(LINEA_LECTURA_PREVIA), "la lectura previa no va por el lector acotado con la pausa local vigente");
+  assert.match(s, /leerAcotada: \(claves\) => leerAcotadasHome<HomePayload>\(claves\)/, "servirConTurno no recibe el lector acotado");
+  const servir = codigo("lib/home-servir.ts");
+  assert.match(servir, /if \(pausaLocal\(\) <= 0\) return deps\.leer\(claves\);/, "sin pausa local tiene que usar `leer` de siempre");
+  assert.match(servir, /await deps\.leerAcotada\(claves\)\.catch\(\(\) => null\)/, "con pausa local no usa el lector acotado (o deja escapar su rechazo)");
+  assert.doesNotMatch(servir + s + codigo("lib/cache.ts"), /conTope|Promise\.race\(\[deps\.leer|lectura-acotada/, "🔴 volvió la carrera: un Promise.race no cancela la lectura, sólo ignora su resultado");
+});
+
+test("🔴 punto 1 (d322282): `leerAcotadasHome` es UN MGET por `redisLector` (retries 0 + señal por petición) — sin cliente nuevo por lectura, sin reintentos y con la misma memoria que batchGet; el tope de servirConTurno es el del lector", () => {
+  const s = codigo("lib/cache.ts");
+  assert.match(s, /export async function leerAcotadasHome<T>\(claves: string\[\]\)/, "falta el lector acotado del Home");
+  const cuerpo = s.slice(s.indexOf("export async function leerAcotadasHome"));
+  const fn = cuerpo.slice(0, cuerpo.indexOf("\n}\n"));
+  assert.match(fn, /await redisLector\.mget<unknown\[\]>\(\.\.\.claves\)/, "no es un MGET por el lector");
+  assert.doesNotMatch(fn, /new Redis\(|redis\.mget|redis!\.mget|batchGet\(/, "🔴 crea un cliente por lectura o usa el cliente principal (con sus 6 reintentos)");
+  assert.match(fn, /mem\.get\(k\)/, "sin Redis tiene que leer el mismo Map de memoria que batchGet");
+  assert.match(fn, /return claves\.map\(\(\) => null\)/, "un fallo del lector tiene que ser null para todas las claves, no un error");
+  assert.equal((s.match(/new Redis\(/g) ?? []).length, 2, "tiene que haber exactamente dos clientes por proceso: el principal y el lector");
+  assert.match(s, /redisLector = new Redis\(\{ url: redisUrl, token: redisToken, retry: \{ retries: 0 \}, signal: \(\) => AbortSignal\.timeout\(CONSTANTES_PAUSA\.TIMEOUT_LECTURA_MS\) \}\)/, "el lector tiene que seguir con retries 0 y señal NUEVA por petición (si aborta, el SDK 1.38.0 lanza sin reintentar)");
+  assert.equal(CONSTANTES.T_LECTURA_PAUSA_MS, CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS, "el tope que servirConTurno documenta es el que aplica la señal del lector: si uno cambia, el otro también");
 });
