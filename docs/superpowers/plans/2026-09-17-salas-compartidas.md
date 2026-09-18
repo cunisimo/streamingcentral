@@ -13,7 +13,7 @@
 - Copy en español rioplatense. Nombres de producto exactos: "¡Nuestro match!", "¡HAY MATCH!", "¡Tenemos empate!", "Esta vez no coincidieron", "Desempatar", "Esperando al organizador", "Compartir nuestro match", "Crear sala", "Otra tanda".
 - Participantes: mínimo **2**, máximo **6** (organizador incluido). Lobby vence a los **15 min** de crear la sala. Ventanas posteriores a empate/resultado: **5 min**. Preparación colgada: **90 s** (se aborta, nunca se borra la sala). Borrado físico: **sólo** salas en estado `vencida` con `expires_at` pasado, o sea 5 min después del último estado terminal; `sala_cerrar` **no** borra en el acto, marca `vencida` y conserva los 5 min. "Otra tanda" renueva `expires_at`.
 - Contador local de **10 s** por card, con el comienzo persistido en `localStorage` por sala/ronda/posición: recargar no lo reinicia; se borra sólo cuando el servidor confirmó el avance (un fallo de red lo conserva). Los botones de voto usan el atributo real `disabled` durante la solicitud.
-- Tandas: **5 → 120 s**, **10 → 180 s**, **20 → 300 s**. Default **10** y **Cualquiera**. Duraciones: `cualquiera` (unión estricta de `corta` ∪ `larga`), `corta` (`runtime <= 90`), `larga` (`runtime > 90`). **Siempre** `apto_chicos = false`, `media_type = 'movie'`, `razon` y `advertencia` no nulos, `runtime > 0`.
+- Tandas: **5 → 120 s**, **10 → 180 s**, **20 → 300 s**. Default **10** y **Cualquiera**. Duraciones: `cualquiera` (unión estricta de `corta` ∪ `larga`), `corta` (`runtime <= 90`), `larga` (`runtime > 90`). **Siempre** `apto_chicos = false`, `media_type = 'movie'`, `razon` no nula, `runtime > 0`. **`advertencia` ("Pero") es OPCIONAL** (decisión del dueño, 2026-09-18): una película sin "pero" entra igual, no se genera ningún texto de reemplazo, y `CardSala` no renderiza la sección "Pero" cuando no hay contenido.
 - Contador local **10 s** por card → registra `pass`. El servidor sólo conoce el plazo global.
 - Votos: `yes` | `no` | `pass`. Sólo la siguiente `pos` pendiente. Idempotente. El `participant_id` **siempre** se deriva del token; ninguna RPC lo acepta como parámetro.
 - El cliente **nunca** calcula match/empate/ganador; la réplica TS de `sala_computar` existe **sólo en tests**.
@@ -77,49 +77,7 @@ Expected: `send` presente; `tmdb-sync-upcoming-daily` en `cron.job` (o anotar qu
 
 **Files:** `scripts/sala/auditoria-pool.sql` (Create — es texto SQL para pegar en el editor; no se ejecuta desde la app).
 
-- [ ] **Step 1: Crear el archivo con estas consultas:**
-
-```sql
--- 1. Tamaño del pool servible para salas (sin plataformas)
-select
-  count(*)                                                        as total,
-  count(*) filter (where razon is not null and advertencia is not null) as con_textos,
-  count(*) filter (where razon is not null and advertencia is not null
-                   and runtime is not null and runtime > 0)       as con_textos_y_duracion,
-  count(*) filter (where razon is not null and advertencia is not null
-                   and runtime > 0 and not apto_chicos)           as servibles_sala,
-  count(*) filter (where razon is not null and advertencia is not null
-                   and runtime > 0 and not apto_chicos and runtime <= 90) as cortas,
-  count(*) filter (where razon is not null and advertencia is not null
-                   and runtime > 0 and not apto_chicos and runtime > 90)  as largas
-from roulette_titles where media_type = 'movie';
-
--- 2. Antigüedad de la disponibilidad
-select min(checked_at), max(checked_at), count(*) from title_availability where region = 'AR';
-
--- 3. Servibles por unión de plataformas (nombres de title_availability, ver lib/roulette-providers.ts)
-with u(nombre, plats) as (values
-  ('n,d,m',   array['Netflix','Disney Plus','HBO Max']),
-  ('n',       array['Netflix']),
-  ('n,d',     array['Netflix','Disney Plus']),
-  ('n,p',     array['Netflix','Amazon Prime Video']),
-  ('n,d,m,p', array['Netflix','Disney Plus','HBO Max','Amazon Prime Video']),
-  ('mb',      array['MUBI','MUBI Amazon Channel'])
-)
-select u.nombre,
-  count(*) filter (where true)             as cualquiera,
-  count(*) filter (where rt.runtime <= 90) as corta,
-  count(*) filter (where rt.runtime > 90)  as larga
-from u
-join title_availability ta on ta.region = 'AR' and ta.providers && u.plats
-join roulette_titles rt on rt.tmdb_id = ta.tmdb_id and rt.media_type = ta.media_type
-where rt.media_type = 'movie' and rt.razon is not null and rt.advertencia is not null
-  and rt.runtime > 0 and not rt.apto_chicos
-group by u.nombre order by u.nombre;
-
--- 4. Nombres de plataforma presentes (diff contra lib/roulette-providers.ts, MANTENIMIENTO §5)
-select distinct unnest(providers) as nombre from title_availability where region = 'AR' order by 1;
-```
+- [ ] **Step 1: El archivo ya existe en la rama** (`scripts/sala/auditoria-pool.sql`, commits `b3a3246`, `b264a16` y la corrección del 2026-09-18 que hace opcional la `advertencia`). Es la referencia: cinco consultas con los filtros exactos de `sala_candidatos` — `media_type = 'movie'`, `razon is not null`, `runtime > 0`, `not apto_chicos`, `not requiere_contexto`, disponibilidad en AR — **sin exigir `advertencia`**. La consulta 1 informa `total_movie, con_razon, con_razon_y_pero, con_razon_y_duracion, servibles_sala, cortas, largas`; la 2, antigüedad de `title_availability` con umbrales de 24 h / 7 d / 30 d (la RPC no filtra por `checked_at`); la 3, servibles por unión de plataformas con la columna `sin_pero` (admitidas sin "Pero"); la 4, nombres de plataforma; la 5, el peso de cada filtro, donde `con_razon_sin_pero` son títulos **admitidos**, no descartados.
 
 - [ ] **Step 2:** El dueño pega y guarda los resultados en `docs/medidas/2026-09-XX-salas-pool.md` (tabla tal cual). **Criterio go de la Etapa 1:** `cualquiera ≥ 20` en `n,d,m`, `n,d` y `n,d,m,p`; `≥ 10` en `n`. Si no, decisión del dueño antes de seguir.
 - [ ] **Step 3:** Si la consulta 4 trae un nombre que no está en `lib/roulette-providers.ts` ni en su lista de exclusiones, anotarlo en `docs/ISSUES.md` (no se corrige en esta etapa).
@@ -219,37 +177,9 @@ for (const f of ARCHIVOS) {
 }
 ```
 
-- [ ] **Step 6: Escribir `scripts/sala/fixtures-local.sql`.** Todo con ids ≥ 90000001 para no chocar con el catálogo real. 40 servibles (`runtime` 82..160: las 5 primeras son `corta`), repartidas entre Netflix / Disney Plus / HBO Max, **una** exclusiva de MUBI (90000041) y controles negativos: 2 `apto_chicos`, 1 sin duración, 1 sin "pero", 1 con `requiere_contexto`, 1 serie (`tv`) y 1 sin disponibilidad en AR:
+- [ ] **Step 6: `scripts/sala/fixtures-local.sql` (ya en la rama; es la referencia).** Todo con ids ≥ 90000001, un rango que TMDB no alcanza (el catálogo real llega a 1.668.364). **41 servibles** con `n,d,m`: 40 "Ficticia" (`runtime` 82..160; las 5 primeras son `corta`) repartidas entre Netflix / Disney Plus / HBO Max, más **"Sin pero" (90000042)**, con `razon` y `advertencia` NULL, en HBO Max — servible desde el 2026-09-18 porque el "pero" es opcional. **Una** exclusiva de MUBI (90000041). Controles negativos que **nunca** salen de `sala_candidatos`: 2 `apto_chicos` (90000101-102), 1 sin duración (90000103), 1 **sin `razon`** (90000104), 1 con `requiere_contexto` (90000105), 1 serie `tv` (90000106) y 1 sin disponibilidad en AR (90000107). El archivo además enciende `sala_config.activas` en local si la tabla existe.
 
-```sql
--- Sólo en local: las salas nacen apagadas en la migración.
-update sala_config set valor = 'true' where clave = 'activas';
-
-insert into roulette_titles (tmdb_id, media_type, title, year, runtime, genres, edad, apto_chicos, vote_count, vote_average, razon, advertencia, atencion)
-select 90000000 + g, 'movie', 'Ficticia ' || g, 2000 + (g % 20), 80 + (g * 2), array['Drama'], 'adultos', false, 100, 7.0,
-       'Por qué verla ' || g, 'Pero ' || g, 'media'
-from generate_series(1, 41) g
-on conflict (tmdb_id, media_type) do nothing;
--- Controles negativos: ninguno puede salir de sala_candidatos
-insert into roulette_titles (tmdb_id, media_type, title, runtime, apto_chicos, requiere_contexto, razon, advertencia) values
-  (90000101, 'movie', 'Infantil 1',   90,  true,  false, 'r', 'a'),
-  (90000102, 'movie', 'Infantil 2',   120, true,  false, 'r', 'a'),
-  (90000103, 'movie', 'Sin duración', null, false, false, 'r', 'a'),
-  (90000104, 'movie', 'Sin pero',     95,  false, false, 'r', null),
-  (90000105, 'movie', 'Secuela',      100, false, true,  'r', 'a'),
-  (90000106, 'tv',    'Serie',        45,  false, false, 'r', 'a'),
-  (90000107, 'movie', 'Sin AR',       100, false, false, 'r', 'a')
-on conflict (tmdb_id, media_type) do nothing;
-insert into title_availability (tmdb_id, media_type, region, providers, rent_only, checked_at)
-select t.tmdb_id, t.media_type, 'AR',
-       case when t.tmdb_id = 90000041 then array['MUBI']
-            when t.tmdb_id % 3 = 0 then array['Netflix'] when t.tmdb_id % 3 = 1 then array['Disney Plus'] else array['HBO Max'] end,
-       false, now()
-from roulette_titles t where t.tmdb_id between 90000001 and 90000106
-on conflict (tmdb_id, media_type, region) do update set providers = excluded.providers, checked_at = now();
-```
-
-Con `n,d,m` quedan **40** candidatas `cualquiera` (5 `corta`, 35 `larga`): alcanza para 20 y para probar `insuficientes` pidiendo 20 en `corta`.
+Con `n,d,m` quedan **41** candidatas `cualquiera` (5 `corta`, 36 `larga`): alcanza para 20 y para probar `insuficientes` pidiendo 20 en `corta`.
 
 - [ ] **Step 7: `.env.sala-local.example`:**
 
@@ -449,7 +379,7 @@ create table if not exists room_titles (
   generos     text[] not null default '{}',
   platforms   text[] not null default '{}',
   razon       text not null,
-  advertencia text not null,
+  advertencia text,             -- NULL = sin "Pero"; la card no muestra la sección
   primary key (round_id, pos),
   unique (round_id, tmdb_id)
 );
@@ -972,7 +902,7 @@ revoke execute on function sala_iniciar_preparacion(uuid, uuid, int, text) from 
 grant execute on function sala_iniciar_preparacion(uuid, uuid, int, text) to service_role;
 
 -- Candidatas del pool curado. Cualquiera = corta ∪ larga, estrictamente. Nunca
--- apto_chicos, nunca sin duración, nunca sin "por qué" ni "pero". Orden por
+-- apto_chicos, nunca sin duración, nunca sin "por qué" (razon). El "pero" (advertencia) es OPCIONAL. Orden por
 -- semilla de sala: sin popularidad ni nota.
 create or replace function sala_candidatos(p_providers text[], p_duracion text, p_excluir int[], p_seed text, p_limit int)
 returns table (tmdb_id int, runtime int, razon text, advertencia text, year int, genres text[])
@@ -981,7 +911,7 @@ language sql stable security definer set search_path = public, extensions, pg_te
   from roulette_titles rt
   join title_availability ta on ta.tmdb_id = rt.tmdb_id and ta.media_type = rt.media_type and ta.region = 'AR'
   where rt.media_type = 'movie'
-    and rt.razon is not null and rt.advertencia is not null
+    and rt.razon is not null
     and rt.runtime is not null and rt.runtime > 0
     and not rt.apto_chicos
     and not rt.requiere_contexto
@@ -1028,7 +958,7 @@ begin
     left join lateral (select coalesce(array(select jsonb_array_elements_text(x->'platforms')), '{}') as plats) pl on true
     where nullif(btrim(x->>'titulo'), '') is null
        or nullif(btrim(x->>'razon'), '') is null
-       or nullif(btrim(x->>'advertencia'), '') is null
+       -- 'advertencia' puede venir NULL o vacía: es opcional y NO se rechaza.
        or (x->>'tmdb_id') !~ '^\d+$'
        or coalesce((x->>'runtime')::int, 0) <= 0
        or (r.duracion = 'corta' and (x->>'runtime')::int > 90)
@@ -1046,7 +976,7 @@ begin
   select p_round, (x->>'pos')::int, (x->>'tmdb_id')::int, btrim(x->>'titulo'), (x->>'anio')::int, (x->>'runtime')::int, x->>'poster',
          coalesce(array(select jsonb_array_elements_text(x->'generos')), '{}'),
          coalesce(array(select jsonb_array_elements_text(x->'platforms')), '{}'),
-         x->>'razon', x->>'advertencia'
+         x->>'razon', nullif(btrim(x->>'advertencia'), '')   -- vacía → NULL: sin "Pero"
   from jsonb_array_elements(p_titulos) x;
   select count(*) into cant from room_titles where round_id = p_round;
   if cant <> r.size then raise exception 'sala_tanda_incompleta' using errcode = '23514'; end if;
@@ -1120,11 +1050,12 @@ select cron.schedule('sala-barrido', '* * * * *', $$ select public.sala_barrido(
 - [ ] **Step 2:** En `lib/salas-migracion.test.ts` agregar:
 
 ```ts
-test("sala_candidatos excluye apto_chicos y exige duración y textos en TODAS las duraciones", () => {
+test("sala_candidatos excluye apto_chicos y exige duración y razón (no advertencia) en TODAS las duraciones", () => {
   const cuerpo = sql.match(/function sala_candidatos[\s\S]*?\$\$;/)![0];
   assert.match(cuerpo, /not rt\.apto_chicos/);
   assert.match(cuerpo, /rt\.runtime > 0/);
-  assert.match(cuerpo, /rt\.advertencia is not null/);
+  assert.match(cuerpo, /rt\.razon is not null/);
+  assert.doesNotMatch(cuerpo, /advertencia is not null/, "el pero es opcional: no puede filtrarse");
   assert.match(cuerpo, /order by md5\(p_seed/);
   assert.doesNotMatch(cuerpo, /popularity|vote_average/);
 });
@@ -1229,20 +1160,31 @@ let ronda;
 await prueba("9. publicar ronda atómica; tanda incompleta no publica", async () => {
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: sala, p_host: host.id, p_size: 5, p_duracion: "cualquiera" });
   const cand = await rpc(admin, "sala_candidatos", { p_providers: ["Netflix", "Disney Plus", "HBO Max", "Amazon Prime Video"], p_duracion: "cualquiera", p_excluir: [], p_seed: "s", p_limit: 80 });
-  // Controles negativos de las fixtures: infantiles, sin duración, sin "pero", con contexto, serie, sin AR y la exclusiva de MUBI.
-  assert.ok(cand.every((c) => c.runtime > 0 && c.advertencia && ![90000101, 90000102, 90000103, 90000104, 90000105, 90000106, 90000107, 90000041].includes(c.tmdb_id)));
-  assert.equal(cand.length, 40);
+  // Controles negativos de las fixtures: infantiles, sin duración, SIN RAZÓN, con contexto, serie, sin AR y la exclusiva de MUBI.
+  assert.ok(cand.every((c) => c.runtime > 0 && c.razon && ![90000101, 90000102, 90000103, 90000104, 90000105, 90000106, 90000107, 90000041].includes(c.tmdb_id)));
+  // "Sin pero" (90000042) SÍ entra: la advertencia es opcional.
+  assert.ok(cand.some((c) => c.tmdb_id === 90000042 && c.advertencia === null), "la película sin pero tiene que ser candidata");
+  assert.equal(cand.length, 41);
   const card = (c, pos) => ({ pos, tmdb_id: c.tmdb_id, titulo: "T" + c.tmdb_id, anio: 2000, runtime: c.runtime, poster: null, generos: ["drama"], platforms: ["n"], razon: c.razon, advertencia: c.advertencia });
   const pub = (titulos) => admin.rpc("sala_publicar_ronda", { p_round: ini.round_id, p_prep_token: ini.prep_token, p_titulos: titulos });
   await debeFallar(pub(cand.slice(0, 4).map(card)), /sala_tanda_incompleta/);
   await debeFallar(pub(cand.slice(0, 5).map((c, i) => card(c, i === 4 ? 7 : i))), /sala_posiciones_invalidas/);
-  await debeFallar(pub(cand.slice(0, 5).map((c, i) => ({ ...card(c, i), advertencia: i === 2 ? "" : c.advertencia }))), /sala_card_invalida/);
+  await debeFallar(pub(cand.slice(0, 5).map((c, i) => ({ ...card(c, i), razon: i === 2 ? "" : c.razon }))), /sala_card_invalida/);  // sin razón no entra
   await debeFallar(pub(cand.slice(0, 5).map((c, i) => ({ ...card(c, i), platforms: i === 1 ? ["mb"] : ["n"] }))), /sala_card_invalida/);  // mb no está en la unión
   await debeFallar(pub(cand.slice(0, 5).map((c, i) => ({ ...card(c, i), platforms: i === 1 ? ["zz"] : ["n"] }))), /sala_card_invalida/);  // código no permitido
-  const publicado = await rpc(admin, "sala_publicar_ronda", { p_round: ini.round_id, p_prep_token: ini.prep_token, p_titulos: cand.slice(0, 5).map(card) });
+  // Publicación real: pos 0 es la card SIN "pero" (advertencia null) y pos 1 lleva advertencia "" → las dos se aceptan.
+  const sinPero = cand.find((c) => c.tmdb_id === 90000042);
+  const tanda = [sinPero, ...cand.filter((c) => c.tmdb_id !== 90000042).slice(0, 4)]
+    .map(card).map((c, i) => ({ ...c, pos: i, advertencia: i === 1 ? "" : c.advertencia }));
+  assert.equal(tanda[0].advertencia, null);
+  const publicado = await rpc(admin, "sala_publicar_ronda", { p_round: ini.round_id, p_prep_token: ini.prep_token, p_titulos: tanda });
   assert.ok(publicado.ok); ronda = ini.round_id;
   const e = await rpc(anon(), "sala_estado", { p_room: sala, p_token: tokHost });
   assert.equal(e.estado, "votando"); assert.equal(e.ronda.titulos.length, 5);
+  // La card sin pero viaja con advertencia NULL, y la vacía se normalizó a NULL.
+  assert.equal(e.ronda.titulos[0].tmdb_id, 90000042); assert.equal(e.ronda.titulos[0].advertencia, null);
+  assert.equal(e.ronda.titulos[1].advertencia, null);
+  assert.ok(e.ronda.titulos.every((t) => typeof t.razon === "string" && t.razon.length > 0));
 });
 await prueba("10. lobby cerrado: no entran participantes nuevos", async () => {
   await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "Tarde", p_platforms: ["n"] }), /sala_no_admite_ingresos/);
@@ -1496,8 +1438,8 @@ await prueba("28. preparación desde el lobby abortada con los 15 min ya vencido
   export const SIZES: readonly Size[]; export const DURACIONES: readonly Duracion[];
   export const LIMITE_SEG: Record<Size, number>; // {5:120,10:180,20:300}
   export const CONFIG_DEFAULT = { size: 10, duracion: "cualquiera" } as const; // lo usa SÓLO la interfaz
-  export interface Candidata { tmdb_id: number; runtime: number; razon: string; advertencia: string; year: number | null; genres: string[] }
-  export interface CardSala { pos: number; tmdb_id: number; titulo: string; anio: number | null; runtime: number; poster: string | null; generos: string[]; platforms: PlatformCode[]; razon: string; advertencia: string }
+  export interface Candidata { tmdb_id: number; runtime: number; razon: string; advertencia: string | null; year: number | null; genres: string[] }
+  export interface CardSala { pos: number; tmdb_id: number; titulo: string; anio: number | null; runtime: number; poster: string | null; generos: string[]; platforms: PlatformCode[]; razon: string; advertencia: string | null }  // null = sin "Pero"
   export function elegirCards(candidatas: Candidata[], cards: Map<number, UITitle>, union: PlatformCode[], size: Size): { cards: CardSala[]; faltan: number };
   export function tamaniosAlcanzables(disponibles: number): Size[];  // [5,10,20].filter(s => s <= disponibles)
   ```
@@ -1520,6 +1462,12 @@ test("toma en orden las que siguen en la unión y corta en size", () => {
   assert.deepEqual(r.cards.map((c) => c.tmdb_id), [1, 3, 4]);
   assert.deepEqual(r.cards.map((c) => c.pos), [0, 1, 2]);
   assert.equal(r.faltan, 2);
+});
+test("una candidata sin pero conserva advertencia null en la card (no se inventa texto)", () => {
+  const c = { ...cand(7), advertencia: null };
+  const r = elegirCards([c], new Map([[7, card(7, ["n"])]]), ["n"], 5);
+  assert.equal(r.cards[0].advertencia, null);
+  assert.equal(r.cards[0].razon, "r");
 });
 test("una candidata sin card se descarta", () => {
   const r = elegirCards([cand(1), cand(2)], new Map([[2, card(2, ["n"])]]), ["n"], 5);
@@ -1673,11 +1621,11 @@ export const OPTIONS = opcionesCors("POST");
 - Create: `components/sala/Votacion.tsx`, `components/sala/CardSala.tsx`, `components/sala/BotonesVoto.tsx`, `components/sala/ProgresoRonda.tsx`
 - Modify: `app/globals.css`
 
-**Detalle de `CardSala`:** póster (`.rlt-poster` sin `Link`), título, `runtime` formateado `Xh Ym`, `generos.map(genreLabel)`, `PlatformLogo` por cada `platforms` (destacando las de la unión), "Por qué verla" (`.rlt-razon`) y "Pero" (`.rlt-pero`). **Sin** enlace a la ficha.
+**Detalle de `CardSala`:** póster (`.rlt-poster` sin `Link`), título, `runtime` formateado `Xh Ym`, `generos.map(genreLabel)`, `PlatformLogo` por cada `platforms` (destacando las de la unión), "Por qué verla" (`.rlt-razon`) y "Pero" (`.rlt-pero`) **sólo si `advertencia` tiene contenido** (`advertencia && advertencia.trim()`): sin "pero" la sección no se renderiza, sin texto de reemplazo ni espacio reservado. **Sin** enlace a la ficha.
 **`BotonesVoto`:** tres `<button type="button" className="act sala-act" aria-label="No|Paso|Sí">` con **sólo el ícono** (sin `.lab` visible; el texto va únicamente en `aria-label`): cruz = `M18 6L6 18M6 6l12 12`; salto = `M5 4l10 8-10 8V4zM19 5v14`; corazón = `M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z`. Mismo trazo `1.8` y `viewBox 0 0 24 24` que `.act svg`; el corazón se rellena con `var(--accent)` en `:active`. CSS: `.sala-act { min-width: 64px; min-height: 64px; border-radius: 999px; border: 1px solid var(--line-2) } .sala-act svg { width: 30px; height: 30px } .sala-act:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }`. Mientras hay un `sala_votar` en vuelo los tres llevan el atributo real **`disabled`** (es lo único que impide pulsaciones nuevas; `aria-disabled` puede acompañarlo pero no lo reemplaza) y `.sala-act:disabled { opacity: .5; cursor: default }`.
 **Contador:** `temporizador-card` con `setInterval` de 250 ms y **persistencia por sala/ronda/pos** (Tarea 3.1): al montar la card se llama `arrancar(localStorage, clave, Date.now())`, que reusa el comienzo guardado si existe. **`cerrar` se llama únicamente cuando el servidor confirmó el avance**: cuando `sala_votar` devolvió `ok: true` (incluido `idempotente`), o devolvió `motivo: "ya_votado"` / `"fuera_de_orden"` con `siguiente > pos`, o cuando un `sala_estado` posterior trae `mi_siguiente_pos > pos`. Si la solicitud falla (red, 5xx, timeout) el comienzo persistido **se conserva**, aunque ya esté vencido: al recargar, `vencio` es verdadero y se reintenta el `pass` de inmediato en vez de regalar otros 10 s. Si al montar `vencio` ya es verdadero, se registra `pass` sin mostrar la card. Al montar con `mi_siguiente_pos` del estado se retoma desde ahí y se limpian las claves de posiciones anteriores a ésa. Tras el último voto: pantalla "Listo, esperando a los demás (k de N)". Al llegar `estado ≠ votando` → `Resultado*`.
 
-- [ ] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, **recargar a los 6 s deja 4 s (no vuelve a 10)**, recarga tras votar retoma en la siguiente con 10 s, voto tardío tras deadline muestra resultado. **Con la red cortada (DevTools → Offline):** al votar, los tres botones quedan con `disabled` real (un segundo toque no dispara nada), la solicitud falla, el comienzo persistido sigue ahí; recargar sin red no reinicia los 10 s y, si venció, intenta el `pass` en cuanto vuelve la red. Con un lector de pantalla (TalkBack/VoiceOver) los tres botones se anuncian "No", "Paso", "Sí".
+- [ ] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, **recargar a los 6 s deja 4 s (no vuelve a 10)**, recarga tras votar retoma en la siguiente con 10 s, voto tardío tras deadline muestra resultado. **Con la red cortada (DevTools → Offline):** al votar, los tres botones quedan con `disabled` real (un segundo toque no dispara nada), la solicitud falla, el comienzo persistido sigue ahí; recargar sin red no reinicia los 10 s y, si venció, intenta el `pass` en cuanto vuelve la red. Con un lector de pantalla (TalkBack/VoiceOver) los tres botones se anuncian "No", "Paso", "Sí". **Una card con `advertencia` null (la fixture "Sin pero") no muestra la sección "Pero"** —ni título ni caja vacía— y la siguiente con advertencia sí la muestra.
 - [ ] **Step 2:** Commit `feat(salas): votación con tres botones, contador local y reanudación`.
 
 ---

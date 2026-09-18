@@ -32,21 +32,31 @@ Prueba de humo en la base **local** cargada con `data/carga-ruleta-*.sql`
 (la carga versionada en `data/`, **no** la base de Producción, aunque los
 totales coinciden con MANTENIMIENTO §9 — ver abajo):
 
-| unión | cualquiera | corta | larga |
-|---|---|---|---|
-| n,d,m | 825 | 107 | 718 |
-| n | 271 | 36 | 235 |
-| n,d | 524 | 64 | 460 |
-| n,p | 528 | 76 | 452 |
-| n,d,m,p | 1036 | 144 | 892 |
-| d / m / p | 265 / 347 / 295 | 28 / 44 / 40 | 237 / 303 / 255 |
-| mb | 89 | 25 | 64 |
+**Cambio de requisito del 2026-09-18 (dueño):** el "Pero" (`advertencia`)
+pasa a ser **opcional**; `razon` sigue siendo obligatoria. La auditoría se
+actualizó (consultas 1, 3 y 5) y se volvió a correr en local:
 
-Pool local: **2448** filas `movie` = **2401** de `data/carga-ruleta-*.sql` +
-**47** películas ficticias (48 fixtures, una es `tv`). Con ambos textos:
-1828 = 1782 reales + 46 ficticias — el 1782 es exactamente el "con
-advertencia" de MANTENIMIENTO §9 (11/08), así que `data/` es la misma foto
-que Producción a esa fecha. Servibles para sala: 1600.
+| unión | cualquiera | corta | larga | sin_pero (admitidas) |
+|---|---|---|---|---|
+| n,d,m | 1005 | 131 | 874 | 180 |
+| n | 317 | 44 | 273 | 46 |
+| n,d | 638 | 79 | 559 | 114 |
+| n,p | 611 | 91 | 520 | 83 |
+| n,d,m,p | 1245 | 174 | 1071 | 209 |
+| d / m / p | 335 / 424 / 336 | 35 / 53 / 47 | 300 / 371 / 289 | 70 / 77 / 41 |
+| mb | 101 | 26 | 75 | 12 |
+
+(Con la regla anterior —ambos textos— `n,d,m` daba 825 / 107 / 718: el "pero"
+opcional abre ~22 % más de pool en esa unión.)
+
+Pool local: **2449** filas `movie` = **2401** de `data/carga-ruleta-*.sql` +
+**48** películas ficticias (49 fixtures, una es `tv`; la 48.ª es "Sin pero",
+servible desde el cambio de regla). Con `razon`: 2306; con `razon` y
+`advertencia`: 1828 = 1782 reales + 46 ficticias — el 1782 es exactamente el
+"con advertencia" de MANTENIMIENTO §9 (11/08), así que `data/` es la misma
+foto que Producción a esa fecha. Servibles para sala con la regla nueva:
+**1922** (antes 1600); la consulta 5 cuenta **478** títulos con razón y sin
+pero, que ahora se admiten, y 143 sin razón, que siguen afuera.
 
 **Corrección de un número publicado en esta sesión:** un conteo anterior dijo
 "2212 títulos en `data/`". Era otra magnitud: `count(*) where tmdb_id <
@@ -103,6 +113,10 @@ MANTENIMIENTO §5, a revisar contra la salida de Producción.
   `p_limit 999` → 40 filas (cap); `corta` con n,d,m → 6 (las 5 fixtures cortas
   **más la serie 900106**: `get_roulette_picks` no filtra `media_type`, lo que
   confirma que `sala_candidatos` tiene que hacerlo); MUBI → sólo 90000041.
+- Fixtures tras el cambio de regla: 41 "Ficticia" + "Sin pero" (90000042,
+  `advertencia` NULL, HBO Max) = **41 candidatas** con `n,d,m`; el control
+  negativo por texto pasa a ser "Sin razón" (90000104). Recargado y verificado:
+  2401 + 48 = 2449 películas.
 - `.env.sala-local` (ignorado) con las claves locales; `.env.sala-local.example`
   versionado.
 

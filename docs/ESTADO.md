@@ -19,7 +19,10 @@
   **Comprobado en local:** `--solo-datos` del generador del pool con 5 tests y
   control byte a byte contra el script anterior; entorno `supabase start`
   (config.toml sin migraciones del CLI, `db-local.mjs`, fixtures) verificado
-  con la anon key vía PostgREST. **Pendiente:** correr
+  con la anon key vía PostgREST. **Decisión del dueño (18/09):** el "Pero" (`advertencia`) es OPCIONAL en
+  las salas; `razon` sigue obligatoria; sin texto de reemplazo; la card no
+  muestra la sección cuando falta. Plan, auditoría y fixtures actualizados.
+  **Pendiente:** correr las consultas 1, 3 y 5 de
   `scripts/sala/auditoria-pool.sql` en Producción (sólo lectura) — es el go de
   la Etapa 1. **No autorizado todavía:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
