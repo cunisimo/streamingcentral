@@ -22,7 +22,7 @@ import { crearOpsEnMemoria, type Entrada } from "./turno-memoria.ts";
 import { crearVueloHome } from "./home-vuelo.ts";
 import { withMetricas, anotar, type MetricasRequest } from "./metricas.ts";
 
-type Payload = { hero: string[]; degradado: boolean; de: string };
+type Payload = { hero: string[]; degradado: boolean; de: string; reintentarEnMs?: number };
 const K = { fresca: "home:v6:1:n:", ub: "home:ub:v6:n:", gen: "home:gen:v6:n:", degradado: "home:degradado:v6:1:n:", turno: "home:turno:v6:1:n:" };
 const tick = () => new Promise<void>((r) => setImmediate(r));
 
@@ -80,7 +80,7 @@ function mundo(opts: { constantes?: Partial<Constantes>; inicio?: number } = {})
       claves: K, propietario: nombre, dia: "2026-09-13", ttl: { fresca: 21600, ub: 129600 },
       leer, turno: crearTurno(ops),
       producir: async () => { if (extra.tarda) await reloj.dormir(extra.tarda); return { valor: payload, fallo: !!extra.fallo }; },
-      vacio: (motivo) => ({ hero: [], degradado: true, de: `vacio:${motivo}` }),
+      vacio: (motivo, extra) => ({ hero: [], degradado: true, de: `vacio:${motivo}`, ...(extra ?? {}) }),
       ahora: reloj.ahora, dormir: reloj.dormir, constantes, log: (l) => log.push(l),
       ...extra,
     };
@@ -483,8 +483,8 @@ test("CONTROL: la señal de un SEGUIDOR abortada no cancela el vuelo: el líder 
 test("🔴 la desigualdad del presupuesto se cumple con las constantes del módulo", () => {
   const c = CONSTANTES;
   assert.equal(c.PRESUPUESTO_REQUEST_MS, 60_000 - c.MARGEN_MS);
-  assert.ok(c.TOPE_ESPERA_MS + c.COMPOSICION_MAX_MS + c.PUBLICACION_MAX_MS <= c.PRESUPUESTO_REQUEST_MS,
-    `espera ${c.TOPE_ESPERA_MS} + composición ${c.COMPOSICION_MAX_MS} + publicación ${c.PUBLICACION_MAX_MS} > presupuesto ${c.PRESUPUESTO_REQUEST_MS}`);
+  assert.ok(c.TOPE_ESPERA_MS + c.COMPOSICION_MAX_MS + c.RESERVA_PUBLICACION_MS <= c.PRESUPUESTO_REQUEST_MS,
+    `espera ${c.TOPE_ESPERA_MS} + composición ${c.COMPOSICION_MAX_MS} + publicación ${c.RESERVA_PUBLICACION_MS} > presupuesto ${c.PRESUPUESTO_REQUEST_MS}`);
   assert.ok(c.RENOVACION_MS * 3 <= c.TURNO_MS, "dos renovaciones perdidas seguidas tienen que dejar margen");
   assert.equal(c.ENFRIAMIENTO_MS, c.TURNO_MS, "valor inicial del enfriamiento: el del turno (a medir)");
 });
@@ -824,4 +824,343 @@ test("3.b — sin programarEnFondo en las deps (o kill switch en el adaptador): 
   const r = await w.reloj.correr(w.solicitud(w.deps("A", { tarda: 5000 })));
   assert.equal(r.valor.de, "A");
   assert.equal(r.m.home.origen, "propia");
+});
+
+// ============================================================================
+// 3.c.1 (#19): la PAUSA compartida ante 429 en la secuencia del Home (informe
+// §40.5, §42, §43, §46-§52). El backend en memoria ejecuta TOMAR (pausa dentro
+// de la adquisición); `pausa` es la vista local del proceso (lib/tmdb-pausa.ts),
+// acá un doble con `vigente()`. Escrito ANTES de la implementación.
+// ============================================================================
+import { CLAVES_PAUSA } from "./pausa-lua.ts";
+import { plazosDelFondo, crearLimpieza } from "./home-servir.ts";
+
+const PAUSA_CFG = { pausa: { clave: CLAVES_PAUSA.pausa } };
+/** Un doble de lib/tmdb-pausa.ts: la pausa LOCAL del proceso, con reloj virtual. */
+function pausaDePrueba(w: ReturnType<typeof mundo>, o: { localHasta?: number | null } = {}) {
+  let localHasta = o.localHasta ?? null;
+  const cubos: string[] = [];
+  return {
+    vigente: () => (localHasta !== null && localHasta > w.reloj.ahora() ? localHasta - w.reloj.ahora() : 0),
+    anotarCubo: (c: "pausaNoLeida" | "pausadosUB" | "pausados503") => { cubos.push(c); },
+    cubos,
+    fijar: (hasta: number | null) => { localHasta = hasta; },
+  };
+}
+/** Escribe la pausa COMPARTIDA en el backend (como lo haría PAUSAR desde otra instancia). */
+const pausaCompartida = (w: ReturnType<typeof mundo>, ms: number) => { w.store.set(CLAVES_PAUSA.pausa, { v: "otra:1", exp: w.reloj.ahora() + ms }); };
+const dormidas = (w: ReturnType<typeof mundo>) => w.log.filter((l) => l.startsWith("[home] duerme")).length;
+/** Deps de una solicitud con la pausa cableada; `jitter` fijo para que las cuentas sean exactas. */
+function depsPausa(w: ReturnType<typeof mundo>, nombre: string, extra: Parameters<typeof w.deps>[1] = {}, p = pausaDePrueba(w)) {
+  return { d: w.deps(nombre, { turno: crearTurno(w.ops, PAUSA_CFG), pausa: p, jitter: () => 100, ...extra }), p };
+}
+
+test("🔴 3.c.1 — pausado CON UB: el UB en el acto (origen ultimo-bueno-pausa), 0 composiciones, 0 fondo, turno libre, cubo pausadosUB", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  pausaCompartida(w, 4000);
+  const f = fondoDePrueba(w);
+  const { d, p } = depsPausa(w, "A", { programarEnFondo: f.programarEnFondo });
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "ub");
+  assert.equal(r.m.home.origen, "ultimo-bueno-pausa"); assert.equal(r.m.home.turno, "pausado");
+  assert.equal(w.cuantasComposiciones(), 0); assert.equal(f.cuantasLlamadas(), 0);
+  assert.equal(w.store.has(K.turno), false);
+  assert.deepEqual(p.cubos, ["pausadosUB"]);
+  assert.equal(r.m.home.pausaMs, 4000);
+});
+
+test("🔴 3.c.1 — pausado SIN UB, la pausa termina dentro de la espera (2,3 s): UN sueño de restante + jitter, 2 adquisiciones, 0 lecturas durante el sueño, compone", async () => {
+  const w = mundo();
+  pausaCompartida(w, 2300);
+  const { d } = depsPausa(w, "A");
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "A"); assert.equal(r.m.home.origen, "propia");
+  assert.equal(dormidas(w), 1, "un solo sueño"); assert.match(w.log.find((l) => l.startsWith("[home] duerme"))!, /2400ms/);
+  assert.equal(r.m.home.pausaEsperaMs, 2400);
+  assert.deepEqual(w.lecturas, [[K.fresca], [K.ub, K.degradado], [K.fresca]], "ninguna lectura durante el sueño");
+  assert.equal(w.cuantasComposiciones(), 1);
+});
+
+test("🔴 3.c.1 — pausado SIN UB y la pausa sigue (8 s > ESPERA 5 s): 503 `pausa` en el acto con reintentarEnMs = 8000, sin dormir, 1 adquisición, cubo pausados503; nada escrito", async () => {
+  const w = mundo();
+  pausaCompartida(w, 8000);
+  const { d, p } = depsPausa(w, "A");
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "vacio:pausa"); assert.equal(r.valor.reintentarEnMs, 8000);
+  assert.equal(r.m.home.origen, "vacio-pausa"); assert.equal(r.m.home.cache, "vacio");
+  assert.equal(dormidas(w), 0); assert.equal(w.cuantasComposiciones(), 0);
+  assert.deepEqual(p.cubos, ["pausados503"]);
+  assert.equal(w.store.has(K.fresca), false); assert.equal(w.store.has(K.ub), false);
+});
+
+test("🔴 3.c.1 — pausa EXTENDIDA durante el sueño (2 s → 4 s más): tras dormir, la readquisición la ve y responde 503 con el restante NUEVO; nunca un segundo sueño", async () => {
+  const w = mundo();
+  pausaCompartida(w, 2000);
+  const { d } = depsPausa(w, "A", { producir: async () => { throw new Error("no debería componer"); } });
+  const extender = w.reloj.dormir(2050).then(() => pausaCompartida(w, 4000));
+  const r = await w.reloj.correr(Promise.all([w.solicitud(d), extender]).then(([s]) => s));
+  assert.equal(r.valor.de, "vacio:pausa");
+  assert.ok(r.valor.reintentarEnMs! > 3900 && r.valor.reintentarEnMs! <= 4000, `reintentarEnMs ${r.valor.reintentarEnMs}`);
+  assert.equal(dormidas(w), 1);
+});
+
+test("🔴 3.c.1 — presupuesto con el PLAZO ABSOLUTO (§46): lectura previa de 30 s + pausa de 2 s → 50 − 30 − 2,25 − 2 = 15,75 < 16 → 503 sin dormir; con 29 s cabe y compone", async () => {
+  for (const [consumido, esperado] of [[30_000, "vacio:presupuesto-insuficiente"], [29_000, "A"]] as const) {
+    const w = mundo();
+    const inicio = w.reloj.ahora();
+    w.reloj.avanzar(consumido);                                                  // la lectura previa, ANTES de servirConTurno
+    pausaCompartida(w, 2000);
+    const { d } = depsPausa(w, "A", { plazo: inicio + CONSTANTES.PRESUPUESTO_REQUEST_MS, inicioRuta: inicio });
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, esperado);
+    assert.equal(dormidas(w), esperado === "A" ? 1 : 0);
+  }
+});
+
+test("🔴 3.c.1 — vencimiento del presupuesto interno DURANTE el sueño: el centinela 4d `vacio-cancelada` de hoy, sin readquirir ni componer ni lanzar", async () => {
+  const w = mundo();
+  pausaCompartida(w, 4000);
+  const ctl = new AbortController();
+  const { d } = depsPausa(w, "A", { senal: ctl.signal });
+  const cortar = w.reloj.dormir(1500).then(() => ctl.abort());
+  const r = await w.reloj.correr(Promise.all([w.solicitud(d), cortar]).then(([s]) => s));
+  assert.equal(r.valor.de, "vacio:cancelada"); assert.equal(r.m.home.origen, "vacio-cancelada");
+  assert.equal(w.cuantasComposiciones(), 0);
+  assert.equal(r.m.home.turno, "pausado", "una sola adquisición: no readquirió");
+});
+
+test("🔴 3.c.1 — readquisición INDETERMINADA (Redis no responde en T_ADQ_MAX = 2 s): 503 con reintentarEnMs = max(5 s, restante − dormido), sin componer", async () => {
+  const w = mundo();
+  pausaCompartida(w, 3000);
+  let n = 0;
+  const ops: OpsTurno = { ...w.ops, evalTomar: (k, a) => { n += 1; return n === 2 ? new Promise(() => {}) : w.ops.evalTomar(k, a); } };
+  const { d } = depsPausa(w, "A", { turno: crearTurno(ops, PAUSA_CFG) });
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "vacio:pausa-indeterminada"); assert.equal(r.valor.reintentarEnMs, 5000);
+  assert.equal(w.cuantasComposiciones(), 0);
+});
+
+test("🔴 3.c.1 — precedencia (§43.3): pausa LOCAL vigente + Redis caído → SIN UB no se compone contra TMDB (503 con el restante local); CON UB el UB en el acto; sin pausa local + caído → el degradado de hoy", async () => {
+  const caido = { evalTomar: async () => { throw new Error("caido"); }, get: async () => { throw new Error("caido"); } };
+  // sin UB, con pausa local de 8 s (no cabe en la espera) → 503 pausa 8000, sin componer
+  { const w = mundo(); const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 8000 });
+    const { d } = depsPausa(w, "A", { turno: crearTurno({ ...w.ops, ...caido }, PAUSA_CFG), producir: async () => { throw new Error("no compone"); } }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, "vacio:pausa"); assert.equal(r.valor.reintentarEnMs, 8000); assert.equal(r.m.home.turno, "pausado"); }
+  // sin UB, con pausa local de 2 s: duerme 2,1 s; al despertar la local venció y Redis sigue caído → el degradado de hoy (compone sin turno, no publica) — NUNCA compuso con la pausa vigente
+  { const w = mundo(); const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+    const { d } = depsPausa(w, "A", { turno: crearTurno({ ...w.ops, ...caido }, PAUSA_CFG), producir: async () => { assert.equal(p.vigente(), 0, "compuso con la pausa local vigente"); return { valor: { hero: [], degradado: false, de: "A" }, fallo: false }; } }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, "A"); assert.equal(r.m.home.origen, "sin-redis"); assert.equal(dormidas(w), 1); assert.equal(w.store.has(K.fresca), false); }
+  // con UB
+  { const w = mundo(); w.store.set(K.ub, { v: UB, exp: 0 }); const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+    const { d } = depsPausa(w, "A", { turno: crearTurno({ ...w.ops, ...caido }, PAUSA_CFG) }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, "ub"); assert.equal(r.m.home.origen, "ultimo-bueno-pausa"); assert.equal(w.cuantasComposiciones(), 0); }
+  // sin pausa local: degradado de hoy (compone sin turno, no publica)
+  { const w = mundo();
+    const { d } = depsPausa(w, "A", { turno: crearTurno({ ...w.ops, ...caido }, PAUSA_CFG) });
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, "A"); assert.equal(r.m.home.origen, "sin-redis"); assert.equal(w.store.has(K.fresca), false); }
+});
+
+test("🔴 3.c.1 — cuatro solicitudes sin UB esperando la misma pausa: UNA composición (SET NX); las otras caen en la espera compartida y reciben la fresca", async () => {
+  const w = mundo();
+  pausaCompartida(w, 1000);
+  const rs = await w.reloj.correr(Promise.all([0, 50, 100, 150].map((j, i) => w.solicitud(depsPausa(w, `S${i}`, { jitter: () => j, tarda: 3000 }).d))));
+  assert.equal(w.cuantasComposiciones(), 1);
+  assert.equal(rs.filter((r) => r.m.home.origen === "propia").length, 1);
+  assert.ok(rs.every((r) => r.valor.de === "S0"), rs.map((r) => `${r.valor.de}/${r.m.home.origen}`).join(" "));
+});
+
+test("🔴 3.c.1 — el rescate de la espera compartida (Etapa 2) también usa el plazo absoluto: lectura previa 30 s + espera 5 s → no rescata (vacío espera-agotada), aunque el reloj local diga que sobran 45 s", async () => {
+  const w = mundo({ constantes: { TOPE_ESPERA_MS: 45_000 } });
+  const inicio = w.reloj.ahora();
+  w.reloj.avanzar(30_000);
+  await w.ops.setNx(K.turno, "muerto", 5000);
+  const { d } = depsPausa(w, "B", { plazo: inicio + CONSTANTES.PRESUPUESTO_REQUEST_MS, inicioRuta: inicio });
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "vacio:espera-agotada"); assert.equal(w.cuantasComposiciones(), 0);
+});
+
+test("🔴 3.c.1 — la pausa aparece DURANTE la composición (429 propio): LIBERAR (no ENFRIAR ni PUBLICAR); con UB → UB `ultimo-bueno-pausa`; sin UB → 503 pausa; nada escrito", async () => {
+  for (const conUb of [true, false]) {
+    const w = mundo();
+    if (conUb) w.store.set(K.ub, { v: UB, exp: 0 });
+    const p = pausaDePrueba(w);
+    const { d } = depsPausa(w, "A", { producir: async () => { await w.reloj.dormir(1000); p.fijar(w.reloj.ahora() + 3000); return { valor: { hero: [], degradado: true, de: "A" }, fallo: true }; } }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, conUb ? "ub" : "vacio:pausa");
+    assert.equal(r.m.home.enfriado, false); assert.equal(r.m.home.publicacion, null);
+    assert.equal(w.store.has(K.turno), false, "liberado"); assert.equal(w.store.has(K.degradado), false, "no enfriado"); assert.equal(w.store.has(K.fresca), false);
+    assert.equal(r.m.home.liberacion, "liberado");
+  }
+});
+
+// ----------------------------------------------------------------- el fondo con dos límites (§47-§52)
+/** El adaptador de fondo de prueba con los PLAZOS reales: min(inicioFondo + 50 s, inicioRuta + 55 s), señal que vence ahí. */
+function fondoConPlazos(w: ReturnType<typeof mundo>, inicioRuta: number) {
+  const tareas: Promise<{ res: void; metricas: MetricasRequest }>[] = [];
+  let plazos: ReturnType<typeof plazosDelFondo> | null = null;
+  const programarEnFondo = (iniciar: (senal?: AbortSignal, plazoEfectivo?: number) => Promise<void>) => {
+    const inicioFondo = w.reloj.ahora();
+    plazos = plazosDelFondo(inicioRuta, inicioFondo, CONSTANTES);
+    const ctl = new AbortController();
+    void w.reloj.dormir(Math.max(0, plazos.plazoEfectivo - inicioFondo)).then(() => ctl.abort());
+    tareas.push(withMetricas(() => iniciar(ctl.signal, plazos!.plazoEfectivo)));
+    return true;
+  };
+  return { programarEnFondo, tareas, fondo: () => w.reloj.correr(tareas[0]), plazos: () => plazos! };
+}
+const opsRegistrando = (w: ReturnType<typeof mundo>, registro: { op: string; t: number }[], o: { liberarFalla?: boolean } = {}): OpsTurno => ({
+  ...w.ops,
+  evalRenovar: (c, p, px) => { registro.push({ op: "RENOVAR", t: w.reloj.ahora() }); return w.ops.evalRenovar(c, p, px); },
+  evalPublicar: (c, a) => { registro.push({ op: "PUBLICAR", t: w.reloj.ahora() }); return w.ops.evalPublicar(c, a); },
+  evalEnfriar: (c, a) => { registro.push({ op: "ENFRIAR", t: w.reloj.ahora() }); return w.ops.evalEnfriar(c, a); },
+  evalLiberar: (c, p) => { registro.push({ op: "LIBERAR", t: w.reloj.ahora() }); if (o.liberarFalla) throw new Error("redis caido"); return w.ops.evalLiberar(c, p); },
+});
+const enFondo = (w: ReturnType<typeof mundo>, o: { inicioRuta: number; registro: { op: string; t: number }[]; f: ReturnType<typeof fondoConPlazos>; liberarFalla?: boolean; producir?: () => Promise<{ valor: Payload; fallo: boolean }> }) =>
+  depsPausa(w, "A", { turno: crearTurno(opsRegistrando(w, o.registro, { liberarFalla: o.liberarFalla }), PAUSA_CFG), plazo: o.inicioRuta + CONSTANTES.PRESUPUESTO_REQUEST_MS, inicioRuta: o.inicioRuta, programarEnFondo: o.f.programarEnFondo, ...(o.producir ? { producir: o.producir } : {}) }).d;
+
+test("🔴 3.c.1 — plazosDelFondo: a 0,4 s limita el interno (50 s); a 15 s el externo (40 s, no 50); las constantes son las del contrato", () => {
+  const c = CONSTANTES;
+  assert.equal(c.MAX_DURATION_MS, 60_000); assert.equal(c.MARGEN_CIERRE_MS, 5_000); assert.equal(c.RESERVA_PUBLICACION_MS, 1_000);
+  assert.equal((c as unknown as Record<string, unknown>).PUBLICACION_MAX_MS, undefined, "renombrada: es una RESERVA, no un máximo (§48.2)");
+  const a = plazosDelFondo(100_000, 100_400, c); assert.equal(a.limitadoPor, "interno"); assert.equal(a.plazoEfectivo - 100_400, 50_000);
+  const b = plazosDelFondo(100_000, 115_000, c); assert.equal(b.limitadoPor, "externo"); assert.equal(b.plazoEfectivo - 115_000, 40_000);
+});
+
+test("🔴 3.c.1 — fondo iniciado a los 40 s de la ruta (quedan 15 s < 16 + 1): UB ya servido, CERO composición, UN LIBERAR, `fondo no-iniciado-presupuesto`", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const inicioRuta = w.reloj.ahora();
+  w.reloj.avanzar(40_000);
+  const registro: { op: string; t: number }[] = [];
+  const f = fondoConPlazos(w, inicioRuta);
+  const r = await w.solicitud(enFondo(w, { inicioRuta, registro, f }));
+  assert.equal(r.valor.de, "ub"); assert.equal(r.m.home.fondo, "programado");
+  const { metricas: mf } = await f.fondo();
+  assert.equal(mf.home.fondo, "no-iniciado-presupuesto"); assert.equal(w.cuantasComposiciones(), 0);
+  assert.deepEqual(registro.map((x) => x.op), ["LIBERAR"]); assert.equal(w.store.has(K.turno), false);
+  assert.equal(mf.home.publicacion, null);
+});
+
+test("🔴 3.c.1 — composición de fondo que CRUZA el plazo efectivo: después del plazo cero RENOVAR/ENFRIAR/PUBLICAR; un solo LIBERAR, dentro del margen; nada publicado; UB intacto", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const ubAntes = JSON.stringify(w.store.get(K.ub));
+  const inicioRuta = w.reloj.ahora();
+  w.reloj.avanzar(20_000);                                                      // fondo a +20 s → plazo efectivo +55 s (externo)
+  const registro: { op: string; t: number }[] = [];
+  const f = fondoConPlazos(w, inicioRuta);
+  await w.solicitud(enFondo(w, { inicioRuta, registro, f, producir: async () => { await w.reloj.dormir(36_000); return { valor: { hero: ["A"], degradado: true, de: "A" }, fallo: true }; } }));   // 36 s: devuelve a +56 s (tras el plazo de +55, dentro del margen), degradado
+  const { metricas: mf } = await f.fondo();
+  const plazo = f.plazos().plazoEfectivo;
+  assert.equal(plazo - inicioRuta, 55_000);
+  const productivas = registro.filter((x) => x.op !== "LIBERAR");
+  assert.ok(productivas.every((x) => x.t < plazo), `productiva en o después del plazo: ${JSON.stringify(registro.map((x) => [x.op, x.t - inicioRuta]))}`);
+  assert.ok(productivas.some((x) => x.op === "RENOVAR"), "hubo renovaciones antes del plazo");
+  const liberaciones = registro.filter((x) => x.op === "LIBERAR");
+  assert.equal(liberaciones.length, 1); assert.ok(liberaciones[0].t < inicioRuta + CONSTANTES.MAX_DURATION_MS);
+  assert.equal(mf.home.cancelada, true); assert.equal(mf.home.enfriado, false); assert.equal(mf.home.publicacion, null);
+  assert.equal(JSON.stringify(w.store.get(K.ub)), ubAntes); assert.equal(w.store.has(K.fresca), false); assert.equal(w.store.has(K.degradado), false);
+  assert.equal(mf.home.liberacion, "liberado");
+});
+
+test("🔴 3.c.1 — sin margen (la composición devuelve en o después de inicioRuta + 60 s): CERO LIBERAR, `liberacion omitido-sin-margen`; el turno se recupera por TTL", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const inicioRuta = w.reloj.ahora();
+  w.reloj.avanzar(20_000);
+  const registro: { op: string; t: number }[] = [];
+  const f = fondoConPlazos(w, inicioRuta);
+  // La señal vence a +55 s pero el productor sólo "detecta" al devolver, a +60 s exacto: sin margen (comparación estricta).
+  await w.solicitud(enFondo(w, { inicioRuta, registro, f, producir: async () => { await w.reloj.dormir(40_000); return { valor: { hero: ["A"], degradado: false, de: "A" }, fallo: false }; } }));
+  const { metricas: mf } = await f.fondo();
+  assert.equal(w.reloj.ahora(), inicioRuta + 60_000);
+  assert.deepEqual(registro.filter((x) => x.op === "LIBERAR"), []);
+  assert.equal(mf.home.liberacion, "omitido-sin-margen"); assert.equal(mf.home.publicacion, null);
+  assert.ok(w.store.has(K.turno), "el turno sigue del proceso: vence por TTL");
+});
+
+test("🔴 3.c.1 — LIBERAR que rechaza (Redis caído al liberar): un solo intento, sin excepción, `liberacion indeterminado`, la tarea del fondo resuelve, UB intacto", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const inicioRuta = w.reloj.ahora();
+  w.reloj.avanzar(20_000);
+  const registro: { op: string; t: number }[] = [];
+  const f = fondoConPlazos(w, inicioRuta);
+  await w.solicitud(enFondo(w, { inicioRuta, registro, f, liberarFalla: true, producir: async () => { await w.reloj.dormir(36_000); return { valor: { hero: ["A"], degradado: false, de: "A" }, fallo: false }; } }));
+  const { metricas: mf } = await f.fondo();
+  assert.equal(registro.filter((x) => x.op === "LIBERAR").length, 1);
+  assert.equal(mf.home.liberacion, "indeterminado"); assert.equal(mf.home.publicacion, null);
+  assert.deepEqual(w.store.get(K.ub)?.v, UB);
+});
+
+test("🔴 3.c.1 — la limpieza es UNA función con guardia por intentos: el productor que rechaza en el fondo pasa por el catch de `iniciar` y por `componer` → un solo LIBERAR", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const inicioRuta = w.reloj.ahora();
+  const registro: { op: string; t: number }[] = [];
+  const f = fondoConPlazos(w, inicioRuta);
+  await w.solicitud(enFondo(w, { inicioRuta, registro, f, producir: async () => { await w.reloj.dormir(1000); throw new Error("productor roto"); } }));
+  await f.fondo();
+  assert.equal(registro.filter((x) => x.op === "LIBERAR").length, 1);
+});
+
+test("🔴 3.c.1 — PUBLICAR no se inicia si no queda la reserva (1 s) antes del plazo: composición que termina a plazo − 0,5 s → sin PUBLICAR, LIBERAR, nada escrito", async () => {
+  const w = mundo();
+  w.store.set(K.ub, { v: UB, exp: 0 });
+  const inicioRuta = w.reloj.ahora();
+  w.reloj.avanzar(20_000);
+  const registro: { op: string; t: number }[] = [];
+  const f = fondoConPlazos(w, inicioRuta);
+  await w.solicitud(enFondo(w, { inicioRuta, registro, f, producir: async () => { await w.reloj.dormir(34_500); return { valor: { hero: ["A"], degradado: false, de: "A" }, fallo: false }; } }));
+  const { metricas: mf } = await f.fondo();
+  assert.deepEqual(registro.filter((x) => x.op === "PUBLICAR"), []); assert.equal(registro.filter((x) => x.op === "LIBERAR").length, 1);
+  assert.equal(mf.home.publicacion, null); assert.equal(w.store.has(K.fresca), false);
+});
+
+test("🔴 3.c.1 — la última renovación se anota con sus DOS instantes (envío y respuesta): el TTL del turno vence 15 s después de la aplicación en Redis, que cae entre ambos", async () => {
+  const w = mundo();
+  const inicioRuta = w.reloj.ahora();
+  const { d } = depsPausa(w, "A", { plazo: inicioRuta + CONSTANTES.PRESUPUESTO_REQUEST_MS, inicioRuta, tarda: 12_000 });
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.m.home.renovaciones, 2);
+  assert.ok(r.m.home.renovacionUltima, "sin instantes de la última renovación");
+  assert.equal(r.m.home.renovacionUltima!.envioMs, 10_000);
+  assert.ok(r.m.home.renovacionUltima!.respuestaMs >= r.m.home.renovacionUltima!.envioMs);
+});
+
+test("3.c.1 — kill switch (sin `pausa` en las deps y turno sin pausa): exactamente el camino de siempre; la pausa compartida escrita en Redis se IGNORA", async () => {
+  const w = mundo();
+  pausaCompartida(w, 8000);
+  const r = await w.reloj.correr(w.solicitud(w.deps("A")));
+  assert.equal(r.valor.de, "A"); assert.equal(r.m.home.origen, "propia");
+});
+
+test("🔴 3.c.1 — sin señal cableada (deps.senal ausente), una composición en línea que devuelve DESPUÉS del plazo no publica ni enfría: LIBERAR y vacío `cancelada` (el plazo absoluto decide, no sólo la señal)", async () => {
+  const w = mundo();
+  const inicioRuta = w.reloj.ahora();
+  const registro: { op: string; t: number }[] = [];
+  const { d } = depsPausa(w, "A", { turno: crearTurno(opsRegistrando(w, registro), PAUSA_CFG), plazo: inicioRuta + CONSTANTES.PRESUPUESTO_REQUEST_MS, inicioRuta, senal: undefined,
+    producir: async () => { await w.reloj.dormir(51_000); return { valor: { hero: ["A"], degradado: false, de: "A" }, fallo: false }; } });
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "vacio:cancelada"); assert.equal(r.m.home.cancelada, true);
+  assert.deepEqual(registro.filter((x) => x.op === "PUBLICAR" || x.op === "ENFRIAR"), []);
+  assert.equal(registro.filter((x) => x.op === "LIBERAR").length, 1);
+  assert.ok(registro.filter((x) => x.op === "RENOVAR").every((x) => x.t < inicioRuta + CONSTANTES.PRESUPUESTO_REQUEST_MS), "ninguna renovación en el plazo ni después");
+});
+
+test("🔴 3.c.1 — crearLimpieza (el mecanismo real de servirConTurno): dos llamadas → UN liberar; en o después de inicioRuta + maxDuration → omitido-sin-margen sin llamar; un liberar que rechaza → indeterminado sin lanzar", async () => {
+  let llamadas = 0;
+  const mk = (ahora: () => number, liberar = async () => { llamadas += 1; return "liberado" as const; }) => crearLimpieza({ ahora, inicioRuta: 100_000, maxDurationMs: 60_000, liberar });
+  llamadas = 0;
+  const l1 = mk(() => 150_000);
+  assert.equal(await l1(), "liberado"); assert.equal(await l1(), "omitido-ya-intentado"); assert.equal(llamadas, 1);
+  for (const [t, esperado] of [[159_999, "liberado"], [160_000, "omitido-sin-margen"], [160_001, "omitido-sin-margen"]] as const) {
+    llamadas = 0; assert.equal(await mk(() => t)(), esperado, `ahora = límite ${t - 160_000}`); assert.equal(llamadas, esperado === "liberado" ? 1 : 0);
+  }
+  assert.equal(await mk(() => 150_000, async () => { throw new Error("redis"); })(), "indeterminado");
 });
