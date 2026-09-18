@@ -29,8 +29,10 @@ drop function if exists sala_desempatar(uuid);
 drop function if exists sala_votar(uuid, text, uuid, int, text);
 drop function if exists sala_estado(uuid, text);
 drop function if exists sala_reclamar(uuid);
-drop function if exists sala_unirse(uuid, text, text[]);
-drop function if exists sala_crear(text, text[]);
+drop function if exists sala_unirse(uuid, text, text[], uuid);
+drop function if exists sala_unirse(uuid, text, text[]);     -- firma previa, sólo en bases locales
+drop function if exists sala_crear(text, text[], uuid);
+drop function if exists sala_crear(text, text[]);            -- firma previa, sólo en bases locales
 drop function if exists sala_aplicar_vencimientos(uuid);
 drop function if exists sala_computar(uuid);
 drop function if exists sala_limite_seg(int);

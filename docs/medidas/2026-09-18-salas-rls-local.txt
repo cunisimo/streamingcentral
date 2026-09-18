@@ -27,6 +27,12 @@ Base: http://127.0.0.1:54321
 ✔ 26. 'Otra tanda' iniciada a segundos del vencimiento renueva expires_at y el barrido no la toca
 ✔ 27. una sala en `preparando` nunca es eliminada por el barrido; `sala_cerrar` conserva 5 min
 ✔ 28. preparación desde el lobby abortada con los 15 min ya vencidos: el lobby se renueva 5 min y se puede reintentar
+✔ 29. crear: la respuesta se pierde y se repite el MISMO intento → misma sala, un solo host, token utilizable
+✔ 29b. no existe ninguna sobrecarga sin p_intento (una firma vieja saltearía la idempotencia)
+✔ 30. unirse anónimo: respuesta perdida y repetición del MISMO intento → un solo participante
+✔ 31. dos reintentos CONCURRENTES del mismo intento → nunca dos participantes ni dos salas
+✔ 32. un intento DIFERENTE sigue respetando la regla de una sola sala activa
+✔ 33. una sala vencida por reloj pero no barrida no bloquea ni da un error crudo: se vence y se crea la nueva
 ✔ 17. el barrido elimina la sala completa (seis tablas) 5 min después del estado terminal
 
-Todo verde (28 pruebas)
+Todo verde (34 pruebas)

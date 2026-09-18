@@ -39,6 +39,9 @@ const debeFallar = async (p, patron) => {
 const rpc = (c, fn, args) => c.rpc(fn, args).then(({ data, error }) => { if (error) throw new Error(`${fn}: ${error.message} [${error.code}]`); return data; });
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 const enMs = (iso) => new Date(iso).getTime();
+// El identificador de intento que el cliente genera y persiste ANTES de la
+// primera solicitud; repetirlo devuelve la misma sala / participación.
+const intento = () => crypto.randomUUID();
 
 async function usuario(prefijo) {
   const email = `${prefijo}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@sala.test`;
@@ -56,8 +59,8 @@ const card = (c, pos) => ({ pos, tmdb_id: c.tmdb_id, titulo: "T" + c.tmdb_id, an
 
 /** Sala de 2 (host + B) ya en `preparando`, con candidatas y cards listas para publicar. */
 async function salaPreparando(jwtHost, hostId, size = 5, duracion = "cualquiera") {
-  const r = await rpc(como(jwtHost), "sala_crear", { p_nombre: "H", p_platforms: ["n", "d", "m"] });
-  const tB = (await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"] })).token;
+  const r = await rpc(como(jwtHost), "sala_crear", { p_nombre: "H", p_platforms: ["n", "d", "m"], p_intento: intento() });
+  const tB = (await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"], p_intento: intento() })).token;
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: r.room_id, p_host: hostId, p_size: size, p_duracion: duracion });
   const cand = await rpc(admin, "sala_candidatos", { p_providers: PLATS, p_duracion: duracion, p_excluir: [], p_seed: "s", p_limit: 80 });
   const cards = cand.slice(0, size).map(card);
@@ -89,32 +92,32 @@ await prueba("1. lectura y escritura directa rechazadas con anon y con JWT", asy
 });
 
 await prueba("2. crear sala exige sesión, valida plataformas y devuelve un token de 43 caracteres", async () => {
-  await debeFallar(anon().rpc("sala_crear", { p_nombre: "X", p_platforms: ["n"] }), /permission denied|42501/); // sin grant a anon: ni llega a la función
-  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Facu", p_platforms: ["n", "zz", "d"] }), /sala_plataforma_desconocida/); // no se limpia en silencio
-  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Facu", p_platforms: [] }), /sala_sin_plataformas/);
-  const r = await rpc(como(host.jwt), "sala_crear", { p_nombre: "  Facu  ", p_platforms: ["n", "n", "d"] });
+  await debeFallar(anon().rpc("sala_crear", { p_nombre: "X", p_platforms: ["n"], p_intento: intento() }), /permission denied|42501/); // sin grant a anon: ni llega a la función
+  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Facu", p_platforms: ["n", "zz", "d"], p_intento: intento() }), /sala_plataforma_desconocida/); // no se limpia en silencio
+  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Facu", p_platforms: [], p_intento: intento() }), /sala_sin_plataformas/);
+  const r = await rpc(como(host.jwt), "sala_crear", { p_nombre: "  Facu  ", p_platforms: ["n", "n", "d"], p_intento: intento() });
   sala = r.room_id; tokHost = r.token;
   assert.equal(tokHost.length, 43);
 });
 
 await prueba("3. una sola sala activa por organizador", async () => {
-  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Otra", p_platforms: ["n"] }), /sala_ya_tiene_activa/);
+  await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Otra", p_platforms: ["n"], p_intento: intento() }), /sala_ya_tiene_activa/);
 });
 
 await prueba("4. plataformas deduplicadas y ordenadas; nombre normalizado; desconocidas y vacías rechazadas", async () => {
   const e = await estado(sala, tokHost);
   assert.deepEqual(e.soy.platforms, ["d", "n"]); assert.equal(e.soy.nombre, "Facu");
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["zz"] }), /sala_plataforma_desconocida/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["n", "zz"] }), /sala_plataforma_desconocida/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: [] }), /sala_sin_plataformas/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "x".repeat(25), p_platforms: ["n"] }), /sala_nombre_invalido/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "  \t ", p_platforms: ["n"] }), /sala_nombre_invalido/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["zz"], p_intento: intento() }), /sala_plataforma_desconocida/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["n", "zz"], p_intento: intento() }), /sala_plataforma_desconocida/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: [], p_intento: intento() }), /sala_sin_plataformas/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "x".repeat(25), p_platforms: ["n"], p_intento: intento() }), /sala_nombre_invalido/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "  \t ", p_platforms: ["n"], p_intento: intento() }), /sala_nombre_invalido/);
 });
 
 await prueba("5. unirse anónimo y autenticado; una cuenta no ocupa dos lugares (rota el token)", async () => {
-  tokA = (await rpc(anon(), "sala_unirse", { p_room: sala, p_nombre: "Ana", p_platforms: ["m"] })).token;
-  tokInv = (await rpc(como(inv.jwt), "sala_unirse", { p_room: sala, p_nombre: "Inv", p_platforms: ["p"] })).token;
-  const otra = (await rpc(como(inv.jwt), "sala_unirse", { p_room: sala, p_nombre: "Inv2", p_platforms: ["p"] })).token;
+  tokA = (await rpc(anon(), "sala_unirse", { p_room: sala, p_nombre: "Ana", p_platforms: ["m"], p_intento: intento() })).token;
+  tokInv = (await rpc(como(inv.jwt), "sala_unirse", { p_room: sala, p_nombre: "Inv", p_platforms: ["p"], p_intento: intento() })).token;
+  const otra = (await rpc(como(inv.jwt), "sala_unirse", { p_room: sala, p_nombre: "Inv2", p_platforms: ["p"], p_intento: intento() })).token;
   assert.notEqual(otra, tokInv);
   await debeFallar(anon().rpc("sala_estado", { p_room: sala, p_token: tokInv }), /sala_token_invalido/); // el rotado murió
   tokInv = otra;
@@ -129,15 +132,15 @@ await prueba("5. unirse anónimo y autenticado; una cuenta no ocupa dos lugares 
 });
 
 await prueba("6. el token de una sala no sirve en otra", async () => {
-  const r2 = await rpc(como(inv.jwt), "sala_crear", { p_nombre: "Inv", p_platforms: ["n"] });
+  const r2 = await rpc(como(inv.jwt), "sala_crear", { p_nombre: "Inv", p_platforms: ["n"], p_intento: intento() });
   await debeFallar(anon().rpc("sala_estado", { p_room: r2.room_id, p_token: tokHost }), /sala_token_invalido/);
   await debeFallar(anon().rpc("sala_votar", { p_room: r2.room_id, p_token: tokHost, p_round: r2.room_id, p_pos: 0, p_voto: "yes" }), /sala_token_invalido/);
   await rpc(como(inv.jwt), "sala_cerrar", { p_room: r2.room_id });
 });
 
 await prueba("7. máximo seis participantes", async () => {
-  for (const n of ["P4", "P5", "P6"]) toksExtra.push((await rpc(anon(), "sala_unirse", { p_room: sala, p_nombre: n, p_platforms: ["n"] })).token);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "P7", p_platforms: ["n"] }), /sala_llena/);
+  for (const n of ["P4", "P5", "P6"]) toksExtra.push((await rpc(anon(), "sala_unirse", { p_room: sala, p_nombre: n, p_platforms: ["n"], p_intento: intento() })).token);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "P7", p_platforms: ["n"], p_intento: intento() }), /sala_llena/);
   assert.equal((await estado(sala, tokHost)).n, 6);
 });
 
@@ -191,7 +194,7 @@ await prueba("9. candidatas correctas y publicación atómica con validación es
 });
 
 await prueba("10. lobby cerrado: no entran participantes nuevos", async () => {
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "Tarde", p_platforms: ["n"] }), /sala_no_admite_ingresos/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "Tarde", p_platforms: ["n"], p_intento: intento() }), /sala_no_admite_ingresos/);
 });
 
 await prueba("11. voto: sólo la siguiente pos; idempotente; distinto voto sobre pos ya votada rechazado; pos fuera de la ronda rechazada", async () => {
@@ -259,11 +262,11 @@ await prueba("14. sala de 2: dos Sí simultáneos sobre la misma película → u
 
 await prueba("15. sala de 3 con empate: sólo el host desempata; repetir devuelve el mismo ganador; la ventana se renueva", async () => {
   const h = await usuario("h15");
-  const r = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n", "d", "m"] });
-  const tB = (await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"] })).token;
-  const tC = (await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "C", p_platforms: ["d"] })).token;
+  const r = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n", "d", "m"], p_intento: intento() });
+  const tB = (await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"], p_intento: intento() })).token;
+  const tC = (await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "C", p_platforms: ["d"], p_intento: intento() })).token;
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: r.room_id, p_host: h.id, p_size: 5, p_duracion: "cualquiera" });
-  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "D", p_platforms: ["n"] }), /sala_no_admite_ingresos/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "D", p_platforms: ["n"], p_intento: intento() }), /sala_no_admite_ingresos/);
   const cand = await rpc(admin, "sala_candidatos", { p_providers: PLATS, p_duracion: "cualquiera", p_excluir: [], p_seed: "s15", p_limit: 80 });
   await rpc(admin, "sala_publicar_ronda", { p_round: ini.round_id, p_prep_token: ini.prep_token, p_titulos: cand.slice(0, 5).map(card) });
   for (const t of [r.token, tB, tC]) for (let pos = 0; pos < 5; pos++) await votar(r.room_id, t, ini.round_id, pos, pos === 1 || pos === 3 ? "yes" : "no");
@@ -332,7 +335,7 @@ await prueba("19. un payload falso en el tópico público NO cambia version ni e
 
 await prueba("20. una sola sala activa por creador, bajo concurrencia (10 sala_crear a la vez)", async () => {
   const h3 = await usuario("h20");
-  const res = await Promise.allSettled(Array.from({ length: 10 }, () => rpc(como(h3.jwt), "sala_crear", { p_nombre: "H3", p_platforms: ["n"] })));
+  const res = await Promise.allSettled(Array.from({ length: 10 }, () => rpc(como(h3.jwt), "sala_crear", { p_nombre: "H3", p_platforms: ["n"], p_intento: intento() })));
   const ok = res.filter((r) => r.status === "fulfilled");
   assert.equal(ok.length, 1, `creó ${ok.length} salas`);
   assert.ok(res.filter((r) => r.status === "rejected").every((r) => /sala_ya_tiene_activa/.test(r.reason.message)));
@@ -397,10 +400,10 @@ await prueba("24. las funciones internas no se pueden ejecutar con anon ni con a
 await prueba("25. kill switch en la base: con activas='false' no se crea ni se entra; con 'true' vuelve", async () => {
   await admin.from("sala_config").update({ valor: "false" }).eq("clave", "activas");
   const h = await usuario("h25");
-  await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"] }), /sala_desactivadas/);
-  const s = await (async () => { await admin.from("sala_config").update({ valor: "true" }).eq("clave", "activas"); return rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"] }); })();
+  await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() }), /sala_desactivadas/);
+  const s = await (async () => { await admin.from("sala_config").update({ valor: "true" }).eq("clave", "activas"); return rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() }); })();
   await admin.from("sala_config").update({ valor: "false" }).eq("clave", "activas");
-  await debeFallar(anon().rpc("sala_unirse", { p_room: s.room_id, p_nombre: "B", p_platforms: ["n"] }), /sala_desactivadas/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: s.room_id, p_nombre: "B", p_platforms: ["n"], p_intento: intento() }), /sala_desactivadas/);
   await admin.from("sala_config").update({ valor: "true" }).eq("clave", "activas");
   await rpc(como(h.jwt), "sala_cerrar", { p_room: s.room_id });
 });
@@ -474,6 +477,104 @@ await prueba("28. preparación desde el lobby abortada con los 15 min ya vencido
   // Control: un lobby vencido de verdad (sin preparación) SÍ vence.
   await admin.from("rooms").update({ lobby_expires_at: new Date(Date.now() - 30_000).toISOString() }).eq("id", s.room);
   assert.equal((await estado(s.room, s.tB)).estado, "vencida");
+});
+
+await prueba("29. crear: la respuesta se pierde y se repite el MISMO intento → misma sala, un solo host, token utilizable", async () => {
+  const h = await usuario("h29");
+  const i = intento();
+  const primera = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: i });
+  // "Se perdió la respuesta": el cliente no guardó room_id ni token y reintenta con el mismo intento.
+  const segunda = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: i });
+  assert.equal(segunda.room_id, primera.room_id); assert.equal(segunda.repetido, true); assert.equal(segunda.estado, "lobby");
+  assert.notEqual(segunda.token, primera.token);
+  const e = await estado(segunda.room_id, segunda.token);            // el token nuevo sirve
+  assert.equal(e.estado, "lobby"); assert.equal(e.soy.es_host, true); assert.equal(e.n, 1);
+  await debeFallar(anon().rpc("sala_estado", { p_room: primera.room_id, p_token: primera.token }), /sala_token_invalido/); // el que nunca llegó, muere
+  const { data: hosts } = await admin.from("room_participants").select("id").eq("room_id", primera.room_id).eq("es_host", true);
+  assert.equal(hosts.length, 1);
+  assert.equal((await admin.from("rooms").select("id").eq("host_user_id", h.id)).data.length, 1);
+  // Sin p_intento no se puede crear.
+  await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: null }), /sala_intento_invalido/);
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: primera.room_id });
+});
+
+await prueba("29b. no existe ninguna sobrecarga sin p_intento (una firma vieja saltearía la idempotencia)", async () => {
+  const h = await usuario("h29b");
+  // Sin la clave p_intento, PostgREST busca sala_crear(p_nombre, p_platforms): no debe existir.
+  await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"] }), /PGRST202|Could not find|42501|permission denied/);
+  const r = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() });
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"] }), /PGRST202|Could not find|42501|permission denied/);
+  assert.equal((await estado(r.room_id, r.token)).n, 1);
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: r.room_id });
+});
+
+await prueba("30. unirse anónimo: respuesta perdida y repetición del MISMO intento → un solo participante", async () => {
+  const h = await usuario("h30");
+  const r = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() });
+  const i = intento();
+  const a = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_platforms: ["n"], p_intento: i });
+  const b = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_platforms: ["n"], p_intento: i });
+  assert.equal(a.repetido, false); assert.equal(b.repetido, true); assert.notEqual(a.token, b.token);
+  assert.equal((await estado(r.room_id, r.token)).n, 2);
+  await debeFallar(anon().rpc("sala_estado", { p_room: r.room_id, p_token: a.token }), /sala_token_invalido/);
+  assert.equal((await estado(r.room_id, b.token)).soy.nombre, "Ana");
+  // Mismo nombre con OTRO intento sí es otra persona: no se deduplica por nombre.
+  await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_platforms: ["n"], p_intento: intento() });
+  assert.equal((await estado(r.room_id, r.token)).n, 3);
+  // El intento sobrevive al arranque: con la sala ya en preparación, repetirlo devuelve la participación en vez de 'no admite ingresos'.
+  await rpc(admin, "sala_iniciar_preparacion", { p_room: r.room_id, p_host: h.id, p_size: 5, p_duracion: "cualquiera" });
+  const c = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_platforms: ["n"], p_intento: i });
+  assert.equal(c.repetido, true); assert.equal((await estado(r.room_id, c.token)).soy.nombre, "Ana");
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "Tarde", p_platforms: ["n"], p_intento: intento() }), /sala_no_admite_ingresos/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "X", p_platforms: ["n"], p_intento: null }), /sala_intento_invalido/);
+  await admin.rpc("sala_abortar_preparacion", { p_round: (await admin.from("room_rounds").select("id, prep_token").eq("room_id", r.room_id).single()).data.id, p_prep_token: (await admin.from("room_rounds").select("prep_token").eq("room_id", r.room_id).single()).data.prep_token });
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: r.room_id });
+});
+
+await prueba("31. dos reintentos CONCURRENTES del mismo intento → nunca dos participantes ni dos salas", async () => {
+  const h = await usuario("h31");
+  const iC = intento();
+  const creadas = await Promise.all(Array.from({ length: 6 }, () => rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: iC })));
+  assert.equal(new Set(creadas.map((r) => r.room_id)).size, 1, "el mismo intento creó más de una sala");
+  assert.equal(creadas.filter((r) => r.repetido === false).length, 1);
+  const room = creadas[0].room_id;
+  const iU = intento();
+  const unidos = await Promise.all(Array.from({ length: 6 }, () => rpc(anon(), "sala_unirse", { p_room: room, p_nombre: "Ana", p_platforms: ["n"], p_intento: iU })));
+  assert.equal(unidos.filter((r) => r.repetido === false).length, 1);
+  assert.equal((await admin.from("room_participants").select("id").eq("room_id", room)).data.length, 2, "host + Ana, nada más");
+  // El único token que sirve es el último rotado; al menos uno de los seis lo es.
+  const vivos = (await Promise.all(unidos.map((u) => anon().rpc("sala_estado", { p_room: room, p_token: u.token })))).filter((r) => !r.error).length;
+  assert.equal(vivos, 1);
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: room });
+});
+
+await prueba("32. un intento DIFERENTE sigue respetando la regla de una sola sala activa", async () => {
+  const h = await usuario("h32");
+  const r = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() });
+  await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() }), /sala_ya_tiene_activa/);
+  assert.equal((await admin.from("rooms").select("id").eq("host_user_id", h.id)).data.length, 1);
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: r.room_id });
+});
+
+await prueba("33. una sala vencida por reloj pero no barrida no bloquea ni da un error crudo: se vence y se crea la nueva", async () => {
+  const h = await usuario("h33");
+  const r = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() });
+  // Los 15 min del lobby pasaron; el barrido todavía no corrió (estado sigue 'lobby').
+  await admin.from("rooms").update({ lobby_expires_at: new Date(Date.now() - 1000).toISOString() }).eq("id", r.room_id);
+  assert.equal((await admin.from("rooms").select("estado").eq("id", r.room_id).single()).data.estado, "lobby");
+  const r2 = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() });
+  assert.notEqual(r2.room_id, r.room_id); assert.equal(r2.repetido, false);
+  const { data: filas } = await admin.from("rooms").select("id, estado").eq("host_user_id", h.id).order("created_at");
+  assert.deepEqual(filas.map((f) => f.estado), ["vencida", "lobby"]);
+  // Idem con una ventana de resultado agotada: la sala vieja se marca vencida y la nueva nace.
+  await admin.from("rooms").update({ estado: "resultado", expires_at: new Date(Date.now() - 1000).toISOString() }).eq("id", r2.room_id);
+  const r3 = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: intento() });
+  assert.equal((await admin.from("rooms").select("estado").eq("id", r2.room_id).single()).data.estado, "vencida");
+  // Y repetir el intento de una sala YA vencida devuelve esa sala con su estado, no un error: el cliente decide.
+  const { data: vieja } = await admin.from("rooms").select("intento_crear").eq("id", r.room_id).single();
+  const rep = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: vieja.intento_crear });
+  assert.equal(rep.room_id, r.room_id); assert.equal(rep.repetido, true); assert.equal(rep.estado, "vencida");
+  await rpc(como(h.jwt), "sala_cerrar", { p_room: r3.room_id });
 });
 
 await prueba("17. el barrido elimina la sala completa (seis tablas) 5 min después del estado terminal", async () => {

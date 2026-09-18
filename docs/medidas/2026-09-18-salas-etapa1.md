@@ -18,25 +18,55 @@ Producción; sin deploy, merge ni push.**
   `search_path` pineado, orden de bloqueo sala→ronda, `sala_candidatos` con el
   criterio de texto real y sin exigir "pero", `advertencia` nullable, nace
   apagado, y que el down borre exactamente lo que el up crea y nada más).
-- `scripts/sala/pruebas-rls.mjs`: **28 pruebas** con la anon key y JWTs reales
+- `scripts/sala/pruebas-rls.mjs`: **34 pruebas** con la anon key y JWTs reales
   contra PostgREST local; `service_role` sólo para lo que en producción hace el
   servidor (usuarios de prueba, relojes forzados, preparación, barrido).
+
+## Corrección tras la auditoría: recuperación ante respuesta perdida
+
+La auditoría encontró que, si `sala_crear` se confirmaba en la base pero la
+respuesta HTTP se perdía, el organizador quedaba con una sala activa cuyo
+`room_id` y token nunca recibió: el reintento daba `sala_ya_tiene_activa` y
+`sala_reclamar` exige conocer el `room_id`. Y repetir un `sala_unirse`
+anónimo creaba otro participante. Corregido con un **identificador de
+intento** (`uuid`) que el cliente genera y persiste antes de la primera
+solicitud: `rooms.intento_crear` único por `(host_user_id, intento_crear)`,
+`room_participants.intento` único por `(room_id, intento)`; repetir el mismo
+intento devuelve la misma sala/participación con token nuevo y `repetido:
+true`, antes de mirar el estado (sirve aunque la sala ya haya empezado). Sin
+intento, las dos RPCs rechazan. No se deduplica por nombre.
+
+También se corrigió la **discrepancia entre el índice `rooms_host_activa_idx`
+(`estado <> 'vencida'`) y el conteo de `sala_crear`** (que además exigía
+`expires_at > now()`): ahora `sala_crear` aplica primero los vencimientos por
+reloj de las salas del organizador y cuenta con el predicado exacto del índice.
+Una sala vencida de hecho pero no barrida se marca `vencida` ahí mismo y la
+nueva nace; no hay error crudo de índice (el índice de apoyo no es único; la
+regla la garantiza el bloqueo consultivo).
+
+Al re-aplicar en local aparecieron como **sobrecargas** las firmas viejas sin
+`p_intento` (con `grant` a `authenticated`): habrían salteado la
+idempotencia. El up las borra a propósito, el down también, y la prueba 29b
+llama sin `p_intento` exigiendo que ninguna función responda.
 
 ## Resultados (comprobado en local, 2026-09-18)
 
 - `node --test lib/salas-migracion.test.ts` → **12/12**.
 - `node --env-file=.env.sala-local scripts/sala/pruebas-rls.mjs` → **"Todo verde
-  (28 pruebas)"**, tres corridas consecutivas; salida completa en
+  (34 pruebas)"**, dos corridas consecutivas tras la corrección (antes, tres con
+  28); salida completa en
   [`2026-09-18-salas-rls-local.txt`](2026-09-18-salas-rls-local.txt).
 - `pg_cron` local ejecutó `sala-barrido` (`cron.job_run_details`: `succeeded`).
 - Rollback: `009_salas_down.sql` dos veces seguidas (la segunda sólo avisa
   "does not exist, skipping"); después, 0 funciones `sala_*`, 0 tablas
   `room*`/`sala_config`, 0 jobs; `roulette_titles` (2451) y `get_roulette_picks`
-  intactos; `db-local.mjs` vuelve a aplicar y la batería vuelve a dar 28/28.
-- Suite completa del repo: **1718 tests, 1708 ok, 0 fallos, 10 omitidos**;
+  intactos; `db-local.mjs` vuelve a aplicar y la batería vuelve a dar 34/34.
+  Exactamente **una** firma de `sala_crear` y una de `sala_unirse` en
+  `pg_proc` después del up.
+- Suite completa del repo: **1719 tests, 1709 ok, 0 fallos, 10 omitidos**;
   `tsc` limpio.
 
-## Lo que cubren las 28 pruebas
+## Lo que cubren las 34 pruebas
 
 Acceso directo a las seis tablas rechazado con anon y con JWT (1); creación
 sólo con sesión, plataformas desconocidas/vacías rechazadas, token de 43
@@ -62,7 +92,15 @@ votos fantasma (23); 12 funciones internas inejecutables con anon y JWT (24);
 kill switch en la base (25); "otra tanda" a segundos del vencimiento renueva
 `expires_at` y el barrido no toca una sala en `preparando` (26); una sala en
 `preparando` nunca se borra, `sala_cerrar` conserva 5 min (27); aborto con
-lobby vencido renueva `lobby_expires_at` 5 min y permite reintentar (28).
+lobby vencido renueva `lobby_expires_at` 5 min y permite reintentar (28);
+**crear con respuesta perdida → misma sala, un host, token utilizable, y sin
+intento no se crea (29); ninguna sobrecarga sin `p_intento` (29b); unirse
+anónimo con respuesta perdida → un participante, también tras el arranque, y
+otro intento con el mismo nombre es otra persona (30); seis reintentos
+concurrentes del mismo intento → una sala / un participante (31); intento
+distinto respeta una sola sala activa (32); sala vencida por reloj no barrida
+se vence al crear y la nueva nace, y repetir el intento de una vencida la
+devuelve con su estado (33).**
 
 ## Hallazgos durante la etapa
 
