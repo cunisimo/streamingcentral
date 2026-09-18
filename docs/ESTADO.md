@@ -22,9 +22,12 @@
   con la anon key vía PostgREST. **Decisión del dueño (18/09):** el "Pero" (`advertencia`) es OPCIONAL en
   las salas; `razon` sigue obligatoria; sin texto de reemplazo; la card no
   muestra la sección cuando falta. Plan, auditoría y fixtures actualizados.
-  **Pendiente:** correr las consultas 1, 3 y 5 de
-  `scripts/sala/auditoria-pool.sql` en Producción (sólo lectura) — es el go de
-  la Etapa 1. **No autorizado todavía:** migraciones en Producción, deploy,
+  **Auditoría del pool en Producción, comprobada en panel por el dueño el 18/09:
+  GO para la Etapa 1** — `servibles_sala` 1742; `n,d,m` 868 / `n` 272 / `n,d`
+  547 / `n,d,m,p` 1097 (umbrales 20/10/20/20); 477 admitidas sin "pero"; 0
+  textos vacíos. Confirma capacidad del pool, no frescura de la disponibilidad
+  (consulta 2 y Apéndice A sin correr). **Etapa 1 en curso** en la rama y la
+  base local. **No autorizado todavía:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:
   [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).

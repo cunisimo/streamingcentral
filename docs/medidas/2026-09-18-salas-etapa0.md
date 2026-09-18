@@ -24,9 +24,47 @@ el plan usa `* * * * *` (un minuto), que alcanza para la ventana de 5 min.
 ## Tarea 0.2 — SQL de auditoría (sólo lectura)
 
 `scripts/sala/auditoria-pool.sql`: cinco consultas con los mismos filtros que
-tendrá `sala_candidatos`. **Pendiente de correr en Producción por el dueño**;
-el criterio de go de la Etapa 1 es `cualquiera >= 20` en `n,d,m`, `n,d` y
-`n,d,m,p`, y `>= 10` en `n`.
+tendrá `sala_candidatos` (texto presente = no vacío tras `btrim`). El criterio
+de go de la Etapa 1 era `cualquiera >= 20` en `n,d,m`, `n,d` y `n,d,m,p`, y
+`>= 10` en `n`.
+
+### Resultado en Producción — COMPROBADO EN PANEL (dueño, 2026-09-18) → **GO**
+
+Consultas 1, 3 y 5 del SQL final (commit `f57e3d1`), corridas una vez en el
+SQL Editor de Producción. Las consultas 2 y 4 no se repitieron.
+
+**Consulta 1** — `total_movie` 2401 · `con_razon` 2259 · `con_razon_y_pero`
+1782 · `con_razon_y_duracion` 2259 · `servibles_sala` **1742** · `cortas` 306
+· `largas` 1436.
+
+**Consulta 3** (cualquiera / corta / larga / sin_pero):
+
+| unión | cualquiera | corta | larga | sin_pero |
+|---|---|---|---|---|
+| n,d,m | **868** | 122 | 746 | 175 |
+| n | **272** | 41 | 231 | 46 |
+| n,d | **547** | 73 | 474 | 114 |
+| n,p | 547 | 87 | 460 | 83 |
+| n,d,m,p | **1097** | 164 | 933 | 204 |
+| d / m / p | 289 / 369 / 310 | 32 / 50 / 46 | 257 / 319 / 264 | 70 / 72 / 41 |
+| mb | 100 | 26 | 74 | 12 |
+
+**Consulta 5** — `con_razon_sin_pero` 477 (admitidas) · `sin_razon` 142 (=
+`razon_null` 142, `razon_vacia` 0) · `pero_vacio` 0 · `sin_duracion` 0 ·
+`aptas_chicos` 399 · `con_contexto` 144 · `series` 0.
+
+Los cuatro umbrales del go se cumplen con holgura (868, 547, 1097 ≥ 20; 272 ≥
+10); hasta MUBI sola supera los 20. No hay textos vacíos ni de sólo espacios en
+Producción.
+
+**Sobre la diferencia con la corrida local** (`n,d,m`: 1005 local contra 868 en
+Producción; `servibles_sala` 1922 contra 1742; `con_contexto` 1 contra 144):
+no bloquea el go y **no prueba por sí sola una desactualización**. La carga
+local no incluye `data/carga-contexto.sql` (144 títulos con `requiere_contexto`
+en Producción, 1 fixture en local), y `title_availability` local es la del
+snapshot versionado, no la de Producción. La auditoría confirma **capacidad**
+del pool, no **frescura** de la disponibilidad: para eso está la consulta 2 y el
+refresco del Apéndice A, que siguen sin correrse.
 
 Prueba de humo en la base **local** cargada con `data/carga-ruleta-*.sql`
 (la carga versionada en `data/`, **no** la base de Producción, aunque los
