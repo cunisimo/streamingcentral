@@ -20,6 +20,14 @@
 // ============================================================================
 //  1. GET fresca (UNA copia: el camino caliente no paga nada más)   → hit
 //  2. MISS → MGET [ub, degradado], una sola vez
+//  2b. PAUSA LOCAL vigente (3.c.1, §43.3; auditoría sobre 6fc63b5, punto 1): este
+//     proceso vio un 429 y su pausa todavía rige. No se compone contra TMDB
+//     pase lo que pase con Redis, y el pedido NO espera los reintentos del
+//     SDK: la fresca y el UB se leen con un tope propio (T_LECTURA_PAUSA_MS) y
+//     lo que no llega se da por ausente. Fresca → HIT; UB → `ultimo-bueno-pausa`;
+//     sin UB → la misma regla de 3 (espera breve acotada + UNA readquisición
+//     con su timeout) o el 503. Límite del recorrido: 2 lecturas acotadas +
+//     ESPERA_PAUSA_MAX + JITTER + T_ADQ_MAX (≈ 10,25 s; con UB, ≈ 2 s).
 //  3. tomar el turno: adquirido | ocupado | sin-redis | PAUSADO (3.c.1)
 //     sin-redis → componer sin coordinar, SERVIR y NO GUARDAR NADA (§3.7): con
 //     Redis vuelto a mitad, una escritura directa pisaría sin fencing lo que
@@ -103,6 +111,7 @@
 // las deps. Es puro: reloj, `dormir` y las lecturas se inyectan, y se prueba
 // con la emulación en memoria y un reloj virtual (lib/home-servir.test.ts).
 import { anotar } from "./metricas.ts";
+import { conTope } from "./lectura-acotada.ts";
 import type { Turno } from "./turno.ts";
 import type { CampoCubo } from "./tmdb-pausa.ts";
 
@@ -137,6 +146,15 @@ export const CONSTANTES = {
   T_ADQ_MAX_MS: 2_000,
   /** `Retry-After` conservador cuando la readquisición queda indeterminada (§43.5: = REINTENTAR_POR_DEFECTO_MS). */
   RETRY_AFTER_FALLBACK_MS: 5_000,
+  /**
+   * Con la pausa LOCAL vigente, tope de cada lectura de Redis de esta secuencia
+   * (auditoría sobre 6fc63b5, punto 1): sin él, un Redis caído dejaba al pedido
+   * esperando los 6 reintentos del SDK por lectura (medido: 23,1 s hasta el
+   * 503). Con la pausa vigente no hay nada que componer, así que lo que no
+   * llega en este tope se da por ausente. Sólo rige con pausa local; el camino
+   * sano no lo toca.
+   */
+  T_LECTURA_PAUSA_MS: 1_000,
 } as const;
 export type Constantes = { -readonly [K in keyof typeof CONSTANTES]: number };
 
@@ -249,14 +267,26 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   const jitter = deps.jitter ?? (() => Math.floor(Math.random() * c.JITTER_MAX_MS));
   anotar((m) => { m.home.propietario = propietario; });
 
+  // 2b. Con la pausa LOCAL vigente, las lecturas llevan tope: Redis puede
+  // estar caído (es lo esperable junto a un 429 masivo) y no hay nada que
+  // componer mientras la pausa rija.
+  const localAlEntrar = pausaLocal();
+  const leerAcotada = async (claves: string[]): Promise<(T | null)[]> => {
+    if (localAlEntrar <= 0) return deps.leer(claves);
+    const r = await conTope(deps.leer(claves), c.T_LECTURA_PAUSA_MS, dormir);
+    if (r === null) anotar((m) => { m.home.lecturasAcotadas += 1; });
+    return r ?? claves.map(() => null);
+  };
+  if (localAlEntrar > 0) anotar((m) => { m.home.pausaMs = localAlEntrar; });
+
   // 1. La fresca, y nada más.
-  const [fresca] = await deps.leer([K.fresca]);
+  const [fresca] = await leerAcotada([K.fresca]);
   if (fresca != null) {
     anotar((m) => { m.home.cache = "hit"; m.home.origen = "fresca"; });
     return fresca;
   }
   // 2. Sólo en el MISS: las dos copias de respaldo.
-  let [ub, degradado] = await deps.leer([K.ub, K.degradado]);
+  let [ub, degradado] = await leerAcotada([K.ub, K.degradado]);
 
   const servirUb = (v: T, cache: "ultimo-bueno" = "ultimo-bueno", origen: "ultimo-bueno" | "ultimo-bueno-fondo" | "ultimo-bueno-pausa" = "ultimo-bueno") => {
     anotar((m) => { m.home.cache = cache; m.home.origen = origen; });
@@ -403,7 +433,12 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     }
     return componer();
   };
-  let r = await tomar();
+  // 2b. Pausa local vigente: no se toma el turno (no hay nada que componer);
+  // es `pausado` con el restante local. Sin UB, abajo rige la espera breve y
+  // la ÚNICA readquisición, ya con su timeout.
+  let r: Awaited<ReturnType<typeof tomar>>;
+  if (localAlEntrar > 0) { r = { estado: "pausado", restanteMs: Math.max(1, pausaLocal()) }; anotar((m) => { m.home.turno = "pausado"; }); }   // el restante FRESCO: las lecturas acotadas consumieron tiempo
+  else r = await tomar();
   if (r.estado === "sin-redis") {
     // §3.7: componer sin coordinar, servir, y no escribir nada.
     log(`[home] compone ${K.fresca} ${propietario} (sin-redis)`);

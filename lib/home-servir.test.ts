@@ -1179,3 +1179,65 @@ test("🔴 3.c.1 — la pausa VENCIÓ antes de que la composición devolviera, p
     assert.equal(w.store.has(K.turno), false); assert.equal(w.store.has(K.fresca), false);
   }
 });
+
+// ============================================================================
+// Auditoría de Codex sobre 6fc63b5, punto 1: con la pausa LOCAL vigente, el
+// pedido NO puede quedar esperando los reintentos normales de Redis (medido:
+// 23,1 s hasta el 503 con Redis caído). Lecturas y TOMAR con tope propio.
+// ============================================================================
+const LIMITE_LOCAL = CONSTANTES.T_LECTURA_PAUSA_MS * 2 + CONSTANTES.ESPERA_PAUSA_MAX_MS + CONSTANTES.JITTER_MAX_MS + CONSTANTES.T_ADQ_MAX_MS;
+
+test("🔴 punto 1 — pausa local vigente (8 s) + Redis que NO responde (lecturas y TOMAR colgados): 503 `pausa` en ≤ 2 lecturas acotadas, 0 TMDB, 0 composiciones, sin esperar a Redis", async () => {
+  const w = mundo();
+  const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 8000 });
+  let producciones = 0;
+  const colgado = () => new Promise<never>(() => {});
+  const ops: OpsTurno = { ...w.ops, evalTomar: colgado, get: colgado, setNx: colgado };
+  const t0 = w.reloj.ahora();
+  const { d } = depsPausa(w, "A", { leer: () => colgado(), turno: crearTurno(ops, PAUSA_CFG), producir: async () => { producciones++; return { valor: { hero: [], degradado: false, de: "A" }, fallo: false }; } }, p);
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "vacio:pausa"); assert.equal(r.valor.reintentarEnMs, 8000 - (w.reloj.ahora() - t0));
+  assert.equal(producciones, 0, "compuso contra TMDB con la pausa local vigente");
+  assert.ok(w.reloj.ahora() - t0 <= 2 * CONSTANTES.T_LECTURA_PAUSA_MS, `tardó ${w.reloj.ahora() - t0} ms: esperó a Redis`);
+  assert.equal(r.m.home.turno, "pausado"); assert.equal(r.m.home.pausaMs, 8000);
+});
+
+test("🔴 punto 1 — pausa local vigente + Redis LENTO (cada lectura 20 s): el UB no llega dentro del tope → 503 con Retry-After; con el UB dentro del tope (500 ms) → el UB", async () => {
+  for (const [demora, esperado] of [[20_000, "vacio:pausa"], [500, "ub"]] as const) {
+    const w = mundo();
+    w.store.set(K.ub, { v: UB, exp: 0 });
+    const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 8000 });
+    const leerLento = async (claves: string[]) => { await w.reloj.dormir(demora); return w.leer(claves); };
+    const t0 = w.reloj.ahora();
+    const { d } = depsPausa(w, "A", { leer: leerLento, producir: async () => { throw new Error("no compone"); } }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, esperado);
+    assert.ok(w.reloj.ahora() - t0 <= 2 * CONSTANTES.T_LECTURA_PAUSA_MS + demora, `demora ${demora}: tardó ${w.reloj.ahora() - t0} ms`);
+    if (esperado === "ub") assert.equal(r.m.home.origen, "ultimo-bueno-pausa");
+  }
+});
+
+test("🔴 punto 1 — pausa local CORTA (2 s) + Redis colgado, sin UB: duerme lo que resta, UNA readquisición acotada por T_ADQ_MAX y 503 `pausa-indeterminada`; todo dentro del límite explícito", async () => {
+  const w = mundo();
+  const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+  const colgado = () => new Promise<never>(() => {});
+  const ops: OpsTurno = { ...w.ops, evalTomar: colgado, get: colgado, setNx: colgado };
+  const t0 = w.reloj.ahora();
+  const { d } = depsPausa(w, "A", { leer: () => colgado(), turno: crearTurno(ops, PAUSA_CFG), producir: async () => { throw new Error("no compone"); } }, p);
+  const r = await w.reloj.correr(w.solicitud(d));
+  assert.equal(r.valor.de, "vacio:pausa-indeterminada");
+  assert.ok(w.reloj.ahora() - t0 <= LIMITE_LOCAL, `tardó ${w.reloj.ahora() - t0} ms > límite ${LIMITE_LOCAL}`);
+  assert.equal(dormidas(w), 1);
+});
+
+test("punto 1 — pausa local vigente con Redis SANO: fresca presente → HIT; UB presente → UB en el acto; el camino sin pausa no cambia (control: un frío sano compone y publica)", async () => {
+  const a = mundo(); a.store.set(K.fresca, { v: UB, exp: 0 });
+  const ra = await a.reloj.correr(a.solicitud(depsPausa(a, "A", {}, pausaDePrueba(a, { localHasta: a.reloj.ahora() + 3000 })).d));
+  assert.equal(ra.m.home.cache, "hit");
+  const b = mundo(); b.store.set(K.ub, { v: UB, exp: 0 });
+  const rb = await b.reloj.correr(b.solicitud(depsPausa(b, "A", {}, pausaDePrueba(b, { localHasta: b.reloj.ahora() + 3000 })).d));
+  assert.equal(rb.valor.de, "ub"); assert.equal(rb.m.home.origen, "ultimo-bueno-pausa"); assert.equal(b.cuantasComposiciones(), 0);
+  const c = mundo();
+  const rc = await c.reloj.correr(c.solicitud(depsPausa(c, "A").d));
+  assert.equal(rc.valor.de, "A"); assert.equal(rc.m.home.publicacion, "publicado");
+});

@@ -92,6 +92,8 @@ export interface MetricasRequest {
     pausaMs: number;
     /** Cuánto durmió esta solicitud esperando que la pausa terminara (sin UB): un solo sueño, ≤ 5,25 s. */
     pausaEsperaMs: number;
+    /** Con la pausa local vigente: lecturas de Redis que NO llegaron dentro de T_LECTURA_PAUSA_MS y se dieron por ausentes. */
+    lecturasAcotadas: number;
     /** Resultado de la ÚNICA limpieza LIBERAR de la composición (§49/§50); `omitido-sin-margen` = en o después de maxDuration, el turno vence por TTL. */
     liberacion: "liberado" | "no-era-mio" | "indeterminado" | "omitido-sin-margen" | "omitido-ya-intentado" | null;
     /**
@@ -167,7 +169,7 @@ export const nuevasMetricas = (): MetricasRequest => ({
     cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0,
     turno: null, origen: null, publicacion: null, renovaciones: 0, turnoPerdido: false, esperaMs: 0, fondo: null,
     degradadoDescartado: false, enfriado: false, cancelada: false, errorProductor: false, propietario: null,
-    pausaMs: 0, pausaEsperaMs: 0, liberacion: null, renovacionUltima: null,
+    pausaMs: 0, pausaEsperaMs: 0, lecturasAcotadas: 0, liberacion: null, renovacionUltima: null,
     descartesTmdb: 0,
   },
   tmdb: {
@@ -293,7 +295,7 @@ export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): 
   const h = m.home;
   const turno = h.turno || h.origen || h.publicacion
     ? ` | turno ${h.turno ?? "?"} | origen ${h.origen ?? "?"} | publicacion ${h.publicacion ?? "no"} | renovaciones ${h.renovaciones} | propietario ${h.propietario ?? "?"} |`
-      + `${h.fondo ? ` fondo ${h.fondo} |` : ""}${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.errorProductor ? " ERROR PRODUCTOR |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}${h.pausaMs ? ` PAUSA ${h.pausaMs}ms |` : ""}${h.pausaEsperaMs ? ` espera pausa ${h.pausaEsperaMs}ms |` : ""}${h.liberacion && h.liberacion !== "liberado" ? ` liberacion ${h.liberacion} |` : ""}${h.renovacionUltima ? ` ult. renovacion +${h.renovacionUltima.envioMs}..+${h.renovacionUltima.respuestaMs}ms |` : ""}`
+      + `${h.fondo ? ` fondo ${h.fondo} |` : ""}${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.errorProductor ? " ERROR PRODUCTOR |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}${h.pausaMs ? ` PAUSA ${h.pausaMs}ms |` : ""}${h.pausaEsperaMs ? ` espera pausa ${h.pausaEsperaMs}ms |` : ""}${h.lecturasAcotadas ? ` ${h.lecturasAcotadas} lectura(s) acotada(s) |` : ""}${h.liberacion && h.liberacion !== "liberado" ? ` liberacion ${h.liberacion} |` : ""}${h.renovacionUltima ? ` ult. renovacion +${h.renovacionUltima.envioMs}..+${h.renovacionUltima.respuestaMs}ms |` : ""}`
     : "";
   return (
     `[home] ${msTotal}ms total | cache ${cache} | ` +

@@ -46,6 +46,7 @@ import type { ClaveLocalizada } from "./claves";
 import { clavesDelHome, instanteHome, type ClavesDelHome } from "./home-instante";
 import { CONSTANTES, plazosDelFondo, servirConTurno, type MotivoVacio } from "./home-servir";
 import { pausaActiva } from "./tmdb-pausa";
+import { conTope } from "./lectura-acotada";
 import { CLAVES_PAUSA } from "./pausa-lua";
 import { crearProgramadorDeFondo, estadoDelFondo } from "./home-fondo";
 import { compuertaDeFondo } from "./fondo-frontera";
@@ -776,7 +777,10 @@ function programarComposicionEnFondo(clave: string, iniciar: (senal?: AbortSigna
 }
 
 const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>({
-  leer: (clave) => backendCache.leer<HomePayload>(clave),
+  // Etapa 3.c.1 (auditoría sobre 6fc63b5, punto 1): con la pausa LOCAL vigente
+  // la lectura previa lleva tope; lo que no llega se da por ausente y el
+  // resolver decide (UB acotado o 503). Sin pausa, la lectura de siempre.
+  leer: (clave) => (pausaTmdb.vigente() > 0 ? conTope(backendCache.leer<HomePayload>(clave), CONSTANTES.T_LECTURA_PAUSA_MS) : backendCache.leer<HomePayload>(clave)),
   resolver: (_clave, producir, claves) => servirConTurno<HomePayload>({
     claves,
     propietario: `${INSTANCIA}:${process.pid}:${++composicionesDeEsteProceso}`,

@@ -125,3 +125,10 @@ test("🔴 lib/home.ts: el productor informa `pausada` (alguna llamada rechazada
   assert.match(s, /rechazadasHastaAhora\(\)/, "falta la lectura de la métrica rechazadas");
   assert.match(s, /pausada: rechazadasHastaAhora\(\) > /, "el productor no calcula `pausada` como delta de rechazadas");
 });
+
+test("🔴 punto 1 (auditoría sobre 6fc63b5): la LECTURA PREVIA del vuelo (lib/home.ts) también lleva tope con la pausa local vigente, con el mismo `conTope` que usa servirConTurno", () => {
+  const s = codigo("lib/home.ts");
+  assert.match(s, /conTope\(backendCache\.leer<HomePayload>\(clave\), CONSTANTES\.T_LECTURA_PAUSA_MS\)/, "la lectura previa no lleva tope");
+  assert.match(s, /pausaTmdb\.vigente\(\) > 0 \? conTope\(/, "el tope sólo rige con la pausa local vigente: el camino sano no cambia");
+  assert.match(codigo("lib/home-servir.ts"), /conTope\(deps\.leer\(claves\), c\.T_LECTURA_PAUSA_MS, dormir\)/, "servirConTurno usa el mismo conTope");
+});
