@@ -290,9 +290,11 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     if (pausaLocal() <= 0) return deps.leer(claves);
     // El lector acotado LANZA cuando su señal aborta o Redis falla (así se
     // comporta el cliente real sin reintentos): acá eso es "no llegó", nunca
-    // un error del Home, y se cuenta como lectura acotada.
+    // un error del Home. Se cuenta CADA lectura que pasó por el lector: un
+    // resultado vacío no distingue "no llegó" de un MISS legítimo (eso lo
+    // dice redis.fallos.lectura).
+    anotar((m) => { m.home.lecturasAcotadas += 1; });
     const r = await deps.leerAcotada(claves).catch(() => null);
-    if (r === null || r.every((v) => v == null)) anotar((m) => { m.home.lecturasAcotadas += 1; });
     return r ?? claves.map(() => null);
   };
   if (localAlEntrar > 0) anotar((m) => { m.home.pausaMs = localAlEntrar; });

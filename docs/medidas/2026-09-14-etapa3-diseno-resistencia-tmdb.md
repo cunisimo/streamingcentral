@@ -5366,6 +5366,11 @@ el camino usa `leer` de siempre y nunca `leerAcotada`.
   `leerAcotadasHome([clave])`; `servirConTurno` recibe `leerAcotada`.
 - **Borrados** `lib/lectura-acotada.ts` y su test. Un test estructural falla si
   vuelve `conTope`, `lectura-acotada` o un `Promise.race([deps.leer…`.
+- **La métrica `lecturasAcotadas` cuenta cada lectura hecha por el lector**
+  (antes: las que vencieron el tope). El lector normaliza a `null`, así que la
+  secuencia no puede distinguir "no llegó" de un MISS legítimo; lo que no llegó
+  se ve en `redis.fallos.lectura`. En los escenarios medidos el número no
+  cambia (2 con Redis caído).
 - **`T_LECTURA_PAUSA_MS` = `CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS`** (1 s), atado
   por test: el tope que la secuencia documenta es el que aplica la señal del
   lector. Se mantuvo el nombre para no tocar métricas ni logs.

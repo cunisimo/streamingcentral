@@ -92,7 +92,7 @@ export interface MetricasRequest {
     pausaMs: number;
     /** Cuánto durmió esta solicitud esperando que la pausa terminara (sin UB): un solo sueño, ≤ 5,25 s. */
     pausaEsperaMs: number;
-    /** Con la pausa local vigente: lecturas de Redis que NO llegaron dentro de T_LECTURA_PAUSA_MS y se dieron por ausentes. */
+    /** Con la pausa local vigente: lecturas de Redis hechas por el LECTOR ACOTADO (sin reintentos, señal de T_LECTURA_PAUSA_MS por petición). Las que no llegaron cuentan además en redis.fallos.lectura. */
     lecturasAcotadas: number;
     /** Resultado de la ÚNICA limpieza LIBERAR de la composición (§49/§50); `omitido-sin-margen` = en o después de maxDuration, el turno vence por TTL. */
     liberacion: "liberado" | "no-era-mio" | "indeterminado" | "omitido-sin-margen" | "omitido-ya-intentado" | null;
