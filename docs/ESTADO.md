@@ -1,12 +1,30 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 15 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 18 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
+- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapa 0 hecha; sin
+  merge, push, deploy ni cambios en Producción (2026-09-18).** Plan aprobado
+  por el dueño con tres rondas de correcciones:
+  [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
+  **Comprobado en panel por el dueño (Tarea 0.1):** Supabase Free, PostgreSQL
+  17.6, `realtime.send` y `broadcast_changes` presentes (→ go), acceso
+  público de Realtime activo, `pg_cron` 1.6.4 / `pgcrypto` 1.3 / `pg_net`
+  0.20.3, `SUPABASE_SERVICE_ROLE_KEY` en Vercel Production y Preview, uso de
+  Vercel a 30 días con margen (19K/1M invocaciones, 30 min/4 h CPU).
+  **Comprobado en local:** `--solo-datos` del generador del pool con 5 tests y
+  control byte a byte contra el script anterior; entorno `supabase start`
+  (config.toml sin migraciones del CLI, `db-local.mjs`, fixtures) verificado
+  con la anon key vía PostgREST. **Pendiente:** correr
+  `scripts/sala/auditoria-pool.sql` en Producción (sólo lectura) — es el go de
+  la Etapa 1. **No autorizado todavía:** migraciones en Producción, deploy,
+  encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
+  del plan), merge y push. Evidencia:
+  [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).
 - **Etapa 3.b de capacidad (#19): MERGEADA, PUSHEADA Y DESPLEGADA
   (2026-09-15).** Aprobada técnicamente por la auditoría final de Codex
   sobre `c5fab20` (más `ae6902f`, dos correcciones documentales: clave del
