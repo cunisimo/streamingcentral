@@ -180,6 +180,44 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   retoma. Kill switch **`HOME_UB_PRIMERO=0`**: vuelve al camino de siempre sin
   tocar código, pero **cambiar una variable en Vercel se aplica recién en el
   siguiente deployment**.
+- **Pausa compartida ante 429 (Etapa 3.c.1, `lib/tmdb-pausa.ts` +
+  `lib/pausa-lua.ts`; en rama, pendiente de auditoría — ver `docs/ESTADO.md`).**
+  Hoy un 429 de TMDB no frena nada: medido, un proceso emite 750-778
+  llamadas más en 3,4-4,4 s después del primero. Con la pausa, DOS niveles
+  que no tocan qué pide el Home ni en qué orden. **Nivel 1, local:** el
+  primer 429 fija `pausaLocalHasta` en memoria (su `Retry-After`, 5 s por
+  defecto, tope 60 s); desde ahí las llamadas que esperan el semáforo de
+  `lib/tmdb.ts` no salen (`ErrorTmdb` clase `rechazada`, métrica
+  `rechazadas`), las en vuelo terminan solas. **Nivel 2, compartido:** el
+  mismo 429 escribe `tmdb:pausa` en Redis con el script `PAUSAR`,
+  idempotente por evento (`<uuid>:<contador>`: un reintento del SDK nunca
+  alarga; un evento nuevo que termina más tarde sí), con marcador de 120 s y
+  marca de agua por proceso; y un LECTOR relee `PTTL tmdb:pausa` a lo sumo
+  una vez por segundo, una lectura en vuelo, con un cliente de Redis aparte
+  (timeout 1 s, sin reintentos) y un fallo → 30 s sin leer. **La adquisición
+  del turno del Home es el script `TOMAR`**: comprueba la pausa y hace el
+  `SET NX` en una operación, así no existe instante entre "leer la pausa" y
+  "adquirir". Qué ve el usuario (`lib/home-servir.ts`): con último bueno, el
+  UB en el acto y sin reconstruir (`ultimo-bueno-pausa`); sin UB, UN solo
+  sueño de lo que resta (tope 5 s) y UNA readquisición, y si la pausa sigue,
+  **503 + `Retry-After`** (`lib/home-http.ts`: el mismo contrato que las
+  fichas), nunca 50 s ni un 200 vacío. Una composición que la pausa cortó se
+  **cancela** (LIBERAR), nunca se enfría ni se publica: un Home mutilado por
+  un 429 no se guarda. Los plazos son ABSOLUTOS desde el inicio real de la
+  ruta (`plazo` nace con la señal, antes de la lectura previa); el fondo
+  vive hasta `min(inicioFondo + 50 s, inicioRuta + 55 s)`, después del plazo
+  no se inicia TMDB, Supabase, RENOVAR, ENFRIAR ni PUBLICAR, y la única
+  limpieza es UN `LIBERAR` estrictamente antes de `maxDuration`; si no puede,
+  el turno vence por TTL (15 s desde la última renovación APLICADA en Redis —
+  entre el envío y la respuesta, el cliente no sabe el restante exacto).
+  `/api/health` expone `pausa` con SÓLO agregados (60 min): `pausas > 0`
+  con `429 = 0` es imposible por construcción y delata un bug (rollback).
+  Kill switch **`TMDB_PAUSA_429=0`**: apaga los dos niveles y `TOMAR` vuelve
+  al `SET NX`; como toda variable de Vercel, en el deployment siguiente.
+  ⚠️ **Con Redis caído** la pausa local rige igual (nunca se compone contra
+  TMDB con ella vigente), pero la duración de la solicitud la dominan los
+  reintentos del SDK por cada lectura del caché (la "promesa reducida" de la
+  Etapa 2): eso no lo cambia la pausa.
 - **El idioma de los títulos sale de una variable, y la configuración va DENTRO
   de la clave de cache** (`lib/idioma.ts` → `HUELLA_IDIOMA`, `lib/claves.ts`).
   `IDIOMA_TITULOS` decide el idioma base (default `es-ES`) y `FALLBACK_IDIOMA`

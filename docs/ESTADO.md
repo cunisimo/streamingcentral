@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 17 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 18 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -20,15 +20,57 @@
   y `docs/medidas/2026-09-05-sync-medicion.md`). Lo que Producción tiene de
   `tmdb-sync` es lo que dice la tabla de despliegue más abajo, no esta rama.
   No retomar sin pedido explícito del dueño.
-- **Etapa 3.c de capacidad (#19) — protección frente a TMDB (informe §45 a
-  §52, estado vigente, 2026-09-17): 3.c.1 "pausa compartida ante 429" con
+- **Etapa 3.c.1 de capacidad (#19) — "pausa compartida ante 429":
+  IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` (worktree `wt-etapa3c1`, desde
+  `aac70e7`; informe §53, 2026-09-18); NO mergeada, NO pusheada, NO
+  desplegada; PENDIENTE DE AUDITORÍA DE CODEX. Diseño §45-§52 aprobado por
+  el dueño el 18/09.** Qué hay [comprobado en Git y en el banco]: los cuatro
+  scripts Lua (`lib/pausa-lua.ts`: `TOMAR` con la pausa dentro de la
+  adquisición, `PAUSAR` v3 idempotente por evento con telemetría en `pcall`,
+  `CUBO`, `SALUD`), la pausa del proceso (`lib/tmdb-pausa.ts`: nivel 1 local
+  en el acto, PAUSAR serializado, lector no bloqueante sólo por `Δt` con una
+  lectura en vuelo y `F_max = 1`), la secuencia (`lib/home-servir.ts`: con
+  UB → UB en el acto; sin UB → un solo sueño ≤ 5,25 s, una readquisición y
+  `503` + `Retry-After`; plazo absoluto desde el inicio real de la ruta;
+  fondo `min(inicioFondo + 50 s, inicioRuta + 55 s)`; tras el plazo cero
+  TMDB/Supabase/RENOVAR/ENFRIAR/PUBLICAR y un solo `LIBERAR` estrictamente
+  antes de `maxDuration`; una composición con llamadas rechazadas por la
+  pausa se cancela, nunca se enfría), `/api/health` con sólo agregados, y el
+  kill switch **`TMDB_PAUSA_429=0`** (vuelve al SET NX y apaga los dos
+  niveles; se aplica en el deployment siguiente). **Evidencia:** Lua
+  verificado contra Upstash real en un Preview descartable (36/36; claves
+  prefijadas borradas; deployments, rama y worktree eliminados;
+  `docs/medidas/2026-09-18-etapa3c1-precondicion-upstash.json`); identidad
+  del Home antes/después **16/16 idéntica** (JSON completo, TMDB 926 = 926
+  … 1082 = 1082); umbrales del camino sano dentro (Redis +24-28 ≤ 41,
+  duración −1 % mediana y +5,1 % peor repetición ≤ +10 %, publicación +1 EVAL
+  porque TOMAR reemplaza al SET NX, UB −34 ms); con 429 total: **77 llamadas
+  tras el primer 429 contra 858 sin pausa** (línea base 750-778), nada
+  publicado ni enfriado, UB en 284 ms, sin UB `503` en 317 ms o composición
+  normal tras dormir lo que resta, propagación entre procesos real (un
+  proceso sin 429 propio cortado por el lector; otro pausado por TOMAR y
+  compuesto después), Redis lento 10 lecturas/25 s, Redis caído: la pausa
+  local rige (`503` sin componer) y 1 lectura. Suite 1868/1868, `tsc` 0,
+  build fresco OK, `git diff --check` limpio. **No probado:** TMDB real (0 ×
+  429 vistos en Producción: cadencia y `Retry-After` reales desconocidos);
+  el corte de Vercel a `maxDuration`. **Observado y no explicado:** `DBSIZE`
+  de Upstash 802 → 90 durante la primera corrida de la precondición (la ruta
+  sólo borró sus 8 claves prefijadas; causa inferida: vencimiento de un
+  lote). **Siguiente paso:** auditoría de Codex sobre la rama; merge, push y
+  deploy sólo con autorización del dueño; después, observación pasiva de
+  `/api/health` (rollback si `pausas > 0` con `429 = 0`, o `pausados503 > 0`
+  con `429 = 0`: `TMDB_PAUSA_429=0` + redeploy). 3.c.2 fuera de alcance.
+  `main` local tiene además `0c13036` (plan de salas compartidas, otra
+  sesión, sin push): no forma parte de esta rama.
+- **Etapa 3.c de capacidad (#19) — diseño (informe §45 a §52, antecedente de
+  la implementación §53): 3.c.1 "pausa compartida ante 429" con
   diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el
   presupuesto interno; §46: un solo deadline absoluto; §47: el fondo con dos
   límites; §48: la señal limita el trabajo nuevo; §49: la limpieza
   `LIBERAR` como única excepción tras el plazo; §50: sus falsos verdes;
   §51: las renovaciones las produce el modelo; §52: envío, aplicación en
-  Redis y recepción son tres instantes); NO APROBADA; NO IMPLEMENTADA;
-  PENDIENTE DE APROBACIÓN FINAL. 3.c.2 fuera de alcance.**
+  Redis y recepción son tres instantes); diseño APROBADO por el dueño el
+  18/09 e IMPLEMENTADO (ver el bloque de arriba, §53). 3.c.2 fuera de alcance.**
   **§52 (sobre `105e440`):** el modelo fijaba `venceEn = envío + 15 s`,
   pero el `PEXPIRE` del script corre cuando **Redis atiende** el comando,
   en un punto del RTT que el cliente no ve. RED ejecutado y visto fallar;

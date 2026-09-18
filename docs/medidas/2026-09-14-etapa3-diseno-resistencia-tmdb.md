@@ -73,6 +73,13 @@
 > `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`), fork de
 > `main = origin/main = b7be927`.
 >
+> **Estado vigente de la 3.c (2026-09-18, §53): la 3.c.1 "pausa compartida
+> ante 429" —diseño §45-§52 aprobado por el dueño— está IMPLEMENTADA en la
+> rama `feat/etapa3c1-pausa-tmdb` (Lua verificado en Upstash por un Preview
+> descartable, identidad del Home 16/16, umbrales dentro, criterios 4-8
+> verdes en el banco), NO mergeada, NO pusheada, NO desplegada, pendiente de
+> auditoría de Codex. Kill switch `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
+>
 > Issue que ataca: **#19**. Lo que NO toca: CDN y límites por ruta (Etapa 4),
 > observabilidad histórica (#20, Etapa 5). Las respuestas a las auditorías de
 > la v1 (13 puntos) y de la v2 (8 puntos) están en `209bda1` §0 y `ced36de`
@@ -4886,7 +4893,7 @@ debe **no** enviarse.
 - **Pendiente:** nueva auditoría de 3.c.1 sobre este estado. Sin
   implementación.
 
-## 52. Corrección de §51 sobre `105e440` — envío, aplicación en Redis y recepción son TRES instantes — **ESTADO VIGENTE de la 3.c (con §45-§51); NO aprobada, NO implementada; pendiente de aprobación final** (2026-09-17)
+## 52. Corrección de §51 sobre `105e440` — envío, aplicación en Redis y recepción son TRES instantes — **diseño APROBADO por el dueño el 2026-09-18 (§45-§52); IMPLEMENTADO en `feat/etapa3c1-pausa-tmdb` (§53); pendiente de auditoría de Codex** (2026-09-17)
 
 Sólo documentación y tests (`lib/tmdb-pausa-diseno.test.ts`, **97/97**). Sin
 código productivo, merge, push ni deploy. El contrato no cambia; cambia qué
@@ -5008,3 +5015,160 @@ no enviarse.
   SDK (se reemplaza por `demoraFalloMs`); variación del RTT entre
   renovaciones (constante por escenario).
 - **Estado:** 3.c.1 **no implementada, pendiente de aprobación final**.
+
+## 53. Implementación de la 3.c.1 sobre `aac70e7` (diseño §45-§52 aprobado por el dueño el 2026-09-18) — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría de Codex** (2026-09-18)
+
+Rama `feat/etapa3c1-pausa-tmdb`, worktree `wt-etapa3c1`, creada desde
+`aac70e7` (el diseño y sus RED, sobre `main` = `37d4707`). Alcance
+**exclusivo**: la 3.c.1 de §45-§52. Fuera: 3.c.2, limitador de tasa fija,
+cadencias, membresía por pool, reintentos de TMDB (siguen apagados), cambios
+en `tmdb-sync`, selección del Home.
+
+### 53.1 Estado verificado antes de empezar
+
+`diseno/etapa3c-proteccion-tmdb` en `aac70e7`, árbol limpio, fork point
+`37d4707` = `origin/main`. `main` local tenía un commit posterior de otra
+sesión (`0c13036`, sólo un plan de salas compartidas, sin push): no se tocó
+y no forma parte de esta rama. `medicion/sync-upcoming` sigue en `a7a223d`,
+árbol limpio, **nunca pusheada** (0 ramas remotas), sin desplegar; ninguno
+de sus archivos está en esta rama (comprobado por ausencia al crear el
+worktree).
+
+### 53.2 Qué se implementó (TDD: cada módulo con su test escrito antes y visto fallar)
+
+| Pieza | Archivo | Test (RED visto fallar) |
+|---|---|---|
+| Los cuatro scripts Lua de la pausa: `TOMAR` (pausa dentro de la adquisición, §40.5), `PAUSAR` v3 (validar → EXISTS ev → GET proc → PTTL → SET pausa → SET proc → SET ev → `pcall` telemetría con `TIME`/`cjson`, §43.10), `CUBO`, `SALUD` | `lib/pausa-lua.ts` | `lib/pausa-memoria.test.ts` (12) |
+| La misma semántica emulada en memoria (producción sin Redis, tests, doble del banco) | `lib/turno-memoria.ts` | ídem |
+| `crearTurno(ops, { pausa })` → `pausado(restanteMs)`; respuesta del script VALIDADA (formas raras = fallo de transporte, nunca adquirido ni pausado); sin `pausa` = SET NX de la Etapa 2 | `lib/turno.ts` | `lib/turno.test.ts` (+7) |
+| La pausa del proceso: nivel 1 local en el acto; PAUSAR serializado (uno en vuelo, los 429 que llegan mientras tanto se funden con el `Retry-After` mayor, §41.3), id `<uuid>:<contador>`; lector no bloqueante sólo por `Δt = 1 s` desde el inicio de la anterior, una en vuelo, `F_max = 1` → 30 s de enfriamiento, `pausaNoLeida`; kill switch `TMDB_PAUSA_429=0` | `lib/tmdb-pausa.ts` | `lib/tmdb-pausa.test.ts` (14; 7 mutaciones caen) |
+| La secuencia: `pausado` con UB → UB en el acto; sin UB → un solo sueño `min(restante, 5 s)` + jitter si cabe en `plazo − ahora − (jitter + T_ADQ)` (§43.4), UNA readquisición con timeout 2 s (carrera; si adquiere tarde, se libera), `503` por vacío `pausa` / `pausa-indeterminada` (`max(5 s, restante − dormido)`, §43.5) / `presupuesto-insuficiente`; vencimiento durante el sueño → centinela 4d; precedencia local sobre Redis caído (§43.3); plazo absoluto (§46) también en el rescate de la espera compartida; fondo con `plazosDelFondo` = min(interno, externo) y `fondo no-iniciado-presupuesto` (§47); RENOVAR nunca en el plazo ni después; PUBLICAR sólo con la reserva; 4d también por plazo (sin señal); 4d' pausa al volver **o llamadas rechazadas durante la composición** → LIBERAR, nunca ENFRIAR; `crearLimpieza`: un solo LIBERAR, `ahora < inicioRuta + maxDuration` estricto, best effort (§49-§50) | `lib/home-servir.ts` | `lib/home-servir.test.ts` (+23; 15 mutaciones caen) |
+| Métricas: turno `pausado`, origen `ultimo-bueno-pausa`/`vacio-pausa`, `pausaMs`, `pausaEsperaMs`, `liberacion`, `renovacionUltima { envioMs, respuestaMs }` (§52: el PEXPIRE corre entre ambos; ningún restante exacto), `fondo no-iniciado-presupuesto`; `PUBLICACION_MAX_MS` → `RESERVA_PUBLICACION_MS` | `lib/metricas.ts` | (línea `[home]` cubierta por los tests existentes) |
+| 503 + `Retry-After` para los finales de la pausa (cuerpo `{ error: tmdb-no-disponible, motivo, reintentarEnMs }`, el que el cliente ya reconoce, §41.5); los vacíos de la Etapa 2 siguen 200 | `lib/home-http.ts` | `lib/home-http.test.ts` (4) |
+| `/api/health`: sólo agregados (`pausaVigenteMs`, 60 min de `429`/`pausas`/`yaMayor`/`yaAplicada`/`pausaNoLeida`/`pausadosUB`/`pausados503`), forma validada, `null` si no se pudo leer (nunca ceros) | `lib/pausa-salud.ts`, `app/api/health/route.ts` | `lib/pausa-salud.test.ts` (3) |
+| Cableado: `lib/cache.ts` (TOMAR y las cuatro primitivas; **cliente aparte para el lector** con `signal: () => AbortSignal.timeout(1 s)` y `retries: 0`; `pausaTmdb` por proceso), `lib/tmdb.ts` (429 → `registrar429`; con pausa local vigente la llamada no sale del semáforo: `ErrorTmdb` clase `rechazada`, métrica `rechazadas`; `permiso()` tras cada permiso concedido), `lib/home.ts` (plazo creado con la señal ANTES de la lectura previa; `plazosDelFondo` y señal del fondo de `plazoEfectivo − inicioFondo`; `pausa`, `plazo`, `inicioRuta` y `pausada` en las deps; `vacio` con `reintentarEnMs`), `app/api/home/route.ts` | — | `lib/etapa3c1-cableado.test.ts` (11, guard estructural) |
+| Doble de Redis del banco: los cuatro scripts por texto, delegando en la emulación | `scripts/banco/dobles.mjs` | ídem |
+
+Desvíos respecto del texto del diseño, decididos al implementar y para la
+auditoría: (a) las llamadas que la pausa no deja salir se cuentan en
+**`rechazadas`** (la métrica que `lib/metricas.ts` ya declaraba para "circuito
+abierto o pausa") y no en `canceladas.enCola` como decía §39.5; (b) tope
+**`PAUSA_MAX_MS = 60 s`** [propuesto] a un `Retry-After` desmedido; (c) el
+timeout de la readquisición es una **carrera** local (`T_ADQ_MAX_MS`), no una
+señal del SDK (que sólo acepta una señal por cliente); si la adquisición
+responde después y adquirió, se libera; (d) **`pausada`**: hallazgo del banco
+(53.5, S3-B) — una composición con llamadas rechazadas por la pausa se
+cancela aunque la pausa haya vencido al devolver, con `Retry-After` mínimo de
+1 s; (e) la familia del evento es el path sin ids (`/movie/:id`), nunca la
+URL con parámetros; (f) la línea `[home-fondo]` agrega `plazo interno|externo
++Nms desde la ruta`.
+
+### 53.3 Precondición del Lua real en Upstash (Preview descartable, ejecutada)
+
+Rama descartable `tmp/etapa3c1-precondicion-upstash` (desde esta rama) con una
+sola ruta temporal, subida con `vercel deploy` (Preview protegido por Vercel
+Authentication + secreto propio comparado en tiempo constante contra
+`CRON_SECRET`; sin encabezado → 401, equivocado → 401; anónimo → 302 al
+login), corrida por `vercel curl` con `MSYS_NO_PATHCONV=1`. **36 pasos, 36
+correctos** —
+[`2026-09-18-etapa3c1-precondicion-upstash.json`](2026-09-18-etapa3c1-precondicion-upstash.json),
+código exacto en
+[`…precondicion-upstash.route.ts.txt`](2026-09-18-etapa3c1-precondicion-upstash.route.ts.txt):
+`TIME`, `cjson.encode`, `pcall` con función local y `PTTL` dentro de scripts;
+TOMAR `['adquirido']` / `['ocupado','A']` / `['pausado', n]` sin adquirir;
+PAUSAR `['escrito', 3000]`, marcador PX 119.762, proc PX 24 h, reintento del
+mismo id `['ya-aplicada', n]` sin extender, más corto `['ya-mayor', n]`, más
+largo `['escrito', 8000]`, contador viejo `['ya-aplicada']`, `ms` inválido →
+`ERR PAUSAR: argumentos invalidos` sin mutar; 3 eventos y los cubos exactos;
+CUBO y SALUD `[7068, 3, 2, 1, 2, 0, 1, 0]`; EVALSHA (NOSCRIPT → EVAL →
+EVALSHA); y **las primitivas de producción** (`opsTurnoHome.evalTomar`,
+`crearTurno(opsTurnoHome, { pausa }).tomar`, `opsPausaHome.pttl` por el
+cliente lector aparte, `opsPausaHome.evalSalud`). Latencia por comando:
+mediana 119 ms (114-351, n = 33). Claves `precond-etapa3c1:<corrida>:*`
+(TTL ≤ 60 s) borradas: `SCAN` 0 antes y después. **Dos hechos del SDK que
+la implementación ya contempla:** deserializa solo el JSON (el `cjson` y el
+`LINDEX` vuelven como objetos) y `PTTL` viaja como número. **Observado y no
+explicado:** durante la primera corrida `DBSIZE` pasó de 802 a 90 y quedó
+estable en 90 en las dos siguientes; la ruta sólo hace `DEL` de sus claves
+prefijadas (devolvió 8 = las existentes) y la causa inferida es el
+vencimiento simultáneo de un lote escrito junto (una composición escribe
+cientos de `card:` con el mismo TTL) — **no verificado**. Limpieza
+ejecutada: los dos deployments borrados (`vercel remove`; `inspect` del
+segundo: "Can't find the deployment"), `app.yump.ar` siguió en
+`dpl_8BzaaFazZuKeppma2RqQ9ZSRFgM5` (Producción) antes y después, worktree,
+rama y archivo de variables borrados.
+
+### 53.4 Identidad del Home y umbrales del camino sano (criterios 1-3)
+
+`comparar-home` entre `37d4707` (worktree `wt-etapa3c1-antes`, build con el
+entorno del banco) y esta rama, cachés aisladas —
+[`2026-09-18-etapa3c1-identidad-home.json`](2026-09-18-etapa3c1-identidad-home.json):
+**16/16 escenarios válidos e idénticos** (JSON completo: hero, rieles, ids,
+orden, cantidades, plataformas, enlaces, toggles), llamadas a TMDB iguales en
+los 15 fríos (926 … 1082) y en el concurrente (2059 = 2059), control de
+mutaciones 4/4 detectadas, control compartido rechazado. Umbrales
+(`etapa3c1-umbrales.mjs`, 3 semillas, modelo `prod-3b`) —
+[`2026-09-18-etapa3c1-umbrales.json`](2026-09-18-etapa3c1-umbrales.json):
+
+| Medida | Umbral | Medido | |
+|---|---|---|---|
+| llamadas a TMDB | 0 de diferencia | frío 926 = 926 ×3; fondo 1 = 1 ×3 | ✔ |
+| operaciones de Redis adicionales | ≤ ⌈926/24⌉ + 2 = 41; fondo ≤ 3 | frío +28 / +24 / +26 (el lector: ~1/s); fondo +1 | ✔ |
+| duración | mediana ≤ +5 %, ninguna > +10 % | frío 31.544 → 31.201 ms (−1,1 %); fondo 3.847 → 3.844; peor repetición +5,1 % (fondo, semilla 22) | ✔ |
+| publicación | ≤ +1 operación | +1 EVAL: `TOMAR` reemplaza al `SET NX` (mismo número de operaciones de adquisición); PUBLICAR sin cambios | ✔ |
+| respuesta del UB con fondo | ≤ +50 ms | 275 → 241 ms (mediana) | ✔ |
+
+### 53.5 Escenarios con 429 (criterios 4-7), tres procesos + control con el kill switch
+
+`etapa3c1-pausa.mjs` —
+[`2026-09-18-etapa3c1-banco.json`](2026-09-18-etapa3c1-banco.json). Modelo
+`prod-3b`, semilla 11; A/B/C con la pausa, D con `TMDB_PAUSA_429=0`.
+
+| Escenario | Resultado |
+|---|---|
+| S0 sano, frío | 200, MISS, publicado, 0 rechazadas, 0 PAUSAR, cubos vacíos |
+| S1 429 total a los 4 s de un frío sin UB | **503 `pausa`**, Retry-After 1, 0 contenido, 8,0 s de pared; 37 x429 propios, 775 rechazadas; **77 llamadas tras el primer 429** (control D sin pausa: **858**; línea base §44.3: 750-778); fresca, UB y degradado NO escritos; turno liberado |
+| S1b pedido durante la pausa, sin UB, TMDB sano | TOMAR `pausado` 354 ms → duerme 466 ms → compone → **200 con contenido** (28,3 s de pared = la composición) |
+| S1c pausa larga (Retry-After 12 s), sin UB | **503 en 317 ms**, Retry-After 9, `PAUSA 8047ms`, 0 composiciones, sin dormir |
+| S2 429 total con UB (fondo largo) | **UB en 284 ms**, byte a byte igual; el fondo: `ultimo-bueno-pausa`, CANCELADA, publicación no, 77-92 llamadas tras el 429; fresca y degradado NO escritos |
+| S2b pedido durante la pausa, con UB | TOMAR `pausado` → **UB en 317 ms**, 0 composiciones, 0 llamadas |
+| S3 propagación real (429 sólo en `/discover/tv` de Crunchyroll: A `cr`; B `n,d` componiendo; C `d,m` frío) | A: 11 x429 → escribe la pausa → 503; **B: 0 x429 propios, 608 rechazadas por el lector** → 503 `pausa` (antes del hallazgo 53.2(d): 200 `degradado-propio` con 548 descartes — corregido); **C: `pausado` 940 ms → duerme 1.018 ms → compone → 200** con 0 x429 |
+| S4a Redis lento (300 ms) + 429 | 503 `pausa`; lector: 10 lecturas en 25 s (≤ 1/s); sobrepaso 166 en 19,7 s (pico 24/s = `enVuelo`) |
+| S4b Redis caído + 429 (Retry-After 20) | primer pedido: `sin-redis`, compone sin turno como hoy, 190 llamadas (4 x429, resto rechazadas), 200 degradado en **74,9 s** — la promesa reducida de la Etapa 2 (cada lectura del caché reintenta 6× con 4,3 s), no la 3.c.1; **segundo pedido a los 5 s, otra clave: `pausado` por la pausa LOCAL 15,2 s → 503 en 23,1 s sin componer** (§43.3; los 23 s son los reintentos del SDK en TOMAR/GET); en la ventana: **1 PTTL** (lector), 42 EVALSHA (reintentos del SDK de TOMAR/PAUSAR/CUBO), MGET/SET del caché de siempre |
+| S5 tres procesos fríos + 429 total | 503/503/503; **231 llamadas globales tras el primer 429** (≈ 77 por proceso); nada escrito; `/api/health`: 429 34, pausas 30, yaMayor 4, pausados503 3 |
+| S6 CONTROL kill switch (D) | 200 `degradado-propio` con 845 descartes, ENFRIAR escrito, **858 llamadas tras el 429**, pico 224/s: el comportamiento de hoy |
+| `/api/health` | sólo agregados; sin uuid, familia, eventos ni ids |
+
+Criterios evaluados con lo medido (`criterios` del JSON): **4** ✔ (nada
+publicado ni enfriado tras un 429 en S1, S2, S5), **5** ✔ (UB en 284 y 317
+ms), **6** ✔ (503 con Retry-After y 0 contenido en S1/S1c; 200 con
+contenido en S1b; ninguna espera de 50 s), **7** ✔ (lecturas 10 y 1; 503 sin
+componer con Redis caído), **propagación** ✔. **8** ✔: ninguna prueba usa
+credenciales ni cachés de Producción (dobles, `entorno.sh`, `YUMP_BANCO=1`;
+el único contacto con Upstash fue la precondición, sobre claves prefijadas y
+borradas).
+
+### 53.6 Verificación final
+
+Suite completa **1868/1868** (`npm test`), `tsc --noEmit` 0 errores, build
+fresco (`.next` borrado, sin el entorno del banco) exit 0, `git diff
+--check` limpio. Commits de la rama: `46b3c40` (Lua + emulación + TOMAR),
+`25a4be8` (`tmdb-pausa.ts`), `747a4b8` (`servirConTurno`), `8927cab`
+(cableado), `f2f4edf` (precondición), `e6bd630` (banco + hallazgo `pausada`).
+
+### 53.7 Comprobado / inferido / desconocido
+
+- **Comprobado:** todo lo de 53.2-53.6; que el Lua corre en Upstash con la
+  forma esperada vía SDK; que el banco reproduce el corte (77 vs 858).
+- **Inferido:** que `MARGEN_CIERRE_MS = 5 s`, `ESPERA_PAUSA_MAX_MS = 5 s`,
+  `T_ADQ_MAX_MS = 2 s` y `PAUSA_MAX_MS = 60 s` son valores razonables
+  (propuestos, sin datos de Producción: 0 × 429 vistos); que el `DBSIZE`
+  802 → 90 fue vencimiento de un lote.
+- **Desconocido:** la cadencia y el `Retry-After` reales de TMDB en un 429
+  de Producción; el RTT p95 de Upstash desde `iad1`; la precisión del corte
+  de Vercel a `maxDuration`.
+- **Pendiente:** auditoría de Codex sobre `feat/etapa3c1-pausa-tmdb`; merge,
+  push y deploy sólo con autorización del dueño; tras el deploy, la
+  observación pasiva de `/api/health` (condición de rollback: pausas > 0 con
+  429 = 0, o pausados503 > 0 con 429 = 0 → `TMDB_PAUSA_429=0` + redeploy, que
+  se aplica en el deployment siguiente).

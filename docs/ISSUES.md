@@ -1297,8 +1297,21 @@ leyendo el código.**
 > errores nuevos; identidad del Home preservada según la evidencia existente);
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
-> restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c (protección frente
-> a TMDB) — estado vigente en el informe §45 a §52 (17/09): 3.c.1 "pausa
+> restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c.1 (pausa compartida
+> ante 429) — IMPLEMENTADA el 18/09 en `feat/etapa3c1-pausa-tmdb` (informe
+> §53): NO mergeada, NO pusheada, NO desplegada, PENDIENTE DE AUDITORÍA DE
+> CODEX. Lua verificado en Upstash por un Preview descartable (36/36);
+> identidad del Home antes/después 16/16 idéntica; umbrales del camino sano
+> dentro (Redis +24-28 ≤ 41, duración −1 % mediana, UB −34 ms); con 429
+> total 77 llamadas tras el primer 429 contra 858 sin pausa, nada publicado
+> ni enfriado, UB en 284 ms, sin UB 503 en 317 ms; propagación entre
+> procesos real; Redis caído: la pausa local rige. Kill switch
+> `TMDB_PAUSA_429=0`. Suite 1868/1868. Un hallazgo del banco corregido en la
+> misma rama: una composición con llamadas rechazadas por la pausa se
+> cancela aunque la pausa haya vencido al devolver (antes se enfriaba y se
+> servía mutilada). #19 sigue abierto hasta el merge y la observación en
+> Producción, y por la 3.c.2 (circuito) y la membresía.** **Diseño de la 3.c
+> (antecedente) — informe §45 a §52 (17/09): 3.c.1 "pausa
 > compartida ante 429" con diseño corregido: adquisición atómica del turno
 > con la pausa adentro; sobrepaso por fórmula parametrizada (`enVuelo +
 > cadencia × (Δt + T_lectura)`; 94 / 184 / 528 por proceso según cadencia
