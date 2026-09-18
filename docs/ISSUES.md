@@ -1304,7 +1304,10 @@ leyendo el código.**
 > pausa local —503 en 3,04 s con Redis caído, antes 23 s—, ring de cubos, un
 > TIME por evento, tests deterministas; el Preview de la precondición usó el
 > Redis de Producción con claves prefijadas y borradas, DBSIZE 802 → 90 no
-> explicado). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
+> explicado; y por §55 tras la auditoría sobre `d322282`: el tope de lectura
+> con pausa local pasó de una carrera que dejaba el MGET reintentando tras el
+> 503 a un lector acotado que cancela —18 MGET y 4 tardíos contra 3 y 0,
+> medido con control—; pendiente de auditoría FINAL). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
 > identidad del Home antes/después 16/16 idéntica; umbrales del camino sano
 > dentro (Redis +24-28 ≤ 41, duración −1 % mediana, UB −34 ms); con 429
 > total 77 llamadas tras el primer 429 contra 858 sin pausa, nada publicado

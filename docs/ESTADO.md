@@ -23,12 +23,20 @@
 - **Etapa 3.c.1 de capacidad (#19) — "pausa compartida ante 429":
   IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` (worktree `wt-etapa3c1`, desde
   `aac70e7`; informe §53) y CORREGIDA tras la auditoría de Codex sobre
-  `6fc63b5` (informe §54, 2026-09-18, rama en `cb0c3d1` + este commit de
-  docs); NO mergeada, NO pusheada, NO desplegada; PENDIENTE DE NUEVA
-  AUDITORÍA. Diseño §45-§52 aprobado por el dueño el 18/09.** **Lo que
+  `6fc63b5` (informe §54, 2026-09-18, `d322282`) y tras la auditoría sobre
+  `d322282` (informe §55, 2026-09-18: el tope de lectura con pausa local
+  CANCELA el trabajo —lector acotado `leerAcotadasHome` sobre `redisLector`,
+  `retries: 0` y señal de 1 s por petición— en vez de la carrera `conTope`,
+  que dejaba el MGET del cliente principal reintentando tras el 503; medido
+  en el banco con control sobre `d322282`: 18 MGET y 4 tardíos hasta +3,3 s
+  contra 3 MGET y 0 tardíos, ventana ≥ 10 s; criterio 8 nuevo en el banco);
+  NO mergeada, NO pusheada, NO desplegada; PENDIENTE DE AUDITORÍA FINAL.
+  Diseño §45-§52 aprobado por el dueño el 18/09.** **Lo que
   corrigió §54 [comprobado en tests y banco]:** (1) con la pausa LOCAL
   vigente ninguna lectura de Redis espera los reintentos del SDK: lectura
-  previa, fresca y UB con tope de 1 s (`lib/lectura-acotada.ts`), sin TOMAR,
+  previa, fresca y UB por el LECTOR ACOTADO (`leerAcotadasHome`: cliente
+  aparte, sin reintentos, señal de 1 s por petición — §55: cancela de verdad,
+  nada queda vivo tras responder), sin TOMAR,
   `pausado` con el restante fresco; medido en el recorrido HTTP completo con
   Redis caído y pausa conocida: **503 en 3,04 s (antes 23,1-23,7 s)**, 0
   composiciones, 0 TMDB; el pedido que entra SIN pausa con Redis caído sigue
@@ -44,9 +52,10 @@
   contra Producción; (5) `home-fondo-orden` y `home-vuelo` deterministas
   (reloj fijo y sincronización inyectada; 3/3 corridas fallaban bajo carga,
   ahora 6/6 pasan); build controlado sin Next activo ni entorno del banco:
-  130 s, exit 0, `BUILD_ID` `XX_-UqA5fcZbIJisArQWs`. Suite 1880/1890 (10
-  omitidos preexistentes) ×2, `tsc` 0, `git diff --check` limpio, identidad
-  16/16, umbrales dentro, criterios 4-8 verdes. Qué hay [comprobado en Git y en el banco]: los cuatro
+  130 s, exit 0, `BUILD_ID` `XX_-UqA5fcZbIJisArQWs`. **Tras §55:** suite
+  1881/1891 (10 omitidos preexistentes) ×2, `tsc` 0, build fresco controlado
+  116 s exit 0 (`BUILD_ID` `ryOY8nDhnkldv8thUQ-gl`), `git diff --check`
+  limpio, identidad 16/16, umbrales dentro, criterios 4-8 verdes. Qué hay [comprobado en Git y en el banco]: los cuatro
   scripts Lua (`lib/pausa-lua.ts`: `TOMAR` con la pausa dentro de la
   adquisición, `PAUSAR` v3 idempotente por evento con telemetría en `pcall`,
   `CUBO`, `SALUD`), la pausa del proceso (`lib/tmdb-pausa.ts`: nivel 1 local

@@ -73,15 +73,20 @@
 > `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`), fork de
 > `main = origin/main = b7be927`.
 >
-> **Estado vigente de la 3.c (2026-09-18, §53 + §54): la 3.c.1 "pausa compartida
-> ante 429" —diseño §45-§52 aprobado por el dueño— está IMPLEMENTADA en la
-> rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA tras la auditoría de Codex sobre
-> `6fc63b5` (§54: lecturas acotadas con pausa local, ring de cubos, un TIME por
-> evento, tests deterministas; el Preview de la precondición usó el Redis de
-> Producción con claves prefijadas y borradas, `DBSIZE` 802 → 90 no
-> explicado). Identidad del Home 16/16, umbrales dentro, criterios 4-8 verdes
-> en el banco. NO mergeada, NO pusheada, NO desplegada, pendiente de NUEVA
-> auditoría. Kill switch `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
+> **Estado vigente de la 3.c (2026-09-18, §53 + §54 + §55): la 3.c.1 "pausa
+> compartida ante 429" —diseño §45-§52 aprobado por el dueño— está IMPLEMENTADA
+> en la rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA dos veces: tras la
+> auditoría de Codex sobre `6fc63b5` (§54: lecturas acotadas con pausa local,
+> ring de cubos, un TIME por evento, tests deterministas; el Preview de la
+> precondición usó el Redis de Producción con claves prefijadas y borradas,
+> `DBSIZE` 802 → 90 no explicado) y tras la auditoría sobre `d322282` (§55: el
+> tope de lectura con pausa local CANCELA el trabajo —lector acotado
+> `leerAcotadasHome` sobre `redisLector`, sin reintentos y con señal por
+> petición— en vez de una carrera que dejaba el MGET reintentando después del
+> 503; medido: 18 MGET y 4 tardíos con `d322282` contra 3 y 0). Identidad del
+> Home 16/16, umbrales dentro, criterios 4-8 verdes en el banco. NO mergeada,
+> NO pusheada, NO desplegada, pendiente de auditoría FINAL. Kill switch
+> `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
 >
 > Issue que ataca: **#19**. Lo que NO toca: CDN y límites por ruta (Etapa 4),
 > observabilidad histórica (#20, Etapa 5). Las respuestas a las auditorías de
@@ -5186,7 +5191,12 @@ fresco (`.next` borrado, sin el entorno del banco) exit 0, `git diff
   429 = 0, o pausados503 > 0 con 429 = 0 → `TMDB_PAUSA_429=0` + redeploy, que
   se aplica en el deployment siguiente).
 
-## 54. Corrección de §53 tras la auditoría de Codex sobre `6fc63b5` (cinco puntos) — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` @ `cb0c3d1`+docs; NO mergeada, NO pusheada, NO desplegada; pendiente de nueva auditoría** (2026-09-18)
+## 54. Corrección de §53 tras la auditoría de Codex sobre `6fc63b5` (cinco puntos) — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` @ `cb0c3d1`+docs (`d322282`); el punto 1 fue CORREGIDO otra vez por §55 (`conTope` no cancelaba); NO mergeada, NO pusheada, NO desplegada** (2026-09-18)
+
+> **§55 corrige de aquí:** el tope de §54.1 era una carrera (`conTope`) que
+> respondía a tiempo pero dejaba el MGET del cliente principal reintentando
+> después del 503. Lo que sigue queda como antecedente; el mecanismo vigente
+> es el lector acotado de §55.2.
 
 Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `6fc63b5`,
 árbol limpio, fork `37d4707` = `origin/main`, 0 ramas remotas; `main` local
@@ -5308,3 +5318,139 @@ globales (S5) contra 872 sin pausa. Commits de esta tanda: `69f182f`
   `Retry-After` reales de TMDB (0 × 429 vistos en Producción).
 - **Pendiente:** nueva auditoría de Codex; merge, push y deploy sólo con
   autorización del dueño.
+
+## 55. Corrección de §54 tras la auditoría sobre `d322282` — el tope de lectura con pausa local CANCELA el trabajo, no sólo ignora el resultado — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría final** (2026-09-18)
+
+Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `d322282`,
+árbol limpio, fork `37d4707` = `origin/main`. Ninguna prueba usó Producción ni
+sus credenciales: unit tests con reloj virtual y el banco aislado (dobles).
+
+### 55.1 El defecto (con `d322282`)
+
+§54.1 acotaba las lecturas con pausa local con `conTope` (`lib/lectura-acotada.ts`):
+una carrera entre la lectura del cliente principal y un `setTimeout`. Eso
+respondía en el tope (503 en ~3 s) pero **no cancelaba nada**: el MGET del
+cliente principal seguía con sus 6 intentos y 4,3 s de backoff por lectura
+después de que el Home ya había respondido, sobre un Redis caído, y podía
+anotar métricas de una solicitud ya cerrada.
+
+**RED (visto fallar, `lib/home-servir.test.ts`):** pausa local conocida al entrar
++ Redis caído modelado como cliente con 5 reintentos y backoff exponencial
+(50·eⁱ ms, como el SDK) → después de responder, `intentos de Redis DESPUÉS de
+la respuesta: [2559, 4289, 5289]` ms. Se fijaron cuatro cosas en el mismo test:
+ninguna lectura viva atribuible a la solicitud (`enVuelo() === 0`) a los 10 s,
+ningún intento de Redis con `t > tRespuesta`, el JSON de métricas de la
+solicitud idéntico a los 10 s, y ningún `unhandledRejection`. Segundo RED:
+Redis COLGADO (nunca responde): la señal por petición corta la lectura al
+segundo y la lectura no sigue viva ni anota después. Control: SIN pausa local
+el camino usa `leer` de siempre y nunca `leerAcotada`.
+
+### 55.2 GREEN: un lector de caché específico para el recorrido pausado
+
+- **`leerAcotadasHome<T>(claves)` en `lib/cache.ts`**: UN `MGET` real por
+  **`redisLector`**, el cliente que ya existía para el PTTL del nivel 2
+  (`retry: { retries: 0 }`, `signal: () => AbortSignal.timeout(TIMEOUT_LECTURA_MS)`
+  → una señal NUEVA por petición; comprobado en `@upstash/redis` 1.38.0: si esa
+  señal aborta, `request()` LANZA sin reintentar; con `retries: 0` hay un solo
+  `fetch`). **No se crea ningún cliente por lectura**: sigue habiendo
+  exactamente dos instancias por proceso (test estructural lo cuenta). Timeout,
+  Redis caído o forma inesperada → `null` para todas las claves, `fallos.lectura`
+  +1, sin reintento. Sin Redis, el mismo `Map` de memoria que `batchGet`.
+  Misma implementación en memoria; el doble de Redis del banco ya atendía MGET.
+- **`DepsServir<T>.leerAcotada`** (obligatoria): `servirConTurno` la usa **sólo
+  cuando `pausaLocal() > 0` en el momento de cada lectura**; un rechazo del
+  lector se trata como "no llegó" (`.catch(() => null)`), nunca como error del
+  Home. Sin pausa, `deps.leer` de siempre: el camino sano conserva el cliente
+  principal y su política de reintentos, sin cambios.
+- **`lib/home.ts`**: la lectura previa del vuelo con pausa local vigente va por
+  `leerAcotadasHome([clave])`; `servirConTurno` recibe `leerAcotada`.
+- **Borrados** `lib/lectura-acotada.ts` y su test. Un test estructural falla si
+  vuelve `conTope`, `lectura-acotada` o un `Promise.race([deps.leer…`.
+- **`T_LECTURA_PAUSA_MS` = `CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS`** (1 s), atado
+  por test: el tope que la secuencia documenta es el que aplica la señal del
+  lector. Se mantuvo el nombre para no tocar métricas ni logs.
+- Sin cambios en `composeHome`, selección, hero, rieles, claves, TTL,
+  `VERSION_HOME` ni contrato JSON (identidad 16/16, abajo).
+
+GREEN: `lib/home-servir.test.ts` 75/75 (los 6 del punto 1 y los 3 nuevos);
+`etapa3c1-cableado` (2 tests reescritos + 1 nuevo), `home-vuelo`,
+`home-turno-cableado`, `home-fondo-orden`, `home-instante` actualizados por la
+dependencia nueva; `descartes-tmdb-inventario` con las dos filas nuevas (el
+`catch` del lector y el `.catch(() => null)` de la secuencia).
+
+### 55.3 Medido en el banco: trabajo residual, con control sobre `d322282`
+
+Escenario S4b (Redis CAÍDO —el doble corta el socket— + TMDB 429 total con
+`Retry-After` 20 s; el segundo pedido, `n,d`, sale recién cuando el proceso vio
+su 429: **pausa local conocida al entrar**, sin UB). Se leen las marcas del
+doble de Redis **≥ 10 s después de la respuesta** del pedido pausado y se cuentan
+los comandos cuya clave es de ESE pedido (`:d,n:`) en tres grupos
+(`scripts/banco/etapa3c1-residual.mjs`, un proceso; el mismo conteo entra en
+S4b de `etapa3c1-pausa.mjs` como criterio 8). Builds con el entorno del banco:
+control `d322282` en `wt-etapa3c1-control` (`BUILD_ID 6E832gGzuvT5WBuT7dpd8`)
+y la rama (`tt4pH5Bb-t04aVe0tSpQm`).
+
+| | control `d322282` | esta corrección |
+|---|---|---|
+| Tiempo hasta la respuesta (503 `pausa`) | **3.052 ms** | **38 ms** (S4b del banco completo: 149 ms) |
+| Operaciones de Redis realmente iniciadas (claves del pedido) | **18** MGET | **3** MGET |
+| … iniciadas antes de responder y completadas antes | 14 | 3 |
+| … iniciadas antes y completadas después de responder | 0 | 0 |
+| … iniciadas DESPUÉS de responder (tardías) | **4** (a +595, +1.320, +2.310, +3.340 ms) | **0** |
+| Operaciones canceladas | 0 (la carrera no cancela) | 0 (con Redis caído el `fetch` falla en el acto y no hay qué cancelar) |
+| Ventana observada tras la respuesta | 12.231 ms | 12.093 ms (banco completo: 54.609 ms) |
+| Composiciones / llamadas a TMDB | 0 / 0 | 0 / 0 |
+
+Lectura: con `d322282`, 3 lecturas × 6 intentos = 18 MGET, y los últimos 4
+llegan al doble hasta 3,3 s después del 503 (con un Redis lento en vez de
+caído serían más y más tarde: el backoff acumulado es 4,3 s por lectura). Con la
+corrección, 3 lecturas = 3 MGET, todos antes de responder. El 503 baja de
+3,05 s a 38 ms porque un socket cortado hace fallar el único intento en el
+acto: **los 3 s de antes eran el tope de la carrera, no el tiempo de Redis**.
+Con Redis COLGADO (no responde) el tope es el que aborta: 1 s por lectura, ≈ 3 s
+sin UB, medido en el test con reloj virtual (exactamente `2 × T_LECTURA_PAUSA_MS`
+hasta decidir). Las "operaciones canceladas" en el banco son 0 en las dos
+columnas porque el doble caído no deja nada en vuelo que cancelar; la
+cancelación real (señal que aborta el `fetch` a 1 s) sólo se observa con Redis
+colgado, y ahí la prueba es la unitaria.
+Archivos: `docs/medidas/2026-09-18-etapa3c1-residual-control-d322282.json`,
+`…-residual-despues.json`, `…-etapa3c1-banco.json`.
+
+### 55.4 Controles conservados (banco completo, `etapa3c1-pausa.mjs`)
+
+Redis sano con fresca → HIT (S1b tras la pausa: 200, publicado); Redis sano con
+UB durante la pausa → UB en 251 ms (S2b, `ultimo-bueno-pausa`, `ubIgual`);
+429 con UB → UB en 346 ms (S2); pausa larga sin UB → 503 en 174 ms (S1c); sin
+pausa (kill switch, S6) → comportamiento de siempre (872 llamadas tras el 429,
+control); pausa corta sin UB → un sueño + una readquisición (tests del punto 1
+con reloj virtual); propagación entre procesos verde; sobrepaso 74 (S1) / 94
+(S2) / 227 global (S5) contra 872 sin pausa. Criterios 4-8 verdes.
+**Identidad del Home 16/16 idéntica** contra `37d4707` (TMDB 926 = 926 …
+1082 = 1082; concurrente 2059 = 2059; controles de mutación verdes).
+**Umbrales** (3 semillas): TMDB 0 diferencia; Redis +26/+25/+26 (≤ 41) y +1 en
+fondo (≤ 3); duración mediana −1,0 % frío / +1,8 % fondo, peor repetición
++6,1 % (≤ +10 %); publicación +1 EVAL; UB −47 ms.
+
+### 55.5 Verificación final
+
+Específicas: `home-servir` 75/75, `etapa3c1-cableado`, `home-vuelo`,
+`home-turno-cableado`, `home-fondo-orden`, `home-instante`,
+`descartes-tmdb-inventario` verdes. Suite completa **1881/1891 (10 omitidos
+preexistentes) × 2**. `tsc --noEmit` 0. Build fresco controlado (0 puertos del
+banco en escucha, sin variables del banco, `.next` borrado): **116 s, exit 0,
+"Compiled successfully", 0 errores, `BUILD_ID` `ryOY8nDhnkldv8thUQ-gl`**.
+`git diff --check` limpio.
+
+### 55.6 Comprobado / inferido / desconocido
+
+- **Comprobado:** RED → GREEN de los tres tests; el comportamiento del SDK
+  1.38.0 ante `signal` como función y `retries: 0` (leído en el código del
+  paquete instalado); el trabajo residual del control y su ausencia en la
+  corrección (banco, marcas del doble); identidad, umbrales y criterios.
+- **Inferido:** con Redis LENTO (responde tarde, no caído) el control dejaría
+  más comandos tardíos que los 4 medidos —el backoff acumulado es 4,3 s por
+  lectura—; no se midió esa variante en el banco.
+- **Desconocido:** sin cambios respecto de §54.7 (`DBSIZE` 802 → 90; cadencia y
+  `Retry-After` reales de TMDB).
+- **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
+  del dueño.

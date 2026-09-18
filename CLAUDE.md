@@ -216,9 +216,14 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   al `SET NX`; como toda variable de Vercel, en el deployment siguiente.
   ⚠️ **Con Redis caído** la pausa local rige igual (nunca se compone contra
   TMDB con ella vigente) y el pedido NO espera los reintentos del SDK: con la
-  pausa local vigente, la lectura previa, la fresca y el UB se leen con tope
-  de 1 s (`lib/lectura-acotada.ts`) y no se toma el turno — medido: 503 en
-  ≈ 3 s. El pedido que entra SIN pausa con Redis caído sigue en la "promesa
+  pausa local vigente, la lectura previa, la fresca y el UB se leen por el
+  LECTOR ACOTADO (`leerAcotadasHome` en `lib/cache.ts`: el cliente
+  `redisLector`, uno por proceso, `retries: 0` y señal de 1 s por petición)
+  y no se toma el turno — medido: 503 en ≈ 3 s. 🔴 **El tope CANCELA la
+  petición, no sólo ignora su resultado**: una carrera (`Promise.race`) sobre
+  el cliente principal respondía en 3 s pero dejaba el MGET y sus 6
+  reintentos corriendo 20-25 s después de responder (auditoría sobre
+  `d322282`, informe §55). El pedido que entra SIN pausa con Redis caído sigue en la "promesa
   reducida" de la Etapa 2 (los reintentos del SDK por cada lectura del
   caché): eso no lo cambia la pausa. Los cubos de `/api/health` viven en un
   RING de 120 slots por minuto dentro de `tmdb:cubos` (acotado: ≤ 960
