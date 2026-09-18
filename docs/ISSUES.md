@@ -1300,7 +1300,11 @@ leyendo el código.**
 > restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c.1 (pausa compartida
 > ante 429) — IMPLEMENTADA el 18/09 en `feat/etapa3c1-pausa-tmdb` (informe
 > §53): NO mergeada, NO pusheada, NO desplegada, PENDIENTE DE AUDITORÍA DE
-> CODEX. Lua verificado en Upstash por un Preview descartable (36/36);
+> CODEX (corregida por §54 tras la primera auditoría: lecturas acotadas con
+> pausa local —503 en 3,04 s con Redis caído, antes 23 s—, ring de cubos, un
+> TIME por evento, tests deterministas; el Preview de la precondición usó el
+> Redis de Producción con claves prefijadas y borradas, DBSIZE 802 → 90 no
+> explicado). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
 > identidad del Home antes/después 16/16 idéntica; umbrales del camino sano
 > dentro (Redis +24-28 ≤ 41, duración −1 % mediana, UB −34 ms); con 429
 > total 77 llamadas tras el primer 429 contra 858 sin pausa, nada publicado

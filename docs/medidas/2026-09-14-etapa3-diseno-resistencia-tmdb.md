@@ -73,12 +73,15 @@
 > `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`), fork de
 > `main = origin/main = b7be927`.
 >
-> **Estado vigente de la 3.c (2026-09-18, §53): la 3.c.1 "pausa compartida
+> **Estado vigente de la 3.c (2026-09-18, §53 + §54): la 3.c.1 "pausa compartida
 > ante 429" —diseño §45-§52 aprobado por el dueño— está IMPLEMENTADA en la
-> rama `feat/etapa3c1-pausa-tmdb` (Lua verificado en Upstash por un Preview
-> descartable, identidad del Home 16/16, umbrales dentro, criterios 4-8
-> verdes en el banco), NO mergeada, NO pusheada, NO desplegada, pendiente de
-> auditoría de Codex. Kill switch `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
+> rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA tras la auditoría de Codex sobre
+> `6fc63b5` (§54: lecturas acotadas con pausa local, ring de cubos, un TIME por
+> evento, tests deterministas; el Preview de la precondición usó el Redis de
+> Producción con claves prefijadas y borradas, `DBSIZE` 802 → 90 no
+> explicado). Identidad del Home 16/16, umbrales dentro, criterios 4-8 verdes
+> en el banco. NO mergeada, NO pusheada, NO desplegada, pendiente de NUEVA
+> auditoría. Kill switch `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
 >
 > Issue que ataca: **#19**. Lo que NO toca: CDN y límites por ruta (Etapa 4),
 > observabilidad histórica (#20, Etapa 5). Las respuestas a las auditorías de
@@ -5016,7 +5019,14 @@ no enviarse.
   renovaciones (constante por escenario).
 - **Estado:** 3.c.1 **no implementada, pendiente de aprobación final**.
 
-## 53. Implementación de la 3.c.1 sobre `aac70e7` (diseño §45-§52 aprobado por el dueño el 2026-09-18) — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría de Codex** (2026-09-18)
+## 53. Implementación de la 3.c.1 sobre `aac70e7` (diseño §45-§52 aprobado por el dueño el 2026-09-18) — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; corregida por §54 tras la auditoría de Codex sobre `6fc63b5`; NO mergeada, NO pusheada, NO desplegada; pendiente de nueva auditoría** (2026-09-18)
+
+> **§54 corrige de aquí:** (1) con pausa local vigente el pedido esperaba los
+> reintentos del SDK de Redis (23 s → 3 s); (2) `tmdb:cubos` crecía sin tope;
+> (3) dos `TIME` por evento podían separar `429` de `pausas`; (4) **el
+> Preview de 53.3 usó el Redis de Producción** (las frases "aislado" y "sin
+> Producción" de 53.3/53.5 son falsas en ese punto; `DBSIZE` 802 → 90 no
+> explicado); (5) tres tests dependían de la carga y el reloj de pared.
 
 Rama `feat/etapa3c1-pausa-tmdb`, worktree `wt-etapa3c1`, creada desde
 `aac70e7` (el diseño y sus RED, sobre `main` = `37d4707`). Alcance
@@ -5087,12 +5097,15 @@ cliente lector aparte, `opsPausaHome.evalSalud`). Latencia por comando:
 mediana 119 ms (114-351, n = 33). Claves `precond-etapa3c1:<corrida>:*`
 (TTL ≤ 60 s) borradas: `SCAN` 0 antes y después. **Dos hechos del SDK que
 la implementación ya contempla:** deserializa solo el JSON (el `cjson` y el
-`LINDEX` vuelven como objetos) y `PTTL` viaja como número. **Observado y no
-explicado:** durante la primera corrida `DBSIZE` pasó de 802 a 90 y quedó
-estable en 90 en las dos siguientes; la ruta sólo hace `DEL` de sus claves
-prefijadas (devolvió 8 = las existentes) y la causa inferida es el
-vencimiento simultáneo de un lote escrito junto (una composición escribe
-cientos de `card:` con el mismo TTL) — **no verificado**. Limpieza
+`LINDEX` vuelven como objetos) y `PTTL` viaja como número. **Observado y NO
+explicado (§54.4):** durante la primera corrida `DBSIZE` pasó de 802 a 90 y
+quedó estable en 90 en las dos siguientes; la ruta sólo hace `DEL` de sus
+claves prefijadas (devolvió 8 = las existentes). ~~La causa inferida es el
+vencimiento de un lote~~ — sin evidencia; no se atribuye a nada. **Y el
+Preview NO estaba aislado del Redis de Producción:** `KV_*` es una sola
+entrada con ámbito "Production, Preview" (§54.4); esta corrida fue una
+operación accidental sobre el Redis de Producción, acotada a claves
+prefijadas y borradas. Limpieza
 ejecutada: los dos deployments borrados (`vercel remove`; `inspect` del
 segundo: "Can't find the deployment"), `app.yump.ar` siguió en
 `dpl_8BzaaFazZuKeppma2RqQ9ZSRFgM5` (Producción) antes y después, worktree,
@@ -5145,8 +5158,8 @@ ms), **6** ✔ (503 con Retry-After y 0 contenido en S1/S1c; 200 con
 contenido en S1b; ninguna espera de 50 s), **7** ✔ (lecturas 10 y 1; 503 sin
 componer con Redis caído), **propagación** ✔. **8** ✔: ninguna prueba usa
 credenciales ni cachés de Producción (dobles, `entorno.sh`, `YUMP_BANCO=1`;
-el único contacto con Upstash fue la precondición, sobre claves prefijadas y
-borradas).
+el único contacto con Upstash fue la precondición de 53.3, que —corregido en
+§54.4— corrió sobre el Redis de Producción con claves prefijadas y borradas).
 
 ### 53.6 Verificación final
 
@@ -5162,8 +5175,8 @@ fresco (`.next` borrado, sin el entorno del banco) exit 0, `git diff
   forma esperada vía SDK; que el banco reproduce el corte (77 vs 858).
 - **Inferido:** que `MARGEN_CIERRE_MS = 5 s`, `ESPERA_PAUSA_MAX_MS = 5 s`,
   `T_ADQ_MAX_MS = 2 s` y `PAUSA_MAX_MS = 60 s` son valores razonables
-  (propuestos, sin datos de Producción: 0 × 429 vistos); que el `DBSIZE`
-  802 → 90 fue vencimiento de un lote.
+  (propuestos, sin datos de Producción: 0 × 429 vistos). ~~Que el `DBSIZE`
+  802 → 90 fue vencimiento de un lote~~ — retirado (§54.4: sin evidencia).
 - **Desconocido:** la cadencia y el `Retry-After` reales de TMDB en un 429
   de Producción; el RTT p95 de Upstash desde `iad1`; la precisión del corte
   de Vercel a `maxDuration`.
@@ -5172,3 +5185,126 @@ fresco (`.next` borrado, sin el entorno del banco) exit 0, `git diff
   observación pasiva de `/api/health` (condición de rollback: pausas > 0 con
   429 = 0, o pausados503 > 0 con 429 = 0 → `TMDB_PAUSA_429=0` + redeploy, que
   se aplica en el deployment siguiente).
+
+## 54. Corrección de §53 tras la auditoría de Codex sobre `6fc63b5` (cinco puntos) — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` @ `cb0c3d1`+docs; NO mergeada, NO pusheada, NO desplegada; pendiente de nueva auditoría** (2026-09-18)
+
+Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `6fc63b5`,
+árbol limpio, fork `37d4707` = `origin/main`, 0 ramas remotas; `main` local
+avanzó por otra sesión (`34e4637`, salas compartidas, sin push) y su worktree
+tiene cambios ajenos: no se tocaron. Ninguna prueba usó Producción.
+
+### 54.1 Punto 1 — pausa local con Redis lento o caído (RED → GREEN)
+
+**El defecto:** con la pausa LOCAL vigente el pedido igual pagaba los 6
+reintentos del SDK (4,3 s de backoff) en la lectura previa del vuelo, en la
+fresca, en el UB y en TOMAR (banco anterior: 23,1 s hasta el 503). **RED
+(visto fallar):** pausa local 8 s + lecturas y TOMAR que nunca responden →
+la secuencia esperaba a Redis; Redis lento 20 s → ídem; la pausa que nace
+ENTRE la primera lectura y la segunda → la segunda esperaba. **GREEN:**
+`lib/lectura-acotada.ts` (`conTope`: lo que no llega en `ms` es `null`, un
+rechazo también, la respuesta tardía se ignora; `dormir` inyectable);
+`servirConTurno` lee fresca y `[UB, degradado]` con tope
+`T_LECTURA_PAUSA_MS = 1 s` cuando la pausa local rige **al momento de cada
+lectura**, no toma el turno (nada que componer) y responde `pausado` con el
+restante FRESCO; sin UB, la espera breve y la ÚNICA readquisición con su
+timeout de siempre; `lib/home.ts` acota igual la lectura previa del vuelo
+(sólo con pausa local vigente: el camino sano no pasa por ahí). **Límite
+explícito del recorrido:** con UB, 3 lecturas acotadas ≈ 3 s; sin UB, 3 s +
+`min(restante, 5 s)` + jitter + `T_ADQ_MAX` 2 s ≈ 10,25 s. Tests:
+`home-servir.test.ts` (+5), `lectura-acotada.test.ts` (3), guard de cableado.
+**Medido en el banco (recorrido HTTP completo, S4b):** Redis caído + 429 con
+`Retry-After` 20 s; el segundo pedido sale recién cuando el proceso vio su
+primer 429 (`pausaConocidaAlPedir: true`): **503 `pausa` en 3.036 ms** (antes
+23.100-23.700 ms), 2 lecturas acotadas, 0 composiciones, 0 TMDB, `PAUSA
+18950ms`. Lo que NO cambia: el primer pedido, que entra sin pausa con Redis
+caído, sigue en la promesa reducida de la Etapa 2 (74,9-75,5 s: `sin-redis`,
+compone sin turno, 190 llamadas, 4 x429) — no es la 3.c.1 y queda como límite
+documentado. Redis sano con pausa local: fresca → HIT, UB → UB sin componer;
+camino sin pausa intacto (control).
+
+### 54.2 Punto 2 — telemetría acotada (RED → GREEN)
+
+`tmdb:cubos` era un hash con un campo por minuto sin poda. **RED (visto
+fallar):** 500 minutos con eventos → 1.500 campos. **GREEN:** un **ring** de
+`RING_CUBOS = 120` slots (`minuto % 120`) dentro de la MISMA clave declarada:
+`<slot>:m` guarda el minuto y `<slot>:<campo>` los contadores; al escribir en
+un slot de otro minuto se lo limpia (`HDEL`) en el mismo script; SALUD hace UN
+`HGETALL` acotado (≤ 8 × 120 = 960 campos) y suma sólo los slots cuyo minuto
+cae en la ventana. Probado: 500 minutos → ≤ 960 campos; la ventana de 60
+minutos suma exactamente (59 con eventos + el actual vacío) y 30 minutos
+después, 29; ninguna clave se construye dentro de un script; SALUD sin uuid,
+ids, rutas ni eventos. Mutación (slot reciclado sin limpiar) cae.
+
+### 54.3 Punto 3 — un solo reloj de Redis por evento (RED → GREEN)
+
+**RED (visto fallar):** con un reloj que avanza 1 ms por lectura, un PAUSAR
+que arranca 4 ms antes del cambio de minuto dejaba `429` en el minuto 100 y
+`pausas` en el 101 — la condición de rollback, producida por el instrumento.
+**GREEN:** PAUSAR lee `TIME` una sola vez (en `pcall`) y ese minuto e instante
+sellan `429`, `pausas`/`ya-mayor`, `ya-aplicada` y el evento; barrido de
+arranques a 1..16 ms del borde: siempre juntos, y el evento en el mismo
+minuto. La emulación en memoria hace lo mismo (`tiempoRedis()` una vez).
+
+### 54.4 Punto 4 — aislamiento del Preview: corrección de §53.3
+
+**Comprobado:** `vercel env ls` muestra `KV_REST_API_URL` y
+`KV_REST_API_TOKEN` como UNA entrada (`Secret`) con ámbito **"Production,
+Preview"** (más las entradas acotadas a `spike/capacitor-android`), y
+`docs/MANTENIMIENTO.md` ("Preview NO puede compartir el Redis de producción")
+documenta exactamente eso. Por lo tanto **el Preview de la precondición usó
+el Redis de Producción**. Las afirmaciones de §53.3/§53.5 ("aislado", "sin
+Producción", "el único contacto con Upstash") eran falsas en ese punto y
+quedan corregidas: fue una **operación accidental sobre el Redis de
+Producción**, acotada a claves con prefijo `precond-etapa3c1:<corrida>:` con
+TTL ≤ 60 s, borradas al final (`SCAN` del prefijo 0 antes y después), sin
+tocar claves normales del Home — como la precondición de la Etapa 2 (§14.1
+de su informe, que sí lo declaraba). **`DBSIZE` 802 → 90 durante la primera
+corrida: NO explicado.** No hay evidencia para atribuirlo a vencimientos ni
+a nada; la ruta sólo ejecutó `DEL` sobre 10 claves propias nombradas
+(devolvió 8). La prueba **no se repite** contra Producción; si hace falta
+repetirla, se hará contra una base Upstash aislada y autorizada por el
+dueño, con las variables `KV_*` acotadas a la rama (procedimiento de
+`docs/MANTENIMIENTO.md`).
+
+### 54.5 Punto 5 — suite determinista y build controlado
+
+**Reproducido antes del cambio:** con cuatro suites en paralelo, 3 de 3
+corridas fallaban `home-fondo-orden` ("ORDEN COMPLETO": el turno de 200 ms
+vencía sin renovar y PUBLICAR salía `rechazado`; "FRONTERA EXTERNA, dos
+llamadores" y "dos handlers concurrentes": el `setImmediate` de B llegaba
+después del timer de 60/40 ms de A) y `home-vuelo` ("dos claves DIFERENTES":
+`< 80 ms` de pared). **Corrección sin ampliar umbrales:** reloj FIJO para el
+turno en memoria (los tests prueban orden, no duraciones); sincronización
+inyectada (A no responde hasta que el test vio arrancar el fondo/la
+composición de B; si B dependiera de A, el tope de 500 vueltas lo delata);
+`producciones === 2` retenidas con una puerta. **Después:** 27/27 en 6
+corridas bajo la misma carga; suite completa 3 × 1879/1889 y 2 × 1880/1890
+tras el último cambio (10 omitidos preexistentes). Controles conservados: el
+fondo que no espera la compuerta rompe 6 tests; el vuelo que serializa
+claves rompe 2. **Build controlado:** ningún Next activo (0 puertos
+3000-3004/4801-4813 en escucha), sin variables del banco, `.next` borrado:
+`npm run build` **130 s, exit 0, "Compiled successfully", 0 errores,
+`BUILD_ID` `XX_-UqA5fcZbIJisArQWs`**.
+
+### 54.6 Verificación final tras las correcciones
+
+Específicas 143/143; suite 1880/1890 (10 omitidos) ×2; `tsc --noEmit` 0;
+build fresco 130 s exit 0; `git diff --check` limpio; identidad del Home
+**16/16 idéntica** (TMDB 926 = 926 … 1082 = 1082; controles verdes);
+umbrales (3 semillas): TMDB 0 diferencia, Redis +29/+27/+26 (≤ 41) y +1 en
+fondo (≤ 3), duración mediana +0,7 % frío / −0,7 % fondo, peor repetición
++1,5 %, publicación +1 EVAL (TOMAR reemplaza al SET NX), UB −79 ms; banco
+429: criterios 4-7 y propagación verdes, sobrepaso 77 (S1) / 92 (S2) / 223
+globales (S5) contra 872 sin pausa. Commits de esta tanda: `69f182f`
+(TIME único + ring), `7449b5e` (lecturas acotadas), `0ce9704` y `bfe8366`
+(tests deterministas), `cb0c3d1` (tope por lectura + banco S4b).
+
+### 54.7 Comprobado / inferido / desconocido
+
+- **Comprobado:** todo lo anterior; el ámbito de `KV_*` en Vercel.
+- **Inferido:** ninguno nuevo; `T_LECTURA_PAUSA_MS = 1 s` es propuesto
+  (igual que el timeout del lector).
+- **Desconocido:** la causa del `DBSIZE` 802 → 90; la cadencia y el
+  `Retry-After` reales de TMDB (0 × 429 vistos en Producción).
+- **Pendiente:** nueva auditoría de Codex; merge, push y deploy sólo con
+  autorización del dueño.

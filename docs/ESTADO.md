@@ -22,9 +22,31 @@
   No retomar sin pedido explícito del dueño.
 - **Etapa 3.c.1 de capacidad (#19) — "pausa compartida ante 429":
   IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` (worktree `wt-etapa3c1`, desde
-  `aac70e7`; informe §53, 2026-09-18); NO mergeada, NO pusheada, NO
-  desplegada; PENDIENTE DE AUDITORÍA DE CODEX. Diseño §45-§52 aprobado por
-  el dueño el 18/09.** Qué hay [comprobado en Git y en el banco]: los cuatro
+  `aac70e7`; informe §53) y CORREGIDA tras la auditoría de Codex sobre
+  `6fc63b5` (informe §54, 2026-09-18, rama en `cb0c3d1` + este commit de
+  docs); NO mergeada, NO pusheada, NO desplegada; PENDIENTE DE NUEVA
+  AUDITORÍA. Diseño §45-§52 aprobado por el dueño el 18/09.** **Lo que
+  corrigió §54 [comprobado en tests y banco]:** (1) con la pausa LOCAL
+  vigente ninguna lectura de Redis espera los reintentos del SDK: lectura
+  previa, fresca y UB con tope de 1 s (`lib/lectura-acotada.ts`), sin TOMAR,
+  `pausado` con el restante fresco; medido en el recorrido HTTP completo con
+  Redis caído y pausa conocida: **503 en 3,04 s (antes 23,1-23,7 s)**, 0
+  composiciones, 0 TMDB; el pedido que entra SIN pausa con Redis caído sigue
+  en la promesa reducida de la Etapa 2 (≈ 75 s), límite documentado; (2)
+  `tmdb:cubos` es un ring de 120 slots (≤ 960 campos por más que corra la
+  app; SALUD un solo HGETALL acotado; 500 minutos probados); (3) PAUSAR lee
+  `TIME` una sola vez por evento (con dos lecturas, un cambio de minuto
+  separaba `429` de `pausas`: RED reproducido); (4) **el Preview de la
+  precondición usó el Redis de Producción** (`KV_*` es una sola entrada con
+  ámbito "Production, Preview", como documenta `docs/MANTENIMIENTO.md`):
+  operación accidental sobre Producción, acotada a claves prefijadas y
+  borradas; `DBSIZE` 802 → 90 **no explicado**, sin atribuir; no se repite
+  contra Producción; (5) `home-fondo-orden` y `home-vuelo` deterministas
+  (reloj fijo y sincronización inyectada; 3/3 corridas fallaban bajo carga,
+  ahora 6/6 pasan); build controlado sin Next activo ni entorno del banco:
+  130 s, exit 0, `BUILD_ID` `XX_-UqA5fcZbIJisArQWs`. Suite 1880/1890 (10
+  omitidos preexistentes) ×2, `tsc` 0, `git diff --check` limpio, identidad
+  16/16, umbrales dentro, criterios 4-8 verdes. Qué hay [comprobado en Git y en el banco]: los cuatro
   scripts Lua (`lib/pausa-lua.ts`: `TOMAR` con la pausa dentro de la
   adquisición, `PAUSAR` v3 idempotente por evento con telemetría en `pcall`,
   `CUBO`, `SALUD`), la pausa del proceso (`lib/tmdb-pausa.ts`: nivel 1 local
@@ -55,13 +77,14 @@
   429 vistos en Producción: cadencia y `Retry-After` reales desconocidos);
   el corte de Vercel a `maxDuration`. **Observado y no explicado:** `DBSIZE`
   de Upstash 802 → 90 durante la primera corrida de la precondición (la ruta
-  sólo borró sus 8 claves prefijadas; causa inferida: vencimiento de un
-  lote). **Siguiente paso:** auditoría de Codex sobre la rama; merge, push y
+  sólo borró sus 8 claves prefijadas; sin evidencia de la causa; el Preview
+  usaba el Redis de Producción, §54.4). **Siguiente paso:** auditoría de Codex sobre la rama; merge, push y
   deploy sólo con autorización del dueño; después, observación pasiva de
   `/api/health` (rollback si `pausas > 0` con `429 = 0`, o `pausados503 > 0`
   con `429 = 0`: `TMDB_PAUSA_429=0` + redeploy). 3.c.2 fuera de alcance.
-  `main` local tiene además `0c13036` (plan de salas compartidas, otra
-  sesión, sin push): no forma parte de esta rama.
+  `main` local tiene además commits de otra sesión (`0c13036`, `34e4637`:
+  salas compartidas, sin push) y su worktree cambios ajenos sin commitear: no
+  forman parte de esta rama y no se tocaron.
 - **Etapa 3.c de capacidad (#19) — diseño (informe §45 a §52, antecedente de
   la implementación §53): 3.c.1 "pausa compartida ante 429" con
   diseño corregido (§43: diez puntos; §44: tres; §45: la señal es el

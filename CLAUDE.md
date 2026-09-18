@@ -215,9 +215,15 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   Kill switch **`TMDB_PAUSA_429=0`**: apaga los dos niveles y `TOMAR` vuelve
   al `SET NX`; como toda variable de Vercel, en el deployment siguiente.
   ⚠️ **Con Redis caído** la pausa local rige igual (nunca se compone contra
-  TMDB con ella vigente), pero la duración de la solicitud la dominan los
-  reintentos del SDK por cada lectura del caché (la "promesa reducida" de la
-  Etapa 2): eso no lo cambia la pausa.
+  TMDB con ella vigente) y el pedido NO espera los reintentos del SDK: con la
+  pausa local vigente, la lectura previa, la fresca y el UB se leen con tope
+  de 1 s (`lib/lectura-acotada.ts`) y no se toma el turno — medido: 503 en
+  ≈ 3 s. El pedido que entra SIN pausa con Redis caído sigue en la "promesa
+  reducida" de la Etapa 2 (los reintentos del SDK por cada lectura del
+  caché): eso no lo cambia la pausa. Los cubos de `/api/health` viven en un
+  RING de 120 slots por minuto dentro de `tmdb:cubos` (acotado: ≤ 960
+  campos), y PAUSAR lee `TIME` UNA vez por evento para que `429` y `pausas`
+  nunca caigan en minutos distintos.
 - **El idioma de los títulos sale de una variable, y la configuración va DENTRO
   de la clave de cache** (`lib/idioma.ts` → `HUELLA_IDIOMA`, `lib/claves.ts`).
   `IDIOMA_TITULOS` decide el idioma base (default `es-ES`) y `FALLBACK_IDIOMA`
