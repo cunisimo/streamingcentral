@@ -98,11 +98,11 @@ test("telemetría con el reloj de Redis: 'escrito' suma 429 y pausas en el cubo 
   const w = mundo();
   const m = w.minuto();
   await w.pausar({ id: "p:1", ms: 8000, uuid: "p", contador: 1, familia: "/discover/movie" });
-  assert.equal(w.cubos().get(`${m}:429`), "1"); assert.equal(w.cubos().get(`${m}:pausas`), "1");
+  assert.equal(String(valorDelMinuto(w.cubos(), m, "429")), "1"); assert.equal(String(valorDelMinuto(w.cubos(), m, "pausas")), "1");
   await w.pausar({ id: "p:1", ms: 8000, uuid: "p", contador: 1 });
-  assert.equal(w.cubos().get(`${m}:429`), "1", "el reintento no cuenta como 429"); assert.equal(w.cubos().get(`${m}:ya-aplicada`), "1");
+  assert.equal(String(valorDelMinuto(w.cubos(), m, "429")), "1", "el reintento no cuenta como 429"); assert.equal(String(valorDelMinuto(w.cubos(), m, "ya-aplicada")), "1");
   await w.pausar({ id: "q:1", ms: 1000, uuid: "q", contador: 1 });
-  assert.equal(w.cubos().get(`${m}:429`), "2"); assert.equal(w.cubos().get(`${m}:ya-mayor`), "1");
+  assert.equal(String(valorDelMinuto(w.cubos(), m, "429")), "2"); assert.equal(String(valorDelMinuto(w.cubos(), m, "ya-mayor")), "1");
   const eventos = w.store.get(w.K.eventos)?.v as string[];
   assert.equal(eventos.length, 2, "un evento por 'escrito' y por 'ya-mayor'; ninguno por 'ya-aplicada'");
   const ev = JSON.parse(eventos[1]);                                            // LPUSH: el más nuevo primero
@@ -150,4 +150,74 @@ test("LUA_PAUSA tiene los cuatro scripts, con las claves y argumentos del diseñ
   assert.ok(p.includes("'TIME'") && p.includes("cjson.encode") && p.includes("'HINCRBY'") && p.includes("'LPUSH'") && p.includes("'LTRIM'"));
   assert.match(p, /'PX', 120000/); assert.match(p, /'PX', 86400000/);
   for (const s of Object.values(LUA_PAUSA)) assert.doesNotMatch(s, /KEYS\[[6-9]\]/, "ninguna clave fuera de las declaradas");
+});
+
+// ============================================================================
+// Auditoría de Codex sobre 6fc63b5, puntos 2 y 3: UN solo reloj de Redis por
+// evento, y telemetría ACOTADA independientemente del tiempo de actividad.
+// ============================================================================
+import { RING_CUBOS } from "./pausa-lua.ts";
+
+/** Un reloj que AVANZA en cada lectura: dos TIME dentro del mismo script caen en instantes distintos. */
+function mundoRelojQueAvanza(inicio: number, pasoMs = 1) {
+  let t = inicio;
+  const store = new Map<string, Entrada>();
+  const ops = crearOpsEnMemoria(store, () => { const v = t; t += pasoMs; return v; });
+  return { store, ops, K: CLAVES_PAUSA, cubos: () => (store.get(CLAVES_PAUSA.cubos)?.v ?? new Map()) as Map<string, string> };
+}
+/** Suma un campo en el cubo del minuto `m`, sea cual sea la forma interna del hash (campo `<m>:<campo>` o ring `<slot>:<campo>` con `<slot>:m`). */
+function valorDelMinuto(cubos: Map<string, string>, m: number, campo: string): number {
+  if (cubos.has(`${m}:${campo}`)) return Number(cubos.get(`${m}:${campo}`));
+  for (const [k, v] of cubos) if (k.endsWith(":m") && Number(v) === m) { const slot = k.slice(0, -2); return Number(cubos.get(`${slot}:${campo}`) ?? 0); }
+  return 0;
+}
+
+test("🔴 punto 3 — un solo TIME por evento: un PAUSAR que cruza el límite de minuto deja `429`, `pausas`/`ya-mayor` y el evento en el MISMO minuto, arranque donde arranque (nunca `pausas > 0` con `429 = 0` en una ventana)", async () => {
+  // El script arranca k ms antes del cambio de minuto 100 → 101 y cada lectura del reloj avanza 1 ms: para
+  // algún k, con DOS lecturas de TIME el primer cubo cae en el 100 y el segundo en el 101.
+  for (let k = 1; k <= 16; k++) {
+    const w = mundoRelojQueAvanza(101 * 60_000 - k);
+    await w.ops.evalPausar([w.K.pausa, w.K.ev("p:1"), w.K.proc("p"), w.K.eventos, w.K.cubos], ["p:1", "3000", "1", "/x", "3000"]);
+    const c = w.cubos();
+    const en = (m: number) => ({ c429: valorDelMinuto(c, m, "429"), pausas: valorDelMinuto(c, m, "pausas") });
+    const e100 = en(100), e101 = en(101);
+    assert.ok((e100.c429 === 1 && e100.pausas === 1 && e101.c429 === 0 && e101.pausas === 0) || (e101.c429 === 1 && e101.pausas === 1 && e100.c429 === 0 && e100.pausas === 0),
+      `k=${k}: 429 y pausas separados por el cambio de minuto: 100 ${JSON.stringify(e100)}, 101 ${JSON.stringify(e101)}`);
+    const ev = JSON.parse((w.store.get(w.K.eventos)!.v as string[])[0]);
+    assert.equal(Math.floor(ev.t / 60_000), e100.c429 === 1 ? 100 : 101, `k=${k}: el evento lleva el MISMO instante que los cubos`);
+    // ya-mayor, en el mismo borde: una pausa previa larga y un evento nuevo más corto.
+    const w2 = mundoRelojQueAvanza(201 * 60_000 - k);
+    w2.store.set(w2.K.pausa, { v: "otro", exp: 201 * 60_000 + 30_000 });
+    await w2.ops.evalPausar([w2.K.pausa, w2.K.ev("q:1"), w2.K.proc("q"), w2.K.eventos, w2.K.cubos], ["q:1", "1000", "1", "/x", "1000"]);
+    const c2 = w2.cubos();
+    const m = valorDelMinuto(c2, 200, "429") === 1 ? 200 : 201;
+    assert.equal(valorDelMinuto(c2, m, "ya-mayor"), 1, `k=${k}: 429 y ya-mayor en el mismo minuto`);
+  }
+});
+
+test("🔴 punto 2 — telemetría acotada: tras 500 minutos con eventos en cada minuto, el hash tiene a lo sumo 8 × RING_CUBOS campos, SALUD sólo mira eso y sigue sumando EXACTAMENTE los últimos 60 minutos", async () => {
+  const w = mundo(60_000 * 1000);
+  for (let i = 0; i < 500; i++) {
+    await w.pausar({ id: `p:${i}`, ms: 500, uuid: "p", contador: i + 1 });        // 1 × 429 + 1 × pausas por minuto
+    await w.ops.evalCubo([w.K.cubos], ["pausadosUB"]);                             // + 1 × pausadosUB
+    w.avanzar(60_000);
+  }
+  const campos = w.cubos().size;
+  assert.ok(campos <= 8 * RING_CUBOS, `el hash creció a ${campos} campos (tope ${8 * RING_CUBOS})`);
+  assert.ok(RING_CUBOS >= 60 && RING_CUBOS <= 240, "el ring cubre la ventana de 60 minutos con margen y no más de 4 h");
+  // El minuto actual es el 500 (vacío): la ventana [441, 500] tiene 59 minutos con eventos.
+  const s = await w.ops.evalSalud([w.K.pausa, w.K.cubos], []) as number[];
+  assert.deepEqual(s.slice(1), [59, 59, 0, 0, 0, 59, 0], "[429, pausas, ya-mayor, ya-aplicada, pausaNoLeida, pausadosUB, pausados503] de los últimos 60 minutos");
+  // Un minuto viejo que el ring todavía guarda NO entra en la suma; un slot reciclado no mezcla minutos.
+  w.avanzar(60_000 * 30);
+  const s2 = await w.ops.evalSalud([w.K.pausa, w.K.cubos], []) as number[];
+  assert.deepEqual(s2.slice(1), [29, 29, 0, 0, 0, 29, 0]);
+});
+
+test("punto 2 — el Lua: los cubos viven en UNA clave declarada, por slot de ring (`<slot>:m` guarda el minuto; un slot reciclado se limpia ANTES de sumar), y SALUD hace un solo HGETALL acotado", () => {
+  const p = LUA_PAUSA.PAUSAR, c = LUA_PAUSA.CUBO, s = LUA_PAUSA.SALUD;
+  for (const t of [p, c]) { assert.match(t, new RegExp(`% ${RING_CUBOS}`), "slot = minuto % RING"); assert.match(t, /'HDEL'/, "el slot reciclado se limpia"); assert.match(t, /':m'/); }
+  assert.equal((p.match(/'TIME'/g) ?? []).length, 1, "PAUSAR lee TIME UNA sola vez");
+  assert.equal((s.match(/'HGETALL'/g) ?? []).length, 1); assert.doesNotMatch(s, /'KEYS'|'SCAN'/);
+  assert.doesNotMatch(p + c + s, /KEYS\[\d\] \.\./, "ninguna clave se construye dentro de un script");
 });

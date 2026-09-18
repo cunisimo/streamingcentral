@@ -24,6 +24,20 @@
 //   SALUD    KEYS=[pausa, cubos] → {pttl, 429, pausas, ya-mayor, ya-aplicada,
 //            pausaNoLeida, pausadosUB, pausados503} de los últimos 60 minutos.
 //            Sólo agregados: ningún uuid, id, familia ni evento crudo (§41.4).
+//
+// LOS CUBOS SON UN RING (auditoría sobre 6fc63b5, punto 2): `tmdb:cubos` es
+// UNA clave declarada, un hash con RING_CUBOS slots (minuto % RING); cada slot
+// guarda su minuto en `<slot>:m` y sus contadores en `<slot>:<campo>`. Al
+// escribir en un slot cuyo `m` es otro minuto se lo LIMPIA primero (HDEL, en
+// el mismo script): el hash nunca pasa de 8 × RING campos por más tiempo que la
+// app corra, y SALUD hace UN HGETALL acotado y suma sólo los slots cuyo minuto
+// cae en la ventana. Antes era un campo por minuto sin poda: crecía sin tope y
+// SALUD lo recorría entero.
+//
+// UN SOLO RELOJ POR EVENTO (punto 3): PAUSAR lee TIME una vez y ese minuto y ese
+// instante valen para `429`, `pausas`/`ya-mayor` y el evento; con dos lecturas,
+// un cambio de minuto entre ambas dejaba `pausas > 0` con `429 = 0` en una
+// ventana — la condición de rollback, producida por el instrumento.
 export const CLAVES_PAUSA = {
   pausa: "tmdb:pausa",
   eventos: "tmdb:eventos",
@@ -42,6 +56,8 @@ export const EVENTOS_MAX = 200;
 /** Ventana de agregados de /api/health, en minutos. */
 export const SALUD_VENTANA_MIN = 60;
 export const CAMPOS_SALUD = ["429", "pausas", "ya-mayor", "ya-aplicada", "pausaNoLeida", "pausadosUB", "pausados503"] as const;
+/** Slots del ring de cubos por minuto (2 h: ≥ la ventana de 60 min con margen): acota el hash a 8 × RING campos y el trabajo de SALUD. */
+export const RING_CUBOS = 120;
 
 export const LUA_PAUSA = {
   TOMAR: `local p = redis.call('PTTL', KEYS[2])
@@ -54,12 +70,18 @@ local contador = tonumber(ARGV[3])
 if not ms or ms <= 0 or ms ~= math.floor(ms) or not contador or contador ~= math.floor(contador) then
   return redis.error_reply('ERR PAUSAR: argumentos invalidos')
 end
+local okT, t = pcall(redis.call, 'TIME')
+local minuto, ahoraMs = nil, nil
+if okT and t then minuto = math.floor(tonumber(t[1]) / 60); ahoraMs = tonumber(t[1]) * 1000 + math.floor(tonumber(t[2]) / 1000) end
 local function cubo(campo)
-  local t = redis.call('TIME')
-  local minuto = math.floor(tonumber(t[1]) / 60)
-  redis.call('HINCRBY', KEYS[5], minuto .. ':' .. campo, 1)
+  if minuto == nil then return end
+  local slot = minuto % ${RING_CUBOS}
+  if redis.call('HGET', KEYS[5], slot .. ':m') ~= tostring(minuto) then
+    redis.call('HDEL', KEYS[5], slot .. ':m', ${CAMPOS_SALUD.map((c) => `slot .. ':${c}'`).join(", ")})
+    redis.call('HSET', KEYS[5], slot .. ':m', minuto)
+  end
+  redis.call('HINCRBY', KEYS[5], slot .. ':' .. campo, 1)
   redis.call('EXPIRE', KEYS[5], ${CUBOS_EXPIRE_S})
-  return tonumber(t[1]) * 1000 + math.floor(tonumber(t[2]) / 1000)
 end
 if redis.call('EXISTS', KEYS[2]) == 1 then
   pcall(cubo, 'ya-aplicada')
@@ -83,7 +105,7 @@ redis.call('SET', KEYS[3], ARGV[3], 'PX', ${PROC_MS})
 redis.call('SET', KEYS[2], '1', 'PX', ${MARCADOR_MS})
 pcall(function()
   cubo('429')
-  local ahoraMs = cubo(estado == 'escrito' and 'pausas' or 'ya-mayor')
+  cubo(estado == 'escrito' and 'pausas' or 'ya-mayor')
   redis.call('LPUSH', KEYS[4], cjson.encode({ id = ARGV[1], t = ahoraMs, familia = ARGV[4], retryAfterMs = ARGV[5], estado = estado, restante = restante }))
   redis.call('LTRIM', KEYS[4], 0, ${EVENTOS_MAX - 1})
   redis.call('EXPIRE', KEYS[4], ${EVENTOS_EXPIRE_S})
@@ -92,7 +114,12 @@ return {estado, restante}`,
 
   CUBO: `local t = redis.call('TIME')
 local minuto = math.floor(tonumber(t[1]) / 60)
-redis.call('HINCRBY', KEYS[1], minuto .. ':' .. ARGV[1], 1)
+local slot = minuto % ${RING_CUBOS}
+if redis.call('HGET', KEYS[1], slot .. ':m') ~= tostring(minuto) then
+  redis.call('HDEL', KEYS[1], slot .. ':m', ${CAMPOS_SALUD.map((c) => `slot .. ':${c}'`).join(", ")})
+  redis.call('HSET', KEYS[1], slot .. ':m', minuto)
+end
+redis.call('HINCRBY', KEYS[1], slot .. ':' .. ARGV[1], 1)
 redis.call('EXPIRE', KEYS[1], ${CUBOS_EXPIRE_S})
 return minuto`,
 
@@ -103,11 +130,17 @@ local campos = {${CAMPOS_SALUD.map((c) => `'${c}'`).join(", ")}}
 local suma = {}
 for i = 1, #campos do suma[i] = 0 end
 local todo = redis.call('HGETALL', KEYS[2])
+local minutoDeSlot = {}
+for i = 1, #todo, 2 do
+  local k = todo[i]
+  local sep = string.find(k, ':', 1, true)
+  if sep and string.sub(k, sep + 1) == 'm' then minutoDeSlot[string.sub(k, 1, sep - 1)] = tonumber(todo[i + 1]) end
+end
 for i = 1, #todo, 2 do
   local k = todo[i]
   local sep = string.find(k, ':', 1, true)
   if sep then
-    local m = tonumber(string.sub(k, 1, sep - 1))
+    local m = minutoDeSlot[string.sub(k, 1, sep - 1)]
     local campo = string.sub(k, sep + 1)
     if m and m >= desde and m <= minuto then
       for j = 1, #campos do
