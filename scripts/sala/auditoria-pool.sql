@@ -28,9 +28,19 @@ select
 from roulette_titles
 where media_type = 'movie';
 
--- 2. Antigüedad de la disponibilidad (la RPC filtra por esto; la card la
---    revalida después con cardsByIds, que puede tener hasta 24 h de caché)
-select min(checked_at) as mas_vieja, max(checked_at) as mas_nueva, count(*) as filas
+-- 2. Antigüedad de la disponibilidad. `sala_candidatos` NO filtra por
+--    `checked_at`: usa `title_availability` tal cual esté, así que su
+--    antigüedad es la del último refresco manual (MANTENIMIENTO §2 / Apéndice A
+--    del plan). Después, la card se revalida con cardsByIds, cuyas cachés
+--    (`card:` 24 h, `pv3:` 8 h) pueden tener hasta 24 h de antigüedad. Los tres
+--    conteos dicen cuánto del pool está más viejo que cada umbral.
+select
+  min(checked_at)                                                   as mas_vieja,
+  max(checked_at)                                                   as mas_nueva,
+  count(*)                                                          as filas,
+  count(*) filter (where checked_at < now() - interval '24 hours')  as mas_de_24h,
+  count(*) filter (where checked_at < now() - interval '7 days')    as mas_de_7d,
+  count(*) filter (where checked_at < now() - interval '30 days')   as mas_de_30d
 from title_availability
 where region = 'AR';
 

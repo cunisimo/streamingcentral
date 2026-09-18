@@ -191,7 +191,7 @@ import { readFileSync } from "node:fs";
 
 // `--catalogo-real` agrega los data/carga-ruleta-*.sql (autorizado por el dueño
 // el 2026-09-18, sólo en local) para las mediciones de la Tarea 2.3. Las fixtures
-// sintéticas (ids 900001+) van siempre: las usa la batería de RLS.
+// sintéticas (ids 90000001+) van siempre: las usa la batería de RLS.
 import { readdirSync } from "node:fs";
 const conCatalogo = process.argv.includes("--catalogo-real");
 const cargas = conCatalogo
@@ -219,33 +219,33 @@ for (const f of ARCHIVOS) {
 }
 ```
 
-- [ ] **Step 6: Escribir `scripts/sala/fixtures-local.sql`.** Todo con ids ≥ 900001 para no chocar con el catálogo real. 40 servibles (`runtime` 82..160: las 5 primeras son `corta`), repartidas entre Netflix / Disney Plus / HBO Max, **una** exclusiva de MUBI (900041) y controles negativos: 2 `apto_chicos`, 1 sin duración, 1 sin "pero", 1 con `requiere_contexto`, 1 serie (`tv`) y 1 sin disponibilidad en AR:
+- [ ] **Step 6: Escribir `scripts/sala/fixtures-local.sql`.** Todo con ids ≥ 90000001 para no chocar con el catálogo real. 40 servibles (`runtime` 82..160: las 5 primeras son `corta`), repartidas entre Netflix / Disney Plus / HBO Max, **una** exclusiva de MUBI (90000041) y controles negativos: 2 `apto_chicos`, 1 sin duración, 1 sin "pero", 1 con `requiere_contexto`, 1 serie (`tv`) y 1 sin disponibilidad en AR:
 
 ```sql
 -- Sólo en local: las salas nacen apagadas en la migración.
 update sala_config set valor = 'true' where clave = 'activas';
 
 insert into roulette_titles (tmdb_id, media_type, title, year, runtime, genres, edad, apto_chicos, vote_count, vote_average, razon, advertencia, atencion)
-select 900000 + g, 'movie', 'Ficticia ' || g, 2000 + (g % 20), 80 + (g * 2), array['Drama'], 'adultos', false, 100, 7.0,
+select 90000000 + g, 'movie', 'Ficticia ' || g, 2000 + (g % 20), 80 + (g * 2), array['Drama'], 'adultos', false, 100, 7.0,
        'Por qué verla ' || g, 'Pero ' || g, 'media'
 from generate_series(1, 41) g
 on conflict (tmdb_id, media_type) do nothing;
 -- Controles negativos: ninguno puede salir de sala_candidatos
 insert into roulette_titles (tmdb_id, media_type, title, runtime, apto_chicos, requiere_contexto, razon, advertencia) values
-  (900101, 'movie', 'Infantil 1',   90,  true,  false, 'r', 'a'),
-  (900102, 'movie', 'Infantil 2',   120, true,  false, 'r', 'a'),
-  (900103, 'movie', 'Sin duración', null, false, false, 'r', 'a'),
-  (900104, 'movie', 'Sin pero',     95,  false, false, 'r', null),
-  (900105, 'movie', 'Secuela',      100, false, true,  'r', 'a'),
-  (900106, 'tv',    'Serie',        45,  false, false, 'r', 'a'),
-  (900107, 'movie', 'Sin AR',       100, false, false, 'r', 'a')
+  (90000101, 'movie', 'Infantil 1',   90,  true,  false, 'r', 'a'),
+  (90000102, 'movie', 'Infantil 2',   120, true,  false, 'r', 'a'),
+  (90000103, 'movie', 'Sin duración', null, false, false, 'r', 'a'),
+  (90000104, 'movie', 'Sin pero',     95,  false, false, 'r', null),
+  (90000105, 'movie', 'Secuela',      100, false, true,  'r', 'a'),
+  (90000106, 'tv',    'Serie',        45,  false, false, 'r', 'a'),
+  (90000107, 'movie', 'Sin AR',       100, false, false, 'r', 'a')
 on conflict (tmdb_id, media_type) do nothing;
 insert into title_availability (tmdb_id, media_type, region, providers, rent_only, checked_at)
 select t.tmdb_id, t.media_type, 'AR',
-       case when t.tmdb_id = 900041 then array['MUBI']
+       case when t.tmdb_id = 90000041 then array['MUBI']
             when t.tmdb_id % 3 = 0 then array['Netflix'] when t.tmdb_id % 3 = 1 then array['Disney Plus'] else array['HBO Max'] end,
        false, now()
-from roulette_titles t where t.tmdb_id between 900001 and 900106
+from roulette_titles t where t.tmdb_id between 90000001 and 90000106
 on conflict (tmdb_id, media_type, region) do update set providers = excluded.providers, checked_at = now();
 ```
 
@@ -1224,13 +1224,13 @@ await prueba("8. invitado no ejecuta acciones del organizador", async () => {
   await debeFallar(como(inv.jwt).rpc("sala_cerrar", { p_room: sala }), /sala_no_es_host/);
   await debeFallar(anon().rpc("sala_iniciar_preparacion", { p_room: sala, p_host: host.id, p_size: 5, p_duracion: "cualquiera" }), /permission denied|42501/);
 });
-// Preparación con service_role (lo que hace Vercel), con fixtures 900001..
+// Preparación con service_role (lo que hace Vercel), con fixtures 90000001..
 let ronda;
 await prueba("9. publicar ronda atómica; tanda incompleta no publica", async () => {
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: sala, p_host: host.id, p_size: 5, p_duracion: "cualquiera" });
   const cand = await rpc(admin, "sala_candidatos", { p_providers: ["Netflix", "Disney Plus", "HBO Max", "Amazon Prime Video"], p_duracion: "cualquiera", p_excluir: [], p_seed: "s", p_limit: 80 });
   // Controles negativos de las fixtures: infantiles, sin duración, sin "pero", con contexto, serie, sin AR y la exclusiva de MUBI.
-  assert.ok(cand.every((c) => c.runtime > 0 && c.advertencia && ![900101, 900102, 900103, 900104, 900105, 900106, 900107, 900041].includes(c.tmdb_id)));
+  assert.ok(cand.every((c) => c.runtime > 0 && c.advertencia && ![90000101, 90000102, 90000103, 90000104, 90000105, 90000106, 90000107, 90000041].includes(c.tmdb_id)));
   assert.equal(cand.length, 40);
   const card = (c, pos) => ({ pos, tmdb_id: c.tmdb_id, titulo: "T" + c.tmdb_id, anio: 2000, runtime: c.runtime, poster: null, generos: ["drama"], platforms: ["n"], razon: c.razon, advertencia: c.advertencia });
   const pub = (titulos) => admin.rpc("sala_publicar_ronda", { p_round: ini.round_id, p_prep_token: ini.prep_token, p_titulos: titulos });

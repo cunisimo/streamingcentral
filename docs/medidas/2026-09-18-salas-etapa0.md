@@ -29,7 +29,8 @@ el criterio de go de la Etapa 1 es `cualquiera >= 20` en `n,d,m`, `n,d` y
 `n,d,m,p`, y `>= 10` en `n`.
 
 Prueba de humo en la base **local** cargada con `data/carga-ruleta-*.sql`
-(snapshot parcial versionado, **no** es Producción):
+(la carga versionada en `data/`, **no** la base de Producción, aunque los
+totales coinciden con MANTENIMIENTO §9 — ver abajo):
 
 | unión | cualquiera | corta | larga |
 |---|---|---|---|
@@ -41,10 +42,24 @@ Prueba de humo en la base **local** cargada con `data/carga-ruleta-*.sql`
 | d / m / p | 265 / 347 / 295 | 28 / 44 / 40 | 237 / 303 / 255 |
 | mb | 89 | 25 | 64 |
 
-Pool local: 2448 filas `movie` (2212 del snapshot + fixtures), 1828 con ambos
-textos, 1600 servibles para sala. **Ojo:** MANTENIMIENTO §9 (11/08) daba 2401
-filas y 2259 con texto en Producción; `data/` es otra foto. Los números que
-valen son los de Producción.
+Pool local: **2448** filas `movie` = **2401** de `data/carga-ruleta-*.sql` +
+**47** películas ficticias (48 fixtures, una es `tv`). Con ambos textos:
+1828 = 1782 reales + 46 ficticias — el 1782 es exactamente el "con
+advertencia" de MANTENIMIENTO §9 (11/08), así que `data/` es la misma foto
+que Producción a esa fecha. Servibles para sala: 1600.
+
+**Corrección de un número publicado en esta sesión:** un conteo anterior dijo
+"2212 títulos en `data/`". Era otra magnitud: `count(*) where tmdb_id <
+900000`, o sea los títulos reales con id **menor a 900.000**; TMDB ya emite
+ids hasta 1.668.364 y 189 del catálogo superan ese umbral. El total real es
+2401. De ese error salió otra corrección: las fixtures sintéticas estaban en
+`900001…900107`, un rango que TMDB alcanza y que podía chocar con títulos
+reales; se movieron a `90000001…90000107`, y el estado local se purgó y
+volvió a cargar (2401 + 47 = 2448 verificado).
+
+La fecha `mas_vieja`/`mas_nueva` de la consulta 2 en local es la hora de la
+carga (`now()` del upsert), no la de Producción. Los números que valen son los
+de Producción.
 
 La consulta 4 (nombres de plataforma en AR) devuelve en local 38 nombres, entre
 ellos varios que no están en `lib/roulette-providers.ts` (Plex, Pluto TV,
@@ -65,7 +80,14 @@ MANTENIMIENTO §5, a revisar contra la salida de Producción.
 
 ## Tarea 0.5 — Entorno local
 
-- Docker Desktop 29.8.0 corriendo; Supabase CLI 2.111.0; `supabase init` →
+- `db-local.mjs` elige el contenedor por **`project_id` exacto** leído de
+  `supabase/config.toml` (`supabase_db_streamingcentral`) y falla si no está
+  o si la coincidencia no es única; nunca por prefijo. Selector puro probado
+  en `scripts/sala/db-local.test.mjs` (6/6) y negativo real contra
+  `docker ps` con un `project_id` inexistente.
+
+- Docker Engine 29.8.0 corriendo (versión del daemon vía `docker version`; la
+  de Docker Desktop no se leyó); Supabase CLI 2.111.0; `supabase init` →
   `supabase/config.toml` con `[db.migrations] enabled = false` y `[db.seed]
   enabled = false` (motivo en el archivo). **Sin `supabase link`.**
 - `supabase start` levantó PostgreSQL 17.6 local con `pgcrypto` 1.3,
@@ -80,7 +102,7 @@ MANTENIMIENTO §5, a revisar contra la salida de Producción.
   directo a `roulette_titles` → 401 `42501`; `get_roulette_picks` con
   `p_limit 999` → 40 filas (cap); `corta` con n,d,m → 6 (las 5 fixtures cortas
   **más la serie 900106**: `get_roulette_picks` no filtra `media_type`, lo que
-  confirma que `sala_candidatos` tiene que hacerlo); MUBI → sólo 900041.
+  confirma que `sala_candidatos` tiene que hacerlo); MUBI → sólo 90000041.
 - `.env.sala-local` (ignorado) con las claves locales; `.env.sala-local.example`
   versionado.
 

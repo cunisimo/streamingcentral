@@ -1,5 +1,58 @@
 # Issues abiertos
 
+## #23 — Dos tests de concurrencia del Home dependen del reloj de pared y fallan bajo carga
+
+**Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-09-18 · **No bloquea** la
+Etapa 1 de salas ni ningún deploy. **Clasificación: arnés sensible a carga y a
+reloj real, NO regresión del producto.**
+
+Dos tests de `npm test` usan tiempos de pared reales (`setTimeout` de 5 a 40
+ms y un umbral de 80 ms) para demostrar propiedades de orden y de no
+serialización:
+
+- [`lib/home-fondo-orden.test.ts:154`](../lib/home-fondo-orden.test.ts) —
+  *"dos handlers concurrentes: cada uno con su compuerta; los dos fondos
+  arrancan después de SU respuesta y no se cruzan"*. Espera 40 ms y 5 ms reales
+  y afirma que `iniciar:B` ocurre antes que `respuesta:A`.
+- [`lib/home-vuelo.test.ts:121`](../lib/home-vuelo.test.ts) — *"dos claves
+  DIFERENTES se componen independientemente: una no bloquea a la otra"*. Dos
+  composiciones de 40 ms en paralelo y `assert.ok(Date.now() - t0 < 80)`.
+
+Si el event loop se atrasa más de lo que separa esos tiempos (otra suite en
+paralelo, Docker levantando contenedores, GC), el orden observado o la duración
+total cruzan el umbral y el test falla **sin que el código haya cambiado**.
+
+### Evidencia
+
+- 2026-09-18, sesión de salas (rama `feat/salas`, que no toca `lib/`): una
+  primera corrida de la suite completa dio 3 fallos; dos corridas posteriores,
+  0. **Control en `main` (`34e4637`):** de dos suites completas, una falló
+  exactamente con estos dos tests y la otra pasó 1697/1697. Mismo código, dos
+  resultados → 8.b.2: el roto es el instrumento.
+- Auditoría dirigida posterior (informada por el dueño): los dos archivos
+  ejecutados cinco veces, **5/5 verdes**. Aislados no fallan; fallan bajo carga.
+- Durante la primera corrida fallida corría `supabase start` en la misma
+  máquina (arranque de ~10 contenedores).
+
+### Lo que NO es
+
+No es un fallo de la frontera del fondo (§35–§36 de la Etapa 3.b) ni del
+single-flight (Etapa 1): los tests deterministas de esas dos piezas, que
+comparten archivo, pasan siempre. Es la parte de la demostración que se apoya
+en que 40 ms sean "mucho más" que 5 ms en un reloj real.
+
+### Criterio de cierre
+
+Reemplazar en los dos tests los umbrales de tiempo de pared por **barreras o
+relojes determinísticos**: una promesa que se libera explícitamente (barrera)
+para ordenar `respuesta` e `iniciar`, y un reloj inyectado o un contador de
+composiciones simultáneas en vuelo para probar "no se serializan" sin medir
+milisegundos. El comportamiento probado no cambia; cambia el instrumento. Hasta
+entonces, una corrida roja de estos dos tests se relee aislada antes de
+investigar el producto.
+
+---
+
 ## #22 — Recuperación desde Android: la contraseña nueva no permite ingresar
 
 **Estado (11/09): la corrección está MERGEADA en `main` (`be5ef1d`),
