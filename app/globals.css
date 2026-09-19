@@ -1051,3 +1051,38 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .admin-buscador li{display:flex;gap:10px;align-items:center;font-size:13px}
 .admin-buscador img{border-radius:4px;object-fit:cover}
 .admin-publicar{border-top:1px solid var(--line-2);margin-top:24px;padding-top:18px}
+
+/* --- Salas compartidas (lobby, entrar, crear) --- */
+/* La entrada del Home reusa .dsmp-banner; como es un <a> hay que quitarle el subrayado. */
+.sala-banner{text-decoration:none}
+.sala-wrap{max-width:640px;padding-top:22px;padding-bottom:40px}
+.sala-h1{font-family:var(--display);font-size:26px;font-weight:800;letter-spacing:-.02em;margin:8px 0 6px;line-height:1.1}
+.sala-h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.015em;margin:0 0 6px}
+.sala-hint{color:var(--dim);font-size:13.5px;line-height:1.45;margin:8px 0 0}
+.sala-err{color:var(--editorial);font-size:14px;margin:12px 0 0}
+.sala-canal{color:var(--faint);font-size:12.5px;margin:0 0 10px}
+.sala-vence{color:var(--dim);font-size:14px;margin:0}
+.sala-vence strong{color:var(--text);font-variant-numeric:tabular-nums}
+.sala-bloque{margin-top:22px}
+.sala-gente{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sala-gente li{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--line-2);background:var(--surface);font-size:15px}
+.sala-gente li.soy{border-color:var(--accent)}
+.sala-gente-nombre{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sala-gente-tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.sala-union{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.sala-enlace{display:flex;gap:8px;margin-top:6px}
+.sala-enlace input{flex:1;min-width:0;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);padding:11px 14px;font-size:13.5px;font-family:var(--body);color:var(--dim);outline:none}
+.sala-enlace .rlt-btn{height:44px;padding:0 16px}
+.sala-config{margin-top:4px}
+.sala-seg{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;padding:4px;border-radius:999px;background:var(--surface);border:1px solid var(--line-2);width:fit-content}
+.sala-seg .tt:disabled{opacity:.55;cursor:default}
+.sala-acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.sala-acciones .btn{flex:1;min-width:160px}
+.sala-espera{color:var(--dim);font-size:15px;margin:0;padding:18px 0}
+.sala-espera-tanda{padding:40px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.sala-espera-tanda .rlt-btn{margin-top:14px;text-decoration:none}
+.sala-form .field{margin-top:16px}
+.sala-form .field label{display:block;font-size:13px;font-weight:600;color:var(--dim);margin-bottom:6px}
+.sala-form .field input{width:100%;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);padding:12px 14px;font-size:15px;font-family:var(--body);color:var(--text);outline:none}
+.sala-form .field input:focus{border-color:var(--accent)}
+.sala-plats{margin-top:6px}

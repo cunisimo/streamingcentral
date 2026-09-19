@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 import UserShelf from "./UserShelf";
 import Avatar from "./avatar/Avatar";
 import { itemRefs, likedRefs, historyRefs } from "@/lib/userdata";
+import { SALAS_VISIBLES } from "@/lib/sala/entrada";
 
 export default function UserHub() {
   const { user, profile } = useAuth();
@@ -39,6 +40,7 @@ export default function UserHub() {
       <UserShelf title="Vistos recientemente" href="/cuenta/vistos" load={() => historyRefs(20)} />
 
       <div className="hub-tiles">
+        {SALAS_VISIBLES && <Link href="/sala/nueva" className="hub-tile"><span className="lock" aria-hidden>🍿</span><span>Crear sala</span><small>Elegir entre varios</small></Link>}
         <div className="hub-tile off"><span className="lock">🔒</span><span>Mis amigos</span><small>Próximamente</small></div>
         <div className="hub-tile off"><span className="lock">🔒</span><span>Mis emblemas</span><small>Próximamente</small></div>
       </div>
