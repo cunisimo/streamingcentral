@@ -29,6 +29,11 @@ import { readFileSync } from "node:fs";
 const arg = (f, d) => { const i = process.argv.indexOf(f); return i >= 0 ? process.argv[i + 1] : d; };
 const BASE = arg("--base", "http://localhost:3111");
 const LOG = arg("--log", null);
+// --sizes 20 (o 5,10,20): qué tamaños medir en esta corrida. Una sola muestra
+// fría no alcanza: se corre el script varias veces reiniciando el proceso del
+// servidor entre corridas (la caché es de proceso), se guardan las líneas crudas
+// y se presentan como observaciones y su máximo — no como un p95 estadístico.
+const SIZES = arg("--sizes", "5,10,20").split(",").map(Number).filter((n) => [5, 10, 20].includes(n));
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, SRV = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!/127\.0\.0\.1|localhost/.test(URL ?? "")) { console.error("Sólo contra la base local"); process.exit(2); }
 
@@ -69,7 +74,7 @@ async function preparar(jwt, roomId, size) {
 }
 
 const filas = [];
-for (const size of [5, 10, 20]) {
+for (const size of SIZES) {
   const h = await usuario();
   const cred = credencial();
   const { room_id } = await rpc(como(h.jwt), "sala_crear", { p_nombre: "M", p_platforms: ["n", "d", "m"], p_credencial: cred });

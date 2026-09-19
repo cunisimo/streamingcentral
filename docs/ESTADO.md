@@ -8,7 +8,7 @@
 ## Evidencia y alcance de esta actualización
 
 - **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0, 1 y 2 hechas; sin
-  merge, push, deploy ni cambios en Producción (2026-09-18).** Plan aprobado
+  merge, push, deploy ni cambios en Producción (2026-09-19).** Plan aprobado
   por el dueño con tres rondas de correcciones:
   [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
   **Comprobado en panel por el dueño (Tarea 0.1):** Supabase Free, PostgreSQL
@@ -36,14 +36,24 @@
   base: sin tokens del servidor, sin rotación, orden de respuestas
   irrelevante); suite y `tsc` limpios. Evidencia:
   [`medidas/2026-09-18-salas-etapa1.md`](medidas/2026-09-18-salas-etapa1.md).
-  **Etapa 2 HECHA en la rama (19/09):** `lib/sala/*` (tipos, selección pura,
-  orquestación con deps inyectadas, handler HTTP puro con 400 sin defaults) y
-  `POST /api/sala/preparar` con `service_role`; 23 tests nuevos; inventario
-  CORS 27 = 24 + 3. **Medido en local con TMDB real** (frío/caliente/control,
-  5/10/20): 2 llamadas a TMDB por card en frío (10 / 20 / 50), 0 en caliente;
-  0,85 / 1,0 / 2,7 s frío y 0,17–0,35 s caliente. Evidencia:
-  [`medidas/2026-09-19-salas-etapa2.md`](medidas/2026-09-19-salas-etapa2.md).
-  Sigue la Etapa 3 (cliente: lobby y votación). **No autorizado todavía:** migraciones en Producción, deploy,
+  **Etapa 2 HECHA en la rama y APROBADA por el dueño (19/09), con cierre
+  auditado:** `lib/sala/*` (tipos, selección pura, orquestación con deps
+  inyectadas, handler HTTP puro con 400 sin defaults) y `POST
+  /api/sala/preparar` con `service_role`; **25 tests en `lib/sala`** (9 + 10 +
+  6); inventario CORS 27 = 24 + 3. La ruta distingue `consultadas` /
+  `enriquecidas` / `descartadas` y el `detalle` interno de un 500 queda sólo
+  en el log del servidor (acotado), nunca en el body. **Medido en local con
+  TMDB real, código final, tres frías INDEPENDIENTES de tamaño 20** (proceso
+  reiniciado y caché vacía antes de cada una; caliente y control después):
+  **2952 / 2856 / 2046 ms de servidor, máximo 2952 ms** — tres observaciones,
+  no un p95 estadístico; 2 llamadas a TMDB por consultada en frío, 0 ok en
+  caliente (0,31–0,65 s). Los "descartes por error de TMDB" en local son los
+  FIXTURES (ids 9000xxxx, 404): sesgo pesimista, no existen en Producción.
+  `npm run build` en verde con la ruta nueva; suite post-build 1745 / 1735 ok /
+  0 fallos / 10 omitidos (artefacto Capacitor); `tsc` limpio. Evidencia:
+  [`medidas/2026-09-19-salas-etapa2.md`](medidas/2026-09-19-salas-etapa2.md) y
+  líneas crudas en `medidas/2026-09-19-salas-preparacion-crudo.txt`.
+  Sigue la Etapa 3 (cliente: lobby y votación), **todavía no autorizada**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:
   [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).

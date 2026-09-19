@@ -39,13 +39,15 @@ async function manejar(req: NextRequest) {
   // Nunca el room_id completo ni credenciales: sólo lo que hace falta para
   // medir. `supabase` cuenta las consultas del cliente anónimo (usuarioDeToken);
   // `rpcs`, las del cliente admin, que no pasan por el observador.
-  const b = res.body as { ok?: boolean; motivo?: string; enriquecidas?: number; descartadas?: number };
+  const b = res.body as { ok?: boolean; motivo?: string; consultadas?: number; enriquecidas?: number; descartadas?: number };
   console.log(
-    `[sala] preparar ${detalle || "-"} ${b.ok ? `publicada (${b.enriquecidas} enriquecidas, ${b.descartadas} descartadas)` : (b.motivo ?? "rechazada")} ${res.status}` +
+    `[sala] preparar ${detalle || "-"} ${b.ok ? `publicada (${b.consultadas} consultadas, ${b.enriquecidas} enriquecidas, ${b.descartadas} descartadas)` : (b.motivo ?? "rechazada")} ${res.status}` +
     ` | tmdb ${metricas.tmdb.llamadas} llamadas (${metricas.tmdb.ok} ok)` +
     ` | redis ${metricas.redis.comandos} comandos (${metricas.redis.hits} hit / ${metricas.redis.misses} miss)` +
     ` | supabase ${metricas.supabase.consultas} consultas + ${rpcs} rpc admin` +
-    ` | ${Date.now() - t0}ms`,
+    ` | ${Date.now() - t0}ms` +
+    // El detalle interno de un fallo, acotado por el handler, sólo acá: nunca en la respuesta.
+    (res.detalle ? ` | detalle: ${res.detalle}` : ""),
   );
   return NextResponse.json(res.body, { status: res.status });
 }

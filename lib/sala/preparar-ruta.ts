@@ -16,7 +16,12 @@ export interface DepsRuta {
   preparar: (args: ArgsPreparar) => Promise<ResultadoPreparar>;
 }
 
-export interface Respuesta { status: number; body: unknown }
+export interface Respuesta {
+  status: number;
+  body: unknown;
+  /** El detalle interno de un fallo, SÓLO para el log del servidor (acotado). Nunca viaja en el body. */
+  detalle?: string;
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -51,5 +56,9 @@ export async function manejarPreparar(
 
   // El organizador es quien firmó el JWT: el cuerpo no puede elegirlo.
   const res = await deps.preparar({ roomId: cuerpo.room_id, hostUid: uid, size, duracion });
-  return { status: res.ok ? 200 : STATUS_MOTIVO[res.motivo], body: res };
+  if (res.ok) return { status: 200, body: res };
+  // El teléfono recibe el motivo; el detalle interno (mensaje de la RPC, de
+  // TMDB o de red) se queda en el servidor, acotado, y nunca en la respuesta.
+  const { detalle, ...publico } = res;
+  return { status: STATUS_MOTIVO[res.motivo], body: publico, detalle: detalle ? detalle.slice(0, 200) : undefined };
 }

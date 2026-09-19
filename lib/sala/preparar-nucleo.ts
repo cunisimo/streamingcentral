@@ -84,13 +84,13 @@ export async function prepararRonda(deps: DepsPreparar, a: ArgsPreparar): Promis
     let seleccion = elegirCards(candidatas, mapa, ini.union as UITitle["platforms"], a.size);
     let i = 0;
     let paso = loteDe(a.size);
-    let enriquecidas = 0;
+    let consultadas = 0;
     while (i < candidatas.length && seleccion.cards.length < a.size) {
       const lote = candidatas.slice(i, i + paso);
       const cards = await deps.cards(lote.map((c) => ({ tipo: "movie" as const, id: c.tmdb_id })));
       for (const c of cards) mapa.set(c.id, c);
       i += lote.length;
-      enriquecidas += lote.length;
+      consultadas += lote.length;
       seleccion = elegirCards(candidatas.slice(0, i), mapa, ini.union as UITitle["platforms"], a.size);
       paso = loteSiguiente(seleccion.faltan);
     }
@@ -105,7 +105,7 @@ export async function prepararRonda(deps: DepsPreparar, a: ArgsPreparar): Promis
     })) as { ok: boolean; started_at: string; deadline_at: string };
     return {
       ok: true, round_id: ini.round_id, numero: ini.numero, started_at: pub.started_at, deadline_at: pub.deadline_at,
-      enriquecidas, descartadas: enriquecidas - seleccion.validas,
+      consultadas, enriquecidas: mapa.size, descartadas: consultadas - seleccion.validas,
     };
   } catch (e) {
     await abortar();

@@ -1,0 +1,66 @@
+Salas — preparación de tanda size 20 / cualquiera / unión n,d,m. Código final (lotes adaptativos,
+consultadas/enriquecidas/descartadas). Base local (supabase start, catálogo real 2401), TMDB real,
+caché en memoria (sin UPSTASH_*). Cada corrida: `preview_stop` + `preview_start sala-local`
+(proceso nuevo, caché vacía) y después
+  node --env-file=.env.sala-local scripts/sala/medir-preparacion.mjs --base http://localhost:3111 --sizes 20
+Líneas [sala] copiadas tal cual del stdout de `next dev`; "pared" es lo que vio el cliente del script.
+El "pared" del frío de cada corrida incluye la compilación del módulo de la ruta por `next dev`
+(primer request del proceso): la medida de la preparación es el `Nms` de la línea del servidor.
+
+=== Corrida 1 ===
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 50 llamadas (48 ok) | redis 55 comandos (1 hit / 51 miss) | supabase 2 consultas + 3 rpc admin | 3170ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 2 llamadas (0 ok) | redis 5 comandos (26 hit / 2 miss) | supabase 1 consultas + 3 rpc admin | 612ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 2 llamadas (0 ok) | redis 5 comandos (26 hit / 2 miss) | supabase 1 consultas + 3 rpc admin | 474ms
+pared (ms): frío 59298 | caliente 714 | control 539
+
+=== Corrida 2 — DESCARTADA (contaminada) ===
+La pestaña del preview cargó el Home al arrancar: `/api/home` compuso en paralelo (450 llamadas a TMDB,
+85 s acumulados) y `next dev` recompiló entre requests (`Compiled in 6ms (588 modules)` ×4), lo que
+vació la caché de proceso: caliente y control pagaron 51 TMDB / 55 miss otra vez. Incumple la regla de
+MANTENIMIENTO 8.b (nada más contra TMDB mientras se mide). Se guardan las líneas por honestidad:
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 2 descartadas) 200 | tmdb 51 llamadas (49 ok) | redis 61 comandos (1 hit / 55 miss) | supabase 4 consultas + 3 rpc admin | 2634ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 2 descartadas) 200 | tmdb 51 llamadas (49 ok) | redis 61 comandos (1 hit / 55 miss) | supabase 4 consultas + 3 rpc admin | 1772ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 2 descartadas) 200 | tmdb 51 llamadas (49 ok) | redis 61 comandos (1 hit / 55 miss) | supabase 4 consultas + 3 rpc admin | 1016ms
+pared (ms): frío 6034 | caliente 2838 | control 1082
+Desde acá, en cada corrida la pestaña se manda a about:blank apenas arranca el servidor y se comprueba en
+el log que no se compiló `/api/home` antes de correr el script.
+
+=== Corrida 3 ===
+(La pestaña cargó el Home antes de poder redirigirla; la composición TERMINÓ —línea [home] cerrada, 450
+TMDB— antes de correr el script, así que no hubo tráfico en paralelo. El frío sigue frío: 50 TMDB para
+25 consultadas, 1 hit / 51 miss.)
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 50 llamadas (48 ok) | redis 55 comandos (1 hit / 51 miss) | supabase 2 consultas + 3 rpc admin | 2952ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 2 llamadas (0 ok) | redis 5 comandos (26 hit / 2 miss) | supabase 1 consultas + 3 rpc admin | 357ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 2 llamadas (0 ok) | redis 5 comandos (26 hit / 2 miss) | supabase 1 consultas + 3 rpc admin | 364ms
+pared (ms): frío 3805 (incluye "Compiled /api/sala/preparar in 573ms") | caliente 385 | control 394
+
+=== Corrida 4 ===
+(Pestaña redirigida a offline.html antes de que el cliente pidiera /api/home: el log sólo muestra
+"Compiled /", "GET /", "/icon.png" y luego la ruta de salas. Sin tráfico a TMDB fuera del script.)
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 50 llamadas (48 ok) | redis 55 comandos (1 hit / 51 miss) | supabase 2 consultas + 3 rpc admin | 2856ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 2 llamadas (0 ok) | redis 5 comandos (26 hit / 2 miss) | supabase 1 consultas + 3 rpc admin | 311ms
+[sala] preparar 20/cualquiera publicada (25 consultadas, 24 enriquecidas, 1 descartadas) 200 | tmdb 2 llamadas (0 ok) | redis 5 comandos (26 hit / 2 miss) | supabase 1 consultas + 3 rpc admin | 399ms
+pared (ms): frío 4899 (incluye "Compiled /api/sala/preparar in 1573ms") | caliente 341 | control 431
+
+=== Corrida 5 ===
+(Pestaña redirigida antes de /api/home; sólo se compiló /api/providers. Sin tráfico a TMDB fuera del script.)
+[sala] preparar 20/cualquiera publicada (30 consultadas, 25 enriquecidas, 7 descartadas) 200 | tmdb 60 llamadas (50 ok) | redis 57 comandos (1 hit / 61 miss) | supabase 2 consultas + 3 rpc admin | 2046ms
+[sala] preparar 20/cualquiera publicada (30 consultadas, 25 enriquecidas, 7 descartadas) 200 | tmdb 10 llamadas (0 ok) | redis 6 comandos (27 hit / 10 miss) | supabase 1 consultas + 3 rpc admin | 650ms
+[sala] preparar 20/cualquiera publicada (30 consultadas, 25 enriquecidas, 7 descartadas) 200 | tmdb 10 llamadas (0 ok) | redis 6 comandos (27 hit / 10 miss) | supabase 1 consultas + 3 rpc admin | 586ms
+pared (ms): frío 3083 (incluye "Compiled /api/sala/preparar in 685ms") | caliente 713 | control 621
+
+=== Los descartes "por error de TMDB" son los FIXTURES locales ===
+Comprobado sobre la sala de la corrida 5 (room 3c2591da-…): `sala_candidatos` con su semilla devuelve
+entre las 30 primeras a 90000006, 90000007, 90000008, 90000022 y 90000023 — ids de
+scripts/sala/fixtures-local.sql ("Ficticia", con Netflix/Disney Plus/HBO Max entre sus providers)—
+y TMDB responde 404 (status_code 34) para los cinco. `db-local.mjs --catalogo-real` carga el catálogo
+real Y los fixtures, así que en local entran a las tandas de n,d,m y cuestan 2 llamadas a TMDB cada uno
+antes de descartarse (y `titleCard` no guarda null: se reintentan en caliente → los "10 llamadas (0 ok)").
+Sesgo PESIMISTA de la medición local (llamadas de más), nunca optimista. En Producción no hay fixtures.
+
+=== Resumen: tres frías independientes válidas (corridas 3, 4 y 5) ===
+ms servidor del frío: 2952 | 2856 | 2046  →  máximo 2952 ms (tres observaciones, NO un p95 estadístico).
+TMDB en frío: 2 llamadas por consultada (50/25, 50/25, 60/30). Caliente/control: 0 llamadas ok a TMDB
+(sólo los reintentos de fixtures 404), 311–650 ms.
+Corrida 1 (3170 ms) queda como observación adicional: su handler pudo correr con el Home componiendo en
+paralelo (pared 59 s por compilaciones; no se conservó el log completo), o sea una cota bajo carga.

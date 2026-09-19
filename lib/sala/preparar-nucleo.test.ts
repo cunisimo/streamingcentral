@@ -50,7 +50,7 @@ const args = { roomId: "ROOM", hostUid: "UID", size: 5 as const, duracion: "cual
 test("llena 5 con 8 candidatas de las que 2 no están en la unión, y publica exactamente 5 con pos 0..4", async () => {
   const { deps, llamadas } = arnes({ candidatas: [1, 2, 3, 4, 5, 6, 7, 8].map(cand), enUnion: (id) => id !== 2 && id !== 4 });
   const r = await prepararRonda(deps, args);
-  assert.deepEqual(r, { ok: true, round_id: "R1", numero: 1, started_at: "2026-09-19T00:00:00Z", deadline_at: "2026-09-19T00:03:00Z", enriquecidas: 8, descartadas: 2 });
+  assert.deepEqual(r, { ok: true, round_id: "R1", numero: 1, started_at: "2026-09-19T00:00:00Z", deadline_at: "2026-09-19T00:03:00Z", consultadas: 8, enriquecidas: 8, descartadas: 2 });
   const orden = llamadas.map((l) => l.fn);
   assert.deepEqual(orden, ["sala_iniciar_preparacion", "sala_candidatos", "sala_publicar_ronda"]);
   const ini = llamadas[0].args;
@@ -94,7 +94,7 @@ test("los lotes siguientes son el doble de lo que falta, entre 5 y 20: a una tan
   const r = await prepararRonda(deps, { ...args, size: 20 });
   assert.ok(r.ok);
   assert.deepEqual(pedidas.map((p) => p.length), [20, 5]);
-  if (r.ok) { assert.equal(r.enriquecidas, 25); assert.equal(r.descartadas, 2); }
+  if (r.ok) { assert.equal(r.consultadas, 25); assert.equal(r.enriquecidas, 25); assert.equal(r.descartadas, 2); }
 });
 
 test("con 20 pedidas y sólo 12 válidas: aborta, no publica, y devuelve insuficientes con alcanzables [5, 10]", async () => {
@@ -138,10 +138,12 @@ test("los errores de iniciar se traducen a motivos y NO abortan (no hay ronda)",
   }
 });
 
-test("una candidata sin card se salta y se sigue con las demás", async () => {
+test("una candidata sin card se salta y se sigue con las demás; consultadas ≠ enriquecidas lo muestra", async () => {
   const { deps, llamadas } = arnes({ candidatas: [1, 2, 3, 4, 5, 6].map(cand), enUnion: () => true, sinCard: [2] });
   const r = await prepararRonda(deps, args);
   assert.ok(r.ok);
+  // 5 consultadas en el primer lote, 4 enriquecidas (la 2 no volvió), faltó 1 → segundo lote de 5 (sólo queda la 6): 6 consultadas, 5 enriquecidas, 1 descartada.
+  if (r.ok) { assert.equal(r.consultadas, 6); assert.equal(r.enriquecidas, 5); assert.equal(r.descartadas, 1); }
   const pub = llamadas.find((l) => l.fn === "sala_publicar_ronda")!.args as { p_titulos: { tmdb_id: number }[] };
   assert.deepEqual(pub.p_titulos.map((t) => t.tmdb_id), [1, 3, 4, 5, 6]);
 });

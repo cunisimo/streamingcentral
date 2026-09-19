@@ -19,7 +19,7 @@ function deps(over: Partial<Parameters<typeof manejarPreparar>[1]> = {}) {
     deps: {
       salasActivas: true,
       usuarioDeToken: async (t: string | null) => (t === "JWT-OK" ? "UID-1" : null),
-      preparar: async (args: unknown) => { recibido.push(args); return { ok: true as const, round_id: "R", numero: 1, started_at: "s", deadline_at: "d", enriquecidas: 10, descartadas: 0 }; },
+      preparar: async (args: unknown) => { recibido.push(args); return { ok: true as const, round_id: "R", numero: 1, started_at: "s", deadline_at: "d", consultadas: 10, enriquecidas: 10, descartadas: 0 }; },
       ...over,
     },
   };
@@ -62,7 +62,7 @@ test("400 con cuerpo inválido, size fuera de {5,10,20}, size ausente, duración
 test("200 con la sesión verificada como hostUid (nunca del cuerpo) y la config exacta", async () => {
   const { deps: d, recibido } = deps();
   const r = await manejarPreparar({ authorization: "Bearer JWT-OK", cuerpo: cuerpo({ room_id: ROOM, size: 20, duracion: "larga", hostUid: "ATACANTE" }) }, d);
-  assert.equal(r.status, 200); assert.deepEqual(r.body, { ok: true, round_id: "R", numero: 1, started_at: "s", deadline_at: "d", enriquecidas: 10, descartadas: 0 });
+  assert.equal(r.status, 200); assert.deepEqual(r.body, { ok: true, round_id: "R", numero: 1, started_at: "s", deadline_at: "d", consultadas: 10, enriquecidas: 10, descartadas: 0 });
   assert.deepEqual(recibido, [{ roomId: ROOM, hostUid: "UID-1", size: 20, duracion: "larga" }]);
 });
 
@@ -73,4 +73,14 @@ test("los motivos de negocio salen con 409 y el fallo con 500", async () => {
     assert.equal(r.status, status, motivo);
     assert.deepEqual(r.body, { ok: false, motivo, alcanzables: [5] });
   }
+});
+
+test("el detalle interno de un fallo NO viaja en el body: queda sólo para el log del servidor, acotado", async () => {
+  const { deps: d } = deps({ preparar: async () => ({ ok: false as const, motivo: "fallo" as const, detalle: "SECRETO-INTERNO sala_publicar_ronda: connection refused 10.0.0.7 " + "x".repeat(500) }) });
+  const r = await manejarPreparar({ authorization: "Bearer JWT-OK", cuerpo: cuerpo({ room_id: ROOM, size: 10, duracion: "cualquiera" }) }, d);
+  assert.equal(r.status, 500);
+  assert.deepEqual(r.body, { ok: false, motivo: "fallo" });
+  assert.ok(!JSON.stringify(r.body).includes("SECRETO-INTERNO"));
+  assert.ok(r.detalle?.startsWith("SECRETO-INTERNO"));
+  assert.ok((r.detalle ?? "").length <= 200, "el detalle del servidor está acotado");
 });

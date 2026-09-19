@@ -328,9 +328,15 @@ misma participación.** (37 pruebas.)
 > (cableado server-only con `supabaseAdmin`), `app/api/sala/preparar/route.ts`,
 > `scripts/sala/medir-preparacion.mjs`. Diferencias respecto de lo escrito
 > abajo: la ruta cablea un handler puro en vez de validar en línea; el resultado
-> `ok` trae `enriquecidas`/`descartadas` para la línea `[sala]`; la
-> configuración de `next dev` local es `sala-local` en `.claude/launch.json`.
-> Medición y evidencia: `docs/medidas/2026-09-19-salas-etapa2.md`.
+> `ok` trae `consultadas` / `enriquecidas` / `descartadas` (candidatas
+> enviadas, cards devueltas, descartadas) para la línea `[sala]`; el `detalle`
+> interno de un 500 se queda en el log del servidor, acotado, y nunca en el
+> body; la configuración de `next dev` local es `sala-local` en
+> `.claude/launch.json`. **Tests: 25 en `lib/sala`** (9 + 10 + 6). Cierre
+> aprobado por el dueño el 19/09 con auditoría de Codex; la Etapa 3 **no está
+> autorizada todavía**. Medición y evidencia:
+> `docs/medidas/2026-09-19-salas-etapa2.md` (líneas crudas en
+> `docs/medidas/2026-09-19-salas-preparacion-crudo.txt`).
 
 ### Task 2.1: Tipos y selección pura
 
@@ -480,7 +486,8 @@ export const OPTIONS = opcionesCors("POST");
 - [ ] **Step 0:** `node scripts/sala/db-local.mjs --catalogo-real` (autorizado el 2026-09-18: carga `data/carga-ruleta-*.sql` **sólo en la base local**; Producción no se toca).
 - [ ] **Step 1:** Script que, contra `next dev` con `.env.sala-local` **y `TMDB_READ_TOKEN` real**, crea una sala con 2 participantes (RPC) con plataformas `n,d,m`, llama a `/api/sala/preparar` para `size` 5, 10 y 20 en `cualquiera`, y lee del stdout del servidor la línea `[sala]`. Corrida A (frío): sin `UPSTASH_*` en el env (caché en memoria) y proceso recién levantado; corrida B (caliente): repetir inmediatamente con otra sala y las mismas plataformas, mismo proceso. Alternar A/B/A/B por tamaño (MANTENIMIENTO "alternar, nunca contra una foto vieja") y no correr nada más contra TMDB mientras tanto.
 - [ ] **Step 2:** Registrar en `docs/medidas/2026-09-XX-salas-preparacion.md`: por tamaño y estado, `tmdb / redis / supabase / ms`, con las dos corridas alternadas (MANTENIMIENTO "alternar, nunca contra una foto vieja") y sin otra carga sobre TMDB.
-- [ ] **Step 3: Go a Etapa 3:** 20 cards caliente ≤ 2 s, frío ≤ 6 s p95 (3 corridas). Si no, bajar el default a 10 queda como decisión del dueño con el número a la vista.
+- [x] **Step 3: Go a Etapa 3:** 20 cards caliente ≤ 2 s, frío ≤ 6 s p95 (3 corridas). Si no, bajar el default a 10 queda como decisión del dueño con el número a la vista.
+  **Resultado (19/09, código final):** tres frías INDEPENDIENTES de 20 (proceso reiniciado y caché vacía antes de cada una) → **2952 / 2856 / 2046 ms de servidor, máximo 2952 ms**; caliente 0,31–0,65 s. Son tres observaciones y su máximo, **no un p95 estadístico**. Dentro del umbral; el default 10 no cambia. Los descartes por TMDB en local son los fixtures (404), sesgo pesimista. Evidencia: `docs/medidas/2026-09-19-salas-etapa2.md`.
 
 ---
 
