@@ -19,7 +19,7 @@ function deps(over: Partial<Parameters<typeof manejarPreparar>[1]> = {}) {
     deps: {
       salasActivas: true,
       usuarioDeToken: async (t: string | null) => (t === "JWT-OK" ? "UID-1" : null),
-      preparar: async (args: unknown) => { recibido.push(args); return { ok: true as const, round_id: "R", numero: 1, started_at: "s", deadline_at: "d" }; },
+      preparar: async (args: unknown) => { recibido.push(args); return { ok: true as const, round_id: "R", numero: 1, started_at: "s", deadline_at: "d", enriquecidas: 10, descartadas: 0 }; },
       ...over,
     },
   };
@@ -62,7 +62,7 @@ test("400 con cuerpo inválido, size fuera de {5,10,20}, size ausente, duración
 test("200 con la sesión verificada como hostUid (nunca del cuerpo) y la config exacta", async () => {
   const { deps: d, recibido } = deps();
   const r = await manejarPreparar({ authorization: "Bearer JWT-OK", cuerpo: cuerpo({ room_id: ROOM, size: 20, duracion: "larga", hostUid: "ATACANTE" }) }, d);
-  assert.equal(r.status, 200); assert.deepEqual(r.body, { ok: true, round_id: "R", numero: 1, started_at: "s", deadline_at: "d" });
+  assert.equal(r.status, 200); assert.deepEqual(r.body, { ok: true, round_id: "R", numero: 1, started_at: "s", deadline_at: "d", enriquecidas: 10, descartadas: 0 });
   assert.deepEqual(recibido, [{ roomId: ROOM, hostUid: "UID-1", size: 20, duracion: "larga" }]);
 });
 

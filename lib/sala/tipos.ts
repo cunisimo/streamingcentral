@@ -52,5 +52,7 @@ export interface CardSala {
 
 /** Respuesta de `POST /api/sala/preparar`. */
 export type ResultadoPreparar =
-  | { ok: true; round_id: string; numero: number; started_at: string; deadline_at: string }
+  | { ok: true; round_id: string; numero: number; started_at: string; deadline_at: string;
+      /** Diagnóstico: cuántas candidatas se enriquecieron y cuántas de ésas se descartaron (sin card, sin duración o fuera de la unión). */
+      enriquecidas: number; descartadas: number }
   | { ok: false; motivo: "sin_quorum" | "estado" | "no_es_host" | "desactivadas" | "insuficientes" | "fallo"; alcanzables?: Size[]; detalle?: string };

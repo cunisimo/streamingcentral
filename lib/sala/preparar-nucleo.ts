@@ -22,8 +22,21 @@ import type { Candidata, Duracion, ResultadoPreparar, Size } from "./tipos.ts";
 
 /** Candidatas que se piden a la base. La RPC capa en 80. */
 export const TOPE_CANDIDATAS = 80;
-/** Cards que se enriquecen por lote: una tanda de 20 cabe en uno. */
+/**
+ * Tope de cards que se enriquecen por lote. El lote real es min(LOTE_CARDS, size):
+ * medido en local, enriquecer 20 para una tanda de 5 costaba 40 llamadas a TMDB
+ * en frío (2 por card) para usar 5; con el lote del tamaño de la tanda son 10, y
+ * sólo si alguna se cae por la unión o por TMDB se pide un segundo lote.
+ */
 export const LOTE_CARDS = 20;
+/** Primer lote: el tamaño de la tanda. */
+export const loteDe = (size: number) => Math.min(LOTE_CARDS, size);
+/**
+ * Lotes siguientes: el doble de lo que falta, entre 5 y 20. Medido en local:
+ * con un segundo lote fijo de 20, una tanda de 20 a la que se le cayeron 2
+ * cards pagaba 40 llamadas más a TMDB para usar 2.
+ */
+export const loteSiguiente = (faltan: number) => Math.max(5, Math.min(LOTE_CARDS, faltan * 2));
 
 export interface DepsPreparar {
   rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown>;
@@ -69,11 +82,17 @@ export async function prepararRonda(deps: DepsPreparar, a: ArgsPreparar): Promis
     // Enriquecer por lotes, en el orden de la semilla, hasta llenar.
     const mapa = new Map<number, UITitle>();
     let seleccion = elegirCards(candidatas, mapa, ini.union as UITitle["platforms"], a.size);
-    for (let i = 0; i < candidatas.length && seleccion.cards.length < a.size; i += LOTE_CARDS) {
-      const lote = candidatas.slice(i, i + LOTE_CARDS);
+    let i = 0;
+    let paso = loteDe(a.size);
+    let enriquecidas = 0;
+    while (i < candidatas.length && seleccion.cards.length < a.size) {
+      const lote = candidatas.slice(i, i + paso);
       const cards = await deps.cards(lote.map((c) => ({ tipo: "movie" as const, id: c.tmdb_id })));
       for (const c of cards) mapa.set(c.id, c);
-      seleccion = elegirCards(candidatas.slice(0, i + LOTE_CARDS), mapa, ini.union as UITitle["platforms"], a.size);
+      i += lote.length;
+      enriquecidas += lote.length;
+      seleccion = elegirCards(candidatas.slice(0, i), mapa, ini.union as UITitle["platforms"], a.size);
+      paso = loteSiguiente(seleccion.faltan);
     }
 
     if (seleccion.cards.length < a.size) {
@@ -84,7 +103,10 @@ export async function prepararRonda(deps: DepsPreparar, a: ArgsPreparar): Promis
     const pub = (await deps.rpc("sala_publicar_ronda", {
       p_round: ini.round_id, p_prep_token: ini.prep_token, p_titulos: seleccion.cards,
     })) as { ok: boolean; started_at: string; deadline_at: string };
-    return { ok: true, round_id: ini.round_id, numero: ini.numero, started_at: pub.started_at, deadline_at: pub.deadline_at };
+    return {
+      ok: true, round_id: ini.round_id, numero: ini.numero, started_at: pub.started_at, deadline_at: pub.deadline_at,
+      enriquecidas, descartadas: enriquecidas - seleccion.validas,
+    };
   } catch (e) {
     await abortar();
     return { ok: false, motivo: "fallo", detalle: e instanceof Error ? e.message : String(e) };

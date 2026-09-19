@@ -13,7 +13,7 @@
 //     sala es otra y no se expone).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { prepararRonda, TOPE_CANDIDATAS, LOTE_CARDS } from "./preparar-nucleo.ts";
+import { prepararRonda, TOPE_CANDIDATAS, LOTE_CARDS, loteDe, loteSiguiente } from "./preparar-nucleo.ts";
 import type { Candidata } from "./tipos.ts";
 import type { UITitle } from "../types.ts";
 
@@ -50,7 +50,7 @@ const args = { roomId: "ROOM", hostUid: "UID", size: 5 as const, duracion: "cual
 test("llena 5 con 8 candidatas de las que 2 no están en la unión, y publica exactamente 5 con pos 0..4", async () => {
   const { deps, llamadas } = arnes({ candidatas: [1, 2, 3, 4, 5, 6, 7, 8].map(cand), enUnion: (id) => id !== 2 && id !== 4 });
   const r = await prepararRonda(deps, args);
-  assert.deepEqual(r, { ok: true, round_id: "R1", numero: 1, started_at: "2026-09-19T00:00:00Z", deadline_at: "2026-09-19T00:03:00Z" });
+  assert.deepEqual(r, { ok: true, round_id: "R1", numero: 1, started_at: "2026-09-19T00:00:00Z", deadline_at: "2026-09-19T00:03:00Z", enriquecidas: 8, descartadas: 2 });
   const orden = llamadas.map((l) => l.fn);
   assert.deepEqual(orden, ["sala_iniciar_preparacion", "sala_candidatos", "sala_publicar_ronda"]);
   const ini = llamadas[0].args;
@@ -72,6 +72,29 @@ test("enriquece por lotes y se detiene cuando ya llenó: no pide cards de más",
   assert.ok(r.ok);
   assert.equal(pedidas.length, 1, "20 cabían en el primer lote");
   assert.equal(pedidas[0].length, LOTE_CARDS);
+});
+
+test("el lote es del tamaño de la tanda: una tanda de 5 enriquece 5, y sólo pide un segundo lote si alguna se cae", async () => {
+  assert.equal(loteDe(5), 5); assert.equal(loteDe(10), 10); assert.equal(loteDe(20), 20);
+  const pedidas: number[][] = [];
+  const { deps } = arnes({ candidatas: Array.from({ length: 30 }, (_, i) => cand(i + 1)), enUnion: (id) => id !== 3 });
+  const cards = deps.cards;
+  deps.cards = async (pairs) => { pedidas.push(pairs.map((p) => p.id)); return cards(pairs); };
+  const r = await prepararRonda(deps, args);
+  assert.ok(r.ok);
+  assert.deepEqual(pedidas, [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]], "5 en el primer lote; la caída de la 3 obliga a un segundo lote de 5");
+});
+
+test("los lotes siguientes son el doble de lo que falta, entre 5 y 20: a una tanda de 20 con 2 caídas le cuesta 5 más, no 20", async () => {
+  assert.equal(loteSiguiente(1), 5); assert.equal(loteSiguiente(2), 5); assert.equal(loteSiguiente(4), 8); assert.equal(loteSiguiente(15), 20);
+  const pedidas: number[][] = [];
+  const { deps } = arnes({ candidatas: Array.from({ length: 80 }, (_, i) => cand(i + 1)), enUnion: (id) => id !== 3 && id !== 7 });
+  const cards = deps.cards;
+  deps.cards = async (pairs) => { pedidas.push(pairs.map((p) => p.id)); return cards(pairs); };
+  const r = await prepararRonda(deps, { ...args, size: 20 });
+  assert.ok(r.ok);
+  assert.deepEqual(pedidas.map((p) => p.length), [20, 5]);
+  if (r.ok) { assert.equal(r.enriquecidas, 25); assert.equal(r.descartadas, 2); }
 });
 
 test("con 20 pedidas y sólo 12 válidas: aborta, no publica, y devuelve insuficientes con alcanzables [5, 10]", async () => {
