@@ -498,7 +498,9 @@ export const OPTIONS = opcionesCors("POST");
 > (3.3), `a2440d2` (3.4). Los archivos reales son la referencia:
 > `lib/sala/{estado,token-store,mensajes,entrada,votacion-nucleo}.ts`,
 > `hooks/{temporizador-card,sala-relectura-nucleo,useSala,useVenceEn}.ts`,
-> `components/sala/*`, `app/sala/nueva`, `app/sala/[id]`. **36 tests nuevos.**
+> `components/sala/*`, `app/sala/nueva`, `app/sala/[id]`. **49 tests nuevos**
+> (36 + la ronda de tres bloqueantes del dueño en `7580a1b`: credencial estable
+> en memoria, compuerta monotónica de `useSala`, cerrojo de la votación).
 > Desvíos declarados: selector desde `PLATFORMS` (no `/api/providers`);
 > resultado PROVISORIO hasta la Etapa 4; enlace + Copiar en el lobby (compartir
 > es la Etapa 5); `claveCard` se llama `claveInicioCard`; `app/sala/[id]`

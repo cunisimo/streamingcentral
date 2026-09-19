@@ -3,7 +3,8 @@
 Plan: [`superpowers/plans/2026-09-17-salas-compartidas.md`](../superpowers/plans/2026-09-17-salas-compartidas.md), Tareas 3.1–3.4.
 Rama `feat/salas`. **Todo en local: base de `supabase start` (catálogo real +
 fixtures), `next dev` con `.env.sala-local`, TMDB real. Nada en Producción; sin
-deploy, merge ni push.** Cuatro commits, uno por tarea.
+deploy, merge ni push.** Cuatro commits, uno por tarea, más el de la ronda de
+correcciones del dueño (`7580a1b`).
 
 ## Qué hay
 
@@ -19,7 +20,7 @@ deploy, merge ni push.** Cuatro commits, uno por tarea.
   `Buffer`), persistida ANTES de la primera solicitud; `confirmarSala` sólo
   MUEVE `yump:sala:credencial:crear` → `yump:sala:<id>`; ninguna respuesta del
   servidor la escribe; respuestas repetidas o en orden inverso no cambian nada;
-  store que lanza → credencial efímera. 9 tests.
+  store que lanza → credencial estable en memoria (ver correcciones). 12 tests.
 - `hooks/temporizador-card.ts` — comienzo por sala/ronda/pos
   (`yump:sala:<room>:<round>:<pos>:inicio`); `arrancar` reusa el guardado (F5
   no reinicia); `cerrar` sólo con avance confirmado; comienzo corrupto o futuro
@@ -68,6 +69,36 @@ deploy, merge ni push.** Cuatro commits, uno por tarea.
   vuelo; "Listo, esperando a los demás (k de N)"; el "Pero" sólo con contenido;
   sin enlace a la ficha.
 
+## Ronda de correcciones del dueño (19/09, `7580a1b`) — tres bloqueantes
+
+1. **`token-store` con `localStorage` roto.** Antes, dos llamadas generaban
+   credenciales distintas (rompía la idempotencia dentro de la pestaña) y
+   `confirmarSala` borraba el origen aunque el destino no hubiera quedado.
+   Ahora hay un respaldo EN MEMORIA por clave: todos los reintentos de la misma
+   clave devuelven la misma credencial; `confirmarSala` relee el destino y borra
+   el origen SÓLO si el store lo conserva (si no, el origen persistido queda y
+   el destino vive en memoria — repetir `sala_crear` devuelve la misma sala).
+   Tests nuevos: store que lanza (estabilidad), `setItem` que lanza sólo en la
+   clave de sala, `setItem` mudo que no persiste. `token-store`: 9 → 12 tests.
+2. **`useSala` y respuestas fuera de orden.** Compuerta monotónica
+   (`hooks/sala-compuerta.ts`): cada lectura sale con un ticket `{gen, n}` y
+   sólo se aplica si es más nueva que la última aplicada y de la generación
+   vigente; cambiar `roomId`/token reinicia la generación. Vale para el éxito y
+   para el error. Test con promesas diferidas: responde primero la lectura nueva
+   y después la vieja → el estado final sigue siendo el nuevo; una lectura de la
+   generación anterior no actualiza la nueva. 5 tests.
+3. **`Votacion` tras `ronda_cerrada`/`inexistente`.** El bucle pasó a
+   `lib/sala/votacion-control.ts` con reloj y RPC inyectados. La compuerta se
+   CIERRA antes de releer y sin mirar si la relectura anduvo: no sale ni un
+   `sala_votar` más aunque el intervalo siga vencido. Test con reloj controlado:
+   1 envío, 20 ticks vencidos en 5 s con `releer` fallando → sigue en 1 (el test
+   se puso en rojo quitando el cerrojo, y volvió a verde con él). También fija un
+   solo voto en vuelo y el reintento acotado a 3 s. 5 tests.
+
+Además: quitado el comentario obsoleto de `009_salas.sql` que decía que
+`sala_reclamar` "rota el token". Smoke en navegador tras el refactor: pass a
+los 10 s, No manual, pass 10 s después del manual, Sí → `match`.
+
 ## Desvíos respecto del plan (declarados)
 
 - **Plataformas del selector desde `PLATFORMS`, no desde `/api/providers`.**
@@ -99,10 +130,14 @@ deploy, merge ni push.** Cuatro commits, uno por tarea.
 
 ## Verificación automática
 
-- `node --test` de lo nuevo: **36 tests** (4 + 9 + 8 + 5 + 4 + 6).
-- `npm run build` en verde: `/sala/[id]` dinámica (ƒ), `/sala/nueva` estática.
-- Suite completa **después del build**: **1781 tests, 1771 ok, 0 fallos, 10
-  omitidos** (artefacto Capacitor, línea base). `npx tsc --noEmit` limpio.
+- `node --test` de lo nuevo: **49 tests** — estado 4, token-store 12, temporizador 8,
+  relectura 5, compuerta 5, mensajes 4, votación-núcleo 6, votación-control 5
+  (eran 36 antes de la ronda de correcciones).
+- `npm run build` en verde: `/sala/[id]` dinámica (ƒ, 8,39 kB), `/sala/nueva` estática.
+- Suite completa **después del build**: **1794 tests, 1784 ok, 0 fallos, 10
+  omitidos** (artefacto Capacitor, línea base). `npx tsc --noEmit` limpio. En la
+  primera corrida falló una vez `home-fondo-orden.test.ts:154`, uno de los dos
+  tests de reloj de pared del **issue #23** (pasa 3/3 aislado; no se tocó).
 
 ## Verificación manual en navegador (local)
 

@@ -60,8 +60,12 @@
   respaldo cada 5 s, relectura tras cada plazo), `/sala/nueva` y `/sala/[id]`
   (crear, reclamar, unirse, lobby con ConfigTanda y "Empezar" contra
   `/api/sala/preparar`), votación con 10 s por card PERSISTIDOS (recargar no
-  reinicia) y `pass` automático; entrada en el Home y en el hub. **36 tests
-  nuevos**; suite post-build 1781 / 1771 ok / 0 fallos / 10 omitidos; `tsc`
+  reinicia) y `pass` automático; entrada en el Home y en el hub. **Auditoría del
+  dueño: tres bloqueantes corregidos** (`7580a1b`: credencial estable en memoria
+  con `localStorage` roto y `confirmarSala` que no pierde el origen; compuerta
+  monotónica en `useSala` contra respuestas fuera de orden y cambio de sala;
+  cerrojo en la votación tras `ronda_cerrada`/`inexistente`). **49 tests
+  nuevos**; suite post-build 1794 / 1784 ok / 0 fallos / 10 omitidos; `tsc`
   limpio; `npm run build` en verde. **Verificado en navegador (local, TMDB
   real)** como invitado sin cuenta con el organizador desde node: lobby en vivo,
   lobby vencido, tanda publicada, pass cada 10 s exactos, recarga a mitad de
