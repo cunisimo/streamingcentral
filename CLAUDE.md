@@ -181,7 +181,13 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   tocar código, pero **cambiar una variable en Vercel se aplica recién en el
   siguiente deployment**.
 - **Pausa compartida ante 429 (Etapa 3.c.1, `lib/tmdb-pausa.ts` +
-  `lib/pausa-lua.ts`; en rama, pendiente de auditoría — ver `docs/ESTADO.md`).**
+  `lib/pausa-lua.ts`; MERGEADA Y DESPLEGADA el 2026-09-19, merge `367b765`
+  — ver `docs/ESTADO.md`; 🔴 el camino de la pausa NO se observó en
+  Producción: ningún 429 real; la evidencia es la del banco y los tests).
+  Kill switch `TMDB_PAUSA_429=0`, NO activado: cambiarlo exige autorización
+  del dueño y redeploy. Limitación heredada: con Redis caído + TMDB pausado +
+  sin UB un pedido puede tardar 58-75 s y terminar en 503 o en el corte de
+  Vercel, sin contenido mutilado.**
   Hoy un 429 de TMDB no frena nada: medido, un proceso emite 750-778
   llamadas más en 3,4-4,4 s después del primero. Con la pausa, DOS niveles
   que no tocan qué pide el Home ni en qué orden. **Nivel 1, local:** el

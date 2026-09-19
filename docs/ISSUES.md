@@ -1298,9 +1298,20 @@ leyendo el código.**
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
 > restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c.1 (pausa compartida
-> ante 429) — IMPLEMENTADA el 18/09 en `feat/etapa3c1-pausa-tmdb` (informe
-> §53): NO mergeada, NO pusheada, NO desplegada, PENDIENTE DE AUDITORÍA DE
-> CODEX (corregida por §54 tras la primera auditoría: lecturas acotadas con
+> ante 429) — MERGEADA (`367b765`, `--no-ff`), PUSHEADA Y DESPLEGADA el
+> 2026-09-19 (`dpl_Emrbaqf1Ft1oJydTjMGy4GzNiWXh`, `app.yump.ar`), tras la
+> auditoría final de Codex sobre `6fd875e` sin hallazgos bloqueantes;
+> SUBETAPA CERRADA. Comprobación pasiva: health (bloque `pausa` en 0), Home,
+> búsqueda y ficha en 200; el fondo publicó con 480/480 llamadas ok. 🔴 No se
+> provocó ni se observó ningún 429 real: el camino de la pausa está probado
+> en tests y banco, no en Producción. Kill switch `TMDB_PAUSA_429=0` NO
+> activado (cambiarlo exige autorización y redeploy). Limitación heredada y
+> tarea futura: con Redis caído + TMDB pausado + sin UB un pedido puede
+> tardar 58-75 s y terminar en 503 o en el corte de Vercel (sin contenido
+> mutilado). **#19 sigue abierto SÓLO por la 3.c.2 (circuito del fondo) y la
+> membresía, no por la 3.a, la 3.b ni la 3.c.1.** Historia en rama: IMPLEMENTADA
+> el 18/09 en `feat/etapa3c1-pausa-tmdb` (informe
+> §53) (corregida por §54 tras la primera auditoría: lecturas acotadas con
 > pausa local —503 en 3,04 s con Redis caído, antes 23 s—, ring de cubos, un
 > TIME por evento, tests deterministas; el Preview de la precondición usó el
 > Redis de Producción con claves prefijadas y borradas, DBSIZE 802 → 90 no
@@ -1315,7 +1326,7 @@ leyendo el código.**
 > TOMAR a +13 s más LIBERAR contra 0 y 0; y por §57 tras la auditoría sobre
 > `9fd6d71`: los caminos `sin-redis` servían un Home mutilado por 429 como
 > 200; ahora UB o 503 `pausa`, sin cambiar la duración de esa composición;
-> criterio 10; pendiente de auditoría FINAL). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
+> criterio 10; auditoría final aprobada sobre `6fd875e`). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
 > identidad del Home antes/después 16/16 idéntica; umbrales del camino sano
 > dentro (Redis +24-28 ≤ 41, duración −1 % mediana, UB −34 ms); con 429
 > total 77 llamadas tras el primer 429 contra 858 sin pausa, nada publicado

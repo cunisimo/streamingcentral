@@ -20,7 +20,49 @@
   y `docs/medidas/2026-09-05-sync-medicion.md`). Lo que Producción tiene de
   `tmdb-sync` es lo que dice la tabla de despliegue más abajo, no esta rama.
   No retomar sin pedido explícito del dueño.
-- **Etapa 3.c.1 de capacidad (#19) — "pausa compartida ante 429":
+- **Etapa 3.c.1 de capacidad (#19) — "pausa compartida ante 429": MERGEADA,
+  PUSHEADA Y DESPLEGADA (2026-09-19). SUBETAPA CERRADA.** Aprobada por la
+  auditoría final de Codex sobre `6fd875e` sin hallazgos bloqueantes
+  (`home-servir` 83/83; suite repetida por Codex 1.900: 1.890 ok, 0 fallos,
+  10 omitidos; `tsc` y `diff --check` limpios). Merge `--no-ff` **`367b765`**
+  en `main` (rama `feat/etapa3c1-pausa-tmdb` en `6fd875e`; **árbol del merge
+  idéntico al de la rama**, verificado por hash de árbol); push de `main`
+  solamente (`origin/main` `37d4707` → `367b765`); deployment automático de
+  Vercel **`dpl_Emrbaqf1Ft1oJydTjMGy4GzNiWXh`** READY, target production,
+  `githubCommitSha = 367b765…`, aliasado a `app.yump.ar` (READY 16:27 UTC).
+  **Precaución de Git cumplida:** el `main` local estaba tres commits
+  adelante (`0c13036`, `8429f5e`, `34e4637`, plan de Salas); se verificó que
+  los tres están contenidos en `feat/salas` (`c7e596c`), que ninguna worktree
+  tenía `main` checkout, y se devolvió el puntero local de `main` a
+  `origin/main` (`git branch -f`, sin tocar `feat/salas` ni los cuatro
+  archivos sin seguimiento del worktree principal); la integración se hizo en
+  una worktree nueva y exclusiva (`wt-integracion-3c1`). Verificado sobre el
+  `main` fusionado antes del push: pruebas de la 3.c.1 (180/180), suite
+  **1.900 (1.890 ok, 0 fallos, 10 omitidos)**, `tsc --noEmit`, build fresco
+  (`dt5aoP2yHEsj1fgGji4lF`, 116 s, 0 errores), `git diff --check`.
+  **Comprobación PASIVA tras el deploy** (sin provocar 429, ni caída de Redis,
+  ni carga, ni vencimientos, ni vaciado de cachés; sin tocar variables ni
+  infraestructura): `/api/health` 200 (Redis OK, 615 claves; bloque `pausa`
+  nuevo: `pausaVigenteMs 0`, cubos de los últimos 60 min todos en 0); Home
+  `n,d,m` 200 (85 KB, 1,6 s y 1,2 s); búsqueda 200; ficha 200; `/`,
+  `/buscar`, `/titulo/movie/603` 200. Logs del deployment: el primer Home
+  salió por el camino UB-primero (`ultimo-bueno-fondo`, fondo programado), el
+  `[home-fondo]` compuso y publicó en 19,6 s con **480 llamadas a TMDB (480 ok,
+  0 x429)**, 3 renovaciones, `turno adquirido`; el siguiente pedido
+  `ultimo-bueno` con `turno ocupado`; sin errores, timeouts, Homes degradados
+  publicados ni tareas residuales. 🔴 **No hubo ningún 429 real en Producción:
+  el camino de la pausa NO se observó en vivo; su evidencia es la del banco y
+  los tests (§53-§57).** **Kill switch `TMDB_PAUSA_429=0`** (apaga los dos
+  niveles y `TOMAR` vuelve al `SET NX`): NO está activado; cualquier cambio de
+  esa variable exige autorización del dueño y un redeploy para aplicarse.
+  **Limitación excepcional heredada, documentada y NO resuelta en esta
+  integración (tarea futura):** con Redis caído + TMDB pausado + sin UB, un
+  pedido puede tardar 58-75 s (la composición `sin-redis` paga los reintentos
+  del cliente principal por cada lectura de caché —promesa reducida de la
+  Etapa 2— antes de decidir); no entrega contenido mutilado, pero puede
+  terminar en 503 `pausa` o en el corte de Vercel (`maxDuration` 60 s). Historia
+  en rama (antes del merge): lo que sigue.
+- **Historia en rama de la 3.c.1 (antes del merge):**
   IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` (worktree `wt-etapa3c1`, desde
   `aac70e7`; informe §53) y CORREGIDA tras la auditoría de Codex sobre
   `6fc63b5` (informe §54, 2026-09-18, `d322282`) y tras la auditoría sobre
@@ -48,8 +90,8 @@
   regla 4d' de `componer`: con UB ya leído → UB, sin UB → 503 `pausa` +
   Retry-After, nada escrito; un degradado AJENO a la pausa se sirve como
   siempre; el tiempo NO cambia (58,5 s: promesa reducida de la composición
-  con Redis caído); criterio 10 en el banco); NO mergeada, NO pusheada, NO
-  desplegada; PENDIENTE DE AUDITORÍA FINAL.
+  con Redis caído); criterio 10 en el banco); luego auditoría final APROBADA
+  sobre `6fd875e` y merge `367b765` (ver el cierre arriba).
   Diseño §45-§52 aprobado por el dueño el 18/09.** **Lo que
   corrigió §54 [comprobado en tests y banco]:** (1) con la pausa LOCAL
   vigente ninguna lectura de Redis espera los reintentos del SDK: lectura
@@ -1221,6 +1263,9 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ```
 origin/main                          ← DESPLEGADO en producción (app.yump.ar)
                                        avatares: merge 89ccb73 · legal: merge 27669c0
+                                       etapa 3.c.1 (pausa 429): merge 367b765 (19/09)
+feat/etapa3c1-pausa-tmdb  6fd875e   ← MERGEADA el 19/09 con --no-ff (367b765). Se puede borrar
+feat/salas                c7e596c   ← rama viva del plan de Salas; contiene 0c13036, 8429f5e, 34e4637 (NO están en main)
 feat/avatares-propios                ← MERGEADA el 27/08 con --no-ff. Se puede borrar
 feat/legal-play-web                  ← MERGEADA el 28/08 con --no-ff. Se puede borrar
 feat/ejes-rieles-genero   1912f56   ← pusheada como respaldo, SIN mergear
@@ -1233,6 +1278,9 @@ pasó dos veces seguidas. Se mira con `git log -1 origin/main`. Lo que sí se
 escribe es el SHA de un hito ya cerrado, como el merge de arriba.
 
 **Lo que hay desplegado hoy:**
+
+- la **Etapa 3.c.1 de capacidad** (pausa compartida ante 429; merge `367b765`,
+  19/09, `dpl_Emrbaqf1Ft1oJydTjMGy4GzNiWXh`), sobre la 3.a y la 3.b del 15/09;
 
 - las tres tandas del **idioma** (catálogo en `es-MX` con respaldo a `es-ES`);
 - los tres arreglos del **Top 10 de Netflix** — la plataforma garantizada por la

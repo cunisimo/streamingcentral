@@ -3,7 +3,10 @@
 > **Estado: DISEÑO v4.1 + ETAPA 3.a MERGEADA, PUSHEADA Y DESPLEGADA
 > (2026-09-15; §31) + ETAPA 3.b MERGEADA, PUSHEADA Y DESPLEGADA
 > (2026-09-15; merge `5604750`, deployment
-> `dpl_A9oAnbXKBqbBTGiKC6kMMLdFz3oB`; §37). Subetapa 3.b, "último bueno
+> `dpl_A9oAnbXKBqbBTGiKC6kMMLdFz3oB`; §37) + ETAPA 3.c.1 MERGEADA, PUSHEADA Y
+> DESPLEGADA (2026-09-19; merge `367b765`, deployment
+> `dpl_Emrbaqf1Ft1oJydTjMGy4GzNiWXh`; §58 — subetapa CERRADA; el camino de la
+> pausa NO se observó en vivo: ningún 429 real).** Subetapa 3.b, "último bueno
 > primero y reconstrucción en fondo": decisión de producto APROBADA; diseño
 > §33; implementada (§34), corregida dos veces (§35, §36), aprobada por la
 > auditoría final sobre `c5fab20` y desplegada; **camino UB-primero
@@ -73,9 +76,11 @@
 > `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`), fork de
 > `main = origin/main = b7be927`.
 >
-> **Estado vigente de la 3.c (2026-09-19, §53 a §57): la 3.c.1
+> **Estado vigente de la 3.c (2026-09-19, §53 a §58): la 3.c.1
 > "pausa compartida ante 429" —diseño §45-§52 aprobado por el dueño— está
-> IMPLEMENTADA en la rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA cuatro veces: tras la
+> MERGEADA, PUSHEADA Y DESPLEGADA (§58; merge `367b765`; auditoría final
+> aprobada sobre `6fd875e`). Fue implementada en la rama
+> `feat/etapa3c1-pausa-tmdb` y CORREGIDA cuatro veces: tras la
 > auditoría de Codex sobre `6fc63b5` (§54: lecturas acotadas con pausa local,
 > ring de cubos, un TIME por evento, tests deterministas; el Preview de la
 > precondición usó el Redis de Producción con claves prefijadas y borradas,
@@ -96,9 +101,9 @@
 > con 11 elementos—; ahora la misma regla 4d' de `componer`: con UB ya leído
 > el UB, sin UB 503 `pausa` + Retry-After; un degradado ajeno a la pausa se
 > sirve como siempre; criterio 10 en el banco). Identidad del Home 16/16,
-> umbrales dentro, criterios 4-10 verdes en el banco. NO mergeada, NO
-> pusheada, NO desplegada, pendiente de auditoría FINAL. Kill switch
-> `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
+> umbrales dentro, criterios 4-10 verdes en el banco. Kill switch
+> `TMDB_PAUSA_429=0` (no activado; cambiarlo exige autorización y redeploy).
+> 3.c.2 fuera de alcance.**
 >
 > Issue que ataca: **#19**. Lo que NO toca: CDN y límites por ruta (Etapa 4),
 > observabilidad histórica (#20, Etapa 5). Las respuestas a las auditorías de
@@ -5677,7 +5682,7 @@ puertos del banco en escucha, sin variables del banco, `.next` borrado):
 - **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
   del dueño.
 
-## 57. Corrección de §56 tras la auditoría sobre `9fd6d71` — `sin-redis` nunca sirve un Home MUTILADO por la pausa — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría final** (2026-09-19)
+## 57. Corrección de §56 tras la auditoría sobre `9fd6d71` — `sin-redis` nunca sirve un Home MUTILADO por la pausa — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` (`6fd875e`); auditoría final APROBADA; mergeada y desplegada en §58** (2026-09-19)
 
 Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `9fd6d71`,
 árbol limpio. Ninguna prueba usó Producción ni provocó un 429 real.
@@ -5780,3 +5785,93 @@ successfully", 0 errores, `BUILD_ID` `ecQqzUTF-JUrt-c9SXM-_`**; `git diff
 - **Desconocido:** sin cambios respecto de §56.6.
 - **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
   del dueño.
+
+## 58. Cierre de la 3.c.1 — merge, push y deploy de `feat/etapa3c1-pausa-tmdb` @ `6fd875e` — **MERGEADA (`367b765`), PUSHEADA Y DESPLEGADA (`dpl_Emrbaqf1Ft1oJydTjMGy4GzNiWXh`); SUBETAPA CERRADA** (2026-09-19)
+
+**Auditoría final de Codex sobre `6fd875e`: APROBADA, sin hallazgos
+bloqueantes** (`home-servir` 83/83; suite repetida 1.900: 1.890 ok, 0 fallos,
+10 omitidos; `tsc` y `diff --check` limpios; los dos caminos `sin-redis` ya no
+sirven un Home mutilado; el degradado ajeno a la pausa conserva su semántica).
+
+### 58.1 Precaución de Git (comprobada antes de integrar)
+
+Tras `git fetch`: `origin/main` = `37d4707`; `main` local = `34e4637`, tres
+commits adelante (`0c13036`, `8429f5e`, `34e4637`, plan de Salas), **los tres
+contenidos en `feat/salas`** (`c7e596c`; `merge-base --is-ancestor` ×3);
+ninguna worktree con `main` checkout (el worktree principal está en
+`feat/salas`); `feat/etapa3c1-pausa-tmdb` (`6fd875e`) nace de `37d4707` (36
+commits). Recién entonces `git branch -f main origin/main` (puntero local a
+`37d4707`), sin tocar `feat/salas`, `medicion/sync-upcoming` ni los cuatro
+archivos sin seguimiento del worktree principal. Worktree nueva y exclusiva
+`wt-integracion-3c1` desde ese `main`.
+
+### 58.2 Integración
+
+`git merge --no-ff feat/etapa3c1-pausa-tmdb` → **`367b765`**; **árbol del
+merge idéntico al de `6fd875e`** (`rev-parse HEAD^{tree}` = el de la rama;
+`git diff` vacío). Sobre el merge, antes del push: pruebas de la 3.c.1
+(`home-servir`, `etapa3c1-cableado`, `turno`, `tmdb-pausa`, `pausa-lua`,
+`turno-memoria`, `home-turno-cableado`, `home-vuelo`,
+`descartes-tmdb-inventario`: **180/180**); suite completa **1.900 (1.890 ok, 0
+fallos, 10 omitidos)** (una primera corrida sin `.next` omitió 18: los ocho
+extra son los tests que leen el artefacto de build; con el build fresco,
+10); `tsc --noEmit` 0; build fresco controlado (sin Next activo, sin
+variables del banco, `.next` borrado): **116 s, exit 0, 0 errores,
+`BUILD_ID` `dt5aoP2yHEsj1fgGji4lF`**; `git diff --check` limpio. Push de
+`main` solamente: `37d4707..367b765`; `origin/main` = `367b765`.
+
+### 58.3 Deployment
+
+Automático de Vercel: **`dpl_Emrbaqf1Ft1oJydTjMGy4GzNiWXh`**, target
+production, READY a las 16:27:08 UTC, `githubCommitSha =
+367b7657f3fba55c6a136b1bcb5e7d6e6a27d88d`, `githubCommitRef = main`, aliasado
+a `app.yump.ar` (consultado por la API de Vercel con el token de la CLI, sin
+imprimirlo).
+
+### 58.4 Comprobación PASIVA de Producción
+
+Sin provocar 429, ni caída de Redis, ni carga, ni vencimientos, ni vaciado de
+cachés; sin cambiar variables ni infraestructura:
+
+- `/api/health` 200 en 1,1 s: Redis OK (lectura y escritura, 615 claves);
+  bloque `pausa` nuevo: `pausaVigenteMs 0`, cubos de los últimos 60 min
+  `429 0, pausas 0, yaMayor 0, yaAplicada 0, pausaNoLeida 0, pausadosUB 0,
+  pausados503 0`.
+- Home `n,d,m` 200 (85.769 bytes) en 1,6 s y, otra vez, 1,2 s; búsqueda
+  (`matrix`) 200; ficha `movie/603` 200; páginas `/`, `/buscar`,
+  `/titulo/movie/603` 200.
+- Logs del deployment (`vercel logs`): el primer Home tras el deploy salió por
+  el camino UB-primero (`[home] 769ms | cache ULTIMO-BUENO | turno adquirido |
+  origen ultimo-bueno-fondo | fondo programado`); el `[home-fondo]` compuso
+  y publicó en 19.607 ms con **480 llamadas a TMDB (480 ok, 0 x429)**, 7
+  consultas a Supabase ok, 499 llamadas a Redis (501 intentos HTTP), 3
+  renovaciones, `turno adquirido`, `publicacion publicado`; el pedido
+  siguiente sirvió `ultimo-bueno` con `turno ocupado` (el fondo en curso).
+  Sin errores, sin timeouts, sin `DEGRADADO`, sin `rechazadas`, sin
+  `CANCELADA`, sin liberaciones ni tareas residuales.
+
+🔴 **No hubo ningún 429 real en Producción durante la comprobación, y no se
+provocó ninguno: el camino de la pausa (niveles 1 y 2, TOMAR con la pausa,
+lecturas y readquisición acotadas, UB/503) NO se observó en vivo.** Su
+evidencia es la de los tests y del banco (§53-§57). Lo que sí se observó en
+vivo es que el camino sano (UB-primero, fondo, publicación, turno) sigue
+funcionando con el código nuevo.
+
+### 58.5 Lo que queda escrito al cerrar
+
+- **Kill switch `TMDB_PAUSA_429=0`:** apaga los dos niveles y `TOMAR` vuelve
+  al `SET NX` de la Etapa 2. **No está activado.** Cualquier cambio de esa
+  variable en Vercel exige autorización del dueño y se aplica recién con un
+  redeploy.
+- **Limitación excepcional heredada (tarea futura, no reabierta acá):** con
+  Redis caído + TMDB pausado + sin UB, un pedido puede tardar 58-75 s: la
+  composición `sin-redis` paga los 6 reintentos del cliente principal por cada
+  lectura de caché (promesa reducida de la Etapa 2, §3.8) antes de decidir.
+  **No entrega contenido mutilado** (§57), pero puede terminar en 503 `pausa`
+  o en el corte de Vercel (`maxDuration` 60 s). Reducirlo exige cortar la
+  composición al primer 429 o acotar sus lecturas de caché: otra subetapa.
+- **#19** sigue abierto SÓLO por la 3.c.2 (circuito del fondo) y la membresía;
+  no por la 3.a, la 3.b ni la 3.c.1.
+- Las worktrees de medición (`wt-etapa3c1`, `wt-etapa3c1-antes` @ `37d4707`,
+  `wt-etapa3c1-control` @ `1403ae4`) quedan en disco por si se repite una
+  medida; se pueden borrar.
