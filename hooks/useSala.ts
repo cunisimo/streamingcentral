@@ -15,11 +15,11 @@
 // reloj, porque los vencimientos los aplica la base al leer y no hay señal
 // hasta que alguien lee.
 //
-// RESPUESTAS FUERA DE ORDEN NO RETROCEDEN (hooks/sala-compuerta.ts): cada
-// lectura sale con un ticket y sólo se aplica si es más nueva que la última
-// aplicada y de la misma generación; cambiar de sala o de credencial abre una
-// generación nueva, así que una respuesta de la sala anterior no escribe sobre
-// la nueva. Vale para el éxito y para el error.
+// LA LECTURA VIVE EN hooks/sala-lector.ts (compuerta monotónica + relectura
+// acotada, sin React): una respuesta más vieja que la última aplicada, o de otra
+// sala/credencial, no toca NADA — ni estado, ni error, ni `cargando`, ni la
+// coordinación de relecturas. Un lector por montaje; cambiar de sala o de
+// credencial monta otro.
 //
 // TOKEN INVÁLIDO ≠ FALLO DE RED. `sala_token_invalido` (la base no reconoce la
 // credencial en esa sala) se informa como `sinAcceso` para que la vista
@@ -29,10 +29,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase";
-import { desfaseReloj, esTerminal, plazoVigente, type RespuestaEstado } from "@/lib/sala/estado";
+import { desfaseReloj, plazoVigente, type RespuestaEstado } from "@/lib/sala/estado";
 import { borrarToken } from "@/lib/sala/token-store";
-import { alReleer, alSenal, inicial, type EstadoRelectura } from "./sala-relectura-nucleo";
-import { crearCompuerta } from "./sala-compuerta";
+import { crearLector, type Lector } from "./sala-lector";
 
 export type EstadoCanal = "conectado" | "desconectado";
 
@@ -61,76 +60,52 @@ export function useSala(roomId: string, token: string | null): UsoSala {
   const [canal, setCanal] = useState<EstadoCanal>("desconectado");
   const [desfase, setDesfase] = useState(0);
 
-  const vivo = useRef(true);
-  const relectura = useRef<EstadoRelectura>(inicial());
-  const timerRelectura = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const terminal = useRef(false);
+  const lectorRef = useRef<Lector | null>(null);
   const canalRef = useRef<RealtimeChannel | null>(null);
-  const compuerta = useRef(crearCompuerta());
+  const timerRelectura = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const leer = useCallback(async () => {
-    if (!token || terminal.current) return;
-    const ticket = compuerta.current.emitir();
-    try {
-      const { data, error: e } = await supabaseBrowser().rpc("sala_estado", { p_room: roomId, p_token: token });
-      if (!vivo.current) return;
-      // Más vieja que la última aplicada, o de otra sala/credencial: se descarta entera.
-      if (!compuerta.current.aplicar(ticket)) return;
-      if (e) {
-        if (/sala_token_invalido/.test(e.message)) {
-          setSinAcceso(true);
-          borrarToken(roomId);
-          terminal.current = true;
-          canalRef.current?.unsubscribe();
-        } else {
-          setError(e.message);
-        }
-        return;
-      }
-      const r = data as RespuestaEstado;
-      setDesfase(desfaseReloj(r, Date.now()));
-      setEstado(r);
-      setError(null);
-      if (esTerminal(r)) {
-        terminal.current = true;
-        canalRef.current?.unsubscribe();
-        borrarToken(roomId);
-      }
-    } catch (err) {
-      if (vivo.current && compuerta.current.aplicar(ticket)) setError(err instanceof Error ? err.message : "fallo");
-    } finally {
-      relectura.current = alReleer(relectura.current, Date.now());
-      if (vivo.current) setCargando(false);
-    }
-  }, [roomId, token]);
+  const releer = useCallback(async () => { await lectorRef.current?.leer(); }, []);
 
-  // Una señal del canal: relectura acotada (trailing, 1500 ms).
-  const senal = useCallback(() => {
-    const r = alSenal(relectura.current, Date.now());
-    relectura.current = r.estado;
-    if (r.programarEnMs === null) return;
-    if (timerRelectura.current) clearTimeout(timerRelectura.current);
-    timerRelectura.current = setTimeout(() => { timerRelectura.current = null; void leer(); }, r.programarEnMs);
-  }, [leer]);
-
-  // Montaje: primera lectura + canal + respaldos.
+  // Montaje (y cada cambio de sala o credencial): lector nuevo, primera
+  // lectura, canal y respaldos. El cleanup deja al lector anterior sin
+  // efectos: se descuelga del ref y su generación se cierra.
   useEffect(() => {
-    vivo.current = true;
-    terminal.current = false;
-    relectura.current = inicial();
-    compuerta.current.reiniciar();   // otra sala u otra credencial: lo que estaba en vuelo ya no cuenta
     setCargando(true); setSinAcceso(false); setError(null); setEstado(null);
     if (!token) { setCargando(false); return; }
 
-    void leer();
-
+    let vivo = true;
     const sb = supabaseBrowser();
     const ch = sb.channel(`sala:${roomId}`, { config: { private: false } });
     canalRef.current = ch;
-    let respaldo: ReturnType<typeof setInterval> | null = setInterval(() => { void leer(); }, RESPALDO_MS);
+
+    const lector = crearLector({
+      pedir: async () => {
+        const { data, error: e } = await sb.rpc("sala_estado", { p_room: roomId, p_token: token });
+        return { data, error: e };
+      },
+      ahora: () => Date.now(),
+      alEstado: (r, recibidoMs) => { if (!vivo) return; setDesfase(desfaseReloj(r, recibidoMs)); setEstado(r); setError(null); },
+      alError: (m) => { if (vivo) setError(m); },
+      alTokenInvalido: () => { if (!vivo) return; setSinAcceso(true); borrarToken(roomId); ch.unsubscribe(); },
+      alTerminarLectura: () => { if (vivo) setCargando(false); },
+      alTerminal: () => { if (!vivo) return; ch.unsubscribe(); borrarToken(roomId); },
+    });
+    lectorRef.current = lector;
+
+    void lector.leer();
+
+    // Señal del canal → relectura acotada (trailing, 1500 ms).
+    const senal = () => {
+      const enMs = lector.senal();
+      if (enMs === null) return;
+      if (timerRelectura.current) clearTimeout(timerRelectura.current);
+      timerRelectura.current = setTimeout(() => { timerRelectura.current = null; void lector.leer(); }, enMs);
+    };
+
+    let respaldo: ReturnType<typeof setInterval> | null = setInterval(() => { void lector.leer(); }, RESPALDO_MS);
     ch.on("broadcast", { event: "cambio" }, () => senal())
       .subscribe((status) => {
-        if (!vivo.current) return;
+        if (!vivo) return;
         if (status === "SUBSCRIBED") {
           setCanal("conectado");
           if (respaldo) { clearInterval(respaldo); respaldo = null; }
@@ -138,25 +113,27 @@ export function useSala(roomId: string, token: string | null): UsoSala {
           senal();
         } else {
           setCanal("desconectado");
-          if (!respaldo && !terminal.current) respaldo = setInterval(() => { void leer(); }, RESPALDO_MS);
+          if (!respaldo && !lector.terminal()) respaldo = setInterval(() => { void lector.leer(); }, RESPALDO_MS);
         }
       });
 
-    const alVolver = () => { if (document.visibilityState === "visible") void leer(); };
-    const alConectar = () => { void leer(); };
+    const alVolver = () => { if (document.visibilityState === "visible") void lector.leer(); };
+    const alConectar = () => { void lector.leer(); };
     document.addEventListener("visibilitychange", alVolver);
     window.addEventListener("online", alConectar);
 
     return () => {
-      vivo.current = false;
+      vivo = false;
+      lector.reiniciar();   // lo que quede en vuelo de esta generación no se aplica
+      if (lectorRef.current === lector) lectorRef.current = null;
       if (respaldo) clearInterval(respaldo);
       if (timerRelectura.current) { clearTimeout(timerRelectura.current); timerRelectura.current = null; }
       document.removeEventListener("visibilitychange", alVolver);
       window.removeEventListener("online", alConectar);
-      canalRef.current = null;
+      if (canalRef.current === ch) canalRef.current = null;
       void sb.removeChannel(ch);
     };
-  }, [roomId, token, leer, senal]);
+  }, [roomId, token]);
 
   // Releer 1 s después del plazo vigente: los vencimientos los aplica la base
   // al leer, así que sin esto una sala cuyo lobby venció seguiría mostrando el
@@ -168,14 +145,9 @@ export function useSala(roomId: string, token: string | null): UsoSala {
     const fin = Date.parse(plazo);
     if (!Number.isFinite(fin)) return;
     const enMs = Math.max(0, fin - (Date.now() + desfase)) + TRAS_PLAZO_MS;
-    const t = setTimeout(() => { void leer(); }, enMs);
+    const t = setTimeout(() => { void lectorRef.current?.leer(); }, enMs);
     return () => clearTimeout(t);
-  }, [estado, desfase, leer]);
+  }, [estado, desfase]);
 
-  // Al terminar, el respaldo no tiene que seguir.
-  useEffect(() => {
-    if (estado && esTerminal(estado)) canalRef.current?.unsubscribe();
-  }, [estado]);
-
-  return { estado, cargando, error, sinAcceso, canal, desfase, releer: leer };
+  return { estado, cargando, error, sinAcceso, canal, desfase, releer };
 }

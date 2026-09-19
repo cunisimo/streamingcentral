@@ -8,9 +8,19 @@
 //     `credencialParaUnirse`): un reintento —incluso concurrente— manda la
 //     MISMA, y la base lo resuelve como la misma sala / participación;
 //   - ninguna respuesta del servidor escribe la credencial. `confirmarSala`
-//     sólo la MUEVE de la clave de "crear" a la de la sala, y borra el origen
-//     ÚNICAMENTE si comprobó que el destino la conserva. Repetirla, o que las
-//     respuestas lleguen en orden inverso, no cambia nada;
+//     sólo la MUEVE de la clave de "crear" a la de la sala. Repetirla, o que
+//     las respuestas lleguen en orden inverso, no cambia nada;
+//   - UN INTENTO PENDIENTE Y UNA CREDENCIAL CONFIRMADA SON COSAS DISTINTAS. La
+//     de "crear" es un intento: se reusa entre reintentos hasta que `sala_crear`
+//     responde. Confirmada, ya es de UNA sala y no puede volver a ser la de un
+//     intento: si el store no consiguió guardar el destino y se dejara el origen
+//     "por si acaso", la próxima creación —después de cerrar esa sala— mandaría
+//     la misma credencial y `sala_crear` devolvería la sala VENCIDA como
+//     repetida. Por eso el origen se borra siempre al confirmar, y además la
+//     credencial queda anotada como confirmada en esta pestaña, para que ni un
+//     store que no pudo borrarla la devuelva como intento. Lo que se pierde si
+//     el store no conserva el destino es la persistencia entre recargas, y eso
+//     lo cubre `sala_reclamar`: el organizador tiene cuenta obligatoriamente;
 //   - `localStorage` va siempre detrás de try/catch. Si lanza (privado, cuota
 //     llena, bloqueado) la pestaña sigue con una credencial EN MEMORIA, y esa
 //     memoria es por clave y estable: todos los reintentos de la misma clave
@@ -28,10 +38,12 @@ export const claveSala = (roomId: string) => `yump:sala:${roomId}`;
 const FORMA = /^[A-Za-z0-9_-]{43}$/;
 const ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-// Respaldo en memoria, por clave, para cuando el store no conserva. Vive lo que
-// vive el módulo (la pestaña). Sólo los tests lo reinician.
+// Respaldo en memoria, por clave, para cuando el store no conserva, y el
+// conjunto de credenciales ya confirmadas en esta pestaña. Viven lo que vive el
+// módulo (la pestaña). Sólo los tests los reinician.
 const memoria = new Map<string, string>();
-export function _reiniciarMemoriaParaTests(): void { memoria.clear(); }
+const confirmadas = new Set<string>();
+export function _reiniciarMemoriaParaTests(): void { memoria.clear(); confirmadas.clear(); }
 
 export function esCredencial(v: unknown): v is string {
   return typeof v === "string" && FORMA.test(v);
@@ -108,26 +120,32 @@ function oGenerar(store: Store, k: string): string {
   return nueva;
 }
 
-/** La credencial con la que se va a llamar a `sala_crear`. Guardada antes de devolverla. */
+/**
+ * La credencial con la que se va a llamar a `sala_crear` (un INTENTO). Guardada
+ * antes de devolverla. Una credencial ya confirmada en esta pestaña no vale
+ * como intento aunque el store todavía la tenga bajo la clave de "crear".
+ */
 export function credencialParaCrear(store: Store = storePorDefecto()): string {
-  return oGenerar(store, CLAVE_CREAR);
+  const actual = leer(store, CLAVE_CREAR);
+  if (actual && !confirmadas.has(actual)) return actual;
+  const nueva = nuevaCredencial();
+  guardar(store, CLAVE_CREAR, nueva);
+  return nueva;
 }
 
 /**
  * `sala_crear` respondió con `room_id`: la credencial de "crear" pasa a ser la
- * de esa sala. El ORIGEN SE BORRA SÓLO SI EL DESTINO LA CONSERVA en el store:
- * si el store no la retiene bajo la clave de la sala, la pestaña la tiene en
- * memoria bajo esa clave y el origen persistido se deja como está —repetir
- * `sala_crear` con ella devuelve la misma sala, que es mejor que perderla—.
- * Si ya está movida (respuesta repetida, o dos reintentos cuya respuesta llegó
- * en cualquier orden) no hace nada.
+ * de esa sala (store si conserva; si no, memoria de la pestaña) y el ORIGEN SE
+ * BORRA SIEMPRE, porque ya no es un intento. Si ya está movida (respuesta
+ * repetida, o dos reintentos cuya respuesta llegó en cualquier orden) no hace
+ * nada.
  */
 export function confirmarSala(roomId: string, store: Store = storePorDefecto()): void {
   const c = leer(store, CLAVE_CREAR);
   if (!c) return;
-  const destino = claveSala(roomId);
-  const persistida = guardar(store, destino, c);
-  if (persistida) borrar(store, CLAVE_CREAR);
+  guardar(store, claveSala(roomId), c);
+  confirmadas.add(c);
+  borrar(store, CLAVE_CREAR);
 }
 
 /** La credencial con la que se va a llamar a `sala_unirse` / `sala_reclamar` en esa sala. */

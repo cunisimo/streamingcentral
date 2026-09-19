@@ -27,9 +27,10 @@ export interface DepsControl {
   releer: () => Promise<void>;
   /** El servidor confirmó el avance de `pos`: borrar su comienzo persistido. */
   alConfirmar: (pos: number) => void;
-  /** Nueva posición (null = ya voté todas). */
+  /** Nueva posición (null = ya voté todas, o la ronda se cerró: no se muestra otra card). */
   alAvanzar: (siguiente: number | null) => void;
-  alError: (texto: string) => void;
+  /** Texto del error visible; `null` lo limpia (al empezar un intento nuevo). */
+  alError: (texto: string | null) => void;
   alVuelo: (enVuelo: boolean) => void;
 }
 
@@ -54,6 +55,7 @@ export function crearControlVotacion(d: DepsControl): ControlVotacion {
   async function votar(v: Voto, pos: number): Promise<void> {
     if (cerrada || enVuelo) return;
     enVuelo = true; d.alVuelo(true);
+    d.alError(null);   // un intento nuevo arranca sin el error del anterior
     try {
       enviados++;
       const { data, error } = await d.enviar(pos, v);
@@ -63,7 +65,10 @@ export function crearControlVotacion(d: DepsControl): ControlVotacion {
       if (r.rondaCerrada) {
         // Se cierra ANTES de releer y sin mirar si la relectura anduvo: el
         // estado nuevo lo trae useSala cuando pueda (canal, respaldo, plazo).
+        // Con un match temprano (ok + estado ≠ votando) además se sale de la
+        // card: no se muestra otra, la vista espera el resultado.
         cerrada = true;
+        if (r.termine) d.alAvanzar(null);
         d.releer().catch(() => { /* la relectura tiene sus propios reintentos */ });
         return;
       }

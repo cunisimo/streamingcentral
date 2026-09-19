@@ -5,11 +5,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { crearControlVotacion, REINTENTO_MS, type DepsControl } from "./votacion-control.ts";
 
-function arnes(respuestas: Array<unknown | Error>, o: { releerFalla?: boolean } = {}) {
+function arnes(respuestas: Array<unknown | Error>, o: { releerFalla?: boolean; size?: number } = {}) {
   let t = 100_000;
   const log: string[] = [];
   const deps: DepsControl = {
-    size: 5,
+    size: o.size ?? 5,
     ahora: () => t,
     enviar: async (pos, voto) => {
       log.push(`enviar ${pos} ${voto}`);
@@ -20,7 +20,7 @@ function arnes(respuestas: Array<unknown | Error>, o: { releerFalla?: boolean } 
     releer: async () => { log.push("releer"); if (o.releerFalla) throw new Error("red"); },
     alConfirmar: (p) => log.push(`confirmar ${p}`),
     alAvanzar: (s) => log.push(`avanzar ${s}`),
-    alError: (m) => log.push(`error ${m}`),
+    alError: (m) => log.push(m === null ? "limpiar-error" : `error ${m}`),
     alVuelo: () => {},
   };
   const c = crearControlVotacion(deps);
@@ -43,6 +43,7 @@ test("después de ronda_cerrada NO sale un segundo voto aunque la relectura fall
   await c.votar("yes", 2);               // ni siquiera un toque manual
   assert.equal(c.enviados(), 1);
   assert.deepEqual(log.filter((l) => l.startsWith("enviar")), ["enviar 2 pass"]);
+  assert.ok(!log.includes("avanzar null"), "sin termine no se sale de la card: la vista espera el estado");
   assert.ok(log.includes("releer"), "se pidió releer una vez");
 });
 
@@ -91,8 +92,31 @@ test("con la card sin vencer, el tick no manda nada; ok avanza y confirma; la ú
   c.tick(0, false);
   assert.equal(c.enviados(), 0);
   await c.votar("yes", 3);
-  assert.deepEqual(log, ["enviar 3 yes", "confirmar 3", "avanzar 4"]);
+  assert.deepEqual(log, ["limpiar-error", "enviar 3 yes", "confirmar 3", "avanzar 4"]);
   await c.votar("no", 4);
-  assert.deepEqual(log.slice(3), ["enviar 4 no", "confirmar 4", "avanzar null", "releer"]);
+  assert.deepEqual(log.slice(4), ["limpiar-error", "enviar 4 no", "confirmar 4", "avanzar null", "releer"]);
   assert.equal(c.cerrada(), false, "terminar de votar no es cerrar la ronda");
+});
+
+test("MATCH TEMPRANO en la posición 1 de 10: confirma la card, sale de la card (avanzar null), cierra la compuerta y relee — sin mostrar otra card", async () => {
+  const { c, log, ticksVencidos } = arnes([{ ok: true, termine: true, estado: "resultado" }], { releerFalla: true, size: 10 });
+  await c.votar("yes", 1);
+  assert.deepEqual(log, ["limpiar-error", "enviar 1 yes", "confirmar 1", "avanzar null", "releer"]);
+  assert.equal(c.cerrada(), true);
+  await ticksVencidos(2, 3000);          // el intervalo de la card 2 no existe porque no se mostró, pero aunque tickeara…
+  assert.equal(c.enviados(), 1);
+  await c.votar("no", 2);
+  assert.equal(c.enviados(), 1, "…ningún voto sale con la ronda cerrada");
+});
+
+test("fallo de red seguido de éxito: el error se limpia al empezar el intento siguiente", async () => {
+  const { c, log, avanzar } = arnes([new Error("Failed to fetch"), { ok: true, termine: false, estado: "votando" }]);
+  await c.votar("yes", 0);
+  assert.deepEqual(log, ["limpiar-error", "enviar 0 yes", "error Sin conexión. Revisá la red y probá de nuevo."]);
+  avanzar(REINTENTO_MS);
+  await c.votar("yes", 0);
+  assert.deepEqual(log.slice(3), ["limpiar-error", "enviar 0 yes", "confirmar 0", "avanzar 1"]);
+  // El último evento de error es la LIMPIEZA: la pantalla queda sin aviso.
+  const ultimoError = [...log].reverse().find((l) => l === "limpiar-error" || l.startsWith("error "));
+  assert.equal(ultimoError, "limpiar-error");
 });

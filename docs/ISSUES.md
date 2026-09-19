@@ -33,6 +33,14 @@ total cruzan el umbral y el test falla **sin que el código haya cambiado**.
   ejecutados cinco veces, **5/5 verdes**. Aislados no fallan; fallan bajo carga.
 - Durante la primera corrida fallida corría `supabase start` en la misma
   máquina (arranque de ~10 contenedores).
+- 2026-09-19 (Etapa 3 de salas, que tampoco toca `lib/home-*`): dos suites
+  completas corridas inmediatamente después de `npm run build`. En la primera
+  falló `home-fondo-orden.test.ts:154`; en la segunda, tres de la misma familia:
+  `home-vuelo.test.ts:121` (el segundo de arriba) y dos más de
+  `home-fondo-orden.test.ts` — *"ORDEN COMPLETO: UB elegido → …"* y *"FRONTERA
+  EXTERNA, dos llamadores concurrentes"*. Los archivos aislados, 12/12 y 15/15;
+  la suite repetida con la máquina quieta, 1805/1795/0 fallos. Mismo patrón:
+  reloj de pared bajo carga.
 
 ### Lo que NO es
 

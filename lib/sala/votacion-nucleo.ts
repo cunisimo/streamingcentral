@@ -29,6 +29,11 @@ export interface Decision {
 /** Qué hacer después de que `sala_votar` respondió para la card `pos`. */
 export function decidirTrasVotar(r: RespuestaVotar, pos: number, size: number): Decision {
   if (r.ok) {
+    // MATCH TEMPRANO: con dos personas, el segundo Sí sobre la misma card cierra
+    // la ronda en el acto y la RPC responde `estado: "resultado"` aunque falten
+    // posiciones. La card actual queda confirmada, no hay siguiente, y la vista
+    // deja de votar y relee el resultado — la compuerta de votos se cierra.
+    if (r.estado !== "votando") return { siguiente: null, cerrar: true, termine: true, rondaCerrada: true };
     const sig = pos + 1;
     return { siguiente: sig < size ? sig : null, cerrar: true, termine: r.termine || sig >= size, rondaCerrada: false };
   }

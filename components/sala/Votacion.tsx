@@ -64,7 +64,7 @@ export default function Votacion({ estado, ronda, roomId, token, desfase, releer
       releer: () => releerRef.current(),
       alConfirmar: (p) => cerrar(store(), claveInicioCard(roomId, ronda.id, p)),
       alAvanzar: (sig) => setPos(sig === null ? size : sig),
-      alError: setErr,
+      alError: (t) => setErr(t ?? ""),
       alVuelo: setEnVuelo,
     });
   }

@@ -5,8 +5,11 @@
 //     de la clave de "crear" a la de la sala, y hacerlo dos veces, o en orden
 //     inverso respecto de otra respuesta, no cambia nada;
 //   - un `localStorage` que lanza no rompe: la pestaña conserva una credencial
-//     estable EN MEMORIA por clave, y `confirmarSala` no borra el origen si el
-//     destino no quedó conservado.
+//     estable EN MEMORIA por clave;
+//   - un intento pendiente y una credencial confirmada son cosas distintas: al
+//     confirmar, el origen se borra siempre y la credencial queda anotada como
+//     confirmada, así que una creación posterior nunca la reusa (si no,
+//     `sala_crear` devolvería la sala ya vencida como repetida).
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -121,25 +124,58 @@ test("store que lanza: la MISMA pestaña conserva una credencial estable EN MEMO
   assert.equal(leerToken("R1", roto), null);
 });
 
-test("confirmarSala: si el store NO conserva la credencial bajo la clave de la sala, NO borra la de creación", () => {
-  // Store que persiste todo salvo las claves de sala (setItem lanza sólo ahí).
+// Store que persiste todo salvo las claves de sala (setItem lanza sólo ahí).
+function parcial() {
   const m = new Map<string, string>();
-  const parcial: Store = {
+  const store: Store = {
     getItem: (k) => m.get(k) ?? null,
     setItem: (k, v) => { if (k.startsWith("yump:sala:") && k !== CLAVE_CREAR) throw new Error("QuotaExceeded"); m.set(k, v); },
     removeItem: (k) => { m.delete(k); },
   };
-  const c = credencialParaCrear(parcial);
-  assert.equal(m.get(CLAVE_CREAR), c);
-  confirmarSala("R1", parcial);
-  assert.equal(m.get(CLAVE_CREAR), c, "el origen persistido sigue ahí");
-  assert.equal(m.has(claveSala("R1")), false, "el store no tiene el destino");
-  assert.equal(leerToken("R1", parcial), c, "pero la pestaña la recupera en memoria bajo la sala");
-  // Un reintento de crear devuelve la MISMA (sala_crear la resolvería como la misma sala).
-  assert.equal(credencialParaCrear(parcial), c);
+  return { m, store };
+}
+
+test("CICLO COMPLETO con storage parcial: crear → confirmar → cerrar/borrar la sala → una nueva creación obtiene OTRA credencial", () => {
+  const { m, store } = parcial();
+  const c = credencialParaCrear(store);
+  assert.equal(m.get(CLAVE_CREAR), c, "el intento se persiste");
+  confirmarSala("R1", store);
+  assert.equal(m.has(claveSala("R1")), false, "el store no pudo guardar el destino");
+  assert.equal(leerToken("R1", store), c, "la pestaña la tiene en memoria bajo la sala");
+  assert.equal(m.has(CLAVE_CREAR), false, "el origen se borró: ya no es un intento, es la credencial de R1");
+  // La sala se cierra (o el estado terminal la borra).
+  borrarToken("R1", store);
+  assert.equal(leerToken("R1", store), null);
+  // Una creación NUEVA no puede reusar la credencial de R1: sala_crear la devolvería como la sala vencida.
+  const d = credencialParaCrear(store);
+  assert.notEqual(d, c);
+  assert.equal(credencialParaCrear(store), d, "y el intento nuevo sí es estable entre reintentos");
 });
 
-test("confirmarSala: un setItem que no lanza pero NO persiste cuenta como no conservada", () => {
+test("CICLO COMPLETO con storage roto (todo lanza): igual, la nueva creación obtiene otra credencial", () => {
+  const c = credencialParaCrear(roto);
+  assert.equal(credencialParaCrear(roto), c);
+  confirmarSala("R1", roto);
+  assert.equal(leerToken("R1", roto), c);
+  borrarToken("R1", roto);
+  const d = credencialParaCrear(roto);
+  assert.notEqual(d, c);
+});
+
+test("una credencial confirmada no vuelve a valer como intento aunque el store la siga devolviendo bajo la clave de crear", () => {
+  // Store cuyo removeItem no hace nada: el origen queda "pegado".
+  const m = new Map<string, string>();
+  const pegajoso: Store = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => { m.set(k, v); }, removeItem: () => { /* no borra */ } };
+  const c = credencialParaCrear(pegajoso);
+  confirmarSala("R1", pegajoso);
+  assert.equal(m.get(CLAVE_CREAR), c, "el store no la borró");
+  assert.equal(leerToken("R1", pegajoso), c);
+  const d = credencialParaCrear(pegajoso);
+  assert.notEqual(d, c, "pero la pestaña sabe que está confirmada y genera otra");
+  assert.equal(m.get(CLAVE_CREAR), d, "y la nueva pisa a la vieja en el store");
+});
+
+test("confirmarSala con setItem mudo (no lanza, no persiste): destino en memoria, origen borrado", () => {
   const m = new Map<string, string>();
   const mudo: Store = {
     getItem: (k) => m.get(k) ?? null,
@@ -148,8 +184,8 @@ test("confirmarSala: un setItem que no lanza pero NO persiste cuenta como no con
   };
   const c = credencialParaCrear(mudo);
   confirmarSala("R1", mudo);
-  assert.equal(m.get(CLAVE_CREAR), c, "origen intacto: el destino no se releyó");
-  assert.equal(leerToken("R1", mudo), c);
+  assert.equal(leerToken("R1", mudo), c, "se releyó el destino, no quedó, y fue a memoria");
+  assert.equal(m.has(CLAVE_CREAR), false);
 });
 
 test("cuando el store SÍ conserva, la memoria no se usa: lo persistido gana y se limpia el respaldo", () => {

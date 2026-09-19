@@ -12,6 +12,17 @@ test("ok → cierra y pasa a la siguiente; en la última, termine y sin siguient
   assert.deepEqual(decidirTrasVotar({ ok: true, termine: false, estado: "votando", idempotente: true }, 0, 5), { siguiente: 1, cerrar: true, termine: false, rondaCerrada: false });
 });
 
+test("MATCH TEMPRANO: ok con estado ≠ votando en la posición 1 de 10 → confirma la card, sin siguiente, ronda cerrada", () => {
+  assert.deepEqual(decidirTrasVotar({ ok: true, termine: true, estado: "resultado" }, 1, 10), { siguiente: null, cerrar: true, termine: true, rondaCerrada: true });
+  // Da igual qué estado sea, mientras no sea votando (empate no puede venir de un ok, pero la regla es la misma).
+  assert.deepEqual(decidirTrasVotar({ ok: true, termine: false, estado: "resultado" }, 4, 20), { siguiente: null, cerrar: true, termine: true, rondaCerrada: true });
+});
+
+test("comportamiento normal preservado: el participante termina la tanda pero la sala sigue votando → termine sin cerrar la ronda", () => {
+  assert.deepEqual(decidirTrasVotar({ ok: true, termine: true, estado: "votando" }, 9, 10), { siguiente: null, cerrar: true, termine: true, rondaCerrada: false });
+  assert.deepEqual(decidirTrasVotar({ ok: true, termine: false, estado: "votando" }, 1, 10), { siguiente: 2, cerrar: true, termine: false, rondaCerrada: false });
+});
+
 test("ya_votado / fuera_de_orden con siguiente > pos → cierra y salta a siguiente", () => {
   assert.deepEqual(decidirTrasVotar({ ok: false, motivo: "ya_votado", siguiente: 4 }, 2, 10), { siguiente: 4, cerrar: true, termine: false, rondaCerrada: false });
   assert.deepEqual(decidirTrasVotar({ ok: false, motivo: "fuera_de_orden", siguiente: 10 }, 7, 10), { siguiente: null, cerrar: true, termine: true, rondaCerrada: false });
