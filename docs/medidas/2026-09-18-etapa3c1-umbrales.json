@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-09-19T13:40:32.164Z",
+  "fecha": "2026-09-19T14:24:06.509Z",
   "antes": "37d4707",
   "despues": "feat/etapa3c1-pausa-tmdb",
   "semillas": [
@@ -13,8 +13,8 @@
       "antes": {
         "frio": {
           "status": 200,
-          "msPared": 30716,
-          "msTotal": 30643,
+          "msPared": 31270,
+          "msTotal": 30805,
           "tmdb": 926,
           "redisComandos": 1002,
           "redisOpsDoble": 1004,
@@ -23,11 +23,11 @@
         },
         "ub": {
           "status": 200,
-          "msPared": 254,
-          "msTotalSolicitud": 225,
+          "msPared": 243,
+          "msTotalSolicitud": 212,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 4396,
+            "msTotal": 4679,
             "tmdb": 1,
             "redisComandos": 60,
             "publicacion": "publicado",
@@ -39,21 +39,21 @@
       "despues": {
         "frio": {
           "status": 200,
-          "msPared": 30804,
-          "msTotal": 30736,
+          "msPared": 31139,
+          "msTotal": 31036,
           "tmdb": 926,
-          "redisComandos": 1028,
-          "redisOpsDoble": 1031,
+          "redisComandos": 1030,
+          "redisOpsDoble": 1033,
           "publicacion": "publicado",
           "cache": "MISS"
         },
         "ub": {
           "status": 200,
-          "msPared": 239,
-          "msTotalSolicitud": 213,
+          "msPared": 302,
+          "msTotalSolicitud": 289,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 4493,
+            "msTotal": 4577,
             "tmdb": 1,
             "redisComandos": 61,
             "publicacion": "publicado",
@@ -68,21 +68,21 @@
       "antes": {
         "frio": {
           "status": 200,
-          "msPared": 31779,
-          "msTotal": 31754,
+          "msPared": 31905,
+          "msTotal": 31886,
           "tmdb": 926,
-          "redisComandos": 1004,
-          "redisOpsDoble": 1004,
+          "redisComandos": 1003,
+          "redisOpsDoble": 1003,
           "publicacion": "publicado",
           "cache": "MISS"
         },
         "ub": {
           "status": 200,
-          "msPared": 305,
-          "msTotalSolicitud": 285,
+          "msPared": 332,
+          "msTotalSolicitud": 313,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3901,
+            "msTotal": 4033,
             "tmdb": 1,
             "redisComandos": 60,
             "publicacion": "publicado",
@@ -94,21 +94,21 @@
       "despues": {
         "frio": {
           "status": 200,
-          "msPared": 32034,
-          "msTotal": 32002,
+          "msPared": 31636,
+          "msTotal": 31628,
           "tmdb": 926,
-          "redisComandos": 1030,
-          "redisOpsDoble": 1030,
+          "redisComandos": 1028,
+          "redisOpsDoble": 1028,
           "publicacion": "publicado",
           "cache": "MISS"
         },
         "ub": {
           "status": 200,
-          "msPared": 297,
-          "msTotalSolicitud": 271,
+          "msPared": 257,
+          "msTotalSolicitud": 223,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3927,
+            "msTotal": 3957,
             "tmdb": 1,
             "redisComandos": 61,
             "publicacion": "publicado",
@@ -123,8 +123,8 @@
       "antes": {
         "frio": {
           "status": 200,
-          "msPared": 33643,
-          "msTotal": 33638,
+          "msPared": 33770,
+          "msTotal": 33753,
           "tmdb": 926,
           "redisComandos": 1005,
           "redisOpsDoble": 1005,
@@ -133,11 +133,11 @@
         },
         "ub": {
           "status": 200,
-          "msPared": 271,
-          "msTotalSolicitud": 255,
+          "msPared": 258,
+          "msTotalSolicitud": 241,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3888,
+            "msTotal": 3783,
             "tmdb": 1,
             "redisComandos": 60,
             "publicacion": "publicado",
@@ -149,21 +149,21 @@
       "despues": {
         "frio": {
           "status": 200,
-          "msPared": 33717,
-          "msTotal": 33711,
+          "msPared": 33907,
+          "msTotal": 33896,
           "tmdb": 926,
-          "redisComandos": 1032,
-          "redisOpsDoble": 1032,
+          "redisComandos": 1031,
+          "redisOpsDoble": 1031,
           "publicacion": "publicado",
           "cache": "MISS"
         },
         "ub": {
           "status": 200,
-          "msPared": 212,
-          "msTotalSolicitud": 204,
+          "msPared": 227,
+          "msTotalSolicitud": 216,
           "cache": "ULTIMO-BUENO",
           "fondo": {
-            "msTotal": 3824,
+            "msTotal": 3752,
             "tmdb": 1,
             "redisComandos": 61,
             "publicacion": "publicado",
@@ -211,20 +211,20 @@
       "frio": [
         {
           "antes": 1004,
-          "despues": 1031,
-          "extra": 27,
+          "despues": 1033,
+          "extra": 29,
           "tope": 41
         },
         {
-          "antes": 1004,
-          "despues": 1030,
-          "extra": 26,
+          "antes": 1003,
+          "despues": 1028,
+          "extra": 25,
           "tope": 41
         },
         {
           "antes": 1005,
-          "despues": 1032,
-          "extra": 27,
+          "despues": 1031,
+          "extra": 26,
           "tope": 41
         }
       ],
@@ -252,43 +252,43 @@
     "duracion-mediana-≤+5%-y-ninguna->+10%": {
       "ok": true,
       "frio": {
-        "antes": 31754,
-        "despues": 32002
+        "antes": 31886,
+        "despues": 31628
       },
       "fondo": {
-        "antes": 3901,
-        "despues": 3927
+        "antes": 4033,
+        "despues": 3957
       },
-      "peorRepeticion": 1.022,
+      "peorRepeticion": 1.007,
       "porSemilla": [
         {
           "frio": [
-            30643,
-            30736
+            30805,
+            31036
           ],
           "fondo": [
-            4396,
-            4493
+            4679,
+            4577
           ]
         },
         {
           "frio": [
-            31754,
-            32002
+            31886,
+            31628
           ],
           "fondo": [
-            3901,
-            3927
+            4033,
+            3957
           ]
         },
         {
           "frio": [
-            33638,
-            33711
+            33753,
+            33896
           ],
           "fondo": [
-            3888,
-            3824
+            3783,
+            3752
           ]
         }
       ]
@@ -327,21 +327,21 @@
     "respuesta-UB-≤+50ms": {
       "ok": true,
       "mediana": {
-        "antes": 271,
-        "despues": 239
+        "antes": 258,
+        "despues": 257
       },
       "porSemilla": [
         [
-          254,
-          239
+          243,
+          302
         ],
         [
-          305,
-          297
+          332,
+          257
         ],
         [
-          271,
-          212
+          258,
+          227
         ]
       ]
     }

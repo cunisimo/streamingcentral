@@ -1,32 +1,32 @@
 {
-  "fecha": "2026-09-19T13:29:51.464Z",
+  "fecha": "2026-09-19T14:15:36.886Z",
   "dir": ".",
-  "buildId": "AVlfbqLiP68898ST6cp8I",
+  "buildId": "cMeFm3bVrLkA1BoecJ2m1",
   "retryAfterS": 3,
   "ventanaMs": 20000,
   "variantes": {
     "caido": {
       "modo": "caido",
       "pausado": {
-        "status": 200,
-        "retryAfter": null,
-        "msPared": 58621,
-        "tInicio": 1789824597794,
-        "tFin": 1789824656415,
-        "contenido": 11,
-        "motivo": null,
+        "status": 503,
+        "retryAfter": "1",
+        "msPared": 58552,
+        "tInicio": 1789827341777,
+        "tFin": 1789827400329,
+        "contenido": 0,
+        "motivo": "pausa",
         "pausaConocidaAlPedir": true,
-        "msDesdeEl429": 13,
-        "propietario": "04b37169-9265-4259-808e-cc7250bae365:20140:2",
+        "msDesdeEl429": 4,
+        "propietario": "71ba6b23-0226-448a-8f75-a54e5003fe6b:20300:2",
         "compone": 1,
         "durmio": 1,
-        "pausaMs": 2941,
-        "esperaPausaMs": 3105,
+        "pausaMs": 0,
+        "esperaPausaMs": 3053,
         "lecturasAcotadas": 2,
-        "linea": "[home] 58612ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (136 fuente(s), 135 descarte(s) tmdb) | turno sin-redis | origen sin-redis | publicacion no | renovaciones 0 | propietario 04b37169-9265-4259-808e-cc7250bae365:20140:2 | PAUSA 2941ms | espera pausa 3105ms | 2 lectura(s) acotada(s) | t"
+        "linea": "[home] 58552ms total | cache VACIO | 1 composición | 0 esperas compartidas | DEGRADADO (0 fuente(s), 135 descarte(s) tmdb) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario 71ba6b23-0226-448a-8f75-a54e5003fe6b:20300:2 | CANCELADA | espera pausa 3053ms | 2 lectura(s) acotada(s) | tmd"
       },
       "residual": {
-        "ventanaMs": 21076,
+        "ventanaMs": 21046,
         "iniciadasAntesDeResponder": 5,
         "completadasAntes": 5,
         "completadasDespuesONunca": [],
@@ -37,17 +37,17 @@
           "GET": 1
         },
         "comandos": [
-          "-58598ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
-          "-58586ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
-          "-58581ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
-          "-55464ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
-          "-55451ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]"
+          "-58538ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-58531ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-58527ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-55467ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "-55463ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]"
         ]
       },
       "redisTrasLaRespuestaTodos": {
-        "total": 1,
+        "total": 6,
         "porComando": {
-          "EVALSHA": 1
+          "EVALSHA": 6
         },
         "propios": 0
       },
@@ -57,7 +57,7 @@
       "primero": {
         "status": 200,
         "motivo": "cancelada",
-        "msPared": 60287
+        "msPared": 59866
       }
     },
     "colgado": {
@@ -65,23 +65,23 @@
       "pausado": {
         "status": 503,
         "retryAfter": "5",
-        "msPared": 5201,
-        "tInicio": 1789824682277,
-        "tFin": 1789824687478,
+        "msPared": 5181,
+        "tInicio": 1789827425915,
+        "tFin": 1789827431096,
         "contenido": 0,
         "motivo": "pausa-indeterminada",
         "pausaConocidaAlPedir": true,
-        "msDesdeEl429": 19,
-        "propietario": "ff65e457-585a-4320-813f-317bda349f6c:2676:2",
+        "msDesdeEl429": 16,
+        "propietario": "f542b8d0-8648-4edc-9367-3b65fc5b6d3a:7608:2",
         "compone": 0,
         "durmio": 1,
-        "pausaMs": 1923,
-        "esperaPausaMs": 139,
+        "pausaMs": 1958,
+        "esperaPausaMs": 119,
         "lecturasAcotadas": 2,
-        "linea": "[home] 5181ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario ff65e457-585a-4320-813f-317bda349f6c:2676:2 | PAUSA 1923ms | espera pausa 139ms | 2 lectura(s) acotada(s) | tmdb 0 llamadas (0 ok) "
+        "linea": "[home] 5170ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario f542b8d0-8648-4edc-9367-3b65fc5b6d3a:7608:2 | PAUSA 1958ms | espera pausa 119ms | 2 lectura(s) acotada(s) | tmdb 0 llamadas (0 ok) "
       },
       "residual": {
-        "ventanaMs": 21180,
+        "ventanaMs": 21046,
         "iniciadasAntesDeResponder": 4,
         "completadasAntes": 4,
         "completadasDespuesONunca": [],
@@ -91,19 +91,18 @@
           "EVALSHA": 1
         },
         "comandos": [
-          "-5170ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
-          "-4173ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
-          "-3171ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
-          "-2006ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653"
+          "-5171ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-4163ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-3161ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-2027ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653"
         ]
       },
       "redisTrasLaRespuestaTodos": {
-        "total": 8,
+        "total": 16,
         "porComando": {
-          "EVALSHA": 2,
-          "EVAL": 3,
-          "PTTL": 1,
-          "MGET": 2
+          "EVALSHA": 1,
+          "EVAL": 4,
+          "MGET": 11
         },
         "propios": 0
       },

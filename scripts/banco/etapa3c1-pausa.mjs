@@ -278,7 +278,27 @@ async function main() {
 
   // ----------------------------------------------------------------- criterios bloqueantes (4-7), con lo medido
   const e = salida.escenarios;
+  // Criterio 10 (auditoría sobre 9fd6d71): ninguna composición MUTILADA por la
+  // pausa se sirve. Sobre TODAS las líneas terminales `[home]`/`[home-fondo]`
+  // de los procesos con la pausa encendida (A, B, C; D es el control con el
+  // kill switch, donde el degradado-propio con 429 es lo esperado): si hubo
+  // llamadas rechazadas por la pausa o 429 propios, el origen tiene que ser el
+  // UB de la pausa o el vacío de la pausa (503), nunca `propia`,
+  // `degradado-propio` ni `sin-redis`.
+  const mutiladasServidas = [];
+  for (const p of [A, B, C]) {
+    for (const l of readFileSync(p.log, "utf8").split("\n").map((x) => x.trim())) {
+      const pref = l.startsWith("[home-fondo]") ? "[home-fondo]" : l.startsWith("[home]") ? "[home]" : null;
+      if (!pref || !esLineaTerminal(l.replace(pref, "[home]"))) continue;
+      const h = parsearLineaHome(l.replace(pref, "[home]"));
+      const rechazadas = Number((l.match(/(\d+) rechazadas/) ?? [])[1] ?? 0);
+      const x429 = Number((l.match(/(\d+) x429/) ?? [])[1] ?? 0);
+      if (rechazadas === 0 && x429 === 0) continue;
+      if (!["ultimo-bueno-pausa", "vacio-pausa", "vacio-cancelada"].includes(h.origen ?? "")) mutiladasServidas.push({ proceso: p.nombre, origen: h.origen, rechazadas, x429, linea: l.slice(0, 220) });
+    }
+  }
   salida.criterios = {
+    "10-nunca-se-sirve-un-Home-mutilado-por-la-pausa": { ok: mutiladasServidas.length === 0, mutiladasServidas, detalle: "toda línea terminal con rechazadas > 0 o x429 > 0 (procesos con la pausa encendida) tiene origen ultimo-bueno-pausa o vacio-pausa; nunca propia, degradado-propio ni sin-redis" },
     "4-429-nunca-publica-un-Home-mutilado": { ok: !e["S1-429-total-sin-UB"].frescaEscrita && !e["S1-429-total-sin-UB"].degradadoEscrito && !e["S2-429-total-con-UB"].frescaEscrita && !e["S5-tres-procesos-frios-429-total"].frescaEscrita && !e["S5-tres-procesos-frios-429-total"].degradadoEscrito, detalle: "fresca/degradado en Redis tras un 429 total (S1, S2, S5)" },
     "5-con-UB-inmediato": { ok: e["S2-429-total-con-UB"].status === 200 && e["S2-429-total-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].status === 200 && e["S2b-pedido-durante-la-pausa-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].msPared < 2000, msPared: [e["S2-429-total-con-UB"].msPared, e["S2b-pedido-durante-la-pausa-con-UB"].msPared] },
     "6-sin-UB-nunca-50s-ni-200-vacio": { ok: [e["S1-429-total-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.status === 503 && x.retryAfter && x.contenido === 0) && e["S1b-pedido-durante-la-pausa-sin-UB"].status === 200 && e["S1b-pedido-durante-la-pausa-sin-UB"].contenido > 0 && [e["S1-429-total-sin-UB"], e["S1b-pedido-durante-la-pausa-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.msPared < 30000), msPared: [e["S1-429-total-sin-UB"].msPared, e["S1b-pedido-durante-la-pausa-sin-UB"].msPared, e["S1c-pausa-larga-sin-UB-503-inmediato"].msPared] },

@@ -1446,7 +1446,7 @@ test("🔴 (auditoría sobre 1403ae4) pausa corta (2 s) + Redis CAÍDO: tras el 
     assert.deepEqual(res.terminadosDespues, []);
     assert.equal(JSON.stringify(r.m), cerradas, "una métrica cerrada cambió después de responder");
     assert.equal(w.store.has(K.turno), false);
-    // Redis caído y la pausa ya vencida: `sin-redis` → el degradado de hoy (compone sin turno), como en §43.3; por el acotado, UN TOMAR y UN GET, y el principal no participa.
+    // Redis caído y la pausa ya vencida: `sin-redis` → compone sin turno y, como acá el productor NO fue mutilado por la pausa (sin `pausada`), sirve lo compuesto (§43.3); por el acotado, UN TOMAR y UN GET, y el principal no participa.
     assert.equal(r.valor.de, "A"); assert.equal(r.m.home.origen, "sin-redis");
     assert.deepEqual(acotado.intentos.map((i) => i.op), ["TOMAR", "GET"]);
     assert.equal(principal.intentos.length, 0, "el cliente principal (con reintentos) no participa en la readquisición");
@@ -1549,4 +1549,86 @@ test("controles (1403ae4): Redis SANO tras la pausa corta → readquisición y c
   { const w = mundo(); w.store.set(K.ub, { v: UB, exp: 0 }); pausaCompartida(w, 2000);
     const r = await w.reloj.correr(w.solicitud(depsPausa(w, "A", { tomarAcotado: async () => { throw new Error("no debía readquirir"); } }).d));
     assert.equal(r.valor.de, "ub"); assert.equal(r.m.home.origen, "ultimo-bueno-pausa"); assert.equal(dormidas(w), 0); }
+});
+
+// ============================================================================
+// Auditoría sobre 9fd6d71: los dos caminos `sin-redis` servían el valor de
+// `producir()` sin mirar `pausada`. Un Home mutilado por llamadas rechazadas
+// por la pausa (TMDB sigue en 429) no se sirve nunca: con UB ya leído → el UB;
+// sin UB → 503 `pausa` con Retry-After. Un degradado AJENO a la pausa
+// (`fallo: true, pausada: false`) conserva la semántica de siempre de sin-redis.
+// ============================================================================
+const MUTILADO = { valor: { hero: ["mutilado"], degradado: true, de: "A" } as Payload, fallo: true, pausada: true };
+
+test("🔴 (auditoría sobre 9fd6d71) readquisición `sin-redis` tras la pausa corta con TMDB todavía en 429 (`pausada: true`): NUNCA el payload mutilado; sin UB → 503 pausa con Retry-After; nada escrito; cero trabajo de Redis después", async () => {
+  const sueltos: unknown[] = []; const h = (e: unknown) => { sueltos.push(e); }; process.on("unhandledRejection", h);
+  try {
+    const w = mundo();
+    pausaCompartida(w, 2000);
+    const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+    const lector = clienteRedisDoble(w, { retries: 0, modo: "caido", senal: () => lector.senalVirtual(CONSTANTES.T_LECTURA_PAUSA_MS) });
+    const acotado = clienteTurnoDoble(w, { retries: 0, modo: "caido", senal: senalDelPlazo });
+    const principal = clienteTurnoDoble(w, { retries: 5, modo: "caido" });
+    let compuso = 0;
+    const { d } = depsPausa(w, "A", {
+      leerAcotada: (claves) => lector.mget(claves) as Promise<(Payload | null)[]>,
+      turno: crearTurno(principal.ops, PAUSA_CFG), tomarAcotado: readquisicionCon(w, acotado),
+      // La composición ve el 429 y vuelve a registrar la pausa local (como lib/tmdb.ts): el Home vuelve mutilado.
+      producir: async () => { compuso += 1; await w.reloj.dormir(500); p.fijar(w.reloj.ahora() + 3000); return MUTILADO; },
+    }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    const tRespuesta = w.reloj.ahora();
+    const cerradas = JSON.stringify(r.m);
+    assert.equal(compuso, 1);
+    assert.equal(r.m.home.turno, "sin-redis");
+    assert.notEqual(r.valor.de, "A", "sirvió el payload mutilado por la pausa");
+    assert.equal(r.valor.de, "vacio:pausa"); assert.equal(r.m.home.origen, "vacio-pausa"); assert.equal(r.m.home.cancelada, true);
+    assert.equal(r.valor.reintentarEnMs, 3000, "Retry-After = lo que resta de la pausa local que la composición volvió a registrar");
+    assert.deepEqual(p.cubos, ["pausados503"]);
+    assert.equal(r.m.home.publicacion, null); assert.equal(r.m.home.enfriado, false);
+    assert.equal(w.store.has(K.fresca), false); assert.equal(w.store.has(K.degradado), false); assert.equal(w.store.has(K.turno), false);
+    await w.reloj.correr(w.reloj.dormir(10_000));
+    const res = residualDe([...principal.intentos, ...acotado.intentos], tRespuesta);
+    assert.deepEqual(res, { tardios: [], terminadosDespues: [] });
+    assert.equal(principal.enVuelo() + acotado.enVuelo(), 0);
+    assert.equal(JSON.stringify(r.m), cerradas);
+    for (let i = 0; i < 5; i++) await new Promise((x) => setImmediate(x));
+    assert.deepEqual(sueltos, []);
+  } finally { process.off("unhandledRejection", h); }
+});
+
+test("🔴 (auditoría sobre 9fd6d71) adquisición inicial `sin-redis` (Redis caído, sin pausa al entrar) y TMDB pasa a 429 durante la composición (`pausada: true`): con UB ya leído → ese UB (ultimo-bueno-pausa); sin UB → 503 pausa; nunca el payload mutilado, nada escrito", async () => {
+  for (const conUb of [true, false]) {
+    const w = mundo();
+    if (conUb) w.store.set(K.ub, { v: UB, exp: 0 });
+    const caido = clienteTurnoDoble(w, { retries: 0, modo: "caido" });
+    const p = pausaDePrueba(w);   // sin pausa al entrar
+    const { d } = depsPausa(w, "A", {
+      turno: crearTurno(caido.ops, PAUSA_CFG),
+      producir: async () => { await w.reloj.dormir(500); p.fijar(w.reloj.ahora() + 2500); return MUTILADO; },
+    }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.m.home.turno, "sin-redis");
+    assert.notEqual(r.valor.de, "A", "sirvió el payload mutilado por la pausa");
+    assert.equal(r.valor.de, conUb ? "ub" : "vacio:pausa");
+    assert.equal(r.m.home.origen, conUb ? "ultimo-bueno-pausa" : "vacio-pausa");
+    if (!conUb) assert.equal(r.valor.reintentarEnMs, 2500);
+    assert.deepEqual(p.cubos, [conUb ? "pausadosUB" : "pausados503"]);
+    assert.equal(r.m.home.publicacion, null); assert.equal(r.m.home.enfriado, false);
+    assert.equal(w.store.has(K.fresca), false); assert.equal(w.store.has(K.degradado), false); assert.equal(w.store.has(K.turno), false);
+  }
+});
+
+test("(9fd6d71) control: `sin-redis` con un degradado AJENO a la pausa (`fallo: true, pausada: false`, sin pausa local al volver) conserva la semántica de siempre: se sirve lo compuesto, no se escribe nada; con la pausa YA VENCIDA y `pausada: true` es 503 con Retry-After mínimo de 1 s", async () => {
+  { const w = mundo();
+    const caido = clienteTurnoDoble(w, { retries: 0, modo: "caido" });
+    const { d } = depsPausa(w, "A", { turno: crearTurno(caido.ops, PAUSA_CFG), producir: async () => ({ valor: { hero: [], degradado: true, de: "A" }, fallo: true, pausada: false }) });
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, "A"); assert.equal(r.m.home.origen, "sin-redis"); assert.equal(r.m.home.cancelada, false);
+    assert.equal(w.store.has(K.fresca), false); assert.equal(w.store.has(K.degradado), false); }
+  { const w = mundo();
+    const caido = clienteTurnoDoble(w, { retries: 0, modo: "caido" });
+    const { d } = depsPausa(w, "A", { turno: crearTurno(caido.ops, PAUSA_CFG), producir: async () => MUTILADO });
+    const r = await w.reloj.correr(w.solicitud(d));
+    assert.equal(r.valor.de, "vacio:pausa"); assert.equal(r.valor.reintentarEnMs, 1000); }
 });

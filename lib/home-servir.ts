@@ -350,6 +350,26 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     return servirVacio(motivo, Math.max(1, reintentarEnMs));
   };
   const servirUbPausado = (v: T) => { pausa?.anotarCubo("pausadosUB"); return servirUb(v, "ultimo-bueno", "ultimo-bueno-pausa"); };
+  /**
+   * sin-redis (§3.7; auditoría sobre 9fd6d71): componer sin coordinar, servir
+   * y no escribir nada. La MISMA regla 4d' de `componer`: si la pausa rige al
+   * volver o alguna llamada salió rechazada por ella (`pausada`), la
+   * composición está MUTILADA por el 429 y no se sirve —con UB ya leído, el
+   * UB; sin UB, el 503 `pausa` con lo que resta (o 1 s)—. Un degradado AJENO
+   * a la pausa (`fallo` sin `pausada`) se sirve como siempre. Acá no hay turno
+   * que liberar ni nada que enfriar: Redis no está.
+   */
+  const componerSinRedis = async (): Promise<T> => {
+    log(`[home] compone ${K.fresca} ${propietario} (sin-redis)`);
+    anotar((m) => { m.home.cache = "miss"; m.home.origen = "sin-redis"; });
+    const p = await deps.producir();
+    const pausaAlVolver = pausaLocal();
+    if (pausaAlVolver > 0 || p.pausada) {
+      anotar((m) => { m.home.cancelada = true; m.home.pausaMs = pausaAlVolver; });
+      return ub != null ? servirUbPausado(ub) : servirPausa("pausa", Math.max(pausaAlVolver, 1000));
+    }
+    return p.valor;
+  };
 
   // La limpieza (§49-§50): UNA por solicitud, best effort, sólo estrictamente
   // antes del corte duro de Vercel; nunca publica ni toca el UB; si no puede,
@@ -484,13 +504,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
   // ÚNICA readquisición (con su timeout) decide.
   if (localAlEntrar > 0 || pausaLocal() > 0) { r = { estado: "pausado", restanteMs: Math.max(1, pausaLocal()) }; anotar((m) => { m.home.turno = "pausado"; }); }
   else r = await tomar();
-  if (r.estado === "sin-redis") {
-    // §3.7: componer sin coordinar, servir, y no escribir nada.
-    log(`[home] compone ${K.fresca} ${propietario} (sin-redis)`);
-    anotar((m) => { m.home.cache = "miss"; m.home.origen = "sin-redis"; });
-    const p = await deps.producir();
-    return p.valor;
-  }
+  if (r.estado === "sin-redis") return componerSinRedis();
   if (r.estado === "pausado") {
     // 3.c.1 (§42/§43): con UB, el UB ya; sin UB, un solo sueño acotado y una readquisición.
     if (ub != null) return servirUbPausado(ub);
@@ -529,11 +543,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
       return servirPausa("pausa-indeterminada", Math.max(c.RETRY_AFTER_FALLBACK_MS, restante - dormido));
     }
     if (r2.estado === "pausado") return servirPausa("pausa", r2.restanteMs);   // nunca un segundo sueño
-    if (r2.estado === "sin-redis") {
-      log(`[home] compone ${K.fresca} ${propietario} (sin-redis)`);
-      anotar((m) => { m.home.cache = "miss"; m.home.origen = "sin-redis"; });
-      return (await deps.producir()).valor;
-    }
+    if (r2.estado === "sin-redis") return componerSinRedis();
     if (r2.estado === "adquirido") return componerSiCabe();
     r = r2;   // ocupado: la espera compartida de siempre (5), que ya tiene UB/degradado en cuenta
   }
