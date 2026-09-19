@@ -30,10 +30,11 @@
   local (18/09):** `009_salas.sql` (seis tablas cerradas, 24 funciones con
   permisos por inventario, trigger `realtime.send`, cron por minuto) y
   `009_salas_down.sql` (rollback probado dos veces); 12 guards textuales y
-  **34 pruebas con la anon key local en verde** (RLS, concurrencia, plazos,
-  kill switch, y —tras la auditoría— idempotencia por identificador de intento
-  ante respuesta HTTP perdida en `sala_crear`/`sala_unirse`); suite y `tsc`
-  limpios. Evidencia:
+  **37 pruebas con la anon key local en verde** (RLS, concurrencia, plazos,
+  kill switch, y —tras dos rondas de auditoría— recuperación ante respuesta
+  HTTP perdida con **credencial generada por el cliente** y hasheada en la
+  base: sin tokens del servidor, sin rotación, orden de respuestas
+  irrelevante); suite y `tsc` limpios. Evidencia:
   [`medidas/2026-09-18-salas-etapa1.md`](medidas/2026-09-18-salas-etapa1.md).
   Sigue la Etapa 2 (preparación en Vercel). **No autorizado todavía:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A

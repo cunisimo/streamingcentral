@@ -26,8 +26,8 @@ const sql = fs.readFileSync(path.join(process.cwd(), "supabase/migrations/009_sa
 // El inventario: quién puede ejecutar qué. Cualquier `create function` que no
 // esté acá hace fallar el test; cualquier fila sin su revoke/grant, también.
 const EXPOSICION: Record<string, "interna" | "participante" | "cuenta" | "servidor"> = {
-  sala_codigos_permitidos: "interna", sala_activas: "interna", sala_hash: "interna", sala_nuevo_token: "interna",
-  sala_plataformas_validas: "interna", sala_nombre_valido: "interna", sala_participante: "interna",
+  sala_codigos_permitidos: "interna", sala_activas: "interna", sala_hash: "interna",
+  sala_plataformas_validas: "interna", sala_nombre_valido: "interna", sala_participante: "interna", sala_credencial_valida: "interna",
   sala_limite_seg: "interna", sala_tocar: "interna", rooms_publicar_cambio: "interna",
   sala_computar: "interna", sala_aplicar_vencimientos: "interna", sala_barrido: "servidor",
   sala_unirse: "participante", sala_estado: "participante", sala_votar: "participante",
@@ -72,6 +72,22 @@ test("la lista de códigos permitidos en SQL es exactamente ALL_CODES", () => {
 
 test("ninguna RPC acepta participant_id como parámetro", () => {
   assert.doesNotMatch(sql, /p_participant/i);
+});
+
+test("la base no genera tokens: la credencial la manda el cliente y sólo se guarda su hash", () => {
+  assert.doesNotMatch(sql, /create or replace function sala_nuevo_token/);
+  assert.doesNotMatch(sql, /gen_random_bytes\(32\)/, "32 bytes aleatorios sólo los genera el cliente");
+  assert.match(sql, /function sala_credencial_valida[\s\S]*?\^\[A-Za-z0-9_-\]\{43\}\$/);
+  for (const fn of ["sala_crear", "sala_unirse", "sala_reclamar"]) {
+    assert.match(sql, new RegExp(`create or replace function ${fn}\\([^)]*p_credencial text\\)`), `${fn} recibe la credencial`);
+  }
+  // Ninguna RPC devuelve la credencial: el cliente ya la tiene.
+  assert.doesNotMatch(sql, /'token', tok/);
+  // La recuperación por credencial va ANTES del kill switch en crear y unirse.
+  for (const fn of ["sala_crear", "sala_unirse"]) {
+    const cuerpo = sql.match(new RegExp(`create or replace function ${fn}\\([\\s\\S]*?\\$\\$;`))![0];
+    assert.ok(cuerpo.indexOf("token_hash = h") < cuerpo.indexOf("sala_activas()"), `${fn}: la recuperación tiene que ir antes del kill switch`);
+  }
 });
 
 test("toda security definer pinea el search_path", () => {

@@ -28,18 +28,22 @@ drop function if exists sala_cerrar(uuid);
 drop function if exists sala_desempatar(uuid);
 drop function if exists sala_votar(uuid, text, uuid, int, text);
 drop function if exists sala_estado(uuid, text);
-drop function if exists sala_reclamar(uuid);
-drop function if exists sala_unirse(uuid, text, text[], uuid);
-drop function if exists sala_unirse(uuid, text, text[]);     -- firma previa, sólo en bases locales
-drop function if exists sala_crear(text, text[], uuid);
-drop function if exists sala_crear(text, text[]);            -- firma previa, sólo en bases locales
+drop function if exists sala_reclamar(uuid, text);
+drop function if exists sala_reclamar(uuid);                    -- firma previa, sólo en bases locales
+drop function if exists sala_unirse(uuid, text, text[], text);
+drop function if exists sala_unirse(uuid, text, text[], uuid);  -- firma previa, sólo en bases locales
+drop function if exists sala_unirse(uuid, text, text[]);        -- firma previa, sólo en bases locales
+drop function if exists sala_crear(text, text[], text);
+drop function if exists sala_crear(text, text[], uuid);         -- firma previa, sólo en bases locales
+drop function if exists sala_crear(text, text[]);               -- firma previa, sólo en bases locales
 drop function if exists sala_aplicar_vencimientos(uuid);
 drop function if exists sala_computar(uuid);
 drop function if exists sala_limite_seg(int);
 drop function if exists sala_participante(uuid, text);
 drop function if exists sala_nombre_valido(text);
 drop function if exists sala_plataformas_validas(text[]);
-drop function if exists sala_nuevo_token();
+drop function if exists sala_credencial_valida(text);
+drop function if exists sala_nuevo_token();                     -- función previa, sólo en bases locales
 drop function if exists sala_hash(text);
 drop function if exists rooms_publicar_cambio();
 drop function if exists sala_tocar(uuid);

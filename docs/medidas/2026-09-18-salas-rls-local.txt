@@ -1,24 +1,24 @@
 Base: http://127.0.0.1:54321
 
 ✔ 1. lectura y escritura directa rechazadas con anon y con JWT
-✔ 2. crear sala exige sesión, valida plataformas y devuelve un token de 43 caracteres
+✔ 2. crear exige sesión y credencial bien formada; valida plataformas; la credencial del cliente queda como token (sólo su hash)
 ✔ 3. una sola sala activa por organizador
 ✔ 4. plataformas deduplicadas y ordenadas; nombre normalizado; desconocidas y vacías rechazadas
-✔ 5. unirse anónimo y autenticado; una cuenta no ocupa dos lugares (rota el token)
-✔ 6. el token de una sala no sirve en otra
+✔ 5. unirse anónimo y autenticado; una cuenta no ocupa dos lugares (pasa a la credencial nueva); sala_reclamar idempotente
+✔ 6. la credencial de una sala no sirve en otra, ni se reutiliza como participación nueva
 ✔ 7. máximo seis participantes
-✔ 8. un invitado no ejecuta acciones del organizador; anon no ejecuta la preparación
+✔ 8. un invitado no ejecuta acciones del organizador; anon y JWT no ejecutan la preparación
 ✔ 9. candidatas correctas y publicación atómica con validación estricta
 ✔ 10. lobby cerrado: no entran participantes nuevos
 ✔ 11. voto: sólo la siguiente pos; idempotente; distinto voto sobre pos ya votada rechazado; pos fuera de la ronda rechazada
-✔ 12. nadie ve votos ajenos; el estado no expone participant_id ajenos ni tokens
+✔ 12. nadie ve votos ajenos; el estado no expone participant_id ajenos ni credenciales
 ✔ 13. seis participantes; el último voto de cada uno se manda a la vez; un único resultado 'ganador'
 ✔ 14. sala de 2: dos Sí simultáneos sobre la misma película → un único match, y la ronda se detiene
 ✔ 15. sala de 3 con empate: sólo el host desempata; repetir devuelve el mismo ganador; la ventana se renueva
 ✔ 16. voto posterior al cierre rechazado con 'ronda_cerrada'
 ✔ 18. otra tanda excluye los títulos de la ronda anterior (y una card repetida es rechazada)
 ✔ 19. un payload falso en el tópico público NO cambia version ni estado
-✔ 20. una sola sala activa por creador, bajo concurrencia (10 sala_crear a la vez)
+✔ 20. una sola sala activa por creador, bajo concurrencia (10 sala_crear con credenciales distintas a la vez)
 ✔ 21. publicar y abortar a la vez: un solo desenlace, nunca un estado intermedio
 ✔ 22. publicar contra el vencimiento de la preparación (barrido): sin deadlock, un solo desenlace
 ✔ 23. voto contra el cierre por plazo: o entra antes del cierre o es 'ronda_cerrada'; nunca los dos
@@ -27,12 +27,15 @@ Base: http://127.0.0.1:54321
 ✔ 26. 'Otra tanda' iniciada a segundos del vencimiento renueva expires_at y el barrido no la toca
 ✔ 27. una sala en `preparando` nunca es eliminada por el barrido; `sala_cerrar` conserva 5 min
 ✔ 28. preparación desde el lobby abortada con los 15 min ya vencidos: el lobby se renueva 5 min y se puede reintentar
-✔ 29. crear: la respuesta se pierde y se repite el MISMO intento → misma sala, un solo host, token utilizable
-✔ 29b. no existe ninguna sobrecarga sin p_intento (una firma vieja saltearía la idempotencia)
-✔ 30. unirse anónimo: respuesta perdida y repetición del MISMO intento → un solo participante
-✔ 31. dos reintentos CONCURRENTES del mismo intento → nunca dos participantes ni dos salas
-✔ 32. un intento DIFERENTE sigue respetando la regla de una sola sala activa
+✔ 29. crear: la respuesta se pierde y se repite la MISMA credencial → misma sala, un solo host, la credencial que el cliente ya tenía sirve
+✔ 29b. ninguna firma previa responde (sin credencial, o con p_intento uuid): una sobrecarga vieja saltearía la idempotencia
+✔ 30. unirse anónimo: respuesta perdida y repetición de la MISMA credencial → un solo participante, también después de que la sala empezó
+✔ 31. reintentos CONCURRENTES de la misma credencial → una sala / un participante, y TODAS las respuestas llevan a la misma credencial válida
+✔ 31b. respuestas concurrentes entregadas en ORDEN INVERSO: el cliente termina con una credencial válida sin importar cuál procesa último
+✔ 32. una credencial DIFERENTE sigue respetando la regla de una sola sala activa
 ✔ 33. una sala vencida por reloj pero no barrida no bloquea ni da un error crudo: se vence y se crea la nueva
+✔ 34. la recuperación va ANTES del kill switch: confirmada, respuesta perdida, activas=false, misma credencial → recupera; credencial nueva → rechazada
+✔ 35. cuenta ya participante entra con credencial NUEVA y la respuesta se pierde; la sala empieza; repetir esa credencial recupera la misma participación
 ✔ 17. el barrido elimina la sala completa (seis tablas) 5 min después del estado terminal
 
-Todo verde (34 pruebas)
+Todo verde (37 pruebas)

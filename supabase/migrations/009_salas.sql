@@ -4,8 +4,16 @@
 --
 -- Seis tablas CERRADAS: RLS activo sin policies y sin privilegios para
 -- anon/authenticated. Toda operación pasa por las RPCs de abajo (security
--- definer, search_path pineado). El participante se identifica por un token
--- portador del que la base guarda sólo el sha256; el organizador, por su JWT.
+-- definer, search_path pineado). El participante se identifica por una
+-- CREDENCIAL PORTADORA QUE GENERA EL CLIENTE (32 bytes aleatorios, base64url de
+-- 43 caracteres) y que la base recibe en cada llamada y guarda SÓLO como
+-- sha256; la base nunca genera tokens. El organizador, además, por su JWT.
+--
+-- IDEMPOTENCIA POR CREDENCIAL: el cliente persiste la credencial ANTES de la
+-- primera solicitud y manda siempre la misma. Repetir sala_crear / sala_unirse
+-- con la misma credencial devuelve la misma sala / participación sin rotar
+-- nada, así que reintentos concurrentes y respuestas desordenadas terminan
+-- todos en la misma credencial válida, que el cliente ya tiene.
 -- Requiere pgcrypto (gen_random_bytes, digest), pg_cron y realtime.send.
 --
 -- ⚠️ Postgres concede EXECUTE a PUBLIC en toda función nueva. Por eso CADA
@@ -25,13 +33,17 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ── Sin sobrecargas ─────────────────────────────────────────────────────────
--- Las firmas SIN p_intento existieron en una versión previa de esta migración
--- (sólo en bases locales, nunca en Producción). Si quedaran, PostgREST las
--- resolvería para una llamada sin p_intento y saltearían la idempotencia y la
--- regla de una sola sala activa. Se borran a propósito; la batería llama sin
--- p_intento y exige que ninguna función responda.
+-- Las firmas previas de estas funciones (sin credencial, o con un p_intento
+-- uuid) existieron sólo en bases locales, nunca en Producción. Si quedaran,
+-- PostgREST las resolvería para una llamada con otros parámetros y saltearían
+-- la idempotencia por credencial. Se borran a propósito; la batería llama con
+-- las firmas viejas y exige que ninguna función responda.
 drop function if exists sala_crear(text, text[]);
+drop function if exists sala_crear(text, text[], uuid);
 drop function if exists sala_unirse(uuid, text, text[]);
+drop function if exists sala_unirse(uuid, text, text[], uuid);
+drop function if exists sala_reclamar(uuid);
+drop function if exists sala_nuevo_token();
 
 -- ── Tablas ─────────────────────────────────────────────────────────────────
 
@@ -47,12 +59,6 @@ create table if not exists rooms (
   expires_at       timestamptz not null,
   platforms_frozen text[],
   round_actual     uuid,
-  -- Identificador de INTENTO de creación, generado y persistido por el cliente
-  -- antes de la primera solicitud. Si la respuesta HTTP se pierde, repetir el
-  -- mismo intento devuelve ESTA sala (con un token nuevo) en vez de
-  -- 'sala_ya_tiene_activa'. Sin él, el organizador quedaba con una sala activa
-  -- cuyo id y token nunca recibió y sin forma de recuperarlos.
-  intento_crear    uuid not null,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
@@ -62,27 +68,23 @@ create index if not exists rooms_expires_idx on rooms (expires_at);
 -- del conteo es EXACTAMENTE este (estado <> 'vencida') después de aplicar los
 -- vencimientos por reloj de las salas del organizador.
 create index if not exists rooms_host_activa_idx on rooms (host_user_id) where estado <> 'vencida';
-create unique index if not exists rooms_un_intento on rooms (host_user_id, intento_crear);
 
 create table if not exists room_participants (
   id           uuid primary key default gen_random_uuid(),
   room_id      uuid not null references rooms (id) on delete cascade,
+  -- sha256 de la credencial que generó el cliente. Es a la vez la identidad del
+  -- participante y la clave de idempotencia de sala_crear / sala_unirse: la
+  -- misma credencial no puede crear dos participaciones.
   token_hash   bytea not null unique,
   user_id      uuid references auth.users (id) on delete set null,
   nombre       text not null check (char_length(nombre) between 1 and 24),
   platforms    text[] not null check (cardinality(platforms) between 1 and 14),
   es_host      boolean not null default false,
-  -- Identificador de INTENTO de ingreso (mismo mecanismo que rooms.intento_crear):
-  -- repetir sala_unirse con el mismo intento devuelve ESTA participación con un
-  -- token nuevo en vez de crear otra y ocupar otro de los seis lugares. No se
-  -- deduplica por nombre.
-  intento      uuid not null,
   joined_at    timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
 create unique index if not exists room_participants_un_usuario on room_participants (room_id, user_id) where user_id is not null;
 create unique index if not exists room_participants_un_host on room_participants (room_id) where es_host;
-create unique index if not exists room_participants_un_intento on room_participants (room_id, intento);
 create index if not exists room_participants_room_idx on room_participants (room_id);
 
 create table if not exists room_rounds (
@@ -212,12 +214,18 @@ language sql immutable set search_path = public, extensions, pg_temp as $$
 $$;
 revoke execute on function sala_hash(text) from public, anon, authenticated;
 
--- 32 bytes aleatorios en base64url (43 caracteres). Se devuelve UNA vez.
-create or replace function sala_nuevo_token() returns text
-language sql volatile set search_path = public, extensions, pg_temp as $$
-  select translate(encode(extensions.gen_random_bytes(32), 'base64'), '+/=', '-_')
+-- La credencial que manda el cliente: 32 bytes en base64url sin relleno, o sea
+-- exactamente 43 caracteres de [A-Za-z0-9_-]. La base no la genera ni la
+-- guarda: sólo comprueba la forma y usa su sha256. Una credencial predecible
+-- perjudica únicamente a quien la eligió.
+create or replace function sala_credencial_valida(p text) returns text
+language plpgsql immutable set search_path = public, extensions, pg_temp as $$
+begin
+  if p is null or p !~ '^[A-Za-z0-9_-]{43}$' then raise exception 'sala_credencial_invalida' using errcode = '22023'; end if;
+  return p;
+end;
 $$;
-revoke execute on function sala_nuevo_token() from public, anon, authenticated;
+revoke execute on function sala_credencial_valida(text) from public, anon, authenticated;
 
 -- Deduplica y ordena, pero RECHAZA el array entero si trae un código
 -- desconocido: ["n","zz","d"] no se convierte en silencio en ["n","d"].
@@ -352,29 +360,29 @@ revoke execute on function sala_aplicar_vencimientos(uuid) from public, anon, au
 
 -- ── RPCs de participante y de cuenta ───────────────────────────────────────
 
-create or replace function sala_crear(p_nombre text, p_platforms text[], p_intento uuid) returns jsonb
+create or replace function sala_crear(p_nombre text, p_platforms text[], p_credencial text) returns jsonb
 language plpgsql security definer set search_path = public, extensions, pg_temp as $$
-declare uid uuid := auth.uid(); rid uuid; tok text; activas int; previa rooms; r_id uuid;
+declare uid uuid := auth.uid(); rid uuid; h bytea; activas int; previa rooms; r_id uuid;
 begin
   if uid is null then raise exception 'sala_sin_sesion' using errcode = '28000'; end if;
-  if p_intento is null then raise exception 'sala_intento_invalido' using errcode = '22023'; end if;
-  if not sala_activas() then raise exception 'sala_desactivadas' using errcode = '55000'; end if;
+  h := sala_hash(sala_credencial_valida(p_credencial));
   -- Serializa la creación POR USUARIO hasta el fin de la transacción: dos
   -- llamadas concurrentes de la misma cuenta se ejecutan una detrás de otra y
   -- la segunda ve la sala que insertó la primera. Sin esto, count + insert
-  -- es una carrera y las dos pasan. También serializa dos reintentos del
-  -- MISMO intento: el segundo encuentra la sala del primero.
+  -- es una carrera y las dos pasan. También serializa dos reintentos de la
+  -- MISMA credencial: el segundo encuentra la sala del primero.
   perform pg_advisory_xact_lock(hashtext('sala_crear:' || uid::text));
 
-  -- 1. Mismo intento → misma sala. La respuesta anterior se perdió (o el toque
-  --    se repitió): se devuelve la sala existente con un token de host NUEVO
-  --    (el anterior, que el cliente quizá nunca recibió, deja de servir).
-  select * into previa from rooms where host_user_id = uid and intento_crear = p_intento;
+  -- 1. Misma credencial → misma sala. VA ANTES DEL KILL SWITCH: recuperar una
+  --    respuesta perdida no es una creación nueva. No se rota nada: la
+  --    credencial válida es la que el cliente ya tiene.
+  select r.* into previa from rooms r join room_participants p on p.room_id = r.id and p.es_host
+  where r.host_user_id = uid and p.token_hash = h;
   if found then
-    tok := sala_nuevo_token();
-    update room_participants set token_hash = sala_hash(tok), last_seen_at = now() where room_id = previa.id and es_host;
-    return jsonb_build_object('room_id', previa.id, 'token', tok, 'repetido', true, 'estado', previa.estado);
+    return jsonb_build_object('room_id', previa.id, 'repetido', true, 'estado', previa.estado);
   end if;
+
+  if not sala_activas() then raise exception 'sala_desactivadas' using errcode = '55000'; end if;
 
   -- 2. Una sola sala activa. Primero se aplican los vencimientos por reloj de
   --    las salas del organizador que el barrido todavía no procesó (un lobby
@@ -387,73 +395,83 @@ begin
   select count(*) into activas from rooms where host_user_id = uid and estado <> 'vencida';
   if activas >= 1 then raise exception 'sala_ya_tiene_activa' using errcode = '23505'; end if;
 
-  insert into rooms (host_user_id, seed, lobby_expires_at, expires_at, intento_crear)
-  values (uid, encode(extensions.gen_random_bytes(16), 'hex'), now() + interval '15 minutes', now() + interval '20 minutes', p_intento)
+  -- La misma credencial no puede ser de otro participante (índice único global).
+  if exists (select 1 from room_participants where token_hash = h) then raise exception 'sala_credencial_en_uso' using errcode = '23505'; end if;
+
+  insert into rooms (host_user_id, seed, lobby_expires_at, expires_at)
+  values (uid, encode(extensions.gen_random_bytes(16), 'hex'), now() + interval '15 minutes', now() + interval '20 minutes')
   returning id into rid;
-  tok := sala_nuevo_token();
-  insert into room_participants (room_id, token_hash, user_id, nombre, platforms, es_host, intento)
-  values (rid, sala_hash(tok), uid, sala_nombre_valido(p_nombre), sala_plataformas_validas(p_platforms), true, p_intento);
+  insert into room_participants (room_id, token_hash, user_id, nombre, platforms, es_host)
+  values (rid, h, uid, sala_nombre_valido(p_nombre), sala_plataformas_validas(p_platforms), true);
   perform sala_tocar(rid);
-  return jsonb_build_object('room_id', rid, 'token', tok, 'repetido', false, 'estado', 'lobby');
+  return jsonb_build_object('room_id', rid, 'repetido', false, 'estado', 'lobby');
 end;
 $$;
-revoke execute on function sala_crear(text, text[], uuid) from public, anon, authenticated;
-grant execute on function sala_crear(text, text[], uuid) to authenticated;
+revoke execute on function sala_crear(text, text[], text) from public, anon, authenticated;
+grant execute on function sala_crear(text, text[], text) to authenticated;
 
-create or replace function sala_unirse(p_room uuid, p_nombre text, p_platforms text[], p_intento uuid) returns jsonb
+create or replace function sala_unirse(p_room uuid, p_nombre text, p_platforms text[], p_credencial text) returns jsonb
 language plpgsql security definer set search_path = public, extensions, pg_temp as $$
-declare s rooms; uid uuid := auth.uid(); tok text; n int; existente room_participants;
+declare s rooms; uid uuid := auth.uid(); h bytea; n int; existente room_participants;
 begin
-  if p_intento is null then raise exception 'sala_intento_invalido' using errcode = '22023'; end if;
-  if not sala_activas() then raise exception 'sala_desactivadas' using errcode = '55000'; end if;
+  h := sala_hash(sala_credencial_valida(p_credencial));
   perform sala_aplicar_vencimientos(p_room);
   select * into s from rooms where id = p_room for update;   -- serializa TODOS los ingresos a la sala
   if not found then raise exception 'sala_inexistente' using errcode = 'P0002'; end if;
-  tok := sala_nuevo_token();
-  -- 1. Mismo intento → misma participación, con token nuevo. Va ANTES de mirar
-  --    el estado: si la respuesta se perdió y la sala ya empezó, el
-  --    participante existe igual y tiene que poder recuperar su lugar.
-  select * into existente from room_participants where room_id = p_room and intento = p_intento;
-  if found then
-    update room_participants set token_hash = sala_hash(tok), last_seen_at = now() where id = existente.id;
-    return jsonb_build_object('token', tok, 'repetido', true);
-  end if;
+
+  -- 1. Misma credencial → misma participación. VA ANTES del kill switch y del
+  --    estado: recuperar una respuesta perdida no es un ingreso nuevo, y si la
+  --    sala ya empezó el participante existe igual. No se rota nada.
+  select * into existente from room_participants where room_id = p_room and token_hash = h;
+  if found then return jsonb_build_object('repetido', true); end if;
+
+  if not sala_activas() then raise exception 'sala_desactivadas' using errcode = '55000'; end if;
   if s.estado <> 'lobby' then raise exception 'sala_no_admite_ingresos' using errcode = '55000'; end if;
-  -- 2. Una cuenta autenticada no ocupa dos lugares: rota su token.
+  if exists (select 1 from room_participants where token_hash = h) then raise exception 'sala_credencial_en_uso' using errcode = '23505'; end if;
+
+  -- 2. Una cuenta autenticada no ocupa dos lugares: su participación pasa a la
+  --    credencial nueva (la anterior deja de servir). Repetir esta misma
+  --    credencial después —aun con la sala empezada— cae en el paso 1.
   if uid is not null then
     select * into existente from room_participants where room_id = p_room and user_id = uid;
     if found then
-      update room_participants set token_hash = sala_hash(tok), last_seen_at = now() where id = existente.id;
-      return jsonb_build_object('token', tok, 'repetido', true);
+      update room_participants set token_hash = h, last_seen_at = now() where id = existente.id;
+      return jsonb_build_object('repetido', true);
     end if;
   end if;
   select count(*) into n from room_participants where room_id = p_room;
   if n >= 6 then raise exception 'sala_llena' using errcode = '54000'; end if;
-  insert into room_participants (room_id, token_hash, user_id, nombre, platforms, intento)
-  values (p_room, sala_hash(tok), uid, sala_nombre_valido(p_nombre), sala_plataformas_validas(p_platforms), p_intento);
+  insert into room_participants (room_id, token_hash, user_id, nombre, platforms)
+  values (p_room, h, uid, sala_nombre_valido(p_nombre), sala_plataformas_validas(p_platforms));
   perform sala_tocar(p_room);
-  return jsonb_build_object('token', tok, 'repetido', false);
+  return jsonb_build_object('repetido', false);
 end;
 $$;
-revoke execute on function sala_unirse(uuid, text, text[], uuid) from public, anon, authenticated;
-grant execute on function sala_unirse(uuid, text, text[], uuid) to anon, authenticated;
+revoke execute on function sala_unirse(uuid, text, text[], text) from public, anon, authenticated;
+grant execute on function sala_unirse(uuid, text, text[], text) to anon, authenticated;
 
 -- Recuperar la participación (organizador u invitado con cuenta) desde otro
 -- navegador: rota el token. El anterior deja de servir.
-create or replace function sala_reclamar(p_room uuid) returns jsonb
+-- Recuperar la participación (organizador u invitado con cuenta) desde otro
+-- navegador: la participación pasa a la credencial NUEVA que generó ese
+-- navegador; la anterior deja de servir. Repetirla es idempotente (mismo hash).
+create or replace function sala_reclamar(p_room uuid, p_credencial text) returns jsonb
 language plpgsql security definer set search_path = public, extensions, pg_temp as $$
-declare uid uuid := auth.uid(); p room_participants; tok text;
+declare uid uuid := auth.uid(); p room_participants; h bytea;
 begin
   if uid is null then raise exception 'sala_sin_sesion' using errcode = '28000'; end if;
+  h := sala_hash(sala_credencial_valida(p_credencial));
+  perform 1 from rooms where id = p_room for update;
   select * into p from room_participants where room_id = p_room and user_id = uid;
   if not found then raise exception 'sala_no_participa' using errcode = 'P0002'; end if;
-  tok := sala_nuevo_token();
-  update room_participants set token_hash = sala_hash(tok), last_seen_at = now() where id = p.id;
-  return jsonb_build_object('token', tok);
+  if p.token_hash = h then return jsonb_build_object('ok', true, 'repetido', true); end if;
+  if exists (select 1 from room_participants where token_hash = h) then raise exception 'sala_credencial_en_uso' using errcode = '23505'; end if;
+  update room_participants set token_hash = h, last_seen_at = now() where id = p.id;
+  return jsonb_build_object('ok', true, 'repetido', false);
 end;
 $$;
-revoke execute on function sala_reclamar(uuid) from public, anon, authenticated;
-grant execute on function sala_reclamar(uuid) to authenticated;
+revoke execute on function sala_reclamar(uuid, text) from public, anon, authenticated;
+grant execute on function sala_reclamar(uuid, text) to authenticated;
 
 -- Lo que ESTE participante puede ver. Aplica vencimientos antes de leer.
 create or replace function sala_estado(p_room uuid, p_token text) returns jsonb

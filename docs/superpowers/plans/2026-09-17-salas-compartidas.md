@@ -209,21 +209,28 @@ como guard textual (12 tests). Lo que se diseñó en las rondas de revisión del
 plan está implementado tal cual, y estas son las **diferencias que aparecieron
 al implementar**:
 
-1. **Idempotencia por identificador de intento** (hueco encontrado por la
-   auditoría: respuesta HTTP perdida en teléfonos). El cliente genera un `uuid`
-   y lo **persiste en `localStorage` antes de la primera solicitud**;
-   `sala_crear(p_nombre, p_platforms, p_intento)` y
-   `sala_unirse(p_room, p_nombre, p_platforms, p_intento)` lo exigen (`null` →
-   `sala_intento_invalido`). `rooms.intento_crear` es único por
-   `(host_user_id, intento_crear)`; `room_participants.intento`, por `(room_id,
-   intento)`. Repetir el mismo intento devuelve **la misma** sala/participación
-   con un **token nuevo** (la base sólo guarda el hash) y `repetido: true`; en
-   `sala_unirse` la búsqueda por intento va **antes** de la comprobación de
-   estado, así que una respuesta perdida se recupera aunque la sala ya haya
-   empezado. Dos reintentos concurrentes se serializan (bloqueo consultivo por
-   usuario en `sala_crear`; fila de `rooms` en `sala_unirse`). **No se
-   deduplica por nombre.** Un intento distinto sigue chocando con
-   `sala_ya_tiene_activa`.
+1. **La credencial la genera EL CLIENTE, y es la clave de idempotencia**
+   (hueco encontrado por la auditoría: respuesta HTTP perdida en teléfonos; una
+   primera versión con un `p_intento` uuid y tokens generados por la base se
+   descartó porque cada reintento rotaba el token y las respuestas podían
+   llegar desordenadas, y porque el intento en claro era una credencial de
+   recuperación sin hashear). Ahora el cliente genera **32 bytes aleatorios en
+   base64url (43 caracteres)**, los **persiste en `localStorage` antes de la
+   primera solicitud** y manda siempre la misma en `sala_crear(p_nombre,
+   p_platforms, p_credencial)`, `sala_unirse(p_room, p_nombre, p_platforms,
+   p_credencial)` y `sala_reclamar(p_room, p_credencial)`. La base valida la
+   forma (`sala_credencial_valida`), guarda **sólo el sha256**
+   (`room_participants.token_hash`, único global) y **nunca genera ni devuelve
+   tokens** (`sala_nuevo_token` no existe). Repetir la misma credencial devuelve
+   la misma sala/participación con `repetido: true`, **sin rotar nada**: da
+   igual cuántos reintentos concurrentes haya ni en qué orden lleguen las
+   respuestas, la única credencial válida es la que el cliente ya tiene. La
+   recuperación va **antes del kill switch y del estado** (recuperar no es
+   crear ni ingresar). Una cuenta ya participante que entra con una credencial
+   nueva pasa su participación a esa credencial (la anterior muere), y repetirla
+   después —aun con la sala empezada— la recupera. **No se deduplica por
+   nombre.** Una credencial distinta sigue chocando con `sala_ya_tiene_activa`,
+   y una ya usada por otro participante con `sala_credencial_en_uso`.
 2. **Regla de una sola sala activa, sin discrepancia con el índice.** Antes de
    contar, `sala_crear` aplica `sala_aplicar_vencimientos` a las salas no
    vencidas del organizador (un lobby con los 15 min pasados o una ventana de
@@ -236,30 +243,32 @@ al implementar**:
    `service_role`) y Producción, y la migración no depende de ninguno.
 4. **`sala_barrido` es "servidor"** (grant a `service_role` además del cron
    como `postgres`): la batería y Vercel pueden barrer a mano.
-5. **Sin sobrecargas**: el up borra las firmas previas sin `p_intento` (sólo
-   existieron en bases locales) y la batería llama sin `p_intento` exigiendo
-   que ninguna función responda — una sobrecarga vieja saltearía la
+5. **Sin sobrecargas**: el up borra las firmas previas (sin credencial, o con
+   `p_intento uuid`; sólo existieron en bases locales) y la batería las llama
+   exigiendo que ninguna función responda — una sobrecarga vieja saltearía la
    idempotencia.
 6. El down usa `drop table … cascade` (`sala_participante` devuelve el tipo de
    fila de `room_participants`) y borra también las firmas previas.
 
 Contratos vigentes de las RPCs de cara al cliente:
 
-- `sala_crear(p_nombre text, p_platforms text[], p_intento uuid) → {room_id, token, repetido, estado}` — `authenticated`.
-- `sala_unirse(p_room uuid, p_nombre text, p_platforms text[], p_intento uuid) → {token, repetido}` — `anon, authenticated`.
-- `sala_reclamar(p_room uuid) → {token}` — `authenticated`.
+- `sala_crear(p_nombre text, p_platforms text[], p_credencial text) → {room_id, repetido, estado}` — `authenticated`. La credencial es la que mandó el cliente; no se devuelve.
+- `sala_unirse(p_room uuid, p_nombre text, p_platforms text[], p_credencial text) → {repetido}` — `anon, authenticated`.
+- `sala_reclamar(p_room uuid, p_credencial text) → {ok, repetido}` — `authenticated` (otro navegador: la participación pasa a la credencial nueva).
 - `sala_estado(p_room uuid, p_token text) → jsonb` — `anon, authenticated`.
 - `sala_votar(p_room uuid, p_token text, p_round uuid, p_pos int, p_voto text) → {ok, motivo?, siguiente?, idempotente?, termine, estado}` — `anon, authenticated`.
 - `sala_desempatar(p_room uuid) → {ganador_pos}`, `sala_cerrar(p_room uuid)` — `authenticated` (host).
 - Servidor (`service_role`): `sala_iniciar_preparacion`, `sala_candidatos`, `sala_publicar_ronda`, `sala_abortar_preparacion`, `sala_barrido`.
 
-**Para el cliente (Etapa 3):** `lib/sala/token-store.ts` guarda también los
-intentos — `yump:sala:intento:crear` (se borra al recibir `room_id`) y
-`yump:sala:intento:unirse:<room_id>` (se borra al recibir el token) — y las
-llamadas a `sala_crear`/`sala_unirse` reintentan **con el mismo intento**
-mientras no haya respuesta guardada.
+**Para el cliente (Etapa 3):** `lib/sala/token-store.ts` genera la credencial
+con `crypto.getRandomValues(new Uint8Array(32))` → base64url, la persiste
+**antes** de la primera solicitud (`yump:sala:credencial:crear` hasta conocer
+el `room_id`, y desde ahí `yump:sala:<room_id>`; para unirse, directamente
+`yump:sala:<room_id>`) y reintenta `sala_crear`/`sala_unirse` **siempre con la
+misma credencial**. Las respuestas sólo confirman `room_id`/`repetido`; ninguna
+puede cambiar la credencial, así que el orden en que lleguen no importa.
 
-### Task 1.5: Batería de pruebas con la anon key local — HECHA (34 pruebas en verde)
+### Task 1.5: Batería de pruebas con la anon key local — HECHA (37 pruebas en verde)
 
 **El archivo real es la referencia:** [`scripts/sala/pruebas-rls.mjs`](../../../scripts/sala/pruebas-rls.mjs)
 (`node --env-file=.env.sala-local scripts/sala/pruebas-rls.mjs`, contra la base
@@ -293,15 +302,21 @@ fantasma · 24 doce internas inejecutables · 25 kill switch en la base · 26
 "otra tanda" a segundos del vencimiento renueva `expires_at` y el barrido no
 toca `preparando` · 27 `preparando` nunca se borra, `sala_cerrar` conserva
 5 min · 28 aborto con lobby vencido renueva `lobby_expires_at` · **29 crear con
-respuesta perdida: mismo intento → misma sala, un solo host, token utilizable;
-sin intento no se crea · 29b ninguna sobrecarga sin `p_intento` responde · 30
-unirse anónimo con respuesta perdida: mismo intento → un solo participante,
-también después de que la sala empezó; otro intento con el mismo nombre es otra
-persona · 31 seis reintentos concurrentes del mismo intento → una sala / un
-participante; sólo el último token vive · 32 un intento distinto sigue
-respetando una sola sala activa · 33 una sala vencida por reloj y no barrida
-(lobby o ventana de resultado) se vence al crear y la nueva nace; repetir el
-intento de una vencida devuelve esa sala con `estado: 'vencida'`.**
+respuesta perdida: misma credencial → misma sala, un solo host, la credencial
+del cliente sirve; ninguna respuesta trae token · 29b ninguna firma previa
+responde · 30 unirse anónimo con respuesta perdida: misma credencial → un solo
+participante, también después de que la sala empezó; otra credencial con el
+mismo nombre es otra persona · 31 seis reintentos concurrentes de la misma
+credencial → una sala / un participante, y todas las respuestas llevan a la
+misma credencial válida · 31b respuestas concurrentes procesadas en orden
+inverso: el cliente termina con una credencial válida · 32 una credencial
+distinta sigue respetando una sola sala activa · 33 una sala vencida por reloj y
+no barrida (lobby o ventana de resultado) se vence al crear y la nueva nace;
+repetir la credencial de una vencida devuelve esa sala con `estado: 'vencida'` ·
+34 la recuperación va antes del kill switch: con `activas=false`, la misma
+credencial recupera y una nueva es rechazada · 35 cuenta ya participante con
+credencial nueva y respuesta perdida; la sala empieza; repetirla recupera la
+misma participación.** (37 pruebas.)
 
 # Etapa 2 — Preparación en Vercel
 
@@ -463,7 +478,7 @@ export const OPTIONS = opcionesCors("POST");
 
 **Files:**
 - Create: `lib/sala/estado.ts` (tipo `EstadoSala` = forma del JSON de `sala_estado`, con `esTerminal(e)`, `venceEnSeg(e, ahora)`)
-- Create: `lib/sala/token-store.ts` (`leerToken(roomId)`, `guardarToken(roomId, tok)`, `borrarToken(roomId)`; clave `yump:sala:<id>`; **y los intentos**: `intentoCrear()` devuelve el guardado en `yump:sala:intento:crear` o genera y persiste un `crypto.randomUUID()` ANTES de la primera solicitud, `cerrarIntentoCrear()` lo borra al recibir `room_id`; `intentoUnirse(roomId)` / `cerrarIntentoUnirse(roomId)` idem con `yump:sala:intento:unirse:<id>`. Sin intento persistido no se manda ninguna de las dos RPCs. try/catch alrededor de `localStorage`)
+- Create: `lib/sala/token-store.ts` — la credencial ES el token: `nuevaCredencial()` = 32 bytes de `crypto.getRandomValues` en base64url (43 chars); `credencialParaCrear()` devuelve la persistida en `yump:sala:credencial:crear` o genera y persiste una **antes** de la primera solicitud; `confirmarSala(roomId)` la mueve a `yump:sala:<roomId>`; `credencialParaUnirse(roomId)` devuelve la de `yump:sala:<roomId>` o genera y persiste; `leerToken(roomId)` / `borrarToken(roomId)`. Ninguna respuesta del servidor escribe la credencial: sólo confirma. try/catch alrededor de `localStorage`. Tests: reintento devuelve la misma credencial; confirmar mueve la clave; respuestas aplicadas en orden inverso no cambian nada.
 - Create: `hooks/temporizador-card.ts` (máquina pura + persistencia inyectable): `arrancar(store, clave, ahoraMs) → { arrancoEn }` lee `store.get(clave)` y, si no hay nada, guarda `ahoraMs`; `restante(arrancoEn, ahoraMs)` en s (10 − transcurridos, mínimo 0); `vencio(arrancoEn, ahoraMs)` a los 10.000 ms; `cerrar(store, clave)` borra la entrada. `clave = \`yump:sala:${room}:${round}:${pos}:inicio\``. **Recargar la página no reinicia los 10 s**: el comienzo persiste en `localStorage` por sala, ronda y posición y **se borra sólo cuando el servidor confirmó el avance** (`sala_votar` aceptado, o `sala_estado` con `mi_siguiente_pos > pos`). Un fallo de red conserva el comienzo, vencido o no: al volver, si ya venció, se reintenta el `pass` de inmediato. El plazo global sigue siendo el del servidor: esto sólo evita que el contador local se regale con F5.
 - Tests: `lib/sala/estado.test.ts`, `lib/sala/token-store.test.ts` (con un `localStorage` doble), `hooks/temporizador-card.test.ts` (casos: arranque nuevo guarda; segundo `arrancar` con la misma clave conserva el comienzo original y `restante` sigue bajando; `cerrar` borra y un `arrancar` posterior arranca de cero; `vencio` exacto a 10.000 ms; store que lanza → se comporta como sin persistencia)
 
