@@ -13,8 +13,8 @@
 //   - Sin card (TMDB no la enriqueció) o sin duración comprobable, se descarta.
 //   - `advertencia` vacía o de espacios se normaliza a null: el "Pero" es
 //     opcional y no se inventa texto. `sala_publicar_ronda` hace lo mismo.
-import type { PlatformCode, UITitle } from "../types";
-import { SIZES, type Candidata, type CardSala, type Size } from "./tipos";
+import type { PlatformCode, UITitle } from "../types.ts";
+import { SIZES, type Candidata, type CardSala, type Size } from "./tipos.ts";
 
 export function enPlataformasDeLaSala(deLaCard: readonly PlatformCode[], union: readonly PlatformCode[]): boolean {
   return deLaCard.some((p) => union.includes(p));

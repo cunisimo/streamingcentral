@@ -1,7 +1,7 @@
 // Tipos y constantes de las salas compartidas. Client-safe: no importa nada
 // de servidor. Es el contrato entre la RPC `sala_estado`, la ruta de
 // preparación y la interfaz.
-import type { PlatformCode } from "../types";
+import type { PlatformCode } from "../types.ts";
 
 export type Duracion = "cualquiera" | "corta" | "larga";
 export type Size = 5 | 10 | 20;
