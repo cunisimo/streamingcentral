@@ -29,8 +29,19 @@
   `retries: 0` y señal de 1 s por petición— en vez de la carrera `conTope`,
   que dejaba el MGET del cliente principal reintentando tras el 503; medido
   en el banco con control sobre `d322282`: 18 MGET y 4 tardíos hasta +3,3 s
-  contra 3 MGET y 0 tardíos, ventana ≥ 10 s; criterio 8 nuevo en el banco);
-  NO mergeada, NO pusheada, NO desplegada; PENDIENTE DE AUDITORÍA FINAL.
+  contra 3 MGET y 0 tardíos, ventana ≥ 10 s; criterio 8 nuevo en el banco) y
+  tras la auditoría sobre `1403ae4` (informe §56, 2026-09-19: la
+  READQUISICIÓN tras el sueño de una pausa corta —que §55 no cubría; S4b usa
+  `Retry-After: 20` y no readquiere— es ahora UNA operación lógica con plazo
+  compartido: `tomarAcotado` = el mismo TOMAR atómico por el cliente acotado
+  (`opsTurnoAcotadoHome`, `retries: 0`) bajo una señal de `T_ADQ_MAX` que
+  viaja por `conPlazoRedis`; vencida → `indeterminado` → 503, sin LIBERAR
+  tardío, y un TOMAR que hubiera aplicado sin reconciliarse vence por TTL
+  (`TURNO_MS` 15 s); medido con control sobre `1403ae4`, Retry-After 3 s: Redis
+  caído 7 comandos tardíos (TOMAR + 6 GET hasta +6,7 s) contra 0; Redis
+  colgado un TOMAR completado a +13 s y un LIBERAR tardío contra 0; escenario
+  S4c y criterio 9 en el banco); NO mergeada, NO pusheada, NO desplegada;
+  PENDIENTE DE AUDITORÍA FINAL.
   Diseño §45-§52 aprobado por el dueño el 18/09.** **Lo que
   corrigió §54 [comprobado en tests y banco]:** (1) con la pausa LOCAL
   vigente ninguna lectura de Redis espera los reintentos del SDK: lectura
@@ -55,7 +66,9 @@
   130 s, exit 0, `BUILD_ID` `XX_-UqA5fcZbIJisArQWs`. **Tras §55:** suite
   1881/1891 (10 omitidos preexistentes) ×2, `tsc` 0, build fresco controlado
   116 s exit 0 (`BUILD_ID` `ryOY8nDhnkldv8thUQ-gl`; sobre el commit final
-  100 s, `fCRCsm-dcpnrTyMTs3GkT`), `git diff --check`
+  100 s, `fCRCsm-dcpnrTyMTs3GkT`; tras §56: suite 1887/1897 ×2, build 185 s
+  `s9n3d_bG5ESPdWEDIY23i`, identidad 16/16, umbrales dentro, criterios 4-9),
+  `git diff --check`
   limpio, identidad 16/16, umbrales dentro, criterios 4-8 verdes. Qué hay [comprobado en Git y en el banco]: los cuatro
   scripts Lua (`lib/pausa-lua.ts`: `TOMAR` con la pausa dentro de la
   adquisición, `PAUSAR` v3 idempotente por evento con telemetría en `pcall`,

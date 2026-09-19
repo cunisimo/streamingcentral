@@ -1307,7 +1307,12 @@ leyendo el código.**
 > explicado; y por §55 tras la auditoría sobre `d322282`: el tope de lectura
 > con pausa local pasó de una carrera que dejaba el MGET reintentando tras el
 > 503 a un lector acotado que cancela —18 MGET y 4 tardíos contra 3 y 0,
-> medido con control—; pendiente de auditoría FINAL). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
+> medido con control—; y por §56 tras la auditoría sobre `1403ae4`: la
+> readquisición tras una pausa corta pasó de una carrera sobre el cliente
+> principal —que dejaba TOMAR, GET y un LIBERAR corriendo tras el 503— a una
+> operación lógica con plazo compartido por el cliente acotado, `indeterminado`
+> al vencer y el turno recuperado por TTL; medido con control: 7 tardíos y un
+> TOMAR a +13 s más LIBERAR contra 0 y 0; pendiente de auditoría FINAL). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
 > identidad del Home antes/después 16/16 idéntica; umbrales del camino sano
 > dentro (Redis +24-28 ≤ 41, duración −1 % mediana, UB −34 ms); con 429
 > total 77 llamadas tras el primer 429 contra 858 sin pausa, nada publicado

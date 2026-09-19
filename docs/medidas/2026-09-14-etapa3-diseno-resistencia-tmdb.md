@@ -73,9 +73,9 @@
 > `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`), fork de
 > `main = origin/main = b7be927`.
 >
-> **Estado vigente de la 3.c (2026-09-18, §53 + §54 + §55): la 3.c.1 "pausa
-> compartida ante 429" —diseño §45-§52 aprobado por el dueño— está IMPLEMENTADA
-> en la rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA dos veces: tras la
+> **Estado vigente de la 3.c (2026-09-19, §53 + §54 + §55 + §56): la 3.c.1
+> "pausa compartida ante 429" —diseño §45-§52 aprobado por el dueño— está
+> IMPLEMENTADA en la rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA tres veces: tras la
 > auditoría de Codex sobre `6fc63b5` (§54: lecturas acotadas con pausa local,
 > ring de cubos, un TIME por evento, tests deterministas; el Preview de la
 > precondición usó el Redis de Producción con claves prefijadas y borradas,
@@ -83,9 +83,16 @@
 > tope de lectura con pausa local CANCELA el trabajo —lector acotado
 > `leerAcotadasHome` sobre `redisLector`, sin reintentos y con señal por
 > petición— en vez de una carrera que dejaba el MGET reintentando después del
-> 503; medido: 18 MGET y 4 tardíos con `d322282` contra 3 y 0). Identidad del
-> Home 16/16, umbrales dentro, criterios 4-8 verdes en el banco. NO mergeada,
-> NO pusheada, NO desplegada, pendiente de auditoría FINAL. Kill switch
+> 503; medido: 18 MGET y 4 tardíos con `d322282` contra 3 y 0) y tras la
+> auditoría sobre `1403ae4` (§56: la READQUISICIÓN tras la pausa corta es una
+> operación lógica con plazo compartido —`tomarAcotado`: el mismo TOMAR
+> atómico por el cliente acotado bajo una señal de `T_ADQ_MAX`, `indeterminado`
+> al vencer, sin LIBERAR tardío; el turno que quedara vence por TTL— en vez de
+> una carrera que dejaba TOMAR, GET y hasta un LIBERAR corriendo después del
+> 503; medido con control: 7 tardíos con Redis caído y un TOMAR completado a
+> +13 s más un LIBERAR con Redis colgado, contra 0 y 0). Identidad del Home
+> 16/16, umbrales dentro, criterios 4-9 verdes en el banco. NO mergeada, NO
+> pusheada, NO desplegada, pendiente de auditoría FINAL. Kill switch
 > `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
 >
 > Issue que ataca: **#19**. Lo que NO toca: CDN y límites por ruta (Etapa 4),
@@ -5319,7 +5326,12 @@ globales (S5) contra 872 sin pausa. Commits de esta tanda: `69f182f`
 - **Pendiente:** nueva auditoría de Codex; merge, push y deploy sólo con
   autorización del dueño.
 
-## 55. Corrección de §54 tras la auditoría sobre `d322282` — el tope de lectura con pausa local CANCELA el trabajo, no sólo ignora el resultado — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría final** (2026-09-18)
+## 55. Corrección de §54 tras la auditoría sobre `d322282` — el tope de lectura con pausa local CANCELA el trabajo, no sólo ignora el resultado — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` (`1403ae4`); VIGENTE para el MGET; la READQUISICIÓN la corrige §56; NO mergeada, NO pusheada, NO desplegada** (2026-09-18)
+
+> **§56 completa esto:** §55 corrigió las LECTURAS (MGET) con pausa local y
+> eso queda vigente. La readquisición tras el sueño de una pausa corta seguía
+> siendo `tomar()` por el cliente principal con una carrera local: la corrige
+> §56 con la misma idea (cliente acotado + plazo compartido).
 
 Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `d322282`,
 árbol limpio, fork `37d4707` = `origin/main`. Ninguna prueba usó Producción ni
@@ -5463,5 +5475,192 @@ lectura es idéntico al final. Commits: `f8769e1` (lector acotado + banco),
   lectura—; no se midió esa variante en el banco.
 - **Desconocido:** sin cambios respecto de §54.7 (`DBSIZE` 802 → 90; cadencia y
   `Retry-After` reales de TMDB).
+- **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
+  del dueño.
+
+## 56. Corrección de §55 tras la auditoría sobre `1403ae4` — la READQUISICIÓN tras la pausa corta es una operación lógica con plazo compartido, no una carrera — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría final** (2026-09-19)
+
+Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `1403ae4`,
+árbol limpio, fork `37d4707` = `origin/main`; los únicos archivos ajenos son
+los del worktree principal (`feat/salas`), que no se tocan. Ninguna prueba usó
+Producción ni sus credenciales, no se provocó ningún 429 real ni se vació una
+caché externa: unit tests con reloj virtual y el banco aislado (dobles).
+
+**Dos defectos distintos, dos correcciones distintas.** §55 corrigió el **MGET**
+de las lecturas con pausa local (lector acotado `leerAcotadasHome`): eso quedó
+bien y no se toca. Lo que §55 NO cubría es la **readquisición** tras el sueño
+de una pausa corta: `tomar()` por el cliente principal (6 intentos, 4,3 s de
+backoff por comando) y una carrera local (`Promise.race`) con `T_ADQ_MAX`. El
+banco no lo veía porque S4b usa `Retry-After: 20` (> `ESPERA_PAUSA_MAX`): el
+pedido responde sin dormir ni readquirir.
+
+### 56.1 RED (visto fallar sobre `1403ae4`, `lib/home-servir.test.ts`)
+
+Un doble del cliente de Redis PARA EL TURNO (`clienteTurnoDoble`): la política
+del principal (reintentos + backoff exponencial del SDK) o la del acotado (un
+intento, señal leída al empezar cada comando como el `signal` como función del
+SDK 1.38.0: si aborta, lanza y no reintenta). Pausa local y compartida de 2 s,
+lecturas iniciales por el lector acotado, un sueño, readquisición real,
+observación de 10 s tras el 503:
+
+- **Redis CAÍDO:** `comandos del turno DESPUÉS de responder: ["TOMAR@+2289",
+  "GET@+2289", "GET@+2339", "GET@+2475", "GET@+2844", "GET@+3848",
+  "GET@+6578"]` — el sexto intento del TOMAR y los seis del GET de
+  reconciliación, hasta 6,6 s después del 503.
+- **Redis COLGADO que responde tarde (6 s):** `queda un comando del turno en
+  vuelo` a los 10 s: el TOMAR llegó a los 6 s, adquirió (la pausa ya había
+  vencido), la carrera disparó un **LIBERAR tardío** que a su vez colgó; y
+  `anotar` del wrapper de `tomar` tocó las métricas de una solicitud ya
+  cerrada.
+
+Los dos fijan además: `enVuelo() === 0`, ningún comando con `t > tRespuesta`,
+JSON de métricas idéntico, 0 `unhandledRejection`.
+
+### 56.2 GREEN
+
+- **`lib/plazo-redis.ts`** (puro): `conPlazoRedis(senal, fn)` /
+  `plazoRedisActual()` por AsyncLocalStorage, como la señal de la solicitud.
+- **`lib/cache.ts`**: el cliente acotado `redisLector` (uno por proceso,
+  `retry: { retries: 0 }`) ahora tiene `signal: () => plazoRedisActual() ??
+  AbortSignal.timeout(TIMEOUT_LECTURA_MS)`: dentro de `conPlazoRedis` todos los
+  comandos comparten UN plazo; fuera, la señal nueva de 1 s por petición de
+  siempre (PTTL del lector, `leerAcotadasHome`). `opsTurnoAcotadoHome` = las
+  mismas primitivas del turno por ese cliente (memoria: el mismo Map).
+  **Comentario corregido (punto 8):** con `signal` como función, una señal
+  abortada hace que `request()` LANCE sin reintentar; el `200` sintético
+  `{ result: "Aborted" }` existe sólo con una señal ESTÁTICA, que este módulo no
+  usa. Los comentarios de `lib/turno.ts`, `lib/tmdb-pausa.ts` y
+  `lib/pausa-salud.ts` que presentaban ese `"Aborted"` como el caso esperado
+  quedaron igual corregidos (la validación de forma es defensa en profundidad).
+- **`lib/turno.ts`**: `tomar(p, { senal })`. La secuencia es la misma —TOMAR
+  atómico con la pausa adentro, reconciliación GET, un segundo intento acotado a
+  uno—; con señal, una primitiva fallida con el plazo vencido es
+  **`indeterminado`** (nuevo estado de `ResultadoTomar`) y no se emite ningún
+  comando más. Sin señal, exactamente lo de antes (el camino sano).
+- **`lib/home-servir.ts`**: `DepsServir.tomarAcotado(p, senal)` (obligatoria).
+  La readquisición crea `plazoAdq` (una señal que vence a los `T_ADQ_MAX` con
+  el reloj inyectable; el temporizador se apaga si Redis respondió antes) y
+  llama `deps.tomarAcotado(...)`; `indeterminado` → 503 `pausa-indeterminada`
+  con el `Retry-After` de §43.5; `sin-redis` con la pausa local vigente →
+  `pausado`; el resto como antes (`pausado` → 503, `sin-redis` → el degradado
+  de §43.3, `adquirido` → componer si cabe, `ocupado` → espera compartida).
+  **Sin `Promise.race`, sin `vencioTimeout`, sin LIBERAR tardío.**
+- **`lib/home.ts`**: `turnoAcotadoHome = crearTurno(opsTurnoAcotadoHome,
+  CFG_TURNO)` (la MISMA configuración de pausa que el turno principal) y
+  `tomarAcotado: (p, senal) => conPlazoRedis(senal, () =>
+  turnoAcotadoHome.tomar(p, { senal }))`.
+- **Lo que se conserva (punto 4):** el TOMAR atómico que consulta la pausa
+  (mismo script, misma `CFG_TURNO`); la reconciliación segura cuando entra en
+  el plazo (test: el TOMAR aplica y su respuesta se pierde, el GET llega a
+  tiempo → `reconciliado`, compone y publica; dos comandos, ninguno después);
+  fencing y TTL como recuperación; máximo una readquisición (el sueño sigue
+  siendo uno y `tomarAcotado` se llama una vez); cero comandos atribuibles a la
+  solicitud después de responder.
+- **Punto 5 — adquisición aplicada sin reconciliar:** test con el TOMAR que
+  aplica en Redis y cuya respuesta nunca vuelve: `indeterminado` → 503, el
+  turno queda tomado por A con `exp = inicio + TURNO_MS` (15 s), **nadie lo
+  limpia después de responder**, a los 10 s no hubo ningún comando más; durante
+  el TTL otro pedido ve `ocupado` (espera compartida) y, vencido, B adquiere,
+  compone y publica. **Ese es el costo aceptado: hasta 15 s sin composición
+  nueva para esa combinación cuando una readquisición queda indeterminada con
+  el TOMAR aplicado** —un caso que exige que Redis reciba el comando y pierda
+  la respuesta dentro de la ventana de 2 s—, a cambio de no dejar ningún
+  comando corriendo detrás de una respuesta.
+- Tests: `home-servir` **80/80** (+5: los dos RED, TTL, reconciliación en
+  plazo, controles); mutación comprobada (la readquisición por el cliente
+  principal vuelve a fallar 7 tests); `etapa3c1-cableado` (+1 estructural: sin
+  carrera, sin liberación tardía, `deps.turno.tomar(` UNA vez —el camino sano—,
+  `tomar(p, opts)` con `indeterminado`); `home-fondo-orden`, `home-instante` y
+  `descartes-tmdb-inventario` por la dependencia nueva y el `catch` nuevo.
+- Sin cambios en `composeHome`, selección, hero, rieles, claves, TTL,
+  `VERSION_HOME` ni contrato JSON.
+
+### 56.3 Medido en el banco, con control sobre `1403ae4`
+
+`scripts/banco/etapa3c1-readquisicion.mjs` (un proceso por variante, contra
+cualquier build): TMDB en 429 total con **`Retry-After: 3`**; un primer pedido
+(n,d,m) hace que el proceso vea su 429 y registre la pausa (local 3 s;
+compartida en Redis, que todavía responde); Redis pasa a **CAÍDO** (socket
+cortado) o **COLGADO** (el doble responde 15 s tarde: modo nuevo en
+`dobles.mjs`); entra OTRO pedido (n,d) sin UB con la pausa local conocida. Los
+comandos se correlacionan **por clave (`:d,n:`) Y por propietario** (el de la
+línea `[home]`; la marca del doble guarda ahora el comando entero, porque en
+EVALSHA la primera posición es el SHA y `k` solo no atribuye un TOMAR ni un
+LIBERAR), y se observa **≥ 20 s** después de responder. Builds con el entorno
+del banco: control `1403ae4` (`xlsKiUoDpxSJtPvPod4se`) y la rama
+(`AVlfbqLiP68898ST6cp8I`).
+
+| | control `1403ae4` CAÍDO | control `1403ae4` COLGADO | corrección CAÍDO | corrección COLGADO |
+|---|---|---|---|---|
+| Respuesta | 503 `pausa-indeterminada` en 5.271 ms | 503 `pausa-indeterminada` en 5.107 ms | 200 `sin-redis` en 58.621 ms (ver abajo) | 503 `pausa-indeterminada` en 5.201 ms |
+| Sueño / lecturas acotadas | 1 / 2 | 1 / 2 | 1 / 2 | 1 / 2 |
+| Comandos del turno iniciados antes de responder | 5 TOMAR (reintentos) | 1 TOMAR | 1 TOMAR + 1 GET | 1 TOMAR |
+| … completados después de responder (o nunca) | 0 | **1** (el TOMAR, servido a **+13,0 s**, `200`, aplicó) | 0 | 0 (abortado por el plazo a los 2 s) |
+| … iniciados DESPUÉS de responder (tardíos) | **7**: TOMAR @+2,3 s y 6 GET hasta @+6,7 s | **1**: LIBERAR @+13,0 s | **0** | **0** |
+| Ventana observada | 21,2 s | 21,2 s | 21,1 s | 21,2 s |
+| Comandos de Redis de OTROS tras la respuesta (transparencia) | 103 (el primer pedido y la pausa) | 3 | 1 | 8 |
+
+Lecturas. **Control:** con Redis caído, el TOMAR sigue reintentando después
+del 503 y arrastra los seis GET de la reconciliación (hasta +6,7 s); con Redis
+colgado, el TOMAR se completa **13 s después** de responder, adquiere (la
+pausa ya venció) y dispara un LIBERAR tardío. **Corrección:** cero comandos
+después de responder en las dos variantes. Con Redis colgado el único TOMAR se
+aborta a los 2 s (marca cerrada sin status) y el pedido responde 503. Con Redis
+**caído** el TOMAR y el GET fallan en el acto → `sin-redis` → **el degradado de
+§43.3** (componer sin turno, no publicar): es la conducta diseñada para "la
+pausa venció y Redis no está", y con Redis caído esa composición es la promesa
+reducida de la Etapa 2 (58,6 s: cada lectura de caché del composer paga los
+reintentos del cliente principal ANTES de responder). El control respondía en
+5 s en ese caso sólo porque los reintentos del TOMAR tardaban más que la
+carrera; no era una propiedad de diseño. Lo que la corrección garantiza es lo
+que pedía la auditoría: nada atribuible a la solicitud corre después de la
+respuesta. Los `EVALSHA`/`EVAL`/`PTTL` que sí aparecen después son del primer
+pedido (su PAUSAR, su LIBERAR) y del lector de la pausa: otras solicitudes,
+otras claves, otro propietario.
+Archivos: `docs/medidas/2026-09-19-etapa3c1-readquisicion-control-1403ae4.json`
+y `…-readquisicion-despues.json`.
+
+**En el banco completo** (`etapa3c1-pausa.mjs`) entró el escenario **S4c**
+(pausa corta + Redis colgado) y el **criterio 9**: 503 en 5.283 ms, UN TOMAR
+abortado, 0 tardíos, 0 completados después, ventana 20,1 s, correlación por
+clave y propietario. Criterios 4-9 verdes; sobrepaso 77 (S1) / 81 (S2) / 214
+global (S5) contra 869 sin pausa.
+
+### 56.4 Controles conservados (punto 7)
+
+Pausa larga → 503 inmediato sin dormir ni readquirir (test y S1c: 121 ms);
+Redis sano tras la pausa corta → readquisición adquirida por el acotado,
+composición y publicación normales (test; S1b en el banco); sin pausa → el
+camino de siempre nunca llama a `tomarAcotado` (test; S0/S6); UB presente → UB
+en el acto sin sueño (test; S2b 220 ms). **Identidad del Home 16/16 idéntica**
+contra `37d4707` (TMDB 926 = 926 … 1082 = 1082; concurrente 2059 = 2059;
+controles de mutación verdes). **Umbrales** (3 semillas): TMDB 0 diferencia;
+Redis +27/+26/+27 (≤ 41) y +1 en fondo (≤ 3); duración mediana +0,8 % frío /
++0,7 % fondo, peor repetición +2,2 % (≤ +10 %); publicación +1 EVAL; UB −32 ms.
+
+### 56.5 Verificación final
+
+Específicas: `home-servir` 80/80, `etapa3c1-cableado`, `home-turno-cableado`,
+`home-vuelo`, `descartes-tmdb-inventario`, `turno`, `home-fondo-orden`,
+`home-instante` verdes (182/182 juntas). Suite completa **1887/1897 (10
+omitidos preexistentes) × 2**. `tsc --noEmit` 0. Build fresco controlado (0
+puertos del banco en escucha, sin variables del banco, `.next` borrado):
+**185 s, exit 0, "Compiled successfully", 0 errores, `BUILD_ID`
+`s9n3d_bG5ESPdWEDIY23i`**. `git diff --check` limpio.
+
+### 56.6 Comprobado / inferido / desconocido
+
+- **Comprobado:** RED → GREEN de los dos tests y la mutación; el comportamiento
+  del SDK 1.38.0 (`request()`: `if (signal.aborted && isSignalFunction) throw`;
+  el 200 sintético sólo en la rama de señal estática; `req.signal ??
+  this.options.signal`, así que la función del cliente rige mientras no se pase
+  una señal por comando —y no se pasa—); el trabajo residual del control y su
+  ausencia en la corrección (marcas del doble, correlación por clave y
+  propietario); identidad, umbrales y criterios 4-9.
+- **Inferido:** que AsyncLocalStorage llega hasta la llamada a `signal()` del
+  SDK en Vercel igual que en el banco (es el mismo mecanismo que ya usan la
+  señal de la solicitud y las métricas, y el banco lo ejercita con el cliente
+  real contra el doble).
+- **Desconocido:** sin cambios respecto de §54.7 y §55.6.
 - **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
   del dueño.

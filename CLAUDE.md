@@ -223,7 +223,23 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   petición, no sólo ignora su resultado**: una carrera (`Promise.race`) sobre
   el cliente principal respondía en 3 s pero dejaba el MGET y sus 6
   reintentos corriendo 20-25 s después de responder (auditoría sobre
-  `d322282`, informe §55). El pedido que entra SIN pausa con Redis caído sigue en la "promesa
+  `d322282`, informe §55). 🔴 **Y la READQUISICIÓN tras el sueño de una pausa
+  corta es UNA operación lógica con plazo compartido, no una carrera**
+  (auditoría sobre `1403ae4`, informe §56): `deps.tomarAcotado` corre el mismo
+  TOMAR atómico (pausa + SET NX, misma `CFG_TURNO`) por el cliente acotado
+  dentro de `conPlazoRedis(senal, …)` (`lib/plazo-redis.ts`: AsyncLocalStorage
+  que la función `signal` del cliente lee al empezar CADA petición), así que
+  TOMAR, el GET de reconciliación y el segundo intento comparten una señal de
+  `T_ADQ_MAX` (2 s); vencida, el comando en vuelo se aborta, no sale ninguno
+  más y el resultado es `indeterminado` → 503. **No hay liberación tardía**: si
+  el TOMAR llegó a aplicarse sin poder reconciliarse, el turno queda tomado y
+  vence por su TTL (`TURNO_MS`, 15 s) — hasta entonces los demás ven
+  `ocupado`. Con `Promise.race` el TOMAR y sus 6 reintentos, los GET y hasta
+  un LIBERAR seguían corriendo después del 503 (medido: TOMAR completado 13 s
+  después de responder). Ojo con el SDK: con `signal` como FUNCIÓN una señal
+  abortada hace que `request()` LANCE sin reintentar; el `200` sintético
+  `{ result: "Aborted" }` sólo existe con una señal ESTÁTICA, que no se usa.
+  El pedido que entra SIN pausa con Redis caído sigue en la "promesa
   reducida" de la Etapa 2 (los reintentos del SDK por cada lectura del
   caché): eso no lo cambia la pausa. Los cubos de `/api/health` viven en un
   RING de 120 slots por minuto dentro de `tmdb:cubos` (acotado: ≤ 960
