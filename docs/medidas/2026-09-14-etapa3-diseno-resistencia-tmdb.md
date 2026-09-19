@@ -73,9 +73,9 @@
 > `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`), fork de
 > `main = origin/main = b7be927`.
 >
-> **Estado vigente de la 3.c (2026-09-19, §53 + §54 + §55 + §56): la 3.c.1
+> **Estado vigente de la 3.c (2026-09-19, §53 a §57): la 3.c.1
 > "pausa compartida ante 429" —diseño §45-§52 aprobado por el dueño— está
-> IMPLEMENTADA en la rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA tres veces: tras la
+> IMPLEMENTADA en la rama `feat/etapa3c1-pausa-tmdb` y CORREGIDA cuatro veces: tras la
 > auditoría de Codex sobre `6fc63b5` (§54: lecturas acotadas con pausa local,
 > ring de cubos, un TIME por evento, tests deterministas; el Preview de la
 > precondición usó el Redis de Producción con claves prefijadas y borradas,
@@ -90,8 +90,13 @@
 > al vencer, sin LIBERAR tardío; el turno que quedara vence por TTL— en vez de
 > una carrera que dejaba TOMAR, GET y hasta un LIBERAR corriendo después del
 > 503; medido con control: 7 tardíos con Redis caído y un TOMAR completado a
-> +13 s más un LIBERAR con Redis colgado, contra 0 y 0). Identidad del Home
-> 16/16, umbrales dentro, criterios 4-9 verdes en el banco. NO mergeada, NO
+> +13 s más un LIBERAR con Redis colgado, contra 0 y 0) y tras la auditoría
+> sobre `9fd6d71` (§57: los dos caminos `sin-redis` servían el valor de
+> `producir()` sin mirar `pausada` —un Home MUTILADO por 429 salía como 200
+> con 11 elementos—; ahora la misma regla 4d' de `componer`: con UB ya leído
+> el UB, sin UB 503 `pausa` + Retry-After; un degradado ajeno a la pausa se
+> sirve como siempre; criterio 10 en el banco). Identidad del Home 16/16,
+> umbrales dentro, criterios 4-10 verdes en el banco. NO mergeada, NO
 > pusheada, NO desplegada, pendiente de auditoría FINAL. Kill switch
 > `TMDB_PAUSA_429=0`. 3.c.2 fuera de alcance.**
 >
@@ -5478,7 +5483,12 @@ lectura es idéntico al final. Commits: `f8769e1` (lector acotado + banco),
 - **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
   del dueño.
 
-## 56. Corrección de §55 tras la auditoría sobre `1403ae4` — la READQUISICIÓN tras la pausa corta es una operación lógica con plazo compartido, no una carrera — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría final** (2026-09-19)
+## 56. Corrección de §55 tras la auditoría sobre `1403ae4` — la READQUISICIÓN tras la pausa corta es una operación lógica con plazo compartido, no una carrera — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb` (`9fd6d71`); VIGENTE; el 200 mutilado que §56.3 describió como "degradado de §43.3" lo corrige §57; NO mergeada, NO pusheada, NO desplegada** (2026-09-19)
+
+> **§57 corrige de aquí:** la fila "corrección CAÍDO" de §56.3 (200
+> `sin-redis` con 11 elementos y 136 fuentes caídas, con TMDB en 429) NO era el
+> degradado de §43.3: era un Home mutilado por la pausa que los caminos
+> `sin-redis` servían sin mirar `pausada`. Hoy es 503 `pausa` (§57.3).
 
 Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `1403ae4`,
 árbol limpio, fork `37d4707` = `origin/main`; los únicos archivos ajenos son
@@ -5592,7 +5602,7 @@ del banco: control `1403ae4` (`xlsKiUoDpxSJtPvPod4se`) y la rama
 
 | | control `1403ae4` CAÍDO | control `1403ae4` COLGADO | corrección CAÍDO | corrección COLGADO |
 |---|---|---|---|---|
-| Respuesta | 503 `pausa-indeterminada` en 5.271 ms | 503 `pausa-indeterminada` en 5.107 ms | 200 `sin-redis` en 58.621 ms (ver abajo) | 503 `pausa-indeterminada` en 5.201 ms |
+| Respuesta | 503 `pausa-indeterminada` en 5.271 ms | 503 `pausa-indeterminada` en 5.107 ms | ~~200 `sin-redis` en 58.621 ms~~ — **Home mutilado servido, corregido en §57: hoy 503 `pausa`** | 503 `pausa-indeterminada` en 5.201 ms |
 | Sueño / lecturas acotadas | 1 / 2 | 1 / 2 | 1 / 2 | 1 / 2 |
 | Comandos del turno iniciados antes de responder | 5 TOMAR (reintentos) | 1 TOMAR | 1 TOMAR + 1 GET | 1 TOMAR |
 | … completados después de responder (o nunca) | 0 | **1** (el TOMAR, servido a **+13,0 s**, `200`, aplicó) | 0 | 0 (abortado por el plazo a los 2 s) |
@@ -5606,11 +5616,13 @@ colgado, el TOMAR se completa **13 s después** de responder, adquiere (la
 pausa ya venció) y dispara un LIBERAR tardío. **Corrección:** cero comandos
 después de responder en las dos variantes. Con Redis colgado el único TOMAR se
 aborta a los 2 s (marca cerrada sin status) y el pedido responde 503. Con Redis
-**caído** el TOMAR y el GET fallan en el acto → `sin-redis` → **el degradado de
-§43.3** (componer sin turno, no publicar): es la conducta diseñada para "la
-pausa venció y Redis no está", y con Redis caído esa composición es la promesa
-reducida de la Etapa 2 (58,6 s: cada lectura de caché del composer paga los
-reintentos del cliente principal ANTES de responder). El control respondía en
+**caído** el TOMAR y el GET fallan en el acto → `sin-redis` → componer sin
+turno (§43.3), y con Redis caído esa composición es la promesa reducida de la
+Etapa 2 (58,6 s: cada lectura de caché del composer paga los reintentos del
+cliente principal ANTES de responder). ~~Es la conducta diseñada~~ — **NO
+lo era del todo: con TMDB todavía en 429 la composición volvió MUTILADA
+(`pausada`) y `sin-redis` la sirvió como 200; §57 lo corrige (503 `pausa` o
+UB), sin cambiar la duración.** El control respondía en
 5 s en ese caso sólo porque los reintentos del TOMAR tardaban más que la
 carrera; no era una propiedad de diseño. Lo que la corrección garantiza es lo
 que pedía la auditoría: nada atribuible a la solicitud corre después de la
@@ -5662,5 +5674,109 @@ puertos del banco en escucha, sin variables del banco, `.next` borrado):
   señal de la solicitud y las métricas, y el banco lo ejercita con el cliente
   real contra el doble).
 - **Desconocido:** sin cambios respecto de §54.7 y §55.6.
+- **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
+  del dueño.
+
+## 57. Corrección de §56 tras la auditoría sobre `9fd6d71` — `sin-redis` nunca sirve un Home MUTILADO por la pausa — **IMPLEMENTADA en `feat/etapa3c1-pausa-tmdb`; NO mergeada, NO pusheada, NO desplegada; pendiente de auditoría final** (2026-09-19)
+
+Estado verificado antes de tocar: rama `feat/etapa3c1-pausa-tmdb` @ `9fd6d71`,
+árbol limpio. Ninguna prueba usó Producción ni provocó un 429 real.
+
+**Dos cosas que §56 mezcló y hay que separar.** "Degradado ajeno a la pausa"
+es una composición a la que se le cayó una fuente por un error de TMDB que no
+es 429 (o por Supabase): con Redis caído se sirve como siempre (§3.7), y eso
+sigue igual. "Payload mutilado por 429" es una composición con llamadas
+**rechazadas por la pausa** o con 429 propios (`producido.pausada`, o la pausa
+local vigente al volver): la regla 4d' de `componer` ya decía que **no se
+sirve** (UB o 503, nunca ENFRIAR ni PUBLICAR). Los dos caminos `sin-redis`
+—la adquisición inicial sin Redis y la readquisición tras la espera breve—
+devolvían `producir().valor` sin mirar `pausada`, y por ahí salió el **200 con
+11 elementos, `DEGRADADO (136 fuente(s), 135 descarte(s) tmdb)`, `origen
+sin-redis`, 58,6 s**, con TMDB todavía en 429, que §56.3 describió mal como
+"el degradado de §43.3". No lo era: era un Home mutilado servido.
+
+### 57.1 RED (visto fallar sobre `9fd6d71`, `lib/home-servir.test.ts`)
+
+- Readquisición `sin-redis` (Redis caído, pausa corta de 2 s que vence, un
+  sueño, TOMAR y GET fallan en el acto) y `producir` devuelve `pausada: true`
+  volviendo a registrar la pausa local (como hace `lib/tmdb.ts` con cada 429):
+  `sirvió el payload mutilado por la pausa`.
+- Adquisición inicial `sin-redis` (Redis caído, sin pausa al entrar; TMDB pasa
+  a 429 durante la composición), con UB ya leído en el MISS y sin UB: ídem.
+- Control (también RED): `fallo: true, pausada: false` se sirve como siempre;
+  y con la pausa ya vencida y `pausada: true`, 503 con `Retry-After` mínimo 1 s.
+
+### 57.2 GREEN
+
+`componerSinRedis()` en `lib/home-servir.ts`, usado por los DOS caminos:
+compone sin coordinar y, si `pausaLocal() > 0 || producido.pausada`, anota
+`cancelada` y `pausaMs` y **con UB ya leído → `servirUbPausado(ub)`
+(`ultimo-bueno-pausa`, cubo `pausadosUB`); sin UB → `servirPausa("pausa",
+max(restante, 1 s))`** (503 con `Retry-After`, cubo `pausados503`). Sin
+`pausada` y sin pausa al volver, `producido.valor` como siempre. No hay turno
+que liberar ni nada que enfriar (Redis no está), y nada se escribe. **Un
+degradado ajeno a la pausa conserva la semántica anterior** (test de
+control). Sin cambios en `composeHome`, selección, hero, rieles, claves, TTL
+ni `VERSION_HOME`. Tests: `home-servir` **83/83** (+3). El test de §56 que
+decía "el degradado de hoy" quedó reescrito: allí el productor NO estaba
+mutilado (sin `pausada`), por eso se sirve.
+
+### 57.3 Banco de readquisición, repetido (build `cMeFm3bVrLkA1BoecJ2m1`)
+
+| | `9fd6d71` CAÍDO | corrección CAÍDO | corrección COLGADO |
+|---|---|---|---|
+| Respuesta | **200, 11 elementos, `sin-redis`, 136 fuentes caídas** en 58.621 ms | **503 `pausa`, `Retry-After: 1`, 0 elementos, `CANCELADA`** en 58.552 ms | 503 `pausa-indeterminada` en 5.181 ms |
+| Composición | 1 (servida) | 1 (descartada: 135 descartes tmdb por 429) | 0 |
+| Comandos propios tras responder | 0 | 0 | 0 |
+
+**Honestamente sobre el tiempo:** la corrección evita servir el Home mutilado,
+pero **no** acorta ese pedido: sigue en 58,5 s porque la composición
+`sin-redis` con Redis caído paga los 6 reintentos del cliente principal por
+cada lectura de caché (la promesa reducida de la Etapa 2, §3.8), y recién al
+volver se decide que está mutilada. El `Retry-After` es 1 s porque la pausa
+local de 3 s ya había vencido al volver (mínimo de la regla 4d'). Reducir ese
+tiempo exigiría otra cosa (cortar la composición al primer 429 o acotar sus
+lecturas de caché), fuera de esta corrección.
+
+**En el banco completo** el primer pedido de S4b (Redis caído + 429 desde el
+inicio) cambió por la misma regla: antes **200 con 11 elementos, `origen
+sin-redis`, 190 llamadas (4 x429)** en 75,1 s; ahora **503 `pausa`,
+`CANCELADA`, 0 elementos** en 75,3 s. Entró el **criterio 10**: sobre TODAS
+las líneas terminales `[home]`/`[home-fondo]` de los procesos con la pausa
+encendida (A, B, C; D es el control con el kill switch, donde el
+degradado-propio con 429 es lo esperado), toda línea con `rechazadas > 0` o
+`x429 > 0` tiene origen `ultimo-bueno-pausa` o `vacio-pausa` (o
+`vacio-cancelada`), nunca `propia`, `degradado-propio` ni `sin-redis`.
+**Control del criterio:** la línea del S4b anterior (`origen sin-redis`, `4
+x429`) lo viola. Criterios 4-10 verdes; sobrepaso 77 (S1) / 81 (S2) / 234
+global (S5) contra 852 sin pausa.
+
+### 57.4 Conservado
+
+Trabajo residual: los RED→GREEN de §55 y §56 siguen verdes (y el test nuevo
+de la readquisición vuelve a fijar 0 comandos tras el 503 y métricas
+intactas); reconciliación en plazo y TTL (tests de §56); **identidad del Home
+16/16 idéntica** contra `37d4707`; **umbrales** (3 semillas): TMDB 0
+diferencia, Redis +29/+25/+26 (≤ 41) y +1 en fondo (≤ 3), duración mediana
+−0,8 % frío / −1,9 % fondo, peor repetición +0,7 %, publicación +1 EVAL, UB
+−1 ms; kill switch (S6: 852 llamadas, control); el contrato JSON del Home no
+cambia (los vacíos de pausa ya existían: `motivo`, `reintentarEnMs`,
+`Retry-After`).
+
+### 57.5 Verificación final
+
+`home-servir` 83/83; suite completa **1890/1900 (10 omitidos preexistentes) ×
+2**; `tsc --noEmit` 0; build fresco controlado (0 puertos del banco, sin
+variables del banco, `.next` borrado): **193 s, exit 0, "Compiled
+successfully", 0 errores, `BUILD_ID` `ecQqzUTF-JUrt-c9SXM-_`**; `git diff
+--check` limpio.
+
+### 57.6 Comprobado / inferido / desconocido
+
+- **Comprobado:** RED → GREEN; el 200 mutilado de §56.3 y del S4b anterior
+  desaparecen (503/UB); cero trabajo residual; identidad, umbrales, criterios
+  4-10.
+- **Inferido:** nada nuevo.
+- **Desconocido:** sin cambios respecto de §56.6.
 - **Pendiente:** auditoría final; merge, push y deploy sólo con autorización
   del dueño.

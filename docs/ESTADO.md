@@ -40,8 +40,16 @@
   (`TURNO_MS` 15 s); medido con control sobre `1403ae4`, Retry-After 3 s: Redis
   caído 7 comandos tardíos (TOMAR + 6 GET hasta +6,7 s) contra 0; Redis
   colgado un TOMAR completado a +13 s y un LIBERAR tardío contra 0; escenario
-  S4c y criterio 9 en el banco); NO mergeada, NO pusheada, NO desplegada;
-  PENDIENTE DE AUDITORÍA FINAL.
+  S4c y criterio 9 en el banco) y tras la auditoría sobre `9fd6d71` (informe
+  §57, 2026-09-19: los dos caminos `sin-redis` —adquisición inicial sin Redis
+  y readquisición tras la espera breve— servían `producir().valor` sin mirar
+  `pausada`, así que un Home MUTILADO por 429 salía como 200 (medido: 11
+  elementos, 136 fuentes caídas, 58,6 s); ahora `componerSinRedis` aplica la
+  regla 4d' de `componer`: con UB ya leído → UB, sin UB → 503 `pausa` +
+  Retry-After, nada escrito; un degradado AJENO a la pausa se sirve como
+  siempre; el tiempo NO cambia (58,5 s: promesa reducida de la composición
+  con Redis caído); criterio 10 en el banco); NO mergeada, NO pusheada, NO
+  desplegada; PENDIENTE DE AUDITORÍA FINAL.
   Diseño §45-§52 aprobado por el dueño el 18/09.** **Lo que
   corrigió §54 [comprobado en tests y banco]:** (1) con la pausa LOCAL
   vigente ninguna lectura de Redis espera los reintentos del SDK: lectura
@@ -67,7 +75,9 @@
   1881/1891 (10 omitidos preexistentes) ×2, `tsc` 0, build fresco controlado
   116 s exit 0 (`BUILD_ID` `ryOY8nDhnkldv8thUQ-gl`; sobre el commit final
   100 s, `fCRCsm-dcpnrTyMTs3GkT`; tras §56: suite 1887/1897 ×2, build 185 s
-  `s9n3d_bG5ESPdWEDIY23i`, identidad 16/16, umbrales dentro, criterios 4-9),
+  `s9n3d_bG5ESPdWEDIY23i`, identidad 16/16, umbrales dentro, criterios 4-9;
+  tras §57: suite 1890/1900 ×2, build 193 s `ecQqzUTF-JUrt-c9SXM-_`, identidad
+  16/16, umbrales dentro, criterios 4-10),
   `git diff --check`
   limpio, identidad 16/16, umbrales dentro, criterios 4-8 verdes. Qué hay [comprobado en Git y en el banco]: los cuatro
   scripts Lua (`lib/pausa-lua.ts`: `TOMAR` con la pausa dentro de la

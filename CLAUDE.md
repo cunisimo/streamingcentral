@@ -239,6 +239,17 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   después de responder). Ojo con el SDK: con `signal` como FUNCIÓN una señal
   abortada hace que `request()` LANCE sin reintentar; el `200` sintético
   `{ result: "Aborted" }` sólo existe con una señal ESTÁTICA, que no se usa.
+  🔴 **`sin-redis` tampoco sirve un Home MUTILADO por la pausa** (auditoría
+  sobre `9fd6d71`, informe §57): los dos caminos sin Redis —adquisición
+  inicial y readquisición tras la espera breve— pasan por `componerSinRedis`,
+  que aplica la misma regla 4d' de `componer`: si al volver la pausa local
+  rige o el productor informa `pausada` (alguna llamada rechazada por la
+  pausa, TMDB sigue en 429), con UB ya leído se sirve el UB y sin UB el 503
+  `pausa` con Retry-After; nada se escribe. Distinguir **"degradado ajeno a
+  la pausa"** (`fallo` sin `pausada`: una fuente cayó por otro error; con Redis
+  caído se sirve como siempre, §3.7) de **"payload mutilado por 429"** (nunca
+  se sirve). Lo que esto NO cambia es la duración: esa composición con Redis
+  caído sigue pagando la promesa reducida (medido: 58,5 s) antes de decidir.
   El pedido que entra SIN pausa con Redis caído sigue en la "promesa
   reducida" de la Etapa 2 (los reintentos del SDK por cada lectura del
   caché): eso no lo cambia la pausa. Los cubos de `/api/health` viven en un

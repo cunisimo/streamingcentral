@@ -1312,7 +1312,10 @@ leyendo el código.**
 > principal —que dejaba TOMAR, GET y un LIBERAR corriendo tras el 503— a una
 > operación lógica con plazo compartido por el cliente acotado, `indeterminado`
 > al vencer y el turno recuperado por TTL; medido con control: 7 tardíos y un
-> TOMAR a +13 s más LIBERAR contra 0 y 0; pendiente de auditoría FINAL). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
+> TOMAR a +13 s más LIBERAR contra 0 y 0; y por §57 tras la auditoría sobre
+> `9fd6d71`: los caminos `sin-redis` servían un Home mutilado por 429 como
+> 200; ahora UB o 503 `pausa`, sin cambiar la duración de esa composición;
+> criterio 10; pendiente de auditoría FINAL). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
 > identidad del Home antes/después 16/16 idéntica; umbrales del camino sano
 > dentro (Redis +24-28 ≤ 41, duración −1 % mediana, UB −34 ms); con 429
 > total 77 llamadas tras el primer 429 contra 858 sin pausa, nada publicado
