@@ -20,8 +20,10 @@ test("🔴 lib/home.ts resuelve el Home por servirConTurno, ya no por cachedLocI
   assert.doesNotMatch(home, /\bcachedLocIf\s*\(/, "volvió cachedLocIf: escribiría la fresca sin fencing");
   assert.doesNotMatch(home, /\bcachedIf\s*\(/);
   assert.doesNotMatch(home, /backendCache\.escribir|\bguardar\s*\(|redis\.set/, "lib/home.ts no puede escribir el Home: sólo PUBLICAR/ENFRIAR, dentro del turno");
-  // La lectura previa del vuelo sigue siendo la fresca sola (una copia).
-  assert.match(home, /leer:\s*\(clave\) => backendCache\.leer<HomePayload>\(clave\)/);
+  // La lectura previa del vuelo sigue siendo la fresca sola (una copia); desde la
+  // 3.c.1 va por el LECTOR ACOTADO (`leerAcotadasHome`, lib/cache.ts) SÓLO con
+  // la pausa local vigente.
+  assert.ok(home.includes("leer: (clave) => (pausaTmdb.vigente() > 0 ? leerAcotadasHome<HomePayload>([clave]).then((v) => v[0] ?? null) : backendCache.leer<HomePayload>(clave)),"));
 });
 
 test("🔴 lib/home.ts arma las CINCO claves con los constructores y la huella real, y la señal de la solicitud", () => {

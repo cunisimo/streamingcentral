@@ -85,7 +85,7 @@ test("🔴 una solicitud iniciada ANTES de medianoche conserva el día anterior 
   const c = clavesDelHome(instante, "d,m,n", "");
   let relojDuranteLaComposicion = ANTES;
   const valor = await servirConTurno<{ de: string }>({
-    claves: c, propietario: "A", dia: c.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, turno: w.turno,
+    claves: c, propietario: "A", dia: c.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, leerAcotada: w.leer, turno: w.turno, tomarAcotado: (p, senal) => w.turno.tomar(p, { senal }),
     producir: async () => { relojDuranteLaComposicion = DESPUES; return { valor: { de: "A" }, fallo: false }; },
     vacio: () => ({ de: "vacio" }),
   });
@@ -106,7 +106,7 @@ test("🔴 una solicitud iniciada DESPUÉS usa coherentemente el nuevo día: otr
   assert.notEqual(hoy.degradado, ayer.degradado);
   assert.equal(hoy.ub, ayer.ub, "el UB no lleva semilla: sobrevive a la medianoche");
   assert.equal(hoy.gen, ayer.gen);
-  await servirConTurno<{ de: string }>({ claves: hoy, propietario: "B", dia: hoy.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, turno: w.turno, producir: async () => ({ valor: { de: "B" }, fallo: false }), vacio: () => ({ de: "vacio" }) });
+  await servirConTurno<{ de: string }>({ claves: hoy, propietario: "B", dia: hoy.dia, ttl: { fresca: 60, ub: 60 }, leer: w.leer, leerAcotada: w.leer, turno: w.turno, tomarAcotado: (p, senal) => w.turno.tomar(p, { senal }), producir: async () => ({ valor: { de: "B" }, fallo: false }), vacio: () => ({ de: "vacio" }) });
   assert.equal(w.vivo(hoy.gen), "2026-09-14:B");
   // E-medianoche del banco, en puro: el propietario viejo termina después y no pisa el UB ni la gen nuevos.
   const r = await w.turno.publicar({ claves: { turno: ayer.turno, fresca: ayer.fresca, ub: ayer.ub, gen: ayer.gen }, propietario: "A", payload: '{"de":"A"}', ttlFresca: 60, ttlUb: 60, dia: ayer.dia });
@@ -138,7 +138,8 @@ test("🔴 lib/home.ts captura UN instante por solicitud y deriva de él las cla
   assert.equal((home.match(/\binstanteHome\(\)/g) ?? []).length, 1, "tiene que haber exactamente una lectura del reloj por solicitud");
   assert.match(home, /const instante = instanteHome\(\);\s*return clavesDelHome\(instante, /, "las cinco claves no salen del instante capturado");
   assert.match(home, /const claves = clavesDeLaSolicitud\(providers, types\);\s*const key = claves\.fresca;/, "la clave de coordinación no es la fresca del instante");
-  assert.match(home, /servirHome\(claves\.fresca, producirHome, claves\)/, "la clave de coordinación tiene que ser exactamente claves.fresca");
+  assert.match(home, /servirHome\(claves\.fresca, producirHome, contexto\)/, "la clave de coordinación tiene que ser exactamente claves.fresca");
+  assert.ok(home.includes("const contexto: ContextoHome = { ...claves, inicioRuta: inicio, plazo: inicio + CONSTANTES.PRESUPUESTO_REQUEST_MS };"), "el contexto son las cinco claves del instante más el plazo y el inicio de la ruta (3.c.1)");
   assert.match(home, /dia: claves\.dia/, "el día del contexto tiene que ser el del instante");
   assert.doesNotMatch(home, /dia: hoyAR\(\)/, "el resolver vuelve a leer el reloj");
   assert.doesNotMatch(home, /function homeKey\(/, "queda un camino separado para la clave fresca");

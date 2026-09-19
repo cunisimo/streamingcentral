@@ -180,6 +180,82 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   retoma. Kill switch **`HOME_UB_PRIMERO=0`**: vuelve al camino de siempre sin
   tocar código, pero **cambiar una variable en Vercel se aplica recién en el
   siguiente deployment**.
+- **Pausa compartida ante 429 (Etapa 3.c.1, `lib/tmdb-pausa.ts` +
+  `lib/pausa-lua.ts`; en rama, pendiente de auditoría — ver `docs/ESTADO.md`).**
+  Hoy un 429 de TMDB no frena nada: medido, un proceso emite 750-778
+  llamadas más en 3,4-4,4 s después del primero. Con la pausa, DOS niveles
+  que no tocan qué pide el Home ni en qué orden. **Nivel 1, local:** el
+  primer 429 fija `pausaLocalHasta` en memoria (su `Retry-After`, 5 s por
+  defecto, tope 60 s); desde ahí las llamadas que esperan el semáforo de
+  `lib/tmdb.ts` no salen (`ErrorTmdb` clase `rechazada`, métrica
+  `rechazadas`), las en vuelo terminan solas. **Nivel 2, compartido:** el
+  mismo 429 escribe `tmdb:pausa` en Redis con el script `PAUSAR`,
+  idempotente por evento (`<uuid>:<contador>`: un reintento del SDK nunca
+  alarga; un evento nuevo que termina más tarde sí), con marcador de 120 s y
+  marca de agua por proceso; y un LECTOR relee `PTTL tmdb:pausa` a lo sumo
+  una vez por segundo, una lectura en vuelo, con un cliente de Redis aparte
+  (timeout 1 s, sin reintentos) y un fallo → 30 s sin leer. **La adquisición
+  del turno del Home es el script `TOMAR`**: comprueba la pausa y hace el
+  `SET NX` en una operación, así no existe instante entre "leer la pausa" y
+  "adquirir". Qué ve el usuario (`lib/home-servir.ts`): con último bueno, el
+  UB en el acto y sin reconstruir (`ultimo-bueno-pausa`); sin UB, UN solo
+  sueño de lo que resta (tope 5 s) y UNA readquisición, y si la pausa sigue,
+  **503 + `Retry-After`** (`lib/home-http.ts`: el mismo contrato que las
+  fichas), nunca 50 s ni un 200 vacío. Una composición que la pausa cortó se
+  **cancela** (LIBERAR), nunca se enfría ni se publica: un Home mutilado por
+  un 429 no se guarda. Los plazos son ABSOLUTOS desde el inicio real de la
+  ruta (`plazo` nace con la señal, antes de la lectura previa); el fondo
+  vive hasta `min(inicioFondo + 50 s, inicioRuta + 55 s)`, después del plazo
+  no se inicia TMDB, Supabase, RENOVAR, ENFRIAR ni PUBLICAR, y la única
+  limpieza es UN `LIBERAR` estrictamente antes de `maxDuration`; si no puede,
+  el turno vence por TTL (15 s desde la última renovación APLICADA en Redis —
+  entre el envío y la respuesta, el cliente no sabe el restante exacto).
+  `/api/health` expone `pausa` con SÓLO agregados (60 min): `pausas > 0`
+  con `429 = 0` es imposible por construcción y delata un bug (rollback).
+  Kill switch **`TMDB_PAUSA_429=0`**: apaga los dos niveles y `TOMAR` vuelve
+  al `SET NX`; como toda variable de Vercel, en el deployment siguiente.
+  ⚠️ **Con Redis caído** la pausa local rige igual (nunca se compone contra
+  TMDB con ella vigente) y el pedido NO espera los reintentos del SDK: con la
+  pausa local vigente, la lectura previa, la fresca y el UB se leen por el
+  LECTOR ACOTADO (`leerAcotadasHome` en `lib/cache.ts`: el cliente
+  `redisLector`, uno por proceso, `retries: 0` y señal de 1 s por petición)
+  y no se toma el turno — medido: 503 en ≈ 3 s. 🔴 **El tope CANCELA la
+  petición, no sólo ignora su resultado**: una carrera (`Promise.race`) sobre
+  el cliente principal respondía en 3 s pero dejaba el MGET y sus 6
+  reintentos corriendo 20-25 s después de responder (auditoría sobre
+  `d322282`, informe §55). 🔴 **Y la READQUISICIÓN tras el sueño de una pausa
+  corta es UNA operación lógica con plazo compartido, no una carrera**
+  (auditoría sobre `1403ae4`, informe §56): `deps.tomarAcotado` corre el mismo
+  TOMAR atómico (pausa + SET NX, misma `CFG_TURNO`) por el cliente acotado
+  dentro de `conPlazoRedis(senal, …)` (`lib/plazo-redis.ts`: AsyncLocalStorage
+  que la función `signal` del cliente lee al empezar CADA petición), así que
+  TOMAR, el GET de reconciliación y el segundo intento comparten una señal de
+  `T_ADQ_MAX` (2 s); vencida, el comando en vuelo se aborta, no sale ninguno
+  más y el resultado es `indeterminado` → 503. **No hay liberación tardía**: si
+  el TOMAR llegó a aplicarse sin poder reconciliarse, el turno queda tomado y
+  vence por su TTL (`TURNO_MS`, 15 s) — hasta entonces los demás ven
+  `ocupado`. Con `Promise.race` el TOMAR y sus 6 reintentos, los GET y hasta
+  un LIBERAR seguían corriendo después del 503 (medido: TOMAR completado 13 s
+  después de responder). Ojo con el SDK: con `signal` como FUNCIÓN una señal
+  abortada hace que `request()` LANCE sin reintentar; el `200` sintético
+  `{ result: "Aborted" }` sólo existe con una señal ESTÁTICA, que no se usa.
+  🔴 **`sin-redis` tampoco sirve un Home MUTILADO por la pausa** (auditoría
+  sobre `9fd6d71`, informe §57): los dos caminos sin Redis —adquisición
+  inicial y readquisición tras la espera breve— pasan por `componerSinRedis`,
+  que aplica la misma regla 4d' de `componer`: si al volver la pausa local
+  rige o el productor informa `pausada` (alguna llamada rechazada por la
+  pausa, TMDB sigue en 429), con UB ya leído se sirve el UB y sin UB el 503
+  `pausa` con Retry-After; nada se escribe. Distinguir **"degradado ajeno a
+  la pausa"** (`fallo` sin `pausada`: una fuente cayó por otro error; con Redis
+  caído se sirve como siempre, §3.7) de **"payload mutilado por 429"** (nunca
+  se sirve). Lo que esto NO cambia es la duración: esa composición con Redis
+  caído sigue pagando la promesa reducida (medido: 58,5 s) antes de decidir.
+  El pedido que entra SIN pausa con Redis caído sigue en la "promesa
+  reducida" de la Etapa 2 (los reintentos del SDK por cada lectura del
+  caché): eso no lo cambia la pausa. Los cubos de `/api/health` viven en un
+  RING de 120 slots por minuto dentro de `tmdb:cubos` (acotado: ≤ 960
+  campos), y PAUSAR lee `TIME` UNA vez por evento para que `429` y `pausas`
+  nunca caigan en minutos distintos.
 - **El idioma de los títulos sale de una variable, y la configuración va DENTRO
   de la clave de cache** (`lib/idioma.ts` → `HUELLA_IDIOMA`, `lib/claves.ts`).
   `IDIOMA_TITULOS` decide el idioma base (default `es-ES`) y `FALLBACK_IDIOMA`

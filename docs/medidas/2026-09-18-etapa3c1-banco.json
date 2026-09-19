@@ -1,0 +1,423 @@
+{
+  "fecha": "2026-09-19T14:17:45.324Z",
+  "rama": "feat/etapa3c1-pausa-tmdb",
+  "dir": ".",
+  "lineaBase": "§44.3: 750-778 llamadas tras el primer 429 en 3,4-4,4 s, pico 224-252/s (sin pausa)",
+  "escenarios": {
+    "S0-sano-frio": {
+      "status": 200,
+      "msPared": 30813,
+      "contenido": 18,
+      "linea": "[home] 30724ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 5 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:1 | ult. renovacion +25729..+25760ms | tmdb 926 llamad",
+      "publicacion": "publicado",
+      "rechazadas": 0,
+      "pausaRedis": {
+        "TOMAR": 1,
+        "PAUSAR": 0,
+        "CUBO": 0,
+        "SALUD": 0,
+        "pausados": 0,
+        "pttl": -2,
+        "cubos": {}
+      },
+      "frescaEscrita": true
+    },
+    "S1-429-total-sin-UB": {
+      "status": 503,
+      "retryAfter": "1",
+      "motivo": "pausa",
+      "error": "tmdb-no-disponible",
+      "reintentarEnMs": 1000,
+      "contenido": 0,
+      "msPared": 8152,
+      "linea": "[home] 8115ms total | cache VACIO | 1 composición | 0 esperas compartidas | DEGRADADO (0 fuente(s), 827 descarte(s) tmdb) | turno adquirido | origen vacio-pausa | publicacion no | renovaciones 1 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:2 | CANCELADA | PAUSA 620ms | ult. renovacion +5",
+      "liberacion": null,
+      "rechazadas": 787,
+      "x429": 40,
+      "pausaLog": [
+        "[tmdb] pausa 93c7f223-4c1b-4a1e-a58f-234375783bce:1 2000ms: escrito (compartida 2000ms)",
+        "[tmdb] pausa 93c7f223-4c1b-4a1e-a58f-234375783bce:2 2000ms: escrito (compartida 2000ms)"
+      ],
+      "sobrepaso": {
+        "antesDel429": 185,
+        "primer429": 1789827506951,
+        "tras429": {
+          "total": 77,
+          "en1s": 53,
+          "en2s": 53,
+          "en5s": 77,
+          "spanMs": 3392,
+          "picoPor1s": 53,
+          "picoPor100ms": 24
+        }
+      },
+      "frescaEscrita": false,
+      "ubEscrito": false,
+      "degradadoEscrito": false,
+      "turnoVivo": false,
+      "pausaRedis": {
+        "TOMAR": 1,
+        "PAUSAR": 7,
+        "CUBO": 0,
+        "SALUD": 0,
+        "pausados": 0,
+        "pttl": 488,
+        "cubos": {
+          "18:m": "29830458",
+          "18:429": "7",
+          "18:pausas": "7"
+        }
+      }
+    },
+    "S1b-pedido-durante-la-pausa-sin-UB": {
+      "status": 200,
+      "msPared": 29309,
+      "contenido": 18,
+      "linea": "[home] 29284ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 5 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:3 | PAUSA 417ms | espera pausa 333ms | 2 lectura(s) acotada(s) | ult. renovacion +25939..+2602",
+      "esperaPausaMs": 333,
+      "pausaMs": 417
+    },
+    "S1c-pausa-larga-sin-UB-503-inmediato": {
+      "status": 503,
+      "retryAfter": "8",
+      "reintentarEnMs": 7765,
+      "msPared": 246,
+      "contenido": 0,
+      "linea": "[home] 241ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno pausado | origen vacio-pausa | publicacion no | renovaciones 0 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:5 | PAUSA 7939ms | 2 lectura(s)",
+      "esperaPausaMs": 0,
+      "pausaMs": 7939
+    },
+    "S2-429-total-con-UB": {
+      "status": 200,
+      "msPared": 276,
+      "contenido": 18,
+      "ubIgual": true,
+      "lineaHome": "[home] 265ms total | cache ULTIMO-BUENO | 0 composiciones | 0 esperas compartidas | turno adquirido | origen ultimo-bueno-fondo | publicacion no | renovaciones 0 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:7",
+      "lineaFondo": "[home-fondo] 7347ms total | cache ULTIMO-BUENO | 1 composición | 0 esperas compartidas | DEGRADADO (894 fuente(s), 894 descarte(s) tmdb) | turno adquirido | origen ultimo-bueno-pausa | publicacion no | renovaciones 1 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:7 | CANCELADA | PAUSA 747ms | ult. renovacion ",
+      "fondoCancelado": true,
+      "fondoPublicacion": "no",
+      "liberacion": null,
+      "sobrepaso": {
+        "antesDel429": 160,
+        "primer429": 1789827595359,
+        "tras429": {
+          "total": 81,
+          "en1s": 57,
+          "en2s": 57,
+          "en5s": 81,
+          "spanMs": 3726,
+          "picoPor1s": 57,
+          "picoPor100ms": 24
+        }
+      },
+      "frescaEscrita": false,
+      "degradadoEscrito": false
+    },
+    "S2b-pedido-durante-la-pausa-con-UB": {
+      "status": 200,
+      "msPared": 145,
+      "contenido": 18,
+      "ubIgual": true,
+      "linea": "[home] 139ms total | cache ULTIMO-BUENO | 0 composiciones | 0 esperas compartidas | turno pausado | origen ultimo-bueno-pausa | publicacion no | renovaciones 0 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:8 | PAUSA 495ms | 2 lectura(s) acotada(s) |",
+      "compone": 0
+    },
+    "S3-propagacion-tres-procesos": {
+      "A": {
+        "status": 503,
+        "motivo": "pausa",
+        "rechazadas": 270,
+        "x429": 11,
+        "pausaLog": 9,
+        "linea": "[home] 3174ms total | cache VACIO | 1 composición | 0 esperas compartidas | DEGRADADO (0 fuente(s), 281 descarte(s) tmdb) | turno adquirido | origen vacio-pausa | publicacion no | renovaciones 0 | pro"
+      },
+      "B": {
+        "status": 503,
+        "motivo": "pausa",
+        "msPared": 18239,
+        "rechazadas": 531,
+        "x429": 0,
+        "pausaLog": 0,
+        "linea": "[home] 18190ms total | cache VACIO | 1 composición | 0 esperas compartidas | DEGRADADO (0 fuente(s), 531 descarte(s) tmdb) | turno adquirido | origen vacio-pausa | publicacion no | renovaciones 3 | propietario ecfed6ba-bbd2-475d-a012-627ef4d25813:16132:1 | CAN"
+      },
+      "C": {
+        "status": 200,
+        "motivo": null,
+        "msPared": 30250,
+        "contenido": 18,
+        "x429": 0,
+        "pausaMs": 843,
+        "esperaPausaMs": 958,
+        "linea": "[home] 30220ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 5 | propietario d944c5f7-17ea-4a3e-8bf9-aef0570d7b53:20412:1 | PAUSA 843ms | espera pausa 958ms | ult. renovacion"
+      },
+      "sobrepasoGlobal": {
+        "antesDel429": 112,
+        "primer429": 1789827605309,
+        "tras429": {
+          "total": 1085,
+          "en1s": 53,
+          "en2s": 53,
+          "en5s": 142,
+          "spanMs": 32349,
+          "picoPor1s": 117,
+          "picoPor100ms": 49
+        }
+      },
+      "lecturasPTTL": 38,
+      "pausaRedis": {
+        "TOMAR": 4,
+        "PAUSAR": 9,
+        "CUBO": 2,
+        "SALUD": 0,
+        "pausados": 1,
+        "pttl": -2,
+        "cubos": {
+          "20:m": "29830460",
+          "20:429": "9",
+          "20:pausas": "9",
+          "20:pausados503": "2"
+        }
+      }
+    },
+    "S4a-redis-lento-300ms-con-429": {
+      "status": 503,
+      "motivo": "pausa",
+      "msPared": 24981,
+      "linea": "[home] 24975ms total | cache VACIO | 1 composición | 0 esperas compartidas | DEGRADADO (0 fuente(s), 1079 descarte(s) tmdb) | turno adquirido | origen vacio-pausa | publicacion no | renovaciones 4 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:10 | C",
+      "lecturasPTTL": 10,
+      "sobrepaso": {
+        "total": 224,
+        "en1s": 56,
+        "en2s": 56,
+        "en5s": 80,
+        "spanMs": 21106,
+        "picoPor1s": 56,
+        "picoPor100ms": 24
+      }
+    },
+    "S4b-redis-caido-con-429": {
+      "primero": {
+        "status": 503,
+        "motivo": "pausa",
+        "contenido": 0,
+        "msPared": 75278,
+        "linea": "[home] 75271ms total | cache VACIO | 1 composición | 0 esperas compartidas | DEGRADADO (0 fuente(s), 190 descarte(s) tmdb) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:11 | CANCELADA | tmdb 190 llamadas (0 ok, 4 x42"
+      },
+      "duranteLaPausaLocal": {
+        "pausaConocidaAlPedir": true,
+        "status": 503,
+        "motivo": "pausa",
+        "contenido": 0,
+        "msPared": 146,
+        "compone": 0,
+        "composiciones": 0,
+        "pausaMs": 19856,
+        "lecturasAcotadas": 2,
+        "linea": "[home] 142ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno pausado | origen vacio-pausa | publicacion no | renovaciones 0 | propietario 2cc68dd0-a1cd-43af-8b2a-aa9c47c0fb6e:19884:12 | PAUSA 19856ms | 2 lectura(s) acotada(s) | tmdb 0 llamadas (0 ok) 0",
+        "residual": {
+          "ventanaMs": 54704,
+          "iniciadasAntesDeResponder": 3,
+          "completadasAntes": 3,
+          "completadasDespues": 0,
+          "tardias": 0,
+          "tardiasMsTrasRespuesta": [],
+          "porComando": {
+            "MGET": 3
+          }
+        }
+      },
+      "marcasRedisTrasCaida": 153,
+      "porComandoTrasCaida": {
+        "MGET": 81,
+        "EVALSHA": 41,
+        "GET": 6,
+        "PTTL": 1,
+        "SET": 24
+      },
+      "lecturasPTTLTrasCaida": 1
+    },
+    "S4c-readquisicion-redis-colgado-pausa-corta": {
+      "pausaConocidaAlPedir": true,
+      "status": 503,
+      "motivo": "pausa-indeterminada",
+      "contenido": 0,
+      "msPared": 5099,
+      "durmio": true,
+      "propietario": "ecfed6ba-bbd2-475d-a012-627ef4d25813:16132:3",
+      "residual": {
+        "ventanaMs": 20165,
+        "iniciadasAntesDeResponder": 4,
+        "completadasAntes": 4,
+        "completadasDespues": 0,
+        "tardias": 0,
+        "tardiasMsTrasRespuesta": [],
+        "porComando": {
+          "MGET": 3,
+          "EVALSHA": 1
+        }
+      },
+      "linea": "[home] 5093ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario ecfed6ba-bbd2-475d-a012-627ef4d25813:16132:3 | PAUSA 1959ms | espera pausa 55ms | 2 lectura(s) acotada(s) | tmd"
+    },
+    "S5-tres-procesos-frios-429-total": {
+      "status": [
+        503,
+        503,
+        503
+      ],
+      "motivos": [
+        "pausa",
+        "pausa",
+        "pausa"
+      ],
+      "sobrepasoGlobal": {
+        "antesDel429": 399,
+        "primer429": 1789827805925,
+        "tras429": {
+          "total": 234,
+          "en1s": 163,
+          "en2s": 163,
+          "en5s": 234,
+          "spanMs": 4019,
+          "picoPor1s": 163,
+          "picoPor100ms": 30
+        }
+      },
+      "frescaEscrita": false,
+      "degradadoEscrito": false,
+      "salud": {
+        "pausaVigenteMs": 457,
+        "ultimos60min": {
+          "429": 32,
+          "pausas": 28,
+          "yaMayor": 4,
+          "yaAplicada": 0,
+          "pausaNoLeida": 0,
+          "pausadosUB": 0,
+          "pausados503": 3
+        }
+      }
+    },
+    "S6-CONTROL-kill-switch-apagado": {
+      "status": 200,
+      "contenido": 17,
+      "motivo": null,
+      "linea": "[home] 9070ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (812 fuente(s), 812 descarte(s) tmdb) | turno adquirido | origen degradado-propio | publicacion no | renovaciones 1 | propietario 573ee28c-2261-4710-b5d5-b63e9a07b44f:20072:1 ",
+      "sobrepaso": {
+        "antesDel429": 185,
+        "primer429": 1789827817324,
+        "tras429": {
+          "total": 852,
+          "en1s": 53,
+          "en2s": 152,
+          "en5s": 656,
+          "spanMs": 5978,
+          "picoPor1s": 224,
+          "picoPor100ms": 56
+        }
+      },
+      "degradadoEscrito": true,
+      "pausaRedis": -2
+    },
+    "health": {
+      "pausa": {
+        "pausaVigenteMs": 0,
+        "ultimos60min": {
+          "429": 0,
+          "pausas": 0,
+          "yaMayor": 0,
+          "yaAplicada": 0,
+          "pausaNoLeida": 0,
+          "pausadosUB": 0,
+          "pausados503": 0
+        }
+      },
+      "sinDatosPrivados": true
+    }
+  },
+  "criterios": {
+    "10-nunca-se-sirve-un-Home-mutilado-por-la-pausa": {
+      "ok": true,
+      "mutiladasServidas": [],
+      "detalle": "toda línea terminal con rechazadas > 0 o x429 > 0 (procesos con la pausa encendida) tiene origen ultimo-bueno-pausa o vacio-pausa; nunca propia, degradado-propio ni sin-redis"
+    },
+    "4-429-nunca-publica-un-Home-mutilado": {
+      "ok": true,
+      "detalle": "fresca/degradado en Redis tras un 429 total (S1, S2, S5)"
+    },
+    "5-con-UB-inmediato": {
+      "ok": true,
+      "msPared": [
+        276,
+        145
+      ]
+    },
+    "6-sin-UB-nunca-50s-ni-200-vacio": {
+      "ok": true,
+      "msPared": [
+        8152,
+        29309,
+        246
+      ]
+    },
+    "7-redis-lento-caido-sin-tormenta": {
+      "ok": true,
+      "limiteLocalMs": 4000,
+      "msParedPausaLocal": 146,
+      "lecturas": [
+        10,
+        1
+      ],
+      "porComando": {
+        "MGET": 81,
+        "EVALSHA": 41,
+        "GET": 6,
+        "PTTL": 1,
+        "SET": 24
+      },
+      "nota": "la duración del primer pedido con Redis caído es la promesa reducida de la Etapa 2 (reintentos del SDK por lectura), no la 3.c.1"
+    },
+    "9-readquisicion-sin-trabajo-residual": {
+      "ok": true,
+      "residual": {
+        "ventanaMs": 20165,
+        "iniciadasAntesDeResponder": 4,
+        "completadasAntes": 4,
+        "completadasDespues": 0,
+        "tardias": 0,
+        "tardiasMsTrasRespuesta": [],
+        "porComando": {
+          "MGET": 3,
+          "EVALSHA": 1
+        }
+      },
+      "detalle": "pausa corta + Redis colgado: UN TOMAR abortado por el plazo, ningún GET/TOMAR/LIBERAR después del 503 (ventana ≥ 10 s, correlación por clave y propietario)"
+    },
+    "8-sin-trabajo-residual-tras-responder": {
+      "ok": true,
+      "residual": {
+        "ventanaMs": 54704,
+        "iniciadasAntesDeResponder": 3,
+        "completadasAntes": 3,
+        "completadasDespues": 0,
+        "tardias": 0,
+        "tardiasMsTrasRespuesta": [],
+        "porComando": {
+          "MGET": 3
+        }
+      },
+      "detalle": "comandos de Redis con las claves del pedido pausado: ninguno iniciado ni completado después del 503 (ventana ≥ 10 s)"
+    },
+    "propagacion-entre-procesos": {
+      "ok": true,
+      "detalle": "B (sin 429 propio) cortado por el lector; C (frío) pausado por TOMAR y luego compuesto"
+    },
+    "sobrepaso-vs-linea-base": {
+      "conPausa": {
+        "S1": 77,
+        "S2": 81,
+        "S5global": 234
+      },
+      "controlSinPausa": 852,
+      "lineaBase": "750-778 por proceso"
+    }
+  }
+}

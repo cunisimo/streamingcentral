@@ -1,0 +1,178 @@
+{
+  "fecha": "2026-09-19T13:28:26.564Z",
+  "dir": "D:/DESARROLLO/stream central/wt-etapa3c1-control",
+  "buildId": "xlsKiUoDpxSJtPvPod4se",
+  "retryAfterS": 3,
+  "ventanaMs": 20000,
+  "variantes": {
+    "caido": {
+      "modo": "caido",
+      "pausado": {
+        "status": 503,
+        "retryAfter": "5",
+        "msPared": 5271,
+        "tInicio": 1789824515389,
+        "tFin": 1789824520660,
+        "contenido": 0,
+        "motivo": "pausa-indeterminada",
+        "pausaConocidaAlPedir": true,
+        "msDesdeEl429": 7,
+        "propietario": "6cc70ae7-3c50-4971-8247-75a3c1760cde:19836:2",
+        "compone": 0,
+        "durmio": 1,
+        "pausaMs": 2943,
+        "esperaPausaMs": 3183,
+        "lecturasAcotadas": 2,
+        "linea": "[home] 5255ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario 6cc70ae7-3c50-4971-8247-75a3c1760cde:19836:2 | PAUSA 2943ms | espera pausa 3183ms | 2 lectura(s) acotada(s) | tmdb 0 llamadas (0 ok"
+      },
+      "residual": {
+        "ventanaMs": 21200,
+        "iniciadasAntesDeResponder": 8,
+        "completadasAntes": 8,
+        "completadasDespuesONunca": [],
+        "tardias": [
+          {
+            "c": "EVALSHA",
+            "msTrasRespuesta": 2328,
+            "status": null
+          },
+          {
+            "c": "GET",
+            "msTrasRespuesta": 2333,
+            "status": null
+          },
+          {
+            "c": "GET",
+            "msTrasRespuesta": 2390,
+            "status": null
+          },
+          {
+            "c": "GET",
+            "msTrasRespuesta": 2530,
+            "status": null
+          },
+          {
+            "c": "GET",
+            "msTrasRespuesta": 2920,
+            "status": null
+          },
+          {
+            "c": "GET",
+            "msTrasRespuesta": 3941,
+            "status": null
+          },
+          {
+            "c": "GET",
+            "msTrasRespuesta": 6676,
+            "status": null
+          }
+        ],
+        "porComando": {
+          "MGET": 3,
+          "EVALSHA": 6,
+          "GET": 6
+        },
+        "comandos": [
+          "-5234ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-5216ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-5204ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-2015ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "-1955ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "-1807ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "-1423ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "-417ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "+2328ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "+2333ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]",
+          "+2390ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]",
+          "+2530ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]",
+          "+2920ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]",
+          "+3941ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]",
+          "+6676ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]"
+        ]
+      },
+      "redisTrasLaRespuestaTodos": {
+        "total": 103,
+        "porComando": {
+          "EVALSHA": 35,
+          "MGET": 38,
+          "GET": 6,
+          "SET": 24
+        },
+        "propios": 7
+      },
+      "veredicto": {
+        "sinTrabajoResidual": false
+      },
+      "primero": {
+        "pendiente": true,
+        "nota": "no se espera: con Redis caído/colgado su composición es la promesa reducida de la Etapa 2"
+      }
+    },
+    "colgado": {
+      "modo": "colgado",
+      "pausado": {
+        "status": 503,
+        "retryAfter": "5",
+        "msPared": 5107,
+        "tInicio": 1789824548936,
+        "tFin": 1789824554043,
+        "contenido": 0,
+        "motivo": "pausa-indeterminada",
+        "pausaConocidaAlPedir": true,
+        "msDesdeEl429": 20,
+        "propietario": "0fb6bd9d-6421-415e-9c61-6f777732cd19:8028:2",
+        "compone": 0,
+        "durmio": 1,
+        "pausaMs": 1940,
+        "esperaPausaMs": 47,
+        "lecturasAcotadas": 2,
+        "linea": "[home] 5100ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario 0fb6bd9d-6421-415e-9c61-6f777732cd19:8028:2 | PAUSA 1940ms | espera pausa 47ms | 2 lectura(s) acotada(s) | tmdb 0 llamadas (0 ok) 0"
+      },
+      "residual": {
+        "ventanaMs": 21218,
+        "iniciadasAntesDeResponder": 4,
+        "completadasAntes": 3,
+        "completadasDespuesONunca": [
+          {
+            "c": "EVALSHA",
+            "msTrasRespuesta": 12999,
+            "status": 200
+          }
+        ],
+        "tardias": [
+          {
+            "c": "EVALSHA",
+            "msTrasRespuesta": 13003,
+            "status": null
+          }
+        ],
+        "porComando": {
+          "MGET": 3,
+          "EVALSHA": 2
+        },
+        "comandos": [
+          "-5094ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-4077ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-3069ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-2009ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "+13003ms EVALSHA [\"evalsha\",\"d02e481a9c91ceec59c5822a58a49d5d5d7ac80b\",1,\"home:turno:es-ES.r1:v6:2429564653"
+        ]
+      },
+      "redisTrasLaRespuestaTodos": {
+        "total": 3,
+        "porComando": {
+          "EVALSHA": 2,
+          "MGET": 1
+        },
+        "propios": 1
+      },
+      "veredicto": {
+        "sinTrabajoResidual": false
+      },
+      "primero": {
+        "pendiente": true,
+        "nota": "no se espera: con Redis caído/colgado su composición es la promesa reducida de la Etapa 2"
+      }
+    }
+  }
+}

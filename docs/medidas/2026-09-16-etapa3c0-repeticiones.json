@@ -1,0 +1,576 @@
+{
+  "fecha": "2026-09-16T21:10:27.759Z",
+  "rama": "diseno/etapa3c-proteccion-tmdb",
+  "factorP95": 1.5,
+  "redisPromedio": 40,
+  "modelos": {
+    "prod-3b": {
+      "tmdb": 348,
+      "redis": 40,
+      "supabase": 355
+    },
+    "prod-3a": {
+      "tmdb": 527,
+      "redis": 40,
+      "supabase": 604
+    }
+  },
+  "modo": "repeticiones",
+  "escenarios": {
+    "rep/semilla-11/S1-frio-total-en-linea": {
+      "semilla": 11,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 26814,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 34.5,
+        "maxPor1s": 76,
+        "concurrenciaMax": 24,
+        "redisOps": 1005,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 450,
+          "composicionMs": 25772,
+          "ultimaLlamadaMs": 462,
+          "publicacionMs": 202,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 592
+        }
+      }
+    },
+    "rep/semilla-11/CAL-342-fondo": {
+      "semilla": 11,
+      "objetivo": {
+        "llamadas": 342,
+        "ms": 16682
+      },
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 19473,
+        "tmdbLinea": 338,
+        "cadenciaLineaPorS": 17.4,
+        "maxPor1s": 59,
+        "concurrenciaMax": 24,
+        "redisOps": 404,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 325,
+          "composicionMs": 18605,
+          "ultimaLlamadaMs": 667,
+          "publicacionMs": 133,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 543
+        }
+      }
+    },
+    "rep/semilla-11/CAL-250-linea": {
+      "semilla": 11,
+      "objetivo": {
+        "llamadas": 250,
+        "ms": 15091
+      },
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 19759,
+        "tmdbLinea": 259,
+        "cadenciaLineaPorS": 13.1,
+        "maxPor1s": 45,
+        "concurrenciaMax": 24,
+        "redisOps": 325,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 303,
+          "composicionMs": 18895,
+          "ultimaLlamadaMs": 451,
+          "publicacionMs": 132,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 561
+        }
+      }
+    },
+    "rep/semilla-11/S7-miss-intradia-fondo": {
+      "semilla": 11,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 3905,
+        "tmdbLinea": 1,
+        "cadenciaLineaPorS": 0.3,
+        "maxPor1s": 1,
+        "concurrenciaMax": 1,
+        "redisOps": 64,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 364,
+          "composicionMs": 0,
+          "ultimaLlamadaMs": 291,
+          "publicacionMs": 3538,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 3541
+        }
+      }
+    },
+    "rep/semilla-11/S3-frio-total-en-fondo": {
+      "semilla": 11,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 27746,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 33.4,
+        "maxPor1s": 76,
+        "concurrenciaMax": 24,
+        "redisOps": 1003,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 363,
+          "composicionMs": 27004,
+          "ultimaLlamadaMs": 488,
+          "publicacionMs": 160,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 379
+        }
+      }
+    },
+    "rep/semilla-11/S5-tres-claves-tres-procesos": {
+      "semilla": 11,
+      "A": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 26027,
+        "tmdbLinea": 742,
+        "cadenciaLineaPorS": 28.5,
+        "maxPor1s": 218,
+        "concurrenciaMax": 72,
+        "redisOps": 2298,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 297,
+          "composicionMs": 24376,
+          "ultimaLlamadaMs": 463,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1354
+        }
+      },
+      "B": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 25235,
+        "tmdbLinea": 731,
+        "cadenciaLineaPorS": 29,
+        "maxPor1s": 218,
+        "concurrenciaMax": 72,
+        "redisOps": 2368,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 294,
+          "composicionMs": 25300,
+          "ultimaLlamadaMs": 463,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": -359
+        }
+      },
+      "C": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 24426,
+        "tmdbLinea": 711,
+        "cadenciaLineaPorS": 29.1,
+        "maxPor1s": 218,
+        "concurrenciaMax": 72,
+        "redisOps": 2295,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 292,
+          "composicionMs": 24376,
+          "ultimaLlamadaMs": 463,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": -242
+        }
+      },
+      "global": {
+        "llamadas": 2180,
+        "primera": 1789593134438,
+        "ultima": 1789593159769,
+        "ultimaFin": 1789593160201,
+        "spanMs": 25331,
+        "cadenciaPorS": 86.1,
+        "maxPor1s": 218,
+        "maxPor100ms": 64,
+        "concurrenciaMax": 72,
+        "latenciaDobleMs": {
+          "p50": 346,
+          "p95": 523
+        }
+      }
+    },
+    "rep/semilla-22/S1-frio-total-en-linea": {
+      "semilla": 22,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 27307,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 33.9,
+        "maxPor1s": 74,
+        "concurrenciaMax": 24,
+        "redisOps": 1002,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 1759,
+          "composicionMs": 26374,
+          "ultimaLlamadaMs": 510,
+          "publicacionMs": 120,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": -826
+        }
+      }
+    },
+    "rep/semilla-22/CAL-342-fondo": {
+      "semilla": 22,
+      "objetivo": {
+        "llamadas": 342,
+        "ms": 16682
+      },
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 19299,
+        "tmdbLinea": 338,
+        "cadenciaLineaPorS": 17.5,
+        "maxPor1s": 59,
+        "concurrenciaMax": 24,
+        "redisOps": 404,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 410,
+          "composicionMs": 18633,
+          "ultimaLlamadaMs": 454,
+          "publicacionMs": 150,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 256
+        }
+      }
+    },
+    "rep/semilla-22/CAL-250-linea": {
+      "semilla": 22,
+      "objetivo": {
+        "llamadas": 250,
+        "ms": 15091
+      },
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 18892,
+        "tmdbLinea": 259,
+        "cadenciaLineaPorS": 13.7,
+        "maxPor1s": 45,
+        "concurrenciaMax": 24,
+        "redisOps": 325,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 347,
+          "composicionMs": 17857,
+          "ultimaLlamadaMs": 524,
+          "publicacionMs": 167,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 688
+        }
+      }
+    },
+    "rep/semilla-22/S7-miss-intradia-fondo": {
+      "semilla": 22,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 4196,
+        "tmdbLinea": 1,
+        "cadenciaLineaPorS": 0.2,
+        "maxPor1s": 1,
+        "concurrenciaMax": 1,
+        "redisOps": 64,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 376,
+          "composicionMs": 0,
+          "ultimaLlamadaMs": 565,
+          "publicacionMs": 3549,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 3820
+        }
+      }
+    },
+    "rep/semilla-22/S3-frio-total-en-fondo": {
+      "semilla": 22,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 26965,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 34.3,
+        "maxPor1s": 80,
+        "concurrenciaMax": 24,
+        "redisOps": 1003,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 382,
+          "composicionMs": 26252,
+          "ultimaLlamadaMs": 462,
+          "publicacionMs": 141,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 331
+        }
+      }
+    },
+    "rep/semilla-22/S5-tres-claves-tres-procesos": {
+      "semilla": 22,
+      "A": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 25076,
+        "tmdbLinea": 734,
+        "cadenciaLineaPorS": 29.3,
+        "maxPor1s": 230,
+        "concurrenciaMax": 72,
+        "redisOps": 2374,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 307,
+          "composicionMs": 24498,
+          "ultimaLlamadaMs": 543,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 271
+        }
+      },
+      "B": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 25441,
+        "tmdbLinea": 670,
+        "cadenciaLineaPorS": 26.3,
+        "maxPor1s": 230,
+        "concurrenciaMax": 72,
+        "redisOps": 2375,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 307,
+          "composicionMs": 24498,
+          "ultimaLlamadaMs": 543,
+          "publicacionMs": 112,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 636
+        }
+      },
+      "C": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 24454,
+        "tmdbLinea": 729,
+        "cadenciaLineaPorS": 29.8,
+        "maxPor1s": 230,
+        "concurrenciaMax": 72,
+        "redisOps": 2367,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 306,
+          "composicionMs": 24240,
+          "ultimaLlamadaMs": 228,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": -92
+        }
+      },
+      "global": {
+        "llamadas": 2133,
+        "primera": 1789593261395,
+        "ultima": 1789593285893,
+        "ultimaFin": 1789593286436,
+        "spanMs": 24498,
+        "cadenciaPorS": 87.1,
+        "maxPor1s": 230,
+        "maxPor100ms": 70,
+        "concurrenciaMax": 72,
+        "latenciaDobleMs": {
+          "p50": 344,
+          "p95": 511
+        }
+      }
+    },
+    "rep/semilla-33/S1-frio-total-en-linea": {
+      "semilla": 33,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 27533,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 33.6,
+        "maxPor1s": 79,
+        "concurrenciaMax": 24,
+        "redisOps": 1002,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 404,
+          "composicionMs": 26655,
+          "ultimaLlamadaMs": 382,
+          "publicacionMs": 111,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 474
+        }
+      }
+    },
+    "rep/semilla-33/CAL-342-fondo": {
+      "semilla": 33,
+      "objetivo": {
+        "llamadas": 342,
+        "ms": 16682
+      },
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 19745,
+        "tmdbLinea": 338,
+        "cadenciaLineaPorS": 17.1,
+        "maxPor1s": 59,
+        "concurrenciaMax": 24,
+        "redisOps": 404,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 385,
+          "composicionMs": 19080,
+          "ultimaLlamadaMs": 435,
+          "publicacionMs": 148,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 280
+        }
+      }
+    },
+    "rep/semilla-33/CAL-250-linea": {
+      "semilla": 33,
+      "objetivo": {
+        "llamadas": 250,
+        "ms": 15091
+      },
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 18950,
+        "tmdbLinea": 259,
+        "cadenciaLineaPorS": 13.7,
+        "maxPor1s": 45,
+        "concurrenciaMax": 24,
+        "redisOps": 325,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 340,
+          "composicionMs": 18057,
+          "ultimaLlamadaMs": 446,
+          "publicacionMs": 111,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 553
+        }
+      }
+    },
+    "rep/semilla-33/S7-miss-intradia-fondo": {
+      "semilla": 33,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 4115,
+        "tmdbLinea": 1,
+        "cadenciaLineaPorS": 0.2,
+        "maxPor1s": 1,
+        "concurrenciaMax": 1,
+        "redisOps": 64,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 272,
+          "composicionMs": 0,
+          "ultimaLlamadaMs": 418,
+          "publicacionMs": 3605,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 3843
+        }
+      }
+    },
+    "rep/semilla-33/S3-frio-total-en-fondo": {
+      "semilla": 33,
+      "resumen": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 28464,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 32.5,
+        "maxPor1s": 82,
+        "concurrenciaMax": 24,
+        "redisOps": 1003,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 321,
+          "composicionMs": 27787,
+          "ultimaLlamadaMs": 512,
+          "publicacionMs": 114,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 356
+        }
+      }
+    },
+    "rep/semilla-33/S5-tres-claves-tres-procesos": {
+      "semilla": 33,
+      "A": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 24235,
+        "tmdbLinea": 753,
+        "cadenciaLineaPorS": 31.1,
+        "maxPor1s": 241,
+        "concurrenciaMax": 72,
+        "redisOps": 2359,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 322,
+          "composicionMs": 23656,
+          "ultimaLlamadaMs": 430,
+          "publicacionMs": 122,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 257
+        }
+      },
+      "B": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 25181,
+        "tmdbLinea": 664,
+        "cadenciaLineaPorS": 26.4,
+        "maxPor1s": 241,
+        "concurrenciaMax": 72,
+        "redisOps": 2364,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 321,
+          "composicionMs": 24269,
+          "ultimaLlamadaMs": 465,
+          "publicacionMs": 130,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 591
+        }
+      },
+      "C": {
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 24525,
+        "tmdbLinea": 707,
+        "cadenciaLineaPorS": 28.8,
+        "maxPor1s": 241,
+        "concurrenciaMax": 72,
+        "redisOps": 2359,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 320,
+          "composicionMs": 24269,
+          "ultimaLlamadaMs": 247,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": -64
+        }
+      },
+      "global": {
+        "llamadas": 2124,
+        "primera": 1789593389125,
+        "ultima": 1789593413394,
+        "ultimaFin": 1789593413859,
+        "spanMs": 24269,
+        "cadenciaPorS": 87.5,
+        "maxPor1s": 241,
+        "maxPor100ms": 72,
+        "concurrenciaMax": 72,
+        "latenciaDobleMs": {
+          "p50": 346,
+          "p95": 510
+        }
+      }
+    }
+  }
+}
