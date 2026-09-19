@@ -451,8 +451,6 @@ revoke execute on function sala_unirse(uuid, text, text[], text) from public, an
 grant execute on function sala_unirse(uuid, text, text[], text) to anon, authenticated;
 
 -- Recuperar la participación (organizador u invitado con cuenta) desde otro
--- navegador: rota el token. El anterior deja de servir.
--- Recuperar la participación (organizador u invitado con cuenta) desde otro
 -- navegador: la participación pasa a la credencial NUEVA que generó ese
 -- navegador; la anterior deja de servir. Repetirla es idempotente (mismo hash).
 create or replace function sala_reclamar(p_room uuid, p_credencial text) returns jsonb

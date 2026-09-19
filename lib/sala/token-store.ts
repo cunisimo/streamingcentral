@@ -8,11 +8,14 @@
 //     `credencialParaUnirse`): un reintento —incluso concurrente— manda la
 //     MISMA, y la base lo resuelve como la misma sala / participación;
 //   - ninguna respuesta del servidor escribe la credencial. `confirmarSala`
-//     sólo la MUEVE de la clave de "crear" a la de la sala. Repetirla, o que
-//     las respuestas lleguen en orden inverso, no cambia nada;
-//   - `localStorage` va siempre detrás de try/catch: en privado, con la cuota
-//     llena o bloqueado, se sigue con una credencial efímera (esa pestaña
-//     participa mientras viva; al recargar habría que volver a entrar).
+//     sólo la MUEVE de la clave de "crear" a la de la sala, y borra el origen
+//     ÚNICAMENTE si comprobó que el destino la conserva. Repetirla, o que las
+//     respuestas lleguen en orden inverso, no cambia nada;
+//   - `localStorage` va siempre detrás de try/catch. Si lanza (privado, cuota
+//     llena, bloqueado) la pestaña sigue con una credencial EN MEMORIA, y esa
+//     memoria es por clave y estable: todos los reintentos de la misma clave
+//     en esta pestaña mandan la misma credencial. Lo que se pierde es la
+//     persistencia entre recargas, no la idempotencia dentro de la pestaña.
 export interface Store {
   getItem(k: string): string | null;
   setItem(k: string, v: string): void;
@@ -24,6 +27,11 @@ export const claveSala = (roomId: string) => `yump:sala:${roomId}`;
 
 const FORMA = /^[A-Za-z0-9_-]{43}$/;
 const ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+// Respaldo en memoria, por clave, para cuando el store no conserva. Vive lo que
+// vive el módulo (la pestaña). Sólo los tests lo reinician.
+const memoria = new Map<string, string>();
+export function _reiniciarMemoriaParaTests(): void { memoria.clear(); }
 
 export function esCredencial(v: unknown): v is string {
   return typeof v === "string" && FORMA.test(v);
@@ -59,44 +67,67 @@ export function nuevaCredencial(fuente: () => Uint8Array = bytesAleatorios): str
   return base64url(fuente());
 }
 
+/** Lo que hay bajo `k`: primero el store, si no la memoria. Sólo devuelve credenciales con forma válida. */
 function leer(store: Store, k: string): string | null {
-  try { return store.getItem(k); } catch { return null; }
+  try {
+    const v = store.getItem(k);
+    if (esCredencial(v)) return v;
+  } catch { /* store roto: sigue la memoria */ }
+  const m = memoria.get(k);
+  return esCredencial(m) ? m : null;
 }
-function escribir(store: Store, k: string, v: string): void {
-  try { store.setItem(k, v); } catch { /* sin persistencia: efímera */ }
+
+/**
+ * Guarda `v` bajo `k` y dice si el STORE la conserva (se relee para
+ * comprobarlo: un `setItem` que no lanza pero no persiste —cuota, modo
+ * privado de algún navegador— cuenta como no conservada). Si el store no la
+ * conserva, queda en memoria; en cualquier caso la pestaña la recupera.
+ */
+function guardar(store: Store, k: string, v: string): boolean {
+  let persistida = false;
+  try { store.setItem(k, v); persistida = store.getItem(k) === v; } catch { persistida = false; }
+  if (persistida) memoria.delete(k); else memoria.set(k, v);
+  return persistida;
 }
+
 function borrar(store: Store, k: string): void {
   try { store.removeItem(k); } catch { /* noop */ }
+  memoria.delete(k);
 }
 
 function storePorDefecto(): Store {
   return globalThis.localStorage;
 }
 
-/** La persistida bajo `k` si tiene la forma; si no, genera una, la persiste y la devuelve. */
+/** La que hay bajo `k`; si no hay una válida, genera una, la guarda (store o memoria) y la devuelve. */
 function oGenerar(store: Store, k: string): string {
   const actual = leer(store, k);
-  if (esCredencial(actual)) return actual;
+  if (actual) return actual;
   const nueva = nuevaCredencial();
-  escribir(store, k, nueva);
+  guardar(store, k, nueva);
   return nueva;
 }
 
-/** La credencial con la que se va a llamar a `sala_crear`. Persistida antes de devolverla. */
+/** La credencial con la que se va a llamar a `sala_crear`. Guardada antes de devolverla. */
 export function credencialParaCrear(store: Store = storePorDefecto()): string {
   return oGenerar(store, CLAVE_CREAR);
 }
 
 /**
  * `sala_crear` respondió con `room_id`: la credencial de "crear" pasa a ser la
- * de esa sala. Si ya está movida (respuesta repetida, o dos reintentos cuya
- * respuesta llegó en cualquier orden) no hace nada.
+ * de esa sala. El ORIGEN SE BORRA SÓLO SI EL DESTINO LA CONSERVA en el store:
+ * si el store no la retiene bajo la clave de la sala, la pestaña la tiene en
+ * memoria bajo esa clave y el origen persistido se deja como está —repetir
+ * `sala_crear` con ella devuelve la misma sala, que es mejor que perderla—.
+ * Si ya está movida (respuesta repetida, o dos reintentos cuya respuesta llegó
+ * en cualquier orden) no hace nada.
  */
 export function confirmarSala(roomId: string, store: Store = storePorDefecto()): void {
   const c = leer(store, CLAVE_CREAR);
-  if (!esCredencial(c)) return;
-  escribir(store, claveSala(roomId), c);
-  borrar(store, CLAVE_CREAR);
+  if (!c) return;
+  const destino = claveSala(roomId);
+  const persistida = guardar(store, destino, c);
+  if (persistida) borrar(store, CLAVE_CREAR);
 }
 
 /** La credencial con la que se va a llamar a `sala_unirse` / `sala_reclamar` en esa sala. */
@@ -105,8 +136,7 @@ export function credencialParaUnirse(roomId: string, store: Store = storePorDefe
 }
 
 export function leerToken(roomId: string, store: Store = storePorDefecto()): string | null {
-  const c = leer(store, claveSala(roomId));
-  return esCredencial(c) ? c : null;
+  return leer(store, claveSala(roomId));
 }
 
 export function borrarToken(roomId: string, store: Store = storePorDefecto()): void {

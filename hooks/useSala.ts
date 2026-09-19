@@ -15,6 +15,12 @@
 // reloj, porque los vencimientos los aplica la base al leer y no hay señal
 // hasta que alguien lee.
 //
+// RESPUESTAS FUERA DE ORDEN NO RETROCEDEN (hooks/sala-compuerta.ts): cada
+// lectura sale con un ticket y sólo se aplica si es más nueva que la última
+// aplicada y de la misma generación; cambiar de sala o de credencial abre una
+// generación nueva, así que una respuesta de la sala anterior no escribe sobre
+// la nueva. Vale para el éxito y para el error.
+//
 // TOKEN INVÁLIDO ≠ FALLO DE RED. `sala_token_invalido` (la base no reconoce la
 // credencial en esa sala) se informa como `sinAcceso` para que la vista
 // ofrezca entrar de nuevo; un fallo de red o de la RPC conserva el último
@@ -26,6 +32,7 @@ import { supabaseBrowser } from "@/lib/supabase";
 import { desfaseReloj, esTerminal, plazoVigente, type RespuestaEstado } from "@/lib/sala/estado";
 import { borrarToken } from "@/lib/sala/token-store";
 import { alReleer, alSenal, inicial, type EstadoRelectura } from "./sala-relectura-nucleo";
+import { crearCompuerta } from "./sala-compuerta";
 
 export type EstadoCanal = "conectado" | "desconectado";
 
@@ -59,12 +66,16 @@ export function useSala(roomId: string, token: string | null): UsoSala {
   const timerRelectura = useRef<ReturnType<typeof setTimeout> | null>(null);
   const terminal = useRef(false);
   const canalRef = useRef<RealtimeChannel | null>(null);
+  const compuerta = useRef(crearCompuerta());
 
   const leer = useCallback(async () => {
     if (!token || terminal.current) return;
+    const ticket = compuerta.current.emitir();
     try {
       const { data, error: e } = await supabaseBrowser().rpc("sala_estado", { p_room: roomId, p_token: token });
       if (!vivo.current) return;
+      // Más vieja que la última aplicada, o de otra sala/credencial: se descarta entera.
+      if (!compuerta.current.aplicar(ticket)) return;
       if (e) {
         if (/sala_token_invalido/.test(e.message)) {
           setSinAcceso(true);
@@ -86,7 +97,7 @@ export function useSala(roomId: string, token: string | null): UsoSala {
         borrarToken(roomId);
       }
     } catch (err) {
-      if (vivo.current) setError(err instanceof Error ? err.message : "fallo");
+      if (vivo.current && compuerta.current.aplicar(ticket)) setError(err instanceof Error ? err.message : "fallo");
     } finally {
       relectura.current = alReleer(relectura.current, Date.now());
       if (vivo.current) setCargando(false);
@@ -107,6 +118,7 @@ export function useSala(roomId: string, token: string | null): UsoSala {
     vivo.current = true;
     terminal.current = false;
     relectura.current = inicial();
+    compuerta.current.reiniciar();   // otra sala u otra credencial: lo que estaba en vuelo ya no cuenta
     setCargando(true); setSinAcceso(false); setError(null); setEstado(null);
     if (!token) { setCargando(false); return; }
 

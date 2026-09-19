@@ -4,13 +4,18 @@
 //   - ninguna respuesta del servidor la escribe: `confirmarSala` sólo la MUEVE
 //     de la clave de "crear" a la de la sala, y hacerlo dos veces, o en orden
 //     inverso respecto de otra respuesta, no cambia nada;
-//   - un `localStorage` que lanza no rompe: se genera una efímera y se sigue.
-import { test } from "node:test";
+//   - un `localStorage` que lanza no rompe: la pestaña conserva una credencial
+//     estable EN MEMORIA por clave, y `confirmarSala` no borra el origen si el
+//     destino no quedó conservado.
+import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   nuevaCredencial, esCredencial, credencialParaCrear, confirmarSala, credencialParaUnirse,
-  leerToken, borrarToken, CLAVE_CREAR, claveSala, type Store,
+  leerToken, borrarToken, CLAVE_CREAR, claveSala, _reiniciarMemoriaParaTests, type Store,
 } from "./token-store.ts";
+
+// El respaldo en memoria es del módulo (la pestaña): cada test arranca limpio.
+beforeEach(() => _reiniciarMemoriaParaTests());
 
 function memoria(): Store & { m: Map<string, string> } {
   const m = new Map<string, string>();
@@ -99,11 +104,61 @@ test("borrarToken deja la sala sin credencial; leerToken devuelve null", () => {
   assert.equal(s.m.has(claveSala("R9")), false);
 });
 
-test("con un store que lanza no se rompe nada: devuelve una credencial válida (efímera) y las demás operaciones callan", () => {
-  const c = credencialParaCrear(roto);
-  assert.ok(esCredencial(c));
-  assert.doesNotThrow(() => confirmarSala("R1", roto));
-  assert.ok(esCredencial(credencialParaUnirse("R1", roto)));
+test("store que lanza: la MISMA pestaña conserva una credencial estable EN MEMORIA para todos los reintentos de la misma clave", () => {
+  const a = credencialParaCrear(roto);
+  assert.ok(esCredencial(a));
+  assert.equal(credencialParaCrear(roto), a, "segundo reintento de crear → la misma");
+  assert.equal(credencialParaCrear(roto), a, "tercero también");
+  const u = credencialParaUnirse("R1", roto);
+  assert.equal(credencialParaUnirse("R1", roto), u, "reintento de unirse → la misma");
+  assert.notEqual(u, a, "claves distintas → credenciales distintas");
+  assert.equal(leerToken("R1", roto), u, "leerToken la recupera de la memoria");
+  assert.notEqual(credencialParaUnirse("R2", roto), u);
+  // Y confirmar / borrar tampoco lanzan ni pierden lo que hay.
+  assert.doesNotThrow(() => confirmarSala("R9", roto));
+  assert.equal(leerToken("R9", roto), a, "la de crear pasó a la sala, en memoria");
+  borrarToken("R1", roto);
   assert.equal(leerToken("R1", roto), null);
-  assert.doesNotThrow(() => borrarToken("R1", roto));
+});
+
+test("confirmarSala: si el store NO conserva la credencial bajo la clave de la sala, NO borra la de creación", () => {
+  // Store que persiste todo salvo las claves de sala (setItem lanza sólo ahí).
+  const m = new Map<string, string>();
+  const parcial: Store = {
+    getItem: (k) => m.get(k) ?? null,
+    setItem: (k, v) => { if (k.startsWith("yump:sala:") && k !== CLAVE_CREAR) throw new Error("QuotaExceeded"); m.set(k, v); },
+    removeItem: (k) => { m.delete(k); },
+  };
+  const c = credencialParaCrear(parcial);
+  assert.equal(m.get(CLAVE_CREAR), c);
+  confirmarSala("R1", parcial);
+  assert.equal(m.get(CLAVE_CREAR), c, "el origen persistido sigue ahí");
+  assert.equal(m.has(claveSala("R1")), false, "el store no tiene el destino");
+  assert.equal(leerToken("R1", parcial), c, "pero la pestaña la recupera en memoria bajo la sala");
+  // Un reintento de crear devuelve la MISMA (sala_crear la resolvería como la misma sala).
+  assert.equal(credencialParaCrear(parcial), c);
+});
+
+test("confirmarSala: un setItem que no lanza pero NO persiste cuenta como no conservada", () => {
+  const m = new Map<string, string>();
+  const mudo: Store = {
+    getItem: (k) => m.get(k) ?? null,
+    setItem: (k, v) => { if (k === CLAVE_CREAR) m.set(k, v); /* las demás se tragan en silencio */ },
+    removeItem: (k) => { m.delete(k); },
+  };
+  const c = credencialParaCrear(mudo);
+  confirmarSala("R1", mudo);
+  assert.equal(m.get(CLAVE_CREAR), c, "origen intacto: el destino no se releyó");
+  assert.equal(leerToken("R1", mudo), c);
+});
+
+test("cuando el store SÍ conserva, la memoria no se usa: lo persistido gana y se limpia el respaldo", () => {
+  const s = memoria();
+  const c = credencialParaCrear(s);
+  confirmarSala("R1", s);
+  assert.equal(s.m.get(claveSala("R1")), c);
+  assert.equal(s.m.has(CLAVE_CREAR), false);
+  // Si alguien borra el store por afuera, no queda una copia fantasma en memoria.
+  s.m.clear();
+  assert.equal(leerToken("R1", s), null);
 });
