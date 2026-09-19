@@ -99,6 +99,34 @@ Además: quitado el comentario obsoleto de `009_salas.sql` que decía que
 `sala_reclamar` "rota el token". Smoke en navegador tras el refactor: pass a
 los 10 s, No manual, pass 10 s después del manual, Sí → `match`.
 
+## Segunda ronda del dueño (19/09, `e8a46fd`) — cuatro casos de integración
+
+1. **Match temprano.** `sala_votar` devuelve `{ok:true, termine:true, estado:"resultado"}`
+   antes de la última posición cuando dos personas coinciden; `decidirTrasVotar`
+   daba una posición siguiente y `rondaCerrada:false`. Ahora un `ok` con
+   `estado ≠ votando` confirma la card, no tiene siguiente, y cierra la ronda: el
+   control cierra la compuerta de votos, sale de la card (pantalla de espera, no
+   otra card) y relee. Tests: match en la posición 1 de 10; el caso normal
+   (termine con la sala aún `votando`) preservado. Núcleo 6 → 8, control 5 → 7.
+2. **`useSala` y el `finally`.** Una respuesta descartada por la compuerta seguía
+   ejecutando el `finally` (relectura y `setCargando(false)`). La lectura pasó a
+   `hooks/sala-lector.ts` (compuerta + relectura + avisos, sin React) y una
+   respuesta descartada no toca NADA. Test: lectura vieja pendiente, cambio de
+   generación, lectura nueva sin resolver; resuelve la vieja → sin efectos (ni
+   estado ni cargado, relectura de la nueva sigue pendiente); resuelve la nueva →
+   estado + cargado una vez. 5 tests; el hook es cableado fino.
+3. **`token-store`: intento ≠ confirmada.** Con el destino sólo en memoria se
+   conservaba `CLAVE_CREAR`, y tras cerrar la sala la creación siguiente reusaba
+   esa credencial → `sala_crear` devolvía la sala vencida como repetida. Ahora al
+   confirmar el origen se borra SIEMPRE y la credencial queda anotada como
+   confirmada en la pestaña (ni un store que no pudo borrarla la devuelve como
+   intento). Ciclo completo probado con storage parcial y roto: crear → confirmar
+   → borrar/cerrar → la nueva creación obtiene otra credencial, estable entre
+   reintentos. Entre recargas con store roto la participación se recupera con
+   `sala_reclamar` (el organizador tiene cuenta). 12 → 14 tests.
+4. **Error visual.** El control limpia el error al empezar cada intento
+   (`alError(null)`); test fallo de red → éxito deja la pantalla sin aviso.
+
 ## Desvíos respecto del plan (declarados)
 
 - **Plataformas del selector desde `PLATFORMS`, no desde `/api/providers`.**
@@ -130,14 +158,16 @@ los 10 s, No manual, pass 10 s después del manual, Sí → `match`.
 
 ## Verificación automática
 
-- `node --test` de lo nuevo: **49 tests** — estado 4, token-store 12, temporizador 8,
-  relectura 5, compuerta 5, mensajes 4, votación-núcleo 6, votación-control 5
-  (eran 36 antes de la ronda de correcciones).
-- `npm run build` en verde: `/sala/[id]` dinámica (ƒ, 8,39 kB), `/sala/nueva` estática.
-- Suite completa **después del build**: **1794 tests, 1784 ok, 0 fallos, 10
-  omitidos** (artefacto Capacitor, línea base). `npx tsc --noEmit` limpio. En la
-  primera corrida falló una vez `home-fondo-orden.test.ts:154`, uno de los dos
-  tests de reloj de pared del **issue #23** (pasa 3/3 aislado; no se tocó).
+- `node --test` de lo nuevo: **60 tests** — estado 4, token-store 14, temporizador 8,
+  relectura 5, compuerta 5, lector 5, mensajes 4, votación-núcleo 8,
+  votación-control 7 (36 al cierre de la etapa, 49 tras la primera ronda).
+- Guards de la migración (`lib/salas-migracion.test.ts`): 13/13.
+- `npm run build` en verde: `/sala/[id]` dinámica (ƒ, 8,53 kB), `/sala/nueva` estática.
+- Suite completa **después del build**: **1805 tests, 1795 ok, 0 fallos, 10
+  omitidos** (artefacto Capacitor, línea base). `npx tsc --noEmit` limpio. Las
+  corridas hechas inmediatamente después del build fallaron en tests de reloj de
+  pared del Home (**issue #23**, actualizado con la observación); aislados y con
+  la máquina quieta, 0 fallos.
 
 ## Verificación manual en navegador (local)
 

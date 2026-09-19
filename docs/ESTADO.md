@@ -64,8 +64,12 @@
   dueño: tres bloqueantes corregidos** (`7580a1b`: credencial estable en memoria
   con `localStorage` roto y `confirmarSala` que no pierde el origen; compuerta
   monotónica en `useSala` contra respuestas fuera de orden y cambio de sala;
-  cerrojo en la votación tras `ronda_cerrada`/`inexistente`). **49 tests
-  nuevos**; suite post-build 1794 / 1784 ok / 0 fallos / 10 omitidos; `tsc`
+  cerrojo en la votación tras `ronda_cerrada`/`inexistente`) **y cuatro casos de
+  integración de la segunda ronda** (`e8a46fd`: match temprano cierra la
+  votación; una lectura descartada no toca ni `cargando` ni la relectura;
+  intento ≠ credencial confirmada en el token-store; el error visual se limpia
+  por intento). **60 tests nuevos**; suite post-build 1805 / 1795 ok / 0 fallos /
+  10 omitidos; `tsc`
   limpio; `npm run build` en verde. **Verificado en navegador (local, TMDB
   real)** como invitado sin cuenta con el organizador desde node: lobby en vivo,
   lobby vencido, tanda publicada, pass cada 10 s exactos, recarga a mitad de
