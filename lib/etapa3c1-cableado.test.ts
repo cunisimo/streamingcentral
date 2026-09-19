@@ -37,7 +37,7 @@ test("🔴 lib/cache.ts enchufa TOMAR en las primitivas del turno y las cuatro d
   assert.match(s, /evalTomar:/, "falta evalTomar en opsTurnoRedis");
   assert.match(s, /LUA_PAUSA/, "los scripts de la pausa salen de lib/pausa-lua.ts");
   assert.match(s, /export const opsPausaHome/, "las primitivas de la pausa se exportan para lib/home.ts y /api/health");
-  assert.match(s, /signal: \(\) => AbortSignal\.timeout\(CONSTANTES_PAUSA\.TIMEOUT_LECTURA_MS\)/, "el lector necesita su timeout propio (§41.2)");
+  assert.match(s, /signal: \(\) => plazoRedisActual\(\) \?\? AbortSignal\.timeout\(CONSTANTES_PAUSA\.TIMEOUT_LECTURA_MS\)/, "el lector necesita su timeout propio (§41.2) y, dentro de conPlazoRedis, el plazo compartido (1403ae4)");
   assert.match(s, /retry: \{ retries: 0 \}/, "el lector no reintenta: F_max lo decide lib/tmdb-pausa.ts");
   assert.match(s, /pausaActiva\(process\.env\)/, "el kill switch se decide con la función pura");
   assert.match(s, /export const pausaTmdb/, "la instancia de la pausa del proceso se exporta desde cache.ts");
@@ -75,7 +75,9 @@ test("🔴 lib/home.ts: el plazo nace con la señal ANTES de la lectura previa y
   assert.match(s, /plazo: claves\.plazo|plazo: contexto\.plazo|plazo: claves\.plazo,/, "servirConTurno recibe el plazo del contexto del líder");
   assert.match(s, /inicioRuta:/, "servirConTurno recibe inicioRuta");
   assert.match(s, /pausa: pausaTmdb/, "servirConTurno recibe la pausa del proceso");
-  assert.match(s, /crearTurno\(opsTurnoHome, pausaActiva\(process\.env\) \? \{ pausa: \{ clave: CLAVES_PAUSA\.pausa \} \} : \{\}\)/, "el turno usa TOMAR sólo con la pausa encendida");
+  assert.match(s, /const CFG_TURNO = pausaActiva\(process\.env\) \? \{ pausa: \{ clave: CLAVES_PAUSA\.pausa \} \} : \{\};/, "el turno usa TOMAR sólo con la pausa encendida");
+  assert.match(s, /crearTurno\(opsTurnoHome, CFG_TURNO\)/);
+  assert.match(s, /crearTurno\(opsTurnoAcotadoHome, CFG_TURNO\)/, "la readquisición acotada tiene que usar la MISMA configuración de pausa que el turno principal");
   assert.match(s, /reintentarEnMs/, "el vacío de la pausa lleva reintentarEnMs");
 });
 
@@ -149,6 +151,25 @@ test("🔴 punto 1 (d322282): `leerAcotadasHome` es UN MGET por `redisLector` (r
   assert.match(fn, /mem\.get\(k\)/, "sin Redis tiene que leer el mismo Map de memoria que batchGet");
   assert.match(fn, /return claves\.map\(\(\) => null\)/, "un fallo del lector tiene que ser null para todas las claves, no un error");
   assert.equal((s.match(/new Redis\(/g) ?? []).length, 2, "tiene que haber exactamente dos clientes por proceso: el principal y el lector");
-  assert.match(s, /redisLector = new Redis\(\{ url: redisUrl, token: redisToken, retry: \{ retries: 0 \}, signal: \(\) => AbortSignal\.timeout\(CONSTANTES_PAUSA\.TIMEOUT_LECTURA_MS\) \}\)/, "el lector tiene que seguir con retries 0 y señal NUEVA por petición (si aborta, el SDK 1.38.0 lanza sin reintentar)");
+  assert.match(s, /redisLector = new Redis\(\{ url: redisUrl, token: redisToken, retry: \{ retries: 0 \}, signal: \(\) => plazoRedisActual\(\) \?\? AbortSignal\.timeout\(CONSTANTES_PAUSA\.TIMEOUT_LECTURA_MS\) \}\)/, "el lector tiene que seguir con retries 0 y señal por petición: el plazo compartido dentro de conPlazoRedis, una nueva de TIMEOUT_LECTURA_MS fuera (si aborta, el SDK 1.38.0 lanza sin reintentar)");
   assert.equal(CONSTANTES.T_LECTURA_PAUSA_MS, CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS, "el tope que servirConTurno documenta es el que aplica la señal del lector: si uno cambia, el otro también");
+});
+
+test("🔴 (auditoría sobre 1403ae4) la readquisición tras la pausa es UNA operación lógica con plazo compartido por el cliente acotado: `tomarAcotado` = conPlazoRedis + turnoAcotadoHome.tomar(p, { senal }); sin carrera, sin LIBERAR tardío, sin cliente nuevo", () => {
+  const home = codigo("lib/home.ts");
+  assert.match(home, /tomarAcotado: \(p, senal\) => conPlazoRedis\(senal, \(\) => turnoAcotadoHome\.tomar\(p, \{ senal \}\)\)/, "lib/home.ts no cablea la readquisición acotada");
+  const cache = codigo("lib/cache.ts");
+  assert.match(cache, /export const opsTurnoAcotadoHome: OpsTurno = redisLector \? opsTurnoRedis\(redisLector\) : opsTurnoMemoria\(\);/, "las primitivas acotadas tienen que ir por el MISMO cliente acotado (uno por proceso) y, sin Redis, por la misma memoria");
+  assert.equal((cache.match(/new Redis\(/g) ?? []).length, 2, "siguen siendo exactamente dos clientes por proceso");
+  assert.match(cache, /import \{ plazoRedisActual \} from "\.\/plazo-redis"/);
+  const servir = codigo("lib/home-servir.ts");
+  assert.match(servir, /r2 = await deps\.tomarAcotado\(\{ clave: K\.turno, propietario, px: c\.TURNO_MS \}, plazoAdq\.signal\);/, "la readquisición no usa tomarAcotado con el plazo");
+  assert.doesNotMatch(servir, /Promise\.race\(\[readquisicion|vencioTimeout|deps\.turno\.liberar\(\{ clave: K\.turno, propietario \}\)\.catch/, "🔴 volvió la carrera o la liberación tardía: una carrera no cancela el TOMAR ni sus reconciliaciones");
+  // La única llamada a `deps.turno.tomar` que queda es la del camino sano (sin pausa local).
+  assert.equal((servir.match(/deps\.turno\.tomar\(/g) ?? []).length, 1, "el camino sano toma el turno con el cliente principal, una sola vez; la readquisición va por el acotado");
+  // lib/turno.ts: con señal, una primitiva fallida con el plazo vencido es `indeterminado` y no se emite otro comando.
+  const turno = codigo("lib/turno.ts");
+  assert.match(turno, /async function tomar\(p: \{ clave: string; propietario: string; px: number \}, opts: \{ senal\?: AbortSignal \} = \{\}\)/);
+  assert.match(turno, /\{ estado: "indeterminado" \}/);
+  assert.match(turno, /const vencido = \(\) => !!opts\.senal\?\.aborted;/);
 });

@@ -135,7 +135,7 @@ export function crearPausa(deps: DepsPausa): Pausa {
     try { r = await deps.ops.pttl(CLAVES_PAUSA.pausa); } catch { r = undefined; }
     lecturaEnVuelo = false;
     if (!Number.isInteger(r)) {
-      // Timeout, error o el `"Aborted"` sintético del SDK: nunca es "sin pausa".
+      // Timeout (el cliente acotado lanza al abortar), error o una forma rara: nunca es "sin pausa".
       lecturasFallidas += 1; fallosSeguidos += 1;
       anotarCubo("pausaNoLeida");
       if (fallosSeguidos >= C.F_MAX) { enfriadoHasta = ahora() + C.ENFRIAMIENTO_LECTOR_MS; fallosSeguidos = 0; }

@@ -80,8 +80,13 @@ const lecturasPttl = (mr, desde) => mr.filter((m) => m.t >= desde && m.c === "PT
 // iniciados antes y terminados antes; iniciados antes y terminados DESPUÉS;
 // iniciados DESPUÉS de responder (tardíos). `ventanaMs` dice cuánto después de
 // la respuesta se miró: tiene que ser ≥ 10 s para que la ausencia signifique algo.
+// `patronClave` puede ser una RegExp sobre la primera clave o una función sobre
+// la marca entera: en EVALSHA la primera posición es el SHA, así que un TOMAR
+// o un LIBERAR se atribuyen por el comando completo (`m.cmd`: claves Y
+// propietario), no por `m.k`.
 function residual(mr, desde, tFin, patronClave, tMarcas) {
-  const propias = mr.filter((m) => m.t >= desde && patronClave.test(m.k ?? ""));
+  const esPropia = typeof patronClave === "function" ? patronClave : (m) => patronClave.test(m.k ?? "");
+  const propias = mr.filter((m) => m.t >= desde && esPropia(m));
   const iniciadas = propias.filter((m) => m.t <= tFin);
   const tardias = propias.filter((m) => m.t > tFin);
   return {
@@ -218,6 +223,33 @@ async function main() {
   log("S4b-redis-caido-con-429", { primero: { status: s4b.status, motivo: s4b.motivo, contenido: s4b.contenido, msPared: s4b.msPared, linea: l4b.home[0]?.linea.slice(0, 300) }, duranteLaPausaLocal: { pausaConocidaAlPedir: s4c.pausaConocidaAlPedir, status: s4c.status, motivo: s4c.motivo, contenido: s4c.contenido, msPared: s4c.msPared, compone: l4c.compone, composiciones: l4c.home[0]?.composiciones, pausaMs: l4c.home[0]?.pausaMs, lecturasAcotadas: Number((l4c.home[0]?.linea.match(/(\d+) lectura\(s\) acotada/) ?? [])[1] ?? 0), linea: l4c.home[0]?.linea.slice(0, 300), residual: residual4c }, marcasRedisTrasCaida: tras.length, porComandoTrasCaida: tras.reduce((o, m) => { o[m.c] = (o[m.c] ?? 0) + 1; return o; }, {}), lecturasPTTLTrasCaida: tras.filter((m) => m.c === "PTTL").length });
   await dormir(21000); await tmdbOk(semilla);
 
+  // S4c — readquisición tras una pausa CORTA con Redis COLGADO (auditoría sobre
+  // 1403ae4): TMDB en 429 con Retry-After 3 s; cuando el proceso vio su 429,
+  // Redis pasa a responder 15 s tarde y entra OTRO pedido sin UB con la pausa
+  // local conocida: lecturas acotadas, UN sueño y la ÚNICA readquisición, que
+  // el plazo aborta a los T_ADQ_MAX. Se correlaciona por clave Y propietario y
+  // se observa ≥ 10 s: con 1403ae4 el TOMAR se completaba a los +13 s y salía
+  // un LIBERAR tardío; ahora cero comandos después de responder.
+  await vaciar(BASE); lineas(B); await modelo(semilla);
+  await tmdb429({ retryAfter: 3 });
+  const desde4c = marcasDesde();
+  const p4c1 = pedir(B, "n,d,m", "", 240000);
+  let x429c = 0;
+  const vioLaPausaC = await esperar(() => { x429c += lineas(B).x429; return x429c > 0; }, 120000, 20);
+  await control(BASE, "redis", "config", { modo: "colgado", latenciaMs: 0, latenciaP95Ms: 0, colgadoMs: 15000 });
+  const s4c2 = await pedir(B, "n,d", "", 240000);
+  await esperar(() => Date.now() - s4c2.tFin >= 20000, 30000, 200);
+  const mr4c = await marcas("redis");
+  const tMarcas4c = Date.now();
+  await control(BASE, "redis", "config", { modo: "ok", ...lat(40) });
+  const l4c2 = lineas(B);
+  const linea4c = l4c2.home.find((l) => /:d,n:\s*$/.test(l.linea));
+  const prop4c = (linea4c?.linea.match(/propietario (\S+)/) ?? [])[1] ?? null;
+  const residual4cR = residual(mr4c, desde4c, s4c2.tFin, (m) => !!m.cmd && (m.cmd.includes(":d,n:") || (prop4c !== null && m.cmd.includes(prop4c))), tMarcas4c);
+  log("S4c-readquisicion-redis-colgado-pausa-corta", { pausaConocidaAlPedir: vioLaPausaC, status: s4c2.status, motivo: s4c2.motivo, contenido: s4c2.contenido, msPared: s4c2.msPared, durmio: l4c2.home.length ? Number(linea4c?.esperaPausaMs ?? 0) > 0 : null, propietario: prop4c, residual: residual4cR, linea: linea4c?.linea.slice(0, 300) });
+  await p4c1.catch(() => null);
+  await dormir(3000); await tmdbOk(semilla);
+
   // S5 — tres procesos fríos a la vez con 429 total a los 3 s: sobrepaso GLOBAL contra la línea base (sin pausa: ~750 por proceso).
   await vaciar(BASE); lineas(A); lineas(B); lineas(C); await modelo(semilla);
   const desde5 = marcasDesde();
@@ -251,6 +283,7 @@ async function main() {
     "5-con-UB-inmediato": { ok: e["S2-429-total-con-UB"].status === 200 && e["S2-429-total-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].status === 200 && e["S2b-pedido-durante-la-pausa-con-UB"].ubIgual && e["S2b-pedido-durante-la-pausa-con-UB"].msPared < 2000, msPared: [e["S2-429-total-con-UB"].msPared, e["S2b-pedido-durante-la-pausa-con-UB"].msPared] },
     "6-sin-UB-nunca-50s-ni-200-vacio": { ok: [e["S1-429-total-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.status === 503 && x.retryAfter && x.contenido === 0) && e["S1b-pedido-durante-la-pausa-sin-UB"].status === 200 && e["S1b-pedido-durante-la-pausa-sin-UB"].contenido > 0 && [e["S1-429-total-sin-UB"], e["S1b-pedido-durante-la-pausa-sin-UB"], e["S1c-pausa-larga-sin-UB-503-inmediato"]].every((x) => x.msPared < 30000), msPared: [e["S1-429-total-sin-UB"].msPared, e["S1b-pedido-durante-la-pausa-sin-UB"].msPared, e["S1c-pausa-larga-sin-UB-503-inmediato"].msPared] },
     "7-redis-lento-caido-sin-tormenta": { ok: e["S4a-redis-lento-300ms-con-429"].lecturasPTTL <= 40 && e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida <= 6 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.status === 503 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.compone === 0 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.pausaConocidaAlPedir === true && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.msPared <= 4000, limiteLocalMs: 3000 + 1000, msParedPausaLocal: e["S4b-redis-caido-con-429"].duranteLaPausaLocal.msPared, lecturas: [e["S4a-redis-lento-300ms-con-429"].lecturasPTTL, e["S4b-redis-caido-con-429"].lecturasPTTLTrasCaida], porComando: e["S4b-redis-caido-con-429"].porComandoTrasCaida, nota: "la duración del primer pedido con Redis caído es la promesa reducida de la Etapa 2 (reintentos del SDK por lectura), no la 3.c.1" },
+    "9-readquisicion-sin-trabajo-residual": { ok: e["S4c-readquisicion-redis-colgado-pausa-corta"].status === 503 && e["S4c-readquisicion-redis-colgado-pausa-corta"].residual.ventanaMs >= 10000 && e["S4c-readquisicion-redis-colgado-pausa-corta"].residual.tardias === 0 && e["S4c-readquisicion-redis-colgado-pausa-corta"].residual.completadasDespues === 0 && e["S4c-readquisicion-redis-colgado-pausa-corta"].residual.porComando.EVALSHA === 1, residual: e["S4c-readquisicion-redis-colgado-pausa-corta"].residual, detalle: "pausa corta + Redis colgado: UN TOMAR abortado por el plazo, ningún GET/TOMAR/LIBERAR después del 503 (ventana ≥ 10 s, correlación por clave y propietario)" },
     "8-sin-trabajo-residual-tras-responder": { ok: e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual.ventanaMs >= 10000 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual.tardias === 0 && e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual.completadasDespues === 0, residual: e["S4b-redis-caido-con-429"].duranteLaPausaLocal.residual, detalle: "comandos de Redis con las claves del pedido pausado: ninguno iniciado ni completado después del 503 (ventana ≥ 10 s)" },
     "propagacion-entre-procesos": { ok: e["S3-propagacion-tres-procesos"].B.x429 === 0 && e["S3-propagacion-tres-procesos"].B.rechazadas > 0 && e["S3-propagacion-tres-procesos"].C.x429 === 0 && e["S3-propagacion-tres-procesos"].C.pausaMs > 0 && e["S3-propagacion-tres-procesos"].C.status === 200, detalle: "B (sin 429 propio) cortado por el lector; C (frío) pausado por TOMAR y luego compuesto" },
     "sobrepaso-vs-linea-base": { conPausa: { S1: e["S1-429-total-sin-UB"].sobrepaso.tras429.total, S2: e["S2-429-total-con-UB"].sobrepaso.tras429.total, S5global: e["S5-tres-procesos-frios-429-total"].sobrepasoGlobal.tras429.total }, controlSinPausa: e["S6-CONTROL-kill-switch-apagado"].sobrepaso.tras429.total, lineaBase: "750-778 por proceso" },

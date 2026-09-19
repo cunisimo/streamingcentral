@@ -41,7 +41,14 @@
 //     jitter, si cabe en el presupuesto (plazo absoluto); después UNA sola
 //     readquisición: adquirido → componer; pausado/indeterminado → el vacío
 //     `pausa` que la ruta convierte en 503 + Retry-After; nunca un segundo
-//     sueño, nunca 50 s, nunca un 200 vacío.
+//     sueño, nunca 50 s, nunca un 200 vacío. La readquisición es UNA operación
+//     lógica con PLAZO COMPARTIDO (`deps.tomarAcotado`, auditoría sobre
+//     1403ae4): TOMAR, reconciliación y segundo intento van por el cliente
+//     acotado (sin reintentos) bajo la misma señal de T_ADQ_MAX; vencida, lo
+//     que está en vuelo se aborta y no sale ningún comando más. Si el TOMAR
+//     llegó a aplicarse sin que se pudiera reconciliar, NO hay limpieza tardía:
+//     el turno vence por su TTL (TURNO_MS). Una carrera local no servía: dejaba
+//     el TOMAR, los GET y hasta un LIBERAR corriendo después de responder.
 //  4. adquirido (directo o reconciliado):
 //     4.0 GET fresca OTRA VEZ. Carrera lectura → turno: entre la lectura y el
 //         SET NX otro pudo publicar y liberar; si la fresca apareció, LIBERAR,
@@ -113,7 +120,7 @@
 // las deps. Es puro: reloj, `dormir` y las lecturas se inyectan, y se prueba
 // con la emulación en memoria y un reloj virtual (lib/home-servir.test.ts).
 import { anotar } from "./metricas.ts";
-import type { Turno } from "./turno.ts";
+import type { ResultadoTomar, Turno } from "./turno.ts";
 import type { CampoCubo } from "./tmdb-pausa.ts";
 
 export const CONSTANTES = {
@@ -143,7 +150,11 @@ export const CONSTANTES = {
   ESPERA_PAUSA_MAX_MS: 5_000,
   /** Jitter del único sueño, para que varias solicitudes no despierten en el mismo milisegundo (§42.2). */
   JITTER_MAX_MS: 250,
-  /** Timeout propio de la readquisición tras el sueño (§43.4) [propuesto]. */
+  /**
+   * Plazo de la ÚNICA readquisición tras el sueño (§43.4) [propuesto]. Es el
+   * plazo compartido de toda la operación lógica (`deps.tomarAcotado`), no una
+   * carrera: vencido, no queda ningún comando en vuelo ni sale otro.
+   */
   T_ADQ_MAX_MS: 2_000,
   /** `Retry-After` conservador cuando la readquisición queda indeterminada (§43.5: = REINTENTAR_POR_DEFECTO_MS). */
   RETRY_AFTER_FALLBACK_MS: 5_000,
@@ -212,6 +223,15 @@ export interface DepsServir<T> {
    */
   leerAcotada: (claves: string[]) => Promise<(T | null)[]>;
   turno: Turno;
+  /**
+   * La ÚNICA readquisición tras el sueño de la pausa (3.c.1, auditoría sobre
+   * 1403ae4): el mismo TOMAR atómico (pausa + SET NX) con su reconciliación,
+   * pero como UNA operación lógica bajo `senal` —el plazo compartido de
+   * T_ADQ_MAX— y por el cliente sin reintentos: vencida la señal, el comando
+   * en vuelo se aborta, no sale ninguno más y el resultado es `indeterminado`.
+   * En producción: `conPlazoRedis(senal, () => turnoAcotado.tomar(p, { senal }))`.
+   */
+  tomarAcotado: (p: { clave: string; propietario: string; px: number }, senal: AbortSignal) => Promise<ResultadoTomar>;
   /**
    * La composición. `fallo` = degradado (alguna fuente cayó). `pausada` (3.c.1)
    * = alguna llamada a TMDB fue RECHAZADA por la pausa durante esta composición:
@@ -442,7 +462,7 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     let r = await deps.turno.tomar({ clave: K.turno, propietario, px: c.TURNO_MS });
     const local = pausaLocal();
     if (r.estado === "sin-redis" && local > 0) r = { estado: "pausado", restanteMs: local };
-    anotar((m) => { m.home.turno = r.estado === "adquirido" ? (r.reconciliado ? "reconciliado" : "adquirido") : r.estado; if (r.estado === "pausado") m.home.pausaMs = r.restanteMs; });
+    anotar((m) => { m.home.turno = r.estado === "adquirido" ? (r.reconciliado ? "reconciliado" : "adquirido") : r.estado === "indeterminado" ? "sin-redis" : r.estado; if (r.estado === "pausado") m.home.pausaMs = r.restanteMs; });
     return r;
   };
   /** Adquirido: si cabe una composición, componer; si no, un rescate que va a morir no se empieza. */
@@ -485,15 +505,27 @@ export async function servirConTurno<T>(deps: DepsServir<T>): Promise<T> {
     anotar((m) => { m.home.pausaEsperaMs = dormido; });
     // Vencimiento del presupuesto interno durante el sueño: el centinela 4d de hoy (§44.1/§45).
     if (abortada()) return servirVacio("cancelada");
-    // La readquisición, con su propio timeout: si Redis no responde en T_ADQ_MAX
-    // es indeterminada; si más tarde la promesa adquiere, se libera.
-    let vencioTimeout = false;
-    const timeout = new AbortController();
-    const readquisicion = tomar().then((x) => { if (vencioTimeout && x.estado === "adquirido") { void deps.turno.liberar({ clave: K.turno, propietario }).catch(() => {}); } return x; });
-    const r2 = await Promise.race([readquisicion, dormir(c.T_ADQ_MAX_MS, timeout.signal).then(() => { if (!timeout.signal.aborted) vencioTimeout = true; return "indeterminado" as const; })]);
-    timeout.abort();   // sin temporizador vivo si Redis respondió antes
-    if (r2 === "indeterminado") {
-      anotar((m) => { m.home.turno = "sin-redis"; });
+    // La ÚNICA readquisición: una operación lógica con plazo compartido. El
+    // plazo es una señal que vence a los T_ADQ_MAX (con el reloj inyectable) y
+    // que `tomarAcotado` reparte a todos sus comandos; si Redis respondió
+    // antes, el temporizador se apaga. Vencido: `indeterminado` — un TOMAR
+    // pudo aplicarse y no se reconcilia después de responder: si quedó, el
+    // turno vence por TTL (TURNO_MS) y hasta entonces los demás ven `ocupado`.
+    // Cero comandos atribuibles a esta solicitud después de responder.
+    const plazoAdq = new AbortController();
+    const relojAdq = new AbortController();
+    void dormir(c.T_ADQ_MAX_MS, relojAdq.signal).then(() => { if (!relojAdq.signal.aborted) plazoAdq.abort(new DOMException("plazo de la readquisición", "TimeoutError")); }, () => {});
+    let r2: ResultadoTomar;
+    try {
+      r2 = await deps.tomarAcotado({ clave: K.turno, propietario, px: c.TURNO_MS }, plazoAdq.signal);
+    } catch {
+      r2 = { estado: plazoAdq.signal.aborted ? "indeterminado" : "sin-redis" };
+    } finally {
+      relojAdq.abort();   // sin temporizador vivo si Redis respondió antes
+    }
+    { const local = pausaLocal(); if (r2.estado === "sin-redis" && local > 0) r2 = { estado: "pausado", restanteMs: local }; }
+    anotar((m) => { m.home.turno = r2.estado === "adquirido" ? (r2.reconciliado ? "reconciliado" : "adquirido") : r2.estado === "indeterminado" ? "sin-redis" : r2.estado; if (r2.estado === "pausado") m.home.pausaMs = r2.restanteMs; });
+    if (r2.estado === "indeterminado") {
       return servirPausa("pausa-indeterminada", Math.max(c.RETRY_AFTER_FALLBACK_MS, restante - dormido));
     }
     if (r2.estado === "pausado") return servirPausa("pausa", r2.restanteMs);   // nunca un segundo sueño

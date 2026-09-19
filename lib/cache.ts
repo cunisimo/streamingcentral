@@ -19,6 +19,7 @@ import { crearOpsEnMemoria, type Entrada } from "./turno-memoria";
 import { CONSTANTES_PAUSA, crearPausa, pausaActiva } from "./tmdb-pausa";
 import { randomUUID } from "node:crypto";
 import { combinarSenales, senalActual } from "./senal-solicitud";
+import { plazoRedisActual } from "./plazo-redis";
 import { createHash } from "node:crypto";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
@@ -43,16 +44,25 @@ try {
   // NO toca `retries`: la Etapa 0 mide, no cambia. Ver lib/metricas.ts.
   if (redisUrl && redisToken) redis = new Redis({ url: redisUrl, token: redisToken, retry: { backoff: backoffRedisInstrumentado() } });
 } catch { redis = null; }
-// El LECTOR de la pausa (3.c.1, §41.2/§43.8) va por un cliente APARTE: timeout
-// propio por petición (`signal` como función: una señal nueva por comando) y
-// SIN reintentos del SDK. Con el cliente principal, una lectura colgada
-// arrastraría 6 intentos y 4,29 s de backoff; acá vence al segundo y
-// lib/tmdb-pausa.ts decide (F_max = 1 → 30 s sin leer). Con una señal abortada
-// el SDK devuelve un 200 sintético `{ result: "Aborted" }`: no es un entero, y
-// el lector lo trata como indeterminado, nunca como "sin pausa".
+// El cliente ACOTADO (3.c.1, §41.2/§43.8; auditorías sobre d322282 y 1403ae4),
+// UNO por proceso y APARTE del principal: SIN reintentos del SDK y con
+// `signal` como FUNCIÓN, que el SDK 1.38.0 llama al empezar CADA petición HTTP.
+// Dentro de `conPlazoRedis` devuelve el plazo compartido de la operación
+// lógica en curso (la readquisición del turno: TOMAR + reconciliación bajo una
+// sola señal); fuera, una señal nueva de TIMEOUT_LECTURA_MS por petición (el
+// PTTL del lector de la pausa y `leerAcotadasHome`). Con el cliente principal,
+// una lectura colgada arrastraría 6 intentos y 4,29 s de backoff que siguen
+// vivos aunque nadie los espere; acá vence y no queda nada.
+// 🔴 Con `signal` como función, una señal abortada hace que `request()` LANCE
+// (`if (signal.aborted && isSignalFunction) throw`) sin reintentar: NO hay 200
+// sintético. El `{ result: "Aborted" }` con status 200 existe sólo para una
+// señal ESTÁTICA (`signal: AbortSignal` o la de `streamOptions`), que este
+// módulo no usa; lib/turno.ts y lib/tmdb-pausa.ts igual validan la forma de
+// cada respuesta y tratan cualquier otra como indeterminada, nunca como
+// "adquirido" ni "sin pausa".
 let redisLector: Redis | null = null;
 try {
-  if (redisUrl && redisToken) redisLector = new Redis({ url: redisUrl, token: redisToken, retry: { retries: 0 }, signal: () => AbortSignal.timeout(CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS) });
+  if (redisUrl && redisToken) redisLector = new Redis({ url: redisUrl, token: redisToken, retry: { retries: 0 }, signal: () => plazoRedisActual() ?? AbortSignal.timeout(CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS) });
 } catch { redisLector = null; }
 
 // Las consultas a Supabase del cliente de servidor se cuentan desde acá:
@@ -495,6 +505,15 @@ function opsTurnoMemoria(): OpsTurno {
 }
 /** Las primitivas del turno del Home, reales o emuladas. Las consume lib/home.ts por `crearTurno`. */
 export const opsTurnoHome: OpsTurno = redis ? opsTurnoRedis(redis) : opsTurnoMemoria();
+/**
+ * Las MISMAS primitivas por el cliente ACOTADO (3.c.1, auditoría sobre
+ * 1403ae4): sin reintentos y con el plazo compartido de `conPlazoRedis`. Sólo
+ * para la ÚNICA readquisición tras el sueño de la pausa; el camino sano toma
+ * el turno con `opsTurnoHome` y su política de siempre. En memoria son las
+ * mismas operaciones sobre el mismo Map (no hay red que acotar).
+ */
+export const opsTurnoAcotadoHome: OpsTurno = redisLector ? opsTurnoRedis(redisLector) : opsTurnoMemoria();
+export { conPlazoRedis } from "./plazo-redis";
 
 // --- La pausa compartida ante 429 (Etapa 3.c.1, #19) ------------------------
 // PAUSAR, CUBO y SALUD van por el cliente principal (reintentos del SDK: el

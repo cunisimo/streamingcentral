@@ -18,6 +18,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { servirConTurno, dormirCancelable, CONSTANTES, type Constantes, type DepsServir } from "./home-servir.ts";
 import { crearTurno, type OpsTurno } from "./turno.ts";
+import { conPlazoRedis, plazoRedisActual } from "./plazo-redis.ts";
 import { crearOpsEnMemoria, type Entrada } from "./turno-memoria.ts";
 import { crearVueloHome } from "./home-vuelo.ts";
 import { withMetricas, anotar, type MetricasRequest } from "./metricas.ts";
@@ -76,13 +77,16 @@ function mundo(opts: { constantes?: Partial<Constantes>; inicio?: number } = {})
   function deps(nombre: string, extra: Partial<DepsServir<Payload>> & { ops?: OpsTurno; payload?: Payload; fallo?: boolean; tarda?: number } = {}): DepsServir<Payload> {
     const ops = extra.ops ?? opsBase;
     const payload: Payload = extra.payload ?? { hero: [`de-${nombre}`], degradado: !!extra.fallo, de: nombre };
+    const turno = extra.turno ?? crearTurno(ops);
     return {
       claves: K, propietario: nombre, dia: "2026-09-13", ttl: { fresca: 21600, ub: 129600 },
-      leer, leerAcotada: leer, turno: crearTurno(ops),
+      leer, leerAcotada: leer, turno,
       producir: async () => { if (extra.tarda) await reloj.dormir(extra.tarda); return { valor: payload, fallo: !!extra.fallo }; },
       vacio: (motivo, extra) => ({ hero: [], degradado: true, de: `vacio:${motivo}`, ...(extra ?? {}) }),
       ahora: reloj.ahora, dormir: reloj.dormir, constantes, log: (l) => log.push(l),
       ...extra,
+      // Por defecto la readquisición acotada es el MISMO turno (en memoria no hay red que acotar), bajo el plazo compartido.
+      tomarAcotado: extra.tomarAcotado ?? ((p, senal) => conPlazoRedis(senal, () => turno.tomar(p, { senal }))),
     };
   }
   /** Una solicitud = un scope de métricas. Devuelve lo servido y sus métricas. */
@@ -850,6 +854,11 @@ function pausaDePrueba(w: ReturnType<typeof mundo>, o: { localHasta?: number | n
 /** Escribe la pausa COMPARTIDA en el backend (como lo haría PAUSAR desde otra instancia). */
 const pausaCompartida = (w: ReturnType<typeof mundo>, ms: number) => { w.store.set(CLAVES_PAUSA.pausa, { v: "otra:1", exp: w.reloj.ahora() + ms }); };
 const dormidas = (w: ReturnType<typeof mundo>) => w.log.filter((l) => l.startsWith("[home] duerme")).length;
+/** La señal que el cliente ACOTADO lee al empezar cada comando: el plazo compartido de la operación en curso. */
+const senalDelPlazo = () => plazoRedisActual() ?? undefined;
+/** La readquisición por un doble del cliente acotado (un intento, plazo compartido), como la cablea lib/home.ts. */
+const readquisicionCon = (w: ReturnType<typeof mundo>, doble: { ops: OpsTurno }) =>
+  (p: { clave: string; propietario: string; px: number }, senal: AbortSignal) => conPlazoRedis(senal, () => crearTurno(doble.ops, PAUSA_CFG).tomar(p, { senal }));
 /** Deps de una solicitud con la pausa cableada; `jitter` fijo para que las cuentas sean exactas. */
 function depsPausa(w: ReturnType<typeof mundo>, nombre: string, extra: Parameters<typeof w.deps>[1] = {}, p = pausaDePrueba(w)) {
   return { d: w.deps(nombre, { turno: crearTurno(w.ops, PAUSA_CFG), pausa: p, jitter: () => 100, leerAcotada: w.leer, ...extra }), p };
@@ -933,9 +942,9 @@ test("🔴 3.c.1 — vencimiento del presupuesto interno DURANTE el sueño: el c
 test("🔴 3.c.1 — readquisición INDETERMINADA (Redis no responde en T_ADQ_MAX = 2 s): 503 con reintentarEnMs = max(5 s, restante − dormido), sin componer", async () => {
   const w = mundo();
   pausaCompartida(w, 3000);
-  let n = 0;
-  const ops: OpsTurno = { ...w.ops, evalTomar: (k, a) => { n += 1; return n === 2 ? new Promise(() => {}) : w.ops.evalTomar(k, a); } };
-  const { d } = depsPausa(w, "A", { turno: crearTurno(ops, PAUSA_CFG) });
+  // La primera adquisición responde (pausado); la readquisición va a un Redis que no responde: el cliente acotado aborta al vencer el plazo.
+  const colgado = clienteTurnoDoble(w, { retries: 0, modo: "colgado", colgadoMs: 1e9, senal: senalDelPlazo });
+  const { d } = depsPausa(w, "A", { tomarAcotado: readquisicionCon(w, colgado) });
   const r = await w.reloj.correr(w.solicitud(d));
   assert.equal(r.valor.de, "vacio:pausa-indeterminada"); assert.equal(r.valor.reintentarEnMs, 5000);
   assert.equal(w.cuantasComposiciones(), 0);
@@ -1225,7 +1234,8 @@ test("🔴 punto 1 — pausa local CORTA (2 s) + Redis colgado, sin UB: duerme l
   const ops: OpsTurno = { ...w.ops, evalTomar: colgado, get: colgado, setNx: colgado };
   const t0 = w.reloj.ahora();
   const acotado = clienteRedisDoble(w, { retries: 0, modo: "colgado", senal: () => acotado.senalVirtual(CONSTANTES.T_LECTURA_PAUSA_MS) });
-  const { d } = depsPausa(w, "A", { leer: () => colgado(), leerAcotada: (c) => acotado.mget(c) as Promise<(Payload | null)[]>, turno: crearTurno(ops, PAUSA_CFG), producir: async () => { throw new Error("no compone"); } }, p);
+  const turnoColgado = clienteTurnoDoble(w, { retries: 0, modo: "colgado", colgadoMs: 1e9, senal: senalDelPlazo });
+  const { d } = depsPausa(w, "A", { leer: () => colgado(), leerAcotada: (c) => acotado.mget(c) as Promise<(Payload | null)[]>, turno: crearTurno(ops, PAUSA_CFG), tomarAcotado: readquisicionCon(w, turnoColgado), producir: async () => { throw new Error("no compone"); } }, p);
   const r = await w.reloj.correr(w.solicitud(d));
   assert.equal(r.valor.de, "vacio:pausa-indeterminada");
   assert.ok(w.reloj.ahora() - t0 <= LIMITE_LOCAL, `tardó ${w.reloj.ahora() - t0} ms > límite ${LIMITE_LOCAL}`);
@@ -1350,4 +1360,193 @@ test("control: SIN pausa local el camino usa `leer` de siempre (el cliente princ
   const acotado = clienteRedisDoble(w, { retries: 0, modo: "ok" });
   const r = await w.reloj.correr(w.solicitud(depsPausa(w, "A", { leer: (c) => principal.mget(c) as Promise<(Payload | null)[]>, leerAcotada: (c) => acotado.mget(c) as Promise<(Payload | null)[]> }).d));
   assert.equal(r.valor.de, "A"); assert.ok(principal.intentos.length >= 3); assert.equal(acotado.intentos.length, 0);
+});
+
+// ============================================================================
+// Auditoría sobre 1403ae4: la READQUISICIÓN tras la pausa corta no puede dejar
+// trabajo vivo después de responder. Un doble del cliente de Redis PARA EL
+// TURNO, con la política del cliente principal (reintentos + backoff del SDK)
+// o la del acotado (un intento, señal por petición leída al empezar cada
+// comando, como el `signal` como función de @upstash/redis 1.38.0: si aborta,
+// lanza y no reintenta).
+// ============================================================================
+function clienteTurnoDoble(w: ReturnType<typeof mundo>, o: { retries: number; modo: "caido" | "colgado" | "ok" | "aplica-y-falla"; colgadoMs?: number; senal?: () => AbortSignal | undefined; aplicaAntesDeColgar?: boolean }) {
+  const intentos: { t: number; op: string; clave: string; fin?: number; resultado?: string }[] = [];
+  let enVuelo = 0;
+  const backoff = (i: number) => Math.round(Math.exp(i) * 50);
+  const comando = <R>(op: string, clave: string, real: () => Promise<R>) => async (): Promise<R> => {
+    const senal = o.senal?.();
+    for (let i = 0; i <= o.retries; i++) {
+      const intento = { t: w.reloj.ahora(), op, clave } as (typeof intentos)[number];
+      intentos.push(intento); enVuelo += 1;
+      try {
+        if (o.modo === "ok") { enVuelo -= 1; intento.fin = w.reloj.ahora(); const r = await real(); intento.resultado = JSON.stringify(r); return r; }
+        // El comando LLEGÓ y aplicó, pero la respuesta se perdió (sólo los que escriben; el GET responde).
+        if (o.modo === "aplica-y-falla") { const r = await real(); enVuelo -= 1; intento.fin = w.reloj.ahora(); if (op === "GET") { intento.resultado = JSON.stringify(r); return r; } throw new TypeError("fetch failed"); }
+        if (o.modo === "colgado") {
+          // El comando puede haber LLEGADO a Redis (y aplicado) aunque la respuesta tarde.
+          let r: R | undefined; if (o.aplicaAntesDeColgar) r = await real();
+          await w.reloj.dormir(o.colgadoMs ?? 6000, senal);
+          enVuelo -= 1; intento.fin = w.reloj.ahora();
+          if (senal?.aborted) throw new DOMException("abortada", "AbortError");
+          if (r === undefined) r = await real();
+          intento.resultado = JSON.stringify(r); return r;
+        }
+        enVuelo -= 1; intento.fin = w.reloj.ahora();
+        throw new TypeError("fetch failed");
+      } catch (e) {
+        if (senal?.aborted) throw e;
+        if (i < o.retries) await w.reloj.dormir(backoff(i)); else throw e;
+      }
+    }
+    throw new Error("inalcanzable");
+  };
+  const ops: OpsTurno = {
+    ...w.ops,
+    setNx: (k, v, px) => comando("SETNX", k, () => w.ops.setNx(k, v, px))(),
+    evalTomar: (claves, args) => comando("TOMAR", claves[0], () => w.ops.evalTomar(claves, args))(),
+    get: (k) => comando("GET", k, () => w.ops.get(k))(),
+    evalLiberar: (k, prop) => comando("LIBERAR", k, () => w.ops.evalLiberar(k, prop))(),
+  };
+  return { ops, intentos, enVuelo: () => enVuelo };
+}
+
+/** Lo que pasó DESPUÉS de `tRespuesta`: iniciado después, o iniciado antes y terminado después. */
+const residualDe = (intentos: { t: number; op: string; fin?: number }[], tRespuesta: number) => ({
+  tardios: intentos.filter((i) => i.t > tRespuesta).map((i) => `${i.op}@+${i.t - tRespuesta}`),
+  terminadosDespues: intentos.filter((i) => i.t <= tRespuesta && (i.fin === undefined || i.fin > tRespuesta)).map((i) => `${i.op}@+${(i.fin ?? Infinity) - tRespuesta}`),
+});
+
+test("🔴 (auditoría sobre 1403ae4) pausa corta (2 s) + Redis CAÍDO: tras el 503 de la readquisición no aparece ningún TOMAR/GET/LIBERAR tardío, nada queda en vuelo, las métricas cerradas no cambian y no hay rechazos sueltos", async () => {
+  const sueltos: unknown[] = []; const h = (e: unknown) => { sueltos.push(e); }; process.on("unhandledRejection", h);
+  try {
+    const w = mundo();
+    pausaCompartida(w, 2000);
+    const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+    const lector = clienteRedisDoble(w, { retries: 0, modo: "caido", senal: () => lector.senalVirtual(CONSTANTES.T_LECTURA_PAUSA_MS) });
+    // El cliente PRINCIPAL para el turno: 6 intentos y 4,3 s de backoff por comando (la política vigente).
+    const principal = clienteTurnoDoble(w, { retries: 5, modo: "caido" });
+    // El cliente ACOTADO para la readquisición: un intento por comando, bajo el plazo compartido.
+    const acotado = clienteTurnoDoble(w, { retries: 0, modo: "caido", senal: senalDelPlazo });
+    const t0 = w.reloj.ahora();
+    const { d } = depsPausa(w, "A", {
+      leerAcotada: (claves) => lector.mget(claves) as Promise<(Payload | null)[]>,
+      turno: crearTurno(principal.ops, PAUSA_CFG), tomarAcotado: readquisicionCon(w, acotado),
+      producir: async () => ({ valor: { hero: ["A"], degradado: false, de: "A" }, fallo: false }),
+    }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    const tRespuesta = w.reloj.ahora();
+    const cerradas = JSON.stringify(r.m);
+    assert.equal(dormidas(w), 1, "un solo sueño");
+    assert.ok(tRespuesta - t0 <= 2000 + 100 + CONSTANTES.T_ADQ_MAX_MS + 1, `respondió en ${tRespuesta - t0} ms`);
+    await w.reloj.correr(w.reloj.dormir(10_000));
+    const res = residualDe([...principal.intentos, ...acotado.intentos], tRespuesta);
+    assert.equal(principal.enVuelo() + acotado.enVuelo(), 0, "queda un comando del turno en vuelo");
+    assert.deepEqual(res.tardios, [], `comandos del turno DESPUÉS de responder: ${JSON.stringify(res.tardios)}`);
+    assert.deepEqual(res.terminadosDespues, []);
+    assert.equal(JSON.stringify(r.m), cerradas, "una métrica cerrada cambió después de responder");
+    assert.equal(w.store.has(K.turno), false);
+    // Redis caído y la pausa ya vencida: `sin-redis` → el degradado de hoy (compone sin turno), como en §43.3; por el acotado, UN TOMAR y UN GET, y el principal no participa.
+    assert.equal(r.valor.de, "A"); assert.equal(r.m.home.origen, "sin-redis");
+    assert.deepEqual(acotado.intentos.map((i) => i.op), ["TOMAR", "GET"]);
+    assert.equal(principal.intentos.length, 0, "el cliente principal (con reintentos) no participa en la readquisición");
+    for (let i = 0; i < 5; i++) await new Promise((x) => setImmediate(x));
+    assert.deepEqual(sueltos, []);
+  } finally { process.off("unhandledRejection", h); }
+});
+
+test("🔴 (auditoría sobre 1403ae4) pausa corta (2 s) + Redis COLGADO que responde tarde (6 s): la readquisición indeterminada NO deja un TOMAR que se complete después, ni un LIBERAR tardío, ni toca las métricas cerradas", async () => {
+  const sueltos: unknown[] = []; const h = (e: unknown) => { sueltos.push(e); }; process.on("unhandledRejection", h);
+  try {
+    const w = mundo();
+    pausaCompartida(w, 2000);
+    const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+    const lector = clienteRedisDoble(w, { retries: 0, modo: "colgado", senal: () => lector.senalVirtual(CONSTANTES.T_LECTURA_PAUSA_MS) });
+    const principal = clienteTurnoDoble(w, { retries: 5, modo: "colgado", colgadoMs: 6000 });
+    const acotado = clienteTurnoDoble(w, { retries: 0, modo: "colgado", colgadoMs: 6000, senal: senalDelPlazo });
+    const t0 = w.reloj.ahora();
+    const { d } = depsPausa(w, "A", {
+      leerAcotada: (claves) => lector.mget(claves) as Promise<(Payload | null)[]>,
+      turno: crearTurno(principal.ops, PAUSA_CFG), tomarAcotado: readquisicionCon(w, acotado),
+      producir: async () => { throw new Error("no compone"); },
+    }, p);
+    const r = await w.reloj.correr(w.solicitud(d));
+    const tRespuesta = w.reloj.ahora();
+    const cerradas = JSON.stringify(r.m);
+    assert.equal(r.valor.de, "vacio:pausa-indeterminada");
+    assert.ok(tRespuesta - t0 <= 2 * CONSTANTES.T_LECTURA_PAUSA_MS + 2000 + 100 + CONSTANTES.T_ADQ_MAX_MS + 1, `respondió en ${tRespuesta - t0} ms`);
+    await w.reloj.correr(w.reloj.dormir(10_000));
+    const res = residualDe([...principal.intentos, ...acotado.intentos], tRespuesta);
+    assert.equal(principal.enVuelo() + acotado.enVuelo(), 0, "queda un comando del turno en vuelo");
+    assert.deepEqual(res.tardios, [], `comandos del turno DESPUÉS de responder: ${JSON.stringify(res.tardios)}`);
+    assert.deepEqual(res.terminadosDespues, [], `comandos terminados DESPUÉS de responder: ${JSON.stringify(res.terminadosDespues)}`);
+    assert.equal(JSON.stringify(r.m), cerradas, "una métrica cerrada cambió después de responder");
+    assert.equal(w.cuantasComposiciones(), 0);
+    // UN solo TOMAR, abortado por el plazo a los T_ADQ_MAX; ningún GET ni LIBERAR; el turno nunca quedó tomado.
+    assert.deepEqual(acotado.intentos.map((i) => `${i.op}:${i.fin! - i.t}`), [`TOMAR:${CONSTANTES.T_ADQ_MAX_MS}`]);
+    assert.equal(principal.intentos.length, 0);
+    assert.equal(w.store.has(K.turno), false);
+    for (let i = 0; i < 5; i++) await new Promise((x) => setImmediate(x));
+    assert.deepEqual(sueltos, []);
+  } finally { process.off("unhandledRejection", h); }
+});
+
+test("🔴 (1403ae4) TOMAR aplicado en Redis pero no reconciliable dentro del plazo: \`indeterminado\` → 503, SIN limpieza tardía; el turno queda y vence por su TTL (TURNO_MS), y recién entonces otro lo toma", async () => {
+  const w = mundo();
+  pausaCompartida(w, 2000);
+  const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+  // El TOMAR llega a Redis y aplica, pero la respuesta nunca vuelve: el plazo lo aborta.
+  const acotado = clienteTurnoDoble(w, { retries: 0, modo: "colgado", colgadoMs: 1e9, aplicaAntesDeColgar: true, senal: senalDelPlazo });
+  const { d } = depsPausa(w, "A", { tomarAcotado: readquisicionCon(w, acotado), producir: async () => { throw new Error("no compone"); } }, p);
+  const r = await w.reloj.correr(w.solicitud(d));
+  const tRespuesta = w.reloj.ahora();
+  assert.equal(r.valor.de, "vacio:pausa-indeterminada");
+  assert.equal(r.m.home.turno, "sin-redis");
+  // El turno quedó tomado por A (fencing intacto) con su TTL: nadie lo limpia después de responder.
+  const e = w.store.get(K.turno)!;
+  assert.equal(e.v, "A"); assert.equal(e.exp, tRespuesta - CONSTANTES.T_ADQ_MAX_MS + CONSTANTES.TURNO_MS);
+  await w.reloj.correr(w.reloj.dormir(10_000));
+  assert.deepEqual(acotado.intentos.map((i) => i.op), ["TOMAR"]);
+  assert.equal(acotado.enVuelo(), 0);
+  assert.equal(w.store.get(K.turno)?.v, "A", "el turno sigue tomado: la recuperación es el TTL, no una limpieza tardía");
+  // Mientras dura el TTL, otro ve \`ocupado\` (espera compartida); vencido, adquiere y compone.
+  await w.reloj.correr(w.reloj.dormir(CONSTANTES.TURNO_MS));
+  assert.equal(w.vivo(K.turno), null);
+  const rb = await w.reloj.correr(w.solicitud(depsPausa(w, "B").d));
+  assert.equal(rb.valor.de, "B"); assert.equal(rb.m.home.turno, "adquirido"); assert.equal(rb.m.home.publicacion, "publicado");
+});
+
+test("(1403ae4) reconciliación SEGURA dentro del plazo: el TOMAR aplica y su respuesta se pierde, el GET llega a tiempo → adquirido (reconciliado) y compone; dos comandos, ninguno después de responder", async () => {
+  const w = mundo();
+  pausaCompartida(w, 2000);
+  const p = pausaDePrueba(w, { localHasta: w.reloj.ahora() + 2000 });
+  const acotado = clienteTurnoDoble(w, { retries: 0, modo: "aplica-y-falla", senal: senalDelPlazo });
+  const { d } = depsPausa(w, "A", { tomarAcotado: readquisicionCon(w, acotado) }, p);
+  const r = await w.reloj.correr(w.solicitud(d));
+  const tRespuesta = w.reloj.ahora();
+  assert.equal(r.valor.de, "A"); assert.equal(r.m.home.turno, "reconciliado"); assert.equal(r.m.home.publicacion, "publicado");
+  assert.deepEqual(acotado.intentos.map((i) => i.op), ["TOMAR", "GET"]);
+  await w.reloj.correr(w.reloj.dormir(10_000));
+  assert.deepEqual(residualDe(acotado.intentos, tRespuesta), { tardios: [], terminadosDespues: [] });
+});
+
+test("controles (1403ae4): Redis SANO tras la pausa corta → readquisición y composición normales por el acotado; pausa LARGA → 503 inmediato sin readquirir; SIN pausa → el camino de siempre nunca llama a tomarAcotado; UB presente → UB en el acto", async () => {
+  // Redis sano: pausa de 2 s, un sueño, readquisición adquirida, compone y publica.
+  { const w = mundo(); pausaCompartida(w, 2000);
+    const sano = clienteTurnoDoble(w, { retries: 0, modo: "ok", senal: senalDelPlazo });
+    const r = await w.reloj.correr(w.solicitud(depsPausa(w, "A", { tomarAcotado: readquisicionCon(w, sano) }).d));
+    assert.equal(r.valor.de, "A"); assert.equal(dormidas(w), 1); assert.equal(r.m.home.turno, "adquirido"); assert.equal(r.m.home.publicacion, "publicado");
+    assert.deepEqual(sano.intentos.map((i) => i.op), ["TOMAR"]); }
+  // Pausa larga (8 s > ESPERA_PAUSA_MAX): 503 en el acto, sin dormir ni readquirir.
+  { const w = mundo(); pausaCompartida(w, 8000);
+    const r = await w.reloj.correr(w.solicitud(depsPausa(w, "A", { tomarAcotado: async () => { throw new Error("no debía readquirir"); } }).d));
+    assert.equal(r.valor.de, "vacio:pausa"); assert.equal(r.valor.reintentarEnMs, 8000); assert.equal(dormidas(w), 0); }
+  // Sin pausa: MISS frío de siempre, `tomarAcotado` no participa.
+  { const w = mundo();
+    const r = await w.reloj.correr(w.solicitud(w.deps("A", { tomarAcotado: async () => { throw new Error("no debía readquirir"); } })));
+    assert.equal(r.valor.de, "A"); assert.equal(r.m.home.turno, "adquirido"); assert.equal(r.m.home.publicacion, "publicado"); }
+  // UB presente con pausa corta: el UB ya, sin sueño ni readquisición.
+  { const w = mundo(); w.store.set(K.ub, { v: UB, exp: 0 }); pausaCompartida(w, 2000);
+    const r = await w.reloj.correr(w.solicitud(depsPausa(w, "A", { tomarAcotado: async () => { throw new Error("no debía readquirir"); } }).d));
+    assert.equal(r.valor.de, "ub"); assert.equal(r.m.home.origen, "ultimo-bueno-pausa"); assert.equal(dormidas(w), 0); }
 });

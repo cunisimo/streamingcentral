@@ -1,0 +1,119 @@
+{
+  "fecha": "2026-09-19T13:29:51.464Z",
+  "dir": ".",
+  "buildId": "AVlfbqLiP68898ST6cp8I",
+  "retryAfterS": 3,
+  "ventanaMs": 20000,
+  "variantes": {
+    "caido": {
+      "modo": "caido",
+      "pausado": {
+        "status": 200,
+        "retryAfter": null,
+        "msPared": 58621,
+        "tInicio": 1789824597794,
+        "tFin": 1789824656415,
+        "contenido": 11,
+        "motivo": null,
+        "pausaConocidaAlPedir": true,
+        "msDesdeEl429": 13,
+        "propietario": "04b37169-9265-4259-808e-cc7250bae365:20140:2",
+        "compone": 1,
+        "durmio": 1,
+        "pausaMs": 2941,
+        "esperaPausaMs": 3105,
+        "lecturasAcotadas": 2,
+        "linea": "[home] 58612ms total | cache MISS | 1 composición | 0 esperas compartidas | DEGRADADO (136 fuente(s), 135 descarte(s) tmdb) | turno sin-redis | origen sin-redis | publicacion no | renovaciones 0 | propietario 04b37169-9265-4259-808e-cc7250bae365:20140:2 | PAUSA 2941ms | espera pausa 3105ms | 2 lectura(s) acotada(s) | t"
+      },
+      "residual": {
+        "ventanaMs": 21076,
+        "iniciadasAntesDeResponder": 5,
+        "completadasAntes": 5,
+        "completadasDespuesONunca": [],
+        "tardias": [],
+        "porComando": {
+          "MGET": 3,
+          "EVALSHA": 1,
+          "GET": 1
+        },
+        "comandos": [
+          "-58598ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-58586ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-58581ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-55464ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653",
+          "-55451ms GET [\"get\",\"home:turno:es-ES.r1:v6:2429564653:d,n:\"]"
+        ]
+      },
+      "redisTrasLaRespuestaTodos": {
+        "total": 1,
+        "porComando": {
+          "EVALSHA": 1
+        },
+        "propios": 0
+      },
+      "veredicto": {
+        "sinTrabajoResidual": true
+      },
+      "primero": {
+        "status": 200,
+        "motivo": "cancelada",
+        "msPared": 60287
+      }
+    },
+    "colgado": {
+      "modo": "colgado",
+      "pausado": {
+        "status": 503,
+        "retryAfter": "5",
+        "msPared": 5201,
+        "tInicio": 1789824682277,
+        "tFin": 1789824687478,
+        "contenido": 0,
+        "motivo": "pausa-indeterminada",
+        "pausaConocidaAlPedir": true,
+        "msDesdeEl429": 19,
+        "propietario": "ff65e457-585a-4320-813f-317bda349f6c:2676:2",
+        "compone": 0,
+        "durmio": 1,
+        "pausaMs": 1923,
+        "esperaPausaMs": 139,
+        "lecturasAcotadas": 2,
+        "linea": "[home] 5181ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno sin-redis | origen vacio-pausa | publicacion no | renovaciones 0 | propietario ff65e457-585a-4320-813f-317bda349f6c:2676:2 | PAUSA 1923ms | espera pausa 139ms | 2 lectura(s) acotada(s) | tmdb 0 llamadas (0 ok) "
+      },
+      "residual": {
+        "ventanaMs": 21180,
+        "iniciadasAntesDeResponder": 4,
+        "completadasAntes": 4,
+        "completadasDespuesONunca": [],
+        "tardias": [],
+        "porComando": {
+          "MGET": 3,
+          "EVALSHA": 1
+        },
+        "comandos": [
+          "-5170ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-4173ms MGET [\"mget\",\"home:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-3171ms MGET [\"mget\",\"home:ub:es-ES.r1:v6:d,n:\",\"home:degradado:es-ES.r1:v6:2429564653:d,n:\"]",
+          "-2006ms EVALSHA [\"evalsha\",\"67ab098cebdee451bfd69efa30c64111e6cc5556\",2,\"home:turno:es-ES.r1:v6:2429564653"
+        ]
+      },
+      "redisTrasLaRespuestaTodos": {
+        "total": 8,
+        "porComando": {
+          "EVALSHA": 2,
+          "EVAL": 3,
+          "PTTL": 1,
+          "MGET": 2
+        },
+        "propios": 0
+      },
+      "veredicto": {
+        "sinTrabajoResidual": true
+      },
+      "primero": {
+        "pendiente": true,
+        "nota": "no se espera: con Redis caído/colgado su composición es la promesa reducida de la Etapa 2"
+      }
+    }
+  }
+}

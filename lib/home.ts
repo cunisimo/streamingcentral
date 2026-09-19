@@ -36,7 +36,7 @@ import {
 // acá arrastraría lib/enrich → lib/cache → Upstash Redis al bundle del navegador.
 import { HOME_GENRES, defaultTypeFor } from "@/components/data";
 import { soloAnimePlatform } from "./audience";
-import { backendCache, dailySeed, leerAcotadasHome, leerVarias, opsTurnoHome, pausaTmdb, pickDaily, TTL, withMetricas } from "./cache";
+import { backendCache, conPlazoRedis, dailySeed, leerAcotadasHome, leerVarias, opsTurnoAcotadoHome, opsTurnoHome, pausaTmdb, pickDaily, TTL, withMetricas } from "./cache";
 import { canonizarProviders, canonizarTipos, claveDeTipos } from "./canonizar-home";
 import { crearVueloHome } from "./home-vuelo";
 // Etapa 3.a (#19, H2): el contexto compuesto —disponibilidad + descartes de
@@ -724,7 +724,12 @@ const INSTANCIA = randomUUID();
 let composicionesDeEsteProceso = 0;
 // Etapa 3.c.1: con la pausa encendida, la adquisición es el script TOMAR
 // (pausa + SET NX atómicos, §40.5); con TMDB_PAUSA_429=0, el SET NX de siempre.
-const turnoHome = crearTurno(opsTurnoHome, pausaActiva(process.env) ? { pausa: { clave: CLAVES_PAUSA.pausa } } : {});
+const CFG_TURNO = pausaActiva(process.env) ? { pausa: { clave: CLAVES_PAUSA.pausa } } : {};
+const turnoHome = crearTurno(opsTurnoHome, CFG_TURNO);
+// La readquisición tras la pausa (3.c.1, auditoría sobre 1403ae4): el mismo
+// TOMAR atómico, por el cliente acotado y bajo UN plazo compartido; vencido, no
+// queda ni sale ningún comando y el resultado es indeterminado.
+const turnoAcotadoHome = crearTurno(opsTurnoAcotadoHome, CFG_TURNO);
 /** El contexto de una solicitud del Home: sus cinco claves más el plazo absoluto (§46) y el comienzo real de la ruta (§47). */
 type ContextoHome = ClavesDelHome & { inicioRuta: number; plazo: number };
 /** La métrica `rechazadas` del contexto actual (llamadas que la pausa no dejó salir); 0 fuera de un scope. */
@@ -790,6 +795,7 @@ const servirHome = crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>({
     leer: (claves) => leerVarias<HomePayload>(claves),
     leerAcotada: (claves) => leerAcotadasHome<HomePayload>(claves),
     turno: turnoHome,
+    tomarAcotado: (p, senal) => conPlazoRedis(senal, () => turnoAcotadoHome.tomar(p, { senal })),
     // Lo producido se anota acá (fuentes caídas, degradado) para que la línea
     // del FONDO (3.b) lo muestre: en el fondo nadie ve el payload producido —
     // con UB, `componer` sirve el UB y descarta el degradado—. En la solicitud,

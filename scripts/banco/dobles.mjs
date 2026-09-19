@@ -114,13 +114,23 @@ function doble(nombre, puerto, atender, extra = {}) {
       marca = { t: Date.now(), fin: 0, f };
       // El SDK de Upstash manda CADA comando como un /pipeline de uno: se
       // registra el primer comando del lote (nombre y clave) y cuántos trae.
-      if (nombre === "redis") { try { const c = JSON.parse(cuerpo); const primero = url.startsWith("/pipeline") ? c[0] : c; marca.c = String(primero?.[0] ?? "").toUpperCase(); marca.k = String(primero?.[1] ?? ""); marca.n = url.startsWith("/pipeline") ? c.length : 1; } catch { /* sin clave */ } }
+      // `cmd` (auditoría sobre 1403ae4): el comando entero, acotado, para
+      // correlacionar por clave Y por propietario: en EVALSHA/EVAL la primera
+      // posición es el SHA/script y las claves del turno y el propietario van
+      // después, así que `k` solo no alcanza para atribuir un TOMAR o un LIBERAR.
+      if (nombre === "redis") { try { const c = JSON.parse(cuerpo); const primero = url.startsWith("/pipeline") ? c[0] : c; marca.c = String(primero?.[0] ?? "").toUpperCase(); marca.k = String(primero?.[1] ?? ""); marca.n = url.startsWith("/pipeline") ? c.length : 1; marca.cmd = JSON.stringify(primero).slice(0, 700); } catch { /* sin clave */ } }
       marcas.push(marca);
       res.on("finish", () => { marca.fin = Date.now(); marca.s = res.statusCode; });
       res.on("close", () => { if (!marca.fin) marca.fin = Date.now(); });
     }
     if (estado.latenciaMs) await dormir(sortearLatencia(estado.latenciaMs, estado.latenciaP95Ms, rng));
     if (estado.modo === "caido") { req.socket.destroy(); return; }
+    // "colgado" (auditoría sobre 1403ae4): Redis RESPONDE, pero tarde
+    // (`colgadoMs`, 15 s por defecto). Si el cliente abortó mientras tanto, la
+    // marca queda con `fin` en el cierre y sin `s`; si no, el comando se atiende
+    // normalmente al vencer la espera: así se ve un TOMAR que llega a aplicarse
+    // después de que el Home respondió.
+    if (estado.modo === "colgado") { await dormir(estado.colgadoMs ?? 15000); if (res.writableEnded || req.socket.destroyed) return; }
     if (estado.modo === "500") return json(res, 500, { error: "doble en modo 500" });
     if (estado.modo === "429") return json(res, 429, { error: "doble en modo 429" }, { "Retry-After": String(estado.retryAfter) });
     // Etapa 3.a (H2): 429 PARCIAL y determinístico —sólo en la familia

@@ -519,7 +519,7 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "no-tmdb", motivo: "fondo 3.b: errores de turno/Redis tras componer; se relanzan al programador que los loguea" },
   { archivo: "lib/home-servir.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "3.c.1: la única limpieza LIBERAR de la composición (best effort): Redis" },
   { archivo: "lib/home-servir.ts", ancla: ".catch(() => null)", clase: "no-tmdb", motivo: "3.c.1 (d322282): el lector acotado lanzó (señal abortada o Redis caído, sin reintento) → la lectura se da por ausente; Redis" },
-  { archivo: "lib/home-servir.ts", ancla: ".catch(() => {})", clase: "no-tmdb", motivo: "3.c.1: readquisición que respondió DESPUÉS de su timeout y adquirió: se suelta el turno; Redis" },
+  { archivo: "lib/home-servir.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "3.c.1 (1403ae4): la readquisición acotada lanzó (plazo vencido → indeterminado; otra cosa → sin-redis): Redis" },
   { archivo: "lib/home-servir.ts", ancla: "catch { registrado = false; }", clase: "no-tmdb", motivo: "el registro en waitUntil lanzó: se compone en línea" },
   // Etapa 3.c.1: la pausa compartida. Las tres son operaciones de Redis (PAUSAR, PTTL del lector, CUBO): nunca un error de TMDB.
   { archivo: "lib/tmdb-pausa.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "PAUSAR indeterminado: rige la pausa local; Redis" },

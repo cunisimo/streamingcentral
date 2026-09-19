@@ -55,8 +55,10 @@ export interface OpsTurno {
 /**
  * Las primitivas de la PAUSA compartida (3.c.1, lib/pausa-lua.ts). Devuelven
  * `unknown` a propósito: lo que vuelve del transporte se valida en
- * lib/tmdb-pausa.ts, y cualquier forma que no sea la esperada (p. ej. el `200`
- * sintético `"Aborted"` del SDK con una señal abortada) es `indeterminado`.
+ * lib/tmdb-pausa.ts, y cualquier forma que no sea la esperada es
+ * `indeterminado`. (Una señal abortada no llega como valor: con `signal` como
+ * función, el SDK 1.38.0 lanza y no reintenta; el `200` sintético `"Aborted"`
+ * sólo existe con una señal estática, que lib/cache.ts no usa.)
  */
 export interface OpsPausa {
   /** PAUSAR: KEYS = [pausa, ev, proc, eventos, cubos]; ARGV = [id, ms, contador, familia, retryAfterMs]. Puede lanzar. */
@@ -74,7 +76,14 @@ export type ResultadoTomar =
   | { estado: "ocupado"; valor: string }
   | { estado: "sin-redis" }
   /** 3.c.1: la pausa compartida está vigente; el script no adquirió. `restanteMs` es el PTTL que devolvió Redis. */
-  | { estado: "pausado"; restanteMs: number };
+  | { estado: "pausado"; restanteMs: number }
+  /**
+   * 3.c.1 (auditoría sobre 1403ae4): el PLAZO de la operación venció antes de
+   * saber. Un TOMAR pudo haberse aplicado en Redis sin que llegara la respuesta
+   * y ya no cabe reconciliarlo: NO se limpia después —el turno, si quedó,
+   * vence por su TTL (`px`)—. Sólo con `senal` en `tomar`.
+   */
+  | { estado: "indeterminado" };
 export type ResultadoRenovar = "renovado" | "perdido" | "indeterminado";
 export type ResultadoPublicar = "publicado" | "publicada-solo-fresca" | "rechazado" | "indeterminado";
 export type ResultadoEnfriar = "enfriado" | "no-era-mio" | "indeterminado";
@@ -96,9 +105,9 @@ export function crearTurno(ops: OpsTurno, cfg: { pausa?: { clave: string } } = {
   /**
    * Un intento de adquisición. Con pausa: el script; su respuesta se VALIDA
    * (`['adquirido']`, `['ocupado', valor]`, `['pausado', entero > 0]`) y
-   * cualquier otra forma —el `"Aborted"` sintético del SDK, `null`, un
-   * número— se trata como fallo de transporte: nunca como adquirido ni como
-   * pausado. Devuelve `undefined` para "no se pudo saber" (excepción o forma
+   * cualquier otra forma —`null`, un número, una cadena suelta— se trata como
+   * fallo de transporte: nunca como adquirido ni como pausado. (Una señal
+   * abortada LANZA en el cliente acotado; no vuelve como valor.) Devuelve `undefined` para "no se pudo saber" (excepción o forma
    * inesperada), y entonces se reconcilia con GET como en la Etapa 2.
    */
   const intentar = async (p: { clave: string; propietario: string; px: number }): Promise<ResultadoTomar | "no-adquirido" | undefined> => {
@@ -117,26 +126,39 @@ export function crearTurno(ops: OpsTurno, cfg: { pausa?: { clave: string } } = {
     return undefined;
   };
 
-  async function tomar(p: { clave: string; propietario: string; px: number }): Promise<ResultadoTomar> {
+  /**
+   * `opts.senal` (3.c.1, auditoría sobre 1403ae4): el plazo compartido de TODA
+   * la operación lógica (intento, reconciliación, segundo intento). Las
+   * primitivas ya lo respetan por su cuenta (el cliente acotado lo lee al
+   * empezar cada petición); acá decide: una primitiva que falló con el plazo
+   * vencido es `indeterminado` —no se sabe si aplicó— y no se emite ningún
+   * comando más. Sin señal, la secuencia de siempre.
+   */
+  async function tomar(p: { clave: string; propietario: string; px: number }, opts: { senal?: AbortSignal } = {}): Promise<ResultadoTomar> {
+    const vencido = () => !!opts.senal?.aborted;
+    if (vencido()) return { estado: "indeterminado" };
     const primero = await intentar(p);
     if (primero !== undefined && primero !== "no-adquirido") return primero;
+    if (vencido()) return { estado: "indeterminado" };
     const fallo = primero === undefined;
     // `null` o excepción: reconciliar. El GET cuesta un comando y evita el
     // turno huérfano; en el camino frío es barato.
     const valor = await leer(p.clave);
-    if (valor === undefined) return { estado: "sin-redis" };
+    if (valor === undefined) return vencido() ? { estado: "indeterminado" } : { estado: "sin-redis" };
     if (valor === p.propietario) return { estado: "adquirido", reconciliado: true };
     if (valor !== null) return { estado: "ocupado", valor };
     // Nadie lo tiene y el SET había fallado: el comando no ejecutó. Un segundo
     // intento, acotado a uno; si también falla, Redis no está.
     if (!fallo) return { estado: "ocupado", valor: "" };
+    if (vencido()) return { estado: "indeterminado" };
     const segundo = await intentar(p);
     if (segundo !== undefined && segundo !== "no-adquirido") return segundo;
+    if (vencido()) return { estado: "indeterminado" };
     if (segundo === undefined) return { estado: "sin-redis" };
     const otra = await leer(p.clave);
     if (otra === p.propietario) return { estado: "adquirido", reconciliado: true };
     if (typeof otra === "string") return { estado: "ocupado", valor: otra };
-    return { estado: "sin-redis" };
+    return vencido() ? { estado: "indeterminado" } : { estado: "sin-redis" };
   }
 
   async function renovar(p: { clave: string; propietario: string; px: number }): Promise<ResultadoRenovar> {
