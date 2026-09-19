@@ -1,13 +1,13 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 18 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 19 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
-- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 y 1 hechas; sin
+- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0, 1 y 2 hechas; sin
   merge, push, deploy ni cambios en Producción (2026-09-18).** Plan aprobado
   por el dueño con tres rondas de correcciones:
   [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
@@ -36,7 +36,14 @@
   base: sin tokens del servidor, sin rotación, orden de respuestas
   irrelevante); suite y `tsc` limpios. Evidencia:
   [`medidas/2026-09-18-salas-etapa1.md`](medidas/2026-09-18-salas-etapa1.md).
-  Sigue la Etapa 2 (preparación en Vercel). **No autorizado todavía:** migraciones en Producción, deploy,
+  **Etapa 2 HECHA en la rama (19/09):** `lib/sala/*` (tipos, selección pura,
+  orquestación con deps inyectadas, handler HTTP puro con 400 sin defaults) y
+  `POST /api/sala/preparar` con `service_role`; 23 tests nuevos; inventario
+  CORS 27 = 24 + 3. **Medido en local con TMDB real** (frío/caliente/control,
+  5/10/20): 2 llamadas a TMDB por card en frío (10 / 20 / 50), 0 en caliente;
+  0,85 / 1,0 / 2,7 s frío y 0,17–0,35 s caliente. Evidencia:
+  [`medidas/2026-09-19-salas-etapa2.md`](medidas/2026-09-19-salas-etapa2.md).
+  Sigue la Etapa 3 (cliente: lobby y votación). **No autorizado todavía:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:
   [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).

@@ -320,6 +320,18 @@ misma participación.** (37 pruebas.)
 
 # Etapa 2 — Preparación en Vercel
 
+> **HECHA (rama `feat/salas`, 2026-09-19).** Los archivos reales son la
+> referencia: `lib/sala/tipos.ts`, `lib/sala/preparacion-nucleo.ts`,
+> `lib/sala/preparar-nucleo.ts` (orquestación con deps inyectadas; lotes: el
+> primero del tamaño de la tanda, los siguientes `max(5, 2·faltan)` hasta 20),
+> `lib/sala/preparar-ruta.ts` (handler HTTP puro), `lib/sala/preparar.ts`
+> (cableado server-only con `supabaseAdmin`), `app/api/sala/preparar/route.ts`,
+> `scripts/sala/medir-preparacion.mjs`. Diferencias respecto de lo escrito
+> abajo: la ruta cablea un handler puro en vez de validar en línea; el resultado
+> `ok` trae `enriquecidas`/`descartadas` para la línea `[sala]`; la
+> configuración de `next dev` local es `sala-local` en `.claude/launch.json`.
+> Medición y evidencia: `docs/medidas/2026-09-19-salas-etapa2.md`.
+
 ### Task 2.1: Tipos y selección pura
 
 **Files:**
