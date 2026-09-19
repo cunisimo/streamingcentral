@@ -7,7 +7,7 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0, 1 y 2 hechas; sin
+- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 a 3 hechas; sin
   merge, push, deploy ni cambios en Producción (2026-09-19).** Plan aprobado
   por el dueño con tres rondas de correcciones:
   [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
@@ -53,7 +53,28 @@
   0 fallos / 10 omitidos (artefacto Capacitor); `tsc` limpio. Evidencia:
   [`medidas/2026-09-19-salas-etapa2.md`](medidas/2026-09-19-salas-etapa2.md) y
   líneas crudas en `medidas/2026-09-19-salas-preparacion-crudo.txt`.
-  Sigue la Etapa 3 (cliente: lobby y votación), **todavía no autorizada**. **No autorizado tampoco:** migraciones en Producción, deploy,
+  **Etapa 3 HECHA en la rama (19/09), pendiente de aprobación del dueño:**
+  cliente completo del MVP hasta la votación — credencial generada en el
+  cliente y persistida antes de la primera solicitud (`lib/sala/token-store.ts`),
+  `useSala` (Broadcast público sólo de escucha, relectura acotada a 1500 ms,
+  respaldo cada 5 s, relectura tras cada plazo), `/sala/nueva` y `/sala/[id]`
+  (crear, reclamar, unirse, lobby con ConfigTanda y "Empezar" contra
+  `/api/sala/preparar`), votación con 10 s por card PERSISTIDOS (recargar no
+  reinicia) y `pass` automático; entrada en el Home y en el hub. **36 tests
+  nuevos**; suite post-build 1781 / 1771 ok / 0 fallos / 10 omitidos; `tsc`
+  limpio; `npm run build` en verde. **Verificado en navegador (local, TMDB
+  real)** como invitado sin cuenta con el organizador desde node: lobby en vivo,
+  lobby vencido, tanda publicada, pass cada 10 s exactos, recarga a mitad de
+  card conserva el contador (9 → 6), `sin_coincidencias` y `match` llegan sin
+  recargar. Corregido en la verificación: el contador se llevaba la card
+  siguiente tras un pass automático (comienzo atado a su posición). **Resultado
+  PROVISORIO** hasta la Etapa 4; `app/sala/[id]` todavía fuera de `APP_FUERA`
+  (Tarea 6.1). Pendiente de verificación manual del dueño: la pantalla del
+  organizador en el navegador, red cortada, lector de pantalla y una card sin
+  "Pero" real. Evidencia:
+  [`medidas/2026-09-19-salas-etapa3.md`](medidas/2026-09-19-salas-etapa3.md).
+  Siguen las Etapas 4 (resultados, desempate, otra tanda), 5 (compartir) y 6,
+  **no autorizadas todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:
   [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).

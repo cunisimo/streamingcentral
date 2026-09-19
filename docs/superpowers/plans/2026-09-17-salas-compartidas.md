@@ -493,6 +493,17 @@ export const OPTIONS = opcionesCors("POST");
 
 # Etapa 3 — Cliente: lobby y votación
 
+> **HECHA (rama `feat/salas`, 2026-09-19), pendiente de aprobación del dueño.**
+> Cuatro commits, uno por tarea: `75e51cc` (3.1), `31db791` (3.2), `25f0cb9`
+> (3.3), `a2440d2` (3.4). Los archivos reales son la referencia:
+> `lib/sala/{estado,token-store,mensajes,entrada,votacion-nucleo}.ts`,
+> `hooks/{temporizador-card,sala-relectura-nucleo,useSala,useVenceEn}.ts`,
+> `components/sala/*`, `app/sala/nueva`, `app/sala/[id]`. **36 tests nuevos.**
+> Desvíos declarados: selector desde `PLATFORMS` (no `/api/providers`);
+> resultado PROVISORIO hasta la Etapa 4; enlace + Copiar en el lobby (compartir
+> es la Etapa 5); `claveCard` se llama `claveInicioCard`; `app/sala/[id]`
+> todavía no está en `APP_FUERA` (Tarea 6.1). Evidencia y verificación manual:
+> `docs/medidas/2026-09-19-salas-etapa3.md`.
 ### Task 3.1: Contratos del estado, token local, temporizador
 
 **Files:**
@@ -501,7 +512,7 @@ export const OPTIONS = opcionesCors("POST");
 - Create: `hooks/temporizador-card.ts` (máquina pura + persistencia inyectable): `arrancar(store, clave, ahoraMs) → { arrancoEn }` lee `store.get(clave)` y, si no hay nada, guarda `ahoraMs`; `restante(arrancoEn, ahoraMs)` en s (10 − transcurridos, mínimo 0); `vencio(arrancoEn, ahoraMs)` a los 10.000 ms; `cerrar(store, clave)` borra la entrada. `clave = \`yump:sala:${room}:${round}:${pos}:inicio\``. **Recargar la página no reinicia los 10 s**: el comienzo persiste en `localStorage` por sala, ronda y posición y **se borra sólo cuando el servidor confirmó el avance** (`sala_votar` aceptado, o `sala_estado` con `mi_siguiente_pos > pos`). Un fallo de red conserva el comienzo, vencido o no: al volver, si ya venció, se reintenta el `pass` de inmediato. El plazo global sigue siendo el del servidor: esto sólo evita que el contador local se regale con F5.
 - Tests: `lib/sala/estado.test.ts`, `lib/sala/token-store.test.ts` (con un `localStorage` doble), `hooks/temporizador-card.test.ts` (casos: arranque nuevo guarda; segundo `arrancar` con la misma clave conserva el comienzo original y `restante` sigue bajando; `cerrar` borra y un `arrancar` posterior arranca de cero; `vencio` exacto a 10.000 ms; store que lanza → se comporta como sin persistencia)
 
-- [ ] **Step 1:** Tests que fallan → implementación mínima → PASS → commit `feat(salas): contratos de estado, token local y temporizador`.
+- [x] **Step 1:** Tests que fallan → implementación mínima → PASS → commit `feat(salas): contratos de estado, token local y temporizador`.
 
 ### Task 3.2: `useSala` — Realtime + relectura acotada
 
@@ -514,8 +525,8 @@ export const OPTIONS = opcionesCors("POST");
 - `useSala(roomId, token) → { estado: EstadoSala | null; cargando; error; releer(); canal: "conectado" | "desconectado" }`
 - Comportamiento: (1) `sala_estado` al montar; (2) canal `supabaseBrowser().channel(\`sala:${roomId}\`, { config: { private: false } }).on("broadcast", { event: "cambio" }, () => programarRelectura())`; (3) **nunca publica**; (4) `visibilitychange` → releer; `online` → releer; (5) mientras el canal no esté `SUBSCRIBED`, `setInterval` de 5 s; al quedar `SUBSCRIBED` se limpia; (6) timers locales: releer 1 s después de `deadline_at`, `lobby_expires_at` y `expires_at`; (7) en estado terminal vencido/inexistente: `channel.unsubscribe()` y `borrarToken`; (8) `useEffect` cleanup: unsubscribe.
 
-- [ ] **Step 1:** Test del núcleo: dos señales a 100 ms → una relectura a los 1500 ms; una señal aislada 3 s después → inmediata.
-- [ ] **Step 2:** Implementar hook. Commit `feat(salas): useSala con Broadcast público, relectura acotada y respaldo`.
+- [x] **Step 1:** Test del núcleo: dos señales a 100 ms → una relectura a los 1500 ms; una señal aislada 3 s después → inmediata.
+- [x] **Step 2:** Implementar hook. Commit `feat(salas): useSala con Broadcast público, relectura acotada y respaldo`.
 
 ### Task 3.3: Páginas y componentes de lobby
 
@@ -527,9 +538,9 @@ export const OPTIONS = opcionesCors("POST");
 - Modify: `components/CatalogView.tsx` (entrada "Crear sala" debajo de `RuletaBanner`, sólo `!ES_NATIVO`; sin sesión lleva a `/cuenta`), `components/UserHub.tsx` (tile "Crear sala" en `hub-tiles`, sólo `!ES_NATIVO`)
 - Modify: `app/globals.css` (`.sala-*`)
 
-- [ ] **Step 1:** Implementar; el "Empezar" hace `fetch(apiUrl("/api/sala/preparar"), { method: "POST", headers: { Authorization: \`Bearer ${session.access_token}\` }, body })` con el patrón de `TeVaAGustar.tsx:89-100`.
-- [ ] **Step 2:** Verificación en navegador (dos ventanas, una incógnito) con `next dev` + `.env.sala-local`: crear, unirse, ver nombres en ambas sin recargar (señal + relectura), lobby vence a los 15 min (probar con `update rooms set lobby_expires_at = now()` vía admin → ambas ventanas muestran "La sala venció").
-- [ ] **Step 3:** Commit `feat(salas): crear sala, unirse y lobby`.
+- [x] **Step 1:** Implementar; el "Empezar" hace `fetch(apiUrl("/api/sala/preparar"), { method: "POST", headers: { Authorization: \`Bearer ${session.access_token}\` }, body })` con el patrón de `TeVaAGustar.tsx:89-100`.
+- [x] **Step 2:** Verificación en navegador (dos ventanas, una incógnito) con `next dev` + `.env.sala-local`: crear, unirse, ver nombres en ambas sin recargar (señal + relectura), lobby vence a los 15 min (probar con `update rooms set lobby_expires_at = now()` vía admin → ambas ventanas muestran "La sala venció").
+- [x] **Step 3:** Commit `feat(salas): crear sala, unirse y lobby`.
 
 ### Task 3.4: Votación
 
@@ -541,8 +552,8 @@ export const OPTIONS = opcionesCors("POST");
 **`BotonesVoto`:** tres `<button type="button" className="act sala-act" aria-label="No|Paso|Sí">` con **sólo el ícono** (sin `.lab` visible; el texto va únicamente en `aria-label`): cruz = `M18 6L6 18M6 6l12 12`; salto = `M5 4l10 8-10 8V4zM19 5v14`; corazón = `M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z`. Mismo trazo `1.8` y `viewBox 0 0 24 24` que `.act svg`; el corazón se rellena con `var(--accent)` en `:active`. CSS: `.sala-act { min-width: 64px; min-height: 64px; border-radius: 999px; border: 1px solid var(--line-2) } .sala-act svg { width: 30px; height: 30px } .sala-act:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }`. Mientras hay un `sala_votar` en vuelo los tres llevan el atributo real **`disabled`** (es lo único que impide pulsaciones nuevas; `aria-disabled` puede acompañarlo pero no lo reemplaza) y `.sala-act:disabled { opacity: .5; cursor: default }`.
 **Contador:** `temporizador-card` con `setInterval` de 250 ms y **persistencia por sala/ronda/pos** (Tarea 3.1): al montar la card se llama `arrancar(localStorage, clave, Date.now())`, que reusa el comienzo guardado si existe. **`cerrar` se llama únicamente cuando el servidor confirmó el avance**: cuando `sala_votar` devolvió `ok: true` (incluido `idempotente`), o devolvió `motivo: "ya_votado"` / `"fuera_de_orden"` con `siguiente > pos`, o cuando un `sala_estado` posterior trae `mi_siguiente_pos > pos`. Si la solicitud falla (red, 5xx, timeout) el comienzo persistido **se conserva**, aunque ya esté vencido: al recargar, `vencio` es verdadero y se reintenta el `pass` de inmediato en vez de regalar otros 10 s. Si al montar `vencio` ya es verdadero, se registra `pass` sin mostrar la card. Al montar con `mi_siguiente_pos` del estado se retoma desde ahí y se limpian las claves de posiciones anteriores a ésa. Tras el último voto: pantalla "Listo, esperando a los demás (k de N)". Al llegar `estado ≠ votando` → `Resultado*`.
 
-- [ ] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, **recargar a los 6 s deja 4 s (no vuelve a 10)**, recarga tras votar retoma en la siguiente con 10 s, voto tardío tras deadline muestra resultado. **Con la red cortada (DevTools → Offline):** al votar, los tres botones quedan con `disabled` real (un segundo toque no dispara nada), la solicitud falla, el comienzo persistido sigue ahí; recargar sin red no reinicia los 10 s y, si venció, intenta el `pass` en cuanto vuelve la red. Con un lector de pantalla (TalkBack/VoiceOver) los tres botones se anuncian "No", "Paso", "Sí". **Una card con `advertencia` null (la fixture "Sin pero") no muestra la sección "Pero"** —ni título ni caja vacía— y la siguiente con advertencia sí la muestra.
-- [ ] **Step 2:** Commit `feat(salas): votación con tres botones, contador local y reanudación`.
+- [x] **Step 1:** Implementar. Verificar con dos navegadores: orden idéntico, `pass` automático a los 10 s, **recargar a los 6 s deja 4 s (no vuelve a 10)**, recarga tras votar retoma en la siguiente con 10 s, voto tardío tras deadline muestra resultado. **Con la red cortada (DevTools → Offline):** al votar, los tres botones quedan con `disabled` real (un segundo toque no dispara nada), la solicitud falla, el comienzo persistido sigue ahí; recargar sin red no reinicia los 10 s y, si venció, intenta el `pass` en cuanto vuelve la red. Con un lector de pantalla (TalkBack/VoiceOver) los tres botones se anuncian "No", "Paso", "Sí". **Una card con `advertencia` null (la fixture "Sin pero") no muestra la sección "Pero"** —ni título ni caja vacía— y la siguiente con advertencia sí la muestra.
+- [x] **Step 2:** Commit `feat(salas): votación con tres botones, contador local y reanudación`.
 
 ---
 
