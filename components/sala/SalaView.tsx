@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAuth } from "../AuthContext";
 import UnirseForm from "./UnirseForm";
 import Lobby from "./Lobby";
+import Votacion from "./Votacion";
 import { useSala } from "@/hooks/useSala";
 import { supabaseBrowser } from "@/lib/supabase";
 import { credencialParaUnirse, leerToken } from "@/lib/sala/token-store";
@@ -78,8 +79,8 @@ export default function SalaView({ roomId }: { roomId: string }) {
           <p className="sala-hint">Estamos eligiendo las películas para todos. Son unos segundos.</p>
         </div>
       )}
-      {e && !esInexistente(e) && e.estado === "votando" && (
-        <p className="sala-hint" role="status">La votación llega en la próxima tanda de trabajo (Tarea 3.4).</p>
+      {e && !esInexistente(e) && e.estado === "votando" && e.ronda && token && (
+        <Votacion key={e.ronda.id} estado={e} ronda={e.ronda} roomId={roomId} token={token} desfase={sala.desfase} releer={sala.releer} />
       )}
       {e && !esInexistente(e) && (e.estado === "empate" || e.estado === "resultado") && (
         <div className="sala-espera-tanda" role="status">

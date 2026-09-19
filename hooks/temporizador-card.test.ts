@@ -4,18 +4,18 @@
 // interfaz llama cuando el servidor confirmó el avance) borra ese comienzo.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { arrancar, restante, vencio, cerrar, claveCard, DURACION_MS, type StoreTemporizador } from "./temporizador-card.ts";
+import { arrancar, restante, vencio, cerrar, claveInicioCard, DURACION_MS, type StoreTemporizador } from "./temporizador-card.ts";
 
 function memoria(): StoreTemporizador & { m: Map<string, string> } {
   const m = new Map<string, string>();
   return { m, getItem: (k) => m.get(k) ?? null, setItem: (k, v) => { m.set(k, v); }, removeItem: (k) => { m.delete(k); } };
 }
-const K = claveCard("R", "RND", 3);
+const K = claveInicioCard("R", "RND", 3);
 
 test("la clave es por sala, ronda y posición", () => {
   assert.equal(K, "yump:sala:R:RND:3:inicio");
-  assert.notEqual(claveCard("R", "RND", 4), K);
-  assert.notEqual(claveCard("R", "OTRA", 3), K);
+  assert.notEqual(claveInicioCard("R", "RND", 4), K);
+  assert.notEqual(claveInicioCard("R", "OTRA", 3), K);
 });
 
 test("arranque nuevo guarda el comienzo; restante arranca en 10 y baja", () => {
@@ -76,10 +76,10 @@ test("store que lanza → se comporta como sin persistencia: cada arrancar empie
 test("limpiar posiciones anteriores: al retomar en `mi_siguiente_pos` se borran las claves de las cards ya confirmadas", async () => {
   const { limpiarAnteriores } = await import("./temporizador-card.ts");
   const s = memoria();
-  for (const p of [0, 1, 2, 3]) arrancar(s, claveCard("R", "RND", p), 1_000 + p);
+  for (const p of [0, 1, 2, 3]) arrancar(s, claveInicioCard("R", "RND", p), 1_000 + p);
   limpiarAnteriores(s, "R", "RND", 2, 10);
-  assert.equal(s.m.has(claveCard("R", "RND", 0)), false);
-  assert.equal(s.m.has(claveCard("R", "RND", 1)), false);
-  assert.equal(s.m.has(claveCard("R", "RND", 2)), true);
-  assert.equal(s.m.has(claveCard("R", "RND", 3)), true);
+  assert.equal(s.m.has(claveInicioCard("R", "RND", 0)), false);
+  assert.equal(s.m.has(claveInicioCard("R", "RND", 1)), false);
+  assert.equal(s.m.has(claveInicioCard("R", "RND", 2)), true);
+  assert.equal(s.m.has(claveInicioCard("R", "RND", 3)), true);
 });

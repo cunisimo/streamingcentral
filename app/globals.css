@@ -1086,3 +1086,27 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-form .field input{width:100%;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);padding:12px 14px;font-size:15px;font-family:var(--body);color:var(--text);outline:none}
 .sala-form .field input:focus{border-color:var(--accent)}
 .sala-plats{margin-top:6px}
+
+/* --- Salas: votación --- */
+.sala-votacion{margin-top:6px}
+.sala-card{margin-top:14px}
+.sala-card .rlt-title{font-size:26px}
+.sala-card .rlt-poster{flex-basis:110px}
+.sala-ident{padding-right:0}
+.sala-progreso{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px 14px;padding:10px 0 4px}
+.sala-progreso-pos{font-size:14px;color:var(--dim)}
+.sala-progreso-pos strong{color:var(--text)}
+.sala-progreso-ronda{font-size:13px;color:var(--faint);font-variant-numeric:tabular-nums}
+.sala-progreso-card{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:40px;padding:0 10px;border-radius:999px;border:2px solid var(--line-2);font-family:var(--display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;color:var(--text)}
+.sala-progreso-card.urgente{border-color:var(--accent);color:var(--accent)}
+.sala-progreso-barra{grid-column:1/-1;height:4px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.sala-progreso-barra span{display:block;height:100%;background:var(--accent);transition:width .25s}
+.sala-votos{display:flex;justify-content:space-around;align-items:center;gap:12px;margin:22px 0 10px;padding:4px 0}
+.sala-act{min-width:64px;min-height:64px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);justify-content:center;gap:0}
+.sala-act svg{width:30px;height:30px}
+.sala-act:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.sala-act:hover{border-color:var(--text)}
+.sala-act-yes:active svg{fill:var(--accent);stroke:var(--accent)}
+.sala-act-yes{min-width:76px;min-height:76px}
+.sala-act:disabled{opacity:.5;cursor:default}
+.sala-act:disabled:hover{border-color:var(--line-2)}

@@ -18,7 +18,7 @@ export interface StoreTemporizador {
 
 export const DURACION_MS = 10_000;
 
-export const claveCard = (room: string, round: string, pos: number) => `yump:sala:${room}:${round}:${pos}:inicio`;
+export const claveInicioCard = (room: string, round: string, pos: number) => `yump:sala:${room}:${round}:${pos}:inicio`;
 
 function leer(store: StoreTemporizador, k: string): number | null {
   try {
@@ -56,5 +56,5 @@ export function cerrar(store: StoreTemporizador, clave: string): void {
 
 /** Al retomar en `desdePos`, las cards anteriores ya están confirmadas: se limpian sus comienzos. */
 export function limpiarAnteriores(store: StoreTemporizador, room: string, round: string, desdePos: number, size: number): void {
-  for (let p = 0; p < Math.min(desdePos, size); p++) cerrar(store, claveCard(room, round, p));
+  for (let p = 0; p < Math.min(desdePos, size); p++) cerrar(store, claveInicioCard(room, round, p));
 }
