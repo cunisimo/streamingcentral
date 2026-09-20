@@ -2,9 +2,11 @@
 
 ## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
 
-**Estado (20/09): CORREGIDO para los 20 casos confirmados, en la rama
-`fix/supresiones-disney` (hotfix aislado desde `main`), sin merge ni deploy.
-El problema de fondo sigue ABIERTO.** Encontrado
+**Estado (20/09): CORREGIDO para los 20 casos confirmados, MERGEADO EN
+`main` (`594dd09`, `--no-ff` de `fix/supresiones-disney` en `d88ecbb`) Y
+DESPLEGADO (`dpl_BUgH7twdWVnuXQxkd5eKsVxPP7sq`, READY, asociado a
+`app.yump.ar`). Las 20 películas confirmadas ya no aparecen en Disney+. El
+problema de fondo sigue ABIERTO.** Encontrado
 por el dueño el 2026-09-20 con *Los Ángeles al desnudo* (`movie:2118`).
 Medición en `docs/medidas/2026-09-20-disney-falsos-positivos.md`.
 
@@ -52,12 +54,21 @@ según estén disponibles los artefactos opcionales (`out-capacitor`, build web)
 10 en la auditoría de Codex y 18 en la corrida desde cero del worktree. `tsc`
 limpio, `npm run build` OK.
 
+**Verificado en producción (`app.yump.ar`, 20/09, tras el deploy
+`dpl_BUgH7twdWVnuXQxkd5eKsVxPP7sq`):** `movie:2118` → `['pp','mv']` en ficha,
+`/api/cards` y búsqueda, y `links` sin `d`; Heat (`movie:949`) → `['p','mv']`;
+LOTR (`movie:122`, control no suprimido) conserva `['d','mv','m']`. Home: con
+`providers=d` no aparece ninguna de las 20; con `d,pp`, 2118 aparece con
+`['pp','mv']`; con `n,d,m,pp,p`, ninguna suprimida lleva `d`. O sea que la
+invalidación por versión de clave fue efectiva al primer request, sin vaciar
+nada a mano.
+
 **Lo que sigue abierto:**
 
 1. **El problema de fondo no se arregla con 20 entradas a mano.** TMDB sigue
    desfasado para el catálogo licenciado de Disney+ LatAm; hay 1291 películas
    en Disney+ AR según TMDB y sólo se midieron 100.
-2. **Cruce global periódico: queda para octubre, frecuencia MENSUAL** (decisión
+2. **Cruce global periódico: MENSUAL, comenzando en octubre de 2026** (decisión
    del dueño). Repetir la muestra, verificar a mano lo que salga y cargar
    supresiones nuevas — cada tanda sube `VERSION_DISPONIBILIDAD` y
    `VERSION_HOME`.

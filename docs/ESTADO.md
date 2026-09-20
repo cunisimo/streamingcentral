@@ -8,8 +8,20 @@
 ## Evidencia y alcance de esta actualización
 
 - **Issue #24 (2026-09-20): Disney+ AR mostraba 20 películas que ya no
-  tiene — CORREGIDO en la rama `fix/supresiones-disney` (hotfix aislado desde
-  `main` `f443924`), sin merge ni deploy; pendiente de auditoría de Codex.**
+  tiene — CORREGIDO, MERGEADO EN `main` Y DESPLEGADO (2026-09-20).** Hotfix
+  aislado desde `main` `f443924` (rama `fix/supresiones-disney`, commit único
+  `d88ecbb`, auditado por Codex sin hallazgos funcionales); merge `--no-ff`
+  **`594dd09`** con árbol idéntico al de la rama; push de `main` solamente;
+  deployment automático de Vercel **`dpl_BUgH7twdWVnuXQxkd5eKsVxPP7sq`**
+  READY, target production, `githubCommitSha = 594dd09`, asociado a
+  `app.yump.ar`. **Comprobado en producción (`app.yump.ar`):** `movie:2118`
+  → `['pp','mv']` en ficha, `/api/cards` y búsqueda, `links` sin `d`; Heat
+  (`movie:949`) → `['p','mv']`; LOTR (`movie:122`, control no suprimido)
+  conserva `['d','mv','m']`; Home con `providers=d`: ninguna de las 20; con
+  `d,pp`: 2118 aparece con `['pp','mv']`; con `n,d,m,pp,p`: ninguna suprimida
+  con `d`. **Las 20 películas confirmadas ya no aparecen en Disney+.** El
+  problema general de TMDB sigue ABIERTO (#24); próximo cruce global
+  **mensual, desde octubre de 2026**.
   Reportado por el dueño con `movie:2118`; no era un bug nuestro: TMDB sirve
   el dato viejo en vivo. Medido: 20 falsos positivos en 100 películas de
   Disney+ AR (todos licenciados), 0 en 60 de Netflix; **el dueño verificó las
@@ -23,12 +35,11 @@
   y búsqueda, sin `links.d`; Heat → `['p','mv']`; LOTR conserva Disney+.
   Suite del commit aislado 1926 pruebas, 0 fallas (omitidas: 10 en la
   auditoría de Codex, 18 desde cero, según los artefactos opcionales).
-  **No probado:** en producción
-  (requiere deploy; la invalidación es por versión de clave, efectiva al
-  primer request). **Siguiente paso:** auditoría de Codex, merge a `main`,
-  deploy; después, reintegrar el hotfix en `feat/salas` (esa rama recupera la
-  fila de `lib/sala/preparacion-nucleo.ts` en el barrido). Cruce global
-  periódico en octubre, mensual (decisión del dueño); cada tanda nueva sube
+  Verificado sobre el `main` fusionado antes del push: suite 1926 (1916 ok,
+  0 fallos, 10 omitidos), `tsc` 0, build fresco OK, `diff --check` limpio.
+  **Siguiente paso:** reintegrar el hotfix en `feat/salas` (esa rama recupera
+  la fila de `lib/sala/preparacion-nucleo.ts` en el barrido). Cruce global
+  periódico mensual desde octubre (decisión del dueño); cada tanda nueva sube
   las dos versiones. Ver `docs/ISSUES.md` #24 y
   `docs/medidas/2026-09-20-disney-falsos-positivos.md`.
 - **`medicion/sync-upcoming` (`a7a223d`, worktree `wt-sync-medicion`) — DETENIDA
