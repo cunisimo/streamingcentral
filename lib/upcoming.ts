@@ -8,6 +8,7 @@ import { TMDB_IMG } from "./tmdb";
 import { genreIdsToSlugs } from "./categories";
 import { codeForTmdbId, codesToTmdbIds } from "./providers-ar";
 import { paginarProximamente, seleccionarProximamente } from "./proximamente";
+import { suprimirPlataformas } from "./supresiones-disponibilidad";
 import type { MediaType, PlatformCode, UIUpcoming } from "./types";
 
 const img = (p: string | null, size = "w500") => (p ? `${TMDB_IMG}/${size}${p}` : null);
@@ -57,7 +58,9 @@ function toUIUpcoming(row: Row): UIUpcoming {
     overview: row.overview ?? "",
     releaseDate: row.release_date,
     genres: genreIdsToSlugs(row.genre_ids ?? []),
-    platforms,
+    // Próximamente arma sus plataformas desde Supabase, no desde el resolvedor:
+    // las supresiones se aplican acá para que ninguna superficie las saltee.
+    platforms: suprimirPlataformas(`${row.media_type}:${row.tmdb_id}`, "AR", platforms),
     popularity: row.popularity != null ? Number(row.popularity) : null,
     voteAverage: row.vote_average != null ? Number(row.vote_average) : null,
     seasonNumber: row.season_number,

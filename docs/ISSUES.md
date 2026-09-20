@@ -1,5 +1,79 @@
 # Issues abiertos
 
+## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
+
+**Estado (20/09): CORREGIDO para los 20 casos confirmados, en la rama
+`fix/supresiones-disney` (hotfix aislado desde `main`), sin merge ni deploy.
+El problema de fondo sigue ABIERTO.** Encontrado
+por el dueño el 2026-09-20 con *Los Ángeles al desnudo* (`movie:2118`).
+Medición en `docs/medidas/2026-09-20-disney-falsos-positivos.md`.
+
+**No era un bug del resolvedor.** TMDB sirve hoy `Disney Plus` para ese título
+en AR (y en MX, BR, CL, CO), `homepage` viene vacío, y la app lo mostraba por
+la prioridad 1 (`tmdb-ar`): repetir lo que dice TMDB. JustWatch —la fuente de
+TMDB— ya lo sacó de Disney+ y lo tiene en Paramount+. El cache de 8 h no
+influía: TMDB está desactualizado en vivo.
+
+**Alcance medido y CONFIRMADO:** 100 películas que TMDB ubica en Disney+ AR,
+**20 falsos positivos**, todos licenciados (Warner, Fox, Universal); las
+producciones Disney propias dan 0. Control con Netflix AR: 59 de 59 correctos.
+**El dueño verificó las 20 a mano dentro de Disney+**: ninguna está. No son
+sólo discrepancias con JustWatch.
+
+**La corrección: supresiones negativas** (`lib/supresiones-disponibilidad.ts`,
+aparte de las excepciones positivas, que sólo agregan). Cada entrada dice
+`movie:<id>`, región `AR`, plataforma `d`, fecha de verificación, evidencia
+("verificación manual del dueño dentro de Disney+"), estado activo y una fecha
+de próxima revisión.
+
+- Se aplican en el **camino central** (`resolverDisponibilidad`, al final y
+  sobre cualquier procedencia) y en el atajo del adaptador (`decisionDeTmdb`),
+  así que llegan a ficha, Home, búsqueda, listas, relacionados y ruleta.
+  El Top (`conPlataformaDeLaFuente`) y Próximamente (`toUIUpcoming`), que
+  arman `platforms` por su cuenta, también pasan por `suprimirPlataformas`; un
+  test inventaría cada construcción de `platforms` del proyecto.
+- Quitan **sólo** la plataforma nombrada: Disney+ + Paramount+ → Paramount+.
+  Si Disney+ era la única, el resultado queda **vacío** y no se consultan
+  respaldos.
+- **No vencen solas**: `proximaRevision` es un recordatorio, no un vencimiento.
+  Se levantan con una verificación positiva directa, nunca por calendario.
+- No mutan el array cacheado de `providersOf` (misma referencia si no hay nada
+  que quitar, copia si sí).
+- Cachés: `VERSION_HOME` 6 → 7 y `VERSION_DISPONIBILIDAD = 1` (segmento `d1`
+  en card, búsqueda, Top por popularidad, reco y últimos). Sin eso, un `card:`
+  de 24 h o un último bueno de 36 h seguirían diciendo Disney+ tras el deploy.
+  Un test ata las dos versiones al registro.
+
+**Verificado en local (20/09), contra el build del hotfix ejecutado con
+`next start`:** `movie:2118` → `['pp','mv']` (ficha, cards y búsqueda), sin
+`links.d`; Heat (949) → `['p','mv']`; LOTR (122, no suprimida) conserva `d`.
+Suite del commit aislado: **1926 pruebas, 0 fallas**; las omitidas varían
+según estén disponibles los artefactos opcionales (`out-capacitor`, build web):
+10 en la auditoría de Codex y 18 en la corrida desde cero del worktree. `tsc`
+limpio, `npm run build` OK.
+
+**Lo que sigue abierto:**
+
+1. **El problema de fondo no se arregla con 20 entradas a mano.** TMDB sigue
+   desfasado para el catálogo licenciado de Disney+ LatAm; hay 1291 películas
+   en Disney+ AR según TMDB y sólo se midieron 100.
+2. **Cruce global periódico: queda para octubre, frecuencia MENSUAL** (decisión
+   del dueño). Repetir la muestra, verificar a mano lo que salga y cargar
+   supresiones nuevas — cada tanda sube `VERSION_DISPONIBILIDAD` y
+   `VERSION_HOME`.
+3. Series de Disney+ y las otras plataformas no se midieron.
+
+**Lo que NO es una salida:** usar la API interna de JustWatch en producción
+(sin licencia; es la fuente de pago que ya se descartó para el Top). Sirve para
+medir, no para servir.
+
+---
+
+(El **#23** está reservado para un issue de la rama `feat/salas`, todavía no
+mergeada; por eso este es el #24 y no hay hueco que rellenar.)
+
+---
+
 ## #22 — Recuperación desde Android: la contraseña nueva no permite ingresar
 
 **Estado (11/09): la corrección está MERGEADA en `main` (`be5ef1d`),

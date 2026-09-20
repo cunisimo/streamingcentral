@@ -24,7 +24,7 @@ import { calcularHuella } from "./idioma.ts";
 
 test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => {
   const H = "";   // la huella vacía, que es lo que se pasaba en la tanda 1
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v6:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:v7:3523671066:d,m,n:");
   assert.equal(
     clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
     "disc:v1:AR:2026-08-23:movie:n:pop.abc123:p2",
@@ -33,17 +33,17 @@ test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => 
     claveCombinadaCache("v1", "AR", "2026-08-23", "tv", "d+m+n", "pop.abc123", 3, H),
     "disc:v1:AR:2026-08-23:tv:combo-d+m+n:pop.abc123:p3",
   );
-  assert.equal(claveCard("movie", 278, H), "card:movie:278");
-  assert.equal(claveTopPop("n", "movie", H), "top:pop:n:movie");
-  assert.equal(claveReco("h4sh", H), "reco:v2:h4sh");
+  assert.equal(claveCard("movie", 278, H), "card:d1:movie:278");
+  assert.equal(claveTopPop("n", "movie", H), "top:pop:d1:n:movie");
+  assert.equal(claveReco("h4sh", H), "reco:v2.d1:h4sh");
   assert.equal(claveRecoMismo("tv", 1399, H), "reco:mismo:tv:1399");
   assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:movie:557:d,m,n");
   assert.equal(claveRecoPerfil("movie", 557, H), "reco:perfil:v2:movie:557");
   assert.equal(clavePeoplePopular(3, H), "people:popular:3");
   // La familia 11: `search:v2` SÍ es localizada, aunque `searchDeTipo` esté
   // clavado en es-MX — el `knownFor` de las personas sale del idioma base.
-  assert.equal(claveSearch("matrix", "d,m,n", H), "search:v2:matrix:d,m,n");
-  assert.equal(claveUltimosSeries("2026-08-30", "d,n", "reg:p1", H), "ultimos:v1:tv:2026-08-30:d,n:reg:p1");
+  assert.equal(claveSearch("matrix", "d,m,n", H), "search:v2.d1:matrix:d,m,n");
+  assert.equal(claveUltimosSeries("2026-08-30", "d,n", "reg:p1", H), "ultimos:v1.d1:tv:2026-08-30:d,n:reg:p1");
 });
 
 // ============================================================================
@@ -58,7 +58,7 @@ test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => 
 test("tanda 2: las doce familias llevan la huella es-MX+f.r1", () => {
   const H = calcularHuella("es-MX", true);
   assert.equal(H, "es-MX+f.r1");
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v6:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v7:3523671066:d,m,n:");
   assert.equal(
     clavePoolCache("v1", "AR", "2026-08-23", "movie", "n", "pop.abc123", 2, H),
     "disc:es-MX+f.r1:v1:AR:2026-08-23:movie:n:pop.abc123:p2",
@@ -67,16 +67,16 @@ test("tanda 2: las doce familias llevan la huella es-MX+f.r1", () => {
     claveCombinadaCache("v1", "AR", "2026-08-23", "tv", "d+m+n", "pop.abc123", 3, H),
     "disc:es-MX+f.r1:v1:AR:2026-08-23:tv:combo-d+m+n:pop.abc123:p3",
   );
-  assert.equal(claveCard("movie", 278, H), "card:es-MX+f.r1:movie:278");
-  assert.equal(claveTopPop("n", "movie", H), "top:pop:es-MX+f.r1:n:movie");
-  assert.equal(claveReco("h4sh", H), "reco:es-MX+f.r1:v2:h4sh");
+  assert.equal(claveCard("movie", 278, H), "card:es-MX+f.r1:d1:movie:278");
+  assert.equal(claveTopPop("n", "movie", H), "top:pop:es-MX+f.r1:d1:n:movie");
+  assert.equal(claveReco("h4sh", H), "reco:es-MX+f.r1:v2.d1:h4sh");
   assert.equal(claveRecoMismo("tv", 1399, H), "reco:mismo:es-MX+f.r1:tv:1399");
   assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:es-MX+f.r1:movie:557:d,m,n");
   assert.equal(claveRecoPerfil("movie", 557, H), "reco:perfil:es-MX+f.r1:v2:movie:557");
   assert.equal(clavePeoplePopular(3, H), "people:popular:es-MX+f.r1:3");
-  assert.equal(claveSearch("matrix", "d,m,n", H), "search:es-MX+f.r1:v2:matrix:d,m,n");
+  assert.equal(claveSearch("matrix", "d,m,n", H), "search:es-MX+f.r1:v2.d1:matrix:d,m,n");
   assert.equal(claveUltimosSeries("2026-08-30", "d,n", "reg:p1", H),
-    "ultimos:es-MX+f.r1:v1:tv:2026-08-30:d,n:reg:p1");
+    "ultimos:es-MX+f.r1:v1.d1:tv:2026-08-30:d,n:reg:p1");
 });
 
 // El rollback tiene que devolver EXACTAMENTE las claves de es-ES, y esas no son
@@ -87,7 +87,7 @@ test("tanda 2: las doce familias llevan la huella es-MX+f.r1", () => {
 test("tanda 2: el rollback a es-ES da su propio espacio, no el compatible", () => {
   const ES = calcularHuella("es-ES", true);
   assert.equal(ES, "es-ES.r1");
-  assert.equal(claveCard("movie", 278, ES), "card:es-ES.r1:movie:278");
+  assert.equal(claveCard("movie", 278, ES), "card:es-ES.r1:d1:movie:278");
   assert.notEqual(claveCard("movie", 278, ES), claveCard("movie", 278, ""));
 });
 

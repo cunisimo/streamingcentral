@@ -1,12 +1,36 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 18 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 20 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
+- **Issue #24 (2026-09-20): Disney+ AR mostraba 20 películas que ya no
+  tiene — CORREGIDO en la rama `fix/supresiones-disney` (hotfix aislado desde
+  `main` `f443924`), sin merge ni deploy; pendiente de auditoría de Codex.**
+  Reportado por el dueño con `movie:2118`; no era un bug nuestro: TMDB sirve
+  el dato viejo en vivo. Medido: 20 falsos positivos en 100 películas de
+  Disney+ AR (todos licenciados), 0 en 60 de Netflix; **el dueño verificó las
+  20 a mano dentro de Disney+**. **Comprobado en código:** registro de
+  supresiones negativas (`lib/supresiones-disponibilidad.ts`, 20 entradas
+  activas, sin vencimiento automático, próxima revisión 2026-10-20), aplicado
+  en el resolvedor central, el atajo del adaptador, el Top y Próximamente;
+  `VERSION_HOME` 7 y `VERSION_DISPONIBILIDAD` 1 para invalidar las cachés
+  exteriores al deployar. **Comprobado en local, contra el build del hotfix
+  ejecutado con `next start`:** `movie:2118` → `['pp','mv']` en ficha, cards
+  y búsqueda, sin `links.d`; Heat → `['p','mv']`; LOTR conserva Disney+.
+  Suite del commit aislado 1926 pruebas, 0 fallas (omitidas: 10 en la
+  auditoría de Codex, 18 desde cero, según los artefactos opcionales).
+  **No probado:** en producción
+  (requiere deploy; la invalidación es por versión de clave, efectiva al
+  primer request). **Siguiente paso:** auditoría de Codex, merge a `main`,
+  deploy; después, reintegrar el hotfix en `feat/salas` (esa rama recupera la
+  fila de `lib/sala/preparacion-nucleo.ts` en el barrido). Cruce global
+  periódico en octubre, mensual (decisión del dueño); cada tanda nueva sube
+  las dos versiones. Ver `docs/ISSUES.md` #24 y
+  `docs/medidas/2026-09-20-disney-falsos-positivos.md`.
 - **`medicion/sync-upcoming` (`a7a223d`, worktree `wt-sync-medicion`) — DETENIDA
   por el dueño el 2026-09-17, NO desplegada, antecedente aislado.** Es una
   tarea separada (instrumentación de la Edge Function `tmdb-sync`, cron de

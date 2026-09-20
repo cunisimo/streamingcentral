@@ -15,8 +15,9 @@ import {
   type DatosTitulo, type ResumenRegional,
 } from "./enlace-oficial.ts";
 import {
-  resolverDisponibilidad, vigente, type ExcepcionManual,
+  decisionDeTmdb, resolverDisponibilidad, vigente, type ExcepcionManual,
 } from "./disponibilidad.ts";
+import type { SupresionManual } from "./supresiones-disponibilidad.ts";
 import type { PlatformCode } from "./types";
 
 const HOY = "2026-08-30";
@@ -345,4 +346,88 @@ test("el Top manual va DESPUÉS del top oficial y ANTES del enlace probable", as
     ...conTodo, leerTopOficial: async () => new Set(["tv:275224"]),
   });
   assert.equal(oficial.procedencia, "top-oficial");
+});
+
+// ============================================================================
+// 3. Supresiones negativas: lo que TMDB afirma y el dueño comprobó que no está
+// ============================================================================
+//
+// La ÚNICA vía por la que el resolvedor puede quitar algo que TMDB dijo. Es lo
+// contrario de los respaldos —resta en vez de sumar— y por eso vive en un
+// registro aparte y se aplica al FINAL, sobre cualquier procedencia.
+
+const SUP_2118: SupresionManual = {
+  clave: "movie:2118", region: "AR", plataforma: "d",
+  verificado: "2026-09-20", evidencia: "verificación manual del dueño dentro de Disney+",
+  activa: true, proximaRevision: "2026-10-20",
+};
+
+test("supresión: TMDB dice Disney+ y Paramount+ → queda Paramount+, procedencia tmdb-ar", async () => {
+  const r = await resolverDisponibilidad({
+    tipo: "movie", id: 2118, deTmdb: ["d", "pp"] as PlatformCode[], hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
+  });
+  assert.deepEqual(r.plataformas, ["pp"]);
+  assert.equal(r.procedencia, "tmdb-ar");
+});
+
+test("supresión: TMDB dice sólo Disney+ → vacío, y NO se consulta ningún respaldo", async () => {
+  // Decisión del dueño (req. 4): si la única plataforma era la suprimida, el
+  // resultado visible queda vacío. No se sale a buscar otra cosa.
+  let consultas = 0;
+  const r = await resolverDisponibilidad({
+    tipo: "movie", id: 2118, deTmdb: ["d"] as PlatformCode[], hoy: HOY,
+    leerTopOficial: async () => { consultas++; return new Set<string>(); },
+    leerDatosTitulo: async () => { consultas++; return GUTIERREZ; },
+    supresiones: [SUP_2118],
+  });
+  assert.deepEqual(r.plataformas, []);
+  assert.equal(consultas, 0);
+});
+
+test("supresión: NO muta el array cacheado de providersOf", async () => {
+  const cacheado: PlatformCode[] = ["d", "pp"];
+  const r = await resolverDisponibilidad({
+    tipo: "movie", id: 2118, deTmdb: cacheado, hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
+  });
+  assert.notEqual(r.plataformas, cacheado);
+  assert.deepEqual(cacheado, ["d", "pp"], "el array cacheado cambió");
+});
+
+test("supresión: otra película sigue devolviendo el MISMO array de TMDB", async () => {
+  const cacheado: PlatformCode[] = ["d", "pp"];
+  const r = await resolverDisponibilidad({
+    tipo: "movie", id: 949, deTmdb: cacheado, hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
+  });
+  assert.equal(r.plataformas, cacheado);
+});
+
+test("supresión: se aplica también sobre lo que agregan los respaldos", async () => {
+  // Si mañana un enlace oficial infiriera Disney+ para un título suprimido, la
+  // supresión gana igual: es la verificación más directa que hay.
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
+    leerTopOficial: nadaTop, leerDatosTitulo: async () => GUTIERREZ,
+    supresiones: [{ ...SUP_2118, clave: "tv:275224" }],
+  });
+  assert.deepEqual(r.plataformas, []);
+  assert.equal(r.procedencia, "oficial-probable");
+});
+
+test("decisionDeTmdb: el atajo del adaptador aplica la misma supresión", () => {
+  // `disponibilidadDe` (enrich.ts) corta ANTES de llamar al resolvedor cuando
+  // TMDB ya sabe. Ese atajo tiene que pasar por acá, o la supresión no llegaría
+  // a ninguna card con proveedor argentino — o sea, a las 20.
+  assert.deepEqual(
+    decisionDeTmdb({ tipo: "movie", id: 2118, deTmdb: ["d", "pp"] as PlatformCode[], supresiones: [SUP_2118] }),
+    ["pp"],
+  );
+  const cacheado: PlatformCode[] = ["m"];
+  assert.equal(decisionDeTmdb({ tipo: "movie", id: 1, deTmdb: cacheado, supresiones: [SUP_2118] }), cacheado);
+  // Sin dato de TMDB no decide: le toca al resolvedor completo.
+  assert.equal(decisionDeTmdb({ tipo: "movie", id: 1, deTmdb: [], supresiones: [SUP_2118] }), null);
+  // Con flatrate no mapeado, decide vacío (TMDB sabe, no hay qué pintar).
+  assert.deepEqual(decisionDeTmdb({ tipo: "movie", id: 1, deTmdb: [], hayFlatrateAR: true, supresiones: [] }), []);
 });
