@@ -33,7 +33,7 @@ import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
 import { disponiblesEnTopOficial } from "./netflix-top10";
 import { evidenciaTopManual } from "./top-manual";
-import { resolverDisponibilidad } from "./disponibilidad";
+import { decisionDeTmdb, resolverDisponibilidad } from "./disponibilidad";
 import { hayFallosDisponibilidad, registrarFalloDisponibilidad } from "./fallos-disponibilidad";
 // Etapa 3.a (#19, H2): el contexto de descartes de causa TMDB, compuesto con el
 // de disponibilidad. Las cuatro superficies cacheadas de este archivo abren
@@ -167,7 +167,12 @@ export async function disponibilidadDe(
     reg?: ResumenRegional;
   },
 ): Promise<PlatformCode[]> {
-  if (prov.codes.length || prov.hayFlatrateAR) return prov.codes;
+  // El atajo pasa por `decisionDeTmdb` y no devuelve `prov.codes` crudo: ahí
+  // se aplican las SUPRESIONES (lib/supresiones-disponibilidad.ts), que son la
+  // única resta sobre lo que TMDB afirma. Sin nada que quitar devuelve el mismo
+  // array, así que sigue costando cero.
+  const deTmdb = decisionDeTmdb({ tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR });
+  if (deTmdb) return deTmdb;
   let fallo = false;
   const res = await cachedIf(`disp:${type}:${id}`, TTL.editorial, async () => {
     const r = await resolverDisponibilidad({
@@ -1499,7 +1504,12 @@ export async function detail(
     composers: [...new Set(composers)],
     seasons: d.number_of_seasons ?? null,
     episodes: d.number_of_episodes ?? null,
-    links: prov.links,
+    // Sólo los links de las plataformas resueltas: una suprimida no deja el
+    // suyo en el JSON. `links` nunca trae más que lo que dijo TMDB, así que
+    // filtrar por `plataformas` es quitar exactamente lo suprimido.
+    links: Object.fromEntries(
+      Object.entries(prov.links).filter(([c]) => plataformas.includes(c as PlatformCode)),
+    ) as Partial<Record<PlatformCode, string>>,
     watchLink: prov.watchLink,
     trailerKey: trailer,
     related,

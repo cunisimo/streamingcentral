@@ -673,6 +673,27 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   plataforma, el dato en conflicto es el nuestro. Y **un fallo nunca es una
   ausencia**: si Supabase o TMDB se caen se devuelve lo de TMDB y **no se
   cachea** (`fallo` viaja hasta `cachedIf`).
+- **La ÚNICA resta son las SUPRESIONES** (`lib/supresiones-disponibilidad.ts`,
+  issue #24): títulos que TMDB afirma en una plataforma y **el dueño verificó
+  dentro de esa plataforma** que no están. Nacieron el 2026-09-20 con 20
+  películas de Disney+ AR: TMDB sirve el dato viejo **en vivo** (no es nuestro
+  cache; JustWatch, su fuente, ya lo corrigió), 20 de 100 licenciadas medidas
+  y 0 de 60 en Netflix. Son otro archivo que las excepciones positivas porque
+  hacen lo contrario. Se aplican **al final** del resolvedor sobre cualquier
+  procedencia Y en el atajo del adaptador (`decisionDeTmdb`), que corta antes
+  cuando TMDB ya sabe — sin eso no llegarían a ninguna card con proveedor
+  argentino. El Top (`conPlataformaDeLaFuente`) y Próximamente arman
+  `platforms` por su cuenta y también pasan por `suprimirPlataformas`; el
+  barrido inventaría cada construcción de `platforms` del proyecto. Quitan
+  **sólo** la plataforma nombrada (Disney+ + Paramount+ → Paramount+; sólo
+  Disney+ → vacío, sin consultar respaldos). **No vencen solas**:
+  `proximaRevision` es un recordatorio del cruce mensual (desde octubre de
+  2026), y se levantan con una verificación positiva directa, nunca por
+  calendario. 🔴 **Cada cambio del registro sube `VERSION_DISPONIBILIDAD`
+  (segmento `d1` en card, búsqueda, Top, reco y últimos) Y `VERSION_HOME`**:
+  las plataformas resueltas viven en cachés de hasta 36 h y sin eso el cambio
+  no se ve al deployar. Un test ata las dos versiones. `pv3:` no se toca nunca:
+  la supresión se aplica al leerlo, sobre una copia.
 - **Un fallo de disponibilidad NO se congela en las cachés de afuera**
   (`lib/fallos-disponibilidad.ts`). `disponibilidadDe` no guardaba su `disp:`
   cuando la evidencia fallaba, pero devolvía sólo el array de plataformas y la

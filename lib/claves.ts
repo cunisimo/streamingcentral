@@ -55,6 +55,12 @@ const marcar = (s: string) => s as ClaveLocalizada;
  * durante las 6 h del TTL el selector no aparecería y el cambio "no se vería"
  * después de deployar. Un solo cambio de versión y un solo arranque frío.
  *
+ * `v7`: entraron las SUPRESIONES de disponibilidad (issue #24): 20 películas
+ * que TMDB ubica en Disney+ AR y el dueño verificó que no están. El payload
+ * lleva las cards con sus `platforms` adentro, así que un `v6` cacheado las
+ * seguiría mostrando en Disney+ hasta 36 h (último bueno). Sube junto con
+ * `VERSION_DISPONIBILIDAD`, y un test lo exige.
+ *
  * Etapa 2 (#17): las CINCO familias del Home la comparten —fresca, último
  * bueno, generación, degradado compartido y turno—, porque el último bueno y el
  * degradado son el MISMO contrato de payload que la fresca. Subirla las
@@ -66,7 +72,24 @@ const marcar = (s: string) => s as ClaveLocalizada;
 export const VERSION_HOME: number =
   process.env.YUMP_BANCO === "1" && /^\d+$/.test(process.env.YUMP_BANCO_VERSION_HOME ?? "")
     ? Number(process.env.YUMP_BANCO_VERSION_HOME)
-    : 6;
+    : 7;
+
+/**
+ * La versión de las PLATAFORMAS RESUELTAS que viaja en cinco familias: card,
+ * búsqueda, Top por popularidad, riel de recomendaciones y últimos. Todas
+ * guardan títulos ya enriquecidos con `platforms` adentro, y la disponibilidad
+ * cambia sin que cambie nada de TMDB cuando cambia el registro de supresiones
+ * (`lib/supresiones-disponibilidad.ts`). Subirla es lo que hace que una
+ * supresión nueva se vea al deployar y no cuando expiren TTLs de hasta 24 h.
+ *
+ * El Home no la lleva: tiene `VERSION_HOME`, que hay que subir a la vez.
+ * `disp:` tampoco: TTL de 5 min y sólo guarda títulos sin dato de TMDB.
+ * `pv3:` NUNCA: es el dato crudo de TMDB, y la supresión se aplica al leerlo.
+ *
+ * `d1`: las 20 supresiones de Disney+ AR del 2026-09-20.
+ */
+export const VERSION_DISPONIBILIDAD = 1;
+const dv = `d${VERSION_DISPONIBILIDAD}`;
 
 /**
  * Las cinco claves de una combinación del Home, derivadas de UNA versión.
@@ -133,17 +156,17 @@ export function claveCombinadaCache(
 
 /** Card reconstruida a partir de (tipo, id). */
 export function claveCard(tipo: MediaType, id: number, huella: string): ClaveLocalizada {
-  return marcar(`card:${pre(huella)}${tipo}:${id}`);
+  return marcar(`card:${pre(huella)}${dv}:${tipo}:${id}`);
 }
 
 /** Bloque de popularidad de /top. */
 export function claveTopPop(plataforma: PlatformCode, tipo: MediaType, huella: string): ClaveLocalizada {
-  return marcar(`top:pop:${pre(huella)}${plataforma}:${tipo}`);
+  return marcar(`top:pop:${pre(huella)}${dv}:${plataforma}:${tipo}`);
 }
 
 /** El riel "Elegidas para vos", ya armado. */
 export function claveReco(huellaSenales: string, huella: string): ClaveLocalizada {
-  return marcar(`reco:${pre(huella)}v2:${huellaSenales}`);
+  return marcar(`reco:${pre(huella)}v2.${dv}:${huellaSenales}`);
 }
 
 /** Recomendados de TMDB para un título. */
@@ -170,7 +193,7 @@ export function claveRecoPerfil(tipo: MediaType, id: number, huella: string): Cl
  *  del payload cambia. La primera auditoría la dejó fuera mirando solo la parte
  *  de títulos. */
 export function claveSearch(q: string, providers: string, huella: string): ClaveLocalizada {
-  return marcar(`search:${pre(huella)}v2:${q}:${providers}`);
+  return marcar(`search:${pre(huella)}v2.${dv}:${q}:${providers}`);
 }
 
 /**
@@ -183,7 +206,7 @@ export function claveSearch(q: string, providers: string, huella: string): Clave
 export function claveUltimosSeries(
   dia: string, providers: string, tramo: string, huella: string,
 ): ClaveLocalizada {
-  return marcar(`ultimos:${pre(huella)}v1:tv:${dia}:${providers}:${tramo}`);
+  return marcar(`ultimos:${pre(huella)}v1.${dv}:tv:${dia}:${providers}:${tramo}`);
 }
 
 /** Actores populares. Guarda `knownFor`, que son títulos localizados. */
