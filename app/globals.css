@@ -1110,3 +1110,49 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-act-yes{min-width:76px;min-height:76px}
 .sala-act:disabled{opacity:.5;cursor:default}
 .sala-act:disabled:hover{border-color:var(--line-2)}
+
+/* --- Salas: resultados --- */
+/* Toda animación va detrás de prefers-reduced-motion: no-preference. Con
+   "reducir movimiento" los elementos quedan directamente en su estado final. */
+.sala-resultado{position:relative;padding:12px 0 30px;text-align:center}
+.sala-titular{font-size:34px;margin:10px 0 4px}
+.sala-corazon{position:relative;width:96px;height:88px;margin:8px auto 0}
+.sala-mitad{position:absolute;top:0;width:48px;height:88px;background:var(--accent);overflow:hidden}
+.sala-mitad-izq{left:0;border-radius:48px 0 0 0;clip-path:polygon(0 30%,100% 0,100% 100%,0 100%);transform:translateX(0) rotate(-45deg);transform-origin:100% 100%}
+.sala-mitad-der{right:0;border-radius:0 48px 0 0;clip-path:polygon(0 0,100% 30%,100% 100%,0 100%);transform:translateX(0) rotate(45deg);transform-origin:0 100%}
+.sala-ganadora{display:flex;gap:18px;align-items:flex-start;text-align:left;margin:22px auto 0;max-width:560px}
+.sala-ganadora-poster{flex:0 0 130px}
+.sala-ganadora-body{min-width:0;flex:1}
+.sala-ganadora .rlt-title{font-size:26px}
+.sala-acciones-resultado{justify-content:center;margin-top:18px}
+.sala-acciones-resultado .rlt-btn{text-decoration:none}
+.sala-pie-resultado{margin-top:26px;text-align:left}
+.sala-pie-resultado .sala-vence{text-align:center}
+.sala-preparar{margin-top:4px}
+.sala-entran{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin:18px 0 6px}
+.sala-entra{margin:0;width:110px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.sala-entra img{width:110px;aspect-ratio:2/3;object-fit:cover;border-radius:var(--radius-sm);box-shadow:var(--sh)}
+.sala-entra figcaption{font-size:12.5px;color:var(--dim);line-height:1.25}
+.sala-separan{display:flex;justify-content:center;gap:10px;margin:14px 0 6px;overflow:hidden}
+.sala-separa{width:72px;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;opacity:.55;filter:saturate(.4)}
+.sala-separa img{width:100%;height:100%;object-fit:cover}
+.sala-separa-txt{font-size:10px;color:var(--dim);padding:4px;text-align:center}
+.sala-empate .dsmp-wheel{margin-top:14px}
+@media (prefers-reduced-motion: no-preference){
+  .sala-mitad-izq{animation:sala-mitad-izq .9s cubic-bezier(.2,.8,.2,1) both}
+  .sala-mitad-der{animation:sala-mitad-der .9s cubic-bezier(.2,.8,.2,1) both}
+  .sala-corazon{animation:sala-latido 1.1s ease-in-out 1s 2}
+  .sala-titular{animation:dsmp-in .4s ease .5s both}
+  .sala-entra{animation:sala-entra .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 90ms)}
+  .sala-separa{animation:sala-separa 1.2s ease-out both;animation-delay:calc(var(--i) * 40ms)}
+}
+@keyframes sala-mitad-izq{from{transform:translateX(-70px) rotate(-45deg);opacity:0}to{transform:translateX(0) rotate(-45deg);opacity:1}}
+@keyframes sala-mitad-der{from{transform:translateX(70px) rotate(45deg);opacity:0}to{transform:translateX(0) rotate(45deg);opacity:1}}
+@keyframes sala-latido{0%,100%{transform:scale(1)}30%{transform:scale(1.12)}60%{transform:scale(.98)}}
+@keyframes sala-entra{from{opacity:0;transform:translateY(24px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes sala-separa{from{opacity:1;filter:none;transform:translateX(0)}to{opacity:.55;filter:saturate(.4);transform:translateX(calc((var(--i) - (var(--n) - 1) / 2) * 10px))}}
+@media(max-width:560px){
+  .sala-ganadora{flex-direction:column;align-items:center;text-align:center}
+  .sala-ganadora .rlt-tags{justify-content:center}
+  .sala-titular{font-size:28px}
+}

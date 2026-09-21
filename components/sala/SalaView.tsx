@@ -5,11 +5,14 @@ import { useAuth } from "../AuthContext";
 import UnirseForm from "./UnirseForm";
 import Lobby from "./Lobby";
 import Votacion from "./Votacion";
+import ResultadoMatch from "./ResultadoMatch";
+import ResultadoEmpate from "./ResultadoEmpate";
+import ResultadoSinCoincidencias from "./ResultadoSinCoincidencias";
 import { useSala } from "@/hooks/useSala";
 import { supabaseBrowser } from "@/lib/supabase";
 import { credencialParaUnirse, leerToken } from "@/lib/sala/token-store";
 import { codigoDe, mensajeDeError } from "@/lib/sala/mensajes";
-import { esInexistente, esTerminal } from "@/lib/sala/estado";
+import { esInexistente, esTerminal, type EstadoSala } from "@/lib/sala/estado";
 
 // La página de una sala. Decide con qué credencial se mira:
 //   1. la guardada para esta sala (`yump:sala:<id>`), si hay;
@@ -82,14 +85,24 @@ export default function SalaView({ roomId }: { roomId: string }) {
       {e && !esInexistente(e) && e.estado === "votando" && e.ronda && token && (
         <Votacion key={e.ronda.id} estado={e} ronda={e.ronda} roomId={roomId} token={token} desfase={sala.desfase} releer={sala.releer} />
       )}
-      {e && !esInexistente(e) && (e.estado === "empate" || e.estado === "resultado") && (
-        <div className="sala-espera-tanda" role="status">
-          <p className="sala-h2">La ronda terminó</p>
-          <p className="sala-hint">Resultado: {e.resultado?.tipo ?? "…"}. Las pantallas de resultado llegan en la Etapa 4.</p>
-        </div>
+      {e && !esInexistente(e) && (e.estado === "empate" || e.estado === "resultado") && e.ronda && e.resultado && (
+        // El resultado lo trae la base (`estado.resultado`); acá sólo se elige
+        // la pantalla. Un componente por ronda: la rueda del empate y las
+        // animaciones corren una vez por tanda, no por relectura.
+        <Resultado key={e.ronda.id} estado={e} roomId={roomId} desfase={sala.desfase} />
       )}
     </div>
   );
+}
+
+function Resultado({ estado: e, roomId, desfase }: { estado: EstadoSala; roomId: string; desfase: number }) {
+  const ronda = e.ronda!, r = e.resultado!;
+  if (r.tipo === "empate") return <ResultadoEmpate estado={e} resultado={r} titulos={ronda.titulos} roomId={roomId} desfase={desfase} />;
+  if (r.tipo === "sin_coincidencias") return <ResultadoSinCoincidencias estado={e} titulos={ronda.titulos} roomId={roomId} desfase={desfase} />;
+  const ganadora = r.ganador_pos === null ? null : ronda.titulos.find((t) => t.pos === r.ganador_pos) ?? null;
+  if ((r.tipo === "match" || r.tipo === "ganador") && ganadora) return <ResultadoMatch estado={e} card={ganadora} roomId={roomId} desfase={desfase} />;
+  // `vencida` (empate que nadie resolvió) o un resultado sin card: la sala termina.
+  return <Terminal titulo="La ronda terminó" sub="No quedó una película elegida." />;
 }
 
 function Terminal({ titulo, sub }: { titulo: string; sub: string }) {
