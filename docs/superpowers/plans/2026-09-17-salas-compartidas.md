@@ -562,8 +562,12 @@ export const OPTIONS = opcionesCors("POST");
 
 # Etapa 4 — Resultados y animaciones
 
-> **CONSTRUIDA (rama `feat/salas`, `cf60bc6`, 2026-09-20); verificación visual
-> PENDIENTE** (la base local no levantó: Docker Desktop/WSL). Archivos:
+> **CONSTRUIDA (rama `feat/salas`, `cf60bc6`, 2026-09-20) y corregida tras la
+> auditoría del dueño (`be5a4e3`, 21/09: celebración a pantalla completa,
+> relectura tras éxito, Ver la ficha en el empate). Verificada en local a 375 px
+> el 21/09 (empate, desempate, ganador, sin coincidencias, otra tanda);
+> pendientes: reducir movimiento, dos teléfonos, pantalla del organizador.**
+> Archivos:
 > `components/sala/{ResultadoMatch,ResultadoEmpate,ResultadoSinCoincidencias,
 > CompartirMatch,PrepararTanda}.tsx`, `sin-computo-cliente.test.ts`; `Wheel`
 > acepta `TileRueda`. "Desempatar" y "Otra tanda" los habilita la base
@@ -583,7 +587,7 @@ export const OPTIONS = opcionesCors("POST");
 El **texto** de resultado en grupos también es "¡Nuestro match!" (en la pantalla y al compartir), aunque el ganador tenga 2 votos.
 
 - [x] **Step 1:** Implementar consumiendo **sólo** `estado.resultado` de la RPC. Prohibido: cualquier conteo de votos en el cliente (test textual en `components/sala/sin-computo-cliente.test.ts` que falla si en `components/sala/*.tsx` aparece `filter(` sobre `votos` o `"yes"`).
-- [ ] ⏳ (código commiteado en `cf60bc6`; la verificación en teléfonos y con reducir movimiento sigue pendiente) **Step 2:** Verificar en dos teléfonos y con "Reducir movimiento" activado. Commit `feat(salas): resultados y animaciones`.
+- [ ] ⏳ **Step 2:** Verificar en dos teléfonos y con "Reducir movimiento" activado. Commit `feat(salas): resultados y animaciones`. (Verificado en local a 375 px el 21/09 —ver evidencia—; teléfonos reales y reducir movimiento siguen pendientes.)
 
 ### Task 4.2: Otra tanda
 

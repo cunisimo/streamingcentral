@@ -81,17 +81,29 @@
   organizador en el navegador, red cortada, lector de pantalla y una card sin
   "Pero" real. Evidencia:
   [`medidas/2026-09-19-salas-etapa3.md`](medidas/2026-09-19-salas-etapa3.md).
-  **Etapa 3 aprobada técnicamente y Etapa 4 CONSTRUIDA (20/09, `cf60bc6`),
-  verificación visual PENDIENTE:** pantallas de match (corazón + confeti +
+  **Etapa 3 aprobada técnicamente y Etapa 4 CONSTRUIDA (20/09, `cf60bc6`) y
+  CORREGIDA tras la auditoría del dueño (21/09, `be5a4e3`: celebración del match
+  a pantalla completa —overlay fijo, corazón grande, ~3 s o "Seguir", no se
+  monta con reducir movimiento—; `pedirTanda` y `desempatar` releen el estado
+  en el acto tras el éxito, con 6 tests; "Ver la ficha" en el empate resuelto).
+  VERIFICADA EN LOCAL a 375 px el 21/09 como invitado, con organizador y tercer
+  participante desde node: empate → desempate (rueda en el DOM) → elegida;
+  ganador con la celebración a pantalla completa; sin coincidencias; "Otra
+  tanda" desde `resultado` sin repetir títulos (30/30 distintos en 6 rondas) y
+  rechazada con 409 durante el empate; card sin "Pero" real. Pendiente para el
+  dueño: reducir movimiento en un teléfono, dos teléfonos reales, pantalla del
+  organizador en el navegador, red cortada, lector de pantalla. Hallazgo sin
+  corregir: en el teléfono los botones de voto quedan bajo el pliegue con textos
+  largos. Suite post-build 1840 / 1830 ok / 0 fallos / 10 omitidos.** Lo
+  construido: pantallas de match (corazón + confeti +
   elegida + Compartir), empate (cards, "Desempatar" sólo host, rueda que frena
   en `ganador_pos`), sin coincidencias, y "Otra tanda" sólo host desde
   `resultado` (`PrepararTanda`, compartido con "Empezar"). Todo lo decide la
   base (`resultado.*`); un barrido falla si un componente cuenta votos.
   Animaciones detrás de `prefers-reduced-motion: no-preference`. Suite
-  post-build 1834 / 1824 ok / 0 fallos / 10 omitidos; `tsc` y build en verde.
-  **No se pudo verificar en navegador**: Docker Desktop/WSL no levantó
-  (`vpnkit-bridge handshake failed`, luego `CreateVm/E_ABORT`) — queda para la
-  prueba completa junto con las cuatro manuales de la Etapa 3. La entrada del
+  `tsc` y build en verde.
+  El 20/09 Docker Desktop/WSL no levantó (`vpnkit-bridge handshake failed`,
+  luego `CreateVm/E_ABORT`); el 21/09 volvió sin reinicio. La entrada del
   Home sigue debajo de la ruleta como Link a `/sala/nueva` con textos
   provisorios (nombre y bajada sin definir). Evidencia:
   [`medidas/2026-09-20-salas-etapa4.md`](medidas/2026-09-20-salas-etapa4.md).

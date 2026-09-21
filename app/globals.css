@@ -1137,7 +1137,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-entra img{width:110px;aspect-ratio:2/3;object-fit:cover;border-radius:var(--radius-sm);box-shadow:var(--sh)}
 .sala-entra figcaption{font-size:12.5px;color:var(--dim);line-height:1.25}
 .sala-separan{display:flex;justify-content:center;gap:10px;margin:14px 0 6px;overflow:hidden}
-.sala-separa{width:72px;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;opacity:.55;filter:saturate(.4)}
+.sala-separa{flex:0 1 72px;min-width:0;width:72px;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;opacity:.55;filter:saturate(.4)}
 .sala-separa img{width:100%;height:100%;object-fit:cover}
 .sala-separa-txt{font-size:10px;color:var(--dim);padding:4px;text-align:center}
 .sala-empate .dsmp-wheel{margin-top:14px}
