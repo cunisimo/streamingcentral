@@ -7,7 +7,7 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 a 3 hechas; sin
+- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 a 3 hechas y 4 construida; sin
   merge, push, deploy ni cambios en Producción (2026-09-19).** Plan aprobado
   por el dueño con tres rondas de correcciones:
   [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
@@ -81,8 +81,21 @@
   organizador en el navegador, red cortada, lector de pantalla y una card sin
   "Pero" real. Evidencia:
   [`medidas/2026-09-19-salas-etapa3.md`](medidas/2026-09-19-salas-etapa3.md).
-  Siguen las Etapas 4 (resultados, desempate, otra tanda), 5 (compartir) y 6,
-  **no autorizadas todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
+  **Etapa 3 aprobada técnicamente y Etapa 4 CONSTRUIDA (20/09, `cf60bc6`),
+  verificación visual PENDIENTE:** pantallas de match (corazón + confeti +
+  elegida + Compartir), empate (cards, "Desempatar" sólo host, rueda que frena
+  en `ganador_pos`), sin coincidencias, y "Otra tanda" sólo host desde
+  `resultado` (`PrepararTanda`, compartido con "Empezar"). Todo lo decide la
+  base (`resultado.*`); un barrido falla si un componente cuenta votos.
+  Animaciones detrás de `prefers-reduced-motion: no-preference`. Suite
+  post-build 1834 / 1824 ok / 0 fallos / 10 omitidos; `tsc` y build en verde.
+  **No se pudo verificar en navegador**: Docker Desktop/WSL no levantó
+  (`vpnkit-bridge handshake failed`, luego `CreateVm/E_ABORT`) — queda para la
+  prueba completa junto con las cuatro manuales de la Etapa 3. La entrada del
+  Home sigue debajo de la ruleta como Link a `/sala/nueva` con textos
+  provisorios (nombre y bajada sin definir). Evidencia:
+  [`medidas/2026-09-20-salas-etapa4.md`](medidas/2026-09-20-salas-etapa4.md).
+  Siguen las Etapas 5 (compartir) y 6, **no autorizadas todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:
   [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).

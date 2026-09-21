@@ -562,6 +562,15 @@ export const OPTIONS = opcionesCors("POST");
 
 # Etapa 4 — Resultados y animaciones
 
+> **CONSTRUIDA (rama `feat/salas`, `cf60bc6`, 2026-09-20); verificación visual
+> PENDIENTE** (la base local no levantó: Docker Desktop/WSL). Archivos:
+> `components/sala/{ResultadoMatch,ResultadoEmpate,ResultadoSinCoincidencias,
+> CompartirMatch,PrepararTanda}.tsx`, `sin-computo-cliente.test.ts`; `Wheel`
+> acepta `TileRueda`. "Desempatar" y "Otra tanda" los habilita la base
+> (`puede_desempatar` / `puede_otra_tanda`), sólo para el organizador.
+> `CompartirMatch` reusa el mensaje de ficha: el texto del match es la Etapa 5.
+> Evidencia y lista de verificación pendiente:
+> `docs/medidas/2026-09-20-salas-etapa4.md`.
 ### Task 4.1: Pantallas de resultado
 
 **Files:**
@@ -573,13 +582,13 @@ export const OPTIONS = opcionesCors("POST");
 
 El **texto** de resultado en grupos también es "¡Nuestro match!" (en la pantalla y al compartir), aunque el ganador tenga 2 votos.
 
-- [ ] **Step 1:** Implementar consumiendo **sólo** `estado.resultado` de la RPC. Prohibido: cualquier conteo de votos en el cliente (test textual en `components/sala/sin-computo-cliente.test.ts` que falla si en `components/sala/*.tsx` aparece `filter(` sobre `votos` o `"yes"`).
-- [ ] **Step 2:** Verificar en dos teléfonos y con "Reducir movimiento" activado. Commit `feat(salas): resultados y animaciones`.
+- [x] **Step 1:** Implementar consumiendo **sólo** `estado.resultado` de la RPC. Prohibido: cualquier conteo de votos en el cliente (test textual en `components/sala/sin-computo-cliente.test.ts` que falla si en `components/sala/*.tsx` aparece `filter(` sobre `votos` o `"yes"`).
+- [ ] ⏳ (código commiteado en `cf60bc6`; la verificación en teléfonos y con reducir movimiento sigue pendiente) **Step 2:** Verificar en dos teléfonos y con "Reducir movimiento" activado. Commit `feat(salas): resultados y animaciones`.
 
 ### Task 4.2: Otra tanda
 
-- [ ] **Step 1:** En `ResultadoMatch`/`ResultadoSinCoincidencias`/`ResultadoEmpate` (sólo tras desempate) el host ve `ConfigTanda` + "Otra tanda" → mismo POST de la Tarea 3.3. Verificar: la ronda 2 no repite ningún `tmdb_id` de la 1 (prueba 18 del script), `expires_at` se reemplaza, participantes y plataformas se conservan; **no** disponible con empate sin resolver.
-- [ ] **Step 2:** Commit `feat(salas): otra tanda`.
+- [x] **Step 1:** En `ResultadoMatch`/`ResultadoSinCoincidencias`/`ResultadoEmpate` (sólo tras desempate) el host ve `ConfigTanda` + "Otra tanda" → mismo POST de la Tarea 3.3. Verificar: la ronda 2 no repite ningún `tmdb_id` de la 1 (prueba 18 del script), `expires_at` se reemplaza, participantes y plataformas se conservan; **no** disponible con empate sin resolver.
+- [x] **Step 2:** Commit `feat(salas): otra tanda`.
 
 ---
 
