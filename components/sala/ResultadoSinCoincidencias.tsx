@@ -7,8 +7,8 @@ import type { CardSala } from "@/lib/sala/tipos";
 // "Esta vez no coincidieron" (plan de salas, Tarea 4.1). Sin corazón roto: las
 // cards de la tanda se separan suavemente (`sala-separa`) y listo. El
 // organizador puede pedir otra tanda; los demás esperan.
-export default function ResultadoSinCoincidencias({ estado, titulos, roomId, desfase }: {
-  estado: EstadoSala; titulos: CardSala[]; roomId: string; desfase: number;
+export default function ResultadoSinCoincidencias({ estado, titulos, roomId, desfase, releer }: {
+  estado: EstadoSala; titulos: CardSala[]; roomId: string; desfase: number; releer: () => Promise<void>;
 }) {
   const seg = useVenceEn(estado, desfase);
   const muestra = titulos.slice(0, 6);
@@ -23,7 +23,7 @@ export default function ResultadoSinCoincidencias({ estado, titulos, roomId, des
       </div>
       <h1 className="sala-h1 sala-titular">Esta vez no coincidieron</h1>
       <p className="sala-hint">Ninguna película juntó dos síes. Pasa. Otra tanda trae otras.</p>
-      <PieResultado estado={estado} roomId={roomId} seg={seg} />
+      <PieResultado estado={estado} roomId={roomId} seg={seg} releer={releer} />
     </div>
   );
 }

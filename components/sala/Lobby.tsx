@@ -14,7 +14,7 @@ import type { EstadoSala } from "@/lib/sala/estado";
 //
 // El enlace para invitar se muestra acá como texto + "Copiar". El mensaje y la
 // acción de compartir del sistema llegan en la Etapa 5.
-export default function Lobby({ estado, desfase, roomId }: { estado: EstadoSala; desfase: number; roomId: string }) {
+export default function Lobby({ estado, desfase, roomId, releer }: { estado: EstadoSala; desfase: number; roomId: string; releer: () => Promise<void> }) {
   const router = useRouter();
   const seg = useVenceEn(estado, desfase);
   const [busy, setBusy] = useState(false);
@@ -82,7 +82,7 @@ export default function Lobby({ estado, desfase, roomId }: { estado: EstadoSala;
 
       {soyHost ? (
         <section className="sala-bloque">
-          <PrepararTanda roomId={roomId} rotulo="Empezar" disabled={estado.n < 2 || busy}
+          <PrepararTanda roomId={roomId} rotulo="Empezar" releer={releer} disabled={estado.n < 2 || busy}
             sizeInicial={estado.config_default?.size} duracionInicial={estado.config_default?.duracion} />
           {err && <p className="sala-err" role="alert">{err}</p>}
           <div className="sala-acciones">

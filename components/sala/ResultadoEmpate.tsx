@@ -1,11 +1,13 @@
 "use client";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import Wheel from "../desempate/Wheel";
 import Confetti from "../desempate/Confetti";
 import { Ganadora, PieResultado } from "./ResultadoMatch";
 import CompartirMatch from "./CompartirMatch";
 import { supabaseBrowser } from "@/lib/supabase";
-import { mensajeDeError } from "@/lib/sala/mensajes";
+import { desempatar as accionDesempatar } from "@/lib/sala/acciones-host";
+import { hrefTitulo } from "@/lib/rutas";
 import { useVenceEn, formatoSeg } from "@/hooks/useVenceEn";
 import type { EstadoSala, ResultadoSala } from "@/lib/sala/estado";
 import type { CardSala } from "@/lib/sala/tipos";
@@ -25,8 +27,8 @@ import type { CardSala } from "@/lib/sala/tipos";
 //
 // Con `prefers-reduced-motion: reduce`, la entrada no anima y la rueda dura
 // 300 ms (lo resuelve Wheel).
-export default function ResultadoEmpate({ estado, resultado, titulos, roomId, desfase }: {
-  estado: EstadoSala; resultado: ResultadoSala; titulos: CardSala[]; roomId: string; desfase: number;
+export default function ResultadoEmpate({ estado, resultado, titulos, roomId, desfase, releer }: {
+  estado: EstadoSala; resultado: ResultadoSala; titulos: CardSala[]; roomId: string; desfase: number; releer: () => Promise<void>;
 }) {
   const seg = useVenceEn(estado, desfase);
   const [busy, setBusy] = useState(false);
@@ -41,12 +43,17 @@ export default function ResultadoEmpate({ estado, resultado, titulos, roomId, de
   const winnerIdx = ganadora ? empatadas.findIndex((t) => t.pos === ganadora.pos) : -1;
   const organizador = estado.participantes.find((p) => p.es_host)?.nombre ?? "quien organiza";
 
+  // Tras el éxito se RELEE en el acto (lib/sala/acciones-host.ts): quien tocó
+  // ve la rueda sin esperar su propio aviso por el canal; los demás lo reciben
+  // por Realtime como siempre.
   async function desempatar() {
     setBusy(true); setErr("");
-    const { error } = await supabaseBrowser().rpc("sala_desempatar", { p_room: roomId });
+    const r = await accionDesempatar({
+      rpc: async () => { const { data, error } = await supabaseBrowser().rpc("sala_desempatar", { p_room: roomId }); return { data, error }; },
+      releer,
+    });
     setBusy(false);
-    if (error) { setErr(mensajeDeError(error.message)); return; }
-    // El estado nuevo (desempatado + ganador_pos) llega por el canal / relectura.
+    if (!r.ok) setErr(r.texto);
   }
 
   // Fase 2: ya hay ganadora. Rueda hasta que frena; después, la elegida.
@@ -71,8 +78,9 @@ export default function ResultadoEmpate({ estado, resultado, titulos, roomId, de
         <Ganadora card={ganadora} union={estado.union} />
         <div className="sala-acciones sala-acciones-resultado">
           <CompartirMatch card={ganadora} union={estado.union} />
+          <Link className="rlt-btn" href={hrefTitulo("movie", ganadora.tmdb_id)}>Ver la ficha</Link>
         </div>
-        <PieResultado estado={estado} roomId={roomId} seg={seg} />
+        <PieResultado estado={estado} roomId={roomId} seg={seg} releer={releer} />
       </div>
     );
   }

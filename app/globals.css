@@ -1116,10 +1116,13 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
    "reducir movimiento" los elementos quedan directamente en su estado final. */
 .sala-resultado{position:relative;padding:12px 0 30px;text-align:center}
 .sala-titular{font-size:34px;margin:10px 0 4px}
-.sala-corazon{position:relative;width:96px;height:88px;margin:8px auto 0}
-.sala-mitad{position:absolute;top:0;width:48px;height:88px;background:var(--accent);overflow:hidden}
-.sala-mitad-izq{left:0;border-radius:48px 0 0 0;clip-path:polygon(0 30%,100% 0,100% 100%,0 100%);transform:translateX(0) rotate(-45deg);transform-origin:100% 100%}
-.sala-mitad-der{right:0;border-radius:0 48px 0 0;clip-path:polygon(0 0,100% 30%,100% 100%,0 100%);transform:translateX(0) rotate(45deg);transform-origin:0 100%}
+/* Corazón clásico de dos lóbulos: cada mitad es un rectángulo con la punta
+   redondeada, girado 45° sobre su esquina inferior. En porcentajes para que la
+   versión chica y la grande compartan las reglas. */
+.sala-corazon{position:relative;width:100px;height:90px;margin:8px auto 0}
+.sala-mitad{position:absolute;top:0;width:52%;height:89%;background:var(--accent);border-radius:50% 50% 0 0/32% 32% 0 0}
+.sala-mitad-izq{left:0;transform-origin:100% 100%;transform:rotate(45deg)}
+.sala-mitad-der{left:50%;transform-origin:0 100%;transform:rotate(-45deg)}
 .sala-ganadora{display:flex;gap:18px;align-items:flex-start;text-align:left;margin:22px auto 0;max-width:560px}
 .sala-ganadora-poster{flex:0 0 130px}
 .sala-ganadora-body{min-width:0;flex:1}
@@ -1146,8 +1149,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .sala-entra{animation:sala-entra .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 90ms)}
   .sala-separa{animation:sala-separa 1.2s ease-out both;animation-delay:calc(var(--i) * 40ms)}
 }
-@keyframes sala-mitad-izq{from{transform:translateX(-70px) rotate(-45deg);opacity:0}to{transform:translateX(0) rotate(-45deg);opacity:1}}
-@keyframes sala-mitad-der{from{transform:translateX(70px) rotate(45deg);opacity:0}to{transform:translateX(0) rotate(45deg);opacity:1}}
+@keyframes sala-mitad-izq{from{transform:translateX(-90%) rotate(45deg);opacity:0}to{transform:translateX(0) rotate(45deg);opacity:1}}
+@keyframes sala-mitad-der{from{transform:translateX(90%) rotate(-45deg);opacity:0}to{transform:translateX(0) rotate(-45deg);opacity:1}}
 @keyframes sala-latido{0%,100%{transform:scale(1)}30%{transform:scale(1.12)}60%{transform:scale(.98)}}
 @keyframes sala-entra{from{opacity:0;transform:translateY(24px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes sala-separa{from{opacity:1;filter:none;transform:translateX(0)}to{opacity:.55;filter:saturate(.4);transform:translateX(calc((var(--i) - (var(--n) - 1) / 2) * 10px))}}
@@ -1156,3 +1159,24 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .sala-ganadora .rlt-tags{justify-content:center}
   .sala-titular{font-size:28px}
 }
+
+/* --- Salas: celebración del match a pantalla completa --- */
+.sala-celebracion{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:calc(24px + var(--safe-t,0px)) 24px calc(24px + var(--safe-b,0px));background:radial-gradient(120% 90% at 50% 30%,#3a1c2e 0%,#241a30 45%,#120d18 100%);color:#fff;text-align:center;overflow:hidden;cursor:pointer}
+.sala-celebracion-cuerpo{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:min(92vw,520px)}
+.sala-corazon-grande{width:min(46vw,240px);height:min(41.4vw,216px);margin:0 auto 6px}
+.sala-celebracion-titulo{font-family:var(--display);font-size:clamp(34px,9vw,56px);font-weight:800;letter-spacing:-.03em;line-height:1;margin:0;color:#fff}
+.sala-celebracion-poster{width:min(38vw,170px);aspect-ratio:2/3;object-fit:cover;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.55)}
+.sala-celebracion-nombre{font-family:var(--display);font-size:clamp(18px,5vw,24px);font-weight:700;margin:0;color:#fff}
+.sala-celebracion-seguir{position:absolute;left:50%;bottom:calc(28px + var(--safe-b,0px));transform:translateX(-50%);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.35);color:#fff}
+.sala-celebracion .dsmp-confetti{position:absolute}
+@media (prefers-reduced-motion: no-preference){
+  .sala-celebracion{animation:sala-cel-fin .4s ease calc(3.3s - .4s) both}
+  .sala-celebracion-titulo{animation:sala-cel-titulo .5s cubic-bezier(.2,.8,.2,1) .8s both}
+  .sala-celebracion-poster{animation:sala-cel-poster .6s cubic-bezier(.2,.8,.2,1) 1.2s both}
+  .sala-celebracion-nombre{animation:dsmp-in .4s ease 1.6s both}
+  .sala-celebracion-seguir{animation:dsmp-in .4s ease 1.8s both}
+  .sala-corazon-grande{animation:sala-latido 1s ease-in-out 1s 2}
+}
+@keyframes sala-cel-fin{from{opacity:1}to{opacity:0;visibility:hidden}}
+@keyframes sala-cel-titulo{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes sala-cel-poster{from{opacity:0;transform:translateY(24px) scale(.8)}to{opacity:1;transform:none}}

@@ -3,8 +3,8 @@ import { useState } from "react";
 import ConfigTanda from "./ConfigTanda";
 import { supabaseBrowser } from "@/lib/supabase";
 import { apiUrl } from "@/lib/api-base";
-import { CONFIG_DEFAULT, SIZES, type Duracion, type Size } from "@/lib/sala/tipos";
-import { mensajeDeError, mensajeDePreparar } from "@/lib/sala/mensajes";
+import { CONFIG_DEFAULT, type Duracion, type Size } from "@/lib/sala/tipos";
+import { pedirTanda } from "@/lib/sala/acciones-host";
 
 // La configuración de una tanda y el botón que la pide. Lo usan el lobby
 // ("Empezar") y las pantallas de resultado ("Otra tanda"), que son la misma
@@ -12,12 +12,14 @@ import { mensajeDeError, mensajeDePreparar } from "@/lib/sala/mensajes";
 // TeVaAGustar.tsx). SÓLO lo ve el organizador: quien lo monta lo decide con
 // `estado.soy.es_host`, y la API lo vuelve a comprobar con el JWT.
 //
-// La respuesta no dibuja nada: el estado pasa a `preparando` en la base y llega
-// por el canal a TODOS, incluido quien tocó. Los 409 sí se muestran:
-// `insuficientes` trae los tamaños alcanzables y se destacan en el selector.
-export default function PrepararTanda({ roomId, rotulo, sizeInicial, duracionInicial, disabled, hint }: {
+// La lógica vive en lib/sala/acciones-host.ts (testeable): tras un 2xx se
+// RELEE el estado en el acto con `releer` — el organizador no depende de
+// recibir su propio aviso por el canal para ver "Armando la tanda…"—; los 409
+// se muestran (`insuficientes` trae los tamaños alcanzables, destacados).
+export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, duracionInicial, disabled, hint }: {
   roomId: string;
   rotulo: string;
+  releer: () => Promise<void>;
   sizeInicial?: Size;
   duracionInicial?: Duracion;
   /** Si el botón no puede tocarse todavía (p. ej. faltan participantes). */
@@ -32,24 +34,20 @@ export default function PrepararTanda({ roomId, rotulo, sizeInicial, duracionIni
 
   async function pedir() {
     setBusy(true); setErr(""); setAlcanzables(null);
-    try {
-      const { data } = await supabaseBrowser().auth.getSession();
-      const jwt = data.session?.access_token;
-      if (!jwt) { setErr(mensajeDePreparar(401, { motivo: "sin_sesion" })); return; }
-      const r = await fetch(apiUrl("/api/sala/preparar"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ room_id: roomId, size, duracion }),
-      });
-      if (r.ok) return; // el cambio de estado llega por el canal
-      const body = await r.json().catch(() => null) as { motivo?: string; alcanzables?: number[] } | null;
-      setErr(mensajeDePreparar(r.status, body));
-      if (body?.motivo === "insuficientes") setAlcanzables((body.alcanzables ?? []).filter((s): s is Size => SIZES.includes(s as Size)));
-    } catch (e) {
-      setErr(mensajeDeError(e instanceof Error ? e.message : null));
-    } finally {
-      setBusy(false);
-    }
+    const r = await pedirTanda({
+      jwt: async () => (await supabaseBrowser().auth.getSession()).data.session?.access_token ?? null,
+      post: async (body, jwt) => {
+        const res = await fetch(apiUrl("/api/sala/preparar"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+          body: JSON.stringify(body),
+        });
+        return { status: res.status, body: await res.json().catch(() => null) };
+      },
+      releer,
+    }, roomId, size, duracion);
+    setBusy(false);
+    if (!r.ok) { setErr(r.texto); if (r.alcanzables) setAlcanzables(r.alcanzables); }
   }
 
   return (

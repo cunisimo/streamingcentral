@@ -1,9 +1,11 @@
 "use client";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import PlatformLogo from "../PlatformLogo";
 import Confetti from "../desempate/Confetti";
 import CompartirMatch from "./CompartirMatch";
 import PrepararTanda from "./PrepararTanda";
+import CelebracionMatch, { permiteCelebracion } from "./CelebracionMatch";
 import { genreLabel } from "../data";
 import { hrefTitulo } from "@/lib/rutas";
 import { formatoDuracion } from "@/lib/sala/votacion-nucleo";
@@ -16,16 +18,22 @@ import type { CardSala } from "@/lib/sala/tipos";
 // En grupos el resultado es `ganador` (la más votada, aunque tenga 2 votos) y
 // el texto es el mismo: es "nuestro match".
 //
-// Animación: dos mitades de corazón que se juntan (`sala-mitad-izq/der`) y el
-// confeti de "Desempatá". Con `prefers-reduced-motion: reduce` el CSS deja el
-// estado final sin transición y Confetti no se dibuja.
-export default function ResultadoMatch({ estado, card, roomId, desfase }: {
-  estado: EstadoSala; card: CardSala; roomId: string; desfase: number;
+// Primero la CELEBRACIÓN a pantalla completa (CelebracionMatch: corazón grande,
+// título, póster, confeti, ~3 s o "Seguir"); debajo ya está esta pantalla con
+// todo lo accionable: póster, plataformas, Compartir, Ver la ficha y —para el
+// organizador— Otra tanda. Con `prefers-reduced-motion: reduce` la celebración
+// no se monta y esta pantalla queda en su estado final sin transición.
+export default function ResultadoMatch({ estado, card, roomId, desfase, releer }: {
+  estado: EstadoSala; card: CardSala; roomId: string; desfase: number; releer: () => Promise<void>;
 }) {
   const seg = useVenceEn(estado, desfase);
+  // Una vez por montaje (= por ronda, SalaView usa key = ronda.id).
+  const [celebrando, setCelebrando] = useState(() => permiteCelebracion());
+  const terminar = useCallback(() => setCelebrando(false), []);
   return (
-    <div className="sala-resultado sala-match">
-      <Confetti count={60} />
+    <div className="sala-resultado sala-match" aria-busy={celebrando}>
+      {celebrando && <CelebracionMatch card={card} onFin={terminar} />}
+      {!celebrando && <Confetti count={40} />}
       <div className="sala-corazon" aria-hidden>
         <span className="sala-mitad sala-mitad-izq" />
         <span className="sala-mitad sala-mitad-der" />
@@ -37,7 +45,7 @@ export default function ResultadoMatch({ estado, card, roomId, desfase }: {
         <CompartirMatch card={card} union={estado.union} />
         <Link className="rlt-btn" href={hrefTitulo("movie", card.tmdb_id)}>Ver la ficha</Link>
       </div>
-      <PieResultado estado={estado} roomId={roomId} seg={seg} />
+      <PieResultado estado={estado} roomId={roomId} seg={seg} releer={releer} />
     </div>
   );
 }
@@ -73,7 +81,7 @@ export function Ganadora({ card, union }: { card: CardSala; union: CardSala["pla
  * `puede_otra_tanda` lo decide la base (host + estado `resultado`): con un
  * empate sin resolver no aparece.
  */
-export function PieResultado({ estado, roomId, seg }: { estado: EstadoSala; roomId: string; seg: number | null }) {
+export function PieResultado({ estado, roomId, seg, releer }: { estado: EstadoSala; roomId: string; seg: number | null; releer: () => Promise<void> }) {
   const puede = estado.resultado?.puede_otra_tanda === true;
   return (
     <div className="sala-pie-resultado">
@@ -83,7 +91,7 @@ export function PieResultado({ estado, roomId, seg }: { estado: EstadoSala; room
       {puede ? (
         <section className="sala-bloque">
           <span className="chip-group-label">¿Otra tanda?</span>
-          <PrepararTanda roomId={roomId} rotulo="Otra tanda" hint="Sin repetir las películas que ya salieron." />
+          <PrepararTanda roomId={roomId} rotulo="Otra tanda" releer={releer} hint="Sin repetir las películas que ya salieron." />
         </section>
       ) : (
         estado.estado === "resultado" && <p className="sala-hint">Quien organiza puede pedir otra tanda.</p>
