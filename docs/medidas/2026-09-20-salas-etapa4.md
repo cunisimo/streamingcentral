@@ -168,14 +168,45 @@ real.
 | Los dos descartes distinguidos en `sala-lector` (gana-aplica vs gana-falla, y la variante con excepción de red) | ✅ |
 | `releerDe` sobre los seis resultados | ✅ rechaza sólo `fallo` y `descartada-sin-estado` |
 
+## Texto visible definitivo (22/09, `4e02ba6`)
+
+El dueño definió el copy de la entrada; se aplicó **literal** en las dos, y
+`entrada-pelimatch.test.ts` lo fija pieza por pieza:
+
+| | |
+|---|---|
+| Emoji | 🍿 |
+| Nombre | Pelimatch |
+| Bajada | "Cada uno vota en su teléfono. Sale una sola película." |
+| Botón | "Matcheá" |
+
+El hub ya no dice la provisoria "Elegir entre varios". La navegación no cambió:
+`Link` a `/sala/nueva`, misma pestaña, pantalla propia.
+
+**Dos ajustes de CSS que hizo falta hacer** (no de copy):
+
+- 🔴 `.dsmp-banner-sub` estaba **oculta abajo de 560 px** —regla de los otros dos
+  banners—, así que en teléfono la bajada no se veía. Ahora se muestra siempre
+  para `.sala-banner`.
+- Los tiles del hub llevan padding: con la bajada de dos líneas el texto llegaba
+  al borde de la tarjeta.
+
+**Medido** con el CSS real: banner **120 px** de alto a 360 (bajada en 3 líneas)
+y **159 px** a 320 (4 líneas), con el botón siempre adentro; tile del hub 123 px
+con el texto dentro de la tarjeta. En la app, a 360: 🍿 / Pelimatch / bajada
+visible / "Matcheá" / sin `target`. ⚠️ El banner queda bastante más alto que los
+otros dos (la ruleta mide ~68 px): si el dueño lo quiere más compacto, es
+decisión suya —achicar el texto o esconderlo en teléfono sería cambiar lo que
+definió—.
+
 ## Verificación automática
 
 - `node --test components/sala/sin-computo-cliente.test.ts` → 3/3.
 - `npx tsc --noEmit` limpio. `npm run build` en verde: `/sala/[id]` 12,7 kB (ƒ).
 - `lib/sala/acciones-host.test.ts` 10/10, `lib/sala/relectura-cableada.test.ts`
   9/9, `hooks/sala-lector.test.ts` 8/8, `components/sala/entrada-pelimatch.test.ts`
-  4/4. Sala completa, con los guards: **263/263**.
-- Suite completa post-build: **1860 tests, 1850 ok, 0 fallos, 10 omitidos**
+  5/5. Sala completa, con los guards: **264/264**.
+- Suite completa post-build: **1861 tests, 1851 ok, 0 fallos, 10 omitidos**
   (artefacto Capacitor). El total incluye los tests sin commitear de la otra
   sesión que hay en el árbol (issue #24, supresiones de Disney+), que también
   pasan.
