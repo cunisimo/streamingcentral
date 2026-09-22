@@ -64,10 +64,12 @@ export function useSala(roomId: string, token: string | null): UsoSala {
   const canalRef = useRef<RealtimeChannel | null>(null);
   const timerRelectura = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 🔴 RECHAZA CUANDO LA LECTURA FALLÓ (`releerDe`). Es lo que `pedirTanda` y
-  // `desempatar` miran para lanzar sus reintentos acotados: con el contrato
-  // anterior —`leer()` atrapaba el error y no devolvía nada— la cadena no
-  // arrancaba nunca. Sin lector (todavía sin token) no es un fallo.
+  // 🔴 RECHAZA CUANDO EL ESTADO NUEVO NO LLEGÓ A APLICARSE (`releerDe`). Es lo
+  // que `pedirTanda` y `desempatar` miran para lanzar sus reintentos acotados.
+  // Dos contratos rotos que pasaron por acá: `leer()` atrapaba el error y no
+  // devolvía nada (la cadena no arrancaba nunca), y después `descartada` contaba
+  // como éxito aunque la lectura que había ganado hubiera fallado. Sin lector
+  // (todavía sin token) no es un fallo.
   const releer = useCallback(async () => {
     const l = lectorRef.current;
     if (l) await releerDe(l)();

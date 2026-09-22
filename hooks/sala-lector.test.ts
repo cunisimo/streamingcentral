@@ -114,14 +114,35 @@ test("leer() informa el resultado: aplicada / fallo / invalida / descartada / om
   assert.equal(await l.leer(), "omitida");
 });
 
-test("releerDe rechaza SÓLO con `fallo`; descartada, inválida y omitida pasan sin error", async () => {
+test("releerDe rechaza cuando el estado NO llegó a aplicarse: fallo y descartada-sin-estado", async () => {
   const { releerDe, ErrorRelectura } = await import("./sala-lector.ts");
   for (const r of ["descartada", "invalida", "omitida", "aplicada"] as const) {
-    await releerDe({ leer: async () => r })();   // no lanza
+    await releerDe({ leer: async () => r })();   // no lanza: alguien aplicó, o no hay nada que hacer
   }
-  await assert.rejects(releerDe({ leer: async () => "fallo" as const })(), (e: unknown) => {
-    assert.ok(e instanceof ErrorRelectura);
-    assert.equal((e as InstanceType<typeof ErrorRelectura>).resultado, "fallo");
-    return true;
-  });
+  for (const r of ["fallo", "descartada-sin-estado"] as const) {
+    await assert.rejects(releerDe({ leer: async () => r })(), (e: unknown) => {
+      assert.ok(e instanceof ErrorRelectura);
+      assert.equal((e as InstanceType<typeof ErrorRelectura>).resultado, r);
+      return true;
+    }, r);
+  }
+});
+
+test("la compuerta distingue los dos descartes: con estado aplicado por otra vs sin ninguno", async () => {
+  // (a) la que gana APLICA estado → la vieja sale "descartada" (éxito).
+  const a1 = arnes();
+  const pv1 = a1.l.leer(), pn1 = a1.l.leer();
+  a1.pendientes[1].resolve(estado(2)); assert.equal(await pn1, "aplicada");
+  a1.pendientes[0].resolve(estado(1)); assert.equal(await pv1, "descartada");
+  // (b) la que gana FALLA → la vieja sale "descartada-sin-estado" (hay que reintentar).
+  const a2 = arnes();
+  const pv2 = a2.l.leer(), pn2 = a2.l.leer();
+  a2.pendientes[1].resolve({ data: null, error: { message: "red" } }); assert.equal(await pn2, "fallo");
+  a2.pendientes[0].resolve(estado(1)); assert.equal(await pv2, "descartada-sin-estado");
+  assert.ok(!a2.log.includes("estado v1"), "y el estado viejo sigue sin aplicarse");
+  // (c) una excepción de red en la vieja, con la nueva fallada, también cuenta como sin estado.
+  const a3 = arnes();
+  const pv3 = a3.l.leer(), pn3 = a3.l.leer();
+  a3.pendientes[1].resolve({ data: null, error: { message: "red" } }); await pn3;
+  a3.pendientes[0].reject(new Error("timeout")); assert.equal(await pv3, "descartada-sin-estado");
 });

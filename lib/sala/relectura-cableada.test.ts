@@ -115,3 +115,104 @@ test("GUARD del cableado: useSala.releer se construye con releerDe (si alguien v
   assert.match(src, /const releer = useCallback\(async \(\) => \{[^}]*releerDe\(l\)\(\)/s, "releer usa releerDe");
   assert.ok(!/await lectorRef\.current\?\.leer\(\);\s*\}, \[\]\)/.test(src), "no vuelve al contrato viejo (leer() y descartar el resultado)");
 });
+
+// --- La carrera que encontró el dueño (22/09) --------------------------------
+// 1. La acción arranca su lectura de `sala_estado` y queda pendiente.
+// 2. Entra una segunda lectura (aviso de Realtime) y FALLA.
+// 3. Vuelve la primera con un estado válido, pero la compuerta la descarta por
+//    ser anterior.
+// Nadie aplicó el estado nuevo. Con el contrato anterior, `descartada` contaba
+// como éxito y la acción no reintentaba.
+
+/** Igual que `cableado`, pero con las respuestas resueltas a mano. */
+function cableadoManual() {
+  const pendientes: Array<(v: Resp) => void> = [];
+  const log: string[] = [];
+  const esperas: number[] = [];
+  const lector = crearLector({
+    pedir: () => new Promise<Resp>((res) => pendientes.push(res)),
+    ahora: () => 1000,
+    alEstado: () => log.push("estado aplicado"),
+    alError: (m) => log.push(`error ${m}`),
+    alTokenInvalido: () => log.push("token-invalido"),
+    alTerminarLectura: () => log.push("cargado"),
+    alTerminal: () => log.push("terminal"),
+  });
+  return { lector, pendientes, log, esperas, releer: releerDe(lector), relectura: { dormir: async (ms: number) => { esperas.push(ms); } } };
+}
+
+test("CARRERA: la lectura de la acción se descarta y la que ganó FALLÓ → la cadena de reintentos arranca igual", async () => {
+  const c = cableadoManual();
+  const accion = pedirTanda({
+    jwt: async () => "JWT",
+    post: async () => ({ status: 200, body: { ok: true } }),
+    releer: c.releer,
+    relectura: c.relectura,
+  }, "R1", 10, "cualquiera");
+
+  // La lectura de la acción ya salió (1) y entra la del aviso (2), que falla.
+  while (c.pendientes.length < 1) await new Promise((r) => setImmediate(r));
+  const senal = c.lector.leer();
+  while (c.pendientes.length < 2) await new Promise((r) => setImmediate(r));
+  c.pendientes[1]({ data: null, error: { message: "Failed to fetch" } });
+  assert.equal(await senal, "fallo");
+
+  // Ahora vuelve la de la acción, con un estado VÁLIDO pero vieja.
+  c.pendientes[0]({ data: { estado: "preparando", version: 9, ahora: "2026-09-22T12:00:00Z" }, error: null });
+  const r = await accion;
+  assert.equal(r.ok, true);
+  assert.ok(!c.log.includes("estado aplicado"), "ninguna lectura aplicó el estado nuevo");
+  assert.ok(r.ok && r.relectura, "🔴 la acción reintenta: antes daba la relectura por buena y se quedaba quieta");
+
+  // Los reintentos salen y terminan acotados (todos fallan en este caso).
+  const cadena = r.ok ? r.relectura! : Promise.reject();
+  for (let i = 0; i < ESPERAS_RELECTURA.length; i++) {
+    while (c.pendientes.length < 3 + i) await new Promise((res) => setImmediate(res));
+    c.pendientes[2 + i]({ data: null, error: { message: "sigue caída" } });
+    await new Promise((res) => setImmediate(res));
+  }
+  assert.deepEqual(await cadena, { intentos: 1 + ESPERAS_RELECTURA.length, ok: false });
+  assert.deepEqual(c.esperas, [...ESPERAS_RELECTURA]);
+});
+
+test("una lectura descartada porque OTRA aplicó el estado NO genera solicitudes extra", async () => {
+  const c = cableadoManual();
+  const accion = pedirTanda({
+    jwt: async () => "JWT",
+    post: async () => ({ status: 200, body: { ok: true } }),
+    releer: c.releer,
+    relectura: c.relectura,
+  }, "R1", 10, "cualquiera");
+
+  while (c.pendientes.length < 1) await new Promise((r) => setImmediate(r));
+  const senal = c.lector.leer();
+  while (c.pendientes.length < 2) await new Promise((r) => setImmediate(r));
+  // La segunda gana y SÍ aplica estado.
+  c.pendientes[1]({ data: { estado: "preparando", version: 10, ahora: "2026-09-22T12:00:00Z" }, error: null });
+  assert.equal(await senal, "aplicada");
+  // La primera vuelve tarde: se descarta, pero el estado ya está puesto.
+  c.pendientes[0]({ data: { estado: "lobby", version: 9, ahora: "2026-09-22T12:00:00Z" }, error: null });
+  const r = await accion;
+  assert.equal(r.ok, true);
+  assert.equal(r.ok && r.relectura, undefined, "sin cadena: no hace falta reintentar");
+  assert.equal(c.pendientes.length, 2, "ni una solicitud extra");
+  assert.equal(c.log.filter((l) => l === "estado aplicado").length, 1, "y el estado viejo NO se aplicó encima");
+  assert.deepEqual(c.esperas, []);
+});
+
+test("descartada con la sala ya terminal tampoco reintenta", async () => {
+  const c = cableadoManual();
+  const accion = pedirTanda({
+    jwt: async () => "JWT", post: async () => ({ status: 200, body: { ok: true } }),
+    releer: c.releer, relectura: c.relectura,
+  }, "R1", 10, "cualquiera");
+  while (c.pendientes.length < 1) await new Promise((r) => setImmediate(r));
+  const senal = c.lector.leer();
+  while (c.pendientes.length < 2) await new Promise((r) => setImmediate(r));
+  c.pendientes[1]({ data: null, error: { message: "sala_token_invalido" } });
+  assert.equal(await senal, "invalida");
+  c.pendientes[0]({ data: { estado: "lobby", version: 9, ahora: "x" }, error: null });
+  const r = await accion;
+  assert.equal(r.ok && r.relectura, undefined, "la sala ya no sirve: no hay nada que reintentar");
+  assert.equal(c.pendientes.length, 2);
+});

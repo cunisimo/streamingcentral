@@ -34,13 +34,21 @@ export interface DepsLector {
  * Cómo terminó una lectura. Lo mira `useSala.releer`, que es lo que consume
  * `lib/sala/acciones-host.ts`: sólo `"fallo"` justifica reintentar.
  *   aplicada   — se aplicó el estado (o el estado terminal).
- *   descartada — la compuerta la rechazó: hay una más nueva, o cambió la sala.
- *                No se reintenta: lo que valía ya se aplicó o ya no importa.
- *   fallo      — error de la RPC o de red. ES EL ÚNICO QUE SE REINTENTA.
+ *   descartada — la compuerta la rechazó Y otra lectura sí aplicó el estado (o
+ *                la sala quedó terminal). No hay nada que reintentar.
+ *   descartada-sin-estado — la compuerta la rechazó pero NINGUNA lectura aplicó
+ *                estado: la que ganó falló. Cuenta como fallo para quien
+ *                necesite reintentar. 🔴 Es la carrera que encontró el dueño:
+ *                la acción arranca su lectura, entra una segunda por un aviso
+ *                de Realtime que FALLA, y cuando vuelve la primera —con un
+ *                estado válido— la compuerta la descarta por vieja. Nadie
+ *                aplicó nada y, con el contrato anterior, la acción daba la
+ *                relectura por buena y no reintentaba.
+ *   fallo      — error de la RPC o de red.
  *   invalida   — `sala_token_invalido`: terminal, no hay nada que reintentar.
  *   omitida    — el lector ya estaba terminal.
  */
-export type ResultadoLectura = "aplicada" | "descartada" | "fallo" | "invalida" | "omitida";
+export type ResultadoLectura = "aplicada" | "descartada" | "descartada-sin-estado" | "fallo" | "invalida" | "omitida";
 
 export interface Lector {
   /**
@@ -72,14 +80,18 @@ export class ErrorRelectura extends Error {
 
 /**
  * El `releer` que consumen las acciones del organizador
- * (`lib/sala/acciones-host.ts`): **rechaza cuando la lectura falló**, que es lo
- * que dispara la cadena de reintentos acotada. Descartada / inválida / omitida
- * NO son fallos: no hay nada que reintentar.
+ * (`lib/sala/acciones-host.ts`): **rechaza cuando el estado nuevo no llegó a
+ * aplicarse**, que es lo que dispara la cadena de reintentos acotada. Son dos
+ * casos: la lectura falló, o la descartó la compuerta sin que ninguna otra
+ * aplicara estado. Una descartada porque OTRA ya aplicó —que es el caso normal
+ * de dos lecturas en vuelo— no genera ni una solicitud extra.
  */
+const SIN_ESTADO: ReadonlySet<ResultadoLectura> = new Set(["fallo", "descartada-sin-estado"]);
+
 export function releerDe(lector: Pick<Lector, "leer">): () => Promise<void> {
   return async () => {
     const r = await lector.leer();
-    if (r === "fallo") throw new ErrorRelectura(r);
+    if (SIN_ESTADO.has(r)) throw new ErrorRelectura(r);
   };
 }
 
@@ -87,16 +99,27 @@ export function crearLector(d: DepsLector): Lector {
   const compuerta = crearCompuerta();
   let relectura = inicial();
   let terminal = false;
+  /** Cuántas lecturas aplicaron estado. Lo mira el descarte (ver arriba). */
+  let aplicaciones = 0;
+
+  /**
+   * Una lectura que la compuerta rechazó. Vale como éxito SÓLO si mientras
+   * tanto otra aplicó estado (o la sala quedó terminal, donde no hay nada que
+   * reintentar); si no, el estado nuevo no llegó a ningún lado.
+   */
+  const descarte = (aplicacionesAlSalir: number): ResultadoLectura =>
+    terminal || aplicaciones > aplicacionesAlSalir ? "descartada" : "descartada-sin-estado";
 
   return {
     async leer(): Promise<ResultadoLectura> {
       if (terminal) return "omitida";
       const ticket = compuerta.emitir();
+      const aplicacionesAlSalir = aplicaciones;
       let admitida = false;
       try {
         const { data, error } = await d.pedir();
         admitida = compuerta.aplicar(ticket);
-        if (!admitida) return "descartada";
+        if (!admitida) return descarte(aplicacionesAlSalir);
         if (error) {
           if (/sala_token_invalido/.test(error.message)) { terminal = true; d.alTokenInvalido(); return "invalida"; }
           d.alError(error.message);
@@ -104,12 +127,13 @@ export function crearLector(d: DepsLector): Lector {
         }
         const r = data as RespuestaEstado;
         d.alEstado(r, d.ahora());
+        aplicaciones++;
         if (esTerminal(r)) { terminal = true; d.alTerminal(); }
         return "aplicada";
       } catch (err) {
         admitida = compuerta.aplicar(ticket);
         if (admitida) d.alError(err instanceof Error ? err.message : "fallo");
-        return admitida ? "fallo" : "descartada";
+        return admitida ? "fallo" : descarte(aplicacionesAlSalir);
       } finally {
         // Sólo la lectura admitida cierra la vuelta: marca la relectura como
         // hecha y avisa que terminó (cargando = false).
@@ -129,6 +153,7 @@ export function crearLector(d: DepsLector): Lector {
       compuerta.reiniciar();
       relectura = inicial();
       terminal = false;
+      aplicaciones = 0;
     },
     terminal: () => terminal,
     relectura: () => relectura,
