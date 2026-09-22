@@ -3,7 +3,7 @@
 // entradas: la del Home (debajo de "Ruleta Yump") y la del hub de la cuenta.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const leer = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
@@ -34,9 +34,14 @@ test("la entrada del Home es un LINK (no despliega nada en el Home) y va debajo 
   assert.match(catalog.slice(iRuleta, iSala), /^\s*<RuletaBanner \/>\s*$/m);
 });
 
-test("el target de pestaña nueva sale de lib/sala/apertura.ts, no escrito a mano", () => {
+test("las dos entradas NAVEGAN EN LA MISMA PESTAÑA: sin target, sin ventana flotante", () => {
+  // Decisión del dueño (22/09): Pelimatch se abre como el "Ver todas" de los
+  // rieles. Una pasada anterior había puesto target=_blank con un módulo de
+  // apertura; se sacó entero.
   for (const src of [HOME, HUB]) {
-    assert.match(src, /atributosEnlace\(contextoDelNavegador\(ES_NATIVO\)\)/);
-    assert.ok(!/target="_blank"/.test(src), "no se fija a mano: en PWA/nativo no corresponde");
+    assert.ok(!/target=/.test(src), "sin target");
+    assert.ok(!/window.open/.test(src), "sin ventana flotante");
+    assert.ok(!/apertura/.test(src), "sin lógica especial de apertura");
   }
+  assert.ok(!existsSync(join(process.cwd(), "lib/sala/apertura.ts")), "el módulo de apertura ya no existe");
 });

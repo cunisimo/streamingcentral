@@ -31,7 +31,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase";
 import { desfaseReloj, plazoVigente, type RespuestaEstado } from "@/lib/sala/estado";
 import { borrarToken } from "@/lib/sala/token-store";
-import { crearLector, type Lector } from "./sala-lector";
+import { crearLector, releerDe, type Lector } from "./sala-lector";
 
 export type EstadoCanal = "conectado" | "desconectado";
 
@@ -64,7 +64,14 @@ export function useSala(roomId: string, token: string | null): UsoSala {
   const canalRef = useRef<RealtimeChannel | null>(null);
   const timerRelectura = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const releer = useCallback(async () => { await lectorRef.current?.leer(); }, []);
+  // 🔴 RECHAZA CUANDO LA LECTURA FALLÓ (`releerDe`). Es lo que `pedirTanda` y
+  // `desempatar` miran para lanzar sus reintentos acotados: con el contrato
+  // anterior —`leer()` atrapaba el error y no devolvía nada— la cadena no
+  // arrancaba nunca. Sin lector (todavía sin token) no es un fallo.
+  const releer = useCallback(async () => {
+    const l = lectorRef.current;
+    if (l) await releerDe(l)();
+  }, []);
 
   // Montaje (y cada cambio de sala o credencial): lector nuevo, primera
   // lectura, canal y respaldos. El cleanup deja al lector anterior sin

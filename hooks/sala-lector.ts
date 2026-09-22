@@ -30,8 +30,27 @@ export interface DepsLector {
   alTerminal: () => void;
 }
 
+/**
+ * Cómo terminó una lectura. Lo mira `useSala.releer`, que es lo que consume
+ * `lib/sala/acciones-host.ts`: sólo `"fallo"` justifica reintentar.
+ *   aplicada   — se aplicó el estado (o el estado terminal).
+ *   descartada — la compuerta la rechazó: hay una más nueva, o cambió la sala.
+ *                No se reintenta: lo que valía ya se aplicó o ya no importa.
+ *   fallo      — error de la RPC o de red. ES EL ÚNICO QUE SE REINTENTA.
+ *   invalida   — `sala_token_invalido`: terminal, no hay nada que reintentar.
+ *   omitida    — el lector ya estaba terminal.
+ */
+export type ResultadoLectura = "aplicada" | "descartada" | "fallo" | "invalida" | "omitida";
+
 export interface Lector {
-  leer(): Promise<void>;
+  /**
+   * 🔴 DEVUELVE CÓMO TERMINÓ, Y NO LANZA. La primera versión no devolvía nada y
+   * atrapaba los errores para avisarlos por `alError`: con ese contrato,
+   * `asegurarRelectura` veía una promesa resuelta y daba la lectura por buena,
+   * así que la cadena de reintentos NUNCA arrancaba. Quien necesite reintentar
+   * mira este resultado (lo hace `useSala.releer`).
+   */
+  leer(): Promise<ResultadoLectura>;
   /** Señal del canal: en cuántos ms releer, o null si ya hay una relectura pendiente. */
   senal(): number | null;
   /** Otra sala u otra credencial: nueva generación; lo que estaba en vuelo no cuenta. */
@@ -41,31 +60,56 @@ export interface Lector {
   relectura(): EstadoRelectura;
 }
 
+/** El error con el que `releer` avisa que la lectura NO se pudo aplicar. */
+export class ErrorRelectura extends Error {
+  // Sin parameter property: `node --test` corre estos .ts en modo strip-only.
+  readonly resultado: ResultadoLectura;
+  constructor(resultado: ResultadoLectura) {
+    super("sala_relectura_fallida");
+    this.resultado = resultado;
+  }
+}
+
+/**
+ * El `releer` que consumen las acciones del organizador
+ * (`lib/sala/acciones-host.ts`): **rechaza cuando la lectura falló**, que es lo
+ * que dispara la cadena de reintentos acotada. Descartada / inválida / omitida
+ * NO son fallos: no hay nada que reintentar.
+ */
+export function releerDe(lector: Pick<Lector, "leer">): () => Promise<void> {
+  return async () => {
+    const r = await lector.leer();
+    if (r === "fallo") throw new ErrorRelectura(r);
+  };
+}
+
 export function crearLector(d: DepsLector): Lector {
   const compuerta = crearCompuerta();
   let relectura = inicial();
   let terminal = false;
 
   return {
-    async leer() {
-      if (terminal) return;
+    async leer(): Promise<ResultadoLectura> {
+      if (terminal) return "omitida";
       const ticket = compuerta.emitir();
       let admitida = false;
       try {
         const { data, error } = await d.pedir();
         admitida = compuerta.aplicar(ticket);
-        if (!admitida) return;
+        if (!admitida) return "descartada";
         if (error) {
-          if (/sala_token_invalido/.test(error.message)) { terminal = true; d.alTokenInvalido(); }
-          else d.alError(error.message);
-          return;
+          if (/sala_token_invalido/.test(error.message)) { terminal = true; d.alTokenInvalido(); return "invalida"; }
+          d.alError(error.message);
+          return "fallo";
         }
         const r = data as RespuestaEstado;
         d.alEstado(r, d.ahora());
         if (esTerminal(r)) { terminal = true; d.alTerminal(); }
+        return "aplicada";
       } catch (err) {
         admitida = compuerta.aplicar(ticket);
         if (admitida) d.alError(err instanceof Error ? err.message : "fallo");
+        return admitida ? "fallo" : "descartada";
       } finally {
         // Sólo la lectura admitida cierra la vuelta: marca la relectura como
         // hecha y avisa que terminó (cargando = false).

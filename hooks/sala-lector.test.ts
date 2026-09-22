@@ -90,3 +90,38 @@ test("la señal respeta la ventana de 1500 ms desde la última lectura ADMITIDA"
   assert.equal(l.senal(), 1400);
   assert.equal(l.senal(), null, "ya hay una pendiente");
 });
+
+// --- El contrato con las acciones del organizador (corrección del dueño, 22/09)
+// `leer()` DEVUELVE cómo terminó y `releerDe` rechaza sólo ante un fallo. Antes
+// `leer()` atrapaba el error y no devolvía nada, así que `asegurarRelectura`
+// daba la lectura por buena y la cadena de reintentos no arrancaba nunca.
+
+test("leer() informa el resultado: aplicada / fallo / invalida / descartada / omitida", async () => {
+  const { l, pendientes } = arnes();
+  const p1 = l.leer(); pendientes[0].resolve(estado(1));
+  assert.equal(await p1, "aplicada");
+  const p2 = l.leer(); pendientes[1].resolve({ data: null, error: { message: "boom" } });
+  assert.equal(await p2, "fallo");
+  const p3 = l.leer(); pendientes[2].reject(new Error("red"));
+  assert.equal(await p3, "fallo", "una excepción de red también es fallo");
+  // Fuera de orden: la vieja se descarta.
+  const pa = l.leer(), pb = l.leer();
+  pendientes[4].resolve(estado(9)); assert.equal(await pb, "aplicada");
+  pendientes[3].resolve(estado(8)); assert.equal(await pa, "descartada");
+  // Token inválido → invalida y terminal; después, omitida.
+  const p6 = l.leer(); pendientes[5].resolve({ data: null, error: { message: "sala_token_invalido" } });
+  assert.equal(await p6, "invalida");
+  assert.equal(await l.leer(), "omitida");
+});
+
+test("releerDe rechaza SÓLO con `fallo`; descartada, inválida y omitida pasan sin error", async () => {
+  const { releerDe, ErrorRelectura } = await import("./sala-lector.ts");
+  for (const r of ["descartada", "invalida", "omitida", "aplicada"] as const) {
+    await releerDe({ leer: async () => r })();   // no lanza
+  }
+  await assert.rejects(releerDe({ leer: async () => "fallo" as const })(), (e: unknown) => {
+    assert.ok(e instanceof ErrorRelectura);
+    assert.equal((e as InstanceType<typeof ErrorRelectura>).resultado, "fallo");
+    return true;
+  });
+});

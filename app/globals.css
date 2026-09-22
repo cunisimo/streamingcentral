@@ -1120,13 +1120,17 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-act-yes{min-width:76px;min-height:76px}
 .sala-act:disabled{opacity:.5;cursor:default}
 .sala-act:disabled:hover{border-color:var(--line-2)}
-/* Pantallas bajas (≈640 px de alto): la píldora se achica para no comerse la card. */
+/* Pantallas bajas (≈640 px de alto): la barra se compacta SIN tocar el área
+   táctil. 🔴 El mínimo de 64 px es el acordado con el dueño y no se baja: una
+   pasada anterior los había dejado en 54 (y 62 el de Sí) y se corrigió. Lo que
+   se achica es el aire —separación y padding— y el círculo de Sí, que sigue
+   siendo el más grande de los tres.
+*/
 @media(max-height:700px){
-  .sala-votos{gap:18px;padding:8px 14px 10px}
-  .sala-act{min-width:54px;min-height:54px}
-  .sala-act svg{width:25px;height:25px}
-  .sala-act-yes{min-width:62px;min-height:62px}
-  .sala-votacion{padding-bottom:calc(var(--nav-total) + 86px)}
+  .sala-votos{gap:16px;padding:8px 14px 10px}
+  .sala-act{min-width:64px;min-height:64px}
+  .sala-act-yes{min-width:70px;min-height:70px}
+  .sala-votacion{padding-bottom:calc(var(--nav-total) + 96px)}
 }
 
 /* --- Salas: resultados --- */
