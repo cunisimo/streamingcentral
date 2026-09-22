@@ -108,8 +108,16 @@
   el error y no devolvía nada, así que `asegurarRelectura` daba la lectura por
   buena): ahora `leer()` devuelve cómo terminó y `releerDe` rechaza sólo ante un
   fallo, probado de punta a punta con una RPC que devuelve error; y la barra
-  compacta conserva el área táctil de 64 px (era 54/62). Suite post-build
-  1856 / 1846 ok / 0 fallos / 10 omitidos; sala 258/258.** Lo
+  compacta conserva el área táctil de 64 px (era 54/62).**
+  **CUARTA RONDA (22/09, `22aec59`):** una carrera más en la relectura —la
+  lectura de la acción queda pendiente, entra otra por Realtime que falla, y la
+  primera vuelve con estado válido pero la compuerta la descarta— dejaba el
+  estado sin aplicar y la acción sin reintentar. Reproducida con el lector real
+  antes de tocar nada y corregida: el lector distingue `descartada` (otra SÍ
+  aplicó, o la sala quedó terminal) de `descartada-sin-estado` (nadie aplicó),
+  y `releerDe` rechaza en el segundo caso. La protección contra estados viejos
+  no cambió y el caso normal no genera ni una solicitud extra. Suite post-build
+  1860 / 1850 ok / 0 fallos / 10 omitidos; sala 263/263.** Lo
   construido: pantallas de match (corazón + confeti +
   elegida + Compartir), empate (cards, "Desempatar" sólo host, rueda que frena
   en `ganador_pos`), sin coincidencias, y "Otra tanda" sólo host desde

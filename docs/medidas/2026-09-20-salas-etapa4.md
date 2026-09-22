@@ -137,14 +137,45 @@ rieles; nada se despliega ni corre en el Home). Desde el 22/09 se llama
 | Entrada del Home en la app | ✅ "Pelimatch", `href="/cuenta"` sin sesión, **sin `target` ni `rel`** |
 | Barra de voto a 320×568 (mock con el CSS real) y a 360×640 (app) | ✅ **64 / 64 / 70 px** en los dos, sin solapar la nav y sin texto tapado al final del scroll |
 
+## Cuarta ronda del dueño (22/09, `22aec59`) — la carrera de la relectura
+
+**Reproducida primero, con el lector real y sin tocar código:**
+
+1. "Empezar" / "Desempatar" arranca su lectura de `sala_estado` y queda pendiente.
+2. Entra una segunda lectura (aviso de Realtime) y **falla**.
+3. Vuelve la primera con un estado válido y **la compuerta la descarta** por ser
+   anterior.
+
+Medido: el log del lector quedaba en `["error Failed to fetch", "cargado"]` —o
+sea, **ninguna lectura aplicó el estado nuevo**— y el `releer()` de la acción
+**resolvía igual**, así que la cadena de reintentos no arrancaba. El agujero era
+real.
+
+**Corrección del contrato, conservando la protección contra estados viejos:**
+
+- `crearLector` cuenta cuántas lecturas APLICARON estado. Al descartar una,
+  distingue: **`descartada`** (otra aplicó, o la sala quedó terminal → nada que
+  reintentar) y **`descartada-sin-estado`** (nadie aplicó → cuenta como fallo).
+- `releerDe` rechaza con `fallo` **y** con `descartada-sin-estado`.
+- La compuerta no cambió: la lectura vieja se sigue descartando y su estado **no**
+  se aplica encima del nuevo.
+
+| Prueba | Resultado |
+|---|---|
+| La carrera exacta con el lector REAL + `pedirTanda` | ✅ la cadena arranca, reintenta 0,8 s + 2 s + 5 s y abandona |
+| Caso normal: la lectura que gana SÍ aplica estado y la vieja llega tarde | ✅ **ni una solicitud extra**, sin cadena, y el estado viejo no se aplica encima |
+| Descartada con la sala ya terminal (token inválido en la que ganó) | ✅ no reintenta |
+| Los dos descartes distinguidos en `sala-lector` (gana-aplica vs gana-falla, y la variante con excepción de red) | ✅ |
+| `releerDe` sobre los seis resultados | ✅ rechaza sólo `fallo` y `descartada-sin-estado` |
+
 ## Verificación automática
 
 - `node --test components/sala/sin-computo-cliente.test.ts` → 3/3.
-- `npx tsc --noEmit` limpio. `npm run build` en verde: `/sala/[id]` 12,6 kB (ƒ).
+- `npx tsc --noEmit` limpio. `npm run build` en verde: `/sala/[id]` 12,7 kB (ƒ).
 - `lib/sala/acciones-host.test.ts` 10/10, `lib/sala/relectura-cableada.test.ts`
-  6/6, `hooks/sala-lector.test.ts` 7/7, `components/sala/entrada-pelimatch.test.ts`
-  4/4. Sala completa, con los guards: **258/258**.
-- Suite completa post-build: **1856 tests, 1846 ok, 0 fallos, 10 omitidos**
+  9/9, `hooks/sala-lector.test.ts` 8/8, `components/sala/entrada-pelimatch.test.ts`
+  4/4. Sala completa, con los guards: **263/263**.
+- Suite completa post-build: **1860 tests, 1850 ok, 0 fallos, 10 omitidos**
   (artefacto Capacitor). El total incluye los tests sin commitear de la otra
   sesión que hay en el árbol (issue #24, supresiones de Disney+), que también
   pasan.

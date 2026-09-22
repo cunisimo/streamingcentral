@@ -577,8 +577,10 @@ export const OPTIONS = opcionesCors("POST");
 > visible **Pelimatch** en las dos entradas (bajada provisoria, rutas sin
 > cambios), botones de voto en barra fija sobre la nav con área táctil de 64 px,
 > navegación en la MISMA pestaña, y reintentos acotados de la relectura tras
-> Empezar/Desempatar —con el contrato de `sala-lector.leer()` corregido, que era
-> lo que impedía que la cadena arrancara—.
+> Empezar/Desempatar —con el contrato de `sala-lector.leer()` corregido dos
+> veces: primero porque se tragaba el error, después porque una lectura
+> descartada por la compuerta contaba como éxito aunque la que había ganado
+> hubiera fallado (cuarta ronda, `22aec59`)—.
 > Evidencia y lista de verificación pendiente:
 > `docs/medidas/2026-09-20-salas-etapa4.md`.
 ### Task 4.1: Pantallas de resultado
