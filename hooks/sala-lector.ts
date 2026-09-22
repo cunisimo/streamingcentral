@@ -32,7 +32,9 @@ export interface DepsLector {
 
 /**
  * Cómo terminó una lectura. Lo mira `useSala.releer`, que es lo que consume
- * `lib/sala/acciones-host.ts`: sólo `"fallo"` justifica reintentar.
+ * `lib/sala/acciones-host.ts`: justifican reintentar `"fallo"` Y
+ * `"descartada-sin-estado"` — los dos casos en que el estado nuevo no llegó a
+ * aplicarse.
  *   aplicada   — se aplicó el estado (o el estado terminal).
  *   descartada — la compuerta la rechazó Y otra lectura sí aplicó el estado (o
  *                la sala quedó terminal). No hay nada que reintentar.

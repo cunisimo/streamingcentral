@@ -65,6 +65,27 @@ export function mensajeCompartir(
 }
 
 /**
+ * El mensaje con el que se comparte un MATCH de Pelimatch (Etapa 5, Tarea 5.1).
+ *
+ * Es distinto del de la ficha a propósito: acá no se recomienda un título, se
+ * cuenta que un grupo coincidió. El texto lo fijó el plan y hay un test que lo
+ * compara carácter por carácter.
+ *
+ * Las plataformas van TODAS las que se le pasen, con su nombre de
+ * `providers-ar.ts`; si no hay ninguna —un título que TMDB todavía no ubica en
+ * AR— la línea entera se omite en vez de quedar un "Disponible en" colgado.
+ */
+export function mensajeMatch(
+  t: { title: string; type: MediaType; id: number | string },
+  plataformas: string[],
+): MensajeCompartir {
+  const lineas = ["¡Nuestro match!"];
+  if (plataformas.length) lineas.push(`Disponible en ${plataformas.join(", ")}`);
+  lineas.push("Ver ficha en Yump:");
+  return { titulo: t.title, texto: lineas.join("\n"), url: urlDeTitulo(t.type, t.id) };
+}
+
+/**
  * El fallback: WhatsApp con el mensaje ya armado.
  *
  * Existe porque `navigator.share` no está en todos lados —escritorio, y también

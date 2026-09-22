@@ -123,15 +123,26 @@ test("Atrás no cambia nada en la web", () => {
 // ---------------------------------------------------------------- compartir
 
 test("compartir usa el selector nativo y NO duplica la lógica de la URL", () => {
-  const src = codigo("components/DetailView.tsx");
-  assert.match(src, /mensajeCompartir/, "dejó de usar el armador canónico");
-  assert.match(src, /await import\("@capacitor\/share"\)/, "el import tiene que ser dinámico");
-  // 🔴 Nada de armar la URL por otro lado: se reusa `m.url`, que sale de
-  // `lib/compartir.ts` y por eso siempre es `https://app.yump.ar/titulo/...`.
-  assert.doesNotMatch(src, /app\.yump\.ar/,
-    "hay una URL escrita a mano: la canónica sale de lib/compartir.ts");
-  assert.doesNotMatch(src, /location\.origin/,
-    "usar el origen del contenedor compartiría https://localhost");
+  // La ACCIÓN se extrajo de DetailView a lib/compartir-accion.ts (Etapa 5, para
+  // compartirla con Pelimatch): el import dinámico del plugin vive ahí ahora.
+  // Lo que se protege es lo mismo — selector nativo en el contenedor y la URL
+  // canónica de lib/compartir.ts, nunca una escrita a mano ni el origen.
+  const accion = codigo("lib/compartir-accion.ts");
+  assert.match(accion, /await import\("@capacitor\/share"\)/, "el import tiene que ser dinámico");
+  assert.match(accion, /ES_NATIVO/, "no consulta la bandera de build");
+  const consumidores = ["components/DetailView.tsx", "components/sala/CompartirMatch.tsx"];
+  for (const p of consumidores) {
+    const src = codigo(p);
+    assert.match(src, /compartir-accion/, `${p}: tiene que delegar la acción`);
+    assert.match(src, /mensaje(Compartir|Match)/, `${p}: dejó de usar el armador canónico`);
+    // 🔴 Nada de armar la URL por otro lado: sale de `lib/compartir.ts` y por eso
+    // siempre es `https://app.yump.ar/titulo/...`.
+    assert.doesNotMatch(src, /app\.yump\.ar/, `${p}: hay una URL escrita a mano`);
+    assert.doesNotMatch(src, /location\.origin/, `${p}: usar el origen del contenedor compartiría https://localhost`);
+  }
+  for (const src of [accion, ...consumidores.map(codigo)]) {
+    assert.doesNotMatch(src, /wa\.me/, "el enlace de WhatsApp sale de enlaceWhatsapp()");
+  }
 });
 
 test("lib/compartir.ts no se tocó, y sigue dando el dominio público", () => {

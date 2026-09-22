@@ -13,8 +13,8 @@ import LikeButton from "./LikeButton";
 import ListActions from "./ListActions";
 import RecordarButton from "./RecordarButton";
 import { platformByCode } from "@/lib/providers-ar";
-import { mensajeCompartir, enlaceWhatsapp } from "@/lib/compartir";
-import { ES_NATIVO } from "@/lib/plataforma";
+import { mensajeCompartir } from "@/lib/compartir";
+import { compartir as compartirMensaje } from "@/lib/compartir-accion";
 import ScScore from "./ScScore";
 import CastRail from "./CastRail";
 import HeroTrailer from "./HeroTrailer";
@@ -96,59 +96,16 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
     .map((code) => ({ code, url: platformByCode(code)?.signupUrl }))
     .find((p): p is { code: PlatformCode; url: string } => !!p.url);
 
-  // Compartir. Dos cosas que fallaban con el `navigator.share?.({ title })` de
-  // antes, y conviene tenerlas separadas porque son distintas:
-  //
-  // 1. El payload llevaba SÓLO `title`. Web Share entrega `title`, `text` y
-  //    `url` al target, pero WhatsApp arma el mensaje con `text` y `url`: el
-  //    `title` es una sugerencia que la mayoría de los targets de Android
-  //    descarta. Resultado, WhatsApp recibía un share sin cuerpo y mostraba
-  //    "Mensaje vacío" — ese cartel es de WhatsApp, no nuestro.
-  // 2. En escritorio `navigator.share` no existe, y el `?.` cortaba la cadena
-  //    entera: el botón no hacía absolutamente nada, sin error ni feedback.
-  //
-  // 3. El enlace se armaba con el origen del navegador. Una PWA instalada
-  //    cuando Yump vivía en el dominio anterior conserva ese origen para
-  //    siempre —el scope de una instalación es por origen y no se migra—,
-  //    así que esos usuarios compartían enlaces al dominio viejo sin que se
-  //    notara desde adentro de la app. El enlace público es SIEMPRE el
-  //    canónico y sale de `lib/compartir.ts`, que es su fuente única.
-  //
-  // La plataforma va en el mensaje porque es el dato que evita el ida y vuelta
-  // de "¿y dónde la veo?", que es el problema que resuelve la app. Se prefiere
-  // una de las tuyas; si no tenés ninguna, la primera del título.
+  // Compartir: el mensaje se arma con `mensajeCompartir` y la acción es la
+  // compartida con Pelimatch (`lib/compartir-accion.ts`), que guarda el
+  // historial de los tres bugs de este camino. Comportamiento sin cambios.
   const compartir = () => {
     const donde = mine[0] ?? t.platforms[0];
     const nombre = (donde ? platformByCode(donde)?.name : null) ?? null;
-    const m = mensajeCompartir(t, nombre);
-    const whatsapp = () => window.open(enlaceWhatsapp(m), "_blank", "noopener");
-
-    // En el contenedor `navigator.share` NO existe (verificado en CP8), así que
-    // sin esto Compartir caía derecho a WhatsApp sin dejar elegir. El plugin
-    // abre el selector nativo de Android.
-    //
-    // 🔴 Se reusa `m`, que sale de `mensajeCompartir` (lib/compartir.ts): la url
-    // sigue siendo la canónica `https://app.yump.ar/titulo/...`. No se arma nada
-    // por otro lado, y NUNCA sale el origen del contenedor.
-    if (ES_NATIVO) {
-      void (async () => {
-        try {
-          const { Share } = await import("@capacitor/share");
-          await Share.share({ title: m.titulo, text: m.texto, url: m.url });
-        } catch {
-          whatsapp();
-        }
-      })();
-      return;
-    }
-
-    if (!navigator.share) return whatsapp();
-    navigator.share({ title: m.titulo, text: m.texto, url: m.url }).catch((err: unknown) => {
-      // Cerrar la hoja de compartir tira `AbortError`: es una decisión del
-      // usuario, no una falla, y abrirle WhatsApp ahí sería pasarle por encima.
-      // Cualquier otro error sí cae al fallback.
-      if ((err as { name?: string } | null)?.name !== "AbortError") whatsapp();
-    });
+    // La plataforma del mensaje: se prefiere una de las tuyas; si no tenés
+    // ninguna, la primera del título. Es el dato que evita el ida y vuelta de
+    // "¿y dónde la veo?".
+    void compartirMensaje(mensajeCompartir(t, nombre));
   };
   const hero = t.backdrop || t.poster;
   const heroBg = hero ? { backgroundImage: `url(${hero})` } : { background: "#2A2D33" };

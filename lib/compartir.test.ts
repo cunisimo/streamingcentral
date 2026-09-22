@@ -13,7 +13,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { SITIO_PUBLICO, urlDeTitulo, mensajeCompartir, enlaceWhatsapp } from "./compartir.ts";
+import { SITIO_PUBLICO, urlDeTitulo, mensajeCompartir, mensajeMatch, enlaceWhatsapp } from "./compartir.ts";
 
 const DOMINIO_VIEJO = "streamingcentral.vercel.app";
 const fuente = (...p: string[]) => fs.readFileSync(path.join(process.cwd(), ...p), "utf8");
@@ -165,4 +165,109 @@ test("no queda ningún dominio viejo escrito a mano en el código", () => {
   ]) {
     assert.doesNotMatch(fuente(f), new RegExp(DOMINIO_VIEJO), `${f} todavía nombra el dominio viejo`);
   }
+});
+
+// --- Etapa 5: el mensaje propio de Pelimatch --------------------------------
+// El texto lo fija el plan (Tarea 5.1) y es distinto del de la ficha: acá se
+// comparte un MATCH, no un descubrimiento suelto.
+
+test("mensajeMatch arma el texto exacto del plan y la url canónica", () => {
+  const m = mensajeMatch({ title: "Seven", type: "movie", id: 807 }, ["Netflix", "Max"]);
+  assert.equal(m.texto, "¡Nuestro match!\nDisponible en Netflix, Max\nVer ficha en Yump:");
+  assert.equal(m.url, "https://app.yump.ar/titulo/movie/807");
+  assert.equal(m.titulo, "Seven");
+});
+
+test("sin plataformas, el mensaje no queda con un 'Disponible en' vacío", () => {
+  const m = mensajeMatch({ title: "Seven", type: "movie", id: 807 }, []);
+  assert.ok(!/Disponible en\s*$/m.test(m.texto), m.texto);
+  assert.equal(m.texto, "¡Nuestro match!\nVer ficha en Yump:");
+  assert.equal(m.url, "https://app.yump.ar/titulo/movie/807");
+});
+
+test("una serie usa /titulo/tv/<id>", () => {
+  assert.equal(mensajeMatch({ title: "X", type: "tv", id: 1 }, ["Netflix"]).url, "https://app.yump.ar/titulo/tv/1");
+});
+
+test("el mensaje del match NUNCA sale del dominio canónico", () => {
+  const m = mensajeMatch({ title: "X", type: "movie", id: 1 }, ["Netflix"]);
+  assert.ok(m.url.startsWith(SITIO_PUBLICO + "/"));
+  assert.ok(!m.url.includes(DOMINIO_VIEJO));
+});
+
+// --- La acción de compartir, compartida con la ficha ------------------------
+
+test("compartir: en nativo usa el plugin; si falla, cae a WhatsApp", async () => {
+  const { compartir } = await import("./compartir-accion.ts");
+  const m = mensajeMatch({ title: "Seven", type: "movie", id: 807 }, ["Netflix"]);
+  const log: string[] = [];
+  await compartir(m, {
+    esNativo: true,
+    plugin: async () => { log.push("plugin"); },
+    abrir: (u) => log.push("abrir " + u.slice(0, 20)),
+  });
+  assert.deepEqual(log, ["plugin"]);
+  log.length = 0;
+  await compartir(m, {
+    esNativo: true,
+    plugin: async () => { throw new Error("sin plugin"); },
+    abrir: (u) => log.push("abrir " + u.slice(0, 20)),
+  });
+  assert.deepEqual(log, ["abrir https://wa.me/?text="]);
+});
+
+test("compartir: en web usa navigator.share si existe", async () => {
+  const { compartir } = await import("./compartir-accion.ts");
+  const m = mensajeMatch({ title: "Seven", type: "movie", id: 807 }, ["Netflix"]);
+  const log: string[] = [];
+  await compartir(m, {
+    esNativo: false,
+    share: async (d) => { log.push(`share ${d.title} | ${d.url}`); },
+    abrir: () => log.push("abrir"),
+  });
+  assert.deepEqual(log, ["share Seven | https://app.yump.ar/titulo/movie/807"]);
+});
+
+test("compartir: sin navigator.share cae a WhatsApp con texto y url", async () => {
+  const { compartir } = await import("./compartir-accion.ts");
+  const m = mensajeMatch({ title: "Seven", type: "movie", id: 807 }, ["Netflix"]);
+  let abierta = "";
+  await compartir(m, { esNativo: false, share: undefined, abrir: (u) => { abierta = u; } });
+  assert.equal(abierta, enlaceWhatsapp(m));
+  assert.ok(decodeURIComponent(abierta).includes("¡Nuestro match!"));
+});
+
+test("compartir: cancelar la hoja (AbortError) NO abre WhatsApp; otro error sí", async () => {
+  const { compartir } = await import("./compartir-accion.ts");
+  const m = mensajeMatch({ title: "X", type: "movie", id: 1 }, []);
+  let abrio = 0;
+  const abortar = Object.assign(new Error("cancelado"), { name: "AbortError" });
+  await compartir(m, { esNativo: false, share: async () => { throw abortar; }, abrir: () => { abrio++; } });
+  assert.equal(abrio, 0, "cancelar es una decisión del usuario");
+  await compartir(m, { esNativo: false, share: async () => { throw new Error("otra cosa"); }, abrir: () => { abrio++; } });
+  assert.equal(abrio, 1);
+});
+
+test("DetailView usa la acción compartida y NO rearma el comportamiento", () => {
+  const src = fuente("components", "DetailView.tsx");
+  assert.match(src, /from "@\/lib\/compartir-accion"/);
+  assert.match(src, /compartirMensaje\(mensajeCompartir\(/, "arma el mensaje de la ficha y delega la acción");
+  assert.ok(!/@capacitor\/share/.test(src), "el plugin ahora vive en la acción");
+  assert.ok(!/navigator\.share/.test(src), "idem navigator.share");
+  const sala = fuente("components", "sala", "CompartirMatch.tsx");
+  assert.match(sala, /mensajeMatch/);
+  assert.match(sala, /from "@\/lib\/compartir-accion"/);
+});
+
+// --- Tarea 5.2: metadata de la ficha ----------------------------------------
+
+test("la ficha exporta generateMetadata y revalida cada 6 h", () => {
+  const src = fuente("app", "titulo", "[tipo]", "[id]", "page.tsx");
+  assert.match(src, /export const revalidate = 21600/);
+  assert.match(src, /export async function generateMetadata/);
+  assert.match(src, /openGraph/);
+  assert.match(src, /twitter/);
+  assert.match(src, /metadataBase/);
+  assert.match(src, /urlDeTitulo\(/, "la url canónica sale de lib/compartir.ts");
+  assert.ok(!/window\.location/.test(src));
 });
