@@ -606,6 +606,13 @@ El **texto** de resultado en grupos también es "¡Nuestro match!" (en la pantal
 
 # Etapa 5 — Compartir
 
+> **HECHA (rama `feat/salas`, 2026-09-22): `a01e150` (5.1) y `81a287c` (5.2).**
+> `mensajeMatch` con el texto del plan, `lib/compartir-accion.ts` (la acción
+> extraída de DetailView, sin cambio de comportamiento, usada por la ficha y por
+> Pelimatch) y `generateMetadata` + `revalidate = 21600` en la ficha. TTFB
+> caliente: 32,4 → 38,5 ms de mediana (+6,1). 🔴 **La vista previa real de
+> WhatsApp en iPhone/Android NO se probó** (Step 3: necesita Preview y
+> dispositivos). Evidencia: `docs/medidas/2026-09-22-salas-etapa5.md`.
 ### Task 5.1: Mensaje y acción de compartir
 
 **Files:**
@@ -614,7 +621,7 @@ El **texto** de resultado en grupos también es "¡Nuestro match!" (en la pantal
 - Modify: `components/DetailView.tsx` para usar `compartir()` (sin cambio de comportamiento)
 - Test: `lib/compartir.test.ts` (agregar caso de `mensajeMatch` con el texto exacto y que la URL sea `https://app.yump.ar/titulo/movie/<id>`)
 
-- [ ] **Step 1:** Test → FAIL → implementar → PASS → commit `feat(salas): mensaje de match y acción de compartir compartida con la ficha`.
+- [x] **Step 1:** Test → FAIL → implementar → PASS → commit `feat(salas): mensaje de match y acción de compartir compartida con la ficha`.
 
 ### Task 5.2: `generateMetadata` de la ficha
 
@@ -622,7 +629,7 @@ El **texto** de resultado en grupos también es "¡Nuestro match!" (en la pantal
 - Modify: `app/titulo/[tipo]/[id]/page.tsx`
 - Test: `lib/compartir.test.ts` (agregar: el archivo de la página exporta `generateMetadata` y `revalidate = 21600`)
 
-- [ ] **Step 1: Código:**
+- [x] **Step 1: Código:**
 
 ```tsx
 import type { Metadata } from "next";
@@ -650,9 +657,9 @@ export async function generateMetadata({ params }: { params: { tipo: string; id:
 }
 ```
 
-- [ ] **Step 2:** Medir TTFB de `/titulo/movie/278` antes y después (`curl -o /dev/null -s -w "%{time_starttransfer}\n"` × 5, caliente). Anotar en `docs/medidas/…`.
-- [ ] **Step 3: Prueba real (Preview de Vercel, no Producción):** compartir un match desde iPhone y desde Android por WhatsApp; capturar la vista previa. **Sin esta prueba, no afirmar que el póster se ve.** Si WhatsApp no muestra imagen: revisar tamaño (`w500` ≈ 40-80 KB) y `og:image` absoluta; si sigue sin verse, queda documentado como limitación y se decide después si vale una imagen propia (fuera del MVP).
-- [ ] **Step 4:** Commit `feat(ficha): metadata Open Graph para la vista previa al compartir`.
+- [x] **Step 2:** Medir TTFB de `/titulo/movie/278` antes y después (`curl -o /dev/null -s -w "%{time_starttransfer}\n"` × 5, caliente). Anotar en `docs/medidas/…`.
+- [ ] ⏳ PENDIENTE (necesita Preview y teléfonos; no se probó) **Step 3: Prueba real (Preview de Vercel, no Producción):** compartir un match desde iPhone y desde Android por WhatsApp; capturar la vista previa. **Sin esta prueba, no afirmar que el póster se ve.** Si WhatsApp no muestra imagen: revisar tamaño (`w500` ≈ 40-80 KB) y `og:image` absoluta; si sigue sin verse, queda documentado como limitación y se decide después si vale una imagen propia (fuera del MVP).
+- [x] **Step 4:** Commit `feat(ficha): metadata Open Graph para la vista previa al compartir`.
 
 ---
 

@@ -129,7 +129,19 @@
   luego `CreateVm/E_ABORT`); el 21/09 volvió sin reinicio. La entrada del
   entrada del Home sigue debajo de la ruleta como Link a `/sala/nueva`. Evidencia:
   [`medidas/2026-09-20-salas-etapa4.md`](medidas/2026-09-20-salas-etapa4.md).
-  Siguen las Etapas 5 (compartir) y 6, **no autorizadas todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
+  **ETAPA 5 HECHA (22/09, `a01e150` + `81a287c`):** `mensajeMatch` con el texto
+  del plan ("¡Nuestro match!" / "Disponible en …" / "Ver ficha en Yump:" + url
+  canónica), `lib/compartir-accion.ts` —la acción extraída de DetailView sin
+  cambiarle el comportamiento, ahora compartida por la ficha y por Pelimatch— y
+  `generateMetadata` + `revalidate = 21600` en la ficha, con `og:image` absoluta
+  de TMDB. **Medido** con build de producción: TTFB caliente 32,4 → 38,5 ms de
+  mediana (+6,1, rangos superpuestos); la primera visita a un título nuevo paga
+  TMDB (270-584 ms) y después vuelve a la banda caliente. Verificado en la app:
+  el match comparte el texto exacto y la ficha sigue compartiendo el suyo.
+  🔴 **La vista previa real de WhatsApp en iPhone/Android NO se probó** (necesita
+  Preview y dispositivos): no está afirmado que el póster se vea. Evidencia:
+  [`medidas/2026-09-22-salas-etapa5.md`](medidas/2026-09-22-salas-etapa5.md).
+  Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:
   [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).
