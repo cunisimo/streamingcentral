@@ -92,9 +92,20 @@
   tanda" desde `resultado` sin repetir títulos (30/30 distintos en 6 rondas) y
   rechazada con 409 durante el empate; card sin "Pero" real. Pendiente para el
   dueño: reducir movimiento en un teléfono, dos teléfonos reales, pantalla del
-  organizador en el navegador, red cortada, lector de pantalla. Hallazgo sin
-  corregir: en el teléfono los botones de voto quedan bajo el pliegue con textos
-  largos. Suite post-build 1840 / 1830 ok / 0 fallos / 10 omitidos.** Lo
+  organizador en el navegador, red cortada, lector de pantalla, movimiento
+  reducido y que la pestaña nueva se abra de verdad (el panel abre los `_blank`
+  en la misma pestaña).
+  **SEGUNDA RONDA DEL DUEÑO (22/09, `231c9be`):** el nombre visible es
+  **Pelimatch** en las dos entradas (Home, debajo de Ruleta Yump, y hub de la
+  cuenta) —bajada todavía provisoria, rutas técnicas sin cambios—; los botones
+  Sí/No/Paso pasaron a una BARRA FIJA sobre la barra inferior, con degradado y
+  alto reservado, así que ya no quedan bajo el pliegue (medido a 360×640 y
+  320×568 con textos largos, y verificado en la app); la entrada abre en
+  PESTAÑA NUEVA en el navegador y en la misma vista en PWA/nativo, donde
+  `_blank` expulsaría a otro contexto de almacenamiento; y la relectura tras
+  Empezar/Desempatar tiene REINTENTOS ACOTADOS (0,8 s + 2 s + 5 s y abandona),
+  porque el respaldo de `useSala` sólo corre con el canal desconectado. Suite
+  post-build 1852 / 1842 ok / 0 fallos / 10 omitidos; sala 119/119.** Lo
   construido: pantallas de match (corazón + confeti +
   elegida + Compartir), empate (cards, "Desempatar" sólo host, rueda que frena
   en `ganador_pos`), sin coincidencias, y "Otra tanda" sólo host desde
@@ -104,8 +115,7 @@
   `tsc` y build en verde.
   El 20/09 Docker Desktop/WSL no levantó (`vpnkit-bridge handshake failed`,
   luego `CreateVm/E_ABORT`); el 21/09 volvió sin reinicio. La entrada del
-  Home sigue debajo de la ruleta como Link a `/sala/nueva` con textos
-  provisorios (nombre y bajada sin definir). Evidencia:
+  entrada del Home sigue debajo de la ruleta como Link a `/sala/nueva`. Evidencia:
   [`medidas/2026-09-20-salas-etapa4.md`](medidas/2026-09-20-salas-etapa4.md).
   Siguen las Etapas 5 (compartir) y 6, **no autorizadas todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
