@@ -92,20 +92,24 @@
   tanda" desde `resultado` sin repetir títulos (30/30 distintos en 6 rondas) y
   rechazada con 409 durante el empate; card sin "Pero" real. Pendiente para el
   dueño: reducir movimiento en un teléfono, dos teléfonos reales, pantalla del
-  organizador en el navegador, red cortada, lector de pantalla, movimiento
-  reducido y que la pestaña nueva se abra de verdad (el panel abre los `_blank`
-  en la misma pestaña).
+  organizador en el navegador, red cortada, lector de pantalla y movimiento
+  reducido.
   **SEGUNDA RONDA DEL DUEÑO (22/09, `231c9be`):** el nombre visible es
   **Pelimatch** en las dos entradas (Home, debajo de Ruleta Yump, y hub de la
   cuenta) —bajada todavía provisoria, rutas técnicas sin cambios—; los botones
   Sí/No/Paso pasaron a una BARRA FIJA sobre la barra inferior, con degradado y
   alto reservado, así que ya no quedan bajo el pliegue (medido a 360×640 y
-  320×568 con textos largos, y verificado en la app); la entrada abre en
-  PESTAÑA NUEVA en el navegador y en la misma vista en PWA/nativo, donde
-  `_blank` expulsaría a otro contexto de almacenamiento; y la relectura tras
+  320×568 con textos largos, y verificado en la app); y la relectura tras
   Empezar/Desempatar tiene REINTENTOS ACOTADOS (0,8 s + 2 s + 5 s y abandona),
-  porque el respaldo de `useSala` sólo corre con el canal desconectado. Suite
-  post-build 1852 / 1842 ok / 0 fallos / 10 omitidos; sala 119/119.** Lo
+  porque el respaldo de `useSala` sólo corre con el canal desconectado.**
+  **TERCERA RONDA (22/09, `38d5b64`):** Pelimatch navega en la MISMA PESTAÑA
+  —se revirtió entera la apertura en pestaña nueva, con su módulo—; el reintento
+  de la relectura NO funcionaba con el cableado real (`lector.leer()` atrapaba
+  el error y no devolvía nada, así que `asegurarRelectura` daba la lectura por
+  buena): ahora `leer()` devuelve cómo terminó y `releerDe` rechaza sólo ante un
+  fallo, probado de punta a punta con una RPC que devuelve error; y la barra
+  compacta conserva el área táctil de 64 px (era 54/62). Suite post-build
+  1856 / 1846 ok / 0 fallos / 10 omitidos; sala 258/258.** Lo
   construido: pantallas de match (corazón + confeti +
   elegida + Compartir), empate (cards, "Desempatar" sólo host, rueda que frena
   en `ganador_pos`), sin coincidencias, y "Otra tanda" sólo host desde

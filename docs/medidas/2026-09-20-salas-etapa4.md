@@ -48,8 +48,9 @@ push.** Autorizada por el dueño el 20/09 tras la aprobación técnica de la Eta
 "Esta vez no coincidieron", "Desempatando…", "nuestro match".
 
 **La entrada del Home**: sigue inmediatamente debajo de Ruleta Yump, es un
-`Link` a `/sala/nueva` (nada se despliega ni corre en el Home). Desde el 22/09
-se llama **Pelimatch** y abre en pestaña nueva — ver la ronda de abajo.
+`Link` a `/sala/nueva` **en la misma pestaña** (como el "Ver todas" de los
+rieles; nada se despliega ni corre en el Home). Desde el 22/09 se llama
+**Pelimatch**.
 
 ## Correcciones del dueño (21/09, `be5a4e3`)
 
@@ -84,15 +85,10 @@ se llama **Pelimatch** y abre en pestaña nueva — ver la ronda de abajo.
    debajo en vez de cortarse seco; `z-index` 30, debajo del 35 de la nav, así que
    nunca la tapa. `.sala-votacion` **reserva el alto de la barra**, de modo que
    ningún texto queda inalcanzable. En pantallas de menos de 700 px de alto los
-   botones bajan a 54/54/62 px.
-3. **Apertura en pestaña nueva** (`lib/sala/apertura.ts`, 4 tests):
-   `target="_blank"` + `rel="noopener noreferrer"` en el navegador, conservando el
-   Home en la pestaña original. **En PWA instalada y en el contenedor NO se usa**:
-   ahí no hay pestañas y `_blank` expulsa al navegador, que es otro contexto de
-   almacenamiento (limitación de iOS ya documentada) — o sea que no conservaría
-   el Home, lo reemplazaría por una ventana sin sesión ni plataformas. Queda
-   declarado por si el dueño quiere otra cosa. El target se resuelve **después de
-   montar**, así que el HTML del servidor no lo trae y no hay hydration mismatch.
+   botones se compactan **sin bajar de 64 px** de área táctil (ver la tercera ronda).
+3. **Apertura en pestaña nueva** — ⛔ **REVERTIDO el 22/09** (ver la tercera
+   ronda): había sido una lectura equivocada de "otra pantalla". Pelimatch
+   navega en la MISMA pestaña.
 4. **Reintentos acotados de la relectura.** Si la relectura inmediata tras
    "Empezar" / "Desempatar" falla, el respaldo de `useSala` no alcanza: **sólo
    corre mientras el canal NO está `SUBSCRIBED`**, así que con el canal conectado
@@ -106,19 +102,49 @@ se llama **Pelimatch** y abre en pestaña nueva — ver la ronda de abajo.
 
 | Qué | Resultado |
 |---|---|
-| Mock con el CSS real a **360×640** y **320×568**, card con "Por qué verla" y "Pero" largos | ✅ barra fija visible, texto que se desvanece bajo ella, sin solapar la nav (barra 400–495, nav 495), botones 54/54/62 en la pantalla baja |
+| Mock con el CSS real a **360×640** y **320×568**, card con "Por qué verla" y "Pero" largos | ✅ barra fija visible, texto que se desvanece bajo ella, sin solapar la nav (barra 400–495, nav 495) |
 | App real a 360×640, ronda de 10 con textos largos | ✅ barra `fixed` pegada a la nav sin solaparla (barra 486–567, navTop 567), los tres botones visibles, al final del scroll la última línea NO queda tapada, y el voto manual desde la barra avanza 3 → 4 |
-| Entrada del Home en la app | ✅ dice "Pelimatch", va inmediatamente después del bloque de la ruleta, y el enlace lleva `target="_blank"` y `rel="noopener noreferrer"` |
-| Que la pestaña nueva se abra de verdad | ⛔ **no se puede observar en el panel**: el navegador integrado abre los enlaces `target="_blank"` en la misma pestaña, también con un `<a>` suelto de prueba. Queda para probar en un navegador de escritorio o en el teléfono |
+| Entrada del Home en la app | ✅ dice "Pelimatch" y va inmediatamente después del bloque de la ruleta |
+
+## Tercera ronda del dueño (22/09, `38d5b64`)
+
+1. **Misma pestaña, no pestaña nueva.** Entendí al revés "otra pantalla": el
+   pedido es que Pelimatch navegue a `/sala/nueva` como el "Ver todas" de los
+   rieles. Se borró `lib/sala/apertura.ts` y su test, y las dos entradas
+   volvieron a ser un `Link` común — sin `target`, sin ventana flotante, sin
+   lógica de standalone. El guard ahora exige lo contrario de lo que exigía: que
+   no haya `target=`, ni `window.open`, ni módulo de apertura.
+2. **El reintento de la relectura no funcionaba con el cableado real.**
+   Diagnóstico del dueño, exacto: `useSala.releer()` llamaba a
+   `sala-lector.leer()`, que **atrapaba el error de la RPC, lo avisaba por
+   `alError` y no devolvía nada**; `asegurarRelectura` veía una promesa resuelta,
+   daba la lectura por buena y la cadena NUNCA arrancaba. Corregido el contrato:
+   `leer()` devuelve `ResultadoLectura` —`aplicada` | `descartada` | `fallo` |
+   `invalida` | `omitida`— y `releerDe(lector)`, que es lo que usa
+   `useSala.releer`, **rechaza sólo con `fallo`**: una lectura descartada por la
+   compuerta (hay otra más nueva), un token inválido o un lector terminal no son
+   cosas que reintentar.
+3. **Área táctil de 64 px** en la barra compacta (&lt;700 px de alto): No y Paso
+   vuelven a 64 y Sí queda en 70; antes bajaban a 54/54/62. Lo que se compacta es
+   el aire (separación y padding), no el área de toque.
+
+### Verificación de esta ronda
+
+| Qué | Resultado |
+|---|---|
+| `lib/sala/relectura-cableada.test.ts` — recorrido completo con el lector REAL y una RPC que devuelve error | ✅ 6 tests: la cadena arranca y reintenta 0,8 s + 2 s + 5 s y abandona (4 lecturas, ninguna más); si la RPC se recupera, el reintento **aplica el estado**; con la RPC sana no hay cadena ni esperas; un caso **EN ROJO** reproduce el contrato viejo (una sola lectura, sin cadena) y otro fija el cableado de `useSala` |
+| `sala-lector`: los cinco resultados de `leer()` y `releerDe` | ✅ 2 tests nuevos (7 en el archivo) |
+| Entrada del Home en la app | ✅ "Pelimatch", `href="/cuenta"` sin sesión, **sin `target` ni `rel`** |
+| Barra de voto a 320×568 (mock con el CSS real) y a 360×640 (app) | ✅ **64 / 64 / 70 px** en los dos, sin solapar la nav y sin texto tapado al final del scroll |
 
 ## Verificación automática
 
 - `node --test components/sala/sin-computo-cliente.test.ts` → 3/3.
-- `npx tsc --noEmit` limpio. `npm run build` en verde: `/sala/[id]` 12,5 kB (ƒ).
-- `lib/sala/acciones-host.test.ts` 10/10, `lib/sala/apertura.test.ts` 4/4,
-  `components/sala/entrada-pelimatch.test.ts` 4/4. Sala completa (lib/sala +
-  hooks + guards de componentes): **119/119**.
-- Suite completa post-build: **1852 tests, 1842 ok, 0 fallos, 10 omitidos**
+- `npx tsc --noEmit` limpio. `npm run build` en verde: `/sala/[id]` 12,6 kB (ƒ).
+- `lib/sala/acciones-host.test.ts` 10/10, `lib/sala/relectura-cableada.test.ts`
+  6/6, `hooks/sala-lector.test.ts` 7/7, `components/sala/entrada-pelimatch.test.ts`
+  4/4. Sala completa, con los guards: **258/258**.
+- Suite completa post-build: **1856 tests, 1846 ok, 0 fallos, 10 omitidos**
   (artefacto Capacitor). El total incluye los tests sin commitear de la otra
   sesión que hay en el árbol (issue #24, supresiones de Disney+), que también
   pasan.
@@ -165,7 +191,6 @@ recuperó de `localStorage`. Sin nada en su log que lo explique.
 - **Movimiento reducido**: el panel no emula `prefers-reduced-motion`. En código
   la celebración no se monta (`permiteCelebracion`), las animaciones están dentro
   de `no-preference` y la rueda dura 300 ms.
-- **Que la pestaña nueva se abra de verdad** (el panel no lo permite observar).
 
 ## Qué NO se hizo
 

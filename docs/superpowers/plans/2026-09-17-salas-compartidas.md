@@ -573,10 +573,12 @@ export const OPTIONS = opcionesCors("POST");
 > acepta `TileRueda`. "Desempatar" y "Otra tanda" los habilita la base
 > (`puede_desempatar` / `puede_otra_tanda`), sólo para el organizador.
 > `CompartirMatch` reusa el mensaje de ficha: el texto del match es la Etapa 5.
-> **Segunda ronda del dueño (22/09, `231c9be`):** nombre visible **Pelimatch**
-> en las dos entradas (bajada provisoria, rutas sin cambios), botones de voto en
-> barra fija sobre la nav, apertura en pestaña nueva (salvo PWA/nativo) y
-> reintentos acotados de la relectura tras Empezar/Desempatar.
+> **Segunda y tercera ronda del dueño (22/09, `231c9be` + `38d5b64`):** nombre
+> visible **Pelimatch** en las dos entradas (bajada provisoria, rutas sin
+> cambios), botones de voto en barra fija sobre la nav con área táctil de 64 px,
+> navegación en la MISMA pestaña, y reintentos acotados de la relectura tras
+> Empezar/Desempatar —con el contrato de `sala-lector.leer()` corregido, que era
+> lo que impedía que la cadena arrancara—.
 > Evidencia y lista de verificación pendiente:
 > `docs/medidas/2026-09-20-salas-etapa4.md`.
 ### Task 4.1: Pantallas de resultado
