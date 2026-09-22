@@ -1055,6 +1055,18 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 /* --- Salas compartidas (lobby, entrar, crear) --- */
 /* La entrada del Home reusa .dsmp-banner; como es un <a> hay que quitarle el subrayado. */
 .sala-banner{text-decoration:none}
+/* 🔴 LA BAJADA DE PELIMATCH SE VE TAMBIÉN EN TELÉFONO. `.dsmp-banner-sub` está
+   oculta abajo de 560 px para los otros dos banners; acá el texto lo definió el
+   dueño (22/09) y es parte de la entrada, así que se muestra siempre. */
+@media(max-width:560px){
+  .sala-banner .dsmp-banner-sub{display:block}
+  .sala-banner{align-items:flex-start;gap:12px}
+  .sala-banner .dsmp-banner-cta{align-self:center}
+}
+/* Los tiles del hub respiran: con la bajada de dos líneas el texto llegaba al
+   borde de la tarjeta. */
+.hub-tile{padding:12px 12px}
+.hub-tile small{line-height:1.3}
 .sala-wrap{max-width:640px;padding-top:22px;padding-bottom:40px}
 .sala-h1{font-family:var(--display);font-size:26px;font-weight:800;letter-spacing:-.02em;margin:8px 0 6px;line-height:1.1}
 .sala-h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.015em;margin:0 0 6px}
