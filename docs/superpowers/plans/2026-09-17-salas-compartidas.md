@@ -597,6 +597,13 @@ El **texto** de resultado en grupos también es "¡Nuestro match!" (en la pantal
 - [x] **Step 1:** Implementar consumiendo **sólo** `estado.resultado` de la RPC. Prohibido: cualquier conteo de votos en el cliente (test textual en `components/sala/sin-computo-cliente.test.ts` que falla si en `components/sala/*.tsx` aparece `filter(` sobre `votos` o `"yes"`).
 - [ ] ⏳ **Step 2:** Verificar en dos teléfonos y con "Reducir movimiento" activado. Commit `feat(salas): resultados y animaciones`. (Verificado en local a 375 px el 21/09 —ver evidencia—; teléfonos reales y reducir movimiento siguen pendientes.)
 
+### Task 4.1.b: el lobby avisa que ya se puede empezar (CAMBIO DEL DUEÑO, 23/09)
+
+Probando, el organizador no se enteraba de que su invitado había entrado y leyó "Empezar" como el botón que da el enlace. 🔴 **No faltaba información**: la lista "Quiénes están (2 de 6)" ya existía y ya se actualizaba sola por Realtime. Lo que fallaba es **dónde estaba**: la lista arriba de todo y "Empezar" abajo del todo, con las plataformas, el enlace y la configuración en el medio; en un teléfono, mirando el botón la lista queda fuera de pantalla. Y el botón deshabilitado no decía por qué.
+
+- [x] **Step 1:** La cuenta va **al botón**: el rótulo pasa a "Falta que se sume alguien" / "Empezar con N" y justo encima se repite el estado ("Están 2 de 6. Pueden seguir sumándose hasta que empieces."), con un aviso resaltado cuando alguien entra ("Se sumó Ana.", 6 s). `lib/sala/lobby-nucleo.ts`, puro y con pruebas.
+- [x] **Step 2:** ⚠️ **NO se automatiza el arranque**, y se evaluó: la app sabe cuántos entraron pero no cuántos faltan, así que "cuando estén todos" no es un dato que tenga; un arranque a los 2 minutos empezaría la tanda —10 s por película— mientras el organizador sigue pegando el enlace en WhatsApp; y cerrar la sala a los 2 minutos pelearía con los 15 del lobby, que existen para invitar sin apuro. La única forma que no adivina sería preguntar cuántos van a ser al crear la sala: queda fuera del MVP.
+
 ### Task 4.2: Otra tanda
 
 - [x] **Step 1:** El host ve `ConfigTanda` + "Otra tanda" → mismo POST de la Tarea 3.3. Verificar: la ronda 2 no repite ningún `tmdb_id` de la 1 (prueba 18 del script), `expires_at` se reemplaza, participantes y plataformas se conservan; **no** disponible con empate sin resolver.

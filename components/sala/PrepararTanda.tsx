@@ -1,4 +1,5 @@
 "use client";
+import type React from "react";
 import { useState } from "react";
 import ConfigTanda from "./ConfigTanda";
 import { supabaseBrowser } from "@/lib/supabase";
@@ -24,7 +25,8 @@ export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, dur
   duracionInicial?: Duracion;
   /** Si el botón no puede tocarse todavía (p. ej. faltan participantes). */
   disabled?: boolean;
-  hint?: string;
+  /** La línea de arriba del botón. Admite marcado: el lobby resalta ahí quién se sumó. */
+  hint?: React.ReactNode;
 }) {
   const [size, setSize] = useState<Size>(sizeInicial ?? CONFIG_DEFAULT.size);
   const [duracion, setDuracion] = useState<Duracion>(duracionInicial ?? CONFIG_DEFAULT.duracion);
@@ -53,7 +55,10 @@ export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, dur
   return (
     <div className="sala-preparar">
       <ConfigTanda size={size} duracion={duracion} onSize={setSize} onDuracion={setDuracion} disabled={busy} alcanzables={alcanzables} />
-      {hint && <p className="sala-hint">{hint}</p>}
+      {/* `role="status"` para que el lector de pantalla anuncie las llegadas
+          sin robar el foco. En "Otra tanda" el texto es fijo, así que no
+          produce anuncios de más. */}
+      {hint && <p className="sala-hint" role="status">{hint}</p>}
       {err && <p className="sala-err" role="alert">{err}</p>}
       <div className="sala-acciones">
         <button type="button" className="btn" onClick={pedir} disabled={busy || disabled}>

@@ -1091,6 +1091,9 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 .sala-acciones .btn{flex:1;min-width:160px}
 .sala-espera{color:var(--dim);font-size:15px;margin:0;padding:18px 0}
+.sala-llego{color:var(--accent);font-weight:600}
+@media (prefers-reduced-motion: no-preference){.sala-llego{animation:sala-llego .35s ease-out}}
+@keyframes sala-llego{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .sala-espera-tanda{padding:40px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
 .sala-espera-tanda .rlt-btn{margin-top:14px;text-decoration:none}
 .sala-form .field{margin-top:16px}

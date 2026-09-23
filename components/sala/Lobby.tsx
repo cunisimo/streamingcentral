@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PlatformLogo from "../PlatformLogo";
 import PrepararTanda from "./PrepararTanda";
 import CerrarSala from "./CerrarSala";
 import { useVenceEn, formatoSeg } from "@/hooks/useVenceEn";
+import { rotuloEmpezar, lineaGente, reciénLlegados, avisoDeLlegada, MINIMO } from "@/lib/sala/lobby-nucleo";
 import type { EstadoSala } from "@/lib/sala/estado";
 
 // El lobby: quiénes están, cuánto falta para que venza, y —sólo para quien
@@ -20,6 +21,30 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
 
   const soyHost = estado.soy.es_host;
   const organizador = estado.participantes.find((p) => p.es_host)?.nombre;
+
+  // Aviso de llegada, JUNTO AL BOTÓN. La lista de arriba ya se actualizaba sola
+  // por Realtime; lo que faltaba era que el organizador se enterara sin subir la
+  // pantalla. El cálculo está en lib/sala/lobby-nucleo.ts (puro, con pruebas).
+  const [aviso, setAviso] = useState<string | null>(null);
+  // Arranca con la primera lectura ya "vista": al montar no llegó nadie.
+  const nombresPrevios = useRef<string[] | null>(null);
+  const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (temporizador.current) clearTimeout(temporizador.current); }, []);
+  useEffect(() => {
+    const ahora = estado.participantes.map((p) => p.nombre);
+    const antes = nombresPrevios.current;
+    nombresPrevios.current = ahora;
+    if (antes === null) return;
+    const texto = avisoDeLlegada(reciénLlegados(antes, ahora));
+    if (!texto) return;
+    setAviso(texto);
+    // El temporizador va en un ref y NO en el `return` del efecto: `estado` se
+    // vuelve a leer seguido (canal + relecturas) y cada lectura trae un array
+    // nuevo, así que la limpieza del efecto anterior cancelaría la cuenta y el
+    // aviso se quedaría pegado.
+    if (temporizador.current) clearTimeout(temporizador.current);
+    temporizador.current = setTimeout(() => setAviso(null), 6000);
+  }, [estado.participantes]);
 
   async function copiar() {
     try { await navigator.clipboard.writeText(enlace); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* sin clipboard */ }
@@ -46,7 +71,6 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
             </li>
           ))}
         </ul>
-        {estado.n < 2 && <p className="sala-hint">Hacen falta al menos 2 personas para empezar.</p>}
       </section>
 
       <section className="sala-bloque">
@@ -67,8 +91,9 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
 
       {soyHost ? (
         <section className="sala-bloque">
-          <PrepararTanda roomId={roomId} rotulo="Empezar" releer={releer} disabled={estado.n < 2}
-            sizeInicial={estado.config_default?.size} duracionInicial={estado.config_default?.duracion} />
+          <PrepararTanda roomId={roomId} rotulo={rotuloEmpezar(estado.n)} releer={releer} disabled={estado.n < MINIMO}
+            sizeInicial={estado.config_default?.size} duracionInicial={estado.config_default?.duracion}
+            hint={<><span>{lineaGente(estado.n)}</span>{aviso && <strong className="sala-llego"> {aviso}</strong>}</>} />
           <CerrarSala roomId={roomId} />
         </section>
       ) : (
