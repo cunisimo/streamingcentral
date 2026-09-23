@@ -78,7 +78,7 @@ for (const size of SIZES) {
   const h = await usuario();
   const cred = credencial();
   const { room_id } = await rpc(como(h.jwt), "sala_crear", { p_nombre: "M", p_platforms: ["n", "d", "m"], p_credencial: cred });
-  await rpc(anon(), "sala_unirse", { p_room: room_id, p_nombre: "B", p_platforms: ["n"], p_credencial: credencial() });
+  await rpc(anon(), "sala_unirse", { p_room: room_id, p_nombre: "B", p_credencial: credencial() });
 
   const frio = await preparar(h.jwt, room_id, size);
   if (!frio.body.ok) { console.error("frío falló", size, frio.status, frio.body); process.exit(1); }

@@ -98,7 +98,7 @@ export default function SalaView({ roomId }: { roomId: string }) {
 function Resultado({ estado: e, roomId, desfase, releer }: { estado: EstadoSala; roomId: string; desfase: number; releer: () => Promise<void> }) {
   const ronda = e.ronda!, r = e.resultado!;
   if (r.tipo === "empate") return <ResultadoEmpate estado={e} resultado={r} titulos={ronda.titulos} roomId={roomId} desfase={desfase} releer={releer} />;
-  if (r.tipo === "sin_coincidencias") return <ResultadoSinCoincidencias estado={e} titulos={ronda.titulos} roomId={roomId} desfase={desfase} releer={releer} />;
+  if (r.tipo === "sin_coincidencias") return <ResultadoSinCoincidencias estado={e} roomId={roomId} desfase={desfase} releer={releer} />;
   const ganadora = r.ganador_pos === null ? null : ronda.titulos.find((t) => t.pos === r.ganador_pos) ?? null;
   if ((r.tipo === "match" || r.tipo === "ganador") && ganadora) return <ResultadoMatch estado={e} card={ganadora} roomId={roomId} desfase={desfase} releer={releer} />;
   // `vencida` (empate que nadie resolvió) o un resultado sin card: la sala termina.

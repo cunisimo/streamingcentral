@@ -70,17 +70,19 @@ async function crear(jwt, nombre, plats) {
   const r = await rpc(como(jwt), "sala_crear", { p_nombre: nombre, p_platforms: plats, p_credencial: tok });
   return { room_id: r.room_id, token: tok, repetido: r.repetido };
 }
-/** unirse con credencial nueva (cliente anon o con JWT); devuelve el token del cliente. */
-async function unirse(cliente, room, nombre, plats) {
+/** unirse con credencial nueva (cliente anon o con JWT); devuelve el token del cliente.
+ *  El invitado NO manda plataformas (decision del dueno, 23/09): hereda las del
+ *  organizador y `sala_unirse` ya no recibe el parametro. */
+async function unirse(cliente, room, nombre) {
   const tok = credencial();
-  const r = await rpc(cliente, "sala_unirse", { p_room: room, p_nombre: nombre, p_platforms: plats, p_credencial: tok });
+  const r = await rpc(cliente, "sala_unirse", { p_room: room, p_nombre: nombre, p_credencial: tok });
   return { token: tok, repetido: r.repetido };
 }
 
 /** Sala de 2 (host + B) ya en `preparando`, con candidatas y cards listas para publicar. */
 async function salaPreparando(jwtHost, hostId, size = 5, duracion = "cualquiera") {
   const r = await crear(jwtHost, "H", ["n", "d", "m"]);
-  const tB = (await unirse(anon(), r.room_id, "B", ["n"])).token;
+  const tB = (await unirse(anon(), r.room_id, "B")).token;
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: r.room_id, p_host: hostId, p_size: size, p_duracion: duracion });
   const cand = await rpc(admin, "sala_candidatos", { p_providers: PLATS, p_duracion: duracion, p_excluir: [], p_seed: "s", p_limit: 80 });
   const cards = cand.slice(0, size).map(card);
@@ -131,22 +133,22 @@ await prueba("3. una sola sala activa por organizador", async () => {
   await debeFallar(como(host.jwt).rpc("sala_crear", { p_nombre: "Otra", p_platforms: ["n"], p_credencial: credencial() }), /sala_ya_tiene_activa/);
 });
 
-await prueba("4. plataformas deduplicadas y ordenadas; nombre normalizado; desconocidas y vacías rechazadas", async () => {
+await prueba("4. plataformas del organizador deduplicadas y ordenadas; nombre normalizado y credencial validados al unirse", async () => {
   const e = await estado(sala, tokHost);
   assert.deepEqual(e.soy.platforms, ["d", "n"]); assert.equal(e.soy.nombre, "Facu");
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["zz"], p_credencial: credencial() }), /sala_plataforma_desconocida/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["n", "zz"], p_credencial: credencial() }), /sala_plataforma_desconocida/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: [], p_credencial: credencial() }), /sala_sin_plataformas/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "x".repeat(25), p_platforms: ["n"], p_credencial: credencial() }), /sala_nombre_invalido/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "  \t ", p_platforms: ["n"], p_credencial: credencial() }), /sala_nombre_invalido/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_platforms: ["n"], p_credencial: "x" }), /sala_credencial_invalida/);
+  // Las plataformas desconocidas y las vacías ya las cubre la prueba 1 sobre
+  // `sala_crear`, que es la ÚNICA que las recibe: el invitado no manda ninguna
+  // (decisión del dueño, 23/09) y `sala_unirse` ni siquiera tiene el parámetro.
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "x".repeat(25), p_credencial: credencial() }), /sala_nombre_invalido/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "  \t ", p_credencial: credencial() }), /sala_nombre_invalido/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "A", p_credencial: "x" }), /sala_credencial_invalida/);
 });
 
 await prueba("5. unirse anónimo y autenticado; una cuenta no ocupa dos lugares (pasa a la credencial nueva); sala_reclamar idempotente", async () => {
-  tokA = (await unirse(anon(), sala, "Ana", ["m"])).token;
-  const inv1 = await unirse(como(inv.jwt), sala, "Inv", ["p"]);
+  tokA = (await unirse(anon(), sala, "Ana")).token;
+  const inv1 = await unirse(como(inv.jwt), sala, "Inv");
   assert.equal(inv1.repetido, false);
-  const inv2 = await unirse(como(inv.jwt), sala, "Inv2", ["p"]);
+  const inv2 = await unirse(como(inv.jwt), sala, "Inv2");
   assert.equal(inv2.repetido, true);                                   // misma cuenta → misma participación
   await debeFallar(anon().rpc("sala_estado", { p_room: sala, p_token: inv1.token }), /sala_token_invalido/); // la credencial anterior murió
   tokInv = inv2.token;
@@ -168,13 +170,13 @@ await prueba("6. la credencial de una sala no sirve en otra, ni se reutiliza com
   const r2 = await crear(inv.jwt, "Inv", ["n"]);
   await debeFallar(anon().rpc("sala_estado", { p_room: r2.room_id, p_token: tokHost }), /sala_token_invalido/);
   await debeFallar(anon().rpc("sala_votar", { p_room: r2.room_id, p_token: tokHost, p_round: r2.room_id, p_pos: 0, p_voto: "yes" }), /sala_token_invalido/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: r2.room_id, p_nombre: "Z", p_platforms: ["n"], p_credencial: tokA }), /sala_credencial_en_uso/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r2.room_id, p_nombre: "Z", p_credencial: tokA }), /sala_credencial_en_uso/);
   await cerrar(inv.jwt, r2.room_id);
 });
 
 await prueba("7. máximo seis participantes", async () => {
-  for (const n of ["P4", "P5", "P6"]) toksExtra.push((await unirse(anon(), sala, n, ["n"])).token);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "P7", p_platforms: ["n"], p_credencial: credencial() }), /sala_llena/);
+  for (const n of ["P4", "P5", "P6"]) toksExtra.push((await unirse(anon(), sala, n)).token);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "P7", p_credencial: credencial() }), /sala_llena/);
   assert.equal((await estado(sala, tokHost)).n, 6);
 });
 
@@ -189,7 +191,10 @@ await prueba("8. un invitado no ejecuta acciones del organizador; anon y JWT no 
 
 await prueba("9. candidatas correctas y publicación atómica con validación estricta", async () => {
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: sala, p_host: host.id, p_size: 5, p_duracion: "cualquiera" });
-  assert.deepEqual(ini.union, ["d", "m", "n", "p"]);
+  // La unión son las plataformas DEL ORGANIZADOR: los invitados heredan las
+  // suyas y ya no la amplían (decisión del dueño, 23/09). Antes eran cuatro
+  // códigos porque cada invitado sumaba el propio.
+  assert.deepEqual(ini.union, ["d", "n"]);
   const cand = await rpc(admin, "sala_candidatos", { p_providers: PLATS, p_duracion: "cualquiera", p_excluir: [], p_seed: "s", p_limit: 80 });
   const excluidos = [90000101, 90000102, 90000103, 90000104, 90000105, 90000106, 90000107, 90000108, 90000041];
   assert.ok(cand.every((c) => c.runtime > 0 && c.razon && c.razon.trim() && !excluidos.includes(c.tmdb_id)));
@@ -221,7 +226,7 @@ await prueba("9. candidatas correctas y publicación atómica con validación es
 });
 
 await prueba("10. lobby cerrado: no entran participantes nuevos", async () => {
-  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "Tarde", p_platforms: ["n"], p_credencial: credencial() }), /sala_no_admite_ingresos/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: sala, p_nombre: "Tarde", p_credencial: credencial() }), /sala_no_admite_ingresos/);
 });
 
 await prueba("11. voto: sólo la siguiente pos; idempotente; distinto voto sobre pos ya votada rechazado; pos fuera de la ronda rechazada", async () => {
@@ -294,10 +299,10 @@ await prueba("14. sala de 2: dos Sí simultáneos sobre la misma película → u
 await prueba("15. sala de 3 con empate: sólo el host desempata; repetir devuelve el mismo ganador; la ventana se renueva", async () => {
   const h = await usuario("h15");
   const r = await crear(h.jwt, "H", ["n", "d", "m"]);
-  const tB = (await unirse(anon(), r.room_id, "B", ["n"])).token;
-  const tC = (await unirse(anon(), r.room_id, "C", ["d"])).token;
+  const tB = (await unirse(anon(), r.room_id, "B")).token;
+  const tC = (await unirse(anon(), r.room_id, "C")).token;
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: r.room_id, p_host: h.id, p_size: 5, p_duracion: "cualquiera" });
-  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "D", p_platforms: ["n"], p_credencial: credencial() }), /sala_no_admite_ingresos/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "D", p_credencial: credencial() }), /sala_no_admite_ingresos/);
   const cand = await rpc(admin, "sala_candidatos", { p_providers: PLATS, p_duracion: "cualquiera", p_excluir: [], p_seed: "s15", p_limit: 80 });
   await rpc(admin, "sala_publicar_ronda", { p_round: ini.round_id, p_prep_token: ini.prep_token, p_titulos: cand.slice(0, 5).map(card) });
   for (const t of [r.token, tB, tC]) for (let pos = 0; pos < 5; pos++) await votar(r.room_id, t, ini.round_id, pos, pos === 1 || pos === 3 ? "yes" : "no");
@@ -331,7 +336,7 @@ await prueba("18. otra tanda excluye los títulos de la ronda anterior (y una ca
   assert.equal(ini2.numero, 2);
   const { data: previos } = await admin.from("room_titles").select("tmdb_id").eq("round_id", ronda);
   assert.deepEqual([...ini2.excluir].sort(), previos.map((t) => t.tmdb_id).sort());
-  assert.deepEqual(ini2.union, ["d", "m", "n", "p"], "la unión sigue congelada");
+  assert.deepEqual(ini2.union, ["d", "n"], "la unión sigue congelada");
   const cand = await rpc(admin, "sala_candidatos", { p_providers: PLATS, p_duracion: "cualquiera", p_excluir: ini2.excluir, p_seed: "s2", p_limit: 80 });
   assert.ok(cand.every((c) => !ini2.excluir.includes(c.tmdb_id)));
   const cards2 = cand.slice(0, 5).map(card);
@@ -429,7 +434,7 @@ await prueba("25. kill switch en la base: con activas='false' no se crea ni se e
   await activas(true);
   const s = await crear(h.jwt, "H", ["n"]);
   await activas(false);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: s.room_id, p_nombre: "B", p_platforms: ["n"], p_credencial: credencial() }), /sala_desactivadas/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: s.room_id, p_nombre: "B", p_credencial: credencial() }), /sala_desactivadas/);
   await activas(true);
   await cerrar(h.jwt, s.room_id);
 });
@@ -525,8 +530,11 @@ await prueba("29b. ninguna firma previa responde (sin credencial, o con p_intent
   await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"] }), /PGRST202|Could not find|42501|permission denied/);
   await debeFallar(como(h.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"], p_intento: randomUUID() }), /PGRST202|Could not find|42501|permission denied/);
   const r = await crear(h.jwt, "H", ["n"]);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"] }), /PGRST202|Could not find|42501|permission denied/);
-  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"], p_intento: randomUUID() }), /PGRST202|Could not find|42501|permission denied/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "B" }), /PGRST202|Could not find|42501|permission denied/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "B", p_intento: randomUUID() }), /PGRST202|Could not find|42501|permission denied/);
+  // La firma CON plataformas también quedó atrás (23/09): si respondiera, un
+  // invitado podría seguir ampliando la unión de la sala desde una llamada directa.
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "B", p_platforms: ["n"], p_credencial: credencial() }), /PGRST202|Could not find|42501|permission denied/);
   await debeFallar(como(h.jwt).rpc("sala_reclamar", { p_room: r.room_id }), /PGRST202|Could not find|42501|permission denied/);
   assert.equal((await estado(r.room_id, r.token)).n, 1);
   await cerrar(h.jwt, r.room_id);
@@ -536,19 +544,19 @@ await prueba("30. unirse anónimo: respuesta perdida y repetición de la MISMA c
   const h = await usuario("h30");
   const r = await crear(h.jwt, "H", ["n"]);
   const cred = credencial();
-  const a = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_platforms: ["n"], p_credencial: cred });
-  const b = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_platforms: ["n"], p_credencial: cred });
+  const a = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_credencial: cred });
+  const b = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_credencial: cred });
   assert.equal(a.repetido, false); assert.equal(b.repetido, true);
   assert.equal((await estado(r.room_id, r.token)).n, 2);
   assert.equal((await estado(r.room_id, cred)).soy.nombre, "Ana");
   // Mismo nombre con OTRA credencial sí es otra persona: no se deduplica por nombre.
-  await unirse(anon(), r.room_id, "Ana", ["n"]);
+  await unirse(anon(), r.room_id, "Ana");
   assert.equal((await estado(r.room_id, r.token)).n, 3);
   // Con la sala ya en preparación, repetir la credencial devuelve la participación en vez de 'no admite ingresos'.
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: r.room_id, p_host: h.id, p_size: 5, p_duracion: "cualquiera" });
-  const c = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_platforms: ["n"], p_credencial: cred });
+  const c = await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "Ana", p_credencial: cred });
   assert.equal(c.repetido, true); assert.equal((await estado(r.room_id, cred)).soy.nombre, "Ana");
-  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "Tarde", p_platforms: ["n"], p_credencial: credencial() }), /sala_no_admite_ingresos/);
+  await debeFallar(anon().rpc("sala_unirse", { p_room: r.room_id, p_nombre: "Tarde", p_credencial: credencial() }), /sala_no_admite_ingresos/);
   await rpc(admin, "sala_abortar_preparacion", { p_round: ini.round_id, p_prep_token: ini.prep_token });
   await cerrar(h.jwt, r.room_id);
 });
@@ -563,7 +571,7 @@ await prueba("31. reintentos CONCURRENTES de la misma credencial → una sala / 
   const room = creadas[0].room_id;
   assert.equal((await estado(room, credC)).soy.es_host, true);           // la única credencial es la del cliente y sirve
   const credU = credencial();
-  const unidos = await Promise.all(Array.from({ length: 6 }, () => rpc(anon(), "sala_unirse", { p_room: room, p_nombre: "Ana", p_platforms: ["n"], p_credencial: credU })));
+  const unidos = await Promise.all(Array.from({ length: 6 }, () => rpc(anon(), "sala_unirse", { p_room: room, p_nombre: "Ana", p_credencial: credU })));
   assert.equal(unidos.filter((r) => r.repetido === false).length, 1);
   assert.equal((await admin.from("room_participants").select("id").eq("room_id", room)).data.length, 2, "host + Ana, nada más");
   assert.equal((await estado(room, credU)).soy.nombre, "Ana");
@@ -589,7 +597,7 @@ await prueba("31b. respuestas concurrentes entregadas en ORDEN INVERSO: el clien
   assert.equal((await estado(almacen.room_id, almacen.credencial)).soy.es_host, true);
   // Lo mismo para unirse: tres reintentos con demoras distintas, procesados al revés.
   const credU = credencial();
-  const rs = await Promise.all([0, 40, 80].map((ms) => dormir(ms).then(() => rpc(anon(), "sala_unirse", { p_room: almacen.room_id, p_nombre: "B", p_platforms: ["n"], p_credencial: credU }))));
+  const rs = await Promise.all([0, 40, 80].map((ms) => dormir(ms).then(() => rpc(anon(), "sala_unirse", { p_room: almacen.room_id, p_nombre: "B", p_credencial: credU }))));
   for (const r of rs.reverse()) assert.ok(typeof r.repetido === "boolean");
   assert.equal((await estado(almacen.room_id, credU)).soy.nombre, "B");
   assert.equal((await estado(almacen.room_id, cred)).n, 2);
@@ -627,15 +635,15 @@ await prueba("34. la recuperación va ANTES del kill switch: confirmada, respues
   const credC = credencial();
   const primera = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_credencial: credC });
   const credU = credencial();
-  await rpc(anon(), "sala_unirse", { p_room: primera.room_id, p_nombre: "B", p_platforms: ["n"], p_credencial: credU });
+  await rpc(anon(), "sala_unirse", { p_room: primera.room_id, p_nombre: "B", p_credencial: credU });
   await activas(false);
   try {
     const rep = await rpc(como(h.jwt), "sala_crear", { p_nombre: "H", p_platforms: ["n"], p_credencial: credC });
     assert.equal(rep.room_id, primera.room_id); assert.equal(rep.repetido, true);
-    assert.equal((await rpc(anon(), "sala_unirse", { p_room: primera.room_id, p_nombre: "B", p_platforms: ["n"], p_credencial: credU })).repetido, true);
+    assert.equal((await rpc(anon(), "sala_unirse", { p_room: primera.room_id, p_nombre: "B", p_credencial: credU })).repetido, true);
     const h2 = await usuario("h34b");
     await debeFallar(como(h2.jwt).rpc("sala_crear", { p_nombre: "H", p_platforms: ["n"], p_credencial: credencial() }), /sala_desactivadas/);
-    await debeFallar(anon().rpc("sala_unirse", { p_room: primera.room_id, p_nombre: "C", p_platforms: ["n"], p_credencial: credencial() }), /sala_desactivadas/);
+    await debeFallar(anon().rpc("sala_unirse", { p_room: primera.room_id, p_nombre: "C", p_credencial: credencial() }), /sala_desactivadas/);
     assert.equal((await estado(primera.room_id, credC)).n, 2);
   } finally {
     await activas(true);
@@ -647,16 +655,16 @@ await prueba("35. cuenta ya participante entra con credencial NUEVA y la respues
   const h = await usuario("h35");
   const u = await usuario("u35");
   const r = await crear(h.jwt, "H", ["n", "d"]);
-  const vieja = (await unirse(como(u.jwt), r.room_id, "U", ["d"])).token;
+  const vieja = (await unirse(como(u.jwt), r.room_id, "U")).token;
   const nueva = credencial();
-  const x = await rpc(como(u.jwt), "sala_unirse", { p_room: r.room_id, p_nombre: "U otra vez", p_platforms: ["d"], p_credencial: nueva });
+  const x = await rpc(como(u.jwt), "sala_unirse", { p_room: r.room_id, p_nombre: "U otra vez", p_credencial: nueva });
   assert.equal(x.repetido, true);                                       // misma cuenta → misma participación, pasada a la credencial nueva
   await debeFallar(anon().rpc("sala_estado", { p_room: r.room_id, p_token: vieja }), /sala_token_invalido/);
   assert.equal((await estado(r.room_id, r.token)).n, 2);
   const ini = await rpc(admin, "sala_iniciar_preparacion", { p_room: r.room_id, p_host: h.id, p_size: 5, p_duracion: "cualquiera" });
   // "Se perdió la respuesta": repite la misma credencial con la sala ya empezada (anon o con JWT, da igual).
-  assert.equal((await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "U otra vez", p_platforms: ["d"], p_credencial: nueva })).repetido, true);
-  assert.equal((await rpc(como(u.jwt), "sala_unirse", { p_room: r.room_id, p_nombre: "U otra vez", p_platforms: ["d"], p_credencial: nueva })).repetido, true);
+  assert.equal((await rpc(anon(), "sala_unirse", { p_room: r.room_id, p_nombre: "U otra vez", p_credencial: nueva })).repetido, true);
+  assert.equal((await rpc(como(u.jwt), "sala_unirse", { p_room: r.room_id, p_nombre: "U otra vez", p_credencial: nueva })).repetido, true);
   const e = await estado(r.room_id, nueva);
   assert.equal(e.soy.nombre, "U"); assert.equal(e.n, 2);               // el nombre original: es la misma participación
   assert.equal((await admin.from("room_participants").select("id").eq("room_id", r.room_id).eq("user_id", u.id)).data.length, 1);

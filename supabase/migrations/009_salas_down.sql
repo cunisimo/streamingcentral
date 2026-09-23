@@ -30,7 +30,8 @@ drop function if exists sala_votar(uuid, text, uuid, int, text);
 drop function if exists sala_estado(uuid, text);
 drop function if exists sala_reclamar(uuid, text);
 drop function if exists sala_reclamar(uuid);                    -- firma previa, sólo en bases locales
-drop function if exists sala_unirse(uuid, text, text[], text);
+drop function if exists sala_unirse(uuid, text, text);
+drop function if exists sala_unirse(uuid, text, text[], text);        -- firma previa, sólo en bases locales
 drop function if exists sala_unirse(uuid, text, text[], uuid);  -- firma previa, sólo en bases locales
 drop function if exists sala_unirse(uuid, text, text[]);        -- firma previa, sólo en bases locales
 drop function if exists sala_crear(text, text[], text);

@@ -42,6 +42,7 @@ drop function if exists sala_crear(text, text[]);
 drop function if exists sala_crear(text, text[], uuid);
 drop function if exists sala_unirse(uuid, text, text[]);
 drop function if exists sala_unirse(uuid, text, text[], uuid);
+drop function if exists sala_unirse(uuid, text, text[], text);  -- llevaba plataformas del invitado (ver abajo)
 drop function if exists sala_reclamar(uuid);
 drop function if exists sala_nuevo_token();
 
@@ -410,9 +411,15 @@ $$;
 revoke execute on function sala_crear(text, text[], text) from public, anon, authenticated;
 grant execute on function sala_crear(text, text[], text) to authenticated;
 
-create or replace function sala_unirse(p_room uuid, p_nombre text, p_platforms text[], p_credencial text) returns jsonb
+-- 🔴 EL INVITADO NO ELIGE PLATAFORMAS (decisión del dueño, 23/09): las de la
+-- sala las pone SÓLO quien la crea, y el invitado hereda esas. Por eso la
+-- función ya no recibe `p_platforms` — no alcanzaba con sacar el selector de
+-- la pantalla: mientras el parámetro existiera, una llamada directa seguía
+-- pudiendo ampliar la unión de la sala, que es lo que decide qué películas
+-- entran. La firma anterior se borra arriba, así que tampoco responde.
+create or replace function sala_unirse(p_room uuid, p_nombre text, p_credencial text) returns jsonb
 language plpgsql security definer set search_path = public, extensions, pg_temp as $$
-declare s rooms; uid uuid := auth.uid(); h bytea; n int; existente room_participants;
+declare s rooms; uid uuid := auth.uid(); h bytea; n int; existente room_participants; plats text[];
 begin
   h := sala_hash(sala_credencial_valida(p_credencial));
   perform sala_aplicar_vencimientos(p_room);
@@ -441,14 +448,18 @@ begin
   end if;
   select count(*) into n from room_participants where room_id = p_room;
   if n >= 6 then raise exception 'sala_llena' using errcode = '54000'; end if;
+  -- Hereda las del organizador: la columna sigue diciendo con qué plataformas
+  -- entró este participante, y la unión de la sala no se mueve por quién entra.
+  select platforms into plats from room_participants where room_id = p_room and es_host;
+  if plats is null then raise exception 'sala_inexistente' using errcode = 'P0002'; end if;
   insert into room_participants (room_id, token_hash, user_id, nombre, platforms)
-  values (p_room, h, uid, sala_nombre_valido(p_nombre), sala_plataformas_validas(p_platforms));
+  values (p_room, h, uid, sala_nombre_valido(p_nombre), plats);
   perform sala_tocar(p_room);
   return jsonb_build_object('repetido', false);
 end;
 $$;
-revoke execute on function sala_unirse(uuid, text, text[], text) from public, anon, authenticated;
-grant execute on function sala_unirse(uuid, text, text[], text) to anon, authenticated;
+revoke execute on function sala_unirse(uuid, text, text) from public, anon, authenticated;
+grant execute on function sala_unirse(uuid, text, text) to anon, authenticated;
 
 -- Recuperar la participación (organizador u invitado con cuenta) desde otro
 -- navegador: la participación pasa a la credencial NUEVA que generó ese

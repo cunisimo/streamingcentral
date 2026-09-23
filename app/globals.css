@@ -1181,9 +1181,10 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-entra{margin:0;width:110px;display:flex;flex-direction:column;gap:6px;align-items:center}
 .sala-entra img{width:110px;aspect-ratio:2/3;object-fit:cover;border-radius:var(--radius-sm);box-shadow:var(--sh)}
 .sala-entra figcaption{font-size:12.5px;color:var(--dim);line-height:1.25}
-.sala-separan{display:flex;justify-content:center;gap:10px;margin:14px 0 6px;overflow:hidden}
-.sala-separa{flex:0 1 72px;min-width:0;width:72px;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;opacity:.55;filter:saturate(.4)}
-.sala-separa img{width:100%;height:100%;object-fit:cover}
+.sala-carita{font-size:clamp(56px,16vw,84px);line-height:1;margin:6px 0 10px;text-align:center}
+.sala-sin-bajada{max-width:36ch;margin-left:auto;margin-right:auto}
+/* Lo usa ResultadoEmpate para una card empatada sin póster. Las cards que se
+   separaban en "sin match" se retiraron con esa pantalla (23/09). */
 .sala-separa-txt{font-size:10px;color:var(--dim);padding:4px;text-align:center}
 .sala-empate .dsmp-wheel{margin-top:14px}
 @media (prefers-reduced-motion: no-preference){
@@ -1200,7 +1201,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   .sala-chispas i{animation:sala-chispa 380ms 490ms both}
   .sala-titular{animation:dsmp-in .4s ease .5s both}
   .sala-entra{animation:sala-entra .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 90ms)}
-  .sala-separa{animation:sala-separa 1.2s ease-out both;animation-delay:calc(var(--i) * 40ms)}
 }
 /* 0-42ms anticipación (se apartan) · 42-300ms unión ACELERANDO hasta pasarse
    4% · 300-420ms asiento. La opacidad sube en los primeros 42 ms: las mitades
@@ -1233,7 +1233,6 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
   100%{opacity:0;transform:rotate(var(--a)) translateY(var(--d)) scale(.45)}
 }
 @keyframes sala-entra{from{opacity:0;transform:translateY(24px) scale(.9)}to{opacity:1;transform:none}}
-@keyframes sala-separa{from{opacity:1;filter:none;transform:translateX(0)}to{opacity:.55;filter:saturate(.4);transform:translateX(calc((var(--i) - (var(--n) - 1) / 2) * 10px))}}
 @media(max-width:560px){
   .sala-ganadora{flex-direction:column;align-items:center;text-align:center}
   .sala-ganadora .rlt-tags{justify-content:center}

@@ -91,6 +91,11 @@ export function Ganadora({ card, union }: { card: CardSala; union: CardSala["pla
  * Y por eso el organizador ve acá "Cerrar sala": no puede tener dos salas
  * activas, y sin este botón tendría que esperar los 5 minutos de la ventana
  * para poder armar la siguiente.
+ *
+ * Al invitado, cuando no puede hacer nada, no se le dice nada: acá había un
+ * "Quien organiza puede pedir otra tanda." que el dueño sacó el 23/09 —la
+ * pantalla del invitado termina en la bajada— y que además repetía lo que ya
+ * dice la línea de vencimiento.
  */
 export function PieResultado({ estado, roomId, seg, releer }: { estado: EstadoSala; roomId: string; seg: number | null; releer: () => Promise<void> }) {
   const puede = estado.resultado?.puede_otra_tanda === true;
@@ -112,9 +117,7 @@ export function PieResultado({ estado, roomId, seg, releer }: { estado: EstadoSa
           <span className="chip-group-label">¿Otra tanda?</span>
           <PrepararTanda roomId={roomId} rotulo="Otra tanda" releer={releer} hint="Sin repetir las películas que ya salieron." />
         </section>
-      ) : (
-        estado.estado === "resultado" && <p className="sala-hint">Quien organiza puede pedir otra tanda.</p>
-      )}
+      ) : null}
     </div>
   );
 }
