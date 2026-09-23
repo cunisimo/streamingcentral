@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import PlatformLogo from "../PlatformLogo";
 import PrepararTanda from "./PrepararTanda";
-import { supabaseBrowser } from "@/lib/supabase";
-import { mensajeDeError } from "@/lib/sala/mensajes";
+import CerrarSala from "./CerrarSala";
 import { useVenceEn, formatoSeg } from "@/hooks/useVenceEn";
 import type { EstadoSala } from "@/lib/sala/estado";
 
@@ -15,26 +13,13 @@ import type { EstadoSala } from "@/lib/sala/estado";
 // El enlace para invitar se muestra acá como texto + "Copiar". El mensaje y la
 // acción de compartir del sistema llegan en la Etapa 5.
 export default function Lobby({ estado, desfase, roomId, releer }: { estado: EstadoSala; desfase: number; roomId: string; releer: () => Promise<void> }) {
-  const router = useRouter();
   const seg = useVenceEn(estado, desfase);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
   const [copiado, setCopiado] = useState(false);
   const [enlace, setEnlace] = useState("");
   useEffect(() => { setEnlace(`${location.origin}/sala/${roomId}`); }, [roomId]);
 
   const soyHost = estado.soy.es_host;
   const organizador = estado.participantes.find((p) => p.es_host)?.nombre;
-
-  async function cerrar() {
-    if (!confirm("¿Cerrar la sala para todos?")) return;
-    setBusy(true); setErr("");
-    const { error } = await supabaseBrowser().rpc("sala_cerrar", { p_room: roomId });
-    setBusy(false);
-    if (error) { setErr(mensajeDeError(error.message)); return; }
-    // El estado `vencida` llega por el canal; quien cerró vuelve al Home.
-    router.replace("/");
-  }
 
   async function copiar() {
     try { await navigator.clipboard.writeText(enlace); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* sin clipboard */ }
@@ -82,12 +67,9 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
 
       {soyHost ? (
         <section className="sala-bloque">
-          <PrepararTanda roomId={roomId} rotulo="Empezar" releer={releer} disabled={estado.n < 2 || busy}
+          <PrepararTanda roomId={roomId} rotulo="Empezar" releer={releer} disabled={estado.n < 2}
             sizeInicial={estado.config_default?.size} duracionInicial={estado.config_default?.duracion} />
-          {err && <p className="sala-err" role="alert">{err}</p>}
-          <div className="sala-acciones">
-            <button type="button" className="btn ghost" onClick={cerrar} disabled={busy}>Cerrar sala</button>
-          </div>
+          <CerrarSala roomId={roomId} />
         </section>
       ) : (
         <section className="sala-bloque">

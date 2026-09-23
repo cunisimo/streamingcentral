@@ -586,7 +586,7 @@ export const OPTIONS = opcionesCors("POST");
 ### Task 4.1: Pantallas de resultado
 
 **Files:**
-- Create: `components/sala/ResultadoMatch.tsx` (pantalla completa; dos mitades de corazón que se juntan con `@keyframes sala-mitad-izq/der`; "¡HAY MATCH!"; póster, título, `PlatformLogo` de las plataformas; `CompartirMatch`; para el host "Otra tanda")
+- Create: `components/sala/ResultadoMatch.tsx` (pantalla completa; dos mitades de corazón que se juntan con `@keyframes sala-mitad-izq/der`; "¡HAY MATCH!"; póster, título, `PlatformLogo` de las plataformas; `CompartirMatch`; para el host "Cerrar sala" —ver el cambio de la Tarea 4.2—)
 - Create: `components/sala/ResultadoEmpate.tsx` (las cards empatadas entran y forman una ruleta con `@keyframes sala-entra`; "¡Tenemos empate!"; host: "Desempatar" → `rpc sala_desempatar` → la animación de ruleta **se detiene en `ganador_pos` ya guardado**; demás: "Esperando al organizador"; contador de la ventana de 5 min)
 - Create: `components/sala/ResultadoSinCoincidencias.tsx` (cards que se separan suavemente; "Esta vez no coincidieron"; sin corazón roto; host: "Otra tanda")
 - Create: `components/sala/CompartirMatch.tsx`
@@ -599,7 +599,8 @@ El **texto** de resultado en grupos también es "¡Nuestro match!" (en la pantal
 
 ### Task 4.2: Otra tanda
 
-- [x] **Step 1:** En `ResultadoMatch`/`ResultadoSinCoincidencias`/`ResultadoEmpate` (sólo tras desempate) el host ve `ConfigTanda` + "Otra tanda" → mismo POST de la Tarea 3.3. Verificar: la ronda 2 no repite ningún `tmdb_id` de la 1 (prueba 18 del script), `expires_at` se reemplaza, participantes y plataformas se conservan; **no** disponible con empate sin resolver.
+- [x] **Step 1:** El host ve `ConfigTanda` + "Otra tanda" → mismo POST de la Tarea 3.3. Verificar: la ronda 2 no repite ningún `tmdb_id` de la 1 (prueba 18 del script), `expires_at` se reemplaza, participantes y plataformas se conservan; **no** disponible con empate sin resolver.
+- [x] **Step 1.b (CAMBIO DEL DUEÑO, 23/09):** 🔴 **Con ganadora no hay "Otra tanda".** El plan la ofrecía en las tres pantallas de resultado; el dueño decidió que si el grupo ya tiene película —match directo, más votada del grupo o desempate resuelto— la sala se termina, y para otra ronda se arma una nueva. Queda **sólo** en "Esta vez no coincidieron". Lo decide la base: `puede_otra_tanda` suma `r.ganador_pos is null` (mira el ganador y no el tipo, porque `sala_desempatar` deja `resultado = 'empate'` y sólo llena `ganador_pos`). En su lugar, el host ve **"Cerrar sala"** ahí mismo: no puede tener dos salas activas y la del resultado sigue activa 5 minutos, así que sin ese botón no podría armar la siguiente hasta que venciera sola.
 - [x] **Step 2:** Commit `feat(salas): otra tanda`.
 
 ---

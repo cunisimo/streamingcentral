@@ -52,3 +52,21 @@ test("EN ROJO: el barrido detecta un conteo de síes escrito de las formas típi
   ];
   for (const m of malos) assert.ok(PROHIBIDO.some(([re]) => re.test(m)), m);
 });
+
+test("con ganadora el pie ofrece 'Cerrar sala' y NO 'Otra tanda'; la condición sigue viniendo de la base", () => {
+  const match = readFileSync(join(DIR, "ResultadoMatch.tsx"), "utf8");
+  // La bifurcación LEE `ganador_pos` (lo calculó la base), no cuenta votos.
+  assert.match(match, /const hayGanadora = typeof estado\.resultado\?\.ganador_pos === "number"/);
+  assert.match(match, /hayGanadora \? \(/, "el pie decide por la ganadora antes que por puede_otra_tanda");
+  assert.match(match, /<CerrarSala roomId=\{roomId\} \/>/, "el organizador puede cerrar sin esperar los 5 min");
+  assert.match(match, /estado\.soy\.es_host && <CerrarSala/, "cerrar es sólo del organizador");
+  // Las tres pantallas comparten este pie, así que el cambio alcanza a match,
+  // a ganador de grupo y al desempate resuelto de una sola vez.
+  for (const f of ["ResultadoEmpate.tsx", "ResultadoSinCoincidencias.tsx"]) {
+    assert.match(readFileSync(join(DIR, f), "utf8"), /<PieResultado /, `${f} usa el pie compartido`);
+  }
+  // Cerrar la sala es una sola implementación, la del componente.
+  const lobby = readFileSync(join(DIR, "Lobby.tsx"), "utf8");
+  assert.match(lobby, /<CerrarSala roomId=\{roomId\} \/>/);
+  assert.doesNotMatch(lobby, /sala_cerrar/, "el lobby ya no llama la RPC por su cuenta");
+});

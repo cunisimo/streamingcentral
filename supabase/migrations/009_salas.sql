@@ -518,7 +518,15 @@ begin
         'tipo', r.resultado, 'ganador_pos', r.ganador_pos, 'empatadas', to_jsonb(r.empatadas),
         'desempatado', r.desempatado_at is not null,
         'puede_desempatar', yo.es_host and s.estado = 'empate',
-        'puede_otra_tanda', yo.es_host and s.estado = 'resultado'
+        -- CON GANADORA NO HAY OTRA TANDA (decision del dueno, 23/09): si el
+        -- grupo ya tiene pelicula -por match directo, por ser la mas votada o
+        -- despues de desempatar- la sala se termino y para otra ronda se arma
+        -- una nueva. `ganador_pos is null` cubre los tres casos de una: el
+        -- desempate NO cambia `resultado` (sigue en 'empate'), solo llena
+        -- `ganador_pos`, asi que mirar el tipo no alcanzaria. La unica pantalla
+        -- que la conserva es 'sin_coincidencias', que es la que no tiene
+        -- ganadora. El empate sin resolver ya quedaba afuera por `s.estado`.
+        'puede_otra_tanda', yo.es_host and s.estado = 'resultado' and r.ganador_pos is null
       ));
     end if;
   end if;

@@ -149,3 +149,18 @@ test("la reversión (009_salas_down.sql) borra las 24 funciones, las seis tablas
   const sinComentarios = down.replace(/--[^\n]*/g, "");
   assert.doesNotMatch(sinComentarios, /roulette_titles|title_availability|get_roulette_picks|profiles|\bvotes\b/);
 });
+
+// 8. Con ganadora la sala se termina (decisión del dueño, 23/09). "Otra tanda"
+//    queda sólo para "Esta vez no coincidieron".
+test("puede_otra_tanda exige ganador_pos is null: con match, con ganador de grupo y tras desempatar, no se ofrece", () => {
+  const linea = sql.match(/'puede_otra_tanda',[^\n]*/)![0];
+  assert.match(linea, /yo\.es_host/, "sigue siendo sólo del organizador");
+  assert.match(linea, /s\.estado = 'resultado'/);
+  assert.match(linea, /r\.ganador_pos is null/, "con ganadora no hay otra tanda");
+  // El desempate NO cambia `resultado` (sigue 'empate'): sólo llena ganador_pos.
+  // Por eso la condición mira ganador_pos y no el tipo — si alguien la
+  // reescribe por tipo, la pantalla del desempate volvería a ofrecer tanda.
+  const desempatar = sql.match(/create or replace function sala_desempatar\(([\s\S]*?)\n\$\$;/)![0];
+  assert.match(desempatar, /update room_rounds set ganador_pos = g, desempatado_at = now\(\)/);
+  assert.doesNotMatch(desempatar, /set[^\n]*\bresultado\s*=/, "el desempate no reescribe el tipo de resultado");
+});

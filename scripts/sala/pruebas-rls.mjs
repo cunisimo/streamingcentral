@@ -259,7 +259,10 @@ await prueba("13. seis participantes; el último voto de cada uno se manda a la 
   const e = await estado(sala, tokHost);
   assert.equal(e.estado, "resultado"); assert.equal(e.resultado.tipo, "ganador"); assert.equal(e.resultado.ganador_pos, 2);
   assert.equal(e.ronda.terminaron, 6);
-  assert.equal(e.resultado.puede_otra_tanda, true);
+  // CON GANADORA NO HAY OTRA TANDA (decision del dueno, 23/09): ni para el host
+  // ni para nadie. Antes acá se afirmaba `true` para el host; la regla cambió y
+  // ahora `puede_otra_tanda` exige `ganador_pos is null`.
+  assert.equal(e.resultado.puede_otra_tanda, false, "hay ganadora: la sala se termina");
   assert.equal((await estado(sala, tokA)).resultado.puede_otra_tanda, false);
   const { data: rondas } = await admin.from("room_rounds").select("id, resultado, closed_at").eq("room_id", sala);
   assert.equal(rondas.filter((r) => r.resultado).length, 1);
@@ -279,6 +282,12 @@ await prueba("14. sala de 2: dos Sí simultáneos sobre la misma película → u
   await publicar(s2);
   for (let pos = 0; pos < 5; pos++) { await votar(s2.room, s2.tokHost, s2.ini.round_id, pos, pos === 1 ? "yes" : "no"); await votar(s2.room, s2.tB, s2.ini.round_id, pos, pos === 3 ? "yes" : "pass"); }
   assert.equal((await estado(s2.room, s2.tB)).resultado.tipo, "sin_coincidencias", "un solo Sí por película no es match");
+  // EL LADO POSITIVO de la regla del 23/09: sin ganadora, "Otra tanda" sigue
+  // siendo lo unico que se ofrece, y sigue siendo solo del organizador.
+  const eSin = await estado(s2.room, s2.tokHost);
+  assert.equal(eSin.resultado.ganador_pos, null);
+  assert.equal(eSin.resultado.puede_otra_tanda, true, "sin coincidencias: se puede pedir otra tanda");
+  assert.equal((await estado(s2.room, s2.tB)).resultado.puede_otra_tanda, false, "el invitado no");
   await cerrar(h.jwt, s.room); await cerrar(h2.jwt, s2.room);
 });
 
