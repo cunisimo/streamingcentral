@@ -271,3 +271,33 @@ test("la ficha exporta generateMetadata y revalida cada 6 h", () => {
   assert.match(src, /urlDeTitulo\(/, "la url canónica sale de lib/compartir.ts");
   assert.ok(!/window\.location/.test(src));
 });
+
+// --- Correcciones de la auditoría (23/09) ------------------------------------
+
+test("compartir: si el PLUGIN NATIVO rechaza con AbortError, NO abre WhatsApp", async () => {
+  const { compartir } = await import("./compartir-accion.ts");
+  const m = mensajeMatch({ title: "Seven", type: "movie", id: 807 }, ["Netflix"]);
+  let abrio = 0;
+  const abortar = Object.assign(new Error("cancelado"), { name: "AbortError" });
+  await compartir(m, { esNativo: true, plugin: async () => { throw abortar; }, abrir: () => { abrio++; } });
+  assert.equal(abrio, 0, "cancelar en el contenedor tampoco abre WhatsApp");
+  // Un fallo de verdad del plugin sí cae al fallback.
+  await compartir(m, { esNativo: true, plugin: async () => { throw new Error("plugin no instalado"); }, abrir: () => { abrio++; } });
+  assert.equal(abrio, 1);
+});
+
+test("esCancelacion: AbortError (probado) y el mensaje de cancelación (defensivo, sin verificar en dispositivo)", async () => {
+  const { esCancelacion } = await import("./compartir-accion.ts");
+  assert.equal(esCancelacion(Object.assign(new Error("x"), { name: "AbortError" })), true);
+  assert.equal(esCancelacion(new Error("Share canceled")), true, "el plugin de iOS rechaza así");
+  assert.equal(esCancelacion(new Error("Abort due to cancellation of share.")), true);
+  assert.equal(esCancelacion(new Error("network error")), false);
+  assert.equal(esCancelacion(null), false);
+  assert.equal(esCancelacion(undefined), false);
+});
+
+test("la metadata usa el tipo de Open Graph que corresponde: película y serie", () => {
+  const src = fuente("app", "titulo", "[tipo]", "[id]", "page.tsx");
+  assert.match(src, /type: tipo === "tv" \? "video\.tv_show" : "video\.movie"/,
+    "una serie no puede declararse video.movie");
+});

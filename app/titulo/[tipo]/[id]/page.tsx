@@ -48,7 +48,10 @@ export async function generateMetadata({ params }: { params: { tipo: string; id:
       title: titulo,
       description,
       url,
-      type: "video.movie",
+      // El tipo de Open Graph sigue al tipo del título: una serie NO es
+      // `video.movie`. Los valores son los del vocabulario de OG
+      // (video.movie / video.tv_show); un test los fija para los dos casos.
+      type: tipo === "tv" ? "video.tv_show" : "video.movie",
       images: card.poster ? [{ url: card.poster, width: 500, height: 750 }] : [],
     },
     twitter: {

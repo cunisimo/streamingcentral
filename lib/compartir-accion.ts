@@ -11,9 +11,17 @@
 //   2. Web con `navigator.share`: la hoja del sistema.
 //   3. El resto (escritorio, WebViews): WhatsApp con el mensaje ya armado.
 //
-// 🔴 Cerrar la hoja de compartir tira `AbortError`: es una decisión del usuario,
-// no una falla, y abrirle WhatsApp ahí sería pasarle por encima. Cualquier otro
-// error sí cae al fallback.
+// 🔴 CANCELAR NO ES FALLAR, y vale para los DOS caminos. Cerrar la hoja tira un
+// error; abrirle WhatsApp ahí sería pasarle por encima al usuario. Cualquier
+// otro error sí cae al fallback.
+//
+// Qué está comprobado y qué no:
+//   - `AbortError` (lo que tira `navigator.share` en la web, y lo que el plugin
+//     de Capacitor debería propagar): reconocido en los DOS caminos, con test.
+//   - ⚠️ El plugin de iOS rechaza con un Error común cuyo mensaje dice
+//     "Share canceled"; por eso también se acepta un mensaje que hable de
+//     cancelación. ESO NO ESTÁ VERIFICADO EN UN DISPOSITIVO: es defensivo, y la
+//     prueba en teléfono sigue pendiente (ver docs/medidas/2026-09-22-salas-etapa5.md).
 //
 // LOS TRES BUGS QUE ESTE CAMINO YA ARREGLÓ (venían del comentario de
 // DetailView; se mudan acá con el código):
@@ -34,6 +42,17 @@
 // navegador ni contenedor; en la app se llama `compartir(m)` a secas.
 import { enlaceWhatsapp, type MensajeCompartir } from "./compartir.ts";
 import { ES_NATIVO } from "./plataforma.ts";
+
+/**
+ * ¿El error es "el usuario cerró la hoja"? Ver la nota de arriba: el nombre
+ * `AbortError` está probado; el mensaje es defensivo y falta comprobarlo en un
+ * teléfono.
+ */
+export function esCancelacion(err: unknown): boolean {
+  const e = err as { name?: string; message?: string } | null;
+  if (!e) return false;
+  return e.name === "AbortError" || /cancel/i.test(e.message ?? "");
+}
 
 export interface DepsCompartir {
   esNativo?: boolean;
@@ -56,7 +75,11 @@ export async function compartir(m: MensajeCompartir, deps: DepsCompartir = {}): 
   const esNativo = deps.esNativo ?? ES_NATIVO;
 
   if (esNativo) {
-    try { await (deps.plugin ?? pluginReal)(datos); } catch { whatsapp(); }
+    try {
+      await (deps.plugin ?? pluginReal)(datos);
+    } catch (e) {
+      if (!esCancelacion(e)) whatsapp();
+    }
     return;
   }
 
@@ -70,6 +93,6 @@ export async function compartir(m: MensajeCompartir, deps: DepsCompartir = {}): 
   try {
     await share(datos);
   } catch (err) {
-    if ((err as { name?: string } | null)?.name !== "AbortError") whatsapp();
+    if (!esCancelacion(err)) whatsapp();
   }
 }

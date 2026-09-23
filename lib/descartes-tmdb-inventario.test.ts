@@ -514,7 +514,7 @@ const INVENTARIO: Fila[] = [
     .map((r) => ({ archivo: `app/api/${r}/route.ts`, ancla: "} catch (e) {", clase: "tmdb-propaga" as const })),
   { archivo: "lib/cors.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "envoltorio de rutas: 500 con CORS" },
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "productor rechazado: libera el turno y sirve UB o propaga" },
-  { archivo: "lib/compartir-accion.ts", ancla: "try { await (deps.plugin ?? pluginReal)(datos); } catch { whatsapp(); }", clase: "no-tmdb", motivo: "compartir: el plugin de Capacitor no está o falló; se cae a WhatsApp" },
+  { archivo: "lib/compartir-accion.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "compartir en el contenedor: si el plugin falló se cae a WhatsApp; si el usuario canceló, no" },
   { archivo: "lib/compartir-accion.ts", ancla: "} catch (err) {", clase: "no-tmdb", motivo: "compartir: navigator.share falló; AbortError es que el usuario cerró la hoja, el resto cae a WhatsApp" },
   // Etapa 3.b: el fondo. Con UB, un rechazo del productor ya lo atrapó el catch de arriba (sirve el UB);
   // lo que llega acá son errores de turno/Redis: se anota, se libera y se relanza al programador, que lo contiene y lo loguea entero.
