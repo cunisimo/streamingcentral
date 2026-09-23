@@ -1157,6 +1157,14 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
    redondeada, girado 45° sobre su esquina inferior. En porcentajes para que la
    versión chica y la grande compartan las reglas. */
 .sala-corazon{position:relative;width:100px;height:90px;margin:8px auto 0}
+/* El destello del impacto y las chispas nacen INVISIBLES y fuera de toda
+   animación: con `prefers-reduced-motion: reduce` no hay nada que apagar. */
+.sala-corazon::after{content:"";position:absolute;left:50%;top:55%;width:170%;height:170%;margin:0;border-radius:50%;background:radial-gradient(circle,var(--accent) 0%,transparent 68%);transform:translate(-50%,-50%) scale(.2);opacity:0;pointer-events:none}
+/* `--d` es la distancia de vuelo y tiene que SUPERAR el radio del corazón
+   (min(23vw,120px)): con un factor de 1 las chispas terminaban adentro del
+   dibujo, del mismo naranja, y no se veían nunca. */
+.sala-chispas{position:absolute;left:50%;top:52%;width:0;height:0;pointer-events:none;--d:calc(min(23vw,120px) * -1.65)}
+.sala-chispas i{position:absolute;left:0;top:0;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);opacity:0;transform:rotate(var(--a)) translateY(0) scale(.3)}
 .sala-mitad{position:absolute;top:0;width:52%;height:89%;background:var(--accent);border-radius:50% 50% 0 0/32% 32% 0 0}
 .sala-mitad-izq{left:0;transform-origin:100% 100%;transform:rotate(45deg)}
 .sala-mitad-der{left:50%;transform-origin:0 100%;transform:rotate(-45deg)}
@@ -1179,16 +1187,51 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-separa-txt{font-size:10px;color:var(--dim);padding:4px;text-align:center}
 .sala-empate .dsmp-wheel{margin-top:14px}
 @media (prefers-reduced-motion: no-preference){
-  .sala-mitad-izq{animation:sala-mitad-izq .9s cubic-bezier(.2,.8,.2,1) both}
-  .sala-mitad-der{animation:sala-mitad-der .9s cubic-bezier(.2,.8,.2,1) both}
-  .sala-corazon{animation:sala-latido 1.1s ease-in-out 1s 2}
+  /* La unión del corazón, en CINCO tramos y 870 ms en total. Era UN solo
+     movimiento de 900 ms con la misma curva para las dos mitades, sin
+     anticipación ni impacto, y después un latido repetido dos veces: eso es lo
+     que se leía básico. Los tiempos por tramo van DENTRO de cada keyframe
+     (`animation-timing-function` por paso), que es la única forma de tener
+     curvas distintas en una sola animación. Sólo transform y opacity. */
+  .sala-mitad-izq{animation:sala-mitad-izq 420ms both}
+  .sala-mitad-der{animation:sala-mitad-der 420ms 30ms both}  /* 2 frames tarde: la simetría exacta se lee a robot */
+  .sala-corazon{animation:sala-impacto 240ms 440ms both}
+  .sala-corazon::after{animation:sala-destello 300ms 490ms both}
+  .sala-chispas i{animation:sala-chispa 380ms 490ms both}
   .sala-titular{animation:dsmp-in .4s ease .5s both}
   .sala-entra{animation:sala-entra .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 90ms)}
   .sala-separa{animation:sala-separa 1.2s ease-out both;animation-delay:calc(var(--i) * 40ms)}
 }
-@keyframes sala-mitad-izq{from{transform:translateX(-90%) rotate(45deg);opacity:0}to{transform:translateX(0) rotate(45deg);opacity:1}}
-@keyframes sala-mitad-der{from{transform:translateX(90%) rotate(-45deg);opacity:0}to{transform:translateX(0) rotate(-45deg);opacity:1}}
-@keyframes sala-latido{0%,100%{transform:scale(1)}30%{transform:scale(1.12)}60%{transform:scale(.98)}}
+/* 0-42ms anticipación (se apartan) · 42-300ms unión ACELERANDO hasta pasarse
+   4% · 300-420ms asiento. La opacidad sube en los primeros 42 ms: las mitades
+   llegan sólidas en vez de ser un corazón fantasma durante todo el viaje. */
+@keyframes sala-mitad-izq{
+  0%{transform:translateX(-92%) rotate(45deg);opacity:0;animation-timing-function:cubic-bezier(.33,1,.68,1)}
+  10%{transform:translateX(-100%) rotate(45deg);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.35)}
+  71%{transform:translateX(4%) rotate(45deg);opacity:1;animation-timing-function:cubic-bezier(.22,1,.36,1)}
+  100%{transform:translateX(0) rotate(45deg);opacity:1}
+}
+@keyframes sala-mitad-der{
+  0%{transform:translateX(92%) rotate(-45deg);opacity:0;animation-timing-function:cubic-bezier(.33,1,.68,1)}
+  10%{transform:translateX(100%) rotate(-45deg);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.35)}
+  71%{transform:translateX(-4%) rotate(-45deg);opacity:1;animation-timing-function:cubic-bezier(.22,1,.36,1)}
+  100%{transform:translateX(0) rotate(-45deg);opacity:1}
+}
+/* El pulso ÚNICO del impacto. `cubic-bezier(.34,1.56,.64,1)` pasa de 1 (el
+   tercer par es > 1): eso es el rebote que la curva anterior no podía dar. */
+@keyframes sala-impacto{
+  0%{transform:scale(1);animation-timing-function:cubic-bezier(.34,1.56,.64,1)}
+  40%{transform:scale(1.15)}
+  100%{transform:scale(1)}
+}
+@keyframes sala-destello{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}22%{opacity:.85}100%{opacity:0;transform:translate(-50%,-50%) scale(1.75)}}
+/* Salen DISPARADAS y después se apagan: la curva ease-out las pone fuera del
+   corazón en el primer tercio, que es cuando empiezan a verse. */
+@keyframes sala-chispa{
+  0%{opacity:0;transform:rotate(var(--a)) translateY(0) scale(.3);animation-timing-function:cubic-bezier(.12,.9,.25,1)}
+  14%{opacity:1}
+  100%{opacity:0;transform:rotate(var(--a)) translateY(var(--d)) scale(.45)}
+}
 @keyframes sala-entra{from{opacity:0;transform:translateY(24px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes sala-separa{from{opacity:1;filter:none;transform:translateX(0)}to{opacity:.55;filter:saturate(.4);transform:translateX(calc((var(--i) - (var(--n) - 1) / 2) * 10px))}}
 @media(max-width:560px){
@@ -1207,12 +1250,15 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-celebracion-seguir{position:absolute;left:50%;bottom:calc(28px + var(--safe-b,0px));transform:translateX(-50%);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.35);color:#fff}
 .sala-celebracion .dsmp-confetti{position:absolute}
 @media (prefers-reduced-motion: no-preference){
-  .sala-celebracion{animation:sala-cel-fin .4s ease calc(3.3s - .4s) both}
-  .sala-celebracion-titulo{animation:sala-cel-titulo .5s cubic-bezier(.2,.8,.2,1) .8s both}
-  .sala-celebracion-poster{animation:sala-cel-poster .6s cubic-bezier(.2,.8,.2,1) 1.2s both}
-  .sala-celebracion-nombre{animation:dsmp-in .4s ease 1.6s both}
-  .sala-celebracion-seguir{animation:dsmp-in .4s ease 1.8s both}
-  .sala-corazon-grande{animation:sala-latido 1s ease-in-out 1s 2}
+  /* El auto-cierre bajó de 3,3 s a 2,4 s (DURACION_CELEBRACION_MS, y un test ata
+     los dos números). Con la coreografía comprimida a 870 ms, el resto entra
+     detrás del impacto en vez de dejar 2 segundos de sólo confeti. El corazón
+     grande NO tiene animación propia: usa la de `.sala-corazon`. */
+  .sala-celebracion{animation:sala-cel-fin .4s ease calc(2.4s - .4s) both}
+  .sala-celebracion-titulo{animation:sala-cel-titulo .5s cubic-bezier(.2,.8,.2,1) .62s both}
+  .sala-celebracion-poster{animation:sala-cel-poster .5s cubic-bezier(.2,.8,.2,1) .84s both}
+  .sala-celebracion-nombre{animation:dsmp-in .4s ease 1.06s both}
+  .sala-celebracion-seguir{animation:dsmp-in .4s ease 1.25s both}
 }
 @keyframes sala-cel-fin{from{opacity:1}to{opacity:0;visibility:hidden}}
 @keyframes sala-cel-titulo{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}

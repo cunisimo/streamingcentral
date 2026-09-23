@@ -604,6 +604,15 @@ Probando, el organizador no se enteraba de que su invitado había entrado y ley�
 - [x] **Step 1:** La cuenta va **al botón**: el rótulo pasa a "Falta que se sume alguien" / "Empezar con N" y justo encima se repite el estado ("Están 2 de 6. Pueden seguir sumándose hasta que empieces."), con un aviso resaltado cuando alguien entra ("Se sumó Ana.", 6 s). `lib/sala/lobby-nucleo.ts`, puro y con pruebas.
 - [x] **Step 2:** ⚠️ **NO se automatiza el arranque**, y se evaluó: la app sabe cuántos entraron pero no cuántos faltan, así que "cuando estén todos" no es un dato que tenga; un arranque a los 2 minutos empezaría la tanda —10 s por película— mientras el organizador sigue pegando el enlace en WhatsApp; y cerrar la sala a los 2 minutos pelearía con los 15 del lobby, que existen para invitar sin apuro. La única forma que no adivina sería preguntar cuántos van a ser al crear la sala: queda fuera del MVP.
 
+### Task 4.1.c: la animación del match (CAMBIO DEL DUEÑO, 23/09)
+
+La unión del corazón quedaba básica: **un solo movimiento de 900 ms** con la misma curva para las dos mitades, sin anticipación ni impacto, y después `sala-latido` repetido dos veces durante 2,2 s. `cubic-bezier(.2,.8,.2,1)` no puede rebotar (su tercer par es .2 y el cuarto 1: desacelera hasta el final y nunca lo pasa), y las mitades hacían `opacity 0 → 1` a lo largo de todo el viaje, así que se veía un corazón fantasma desde el frame 0.
+
+- [x] **Step 1:** Coreografía en cinco tramos, **870 ms** en total, sólo `transform` y `opacity`: anticipación (0-42 ms), unión acelerando con `cubic-bezier(.55,0,.85,.35)` que se pasa 4% al chocar (42-300), asiento (300-420), pulso único 1 → 1.15 → 1 con `cubic-bezier(.34,1.56,.64,1)` (440-680) y destello + 8 chispas en `--accent` desde el centro (490-870). Los tiempos por tramo van DENTRO de cada keyframe (`animation-timing-function` por paso). La mitad derecha llega **30 ms** tarde: una milésima no existe a 60 fps (un frame son 16,7 ms) y 2 frames es el mínimo que se percibe.
+- [x] **Step 2:** El auto-cierre del overlay baja de 3,3 s a **2,4 s**, y es un techo: ya se descartaba con un toque en cualquier parte, Escape, Enter o "Seguir". Confeti de la celebración de 90 a **60** (es lo más caro de la pantalla); el default del componente sigue en 70 porque lo comparte `DesempateResult`, que no se toca.
+- [x] **Step 3:** `prefers-reduced-motion` **sin cambios** (decisión del dueño): la celebración sigue sin montarse y el destello y las chispas nacen en `opacity: 0`, así que no hay nada que apagar.
+- [x] **Step 4:** `components/sala/celebracion-animacion.test.ts` (9 pruebas textuales): la secuencia, el desfasaje, el overshoot, que no se anime nada fuera de transform/opacity, que todo viva bajo la media query, que la coreografía entre en 600-900 ms y que los **dos** números del auto-cierre (TS y CSS) coincidan.
+
 ### Task 4.2: Otra tanda
 
 - [x] **Step 1:** El host ve `ConfigTanda` + "Otra tanda" → mismo POST de la Tarea 3.3. Verificar: la ronda 2 no repite ningún `tmdb_id` de la 1 (prueba 18 del script), `expires_at` se reemplaza, participantes y plataformas se conservan; **no** disponible con empate sin resolver.
