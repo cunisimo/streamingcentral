@@ -7,7 +7,7 @@ import { platformByCode } from "@/lib/providers-ar";
 import type { MediaType } from "@/lib/types";
 
 // La vista previa del enlace cuando alguien comparte una ficha —o un match de
-// Pelimatch, que comparte la misma url— (Etapa 5, Tarea 5.2).
+// Yumpeá, que comparte la misma url— (Etapa 5, Tarea 5.2).
 //
 // 6 h de revalidación: la misma escala que `TTL.home`. El póster y las
 // plataformas de un título no cambian más rápido que eso, y la metadata la pide

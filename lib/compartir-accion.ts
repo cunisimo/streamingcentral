@@ -1,6 +1,6 @@
 // La ACCIÓN de compartir, una sola para toda la app (Etapa 5, Tarea 5.1).
 //
-// Estaba escrita dentro de `components/DetailView.tsx` y Pelimatch necesitaba lo
+// Estaba escrita dentro de `components/DetailView.tsx` y Yumpeá necesitaba lo
 // mismo, así que se extrajo tal cual —con sus tres caminos y el motivo de cada
 // uno— en vez de copiarla. El mensaje se arma aparte (`lib/compartir.ts`): acá
 // sólo se decide POR DÓNDE sale.

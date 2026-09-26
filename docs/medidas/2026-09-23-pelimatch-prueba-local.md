@@ -1,5 +1,15 @@
 # Pelimatch — prueba local del dueño, y los dos caminos que faltan
 
+> ⚠️ **Este documento es un registro del 23/09 y conserva los nombres y la
+> pantalla de entonces.** Para repetir la prueba hoy, tres diferencias, ninguna
+> de ellas en las rutas ni en la cuenta local:
+>
+> - La sección se llama **Yumpeá** y el botón del banner dice **"Hacé match"**
+>   (26/09).
+> - El **invitado ya no elige plataformas**: el paso 4 es sólo el nombre (23/09).
+> - Con match **no aparece "¿Otra tanda?"**: el organizador ve **"Cerrar sala"**
+>   (23/09).
+
 Rama `feat/salas`. **Nada de esto toca Producción, ni servicios ni
 configuraciones remotas.** El entorno corre contra la base **local** de
 `supabase start` (`.env.sala-local` → `http://127.0.0.1:54321`), no contra la de

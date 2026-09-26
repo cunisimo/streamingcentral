@@ -94,8 +94,8 @@
   dueño: reducir movimiento en un teléfono, dos teléfonos reales, pantalla del
   organizador en el navegador, red cortada, lector de pantalla y movimiento
   reducido.
-  **SEGUNDA RONDA DEL DUEÑO (22/09, `231c9be`):** el nombre visible es
-  **Pelimatch** en las dos entradas (Home, debajo de Ruleta Yump, y hub de la
+  **SEGUNDA RONDA DEL DUEÑO (22/09, `231c9be`):** el nombre visible pasó a ser
+  **Pelimatch** —hoy es **Yumpeá**, ver la ronda del 26/09— en las dos entradas (Home, debajo de Ruleta Yump, y hub de la
   cuenta) —bajada todavía provisoria, rutas técnicas sin cambios—; los botones
   Sí/No/Paso pasaron a una BARRA FIJA sobre la barra inferior, con degradado y
   alto reservado, así que ya no quedan bajo el pliegue (medido a 360×640 y
@@ -141,6 +141,32 @@
   🔴 **La vista previa real de WhatsApp en iPhone/Android NO se probó** (necesita
   Preview y dispositivos): no está afirmado que el póster se vea. Evidencia:
   [`medidas/2026-09-22-salas-etapa5.md`](medidas/2026-09-22-salas-etapa5.md).
+  **RONDA DEL DUEÑO (23/09, `fce03a6` → `45c1666`):** cuatro correcciones sobre
+  la Etapa 5 ya cerrada. (a) **Con ganadora la sala se termina**: "Otra tanda"
+  desaparece del match, del ganador de grupo y del desempate resuelto —queda
+  sólo en "sin match"— y en su lugar el organizador ve **"Cerrar sala"**, que
+  hace falta porque no puede tener dos salas activas y la del resultado sigue
+  viva 5 minutos. Lo decide la base: `puede_otra_tanda` suma `r.ganador_pos is
+  null` (mira el ganador y NO el tipo, porque `sala_desempatar` deja
+  `resultado = 'empate'`). (b) **El lobby avisa**: el rótulo del botón pasó a
+  "Falta que se sume alguien" / "Empezar con N", con la cuenta pegada al botón y
+  un aviso de 6 s cuando alguien entra; la lista ya se actualizaba sola, el
+  problema era que está arriba de todo y el botón abajo. **No se automatizó el
+  arranque** y está argumentado en el plan. (c) **La animación del match** pasó
+  de un solo movimiento de 900 ms a cinco tramos en 870 ms (anticipación, unión
+  acelerando que se pasa 4%, asiento, pulso único con overshoot real, destello y
+  8 chispas); overlay de 3,3 s a 2,4 s y confeti de la celebración de 90 a 60
+  (el default del componente sigue en 70: lo comparte el desempate). (d) **El
+  invitado no elige plataformas**: `sala_unirse` perdió `p_platforms` —con el
+  parámetro vivo, una llamada directa seguía ampliando la unión— y hereda las
+  del organizador; la pantalla sin match pasó a carita 🙁 + "Esta vez no hubo
+  match" + "Ninguna película tuvo coincidencias. Suele pasar.", con la línea de
+  "Otra tanda" sólo para quien organiza.
+  **RONDA DEL DUEÑO (26/09):** 🔴 **el nombre visible es ahora "Yumpeá"** y el
+  botón del banner dice **"Hacé match"**; el emoji 🍿 y la bajada no cambian, y
+  el hub sigue sin botón porque la tarjeta entera es el enlace. **Sólo cambió el
+  rótulo**: rutas (`/sala/nueva`, `/sala/[id]`), tablas, RPC y los nombres de
+  archivo (`PelimatchTile.tsx`) siguen igual. Verificado a 375 px.
   Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:

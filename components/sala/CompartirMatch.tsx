@@ -7,7 +7,7 @@ import type { PlatformCode } from "@/lib/types";
 
 // Compartir la película del match (Etapa 5, Tarea 5.1).
 //
-// El MENSAJE es el propio de Pelimatch (`mensajeMatch`): "¡Nuestro match!", las
+// El MENSAJE es el propio de Yumpeá (`mensajeMatch`): "¡Nuestro match!", las
 // plataformas donde está y el enlace canónico a la ficha. No es el de la ficha
 // —ahí se recomienda un título; acá se cuenta que el grupo coincidió—.
 //

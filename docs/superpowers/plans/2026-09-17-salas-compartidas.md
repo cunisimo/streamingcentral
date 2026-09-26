@@ -574,7 +574,7 @@ export const OPTIONS = opcionesCors("POST");
 > (`puede_desempatar` / `puede_otra_tanda`), sólo para el organizador.
 > `CompartirMatch` reusa el mensaje de ficha: el texto del match es la Etapa 5.
 > **Segunda y tercera ronda del dueño (22/09, `231c9be` + `38d5b64`):** nombre
-> visible **Pelimatch** en las dos entradas (bajada provisoria, rutas sin
+> visible **Pelimatch** —hoy **Yumpeá**, ver la Tarea 4.1.e— en las dos entradas (bajada provisoria, rutas sin
 > cambios), botones de voto en barra fija sobre la nav con área táctil de 64 px,
 > navegación en la MISMA pestaña, y reintentos acotados de la relectura tras
 > Empezar/Desempatar —con el contrato de `sala-lector.leer()` corregido dos
@@ -604,6 +604,12 @@ Probando, el organizador no se enteraba de que su invitado había entrado y ley�
 - [x] **Step 1:** La cuenta va **al botón**: el rótulo pasa a "Falta que se sume alguien" / "Empezar con N" y justo encima se repite el estado ("Están 2 de 6. Pueden seguir sumándose hasta que empieces."), con un aviso resaltado cuando alguien entra ("Se sumó Ana.", 6 s). `lib/sala/lobby-nucleo.ts`, puro y con pruebas.
 - [x] **Step 2:** ⚠️ **NO se automatiza el arranque**, y se evaluó: la app sabe cuántos entraron pero no cuántos faltan, así que "cuando estén todos" no es un dato que tenga; un arranque a los 2 minutos empezaría la tanda —10 s por película— mientras el organizador sigue pegando el enlace en WhatsApp; y cerrar la sala a los 2 minutos pelearía con los 15 del lobby, que existen para invitar sin apuro. La única forma que no adivina sería preguntar cuántos van a ser al crear la sala: queda fuera del MVP.
 
+### Task 4.1.e: el nombre visible pasa a "Yumpeá" (CAMBIO DEL DUEÑO, 26/09)
+
+- [x] **Step 1:** Banner del Home: 🍿 · **Yumpeá** · "Cada uno vota en su teléfono. Sale una sola película." · botón **"Hacé match"** (antes "Matcheá"). Hub de la cuenta: mismo emoji, mismo nombre y la misma bajada, **sin botón** —la tarjeta entera es el enlace—. Navegación a `/sala/nueva` en la misma pestaña, sin cambios.
+- [x] **Step 2:** 🔴 **Sólo cambia el rótulo.** No se renombran rutas (`/sala/nueva`, `/sala/[id]`), tablas, RPC, claves ni archivos: `components/sala/PelimatchTile.tsx` sigue llamándose así, igual que el riel cuya ruta sigue siendo `hacete-cargo` después de pasar a rotularse "No gustaron". Renombrarlos no le cambia nada a nadie y rompería enlaces ya compartidos.
+- [x] **Step 3:** `components/sala/entrada-pelimatch.test.ts` fija el texto nuevo y además comprueba que el nombre anterior no quedó suelto en el JSX de ninguna de las dos entradas (los comentarios sí lo citan, para explicar el cambio). Las referencias históricas de los documentos fechados se conservan.
+
 ### Task 4.1.d: el invitado no elige plataformas y el texto de "sin match" (CAMBIO DEL DUEÑO, 23/09)
 
 - [x] **Step 1:** 🔴 **Las plataformas de la sala las pone SÓLO quien la crea.** No alcanzaba con sacar el selector de `UnirseForm`: mientras `sala_unirse` recibiera `p_platforms`, una llamada directa seguía pudiendo ampliar la unión de la sala, que es lo que decide qué películas entran. La firma pasó a `sala_unirse(p_room, p_nombre, p_credencial)`, la anterior se borra en la migración, y el invitado **hereda** las del organizador (la columna es `not null` con `cardinality >= 1`, así que un array vacío ni siquiera entraría). Las "mis plataformas" del Home del invitado no se tocan.
@@ -632,7 +638,7 @@ La unión del corazón quedaba básica: **un solo movimiento de 900 ms** con la 
 > **HECHA (rama `feat/salas`, 2026-09-22): `a01e150` (5.1) y `81a287c` (5.2).**
 > `mensajeMatch` con el texto del plan, `lib/compartir-accion.ts` (la acción
 > extraída de DetailView, sin cambio de comportamiento, usada por la ficha y por
-> Pelimatch) y `generateMetadata` + `revalidate = 21600` en la ficha. TTFB
+> Yumpeá) y `generateMetadata` + `revalidate = 21600` en la ficha. TTFB
 > caliente: 32,4 → 38,5 ms de mediana (+6,1). 🔴 **La vista previa real de
 > WhatsApp en iPhone/Android NO se probó** (Step 3: necesita Preview y
 > dispositivos). Evidencia: `docs/medidas/2026-09-22-salas-etapa5.md`.

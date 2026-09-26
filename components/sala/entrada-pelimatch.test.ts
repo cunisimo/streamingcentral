@@ -1,6 +1,10 @@
-// El nombre visible de la funcionalidad es **Pelimatch** (decisión del dueño,
-// 22/09) y las rutas técnicas NO cambian. Barrido textual sobre las dos
-// entradas: la del Home (debajo de "Ruleta Yump") y la del hub de la cuenta.
+// El nombre visible de la funcionalidad es **Yumpeá** (decisión del dueño,
+// 26/09; antes se llamó "Pelimatch") y las rutas técnicas NO cambian. Barrido
+// textual sobre las dos entradas: la del Home (debajo de "Ruleta Yump") y la del
+// hub de la cuenta.
+//
+// El archivo y el componente del tile SIGUEN llamándose PelimatchTile: un
+// cambio de rótulo no renombra archivos, rutas ni contratos.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -11,18 +15,18 @@ const HOME = leer("components/sala/CrearSalaEntrada.tsx");
 const HUB = leer("components/sala/PelimatchTile.tsx");
 const USERHUB = leer("components/UserHub.tsx");
 
-// El texto visible, LITERAL (decisión del dueño, 22/09). Si alguien lo cambia
+// El texto visible, LITERAL (decisión del dueño, 26/09). Si alguien lo cambia
 // sin que él lo pida, este test falla.
 const EMOJI = "🍿";
-const NOMBRE = "Pelimatch";
+const NOMBRE = "Yumpeá";
 const BAJADA = "Cada uno vota en su teléfono. Sale una sola película.";
-const BOTON = "Matcheá";
+const BOTON = "Hacé match";
 
 test("el banner del Home lleva el texto EXACTO: emoji, nombre, bajada y botón", () => {
   assert.ok(HOME.includes(`<span className="dsmp-banner-ico" aria-hidden>${EMOJI}</span>`), "el emoji");
   assert.ok(HOME.includes(`<span className="dsmp-banner-title">${NOMBRE}</span>`), "el nombre");
   assert.ok(HOME.includes(`<span className="dsmp-banner-sub">${BAJADA}</span>`), "la bajada");
-  assert.ok(/dsmp-banner-cta">\s*Matcheá/.test(HOME), "el botón");
+  assert.ok(new RegExp(`dsmp-banner-cta">\\s*${BOTON}`).test(HOME), "el botón");
 });
 
 test("la entrada del hub dice lo mismo y NO conserva la bajada provisoria", () => {
@@ -34,6 +38,12 @@ test("la entrada del hub dice lo mismo y NO conserva la bajada provisoria", () =
   assert.ok(!/<small>Elegir entre varios<\/small>/.test(HUB), "el tile ya no la muestra");
   assert.ok(!/banner-sub">Elegir entre varios/.test(HOME), "el banner tampoco");
   assert.ok(USERHUB.includes("<PelimatchTile />"), "el hub monta la entrada");
+  // El nombre anterior no quedó suelto en el JSX (los comentarios lo citan para
+  // explicar el cambio, y eso no es texto visible).
+  for (const [n, src] of [["banner", HOME], ["tile", HUB]] as const) {
+    const jsx = src.slice(src.indexOf("return ("));
+    assert.ok(!/Pelimatch|Matcheá/.test(jsx), `${n}: quedó el nombre viejo a la vista`);
+  }
 });
 
 test("las rutas técnicas siguen siendo /sala/nueva y /cuenta; nadie renombró carpetas ni endpoints", () => {
@@ -56,7 +66,7 @@ test("la entrada del Home es un LINK (no despliega nada en el Home) y va debajo 
 });
 
 test("las dos entradas NAVEGAN EN LA MISMA PESTAÑA: sin target, sin ventana flotante", () => {
-  // Decisión del dueño (22/09): Pelimatch se abre como el "Ver todas" de los
+  // Decisión del dueño (22/09): se abre como el "Ver todas" de los
   // rieles. Una pasada anterior había puesto target=_blank con un módulo de
   // apertura; se sacó entero.
   for (const src of [HOME, HUB]) {

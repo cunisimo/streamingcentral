@@ -65,7 +65,7 @@ export function mensajeCompartir(
 }
 
 /**
- * El mensaje con el que se comparte un MATCH de Pelimatch (Etapa 5, Tarea 5.1).
+ * El mensaje con el que se comparte un MATCH de Yumpeá (Etapa 5, Tarea 5.1).
  *
  * Es distinto del de la ficha a propósito: acá no se recomienda un título, se
  * cuenta que un grupo coincidió. El texto lo fijó el plan y hay un test que lo

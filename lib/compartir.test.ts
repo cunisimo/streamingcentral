@@ -167,7 +167,7 @@ test("no queda ningún dominio viejo escrito a mano en el código", () => {
   }
 });
 
-// --- Etapa 5: el mensaje propio de Pelimatch --------------------------------
+// --- Etapa 5: el mensaje propio de Yumpeá -----------------------------------
 // El texto lo fija el plan (Tarea 5.1) y es distinto del de la ficha: acá se
 // comparte un MATCH, no un descubrimiento suelto.
 

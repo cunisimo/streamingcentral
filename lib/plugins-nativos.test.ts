@@ -124,7 +124,7 @@ test("Atrás no cambia nada en la web", () => {
 
 test("compartir usa el selector nativo y NO duplica la lógica de la URL", () => {
   // La ACCIÓN se extrajo de DetailView a lib/compartir-accion.ts (Etapa 5, para
-  // compartirla con Pelimatch): el import dinámico del plugin vive ahí ahora.
+  // compartirla con Yumpeá): el import dinámico del plugin vive ahí ahora.
   // Lo que se protege es lo mismo — selector nativo en el contenedor y la URL
   // canónica de lib/compartir.ts, nunca una escrita a mano ni el origen.
   const accion = codigo("lib/compartir-accion.ts");

@@ -97,7 +97,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
     .find((p): p is { code: PlatformCode; url: string } => !!p.url);
 
   // Compartir: el mensaje se arma con `mensajeCompartir` y la acción es la
-  // compartida con Pelimatch (`lib/compartir-accion.ts`), que guarda el
+  // compartida con Yumpeá (`lib/compartir-accion.ts`), que guarda el
   // historial de los tres bugs de este camino. Comportamiento sin cambios.
   const compartir = () => {
     const donde = mine[0] ?? t.platforms[0];
