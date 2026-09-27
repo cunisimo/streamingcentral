@@ -50,6 +50,7 @@ import { conDescartesRegistrados, withFallosTmdb } from "./fallos-tmdb.ts";
 import { ErrorTmdb } from "./tmdb-error.ts";
 import { resolverDirectores, resolverPortadas } from "./lotes-tolerantes.ts";
 import { enriquecerElegidos, producirBusquedaConFallos } from "./busqueda-enriquecido.ts";
+import { armarFilmografia } from "./filmografia.ts";
 import { resolverConCache, type BackendCache } from "./reparar-y-cachear.ts";
 import { settleAll } from "./settle-all.ts";
 import { clavePorId, repararLote, repararUno } from "./idioma.ts";
@@ -339,6 +340,16 @@ const EJECUCIONES = {
     lineasSinContexto: 1,
     consumidor: (r: { cache: { escrituras: number }; res: { degradacion?: { proveedores?: number } } }) => { assert.equal(r.res.degradacion?.proveedores, 1); assert.equal(r.cache.escrituras, 0, "la búsqueda degradada NO se guarda"); },
   },
+  filmografia: {
+    sitio: "persona:providersOf",
+    correr: () => armarFilmografia({
+      secciones: { direccion: [{ id: 1, media_type: "movie" }, { id: 2, media_type: "movie" }], actuacion: [] },
+      providers: ["n"],
+      enriquecer: async (c) => { if (c.id === 2) throw e429("/movie/2/watch/providers"); return ui(c.id, ["n"]); },
+      sinPlataformas: (c) => ui(c.id, []),
+    }),
+    consumidor: (r: { direccion: UITitle[]; degradacion?: { proveedores?: number } }) => { assert.deepEqual(r.direccion.map((t) => t.id), [1, 2], "el título caído sigue en la lista"); assert.equal(r.degradacion?.proveedores, 1); },
+  },
   settleAll: {
     sitio: "prueba",
     correr: () => settleAll([Promise.resolve(1), Promise.reject(e429())], "prueba", { relanzar: false, log: silencio }),
@@ -453,6 +464,8 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/lotes-tolerantes.ts", ancla: "Promise.allSettled(o.ids.map", clase: "tmdb-registra", efecto: "contexto", ejecucion: "directores" },
   { archivo: "lib/lotes-tolerantes.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "portadas" },
   { archivo: "lib/busqueda-enriquecido.ts", ancla: "deps.enriquecer(c).then((t) => ({ t, degradado: false })).catch", clase: "tmdb-registra", efecto: "contexto", ejecucion: "busqueda" },
+  // Filmografía de una persona: el título cuyo providersOf falló sale SIN plataformas (no se esconde) y se cuenta en `degradacion`. La vista no se cachea.
+  { archivo: "lib/filmografia.ts", ancla: "p = o.enriquecer(c).catch((e: unknown) => {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "filmografia" },
   { archivo: "lib/settle-all.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", ejecucion: "settleAll" },
   // pools: el contexto lo abre el Home (por contexto async) y hay VARIOS
   // recorridos soportados desde composeHome que llegan al mismo sitio, todos

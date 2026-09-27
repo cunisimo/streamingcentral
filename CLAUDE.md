@@ -358,10 +358,12 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   | `/proximamente` | filtro, items, página y scroll (paginado) |
   | `/top` | payload, scroll vertical y horizontal de cada carrusel |
   | `/cuenta/*` | scroll horizontal de cada riel |
+  | `/persona/[id]` | filmografía, cuántas se ven por sección ("Ver más") y scroll — una sola entrada para todas las personas |
 
-  **Fuera a propósito**: Home y `/persona` **no se tocaron** — se auditaron y no
-  reprodujeron la falla, aunque comparten la carrera (contenido asíncrono +
-  restauración nativa del navegador). Si alguna vez aparece, es esto.
+  **Fuera a propósito**: el Home **no se tocó** — se auditó y no reprodujo la
+  falla, aunque comparte la carrera (contenido asíncrono + restauración nativa
+  del navegador). Si alguna vez aparece, es esto. `/persona` entró el 27/09
+  (issue #25): con "Ver más", volver desde la card 50 sin restaurar era perderla.
 
   **Qué guarda**: `sessionStorage`, clave `yump:lista-paginada`, una entrada por
   vista. **Una sola entrada por ruta, NO una por modo**: en `/buscar`, cambiar
@@ -1181,6 +1183,9 @@ lib/
   cache.ts            — wrapper Redis/memoria + el motor determinístico del indeciso
   supabase.ts          — clientes browser/server
   reviews.ts            — acceso a editorial_reviews
+  filmografia.ts         — filmografía de una persona: secciones Dirección/Actuación,
+                            reparación de idioma SIN pisar roles, disponibilidad que
+                            ordena. Función PURA (issue #25)
   proximamente.ts        — selección editorial de la Agenda: función PURA (cupo por
                             fecha, tope de anime, paginación). Ver docs/UPCOMING.md
   types.ts               — shape estable que consume toda la UI (UITitle, UITitleDetail, UIPerson)
@@ -1206,7 +1211,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/hacete-cargo` | "No gustaron" (votos malaso, `top_voted` 1-1). La ruta y la clave siguen diciendo `hacete-cargo`: cambió el rótulo, no el riel |
 | `GET /api/search` | búsqueda (títulos + personas). `providers` **ordena, no filtra** |
 | `GET /api/latest` | últimos estrenos por fecha. `?tipo=movie` (default) o `tv`; en `tv` mezcla el catálogo regional con candidatos por red oficial. `?page=` se normaliza (entero ≥ 1, o 1) |
-| `GET /api/person/[id]` | filmografía de una persona (actor o director), filtrada a plataformas |
+| `GET /api/person/[id]` | filmografía COMPLETA de una persona en dos secciones (`direccion`, `actuacion`; orden en `secciones`). `providers` **ordena, no filtra**. Conserva `titles`/`hidden` (sólo lo disponible) para bundles nativos viejos. `maxDuration = 60`. Lógica en `lib/filmografia.ts` (issue #25) |
 | `GET /api/personas` | actores populares paginados (`?page=`) |
 | `GET /api/directores` | lista curada de directores (`DIRECTOR_IDS` en `lib/enrich.ts`) |
 | `GET /api/genre-covers` | un póster representativo por género, cacheado 24h |

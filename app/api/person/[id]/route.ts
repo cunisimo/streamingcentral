@@ -4,6 +4,10 @@ import type { PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
+// La filmografía se enriquece COMPLETA (sin el viejo recorte a 40): en frío,
+// una carrera de ~230 obras midió ~350 llamadas a TMDB y 13,5 s en local.
+// Mismo techo que las otras rutas que enriquecen cientos de títulos.
+export const maxDuration = 60;
 
 async function manejar(req: NextRequest, { params }: { params: { id: string } }) {
   const providers = (req.nextUrl.searchParams.get("providers")?.split(",").filter(Boolean) || []) as PlatformCode[];

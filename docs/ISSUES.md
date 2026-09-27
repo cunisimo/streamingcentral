@@ -1,5 +1,69 @@
 # Issues abiertos
 
+## #25 — La ficha de persona pierde películas (roles pisados y recorte a 40)
+
+**Estado (27/09): CORREGIDO EN RAMA `fix/filmografia-persona`, SIN MERGE,
+SIN PUSH, SIN DEPLOY.** Reportado por el dueño con Denis Villeneuve
+(`/api/person/137427?providers=m` mostraba sólo *La llegada* y *Blade Runner
+2049*). Las fichas individuales de Duna y Duna: Parte dos sí dicen Max: no era
+TMDB, caché ni el mapeo de Max; las obras se perdían antes del filtro.
+Medición y evidencia: `docs/medidas/2026-09-27-filmografia.md`.
+
+**Causa raíz 1 — la reparación de idioma pisaba los roles.**
+`personFilmography()` concatenaba `cast` y `crew`, reparaba el lote y armaba
+un índice por `media_type:id` que después expandía (`{ ...c, ...índice }`)
+sobre cada crédito. Una persona puede tener varios créditos en la misma obra
+y el índice se quedaba con el último: en Duna (`Director`, `Producer`,
+`Screenplay`) todos pasaban a `Screenplay`; en Duna: Parte dos
+(`Screenplay`, `Director`, `Producer`), a `Producer`. Pasaba **aunque no
+hubiera nada que reparar**: el índice se armaba siempre. Medido con
+Spielberg: sobrevivían 38 de 52 créditos de dirección.
+
+**Causa 2 — `merged.slice(0, 40)` antes de la disponibilidad.** Las carreras
+largas perdían obras en silencio (Samuel L. Jackson: 229 obras de actuación,
+se evaluaban 40).
+
+**La corrección** (`lib/filmografia.ts`, puro; `lib/enrich.ts` sólo enchufa):
+- Reconstrucción **por posición**: `repararLote` conserva orden y longitud,
+  así que `cast` son los primeros `cast.length`. La fusión sólo copia título y
+  sinopsis. **No volver a usar una clave que junte los roles de una persona en
+  una misma obra.**
+- Sin recorte. Dos secciones: Dirección (`job === "Director"`) y Actuación
+  (reparto real, incluidos voz y sin acreditar). `Self`, `Himself`,
+  `Herself`, `Themselves` y variantes (`Self (archive footage)`, `Self -
+  Guest`, …) no son actuación. En talk show/noticias/reality sólo se excluye
+  la aparición propia, sin personaje o como conductor/invitado; un personaje
+  real en esos programas cuenta. Una obra dirigida y actuada está en las dos
+  secciones (y se enriquece una vez).
+- Las plataformas **ordenan, no filtran**: partición estable, primero lo
+  disponible, cada grupo por votos. La card sigue marcando "No está en tus
+  plataformas".
+- Un `providersOf` caído por TMDB deja el título **sin plataformas**, no lo
+  esconde (`degradacion.proveedores`); un error propio se propaga.
+- `titles`/`hidden` se conservan (ahora sobre la filmografía completa) para
+  los bundles nativos ya instalados, que leen esa forma.
+
+**Riesgos y decisiones abiertas:**
+1. **Coste en frío de las carreras largas.** Samuel L. Jackson: 352 llamadas
+   a TMDB y 13,5 s en local (antes 44 y 5 s). Queda bajo el techo de 24 en
+   vuelo de `lib/tmdb.ts` y no hubo 429, pero es una ráfaga del orden de un
+   Home frío, disparable por cualquier visita a una persona poco vista. En
+   caliente son 2 llamadas. Opciones si molesta: cachear la filmografía
+   enriquecida por persona (clave con huella de idioma y
+   `VERSION_DISPONIBILIDAD`, entra en el inventario de cachés) o paginar
+   resignando el orden "disponible primero" global. **Decide el dueño.**
+2. **Payload:** hasta 75 KB (15,6 KB gzip) para la carrera más larga medida.
+   La vista pinta 24 por sección; el snapshot de la vuelta se guarda en
+   `sessionStorage` con UNA entrada para todas las personas (se reescribe al
+   terminar de scrollear, no por cuadro).
+3. **Créditos sin personaje fuera de no ficción cuentan como actuación**
+   (decisión tomada acá: es reparto real sin rol cargado). Revisable.
+4. **Redis en Producción no medido:** en local la caché es en memoria.
+
+**Criterio de cierre:** merge + deploy y la checklist del dueño en Producción
+(Villeneuve con `m`, Spielberg, un actor con voz, volver desde una ficha, app
+Android).
+
 ## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
 
 **Estado (20/09): CORREGIDO para los 20 casos confirmados, MERGEADO EN

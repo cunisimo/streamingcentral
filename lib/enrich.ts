@@ -42,6 +42,9 @@ import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import { esErrorTmdb } from "./tmdb-error";
 import { settleAll } from "./settle-all";
 import { producirBusquedaConFallos } from "./busqueda-enriquecido";
+import {
+  armarFilmografia, ordenDeSecciones, repararCreditos, seccionesDeCreditos,
+} from "./filmografia";
 import { resolverDirectores, resolverPortadas } from "./lotes-tolerantes";
 import { backendCache } from "./cache";
 import {
@@ -1271,45 +1274,42 @@ export async function genreCovers(): Promise<Record<string, string | null>> {
   });
 }
 
-// --- Filmografía de una persona (actor o director), en tus plataformas ---
-const JUNK_GENRES = new Set([10767, 10763, 10764]); // talk, news, reality
+// --- Filmografía de una persona (actor o director) ---
+// La lógica vive en lib/filmografia.ts (pura, probada sin TMDB). Acá sólo se
+// enchufan TMDB, la disponibilidad y Supabase.
+//
+// Filmografía COMPLETA en dos secciones —Dirección y Actuación— y las
+// plataformas del usuario ORDENAN, no filtran (igual que el buscador). No hay
+// recorte: el `slice(0, 40)` que había acá descartaba obras antes de saber si
+// estaban en tus plataformas. Coste medido en docs/ESTADO.md (filmografía).
 export async function personFilmography(id: number, providers: PlatformCode[]) {
   const [det, creditsCrudos] = await Promise.all([personDetails(id), personCombinedCredits(id)]);
 
   // La filmografía es un lote MIXTO: `cast` y `crew` mezclan películas y series,
   // y TMDB reutiliza los ids entre tipos. No está cacheada, así que un fallo del
   // respaldo solo cuesta esta vista y no se congela en ningún lado.
-  const planos = [...creditsCrudos.cast, ...creditsCrudos.crew];
-  const repCreditos = await repararLote(
-    planos,
+  // 🔴 Se reconstruye POR POSICIÓN, no con un índice por `media_type:id`: una
+  // persona tiene varios créditos en la misma obra (Duna: Director, Producer,
+  // Screenplay) y el índice pisaba el `job` de unos con el de otros.
+  const credits = await repararCreditos<CreditEntry>(
+    creditsCrudos,
     () => pedirRespaldoIdioma(`filmografia:${id}`, async () => {
       const r = await personCombinedCredits(id, IDIOMA_FALLBACK);
       return [...r.cast, ...r.crew];
     }),
     `filmografía persona:${id}`,
-    { clave: claveMixta, claveRespaldo: claveMixta },
   );
-  const porClaveCred = indiceMixto(repCreditos.items, claveMixta);
-  const credits = {
-    cast: creditsCrudos.cast.map((c) => ({ ...c, ...conRespuesto(porClaveCred, c, claveMixta) })),
-    crew: creditsCrudos.crew.map((c) => ({ ...c, ...conRespuesto(porClaveCred, c, claveMixta) })),
-  };
+  const secciones = seccionesDeCreditos(credits);
   const pub = await publishedIds();
-  const seen = new Set<string>();
-  const acting = credits.cast.filter((c) => c.character && !/^(self|himself|herself)$/i.test(c.character));
-  const directing = credits.crew.filter((c) => c.job === "Director");
-  const merged = [...directing, ...acting].filter((c: CreditEntry) => {
-    const k = `${c.id}:${c.media_type}`;
-    if (seen.has(k)) return false; seen.add(k);
-    if ((c.genre_ids ?? []).some((g) => JUNK_GENRES.has(g))) return false;
-    return c.media_type === "movie" || c.media_type === "tv";
-  }).sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0));
-  const items = await Promise.all(merged.slice(0, 40).map((c) => toUITitle(c, c.media_type, pub)));
-  const avail = items.filter((i) => onUserPlatforms(i, providers));
+  const res = await armarFilmografia({
+    secciones, providers,
+    enriquecer: (c) => toUITitle(c, c.media_type, pub),
+    sinPlataformas: (c) => tituloSinPlataformas(c, c.media_type, pub),
+  });
   return {
     person: { id: det.id, name: det.name, profile: img(det.profile_path, "w185"), knownFor: [] } as UIPerson,
-    titles: avail,
-    hidden: items.length - avail.length,
+    secciones: ordenDeSecciones(det.known_for_department, secciones),
+    ...res,
   };
 }
 

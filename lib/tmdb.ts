@@ -383,7 +383,9 @@ export function personCombinedCredits(id: number, language?: string) {
   );
 }
 export function personDetails(id: number) {
-  return tmdb<{ id: number; name: string; profile_path: string | null }>(`/person/${id}`);
+  // `known_for_department` viene en la misma respuesta: ordena las secciones
+  // de la filmografía sin costar una llamada más.
+  return tmdb<{ id: number; name: string; profile_path: string | null; known_for_department?: string }>(`/person/${id}`);
 }
 
 export function watchProviders(type: MediaType, id: number) {
