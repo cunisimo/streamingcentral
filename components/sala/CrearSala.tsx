@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "../AuthContext";
 import { usePlatforms } from "../PlatformsContext";
 import SelectorPlataformasSala from "./SelectorPlataformasSala";
+import { hrefSala } from "@/lib/rutas";
 import { supabaseBrowser } from "@/lib/supabase";
 import { confirmarSala, credencialParaCrear } from "@/lib/sala/token-store";
 import { mensajeDeError } from "@/lib/sala/mensajes";
@@ -49,7 +50,9 @@ export default function CrearSala() {
     if (error) { setBusy(false); setErr(mensajeDeError(error.message)); return; }
     const roomId = (data as { room_id: string }).room_id;
     confirmarSala(roomId);
-    router.replace(`/sala/${roomId}`);
+    // `hrefSala`, no la ruta a mano: en el contenedor la sala se muestra en
+    // `/s/?id=<uuid>` porque el segmento dinámico no existe en el artefacto.
+    router.replace(hrefSala(roomId));
   }
 
   return (

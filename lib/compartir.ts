@@ -30,6 +30,23 @@ export function urlDeTitulo(tipo: MediaType, id: number | string): string {
   return `${SITIO_PUBLICO}/titulo/${tipo}/${id}`;
 }
 
+/**
+ * El enlace público a una sala: el que se copia y se comparte para invitar.
+ *
+ * 🔴 SIEMPRE `app.yump.ar`, TAMBIÉN DENTRO DEL CONTENEDOR. Antes se armaba con
+ * `location.origin` en el lobby, y adentro de la app Android eso es
+ * `https://localhost`: el organizador copiaba `https://localhost/sala/<uuid>` y
+ * no le servía a nadie, ni siquiera a él. Y tiene que ser el público aunque
+ * quien invita tenga la app: el invitado puede no tenerla, y entonces el mismo
+ * enlace le abre la web.
+ *
+ * Es la ruta `/sala/<id>`, no `/s/?id=`: `/s` es navegación interna del
+ * contenedor (ver `hrefSala` en lib/rutas.ts) y en la web no existe.
+ */
+export function urlDeSala(id: string): string {
+  return `${SITIO_PUBLICO}/sala/${id}`;
+}
+
 export interface TituloCompartible {
   title: string;
   year?: number | null;

@@ -4,6 +4,7 @@ import PlatformLogo from "../PlatformLogo";
 import PrepararTanda from "./PrepararTanda";
 import CerrarSala from "./CerrarSala";
 import { useVenceEn, formatoSeg } from "@/hooks/useVenceEn";
+import { urlDeSala } from "@/lib/compartir";
 import { rotuloEmpezar, lineaGente, reciénLlegados, avisoDeLlegada, MINIMO } from "@/lib/sala/lobby-nucleo";
 import type { EstadoSala } from "@/lib/sala/estado";
 
@@ -16,8 +17,12 @@ import type { EstadoSala } from "@/lib/sala/estado";
 export default function Lobby({ estado, desfase, roomId, releer }: { estado: EstadoSala; desfase: number; roomId: string; releer: () => Promise<void> }) {
   const seg = useVenceEn(estado, desfase);
   const [copiado, setCopiado] = useState(false);
-  const [enlace, setEnlace] = useState("");
-  useEffect(() => { setEnlace(`${location.origin}/sala/${roomId}`); }, [roomId]);
+
+  // 🔴 EL ENLACE ES SIEMPRE EL PÚBLICO, no `location.origin`: adentro de la app
+  // Android el origen es `https://localhost` y lo copiado no le servía a nadie.
+  // No hace falta esperar al montaje —no lee `window`— así que tampoco hay
+  // estado ni efecto: es una constante por sala.
+  const enlace = urlDeSala(roomId);
 
   const soyHost = estado.soy.es_host;
   const organizador = estado.participantes.find((p) => p.es_host)?.nombre;

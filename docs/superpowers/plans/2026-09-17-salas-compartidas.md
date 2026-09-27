@@ -712,9 +712,32 @@ select (select count(*) from rooms) salas, (select count(*) from room_votes) vot
 - [ ] **Step 5: Safari/iPhone suspendido.** Con una ronda de 5 (120 s): bloquear el teléfono 3 minutos, desbloquear → la vista debe mostrar el resultado calculado por el servidor (o "venció"), nunca seguir votando.
 - [ ] **Step 6:** Registrar todo con fecha, dispositivo y navegador; marcar explícitamente lo que no se probó.
 
-### Task 6.1: Exclusión del build nativo
+### Task 6.1: ~~Exclusión del build nativo~~ → **Yumpeá DENTRO de la app Android** (CAMBIO DEL DUEÑO, 27/09)
 
-**Files:** Modify `scripts/build-capacitor.mjs` (`APP_FUERA` += `"sala"`), y verificar que las dos entradas (`CatalogView`, `UserHub`) están detrás de `!ES_NATIVO`. Test: `scripts/rutas-nativas` no necesita cambios (no hay ruta nativa nueva). Correr `npm run build:capacitor` en modo diagnóstico y confirmar que `out-capacitor/` no contiene `sala/`.
+🔴 **La decisión de dejar las salas sólo en web/PWA ya no vale.** Esta tarea decía "sacar `sala` del artefacto y que un enlace se abra en el navegador"; ahora el recorrido completo —crear o entrar, votar y ver el resultado— tiene que funcionar adentro de la app.
+
+**Lo que se encontró al mirar el build:** 🔴 **el artefacto nativo NO COMPILABA**, y estaba así desde que entró `app/sala/`. Verificado el 27/09:
+
+```
+Error: Page "/sala/[id]" is missing "generateStaticParams()"
+so it cannot be used with "output: export" config.
+```
+
+O sea que no había AAB posible, con salas o sin ellas.
+
+- [x] **Step 1 — la ruta.** `app/s/page.tsx` + `components/nativo/SalaDesdeQuery.tsx`, el mismo patrón que `/t` y `/p` y por el mismo motivo (el id es un uuid de la base, no se puede enumerar). `hrefSala` en `lib/rutas.ts` decide `/sala/<uuid>` en web y `/s/?id=<uuid>` en el contenedor. Del artefacto se excluye **sólo el segmento dinámico**: `APP_FUERA` pasó a admitir subrutas (`sala/[id]`), así que `app/sala/nueva` sigue viajando. La lista blanca del guion de arranque sale del artefacto, así que `/s/` entra sola — comprobado en el `index.html` generado.
+- [x] **Step 2 — el enlace de invitación.** `urlDeSala` en `lib/compartir.ts`: **siempre** `https://app.yump.ar/sala/<uuid>`, también dentro del contenedor. El lobby lo armaba con `location.origin`, que adentro de la app es `https://localhost` — el organizador copiaba un enlace que no le servía a nadie, ni a él.
+- [x] **Step 3 — la entrada visible.** `SALAS_VISIBLES` dejó de mirar `ES_NATIVO`; el kill switch por variable sigue igual.
+- [x] **Step 4 — App Links.** intent-filter con `autoVerify` **acotado a `/sala/`** (el resto del sitio sigue abriendo en el navegador) y `components/nativo/EnlacesDeSala.tsx`, que cubre los dos casos: app cerrada (`getLaunchUrl`) y en segundo plano (`appUrlOpen`). La traducción url pública → ruta interna es lista blanca (`lib/sala/enlace-nativo.ts`).
+- [ ] ⏳ **Step 5 — `assetlinks.json`: PENDIENTE.** Necesita la huella SHA-256 de **Play App Signing** (no la de la clave de subida, que está justo debajo en la misma pantalla). Procedimiento completo, plantilla y verificación: [`docs/ANDROID-APP-LINKS.md`](../../ANDROID-APP-LINKS.md). Sin el archivo el enlace igual abre la app, pero Android puede mostrar el desambiguador.
+- [x] **Step 6 — build real.** `next build` con `output: export` en verde (`/s` y `/sala/nueva` presentes, `/sala/[id]` ausente), `cap sync android`, y **`./gradlew assembleDebug` BUILD SUCCESSFUL** con el intent-filter presente en el manifest fusionado del APK.
+
+### Task 6.1.b: invitación a instalar Yump al terminar una sala (DUEÑO, 27/09)
+
+- [x] **Step 1:** `components/sala/InvitacionInstalar.tsx`, montado **último** dentro de `PieResultado` — debajo de "Cerrar sala" cuando hay ganadora y debajo de "Otra tanda" cuando no la hay. Que no aparezca antes del resultado no es una condición que se compruebe: ese pie **sólo existe** en las tres pantallas de resultado final, y el empate sin resolver arma su propio bloque.
+- [x] **Step 2:** La decisión vive en `lib/sala/invitacion-instalar.ts`, puro: nada en el contenedor, nada con Yump ya instalada como PWA, nada en escritorio, instrucciones en iPhone, y en **Android nada hasta que `NEXT_PUBLIC_YUMP_PLAY_PUBLICA=1`** — la bandera nace apagada porque la app está en prueba cerrada Alpha y la ficha pública todavía no sirve. El sistema se detecta por UA y **no** por `beforeinstallprompt`, que no se dispara si la PWA ya fue descartada o si el navegador no lo soporta.
+- [x] **Step 3:** El aviso PWA se suprime en **todo** `/sala/*` (y en `/s`), para que no salte en medio de una votación ni compita con esta invitación. `prefer_related_applications` **no se tocó**: se evalúa aparte.
+- [x] **Step 4:** No se promete que instalar recupere la sala recién jugada. No podría: la credencial del participante vive en el `localStorage` del navegador y no viaja a la app, y la ventana de resultado dura 5 minutos.
 
 ### Task 6.2: Docs
 

@@ -6,6 +6,7 @@ import Confetti from "../desempate/Confetti";
 import CompartirMatch from "./CompartirMatch";
 import PrepararTanda from "./PrepararTanda";
 import CerrarSala from "./CerrarSala";
+import InvitacionInstalar from "./InvitacionInstalar";
 import CelebracionMatch, { permiteCelebracion } from "./CelebracionMatch";
 import { genreLabel } from "../data";
 import { hrefTitulo } from "@/lib/rutas";
@@ -118,6 +119,11 @@ export function PieResultado({ estado, roomId, seg, releer }: { estado: EstadoSa
           <PrepararTanda roomId={roomId} rotulo="Otra tanda" releer={releer} hint="Sin repetir las películas que ya salieron." />
         </section>
       ) : null}
+      {/* ÚLTIMA, siempre: así queda debajo de "Cerrar sala" cuando hay ganadora
+          y debajo de "Otra tanda" cuando no la hay. Y como este pie sólo existe
+          en las tres pantallas de resultado final, no puede aparecer en el
+          lobby, en la votación ni en un empate sin resolver. */}
+      <InvitacionInstalar />
     </div>
   );
 }

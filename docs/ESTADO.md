@@ -167,6 +167,33 @@
   el hub sigue sin botón porque la tarjeta entera es el enlace. **Sólo cambió el
   rótulo**: rutas (`/sala/nueva`, `/sala/[id]`), tablas, RPC y los nombres de
   archivo (`PelimatchTile.tsx`) siguen igual. Verificado a 375 px.
+  **RONDA DEL DUEÑO (27/09): Yumpeá DENTRO de la app Android.** La decisión de
+  dejarla sólo en web/PWA se revirtió. 🔴 **Hallazgo:** el artefacto nativo **no
+  compilaba** desde que entró `app/sala/` (`Page "/sala/[id]" is missing
+  "generateStaticParams()"`), o sea que no había AAB posible. **Comprobado
+  automáticamente:** ruta `/s/?id=<uuid>` con el patrón de `/t` y `/p`; del
+  paquete se excluye sólo el segmento dinámico, así que `/sala/nueva` sigue
+  viajando; el enlace de invitación es siempre `https://app.yump.ar/sala/<id>`
+  (antes salía de `location.origin`, que en el contenedor es
+  `https://localhost`); la entrada dejó de ocultarse en Android; intent-filter
+  con `autoVerify` acotado a `/sala/` y manejo de los dos casos (app cerrada con
+  `getLaunchUrl`, en segundo plano con `appUrlOpen`); traducción del enlace por
+  lista blanca. Invitación a instalar Yump al final de las tres pantallas de
+  resultado final, con Android en blanco hasta que `NEXT_PUBLIC_YUMP_PLAY_PUBLICA=1`
+  (la app está en prueba cerrada Alpha) e instrucciones en iPhone; el aviso PWA
+  se suprime en todo `/sala/*`. **Comprobado con build real:** export estático en
+  verde, `cap sync android` y **`./gradlew assembleDebug` BUILD SUCCESSFUL**, con
+  el intent-filter presente en el manifest fusionado del APK. Suite 1914 (1898
+  ok, 0 fallos, 16 omitidos), `tsc` limpio, `npm run build` web en verde.
+  ⏳ **PENDIENTE y bloqueante para la verificación de dominio:**
+  `public/.well-known/assetlinks.json`, que necesita la huella SHA-256 de **Play
+  App Signing** del dueño; no se creó ni se desplegó
+  ([`ANDROID-APP-LINKS.md`](ANDROID-APP-LINKS.md)). 🔴 **NADA se probó en un
+  teléfono**: ni el enlace de WhatsApp, ni la instalación, ni la invitación en
+  pantalla. `prefer_related_applications` no se tocó.
+  ⚠️ `npm run build:capacitor` **falla en la máquina del dueño** por
+  `NEXT_PUBLIC_SITE_URL` ausente en `.env.local`; en esta sesión se inyectó desde
+  afuera sin tocar el archivo.
   Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:

@@ -190,8 +190,30 @@ const ARCHIVOS = [
   "next.config.mjs", "tsconfig.json", "postcss.config.mjs",
   "tailwind.config.ts", "next-env.d.ts", "package.json", "package-lock.json",
 ];
-/** Rutas de `app/` que NO viajan. */
-const APP_FUERA = new Set(["api", "admin", "titulo", "persona"]);
+/**
+ * Rutas de `app/` que NO viajan, relativas a `app/` y con "/" como separador.
+ *
+ * 🔴 ADMITEN SUBRUTAS, y eso es lo que permite dejar `sala/nueva` adentro. Las
+ * cuatro primeras son directorios enteros; `sala/[id]` es sólo el segmento
+ * dinámico: su id es un uuid de la base, no se puede enumerar, y el export
+ * estático la rechaza —verificado el 27/09: el build muere con
+ * `Page "/sala/[id]" is missing "generateStaticParams()"`, y así estaba desde
+ * que entró la carpeta `app/sala`, o sea que el AAB no compilaba—. Adentro del
+ * contenedor esa sala se muestra con `/s/?id=<uuid>`, igual que `/t` y `/p`.
+ */
+const APP_FUERA = new Set(["api", "admin", "titulo", "persona", "sala/[id]"]);
+
+/**
+ * ¿La ruta relativa a `app/` queda fuera del artefacto? `rel` viene con "/" y
+ * sin barra inicial; "" es `app/` misma. Pura, para poder probarla.
+ */
+export function excluidaDeApp(rel) {
+  if (!rel) return false;
+  for (const fuera of APP_FUERA) {
+    if (rel === fuera || rel.startsWith(fuera + "/")) return true;
+  }
+  return false;
+}
 /** De `public/`, lo que NO viaja: el service worker (defensa de build, CP6). */
 export const PUBLIC_FUERA = new Set(["sw.js", "sw"]);
 
@@ -217,13 +239,15 @@ export function copiarAlStaging(dirStaging) {
   mkdirSync(join(dirStaging, COMPARTIDO_SUPABASE), { recursive: true });
   cpSync(COMPARTIDO_SUPABASE, join(dirStaging, COMPARTIDO_SUPABASE), { recursive: true });
 
-  // `app/` sin las cuatro rutas excluidas. `app/t` y `app/p` SÍ viajan: no
-  // están en la lista, y son las que reemplazan a titulo y persona.
+  // `app/` sin las rutas excluidas. `app/t`, `app/p`, `app/s` y `app/sala/nueva`
+  // SÍ viajan: no están en la lista. La comparación es sobre la ruta relativa
+  // COMPLETA, no sobre el primer segmento, que es lo que hace posible sacar
+  // `sala/[id]` sin llevarse `sala/nueva`.
   cpSync("app", join(dirStaging, "app"), {
     recursive: true,
     filter: (src) => {
-      const rel = resolve(src).slice(resolve("app").length + 1).split(sep)[0];
-      return !rel || !APP_FUERA.has(rel);
+      const rel = resolve(src).slice(resolve("app").length + 1).split(sep).join("/");
+      return !excluidaDeApp(rel);
     },
   });
 

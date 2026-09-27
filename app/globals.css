@@ -1182,6 +1182,12 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-entra img{width:110px;aspect-ratio:2/3;object-fit:cover;border-radius:var(--radius-sm);box-shadow:var(--sh)}
 .sala-entra figcaption{font-size:12.5px;color:var(--dim);line-height:1.25}
 .sala-carita{font-size:clamp(56px,16vw,84px);line-height:1;margin:6px 0 10px;text-align:center}
+/* La invitacion a instalar, al final del resultado: bloque secundario del
+   flujo, no una ventana flotante. Sin position:fixed a proposito. */
+.sala-instalar{margin:26px auto 0;padding:14px 16px;max-width:36ch;border:1px solid var(--line-2);border-radius:var(--radius-sm);background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.sala-instalar-txt{color:var(--dim);font-size:13.5px;line-height:1.5;margin:0}
+.sala-instalar-txt strong{color:var(--text)}
+.sala-instalar .rlt-btn{text-decoration:none}
 .sala-sin-bajada{max-width:36ch;margin-left:auto;margin-right:auto}
 /* Lo usa ResultadoEmpate para una card empatada sin póster. Las cards que se
    separaban en "sin match" se retiraron con esa pantalla (23/09). */
