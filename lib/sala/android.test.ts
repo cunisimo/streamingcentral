@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { hrefSala, parseParamsSala } from "../rutas.ts";
 import { urlDeSala, SITIO_PUBLICO } from "../compartir.ts";
 import { rutaDeEnlace, HOST_PUBLICO } from "./enlace-nativo.ts";
-import { excluidaDeApp } from "../../scripts/build-capacitor.mjs";
+import { excluidaDeApp, APP_DESDE_ENV, APP_DEL_SCRIPT, motivoParaNoConstruirRelease } from "../../scripts/build-capacitor.mjs";
 
 const leer = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 /**
@@ -159,4 +159,37 @@ test("⏳ assetlinks.json: si algún día aparece, no puede llevar el marcador d
     assert.doesNotMatch(h, /AQUI_VA|PLACEHOLDER|XX:XX/i, "quedó el marcador de la plantilla");
     assert.match(h, /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/, `huella con forma inválida: ${h}`);
   }
+});
+
+test("🔴 el kill switch de la WEB no viaja al paquete: NEXT_PUBLIC_SALAS_ACTIVAS no está en la allowlist", () => {
+  // Es la propiedad que permite deployar la web con la entrada OCULTA
+  // (`NEXT_PUBLIC_SALAS_ACTIVAS=0` en Vercel) mientras la app de la prueba
+  // cerrada SÍ la muestra: `entornoDelBuild` arma el entorno desde cero, sin
+  // heredar `process.env`, y sólo pasa lo que está en las dos allowlists. La
+  // variable llega `undefined` al bundle nativo, y `undefined !== "0"`.
+  assert.deepEqual(APP_DESDE_ENV, [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SITE_URL",
+  ]);
+  assert.deepEqual(APP_DEL_SCRIPT, ["CAPACITOR", "NEXT_PUBLIC_YUMP_NATIVO", "NEXT_PUBLIC_YUMP_API_BASE"]);
+  for (const v of ["NEXT_PUBLIC_SALAS_ACTIVAS", "NEXT_PUBLIC_YUMP_PLAY_PUBLICA", "SALAS_ACTIVAS"]) {
+    assert.ok(!APP_DESDE_ENV.includes(v) && !APP_DEL_SCRIPT.includes(v), v);
+  }
+  // Y el entorno se construye de cero: si heredara process.env, la variable de
+  // la máquina que compila se colaría en el artefacto de Play.
+  const script = readFileSync(join(process.cwd(), "scripts/build-capacitor.mjs"), "utf8");
+  assert.match(script, /NO se hereda `process\.env`/);
+});
+
+test("el guard de la release sigue exigiendo la base de Producción exacta", () => {
+  // Apuntar el AAB a otro servidor "para probar" es justo el error que este
+  // guard existe para impedir: una Preview responde 302 al SSO de Vercel y la
+  // app lo muestra como "sin conexión", recién en el teléfono de un tester.
+  assert.equal(motivoParaNoConstruirRelease("https://app.yump.ar", true), null);
+  for (const base of ["https://app.yump.ar/", "https://yump.ar", "https://x.vercel.app", "http://app.yump.ar"]) {
+    assert.match(String(motivoParaNoConstruirRelease(base, true)), /sólo puede apuntar a https:\/\/app\.yump\.ar/);
+  }
+  // Sin --release se puede usar cualquier base: eso no cambió.
+  assert.equal(motivoParaNoConstruirRelease("https://ejemplo.invalid", false), null);
 });
