@@ -244,6 +244,34 @@
   hasta deployar y ver `app.yump.ar: verified` en un teléfono.
   **Nada ejecutado:** sin migración, sin encendido, sin deploy, sin merge, sin
   push y sin subir el AAB a Play. Lo único que falta ahora son autorizaciones.
+  🔴 **LANZAMIENTO AUTORIZADO EL 27/09 Y **NO EJECUTADO**: DETENIDO ANTES DE
+  TOCAR PRODUCCIÓN.** El dueño autorizó migración, encendido, merge/push/deploy y
+  subida del AAB al canal Alpha, con la condición de verificar antes que el AAB y
+  el deploy web correspondan al mismo código. **No corresponden, y por eso se
+  frenó.** Evidencia, toda comprobada en este repositorio:
+  1. **`origin/main` está 41 commits por delante de `feat/salas`** e incluye
+     trabajo mayor que la rama no tiene: la **Etapa 3.c.1** (pausa compartida ante
+     429) y el **hotfix de supresiones del #24 ya mergeado y desplegado**
+     (`594dd09`, `06bdfd1`). El AAB firmado se compiló del árbol de `feat/salas`,
+     así que **no contiene nada de eso**: el teléfono correría un código distinto
+     del que serviría `app.yump.ar`.
+  2. **El merge no es limpio:** `git merge-tree` marca **3 conflictos** —
+     `docs/ESTADO.md`, `docs/ISSUES.md` y `lib/descartes-tmdb-inventario.test.ts`.
+  3. **Los cambios sin commitear del #24 ya están en `main`**: `lib/disponibilidad.ts`,
+     `lib/enrich.ts` y `lib/claves.ts` del árbol son **idénticos** a los de
+     `origin/main`. El árbol quedó desactualizado, no tiene trabajo en riesgo ahí;
+     `lib/supresiones-disponibilidad.ts` sí difiere (114 líneas menos que en main).
+  **Accesos que además faltan, comprobados:** el MCP de Supabase responde
+  **`Unauthorized`** (sin token), así que la migración no se puede aplicar desde
+  acá; y no hay ninguna vía para subir un AAB a Play Console. Los pasos 1 y 3 son
+  del dueño.
+  **Lo que SÍ quedó listo y verificado** (ver [`YUMPEA-PRUEBA-CERRADA.md`](YUMPEA-PRUEBA-CERRADA.md)):
+  AAB firmado con `versionCode 2`, firma de subida correcta, API de Producción y
+  Yumpeá adentro; `assetlinks.json` con las tres huellas de firma de aplicación,
+  servido con 200 y sin redirecciones. **Ese AAB hay que volver a compilarlo**
+  desde el árbol fusionado antes de subirlo.
+  **Nada publicado:** sin migración, sin encendido, sin merge, sin push, sin
+  deploy y sin subida a Play. **Nada probado en teléfonos.**
   Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:

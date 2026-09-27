@@ -370,10 +370,13 @@ Ya no falta ningún dato tuyo: sólo autorizaciones.
   cuando Yump con Yumpeá sea **pública**. Terminar la prueba cerrada NO alcanza:
   la ficha de Play no le sirve a quien no está en la lista de testers, y ése es
   justamente el enlace inutilizable que no queremos mostrar.
-- **`assetlinks.json`**: no se creó ni se desplegó, y no se inventó la huella.
-  Sin él el enlace de WhatsApp **lleva a la sala igual** —abre `app.yump.ar` en
-  el navegador— pero **no está garantizado que abra la app instalada**: en
-  Android 12+ abre el navegador directamente, sin preguntar. Ver el paso 6.
+- **`assetlinks.json`**: ✅ **creado** en `public/.well-known/`, con las tres
+  huellas de firma de aplicación, y verificado (JSON válido y servido con 200,
+  `application/json`, sin redirecciones). ⏳ **Falta desplegarlo**: `app.yump.ar`
+  todavía lo sirve en 404. Hasta entonces el enlace de WhatsApp **lleva a la sala
+  igual** —abre `app.yump.ar` en el navegador— pero **no está garantizado que
+  abra la app instalada**: en Android 12+ abre el navegador directamente, sin
+  preguntar. Ver el paso 6.
 - **`prefer_related_applications`**: sin tocar.
 
 ## 8. Un arreglo local que ya está hecho
