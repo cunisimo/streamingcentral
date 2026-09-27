@@ -69,18 +69,53 @@ entrada de Yumpeá y nada más.
 ### La forma más segura, sin un segundo proyecto de Supabase
 
 Usar el proyecto que ya existe, **con las salas naciendo apagadas**. La
-migración está diseñada justo para eso: `sala_config` nace con
-`activas = 'false'`, así que aplicarla no habilita nada.
+migración está diseñada justo para eso: `sala_config` nace apagada, así que
+aplicarla no habilita nada.
 
-**Y la verificación va ANTES de tocar Play:** una vez que el backend está vivo,
-se completa una sala real **desde el navegador del teléfono** en
-`app.yump.ar/sala/nueva`. Es el mismo Supabase, la misma API y las mismas RPC
-que va a usar la app; lo único que no cubre es el contenedor y los App Links.
-Recién si eso anda se justifica subir un AAB.
+**Las dos superficies comparten backend**, y eso es lo que permite verificar
+antes de tocar Play: el Home web y la app usan el MISMO Supabase, la MISMA ruta
+de servidor y las MISMAS RPC. Lo único propio de Android es el contenedor y los
+App Links.
 
-## 4. Los cuatro pasos que requieren tu autorización
+**Por eso la verificación va ANTES de subir el AAB:** con el backend vivo se
+completa una sala real desde el navegador —escritorio y teléfono— y recién si
+eso anda se justifica un artefacto para Play.
 
-### Paso 1 — Migración en Supabase Producción (salas APAGADAS)
+⚠️ **Y desde el 27/09 esa verificación no es un ensayo privado.** El dueño
+decidió que la entrada NO se oculte en la web, así que el mismo deploy que
+habilita la prueba deja Yumpeá viva para cualquiera que entre a `app.yump.ar`.
+
+## 4. Los pasos que requieren tu autorización
+
+🔴 **Decisión del dueño (27/09): la entrada de Yumpeá NO se oculta en la web.**
+Una vez encendida, aparece y funciona en el Home web y en la app de la prueba
+cerrada. La web no está restringida técnicamente a testers y eso se acepta. El
+paso que deployaba con `NEXT_PUBLIC_SALAS_ACTIVAS=0` **se quitó**, y con él la
+única variable que había que tocar en Vercel: ahora **no hay que cambiar ninguna**.
+
+⚠️ **Encender es lanzar en la web.** No es un ensayo privado: desde el segundo en
+que estén las dos cosas —el código deployado y `activas` en `true`— cualquiera
+que entre a `app.yump.ar` ve el banner y puede armar una sala. El interruptor de
+Supabase se conserva justamente para poder apagarlo si aparece un problema.
+
+### El ORDEN cambió, y no es un detalle
+
+Encender va **antes** del deploy, no después. Con el orden anterior había una
+ventana en la que el banner ya estaba en el Home y tocarlo daba "Las salas están
+desactivadas por ahora. Probá más tarde." — un botón visible que falla. Antes
+del deploy, en cambio, encender no se nota: ningún código desplegado usa esas
+tablas todavía.
+
+| # | Paso | Se nota en la web |
+|---|---|---|
+| 1 | Migración en Supabase (nace apagada) | no |
+| 2 | Encender las salas | no |
+| 3 | Deploy del código | **sí: Yumpeá queda viva para todos** |
+| 4 | Verificar en la web | — |
+| 5 | Keystore, versionCode, AAB y subida al canal Alpha | no |
+| 6 | Verificar en Android | — |
+
+### Paso 1 — Migración en Supabase Producción (nace apagada)
 
 **Qué cambia:** se crean **6 tablas** (`rooms`, `room_participants`,
 `room_rounds`, `room_titles`, `room_votes`, `sala_config`), **24 funciones** y
@@ -102,77 +137,113 @@ select jobname, schedule from cron.job where jobname = 'sala-barrido';
 **Cómo se revierte:** `supabase/migrations/009_salas_down.sql` — desagenda el
 cron, borra las 24 funciones y las 6 tablas en orden inverso. No toca nada más.
 
-**Riesgo con las salas apagadas: ninguno para los usuarios.** Ningún código
-desplegado referencia esas tablas todavía.
+**Riesgo: ninguno para los usuarios.** Ningún código desplegado referencia esas
+tablas todavía.
 
-### Paso 2 — Deploy del código a Producción
+### Paso 2 — Encender las salas, ANTES del deploy
 
-Es lo que pone `/api/sala/preparar` en `app.yump.ar`. Implica **merge y push de
-`feat/salas`**, que no están autorizados.
-
-**Con la entrada oculta en la web.** En Vercel Producción:
-
-```
-NEXT_PUBLIC_SALAS_ACTIVAS = 0      → la entrada de Yumpeá NO se dibuja en la web
-SALAS_ACTIVAS             = (sin definir)  → la API sí responde: la app la necesita
+```sql
+update sala_config set valor = 'true' where clave = 'activas';
 ```
 
-🔴 **La app de Play NO se entera de `NEXT_PUBLIC_SALAS_ACTIVAS=0`, y está
-verificado.** El build nativo arma su entorno desde cero, sin heredar
-`process.env`, y sólo pasa tres variables públicas por allowlist; esa no está.
-Llega `undefined` al bundle, y `undefined !== "0"`. Hay un test que fija las dos
-allowlists justamente para que esto no se rompa sin avisar.
+**Cómo se comprueba:** `select sala_activas();` devuelve `true`.
 
-⚠️ **Las variables de Vercel se aplican en el deployment SIGUIENTE**, así que hay
-que definirlas antes de deployar, no después.
+**Por qué acá y no después:** evita la ventana del botón que falla. Lo único que
+habilita en este momento es que las RPC respondan a quien las conozca; como
+`/api/sala/preparar` todavía no existe, ninguna sala puede pasar del lobby y el
+barrido las borra solas.
 
-**Cómo se comprueba:**
+**Cómo se revierte:** la misma consulta con `false`. Inmediato, sin deploy:
+`sala_crear` y `sala_unirse` rechazan en el acto y las salas en curso terminan
+solas.
+
+### Paso 3 — Deploy del código a Producción
+
+Es lo que pone `/api/sala/preparar` en `app.yump.ar` y lo que hace aparecer el
+banner. Implica **merge y push de `feat/salas`**, que no están autorizados.
+
+**Variables de Vercel: ninguna.** `SALAS_ACTIVAS` y `NEXT_PUBLIC_SALAS_ACTIVAS`
+se dejan **sin definir**, que es lo que las deja encendidas. Siguen existiendo
+como segundo interruptor por si hace falta (ver "Cómo se apaga", abajo).
+
+⚠️ **Lo que este deploy trae además de las salas:** todo lo de la rama. Conviene
+que lo mire tu auditoría antes, que es el paso 6.3 del plan.
+
+**Cómo se revierte:** en Vercel, promover el deployment anterior. Es inmediato,
+no depende de git y hace desaparecer el banner por completo.
+
+### Paso 4 — Verificar en la web (antes de tocar Play)
+
+Es la verificación que pediste antes de subir nada, y ahora cubre además la
+superficie que acaba de quedar viva para todos.
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X POST https://app.yump.ar/api/sala/preparar
 # 400 o 401 = la ruta existe.  404 = el deploy no llegó.  503 = SALAS_ACTIVAS=0
 ```
 
-Y en la web, que el banner de Yumpeá **no** aparezca en el Home.
+En el **escritorio** y en el **navegador del teléfono**, con dos participantes:
 
-**Cómo se revierte:** en Vercel, promover el deployment anterior. Es inmediato y
-no depende de git.
+1. El banner **🍿 Yumpeá · Hacé match** aparece en el Home, debajo del bloque de
+   la ruleta.
+2. Crear sala, copiar el enlace y comprobar que empieza con
+   `https://app.yump.ar/sala/` — nunca `localhost`.
+3. El invitado entra **sin cuenta** desde el enlace, y no se le piden
+   plataformas.
+4. Empezar una tanda de 5, votar en los dos y llegar a un resultado.
+5. En la pantalla de resultado, la **invitación a instalar**: en iPhone las
+   instrucciones; en Android, **nada** todavía.
+6. `select count(*) from rooms;` en Supabase para ver que quedó registrada, y
+   que el barrido la borra unos minutos después del cierre.
 
-⚠️ **Lo que este deploy trae además de las salas:** todo lo de la rama. Conviene
-que lo mire tu auditoría antes, que es el paso 6.3 del plan.
+Es el mismo Supabase, la misma API y las mismas RPC que va a usar la app. Lo
+único que **no** cubre es el contenedor y los App Links.
 
-### Paso 3 — Encender las salas
+### Paso 5 — Subir el AAB al canal cerrado que ya existe
 
-```sql
-update sala_config set valor = 'true' where clave = 'activas';
-```
-
-**Se revierte con la misma consulta y `'false'`**, sin deploy y sin esperar
-nada: `sala_crear` y `sala_unirse` empiezan a rechazar en el acto y las salas en
-curso terminan solas.
-
-🔴 **Mientras esté encendido, cualquiera que conozca las rutas puede crear una
-sala desde la web**, aunque el banner no se dibuje. La entrada oculta es una
-decisión de interfaz, no un control de acceso: los controles son estos dos
-interruptores. Por eso conviene encenderlo para la ventana de prueba y apagarlo
-después.
-
-### Paso 4 — Subir el AAB al canal cerrado que ya existe
-
-Sólo después de completar una sala real desde el navegador del teléfono.
+Sólo después del paso 4.
 
 1. Crear `android/keystore.properties` (fuera de Git) con `storeFile`,
    `storePassword`, `keyAlias` y `keyPassword` del keystore de carga.
 2. Subir el `versionCode` al número que diga Play, más uno.
 3. `node scripts/build-capacitor.mjs --release --api-base=https://app.yump.ar`
 4. `node node_modules/@capacitor/cli/bin/capacitor sync android`
-5. `./gradlew bundleRelease` → `android/app/build/outputs/bundle/release/app-release.aab`
-6. Play Console → **Testing → Closed testing → el canal Alpha que ya existe** →
-   Create new release → subir el AAB.
+5. `./gradlew bundleRelease`, que deja el AAB en
+   `android/app/build/outputs/bundle/release/app-release.aab`
+6. Play Console, **Testing → Closed testing → el canal Alpha que ya existe**,
+   Create new release, subir el AAB.
 
 **Mismo canal, misma lista de testers.** No hace falta prueba interna ni reducir
 la lista: la app instalada se actualiza sola porque Play App Signing vuelve a
 firmar con la misma clave, así que la firma no cambia y no hay que desinstalar.
+
+### Paso 6 — Verificar en Android, en el teléfono
+
+Con la app ya actualizada desde la prueba cerrada:
+
+1. El banner de Yumpeá aparece en el Home **de la app**.
+2. Crear una sala desde la app y completar la tanda con un segundo
+   participante (otro teléfono, o el navegador del escritorio).
+3. El enlace que comparte la app empieza con `https://app.yump.ar/sala/`.
+4. Ese enlace, abierto desde WhatsApp con la app **cerrada** y con la app **en
+   segundo plano**, abre la sala dentro de la app. ⚠️ Mientras no esté
+   `assetlinks.json`, Android puede mostrar el desambiguador: eso no es un bug
+   del enlace.
+5. En la pantalla de resultado **no** aparece la invitación a instalar.
+6. Botón Atrás en lobby, votación y resultado; y perder conexión a mitad de
+   ronda.
+
+### Cómo se apaga, si algo sale mal
+
+| Herramienta | Efecto | Cuándo se aplica |
+|---|---|---|
+| `sala_config.activas` en `false` | Nadie crea ni entra; las salas en curso terminan solas. El banner **sigue visible** y dice "Las salas están desactivadas por ahora. Probá más tarde." | **Inmediato** |
+| Promover el deployment anterior en Vercel | El banner desaparece y la API vuelve a no existir | Inmediato |
+| `NEXT_PUBLIC_SALAS_ACTIVAS=0` / `SALAS_ACTIVAS=0` | Oculta el banner / 503 en la API | ⚠️ **Sólo en el deployment siguiente** |
+| `009_salas_down.sql` | Retira tablas, funciones y cron | Cuando se decida abandonar |
+
+El primero es el que usás ante un problema: actúa sobre lo que los teléfonos
+escriben directo en Supabase, que es lo único que un deploy no puede frenar.
 
 ## 5. Lo que tenés que hacer vos
 
@@ -181,16 +252,18 @@ firmar con la misma clave, así que la firma no cambia y no hay que desinstalar.
 | 1 | Leer el `versionCode` vigente en Play Console | No tengo acceso a tu consola |
 | 2 | Crear `android/keystore.properties` con tu keystore de carga | Contraseñas tuyas; no van al repo ni a un chat |
 | 3 | Autorizar el **paso 1** (migración en Producción) | Cambia Producción |
-| 4 | Autorizar el **paso 2** (merge, push y deploy + dos variables en Vercel) | Cambia Producción |
-| 5 | Autorizar el **paso 3** (encender las salas) | Cambia Producción |
+| 4 | Autorizar el **paso 2** (encender las salas) | Cambia Producción |
+| 5 | Autorizar el **paso 3** (merge, push y deploy). **Ninguna variable de Vercel que tocar** | Cambia Producción, y deja Yumpeá viva en la web para todos |
 | 6 | Copiar la huella SHA-256 de **Play App Signing** | Sólo está en tu consola (ver `ANDROID-APP-LINKS.md`) |
-| 7 | Autorizar el **paso 4** (subir el AAB) | Publica, aunque sea a testers |
+| 7 | Autorizar el **paso 5** (subir el AAB al canal Alpha) | Publica, aunque sea a testers |
 
 ## 6. Lo que queda apagado
 
 - **El botón de Google Play** del resultado: `NEXT_PUBLIC_YUMP_PLAY_PUBLICA` no
-  se define, así que en Android web no se muestra nada. Se enciende recién
-  cuando Yump con Yumpeá sea **pública**, no con la prueba cerrada.
+  se define, así que en Android web no se muestra nada. 🔴 Se enciende recién
+  cuando Yump con Yumpeá sea **pública**. Terminar la prueba cerrada NO alcanza:
+  la ficha de Play no le sirve a quien no está en la lista de testers, y ése es
+  justamente el enlace inutilizable que no queremos mostrar.
 - **`assetlinks.json`**: no se creó ni se desplegó. Sin él los enlaces de
   WhatsApp abren la app igual, pero Android puede mostrar el desambiguador.
 - **`prefer_related_applications`**: sin tocar.
