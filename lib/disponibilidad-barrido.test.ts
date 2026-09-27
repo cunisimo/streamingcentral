@@ -439,6 +439,11 @@ const CONSTRUCCIONES_PLATFORMS: { archivo: string; fragmento: string; cubierta: 
     cubierta: "la plataforma del bloque del Top pasa por las supresiones" },
   { archivo: "lib/upcoming.ts", fragmento: "platforms: suprimirPlataformas(",
     cubierta: "Próximamente arma desde Supabase y pasa por las supresiones" },
+  // Apareció al INTEGRAR: `lib/sala/` es de la rama de salas y el barrido del
+  // #24 es de `main`, así que esta construcción no existía en ninguna de las dos
+  // por separado y el test sólo se pone en rojo con las dos juntas.
+  { archivo: "lib/sala/preparacion-nucleo.ts", fragmento: "platforms: card.platforms,",
+    cubierta: "copia de una card de cardsByIds, que ya pasó por titleCard" },
 ];
 
 test("toda construcción de `platforms:` está inventariada con su cobertura", () => {
