@@ -133,11 +133,37 @@ tasks.register("verificarFirmaDeCarga") {
     }
 }
 
-afterEvaluate {
-    tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
-        dependsOn("verificarFirmaDeCarga", "verificarBaseDeApi")
+// 3. Que el paquete web sea el NUEVO, no uno viejo que quedo sincronizado.
+//
+// Gradle empaqueta lo que haya en assets/public. Si alguien reconstruye la
+// cascara y se olvida del `sync`, el AAB sale con el paquete ANTERIOR: compila,
+// se firma, se sube, y el tester actualiza a una version que no trae Yumpea.
+// Los otros dos guards no lo atrapan, porque la base de API es la correcta y la
+// firma tambien.
+//
+// Se comprueba por las rutas que la funcionalidad necesita, que son archivos
+// reales del export: /s (la sala dentro del contenedor) y /sala/nueva.
+tasks.register("verificarPaqueteConSalas") {
+    description = "Falla si el paquete web empaquetado no trae las rutas de Yumpea."
+    doLast {
+        def web = file("src/main/assets/public")
+        def faltan = ["s/index.html", "sala/nueva/index.html"].findAll { !new File(web, it).exists() }
+        if (!faltan.isEmpty()) {
+            throw new GradleException(
+                "el paquete web de ${web} no trae ${faltan.join(', ')}: quedo una cascara vieja. " +
+                "Reconstrui con --release --api-base=${BASE_PRODUCCION} y volve a sincronizar " +
+                "(node scripts/build-capacitor.mjs y despues el sync de capacitor).")
+        }
+        logger.lifecycle("verificarPaqueteConSalas: el paquete trae /s y /sala/nueva")
     }
 }
+
+afterEvaluate {
+    tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
+        dependsOn("verificarFirmaDeCarga", "verificarBaseDeApi", "verificarPaqueteConSalas")
+    }
+}
+
 
 repositories {
     flatDir{

@@ -96,14 +96,19 @@ test("el script declara --release y corta antes de construir", () => {
 // `cap sync` viejo, de otra rama, de una copia a mano. Por eso el segundo guard
 // mira el RESULTADO y no la intención.
 
-test("🔴 bundleRelease depende de los dos guards", () => {
+test("🔴 bundleRelease depende de los TRES guards", () => {
   assert.match(GRADLE, /tasks\.register\("verificarBaseDeApi"\)/, "falta el guard de la API");
   assert.match(GRADLE, /tasks\.register\("verificarFirmaDeCarga"\)/, "falta el guard de la firma");
+  // El tercero entró el 27/09: un `sync` olvidado dejaba pasar un AAB con el
+  // paquete web ANTERIOR —compila, se firma, se sube, y el tester actualiza a
+  // una versión sin Yumpeá—, y los otros dos no lo atrapan, porque la base de
+  // API es la correcta y la firma también.
+  assert.match(GRADLE, /tasks\.register\("verificarPaqueteConSalas"\)/, "falta el guard del paquete");
   const enganche = GRADLE.slice(GRADLE.indexOf("afterEvaluate"));
   assert.match(enganche, /bundleRelease/, "el AAB no depende de los guards");
   assert.match(enganche, /assembleRelease/, "el APK de release no depende de los guards");
-  assert.match(enganche, /dependsOn\("verificarFirmaDeCarga", "verificarBaseDeApi"\)/,
-    "el enganche no declara los dos guards");
+  assert.match(enganche, /dependsOn\("verificarFirmaDeCarga", "verificarBaseDeApi", "verificarPaqueteConSalas"\)/,
+    "el enganche no declara los tres guards");
 });
 
 test("🔴 el guard de Gradle usa la MISMA base que el script", () => {

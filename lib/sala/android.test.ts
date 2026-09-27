@@ -193,3 +193,32 @@ test("el guard de la release sigue exigiendo la base de Producción exacta", () 
   // Sin --release se puede usar cualquier base: eso no cambió.
   assert.equal(motivoParaNoConstruirRelease("https://ejemplo.invalid", false), null);
 });
+
+test("la release exige un paquete web con las rutas de Yumpeá (un `sync` olvidado no pasa)", () => {
+  // Gradle empaqueta lo que haya en assets/public. Sin este guard, reconstruir
+  // la cáscara y olvidarse de sincronizar produce un AAB que compila, se firma,
+  // se sube, y actualiza al tester a una versión SIN Yumpeá. Los otros dos
+  // guards no lo atrapan: la base de API es correcta y la firma también.
+  const gradle = readFileSync(join(process.cwd(), "android/app/build.gradle"), "utf8");
+  assert.match(gradle, /tasks\.register\("verificarPaqueteConSalas"\)/);
+  assert.match(gradle, /"s\/index\.html", "sala\/nueva\/index\.html"/);
+  assert.match(gradle, /dependsOn\("verificarFirmaDeCarga", "verificarBaseDeApi", "verificarPaqueteConSalas"\)/);
+  // Y la firma sigue sin caer a la de depuración.
+  assert.match(gradle, /NO se firma con la clave de depuracion/);
+});
+
+test("🔴 el keystore y sus contraseñas no pueden entrar a Git", () => {
+  const ig = readFileSync(join(process.cwd(), "android/.gitignore"), "utf8");
+  for (const patron of ["keystore.properties", "*.jks", "*.keystore"]) {
+    assert.ok(ig.split("\n").some((l) => l.trim() === patron), `falta en .gitignore: ${patron}`);
+  }
+  // La PLANTILLA sí se versiona, y tiene que estar vacía.
+  const ej = readFileSync(join(process.cwd(), "android/keystore.properties.example"), "utf8");
+  for (const clave of ["storeFile", "storePassword", "keyAlias", "keyPassword"]) {
+    assert.match(ej, new RegExp(`^${clave}=\s*$`, "m"), `${clave} tiene que estar vacío en la plantilla`);
+  }
+  // El `keystore.properties` real puede existir o no según la máquina: en la del
+  // dueño existe y está ignorado por la regla de arriba. Lo que sí se comprueba
+  // es que la plantilla no se haya llenado por error.
+  assert.doesNotMatch(ej, /^(storePassword|keyPassword)=.+$/m, "la plantilla tiene una contraseña escrita");
+});

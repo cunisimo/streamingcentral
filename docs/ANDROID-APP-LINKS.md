@@ -48,9 +48,20 @@ puede traer cualquier cosa.
 
 ## 3. `assetlinks.json` — ⏳ PENDIENTE, necesita tu huella
 
-Sin este archivo el enlace **igual abre la app**, pero Android no puede verificar
-el dominio y puede mostrar el desambiguador ("¿Con qué app abrir?") en vez de ir
-directo. Con el archivo correcto, va directo.
+🔴 **Sin este archivo NO está garantizado que el enlace abra la app.** Conviene
+no confundir dos cosas: el enlace **funciona igual** —quien lo recibe llega a la
+sala, porque si no abre la app abre `app.yump.ar/sala/<uuid>` en el navegador—,
+pero la verificación del dominio **falla**, y de eso depende que Android ofrezca
+la app.
+
+⚠️ **En Android 12 o posterior, un filtro de enlaces web que no verificó NO se
+ofrece**: el enlace abre el navegador directamente, sin diálogo. No hay
+desambiguador. (En Android 11 y anteriores sí aparecía "¿Con qué app abrir?", que
+al menos dejaba elegir.) El usuario puede habilitarlo a mano en Ajustes → Apps →
+Yump → Abrir enlaces admitidos, pero eso es una excepción manual, no una prueba.
+
+Por eso la apertura desde WhatsApp **no se puede dar por aprobada** hasta
+desplegar este archivo con la huella correcta y ver `verified` en un teléfono.
 
 ### Qué archivo
 

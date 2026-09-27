@@ -194,6 +194,34 @@
   ⚠️ `npm run build:capacitor` **falla en la máquina del dueño** por
   `NEXT_PUBLIC_SITE_URL` ausente en `.env.local`; en esta sesión se inyectó desde
   afuera sin tocar el archivo.
+  **RONDA DEL DUEÑO (27/09, 2ª parte): las DOS superficies, y el AAB preparado.**
+  Yumpeá va a estar visible y funcionando en el Home web **y** en la app del
+  canal de prueba cerrada; la entrada web **no** se oculta. **Comprobado con
+  build real:** el paquete web de release se construye y sincroniza, y de los
+  tres guards de Gradle pasan los dos que pueden correr —`verificarBaseDeApi` y
+  el nuevo `verificarPaqueteConSalas`, que impide que un `sync` olvidado
+  produzca un AAB con el paquete web anterior (probado en rojo y en verde)—.
+  🔴 **El AAB firmado NO se puede generar todavía:** `bundleRelease` corta en
+  `verificarFirmaDeCarga` porque falta `android/keystore.properties`, que es del
+  dueño y no sale de su máquina. Se agregó la plantilla vacía
+  `android/keystore.properties.example`; `.gitignore` ya cubría el `.jks` y las
+  contraseñas, y hay un test que lo verifica. **Faltan DOS datos de Play
+  Console**, ninguno secreto: el `versionCode` más alto subido a cualquier canal
+  y la huella SHA-256 de **Play App Signing**.
+  ⚠️ **Corrección sobre los App Links:** sin `assetlinks.json` el enlace de
+  WhatsApp **lleva a la sala igual** (por el navegador), pero **no está
+  garantizado que abra la app**: en Android 12+ un filtro que no verificó no se
+  ofrece y abre Chrome directamente, sin diálogo. Esa prueba queda **pendiente,
+  no aprobada**, hasta desplegar el archivo con la huella correcta y ver
+  `verified` en un teléfono.
+  ⚠️ **Reversión después de distribuir el AAB:** volver al deployment web
+  anterior **no** quita la actualización de los teléfonos. El primer freno es
+  `sala_config.activas = false` en Supabase, que es lo único que actúa sobre lo
+  que los teléfonos ya instalados escriben directo en la base.
+  Orden y autorizaciones en
+  [`YUMPEA-PRUEBA-CERRADA.md`](YUMPEA-PRUEBA-CERRADA.md): migración apagada →
+  encender → deploy (con `assetlinks.json` si la huella llegó) → sala completa en
+  la web → AAB al canal Alpha → sala completa en Android. **Nada ejecutado.**
   Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:

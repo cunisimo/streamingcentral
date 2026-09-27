@@ -39,8 +39,10 @@
 
                  PENDIENTE (bloquea la verificacion, no el build): ese archivo
                  todavia no existe en el dominio y necesita la huella de Play App
-                 Signing. Mientras no este, el enlace abre igual la app pero
-                 Android puede mostrar el desambiguador en vez de ir directo.
+                 Signing. Mientras no este, NO esta garantizado que el enlace
+                 abra la app: lleva a la sala igual, pero por el navegador. En
+                 Android 12+ un filtro que no verifico NO se ofrece, asi que
+                 abre Chrome directamente, sin preguntar.
 
                  El intent lo atiende components/nativo/EnlacesDeSala.tsx, que
                  cubre los dos casos: app cerrada (getLaunchUrl) y en segundo
