@@ -1,0 +1,267 @@
+{
+  "fecha": "2026-09-16T20:42:48.762Z",
+  "rama": "diseno/etapa3c-proteccion-tmdb",
+  "factorP95": 1.5,
+  "modelos": {
+    "prod-3b": {
+      "tmdb": 348,
+      "redis": 138,
+      "supabase": 355
+    },
+    "prod-3a": {
+      "tmdb": 527,
+      "redis": 138,
+      "supabase": 604
+    }
+  },
+  "escenarios": {
+    "calibracion/prod-3b/redis-40ms/S1-frio-total-en-linea": {
+      "redisPromedioMs": 40,
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 26985,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 26902,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 34.4,
+        "maxPor1s": 80,
+        "concurrenciaMax": 24,
+        "redisOps": 1004,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 398,
+          "composicionMs": 25821,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 683
+        }
+      }
+    },
+    "calibracion/prod-3b/redis-40ms/CAL-342-fondo": {
+      "objetivo": {
+        "llamadas": 342,
+        "ms": 16682
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 276,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 19707,
+        "tmdbLinea": 338,
+        "cadenciaLineaPorS": 17.2,
+        "maxPor1s": 59,
+        "concurrenciaMax": 24,
+        "redisOps": 404,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 358,
+          "composicionMs": 19088,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 261
+        }
+      }
+    },
+    "calibracion/prod-3b/redis-40ms/CAL-250-linea": {
+      "objetivo": {
+        "llamadas": 250,
+        "ms": 15091
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 17845,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 17841,
+        "tmdbLinea": 259,
+        "cadenciaLineaPorS": 14.5,
+        "maxPor1s": 45,
+        "concurrenciaMax": 24,
+        "redisOps": 325,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 295,
+          "composicionMs": 16899,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 647
+        }
+      }
+    },
+    "calibracion/prod-3b/redis-40ms/S7-miss-intradia-fondo": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 246,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 3697,
+        "tmdbLinea": 1,
+        "cadenciaLineaPorS": 0.3,
+        "maxPor1s": 1,
+        "concurrenciaMax": 1,
+        "redisOps": 64,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 316,
+          "composicionMs": 0,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 3381
+        }
+      }
+    },
+    "calibracion/prod-3b/redis-40ms/S3-frio-total-en-fondo": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 232,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 26806,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 34.5,
+        "maxPor1s": 74,
+        "concurrenciaMax": 24,
+        "redisOps": 1002,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 291,
+          "composicionMs": 26019,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 496
+        }
+      }
+    },
+    "calibracion/prod-3a/redis-40ms/S1-frio-total-en-linea": {
+      "redisPromedioMs": 40,
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 37779,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 37769,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 24.5,
+        "maxPor1s": 52,
+        "concurrenciaMax": 24,
+        "redisOps": 1005,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 320,
+          "composicionMs": 36722,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 727
+        }
+      }
+    },
+    "calibracion/prod-3a/redis-40ms/CAL-342-fondo": {
+      "objetivo": {
+        "llamadas": 342,
+        "ms": 16682
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 250,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 26855,
+        "tmdbLinea": 338,
+        "cadenciaLineaPorS": 12.6,
+        "maxPor1s": 58,
+        "concurrenciaMax": 24,
+        "redisOps": 406,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 318,
+          "composicionMs": 25816,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 721
+        }
+      }
+    },
+    "calibracion/prod-3a/redis-40ms/CAL-250-linea": {
+      "objetivo": {
+        "llamadas": 250,
+        "ms": 15091
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 24736,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 24730,
+        "tmdbLinea": 259,
+        "cadenciaLineaPorS": 10.5,
+        "maxPor1s": 45,
+        "concurrenciaMax": 24,
+        "redisOps": 326,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 318,
+          "composicionMs": 23407,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1005
+        }
+      }
+    },
+    "calibracion/prod-3a/redis-40ms/S7-miss-intradia-fondo": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 275,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 4151,
+        "tmdbLinea": 1,
+        "cadenciaLineaPorS": 0.2,
+        "maxPor1s": 1,
+        "concurrenciaMax": 1,
+        "redisOps": 64,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 348,
+          "composicionMs": 0,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 3803
+        }
+      }
+    },
+    "calibracion/prod-3a/redis-40ms/S3-frio-total-en-fondo": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 250,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 36476,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 25.4,
+        "maxPor1s": 56,
+        "concurrenciaMax": 24,
+        "redisOps": 1005,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 305,
+          "composicionMs": 35802,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 369
+        }
+      }
+    }
+  }
+}

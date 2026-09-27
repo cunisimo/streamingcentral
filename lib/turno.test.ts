@@ -24,7 +24,7 @@ import assert from "node:assert/strict";
 import { crearTurno, type OpsTurno } from "./turno.ts";
 import { crearOpsEnMemoria } from "./turno-memoria.ts";
 
-const PRIMITIVAS = ["setNx", "get", "evalRenovar", "evalPublicar", "evalEnfriar", "evalLiberar"] as const;
+const PRIMITIVAS = ["setNx", "get", "evalTomar", "evalRenovar", "evalPublicar", "evalEnfriar", "evalLiberar"] as const;
 
 /** Deps de prueba: cada primitiva se programa con una lista de respuestas; una función lanza. */
 function deps(programa: Partial<Record<(typeof PRIMITIVAS)[number], Array<unknown | (() => never)>>>) {
@@ -249,4 +249,66 @@ test("memoria: ENFRIAR convierte el turno en `enfriando:` y guarda el degradado 
   assert.equal(await m.ops.evalLiberar(C.turno, "B"), 0);
   assert.equal(await m.ops.evalLiberar(C.turno, "A"), 1);
   assert.equal(await m.ops.get(C.turno), null);
+});
+
+// ============================================================================
+// Etapa 3.c.1 (#19): TOMAR con la pausa DENTRO de la adquisición (§40.5).
+// Con `pausa` configurada, `tomar` usa el script TOMAR en vez de SET NX: la
+// comprobación de la pausa y el SET NX son UNA operación atómica y el script
+// devuelve el PTTL restante. Escrito ANTES de la implementación.
+// ============================================================================
+const PAUSA = { clave: "tmdb:pausa" };
+
+test("tomar (3.c.1): ['adquirido'] → adquirido; el script recibe [turno, pausa] y [propietario, px]", async () => {
+  const d = deps({ evalTomar: [["adquirido"]] });
+  const r = await crearTurno(d.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 });
+  assert.deepEqual(r, { estado: "adquirido", reconciliado: false });
+  assert.deepEqual(d.llamadas, ['evalTomar(["home:turno:k","tmdb:pausa"],["A","15000"])']);
+});
+
+test("🔴 tomar (3.c.1): ['pausado', 3700] → pausado con el PTTL, SIN ninguna otra operación (no se adquiere, no se reconcilia)", async () => {
+  const d = deps({ evalTomar: [["pausado", 3700]] });
+  const r = await crearTurno(d.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 });
+  assert.deepEqual(r, { estado: "pausado", restanteMs: 3700 });
+  assert.equal(d.llamadas.length, 1);
+});
+
+test("tomar (3.c.1): ['ocupado', 'B'] → ocupado con el valor; ['ocupado', 'A'] (mío: el SET ejecutó y la respuesta se perdió) → adquirido reconciliado", async () => {
+  const b = deps({ evalTomar: [["ocupado", "enfriando:B"]] });
+  assert.deepEqual(await crearTurno(b.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "ocupado", valor: "enfriando:B" });
+  const a = deps({ evalTomar: [["ocupado", "A"]] });
+  assert.deepEqual(await crearTurno(a.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "adquirido", reconciliado: true });
+});
+
+test("🔴 tomar (3.c.1): una forma inesperada del transporte ('Aborted', null, 7, ['pausado', 'x']) NUNCA es adquirido ni pausado: se reconcilia con GET como un fallo", async () => {
+  for (const raro of ["Aborted", null, 7, ["pausado", "x"], ["pausado", -1], ["adquirido", "extra", "extra"]]) {
+    const d = deps({ evalTomar: [raro], get: ["B"] });
+    assert.deepEqual(await crearTurno(d.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "ocupado", valor: "B" }, JSON.stringify(raro));
+  }
+});
+
+test("tomar (3.c.1): el script lanza → reconciliar con GET: mío → adquirido reconciliado; null → un segundo TOMAR (que puede decir pausado); dos fallos → sin-redis", async () => {
+  const a = deps({ evalTomar: [falla], get: ["A"] });
+  assert.deepEqual(await crearTurno(a.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "adquirido", reconciliado: true });
+  const b = deps({ evalTomar: [falla, ["pausado", 900]], get: [null] });
+  assert.deepEqual(await crearTurno(b.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "pausado", restanteMs: 900 });
+  const c = deps({ evalTomar: [falla, falla], get: [null, falla] });
+  assert.deepEqual(await crearTurno(c.ops, { pausa: PAUSA }).tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "sin-redis" });
+});
+
+test("tomar SIN pausa configurada (kill switch): el camino de la Etapa 2, SET NX, sin tocar evalTomar", async () => {
+  const d = deps({ setNx: ["OK"] });
+  await crearTurno(d.ops).tomar({ clave: C.turno, propietario: "A", px: 15000 });
+  assert.deepEqual(d.llamadas, ["setNx(home:turno:k,A,15000)"]);
+});
+
+test("memoria: TOMAR con pausa vigente → pausado con el restante y el turno queda libre", async () => {
+  const m = memoria();
+  const t = crearTurno(m.ops, { pausa: PAUSA });
+  await m.ops.evalPausar(["tmdb:pausa", "tmdb:pausa:ev:p:1", "tmdb:pausa:proc:p", "tmdb:eventos", "tmdb:cubos"], ["p:1", "2000", "1", "/x", "2000"]);
+  assert.deepEqual(await t.tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "pausado", restanteMs: 2000 });
+  assert.equal(m.leer(C.turno), null);
+  m.avanzar(2001);
+  assert.deepEqual(await t.tomar({ clave: C.turno, propietario: "A", px: 15000 }), { estado: "adquirido", reconciliado: false });
+  assert.deepEqual(await t.tomar({ clave: C.turno, propietario: "B", px: 15000 }), { estado: "ocupado", valor: "A" });
 });

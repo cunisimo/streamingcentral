@@ -1,0 +1,1139 @@
+{
+  "fecha": "2026-09-16T20:07:12.386Z",
+  "rama": "diseno/etapa3c-proteccion-tmdb",
+  "factorP95": 2.3,
+  "modelos": {
+    "prod-3b": {
+      "tmdb": 348,
+      "redis": 138,
+      "supabase": 355
+    },
+    "prod-3a": {
+      "tmdb": 527,
+      "redis": 138,
+      "supabase": 604
+    }
+  },
+  "escenarios": {
+    "prod-3b/S1-frio-total-en-linea": {
+      "modelo": {
+        "nombre": "prod-3b",
+        "promedios": {
+          "tmdb": 348,
+          "redis": 138,
+          "supabase": 355
+        },
+        "medianasConfiguradas": {
+          "tmdb": 306,
+          "redis": 121,
+          "supabase": 312
+        },
+        "factorP95": 2.3,
+        "promedioSobreMediana": 1.137
+      },
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 40483,
+        "hero": 6,
+        "rails": 12,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "msTotal": 40433,
+          "tmdb": 926,
+          "tmdbMs": 330197,
+          "redis": 1006,
+          "redisMs": 160649,
+          "supabase": 4,
+          "cancelada": false,
+          "degradado": false,
+          "renovaciones": 7
+        },
+        "lineaCompleta": "[home] 40433ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 7 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:1 | tmdb 926 llamadas (926 ok) 330197ms | supabase 4 consultas (4 ok) 2042ms | redis 1004 llamadas / 1006 intentos http / 1004 comandos | 962 claves (30 hit / 932 miss) | 160649ms | lotes: 68 de [1,1,2,1,93,1,20,2,5,1,28,7,1,28,1,28,1,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 926,
+          "primera": 1789589236708,
+          "ultima": 1789589275243,
+          "spanMs": 38535,
+          "cadenciaPorS": 24,
+          "maxPor1s": 83,
+          "maxPor100ms": 25,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 311,
+            "p95": 698
+          }
+        },
+        "redisOps": 1006,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 770,
+          "composicionMs": 38535,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1128
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 40483,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 40433,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 22.9,
+        "tmdbDoble": 926,
+        "cadenciaPorS": 24,
+        "maxPor1s": 83,
+        "maxPor100ms": 25,
+        "concurrenciaMax": 24,
+        "redisOps": 1006,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 770,
+          "composicionMs": 38535,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1128
+        }
+      }
+    },
+    "prod-3b/S1b-hit": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 205,
+        "cache": "HIT",
+        "origen": null,
+        "publicacion": null,
+        "cancelada": false,
+        "msTotal": 178,
+        "tmdbLinea": 0,
+        "cadenciaLineaPorS": null,
+        "tmdbDoble": 0,
+        "cadenciaPorS": null,
+        "maxPor1s": 0,
+        "maxPor100ms": 0,
+        "concurrenciaMax": 0,
+        "redisOps": 1,
+        "fases": null
+      }
+    },
+    "prod-3b/CAL-342-fondo": {
+      "objetivo": {
+        "llamadas": 342,
+        "ms": 16682,
+        "fuente": "§37, [home-fondo] 15/09"
+      },
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 644,
+        "hero": 6,
+        "rails": 12,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "msTotal": 32491,
+          "tmdb": 338,
+          "tmdbMs": 120507,
+          "redis": 403,
+          "redisMs": 62766,
+          "supabase": 2,
+          "cancelada": false,
+          "degradado": false,
+          "renovaciones": 6
+        },
+        "lineaCompleta": "[home-fondo] 32491ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 6 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:2 | tmdb 338 llamadas (338 ok) 120507ms | supabase 2 consultas (2 ok) 599ms | redis 403 llamadas / 403 intentos http / 403 comandos | 956 claves (618 hit / 338 miss) | 62766ms | lotes: 59 de [1,93,2,2,100,1,20,12,12,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 338,
+          "primera": 1789589278333,
+          "ultima": 1789589309443,
+          "spanMs": 31110,
+          "cadenciaPorS": 10.9,
+          "maxPor1s": 58,
+          "maxPor100ms": 24,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 309,
+            "p95": 708
+          }
+        },
+        "redisOps": 407,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 994,
+          "composicionMs": 31110,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 387
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 644,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 32491,
+        "tmdbLinea": 338,
+        "cadenciaLineaPorS": 10.4,
+        "tmdbDoble": 338,
+        "cadenciaPorS": 10.9,
+        "maxPor1s": 58,
+        "maxPor100ms": 24,
+        "concurrenciaMax": 24,
+        "redisOps": 407,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 994,
+          "composicionMs": 31110,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 387
+        }
+      }
+    },
+    "prod-3b/CAL-250-linea": {
+      "objetivo": {
+        "llamadas": 250,
+        "ms": 15091,
+        "fuente": "§32.1, [home] 15/09"
+      },
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 32101,
+        "hero": 6,
+        "rails": 12,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "msTotal": 32095,
+          "tmdb": 259,
+          "tmdbMs": 92890,
+          "redis": 328,
+          "redisMs": 54499,
+          "supabase": 2,
+          "cancelada": false,
+          "degradado": false,
+          "renovaciones": 6
+        },
+        "lineaCompleta": "[home] 32095ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 6 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:3 | tmdb 259 llamadas (259 ok) 92890ms | supabase 2 consultas (2 ok) 845ms | redis 328 llamadas / 328 intentos http / 328 comandos | 960 claves (697 hit / 263 miss) | 54499ms | lotes: 62 de [1,1,2,1,93,2,2,12,100,1,12,20,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 259,
+          "primera": 1789589311783,
+          "ultima": 1789589341893,
+          "spanMs": 30110,
+          "cadenciaPorS": 8.6,
+          "maxPor1s": 44,
+          "maxPor100ms": 24,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 313,
+            "p95": 701
+          }
+        },
+        "redisOps": 328,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 884,
+          "composicionMs": 30110,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1101
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 32101,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 32095,
+        "tmdbLinea": 259,
+        "cadenciaLineaPorS": 8.1,
+        "tmdbDoble": 259,
+        "cadenciaPorS": 8.6,
+        "maxPor1s": 44,
+        "maxPor100ms": 24,
+        "concurrenciaMax": 24,
+        "redisOps": 328,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 884,
+          "composicionMs": 30110,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1101
+        }
+      }
+    },
+    "prod-3b/S7-miss-intradia-fondo": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 548,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 9835,
+        "tmdbLinea": 1,
+        "cadenciaLineaPorS": 0.1,
+        "tmdbDoble": 1,
+        "cadenciaPorS": null,
+        "maxPor1s": 1,
+        "maxPor100ms": 1,
+        "concurrenciaMax": 1,
+        "redisOps": 65,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 722,
+          "composicionMs": 0,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 9113
+        }
+      }
+    },
+    "prod-3b/S3-frio-total-en-fondo": {
+      "ubPrevio": 1,
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 584,
+        "hero": 6,
+        "rails": 12,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "msTotal": 40076,
+          "tmdb": 926,
+          "tmdbMs": 333378,
+          "redis": 1000,
+          "redisMs": 154823,
+          "supabase": 4,
+          "cancelada": false,
+          "degradado": false,
+          "renovaciones": 7
+        },
+        "lineaCompleta": "[home-fondo] 40076ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 7 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:5 | tmdb 926 llamadas (926 ok) 333378ms | supabase 4 consultas (4 ok) 1051ms | redis 1000 llamadas / 1000 intentos http / 1000 comandos | 958 claves (30 hit / 928 miss) | 154823ms | lotes: 65 de [1,93,1,2,20,5,1,7,1,1,28,28,1,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 926,
+          "primera": 1789589354904,
+          "ultima": 1789589393670,
+          "spanMs": 38766,
+          "cadenciaPorS": 23.9,
+          "maxPor1s": 83,
+          "maxPor100ms": 25,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 312,
+            "p95": 719
+          }
+        },
+        "redisOps": 1004,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 688,
+          "composicionMs": 38766,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 622
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 584,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 40076,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 23.1,
+        "tmdbDoble": 926,
+        "cadenciaPorS": 23.9,
+        "maxPor1s": 83,
+        "maxPor100ms": 25,
+        "concurrenciaMax": 24,
+        "redisOps": 1004,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 688,
+          "composicionMs": 38766,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 622
+        }
+      }
+    },
+    "prod-3b/S4-dos-claves-dos-procesos": {
+      "nota": "las marcas del doble son globales: `doble` de A y B es la misma serie; la cadencia por proceso es cadenciaLineaPorS",
+      "A": {
+        "status": 200,
+        "respuestaMs": 39242,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 39236,
+        "tmdbLinea": 879,
+        "cadenciaLineaPorS": 22.4,
+        "tmdbDoble": 1474,
+        "cadenciaPorS": 38.9,
+        "maxPor1s": 162,
+        "maxPor100ms": 46,
+        "concurrenciaMax": 48,
+        "redisOps": 1638,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 788,
+          "composicionMs": 37888,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 560
+        }
+      },
+      "B": {
+        "status": 200,
+        "respuestaMs": 41568,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 41536,
+        "tmdbLinea": 620,
+        "cadenciaLineaPorS": 14.9,
+        "tmdbDoble": 1499,
+        "cadenciaPorS": 37.4,
+        "maxPor1s": 162,
+        "maxPor100ms": 46,
+        "concurrenciaMax": 48,
+        "redisOps": 1667,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 787,
+          "composicionMs": 40055,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 694
+        }
+      },
+      "global": {
+        "llamadas": 1499,
+        "primera": 1789589396075,
+        "ultima": 1789589436130,
+        "spanMs": 40055,
+        "cadenciaPorS": 37.4,
+        "maxPor1s": 162,
+        "maxPor100ms": 46,
+        "concurrenciaMax": 48,
+        "latenciaDobleMs": {
+          "p50": 318,
+          "p95": 705
+        }
+      }
+    },
+    "prod-3b/S5-tres-claves-tres-procesos": {
+      "A": {
+        "status": 200,
+        "respuestaMs": 39590,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 39582,
+        "tmdbLinea": 751,
+        "cadenciaLineaPorS": 19,
+        "tmdbDoble": 1912,
+        "cadenciaPorS": 48.9,
+        "maxPor1s": 210,
+        "maxPor100ms": 53,
+        "concurrenciaMax": 72,
+        "redisOps": 2145,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 600,
+          "composicionMs": 39112,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": -130
+        }
+      },
+      "B": {
+        "status": 200,
+        "respuestaMs": 41629,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 41623,
+        "tmdbLinea": 450,
+        "cadenciaLineaPorS": 10.8,
+        "tmdbDoble": 1916,
+        "cadenciaPorS": 47.7,
+        "maxPor1s": 210,
+        "maxPor100ms": 53,
+        "concurrenciaMax": 72,
+        "redisOps": 2162,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 599,
+          "composicionMs": 40178,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 846
+        }
+      },
+      "C": {
+        "status": 200,
+        "respuestaMs": 39525,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 39464,
+        "tmdbLinea": 715,
+        "cadenciaLineaPorS": 18.1,
+        "tmdbDoble": 1912,
+        "cadenciaPorS": 48.9,
+        "maxPor1s": 210,
+        "maxPor100ms": 53,
+        "concurrenciaMax": 72,
+        "redisOps": 2144,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 599,
+          "composicionMs": 39112,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": -247
+        }
+      },
+      "global": {
+        "llamadas": 1916,
+        "primera": 1789589437835,
+        "ultima": 1789589478013,
+        "spanMs": 40178,
+        "cadenciaPorS": 47.7,
+        "maxPor1s": 210,
+        "maxPor100ms": 53,
+        "concurrenciaMax": 72,
+        "latenciaDobleMs": {
+          "p50": 320,
+          "p95": 732
+        }
+      }
+    },
+    "prod-3a/S1-frio-total-en-linea": {
+      "modelo": {
+        "nombre": "prod-3a",
+        "promedios": {
+          "tmdb": 527,
+          "redis": 138,
+          "supabase": 604
+        },
+        "medianasConfiguradas": {
+          "tmdb": 464,
+          "redis": 121,
+          "supabase": 531
+        },
+        "factorP95": 2.3,
+        "promedioSobreMediana": 1.137
+      },
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 51903,
+        "hero": 0,
+        "rails": 0,
+        "linea": {
+          "cache": "VACIO",
+          "origen": "vacio-cancelada",
+          "publicacion": "no",
+          "msTotal": 51883,
+          "tmdb": 870,
+          "tmdbMs": 484713,
+          "redis": 951,
+          "redisMs": 153137,
+          "supabase": 4,
+          "cancelada": true,
+          "degradado": true,
+          "renovaciones": 9
+        },
+        "lineaCompleta": "[home] 51883ms total | cache VACIO | 1 composición | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno adquirido | origen vacio-cancelada | publicacion no | renovaciones 9 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:8 | CANCELADA | tmdb 870 llamadas (864 ok) 484713ms | 6 canceladas (6 en vuelo) | supabase 4 consultas (4 ok) 3351ms | redis 950 llamadas / 951 intentos http / 950 comandos | 1049 claves (33 hit / 1016 miss) | 153137ms | lotes: 74 de [1,1,2,1,93,1,20,2,5,7,1,28,1,1,28,1,28,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 870,
+          "primera": 1789589479944,
+          "ultima": 1789589528879,
+          "spanMs": 48935,
+          "cadenciaPorS": 17.8,
+          "maxPor1s": 60,
+          "maxPor100ms": 24,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 489,
+            "p95": 1085
+          }
+        },
+        "redisOps": 951,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 619,
+          "composicionMs": 48935,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 2329
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 51903,
+        "cache": "VACIO",
+        "origen": "vacio-cancelada",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 51883,
+        "tmdbLinea": 870,
+        "cadenciaLineaPorS": 16.8,
+        "tmdbDoble": 870,
+        "cadenciaPorS": 17.8,
+        "maxPor1s": 60,
+        "maxPor100ms": 24,
+        "concurrenciaMax": 24,
+        "redisOps": 951,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 619,
+          "composicionMs": 48935,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 2329
+        }
+      }
+    },
+    "prod-3a/S1b-hit": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 13519,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 13499,
+        "tmdbLinea": 63,
+        "cadenciaLineaPorS": 4.7,
+        "tmdbDoble": 63,
+        "cadenciaPorS": 5.5,
+        "maxPor1s": 28,
+        "maxPor100ms": 24,
+        "concurrenciaMax": 24,
+        "redisOps": 128,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 689,
+          "composicionMs": 11356,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1454
+        }
+      }
+    },
+    "prod-3a/CAL-342-fondo": {
+      "objetivo": {
+        "llamadas": 342,
+        "ms": 16682,
+        "fuente": "§37, [home-fondo] 15/09"
+      },
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 520,
+        "hero": 6,
+        "rails": 12,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "msTotal": 41622,
+          "tmdb": 338,
+          "tmdbMs": 182076,
+          "redis": 405,
+          "redisMs": 65118,
+          "supabase": 2,
+          "cancelada": false,
+          "degradado": false,
+          "renovaciones": 8
+        },
+        "lineaCompleta": "[home-fondo] 41622ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 8 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:10 | tmdb 338 llamadas (338 ok) 182076ms | supabase 2 consultas (2 ok) 920ms | redis 405 llamadas / 405 intentos http / 405 comandos | 956 claves (618 hit / 338 miss) | 65118ms | lotes: 59 de [1,93,2,2,12,100,12,1,20,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 338,
+          "primera": 1789589546089,
+          "ultima": 1789589585497,
+          "spanMs": 39408,
+          "cadenciaPorS": 8.6,
+          "maxPor1s": 54,
+          "maxPor100ms": 19,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 478,
+            "p95": 1082
+          }
+        },
+        "redisOps": 409,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 664,
+          "composicionMs": 39408,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1550
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 520,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 41622,
+        "tmdbLinea": 338,
+        "cadenciaLineaPorS": 8.1,
+        "tmdbDoble": 338,
+        "cadenciaPorS": 8.6,
+        "maxPor1s": 54,
+        "maxPor100ms": 19,
+        "concurrenciaMax": 24,
+        "redisOps": 409,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 664,
+          "composicionMs": 39408,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1550
+        }
+      }
+    },
+    "prod-3a/CAL-250-linea": {
+      "objetivo": {
+        "llamadas": 250,
+        "ms": 15091,
+        "fuente": "§32.1, [home] 15/09"
+      },
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 40771,
+        "hero": 6,
+        "rails": 12,
+        "linea": {
+          "cache": "MISS",
+          "origen": "propia",
+          "publicacion": "publicado",
+          "msTotal": 40765,
+          "tmdb": 259,
+          "tmdbMs": 132922,
+          "redis": 329,
+          "redisMs": 53945,
+          "supabase": 2,
+          "cancelada": false,
+          "degradado": false,
+          "renovaciones": 7
+        },
+        "lineaCompleta": "[home] 40765ms total | cache MISS | 1 composición | 0 esperas compartidas | turno adquirido | origen propia | publicacion publicado | renovaciones 7 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:11 | tmdb 259 llamadas (259 ok) 132922ms | supabase 2 consultas (2 ok) 858ms | redis 329 llamadas / 329 intentos http / 329 comandos | 960 claves (697 hit / 263 miss) | 53945ms | lotes: 62 de [1,1,2,1,93,2,2,12,100,1,12,20,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 259,
+          "primera": 1789589588970,
+          "ultima": 1789589627681,
+          "spanMs": 38711,
+          "cadenciaPorS": 6.7,
+          "maxPor1s": 44,
+          "maxPor100ms": 24,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 473,
+            "p95": 1048
+          }
+        },
+        "redisOps": 329,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 834,
+          "composicionMs": 38711,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1220
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 40771,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 40765,
+        "tmdbLinea": 259,
+        "cadenciaLineaPorS": 6.4,
+        "tmdbDoble": 259,
+        "cadenciaPorS": 6.7,
+        "maxPor1s": 44,
+        "maxPor100ms": 24,
+        "concurrenciaMax": 24,
+        "redisOps": 329,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 834,
+          "composicionMs": 38711,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1220
+        }
+      }
+    },
+    "prod-3a/S7-miss-intradia-fondo": {
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 453,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 10162,
+        "tmdbLinea": 1,
+        "cadenciaLineaPorS": 0.1,
+        "tmdbDoble": 1,
+        "cadenciaPorS": null,
+        "maxPor1s": 1,
+        "maxPor100ms": 1,
+        "concurrenciaMax": 1,
+        "redisOps": 65,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 537,
+          "composicionMs": 0,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 9625
+        }
+      }
+    },
+    "prod-3a/S3-frio-total-en-fondo": {
+      "ubPrevio": 1,
+      "medida": {
+        "providers": "n,d,m",
+        "status": 200,
+        "respuestaMs": 394,
+        "hero": 6,
+        "rails": 12,
+        "linea": {
+          "cache": "ULTIMO-BUENO",
+          "origen": "ultimo-bueno",
+          "publicacion": "no",
+          "msTotal": 51345,
+          "tmdb": 926,
+          "tmdbMs": 489092,
+          "redis": 983,
+          "redisMs": 158479,
+          "supabase": 5,
+          "cancelada": true,
+          "degradado": false,
+          "renovaciones": 9
+        },
+        "lineaCompleta": "[home-fondo] 51345ms total | cache ULTIMO-BUENO | 1 composición | 0 esperas compartidas | turno adquirido | origen ultimo-bueno | publicacion no | renovaciones 9 | propietario fc92afb3-2b9f-4b64-9295-745c440da487:15056:13 | CANCELADA | tmdb 926 llamadas (900 ok) 489092ms | 26 canceladas (2 en cola, 24 en vuelo) | supabase 5 consultas (5 ok) 3703ms | redis 983 llamadas / 983 intentos http / 983 comandos | 1039 claves (32 hit / 1007 miss) | 158479ms | lotes: 71 de [1,93,1,2,5,7,1,20,1,28,28,1,28,1,28,1,28,1,26,1,26,1,26,1,28,1,26,1,26,1,26,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,28,1,26,1,26,1,26] | clave home:es-ES.r1:v6:2429564653:d,m,n:",
+        "doble": {
+          "llamadas": 924,
+          "primera": 1789589640848,
+          "ultima": 1789589690564,
+          "spanMs": 49716,
+          "cadenciaPorS": 18.6,
+          "maxPor1s": 63,
+          "maxPor100ms": 25,
+          "concurrenciaMax": 24,
+          "latenciaDobleMs": {
+            "p50": 455,
+            "p95": 1080
+          }
+        },
+        "redisOps": 987,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 637,
+          "composicionMs": 49716,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 992
+        },
+        "completo": true
+      },
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 394,
+        "cache": "ULTIMO-BUENO",
+        "origen": "ultimo-bueno",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 51345,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 18,
+        "tmdbDoble": 924,
+        "cadenciaPorS": 18.6,
+        "maxPor1s": 63,
+        "maxPor100ms": 25,
+        "concurrenciaMax": 24,
+        "redisOps": 987,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 637,
+          "composicionMs": 49716,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 992
+        }
+      }
+    },
+    "prod-3a/S4-dos-claves-dos-procesos": {
+      "nota": "las marcas del doble son globales: `doble` de A y B es la misma serie; la cadencia por proceso es cadenciaLineaPorS",
+      "A": {
+        "status": 200,
+        "respuestaMs": 51570,
+        "cache": "VACIO",
+        "origen": "vacio-cancelada",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 51565,
+        "tmdbLinea": 830,
+        "cadenciaLineaPorS": 16.1,
+        "tmdbDoble": 1442,
+        "cadenciaPorS": 29.2,
+        "maxPor1s": 106,
+        "maxPor100ms": 46,
+        "concurrenciaMax": 48,
+        "redisOps": 1598,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 570,
+          "composicionMs": 49318,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1677
+        }
+      },
+      "B": {
+        "status": 200,
+        "respuestaMs": 51103,
+        "cache": "VACIO",
+        "origen": "vacio-cancelada",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 51097,
+        "tmdbLinea": 616,
+        "cadenciaLineaPorS": 12.1,
+        "tmdbDoble": 1442,
+        "cadenciaPorS": 29.2,
+        "maxPor1s": 106,
+        "maxPor100ms": 46,
+        "concurrenciaMax": 48,
+        "redisOps": 1597,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 569,
+          "composicionMs": 49318,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1210
+        }
+      },
+      "global": {
+        "llamadas": 1442,
+        "primera": 1789589692936,
+        "ultima": 1789589742254,
+        "spanMs": 49318,
+        "cadenciaPorS": 29.2,
+        "maxPor1s": 106,
+        "maxPor100ms": 46,
+        "concurrenciaMax": 48,
+        "latenciaDobleMs": {
+          "p50": 469,
+          "p95": 1055
+        }
+      }
+    },
+    "prod-3a/S5-tres-claves-tres-procesos": {
+      "A": {
+        "status": 200,
+        "respuestaMs": 51483,
+        "cache": "VACIO",
+        "origen": "vacio-cancelada",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 51480,
+        "tmdbLinea": 675,
+        "cadenciaLineaPorS": 13.1,
+        "tmdbDoble": 1924,
+        "cadenciaPorS": 39.1,
+        "maxPor1s": 167,
+        "maxPor100ms": 39,
+        "concurrenciaMax": 72,
+        "redisOps": 2183,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 516,
+          "composicionMs": 49159,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1805
+        }
+      },
+      "B": {
+        "status": 200,
+        "respuestaMs": 51401,
+        "cache": "VACIO",
+        "origen": "vacio-cancelada",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 51394,
+        "tmdbLinea": 629,
+        "cadenciaLineaPorS": 12.2,
+        "tmdbDoble": 1924,
+        "cadenciaPorS": 39.1,
+        "maxPor1s": 167,
+        "maxPor100ms": 39,
+        "concurrenciaMax": 72,
+        "redisOps": 2183,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 516,
+          "composicionMs": 49159,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1719
+        }
+      },
+      "C": {
+        "status": 200,
+        "respuestaMs": 51623,
+        "cache": "VACIO",
+        "origen": "vacio-cancelada",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 51604,
+        "tmdbLinea": 620,
+        "cadenciaLineaPorS": 12,
+        "tmdbDoble": 1924,
+        "cadenciaPorS": 39.1,
+        "maxPor1s": 167,
+        "maxPor100ms": 39,
+        "concurrenciaMax": 72,
+        "redisOps": 2183,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 515,
+          "composicionMs": 49159,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 1930
+        }
+      },
+      "global": {
+        "llamadas": 1924,
+        "primera": 1789589744892,
+        "ultima": 1789589794051,
+        "spanMs": 49159,
+        "cadenciaPorS": 39.1,
+        "maxPor1s": 167,
+        "maxPor100ms": 39,
+        "concurrenciaMax": 72,
+        "latenciaDobleMs": {
+          "p50": 474,
+          "p95": 1083
+        }
+      }
+    },
+    "S6-redis-30ms/frio-total-en-linea": {
+      "redisMedianaMs": 30,
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 30148,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 30117,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 30.7,
+        "tmdbDoble": 926,
+        "cadenciaPorS": 31.6,
+        "maxPor1s": 82,
+        "maxPor100ms": 25,
+        "concurrenciaMax": 24,
+        "redisOps": 1002,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 285,
+          "composicionMs": 29269,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 563
+        }
+      }
+    },
+    "S6-redis-300ms/frio-total-en-linea": {
+      "redisMedianaMs": 300,
+      "resumen": {
+        "status": 200,
+        "respuestaMs": 54072,
+        "cache": "VACIO",
+        "origen": "vacio-cancelada",
+        "publicacion": "no",
+        "cancelada": true,
+        "msTotal": 54068,
+        "tmdbLinea": 842,
+        "cadenciaLineaPorS": 15.6,
+        "tmdbDoble": 838,
+        "cadenciaPorS": 17.3,
+        "maxPor1s": 78,
+        "maxPor100ms": 25,
+        "concurrenciaMax": 24,
+        "redisOps": 902,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 1620,
+          "composicionMs": 48355,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": 4093
+        }
+      }
+    },
+    "S8-sync-simulado-10ps/frio-total-en-linea": {
+      "hipotesis": "tmdb-sync a 10/s constantes; el doble no limita, así que sólo mide la tasa global resultante",
+      "llamadasSync": 389,
+      "home": {
+        "status": 200,
+        "respuestaMs": 42466,
+        "cache": "MISS",
+        "origen": "propia",
+        "publicacion": "publicado",
+        "cancelada": false,
+        "msTotal": 42453,
+        "tmdbLinea": 926,
+        "cadenciaLineaPorS": 21.8,
+        "tmdbDoble": 1317,
+        "cadenciaPorS": 30.9,
+        "maxPor1s": 93,
+        "maxPor100ms": 26,
+        "concurrenciaMax": 30,
+        "redisOps": 1005,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 127,
+          "composicionMs": 42639,
+          "publicacionMs": null,
+          "cierreMs": null,
+          "trasUltimaLlamadaMs": -313
+        }
+      },
+      "global": {
+        "llamadas": 1317,
+        "primera": 1789589881694,
+        "ultima": 1789589924333,
+        "spanMs": 42639,
+        "cadenciaPorS": 30.9,
+        "maxPor1s": 93,
+        "maxPor100ms": 26,
+        "concurrenciaMax": 30,
+        "latenciaDobleMs": {
+          "p50": 316,
+          "p95": 719
+        }
+      }
+    }
+  }
+}

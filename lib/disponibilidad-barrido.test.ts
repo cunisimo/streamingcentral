@@ -278,11 +278,13 @@ test("la fuente del riel usa el tipo elegido, no `movie` fijo", () => {
     "las dos páginas (p1 y su fallback p2) tienen que usar el mismo tipo");
 });
 
-test("la versión de la clave del Home subió a v6", () => {
-  // Un payload v5 cacheado no trae el selector: sin subir la versión, el cambio
-  // no se vería hasta que expirara el TTL de 6 h. Desde la Etapa 2 la versión
-  // es UNA constante para las cinco familias del Home (lib/claves-home.test.ts).
-  assert.match(codigo("lib/claves.ts"), /export const VERSION_HOME: number =[\s\S]*?: 6;/);
+test("la versión de la clave del Home es v7", () => {
+  // v6: un payload v5 cacheado no traía el selector de "Últimos". v7: un
+  // payload v6 cacheado trae cards con Disney+ en las 20 suprimidas (#24).
+  // Sin subir la versión, el cambio no se vería hasta que expirara el TTL.
+  // Desde la Etapa 2 la versión es UNA constante para las cinco familias del
+  // Home (lib/claves-home.test.ts).
+  assert.match(codigo("lib/claves.ts"), /export const VERSION_HOME: number =[\s\S]*?: 7;/);
 });
 
 test("los skeletons reservan el selector también en el primer riel", () => {
@@ -399,4 +401,88 @@ test("no se paga una llamada por idioma", () => {
   const m = /async function datosTituloDe\([\s\S]*?\n}/.exec(src);
   assert.equal([...m![0].matchAll(/titleDetails\(/g)].length, 1,
     "el lector de evidencia hace más de una llamada de detalle");
+});
+
+// ============================================================================
+// 5. Las supresiones llegan a TODAS las superficies
+// ============================================================================
+//
+// La supresión (`lib/supresiones-disponibilidad.ts`) vive en el resolvedor,
+// pero el resolvedor NO es el único lugar que produce `platforms`: el
+// adaptador tiene un atajo que corta antes cuando TMDB ya sabe, el Top le pone
+// la plataforma del bloque a lo que llega vacío, y "Próximamente" arma las
+// suyas desde Supabase. Cada lugar que construye `platforms` para la interfaz
+// tiene que estar acá, con su motivo, o el test falla.
+
+test("el atajo del adaptador pasa por decisionDeTmdb, no devuelve prov.codes crudo", () => {
+  const src = codigo("lib/enrich.ts");
+  const m = /export async function disponibilidadDe\([\s\S]*?\n}/.exec(src);
+  assert.ok(m, "no se encontró disponibilidadDe");
+  assert.match(m![0], /decisionDeTmdb\(/, "el atajo no aplica las supresiones");
+  assert.doesNotMatch(m![0], /return prov\.codes;/,
+    "el atajo devuelve el array de TMDB sin pasar por las supresiones");
+});
+
+// Cada construcción de `platforms:` en runtime, con el camino que la cubre.
+const CONSTRUCCIONES_PLATFORMS: { archivo: string; fragmento: string; cubierta: string }[] = [
+  { archivo: "lib/enrich.ts", fragmento: "platforms: codes,",
+    cubierta: "`codes` sale de disponibilidadDe (toUITitle)" },
+  { archivo: "lib/enrich.ts", fragmento: "platforms: [],",
+    cubierta: "vacío: la card cuyo watch/providers falló por TMDB" },
+  { archivo: "lib/enrich.ts", fragmento: "platforms: plataformas,",
+    cubierta: "`plataformas` sale de disponibilidadDe (ficha)" },
+  { archivo: "lib/enrich.ts", fragmento: "platforms: await disponibilidadDe(",
+    cubierta: "la card reconstruida (titleCard)" },
+  { archivo: "lib/roulette.ts", fragmento: "platforms: card.platforms,",
+    cubierta: "copia de una card que ya pasó por titleCard" },
+  { archivo: "lib/top-plataformas.ts", fragmento: "platforms: suprimirPlataformas(",
+    cubierta: "la plataforma del bloque del Top pasa por las supresiones" },
+  { archivo: "lib/upcoming.ts", fragmento: "platforms: suprimirPlataformas(",
+    cubierta: "Próximamente arma desde Supabase y pasa por las supresiones" },
+];
+
+test("toda construcción de `platforms:` está inventariada con su cobertura", () => {
+  const enDisco: string[] = [];
+  for (const f of TODAS.filter((x) => x.startsWith("lib/"))) {
+    for (const l of codigo(f).split("\n")) {
+      if (/\bplatforms:\s/.test(l) && !/platforms:\s*(PlatformCode|string)/.test(l)) {
+        enDisco.push(`${f} :: ${l.trim()}`);
+      }
+    }
+  }
+  const cubiertas = enDisco.filter((linea) =>
+    CONSTRUCCIONES_PLATFORMS.some((c) => linea.startsWith(c.archivo + " :: ") && linea.includes(c.fragmento)));
+  const sinCubrir = enDisco.filter((l) => !cubiertas.includes(l));
+  assert.deepEqual(sinCubrir, [],
+    "hay construcciones de `platforms` sin inventariar; decidí cómo les llegan las supresiones:\n" + sinCubrir.join("\n"));
+  for (const c of CONSTRUCCIONES_PLATFORMS) {
+    assert.ok(codigo(c.archivo).includes(c.fragmento),
+      `${c.archivo}: el fragmento "${c.fragmento}" ya no está — el inventario quedó viejo`);
+  }
+});
+
+test("la ficha no deja el link de una plataforma suprimida", () => {
+  // `links` va en el JSON de la ficha por plataforma. Sin filtrarlo, movie:2118
+  // seguiría llevando `links.d` aunque `platforms` ya no diga Disney+.
+  const src = codigo("lib/enrich.ts");
+  assert.doesNotMatch(src, /links: prov\.links,/, "la ficha copia los links crudos de providersOf");
+});
+
+test("cambiar el registro de supresiones obliga a subir las versiones de caché", () => {
+  // Las plataformas resueltas viven en cachés exteriores de hasta 36 h. Este
+  // test ata la cantidad de supresiones a las versiones: si agregás o quitás
+  // una, subí VERSION_DISPONIBILIDAD y VERSION_HOME y actualizá estos números.
+  const claves = codigo("lib/claves.ts");
+  assert.match(claves, /export const VERSION_DISPONIBILIDAD = 1;/);
+  assert.match(claves, /export const VERSION_HOME: number =[\s\S]*?: 7;/);
+});
+
+test("las cinco familias que guardan plataformas resueltas llevan VERSION_DISPONIBILIDAD", () => {
+  const claves = codigo("lib/claves.ts");
+  assert.match(claves, /const dv = `d\$\{VERSION_DISPONIBILIDAD\}`;/, "`dv` no sale de la constante");
+  for (const fn of ["claveCard", "claveSearch", "claveTopPop", "claveReco", "claveUltimosSeries"]) {
+    const m = new RegExp(`export function ${fn}\\([\\s\\S]*?\\n}`).exec(claves);
+    assert.ok(m, `no existe ${fn}`);
+    assert.match(m![0], /\$\{dv\}/, `${fn} no lleva la versión de disponibilidad`);
+  }
 });

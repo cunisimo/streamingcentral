@@ -1,0 +1,48 @@
+{
+  "fecha": "2026-09-18T23:14:08.478Z",
+  "dir": "D:/DESARROLLO/stream central/wt-etapa3c1-control",
+  "buildId": "6E832gGzuvT5WBuT7dpd8",
+  "commitRef": "gitdir: D:/DESARROLLO/stream central/streamingcentral/.git/worktrees/wt-etapa3c1-control",
+  "pausado": {
+    "status": 503,
+    "retryAfter": "17",
+    "msPared": 3052,
+    "tFin": 1789773277387,
+    "contenido": 0,
+    "motivo": "pausa",
+    "pausaConocidaAlPedir": true,
+    "compone": 0,
+    "pausaMs": 18928,
+    "lecturasAcotadas": 2,
+    "linea": "[home] 3041ms total | cache VACIO | 0 composiciones | 0 esperas compartidas | DEGRADADO (0 fuente(s)) | turno pausado | origen vacio-pausa | publicacion no | renovaciones 0 | propietario ee0a7e4c-bb66-46d7-a884-580668c0d899:34848:2 | PAUSA 18928ms | 2 lectura(s) acotada(s) | tmdb 0 llamadas (0 ok) 0"
+  },
+  "residual": {
+    "ventanaMs": 12231,
+    "iniciadasAntesDeResponder": 14,
+    "completadasAntes": 14,
+    "completadasDespues": 0,
+    "tardias": 4,
+    "tardiasMsTrasRespuesta": [
+      595,
+      1320,
+      2310,
+      3340
+    ],
+    "porComando": {
+      "MGET": 18
+    },
+    "claves": [
+      "home:es-ES.r1:v6:2429564653:d,n:",
+      "home:ub:es-ES.r1:v6:d,n:"
+    ]
+  },
+  "tmdbTrasLaPausa": 0,
+  "veredicto": {
+    "sinTrabajoResidual": false
+  },
+  "primero": {
+    "status": 200,
+    "motivo": null,
+    "msPared": 76938
+  }
+}

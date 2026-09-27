@@ -10,7 +10,13 @@
 // Cada doble expone, además de lo que imita, un control en `/__banco`:
 //
 //   GET  /__banco/estado          contadores: peticiones recibidas, por familia
-//   POST /__banco/config          { modo, latenciaMs, retryAfter }
+//   POST /__banco/config          { modo, latenciaMs, latenciaP95Ms?, retryAfter }
+//        latenciaMs es la MEDIANA; con latenciaP95Ms la latencia se sortea de una
+//        log-normal con esa mediana y ese p95 (Etapa 3.c.0: calibrar el banco
+//        contra las latencias observadas en Producción; sin p95, es constante)
+//   GET  /__banco/marcas          una marca por petición atendida: { t: llegada,
+//        fin: respuesta terminada, f: familia, k?: clave (Redis) } — de ahí salen
+//        la cadencia efectiva, la ráfaga máxima, la concurrencia y las fases
 //        modo: "ok" | "429" | "500" | "caido"   ("caido" corta el socket: fallo
 //        de transporte, que es lo único que el SDK de Upstash reintenta)
 //        modo: "429-parcial" + { parcialP: 0.1, familiaParcial: "/watch/providers", parcialPorQuery?: true }
@@ -36,12 +42,30 @@
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";
 import { LUA } from "../../lib/turno-lua.ts";
+import { LUA_PAUSA } from "../../lib/pausa-lua.ts";
+import { crearOpsEnMemoria } from "../../lib/turno-memoria.ts";
 
 // ----------------------------------------------------------------- utilidades
 // Puerto base configurable: el comparador del Home levanta dos juegos de dobles.
 const PUERTO_BASE = Number(process.env.BANCO_PUERTO_BASE) || 4801;
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+// Generador DETERMINISTA (mulberry32) por doble: `semilla` en /__banco/config
+// (3.c.0, auditoría sobre 1ad1025: sin semilla, dos corridas no son
+// comparables). La secuencia de sorteos es fija; el ORDEN en que llegan las
+// peticiones sigue siendo del sistema, así que dos corridas con la misma
+// semilla asignan las mismas latencias en el mismo orden de llegada, no
+// necesariamente a las mismas URLs.
+function mulberry32(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// Log-normal con mediana `m` y percentil 95 `p95` (Box-Muller); sin p95, constante.
+function sortearLatencia(m, p95, rng = Math.random) {
+  if (!m) return 0;
+  if (!p95 || p95 <= m) return m;
+  const sigma = Math.log(p95 / m) / 1.6449;
+  const u = 1 - rng(), v = rng();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return Math.round(m * Math.exp(sigma * z));
+}
 function leerCuerpo(req) {
   return new Promise((resolve) => { let b = ""; req.on("data", (c) => { b += c; }); req.on("end", () => resolve(b)); });
 }
@@ -55,18 +79,22 @@ function json(res, estado, cuerpo, headers = {}) {
 // Un doble = servidor + estado de control + contadores. `atender` hace lo
 // específico; el control y los modos de fallo son comunes.
 function doble(nombre, puerto, atender, extra = {}) {
-  const estado = { modo: "ok", latenciaMs: 0, retryAfter: 2 };
+  const estado = { modo: "ok", latenciaMs: 0, latenciaP95Ms: 0, retryAfter: 2, semilla: 0 };
+  let rng = Math.random;
   // `bytes`: lo que entró y salió por el cable en las peticiones atendidas (sin
   // el control). Es lo que mide el costo en BYTES del camino caliente (Etapa 2,
   // §14.6): un HIT tiene que transferir UNA copia del Home, no dos ni tres.
   const cuenta = { peticiones: 0, porFamilia: {}, desconocidas: [], bytes: { recibidos: 0, enviados: 0 } };
+  // Marcas por petición (3.c.0); tope para que un banco largo no crezca sin fin.
+  const marcas = [];
   const familia = (metodo, url) => (extra.familia ? extra.familia(metodo, url) : `${metodo} ${url.split("?")[0]}`);
   const srv = createServer(async (req, res) => {
     const url = req.url ?? "/";
     if (url.startsWith("/__banco/")) {
       if (url === "/__banco/estado") return json(res, 200, { nombre, estado, cuenta, ...(extra.estado?.() ?? {}) });
-      if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); return json(res, 200, estado); }
-      if (url === "/__banco/reset") { cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; cuenta.consultas429 = []; cuenta.discovers = []; extra.reset?.(); return json(res, 200, { ok: true }); }
+      if (url === "/__banco/marcas") return json(res, 200, marcas);
+      if (url === "/__banco/config") { Object.assign(estado, JSON.parse(await leerCuerpo(req) || "{}")); rng = estado.semilla ? mulberry32(Number(estado.semilla)) : Math.random; return json(res, 200, estado); }
+      if (url === "/__banco/reset") { marcas.length = 0; cuenta.peticiones = 0; cuenta.porFamilia = {}; cuenta.desconocidas = []; cuenta.bytes = { recibidos: 0, enviados: 0 }; cuenta.parciales429 = 0; cuenta.consultas429 = []; cuenta.discovers = []; extra.reset?.(); return json(res, 200, { ok: true }); }
       // Controles propios del doble (Etapa 2: expirar, borrar, perder la
       // respuesta, fallar EVAL, listar claves).
       if (extra.control) { const r = await extra.control(url, await leerCuerpo(req)); if (r !== undefined) return json(res, 200, r); }
@@ -81,8 +109,28 @@ function doble(nombre, puerto, atender, extra = {}) {
     res.end = (chunk, ...a) => { if (chunk && typeof chunk !== "function") cuenta.bytes.enviados += Buffer.byteLength(chunk); return endOriginal(chunk, ...a); };
     const f = familia(req.method, url, cuerpo);
     cuenta.porFamilia[f] = (cuenta.porFamilia[f] ?? 0) + 1;
-    if (estado.latenciaMs) await dormir(estado.latenciaMs);
+    let marca = null;
+    if (marcas.length < 200000) {
+      marca = { t: Date.now(), fin: 0, f };
+      // El SDK de Upstash manda CADA comando como un /pipeline de uno: se
+      // registra el primer comando del lote (nombre y clave) y cuántos trae.
+      // `cmd` (auditoría sobre 1403ae4): el comando entero, acotado, para
+      // correlacionar por clave Y por propietario: en EVALSHA/EVAL la primera
+      // posición es el SHA/script y las claves del turno y el propietario van
+      // después, así que `k` solo no alcanza para atribuir un TOMAR o un LIBERAR.
+      if (nombre === "redis") { try { const c = JSON.parse(cuerpo); const primero = url.startsWith("/pipeline") ? c[0] : c; marca.c = String(primero?.[0] ?? "").toUpperCase(); marca.k = String(primero?.[1] ?? ""); marca.n = url.startsWith("/pipeline") ? c.length : 1; marca.cmd = JSON.stringify(primero).slice(0, 700); } catch { /* sin clave */ } }
+      marcas.push(marca);
+      res.on("finish", () => { marca.fin = Date.now(); marca.s = res.statusCode; });
+      res.on("close", () => { if (!marca.fin) marca.fin = Date.now(); });
+    }
+    if (estado.latenciaMs) await dormir(sortearLatencia(estado.latenciaMs, estado.latenciaP95Ms, rng));
     if (estado.modo === "caido") { req.socket.destroy(); return; }
+    // "colgado" (auditoría sobre 1403ae4): Redis RESPONDE, pero tarde
+    // (`colgadoMs`, 15 s por defecto). Si el cliente abortó mientras tanto, la
+    // marca queda con `fin` en el cierre y sin `s`; si no, el comando se atiende
+    // normalmente al vencer la espera: así se ve un TOMAR que llega a aplicarse
+    // después de que el Home respondió.
+    if (estado.modo === "colgado") { await dormir(estado.colgadoMs ?? 15000); if (res.writableEnded || req.socket.destroyed) return; }
     if (estado.modo === "500") return json(res, 500, { error: "doble en modo 500" });
     if (estado.modo === "429") return json(res, 429, { error: "doble en modo 429" }, { "Retry-After": String(estado.retryAfter) });
     // Etapa 3.a (H2): 429 PARCIAL y determinístico —sólo en la familia
@@ -211,10 +259,24 @@ doble("supabase", PUERTO_BASE + 1, async (req, res, url) => {
 // error (un EVALSHA rechazado con NOSCRIPT no es un comando confirmado: así lo
 // cuenta la app, y así lo compara el validador).
 const base = new Map();
+const pttlDe = (m, k) => { const e = m.get(k); if (!e) return -2; if (!e.exp) return -1; return e.exp <= Date.now() ? -2 : e.exp - Date.now(); };
+const cubosDe = (m) => { const e = m.get("tmdb:cubos"); return e && e.v instanceof Map ? Object.fromEntries(e.v) : {}; };
 const registro = [];           // { t, op, clave, propietario, resultado }
 const scriptsCargados = new Map(); // sha1 → texto
 const sha1 = (t) => createHash("sha1").update(t).digest("hex");
-const NOMBRE_POR_TEXTO = new Map(Object.entries(LUA).map(([n, t]) => [t, n]));
+const NOMBRE_POR_TEXTO = new Map([...Object.entries(LUA), ...Object.entries(LUA_PAUSA)].map(([n, t]) => [t, n]));
+// Etapa 3.c.1: los cuatro scripts de la PAUSA (TOMAR, PAUSAR, CUBO, SALUD) corren
+// por texto delegando en la MISMA emulación en memoria que usan producción sin
+// Redis y los tests (lib/turno-memoria.ts), sobre el mismo Map `base`. Así el
+// doble no reimplementa el contrato: si la emulación cambia, el banco cambia.
+const emulacionPausa = crearOpsEnMemoria(base, Date.now);
+const SCRIPTS_PAUSA = {
+  TOMAR: (k, a) => emulacionPausa.evalTomar(k, a),
+  PAUSAR: (k, a) => emulacionPausa.evalPausar(k, a),
+  CUBO: (k, a) => emulacionPausa.evalCubo(k, a),
+  SALUD: (k, a) => emulacionPausa.evalSalud(k, a),
+};
+const comandosPausa = { TOMAR: 0, PAUSAR: 0, CUBO: 0, SALUD: 0, pausados: 0 };
 const fallos = { perderRespuesta: { comando: null, veces: 0 }, fallarEval: 0 };
 const vivo = (k) => {
   const v = base.get(k); if (!v) return null;
@@ -222,10 +284,16 @@ const vivo = (k) => {
   return v.v;
 };
 const anotarTurno = (op, clave, propietario, resultado) => { if (clave.includes(":turno:")) registro.push({ t: Date.now(), op, clave, propietario, resultado }); };
-function correrScript(texto, keys, argv) {
+async function correrScript(texto, keys, argv) {
   const nombre = NOMBRE_POR_TEXTO.get(texto);
-  if (!nombre) throw new Error("ERR el doble sólo ejecuta los cuatro scripts del turno, por texto");
+  if (!nombre) throw new Error("ERR el doble sólo ejecuta los scripts del turno y de la pausa, por texto");
   if (fallos.fallarEval > 0) { fallos.fallarEval -= 1; anotarTurno(nombre, keys[0], argv[0], "ERROR"); throw new Error("ERR doble en modo fallarEval"); }
+  if (nombre in SCRIPTS_PAUSA) {
+    comandosPausa[nombre] += 1;
+    const r = await SCRIPTS_PAUSA[nombre](keys, argv);
+    if (nombre === "TOMAR") { anotarTurno("TOMAR", keys[0], argv[0], Array.isArray(r) ? r[0] : r); if (Array.isArray(r) && r[0] === "pausado") comandosPausa.pausados += 1; }
+    return r;
+  }
   let r;
   switch (nombre) {
     case "RENOVAR": {
@@ -311,10 +379,10 @@ const b64 = (v) => typeof v === "string" ? Buffer.from(v).toString("base64") : A
 const comandosRedis = { total: 0, errores: 0, perdidos: 0, porComando: {} };
 doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
   const codificar = (req.headers["upstash-encoding"] === "base64") ? b64 : (v) => v;
-  const uno = (cmd) => {
+  const uno = async (cmd) => {
     const op = String(cmd[0]).toUpperCase();
     try {
-      const r = ejecutar(cmd);
+      const r = await ejecutar(cmd);
       comandosRedis.total += 1;
       comandosRedis.porComando[op] = (comandosRedis.porComando[op] ?? 0) + 1;
       return { result: codificar(r) };
@@ -326,7 +394,9 @@ doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
   const parsed = JSON.parse(cuerpo || "[]");
   const esPipeline = url.split("?")[0] === "/pipeline";
   const antes = comandosRedis.total;
-  const respuesta = esPipeline ? parsed.map(uno) : uno(parsed);
+  // Secuencial, como Redis: un comando del pipeline ve los efectos del anterior.
+  const respuesta = esPipeline ? [] : await uno(parsed);
+  if (esPipeline) for (const cmd of parsed) respuesta.push(await uno(cmd));
   // perderRespuesta: el comando EJECUTÓ; el socket se corta sin responder. Es
   // la "respuesta perdida" que la reconciliación del turno tiene que cubrir.
   const primero = Array.isArray(parsed[0]) ? parsed[0][0] : parsed[0];
@@ -343,8 +413,8 @@ doble("redis", PUERTO_BASE + 2, async (req, res, url, cuerpo) => {
     if (url.startsWith("/pipeline")) return "POST /pipeline";
     try { return `POST / ${String(JSON.parse(cuerpo)[0]).toUpperCase()}`; } catch { return "POST /"; }
   },
-  estado: () => ({ comandos: comandosRedis, claves: base.size, registro, cargados: scriptsCargados.size }),
-  reset: () => { base.clear(); comandosRedis.total = 0; comandosRedis.errores = 0; comandosRedis.perdidos = 0; comandosRedis.porComando = {}; registro.length = 0; fallos.perderRespuesta = { comando: null, veces: 0 }; fallos.fallarEval = 0; },
+  estado: () => ({ comandos: comandosRedis, claves: base.size, registro, cargados: scriptsCargados.size, pausa: { ...comandosPausa, pttl: pttlDe(base, "tmdb:pausa"), cubos: cubosDe(base) } }),
+  reset: () => { base.clear(); for (const k of Object.keys(comandosPausa)) comandosPausa[k] = 0; comandosRedis.total = 0; comandosRedis.errores = 0; comandosRedis.perdidos = 0; comandosRedis.porComando = {}; registro.length = 0; fallos.perderRespuesta = { comando: null, veces: 0 }; fallos.fallarEval = 0; },
   // POST /__banco/redis  { accion: "borrar", patron } | { accion: "expirar", patron }
   //                      | { accion: "perderRespuesta", comando: "SET", veces: 1 }
   //                      | { accion: "fallarEval", veces } | { accion: "claves", patron }

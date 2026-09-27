@@ -13,6 +13,7 @@ import { baseTmdb } from "./tmdb-base";
 import { ErrorTmdb, clasificarError } from "./tmdb-error";
 import { parsearRetryAfter } from "./retry-after";
 import { conReintentos, reintentosActivos, TIMEOUT_LLAMADA_MS } from "./tmdb-politica";
+import { pausaTmdb } from "./cache";
 
 // La base es la oficial salvo que el BANCO aislado la apunte a un doble, y
 // nunca en Producción: hacen falta `TMDB_BASE_URL`, `YUMP_BANCO=1` y que
@@ -102,6 +103,22 @@ async function tmdb<T>(path: string, params: Record<string, string> = {}): Promi
   });
 }
 
+// --- La pausa ante 429 (Etapa 3.c.1, #19; lib/tmdb-pausa.ts) -------------------
+// Nivel 1: con la pausa LOCAL vigente, la llamada que espera el semáforo NO se
+// inicia: sale como ErrorTmdb de clase `rechazada` (la métrica que ya la nombra),
+// sin ocupar el cable. Las que ya están en vuelo terminan solas: ya cuentan
+// para TMDB. Un 429 registra la pausa (local en el acto; compartida por Redis,
+// serializada e idempotente). Y cada permiso CONCEDIDO le da al lector del
+// nivel 2 la oportunidad de releer la pausa compartida, a lo sumo una vez por
+// segundo y sin bloquear nunca al semáforo (§41.2). Kill switch: TMDB_PAUSA_429=0.
+// Qué familia de ruta se registra en el evento: el path sin ids ni parámetros
+// (`/movie/123` → `/movie/:id`), nunca la URL con la consulta.
+const familiaDe = (path: string) => path.replace(/\/\d+/g, "/:id");
+function rechazadaPorPausa(path: string): ErrorTmdb {
+  anotar((m) => { m.tmdb.rechazadas += 1; });
+  return new ErrorTmdb({ estado: null, clase: "rechazada", path, retryAfterMs: pausaTmdb.vigente() });
+}
+
 // UN intento: permiso del semáforo, fetch, clasificación, liberación. Entre dos
 // intentos no se retiene el permiso: cada uno lo pide y lo devuelve.
 async function intento<T>(path: string, q: URLSearchParams, timeoutMs: number): Promise<T> {
@@ -109,7 +126,9 @@ async function intento<T>(path: string, q: URLSearchParams, timeoutMs: number): 
     anotar((m) => { m.tmdb.canceladas.enCola += 1; });
     throw new DOMException("solicitud cancelada", "AbortError");
   }
+  if (pausaTmdb.vigente() > 0) throw rechazadaPorPausa(path);
   await adquirir();
+  pausaTmdb.permiso();
   // Y otra vez DESPUÉS del semáforo: la solicitud pudo cancelarse mientras esta
   // llamada esperaba su permiso, y salir igual sería contar un intento que el
   // servidor nunca recibe (medido en el banco: 4 de 565 en E-cancelacion).
@@ -118,6 +137,8 @@ async function intento<T>(path: string, q: URLSearchParams, timeoutMs: number): 
     anotar((m) => { m.tmdb.canceladas.enCola += 1; });
     throw new DOMException("solicitud cancelada", "AbortError");
   }
+  // Lo mismo con la pausa: pudo aparecer mientras esta llamada esperaba su permiso.
+  if (pausaTmdb.vigente() > 0) { liberar(); throw rechazadaPorPausa(path); }
   // El tiempo se mide DESPUÉS de obtener el permiso: es lo que tardó TMDB, no
   // lo que se esperó en el semáforo.
   const t0 = Date.now();
@@ -146,10 +167,11 @@ async function intento<T>(path: string, q: URLSearchParams, timeoutMs: number): 
     const clase = clasificarEstadoHttp(res.status);
     if (clase !== "ok") {
       anotar((m) => { m.tmdb.errores[clase] += 1; });
-      throw new ErrorTmdb({
-        estado: res.status, clase, path,
-        retryAfterMs: parsearRetryAfter(res.headers.get("retry-after"), Date.now()),
-      });
+      const retryAfterMs = parsearRetryAfter(res.headers.get("retry-after"), Date.now());
+      // El 429 pausa: local en el acto (sincrónico), compartida en fondo; no se
+      // espera a Redis para responder a quien llamó.
+      if (clase === "http429") void pausaTmdb.registrar429({ retryAfterMs, familia: familiaDe(path) });
+      throw new ErrorTmdb({ estado: res.status, clase, path, retryAfterMs });
     }
     // El parseo del body va DENTRO del permiso: sigue siendo parte del request.
     // Y el `ok` se anota DESPUÉS de parsear (Etapa 3.a, H6): un 200 con JSON

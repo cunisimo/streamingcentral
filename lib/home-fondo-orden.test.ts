@@ -26,10 +26,19 @@ const UB: Payload = { hero: ["ub"], degradado: false, de: "ub" };
 const tick = () => new Promise<void>((r) => setImmediate(r));
 const ms = (n: number) => new Promise<void>((r) => setTimeout(r, n));
 
-/** Un mundo con reloj real (los tiempos son cortos): turno en memoria, UB presente, composición de `tarda` ms. */
+// El RELOJ del turno es FIJO (auditoría de Codex sobre 6fc63b5, punto 5): estos
+// tests prueban ORDEN, no duraciones, y con `Date.now` un proceso cargado
+// dejaba pasar los 200 ms del turno sin renovarlo y PUBLICAR salía `rechazado`
+// (reproducido: 3 de 3 corridas con cuatro suites en paralelo). Con el reloj
+// fijo el turno no vence nunca y el resultado no depende de la carga; lo que
+// sigue siendo real es el event loop (setImmediate, microtasks), que es lo que
+// la frontera ordena.
+const AHORA_FIJO = 1_000_000;
+const ahoraFijo = () => AHORA_FIJO;
+/** Un mundo con reloj FIJO para el turno y tiempos reales cortos para la composición: turno en memoria, UB presente, composición de `tarda` ms. */
 function mundo(o: { tarda?: number; fallo?: boolean; producir?: () => Promise<{ valor: Payload; fallo: boolean }> } = {}) {
   const store = new Map<string, Entrada>();
-  const ops = crearOpsEnMemoria(store, Date.now);
+  const ops = crearOpsEnMemoria(store, ahoraFijo);
   store.set(K.ub, { v: UB, exp: 0 });
   const eventos: string[] = [];
   const log = (l: string) => { eventos.push(l.startsWith("[home] compone") ? "[home] compone" : l); };
@@ -40,13 +49,13 @@ function mundo(o: { tarda?: number; fallo?: boolean; producir?: () => Promise<{ 
     compuerta: compuertaDeFondo,
     disponible: true, apagado: false, error: (...a) => { eventos.push(`error:${String(a[0])}`); },
   });
-  const vivo = (k: string) => { const e = store.get(k); return e && (!e.exp || e.exp > Date.now()) ? (e.v as Payload) : null; };
+  const vivo = (k: string) => { const e = store.get(k); return e && (!e.exp || e.exp > ahoraFijo()) ? (e.v as Payload) : null; };
   const deps = (): DepsServir<Payload> => ({
     claves: K, propietario: `A:${++contador}`, dia: "2026-09-15", ttl: { fresca: 21600, ub: 129600 },
-    leer: async (claves) => claves.map(vivo), turno: crearTurno(ops),
+    leer: async (claves) => claves.map(vivo), leerAcotada: async (claves) => claves.map(vivo), turno: crearTurno(ops), tomarAcotado: (p, senal) => crearTurno(ops).tomar(p, { senal }),
     producir: o.producir ?? (async () => { eventos.push("iniciar"); await ms(o.tarda ?? 30); return { valor: { hero: ["A"], degradado: !!o.fallo, de: "A" }, fallo: !!o.fallo }; }),
     vacio: (motivo) => ({ hero: [], degradado: true, de: `vacio:${motivo}` }),
-    log, constantes: { ...CONSTANTES, RENOVACION_MS: 10, TURNO_MS: 200 },
+    log, ahora: ahoraFijo, constantes: { ...CONSTANTES, RENOVACION_MS: 10, TURNO_MS: 200 },
     // Como el adaptador real: el fondo corre en SU scope de métricas. El PRIMER
     // tramo de `iniciar` es síncrono y observable ("fondo-inicia"): es lo que
     // compite con la entrega de la respuesta si arranca demasiado pronto.
@@ -110,7 +119,7 @@ test("🔴 sin frontera declarada (handler no envuelto): no hay compuerta, el pr
     assert.equal(estadoDeLaFrontera(), "sin-frontera");
     // El mismo handler pero sin `conFrontera`: se llama a servirConTurno directo.
     const store = w.store;
-    const ops = crearOpsEnMemoria(store, Date.now);
+    const ops = crearOpsEnMemoria(store, ahoraFijo);
     void ops;
     const programar = crearProgramadorDeFondo({ registrar: (p) => { w.registradas.push(p); }, compuerta: compuertaDeFondo, disponible: true, apagado: false });
     let iniciadas = 0;
@@ -156,13 +165,21 @@ test("dos handlers concurrentes: cada uno con su compuerta; los dos fondos arran
     const eventos: string[] = [];
     const registradas: Promise<unknown>[] = [];
     const programar = crearProgramadorDeFondo({ registrar: (p) => { registradas.push(p); }, compuerta: compuertaDeFondo, disponible: true, apagado: false });
-    const handler = (nombre: string, espera: number) => conFrontera(async () => {
+    // Misma sincronización inyectada que en la frontera externa: A no responde hasta que el fondo de B arrancó.
+    let liberarA!: () => void;
+    const puertaA = new Promise<void>((r) => { liberarA = r; });
+    const handler = (nombre: string, esperar: () => Promise<void>) => conFrontera(async () => {
       assert.equal(programar(async () => { eventos.push(`iniciar:${nombre}`); }), true);
-      await ms(espera);
+      await esperar();
       eventos.push(`respuesta:${nombre}`);
       return nombre;
     });
-    await Promise.all([handler("A", 40)(), handler("B", 5)()]);
+    const ambos = Promise.all([handler("A", () => puertaA)(), handler("B", async () => { await tick(); })()]);
+    let vueltas = 0;
+    while (!eventos.includes("iniciar:B") && vueltas++ < 500) await tick();
+    assert.ok(eventos.includes("iniciar:B"), `el fondo de B no arrancó mientras A seguía en vuelo (${vueltas} vueltas): ${JSON.stringify(eventos)}`);
+    liberarA();
+    await ambos;
     await Promise.all(registradas);
     const i = (e: string) => eventos.indexOf(e);
     assert.ok(i("respuesta:B") < i("iniciar:B") && i("respuesta:A") < i("iniciar:A"), JSON.stringify(eventos));
@@ -225,14 +242,27 @@ test("🔴 FRONTERA EXTERNA, dos llamadores concurrentes: el fondo de cada handl
     const eventos: string[] = [];
     const registradas: Promise<unknown>[] = [];
     const programar = crearProgramadorDeFondo({ registrar: (p) => { registradas.push(p); }, compuerta: compuertaDeFondo, disponible: true, apagado: false });
-    const GET = (nombre: string, espera: number) => conFrontera(async () => {
+    // Sincronización INYECTADA, no temporizadores (auditoría sobre 6fc63b5, punto 5):
+    // A no construye su respuesta hasta que el test vio arrancar el fondo de B.
+    // Con `ms(60)` vs `ms(5)` el orden dependía de la carga (reproducido: el
+    // setImmediate de B llegaba después del timer de A). Si el fondo de B
+    // dependiera de la respuesta de A, B nunca arrancaría y este test fallaría
+    // por el tope de vueltas: ese es el control de la regresión.
+    let liberarA!: () => void;
+    const puertaA = new Promise<void>((r) => { liberarA = r; });
+    const GET = (nombre: string, esperar: () => Promise<void>) => conFrontera(async () => {
       assert.equal(programar(async () => { eventos.push(`fondo-inicia:${nombre}`); }), true);
-      await ms(espera);
+      await esperar();
       eventos.push(`respuesta-construida:${nombre}`);
       return { status: 200, nombre };
     });
-    const llamador = async (nombre: string, espera: number) => { const r = await GET(nombre, espera)(); eventos.push(`caller-recibio:${nombre}`); return r; };
-    await Promise.all([llamador("A", 60), llamador("B", 5)]);
+    const llamador = async (nombre: string, esperar: () => Promise<void>) => { const r = await GET(nombre, esperar)(); eventos.push(`caller-recibio:${nombre}`); return r; };
+    const ambos = Promise.all([llamador("A", () => puertaA), llamador("B", async () => { await tick(); })]);
+    let vueltas = 0;
+    while (!eventos.includes("fondo-inicia:B") && vueltas++ < 500) await tick();
+    assert.ok(eventos.includes("fondo-inicia:B"), `el fondo de B no arrancó mientras A seguía en vuelo (${vueltas} vueltas): ${JSON.stringify(eventos)}`);
+    liberarA();
+    await ambos;
     await Promise.all(registradas);
     const i = (e: string) => eventos.indexOf(e);
     for (const n of ["A", "B"]) {

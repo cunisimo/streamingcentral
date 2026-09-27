@@ -64,12 +64,13 @@ export interface MetricasRequest {
     fuentesCaidas: number;
     // --- Etapa 2 (#17): turno distribuido y último bueno (lib/home-servir.ts) ---
     /** Qué pasó con el turno de composición de la clave. `reconciliado` = adquirido tras una respuesta perdida. */
-    turno: "adquirido" | "reconciliado" | "ocupado" | "sin-redis" | null;
+    turno: "adquirido" | "reconciliado" | "ocupado" | "sin-redis" | "pausado" | null;
     /** De dónde salió lo que se sirvió. */
     origen: "fresca" | "fresca-tras-turno" | "ultimo-bueno" | "ultimo-bueno-fondo" | "esperada" | "propia" | "propia-sin-publicar"
-      | "degradado-propio" | "degradado-compartido" | "sin-redis" | "vacio-espera-agotada" | "vacio-cancelada" | "compartida" | null;
+      | "degradado-propio" | "degradado-compartido" | "sin-redis" | "vacio-espera-agotada" | "vacio-cancelada" | "compartida"
+      | "ultimo-bueno-pausa" | "vacio-pausa" | null;
     /** Etapa 3.b: la solicitud respondió el UB y dejó la composición registrada en fondo. */
-    fondo: "programado" | null;
+    fondo: "programado" | "no-iniciado-presupuesto" | null;
     /** Resultado de PUBLICAR, si se intentó. */
     publicacion: "publicado" | "publicada-solo-fresca" | "rechazado" | "indeterminado" | null;
     renovaciones: number;
@@ -86,6 +87,22 @@ export interface MetricasRequest {
     /** El productor RECHAZÓ (no degradó): se liberó el turno y se sirvió UB si había. */
     errorProductor: boolean;
     propietario: string | null;
+    // --- Etapa 3.c.1 (#19): pausa compartida y plazos (lib/home-servir.ts, lib/tmdb-pausa.ts) ---
+    /** Restante de la pausa (compartida o local) que decidió esta solicitud, en ms. */
+    pausaMs: number;
+    /** Cuánto durmió esta solicitud esperando que la pausa terminara (sin UB): un solo sueño, ≤ 5,25 s. */
+    pausaEsperaMs: number;
+    /** Con la pausa local vigente: lecturas de Redis hechas por el LECTOR ACOTADO (sin reintentos, señal de T_LECTURA_PAUSA_MS por petición). Las que no llegaron cuentan además en redis.fallos.lectura. */
+    lecturasAcotadas: number;
+    /** Resultado de la ÚNICA limpieza LIBERAR de la composición (§49/§50); `omitido-sin-margen` = en o después de maxDuration, el turno vence por TTL. */
+    liberacion: "liberado" | "no-era-mio" | "indeterminado" | "omitido-sin-margen" | "omitido-ya-intentado" | null;
+    /**
+     * Los DOS instantes de la última renovación aplicada (ms desde el inicio de
+     * la ruta): envío y respuesta. El PEXPIRE corre cuando Redis atiende el
+     * comando, entre ambos; el turno vence 15 s después de ESA aplicación (§52).
+     * Desde el cliente no se conoce el restante exacto: sólo ese intervalo.
+     */
+    renovacionUltima: { envioMs: number; respuestaMs: number } | null;
     // --- Etapa 3.a (#19, H2) ---
     /** Títulos, pools, bloques o cards descartados por un error de TMDB (lib/fallos-tmdb.ts). Marcan el payload como degradado. */
     descartesTmdb: number;
@@ -152,6 +169,7 @@ export const nuevasMetricas = (): MetricasRequest => ({
     cache: null, composiciones: 0, esperasCompartidas: 0, degradado: false, fuentesCaidas: 0,
     turno: null, origen: null, publicacion: null, renovaciones: 0, turnoPerdido: false, esperaMs: 0, fondo: null,
     degradadoDescartado: false, enfriado: false, cancelada: false, errorProductor: false, propietario: null,
+    pausaMs: 0, pausaEsperaMs: 0, lecturasAcotadas: 0, liberacion: null, renovacionUltima: null,
     descartesTmdb: 0,
   },
   tmdb: {
@@ -277,7 +295,7 @@ export function lineaHome(m: MetricasRequest, msTotal: number, clave?: string): 
   const h = m.home;
   const turno = h.turno || h.origen || h.publicacion
     ? ` | turno ${h.turno ?? "?"} | origen ${h.origen ?? "?"} | publicacion ${h.publicacion ?? "no"} | renovaciones ${h.renovaciones} | propietario ${h.propietario ?? "?"} |`
-      + `${h.fondo ? ` fondo ${h.fondo} |` : ""}${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.errorProductor ? " ERROR PRODUCTOR |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}`
+      + `${h.fondo ? ` fondo ${h.fondo} |` : ""}${h.turnoPerdido ? " TURNO PERDIDO |" : ""}${h.enfriado ? " ENFRIADO |" : ""}${h.cancelada ? " CANCELADA |" : ""}${h.errorProductor ? " ERROR PRODUCTOR |" : ""}${h.degradadoDescartado ? " DEGRADADO DESCARTADO |" : ""}${h.esperaMs ? ` espera ${h.esperaMs}ms |` : ""}${h.pausaMs ? ` PAUSA ${h.pausaMs}ms |` : ""}${h.pausaEsperaMs ? ` espera pausa ${h.pausaEsperaMs}ms |` : ""}${h.lecturasAcotadas ? ` ${h.lecturasAcotadas} lectura(s) acotada(s) |` : ""}${h.liberacion && h.liberacion !== "liberado" ? ` liberacion ${h.liberacion} |` : ""}${h.renovacionUltima ? ` ult. renovacion +${h.renovacionUltima.envioMs}..+${h.renovacionUltima.respuestaMs}ms |` : ""}`
     : "";
   return (
     `[home] ${msTotal}ms total | cache ${cache} | ` +

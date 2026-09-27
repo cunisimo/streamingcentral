@@ -1,5 +1,87 @@
 # Issues abiertos
 
+## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
+
+**Estado (20/09): CORREGIDO para los 20 casos confirmados, MERGEADO EN
+`main` (`594dd09`, `--no-ff` de `fix/supresiones-disney` en `d88ecbb`) Y
+DESPLEGADO (`dpl_BUgH7twdWVnuXQxkd5eKsVxPP7sq`, READY, asociado a
+`app.yump.ar`). Las 20 películas confirmadas ya no aparecen en Disney+. El
+problema de fondo sigue ABIERTO.** Encontrado
+por el dueño el 2026-09-20 con *Los Ángeles al desnudo* (`movie:2118`).
+Medición en `docs/medidas/2026-09-20-disney-falsos-positivos.md`.
+
+**No era un bug del resolvedor.** TMDB sirve hoy `Disney Plus` para ese título
+en AR (y en MX, BR, CL, CO), `homepage` viene vacío, y la app lo mostraba por
+la prioridad 1 (`tmdb-ar`): repetir lo que dice TMDB. JustWatch —la fuente de
+TMDB— ya lo sacó de Disney+ y lo tiene en Paramount+. El cache de 8 h no
+influía: TMDB está desactualizado en vivo.
+
+**Alcance medido y CONFIRMADO:** 100 películas que TMDB ubica en Disney+ AR,
+**20 falsos positivos**, todos licenciados (Warner, Fox, Universal); las
+producciones Disney propias dan 0. Control con Netflix AR: 59 de 59 correctos.
+**El dueño verificó las 20 a mano dentro de Disney+**: ninguna está. No son
+sólo discrepancias con JustWatch.
+
+**La corrección: supresiones negativas** (`lib/supresiones-disponibilidad.ts`,
+aparte de las excepciones positivas, que sólo agregan). Cada entrada dice
+`movie:<id>`, región `AR`, plataforma `d`, fecha de verificación, evidencia
+("verificación manual del dueño dentro de Disney+"), estado activo y una fecha
+de próxima revisión.
+
+- Se aplican en el **camino central** (`resolverDisponibilidad`, al final y
+  sobre cualquier procedencia) y en el atajo del adaptador (`decisionDeTmdb`),
+  así que llegan a ficha, Home, búsqueda, listas, relacionados y ruleta.
+  El Top (`conPlataformaDeLaFuente`) y Próximamente (`toUIUpcoming`), que
+  arman `platforms` por su cuenta, también pasan por `suprimirPlataformas`; un
+  test inventaría cada construcción de `platforms` del proyecto.
+- Quitan **sólo** la plataforma nombrada: Disney+ + Paramount+ → Paramount+.
+  Si Disney+ era la única, el resultado queda **vacío** y no se consultan
+  respaldos.
+- **No vencen solas**: `proximaRevision` es un recordatorio, no un vencimiento.
+  Se levantan con una verificación positiva directa, nunca por calendario.
+- No mutan el array cacheado de `providersOf` (misma referencia si no hay nada
+  que quitar, copia si sí).
+- Cachés: `VERSION_HOME` 6 → 7 y `VERSION_DISPONIBILIDAD = 1` (segmento `d1`
+  en card, búsqueda, Top por popularidad, reco y últimos). Sin eso, un `card:`
+  de 24 h o un último bueno de 36 h seguirían diciendo Disney+ tras el deploy.
+  Un test ata las dos versiones al registro.
+
+**Verificado en local (20/09), contra el build del hotfix ejecutado con
+`next start`:** `movie:2118` → `['pp','mv']` (ficha, cards y búsqueda), sin
+`links.d`; Heat (949) → `['p','mv']`; LOTR (122, no suprimida) conserva `d`.
+Suite del commit aislado: **1926 pruebas, 0 fallas**; las omitidas varían
+según estén disponibles los artefactos opcionales (`out-capacitor`, build web):
+10 en la auditoría de Codex y 18 en la corrida desde cero del worktree. `tsc`
+limpio, `npm run build` OK.
+
+**Verificado en producción (`app.yump.ar`, 20/09, tras el deploy
+`dpl_BUgH7twdWVnuXQxkd5eKsVxPP7sq`):** `movie:2118` → `['pp','mv']` en ficha,
+`/api/cards` y búsqueda, y `links` sin `d`; Heat (`movie:949`) → `['p','mv']`;
+LOTR (`movie:122`, control no suprimido) conserva `['d','mv','m']`. Home: con
+`providers=d` no aparece ninguna de las 20; con `d,pp`, 2118 aparece con
+`['pp','mv']`; con `n,d,m,pp,p`, ninguna suprimida lleva `d`. O sea que la
+invalidación por versión de clave fue efectiva al primer request, sin vaciar
+nada a mano.
+
+**Lo que sigue abierto:**
+
+1. **El problema de fondo no se arregla con 20 entradas a mano.** TMDB sigue
+   desfasado para el catálogo licenciado de Disney+ LatAm; hay 1291 películas
+   en Disney+ AR según TMDB y sólo se midieron 100.
+2. **Cruce global periódico: MENSUAL, comenzando en octubre de 2026** (decisión
+   del dueño). Repetir la muestra, verificar a mano lo que salga y cargar
+   supresiones nuevas — cada tanda sube `VERSION_DISPONIBILIDAD` y
+   `VERSION_HOME`.
+3. Series de Disney+ y las otras plataformas no se midieron.
+
+**Lo que NO es una salida:** usar la API interna de JustWatch en producción
+(sin licencia; es la fuente de pago que ya se descartó para el Top). Sirve para
+medir, no para servir.
+
+---
+
+(El **#23** está reservado para un issue de la rama `feat/salas`, todavía no
+mergeada; por eso este es el #24 y no hay hueco que rellenar.)
 ## #23 — Dos tests de concurrencia del Home dependen del reloj de pared y fallan bajo carga
 
 **Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-09-18 · **No bloquea** la
@@ -1358,7 +1440,101 @@ leyendo el código.**
 > errores nuevos; identidad del Home preservada según la evidencia existente);
 > reintentos APAGADOS (`TMDB_REINTENTOS` ausente); limitador, circuito y
 > membresía NO implementados — **#19 sigue abierto por esas subetapas
-> restantes, no por la 3.a ni la 3.b.** **Subetapa 3.b ("último bueno
+> restantes, no por la 3.a ni la 3.b.** **Subetapa 3.c.1 (pausa compartida
+> ante 429) — MERGEADA (`367b765`, `--no-ff`), PUSHEADA Y DESPLEGADA el
+> 2026-09-19 (`dpl_Emrbaqf1Ft1oJydTjMGy4GzNiWXh`, `app.yump.ar`), tras la
+> auditoría final de Codex sobre `6fd875e` sin hallazgos bloqueantes;
+> SUBETAPA CERRADA. Comprobación pasiva: health (bloque `pausa` en 0), Home,
+> búsqueda y ficha en 200; el fondo publicó con 480/480 llamadas ok. 🔴 No se
+> provocó ni se observó ningún 429 real: el camino de la pausa está probado
+> en tests y banco, no en Producción. Kill switch `TMDB_PAUSA_429=0` NO
+> activado (cambiarlo exige autorización y redeploy). Limitación heredada y
+> tarea futura: con Redis caído + TMDB pausado + sin UB un pedido puede
+> tardar 58-75 s y terminar en 503 o en el corte de Vercel (sin contenido
+> mutilado). **#19 sigue abierto SÓLO por la 3.c.2 (circuito del fondo) y la
+> membresía, no por la 3.a, la 3.b ni la 3.c.1.** Historia en rama: IMPLEMENTADA
+> el 18/09 en `feat/etapa3c1-pausa-tmdb` (informe
+> §53) (corregida por §54 tras la primera auditoría: lecturas acotadas con
+> pausa local —503 en 3,04 s con Redis caído, antes 23 s—, ring de cubos, un
+> TIME por evento, tests deterministas; el Preview de la precondición usó el
+> Redis de Producción con claves prefijadas y borradas, DBSIZE 802 → 90 no
+> explicado; y por §55 tras la auditoría sobre `d322282`: el tope de lectura
+> con pausa local pasó de una carrera que dejaba el MGET reintentando tras el
+> 503 a un lector acotado que cancela —18 MGET y 4 tardíos contra 3 y 0,
+> medido con control—; y por §56 tras la auditoría sobre `1403ae4`: la
+> readquisición tras una pausa corta pasó de una carrera sobre el cliente
+> principal —que dejaba TOMAR, GET y un LIBERAR corriendo tras el 503— a una
+> operación lógica con plazo compartido por el cliente acotado, `indeterminado`
+> al vencer y el turno recuperado por TTL; medido con control: 7 tardíos y un
+> TOMAR a +13 s más LIBERAR contra 0 y 0; y por §57 tras la auditoría sobre
+> `9fd6d71`: los caminos `sin-redis` servían un Home mutilado por 429 como
+> 200; ahora UB o 503 `pausa`, sin cambiar la duración de esa composición;
+> criterio 10; auditoría final aprobada sobre `6fd875e`). Lua verificado en Upstash (36/36; sobre el Redis de Producción);
+> identidad del Home antes/después 16/16 idéntica; umbrales del camino sano
+> dentro (Redis +24-28 ≤ 41, duración −1 % mediana, UB −34 ms); con 429
+> total 77 llamadas tras el primer 429 contra 858 sin pausa, nada publicado
+> ni enfriado, UB en 284 ms, sin UB 503 en 317 ms; propagación entre
+> procesos real; Redis caído: la pausa local rige. Kill switch
+> `TMDB_PAUSA_429=0`. Suite 1868/1868. Un hallazgo del banco corregido en la
+> misma rama: una composición con llamadas rechazadas por la pausa se
+> cancela aunque la pausa haya vencido al devolver (antes se enfriaba y se
+> servía mutilada). #19 sigue abierto hasta el merge y la observación en
+> Producción, y por la 3.c.2 (circuito) y la membresía.** **Diseño de la 3.c
+> (antecedente) — informe §45 a §52 (17/09): 3.c.1 "pausa
+> compartida ante 429" con diseño corregido: adquisición atómica del turno
+> con la pausa adentro; sobrepaso por fórmula parametrizada (`enVuelo +
+> cadencia × (Δt + T_lectura)`; 94 / 184 / 528 por proceso según cadencia
+> 35 / 80 / 252 son ESTIMACIONES, no cotas; sin cota compartida si la
+> lectura falla) con línea base medida hoy (750-778 llamadas tras el primer
+> 429 rápido, pico 224-252/s); lector no bloqueante (sólo `Δt`, `F_max = 1`);
+> `PAUSAR` idempotente por identidad de evento, marcador 120 s, marca de
+> agua por proceso con TTL propio, Lua que valida antes de mutar y falla
+> seguro, telemetría en `pcall`; `/api/health` sólo agregados; sin UB,
+> espera breve y acotada `min(restante, 5 s)` con UN solo sueño y UNA
+> readquisición (≤ 2 `EVAL`) y `503` + `Retry-After` sólo si la pausa
+> continúa (§42, decisión del dueño; `ESPERA_MAX = 5 s` provisional sin
+> datos reales); el vencimiento del presupuesto interno (la única señal: la
+> ruta no usa `req.signal`) sale por el centinela 4d sin readquirir,
+> componer, lanzar ni registrar un falso error; pausa local por encima de
+> Redis caído/indeterminado; UB sin caché en memoria (matriz por instante
+> del fallo); umbrales antes/después fijados y sin tocar; **un solo deadline
+> absoluto `plazo` creado con la señal y `plazo − ahora` en lectura previa,
+> espera, readquisición y composición** (§46: la lectura previa no entraba
+> en el reloj local de `servirConTurno`; el mismo defecto está en el rescate
+> de la Etapa 2 hoy en Producción, `home-servir.ts:315`, y viaja con la
+> implementación); **el fondo con dos límites absolutos, `min(inicioFondo +
+> 50 s, inicioRuta + 60 s − 5 s)`, y sin composiciones condenadas: si no
+> quedan 16 s + 1 s de reserva, UB servido, `LIBERAR` best effort y `fondo:
+> no-iniciado-presupuesto`** (§47); **la señal limita el trabajo NUEVO: una
+> operación de Redis ya enviada completa después del plazo o pierde su
+> respuesta (atómica, con fencing), no se inicia `PUBLICAR` tras el plazo,
+> el turno se recupera eventualmente por TTL si `LIBERAR` falla o Vercel corta, y un `PUBLICAR`
+> aceptado publica un payload completo o nada** (§48); **tras el plazo
+> efectivo ninguna operación productiva o de publicación; la única
+> excepción es un solo `LIBERAR` best effort estrictamente antes del corte
+> externo (`ahora < inicio + 60 s`), que nunca publica, enfría, renueva ni
+> toca el UB; sin margen, con fallo o con respuesta perdida no aplicada,
+> recuperación EVENTUAL por TTL (≤ 15 s desde la última renovación); con
+> respuesta perdida aplicada, ya liberado; sin reintento** (§49-§50);
+> **las renovaciones las produce el modelo, no el test** (§51: el bucle 4b
+> real — primer `RENOVAR` a +5 s, luego cada 5 s + RTT, sólo con `t <
+> plazo`, cada uno extiende 15 s desde esa renovación — y el TTL restante
+> se deriva de ellas; el modelo de `7dc1f44` no renovaba nunca y su
+> aserción era vacua); **envío, aplicación en Redis y recepción son tres
+> instantes** (§52: el `PEXPIRE` corre cuando Redis atiende, no al enviar;
+> un `RENOVAR` aplicado vence 15 s después de ESA aplicación —
+> garantizado —; con respuesta recibida el cliente acota `[envío + 15 s,
+> recepción + 15 s]`, con respuesta perdida no conoce el restante exacto;
+> la vuelta siguiente se programa al terminar la anterior; el restante en
+> los casos modelados es un intervalo para el RTT modelado de 140 ms —
+> [10,60; 10,74] s a 155,1 s, [5,60; 5,74] s a 160,1 s —, estimación, no
+> cota; "5,6-10,6 s" de §51 superado).
+> Modelo 97/97 con
+> guard estructural sobre la ruta. NO APROBADA, NO IMPLEMENTADA, PENDIENTE
+> DE APROBACIÓN FINAL;
+> 3.c.2 fuera de alcance. 3.c.0: modelo de sensibilidad ajustado, no
+> predictivo; ningún frío total se pide en Producción. Antecedentes §38-§40
+> superados (§41-§43: corregidos por §44/§45).** **Subetapa 3.b ("último bueno
 > primero, reconstrucción en fondo"): MERGEADA, PUSHEADA Y DESPLEGADA el
 > 2026-09-15** — aprobada por la auditoría final de Codex sobre `c5fab20`;
 > merge `--no-ff` `5604750` (rama en `ae6902f`), deployment

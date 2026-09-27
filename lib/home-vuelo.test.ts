@@ -63,13 +63,13 @@ type Payload = { hero: string[]; degradado: boolean; n: number };
 
 // Una "solicitud": abre su scope de métricas (el real) y sirve el Home por el
 // vuelo, con un productor que tarda `ms` y puede degradar o fallar.
-function armar(opts: { ms?: number; degradado?: boolean; falla?: boolean; escrituraFalla?: boolean } = {}) {
+function armar(opts: { ms?: number; esperar?: () => Promise<void>; degradado?: boolean; falla?: boolean; escrituraFalla?: boolean } = {}) {
   const be = backend({ escrituraFalla: opts.escrituraFalla });
   let producciones = 0;
   const producir = async (): Promise<Payload> => {
     anotar((m) => { m.home.cache = "miss"; m.home.composiciones += 1; });
     producciones++;
-    await dormir(opts.ms ?? 20);
+    if (opts.esperar) await opts.esperar(); else await dormir(opts.ms ?? 20);
     if (opts.falla) throw new Error("composeHome reventó");
     return { hero: ["a"], degradado: !!opts.degradado, n: producciones };
   };
@@ -119,13 +119,20 @@ test("🔴 todas reciben el MISMO resultado correcto", async () => {
 });
 
 test("🔴 dos claves DIFERENTES se componen independientemente: una no bloquea a la otra", async () => {
-  const h = armar({ ms: 40 });
-  const t0 = Date.now();
-  const [a, b] = await Promise.all([h.solicitud("home:a"), h.solicitud("home:b")]);
-  assert.equal(h.producciones, 2, "dos claves son dos composiciones");
+  // Sin reloj de pared (auditoría de Codex sobre 6fc63b5, punto 5: `< 80 ms`
+  // fallaba bajo carga). Las dos composiciones se RETIENEN con una puerta: si
+  // el vuelo las serializara, la segunda no arrancaría hasta soltar la primera,
+  // y `producciones` valdría 1 en el momento de la comprobación.
+  let soltar!: () => void;
+  const puerta = new Promise<void>((r) => { soltar = r; });
+  const h = armar({ esperar: () => puerta });
+  const ambas = Promise.all([h.solicitud("home:a"), h.solicitud("home:b")]);
+  for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r));
+  assert.equal(h.producciones, 2, "🔴 se serializaron: la segunda espera a que termine la primera");
+  soltar();
+  const [a, b] = await ambas;
   assert.deepEqual(resumen(a.metricas), { cache: "miss", comp: 1, esperas: 0 });
   assert.deepEqual(resumen(b.metricas), { cache: "miss", comp: 1, esperas: 0 });
-  assert.ok(Date.now() - t0 < 80, "🔴 se serializaron: la segunda esperó a la primera");
 });
 
 test("🔴 con caché CALIENTE no hay composición ni espera innecesaria: todas son HIT", async () => {
@@ -202,13 +209,15 @@ const sinComentarios = (rel: string) => readFileSync(rel, "utf8")
 const home = sinComentarios("lib/home.ts");
 
 test("🔴 homePayload sirve el Home por el vuelo compartido, con la lectura previa y la resolución real", () => {
-  assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada, ClavesDelHome>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada y las cinco claves (y el día) como contexto");
-  assert.match(home, /leer:\s*\(clave\) => backendCache\.leer<HomePayload>\(clave\)/, "la lectura previa no usa el backend real");
+  assert.match(home, /crearVueloHome<HomePayload, ClaveLocalizada, ContextoHome>\(/, "lib/home.ts no crea el vuelo del Home con la clave tipada y el contexto (las cinco claves, el día, el plazo y el inicio de la ruta) como contexto");
+  assert.ok(home.includes("type ContextoHome = ClavesDelHome & { inicioRuta: number; plazo: number };"), "el contexto extiende las cinco claves del instante (3.c.1)");
+  // 3.c.1: con la pausa local vigente la lectura previa va por el lector acotado (leerAcotadasHome); sin pausa es la lectura de siempre.
+  assert.ok(home.includes("leer: (clave) => (pausaTmdb.vigente() > 0 ? leerAcotadasHome<HomePayload>([clave]).then((v) => v[0] ?? null) : backendCache.leer<HomePayload>(clave)),"), "la lectura previa no usa el backend real (con tope sólo bajo pausa local)");
   // Etapa 2: el líder resuelve por la secuencia con turno (lib/home-servir.ts),
   // que decide qué se publica; `cachedLocIf` escribiría la fresca sin fencing.
   assert.match(home, /resolver:\s*\(_clave, producir, claves\) => servirConTurno<HomePayload>\(/, "el vuelo no resuelve por la secuencia con turno, con las cinco claves del contexto");
   assert.doesNotMatch(home, /cachedLocIf\s*\(/, "volvió cachedLocIf en el Home");
-  assert.match(home, /servirHome\(claves\.fresca, producirHome, claves\)/, "homePayload no entra por el vuelo con la fresca del instante y las cinco claves");
+  assert.match(home, /servirHome\(claves\.fresca, producirHome, contexto\)/, "homePayload no entra por el vuelo con la fresca del instante y las cinco claves");
 });
 
 test("🔴 el single-flight NO se agrega a cached/cachedIf/cachedLocIf ni a otros llamadores", () => {
@@ -272,5 +281,6 @@ test("🔴 no queda estado acumulado tras finalizar: cero vuelos en curso con la
 
 test("🔴 lib/home.ts ya no retiene un mapa global de claves en vuelo", () => {
   assert.doesNotMatch(home, /clavesEnVuelo/, "volvió el Map global que nunca se vacía");
-  assert.match(home, /servirHome\(claves\.fresca, producirHome, claves\)/, "las cinco claves tienen que viajar como contexto de la solicitud");
+  assert.match(home, /servirHome\(claves\.fresca, producirHome, contexto\)/, "las cinco claves tienen que viajar como contexto de la solicitud (3.c.1: más el plazo y el inicio de la ruta)");
+  assert.match(home, /...claves, inicioRuta: inicio, plazo:/);
 });

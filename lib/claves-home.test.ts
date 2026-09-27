@@ -19,15 +19,17 @@ import { calcularHuella } from "./idioma.ts";
 
 const H = calcularHuella("es-MX", true);
 
-test("VERSION_HOME es 6 y claveHome produce los mismos bytes que hoy", () => {
-  // (a) del plan RED: la fresca no cambia ni un byte con la Etapa 2. Un payload
-  // `v6` ya cacheado sigue siendo HIT después del deploy (§4.2, adopción).
-  assert.equal(VERSION_HOME, 6);
-  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v6:3523671066:d,m,n:");
-  assert.equal(claveHome(3523671066, "d,m,n", "", ""), "home:v6:3523671066:d,m,n:");
-  // Y el literal `v6` ya no vive escrito adentro de `claveHome`: sale de la constante.
+test("VERSION_HOME es 7 y claveHome produce los bytes esperados", () => {
+  // (a) del plan RED de la Etapa 2: la fresca no cambiaba ni un byte y un
+  // payload `v6` cacheado seguía siendo HIT. Con las supresiones (#24) la
+  // versión SUBIÓ a v7 a propósito: un `v6` trae cards con Disney+ en las 20
+  // películas suprimidas, y tiene que dejar de servirse al deployar.
+  assert.equal(VERSION_HOME, 7);
+  assert.equal(claveHome(3523671066, "d,m,n", "", H), "home:es-MX+f.r1:v7:3523671066:d,m,n:");
+  assert.equal(claveHome(3523671066, "d,m,n", "", ""), "home:v7:3523671066:d,m,n:");
+  // Y el literal de la versión no vive escrito adentro de `claveHome`: sale de la constante.
   const src = readFileSync("lib/claves.ts", "utf8");
-  assert.doesNotMatch(src, /`home:\$\{pre\(huella\)\}v6:/, "claveHome tiene que derivar la versión de VERSION_HOME");
+  assert.doesNotMatch(src, /`home:\$\{pre\(huella\)\}v\d+:/, "claveHome tiene que derivar la versión de VERSION_HOME");
 });
 
 test("las cinco familias del Home comparten el segmento v<VERSION_HOME>", () => {
@@ -45,11 +47,11 @@ test("las cinco familias del Home comparten el segmento v<VERSION_HOME>", () => 
     assert.equal(Number(m![1]), VERSION_HOME, `${nombre}: ${clave}`);
   }
   // Las formas exactas, para poder mirarlas en el panel.
-  assert.equal(claves.fresca, "home:es-MX+f.r1:v6:123:d,m,n:accion:tv");
-  assert.equal(claves.ub, "home:ub:es-MX+f.r1:v6:d,m,n:accion:tv");
-  assert.equal(claves.gen, "home:gen:es-MX+f.r1:v6:d,m,n:accion:tv");
-  assert.equal(claves.degradado, "home:degradado:es-MX+f.r1:v6:123:d,m,n:accion:tv");
-  assert.equal(claves.turno, "home:turno:es-MX+f.r1:v6:123:d,m,n:accion:tv");
+  assert.equal(claves.fresca, "home:es-MX+f.r1:v7:123:d,m,n:accion:tv");
+  assert.equal(claves.ub, "home:ub:es-MX+f.r1:v7:d,m,n:accion:tv");
+  assert.equal(claves.gen, "home:gen:es-MX+f.r1:v7:d,m,n:accion:tv");
+  assert.equal(claves.degradado, "home:degradado:es-MX+f.r1:v7:123:d,m,n:accion:tv");
+  assert.equal(claves.turno, "home:turno:es-MX+f.r1:v7:123:d,m,n:accion:tv");
 });
 
 test("el UB y su generación NO llevan semilla; el turno y el degradado SÍ", () => {
@@ -64,19 +66,19 @@ test("el UB y su generación NO llevan semilla; el turno y el degradado SÍ", ()
   assert.notEqual(a.degradado, b.degradado);
 });
 
-test("subir VERSION_HOME cambia las cinco claves a la vez y ninguna conserva v6", () => {
+test("subir VERSION_HOME cambia las cinco claves a la vez y ninguna conserva la anterior", () => {
   // (c): la invalidación es conjunta. `familiasHome` acepta la versión como
   // parámetro justamente para poder probar el salto sin recargar el módulo.
-  const v6 = familiasHome({ semilla: 9, providers: "d,n", tipos: "", huella: H });
-  const v7 = familiasHome({ semilla: 9, providers: "d,n", tipos: "", huella: H, version: 7 });
+  const actual = familiasHome({ semilla: 9, providers: "d,n", tipos: "", huella: H });
+  const siguiente = familiasHome({ semilla: 9, providers: "d,n", tipos: "", huella: H, version: VERSION_HOME + 1 });
   for (const familia of ["fresca", "ub", "gen", "degradado", "turno"] as const) {
-    assert.match(v6[familia], /:v6:/, familia);
-    assert.match(v7[familia], /:v7:/, familia);
-    assert.doesNotMatch(v7[familia], /:v6:/, `${familia} conserva v6 tras subir la versión`);
-    assert.notEqual(v6[familia], v7[familia], familia);
+    assert.match(actual[familia], new RegExp(`:v${VERSION_HOME}:`), familia);
+    assert.match(siguiente[familia], new RegExp(`:v${VERSION_HOME + 1}:`), familia);
+    assert.doesNotMatch(siguiente[familia], new RegExp(`:v${VERSION_HOME}:`), `${familia} conserva la versión anterior tras subirla`);
+    assert.notEqual(actual[familia], siguiente[familia], familia);
   }
   // Y el default de `familiasHome` es la constante: lo que corre en producción.
-  assert.deepEqual(familiasHome({ semilla: 9, providers: "d,n", tipos: "", huella: H, version: VERSION_HOME }), v6);
+  assert.deepEqual(familiasHome({ semilla: 9, providers: "d,n", tipos: "", huella: H, version: VERSION_HOME }), actual);
 });
 
 test("los turnos de dos versiones son claves distintas: cada versión coordina consigo misma", () => {

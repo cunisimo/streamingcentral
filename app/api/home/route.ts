@@ -3,6 +3,7 @@ import { homePayload } from "@/lib/home";
 import { tiposDesdeParam } from "@/lib/canonizar-home";
 import { conCors, opcionesCors } from "@/lib/cors";
 import { conFrontera } from "@/lib/fondo-frontera";
+import { respuestaDelHome } from "@/lib/home-http";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,12 @@ async function manejar(req: NextRequest) {
   try {
     // `getAll`, no `get`: con un `t` repetido en la query, `get` devuelve la
     // PRIMERA aparición y la política es que gane la última.
-    return NextResponse.json(await homePayload({ providers, types: tiposDesdeParam(sp.getAll("t")) }));
+    // Etapa 3.c.1: sin último bueno y con la pausa ante 429 vigente, el payload
+    // trae `motivo: "pausa"` y viaja como 503 + Retry-After (lib/home-http.ts),
+    // el mismo contrato que las fichas ya usan cuando TMDB no responde. Nunca un
+    // 200 vacío que la vista leería como "Nada en tus plataformas".
+    const r = respuestaDelHome(await homePayload({ providers, types: tiposDesdeParam(sp.getAll("t")) }));
+    return NextResponse.json(r.body, { status: r.status, headers: r.headers });
   } catch (e) {
     // composeHome envuelve cada fuente en `safe`, así que en producción no
     // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con 200.

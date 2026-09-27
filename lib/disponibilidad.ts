@@ -16,6 +16,12 @@
 // en conflicto es el nuestro: lo más probable es un error de matcheo, y
 // "corregirlo" convertiría un error propio en una afirmación falsa.
 //
+// LA ÚNICA RESTA: las SUPRESIONES (`lib/supresiones-disponibilidad.ts`). Son
+// títulos que TMDB afirma en una plataforma y el dueño comprobó DENTRO de esa
+// plataforma que no están. Se aplican al final, sobre cualquier procedencia,
+// y quitan sólo la plataforma nombrada. No son un respaldo: son la corrección
+// de un dato de TMDB con una verificación más directa que TMDB.
+//
 // 🔴 UN FALLO NUNCA ES UNA AUSENCIA. Si Supabase o TMDB se caen, se devuelve lo
 // que TMDB haya dicho y se marca `fallo: true` para que el llamador NO lo
 // cachee. Congelar un "no está en ningún lado" por un hipo de la base deja la
@@ -25,6 +31,7 @@
 import { registrarDescarteTmdb } from "./fallos-tmdb.ts";
 import { evidenciaOficialDe, type DatosTitulo } from "./enlace-oficial.ts";
 import { EXCEPCIONES, type ExcepcionManual } from "./excepciones-disponibilidad.ts";
+import { SUPRESIONES, suprimirPlataformas, type SupresionManual } from "./supresiones-disponibilidad.ts";
 import { claveTitulo } from "./top-plataformas.ts";
 import type { MediaType, PlatformCode } from "./types";
 
@@ -53,6 +60,28 @@ export interface Disponibilidad {
 /** ¿La excepción sigue vigente hoy? El día de vencimiento todavía cuenta. */
 export function vigente(e: ExcepcionManual, hoy: string): boolean {
   return e.vence >= hoy;
+}
+
+/**
+ * La decisión cuando TMDB ya sabe: sus plataformas, menos las suprimidas.
+ *
+ * Devuelve `null` cuando TMDB no sabe nada y le toca al resolvedor completo.
+ * Es la prioridad 1 del resolvedor Y el atajo de `disponibilidadDe` en
+ * enrich.ts, que corta antes de tocar el cache cuando hay dato de TMDB: los dos
+ * tienen que pasar por la misma función, o la supresión no llegaría a ninguna
+ * card con proveedor argentino — que son justamente las que la necesitan.
+ *
+ * Devuelve el MISMO array de TMDB cuando no hay nada que quitar (ver
+ * `suprimirPlataformas`), así que el atajo sigue costando cero.
+ */
+export function decisionDeTmdb(opts: {
+  tipo: MediaType; id: number; deTmdb: PlatformCode[];
+  hayFlatrateAR?: boolean; supresiones?: SupresionManual[];
+}): PlatformCode[] | null {
+  if (!opts.deTmdb.length && !opts.hayFlatrateAR) return null;
+  return suprimirPlataformas(
+    claveTitulo(opts.tipo, opts.id), "AR", opts.deTmdb, opts.supresiones ?? SUPRESIONES,
+  );
 }
 
 /**
@@ -102,7 +131,23 @@ export async function resolverDisponibilidad(opts: {
    */
   leerTopManual?: () => Promise<Map<string, PlatformCode[]>>;
   excepciones?: ExcepcionManual[];
+  supresiones?: SupresionManual[];
 }): Promise<Disponibilidad> {
+  const r = await resolverSinSupresiones(opts);
+  // --- 6. Supresiones: la única resta, sobre cualquier procedencia ----------
+  // Después de todo lo demás a propósito: si un respaldo agregara la plataforma
+  // suprimida (un enlace oficial de Disney+, un ranking manual viejo), la
+  // verificación directa del dueño gana igual. Sin nada que quitar devuelve
+  // el mismo objeto y el mismo array.
+  const plataformas = suprimirPlataformas(
+    claveTitulo(opts.tipo, opts.id), "AR", r.plataformas, opts.supresiones ?? SUPRESIONES,
+  );
+  return plataformas === r.plataformas ? r : { ...r, plataformas };
+}
+
+async function resolverSinSupresiones(
+  opts: Parameters<typeof resolverDisponibilidad>[0],
+): Promise<Disponibilidad> {
   // --- 1. TMDB AR manda, y corta acá ---------------------------------------
   // El orden ES la optimización: con dato de TMDB no se lee Supabase, no se
   // pide nada más a TMDB y no se toca el cache. El costo extra queda sólo en

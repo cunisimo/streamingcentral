@@ -13,9 +13,13 @@ import {
 } from "./metricas";
 import { observarSupabase, proveerSenalSupabase } from "./supabase";
 import { LUA } from "./turno-lua";
-import type { OpsTurno } from "./turno";
+import { LUA_PAUSA } from "./pausa-lua";
+import type { OpsTurno, OpsPausa } from "./turno";
 import { crearOpsEnMemoria, type Entrada } from "./turno-memoria";
+import { CONSTANTES_PAUSA, crearPausa, pausaActiva } from "./tmdb-pausa";
+import { randomUUID } from "node:crypto";
 import { combinarSenales, senalActual } from "./senal-solicitud";
+import { plazoRedisActual } from "./plazo-redis";
 import { createHash } from "node:crypto";
 
 // Credenciales REST de Upstash. Se aceptan DOS juegos de nombres porque
@@ -40,6 +44,26 @@ try {
   // NO toca `retries`: la Etapa 0 mide, no cambia. Ver lib/metricas.ts.
   if (redisUrl && redisToken) redis = new Redis({ url: redisUrl, token: redisToken, retry: { backoff: backoffRedisInstrumentado() } });
 } catch { redis = null; }
+// El cliente ACOTADO (3.c.1, §41.2/§43.8; auditorías sobre d322282 y 1403ae4),
+// UNO por proceso y APARTE del principal: SIN reintentos del SDK y con
+// `signal` como FUNCIÓN, que el SDK 1.38.0 llama al empezar CADA petición HTTP.
+// Dentro de `conPlazoRedis` devuelve el plazo compartido de la operación
+// lógica en curso (la readquisición del turno: TOMAR + reconciliación bajo una
+// sola señal); fuera, una señal nueva de TIMEOUT_LECTURA_MS por petición (el
+// PTTL del lector de la pausa y `leerAcotadasHome`). Con el cliente principal,
+// una lectura colgada arrastraría 6 intentos y 4,29 s de backoff que siguen
+// vivos aunque nadie los espere; acá vence y no queda nada.
+// 🔴 Con `signal` como función, una señal abortada hace que `request()` LANCE
+// (`if (signal.aborted && isSignalFunction) throw`) sin reintentar: NO hay 200
+// sintético. El `{ result: "Aborted" }` con status 200 existe sólo para una
+// señal ESTÁTICA (`signal: AbortSignal` o la de `streamOptions`), que este
+// módulo no usa; lib/turno.ts y lib/tmdb-pausa.ts igual validan la forma de
+// cada respuesta y tratan cualquier otra como indeterminada, nunca como
+// "adquirido" ni "sin pausa".
+let redisLector: Redis | null = null;
+try {
+  if (redisUrl && redisToken) redisLector = new Redis({ url: redisUrl, token: redisToken, retry: { retries: 0 }, signal: () => plazoRedisActual() ?? AbortSignal.timeout(CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS) });
+} catch { redisLector = null; }
 
 // Las consultas a Supabase del cliente de servidor se cuentan desde acá:
 // lib/supabase.ts llega al bundle del navegador y no puede importar el módulo
@@ -427,7 +451,8 @@ export async function cachedIf<T>(
 // 🔴 Acá NO hay `DEL` ni `SET … XX`: liberar y publicar son compare-and-delete
 // dentro de los scripts, y este módulo no conoce otra forma de soltar un turno.
 const sha1 = (s: string) => createHash("sha1").update(s).digest("hex");
-const SHA = { RENOVAR: sha1(LUA.RENOVAR), LIBERAR: sha1(LUA.LIBERAR), ENFRIAR: sha1(LUA.ENFRIAR), PUBLICAR: sha1(LUA.PUBLICAR) };
+const TODOS_LOS_SCRIPTS = { ...LUA, ...LUA_PAUSA } as const;
+const SHA = Object.fromEntries(Object.entries(TODOS_LOS_SCRIPTS).map(([n, t]) => [n, sha1(t)])) as Record<keyof typeof TODOS_LOS_SCRIPTS, string>;
 
 async function comandoTurno<T>(fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now();
@@ -440,20 +465,27 @@ async function comandoTurno<T>(fn: () => Promise<T>): Promise<T> {
     anotar((m) => { m.redis.ms += Date.now() - t0; });
   }
 }
-async function script(r: Redis, nombre: keyof typeof LUA, claves: string[], args: string[]): Promise<number> {
+// Un script por EVALSHA; ante NOSCRIPT, el mismo pedido por EVAL. `crudo` devuelve
+// lo que vino del transporte SIN convertir: los scripts de la pausa responden
+// tuplas que lib/turno.ts y lib/tmdb-pausa.ts validan; los del turno, un número.
+async function scriptCrudo(r: Redis, nombre: keyof typeof TODOS_LOS_SCRIPTS, claves: string[], args: string[]): Promise<unknown> {
   try {
-    return Number(await comandoTurno(() => r.evalsha<string[], number>(SHA[nombre], claves, args)));
+    return await comandoTurno(() => r.evalsha<string[], unknown>(SHA[nombre], claves, args));
   } catch (e) {
     if (!/NOSCRIPT/i.test(String(e))) throw e;
     // El mismo pedido lógico, un intento HTTP más; el EVAL confirma el comando.
     anotar((m) => { m.redis.intentosHttp += 1; });
-    return Number(await r.eval<string[], number>(LUA[nombre], claves, args).then((v) => { anotar((m) => { m.redis.comandos += 1; }); return v; }));
+    return r.eval<string[], unknown>(TODOS_LOS_SCRIPTS[nombre], claves, args).then((v) => { anotar((m) => { m.redis.comandos += 1; }); return v; });
   }
+}
+async function script(r: Redis, nombre: keyof typeof LUA, claves: string[], args: string[]): Promise<number> {
+  return Number(await scriptCrudo(r, nombre, claves, args));
 }
 function opsTurnoRedis(r: Redis): OpsTurno {
   return {
     setNx: (clave, valor, px) => comandoTurno(async () => ((await r.set(clave, valor, { nx: true, px })) === "OK" ? "OK" : null)),
     get: (clave) => comandoTurno(async () => { const v = await r.get<string>(clave); return v === null || v === undefined ? null : String(v); }),
+    evalTomar: (claves, args) => scriptCrudo(r, "TOMAR", claves, args),
     evalRenovar: (clave, propietario, px) => script(r, "RENOVAR", [clave], [propietario, String(px)]),
     evalPublicar: (claves, args) => script(r, "PUBLICAR", claves, args),
     evalEnfriar: (claves, args) => script(r, "ENFRIAR", claves, args),
@@ -467,16 +499,96 @@ function opsTurnoMemoria(): OpsTurno {
     return fn(...a);
   };
   return {
-    setNx: contar(base.setNx), get: contar(base.get), evalRenovar: contar(base.evalRenovar),
+    setNx: contar(base.setNx), get: contar(base.get), evalTomar: contar(base.evalTomar), evalRenovar: contar(base.evalRenovar),
     evalPublicar: contar(base.evalPublicar), evalEnfriar: contar(base.evalEnfriar), evalLiberar: contar(base.evalLiberar),
   };
 }
 /** Las primitivas del turno del Home, reales o emuladas. Las consume lib/home.ts por `crearTurno`. */
 export const opsTurnoHome: OpsTurno = redis ? opsTurnoRedis(redis) : opsTurnoMemoria();
+/**
+ * Las MISMAS primitivas por el cliente ACOTADO (3.c.1, auditoría sobre
+ * 1403ae4): sin reintentos y con el plazo compartido de `conPlazoRedis`. Sólo
+ * para la ÚNICA readquisición tras el sueño de la pausa; el camino sano toma
+ * el turno con `opsTurnoHome` y su política de siempre. En memoria son las
+ * mismas operaciones sobre el mismo Map (no hay red que acotar).
+ */
+export const opsTurnoAcotadoHome: OpsTurno = redisLector ? opsTurnoRedis(redisLector) : opsTurnoMemoria();
+export { conPlazoRedis } from "./plazo-redis";
+
+// --- La pausa compartida ante 429 (Etapa 3.c.1, #19) ------------------------
+// PAUSAR, CUBO y SALUD van por el cliente principal (reintentos del SDK: el
+// script es idempotente por evento). La LECTURA del lector va por
+// `redisLector` (timeout propio, sin reintentos) y devuelve lo crudo: la
+// validación es del lector.
+function opsPausaRedis(r: Redis, lector: Redis): OpsPausa {
+  return {
+    evalPausar: (claves, args) => scriptCrudo(r, "PAUSAR", claves, args),
+    pttl: (clave) => comandoTurno(() => lector.pttl(clave)),
+    evalCubo: (claves, args) => scriptCrudo(r, "CUBO", claves, args),
+    evalSalud: (claves, args) => scriptCrudo(r, "SALUD", claves, args),
+  };
+}
+function opsPausaMemoria(): OpsPausa {
+  const base = crearOpsEnMemoria(mem);
+  const contar = <A extends unknown[], R>(fn: (...a: A) => Promise<R>) => async (...a: A) => {
+    anotar((m) => { m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; });
+    return fn(...a);
+  };
+  return { evalPausar: contar(base.evalPausar), pttl: contar(base.pttl), evalCubo: contar(base.evalCubo), evalSalud: contar(base.evalSalud) };
+}
+/** Las primitivas de la pausa, reales o emuladas. Las consumen `pausaTmdb` y /api/health. */
+export const opsPausaHome: OpsPausa = redis && redisLector ? opsPausaRedis(redis, redisLector) : opsPausaMemoria();
+/**
+ * LA pausa de este proceso (un uuid por proceso: parte del id de evento y de
+ * la marca de agua). lib/tmdb.ts la alimenta (429, permisos del semáforo) y
+ * lib/home-servir.ts la consulta. Kill switch: `TMDB_PAUSA_429=0`.
+ */
+export const pausaTmdb = crearPausa({ ops: opsPausaHome, uuid: randomUUID(), activa: pausaActiva(process.env) });
 
 /** Varias claves en UN comando: N `batchGet` en el mismo tick son un MGET. */
 export function leerVarias<T>(claves: string[]): Promise<(T | null)[]> {
   return Promise.all(claves.map((k) => batchGet<T>(k)));
+}
+
+/**
+ * Las mismas claves, por el LECTOR ACOTADO (3.c.1, auditoría sobre d322282):
+ * UN MGET real por `redisLector` —el cliente sin reintentos y con señal de
+ * `CONSTANTES_PAUSA.TIMEOUT_LECTURA_MS` por petición, el mismo que lee el PTTL
+ * de la pausa; no se crea ningún cliente por lectura—. Lo que no llega
+ * —timeout, Redis caído, forma inesperada— es `null` para todas las claves, y
+ * nada sigue reintentando después: si la señal aborta, el SDK 1.38.0 lanza
+ * sin reintentar. Sin Redis, el mismo Map de memoria que `batchGet`.
+ * SÓLO para el camino con pausa LOCAL vigente: el camino sano usa `batchGet`
+ * con el cliente principal y su política de siempre.
+ */
+export async function leerAcotadasHome<T>(claves: string[]): Promise<(T | null)[]> {
+  if (!claves.length) return [];
+  if (!redisLector) {
+    const ahora = Date.now();
+    anotar((m) => { m.redis.modo = "memoria"; m.redis.llamadasLogicas += 1; m.redis.comandos += 1; m.redis.lotes.push(claves.length); });
+    return claves.map((k) => {
+      const hit = mem.get(k); const vivo = !!(hit && hit.exp > ahora);
+      anotar((m) => { m.redis.claves += 1; if (vivo) m.redis.hits++; else m.redis.misses++; });
+      return vivo ? (hit!.v as T) : null;
+    });
+  }
+  const t0 = Date.now();
+  anotar((m) => { m.redis.modo = "redis"; m.redis.llamadasLogicas += 1; m.redis.intentosHttp += 1; });
+  try {
+    const vals = await redisLector.mget<unknown[]>(...claves);
+    if (!Array.isArray(vals) || vals.length !== claves.length) throw new Error("respuesta inesperada del MGET acotado");
+    anotar((m) => { m.redis.comandos += 1; m.redis.lotes.push(claves.length); });
+    return vals.map((v) => {
+      const vivo = !(v === null || v === undefined);
+      anotar((m) => { m.redis.claves += 1; if (vivo) m.redis.hits++; else m.redis.misses++; });
+      return vivo ? (v as T) : null;
+    });
+  } catch {
+    anotar((m) => { m.redis.fallos.lectura += 1; m.redis.claves += claves.length; m.redis.misses += claves.length; });
+    return claves.map(() => null);
+  } finally {
+    anotar((m) => { m.redis.ms += Date.now() - t0; });
+  }
 }
 
 // --- Motor "del día": determinístico por fecha ---

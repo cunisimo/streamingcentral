@@ -11,6 +11,7 @@
 // módulo, y todo el punto de que viva acá es poder probarlo.
 import { hoyAR } from "./fecha.ts";
 import { resolverConCache, type BackendCache } from "./reparar-y-cachear.ts";
+import { suprimirPlataformas } from "./supresiones-disponibilidad.ts";
 import type { MediaType, PlatformCode, UITitle } from "./types";
 
 /** La clave con la que se identifica un título en la evidencia. */
@@ -41,7 +42,11 @@ export const claveTitulo = (tipo: MediaType, id: number) => `${tipo}:${id}`;
  */
 export function conPlataformaDeLaFuente(item: UITitle, platform: PlatformCode): UITitle {
   if (item.platforms.length) return item;
-  return { ...item, platforms: [platform] };
+  // La plataforma del bloque también pasa por las supresiones: si el dueño
+  // verificó que el título NO está ahí, el bloque no lo vuelve a poner. Es la
+  // misma regla que en el resolvedor —la verificación directa gana— y así el
+  // Top no contradice a la ficha del mismo título.
+  return { ...item, platforms: suprimirPlataformas(claveTitulo(item.type, item.id), "AR", [platform]) };
 }
 
 // ============================================================================

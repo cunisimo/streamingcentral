@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual, randomUUID } from "node:crypto";
+import { Redis } from "@upstash/redis";
+import { LUA_PAUSA } from "@/lib/pausa-lua";
+import { opsPausaHome, opsTurnoHome } from "@/lib/cache";
+import { crearTurno } from "@/lib/turno";
+import { saludDeLaPausa } from "@/lib/pausa-salud";
+
+// RUTA TEMPORAL — precondición de la Etapa 3.c.1 (diseño §39.6, §41.4, §41.9,
+// §43.10). Vive sólo en la rama descartable `tmp/etapa3c1-precondicion-upstash`,
+// desplegada como Preview; NUNCA se mergea. Ejecuta contra la base real de
+// Upstash los cuatro scripts Lua de la pausa (TOMAR, PAUSAR, CUBO, SALUD) tal
+// cual están en lib/pausa-lua.ts, por el SDK (EVAL y EVALSHA) y por las
+// primitivas de producción (lib/cache.ts: opsTurnoHome/opsPausaHome, con el
+// cliente aparte del lector), exclusivamente sobre claves con el prefijo
+// `precond-etapa3c1:<corrida>:` y TTL ≤ 60 s, y las borra al final. Lo que se
+// verifica: TIME y cjson dentro de scripts, PTTL, la FORMA exacta de cada
+// respuesta vía SDK y los estados de cada script. No toca ninguna clave normal.
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+type Paso = { paso: string; esperado: string; resultado: unknown; forma: string; ok: boolean; ms: number };
+
+function secretoValido(header: string | null, secret: string): boolean {
+  if (!header) return false;
+  const recibido = Buffer.from(header);
+  const esperado = Buffer.from(`Bearer ${secret}`);
+  if (recibido.length !== esperado.length) return false;
+  return timingSafeEqual(recibido, esperado);
+}
+const forma = (v: unknown): string => Array.isArray(v) ? `[${v.map((x) => typeof x).join(",")}]` : v === null ? "null" : typeof v;
+const esEntero = (v: unknown) => Number.isInteger(v);
+
+export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  const propio = req.headers.get("x-precond-secret");
+  const header = propio ? `Bearer ${propio}` : req.headers.get("authorization");
+  if (!secret) return NextResponse.json({ ok: false, error: "no autorizado", motivo: "sin CRON_SECRET" }, { status: 401 });
+  if (!secretoValido(header, secret)) return NextResponse.json({ ok: false, error: "no autorizado", motivo: header ? "no coincide" : "sin encabezado" }, { status: 401 });
+
+  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return NextResponse.json({ ok: false, error: "sin credenciales de Redis en este entorno" }, { status: 500 });
+  const r = new Redis({ url, token });
+  const corrida = `${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`;
+  const P = `precond-etapa3c1:${corrida}:`;
+  const K = { turno: `${P}turno`, pausa: `${P}pausa`, ev: (id: string) => `${P}ev:${id}`, proc: (u: string) => `${P}proc:${u}`, eventos: `${P}eventos`, cubos: `${P}cubos` };
+  const claves: string[] = [K.turno, K.pausa, K.eventos, K.cubos];
+  const pasos: Paso[] = [];
+  const paso = async (nombre: string, esperado: string, fn: () => Promise<unknown>, verificar: (v: unknown) => boolean) => {
+    const t0 = Date.now();
+    let resultado: unknown, ok = false;
+    try { resultado = await fn(); ok = verificar(resultado); } catch (e) { resultado = { error: String(e).slice(0, 300) }; ok = verificar(resultado); }
+    pasos.push({ paso: nombre, esperado, resultado, forma: forma(resultado), ok, ms: Date.now() - t0 });
+    return resultado;
+  };
+  const scan = async () => { let cursor = "0"; const out: string[] = []; for (let i = 0; i < 20; i++) { const [c, ks] = await r.scan(cursor, { match: `precond-etapa3c1:*`, count: 1000 }); out.push(...ks); cursor = String(c); if (cursor === "0") break; } return out; };
+  const pausar = (id: string, ms: string, uuid: string, contador: string, familia = "/discover/movie", ra = ms) =>
+    r.eval<string[], unknown>(LUA_PAUSA.PAUSAR, [K.pausa, K.ev(id), K.proc(uuid), K.eventos, K.cubos], [id, ms, contador, familia, ra]);
+  claves.push(K.ev("p:1"), K.ev("p:2"), K.ev("q:1"), K.ev("p:0"), K.proc("p"), K.proc("q"));
+
+  try {
+    await paso("0. PING", "PONG", () => r.ping(), (v) => v === "PONG");
+    await paso("0. DBSIZE antes", "número", () => r.dbsize(), esEntero);
+    await paso("0. SCAN precond-etapa3c1:* antes", "0 claves", scan, (v) => Array.isArray(v) && v.length === 0);
+    // --- precondiciones del Lua en Upstash
+    await paso("1. TIME dentro de un script", "[s, us] como strings numéricos", () => r.eval("local t = redis.call('TIME'); return {t[1], t[2]}", [], []), (v) => Array.isArray(v) && v.length === 2 && /^\d+$/.test(String(v[0])));
+    await paso("2. cjson.encode dentro de un script", "JSON (el SDK lo deserializa solo: llega como objeto)", () => r.eval("return cjson.encode({ a = 1, b = 'x' })", [], []), (v) => (typeof v === "string" ? JSON.parse(v) : v as { a?: number })?.a === 1);
+    await paso("3. PTTL de una clave ausente (SDK)", "-2 (número)", () => r.pttl(K.pausa), (v) => v === -2);
+    await paso("4. pcall con una función local dentro de un script", "1", () => r.eval("local function f() return 1 end; local ok, v = pcall(f); return ok and v or 0", [], []), (v) => v === 1);
+    // --- TOMAR
+    await paso("5. TOMAR sin pausa", "['adquirido']", () => r.eval(LUA_PAUSA.TOMAR, [K.turno, K.pausa], ["A", "20000"]), (v) => JSON.stringify(v) === '["adquirido"]');
+    await paso("6. TOMAR con turno ajeno", "['ocupado','A']", () => r.eval(LUA_PAUSA.TOMAR, [K.turno, K.pausa], ["B", "20000"]), (v) => JSON.stringify(v) === '["ocupado","A"]');
+    await paso("6b. PTTL del turno", "0 < n ≤ 20000", () => r.pttl(K.turno), (v) => esEntero(v) && (v as number) > 0 && (v as number) <= 20000);
+    await paso("7. DEL turno", "1", () => r.del(K.turno), (v) => v === 1);
+    // --- PAUSAR v3
+    await paso("8. PAUSAR escrito (p:1, 3000)", "['escrito', 3000]", () => pausar("p:1", "3000", "p", "1"), (v) => JSON.stringify(v) === '["escrito",3000]');
+    await paso("8b. PTTL pausa", "0 < n ≤ 3000", () => r.pttl(K.pausa), (v) => esEntero(v) && (v as number) > 0 && (v as number) <= 3000);
+    await paso("8c. PTTL marcador ev:p:1", "≈ 120000", () => r.pttl(K.ev("p:1")), (v) => esEntero(v) && (v as number) > 110_000 && (v as number) <= 120_000);
+    await paso("8d. GET proc:p", "'1' con PX 24 h", async () => [await r.get(K.proc("p")), await r.pttl(K.proc("p"))], (v) => Array.isArray(v) && String(v[0]) === "1" && (v[1] as number) > 86_000_000);
+    await paso("9. TOMAR con pausa vigente", "['pausado', n] con 0 < n ≤ 3000, sin adquirir", async () => [await r.eval(LUA_PAUSA.TOMAR, [K.turno, K.pausa], ["A", "20000"]), await r.exists(K.turno)], (v) => { const [t, e] = v as [unknown[], number]; return Array.isArray(t) && t[0] === "pausado" && esEntero(t[1]) && (t[1] as number) > 0 && (t[1] as number) <= 3000 && e === 0; });
+    await paso("10. PAUSAR reintento del MISMO id (p:1)", "['ya-aplicada', n ≤ 3000], sin extender", async () => { const antes = await r.pttl(K.pausa); const x = await pausar("p:1", "3000", "p", "1"); const despues = await r.pttl(K.pausa); return [x, antes, despues]; }, (v) => { const [x, a, d] = v as [unknown[], number, number]; return Array.isArray(x) && x[0] === "ya-aplicada" && esEntero(x[1]) && d <= a; });
+    await paso("11. PAUSAR evento NUEVO más corto (q:1, 1000)", "['ya-mayor', n] con n > 1000", () => pausar("q:1", "1000", "q", "1"), (v) => Array.isArray(v) && (v as unknown[])[0] === "ya-mayor" && esEntero((v as unknown[])[1]) && ((v as unknown[])[1] as number) > 1000);
+    await paso("12. PAUSAR evento NUEVO más largo (p:2, 8000)", "['escrito', 8000]", () => pausar("p:2", "8000", "p", "2"), (v) => JSON.stringify(v) === '["escrito",8000]');
+    await paso("13. marca de agua: contador viejo del mismo uuid (p:0)", "['ya-aplicada', n]", () => pausar("p:0", "9000", "p", "0"), (v) => Array.isArray(v) && (v as unknown[])[0] === "ya-aplicada");
+    await paso("14. PAUSAR con ms inválido", "error del script (ERR PAUSAR), nada mutado", () => pausar("p:9", "abc", "p", "9"), (v) => typeof v === "object" && v !== null && /ERR PAUSAR|argumentos/.test(String((v as { error?: string }).error)));
+    await paso("14b. GET proc:p sigue en 2 (nada mutado por el error)", "'2'", () => r.get(K.proc("p")), (v) => String(v) === "2");
+    // --- telemetría
+    await paso("15. LLEN eventos", "3 (escrito, ya-mayor, escrito; ninguno por ya-aplicada)", () => r.llen(K.eventos), (v) => v === 3);
+    await paso("15b. LINDEX eventos 0 (el más nuevo): JSON con familia/estado/restante/t (el SDK lo deserializa solo)", "objeto con esas claves", async () => { const v = await r.lindex(K.eventos, 0); return typeof v === "string" ? JSON.parse(v) : v; }, (v) => { const o = v as Record<string, unknown>; return o.estado === "escrito" && o.familia === "/discover/movie" && esEntero(o.t) && esEntero(o.restante); });
+    await paso("16. HGETALL cubos", "campos <minuto>:429 = 3, pausas = 2, ya-mayor = 1, ya-aplicada = 2", () => r.hgetall(K.cubos), (v) => { const o = (v ?? {}) as Record<string, string | number>; const suma = (c: string) => Object.entries(o).filter(([k]) => k.endsWith(`:${c}`)).reduce((s, [, n]) => s + Number(n), 0); return suma("429") === 3 && suma("pausas") === 2 && suma("ya-mayor") === 1 && suma("ya-aplicada") === 2; });
+    await paso("17. CUBO pausadosUB", "minuto (entero)", () => r.eval(LUA_PAUSA.CUBO, [K.cubos], ["pausadosUB"]), esEntero);
+    await paso("18. SALUD", "[pttl>0, 3, 2, 1, 2, 0, 1, 0] y saludDeLaPausa lo acepta", () => r.eval(LUA_PAUSA.SALUD, [K.pausa, K.cubos], []), (v) => { const s = saludDeLaPausa(v); return !!s && s.pausaVigenteMs > 0 && JSON.stringify(s.ultimos60min) === JSON.stringify({ "429": 3, pausas: 2, yaMayor: 1, yaAplicada: 2, pausaNoLeida: 0, pausadosUB: 1, pausados503: 0 }); });
+    // --- EVALSHA: el camino de producción (NOSCRIPT → EVAL → EVALSHA)
+    await paso("19. EVALSHA de TOMAR (sha ya cargado por el EVAL anterior)", "['pausado', n]", async () => { const { createHash } = await import("node:crypto"); const sha = createHash("sha1").update(LUA_PAUSA.TOMAR).digest("hex"); return r.evalsha(sha, [K.turno, K.pausa], ["A", "20000"]); }, (v) => Array.isArray(v) && (v as unknown[])[0] === "pausado");
+    // --- las primitivas de PRODUCCIÓN (lib/cache.ts), con claves prefijadas
+    await paso("20. opsTurnoHome.evalTomar (producción) con pausa", "['pausado', n]", () => opsTurnoHome.evalTomar([K.turno, K.pausa], ["A", "20000"]), (v) => Array.isArray(v) && (v as unknown[])[0] === "pausado");
+    await paso("21. crearTurno(opsTurnoHome, { pausa }).tomar", "{ estado: 'pausado', restanteMs > 0 }", () => crearTurno(opsTurnoHome, { pausa: { clave: K.pausa } }).tomar({ clave: K.turno, propietario: "A", px: 20000 }), (v) => (v as { estado: string }).estado === "pausado" && ((v as { restanteMs: number }).restanteMs) > 0);
+    await paso("22. opsPausaHome.pttl (el cliente LECTOR aparte, timeout 1 s, sin reintentos)", "entero > 0", () => opsPausaHome.pttl(K.pausa), (v) => esEntero(v) && (v as number) > 0);
+    await paso("23. opsPausaHome.evalSalud (producción)", "tupla de 8 enteros", () => opsPausaHome.evalSalud([K.pausa, K.cubos], []), (v) => saludDeLaPausa(v) !== null);
+    await paso("24. DEL pausa y crearTurno(...).tomar adquiere", "{ estado: 'adquirido' }", async () => { await r.del(K.pausa); return crearTurno(opsTurnoHome, { pausa: { clave: K.pausa } }).tomar({ clave: K.turno, propietario: "A", px: 20000 }); }, (v) => (v as { estado: string }).estado === "adquirido");
+  } finally {
+    const borradas = await r.del(...claves).catch((e) => ({ error: String(e) }));
+    pasos.push({ paso: "99. DEL de todas las claves de la corrida", esperado: "número", resultado: borradas, forma: forma(borradas), ok: esEntero(borradas), ms: 0 });
+    const despues = await scan().catch(() => ["error"]);
+    pasos.push({ paso: "99. SCAN precond-etapa3c1:* después", esperado: "0 claves", resultado: despues, forma: forma(despues), ok: Array.isArray(despues) && despues.length === 0, ms: 0 });
+    const db = await r.dbsize().catch(() => -1);
+    pasos.push({ paso: "99. DBSIZE después", esperado: "número", resultado: db, forma: forma(db), ok: esEntero(db), ms: 0 });
+  }
+  const ok = pasos.every((p) => p.ok);
+  return NextResponse.json({ ok, corrida, prefijo: P, pasos: pasos.length, correctos: pasos.filter((p) => p.ok).length, sdk: "@upstash/redis 1.38.0", detalle: pasos });
+}

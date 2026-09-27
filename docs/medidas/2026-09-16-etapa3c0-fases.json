@@ -1,0 +1,75 @@
+{
+  "fecha": "2026-09-16T20:52:45.942Z",
+  "rama": "diseno/etapa3c-proteccion-tmdb",
+  "factorP95": 1.5,
+  "redisPromedio": 40,
+  "modelos": {
+    "prod-3b": {
+      "tmdb": 348,
+      "redis": 40,
+      "supabase": 355
+    },
+    "prod-3a": {
+      "tmdb": 527,
+      "redis": 40,
+      "supabase": 604
+    }
+  },
+  "modo": "fases",
+  "escenarios": {
+    "fases/S1-frio-total-en-linea": {
+      "resumen": {
+        "respuestaMs": 26574,
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 26511,
+        "tmdbLinea": 926,
+        "redisOps": 1005,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 336,
+          "composicionMs": 25573,
+          "ultimaLlamadaMs": 417,
+          "publicacionMs": 214,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 602
+        }
+      }
+    },
+    "fases/S3-frio-total-en-fondo": {
+      "resumen": {
+        "respuestaMs": 296,
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 25941,
+        "tmdbLinea": 926,
+        "redisOps": 1003,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 365,
+          "composicionMs": 25371,
+          "ultimaLlamadaMs": 347,
+          "publicacionMs": 149,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 205
+        }
+      }
+    },
+    "fases/S3b-frio-total-en-fondo-repeticion": {
+      "resumen": {
+        "respuestaMs": 232,
+        "cache": "MISS",
+        "cancelada": false,
+        "msTotal": 26158,
+        "tmdbLinea": 926,
+        "redisOps": 1002,
+        "fases": {
+          "hastaPrimeraLlamadaMs": 297,
+          "composicionMs": 25553,
+          "ultimaLlamadaMs": 418,
+          "publicacionMs": 129,
+          "cierreMs": 0,
+          "trasUltimaLlamadaMs": 308
+        }
+      }
+    }
+  }
+}
