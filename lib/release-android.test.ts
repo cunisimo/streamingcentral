@@ -172,8 +172,13 @@ test("🔴 keystore.properties y los keystores están fuera de Git", () => {
 // 4. LA CONFIGURACIÓN DE RELEASE
 // ============================================================================
 
-test("versionCode 1, versionName 1.0.0 y release no depurable", () => {
-  assert.match(GRADLE, /versionCode 1\b/, "cambió el versionCode del primer envío");
+test("versionCode 2, versionName 1.0.0 y release no depurable", () => {
+  // 27/09: pasó de 1 a 2 para la segunda subida al canal cerrado, la que lleva
+  // Yumpeá. El dueño confirmó en Play Console que 1 era el mayor subido a
+  // cualquier canal, y Play exige estrictamente mayor. Cuando haya una tercera
+  // subida este número vuelve a cambiar, y este test es el que obliga a
+  // decidirlo a conciencia en vez de dejarlo pasar.
+  assert.match(GRADLE, /versionCode 2\b/, "cambió el versionCode de la segunda subida");
   assert.match(GRADLE, /versionName "1\.0\.0"/, "el versionName no es 1.0.0");
   assert.match(GRADLE, /debuggable false/, "la release no declara debuggable false");
   assert.match(GRADLE, /minifyEnabled false/, "cambió minifyEnabled sin decidirlo");

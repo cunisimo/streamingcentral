@@ -46,7 +46,7 @@ La url pública se traduce a la ruta interna con `lib/sala/enlace-nativo.ts`:
 saneador: sólo el host canónico, sólo `https`, sólo esa forma exacta. Un intent
 puede traer cualquier cosa.
 
-## 3. `assetlinks.json` — ⏳ PENDIENTE, necesita tu huella
+## 3. `assetlinks.json` — ✅ preparado, ⏳ falta desplegarlo y verificarlo
 
 🔴 **Sin este archivo NO está garantizado que el enlace abra la app.** Conviene
 no confundir dos cosas: el enlace **funciona igual** —quien lo recibe llega a la
@@ -68,22 +68,36 @@ desplegar este archivo con la huella correcta y ver `verified` en un teléfono.
 Se sirve en `https://app.yump.ar/.well-known/assetlinks.json`, con
 `Content-Type: application/json` y **sin redirecciones** (Android no las sigue):
 
+El contenido real está en el repositorio; la forma es ésta, con las tres huellas
+de **firma de aplicación** en el array:
+
 ```json
 [{
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
     "package_name": "ar.yump.app",
-    "sha256_cert_fingerprints": ["AQUI_VA_LA_HUELLA_DE_PLAY_APP_SIGNING"]
+    "sha256_cert_fingerprints": ["…clásica actual…", "…poscuántica…", "…clásica anterior…"]
   }
 }]
 ```
 
-En este repo iría en `public/.well-known/assetlinks.json`. **Todavía no existe a
-propósito**: publicarlo con una huella equivocada es peor que no publicarlo,
-porque Android cachea el resultado de la verificación.
+**Ya está escrito en `public/.well-known/assetlinks.json`**, con las **tres**
+huellas de firma de aplicación que el dueño copió de Play Console el 27/09: la
+clásica actual, la poscuántica y la clásica anterior. El array admite varias y
+las tres tienen que estar.
 
-### 🔴 De dónde sale la huella, exactamente
+🔴 **Ninguna de las tres es la de SUBIDA.** Están una debajo de la otra en la
+misma pantalla, y con la de subida la verificación falla en silencio. Hay un test
+que compara las tres contra la lista y **rechaza explícitamente** la de subida.
+
+**Comprobado, además de la forma del JSON:** que Next lo sirve de verdad. Un
+`public/` con carpeta que empieza con punto no es obvio, así que se levantó el
+build de producción y se pidió la url: **HTTP 200,
+`application/json; charset=UTF-8`, 0 redirecciones** — que es exactamente lo que
+Android necesita, porque no sigue redirecciones.
+
+### 🔴 De dónde salieron las huellas (ya hecho, se documenta para la próxima)
 
 **Play Console → tu app → Test and release → Setup → App integrity → pestaña
 "App signing" → "App signing key certificate" → `SHA-256 certificate
@@ -114,8 +128,10 @@ La segunda tiene que decir `app.yump.ar: verified`. Si dice `none` o
 
 ## Lo que NO se hizo, y por qué
 
-- **No se desplegó `assetlinks.json`.** Falta la huella y vos pediste no
-  desplegarlo todavía.
+- 🔴 **No se desplegó.** El archivo está en el repositorio pero `app.yump.ar`
+  todavía lo sirve en 404: hace falta un deploy, que necesita autorización.
+  **Mientras tanto la apertura automática desde WhatsApp NO está aprobada**, y no
+  lo va a estar hasta ver `app.yump.ar: verified` en un teléfono real.
 - **No se tocó `prefer_related_applications`** del manifest web. Es el mecanismo
   por el que Chrome suprime su propio aviso de instalación de PWA a favor de la
   app de Play; lo evaluamos aparte.

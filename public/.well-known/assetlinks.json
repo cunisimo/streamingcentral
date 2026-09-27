@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ar.yump.app",
+      "sha256_cert_fingerprints": [
+        "BC:C3:01:3B:1C:D4:21:70:95:6D:3C:E1:4D:77:33:24:A4:65:84:57:56:FA:28:1D:C4:6E:99:8E:77:05:62:C5",
+        "7C:F1:AA:27:40:DD:7A:03:17:4C:6D:F8:9D:22:06:82:56:94:E9:1F:31:0C:79:EE:66:F4:3C:08:57:95:ED:83",
+        "69:DB:5C:85:93:AF:C0:CC:06:95:A2:62:C2:F2:23:DC:D8:0C:06:B3:DE:3C:20:CA:91:D2:99:4D:CC:AC:F2:9B"
+      ]
+    }
+  }
+]

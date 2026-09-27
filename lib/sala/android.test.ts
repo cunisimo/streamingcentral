@@ -142,22 +142,37 @@ test("la entrada a Yumpeá ya NO se oculta en Android", () => {
   assert.match(entrada, /process\.env\.NEXT_PUBLIC_SALAS_ACTIVAS !== "0"/, "el kill switch sigue");
 });
 
-test("⏳ assetlinks.json: si algún día aparece, no puede llevar el marcador de plantilla", () => {
-  // Hoy NO existe a propósito: falta la huella SHA-256 de Play App Signing y el
-  // dueño pidió no desplegarlo todavía. Publicarlo con una huella equivocada es
-  // PEOR que no publicarlo, porque Android cachea el resultado de la
-  // verificación. Este test no exige que exista; exige que, cuando exista, sea
-  // de verdad. Ver docs/ANDROID-APP-LINKS.md.
+test("assetlinks.json: las TRES huellas son las de FIRMA DE APLICACIÓN, no la de subida", () => {
+  // 🔴 EL ERROR CLÁSICO ES PONER LA DE SUBIDA. Están una debajo de la otra en la
+  // misma pantalla de Play Console, y con la de subida la verificación falla en
+  // silencio: Android descarga el archivo, no encuentra la huella de la firma
+  // con la que Play re-firmó el paquete, y marca el dominio como no verificado.
+  //
+  // Son TRES porque Play publica la clásica actual, la poscuántica y la clásica
+  // anterior; el array admite varias y las tres tienen que estar.
+  const HUELLA = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/;
+  // La de SUBIDA, la que NO va acá. Es pública (es una huella, no una clave) y
+  // está escrita para que el test pueda rechazarla si alguien la pega por error.
+  const SUBIDA = "2D:18:A7:C1:F4:FC:AB:D4:09:79:B3:CB:EA:66:1F:E5:41:D4:92:89:7D:47:B2:C6:7E:CF:AB:9F:93:03:95:AE";
+  const FIRMA_APP = [
+    "BC:C3:01:3B:1C:D4:21:70:95:6D:3C:E1:4D:77:33:24:A4:65:84:57:56:FA:28:1D:C4:6E:99:8E:77:05:62:C5",
+    "7C:F1:AA:27:40:DD:7A:03:17:4C:6D:F8:9D:22:06:82:56:94:E9:1F:31:0C:79:EE:66:F4:3C:08:57:95:ED:83",
+    "69:DB:5C:85:93:AF:C0:CC:06:95:A2:62:C2:F2:23:DC:D8:0C:06:B3:DE:3C:20:CA:91:D2:99:4D:CC:AC:F2:9B",
+  ];
+
   const ruta = join(process.cwd(), "public/.well-known/assetlinks.json");
-  if (!existsSync(ruta)) return;
+  assert.ok(existsSync(ruta), "falta public/.well-known/assetlinks.json");
   const j = JSON.parse(readFileSync(ruta, "utf8"));
-  assert.ok(Array.isArray(j) && j.length >= 1);
+  assert.ok(Array.isArray(j) && j.length === 1);
+  assert.deepEqual(j[0].relation, ["delegate_permission/common.handle_all_urls"]);
   const t = j[0].target;
   assert.equal(t.namespace, "android_app");
   assert.equal(t.package_name, "ar.yump.app");
+  assert.deepEqual(t.sha256_cert_fingerprints, FIRMA_APP, "las huellas no son las tres de firma de aplicación");
+  assert.ok(!t.sha256_cert_fingerprints.includes(SUBIDA), "🔴 entró la huella de SUBIDA");
   for (const h of t.sha256_cert_fingerprints) {
-    assert.doesNotMatch(h, /AQUI_VA|PLACEHOLDER|XX:XX/i, "quedó el marcador de la plantilla");
-    assert.match(h, /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/, `huella con forma inválida: ${h}`);
+    assert.match(h, HUELLA, `huella con forma inválida: ${h}`);
+    assert.doesNotMatch(h, /AQUI_VA|PLACEHOLDER|XX:XX/i);
   }
 });
 

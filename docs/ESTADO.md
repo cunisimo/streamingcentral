@@ -222,6 +222,28 @@
   [`YUMPEA-PRUEBA-CERRADA.md`](YUMPEA-PRUEBA-CERRADA.md): migración apagada →
   encender → deploy (con `assetlinks.json` si la huella llegó) → sala completa en
   la web → AAB al canal Alpha → sala completa en Android. **Nada ejecutado.**
+  **RONDA DEL DUEÑO (27/09, 3ª parte): el AAB firmado YA COMPILA.** El dueño
+  recuperó el keystore de subida —su SHA-256 coincide con Play y contiene
+  `PrivateKeyEntry`, así que no hay que pedir cambio de clave— y confirmó que el
+  `versionCode` más alto en Play es **1**. **Comprobado con build real:**
+  `versionCode` subido a **2**, `bundleRelease` BUILD SUCCESSFUL con los tres
+  guards en verde, y sobre el AAB resultante: la firma es la clave de subida
+  correcta (huella idéntica a la confirmada), `versionCode 2` en el manifest
+  fusionado, 6 archivos del paquete web con `https://app.yump.ar` y **0** con
+  `vercel.app`, y "Yumpeá", "Hacé match" y la ruta `/s/?id=` presentes. 🔒 El
+  `.jks`, el alias y las contraseñas no se leyeron ni se registraron: lo único
+  mirado es la huella pública del certificado.
+  **`public/.well-known/assetlinks.json` escrito** con las **tres** huellas de
+  **firma de aplicación** (clásica actual, poscuántica y clásica anterior), no la
+  de subida; hay un test que las fija y rechaza la de subida explícitamente.
+  Verificado además que **Next lo sirve**: HTTP 200, `application/json`, 0
+  redirecciones —una carpeta que empieza con punto dentro de `public/` no es
+  obvio—.
+  🔴 **La apertura automática desde WhatsApp sigue SIN aprobar**: el archivo está
+  en el repositorio pero `app.yump.ar` todavía lo sirve en 404. No se aprueba
+  hasta deployar y ver `app.yump.ar: verified` en un teléfono.
+  **Nada ejecutado:** sin migración, sin encendido, sin deploy, sin merge, sin
+  push y sin subir el AAB a Play. Lo único que falta ahora son autorizaciones.
   Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
   encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
   del plan), merge y push. Evidencia:

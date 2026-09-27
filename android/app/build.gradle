@@ -28,7 +28,11 @@ android {
         applicationId "ar.yump.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        // versionCode 2: el mayor subido a Play es 1 (confirmado por el dueno en
+        // Play Console el 27/09). Play exige estrictamente mayor, y la app ya
+        // instalada desde la prueba cerrada se actualiza sola porque Play App
+        // Signing vuelve a firmar con la misma clave: no hay que desinstalar.
+        versionCode 2
         versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

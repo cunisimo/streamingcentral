@@ -14,52 +14,55 @@ Supabase Producción espera autorización explícita del dueño.
 | **Paquete web de release** | ✅ compila | `node scripts/build-capacitor.mjs --release --api-base=https://app.yump.ar` → 35 rutas en 38 html |
 | **Guard de base de API** | ✅ pasa | `./gradlew verificarBaseDeApi` → "el paquete web apunta a https://app.yump.ar" |
 | **Guard de paquete con salas** (nuevo) | ✅ pasa, y falla en rojo | `verificarPaqueteConSalas` → "el paquete trae /s y /sala/nueva"; sacando esa carpeta a mano, corta con el motivo escrito |
-| **AAB firmado** | ❌ **NO se puede hoy** | `./gradlew bundleRelease` → falla en `verificarFirmaDeCarga` |
+| **AAB firmado** | ✅ **compila** (27/09, con el keystore del dueño) | `./gradlew bundleRelease` → BUILD SUCCESSFUL, `app-release.aab` (7,2 MB) |
 
-El error exacto del AAB:
+### Lo que se verificó del AAB, sin tocar el keystore ni sus contraseñas
 
-```
-Execution failed for task ':app:verificarFirmaDeCarga'.
-> falta …\android\keystore.properties (o esta incompleto). Una release necesita
-  la clave de carga y NO se firma con la clave de depuracion.
-```
+| Qué | Cómo | Resultado |
+|---|---|---|
+| La firma es la clave de **subida** correcta | `keytool -printcert -jarfile` sobre el AAB | SHA-256 **idéntico** al que el dueño confirmó contra Play |
+| `versionCode` | manifest fusionado de release | **2** (`versionName` sigue en `1.0.0`) |
+| Apunta a **Producción** | recorriendo las 201 entradas del paquete web dentro del AAB | **6** archivos con `https://app.yump.ar`, **0** con `vercel.app` |
+| Trae **Yumpeá** | lo mismo | "Yumpeá", "Hacé match" y la ruta `/s/?id=` presentes |
+| Los tres guards | `bundleRelease` | los tres corrieron y pasaron |
 
-**Falta una sola cosa: `android/keystore.properties`**, que está fuera de Git a
-propósito y apunta al keystore del dueño. El build no cae a la clave de
-depuración ni produce un artefacto sin firmar: corta antes, que es lo correcto.
+⚠️ Aparece un `http://localhost:9999` en un chunk: es el **default interno de
+supabase-js** (la url de GoTrue cuando no se le pasa ninguna). Nunca se usa,
+porque el cliente se construye con la url real. No es nuestro y está en todos
+los builds.
 
-**Todo lo demás ya está preparado.** El paquete web de release está construido y
-sincronizado en `android/app/src/main/assets/public`, y los dos guards que sí
-pueden correr pasan. La última corrida llegó exactamente hasta la firma: el
-siguiente `bundleRelease`, con el archivo puesto, debería producir el AAB.
+🔒 El `.jks`, el alias y las contraseñas **no se leyeron, no se imprimieron y no
+se registraron**. Lo único que se miró es la huella pública del certificado, que
+es la que el dueño ya había confirmado contra Play.
 
-Hay una plantilla vacía en **`android/keystore.properties.example`**. El `.jks` y
-las contraseñas se quedan en tu máquina: `android/.gitignore` ya ignora
-`keystore.properties`, `*.jks` y `*.keystore`, y hay un test que lo verifica.
+El `keystore.properties` del dueño vive en su máquina y fuera de Git
+(`android/.gitignore` cubre `keystore.properties`, `*.jks` y `*.keystore`, y hay
+un test que lo verifica). La plantilla vacía quedó en
+`android/keystore.properties.example`.
 
-⚠️ **Falta además subir el `versionCode`**, que depende del dato de Play (§5).
+**El AAB está listo para subir.** Lo único que falta para que llegue a los
+testers es tu autorización y el resto del orden: sin el backend en Producción, la
+app muestra Yumpeá y no puede armar una sala.
 
 ⚠️ **Un APK de depuración NO sirve para probar sin desinstalar.** Tiene otra
 firma que el instalado desde Play, y Android rechaza la instalación con "App not
 installed" cuando el `applicationId` coincide y la firma no. Para actualizar la
 app de la prueba cerrada **el único camino es subir un AAB a Play**.
 
-## 2. `versionCode`: hay que comprobarlo antes de tocarlo
+## 2. `versionCode`: comprobado, y subido a 2
 
 | Fuente | Dice |
 |---|---|
-| `android/app/build.gradle` | `versionCode 1`, `versionName "1.0.0"` |
-| `docs/ESTADO.md` (heredado) | prueba cerrada Alpha, "versión 1 (1.0.0)" |
+| Play Console (el dueño, 27/09) | el mayor subido a cualquier canal es **1** |
+| `android/app/build.gradle` | ahora **`versionCode 2`**, `versionName "1.0.0"` |
 
-**Ninguna de las dos es autoritativa.** El número que manda es el más alto
-subido a **cualquier** canal de esa app. Se lee en:
+Play exige **estrictamente mayor**, así que 2. La app instalada desde la prueba
+cerrada se actualiza sola: Play App Signing vuelve a firmar con la misma clave,
+la firma no cambia y no hay que desinstalar nada.
 
-> Play Console → tu app → **Test and release → App bundle explorer** (o
-> Testing → Closed testing → el canal Alpha → la release activa).
-
-El `versionCode` nuevo tiene que ser **estrictamente mayor** que ése. Si Play
-dice 1, va `versionCode 2`; si dice otra cosa, va ese número más uno. **No lo
-cambié**: es una línea y depende de un dato que sólo está en tu consola.
+⚠️ **`versionName` se dejó en `1.0.0`.** Es lo que ve el usuario en la ficha de
+Play; si querés que diga otra cosa —`1.1.0`, por ejemplo— es una línea más. No lo
+cambié porque no lo pediste.
 
 ## 3. El bloqueo real: el AAB apunta a Producción y las salas no están ahí
 
@@ -328,34 +331,37 @@ sobre lo que los teléfonos ya instalados escriben directo en la base.
 El orden ante un problema es **1**, y después mirar. El 2 arregla la web pero
 deja la app con un botón que falla, así que no sustituye al 1.
 
-## 5. Los dos datos que necesito de Play Console
+## 5. Datos de Play Console: recibidos
 
-Son los únicos que me faltan, y ninguno es secreto.
+Los dos que faltaban llegaron el 27/09 y ya están aplicados.
 
-| Dato | Dónde está | Para qué |
-|---|---|---|
-| **El `versionCode` más alto** subido a cualquier canal | Play Console → Test and release → **App bundle explorer** (o el canal Alpha → la release activa) | El nuevo tiene que ser estrictamente mayor. Hoy el repo dice `1` |
-| **La huella SHA-256 de Play App Signing** | Play Console → Test and release → Setup → **App integrity** → pestaña *App signing* → **App signing key certificate** | `assetlinks.json`, para que el enlace de WhatsApp abra la app |
+| Dato | Estado |
+|---|---|
+| `versionCode` más alto en Play | **1** → el nuevo quedó en **2** |
+| Huellas SHA-256 de **firma de aplicación** | Las **tres** (clásica actual, poscuántica y clásica anterior) en `public/.well-known/assetlinks.json` |
+| Keystore de subida | Recuperado por el dueño; su SHA-256 coincide con Play y contiene `PrivateKeyEntry`. **No hace falta pedir cambio de clave** |
 
-⚠️ La segunda **no** es la del *upload key certificate*, que aparece justo debajo
-en la misma pantalla. Con ésa la verificación falla en silencio.
+🔒 **Lo que nunca salió de la máquina del dueño:** el `.jks`, el alias y las
+contraseñas. No se leyeron, no se imprimieron, no se registraron y no se
+pidieron por chat. Lo único que se miró del AAB firmado es la **huella pública**
+del certificado, para comprobar que es la clave de subida correcta.
 
-🔴 **Lo que NO necesito y no hay que mandarme nunca:** el archivo `.jks`, su
-contraseña, la del alias o el alias mismo. Eso se queda en tu máquina, en
-`android/keystore.properties`, que ya está en `.gitignore` junto con `*.jks` y
-`*.keystore`. No lo pido por chat, no lo escribo en un log y no entra a Git. Hay
-una plantilla vacía en `android/keystore.properties.example`.
+⚠️ En `assetlinks.json` van las huellas de **firma de aplicación**, NO la de
+subida. Están una debajo de la otra en la misma pantalla de Play Console y con la
+de subida la verificación falla en silencio. Hay un test que compara las tres
+contra la lista y **rechaza explícitamente** la de subida.
 
 ## 6. Lo que tenés que hacer o autorizar
 
+Ya no falta ningún dato tuyo: sólo autorizaciones.
+
 | # | Acción | Por qué no puedo yo |
 |---|---|---|
-| 1 | Pasarme los **dos datos** de la tabla de arriba | No tengo acceso a tu consola |
-| 2 | Crear `android/keystore.properties` desde la plantilla | Contraseñas tuyas; no salen de tu máquina |
-| 3 | Autorizar el **paso 1** (migración en Producción, apagada) | Cambia Producción |
-| 4 | Autorizar el **paso 2** (encender las salas) | Cambia Producción |
-| 5 | Autorizar el **paso 3** (merge, push y deploy). **Ninguna variable de Vercel que tocar** | Cambia Producción, y deja Yumpeá viva en la web para todos |
-| 6 | Autorizar el **paso 5** (subir el AAB al canal Alpha) | Publica, aunque sea a testers |
+| 1 | Autorizar el **paso 1** (migración en Producción, apagada) | Cambia Producción |
+| 2 | Autorizar el **paso 2** (encender las salas) | Cambia Producción |
+| 3 | Autorizar el **paso 3** (merge, push y deploy, con `assetlinks.json`). **Ninguna variable de Vercel que tocar** | Cambia Producción, y deja Yumpeá viva en la web para todos |
+| 4 | Autorizar el **paso 5** (subir el AAB al canal Alpha) | Publica, aunque sea a testers |
+| 5 | Decir si `versionName` se queda en `1.0.0` | Es lo que ve el usuario en la ficha |
 
 ## 7. Lo que queda apagado
 
