@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { pwaActiva } from "@/lib/pwa-nativa";
+import { enRecorridoDeSala } from "@/lib/sala/aviso-pwa";
 
 const DISMISS_KEY = "sc:pwa:dismissed"; // timestamp del último descarte
 const VISITS_KEY = "sc:visits";          // conteo de sesiones
@@ -26,6 +28,13 @@ const SHOWN_FLAG = "sc:pwa:shown";        // ya se evaluó/mostró el banner est
 export default function InstallPrompt() {
   const { platform, canPrompt, installed, promptInstall } = useInstallPrompt();
   const [show, setShow] = useState(false);
+  // 🔴 EN TODO EL RECORRIDO DE UNA SALA, NUNCA (decisión del dueño, 27/09).
+  // Este banner se monta en el layout raíz y puede aparecer en cualquier
+  // pantalla, incluidos los 10 segundos de una votación. Y al terminar la sala
+  // competiría con la invitación a instalar del resultado, que es la que el
+  // dueño quiere ahí. Se decide por RUTA, que es lo único que distingue el
+  // recorrido desde el layout.
+  const pathname = usePathname();
 
   // Efecto 1 — contar SESIONES, no cargas de página. SESSION_FLAG persiste en
   // sessionStorage toda la sesión (sobrevive recargas, incluida la que dispara
@@ -69,6 +78,7 @@ export default function InstallPrompt() {
   // misma razón que en InstallRow: los dos efectos de arriba ya corrieron y su
   // orden no cambia entre renders.
   if (!pwaActiva()) return null;
+  if (enRecorridoDeSala(pathname)) return null;
   if (!show || installed) return null;
 
   function dismiss() {

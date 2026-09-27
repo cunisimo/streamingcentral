@@ -4,8 +4,23 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "sala-local",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file=.env.sala-local",
+        "node_modules/next/dist/bin/next",
+        "dev",
+        "-p",
+        "3111"
+      ],
+      "port": 3111
     }
   ]
 }

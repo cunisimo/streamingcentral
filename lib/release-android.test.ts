@@ -96,14 +96,19 @@ test("el script declara --release y corta antes de construir", () => {
 // `cap sync` viejo, de otra rama, de una copia a mano. Por eso el segundo guard
 // mira el RESULTADO y no la intención.
 
-test("🔴 bundleRelease depende de los dos guards", () => {
+test("🔴 bundleRelease depende de los TRES guards", () => {
   assert.match(GRADLE, /tasks\.register\("verificarBaseDeApi"\)/, "falta el guard de la API");
   assert.match(GRADLE, /tasks\.register\("verificarFirmaDeCarga"\)/, "falta el guard de la firma");
+  // El tercero entró el 27/09: un `sync` olvidado dejaba pasar un AAB con el
+  // paquete web ANTERIOR —compila, se firma, se sube, y el tester actualiza a
+  // una versión sin Yumpeá—, y los otros dos no lo atrapan, porque la base de
+  // API es la correcta y la firma también.
+  assert.match(GRADLE, /tasks\.register\("verificarPaqueteConSalas"\)/, "falta el guard del paquete");
   const enganche = GRADLE.slice(GRADLE.indexOf("afterEvaluate"));
   assert.match(enganche, /bundleRelease/, "el AAB no depende de los guards");
   assert.match(enganche, /assembleRelease/, "el APK de release no depende de los guards");
-  assert.match(enganche, /dependsOn\("verificarFirmaDeCarga", "verificarBaseDeApi"\)/,
-    "el enganche no declara los dos guards");
+  assert.match(enganche, /dependsOn\("verificarFirmaDeCarga", "verificarBaseDeApi", "verificarPaqueteConSalas"\)/,
+    "el enganche no declara los tres guards");
 });
 
 test("🔴 el guard de Gradle usa la MISMA base que el script", () => {
@@ -167,8 +172,13 @@ test("🔴 keystore.properties y los keystores están fuera de Git", () => {
 // 4. LA CONFIGURACIÓN DE RELEASE
 // ============================================================================
 
-test("versionCode 1, versionName 1.0.0 y release no depurable", () => {
-  assert.match(GRADLE, /versionCode 1\b/, "cambió el versionCode del primer envío");
+test("versionCode 2, versionName 1.0.0 y release no depurable", () => {
+  // 27/09: pasó de 1 a 2 para la segunda subida al canal cerrado, la que lleva
+  // Yumpeá. El dueño confirmó en Play Console que 1 era el mayor subido a
+  // cualquier canal, y Play exige estrictamente mayor. Cuando haya una tercera
+  // subida este número vuelve a cambiar, y este test es el que obliga a
+  // decidirlo a conciencia en vez de dejarlo pasar.
+  assert.match(GRADLE, /versionCode 2\b/, "cambió el versionCode de la segunda subida");
   assert.match(GRADLE, /versionName "1\.0\.0"/, "el versionName no es 1.0.0");
   assert.match(GRADLE, /debuggable false/, "la release no declara debuggable false");
   assert.match(GRADLE, /minifyEnabled false/, "cambió minifyEnabled sin decidirlo");

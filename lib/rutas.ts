@@ -52,6 +52,20 @@ export function hrefPersona(id: number | string, opts: Opciones = {}): string {
   return esNativo(opts.nativo) ? `/p/?id=${id}` : `/persona/${id}`;
 }
 
+/**
+ * El href INTERNO a una sala. Mismo motivo que los dos de arriba: el id es un
+ * uuid que nace en la base, así que `/sala/[id]` no se puede enumerar y el
+ * export estático la rechaza —verificado: el build muere con
+ * `Page "/sala/[id]" is missing "generateStaticParams()"`—.
+ *
+ * ⚠️ NO es el enlace que se reparte. Ese es `urlDeSala` de `lib/compartir.ts`,
+ * siempre `https://app.yump.ar/sala/<id>`, también dentro del contenedor: un
+ * invitado puede no tener la app, y `location.origin` ahí es `https://localhost`.
+ */
+export function hrefSala(id: string, opts: Opciones = {}): string {
+  return esNativo(opts.nativo) ? `/s/?id=${id}` : `/sala/${id}`;
+}
+
 // Los parámetros se validan y NO se confía en la URL: `/t` y `/p` son rutas
 // públicas del bundle y cualquiera puede escribirles cualquier cosa.
 const soloDigitos = /^\d+$/;
@@ -63,6 +77,19 @@ export function parseParamsTitulo(sp: URLSearchParams): { tipo: MediaType; id: s
   if (tipo !== "movie" && tipo !== "tv") return null;
   if (!id || !soloDigitos.test(id)) return null;
   return { tipo, id };
+}
+
+/**
+ * Valida el param de `/s`. El uuid se compara con la MISMA forma que exige
+ * `app/sala/[id]`, y se normaliza a minúsculas como allá: la base los guarda
+ * así y un App Link puede llegar con mayúsculas.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function parseParamsSala(sp: URLSearchParams): { id: string } | null {
+  const id = sp.get("id");
+  if (!id || !UUID.test(id)) return null;
+  return { id: id.toLowerCase() };
 }
 
 /** Valida los params de `/p`. Devuelve null si son inválidos. */

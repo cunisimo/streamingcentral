@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { UITitle } from "@/lib/types";
+
+// La rueda sólo necesita póster y título: así la reusan las salas compartidas
+// (cards congeladas de `room_titles`, que no son UITitle) sin adaptar nada.
+export type TileRueda = Pick<UITitle, "poster" | "title">;
 import { useSlotSound } from "./useSlotSound";
 
 // Cuántas veces se repite la lista para armar un riel largo (sensación de giro
@@ -22,7 +26,7 @@ const prefersReduced = () =>
 export default function Wheel({
   selected, winnerIdx, onFinish,
 }: {
-  selected: UITitle[];
+  selected: TileRueda[];
   winnerIdx: number;
   onFinish: () => void;
 }) {
@@ -39,7 +43,7 @@ export default function Wheel({
   const [vw, setVw] = useState(0);
 
   const strip = useMemo(() => {
-    const arr: UITitle[] = [];
+    const arr: TileRueda[] = [];
     for (let i = 0; i < LOOPS; i++) arr.push(...selected);
     return arr;
   }, [selected]);

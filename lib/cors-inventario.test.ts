@@ -172,7 +172,7 @@ test("toda ruta está clasificada: integrada o excluida, sin pendientes", () => 
     `rutas sin CORS y sin clasificar:\n${sinClasificar.join("\n")}`);
 });
 
-test("las 23 integradas coinciden en sus TRES declaraciones de método", () => {
+test("las 24 integradas coinciden en sus TRES declaraciones de método", () => {
   const divergentes: string[] = [];
   for (const r of rutasDeApi()) {
     if (EXCLUIDAS.has(r)) continue;
@@ -205,13 +205,15 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 26 rutas = 23 integradas + 3 excluidas", () => {
+test("el recuento cierra: 27 rutas = 24 integradas + 3 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
   const integradas = todas.filter((r) => integraCors(leer(r)));
-  assert.equal(todas.length, 26, "cambió la cantidad de rutas: hay que reclasificar");
-  assert.equal(integradas.length, 23);
+  // 26 -> 27 con las salas: `app/api/sala/preparar` integra CORS (la consume el
+  // contenedor con el JWT del organizador, igual que /api/te-va-a-gustar).
+  assert.equal(todas.length, 27, "cambió la cantidad de rutas: hay que reclasificar");
+  assert.equal(integradas.length, 24);
   assert.equal(EXCLUIDAS.size, 3);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });

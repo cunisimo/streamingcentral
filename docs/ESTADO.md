@@ -1,12 +1,281 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 20 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 27 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
+- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 a 3 hechas y 4 construida; sin
+  merge, push, deploy ni cambios en Producción (2026-09-19).** Plan aprobado
+  por el dueño con tres rondas de correcciones:
+  [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
+  **Comprobado en panel por el dueño (Tarea 0.1):** Supabase Free, PostgreSQL
+  17.6, `realtime.send` y `broadcast_changes` presentes (→ go), acceso
+  público de Realtime activo, `pg_cron` 1.6.4 / `pgcrypto` 1.3 / `pg_net`
+  0.20.3, `SUPABASE_SERVICE_ROLE_KEY` en Vercel Production y Preview, uso de
+  Vercel a 30 días con margen (19K/1M invocaciones, 30 min/4 h CPU).
+  **Comprobado en local:** `--solo-datos` del generador del pool con 5 tests y
+  control byte a byte contra el script anterior; entorno `supabase start`
+  (config.toml sin migraciones del CLI, `db-local.mjs`, fixtures) verificado
+  con la anon key vía PostgREST. **Decisión del dueño (18/09):** el "Pero" (`advertencia`) es OPCIONAL en
+  las salas; `razon` sigue obligatoria; sin texto de reemplazo; la card no
+  muestra la sección cuando falta. Plan, auditoría y fixtures actualizados.
+  **Auditoría del pool en Producción, comprobada en panel por el dueño el 18/09:
+  GO para la Etapa 1** — `servibles_sala` 1742; `n,d,m` 868 / `n` 272 / `n,d`
+  547 / `n,d,m,p` 1097 (umbrales 20/10/20/20); 477 admitidas sin "pero"; 0
+  textos vacíos. Confirma capacidad del pool, no frescura de la disponibilidad
+  (consulta 2 y Apéndice A sin correr). **Etapa 1 HECHA en la rama y la base
+  local (18/09):** `009_salas.sql` (seis tablas cerradas, 24 funciones con
+  permisos por inventario, trigger `realtime.send`, cron por minuto) y
+  `009_salas_down.sql` (rollback probado dos veces); 12 guards textuales y
+  **37 pruebas con la anon key local en verde** (RLS, concurrencia, plazos,
+  kill switch, y —tras dos rondas de auditoría— recuperación ante respuesta
+  HTTP perdida con **credencial generada por el cliente** y hasheada en la
+  base: sin tokens del servidor, sin rotación, orden de respuestas
+  irrelevante); suite y `tsc` limpios. Evidencia:
+  [`medidas/2026-09-18-salas-etapa1.md`](medidas/2026-09-18-salas-etapa1.md).
+  **Etapa 2 HECHA en la rama y APROBADA por el dueño (19/09), con cierre
+  auditado:** `lib/sala/*` (tipos, selección pura, orquestación con deps
+  inyectadas, handler HTTP puro con 400 sin defaults) y `POST
+  /api/sala/preparar` con `service_role`; **25 tests en `lib/sala`** (9 + 10 +
+  6); inventario CORS 27 = 24 + 3. La ruta distingue `consultadas` /
+  `enriquecidas` / `descartadas` y el `detalle` interno de un 500 queda sólo
+  en el log del servidor (acotado), nunca en el body. **Medido en local con
+  TMDB real, código final, tres frías INDEPENDIENTES de tamaño 20** (proceso
+  reiniciado y caché vacía antes de cada una; caliente y control después):
+  **2952 / 2856 / 2046 ms de servidor, máximo 2952 ms** — tres observaciones,
+  no un p95 estadístico; 2 llamadas a TMDB por consultada en frío, 0 ok en
+  caliente (0,31–0,65 s). Los "descartes por error de TMDB" en local son los
+  FIXTURES (ids 9000xxxx, 404): sesgo pesimista, no existen en Producción.
+  `npm run build` en verde con la ruta nueva; suite post-build 1745 / 1735 ok /
+  0 fallos / 10 omitidos (artefacto Capacitor); `tsc` limpio. Evidencia:
+  [`medidas/2026-09-19-salas-etapa2.md`](medidas/2026-09-19-salas-etapa2.md) y
+  líneas crudas en `medidas/2026-09-19-salas-preparacion-crudo.txt`.
+  **Etapa 3 HECHA en la rama (19/09), pendiente de aprobación del dueño:**
+  cliente completo del MVP hasta la votación — credencial generada en el
+  cliente y persistida antes de la primera solicitud (`lib/sala/token-store.ts`),
+  `useSala` (Broadcast público sólo de escucha, relectura acotada a 1500 ms,
+  respaldo cada 5 s, relectura tras cada plazo), `/sala/nueva` y `/sala/[id]`
+  (crear, reclamar, unirse, lobby con ConfigTanda y "Empezar" contra
+  `/api/sala/preparar`), votación con 10 s por card PERSISTIDOS (recargar no
+  reinicia) y `pass` automático; entrada en el Home y en el hub. **Auditoría del
+  dueño: tres bloqueantes corregidos** (`7580a1b`: credencial estable en memoria
+  con `localStorage` roto y `confirmarSala` que no pierde el origen; compuerta
+  monotónica en `useSala` contra respuestas fuera de orden y cambio de sala;
+  cerrojo en la votación tras `ronda_cerrada`/`inexistente`) **y cuatro casos de
+  integración de la segunda ronda** (`e8a46fd`: match temprano cierra la
+  votación; una lectura descartada no toca ni `cargando` ni la relectura;
+  intento ≠ credencial confirmada en el token-store; el error visual se limpia
+  por intento). **60 tests nuevos**; suite post-build 1805 / 1795 ok / 0 fallos /
+  10 omitidos; `tsc`
+  limpio; `npm run build` en verde. **Verificado en navegador (local, TMDB
+  real)** como invitado sin cuenta con el organizador desde node: lobby en vivo,
+  lobby vencido, tanda publicada, pass cada 10 s exactos, recarga a mitad de
+  card conserva el contador (9 → 6), `sin_coincidencias` y `match` llegan sin
+  recargar. Corregido en la verificación: el contador se llevaba la card
+  siguiente tras un pass automático (comienzo atado a su posición). **Resultado
+  PROVISORIO** hasta la Etapa 4; `app/sala/[id]` todavía fuera de `APP_FUERA`
+  (Tarea 6.1). Pendiente de verificación manual del dueño: la pantalla del
+  organizador en el navegador, red cortada, lector de pantalla y una card sin
+  "Pero" real. Evidencia:
+  [`medidas/2026-09-19-salas-etapa3.md`](medidas/2026-09-19-salas-etapa3.md).
+  **Etapa 3 aprobada técnicamente y Etapa 4 CONSTRUIDA (20/09, `cf60bc6`) y
+  CORREGIDA tras la auditoría del dueño (21/09, `be5a4e3`: celebración del match
+  a pantalla completa —overlay fijo, corazón grande, ~3 s o "Seguir", no se
+  monta con reducir movimiento—; `pedirTanda` y `desempatar` releen el estado
+  en el acto tras el éxito, con 6 tests; "Ver la ficha" en el empate resuelto).
+  VERIFICADA EN LOCAL a 375 px el 21/09 como invitado, con organizador y tercer
+  participante desde node: empate → desempate (rueda en el DOM) → elegida;
+  ganador con la celebración a pantalla completa; sin coincidencias; "Otra
+  tanda" desde `resultado` sin repetir títulos (30/30 distintos en 6 rondas) y
+  rechazada con 409 durante el empate; card sin "Pero" real. Pendiente para el
+  dueño: reducir movimiento en un teléfono, dos teléfonos reales, pantalla del
+  organizador en el navegador, red cortada, lector de pantalla y movimiento
+  reducido.
+  **SEGUNDA RONDA DEL DUEÑO (22/09, `231c9be`):** el nombre visible pasó a ser
+  **Pelimatch** —hoy es **Yumpeá**, ver la ronda del 26/09— en las dos entradas (Home, debajo de Ruleta Yump, y hub de la
+  cuenta) —bajada todavía provisoria, rutas técnicas sin cambios—; los botones
+  Sí/No/Paso pasaron a una BARRA FIJA sobre la barra inferior, con degradado y
+  alto reservado, así que ya no quedan bajo el pliegue (medido a 360×640 y
+  320×568 con textos largos, y verificado en la app); y la relectura tras
+  Empezar/Desempatar tiene REINTENTOS ACOTADOS (0,8 s + 2 s + 5 s y abandona),
+  porque el respaldo de `useSala` sólo corre con el canal desconectado.**
+  **TERCERA RONDA (22/09, `38d5b64`):** Pelimatch navega en la MISMA PESTAÑA
+  —se revirtió entera la apertura en pestaña nueva, con su módulo—; el reintento
+  de la relectura NO funcionaba con el cableado real (`lector.leer()` atrapaba
+  el error y no devolvía nada, así que `asegurarRelectura` daba la lectura por
+  buena): ahora `leer()` devuelve cómo terminó y `releerDe` rechaza sólo ante un
+  fallo, probado de punta a punta con una RPC que devuelve error; y la barra
+  compacta conserva el área táctil de 64 px (era 54/62).**
+  **CUARTA RONDA (22/09, `22aec59`):** una carrera más en la relectura —la
+  lectura de la acción queda pendiente, entra otra por Realtime que falla, y la
+  primera vuelve con estado válido pero la compuerta la descarta— dejaba el
+  estado sin aplicar y la acción sin reintentar. Reproducida con el lector real
+  antes de tocar nada y corregida: el lector distingue `descartada` (otra SÍ
+  aplicó, o la sala quedó terminal) de `descartada-sin-estado` (nadie aplicó),
+  y `releerDe` rechaza en el segundo caso. La protección contra estados viejos
+  no cambió y el caso normal no genera ni una solicitud extra. Suite post-build
+  1860 / 1850 ok / 0 fallos / 10 omitidos; sala 263/263.** Lo
+  construido: pantallas de match (corazón + confeti +
+  elegida + Compartir), empate (cards, "Desempatar" sólo host, rueda que frena
+  en `ganador_pos`), sin coincidencias, y "Otra tanda" sólo host desde
+  `resultado` (`PrepararTanda`, compartido con "Empezar"). Todo lo decide la
+  base (`resultado.*`); un barrido falla si un componente cuenta votos.
+  Animaciones detrás de `prefers-reduced-motion: no-preference`. Suite
+  `tsc` y build en verde.
+  El 20/09 Docker Desktop/WSL no levantó (`vpnkit-bridge handshake failed`,
+  luego `CreateVm/E_ABORT`); el 21/09 volvió sin reinicio. La entrada del
+  entrada del Home sigue debajo de la ruleta como Link a `/sala/nueva`. Evidencia:
+  [`medidas/2026-09-20-salas-etapa4.md`](medidas/2026-09-20-salas-etapa4.md).
+  **ETAPA 5 HECHA (22/09, `a01e150` + `81a287c`):** `mensajeMatch` con el texto
+  del plan ("¡Nuestro match!" / "Disponible en …" / "Ver ficha en Yump:" + url
+  canónica), `lib/compartir-accion.ts` —la acción extraída de DetailView sin
+  cambiarle el comportamiento, ahora compartida por la ficha y por Pelimatch— y
+  `generateMetadata` + `revalidate = 21600` en la ficha, con `og:image` absoluta
+  de TMDB. **Medido** con build de producción: TTFB caliente 32,4 → 38,5 ms de
+  mediana (+6,1, rangos superpuestos); la primera visita a un título nuevo paga
+  TMDB (270-584 ms) y después vuelve a la banda caliente. Verificado en la app:
+  el match comparte el texto exacto y la ficha sigue compartiendo el suyo.
+  🔴 **La vista previa real de WhatsApp en iPhone/Android NO se probó** (necesita
+  Preview y dispositivos): no está afirmado que el póster se vea. Evidencia:
+  [`medidas/2026-09-22-salas-etapa5.md`](medidas/2026-09-22-salas-etapa5.md).
+  **RONDA DEL DUEÑO (23/09, `fce03a6` → `45c1666`):** cuatro correcciones sobre
+  la Etapa 5 ya cerrada. (a) **Con ganadora la sala se termina**: "Otra tanda"
+  desaparece del match, del ganador de grupo y del desempate resuelto —queda
+  sólo en "sin match"— y en su lugar el organizador ve **"Cerrar sala"**, que
+  hace falta porque no puede tener dos salas activas y la del resultado sigue
+  viva 5 minutos. Lo decide la base: `puede_otra_tanda` suma `r.ganador_pos is
+  null` (mira el ganador y NO el tipo, porque `sala_desempatar` deja
+  `resultado = 'empate'`). (b) **El lobby avisa**: el rótulo del botón pasó a
+  "Falta que se sume alguien" / "Empezar con N", con la cuenta pegada al botón y
+  un aviso de 6 s cuando alguien entra; la lista ya se actualizaba sola, el
+  problema era que está arriba de todo y el botón abajo. **No se automatizó el
+  arranque** y está argumentado en el plan. (c) **La animación del match** pasó
+  de un solo movimiento de 900 ms a cinco tramos en 870 ms (anticipación, unión
+  acelerando que se pasa 4%, asiento, pulso único con overshoot real, destello y
+  8 chispas); overlay de 3,3 s a 2,4 s y confeti de la celebración de 90 a 60
+  (el default del componente sigue en 70: lo comparte el desempate). (d) **El
+  invitado no elige plataformas**: `sala_unirse` perdió `p_platforms` —con el
+  parámetro vivo, una llamada directa seguía ampliando la unión— y hereda las
+  del organizador; la pantalla sin match pasó a carita 🙁 + "Esta vez no hubo
+  match" + "Ninguna película tuvo coincidencias. Suele pasar.", con la línea de
+  "Otra tanda" sólo para quien organiza.
+  **RONDA DEL DUEÑO (26/09):** 🔴 **el nombre visible es ahora "Yumpeá"** y el
+  botón del banner dice **"Hacé match"**; el emoji 🍿 y la bajada no cambian, y
+  el hub sigue sin botón porque la tarjeta entera es el enlace. **Sólo cambió el
+  rótulo**: rutas (`/sala/nueva`, `/sala/[id]`), tablas, RPC y los nombres de
+  archivo (`PelimatchTile.tsx`) siguen igual. Verificado a 375 px.
+  **RONDA DEL DUEÑO (27/09): Yumpeá DENTRO de la app Android.** La decisión de
+  dejarla sólo en web/PWA se revirtió. 🔴 **Hallazgo:** el artefacto nativo **no
+  compilaba** desde que entró `app/sala/` (`Page "/sala/[id]" is missing
+  "generateStaticParams()"`), o sea que no había AAB posible. **Comprobado
+  automáticamente:** ruta `/s/?id=<uuid>` con el patrón de `/t` y `/p`; del
+  paquete se excluye sólo el segmento dinámico, así que `/sala/nueva` sigue
+  viajando; el enlace de invitación es siempre `https://app.yump.ar/sala/<id>`
+  (antes salía de `location.origin`, que en el contenedor es
+  `https://localhost`); la entrada dejó de ocultarse en Android; intent-filter
+  con `autoVerify` acotado a `/sala/` y manejo de los dos casos (app cerrada con
+  `getLaunchUrl`, en segundo plano con `appUrlOpen`); traducción del enlace por
+  lista blanca. Invitación a instalar Yump al final de las tres pantallas de
+  resultado final, con Android en blanco hasta que `NEXT_PUBLIC_YUMP_PLAY_PUBLICA=1`
+  (la app está en prueba cerrada Alpha) e instrucciones en iPhone; el aviso PWA
+  se suprime en todo `/sala/*`. **Comprobado con build real:** export estático en
+  verde, `cap sync android` y **`./gradlew assembleDebug` BUILD SUCCESSFUL**, con
+  el intent-filter presente en el manifest fusionado del APK. Suite 1914 (1898
+  ok, 0 fallos, 16 omitidos), `tsc` limpio, `npm run build` web en verde.
+  ⏳ **PENDIENTE y bloqueante para la verificación de dominio:**
+  `public/.well-known/assetlinks.json`, que necesita la huella SHA-256 de **Play
+  App Signing** del dueño; no se creó ni se desplegó
+  ([`ANDROID-APP-LINKS.md`](ANDROID-APP-LINKS.md)). 🔴 **NADA se probó en un
+  teléfono**: ni el enlace de WhatsApp, ni la instalación, ni la invitación en
+  pantalla. `prefer_related_applications` no se tocó.
+  ⚠️ `npm run build:capacitor` **falla en la máquina del dueño** por
+  `NEXT_PUBLIC_SITE_URL` ausente en `.env.local`; en esta sesión se inyectó desde
+  afuera sin tocar el archivo.
+  **RONDA DEL DUEÑO (27/09, 2ª parte): las DOS superficies, y el AAB preparado.**
+  Yumpeá va a estar visible y funcionando en el Home web **y** en la app del
+  canal de prueba cerrada; la entrada web **no** se oculta. **Comprobado con
+  build real:** el paquete web de release se construye y sincroniza, y de los
+  tres guards de Gradle pasan los dos que pueden correr —`verificarBaseDeApi` y
+  el nuevo `verificarPaqueteConSalas`, que impide que un `sync` olvidado
+  produzca un AAB con el paquete web anterior (probado en rojo y en verde)—.
+  🔴 **El AAB firmado NO se puede generar todavía:** `bundleRelease` corta en
+  `verificarFirmaDeCarga` porque falta `android/keystore.properties`, que es del
+  dueño y no sale de su máquina. Se agregó la plantilla vacía
+  `android/keystore.properties.example`; `.gitignore` ya cubría el `.jks` y las
+  contraseñas, y hay un test que lo verifica. **Faltan DOS datos de Play
+  Console**, ninguno secreto: el `versionCode` más alto subido a cualquier canal
+  y la huella SHA-256 de **Play App Signing**.
+  ⚠️ **Corrección sobre los App Links:** sin `assetlinks.json` el enlace de
+  WhatsApp **lleva a la sala igual** (por el navegador), pero **no está
+  garantizado que abra la app**: en Android 12+ un filtro que no verificó no se
+  ofrece y abre Chrome directamente, sin diálogo. Esa prueba queda **pendiente,
+  no aprobada**, hasta desplegar el archivo con la huella correcta y ver
+  `verified` en un teléfono.
+  ⚠️ **Reversión después de distribuir el AAB:** volver al deployment web
+  anterior **no** quita la actualización de los teléfonos. El primer freno es
+  `sala_config.activas = false` en Supabase, que es lo único que actúa sobre lo
+  que los teléfonos ya instalados escriben directo en la base.
+  Orden y autorizaciones en
+  [`YUMPEA-PRUEBA-CERRADA.md`](YUMPEA-PRUEBA-CERRADA.md): migración apagada →
+  encender → deploy (con `assetlinks.json` si la huella llegó) → sala completa en
+  la web → AAB al canal Alpha → sala completa en Android. **Nada ejecutado.**
+  **RONDA DEL DUEÑO (27/09, 3ª parte): el AAB firmado YA COMPILA.** El dueño
+  recuperó el keystore de subida —su SHA-256 coincide con Play y contiene
+  `PrivateKeyEntry`, así que no hay que pedir cambio de clave— y confirmó que el
+  `versionCode` más alto en Play es **1**. **Comprobado con build real:**
+  `versionCode` subido a **2**, `bundleRelease` BUILD SUCCESSFUL con los tres
+  guards en verde, y sobre el AAB resultante: la firma es la clave de subida
+  correcta (huella idéntica a la confirmada), `versionCode 2` en el manifest
+  fusionado, 6 archivos del paquete web con `https://app.yump.ar` y **0** con
+  `vercel.app`, y "Yumpeá", "Hacé match" y la ruta `/s/?id=` presentes. 🔒 El
+  `.jks`, el alias y las contraseñas no se leyeron ni se registraron: lo único
+  mirado es la huella pública del certificado.
+  **`public/.well-known/assetlinks.json` escrito** con las **tres** huellas de
+  **firma de aplicación** (clásica actual, poscuántica y clásica anterior), no la
+  de subida; hay un test que las fija y rechaza la de subida explícitamente.
+  Verificado además que **Next lo sirve**: HTTP 200, `application/json`, 0
+  redirecciones —una carpeta que empieza con punto dentro de `public/` no es
+  obvio—.
+  🔴 **La apertura automática desde WhatsApp sigue SIN aprobar**: el archivo está
+  en el repositorio pero `app.yump.ar` todavía lo sirve en 404. No se aprueba
+  hasta deployar y ver `app.yump.ar: verified` en un teléfono.
+  **Nada ejecutado:** sin migración, sin encendido, sin deploy, sin merge, sin
+  push y sin subir el AAB a Play. Lo único que falta ahora son autorizaciones.
+  🔴 **LANZAMIENTO AUTORIZADO EL 27/09 Y **NO EJECUTADO**: DETENIDO ANTES DE
+  TOCAR PRODUCCIÓN.** El dueño autorizó migración, encendido, merge/push/deploy y
+  subida del AAB al canal Alpha, con la condición de verificar antes que el AAB y
+  el deploy web correspondan al mismo código. **No corresponden, y por eso se
+  frenó.** Evidencia, toda comprobada en este repositorio:
+  1. **`origin/main` está 41 commits por delante de `feat/salas`** e incluye
+     trabajo mayor que la rama no tiene: la **Etapa 3.c.1** (pausa compartida ante
+     429) y el **hotfix de supresiones del #24 ya mergeado y desplegado**
+     (`594dd09`, `06bdfd1`). El AAB firmado se compiló del árbol de `feat/salas`,
+     así que **no contiene nada de eso**: el teléfono correría un código distinto
+     del que serviría `app.yump.ar`.
+  2. **El merge no es limpio:** `git merge-tree` marca **3 conflictos** —
+     `docs/ESTADO.md`, `docs/ISSUES.md` y `lib/descartes-tmdb-inventario.test.ts`.
+  3. **Los cambios sin commitear del #24 ya están en `main`**: `lib/disponibilidad.ts`,
+     `lib/enrich.ts` y `lib/claves.ts` del árbol son **idénticos** a los de
+     `origin/main`. El árbol quedó desactualizado, no tiene trabajo en riesgo ahí;
+     `lib/supresiones-disponibilidad.ts` sí difiere (114 líneas menos que en main).
+  **Accesos que además faltan, comprobados:** el MCP de Supabase responde
+  **`Unauthorized`** (sin token), así que la migración no se puede aplicar desde
+  acá; y no hay ninguna vía para subir un AAB a Play Console. Los pasos 1 y 3 son
+  del dueño.
+  **Lo que SÍ quedó listo y verificado** (ver [`YUMPEA-PRUEBA-CERRADA.md`](YUMPEA-PRUEBA-CERRADA.md)):
+  AAB firmado con `versionCode 2`, firma de subida correcta, API de Producción y
+  Yumpeá adentro; `assetlinks.json` con las tres huellas de firma de aplicación,
+  servido con 200 y sin redirecciones. **Ese AAB hay que volver a compilarlo**
+  desde el árbol fusionado antes de subirlo.
+  **Nada publicado:** sin migración, sin encendido, sin merge, sin push, sin
+  deploy y sin subida a Play. **Nada probado en teléfonos.**
+  Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
+  encender `sala_config.activas`, refresco productivo del catálogo (Apéndice A
+  del plan), merge y push. Evidencia:
+  [`medidas/2026-09-18-salas-etapa0.md`](medidas/2026-09-18-salas-etapa0.md).
 - **Issue #24 (2026-09-20): Disney+ AR mostraba 20 películas que ya no
   tiene — CORREGIDO, MERGEADO EN `main` Y DESPLEGADO (2026-09-20).** Hotfix
   aislado desde `main` `f443924` (rama `fix/supresiones-disney`, commit único

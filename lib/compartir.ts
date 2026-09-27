@@ -30,6 +30,23 @@ export function urlDeTitulo(tipo: MediaType, id: number | string): string {
   return `${SITIO_PUBLICO}/titulo/${tipo}/${id}`;
 }
 
+/**
+ * El enlace público a una sala: el que se copia y se comparte para invitar.
+ *
+ * 🔴 SIEMPRE `app.yump.ar`, TAMBIÉN DENTRO DEL CONTENEDOR. Antes se armaba con
+ * `location.origin` en el lobby, y adentro de la app Android eso es
+ * `https://localhost`: el organizador copiaba `https://localhost/sala/<uuid>` y
+ * no le servía a nadie, ni siquiera a él. Y tiene que ser el público aunque
+ * quien invita tenga la app: el invitado puede no tenerla, y entonces el mismo
+ * enlace le abre la web.
+ *
+ * Es la ruta `/sala/<id>`, no `/s/?id=`: `/s` es navegación interna del
+ * contenedor (ver `hrefSala` en lib/rutas.ts) y en la web no existe.
+ */
+export function urlDeSala(id: string): string {
+  return `${SITIO_PUBLICO}/sala/${id}`;
+}
+
 export interface TituloCompartible {
   title: string;
   year?: number | null;
@@ -62,6 +79,27 @@ export function mensajeCompartir(
     (plataforma ? ` — en ${plataforma}` : "") +
     ". La ficha en Yump:";
   return { titulo: t.title, texto, url: urlDeTitulo(t.type, t.id) };
+}
+
+/**
+ * El mensaje con el que se comparte un MATCH de Yumpeá (Etapa 5, Tarea 5.1).
+ *
+ * Es distinto del de la ficha a propósito: acá no se recomienda un título, se
+ * cuenta que un grupo coincidió. El texto lo fijó el plan y hay un test que lo
+ * compara carácter por carácter.
+ *
+ * Las plataformas van TODAS las que se le pasen, con su nombre de
+ * `providers-ar.ts`; si no hay ninguna —un título que TMDB todavía no ubica en
+ * AR— la línea entera se omite en vez de quedar un "Disponible en" colgado.
+ */
+export function mensajeMatch(
+  t: { title: string; type: MediaType; id: number | string },
+  plataformas: string[],
+): MensajeCompartir {
+  const lineas = ["¡Nuestro match!"];
+  if (plataformas.length) lineas.push(`Disponible en ${plataformas.join(", ")}`);
+  lineas.push("Ver ficha en Yump:");
+  return { titulo: t.title, texto: lineas.join("\n"), url: urlDeTitulo(t.type, t.id) };
 }
 
 /**

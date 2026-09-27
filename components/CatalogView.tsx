@@ -4,6 +4,7 @@ import ShelfSkeleton from "./ShelfSkeleton";
 import IndecisoHero from "./IndecisoHero";
 import DesempateBanner from "./desempate/DesempateBanner";
 import RuletaBanner from "./ruleta/RuletaBanner";
+import CrearSalaEntrada from "./sala/CrearSalaEntrada";
 import UpcomingSection from "./upcoming/UpcomingSection";
 import OfflineState from "./pwa/OfflineState";
 import TeVaAGustar from "./TeVaAGustar";
@@ -104,6 +105,7 @@ export default function CatalogView() {
         )}
 
         <RuletaBanner />
+        <CrearSalaEntrada />
         <DesempateBanner />
         <UpcomingSection />
 
