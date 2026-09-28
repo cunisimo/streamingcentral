@@ -1,15 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { personFilmography } from "@/lib/enrich";
+import { disponibilidadFilmografia, personFilmography } from "@/lib/enrich";
+import { MAX_POR_PEDIDO, parsearClave } from "@/lib/filmografia";
 import type { PlatformCode } from "@/lib/types";
 import { conCors, opcionesCors } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
-// La filmografía se enriquece COMPLETA (sin el viejo recorte a 40): en frío,
-// una carrera de ~230 obras midió ~350 llamadas a TMDB y 13,5 s en local.
-// Mismo techo que las otras rutas que enriquecen cientos de títulos.
-export const maxDuration = 60;
 
+// Dos usos de la MISMA ruta (issue #25, carga progresiva):
+//
+//   ?providers=n,d,m        → la filmografía completa como datos básicos + la
+//                              disponibilidad del bloque inicial visible (≤ 12).
+//   ?items=movie:1,tv:2     → "Ver más": SÓLO la disponibilidad de esas obras
+//                              (máx. 24). No vuelve a pedir la persona ni sus
+//                              créditos: el cliente ya los tiene.
+//
+// Sin `maxDuration` propio a propósito: el trabajo está acotado por bloque, y
+// un techo alto no es el mecanismo para permitir trabajo de más.
 async function manejar(req: NextRequest, { params }: { params: { id: string } }) {
+  const items = req.nextUrl.searchParams.get("items");
+  if (items !== null) {
+    const claves = [...new Set(items.split(",").map((s) => s.trim()).filter(Boolean))];
+    if (!claves.length || claves.length > MAX_POR_PEDIDO || claves.some((k) => !parsearClave(k))) {
+      return NextResponse.json({ error: `items: entre 1 y ${MAX_POR_PEDIDO} claves tipo:id` }, { status: 400 });
+    }
+    try {
+      return NextResponse.json(await disponibilidadFilmografia(claves));
+    } catch (e) {
+      return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
+  }
   const providers = (req.nextUrl.searchParams.get("providers")?.split(",").filter(Boolean) || []) as PlatformCode[];
   try {
     const res = await personFilmography(Number(params.id), providers);

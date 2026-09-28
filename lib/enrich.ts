@@ -42,9 +42,7 @@ import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import { esErrorTmdb } from "./tmdb-error";
 import { settleAll } from "./settle-all";
 import { producirBusquedaConFallos } from "./busqueda-enriquecido";
-import {
-  armarFilmografia, ordenDeSecciones, repararCreditos, seccionesDeCreditos,
-} from "./filmografia";
+import { armarFilmografia, repararCreditos, resolverBloque, type GrupoObra } from "./filmografia";
 import { resolverDirectores, resolverPortadas } from "./lotes-tolerantes";
 import { backendCache } from "./cache";
 import {
@@ -60,7 +58,7 @@ import { primaryCountry } from "./countries";
 import { hoyAR } from "./fecha";
 import { pickTrailer } from "./trailer";
 import type {
-  MediaType, MotivoVacio, PlatformCode, UITitle, UITitleDetail, UIPerson,
+  DisponibilidadObras, FilmografiaPersona, MediaType, MotivoVacio, ObraPersona, PlatformCode, UITitle, UITitleDetail, UIPerson,
 } from "./types";
 
 const img = (p: string | null, size = "w500") => (p ? `${TMDB_IMG}/${size}${p}` : null);
@@ -1275,22 +1273,30 @@ export async function genreCovers(): Promise<Record<string, string | null>> {
 }
 
 // --- Filmografía de una persona (actor o director) ---
-// La lógica vive en lib/filmografia.ts (pura, probada sin TMDB). Acá sólo se
-// enchufan TMDB, la disponibilidad y Supabase.
+// La lógica vive en lib/filmografia.ts y lib/filmografia-bloques.ts (puras,
+// probadas sin TMDB). Acá sólo se enchufan TMDB, la disponibilidad y Supabase.
 //
-// Filmografía COMPLETA en dos secciones —Dirección y Actuación— y las
-// plataformas del usuario ORDENAN, no filtran (igual que el buscador). No hay
-// recorte: el `slice(0, 40)` que había acá descartaba obras antes de saber si
-// estaban en tus plataformas. Coste medido en docs/ESTADO.md (filmografía).
-export async function personFilmography(id: number, providers: PlatformCode[]) {
+// 🔴 CONTRATO DE COSTE (issue #25): la filmografía COMPLETA viaja como datos
+// básicos, que salen de `combined_credits` sin llamadas por título. La
+// disponibilidad —1 `providersOf` por obra, más la evidencia oficial si TMDB no
+// la ubica en AR— se resuelve SÓLO para el bloque inicial visible (≤ 12 obras
+// entre las dos secciones). "Ver más" pide el bloque siguiente (≤ 24) con
+// `disponibilidadFilmografia`. Enriquecer la carrera entera al abrir (706fb7a:
+// 352 llamadas y 13,5 s en frío para Samuel L. Jackson) se rechazó.
+
+// La disponibilidad de UNA obra: el mismo camino que `toUITitle` (providersOf +
+// resolvedor central), sin armar la card, que el cliente ya tiene.
+async function plataformasDeObra(tipo: MediaType, id: number): Promise<PlatformCode[]> {
+  return disponibilidadDe(tipo, id, await providersOf(tipo, id));
+}
+
+export async function personFilmography(id: number, providers: PlatformCode[]): Promise<FilmografiaPersona> {
   const [det, creditsCrudos] = await Promise.all([personDetails(id), personCombinedCredits(id)]);
 
-  // La filmografía es un lote MIXTO: `cast` y `crew` mezclan películas y series,
-  // y TMDB reutiliza los ids entre tipos. No está cacheada, así que un fallo del
-  // respaldo solo cuesta esta vista y no se congela en ningún lado.
-  // 🔴 Se reconstruye POR POSICIÓN, no con un índice por `media_type:id`: una
-  // persona tiene varios créditos en la misma obra (Duna: Director, Producer,
-  // Screenplay) y el índice pisaba el `job` de unos con el de otros.
+  // Lote MIXTO (películas y series, ids reutilizados entre tipos). No está
+  // cacheado: un fallo del respaldo sólo cuesta esta vista.
+  // 🔴 Reparación POSICIONAL: ningún índice por obra vuelve a tocar `job`,
+  // `department`, `character` ni `credit_id` (ver repararCreditos).
   const credits = await repararCreditos<CreditEntry>(
     creditsCrudos,
     () => pedirRespaldoIdioma(`filmografia:${id}`, async () => {
@@ -1299,18 +1305,26 @@ export async function personFilmography(id: number, providers: PlatformCode[]) {
     }),
     `filmografía persona:${id}`,
   );
-  const secciones = seccionesDeCreditos(credits);
   const pub = await publishedIds();
   const res = await armarFilmografia({
-    secciones, providers,
-    enriquecer: (c) => toUITitle(c, c.media_type, pub),
-    sinPlataformas: (c) => tituloSinPlataformas(c, c.media_type, pub),
+    credits, conocidoPor: det.known_for_department, providers, plataformasDe: plataformasDeObra,
+    aObra: (g: GrupoObra<CreditEntry>): ObraPersona => {
+      const t = g.credito;
+      return {
+        id: t.id, type: g.tipo, title: titleOf(t), year: yearOf(t), fecha: g.fecha,
+        poster: img(t.poster_path), country: t.origin_country?.[0] ?? null,
+        genres: genreIdsToSlugs(t.genre_ids ?? []),
+        tmdb: t.vote_average ? Number(t.vote_average.toFixed(1)) : null,
+        votos: t.vote_count ?? 0, hasEditorial: pub.has(`${t.id}:${g.tipo}`), roles: g.roles,
+      };
+    },
   });
-  return {
-    person: { id: det.id, name: det.name, profile: img(det.profile_path, "w185"), knownFor: [] } as UIPerson,
-    secciones: ordenDeSecciones(det.known_for_department, secciones),
-    ...res,
-  };
+  return { person: { id: det.id, name: det.name, profile: img(det.profile_path, "w185"), knownFor: [] }, ...res };
+}
+
+/** "Ver más": la disponibilidad de un bloque de obras (`tipo:id`, máx. 24). */
+export async function disponibilidadFilmografia(claves: string[]): Promise<DisponibilidadObras> {
+  return resolverBloque(claves, plataformasDeObra);
 }
 
 // --- Detalle completo (merge TMDB + providers + reseña + relacionados) ---

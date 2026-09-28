@@ -50,7 +50,7 @@ import { conDescartesRegistrados, withFallosTmdb } from "./fallos-tmdb.ts";
 import { ErrorTmdb } from "./tmdb-error.ts";
 import { resolverDirectores, resolverPortadas } from "./lotes-tolerantes.ts";
 import { enriquecerElegidos, producirBusquedaConFallos } from "./busqueda-enriquecido.ts";
-import { armarFilmografia } from "./filmografia.ts";
+import { resolverBloque } from "./filmografia.ts";
 import { resolverConCache, type BackendCache } from "./reparar-y-cachear.ts";
 import { settleAll } from "./settle-all.ts";
 import { clavePorId, repararLote, repararUno } from "./idioma.ts";
@@ -342,13 +342,11 @@ const EJECUCIONES = {
   },
   filmografia: {
     sitio: "persona:providersOf",
-    correr: () => armarFilmografia({
-      secciones: { direccion: [{ id: 1, media_type: "movie" }, { id: 2, media_type: "movie" }], actuacion: [] },
-      providers: ["n"],
-      enriquecer: async (c) => { if (c.id === 2) throw e429("/movie/2/watch/providers"); return ui(c.id, ["n"]); },
-      sinPlataformas: (c) => ui(c.id, []),
+    correr: () => resolverBloque(["movie:1", "movie:2"], async (_tipo, id) => {
+      if (id === 2) throw e429("/movie/2/watch/providers");
+      return ["n"];
     }),
-    consumidor: (r: { direccion: UITitle[]; degradacion?: { proveedores?: number } }) => { assert.deepEqual(r.direccion.map((t) => t.id), [1, 2], "el título caído sigue en la lista"); assert.equal(r.degradacion?.proveedores, 1); },
+    consumidor: (r: { disponibilidad: Record<string, string[]>; sinDisponibilidad: string[] }) => { assert.deepEqual(r.disponibilidad, { "movie:1": ["n"] }); assert.deepEqual(r.sinDisponibilidad, ["movie:2"], "'no sé', no 'no está'"); },
   },
   settleAll: {
     sitio: "prueba",
@@ -464,8 +462,8 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/lotes-tolerantes.ts", ancla: "Promise.allSettled(o.ids.map", clase: "tmdb-registra", efecto: "contexto", ejecucion: "directores" },
   { archivo: "lib/lotes-tolerantes.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "portadas" },
   { archivo: "lib/busqueda-enriquecido.ts", ancla: "deps.enriquecer(c).then((t) => ({ t, degradado: false })).catch", clase: "tmdb-registra", efecto: "contexto", ejecucion: "busqueda" },
-  // Filmografía de una persona: el título cuyo providersOf falló sale SIN plataformas (no se esconde) y se cuenta en `degradacion`. La vista no se cachea.
-  { archivo: "lib/filmografia.ts", ancla: "p = o.enriquecer(c).catch((e: unknown) => {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "filmografia" },
+  // Filmografía de una persona: la obra cuyo providersOf falló queda en `sinDisponibilidad` ("no sé", no "no está"); sus datos básicos siguen. La vista no se cachea.
+  { archivo: "lib/filmografia.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "filmografia" },
   { archivo: "lib/settle-all.ts", ancla: "Promise.allSettled(tareas)", clase: "tmdb-registra", efecto: "contexto", ejecucion: "settleAll" },
   // pools: el contexto lo abre el Home (por contexto async) y hay VARIOS
   // recorridos soportados desde composeHome que llegan al mismo sitio, todos
@@ -578,6 +576,8 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/netflix-top10.ts", ancla: "reader.cancel().catch", clase: "no-tmdb", motivo: "stream del TSV" },
   { archivo: "app/api/admin/top/route.ts", ancla: "catch { return NextResponse.json({ error: \"cuerpo inválido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   { archivo: "app/api/admin/top/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo handler de la ruta de admin (Supabase)" },
+  { archivo: "app/api/person/[id]/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo camino de la ruta: \"Ver más\" (?items=), 500 si el bloque falla entero" },
+  { archivo: "lib/filmografia-bloques.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "cargador del cliente: descarta el error de una generación vieja, relanza el de la actual" },
   { archivo: "app/api/cuenta/eliminar/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "Supabase" },
   { archivo: "app/api/te-va-a-gustar/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "JSON del cliente" },
 ];

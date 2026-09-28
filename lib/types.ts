@@ -98,6 +98,38 @@ export interface UIPerson {
   department?: string; // known_for_department de TMDB: "Acting" | "Directing" | …
 }
 
+// Una obra de la filmografía de una persona: DATOS BÁSICOS, sin disponibilidad.
+// Salen de `combined_credits` sin ninguna llamada por título; la disponibilidad
+// viaja aparte (`FilmografiaPersona.disponibilidad`) y sólo para lo visible.
+export interface ObraPersona extends Omit<UITitle, "platforms" | "runtime" | "votes"> {
+  fecha: string | null; // YYYY-MM-DD de estreno (o primera emisión), o null
+  votos: number; // vote_count de TMDB
+  // Dirección: todos sus trabajos de equipo en la obra (Director primero).
+  // Actuación: todos sus personajes (voz y "uncredited" incluidos).
+  roles: string[];
+}
+
+// GET /api/person/[id]?providers=… — ver lib/filmografia-bloques.ts.
+export interface FilmografiaPersona {
+  person: UIPerson;
+  secciones: ("direccion" | "actuacion")[]; // orden de las no vacías
+  direccion: ObraPersona[]; // TODAS, fecha descendente
+  actuacion: ObraPersona[];
+  inicial: { direccion: number; actuacion: number }; // cuántas se ven al abrir
+  disponibilidad: Record<string, PlatformCode[]>; // `tipo:id` del bloque inicial
+  sinDisponibilidad: string[]; // del bloque inicial, consulta fallida ("no sé")
+  // LEGADO, sólo para bundles nativos anteriores al issue #25 (leen `titles`):
+  // lo disponible DENTRO del bloque inicial. La interfaz nueva no lo usa.
+  titles: UITitle[];
+  hidden: number;
+}
+
+// GET /api/person/[id]?items=movie:1,tv:2 (máx. 24) — "Ver más".
+export interface DisponibilidadObras {
+  disponibilidad: Record<string, PlatformCode[]>;
+  sinDisponibilidad: string[];
+}
+
 // Estreno de la Agenda (upcoming). Shape que consume el read path desde Supabase.
 // Para movies los campos de TV van en null. `releaseDate` es ISO YYYY-MM-DD
 // (movie: estreno; tv: air_date del próximo episodio).

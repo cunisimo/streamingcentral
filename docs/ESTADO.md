@@ -1,58 +1,57 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 27 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 28 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
-- **Issue #25 (2026-09-27): la ficha de persona perdía películas —
+- **Issue #25 (2026-09-27/28): la ficha de persona perdía películas —
   CORREGIDO EN RAMA `fix/filmografia-persona` (worktree `wt-filmografia`,
-  desde `origin/main` `2af1a37`). NO MERGEADO, NO PUSHEADO, NO DESPLEGADO.**
+  desde `origin/main` `2af1a37`), DOS commits: `706fb7a` (1ª corrección,
+  🔴 RECHAZADA por el dueño el 28/09) y el commit siguiente (2ª corrección,
+  pendiente de auditoría de Codex). NO MERGEADO, NO PUSHEADO, NO DESPLEGADO.**
   Independiente de Yumpeá/salas: no toca archivos de salas.
-  Reportado por el dueño con Denis Villeneuve: `/api/person/137427?providers=m`
-  mostraba sólo *La llegada* y *Blade Runner 2049*, aunque las fichas de Duna
-  (`movie:438631`) y Duna: Parte dos (`movie:693134`) sí dicen Max.
-  **Causa raíz 1:** la reparación de idioma reconstruía los créditos con un
-  índice por `media_type:id` y expandía el objeto entero; con varios créditos
-  en la misma obra (Duna: Director, Producer, Screenplay) el último pisaba
-  `job`/`department`/`character` y la obra dejaba de ser "dirigida". Medido
-  sobre TMDB real: a Spielberg le sobrevivían 38 de 52 créditos de dirección.
-  **Causa 2:** `merged.slice(0, 40)` recortaba antes de resolver
-  disponibilidad. **Corrección:** `lib/filmografia.ts` (lógica pura) —
-  reconstrucción POR POSICIÓN (`repararLote` conserva orden y longitud; la
-  fusión sólo toca título/sinopsis), sin recorte, dos secciones (Dirección =
-  `job === "Director"`; Actuación = reparto real con voz y sin acreditar, sin
-  `Self`/`Himself`/`Herself`/variantes; en talk show/noticias/reality sólo se
-  excluye la aparición propia o sin personaje), y las plataformas **ordenan,
-  no filtran**. La ruta conserva `titles`/`hidden` para los bundles nativos
-  ya instalados. `PersonView` muestra las secciones con "Ver más" de a 24 y
-  restaura la vista al volver (patrón de `ListaView`).
-  **Comprobado por tests:** 19 tests nuevos (`lib/filmografia.test.ts`), que
-  con la lógica vieja daban 13 fallos por los motivos esperados, incluido un
-  control con el algoritmo viejo que debe fallar; + fila nueva en el
-  inventario de descartes de TMDB. Suite: 2131 / 2113 ok / 0 fallos / 18
-  omitidos; `tsc` limpio; `npm run build` OK.
-  **Comprobado en local** (build con `next start`, caché en memoria, TMDB
-  real): Villeneuve con `m` → Dirección 24 con las dos Duna en el bloque de
-  Max; Spielberg con `n` → Dirección 52, `1941` en el puesto 5; Tom Hanks y
-  Samuel L. Jackson → créditos de voz (*Toy Story*, *Los increíbles*) en
-  Actuación; en navegador a 375 px, "Ver más" y la vuelta desde una ficha sin
-  volver a pedir. ⚠️ `1941` **no** quedaba fuera del puesto 40 en la medición
-  de hoy (puesto 25-28 con el orden viejo): el caso ">40" está probado con
-  datos sintéticos y con carreras largas reales (Samuel L. Jackson: 229 obras,
-  antes se evaluaban 40).
-  **Coste medido (en frío, local):** Samuel L. Jackson 44 → 352 llamadas a
-  TMDB, 5,0 → 13,5 s, 8 → 75 KB (15,6 KB gzip); Villeneuve 29 → 51; en
-  caliente, 2 llamadas y ~0,25 s en todos los casos. Por eso la ruta pasa a
-  `maxDuration = 60`. Detalle:
+  Reportado por el dueño con Villeneuve: `/api/person/137427?providers=m`
+  mostraba sólo *La llegada* y *Blade Runner 2049* (Duna y Duna: Parte dos
+  dicen Max en su ficha). **Causa 1:** la reparación de idioma reconstruía los
+  créditos con un índice por `media_type:id` y el último crédito de cada obra
+  pisaba `job`/`department`/`character` (Duna pasaba a `Screenplay` y
+  dejaba de ser "dirigida"; a Spielberg le sobrevivían 38 de 52 créditos de
+  dirección). **Causa 2:** `merged.slice(0, 40)` truncaba antes de armar nada.
+  **Por qué se rechazó `706fb7a`:** enriquecía la carrera ENTERA al abrir (352
+  peticiones a TMDB y 10–13 s en frío para Samuel L. Jackson) y lo tapaba con
+  `maxDuration = 60`. **No es un resultado aceptable** y no se repite.
+  **2ª corrección:** reparación POSICIONAL (la reparación sólo toca título y
+  sinopsis) y consolidación por obra que AGREGA los roles (Dune conserva
+  Director, Producer y Screenplay en cualquier orden del array); la ruta
+  devuelve la filmografía COMPLETA como datos básicos (sin llamadas por
+  título, orden por fecha descendente) y la disponibilidad SÓLO de las 12 obras
+  visibles al abrir; cada "Ver más" pide las 24 siguientes de esa sección a la
+  misma ruta (`?items=`, máx. 24, sin volver a pedir créditos). Las
+  plataformas ordenan DENTRO de cada bloque ya resuelto; una consulta fallida
+  se muestra como "sin datos", nunca como "no está". `titles`/`hidden` se
+  conservan para los bundles Android instalados, acotados a lo ya resuelto.
+  Sin `maxDuration` propio. Lógica en `lib/filmografia.ts` y
+  `lib/filmografia-bloques.ts`.
+  **Comprobado por tests:** 30 tests de filmografía (control con el algoritmo
+  viejo + dos mutaciones que los ponen en rojo); uno falla si la apertura de
+  229 obras procesa más de 24. Suite: 2142 / 2132 ok / 0 fallos / 10 omitidos;
+  `tsc` limpio; `npm run build` OK.
+  **Comprobado localmente** (TMDB real, Redis = doble del banco, versiones
+  alternadas en la misma ventana): peticiones reales a TMDB al abrir en frío,
+  antes → después: Villeneuve **29 → 20**, Spielberg **60 → 22**, Tom Hanks
+  **50 → 22**, Samuel L. Jackson **44 → 22**; con Redis caliente, 2 en todos
+  (persona + créditos). Build con `next start` + Redis del banco: las dos
+  Dune con Max en el primer bloque, roles visibles, "Ver más" = una petición,
+  volver de una ficha restaura sin pedir nada. **Desvío del pedido, a decisión
+  del dueño:** la apertura es de 12 y no de 24, porque con 24 Villeneuve midió
+  43 > 29. Detalle:
   [`medidas/2026-09-27-filmografia.md`](medidas/2026-09-27-filmografia.md).
-  **Pendiente de prueba manual del dueño** (criterio de cierre en el issue #25):
-  teléfono real, Android nativo, restauración con otras plataformas, y el
-  coste real con Redis en un Preview. **Decisión pendiente:** si el frío de
-  las carreras más largas es aceptable o se cachea la filmografía entera
-  (ver #25).
+  **Pendiente de prueba manual del dueño** (criterio de cierre en el issue
+  #25): Preview con Redis, teléfono real y app Android instalada.
+  **No desplegado.**
 - **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 a 3 hechas y 4 construida; sin
   merge, push, deploy ni cambios en Producción (2026-09-19).** Plan aprobado
   por el dueño con tres rondas de correcciones:

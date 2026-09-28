@@ -1,64 +1,98 @@
 #!/usr/bin/env node
-// Medición de la filmografía de personas (`personFilmography`), antes y después
-// del arreglo de roles y del recorte a 40.
+// Medición de la filmografía de personas (issue #25), el MISMO instrumento para
+// el código viejo (2af1a37), el rechazado (706fb7a) y el actual.
 //
 //   node --env-file=.env.local --import ./scripts/cargar-lib.mjs \
-//        scripts/medir-filmografia.mjs <personId> <providers> [--ids=movie:1,movie:2]
+//        scripts/medir-filmografia.mjs <etiqueta> <personId> <providers> [--ver-mas]
 //
-// Una persona por PROCESO: el cache en memoria arranca vacío, así que la
-// primera llamada es la fría y la segunda (en el mismo proceso) la caliente.
-// Sin credenciales `KV_*` el cache es en memoria: NO escribe en el Redis de
-// producción. Sólo lee TMDB y Supabase (publishedIds).
+// Una corrida = UN proceso. Para medir "caché vacía" y "Redis caliente" se
+// corre dos veces contra el mismo Redis: la primera después de vaciarlo, la
+// segunda en un proceso nuevo (sin nada en memoria) con el Redis ya lleno.
+// El Redis es el DOBLE del banco (`scripts/banco/dobles.mjs`, REST de Upstash
+// en local) vía `UPSTASH_REDIS_REST_URL`: nunca el de Producción.
 //
-// Imprime conteos, llamadas a TMDB, tiempo de pared y bytes del JSON. Acepta
-// las dos formas de respuesta (la vieja `{ titles, hidden }` y la nueva por
-// secciones) para poder comparar con el mismo instrumento.
+// Qué separa, porque son costos distintos y no se suman:
+//   base      peticiones HTTP reales a TMDB de la persona y sus créditos
+//             (`/person/{id}`, `/person/{id}/combined_credits`, respaldo de idioma)
+//   proveedores / detalle / otras   peticiones HTTP reales a TMDB del resto
+//   enriquecedor  invocaciones LÓGICAS al enriquecido por obra (toUITitle en el
+//             código viejo; la resolución de disponibilidad en el nuevo),
+//             salgan o no a la red
+//   redis     hits y misses por clave, y comandos (lo que factura Upstash)
+// Una lectura servida por Redis NO es una petición a TMDB: las peticiones se
+// cuentan interceptando `fetch` hacia api.themoviedb.org, que es el cable.
 import { withMetricas } from "../lib/metricas.ts";
 
-const [idArg, provArg = "", ...resto] = process.argv.slice(2);
-if (!idArg) throw new Error("uso: medir-filmografia.mjs <personId> <providers> [--ids=movie:1,...]");
+const [etiqueta, idArg, provArg = "", ...resto] = process.argv.slice(2);
+if (!etiqueta || !idArg) throw new Error("uso: medir-filmografia.mjs <etiqueta> <personId> <providers> [--ver-mas]");
 const providers = provArg.split(",").filter(Boolean);
-const buscar = (resto.find((a) => a.startsWith("--ids=")) ?? "--ids=").slice(6).split(",").filter(Boolean);
+const conVerMas = resto.includes("--ver-mas");
 
-const { personFilmography } = await import("../lib/enrich.ts");
-
-async function corrida(etiqueta) {
-  const t0 = Date.now();
-  const { res, metricas } = await withMetricas(() => personFilmography(Number(idArg), providers));
-  const ms = Date.now() - t0;
-  const bytes = Buffer.byteLength(JSON.stringify(res));
-  const secciones = {};
-  for (const k of ["direccion", "actuacion"]) {
-    if (Array.isArray(res[k])) {
-      secciones[k] = {
-        total: res[k].length,
-        enTusPlataformas: res[k].filter((t) => t.platforms.some((p) => providers.includes(p))).length,
-      };
-    }
+// --- El cable: cada fetch a TMDB, por familia ---------------------------------
+const cable = { base: 0, proveedores: 0, detalle: 0, otras: 0 };
+const fetchOriginal = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  const u = String(url instanceof Request ? url.url : url);
+  if (u.includes("api.themoviedb.org")) {
+    const ruta = new URL(u).pathname.replace(/^\/3/, "");
+    if (/^\/person\/\d+(\/combined_credits)?$/.test(ruta)) cable.base++;
+    else if (/\/watch\/providers$/.test(ruta)) cable.proveedores++;
+    else if (/^\/(movie|tv)\/\d+$/.test(ruta)) cable.detalle++;
+    else cable.otras++;
   }
-  const todos = [...(res.titles ?? []), ...(res.direccion ?? []), ...(res.actuacion ?? [])];
-  const presentes = Object.fromEntries(buscar.map((k) => {
-    const [tipo, id] = k.split(":");
-    const donde = [];
-    if ((res.direccion ?? []).some((t) => t.type === tipo && t.id === Number(id))) donde.push("direccion");
-    if ((res.actuacion ?? []).some((t) => t.type === tipo && t.id === Number(id))) donde.push("actuacion");
-    if ((res.titles ?? []).some((t) => t.type === tipo && t.id === Number(id))) donde.push("titles");
-    return [k, donde.length ? donde.join("+") : "AUSENTE"];
-  }));
-  console.log(JSON.stringify({
-    etiqueta, persona: res.person?.name, providers: providers.join(","), ms, bytes,
-    legacy: res.titles ? { titles: res.titles.length, hidden: res.hidden } : null,
-    secciones,
-    distintos: new Set(todos.map((t) => `${t.type}:${t.id}`)).size,
-    tmdb: {
-      intentos: metricas.tmdb.intentos, ok: metricas.tmdb.ok,
-      http429: metricas.tmdb.errores.http429, http5xx: metricas.tmdb.errores.http5xx,
-      timeout: metricas.tmdb.errores.timeout, red: metricas.tmdb.errores.red,
-    },
-    degradacion: res.degradacion ?? null,
-    presentes,
-  }));
+  return fetchOriginal(url, init);
+};
+const tomarCable = () => { const c = { ...cable }; for (const k of Object.keys(cable)) cable[k] = 0; return c; };
+
+const enrich = await import("../lib/enrich.ts");
+
+async function medir(fn) {
+  tomarCable();
+  const t0 = Date.now();
+  const { res, metricas } = await withMetricas(fn);
+  const ms = Date.now() - t0;
+  const c = tomarCable();
+  return {
+    res, ms,
+    tmdbReales: c.base + c.proveedores + c.detalle + c.otras, cable: c,
+    redis: { modo: metricas.redis.modo, hits: metricas.redis.hits, misses: metricas.redis.misses, comandos: metricas.redis.comandos },
+    errores: metricas.tmdb.errores,
+  };
 }
 
-await corrida("fria");
-await corrida("caliente");
+const apertura = await medir(() => enrich.personFilmography(Number(idArg), providers));
+const r = apertura.res;
+// Tres formas de respuesta. Se distinguen por lo que traen, no por una sola
+// señal: 706fb7a ya tenía secciones pero enriquecía todo (sin `disponibilidad`).
+//   2af1a37   { titles, hidden }                    → enriquecía titles + hidden
+//   706fb7a   { direccion, actuacion, titles, hidden } → enriquecía TODAS las obras distintas
+//   actual    { …, disponibilidad, sinDisponibilidad } → enriquece sólo el bloque
+const nuevo = r.disponibilidad !== undefined;
+const conSecciones = Array.isArray(r.direccion);
+const distintas = conSecciones ? new Set([...r.direccion, ...r.actuacion].map((t) => `${t.type}:${t.id}`)).size : null;
+const enriquecidas = nuevo
+  ? Object.keys(r.disponibilidad).length + r.sinDisponibilidad.length
+  : conSecciones ? distintas : r.titles.length + r.hidden;
+const salida = {
+  etiqueta, persona: r.person?.name, providers: providers.join(","),
+  apertura: {
+    ms: apertura.ms, tmdbReales: apertura.tmdbReales, cable: apertura.cable, enriquecedor: enriquecidas,
+    redis: apertura.redis, bytes: Buffer.byteLength(JSON.stringify(r)), errores429: apertura.errores.http429,
+  },
+  obras: conSecciones
+    ? { direccion: r.direccion.length, actuacion: r.actuacion.length, inicial: r.inicial ?? null }
+    : { evaluadas: enriquecidas, mostradas: r.titles.length },
+};
+
+// "Ver más": el bloque siguiente de la primera sección (sólo código nuevo).
+if (conVerMas && nuevo && r.secciones.length) {
+  const { siguienteBloque, claveDe } = await import("../lib/filmografia-bloques.ts");
+  const s = r.secciones[0];
+  const resueltas = new Set([...Object.keys(r.disponibilidad), ...r.sinDisponibilidad]);
+  const { pedir } = siguienteBloque(r[s].map(claveDe), r.inicial[s], (k) => resueltas.has(k));
+  if (pedir.length) {
+    const vm = await medir(() => enrich.disponibilidadFilmografia(pedir));
+    salida.verMas = { seccion: s, enriquecedor: pedir.length, ms: vm.ms, tmdbReales: vm.tmdbReales, cable: vm.cable, redis: vm.redis, bytes: Buffer.byteLength(JSON.stringify(vm.res)) };
+  }
+}
+console.log(JSON.stringify(salida));

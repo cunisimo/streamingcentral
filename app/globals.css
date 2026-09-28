@@ -303,9 +303,12 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .empty-note{color:var(--faint);font-size:13px;padding:18px 0}
 /* Ficha de persona: una sección por profesión (Dirección / Actuación). */
 .filmo-sec{margin-bottom:34px}
-.filmo-sec-t{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0 0 2px}
+.filmo-sec-t{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0 0 14px}
 .filmo-sec-t span{color:var(--dim);font-weight:500}
-.filmo-sec-sub{color:var(--dim);font-size:13px;margin:0 0 14px}
+.filmo-obra{min-width:0}
+.filmo-roles{color:var(--dim);font-size:12px;line-height:1.35;margin:6px 2px 0;overflow-wrap:anywhere}
+.filmo-aviso{color:var(--dim);font-size:13px;margin:14px 0 0}
+.filmo-reintentar{background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;padding:0;text-decoration:underline}
 .filmo-mas{text-align:center;margin-top:20px}
 .loading{color:var(--faint);font-size:14px;padding:30px 0}
 

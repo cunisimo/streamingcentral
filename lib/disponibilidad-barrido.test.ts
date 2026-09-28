@@ -444,6 +444,10 @@ const CONSTRUCCIONES_PLATFORMS: { archivo: string; fragmento: string; cubierta: 
   // por separado y el test sólo se pone en rojo con las dos juntas.
   { archivo: "lib/sala/preparacion-nucleo.ts", fragmento: "platforms: card.platforms,",
     cubierta: "copia de una card de cardsByIds, que ya pasó por titleCard" },
+  // Issue #25: el legado `titles` de la filmografía copia lo que resolvió el
+  // bloque inicial, que sale de `plataformasDeObra` (providersOf + disponibilidadDe).
+  { archivo: "lib/filmografia.ts", fragmento: "platforms: plataformas });",
+    cubierta: "legado `titles` de la filmografía: copia de plataformasDeObra (disponibilidadDe)" },
 ];
 
 test("toda construcción de `platforms:` está inventariada con su cobertura", () => {

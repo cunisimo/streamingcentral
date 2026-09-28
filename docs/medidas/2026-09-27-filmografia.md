@@ -1,110 +1,143 @@
-# Filmografía de personas — medición antes/después (27/09/2026)
+# Filmografía de personas — medición (issue #25)
 
 Rama `fix/filmografia-persona` (worktree `wt-filmografia`, desde `origin/main`
-`2af1a37`). **Sin merge, sin push, sin deploy.** Nada de lo de acá está en
+`2af1a37`). **Sin merge, sin push, sin deploy.** Nada de esto está en
 Producción.
 
-## Qué se midió y con qué
+Tres versiones medidas con el MISMO instrumento:
 
-- Instrumento: `scripts/medir-filmografia.mjs`, que llama a
-  `personFilmography()` en proceso (`scripts/cargar-lib.mjs`) dentro de
-  `withMetricas`. Una persona por proceso: la primera llamada es la **fría**
-  (caché en memoria vacía) y la segunda, en el mismo proceso, la **caliente**.
-- Sin credenciales `KV_*`: caché en **memoria**. No escribe en el Redis de
-  Producción; sólo lee TMDB y Supabase (`publishedIds`).
-- **Mismo instrumento para las dos versiones**: el script entiende la forma
-  vieja (`titles`/`hidden`) y la nueva (secciones). "Antes" corrió sobre el
-  código sin tocar (`2af1a37`); "después", sobre la rama.
-- ⚠️ Los **tiempos** son de una máquina local contra TMDB real, corridas
-  secuenciales (MANTENIMIENTO, "TMDB se degrada bajo concurrencia"): sirven
-  como orden de magnitud, no como p95. Los **conteos** (títulos, llamadas,
-  bytes) son los que valen. Antes y después se midieron con ~40 min de
-  diferencia: la deriva de TMDB puede mover una o dos obras.
+| Versión | Qué hace al abrir la ficha | Estado |
+|---|---|---|
+| `2af1a37` ("antes") | índice que pisa roles + `slice(0, 40)` + filtro por plataformas | en Producción |
+| `706fb7a` (1ª corrección) | arregla roles y recorte, pero **enriquece la carrera entera** | 🔴 **RECHAZADA** por el dueño (28/09) |
+| 2ª corrección (commit siguiente) | datos básicos de todo + disponibilidad sólo del bloque visible | en rama |
 
-## Resultados
+🔴 **El enriquecido completo y anticipado de `706fb7a` se rechazó y no es un
+resultado aceptable.** 352 peticiones a TMDB y 10–13 s en frío para abrir una
+ficha no se justifican con un `maxDuration` más alto (la 2ª corrección lo sacó).
 
-| Persona (`providers`) | | Obras evaluadas | Mostradas | Llamadas TMDB (fría) | Tiempo frío | Tiempo caliente | JSON |
-|---|---|---|---|---|---|---|---|
-| Denis Villeneuve (`m`) | antes | 16 | 2 (sólo Max) | 29 | 7,5 s | 0,20 s | 679 B |
-| | después | 28 distintas | Dirección 24 (4 en Max) + Actuación 5 | 51 | 5,0 s | 0,16 s | 8,5 KB (1,9 KB gzip) |
-| Steven Spielberg (`n`) | antes | 40 | 6 | 57 | 6,0 s | 0,29 s | 1,8 KB |
-| | después | 66 distintas | Dirección 52 (5 en Netflix) + Actuación 18 | 106 | 6,7 s | 0,28 s | 19,7 KB (4,0 KB gzip) |
-| Tom Hanks (`n,d,m`) | antes | 40 | 20 | 50 | 4,3 s | 0,26 s | 5,2 KB |
-| | después | 123 distintas | Actuación 121 + Dirección 8 | 194 | 9,2 s | 0,26 s | 42,3 KB (7,0 KB gzip) |
-| Samuel L. Jackson (`n,d,m`) | antes | 40 | 29 | 44 | 5,0 s | 0,29 s | 8,0 KB |
-| | después | 229 | Actuación 229 (61 en tus plataformas) | 352 | 13,5 s | 0,26 s | 75,1 KB (15,6 KB gzip) |
+## Instrumento
 
-"Caliente" son siempre **2** llamadas a TMDB (`/person/{id}` y
-`combined_credits`, que no se cachean ni antes ni ahora); todo lo demás sale
-de `pv3:`/`disp:`. Con Redis de verdad, cada título son lecturas en MGET por
-lotes (`lib/cache.ts`): **no medido acá**, porque sin `KV_*` no hay comandos que
-contar.
+`scripts/medir-filmografia.mjs` corre `personFilmography()` en proceso
+(`scripts/cargar-lib.mjs`) y separa:
 
-Las llamadas en frío por encima de "1 por obra" son las del resolvedor de
-disponibilidad (`datosTituloDe`) para las obras que TMDB no ubica en AR: el
-mismo camino que el resto de la app, sin atajos propios. **Cero 429, cero
-timeouts** en las corridas del "después". Una corrida de Samuel L. Jackson
-del "después" falló por un timeout de TMDB en `/person/2231` (la llamada de
-detalle, previa al enriquecido y que no cambió); se repitió sola y es la que
-figura en la tabla.
+- **Peticiones HTTP reales a TMDB**, contadas interceptando `fetch` hacia
+  `api.themoviedb.org` (el cable), por familia: **base** (`/person/{id}` y
+  `/person/{id}/combined_credits`), **proveedores** (`/watch/providers`) y
+  **detalle** (la evidencia oficial de `disponibilidadDe` para obras que TMDB
+  no ubica en AR). Una lectura servida por Redis **no** es una petición a TMDB.
+- **Invocaciones lógicas al enriquecedor**: obras por las que se resolvió
+  disponibilidad, salgan o no a la red.
+- **Redis**: hits y misses por clave, y comandos (lo que factura Upstash).
 
-## Lo que se pierde hoy (causa raíz 1), medido sobre TMDB real
+Redis: el **doble REST de Upstash del banco** (`scripts/banco/dobles.mjs`,
+puerto propio) vía `UPSTASH_REDIS_REST_URL`. Nunca el de Producción. Por cada
+versión y persona: se vacía el Redis, una corrida **fría** (proceso nuevo) y
+otra **caliente** (otro proceso nuevo, sin nada en memoria, con el Redis ya
+lleno). TMDB y Supabase (`publishedIds`, sólo lectura) reales.
 
-Simulando el índice viejo sobre `combined_credits` de Spielberg:
-**sobreviven 38 de sus 52 créditos de Director** en `es-MX` y 46 de 52 en
-`es-ES`. Los que se pierden son las obras donde tiene otro crédito de equipo
-posterior en la lista (productor, guion).
+Las tres versiones se corrieron **alternadas por persona en la misma ventana**
+(28/09), como pide MANTENIMIENTO ("Comparar dos corridas"). Los "antes" viejos
+se corrieron desde una copia de `2af1a37`/`706fb7a` extraída con `git archive`
+en un directorio temporal, sin worktrees extra. Cero 429 en todas las corridas.
 
-Villeneuve: 24 créditos `Director` en `es-MX` el 27/09 (el dueño contó 25 en su
-consulta; la diferencia es deriva de TMDB o idioma). Antes quedaban 16 obras
-evaluadas; ahora las 24 de dirección.
+⚠️ El instrumento se equivocó una vez y se corrigió antes de publicar números
+(§8.b): identificaba la respuesta nueva por la presencia de secciones, y
+`706fb7a` también las tiene; contaba 0 obras enriquecidas para la versión
+rechazada. Ahora distingue las tres formas de respuesta por lo que traen.
 
-⚠️ **`1941` (Spielberg, Netflix) NO cayó fuera del puesto 40 en esta medición:**
-con el orden viejo quedó en el puesto 25 (`es-MX`) / 28 (`es-ES`), y "antes"
-ya aparecía con `providers=n`. El dueño la había visto cerca del 41 en
-Producción; hoy no se reprodujo (deriva de TMDB o de idioma). El recorte a 40
-sí descartaba obras en silencio: Samuel L. Jackson tiene 229 créditos de
-actuación y se evaluaban 40; Tom Hanks, 123 obras y se evaluaban 40. El caso
-"después del puesto 40" queda probado con datos sintéticos (test 5).
+⚠️ Tiempos: una máquina local contra TMDB real, corridas secuenciales. Sirven
+como orden de magnitud; los **conteos** son los que valen.
 
-## TDD: los tests fallaban antes del arreglo
+## Apertura de la ficha (criterio: peticiones reales después ≤ antes)
 
-Primero se extrajo la lógica VIEJA tal cual a `lib/filmografia.ts` y se
-corrieron los 19 tests nuevos: **6 ok / 13 fallos**, cada uno por el motivo
-esperado. Extracto:
+| Persona (`providers`) | Versión | Base | Proveedores | Detalle | **TMDB reales** | Enriquecedor | Redis hit / miss / cmd | ms (vacía) | JSON |
+|---|---|---|---|---|---|---|---|---|---|
+| Villeneuve (`m`) | antes | 2 | 16 | 11 | **29** | 16 | 0 / 61 / 110 | 4172 | 679 B |
+| | 706fb7a 🔴 | 2 | 28 | 21 | 51 | 28 | 11 / 102 / 191 | 3350 | 8,5 KB |
+| | **después** | 2 | 12 | 6 | **20** | 12 | 0 / 37 / 66 | 2801 | 9,7 KB (2,4 KB gzip) |
+| Spielberg (`n`) | antes | 2 | 40 | 18 | **60** | 40 | 11 / 102 / 179 | 3960 | 2,0 KB |
+| | 706fb7a 🔴 | 2 | 66 | 38 | 106 | 66 | 31 / 188 / 347 | 7000 | 19,7 KB |
+| | **después** | 2 | 12 | 8 | **22** | 12 | 3 / 42 / 79 | 3077 | 20,7 KB |
+| Tom Hanks (`n,d,m`) | antes | 2 | 40 | 8 | **50** | 40 | 4 / 69 / 106 | 4053 | 5,2 KB |
+| | 706fb7a 🔴 | 2 | 123 | 69 | 194 | 123 | 114 / 286 / 570 | 5256 | 42,3 KB |
+| | **después** | 2 | 12 | 8 | **22** | 12 | 0 / 45 / 82 | 3256 | 37,7 KB |
+| Samuel L. Jackson (`n,d,m`) | antes | 2 | 40 | 2 | **44** | 40 | 0 / 49 / 62 | 4153 | 8,0 KB |
+| | 706fb7a 🔴 | 2 | 229 | 121 | 352 | 229 | 204 / 510 / 1006 | 10222 | 75,1 KB |
+| | **después** | 2 | 12 | 8 | **22** | 12 | 0 / 45 / 82 | 3536 | 65,9 KB (15,9 KB gzip) |
 
-```
-✖ varios trabajos en el mismo título conservan Director, Producer y Screenplay
-    actual:   [ [Screenplay, Writing], [Screenplay, Writing], [Screenplay, Writing] ]
-    expected: [ [Director, Directing], [Producer, Production], [Screenplay, Writing] ]
-✖ un título posterior al puesto 40 sigue siendo accesible
-    actual: 0,  expected: 60
-✖ elegir sólo Max no elimina lo que no está en Max: sólo cambia el orden
-    actual: [],  expected: [438631, 693134, 329865, 335984]
-```
+**Criterio cumplido en los cuatro casos:** 20 ≤ 29, 22 ≤ 60, 22 ≤ 50, 22 ≤ 44.
 
-El test `control:` conserva una copia del algoritmo viejo y verifica que
-**pierde** el Director de Duna (MANTENIMIENTO §8.b): si alguien lo "arregla"
-hasta que pase con las dos versiones, deja de probar algo.
+**Con Redis caliente** (proceso nuevo, Redis lleno), las tres versiones y las
+cuatro personas: **2 peticiones reales a TMDB** (persona y créditos, que no se
+cachean en ninguna versión), 0 misses. Duración: antes 0,7–1,4 s, después
+1,1–2,0 s. El enriquecedor sigue invocándose (12), pero todo sale de Redis.
 
-Después del arreglo: **19/19**. Suite completa: 2131 tests, 2113 ok, 0 fallos,
-18 omitidos (artefactos opcionales). `npx tsc --noEmit` limpio;
-`npm run build` OK.
+El JSON crece porque ahora viaja la filmografía ENTERA como datos básicos
+(título, póster, fecha, votos, géneros, roles), que es lo que permite
+recorrerla sin volver a pedir créditos. Es lo único que escala con la carrera,
+y cuesta 0 peticiones a TMDB.
 
-## Verificado en local con el build (`next start`, caché en memoria)
+## "Ver más" (el bloque siguiente de la primera sección)
 
-- `GET /api/person/137427?providers=m` → Dirección 24; primeras: La llegada,
-  Blade Runner 2049, Duna (`mv,m,un`), Duna: Parte dos (`m,un`); después el
-  resto en gris. Legado `titles` = 4, `hidden` = 24.
-- `GET /api/person/488?providers=n` → Dirección 52, `1941` en el puesto 5
-  (bloque de Netflix); Actuación 18 (cameos reales: "Alien on TV Monitor",
-  voces sin acreditar), separada.
-- `GET /api/person/31?providers=n,d,m` → Actuación primero (profesión
-  conocida), *Toy Story* (voz) en el puesto 1.
-- `GET /api/person/2231?providers=n,d,m` → sólo Actuación (229), *Los
-  increíbles* (voz de Frozone) presente.
-- Navegador a 375 px: secciones con conteo, "N en tus plataformas", cards
-  fuera de tus plataformas en gris con "No está en tus plataformas", sin
-  scroll horizontal. "Ver más" de a 24. Abrir la card 56 de Samuel L. Jackson
-  y volver: 72 cards y el mismo scroll (9763 px), **sin volver a pedir**
-  `/api/person`.
+| Persona | Obras pedidas | TMDB reales (frío) | Redis hit / miss / cmd | ms (frío) | ms (Redis caliente) | JSON |
+|---|---|---|---|---|---|---|
+| Villeneuve (Dirección) | 15 | 29 (15 + 14) | 28 / 43 / 101 | 801 | 21 | 312 B |
+| Spielberg (Dirección) | 24 | 33 (24 + 9) | 18 / 42 / 80 | 1033 | 35 | 562 B |
+| Tom Hanks (Actuación) | 24 | 35 (24 + 11) | 22 / 46 / 93 | 2410 | 21 | 532 B |
+| Samuel L. Jackson (Actuación) | 24 | 30 (24 + 6) | 12 / 36 / 62 | 864 | 27 | 530 B |
+
+Villeneuve pide 15 y no 16: la obra restante ya estaba resuelta desde la otra
+sección. "Ver más" no vuelve a pedir la persona ni los créditos (base 0).
+
+## Por qué la apertura es de 12 y no de 24
+
+El pedido del dueño fija la apertura en "como máximo 24" y el criterio
+obligatorio en "peticiones reales iniciales después ≤ antes". Con una apertura
+de 24 obras (primer intento de esta corrección, 28/09, mismo instrumento),
+Villeneuve midió **43** peticiones reales (2 + 24 + 17) contra **29** del
+antes: el "antes" es barato porque el bug le descartaba 8 obras dirigidas.
+Con 12, el **peor caso** es 2 + 12 × 2 = 26 (27 con el respaldo de idioma),
+por debajo de 29 sin depender de cuántas obras caigan al respaldo. "Ver más"
+sigue siendo de 24. Es un desvío del contrato pedido ("apertura: posiciones
+0–23") y está a decisión del dueño.
+
+## Causa raíz 1, sobre datos reales
+
+Simulando el índice viejo sobre `combined_credits` de Spielberg (27/09):
+sobreviven **38 de 52** créditos de Director (`es-MX`), 46 de 52 (`es-ES`).
+Villeneuve: el "antes" evaluaba 16 obras de sus 24 dirigidas.
+
+⚠️ `1941` (Spielberg) **no** quedó fuera del puesto 40 en la medición del
+27/09 (puesto 25–28 con el orden viejo); el dueño la vio cerca del 41 en
+Producción. No se reprodujo. Con la carga progresiva, está en la filmografía
+básica de todas formas y se alcanza con "Ver más".
+
+## Tests
+
+- 1ª corrección: los 19 tests nuevos daban **13 fallos** contra la lógica vieja
+  extraída tal cual (motivos esperados: roles `[Screenplay ×3]`, 0 de 60 obras
+  tras el puesto 40, filtro por Max).
+- 2ª corrección: `lib/filmografia.test.ts` (22) + `lib/filmografia-bloques.test.ts`
+  (8). Además del **control** con el algoritmo viejo (pierde el Director en 4
+  de los 6 órdenes posibles de Director/Producer/Screenplay), se hicieron dos
+  **mutaciones** temporales para ver que los tests muerden: con la apertura
+  enriqueciendo la carrera entera fallan 2 tests (el de 229 obras entre ellos);
+  con "el último rol gana" fallan 5 (Dune, órdenes, Villeneuve, Max,
+  secciones). Restaurado el código: 30/30.
+
+## Verificado en local (build de producción con `next start` y el Redis del banco)
+
+- `/api/person/137427?providers=m`: 24 obras de Dirección y 5 de Actuación
+  como datos básicos, 12 consultadas (`inicial` 8 + 4). Dirección, por fecha:
+  Dune: Parte tres (2026-12-15, sin plataformas), Dune: Parte dos `[m, un]`,
+  Dune `[mv, m, un]`, Blade Runner 2049 `[mv, m]`, La llegada `[mv, m]`…; Dune
+  con roles Director/Producer/Screenplay.
+- En navegador a 375 px: las cuatro de Max arriba del primer bloque, roles en
+  castellano bajo cada card ("Dirección · Guion · Producción"), voz como
+  "(voz)", sin scroll horizontal. "Ver más" de Dirección → UNA petición
+  `?items=` con 15 claves y el bloque aparece completo.
+- Samuel L. Jackson: 229 obras básicas, 12 consultadas; dos "Ver más", abrir la
+  card 41 y volver: 60 cards y el mismo scroll (7700 px). Peticiones a la
+  persona en toda la prueba: la apertura y los dos `?items=`; **la vuelta no
+  pidió nada**.

@@ -1,51 +1,58 @@
-// Filmografía de una persona (`personFilmography` en lib/enrich.ts).
+// Filmografía de una persona (issue #25): roles que no se pisan, filmografía
+// completa como datos básicos, y disponibilidad SÓLO del bloque visible.
 //
-// Dos bugs, encontrados con Denis Villeneuve en producción (27/09):
-//
-//   1. La reparación de idioma reconstruía los créditos con un índice por
-//      `media_type:id`. Una persona puede tener VARIOS créditos en la misma obra
-//      (Duna: Director, Producer, Screenplay) y el último pisaba `job`,
-//      `department` y `character` de los demás: Duna y Duna: Parte dos dejaban de
-//      ser créditos de dirección y desaparecían de la ficha.
-//   2. `merged.slice(0, 40)` recortaba ANTES de saber qué estaba en las
-//      plataformas del usuario: las carreras largas perdían obras en silencio.
-//
-// Todo se prueba sobre lógica pura, sin TMDB: las dependencias se inyectan.
+// Todo sobre lógica pura, sin TMDB: `armarFilmografia` es la composición que
+// ejecuta `personFilmography` (lib/enrich.ts), y `plataformasDe` —lo único que
+// cuesta llamadas por título— se inyecta y se CUENTA.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { claveMixta, conRespuesto, indiceMixto, repararLote } from "./idioma.ts";
 import { ErrorTmdb } from "./tmdb-error.ts";
+import { codeForTmdbId } from "./providers-ar.ts";
+import { decisionDeTmdb } from "./disponibilidad.ts";
 import {
-  armarFilmografia, esActuacion, esAparicionPropia, ordenDeSecciones,
-  primeroEnTusPlataformas, repararCreditos, seccionesDeCreditos,
-  type CreditoPersona,
+  agruparSecciones, armarFilmografia, compararObras, esActuacion, esAparicionPropia,
+  MAX_POR_PEDIDO, ordenDeSecciones, parsearClave, repararCreditos, resolverBloque,
+  type CreditoPersona, type GrupoObra,
 } from "./filmografia.ts";
-import type { PlatformCode, UITitle } from "./types.ts";
+import { BLOQUE, BLOQUE_INICIAL, claveDe, siguienteBloque } from "./filmografia-bloques.ts";
+import type { MediaType, ObraPersona, PlatformCode } from "./types.ts";
 
 // --- Datos -------------------------------------------------------------------
 const cred = (o: Partial<CreditoPersona> & { id: number }): CreditoPersona => ({
   media_type: "movie", title: `Obra ${o.id}`, overview: "Sinopsis.", original_language: "en",
-  vote_count: 100, genre_ids: [18], ...o,
+  vote_count: 100, genre_ids: [18], release_date: "2000-01-01", ...o,
 });
+const permutaciones = <T>(xs: T[]): T[][] =>
+  xs.length <= 1 ? [xs] : xs.flatMap((x, i) => permutaciones([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [x, ...p]));
 
-// Los créditos REALES de Villeneuve en las dos Duna, en el orden en que los
-// trae TMDB (combined_credits, 27/09). El orden importa: el índice viejo
-// conservaba el ÚLTIMO de cada obra.
-const DUNA = 438631;
-const DUNA2 = 693134;
+const DUNE = 438631;
+const DUNE2 = 693134;
+const ARRIVAL = 329865;
+const BR2049 = 335984;
+// Villeneuve, en el ORDEN en que TMDB trae sus créditos de equipo (27/09):
+// Dune con Director, Producer, Screenplay; Dune: Part Two con Screenplay,
+// Director, Producer. El índice viejo conservaba el ÚLTIMO de cada obra.
 const crewVilleneuve: CreditoPersona[] = [
-  cred({ id: DUNA, title: "Duna", job: "Director", department: "Directing", vote_count: 14000 }),
-  cred({ id: DUNA, title: "Duna", job: "Producer", department: "Production", vote_count: 14000 }),
-  cred({ id: DUNA, title: "Duna", job: "Screenplay", department: "Writing", vote_count: 14000 }),
-  cred({ id: DUNA2, title: "Duna: Parte dos", job: "Screenplay", department: "Writing", vote_count: 7000 }),
-  cred({ id: DUNA2, title: "Duna: Parte dos", job: "Director", department: "Directing", vote_count: 7000 }),
-  cred({ id: DUNA2, title: "Duna: Parte dos", job: "Producer", department: "Production", vote_count: 7000 }),
-  cred({ id: 329865, title: "La llegada", job: "Director", department: "Directing", vote_count: 18000 }),
-  cred({ id: 335984, title: "Blade Runner 2049", job: "Director", department: "Directing", vote_count: 14500 }),
+  cred({ id: DUNE, title: "Dune", job: "Director", department: "Directing", credit_id: "d1", release_date: "2021-09-15", vote_count: 14000 }),
+  cred({ id: DUNE, title: "Dune", job: "Producer", department: "Production", credit_id: "d2", release_date: "2021-09-15", vote_count: 14000 }),
+  cred({ id: DUNE, title: "Dune", job: "Screenplay", department: "Writing", credit_id: "d3", release_date: "2021-09-15", vote_count: 14000 }),
+  cred({ id: DUNE2, title: "Dune: Part Two", job: "Screenplay", department: "Writing", credit_id: "e1", release_date: "2024-02-27", vote_count: 7000 }),
+  cred({ id: DUNE2, title: "Dune: Part Two", job: "Director", department: "Directing", credit_id: "e2", release_date: "2024-02-27", vote_count: 7000 }),
+  cred({ id: DUNE2, title: "Dune: Part Two", job: "Producer", department: "Production", credit_id: "e3", release_date: "2024-02-27", vote_count: 7000 }),
+  cred({ id: ARRIVAL, title: "Arrival", job: "Director", department: "Directing", release_date: "2016-11-10", vote_count: 18000 }),
+  cred({ id: BR2049, title: "Blade Runner 2049", job: "Director", department: "Directing", release_date: "2017-10-04", vote_count: 14500 }),
+  cred({ id: 273481, title: "Sicario", job: "Director", release_date: "2015-09-17", vote_count: 9000 }),
+  cred({ id: 146233, title: "Prisoners", job: "Director", release_date: "2013-09-19", vote_count: 11000 }),
+  cred({ id: 181886, title: "Enemy", job: "Director", release_date: "2013-09-08", vote_count: 4000 }),
+  cred({ id: 46738, title: "Incendies", job: "Director", release_date: "2010-09-04", vote_count: 2500 }),
+  cred({ id: 46738, title: "Incendies", job: "Screenplay", release_date: "2010-09-04", vote_count: 2500 }),
+  cred({ id: 900100, title: "Un proyecto anunciado", job: "Director", release_date: "", vote_count: 0 }),
+  cred({ id: 900200, title: "Algo que sólo produjo", job: "Producer", release_date: "2019-01-01" }),
 ];
 const castVilleneuve: CreditoPersona[] = [
-  cred({ id: 900001, media_type: "tv", title: "Un talk show", character: "Self", genre_ids: [10767] }),
-  cred({ id: DUNA, title: "Duna", character: "Self (archive footage)" }),
+  cred({ id: 900001, media_type: "tv", title: "Un talk show", character: "Self", genre_ids: [10767], first_air_date: "2010-01-01" }),
+  cred({ id: DUNE, title: "Dune", character: "Self (archive footage)", release_date: "2021-09-15" }),
 ];
 
 // Implementación ANTERIOR (lib/enrich.ts hasta 2af1a37), copiada a propósito:
@@ -60,57 +67,83 @@ async function repararCreditosViejo(cast: CreditoPersona[], crew: CreditoPersona
     crew: crew.map((c) => ({ ...c, ...conRespuesto(idx, c, claveMixta) })),
   };
 }
-
 const sinRespaldo = async () => [];
 
-// --- 1 y 9: la reparación no toca campos estructurales -----------------------
-test("control: la implementación VIEJA pierde el crédito de Director de Duna", async () => {
+// Stand-in de `aObra` (enrich.ts la arma con img()/genreIdsToSlugs()).
+const aObra = (g: GrupoObra<CreditoPersona>): ObraPersona => ({
+  id: g.credito.id, type: g.tipo, title: g.credito.title ?? g.credito.name ?? "", year: null, fecha: g.fecha,
+  poster: null, country: null, genres: [], tmdb: null, votos: g.credito.vote_count ?? 0, hasEditorial: false, roles: g.roles,
+});
+function contador(plataformas: (tipo: MediaType, id: number) => PlatformCode[] = () => []) {
+  const llamadas: string[] = [];
+  return {
+    llamadas,
+    plataformasDe: async (tipo: MediaType, id: number) => { llamadas.push(`${tipo}:${id}`); return plataformas(tipo, id); },
+  };
+}
+
+// --- Roles: la reparación no pisa, la consolidación agrega --------------------
+test("control: la implementación VIEJA pierde el Director de Dune y de Dune: Part Two", async () => {
   const r = await repararCreditosViejo(castVilleneuve, crewVilleneuve);
-  const jobsDuna = r.crew.filter((c) => c.id === DUNA).map((c) => c.job);
-  assert.deepEqual(jobsDuna, ["Screenplay", "Screenplay", "Screenplay"], "el último pisaba a los demás");
-  const jobsDuna2 = r.crew.filter((c) => c.id === DUNA2).map((c) => c.job);
-  assert.deepEqual(jobsDuna2, ["Producer", "Producer", "Producer"]);
+  assert.deepEqual(r.crew.filter((c) => c.id === DUNE).map((c) => c.job), ["Screenplay", "Screenplay", "Screenplay"]);
+  assert.deepEqual(r.crew.filter((c) => c.id === DUNE2).map((c) => c.job), ["Producer", "Producer", "Producer"]);
 });
 
-test("varios trabajos en el mismo título conservan Director, Producer y Screenplay", async () => {
-  const r = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
-  assert.deepEqual(r.crew.filter((c) => c.id === DUNA).map((c) => [c.job, c.department]), [
-    ["Director", "Directing"], ["Producer", "Production"], ["Screenplay", "Writing"],
+test("Dune (Director + Producer + Screenplay) y Dune: Part Two (Screenplay + Director + Producer) siguen en Dirección con los tres roles", async () => {
+  const rep = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
+  const { direccion } = agruparSecciones(rep);
+  const roles = (id: number) => direccion.find((g) => g.credito.id === id)?.roles;
+  assert.deepEqual(roles(DUNE), ["Director", "Producer", "Screenplay"]);
+  assert.deepEqual(roles(DUNE2), ["Director", "Screenplay", "Producer"]);
+  // Y la reparación dejó cada registro con su propia identidad.
+  assert.deepEqual(rep.crew.filter((c) => c.id === DUNE).map((c) => [c.job, c.department, c.credit_id]), [
+    ["Director", "Directing", "d1"], ["Producer", "Production", "d2"], ["Screenplay", "Writing", "d3"],
   ]);
-  assert.deepEqual(r.crew.filter((c) => c.id === DUNA2).map((c) => c.job), ["Screenplay", "Director", "Producer"]);
-  assert.equal(r.crew.length, crewVilleneuve.length, "no se pierde ni se agrega ningún crédito");
-  assert.equal(r.cast.length, castVilleneuve.length);
-  // El `character` del reparto sigue siendo el suyo: no lo pisa el crew de la misma obra.
-  assert.equal(r.cast.find((c) => c.id === DUNA)?.character, "Self (archive footage)");
-  assert.equal(r.cast.find((c) => c.id === DUNA)?.job, undefined, "el reparto no recibe un `job` del crew");
 });
 
-test("la reparación de idioma sigue funcionando y NO cambia job, department, character ni media_type", async () => {
-  // Título roto (coreano, sin sinopsis) en tres créditos de la misma obra y en
-  // uno de reparto; el respaldo trae UN solo registro por obra, con otro `job`.
+test("una obra con varios créditos NO pierde Director, en CUALQUIER orden del array (y el algoritmo viejo sí)", async () => {
+  const base = [
+    cred({ id: 1, job: "Director", department: "Directing" }),
+    cred({ id: 1, job: "Producer", department: "Production" }),
+    cred({ id: 1, job: "Screenplay", department: "Writing" }),
+  ];
+  let perdidasViejo = 0;
+  for (const orden of permutaciones(base)) {
+    const rep = await repararCreditos({ cast: [], crew: orden }, sinRespaldo, "t", true);
+    const g = agruparSecciones(rep).direccion;
+    assert.equal(g.length, 1, `orden ${orden.map((c) => c.job)}: sigue en Dirección`);
+    assert.deepEqual([...g[0].roles].sort(), ["Director", "Producer", "Screenplay"]);
+    assert.equal(g[0].roles[0], "Director");
+    const viejo = await repararCreditosViejo([], orden);
+    if (!agruparSecciones(viejo).direccion.length) perdidasViejo++;
+  }
+  assert.equal(perdidasViejo, 4, "con el índice viejo, sólo sobrevive cuando Director queda último (2 de 6 órdenes)");
+});
+
+test("la reparación de idioma sigue funcionando y NO cambia job, department, character, credit_id ni media_type", async () => {
   const roto = { title: "듄", overview: "", original_language: "ko" };
-  const cast = [cred({ id: 1, ...roto, character: "Voz del gusano (voice)" })];
+  const cast = [cred({ id: 1, ...roto, character: "Voz del gusano (voice)", credit_id: "c1" })];
   const crew = [
-    cred({ id: 1, ...roto, job: "Director", department: "Directing" }),
-    cred({ id: 1, ...roto, job: "Producer", department: "Production" }),
-    cred({ id: 1, media_type: "tv", ...roto, job: "Director", department: "Directing" }),
+    cred({ id: 1, ...roto, job: "Director", department: "Directing", credit_id: "k1" }),
+    cred({ id: 1, ...roto, job: "Producer", department: "Production", credit_id: "k2" }),
+    cred({ id: 1, media_type: "tv", ...roto, job: "Director", department: "Directing", credit_id: "k3" }),
   ];
   const respaldo = async () => [
-    { id: 1, media_type: "movie", title: "Duna", overview: "Arena.", job: "Writer", department: "Writing", character: "Otro" },
+    { id: 1, media_type: "movie", title: "Duna", overview: "Arena.", job: "Writer", department: "Writing", character: "Otro", credit_id: "x" },
     { id: 1, media_type: "tv", title: "Duna, la serie", overview: "Tele." },
   ];
   const r = await repararCreditos({ cast, crew }, respaldo, "t", true);
-  assert.deepEqual(r.crew.map((c) => [c.media_type, c.title, c.overview, c.job, c.department]), [
-    ["movie", "Duna", "Arena.", "Director", "Directing"],
-    ["movie", "Duna", "Arena.", "Producer", "Production"],
-    ["tv", "Duna, la serie", "Tele.", "Director", "Directing"],
+  assert.deepEqual(r.crew.map((c) => [c.media_type, c.title, c.overview, c.job, c.department, c.credit_id]), [
+    ["movie", "Duna", "Arena.", "Director", "Directing", "k1"],
+    ["movie", "Duna", "Arena.", "Producer", "Production", "k2"],
+    ["tv", "Duna, la serie", "Tele.", "Director", "Directing", "k3"],
   ]);
   assert.equal(r.cast[0].title, "Duna");
-  assert.equal(r.cast[0].character, "Voz del gusano (voice)", "el character del respaldo no entra");
-  assert.equal(r.fallo, false);
+  assert.equal(r.cast[0].character, "Voz del gusano (voice)");
+  assert.equal(r.cast[0].credit_id, "c1");
 });
 
-test("si el respaldo falla, los créditos quedan intactos y se avisa", async () => {
+test("si el respaldo de idioma falla, los créditos quedan intactos y se avisa", async () => {
   const r = await repararCreditos(
     { cast: [cred({ id: 1, title: "듄", overview: "" })], crew: crewVilleneuve },
     async () => { throw new Error("caído"); }, "t", true,
@@ -119,27 +152,69 @@ test("si el respaldo falla, los créditos quedan intactos y se avisa", async () 
   assert.deepEqual(r.crew.map((c) => c.job), crewVilleneuve.map((c) => c.job));
 });
 
-// --- Secciones ---------------------------------------------------------------
-test("Duna y Duna: Parte dos son créditos de dirección de Villeneuve después de reparar", async () => {
-  const r = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
-  const s = seccionesDeCreditos(r);
-  const ids = s.direccion.map((c) => c.id);
-  assert.ok(ids.includes(DUNA), "Duna en Dirección");
-  assert.ok(ids.includes(DUNA2), "Duna: Parte dos en Dirección");
-  assert.equal(ids.length, 4, "sin duplicados: una entrada por obra");
-  assert.deepEqual(s.actuacion, [], "Self y archivo no son actuación");
+// --- Aceptación: Villeneuve --------------------------------------------------
+test("Villeneuve: Dirección conserva Dune, Dune: Part Two, Arrival y Blade Runner 2049, todas en el bloque inicial", async () => {
+  const rep = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
+  const { llamadas, plataformasDe } = contador();
+  const r = await armarFilmografia({ credits: rep, conocidoPor: "Directing", providers: ["m"], aObra, plataformasDe });
+  const ids = r.direccion.map((o) => o.id);
+  for (const id of [DUNE, DUNE2, ARRIVAL, BR2049]) assert.ok(ids.includes(id), `falta ${id}`);
+  assert.equal(ids.includes(900200), false, "sólo produjo: no es Dirección");
+  assert.equal(new Set(ids).size, ids.length, "una vez por obra");
+  // Fecha descendente: Dune: Part Two (2024) primero; lo anunciado sin fecha, al final.
+  assert.deepEqual(ids.slice(0, 4), [DUNE2, DUNE, BR2049, ARRIVAL]);
+  assert.equal(ids[ids.length - 1], 900100);
+  for (const id of [DUNE, DUNE2, ARRIVAL, BR2049]) assert.ok(llamadas.includes(`movie:${id}`), `movie:${id} en el primer bloque`);
+  assert.deepEqual(r.actuacion, [], "Self y archivo no son actuación");
+  assert.deepEqual(r.secciones, ["direccion"]);
 });
 
-test("un crédito de voz y uno sin acreditar aparecen en Actuación", () => {
-  const s = seccionesDeCreditos({
+test("Dune y Dune: Part Two muestran Max cuando los proveedores de TMDB dicen Max en AR", async () => {
+  // Respuesta de `watch/providers` como la de TMDB: Max = provider_id 1899 en
+  // AR/flatrate. Se convierte con el MISMO mapeo y la MISMA decisión que usa
+  // `providersOf` + `disponibilidadDe` (codeForTmdbId + decisionDeTmdb).
+  const watchProviders: Record<number, { AR?: { flatrate?: { provider_id: number }[] } }> = {
+    [DUNE]: { AR: { flatrate: [{ provider_id: 1899 }] } },
+    [DUNE2]: { AR: { flatrate: [{ provider_id: 1899 }] } },
+  };
+  const plataformasDe = async (tipo: MediaType, id: number): Promise<PlatformCode[]> => {
+    const flat = watchProviders[id]?.AR?.flatrate ?? [];
+    const codes = flat.map((p) => codeForTmdbId(p.provider_id)).filter((c): c is PlatformCode => !!c);
+    return decisionDeTmdb({ tipo, id, deTmdb: codes, hayFlatrateAR: flat.length > 0 }) ?? [];
+  };
+  const rep = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
+  const r = await armarFilmografia({ credits: rep, conocidoPor: "Directing", providers: ["m"], aObra, plataformasDe });
+  assert.deepEqual(r.disponibilidad[`movie:${DUNE}`], ["m"]);
+  assert.deepEqual(r.disponibilidad[`movie:${DUNE2}`], ["m"]);
+  assert.deepEqual(r.titles.map((t) => t.id).sort(), [DUNE, DUNE2].sort(), "legado: lo disponible en Max");
+});
+
+// --- Aceptación: sin límites artificiales -------------------------------------
+test("Spielberg: 52 obras dirigidas y 18 actuadas llegan TODAS como datos básicos; al abrir se consultan 12", async () => {
+  const crew = Array.from({ length: 52 }, (_, i) => cred({ id: 1000 + i, job: "Director", release_date: `${1971 + i}-06-01` }));
+  const cast = Array.from({ length: 18 }, (_, i) => cred({ id: 5000 + i, character: `Cameo ${i}`, release_date: `${1980 + i}-01-01` }));
+  const { llamadas, plataformasDe } = contador();
+  const r = await armarFilmografia({ credits: { cast, crew }, conocidoPor: "Directing", providers: ["n"], aObra, plataformasDe });
+  assert.equal(r.direccion.length, 52, "ni 10 ni 40");
+  assert.equal(r.actuacion.length, 18);
+  assert.deepEqual(r.secciones, ["direccion", "actuacion"]);
+  assert.deepEqual(r.inicial, { direccion: 8, actuacion: 4 });
+  assert.equal(llamadas.length, 12);
+});
+
+test("un actor conserva películas, series, personajes normales y trabajos de voz", () => {
+  const s = agruparSecciones({
     cast: [
-      cred({ id: 9806, title: "Los increíbles", character: "Lucius Best / Frozone (voice)" }),
-      cred({ id: 12, character: "Nick Fury (uncredited)" }),
-      cred({ id: 13, character: "Narrator (voice)", genre_ids: [99] }),
+      cred({ id: 9806, title: "The Incredibles", character: "Lucius Best / Frozone (voice)", release_date: "2004-10-27" }),
+      cred({ id: 24428, title: "The Avengers", character: "Nick Fury", release_date: "2012-04-25" }),
+      cred({ id: 1403, media_type: "tv", name: "Agents of S.H.I.E.L.D.", title: undefined, character: "Nick Fury", first_air_date: "2013-09-24", release_date: undefined }),
+      cred({ id: 12, character: "Nick Fury (uncredited)", release_date: "2008-04-30" }),
     ],
     crew: [],
   });
-  assert.deepEqual(s.actuacion.map((c) => c.id), [9806, 12, 13]);
+  assert.deepEqual(s.actuacion.map((g) => g.clave), ["tv:1403", "movie:24428", "movie:12", "movie:9806"]);
+  assert.deepEqual(s.actuacion.find((g) => g.clave === "movie:9806")?.roles, ["Lucius Best / Frozone (voice)"]);
+  assert.equal(s.direccion.length, 0);
 });
 
 test("Self y sus variantes no cuentan como actuación", () => {
@@ -159,145 +234,143 @@ test("Self y sus variantes no cuentan como actuación", () => {
 test("talk show / noticias / reality: fuera sólo si es aparición propia, no por el género", () => {
   const talk = [10767];
   assert.equal(esActuacion(cred({ id: 1, media_type: "tv", character: "Self - Guest", genre_ids: talk })), false);
-  // Sin personaje o como presentador en un programa de no ficción: aparición propia presunta.
   assert.equal(esActuacion(cred({ id: 2, media_type: "tv", character: "", genre_ids: talk })), false);
   assert.equal(esActuacion(cred({ id: 3, media_type: "tv", character: "Host", genre_ids: [10764] })), false);
-  // Un personaje real dentro de un talk show (un sketch) SÍ es actuación.
   assert.equal(esActuacion(cred({ id: 4, media_type: "tv", character: "Nick Fury", genre_ids: talk })), true);
-  // Y un crédito sin nombre de personaje en ficción es reparto real.
   assert.equal(esActuacion(cred({ id: 5, character: "" })), true);
 });
 
-test("dirección y actuación quedan separadas; la misma obra puede estar en las dos", () => {
-  const s = seccionesDeCreditos({
+test("Dirección y Actuación separadas; una obra dirigida y actuada está en las dos, una vez en cada una", () => {
+  const s = agruparSecciones({
     cast: [
-      cred({ id: 1, character: "Cameo" }),              // dirigió Y actuó
+      cred({ id: 1, character: "Cameo" }),
+      cred({ id: 1, character: "Voz en off (voice)" }),     // dos personajes, misma obra
+      cred({ id: 1, character: "Cameo" }),                  // repetido exacto
       cred({ id: 2, character: "Protagonista" }),
-      cred({ id: 3, character: "Self" }),               // cameo como sí mismo: fuera
+      cred({ id: 3, character: "Self" }),
     ],
     crew: [
-      cred({ id: 1, job: "Director" }),
-      cred({ id: 1, job: "Writer" }),
+      cred({ id: 1, job: "Director" }), cred({ id: 1, job: "Writer" }), cred({ id: 1, job: "Director" }),
       cred({ id: 4, job: "Director" }),
-      cred({ id: 5, job: "Producer" }),                 // no es dirección
-      cred({ id: 6, job: "Second Unit Director" }),     // tampoco
+      cred({ id: 5, job: "Producer" }),
+      cred({ id: 6, job: "Second Unit Director" }),
     ],
   });
-  assert.deepEqual(s.direccion.map((c) => c.id).sort(), [1, 4]);
-  assert.deepEqual(s.actuacion.map((c) => c.id).sort(), [1, 2]);
+  assert.deepEqual(s.direccion.map((g) => g.credito.id).sort(), [1, 4]);
+  assert.deepEqual(s.actuacion.map((g) => g.credito.id).sort(), [1, 2]);
+  assert.deepEqual(s.direccion.find((g) => g.credito.id === 1)?.roles, ["Director", "Writer"]);
+  assert.deepEqual(s.actuacion.find((g) => g.credito.id === 1)?.roles, ["Cameo", "Voz en off (voice)"]);
 });
 
-test("película y serie con el mismo id no se deduplican entre sí", () => {
-  const s = seccionesDeCreditos({
-    cast: [], crew: [cred({ id: 7, job: "Director" }), cred({ id: 7, media_type: "tv", job: "Director" })],
-  });
-  assert.deepEqual(s.direccion.map((c) => `${c.media_type}:${c.id}`), ["movie:7", "tv:7"]);
+test("película y serie con el mismo id son obras distintas", () => {
+  const s = agruparSecciones({ cast: [], crew: [cred({ id: 7, job: "Director" }), cred({ id: 7, media_type: "tv", job: "Director" })] });
+  assert.deepEqual(s.direccion.map((g) => g.clave).sort(), ["movie:7", "tv:7"]);
+});
+
+test("orden: fecha descendente, sin fecha al final, empate por votos y clave (total y estable)", () => {
+  const g = (clave: string, fecha: string | null, votos: number): GrupoObra<CreditoPersona> =>
+    ({ clave, tipo: "movie", credito: cred({ id: 1, vote_count: votos }), roles: [], fecha });
+  const orden = [g("movie:1", "2010-01-01", 5), g("movie:2", null, 999), g("movie:3", "2020-01-01", 1),
+    g("movie:4", "2010-01-01", 50), g("movie:5", "2010-01-01", 50)].sort(compararObras).map((x) => x.clave);
+  assert.deepEqual(orden, ["movie:3", "movie:4", "movie:5", "movie:1", "movie:2"]);
 });
 
 test("una persona con una sola profesión: una sola sección", () => {
-  const s = seccionesDeCreditos({ cast: [cred({ id: 1, character: "Vincent" })], crew: [] });
-  assert.equal(s.direccion.length, 0);
-  assert.equal(s.actuacion.length, 1);
-  assert.deepEqual(ordenDeSecciones("Acting", s), ["actuacion"]);
+  assert.deepEqual(ordenDeSecciones("Acting", { direccion: 0, actuacion: 3 }), ["actuacion"]);
+  assert.deepEqual(ordenDeSecciones("Directing", { direccion: 1, actuacion: 2 }), ["direccion", "actuacion"]);
+  assert.deepEqual(ordenDeSecciones("Acting", { direccion: 1, actuacion: 2 }), ["actuacion", "direccion"]);
+  assert.deepEqual(ordenDeSecciones(undefined, { direccion: 5, actuacion: 2 }), ["direccion", "actuacion"]);
+  assert.deepEqual(ordenDeSecciones("Directing", { direccion: 0, actuacion: 0 }), []);
 });
 
-test("orden de las secciones: según su profesión conocida, sin mostrar las vacías", () => {
-  const ambas = { direccion: [cred({ id: 1 })], actuacion: [cred({ id: 2 }), cred({ id: 3 })] };
-  assert.deepEqual(ordenDeSecciones("Directing", ambas), ["direccion", "actuacion"]);
-  assert.deepEqual(ordenDeSecciones("Acting", ambas), ["actuacion", "direccion"]);
-  assert.deepEqual(ordenDeSecciones(undefined, ambas), ["actuacion", "direccion"], "sin dato, la más grande primero");
-  assert.deepEqual(ordenDeSecciones("Directing", { direccion: [], actuacion: [] }), []);
+// --- Aceptación: 229 obras, carga progresiva ---------------------------------
+const carrera229 = () => ({
+  cast: Array.from({ length: 229 }, (_, i) => cred({
+    id: 20000 + i, media_type: i % 5 === 0 ? "tv" : "movie", character: i % 7 === 0 ? `Personaje ${i} (voice)` : `Personaje ${i}`,
+    release_date: i % 5 === 0 ? undefined : `${2025 - Math.floor(i / 5)}-0${1 + (i % 9)}-01`,
+    first_air_date: i % 5 === 0 ? `${2025 - Math.floor(i / 5)}-01-15` : undefined,
+  })),
+  crew: [],
 });
 
-// --- Disponibilidad: ordena, no filtra ----------------------------------------
-const plataformasDe = (m: Record<number, PlatformCode[]>) => (c: CreditoPersona) => m[c.id] ?? [];
-function enriquecedor(plataformas: (c: CreditoPersona) => PlatformCode[]) {
-  const llamadas: string[] = [];
-  const enriquecer = async (c: CreditoPersona): Promise<UITitle> => {
-    llamadas.push(`${c.media_type}:${c.id}`);
-    return sinPlataformas(c, plataformas(c));
-  };
-  return { enriquecer, llamadas };
-}
-function sinPlataformas(c: CreditoPersona, platforms: PlatformCode[] = []): UITitle {
-  return {
-    id: c.id, type: c.media_type === "tv" ? "tv" : "movie", title: c.title ?? "", year: null, runtime: null,
-    poster: null, country: null, genres: [], platforms, tmdb: null, hasEditorial: false,
-  };
-}
+test("229 obras: las 229 como datos básicos, 12 enriquecidas al abrir (tope 24), las 24 siguientes al pedir más", async () => {
+  const { llamadas, plataformasDe } = contador();
+  const r = await armarFilmografia({ credits: carrera229(), conocidoPor: "Acting", providers: ["n"], aObra, plataformasDe });
+  assert.equal(r.actuacion.length, 229, "datos básicos completos");
+  // 🔴 El contrato de coste: la apertura procesa COMO MÁXIMO un bloque (24), y
+  // en concreto la apertura chica (12, ver BLOQUE_INICIAL).
+  assert.ok(llamadas.length <= BLOQUE, `la apertura enriqueció ${llamadas.length} (> ${BLOQUE})`);
+  assert.equal(llamadas.length, BLOQUE_INICIAL);
+  const claves = r.actuacion.map(claveDe);
+  assert.deepEqual(llamadas.sort(), claves.slice(0, 12).sort(), "exactamente las posiciones 0–11");
 
-test("un título posterior al puesto 40 sigue siendo accesible", async () => {
-  // 60 películas dirigidas, ordenadas por votos; la 55 es la única en Netflix.
-  const crew = Array.from({ length: 60 }, (_, i) => cred({ id: i + 1, job: "Director", vote_count: 1000 - i }));
-  const { enriquecer, llamadas } = enriquecedor(plataformasDe({ 55: ["n"] }));
+  const resueltas = new Set([...Object.keys(r.disponibilidad), ...r.sinDisponibilidad]);
+  let visibles = r.inicial.actuacion;
+  for (const [desde, hasta] of [[12, 36], [36, 60]]) {
+    const sig = siguienteBloque(claves, visibles, (k) => resueltas.has(k));
+    assert.deepEqual(sig.pedir, claves.slice(desde, hasta), `"Ver más" pide ${desde}–${hasta - 1}`);
+    llamadas.length = 0;
+    const b = await resolverBloque(sig.pedir, plataformasDe);
+    assert.equal(llamadas.length, 24);
+    for (const k of Object.keys(b.disponibilidad)) resueltas.add(k);
+    visibles = sig.hasta;
+  }
+  // El último bloque es menor: 229 = 12 + 9 × 24 + 1.
+  const ultimo = siguienteBloque(claves, 228, (k) => resueltas.has(k));
+  assert.equal(ultimo.pedir.length, 1);
+  assert.equal(ultimo.hasta, 229);
+});
+
+test("resolverBloque rechaza más de un bloque y nunca consulta dos veces la misma obra", async () => {
+  const { llamadas, plataformasDe } = contador();
+  const muchas = Array.from({ length: MAX_POR_PEDIDO + 1 }, (_, i) => `movie:${i + 1}`);
+  await assert.rejects(resolverBloque(muchas, plataformasDe), RangeError);
+  assert.equal(llamadas.length, 0, "rechaza ANTES de consultar");
+  await resolverBloque(["movie:1", "movie:1", "tv:1"], plataformasDe);
+  assert.deepEqual(llamadas.sort(), ["movie:1", "tv:1"]);
+});
+
+test("una obra dirigida y actuada visible en las dos secciones se consulta UNA vez", async () => {
+  const { llamadas, plataformasDe } = contador();
   const r = await armarFilmografia({
-    secciones: seccionesDeCreditos({ cast: [], crew }), providers: ["n"], enriquecer, sinPlataformas,
-  });
-  assert.equal(r.direccion.length, 60, "no se recorta nada");
-  assert.equal(llamadas.length, 60, "se evalúa la disponibilidad de todas");
-  assert.equal(r.direccion[0].id, 55, "la disponible sube al primer lugar");
-});
-
-test("elegir sólo Max no elimina lo que no está en Max: sólo cambia el orden", async () => {
-  const r0 = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
-  const { enriquecer } = enriquecedor(plataformasDe({ [DUNA]: ["m"], [DUNA2]: ["m"], 329865: ["n"] }));
-  const r = await armarFilmografia({ secciones: seccionesDeCreditos(r0), providers: ["m"], enriquecer, sinPlataformas });
-  assert.deepEqual(r.direccion.map((t) => t.id), [DUNA, DUNA2, 329865, 335984],
-    "primero las dos de Max (por votos), después el resto (por votos)");
-  assert.equal(r.direccion.length, 4, "nada filtrado");
-});
-
-test("lo disponible en tus plataformas va primero, en cada sección y de forma estable", () => {
-  const t = (id: number, platforms: PlatformCode[]) => sinPlataformas(cred({ id }), platforms);
-  const orden = primeroEnTusPlataformas([t(1, []), t(2, ["n"]), t(3, ["d"]), t(4, ["m", "n"]), t(5, [])], ["n"]);
-  assert.deepEqual(orden.map((x) => x.id), [2, 4, 1, 3, 5]);
-  assert.deepEqual(primeroEnTusPlataformas([t(1, []), t(2, ["n"])], []).map((x) => x.id), [1, 2], "sin plataformas, sin cambios");
-});
-
-test("una obra dirigida y actuada se enriquece UNA vez y aparece en las dos secciones", async () => {
-  const { enriquecer, llamadas } = enriquecedor(() => []);
-  const r = await armarFilmografia({
-    secciones: seccionesDeCreditos({
-      cast: [cred({ id: 1, character: "Cameo" })], crew: [cred({ id: 1, job: "Director" })],
-    }),
-    providers: ["n"], enriquecer, sinPlataformas,
+    credits: { cast: [cred({ id: 1, character: "Cameo" })], crew: [cred({ id: 1, job: "Director" })] },
+    conocidoPor: "Directing", providers: ["n"], aObra, plataformasDe,
   });
   assert.deepEqual(llamadas, ["movie:1"]);
   assert.equal(r.direccion.length, 1);
   assert.equal(r.actuacion.length, 1);
 });
 
-test("un fallo de TMDB en un título lo deja SIN plataformas, no lo esconde", async () => {
-  const enriquecer = async (c: CreditoPersona): Promise<UITitle> => {
-    if (c.id === 2) throw new ErrorTmdb({ estado: 429, clase: "http429", path: "/movie/2/watch/providers" });
-    return sinPlataformas(c, ["n"]);
+test("un fallo parcial de TMDB conserva TODOS los créditos básicos y marca 'sin datos', no 'no está'", async () => {
+  const plataformasDe = async (_t: MediaType, id: number): Promise<PlatformCode[]> => {
+    if (id === 2) throw new ErrorTmdb({ estado: 429, clase: "http429", path: "/movie/2/watch/providers" });
+    return ["n"];
   };
-  const r = await armarFilmografia({
-    secciones: seccionesDeCreditos({ cast: [], crew: [cred({ id: 1, job: "Director" }), cred({ id: 2, job: "Director" })] }),
-    providers: ["n"], enriquecer, sinPlataformas,
-  });
-  assert.deepEqual(r.direccion.map((t) => [t.id, t.platforms]), [[1, ["n"]], [2, []]]);
-  assert.deepEqual(r.degradacion, { proveedores: 1 });
+  const crew = [1, 2, 3].map((id) => cred({ id, job: "Director" }));
+  const r = await armarFilmografia({ credits: { cast: [], crew }, conocidoPor: "Directing", providers: ["n"], aObra, plataformasDe });
+  assert.equal(r.direccion.length, 3);
+  assert.deepEqual(r.sinDisponibilidad, ["movie:2"]);
+  assert.equal(r.disponibilidad["movie:2"], undefined, "no se afirma que no está");
+  assert.deepEqual(r.titles.map((t) => t.id).sort(), [1, 3]);
 });
 
 test("un error propio (no de TMDB) no se disfraza: se propaga", async () => {
-  await assert.rejects(armarFilmografia({
-    secciones: seccionesDeCreditos({ cast: [], crew: [cred({ id: 1, job: "Director" })] }),
-    providers: ["n"], enriquecer: async () => { throw new TypeError("bug"); }, sinPlataformas,
-  }), TypeError);
+  await assert.rejects(resolverBloque(["movie:1"], async () => { throw new TypeError("bug"); }), TypeError);
 });
 
-test("compatibilidad: `titles` y `hidden` para los bundles nativos ya instalados", async () => {
-  // Los clientes viejos muestran `titles` como "Filmografía en tus plataformas":
-  // sólo lo disponible, sin repetir una obra que esté en las dos secciones.
-  const { enriquecer } = enriquecedor(plataformasDe({ 1: ["n"], 3: ["n"] }));
-  const r = await armarFilmografia({
-    secciones: seccionesDeCreditos({
-      cast: [cred({ id: 1, character: "Cameo", vote_count: 10 }), cred({ id: 2, character: "X", vote_count: 20 })],
-      crew: [cred({ id: 1, job: "Director", vote_count: 10 }), cred({ id: 3, job: "Director", vote_count: 30 })],
-    }),
-    providers: ["n"], enriquecer, sinPlataformas,
-  });
-  assert.deepEqual(r.titles.map((t) => t.id), [3, 1], "disponibles, por votos, sin duplicar");
-  assert.equal(r.hidden, 1, "la obra 2 no está en tus plataformas");
+test("parsearClave sólo acepta tipo:id", () => {
+  assert.deepEqual(parsearClave("movie:438631"), { tipo: "movie", id: 438631 });
+  assert.deepEqual(parsearClave("tv:1"), { tipo: "tv", id: 1 });
+  for (const k of ["person:1", "movie:", "movie:1:2", "movie:abc", " movie:1"]) assert.equal(parsearClave(k), null, k);
+});
+
+test("legado `titles`/`hidden`: sólo lo disponible del bloque inicial, sin consultas extra", async () => {
+  const cast = Array.from({ length: 60 }, (_, i) => cred({ id: 100 + i, character: "X", release_date: `${2060 - i}-01-01`, vote_count: i }));
+  const { llamadas, plataformasDe } = contador(() => ["n"]);
+  const r = await armarFilmografia({ credits: { cast, crew: [] }, conocidoPor: "Acting", providers: ["n"], aObra, plataformasDe });
+  assert.equal(llamadas.length, 12, "el legado no dispara consultas");
+  assert.equal(r.titles.length, 12, "acotado al bloque ya resuelto");
+  assert.deepEqual(r.titles.map((t) => t.platforms), Array(12).fill(["n"]));
+  assert.ok(r.titles.every((t, i, a) => i === 0 || (cast.find((c) => c.id === a[i - 1].id)!.vote_count! >= cast.find((c) => c.id === t.id)!.vote_count!)), "por votos, como antes");
+  assert.equal(r.hidden, 48);
 });

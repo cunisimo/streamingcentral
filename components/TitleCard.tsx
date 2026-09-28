@@ -13,7 +13,11 @@ const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6
 // es para mí" exista solo en "Elegidas para vos". La card es la misma en todos
 // los rieles, así que la diferencia tiene que entrar por el llamador — un riel
 // que no pasa el prop no puede mostrar el botón ni por descuido.
-export default function TitleCard({ t, rank, onDescartar }: { t: UITitle; rank?: number; onDescartar?: (t: UITitle) => void }) {
+// `sinDatos` es OPCIONAL: la disponibilidad NO se pudo consultar (fallo de
+// TMDB). Sin él, una lista vacía de plataformas significa "no está"; con él, la
+// card no se pinta en gris ni dice "No está en tus plataformas", porque eso
+// sería afirmar algo que no se sabe. Hoy sólo lo pasa la ficha de persona.
+export default function TitleCard({ t, rank, onDescartar, sinDatos }: { t: UITitle; rank?: number; onDescartar?: (t: UITitle) => void; sinDatos?: boolean }) {
   const { platforms, ready } = usePlatforms();
   const mine = t.platforms.filter((p) => platforms.includes(p));
   const shown = mine.slice(0, 2);
@@ -26,7 +30,7 @@ export default function TitleCard({ t, rank, onDescartar }: { t: UITitle; rank?:
   // parpadean en gris en cada carga. No hace falta chequear que haya al menos
   // una plataforma — PlatformsContext garantiza el invariante "nunca vacío" en
   // la hidratación, en `toggle` y en `set`.
-  const fuera = ready && mine.length === 0;
+  const fuera = ready && mine.length === 0 && !sinDatos;
   return (
     <div className={`card${fuera ? " off-plat" : ""}`}>
       <Link className="card-link" href={hrefTitulo(t.type, t.id)}>
@@ -44,7 +48,7 @@ export default function TitleCard({ t, rank, onDescartar }: { t: UITitle; rank?:
             {mine.length > 2 && <span className="more">+{mine.length - 2}</span>}
             {mine.length === 0 && (
               <span className="more off-plat-lbl">
-                {fuera ? "No está en tus plataformas" : "—"}
+                {fuera ? "No está en tus plataformas" : sinDatos ? "Sin datos de disponibilidad" : "—"}
               </span>
             )}
           </div>
