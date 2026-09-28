@@ -197,8 +197,14 @@ export interface DisponibilidadBloque {
   sinDisponibilidad: string[];
 }
 
-/** Cuántas claves acepta un pedido de disponibilidad: un bloque. */
+/** Cuántas claves acepta un pedido de disponibilidad del contrato v2: un bloque. */
 export const MAX_POR_PEDIDO = BLOQUE;
+/**
+ * Cuántas obras evalúa el contrato v1 (legado): las mismas 40 que evaluaba el
+ * código anterior al issue #25 (`merged.slice(0, 40)` en 2af1a37). Es el techo
+ * de costo de los clientes viejos: no puede crecer.
+ */
+export const MAX_V1 = 40;
 
 /**
  * Resuelve la disponibilidad de un bloque de claves `tipo:id`, una vez por
@@ -210,8 +216,16 @@ export async function resolverBloque(
   claves: string[],
   plataformasDe: (tipo: MediaType, id: number) => Promise<PlatformCode[]>,
 ): Promise<DisponibilidadBloque> {
+  return resolverHasta(claves, plataformasDe, MAX_POR_PEDIDO);
+}
+
+async function resolverHasta(
+  claves: string[],
+  plataformasDe: (tipo: MediaType, id: number) => Promise<PlatformCode[]>,
+  maximo: number,
+): Promise<DisponibilidadBloque> {
   const unicas = [...new Set(claves)];
-  if (unicas.length > MAX_POR_PEDIDO) throw new RangeError(`[filmografia] ${unicas.length} obras en un pedido; el máximo es ${MAX_POR_PEDIDO}`);
+  if (unicas.length > maximo) throw new RangeError(`[filmografia] ${unicas.length} obras en un pedido; el máximo es ${maximo}`);
   const out: DisponibilidadBloque = { disponibilidad: {}, sinDisponibilidad: [] };
   await Promise.all(unicas.map(async (k) => {
     const par = parsearClave(k);
@@ -235,18 +249,18 @@ export function parsearClave(k: string): { tipo: MediaType; id: number } | null 
 
 // --- 4. La apertura completa --------------------------------------------------
 /**
- * Arma la respuesta de `/api/person/[id]` a partir de los créditos YA
- * reparados. Es la composición que ejecuta `personFilmography`: los tests la
- * corren entera y cuentan las llamadas a `plataformasDe`.
+ * Contrato **v2** (`/api/person/[id]?filmografia=v2`), a partir de los
+ * créditos YA reparados. Es la composición que ejecuta `personFilmography`: los
+ * tests la corren entera y cuentan las llamadas a `plataformasDe`.
  *
  * Datos básicos de TODAS las obras; disponibilidad SÓLO de las visibles al
- * abrir (`bloqueInicial`, ≤ `BLOQUE_INICIAL` obras distintas). El contrato viejo
- * (`titles`/`hidden`) sale de ese mismo bloque: no dispara ni una consulta más.
+ * abrir (`bloqueInicial`, ≤ `BLOQUE_INICIAL` obras distintas). No depende de
+ * las plataformas del usuario (sólo ordenan, y eso es del cliente), y NO arma
+ * el contrato viejo: cada petición ejecuta una sola versión.
  */
 export async function armarFilmografia<C extends CreditoPersona>(o: {
   credits: Creditos<C>;
   conocidoPor: string | undefined;
-  providers: PlatformCode[];
   aObra: (g: GrupoObra<C>) => ObraPersona;
   plataformasDe: (tipo: MediaType, id: number) => Promise<PlatformCode[]>;
 }): Promise<Omit<FilmografiaPersona, "person">> {
@@ -263,24 +277,53 @@ export async function armarFilmografia<C extends CreditoPersona>(o: {
     o.plataformasDe,
   );
 
-  // LEGADO (bundles nativos anteriores al #25 leen `titles` como "Filmografía
-  // en tus plataformas"): lo disponible DENTRO del bloque ya resuelto, por
-  // votos como antes, una vez por obra. `hidden` no lo muestra ningún cliente.
-  const titles: UITitle[] = [];
-  const vistos = new Set<string>();
-  for (const obra of [...direccion, ...actuacion].sort((a, b) => b.votos - a.votos)) {
-    const k = claveDe(obra);
-    const plataformas = bloque.disponibilidad[k];
-    if (vistos.has(k) || !plataformas?.some((c) => o.providers.includes(c))) continue;
-    vistos.add(k);
-    const { fecha: _f, votos: _v, roles: _r, ...base } = obra;
-    titles.push({ ...base, runtime: null, platforms: plataformas });
-  }
-  const distintas = new Set([...direccion, ...actuacion].map(claveDe)).size;
-
   return {
     secciones, direccion, actuacion, inicial,
     disponibilidad: bloque.disponibilidad, sinDisponibilidad: bloque.sinDisponibilidad,
-    titles, hidden: distintas - titles.length,
   };
+}
+
+// --- 5. El contrato v1 (legado) ---------------------------------------------
+/**
+ * Contrato **v1** (`/api/person/[id]` sin `filmografia=v2`): el que leen los
+ * bundles Android instalados antes del issue #25, que muestran `titles` como
+ * "Filmografía en tus plataformas".
+ *
+ * Es la selección del código anterior (2af1a37) —dirección y actuación
+ * juntas, una vez por obra, por votos, las primeras `MAX_V1` (40)—, pero sobre
+ * los créditos con la reparación NUEVA de roles: Dune vuelve a ser una obra
+ * dirigida y deja de desaparecer. Se consultan como máximo esas 40, igual que
+ * antes; nunca la carrera entera.
+ *
+ * Una consulta de disponibilidad fallida deja la obra afuera de `titles` (no
+ * se puede afirmar que está en tus plataformas) y cuenta en `hidden`. Antes,
+ * un solo fallo tiraba la vista entera (`Promise.all`).
+ */
+export async function armarFilmografiaV1<C extends CreditoPersona>(o: {
+  credits: Creditos<C>;
+  providers: PlatformCode[];
+  aObra: (g: GrupoObra<C>) => ObraPersona;
+  plataformasDe: (tipo: MediaType, id: number) => Promise<PlatformCode[]>;
+}): Promise<{ titles: UITitle[]; hidden: number }> {
+  const grupos = agruparSecciones(o.credits);
+  const vistos = new Set<string>();
+  const unicas: GrupoObra<C>[] = [];
+  for (const g of [...grupos.direccion, ...grupos.actuacion]) {
+    if (vistos.has(g.clave)) continue;
+    vistos.add(g.clave);
+    unicas.push(g);
+  }
+  // Por votos, estable (como el `sort` de 2af1a37), y el mismo recorte a 40.
+  const evaluadas = unicas
+    .sort((a, b) => (b.credito.vote_count ?? 0) - (a.credito.vote_count ?? 0))
+    .slice(0, MAX_V1);
+  const lote = await resolverHasta(evaluadas.map((g) => g.clave), o.plataformasDe, MAX_V1);
+  const titles: UITitle[] = [];
+  for (const g of evaluadas) {
+    const plataformas = lote.disponibilidad[g.clave];
+    if (!plataformas?.some((c) => o.providers.includes(c))) continue;
+    const { fecha: _f, votos: _v, roles: _r, ...base } = o.aObra(g);
+    titles.push({ ...base, runtime: null, platforms: plataformas });
+  }
+  return { titles, hidden: evaluadas.length - titles.length };
 }

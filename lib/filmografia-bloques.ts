@@ -19,6 +19,14 @@
 // para Samuel L. Jackson) y se RECHAZÓ: no se vuelve a hacer.
 import type { PlatformCode } from "./types.ts";
 
+/**
+ * Versión del contrato de `/api/person/[id]` que usan la web y todo AAB nuevo
+ * (lib/filmografia-ruta.ts). Sin este parámetro la ruta responde el contrato v1
+ * de los bundles Android anteriores. Vive acá porque este módulo es apto para
+ * el cliente; filmografia-ruta.ts arrastra código de servidor.
+ */
+export const VERSION_FILMOGRAFIA = "v2";
+
 export const BLOQUE = 24;
 // 🔴 La apertura es MÁS CHICA que un "Ver más", y el número sale de una cuenta,
 // no de una medición. El criterio del dueño es que la apertura no haga más
@@ -101,30 +109,4 @@ export function ordenVisible(
     out.push(...si, ...tramo.filter((k) => !si.includes(k)));
   }
   return out;
-}
-
-/**
- * Descarta respuestas viejas. Cada cambio de persona abre una GENERACIÓN
- * nueva; una respuesta de "Ver más" que vuelve con otra generación no se
- * aplica — así, pasar rápido de una persona a otra no mezcla resultados.
- */
-export function crearCargador<R>(pedir: (claves: string[], senal: AbortSignal) => Promise<R>) {
-  let generacion = 0;
-  let control = new AbortController();
-  return {
-    /** Nueva persona (o desmontaje): lo que esté en vuelo se cancela y se ignora. */
-    reiniciar() { generacion++; control.abort(); control = new AbortController(); },
-    /** Devuelve `null` si la respuesta llegó tarde (otra persona) y NO se debe aplicar. */
-    async cargar(claves: string[]): Promise<R | null> {
-      const g = generacion;
-      try {
-        const r = await pedir(claves, control.signal);
-        return g === generacion ? r : null;
-      } catch (e) {
-        // Un error de una generación vieja (incluida la cancelación) tampoco se aplica.
-        if (g !== generacion) return null;
-        throw e;
-      }
-    },
-  };
 }

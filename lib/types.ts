@@ -109,7 +109,8 @@ export interface ObraPersona extends Omit<UITitle, "platforms" | "runtime" | "vo
   roles: string[];
 }
 
-// GET /api/person/[id]?providers=… — ver lib/filmografia-bloques.ts.
+// GET /api/person/[id]?filmografia=v2 — contrato v2 (web y AAB desde el
+// issue #25). Ver lib/filmografia-bloques.ts.
 export interface FilmografiaPersona {
   person: UIPerson;
   secciones: ("direccion" | "actuacion")[]; // orden de las no vacías
@@ -118,13 +119,19 @@ export interface FilmografiaPersona {
   inicial: { direccion: number; actuacion: number }; // cuántas se ven al abrir
   disponibilidad: Record<string, PlatformCode[]>; // `tipo:id` del bloque inicial
   sinDisponibilidad: string[]; // del bloque inicial, consulta fallida ("no sé")
-  // LEGADO, sólo para bundles nativos anteriores al issue #25 (leen `titles`):
-  // lo disponible DENTRO del bloque inicial. La interfaz nueva no lo usa.
+}
+
+// GET /api/person/[id]?providers=… SIN `filmografia=v2` — contrato v1, el de
+// los bundles Android instalados antes del issue #25: hasta 40 obras evaluadas
+// (las mismas que antes, por votos) con los roles ya reparados. `titles` es lo
+// disponible en tus plataformas; `hidden`, lo evaluado que no.
+export interface FilmografiaLegado {
+  person: UIPerson;
   titles: UITitle[];
   hidden: number;
 }
 
-// GET /api/person/[id]?items=movie:1,tv:2 (máx. 24) — "Ver más".
+// GET /api/person/[id]?filmografia=v2&items=movie:1,tv:2 (máx. 24) — "Ver más".
 export interface DisponibilidadObras {
   disponibilidad: Record<string, PlatformCode[]>;
   sinDisponibilidad: string[];

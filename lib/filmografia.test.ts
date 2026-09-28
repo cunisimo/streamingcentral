@@ -11,8 +11,8 @@ import { ErrorTmdb } from "./tmdb-error.ts";
 import { codeForTmdbId } from "./providers-ar.ts";
 import { decisionDeTmdb } from "./disponibilidad.ts";
 import {
-  agruparSecciones, armarFilmografia, compararObras, esActuacion, esAparicionPropia,
-  MAX_POR_PEDIDO, ordenDeSecciones, parsearClave, repararCreditos, resolverBloque,
+  agruparSecciones, armarFilmografia, armarFilmografiaV1, compararObras, esActuacion, esAparicionPropia,
+  MAX_POR_PEDIDO, MAX_V1, ordenDeSecciones, parsearClave, repararCreditos, resolverBloque,
   type CreditoPersona, type GrupoObra,
 } from "./filmografia.ts";
 import { BLOQUE, BLOQUE_INICIAL, claveDe, siguienteBloque } from "./filmografia-bloques.ts";
@@ -156,7 +156,7 @@ test("si el respaldo de idioma falla, los créditos quedan intactos y se avisa",
 test("Villeneuve: Dirección conserva Dune, Dune: Part Two, Arrival y Blade Runner 2049, todas en el bloque inicial", async () => {
   const rep = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
   const { llamadas, plataformasDe } = contador();
-  const r = await armarFilmografia({ credits: rep, conocidoPor: "Directing", providers: ["m"], aObra, plataformasDe });
+  const r = await armarFilmografia({ credits: rep, conocidoPor: "Directing", aObra, plataformasDe });
   const ids = r.direccion.map((o) => o.id);
   for (const id of [DUNE, DUNE2, ARRIVAL, BR2049]) assert.ok(ids.includes(id), `falta ${id}`);
   assert.equal(ids.includes(900200), false, "sólo produjo: no es Dirección");
@@ -183,10 +183,13 @@ test("Dune y Dune: Part Two muestran Max cuando los proveedores de TMDB dicen Ma
     return decisionDeTmdb({ tipo, id, deTmdb: codes, hayFlatrateAR: flat.length > 0 }) ?? [];
   };
   const rep = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
-  const r = await armarFilmografia({ credits: rep, conocidoPor: "Directing", providers: ["m"], aObra, plataformasDe });
+  const r = await armarFilmografia({ credits: rep, conocidoPor: "Directing", aObra, plataformasDe });
   assert.deepEqual(r.disponibilidad[`movie:${DUNE}`], ["m"]);
   assert.deepEqual(r.disponibilidad[`movie:${DUNE2}`], ["m"]);
-  assert.deepEqual(r.titles.map((t) => t.id).sort(), [DUNE, DUNE2].sort(), "legado: lo disponible en Max");
+  // Y el cliente viejo (v1) también las ve en "Filmografía en tus plataformas".
+  const v1 = await armarFilmografiaV1({ credits: rep, providers: ["m"], aObra, plataformasDe });
+  assert.ok(v1.titles.some((t) => t.id === DUNE && t.platforms.includes("m")));
+  assert.ok(v1.titles.some((t) => t.id === DUNE2 && t.platforms.includes("m")));
 });
 
 // --- Aceptación: sin límites artificiales -------------------------------------
@@ -194,7 +197,7 @@ test("Spielberg: 52 obras dirigidas y 18 actuadas llegan TODAS como datos básic
   const crew = Array.from({ length: 52 }, (_, i) => cred({ id: 1000 + i, job: "Director", release_date: `${1971 + i}-06-01` }));
   const cast = Array.from({ length: 18 }, (_, i) => cred({ id: 5000 + i, character: `Cameo ${i}`, release_date: `${1980 + i}-01-01` }));
   const { llamadas, plataformasDe } = contador();
-  const r = await armarFilmografia({ credits: { cast, crew }, conocidoPor: "Directing", providers: ["n"], aObra, plataformasDe });
+  const r = await armarFilmografia({ credits: { cast, crew }, conocidoPor: "Directing", aObra, plataformasDe });
   assert.equal(r.direccion.length, 52, "ni 10 ni 40");
   assert.equal(r.actuacion.length, 18);
   assert.deepEqual(r.secciones, ["direccion", "actuacion"]);
@@ -295,7 +298,7 @@ const carrera229 = () => ({
 
 test("229 obras: las 229 como datos básicos, 12 enriquecidas al abrir (tope 24), las 24 siguientes al pedir más", async () => {
   const { llamadas, plataformasDe } = contador();
-  const r = await armarFilmografia({ credits: carrera229(), conocidoPor: "Acting", providers: ["n"], aObra, plataformasDe });
+  const r = await armarFilmografia({ credits: carrera229(), conocidoPor: "Acting", aObra, plataformasDe });
   assert.equal(r.actuacion.length, 229, "datos básicos completos");
   // 🔴 El contrato de coste: la apertura procesa COMO MÁXIMO un bloque (24), y
   // en concreto la apertura chica (12, ver BLOQUE_INICIAL).
@@ -334,7 +337,7 @@ test("una obra dirigida y actuada visible en las dos secciones se consulta UNA v
   const { llamadas, plataformasDe } = contador();
   const r = await armarFilmografia({
     credits: { cast: [cred({ id: 1, character: "Cameo" })], crew: [cred({ id: 1, job: "Director" })] },
-    conocidoPor: "Directing", providers: ["n"], aObra, plataformasDe,
+    conocidoPor: "Directing", aObra, plataformasDe,
   });
   assert.deepEqual(llamadas, ["movie:1"]);
   assert.equal(r.direccion.length, 1);
@@ -347,11 +350,10 @@ test("un fallo parcial de TMDB conserva TODOS los créditos básicos y marca 'si
     return ["n"];
   };
   const crew = [1, 2, 3].map((id) => cred({ id, job: "Director" }));
-  const r = await armarFilmografia({ credits: { cast: [], crew }, conocidoPor: "Directing", providers: ["n"], aObra, plataformasDe });
+  const r = await armarFilmografia({ credits: { cast: [], crew }, conocidoPor: "Directing", aObra, plataformasDe });
   assert.equal(r.direccion.length, 3);
   assert.deepEqual(r.sinDisponibilidad, ["movie:2"]);
   assert.equal(r.disponibilidad["movie:2"], undefined, "no se afirma que no está");
-  assert.deepEqual(r.titles.map((t) => t.id).sort(), [1, 3]);
 });
 
 test("un error propio (no de TMDB) no se disfraza: se propaga", async () => {
@@ -364,13 +366,86 @@ test("parsearClave sólo acepta tipo:id", () => {
   for (const k of ["person:1", "movie:", "movie:1:2", "movie:abc", " movie:1"]) assert.equal(parsearClave(k), null, k);
 });
 
-test("legado `titles`/`hidden`: sólo lo disponible del bloque inicial, sin consultas extra", async () => {
-  const cast = Array.from({ length: 60 }, (_, i) => cred({ id: 100 + i, character: "X", release_date: `${2060 - i}-01-01`, vote_count: i }));
+// --- Contrato v1 (clientes Android anteriores) --------------------------------
+// Implementación ANTERIOR de la selección v1 (2af1a37), sobre créditos sin roles
+// repetidos —donde no la afecta el bug del índice—: sirve de control de que v1
+// evalúa EXACTAMENTE las mismas obras que evaluaba el código viejo.
+function seleccionVieja(cast: CreditoPersona[], crew: CreditoPersona[]): string[] {
+  const JUNK = new Set([10767, 10763, 10764]);
+  const vistos = new Set<string>();
+  const acting = cast.filter((c) => c.character && !/^(self|himself|herself)$/i.test(c.character));
+  const directing = crew.filter((c) => c.job === "Director");
+  return [...directing, ...acting].filter((c) => {
+    const k = `${c.media_type}:${c.id}`;
+    if (vistos.has(k)) return false; vistos.add(k);
+    if ((c.genre_ids ?? []).some((g) => JUNK.has(g))) return false;
+    return c.media_type === "movie" || c.media_type === "tv";
+  }).sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0)).slice(0, 40).map((c) => `${c.media_type}:${c.id}`);
+}
+
+test("v1: evalúa las MISMAS obras que el código viejo cuando no hay roles repetidos (≤ 40, por votos)", async () => {
+  const crew = Array.from({ length: 30 }, (_, i) => cred({ id: 1000 + i, job: "Director", vote_count: 5000 - i * 7 }));
+  const cast = Array.from({ length: 50 }, (_, i) => cred({ id: 3000 + i, media_type: i % 4 ? "movie" : "tv", character: `P${i}`, vote_count: 4000 - i * 11 }));
+  const { llamadas, plataformasDe } = contador();
+  await armarFilmografiaV1({ credits: { cast, crew }, providers: ["n"], aObra, plataformasDe });
+  assert.equal(MAX_V1, 40);
+  assert.deepEqual([...llamadas].sort(), seleccionVieja(cast, crew).sort());
+  assert.equal(llamadas.length, 40, "el mismo techo de antes, no más");
+});
+
+test("v1: una carrera de 229 obras consulta 40, no la carrera entera", async () => {
   const { llamadas, plataformasDe } = contador(() => ["n"]);
-  const r = await armarFilmografia({ credits: { cast, crew: [] }, conocidoPor: "Acting", providers: ["n"], aObra, plataformasDe });
-  assert.equal(llamadas.length, 12, "el legado no dispara consultas");
-  assert.equal(r.titles.length, 12, "acotado al bloque ya resuelto");
-  assert.deepEqual(r.titles.map((t) => t.platforms), Array(12).fill(["n"]));
-  assert.ok(r.titles.every((t, i, a) => i === 0 || (cast.find((c) => c.id === a[i - 1].id)!.vote_count! >= cast.find((c) => c.id === t.id)!.vote_count!)), "por votos, como antes");
-  assert.equal(r.hidden, 48);
+  const r = await armarFilmografiaV1({ credits: carrera229(), providers: ["n"], aObra, plataformasDe });
+  assert.equal(llamadas.length, 40);
+  assert.equal(new Set(llamadas).size, 40, "ninguna obra dos veces");
+  assert.equal(r.titles.length, 40);
+  assert.equal(r.hidden, 0);
+});
+
+test("v1 incorpora la reparación de roles: Dune y Dune: Part Two dejan de desaparecer (el viejo las perdía)", async () => {
+  const rep = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
+  const max = (_t: MediaType, id: number): PlatformCode[] => ([DUNE, DUNE2, ARRIVAL, BR2049].includes(id) ? ["m"] : []);
+  const { llamadas, plataformasDe } = contador(max);
+  const r = await armarFilmografiaV1({ credits: rep, providers: ["m"], aObra, plataformasDe });
+  assert.deepEqual(r.titles.map((t) => t.id), [ARRIVAL, BR2049, DUNE, DUNE2], "por votos, las cuatro de Max");
+  assert.deepEqual(r.titles.map((t) => t.platforms), [["m"], ["m"], ["m"], ["m"]]);
+  // Obras con roles repetidos: una consulta por obra, nunca por crédito.
+  assert.equal(llamadas.filter((k) => k === `movie:${DUNE}`).length, 1);
+  assert.equal(new Set(llamadas).size, llamadas.length);
+  // Control: con el índice viejo, sus créditos de EQUIPO no las dejaban como
+  // dirigidas y no llegaban a evaluarse. (Sólo el equipo: la fixture tiene una
+  // aparición de archivo en Dune que el filtro viejo de actuación dejaba pasar.)
+  const viejo = await repararCreditosViejo([], crewVilleneuve);
+  const selViejo = seleccionVieja([], viejo.crew);
+  assert.equal(selViejo.includes(`movie:${DUNE}`), false);
+  assert.equal(selViejo.includes(`movie:${DUNE2}`), false);
+});
+
+test("v1: `titles` = lo disponible en tus plataformas; `hidden` = lo evaluado que no", async () => {
+  const crew = [1, 2, 3, 4].map((id) => cred({ id, job: "Director", vote_count: 100 - id }));
+  const plat: Record<number, PlatformCode[]> = { 1: ["n"], 2: ["d"], 3: [], 4: ["n", "m"] };
+  const { plataformasDe } = contador((_t, id) => plat[id]);
+  const r = await armarFilmografiaV1({ credits: { cast: [], crew }, providers: ["n"], aObra, plataformasDe });
+  assert.deepEqual(r.titles.map((t) => t.id), [1, 4]);
+  assert.equal(r.hidden, 2);
+  // Forma exacta que lee el bundle viejo: UITitle con platforms y runtime.
+  assert.deepEqual(Object.keys(r.titles[0]).sort(), ["country", "genres", "hasEditorial", "id", "platforms", "poster", "runtime", "title", "tmdb", "type", "year"]);
+});
+
+test("v1: un fallo de TMDB en una obra no tira la vista; esa obra no se afirma disponible", async () => {
+  const plataformasDe = async (_t: MediaType, id: number): Promise<PlatformCode[]> => {
+    if (id === 2) throw new ErrorTmdb({ estado: 429, clase: "http429", path: "/movie/2/watch/providers" });
+    return ["n"];
+  };
+  const crew = [1, 2, 3].map((id) => cred({ id, job: "Director" }));
+  const r = await armarFilmografiaV1({ credits: { cast: [], crew }, providers: ["n"], aObra, plataformasDe });
+  assert.deepEqual(r.titles.map((t) => t.id).sort(), [1, 3]);
+  assert.equal(r.hidden, 1);
+});
+
+test("v2 no arma el contrato viejo (una petición = una versión)", async () => {
+  const { plataformasDe } = contador();
+  const r = await armarFilmografia({ credits: { cast: [cred({ id: 1, character: "X" })], crew: [] }, conocidoPor: "Acting", aObra, plataformasDe });
+  assert.equal("titles" in r, false);
+  assert.equal("hidden" in r, false);
 });

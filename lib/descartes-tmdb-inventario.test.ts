@@ -521,7 +521,7 @@ const INVENTARIO: Fila[] = [
   // --- rutas: propagan como estado HTTP --------------------------------------
   { archivo: "app/api/title/[tipo]/[id]/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga" },
   { archivo: "app/api/search/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga" },
-  ...["admin-search", "audience", "cards", "cron/netflix-top10", "directores", "discover", "genre-covers", "hacete-cargo", "home", "latest", "mas-votados", "miniseries", "person/[id]", "personas", "providers", "recomendaciones", "ruleta", "top", "upcoming", "admin/top", "te-va-a-gustar"]
+  ...["admin-search", "audience", "cards", "cron/netflix-top10", "directores", "discover", "genre-covers", "hacete-cargo", "home", "latest", "mas-votados", "miniseries", "personas", "providers", "recomendaciones", "ruleta", "top", "upcoming", "admin/top", "te-va-a-gustar"]
     .map((r) => ({ archivo: `app/api/${r}/route.ts`, ancla: "} catch (e) {", clase: "tmdb-propaga" as const })),
   { archivo: "lib/cors.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "envoltorio de rutas: 500 con CORS" },
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "productor rechazado: libera el turno y sirve UB o propaga" },
@@ -576,8 +576,11 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/netflix-top10.ts", ancla: "reader.cancel().catch", clase: "no-tmdb", motivo: "stream del TSV" },
   { archivo: "app/api/admin/top/route.ts", ancla: "catch { return NextResponse.json({ error: \"cuerpo inválido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   { archivo: "app/api/admin/top/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo handler de la ruta de admin (Supabase)" },
-  { archivo: "app/api/person/[id]/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo camino de la ruta: \"Ver más\" (?items=), 500 si el bloque falla entero" },
-  { archivo: "lib/filmografia-bloques.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "cargador del cliente: descarta el error de una generación vieja, relanza el de la actual" },
+  // Issue #25: la ruta de filmografía ya no atrapa nada; lo hace su módulo puro, con el mismo 500 de siempre para v1, v2 e items.
+  { archivo: "lib/filmografia-ruta.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "ruta /api/person: 500 con el error (v1, v2 o items), como siempre" },
+  // El controlador del CLIENTE: lo que atrapa son fallos del fetch del navegador contra nuestra API, no de TMDB.
+  { archivo: "lib/filmografia-cliente.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "cliente: un 'Ver más' fallido abre el bloque con 'sin datos' (fetch del navegador)" },
+  { archivo: "lib/filmografia-cliente.ts", ancla: "} catch (err) {", clase: "no-tmdb", motivo: "cliente: apertura fallida → offline o error (fetch del navegador)" },
   { archivo: "app/api/cuenta/eliminar/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "Supabase" },
   { archivo: "app/api/te-va-a-gustar/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "JSON del cliente" },
 ];

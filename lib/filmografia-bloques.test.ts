@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  BLOQUE, BLOQUE_INICIAL, bloqueInicial, clavesVisibles, crearCargador, ordenVisible, siguienteBloque,
+  BLOQUE, BLOQUE_INICIAL, bloqueInicial, clavesVisibles, ordenVisible, siguienteBloque,
 } from "./filmografia-bloques.ts";
 import type { PlatformCode } from "./types.ts";
 
@@ -64,41 +64,4 @@ test("orden visible respeta un bloque inicial menor a 24 (secciones que comparte
   const o = ordenVisible(ks, 8, 32, (k) => (k === "movie:9" ? ["n"] : []), ["n"]);
   assert.equal(o[0], "movie:1", "movie:9 no salta al primer bloque (1–8)");
   assert.equal(o[8], "movie:9", "encabeza el segundo bloque (9–32)");
-});
-
-// --- Cambio rápido de persona -----------------------------------------------
-function diferido<T>() {
-  let resolver!: (v: T) => void;
-  const promesa = new Promise<T>((r) => { resolver = r; });
-  return { promesa, resolver };
-}
-
-test("cambiar rápido de persona no mezcla resultados: la respuesta vieja se descarta", async () => {
-  const pendientes: { claves: string[]; d: ReturnType<typeof diferido<string>>; senal: AbortSignal }[] = [];
-  const cargador = crearCargador<string>((claves, senal) => {
-    const d = diferido<string>();
-    pendientes.push({ claves, d, senal });
-    return d.promesa;
-  });
-  const deA = cargador.cargar(["movie:1"]);   // "Ver más" de la persona A
-  cargador.reiniciar();                        // el usuario pasa a la persona B
-  const deB = cargador.cargar(["movie:2"]);
-  assert.equal(pendientes[0].senal.aborted, true, "lo de A se cancela");
-  assert.equal(pendientes[1].senal.aborted, false);
-  pendientes[1].d.resolver("B");
-  pendientes[0].d.resolver("A");               // A llega DESPUÉS
-  assert.equal(await deA, null, "no se aplica sobre B");
-  assert.equal(await deB, "B");
-});
-
-test("un error de una generación vieja (p. ej. la cancelación) tampoco se aplica", async () => {
-  let rechazar!: (e: unknown) => void;
-  const cargador = crearCargador<string>(() => new Promise((_, r) => { rechazar = r; }));
-  const viejo = cargador.cargar(["movie:1"]);
-  cargador.reiniciar();
-  rechazar(new DOMException("abortado", "AbortError"));
-  assert.equal(await viejo, null);
-  const actual = cargador.cargar(["movie:2"]);
-  rechazar(new Error("red"));
-  await assert.rejects(actual, /red/, "un error de la persona actual sí sube");
 });

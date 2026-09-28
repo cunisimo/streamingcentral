@@ -42,7 +42,9 @@ import { registrarDescarteTmdb, withFallosDeFuentes } from "./fallos-tmdb";
 import { esErrorTmdb } from "./tmdb-error";
 import { settleAll } from "./settle-all";
 import { producirBusquedaConFallos } from "./busqueda-enriquecido";
-import { armarFilmografia, repararCreditos, resolverBloque, type GrupoObra } from "./filmografia";
+import {
+  armarFilmografia, armarFilmografiaV1, repararCreditos, resolverBloque, type GrupoObra,
+} from "./filmografia";
 import { resolverDirectores, resolverPortadas } from "./lotes-tolerantes";
 import { backendCache } from "./cache";
 import {
@@ -58,7 +60,7 @@ import { primaryCountry } from "./countries";
 import { hoyAR } from "./fecha";
 import { pickTrailer } from "./trailer";
 import type {
-  DisponibilidadObras, FilmografiaPersona, MediaType, MotivoVacio, ObraPersona, PlatformCode, UITitle, UITitleDetail, UIPerson,
+  DisponibilidadObras, FilmografiaLegado, FilmografiaPersona, MediaType, MotivoVacio, ObraPersona, PlatformCode, UITitle, UITitleDetail, UIPerson,
 } from "./types";
 
 const img = (p: string | null, size = "w500") => (p ? `${TMDB_IMG}/${size}${p}` : null);
@@ -1290,13 +1292,13 @@ async function plataformasDeObra(tipo: MediaType, id: number): Promise<PlatformC
   return disponibilidadDe(tipo, id, await providersOf(tipo, id));
 }
 
-export async function personFilmography(id: number, providers: PlatformCode[]): Promise<FilmografiaPersona> {
+// Lo común a v1 y v2, y lo único que cuesta en caliente: la persona y sus
+// créditos (2 peticiones, sin caché) y la reparación POSICIONAL de idioma —
+// ningún índice por obra vuelve a tocar `job`, `department`, `character` ni
+// `credit_id` (ver repararCreditos). Lote MIXTO: películas y series, ids
+// reutilizados entre tipos. Un fallo del respaldo sólo cuesta esta vista.
+async function creditosDePersona(id: number) {
   const [det, creditsCrudos] = await Promise.all([personDetails(id), personCombinedCredits(id)]);
-
-  // Lote MIXTO (películas y series, ids reutilizados entre tipos). No está
-  // cacheado: un fallo del respaldo sólo cuesta esta vista.
-  // 🔴 Reparación POSICIONAL: ningún índice por obra vuelve a tocar `job`,
-  // `department`, `character` ni `credit_id` (ver repararCreditos).
   const credits = await repararCreditos<CreditEntry>(
     creditsCrudos,
     () => pedirRespaldoIdioma(`filmografia:${id}`, async () => {
@@ -1306,20 +1308,32 @@ export async function personFilmography(id: number, providers: PlatformCode[]): 
     `filmografía persona:${id}`,
   );
   const pub = await publishedIds();
-  const res = await armarFilmografia({
-    credits, conocidoPor: det.known_for_department, providers, plataformasDe: plataformasDeObra,
-    aObra: (g: GrupoObra<CreditEntry>): ObraPersona => {
-      const t = g.credito;
-      return {
-        id: t.id, type: g.tipo, title: titleOf(t), year: yearOf(t), fecha: g.fecha,
-        poster: img(t.poster_path), country: t.origin_country?.[0] ?? null,
-        genres: genreIdsToSlugs(t.genre_ids ?? []),
-        tmdb: t.vote_average ? Number(t.vote_average.toFixed(1)) : null,
-        votos: t.vote_count ?? 0, hasEditorial: pub.has(`${t.id}:${g.tipo}`), roles: g.roles,
-      };
-    },
-  });
-  return { person: { id: det.id, name: det.name, profile: img(det.profile_path, "w185"), knownFor: [] }, ...res };
+  const aObra = (g: GrupoObra<CreditEntry>): ObraPersona => {
+    const t = g.credito;
+    return {
+      id: t.id, type: g.tipo, title: titleOf(t), year: yearOf(t), fecha: g.fecha,
+      poster: img(t.poster_path), country: t.origin_country?.[0] ?? null,
+      genres: genreIdsToSlugs(t.genre_ids ?? []),
+      tmdb: t.vote_average ? Number(t.vote_average.toFixed(1)) : null,
+      votos: t.vote_count ?? 0, hasEditorial: pub.has(`${t.id}:${g.tipo}`), roles: g.roles,
+    };
+  };
+  const person: UIPerson = { id: det.id, name: det.name, profile: img(det.profile_path, "w185"), knownFor: [] };
+  return { det, credits, aObra, person };
+}
+
+/** Contrato v2 (`?filmografia=v2`): no depende de las plataformas del usuario. */
+export async function personFilmography(id: number): Promise<FilmografiaPersona> {
+  const { det, credits, aObra, person } = await creditosDePersona(id);
+  const res = await armarFilmografia({ credits, conocidoPor: det.known_for_department, aObra, plataformasDe: plataformasDeObra });
+  return { person, ...res };
+}
+
+/** Contrato v1 (sin `filmografia`): bundles Android anteriores. ≤ 40 evaluadas. */
+export async function personFilmographyLegado(id: number, providers: PlatformCode[]): Promise<FilmografiaLegado> {
+  const { credits, aObra, person } = await creditosDePersona(id);
+  const res = await armarFilmografiaV1({ credits, providers, aObra, plataformasDe: plataformasDeObra });
+  return { person, ...res };
 }
 
 /** "Ver más": la disponibilidad de un bloque de obras (`tipo:id`, máx. 24). */
