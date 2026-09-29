@@ -26,7 +26,7 @@ test("el nombre se valida con la regla de la base: espacios colapsados, sin cont
   assert.equal(nombreParaInvitacion("Ana\tMaría\n"), "AnaMaría");
   assert.equal(nombreParaInvitacion("Ana   María"), "Ana María", "el espacio duro se colapsa");
   assert.equal(nombreParaInvitacion("Jua\u0000n\u0007"), "Juan", "controles C0 afuera");
-  assert.equal(nombreParaInvitacion("‮nauJ"), "nauJ", "sin override bidireccional");
+  assert.equal(nombreParaInvitacion("\u202EnauJ"), "nauJ", "sin override bidireccional");
   for (const malo of [undefined, null, "", "   ", "\u0000\u0001"]) assert.equal(nombreParaInvitacion(malo), null, JSON.stringify(malo));
   // Largo: 24 entra, 25 no (en CARACTERES, como char_length: un emoji es uno).
   assert.equal(MAX_NOMBRE, 24);

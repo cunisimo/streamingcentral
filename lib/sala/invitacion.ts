@@ -32,7 +32,7 @@ export const DESCRIPCION_GENERICA = "Te invitaron a yumpear.";
 
 // Controles (C0, DEL, C1) y los de formato bidireccional, que en una vista
 // previa pueden dar vuelta el texto que rodea al nombre.
-const CONTROLES = /[\u0000-\u001F\u007F-\u009F‎‏‪-‮⁦-⁩]/g;
+const CONTROLES = /[\u0000-\u001F\u007F-\u009F\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
 
 /** El nombre listo para mostrar, o `null` si falta o no es válido. */
 export function nombreParaInvitacion(crudo: string | string[] | null | undefined): string | null {
