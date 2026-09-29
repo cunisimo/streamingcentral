@@ -12,18 +12,35 @@
   `origin/main` `2af1a37` (árbol `ac9715d`, comprobado con `git fetch` el 28/09:
   `origin/main` no avanzó). NO MERGEADA, NO PUSHEADA, NO DESPLEGADA; ningún AAB
   nuevo generado ni subido.** Una sola futura publicación web y un solo futuro
-  AAB, del mismo commit y árbol. Commits, en orden: `e075fb2` y `914faa4`
+  AAB, del mismo commit y árbol.
+  🔴 **BLOQUEADA POR UNA DECISIÓN DEL DUEÑO (auditoría del 29/09): la
+  compatibilidad v1 con los bundles Android instalados NO está resuelta.** La
+  auditoría encontró que v1 (hasta `1692a18`) copiaba del código viejo sólo la
+  CANTIDAD de obras y elegía con las reglas de v2: un talk show de muchos votos
+  o un crédito sin personaje desplazaban a una película visible. Corregido en
+  `90f15e6` (reglas legacy separadas, prueba RED → GREEN). **Persisten
+  pérdidas** que no se pueden evitar sin decidir una política: con fotos reales
+  del 29/09, Spielberg con Netflix pierde *1941*, *El último vuelo del
+  Challenger* y *1975: El fin de una era* (7 → 5 visibles; gana *A.I.*) y Tom
+  Hanks pierde *Noticias del gran mundo* (gana *Hermanos de sangre*);
+  Villeneuve 2 → 4 (las dos Dune) y Samuel L. Jackson 29 → 29 sin cambios.
+  Está demostrado (test) que con el presupuesto del viejo no existe una
+  selección que conserve todo lo visible Y sume lo recuperado. Opciones y
+  consecuencias en el issue **#25**; **la entrega no se publica hasta que el
+  dueño elija**. Commits, en orden: `e075fb2` y `914faa4`
   (cherry-pick de `706fb7a` y `c9b6119`, árbol idéntico al de `c9b6119`),
   `b169d8c` (filmografía v1/v2 y cambio de plataformas sin peticiones),
   `9c5ea58` (Yumpeá: bajada sólo en escritorio, lobby, espera y sin match),
   `508dbb8` (App Links de fichas y vista previa de invitación), `771301f`
-  (presupuesto de v1), `40bbfdd` (escapes de caracteres bidireccionales) y
-  el commit final de documentación. Detalle de
+  (presupuesto de v1), `40bbfdd` (escapes de caracteres bidireccionales),
+  `1692a18` (documentación), `90f15e6` (v1 con reglas legacy, 29/09) y el
+  commit de documentación del 29/09. Detalle de
   filmografía en el issue **#25**; medición en
   [`medidas/2026-09-27-filmografia.md`](medidas/2026-09-27-filmografia.md).
   **Comprobado en código/Git:**
   - Filmografía: contrato versionado en `/api/person/[id]`. Sin
-    `filmografia=v2` responde v1 `{ person, titles, hidden }` (bundles Android
+    `filmografia=v2` responde v1 `{ person, titles, hidden }` (bundles Android;
+    desde `90f15e6` con las reglas del contrato viejo —ver arriba—)
     anteriores): la selección de siempre con los roles reparados y nunca más
     obras que las que evaluaba el código anterior para esa persona (≤ 40). Con
     `filmografia=v2` (web y AAB nuevo) responde la filmografía completa, 12
@@ -72,7 +89,9 @@
     generados y se restauraron. **No se generó ni firmó ningún AAB.**
   - Peticiones reales a TMDB al abrir, en frío (mismo instrumento, TMDB real,
     Redis = doble del banco, variantes alternadas en la misma ventana): antes →
-    v1 → v2: Villeneuve **23 → 21 → 20**, Spielberg **60 → 55 → 22**, Tom Hanks
+    v1 → v2 (28/09; repetido el 29/09 con v1 legacy: Villeneuve 23 → 20 → 20,
+    Spielberg 58 → 55 → 22, Hanks 50 → 50 → 21, Jackson 43 → 43 → 22; el costo
+    cumple, los títulos visibles NO, ver arriba): Villeneuve **23 → 21 → 20**, Spielberg **60 → 55 → 22**, Tom Hanks
     **50 → 50 → 22**, Samuel L. Jackson **44 → 44 → 22**. Con Redis caliente,
     2 en todos. "Ver más" (24 obras): 30–35 en frío, 0 en caliente.
   - Build servido con `next start` (TMDB real, Redis del banco): el HTML de

@@ -1,6 +1,34 @@
 # Filmografía de personas — medición (issue #25)
 
-## Vigente: entrega integrada (28/09) — contrato v1/v2
+## Vigente: compatibilidad v1 por CONTENIDO (29/09)
+
+La auditoría del 29/09 señaló que la tabla del 28/09 (abajo) comparaba
+CANTIDADES: "misma cantidad de obras evaluadas" no es "compatibilidad". Acá
+se comparan conjuntos. Código: `90f15e6` (v1 con reglas legacy).
+
+**Instrumentos.** Conjuntos: `scripts/comparar-v1.mjs`, que lee créditos y
+disponibilidad reales UNA vez y arma todas las variantes con esos mismos datos
+(sin deriva entre variantes); las fotos quedaron en
+`lib/fixtures/filmografia-v1/`. Peticiones: `scripts/medir-filmografia.mjs`,
+igual que el 28/09 (TMDB real, Redis del banco, variantes alternadas por
+persona en la misma ventana, cero 429).
+
+| Persona | Obras evaluadas viejo / v1 | Visibles viejo → v1 | Ganados | Perdidos | TMDB reales viejo → v1 → v2 (frío) |
+|---|---|---|---|---|---|
+| Villeneuve (`m`) | 13 / 13 | 2 → 4 | *Dune*, *Dune: Parte dos* | — | 23 → 20 → 20 |
+| Spielberg (`n`) | 40 / 40 | 7 → 5 | *A.I.* | *1941*, *El último vuelo del Challenger*, *1975: El fin de una era* | 58 → 55 → 22 |
+| Tom Hanks (`n,d,m`) | 40 / 40 | 20 → 20 | *Hermanos de sangre* | *Noticias del gran mundo* | 50 → 50 → 21 |
+| Samuel L. Jackson (`n,d,m`) | 40 / 40 | 29 → 29 | — | — | 43 → 43 → 22 |
+
+Con Redis caliente: 2 peticiones en todas las variantes. v2 sin cambios: 12
+obras al abrir, "Ver más" de 24 (28–35 peticiones en frío, 0 en caliente).
+
+🔴 **Las pérdidas NO son un resultado aceptado: están pendientes de decisión del
+dueño** (opciones en `docs/ISSUES.md` #25). La réplica del viejo se validó
+contra lo medido: la variante "exacta" da 2, 7, 20 y 29 visibles, los mismos
+números que devolvía 2af1a37.
+
+## Antecedente: entrega integrada (28/09) — contrato v1/v2
 
 Rama `fix/yumpea-filmografia-entrega` (worktree `wt-yumpea-filmografia`, desde
 `origin/main` `2af1a37`, árbol `ac9715d`). Código medido: commit `771301f`
