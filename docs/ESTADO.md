@@ -8,7 +8,7 @@
 ## Evidencia y alcance de esta actualización
 
 - **ENTREGA INTEGRADA Yumpeá + filmografía: WEB EN PRODUCCIÓN (2026-09-29);
-  AAB `versionCode 3` PENDIENTE DE FIRMA, NO SUBIDO.** Rama
+  AAB `versionCode 3` (`1.1.0`) FIRMADO Y VERIFICADO, NO SUBIDO.** Rama
   `fix/yumpea-filmografia-entrega` (worktree `wt-yumpea-filmografia`), desde
   `origin/main` `2af1a37` (árbol `ac9715d`).
   **Publicación web (29/09), comprobado en Git:** aprobada por la auditoría
@@ -50,11 +50,47 @@
   android` (sólo cambió fines de línea de dos Gradle generados, restaurados);
   `verificarBaseDeApi` y `verificarPaqueteConSalas` BUILD SUCCESSFUL; manifest
   fusionado de **release**: `package ar.yump.app`, `versionCode 3`,
-  `versionName 1.0.0` (antes del cambio a 1.1.0), `autoVerify` en los tres filtros `https` de
+  `versionName 1.0.0` (antes del cambio a 1.1.0), `autoVerify` en los dos filtros `https` de
   `app.yump.ar` (`/sala/`, `/titulo/movie/`, `/titulo/tv/`), 0 `vercel.app`.
-  **Falta la firma:** `android/keystore.properties` (fuera de Git) no existe
-  en este worktree y `verificarFirmaDeCarga` corta `bundleRelease` sin él; no
-  se copió desde otro checkout ni se leyó. Ningún AAB generado ni subido.
+  **AAB firmado (29/09), comprobado:** generado desde **`bdbfb96`** (árbol
+  `dca3a2c`): `versionCode 3`, `versionName 1.1.0`; frente a lo desplegado
+  (`95bf527`) sólo cambian `android/app/build.gradle`,
+  `lib/release-android.test.ts` y documentación. Antes de firmar: tests
+  afectados 38/38, suite 2208 / 2208 ok / 0 omitidos, `tsc` 0, export nativo
+  release contra `https://app.yump.ar` exit 0 y `cap sync android`.
+  `bundleRelease` BUILD SUCCESSFUL (2 min 55 s) con `verificarBaseDeApi`,
+  `verificarFirmaDeCarga` y `verificarPaqueteConSalas` en verde.
+  - Archivo: `android/app/build/outputs/bundle/release/app-release.aab` del
+    worktree `wt-yumpea-filmografia`, **7.536.764 bytes**, SHA-256
+    **`8ae1ce4a14f69f8de66162909a71c573a45c258f5697bacca5864f739f64d5ac`**.
+  - Firma: `jarsigner -verify` (JDK 17) → `jar verified.`, con los avisos
+    esperados de una clave de subida (autofirmada, sin sello de tiempo).
+    Certificado `CN=Yump, OU=Desarrollo, O=Yump, C=AR`, SHA256withRSA de 2048
+    bits, válido hasta 2056; SHA-256 del certificado
+    `2D:18:A7:C1:F4:FC:AB:D4:09:79:B3:CB:EA:66:1F:E5:41:D4:92:89:7D:47:B2:C6:7E:CF:AB:9F:93:03:95:AE`,
+    **la huella de SUBIDA esperada** (la que fija `lib/sala/android.test.ts`),
+    no la de depuración. El `jarsigner` de JDK 25 agrega además el aviso
+    "signed in JarFile but not in JarInputStream", que el de JDK 17 no da.
+  - Manifest DENTRO del AAB (`base/manifest/AndroidManifest.xml`, protobuf de
+    aapt2 decodificado): `package ar.yump.app`, `versionCode 3`, `versionName
+    1.1.0`; dos filtros `autoVerify="true"` con `https://app.yump.ar` y
+    `/sala/`, `/titulo/movie/`, `/titulo/tv/`; 0 `vercel.app`. Igual que el
+    manifest fusionado de release.
+  - Paquete web dentro del AAB: 201 entradas; 199 idénticas byte a byte al
+    export, más `cordova.js` y `cordova_plugins.js` (los agrega Capacitor);
+    falta sólo `.well-known/assetlinks.json`, que `ignoreAssetsPattern` excluye
+    (es de la web, no de la app). `https://app.yump.ar` en 6 archivos, 0 con
+    `vercel.app`, la ficha pide `?filmografia=v2` y `&items=`; `/t/`, `/s/`,
+    `/sala/nueva/` y `/p/` presentes.
+  - Entorno (no es código): el worktree no tiene `local.properties`, así que
+    se pasó `ANDROID_HOME` sólo al comando; Capacitor 8 compila con Java 21 y
+    el JDK 17 falla (`invalid source release: 21`), así que Gradle corrió con
+    el JBR 25 de Android Studio.
+  - 🔒 `keystore.properties` se copió byte por byte desde el checkout
+    principal con autorización expresa del dueño (destino ignorado por Git,
+    contenido no abierto ni mostrado) y **se eliminó del worktree** al
+    terminar; el original quedó intacto.
+  **No subido a Play Console. Commits sin push**, a la espera del dueño.
   **v1 = COMPATIBILIDAD LEGACY EXACTA (opción A, decisión del dueño del
   29/09).** Los bundles Android instalados (piden sin `filmografia=v2`)
   reciben exactamente lo de antes: las mismas obras evaluadas, con los mismos
