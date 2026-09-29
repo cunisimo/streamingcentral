@@ -3,8 +3,8 @@
 ## #25 — La ficha de persona pierde películas (roles pisados y truncado)
 
 **Estado (29/09): CORREGIDO EN RAMA `fix/yumpea-filmografia-entrega` para v2;
-🔴 v1 (bundles Android viejos) BLOQUEADA por una decisión del dueño (ver
-"Decisión pendiente" abajo).** Antes (28/09): CORREGIDO EN RAMA `fix/yumpea-filmografia-entrega`
+v1 (bundles Android viejos) = compatibilidad legacy EXACTA por decisión del
+dueño (opción A, `12abbbc`; ver "Decisión del dueño" abajo).** Antes (28/09): CORREGIDO EN RAMA `fix/yumpea-filmografia-entrega`
 (worktree `wt-yumpea-filmografia`, desde `origin/main` `2af1a37`), junto con
 los ajustes de Yumpeá, para salir en UNA publicación web y UN AAB. SIN MERGE,
 SIN PUSH, SIN DEPLOY.** Integra los dos commits de `fix/filmografia-persona`
@@ -41,10 +41,10 @@ reparar. Spielberg: sobrevivían 38 de 52 créditos de dirección.
   obra que **agrega** roles (Dune conserva los tres, en cualquier orden).
 - **Contrato versionado** (`lib/filmografia-ruta.ts`), UNA versión por petición:
   - **v1** (sin `filmografia`): `{ person, titles, hidden }` para los bundles
-    Android anteriores. La selección de siempre (por votos), con los roles
-    reparados, y **nunca más obras que las que evaluaba el código anterior
-    para esa persona** (≤ 40). Villeneuve: 2 → 4 títulos en Max (entran las dos
-    Dune) con 23 → 21 peticiones.
+    Android anteriores. **Exactamente lo que devolvía el código anterior**
+    (opción A): mismas obras evaluadas, mismos filtros, mismo orden, mismos
+    títulos visibles, mismo costo. Sin la reparación de roles: Villeneuve
+    sigue con 2 títulos en Max, sin Dune (aceptado por el dueño).
   - **v2** (`filmografia=v2`, web y AAB nuevo): filmografía completa como datos
     básicos, Dirección y Actuación, roles, disponibilidad sólo de las 12 obras
     visibles; "Ver más" con `filmografia=v2&items=` (máx. 24). No recibe
@@ -61,14 +61,42 @@ reparar. Spielberg: sobrevivían 38 de 52 créditos de dirección.
    AAB nuevo, v2. 🔴 **El deploy web va ANTES que el AAB nuevo**: contra el
    servidor actual, el AAB nuevo recibiría el contrato viejo. Si alguna vez un cliente nuevo pidiera sin la versión, vería el
    contrato viejo (no se rompe, pero es un error del cliente).
-3. 🔴 **DECISIÓN PENDIENTE DEL DUEÑO: compatibilidad v1 (auditoría del 29/09).**
-   Ver la sección siguiente. La pérdida de Spielberg NO está aprobada.
+3. **Compatibilidad v1: decidida por el dueño el 29/09 (opción A, exacta).**
+   Los bundles viejos reciben la corrección recién cuando actualicen al AAB
+   nuevo (v2). Ver la sección siguiente.
 4. Créditos sin personaje fuera de no ficción cuentan como actuación (p. ej. los
    "Behind the Scenes" de Villeneuve). Revisable.
 5. Persona y créditos no se cachean (tampoco antes): son las 2 peticiones de
    cada apertura con Redis caliente.
 
-### 🔴 Decisión pendiente: qué recibe un bundle Android viejo (v1)
+### Decisión del dueño (29/09): v1 es compatibilidad legacy EXACTA (opción A)
+
+**Decidido.** v1 reproduce exactamente el comportamiento visible anterior; no
+recupera las dos Dune (aceptado); la reparación completa queda en v2 (web,
+próximo AAB y todo cliente que envíe `filmografia=v2`). No se subió el
+presupuesto legacy. Implementado en `12abbbc`: `seleccionV1` =
+`candidatasLegado(…, { indiceViejo: true })` = `seleccionDelCodigoAnterior`,
+con el índice de idioma del código viejo incluido. Se conservan las
+protecciones (talk show, noticias, reality, personaje vacío) y sus tests; las
+pruebas de Dune pasaron a v2.
+
+**Evidencia (29/09):**
+- Tests con dos oráculos independientes de `seleccionV1` (la copia del
+  algoritmo viejo en el test y los títulos registrados de TMDB real): en las
+  cuatro fotos, títulos visibles idénticos y en el mismo orden, 0 ganados, 0
+  perdidos, mismas obras evaluadas, una consulta por obra, ninguna de género
+  descartado. Mutaciones: v1 reparada → 11 fallos; sin filtro de géneros → 5;
+  presupuesto + 1 → 9; v2 con "el último rol gana" → 6.
+- TMDB real, mismo instrumento (ahora registra las claves visibles), Redis del
+  banco, alternado con `2af1a37` en la misma ventana: v1 = antes en las cuatro
+  personas (2, 7, 20, 29 títulos, mismo orden; 23, 58, 50, 43 peticiones en
+  frío; 2 en caliente). v2: Dune y Dune: Parte dos en el bloque inicial de
+  Dirección de Villeneuve, con Max.
+
+Lo que sigue es el análisis que llevó a la decisión (se conserva como
+registro; las opciones B y C quedan como comparadores en `variantesV1()`).
+
+#### Análisis previo: qué recibe un bundle Android viejo (v1)
 
 **Hallazgo de la auditoría (29/09).** v1 (hasta `1692a18`) tomaba del código
 anterior sólo la CANTIDAD de obras a evaluar y elegía con las reglas de v2. Un
@@ -92,7 +120,7 @@ exhaustiva del caso mínimo) y se ve en datos reales.
 
 **Datos reales (29/09, TMDB, fotos en `lib/fixtures/filmografia-v1/`):**
 
-| Persona | Viejo: obras / visibles | v1 vigente (reparada) | Exacta legacy | Ampliada |
+| Persona | Viejo: obras / visibles | Reparada (B, descartada) | Exacta legacy (A, vigente) | Ampliada (C, descartada) |
 |---|---|---|---|---|
 | Villeneuve (`m`) | 13 / 2 | 13 / 4: +*Dune*, +*Dune: Parte dos* | 13 / 2 | 25 / 4 |
 | Spielberg (`n`) | 40 / 7 | 40 / 5: −*1941*, −*El último vuelo del Challenger*, −*1975: El fin de una era*, +*A.I.* | 40 / 7 | 56 / 8 |
@@ -100,7 +128,7 @@ exhaustiva del caso mínimo) y se ve en datos reales.
 | Samuel L. Jackson (`n,d,m`) | 40 / 29 | 40 / 29 | 40 / 29 | 40 / 29 |
 
 Peticiones reales a TMDB al abrir, en frío (mismo instrumento, Redis del
-banco, 29/09): viejo → v1 vigente: Villeneuve 23 → 20, Spielberg 58 → 55,
+banco, 29/09): viejo → variante reparada: Villeneuve 23 → 20, Spielberg 58 → 55,
 Hanks 50 → 50, Jackson 43 → 43. "Exacta" cuesta lo mismo que el viejo (evalúa
 las mismas obras). "Ampliada" evalúa 12, 16, 1 y 0 obras más; cada obra
 cuesta en frío 1 o 2 peticiones (proveedores y, si TMDB no la ubica en AR, el
@@ -108,18 +136,18 @@ detalle de la evidencia oficial) y 0 con Redis caliente: estimado +12 a +24
 para Villeneuve y +16 a +32 para Spielberg. No se midió como contrato porque
 no está implementado.
 
-**Opciones para el dueño (ninguna se eligió):**
-- **A. Exacta legacy.** v1 devuelve exactamente lo que devolvía el cliente
+**Opciones que se presentaron al dueño (eligió la A):**
+- **A. Exacta legacy — ELEGIDA.** v1 devuelve exactamente lo que devolvía el cliente
   viejo. Cero pérdidas, mismo costo. Los bundles viejos NO reciben la
   corrección (Villeneuve sigue sin Dune hasta que actualicen). v2 no cambia.
-- **B. Reparada con el presupuesto viejo (la vigente en la rama).** Suma lo
+- **B. Reparada con el presupuesto viejo (descartada).** Suma lo
   recuperado (Dune) con el mismo costo, pero puede quitar títulos que se veían
   (Spielberg 7 → 5, Hanks cambia uno). Las pérdidas dependen de la persona y
   de las plataformas.
-- **C. Ampliada.** Conserva todo y suma lo recuperado; evalúa más obras que
+- **C. Ampliada (descartada).** Conserva todo y suma lo recuperado; evalúa más obras que
   el viejo para quien tiene obras recuperadas (arriba), con techo de 40 +
   recuperadas del top 40 reparado.
-- **D. Ampliada sólo con caché.** Como C, pero lo recuperado se muestra sólo
+- **D. Ampliada sólo con caché (descartada).** Como C, pero lo recuperado se muestra sólo
   si su disponibilidad ya está en Redis (0 peticiones extra a TMDB, algunos
   comandos de Redis más). Resultado no determinístico: la misma persona puede
   mostrar o no a Dune según qué se consultó antes. No implementada.
@@ -127,7 +155,7 @@ no está implementado.
 `variantesV1()` (lib/filmografia.ts) arma las claves de A, B y C sin consultar
 nada, y `scripts/comparar-v1.mjs` las compara con TMDB real.
 
-**Criterio de cierre:** decisión del dueño sobre v1, auditoría de la rama, merge + deploy + AAB nuevo
+**Criterio de cierre:** auditoría de la rama, merge + deploy + AAB nuevo
 autorizados por el dueño, y la checklist en teléfonos (ver `docs/ESTADO.md`).
 
 ## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)

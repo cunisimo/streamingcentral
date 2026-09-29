@@ -1,6 +1,31 @@
 # Filmografía de personas — medición (issue #25)
 
-## Vigente: compatibilidad v1 por CONTENIDO (29/09)
+## Vigente: v1 = compatibilidad legacy EXACTA (opción A, 29/09)
+
+El dueño eligió la opción A (issue #25): v1 reproduce exactamente al código
+anterior y no recupera las Dune; la reparación completa va en v2. Código:
+`12abbbc` (árbol `b8eb095`). Mismo instrumento de siempre
+(`scripts/medir-filmografia.mjs`, que ahora además registra las claves
+visibles de v1 EN ORDEN), TMDB real, Redis = doble del banco (4893) vaciado
+antes de cada variante, `2af1a37` (árbol temporal por `git archive`) y la
+rama alternados por persona en la misma ventana, cero 429.
+
+| Persona | Obras evaluadas antes / v1 | Visibles antes → v1 | Iguales en orden | Ganados | Perdidos | TMDB reales antes → v1 → v2 (frío) | Caliente |
+|---|---|---|---|---|---|---|---|
+| Villeneuve (`m`) | 13 / 13 | 2 → 2 | sí | 0 | 0 | 23 → 23 → 20 | 2 / 2 / 2 |
+| Spielberg (`n`) | 40 / 40 | 7 → 7 | sí | 0 | 0 | 58 → 58 → 22 | 2 / 2 / 2 |
+| Tom Hanks (`n,d,m`) | 40 / 40 | 20 → 20 | sí | 0 | 0 | 50 → 50 → 21 | 2 / 2 / 2 |
+| Samuel L. Jackson (`n,d,m`) | 40 / 40 | 29 → 29 | sí | 0 | 0 | 43 → 43 → 22 | 2 / 2 / 2 |
+
+v2 en la misma ventana: 12 obras al abrir; "Ver más" 15–24 obras, 28–35
+peticiones en frío, 0 en caliente. Control aparte contra TMDB real:
+`personFilmography(137427)` pone *Dune* (`mv`, `m`, `un`) y *Dune: Parte dos*
+(`m`, `un`) en el bloque inicial de Dirección; `personFilmographyLegado(137427,
+["m"])` devuelve *La llegada* y *Blade Runner 2049* con 11 ocultas, como antes.
+Los tests (`lib/filmografia.test.ts`) repiten la comparación sobre las fotos
+de `lib/fixtures/filmografia-v1/` con dos oráculos independientes.
+
+## Antecedente: compatibilidad v1 por CONTENIDO (29/09, variante reparada, descartada)
 
 La auditoría del 29/09 señaló que la tabla del 28/09 (abajo) comparaba
 CANTIDADES: "misma cantidad de obras evaluadas" no es "compatibilidad". Acá
@@ -23,8 +48,8 @@ persona en la misma ventana, cero 429).
 Con Redis caliente: 2 peticiones en todas las variantes. v2 sin cambios: 12
 obras al abrir, "Ver más" de 24 (28–35 peticiones en frío, 0 en caliente).
 
-🔴 **Las pérdidas NO son un resultado aceptado: están pendientes de decisión del
-dueño** (opciones en `docs/ISSUES.md` #25). La réplica del viejo se validó
+Las pérdidas no se aceptaron: el dueño eligió la opción A (arriba; opciones
+en `docs/ISSUES.md` #25). La réplica del viejo se validó
 contra lo medido: la variante "exacta" da 2, 7, 20 y 29 visibles, los mismos
 números que devolvía 2af1a37.
 

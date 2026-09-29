@@ -91,6 +91,9 @@ const salida = {
     ? { direccion: r.direccion.length, actuacion: r.actuacion.length, inicial: r.inicial ?? null }
     : { evaluadas: enriquecidas, mostradas: r.titles.length },
 };
+// Contrato v1: las claves visibles EN ORDEN, para comparar ganados/perdidos
+// entre árboles sobre la misma respuesta de TMDB (no sólo la cantidad).
+if (!conSecciones) salida.visibles = r.titles.map((t) => `${t.type}:${t.id}`);
 
 // "Ver más": el bloque siguiente de la primera sección (sólo código nuevo).
 if (conVerMas && nuevo && r.secciones.length) {

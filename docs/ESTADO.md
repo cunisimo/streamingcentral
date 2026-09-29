@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 28 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 29 de septiembre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -13,36 +13,35 @@
   `origin/main` no avanzó). NO MERGEADA, NO PUSHEADA, NO DESPLEGADA; ningún AAB
   nuevo generado ni subido.** Una sola futura publicación web y un solo futuro
   AAB, del mismo commit y árbol.
-  🔴 **BLOQUEADA POR UNA DECISIÓN DEL DUEÑO (auditoría del 29/09): la
-  compatibilidad v1 con los bundles Android instalados NO está resuelta.** La
-  auditoría encontró que v1 (hasta `1692a18`) copiaba del código viejo sólo la
-  CANTIDAD de obras y elegía con las reglas de v2: un talk show de muchos votos
-  o un crédito sin personaje desplazaban a una película visible. Corregido en
-  `90f15e6` (reglas legacy separadas, prueba RED → GREEN). **Persisten
-  pérdidas** que no se pueden evitar sin decidir una política: con fotos reales
-  del 29/09, Spielberg con Netflix pierde *1941*, *El último vuelo del
-  Challenger* y *1975: El fin de una era* (7 → 5 visibles; gana *A.I.*) y Tom
-  Hanks pierde *Noticias del gran mundo* (gana *Hermanos de sangre*);
-  Villeneuve 2 → 4 (las dos Dune) y Samuel L. Jackson 29 → 29 sin cambios.
-  Está demostrado (test) que con el presupuesto del viejo no existe una
-  selección que conserve todo lo visible Y sume lo recuperado. Opciones y
-  consecuencias en el issue **#25**; **la entrega no se publica hasta que el
-  dueño elija**. Commits, en orden: `e075fb2` y `914faa4`
+  **v1 = COMPATIBILIDAD LEGACY EXACTA (opción A, decisión del dueño del
+  29/09).** Los bundles Android instalados (piden sin `filmografia=v2`)
+  reciben exactamente lo de antes: las mismas obras evaluadas, con los mismos
+  filtros, en el mismo orden, los mismos títulos visibles para las mismas
+  plataformas y el mismo costo. **No recuperan las dos Dune** (aceptado por el
+  dueño). La reparación completa (roles, Dune, secciones, carga progresiva)
+  llega con **v2**: la web y el próximo AAB. Historia: la auditoría del 29/09
+  encontró que v1 copiaba del viejo sólo la CANTIDAD de obras (`1692a18`);
+  `90f15e6` le dio reglas legacy pero con roles reparados, y eso perdía
+  títulos (Spielberg con Netflix 7 → 5, Hanks cambiaba uno); se demostró en
+  un test que no hay selección que conserve lo visible, sume lo recuperado y
+  no evalúe más. El dueño eligió la opción A; implementada en `12abbbc`
+  (issue **#25**). Commits, en orden: `e075fb2` y `914faa4`
   (cherry-pick de `706fb7a` y `c9b6119`, árbol idéntico al de `c9b6119`),
   `b169d8c` (filmografía v1/v2 y cambio de plataformas sin peticiones),
   `9c5ea58` (Yumpeá: bajada sólo en escritorio, lobby, espera y sin match),
   `508dbb8` (App Links de fichas y vista previa de invitación), `771301f`
   (presupuesto de v1), `40bbfdd` (escapes de caracteres bidireccionales),
-  `1692a18` (documentación), `90f15e6` (v1 con reglas legacy, 29/09) y el
-  commit de documentación del 29/09. Detalle de
+  `1692a18` (documentación), `90f15e6` (v1 con reglas legacy, 29/09), su
+  documentación, `12abbbc` (v1 exacta, opción A, 29/09) y el commit de
+  documentación de la opción A. Detalle de
   filmografía en el issue **#25**; medición en
   [`medidas/2026-09-27-filmografia.md`](medidas/2026-09-27-filmografia.md).
   **Comprobado en código/Git:**
   - Filmografía: contrato versionado en `/api/person/[id]`. Sin
-    `filmografia=v2` responde v1 `{ person, titles, hidden }` (bundles Android;
-    desde `90f15e6` con las reglas del contrato viejo —ver arriba—)
-    anteriores): la selección de siempre con los roles reparados y nunca más
-    obras que las que evaluaba el código anterior para esa persona (≤ 40). Con
+    `filmografia=v2` responde v1 `{ person, titles, hidden }` (bundles Android
+    anteriores): **exactamente la selección del código anterior**
+    (`seleccionV1` = la de `2af1a37`, incluido su índice de idioma), sin la
+    reparación de roles. Con
     `filmografia=v2` (web y AAB nuevo) responde la filmografía completa, 12
     abiertas y 24 por "Ver más" (`&items=`, sólo en v2). Una versión por
     petición. `PersonView` dejó `useApi`: cambiar plataformas no pide nada.
@@ -61,12 +60,25 @@
     archivo contra `origin/main`; `TitleCard` sólo suma un prop opcional que
     nadie más pasa).
   **Comprobado por tests y mediciones:**
-  - Suite sobre el código final (`40bbfdd`): **2195 tests / 2195 ok / 0
-    fallos / 0 omitidos** (con el paquete nativo presente; sin él son 10
+  - Suite sobre el código final (`12abbbc`, opción A): **2208 tests / 2208 ok
+    / 0 fallos / 0 omitidos**; filmografía 42/42, bloques 6/6, ruta 8/8,
+    cliente 10/10. Controles por mutación: v1 con la selección reparada → 11
+    fallos; sin el filtro de géneros → 5; una obra más de presupuesto → 9; v2
+    con "el último rol gana" → 6. (Antes, sobre `40bbfdd`: 2195 / 2195 ok (con el paquete nativo presente; sin él son 10
     omitidos por artefactos opcionales); release Android y scripts: 34/34; `npx tsc
     --noEmit` limpio; `git diff --check` limpio salvo el
     `AndroidManifest.xml`, que está guardado con CRLF en todas sus líneas desde
     antes (95 de 95 en `origin/main`): se respetó esa convención.
+  - **Opción A (`12abbbc`, árbol `b8eb095`, 29/09):** build web exit 0 en
+    2 min 04 s (16:55:54 → 16:57:59); export nativo release contra
+    `https://app.yump.ar` exit 0 en 1 min 46 s, 35 rutas en 38 html, `/t/`,
+    `/s/`, `/sala/nueva/`, `/p/`, `getLaunchUrl`/`appUrlOpen`, `app.yump.ar`
+    en 6 archivos y 0 con `vercel.app`, la ficha pide `?filmografia=v2` y
+    `&items=`; `cap copy android`; guardas `verificarBaseDeApi` y
+    `verificarPaqueteConSalas` BUILD SUCCESSFUL (1 min 37 s); manifest
+    fusionado de debug: `autoVerify` en `app.yump.ar` con `/sala/`,
+    `/titulo/movie/` y `/titulo/tv/`, `versionCode 2`, `versionName 1.0.0`.
+    Lo que sigue es la corrida anterior, sobre `40bbfdd`:
   - **Build web de Producción** (`npm run build`) sobre `40bbfdd` (árbol
     `1fefb6c`, el código final de la entrega): **terminó, exit 0, 2 min 40 s
     de pared** (21:41:53 → 21:44:33 del 28/09), con `/persona/[id]`, `/sala/[id]`,
@@ -87,11 +99,19 @@
     debug con los filtros `/sala/`, `/titulo/movie/` y `/titulo/tv/`,
     `versionCode 2`. `cap sync` sólo cambió fines de línea de dos Gradle
     generados y se restauraron. **No se generó ni firmó ningún AAB.**
+  - **v1 exacta contra TMDB real (29/09, `12abbbc`, Redis = doble del
+    banco, antes y v1 alternados):** títulos visibles de v1 **idénticos y en
+    el mismo orden** que los del código anterior en las cuatro personas (0
+    ganados, 0 perdidos: Villeneuve 2, Spielberg 7, Hanks 20, Jackson 29),
+    mismas obras evaluadas (13, 40, 40, 40) y **mismas peticiones**: 23, 58,
+    50 y 43 en frío en los dos; 2 con Redis caliente. v2 en la misma ventana:
+    20, 22, 21 y 22 al abrir; "Ver más" 28–35 en frío, 0 en caliente; las
+    dos Dune en el bloque inicial de Dirección de Villeneuve con Max.
   - Peticiones reales a TMDB al abrir, en frío (mismo instrumento, TMDB real,
     Redis = doble del banco, variantes alternadas en la misma ventana): antes →
     v1 → v2 (28/09; repetido el 29/09 con v1 legacy: Villeneuve 23 → 20 → 20,
     Spielberg 58 → 55 → 22, Hanks 50 → 50 → 21, Jackson 43 → 43 → 22; el costo
-    cumple, los títulos visibles NO, ver arriba): Villeneuve **23 → 21 → 20**, Spielberg **60 → 55 → 22**, Tom Hanks
+    cumplía, los títulos visibles NO: era la variante reparada, descartada): Villeneuve **23 → 21 → 20**, Spielberg **60 → 55 → 22**, Tom Hanks
     **50 → 50 → 22**, Samuel L. Jackson **44 → 44 → 22**. Con Redis caliente,
     2 en todos. "Ver más" (24 obras): 30–35 en frío, 0 en caliente.
   - Build servido con `next start` (TMDB real, Redis del banco): el HTML de
@@ -101,7 +121,8 @@
     yumpear." (escapado por Next), `og:url` canónica SIN el nombre,
     `og:site_name`, `og:image` y `noindex`; sin nombre o con uno de 30
     caracteres, "Te invitaron a yumpear."; el Home conserva su descripción. API:
-    sin versión responde v1 (Villeneuve con `m`: 4 títulos, las dos Dune); con
+    sin versión respondía v1 (Villeneuve con `m`: 4 títulos, las dos Dune: era
+    la variante reparada, DESCARTADA; con la opción A son los 2 de antes); con
     `filmografia=v2`, secciones y roles; `items` sin v2, versión rara y 25
     ítems → 400. En navegador: ficha de Villeneuve con "Ver más" abierto (28
     obras), agregar Netflix y después sacar Max → **0 peticiones** a `/api`,
@@ -135,7 +156,7 @@
   "Reducir movimiento"; sin match como organizador e invitado; filmografía v2 y
   "Ver más"; cambiar plataformas sin perder estado; volver desde una ficha;
   cliente Android anterior durante la transición (sigue viendo "Filmografía en
-  tus plataformas", ahora con Dune).
+  tus plataformas", con los mismos títulos que antes y sin Dune).
 - **Yumpeá EN PRODUCCIÓN WEB (2026-09-27), comprobado; en Alpha de Play
   (2026-09-28), informado por el dueño.** El dueño aplicó `009_salas.sql` en
   Supabase Producción, verificó que naciera apagada y encendió
