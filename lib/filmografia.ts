@@ -284,58 +284,109 @@ export async function armarFilmografia<C extends CreditoPersona>(o: {
 }
 
 // --- 5. El contrato v1 (legado) ---------------------------------------------
+//
+// 🔴 LAS REGLAS DE v1 SON LAS DEL CONTRATO VIEJO, NO LAS DE v2. v1 existe para
+// que los bundles Android instalados no empeoren mientras la gente actualiza,
+// así que su elegibilidad es la de 2af1a37, copiada acá a propósito y separada
+// de `esActuacion`/`agruparSecciones` (que son de v2):
+//   - dirección: créditos de equipo con `job === "Director"`;
+//   - actuación: `character` NO vacío y distinto de Self/Himself/Herself
+//     EXACTOS (un crédito sin personaje no es actuación legacy);
+//   - dirección primero y después actuación, una vez por obra (gana la primera
+//     aparición), y DESPUÉS se descartan talk show, noticias y reality (10767,
+//     10763, 10764) sin mirar el personaje, y lo que no sea película o serie;
+//   - orden por `vote_count` descendente, estable.
+// Lo único que v1 cambia respecto del viejo es la REPARACIÓN de roles: sin el
+// índice que pisaba `job` y `character`, Dune vuelve a ser una obra dirigida.
+//
+// La auditoría del 29/09 encontró que 771301f tomaba la CANTIDAD del viejo pero
+// elegía con las reglas de v2: un talk show de muchos votos o un crédito sin
+// personaje podían desplazar a una película que el cliente viejo mostraba.
+
+const REGLA_LEGADO_NO_ES_ACTUACION = /^(self|himself|herself)$/i;
+const GENEROS_DESCARTADOS_LEGADO = new Set([10767, 10763, 10764]); // talk, news, reality
+
 /**
- * Cuántas obras evaluaba el código anterior (2af1a37) para esta persona, sin
- * consultar nada. Es el PRESUPUESTO de v1: un cliente viejo no puede costar más
- * que antes, y no alcanza con el techo de 40.
- *
- * Por qué hace falta (medido el 28/09, mismo instrumento): con el techo de 40
- * solo, Denis Villeneuve pasaba de 23 a 51 peticiones reales a TMDB, porque el
- * código viejo —por el bug de los roles— evaluaba 13 de sus obras y v1, ya
- * reparado, evaluaba sus 28. Acá se cuenta lo que evaluaba el viejo y v1 evalúa
- * esa misma CANTIDAD, elegida por votos de la lista reparada: Dune entra porque
- * tiene más votos que las obras que el bug dejaba pasar.
- *
- * Réplica exacta de la selección vieja, sólo para contar: el índice por
- * `media_type:id` se quedaba con el ÚLTIMO crédito de cada obra (reparto y
- * equipo concatenados, en ese orden) y lo expandía sobre cada crédito. Una obra
- * "dirigida" sobrevivía sólo si ese último crédito decía `Director`; la
- * actuación exigía un `character` no vacío y distinto de Self/Himself/Herself
- * exactos; después se deduplicaba por obra, se sacaban talk show, noticias y
- * reality y lo que no fuera película o serie, y se cortaba en 40.
+ * La lista legacy de obras candidatas, ORDENADA, con las reglas de 2af1a37.
+ * `indiceViejo: true` reproduce además el índice que pisaba roles (el bug):
+ * cada crédito recibe los campos del ÚLTIMO crédito de su obra —reparto y
+ * equipo concatenados, en ese orden—, exactamente como `{ ...c, ...último }`.
+ * Es la única forma de saber qué evaluaba y qué mostraba el cliente viejo.
+ */
+export function candidatasLegado<C extends CreditoPersona>(credits: Creditos<C>, opts: { indiceViejo: boolean }): C[] {
+  let { cast, crew } = credits;
+  if (opts.indiceViejo) {
+    const ultimo = new Map<string, C>();
+    for (const c of [...cast, ...crew]) ultimo.set(claveCredito(c), c);
+    cast = cast.map((c) => ({ ...c, ...ultimo.get(claveCredito(c)) }));
+    crew = crew.map((c) => ({ ...c, ...ultimo.get(claveCredito(c)) }));
+  }
+  const actuacion = cast.filter((c) => c.character && !REGLA_LEGADO_NO_ES_ACTUACION.test(c.character));
+  const direccion = crew.filter((c) => c.job === "Director");
+  const vistos = new Set<string>();
+  return [...direccion, ...actuacion].filter((c) => {
+    const k = claveCredito(c);
+    if (vistos.has(k)) return false;
+    vistos.add(k);
+    if ((c.genre_ids ?? []).some((g) => GENEROS_DESCARTADOS_LEGADO.has(g))) return false;
+    return c.media_type === "movie" || c.media_type === "tv";
+  }).sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0));
+}
+
+/** Las obras que EVALUABA el código anterior (2af1a37) para esta persona, en orden. */
+export function seleccionDelCodigoAnterior<C extends CreditoPersona>(credits: Creditos<C>): string[] {
+  return candidatasLegado(credits, { indiceViejo: true }).slice(0, MAX_V1).map(claveCredito);
+}
+
+/**
+ * Cuántas obras evaluaba el código anterior: el PRESUPUESTO de v1. Un cliente
+ * viejo no puede costar más que antes, y no alcanza con el techo de 40 (medido
+ * el 28/09: con sólo el techo, Villeneuve pasaba de 23 a 51 peticiones reales).
  */
 export function evaluadasPorElCodigoAnterior(credits: Creditos<CreditoPersona>): number {
-  const ultimo = new Map<string, CreditoPersona>();
-  for (const c of [...credits.cast, ...credits.crew]) ultimo.set(`${c.media_type}:${c.id}`, c);
-  const JUNK = new Set([10767, 10763, 10764]);
-  const valida = (c: CreditoPersona) =>
-    (c.media_type === "movie" || c.media_type === "tv") && !(c.genre_ids ?? []).some((g) => JUNK.has(g));
-  const obras = new Set<string>();
-  for (const c of credits.crew) {
-    const k = `${c.media_type}:${c.id}`;
-    if (ultimo.get(k)?.job === "Director" && valida(c)) obras.add(k);
-  }
-  for (const c of credits.cast) {
-    // `{ ...c, ...último }`: si el último crédito de la obra trae `character`
-    // (otro de reparto) lo pisaba; uno de equipo no lo trae y quedaba el propio.
-    const k = `${c.media_type}:${c.id}`;
-    const u = ultimo.get(k)!;
-    const ch = "character" in u ? u.character : c.character;
-    if (ch && !/^(self|himself|herself)$/i.test(ch) && valida(c)) obras.add(k);
-  }
-  return Math.min(MAX_V1, obras.size);
+  return seleccionDelCodigoAnterior(credits).length;
+}
+
+/**
+ * Las obras que evalúa v1: las primeras `presupuesto` de la lista legacy SIN el
+ * índice viejo (roles reparados), con `presupuesto` = lo que evaluaba el viejo.
+ *
+ * ⚠️ PENDIENTE DE DECISIÓN DEL DUEÑO (ver docs/ISSUES.md #25). Con el mismo
+ * presupuesto, cada obra que la reparación recupera y que entra en el corte
+ * (Dune) deja afuera a la última del viejo. Si ésa estaba en tus plataformas,
+ * el cliente viejo la pierde. Está DEMOSTRADO que no hay selección que, sin
+ * consultar más obras que antes, garantice a la vez conservar todo lo que se
+ * veía y sumar lo recuperado (test "imposibilidad" en lib/filmografia.test.ts).
+ */
+export function seleccionV1<C extends CreditoPersona>(credits: Creditos<C>): C[] {
+  return candidatasLegado(credits, { indiceViejo: false }).slice(0, evaluadasPorElCodigoAnterior(credits));
+}
+
+/**
+ * Las variantes que se comparan para la decisión pendiente (sólo claves; no
+ * consulta nada). `antes` es exactamente lo que evaluaba el viejo.
+ *   v1       — la selección vigente (reglas legacy, roles reparados, mismo presupuesto)
+ *   exacta   — la del viejo, tal cual (sin sumar lo recuperado)
+ *   ampliada — la del viejo MÁS lo recuperado que entra en el top 40 reparado
+ *              (conserva todo y suma, pero evalúa más obras que antes)
+ */
+export function variantesV1(credits: Creditos<CreditoPersona>): Record<"antes" | "v1" | "exacta" | "ampliada", string[]> {
+  const antes = seleccionDelCodigoAnterior(credits);
+  const reparada = candidatasLegado(credits, { indiceViejo: false }).map(claveCredito);
+  const recuperadas = reparada.slice(0, MAX_V1).filter((k) => !antes.includes(k));
+  return {
+    antes,
+    v1: seleccionV1(credits).map(claveCredito),
+    exacta: antes,
+    ampliada: [...antes, ...recuperadas],
+  };
 }
 
 /**
  * Contrato **v1** (`/api/person/[id]` sin `filmografia=v2`): el que leen los
  * bundles Android instalados antes del issue #25, que muestran `titles` como
- * "Filmografía en tus plataformas".
- *
- * Es la selección del código anterior (2af1a37) —dirección y actuación
- * juntas, una vez por obra, por votos, las primeras `MAX_V1` (40)—, pero sobre
- * los créditos con la reparación NUEVA de roles: Dune vuelve a ser una obra
- * dirigida y deja de desaparecer. Se consultan como máximo esas 40, igual que
- * antes; nunca la carrera entera.
+ * "Filmografía en tus plataformas". Evalúa `seleccionV1` (reglas legacy, roles
+ * reparados, el presupuesto del viejo), una consulta por obra.
  *
  * Una consulta de disponibilidad fallida deja la obra afuera de `titles` (no
  * se puede afirmar que está en tus plataformas) y cuenta en `hidden`. Antes,
@@ -347,19 +398,9 @@ export async function armarFilmografiaV1<C extends CreditoPersona>(o: {
   aObra: (g: GrupoObra<C>) => ObraPersona;
   plataformasDe: (tipo: MediaType, id: number) => Promise<PlatformCode[]>;
 }): Promise<{ titles: UITitle[]; hidden: number }> {
-  const grupos = agruparSecciones(o.credits);
-  const vistos = new Set<string>();
-  const unicas: GrupoObra<C>[] = [];
-  for (const g of [...grupos.direccion, ...grupos.actuacion]) {
-    if (vistos.has(g.clave)) continue;
-    vistos.add(g.clave);
-    unicas.push(g);
-  }
-  // Por votos, estable (como el `sort` de 2af1a37), y NUNCA más obras de las que
-  // evaluaba el código anterior para esta misma persona (≤ 40).
-  const evaluadas = unicas
-    .sort((a, b) => (b.credito.vote_count ?? 0) - (a.credito.vote_count ?? 0))
-    .slice(0, evaluadasPorElCodigoAnterior(o.credits));
+  const evaluadas: GrupoObra<C>[] = seleccionV1(o.credits).map((c) => ({
+    clave: claveCredito(c), tipo: c.media_type as MediaType, credito: c, roles: [], fecha: fechaDe(c),
+  }));
   const lote = await resolverHasta(evaluadas.map((g) => g.clave), o.plataformasDe, MAX_V1);
   const titles: UITitle[] = [];
   for (const g of evaluadas) {

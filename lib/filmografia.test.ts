@@ -474,3 +474,140 @@ test("🔴 v1 nunca evalúa más obras que el código viejo para esa persona (Vi
   assert.equal(llamadas.length, presupuesto, "la misma cantidad de obras evaluadas que antes");
   assert.ok(llamadas.includes(`movie:${DUNE}`) && llamadas.includes(`movie:${DUNE2}`), "pero ahora entran las dos Dune");
 });
+
+// --- Compatibilidad v1: CONTENIDO, no sólo cantidad (auditoría del 29/09) -------
+test("RED→GREEN: un talk show de muchos votos NO desplaza a la película que mostraba el cliente viejo", async () => {
+  // El código anterior descartaba talk show / noticias / reality SIEMPRE y
+  // presupuestaba UNA obra: la película. La v1 de 771301f usaba las reglas
+  // nuevas (un personaje real en un talk show es actuación) y con el mismo
+  // presupuesto elegía el talk show.
+  const cast = [
+    cred({ id: 1, title: "Película válida", character: "Protagonista", vote_count: 10 }),
+    cred({ id: 2, media_type: "tv", title: "Un talk show", character: "Nick Fury", genre_ids: [10767], vote_count: 9000 }),
+  ];
+  assert.equal(evaluadasPorElCodigoAnterior({ cast, crew: [] }), 1, "presupuesto legacy de una obra");
+  const { llamadas, plataformasDe } = contador(() => ["n"]);
+  const r = await armarFilmografiaV1({ credits: { cast, crew: [] }, providers: ["n"], aObra, plataformasDe });
+  assert.deepEqual(llamadas, ["movie:1"], "se evalúa la obra que evaluaba el viejo");
+  assert.deepEqual(r.titles.map((t) => t.id), [1], "la película sigue visible");
+});
+
+test("RED→GREEN: un crédito sin personaje (que el viejo no contaba como actuación) no desplaza a una obra válida", async () => {
+  const cast = [
+    cred({ id: 1, title: "Película válida", character: "Protagonista", vote_count: 10 }),
+    cred({ id: 3, title: "Sin personaje", character: "", vote_count: 9000 }),
+  ];
+  const { llamadas, plataformasDe } = contador(() => ["n"]);
+  const r = await armarFilmografiaV1({ credits: { cast, crew: [] }, providers: ["n"], aObra, plataformasDe });
+  assert.deepEqual(llamadas, ["movie:1"]);
+  assert.deepEqual(r.titles.map((t) => t.id), [1]);
+});
+
+// --- La tensión, demostrada: no existe una selección que cumpla las tres ------
+test("imposibilidad: con el presupuesto del viejo no se puede conservar todo Y sumar lo recuperado", () => {
+  // Caso mínimo: el viejo evaluaba UNA obra (`a`) y la reparación recupera otra
+  // (`d`). Condiciones pedidas: (1) no evaluar más obras que el viejo; (2) todo
+  // lo que el viejo podía mostrar sigue visible; (3) lo recuperado se suma.
+  // Una obra sólo puede mostrarse "en tus plataformas" si se evaluó.
+  // Se enumeran TODAS las selecciones posibles y el mundo donde las dos están
+  // disponibles: ninguna selección cumple (2) y (3) a la vez.
+  const presupuesto = 1;
+  const universo = ["a", "d"];
+  const selecciones: string[][] = [[], ...universo.map((x) => [x]), universo];
+  const disponibles = new Set(["a", "d"]);
+  const cumplen = selecciones.filter((sel) =>
+    sel.length <= presupuesto &&                                  // (1)
+    [...disponibles].filter((x) => x === "a").every((x) => sel.includes(x)) && // (2)
+    sel.includes("d"));                                           // (3)
+  assert.deepEqual(cumplen, [], "ninguna selección cumple las tres");
+  // Y relajando cualquiera de las tres, sí hay solución: son las opciones del dueño.
+  assert.ok(selecciones.some((s) => s.length <= presupuesto && s.includes("a")), "exacta: (1)+(2) sin (3)");
+  assert.ok(selecciones.some((s) => s.length <= presupuesto && s.includes("d")), "reparada: (1)+(3) arriesga (2)");
+  assert.ok(selecciones.some((s) => s.includes("a") && s.includes("d")), "ampliada: (2)+(3) sin (1)");
+});
+
+// --- Fotos reales (TMDB, 29/09): contenido antes vs v1, no sólo cantidades -----
+// lib/fixtures/filmografia-v1/*.json: créditos recortados + disponibilidad real
+// de todas las obras que cualquier variante evalúa. Generadas con
+// scripts/comparar-v1.mjs; los tests no tocan TMDB.
+import { readFileSync as leerFixture } from "node:fs";
+import {
+  candidatasLegado, seleccionDelCodigoAnterior, seleccionV1, variantesV1,
+} from "./filmografia.ts";
+
+interface Foto { persona: number; providers: PlatformCode[]; credits: { cast: CreditoPersona[]; crew: CreditoPersona[] }; disponibilidad: Record<string, PlatformCode[]> }
+const foto = (n: string): Foto => JSON.parse(leerFixture(new URL(`./fixtures/filmografia-v1/${n}.json`, import.meta.url), "utf8"));
+const visibles = (f: Foto, claves: string[]) => claves.filter((k) => (f.disponibilidad[k] ?? []).some((p) => f.providers.includes(p)));
+
+// 🔴 Pérdidas CONOCIDAS de la v1 vigente (reglas legacy + roles reparados +
+// presupuesto del viejo). NO están aprobadas: son la decisión pendiente del
+// dueño (docs/ISSUES.md #25). Si aparece otra pérdida, o una de éstas cambia,
+// este test falla: nadie puede empeorar a un cliente viejo sin que se note.
+const PERDIDAS_CONOCIDAS: Record<string, string[]> = {
+  villeneuve: [],
+  spielberg: ["movie:11519", "tv:108298", "movie:1584125"], // 1941, El último vuelo del Challenger, 1975: El fin de una era
+  hanks: ["movie:581032"],                                   // Noticias del gran mundo
+  jackson: [],
+};
+const GANANCIAS_CONOCIDAS: Record<string, string[]> = {
+  villeneuve: ["movie:438631", "movie:693134"],              // Dune, Dune: Parte dos
+  spielberg: ["movie:644"],                                  // A.I.
+  hanks: ["tv:4613"],                                        // Hermanos de sangre
+  jackson: [],
+};
+
+for (const n of ["villeneuve", "spielberg", "hanks", "jackson"]) {
+  test(`foto real ${n}: conjunto visible antes vs v1, pérdidas y ganancias registradas`, () => {
+    const f = foto(n);
+    const antes = visibles(f, seleccionDelCodigoAnterior(f.credits));
+    const v1 = visibles(f, seleccionV1(f.credits).map((c) => `${c.media_type}:${c.id}`));
+    assert.deepEqual(antes.filter((k) => !v1.includes(k)).sort(), [...PERDIDAS_CONOCIDAS[n]].sort(), "pérdidas");
+    assert.deepEqual(v1.filter((k) => !antes.includes(k)).sort(), [...GANANCIAS_CONOCIDAS[n]].sort(), "ganancias");
+  });
+
+  test(`foto real ${n}: v1 respeta el presupuesto del viejo, una consulta por obra y los filtros legacy`, async () => {
+    const f = foto(n);
+    const presupuesto = seleccionDelCodigoAnterior(f.credits).length;
+    assert.ok(presupuesto <= MAX_V1);
+    const { llamadas, plataformasDe } = contador((t, id) => f.disponibilidad[`${t}:${id}`] ?? []);
+    const r = await armarFilmografiaV1({ credits: f.credits, providers: f.providers, aObra, plataformasDe });
+    assert.equal(llamadas.length, presupuesto, "ni una obra más que el viejo");
+    assert.equal(new Set(llamadas).size, llamadas.length, "una consulta por obra");
+    // Control: ninguna obra de género que el contrato viejo descartaba.
+    const porClave = new Map([...f.credits.cast, ...f.credits.crew].map((c) => [`${c.media_type}:${c.id}`, c]));
+    for (const k of llamadas) {
+      assert.ok(!(porClave.get(k)!.genre_ids ?? []).some((g) => [10767, 10763, 10764].includes(g)), `${k} es talk show/noticias/reality`);
+    }
+    // Control: toda obra evaluada es dirigida o tiene un personaje legacy válido.
+    for (const k of llamadas) {
+      const dirigida = f.credits.crew.some((c) => `${c.media_type}:${c.id}` === k && c.job === "Director");
+      const actuada = f.credits.cast.some((c) => `${c.media_type}:${c.id}` === k && c.character && !/^(self|himself|herself)$/i.test(c.character));
+      assert.ok(dirigida || actuada, `${k} no es elegible en el contrato viejo`);
+    }
+    assert.equal(r.titles.length + r.hidden, presupuesto);
+  });
+}
+
+test("foto real Villeneuve: las dos Dune entran en v1 con Max (control de la reparación de roles)", () => {
+  const f = foto("villeneuve");
+  const v1 = visibles(f, seleccionV1(f.credits).map((c) => `${c.media_type}:${c.id}`));
+  assert.ok(v1.includes("movie:438631") && v1.includes("movie:693134"));
+  // Y con el índice viejo no estaban (el bug): el control demuestra la reparación.
+  const viejas = candidatasLegado(f.credits, { indiceViejo: true }).map((c) => `${c.media_type}:${c.id}`);
+  assert.ok(!viejas.includes("movie:438631") && !viejas.includes("movie:693134"));
+});
+
+test("variantes para la decisión: 'exacta' no pierde nada; 'ampliada' no pierde y suma, pero evalúa más", () => {
+  const extra: Record<string, number> = {};
+  for (const n of ["villeneuve", "spielberg", "hanks", "jackson"]) {
+    const f = foto(n);
+    const v = variantesV1(f.credits);
+    const antes = visibles(f, v.antes);
+    assert.deepEqual(visibles(f, v.exacta), antes, `${n}: exacta = antes`);
+    const amp = visibles(f, v.ampliada);
+    assert.ok(antes.every((k) => amp.includes(k)), `${n}: ampliada conserva todo`);
+    for (const k of GANANCIAS_CONOCIDAS[n]) assert.ok(amp.includes(k), `${n}: ampliada suma ${k}`);
+    extra[n] = v.ampliada.length - v.antes.length;
+  }
+  assert.deepEqual(extra, { villeneuve: 12, spielberg: 16, hanks: 1, jackson: 0 }, "obras de más que evalúa 'ampliada'");
+});
