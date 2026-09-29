@@ -1,8 +1,78 @@
 # Filmografía de personas — medición (issue #25)
 
-Rama `fix/filmografia-persona` (worktree `wt-filmografia`, desde `origin/main`
-`2af1a37`). **Sin merge, sin push, sin deploy.** Nada de esto está en
+## Vigente: entrega integrada (28/09) — contrato v1/v2
+
+Rama `fix/yumpea-filmografia-entrega` (worktree `wt-yumpea-filmografia`, desde
+`origin/main` `2af1a37`, árbol `ac9715d`). Código medido: commit `771301f`
+(árbol `8dc25f5`). El código final (`40bbfdd`) sólo difiere en los escapes de la
+regex de la invitación de Yumpeá: nada de filmografía. **Sin merge, sin push, sin deploy.** Nada de esto está en
 Producción.
+
+La ruta tiene dos contratos (lib/filmografia-ruta.ts) y se midieron los dos,
+con el instrumento de abajo (`--contrato=v1|v2`), TMDB real y Redis = el doble
+del banco. Las tres variantes se corrieron **alternadas por persona en la misma
+ventana**; antes de cada variante se vació el Redis. Cero 429 en todas.
+
+- **antes**: `2af1a37`, lo que hoy recibe cualquier cliente.
+- **v1**: sin `filmografia=v2`, lo que recibe un bundle Android viejo después de
+  la entrega. Evalúa como máximo tantas obras como evaluaba `2af1a37` para esa
+  misma persona (≤ 40).
+- **v2**: `filmografia=v2`, la web y todo AAB nuevo. 12 obras al abrir, 24 por
+  "Ver más".
+
+### Peticiones HTTP reales a TMDB, apertura con caché vacía
+
+| Persona (`providers`) | antes | v1 | v2 | v2 "Ver más" (obras) |
+|---|---|---|---|---|
+| Denis Villeneuve (`m`) | 23 (2 + 13 + 8) | **21** (2 + 13 + 6) | **20** (2 + 12 + 6) | 29 (15) |
+| Steven Spielberg (`n`) | 60 (2 + 40 + 18) | **55** (2 + 40 + 13) | **22** (2 + 12 + 8) | 33 (24) |
+| Tom Hanks (`n,d,m`) | 50 (2 + 40 + 8) | **50** (2 + 40 + 8) | **22** (2 + 12 + 8) | 35 (24) |
+| Samuel L. Jackson (`n,d,m`) | 44 (2 + 40 + 2) | **44** (2 + 40 + 2) | **22** (2 + 12 + 8) | 30 (24) |
+
+(base persona+créditos + `watch/providers` + detalle de la evidencia oficial.)
+
+**Criterios cumplidos:** v1 ≤ antes y v2 ≤ antes en los cuatro casos.
+
+### Invocaciones al enriquecedor, Redis y tiempos
+
+| Persona | Variante | Obras enriquecidas | Redis hit / miss / cmd (fría) | ms fría | ms Redis caliente | JSON |
+|---|---|---|---|---|---|---|
+| Villeneuve | antes / v1 / v2 | 13 / 13 / 12 | 2/44/81 · 0/38/67 · 0/37/66 | 3746 · 2919 · 2719 | 905 · 894 · 892 | 679 B · 1,2 KB · 8,7 KB |
+| Spielberg | antes / v1 / v2 | 40 / 40 / 12 | 6/107/184 · 8/85/142 · 0/45/82 | 4044 · 3402 · 2870 | 1076 · 1121 · 1305 | 2,0 · 1,8 · 20,4 KB |
+| Tom Hanks | antes / v1 / v2 | 40 / 40 / 12 | 3/70/107 · 3/70/107 · 2/43/80 | 3097 · 3437 · 2874 | 1023 · 1074 · 1039 | 5,2 · 5,2 · 36,6 KB |
+| Samuel L. Jackson | antes / v1 / v2 | 40 / 40 / 12 | 0/49/62 · 0/49/62 · 0/45/82 | 3108 · 3173 · 2900 | 1168 · 1124 · 1040 | 8,0 · 8,0 · 65,1 KB |
+
+**Con Redis caliente** (proceso nuevo, Redis lleno), todas las variantes y
+personas: **2 peticiones reales** (persona y créditos, que no se cachean en
+ninguna versión) y **0 misses**; "Ver más" en caliente: **0** peticiones, 16–40 ms.
+
+**Cambio de plataformas: 0 peticiones** (ni persona, ni créditos, ni
+disponibilidad). No es una medición de TMDB sino de diseño, y está fijado por
+test (`lib/filmografia-cliente.test.ts`, transporte que cuenta): el contrato v2
+no recibe plataformas y el cliente ya no usa `useApi`; cambiarlas reordena lo
+cargado al dibujar. Verificado además en navegador (ver ESTADO).
+
+### El primer intento de v1 no cumplía, y por qué
+
+Con sólo el techo de 40, v1 costaba en frío **51** peticiones para Villeneuve
+contra **23** de antes (Spielberg 55 ≤ 60, Hanks 50 = 50, Jackson 44 = 44). El
+"antes" es barato porque el bug de los roles le dejaba 13 obras evaluadas; v1
+reparado evaluaba sus 28. La corrección no ajusta un número a la medición: v1
+evalúa la misma **cantidad** de obras que el código viejo para esa persona
+(réplica del índice viejo, sin consultar nada), elegidas por votos de la lista
+reparada. Villeneuve: 13 obras, 21 peticiones, y "en tus plataformas" pasa de 2
+títulos a 4 (entran las dos Dune).
+
+⚠️ Deriva: el "antes" de Villeneuve dio 29 peticiones / 16 obras el 27/09 y 23 /
+13 el 28/09, con el mismo código. Es el catálogo de TMDB (MANTENIMIENTO,
+"Comparar dos corridas"); por eso todo se compara dentro de la misma ventana.
+
+---
+
+## Antecedente: primera y segunda corrección (27–28/09, rama `fix/filmografia-persona`)
+
+Lo que sigue es la medición de los commits `706fb7a` y `c9b6119`, integrados en
+esta entrega. Se conserva como antecedente; la tabla vigente es la de arriba.
 
 Tres versiones medidas con el MISMO instrumento:
 
@@ -10,7 +80,7 @@ Tres versiones medidas con el MISMO instrumento:
 |---|---|---|
 | `2af1a37` ("antes") | índice que pisa roles + `slice(0, 40)` + filtro por plataformas | en Producción |
 | `706fb7a` (1ª corrección) | arregla roles y recorte, pero **enriquece la carrera entera** | 🔴 **RECHAZADA** por el dueño (28/09) |
-| 2ª corrección (commit siguiente) | datos básicos de todo + disponibilidad sólo del bloque visible | en rama |
+| 2ª corrección (`c9b6119`) | datos básicos de todo + disponibilidad sólo del bloque visible | auditada; ⚠️ su legado `titles` salía sólo de las 12 obras iniciales (degradaba los bundles Android viejos) y cambiar plataformas volvía a pedir todo: corregido en la entrega integrada (v1/v2) |
 
 🔴 **El enriquecido completo y anticipado de `706fb7a` se rechazó y no es un
 resultado aceptable.** 352 peticiones a TMDB y 10–13 s en frío para abrir una

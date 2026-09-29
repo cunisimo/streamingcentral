@@ -358,7 +358,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   | `/proximamente` | filtro, items, página y scroll (paginado) |
   | `/top` | payload, scroll vertical y horizontal de cada carrusel |
   | `/cuenta/*` | scroll horizontal de cada riel |
-  | `/persona/[id]` | filmografía básica, disponibilidad ya resuelta, cuántas se ven por sección ("Ver más") y scroll — una sola entrada para todas las personas |
+  | `/persona/[id]` | filmografía básica, disponibilidad ya resuelta, cuántas se ven por sección ("Ver más") y scroll — una sola entrada para todas las personas; la firma es el id, NO las plataformas (cambiarlas sólo reordena, sin peticiones) |
 
   **Fuera a propósito**: el Home **no se tocó** — se auditó y no reprodujo la
   falla, aunque comparte la carrera (contenido asíncrono + restauración nativa
@@ -1185,9 +1185,15 @@ lib/
   reviews.ts            — acceso a editorial_reviews
   filmografia.ts         — filmografía de una persona: reparación de idioma POSICIONAL,
                             roles agregados por obra, secciones Dirección/Actuación y
-                            disponibilidad de UN bloque. PURA (issue #25)
+                            disponibilidad de UN bloque; contratos v2 y v1 (legado, ≤ 40).
+                            PURA (issue #25)
   filmografia-bloques.ts — carga progresiva (12 al abrir, 24 por "Ver más"), orden por
-                            bloque y generaciones. PURA y apta para el cliente
+                            bloque y la versión del contrato. PURA y apta para el cliente
+  filmografia-ruta.ts    — qué contrato ejecuta cada petición a /api/person (v1, v2, items)
+  filmografia-cliente.ts — el estado de la ficha en el cliente: pedidos, generaciones, sin
+                            plataformas (cambiarlas no pide nada). PURO
+  enlaces-app.ts         — App Links: /sala/<uuid> y /titulo/movie|tv/<id> → ruta interna
+                            del contenedor, lista blanca, app cerrada y en segundo plano
   proximamente.ts        — selección editorial de la Agenda: función PURA (cupo por
                             fecha, tope de anime, paginación). Ver docs/UPCOMING.md
   types.ts               — shape estable que consume toda la UI (UITitle, UITitleDetail, UIPerson)
@@ -1213,7 +1219,7 @@ supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla v
 | `GET /api/hacete-cargo` | "No gustaron" (votos malaso, `top_voted` 1-1). La ruta y la clave siguen diciendo `hacete-cargo`: cambió el rótulo, no el riel |
 | `GET /api/search` | búsqueda (títulos + personas). `providers` **ordena, no filtra** |
 | `GET /api/latest` | últimos estrenos por fecha. `?tipo=movie` (default) o `tv`; en `tv` mezcla el catálogo regional con candidatos por red oficial. `?page=` se normaliza (entero ≥ 1, o 1) |
-| `GET /api/person/[id]` | `?providers=`: filmografía COMPLETA como **datos básicos** (`direccion`, `actuacion`, orden en `secciones`, por fecha desc.) + disponibilidad **sólo del bloque inicial** (≤ 12 obras, `inicial`/`disponibilidad`/`sinDisponibilidad`). `?items=movie:1,tv:2` (máx. 24): sólo disponibilidad, para "Ver más". **Nunca enriquece la carrera entera** (se rechazó en el issue #25). `titles`/`hidden`: legado para bundles Android, acotado a lo ya resuelto. Lógica en `lib/filmografia.ts` y `lib/filmografia-bloques.ts` |
+| `GET /api/person/[id]` | **Contrato VERSIONADO** (issue #25, `lib/filmografia-ruta.ts`); cada petición ejecuta UNA versión. **Sin `filmografia`** (bundles Android anteriores): v1 `{ person, titles, hidden }`, ≤ 40 obras evaluadas por votos —la misma selección de siempre— con los roles ya reparados; `?providers=` decide `titles`. **`?filmografia=v2`** (web y todo AAB nuevo): filmografía COMPLETA como **datos básicos** (`direccion`, `actuacion`, orden en `secciones`, por fecha desc.) + disponibilidad **sólo del bloque inicial** (≤ 12 obras, `inicial`/`disponibilidad`/`sinDisponibilidad`); no recibe plataformas: sólo ordenan, en el cliente. **`?filmografia=v2&items=movie:1,tv:2`** (máx. 24): sólo disponibilidad, para "Ver más"; sin la versión, 400. **Ninguna versión enriquece la carrera entera** (se rechazó en el issue #25). Lógica en `lib/filmografia.ts`, `lib/filmografia-bloques.ts` y `lib/filmografia-cliente.ts` |
 | `GET /api/personas` | actores populares paginados (`?page=`) |
 | `GET /api/directores` | lista curada de directores (`DIRECTOR_IDS` en `lib/enrich.ts`) |
 | `GET /api/genre-covers` | un póster representativo por género, cacheado 24h |

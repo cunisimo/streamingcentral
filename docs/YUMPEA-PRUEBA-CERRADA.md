@@ -3,8 +3,20 @@
 Cómo llevar Yumpeá al canal de **prueba cerrada que ya existe** (Alpha, con los
 testers inscritos), actualizando la app instalada **sin desinstalarla**.
 
-🔴 **Nada de este documento se ejecutó.** Todo lo que toca Play, Vercel o
-Supabase Producción espera autorización explícita del dueño.
+> **Estado al 28/09 (el vigente está en [`ESTADO.md`](ESTADO.md)).** Este
+> documento se escribió antes de ejecutar nada y se conserva como procedimiento.
+> Desde entonces: **pasos 1 a 4 hechos** el 27/09 —migración `009_salas.sql`
+> aplicada, `sala_config.activas` encendida, merge `2af1a37` desplegado (árbol
+> `ac9715d`) y verificado contra `app.yump.ar`—; **paso 5: el dueño informó (28/09)
+> que subió el AAB con `versionCode 2` a Alpha y que aparece en la app**. Eso NO
+> equivale a una sala completa probada en teléfonos: el **paso 6 sigue
+> pendiente** (sala web–Android, enlaces de WhatsApp, `app.yump.ar: verified`).
+> El próximo AAB necesita un `versionCode` estrictamente mayor que el mayor que
+> figure en Play (ver §2) y **no** se genera hasta que el dueño lo confirme.
+
+🔴 **Cuando se escribió, nada de este documento se había ejecutado.** Todo lo
+que toca Play, Vercel o Supabase Producción espera autorización explícita del
+dueño.
 
 ## 1. Qué se pudo compilar de verdad
 

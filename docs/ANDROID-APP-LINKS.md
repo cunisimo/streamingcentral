@@ -1,12 +1,20 @@
-# Android App Links para las salas de Yumpeá
+# Android App Links: salas de Yumpeá y fichas compartidas
 
-Qué hace que un enlace de invitación recibido por WhatsApp abra **la app** y no
-Chrome. Tres piezas; dos están hechas y **una depende de un dato que sólo está
-en Play Console**.
+Qué hace que un enlace recibido por WhatsApp abra **la app** y no Chrome. Son
+dos enlaces públicos, los dos HTTPS y canónicos —nunca un esquema privado como
+`yump://`—, porque quien los recibe puede no tener la app:
 
-## 1. El intent-filter (hecho)
+| Enlace público | Con Yump instalada y el dominio verificado | Sin la app |
+|---|---|---|
+| `https://app.yump.ar/sala/<uuid>` (invitación) | abre la sala en la app: `/s/?id=<uuid>` | abre la sala web |
+| `https://app.yump.ar/titulo/movie/<id>` y `/titulo/tv/<id>` (el enlace de un match, desde el 28/09) | abre la ficha en la app: `/t/?tipo=…&id=…` | abre la ficha web |
 
-`android/app/src/main/AndroidManifest.xml`, dentro de `MainActivity`:
+Tres piezas: el intent-filter, el manejo del intent y `assetlinks.json`.
+
+## 1. Los intent-filters
+
+`android/app/src/main/AndroidManifest.xml`, dentro de `MainActivity`, **dos**
+filtros con `autoVerify`:
 
 ```xml
 <intent-filter android:autoVerify="true">
@@ -15,20 +23,27 @@ en Play Console**.
     <category android:name="android.intent.category.BROWSABLE" />
     <data android:scheme="https" android:host="app.yump.ar" android:pathPrefix="/sala/" />
 </intent-filter>
+<intent-filter android:autoVerify="true">
+    <!-- mismas action y category -->
+    <data android:scheme="https" android:host="app.yump.ar" android:pathPrefix="/titulo/movie/" />
+    <data android:scheme="https" android:host="app.yump.ar" android:pathPrefix="/titulo/tv/" />
+</intent-filter>
 ```
 
-🔴 **Acotado a `/sala/` a propósito.** Con `pathPrefix` la app se ofrece sólo
-para los enlaces de sala; el resto de `app.yump.ar` sigue abriendo en el
-navegador, que es lo que la gente espera de un link cualquiera del sitio.
-Verificar el dominio entero le sacaría a Chrome toda la navegación del sitio sin
-que nadie lo haya pedido.
+🔴 **Acotados a propósito.** Con `pathPrefix` la app se ofrece sólo para esos
+tres prefijos; el resto de `app.yump.ar` sigue abriendo en el navegador, que es
+lo que la gente espera de un link cualquiera del sitio. Para las fichas van dos
+prefijos exactos (`/titulo/movie/`, `/titulo/tv/`) y no `/titulo/` a secas. Un
+test fija que sean exactamente esos tres y que no haya esquema privado.
 
 `android:launchMode="singleTask"` ya estaba y es lo que evita que el enlace abra
 una instancia nueva encima de la que ya está corriendo.
 
-## 2. El manejo del intent (hecho)
+## 2. El manejo del intent
 
-`components/nativo/EnlacesDeSala.tsx`, montado en el layout raíz.
+`components/nativo/EnlacesEntrantes.tsx` (se llamaba `EnlacesDeSala`), montado en
+el layout raíz, con la lógica en `atenderEnlaces` de `lib/enlaces-app.ts`
+(se llamaba `lib/sala/enlace-nativo.ts`).
 
 **Hacen falta los dos caminos y ése es el punto:**
 
@@ -38,121 +53,89 @@ una instancia nueva encima de la que ya está corriendo.
 | App **en segundo plano** | Llega como evento → `App.addListener("appUrlOpen")` |
 
 `appUrlOpen` no se dispara nunca en el arranque en frío, porque el listener se
-registra después. Atender uno solo deja la mitad de los casos sin abrir la sala,
-y es justo la mitad que no se nota probando con la app abierta.
+registra después. Atender uno solo deja la mitad de los casos sin abrir el
+enlace, y es justo la mitad que no se nota probando con la app abierta. Los dos
+caminos están probados con un plugin simulado (`lib/sala/android.test.ts`).
+Se navega con `router.replace`, no `push`: el enlace es el destino, no un paso
+adelante.
 
-La url pública se traduce a la ruta interna con `lib/sala/enlace-nativo.ts`:
-`https://app.yump.ar/sala/<uuid>` → `/s/?id=<uuid>`. Es **lista blanca**, no un
-saneador: sólo el host canónico, sólo `https`, sólo esa forma exacta. Un intent
-puede traer cualquier cosa.
+La url pública se traduce a la ruta interna con `rutaDeEnlace`. Es **lista
+blanca**, no un saneador: sólo `https`, sólo el host canónico exacto (sin
+subdominios, credenciales ni puerto), sólo el path exacto
+(`/sala/<uuid>`, `/titulo/movie|tv/<id>` con id de 1 a 10 dígitos sin ceros a la
+izquierda, barra final opcional). La query y el fragmento se ignoran: WhatsApp
+agrega parámetros y la invitación trae `?organizador=` (sólo presentación, ver
+`lib/sala/invitacion.ts`). Un intent puede traer cualquier cosa.
 
-## 3. `assetlinks.json` — ✅ preparado, ⏳ falta desplegarlo y verificarlo
+## 3. `assetlinks.json`
 
-🔴 **Sin este archivo NO está garantizado que el enlace abra la app.** Conviene
-no confundir dos cosas: el enlace **funciona igual** —quien lo recibe llega a la
-sala, porque si no abre la app abre `app.yump.ar/sala/<uuid>` en el navegador—,
-pero la verificación del dominio **falla**, y de eso depende que Android ofrezca
-la app.
+🔴 **Sin este archivo NO está garantizado que el enlace abra la app.** El enlace
+**funciona igual** —quien lo recibe llega a la sala o a la ficha, porque si no
+abre la app abre la web—, pero la verificación del dominio **falla**, y de eso
+depende que Android ofrezca la app.
 
 ⚠️ **En Android 12 o posterior, un filtro de enlaces web que no verificó NO se
-ofrece**: el enlace abre el navegador directamente, sin diálogo. No hay
-desambiguador. (En Android 11 y anteriores sí aparecía "¿Con qué app abrir?", que
-al menos dejaba elegir.) El usuario puede habilitarlo a mano en Ajustes → Apps →
-Yump → Abrir enlaces admitidos, pero eso es una excepción manual, no una prueba.
+ofrece**: el enlace abre el navegador directamente, sin diálogo. El usuario puede
+habilitarlo a mano en Ajustes → Apps → Yump → Abrir enlaces admitidos, pero eso
+es una excepción manual, no una prueba.
 
-Por eso la apertura desde WhatsApp **no se puede dar por aprobada** hasta
-desplegar este archivo con la huella correcta y ver `verified` en un teléfono.
-
-### Qué archivo
-
-Se sirve en `https://app.yump.ar/.well-known/assetlinks.json`, con
-`Content-Type: application/json` y **sin redirecciones** (Android no las sigue):
-
-El contenido real está en el repositorio; la forma es ésta, con las tres huellas
-de **firma de aplicación** en el array:
-
-```json
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "ar.yump.app",
-    "sha256_cert_fingerprints": ["…clásica actual…", "…poscuántica…", "…clásica anterior…"]
-  }
-}]
-```
-
-**Ya está escrito en `public/.well-known/assetlinks.json`**, con las **tres**
-huellas de firma de aplicación que el dueño copió de Play Console el 27/09: la
-clásica actual, la poscuántica y la clásica anterior. El array admite varias y
-las tres tienen que estar.
+**Estado:** `public/.well-known/assetlinks.json` tiene las **tres** huellas de
+**firma de aplicación** que el dueño copió de Play Console el 27/09 (clásica
+actual, poscuántica y clásica anterior), y el deploy del 27/09 lo sirve:
+comprobado contra `app.yump.ar` → **200, `application/json`, 0 redirecciones**
+(ver `docs/ESTADO.md`). El archivo verifica el **dominio**, no una ruta: el
+filtro nuevo de `/titulo/` no necesita cambiarlo, y **no se cambió**.
 
 🔴 **Ninguna de las tres es la de SUBIDA.** Están una debajo de la otra en la
-misma pantalla, y con la de subida la verificación falla en silencio. Hay un test
-que compara las tres contra la lista y **rechaza explícitamente** la de subida.
+misma pantalla de Play Console, y con la de subida la verificación falla en
+silencio. Hay un test que compara las tres contra la lista y **rechaza
+explícitamente** la de subida.
 
-**Comprobado, además de la forma del JSON:** que Next lo sirve de verdad. Un
-`public/` con carpeta que empieza con punto no es obvio, así que se levantó el
-build de producción y se pidió la url: **HTTP 200,
-`application/json; charset=UTF-8`, 0 redirecciones** — que es exactamente lo que
-Android necesita, porque no sigue redirecciones.
+⏳ **Lo que sigue pendiente, y no se afirma hasta verlo:** `app.yump.ar:
+verified` en un teléfono con la app instalada desde Play. Y el filtro de fichas
+llega recién con el próximo AAB: la versión que está en Alpha (`versionCode 2`)
+sólo declara `/sala/`.
 
-### 🔴 De dónde salieron las huellas (ya hecho, se documenta para la próxima)
+### De dónde salieron las huellas (ya hecho, se documenta para la próxima)
 
 **Play Console → tu app → Test and release → Setup → App integrity → pestaña
 "App signing" → "App signing key certificate" → `SHA-256 certificate
 fingerprint`.** Se copia tal cual, en mayúsculas y con los dos puntos.
 
-Tres precisiones que hacen la diferencia:
-
 - Es la del **certificado de firma de la app** (App Signing), **no** la del
-  *upload key certificate*, que está en la misma pantalla, justo debajo. Es el
-  error clásico: con la de subida la verificación falla en silencio.
-- **No es una clave privada.** Es una huella pública; se puede pegar en un
-  archivo que sirve todo internet. No me mandes el keystore ni su contraseña.
+  *upload key certificate*, que está justo debajo.
+- **No es una clave privada.** Es una huella pública.
 - Si alguna vez se instala un **APK firmado localmente** (no bajado de Play), su
   huella es otra y no verifica. Para probar App Links con un build local hay que
-  agregar **también** esa huella al mismo array — el array admite varias.
+  agregar **también** esa huella al mismo array.
 
-### Cómo verificar, después de desplegarlo
+### Cómo verificar en un teléfono
 
 ```bash
 curl -sI https://app.yump.ar/.well-known/assetlinks.json
 adb shell pm get-app-links ar.yump.app
 adb shell am start -a android.intent.action.VIEW -d "https://app.yump.ar/sala/<uuid>"
+adb shell am start -a android.intent.action.VIEW -d "https://app.yump.ar/titulo/movie/438631"
 ```
 
-La segunda tiene que decir `app.yump.ar: verified`. Si dice `none` o
-`ask`, la verificación no pasó: re-disparala con
-`adb shell pm verify-app-links --re-verify ar.yump.app`.
+La segunda tiene que decir `app.yump.ar: verified`. Si dice `none` o `ask`, la
+verificación no pasó: re-disparala con
+`adb shell pm verify-app-links --re-verify ar.yump.app`. Puede tardar unos
+minutos después de instalar; un `none` inmediato no es concluyente.
 
 ## Lo que NO se hizo, y por qué
 
-- 🔴 **No se desplegó.** El archivo está en el repositorio pero `app.yump.ar`
-  todavía lo sirve en 404: hace falta un deploy, que necesita autorización.
-  **Mientras tanto la apertura automática desde WhatsApp NO está aprobada**, y no
-  lo va a estar hasta ver `app.yump.ar: verified` en un teléfono real.
-- **No se tocó `prefer_related_applications`** del manifest web. Es el mecanismo
-  por el que Chrome suprime su propio aviso de instalación de PWA a favor de la
-  app de Play; lo evaluamos aparte.
-- **Nada probado en un teléfono.** Todo lo de arriba está comprobado en código y
-  en el manifest fusionado del APK, que es otra cosa.
+- **No se capturó el dominio entero** ni se agregó un esquema privado.
+- **No se tocó `prefer_related_applications`** del manifest web.
+- **Nada probado en un teléfono.** Todo lo de arriba está comprobado en código,
+  en tests y en el manifest del paquete, que es otra cosa.
 
 ## Un detalle del entorno de build
 
-`npm run build:capacitor` **falla en esta máquina** antes de compilar:
-
-```
-Error: faltan variables públicas: NEXT_PUBLIC_SITE_URL
-```
-
-La allowlist del script exige esa variable y `.env.local` no la tiene. Para las
-corridas de esta sesión se inyectó desde afuera, sin tocar el archivo. Para que
-el comando funcione tal cual, agregar a `.env.local`:
+`npm run build:capacitor` exige `NEXT_PUBLIC_SITE_URL` en `.env.local` (la
+allowlist del script). Es pública —la misma que está en Vercel y en el Site URL
+de Supabase—:
 
 ```
 NEXT_PUBLIC_SITE_URL=https://app.yump.ar
 ```
-
-Es la misma que usa el correo de recuperación de contraseña, así que conviene
-que coincida con la allowlist de Redirect URLs de Supabase.

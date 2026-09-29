@@ -7,51 +7,134 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **Issue #25 (2026-09-27/28): la ficha de persona perdía películas —
-  CORREGIDO EN RAMA `fix/filmografia-persona` (worktree `wt-filmografia`,
-  desde `origin/main` `2af1a37`), DOS commits: `706fb7a` (1ª corrección,
-  🔴 RECHAZADA por el dueño el 28/09) y el commit siguiente (2ª corrección,
-  pendiente de auditoría de Codex). NO MERGEADO, NO PUSHEADO, NO DESPLEGADO.**
-  Independiente de Yumpeá/salas: no toca archivos de salas.
-  Reportado por el dueño con Villeneuve: `/api/person/137427?providers=m`
-  mostraba sólo *La llegada* y *Blade Runner 2049* (Duna y Duna: Parte dos
-  dicen Max en su ficha). **Causa 1:** la reparación de idioma reconstruía los
-  créditos con un índice por `media_type:id` y el último crédito de cada obra
-  pisaba `job`/`department`/`character` (Duna pasaba a `Screenplay` y
-  dejaba de ser "dirigida"; a Spielberg le sobrevivían 38 de 52 créditos de
-  dirección). **Causa 2:** `merged.slice(0, 40)` truncaba antes de armar nada.
-  **Por qué se rechazó `706fb7a`:** enriquecía la carrera ENTERA al abrir (352
-  peticiones a TMDB y 10–13 s en frío para Samuel L. Jackson) y lo tapaba con
-  `maxDuration = 60`. **No es un resultado aceptable** y no se repite.
-  **2ª corrección:** reparación POSICIONAL (la reparación sólo toca título y
-  sinopsis) y consolidación por obra que AGREGA los roles (Dune conserva
-  Director, Producer y Screenplay en cualquier orden del array); la ruta
-  devuelve la filmografía COMPLETA como datos básicos (sin llamadas por
-  título, orden por fecha descendente) y la disponibilidad SÓLO de las 12 obras
-  visibles al abrir; cada "Ver más" pide las 24 siguientes de esa sección a la
-  misma ruta (`?items=`, máx. 24, sin volver a pedir créditos). Las
-  plataformas ordenan DENTRO de cada bloque ya resuelto; una consulta fallida
-  se muestra como "sin datos", nunca como "no está". `titles`/`hidden` se
-  conservan para los bundles Android instalados, acotados a lo ya resuelto.
-  Sin `maxDuration` propio. Lógica en `lib/filmografia.ts` y
-  `lib/filmografia-bloques.ts`.
-  **Comprobado por tests:** 30 tests de filmografía (control con el algoritmo
-  viejo + dos mutaciones que los ponen en rojo); uno falla si la apertura de
-  229 obras procesa más de 24. Suite: 2142 / 2132 ok / 0 fallos / 10 omitidos;
-  `tsc` limpio; `npm run build` OK.
-  **Comprobado localmente** (TMDB real, Redis = doble del banco, versiones
-  alternadas en la misma ventana): peticiones reales a TMDB al abrir en frío,
-  antes → después: Villeneuve **29 → 20**, Spielberg **60 → 22**, Tom Hanks
-  **50 → 22**, Samuel L. Jackson **44 → 22**; con Redis caliente, 2 en todos
-  (persona + créditos). Build con `next start` + Redis del banco: las dos
-  Dune con Max en el primer bloque, roles visibles, "Ver más" = una petición,
-  volver de una ficha restaura sin pedir nada. **Desvío del pedido, a decisión
-  del dueño:** la apertura es de 12 y no de 24, porque con 24 Villeneuve midió
-  43 > 29. Detalle:
+- **ENTREGA INTEGRADA Yumpeá + filmografía (2026-09-28): EN RAMA
+  `fix/yumpea-filmografia-entrega` (worktree `wt-yumpea-filmografia`), desde
+  `origin/main` `2af1a37` (árbol `ac9715d`, comprobado con `git fetch` el 28/09:
+  `origin/main` no avanzó). NO MERGEADA, NO PUSHEADA, NO DESPLEGADA; ningún AAB
+  nuevo generado ni subido.** Una sola futura publicación web y un solo futuro
+  AAB, del mismo commit y árbol. Commits, en orden: `e075fb2` y `914faa4`
+  (cherry-pick de `706fb7a` y `c9b6119`, árbol idéntico al de `c9b6119`),
+  `b169d8c` (filmografía v1/v2 y cambio de plataformas sin peticiones),
+  `9c5ea58` (Yumpeá: bajada sólo en escritorio, lobby, espera y sin match),
+  `508dbb8` (App Links de fichas y vista previa de invitación), `771301f`
+  (presupuesto de v1), `40bbfdd` (escapes de caracteres bidireccionales) y
+  el commit final de documentación. Detalle de
+  filmografía en el issue **#25**; medición en
   [`medidas/2026-09-27-filmografia.md`](medidas/2026-09-27-filmografia.md).
-  **Pendiente de prueba manual del dueño** (criterio de cierre en el issue
-  #25): Preview con Redis, teléfono real y app Android instalada.
-  **No desplegado.**
+  **Comprobado en código/Git:**
+  - Filmografía: contrato versionado en `/api/person/[id]`. Sin
+    `filmografia=v2` responde v1 `{ person, titles, hidden }` (bundles Android
+    anteriores): la selección de siempre con los roles reparados y nunca más
+    obras que las que evaluaba el código anterior para esa persona (≤ 40). Con
+    `filmografia=v2` (web y AAB nuevo) responde la filmografía completa, 12
+    abiertas y 24 por "Ver más" (`&items=`, sólo en v2). Una versión por
+    petición. `PersonView` dejó `useApi`: cambiar plataformas no pide nada.
+  - Yumpeá: la bajada del banner y del tile se ve sólo en navegador de
+    escritorio (CSS, no en móvil, PWA ni app); en el lobby, "Falta que se sume
+    alguien" es un estado y con dos aparece "Empezar con 2"; spinner del
+    invitado (quieto con "Reducir movimiento"); sin match, el organizador tiene
+    "Otra tanda" y "Cerrar sala", y el invitado "Esperá a ver si <organizador>
+    arma otra tanda."; App Link acotado a `/titulo/movie/` y `/titulo/tv/` →
+    `/t/?tipo=&id=` (además de `/sala/`); vista previa de invitación "Yump" /
+    "<organizador> te invitó a yumpear." con `?organizador=` sólo de
+    presentación. Sin SQL ni migraciones. Los votos de salas siguen sólo en
+    `room_votes` (test nuevo lo fija).
+  - **Home, "6 para hoy", carruseles, «Elegidas para vos», Top, estrenos,
+    reseñas, disponibilidad general, cachés y Supabase: sin cambios** (diff por
+    archivo contra `origin/main`; `TitleCard` sólo suma un prop opcional que
+    nadie más pasa).
+  **Comprobado por tests y mediciones:**
+  - Suite sobre el código final (`40bbfdd`): **2195 tests / 2195 ok / 0
+    fallos / 0 omitidos** (con el paquete nativo presente; sin él son 10
+    omitidos por artefactos opcionales); release Android y scripts: 34/34; `npx tsc
+    --noEmit` limpio; `git diff --check` limpio salvo el
+    `AndroidManifest.xml`, que está guardado con CRLF en todas sus líneas desde
+    antes (95 de 95 en `origin/main`): se respetó esa convención.
+  - **Build web de Producción** (`npm run build`) sobre `40bbfdd` (árbol
+    `1fefb6c`, el código final de la entrega): **terminó, exit 0, 2 min 40 s
+    de pared** (21:41:53 → 21:44:33 del 28/09), con `/persona/[id]`, `/sala/[id]`,
+    `/s`, `/sala/nueva` y `/t` en la salida. Un build anterior de la misma
+    sesión también terminaron: `508dbb8` exit 0 en 5 min 53 s y `771301f`
+    exit 0 en 2 min 32 s. **Antes de
+    esta integración no había un build completo confirmado por la auditoría
+    independiente** (sus dos builds de `c9b6119` se interrumpieron compilando).
+  - **Export nativo** (`node scripts/build-capacitor.mjs --release
+    --api-base=https://app.yump.ar`, sobre `40bbfdd`): exit 0, 2 min 23 s, 35
+    rutas en 38 html. El paquete trae `/t/`, `/s/`, `/sala/nueva` y `/p/`;
+    `getLaunchUrl`, `appUrlOpen` y las regex de `/sala/` y `/titulo/`;
+    `https://app.yump.ar` en 6 archivos y **0** con `vercel.app`; la ficha de
+    persona pide `?filmografia=v2`; la bajada no está en ningún HTML. Guardas
+    de Gradle (JDK 17 pasado sólo al comando; el `JAVA_HOME` del sistema apunta
+    a `C:\Program Files\Java\jdk-17.0.5\bin`, que no es válido): `verificarBaseDeApi` y
+    `verificarPaqueteConSalas` **BUILD SUCCESSFUL**; manifest fusionado de
+    debug con los filtros `/sala/`, `/titulo/movie/` y `/titulo/tv/`,
+    `versionCode 2`. `cap sync` sólo cambió fines de línea de dos Gradle
+    generados y se restauraron. **No se generó ni firmó ningún AAB.**
+  - Peticiones reales a TMDB al abrir, en frío (mismo instrumento, TMDB real,
+    Redis = doble del banco, variantes alternadas en la misma ventana): antes →
+    v1 → v2: Villeneuve **23 → 21 → 20**, Spielberg **60 → 55 → 22**, Tom Hanks
+    **50 → 50 → 22**, Samuel L. Jackson **44 → 44 → 22**. Con Redis caliente,
+    2 en todos. "Ver más" (24 obras): 30–35 en frío, 0 en caliente.
+  - Build servido con `next start` (TMDB real, Redis del banco): el HTML de
+    `/sala/<uuid>?organizador=Juan%20P%C3%A9rez%20%26%20%3CCo%3E` trae
+    `<title>Yump</title>`, `og:title` "Yump", `og:description` y
+    `twitter:description` "Juan Pérez &amp; &lt;Co&gt; te invitó a
+    yumpear." (escapado por Next), `og:url` canónica SIN el nombre,
+    `og:site_name`, `og:image` y `noindex`; sin nombre o con uno de 30
+    caracteres, "Te invitaron a yumpear."; el Home conserva su descripción. API:
+    sin versión responde v1 (Villeneuve con `m`: 4 títulos, las dos Dune); con
+    `filmografia=v2`, secciones y roles; `items` sin v2, versión rara y 25
+    ítems → 400. En navegador: ficha de Villeneuve con "Ver más" abierto (28
+    obras), agregar Netflix y después sacar Max → **0 peticiones** a `/api`,
+    las 28 siguen abiertas y el orden cambia; la bajada se ve en escritorio
+    (`display: block`) y no en emulación móvil (`display: none`, puntero
+    táctil). La PWA standalone y la app no se pudieron probar acá.
+  **Informado por el dueño:** Yumpeá está desplegada en la web desde el 27/09
+  (ver la entrada siguiente) y el 28/09 subió el AAB con **`versionCode 2`** a
+  Alpha, que **aparece en la app**. Eso NO equivale a una sala completa probada
+  en teléfonos.
+  **Pendiente de comprobar (nada de esto se probó en un teléfono):** App Links
+  de fichas y de salas (`app.yump.ar: verified`, app cerrada y en segundo
+  plano), la vista previa real de WhatsApp, los cambios visuales en teléfono,
+  PWA y escritorio, la filmografía v2 en el AAB nuevo y el cliente Android
+  anterior durante la transición. El filtro de fichas llega recién con el
+  próximo AAB. Checklist al final de esta entrada.
+  **Antes del AAB definitivo:** el dueño confirma en Play Console el mayor
+  `versionCode` de cualquier canal; el nuevo es estrictamente mayor (si es 2,
+  **3**). `versionName "1.0.1"` es una propuesta, sin aplicar. El repo sigue en
+  `versionCode 2` y no se subió en builds descartables. 🔴 **Orden obligatorio:
+  primero el deploy web, después el AAB.** El AAB nuevo pide
+  `filmografia=v2`; contra el servidor actual (sin versiones) recibiría el
+  contrato viejo y la ficha de persona no lo entiende. Al revés no hay
+  problema: los bundles viejos piden sin versión y reciben v1.
+  **Checklist para el dueño (pendiente, no hecho):** web de escritorio;
+  navegador móvil; PWA instalada; app Android actualizada desde Alpha; con la
+  app cerrada y en segundo plano, abrir un enlace `/sala/` y uno `/titulo/`;
+  teléfono sin la app: los dos abren la web; vista previa real de WhatsApp
+  ("Yump" / "<organizador> te invitó a yumpear."); bajada visible sólo en
+  escritorio; lobby con una persona y después con dos; spinner normal y con
+  "Reducir movimiento"; sin match como organizador e invitado; filmografía v2 y
+  "Ver más"; cambiar plataformas sin perder estado; volver desde una ficha;
+  cliente Android anterior durante la transición (sigue viendo "Filmografía en
+  tus plataformas", ahora con Dune).
+- **Yumpeá EN PRODUCCIÓN WEB (2026-09-27), comprobado; en Alpha de Play
+  (2026-09-28), informado por el dueño.** El dueño aplicó `009_salas.sql` en
+  Supabase Producción, verificó que naciera apagada y encendió
+  `sala_config.activas` (`activas | true`). `origin/main` se fusionó en
+  `feat/salas` (`3a5fe02`) y el merge **`2af1a37`** (padres `06bdfd1` y
+  `417f72f`) se pusheó y desplegó; 🔴 su árbol es **`ac9715d`, el mismo objeto
+  que compiló el AAB `versionCode 2`** (identidad de árbol, no inspección).
+  **Comprobado contra `app.yump.ar` después del deploy (27/09):**
+  `POST /api/sala/preparar` → 401; `/sala/nueva` y `/s` → 200; el Home trae
+  "Yumpeá"; `/.well-known/assetlinks.json` → 200, `application/json`, 0
+  redirecciones, con las tres huellas de firma de aplicación. **Contra Supabase
+  Producción con la anon key:** `sala_crear` → `42501` y `sala_unirse` →
+  `22023 sala_credencial_invalida` (existen, corren y tienen los permisos
+  correctos). **No volver a ejecutar `009_salas.sql`.** El botón web de Google
+  Play sigue apagado (`NEXT_PUBLIC_YUMP_PLAY_PUBLICA` sin definir). **Pendiente
+  en teléfonos:** una sala completa web–Android, enlaces de WhatsApp y
+  `app.yump.ar: verified`. (Registrado primero en el commit local `d95e04d` de
+  `feat/salas`, no pusheado; se integró acá a mano con el dato del 28/09.)
 - **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 a 3 hechas y 4 construida; sin
   merge, push, deploy ni cambios en Producción (2026-09-19).** Plan aprobado
   por el dueño con tres rondas de correcciones:
@@ -315,6 +398,9 @@
   Yumpeá adentro; `assetlinks.json` con las tres huellas de firma de aplicación,
   servido con 200 y sin redirecciones. **Ese AAB hay que volver a compilarlo**
   desde el árbol fusionado antes de subirlo.
+  *(Histórico al 27/09: lo que sigue quedó superado el mismo día —migración,
+  encendido, merge y deploy— y el AAB se subió a Alpha el 28/09; ver la entrada
+  "Yumpeá EN PRODUCCIÓN WEB" arriba.)*
   **Nada publicado:** sin migración, sin encendido, sin merge, sin push, sin
   deploy y sin subida a Play. **Nada probado en teléfonos.**
   Sigue la Etapa 6, **no autorizada todavía**. **No autorizado tampoco:** migraciones en Producción, deploy,
