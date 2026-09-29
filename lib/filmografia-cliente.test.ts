@@ -174,4 +174,3 @@ test("las URLs llevan la versión y codifican el id", () => {
   assert.equal(urlItems("31", ["movie:1", "tv:2"]), "/api/person/31?filmografia=v2&items=movie:1,tv:2");
   assert.equal(urlApertura("a/b"), "/api/person/a%2Fb?filmografia=v2");
 });
-

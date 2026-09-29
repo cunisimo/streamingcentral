@@ -12,7 +12,7 @@ import { codeForTmdbId } from "./providers-ar.ts";
 import { decisionDeTmdb } from "./disponibilidad.ts";
 import {
   agruparSecciones, armarFilmografia, armarFilmografiaV1, compararObras, esActuacion, esAparicionPropia,
-  MAX_POR_PEDIDO, MAX_V1, ordenDeSecciones, parsearClave, repararCreditos, resolverBloque,
+  evaluadasPorElCodigoAnterior, MAX_POR_PEDIDO, MAX_V1, ordenDeSecciones, parsearClave, repararCreditos, resolverBloque,
   type CreditoPersona, type GrupoObra,
 } from "./filmografia.ts";
 import { BLOQUE, BLOQUE_INICIAL, claveDe, siguienteBloque } from "./filmografia-bloques.ts";
@@ -448,4 +448,29 @@ test("v2 no arma el contrato viejo (una petición = una versión)", async () => 
   const r = await armarFilmografia({ credits: { cast: [cred({ id: 1, character: "X" })], crew: [] }, conocidoPor: "Acting", aObra, plataformasDe });
   assert.equal("titles" in r, false);
   assert.equal("hidden" in r, false);
+});
+
+// --- Presupuesto de v1: nunca más obras que el código anterior ------------------
+test("v1: el presupuesto es EXACTAMENTE lo que evaluaba el código viejo, índice que pisaba roles incluido", async () => {
+  const casos: { cast: CreditoPersona[]; crew: CreditoPersona[] }[] = [
+    { cast: castVilleneuve, crew: crewVilleneuve },
+    { cast: [], crew: crewVilleneuve },
+    // Varios créditos de reparto en la misma obra: el último pisaba el character.
+    { cast: [cred({ id: 7, media_type: "tv", character: "Nick Fury" }), cred({ id: 7, media_type: "tv", character: "Self" }), cred({ id: 8, character: "Self" }), cred({ id: 8, character: "Frozone (voice)" })], crew: [] },
+    carrera229(),
+  ];
+  for (const { cast, crew } of casos) {
+    const viejo = await repararCreditosViejo(cast, crew);
+    assert.equal(evaluadasPorElCodigoAnterior({ cast, crew }), seleccionVieja(viejo.cast, viejo.crew).length);
+  }
+});
+
+test("🔴 v1 nunca evalúa más obras que el código viejo para esa persona (Villeneuve: el bug le dejaba 7 en la fixture)", async () => {
+  const rep = await repararCreditos({ cast: castVilleneuve, crew: crewVilleneuve }, sinRespaldo, "t", true);
+  const viejo = await repararCreditosViejo(castVilleneuve, crewVilleneuve);
+  const presupuesto = seleccionVieja(viejo.cast, viejo.crew).length;
+  const { llamadas, plataformasDe } = contador();
+  await armarFilmografiaV1({ credits: rep, providers: ["m"], aObra, plataformasDe });
+  assert.equal(llamadas.length, presupuesto, "la misma cantidad de obras evaluadas que antes");
+  assert.ok(llamadas.includes(`movie:${DUNE}`) && llamadas.includes(`movie:${DUNE2}`), "pero ahora entran las dos Dune");
 });

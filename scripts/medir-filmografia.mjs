@@ -3,7 +3,7 @@
 // el código viejo (2af1a37), el rechazado (706fb7a) y el actual.
 //
 //   node --env-file=.env.local --import ./scripts/cargar-lib.mjs \
-//        scripts/medir-filmografia.mjs <etiqueta> <personId> <providers> [--ver-mas]
+//        scripts/medir-filmografia.mjs <etiqueta> <personId> <providers> [--ver-mas] [--contrato=v1|v2]
 //
 // Una corrida = UN proceso. Para medir "caché vacía" y "Redis caliente" se
 // corre dos veces contra el mismo Redis: la primera después de vaciarlo, la
@@ -60,7 +60,15 @@ async function medir(fn) {
   };
 }
 
-const apertura = await medir(() => enrich.personFilmography(Number(idArg), providers));
+// Contrato (desde b169d8c la ruta está versionada): `--contrato=v1` mide lo que
+// recibe un cliente Android viejo (sin `filmografia=v2`) y `--contrato=v2` lo
+// que recibe la web. En los árboles anteriores no hay versiones: la función de
+// siempre, y el parámetro se ignora (2af1a37 es "el v1 de antes").
+const contrato = (resto.find((a) => a.startsWith("--contrato=")) ?? "--contrato=v2").slice(11);
+const abrir = contrato === "v1" && typeof enrich.personFilmographyLegado === "function"
+  ? () => enrich.personFilmographyLegado(Number(idArg), providers)
+  : () => enrich.personFilmography(Number(idArg), providers);
+const apertura = await medir(abrir);
 const r = apertura.res;
 // Tres formas de respuesta. Se distinguen por lo que traen, no por una sola
 // señal: 706fb7a ya tenía secciones pero enriquecía todo (sin `disponibilidad`).
@@ -74,7 +82,7 @@ const enriquecidas = nuevo
   ? Object.keys(r.disponibilidad).length + r.sinDisponibilidad.length
   : conSecciones ? distintas : r.titles.length + r.hidden;
 const salida = {
-  etiqueta, persona: r.person?.name, providers: providers.join(","),
+  etiqueta, contrato, persona: r.person?.name, providers: providers.join(","),
   apertura: {
     ms: apertura.ms, tmdbReales: apertura.tmdbReales, cable: apertura.cable, enriquecedor: enriquecidas,
     redis: apertura.redis, bytes: Buffer.byteLength(JSON.stringify(r)), errores429: apertura.errores.http429,

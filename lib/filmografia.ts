@@ -285,6 +285,48 @@ export async function armarFilmografia<C extends CreditoPersona>(o: {
 
 // --- 5. El contrato v1 (legado) ---------------------------------------------
 /**
+ * Cuántas obras evaluaba el código anterior (2af1a37) para esta persona, sin
+ * consultar nada. Es el PRESUPUESTO de v1: un cliente viejo no puede costar más
+ * que antes, y no alcanza con el techo de 40.
+ *
+ * Por qué hace falta (medido el 28/09, mismo instrumento): con el techo de 40
+ * solo, Denis Villeneuve pasaba de 23 a 51 peticiones reales a TMDB, porque el
+ * código viejo —por el bug de los roles— evaluaba 13 de sus obras y v1, ya
+ * reparado, evaluaba sus 28. Acá se cuenta lo que evaluaba el viejo y v1 evalúa
+ * esa misma CANTIDAD, elegida por votos de la lista reparada: Dune entra porque
+ * tiene más votos que las obras que el bug dejaba pasar.
+ *
+ * Réplica exacta de la selección vieja, sólo para contar: el índice por
+ * `media_type:id` se quedaba con el ÚLTIMO crédito de cada obra (reparto y
+ * equipo concatenados, en ese orden) y lo expandía sobre cada crédito. Una obra
+ * "dirigida" sobrevivía sólo si ese último crédito decía `Director`; la
+ * actuación exigía un `character` no vacío y distinto de Self/Himself/Herself
+ * exactos; después se deduplicaba por obra, se sacaban talk show, noticias y
+ * reality y lo que no fuera película o serie, y se cortaba en 40.
+ */
+export function evaluadasPorElCodigoAnterior(credits: Creditos<CreditoPersona>): number {
+  const ultimo = new Map<string, CreditoPersona>();
+  for (const c of [...credits.cast, ...credits.crew]) ultimo.set(`${c.media_type}:${c.id}`, c);
+  const JUNK = new Set([10767, 10763, 10764]);
+  const valida = (c: CreditoPersona) =>
+    (c.media_type === "movie" || c.media_type === "tv") && !(c.genre_ids ?? []).some((g) => JUNK.has(g));
+  const obras = new Set<string>();
+  for (const c of credits.crew) {
+    const k = `${c.media_type}:${c.id}`;
+    if (ultimo.get(k)?.job === "Director" && valida(c)) obras.add(k);
+  }
+  for (const c of credits.cast) {
+    // `{ ...c, ...último }`: si el último crédito de la obra trae `character`
+    // (otro de reparto) lo pisaba; uno de equipo no lo trae y quedaba el propio.
+    const k = `${c.media_type}:${c.id}`;
+    const u = ultimo.get(k)!;
+    const ch = "character" in u ? u.character : c.character;
+    if (ch && !/^(self|himself|herself)$/i.test(ch) && valida(c)) obras.add(k);
+  }
+  return Math.min(MAX_V1, obras.size);
+}
+
+/**
  * Contrato **v1** (`/api/person/[id]` sin `filmografia=v2`): el que leen los
  * bundles Android instalados antes del issue #25, que muestran `titles` como
  * "Filmografía en tus plataformas".
@@ -313,10 +355,11 @@ export async function armarFilmografiaV1<C extends CreditoPersona>(o: {
     vistos.add(g.clave);
     unicas.push(g);
   }
-  // Por votos, estable (como el `sort` de 2af1a37), y el mismo recorte a 40.
+  // Por votos, estable (como el `sort` de 2af1a37), y NUNCA más obras de las que
+  // evaluaba el código anterior para esta misma persona (≤ 40).
   const evaluadas = unicas
     .sort((a, b) => (b.credito.vote_count ?? 0) - (a.credito.vote_count ?? 0))
-    .slice(0, MAX_V1);
+    .slice(0, evaluadasPorElCodigoAnterior(o.credits));
   const lote = await resolverHasta(evaluadas.map((g) => g.clave), o.plataformasDe, MAX_V1);
   const titles: UITitle[] = [];
   for (const g of evaluadas) {
