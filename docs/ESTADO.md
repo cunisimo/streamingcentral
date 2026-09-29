@@ -37,10 +37,12 @@
   (Home 12 rieles, `fallos 0`; v1 de Villeneuve 2 títulos / 11 ocultas) y,
   después, que `?filmografia=v2` responde secciones; la comparación posterior
   la bloqueó el sistema de permisos de su sesión.
-  **AAB:** `6ca23f4` sube sólo `versionCode` 2 → 3 (`versionName 1.0.0` sin
-  cambios, decisión del dueño) y su test; frente a lo desplegado
-  (`95bf527`) difieren sólo `android/app/build.gradle` y
-  `lib/release-android.test.ts`: el paquete web es el mismo código.
+  **AAB:** `6ca23f4` sube `versionCode` 2 → 3 y, después, por decisión del
+  dueño, un commit aparte cambia `versionName` 1.0.0 → **1.1.0** (sólo
+  identificación de versión), cada uno con su test; frente a lo desplegado
+  (`95bf527`) difieren sólo `android/app/build.gradle`,
+  `lib/release-android.test.ts` y documentación: el paquete web es el mismo
+  código y no hace falta otro deploy.
   Sobre `6ca23f4` (árbol `ec272e8`): suite 2208 / 2208 ok, `tsc` 0; export
   nativo release contra `https://app.yump.ar` exit 0 (2 min 19 s, 35 rutas en
   38 html, `/t/`, `/s/`, `/sala/nueva/`, `/p/`, `app.yump.ar` en 6 archivos, 0
@@ -48,7 +50,7 @@
   android` (sólo cambió fines de línea de dos Gradle generados, restaurados);
   `verificarBaseDeApi` y `verificarPaqueteConSalas` BUILD SUCCESSFUL; manifest
   fusionado de **release**: `package ar.yump.app`, `versionCode 3`,
-  `versionName 1.0.0`, `autoVerify` en los tres filtros `https` de
+  `versionName 1.0.0` (antes del cambio a 1.1.0), `autoVerify` en los tres filtros `https` de
   `app.yump.ar` (`/sala/`, `/titulo/movie/`, `/titulo/tv/`), 0 `vercel.app`.
   **Falta la firma:** `android/keystore.properties` (fuera de Git) no existe
   en este worktree y `verificarFirmaDeCarga` corta `bundleRelease` sin él; no
@@ -180,8 +182,8 @@
   anterior durante la transición. El filtro de fichas llega recién con el
   próximo AAB. Checklist al final de esta entrada.
   **AAB definitivo:** el dueño confirmó en Play Console que el mayor es
-  `2 (1.0.0)`; el nuevo es **`versionCode 3`** con `versionName "1.0.0"` (la
-  propuesta `1.0.1` no se aplicó). 🔴 **Orden obligatorio, cumplido: primero
+  `2 (1.0.0)`; el nuevo es **`versionCode 3`** con **`versionName "1.1.0"`**
+  (decisión del dueño del 29/09; la propuesta `1.0.1` no se aplicó). 🔴 **Orden obligatorio, cumplido: primero
   el deploy web (hecho y verificado), después el AAB.** El AAB nuevo pide
   `filmografia=v2`; contra el servidor actual (sin versiones) recibiría el
   contrato viejo y la ficha de persona no lo entiende. Al revés no hay
