@@ -2,9 +2,14 @@
 
 ## #25 — La ficha de persona pierde películas (roles pisados y truncado)
 
-**Estado (29/09): CORREGIDO EN RAMA `fix/yumpea-filmografia-entrega` para v2;
-v1 (bundles Android viejos) = compatibilidad legacy EXACTA por decisión del
-dueño (opción A, `12abbbc`; ver "Decisión del dueño" abajo).** Antes (28/09): CORREGIDO EN RAMA `fix/yumpea-filmografia-entrega`
+**Estado (29/09): CORREGIDO Y EN PRODUCCIÓN WEB** (fast-forward de `main` a
+`95bf527`; Vercel Ready para ese commit, informado por el dueño). v2 para la
+web y el AAB nuevo (`versionCode 3`, pendiente de firma y de subida); v1
+(bundles Android viejos) = compatibilidad legacy EXACTA por decisión del
+dueño (opción A, `12abbbc`; ver "Decisión del dueño" abajo). Comprobado en
+Producción por Codex: v1 de Villeneuve con Max igual que antes (2 títulos, 11
+ocultas); v2 con *Duna* y *Duna: Parte dos* en Dirección con Max; `items`
+sólo con v2; "Ver más" con 24; cambio de plataformas sin carga nueva. Antes (28/09): CORREGIDO EN RAMA `fix/yumpea-filmografia-entrega`
 (worktree `wt-yumpea-filmografia`, desde `origin/main` `2af1a37`), junto con
 los ajustes de Yumpeá, para salir en UNA publicación web y UN AAB. SIN MERGE,
 SIN PUSH, SIN DEPLOY.** Integra los dos commits de `fix/filmografia-persona`
@@ -155,8 +160,9 @@ no está implementado.
 `variantesV1()` (lib/filmografia.ts) arma las claves de A, B y C sin consultar
 nada, y `scripts/comparar-v1.mjs` las compara con TMDB real.
 
-**Criterio de cierre:** auditoría de la rama, merge + deploy + AAB nuevo
-autorizados por el dueño, y la checklist en teléfonos (ver `docs/ESTADO.md`).
+**Criterio de cierre:** ~~auditoría de la rama~~ (aprobada), ~~merge +
+deploy~~ (hecho el 29/09), AAB nuevo firmado y subido con autorización del
+dueño, y la checklist en teléfonos (ver `docs/ESTADO.md`).
 
 ## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
 

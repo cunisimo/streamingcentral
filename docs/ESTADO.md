@@ -7,12 +7,52 @@
 
 ## Evidencia y alcance de esta actualización
 
-- **ENTREGA INTEGRADA Yumpeá + filmografía (2026-09-28): EN RAMA
+- **ENTREGA INTEGRADA Yumpeá + filmografía: WEB EN PRODUCCIÓN (2026-09-29);
+  AAB `versionCode 3` PENDIENTE DE FIRMA, NO SUBIDO.** Rama
   `fix/yumpea-filmografia-entrega` (worktree `wt-yumpea-filmografia`), desde
-  `origin/main` `2af1a37` (árbol `ac9715d`, comprobado con `git fetch` el 28/09:
-  `origin/main` no avanzó). NO MERGEADA, NO PUSHEADA, NO DESPLEGADA; ningún AAB
-  nuevo generado ni subido.** Una sola futura publicación web y un solo futuro
-  AAB, del mismo commit y árbol.
+  `origin/main` `2af1a37` (árbol `ac9715d`).
+  **Publicación web (29/09), comprobado en Git:** aprobada por la auditoría
+  final de Codex sobre `feace52` (árbol `9ae0a70`) sin hallazgos bloqueantes;
+  único cambio posterior, un paréntesis de este archivo (`95bf527`). Antes de
+  integrar, sobre `95bf527` (árbol `bf4053f`): suite 2208 / 2208 ok / 0 fallos
+  / 0 omitidos, `tsc` 0, `git diff --check` limpio y build fresco exit 0 (2 min
+  22 s). **Fast-forward** de `origin/main` `2af1a37` → `95bf527` (push de
+  `main` solamente, sin force, sin commit de merge: el árbol publicado es el de
+  la rama). Producción empezó a servir `filmografia=v2` a las 20:37:14 UTC,
+  unos 75 s después del push. El `main` local (worktree `wt-integracion-3c1`,
+  `06bdfd1`) ya estaba atrás de `origin/main` y no se tocó.
+  **Informado por el dueño:** Vercel muestra el deployment de Producción
+  **Ready para `95bf527`**; Play Console muestra como mayor la versión
+  **`2 (1.0.0)`**.
+  **Comprobado en Producción por Codex (29/09, informado por el dueño):** Home
+  con 12 rieles, `fallos: 0`, `degradado: false`; Top funciona, `fallos: 0`,
+  `degradado: false`; `/api/health` con Redis OK y 0 errores 429; v1 de
+  Villeneuve con Max: *La llegada* y *Blade Runner 2049*, 11 ocultas (igual
+  que antes del deploy); v2: *Duna* y *Duna: Parte dos* en Dirección y con
+  Max; `filmografia=v2&items=` funciona e `items` sin v2 se rechaza; "Ver más"
+  cargó las 24 obras de Dirección; cambiar plataformas reordenó sin perder lo
+  cargado ni mostrar una carga nueva; la invitación muestra `Yump` y "Ana te
+  invitó a yumpear."; `/.well-known/assetlinks.json` publicado para
+  `ar.yump.app`. Claude sólo comprobó, antes del deploy, la foto de Producción
+  (Home 12 rieles, `fallos 0`; v1 de Villeneuve 2 títulos / 11 ocultas) y,
+  después, que `?filmografia=v2` responde secciones; la comparación posterior
+  la bloqueó el sistema de permisos de su sesión.
+  **AAB:** `6ca23f4` sube sólo `versionCode` 2 → 3 (`versionName 1.0.0` sin
+  cambios, decisión del dueño) y su test; frente a lo desplegado
+  (`95bf527`) difieren sólo `android/app/build.gradle` y
+  `lib/release-android.test.ts`: el paquete web es el mismo código.
+  Sobre `6ca23f4` (árbol `ec272e8`): suite 2208 / 2208 ok, `tsc` 0; export
+  nativo release contra `https://app.yump.ar` exit 0 (2 min 19 s, 35 rutas en
+  38 html, `/t/`, `/s/`, `/sala/nueva/`, `/p/`, `app.yump.ar` en 6 archivos, 0
+  con `vercel.app`, la ficha pide `?filmografia=v2` y `&items=`); `cap sync
+  android` (sólo cambió fines de línea de dos Gradle generados, restaurados);
+  `verificarBaseDeApi` y `verificarPaqueteConSalas` BUILD SUCCESSFUL; manifest
+  fusionado de **release**: `package ar.yump.app`, `versionCode 3`,
+  `versionName 1.0.0`, `autoVerify` en los tres filtros `https` de
+  `app.yump.ar` (`/sala/`, `/titulo/movie/`, `/titulo/tv/`), 0 `vercel.app`.
+  **Falta la firma:** `android/keystore.properties` (fuera de Git) no existe
+  en este worktree y `verificarFirmaDeCarga` corta `bundleRelease` sin él; no
+  se copió desde otro checkout ni se leyó. Ningún AAB generado ni subido.
   **v1 = COMPATIBILIDAD LEGACY EXACTA (opción A, decisión del dueño del
   29/09).** Los bundles Android instalados (piden sin `filmografia=v2`)
   reciben exactamente lo de antes: las mismas obras evaluadas, con los mismos
@@ -139,11 +179,10 @@
   PWA y escritorio, la filmografía v2 en el AAB nuevo y el cliente Android
   anterior durante la transición. El filtro de fichas llega recién con el
   próximo AAB. Checklist al final de esta entrada.
-  **Antes del AAB definitivo:** el dueño confirma en Play Console el mayor
-  `versionCode` de cualquier canal; el nuevo es estrictamente mayor (si es 2,
-  **3**). `versionName "1.0.1"` es una propuesta, sin aplicar. El repo sigue en
-  `versionCode 2` y no se subió en builds descartables. 🔴 **Orden obligatorio:
-  primero el deploy web, después el AAB.** El AAB nuevo pide
+  **AAB definitivo:** el dueño confirmó en Play Console que el mayor es
+  `2 (1.0.0)`; el nuevo es **`versionCode 3`** con `versionName "1.0.0"` (la
+  propuesta `1.0.1` no se aplicó). 🔴 **Orden obligatorio, cumplido: primero
+  el deploy web (hecho y verificado), después el AAB.** El AAB nuevo pide
   `filmografia=v2`; contra el servidor actual (sin versiones) recibiría el
   contrato viejo y la ficha de persona no lo entiende. Al revés no hay
   problema: los bundles viejos piden sin versión y reciben v1.
