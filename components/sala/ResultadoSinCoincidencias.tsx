@@ -27,7 +27,7 @@ export default function ResultadoSinCoincidencias({ estado, roomId, desfase, rel
       {estado.resultado?.puede_otra_tanda === true && (
         <p className="sala-hint sala-sin-bajada">Si elegís Otra tanda pueden ver otras.</p>
       )}
-      <PieResultado estado={estado} roomId={roomId} seg={seg} releer={releer} />
+      <PieResultado estado={estado} roomId={roomId} seg={seg} releer={releer} sinCoincidencias />
     </div>
   );
 }

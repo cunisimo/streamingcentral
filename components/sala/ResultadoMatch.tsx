@@ -98,8 +98,16 @@ export function Ganadora({ card, union }: { card: CardSala; union: CardSala["pla
  * pantalla del invitado termina en la bajada— y que además repetía lo que ya
  * dice la línea de vencimiento.
  */
-export function PieResultado({ estado, roomId, seg, releer }: { estado: EstadoSala; roomId: string; seg: number | null; releer: () => Promise<void> }) {
+export function PieResultado({ estado, roomId, seg, releer, sinCoincidencias }: {
+  estado: EstadoSala; roomId: string; seg: number | null; releer: () => Promise<void>;
+  /** Sólo la pantalla "Esta vez no hubo match" lo pasa: habilita la espera del invitado. */
+  sinCoincidencias?: boolean;
+}) {
   const puede = estado.resultado?.puede_otra_tanda === true;
+  // "Otra tanda" y "Cerrar sala" conviven sin coincidencias (28/09): mientras
+  // una está en curso, la otra no se puede tocar (ni doble envío cruzado).
+  const [ocupado, setOcupado] = useState<"tanda" | "cerrar" | null>(null);
+  const organizador = estado.participantes.find((p) => p.es_host)?.nombre ?? "quien organiza";
   // Se LEE el ganador que ya calculó la base (`sala_computar` / `sala_desempatar`),
   // no se cuenta ningún voto.
   const hayGanadora = typeof estado.resultado?.ganador_pos === "number";
@@ -107,6 +115,12 @@ export function PieResultado({ estado, roomId, seg, releer }: { estado: EstadoSa
     <div className="sala-pie-resultado">
       {seg !== null && seg > 0 && (
         <p className="sala-vence" role="status">La sala se cierra en <strong>{formatoSeg(seg)}</strong>{puede ? " si no empezás otra tanda." : "."}</p>
+      )}
+      {/* Al INVITADO, sólo sin coincidencias: la única salida es que quien
+          organiza arme otra tanda. Ni con ganadora ni en un empate sin resolver
+          (que no usa este pie). */}
+      {sinCoincidencias && !estado.soy.es_host && !hayGanadora && (
+        <p className="sala-hint sala-espera-otra">Esperá a ver si {organizador} arma otra tanda.</p>
       )}
       {hayGanadora ? (
         <>
@@ -116,7 +130,13 @@ export function PieResultado({ estado, roomId, seg, releer }: { estado: EstadoSa
       ) : puede ? (
         <section className="sala-bloque">
           <span className="chip-group-label">¿Otra tanda?</span>
-          <PrepararTanda roomId={roomId} rotulo="Otra tanda" releer={releer} hint="Sin repetir las películas que ya salieron." />
+          <PrepararTanda roomId={roomId} rotulo="Otra tanda" releer={releer} hint="Sin repetir las películas que ya salieron."
+            bloqueado={ocupado === "cerrar"} onOcupado={(o) => setOcupado(o ? "tanda" : null)} />
+          {/* Sin coincidencias, el organizador también puede cerrar (28/09): el
+              mismo componente y la misma RPC que con ganadora. */}
+          {estado.soy.es_host && (
+            <CerrarSala roomId={roomId} bloqueado={ocupado === "tanda"} onOcupado={(o) => setOcupado(o ? "cerrar" : null)} />
+          )}
         </section>
       ) : null}
       {/* ÚLTIMA, siempre: así queda debajo de "Cerrar sala" cuando hay ganadora

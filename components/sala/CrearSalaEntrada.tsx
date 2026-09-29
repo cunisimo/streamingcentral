@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useAuth } from "../AuthContext";
 import { SALAS_VISIBLES } from "@/lib/sala/entrada";
+import { ES_NATIVO } from "@/lib/plataforma";
 
 // La entrada a **Yumpeá** en el Home, debajo de "Ruleta Yump". Mismo lenguaje
 // visual que los otros dos banners (`.dsmp-banner`), pero es un LINK, no un
@@ -14,6 +15,10 @@ import { SALAS_VISIBLES } from "@/lib/sala/entrada";
 // teléfono. Sale una sola película." y botón "Hacé match" (antes "Matcheá"). Lo
 // mismo en el hub de la cuenta (components/sala/PelimatchTile.tsx); un test fija
 // las cuatro piezas.
+//
+// La BAJADA se ve sólo en un navegador de escritorio (28/09): la decide el CSS
+// (`.sala-bajada`, ver MEDIA_ESCRITORIO en lib/sala/entrada.ts) y en la app
+// Android ni se dibuja. Nombre, emoji, botón, destino y posición no cambian.
 //
 // 🔴 EL CAMBIO DE NOMBRE ES SÓLO VISIBLE. Las rutas (`/sala/nueva`, `/sala/[id]`),
 // las tablas, las RPC y hasta el nombre de este archivo y el del tile siguen
@@ -32,7 +37,7 @@ export default function CrearSalaEntrada() {
         <span className="dsmp-banner-ico" aria-hidden>🍿</span>
         <span className="dsmp-banner-txt">
           <span className="dsmp-banner-title">Yumpeá</span>
-          <span className="dsmp-banner-sub">Cada uno vota en su teléfono. Sale una sola película.</span>
+          {!ES_NATIVO && <span className="dsmp-banner-sub sala-bajada">Cada uno vota en su teléfono. Sale una sola película.</span>}
         </span>
         <span className="dsmp-banner-cta">
           Hacé match

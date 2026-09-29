@@ -53,3 +53,14 @@ export function avisoDeLlegada(nuevos: readonly string[]): string | null {
   if (nuevos.length === 2) return `Se sumaron ${nuevos[0]} y ${nuevos[1]}.`;
   return `Se sumaron ${nuevos.length} personas.`;
 }
+
+/**
+ * Qué ve el organizador donde va "Empezar" (dueño, 28/09). Con menos de
+ * `MINIMO` no hay botón: "Falta que se sume alguien" es un ESTADO (texto de
+ * acento, sin caja ni apariencia de botón, anunciado con `role="status"`).
+ * Desde `MINIMO`, el botón real "Empezar con N". La regla no cambia y el
+ * inicio sigue siendo manual.
+ */
+export function accionEmpezar(n: number): { tipo: "estado"; texto: string } | { tipo: "boton"; rotulo: string } {
+  return n < MINIMO ? { tipo: "estado", texto: rotuloEmpezar(n) } : { tipo: "boton", rotulo: rotuloEmpezar(n) };
+}

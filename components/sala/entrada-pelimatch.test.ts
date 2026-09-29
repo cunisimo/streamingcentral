@@ -25,14 +25,14 @@ const BOTON = "Hacé match";
 test("el banner del Home lleva el texto EXACTO: emoji, nombre, bajada y botón", () => {
   assert.ok(HOME.includes(`<span className="dsmp-banner-ico" aria-hidden>${EMOJI}</span>`), "el emoji");
   assert.ok(HOME.includes(`<span className="dsmp-banner-title">${NOMBRE}</span>`), "el nombre");
-  assert.ok(HOME.includes(`<span className="dsmp-banner-sub">${BAJADA}</span>`), "la bajada");
+  assert.ok(HOME.includes(`<span className="dsmp-banner-sub sala-bajada">${BAJADA}</span>`), "la bajada");
   assert.ok(new RegExp(`dsmp-banner-cta">\\s*${BOTON}`).test(HOME), "el botón");
 });
 
 test("la entrada del hub dice lo mismo y NO conserva la bajada provisoria", () => {
   assert.ok(HUB.includes(`<span className="lock" aria-hidden>${EMOJI}</span>`), "el emoji");
   assert.ok(HUB.includes(`<span>${NOMBRE}</span>`), "el nombre");
-  assert.ok(HUB.includes(`<small>${BAJADA}</small>`), "la bajada definitiva");
+  assert.ok(HUB.includes(`<small className="sala-bajada">${BAJADA}</small>`), "la bajada definitiva");
   // Se mira el JSX, no los comentarios: el del tile nombra la bajada vieja para
   // explicar el cambio, y eso no es texto visible.
   assert.ok(!/<small>Elegir entre varios<\/small>/.test(HUB), "el tile ya no la muestra");
@@ -75,4 +75,39 @@ test("las dos entradas NAVEGAN EN LA MISMA PESTAÑA: sin target, sin ventana flo
     assert.ok(!/apertura/.test(src), "sin lógica especial de apertura");
   }
   assert.ok(!existsSync(join(process.cwd(), "lib/sala/apertura.ts")), "el módulo de apertura ya no existe");
+});
+
+// --- La bajada, sólo en navegador de escritorio (dueño, 28/09) ----------------
+import { MEDIA_ESCRITORIO, bajadaVisible } from "../../lib/sala/entrada.ts";
+
+test("bajada: visible en escritorio; oculta en navegador móvil, PWA standalone y app Android", () => {
+  const escritorio = { nativo: false, displayModeBrowser: true, hover: true, punteroFino: true };
+  assert.equal(bajadaVisible(escritorio), true, "navegador de escritorio");
+  assert.equal(bajadaVisible({ ...escritorio, hover: false, punteroFino: false }), false, "navegador móvil (táctil)");
+  assert.equal(bajadaVisible({ ...escritorio, displayModeBrowser: false }), false, "PWA instalada (standalone), aun en escritorio");
+  assert.equal(bajadaVisible({ ...escritorio, nativo: true }), false, "app Android, con cualquier pantalla y puntero");
+  assert.equal(bajadaVisible({ ...escritorio, punteroFino: false }), false, "tablet táctil con hover emulado");
+});
+
+test("bajada: el CSS usa EXACTAMENTE la media query de la función, y la oculta por defecto", () => {
+  const css = leer("app/globals.css");
+  assert.equal(MEDIA_ESCRITORIO, "(display-mode: browser) and (hover: hover) and (pointer: fine)");
+  const i = css.indexOf(`@media ${MEDIA_ESCRITORIO}{`);
+  assert.ok(i > 0, "falta la media query de escritorio");
+  const bloque = css.slice(i, css.indexOf("}", css.indexOf("{", i) + 1) + 1);
+  assert.ok(bloque.includes(".sala-banner .dsmp-banner-sub.sala-bajada,.hub-tile small.sala-bajada{display:block}"), bloque);
+  const antes = css.slice(0, i);
+  assert.ok(antes.includes(".sala-banner .dsmp-banner-sub.sala-bajada,.hub-tile small.sala-bajada{display:none}"), "oculta por defecto");
+  // Ya no se fuerza en teléfono (la regla del 22/09 se retiró).
+  assert.ok(!css.includes(".sala-banner .dsmp-banner-sub{display:block}"));
+});
+
+test("bajada: en la app Android ni se dibuja; nombre, emoji, botón, destino y los 'Próximamente' no cambian", () => {
+  assert.ok(HOME.includes(`{!ES_NATIVO && <span className="dsmp-banner-sub sala-bajada">`));
+  assert.ok(HUB.includes(`{!ES_NATIVO && <small className="sala-bajada">`));
+  assert.ok(HOME.includes(`<span className="dsmp-banner-title">${NOMBRE}</span>`));
+  assert.ok(HUB.includes(`<span>${NOMBRE}</span>`));
+  // Los otros tiles del hub conservan su "Próximamente", sin la clase nueva.
+  assert.equal(USERHUB.split("<small>Próximamente</small>").length - 1, 2);
+  assert.ok(!USERHUB.includes("sala-bajada"));
 });

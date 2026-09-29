@@ -14,16 +14,21 @@ import { mensajeDeError } from "@/lib/sala/mensajes";
 // sola. `sala_cerrar` la deja `vencida` en el acto —conservando los 5 min para
 // que los demás vean que se cerró—, y el conteo de "una sola sala activa"
 // excluye justamente `vencida`.
-export default function CerrarSala({ roomId, rotulo = "Cerrar sala" }: { roomId: string; rotulo?: string }) {
+// `bloqueado` / `onOcupado`: en "sin coincidencias" comparte pantalla con "Otra
+// tanda" (28/09); mientras una de las dos está en curso, la otra no se toca.
+export default function CerrarSala({ roomId, rotulo = "Cerrar sala", bloqueado, onOcupado }: {
+  roomId: string; rotulo?: string; bloqueado?: boolean; onOcupado?: (ocupado: boolean) => void;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   async function cerrar() {
+    if (busy || bloqueado) return;
     if (!confirm("¿Cerrar la sala para todos?")) return;
-    setBusy(true); setErr("");
+    setBusy(true); onOcupado?.(true); setErr("");
     const { error } = await supabaseBrowser().rpc("sala_cerrar", { p_room: roomId });
-    setBusy(false);
+    setBusy(false); onOcupado?.(false);
     if (error) { setErr(mensajeDeError(error.message)); return; }
     // El estado `vencida` llega por el canal; quien cerró vuelve al Home.
     router.replace("/");
@@ -32,7 +37,7 @@ export default function CerrarSala({ roomId, rotulo = "Cerrar sala" }: { roomId:
   return (
     <>
       <div className="sala-acciones">
-        <button type="button" className="btn ghost" onClick={cerrar} disabled={busy}>{busy ? "Cerrando…" : rotulo}</button>
+        <button type="button" className="btn ghost" onClick={cerrar} disabled={busy || bloqueado}>{busy ? "Cerrando…" : rotulo}</button>
       </div>
       {err && <p className="sala-err" role="alert">{err}</p>}
     </>

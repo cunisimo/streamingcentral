@@ -5,7 +5,7 @@ import PrepararTanda from "./PrepararTanda";
 import CerrarSala from "./CerrarSala";
 import { useVenceEn, formatoSeg } from "@/hooks/useVenceEn";
 import { urlDeSala } from "@/lib/compartir";
-import { rotuloEmpezar, lineaGente, reciénLlegados, avisoDeLlegada, MINIMO } from "@/lib/sala/lobby-nucleo";
+import { rotuloEmpezar, lineaGente, reciénLlegados, avisoDeLlegada, accionEmpezar } from "@/lib/sala/lobby-nucleo";
 import type { EstadoSala } from "@/lib/sala/estado";
 
 // El lobby: quiénes están, cuánto falta para que venza, y —sólo para quien
@@ -18,14 +18,15 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
   const seg = useVenceEn(estado, desfase);
   const [copiado, setCopiado] = useState(false);
 
+  const soyHost = estado.soy.es_host;
+  const accion = accionEmpezar(estado.n);
+  const organizador = estado.participantes.find((p) => p.es_host)?.nombre;
+
   // 🔴 EL ENLACE ES SIEMPRE EL PÚBLICO, no `location.origin`: adentro de la app
   // Android el origen es `https://localhost` y lo copiado no le servía a nadie.
   // No hace falta esperar al montaje —no lee `window`— así que tampoco hay
   // estado ni efecto: es una constante por sala.
   const enlace = urlDeSala(roomId);
-
-  const soyHost = estado.soy.es_host;
-  const organizador = estado.participantes.find((p) => p.es_host)?.nombre;
 
   // Aviso de llegada, JUNTO AL BOTÓN. La lista de arriba ya se actualizaba sola
   // por Realtime; lo que faltaba era que el organizador se enterara sin subir la
@@ -96,14 +97,25 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
 
       {soyHost ? (
         <section className="sala-bloque">
-          <PrepararTanda roomId={roomId} rotulo={rotuloEmpezar(estado.n)} releer={releer} disabled={estado.n < MINIMO}
+          {/* Sólo el organizador: "Falta que se sume alguien" es un ESTADO (texto,
+              sin botón); con 2 o más aparece el botón real "Empezar con N". La
+              regla mínima (MINIMO = 2) y el inicio manual no cambian. */}
+          <PrepararTanda roomId={roomId} rotulo={rotuloEmpezar(estado.n)} releer={releer} disabled={accion.tipo === "estado"}
+            enEspera={accion.tipo === "estado" ? accion.texto : undefined}
             sizeInicial={estado.config_default?.size} duracionInicial={estado.config_default?.duracion}
             hint={<><span>{lineaGente(estado.n)}</span>{aviso && <strong className="sala-llego"> {aviso}</strong>}</>} />
           <CerrarSala roomId={roomId} />
         </section>
       ) : (
         <section className="sala-bloque">
-          <p className="sala-espera" role="status">Esperando a que {organizador ?? "quien organiza"} empiece…</p>
+          {/* El spinner es decorativo (aria-hidden) y gira SÓLO con
+              prefers-reduced-motion: no-preference; con "Reducir movimiento"
+              queda quieto y el mensaje sigue igual. Sin polling: la vista sigue
+              enterándose por el canal de siempre. */}
+          <p className="sala-espera" role="status">
+            <span className="sala-spinner" aria-hidden="true" />
+            <span>Esperando a que {organizador ?? "quien organiza"} empiece…</span>
+          </p>
         </section>
       )}
     </div>

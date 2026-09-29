@@ -17,7 +17,7 @@ import { pedirTanda } from "@/lib/sala/acciones-host";
 // RELEE el estado en el acto con `releer` — el organizador no depende de
 // recibir su propio aviso por el canal para ver "Armando la tanda…"—; los 409
 // se muestran (`insuficientes` trae los tamaños alcanzables, destacados).
-export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, duracionInicial, disabled, hint }: {
+export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, duracionInicial, disabled, hint, enEspera, bloqueado, onOcupado }: {
   roomId: string;
   rotulo: string;
   releer: () => Promise<void>;
@@ -27,6 +27,17 @@ export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, dur
   disabled?: boolean;
   /** La línea de arriba del botón. Admite marcado: el lobby resalta ahí quién se sumó. */
   hint?: React.ReactNode;
+  /**
+   * Si viene, NO hay botón: se muestra este texto como ESTADO (dueño, 28/09).
+   * El lobby lo usa mientras está sólo el organizador: un botón naranja
+   * deshabilitado que dice "Falta que se sume alguien" parecía tocable y no
+   * hacía nada. Ahora es texto de estado, sin caja ni apariencia de botón.
+   */
+  enEspera?: string;
+  /** Otra acción de la misma pantalla está en curso (p. ej. "Cerrar sala"). */
+  bloqueado?: boolean;
+  /** Avisa cuando esta acción empieza y termina, para bloquear las demás. */
+  onOcupado?: (ocupado: boolean) => void;
 }) {
   const [size, setSize] = useState<Size>(sizeInicial ?? CONFIG_DEFAULT.size);
   const [duracion, setDuracion] = useState<Duracion>(duracionInicial ?? CONFIG_DEFAULT.duracion);
@@ -35,7 +46,8 @@ export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, dur
   const [alcanzables, setAlcanzables] = useState<Size[] | null>(null);
 
   async function pedir() {
-    setBusy(true); setErr(""); setAlcanzables(null);
+    if (busy || bloqueado) return;
+    setBusy(true); onOcupado?.(true); setErr(""); setAlcanzables(null);
     const r = await pedirTanda({
       jwt: async () => (await supabaseBrowser().auth.getSession()).data.session?.access_token ?? null,
       post: async (body, jwt) => {
@@ -48,7 +60,7 @@ export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, dur
       },
       releer,
     }, roomId, size, duracion);
-    setBusy(false);
+    setBusy(false); onOcupado?.(false);
     if (!r.ok) { setErr(r.texto); if (r.alcanzables) setAlcanzables(r.alcanzables); }
   }
 
@@ -60,11 +72,18 @@ export default function PrepararTanda({ roomId, rotulo, releer, sizeInicial, dur
           produce anuncios de más. */}
       {hint && <p className="sala-hint" role="status">{hint}</p>}
       {err && <p className="sala-err" role="alert">{err}</p>}
-      <div className="sala-acciones">
-        <button type="button" className="btn" onClick={pedir} disabled={busy || disabled}>
-          {busy ? "Un momento…" : rotulo}
-        </button>
-      </div>
+      {enEspera ? (
+        // Estado, no acción: sin caja, sin fondo, sin borde y sin foco. El
+        // `role="status"` lo anuncia; el botón real ("Empezar con 2") aparece
+        // cuando entra alguien.
+        <p className="sala-falta" role="status">{enEspera}</p>
+      ) : (
+        <div className="sala-acciones">
+          <button type="button" className="btn" onClick={pedir} disabled={busy || disabled || bloqueado}>
+            {busy ? "Un momento…" : rotulo}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
