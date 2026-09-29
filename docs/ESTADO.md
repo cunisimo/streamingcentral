@@ -64,8 +64,8 @@
     / 0 fallos / 0 omitidos**; filmografía 42/42, bloques 6/6, ruta 8/8,
     cliente 10/10. Controles por mutación: v1 con la selección reparada → 11
     fallos; sin el filtro de géneros → 5; una obra más de presupuesto → 9; v2
-    con "el último rol gana" → 6. (Antes, sobre `40bbfdd`: 2195 / 2195 ok (con el paquete nativo presente; sin él son 10
-    omitidos por artefactos opcionales); release Android y scripts: 34/34; `npx tsc
+    con "el último rol gana" → 6. (Antes, sobre `40bbfdd`: 2195 / 2195 ok con el paquete nativo presente; sin él, 10
+    omitidos por artefactos opcionales.) Release Android y scripts: 34/34; `npx tsc
     --noEmit` limpio; `git diff --check` limpio salvo el
     `AndroidManifest.xml`, que está guardado con CRLF en todas sus líneas desde
     antes (95 de 95 en `origin/main`): se respetó esa convención.
