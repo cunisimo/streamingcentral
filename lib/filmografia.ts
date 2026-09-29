@@ -296,12 +296,21 @@ export async function armarFilmografia<C extends CreditoPersona>(o: {
 //     aparición), y DESPUÉS se descartan talk show, noticias y reality (10767,
 //     10763, 10764) sin mirar el personaje, y lo que no sea película o serie;
 //   - orden por `vote_count` descendente, estable.
-// Lo único que v1 cambia respecto del viejo es la REPARACIÓN de roles: sin el
-// índice que pisaba `job` y `character`, Dune vuelve a ser una obra dirigida.
 //
-// La auditoría del 29/09 encontró que 771301f tomaba la CANTIDAD del viejo pero
-// elegía con las reglas de v2: un talk show de muchos votos o un crédito sin
-// personaje podían desplazar a una película que el cliente viejo mostraba.
+// 🔴 DECISIÓN DEL DUEÑO (29/09): v1 es COMPATIBILIDAD EXACTA. Reproduce lo que
+// devolvía 2af1a37 —mismas obras evaluadas, mismos filtros, mismo orden, mismos
+// títulos visibles, mismo presupuesto—, INCLUIDO el índice viejo que pisaba
+// roles. Por eso v1 NO recupera las dos Dune: se aceptó expresamente. La
+// reparación de roles, Dune, las secciones y la carga progresiva son de v2 (la
+// web y todo AAB nuevo). Motivo: se demostró que, con el presupuesto del viejo,
+// no existe una selección que conserve todo lo visible Y sume lo recuperado
+// (test "imposibilidad"), y los clientes viejos no pueden empeorar mientras la
+// gente actualiza.
+//
+// Historia: 771301f tomaba la CANTIDAD del viejo pero elegía con las reglas de
+// v2 (un talk show o un crédito sin personaje podían desplazar a una película
+// visible); 90f15e6 pasó a reglas legacy con roles reparados, y aun así
+// perdía títulos (Spielberg 7 → 5). Las dos quedaron descartadas.
 
 const REGLA_LEGADO_NO_ES_ACTUACION = /^(self|himself|herself)$/i;
 const GENEROS_DESCARTADOS_LEGADO = new Set([10767, 10763, 10764]); // talk, news, reality
@@ -348,36 +357,33 @@ export function evaluadasPorElCodigoAnterior(credits: Creditos<CreditoPersona>):
 }
 
 /**
- * Las obras que evalúa v1: las primeras `presupuesto` de la lista legacy SIN el
- * índice viejo (roles reparados), con `presupuesto` = lo que evaluaba el viejo.
- *
- * ⚠️ PENDIENTE DE DECISIÓN DEL DUEÑO (ver docs/ISSUES.md #25). Con el mismo
- * presupuesto, cada obra que la reparación recupera y que entra en el corte
- * (Dune) deja afuera a la última del viejo. Si ésa estaba en tus plataformas,
- * el cliente viejo la pierde. Está DEMOSTRADO que no hay selección que, sin
- * consultar más obras que antes, garantice a la vez conservar todo lo que se
- * veía y sumar lo recuperado (test "imposibilidad" en lib/filmografia.test.ts).
+ * Las obras que evalúa v1: EXACTAMENTE las que evaluaba el código anterior, en
+ * su orden, con el índice viejo incluido (opción A, decisión del dueño del
+ * 29/09). Son los mismos créditos (con la reparación de IDIOMA, que sólo toca
+ * título y sinopsis y ya la hacía el viejo antes del índice).
  */
 export function seleccionV1<C extends CreditoPersona>(credits: Creditos<C>): C[] {
-  return candidatasLegado(credits, { indiceViejo: false }).slice(0, evaluadasPorElCodigoAnterior(credits));
+  return candidatasLegado(credits, { indiceViejo: true }).slice(0, MAX_V1);
 }
 
 /**
- * Las variantes que se comparan para la decisión pendiente (sólo claves; no
- * consulta nada). `antes` es exactamente lo que evaluaba el viejo.
- *   v1       — la selección vigente (reglas legacy, roles reparados, mismo presupuesto)
- *   exacta   — la del viejo, tal cual (sin sumar lo recuperado)
- *   ampliada — la del viejo MÁS lo recuperado que entra en el top 40 reparado
- *              (conserva todo y suma, pero evalúa más obras que antes)
+ * Las variantes que se compararon para la decisión (sólo claves; no consulta
+ * nada). Se conservan para `scripts/comparar-v1.mjs` y los tests:
+ *   antes    — lo que evaluaba el viejo (2af1a37)
+ *   v1       — la vigente: igual a `antes` (opción A, aprobada)
+ *   reparada — reglas legacy + roles reparados + presupuesto viejo
+ *              (opción B, descartada: perdía títulos visibles)
+ *   ampliada — la del viejo MÁS lo recuperado del top 40 reparado
+ *              (opción C, descartada: evalúa más obras que antes)
  */
-export function variantesV1(credits: Creditos<CreditoPersona>): Record<"antes" | "v1" | "exacta" | "ampliada", string[]> {
+export function variantesV1(credits: Creditos<CreditoPersona>): Record<"antes" | "v1" | "reparada" | "ampliada", string[]> {
   const antes = seleccionDelCodigoAnterior(credits);
   const reparada = candidatasLegado(credits, { indiceViejo: false }).map(claveCredito);
   const recuperadas = reparada.slice(0, MAX_V1).filter((k) => !antes.includes(k));
   return {
     antes,
     v1: seleccionV1(credits).map(claveCredito),
-    exacta: antes,
+    reparada: reparada.slice(0, antes.length),
     ampliada: [...antes, ...recuperadas],
   };
 }
@@ -385,8 +391,9 @@ export function variantesV1(credits: Creditos<CreditoPersona>): Record<"antes" |
 /**
  * Contrato **v1** (`/api/person/[id]` sin `filmografia=v2`): el que leen los
  * bundles Android instalados antes del issue #25, que muestran `titles` como
- * "Filmografía en tus plataformas". Evalúa `seleccionV1` (reglas legacy, roles
- * reparados, el presupuesto del viejo), una consulta por obra.
+ * "Filmografía en tus plataformas". Evalúa `seleccionV1` —exactamente las obras
+ * del código anterior, en su orden—, una consulta por obra. Mismos títulos
+ * visibles que antes para las mismas plataformas; sin Dune (eso es v2).
  *
  * Una consulta de disponibilidad fallida deja la obra afuera de `titles` (no
  * se puede afirmar que está en tus plataformas) y cuenta en `hidden`. Antes,
