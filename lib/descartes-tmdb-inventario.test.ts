@@ -573,6 +573,9 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/api-base.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "URL en el navegador" },
   { archivo: "lib/barra-estado.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "navegador" },
   { archivo: "lib/enlace-oficial.ts", ancla: "catch { return null; }", clase: "no-tmdb", motivo: "new URL()" },
+  // App Links (28/09: salió de lib/sala/, que el barrido no recorre, y ahora también abre fichas).
+  { archivo: "lib/enlaces-app.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "new URL() de un intent: url inválida → no navega" },
+  { archivo: "lib/enlaces-app.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "plugin @capacitor/app ausente o fallido → el enlace no se abre adentro" },
   { archivo: "lib/netflix-top10.ts", ancla: "reader.cancel().catch", clase: "no-tmdb", motivo: "stream del TSV" },
   { archivo: "app/api/admin/top/route.ts", ancla: "catch { return NextResponse.json({ error: \"cuerpo inválido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   { archivo: "app/api/admin/top/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo handler de la ruta de admin (Supabase)" },

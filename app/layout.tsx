@@ -15,7 +15,7 @@ import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import NavHistorial from "@/components/NavHistorial";
 import AtrasNativo from "@/components/nativo/AtrasNativo";
 import AvisoNativo from "@/components/nativo/AvisoNativo";
-import EnlacesDeSala from "@/components/nativo/EnlacesDeSala";
+import EnlacesEntrantes from "@/components/nativo/EnlacesEntrantes";
 import { metadataPwa, pwaActiva } from "@/lib/pwa-nativa";
 
 // Corre ANTES del primer pintado, fija `data-theme` y CREA la meta theme-color.
@@ -101,7 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {/* Sólo hace algo en el contenedor; en web devuelve null. */}
                 <AtrasNativo />
                 <AvisoNativo />
-                <EnlacesDeSala />
+                <EnlacesEntrantes />
               </PlatformsProvider>
             </MyListProvider>
           </AuthProvider>

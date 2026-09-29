@@ -4,7 +4,7 @@ import PlatformLogo from "../PlatformLogo";
 import PrepararTanda from "./PrepararTanda";
 import CerrarSala from "./CerrarSala";
 import { useVenceEn, formatoSeg } from "@/hooks/useVenceEn";
-import { urlDeSala } from "@/lib/compartir";
+import { enlaceDeInvitacion } from "@/lib/sala/invitacion";
 import { rotuloEmpezar, lineaGente, reciénLlegados, avisoDeLlegada, accionEmpezar } from "@/lib/sala/lobby-nucleo";
 import type { EstadoSala } from "@/lib/sala/estado";
 
@@ -24,9 +24,11 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
 
   // 🔴 EL ENLACE ES SIEMPRE EL PÚBLICO, no `location.origin`: adentro de la app
   // Android el origen es `https://localhost` y lo copiado no le servía a nadie.
-  // No hace falta esperar al montaje —no lee `window`— así que tampoco hay
-  // estado ni efecto: es una constante por sala.
-  const enlace = urlDeSala(roomId);
+  // Lleva además `?organizador=<nombre>` —el nombre ya normalizado que trae el
+  // estado— SÓLO para la vista previa de WhatsApp ("Juan te invitó a
+  // yumpear."). No es identidad ni permiso: la sala es el UUID. Ver
+  // lib/sala/invitacion.ts. No lee `window`: no hace falta esperar al montaje.
+  const enlace = enlaceDeInvitacion(roomId, organizador);
 
   // Aviso de llegada, JUNTO AL BOTÓN. La lista de arriba ya se actualizaba sola
   // por Realtime; lo que faltaba era que el organizador se enterara sin subir la

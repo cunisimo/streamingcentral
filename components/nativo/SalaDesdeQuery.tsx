@@ -16,7 +16,7 @@ import { parseParamsSala } from "@/lib/rutas";
 // En la WEB no se usa: `hrefSala` sigue devolviendo `/sala/<uuid>`, que es la
 // URL pública y la que se reparte por WhatsApp. En el contenedor, `hrefSala`
 // devuelve `/s/?id=<uuid>` y entra por acá; un App Link a `app.yump.ar/sala/…`
-// lo traduce `components/nativo/EnlacesDeSala.tsx`.
+// lo traduce `components/nativo/EnlacesEntrantes.tsx`.
 
 function SDetalle() {
   const params = parseParamsSala(useSearchParams());

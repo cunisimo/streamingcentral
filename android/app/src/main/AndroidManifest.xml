@@ -23,40 +23,56 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Enlaces de invitacion a una sala de Yumpea (Android App Links).
-
-                 ACOTADO A /sala/ A PROPOSITO. Con pathPrefix la app se ofrece
-                 SOLO para los enlaces de sala; el resto de app.yump.ar sigue
-                 abriendo en el navegador, que es lo que la gente espera de un
-                 link cualquiera del sitio. Verificar el dominio entero le
-                 sacaria a Chrome toda la navegacion del sitio sin que nadie lo
-                 haya pedido.
-
-                 android:autoVerify="true" es lo que evita el selector de apps:
-                 Android descarga https://app.yump.ar/.well-known/assetlinks.json
-                 y comprueba que la huella SHA-256 declarada ahi coincida con la
-                 firma del paquete instalado.
-
-                 PENDIENTE (bloquea la verificacion, no el build): ese archivo
-                 todavia no existe en el dominio y necesita la huella de Play App
-                 Signing. Mientras no este, NO esta garantizado que el enlace
-                 abra la app: lleva a la sala igual, pero por el navegador. En
-                 Android 12+ un filtro que no verifico NO se ofrece, asi que
-                 abre Chrome directamente, sin preguntar.
-
-                 El intent lo atiende components/nativo/EnlacesDeSala.tsx, que
-                 cubre los dos casos: app cerrada (getLaunchUrl) y en segundo
-                 plano (appUrlOpen). launchMode singleTask, ya declarado arriba,
-                 es lo que hace que no se abra una instancia nueva. -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https"
-                    android:host="app.yump.ar"
-                    android:pathPrefix="/sala/" />
-            </intent-filter>
-
+            <!-- Enlaces publicos que abren la app (Android App Links).
+
+                 ACOTADOS A PROPOSITO. Con pathPrefix la app se ofrece SOLO para
+                 los enlaces de sala y de ficha; el resto de app.yump.ar sigue
+                 abriendo en el navegador, que es lo que la gente espera de un
+                 link cualquiera del sitio. Verificar el dominio entero le
+                 sacaria a Chrome toda la navegacion del sitio sin que nadie lo
+                 haya pedido.
+
+                 android:autoVerify="true" es lo que evita el selector de apps:
+                 Android descarga https://app.yump.ar/.well-known/assetlinks.json
+                 y comprueba que la huella SHA-256 declarada ahi coincida con la
+                 firma del paquete instalado. El archivo esta desplegado (27/09)
+                 con las tres huellas de firma de aplicacion; la verificacion en
+                 un telefono ("app.yump.ar: verified") sigue PENDIENTE. En
+                 Android 12+ un filtro que no verifico NO se ofrece: abre Chrome
+                 directamente, que igual lleva a la sala o a la ficha web.
+
+                 El intent lo atiende components/nativo/EnlacesEntrantes.tsx,
+                 que cubre los dos casos: app cerrada (getLaunchUrl) y en segundo
+                 plano (appUrlOpen), y traduce con lista blanca
+                 (lib/enlaces-app.ts). launchMode singleTask, ya declarado
+                 arriba, es lo que hace que no se abra una instancia nueva. -->
+
+            <!-- Invitacion a una sala de Yumpea: /sala/<uuid> -> /s/?id=<uuid> -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                    android:host="app.yump.ar"
+                    android:pathPrefix="/sala/" />
+            </intent-filter>
+
+            <!-- Ficha compartida (el enlace de un match, 28/09):
+                 /titulo/movie/<id> y /titulo/tv/<id> -> /t/?tipo=...&id=...
+                 Dos prefijos exactos y no "/titulo/" a secas: un enlace con otro
+                 tipo no tiene por que abrir la app. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                    android:host="app.yump.ar"
+                    android:pathPrefix="/titulo/movie/" />
+                <data android:scheme="https"
+                    android:host="app.yump.ar"
+                    android:pathPrefix="/titulo/tv/" />
+            </intent-filter>
+
         </activity>
 
         <provider

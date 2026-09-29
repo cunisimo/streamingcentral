@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { hrefSala, parseParamsSala } from "../rutas.ts";
 import { urlDeSala, SITIO_PUBLICO } from "../compartir.ts";
-import { rutaDeEnlace, HOST_PUBLICO } from "./enlace-nativo.ts";
+import { rutaDeEnlace, HOST_PUBLICO } from "../enlaces-app.ts";
 import { excluidaDeApp, APP_DESDE_ENV, APP_DEL_SCRIPT, motivoParaNoConstruirRelease } from "../../scripts/build-capacitor.mjs";
 
 const leer = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
@@ -68,7 +68,7 @@ test("🔴 el enlace que se reparte es SIEMPRE el público, nunca location.origi
   assert.equal(urlDeSala(UUID), `${SITIO_PUBLICO}/sala/${UUID}`);
   assert.equal(SITIO_PUBLICO, "https://app.yump.ar");
   const lobby = codigo("components/sala/Lobby.tsx");
-  assert.match(lobby, /const enlace = urlDeSala\(roomId\)/);
+  assert.match(lobby, /const enlace = enlaceDeInvitacion\(roomId, organizador\)/);
   // Adentro del contenedor `location.origin` es `https://localhost`: el
   // organizador copiaba un enlace que no le servía a nadie, ni a él.
   assert.doesNotMatch(lobby, /location\.origin/, "volvió el origen del navegador");
@@ -83,6 +83,17 @@ test("rutaDeEnlace traduce el enlace público a la ruta interna del contenedor",
   // WhatsApp y los clientes de correo agregan parámetros: sólo se lee el path.
   assert.equal(rutaDeEnlace(`https://app.yump.ar/sala/${UUID}?utm_source=whatsapp`), `/s/?id=${UUID}`);
   assert.equal(rutaDeEnlace(`https://app.yump.ar/sala/${UUID}#x`), `/s/?id=${UUID}`);
+  // El enlace de invitación trae el nombre del organizador SÓLO para la vista
+  // previa: la traducción usa el path y la query no viaja a la ruta interna.
+  assert.equal(rutaDeEnlace(`https://app.yump.ar/sala/${UUID}?organizador=Juan%20P%C3%A9rez`), `/s/?id=${UUID}`);
+  assert.equal(rutaDeEnlace(`https://app.yump.ar/sala/${UUID}/`), `/s/?id=${UUID}`);
+});
+
+test("rutaDeEnlace: las FICHAS compartidas abren /t/ con tipo e id (App Link de /titulo/, 28/09)", () => {
+  assert.equal(rutaDeEnlace("https://app.yump.ar/titulo/movie/438631"), "/t/?tipo=movie&id=438631");
+  assert.equal(rutaDeEnlace("https://app.yump.ar/titulo/tv/1399"), "/t/?tipo=tv&id=1399");
+  assert.equal(rutaDeEnlace("https://app.yump.ar/titulo/movie/278/"), "/t/?tipo=movie&id=278");
+  assert.equal(rutaDeEnlace("https://app.yump.ar/titulo/movie/278?utm_source=whatsapp#x"), "/t/?tipo=movie&id=278", "la query no pasa");
 });
 
 test("🔴 es lista blanca: un intent puede traer cualquier cosa", () => {
@@ -94,7 +105,26 @@ test("🔴 es lista blanca: un intent puede traer cualquier cosa", () => {
     "https://app.yump.ar/sala/",                       // sin id
     "https://app.yump.ar/sala/no-es-uuid",
     `https://app.yump.ar/sala/${UUID}/extra`,          // segmento de más
-    `https://app.yump.ar/titulo/movie/278`,            // otra sección
+    "https://app.yump.ar/persona/488",                 // otra sección
+    "https://app.yump.ar/",                            // la raíz no se captura
+    "https://app.yump.ar/titulo/person/278",           // tipo fuera de la lista
+    "https://app.yump.ar/titulo/MOVIE/278",            // el tipo es exacto
+    "https://app.yump.ar/titulo/movie/",               // sin id
+    "https://app.yump.ar/titulo/movie/abc",
+    "https://app.yump.ar/titulo/movie/-1",
+    "https://app.yump.ar/titulo/movie/0",
+    "https://app.yump.ar/titulo/movie/0278",           // ceros a la izquierda
+    "https://app.yump.ar/titulo/movie/12345678901",    // más de 10 dígitos
+    "https://app.yump.ar/titulo/movie/%32%37%38",      // codificado
+    "https://app.yump.ar/titulo/movie/278/extra",      // segmento de más
+    "https://app.yump.ar/titulo/movie",
+    `https://app.yump.ar//sala//${UUID}`,              // barras dobles
+    `https://user:pass@app.yump.ar/sala/${UUID}`,      // credenciales
+    `https://app.yump.ar:8443/sala/${UUID}`,           // puerto
+    "http://app.yump.ar/titulo/movie/278",             // sin TLS
+    "https://app.yump.ar.evil.com/titulo/movie/278",
+    "yump://titulo/movie/278",                         // esquema privado
+    "intent://app.yump.ar/titulo/movie/278#Intent;scheme=https;end",
     `javascript:alert(1)`,
     "no es una url",
     "",
@@ -103,18 +133,23 @@ test("🔴 es lista blanca: un intent puede traer cualquier cosa", () => {
 });
 
 test("el contenedor atiende los DOS casos: app cerrada y en segundo plano", () => {
-  const src = codigo("components/nativo/EnlacesDeSala.tsx");
+  const src = codigo("components/nativo/EnlacesEntrantes.tsx");
   // Con la app cerrada el intent llega en el arranque y `appUrlOpen` no se
   // dispara nunca: el listener se registra después. Atender uno solo deja la
   // mitad de los casos sin abrir la sala.
-  assert.match(src, /App\.getLaunchUrl\(\)/, "falta el arranque en frío");
-  assert.match(src, /addListener\("appUrlOpen"/, "falta la app en segundo plano");
-  assert.match(src, /router\.replace\(ruta\)/, "con push, Atrás volvería a una pantalla que nadie pidió");
+  // La lógica está en `atenderEnlaces` (probada abajo con un plugin simulado);
+  // el componente sólo la cablea con el plugin real y `replace`.
+  assert.match(src, /atenderEnlaces\(App, \(ruta\) => router\.replace\(ruta\)\)/, "con push, Atrás volvería a una pantalla que nadie pidió");
+  assert.doesNotMatch(src, /router\.push/);
   assert.match(src, /if \(!ES_NATIVO\) return;/, "el plugin no debe entrar al bundle web");
-  assert.match(leer("app/layout.tsx"), /<EnlacesDeSala \/>/, "no está montado");
+  assert.match(leer("app/layout.tsx"), /<EnlacesEntrantes \/>/, "no está montado");
+  assert.ok(src.includes('from "@/lib/enlaces-app"'), "traduce con la lista blanca");
+  // Los nombres viejos no quedaron vivos.
+  assert.ok(!existsSync(join(process.cwd(), "components/nativo/EnlacesDeSala.tsx")));
+  assert.ok(!existsSync(join(process.cwd(), "lib/sala/enlace-nativo.ts")));
 });
 
-test("el intent-filter está ACOTADO a las salas y pide verificación", () => {
+test("los intent-filters están ACOTADOS a salas y fichas, y piden verificación", () => {
   const manifest = leer("android/app/src/main/AndroidManifest.xml");
   assert.match(manifest, /<intent-filter android:autoVerify="true">/);
   assert.match(manifest, /android:scheme="https"/);
@@ -122,6 +157,14 @@ test("el intent-filter está ACOTADO a las salas y pide verificación", () => {
   // Con pathPrefix el resto del sitio sigue abriendo en el navegador. Verificar
   // el dominio entero le sacaría a Chrome toda la navegación de app.yump.ar.
   assert.match(manifest, /android:pathPrefix="\/sala\/"/);
+  // Exactamente tres prefijos: ni la raíz, ni "/titulo/" a secas, ni otra sección.
+  const prefijos = [...manifest.matchAll(/android:pathPrefix="([^"]+)"/g)].map((m) => m[1]).sort();
+  assert.deepEqual(prefijos, ["/sala/", "/titulo/movie/", "/titulo/tv/"]);
+  assert.equal((manifest.match(/<intent-filter android:autoVerify="true">/g) ?? []).length, 2);
+  assert.ok(!manifest.includes('android:scheme="yump"'), "sin esquema privado");
+  // Los dos filtros verificados usan sólo https y el host canónico.
+  const hosts = [...manifest.matchAll(/android:host="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(hosts.length === 3 && hosts.every((h) => h === "app.yump.ar"), hosts.join(","));
   assert.doesNotMatch(manifest, /android:pathPattern/, "no hace falta y es más fácil de equivocar");
   // singleTask evita que el enlace abra una instancia nueva encima de la viva.
   assert.match(manifest, /android:launchMode="singleTask"/);
@@ -236,4 +279,77 @@ test("🔴 el keystore y sus contraseñas no pueden entrar a Git", () => {
   // dueño existe y está ignorado por la regla de arriba. Lo que sí se comprueba
   // es que la plantilla no se haya llenado por error.
   assert.doesNotMatch(ej, /^(storePassword|keyPassword)=.+$/m, "la plantilla tiene una contraseña escrita");
+});
+
+// ── Los dos caminos, con un plugin simulado ────────────────────────────────
+import { atenderEnlaces, type PluginApp } from "../enlaces-app.ts";
+
+function pluginSimulado(lanzamiento: string | undefined) {
+  let oyente: ((e: { url: string }) => void) | null = null;
+  let quitados = 0;
+  const app: PluginApp = {
+    getLaunchUrl: async () => (lanzamiento === undefined ? undefined : { url: lanzamiento }),
+    addListener: async (_e, fn) => { oyente = fn; return { remove: () => { quitados++; oyente = null; } }; },
+  };
+  return { app, emitir: (url: string) => oyente?.({ url }), quitados: () => quitados, hayOyente: () => oyente !== null };
+}
+const esperar = () => new Promise((r) => setImmediate(r));
+
+test("app CERRADA: el enlace de lanzamiento abre la ficha o la sala (getLaunchUrl)", async () => {
+  for (const [url, ruta] of [
+    ["https://app.yump.ar/titulo/movie/438631", "/t/?tipo=movie&id=438631"],
+    [`https://app.yump.ar/sala/${UUID}?organizador=Juan`, `/s/?id=${UUID}`],
+  ] as const) {
+    const p = pluginSimulado(url);
+    const rutas: string[] = [];
+    atenderEnlaces(p.app, (r) => rutas.push(r));
+    await esperar();
+    assert.deepEqual(rutas, [ruta], url);
+  }
+});
+
+test("app en SEGUNDO PLANO: el evento appUrlOpen navega; sin lanzamiento no se navega al abrir", async () => {
+  const p = pluginSimulado(undefined);
+  const rutas: string[] = [];
+  atenderEnlaces(p.app, (r) => rutas.push(r));
+  await esperar();
+  assert.deepEqual(rutas, [], "arrancar sin enlace no navega");
+  assert.ok(p.hayOyente(), "queda escuchando");
+  p.emitir("https://app.yump.ar/titulo/tv/1399");
+  p.emitir(`https://app.yump.ar/sala/${UUID}`);
+  assert.deepEqual(rutas, ["/t/?tipo=tv&id=1399", `/s/?id=${UUID}`]);
+});
+
+test("un enlace hostil o malformado no navega, ni al arrancar ni como evento", async () => {
+  const p = pluginSimulado("https://app.yump.ar.evil.com/titulo/movie/1");
+  const rutas: string[] = [];
+  atenderEnlaces(p.app, (r) => rutas.push(r));
+  await esperar();
+  for (const u of ["javascript:alert(1)", "https://app.yump.ar/titulo/movie/0278", "yump://titulo/movie/1", ""]) p.emitir(u);
+  assert.deepEqual(rutas, []);
+});
+
+test("desmontar quita el listener, aunque todavía no se hubiera registrado", async () => {
+  const a = pluginSimulado(undefined);
+  const quitarA = atenderEnlaces(a.app, () => {});
+  await esperar();
+  quitarA();
+  assert.equal(a.quitados(), 1);
+  const b = pluginSimulado(undefined);
+  const quitarB = atenderEnlaces(b.app, () => {});
+  quitarB();                // antes de que termine el registro
+  await esperar();
+  assert.equal(b.quitados(), 1, "se quita al registrarse");
+  assert.equal(b.hayOyente(), false);
+});
+
+test("sin plugin (falla el import o el plugin), no navega ni rompe", async () => {
+  const roto: PluginApp = {
+    getLaunchUrl: async () => { throw new Error("sin plugin"); },
+    addListener: async () => { throw new Error("sin plugin"); },
+  };
+  const rutas: string[] = [];
+  atenderEnlaces(roto, (r) => rutas.push(r));
+  await esperar();
+  assert.deepEqual(rutas, []);
 });
