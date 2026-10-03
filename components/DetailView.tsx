@@ -218,7 +218,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           <>
             <div className="dsec-h">Reseña editorial</div>
             <div className="review">
-              <div className="badge">{star}Reseña SC</div>
+              <div className="badge">{star}Reseña Yump</div>
               <p>{t.editorial.texto}</p>
               <p className="auth">— Reseña propia · {t.editorial.fecha}</p>
             </div>

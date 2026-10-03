@@ -35,7 +35,7 @@ export default function TitleCard({ t, rank, onDescartar, sinDatos }: { t: UITit
     <div className={`card${fuera ? " off-plat" : ""}`}>
       <Link className="card-link" href={hrefTitulo(t.type, t.id)}>
         <div className="poster" style={bg}>
-          {t.hasEditorial && <div className="ed-flag">{star}Reseña SC</div>}
+          {t.hasEditorial && <div className="ed-flag" title="Reseña Yump">{star}Yump</div>}
           {/* Número del ranking del Top, va abajo a la izquierda sobre el degradado */}
           {rank != null && <span className={`rank-num${rank <= 3 ? " top3" : ""}`}>{rank}</span>}
           {!t.poster && <div className={`ptitle${rank != null ? " rank-shift" : ""}`}>{t.title}</div>}
