@@ -23,7 +23,7 @@
   En la app Android llega recién con el próximo AAB (el `versionCode 3` ya
   generado trae "Reseña SC"); la web, con el próximo deploy.
 - **ENTREGA INTEGRADA Yumpeá + filmografía: WEB EN PRODUCCIÓN (2026-09-29);
-  AAB `versionCode 3` (`1.1.0`) FIRMADO Y VERIFICADO, NO SUBIDO.** Rama
+  AAB `3 (1.1.0)` SUBIDO A ALPHA (informado por el dueño, 3/10).** Rama
   `fix/yumpea-filmografia-entrega` (worktree `wt-yumpea-filmografia`), desde
   `origin/main` `2af1a37` (árbol `ac9715d`).
   **Publicación web (29/09), comprobado en Git:** aprobada por la auditoría
@@ -105,7 +105,15 @@
     principal con autorización expresa del dueño (destino ignorado por Git,
     contenido no abierto ni mostrado) y **se eliminó del worktree** al
     terminar; el original quedó intacto.
-  **No subido a Play Console. Commits sin push**, a la espera del dueño.
+  - Copia estable, idéntica byte por byte (mismo tamaño y SHA-256):
+    `D:\DESARROLLO\stream central\releases\Yump-1.1.0-vc3.aab`, fuera de Git
+    y de los directorios de build. Rama respaldada en
+    `origin/fix/yumpea-filmografia-entrega` (`4ef762c`), sin force.
+  **Informado por el dueño (3/10):** subió ese AAB a la prueba cerrada
+  **Alpha** como `3 (1.1.0)` y pidió a Google el acceso a **Producción**; está
+  a la espera de esa aprobación. Claude no operó Play Console (Claude in Chrome
+  no estaba conectado) y no vio el estado de procesamiento de la versión.
+  **La checklist manual en teléfonos se omitió por decisión del dueño.**
   **v1 = COMPATIBILIDAD LEGACY EXACTA (opción A, decisión del dueño del
   29/09).** Los bundles Android instalados (piden sin `filmografia=v2`)
   reciben exactamente lo de antes: las mismas obras evaluadas, con los mismos

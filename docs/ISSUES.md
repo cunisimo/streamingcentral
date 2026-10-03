@@ -4,7 +4,7 @@
 
 **Estado (29/09): CORREGIDO Y EN PRODUCCIÓN WEB** (fast-forward de `main` a
 `95bf527`; Vercel Ready para ese commit, informado por el dueño). v2 para la
-web y el AAB nuevo (`versionCode 3`, pendiente de firma y de subida); v1
+web y el AAB nuevo (`3 (1.1.0)`, subido a Alpha por el dueño el 3/10); v1
 (bundles Android viejos) = compatibilidad legacy EXACTA por decisión del
 dueño (opción A, `12abbbc`; ver "Decisión del dueño" abajo). Comprobado en
 Producción por Codex: v1 de Villeneuve con Max igual que antes (2 títulos, 11
@@ -161,8 +161,9 @@ no está implementado.
 nada, y `scripts/comparar-v1.mjs` las compara con TMDB real.
 
 **Criterio de cierre:** ~~auditoría de la rama~~ (aprobada), ~~merge +
-deploy~~ (hecho el 29/09), AAB nuevo firmado y subido con autorización del
-dueño, y la checklist en teléfonos (ver `docs/ESTADO.md`).
+deploy~~ (hecho el 29/09), ~~AAB nuevo~~ (`3 (1.1.0)` subido a Alpha por
+el dueño el 3/10). La checklist en teléfonos se omitió por decisión del dueño.
+Queda: el fast-forward de `main` con la documentación final.
 
 ## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
 
