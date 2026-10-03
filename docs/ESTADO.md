@@ -7,6 +7,21 @@
 
 ## Evidencia y alcance de esta actualización
 
+- **Badge de reseña editorial con la marca Yump (2026-10-03): EN RAMA
+  `fix/badge-resena-yump` (sobre `fix/yumpea-filmografia-entrega` `4ef762c`),
+  SIN PUSH NI DEPLOY.** **Informado por el dueño:** el 3/10 publicó la primera
+  reseña desde `/admin` y se vio bien; pidió que el badge dijera "Reseña Yump"
+  y no "Reseña SC" (marca vieja). **Comprobado en código/tests:** la ficha dice
+  "Reseña Yump"; la tarjeta dice **"★ Yump"** con `title="Reseña Yump"`,
+  corto por decisión del dueño (opción B) después de medirlo en el navegador
+  con la fuente real: el botón de agregar (32 px, arriba a la derecha, en todas
+  las tarjetas) tapaba "★ Reseña Yump" (104 px) 29 px en las tarjetas de 124
+  px y 13 px en las de 140 px del carrusel en celular —con "Reseña SC" ya se
+  pisaba 14 px en las de 124—; "★ Yump" (64 px) entra libre. Test nuevo
+  `lib/resena-marca.test.ts` (RED → GREEN); suite 2210 / 2210 ok, `tsc` 0.
+  Sólo cambia texto: `components/TitleCard.tsx` y `components/DetailView.tsx`.
+  En la app Android llega recién con el próximo AAB (el `versionCode 3` ya
+  generado trae "Reseña SC"); la web, con el próximo deploy.
 - **ENTREGA INTEGRADA Yumpeá + filmografía: WEB EN PRODUCCIÓN (2026-09-29);
   AAB `versionCode 3` (`1.1.0`) FIRMADO Y VERIFICADO, NO SUBIDO.** Rama
   `fix/yumpea-filmografia-entrega` (worktree `wt-yumpea-filmografia`), desde

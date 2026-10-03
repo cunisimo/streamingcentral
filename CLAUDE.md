@@ -47,13 +47,18 @@ de las plataformas del usuario (Netflix, Disney+, Max, etc.), sin cine ni TV
 abierta.
 
 **El diferencial hoy son la ruleta y los votos de la comunidad, NO las reseñas
-editoriales.** El módulo de reseñas propias está construido (dashboard `/admin`,
-tabla `editorial_reviews`, badge y sección en la ficha) pero **en standby por
-decisión del dueño**: si algún día negocia con una plataforma, un puntaje bajo
-firmado por Yump sobre una película de esa plataforma se vuelve una variable de
-la negociación. La tabla está vacía a propósito y el cuadro "Reseña Yump" de la
-ficha no se renderiza nunca. **No proponer cargar reseñas ni reactivar el
-módulo** sin que el dueño lo pida.
+editoriales.** El módulo de reseñas propias (dashboard `/admin`, tabla
+`editorial_reviews`, badge en la tarjeta y sección en la ficha) estuvo en
+standby por decisión del dueño —si algún día negocia con una plataforma, un
+puntaje bajo firmado por Yump sobre una película de esa plataforma se vuelve
+una variable de la negociación— y **el dueño lo usó por primera vez el 3/10/2026**:
+publicó una reseña desde `/admin` y se vio bien. Cargar o no reseñas, y con
+nota o sin ella, es decisión suya: **no proponer cargar reseñas**. La firma es
+"Reseña Yump" en la ficha y "★ Yump" en el badge de la tarjeta (corto a
+propósito: ver `lib/resena-marca.test.ts`). Publicar o borrar se ve al
+instante en la ficha (`/api/title` es dinámica), en ≤ 5 min en los listados
+(`TTL.editorial`) y hasta `TTL.home` (6 h) en los rieles del Home, que guardan
+el badge dentro del Home armado.
 
 Si algún día se retoma, el camino ya está probado y es el de la ruleta: **voz
 editorial sin puntaje**. Cada título del pool trae un "por qué esta" y un "pero"
@@ -1198,8 +1203,8 @@ lib/
                             fecha, tope de anime, paginación). Ver docs/UPCOMING.md
   types.ts               — shape estable que consume toda la UI (UITitle, UITitleDetail, UIPerson)
 
-supabase/schema.sql   — editorial_reviews (construido pero EN STANDBY, tabla vacía
-                        a propósito — ver el encabezado) + votes/user_reviews
+supabase/schema.sql   — editorial_reviews (en uso desde el 3/10/2026, a criterio del
+                        dueño — ver el encabezado) + votes/user_reviews
 ```
 
 ## Rutas API (todas `force-dynamic`, sin caché de Next)
