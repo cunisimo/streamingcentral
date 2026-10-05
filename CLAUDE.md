@@ -55,7 +55,11 @@ una variable de la negociación— y **el dueño lo usó por primera vez el 3/10
 publicó una reseña desde `/admin` y se vio bien. Cargar o no reseñas, y con
 nota o sin ella, es decisión suya: **no proponer cargar reseñas**. La firma es
 "Reseña Yump" en la ficha y "★ Yump" en el badge de la tarjeta (corto a
-propósito: ver `lib/resena-marca.test.ts`). Publicar o borrar se ve al
+propósito: ver `lib/resena-marca.test.ts`). En la ficha las reseñas van en la sección
+**"RESEÑAS · n"** (`components/ResenasAcordeon.tsx`): acordeón SIEMPRE cerrado
+por spoilers y, abierto, ventana con scroll propio. La lista sale de
+`lib/resenas.ts` (la de Yump siempre primera), pensada para sumar las reseñas
+de usuarios cuando se construyan. Publicar o borrar se ve al
 instante en la ficha (`/api/title` es dinámica), en ≤ 5 min en los listados
 (`TTL.editorial`) y hasta `TTL.home` (6 h) en los rieles del Home, que guardan
 el badge dentro del Home armado.

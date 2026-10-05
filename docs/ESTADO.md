@@ -7,6 +7,25 @@
 
 ## Evidencia y alcance de esta actualización
 
+- **Sección RESEÑAS de la ficha como acordeón (2026-10-05): EN RAMA
+  `fix/badge-resena-yump`, SIN PUSH NI DEPLOY; va con el badge (abajo) en el
+  próximo deploy web y el AAB 4.** Pedido y decisiones del dueño (5/10): el
+  título "Reseña editorial" pasa a **"RESEÑAS · n"** con la bajada "Cuidado,
+  puede contener spoilers."; arranca **siempre cerrada** (cerrada no renderiza
+  texto) y al volver a la ficha vuelve cerrada; abierta, una ventana de alto
+  máximo 55 % de la pantalla con scroll propio. Preparada para las reseñas de
+  usuarios que vienen: `lib/resenas.ts` arma la lista (la de Yump siempre
+  primera) y `components/ResenasAcordeon.tsx` la pinta; el sistema de reseñas
+  de usuarios NO está construido. **Comprobado en navegador** (`next dev` local
+  con la reseña real de *Freaks*, Supabase leído con la clave pública): cerrada
+  muestra "RESEÑAS · 1" y la bajada; abierta, ventana de 446 px en 375×812
+  (55 %) y 494 px en 1280×900; rueda dentro de la ventana mueve la ventana (0 →
+  500) y no la página; al final de la ventana (518/518) la página tampoco se
+  mueve (`overscroll-behavior: contain`); rueda afuera mueve la página (1166 →
+  1566); ir a un relacionado y volver la deja cerrada. Tests nuevos
+  `lib/resenas.test.ts` (RED → GREEN); suite 2217 / 2217 ok / 0 omitidos, `tsc`
+  0, build de Producción exit 0. No probado: el arrastre táctil en un teléfono
+  real (sólo emulación con rueda).
 - **Badge de reseña editorial con la marca Yump (2026-10-03): EN RAMA
   `fix/badge-resena-yump` (sobre `fix/yumpea-filmografia-entrega` `4ef762c`),
   SIN PUSH NI DEPLOY.** **Informado por el dueño:** el 3/10 publicó la primera
