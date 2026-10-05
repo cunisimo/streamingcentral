@@ -13,6 +13,10 @@ interface MyListCtx {
   has: (id: number, tipo: MediaType) => boolean;
   toggle: (id: number, tipo: MediaType) => Promise<void>;
   loaded: boolean;
+  // Las claves `tipo:id` de lo que hay en la lista. Sólo lectura: la usa la
+  // vista completa de Mi lista para reconciliar su snapshot al volver de una
+  // ficha sin consultar nada (lib/mi-lista.ts).
+  claves: ReadonlySet<string>;
 }
 
 const Ctx = createContext<MyListCtx | null>(null);
@@ -50,7 +54,7 @@ export function MyListProvider({ children }: { children: ReactNode }) {
     else if (on) void olvidarDescarte(user.id, { tmdb_id: id, tipo });
   }, [user, ids]);
 
-  return <Ctx.Provider value={{ has, toggle, loaded }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ has, toggle, loaded, claves: ids }}>{children}</Ctx.Provider>;
 }
 
 export function useMyList(): MyListCtx | null {
