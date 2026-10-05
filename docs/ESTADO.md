@@ -7,6 +7,41 @@
 
 ## Evidencia y alcance de esta actualización
 
+- **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
+  (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
+  Pedido del dueño: en `/cuenta/lista` (sólo la vista completa; los rieles del
+  hub siguen con `UserShelf`) el selector de las categorías, mismas clases
+  `.tipo-toggle`/`.tt`, sólo Películas y Series. Abre en Películas, o en Series
+  si no hay películas; un tipo vacío muestra "Todavía no guardaste películas."
+  / "…series." con los dos botones; la lista vacía conserva su mensaje. El
+  filtro es local (`lib/mi-lista.ts`, puro; `components/MiListaView.tsx`);
+  dentro de cada tipo sigue el orden de `itemRefs("list")` (más reciente
+  primero; `/api/cards` lo conserva). Volver de una ficha restaura filtro,
+  tarjetas y scroll del snapshot (`cuenta:mi-lista`, firma = usuario) sin
+  consultas, reconciliado contra `MyListContext` (que ahora expone `claves`,
+  sólo lectura): lo que se sacó en la ficha desaparece sin consultar y si se
+  agregó algo se recarga una vez conservando filtro y scroll. Pestañas ARIA
+  (`tablist`/`tab`/`tabpanel`, `aria-selected`, `aria-controls`, tabulación
+  sólo en la elegida, flechas/Inicio/Fin). Sin SQL ni cambios de Supabase,
+  Home o TMDB. Versión: **`versionCode 4`, `versionName "1.2.0"`** y la
+  convención de versionado registrada en `CLAUDE.md` ("Versionado de la app
+  Android"). **Tests:** `lib/mi-lista.test.ts` (RED → GREEN, 12, con dos
+  mutaciones detectadas) y `lib/release-android.test.ts` (RED → GREEN); suite
+  2229 / 2229 ok / 0 omitidos; `tsc` 0; build de Producción fresco (sin `next
+  dev` corriendo, `.next` borrado antes) exit 0; export nativo release contra
+  `https://app.yump.ar` exit 0 con `/cuenta/lista`, el selector y los textos
+  en el paquete. **Comprobado en navegador** (`next dev` local, emulación
+  375×812, con una página de prueba TEMPORAL no commiteada porque la vista
+  real exige sesión y no se inicia sesión contra Supabase de Producción:
+  `MiListaView` real, títulos reales vía `/api/cards`): abre en Películas con
+  las 15 en el orden dado; clic en Series → 3 series en orden y **0
+  peticiones de datos** (sólo los 3 pósters de la CDN de imágenes); teclado
+  ←/Fin/Inicio cambian selección y foco; ir a una ficha y volver conserva
+  Series sin recargar (1 carga en todo el recorrido). **NO comprobado:** el
+  scroll al volver y la vista de escritorio — el panel del navegador quedó
+  oculto (`requestAnimationFrame` congelado y `innerWidth` 0), así que esas
+  mediciones no son válidas; la página real con sesión; el gesto táctil en un
+  teléfono.
 - **Sección RESEÑAS de la ficha como acordeón (2026-10-05): EN RAMA
   `fix/badge-resena-yump`, SIN PUSH NI DEPLOY; va con el badge (abajo) en el
   próximo deploy web y el AAB 4.** Pedido y decisiones del dueño (5/10): el
