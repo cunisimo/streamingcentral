@@ -23,8 +23,8 @@ import DetailSkeleton from "./DetailSkeleton";
 import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType, PlatformCode } from "@/lib/types";
 import AyudasBusqueda from "@/components/AyudasBusqueda";
-
-const star = <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 8.9l6.8-.6z" /></svg>;
+import ResenasAcordeon from "./ResenasAcordeon";
+import { resenasDeFicha } from "@/lib/resenas";
 
 export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }) {
   const router = useRouter();
@@ -71,6 +71,8 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   if (loading || !data) return <DetailSkeleton />;
   const t = data;
   const mine = t.platforms.filter((p) => platforms.includes(p));
+  // Hoy sólo la de Yump; las de usuarios entran acá cuando existan.
+  const resenas = resenasDeFicha(t.editorial);
   // Todavía no salió: es lo que habilita "Recordarme". Se compara contra el día
   // de hoy en ISO, sin husos: la fecha de TMDB es un día calendario, no un
   // instante, y convertirla a Date acá corría el estreno un día en AR (UTC-3).
@@ -214,16 +216,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           {t.editorial?.rating != null && <div className="rb ed"><div className="lbl">Reseña Yump</div><div className="num">{t.editorial.rating.toFixed(1)}</div></div>}
         </div>
 
-        {t.editorial && (
-          <>
-            <div className="dsec-h">Reseña editorial</div>
-            <div className="review">
-              <div className="badge">{star}Reseña Yump</div>
-              <p>{t.editorial.texto}</p>
-              <p className="auth">— Reseña propia · {t.editorial.fecha}</p>
-            </div>
-          </>
-        )}
+        {resenas.length > 0 && <ResenasAcordeon key={`${t.type}:${t.id}`} resenas={resenas} />}
 
         {t.genres.length > 0 && (
           <div className="gtags">{t.genres.map((g) => <span key={g} className="gt">{genreLabel(g)}</span>)}</div>

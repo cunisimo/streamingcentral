@@ -10,9 +10,14 @@ import { readFileSync } from "node:fs";
 const fuente = (ruta: string) => readFileSync(new URL(`../${ruta}`, import.meta.url), "utf8");
 
 test("ficha: la reseña editorial dice \"Reseña Yump\", no la marca vieja", () => {
-  const s = fuente("components/DetailView.tsx");
-  assert.ok(!/Reseña SC/.test(s), "quedó \"Reseña SC\"");
-  assert.match(s, /<div className="badge">\{star\}Reseña Yump<\/div>/);
+  for (const ruta of ["components/DetailView.tsx", "components/ResenasAcordeon.tsx", "lib/resenas.ts"]) {
+    assert.ok(!/Reseña SC/.test(fuente(ruta)), `quedó "Reseña SC" en ${ruta}`);
+  }
+  // La firma sale de la lista de reseñas y el acordeón la pinta con la estrella.
+  assert.match(fuente("lib/resenas.ts"), /autor: "Reseña Yump"/);
+  assert.match(fuente("components/ResenasAcordeon.tsx"), /<div className="badge">\{r\.origen === "yump" && star\}\{r\.autor\}<\/div>/);
+  // El recuadro de la nota en "Puntajes" sigue en la ficha.
+  assert.match(fuente("components/DetailView.tsx"), /<div className="lbl">Reseña Yump<\/div>/);
 });
 
 // En la tarjeta va CORTO a propósito (decisión del dueño, 3/10). El botón de
