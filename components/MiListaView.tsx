@@ -64,7 +64,7 @@ export default function MiListaView({ userId, cargar = cargarMiLista }: { userId
     decidido.current = true;
     const e = decidirRestauracionVista<UITitle[], { tipo: TipoLista }>({ clave: CLAVE, firma: userId, volvio: consumirVuelta(ruta) });
     const snapshot = e?.extra?.tipo ? { datos: { tipo: e.extra.tipo, items: e.datos }, scrollY: e.scrollY } : null;
-    abrirMiLista({ snapshot, enLista: lista?.loaded ? lista.claves : null, cargar })
+    abrirMiLista({ snapshot, enLista: lista?.loaded ? lista.asentado : null, cargar })
       .then((v) => {
         if (!montado.current) return;
         scrollPendiente.current = v.scrollY;

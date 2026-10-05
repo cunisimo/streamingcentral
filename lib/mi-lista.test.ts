@@ -68,7 +68,7 @@ test("cambiar de filtro es LOCAL: no consulta nada (ni Supabase, ni /api/cards, 
 test("volver de una ficha: filtro, tarjetas y scroll del snapshot, SIN consultas", async () => {
   const { llamadas, cargar } = contador(MEZCLA);
   const snapshot = { datos: { tipo: "tv", items: MEZCLA } as SnapshotMiLista, scrollY: 640 };
-  const v = await abrirMiLista({ snapshot, enLista: new Set(claves(MEZCLA)), cargar });
+  const v = await abrirMiLista({ snapshot, enLista: async () => new Set(claves(MEZCLA)), cargar });
   assert.equal(v.tipo, "tv", "conserva el filtro elegido aunque haya películas");
   assert.equal(v.scrollY, 640);
   assert.deepEqual(claves(v.items), claves(MEZCLA));
@@ -79,7 +79,7 @@ test("volver después de SACAR un título en la ficha: desaparece, sin consultas
   const { llamadas, cargar } = contador(MEZCLA);
   const snapshot = { datos: { tipo: "movie", items: MEZCLA } as SnapshotMiLista, scrollY: 300 };
   const enLista = new Set(claves(MEZCLA).filter((k) => k !== "movie:3"));
-  const v = await abrirMiLista({ snapshot, enLista, cargar });
+  const v = await abrirMiLista({ snapshot, enLista: async () => enLista, cargar });
   assert.deepEqual(claves(deTipo(v.items, "movie")), ["movie:2", "movie:5"]);
   assert.equal(llamadas.n, 0);
 });
@@ -88,7 +88,7 @@ test("volver después de AGREGAR un título en la ficha: recarga una vez y conse
   const nueva = [t("movie", 9), ...MEZCLA];
   const { llamadas, cargar } = contador(nueva);
   const snapshot = { datos: { tipo: "tv", items: MEZCLA } as SnapshotMiLista, scrollY: 300 };
-  const v = await abrirMiLista({ snapshot, enLista: new Set(claves(nueva)), cargar });
+  const v = await abrirMiLista({ snapshot, enLista: async () => new Set(claves(nueva)), cargar });
   assert.equal(llamadas.n, 1);
   assert.equal(v.tipo, "tv");
   assert.equal(v.scrollY, 300);

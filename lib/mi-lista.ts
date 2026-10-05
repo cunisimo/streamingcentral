@@ -8,6 +8,10 @@
 //   reconciliado contra `MyListContext` (la lista en memoria, la misma que
 //   tocan la ficha y las tarjetas): lo que se sacó desaparece sin consultar; si
 //   se agregó algo, se recarga una vez y se conservan filtro y scroll.
+// - Antes de decidir se ESPERA a que se asienten las escrituras pendientes de
+//   Mi lista (`asentado` de lib/mi-lista-memoria.ts): volver al toque después
+//   de tocar "Mi lista" en la ficha leía claves optimistas, y un alta recargaba
+//   antes de existir en Supabase o una baja fallida dejaba el título oculto.
 import type { UITitle } from "./types";
 
 export type TipoLista = "movie" | "tv";
@@ -41,17 +45,20 @@ export function tipoInicial(items: UITitle[]): TipoLista {
 export async function abrirMiLista(o: {
   // Sólo cuando se VOLVIÓ a la vista (atrás/adelante) y hay snapshot vigente.
   snapshot: { datos: SnapshotMiLista; scrollY: number } | null;
-  // Lo que hay en Mi lista según el contexto; `null` si todavía no se sabe.
-  enLista: ReadonlySet<string> | null;
+  // Lo que hay en Mi lista según el contexto, YA ASENTADO (sin escrituras en
+  // vuelo); `null` si todavía no se sabe.
+  enLista: (() => Promise<ReadonlySet<string>>) | null;
   cargar: () => Promise<UITitle[]>;
 }): Promise<VistaMiLista> {
+  // También en una entrada nueva: si se agregó algo y se entró por un enlace,
+  // la carga tiene que ver el alta confirmada.
+  const enLista = o.enLista ? await o.enLista() : null;
   if (o.snapshot) {
     const { datos, scrollY } = o.snapshot;
-    if (o.enLista) {
+    if (enLista) {
       const guardadas = new Set(datos.items.map(claveDe));
-      const hayNuevas = [...o.enLista].some((k) => !guardadas.has(k));
+      const hayNuevas = [...enLista].some((k) => !guardadas.has(k));
       if (!hayNuevas) {
-        const enLista = o.enLista;
         return { items: datos.items.filter((t) => enLista.has(claveDe(t))), tipo: datos.tipo, scrollY };
       }
     }
