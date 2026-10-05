@@ -42,6 +42,31 @@
   oculto (`requestAnimationFrame` congelado y `innerWidth` 0), así que esas
   mediciones no son válidas; la página real con sesión; el gesto táctil en un
   teléfono.
+  **Carrera corregida (auditoría del 5/10):** la ficha hace `void
+  list?.toggle(...)` y el contexto cambiaba las claves de forma optimista antes
+  de que Supabase respondiera; volver al toque a Mi lista decidía con esas
+  claves, así que un alta recargaba antes de existir en la base (el título
+  faltaba) y una baja fallida dejaba el título oculto aunque el contexto
+  revirtiera después. Ahora la escritura de Mi lista vive en
+  `lib/mi-lista-memoria.ts` (pura; `MyListContext` la usa con la misma API más
+  `asentado`), y `abrirMiLista` espera `asentado()` —que resuelve cuando no
+  queda ninguna escritura en vuelo, con confirmación o rollback aplicados—
+  antes de decidir, también en una entrada nueva. Sin demoras, sondeos ni
+  recargas repetidas. `lib/mi-lista-carrera.test.ts`, con escrituras de
+  promesa controlada: **RED** contra el código anterior (fallaban alta
+  confirmada y baja fallida, salida guardada) y **GREEN** después en alta
+  confirmada (1 recarga, el título primero), alta fallida (0 consultas, sin el
+  título), baja confirmada (0 consultas, sin el título), baja fallida (0
+  consultas, el título sigue), sin cambios (0 consultas), entrada nueva con
+  alta pendiente y escrituras encadenadas; un test de REGRESIÓN fija que leer
+  las claves sin esperar vuelve a romper los dos casos. Dos mutaciones
+  detectadas (5 y 3 fallos). El nuevo `allSettled` quedó clasificado en el
+  inventario de `lib/descartes-tmdb-inventario.test.ts`. Suite 2237 / 2237 ok /
+  0 omitidos, `tsc` 0, build de Producción limpio (sin `next dev`, `.next` y
+  `out-capacitor` borrados antes) exit 0, export nativo exit 0. **No probado
+  con sesión real** (no se inician sesiones contra Supabase de Producción):
+  volver al toque tras agregar/eliminar, el scroll al volver y la vista de
+  escritorio quedan para la prueba del dueño.
 - **Sección RESEÑAS de la ficha como acordeón (2026-10-05): EN RAMA
   `fix/badge-resena-yump`, SIN PUSH NI DEPLOY; va con el badge (abajo) en el
   próximo deploy web y el AAB 4.** Pedido y decisiones del dueño (5/10): el
