@@ -28,13 +28,14 @@ android {
         applicationId "ar.yump.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 3: el mayor en Play es 2 (1.0.0), confirmado por el dueno en
-        // Play Console el 29/09. Play exige estrictamente mayor, y la app ya
-        // instalada desde la prueba cerrada se actualiza sola porque Play App
-        // Signing vuelve a firmar con la misma clave: no hay que desinstalar.
-        // versionName 1.1.0 (decision del dueno, 29/09): solo identifica la version.
-        versionCode 3
-        versionName "1.1.0"
+        // versionCode 4 / versionName 1.2.0 (decision del dueno, 5/10): el
+        // ultimo subido a Play es 3 (1.1.0). Play exige versionCode estrictamente
+        // mayor en cualquier canal, y la app ya instalada se actualiza sola porque
+        // Play App Signing vuelve a firmar con la misma clave. La convencion
+        // (versionCode creciente; versionName MAJOR.MINOR.PATCH) esta en
+        // CLAUDE.md, "Versionado de la app Android".
+        versionCode 4
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

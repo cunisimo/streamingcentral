@@ -34,6 +34,24 @@ está en `docs/CAPACITOR.md`; el procedimiento de implementación y release en
 `docs/superpowers/plans/2026-09-05-etapa3-android-publicable.md`. El estado de
 publicación y pruebas se consulta en `docs/ESTADO.md`.
 
+### Versionado de la app Android
+
+Convención del dueño (5/10/2026), en `android/app/build.gradle` y fijada por
+`lib/release-android.test.ts`:
+
+- **`versionCode`**: el entero interno de Google Play. Sube en **cada** AAB
+  que se suba a **cualquier** canal y nunca se repite ni baja. Antes de un AAB
+  definitivo, el dueño confirma en Play Console el mayor subido y el nuevo es
+  estrictamente mayor. No se toca en builds descartables.
+- **`versionName`**: `MAJOR.MINOR.PATCH`, lo que ve el usuario en Play.
+  - **MAJOR** (`2.0.0`): relanzamiento, rediseño o transformación muy grande.
+  - **MINOR** (`1.2.0`): nueva funcionalidad visible para el usuario.
+  - **PATCH** (`1.2.1`): correcciones, textos o ajustes sin funcionalidad nueva.
+
+Historial: `1 (1.0.0)` y `2 (1.0.0)` (Yumpeá), `3 (1.1.0)` (filmografía v2),
+`4 (1.2.0)` (acordeón de reseñas y filtro de Mi lista). Qué está subido y en
+qué canal lo dice `docs/ESTADO.md`.
+
 `app/layout.tsx` monta Vercel Analytics y Speed Insights sólo cuando
 `!ES_NATIVO`: miden web/PWA, no el contenedor Android. Allí intentaban cargar
 scripts desde `https://localhost/_vercel/...` y fallaban; se desactivaron tras
