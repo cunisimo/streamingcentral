@@ -12,8 +12,8 @@ suscripción (`claude` → `/status` tiene que mostrar el plan, no una API key).
 
 | Cada cuánto | Qué |
 |---|---|
-| Mensual | Disponibilidad de la ruleta (§2) |
-| Trimestral | Títulos nuevos en la ruleta (§3) |
+| Mensual | Disponibilidad de la ruleta (§1.b, fase `disponibilidad`) |
+| Trimestral | Títulos nuevos en la ruleta (§1.b `descubrir` + `enriquecer`, y LLM de §3) |
 | Octubre | Chip Mágica navidad, antes de la temporada (§4) |
 | Después de cada corrida | Diff del mapa de plataformas (§5) |
 
@@ -39,7 +39,85 @@ acordate de que Claude Code para programar come del mismo pozo.
 
 ---
 
+## 1.b Ruleta: mantenimiento INCREMENTAL (desde 2026-10-06, rama `feat/ruleta-incremental`)
+
+**Reemplaza, para todo lo que consulta TMDB, a `build-roulette-pool`,
+`build-shorts-pool` y `enrich-roulette-collections`** (§2 y §3, que quedan
+como referencia histórica). Los pasos con LLM (`generate-copy`,
+`classify-context`) no cambian.
+
+### Por qué
+
+La secuencia anterior, para refrescar UNA vez el pool de 2401 títulos, hacía
+~5500 pedidos exitosos (más 429 reintentados sin contar): 312 páginas de
+discover (4 órdenes × 8 páginas, solapadas y aun así truncadas), un detalle
+completo de **cada** candidato aunque ya lo tuviéramos, y otro detalle de
+**cada** título con texto sólo para leer `belongs_to_collection`, que ya venía
+en el primero y se tiraba. Además:
+
+- `build-roulette-pool` **reescribe** `pool-ruleta.json` desde cero: se pierden
+  las 590 cortas hasta volver a correr `build-shorts-pool`.
+- Un título que sale del pool (dejó la plataforma) no se vuelve a mirar nunca:
+  su `title_availability` queda vieja para siempre y la ruleta lo sigue
+  sirviendo.
+- `build-roulette-sql` (modo normal) pisa textos de la base con los del JSON
+  local, y `carga-contexto.sql` apaga TODOS los `requiere_contexto` antes de
+  aplicar su lista. En la base hay correcciones a mano que el JSON no tiene
+  (2 `razon` del 23/08 y 6 `requiere_contexto`: Harry Potter y Star Wars).
+
+### Cómo
+
+```bash
+# 1. Plan: NO consulta TMDB, NO escribe nada. Siempre primero.
+node scripts/actualizar-ruleta.mjs
+
+# 2. Descubrir (sólo páginas de discover; deja los candidatos en el estado)
+node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases descubrir --presupuesto 260
+
+# 3. Plan otra vez: ahora los títulos nuevos son EXACTOS
+node scripts/actualizar-ruleta.mjs --fases enriquecer
+
+# 4. Detalle de los nuevos (+ colección sólo de sagas desconocidas)
+node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases enriquecer --presupuesto <plan + 10%>
+
+# 5. Disponibilidad vencida (TTL configurable; se puede repartir en varias corridas)
+node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases disponibilidad --presupuesto 2500 [--max-disponibilidad 800]
+```
+
+Cada corrida deja `data/ruleta-informe-<fecha>.json` y `.md` (intentos HTTP
+reales, éxitos, fallos, reintentos, 429, por operación, diferencias y archivos
+escritos) y `data/carga-ruleta-incremental-<fecha>-N.sql`.
+
+Después, como siempre: `generate-copy.mjs` (sólo procesa los que no tienen
+texto) → `classify-context.mjs` (sólo las secuelas nuevas) →
+**`build-roulette-sql.mjs --textos-nuevos`** → pegar
+`data/carga-ruleta-incremental-*.sql` y después `data/carga-textos-nuevos.sql`.
+**No** pegar `carga-contexto.sql` ni las `carga-ruleta-N.sql` del modo normal.
+
+### Reglas
+
+- **Estado:** `data/ruleta-estado.json`. La primera vez se arma solo desde
+  `pool-ruleta.json` + `copy-ruleta.json` + `colecciones-ruleta.json`, sin
+  consultar TMDB. Verificado el 2026-10-06 contra la base (sólo lectura): mismos
+  2401 títulos y mismos proveedores; difieren sólo las 2 `razon` corregidas a
+  mano, que el SQL incremental no toca.
+- **Reanudación:** cada operación terminada va a `data/ruleta-progreso.jsonl`.
+  Si se corta (presupuesto, Ctrl+C, fallos), el estado NO se toca: se vuelve a
+  correr el mismo comando y no se repite nada.
+- **Presupuesto:** cuenta intentos HTTP, reintentos incluidos, y corta ANTES de
+  superarse. `--ejecutar` sin `--presupuesto` no arranca.
+- **Ritmo:** `--ritmo-ms 250` por defecto (4 pedidos/s, en serie). Un 429
+  respeta `Retry-After` y frena a todos. No hay esperas fijas.
+- **El SQL incremental no menciona columnas editoriales** y la disponibilidad
+  lleva la fecha REAL de la consulta (el generador anterior ponía `now()` a
+  todas las filas).
+- Tests: `npm run test:ruleta` (TMDB simulado; sin red).
+
+---
+
 ## 2. Refrescar disponibilidad (mensual)
+
+> **Histórico.** Reemplazado por §1.b. No usar estos comandos para TMDB.
 
 Las plataformas rotan catálogo. Sin esto, la app recomienda películas que ya
 no están.
@@ -65,6 +143,9 @@ from roulette_titles;
 ---
 
 ## 3. Sumar títulos nuevos a la ruleta (trimestral)
+
+> **Histórico para los pasos 1, 3 y 5** (TMDB y SQL): usar §1.b. Los pasos 2 y
+> 4 (LLM) siguen igual.
 
 Cuatro comandos, en este orden. **Ninguno se puede saltear**: si generás
 textos pero no clasificás contexto, las secuelas nuevas entran a la ruleta

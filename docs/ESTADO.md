@@ -7,6 +7,31 @@
 
 ## Evidencia y alcance de esta actualización
 
+- **Mantenimiento INCREMENTAL de la ruleta (2026-10-06): EN RAMA
+  `feat/ruleta-incremental` (desde `origin/main` `072e227`), commits locales,
+  SIN PUSH, MERGE NI DEPLOY. NO se ejecutó contra TMDB real ni se cargó nada en
+  Supabase: el dueño revisa el informe y autoriza aparte.**
+  Qué es: `scripts/actualizar-ruleta.mjs` + `scripts/ruleta/*` reemplazan los
+  tres scripts que consultaban TMDB (procedimiento en `MANTENIMIENTO.md` §1.b).
+  Plan sin red ni escritura; fases descubrir/enriquecer/disponibilidad;
+  presupuesto de intentos HTTP; ritmo 4/s; `Retry-After`; diario reanudable;
+  SQL incremental sin columnas editoriales; `build-roulette-sql.mjs
+  --textos-nuevos` con guardas `razon is null` / `collection_name is null`.
+  **Comprobado en código:** 20 tests nuevos con TMDB simulado + 5 del SQL
+  (`npm run test:ruleta`), y cuatro mutaciones deliberadas que hacen caer
+  tests; suite completa 2237 / 2219 ok / 0 fallos / 18 omitidos.
+  **Comprobado en base, sólo lectura (service role, `select`):**
+  `roulette_titles` 2401, 2259 con texto, 1782 con "pero", 144
+  `requiere_contexto` (138 del clasificador + 6 manuales), disponibilidad AR de
+  las 2401 con `checked_at` 2026-08-11; coincide con `data/` salvo 2 `razon`
+  corregidas a mano el 23/08. El conector MCP de Supabase respondió
+  `Unauthorized` y no se usó.
+  **Plan calculado (sin TMDB):** 2401 títulos, 2401 con disponibilidad vencida
+  (> 30 días), 525 sagas reutilizables; ~2592 llamadas (191 discover estimadas +
+  2401 `watch/providers`) contra ~5497 del proceso anterior; los títulos nuevos
+  se conocen recién después de la fase descubrir.
+  Pendiente: autorización del dueño para correr la fase descubrir con TMDB real.
+
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
   Pedido del dueño: en `/cuenta/lista` (sólo la vista completa; los rieles del
