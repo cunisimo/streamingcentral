@@ -91,6 +91,59 @@ export function armarDisponibilidad(trozo, region) {
   return p.join("\n");
 }
 
+/** ¿Vino `--textos-nuevos`? */
+export function esTextosNuevos(argv) {
+  return argv.includes("--textos-nuevos");
+}
+
+/**
+ * `--textos-nuevos`: lleva a la base los textos y el contexto de saga de los
+ * títulos que TODAVÍA NO LOS TIENEN, y nada más. Es el paso que sigue a
+ * `actualizar-ruleta.mjs` + `generate-copy.mjs` + `classify-context.mjs`.
+ *
+ * Por qué no alcanza el modo normal: hace `coalesce(excluded.razon, …)`, así
+ * que un texto del JSON local PISA el de la base, y en la base hay
+ * correcciones hechas a mano que el JSON no tiene (las dos `razon` del
+ * 23/08). Y `carga-contexto.sql` pone `requiere_contexto = false` a TODAS las
+ * filas antes de aplicar su lista, lo que se lleva puestas las excepciones
+ * manuales (Harry Potter, Star Wars).
+ *
+ * Las guardas van en el WHERE, contra lo que la base tiene en ese momento:
+ *   - textos:  `razon is null`. Una fila con texto, sea del LLM o corregido a
+ *     mano, no se toca.
+ *   - saga:    `collection_name is null`. Toda secuela ya procesada tiene
+ *     nombre de saga; una nueva todavía no. El contexto sólo se marca `true`
+ *     (nunca se apaga uno existente).
+ */
+export function armarTextosNuevos(textos, contexto, colecciones) {
+  const p = [];
+  const filasTexto = [...textos.values()].filter((r) => r.razon);
+  if (filasTexto.length) {
+    p.push("update roulette_titles rt set razon = v.razon, advertencia = v.advertencia, atencion = v.atencion");
+    p.push("from (values");
+    p.push(filasTexto.map((r) => `  (${num(r.tmdb_id)}, ${q(r.razon)}, ${q(r.advertencia ?? null)}, ${q(r.atencion ?? null)})`).join(",\n"));
+    p.push(") as v(tmdb_id, razon, advertencia, atencion)");
+    p.push("where rt.tmdb_id = v.tmdb_id and rt.media_type = 'movie' and rt.razon is null;");
+    p.push("");
+  }
+  const requieren = (contexto ?? []).filter((r) => r.requiere_contexto).map((r) => r.tmdb_id);
+  if (requieren.length) {
+    // Va ANTES que collection_name: la guarda es justamente que todavía no lo tenga.
+    p.push("update roulette_titles set requiere_contexto = true");
+    p.push(`where media_type = 'movie' and collection_name is null and tmdb_id in (${requieren.join(", ")});`);
+    p.push("");
+  }
+  const conSaga = (colecciones ?? []).filter((f) => f.collection_name);
+  if (conSaga.length) {
+    p.push("update roulette_titles rt set collection_name = v.nombre");
+    p.push("from (values");
+    p.push(conSaga.map((f) => `  (${num(f.tmdb_id)}, ${q(f.collection_name)})`).join(",\n"));
+    p.push(") as v(id, nombre) where rt.tmdb_id = v.id and rt.media_type = 'movie' and rt.collection_name is null;");
+    p.push("");
+  }
+  return p.join("\n");
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const arg = (f) => {
@@ -102,6 +155,23 @@ async function main() {
 
   const pool = JSON.parse(await readFile(resolve("data/pool-ruleta.json"), "utf8"));
   const copy = JSON.parse(await readFile(resolve("data/copy-ruleta.json"), "utf8"));
+
+  if (esTextosNuevos(args)) {
+    const leerSi = async (p) => { try { return JSON.parse(await readFile(resolve(p), "utf8")); } catch { return null; } };
+    const textosTodos = new Map((copy.rows ?? []).filter((r) => r.conoce).map((r) => [r.tmdb_id, r]));
+    const contexto = (await leerSi("data/contexto-ruleta.json"))?.rows ?? [];
+    const colecciones = (await leerSi("data/colecciones-ruleta.json"))?.rows ?? [];
+    const cuerpo = armarTextosNuevos(textosTodos, contexto, colecciones);
+    const path = resolve("data/carga-textos-nuevos.sql");
+    await writeFile(path, [
+      "-- Textos, contexto y saga SÓLO donde la base no los tiene todavía.",
+      "-- Ninguna fila con razon o collection_name existente se modifica.",
+      "", "begin;", "", cuerpo, "commit;", "",
+    ].join("\n"), "utf8");
+    console.log(`\n  ✔ ${path}`);
+    console.log(`  textos candidatos: ${textosTodos.size} (sólo se aplican donde razon is null)`);
+    return;
+  }
 
   const region = pool.region ?? "AR";
   const textos = new Map(

@@ -10,6 +10,7 @@
     "prebuild": "node scripts/stamp-sw.mjs",
     "pwa:assets": "node scripts/generate-pwa-assets.mjs",
     "test": "node --test \"{lib,components,hooks}/**/*.test.ts\"",
+    "test:ruleta": "node --test \"scripts/ruleta/*.test.mjs\" scripts/build-roulette-sql.test.mjs",
     "build:capacitor": "node scripts/build-capacitor.mjs"
   },
   "dependencies": {
