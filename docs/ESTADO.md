@@ -98,6 +98,19 @@
   `apiKeySource=none` porque el mensaje de inicio sale ANTES de autenticarse:
   ahora exige además una respuesta real exitosa. Pendiente: que el dueño
   renueve el login del CLI `claude` (suscripción) y autorice reanudar.
+  **Textos GENERADOS (07/10, tras renovar el login).** Sondeo nuevo OK
+  (`apiKeySource=none`, respuesta real, `claude-sonnet-5`; quitada del hijo
+  sólo `ANTHROPIC_BASE_URL`). 15/15 lotes de 40 en tramos de 5, 1 reintento
+  exitoso (lote 14), 0 fallidos; uso del plan 5 h 14% → 27%, semanal 12% →
+  14% (compartido con la sesión de trabajo; uso extra deshabilitado).
+  Resultado: **483 de 575 con texto, 92 "no conoce"** (31% entre 50–299 votos,
+  0% con 3000+); 2401 textos anteriores intactos; 0 duplicados; vocabulario sin
+  casos reales. **No alcanza para 500 ni para 200 cortas (184)**: propuesta de
+  reemplazo, sin generar, de 25 cortas de la reserva (todas 2020s; varias son
+  especiales, no películas). Decisión pendiente del dueño. `copy-ruleta.json`
+  versionado con las 575 filas nuevas; `ruleta-estado.json` todavía tiene
+  `con_texto=false` para ellas (se sincroniza en el paso siguiente). Sin
+  contexto de secuelas, disponibilidad general, SQL ni Supabase.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
