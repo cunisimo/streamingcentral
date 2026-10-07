@@ -201,10 +201,10 @@ async function main() {
 
   // Antes de gastar un solo lote: ¿el hijo se autentica con la suscripción?
   const sondeo = await sondearAutenticacion({ modelo: MODEL });
-  console.log(`\n  autenticación del hijo: apiKeySource=${sondeo.inicio?.apiKeySource ?? "?"} · modelo ${sondeo.inicio?.model ?? "?"}`);
+  console.log(`\n  autenticación del hijo: apiKeySource=${sondeo.inicio?.apiKeySource ?? "?"} · modelo ${sondeo.inicio?.model ?? "?"} · respuesta de prueba ${sondeo.inicio?.ok ? "OK" : `FALLÓ (${sondeo.inicio?.error})`}`);
   console.log(`  variables quitadas del entorno del hijo: ${sondeo.quitadas.join(", ") || "ninguna"} (valores no mostrados)`);
   if (!esSuscripcion(sondeo.inicio)) {
-    console.error("\n  DETENIDO: no se pudo confirmar la suscripción (apiKeySource distinto de \"none\"). No se generó nada.");
+    console.error("\n  DETENIDO: no se pudo confirmar la suscripción (apiKeySource distinto de \"none\" o la respuesta de prueba falló). No se generó nada.");
     process.exit(4);
   }
 
@@ -293,7 +293,9 @@ async function main() {
       }
     }
 
-    await guardar(); // progreso incremental
+    // Progreso incremental: sólo si el lote produjo algo (un lote fallido no
+    // reescribe el archivo, ni siquiera con la misma información).
+    if (ok) await guardar();
     if (!ok) {
       // Un reintento como máximo: si vuelve a fallar, se DETIENE la corrida
       // (no se sigue gastando cuota con lotes que podrían fallar igual).

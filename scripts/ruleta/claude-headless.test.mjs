@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EventEmitter } from "node:events";
-import { entornoSuscripcion, leerInicio, esSuscripcion, sondearAutenticacion, VARIABLES_DE_FACTURACION } from "./claude-headless.mjs";
+import { entornoSuscripcion, leerInicio, leerSondeo, esSuscripcion, sondearAutenticacion, VARIABLES_DE_FACTURACION } from "./claude-headless.mjs";
 
 test("el entorno del hijo no lleva NINGUNA variable de facturación por API, y conserva el resto", () => {
   const env = { PATH: "x", HOME: "y", ANTHROPIC_API_KEY: "secreto", ANTHROPIC_BASE_URL: "http://gw", CLAUDE_CODE_USE_BEDROCK: "1" };
@@ -16,11 +16,11 @@ test("el entorno del hijo no lleva NINGUNA variable de facturación por API, y c
 });
 
 test("sólo apiKeySource = \"none\" cuenta como suscripción", () => {
-  const init = (src) => `{"type":"system","subtype":"init","apiKeySource":"${src}","model":"claude-sonnet"}\n{"type":"result"}`;
-  assert.equal(esSuscripcion(leerInicio(init("none"))), true);
-  assert.equal(esSuscripcion(leerInicio(init("ANTHROPIC_API_KEY"))), false);
-  assert.equal(esSuscripcion(leerInicio(init("apiKeyHelper"))), false);
-  assert.equal(esSuscripcion(leerInicio("basura")), false, "sin mensaje de inicio no hay garantía");
+  const init = (src) => `{"type":"system","subtype":"init","apiKeySource":"${src}","model":"claude-sonnet"}\n{"type":"result","is_error":false,"result":"OK"}`;
+  assert.equal(esSuscripcion(leerSondeo(init("none"))), true);
+  assert.equal(esSuscripcion(leerSondeo(init("ANTHROPIC_API_KEY"))), false);
+  assert.equal(esSuscripcion(leerSondeo(init("apiKeyHelper"))), false);
+  assert.equal(esSuscripcion(leerSondeo("basura")), false, "sin mensaje de inicio no hay garantía");
   assert.equal(leerInicio(init("none")).model, "claude-sonnet");
 });
 
@@ -30,7 +30,7 @@ test("el sondeo arranca el hijo con el entorno limpio y el modelo pedido", async
     visto = { cmd, argv, opts };
     const h = new EventEmitter();
     h.stdout = new EventEmitter();
-    h.stdin = { write() {}, end() { queueMicrotask(() => { h.stdout.emit("data", '{"type":"system","subtype":"init","apiKeySource":"none","model":"m"}\n'); h.emit("close", 0); }); } };
+    h.stdin = { write() {}, end() { queueMicrotask(() => { h.stdout.emit("data", '{"type":"system","subtype":"init","apiKeySource":"none","model":"m"}\n{"type":"result","is_error":false,"result":"OK"}\n'); h.emit("close", 0); }); } };
     return h;
   };
   process.env.ANTHROPIC_API_KEY_PRUEBA_NO_SE_USA = "1";
@@ -51,4 +51,21 @@ test("generate-copy: hijo con entorno limpio, sondeo antes del primer lote, ids 
   assert.match(s, /if \(!ok\) \{[\s\S]{0,600}process\.exit\(3\)/, "un lote fallido dos veces detiene la corrida");
   assert.match(s, /--model", MODEL/);
   assert.match(s, /"--max-turns", "4"/);
+});
+
+test("el sondeo exige una respuesta REAL exitosa: el mensaje de inicio sale antes de autenticarse", async () => {
+  const { leerSondeo } = await import("./claude-headless.mjs");
+  const init = '{"type":"system","subtype":"init","apiKeySource":"none","model":"m"}';
+  // Caso real del 2026-10-07: init con "none" y después falla la autenticación.
+  const vencida = `${init}\n{"type":"result","subtype":"success","is_error":true,"result":"Failed to authenticate: OAuth session expired"}`;
+  assert.equal(esSuscripcion(leerSondeo(vencida)), false);
+  assert.match(leerSondeo(vencida).error, /OAuth session expired/);
+  const bien = `${init}\n{"type":"result","subtype":"success","is_error":false,"result":"OK"}`;
+  assert.equal(esSuscripcion(leerSondeo(bien)), true);
+  assert.equal(esSuscripcion(leerSondeo(init)), false, "sin resultado no hay garantía");
+});
+
+test("generate-copy no reescribe copy-ruleta.json si el lote no produjo nada", () => {
+  const s = readFileSync(resolve(import.meta.dirname, "..", "generate-copy.mjs"), "utf8");
+  assert.match(s, /if \(ok\) await guardar\(\);/);
 });

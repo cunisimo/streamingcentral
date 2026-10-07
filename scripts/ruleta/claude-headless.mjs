@@ -52,8 +52,27 @@ export function leerInicio(salida) {
   return null;
 }
 
-/** ¿Este inicio garantiza suscripción? Sólo "none" (OAuth, sin API key). */
-export const esSuscripcion = (inicio) => inicio?.apiKeySource === "none";
+/**
+ * Inicio + resultado. El mensaje de inicio se emite ANTES de autenticarse
+ * (2026-10-07: init con "none" y después "OAuth session expired"), así que por
+ * sí solo no prueba nada: hace falta el resultado, y sin error.
+ */
+export function leerSondeo(salida) {
+  const inicio = leerInicio(salida);
+  let resultado = null;
+  for (const linea of salida.split("\n")) {
+    try { const m = JSON.parse(linea); if (m.type === "result") resultado = m; } catch { /* no JSON */ }
+  }
+  return {
+    apiKeySource: inicio?.apiKeySource ?? null,
+    model: inicio?.model ?? null,
+    ok: !!resultado && resultado.is_error === false,
+    error: resultado?.is_error ? String(resultado.result ?? resultado.subtype ?? "error").slice(0, 200) : (resultado ? null : "sin resultado"),
+  };
+}
+
+/** Suscripción garantizada: OAuth sin API key ("none") Y una respuesta real exitosa. */
+export const esSuscripcion = (s) => s?.apiKeySource === "none" && s?.ok === true;
 
 /**
  * Sondeo: una invocación mínima (1 turno, respuesta de una palabra) que sólo
@@ -67,7 +86,7 @@ export function sondearAutenticacion({ modelo = "sonnet", ejecutar = spawn } = {
     let out = "";
     hijo.stdout.on("data", (c) => (out += c));
     hijo.on("error", (e) => mal(new Error(`No pude ejecutar claude: ${e.message}`)));
-    hijo.on("close", () => ok({ inicio: leerInicio(out), quitadas }));
+    hijo.on("close", () => ok({ inicio: leerSondeo(out), quitadas }));
     hijo.stdin.write("Respondé sólo con la palabra OK.");
     hijo.stdin.end();
   });

@@ -86,6 +86,18 @@
   Supabase: `carga_pendiente` (575 nuevos + 575 disponibilidades) y 2345
   `metadatos_pendientes_sql` esperan la carga que se autorice. Ninguno tiene
   texto todavía. Tests: test:ruleta 59/59, suite 2237/2219/0/18.
+  **Textos de los 575 (07/10): DETENIDO antes de generar nada.** Backup
+  completo y validado en `D:\DESARROLLO\stream central\backups-yump\ruleta-2026-10-07-pre-textos\`
+  (23 archivos, SHA-256 en `MANIFIESTO.json`; restauración de prueba: 23/23
+  hashes y plan idéntico). `generate-copy` endurecido (`295ced3` y siguiente):
+  hijo sin variables de facturación por API, `--ids`, `--max-lotes`, corte tras
+  un reintento, sólo ids del lote. Primer tramo: el lote 1 falló dos veces con
+  "OAuth session expired and could not be refreshed" → corrida detenida, 0
+  textos generados, los 2401 existentes intactos (huella), uso del plan sin
+  cambios (5 h 13%, semanal 12%; uso extra deshabilitado). El sondeo había dado
+  `apiKeySource=none` porque el mensaje de inicio sale ANTES de autenticarse:
+  ahora exige además una respuesta real exitosa. Pendiente: que el dueño
+  renueve el login del CLI `claude` (suscripción) y autorice reanudar.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
