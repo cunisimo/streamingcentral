@@ -70,6 +70,22 @@
   los 80): sus cupos se redistribuyeron por la regla aprobada (<1980 68,
   1980s 21). Falta, proyectado con tasas OBSERVADAS: ~200–265 detalles más +
   ~90–110 colecciones. Sin textos, disponibilidad general, SQL ni Supabase.
+  **Selección CERRADA (07/10, decisión del dueño, `4dd993a`):** último recurso
+  determinístico — si el recorrido termina sin el mínimo de cortas, entran
+  cortas REALES ya enriquecidas de la reserva aunque su década esté llena,
+  priorizando la década menos representada (`--sin-nuevos-detalles`: la cola
+  usa sólo el diario y el cliente PROHÍBE `detalle`). Corrida autorizada de
+  colecciones (presupuesto 150, 2 req/s, `--detener-en-429 --sin-sql`): **85
+  intentos, 85 éxitos, 0 fallos, 0 429, 0 detalles**; completa. Estado guardado
+  en el `data/` del worktree (ignorado salvo inventario y cola): pool 2401 →
+  **2976**; los **575** nuevos: <1980 68 · 80s 29 · 90s 98 · 00s 124 · 10s 125
+  · 20s 131; **230 cortas reales ≤ 90** (24 desde la reserva: 8 de los 80, 5 de
+  los 2000, 4 de los 2010, 7 de los 2020); todos con flatrate de Yump y datos
+  completos; 137 con saga (84 secuelas), 0 sin resolver; 102 aptos para chicos;
+  484 servibles en reserva (46 cortas); 441 descartados. Nada de esto está en
+  Supabase: `carga_pendiente` (575 nuevos + 575 disponibilidades) y 2345
+  `metadatos_pendientes_sql` esperan la carga que se autorice. Ninguno tiene
+  texto todavía. Tests: test:ruleta 59/59, suite 2237/2219/0/18.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
