@@ -59,6 +59,17 @@
   126 colecciones = 1422; ~436 servibles quedarían en reserva para la próxima
   ampliación. NO se ejecutó enriquecimiento, textos, disponibilidad, SQL ni
   Supabase.
+  **Enriquecimiento autorizado (07/10, presupuesto 1500, 2 req/s,
+  `--detener-en-429 --sin-sql`, `d46794d`): 1500 intentos, 1500 éxitos, 0
+  fallos, 0 reintentos, 0 429; INCOMPLETO por presupuesto**, estado intacto y
+  1500 detalles en el diario del worktree. Reproducido sin TMDB a la posición
+  1500: 551 aceptados de 575 (206 cortas reales ≤ 90 de 230), 508 servibles en
+  reserva, 441 descartes (283 sin flatrate de Yump, 103 cortas-familia fuera de
+  60–100, 55 sin sinopsis). Las tasas reales de las décadas viejas son mucho
+  más bajas que las supuestas (servibles: 34% <1980 probables cortas, 35–46% en
+  los 80): sus cupos se redistribuyeron por la regla aprobada (<1980 68,
+  1980s 21). Falta, proyectado con tasas OBSERVADAS: ~200–265 detalles más +
+  ~90–110 colecciones. Sin textos, disponibilidad general, SQL ni Supabase.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
