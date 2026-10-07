@@ -490,3 +490,38 @@ test("dos corridas del mismo día no se pisan el informe (fecha y hora argentina
   assert.notEqual(a.informeJson, b.informeJson);
   assert.match(b.informeJson, /ruleta-informe-2026-10-07-1551\.json$/);
 });
+
+// ── Corrida autorizada con "429 = parar" y sin SQL (2026-10-07) ──────────────────
+
+test("con detenerEn429, un 429 corta la corrida ENTERA sin esperar ni reintentar, y conserva el progreso", async () => {
+  const { Detenido429 } = await import("./cliente-tmdb.mjs");
+  const r0 = reloj();
+  const fake = tmdbFalso(BASE, { guion: [null, { status: 429, headers: { "retry-after": "30" } }] });
+  const c = crearClienteTmdb({ token: "x", fetchImpl: fake.fetchImpl, ahora: r0.ahora, esperar: r0.esperar, ritmoMs: 0, detenerEn429: true });
+  await c.pedir("x", "/movie/1/watch/providers");
+  await assert.rejects(() => c.pedir("x", "/movie/2/watch/providers"), Detenido429);
+  assert.equal(c.metricas().r429, 1);
+  assert.equal(c.metricas().reintentos, 0);
+  assert.equal(fake.pedidos.length, 2, "no hubo reintento");
+  assert.ok(!r0.esperas.some((ms) => ms >= 30000), "no esperó el Retry-After");
+
+  const estado = estadoBase(BASE, { dispHace: 60 * DIA });
+  const diario = diarioEnMemoria();
+  const fake2 = tmdbFalso(BASE, { guion: [null, { status: 429, headers: { "retry-after": "1" } }] });
+  const r = await ejecutar({ estado, diario, cliente: cliente(fake2, { detenerEn429: true }), cfg: CFG("p") });
+  assert.equal(r.completo, false);
+  assert.equal(r.motivo, "429");
+  assert.equal(diario.entradas().size, 1, "lo terminado antes del 429 quedó en el diario");
+  assert.equal(fake2.pedidos.length, 2, "después del 429 no salió ningún pedido más");
+});
+
+test("con sql:false una corrida completa no escribe ningún .sql y deja los metadatos pendientes", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ruleta-"));
+  const estado = estadoBase(BASE, { dispHace: 60 * DIA });
+  const r = await ejecutar({ estado, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso({ ...BASE, 1: { ...BASE[1], votos: 900 } })), cfg: CFG("dp") });
+  const out = escribirSalidas(dir, { ...r, estadoAnterior: estado }, iso(AHORA), { sql: false });
+  assert.ok(!readdirSync(dir).some((f) => f.endsWith(".sql")), readdirSync(dir).join(", "));
+  assert.ok(existsSync(join(dir, "ruleta-estado.json")));
+  assert.deepEqual(out.estado.metadatos_pendientes_sql, [1]);
+  assert.equal(out.filasSql.partes, 0);
+});

@@ -135,7 +135,7 @@ export function inventarioDeEstado(estado) {
   };
 }
 
-export function escribirSalidas(dir, { estado, diferencias, dispActualizada, estadoAnterior }, ahoraIso) {
+export function escribirSalidas(dir, { estado, diferencias, dispActualizada, estadoAnterior }, ahoraIso, { sql: conSql = true } = {}) {
   const fecha = fechaAR(Date.parse(ahoraIso));
   const s = archivosDeSalida(dir, fecha);
   const leer = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
@@ -169,12 +169,19 @@ export function escribirSalidas(dir, { estado, diferencias, dispActualizada, est
       if (!a) return false;
       return pendientes.has(t.tmdb_id) || a.vote_count !== t.vote_count || a.vote_average !== t.vote_average || a.runtime !== t.runtime || a.year !== t.year;
     });
-    const sql = armarCargaIncremental({ nuevos: incorporados, metadatos: cambiaronMeta, disponibilidad }, { region: estado.region });
+    // Sin SQL (corrida autorizada sólo para consultar): no se escribe ningún
+    // .sql y lo pendiente sigue pendiente para la carga que se autorice.
+    const sql = conSql ? armarCargaIncremental({ nuevos: incorporados, metadatos: cambiaronMeta, disponibilidad }, { region: estado.region }) : [];
     sql.forEach((contenido, i) => { escribirAtomico(s.sql(i + 1), contenido); escritos.push(s.sql(i + 1)); });
     escribirAtomico(s.pool, JSON.stringify(poolLegado(estado, poolAnterior, ahoraIso), null, 2)); escritos.push(s.pool);
     escribirAtomico(s.colecciones, JSON.stringify(coleccionesLegado(leer(s.colecciones), diferencias.incorporados, estado, ahoraIso), null, 2)); escritos.push(s.colecciones);
-    sig = { ...estado, metadatos_pendientes_sql: [] };
-    filasSql = { nuevos: incorporados.length, metadatos: cambiaronMeta.length, disponibilidad: disponibilidad.length, partes: sql.length };
+    if (conSql) {
+      sig = { ...estado, metadatos_pendientes_sql: [] };
+      filasSql = { nuevos: incorporados.length, metadatos: cambiaronMeta.length, disponibilidad: disponibilidad.length, partes: sql.length };
+    } else {
+      // Lo que esta corrida trajo también queda pendiente de SQL.
+      sig = { ...estado, carga_pendiente: { nuevos: incorporados.map((t) => t.tmdb_id), disponibilidad: disponibilidad.map((d) => d.tmdb_id), desde: ahoraIso } };
+    }
   }
   // El estado va ÚLTIMO: si algo de arriba falla, la próxima corrida retoma del diario.
   escribirAtomico(s.estado, JSON.stringify(sig)); escritos.push(s.estado);

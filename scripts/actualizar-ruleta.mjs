@@ -138,7 +138,7 @@ if (!token) throw new Error("falta TMDB_READ_TOKEN");
 let detener = false;
 process.on("SIGINT", () => { detener = true; console.log("\nCortando al terminar la operación en curso…"); });
 
-const cliente = crearClienteTmdb({ token, ritmoMs: numero("--ritmo-ms", 250), presupuesto });
+const cliente = crearClienteTmdb({ token, ritmoMs: numero("--ritmo-ms", 250), presupuesto, detenerEn429: args.includes("--detener-en-429") });
 const diario = crearDiario(DATOS, diarioPrevio);
 const t0 = Date.now();
 const r = await ejecutar({ estado, diario, cliente, cfg, detener: () => detener, log: (m) => console.log(`  ${m}`) });
@@ -148,7 +148,7 @@ const s = archivosDeSalida(DATOS, fecha, sello);
 let archivosEscritos = [];
 if (r.completo) {
   const ahoraIso = new Date(ahoraMs).toISOString();
-  const out = escribirSalidas(DATOS, { ...r, estadoAnterior: estado }, ahoraIso);
+  const out = escribirSalidas(DATOS, { ...r, estadoAnterior: estado }, ahoraIso, { sql: !args.includes("--sin-sql") });
   archivosEscritos = out.escritos;
   diario.borrar();
 }

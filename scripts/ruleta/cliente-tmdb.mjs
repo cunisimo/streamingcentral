@@ -27,6 +27,19 @@ export class PresupuestoAgotado extends Error {
   }
 }
 
+/**
+ * Modo "un 429 = parar" (pedido por el dueño para las corridas grandes): el
+ * primer 429 corta TODO, sin esperar el Retry-After ni reintentar. Lo terminado
+ * queda en el diario y la próxima corrida retoma.
+ */
+export class Detenido429 extends Error {
+  constructor(ruta, retryAfter) {
+    super(`429 en ${ruta}${retryAfter ? ` (Retry-After: ${retryAfter})` : ""}: corrida detenida`);
+    this.name = "Detenido429";
+    this.retryAfter = retryAfter ?? null;
+  }
+}
+
 /** Fallo definitivo de una operación (agotó reintentos o es un 4xx). */
 export class FalloTmdb extends Error {
   constructor(op, ruta, status, detalle) {
@@ -63,6 +76,7 @@ export function crearClienteTmdb({
   max429 = 3,
   maxErroresTransitorios = 2,
   timeoutMs = 15000,
+  detenerEn429 = false,
 } = {}) {
   if (!token) throw new Error("falta el token de TMDB");
 
@@ -128,6 +142,7 @@ export function crearClienteTmdb({
 
       if (res.status === 429) {
         m.r429++; op(nombre).r429++;
+        if (detenerEn429) { m.fallos++; op(nombre).fallos++; throw new Detenido429(ruta, res.headers?.get?.("retry-after")); }
         const ms = retryAfterMs(res.headers?.get?.("retry-after"), ahora());
         // Frena a todos: el próximo pedido, de quien sea, sale después.
         proximoPermitido = Math.max(proximoPermitido, ahora() + ms);

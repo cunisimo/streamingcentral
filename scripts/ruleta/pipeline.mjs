@@ -12,7 +12,7 @@
 // se devuelve `completo: false` y la próxima corrida retoma desde el diario.
 // Sólo una corrida sin pendientes ni fallos produce el estado nuevo.
 
-import { PresupuestoAgotado, FalloTmdb } from "./cliente-tmdb.mjs";
+import { PresupuestoAgotado, FalloTmdb, Detenido429 } from "./cliente-tmdb.mjs";
 import {
   FAMILIAS, IDIOMA, paramsDescubrir, claveDescubrir, claveDetalle, claveDisp, claveColeccion,
   construirTitulo, proveedoresDe, esSecuelaInferida, sagaDeColeccion, dispVencida, faltanDatos,
@@ -53,7 +53,7 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
       diario.anotar(clave, r);
       return r;
     } catch (e) {
-      if (e instanceof PresupuestoAgotado || e instanceof Interrumpido) throw e;
+      if (e instanceof PresupuestoAgotado || e instanceof Interrumpido || e instanceof Detenido429) throw e;
       if (e instanceof FalloTmdb) { fallos.push({ clave, error: e.message }); return undefined; }
       throw e;
     }
@@ -198,6 +198,7 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
   } catch (e) {
     if (e instanceof PresupuestoAgotado) corte = "presupuesto";
     else if (e instanceof Interrumpido) corte = "interrumpido";
+    else if (e instanceof Detenido429) { corte = "429"; fallos.push({ clave: "429", error: e.message }); }
     // La cola es ordenada: saltear un título que falló cambiaría qué entra.
     // Se corta y la próxima corrida lo reintenta en su lugar.
     else if (e instanceof FalloEnCola) corte = "fallos";
