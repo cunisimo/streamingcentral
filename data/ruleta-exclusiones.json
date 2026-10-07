@@ -1,0 +1,210 @@
+{
+ "nota": "Exclusiones editoriales de No sé qué ver (dueño, 2026-10-07). El anime y el stand-up también los aplica la regla automática de scripts/ruleta/seleccion.mjs; esta lista deja constancia y cubre lo que la regla no detecta (especiales no narrativos). No se consulta TMDB para mantenerla.",
+ "actualizado": "2026-10-07",
+ "excluidos": {
+  "14003": {
+   "motivo": "anime",
+   "titulo": "Fullmetal Alchemist: El conquistador de Shambala",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "16198": {
+   "motivo": "anime",
+   "titulo": "Mis vecinos los Yamada",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "21057": {
+   "motivo": "anime",
+   "titulo": "Puedo escuchar el mar",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "23151": {
+   "motivo": "anime",
+   "titulo": "El jardín de los pecadores: …y nada en el corazón / Especulación de asesinato (Primera parte)",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "24752": {
+   "motivo": "anime",
+   "titulo": "Dragon Ball Z: El Más Poderoso Contra el Más Poderoso",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "25278": {
+   "motivo": "anime",
+   "titulo": "One Piece: Saga de Arabasta - Los Piratas y la Princesa del Desierto",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "35435": {
+   "motivo": "anime",
+   "titulo": "Higashi no Eden Movie I: The King of Eden",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "37933": {
+   "motivo": "anime",
+   "titulo": "Cuentos de Terramar",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "39100": {
+   "motivo": "anime",
+   "titulo": "Dragon Ball Z: El Más Fuerte del Mundo",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "39101": {
+   "motivo": "anime",
+   "titulo": "Dragon Ball Z꞉ Super Batalla Decisiva por la Tierra",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "39102": {
+   "motivo": "anime",
+   "titulo": "Dragon Ball Z: Son Goku el Super Saiyan",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "39103": {
+   "motivo": "anime",
+   "titulo": "Dragon Ball Z꞉ ¡Choque! Los Guerreros de 10.000 Millones de Poder",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "39104": {
+   "motivo": "anime",
+   "titulo": "Dragon Ball Z꞉ ¡Batalla al Límite! Los Tres Grandes Super Saiyans",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "40534": {
+   "motivo": "especial-no-narrativo",
+   "titulo": "Jonas Brothers: En concierto 3D",
+   "nota": "concierto filmado",
+   "regla": "manual"
+  },
+  "44251": {
+   "motivo": "anime",
+   "titulo": "Dragon Ball Z: ¡El Dúo Peligroso! Los Súper Guerreros Nunca Duermen",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "74510": {
+   "motivo": "stand-up",
+   "titulo": "Kevin Hart: Laugh at My Pain",
+   "regla": "automática (sinopsis)"
+  },
+  "75624": {
+   "motivo": "anime",
+   "titulo": "Naruto Shippuden 5: Prisión de Sangre",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "101449": {
+   "motivo": "stand-up",
+   "titulo": "Jim Gaffigan: Mr. Universe",
+   "regla": "manual"
+  },
+  "181330": {
+   "motivo": "stand-up",
+   "titulo": "Kevin Hart: Let Me Explain",
+   "regla": "manual"
+  },
+  "211755": {
+   "motivo": "anime",
+   "titulo": "Hunter × Hunter: Phantom Rouge",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "212161": {
+   "motivo": "anime",
+   "titulo": "Code Geass: Boukoku no Akito 2 - Hikisakareshi Yokuryuu",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "219250": {
+   "motivo": "anime",
+   "titulo": "Toaru Majutsu no Index: Endymion no Kiseki",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "239523": {
+   "motivo": "anime",
+   "titulo": "Hunter × Hunter: The Last Mission",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "408546": {
+   "motivo": "stand-up",
+   "titulo": "David Cross: Making America Great Again",
+   "regla": "automática (sinopsis)"
+  },
+  "462108": {
+   "motivo": "stand-up",
+   "titulo": "Chris D'Elia: Man on Fire",
+   "regla": "manual"
+  },
+  "508933": {
+   "motivo": "stand-up",
+   "titulo": "Ricky Gervais: Humanity",
+   "regla": "automática (sinopsis)"
+  },
+  "553600": {
+   "motivo": "anime",
+   "titulo": "Promare",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "566451": {
+   "motivo": "anime",
+   "titulo": "Re:ZERO -Starting Life in Another World- The Frozen Bond",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "608658": {
+   "motivo": "especial-no-narrativo",
+   "titulo": "Oprah Winfrey presenta: Así nos ven ahora",
+   "nota": "entrevista televisiva",
+   "regla": "manual"
+  },
+  "665251": {
+   "motivo": "anime",
+   "titulo": "Altered Carbon: Reenfundados",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "685274": {
+   "motivo": "anime",
+   "titulo": "Mobile Suit Gundam Hathaway",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "828853": {
+   "motivo": "especial-no-narrativo",
+   "titulo": "Jackass 4.5",
+   "nota": "compilado de tomas descartadas / making-of",
+   "regla": "manual"
+  },
+  "857862": {
+   "motivo": "anime",
+   "titulo": "Neon Genesis Evangelion: Death (True)²",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "912598": {
+   "motivo": "anime",
+   "titulo": "Burbuja",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "973164": {
+   "motivo": "stand-up",
+   "titulo": "Ricky Gervais: SuperNature",
+   "regla": "automática (sinopsis)"
+  },
+  "975088": {
+   "motivo": "stand-up",
+   "titulo": "Norm Macdonald: Nothing Special",
+   "regla": "automática (sinopsis)"
+  },
+  "1015606": {
+   "motivo": "especial-no-narrativo",
+   "titulo": "Obi-Wan Kenobi: El retorno del Jedi",
+   "nota": "making-of documental",
+   "regla": "manual"
+  },
+  "1208476": {
+   "motivo": "stand-up",
+   "titulo": "Ricky Gervais: Armageddon",
+   "regla": "automática (sinopsis)"
+  },
+  "1263421": {
+   "motivo": "anime",
+   "titulo": "Baki Hanma vs. Kengan Ashura",
+   "regla": "automática (Crunchyroll o Animación + ja)"
+  },
+  "1417677": {
+   "motivo": "stand-up",
+   "titulo": "Bill Burr: Drop Dead Years",
+   "regla": "automática (sinopsis)"
+  }
+ }
+}

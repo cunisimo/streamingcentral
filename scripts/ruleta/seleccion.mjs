@@ -94,8 +94,13 @@ export function cuotasConReserva(obj) {
  */
 export function construirCola(inventario, estado, obj = OBJETIVO_500, { semilla = "ruleta", ritmoCortas = 3, ahoraMs = Date.now(), ttlDescartesDias = 90 } = {}) {
   const enPool = (id) => !!estado.titulos[id] || !!estado.reserva?.[id];
+  // Los descartes por regla editorial (anime, stand-up, especial) NO vencen:
+  // no se vuelven a consultar nunca. Los demás, por TTL.
+  const PERMANENTES = new Set(["anime", "stand-up", "especial-no-narrativo"]);
   const descartado = (id) => {
+    if (estado.excluidos_editoriales?.[id]) return true;
     const d = estado.descartados?.[id];
+    if (d && PERMANENTES.has(d.motivo)) return true;
     return d?.at && ahoraMs - Date.parse(d.at) <= ttlDescartesDias * 86_400_000;
   };
   const porDecada = Object.fromEntries(DECADAS.map((d) => [d, []]));
@@ -144,8 +149,43 @@ export function construirCola(inventario, estado, obj = OBJETIVO_500, { semilla 
 }
 
 /** ¿Se puede servir? Devuelve el motivo si no. */
-export function motivoNoServible(t) {
+// ── Reglas editoriales permanentes (dueño, 2026-10-07) ──────────────────────
+// "No sé qué ver" no incluye ANIME aunque el usuario tenga Crunchyroll, ni
+// stand-up, ni especiales no narrativos. Valen para la selección, la reserva y
+// toda ampliación futura (tests en exclusiones.test.mjs).
+
+const sinAcentos = (s) => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/**
+ * Anime, con el criterio ya establecido en el proyecto (lib/proximamente.ts →
+ * esAnime): está en Crunchyroll (en cualquier modalidad), o tiene género
+ * Animación y idioma original japonés. La animación occidental (Pixar, South
+ * Park, Charlie Brown) NO es anime.
+ */
+export function esAnime(t) {
+  const plataformas = [...(t?.providers ?? []), ...(t?.providers_flatrate ?? [])];
+  if (plataformas.some((p) => /crunchyroll/i.test(p))) return true;
+  const animacion = (t?.genres ?? []).some((g) => sinAcentos(g) === "animacion");
+  return animacion && t?.original_language === "ja";
+}
+
+/**
+ * Stand-up: comedia de duración de especial cuya SINOPSIS lo dice. Es una
+ * heurística deliberadamente estrecha ("humoristas" a secas no alcanza: hay
+ * ficciones sobre humoristas); lo que se escape va a la lista editorial.
+ */
+const RX_STAND_UP = /stand[- ]?up|especial de comedia|monologuista|mon[oó]logos?(?![\p{L}])/iu;
+export function esStandUp(t) {
+  const comedia = (t?.genres ?? []).some((g) => sinAcentos(g) === "comedia");
+  return comedia && (t?.runtime ?? 999) <= 100 && RX_STAND_UP.test(t?.overview ?? "");
+}
+
+export function motivoNoServible(t, { excluidos = null } = {}) {
   if (!t) return "no-existe";
+  const editorial = excluidos?.get?.(t.tmdb_id) ?? excluidos?.get?.(String(t.tmdb_id));
+  if (editorial) return editorial.motivo;
+  if (esAnime(t)) return "anime";
+  if (esStandUp(t)) return "stand-up";
   const flat = t.providers_flatrate ?? [];
   if (!flat.some((p) => YUMP.has(p))) return "sin-flatrate-yump";
   if (!t.overview) return "sin-sinopsis";
@@ -208,8 +248,11 @@ export const FIN_DE_DATOS = Symbol("fin-de-datos");
  * posición en la cola. Después, si sigue faltando total, se completa desde la
  * reserva respetando los cupos.
  */
-function completarDesdeReserva(reserva, cont, cuotas, objetivoDecadas) {
+function completarDesdeReserva(reserva, cont, cuotas, objetivoDecadas, excluidos) {
   const promovidos = [];
+  // Una reserva clasificada antes de una regla editorial puede traer títulos
+  // que hoy no se sirven (anime): nunca se promueven.
+  for (const t of [...reserva]) if (motivoNoServible(t, { excluidos })) reserva.splice(reserva.indexOf(t), 1);
   const quitar = (t) => reserva.splice(reserva.indexOf(t), 1);
   const representacion = (d) => (cont.decadas[d] ?? 0) / Math.max(1, objetivoDecadas?.[d] ?? cuotas.decadas[d] ?? 1);
   while (cont.cortas < cuotas.cortaMin && cont.total < cuotas.total) {
@@ -227,13 +270,13 @@ function completarDesdeReserva(reserva, cont, cuotas, objetivoDecadas) {
   return promovidos;
 }
 
-export async function llenarObjetivo(cola, cuotasIniciales, evaluar, { objetivoDecadas = null } = {}) {
+export async function llenarObjetivo(cola, cuotasIniciales, evaluar, { objetivoDecadas = null, excluidos = null, reservaInicial = [] } = {}) {
   const cuotas = structuredClone(cuotasIniciales);
   const cont = contadoresVacios();
   const restantes = Object.fromEntries(DECADAS.map((d) => [d, 0]));
   for (const c of cola) restantes[c.prevista]++;
   const aceptados = [];
-  const reserva = [];
+  const reserva = [...reservaInicial];
   const descartes = [];
   let consultas = 0;
   const redistribuir = () => {
@@ -251,7 +294,7 @@ export async function llenarObjetivo(cola, cuotasIniciales, evaluar, { objetivoD
     if (t === FIN_DE_DATOS) break;
     restantes[c.prevista]--;
     consultas++;
-    const motivo = motivoNoServible(t);
+    const motivo = motivoNoServible(t, { excluidos });
     if (motivo) descartes.push({ id: c.id, motivo });
     else {
       const r = decidir(t, cont, cuotas);
@@ -264,7 +307,7 @@ export async function llenarObjetivo(cola, cuotasIniciales, evaluar, { objetivoD
   // datos) sin llenar el objetivo. Un corte por presupuesto lanza antes.
   let completadosDesdeReserva = [];
   if (cont.total < cuotas.total) {
-    completadosDesdeReserva = completarDesdeReserva(reserva, cont, cuotas, objetivoDecadas ?? cuotasIniciales.decadas);
+    completadosDesdeReserva = completarDesdeReserva(reserva, cont, cuotas, objetivoDecadas ?? cuotasIniciales.decadas, excluidos);
     for (const t of completadosDesdeReserva) aceptados.push(t);
   }
   const completo = cont.total >= cuotas.total && cont.cortas >= Math.min(cuotas.cortaMin, cuotas.total);

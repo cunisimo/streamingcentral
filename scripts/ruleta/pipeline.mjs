@@ -127,6 +127,11 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
           if (!r) throw new FalloEnCola(c.id); // falló la consulta: no se decide a ciegas
           if (r.descartado) { descartados[c.id] = { motivo: r.descartado, at: ahoraIso }; return null; }
           return r.titulo;
+        }, {
+          // Reglas editoriales (anime, stand-up, lista versionada) y la reserva
+          // previa, para que el último recurso nunca promueva un excluido.
+          excluidos: cfg.seleccion.excluidos ?? null,
+          reservaInicial: Object.values(estado.reserva ?? {}).map((t) => ({ ...t, _pos: t.reserva_pos ?? Infinity })),
         });
         for (const d of seleccion.descartes) descartados[d.id] ??= { motivo: d.motivo, at: ahoraIso };
         for (const t of seleccion.aceptados) nuevos.push({ ...t, _existente: false });
@@ -253,6 +258,8 @@ export function fusionar(estado, { candidatos, nuevos, reservaNueva = [], descar
       dif.datosCompletados.push(t.tmdb_id);
     } else {
       sig.titulos[t.tmdb_id] = t;
+      // Si venía de la reserva (último recurso), deja de estar ahí.
+      if (sig.reserva) delete sig.reserva[t.tmdb_id];
       dif.incorporados.push({ tmdb_id: t.tmdb_id, title: t.title, year: t.year, familia: t.familia, providers: t.providers, es_secuela: t.es_secuela });
     }
   }

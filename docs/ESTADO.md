@@ -111,6 +111,15 @@
   versionado con las 575 filas nuevas; `ruleta-estado.json` todavía tiene
   `con_texto=false` para ellas (se sincroniza en el paso siguiente). Sin
   contexto de secuelas, disponibilidad general, SQL ni Supabase.
+  **Regla editorial nueva (07/10): sin anime, stand-up ni especiales no
+  narrativos** (MANTENIMIENTO §1.c; tests `exclusiones.test.mjs`; lista
+  `data/ruleta-exclusiones.json`). Aplicada al estado sin TMDB: de los 575
+  salen 30 (17 anime, 10 stand-up, 3 no narrativos) → 545; de la reserva salen
+  10 (9 anime, incl. Baki; 1 making-of) → 474. Quedan **453 con texto válido y
+  155 cortas**: faltan 47 y 45. La reserva tiene 44 cortas (≈34 con texto
+  esperado) → no alcanza para 200 cortas sin nuevas consultas. **Hallazgo:**
+  entre los 2401 ya cargados hay 84 anime y 2 stand-up según el mismo
+  criterio; no se tocaron (decisión y SQL aparte). Nada generado ni cargado.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**

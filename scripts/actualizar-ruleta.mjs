@@ -47,7 +47,8 @@ import { cargarEstado, leerDiario, crearDiario } from "./ruleta/estado.mjs";
 import { planificar, fechaAR, selloAR } from "./ruleta/nucleo.mjs";
 import { crearClienteTmdb } from "./ruleta/cliente-tmdb.mjs";
 import { ejecutar } from "./ruleta/pipeline.mjs";
-import { escribirSalidas, informeMarkdown, archivosDeSalida } from "./ruleta/salidas.mjs";
+import { escribirSalidas, informeMarkdown, archivosDeSalida, poolLegado } from "./ruleta/salidas.mjs";
+import { cargarExclusiones, aplicarExclusiones } from "./ruleta/exclusiones.mjs";
 import { escribirAtomico } from "./ruleta/estado.mjs";
 
 const args = process.argv.slice(2);
@@ -80,6 +81,26 @@ const sello = selloAR(ahoraMs);
 // distribución acordada y la guarda en <datos>/ruleta-cola.json. Los primeros
 // son los elegidos; los siguientes, los suplentes. No consulta TMDB.
 const RUTA_COLA = resolve(arg("--cola") ?? `${DATOS}/ruleta-cola.json`);
+
+// ── Exclusiones editoriales (sin TMDB) ───────────────────────────────────────
+// Anime, stand-up y especiales no narrativos salen de los NUEVOS y de la
+// reserva (los ya cargados sólo se informan). La lista versionada es
+// <datos>/ruleta-exclusiones.json; lo excluido queda en excluidos_editoriales.
+const EXCLUIDOS = cargarExclusiones(resolve(DATOS, "ruleta-exclusiones.json"));
+if (args.includes("--aplicar-exclusiones")) {
+  if (origen !== "estado") throw new Error("--aplicar-exclusiones necesita un ruleta-estado.json existente");
+  const ahoraIso = new Date(ahoraMs).toISOString();
+  const { estado: sig, resumen } = aplicarExclusiones(estado, { excluidos: EXCLUIDOS, ahoraIso });
+  const rutaPool = resolve(DATOS, "pool-ruleta.json");
+  const poolAnterior = existsSync(rutaPool) ? JSON.parse(readFileSync(rutaPool, "utf8")) : null;
+  escribirAtomico(rutaPool, JSON.stringify(poolLegado(sig, poolAnterior, ahoraIso), null, 2));
+  escribirAtomico(resolve(DATOS, "ruleta-estado.json"), JSON.stringify(sig));
+  const n = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v.length]));
+  console.log(JSON.stringify({ nuevosExcluidos: n(resumen.nuevos), reservaExcluida: n(resumen.reserva), yaCargadosQueSonAnime: resumen.yaCargadosQueSonAnime.length, yaCargadosStandUp: resumen.yaCargadosStandUp.length, pool: Object.keys(sig.titulos).length, reserva: Object.keys(sig.reserva ?? {}).length }, null, 1));
+  console.log("\nNo se consultó TMDB. Escritos: ruleta-estado.json y pool-ruleta.json.");
+  process.exit(0);
+}
+
 if (args.includes("--armar-cola")) {
   const objetivo = { ...OBJETIVO_500, total: numero("--objetivo", OBJETIVO_500.total) };
   if (objetivo.total !== OBJETIVO_500.total) {
@@ -106,7 +127,7 @@ if (fases.enriquecer) {
   if (!args.includes("--sin-cola")) {
     if (existsSync(RUTA_COLA)) {
       const c = JSON.parse(readFileSync(RUTA_COLA, "utf8"));
-      cfg.seleccion = { cola: c.cola, cuotas: c.cuotas, estimacion: c.estimacion };
+      cfg.seleccion = { cola: c.cola, cuotas: c.cuotas, estimacion: c.estimacion, excluidos: EXCLUIDOS };
       // Lo que falta se reconstruye del diario (no se resta de la estimación).
       cfg.seleccion.pendientes = await estimarPendientes(c.cola, c.cuotas, diarioPrevio, { sinNuevosDetalles: SIN_NUEVOS_DETALLES });
     } else if (EJECUTAR) {

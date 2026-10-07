@@ -28,6 +28,7 @@ data/*
 # El estado y el diario NO se versionan: cambian en cada corrida.
 !data/ruleta-inventario.json
 !data/ruleta-cola.json
+!data/ruleta-exclusiones.json
 
 # Permisos locales de Claude Code. NO se versiona y NO se lee: es configuracion
 # de la maquina del dueno, no del proyecto (`.claude/settings.json` y

@@ -135,6 +135,28 @@ texto) → `classify-context.mjs` (sólo las secuelas nuevas) →
 5. Al llegar a **~3500–4000 películas realmente disponibles**, bajar a una o
    dos ampliaciones por año.
 
+**Exclusiones editoriales PERMANENTES** (dueño, 2026-10-07; valen para la
+selección, la reserva y toda ampliación futura; tests en
+`scripts/ruleta/exclusiones.test.mjs`):
+
+- **Sin anime**, aunque el usuario tenga Crunchyroll. Criterio del proyecto
+  (`lib/proximamente.ts` → `esAnime`): está en Crunchyroll (cualquier
+  modalidad) **o** tiene género Animación y `original_language = "ja"`. La
+  animación occidental (Pixar, South Park, Charlie Brown) **no** es anime y no
+  se excluye. Regla automática en `esAnime` / `motivoNoServible`.
+- **Sin stand-up**: regla automática estrecha por sinopsis (`esStandUp`) más la
+  lista editorial para los que se escapan (3 de 10 se escaparon el 07/10).
+- **Sin especiales no narrativos** (conciertos, making-of, entrevistas):
+  sólo por lista editorial. Los documentales propiamente dichos y los
+  especiales de ficción (South Park, Werewolf by Night) **sí** entran.
+- La lista versionada es `data/ruleta-exclusiones.json` (id → motivo, título).
+  `node scripts/actualizar-ruleta.mjs --aplicar-exclusiones` la aplica al
+  estado sin TMDB: saca lo excluido de los títulos NUEVOS y de la reserva y lo
+  guarda en `excluidos_editoriales`. Los títulos **ya cargados** en Producción
+  no se tocan: se informan (el 07/10: 84 anime y 2 stand-up entre los 2401).
+- Un descarte editorial no vence nunca (la cola no lo vuelve a ofrecer) y el
+  último recurso nunca promueve un excluido desde la reserva.
+
 **Criterios** (los aplica `scripts/ruleta/seleccion.mjs`):
 
 - **Cortas primero:** el mínimo de cortas se mide con la duración REAL ≤ 90 min.
