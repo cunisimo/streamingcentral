@@ -19,10 +19,11 @@
  * Salida:  data/copy-ruleta.json  (se reescribe tras CADA lote)
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, appendFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
+import { entornoSuscripcion, sondearAutenticacion, esSuscripcion } from "./ruleta/claude-headless.mjs";
 
 const args = process.argv.slice(2);
 const arg = (f) => {
@@ -35,6 +36,15 @@ const todos = args.includes("--todos");
 const POR_DECADA = arg("--por-decada") ? Number(arg("--por-decada")) : 100;
 const BATCH_SIZE = arg("--batch") ? Number(arg("--batch")) : 40;
 const MODEL = arg("--model") ?? "sonnet";
+// --ids <archivo.json>: sólo estos tmdb_id (array, o { carga_pendiente: { nuevos } }).
+// Es lo que acota una ampliación a los títulos seleccionados.
+const IDS_PATH = arg("--ids");
+// --max-lotes N: corta limpio después de N lotes (para medir el uso del plan
+// entre tramos). Correr el mismo comando sigue desde donde quedó.
+const MAX_LOTES = arg("--max-lotes") ? Number(arg("--max-lotes")) : Infinity;
+const REGISTRO_PATH = resolve("data/copy-ruleta-corridas.jsonl");
+// El hijo nunca hereda variables de facturación por API (ver claude-headless).
+const ENTORNO_HIJO = entornoSuscripcion().env;
 
 const POOL_PATH = resolve("data/pool-ruleta.json");
 const PROMPT_PATH = resolve("prompts/ruleta-copy.md");
@@ -48,7 +58,7 @@ function runClaude(prompt) {
     const child = spawn(
       "claude",
       ["-p", "--model", MODEL, "--output-format", "json", "--max-turns", "4"],
-      { cwd: tmpdir(), shell: true },
+      { cwd: tmpdir(), shell: true, env: ENTORNO_HIJO },
     );
 
     let stdout = "";
@@ -147,7 +157,14 @@ async function main() {
     }
   }
 
-  const pendientes = objetivo.filter((t) => !hechos.has(t.tmdb_id));
+  let pendientes = objetivo.filter((t) => !hechos.has(t.tmdb_id));
+  if (IDS_PATH) {
+    const crudo = JSON.parse(await readFile(resolve(IDS_PATH), "utf8"));
+    const ids = new Set(Array.isArray(crudo) ? crudo : (crudo.carga_pendiente?.nuevos ?? crudo.ids ?? []));
+    if (!ids.size) throw new Error(`--ids ${IDS_PATH}: no trae ningún id`);
+    pendientes = pendientes.filter((t) => ids.has(t.tmdb_id));
+    console.log(`  acotado por --ids       : ${ids.size} ids (${pendientes.length} sin texto)`);
+  }
 
   console.log(`  objetivo de esta tanda : ${objetivo.length}`);
   console.log(`  pendientes de generar  : ${pendientes.length}`);
@@ -182,7 +199,17 @@ async function main() {
     return;
   }
 
-  console.log(`\n  lotes: ${lotes.length} de hasta ${BATCH_SIZE} · modelo ${MODEL}\n`);
+  // Antes de gastar un solo lote: ¿el hijo se autentica con la suscripción?
+  const sondeo = await sondearAutenticacion({ modelo: MODEL });
+  console.log(`\n  autenticación del hijo: apiKeySource=${sondeo.inicio?.apiKeySource ?? "?"} · modelo ${sondeo.inicio?.model ?? "?"}`);
+  console.log(`  variables quitadas del entorno del hijo: ${sondeo.quitadas.join(", ") || "ninguna"} (valores no mostrados)`);
+  if (!esSuscripcion(sondeo.inicio)) {
+    console.error("\n  DETENIDO: no se pudo confirmar la suscripción (apiKeySource distinto de \"none\"). No se generó nada.");
+    process.exit(4);
+  }
+
+  console.log(`\n  lotes: ${lotes.length} de hasta ${BATCH_SIZE} · modelo ${MODEL}${Number.isFinite(MAX_LOTES) ? ` · esta corrida: hasta ${MAX_LOTES}` : ""}\n`);
+  const registrar = (r) => appendFile(REGISTRO_PATH, JSON.stringify({ at: new Date().toISOString(), modelo: MODEL, ...r }) + "\n", "utf8");
 
   const porId = new Map(titulos.map((t) => [t.tmdb_id, t]));
   let costo = 0;
@@ -207,11 +234,22 @@ async function main() {
     );
   }
 
+  let lotesHechos = 0;
   for (const [i, lote] of lotes.entries()) {
+    if (lotesHechos >= MAX_LOTES) {
+      console.log(`\n  --max-lotes ${MAX_LOTES}: corte limpio. Correr el mismo comando sigue desde acá.`);
+      break;
+    }
     process.stdout.write(`  lote ${i + 1}/${lotes.length} (${lote.length})… `);
+    // Sólo se aceptan ids DE ESTE LOTE: un id de otro título del pool que el
+    // modelo devolviera por error pisaría un texto existente.
+    const delLote = new Set(lote.map((t) => t.tmdb_id));
 
     let ok = false;
+    let reintentado = false;
+    let ultimoError = null;
     for (let intento = 0; intento < 2 && !ok; intento++) {
+      if (intento === 1) reintentado = true;
       try {
         const { text, cost } = await runClaude(armarPrompt(lote));
         costo += cost;
@@ -226,9 +264,14 @@ async function main() {
 
         let validos = 0;
         let desconocidos = 0;
+        let ajenos = 0;
+        let duplicados = 0;
+        const vistos = new Set();
         for (const r of results) {
           const t = porId.get(r.id);
-          if (!t) continue; // id inventado
+          if (!t || !delLote.has(r.id)) { ajenos++; continue; } // inventado o de otro lote
+          if (vistos.has(r.id)) { duplicados++; continue; }      // gana la primera
+          vistos.add(r.id);
           hechos.set(r.id, {
             tmdb_id: r.id,
             title: t.title,
@@ -241,18 +284,27 @@ async function main() {
           validos++;
           if (r.conoce !== true) desconocidos++;
         }
-        console.log(`${validos}/${lote.length} ok · ${desconocidos} sin conocer`);
+        console.log(`${validos}/${lote.length} ok · ${desconocidos} sin conocer${ajenos ? ` · ${ajenos} ids ajenos ignorados` : ""}${duplicados ? ` · ${duplicados} duplicados ignorados` : ""}`);
+        await registrar({ lote: i + 1, ids: lote.length, ok: true, reintentado, validos, desconocidos, ajenos, duplicados, faltantes: lote.length - validos });
         ok = true;
       } catch (err) {
-        if (intento === 1) {
-          console.log("FALLÓ");
-          console.error(`    ${err.message}`);
-        }
+        ultimoError = err;
+        if (intento === 0) process.stdout.write("falló, un reintento… ");
       }
     }
 
     await guardar(); // progreso incremental
-    if (i < lotes.length - 1) await sleep(8000); // respiro entre invocaciones
+    if (!ok) {
+      // Un reintento como máximo: si vuelve a fallar, se DETIENE la corrida
+      // (no se sigue gastando cuota con lotes que podrían fallar igual).
+      console.log("FALLÓ");
+      console.error(`    ${ultimoError?.message ?? "sin detalle"}`);
+      await registrar({ lote: i + 1, ids: lote.length, ok: false, reintentado: true, error: String(ultimoError?.message ?? "").slice(0, 300) });
+      console.error("\n  DETENIDO tras un lote fallido dos veces. Lo hecho quedó guardado; correr el mismo comando retoma.");
+      process.exit(3);
+    }
+    lotesHechos++;
+    if (i < lotes.length - 1 && lotesHechos < MAX_LOTES) await sleep(8000); // respiro entre invocaciones
   }
 
   const rows = [...hechos.values()];
