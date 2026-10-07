@@ -30,7 +30,19 @@
   (> 30 días), 525 sagas reutilizables; ~2592 llamadas (191 discover estimadas +
   2401 `watch/providers`) contra ~5497 del proceso anterior; los títulos nuevos
   se conocen recién después de la fase descubrir.
-  Pendiente: autorización del dueño para correr la fase descubrir con TMDB real.
+  **Fase `descubrir` corrida contra TMDB real con autorización (06/10, dos
+  tandas, presupuestos 260 + 200): 460 intentos HTTP, 460 éxitos, 0 fallos, 0
+  reintentos, 0 429.** Quedó INCOMPLETA por presupuesto: faltan 12 páginas
+  (cortas 2015-2029, páginas 103-114); el estado no se tocó y las 460 páginas
+  están en el diario del worktree (`data/`, ignorado por git). Hallazgo: 4626
+  candidatos nuevos que cumplen los filtros (2979 de la familia principal,
+  1647 sólo de cortas), porque el proceso anterior veía como máximo 640 títulos
+  por ventana; filtro verificado (1 violación de 5072, excluida). Corregidas en
+  `c387608` dos fallas vistas en la corrida (fecha UTC en informes, progreso
+  vacío al cortar), con tests en rojo antes. NO se ejecutó enriquecimiento,
+  disponibilidad, textos, SQL ni Supabase. Decisión pendiente del dueño:
+  cuántos incorporar (propuesta 300/500/800 estratificada); antes de enriquecer
+  falta un mecanismo de selección, porque hoy `enriquecer` procesaría los 4626.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
