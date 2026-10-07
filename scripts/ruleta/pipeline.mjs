@@ -12,13 +12,13 @@
 // se devuelve `completo: false` y la próxima corrida retoma desde el diario.
 // Sólo una corrida sin pendientes ni fallos produce el estado nuevo.
 
-import { PresupuestoAgotado, FalloTmdb, Detenido429 } from "./cliente-tmdb.mjs";
+import { PresupuestoAgotado, FalloTmdb, Detenido429, OperacionProhibida } from "./cliente-tmdb.mjs";
 import {
   FAMILIAS, IDIOMA, paramsDescubrir, claveDescubrir, claveDetalle, claveDisp, claveColeccion,
   construirTitulo, proveedoresDe, esSecuelaInferida, sagaDeColeccion, dispVencida, faltanDatos,
   descarteVigente, progresoDesdeDiario,
 } from "./nucleo.mjs";
-import { llenarObjetivo } from "./seleccion.mjs";
+import { llenarObjetivo, FIN_DE_DATOS } from "./seleccion.mjs";
 
 /** Una consulta de la cola falló: se corta en vez de decidir sin el dato. */
 export class FalloEnCola extends Error {
@@ -53,7 +53,7 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
       diario.anotar(clave, r);
       return r;
     } catch (e) {
-      if (e instanceof PresupuestoAgotado || e instanceof Interrumpido || e instanceof Detenido429) throw e;
+      if (e instanceof PresupuestoAgotado || e instanceof Interrumpido || e instanceof Detenido429 || e instanceof OperacionProhibida) throw e;
       if (e instanceof FalloTmdb) { fallos.push({ clave, error: e.message }); return undefined; }
       throw e;
     }
@@ -120,6 +120,9 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
         // objetivo de títulos SERVIBLES; lo que sirve pero no entra va a reserva.
         const familiaDe = (id) => candidatos.get(id)?.familia ?? "principal";
         seleccion = await llenarObjetivo(cfg.seleccion.cola, cfg.seleccion.cuotas, async (c) => {
+          // --sin-nuevos-detalles: sólo lo que ya está en el diario. Lo demás
+          // termina el recorrido (y el cliente además prohíbe "detalle").
+          if (cfg.sinNuevosDetalles && !diario.tiene(claveDetalle(c.id))) return FIN_DE_DATOS;
           const r = await detalle(c.id, familiaDe(c.id));
           if (!r) throw new FalloEnCola(c.id); // falló la consulta: no se decide a ciegas
           if (r.descartado) { descartados[c.id] = { motivo: r.descartado, at: ahoraIso }; return null; }
@@ -199,6 +202,7 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
     if (e instanceof PresupuestoAgotado) corte = "presupuesto";
     else if (e instanceof Interrumpido) corte = "interrumpido";
     else if (e instanceof Detenido429) { corte = "429"; fallos.push({ clave: "429", error: e.message }); }
+    else if (e instanceof OperacionProhibida) { corte = `${e.op}-prohibido`; fallos.push({ clave: e.op, error: e.message }); }
     // La cola es ordenada: saltear un título que falló cambiaría qué entra.
     // Se corta y la próxima corrida lo reintenta en su lugar.
     else if (e instanceof FalloEnCola) corte = "fallos";
@@ -242,7 +246,7 @@ export function fusionar(estado, { candidatos, nuevos, reservaNueva = [], descar
   if (descubiertoAhora) dif.noReaparecen = Object.keys(sig.titulos).filter((id) => !candidatos.has(Number(id))).length;
 
   for (const n of nuevos) {
-    const { _existente, _pos, ...t } = n;
+    const { _existente, _pos, _motivo, ...t } = n;
     if (_existente) {
       const prev = sig.titulos[t.tmdb_id];
       sig.titulos[t.tmdb_id] = { ...t, con_texto: prev.con_texto, coleccion: prev.coleccion ?? t.coleccion, es_secuela: prev.es_secuela ?? t.es_secuela, coleccion_at: prev.coleccion_at ?? t.coleccion_at, familia: prev.familia ?? t.familia };

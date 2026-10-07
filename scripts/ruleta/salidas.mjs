@@ -141,9 +141,16 @@ export function escribirSalidas(dir, { estado, diferencias, dispActualizada, est
   const leer = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
   const escritos = [];
 
-  const incorporados = diferencias.incorporados.map((i) => estado.titulos[i.tmdb_id]);
+  // Lo traído por una corrida anterior --sin-sql (carga_pendiente) entra en la
+  // primera carga con SQL, junto con lo de esta corrida.
+  const pend = conSql ? (estado.carga_pendiente ?? {}) : {};
+  const idsNuevos = [...new Set([...(pend.nuevos ?? []), ...diferencias.incorporados.map((i) => i.tmdb_id)])];
+  const incorporados = idsNuevos.map((id) => estado.titulos[id]).filter(Boolean);
+  const dispPend = (pend.disponibilidad ?? []).filter((id) => !idsNuevos.includes(id) && !dispActualizada[id])
+    .map((id) => estado.titulos[id]).filter(Boolean).map((t) => ({ tmdb_id: t.tmdb_id, providers: t.providers, at: t.disp_at }));
   const disponibilidad = [
     ...incorporados.map((t) => ({ tmdb_id: t.tmdb_id, providers: t.providers, at: t.disp_at })),
+    ...dispPend,
     ...Object.entries(dispActualizada).map(([id, r]) => ({ tmdb_id: Number(id), providers: r.providers, at: r.at })),
   ];
   const hayCarga = incorporados.length > 0 || disponibilidad.length > 0 || diferencias.datosCompletados.length > 0;
@@ -176,11 +183,17 @@ export function escribirSalidas(dir, { estado, diferencias, dispActualizada, est
     escribirAtomico(s.pool, JSON.stringify(poolLegado(estado, poolAnterior, ahoraIso), null, 2)); escritos.push(s.pool);
     escribirAtomico(s.colecciones, JSON.stringify(coleccionesLegado(leer(s.colecciones), diferencias.incorporados, estado, ahoraIso), null, 2)); escritos.push(s.colecciones);
     if (conSql) {
-      sig = { ...estado, metadatos_pendientes_sql: [] };
+      const { carga_pendiente, ...resto } = estado;
+      sig = { ...resto, metadatos_pendientes_sql: [] };
       filasSql = { nuevos: incorporados.length, metadatos: cambiaronMeta.length, disponibilidad: disponibilidad.length, partes: sql.length };
     } else {
       // Lo que esta corrida trajo también queda pendiente de SQL.
-      sig = { ...estado, carga_pendiente: { nuevos: incorporados.map((t) => t.tmdb_id), disponibilidad: disponibilidad.map((d) => d.tmdb_id), desde: ahoraIso } };
+      const prev = estado.carga_pendiente ?? {};
+      sig = { ...estado, carga_pendiente: {
+        nuevos: [...new Set([...(prev.nuevos ?? []), ...incorporados.map((t) => t.tmdb_id)])],
+        disponibilidad: [...new Set([...(prev.disponibilidad ?? []), ...disponibilidad.map((d) => d.tmdb_id)])],
+        desde: prev.desde ?? ahoraIso,
+      } };
     }
   }
   // El estado va ÚLTIMO: si algo de arriba falla, la próxima corrida retoma del diario.

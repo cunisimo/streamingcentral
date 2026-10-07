@@ -29,7 +29,7 @@
 
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { OBJETIVO_500, construirCola, cuotasConReserva, estimarConsultas } from "./ruleta/seleccion.mjs";
+import { OBJETIVO_500, construirCola, cuotasConReserva, estimarConsultas, estimarPendientes } from "./ruleta/seleccion.mjs";
 
 // Tasas SUPUESTAS para estimar el presupuesto (no son medición): proporción de
 // candidatos de discover que resultan servibles (flatrate Yump + datos), por
@@ -61,8 +61,9 @@ for (const f of fasesLista) if (!["descubrir", "enriquecer", "disponibilidad"].i
 const fases = { descubrir: fasesLista.includes("descubrir"), enriquecer: fasesLista.includes("enriquecer"), disponibilidad: fasesLista.includes("disponibilidad") };
 const ahoraMs = arg("--ahora") ? Date.parse(arg("--ahora")) : Date.now();
 if (!Number.isFinite(ahoraMs)) throw new Error("--ahora inválido");
+const SIN_NUEVOS_DETALLES = args.includes("--sin-nuevos-detalles");
 const cfg = {
-  fases, ahoraMs,
+  fases, ahoraMs, sinNuevosDetalles: SIN_NUEVOS_DETALLES,
   ttlDispDias: numero("--ttl-disponibilidad", 30),
   ttlDescartesDias: numero("--ttl-descartes", 90),
   maxDisponibilidad: numero("--max-disponibilidad", Infinity),
@@ -106,6 +107,8 @@ if (fases.enriquecer) {
     if (existsSync(RUTA_COLA)) {
       const c = JSON.parse(readFileSync(RUTA_COLA, "utf8"));
       cfg.seleccion = { cola: c.cola, cuotas: c.cuotas, estimacion: c.estimacion };
+      // Lo que falta se reconstruye del diario (no se resta de la estimación).
+      cfg.seleccion.pendientes = await estimarPendientes(c.cola, c.cuotas, diarioPrevio, { sinNuevosDetalles: SIN_NUEVOS_DETALLES });
     } else if (EJECUTAR) {
       throw new Error(`enriquecer exige una cola (${RUTA_COLA}); armala con --armar-cola`);
     }
@@ -138,7 +141,13 @@ if (!token) throw new Error("falta TMDB_READ_TOKEN");
 let detener = false;
 process.on("SIGINT", () => { detener = true; console.log("\nCortando al terminar la operación en curso…"); });
 
-const cliente = crearClienteTmdb({ token, ritmoMs: numero("--ritmo-ms", 250), presupuesto, detenerEn429: args.includes("--detener-en-429") });
+const cliente = crearClienteTmdb({
+  token, ritmoMs: numero("--ritmo-ms", 250), presupuesto,
+  detenerEn429: args.includes("--detener-en-429"),
+  // --sin-nuevos-detalles: el recorrido de la cola usa sólo el diario, y por
+  // las dudas el cliente rechaza cualquier pedido de detalle.
+  prohibidas: SIN_NUEVOS_DETALLES ? ["detalle"] : [],
+});
 const diario = crearDiario(DATOS, diarioPrevio);
 const t0 = Date.now();
 const r = await ejecutar({ estado, diario, cliente, cfg, detener: () => detener, log: (m) => console.log(`  ${m}`) });

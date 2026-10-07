@@ -192,7 +192,42 @@ export function sumar(cont, t) {
  *
  * `detener()` permite cortar entre consultas (presupuesto, Ctrl+C).
  */
-export async function llenarObjetivo(cola, cuotasIniciales, evaluar) {
+/**
+ * Lo que devuelve `evaluar` cuando NO hay dato y no se debe consultar
+ * (`--sin-nuevos-detalles`): el recorrido termina ahí, como si la cola se
+ * hubiera agotado, y se aplica el último recurso.
+ */
+export const FIN_DE_DATOS = Symbol("fin-de-datos");
+
+/**
+ * Último recurso (decisión del dueño, 2026-10-07): si al terminar el recorrido
+ * no se alcanzó el mínimo de cortas, se incorporan cortas REALES (≤ 90 min) ya
+ * enriquecidas de la reserva, AUNQUE su década esté llena. Sin consultar nada.
+ * Orden: primero la década menos representada respecto de su objetivo
+ * ORIGINAL (las antiguas, que se quedaron cortas), y dentro de una década, la
+ * posición en la cola. Después, si sigue faltando total, se completa desde la
+ * reserva respetando los cupos.
+ */
+function completarDesdeReserva(reserva, cont, cuotas, objetivoDecadas) {
+  const promovidos = [];
+  const quitar = (t) => reserva.splice(reserva.indexOf(t), 1);
+  const representacion = (d) => (cont.decadas[d] ?? 0) / Math.max(1, objetivoDecadas?.[d] ?? cuotas.decadas[d] ?? 1);
+  while (cont.cortas < cuotas.cortaMin && cont.total < cuotas.total) {
+    const cortas = reserva.filter((t) => t.runtime <= CORTA_MAX_MIN);
+    if (!cortas.length) break;
+    cortas.sort((a, b) => representacion(decadaDe(a.year)) - representacion(decadaDe(b.year)) || a._pos - b._pos);
+    const t = cortas[0];
+    quitar(t); sumar(cont, t); promovidos.push({ ...t, _motivo: "ultimo-recurso-cortas" });
+  }
+  for (const t of [...reserva].sort((a, b) => a._pos - b._pos)) {
+    if (cont.total >= cuotas.total) break;
+    if (decidir(t, cont, cuotas).decision !== "aceptado") continue;
+    quitar(t); sumar(cont, t); promovidos.push({ ...t, _motivo: "ultimo-recurso-cupo" });
+  }
+  return promovidos;
+}
+
+export async function llenarObjetivo(cola, cuotasIniciales, evaluar, { objetivoDecadas = null } = {}) {
   const cuotas = structuredClone(cuotasIniciales);
   const cont = contadoresVacios();
   const restantes = Object.fromEntries(DECADAS.map((d) => [d, 0]));
@@ -212,9 +247,10 @@ export async function llenarObjetivo(cola, cuotasIniciales, evaluar) {
   };
   for (const c of cola) {
     if (cont.total >= cuotas.total) break;
+    const t = await evaluar(c);
+    if (t === FIN_DE_DATOS) break;
     restantes[c.prevista]--;
     consultas++;
-    const t = await evaluar(c);
     const motivo = motivoNoServible(t);
     if (motivo) descartes.push({ id: c.id, motivo });
     else {
@@ -224,7 +260,15 @@ export async function llenarObjetivo(cola, cuotasIniciales, evaluar) {
     }
     redistribuir();
   }
-  return { aceptados, reserva, descartes, consultas, cont, cuotas, completo: cont.total >= cuotas.total };
+  // Último recurso sólo si el recorrido terminó (cola agotada o sin más
+  // datos) sin llenar el objetivo. Un corte por presupuesto lanza antes.
+  let completadosDesdeReserva = [];
+  if (cont.total < cuotas.total) {
+    completadosDesdeReserva = completarDesdeReserva(reserva, cont, cuotas, objetivoDecadas ?? cuotasIniciales.decadas);
+    for (const t of completadosDesdeReserva) aceptados.push(t);
+  }
+  const completo = cont.total >= cuotas.total && cont.cortas >= Math.min(cuotas.cortaMin, cuotas.total);
+  return { aceptados, reserva, descartes, consultas, cont, cuotas, completo, completadosDesdeReserva };
 }
 
 /**
@@ -254,4 +298,40 @@ export async function estimarConsultas(cola, cuotas, tasas, { corridas = 200, se
     cortasP50: q(ord((r) => r.cont.cortas), 0.5),
     decadasP50: Object.fromEntries(DECADAS.map((d) => [d, q(ord((r) => r.cont.decadas[d]), 0.5)])),
   };
+}
+
+/**
+ * Detalles que FALTAN para llenar el objetivo, reconstruido del diario: se
+ * reproduce la cola con lo que ya se consultó y, para lo que falta, se muestrea
+ * de lo OBSERVADO (por década prevista y probable corta; semilla fija). No
+ * resta nada de la estimación inicial, que con tasas supuestas puede estar muy
+ * lejos (pasó: estimaba 1296 y a 1500 faltaban 24).
+ * `diario`: Map clave → resultado (`detalle:<id>` → { titulo } | { descartado }).
+ */
+export async function estimarPendientes(cola, cuotas, diario, { sinNuevosDetalles = false, corridas = 200, semilla = 11, tasasRespaldo = null } = {}) {
+  const dato = (c) => diario.get(`detalle:${c.id}`);
+  const valor = (d) => (d?.titulo && !motivoNoServible(d.titulo) ? d.titulo : null);
+  const obs = {};
+  for (const c of cola) { const d = dato(c); if (d) (obs[`${c.prevista}|${c.cortaProbable}`] ??= []).push(valor(d)); }
+  const todas = Object.values(obs).flat();
+  let s = semilla >>> 0;
+  const azar = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 2 ** 32; };
+  const sinDato = new Set(cola.filter((c) => !dato(c)).map((c) => c.id));
+  const res = [];
+  for (let k = 0; k < (sinNuevosDetalles ? 1 : corridas); k++) {
+    let nuevas = 0;
+    const r = await llenarObjetivo(cola, cuotas, async (c) => {
+      const d = dato(c);
+      if (d) return d.titulo ?? null;
+      if (sinNuevosDetalles) return FIN_DE_DATOS;
+      nuevas++;
+      const m = obs[`${c.prevista}|${c.cortaProbable}`] ?? todas;
+      if (!m.length) return azar() < (tasasRespaldo?.servible?.[c.prevista] ?? 0.8) ? { title: "x", overview: "x", genres: ["x"], providers_flatrate: ["Netflix"], year: 2015, runtime: 110 } : null;
+      return m[Math.floor(azar() * m.length)];
+    });
+    res.push({ nuevas, completo: r.completo });
+  }
+  const ord = res.map((r) => r.nuevas).sort((a, b) => a - b);
+  const q = (p) => ord[Math.floor(p * (ord.length - 1))];
+  return { p50: q(0.5), p90: q(0.9), max: q(1), completas: res.filter((r) => r.completo).length / res.length, enDiario: cola.length - sinDato.size };
 }

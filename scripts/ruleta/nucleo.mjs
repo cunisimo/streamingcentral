@@ -318,10 +318,12 @@ export function planificar(estado, diario, cfg) {
   // Con cola, el detalle se corta al llenar el objetivo: se estima con la
   // simulación guardada en la cola (p90), no con todos los candidatos nuevos.
   const sel = cfg.seleccion;
-  const detalleCola = sel ? Math.min(sel.cola.length, sel.estimacion?.p90 ?? sel.cola.length) : null;
+  // Pendiente REAL: reconstruido del diario (`sel.pendientes`, ver
+  // estimarPendientes). Sin eso, la estimación inicial de la cola.
+  const detalleCola = sel ? (sel.pendientes ? sel.pendientes.p90 : Math.min(sel.cola.length, sel.estimacion?.p90 ?? sel.cola.length)) : null;
   const llamadas = {
     descubrir: desc.paginasPrevistas,
-    detalle: fases.enriquecer ? (sel ? Math.max(0, detalleCola - detalleHechos) : nuevos.length - detalleHechos) + faltantes.length : 0,
+    detalle: fases.enriquecer ? (sel ? (sel.pendientes ? detalleCola : Math.max(0, detalleCola - detalleHechos)) : nuevos.length - detalleHechos) + faltantes.length : 0,
     disponibilidad: dispObjetivo.length - dispHechas,
     coleccion: fases.enriquecer ? Math.ceil((sel ? sel.cuotas.total : nuevos.length) * tasaSaga * tasaSagaNueva) : 0,
   };

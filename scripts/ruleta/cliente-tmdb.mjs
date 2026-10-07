@@ -40,6 +40,15 @@ export class Detenido429 extends Error {
   }
 }
 
+/**
+ * Una operación que esta corrida tiene PROHIBIDA (p. ej. `detalle` con
+ * --sin-nuevos-detalles). Se lanza ANTES de consumir presupuesto o salir a la
+ * red: si algo intenta pedirla, la corrida se detiene y lo informa.
+ */
+export class OperacionProhibida extends Error {
+  constructor(op, ruta) { super(`operación prohibida en esta corrida: ${op} ${ruta}`); this.name = "OperacionProhibida"; this.op = op; }
+}
+
 /** Fallo definitivo de una operación (agotó reintentos o es un 4xx). */
 export class FalloTmdb extends Error {
   constructor(op, ruta, status, detalle) {
@@ -77,7 +86,9 @@ export function crearClienteTmdb({
   maxErroresTransitorios = 2,
   timeoutMs = 15000,
   detenerEn429 = false,
+  prohibidas = [],
 } = {}) {
+  const prohibida = new Set(prohibidas);
   if (!token) throw new Error("falta el token de TMDB");
 
   const m = {
@@ -114,6 +125,7 @@ export function crearClienteTmdb({
    * definitivo lanza `FalloTmdb`.
    */
   async function pedir(nombre, ruta, params = {}) {
+    if (prohibida.has(nombre)) throw new OperacionProhibida(nombre, ruta);
     const url = new URL(base + ruta);
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));

@@ -263,5 +263,76 @@ test("el plan de enriquecer usa la cola: estima por la simulación, no por todos
   const cli = resolve(import.meta.dirname, "..", "actualizar-ruleta.mjs");
   const r = spawnSync(process.execPath, [cli, "--datos", dir, "--fases", "enriquecer", "--ahora", iso], { encoding: "utf8", env: { ...process.env, TMDB_READ_TOKEN: "" } });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /\| detalle \| 14 \|/, r.stdout);
+  // Sin nada en el diario, lo pendiente se proyecta (tasas de respaldo): ~10-20
+  // detalles para 10 servibles, nunca los 300 candidatos.
+  const n = Number(r.stdout.match(/\| detalle \| (\d+) \|/)?.[1]);
+  assert.ok(n >= 10 && n <= 20, r.stdout);
+});
+
+// ── Último recurso: cortas desde la reserva (decisión del dueño, 2026-10-07) ─────
+
+test("si el recorrido termina sin el mínimo de cortas, se completa con cortas ya enriquecidas de la reserva, aunque su década esté llena", async () => {
+  const { llenarObjetivo: llenar, FIN_DE_DATOS } = await import("./seleccion.mjs");
+  // Cupos: 2 por década en 2010s y 2020s, mínimo 3 cortas, total 4.
+  const cuotas = { total: 4, cortaMin: 3, decadas: { "<1980": 0, "1980s": 0, "1990s": 0, "2000s": 0, "2010s": 2, "2020s": 2 } };
+  const fichas = {
+    1: { year: 2021, runtime: 85 }, 2: { year: 2022, runtime: 80 },   // llenan 2020s
+    3: { year: 2023, runtime: 75 }, 4: { year: 2024, runtime: 70 },   // cortas → reserva por cupo 2020s
+    5: { year: 2015, runtime: 120 },                                   // larga → reserva: lugar para cortas
+  };
+  const cola = [1, 2, 3, 4, 5, 6].map((id, i) => ({ pos: i + 1, id, prevista: id <= 4 ? "2020s" : "2010s", cortaProbable: true }));
+  let consultas = 0;
+  const r = await llenar(cola, cuotas, async (c) => {
+    if (!fichas[c.id]) return FIN_DE_DATOS; // 6 no está en el diario: no se consulta
+    consultas++;
+    return { ...titulo({ tmdb_id: c.id }), ...fichas[c.id] };
+  });
+  assert.equal(consultas, 5);
+  assert.equal(r.completo, true);
+  assert.equal(r.cont.cortas, 3);
+  // 1 y 2 llenan 2020s; 3 y 4 van a reserva por cupo; 5 (larga, 2010s) entra;
+  // al terminar faltan 1 corta y 1 lugar: entra la 3 (primera por posición).
+  assert.deepEqual(r.aceptados.map((t) => t.tmdb_id).sort((x, y) => x - y), [1, 2, 3, 5]);
+  assert.ok(r.aceptados.some((t) => t.tmdb_id === 3), "la primera corta de la reserva (por posición) entra aunque 2020s esté lleno");
+  assert.ok(r.completadosDesdeReserva.length >= 1);
+  assert.equal(r.cont.decadas["2020s"], 3, "2020s supera su cupo sólo por el último recurso");
+});
+
+test("el último recurso prioriza las décadas menos representadas antes que las más recientes", async () => {
+  const { llenarObjetivo: llenar, FIN_DE_DATOS } = await import("./seleccion.mjs");
+  const cuotas = { total: 3, cortaMin: 3, decadas: { "<1980": 0, "1980s": 0, "1990s": 1, "2000s": 0, "2010s": 0, "2020s": 1 } };
+  const fichas = {
+    1: { year: 1995, runtime: 80 }, 2: { year: 2021, runtime: 80 },   // llenan 1990s y 2020s
+    3: { year: 2022, runtime: 80 },                                   // reserva 2020s (pos 3)
+    4: { year: 1996, runtime: 80 },                                   // reserva 1990s (pos 4)
+  };
+  const cuotasIniciales = { "1990s": 5, "2020s": 1 }; // 1990s está muy por debajo de su objetivo original
+  const cola = [1, 2, 3, 4].map((id, i) => ({ pos: i + 1, id, prevista: "2020s", cortaProbable: true }));
+  const r = await llenar(cola, cuotas, async (c) => (fichas[c.id] ? { ...titulo({ tmdb_id: c.id }), ...fichas[c.id] } : FIN_DE_DATOS), { objetivoDecadas: cuotasIniciales });
+  assert.equal(r.completo, true);
+  assert.deepEqual(r.completadosDesdeReserva.map((t) => t.tmdb_id), [4], "entra la de 1990s aunque la de 2020s esté antes en la cola");
+});
+
+test("sin el mínimo de cortas en la reserva, no se inventan: el resultado queda incompleto y lo dice", async () => {
+  const { llenarObjetivo: llenar, FIN_DE_DATOS } = await import("./seleccion.mjs");
+  const cuotas = { total: 3, cortaMin: 3, decadas: { "<1980": 0, "1980s": 0, "1990s": 0, "2000s": 0, "2010s": 3, "2020s": 0 } };
+  const r = await llenar([{ pos: 1, id: 1, prevista: "2010s", cortaProbable: true }, { pos: 2, id: 2, prevista: "2010s", cortaProbable: true }],
+    cuotas, async (c) => (c.id === 1 ? titulo({ tmdb_id: 1, runtime: 80 }) : FIN_DE_DATOS));
+  assert.equal(r.completo, false);
+  assert.equal(r.cont.cortas, 1);
+});
+
+test("los detalles pendientes se reconstruyen del diario, no se restan de la estimación inicial", async () => {
+  const { estimarPendientes } = await import("./seleccion.mjs");
+  const cola = Array.from({ length: 40 }, (_, i) => ({ pos: i + 1, id: i + 1, prevista: "2010s", cortaProbable: false }));
+  const cuotas = { total: 10, cortaMin: 0, decadas: { "<1980": 0, "1980s": 0, "1990s": 0, "2000s": 0, "2010s": 10, "2020s": 0 } };
+  // En el diario: 20 consultados, la mitad servibles → 10 aceptados: completo.
+  const diario = new Map(cola.slice(0, 20).map((c) => [`detalle:${c.id}`, c.id % 2 ? { descartado: "sin-sinopsis" } : { titulo: titulo({ tmdb_id: c.id, runtime: 120 }) }]));
+  assert.equal((await estimarPendientes(cola, cuotas, diario)).p90, 0, "el objetivo ya está cubierto por el diario");
+  // Sólo 6 en el diario (3 servibles): faltan 7 servibles al 50% observado → ~14.
+  const corto = new Map([...diario].slice(0, 6));
+  const e = await estimarPendientes(cola, cuotas, corto);
+  assert.ok(e.p50 >= 10 && e.p50 <= 20, JSON.stringify(e));
+  // Con --sin-nuevos-detalles no se proyecta ninguna consulta.
+  assert.equal((await estimarPendientes(cola, cuotas, corto, { sinNuevosDetalles: true })).p90, 0);
 });

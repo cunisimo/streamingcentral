@@ -525,3 +525,35 @@ test("con sql:false una corrida completa no escribe ningún .sql y deja los meta
   assert.deepEqual(out.estado.metadatos_pendientes_sql, [1]);
   assert.equal(out.filasSql.partes, 0);
 });
+
+test("una operación prohibida (detalle en --sin-nuevos-detalles) corta la corrida sin salir a la red", async () => {
+  const { OperacionProhibida } = await import("./cliente-tmdb.mjs");
+  const fake = tmdbFalso(BASE);
+  const c = cliente(fake, { prohibidas: ["detalle"] });
+  await assert.rejects(() => c.pedir("detalle", "/movie/1"), OperacionProhibida);
+  assert.equal(fake.pedidos.length, 0);
+  assert.equal(c.metricas().intentos, 0);
+  const catalogo = { ...BASE, 4: { title: "Nueva", year: 2024, runtime: 130, providers: ["Netflix"] } };
+  const estado = estadoBase(BASE, { dispHace: 5 * DIA });
+  const r = await ejecutar({ estado, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso(catalogo), { prohibidas: ["detalle"] }), cfg: CFG("de") });
+  assert.equal(r.completo, false);
+  assert.equal(r.motivo, "detalle-prohibido");
+});
+
+test("el SQL incluye lo que quedó en carga_pendiente de una corrida --sin-sql, y la limpia", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ruleta-"));
+  const estado = estadoBase(BASE, { dispHace: 5 * DIA });
+  const catalogo = { ...BASE, 4: { title: "Nueva", year: 2024, runtime: 130, providers: ["Netflix"] } };
+  const r1 = await ejecutar({ estado, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso(catalogo)), cfg: CFG("de") });
+  const e1 = escribirSalidas(dir, { ...r1, estadoAnterior: estado }, iso(AHORA), { sql: false }).estado;
+  assert.deepEqual(e1.carga_pendiente.nuevos, [4]);
+  assert.ok(!readdirSync(dir).some((f) => f.endsWith(".sql")));
+  // Corrida siguiente (con SQL): una disponibilidad vencida dispara la carga.
+  e1.titulos[2].disp_at = iso(AHORA - 60 * DIA);
+  const r2 = await ejecutar({ estado: e1, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso(catalogo)), cfg: CFG("p") });
+  const e2 = escribirSalidas(dir, { ...r2, estadoAnterior: e1 }, iso(AHORA + DIA)).estado;
+  const sql = readdirSync(dir).filter((f) => f.endsWith(".sql")).map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
+  assert.match(sql, /insert into roulette_titles[\s\S]*\(4, 'movie', 'Nueva'/, "el nuevo de la corrida sin SQL entra ahora");
+  assert.match(sql, /insert into title_availability[\s\S]*\(4, 'movie', 'AR'/);
+  assert.equal(e2.carga_pendiente, undefined);
+});
