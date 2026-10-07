@@ -285,7 +285,7 @@ export function planificar(estado, diario, cfg) {
       }
     }
   } else if (estado.descubrimiento?.candidatos) {
-    for (const [id, [fam]] of Object.entries(estado.descubrimiento.candidatos)) desc.candidatos.set(Number(id), fam);
+    for (const [id, c] of Object.entries(estado.descubrimiento.candidatos)) desc.candidatos.set(Number(id), c.fams[0]);
   } else desc.exacto = false;
 
   // 2. Nuevos: candidatos que no están en el pool ni descartados vigentes.

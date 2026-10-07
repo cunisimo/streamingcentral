@@ -125,7 +125,7 @@ function paginasDescubrir(peliculas) {
 // ── 1. Sin cambios: cero llamadas ──────────────────────────────────────────────
 test("títulos sin cambios y disponibilidad vigente no provocan ninguna llamada", async () => {
   const estado = estadoBase(BASE, { dispHace: 5 * DIA });
-  estado.descubrimiento = { at: iso(AHORA - DIA), candidatos: { 1: ["principal", 500, 7, 1], 2: ["principal", 500, 7, 1], 3: ["principal", 500, 7, 1] } };
+  estado.descubrimiento = { at: iso(AHORA - DIA), candidatos: { 1: { fams: ["principal"], wp: null, wc: null, vc: 500, va: 7, pop: 1 }, 2: { fams: ["principal"], wp: null, wc: null, vc: 500, va: 7, pop: 1 }, 3: { fams: ["principal"], wp: null, wc: null, vc: 500, va: 7, pop: 1 } } };
   const fake = tmdbFalso(BASE);
   const c = cliente(fake);
   const r = await ejecutar({ estado, diario: diarioEnMemoria(), cliente: c, cfg: CFG("ep") });
@@ -444,4 +444,39 @@ test("el progreso del diario también cuenta detalles y disponibilidades hechas"
   const r = await ejecutar({ estado, diario, cliente: cliente(tmdbFalso(BASE), { presupuesto: 2 }), cfg: CFG("p") });
   assert.equal(r.completo, false);
   assert.deepEqual(r.progreso.disponibilidad, { hechas: 2, objetivo: 3 });
+});
+
+// ── Inventario y corridas que sólo descubren ─────────────────────────────────────
+
+test("una corrida que sólo descubre escribe estado e inventario, y NI pool NI SQL", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ruleta-"));
+  const estado = estadoBase(BASE, { dispHace: 5 * DIA });
+  const poolAntes = JSON.stringify({ region: "AR", titles: Object.values(estado.titulos) });
+  writeFileSync(join(dir, "pool-ruleta.json"), poolAntes);
+  const catalogo = { ...BASE, 1: { ...BASE[1], votos: 900 }, 4: { title: "Nueva", year: 2024, runtime: 95, providers: ["Netflix"] } };
+  const r = await ejecutar({ estado, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso(catalogo)), cfg: CFG("d") });
+  assert.equal(r.completo, true);
+  const out = escribirSalidas(dir, { ...r, estadoAnterior: estado }, iso(AHORA));
+  assert.equal(readFileSync(join(dir, "pool-ruleta.json"), "utf8"), poolAntes, "el pool no se reescribe");
+  assert.ok(!readdirSync(dir).some((f) => f.endsWith(".sql")), readdirSync(dir).join(", "));
+  const inv = JSON.parse(readFileSync(join(dir, "ruleta-inventario.json"), "utf8"));
+  assert.equal(inv.total, 4);
+  assert.deepEqual(inv.candidatos[4].fams, ["principal", "cortas"], "95 min: aparece en las dos familias");
+  assert.equal(inv.candidatos[4].wp, "2020-2029");
+  assert.equal(inv.candidatos[4].wc, "2015-2029");
+  assert.deepEqual(out.estado.metadatos_pendientes_sql, [1], "los votos nuevos de 1 quedan pendientes");
+});
+
+test("los metadatos pendientes de un descubrimiento van en la primera carga real", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ruleta-"));
+  const estado = estadoBase(BASE, { dispHace: 5 * DIA });
+  const catalogo = { ...BASE, 1: { ...BASE[1], votos: 900 } };
+  const r1 = await ejecutar({ estado, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso(catalogo)), cfg: CFG("d") });
+  const e1 = escribirSalidas(dir, { ...r1, estadoAnterior: estado }, iso(AHORA)).estado;
+  e1.titulos[2].disp_at = iso(AHORA - 60 * DIA); // fuerza una carga de disponibilidad
+  const r2 = await ejecutar({ estado: e1, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso(catalogo)), cfg: CFG("p") });
+  const e2 = escribirSalidas(dir, { ...r2, estadoAnterior: e1 }, iso(AHORA + DIA)).estado;
+  const sql = readdirSync(dir).filter((f) => f.endsWith(".sql")).map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
+  assert.match(sql, /update roulette_titles rt set[\s\S]*\(1, 120, 2001, 900, 7::numeric\)/);
+  assert.deepEqual(e2.metadatos_pendientes_sql, []);
 });

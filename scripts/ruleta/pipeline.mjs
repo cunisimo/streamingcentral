@@ -54,7 +54,10 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
   }
 
   const titulos = estado.titulos;
-  const candidatos = new Map(); // id → { familia, vc, va, pop }
+  // id → { familia, fams, wp, wc, vc, va, pop }. `familia` es la primera que lo
+  // encontró (principal se recorre antes y no tiene filtro de duración); `fams`
+  // y las ventanas (wp = principal, wc = cortas) son lo que usa la selección.
+  const candidatos = new Map();
   let sagasNuevas = {};
 
   try {
@@ -75,11 +78,8 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
             if (!r) break; // falló esta página: el resto de la ventana queda pendiente
             hechas++;
             total = r.total_pages;
-            for (const it of r.items) {
-              // La primera familia que lo encuentra gana: el principal no tiene
-              // filtro de duración, así que no se le aplica el de las cortas.
-              if (!candidatos.has(it.id)) candidatos.set(it.id, { familia: fam, ...it });
-            }
+            const ventana = `${v[0].slice(0, 4)}-${v[1].slice(0, 4)}`;
+            for (const it of r.items) acumularCandidato(candidatos, fam, ventana, it);
           }
         }
       }
@@ -87,8 +87,8 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
       log(`descubrir: ${hechas} páginas, ${candidatos.size} candidatos`);
     } else if (estado.descubrimiento?.candidatos) {
       // Descubrimiento de una corrida anterior: se reutiliza sin pedir nada.
-      for (const [id, [familia, vc, va, pop]] of Object.entries(estado.descubrimiento.candidatos)) {
-        candidatos.set(Number(id), { familia, id: Number(id), vc, va, pop, reutilizado: true });
+      for (const [id, c] of Object.entries(estado.descubrimiento.candidatos)) {
+        candidatos.set(Number(id), { ...c, id: Number(id), familia: c.fams[0], reutilizado: true });
       }
       progreso.descubrir = { reutilizado: estado.descubrimiento.at, candidatos: candidatos.size };
     }
@@ -180,8 +180,17 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
  * Los textos editoriales no viven en el estado (están en copy-ruleta.json y en
  * la base): ninguna fusión puede tocarlos. `con_texto` se conserva tal cual.
  */
+/** Suma un ítem de discover al inventario de candidatos de la corrida. */
+export function acumularCandidato(candidatos, fam, ventana, it) {
+  const c = candidatos.get(it.id) ?? { id: it.id, familia: fam, fams: [], wp: null, wc: null, vc: it.vc, va: it.va, pop: it.pop };
+  if (!c.fams.includes(fam)) c.fams.push(fam);
+  if (fam === "principal") c.wp = ventana; else c.wc = ventana;
+  candidatos.set(it.id, c);
+}
+
 export function fusionar(estado, { candidatos, nuevos, descartados, disp, sagasNuevas, ahoraIso, cfg }) {
   const sig = structuredClone(estado);
+  const pendientes = new Set(sig.metadatos_pendientes_sql ?? []);
   const dif = { incorporados: [], datosCompletados: [], metadatosDesdeDescubrir: 0, disponibilidad: { cambiadas: [], sinPlataforma: [], sinCambios: 0 }, descartados: Object.keys(descartados).length, noReaparecen: 0 };
 
   // Metadatos gratis: lo que discover ya trajo de los títulos existentes.
@@ -191,6 +200,8 @@ export function fusionar(estado, { candidatos, nuevos, descartados, disp, sagasN
     if (t.vote_count !== c.vc || t.vote_average !== c.va) {
       t.vote_count = c.vc; t.vote_average = c.va; t.popularity = c.pop;
       dif.metadatosDesdeDescubrir++;
+      // Todavía no fueron a ningún SQL: quedan anotados hasta la próxima carga.
+      pendientes.add(Number(id));
     }
   }
   const descubiertoAhora = [...candidatos.values()].some((c) => !c.reutilizado);
@@ -225,9 +236,13 @@ export function fusionar(estado, { candidatos, nuevos, descartados, disp, sagasN
     t.disp_at = r.at;
   }
 
+  sig.metadatos_pendientes_sql = [...pendientes].sort((a, b) => a - b);
   sig.ultima_corrida = { at: ahoraIso, ttl_disp_dias: cfg.ttlDispDias };
   if (descubiertoAhora) {
-    sig.descubrimiento = { at: ahoraIso, candidatos: Object.fromEntries([...candidatos].map(([id, c]) => [id, [c.familia, c.vc, c.va, c.pop]])) };
+    sig.descubrimiento = {
+      at: ahoraIso,
+      candidatos: Object.fromEntries([...candidatos].map(([id, c]) => [id, { fams: c.fams, wp: c.wp, wc: c.wc, vc: c.vc, va: c.va, pop: c.pop }])),
+    };
   }
   return { estado: sig, diferencias: dif, dispActualizada: disp };
 }

@@ -112,8 +112,26 @@ export function archivosDeSalida(dir, fecha) {
     poolRespaldo: join(dir, `pool-ruleta.antes-${fecha}.json`),
     colecciones: a.colecciones,
     sql: (n) => join(dir, `carga-ruleta-incremental-${fecha}-${n}.sql`),
+    inventario: join(dir, "ruleta-inventario.json"),
     informeJson: join(dir, `ruleta-informe-${fecha}.json`),
     informeMd: join(dir, `ruleta-informe-${fecha}.md`),
+  };
+}
+
+/**
+ * Inventario del descubrimiento, aparte del estado: es lo que se reutiliza en
+ * las ampliaciones siguientes sin repetir las ~470 páginas de discover. Se
+ * versiona en git (ver .gitignore), como los textos que costaron cuota.
+ */
+export function inventarioDeEstado(estado) {
+  const d = estado.descubrimiento;
+  if (!d?.candidatos) return null;
+  return {
+    descubierto_at: d.at,
+    region: estado.region,
+    nota: "Candidatos de discover (flatrate AR) con familia y ventana. No es el pool: incluye los que ya están y los que nunca se enriquecieron.",
+    total: Object.keys(d.candidatos).length,
+    candidatos: d.candidatos,
   };
 }
 
@@ -121,29 +139,46 @@ export function escribirSalidas(dir, { estado, diferencias, dispActualizada, est
   const fecha = fechaAR(Date.parse(ahoraIso));
   const s = archivosDeSalida(dir, fecha);
   const leer = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
-
-  const poolAnterior = leer(s.pool);
-  if (poolAnterior) copyFileSync(s.pool, s.poolRespaldo);
+  const escritos = [];
 
   const incorporados = diferencias.incorporados.map((i) => estado.titulos[i.tmdb_id]);
-  const cambiaronMeta = Object.values(estado.titulos).filter((t) => {
-    const a = estadoAnterior.titulos[t.tmdb_id];
-    return a && (a.vote_count !== t.vote_count || a.vote_average !== t.vote_average || a.runtime !== t.runtime || a.year !== t.year);
-  });
   const disponibilidad = [
     ...incorporados.map((t) => ({ tmdb_id: t.tmdb_id, providers: t.providers, at: t.disp_at })),
     ...Object.entries(dispActualizada).map(([id, r]) => ({ tmdb_id: Number(id), providers: r.providers, at: r.at })),
   ];
-  const sql = armarCargaIncremental({ nuevos: incorporados, metadatos: cambiaronMeta, disponibilidad }, { region: estado.region });
+  const hayCarga = incorporados.length > 0 || disponibilidad.length > 0 || diferencias.datosCompletados.length > 0;
 
-  const escritos = [];
-  sql.forEach((contenido, i) => { escribirAtomico(s.sql(i + 1), contenido); escritos.push(s.sql(i + 1)); });
-  escribirAtomico(s.pool, JSON.stringify(poolLegado(estado, poolAnterior, ahoraIso), null, 2)); escritos.push(s.pool);
-  escribirAtomico(s.colecciones, JSON.stringify(coleccionesLegado(leer(s.colecciones), diferencias.incorporados, estado, ahoraIso), null, 2)); escritos.push(s.colecciones);
+  const inventario = inventarioDeEstado(estado);
+  const descubiertoAhora = estado.descubrimiento?.at && estado.descubrimiento.at !== estadoAnterior.descubrimiento?.at;
+  if (inventario && descubiertoAhora) {
+    escribirAtomico(s.inventario, JSON.stringify(inventario));
+    escritos.push(s.inventario);
+  }
+
+  let filasSql = { nuevos: 0, metadatos: 0, disponibilidad: 0, partes: 0 };
+  let sig = estado;
+  if (hayCarga) {
+    // Una corrida que sólo descubre NO genera carga: ni pool nuevo ni SQL. Los
+    // votos que discover actualizó quedan en `metadatos_pendientes_sql` y van
+    // en la primera carga real.
+    const poolAnterior = leer(s.pool);
+    if (poolAnterior) { copyFileSync(s.pool, s.poolRespaldo); escritos.push(s.poolRespaldo); }
+    const pendientes = new Set(estado.metadatos_pendientes_sql ?? []);
+    const cambiaronMeta = Object.values(estado.titulos).filter((t) => {
+      const a = estadoAnterior.titulos[t.tmdb_id];
+      if (!a) return false;
+      return pendientes.has(t.tmdb_id) || a.vote_count !== t.vote_count || a.vote_average !== t.vote_average || a.runtime !== t.runtime || a.year !== t.year;
+    });
+    const sql = armarCargaIncremental({ nuevos: incorporados, metadatos: cambiaronMeta, disponibilidad }, { region: estado.region });
+    sql.forEach((contenido, i) => { escribirAtomico(s.sql(i + 1), contenido); escritos.push(s.sql(i + 1)); });
+    escribirAtomico(s.pool, JSON.stringify(poolLegado(estado, poolAnterior, ahoraIso), null, 2)); escritos.push(s.pool);
+    escribirAtomico(s.colecciones, JSON.stringify(coleccionesLegado(leer(s.colecciones), diferencias.incorporados, estado, ahoraIso), null, 2)); escritos.push(s.colecciones);
+    sig = { ...estado, metadatos_pendientes_sql: [] };
+    filasSql = { nuevos: incorporados.length, metadatos: cambiaronMeta.length, disponibilidad: disponibilidad.length, partes: sql.length };
+  }
   // El estado va ÚLTIMO: si algo de arriba falla, la próxima corrida retoma del diario.
-  escribirAtomico(s.estado, JSON.stringify(estado)); escritos.push(s.estado);
-  if (poolAnterior) escritos.push(s.poolRespaldo);
-  return { escritos, filasSql: { nuevos: incorporados.length, metadatos: cambiaronMeta.length, disponibilidad: disponibilidad.length, partes: sql.length } };
+  escribirAtomico(s.estado, JSON.stringify(sig)); escritos.push(s.estado);
+  return { escritos, filasSql, estado: sig };
 }
 
 // --- Informe ----------------------------------------------------------------------
