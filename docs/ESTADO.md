@@ -43,6 +43,22 @@
   disponibilidad, textos, SQL ni Supabase. Decisión pendiente del dueño:
   cuántos incorporar (propuesta 300/500/800 estratificada); antes de enriquecer
   falta un mecanismo de selección, porque hoy `enriquecer` procesaría los 4626.
+  **Actualización 07/10: el dueño aprobó 500 + cadencia (MANTENIMIENTO §1.c).**
+  `descubrir` COMPLETO con autorización (presupuesto 20): 12 intentos, 12
+  éxitos, 0 errores/429 → 472 páginas en total. Inventario definitivo
+  `data/ruleta-inventario.json` (7114 candidatos, 4765 nuevos, 1 fuera de
+  filtro), versionado. Selección estratificada y determinística
+  (`scripts/ruleta/seleccion.mjs`): cortas por duración REAL ≤ 90, cupo por
+  década con redistribución, terciles de votos, sólo flatrate de Yump; la cola
+  (`data/ruleta-cola.json`, 4761, versionada) se recorre hasta llenar 500 + 15%
+  de reserva y `--ejecutar --fases enriquecer` no corre sin cola. Informes con
+  fecha y hora argentinas (`-HHMM`): el de la primera tanda de descubrir había
+  quedado como `2026-10-07` y lo pisó el de la tercera; sus números están arriba.
+  Tests: `npm run test:ruleta` 51/51; mutaciones deliberadas caen. Estimación
+  (simulada con tasas SUPUESTAS del pool, no medidas): 1296 detalles (p90) +
+  126 colecciones = 1422; ~436 servibles quedarían en reserva para la próxima
+  ampliación. NO se ejecutó enriquecimiento, textos, disponibilidad, SQL ni
+  Supabase.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**

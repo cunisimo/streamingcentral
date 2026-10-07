@@ -103,6 +103,8 @@ export function proveedoresDe(watchProviders) {
 export function construirTitulo(detail, familia, ahoraIso) {
   if (!detail) return { descartado: "no-existe" };
   const providers = proveedoresDe(detail["watch/providers"]);
+  // Sólo suscripción: es lo que decide si un título NUEVO se incorpora.
+  const providers_flatrate = [...new Set((detail["watch/providers"]?.results?.[REGION]?.flatrate ?? []).map((p) => p.provider_name))];
   if (!providers.length) return { descartado: "sin-plataforma" };
   const overview = (detail.overview ?? "").trim();
   if (!overview) return { descartado: "sin-sinopsis" };
@@ -135,6 +137,7 @@ export function construirTitulo(detail, familia, ahoraIso) {
       vote_average: detail.vote_average ?? null,
       popularity: detail.popularity ?? null,
       providers,
+      providers_flatrate,
       con_texto: false,
       familia,
       meta_at: ahoraIso,
@@ -312,11 +315,15 @@ export function planificar(estado, diario, cfg) {
   const tasaSaga = titulos.length ? conSaga.length / titulos.length : 0;
   const tasaSagaNueva = conSaga.length ? sagasConocidas / conSaga.length : 0;
 
+  // Con cola, el detalle se corta al llenar el objetivo: se estima con la
+  // simulación guardada en la cola (p90), no con todos los candidatos nuevos.
+  const sel = cfg.seleccion;
+  const detalleCola = sel ? Math.min(sel.cola.length, sel.estimacion?.p90 ?? sel.cola.length) : null;
   const llamadas = {
     descubrir: desc.paginasPrevistas,
-    detalle: fases.enriquecer ? nuevos.length - detalleHechos + faltantes.length : 0,
+    detalle: fases.enriquecer ? (sel ? Math.max(0, detalleCola - detalleHechos) : nuevos.length - detalleHechos) + faltantes.length : 0,
     disponibilidad: dispObjetivo.length - dispHechas,
-    coleccion: fases.enriquecer ? Math.ceil(nuevos.length * tasaSaga * tasaSagaNueva) : 0,
+    coleccion: fases.enriquecer ? Math.ceil((sel ? sel.cuotas.total : nuevos.length) * tasaSaga * tasaSagaNueva) : 0,
   };
   const total = Object.values(llamadas).reduce((a, b) => a + b, 0);
   const anterior = costoProcesoAnterior(estado);
@@ -349,6 +356,12 @@ export function planificar(estado, diario, cfg) {
  * corrida se nombran con esto: con la fecha UTC, a partir de las 21:00 locales
  * ya dice "mañana" (pasó en la primera corrida real: 21:01 → 2026-10-07).
  */
+/** Fecha y hora argentinas para nombrar informes: dos corridas del mismo día no se pisan. */
+export function selloAR(ms) {
+  const hora = new Date(ms).toLocaleTimeString("en-GB", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  return `${fechaAR(ms)}-${hora.replace(":", "")}`;
+}
+
 export function fechaAR(ms) {
   return new Date(ms).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 }

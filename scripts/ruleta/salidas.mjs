@@ -104,7 +104,7 @@ export function coleccionesLegado(anterior, incorporados, estado, ahoraIso) {
  * Qué archivos escribiría (o escribió) una corrida completa. Separado de la
  * escritura para que el plan pueda listarlos sin escribir nada.
  */
-export function archivosDeSalida(dir, fecha) {
+export function archivosDeSalida(dir, fecha, sello = fecha) {
   const a = archivos(dir);
   return {
     estado: a.estado,
@@ -113,8 +113,8 @@ export function archivosDeSalida(dir, fecha) {
     colecciones: a.colecciones,
     sql: (n) => join(dir, `carga-ruleta-incremental-${fecha}-${n}.sql`),
     inventario: join(dir, "ruleta-inventario.json"),
-    informeJson: join(dir, `ruleta-informe-${fecha}.json`),
-    informeMd: join(dir, `ruleta-informe-${fecha}.md`),
+    informeJson: join(dir, `ruleta-informe-${sello}.json`),
+    informeMd: join(dir, `ruleta-informe-${sello}.md`),
   };
 }
 

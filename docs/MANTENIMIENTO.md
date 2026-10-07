@@ -13,7 +13,7 @@ suscripción (`claude` → `/status` tiene que mostrar el plan, no una API key).
 | Cada cuánto | Qué |
 |---|---|
 | Mensual | Disponibilidad de la ruleta (§1.b, fase `disponibilidad`) |
-| Trimestral | Títulos nuevos en la ruleta (§1.b `descubrir` + `enriquecer`, y LLM de §3) |
+| Ampliación de la ruleta | Cadencia aprobada en §1.c (hoy: 500 → esperar ~2 meses → 300–500 → trimestral) |
 | Octubre | Chip Mágica navidad, antes de la temporada (§4) |
 | Después de cada corrida | Diff del mapa de plataformas (§5) |
 
@@ -71,20 +71,26 @@ en el primero y se tiraba. Además:
 # 1. Plan: NO consulta TMDB, NO escribe nada. Siempre primero.
 node scripts/actualizar-ruleta.mjs
 
-# 2. Descubrir (sólo páginas de discover; deja los candidatos en el estado)
-node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases descubrir --presupuesto 260
+# 2. Descubrir (sólo páginas de discover). Medido el 2026-10-06/07: 472
+#    páginas en total. Una corrida que sólo descubre escribe el estado y
+#    data/ruleta-inventario.json (versionado), NO pool ni SQL.
+node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases descubrir --presupuesto 500
 
-# 3. Plan otra vez: ahora los títulos nuevos son EXACTOS
+# 3. Cola de selección (§1.c): sin TMDB, escribe data/ruleta-cola.json (versionada)
+node scripts/actualizar-ruleta.mjs --armar-cola --objetivo 500
+
+# 4. Plan con la cola: estima los detalles hasta llenar el objetivo
 node scripts/actualizar-ruleta.mjs --fases enriquecer
 
-# 4. Detalle de los nuevos (+ colección sólo de sagas desconocidas)
-node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases enriquecer --presupuesto <plan + 10%>
+# 5. Detalle recorriendo la cola hasta llenar el objetivo (+ colecciones de
+#    sagas desconocidas). Sin cola, `--ejecutar --fases enriquecer` no corre.
+node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases enriquecer --presupuesto <p90 de la cola + colecciones + 5%>
 
-# 5. Disponibilidad vencida (TTL configurable; se puede repartir en varias corridas)
+# 6. Disponibilidad vencida (TTL configurable; se puede repartir en varias corridas)
 node --env-file=.env.local scripts/actualizar-ruleta.mjs --ejecutar --fases disponibilidad --presupuesto 2500 [--max-disponibilidad 800]
 ```
 
-Cada corrida deja `data/ruleta-informe-<fecha>.json` y `.md` (intentos HTTP
+Cada corrida deja `data/ruleta-informe-<fecha>-<HHMM>.json` y `.md` (hora argentina) (intentos HTTP
 reales, éxitos, fallos, reintentos, 429, por operación, diferencias y archivos
 escritos) y `data/carga-ruleta-incremental-<fecha>-N.sql`.
 
@@ -112,6 +118,41 @@ texto) → `classify-context.mjs` (sólo las secuelas nuevas) →
   lleva la fecha REAL de la consulta (el generador anterior ponía `now()` a
   todas las filas).
 - Tests: `npm run test:ruleta` (TMDB simulado; sin red).
+
+---
+
+## 1.c Ampliación de la ruleta: cadencia y selección (aprobado por el dueño el 2026-10-07)
+
+**Cadencia** (procedimiento manual, NO automatizado):
+
+1. Ahora: incorporar **500 películas nuevas realmente utilizables**.
+2. Esperar **~2 meses** y observar el uso real.
+3. Incorporar otras **300–500** desde el inventario ya descubierto
+   (`data/ruleta-inventario.json`, sin repetir el descubrimiento), empezando
+   por la RESERVA que dejó la ampliación anterior: ya está enriquecida y sólo
+   hay que revisar su disponibilidad por TTL.
+4. Seguir **trimestralmente** mientras aporte variedad.
+5. Al llegar a **~3500–4000 películas realmente disponibles**, bajar a una o
+   dos ampliaciones por año.
+
+**Criterios** (los aplica `scripts/ruleta/seleccion.mjs`):
+
+- **Cortas primero:** el mínimo de cortas se mide con la duración REAL ≤ 90 min.
+  La familia de discover de 60–100 min sólo sirve para encontrar candidatas:
+  una de 91–100 min cuenta como larga. Sólo el 44% de las de 60–100 min del
+  pool dura ≤ 90; por eso la cola intercala 3 probables cortas por cada otra.
+- **Antiguas protegidas:** cupo por década (para 500: <1980 90 · 80s 60 ·
+  90s 85 · 00s 85 · 10s 90 · 20s 90). Si una década se queda sin candidatos,
+  su sobrante pasa a las demás empezando por la más antigua.
+- **Populares y menos conocidas:** dentro de cada década, ronda entre terciles
+  de votos; el orden dentro de cada tercil es un hash del id, no la popularidad.
+- **Sólo plataformas de Yump:** flatrate vigente en AR en una plataforma de
+  `lib/roulette-providers.ts` (un test ata las dos listas). Publicidad o
+  plataformas no soportadas no cuentan.
+- **El objetivo son títulos servibles, no candidatos procesados:** la cola se
+  recorre hasta llenar 500 + 15% de reserva (los que el LLM no conozca). Lo que
+  sirve pero no entra por cupo queda en `reserva` dentro del estado, ya
+  enriquecido, para la ampliación siguiente.
 
 ---
 

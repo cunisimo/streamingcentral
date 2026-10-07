@@ -480,3 +480,13 @@ test("los metadatos pendientes de un descubrimiento van en la primera carga real
   assert.match(sql, /update roulette_titles rt set[\s\S]*\(1, 120, 2001, 900, 7::numeric\)/);
   assert.deepEqual(e2.metadatos_pendientes_sql, []);
 });
+
+test("dos corridas del mismo día no se pisan el informe (fecha y hora argentinas)", async () => {
+  const { selloAR } = await import("./nucleo.mjs");
+  const { archivosDeSalida } = await import("./salidas.mjs");
+  assert.equal(selloAR(NOCHE_AR), "2026-10-06-2130");
+  const a = archivosDeSalida("d", "2026-10-07", selloAR(Date.parse("2026-10-07T13:00:00Z")));
+  const b = archivosDeSalida("d", "2026-10-07", selloAR(Date.parse("2026-10-07T18:51:00Z")));
+  assert.notEqual(a.informeJson, b.informeJson);
+  assert.match(b.informeJson, /ruleta-informe-2026-10-07-1551\.json$/);
+});

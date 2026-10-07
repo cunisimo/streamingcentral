@@ -23,6 +23,11 @@ data/*
 !data/copy-ruleta.json
 !data/contexto-ruleta.json
 !data/clasificado-magica-navidad.json
+# Ruleta incremental (MANTENIMIENTO §1.b): el inventario costó 472 páginas de
+# discover y la cola es la selección aprobada; se reutilizan en cada ampliación.
+# El estado y el diario NO se versionan: cambian en cada corrida.
+!data/ruleta-inventario.json
+!data/ruleta-cola.json
 
 # Permisos locales de Claude Code. NO se versiona y NO se lee: es configuracion
 # de la maquina del dueno, no del proyecto (`.claude/settings.json` y

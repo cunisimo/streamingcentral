@@ -18,6 +18,12 @@ import {
   construirTitulo, proveedoresDe, esSecuelaInferida, sagaDeColeccion, dispVencida, faltanDatos,
   descarteVigente, progresoDesdeDiario,
 } from "./nucleo.mjs";
+import { llenarObjetivo } from "./seleccion.mjs";
+
+/** Una consulta de la cola falló: se corta en vez de decidir sin el dato. */
+export class FalloEnCola extends Error {
+  constructor(id) { super(`falló el detalle de ${id}`); this.name = "FalloEnCola"; }
+}
 
 export class Interrumpido extends Error {
   constructor() { super("interrumpido"); this.name = "Interrumpido"; }
@@ -95,27 +101,49 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
 
     // ── 2. Enriquecer ─────────────────────────────────────────────────────
     const nuevos = [];
+    const reservaNueva = [];
     const descartados = {};
     let descartesReusados = 0;
+    let seleccion = null;
     if (cfg.fases.enriquecer) {
-      const objetivo = [];
-      for (const [id, c] of candidatos) {
-        if (titulos[id]) continue;
-        if (descarteVigente(estado.descartados[id], cfg.ahoraMs, cfg.ttlDescartesDias)) { descartesReusados++; continue; }
-        objetivo.push({ id, familia: c.familia });
-      }
-      const faltantes = Object.values(titulos).filter(faltanDatos).map((t) => ({ id: t.tmdb_id, familia: t.familia ?? "principal", existente: true }));
-
-      for (const o of [...objetivo, ...faltantes]) {
-        const r = await operacion(claveDetalle(o.id), async () => {
-          const d = await cliente.pedir("detalle", `/movie/${o.id}`, {
-            language: IDIOMA, append_to_response: "release_dates,watch/providers",
-          });
-          return construirTitulo(d, o.familia, ahoraIso);
+      const detalle = (id, familia) => operacion(claveDetalle(id), async () => {
+        const d = await cliente.pedir("detalle", `/movie/${id}`, {
+          language: IDIOMA, append_to_response: "release_dates,watch/providers",
         });
-        if (!r) continue;
-        if (r.descartado) descartados[o.id] = { motivo: r.descartado, at: ahoraIso };
-        else nuevos.push({ ...r.titulo, _existente: !!o.existente });
+        return construirTitulo(d, familia, ahoraIso);
+      });
+      const faltantes = Object.values(titulos).filter(faltanDatos).map((t) => ({ id: t.tmdb_id, familia: t.familia ?? "principal", existente: true }));
+      let objetivo = [];
+
+      if (cfg.seleccion) {
+        // Con COLA (el modo normal): se recorre en orden hasta llenar el
+        // objetivo de títulos SERVIBLES; lo que sirve pero no entra va a reserva.
+        const familiaDe = (id) => candidatos.get(id)?.familia ?? "principal";
+        seleccion = await llenarObjetivo(cfg.seleccion.cola, cfg.seleccion.cuotas, async (c) => {
+          const r = await detalle(c.id, familiaDe(c.id));
+          if (!r) throw new FalloEnCola(c.id); // falló la consulta: no se decide a ciegas
+          if (r.descartado) { descartados[c.id] = { motivo: r.descartado, at: ahoraIso }; return null; }
+          return r.titulo;
+        });
+        for (const d of seleccion.descartes) descartados[d.id] ??= { motivo: d.motivo, at: ahoraIso };
+        for (const t of seleccion.aceptados) nuevos.push({ ...t, _existente: false });
+        for (const t of seleccion.reserva) reservaNueva.push(t);
+      } else {
+        for (const [id, c] of candidatos) {
+          if (titulos[id]) continue;
+          if (descarteVigente(estado.descartados[id], cfg.ahoraMs, cfg.ttlDescartesDias)) { descartesReusados++; continue; }
+          objetivo.push({ id, familia: c.familia });
+        }
+        for (const o of objetivo) {
+          const r = await detalle(o.id, o.familia);
+          if (!r) continue;
+          if (r.descartado) descartados[o.id] = { motivo: r.descartado, at: ahoraIso };
+          else nuevos.push({ ...r.titulo, _existente: false });
+        }
+      }
+      for (const o of faltantes) {
+        const r = await detalle(o.id, o.familia);
+        if (r?.titulo) nuevos.push({ ...r.titulo, _existente: true });
       }
 
       // Sagas de los nuevos: primero lo que ya se sabe; colección sólo si no alcanza.
@@ -135,8 +163,10 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
         t.coleccion_at = ahoraIso;
       }
       progreso.enriquecer = {
-        objetivo: objetivo.length, faltantes: faltantes.length, incorporados: nuevos.filter((t) => !t._existente).length,
+        objetivo: seleccion ? seleccion.cuotas.total : objetivo.length, faltantes: faltantes.length,
+        incorporados: nuevos.filter((t) => !t._existente).length, reserva: reservaNueva.length,
         descartados: Object.keys(descartados).length, descartesReusados, sagasConsultadas: Object.keys(sagasNuevas).length,
+        ...(seleccion ? { consultasDeCola: seleccion.consultas, cortas: seleccion.cont.cortas, decadas: seleccion.cont.decadas, completo: seleccion.completo } : {}),
       };
       log(`enriquecer: ${progreso.enriquecer.incorporados} nuevos, ${progreso.enriquecer.descartados} descartados`);
     }
@@ -163,11 +193,14 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
     if (fallos.length) return { completo: false, motivo: "fallos", fallos, progreso: progresoDesdeDiario(diario.entradas(), estado, cfg) };
     return {
       completo: true, fallos, progreso,
-      ...fusionar(estado, { candidatos, nuevos, descartados, disp, sagasNuevas, ahoraIso, cfg }),
+      ...fusionar(estado, { candidatos, nuevos, reservaNueva, descartados, disp, sagasNuevas, ahoraIso, cfg }),
     };
   } catch (e) {
     if (e instanceof PresupuestoAgotado) corte = "presupuesto";
     else if (e instanceof Interrumpido) corte = "interrumpido";
+    // La cola es ordenada: saltear un título que falló cambiaría qué entra.
+    // Se corta y la próxima corrida lo reintenta en su lugar.
+    else if (e instanceof FalloEnCola) corte = "fallos";
     else throw e;
     // El progreso en memoria se arma al final de cada fase, así que una fase
     // cortada a la mitad no lo tiene: se reconstruye del diario, que es lo real.
@@ -188,7 +221,7 @@ export function acumularCandidato(candidatos, fam, ventana, it) {
   candidatos.set(it.id, c);
 }
 
-export function fusionar(estado, { candidatos, nuevos, descartados, disp, sagasNuevas, ahoraIso, cfg }) {
+export function fusionar(estado, { candidatos, nuevos, reservaNueva = [], descartados, disp, sagasNuevas, ahoraIso, cfg }) {
   const sig = structuredClone(estado);
   const pendientes = new Set(sig.metadatos_pendientes_sql ?? []);
   const dif = { incorporados: [], datosCompletados: [], metadatosDesdeDescubrir: 0, disponibilidad: { cambiadas: [], sinPlataforma: [], sinCambios: 0 }, descartados: Object.keys(descartados).length, noReaparecen: 0 };
@@ -208,7 +241,7 @@ export function fusionar(estado, { candidatos, nuevos, descartados, disp, sagasN
   if (descubiertoAhora) dif.noReaparecen = Object.keys(sig.titulos).filter((id) => !candidatos.has(Number(id))).length;
 
   for (const n of nuevos) {
-    const { _existente, ...t } = n;
+    const { _existente, _pos, ...t } = n;
     if (_existente) {
       const prev = sig.titulos[t.tmdb_id];
       sig.titulos[t.tmdb_id] = { ...t, con_texto: prev.con_texto, coleccion: prev.coleccion ?? t.coleccion, es_secuela: prev.es_secuela ?? t.es_secuela, coleccion_at: prev.coleccion_at ?? t.coleccion_at, familia: prev.familia ?? t.familia };
@@ -219,6 +252,12 @@ export function fusionar(estado, { candidatos, nuevos, descartados, disp, sagasN
     }
   }
   for (const [id, d] of Object.entries(descartados)) sig.descartados[id] = d;
+  // Servibles que no entraron por cupo: quedan enriquecidos para la próxima
+  // ampliación. Al promoverlos, su disponibilidad se revisa por TTL como la de
+  // cualquier título.
+  sig.reserva ??= {};
+  for (const t of reservaNueva) { const { _pos, _motivo, ...r } = t; sig.reserva[r.tmdb_id] = { ...r, reserva_motivo: _motivo, reserva_pos: _pos }; }
+  dif.reserva = reservaNueva.length;
   for (const [cid, s] of Object.entries(sagasNuevas)) sig.sagas[cid] = s;
 
   for (const [id, r] of Object.entries(disp)) {

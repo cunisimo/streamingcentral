@@ -27,10 +27,24 @@
  * MISMO comando retoma sin repetir. Ctrl+C corta limpio.
  */
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { OBJETIVO_500, construirCola, cuotasConReserva, estimarConsultas } from "./ruleta/seleccion.mjs";
+
+// Tasas SUPUESTAS para estimar el presupuesto (no son medición): proporción de
+// candidatos de discover que resultan servibles (flatrate Yump + datos), por
+// década prevista, y proporción de "probables cortas" (60–100 min) que duran
+// ≤ 90 min de verdad. Salen del pool actual (2026-10-07): plataforma Yump 63%
+// antes de 1980, 81% en los 80, 97-100% después; 44% de las de 60–100 min
+// duran ≤ 90. Se descuenta un 10% más por discover que no coincide con
+// watch/providers y por sinopsis faltantes.
+const TASAS_SUPUESTAS = {
+  servible: { "<1980": 0.55, "1980s": 0.72, "1990s": 0.85, "2000s": 0.87, "2010s": 0.87, "2020s": 0.88 },
+  cortaReal: 0.44,
+  cortaRealResto: 0.03,
+};
 import { cargarEstado, leerDiario, crearDiario } from "./ruleta/estado.mjs";
-import { planificar, fechaAR } from "./ruleta/nucleo.mjs";
+import { planificar, fechaAR, selloAR } from "./ruleta/nucleo.mjs";
 import { crearClienteTmdb } from "./ruleta/cliente-tmdb.mjs";
 import { ejecutar } from "./ruleta/pipeline.mjs";
 import { escribirSalidas, informeMarkdown, archivosDeSalida } from "./ruleta/salidas.mjs";
@@ -56,12 +70,54 @@ const cfg = {
 
 const { estado, origen } = cargarEstado(DATOS);
 const diarioPrevio = leerDiario(DATOS);
-const plan = planificar(estado, diarioPrevio, cfg);
 // Día argentino, no UTC: a partir de las 21 h la fecha UTC ya es mañana.
 const fecha = fechaAR(ahoraMs);
+const sello = selloAR(ahoraMs);
+
+// ── Cola de selección (sin TMDB) ─────────────────────────────────────────────
+// `--armar-cola` ordena TODOS los candidatos nuevos del inventario según la
+// distribución acordada y la guarda en <datos>/ruleta-cola.json. Los primeros
+// son los elegidos; los siguientes, los suplentes. No consulta TMDB.
+const RUTA_COLA = resolve(arg("--cola") ?? `${DATOS}/ruleta-cola.json`);
+if (args.includes("--armar-cola")) {
+  const objetivo = { ...OBJETIVO_500, total: numero("--objetivo", OBJETIVO_500.total) };
+  if (objetivo.total !== OBJETIVO_500.total) {
+    const f = objetivo.total / OBJETIVO_500.total;
+    objetivo.cortaMin = Math.round(OBJETIVO_500.cortaMin * f);
+    objetivo.decadas = Object.fromEntries(Object.entries(OBJETIVO_500.decadas).map(([d, n]) => [d, Math.round(n * f)]));
+  }
+  const inventario = JSON.parse(readFileSync(resolve(DATOS, "ruleta-inventario.json"), "utf8"));
+  const cola = construirCola(inventario, estado, objetivo, { ahoraMs, ttlDescartesDias: cfg.ttlDescartesDias });
+  const cuotas = cuotasConReserva(objetivo);
+  const estimacion = await estimarConsultas(cola, cuotas, TASAS_SUPUESTAS);
+  const doc = {
+    generada_at: new Date(ahoraMs).toISOString(), fecha, objetivo, cuotas, tasas_supuestas: TASAS_SUPUESTAS, estimacion,
+    inventario_descubierto_at: inventario.descubierto_at, candidatos: cola.length, cola,
+  };
+  escribirAtomico(RUTA_COLA, JSON.stringify(doc, null, 1));
+  console.log(JSON.stringify({ candidatos: cola.length, objetivo, cuotas, estimacion }, null, 2));
+  console.log(`\n✔ ${RUTA_COLA}\nNo se consultó TMDB.`);
+  process.exit(0);
+}
+if (fases.enriquecer) {
+  // Sin cola, enriquecer recorrería TODOS los candidatos nuevos (4764 en el
+  // inventario de 2026-10-07). Es exactamente lo que el dueño decidió no hacer.
+  if (!args.includes("--sin-cola")) {
+    if (existsSync(RUTA_COLA)) {
+      const c = JSON.parse(readFileSync(RUTA_COLA, "utf8"));
+      cfg.seleccion = { cola: c.cola, cuotas: c.cuotas, estimacion: c.estimacion };
+    } else if (EJECUTAR) {
+      throw new Error(`enriquecer exige una cola (${RUTA_COLA}); armala con --armar-cola`);
+    }
+  }
+}
+
+// El plan va DESPUÉS de cargar la cola: con cola, el detalle se estima por su
+// simulación y no por todos los candidatos nuevos.
+const plan = planificar(estado, diarioPrevio, cfg);
 
 if (!EJECUTAR) {
-  const s = archivosDeSalida(DATOS, fecha);
+  const s = archivosDeSalida(DATOS, fecha, sello);
   const inf = {
     modo: "plan", fecha, origenEstado: origen, fases: fasesLista, cfg: { ...cfg, maxDisponibilidad: String(cfg.maxDisponibilidad) }, plan,
     archivos: [s.estado, s.pool, s.poolRespaldo, s.colecciones, s.sql("N"), s.informeJson, s.informeMd].map((p) => `${p} (se escribiría)`),
@@ -88,7 +144,7 @@ const t0 = Date.now();
 const r = await ejecutar({ estado, diario, cliente, cfg, detener: () => detener, log: (m) => console.log(`  ${m}`) });
 const duracionMs = Date.now() - t0;
 
-const s = archivosDeSalida(DATOS, fecha);
+const s = archivosDeSalida(DATOS, fecha, sello);
 let archivosEscritos = [];
 if (r.completo) {
   const ahoraIso = new Date(ahoraMs).toISOString();
