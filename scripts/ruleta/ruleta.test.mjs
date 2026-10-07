@@ -391,3 +391,57 @@ test("el modo plan no necesita token, no consulta TMDB y no escribe nada", () =>
   assert.ok(!existsSync(join(dir, "ruleta-estado.json")));
   assert.equal(cargarEstado(dir).origen, "legado");
 });
+
+// ── Correcciones posteriores a la primera corrida real (2026-10-06) ──────────────
+// Las dos fallas se vieron en la corrida real de descubrir: el informe salió
+// fechado 2026-10-07 a las 21:01 de Argentina, y la sección "Progreso" quedó
+// vacía porque la corrida se cortó por presupuesto.
+
+// 21:30 en Argentina = 00:30 UTC del día siguiente: la franja donde la fecha
+// UTC ya dice "mañana" (CLAUDE.md, convención de fechas).
+const NOCHE_AR = Date.parse("2026-10-07T00:30:00Z");
+
+test("los archivos de una corrida llevan la fecha ARGENTINA, no la UTC", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ruleta-"));
+  const estado = estadoBase(BASE, { dispHace: 60 * DIA });
+  const r = await ejecutar({ estado, diario: diarioEnMemoria(), cliente: cliente(tmdbFalso(BASE)), cfg: CFG("p", { ahoraMs: NOCHE_AR }) });
+  escribirSalidas(dir, { ...r, estadoAnterior: estado }, iso(NOCHE_AR));
+  const nombres = readdirSync(dir);
+  assert.ok(nombres.some((n) => n.includes("2026-10-06")), nombres.join(", "));
+  assert.ok(!nombres.some((n) => n.includes("2026-10-07")), nombres.join(", "));
+});
+
+test("el informe del plan se fecha en hora argentina", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ruleta-"));
+  const titles = Object.values(estadoBase(BASE).titulos);
+  writeFileSync(join(dir, "pool-ruleta.json"), JSON.stringify({ region: "AR", generated_at: iso(AHORA), titles }));
+  const cli = resolve(import.meta.dirname, "..", "actualizar-ruleta.mjs");
+  const r = spawnSync(process.execPath, [cli, "--datos", dir, "--ahora", iso(NOCHE_AR)], { encoding: "utf8", env: { ...process.env, TMDB_READ_TOKEN: "" } });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /# Ruleta — plan 2026-10-06/);
+});
+
+test("una corrida cortada por presupuesto informa el progreso reconstruido del diario", async () => {
+  const catalogo = { ...BASE, 4: { title: "Nueva", year: 2024, runtime: 130, providers: ["Netflix"] } };
+  const estado = estadoBase(BASE, { dispHace: 60 * DIA });
+  const diario = diarioEnMemoria();
+  const r = await ejecutar({ estado, diario, cliente: cliente(tmdbFalso(catalogo), { presupuesto: 6 }), cfg: CFG("dep") });
+  assert.equal(r.completo, false);
+  assert.equal(r.motivo, "presupuesto");
+  const d = r.progreso.descubrir;
+  assert.ok(d, `progreso vacío: ${JSON.stringify(r.progreso)}`);
+  assert.equal(d.paginasHechas, 6, "las seis ventanas de la familia principal");
+  assert.ok(d.paginasPendientesConocidas >= 0);
+  assert.ok(d.ventanas.length >= 1);
+  assert.equal(d.candidatos, 4, "las tres de BASE más la nueva de 2024");
+  assert.equal(d.nuevos, 1);
+  assert.equal(d.ventanasSinEmpezar, FAMILIAS.cortas.ventanas.length);
+});
+
+test("el progreso del diario también cuenta detalles y disponibilidades hechas", async () => {
+  const estado = estadoBase(BASE, { dispHace: 60 * DIA });
+  const diario = diarioEnMemoria();
+  const r = await ejecutar({ estado, diario, cliente: cliente(tmdbFalso(BASE), { presupuesto: 2 }), cfg: CFG("p") });
+  assert.equal(r.completo, false);
+  assert.deepEqual(r.progreso.disponibilidad, { hechas: 2, objetivo: 3 });
+});

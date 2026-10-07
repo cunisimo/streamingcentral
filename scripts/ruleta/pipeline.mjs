@@ -16,7 +16,7 @@ import { PresupuestoAgotado, FalloTmdb } from "./cliente-tmdb.mjs";
 import {
   FAMILIAS, IDIOMA, paramsDescubrir, claveDescubrir, claveDetalle, claveDisp, claveColeccion,
   construirTitulo, proveedoresDe, esSecuelaInferida, sagaDeColeccion, dispVencida, faltanDatos,
-  descarteVigente,
+  descarteVigente, progresoDesdeDiario,
 } from "./nucleo.mjs";
 
 export class Interrumpido extends Error {
@@ -160,7 +160,7 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
       log(`disponibilidad: ${Object.keys(disp).length}/${vencidas.length}`);
     }
 
-    if (fallos.length) return { completo: false, motivo: "fallos", fallos, progreso };
+    if (fallos.length) return { completo: false, motivo: "fallos", fallos, progreso: progresoDesdeDiario(diario.entradas(), estado, cfg) };
     return {
       completo: true, fallos, progreso,
       ...fusionar(estado, { candidatos, nuevos, descartados, disp, sagasNuevas, ahoraIso, cfg }),
@@ -169,7 +169,9 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
     if (e instanceof PresupuestoAgotado) corte = "presupuesto";
     else if (e instanceof Interrumpido) corte = "interrumpido";
     else throw e;
-    return { completo: false, motivo: corte, fallos, progreso };
+    // El progreso en memoria se arma al final de cada fase, así que una fase
+    // cortada a la mitad no lo tiene: se reconstruye del diario, que es lo real.
+    return { completo: false, motivo: corte, fallos, progreso: progresoDesdeDiario(diario.entradas(), estado, cfg) };
   }
 }
 

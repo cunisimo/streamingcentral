@@ -11,6 +11,7 @@
 // donde la base todavía no tiene nada.
 
 import { escribirAtomico, archivos } from "./estado.mjs";
+import { fechaAR } from "./nucleo.mjs";
 import { readFileSync, existsSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -117,7 +118,7 @@ export function archivosDeSalida(dir, fecha) {
 }
 
 export function escribirSalidas(dir, { estado, diferencias, dispActualizada, estadoAnterior }, ahoraIso) {
-  const fecha = ahoraIso.slice(0, 10);
+  const fecha = fechaAR(Date.parse(ahoraIso));
   const s = archivosDeSalida(dir, fecha);
   const leer = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
 

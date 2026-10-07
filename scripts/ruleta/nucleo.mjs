@@ -341,3 +341,72 @@ export function planificar(estado, diario, cfg) {
     evitadas: anterior.total - total,
   };
 }
+
+// --- Fecha y progreso ---------------------------------------------------------------
+
+/**
+ * Día ARGENTINO de un instante, `YYYY-MM-DD`. Los informes y archivos de una
+ * corrida se nombran con esto: con la fecha UTC, a partir de las 21:00 locales
+ * ya dice "mañana" (pasó en la primera corrida real: 21:01 → 2026-10-07).
+ */
+export function fechaAR(ms) {
+  return new Date(ms).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+}
+
+/**
+ * Progreso reconstruido SÓLO desde el diario. Es lo que hay que mostrar cuando
+ * una corrida se corta: el estado no se tocó, pero lo hecho está anotado.
+ * `diario` es el Map clave → resultado.
+ */
+export function progresoDesdeDiario(diario, estado, cfg) {
+  const out = {};
+  if (cfg.fases.descubrir) {
+    const ventanas = [];
+    const candidatos = new Set();
+    let paginasHechas = 0;
+    let pendientes = 0;
+    let sinEmpezar = 0;
+    for (const [fam, f] of Object.entries(FAMILIAS)) {
+      for (const v of f.ventanas) {
+        const p1 = diario.get(claveDescubrir(fam, v, 1));
+        const prefijo = claveDescubrir(fam, v, "");
+        let hechas = 0;
+        for (const [k, r] of diario) {
+          if (!k.startsWith(prefijo)) continue;
+          hechas++;
+          for (const it of r.items ?? []) candidatos.add(it.id);
+        }
+        const total = p1?.total_pages ?? null;
+        if (total == null && hechas === 0) sinEmpezar++;
+        if (total != null) pendientes += Math.max(0, total - hechas);
+        paginasHechas += hechas;
+        ventanas.push({ familia: fam, ventana: `${v[0].slice(0, 4)}-${v[1].slice(0, 4)}`, hechas, total });
+      }
+    }
+    out.descubrir = {
+      paginasHechas,
+      paginasPendientesConocidas: pendientes,
+      ventanasSinEmpezar: sinEmpezar,
+      candidatos: candidatos.size,
+      nuevos: [...candidatos].filter((id) => !estado.titulos[id]).length,
+      ventanas,
+    };
+  }
+  const contar = (pref) => [...diario.keys()].filter((k) => k.startsWith(pref)).length;
+  if (cfg.fases.enriquecer) {
+    const detalles = [...diario].filter(([k]) => k.startsWith("detalle:"));
+    out.enriquecer = {
+      detallesHechos: detalles.length,
+      descartados: detalles.filter(([, r]) => r?.descartado).length,
+      coleccionesHechas: contar("coleccion:"),
+    };
+  }
+  if (cfg.fases.disponibilidad) {
+    const objetivo = Math.min(
+      Object.values(estado.titulos).filter((t) => dispVencida(t, cfg.ahoraMs, cfg.ttlDispDias)).length,
+      cfg.maxDisponibilidad ?? Infinity,
+    );
+    out.disponibilidad = { hechas: contar("disp:"), objetivo };
+  }
+  return out;
+}

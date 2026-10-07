@@ -30,7 +30,7 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { cargarEstado, leerDiario, crearDiario } from "./ruleta/estado.mjs";
-import { planificar } from "./ruleta/nucleo.mjs";
+import { planificar, fechaAR } from "./ruleta/nucleo.mjs";
 import { crearClienteTmdb } from "./ruleta/cliente-tmdb.mjs";
 import { ejecutar } from "./ruleta/pipeline.mjs";
 import { escribirSalidas, informeMarkdown, archivosDeSalida } from "./ruleta/salidas.mjs";
@@ -57,7 +57,8 @@ const cfg = {
 const { estado, origen } = cargarEstado(DATOS);
 const diarioPrevio = leerDiario(DATOS);
 const plan = planificar(estado, diarioPrevio, cfg);
-const fecha = new Date(ahoraMs).toISOString().slice(0, 10);
+// Día argentino, no UTC: a partir de las 21 h la fecha UTC ya es mañana.
+const fecha = fechaAR(ahoraMs);
 
 if (!EJECUTAR) {
   const s = archivosDeSalida(DATOS, fecha);
