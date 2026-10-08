@@ -12,6 +12,7 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const args = process.argv.slice(2);
 const i = args.indexOf("--archivo");
@@ -33,7 +34,34 @@ const PENINSULARES = [
   "espabilar", "cabrear", "mosquear", "petardo",
 ];
 
-const rx = new RegExp(`\\b(${PENINSULARES.join("|")})\\b`, "gi");
+// Límites de palabra que entienden acentos: \b de JavaScript no los entiende
+// ("móvil" o "ñ" rompían el corte).
+const L = String.raw`(?<![\p{L}])`;
+const R = String.raw`(?![\p{L}])`;
+const rxLista = new RegExp(`${L}(${PENINSULARES.join("|")})${R}`, "giu");
+// "vale" sólo como interjección (por "dale"): seguido de puntuación o al final.
+// "vale la pena", "vale como", "vale para" son rioplatenses.
+const rxVale = new RegExp(`${L}vale(?=\\s*[,.;:!?]|\\s*$)`, "giu");
+// Pronombre "os" suelto (vosotros).
+const rxOs = new RegExp(`${L}os${R}`, "giu");
+// Conjugaciones en -áis / -éis, salvo los números terminados en "seis"
+// (dieciséis, veintiséis), que llevan tilde y no son verbos.
+const rxAis = new RegExp(`${L}\\p{L}+(?:áis|éis)${R}`, "giu");
+
+// Plurales de sustantivos en -ái que no son conjugaciones.
+const NO_VERBOS = new Set(["samuráis", "bonsáis", "paipáis"]);
+
+/** Palabras peninsulares encontradas en un texto, en minúscula y sin repetir. */
+export function buscarVocabulario(texto) {
+  const t = texto ?? "";
+  const encontrados = [
+    ...[...t.matchAll(rxLista)].map((m) => m[0]),
+    ...[...t.matchAll(rxVale)].map((m) => m[0]),
+    ...[...t.matchAll(rxOs)].map((m) => m[0]),
+    ...[...t.matchAll(rxAis)].map((m) => m[0]).filter((w) => !/s[eé]is$/iu.test(w) && !NO_VERBOS.has(w.toLowerCase())),
+  ];
+  return [...new Set(encontrados.map((w) => w.toLowerCase()))];
+}
 
 async function main() {
   const data = JSON.parse(await readFile(PATH, "utf8"));
@@ -46,8 +74,8 @@ async function main() {
     for (const campo of ["razon", "advertencia"]) {
       const texto = r[campo];
       if (!texto) continue;
-      const m = texto.match(rx);
-      if (!m) continue;
+      const m = buscarVocabulario(texto);
+      if (!m.length) continue;
       for (const palabra of m) {
         const k = palabra.toLowerCase();
         conteo.set(k, (conteo.get(k) ?? 0) + 1);
@@ -80,7 +108,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("Falló:", err);
-  process.exit(1);
-});
+// Sólo corre como programa: el test importa buscarVocabulario.
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main().catch((err) => {
+    console.error("Falló:", err);
+    process.exit(1);
+  });
+}

@@ -122,6 +122,7 @@ test("la lista editorial versionada existe, tiene motivo para cada id y excluye 
   }
   assert.equal(lista.excluidos[1263421]?.motivo, "anime", "Baki Hanma vs. Kengan Ashura");
   assert.equal(lista.excluidos[1015606]?.motivo, "especial-no-narrativo", "Obi-Wan Kenobi: El retorno del Jedi");
+  assert.equal(lista.excluidos[773655]?.motivo, "especial-no-narrativo", "A la mierda el 2020 (recapitulación)");
 });
 
 test("un título promovido desde la reserva sale de la reserva al incorporarse", async () => {

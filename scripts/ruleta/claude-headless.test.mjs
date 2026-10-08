@@ -65,6 +65,11 @@ test("el sondeo exige una respuesta REAL exitosa: el mensaje de inicio sale ante
   assert.equal(esSuscripcion(leerSondeo(init)), false, "sin resultado no hay garantía");
 });
 
+test("generate-copy toma de --ids los datos de títulos que no están en el pool (reemplazos desde la reserva)", () => {
+  const s = readFileSync(resolve(import.meta.dirname, "..", "generate-copy.mjs"), "utf8");
+  assert.ok(s.includes(".titulos ?? [];") && s.includes("if (!ya.has(t.tmdb_id)) titulos.push(t);"));
+});
+
 test("generate-copy no reescribe copy-ruleta.json si el lote no produjo nada", () => {
   const s = readFileSync(resolve(import.meta.dirname, "..", "generate-copy.mjs"), "utf8");
   assert.match(s, /if \(ok\) await guardar\(\);/);

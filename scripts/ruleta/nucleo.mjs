@@ -321,11 +321,18 @@ export function planificar(estado, diario, cfg) {
   // Pendiente REAL: reconstruido del diario (`sel.pendientes`, ver
   // estimarPendientes). Sin eso, la estimación inicial de la cola.
   const detalleCola = sel ? (sel.pendientes ? sel.pendientes.p90 : Math.min(sel.cola.length, sel.estimacion?.p90 ?? sel.cola.length)) : null;
+  const sagasSinResolver = new Set(titulos.filter((t) => t.coleccion?.id && t.es_secuela == null && !estado.sagas?.[t.coleccion.id]).map((t) => t.coleccion.id)).size;
   const llamadas = {
     descubrir: desc.paginasPrevistas,
     detalle: fases.enriquecer ? (sel ? (sel.pendientes ? detalleCola : Math.max(0, detalleCola - detalleHechos)) : nuevos.length - detalleHechos) + faltantes.length : 0,
     disponibilidad: dispObjetivo.length - dispHechas,
-    coleccion: fases.enriquecer ? Math.ceil((sel ? sel.cuotas.total : nuevos.length) * tasaSaga * tasaSagaNueva) : 0,
+    // Colecciones: las sagas que YA están sin resolver (exacto) más una
+    // estimación sólo para los detalles que todavía faltan. Con la selección
+    // cerrada (0 detalles pendientes) el número es exacto; antes se aplicaba
+    // una tasa sobre el objetivo entero y daba 118 con todo resuelto.
+    coleccion: fases.enriquecer
+      ? sagasSinResolver + Math.ceil((sel ? (sel.pendientes ? detalleCola : sel.cuotas.total) : nuevos.length) * tasaSaga * tasaSagaNueva)
+      : 0,
   };
   const total = Object.values(llamadas).reduce((a, b) => a + b, 0);
   const anterior = costoProcesoAnterior(estado);

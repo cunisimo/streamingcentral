@@ -49,6 +49,7 @@ import { crearClienteTmdb } from "./ruleta/cliente-tmdb.mjs";
 import { ejecutar } from "./ruleta/pipeline.mjs";
 import { escribirSalidas, informeMarkdown, archivosDeSalida, poolLegado } from "./ruleta/salidas.mjs";
 import { cargarExclusiones, aplicarExclusiones } from "./ruleta/exclusiones.mjs";
+import { sincronizarTextos } from "./ruleta/textos.mjs";
 import { escribirAtomico } from "./ruleta/estado.mjs";
 
 const args = process.argv.slice(2);
@@ -87,6 +88,19 @@ const RUTA_COLA = resolve(arg("--cola") ?? `${DATOS}/ruleta-cola.json`);
 // reserva (los ya cargados sólo se informan). La lista versionada es
 // <datos>/ruleta-exclusiones.json; lo excluido queda en excluidos_editoriales.
 const EXCLUIDOS = cargarExclusiones(resolve(DATOS, "ruleta-exclusiones.json"));
+// ── con_texto (sin TMDB) ─────────────────────────────────────────────────────
+// generate-copy escribe los textos pero no el estado: esto lo refleja.
+if (args.includes("--sincronizar-textos")) {
+  if (origen !== "estado") throw new Error("--sincronizar-textos necesita un ruleta-estado.json existente");
+  const filas = JSON.parse(readFileSync(resolve(DATOS, "copy-ruleta.json"), "utf8")).rows ?? [];
+  const { estado: sig, cambios } = sincronizarTextos(estado, filas);
+  escribirAtomico(resolve(DATOS, "ruleta-estado.json"), JSON.stringify(sig));
+  const conTexto = (g) => Object.values(g ?? {}).filter((t) => t.con_texto).length;
+  console.log(JSON.stringify({ cambios, poolConTexto: conTexto(sig.titulos), pool: Object.keys(sig.titulos).length, reservaConTexto: conTexto(sig.reserva), reserva: Object.keys(sig.reserva ?? {}).length }, null, 1));
+  console.log("\nNo se consultó TMDB. Escrito: ruleta-estado.json.");
+  process.exit(0);
+}
+
 if (args.includes("--aplicar-exclusiones")) {
   if (origen !== "estado") throw new Error("--aplicar-exclusiones necesita un ruleta-estado.json existente");
   const ahoraIso = new Date(ahoraMs).toISOString();

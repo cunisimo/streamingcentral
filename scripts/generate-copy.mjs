@@ -125,7 +125,14 @@ const decadaDe = (t) => (t.year ? Math.floor(t.year / 10) * 10 : null);
 async function main() {
   const pool = JSON.parse(await readFile(POOL_PATH, "utf8"));
   const prompt = await readFile(PROMPT_PATH, "utf8");
-  const titulos = pool.titles ?? [];
+  const titulos = [...(pool.titles ?? [])];
+  // --ids puede traer los datos de títulos que todavía no están en el pool
+  // (reemplazos desde la reserva): se agregan como candidatos, sin duplicar.
+  if (IDS_PATH) {
+    const extra = JSON.parse(await readFile(resolve(IDS_PATH), "utf8")).titulos ?? [];
+    const ya = new Set(titulos.map((t) => t.tmdb_id));
+    for (const t of extra) if (!ya.has(t.tmdb_id)) titulos.push(t);
+  }
 
   // Lo ya generado en corridas anteriores. Esto es lo que hace reanudable
   // al script: nunca se vuelve a pagar por un título que ya tiene texto.
