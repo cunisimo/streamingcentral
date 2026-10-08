@@ -74,3 +74,13 @@ test("generate-copy no reescribe copy-ruleta.json si el lote no produjo nada", (
   const s = readFileSync(resolve(import.meta.dirname, "..", "generate-copy.mjs"), "utf8");
   assert.match(s, /if \(ok\) await guardar\(\);/);
 });
+
+test("classify-context: entorno limpio, sondeo antes de clasificar, ids sólo del lote, corte tras un reintento y --sin-sql", () => {
+  const s = readFileSync(resolve(import.meta.dirname, "..", "classify-context.mjs"), "utf8");
+  assert.match(s, /env: ENTORNO_HIJO/);
+  assert.ok(s.indexOf("sondearAutenticacion({") < s.indexOf("for (const [i, lote] of lotes.entries())"));
+  assert.match(s, /!delLote\.has\(r\.id\)/);
+  assert.match(s, /hechos\.has\(r\.id\)/, "no repisa una clasificación existente");
+  assert.match(s, /if \(!ok\) \{[\s\S]{0,300}process\.exit\(3\)/);
+  assert.match(s, /if \(SIN_SQL\)[\s\S]{0,200}else await writeFile\(SQL_PATH/);
+});

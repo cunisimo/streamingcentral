@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-08T00:22:30.235Z",
+  "generated_at": "2026-10-08T18:42:55.895Z",
   "modelo": "sonnet",
-  "total": 3056,
-  "con_texto": 2808,
+  "total": 3096,
+  "con_texto": 2848,
   "rows": [
     {
       "tmdb_id": 19,
@@ -27510,6 +27510,366 @@
       "conoce": true,
       "razon": "Donnie Yen vuelve a hacer de Ip Man con la misma calma física de la primera. El conflicto con los ingleses le agrega una capa de orgullo nacional a las peleas de Wing Chun. Sammo Hung como rival le da a las coreografías un peso distinto.",
       "advertencia": "Si no viste la primera, parte del peso del personaje de Ip Man como maestro se pierde.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 6278,
+      "title": "El imperio del fuego",
+      "year": 2002,
+      "conoce": true,
+      "razon": "Dragones apocalípticos en una Inglaterra devastada, con Christian Bale de líder reacio y Matthew McConaughey como cazador de dragones excesivo. Funciona como cine de acción ochentoso con criaturas, sin pretensiones de prestigio.",
+      "advertencia": "Los efectos especiales ya muestran el paso del tiempo, así que si buscás dragones hiperrealistas vas a notar las costuras.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 376866,
+      "title": "Jackie",
+      "year": 2016,
+      "conoce": true,
+      "razon": "Natalie Portman reconstruye el duelo de Jackie Kennedy minuto a minuto, entre el protocolo de Estado y el shock personal. Pablo Larraín filma el instante en que una mujer decide cómo va a ser recordado su marido, no la política detrás.",
+      "advertencia": "Si esperás un relato cronológico de la presidencia de Kennedy, no es eso: la película se queda pegada a esas pocas jornadas.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 527435,
+      "title": "Crónicas de Navidad",
+      "year": 2018,
+      "conoce": true,
+      "razon": "Kurt Russell hace de Papá Noel con códigos de galán y poca paciencia para la Nochebuena arruinada. Eso le da un aire propio a una comedia navideña pensada para ver en familia.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 615665,
+      "title": "Amor de calendario",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Emma Roberts y Luke Bracey arrancan juntándose en cada feriado del año solo para no ir solos a los eventos familiares. No hay compromiso romántico de por medio, al menos al principio. Es una comedia liviana que recorre casi todas las fiestas del calendario gringo.",
+      "advertencia": "El humor es bastante más subido de tono que el de una comedia romántica de fiestas típica.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 537116,
+      "title": "tick, tick... BOOM!",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Andrew Garfield se mete en la piel de Jonathan Larson, el compositor de Rent. Son los días en que siente que el tiempo se le escapa antes de triunfar. Lin-Manuel Miranda dirige con cariño de fan, mostrando el proceso creativo desde adentro.",
+      "advertencia": "Si no conocés nada del mundo del teatro musical de Nueva York, varias referencias y guiños te van a pasar de largo.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 760161,
+      "title": "La huérfana: Primer asesinato",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es la precuela de La huérfana, así que ya sabés el truco detrás del personaje de Leena. La gracia está en ver cómo la actriz lo vuelve a vender, esta vez con otra vuelta de tuerca en la historia.",
+      "advertencia": "Si no viste la primera La huérfana, buena parte del efecto sorpresa que arma esta precuela se pierde.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 938614,
+      "title": "El último late night",
+      "year": 2024,
+      "conoce": true,
+      "razon": "Toda la película transcurre como la grabación de un programa de entrevistas en vivo de los años 70. Esa estética de video analógico le da un clima propio, casi de objeto encontrado. El terror se construye de a poco, jugando con lo que la cámara del estudio llega a captar.",
+      "advertencia": "Si no te atrapa el formato de falso programa de televisión en vivo, la estructura puede sentirse encorsetada.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 5994,
+      "title": "Family Man",
+      "year": 2000,
+      "conoce": true,
+      "razon": "Nicolas Cage es un ejecutivo de Wall Street que se despierta viviendo la vida que hubiera tenido si elegía el amor y no la carrera. Es la típica fantasía de 'qué hubiera pasado si', pero con Cage comprometido con el costado más sentimental.",
+      "advertencia": "Si ya viste varias películas de segundas oportunidades de los 90, la premisa te va a resultar previsible.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 48231,
+      "title": "Un método peligroso",
+      "year": 2011,
+      "conoce": true,
+      "razon": "Cronenberg filma el quiebre entre Freud y Jung casi como un drama de cámara, apoyado en los diálogos y en la tensión entre sus protagonistas. Es cine de ideas antes que de acción, con el psicoanálisis naciente como campo de batalla.",
+      "advertencia": "Si vas buscando algo del Cronenberg más visceral de otras épocas, esta es mucho más contenida y hablada.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 649609,
+      "title": "Renfield",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Nicholas Hoult hace de asistente de Drácula y encuadra la historia como una relación tóxica de manual, con Nicolas Cage sobreactuando como el vampiro. El humor negro y la violencia exagerada son el centro, no el terror.",
+      "advertencia": "Si esperás una historia de vampiros clásica y seria, el tono de comedia gore te va a descolocar.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 461130,
+      "title": "Code 8",
+      "year": 2019,
+      "conoce": true,
+      "razon": "Es ciencia ficción de bajo presupuesto sobre gente con poderes que vive en la pobreza. La premisa funciona más como alegoría de clase que como espectáculo de superhéroes. Los hermanos Amell sostienen la película con oficio.",
+      "advertencia": "El presupuesto ajustado se nota en las escenas de acción, bastante más chicas que lo que promete la idea.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 431580,
+      "title": "Abominable",
+      "year": 2019,
+      "conoce": true,
+      "razon": "Una adolescente de Shanghái esconde a un yeti fugitivo en la azotea de su edificio. Se lanza a devolverlo a casa, con paisajes chinos como protagonistas del viaje. Es aventura familiar de ritmo amable, pensada para ver todos juntos.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 15373,
+      "title": "Mal ejemplo",
+      "year": 2008,
+      "conoce": true,
+      "razon": "Paul Rudd y Seann William Scott hacen de promotores fracasados condenados a hacer de mentores de chicos. La gracia está en que ninguno de los dos quiere estar ahí. El humor es bastante más ácido que el de otras comedias de 'adultos que cuidan niños'.",
+      "advertencia": "Si no te gusta el humor incómodo o un poco cruel, varias escenas se pasan de rosca.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 2207,
+      "title": "16 calles",
+      "year": 2006,
+      "conoce": true,
+      "razon": "Bruce Willis hace de policía alcoholizado y venido abajo al que le tocan dieciséis cuadras para llevar a un testigo al juzgado. La película se arma casi en tiempo real sobre ese trayecto. Es un thriller urbano chico, más sobre la redención del personaje que sobre la acción.",
+      "advertencia": "El ritmo es más pausado que el de una persecución típica, y si buscás acción constante te puede quedar lento.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 9946,
+      "title": "El fin de los días",
+      "year": 1999,
+      "conoce": true,
+      "razon": "Schwarzenegger se enfrenta literalmente al Anticristo en un Nueva York de fin de milenio, con todo el imaginario apocalíptico que generaba el cambio de siglo. Es acción ochentosa con capa de terror sobrenatural, sin disimular lo pulp que es.",
+      "advertencia": "Si tomás en serio la mitología religiosa que plantea, no va a aguantar mucho análisis.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 18126,
+      "title": "Hannah Montana: La película",
+      "year": 2009,
+      "conoce": true,
+      "razon": "Miley Cyrus deja por un rato las luces de Hollywood para volver al pueblo de su familia. Es una película pensada de punta a punta para el público de la serie. Tiene números musicales y el tono liviano típico de Disney Channel de esos años.",
+      "advertencia": "Si no seguiste la serie o no tenés nostalgia por ella, la historia no tiene mucho más para ofrecer.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 9268,
+      "title": "Eraser (Eliminador)",
+      "year": 1996,
+      "conoce": true,
+      "razon": "Schwarzenegger de agente de protección de testigos enfrentado a traficantes de armas, con ese tono de acción noventosa que no se toma en serio. Las escenas de acción, para la época, apostaban fuerte a los efectos digitales.",
+      "advertencia": "Los efectos que en su momento eran la gran novedad hoy se ven bastante envejecidos.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 324670,
+      "title": "Spectral",
+      "year": 2016,
+      "conoce": true,
+      "razon": "Un escuadrón de operaciones especiales se topa con criaturas que solo se ven con cámaras térmicas. Ese truco visual es lo más interesante de la película. Es ciencia ficción militar de Netflix, prolija pero sin demasiadas pretensiones.",
+      "advertencia": "Los personajes están poco desarrollados, así que si buscás algo más que la premisa visual te vas a quedar corto.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 82,
+      "title": "Corrupción en Miami",
+      "year": 2006,
+      "conoce": true,
+      "razon": "Michael Mann traslada la serie de los 80 a un tono mucho más árido y realista. Colin Farrell y Jamie Foxx son los encubiertos que terminan metidos en una operación que se les escapa de las manos. La estética digital y nocturna de Mann pesa tanto como la trama.",
+      "advertencia": "Si vas buscando el neón y la onda pop de la serie original, esta versión es fría y seria.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 1034541,
+      "title": "Terrifier 3",
+      "year": 2024,
+      "conoce": true,
+      "razon": "El payaso Art vuelve en una matanza navideña con el gore extremo que hizo famosa a la saga, sin filtro ni intención de disimularlo. Es para el público que ya sigue la franquicia y busca exactamente ese nivel de violencia gráfica.",
+      "advertencia": "La violencia es explícita al punto de resultar insoportable para cualquiera que no busque específicamente ese tipo de terror.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 376290,
+      "title": "El caso Sloane",
+      "year": 2016,
+      "conoce": true,
+      "razon": "Jessica Chastain hace de lobista despiadada peleando una ley de control de armas. La película se mueve como un ajedrez de estrategias dentro de Washington. El atractivo está en verla operar varios pasos adelante de todos.",
+      "advertencia": "El vocabulario legislativo y la cantidad de jugadas políticas simultáneas piden atención constante.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 6279,
+      "title": "Sister Act 2: De vuelta al convento",
+      "year": 1993,
+      "conoce": true,
+      "razon": "Whoopi Goldberg vuelve a vestirse de monja para salvar una escuela parroquial armando un coro con chicos de barrio. Los números musicales son el motor de la trama. Es comedia noventosa amable, pensada para ver en familia.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 1729,
+      "title": "El reino prohibido",
+      "year": 2008,
+      "conoce": true,
+      "razon": "Jackie Chan y Jet Li comparten pantalla por primera vez en una aventura de kung fu. Mezcla mitología china con un pibe de Boston transportado en el tiempo. El plato fuerte es verlos pelear juntos, más que la trama en sí.",
+      "advertencia": "La historia del chico moderno transportado es bastante genérica, funciona como excusa para llegar a las peleas.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 775996,
+      "title": "A descubierto",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Anthony Mackie hace de androide militar que entrena a un piloto de drones en una zona de guerra futurista. De fondo está la pregunta de hasta dónde delegarle decisiones a una máquina. Es ciencia ficción de acción de Netflix, con ese dilema como gancho.",
+      "advertencia": "La resolución del dilema moral queda bastante subordinada a las escenas de acción.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1151031,
+      "title": "Devuélvemela",
+      "year": 2025,
+      "conoce": true,
+      "razon": "Los directores de Talk to Me vuelven con un terror que usa el ritual ocultista como excusa. De fondo habla del duelo y del abuso bajo la careta del cuidado. Sally Hawkins construye un personaje que inquieta mucho antes de que pase nada sobrenatural.",
+      "advertencia": "Tiene momentos de violencia física muy crudos, más cercanos al horror corporal que al terror sugerido.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 660120,
+      "title": "La peor persona del mundo",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Joachim Trier sigue a Julie en los años en que no logra decidir qué quiere de su vida ni de sus parejas. El humor agridulce de la película no juzga sus indecisiones. Es una película para quien ya pasó por esa edad en la que todo parece una elección final.",
+      "advertencia": null,
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 646207,
+      "title": "Ice Road",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Liam Neeson maneja un camión quitanieves sobre hielo que se está quebrando, para rescatar mineros atrapados. Es una de esas películas de acción pura que no necesitan segunda lectura. El atractivo está en la tensión física del viaje, no en los personajes.",
+      "advertencia": "Los diálogos y las motivaciones de los personajes son de relleno, lo que importa es la road movie sobre el hielo.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 625450,
+      "title": "Tall Girl",
+      "year": 2019,
+      "conoce": true,
+      "razon": "Ava Michelle hace de la chica más alta del colegio que por fin decide dejar de esconderse. Es una comedia adolescente de Netflix bastante estándar en su fórmula. Funciona para un público joven que busca algo liviano sobre inseguridades físicas.",
+      "advertencia": "Los conflictos se resuelven de manera bastante simplista para un tema que da para más.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 445629,
+      "title": "Peleando en familia",
+      "year": 2019,
+      "conoce": true,
+      "razon": "Florence Pugh interpreta a la luchadora real Paige en su camino de los cuadriláteros ingleses de pueblo hasta la WWE. Su familia es el verdadero corazón de la historia. Funciona tanto para fans de la lucha libre como para quien no sabe nada del tema.",
+      "advertencia": null,
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 9353,
+      "title": "Super Nacho",
+      "year": 2006,
+      "conoce": true,
+      "razon": "Jack Black hace de cocinero de un monasterio mexicano que de noche se calza una máscara para luchar. Junta plata para los huérfanos a su cargo. El humor absurdo de Jack Black es el centro, con un acento marcado que es parte de la broma.",
+      "advertencia": "El humor es muy particular y puede no cerrarte si no te gusta el estilo de comedia de Jack Black.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 578701,
+      "title": "Aquellos que desean mi muerte",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Angelina Jolie hace de bombera forestal que termina protegiendo a un chico perseguido por sicarios, mientras un incendio real amenaza con tragarse todo. Combina el thriller de persecución con el cine de catástrofe natural.",
+      "advertencia": null,
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 623491,
+      "title": "The Babysitter: Killer Queen",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Es la secuela directa de The Babysitter, así que retoma personajes y chistes de la primera sin presentarlos de nuevo. El tono sigue siendo de comedia gore adolescente, exagerada a propósito.",
+      "advertencia": "Si no viste la primera The Babysitter, varios chistes y referencias no te van a cerrar.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 325789,
+      "title": "Infiltrado",
+      "year": 2016,
+      "conoce": true,
+      "razon": "Bryan Cranston hace de agente federal que se infiltra en las finanzas del cartel de Pablo Escobar haciéndose pasar por lavador de dinero. Es un thriller basado en hechos reales, más centrado en la tensión de sostener una identidad falsa que en los tiroteos.",
+      "advertencia": null,
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 656690,
+      "title": "El dilema de las redes sociales",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Exempleados de Facebook, Google y Twitter explican desde adentro cómo están diseñados los algoritmos para captar tu atención el mayor tiempo posible. Mezcla entrevistas con dramatizaciones de una familia afectada por el uso de pantallas.",
+      "advertencia": "Las partes dramatizadas con actores son bastante más flojas y obvias que las entrevistas documentales.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 585245,
+      "title": "Clifford, el gran perro rojo",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Un cachorro mágico se convierte de la noche a la mañana en un perro gigante dentro de un departamento de Nueva York. Ese caos es el motor de la comedia familiar. Es para ver con los más chicos de la casa, sin mayores vueltas.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 511809,
+      "title": "West Side Story",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Spielberg filma de nuevo el musical de Romeo y Julieta entre pandillas neoyorquinas de los años cincuenta. Los números de baile están coreografiados con una ambición pocas veces vista en el género. La fotografía y el sonido están pensados para pantalla grande.",
+      "advertencia": "Si ya conocés bien la versión de 1961, esta respeta tanto la estructura que las sorpresas son mínimas.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 614560,
+      "title": "Mank",
+      "year": 2020,
+      "conoce": true,
+      "razon": "David Fincher filma en blanco y negro los años en que Herman Mankiewicz escribió el guion de Ciudadano Kane. Lo muestra metido en los líos políticos y los excesos de Hollywood de los años treinta. Es una película para cinéfilos, con referencias constantes a la industria de esa época.",
+      "advertencia": "Si no tenés algo de contexto sobre Ciudadano Kane y el Hollywood clásico, bastante del relato se te va a escapar.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 385103,
+      "title": "¡Scooby!",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Es el origen de Scooby-Doo y la pandilla de Misterios S.A., con guiños a otras producciones de Hanna-Barbera metidas en la trama. Funciona como entrada liviana a los personajes para quien no los conoce o como nostalgia para quien sí.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 1266,
+      "title": "Dueños de la calle",
+      "year": 2008,
+      "conoce": true,
+      "razon": "Keanu Reeves hace de policía corrupto de Los Ángeles al que cuestionan dentro del cuerpo, en un policial escrito por James Ellroy. Es un thriller duro sobre la corrupción interna, más que sobre la acción callejera.",
+      "advertencia": null,
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 626735,
+      "title": "Dog - Un viaje salvaje",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Channing Tatum hace de exsoldado que viaja con el perro de un compañero caído para llegar a su funeral. La relación entre los dos termina siendo el verdadero eje. Mezcla comedia de buddy movie con un fondo más triste sobre el estrés postraumático.",
+      "advertencia": null,
       "atencion": "media"
     }
   ]

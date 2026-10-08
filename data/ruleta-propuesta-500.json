@@ -1,88 +1,96 @@
 {
- "generada": "2026-10-07",
- "regla": "todas las cortas con texto + resto por cupos de década y terciles; cola determinística; excedente = reserva editorial",
- "reemplazos": {
-  "pedidos": 80,
-  "conTexto": 66,
-  "noConoce": 14,
-  "sinFila": 0,
-  "cortasConTexto": 29,
-  "largasConTexto": 37
- },
- "candidatosConTexto": 519,
- "cortasDisponibles": 184,
- "completa": true,
+ "generada": "2026-10-08",
+ "regla": "servibles en la ruleta (razon + advertencia + atencion, flatrate Yump, sin exclusiones, saga resuelta); todas las cortas; resto por cupos y terciles; cola determinística",
+ "completa": false,
+ "candidatosServibles": 493,
+ "cortasDisponibles": 161,
  "propuesta": {
-  "total": 500,
-  "cortas_le90": 184,
+  "total": 484,
+  "cortas_le90": 161,
   "decadas": {
-   "<1980": 60,
+   "<1980": 56,
    "2020s": 113,
-   "2010s": 100,
-   "2000s": 116,
-   "1990s": 86,
-   "1980s": 25
+   "2010s": 102,
+   "2000s": 113,
+   "1990s": 78,
+   "1980s": 22
   },
   "votos": {
-   "50-299": 120,
-   "300-999": 192,
-   "1000-2999": 143,
-   "3000+": 45
+   "50-299": 109,
+   "300-999": 177,
+   "1000-2999": 148,
+   "3000+": 50
   },
   "plataformas": {
-   "MovistarTV": 158,
-   "Prime Video": 120,
-   "Netflix": 90,
-   "Disney+": 89,
-   "Max": 80,
+   "MovistarTV": 149,
+   "Prime Video": 115,
+   "Netflix": 95,
+   "Disney+": 81,
+   "Max": 75,
    "MUBI": 35,
    "Universal+": 11,
    "Paramount+": 10,
-   "Claro video": 5,
-   "Apple TV+": 3,
-   "ViX": 2,
+   "Claro video": 4,
+   "ViX": 3,
+   "Apple TV+": 2,
    "DIRECTV GO": 1
   },
   "origen": {
-   "seleccion": 453,
-   "reserva": 47
+   "seleccion": 414,
+   "reserva": 70
   },
-  "sinAdvertencia_noSaleEnRuleta": 42,
-  "aptoChicos": 82
+  "aptoChicos": 63,
+  "secuelas": 69
  },
  "reservaEditorial": {
-  "total": 19,
+  "total": 9,
   "cortas_le90": 0,
   "decadas": {
-   "1990s": 3,
-   "2010s": 7,
    "2000s": 6,
    "2020s": 3
   },
   "votos": {
-   "3000+": 15,
-   "1000-2999": 4
+   "3000+": 4,
+   "1000-2999": 5
   },
   "plataformas": {
-   "MovistarTV": 9,
-   "Netflix": 5,
-   "Universal+": 4,
-   "Max": 4,
-   "DIRECTV GO": 2,
+   "MovistarTV": 3,
+   "Max": 3,
    "Prime Video": 2,
-   "Disney+": 2,
+   "Netflix": 2,
+   "DIRECTV GO": 1,
+   "Disney+": 1,
+   "Universal+": 1,
    "Paramount+": 1,
    "ViX": 1
   },
   "origen": {
-   "reserva": 19
+   "reserva": 9
   },
-  "sinAdvertencia_noSaleEnRuleta": 0,
-  "aptoChicos": 1
+  "aptoChicos": 2,
+  "secuelas": 1
  },
+ "soloYumpea_sinPero": 53,
+ "sagaSinResolver": [
+  "736074 Batman: El Largo Halloween, Parte 2",
+  "913862 Caída en picado: El caso contra Boeing",
+  "1135408 La Chica Que Mato A Sus Padres: Confesión",
+  "828900 Aqua Teen para siempre: Plantasma",
+  "287947 ¡Shazam!",
+  "480530 Creed II: La leyenda de Rocky",
+  "146216 Red II",
+  "9762 Bailando (Step Up)",
+  "522931 El otro guardaespaldas 2",
+  "760161 La huérfana: Primer asesinato",
+  "9268 Eraser (Eliminador)",
+  "646207 Ice Road",
+  "625450 Tall Girl"
+ ],
+ "secuelasAClasificar": 69,
  "ids": {
   "propuesta": [
    67,
+   82,
    104,
    113,
    174,
@@ -90,6 +98,7 @@
    179,
    193,
    242,
+   280,
    475,
    612,
    826,
@@ -104,11 +113,11 @@
    1439,
    1440,
    1497,
-   1584,
-   1588,
+   1581,
    1597,
    1654,
    1682,
+   1729,
    1911,
    1931,
    1951,
@@ -117,11 +126,11 @@
    2007,
    2061,
    2067,
+   2207,
    2525,
    2666,
    2755,
    2757,
-   2787,
    2789,
    3021,
    3107,
@@ -140,28 +149,25 @@
    5206,
    5549,
    5919,
+   5994,
    6077,
-   6552,
+   6278,
    6575,
    6961,
    6963,
    7095,
    7461,
    7552,
-   8204,
+   8068,
    8222,
    8223,
    8289,
    8324,
    8326,
    8512,
-   8816,
-   8840,
-   8874,
    8914,
    8967,
    8978,
-   9077,
    9272,
    9367,
    9395,
@@ -173,7 +179,6 @@
    9546,
    9563,
    9598,
-   9611,
    9664,
    9667,
    9684,
@@ -187,7 +192,7 @@
    9788,
    9791,
    9945,
-   10072,
+   9946,
    10102,
    10208,
    10210,
@@ -200,7 +205,6 @@
    10468,
    10483,
    10490,
-   10510,
    10539,
    10569,
    10617,
@@ -208,13 +212,11 @@
    10675,
    10731,
    10781,
-   10837,
    10874,
    10897,
    10994,
    11018,
    11135,
-   11186,
    11198,
    11300,
    11322,
@@ -224,7 +226,6 @@
    11348,
    11351,
    11355,
-   11448,
    11463,
    11477,
    11589,
@@ -237,11 +238,9 @@
    12149,
    12165,
    12227,
-   12589,
    13275,
    13313,
    13417,
-   13479,
    13483,
    13499,
    13551,
@@ -250,7 +249,6 @@
    13809,
    13938,
    14008,
-   14012,
    14172,
    14254,
    14317,
@@ -258,24 +256,21 @@
    14527,
    14728,
    14819,
-   14821,
    14854,
    15413,
    15919,
    16220,
-   16394,
    16428,
-   16620,
    17006,
    17609,
    17927,
+   18126,
    18250,
    18269,
    18289,
    18736,
    19042,
    19184,
-   19458,
    20481,
    20771,
    21242,
@@ -293,14 +288,10 @@
    24767,
    25059,
    25199,
-   25475,
    25694,
-   25797,
    26171,
-   26177,
    26337,
    26518,
-   27681,
    27850,
    27970,
    28032,
@@ -325,10 +316,11 @@
    34205,
    34474,
    34996,
-   35680,
    36464,
    36465,
    36670,
+   37094,
+   37472,
    37495,
    37635,
    37969,
@@ -349,17 +341,17 @@
    42630,
    42661,
    42745,
-   42884,
    44040,
    44381,
    44514,
    44655,
    45371,
    46705,
+   48231,
    48303,
    50456,
+   50546,
    50717,
-   53565,
    55787,
    55846,
    57544,
@@ -370,10 +362,10 @@
    65291,
    71552,
    71885,
+   72570,
    75174,
    77621,
    81440,
-   82703,
    82775,
    82779,
    83552,
@@ -402,7 +394,6 @@
    229749,
    230170,
    232572,
-   239563,
    241001,
    244264,
    249164,
@@ -416,23 +407,25 @@
    274854,
    274855,
    274857,
-   287947,
    290859,
    290864,
-   292011,
    295592,
+   302401,
    303623,
    310568,
    318121,
    320006,
+   324670,
    326215,
    326359,
    331354,
-   332210,
    332270,
    339095,
+   339846,
    340666,
    352161,
+   376290,
+   376866,
    376867,
    401743,
    405894,
@@ -443,7 +436,6 @@
    421467,
    424121,
    425001,
-   429415,
    429417,
    432383,
    432527,
@@ -452,12 +444,12 @@
    438396,
    438674,
    439058,
-   440161,
    443009,
    454983,
    455656,
    457799,
    457955,
+   461130,
    467482,
    472983,
    478860,
@@ -466,6 +458,7 @@
    498402,
    500682,
    505948,
+   511809,
    513268,
    516329,
    517302,
@@ -474,12 +467,13 @@
    529790,
    531509,
    536437,
+   537116,
    537739,
    549787,
    553604,
    553646,
    558582,
-   574093,
+   565426,
    575446,
    576156,
    578908,
@@ -491,14 +485,15 @@
    594328,
    597316,
    600583,
-   602269,
    605116,
-   612706,
+   614560,
+   615665,
    615667,
    616747,
    617502,
    618416,
    619778,
+   623491,
    638974,
    639721,
    639798,
@@ -506,6 +501,7 @@
    652004,
    653729,
    655187,
+   656690,
    659067,
    660982,
    666243,
@@ -515,10 +511,8 @@
    696157,
    698432,
    704854,
-   736074,
    736769,
    739990,
-   739993,
    744276,
    749004,
    749142,
@@ -526,13 +520,12 @@
    763215,
    766798,
    774825,
+   775996,
    795514,
    800510,
    814338,
-   816904,
    818647,
    823766,
-   828900,
    833591,
    835113,
    836009,
@@ -543,20 +536,18 @@
    858024,
    864873,
    869626,
-   870358,
    874299,
    874300,
    878361,
    886396,
-   892153,
    894205,
    899112,
    913673,
-   913862,
    916053,
    921785,
    932420,
    932430,
+   938614,
    939335,
    948276,
    955531,
@@ -574,7 +565,7 @@
    1102493,
    1110358,
    1115191,
-   1135408,
+   1151031,
    1151334,
    1161108,
    1242384,
@@ -584,25 +575,3944 @@
    1401905
   ],
   "reservaEditorial": [
-   280,
-   1581,
    4547,
    5176,
-   8068,
+   9353,
    9477,
-   9762,
    10719,
-   37094,
-   37472,
-   50546,
-   72570,
-   146216,
-   302401,
-   339846,
-   480530,
-   522931,
-   565426,
-   625568
+   15373,
+   625568,
+   649609,
+   1034541
+  ],
+  "soloYumpea": [
+   1266,
+   1584,
+   1588,
+   2787,
+   6279,
+   6552,
+   8204,
+   8816,
+   8840,
+   8874,
+   9077,
+   9611,
+   10072,
+   10510,
+   10837,
+   11186,
+   11448,
+   12589,
+   13479,
+   14012,
+   14821,
+   16394,
+   16620,
+   19458,
+   25475,
+   25797,
+   26177,
+   27681,
+   35680,
+   42884,
+   53565,
+   82703,
+   239563,
+   292011,
+   325789,
+   332210,
+   385103,
+   429415,
+   431580,
+   440161,
+   445629,
+   527435,
+   574093,
+   578701,
+   585245,
+   602269,
+   612706,
+   626735,
+   660120,
+   739993,
+   816904,
+   870358,
+   892153
   ]
- }
+ },
+ "titulos": [
+  {
+   "tmdb_id": 81440,
+   "title": "¡Buena Suerte, Charlie!: Un Viaje de Película",
+   "year": 2011,
+   "runtime": 100,
+   "votos": 435,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11323,
+   "title": "¡El soplón!",
+   "year": 2009,
+   "runtime": 108,
+   "votos": 1021,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 439058,
+   "title": "¡Hey Arnold! Una peli en la jungla",
+   "year": 2018,
+   "runtime": 75,
+   "votos": 204,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 326215,
+   "title": "¡Upsss! ¿Dónde está Noé...?",
+   "year": 2015,
+   "runtime": 86,
+   "votos": 353,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4380,
+   "title": "¿Bailamos?",
+   "year": 2004,
+   "runtime": 106,
+   "votos": 1324,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1261924,
+   "title": "¿Qué hizo Jennifer?",
+   "year": 2024,
+   "runtime": 88,
+   "votos": 193,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 455656,
+   "title": "#RealityHigh",
+   "year": 2017,
+   "runtime": 99,
+   "votos": 1049,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 3021,
+   "title": "1408",
+   "year": 2007,
+   "runtime": 103,
+   "votos": 5106,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2207,
+   "title": "16 calles",
+   "year": 2006,
+   "runtime": 105,
+   "votos": 2184,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 10468,
+   "title": "28 días",
+   "year": 2000,
+   "runtime": 103,
+   "votos": 1118,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 775996,
+   "title": "A descubierto",
+   "year": 2021,
+   "runtime": 114,
+   "votos": 1999,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 2755,
+   "title": "A propósito de Schmidt",
+   "year": 2002,
+   "runtime": 125,
+   "votos": 1417,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 565426,
+   "title": "A todos los chicos: P.D. Todavía te quiero",
+   "year": 2020,
+   "runtime": 102,
+   "votos": 2744,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 818647,
+   "title": "A través de mi ventana",
+   "year": 2022,
+   "runtime": 112,
+   "votos": 3388,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9684,
+   "title": "Acordes y desacuerdos",
+   "year": 1999,
+   "runtime": 95,
+   "votos": 577,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2757,
+   "title": "Adaptation. El ladrón de orquídeas",
+   "year": 2002,
+   "runtime": 116,
+   "votos": 2904,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9788,
+   "title": "Admitido",
+   "year": 2006,
+   "runtime": 90,
+   "votos": 1857,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 744276,
+   "title": "After: Amor infinito",
+   "year": 2022,
+   "runtime": 95,
+   "votos": 1402,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 152737,
+   "title": "Agosto",
+   "year": 2013,
+   "runtime": 121,
+   "votos": 1624,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 55787,
+   "title": "Agua para elefantes",
+   "year": 2011,
+   "runtime": 120,
+   "votos": 2670,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 964980,
+   "title": "Air",
+   "year": 2023,
+   "runtime": 112,
+   "votos": 2471,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 939335,
+   "title": "Ajuste de cuentas (Muzzle)",
+   "year": 2023,
+   "runtime": 100,
+   "votos": 376,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 655187,
+   "title": "Akelarre",
+   "year": 2020,
+   "runtime": 92,
+   "votos": 322,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 438674,
+   "title": "Al otro lado de la ley",
+   "year": 2019,
+   "runtime": 159,
+   "votos": 1181,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 916053,
+   "title": "Algo de Tiffany’s",
+   "year": 2022,
+   "runtime": 88,
+   "votos": 329,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 11300,
+   "title": "Algo salvaje",
+   "year": 1986,
+   "runtime": 114,
+   "votos": 427,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 25694,
+   "title": "Alicia en el país de las Maravillas",
+   "year": 1933,
+   "runtime": 76,
+   "votos": 67,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 498402,
+   "title": "Aline: La voz del amor",
+   "year": 2021,
+   "runtime": 126,
+   "votos": 405,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 228970,
+   "title": "Alma salvaje",
+   "year": 2014,
+   "runtime": 115,
+   "votos": 2744,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 924,
+   "title": "Amanecer de los muertos",
+   "year": 2004,
+   "runtime": 101,
+   "votos": 4743,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 36464,
+   "title": "Amenaza de tormenta",
+   "year": 2002,
+   "runtime": 94,
+   "votos": 80,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 660982,
+   "title": "American Pie presenta: Las chicas mandan",
+   "year": 2020,
+   "runtime": 95,
+   "votos": 741,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 71552,
+   "title": "American Pie: El reencuentro",
+   "year": 2012,
+   "runtime": 113,
+   "votos": 4835,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 615665,
+   "title": "Amor de calendario",
+   "year": 2020,
+   "runtime": 104,
+   "votos": 2412,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 1439,
+   "title": "Ana y el rey",
+   "year": 1999,
+   "runtime": 147,
+   "votos": 841,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11980,
+   "title": "Ángeles y demonios",
+   "year": 1995,
+   "runtime": 98,
+   "votos": 587,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9791,
+   "title": "Animal Factory",
+   "year": 2000,
+   "runtime": 94,
+   "votos": 272,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 340666,
+   "title": "Animales nocturnos",
+   "year": 2016,
+   "runtime": 115,
+   "votos": 8505,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 17609,
+   "title": "Anticristo",
+   "year": 2009,
+   "runtime": 108,
+   "votos": 2936,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 516329,
+   "title": "Antlers: Criatura oscura",
+   "year": 2021,
+   "runtime": 99,
+   "votos": 1278,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8978,
+   "title": "Asalto al Distrito 13",
+   "year": 2005,
+   "runtime": 91,
+   "votos": 1254,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 24655,
+   "title": "Asesino invisible",
+   "year": 1977,
+   "runtime": 96,
+   "votos": 345,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 852046,
+   "title": "Atenea",
+   "year": 2022,
+   "runtime": 97,
+   "votos": 853,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 489430,
+   "title": "Aterrados",
+   "year": 2018,
+   "runtime": 85,
+   "votos": 885,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 29787,
+   "title": "Atracción diabólica",
+   "year": 1988,
+   "runtime": 113,
+   "votos": 378,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9598,
+   "title": "Babe: El cerdito valiente",
+   "year": 1995,
+   "runtime": 89,
+   "votos": 3228,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 886396,
+   "title": "Batman y Superman: La Batalla de los Super hijos",
+   "year": 2022,
+   "runtime": 79,
+   "votos": 370,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 339846,
+   "title": "Baywatch: Los vigilantes de la playa",
+   "year": 2017,
+   "runtime": 116,
+   "votos": 8647,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 3179,
+   "title": "Beavis y Butt-Head recorren America",
+   "year": 1996,
+   "runtime": 80,
+   "votos": 810,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 878361,
+   "title": "Big George Foreman",
+   "year": 2023,
+   "runtime": 129,
+   "votos": 387,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 55846,
+   "title": "Blitz",
+   "year": 2011,
+   "runtime": 97,
+   "votos": 1888,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4133,
+   "title": "Blow",
+   "year": 2001,
+   "runtime": 119,
+   "votos": 4707,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 46705,
+   "title": "Blue Valentine",
+   "year": 2010,
+   "runtime": 112,
+   "votos": 3639,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 475,
+   "title": "Bonnie y Clyde",
+   "year": 1967,
+   "runtime": 111,
+   "votos": 1860,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10337,
+   "title": "Bugsy",
+   "year": 1991,
+   "runtime": 135,
+   "votos": 469,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 916,
+   "title": "Bullitt",
+   "year": 1968,
+   "runtime": 113,
+   "votos": 1342,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 14008,
+   "title": "Cadete Kelly",
+   "year": 2002,
+   "runtime": 100,
+   "votos": 636,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 6077,
+   "title": "Calle Tzameti: 13 - El club del suicidio",
+   "year": 2006,
+   "runtime": 95,
+   "votos": 267,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 513268,
+   "title": "Cámara policial",
+   "year": 2020,
+   "runtime": 100,
+   "votos": 451,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 169917,
+   "title": "Caminando entre las tumbas",
+   "year": 2014,
+   "runtime": 113,
+   "votos": 3114,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 38810,
+   "title": "Canino",
+   "year": 2009,
+   "runtime": 94,
+   "votos": 2704,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 268531,
+   "title": "Capitán Calzoncillos: Su primer peliculón",
+   "year": 2017,
+   "runtime": 84,
+   "votos": 1393,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 991833,
+   "title": "Cat Pack: A PAW Patrol Exclusive Event",
+   "year": 2022,
+   "runtime": 68,
+   "votos": 83,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11198,
+   "title": "Cazador Urbano",
+   "year": 1993,
+   "runtime": 105,
+   "votos": 477,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 976,
+   "title": "Chantaje en Broadway",
+   "year": 1957,
+   "runtime": 96,
+   "votos": 607,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11708,
+   "title": "Chitty Chitty Bang Bang",
+   "year": 1968,
+   "runtime": 140,
+   "votos": 772,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4351,
+   "title": "Ciudad del silencio",
+   "year": 2007,
+   "runtime": 112,
+   "votos": 373,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 461130,
+   "title": "Code 8",
+   "year": 2019,
+   "runtime": 99,
+   "votos": 2264,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 932420,
+   "title": "Código 8 (Parte 2)",
+   "year": 2024,
+   "runtime": 101,
+   "votos": 761,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 12227,
+   "title": "Colmillo blanco",
+   "year": 1991,
+   "runtime": 107,
+   "votos": 685,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 16428,
+   "title": "Cómo romper con tu pareja",
+   "year": 2004,
+   "runtime": 85,
+   "votos": 107,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 24020,
+   "title": "Contra corriente (Johnny Tsunami)",
+   "year": 1999,
+   "runtime": 88,
+   "votos": 157,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 48303,
+   "title": "Copia certificada",
+   "year": 2010,
+   "runtime": 106,
+   "votos": 468,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 104,
+   "title": "Corre Lola, corre",
+   "year": 1998,
+   "runtime": 81,
+   "votos": 2690,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 82,
+   "title": "Corrupción en Miami",
+   "year": 2006,
+   "runtime": 132,
+   "votos": 2080,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 1102493,
+   "title": "Cosas pequeñas como estas",
+   "year": 2024,
+   "runtime": 100,
+   "votos": 612,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 638974,
+   "title": "Criminales a la vista",
+   "year": 2023,
+   "runtime": 89,
+   "votos": 2048,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 229749,
+   "title": "Cuando habla el corazón",
+   "year": 2013,
+   "runtime": 90,
+   "votos": 61,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11338,
+   "title": "Cuando llega la noche",
+   "year": 1985,
+   "runtime": 115,
+   "votos": 342,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10449,
+   "title": "Cuando un hombre ama a una mujer",
+   "year": 1994,
+   "runtime": 126,
+   "votos": 403,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 21299,
+   "title": "Cuatro cachorros para salvar",
+   "year": 1987,
+   "runtime": 88,
+   "votos": 181,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 739990,
+   "title": "Cuentos al caer la noche",
+   "year": 2021,
+   "runtime": 100,
+   "votos": 450,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 763215,
+   "title": "Damsel",
+   "year": 2024,
+   "runtime": 110,
+   "votos": 2949,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2666,
+   "title": "Dark City",
+   "year": 1998,
+   "runtime": 100,
+   "votos": 3371,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 50717,
+   "title": "Davy Crockett y los piratas del Mississippi",
+   "year": 1956,
+   "runtime": 95,
+   "votos": 71,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 407447,
+   "title": "De la India a París en un armario de Ikea",
+   "year": 2018,
+   "runtime": 92,
+   "votos": 315,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 254172,
+   "title": "De padres a hijas",
+   "year": 2015,
+   "runtime": 116,
+   "votos": 1073,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 25059,
+   "title": "De vuelta a casa 2: Perdidos en San Francisco",
+   "year": 1996,
+   "runtime": 88,
+   "votos": 552,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10483,
+   "title": "Death Race: La carrera de la muerte",
+   "year": 2008,
+   "runtime": 111,
+   "votos": 4287,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 177047,
+   "title": "Decoding Annie Parker",
+   "year": 2014,
+   "runtime": 91,
+   "votos": 92,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8914,
+   "title": "Deep Blue Sea",
+   "year": 1999,
+   "runtime": 109,
+   "votos": 2759,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10669,
+   "title": "Defensa",
+   "year": 1972,
+   "runtime": 109,
+   "votos": 1893,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9739,
+   "title": "Demolition Man",
+   "year": 1993,
+   "runtime": 115,
+   "votos": 4295,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8068,
+   "title": "Desperado",
+   "year": 1995,
+   "runtime": 104,
+   "votos": 3270,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 13483,
+   "title": "Despierto",
+   "year": 2007,
+   "runtime": 84,
+   "votos": 1632,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9476,
+   "title": "Destino de caballero",
+   "year": 2001,
+   "runtime": 132,
+   "votos": 3529,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 407448,
+   "title": "Detroit",
+   "year": 2017,
+   "runtime": 143,
+   "votos": 1781,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1151031,
+   "title": "Devuélvemela",
+   "year": 2025,
+   "runtime": 104,
+   "votos": 1991,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 6575,
+   "title": "Dewey Cox: Una vida larga y dura",
+   "year": 2007,
+   "runtime": 96,
+   "votos": 795,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 29060,
+   "title": "Diario de un loco",
+   "year": 1963,
+   "runtime": 96,
+   "votos": 71,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 7552,
+   "title": "Dick y Jane (Ladrones de risa)",
+   "year": 2005,
+   "runtime": 90,
+   "votos": 2772,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1654,
+   "title": "Doce del patíbulo",
+   "year": 1967,
+   "runtime": 150,
+   "votos": 1378,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 419680,
+   "title": "Dos padres por desigual",
+   "year": 2017,
+   "runtime": 100,
+   "votos": 2806,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 36465,
+   "title": "Durante la tormenta",
+   "year": 2009,
+   "runtime": 100,
+   "votos": 91,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 33542,
+   "title": "Duro de matar",
+   "year": 1995,
+   "runtime": 105,
+   "votos": 1231,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 517302,
+   "title": "EGO",
+   "year": 2022,
+   "runtime": 86,
+   "votos": 520,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 2007,
+   "title": "El aceite de la vida",
+   "year": 1992,
+   "runtime": 135,
+   "votos": 589,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 814338,
+   "title": "El amante de Lady Chatterley",
+   "year": 2022,
+   "runtime": 126,
+   "votos": 548,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 424121,
+   "title": "El apóstol",
+   "year": 2018,
+   "runtime": 130,
+   "votos": 1665,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8967,
+   "title": "El árbol de la vida",
+   "year": 2011,
+   "runtime": 139,
+   "votos": 3430,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 835113,
+   "title": "El asesino del juego de citas",
+   "year": 2024,
+   "runtime": 89,
+   "votos": 1116,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 14728,
+   "title": "El bibliotecario: La maldición del cáliz de Judas",
+   "year": 2008,
+   "runtime": 90,
+   "votos": 542,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 40996,
+   "title": "El bombero atómico",
+   "year": 1952,
+   "runtime": 95,
+   "votos": 107,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9272,
+   "title": "El buen hijo",
+   "year": 1993,
+   "runtime": 86,
+   "votos": 1092,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 376290,
+   "title": "El caso Sloane",
+   "year": 2016,
+   "runtime": 132,
+   "votos": 2038,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 44514,
+   "title": "El Cid: La leyenda",
+   "year": 2003,
+   "runtime": 83,
+   "votos": 63,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 82775,
+   "title": "El Circo",
+   "year": 1943,
+   "runtime": 90,
+   "votos": 57,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 352161,
+   "title": "El clan",
+   "year": 2015,
+   "runtime": 108,
+   "votos": 458,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10731,
+   "title": "El cliente",
+   "year": 1994,
+   "runtime": 121,
+   "votos": 1451,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 736769,
+   "title": "El clon de Tyrone",
+   "year": 2023,
+   "runtime": 119,
+   "votos": 819,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 92620,
+   "title": "El color de la amistad",
+   "year": 2000,
+   "runtime": 83,
+   "votos": 72,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 5919,
+   "title": "El coloso en llamas",
+   "year": 1974,
+   "runtime": 165,
+   "votos": 1089,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 674607,
+   "title": "El declive",
+   "year": 2020,
+   "runtime": 83,
+   "votos": 458,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8512,
+   "title": "El demonio vestido de azul",
+   "year": 1995,
+   "runtime": 102,
+   "votos": 482,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 13275,
+   "title": "El desafío (Annapolis)",
+   "year": 2006,
+   "runtime": 108,
+   "votos": 593,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 6961,
+   "title": "El día de la boda",
+   "year": 2005,
+   "runtime": 94,
+   "votos": 1289,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 656690,
+   "title": "El dilema de las redes sociales",
+   "year": 2020,
+   "runtime": 93,
+   "votos": 1863,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 13417,
+   "title": "El emperador y sus locuras 2: La gran aventura de Kronk",
+   "year": 2005,
+   "runtime": 72,
+   "votos": 1385,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9946,
+   "title": "El fin de los días",
+   "year": 1999,
+   "runtime": 121,
+   "votos": 2161,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 11777,
+   "title": "El genio del amor",
+   "year": 1994,
+   "runtime": 95,
+   "votos": 510,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1911,
+   "title": "El guerrero nº 13",
+   "year": 1999,
+   "runtime": 102,
+   "votos": 2154,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 252838,
+   "title": "El gurú de las bodas",
+   "year": 2015,
+   "runtime": 101,
+   "votos": 1748,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 6963,
+   "title": "El hombre del tiempo",
+   "year": 2005,
+   "runtime": 101,
+   "votos": 1133,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 6278,
+   "title": "El imperio del fuego",
+   "year": 2002,
+   "runtime": 101,
+   "votos": 2560,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 264397,
+   "title": "El Incidente",
+   "year": 2014,
+   "runtime": 100,
+   "votos": 192,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 31682,
+   "title": "El increíble hombre menguante",
+   "year": 1957,
+   "runtime": 81,
+   "votos": 589,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 472983,
+   "title": "El invasor Zim y el portal mágico",
+   "year": 2019,
+   "runtime": 71,
+   "votos": 264,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 5206,
+   "title": "El jefe de todo esto",
+   "year": 2006,
+   "runtime": 99,
+   "votos": 334,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11329,
+   "title": "El jurado",
+   "year": 2003,
+   "runtime": 127,
+   "votos": 1615,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 652004,
+   "title": "El lobo de Snow Hollow",
+   "year": 2020,
+   "runtime": 83,
+   "votos": 539,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 27970,
+   "title": "El lobo humano",
+   "year": 1935,
+   "runtime": 75,
+   "votos": 155,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11915,
+   "title": "El loco, loco mundo del gendarme",
+   "year": 1982,
+   "runtime": 105,
+   "votos": 615,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1312946,
+   "title": "El mapa que me lleva a ti",
+   "year": 2025,
+   "runtime": 96,
+   "votos": 360,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9367,
+   "title": "El Mariachi",
+   "year": 1993,
+   "runtime": 80,
+   "votos": 1342,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 972614,
+   "title": "El método Knox",
+   "year": 2024,
+   "runtime": 115,
+   "votos": 536,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1428,
+   "title": "El mexicano",
+   "year": 2003,
+   "runtime": 105,
+   "votos": 2495,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 38718,
+   "title": "El misterio Von Bülow",
+   "year": 1990,
+   "runtime": 111,
+   "votos": 365,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1061117,
+   "title": "El mochilero del hacha",
+   "year": 2023,
+   "runtime": 87,
+   "votos": 172,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 21845,
+   "title": "El novato del año",
+   "year": 1993,
+   "runtime": 103,
+   "votos": 408,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 268238,
+   "title": "El nuevo exótico hotel Marigold",
+   "year": 2015,
+   "runtime": 124,
+   "votos": 790,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 13676,
+   "title": "El origen de la sirenita",
+   "year": 2008,
+   "runtime": 77,
+   "votos": 1094,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 242,
+   "title": "El padrino III",
+   "year": 1990,
+   "runtime": 162,
+   "votos": 7102,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 152780,
+   "title": "El pasado",
+   "year": 2013,
+   "runtime": 130,
+   "votos": 641,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 600583,
+   "title": "El poder del perro",
+   "year": 2021,
+   "runtime": 128,
+   "votos": 3063,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 823766,
+   "title": "El prodigio",
+   "year": 2022,
+   "runtime": 108,
+   "votos": 1020,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 826,
+   "title": "El puente sobre el río Kwai",
+   "year": 1957,
+   "runtime": 161,
+   "votos": 2470,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 88431,
+   "title": "El rebelde orgulloso",
+   "year": 1958,
+   "runtime": 98,
+   "votos": 52,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 295592,
+   "title": "El reino de los monos",
+   "year": 2015,
+   "runtime": 81,
+   "votos": 157,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1729,
+   "title": "El reino prohibido",
+   "year": 2008,
+   "runtime": 104,
+   "votos": 2003,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 421467,
+   "title": "El retorno de Godzilla",
+   "year": 1984,
+   "runtime": 103,
+   "votos": 353,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 18250,
+   "title": "El retorno del Dr. Phibes",
+   "year": 1972,
+   "runtime": 89,
+   "votos": 163,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 31906,
+   "title": "El seductor",
+   "year": 1971,
+   "runtime": 109,
+   "votos": 525,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1161108,
+   "title": "El segundo acto",
+   "year": 2024,
+   "runtime": 80,
+   "votos": 321,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 82779,
+   "title": "El señor fotógrafo",
+   "year": 1953,
+   "runtime": 100,
+   "votos": 82,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 30131,
+   "title": "El Siete Machos",
+   "year": 1951,
+   "runtime": 90,
+   "votos": 114,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10210,
+   "title": "El sueño de una noche de verano",
+   "year": 1999,
+   "runtime": 116,
+   "votos": 436,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 274854,
+   "title": "El último cazador de brujas",
+   "year": 2015,
+   "runtime": 106,
+   "votos": 3970,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 13938,
+   "title": "El último dragón",
+   "year": 1985,
+   "runtime": 107,
+   "votos": 302,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 938614,
+   "title": "El último late night",
+   "year": 2024,
+   "runtime": 93,
+   "votos": 2317,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 37635,
+   "title": "El único testigo",
+   "year": 1954,
+   "runtime": 83,
+   "votos": 76,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 310568,
+   "title": "El verano de Sangaile",
+   "year": 2015,
+   "runtime": 88,
+   "votos": 111,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 37969,
+   "title": "El viaje increible",
+   "year": 1963,
+   "runtime": 90,
+   "votos": 123,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 500682,
+   "title": "Emboscada final",
+   "year": 2019,
+   "runtime": 133,
+   "votos": 2315,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 7461,
+   "title": "En el punto de mira",
+   "year": 2008,
+   "runtime": 90,
+   "votos": 2265,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 425001,
+   "title": "En guerra con mi abuelo",
+   "year": 2020,
+   "runtime": 94,
+   "votos": 1101,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 42500,
+   "title": "En nombre de la ley",
+   "year": 1971,
+   "runtime": 95,
+   "votos": 142,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9701,
+   "title": "En tierra de hombres",
+   "year": 2005,
+   "runtime": 126,
+   "votos": 760,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 28894,
+   "title": "Encubridora",
+   "year": 1952,
+   "runtime": 86,
+   "votos": 130,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11322,
+   "title": "Enemigos públicos",
+   "year": 2009,
+   "runtime": 140,
+   "votos": 4988,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10617,
+   "title": "Érase una vez en China",
+   "year": 1991,
+   "runtime": 134,
+   "votos": 507,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 114779,
+   "title": "Es un desastre",
+   "year": 2013,
+   "runtime": 88,
+   "votos": 242,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 12149,
+   "title": "Escalofrío",
+   "year": 2002,
+   "runtime": 99,
+   "votos": 1413,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 585216,
+   "title": "Escape Room 2: Mueres por salir",
+   "year": 2021,
+   "runtime": 88,
+   "votos": 2372,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 40095,
+   "title": "Estamos muertos... ¿o qué?",
+   "year": 1988,
+   "runtime": 86,
+   "votos": 247,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 83552,
+   "title": "Esto no es una película",
+   "year": 2011,
+   "runtime": 78,
+   "votos": 113,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 457799,
+   "title": "Extremadamente cruel, malvado y perverso",
+   "year": 2019,
+   "runtime": 108,
+   "votos": 3627,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 5994,
+   "title": "Family Man",
+   "year": 2000,
+   "runtime": 121,
+   "votos": 2295,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 8324,
+   "title": "Fast Food Nation",
+   "year": 2006,
+   "runtime": 110,
+   "votos": 416,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10288,
+   "title": "Fido",
+   "year": 2006,
+   "runtime": 91,
+   "votos": 505,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 558582,
+   "title": "First Cow",
+   "year": 2020,
+   "runtime": 121,
+   "votos": 565,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 105768,
+   "title": "Flicka: Country Pride",
+   "year": 2012,
+   "runtime": 93,
+   "votos": 104,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 33379,
+   "title": "Flower Power (como una regadera)",
+   "year": 2001,
+   "runtime": 91,
+   "votos": 88,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9664,
+   "title": "Flyboys: Héroes del aire",
+   "year": 2006,
+   "runtime": 139,
+   "votos": 877,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 37495,
+   "title": "Four Lions",
+   "year": 2010,
+   "runtime": 101,
+   "votos": 1340,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11348,
+   "title": "Frágiles",
+   "year": 2005,
+   "runtime": 104,
+   "votos": 646,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10675,
+   "title": "Frenético",
+   "year": 1988,
+   "runtime": 120,
+   "votos": 1178,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 326359,
+   "title": "Frozen Fever",
+   "year": 2015,
+   "runtime": 8,
+   "votos": 1938,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 274855,
+   "title": "Geostorm",
+   "year": 2017,
+   "runtime": 109,
+   "votos": 5362,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 39256,
+   "title": "Godzilla 1985",
+   "year": 1985,
+   "runtime": 87,
+   "votos": 202,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 18289,
+   "title": "Godzilla contra Biollante",
+   "year": 1989,
+   "runtime": 105,
+   "votos": 318,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 38582,
+   "title": "Godzilla contra Ciber Godzilla, máquina de destrucción",
+   "year": 1974,
+   "runtime": 84,
+   "votos": 304,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1682,
+   "title": "Godzilla contra los monstruos",
+   "year": 1964,
+   "runtime": 87,
+   "votos": 360,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8289,
+   "title": "Gorky Park",
+   "year": 1983,
+   "runtime": 128,
+   "votos": 354,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9410,
+   "title": "Grandes esperanzas",
+   "year": 1998,
+   "runtime": 111,
+   "votos": 724,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10569,
+   "title": "Granujas de medio pelo",
+   "year": 2000,
+   "runtime": 95,
+   "votos": 775,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 17927,
+   "title": "Guerra de cheerleaders",
+   "year": 2009,
+   "runtime": 89,
+   "votos": 724,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10294,
+   "title": "Habitación sin salida",
+   "year": 2007,
+   "runtime": 85,
+   "votos": 1716,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 467482,
+   "title": "Háblame de ti",
+   "year": 2018,
+   "runtime": 100,
+   "votos": 320,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 27850,
+   "title": "Halloweentown: ¡Qué familia la mía!",
+   "year": 1998,
+   "runtime": 84,
+   "votos": 622,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 34205,
+   "title": "Halloweentown: La venganza",
+   "year": 2001,
+   "runtime": 81,
+   "votos": 382,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 858024,
+   "title": "Hamnet",
+   "year": 2025,
+   "runtime": 125,
+   "votos": 1664,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 50456,
+   "title": "Hanna",
+   "year": 2011,
+   "runtime": 111,
+   "votos": 3790,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 18126,
+   "title": "Hannah Montana: La película",
+   "year": 2009,
+   "runtime": 102,
+   "votos": 2135,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 42172,
+   "title": "Hardcore: Un mundo oculto",
+   "year": 1979,
+   "runtime": 109,
+   "votos": 339,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 303623,
+   "title": "Hello Ladies: la película",
+   "year": 2014,
+   "runtime": 85,
+   "votos": 168,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 955531,
+   "title": "Hermana Muerte",
+   "year": 2023,
+   "runtime": 91,
+   "votos": 387,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 864873,
+   "title": "Hipnótico",
+   "year": 2021,
+   "runtime": 89,
+   "votos": 716,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 429417,
+   "title": "Historias de fantasmas",
+   "year": 2018,
+   "runtime": 98,
+   "votos": 1322,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9686,
+   "title": "Historias de Nueva York",
+   "year": 1989,
+   "runtime": 119,
+   "votos": 424,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 536437,
+   "title": "Hypnotic",
+   "year": 2023,
+   "runtime": 93,
+   "votos": 1579,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 505948,
+   "title": "I Am Mother",
+   "year": 2019,
+   "runtime": 115,
+   "votos": 2962,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 774825,
+   "title": "Ice Age: Las aventuras de Buck",
+   "year": 2022,
+   "runtime": 82,
+   "votos": 1884,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 14527,
+   "title": "Infalible",
+   "year": 2003,
+   "runtime": 90,
+   "votos": 214,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 75174,
+   "title": "Infierno blanco",
+   "year": 2012,
+   "runtime": 115,
+   "votos": 4267,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 1115191,
+   "title": "Intoxicación: La cruda verdad de nuestra comida",
+   "year": 2023,
+   "runtime": 83,
+   "votos": 56,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 3107,
+   "title": "Invasión extraterrestre",
+   "year": 1968,
+   "runtime": 89,
+   "votos": 300,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 37472,
+   "title": "Ip Man 2",
+   "year": 2010,
+   "runtime": 108,
+   "votos": 2578,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 7095,
+   "title": "Jack",
+   "year": 1996,
+   "runtime": 113,
+   "votos": 1397,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 376866,
+   "title": "Jackie",
+   "year": 2016,
+   "runtime": 95,
+   "votos": 2476,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 10539,
+   "title": "James y el melocotón gigante",
+   "year": 1996,
+   "runtime": 79,
+   "votos": 1493,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11351,
+   "title": "Jeepers Creepers 2",
+   "year": 2003,
+   "runtime": 104,
+   "votos": 1902,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 62527,
+   "title": "Johnny Kapahala: Contracorriente 2",
+   "year": 2007,
+   "runtime": 90,
+   "votos": 102,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 617502,
+   "title": "Jolt",
+   "year": 2021,
+   "runtime": 91,
+   "votos": 1446,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 590995,
+   "title": "Jóvenes y brujas",
+   "year": 2020,
+   "runtime": 90,
+   "votos": 920,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1440,
+   "title": "Juegos secretos",
+   "year": 2006,
+   "runtime": 136,
+   "votos": 1208,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1072371,
+   "title": "Jules",
+   "year": 2023,
+   "runtime": 87,
+   "votos": 423,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 843794,
+   "title": "JUNG_E",
+   "year": 2023,
+   "runtime": 98,
+   "votos": 706,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 14172,
+   "title": "Justa venganza",
+   "year": 2004,
+   "runtime": 91,
+   "votos": 283,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 19184,
+   "title": "Kamikaze 1999 (El último combate)",
+   "year": 1983,
+   "runtime": 90,
+   "votos": 176,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8223,
+   "title": "Kika",
+   "year": 1993,
+   "runtime": 117,
+   "votos": 332,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 20771,
+   "title": "Kim Possible: Sí Es para Tanto",
+   "year": 2005,
+   "runtime": 71,
+   "votos": 210,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 800510,
+   "title": "Kimi",
+   "year": 2022,
+   "runtime": 89,
+   "votos": 1026,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 845222,
+   "title": "Kingdom: La historia de Ashin",
+   "year": 2021,
+   "runtime": 92,
+   "votos": 657,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 12102,
+   "title": "Kramer contra Kramer",
+   "year": 1979,
+   "runtime": 104,
+   "votos": 2558,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 290864,
+   "title": "Kung Fu jungle",
+   "year": 2014,
+   "runtime": 100,
+   "votos": 534,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 948276,
+   "title": "La bala perdida 2",
+   "year": 2022,
+   "runtime": 98,
+   "votos": 492,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 405894,
+   "title": "La Banda del patio ya esta en el 5º Curso",
+   "year": 2003,
+   "runtime": 62,
+   "votos": 96,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 21301,
+   "title": "La barbería 2: Vuelta al negocio",
+   "year": 2004,
+   "runtime": 110,
+   "votos": 333,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 132144,
+   "title": "La batalla de Chile (Parte 1). La insurrección de la burguesía",
+   "year": 1975,
+   "runtime": 97,
+   "votos": 62,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11463,
+   "title": "La batalla de Inglaterra",
+   "year": 1969,
+   "runtime": 151,
+   "votos": 364,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 332270,
+   "title": "La batalla por Sebastopol",
+   "year": 2015,
+   "runtime": 110,
+   "votos": 519,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 13313,
+   "title": "La bella y la bestia 2: Una navidad encantada",
+   "year": 1997,
+   "runtime": 75,
+   "votos": 1118,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2525,
+   "title": "La Biblia... en su principio",
+   "year": 1966,
+   "runtime": 175,
+   "votos": 305,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1280282,
+   "title": "La casa de muñecas de Gabby: La película",
+   "year": 2025,
+   "runtime": 98,
+   "votos": 101,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 30014,
+   "title": "La casa del río",
+   "year": 1950,
+   "runtime": 88,
+   "votos": 122,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11477,
+   "title": "La comunidad",
+   "year": 2000,
+   "runtime": 107,
+   "votos": 363,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1151334,
+   "title": "La conductora",
+   "year": 2025,
+   "runtime": 106,
+   "votos": 371,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 18269,
+   "title": "La dama y el vagabundo 2: Las aventuras de Golfillo",
+   "year": 2001,
+   "runtime": 69,
+   "votos": 1342,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 38542,
+   "title": "La desaparición de Alice Creed",
+   "year": 2009,
+   "runtime": 96,
+   "votos": 611,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 481084,
+   "title": "La familia Addams",
+   "year": 2019,
+   "runtime": 86,
+   "votos": 2549,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 639721,
+   "title": "La familia Addams 2: La gran escapada",
+   "year": 2021,
+   "runtime": 93,
+   "votos": 1446,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 618416,
+   "title": "La familia Bloom",
+   "year": 2021,
+   "runtime": 95,
+   "votos": 348,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10994,
+   "title": "La flor del mal",
+   "year": 2002,
+   "runtime": 109,
+   "votos": 434,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10102,
+   "title": "La gran comilona",
+   "year": 1973,
+   "runtime": 130,
+   "votos": 562,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 13691,
+   "title": "La gran película de Piglet",
+   "year": 2003,
+   "runtime": 79,
+   "votos": 421,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 31658,
+   "title": "La hora de las pistolas",
+   "year": 1967,
+   "runtime": 100,
+   "votos": 106,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4520,
+   "title": "La huella",
+   "year": 2007,
+   "runtime": 88,
+   "votos": 605,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 179,
+   "title": "La intérprete",
+   "year": 2005,
+   "runtime": 128,
+   "votos": 1651,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 164457,
+   "title": "La ley del más fuerte",
+   "year": 2013,
+   "runtime": 116,
+   "votos": 2190,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 615667,
+   "title": "La madre del blues",
+   "year": 2020,
+   "runtime": 94,
+   "votos": 1296,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 42745,
+   "title": "La maldición de la calavera",
+   "year": 1965,
+   "runtime": 83,
+   "votos": 117,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8326,
+   "title": "La maldición de los hoyos",
+   "year": 2003,
+   "runtime": 117,
+   "votos": 1605,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 894205,
+   "title": "La maldición del hombre lobo",
+   "year": 2022,
+   "runtime": 55,
+   "votos": 1626,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 11772,
+   "title": "La mansión encantada",
+   "year": 1963,
+   "runtime": 112,
+   "votos": 738,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10781,
+   "title": "La matanza de Texas: El origen",
+   "year": 2006,
+   "runtime": 90,
+   "votos": 2030,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 42630,
+   "title": "La mujer de cemento",
+   "year": 1968,
+   "runtime": 93,
+   "votos": 67,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 401743,
+   "title": "La mujer más odiada de América",
+   "year": 2017,
+   "runtime": 91,
+   "votos": 234,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 457955,
+   "title": "La noche devora el mundo",
+   "year": 2018,
+   "runtime": 94,
+   "votos": 839,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2001,
+   "title": "La noche es nuestra",
+   "year": 2007,
+   "runtime": 117,
+   "votos": 1576,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4191,
+   "title": "La novia vestía de negro",
+   "year": 1968,
+   "runtime": 107,
+   "votos": 302,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 582596,
+   "title": "La otra Missy",
+   "year": 2020,
+   "runtime": 89,
+   "votos": 1317,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 124097,
+   "title": "La receta del millón de dólares",
+   "year": 2003,
+   "runtime": 81,
+   "votos": 86,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1242384,
+   "title": "La red antisocial: De los memes al caos",
+   "year": 2024,
+   "runtime": 86,
+   "votos": 63,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 45371,
+   "title": "La relacion especial",
+   "year": 2010,
+   "runtime": 93,
+   "votos": 76,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 93863,
+   "title": "La señora sin camelias",
+   "year": 1953,
+   "runtime": 97,
+   "votos": 68,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4421,
+   "title": "La teniente O'Neil",
+   "year": 1997,
+   "runtime": 125,
+   "votos": 1926,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 659067,
+   "title": "La tierra y la sangre",
+   "year": 2020,
+   "runtime": 80,
+   "votos": 308,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 44040,
+   "title": "La trampa del mal",
+   "year": 2010,
+   "runtime": 80,
+   "votos": 3210,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1429,
+   "title": "La última noche",
+   "year": 2002,
+   "runtime": 135,
+   "votos": 2666,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 34474,
+   "title": "La Venus rubia",
+   "year": 1932,
+   "runtime": 93,
+   "votos": 152,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 244264,
+   "title": "Laggies",
+   "year": 2014,
+   "runtime": 99,
+   "votos": 1197,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2789,
+   "title": "Las crónicas de Riddick",
+   "year": 2004,
+   "runtime": 134,
+   "votos": 4665,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 21481,
+   "title": "Las gemelas hechizan dos veces",
+   "year": 2005,
+   "runtime": 86,
+   "votos": 561,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 670439,
+   "title": "Las hijas del Reich",
+   "year": 2020,
+   "runtime": 99,
+   "votos": 197,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 30309,
+   "title": "Las mujeres de verdad tienen curvas",
+   "year": 2002,
+   "runtime": 86,
+   "votos": 106,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 59387,
+   "title": "Las Supernenas: la película",
+   "year": 2002,
+   "runtime": 74,
+   "votos": 364,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1497,
+   "title": "Las tortugas ninja II. El secreto de los mocos verdes",
+   "year": 1991,
+   "runtime": 88,
+   "votos": 1294,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 12165,
+   "title": "Lejos de la tierra quemada",
+   "year": 2008,
+   "runtime": 111,
+   "votos": 479,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 21316,
+   "title": "Leroy y Stitch",
+   "year": 2006,
+   "runtime": 75,
+   "votos": 626,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 65291,
+   "title": "Linterna Verde: Caballeros Esmeralda",
+   "year": 2011,
+   "runtime": 84,
+   "votos": 571,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 18736,
+   "title": "Lizzie superstar",
+   "year": 2003,
+   "runtime": 90,
+   "votos": 1363,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9787,
+   "title": "Los amos de Dogtown",
+   "year": 2005,
+   "runtime": 105,
+   "votos": 846,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 16220,
+   "title": "Los hechiceros de la guerra (Wizards)",
+   "year": 1977,
+   "runtime": 81,
+   "votos": 255,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1059064,
+   "title": "Los instigadores",
+   "year": 2024,
+   "runtime": 102,
+   "votos": 701,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10208,
+   "title": "Los Muppets en el Espacio",
+   "year": 1999,
+   "runtime": 87,
+   "votos": 379,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1597,
+   "title": "Los padres de ella",
+   "year": 2000,
+   "runtime": 107,
+   "votos": 6588,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 318121,
+   "title": "Los principios del cuidado",
+   "year": 2016,
+   "runtime": 93,
+   "votos": 2378,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11135,
+   "title": "Los rescatadores en Cangurolandia",
+   "year": 1990,
+   "runtime": 77,
+   "votos": 1436,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 30330,
+   "title": "Los reyes de la noche",
+   "year": 1996,
+   "runtime": 95,
+   "votos": 67,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10874,
+   "title": "Los teleñecos en la Isla del Tesoro",
+   "year": 1996,
+   "runtime": 100,
+   "votos": 493,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 14317,
+   "title": "Los Thornberrys: La película",
+   "year": 2002,
+   "runtime": 82,
+   "votos": 298,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 576156,
+   "title": "Los tortolitos",
+   "year": 2020,
+   "runtime": 87,
+   "votos": 745,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 339095,
+   "title": "Los últimos días del crimen",
+   "year": 2020,
+   "runtime": 148,
+   "votos": 868,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 42661,
+   "title": "Los Vikingos",
+   "year": 1958,
+   "runtime": 114,
+   "votos": 387,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11589,
+   "title": "Los violentos de Kelly",
+   "year": 1970,
+   "runtime": 144,
+   "votos": 867,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 39833,
+   "title": "Love Me Tender (Ámame tiernamente)",
+   "year": 1956,
+   "runtime": 89,
+   "votos": 100,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 214096,
+   "title": "Lucky Them",
+   "year": 2013,
+   "runtime": 97,
+   "votos": 91,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 432383,
+   "title": "Luis y los alienígenas",
+   "year": 2018,
+   "runtime": 100,
+   "votos": 195,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 26337,
+   "title": "Luna de porcelana",
+   "year": 1994,
+   "runtime": 99,
+   "votos": 155,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 766798,
+   "title": "Madres paralelas",
+   "year": 2021,
+   "runtime": 120,
+   "votos": 1066,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 639798,
+   "title": "Malasaña 32",
+   "year": 2020,
+   "runtime": 105,
+   "votos": 710,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 619778,
+   "title": "Maligno",
+   "year": 2021,
+   "runtime": 111,
+   "votos": 2762,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 1951,
+   "title": "Manderlay",
+   "year": 2005,
+   "runtime": 139,
+   "votos": 418,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11018,
+   "title": "Manhattan Sur",
+   "year": 1985,
+   "runtime": 134,
+   "votos": 509,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 614560,
+   "title": "Mank",
+   "year": 2020,
+   "runtime": 132,
+   "votos": 1854,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 522887,
+   "title": "Manou",
+   "year": 2019,
+   "runtime": 80,
+   "votos": 81,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 616747,
+   "title": "Mansión encantada (Haunted Mansion)",
+   "year": 2023,
+   "runtime": 123,
+   "votos": 1281,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 869626,
+   "title": "Marcel, la concha con zapatos",
+   "year": 2022,
+   "runtime": 90,
+   "votos": 744,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 586810,
+   "title": "Mars Express",
+   "year": 2023,
+   "runtime": 85,
+   "votos": 601,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 15919,
+   "title": "Marty",
+   "year": 1955,
+   "runtime": 90,
+   "votos": 476,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 119569,
+   "title": "Marvel One-Shot: Artículo 47",
+   "year": 2012,
+   "runtime": 12,
+   "votos": 650,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 24420,
+   "title": "Más allá del tiempo",
+   "year": 2009,
+   "runtime": 107,
+   "votos": 2810,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 531509,
+   "title": "Más que madres",
+   "year": 2019,
+   "runtime": 100,
+   "votos": 478,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9460,
+   "title": "Mascara Negra",
+   "year": 1996,
+   "runtime": 96,
+   "votos": 300,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4710,
+   "title": "Masculino, femenino",
+   "year": 1966,
+   "runtime": 110,
+   "votos": 434,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 14854,
+   "title": "McQuade, lobo solitario",
+   "year": 1983,
+   "runtime": 107,
+   "votos": 443,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 454983,
+   "title": "Mi primer beso",
+   "year": 2018,
+   "runtime": 105,
+   "votos": 7524,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 24122,
+   "title": "Mi segunda vez",
+   "year": 2009,
+   "runtime": 97,
+   "votos": 989,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9709,
+   "title": "Mi verano de amor",
+   "year": 2005,
+   "runtime": 86,
+   "votos": 333,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 252512,
+   "title": "Mientras seamos jóvenes",
+   "year": 2015,
+   "runtime": 94,
+   "votos": 1222,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 13499,
+   "title": "Míos, tuyos y nuestros",
+   "year": 2005,
+   "runtime": 90,
+   "votos": 929,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2067,
+   "title": "Misión a Marte",
+   "year": 2000,
+   "runtime": 114,
+   "votos": 1658,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 22559,
+   "title": "Misterios del océano",
+   "year": 2005,
+   "runtime": 95,
+   "votos": 87,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 921785,
+   "title": "Mixed by Erry",
+   "year": 2023,
+   "runtime": 90,
+   "votos": 503,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 376867,
+   "title": "Moonlight",
+   "year": 2016,
+   "runtime": 111,
+   "votos": 7712,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 227738,
+   "title": "Mortadelo y Filemón contra Jimmy el Cachondo",
+   "year": 2014,
+   "runtime": 88,
+   "votos": 213,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10490,
+   "title": "Muérete, bonita",
+   "year": 1999,
+   "runtime": 98,
+   "votos": 466,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 520023,
+   "title": "Muerte, muerte, muerte",
+   "year": 2022,
+   "runtime": 94,
+   "votos": 1554,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 57544,
+   "title": "Muertos de risa",
+   "year": 1999,
+   "runtime": 75,
+   "votos": 93,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 612,
+   "title": "Munich",
+   "year": 2005,
+   "runtime": 164,
+   "votos": 3108,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 597316,
+   "title": "My Little Pony: Una nueva generación",
+   "year": 2021,
+   "runtime": 90,
+   "votos": 356,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 698432,
+   "title": "Nadie sabe que estoy aquí",
+   "year": 2020,
+   "runtime": 91,
+   "votos": 207,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 44381,
+   "title": "Napoleón, el perrito aventurero",
+   "year": 1995,
+   "runtime": 81,
+   "votos": 97,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 913673,
+   "title": "Nefarious. Cuando habla el diablo",
+   "year": 2023,
+   "runtime": 96,
+   "votos": 552,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 193610,
+   "title": "No hay dos sin tres",
+   "year": 2014,
+   "runtime": 109,
+   "votos": 3818,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 639988,
+   "title": "No hay otra opción",
+   "year": 2025,
+   "runtime": 139,
+   "votos": 1326,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 15413,
+   "title": "No le digas a mamá que la canguro ha muerto",
+   "year": 1991,
+   "runtime": 102,
+   "votos": 508,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 537739,
+   "title": "No te lo vas a creer",
+   "year": 2019,
+   "runtime": 94,
+   "votos": 986,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1401905,
+   "title": "No te mueras: El hombre que quiere vivir para siempre",
+   "year": 2025,
+   "runtime": 88,
+   "votos": 82,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 1063877,
+   "title": "No te muevas",
+   "year": 2024,
+   "runtime": 92,
+   "votos": 1075,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 443009,
+   "title": "No te preocupes, no llegará lejos a pie",
+   "year": 2018,
+   "runtime": 114,
+   "votos": 784,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 899112,
+   "title": "Noche de paz",
+   "year": 2022,
+   "runtime": 101,
+   "votos": 2656,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 575446,
+   "title": "Nuevo Orden",
+   "year": 2020,
+   "runtime": 88,
+   "votos": 390,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 36670,
+   "title": "Nunca digas nunca jamás",
+   "year": 1983,
+   "runtime": 137,
+   "votos": 1696,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 11355,
+   "title": "Nunca me han besado",
+   "year": 1999,
+   "runtime": 110,
+   "votos": 1629,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 108726,
+   "title": "Objetivo terrorista",
+   "year": 2013,
+   "runtime": 86,
+   "votos": 98,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 24032,
+   "title": "Oh, God!",
+   "year": 1977,
+   "runtime": 98,
+   "votos": 142,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 26518,
+   "title": "Old Joy",
+   "year": 2006,
+   "runtime": 73,
+   "votos": 209,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 749142,
+   "title": "Olga",
+   "year": 2021,
+   "runtime": 90,
+   "votos": 59,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 203801,
+   "title": "Operación U.N.C.L.E.",
+   "year": 2015,
+   "runtime": 116,
+   "votos": 7089,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 58431,
+   "title": "Orgullo + Prejuicio + Zombis",
+   "year": 2016,
+   "runtime": 108,
+   "votos": 2366,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 438396,
+   "title": "Orígenes secretos",
+   "year": 2020,
+   "runtime": 97,
+   "votos": 463,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 529790,
+   "title": "Pachamama",
+   "year": 2018,
+   "runtime": 72,
+   "votos": 83,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 932430,
+   "title": "Pacto de graduación",
+   "year": 2023,
+   "runtime": 98,
+   "votos": 195,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 432527,
+   "title": "Padmaavat",
+   "year": 2018,
+   "runtime": 163,
+   "votos": 328,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 67,
+   "title": "Paradise Now",
+   "year": 2005,
+   "runtime": 90,
+   "votos": 298,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9718,
+   "title": "Pasado de vueltas",
+   "year": 2006,
+   "runtime": 108,
+   "votos": 2009,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4499,
+   "title": "Pepi, Luci, Bom y otras chicas del montón",
+   "year": 1980,
+   "runtime": 82,
+   "votos": 199,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 836009,
+   "title": "Perdidos en el Ártico",
+   "year": 2022,
+   "runtime": 101,
+   "votos": 649,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 704854,
+   "title": "Perdidos en el Everest",
+   "year": 2020,
+   "runtime": 60,
+   "votos": 55,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 833591,
+   "title": "Perfectos desconocidos",
+   "year": 2022,
+   "runtime": 99,
+   "votos": 84,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 14819,
+   "title": "Pesos pesados",
+   "year": 1995,
+   "runtime": 97,
+   "votos": 430,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 749004,
+   "title": "Petite Maman",
+   "year": 2021,
+   "runtime": 72,
+   "votos": 485,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 594328,
+   "title": "Phineas y Ferb, la película: Candace contra el universo",
+   "year": 2020,
+   "runtime": 86,
+   "votos": 418,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1992,
+   "title": "Planet Terror",
+   "year": 2007,
+   "runtime": 105,
+   "votos": 3986,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9395,
+   "title": "Por encima de la ley",
+   "year": 1988,
+   "runtime": 99,
+   "votos": 828,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 14254,
+   "title": "Presencias extrañas",
+   "year": 2009,
+   "runtime": 87,
+   "votos": 1686,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 113,
+   "title": "Primavera, verano, otoño, invierno... y primavera",
+   "year": 2003,
+   "runtime": 103,
+   "votos": 1250,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 478860,
+   "title": "Próxima",
+   "year": 2019,
+   "runtime": 107,
+   "votos": 456,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 605116,
+   "title": "Proyecto Power",
+   "year": 2020,
+   "runtime": 113,
+   "votos": 3162,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 77621,
+   "title": "Puertas adentro",
+   "year": 1920,
+   "runtime": 79,
+   "votos": 113,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 28032,
+   "title": "Pulgarcita",
+   "year": 1994,
+   "runtime": 83,
+   "votos": 555,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 2061,
+   "title": "Pusher, un paseo por el abismo",
+   "year": 1996,
+   "runtime": 110,
+   "votos": 927,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 21242,
+   "title": "Que viene Valdez",
+   "year": 1971,
+   "runtime": 91,
+   "votos": 97,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 20481,
+   "title": "Razas de noche",
+   "year": 1990,
+   "runtime": 120,
+   "votos": 566,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 34204,
+   "title": "Regreso a Halloweentown",
+   "year": 2006,
+   "runtime": 88,
+   "votos": 638,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 553646,
+   "title": "ReMastered: Los dos asesinatos de Sam Cooke",
+   "year": 2019,
+   "runtime": 74,
+   "votos": 57,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 331354,
+   "title": "Requisitos para ser una persona normal",
+   "year": 2015,
+   "runtime": 81,
+   "votos": 138,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 274857,
+   "title": "Rey Arturo. La leyenda de Excalibur",
+   "year": 2017,
+   "runtime": 126,
+   "votos": 6210,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9546,
+   "title": "Ricochet",
+   "year": 1991,
+   "runtime": 105,
+   "votos": 389,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 71885,
+   "title": "Riesgo Xtremo",
+   "year": 2001,
+   "runtime": 91,
+   "votos": 97,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 98514,
+   "title": "River of Grass",
+   "year": 1995,
+   "runtime": 76,
+   "votos": 82,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1013577,
+   "title": "Robert Downey Sr.",
+   "year": 2022,
+   "runtime": 90,
+   "votos": 67,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 5549,
+   "title": "Robocop II",
+   "year": 1990,
+   "runtime": 117,
+   "votos": 2223,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10249,
+   "title": "Rocketeer",
+   "year": 1991,
+   "runtime": 108,
+   "votos": 1094,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 13809,
+   "title": "RocknRolla",
+   "year": 2008,
+   "runtime": 114,
+   "votos": 3448,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1246,
+   "title": "Rocky Balboa",
+   "year": 2006,
+   "runtime": 101,
+   "votos": 3944,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 110415,
+   "title": "Rompenieves",
+   "year": 2013,
+   "runtime": 126,
+   "votos": 10732,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 14444,
+   "title": "Rugrats: La película",
+   "year": 1998,
+   "runtime": 80,
+   "votos": 663,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 998022,
+   "title": "Sala de profesores",
+   "year": 2023,
+   "runtime": 99,
+   "votos": 768,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 230170,
+   "title": "Sarah Silverman: We Are Miracles",
+   "year": 2013,
+   "runtime": 60,
+   "votos": 55,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 433247,
+   "title": "Se lo llevaron: Recuerdos de una niña de Camboya",
+   "year": 2017,
+   "runtime": 136,
+   "votos": 732,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 39486,
+   "title": "Secretariat",
+   "year": 2010,
+   "runtime": 123,
+   "votos": 654,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 857729,
+   "title": "Secretos del deporte: Pacto con el diablo",
+   "year": 2021,
+   "runtime": 77,
+   "votos": 72,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4584,
+   "title": "Sentido y sensibilidad",
+   "year": 1995,
+   "runtime": 131,
+   "votos": 1902,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 4141,
+   "title": "Shoot 'Em Up (En el punto de mira)",
+   "year": 2007,
+   "runtime": 86,
+   "votos": 2206,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 249164,
+   "title": "Si decido quedarme",
+   "year": 2014,
+   "runtime": 106,
+   "votos": 4370,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 41300,
+   "title": "Si yo fuera diputado",
+   "year": 1952,
+   "runtime": 95,
+   "votos": 78,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 406990,
+   "title": "Siete hermanas",
+   "year": 2017,
+   "runtime": 123,
+   "votos": 6589,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 50546,
+   "title": "Sígueme el rollo",
+   "year": 2011,
+   "runtime": 117,
+   "votos": 6268,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 972533,
+   "title": "Sin oxígeno",
+   "year": 2025,
+   "runtime": 93,
+   "votos": 708,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 3638,
+   "title": "Sin reservas",
+   "year": 2007,
+   "runtime": 76,
+   "votos": 1548,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 302401,
+   "title": "Snowden",
+   "year": 2016,
+   "runtime": 135,
+   "votos": 4800,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 17006,
+   "title": "Sobredosis de oro",
+   "year": 1988,
+   "runtime": 88,
+   "votos": 223,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10414,
+   "title": "Somos los mejores",
+   "year": 1992,
+   "runtime": 101,
+   "votos": 1015,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9473,
+   "title": "South Park: Más grande, más largo y sin cortes",
+   "year": 1999,
+   "runtime": 81,
+   "votos": 3054,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 874299,
+   "title": "South Park: Post Covid",
+   "year": 2021,
+   "runtime": 59,
+   "votos": 420,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 874300,
+   "title": "South Park. Post Covid: El retorno del Covid",
+   "year": 2021,
+   "runtime": 62,
+   "votos": 492,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 324670,
+   "title": "Spectral",
+   "year": 2016,
+   "runtime": 108,
+   "votos": 2124,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 174,
+   "title": "Star Trek VI. Aquel país desconocido",
+   "year": 1991,
+   "runtime": 109,
+   "votos": 1486,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 193,
+   "title": "Star Trek. La próxima generación",
+   "year": 1994,
+   "runtime": 113,
+   "votos": 1568,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1931,
+   "title": "Stomp the Yard: Ritmo salvaje",
+   "year": 2007,
+   "runtime": 114,
+   "votos": 562,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1272,
+   "title": "Sunshine",
+   "year": 2007,
+   "runtime": 107,
+   "votos": 4460,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 44655,
+   "title": "Susana la perversa",
+   "year": 1951,
+   "runtime": 86,
+   "votos": 50,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 586461,
+   "title": "Swallow",
+   "year": 2020,
+   "runtime": 94,
+   "votos": 883,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 8222,
+   "title": "Tacones lejanos",
+   "year": 1991,
+   "runtime": 112,
+   "votos": 484,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 320006,
+   "title": "Taxi Teherán",
+   "year": 2015,
+   "runtime": 86,
+   "votos": 498,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 280,
+   "title": "Terminator 2: El juicio final",
+   "year": 1991,
+   "runtime": 137,
+   "votos": 14966,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 290859,
+   "title": "Terminator: Destino oscuro",
+   "year": 2019,
+   "runtime": 120,
+   "votos": 5897,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 34996,
+   "title": "The Addiction",
+   "year": 1995,
+   "runtime": 82,
+   "votos": 330,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 623491,
+   "title": "The Babysitter: Killer Queen",
+   "year": 2020,
+   "runtime": 101,
+   "votos": 1920,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 13551,
+   "title": "The Dead Girl",
+   "year": 2006,
+   "runtime": 85,
+   "votos": 266,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 795514,
+   "title": "The Fallout",
+   "year": 2021,
+   "runtime": 92,
+   "votos": 1340,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1581,
+   "title": "The Holiday (Vacaciones)",
+   "year": 2006,
+   "runtime": 135,
+   "votos": 5776,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 9667,
+   "title": "The jacket",
+   "year": 2005,
+   "runtime": 103,
+   "votos": 1783,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 437108,
+   "title": "The Mimic",
+   "year": 2017,
+   "runtime": 100,
+   "votos": 178,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 666243,
+   "title": "The Witcher: La pesadilla del lobo",
+   "year": 2021,
+   "runtime": 83,
+   "votos": 1147,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1051891,
+   "title": "Thelma: La venganza nunca ha sido tan dulce",
+   "year": 2024,
+   "runtime": 98,
+   "votos": 473,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 537116,
+   "title": "tick, tick... BOOM!",
+   "year": 2021,
+   "runtime": 120,
+   "votos": 2383,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 672741,
+   "title": "Till Death: Hasta que la muerte nos separe",
+   "year": 2021,
+   "runtime": 88,
+   "votos": 1008,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 653729,
+   "title": "Time",
+   "year": 2020,
+   "runtime": 81,
+   "votos": 131,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 241001,
+   "title": "Tintín y el Templo del Sol",
+   "year": 1969,
+   "runtime": 78,
+   "votos": 96,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9716,
+   "title": "Todos dicen I love you",
+   "year": 1996,
+   "runtime": 101,
+   "votos": 743,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 26171,
+   "title": "Todos están bien",
+   "year": 2009,
+   "runtime": 100,
+   "votos": 1135,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 72570,
+   "title": "Todos los días de mi vida",
+   "year": 2012,
+   "runtime": 104,
+   "votos": 4344,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 19042,
+   "title": "Todos los perros van al cielo 2",
+   "year": 1996,
+   "runtime": 82,
+   "votos": 296,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 549787,
+   "title": "Tokyo Ghoul S",
+   "year": 2019,
+   "runtime": 97,
+   "votos": 99,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 33560,
+   "title": "Totally F***ed Up",
+   "year": 1994,
+   "runtime": 80,
+   "votos": 130,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 256835,
+   "title": "Toy Story: El tiempo perdido",
+   "year": 2014,
+   "runtime": 22,
+   "votos": 1190,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 41662,
+   "title": "Tres mujeres",
+   "year": 1977,
+   "runtime": 124,
+   "votos": 359,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 85550,
+   "title": "Un cuento de cine",
+   "year": 2005,
+   "runtime": 89,
+   "votos": 91,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 28769,
+   "title": "Un cuento de Navidad (El musical)",
+   "year": 2004,
+   "runtime": 87,
+   "votos": 57,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 41305,
+   "title": "Un día con el Diablo",
+   "year": 1945,
+   "runtime": 100,
+   "votos": 75,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 37094,
+   "title": "Un día de furia",
+   "year": 1993,
+   "runtime": 113,
+   "votos": 4288,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 9563,
+   "title": "Un domingo cualquiera",
+   "year": 1999,
+   "runtime": 162,
+   "votos": 1891,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 553604,
+   "title": "Un ladrón honesto",
+   "year": 2020,
+   "runtime": 99,
+   "votos": 1955,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 762441,
+   "title": "Un lugar tranquilo: Día uno",
+   "year": 2024,
+   "runtime": 100,
+   "votos": 3605,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 578908,
+   "title": "Un mal viaje",
+   "year": 2021,
+   "runtime": 87,
+   "votos": 616,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 48231,
+   "title": "Un método peligroso",
+   "year": 2011,
+   "runtime": 99,
+   "votos": 2280,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 232572,
+   "title": "Un paseo por el bosque",
+   "year": 2015,
+   "runtime": 104,
+   "votos": 799,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 25199,
+   "title": "Una disparatada bruja en la universidad",
+   "year": 1989,
+   "runtime": 90,
+   "votos": 195,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10897,
+   "title": "Una pandilla de pillos",
+   "year": 1994,
+   "runtime": 78,
+   "votos": 1375,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9535,
+   "title": "Una terapia peligrosa",
+   "year": 1999,
+   "runtime": 103,
+   "votos": 2224,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 9945,
+   "title": "Vampiros de John Carpenter",
+   "year": 1998,
+   "runtime": 110,
+   "votos": 1418,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 33408,
+   "title": "Veneno en la Piel",
+   "year": 1993,
+   "runtime": 89,
+   "votos": 580,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 30974,
+   "title": "Vertige",
+   "year": 2009,
+   "runtime": 84,
+   "votos": 452,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 837,
+   "title": "Videodrome",
+   "year": 1983,
+   "runtime": 87,
+   "votos": 2588,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 33247,
+   "title": "Vivir hasta el fin",
+   "year": 1992,
+   "runtime": 84,
+   "votos": 98,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 178,
+   "title": "Volar por los aires",
+   "year": 1994,
+   "runtime": 121,
+   "votos": 656,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 24767,
+   "title": "Voluntad de hierro",
+   "year": 1994,
+   "runtime": 108,
+   "votos": 341,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 511809,
+   "title": "West Side Story",
+   "year": 2021,
+   "runtime": 156,
+   "votos": 1854,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 696157,
+   "title": "Whitney Houston: I Wanna Dance with Somebody",
+   "year": 2022,
+   "runtime": 144,
+   "votos": 542,
+   "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1110358,
+   "title": "Yannick",
+   "year": 2023,
+   "runtime": 67,
+   "votos": 749,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 60803,
+   "title": "Zack y Cody:  La Película",
+   "year": 2011,
+   "runtime": 79,
+   "votos": 540,
+   "origen": "seleccion"
+  }
+ ]
 }

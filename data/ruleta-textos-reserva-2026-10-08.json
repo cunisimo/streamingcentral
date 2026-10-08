@@ -1,0 +1,513 @@
+{
+ "nota": "Último lote aprobado (2026-10-08): 40 de la reserva, elegibles y sin texto, por votos desc (desempate tmdb_id).",
+ "ids": [
+  6278,
+  376866,
+  527435,
+  615665,
+  537116,
+  760161,
+  938614,
+  5994,
+  48231,
+  649609,
+  461130,
+  431580,
+  15373,
+  2207,
+  9946,
+  18126,
+  9268,
+  324670,
+  82,
+  1034541,
+  376290,
+  6279,
+  1729,
+  775996,
+  1151031,
+  660120,
+  646207,
+  625450,
+  445629,
+  9353,
+  578701,
+  623491,
+  325789,
+  656690,
+  585245,
+  511809,
+  614560,
+  385103,
+  1266,
+  626735
+ ],
+ "titulos": [
+  {
+   "tmdb_id": 6278,
+   "title": "El imperio del fuego",
+   "year": 2002,
+   "genres": [
+    "Aventura",
+    "Acción",
+    "Fantasía"
+   ],
+   "runtime": 101,
+   "overview": "En el Londres actual, Quinn, un niño de 12 años, despierta por error a un enorme dragón de su letargo de siglos. Veinte años más tarde, pueden apreciarse las devastadoras consecuencias del paso de la bestia y de sus vástagos en la práctica totalidad del planeta. Los dragones son seres extremadamente inteligentes, muy evolucionados… y no tienen ninguna intención de compartir la Tierra con los humanos. Quinn se ha hecho mayor y ahora es Jefe de Bomberos. Su tarea es mantener a las bestias alejadas y defender a una pequeña comunidad que lucha por su supervivencia. En medio de este caos aparece Van Zan, un emprendedor americano que afirma saber cómo acabar con los dragones y salvar a la humanidad; y además con un método que Quinn jamás había visto utilizar antes…"
+  },
+  {
+   "tmdb_id": 376866,
+   "title": "Jackie",
+   "year": 2016,
+   "genres": [
+    "Drama"
+   ],
+   "runtime": 95,
+   "overview": "Película sobre la exprimera dama estadounidense Jacqueline Kennedy, centrada en los días inmediatamente posteriores al asesinato de JFK, en Dallas, el 22 de noviembre del año 1963."
+  },
+  {
+   "tmdb_id": 527435,
+   "title": "Crónicas de Navidad",
+   "year": 2018,
+   "genres": [
+    "Comedia",
+    "Aventura",
+    "Familia",
+    "Fantasía"
+   ],
+   "runtime": 100,
+   "overview": "Kate Pierce (Darby Camp) y su hermano Teddy (Judah Lewis) pretenden grabar a Papá Noel (Kurt Russell) en Nochebuena. Después de que se monten a escondidas en su trineo, provocan un accidente que podría arruinar toda la Navidad. A partir de ese momento los hermanos vivirán junto a Papá Noel y sus fieles elfos toda una serie de aventuras para salvar la Navidad antes de que sea demasiado tarde."
+  },
+  {
+   "tmdb_id": 615665,
+   "title": "Amor de calendario",
+   "year": 2020,
+   "genres": [
+    "Comedia",
+    "Romance"
+   ],
+   "runtime": 104,
+   "overview": "Sloane y Jackson odian las vacaciones, porque les obliga a pasar tiempo con sus respectivas familias y a tener que participar en comidas a las que no les apetece ir. Cuando ambos se conocen, deciden hacer todo lo posible por disfrutar de su tiempo libre de cualquier otra manera."
+  },
+  {
+   "tmdb_id": 537116,
+   "title": "tick, tick... BOOM!",
+   "year": 2021,
+   "genres": [
+    "Drama",
+    "Música"
+   ],
+   "runtime": 120,
+   "overview": "En la cúspide de su cumpleaños número 30, un joven y prometedor compositor de teatro navega por el amor, la amistad y las presiones de la vida como artista en la ciudad de Nueva York."
+  },
+  {
+   "tmdb_id": 760161,
+   "title": "La huérfana: Primer asesinato",
+   "year": 2022,
+   "genres": [
+    "Terror",
+    "Suspense"
+   ],
+   "runtime": 99,
+   "overview": "Tras escapar de un centro psiquiátrico estonio, Leena Klammer viaja a América haciéndose pasar por Esther, la hija desaparecida de una familia adinerada. Pero cuando su máscara empieza a caer, se enfrenta a una madre que protegerá a su familia de la \"niña\" asesina a cualquier precio."
+  },
+  {
+   "tmdb_id": 938614,
+   "title": "El último late night",
+   "year": 2024,
+   "genres": [
+    "Terror"
+   ],
+   "runtime": 93,
+   "overview": "En la noche de Halloween de 1977, el caos se desata cuando el presentador Jack Delroy entrevista a una parapsicóloga y a una joven adolescente que es la única superviviente de una matanza masiva en una iglesia satánica."
+  },
+  {
+   "tmdb_id": 5994,
+   "title": "Family Man",
+   "year": 2000,
+   "genres": [
+    "Comedia",
+    "Drama",
+    "Romance",
+    "Fantasía"
+   ],
+   "runtime": 121,
+   "overview": "Jack Campbell es un egocéntrico broker de Wall Street cuya única obsesión es el trabajo y una vida llena de lujo. Tras un incidente en una tienda el día de Nochebuena, se despierta viviendo otra vida: es un humilde vendedor de neumáticos de Nueva Jersey, casado con su antigua novia Kate, a la que había abandonado hacía años para que no obstaculizara su carrera en el mundo de las finanzas."
+  },
+  {
+   "tmdb_id": 48231,
+   "title": "Un método peligroso",
+   "year": 2011,
+   "genres": [
+    "Drama"
+   ],
+   "runtime": 99,
+   "overview": "El joven psicoanalista Carl Jung comienza un tratamiento innovador en la histérica Sabina Spielrein, bajo la dirección de su maestro, Sigmund Freud. Dispuesto a penetrar más profundamente en los misterios de la mente humana, Jung descubre que algunas de sus ideas chocan con las teorías de Freud, al mismo tiempo que sucumbe a un romance emocionante y peligroso con la bella Sabina."
+  },
+  {
+   "tmdb_id": 649609,
+   "title": "Renfield",
+   "year": 2023,
+   "genres": [
+    "Comedia",
+    "Fantasía",
+    "Terror"
+   ],
+   "runtime": 93,
+   "overview": "En este moderno y monstruoso relato sobre el fiel ayudante de Drácula, Renfield se ve obligado a procurarle víctimas a su amo y hacer todo aquello que este le ordene, por inmoral que sea. Pero ahora, tras siglos de servidumbre, Renfield está listo para descubrir si hay vida lejos de la alargada sombra del Príncipe de las Tinieblas. ¿El problema? Que no sabe cómo romper esa relación de dependencia."
+  },
+  {
+   "tmdb_id": 461130,
+   "title": "Code 8",
+   "year": 2019,
+   "genres": [
+    "Ciencia ficción",
+    "Acción",
+    "Crimen"
+   ],
+   "runtime": 99,
+   "overview": "En Lincoln City algunos habitantes tienen habilidades extraordinarias. La mayoría vive por debajo del umbral de la pobreza, bajo la estrecha vigilancia de una fuerza policial fuertemente militarizada. Connor, un trabajador de la construcción con poderes, se une a una banda criminal para ayudar a su madre enferma. (Basada en el cortometraje «Code 8», 2016.)"
+  },
+  {
+   "tmdb_id": 431580,
+   "title": "Abominable",
+   "year": 2019,
+   "genres": [
+    "Familia",
+    "Animación",
+    "Aventura",
+    "Comedia",
+    "Fantasía"
+   ],
+   "runtime": 97,
+   "overview": "Yi es una adolescente más en la enorme ciudad de Shanghai. Un día, se encuentra a un joven yeti en la azotea de su edificio. La supuestamente “abominable” criatura, que se ha escapado del laboratorio donde estaba encerrado, está siendo buscada por toda la ciudad. Junto con sus ingeniosos amigos Jin y Peng, Yi decide ayudarle a huir, le bautizan como “Everest” y los cuatro se embarcan en una épica aventura para reunir a la mítica criatura con su familia en el pico más alto del mundo."
+  },
+  {
+   "tmdb_id": 15373,
+   "title": "Mal ejemplo",
+   "year": 2008,
+   "genres": [
+    "Comedia"
+   ],
+   "runtime": 99,
+   "overview": "Danny (Paul Rudd) y Wheeler (Seann William Scott) son comerciales de una bebida energética. Tras estrellar el vehículo de la empresa son arrestados, y sentenciados a completar 150 horas de servicio a la comunidad haciendo de mentores de niños. Mala idea..."
+  },
+  {
+   "tmdb_id": 2207,
+   "title": "16 calles",
+   "year": 2006,
+   "genres": [
+    "Acción",
+    "Aventura",
+    "Crimen",
+    "Suspense"
+   ],
+   "runtime": 105,
+   "overview": "A las 8:02 de la mañana, el detective de la policía de Nueva York Jack Mosley tiene encomendada una misión aparentemente sencilla. El delincuente Eddie Bunker está citado para testificar ante un gran jurado a las 10 en punto, y Mosley debe trasladarlo desde la celda al juzgado, a 16 calles de distancia. Cuando Jack, que tiene serios problemas con el alcohol, mete a Eddie en el asiento trasero de su coche y se dispone a atravesar Nueva York en hora punta de la mañana, no se da cuenta de que los sigue una furgoneta..."
+  },
+  {
+   "tmdb_id": 9946,
+   "title": "El fin de los días",
+   "year": 1999,
+   "genres": [
+    "Acción",
+    "Terror",
+    "Fantasía"
+   ],
+   "runtime": 121,
+   "overview": "Nueva York, 1979. En un hospital de Manhattan acaba de nacer Christine, una niña preciosa. Ese mismo día, en el Vaticano, un joven sacerdote informa al Papa del nacimiento de la niña, que lleva la marca del Anticristo. En 1999, Jericho Cane, un ex-policía amargado, salva a una joven del asalto de unos ladrones: es Christine. Desde entonces Cane será víctima de la persecución de terribles fuerzas sobrenaturales."
+  },
+  {
+   "tmdb_id": 18126,
+   "title": "Hannah Montana: La película",
+   "year": 2009,
+   "genres": [
+    "Comedia",
+    "Drama",
+    "Familia",
+    "Música",
+    "Romance"
+   ],
+   "runtime": 102,
+   "overview": "Miley Stewart se las arregla como puede para compaginar el colegio, sus amigos y su vida secreta como estrella del pop; pero su enorme popularidad amenaza con invadir toda su vida, y ella parece aceptarlo. Así que cuando la popularidad de Hannah comienza a ser algo parecido a una carga, su padre decide llevarla a Crowley Corners, en Tennessee, para darle una dosis de realidad y reflexionar sobre lo que realmente importa en la vida. Allí comienza una aventura llena de diversión, risas y romance que ni la propia Hannah Montana podría imaginar."
+  },
+  {
+   "tmdb_id": 9268,
+   "title": "Eraser (Eliminador)",
+   "year": 1996,
+   "genres": [
+    "Acción",
+    "Misterio",
+    "Suspense"
+   ],
+   "runtime": 115,
+   "overview": "John Kruger, Eraser, es un destacado oficial del Programa Federal de Protección de Testigos. Ahora se enfrenta a un gran reto profesional: suministrar una nueva identidad a Lee Cullen. Esta joven ha descubierto una conspiración en la que están implicados importantes personajes de la política y la industria armamentística, por lo que su supervivencia está en manos de Eraser."
+  },
+  {
+   "tmdb_id": 324670,
+   "title": "Spectral",
+   "year": 2016,
+   "genres": [
+    "Ciencia ficción",
+    "Suspense",
+    "Acción"
+   ],
+   "runtime": 108,
+   "overview": "Esta historia de ciencia ficción / thriller se centra en un equipo de operaciones especiales enviado para luchar contra unos seres sobrenaturales."
+  },
+  {
+   "tmdb_id": 82,
+   "title": "Corrupción en Miami",
+   "year": 2006,
+   "genres": [
+    "Acción",
+    "Crimen",
+    "Suspense"
+   ],
+   "runtime": 132,
+   "overview": "En Miami, ciudad en la que los barones de la droga procedentes del Tercer Mundo se codean con industrias corporativas de miles de millones de dólares, “Sonny” Crockett y Ricardo Tubbs, se enteran de que un soplo en las altas esferas ha causado la muerte de dos agentes federales y la masacre de una familia. La investigación de los dos detectives no tarda en llevarlos ante la puerta de los brutales asesinos de la Hermandad Aria y de una sofisticada red de traficantes globalizados protegidos internacionalmente."
+  },
+  {
+   "tmdb_id": 1034541,
+   "title": "Terrifier 3",
+   "year": 2024,
+   "genres": [
+    "Terror"
+   ],
+   "runtime": 125,
+   "overview": "El payaso Art desata el caos entre los desprevenidos habitantes del condado de Miles mientras duermen plácidamente en Nochebuena. Tras sobrevivir a la masacre de Halloween perpetrada por el peor asesino en serie desde Jack el Destripador, Sienna y su hermano se esfuerzan por reconstruir sus vidas destrozadas. A medida que se acercan las fiestas de Navidad, intentan abrazar el espíritu navideño y dejar atrás los horrores del pasado. Pero justo cuando creen que están a salvo, el payaso Art regresa, decidido a convertir su alegría navideña en una nueva pesadilla. La temporada festiva se desmorona rápidamente mientras el payaso Art desata su retorcido terror marca de la casa, demostrando que ninguna festividad es segura."
+  },
+  {
+   "tmdb_id": 376290,
+   "title": "El caso Sloane",
+   "year": 2016,
+   "genres": [
+    "Suspense",
+    "Drama",
+    "Crimen"
+   ],
+   "runtime": 132,
+   "overview": "Elizabeth Sloane es una implacable y ambiciosa ejecutiva que intenta que fructifique una legislación a favor del control de armas en Washington DC. Para ello intentará usar todos los recursos a su alcance. En las altas esferas del mundo político y empresarial Sloane tiene una reputación formidable. Conocida por su astucia y sus éxitos sin parangón, siempre ha hecho lo que fuera necesario para ganar. Pero cuando se enfrenta al oponente más poderoso de su carrera, se da cuenta de que la victoria puede tener un precio demasiado alto."
+  },
+  {
+   "tmdb_id": 6279,
+   "title": "Sister Act 2: De vuelta al convento",
+   "year": 1993,
+   "genres": [
+    "Música",
+    "Comedia"
+   ],
+   "runtime": 107,
+   "overview": "Dolores vuelve a colocarse los hábitos de la hermana Mary Clarence. Sus compañeras monjas necesitan ayuda para evitar el cierre de la escuela parroquial de Saint Francis. Con su colaboración y la del resto de las divertidas monjas, se prepara la participación del colegio en un concurso de coros escolares."
+  },
+  {
+   "tmdb_id": 1729,
+   "title": "El reino prohibido",
+   "year": 2008,
+   "genres": [
+    "Acción",
+    "Aventura",
+    "Fantasía"
+   ],
+   "runtime": 104,
+   "overview": "Un joven (Michael Angarano), que siente una gran pasión por el cine de Kung Fu, visita regularmente una casa de empeños en Chinatown buscando películas. En una de sus visitas descubre un bastón que ha visto en un sueño recientemente, y más tarde se ve envuelto en un atraco en la misma casa de empeños, tras el cual huye con el bastón. En medio de la huida cae desde una azotea y es milagrosamente transportado a la China medieval donde, con la ayuda del luchador borracho (Jackie Chan), el monje silencioso (Jet Li), y el Gorrion Dorado (Yifei Liu), deberá devolver este bastón al mismo Rey Mono, transformado en una estatua de piedra mucho tiempo atras."
+  },
+  {
+   "tmdb_id": 775996,
+   "title": "A descubierto",
+   "year": 2021,
+   "genres": [
+    "Suspense",
+    "Acción",
+    "Ciencia ficción"
+   ],
+   "runtime": 114,
+   "overview": "Un piloto de drones se une a un oficial androide para localizar un dispositivo que amenaza con acabar con la vida sobre el planeta. El dispositivo en cuestión se encuentra oculto en una zona altamente militarizada."
+  },
+  {
+   "tmdb_id": 1151031,
+   "title": "Devuélvemela",
+   "year": 2025,
+   "genres": [
+    "Terror"
+   ],
+   "runtime": 104,
+   "overview": "Un hermano y su hermana descubren un aterrador ritual en la apartada casa de su nueva madre adoptiva. Lo que parece un hogar seguro pronto se convierte en una pesadilla, donde figuras siniestras, extrañas imágenes en vídeo y sucesos paranormales los rodean."
+  },
+  {
+   "tmdb_id": 660120,
+   "title": "La peor persona del mundo",
+   "year": 2021,
+   "genres": [
+    "Drama",
+    "Romance",
+    "Comedia"
+   ],
+   "runtime": 128,
+   "overview": "Julie va a cumplir los treinta y su vida es un desastre existencial. Ya ha desperdiciado parte de su talento y su novio Aksel, un exitoso novelista gráfico mayor que ella, la presiona para que contenga su energía creativa y siente la cabeza. Una noche se cuela en una fiesta y conoce al joven y encantador Eivind. Tardará poco en romper con Aksel y embarcarse en una nueva relación con la esperanza de que su vida adquiera una nueva perspectiva. Sin embargo, tendrá que darse cuenta de que ya es demasiado tarde para ciertas opciones vitales."
+  },
+  {
+   "tmdb_id": 646207,
+   "title": "Ice Road",
+   "year": 2021,
+   "genres": [
+    "Acción",
+    "Suspense"
+   ],
+   "runtime": 103,
+   "overview": "Una remota mina de diamantes ha colapsado dejando atrapados a un grupo de mineros en una región lejana y helada de Canadá. Como parte de un equipo contratado para rescatarlos, el experimentado conductor de una quitahielos emprende un rescate imposible, teniendo que luchar contra una carretera helada, contra las aguas que están descongelándose y contra una amenaza que no ve venir."
+  },
+  {
+   "tmdb_id": 625450,
+   "title": "Tall Girl",
+   "year": 2019,
+   "genres": [
+    "Comedia",
+    "Drama",
+    "Romance"
+   ],
+   "runtime": 102,
+   "overview": "Jodi lleva años acomplejada por su estatura (1,91 m). Siendo con mucho la chica más alta del instituto, nunca se ha sentido a gusto con su cuerpo. Después de años andando encorvada, aguantando burlas e intentando pasar desapercibida, por fin decide que ya es hora de superar sus inseguridades y se enreda en un trío amoroso en el instituto"
+  },
+  {
+   "tmdb_id": 445629,
+   "title": "Peleando en familia",
+   "year": 2019,
+   "genres": [
+    "Comedia"
+   ],
+   "runtime": 108,
+   "overview": "La familia Knight lleva trabajando durante décadas en el circuito de lucha libre profesional de su pequeña localidad en Inglaterra. Ricky (Nick Frost) y Julia (Lena Headey) son el padre y la madre de esta familia, a cuyos hijos, Raya (Florence Pugh) y Zak (Jack Lowden), han criado para que sigan sus pasos. Las vidas de todos ellos se centran en la lucha libre, participando en combates de poca monta. Después de años de muchos intentos, Raya y Zak son invitados a una audición para la WWE (World Wrestling Entertainment) en Londres. Esta será una oportunidad que no deberán desaprovechar, a pesar de la mano dura de Hutch (Vince Vaughn), su entrenador, y del conflicto que se producirá entre los dos hermanos por ver cuál de ellos se clasifica."
+  },
+  {
+   "tmdb_id": 9353,
+   "title": "Super Nacho",
+   "year": 2006,
+   "genres": [
+    "Comedia",
+    "Acción",
+    "Familia"
+   ],
+   "runtime": 100,
+   "overview": "Ignacio (Jack Black) es un luchador gordo con un socio de equipo. Su madre era una misionera de Escandinavia y su padre era diácono de México. Murieron cuando Ignacio era pequeño. Creciendo como huérfano en un monasterio mexicano se convirtió en el cocinero del orfanato. Ignacio soñaba con convertirse en un luchador, pero la prohibición de la lucha en el monasterio no se lo permitía. Como en el orfanato la comida era escasa, a Nacho se le ocurrió un plan para conseguir el dinero para los huérfanos, ir a competir en la lucha libre, pero debe tener cuidado con la hermana Encarnación (Ana de la Reguera) con quien tiene mucho en común. Ignacio decide finalmente ser un luchador."
+  },
+  {
+   "tmdb_id": 578701,
+   "title": "Aquellos que desean mi muerte",
+   "year": 2021,
+   "genres": [
+    "Suspense",
+    "Acción"
+   ],
+   "runtime": 100,
+   "overview": "Connor, un niño testigo de un asesinato, es perseguido por dos asesinos a través de las tierras salvajes de Montana. Aunque cuenta con Hannah, una bombero y experta en supervivencia, para evitar que los secuaces le den caza, un peligroso incendio cercano amenaza con acabar con la vida de todos los implicados."
+  },
+  {
+   "tmdb_id": 623491,
+   "title": "The Babysitter: Killer Queen",
+   "year": 2020,
+   "genres": [
+    "Comedia",
+    "Terror"
+   ],
+   "runtime": 101,
+   "overview": "Dos años después de derrotar a la secta satánica liderada por la niñera Bee, Cole trata de olvidar su pasado para centrarse así en sobrevivir al instituto. Cuando viejos enemigos regresan, Cole no tendrá más remedio que volver a enfrentarse a las fuerzas del mal."
+  },
+  {
+   "tmdb_id": 325789,
+   "title": "Infiltrado",
+   "year": 2016,
+   "genres": [
+    "Crimen",
+    "Drama",
+    "Suspense"
+   ],
+   "runtime": 127,
+   "overview": "Basada en una historia real ocurrida en los años 80, narra cómo un policía estadounidense se infiltra en una banda de narcos colombianos. Para lograr ese objetivo, Robert Mazur se infiltrará junto Kathy Ertz, quien fingirá ser su futura esposa y Emir Abreu, un policía con métodos poco tradicionales para codearse con la cúpula de la organización criminal y ser parte de la mayor operación encubierta antidroga de la historia."
+  },
+  {
+   "tmdb_id": 656690,
+   "title": "El dilema de las redes sociales",
+   "year": 2020,
+   "genres": [
+    "Documental",
+    "Drama"
+   ],
+   "runtime": 93,
+   "overview": "A medida que las plataformas digitales se vuelven más importantes para mantenernos conectados, expertos explican cómo esta interacción está reprogramando la civilización, revelando qué se esconde al otro lado de la pantalla"
+  },
+  {
+   "tmdb_id": 585245,
+   "title": "Clifford, el gran perro rojo",
+   "year": 2021,
+   "genres": [
+    "Familia",
+    "Aventura",
+    "Comedia",
+    "Fantasía"
+   ],
+   "runtime": 96,
+   "overview": "Cuando Emily Elizabeth conoce a un rescatador mágico de animales que le regala un pequeño cachorro rojo, nunca se hubiera imaginado que al despertarse se encontraría un sabueso gigante de tres metros en su pequeño apartamento de Nueva York. Mientras su madre soltera se encuentra de viaje de negocios, Emily y su divertido pero impulsivo tío Casey se embarcan en una gran aventura."
+  },
+  {
+   "tmdb_id": 511809,
+   "title": "West Side Story",
+   "year": 2021,
+   "genres": [
+    "Drama",
+    "Romance",
+    "Crimen"
+   ],
+   "runtime": 156,
+   "overview": "Los adolescentes Tony y María, a pesar de tener afiliaciones con pandillas callejeras rivales, los Jets y los Sharks, se enamoran en la ciudad de Nueva York en la década de los 50. Nueva versión del legendario musical 'West Side Story', a su vez adaptación de una famosa obra de teatro de Broadway, que modernizaba la historia de 'Romeo y Julieta', de Shakespeare."
+  },
+  {
+   "tmdb_id": 614560,
+   "title": "Mank",
+   "year": 2020,
+   "genres": [
+    "Drama",
+    "Historia"
+   ],
+   "runtime": 132,
+   "overview": "Biopic sobre Herman Mankiewicz, guionista de 'Ciudadano Kane', que repasa el proceso de rodaje de la obra maestra de Orson Welles, dirigida y estrenada en 1941. La película toma como base un guión escrito por Jack Fincher, padre de David Fincher, antes de morir en 2003."
+  },
+  {
+   "tmdb_id": 385103,
+   "title": "¡Scooby!",
+   "year": 2020,
+   "genres": [
+    "Animación",
+    "Comedia",
+    "Familia",
+    "Misterio"
+   ],
+   "runtime": 94,
+   "overview": "Con cientos de casos resueltos y aventuras compartidas, Scooby y la pandilla se enfrentan al misterio más grande y desafiante de todos los tiempos: un complot para liberar al perro fantasma Cerberus en el mundo. Mientras compiten para detener esta escasez de perros global, la pandilla descubre que Scooby tiene un legado secreto y un destino épico más grande de lo que cualquiera podría haber imaginado."
+  },
+  {
+   "tmdb_id": 1266,
+   "title": "Dueños de la calle",
+   "year": 2008,
+   "genres": [
+    "Acción",
+    "Crimen",
+    "Drama",
+    "Suspense"
+   ],
+   "runtime": 109,
+   "overview": "Tom Ludlow es un veterano policía de Los Ángeles que está pasando el peor momento de su vida tras la muerte de su mujer. Cuando unas pruebas le implican en la ejecución de un compañero, Tom se verá forzado a ir contra todo lo que ha conocido en el cuerpo hasta ahora, cuestionándose la lealtad de todos y cada uno de los que le rodean..."
+  },
+  {
+   "tmdb_id": 626735,
+   "title": "Dog - Un viaje salvaje",
+   "year": 2022,
+   "genres": [
+    "Drama",
+    "Comedia"
+   ],
+   "runtime": 101,
+   "overview": "Un guardabosques del ejército y su perro se embarcan en un viaje por carretera a lo largo de la Pacific Coast Highway para asistir al funeral de un amigo."
+  }
+ ]
+}

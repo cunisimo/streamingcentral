@@ -22,6 +22,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
+import { entornoSuscripcion, sondearAutenticacion, esSuscripcion } from "./ruleta/claude-headless.mjs";
 
 const args = process.argv.slice(2);
 const arg = (f) => {
@@ -33,7 +34,16 @@ const dryRun = args.includes("--dry-run");
 const BATCH_SIZE = arg("--batch") ? Number(arg("--batch")) : 40;
 const MODEL = arg("--model") ?? "sonnet";
 
-const IN_PATH = resolve("data/colecciones-ruleta.json");
+// --entrada <json>: filas { tmdb_id, title, year, collection_name, es_secuela } (p. ej. las
+// secuelas de una ampliación, incluidas las promovidas desde la reserva).
+const IN_PATH = resolve(arg("--entrada") ?? "data/colecciones-ruleta.json");
+// --ids <json>: sólo estas secuelas. --sin-sql: NO reescribe carga-contexto.sql, que
+// apaga TODOS los requiere_contexto antes de aplicar su lista (y se llevaba las
+// excepciones manuales de Harry Potter y Star Wars). La carga va por
+// build-roulette-sql --textos-nuevos, que sólo marca filas nuevas.
+const IDS_PATH = arg("--ids");
+const SIN_SQL = args.includes("--sin-sql");
+const ENTORNO_HIJO = entornoSuscripcion().env;
 const OUT_PATH = resolve("data/contexto-ruleta.json");
 const SQL_PATH = resolve("data/carga-contexto.sql");
 
@@ -78,7 +88,7 @@ function runClaude(prompt) {
     const child = spawn(
       "claude",
       ["-p", "--model", MODEL, "--output-format", "json", "--max-turns", "4"],
-      { cwd: tmpdir(), shell: true },
+      { cwd: tmpdir(), shell: true, env: ENTORNO_HIJO },
     );
     let stdout = "";
     let stderr = "";
@@ -122,7 +132,12 @@ function parseArray(text) {
 async function main() {
   const data = JSON.parse(await readFile(IN_PATH, "utf8"));
   const filas = data.rows ?? [];
-  const secuelas = filas.filter((f) => f.es_secuela);
+  let secuelas = filas.filter((f) => f.es_secuela);
+  if (IDS_PATH) {
+    const crudo = JSON.parse(await readFile(resolve(IDS_PATH), "utf8"));
+    const ids = new Set(Array.isArray(crudo) ? crudo : crudo.ids ?? []);
+    secuelas = secuelas.filter((f) => ids.has(f.tmdb_id));
+  }
 
   let hechos = new Map();
   try {
@@ -172,8 +187,17 @@ async function main() {
     );
   }
 
+  // Antes del primer lote: el hijo tiene que autenticarse con la suscripción
+  // (apiKeySource "none" Y una respuesta real exitosa). Si no, no se clasifica nada.
+  const sondeo = await sondearAutenticacion({ modelo: MODEL });
+  console.log(`  autenticación del hijo: apiKeySource=${sondeo.inicio?.apiKeySource ?? "?"} · modelo ${sondeo.inicio?.model ?? "?"} · respuesta de prueba ${sondeo.inicio?.ok ? "OK" : `FALLÓ (${sondeo.inicio?.error})`}`);
+  if (!esSuscripcion(sondeo.inicio)) {
+    console.error("  DETENIDO: no se pudo confirmar la suscripción. No se clasificó nada.");
+    process.exit(4);
+  }
   for (const [i, lote] of lotes.entries()) {
     process.stdout.write(`  lote ${i + 1}/${lotes.length} (${lote.length})… `);
+    const delLote = new Set(lote.map((f) => f.tmdb_id));
     let ok = false;
     for (let intento = 0; intento < 2 && !ok; intento++) {
       try {
@@ -190,7 +214,8 @@ async function main() {
         let n = 0;
         for (const r of res) {
           const f = porId.get(r.id);
-          if (!f) continue;
+          // Sólo ids del lote: uno ajeno pisaría una clasificación existente.
+          if (!f || !delLote.has(r.id) || hechos.has(r.id)) continue;
           hechos.set(r.id, {
             tmdb_id: r.id,
             title: f.title,
@@ -209,6 +234,11 @@ async function main() {
           console.error(`    ${err.message}`);
         }
       }
+    }
+    if (!ok) {
+      // Un reintento como máximo: si vuelve a fallar se detiene (lo hecho ya está guardado).
+      console.error("  DETENIDO tras un lote fallido dos veces. Correr el mismo comando retoma.");
+      process.exit(3);
     }
     await guardar();
     if (i < lotes.length - 1) await sleep(8000);
@@ -257,7 +287,8 @@ async function main() {
   sql.push("--   select count(*) from roulette_titles where requiere_contexto;");
   sql.push("");
 
-  await writeFile(SQL_PATH, sql.join("\n"), "utf8");
+  if (SIN_SQL) console.log("  --sin-sql: carga-contexto.sql NO se reescribe (la carga va por build-roulette-sql --textos-nuevos).");
+  else await writeFile(SQL_PATH, sql.join("\n"), "utf8");
 
   console.log(`\n  costo informado: USD ${costo.toFixed(4)}`);
   console.log(`\n✔ ${OUT_PATH}`);

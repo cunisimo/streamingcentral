@@ -136,6 +136,20 @@
   anime —incluye Studio Ghibli y Your Name— y 2 stand-up de Bo Burnham), con
   reversión por título. Ruleta servible 1454 → 1388 (corta 189 → 172). Yumpeá
   (`sala_candidatos`) no se toca: decisión aparte.
+  **08/10 — decisiones del dueño:** la ruleta sigue exigiendo "pero"; todo el
+  anime sale de "No sé qué ver" (Ghibli incluido); Yumpeá no cambia. Último
+  lote de 40 de la reserva (por votos, sin anime/stand-up/no narrativos): 1/1,
+  sondeo OK, 40 con texto, 29 con "pero"; uso 5 h 4% → 7%, semanal 0% → 1%.
+  **Propuesta de 500 servibles NO cerrada:** hay 493 servibles (razon +
+  advertencia + atencion, Yump, sin exclusiones, saga resuelta) + 13 con saga
+  sin resolver sin TMDB + 53 sin "pero" (sólo Yumpeá). Como las secuelas que
+  pidan contexto dejan de ser servibles, faltan textos: decisión pendiente
+  (otro lote de la reserva). Clasificación de contexto NO ejecutada (estaba
+  condicionada al cierre de los 500). `classify-context.mjs` endurecido (hijo
+  sin facturación por API, sondeo real, `--ids`, `--entrada`, corte tras un
+  reintento, `--sin-sql`). Diff de plataformas: 4 nombres nuevos sin mapear
+  (Looke, Lionsgate+, Filmelier Plus, Cindie; todos canales de Amazon y ninguno de Yump).
+  Backup `backups-yump/ruleta-2026-10-08-pre-contexto` (32/32 hashes).
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
