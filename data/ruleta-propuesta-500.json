@@ -1,92 +1,94 @@
 {
  "generada": "2026-10-08",
- "regla": "servibles en la ruleta (razon + advertencia + atencion, flatrate Yump, sin exclusiones, saga resuelta); todas las cortas; resto por cupos y terciles; cola determinística",
- "completa": false,
- "candidatosServibles": 493,
- "cortasDisponibles": 161,
+ "completa": true,
+ "servibles": 517,
  "propuesta": {
-  "total": 484,
-  "cortas_le90": 161,
+  "total": 500,
+  "cortas_le90": 159,
   "decadas": {
    "<1980": 56,
-   "2020s": 113,
-   "2010s": 102,
-   "2000s": 113,
-   "1990s": 78,
+   "2020s": 118,
+   "2010s": 104,
+   "2000s": 116,
+   "1990s": 84,
    "1980s": 22
   },
   "votos": {
    "50-299": 109,
-   "300-999": 177,
-   "1000-2999": 148,
-   "3000+": 50
+   "300-999": 171,
+   "1000-2999": 169,
+   "3000+": 51
   },
   "plataformas": {
-   "MovistarTV": 149,
-   "Prime Video": 115,
-   "Netflix": 95,
-   "Disney+": 81,
-   "Max": 75,
-   "MUBI": 35,
-   "Universal+": 11,
-   "Paramount+": 10,
-   "Claro video": 4,
+   "MovistarTV": 156,
+   "Prime Video": 117,
+   "Netflix": 101,
+   "Disney+": 83,
+   "Max": 79,
+   "MUBI": 37,
+   "Universal+": 10,
+   "Paramount+": 7,
+   "Claro video": 3,
    "ViX": 3,
    "Apple TV+": 2,
-   "DIRECTV GO": 1
+   "DIRECTV GO": 2
   },
   "origen": {
-   "seleccion": 414,
-   "reserva": 70
+   "seleccion": 400,
+   "reserva": 100
   },
-  "aptoChicos": 63,
-  "secuelas": 69
+  "aptoChicos": 64
  },
  "reservaEditorial": {
-  "total": 9,
+  "total": 17,
   "cortas_le90": 0,
   "decadas": {
-   "2000s": 6,
-   "2020s": 3
+   "2000s": 8,
+   "2020s": 9
   },
   "votos": {
-   "3000+": 4,
-   "1000-2999": 5
+   "3000+": 2,
+   "1000-2999": 15
   },
   "plataformas": {
-   "MovistarTV": 3,
-   "Max": 3,
-   "Prime Video": 2,
-   "Netflix": 2,
-   "DIRECTV GO": 1,
-   "Disney+": 1,
-   "Universal+": 1,
+   "MovistarTV": 5,
+   "Max": 4,
+   "Disney+": 4,
+   "Netflix": 3,
+   "Universal+": 2,
    "Paramount+": 1,
-   "ViX": 1
+   "ViX": 1,
+   "Apple TV+": 1,
+   "Prime Video": 1
   },
   "origen": {
-   "reserva": 9
+   "reserva": 17
   },
-  "aptoChicos": 2,
-  "secuelas": 1
+  "aptoChicos": 3
  },
- "soloYumpea_sinPero": 53,
- "sagaSinResolver": [
+ "pidenContexto": [
+  "744276 After: Amor infinito",
+  "874300 South Park. Post Covid: El retorno del Covid",
+  "948276 La bala perdida 2",
+  "290859 Terminator: Destino oscuro",
+  "268238 El nuevo exótico hotel Marigold",
+  "1428 El mexicano",
+  "585216 Escape Room 2: Mueres por salir",
+  "932420 Código 8 (Parte 2)",
+  "21316 Leroy y Stitch",
+  "549787 Tokyo Ghoul S",
+  "1246 Rocky Balboa",
+  "1951 Manderlay",
+  "71552 American Pie: El reencuentro",
+  "439058 ¡Hey Arnold! Una peli en la jungla",
   "736074 Batman: El Largo Halloween, Parte 2",
-  "913862 Caída en picado: El caso contra Boeing",
   "1135408 La Chica Que Mato A Sus Padres: Confesión",
-  "828900 Aqua Teen para siempre: Plantasma",
-  "287947 ¡Shazam!",
+  "242 El padrino III",
   "480530 Creed II: La leyenda de Rocky",
-  "146216 Red II",
-  "9762 Bailando (Step Up)",
-  "522931 El otro guardaespaldas 2",
-  "760161 La huérfana: Primer asesinato",
-  "9268 Eraser (Eliminador)",
-  "646207 Ice Road",
-  "625450 Tall Girl"
+  "565426 A todos los chicos: P.D. Todavía te quiero",
+  "1034541 Terrifier 3",
+  "623491 The Babysitter: Killer Queen"
  ],
- "secuelasAClasificar": 69,
  "ids": {
   "propuesta": [
    67,
@@ -97,30 +99,28 @@
    178,
    179,
    193,
-   242,
    280,
    475,
+   512,
    612,
    826,
    837,
    916,
    924,
    976,
-   1246,
    1272,
-   1428,
    1429,
    1439,
    1440,
    1497,
    1581,
    1597,
+   1649,
    1654,
    1682,
    1729,
    1911,
    1931,
-   1951,
    1992,
    2001,
    2007,
@@ -133,6 +133,7 @@
    2757,
    2789,
    3021,
+   3036,
    3107,
    3179,
    3638,
@@ -144,6 +145,8 @@
    4421,
    4499,
    4520,
+   4547,
+   4552,
    4584,
    4710,
    5206,
@@ -152,6 +155,7 @@
    5994,
    6077,
    6278,
+   6520,
    6575,
    6961,
    6963,
@@ -168,6 +172,7 @@
    8914,
    8967,
    8978,
+   9268,
    9272,
    9367,
    9395,
@@ -188,12 +193,15 @@
    9716,
    9718,
    9739,
+   9762,
    9787,
    9788,
    9791,
+   9882,
    9945,
    9946,
    10102,
+   10158,
    10208,
    10210,
    10249,
@@ -210,7 +218,9 @@
    10617,
    10669,
    10675,
+   10719,
    10731,
+   10735,
    10781,
    10874,
    10897,
@@ -233,6 +243,7 @@
    11772,
    11777,
    11915,
+   11975,
    11980,
    12102,
    12149,
@@ -257,6 +268,7 @@
    14728,
    14819,
    14854,
+   15373,
    15413,
    15919,
    16220,
@@ -276,7 +288,6 @@
    21242,
    21299,
    21301,
-   21316,
    21481,
    21845,
    22559,
@@ -360,7 +371,6 @@
    60803,
    62527,
    65291,
-   71552,
    71885,
    72570,
    75174,
@@ -381,8 +391,11 @@
    119569,
    124097,
    132144,
+   146216,
+   146239,
    152737,
    152780,
+   157834,
    164457,
    169917,
    177047,
@@ -402,12 +415,11 @@
    254172,
    256835,
    264397,
-   268238,
    268531,
    274854,
    274855,
    274857,
-   290859,
+   287947,
    290864,
    295592,
    302401,
@@ -415,6 +427,7 @@
    310568,
    318121,
    320006,
+   320007,
    324670,
    326215,
    326359,
@@ -427,6 +440,7 @@
    376290,
    376866,
    376867,
+   396806,
    401743,
    405894,
    406990,
@@ -443,7 +457,6 @@
    437108,
    438396,
    438674,
-   439058,
    443009,
    454983,
    455656,
@@ -451,6 +464,7 @@
    457955,
    461130,
    467482,
+   471498,
    472983,
    478860,
    481084,
@@ -464,21 +478,19 @@
    517302,
    520023,
    522887,
+   529485,
    529790,
    531509,
    536437,
    537116,
    537739,
-   549787,
    553604,
    553646,
    558582,
-   565426,
    575446,
    576156,
    578908,
    582596,
-   585216,
    586461,
    586810,
    590995,
@@ -493,11 +505,12 @@
    617502,
    618416,
    619778,
-   623491,
+   625450,
    638974,
    639721,
    639798,
    639988,
+   646207,
    652004,
    653729,
    655187,
@@ -513,19 +526,24 @@
    704854,
    736769,
    739990,
-   744276,
+   744857,
    749004,
    749142,
+   760161,
    762441,
    763215,
    766798,
    774825,
    775996,
+   777270,
    795514,
    800510,
    814338,
    818647,
+   819876,
+   820609,
    823766,
+   828900,
    833591,
    835113,
    836009,
@@ -537,19 +555,17 @@
    864873,
    869626,
    874299,
-   874300,
    878361,
    886396,
    894205,
    899112,
    913673,
+   913862,
    916053,
    921785,
-   932420,
    932430,
    938614,
    939335,
-   948276,
    955531,
    964980,
    972533,
@@ -562,12 +578,14 @@
    1061117,
    1063877,
    1072371,
+   1086747,
    1102493,
    1110358,
    1115191,
    1151031,
    1151334,
    1161108,
+   1228710,
    1242384,
    1261924,
    1280282,
@@ -575,70 +593,23 @@
    1401905
   ],
   "reservaEditorial": [
-   4547,
+   1247,
+   2114,
+   2284,
+   2539,
    5176,
+   8066,
    9353,
    9477,
-   10719,
-   15373,
+   420821,
+   520172,
+   522931,
+   583406,
    625568,
    649609,
-   1034541
-  ],
-  "soloYumpea": [
-   1266,
-   1584,
-   1588,
-   2787,
-   6279,
-   6552,
-   8204,
-   8816,
-   8840,
-   8874,
-   9077,
-   9611,
-   10072,
-   10510,
-   10837,
-   11186,
-   11448,
-   12589,
-   13479,
-   14012,
-   14821,
-   16394,
-   16620,
-   19458,
-   25475,
-   25797,
-   26177,
-   27681,
-   35680,
-   42884,
-   53565,
-   82703,
-   239563,
-   292011,
-   325789,
-   332210,
-   385103,
-   429415,
-   431580,
-   440161,
-   445629,
-   527435,
-   574093,
-   578701,
-   585245,
-   602269,
-   612706,
-   626735,
-   660120,
-   739993,
-   816904,
-   870358,
-   892153
+   661539,
+   823482,
+   877817
   ]
  },
  "titulos": [
@@ -659,12 +630,20 @@
    "origen": "seleccion"
   },
   {
-   "tmdb_id": 439058,
-   "title": "¡Hey Arnold! Una peli en la jungla",
-   "year": 2018,
-   "runtime": 75,
-   "votos": 204,
-   "origen": "seleccion"
+   "tmdb_id": 146239,
+   "title": "¡Menudo fenómeno!",
+   "year": 2013,
+   "runtime": 103,
+   "votos": 1622,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 287947,
+   "title": "¡Shazam!",
+   "year": 2019,
+   "runtime": 132,
+   "votos": 10489,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 326215,
@@ -715,6 +694,14 @@
    "origen": "reserva"
   },
   {
+   "tmdb_id": 4552,
+   "title": "2 hermanas",
+   "year": 2003,
+   "runtime": 114,
+   "votos": 1406,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 10468,
    "title": "28 días",
    "year": 2000,
@@ -737,14 +724,6 @@
    "runtime": 125,
    "votos": 1417,
    "origen": "seleccion"
-  },
-  {
-   "tmdb_id": 565426,
-   "title": "A todos los chicos: P.D. Todavía te quiero",
-   "year": 2020,
-   "runtime": 102,
-   "votos": 2744,
-   "origen": "reserva"
   },
   {
    "tmdb_id": 818647,
@@ -776,14 +755,6 @@
    "year": 2006,
    "runtime": 90,
    "votos": 1857,
-   "origen": "seleccion"
-  },
-  {
-   "tmdb_id": 744276,
-   "title": "After: Amor infinito",
-   "year": 2022,
-   "runtime": 95,
-   "votos": 1402,
    "origen": "seleccion"
   },
   {
@@ -899,14 +870,6 @@
    "origen": "seleccion"
   },
   {
-   "tmdb_id": 71552,
-   "title": "American Pie: El reencuentro",
-   "year": 2012,
-   "runtime": 113,
-   "votos": 4835,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 615665,
    "title": "Amor de calendario",
    "year": 2020,
@@ -947,6 +910,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 396806,
+   "title": "Anon",
+   "year": 2018,
+   "runtime": 100,
+   "votos": 1795,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 17609,
    "title": "Anticristo",
    "year": 2009,
@@ -961,6 +932,14 @@
    "runtime": 99,
    "votos": 1278,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 828900,
+   "title": "Aqua Teen para siempre: Plantasma",
+   "year": 2022,
+   "runtime": 76,
+   "votos": 53,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 8978,
@@ -1011,6 +990,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 9762,
+   "title": "Bailando (Step Up)",
+   "year": 2006,
+   "runtime": 104,
+   "votos": 3979,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 886396,
    "title": "Batman y Superman: La Batalla de los Super hijos",
    "year": 2022,
@@ -1033,6 +1020,14 @@
    "runtime": 80,
    "votos": 810,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 777270,
+   "title": "Belfast",
+   "year": 2021,
+   "runtime": 98,
+   "votos": 1743,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 878361,
@@ -1097,6 +1092,14 @@
    "runtime": 100,
    "votos": 636,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 913862,
+   "title": "Caída en picado: El caso contra Boeing",
+   "year": 2022,
+   "runtime": 89,
+   "votos": 219,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 6077,
@@ -1187,14 +1190,6 @@
    "origen": "reserva"
   },
   {
-   "tmdb_id": 932420,
-   "title": "Código 8 (Parte 2)",
-   "year": 2024,
-   "runtime": 101,
-   "votos": 761,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 12227,
    "title": "Colmillo blanco",
    "year": 1991,
@@ -1251,11 +1246,27 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 819876,
+   "title": "Crímenes del futuro",
+   "year": 2022,
+   "runtime": 107,
+   "votos": 1343,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 638974,
    "title": "Criminales a la vista",
    "year": 2023,
    "runtime": 89,
    "votos": 2048,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 744857,
+   "title": "Cuando acecha la maldad",
+   "year": 2023,
+   "runtime": 100,
+   "votos": 1577,
    "origen": "reserva"
   },
   {
@@ -1497,6 +1508,14 @@
    "runtime": 135,
    "votos": 589,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 1649,
+   "title": "El alucinante viaje de Bill y Ted",
+   "year": 1991,
+   "runtime": 93,
+   "votos": 1415,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 814338,
@@ -1803,14 +1822,6 @@
    "origen": "seleccion"
   },
   {
-   "tmdb_id": 1428,
-   "title": "El mexicano",
-   "year": 2003,
-   "runtime": 105,
-   "votos": 2495,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 38718,
    "title": "El misterio Von Bülow",
    "year": 1990,
@@ -1835,28 +1846,12 @@
    "origen": "seleccion"
   },
   {
-   "tmdb_id": 268238,
-   "title": "El nuevo exótico hotel Marigold",
-   "year": 2015,
-   "runtime": 124,
-   "votos": 790,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 13676,
    "title": "El origen de la sirenita",
    "year": 2008,
    "runtime": 77,
    "votos": 1094,
    "origen": "seleccion"
-  },
-  {
-   "tmdb_id": 242,
-   "title": "El padrino III",
-   "year": 1990,
-   "runtime": 162,
-   "votos": 7102,
-   "origen": "reserva"
   },
   {
    "tmdb_id": 152780,
@@ -1872,6 +1867,14 @@
    "year": 2021,
    "runtime": 128,
    "votos": 3063,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 6520,
+   "title": "El primer caballero",
+   "year": 1995,
+   "runtime": 134,
+   "votos": 1381,
    "origen": "reserva"
   },
   {
@@ -2019,6 +2022,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 10719,
+   "title": "Elf",
+   "year": 2003,
+   "runtime": 97,
+   "votos": 4713,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 500682,
    "title": "Emboscada final",
    "year": 2019,
@@ -2083,6 +2094,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 9268,
+   "title": "Eraser (Eliminador)",
+   "year": 1996,
+   "runtime": 115,
+   "votos": 2129,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 114779,
    "title": "Es un desastre",
    "year": 2013,
@@ -2099,12 +2118,12 @@
    "origen": "seleccion"
   },
   {
-   "tmdb_id": 585216,
-   "title": "Escape Room 2: Mueres por salir",
-   "year": 2021,
-   "runtime": 88,
-   "votos": 2372,
-   "origen": "seleccion"
+   "tmdb_id": 9882,
+   "title": "Estado de sitio",
+   "year": 1998,
+   "runtime": 116,
+   "votos": 1560,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 40095,
@@ -2201,6 +2220,14 @@
    "runtime": 104,
    "votos": 646,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 3036,
+   "title": "Frankenstein de Mary Shelley",
+   "year": 1994,
+   "runtime": 123,
+   "votos": 1422,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 10675,
@@ -2419,6 +2446,14 @@
    "origen": "reserva"
   },
   {
+   "tmdb_id": 646207,
+   "title": "Ice Road",
+   "year": 2021,
+   "runtime": 103,
+   "votos": 1983,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 14527,
    "title": "Infalible",
    "year": 2003,
@@ -2603,14 +2638,6 @@
    "origen": "seleccion"
   },
   {
-   "tmdb_id": 948276,
-   "title": "La bala perdida 2",
-   "year": 2022,
-   "runtime": 98,
-   "votos": 492,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 405894,
    "title": "La Banda del patio ya esta en el 5º Curso",
    "year": 2003,
@@ -2763,6 +2790,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 4547,
+   "title": "La habitación del pánico",
+   "year": 2002,
+   "runtime": 112,
+   "votos": 5603,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 31658,
    "title": "La hora de las pistolas",
    "year": 1967,
@@ -2777,6 +2812,14 @@
    "runtime": 88,
    "votos": 605,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 760161,
+   "title": "La huérfana: Primer asesinato",
+   "year": 2022,
+   "runtime": 99,
+   "votos": 2371,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 179,
@@ -3019,19 +3062,19 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 11975,
+   "title": "Legítima defensa, de John Grisham",
+   "year": 1997,
+   "runtime": 135,
+   "votos": 1557,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 12165,
    "title": "Lejos de la tierra quemada",
    "year": 2008,
    "runtime": 111,
    "votos": 479,
-   "origen": "seleccion"
-  },
-  {
-   "tmdb_id": 21316,
-   "title": "Leroy y Stitch",
-   "year": 2006,
-   "runtime": 75,
-   "votos": 626,
    "origen": "seleccion"
   },
   {
@@ -3057,6 +3100,14 @@
    "runtime": 105,
    "votos": 846,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 10158,
+   "title": "Los blancos no la saben meter",
+   "year": 1992,
+   "runtime": 115,
+   "votos": 1595,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 16220,
@@ -3147,6 +3198,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 1086747,
+   "title": "Los vigilantes",
+   "year": 2024,
+   "runtime": 102,
+   "votos": 1742,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 42661,
    "title": "Los Vikingos",
    "year": 1958,
@@ -3203,6 +3262,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 15373,
+   "title": "Mal ejemplo",
+   "year": 2008,
+   "runtime": 99,
+   "votos": 2228,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 639798,
    "title": "Malasaña 32",
    "year": 2020,
@@ -3217,14 +3284,6 @@
    "runtime": 111,
    "votos": 2762,
    "origen": "reserva"
-  },
-  {
-   "tmdb_id": 1951,
-   "title": "Manderlay",
-   "year": 2005,
-   "runtime": 139,
-   "votos": 418,
-   "origen": "seleccion"
   },
   {
    "tmdb_id": 11018,
@@ -3459,6 +3518,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 820609,
+   "title": "Nadie te salvará",
+   "year": 2023,
+   "runtime": 93,
+   "votos": 1623,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 44381,
    "title": "Napoleón, el perrito aventurero",
    "year": 1995,
@@ -3617,6 +3684,14 @@
    "runtime": 97,
    "votos": 463,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 471498,
+   "title": "Oxígeno",
+   "year": 2021,
+   "runtime": 100,
+   "votos": 1619,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 529790,
@@ -3803,6 +3878,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 146216,
+   "title": "Red II",
+   "year": 2013,
+   "runtime": 116,
+   "votos": 4445,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 34204,
    "title": "Regreso a Halloweentown",
    "year": 2006,
@@ -3891,14 +3974,6 @@
    "origen": "seleccion"
   },
   {
-   "tmdb_id": 1246,
-   "title": "Rocky Balboa",
-   "year": 2006,
-   "runtime": 101,
-   "votos": 3944,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 110415,
    "title": "Rompenieves",
    "year": 2013,
@@ -3929,6 +4004,14 @@
    "runtime": 60,
    "votos": 55,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 512,
+   "title": "Scoop",
+   "year": 2006,
+   "runtime": 96,
+   "votos": 1793,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 433247,
@@ -4059,14 +4142,6 @@
    "origen": "reserva"
   },
   {
-   "tmdb_id": 874300,
-   "title": "South Park. Post Covid: El retorno del Covid",
-   "year": 2021,
-   "runtime": 62,
-   "votos": 492,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 324670,
    "title": "Spectral",
    "year": 2016,
@@ -4131,12 +4206,28 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 625450,
+   "title": "Tall Girl",
+   "year": 2019,
+   "runtime": 102,
+   "votos": 1980,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 320006,
    "title": "Taxi Teherán",
    "year": 2015,
    "runtime": 86,
    "votos": 498,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 157834,
+   "title": "Teorema zero",
+   "year": 2013,
+   "runtime": 107,
+   "votos": 1396,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 280,
@@ -4147,28 +4238,12 @@
    "origen": "reserva"
   },
   {
-   "tmdb_id": 290859,
-   "title": "Terminator: Destino oscuro",
-   "year": 2019,
-   "runtime": 120,
-   "votos": 5897,
-   "origen": "seleccion"
-  },
-  {
    "tmdb_id": 34996,
    "title": "The Addiction",
    "year": 1995,
    "runtime": 82,
    "votos": 330,
    "origen": "seleccion"
-  },
-  {
-   "tmdb_id": 623491,
-   "title": "The Babysitter: Killer Queen",
-   "year": 2020,
-   "runtime": 101,
-   "votos": 1920,
-   "origen": "reserva"
   },
   {
    "tmdb_id": 13551,
@@ -4203,12 +4278,28 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 1228710,
+   "title": "The Mandalorian and Grogu",
+   "year": 2026,
+   "runtime": 132,
+   "votos": 1799,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 437108,
    "title": "The Mimic",
    "year": 2017,
    "runtime": 100,
    "votos": 178,
    "origen": "seleccion"
+  },
+  {
+   "tmdb_id": 529485,
+   "title": "The Way Back",
+   "year": 2020,
+   "runtime": 108,
+   "votos": 1366,
+   "origen": "reserva"
   },
   {
    "tmdb_id": 666243,
@@ -4288,14 +4379,6 @@
    "year": 1996,
    "runtime": 82,
    "votos": 296,
-   "origen": "seleccion"
-  },
-  {
-   "tmdb_id": 549787,
-   "title": "Tokyo Ghoul S",
-   "year": 2019,
-   "runtime": 97,
-   "votos": 99,
    "origen": "seleccion"
   },
   {
@@ -4403,6 +4486,14 @@
    "origen": "seleccion"
   },
   {
+   "tmdb_id": 10735,
+   "title": "Un sueño para ella",
+   "year": 2003,
+   "runtime": 100,
+   "votos": 1759,
+   "origen": "reserva"
+  },
+  {
    "tmdb_id": 25199,
    "title": "Una disparatada bruja en la universidad",
    "year": 1989,
@@ -4448,6 +4539,14 @@
    "year": 2009,
    "runtime": 84,
    "votos": 452,
+   "origen": "reserva"
+  },
+  {
+   "tmdb_id": 320007,
+   "title": "Victoria",
+   "year": 2015,
+   "runtime": 140,
+   "votos": 1409,
    "origen": "reserva"
   },
   {

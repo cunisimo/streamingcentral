@@ -33,6 +33,26 @@ import { ALL_CODES } from "./providers-ar";
 // pierde nada) y `Curiosity Stream` (dos documentales que sólo viven ahí).
 //
 // Sobre los 2259 títulos con texto, este mapa alcanza 2028.
+//
+// 2026-10-08 (ampliación incremental de la ruleta): aparecieron cuatro
+// channels de Amazon que tampoco son plataformas de Yump: Looke, Lionsgate+,
+// Filmelier Plus y Cindie. Van a NOMBRES_EXCLUIDOS.
+
+/**
+ * Nombres que aparecen en `title_availability` y se dejan afuera A PROPÓSITO.
+ * Es la versión verificable de la lista de arriba: un test exige que ninguno
+ * se interprete como plataforma y que ninguno esté a la vez en NOMBRES.
+ */
+export const NOMBRES_EXCLUIDOS: readonly string[] = [
+  "MGM+ Apple TV Channel", "MGM Plus Amazon Channel", "Mercado Play", "Plex",
+  "Artiflix", "Sony One Amazon Channel", "JustWatch TV", "Pluto TV", "Bloodstream",
+  "Cultpix", "Adrenalina Pura Amazon channel", "Adrenalina Pura Apple TV channel",
+  "FilmBox+", "DocAlliance Films", "Runtime", "Filmzie", "Artify", "CINE",
+  "Curiosity Stream", "Dekkoo", "FOUND TV", "Shahid VIP",
+  "Looke Amazon Channel", "Lionsgate+ Amazon Channel",
+  "Filmelier Plus Amazon Channel", "Cindie Amazon Channel",
+];
+
 const NOMBRES: Record<PlatformCode, string[]> = {
   n:  ["Netflix"],
   d:  ["Disney Plus"],

@@ -150,6 +150,20 @@
   reintento, `--sin-sql`). Diff de plataformas: 4 nombres nuevos sin mapear
   (Looke, Lionsgate+, Filmelier Plus, Cindie; todos canales de Amazon y ninguno de Yump).
   Backup `backups-yump/ruleta-2026-10-08-pre-contexto` (32/32 hashes).
+  **08/10 — CERRADA la propuesta de 500.** Lote adicional de 40 (1/1, 40 con
+  texto); clasificación de contexto de 86 (70 secuelas + 16 sagas sin resolver)
+  con `--sin-sql`, 3/3 lotes, sondeo OK: 21 requieren contexto, 65 funcionan
+  solas; las 461 clasificaciones previas intactas (547 filas, 159 requieren).
+  **500 servibles exactos** (`data/ruleta-propuesta-500.json`): todos con
+  razon + advertencia + atencion, flatrate Yump, sin exclusiones ni contexto
+  requerido; **159 cortas**; 400 de la selección + 100 de la reserva; reserva
+  editorial 17. SQL completo para revisión, NO ejecutado:
+  `supabase/propuestas/2026-10-08-carga-ruleta/00…06` (verificaciones previas
+  bloqueantes —incluida la definición real de `get_roulette_picks`—, 010,
+  500 títulos y disponibilidades, textos/saga guardados, exclusión de los 86,
+  verificaciones posteriores y reversión). `sala_candidatos` no se modifica.
+  `lib/roulette-providers.ts`: `NOMBRES_EXCLUIDOS` con Looke, Lionsgate+,
+  Filmelier Plus y Cindie (test). Backup `ruleta-2026-10-08-pre-sql` (46/46).
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**

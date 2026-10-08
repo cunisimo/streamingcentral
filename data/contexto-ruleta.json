@@ -1,6 +1,6 @@
 {
-  "classified_at": "2026-08-11T21:35:57.883Z",
-  "total": 461,
+  "classified_at": "2026-10-08T19:10:14.036Z",
+  "total": 547,
   "rows": [
     {
       "tmdb_id": 155,
@@ -3689,6 +3689,694 @@
       "saga": "El Santo Collection",
       "requiere_contexto": false,
       "motivo": "Aventura de lucha libre autoconclusiva dentro de la serie"
+    },
+    {
+      "tmdb_id": 82779,
+      "title": "El señor fotógrafo",
+      "year": 1953,
+      "saga": "Cantinflas Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia autoconclusiva de Cantinflas"
+    },
+    {
+      "tmdb_id": 857729,
+      "title": "Secretos del deporte: Pacto con el diablo",
+      "year": 2021,
+      "saga": "Untold Collection",
+      "requiere_contexto": false,
+      "motivo": "Documental antológico, episodios independientes"
+    },
+    {
+      "tmdb_id": 744276,
+      "title": "After: Amor infinito",
+      "year": 2022,
+      "saga": "After - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra arco romántico acumulado de entregas previas"
+    },
+    {
+      "tmdb_id": 874300,
+      "title": "South Park. Post Covid: El retorno del Covid",
+      "year": 2021,
+      "saga": "South Park: Post COVID Collection",
+      "requiere_contexto": true,
+      "motivo": "Secuela directa del especial Post Covid anterior"
+    },
+    {
+      "tmdb_id": 419680,
+      "title": "Dos padres por desigual",
+      "year": 2017,
+      "saga": "Padres por desigual - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia familiar autoconclusiva"
+    },
+    {
+      "tmdb_id": 18289,
+      "title": "Godzilla contra Biollante",
+      "year": 1989,
+      "saga": "Godzilla (Heisei) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Kaiju standalone, conflicto se explica solo"
+    },
+    {
+      "tmdb_id": 82775,
+      "title": "El Circo",
+      "year": 1943,
+      "saga": "Cantinflas Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia autoconclusiva de Cantinflas"
+    },
+    {
+      "tmdb_id": 19042,
+      "title": "Todos los perros van al cielo 2",
+      "year": 1996,
+      "saga": "Todos los perros van al cielo - Colección",
+      "requiere_contexto": false,
+      "motivo": "Trama infantil cerrada en sí misma"
+    },
+    {
+      "tmdb_id": 948276,
+      "title": "La bala perdida 2",
+      "year": 2022,
+      "saga": "Bala perdida",
+      "requiere_contexto": true,
+      "motivo": "Continúa directo tras el cliffhanger de la primera"
+    },
+    {
+      "tmdb_id": 11915,
+      "title": "El loco, loco mundo del gendarme",
+      "year": 1982,
+      "saga": "El gendarme - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia episódica autoconclusiva del gendarme"
+    },
+    {
+      "tmdb_id": 639721,
+      "title": "La familia Addams 2: La gran escapada",
+      "year": 2021,
+      "saga": "La Familia Addams (Animación) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia animada con trama propia cerrada"
+    },
+    {
+      "tmdb_id": 36465,
+      "title": "Durante la tormenta",
+      "year": 2009,
+      "saga": "Colección La tormenta que se avecina",
+      "requiere_contexto": false,
+      "motivo": "Drama autoconclusivo, no depende de la anterior"
+    },
+    {
+      "tmdb_id": 290859,
+      "title": "Terminator: Destino oscuro",
+      "year": 2019,
+      "saga": "Terminator - Colección",
+      "requiere_contexto": true,
+      "motivo": "Exige conocer a Sarah y John Connor de T2"
+    },
+    {
+      "tmdb_id": 36670,
+      "title": "Nunca digas nunca jamás",
+      "year": 1983,
+      "saga": "James Bond - Colección",
+      "requiere_contexto": false,
+      "motivo": "Bond autoconclusivo, misión independiente"
+    },
+    {
+      "tmdb_id": 955531,
+      "title": "Hermana Muerte",
+      "year": 2023,
+      "saga": "Veronica Collection",
+      "requiere_contexto": false,
+      "motivo": "Precuela de terror que funciona sola"
+    },
+    {
+      "tmdb_id": 3107,
+      "title": "Invasión extraterrestre",
+      "year": 1968,
+      "saga": "Godzilla Showa - Colección",
+      "requiere_contexto": false,
+      "motivo": "Kaiju standalone con amenaza propia"
+    },
+    {
+      "tmdb_id": 268238,
+      "title": "El nuevo exótico hotel Marigold",
+      "year": 2015,
+      "saga": "El exótico Hotel Marigold - Colección",
+      "requiere_contexto": true,
+      "motivo": "Peso emocional depende de relaciones ya establecidas"
+    },
+    {
+      "tmdb_id": 11351,
+      "title": "Jeepers Creepers 2",
+      "year": 2003,
+      "saga": "Jeepers Creepers - Colección",
+      "requiere_contexto": false,
+      "motivo": "Terror de criatura, historia autónoma"
+    },
+    {
+      "tmdb_id": 50717,
+      "title": "Davy Crockett y los piratas del Mississippi",
+      "year": 1956,
+      "saga": "Davy Crockett Collection",
+      "requiere_contexto": false,
+      "motivo": "Aventura autoconclusiva con nueva trama"
+    },
+    {
+      "tmdb_id": 40996,
+      "title": "El bombero atómico",
+      "year": 1952,
+      "saga": "Cantinflas Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia autoconclusiva de Cantinflas"
+    },
+    {
+      "tmdb_id": 1428,
+      "title": "El mexicano",
+      "year": 2003,
+      "saga": "El Mariachi - Colección",
+      "requiere_contexto": true,
+      "motivo": "Retoma personajes y pasado de El Mariachi/Desperado"
+    },
+    {
+      "tmdb_id": 405894,
+      "title": "La Banda del patio ya esta en el 5º Curso",
+      "year": 2003,
+      "saga": "La Banda del Patio - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia infantil episódica autoconclusiva"
+    },
+    {
+      "tmdb_id": 660982,
+      "title": "American Pie presenta: Las chicas mandan",
+      "year": 2020,
+      "saga": "American Pie presenta... - Colección",
+      "requiere_contexto": false,
+      "motivo": "Spin-off con personajes y trama nuevos"
+    },
+    {
+      "tmdb_id": 585216,
+      "title": "Escape Room 2: Mueres por salir",
+      "year": 2021,
+      "saga": "Escape Room - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directo la historia de los sobrevivientes"
+    },
+    {
+      "tmdb_id": 25059,
+      "title": "De vuelta a casa 2: Perdidos en San Francisco",
+      "year": 1996,
+      "saga": "De Vuelta a Casa Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura familiar autoconclusiva"
+    },
+    {
+      "tmdb_id": 41300,
+      "title": "Si yo fuera diputado",
+      "year": 1952,
+      "saga": "Cantinflas Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia autoconclusiva de Cantinflas"
+    },
+    {
+      "tmdb_id": 932420,
+      "title": "Código 8 (Parte 2)",
+      "year": 2024,
+      "saga": "Código 8 - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continuación directa de la trama inconclusa de la primera"
+    },
+    {
+      "tmdb_id": 105768,
+      "title": "Flicka: Country Pride",
+      "year": 2012,
+      "saga": "Flicka Collection",
+      "requiere_contexto": false,
+      "motivo": "Drama familiar autoconclusivo"
+    },
+    {
+      "tmdb_id": 21301,
+      "title": "La barbería 2: Vuelta al negocio",
+      "year": 2004,
+      "saga": "La barbería - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia coral con trama propia cerrada"
+    },
+    {
+      "tmdb_id": 41305,
+      "title": "Un día con el Diablo",
+      "year": 1945,
+      "saga": "Cantinflas Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia autoconclusiva de Cantinflas"
+    },
+    {
+      "tmdb_id": 590995,
+      "title": "Jóvenes y brujas",
+      "year": 2020,
+      "saga": "Jóvenes y brujas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Reboot con personajes y trama nuevos"
+    },
+    {
+      "tmdb_id": 21316,
+      "title": "Leroy y Stitch",
+      "year": 2006,
+      "saga": "Lilo & Stitch - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra tramas de todos los experimentos de la serie"
+    },
+    {
+      "tmdb_id": 174,
+      "title": "Star Trek VI. Aquel país desconocido",
+      "year": 1991,
+      "saga": "Star Trek: La serie original - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión autoconclusiva, trama política propia"
+    },
+    {
+      "tmdb_id": 2789,
+      "title": "Las crónicas de Riddick",
+      "year": 2004,
+      "saga": "Las crónicas de Riddick - Colección",
+      "requiere_contexto": false,
+      "motivo": "Épica autónoma, el universo se explica solo"
+    },
+    {
+      "tmdb_id": 14728,
+      "title": "El bibliotecario: La maldición del cáliz de Judas",
+      "year": 2008,
+      "saga": "El bibliotecario - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura episódica autoconclusiva"
+    },
+    {
+      "tmdb_id": 5549,
+      "title": "Robocop II",
+      "year": 1990,
+      "saga": "RoboCop - Colección",
+      "requiere_contexto": false,
+      "motivo": "Villano y trama nuevos, se sostiene sola"
+    },
+    {
+      "tmdb_id": 1682,
+      "title": "Godzilla contra los monstruos",
+      "year": 1964,
+      "saga": "Godzilla Showa - Colección",
+      "requiere_contexto": false,
+      "motivo": "Kaiju standalone con amenaza propia"
+    },
+    {
+      "tmdb_id": 549787,
+      "title": "Tokyo Ghoul S",
+      "year": 2019,
+      "saga": "Tokyo Ghoul - Colección",
+      "requiere_contexto": true,
+      "motivo": "Spin-off que asume conocer la historia de Kaneki"
+    },
+    {
+      "tmdb_id": 1246,
+      "title": "Rocky Balboa",
+      "year": 2006,
+      "saga": "Rocky - Colección",
+      "requiere_contexto": true,
+      "motivo": "Peso emocional depende de Adrian y Apollo previos"
+    },
+    {
+      "tmdb_id": 1951,
+      "title": "Manderlay",
+      "year": 2005,
+      "saga": "USA: Tierra de oportunidades - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente la historia de Grace de Dogville"
+    },
+    {
+      "tmdb_id": 42630,
+      "title": "La mujer de cemento",
+      "year": 1968,
+      "saga": "Tony Rome Collection",
+      "requiere_contexto": false,
+      "motivo": "Caso detectivesco autoconclusivo, no depende de entregas previas"
+    },
+    {
+      "tmdb_id": 71552,
+      "title": "American Pie: El reencuentro",
+      "year": 2012,
+      "saga": "American Pie - Colección",
+      "requiere_contexto": true,
+      "motivo": "Reencuentro de personajes cuyo peso depende de películas anteriores"
+    },
+    {
+      "tmdb_id": 1497,
+      "title": "Las tortugas ninja II. El secreto de los mocos verdes",
+      "year": 1991,
+      "saga": "Las tortugas ninja - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura infantil autoconclusiva con las mismas tortugas"
+    },
+    {
+      "tmdb_id": 38582,
+      "title": "Godzilla contra Ciber Godzilla, máquina de destrucción",
+      "year": 1974,
+      "saga": "Godzilla Showa - Colección",
+      "requiere_contexto": false,
+      "motivo": "Película de monstruos Showa, enfrentamiento autoconclusivo"
+    },
+    {
+      "tmdb_id": 30131,
+      "title": "El Siete Machos",
+      "year": 1951,
+      "saga": "Cantinflas Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia de Cantinflas con historia independiente"
+    },
+    {
+      "tmdb_id": 553646,
+      "title": "ReMastered: Los dos asesinatos de Sam Cooke",
+      "year": 2019,
+      "saga": "ReMastered Series",
+      "requiere_contexto": false,
+      "motivo": "Documental de episodio único, tema propio autoconclusivo"
+    },
+    {
+      "tmdb_id": 11135,
+      "title": "Los rescatadores en Cangurolandia",
+      "year": 1990,
+      "saga": "Los rescatadores - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura autoconclusiva de los mismos personajes"
+    },
+    {
+      "tmdb_id": 18250,
+      "title": "El retorno del Dr. Phibes",
+      "year": 1972,
+      "saga": "Dr. Phibes - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva venganza de Phibes, se presenta y cierra sola"
+    },
+    {
+      "tmdb_id": 34205,
+      "title": "Halloweentown: La venganza",
+      "year": 2001,
+      "saga": "Halloweentown Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura familiar autoconclusiva, presenta su conflicto propio"
+    },
+    {
+      "tmdb_id": 439058,
+      "title": "¡Hey Arnold! Una peli en la jungla",
+      "year": 2018,
+      "saga": "¡Oye, Arnold! - Colección",
+      "requiere_contexto": true,
+      "motivo": "Resuelve el misterio de los padres armado en entregas previas"
+    },
+    {
+      "tmdb_id": 34204,
+      "title": "Regreso a Halloweentown",
+      "year": 2006,
+      "saga": "Halloweentown Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva crisis en Halloweentown, se explica sola"
+    },
+    {
+      "tmdb_id": 62527,
+      "title": "Johnny Kapahala: Contracorriente 2",
+      "year": 2007,
+      "saga": "Johnny Tsunami Collection",
+      "requiere_contexto": false,
+      "motivo": "Historia de surf independiente, personajes presentados de nuevo"
+    },
+    {
+      "tmdb_id": 13676,
+      "title": "El origen de la sirenita",
+      "year": 2008,
+      "saga": "La sirenita - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela origen, historia cerrada en sí misma"
+    },
+    {
+      "tmdb_id": 13313,
+      "title": "La bella y la bestia 2: Una navidad encantada",
+      "year": 1997,
+      "saga": "La bella y la bestia - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia navideña autoconclusiva insertada en la cronología"
+    },
+    {
+      "tmdb_id": 227738,
+      "title": "Mortadelo y Filemón contra Jimmy el Cachondo",
+      "year": 2014,
+      "saga": "Mortadelo y Filemón - Colección",
+      "requiere_contexto": false,
+      "motivo": "Caso cómico autoconclusivo de los detectives"
+    },
+    {
+      "tmdb_id": 21299,
+      "title": "Cuatro cachorros para salvar",
+      "year": 1987,
+      "saga": "The Benji Collection",
+      "requiere_contexto": false,
+      "motivo": "Nueva aventura canina independiente"
+    },
+    {
+      "tmdb_id": 39256,
+      "title": "Godzilla 1985",
+      "year": 1985,
+      "saga": "Americanized Godzilla Collection",
+      "requiere_contexto": false,
+      "motivo": "Reinicio accesible, presenta la amenaza desde cero"
+    },
+    {
+      "tmdb_id": 13417,
+      "title": "El emperador y sus locuras 2: La gran aventura de Kronk",
+      "year": 2005,
+      "saga": "El emperador y sus locuras - Colección",
+      "requiere_contexto": false,
+      "motivo": "Spinoff con historia propia de Kronk, autoconclusiva"
+    },
+    {
+      "tmdb_id": 20771,
+      "title": "Kim Possible: Sí Es para Tanto",
+      "year": 2005,
+      "saga": "Kim Possible Collection",
+      "requiere_contexto": false,
+      "motivo": "Despedida con trama de graduación autoconclusiva"
+    },
+    {
+      "tmdb_id": 10781,
+      "title": "La matanza de Texas: El origen",
+      "year": 2006,
+      "saga": "La matanza de Texas (Reboot) - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela origen independiente de la masacre"
+    },
+    {
+      "tmdb_id": 638974,
+      "title": "Criminales a la vista",
+      "year": 2023,
+      "saga": "Criminales en el mar - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia de atracos con caso propio autoconclusivo"
+    },
+    {
+      "tmdb_id": 774825,
+      "title": "Ice Age: Las aventuras de Buck",
+      "year": 2022,
+      "saga": "Ice Age - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura spinoff de un personaje secundario, autoconclusiva"
+    },
+    {
+      "tmdb_id": 18269,
+      "title": "La dama y el vagabundo 2: Las aventuras de Golfillo",
+      "year": 2001,
+      "saga": "La dama y el vagabundo - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia del cachorro, autoconclusiva pese a referencias"
+    },
+    {
+      "tmdb_id": 736074,
+      "title": "Batman: El Largo Halloween, Parte 2",
+      "year": 2021,
+      "saga": "Batman: El largo Halloween - Colección",
+      "requiere_contexto": true,
+      "motivo": "Cierra la trama partida que empieza en la Parte 1"
+    },
+    {
+      "tmdb_id": 913862,
+      "title": "Caída en picado: El caso contra Boeing",
+      "year": 2022,
+      "saga": "Boeing Collection",
+      "requiere_contexto": false,
+      "motivo": "Documental sobre Boeing, tema autoconclusivo"
+    },
+    {
+      "tmdb_id": 1135408,
+      "title": "La Chica Que Mato A Sus Padres: Confesión",
+      "year": 2023,
+      "saga": "A Menina que Matou os Pais",
+      "requiere_contexto": true,
+      "motivo": "Confesión que continúa el caso narrado en la entrega previa"
+    },
+    {
+      "tmdb_id": 828900,
+      "title": "Aqua Teen para siempre: Plantasma",
+      "year": 2022,
+      "saga": "Aqua Teen Hunger Force Collection",
+      "requiere_contexto": false,
+      "motivo": "Humor absurdo autoconclusivo pese a ser muy referencial"
+    },
+    {
+      "tmdb_id": 280,
+      "title": "Terminator 2: El juicio final",
+      "year": 1991,
+      "saga": "Terminator - Colección",
+      "requiere_contexto": false,
+      "motivo": "Secuela clásica que se explica y cierra sola"
+    },
+    {
+      "tmdb_id": 287947,
+      "title": "¡Shazam!",
+      "year": 2019,
+      "saga": "¡Shazam! - Colección",
+      "requiere_contexto": false,
+      "motivo": "Origen del personaje, presentado completamente de cero"
+    },
+    {
+      "tmdb_id": 242,
+      "title": "El padrino III",
+      "year": 1990,
+      "saga": "El padrino - Colección",
+      "requiere_contexto": true,
+      "motivo": "Pesa toda la historia familiar de las dos entregas previas"
+    },
+    {
+      "tmdb_id": 480530,
+      "title": "Creed II: La leyenda de Rocky",
+      "year": 2018,
+      "saga": "Creed - Colección",
+      "requiere_contexto": true,
+      "motivo": "El duelo con Drago depende de Creed y Rocky IV"
+    },
+    {
+      "tmdb_id": 146216,
+      "title": "Red II",
+      "year": 2013,
+      "saga": "RED - Colección",
+      "requiere_contexto": false,
+      "motivo": "Comedia de acción con misión autoconclusiva"
+    },
+    {
+      "tmdb_id": 9762,
+      "title": "Bailando (Step Up)",
+      "year": 2006,
+      "saga": "Step Up - Colección",
+      "requiere_contexto": false,
+      "motivo": "Primera entrega cronológica, presenta todo de cero"
+    },
+    {
+      "tmdb_id": 8068,
+      "title": "Desperado",
+      "year": 1995,
+      "saga": "El Mariachi - Colección",
+      "requiere_contexto": false,
+      "motivo": "Recapitula y se sostiene sin ver El Mariachi"
+    },
+    {
+      "tmdb_id": 565426,
+      "title": "A todos los chicos: P.D. Todavía te quiero",
+      "year": 2020,
+      "saga": "A todos los chicos - Colección",
+      "requiere_contexto": true,
+      "motivo": "Romance que depende del vínculo establecido en la primera"
+    },
+    {
+      "tmdb_id": 522931,
+      "title": "El otro guardaespaldas 2",
+      "year": 2021,
+      "saga": "El otro guardaespaldas - Colección",
+      "requiere_contexto": false,
+      "motivo": "Nueva misión de acción, autoconclusiva"
+    },
+    {
+      "tmdb_id": 37472,
+      "title": "Ip Man 2",
+      "year": 2010,
+      "saga": "Ip Man - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia de artes marciales independiente y cerrada"
+    },
+    {
+      "tmdb_id": 760161,
+      "title": "La huérfana: Primer asesinato",
+      "year": 2022,
+      "saga": "La huérfana - Colección",
+      "requiere_contexto": false,
+      "motivo": "Precuela con thriller propio, giro funciona sola"
+    },
+    {
+      "tmdb_id": 9268,
+      "title": "Eraser (Eliminador)",
+      "year": 1996,
+      "saga": "Eraser Collection",
+      "requiere_contexto": false,
+      "motivo": "Acción autoconclusiva, no depende de otra entrega"
+    },
+    {
+      "tmdb_id": 1034541,
+      "title": "Terrifier 3",
+      "year": 2024,
+      "saga": "Terrifier - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente los arcos de Sienna de Terrifier 2"
+    },
+    {
+      "tmdb_id": 646207,
+      "title": "Ice Road",
+      "year": 2021,
+      "saga": "The Ice Road - Colección",
+      "requiere_contexto": false,
+      "motivo": "Misión de rescate autónoma, no depende de entregas anteriores"
+    },
+    {
+      "tmdb_id": 625450,
+      "title": "Tall Girl",
+      "year": 2019,
+      "saga": "Tall Girl - Colección",
+      "requiere_contexto": false,
+      "motivo": "Historia adolescente autoconclusiva sobre inseguridad por su altura"
+    },
+    {
+      "tmdb_id": 623491,
+      "title": "The Babysitter: Killer Queen",
+      "year": 2020,
+      "saga": "La niñera - Colección",
+      "requiere_contexto": true,
+      "motivo": "Continúa directamente la trama y trauma de la primera película"
+    },
+    {
+      "tmdb_id": 2114,
+      "title": "Final fantasy: La fuerza interior",
+      "year": 2001,
+      "saga": "Final Fantasy Triple",
+      "requiere_contexto": false,
+      "motivo": "Historia original independiente, sin personajes ni trama previa"
+    },
+    {
+      "tmdb_id": 744857,
+      "title": "Cuando acecha la maldad",
+      "year": 2023,
+      "saga": "Cuando acecha la maldad - Colección",
+      "requiere_contexto": false,
+      "motivo": "Relato de horror autoconclusivo, solo comparte universo/tono"
+    },
+    {
+      "tmdb_id": 1649,
+      "title": "El alucinante viaje de Bill y Ted",
+      "year": 1991,
+      "saga": "La más excelente colección de Bill & Ted - Colección",
+      "requiere_contexto": false,
+      "motivo": "Aventura disparatada que se explica y resuelve por sí sola"
     }
   ]
 }

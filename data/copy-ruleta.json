@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-08T18:42:55.895Z",
+  "generated_at": "2026-10-08T19:06:46.560Z",
   "modelo": "sonnet",
-  "total": 3096,
-  "con_texto": 2848,
+  "total": 3136,
+  "con_texto": 2888,
   "rows": [
     {
       "tmdb_id": 19,
@@ -27871,6 +27871,366 @@
       "razon": "Channing Tatum hace de exsoldado que viaja con el perro de un compañero caído para llegar a su funeral. La relación entre los dos termina siendo el verdadero eje. Mezcla comedia de buddy movie con un fondo más triste sobre el estrés postraumático.",
       "advertencia": null,
       "atencion": "media"
+    },
+    {
+      "tmdb_id": 1228710,
+      "title": "The Mandalorian and Grogu",
+      "year": 2026,
+      "conoce": true,
+      "razon": "Es la continuación en cine de la serie, con el mismo tono de western espacial que encontró Favreau en Disney+. Para quien siguió el show, es ver crecer en pantalla grande el vínculo entre Din Djarin y Grogu.",
+      "advertencia": "Si no viste la serie, entrás sin el vínculo emocional que sostiene la película.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 396806,
+      "title": "Anon",
+      "year": 2018,
+      "conoce": true,
+      "razon": "Niccol imagina una vigilancia tan total que nadie usa pantallas: todo lo que la gente ve queda grabado directo en los ojos. Clive Owen hace de detective agotado, no de héroe de acción. Esa decisión le da a toda la historia un tono de policial frío y pausado.",
+      "advertencia": "Si buscás acción, la historia se mueve al ritmo pausado de un policial cerebral.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 512,
+      "title": "Scoop",
+      "year": 2006,
+      "conoce": true,
+      "razon": "Es Woody Allen en modo liviano, más cerca de la comedia de enredos que del drama existencial de sus películas más conocidas. Scarlett Johansson y el propio Allen tienen una química de nerd torpe y aprendiz entusiasta que sostiene toda la trama.",
+      "advertencia": "Si esperás su humor más filosófico, acá se queda en la superficie de la trama policial.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 583406,
+      "title": "Judas y el mesías negro",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Daniel Kaluuya construye a Fred Hampton con una oratoria que todavía impresiona. LaKeith Stanfield carga la película con la tensión de un infiltrado que nunca termina de elegir bando del todo.",
+      "advertencia": "El primer acto reparte mucha información sobre la organización antes de que la trama agarre tracción.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 10735,
+      "title": "Un sueño para ella",
+      "year": 2003,
+      "conoce": true,
+      "razon": "Amanda Bynes lleva la película con un registro físico, de comedia gestual, que compensa lo previsible del argumento. Colin Firth hace de aristócrata rígido con un timing cómico más fino de lo que promete el afiche.",
+      "advertencia": "Si ya viste varias comedias de padres separados que deben reconciliarse, no hay sorpresas en el camino.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 777270,
+      "title": "Belfast",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Branagh filma en blanco y negro su propia infancia en Belfast, con el conflicto norirlandés como ruido de fondo de la vida cotidiana. Judi Dench y Ciarán Hinds hacen de abuelos con una calidez que nunca cae en lo almibarado.",
+      "advertencia": "Si buscás que la violencia política ocupe el centro de la trama, acá queda siempre en segundo plano.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1086747,
+      "title": "Los vigilantes",
+      "year": 2024,
+      "conoce": true,
+      "razon": "Ishana Night Shyamalan debuta con un terror de atmósfera, apoyado en el folclore irlandés más que en sustos de golpe. Dakota Fanning sostiene el misterio de ese grupo encerrado que se observa entre sí noche tras noche.",
+      "advertencia": "El misterio central se resuelve con una explicación que a varios resultó menos interesante que el planteo.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 614930,
+      "title": "Ninja Turtles: Caos mutante",
+      "year": 2023,
+      "conoce": true,
+      "razon": "El trazo irregular, tipo cuaderno de dibujos de un pibe de secundaria, le da a esta versión una identidad visual propia. El humor adolescente, la inseguridad y las ganas de encajar, pesa más acá que la acción.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 2114,
+      "title": "Final fantasy: La fuerza interior",
+      "year": 2001,
+      "conoce": true,
+      "razon": "Fue la primera película en apostar todo a personajes humanos hiperrealistas generados por computadora. Ese experimento visual sigue siendo lo más interesante de verla hoy, más que la trama de ciencia ficción espiritual.",
+      "advertencia": "El guion es confuso y la mitología alienígena nunca termina de explicarse del todo.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 820609,
+      "title": "Nadie te salvará",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Casi no hay diálogo en toda la película: Kaitlyn Dever lleva el peso actoral solo con el cuerpo y la cara. La decisión de no explicar el pasado de su personaje hasta bien entrada la trama genera una tensión más emocional que de terror puro.",
+      "advertencia": "Si necesitás diálogo para enganchar con una película, el silencio constante puede cansar.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 146239,
+      "title": "¡Menudo fenómeno!",
+      "year": 2013,
+      "conoce": true,
+      "razon": "Vince Vaughn baja varios cambios respecto a sus comedias habituales, con un registro agridulce de tipo que no sabe qué hacer con la paternidad encima. La premisa absurda de los 533 hijos funciona más como excusa para hablar de responsabilidad que como chiste central.",
+      "advertencia": "El tramo del medio estira la misma situación sin sumar demasiado antes del cierre.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 471498,
+      "title": "Oxígeno",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Mélanie Laurent actúa casi sola, encerrada en una cápsula. El suspenso se construye a partir de lo que ella misma no sabe de su propia historia. Aja filma el encierro sin recurrir al sustito fácil, apostando a la angustia física del espacio reducido.",
+      "advertencia": "Si te genera ansiedad real estar encerrado en espacios chicos, la premisa puede resultar pesada.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 8066,
+      "title": "Tránsito",
+      "year": 2005,
+      "conoce": true,
+      "razon": "Ryan Gosling hace de paciente manipulador con una calma inquietante que corre por debajo de toda la superficie amable. Forster construye la historia como un juego de espejos entre la razón del psiquiatra y el delirio del paciente. Hacia el final ya no queda claro quién convence a quién.",
+      "advertencia": "El tramo final se vuelve deliberadamente confuso y pide haber seguido cada pista desde el principio.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 10158,
+      "title": "Los blancos no la saben meter",
+      "year": 1992,
+      "conoce": true,
+      "razon": "Wesley Snipes y Woody Harrelson tienen una química de insultos y bravuconadas que sostiene la película más que cualquier partido de básquet. La relación entre los dos protagonistas es lo que sigue funcionando hoy, más que los chistes de época.",
+      "advertencia": "Varios chistes sobre raza y género quedaron anclados en su época.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 877817,
+      "title": "Wolfs",
+      "year": 2024,
+      "conoce": true,
+      "razon": "George Clooney y Brad Pitt juegan con su propia leyenda de galanes que ya no son tan jóvenes, compitiendo por quién arregla mejor el entuerto. La gracia está en verlos pelear por ego en vez de resolver el problema.",
+      "advertencia": "Si esperás una trama de thriller con sorpresas, el interés acá está en la dupla, no en el caso.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 661539,
+      "title": "A Complete Unknown",
+      "year": 2024,
+      "conoce": true,
+      "razon": "Timothée Chalamet canta él mismo los temas de Dylan. Ese compromiso físico con el personaje es lo más logrado de la película. Mangold se concentra en los años de Greenwich Village al Newport Festival, no en toda la vida del músico.",
+      "advertencia": "Si esperás un repaso por toda la carrera de Dylan, la película se queda en pocos años clave.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 10400,
+      "title": "Huracán Carter",
+      "year": 1999,
+      "conoce": true,
+      "razon": "Denzel Washington se entrenó como boxeador real para el papel. Esa entrega física se siente en cada escena arriba del ring. La película alterna el pasado carcelario con el presente de la lucha legal sin perder claridad en la estructura.",
+      "advertencia": null,
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 744857,
+      "title": "Cuando acecha la maldad",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Rugna construye el horror a partir de la lógica rural argentina: nadie quiere hacerse cargo del problema. Esa pasividad es la que deja que todo termine pudriéndose del todo. No hay sustos tradicionales, hay una sensación de deterioro constante que no da respiro.",
+      "advertencia": "Tiene escenas de violencia hacia animales y chicos bastante más duras de lo que el afiche sugiere.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 9882,
+      "title": "Estado de sitio",
+      "year": 1998,
+      "conoce": true,
+      "razon": "La película imaginó la ley marcial en Nueva York por atentados terroristas, años antes del 11 de septiembre. Esa anticipación es lo que la vuelve interesante hoy, más que su forma de thriller político convencional.",
+      "advertencia": "El trato de la comunidad árabe-americana es de su época y hoy se lee con otra sensibilidad.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 11975,
+      "title": "Legítima defensa, de John Grisham",
+      "year": 1997,
+      "conoce": true,
+      "razon": "Matt Damon joven hace de abogado idealista contra una aseguradora, con Coppola dirigiendo el típico thriller legal de Grisham sin lujos de autor. Danny DeVito aporta el cinismo que le falta al protagonista.",
+      "advertencia": "Si ya viste varias películas de abogados de los noventa, la fórmula se nota bastante.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 823482,
+      "title": "Dream Scenario",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Nicolas Cage hace de profesor gris que de golpe aparece en los sueños de millones de personas. La película usa esa premisa para hablar de la fama no pedida y lo rápido que se vuelve pesadilla pública. Cage está mejor cuanto más patético se permite ser el personaje.",
+      "advertencia": "El tono cambia bastante en la segunda mitad, de comedia rara a algo más amargo.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1389,
+      "title": "Un romance muy peligroso",
+      "year": 1998,
+      "conoce": true,
+      "razon": "Soderbergh corta la historia en el tiempo, adelante y atrás. Esa estructura le da un aire sofisticado a lo que en el fondo es una comedia romántica policial. George Clooney y Jennifer Lopez generan una tensión sexual que se sostiene en diálogos filosos, no en escenas explícitas.",
+      "advertencia": null,
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1056360,
+      "title": "American Fiction",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Jeffrey Wright hace de escritor que, por hastío, escribe la parodia más estereotipada posible sobre la vida negra en Estados Unidos. El chiste se le va de las manos cuando el mundo editorial la toma en serio. En paralelo es también una película familiar sobre un padre enfermo.",
+      "advertencia": null,
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 913,
+      "title": "El secreto de Thomas Crown",
+      "year": 1999,
+      "conoce": true,
+      "razon": "Pierce Brosnan y Rene Russo juegan al gato y al ratón con una elegancia que depende más de las miradas que del robo en sí. La escena del museo lleno de gente con máscaras de Magritte es el momento que todos recuerdan.",
+      "advertencia": null,
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 420821,
+      "title": "Chip y Chop: Los guardianes rescatadores",
+      "year": 2022,
+      "conoce": true,
+      "razon": "La película mezcla estilos de animación, de 2D clásico a stop motion, según de qué personaje habla. Ese choque visual es el chiste central, no un detalle técnico de producción. El humor funciona en dos niveles: referencias para quien creció con la serie original y gags visuales para cualquiera.",
+      "advertencia": "Si no tenés referencias de dibujos animados de los años 80 y 90, se pierden bastantes chistes.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 2539,
+      "title": "Spanglish",
+      "year": 2004,
+      "conoce": true,
+      "razon": "Paz Vega hace de empleada doméstica que no habla inglés en casa de una familia rica y disfuncional. La película mira ese choque de clases sin ponerse del lado fácil de nadie. Téa Leoni construye a una madre ansiosa y controladora que podría ser una caricatura y no lo es.",
+      "advertencia": "Dura más de dos horas y el ritmo se siente, sobre todo en el tramo central.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 3036,
+      "title": "Frankenstein de Mary Shelley",
+      "year": 1994,
+      "conoce": true,
+      "razon": "Branagh filma la novela con más fidelidad al texto original que casi cualquier otra adaptación. El monstruo de Robert De Niro es elocuente y sufriente, no un bicho mudo.",
+      "advertencia": "El estilo actoral es muy exagerado, a tono con el gótico operístico de Branagh.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1649,
+      "title": "El alucinante viaje de Bill y Ted",
+      "year": 1991,
+      "conoce": true,
+      "razon": "La secuela se anima a ir más lejos que la primera: pelean contra versiones robóticas de sí mismos. Después terminan jugando a las cartas contra la Muerte en persona, que se vuelve casi un personaje más.",
+      "advertencia": "Si no viste la primera, varios chistes sobre quiénes son estos dos pierden gracia.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 1075794,
+      "title": "Leo",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Adam Sandler le presta la voz a una lagartija que calcula cuánto tiempo de vida le queda. Recién ahí decide involucrarse con los chicos de los que siempre se mantuvo a distancia. El fondo sobre el miedo a la muerte y la soledad le da un peso real a la comedia ruidosa de Sandler.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 320007,
+      "title": "Victoria",
+      "year": 2015,
+      "conoce": true,
+      "razon": "Está filmada en un solo plano continuo de más de dos horas, sin cortes. La cámara persigue a la protagonista en tiempo real mientras la noche se le complica cada vez más. Laia Costa sostiene toda la película con una energía que no decae nunca.",
+      "advertencia": "El primer tramo, antes de que arranque el quilombo real, se toma su tiempo en armar el grupo.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 4552,
+      "title": "2 hermanas",
+      "year": 2003,
+      "conoce": true,
+      "razon": "Kim Jee-woon construye el terror a partir de lo que no se entiende bien de la relación entre las hermanas y la madrastra. La película se puede ver dos veces y cambia de sentido en la segunda.",
+      "advertencia": "La estructura narrativa es deliberadamente confusa y pide atención total para que el final cierre.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 157834,
+      "title": "Teorema zero",
+      "year": 2013,
+      "conoce": true,
+      "razon": "Christoph Waltz hace de un empleado corporativo que trabaja desde una capilla en ruinas. Ahí intenta resolver una ecuación que promete explicar el sentido de la existencia. Gilliam vuelve a su obsesión por la burocracia absurda, en un tono más melancólico que el de sus películas más conocidas.",
+      "advertencia": "El ritmo es lento y la trama avanza poco, más cerca del ensayo visual que de la historia con tensión.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 6520,
+      "title": "El primer caballero",
+      "year": 1995,
+      "conoce": true,
+      "razon": "Sean Connery hace de Arturo como un rey razonable y melancólico, no el mito heroico de siempre. Eso corre el foco del triángulo amoroso hacia su punto de vista, más que hacia Lanzarote.",
+      "advertencia": "Las escenas de batalla son genéricas y se sienten puestas para justificar el presupuesto.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 529485,
+      "title": "The Way Back",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Ben Affleck hace de un ex jugador alcohólico con una entrega que en su momento se sintió personal. La película evita el arco de redención prolijo del género deportivo: los avances del personaje no son lineales ni garantizados.",
+      "advertencia": "Si buscás la típica película de equipo que remonta hasta ganar el campeonato, el foco está en otro lado.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1247,
+      "title": "El buen pastor",
+      "year": 2006,
+      "conoce": true,
+      "razon": "De Niro dirige con un ritmo deliberadamente frío y distante, calcado del propio personaje. Matt Damon hace de un espía que no puede permitirse mostrar nada. Esa superficie casi sin gestos es a propósito, pensada para un relato de espionaje de paciencia, no de acción.",
+      "advertencia": "Dura casi tres horas y el tono distante del protagonista mantiene al espectador a la misma distancia.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 2284,
+      "title": "Mr. Magorium y su tienda mágica",
+      "year": 2007,
+      "conoce": true,
+      "razon": "Dustin Hoffman compone a un dueño de juguetería de 243 años con una rareza casi infantil. La película habla de soltar lo que uno ama y confiar en que otro se haga cargo, un tema grande para una comedia familiar.",
+      "advertencia": "El ritmo se vuelve meloso hacia el final y el mensaje se repite más de una vez.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 520172,
+      "title": "La estación de la felicidad",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Kristen Stewart hace de una mujer que tiene que volver al closet frente a la familia de su pareja durante las fiestas. Esa incomodidad real tensiona la comedia navideña clásica más de lo esperado. El reparto secundario, con Aubrey Plaza y Dan Levy, aporta un humor más filoso que el habitual en estas películas.",
+      "advertencia": "El tramo central estira la incomodidad familiar sin sumar mucho antes de que todo se resuelva.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 13673,
+      "title": "Una Navidad de locos",
+      "year": 2004,
+      "conoce": true,
+      "razon": "Tim Allen y Jamie Lee Curtis deciden saltearse la Navidad para irse de crucero. La película exagera hasta el absurdo lo mal que lo toman vecinos y familia.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 758009,
+      "title": "Una boda explosiva",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Jennifer Lopez y Josh Duhamel hacen de pareja que discute por la boda mientras escapan de un secuestro armado. La gracia está en que las peleas de pareja no se detienen ni con balas de por medio.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 819876,
+      "title": "Crímenes del futuro",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Cronenberg vuelve al body horror después de años filmando dramas más convencionales. Viggo Mortensen y Léa Seydoux hacen de artistas que usan la cirugía como forma de expresión, en un mundo donde el dolor físico desapareció.",
+      "advertencia": "Las imágenes de cirugías y mutaciones son explícitas y pueden resultar muy fuertes para quien no conoce su estilo.",
+      "atencion": "alta"
     }
   ]
 }

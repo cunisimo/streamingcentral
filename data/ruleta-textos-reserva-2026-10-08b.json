@@ -1,0 +1,519 @@
+{
+ "nota": "Lote adicional aprobado (2026-10-08): 40 de la reserva por votos desc.",
+ "ids": [
+  1228710,
+  396806,
+  512,
+  583406,
+  10735,
+  777270,
+  1086747,
+  614930,
+  2114,
+  820609,
+  146239,
+  471498,
+  8066,
+  10158,
+  877817,
+  661539,
+  10400,
+  744857,
+  9882,
+  11975,
+  823482,
+  1389,
+  1056360,
+  913,
+  420821,
+  2539,
+  3036,
+  1649,
+  1075794,
+  320007,
+  4552,
+  157834,
+  6520,
+  529485,
+  1247,
+  2284,
+  520172,
+  13673,
+  758009,
+  819876
+ ],
+ "titulos": [
+  {
+   "tmdb_id": 1228710,
+   "title": "The Mandalorian and Grogu",
+   "year": 2026,
+   "genres": [
+    "Acción",
+    "Aventura",
+    "Ciencia ficción"
+   ],
+   "runtime": 132,
+   "overview": "El Imperio ha caído y los señores de la guerra imperiales siguen dispersos por toda la galaxia. Mientras la incipiente Nueva República trabaja para proteger todo por lo que luchó la Rebelión, ha reclutado la ayuda del legendario cazarrecompensas mandaloriano Din Djarin y su joven aprendiz Grogu."
+  },
+  {
+   "tmdb_id": 396806,
+   "title": "Anon",
+   "year": 2018,
+   "genres": [
+    "Ciencia ficción",
+    "Crimen",
+    "Misterio",
+    "Suspense"
+   ],
+   "runtime": 100,
+   "overview": "Anon nos lleva hasta un futuro no muy lejano al estilo soviético, donde el gobierno trata de combatir el crimen eliminando la privacidad, creando así una vigilancia total y de autocensura. Un oficial de policía llamado Sal Frieland hace todo lo posible para combatir el crimen en su ciudad. Sin embargo, las cosas toman un inesperado giro cuando se topa con una hacker conocida como The Girl, que le llevará a cuestionar su propio gobierno."
+  },
+  {
+   "tmdb_id": 512,
+   "title": "Scoop",
+   "year": 2006,
+   "genres": [
+    "Comedia",
+    "Misterio"
+   ],
+   "runtime": 96,
+   "overview": "Sondra Pransky (Scarlett Johansson), una estudiante americana de periodismo, se encuentra en Gran Bretaña visitando a unos amigos. Durante su estancia en Londres, acude a un espectáculo de magia, donde un ilusionista (Woody Allen) la invita a subir al escenario para hacerla desaparecer. Mientras espera que el mago ponga en práctica su truco, recibe la visita del fantasma de un prestigioso periodista muerto (Ian McShane), que ha venido desde el más allá para servirle en bandeja la exclusiva del año. El espíritu afirma que Peter Lyman (Hugh Jackman), el rico y atractivo hijo de un conocido aristócrata británico, es en realidad el famoso asesino en serie conocido como \"el asesino del tarot\"."
+  },
+  {
+   "tmdb_id": 583406,
+   "title": "Judas y el mesías negro",
+   "year": 2021,
+   "genres": [
+    "Drama",
+    "Historia"
+   ],
+   "runtime": 125,
+   "overview": "Bill O'Neal se infiltra en las Panteras Negras según el agente del FBI Mitchell y J. Edgar Hoover. A medida que el presidente de Black Panther, Fred Hampton, asciende y se enamora de un compañero revolucionario en el camino, una batalla se paga por el alma de O'Neal."
+  },
+  {
+   "tmdb_id": 10735,
+   "title": "Un sueño para ella",
+   "year": 2003,
+   "genres": [
+    "Familia",
+    "Comedia",
+    "Drama",
+    "Romance"
+   ],
+   "runtime": 100,
+   "overview": "Daphne Reynolds es una adolescente que viaja de Nueva York a Londres para ver a su padre, un político que pertenece a la aristocracia y que proyecta casarse con una mujer detestable. Lo que Daphne se propone es conseguir que sus padres vuelvan a estar juntos de nuevo."
+  },
+  {
+   "tmdb_id": 777270,
+   "title": "Belfast",
+   "year": 2021,
+   "genres": [
+    "Drama",
+    "Historia"
+   ],
+   "runtime": 98,
+   "overview": "La película, un drama de madurez ambientado en los tumultos de la Irlanda del Norte de finales de los años 60, sigue al joven Buddy mientras navega por un paisaje de lucha obrera, cambios culturales radicales y violencia sectaria. Buddy sueña con un futuro glamuroso que lo aleje de los problemas, pero, mientras tanto, encuentra consuelo en su carismático padre y su madre, y en sus alegres abuelos."
+  },
+  {
+   "tmdb_id": 1086747,
+   "title": "Los vigilantes",
+   "year": 2024,
+   "genres": [
+    "Fantasía",
+    "Terror",
+    "Misterio"
+   ],
+   "runtime": 102,
+   "overview": "Sigue a Mina, una artista de 28 años que queda varada en un bosque en el oeste de Irlanda. Cuando Mina encuentra refugio, sin saberlo, queda atrapada junto a tres extraños que son observados y acechados por misteriosas criaturas cada noche."
+  },
+  {
+   "tmdb_id": 614930,
+   "title": "Ninja Turtles: Caos mutante",
+   "year": 2023,
+   "genres": [
+    "Animación",
+    "Comedia",
+    "Acción",
+    "Ciencia ficción"
+   ],
+   "runtime": 100,
+   "overview": "Después de pasar años apartados del mundo humano, los hermanos Tortuga se proponen ganarse el corazón de los habitantes de Nueva York y que les acepten como quinceañeros normales, llevando a cabo actos heroicos. Su nueva amiga April O'Neil les ayuda a enfrentarse a un misterioso sindicato del crimen, pero pronto se ven superados ante el ataque de un ejército de mutantes que se abalanza sobre ellos."
+  },
+  {
+   "tmdb_id": 2114,
+   "title": "Final fantasy: La fuerza interior",
+   "year": 2001,
+   "genres": [
+    "Acción",
+    "Aventura",
+    "Animación",
+    "Fantasía",
+    "Ciencia ficción"
+   ],
+   "runtime": 106,
+   "overview": "Corre el año 2070 y la tierra ha sido devastada por una invasión alienígena. En los ojos de una joven se refleja tristeza y desolación, mientras mira fijamente a la desértica tierra a su alrededor, y la luz del sol, demasiado brillante, le dificulta la visión. Está sola, entre nubes de polvo, en un amenazador mundo de extraterrestres y sus ojos revelan un conflicto interno. Times Square se desmorona en la oscuridad, quemado casi hasta desaparecer, pero en alguna parte grandes ejércitos retienen al ejército extraterrestre. Mientras la muerte acecha entre las sombras, ella busca el milagro, creyendo en que los valores humanos como el valor, la dedicación y el amor podrán finalmente salvar al planeta Tierra..."
+  },
+  {
+   "tmdb_id": 820609,
+   "title": "Nadie te salvará",
+   "year": 2023,
+   "genres": [
+    "Terror",
+    "Ciencia ficción"
+   ],
+   "runtime": 93,
+   "overview": "Una mujer lucha con unos extraterrestres que amenazan su futuro y la hacen enfrentarse a su pasado."
+  },
+  {
+   "tmdb_id": 146239,
+   "title": "¡Menudo fenómeno!",
+   "year": 2013,
+   "genres": [
+    "Comedia"
+   ],
+   "runtime": 103,
+   "overview": "Debido a una confusión, un anónimo donante de esperma se entera después de 20 años que es el padre biológico de 533 niños. Los niños han crecido y ahora debe decidir si presentarse o no ante los 142 que le han demandado para conseguir revelar su identidad."
+  },
+  {
+   "tmdb_id": 471498,
+   "title": "Oxígeno",
+   "year": 2021,
+   "genres": [
+    "Ciencia ficción",
+    "Suspense",
+    "Terror"
+   ],
+   "runtime": 100,
+   "overview": "Una mujer despierta en una unidad criogénica médica. No recuerda quién es ni cómo ha terminado encerrada en una caja no más grande que un ataúd. Mientras se queda sin oxígeno, debe reconstruir sus recuerdos para escapar de esa pesadilla."
+  },
+  {
+   "tmdb_id": 8066,
+   "title": "Tránsito",
+   "year": 2005,
+   "genres": [
+    "Misterio",
+    "Suspense",
+    "Drama"
+   ],
+   "runtime": 99,
+   "overview": "Henry (Ryan Gosling), un joven mentalmente perturbado, le anuncia a Sam Forster, su psiquiatra (Ewan McGregor), que piensa suicidarse en un plazo de tres días, cosa que el psiquiatra intentará evitar. Por su parte, Henry se dedica a enturbiar la relación de Sam con su novia Lila (Naomi Watts), pintora y antigua paciente suya. Poco a poco, la sólida y arraigada racionalidad de Sam empieza a tambalearse. Sometido a situaciones cada vez más surrealistas, llega un momento en que ya no puede distinguir entre realidad y ficción, y su yo y el de Henry se confunden."
+  },
+  {
+   "tmdb_id": 10158,
+   "title": "Los blancos no la saben meter",
+   "year": 1992,
+   "genres": [
+    "Comedia",
+    "Drama"
+   ],
+   "runtime": 115,
+   "overview": "Billy y Sidney son dos amigos, uno blanco y otro negro, que se dedican a practicar el baloncesto callejero contra todo aquel que desee medir sus fuerzas con ellos. Como los dos se creen los mejores jugadores del mundo, su excesivo ego hace que se peleen entre ellos, con los contrarios y con todo aquel que no comparta su filosofía del juego."
+  },
+  {
+   "tmdb_id": 877817,
+   "title": "Wolfs",
+   "year": 2024,
+   "genres": [
+    "Crimen",
+    "Comedia"
+   ],
+   "runtime": 108,
+   "overview": "Dos “solucionadores” rivales cruzan sus caminos cuando los llaman a ambos para ayudar a ocultar el desliz de una importante funcionaria de Nueva York. Durante una noche muy intensa, deberán dejar de lado sus pequeñas rencillas -y sus egos- para terminar el trabajo."
+  },
+  {
+   "tmdb_id": 661539,
+   "title": "A Complete Unknown",
+   "year": 2024,
+   "genres": [
+    "Drama",
+    "Música"
+   ],
+   "runtime": 141,
+   "overview": "Bob Dylan se hizo un nombre en el mundo del folk a muy temprana edad con sus versiones acústicas. Así que cuando en 1965, en el Newport Folk Festival, decidió conectar una guitarra eléctrica y usarla en su concierto, fue un duro golpe para los puristas del folk que veían el futuro del género en el joven. Desde ese momento, la vida de Dylan cambió profundamente. Siendo atacado por un gran grupo de seguidores del folk que lo tachaban de traidor, haciendo que su carrera no volviera a ser la misma. Ese concierto fue clave, se declaró como un músico independiente y fue el comienzo de la voz de una generación."
+  },
+  {
+   "tmdb_id": 10400,
+   "title": "Huracán Carter",
+   "year": 1999,
+   "genres": [
+    "Drama"
+   ],
+   "runtime": 145,
+   "overview": "Basada en hechos reales. Rubin \"Huracán\" Carter era un boxeador negro que se sobrepuso a su problemática juventud y se convirtió en aspirante al título de los pesos medios. Sin embargo, sus sueños se vinieron abajo cuando, en junio de 1966, fue injustamente acusado de un triple asesinato ocurrido en un bar de Nueva Jersey. Condenado en un juicio lleno de errores, Carter fue condenado a tres cadenas perpetuas."
+  },
+  {
+   "tmdb_id": 744857,
+   "title": "Cuando acecha la maldad",
+   "year": 2023,
+   "genres": [
+    "Terror",
+    "Suspense"
+   ],
+   "runtime": 100,
+   "overview": "En una aldea remota donde dos hermanos encuentran a un hombre infectado por un demonio que está a punto de dar a luz al mal mismo. En un momento en que el exorcismo parece ser de poca utilidad para protegerse del mal, después de advertir a los vecinos de la ciudad, deciden deshacerse del hombre, pero simplemente logran ayudarlo a librar el infierno."
+  },
+  {
+   "tmdb_id": 9882,
+   "title": "Estado de sitio",
+   "year": 1998,
+   "genres": [
+    "Drama",
+    "Acción",
+    "Suspense",
+    "Crimen"
+   ],
+   "runtime": 116,
+   "overview": "Tras el secuestro de un líder religioso musulmán por tropas norteamericanas, Nueva York se convierte en el objetivo de una serie de atentados terroristas. Anthony Hubbard, el director del equipo antiterrorista del FBI, y la agente de la CIA Elise Kraft serán los encargados de acabar con la organización criminal. Mientras tanto, el gobierno decide declarar la ley marcial en la Gran Manzana."
+  },
+  {
+   "tmdb_id": 11975,
+   "title": "Legítima defensa, de John Grisham",
+   "year": 1997,
+   "genres": [
+    "Drama",
+    "Crimen",
+    "Suspense"
+   ],
+   "runtime": 135,
+   "overview": "Un joven abogado, recién licenciado e idealista, afronta su primer caso importante con casi todo en contra. Su primer trabajo a las órdenes de un letrado muy poco escrupuloso le lleva a desenmascarar un negocio de seguros, tan sucio como multimillonario,cuya trama puede sacudir los cimientos de una justicia corrupta. El mítico director Francis Ford Coppola denuncia en este film, basado en el libro del considerado rey del best seller John Grisham, el poder que las grandes empresas poseen en los Estados Unidos."
+  },
+  {
+   "tmdb_id": 823482,
+   "title": "Dream Scenario",
+   "year": 2023,
+   "genres": [
+    "Comedia",
+    "Fantasía"
+   ],
+   "runtime": 100,
+   "overview": "Paul Matthews, un desventurado padre de familia, ve cómo su vida da un vuelco cuando millones de extraños empiezan a verle en sueños. Pero cuando sus apariciones nocturnas toman un giro de pesadilla, Paul se ve obligado a navegar por su nuevo estrellato."
+  },
+  {
+   "tmdb_id": 1389,
+   "title": "Un romance muy peligroso",
+   "year": 1998,
+   "genres": [
+    "Romance",
+    "Comedia",
+    "Crimen"
+   ],
+   "runtime": 123,
+   "overview": "Jack Foley, un elegante atracador de bancos, es detenido tras un atraco fallido e ingresa en prisión. Estando en la cárcel Jack planea un plan de fuga en el que contará con la ayuda de su socio Buddy Bragg. Pero durante la huida se ven obligados a tomar como rehén a Karen Sisco, una agente federal muy propensa a las atracciones fatales por los criminales que debe capturar."
+  },
+  {
+   "tmdb_id": 1056360,
+   "title": "American Fiction",
+   "year": 2023,
+   "genres": [
+    "Comedia",
+    "Drama"
+   ],
+   "runtime": 117,
+   "overview": "El profesor de inglés y escritor Thelonious 'Monk' Ellison escribe una novela satírica bajo seudónimo, con la intención de denunciar la hipocresía de la industria editorial."
+  },
+  {
+   "tmdb_id": 913,
+   "title": "El secreto de Thomas Crown",
+   "year": 1999,
+   "genres": [
+    "Drama",
+    "Crimen",
+    "Romance"
+   ],
+   "runtime": 113,
+   "overview": "A los cuarenta años, al multimillonario y distinguido Thomas Crown no le queda nada que demostrar: es un triunfador nato. Pero no se siente satisfecho, así que planea robar un Monet del Museo de Nueva York. La policía nunca sospecharía de él, pero sí lo hace una experta y bella detective privada que trabaja para la agencia de seguros del museo. Por esta razón empieza a tantear a Crown por medio de un peligroso juego de inteligencia y seducción."
+  },
+  {
+   "tmdb_id": 420821,
+   "title": "Chip y Chop: Los guardianes rescatadores",
+   "year": 2022,
+   "genres": [
+    "Animación",
+    "Familia",
+    "Comedia",
+    "Aventura",
+    "Misterio"
+   ],
+   "runtime": 98,
+   "overview": "Treinta años después, las estrellas de las series de animación de Disney de los años 1990, Chip y Chop, viven en Los Ángeles entre dibujos animados y humanos. Chip lleva una vida rutinaria y hogareña como vendedor de seguros, mientras que Chop se ha hecho la cirugía 3D y se dedica a explotar la nostalgia de convención en convención, desesperado por revivir sus días de gloria. Cuando un antiguo compañero de reparto desaparece misteriosamente, Chip y Chop se ven obligados a recuperar la amistad perdida y a hacer de detectives una vez más como Guardianes Rescatadores para salvar a su amigo."
+  },
+  {
+   "tmdb_id": 2539,
+   "title": "Spanglish",
+   "year": 2004,
+   "genres": [
+    "Drama",
+    "Comedia",
+    "Romance"
+   ],
+   "runtime": 130,
+   "overview": "Flor (Paz Vega) es una mexicana que emigra a los Estados Unidos para poder ofrecer una vida mejor a su hija. Una vez allí consigue trabajo en casa de una acomodada familia, los Clasky (Adam Sandler y Téa Leoni), a pesar de la barrera que supone su desconocimiento del inglés."
+  },
+  {
+   "tmdb_id": 3036,
+   "title": "Frankenstein de Mary Shelley",
+   "year": 1994,
+   "genres": [
+    "Drama",
+    "Terror",
+    "Ciencia ficción",
+    "Romance"
+   ],
+   "runtime": 123,
+   "overview": "La prematura muerte de su madre durante un parto, arranca violentamente a Víctor Frankenstein de su idílica vida en Ginebra. Desde ese día, la posibilidad de vencer a la muerte será su obsesión y, por ello, decide estudiar medicina en Inglostadt. Allí conoce al siniestro profesor Waldman, de quien se rumorea que pasó su juventud estudiando la posibilidad de crear un ser humano. Víctor no sólo se interesa por sus experimentos, sino que está dispuesto a llegar hasta el fondo de la cuestión cueste lo que cueste."
+  },
+  {
+   "tmdb_id": 1649,
+   "title": "El alucinante viaje de Bill y Ted",
+   "year": 1991,
+   "genres": [
+    "Aventura",
+    "Comedia",
+    "Fantasía"
+   ],
+   "runtime": 93,
+   "overview": "Una cabina telefónica es el instrumento que utilizan Billy y Ted para viajar a sus anchas por el espacio y el tiempo. Viajarán al Infierno, al Cielo, se harán amigos de la Muerte (que acabará convirtiéndose en ídolo del rock), y conocerán a los marcianos, al conejo de Pascua, y a Albert Einstein."
+  },
+  {
+   "tmdb_id": 1075794,
+   "title": "Leo",
+   "year": 2023,
+   "genres": [
+    "Animación",
+    "Comedia",
+    "Familia"
+   ],
+   "runtime": 102,
+   "overview": "Leo (Sandler) es un lagarto de 74 años que lleva atrapado en el mismo aula de Florida durante décadas con su compañera de terrario, una tortuga (Bill Burr). Cuando se entera de que solo le queda un año de vida, Leo planea escapar para experimentar la vida en el exterior, pero entonces comienzan sus problemas."
+  },
+  {
+   "tmdb_id": 320007,
+   "title": "Victoria",
+   "year": 2015,
+   "genres": [
+    "Crimen",
+    "Suspense",
+    "Romance"
+   ],
+   "runtime": 140,
+   "overview": "Rodada en un único plano secuencia, el film tiene como escenario el famoso barrio berlinés de Kreuzberg. La cámara es testigo de todo lo que le pasa a la joven Victoria, una joven española de Berlín, durante dos horas de su vida: desde las cuatro de la mañana hasta las seis: desde que conoce a cuatro jóvenes para los que la noche acaba de empezar, y cómo en ese breve periodo de tiempo le suceden cosas que darán un giro total a su vida."
+  },
+  {
+   "tmdb_id": 4552,
+   "title": "2 hermanas",
+   "year": 2003,
+   "genres": [
+    "Drama",
+    "Terror",
+    "Misterio"
+   ],
+   "runtime": 114,
+   "overview": "Dos hermanas llegan a la nueva casa que su padre viudo comparte con su nueva esposa. La creciente crueldad de la madrastra, unida a las apariciones del fantasma de la madre de las jóvenes, irá creando una atmósfera inquietante."
+  },
+  {
+   "tmdb_id": 157834,
+   "title": "Teorema zero",
+   "year": 2013,
+   "genres": [
+    "Drama",
+    "Fantasía",
+    "Ciencia ficción"
+   ],
+   "runtime": 107,
+   "overview": "Oohen Leth es un excéntrico genio de los ordenadores que vive en un mundo corporativo controlado por una oscura figura llamada \"Dirección\". Recluido en el interior de una capilla en ruinas, Oohen trabaja en la solución a un extraño teorema, un proyecto que podría descubrir la verdad sobre su alma y el significado de la existencia (o la falta del mismo) de una vez por todas."
+  },
+  {
+   "tmdb_id": 6520,
+   "title": "El primer caballero",
+   "year": 1995,
+   "genres": [
+    "Acción",
+    "Aventura",
+    "Drama",
+    "Romance"
+   ],
+   "runtime": 134,
+   "overview": "Amor, honor, traición y pasión en el Reino de Camelot. Cuando Lady Ginebra contrae matrimonio con el rey Arturo, lo hace movida por dos razones: el respeto y la admiración que siente por él y la necesidad de que proteja su reino, Leonesse. Pero el destino hace que se cruce en su camino el apuesto caballero Lanzarote, recién llegado a Camelot. Surge de inmediato el amor entre ellos, colocando a Ginebra en la tesitura de elegir entre el rey o Lanzarote."
+  },
+  {
+   "tmdb_id": 529485,
+   "title": "The Way Back",
+   "year": 2020,
+   "genres": [
+    "Drama"
+   ],
+   "runtime": 108,
+   "overview": "Una antigua estrella del baloncesto caída en desgracia y sumido en el terrible mundo de las adicciones trata de volver al sendero correcto como entrenador de un equipo de instituto cuya mayor peculiaridad es estar compuesto por un variopinto grupo de estudiantes."
+  },
+  {
+   "tmdb_id": 1247,
+   "title": "El buen pastor",
+   "year": 2006,
+   "genres": [
+    "Drama",
+    "Suspense",
+    "Historia"
+   ],
+   "runtime": 167,
+   "overview": "Biografía de James Wilson, entre 1930 y 1960. Graduado en la Universidad de Yale, acabó siendo uno de los fundadores de la CIA. Se supone que el personaje se basa en el legendario y astuto jefe de inteligencia James Jesús Angleton."
+  },
+  {
+   "tmdb_id": 2284,
+   "title": "Mr. Magorium y su tienda mágica",
+   "year": 2007,
+   "genres": [
+    "Familia",
+    "Fantasía",
+    "Comedia"
+   ],
+   "runtime": 95,
+   "overview": "Molly Mahoney es la tímida e insegura gerente de Mr. Magorium's Wonder Emporium, la más extraña, fantástica y maravillosa tienda de juguetes del mundo. Pero cuando el señor Magorium, el excéntrico dueño de la tienda, que tiene 243 años, decide traspasar el negocio a la joven Molly, la tienda experimenta un oscuro y extraño cambio."
+  },
+  {
+   "tmdb_id": 520172,
+   "title": "La estación de la felicidad",
+   "year": 2020,
+   "genres": [
+    "Romance",
+    "Comedia"
+   ],
+   "runtime": 102,
+   "overview": "Una mujer que planea pedirle matrimonio a su novia durante las vacaciones anuales con la familia descubre que los conservadores padres de su pareja aún desconocen la orientación sexual de su hija."
+  },
+  {
+   "tmdb_id": 13673,
+   "title": "Una Navidad de locos",
+   "year": 2004,
+   "genres": [
+    "Comedia",
+    "Familia"
+   ],
+   "runtime": 99,
+   "overview": "Luther Krank y su mujer deciden no celebrar la Navidad. Nada de arbolitos. ¿Lograrán manejar las reacciones que su decisión provoca en familiares y vecinos?"
+  },
+  {
+   "tmdb_id": 758009,
+   "title": "Una boda explosiva",
+   "year": 2022,
+   "genres": [
+    "Acción",
+    "Comedia",
+    "Romance"
+   ],
+   "runtime": 101,
+   "overview": "Darcy (Jennifer Lopez) y Tom (Josh Duhamel) viajan con sus familias para celebrar su boda, pero cuando todos los invitados son tomados como rehenes, la frase «hasta que la muerte nos separe» adquiere un nuevo significado en esta desternillante aventura cargada de adrenalina en la que Darcy y Tom tendrán que salvar a sus seres queridos, si no se matan entre ellos antes."
+  },
+  {
+   "tmdb_id": 819876,
+   "title": "Crímenes del futuro",
+   "year": 2022,
+   "genres": [
+    "Ciencia ficción",
+    "Terror",
+    "Suspense"
+   ],
+   "runtime": 107,
+   "overview": "En un futuro no muy lejano la humanidad está aprendiendo a adaptarse a su entorno sintético, en un mundo donde no existe el dolor. Esta evolución lleva a los humanos más allá de su estado natural y hacia una metamorfosis, alterando su estructura biológica."
+  }
+ ]
+}

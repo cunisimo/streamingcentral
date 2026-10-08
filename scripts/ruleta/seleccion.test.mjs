@@ -223,7 +223,7 @@ test("con cola, un corte por presupuesto se retoma y elige EXACTAMENTE lo mismo"
 
 test("NOMBRES_YUMP coincide con los nombres de lib/roulette-providers.ts", () => {
   const ts = readFileSync(resolve(import.meta.dirname, "..", "..", "lib", "roulette-providers.ts"), "utf8");
-  const bloque = ts.slice(ts.indexOf("const NOMBRES"), ts.indexOf("};", ts.indexOf("const NOMBRES")));
+  const bloque = ts.slice(ts.indexOf("const NOMBRES:"), ts.indexOf("};", ts.indexOf("const NOMBRES:")));
   const nombres = [...bloque.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual([...new Set(nombres)].sort(), [...NOMBRES_YUMP].sort());
 });
