@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-07T22:52:22.848Z",
+  "generated_at": "2026-10-08T00:22:30.235Z",
   "modelo": "sonnet",
-  "total": 2976,
-  "con_texto": 2742,
+  "total": 3056,
+  "con_texto": 2808,
   "rows": [
     {
       "tmdb_id": 19,
@@ -26790,6 +26790,726 @@
       "conoce": true,
       "razon": "Es un melodrama mexicano dirigido por Luis Buñuel, con Rosita Quintana como la mujer que desordena una hacienda entera. Buñuel juega con los clichés del género de la época, con un tono más irónico que el de un melodrama convencional.",
       "advertencia": "Si buscás el surrealismo típico de Buñuel, acá está mucho más contenido por tratarse de un encargo de estudio.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 7461,
+      "title": "En el punto de mira",
+      "year": 2008,
+      "conoce": true,
+      "razon": "La gracia está en la estructura: la misma media hora se repite ocho veces, cada vez desde un testigo distinto. El rompecabezas se termina de armar recién cuando se cruzan todas las versiones. Funciona mejor si te entregás al juego de las perspectivas sin pedirle demasiado realismo político.",
+      "advertencia": "Repite la misma media hora ocho veces antes de mostrar el cuadro completo, y la tercera vuelta ya se siente repetitiva.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 638974,
+      "title": "Criminales a la vista",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Es la continuación directa de la primera entrega y repite la fórmula de pareja de turistas enredada en un crimen de alta sociedad. Sandler y Aniston tienen buena onda en pantalla y el ritmo no da tiempo a aburrirse. Sirve para una noche sin pretensiones, no para buscar un misterio bien armado.",
+      "advertencia": "El misterio es una excusa: si buscás un enigma que cierre prolijo, te vas a quedar con gusto a poco.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 774825,
+      "title": "Ice Age: Las aventuras de Buck",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es un spin-off corto centrado en Buck, la comadreja tuerta que siempre fue el personaje más excéntrico de la saga. Acá tiene protagonismo total, con las mismas peleas con dinosaurios y los mismos chistes físicos de siempre. Está pensada para chicos que ya conocen a los personajes, no para ampliar la historia de la franquicia.",
+      "advertencia": "Si no te cae bien el humor exagerado de Buck en las películas anteriores, acá lo tenés en dosis todavía más concentrada.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 14254,
+      "title": "Presencias extrañas",
+      "year": 2009,
+      "conoce": true,
+      "razon": "Es el remake americano de la surcoreana Dos hermanas, y mantiene el clima de desconfianza entre hermanas y madrastra que tenía el original. El terror acá es psicológico, con sustos medidos en vez de golpes de efecto constantes. Es buena opción si preferís el misterio familiar al terror de sobresaltos.",
+      "advertencia": "Si ya viste Dos hermanas, te vas a adelantar a varios giros antes de que la película los revele.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 894205,
+      "title": "La maldición del hombre lobo",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es un especial de Marvel pensado como corto de terror clásico, filmado en blanco y negro. Tiene el aire de las películas de monstruos clásicas de Universal y dura menos de una hora. Funciona bien para quien busca terror de monstruos sin comprometerse a toda una saga de superhéroes.",
+      "advertencia": "Dura 55 minutos y se nota: el desarrollo de personajes es mínimo porque todo está puesto al servicio del ritmo.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 18269,
+      "title": "La dama y el vagabundo 2: Las aventuras de Golfillo",
+      "year": 2001,
+      "conoce": true,
+      "razon": "Es la secuela directa a video de La dama y el vagabundo, centrada en el hijo rebelde de la pareja original. Tiene la estructura clásica de esas secuelas Disney: menos elaborada que la original, pero con canciones y el mismo tono familiar. Funciona bien para chicos que ya quieren saber qué pasó después de la primera película.",
+      "advertencia": "Si esperás el nivel de animación y música de la película original de 1955, esta secuela se siente notoriamente más simple.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 840882,
+      "title": "Fin de semana en Croacia",
+      "year": 2022,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 1110358,
+      "title": "Yannick",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Es la última rareza de Quentin Dupieux, el director de El neumático asesino, y dura apenas una hora y siete minutos. Un espectador se levanta en medio de una obra de teatro mala y decide dirigir la función desde su butaca. Es una comedia incómoda sobre el control y el mal arte, no una comedia de chistes fáciles.",
+      "advertencia": "Si no te gustó el humor absurdo y seco de Dupieux en otras películas, esta tampoco te va a convencer.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 576156,
+      "title": "Los tortolitos",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Issa Rae y Kumail Nanjiani hacen de pareja a punto de separarse que termina perseguida toda una noche por un crimen que no cometieron. La comedia sale de cómo discuten la relación en medio de la persecución, no de gags sueltos. Funciona si te gusta la comedia de pareja con ritmo rápido y diálogo filoso.",
+      "advertencia": "Si buscás una trama de crimen que se sostenga en la lógica, la escalada de situaciones absurdas te va a sacar afuera.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 586810,
+      "title": "Mars Express",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Es animación francesa adulta, con un diseño visual denso y una trama de ciencia ficción noir. Mezcla androides, hackers y una detective con un compañero muerto que reencarnó en el cuerpo de un robot. No es para chicos: el tono es más cercano a Blade Runner que a una animación convencional.",
+      "advertencia": "El primer tramo larga nombres, tecnología y reglas del mundo muy rápido, y si te perdés ahí cuesta reengancharse.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 736074,
+      "title": "Batman: El Largo Halloween, Parte 2",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Es la segunda mitad de la adaptación animada del cómic de Loeb y Sale, así que conviene haber visto la primera parte antes. Acá el foco pasa de buscar al asesino en serie a la transformación de Harvey Dent. Funciona bien para quien ya sigue al personaje y quiere una versión fiel al cómic.",
+      "advertencia": "Si no viste la Parte 1, varias tramas y personajes van a aparecer a mitad de camino sin presentación.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 517302,
+      "title": "EGO",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es la película finlandesa conocida como Hatching, sobre una gimnasta adolescente que esconde un huevo extraño. Lo hace mientras intenta cumplir con las exigencias de una madre asfixiante, obsesionada con mostrar una familia perfecta. El terror acá funciona como metáfora de la presión familiar, más incómoda que aterradora.",
+      "advertencia": "Si buscás terror de sustos, esta película hace otra cosa: la tensión viene de la relación materno-filial, no de la criatura.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 816904,
+      "title": "Momias",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Es animación española de los creadores de Klaus, con el mismo humor físico y la aventura liviana de siempre. La ambientación egipcia funciona más como excusa para las persecuciones que como reconstrucción histórica. Es buena opción para ver con chicos chicos, sin exigirle demasiado a la trama.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 664031,
+      "title": "En el mejor momento",
+      "year": 2020,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 1086260,
+      "title": "La astronauta",
+      "year": 2025,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 30974,
+      "title": "Vertige",
+      "year": 2009,
+      "conoce": true,
+      "razon": "Es un thriller francés también conocido como High Lane, sobre un grupo de amigos que va a escalar una montaña en Croacia. Lo que arranca como aventura con tensiones de pareja de fondo se convierte en una pesadilla de supervivencia. Funciona como terror de montaña físico, sin vueltas sobrenaturales.",
+      "advertencia": "Si vas con la idea de un drama de amigos escalando, el giro hacia el terror puro puede tomarte por sorpresa.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 892153,
+      "title": "Tom y Jerry: ¡Arriba, vaquero!",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es una película directa a streaming con la fórmula de siempre entre Tom y Jerry, esta vez con ambientación de western. Suma personajes nuevos, como los sobrinos de Jerry, pero la base sigue siendo la persecución física sin diálogo entre los dos. Funciona bien de fondo para chicos que ya conocen el formato clásico.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 1072371,
+      "title": "Jules",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Ben Kingsley hace de un hombre mayor con problemas de memoria que encuentra un alienígena asustado en su patio. Decide cuidarlo casi como a una mascota, y la película usa eso para hablar de la vejez y la soledad. El alienígena casi no habla, así que el peso actoral cae en Kingsley y en el grupo de vecinos que se suman.",
+      "advertencia": "Si esperás ciencia ficción con acción, esta película es mucho más chica y lenta de lo que sugiere la premisa.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 874299,
+      "title": "South Park: Post Covid",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Es un especial fuera de temporada que imagina a Stan, Kyle, Cartman y Kenny ya adultos, años después de la pandemia. El tono es mucho más oscuro que el de la serie habitual, como una fábula sobre cómo esos años cambiaron a una generación. Conviene conocer a los personajes de la serie para que el contraste con su versión adulta tenga peso.",
+      "advertencia": "Si no seguís South Park, el peso emocional de ver a los personajes envejecidos no te va a pegar igual.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 801071,
+      "title": "The Jack in the Box: El despertar",
+      "year": 2022,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 575446,
+      "title": "Nuevo Orden",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Es la película de Michel Franco que ganó el Gran Premio del Jurado en Venecia. Un estallido social interrumpe una boda de la clase alta mexicana y todo se desarma en minutos. Es dura y no da respiro: funciona para quien busca cine político incómodo, no para una noche liviana.",
+      "advertencia": "Es bastante más violenta y asfixiante de lo que promete el arranque de boda, sobre todo en su segunda mitad.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 1032950,
+      "title": "El abismo del infierno",
+      "year": 2022,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 886396,
+      "title": "Batman y Superman: La Batalla de los Super hijos",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es una película animada centrada en los hijos de Batman y Superman, pensada para un público más chico. Jon Kent descubre sus poderes y eso lleva a Damian Wayne y a él a convertirse en un nuevo dúo de héroes. Funciona como puerta de entrada a DC para pre-adolescentes, no como una historia pensada para fans adultos.",
+      "advertencia": "Si venís de las películas animadas de Batman más oscuras, el tono acá es mucho más liviano y pensado para chicos.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 916053,
+      "title": "Algo de Tiffany’s",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es una comedia romántica de Amazon con la premisa clásica del anillo equivocado. La protagonista recibe por error el compromiso que su novio compró para otra mujer, y ahí se cruzan dos parejas. Sirve para una tarde sin pretensiones, con el formato de siempre del género.",
+      "advertencia": "Si ya viste muchas comedias románticas de parejas que se cruzan por un malentendido, el desarrollo no te va a sorprender.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 659067,
+      "title": "La tierra y la sangre",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Es un thriller francés de Netflix sobre un aserradero en medio del bosque que termina en guerra con un cartel de drogas. Tiene más acción directa y violencia que trama, con ritmo rápido y pocas vueltas. No busca profundidad, busca tensión constante.",
+      "advertencia": "Si buscás algo más que acción pura, la trama de fondo es bastante simple y predecible.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 14317,
+      "title": "Los Thornberrys: La película",
+      "year": 2002,
+      "conoce": true,
+      "razon": "Es la versión cine de la serie de Nickelodeon, con la misma familia aventurera y el mismo humor de siempre. Tiene más presupuesto para la animación y suma una trama de cazadores furtivos como hilo central. Funciona bien para quien ya conocía la serie de chico.",
+      "advertencia": "Si nunca viste la serie, te vas a perder algunas referencias a personajes y chistes recurrentes.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1000938,
+      "title": "La familia tiene un precio",
+      "year": 2022,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 913862,
+      "title": "Caída en picado: El caso contra Boeing",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Es un documental de Netflix sobre los dos accidentes del 737 MAX. Muestra cómo Boeing priorizó el cronograma de producción por sobre las alertas de seguridad de sus propios ingenieros. Funciona para quien quiere entender la mecánica corporativa detrás de la tragedia, no solo el hecho en sí.",
+      "advertencia": "Maneja bastante información técnica sobre aviación y proceso regulatorio, así que pide prestar atención para no perder el hilo.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 16394,
+      "title": "Winnie the Pooh: Una primavera con Rito",
+      "year": 2004,
+      "conoce": true,
+      "razon": "Es una película directa a video centrada en Rito, el personaje más chico del Bosque de los Cien Acres. Cuenta una historia simple sobre la Pascua, con el tono tranquilo y las canciones de siempre de esa época de Winnie Pooh. Es ideal para ver con chicos muy chicos, sin exigir atención constante.",
+      "advertencia": null,
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 653729,
+      "title": "Time",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Es un documental filmado con material propio de la familia durante casi veinte años. Sigue a Fox Rich en su lucha para liberar a su marido de la cárcel. Está editado en blanco y negro y mezcla los años sin avisar, así que el tiempo se siente fragmentado a propósito.",
+      "advertencia": "Salta entre años sin marcarlo con claridad, y si no prestás atención perdés de qué momento de la historia familiar se está hablando.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 821420,
+      "title": "Hasta el final",
+      "year": 2022,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 1401905,
+      "title": "No te mueras: El hombre que quiere vivir para siempre",
+      "year": 2025,
+      "conoce": true,
+      "razon": "Es el documental de Netflix sobre Bryan Johnson, el millonario que gasta su fortuna en un protocolo extremo antienvejecimiento. Funciona como retrato de una obsesión más que como informe médico neutral, y deja ver también lo incómodo del personaje. Interesa tanto a quien sigue el tema de la longevidad como a quien quiere ver un estudio de ego.",
+      "advertencia": "Si esperás un análisis científico equilibrado, el documental está más del lado del personaje que de una mirada crítica externa.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1094473,
+      "title": "Bambi, una vida en el bosque",
+      "year": 2024,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 75493,
+      "title": "Papá se volvió loco",
+      "year": 2005,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 1135408,
+      "title": "La Chica Que Mato A Sus Padres: Confesión",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Es la segunda parte de la serie de películas brasileñas sobre el caso real de Suzane von Richthofen. Esta vez está contada desde la perspectiva de Daniel Cravinhos, el novio que participó del crimen. Conviene haber visto la primera entrega para entender el contexto completo del caso.",
+      "advertencia": "Si no viste la primera parte, te faltan datos del caso que esta película da por conocidos.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 754219,
+      "title": "72 Horas Después",
+      "year": 2020,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 1688652,
+      "title": "Gary",
+      "year": 2026,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 72753,
+      "title": "Strike",
+      "year": 2000,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 749142,
+      "title": "Olga",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Es una coproducción ucraniana-suiza sobre una gimnasta de 15 años que entrena en Suiza. Mientras tanto su madre cubre las protestas del Euromaidán en Kiev como periodista. Mezcla el drama deportivo de alto rendimiento con el peso de la distancia familiar en medio de un conflicto político real.",
+      "advertencia": "El costado deportivo y el político conviven en paralelo, y si no conocés nada del Euromaidán el contexto puede costar un poco.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 84331,
+      "title": "La Banda del Patio vuelve a la guardería",
+      "year": 2003,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 1115191,
+      "title": "Intoxicación: La cruda verdad de nuestra comida",
+      "year": 2023,
+      "conoce": true,
+      "razon": "Repasa casos reales de intoxicaciones masivas en EE.UU., como el brote de E. coli de Jack in the Box en 1993. El abogado Bill Marler aparece como hilo conductor entre casos distintos. Sirve para entender cómo funciona, y falla, el sistema de seguridad alimentaria.",
+      "advertencia": "Salta entre varios casos sin profundizar en ninguno, así que algunos tramos se sienten repetitivos.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 828900,
+      "title": "Aqua Teen para siempre: Plantasma",
+      "year": 2022,
+      "conoce": true,
+      "razon": "Mantiene el humor sin lógica de la serie original: chistes que no buscan tener sentido, solo sorprender. Es puro ruido de Adult Swim, no busques trama real detrás. Funciona mejor si ya conocés a estos personajes de antes.",
+      "advertencia": "Si no conocés la serie original, se siente como entrar a una fiesta ajena a mitad de evento.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 1429834,
+      "title": "Casi familia",
+      "year": 2025,
+      "conoce": false,
+      "razon": null,
+      "advertencia": null,
+      "atencion": null
+    },
+    {
+      "tmdb_id": 280,
+      "title": "Terminator 2: El juicio final",
+      "year": 1991,
+      "conoce": true,
+      "razon": "Las escenas de acción se apoyan en efectos prácticos y animatronics, no en CGI pesado, y por eso envejecieron mejor que otras de su época. El vínculo entre Sarah Connor y el T-800 le da peso emocional a la persecución. El T-1000 funciona como villano sin necesitar casi diálogo.",
+      "advertencia": "Si ya la viste varias veces, las frases y escenas te van a resultar demasiado conocidas como para sorprenderte.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 110415,
+      "title": "Rompenieves",
+      "year": 2013,
+      "conoce": true,
+      "razon": "Cada vagón del tren representa una clase social distinta, así que avanzar hacia la cabeza es escalar la pirámide. Bong Joon-ho mezcla violencia física cruda con sátira política sin bajarle el tono a ninguna de las dos.",
+      "advertencia": "La escena del aula en el vagón escolar es de las más extrañas que vas a ver en una película de acción.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 287947,
+      "title": "¡Shazam!",
+      "year": 2019,
+      "conoce": true,
+      "razon": "Tiene menos solemnidad que otras películas de DC: es básicamente un chico de 14 años probando qué hacer con un cuerpo de superhéroe adulto. Funciona bien en familia porque no pide haber visto otras películas del universo DC.",
+      "advertencia": "El tono liviano se nota en el villano, que queda bastante por debajo del protagonista en interés.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 339846,
+      "title": "Baywatch: Los vigilantes de la playa",
+      "year": 2017,
+      "conoce": true,
+      "razon": "Se ríe de lo ridículo del concepto original antes de que lo hagas vos. Dwayne Johnson y Zac Efron tienen buena química de comedia física entre ellos.",
+      "advertencia": "El humor es bastante subido de tono y grosero, así que no es tan familiar como sugiere el póster.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 376867,
+      "title": "Moonlight",
+      "year": 2016,
+      "conoce": true,
+      "razon": "Cuenta la misma historia en tres edades del protagonista, con actores distintos en cada etapa, sin que se note el quiebre. La cámara se queda cerca de los cuerpos y los silencios, más que de los diálogos.",
+      "advertencia": "Si buscás una trama con conflicto externo marcado, te va a resultar lenta porque casi todo pasa adentro del personaje.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 242,
+      "title": "El padrino III",
+      "year": 1990,
+      "conoce": true,
+      "razon": "Es Michael Corleone tratando de comprar una salida limpia de todo lo que construyó con sangre, negociando con el Vaticano. Pacino juega a un hombre cansado, no al capo frío de las dos primeras.",
+      "advertencia": "Si venís de ver las dos primeras hace poco, el salto de calidad se nota en el guion y en el arco romántico.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 203801,
+      "title": "Operación U.N.C.L.E.",
+      "year": 2015,
+      "conoce": true,
+      "razon": "Guy Ritchie filma la Guerra Fría como un desfile de trajes y chicanas visuales, más cerca del estilo que de la tensión de espías real. Cavill y Hammer construyen una rivalidad con humor que sostiene la película.",
+      "advertencia": "Si buscás una de espías con tensión real, aquí la estética le gana siempre al guion.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 406990,
+      "title": "Siete hermanas",
+      "year": 2017,
+      "conoce": true,
+      "razon": "El truco central es una sola actriz haciendo de siete hermanas distintas. Cada una tiene su propio gesto y su propia velocidad, no solo el peinado o la ropa. También funciona como ciencia ficción política además de thriller.",
+      "advertencia": "Cuesta al principio distinguir a las siete hermanas hasta que el ojo se acostumbra a los gestos de cada una.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 50546,
+      "title": "Sígueme el rollo",
+      "year": 2011,
+      "conoce": true,
+      "razon": "Es Adam Sandler en modo liviano, con Jennifer Aniston como contrapeso sensato a la mentira que arma el protagonista. La comedia sale más de la situación incómoda que armó él mismo que de chistes sueltos.",
+      "advertencia": "La premisa pide aceptar desde el arranque una mentira bastante forzada que sostiene toda la trama.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 480530,
+      "title": "Creed II: La leyenda de Rocky",
+      "year": 2018,
+      "conoce": true,
+      "razon": "El combate central tiene algo personal detrás, ligado a la muerte de Apollo Creed en el ring contra el padre del rival. Stallone vuelve a hacer de Rocky como entrenador, ya no como protagonista.",
+      "advertencia": "Si no viste Rocky IV, el peso emocional del rival pierde la mitad de su sentido.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 1581,
+      "title": "The Holiday (Vacaciones)",
+      "year": 2006,
+      "conoce": true,
+      "razon": "Las dos historias corren en paralelo sin cruzarse demasiado, con ritmos bien distintos entre Inglaterra y California. Es una comedia romántica que se disfruta más por la ambientación navideña que por sorpresas de guion.",
+      "advertencia": "Dura más de dos horas para una comedia romántica, algo que se nota en el tramo final de la historia californiana.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 4547,
+      "title": "La habitación del pánico",
+      "year": 2002,
+      "conoce": true,
+      "razon": "Fincher encierra casi toda la película en una casa y mueve la cámara por paredes y pisos como si la casa fuera un personaje más. La tensión viene de la logística, de quién controla qué parte de la casa en cada momento.",
+      "advertencia": "Si ya viste varias películas de intrusos en casa, la estructura te va a resultar familiar.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 302401,
+      "title": "Snowden",
+      "year": 2016,
+      "conoce": true,
+      "razon": "Oliver Stone arma el relato como un thriller de contrainteligencia, no como un documental sobre vigilancia masiva. Gordon-Levitt imita la voz y los gestos de Snowden de forma notable. La película alterna la fuga en Hong Kong con flashbacks de cómo un técnico leal al sistema termina filtrando todo.",
+      "advertencia": "Si ya viste el documental Citizenfour sobre el mismo tema, esta versión dramatizada agrega poco nuevo a los hechos.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 10719,
+      "title": "Elf",
+      "year": 2003,
+      "conoce": true,
+      "razon": "Will Ferrell juega al elfo adulto sin un gramo de ironía. Ese choque entre su inocencia y el cinismo de Nueva York es la base de la comedia. Es de esas navideñas que gustan incluso a quien no es fan de la época.",
+      "advertencia": "El humor es bastante infantil y repetitivo en el tramo de Nueva York.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 1272,
+      "title": "Sunshine",
+      "year": 2007,
+      "conoce": true,
+      "razon": "Danny Boyle filma el espacio como un lugar que puede quemarte, enceguecerte o desintegrarte sin aviso. La tripulación empieza a quebrarse por el encierro y la presión de la misión, no solo por el peligro externo. Es ciencia ficción que se apoya en la física y el desgaste psicológico.",
+      "advertencia": "Si buscás una de acción espacial rápida, los primeros tramos son bastante técnicos y contemplativos.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 146216,
+      "title": "Red II",
+      "year": 2013,
+      "conoce": true,
+      "razon": "Es más cómica y menos violenta que la primera, apoyada en el contraste entre espías veteranos y la energía de los más jóvenes. Helen Mirren con ametralladora sigue siendo el gancho principal de la saga.",
+      "advertencia": "Si te gustó la primera por el tono serio, esta se inclina bastante más hacia la comedia.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 72570,
+      "title": "Todos los días de mi vida",
+      "year": 2012,
+      "conoce": true,
+      "razon": "Está basada en un caso real, pero juega todas sus cartas a la pregunta de si se puede reconstruir un amor con alguien que ya no te recuerda. Channing Tatum hace de paciencia, no de galán de acción.",
+      "advertencia": "El ritmo es lento y bastante previsible en la segunda mitad.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 37094,
+      "title": "Un día de furia",
+      "year": 1993,
+      "conoce": true,
+      "razon": "Michael Douglas atraviesa Los Ángeles a pie y de traje, y cada parada se convierte en una pequeña explosión distinta. Nunca queda claro si es una crítica social o el retrato de un tipo que perdió la cabeza. Es incómoda a propósito, no por accidente.",
+      "advertencia": "El personaje puede leerse hoy como la defensa de la furia de un hombre blanco frustrado, algo que incomoda más que en los 90.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 75174,
+      "title": "Infierno blanco",
+      "year": 2012,
+      "conoce": true,
+      "razon": "Liam Neeson no está salvando a nadie a los golpes, está tratando de sobrevivir al frío y al cansancio antes que nada. Los lobos son menos un enemigo de acción y más una amenaza que nunca se ve del todo.",
+      "advertencia": "Si fuiste con la expectativa de ver a Neeson peleando lobos como en los avances, la película es mucho más contemplativa.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 5176,
+      "title": "El tren de las 3:10",
+      "year": 2007,
+      "conoce": true,
+      "razon": "Más que una persecución, es una conversación larga entre un ranchero arruinado y el forajido que custodia. Bale y Crowe sostienen esa tensión sin necesitar tiros todo el tiempo. El western clásico está ahí, pero el centro es psicológico.",
+      "advertencia": "El tramo del medio, cuando el viaje se hace largo, baja bastante el ritmo.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 9762,
+      "title": "Bailando (Step Up)",
+      "year": 2006,
+      "conoce": true,
+      "razon": "La trama es la excusa para llegar a los números de baile, que es donde la película realmente funciona. Channing Tatum todavía no era la estrella de acción que fue después, acá es puro baile de calle.",
+      "advertencia": "El romance y el conflicto de clases están contados con bastante brocha gruesa.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 193610,
+      "title": "No hay dos sin tres",
+      "year": 2014,
+      "conoce": true,
+      "razon": "La gracia está en que la esposa engañada y la amante deciden ser aliadas en vez de rivales. Cameron Diaz y Leslie Mann tienen buena dinámica de comedia juntas.",
+      "advertencia": "El tramo de la venganza se estira más de la cuenta hacia el final.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 46705,
+      "title": "Blue Valentine",
+      "year": 2010,
+      "conoce": true,
+      "razon": "La película corta entre el inicio de la relación y su final sin avisar, armando el contraste vos mismo. Gosling y Williams hacen que ese contraste duela sin necesidad de gritos ni grandes escenas.",
+      "advertencia": "Es dura emocionalmente de un modo bien realista, sin alivio cómico en el medio.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 762441,
+      "title": "Un lugar tranquilo: Día uno",
+      "year": 2024,
+      "conoce": true,
+      "razon": "Cambia el foco de la familia que sobrevive por reglas hacia una sola persona en el primer día del ataque. Esa persona ya estaba en lo peor de su vida antes de que llegaran los monstruos. Depende más de la actuación de Lupita Nyong'o que de sustos nuevos.",
+      "advertencia": "Si venís de las dos anteriores esperando más acción con las criaturas, esta es mucho más íntima y lenta.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 9476,
+      "title": "Destino de caballero",
+      "year": 2001,
+      "conoce": true,
+      "razon": "Mezcla justas medievales con banda de rock y anacronismos a propósito, como el público cantando en las gradas. Heath Ledger joven lidera un grupo con buena onda entre sí.",
+      "advertencia": "Si esperás precisión histórica, los anacronismos constantes te van a sacar de la película.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 2666,
+      "title": "Dark City",
+      "year": 1998,
+      "conoce": true,
+      "razon": "La ciudad entera se reconstruye cada noche mientras los habitantes duermen, sin que lo recuerden. La pregunta de qué es real se instala antes de que el protagonista mismo la haga. Visualmente está muy cerca del expresionismo alemán.",
+      "advertencia": "El ritmo es pausado para lo que promete el póster de ciencia ficción de acción.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 8068,
+      "title": "Desperado",
+      "year": 1995,
+      "conoce": true,
+      "razon": "Robert Rodriguez filma la venganza como un comic en movimiento, con poses y cámara lenta todo el tiempo. Antonio Banderas está ahí para verse genial, no para tener un arco de personaje complejo.",
+      "advertencia": "La trama es apenas una excusa para las escenas de acción.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 605116,
+      "title": "Proyecto Power",
+      "year": 2020,
+      "conoce": true,
+      "razon": "La pastilla funciona como lotería de superpoderes, y la incertidumbre de qué va a pasar en cada toma es el motor de la película. Jamie Foxx y Joseph Gordon-Levitt llevan el costado policial mientras Dominique Fishback aporta la mirada más callejera.",
+      "advertencia": "El tercer acto se vuelve más genérico de lo que prometía la idea inicial.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 600583,
+      "title": "El poder del perro",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Benedict Cumberbatch juega a la masculinidad tóxica como una actuación constante, nunca del todo genuina. Jane Campion deja que el paisaje de Montana se sienta tan hostil como los personajes. Avanza por gestos y miradas, no por diálogo explicativo.",
+      "advertencia": "Si necesitás que te expliquen lo que pasa, esta película no lo hace nunca.",
+      "atencion": "alta"
+    },
+    {
+      "tmdb_id": 9477,
+      "title": "El rey Arturo",
+      "year": 2004,
+      "conoce": true,
+      "razon": "Despoja la leyenda artúrica de magia y la pone en clave histórica, con romanos retirándose de Britania. Clive Owen juega a un Arturo cansado de la guerra, no al rey mítico de la espada en la piedra.",
+      "advertencia": "Si vas buscando la versión con Merlín mago y Excalibur mítica, esta la despoja de casi todo eso.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 619778,
+      "title": "Maligno",
+      "year": 2021,
+      "conoce": true,
+      "razon": "James Wan arranca con pesadillas, parálisis y terror sobrenatural clásico, y termina yendo a un lugar que no es el esperable. Annabelle Wallis carga casi sola la primera mitad, con mucho primer plano y poca explicación.",
+      "advertencia": "Si preferís terror de un solo registro de principio a fin, esta cambia de tono a mitad de camino.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 228970,
+      "title": "Alma salvaje",
+      "year": 2014,
+      "conoce": true,
+      "razon": "Reese Witherspoon camina sola con la mochila como columna vertebral de toda la película. Los flashbacks van llenando por qué está ahí sin que se sienta forzado. Es más sobre el duelo y la relación con la madre que sobre la proeza física.",
+      "advertencia": "Si buscás una de aventura con peligro constante, el ritmo es más interno y contemplativo que de supervivencia.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 565426,
+      "title": "A todos los chicos: P.D. Todavía te quiero",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Sigue la fórmula de comedia romántica adolescente de Netflix, con Lara Jean dividida entre la seguridad de lo que tiene y la curiosidad por lo que podría haber sido. Funciona bien si ya seguiste la primera.",
+      "advertencia": "Si no viste la primera, buena parte de la tensión emocional no se entiende.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 522931,
+      "title": "El otro guardaespaldas 2",
+      "year": 2021,
+      "conoce": true,
+      "razon": "Vuelve a apostar al contraste entre la prolijidad de Ryan Reynolds y el caos de Samuel L. Jackson y Salma Hayek, que acá tiene mucho más protagonismo. Es acción con chiste permanente, sin intención de tomarse nada en serio.",
+      "advertencia": "Si te gustó la primera por la acción, acá el humor absurdo le gana bastante al suspenso.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 55787,
+      "title": "Agua para elefantes",
+      "year": 2011,
+      "conoce": true,
+      "razon": "El circo de la Gran Depresión funciona como escenario de clase, con los animales como otra forma más de propiedad. Robert Pattinson y Reese Witherspoon sostienen un romance clásico de época, sin grandes sorpresas.",
+      "advertencia": "El ritmo es lento y el romance sigue una fórmula bastante previsible.",
+      "atencion": "fondo"
+    },
+    {
+      "tmdb_id": 625568,
+      "title": "Salvaje",
+      "year": 2020,
+      "conoce": true,
+      "razon": "Arranca de un bocinazo en un semáforo y escala a algo desproporcionado, sin molestarse en explicar mucho más. Russell Crowe juega al tipo que ya no tiene nada que perder, sin intentar hacerlo simpático.",
+      "advertencia": "Si buscás algo con vueltas de guion, esta es mucho más bruta y directa que eso.",
+      "atencion": "media"
+    },
+    {
+      "tmdb_id": 37472,
+      "title": "Ip Man 2",
+      "year": 2010,
+      "conoce": true,
+      "razon": "Donnie Yen vuelve a hacer de Ip Man con la misma calma física de la primera. El conflicto con los ingleses le agrega una capa de orgullo nacional a las peleas de Wing Chun. Sammo Hung como rival le da a las coreografías un peso distinto.",
+      "advertencia": "Si no viste la primera, parte del peso del personaje de Ip Man como maestro se pierde.",
       "atencion": "media"
     }
   ]

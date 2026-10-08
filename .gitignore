@@ -29,6 +29,8 @@ data/*
 !data/ruleta-inventario.json
 !data/ruleta-cola.json
 !data/ruleta-exclusiones.json
+!data/ruleta-propuesta-500.json
+!data/ruleta-textos-reserva-2026-10-07.json
 
 # Permisos locales de Claude Code. NO se versiona y NO se lee: es configuracion
 # de la maquina del dueno, no del proyecto (`.claude/settings.json` y

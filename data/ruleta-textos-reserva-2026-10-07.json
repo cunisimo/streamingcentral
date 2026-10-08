@@ -1,0 +1,1022 @@
+{
+ "nota": "Reemplazos aprobados por el dueño (2026-10-07): todas las cortas elegibles de la reserva + las largas más votadas hasta 80. Orden: cortas por votos desc, luego largas por votos desc; desempate por tmdb_id.",
+ "ids": [
+  7461,
+  638974,
+  774825,
+  14254,
+  894205,
+  18269,
+  840882,
+  1110358,
+  576156,
+  586810,
+  736074,
+  517302,
+  816904,
+  664031,
+  1086260,
+  30974,
+  892153,
+  1072371,
+  874299,
+  801071,
+  575446,
+  1032950,
+  886396,
+  916053,
+  659067,
+  14317,
+  1000938,
+  913862,
+  16394,
+  653729,
+  821420,
+  1401905,
+  1094473,
+  75493,
+  1135408,
+  754219,
+  1688652,
+  72753,
+  749142,
+  84331,
+  1115191,
+  828900,
+  1429834,
+  280,
+  110415,
+  287947,
+  339846,
+  376867,
+  242,
+  203801,
+  406990,
+  50546,
+  480530,
+  1581,
+  4547,
+  302401,
+  10719,
+  1272,
+  146216,
+  72570,
+  37094,
+  75174,
+  5176,
+  9762,
+  193610,
+  46705,
+  762441,
+  9476,
+  2666,
+  8068,
+  605116,
+  600583,
+  9477,
+  619778,
+  228970,
+  565426,
+  522931,
+  55787,
+  625568,
+  37472
+ ],
+ "titulos": [
+  {
+   "tmdb_id": 7461,
+   "title": "En el punto de mira",
+   "year": 2008,
+   "genres": [
+    "Drama",
+    "Acción",
+    "Suspense",
+    "Crimen"
+   ],
+   "runtime": 90,
+   "overview": "El presidente de los Estados Unidos viaja a Salamanca para dar una conferencia. En medio del mitin, alguien intenta atentar contra su vida. La historia está contada a través de los ojos de ocho testigos: ocho versiones distintas sobre un único hecho. ¿Qué ocurrió realmente?"
+  },
+  {
+   "tmdb_id": 638974,
+   "title": "Criminales a la vista",
+   "year": 2023,
+   "genres": [
+    "Comedia",
+    "Misterio",
+    "Crimen"
+   ],
+   "runtime": 89,
+   "overview": "Nick y Audrey Spitz, ahora con su propia agencia de detectives, investigan un caso que marcará su carrera: el secuestro de su amigo multimillonario durante su boda."
+  },
+  {
+   "tmdb_id": 774825,
+   "title": "Ice Age: Las aventuras de Buck",
+   "year": 2022,
+   "genres": [
+    "Animación",
+    "Comedia",
+    "Familia",
+    "Aventura"
+   ],
+   "runtime": 82,
+   "overview": "La intrépida comadreja tuerta Buck Wild se une a dos traviesos hermanos zarigüeya en una nueva aventura a través del secreto y peligroso mundo de los dinosaurios.. Los hermanos zarigüeya Crash y Eddie deciden abandonar el grupo para conocer el mundo por ellos mismos. En su trayecto caen en el Mundo Perdido, la tierra interior en la que viven los dinosaurios."
+  },
+  {
+   "tmdb_id": 14254,
+   "title": "Presencias extrañas",
+   "year": 2009,
+   "genres": [
+    "Terror"
+   ],
+   "runtime": 87,
+   "overview": "Anna Rydell regresa a casa junto a su hermana -y mejor amiga- Alex, tras su estancia en un hospital mental. Pero su recuperación se pondrá en peligro por culpa de su cruel madrastra, de su padre ausente y de la presencia de un fantasma que habita en la casa... Remake americano de la película surcoreana \"Janghwa, hongryeon\", dirigida por Ji-woon Kim en 2003 y estrenada posteriormente en España bajo el título de \"Dos hermanas\"."
+  },
+  {
+   "tmdb_id": 894205,
+   "title": "La maldición del hombre lobo",
+   "year": 2022,
+   "genres": [
+    "Acción",
+    "Fantasía",
+    "Terror"
+   ],
+   "runtime": 55,
+   "overview": "En una noche oscura y sombría, un grupo secreto de matamonstruos surge de las sombras y se reúne en el siniestro templo de los Bloodstone tras la muerte de su líder. Tras una extraña y macabra ceremonia en su memoria, los participantes se ven arrastrados a una misteriosa y mortal competición por una poderosa reliquia, una cacería que acabará enfrentándolos a un peligroso monstruo."
+  },
+  {
+   "tmdb_id": 18269,
+   "title": "La dama y el vagabundo 2: Las aventuras de Golfillo",
+   "year": 2001,
+   "genres": [
+    "Animación",
+    "Familia",
+    "Romance",
+    "Aventura"
+   ],
+   "runtime": 69,
+   "overview": "Los encantadores perritos Reina y Golfo han sido padres de cuatro cachorros: Anette, Colette, Daniela y Golfillo. Este último es el más travieso de todos y se ve atraído por la libertad del mundo exterior lejos de las normas domésticas. Una noche escapa de casa y conoce a Ángela, una preciosa perrita huérfana que vive en las calles. Junto a ella y un grupo de nuevos amigos descubrirá un mundo desconocido para él. ¿Encontrará Golfillo la aventura de su vida en las calles, o aprenderá a valorar el amor que le brinda la familia que dejó atrás?"
+  },
+  {
+   "tmdb_id": 840882,
+   "title": "Fin de semana en Croacia",
+   "year": 2022,
+   "genres": [
+    "Suspense",
+    "Misterio"
+   ],
+   "runtime": 90,
+   "overview": "Cuando su mejor amiga desaparece durante una escapada de fin de semana de chicas a Croacia, Beth se empeña en descubrir qué pasó. Pero cada pista revela una nueva e inquietante mentira, y sus esfuerzos por descubrir la verdad sacan a la luz amargos secretos."
+  },
+  {
+   "tmdb_id": 1110358,
+   "title": "Yannick",
+   "year": 2023,
+   "genres": [
+    "Comedia",
+    "Drama",
+    "Suspense"
+   ],
+   "runtime": 67,
+   "overview": "En medio de una representación de la obra 'Le Cocu', Yannick se levanta e interrumpe el espectáculo para retomar el control."
+  },
+  {
+   "tmdb_id": 576156,
+   "title": "Los tortolitos",
+   "year": 2020,
+   "genres": [
+    "Romance",
+    "Comedia"
+   ],
+   "runtime": 87,
+   "overview": "A punto de separarse, una pareja se enreda involuntariamente en un extraño, divertido y misterioso asesinato. A medida que se acercan al momento de limpiar sus nombres y resolver el caso, necesitan descubrir cómo ellos y su relación pueden sobrevivir a esa noche."
+  },
+  {
+   "tmdb_id": 586810,
+   "title": "Mars Express",
+   "year": 2023,
+   "genres": [
+    "Animación",
+    "Ciencia ficción",
+    "Suspense"
+   ],
+   "runtime": 85,
+   "overview": "Aline Ruby es una testaruda detective privada, y su compañero Carlos Rivera lleva muerto cinco años, pero se ha 'reencarnado' en el cuerpo de un robot. Ambos se encuentran en una carrera contrarreloj hacia Marte. Su misión inicial es encontrar a Jun Chow, una estudiante de cibernética a la fuga, antes de que los asesinos que le pisan los talones puedan atraparla. Sin embargo, lo que los investigadores descubren por el camino es más grande de lo que ninguno de los dos podía esperar."
+  },
+  {
+   "tmdb_id": 736074,
+   "title": "Batman: El Largo Halloween, Parte 2",
+   "year": 2021,
+   "genres": [
+    "Animación",
+    "Misterio",
+    "Acción",
+    "Crimen"
+   ],
+   "runtime": 87,
+   "overview": "Mientras el joven justiciero de Gotham City, Batman, lucha por perseguir a un brutal asesino en serie, el fiscal de distrito Harvey Dent queda atrapado en una disputa que involucra a la familia criminal de los Falcones."
+  },
+  {
+   "tmdb_id": 517302,
+   "title": "EGO",
+   "year": 2022,
+   "genres": [
+    "Terror",
+    "Fantasía"
+   ],
+   "runtime": 86,
+   "overview": "Una joven gimnasta que intenta desesperadamente complacer a su exigente madre, descubre un extraño huevo. Ella lo esconde y lo mantiene caliente, pero cuando sale del cascarón, lo que emerge los sorprende a todos."
+  },
+  {
+   "tmdb_id": 816904,
+   "title": "Momias",
+   "year": 2023,
+   "genres": [
+    "Animación",
+    "Aventura",
+    "Fantasía",
+    "Familia"
+   ],
+   "runtime": 88,
+   "overview": "En las entrañas de la tierra, ¡existe una ciudad de momias! Por mandato imperial, la Princesa Nefer debe casarse con Thut, un ex auriga de carros. Ninguno desea el matrimonio; Nefer porque ansía la libertad, y Thut porque es alérgico al matrimonio. Pero los designios de los dioses son irrevocables: Thut deberá desposar a Nefer y custodiar el anillo real que el Faraón le ha otorgado; si algo le ocurriera a este, Thut perdería los ojos y la lengua. Mientras tanto, en nuestro mundo, Lord Carnaby lleva a cabo una excavación arqueológica y encuentra algo único: ¡un anillo de boda real egipcia! Thut debe ir al mundo de los humanos para recuperarlo. Le acompaña Sekhem, su hermano de 12 años, con su mascota cocodrilo, y Nefer. Juntos vivirán una gran aventura en la moderna Londres y descubrirán algo que no entraba en sus planes: enamorarse."
+  },
+  {
+   "tmdb_id": 664031,
+   "title": "En el mejor momento",
+   "year": 2020,
+   "genres": [
+    "Romance",
+    "Comedia"
+   ],
+   "runtime": 90,
+   "overview": "Marta puede ser huérfana y puede verse afectada por una enfermedad letal, pero es la persona más positiva que uno puede conocer. Quiere que un chico se enamore de ella. No cualquier chico, el más guapo de todos. Un día, pudo haber encontrado su pareja."
+  },
+  {
+   "tmdb_id": 1086260,
+   "title": "La astronauta",
+   "year": 2025,
+   "genres": [
+    "Terror",
+    "Ciencia ficción",
+    "Suspense"
+   ],
+   "runtime": 90,
+   "overview": "Sam Walker (Kate Mara) regresa en extrañas circunstancias de su primera misión espacial. El general William Harris (Laurence Fishburne) la obliga a permanecer en cuarentena, bajo la estricta vigilancia de la NASA, en una casa aislada de alta seguridad. Pese a vivir en una aparente normalidad, Walker empieza a percibir sucesos inquietantes en los alrededores de la propiedad. Es entonces cuando comienza a temer que no haya vuelto sola a la Tierra."
+  },
+  {
+   "tmdb_id": 30974,
+   "title": "Vertige",
+   "year": 2009,
+   "genres": [
+    "Acción",
+    "Suspense",
+    "Terror"
+   ],
+   "runtime": 84,
+   "overview": "Llevados por el ansia de aventura y la euforia de verse reunidos, un grupo de amigos emprende la escalada de una alta montaña. A Chloé, Guillaume, Fred, Karine y Loïc, les crea problemas no sólo el vértigo que les produce la altura de las cimas, sino también sus sentimientos soterrados. Por si fuera poco, se dan cuenta con espanto de que ni siquiera están solos. A partir de ese momento, la expedición se convierte en una auténtica pesadilla."
+  },
+  {
+   "tmdb_id": 892153,
+   "title": "Tom y Jerry: ¡Arriba, vaquero!",
+   "year": 2022,
+   "genres": [
+    "Animación",
+    "Comedia",
+    "Familia",
+    "Western"
+   ],
+   "runtime": 75,
+   "overview": "Esta vez, los rivales se unen para ayudar a una vaquera y su hermano a salvar su granja de un acaparador de tierras codicioso, ¡y van a necesitar ayuda! Los tres sobrinos precoces de Jerry están listos para la acción, y Tom está reuniendo una pandilla de perros de la pradera. Pero, ¿puede una banda de alimañas derrotar a un bandido engañoso decidido a engañar a una damisela en apuros? No importa lo que pase con Tom y Jerry en la silla de montar, ¡será un buen momento!"
+  },
+  {
+   "tmdb_id": 1072371,
+   "title": "Jules",
+   "year": 2023,
+   "genres": [
+    "Comedia",
+    "Ciencia ficción",
+    "Drama"
+   ],
+   "runtime": 87,
+   "overview": "Un platillo volador aterriza en el patio trasero de un anciano de los suburbios con problemas de memoria, que forma un vínculo con el alienígena asustado que está dentro."
+  },
+  {
+   "tmdb_id": 874299,
+   "title": "South Park: Post Covid",
+   "year": 2021,
+   "genres": [
+    "Animación",
+    "Comedia",
+    "Película de TV"
+   ],
+   "runtime": 59,
+   "overview": "¿Qué pasó con los niños que vivieron la pandemia? Stan, Kyle, Cartman y Kenny sobrevivieron, pero nunca volverán a ser el mismo Post Covid."
+  },
+  {
+   "tmdb_id": 801071,
+   "title": "The Jack in the Box: El despertar",
+   "year": 2022,
+   "genres": [
+    "Terror"
+   ],
+   "runtime": 89,
+   "overview": "Cuando una mujer moribunda abre un Jack-in-the-box antiguo, entra en un trato con el demonio interno que curaría su enfermedad a cambio de ayudarla a reclamar seis víctimas inocentes."
+  },
+  {
+   "tmdb_id": 575446,
+   "title": "Nuevo Orden",
+   "year": 2020,
+   "genres": [
+    "Drama",
+    "Suspense"
+   ],
+   "runtime": 88,
+   "overview": "En un futuro cercano, un levantamiento popular en la Ciudad de México interrumpe una boda celebrada en la casa de una familia adinerada. Una vez sofocados los disturbios, descubren que la novia ha desaparecido y ruegan a los militares que los ayuden a localizarla."
+  },
+  {
+   "tmdb_id": 1032950,
+   "title": "El abismo del infierno",
+   "year": 2022,
+   "genres": [
+    "Terror",
+    "Misterio"
+   ],
+   "runtime": 90,
+   "overview": "Marek, un joven policía que se hace pasar por un clérigo, tiene la tarea de averiguar sobre la desaparición de unos presos atormentados en un monasterio cerrado."
+  },
+  {
+   "tmdb_id": 886396,
+   "title": "Batman y Superman: La Batalla de los Super hijos",
+   "year": 2022,
+   "genres": [
+    "Animación",
+    "Acción",
+    "Ciencia ficción"
+   ],
+   "runtime": 79,
+   "overview": "Comienza cuando Jonathan Kent, de once años, descubre que tiene superpoderes, empujando al semi kryptoniano al complicado mundo de los superhéroes y los supervillanos, que ahora están siendo atacados por una fuerza alienígena malvada conocida como Starro”."
+  },
+  {
+   "tmdb_id": 916053,
+   "title": "Algo de Tiffany’s",
+   "year": 2022,
+   "genres": [
+    "Romance",
+    "Comedia",
+    "Drama"
+   ],
+   "runtime": 88,
+   "overview": "La vida sentimental de una joven de Nueva York se complica, cuando recibe equivocadamente de su novio un anillo de compromiso comprado en Tiffany por otra persona y destinado a otra mujer."
+  },
+  {
+   "tmdb_id": 659067,
+   "title": "La tierra y la sangre",
+   "year": 2020,
+   "genres": [
+    "Acción",
+    "Suspense"
+   ],
+   "runtime": 80,
+   "overview": "Tras años dirigiendo un próspero aserradero en medio de los bosques de las Ardenas, contratando a ex presidiarios y jóvenes delincuentes, Said recibe la visita inesperada de los miembros de un cártel de drogas que le exigen que guarde dentro de su fábrica una gran cantidad de cocaína."
+  },
+  {
+   "tmdb_id": 14317,
+   "title": "Los Thornberrys: La película",
+   "year": 2002,
+   "genres": [
+    "Familia",
+    "Comedia",
+    "Aventura",
+    "Animación"
+   ],
+   "runtime": 82,
+   "overview": "Primera adaptación al cine de la serie televisiva de Nickelodeon, protagonizada por la aventurera y pintoresca familia Thornberry. Durante un viaje de safari en África realizando documentales sobre la naturaleza, la hija Eliza conoce a un misterioso chamán que le concede el don de poder hablar con los animales. Pero la impondrá una condición; si revela su don, lo perderá para siempre. Gracias a su nuevo poder, la joven descubre las intenciones de un grupo de cazadores furtivos para matar una manada de elefantes de la sabana. Eliza y su amigo el chimpancé Darwin se proponen evitarlo."
+  },
+  {
+   "tmdb_id": 1000938,
+   "title": "La familia tiene un precio",
+   "year": 2022,
+   "genres": [
+    "Comedia"
+   ],
+   "runtime": 90,
+   "overview": "Cuando Alessandra y Emilio se mudan a la ciudad dejando solos a sus padres Carlo y Anna, la vida cambia para todos. En unos meses, los hijos se olvidan de sus padres: algunas llamadas telefónicas, cumpleaños perdidos, funerales perdidos. Pero la gota que colmó el vaso para estos padres es saber que sus hijos no estarán presentes en Navidad. La pareja enfadada y desesperada hace un último esfuerzo: pretenden haber heredado seis millones de euros de una tía anciana. Dinero para comprar afecto."
+  },
+  {
+   "tmdb_id": 913862,
+   "title": "Caída en picado: El caso contra Boeing",
+   "year": 2022,
+   "genres": [
+    "Documental"
+   ],
+   "runtime": 89,
+   "overview": "Los investigadores revelan cómo la supuesta prioridad de las ganancias de Boeing sobre la seguridad podría haber contribuido a dos accidentes catastróficos con meses de diferencia."
+  },
+  {
+   "tmdb_id": 16394,
+   "title": "Winnie the Pooh: Una primavera con Rito",
+   "year": 2004,
+   "genres": [
+    "Aventura",
+    "Animación",
+    "Comedia",
+    "Familia"
+   ],
+   "runtime": 65,
+   "overview": "Cuento está protagonizado por Winnie the Pooh y su pequeño amiguito, Roo. Cada año Rabbit trae un huevo de Pascua. Pero este año no ha sido así. Si no hay huevo de Pascua significa que no hay ningún dulce para Pooh, nada de caza para Tigger, ninguna cesta para el cochinillo, ningunas orejas mullidas de conejo para Eeyore y nada de diversión para Roo. Rabbit espera que todos entren en acción: ¡que frieguen, quiten el polvo, y barran! Pero el amor y la sabiduría de Roo demuestran a Rabbit que los días especiales deben ser compartidos de una manera especial. (FILMAFFINITY)"
+  },
+  {
+   "tmdb_id": 653729,
+   "title": "Time",
+   "year": 2020,
+   "genres": [
+    "Documental"
+   ],
+   "runtime": 81,
+   "overview": "Fox Rich, matriarca indomable y abolicionista actual, se esfuerza por mantener unida a su familia mientras lucha por la liberación de su esposo encarcelado. Una historia de amor íntima, épica y poco convencional, filmada durante dos décadas."
+  },
+  {
+   "tmdb_id": 821420,
+   "title": "Hasta el final",
+   "year": 2022,
+   "genres": [
+    "Suspense",
+    "Misterio"
+   ],
+   "runtime": 85,
+   "overview": "Una excampeona de boxeo lleva a cabo la misión de su vida cuando decide buscar a su hermana desaparecida."
+  },
+  {
+   "tmdb_id": 1401905,
+   "title": "No te mueras: El hombre que quiere vivir para siempre",
+   "year": 2025,
+   "genres": [
+    "Documental"
+   ],
+   "runtime": 88,
+   "overview": "En este documental, el magnate Bryan Johnson arriesga su cuerpo y su fortuna para desafiar al envejecimiento y alargar su vida hasta límites desconocidos."
+  },
+  {
+   "tmdb_id": 1094473,
+   "title": "Bambi, una vida en el bosque",
+   "year": 2024,
+   "genres": [
+    "Documental",
+    "Familia",
+    "Aventura"
+   ],
+   "runtime": 78,
+   "overview": "Adaptación del libro “Bambi, la historia de una vida en el bosque” de Felix Salten, la película cuenta las aventuras de un joven cervatillo, rodeado de su madre y de los animales del bosque: su amigo el cuervo, el conejo, el mapache... Descubre el mundo de los árboles y sus secretos. Cada día, su madre lo educa para que pueda crecer fuerte. Pero cuando llega el otoño, Bambi se aventura a la intemperie cuando los cazadores lo separan para siempre de su madre."
+  },
+  {
+   "tmdb_id": 75493,
+   "title": "Papá se volvió loco",
+   "year": 2005,
+   "genres": [
+    "Comedia"
+   ],
+   "runtime": 90,
+   "overview": "Con una apacible vida de casados, Juan y Ana deciden pasar una segunda luna de miel en el Caribe para revivir el romance y la pasión. Sin embargo, una aparición inesperada va a dar por tierra los planes de la pareja. Una joven morena, veinteañera y con un cuerpo escultural se transforma en el sueño de Juan. Después de verla repetidas veces compartiendo el mismo hotel y las mismas playas, decide enamorarla. Cuando llega el momento de regresar a Buenos Aires deviene el dilema: ¿Qué hacer? ¿Abandonar a su mujer y a sus hijos o dejar a la morena?"
+  },
+  {
+   "tmdb_id": 1135408,
+   "title": "La Chica Que Mato A Sus Padres: Confesión",
+   "year": 2023,
+   "genres": [
+    "Drama",
+    "Crimen",
+    "Suspense",
+    "Terror"
+   ],
+   "runtime": 85,
+   "overview": "Presenta el punto de vista de Daniel Cravinhos sobre los eventos que llevaron a la muerte de la pareja Richthofen, padres de su entonces novia Suzane von Richthofen. Un drama criminal real sobre uno de los casos de asesinato mas impactantes de Brasil."
+  },
+  {
+   "tmdb_id": 754219,
+   "title": "72 Horas Después",
+   "year": 2020,
+   "genres": [
+    "Acción",
+    "Crimen",
+    "Misterio",
+    "Suspense"
+   ],
+   "runtime": 87,
+   "overview": "Después de mezclarse con un peligroso sindicato del crimen, un policía encubierto se despierta y descubre que extraña a su pareja, a su esposa y a tres días de su vida."
+  },
+  {
+   "tmdb_id": 1688652,
+   "title": "Gary",
+   "year": 2026,
+   "genres": [
+    "Drama",
+    "Comedia"
+   ],
+   "runtime": 60,
+   "overview": "Dos amigos emprenden un viaje de trabajo, pero se topan con retos inesperados al intentar cumplir su misión. A medida que solucionan problemas y conectan con los lugareños, la experiencia les deja una huella imborrable y les ofrece una nueva perspectiva de su amistad."
+  },
+  {
+   "tmdb_id": 72753,
+   "title": "Strike",
+   "year": 2000,
+   "genres": [
+    "Familia",
+    "Drama",
+    "Comedia",
+    "Película de TV"
+   ],
+   "runtime": 87,
+   "overview": "Una pandilla de adolescentes matan el tiempo en la bolera del padre de uno de ellos. Son muy buenos jugadores, les gusta la música swing, pero no son para nada los chicos más populares de su escuela. Todo cambiará al celebrarse un campeonato entre distintas escuelas. Drama juvenil realizado para la televisión por la productora Disney. El director es Rod Daniel, un prestigioso director de series televisivas, entre las que destacan \"Boston Common\" o \"Raymond\". Entre su filmografía también aparecen títulos de comedias infantiles como \"Beethoven 2, la familia crece\" o \"Super agente K-9\"."
+  },
+  {
+   "tmdb_id": 749142,
+   "title": "Olga",
+   "year": 2021,
+   "genres": [
+    "Drama"
+   ],
+   "runtime": 90,
+   "overview": "2013. Una gimnasta ucraniana de 15 años está dividida entre Suiza -donde se entrena para el Campeonato Europeo como preparación para los Juegos Olímpicos- y Kiev, donde su madre trabaja como periodista, informando sobre el Euromaidán."
+  },
+  {
+   "tmdb_id": 84331,
+   "title": "La Banda del Patio vuelve a la guardería",
+   "year": 2003,
+   "genres": [
+    "Familia",
+    "Comedia",
+    "Animación"
+   ],
+   "runtime": 61,
+   "overview": "La diversión comienza cuando todos se dirigen a un parque infantil abandonado para probar el nuevo equipo de croquet de Mickey. Rodeados de una nueva pandilla de traviesos parvulitos, los \"mayores\" son secuestrados y descubren que el jefe pegajoso se ha autoproclamado nuevo rey de la guardería."
+  },
+  {
+   "tmdb_id": 1115191,
+   "title": "Intoxicación: La cruda verdad de nuestra comida",
+   "year": 2023,
+   "genres": [
+    "Documental",
+    "Crimen"
+   ],
+   "runtime": 83,
+   "overview": "Mediante reveladoras entrevistas con expertos y familiares de víctimas, este fascinante documental analiza las enfermedades mortales transmitidas por alimentos en EE. UU."
+  },
+  {
+   "tmdb_id": 828900,
+   "title": "Aqua Teen para siempre: Plantasma",
+   "year": 2022,
+   "genres": [
+    "Animación",
+    "Comedia",
+    "Ciencia ficción"
+   ],
+   "runtime": 76,
+   "overview": "Los sinvergüenzas favoritos de todos, los Aqua Teens, y el vecino pervertido favorito de todos, Carl, se separan y vuelven a estar juntos para luchar contra el señor corporativo favorito de todos, Amazin, liderado por el magnate de la tecnología favorito de todos, Nei y su compañero científico de confianza, Elmer."
+  },
+  {
+   "tmdb_id": 1429834,
+   "title": "Casi familia",
+   "year": 2025,
+   "genres": [
+    "Comedia"
+   ],
+   "runtime": 80,
+   "overview": "Un padre brasileño da con la horma de su zapato cuando conoce al suegro argentino de su hija... y un viaje a Bariloche se convierte en un escenario de ego cultural lleno de roces."
+  },
+  {
+   "tmdb_id": 280,
+   "title": "Terminator 2: El juicio final",
+   "year": 1991,
+   "genres": [
+    "Acción",
+    "Suspense",
+    "Ciencia ficción"
+   ],
+   "runtime": 137,
+   "overview": "Ha pasado once años desde que Sarah Connor fue marcada como objetivo para ser eliminada por un cyborg del futuro. Ahora su hijo John, el futuro líder de la resistencia, es el objetivo de un Terminator más moderno, más mortífero. Una vez más, la resistencia se las ha ingeniado para enviar un protector de vuelta al pasado para intentar salvar a John y a su madre Sarah."
+  },
+  {
+   "tmdb_id": 110415,
+   "title": "Rompenieves",
+   "year": 2013,
+   "genres": [
+    "Acción",
+    "Ciencia ficción",
+    "Drama"
+   ],
+   "runtime": 126,
+   "overview": "Un experimento para solucionar el calentamiento global acabó con la mayoría de vida existente en el planeta. El último tren llamado Snowpiercer (Rompenieves) se mueve en círculos por el mundo, a través de un desierto de hielo y nieve. Los últimos supervivientes de la Tierra se amontonan en sus vagones. El joven Curtis (Chris Evans) iniciará una revolución desde los vagones de cola."
+  },
+  {
+   "tmdb_id": 287947,
+   "title": "¡Shazam!",
+   "year": 2019,
+   "genres": [
+    "Acción",
+    "Comedia",
+    "Fantasía"
+   ],
+   "runtime": 132,
+   "overview": "Todos llevamos un superhéroe dentro, solo se necesita un poco de magia para sacarlo a la luz. Cuando Billy Batson, un niño de acogida de 14 años que ha crecido en las calles, grita la palabra 'SHAZAM!' se convierte en el Superhéroe adulto Shazam, por cortesía de un antiguo mago. Dentro de un cuerpo musculoso y divino, Shazam esconde un corazón de niño. Pero lo mejor es que en esta versión de adulto consigue realizar todo lo que le gustaría hacer a cualquier adolescente con superpoderes: ¡divertirse con ellos! ¿Volar? ¿Tener visión de rayos X? ¿Disparar un rayo con las manos? ¿Saltarse el examen de sociales? Shazam va a poner a prueba los límites de sus habilidades con la inconsciencia propia de un niño. Pero necesitará dominar rápidamente esos poderes para luchar contra las letales fuerzas del mal que controla el Dr. Thaddeus Sivana."
+  },
+  {
+   "tmdb_id": 339846,
+   "title": "Baywatch: Los vigilantes de la playa",
+   "year": 2017,
+   "genres": [
+    "Comedia",
+    "Acción",
+    "Crimen"
+   ],
+   "runtime": 116,
+   "overview": "Mitch Buchannon, un estricto y esforzado socorrista de la antigua escuela, deberá trabajar codo con codo con el rebelde Matt Brody, un joven ex nadador olímpico caído en desgracia al que le gusta saltarse las normas. A pesar de tener personalidades opuestas, los dos socorristas deberán unir fuerzas y formar equipo. Juntos descubrirán una trama criminal, en torno a drogas y asesinos, que amenaza el futuro de la Bahía. Su objetivo será proteger la playa de su destrucción a manos de un magnate del petróleo."
+  },
+  {
+   "tmdb_id": 376867,
+   "title": "Moonlight",
+   "year": 2016,
+   "genres": [
+    "Drama"
+   ],
+   "runtime": 111,
+   "overview": "Chiron es un joven afroamericano con una difícil infancia y adolescencia, que crece en una zona conflictiva de Miami. A medida que pasan los años, el joven se descubre a sí mismo intentando sobrevivir en diferentes situaciones. Durante todo ese tiempo, Chirón tendrá que hacer frente a la drogadicción de su madre y al violento ambiente de su colegio y su barrio."
+  },
+  {
+   "tmdb_id": 242,
+   "title": "El padrino III",
+   "year": 1990,
+   "genres": [
+    "Crimen",
+    "Drama",
+    "Suspense"
+   ],
+   "runtime": 162,
+   "overview": "Michael Corleone, heredero del imperio de don Vito Corleone, intenta rehabilitarse socialmente y legitimar todas las posesiones de la familia negociando con el Vaticano. Después de luchar toda su vida se encuentra cansado y centra todas sus esperanzas en encontrar un sucesor que se haga cargo de los negocios. Vincent, el hijo ilegítimo de su hermano Sonny, parece ser el elegido."
+  },
+  {
+   "tmdb_id": 203801,
+   "title": "Operación U.N.C.L.E.",
+   "year": 2015,
+   "genres": [
+    "Comedia",
+    "Acción",
+    "Aventura"
+   ],
+   "runtime": 116,
+   "overview": "Guerra fría, años 60. Narra las aventuras de dos agentes secretos que se parecen más de lo que creen: Napoleon Solo, de la CIA, e Illya Kuryakin, del KGB. Ambos se ven obligados a olvidar sus diferencias y formar un equipo cuya misión será poner fin a una misteriosa organización criminal internacional que pretende desestabilizar el frágil equilibrio de poder provocado por la proliferación de las armas nucleares. La hija de un científico alemán desaparecido es la clave para infiltrarse en la organización, encontrar al científico y evitar una catástrofe mundial."
+  },
+  {
+   "tmdb_id": 406990,
+   "title": "Siete hermanas",
+   "year": 2017,
+   "genres": [
+    "Ciencia ficción",
+    "Suspense",
+    "Misterio",
+    "Acción"
+   ],
+   "runtime": 123,
+   "overview": "En un futuro distópico en el que la sobrepoblación y la hambruna han obligado al gobierno a implantar una política de un único hijo, siete hermanas, cada una con el nombre de un día de la semana, luchan por sobrevivir y pasar inadvertidas haciéndose pasar por una sola persona cuando salen a la calle: Karen Settman. Pero un día una de ella, Lunes, desaparece sin dejar rastro. Las otras hermanas intentarán encontrarla."
+  },
+  {
+   "tmdb_id": 50546,
+   "title": "Sígueme el rollo",
+   "year": 2011,
+   "genres": [
+    "Comedia",
+    "Romance"
+   ],
+   "runtime": 117,
+   "overview": "Danny Maccabee es un cirujano plástico que siempre finge estar casado para así no comprometerse con ninguna mujer. Pero un día conoce a la despampanante Palmer, una joven con la que quiere algo más serio. El problema es que cuando Palmer descubre su anillo de casado, piensa que lo está, así que Danny decide contratar a su ayudante Katherine, una madre soltera con hijos, para que finjan ser su familia. Su intención es demostrarle a Palmer que su amor por ella es tan grande que está a punto de divorciarse de su mujer."
+  },
+  {
+   "tmdb_id": 480530,
+   "title": "Creed II: La leyenda de Rocky",
+   "year": 2018,
+   "genres": [
+    "Drama",
+    "Acción"
+   ],
+   "runtime": 130,
+   "overview": "Adonis Creed se debate entre las obligaciones personales y el entrenamiento para su próxima gran pelea, con el desafío de su vida por delante. Enfrentarse a un oponente que tiene vínculos con el pasado de su familia solo intensifica su inminente batalla en el ring. Afortunadamente Rocky Balboa está a su lado a lo largo de todo el camino, y juntos se cuestionarán por lo que vale la pena luchar y descubrirán que nada es más importante que la familia..."
+  },
+  {
+   "tmdb_id": 1581,
+   "title": "The Holiday (Vacaciones)",
+   "year": 2006,
+   "genres": [
+    "Comedia",
+    "Romance"
+   ],
+   "runtime": 135,
+   "overview": "Amanda Woods, una chica americana que posee una próspera agencia de publicidad especializada en trailers de películas, vive en el sur de California y acaba de romper con su novio. Por su parte, Iris Simpkins, redactora de la popular columna de bodas para el London Daily Telegraph, vive en una encantadora casa de campo en Inglaterra y sus relaciones con los hombres tampoco son fáciles. A través de internet llegan a un acuerdo para intercambiarse sus respectivas viviendas durante las Navidades."
+  },
+  {
+   "tmdb_id": 4547,
+   "title": "La habitación del pánico",
+   "year": 2002,
+   "genres": [
+    "Crimen",
+    "Drama",
+    "Suspense"
+   ],
+   "runtime": 112,
+   "overview": "La recién separada Meg Altman y su hija Sarah se mudan a una lujosa mansión en Nueva York. Pero cuando tres intrusos invaden brutalmente su hogar, las dos se encierran en \"la habitación del antipánico\", una cámara oculta construida como refugio, con cuatro muros de hormigón, línea de teléfono independiente, un conjunto de monitores que controlan todos los rincones de la casa y una impenetrable puerta de acero."
+  },
+  {
+   "tmdb_id": 302401,
+   "title": "Snowden",
+   "year": 2016,
+   "genres": [
+    "Drama",
+    "Historia",
+    "Crimen",
+    "Suspense"
+   ],
+   "runtime": 135,
+   "overview": "Basada en el libro \"The Snowden files. The inside story of the world's most wanted man\" escrito por Luke Harding, y en un libro escrito por Anatoly Kucherena, el abogado ruso de Edward Snowden. Narra los acontecimientos que acompañaron la publicación por parte del diario The Guardian de los documentos clasificados que aportó Edward Snowden sobre el programa de vigilancia mundial secreto de la NSA (Agencia de Seguridad Nacional) en 2013."
+  },
+  {
+   "tmdb_id": 10719,
+   "title": "Elf",
+   "year": 2003,
+   "genres": [
+    "Comedia",
+    "Familia",
+    "Fantasía"
+   ],
+   "runtime": 97,
+   "overview": "Una Nochebuena, en un orfanato, un bebé gatea dentro del saco de regalos de Santa Claus y acaba en el taller de éste en el Polo Norte. Aunque allí es adoptado y educado como un elfo, al crecer, se hace tres veces más grande que los habitantes de la región. Parece claro que nunca encajará en el mundo de los elfos; lo que necesita es encontrar a su verdadera familia. Con esta intención viaja a Nueva York, donde descubrirá que la vida no consiste sólo en patinar y comer dulces; así que vuelve a sentirse otra vez fuera lugar. Consigue, no obstante, encontrar a su padre, Walter, un editor de libros infantiles adicto al trabajo y al dinero que figura en la lista negra de Santa Claus. Buddy también encuentra a una nueva madre y descubre que su hermanastro de diez años no cree en los elfos ni en Santa Claus ni en las Navidades. En realidad todo el mundo parece haber olvidado el verdadero significado de la Navidad."
+  },
+  {
+   "tmdb_id": 1272,
+   "title": "Sunshine",
+   "year": 2007,
+   "genres": [
+    "Ciencia ficción",
+    "Suspense"
+   ],
+   "runtime": 107,
+   "overview": "En el 2057, ante la inminente extinción de la humanidad a causa del envejecimiento del Sol, una nave espacial debe reactivar el astro con un dispositivo nuclear. Pero durante el viaje, la tripulación recibe una señal de socorro de la nave espacial Ícaro I, desaparecida años atrás tras intentar realizar la misma misión."
+  },
+  {
+   "tmdb_id": 146216,
+   "title": "Red II",
+   "year": 2013,
+   "genres": [
+    "Acción",
+    "Aventura",
+    "Comedia",
+    "Crimen",
+    "Suspense"
+   ],
+   "runtime": 116,
+   "overview": "El agente retirado de operaciones encubiertas la CIA, Frank Moses, vuelve a reunir a su peculiar equipo de élite para emprender la búsqueda a nivel global de un dispositivo nuclear portátil desaparecido. Por el camino tendrán que enfrentarse a un ejército de implacables asesinos, despiadados terroristas y oficiales del Gobierno enloquecidos por el poder; todos ansiosos por hacerse con un arma devastadora… y todos muy poco conscientes de lo que puede suponer enfrentarse al equipo de Retirados Extremadamente Peligrosos y sus tácticas de la vieja escuela."
+  },
+  {
+   "tmdb_id": 72570,
+   "title": "Todos los días de mi vida",
+   "year": 2012,
+   "genres": [
+    "Drama",
+    "Romance"
+   ],
+   "runtime": 104,
+   "overview": "Un accidente de coche deja a Paige en coma. Cuando se despierta ha perdido la memoria, y ni siquiera reconoce a su marido Leo, con el que llevaba poco tiempo casada. Leo tendrá entonces que trabajar para ganarse de nuevo el corazón de su amada esposa."
+  },
+  {
+   "tmdb_id": 37094,
+   "title": "Un día de furia",
+   "year": 1993,
+   "genres": [
+    "Crimen",
+    "Drama",
+    "Suspense"
+   ],
+   "runtime": 113,
+   "overview": "En Los Ángeles, durante una jornada especialmente agobiante a causa del calor y del colapso del tráfico, de repente, un ciudadano normal se rebela de manera violenta y destructiva contra todo lo que lo rodea. Bill Foster (Michael Douglas) no es más que un hombre corriente que supera como puede las frustraciones de cada día y que lo único que quiere es regresar a casa. Un oficial del departamento de policía (Robert Duvall) intentará poner fin a su violencia y agresividad."
+  },
+  {
+   "tmdb_id": 75174,
+   "title": "Infierno blanco",
+   "year": 2012,
+   "genres": [
+    "Acción",
+    "Aventura",
+    "Suspense"
+   ],
+   "runtime": 115,
+   "overview": "En “Infierno blanco”, el personaje interpretado por Liam Neeson es el líder de un indisciplinado grupo de trabajadores de una refinería cuyo avión se estrella en las remotas montañas de Alaska. Los supervivientes, expuestos a heridas mortales y un tiempo inclemente, disponen de pocos días para escapar de los gélidos elementos. Y por si el terrible frío fuera poco enemigo, una manada de lobos salvajes, amenazantes y sanguinarios, persiguen incansablemente a sus presas humanas. A medida que las indefensas víctimas caen una a una, las posibilidades de supervivencia del último de estos hombres son cada vez más remotas."
+  },
+  {
+   "tmdb_id": 5176,
+   "title": "El tren de las 3:10",
+   "year": 2007,
+   "genres": [
+    "Western"
+   ],
+   "runtime": 117,
+   "overview": "Remake del film de 1957 \"El Tren de las 3:10\", de Delmer Daves. Dan Evans es un típico ranchero de un pueblo de Arizona y veterano de la Guerra de Secesión que, para aliviar sus penurias económicas, decide escoltar al peligroso forajido Ben Wade mientras llega el tren que tiene que llevarlo ante la justicia. Pero no todo saldrá bien y la violencia no tardará en aparecer: durante ese tiempo se inicia una dramática lucha psicológica entre ambos hombres mientras las compañeros del forajido intentan liberarle."
+  },
+  {
+   "tmdb_id": 9762,
+   "title": "Bailando (Step Up)",
+   "year": 2006,
+   "genres": [
+    "Música",
+    "Drama",
+    "Romance",
+    "Crimen"
+   ],
+   "runtime": 104,
+   "overview": "Tyler Gage (Channing Tatum) ha crecido y pasado toda su vida en los barrios más peligrosos de la ciudad de Baltimore y sabe que es poco probable que alguna vez salga de ahí. Un día, tras un roce con la ley, Tyler es sentenciado a realizar un servicio comunitario en la Escuela de Artes de Maryland. Allí conoce a Nora (Jenna Dewan), una atractiva bailarina que está buscando desesperadamente a alguien que sustituya a su compañero, de baja por accidente, antes de la importantísima Exhibición Senior de la escuela."
+  },
+  {
+   "tmdb_id": 193610,
+   "title": "No hay dos sin tres",
+   "year": 2014,
+   "genres": [
+    "Comedia",
+    "Romance"
+   ],
+   "runtime": 109,
+   "overview": "Una mujer se entera de que el hombre con quien sale está casado. Además descubre que tiene mucho en común con la esposa, por lo que ambas, junto a su actual amante, deciden vengarse de él por sus infidelidades."
+  },
+  {
+   "tmdb_id": 46705,
+   "title": "Blue Valentine",
+   "year": 2010,
+   "genres": [
+    "Drama",
+    "Romance"
+   ],
+   "runtime": 112,
+   "overview": "Dean y Cindy llevan juntos seis años, en los que ha florecido una apasionada historia de amor, han tenido una hija juntos y han decidido casarse. Ahora su amor empieza a desmoronarse: Cindy ha perdido interés por la relación, y en un intento por juntar las piezas y reconstruir lo que habían construido juntos, Dean propone ir a pasar la noche a un hotel temático, donde eligen la “habitación del futuro”. Desde este futuro, que Dean y Cindy difícilmente podían haber intuido años atrás, iremos conociendo la historia de esta pareja. Una historia que va desvelando el misterio de por qué incluso las relaciones más esperanzadoras e intensas pueden irse al traste, en un viaje emocional que hace que dos personas ya nunca vuelvan a ser las mismas."
+  },
+  {
+   "tmdb_id": 762441,
+   "title": "Un lugar tranquilo: Día uno",
+   "year": 2024,
+   "genres": [
+    "Terror",
+    "Ciencia ficción",
+    "Suspense"
+   ],
+   "runtime": 100,
+   "overview": "Una mujer llamada Sam trata de sobrevivir a una invasión en la ciudad de Nueva York por criaturas alienígenas sedientas de sangre con oídos ultrasónicos. Tercera entrega de la saga y precuela de las dos anteriores."
+  },
+  {
+   "tmdb_id": 9476,
+   "title": "Destino de caballero",
+   "year": 2001,
+   "genres": [
+    "Aventura",
+    "Drama",
+    "Romance",
+    "Acción"
+   ],
+   "runtime": 132,
+   "overview": "Edad Media, siglo XIV. William es un joven plebeyo extraordinariamente dotado para justas y torneos. Tras la repentina muerte de su maestro, en compañía de sus amigos y escuderos Roland y Wat, se lanza a la aventura y se hace pasar por un noble caballero. Durante sus viajes conocerá a Chaucer, un escritor que falsificará un árbol genealógico que justifique el título nobiliario del que se ha apropiado."
+  },
+  {
+   "tmdb_id": 2666,
+   "title": "Dark City",
+   "year": 1998,
+   "genres": [
+    "Misterio",
+    "Ciencia ficción"
+   ],
+   "runtime": 100,
+   "overview": "Al despertar solo en un extraño hotel y habiendo perdido la memoria, John Murdoch se ve envuelto en una peligrosa búsqueda de su identidad en una ciudad donde la noche parece nunca terminar, mientras es perseguido por las autoridades como el autor de una serie de sádicos y brutales asesinatos."
+  },
+  {
+   "tmdb_id": 8068,
+   "title": "Desperado",
+   "year": 1995,
+   "genres": [
+    "Suspense",
+    "Acción",
+    "Crimen"
+   ],
+   "runtime": 104,
+   "overview": "Un joven mariachi marcado por la fatalidad y el destino se sumerge en el oscuro mundo del hampa cargado con un viejo estuche de guitarra que esconde todo tipo de armas. Su objetivo es seguir la sangrienta pista que le lleva hasta el infame narcotraficante Bucho. Con la ayuda de la dueña de un café de un pequeño pueblo tomado por un traficante de drogas, se enfrentará al bandido en un duelo marcado por la pólvora, la sangre y la acción."
+  },
+  {
+   "tmdb_id": 605116,
+   "title": "Proyecto Power",
+   "year": 2020,
+   "genres": [
+    "Acción",
+    "Crimen",
+    "Ciencia ficción",
+    "Suspense"
+   ],
+   "runtime": 113,
+   "overview": "Comienza a correrse la voz por las calles de Nueva Orleans de una misteriosa pastilla nueva que le confiere superpoderes únicos a cada persona que la consume. ¿La trampa? No sabes qué puede pasar hasta que la tomas... Algunos adquieren una piel a prueba de balas, invisibilidad y fuerza sobrehumana, mientras que otros padecen una reacción más letal. Con la llegada de la pastilla, la tasa de delitos de la ciudad escala a niveles peligrosos, por lo que un policía local (Joseph Gordon-Levitt) se une a una traficante de drogas adolescente (Dominique Fishback) y a un exsoldado motivado por un plan de venganza secreto (Jamie Foxx) para enfrentar con poder al poder. Tanto es así, que se arriesgan a tomar la pastilla con el objetivo de encontrar y detener al grupo responsable de su elaboración."
+  },
+  {
+   "tmdb_id": 600583,
+   "title": "El poder del perro",
+   "year": 2021,
+   "genres": [
+    "Drama",
+    "Western"
+   ],
+   "runtime": 128,
+   "overview": "Los acaudalados hermanos Phil y George Burbank son las dos caras de la misma moneda. Phil es elegante, genial y cruel, mientras George es impasible, quisquilloso y amable. Juntos son copropietarios de un enorme rancho en Montana. Es un lugar donde la rápida modernización del siglo XX se mantiene y en el que la figura de Bronco Henry, el mayor cowboy que Phil ha conocido jamás, es venerado. Cuando George se casa en secreto con Rose, una viuda del pueblo, Phil, sorprendido y furioso, lleva a cabo una guerra sádica e implacable para destruirla por completo usando a su afeminado hijo, Peter, como peón."
+  },
+  {
+   "tmdb_id": 9477,
+   "title": "El rey Arturo",
+   "year": 2004,
+   "genres": [
+    "Aventura",
+    "Bélica",
+    "Historia",
+    "Acción",
+    "Drama"
+   ],
+   "runtime": 140,
+   "overview": "Arturo está deseando abandonar Bretaña para regresar a la paz y estabilidad de Roma. Pero antes, una última misión le hace comprender tanto a él como a los caballeros de la Mesa Redonda (Lancelot, Galahad, Bors,Tristán y Gawain) que, tras la caída de Roma (476 d.C.), lo que Bretaña necesita es un rey que la defienda de la amenaza de la invasión sajona en un tiempo nuevo. Guiado por Merlín y por la valiente y hermosa Ginebra, Arturo tendrá que encontrar en sí mismo la fuerza necesaria para cambiar el curso de la historia."
+  },
+  {
+   "tmdb_id": 619778,
+   "title": "Maligno",
+   "year": 2021,
+   "genres": [
+    "Terror",
+    "Misterio"
+   ],
+   "runtime": 111,
+   "overview": "Madison es una mujer que tiene unas macabras pesadillas que la dejan completamente paralizada. Aterrada por lo que ve en ellas, Madison no consigue dormir por las noches ni vivir por el día. Pero el terror cada vez se irá apoderando de ella cuando descubra que esas pesadillas no son sueños, sino que son hechos de la vida real."
+  },
+  {
+   "tmdb_id": 228970,
+   "title": "Alma salvaje",
+   "year": 2014,
+   "genres": [
+    "Drama"
+   ],
+   "runtime": 115,
+   "overview": "Narra la historia de una mujer que recorre en solitario más de 1.000 kilómetros a través del desierto de Mojave para reencontrarse a sí misma después de sufrir una serie de trágicas experiencias personales."
+  },
+  {
+   "tmdb_id": 565426,
+   "title": "A todos los chicos: P.D. Todavía te quiero",
+   "year": 2020,
+   "genres": [
+    "Romance",
+    "Comedia"
+   ],
+   "runtime": 102,
+   "overview": "Ya es oficial, Lara Jean y Peter son pareja. ¿Qué podría salir mal? Pues que un viejo amor vuelva a entrar en la vida de esta chica tan feliz."
+  },
+  {
+   "tmdb_id": 522931,
+   "title": "El otro guardaespaldas 2",
+   "year": 2021,
+   "genres": [
+    "Acción",
+    "Comedia",
+    "Crimen",
+    "Suspense"
+   ],
+   "runtime": 100,
+   "overview": "El guardaespaldas Michael Bryce (Ryan Reynolds) y el asesino a sueldo Darius Kincaid (Samuel L. Jackson) vuelven a la carga en una nueva misión para garantizar la paz y estabilidad en Europa. Bryce, aún bajo investigación y sin licencia, se encuentra disfrutando de su año sabático, cuando Sonia Kincaid (Salma Hayek), la impulsiva y peligrosa esposa de Darius, reaparece para que la ayude a liberar a su marido y luchar contra un complot mundial en el que están implicados un malvado griego (Antonio Banderas) y un célebre exagente (Morgan Freeman)."
+  },
+  {
+   "tmdb_id": 55787,
+   "title": "Agua para elefantes",
+   "year": 2011,
+   "genres": [
+    "Drama",
+    "Romance"
+   ],
+   "runtime": 120,
+   "overview": "En la época de la Gran Depresión, un joven estudiante de veterinaria se ve obligado a dejar sus estudios tras la muerte de sus padres. Empieza entonces a trabajar para el circo de los hermanos Benzini como veterinario y encargado de los animales. El joven se enamora de Marlena, una amazona que está casada con August, el dueño del circo, un hombre tan carismático como retorcido... Adaptación del aclamado best-seller homónimo de Sara Gruen"
+  },
+  {
+   "tmdb_id": 625568,
+   "title": "Salvaje",
+   "year": 2020,
+   "genres": [
+    "Acción",
+    "Suspense",
+    "Terror"
+   ],
+   "runtime": 91,
+   "overview": "Tom es un hombre cuya vida ha dejado de tener sentido. En pleno colapso mental se cruza en la carretera con Rachel, una joven que llega tarde a trabajar y que, nerviosa, recrimina a Tom con el claxon que no mueva su coche en un semáforo. A partir de entonces dará comienzo un peligroso juego del gato y el ratón en el que el torbellino de esta ira en la carretera traspasará cualquier límite que Rachel jamás haya imaginado.  Salvaje toma como testigo la adrenalina y el pánico de otras películas con psicópatas al volante como El diablo sobre ruedas, Nunca juegues con extraños o Death Proof."
+  },
+  {
+   "tmdb_id": 37472,
+   "title": "Ip Man 2",
+   "year": 2010,
+   "genres": [
+    "Acción",
+    "Historia",
+    "Drama"
+   ],
+   "runtime": 108,
+   "overview": "En esta secuela, Ip Man (Donnie Yen), llega a Hong-Kong y abre una escuela de Wing Chun, pero pronto entrará en conflicto con un maestro local de Hung Fist llamado Hung Jan-nam, quien es interpretado por Sammo Hung. Aunque, Ip Man, últimamente ha sido desafiado por los ingleses que gobiernan el territorio, las tensiones entre los dos maestros de Kung fu sigue incrementando, y eso hace que ellos se vean forzados a batirse a duelo."
+  }
+ ]
+}

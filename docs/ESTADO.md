@@ -120,6 +120,22 @@
   esperado) → no alcanza para 200 cortas sin nuevas consultas. **Hallazgo:**
   entre los 2401 ya cargados hay 84 anime y 2 stand-up según el mismo
   criterio; no se tocaron (decisión y SQL aparte). Nada generado ni cargado.
+  **Reemplazos y propuesta final (07/10, sin TMDB):** 80 de la reserva (43
+  cortas elegibles + 37 largas más votadas; "A la mierda el 2020" excluida como
+  recapitulación) en 2/2 lotes, 0 reintentos, sondeo OK; uso 5 h 3% → 5%,
+  semanal 15%. 66 con texto (29 cortas). **Propuesta determinística de 500
+  (`data/ruleta-propuesta-500.json`): 184 cortas reales**, 453 de la selección
+  + 47 de la reserva; **42 sin "pero" no salen en la ruleta** (sí en Yumpeá);
+  reserva editorial 19 (todas largas). Corregidos a mano (aprobados): Death
+  Race, St Vincent, Voluntad de hierro, El jurado. `con_texto` sincronizado;
+  colecciones pendientes = 0 reales; vocabulario sin falsos positivos.
+  **Producción (propuesta, NO ejecutada):** migración
+  `supabase/migrations/010_ruleta_exclusiones.sql` (columnas `excluido_motivo`
+  / `excluido_at` + filtro en `get_roulette_picks`; down incluido) y datos en
+  `supabase/propuestas/2026-10-07-exclusiones-ruleta.sql` para los 86 (84
+  anime —incluye Studio Ghibli y Your Name— y 2 stand-up de Bo Burnham), con
+  reversión por título. Ruleta servible 1454 → 1388 (corta 189 → 172). Yumpeá
+  (`sala_candidatos`) no se toca: decisión aparte.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
