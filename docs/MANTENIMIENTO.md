@@ -39,7 +39,7 @@ acordate de que Claude Code para programar come del mismo pozo.
 
 ---
 
-## 1.b Ruleta: mantenimiento INCREMENTAL (desde 2026-10-06, rama `feat/ruleta-incremental`)
+## 1.b Ruleta: mantenimiento INCREMENTAL (desde 2026-10-06; en `main` desde `3eface7`)
 
 **Reemplaza, para todo lo que consulta TMDB, a `build-roulette-pool`,
 `build-shorts-pool` y `enrich-roulette-collections`** (§2 y §3, que quedan
@@ -99,6 +99,31 @@ texto) → `classify-context.mjs` (sólo las secuelas nuevas) →
 **`build-roulette-sql.mjs --textos-nuevos`** → pegar
 `data/carga-ruleta-incremental-*.sql` y después `data/carga-textos-nuevos.sql`.
 **No** pegar `carga-contexto.sql` ni las `carga-ruleta-N.sql` del modo normal.
+
+### Después de cargar a mano: reconciliar (obligatorio)
+
+La carga la hace el dueño en el SQL Editor y puede ser una SELECCIÓN de lo
+traído (el 2026-10-08 se cargaron 500 de 545 y 100 salieron de la reserva). El
+estado local no se entera solo, y si no se reconcilia la corrida siguiente
+vuelve a emitir SQL para todo `carga_pendiente` y cuenta como "en el pool"
+títulos que no están en Producción. Con una foto de **sólo lectura**:
+
+```bash
+# GET contra PostgREST (service role); no escribe nada en Supabase.
+node --env-file=.env.local scripts/ruleta/snapshot-produccion.mjs data/produccion-foto-AAAA-MM-DD.json
+# Sin TMDB y sin SQL: deja titulos = roulette_titles, devuelve a reserva lo no
+# cargado (con su motivo), registra la carga en `cargas`, vacía carga_pendiente
+# de lo confirmado y anota `excluidos_produccion` (010). Idempotente.
+node scripts/actualizar-ruleta.mjs --reconciliar data/produccion-foto-AAAA-MM-DD.json
+```
+
+Aborta sin escribir ante lo que no puede explicar (un id de Producción que el
+estado no conoce, un excluido o descartado cargado, un título viejo que
+desapareció). Además, la cola (`ruleta-cola.json`) se filtra siempre contra el
+pool, la reserva y los excluidos (`colaVigente`), así que una cola vieja nunca
+vuelve a proponer lo ya cargado. El plan muestra la sección **Estado operativo**
+(pool = Producción, última carga, reserva por motivo, excluidos, descartados,
+carga pendiente, cola vigente).
 
 ### Reglas
 

@@ -22,6 +22,9 @@
  *   --ritmo-ms <ms>             separación mínima entre pedidos (default 250 = 4/s)
  *   --ahora <ISO>               fija "hoy" (para medir o reproducir un plan)
  *   --informe <archivo.json>    en modo plan, guarda el plan además de mostrarlo
+ *   --reconciliar <foto.json>   deja el estado igual a Producción después de una
+ *                               carga manual (foto de snapshot-produccion.mjs).
+ *                               Sin TMDB y sin SQL; sólo escribe el estado y el pool.
  *
  * Reanudable: lo terminado queda en <datos>/ruleta-progreso.jsonl. Correr el
  * MISMO comando retoma sin repetir. Ctrl+C corta limpio.
@@ -51,6 +54,7 @@ import { escribirSalidas, informeMarkdown, archivosDeSalida, poolLegado } from "
 import { cargarExclusiones, aplicarExclusiones } from "./ruleta/exclusiones.mjs";
 import { sincronizarTextos } from "./ruleta/textos.mjs";
 import { escribirAtomico } from "./ruleta/estado.mjs";
+import { reconciliarConProduccion, colaVigente, resumenEstado } from "./ruleta/reconciliar.mjs";
 
 const args = process.argv.slice(2);
 const arg = (f, d = null) => { const i = args.indexOf(f); return i !== -1 ? (args[i + 1] ?? d) : d; };
@@ -101,6 +105,34 @@ if (args.includes("--sincronizar-textos")) {
   process.exit(0);
 }
 
+// ── Reconciliación con Producción (sin TMDB, sin SQL) ───────────────────────
+// La carga la aplica el dueño a mano y puede diferir de carga_pendiente (se
+// cargó una selección). La foto de sólo lectura manda: ver ruleta/reconciliar.mjs.
+if (arg("--reconciliar")) {
+  if (origen !== "estado") throw new Error("--reconciliar necesita un ruleta-estado.json existente");
+  const foto = JSON.parse(readFileSync(resolve(arg("--reconciliar")), "utf8"));
+  const ahoraIso = new Date(ahoraMs).toISOString();
+  // Motivo de lo que vuelve a reserva: por qué no entró a la carga.
+  const filas = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")).rows ?? [] : []);
+  const copy = new Map(filas(resolve(DATOS, "copy-ruleta.json")).map((r) => [r.tmdb_id, r]));
+  const ctx = new Map(filas(resolve(DATOS, "contexto-ruleta.json")).map((r) => [r.tmdb_id, r]));
+  const motivoDe = (id) => {
+    const c = copy.get(id);
+    if (!c?.razon) return "no-cargado-sin-texto";
+    if (!c.advertencia) return "no-cargado-sin-pero";
+    if (ctx.get(id)?.requiere_contexto) return "no-cargado-requiere-contexto";
+    return "no-cargado";
+  };
+  const { estado: sig, resumen } = reconciliarConProduccion(estado, foto, { ahoraIso, motivoDe });
+  const rutaPool = resolve(DATOS, "pool-ruleta.json");
+  const poolAnterior = existsSync(rutaPool) ? JSON.parse(readFileSync(rutaPool, "utf8")) : null;
+  escribirAtomico(rutaPool, JSON.stringify(poolLegado(sig, poolAnterior, ahoraIso), null, 2));
+  escribirAtomico(resolve(DATOS, "ruleta-estado.json"), JSON.stringify(sig));
+  console.log(JSON.stringify(resumen, null, 1));
+  console.log("\nNo se consultó TMDB ni Supabase. Escritos: ruleta-estado.json y pool-ruleta.json.");
+  process.exit(0);
+}
+
 if (args.includes("--aplicar-exclusiones")) {
   if (origen !== "estado") throw new Error("--aplicar-exclusiones necesita un ruleta-estado.json existente");
   const ahoraIso = new Date(ahoraMs).toISOString();
@@ -141,9 +173,16 @@ if (fases.enriquecer) {
   if (!args.includes("--sin-cola")) {
     if (existsSync(RUTA_COLA)) {
       const c = JSON.parse(readFileSync(RUTA_COLA, "utf8"));
-      cfg.seleccion = { cola: c.cola, cuotas: c.cuotas, estimacion: c.estimacion, excluidos: EXCLUIDOS };
+      // Lo ya cargado, en reserva o excluido no se vuelve a proponer aunque la
+      // cola sea de una ampliación anterior.
+      const { cola, quitados } = colaVigente(c.cola, estado);
+      cfg.seleccion = { cola, cuotas: c.cuotas, estimacion: c.estimacion, excluidos: EXCLUIDOS, colaArmadaAt: c.generada_at, colaQuitados: quitados, colaOriginal: c.cola.length };
       // Lo que falta se reconstruye del diario (no se resta de la estimación).
-      cfg.seleccion.pendientes = await estimarPendientes(c.cola, c.cuotas, diarioPrevio, { sinNuevosDetalles: SIN_NUEVOS_DETALLES });
+      // Sin ningún detalle en el diario no hay de qué reconstruir: se estima
+      // la cola vigente con las tasas supuestas, como al armarla.
+      const hayDetalles = [...diarioPrevio.keys()].some((k) => k.startsWith("detalle:"));
+      if (hayDetalles) cfg.seleccion.pendientes = await estimarPendientes(cola, c.cuotas, diarioPrevio, { sinNuevosDetalles: SIN_NUEVOS_DETALLES });
+      else cfg.seleccion.estimacion = await estimarConsultas(cola, c.cuotas, TASAS_SUPUESTAS);
     } else if (EJECUTAR) {
       throw new Error(`enriquecer exige una cola (${RUTA_COLA}); armala con --armar-cola`);
     }
@@ -157,7 +196,8 @@ const plan = planificar(estado, diarioPrevio, cfg);
 if (!EJECUTAR) {
   const s = archivosDeSalida(DATOS, fecha, sello);
   const inf = {
-    modo: "plan", fecha, origenEstado: origen, fases: fasesLista, cfg: { ...cfg, maxDisponibilidad: String(cfg.maxDisponibilidad) }, plan,
+    modo: "plan", fecha, origenEstado: origen, fases: fasesLista, cfg: { ...cfg, seleccion: cfg.seleccion ? { cola: cfg.seleccion.cola.length, cuotas: cfg.seleccion.cuotas, pendientes: cfg.seleccion.pendientes } : null, maxDisponibilidad: String(cfg.maxDisponibilidad) }, plan,
+    estadoOperativo: { ...resumenEstado(estado), cola: cfg.seleccion ? { vigente: cfg.seleccion.cola.length, original: cfg.seleccion.colaOriginal, quitados: cfg.seleccion.colaQuitados, armada_at: cfg.seleccion.colaArmadaAt } : null },
     archivos: [s.estado, s.pool, s.poolRespaldo, s.colecciones, s.sql("N"), s.informeJson, s.informeMd].map((p) => `${p} (se escribiría)`),
   };
   process.stdout.write(informeMarkdown(inf));

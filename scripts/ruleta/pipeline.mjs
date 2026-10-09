@@ -19,6 +19,7 @@ import {
   descarteVigente, progresoDesdeDiario,
 } from "./nucleo.mjs";
 import { llenarObjetivo, FIN_DE_DATOS } from "./seleccion.mjs";
+import { colaVigente } from "./reconciliar.mjs";
 
 /** Una consulta de la cola falló: se corta en vez de decidir sin el dato. */
 export class FalloEnCola extends Error {
@@ -119,7 +120,10 @@ export async function ejecutar({ estado, diario, cliente, cfg, detener = () => f
         // Con COLA (el modo normal): se recorre en orden hasta llenar el
         // objetivo de títulos SERVIBLES; lo que sirve pero no entra va a reserva.
         const familiaDe = (id) => candidatos.get(id)?.familia ?? "principal";
-        seleccion = await llenarObjetivo(cfg.seleccion.cola, cfg.seleccion.cuotas, async (c) => {
+        // Defensa: aunque la cola venga vieja, nada del pool, la reserva o los
+        // excluidos se vuelve a proponer como nuevo.
+        const { cola } = colaVigente(cfg.seleccion.cola, estado);
+        seleccion = await llenarObjetivo(cola, cfg.seleccion.cuotas, async (c) => {
           // --sin-nuevos-detalles: sólo lo que ya está en el diario. Lo demás
           // termina el recorrido (y el cliente además prohíbe "detalle").
           if (cfg.sinNuevosDetalles && !diario.tiene(claveDetalle(c.id))) return FIN_DE_DATOS;

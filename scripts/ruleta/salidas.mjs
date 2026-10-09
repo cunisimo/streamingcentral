@@ -208,6 +208,22 @@ export function informeMarkdown(inf) {
   const fila = (k, v) => l.push(`| ${k} | ${v} |`);
   l.push(`# Ruleta — ${inf.modo === "plan" ? "plan" : "corrida"} ${inf.fecha}`, "");
   if (inf.modo !== "plan") l.push(`**Resultado:** ${inf.completo ? "completa" : `INCOMPLETA (${inf.motivo})`} · duración ${(inf.duracionMs / 1000).toFixed(1)} s`, "");
+  if (inf.estadoOperativo) {
+    const e = inf.estadoOperativo;
+    const obj = (o) => Object.entries(o ?? {}).map(([k, v]) => `${k} ${v}`).join(", ") || "—";
+    l.push("## Estado operativo", "", "| | |", "|---|---|");
+    fila("Producción verificada", e.produccionVerificada ? `${e.produccionVerificada.roulette_titles} títulos · foto ${e.produccionVerificada.foto_at}` : "nunca (correr --reconciliar tras cada carga)");
+    fila("Títulos en el pool (= Producción)", e.titulos);
+    fila("…excluidos en Producción (010)", e.excluidosEnProduccion);
+    fila("Última carga confirmada", e.ultimaCarga ? `${e.ultimaCarga.total} (${e.ultimaCarga.desde_reserva} desde reserva) · ${e.ultimaCarga.confirmada_at}` : "—");
+    fila("Reserva enriquecida", `${e.reserva} (${obj(e.reservaPorMotivo)})`);
+    fila("Excluidos editoriales", obj(e.excluidosEditoriales));
+    fila("Descartados", obj(e.descartados));
+    fila("Carga pendiente", e.cargaPendiente ? obj(e.cargaPendiente) : "ninguna");
+    fila("Metadatos pendientes de SQL", e.metadatosPendientesSql);
+    if (e.cola) fila("Cola", `${e.cola.vigente} vigentes de ${e.cola.original} (quitados ${e.cola.quitados} ya en pool/reserva/excluidos) · armada ${e.cola.armada_at}`);
+    l.push("");
+  }
   if (inf.plan) {
     const p = inf.plan;
     l.push("## Inventario", "", "| | |", "|---|---|");

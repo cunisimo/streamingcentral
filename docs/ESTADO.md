@@ -1,16 +1,55 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 29 de septiembre de 2026.**
+> **Estado canónico. Actualizado el 9 de octubre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
-- **Mantenimiento INCREMENTAL de la ruleta (2026-10-06): EN RAMA
-  `feat/ruleta-incremental` (desde `origin/main` `072e227`), commits locales,
-  SIN PUSH, MERGE NI DEPLOY. NO se ejecutó contra TMDB real ni se cargó nada en
-  Supabase: el dueño revisa el informe y autoriza aparte.**
+- **Mantenimiento INCREMENTAL de la ruleta (2026-10-06 → 2026-10-09):
+  INTEGRADO A `main` Y DESPLEGADO.** Pool de Producción 2401 → 2901 (carga
+  manual del dueño, 08/10). Lo de abajo es el registro cronológico; las
+  menciones a "en rama / sin push" de las entradas del 06–08/10 son
+  históricas.
+  **09/10 — integración (autorizada por el dueño):** push de la rama y
+  fast-forward de `main` `072e227` → `3eface7`, sin force; Vercel "Deployment
+  has completed". Verificado después del deploy (sólo lectura):
+  `get_roulette_picks` 40/40/40 en corta/larga/chicos con 0 excluidos;
+  `/api/ruleta?escenario=corta` 20 ítems; `/api/health` ok; `sala_candidatos`
+  sigue devolviendo anime con Crunchyroll (Yumpeá sin cambios; la huella no se
+  pudo leer acá, el conector MCP no autoriza). Migración 010: aplicada a mano
+  como 001–009; el proyecto no usa el historial del CLI
+  (`[db.migrations] enabled = false`, sin enlazar) y un test falla si se
+  reactiva — no hace falta tocar Producción. Archivos operativos ignorados por
+  git copiados a `streamingcentral/data/` (hashes iguales al worktree y a
+  `backups-yump/ruleta-2026-10-08-pre-sql`); el `colecciones-ruleta.json`
+  anterior del checkout quedó en
+  `backups-yump/checkout-data-antes-2026-10-08/`.
+  **09/10 — reconciliación del estado con la carga real (sin TMDB, sin SQL,
+  sin escribir en Supabase):** `ruleta-estado.json` no coincidía con lo
+  cargado: tenía 2946 títulos (los 545 traídos, de los que se cargaron 400) y
+  `carga_pendiente` con los 545, mientras 100 de los 500 cargados seguían en
+  la reserva. Sin corregirlo, la corrida siguiente habría vuelto a emitir SQL
+  para los 545 (145 sin texto, sin "pero" o con contexto) y la cola vieja
+  habría vuelto a proponer los 500 (su primer elemento es uno de ellos). Se
+  agregó `--reconciliar <foto>` (`scripts/ruleta/reconciliar.mjs`), la foto de
+  sólo lectura `scripts/ruleta/snapshot-produccion.mjs` (GET) y el filtro
+  `colaVigente` en la CLI y el pipeline; procedimiento en `MANTENIMIENTO.md`
+  §1.b. Resultado contra la foto del 09/10: pool = 2901 = Producción (86
+  excluidos por 010); carga confirmada = exactamente los 500 de la propuesta
+  (100 desde reserva), con proveedores idénticos a Producción;
+  `carga_pendiente` vacía; 145 vuelven a la reserva (92 sin texto, 39 sin
+  "pero", 14 con contexto) → reserva 518; 2345 metadatos de votos siguen
+  pendientes de SQL (los trajo el descubrimiento del 07/10 y no iban en la
+  carga). Segunda pasada idéntica. Tests `test:ruleta` 93/93. Backups:
+  `backups-yump/ruleta-2026-10-09-pre-reconciliacion` y
+  `backups-yump/ruleta-2026-10-09-post-carga`. **Plan en seco** (sin TMDB): con
+  la cola vieja quedan 3702 candidatos y ~2156 detalles estimados; el
+  inventario del 07/10 ya no tiene candidatos anteriores a 1990 (y sólo 15 de
+  los 90), así que la próxima ampliación con los mismos cupos por década
+  necesita un descubrimiento nuevo o una decisión sobre los cupos — decisión
+  del dueño. Siguiente paso: la próxima ampliación (≈ diciembre 2026, §1.c).
   Qué es: `scripts/actualizar-ruleta.mjs` + `scripts/ruleta/*` reemplazan los
   tres scripts que consultaban TMDB (procedimiento en `MANTENIMIENTO.md` §1.b).
   Plan sin red ni escritura; fases descubrir/enriquecer/disponibilidad;
@@ -181,9 +220,8 @@
   el chip. `get_roulette_picks` devuelve 40 en corta/larga/chicos y ningún
   excluido. Huella de `sala_candidatos` informada por el dueño:
   `13fd9cf67683920729dbccdeac5fdd01`, sin cambios (no se pudo leer acá: el
-  conector MCP de Supabase no conecta). Pendiente: integrar
-  `feat/ruleta-incremental` a `main` (fast-forward, sin conflictos) con
-  autorización.
+  conector MCP de Supabase no conecta). Integrado a `main` el 09/10 (ver
+  arriba).
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
