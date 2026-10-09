@@ -164,6 +164,26 @@
   verificaciones posteriores y reversión). `sala_candidatos` no se modifica.
   `lib/roulette-providers.ts`: `NOMBRES_EXCLUIDOS` con Looke, Lionsgate+,
   Filmelier Plus y Cindie (test). Backup `ruleta-2026-10-08-pre-sql` (46/46).
+  **CARGADO EN PRODUCCIÓN por el dueño (08/10, a mano)**: verificaciones
+  previas OK, CSV de respaldo descargados, migración 010 aplicada
+  (`get_roulette_picks` = 003 + `rt.excluido_motivo is null`), carga de los
+  500, exclusiones; `06-reversion.sql` NO ejecutado. **Auditoría de sólo
+  lectura (service role, select + rpc), 08/10:** `roulette_titles` 2901, 2759
+  con texto, 2282 con texto y "pero", 144 requieren contexto (sin cambios),
+  excluidos anime 84 / stand-up 2; los 500 presentes, 500 servibles, 500 con
+  disponibilidad; `title_availability` AR 3000 = 2901 de la ruleta + 99 sólo
+  de chips; ningún título de la ruleta sin disponibilidad. **Las 5
+  disponibilidades preexistentes** eran títulos del chip curado
+  `magica-navidad` (The Holiday, Family Man, Elf, Dos padres por desigual, La
+  bella y la bestia 2): `title_availability` es compartida con los chips;
+  antes 2505 filas (2401 ruleta + 104 sólo chips), ahora 2901 + 99. El upsert
+  les dejó la disponibilidad consultada el 07/10 (más nueva), que también usa
+  el chip. `get_roulette_picks` devuelve 40 en corta/larga/chicos y ningún
+  excluido. Huella de `sala_candidatos` informada por el dueño:
+  `13fd9cf67683920729dbccdeac5fdd01`, sin cambios (no se pudo leer acá: el
+  conector MCP de Supabase no conecta). Pendiente: integrar
+  `feat/ruleta-incremental` a `main` (fast-forward, sin conflictos) con
+  autorización.
 
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
   (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
