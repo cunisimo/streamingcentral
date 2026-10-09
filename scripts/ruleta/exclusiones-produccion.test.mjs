@@ -69,3 +69,10 @@ test("la exclusión SOBREVIVE a las cargas: ningún generador de SQL de la rulet
   ].join("\n");
   assert.ok(!/excluido/i.test(todos));
 });
+
+test("las migraciones del CLI siguen apagadas: un db push no puede reaplicar 001–010", () => {
+  const cfg = leer("supabase/config.toml");
+  const bloque = cfg.slice(cfg.indexOf("[db.migrations]"), cfg.indexOf("[", cfg.indexOf("[db.migrations]") + 1));
+  assert.match(bloque, /^enabled = false$/m);
+  assert.match(leer("supabase/migrations/010_ruleta_exclusiones.sql"), /APLICADA A MANO en Producción/);
+});

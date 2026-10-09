@@ -32,7 +32,8 @@ ya listados. No es un bug.
 
 ```bash
 # 1. Schema: correr la sección nueva de supabase/schema.sql en el SQL editor
-#    (o) supabase db push
+#    (NO usar "supabase db push": el proyecto no está enlazado al CLI y las
+#    migraciones se aplican a mano en el SQL Editor; ver supabase/config.toml)
 
 # 2. Secrets de la función
 supabase secrets set TMDB_READ_TOKEN=<token_v4>

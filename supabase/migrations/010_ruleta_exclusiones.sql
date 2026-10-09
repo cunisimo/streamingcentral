@@ -1,4 +1,9 @@
 -- ═══════════════════════════════════════════════════════════════════════════
+-- APLICADA A MANO en Producción (SQL Editor) por el dueño el 2026-10-08, como
+-- 001–009: el proyecto no usa el historial de migraciones del CLI
+-- (config.toml → [db.migrations] enabled = false; nunca "supabase db push").
+-- NO volver a correrla.
+-- ═══════════════════════════════════════════════════════════════════════════
 -- Ruleta "No sé qué ver": exclusión editorial reversible (dueño, 2026-10-07)
 --
 -- Regla: la ruleta no sirve anime (aunque el usuario tenga Crunchyroll), ni
