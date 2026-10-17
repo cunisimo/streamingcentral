@@ -39,13 +39,40 @@
   Producción exit 0 y export nativo exit 0. **Comprobado en navegador** (build
   de Producción servido en local, sin sesión): `/admin/top` →
   `/admin/login?destino=%2Fadmin%2Ftop`, nunca `/`.
-  **NO comprobado:** login, perfil y MFA con una cuenta real (Claude no inicia
-  sesión contra Supabase de Producción); la expulsión del celular: es
-  comportamiento de Supabase Auth al verificar MFA (auditoría de Codex, no
-  verificado contra nuestra versión ni los registros), y la salida es una
-  **cuenta exclusiva de administración**: runbook paso a paso en
-  `docs/MANTENIMIENTO.md` ("Runbook: cuenta EXCLUSIVA de administración"),
-  **no ejecutado**: ninguna cuenta ni permiso de Producción se tocó.
+  Lo anterior es lo que **verificó Claude** sobre `80f8fa9` (17/10).
+  **Auditoría de Codex** (17/10; registrada en `docs/ESTADO.md` del checkout
+  principal, `feat/salas`, como cambio local SIN commitear: acá se concilia,
+  allá no se tocó). Antes de la rama, por lectura de código: identificó la
+  carrera `ready`/perfil y la redirección a `/`, el login que navega sin
+  esperar el perfil, el cliente compartido de `lib/supabase.ts` y los
+  `signOut()` sin scope (`global` por defecto). Con la aclaración del dueño de
+  que el celular se cae **al verificar el 2FA, sin pulsar "Salir"**, corrigió
+  su diagnóstico: el cierre global NO explica ese episodio; el mecanismo
+  compatible es que Supabase Auth v2.197.0 invalida, al verificar TOTP, las
+  sesiones de nivel inferior de la misma cuenta
+  (`InvalidateSessionsWithAALLessThan`), y ni el cierre local ni aislar el
+  almacenamiento del navegador lo evitan. Sobre el diff
+  `dcc8c6e..80f8fa9` de esta rama: **25 tests específicos de acceso y
+  autorización en verde, suite 2261 / 2261 ok / 0 fallos / 0 omitidos,
+  `tsc --noEmit --incremental false` exit 0**; sin defectos adicionales
+  comprobados en el código. No repitió el build web, el export nativo ni el
+  login/MFA autenticados. Hallazgos documentales, corregidos en esta rama el
+  17/10: (1) el runbook proponía quitarle `is_admin` a la cuenta personal, lo
+  que contradice la decisión del dueño; (2) faltaba completar la bienvenida
+  (`onboarding_completed = false` en toda cuenta nueva; `OnboardingGate` no
+  exime `/admin` y al terminar vuelve a `/`), también en la alternativa de
+  crear la cuenta desde Supabase.
+  **Decisión del dueño (17/10):** la cuenta personal **conserva
+  permanentemente** el rol de administrador y sus factores 2FA; la cuenta de
+  administración es **adicional** y se usa para administrar habitualmente.
+  Conservar el rol no cambia el mecanismo de Supabase: entrar al panel con la
+  personal puede volver a cerrar las sesiones de su celular.
+  **Pendiente (nadie lo comprobó todavía):** login, perfil y MFA con una
+  cuenta real; la versión de Supabase Auth del proyecto y sus registros; la
+  prueba manual del dueño de esta rama (instrucciones en el runbook y en la
+  respuesta del 17/10) y, recién después, merge y deploy. Runbook:
+  `docs/MANTENIMIENTO.md`, "Runbook: cuenta ADICIONAL de administración",
+  **no ejecutado**: ninguna cuenta, permiso ni factor de Producción se tocó.
 - **Mantenimiento INCREMENTAL de la ruleta (2026-10-06 → 2026-10-09):
   INTEGRADO A `main` Y DESPLEGADO.** Pool de Producción 2401 → 2901 (carga
   manual del dueño, 08/10). Lo de abajo es el registro cronológico; las

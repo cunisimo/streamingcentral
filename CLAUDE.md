@@ -587,8 +587,11 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   ⚠️ **Verificar el MFA cierra las OTRAS sesiones de menor nivel de la misma
   cuenta** (comportamiento de Supabase Auth, señalado por la auditoría y no
   verificado en nuestro proyecto): entrar al panel con la cuenta personal
-  echaba al celular. Eso no se arregla desde la app; la salida es una cuenta
-  exclusiva de administración (runbook en `docs/MANTENIMIENTO.md`).
+  echaba al celular. Eso no se arregla desde la app (ni con el cierre local);
+  la salida es una cuenta **adicional** de administración para el uso
+  habitual. La personal conserva su rol y su 2FA por decisión del dueño, y
+  entrar al panel con ella puede volver a cerrar sus otras sesiones (runbook en
+  `docs/MANTENIMIENTO.md`).
 - **La carga manual es también evidencia de disponibilidad** (procedencia
   `top-manual`, prioridad 3 del resolvedor). Cuando el dueño confirma que un
   título está en una plataforma, eso resuelve el caso que TMDB tarda en publicar.

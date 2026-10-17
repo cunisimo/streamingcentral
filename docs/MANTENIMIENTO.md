@@ -917,88 +917,111 @@ chico (un título en 314) que la deriva lo tapa entero.
 
 ---
 
-## Runbook: cuenta EXCLUSIVA de administración (preparado el 2026-10-17, NO ejecutado)
+## Runbook: cuenta ADICIONAL de administración (preparado el 2026-10-17, NO ejecutado)
 
 **Por qué.** El dueño informó (17/10) que al entrar al panel y completar el 2FA
-se le cerraba la sesión de la app del celular. Supabase Auth, al verificar un
-factor (sesión `aal2`), invalida las demás sesiones de MENOR nivel de la misma
-cuenta (auditoría de Codex: `internal/api/mfa.go#L648` y
-`internal/models/sessions.go#L328` de `supabase/auth` v2.197.0). **No está
+se le cerraba la sesión de la app del celular, sin pulsar "Salir". Supabase
+Auth, al verificar un factor (sesión `aal2`), invalida las demás sesiones de
+MENOR nivel de la misma cuenta (auditoría de Codex:
+`InvalidateSessionsWithAALLessThan` en `internal/api/mfa.go` e
+`internal/models/sessions.go` de `supabase/auth` v2.197.0). **No está
 verificado** qué versión corre nuestro proyecto ni que los registros de Auth lo
-muestren. Eso no se corrige desde la app. Con una cuenta sólo para
-administrar, el MFA se verifica en ESA cuenta y la personal —la del celular,
-con sus listas, votos e historial— no se toca.
+muestren. Eso no se corrige desde la app, y cerrar sesión con `scope: "local"`
+tampoco lo evita. Con una cuenta **adicional** sólo para administrar, el MFA
+se verifica en ESA cuenta y la personal —la del celular, con sus listas, votos
+e historial— no se toca.
+
+**Decisión del dueño (17/10): la cuenta personal CONSERVA permanentemente su
+rol de administrador y sus factores 2FA.** La cuenta de administración es
+ADICIONAL, no un reemplazo: este procedimiento no le quita nada a la personal.
+⚠️ Conservar el rol no cambia el mecanismo de Supabase: **si se vuelve a
+entrar al panel con la cuenta personal, su propio MFA puede volver a cerrar
+sus otras sesiones** (el celular). Para administrar habitualmente se usa la
+cuenta adicional.
 
 **Qué exige el esquema real** (no hay que crear nada en SQL salvo el UPDATE
-del paso 3):
+del paso 4):
 - Toda cuenta nueva tiene su fila en `profiles` por el trigger
-  `handle_new_user`, con `is_admin = false`.
+  `handle_new_user`, con `is_admin = false` y `onboarding_completed = false`.
 - `is_admin` NO se puede cambiar desde la app (trigger `protect_is_admin`, rol
   `authenticated`); sí desde el SQL editor de Supabase o con `service_role`.
+- `OnboardingGate` vive en el layout raíz y **no exime `/admin`**: mientras
+  `onboarding_completed` sea `false`, cualquier ruta —el panel incluido—
+  manda a `/onboarding`, y al terminar la bienvenida vuelve a `/`.
 - El panel exige `is_admin_mfa()`: `is_admin`, token `aal2` y **dos** factores
   TOTP verificados (`factores_totp_verificados() >= 2`). Las APIs, lo mismo
   (`adminDeToken`). Las reseñas editoriales exigen `is_admin()`.
-- `editorial_reviews` no guarda autor: cambiar de cuenta no deja nada
-  huérfano. El Top guarda `creado_por`/`revisado_por` de cada versión: las
-  históricas quedan con la cuenta anterior, que es lo correcto.
+- `editorial_reviews` no guarda autor. El Top guarda `creado_por`/
+  `revisado_por` de cada versión: lo que firme la cuenta adicional queda a su
+  nombre y lo histórico, con la personal.
 
 **Datos y pasos manuales del dueño** (Claude no inventa correos ni toca cuentas
 o permisos en Producción):
 1. Un correo **distinto** del personal, al que tengas acceso.
-2. Dos autenticadores para el TOTP: el principal y uno de **respaldo** en otro
-   dispositivo o en el gestor de contraseñas.
+2. Dos autenticadores para el TOTP de la cuenta adicional: el principal y uno
+   de **respaldo** en otro dispositivo o en el gestor de contraseñas.
 3. Acceso al panel de Supabase (Authentication y SQL editor).
 
 **Procedimiento** (en orden; cada paso se verifica antes del siguiente):
 0. **En un perfil de navegador APARTE** (o ventana privada). El panel y la app
    comparten el mismo almacenamiento de sesión por sitio
    (`lib/supabase.ts`): en un mismo perfil de navegador hay UNA sesión a la vez,
-   y entrar como admin ahí cierra la personal en esa computadora.
+   y entrar con la cuenta adicional ahí reemplaza a la personal en esa
+   computadora. Esto evita mezclar sesiones en el navegador; NO evita la
+   invalidación del servidor, que es por cuenta.
 1. **Alta.** En ese perfil, `https://app.yump.ar/cuenta` → crear cuenta con el
    correo nuevo y una contraseña del gestor. Confirmar el correo con el enlace
    que llega. (Alternativa: Supabase → Authentication → Users → *Add user* →
-   *Create new user* con *Auto Confirm User*.)
-2. **Comprobar** (SQL editor, sólo lectura):
+   *Create new user* con *Auto Confirm User*; después, ingresar con esa cuenta
+   en `https://app.yump.ar/cuenta`.)
+2. **Bienvenida.** La primera vez que la cuenta nueva entra, la app la manda a
+   `/onboarding` (también si se creó desde Supabase). **Completarla** hasta el
+   final; al terminar vuelve a `/`. Sin esto, `/admin/top` también redirige a
+   la bienvenida.
+3. **Comprobar** (SQL editor, sólo lectura):
    ```sql
    select id, email, email_confirmed_at from auth.users where email = '<correo-admin>';
-   select id, is_admin from public.profiles where id = '<uuid-admin>';
+   select id, is_admin, onboarding_completed from public.profiles where id = '<uuid-admin>';
    ```
-   Tiene que haber una fila en cada una, con `email_confirmed_at` no nulo e
-   `is_admin = false`.
-3. **Permiso** (SQL editor; es el ÚNICO cambio de permisos de este paso):
+   Tiene que haber una fila en cada una, con `email_confirmed_at` no nulo,
+   `is_admin = false` y `onboarding_completed = true`.
+4. **Permiso** (SQL editor; es el ÚNICO cambio de permisos de todo el
+   procedimiento):
    ```sql
    update public.profiles set is_admin = true where id = '<uuid-admin>' returning id, is_admin;
    ```
-   La cuenta personal NO se toca: sigue siendo admin hasta el paso 6.
-4. **MFA.** En el perfil de navegador del admin, abrir
-   `https://app.yump.ar/admin/top` → ingresar → el panel manda a `/admin/mfa`:
-   registrar el factor principal y verificarlo; registrar el de respaldo y
-   verificarlo. Comprobar:
+   La cuenta personal no se toca en ningún paso.
+5. **MFA.** En el perfil de navegador de la cuenta adicional, abrir
+   **nuevamente** `https://app.yump.ar/admin/top` → si pide ingresar, ingresar
+   → el panel manda a `/admin/mfa`: registrar el factor principal y
+   verificarlo; registrar el de respaldo y verificarlo. Comprobar:
    ```sql
    select count(*) from auth.mfa_factors
     where user_id = '<uuid-admin>' and factor_type = 'totp' and status = 'verified';  -- 2
    ```
-5. **Prueba de acceso.** Con la cuenta admin, `/admin/top` muestra el panel
+6. **Prueba de acceso.** Con la cuenta adicional, `/admin/top` muestra el panel
    (después del MFA vuelve a `/admin/top`, no a `/admin`); `/admin` lista las
-   reseñas. **Sin publicar nada** para probar.
+   reseñas. **Sin publicar nada** del Top ni reseñas para probar.
    **Prueba de no interferencia:** con el celular abierto en la cuenta
-   personal, hacer login + MFA admin en la computadora; después, en el
-   celular, recargar Mi cuenta y Mi lista: la sesión tiene que seguir abierta.
-6. **Recién con el paso 5 aprobado**, decidir sobre la cuenta personal:
+   personal, hacer login + MFA de la cuenta adicional en la computadora;
+   después, en el celular, recargar Mi cuenta y Mi lista: la sesión tiene que
+   seguir abierta.
+7. **La cuenta personal, intacta.** Comprobar (sólo lectura) que conserva el
+   rol y sus factores:
    ```sql
-   update public.profiles set is_admin = false where id = '<uuid-personal>' returning id, is_admin;
+   select id, is_admin from public.profiles where id = '<uuid-personal>';            -- is_admin = true
+   select count(*) from auth.mfa_factors
+    where user_id = '<uuid-personal>' and factor_type = 'totp' and status = 'verified';
    ```
-   Si la personal tiene factores TOTP y alguna vez vuelve a elevarse a `aal2`
-   (entrar al panel con ella), Supabase vuelve a cerrar sus otras sesiones.
-   Quitarle los factores (Supabase → el usuario → MFA) es opcional y decisión
-   del dueño.
 
-**Rollback:** hasta el paso 6 la cuenta personal sigue siendo admin; si algo
-falla, se sigue usando como hoy y la nueva se deja sin `is_admin`
-(`update … set is_admin = false where id = '<uuid-admin>'`).
+**Rollback:** la cuenta personal nunca deja de ser administradora, así que no
+hay nada que restaurar. Si la adicional no sirve, se deja sin permisos con
+`update public.profiles set is_admin = false where id = '<uuid-admin>';` y se
+sigue administrando como hasta ahora, sabiendo que entrar al panel con la
+personal puede volver a cerrar las sesiones de su celular.
 
 **Para confirmar la causa** (opcional, sin tocar nada): Supabase → Logs →
-Auth, filtrar por el usuario personal a la hora de un MFA, y buscar el cierre
+Auth, filtrar por la cuenta personal a la hora de un MFA, y buscar el cierre
 de sus otras sesiones.
 
 ## Runbook: la ingesta manual del Top 10 después de deployar el resolvedor
