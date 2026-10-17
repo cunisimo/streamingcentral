@@ -16,7 +16,7 @@ export default function AdminHome() {
       .then(({ data }) => { setRows((data as Review[]) ?? []); setLoading(false); });
   }, []);
 
-  async function logout() { await supabaseBrowser().auth.signOut(); router.push("/admin/login"); }
+  async function logout() { await supabaseBrowser().auth.signOut({ scope: "local" }); router.push("/admin/login"); }
 
   return (
     <div className="admin">

@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase";
 import type { EleccionAvatar } from "@/lib/avatares";
+import { crearSesionPerfil, type EstadoPerfil, type LecturaPerfil } from "@/lib/admin-acceso";
 import {
   cambiarPassword, hayTokensDeRecuperacion, reclamar, siguientePendiente,
   type Enlace, type Pendiente, type RecuperacionAceptada, type Resultado as ResultadoRecuperacion,
@@ -23,7 +24,16 @@ export interface Profile {
 interface Ctx {
   user: User | null;
   profile: Profile | null;
+  /** `ready` es "la sesión ya se conoce"; el perfil puede seguir en camino. */
   ready: boolean;
+  /**
+   * El perfil de la sesión actual: `pendiente` mientras se lee, `listo` cuando
+   * llegó (o no existe la fila), `error` si la lectura falló. Quien decide
+   * permisos con el perfil (el layout de /admin) tiene que mirar esto: con
+   * `pendiente` o `error`, `profile` es `null` y NO significa "sin permisos".
+   */
+  estadoPerfil: EstadoPerfil;
+  reintentarPerfil: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string; needsConfirm?: boolean }>;
   signOut: () => Promise<void>;
@@ -58,12 +68,15 @@ interface Ctx {
 }
 const AuthCtx = createContext<Ctx | null>(null);
 
-async function loadProfile(user: User): Promise<Profile | null> {
-  const { data } = await supabaseBrowser()
+// Un error de la consulta se informa como error, NO como "sin perfil": antes
+// se descartaba y el layout de /admin lo leía como "no es administrador".
+async function loadProfile(user: User): Promise<LecturaPerfil<Profile>> {
+  const { data, error } = await supabaseBrowser()
     .from("profiles")
     .select("id, display_name, is_admin, avatar_seed, avatar_style, onboarding_completed, platforms, country_code")
     .eq("id", user.id)
     .maybeSingle();
+  if (error) return { perfil: null, error: error.message };
   // El nombre elegido al registrarse queda también en el metadata de auth.
   // Lo usamos como respaldo para no volver a pedirlo si el perfil no lo tiene
   // (registro previo al trigger, o fila de perfil todavía no creada).
@@ -73,17 +86,28 @@ async function loadProfile(user: User): Promise<Profile | null> {
     if (!p.display_name && metaName) {
       // Backfill silencioso para que la próxima vez ya venga del perfil.
       void supabaseBrowser().from("profiles").update({ display_name: metaName }).eq("id", user.id);
-      return { ...p, display_name: metaName };
+      return { perfil: { ...p, display_name: metaName }, error: null };
     }
-    return p;
+    return { perfil: p, error: null };
   }
-  return metaName ? { id: user.id, display_name: metaName, is_admin: false, avatar_seed: user.id, avatar_style: null, onboarding_completed: true, platforms: [], country_code: "AR" } : null;
+  return { perfil: metaName ? { id: user.id, display_name: metaName, is_admin: false, avatar_seed: user.id, avatar_style: null, onboarding_completed: true, platforms: [], country_code: "AR" } : null, error: null };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil>("pendiente");
   const [ready, setReady] = useState(false);
+  // La carga del perfil, con generaciones (lib/admin-acceso.ts): una respuesta
+  // de otra cuenta o de una sesión ya cerrada no pisa a la actual.
+  const usuarioActual = useRef<User | null>(null);
+  const [sesionPerfil] = useState(() => crearSesionPerfil<Profile>(
+    (id) => usuarioActual.current?.id === id
+      ? loadProfile(usuarioActual.current)
+      : Promise.resolve({ perfil: null, error: "la sesión cambió" }),
+    (e) => { setProfile(e.perfil); setEstadoPerfil(e.estadoPerfil); },
+  ));
+  const reintentarPerfil = useCallback(() => sesionPerfil.reintentar(), [sesionPerfil]);
   // La PENDIENTE: una ref como fuente de verdad (para que reclamar sea atómico
   // entre dos instancias) y un booleano de estado para que la pantalla reaccione
   // cuando llega tarde. El valor no se expone: sólo se reclama.
@@ -107,11 +131,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const sb = supabaseBrowser();
     let alive = true;
 
-    async function sync(session: Session | null) {
+    // Usuario y estado del perfil cambian en el MISMO tick: cuando `ready` pasa
+    // a `true`, el perfil ya figura como `pendiente` y nadie lo lee como "sin
+    // permisos". El perfil llega después, por `sesionPerfil`.
+    function sync(session: Session | null) {
       const u = session?.user ?? null;
       if (!alive) return;
+      usuarioActual.current = u;
       setUser(u);
-      setProfile(u ? await loadProfile(u) : null);
+      void sesionPerfil.cambio(u?.id ?? null);
     }
 
     // `ready` con `getSession()`, como siempre — salvo que la URL traiga tokens
@@ -119,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // (auth-js lo emite con `setTimeout(0)` después de terminar de inicializar)
     // y la página mostraría "enlace inválido" un instante antes del formulario.
     sb.auth.getSession().then(({ data }) => {
-      void sync(data.session);
+      sync(data.session);
       if (alive && !esperarRecuperacion) setReady(true);
     });
 
@@ -157,10 +185,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // tick es lo que deja a la página decir que el enlace no sirvió.
         setTimeout(() => { if (alive) setReady(true); }, 0);
       }
-      void sync(session);
+      sync(session);
     });
     return () => { alive = false; sub.subscription.unsubscribe(); };
-  }, []);
+  }, [sesionPerfil]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabaseBrowser().auth.signInWithPassword({ email, password });
@@ -179,8 +207,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { needsConfirm: !data.session };
   }, []);
 
+  // "Salir" cierra SÓLO esta sesión. Sin scope, auth-js usa `global` y revoca
+  // todas las sesiones de la cuenta: salir en la web echaba también al
+  // celular. La eliminación de cuenta tiene su propio cierre y no pasa por acá.
   const signOut = useCallback(async () => {
-    await supabaseBrowser().auth.signOut();
+    await supabaseBrowser().auth.signOut({ scope: "local" });
   }, []);
 
   // Manda el mail de recuperación. El link vuelve a /cuenta/reset, donde
@@ -291,7 +322,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <AuthCtx.Provider value={{ user, profile, ready, hayRecuperacionPendiente, reclamarRecuperacion, signIn, signUp, signOut, updateDisplayName, updateAvatar, resetPassword, cambiarPasswordDeRecuperacion, updatePassword, updatePlatforms, completeOnboarding }}>
+    <AuthCtx.Provider value={{ user, profile, ready, estadoPerfil, reintentarPerfil, hayRecuperacionPendiente, reclamarRecuperacion, signIn, signUp, signOut, updateDisplayName, updateAvatar, resetPassword, cambiarPasswordDeRecuperacion, updatePassword, updatePlatforms, completeOnboarding }}>
       {children}
     </AuthCtx.Provider>
   );

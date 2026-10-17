@@ -1,26 +1,43 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import PasswordInput from "@/components/PasswordInput";
+import { destinoSeguro } from "@/lib/admin-acceso";
+
+// A dónde volver: la sección que se pidió (`?destino=/admin/top`), validada.
+// Se lee de la barra en el cliente; sin `useSearchParams`, que obligaría a un
+// <Suspense> en una página que se prerenderiza.
+function destinoPedido(): string {
+  if (typeof window === "undefined") return "/admin";
+  return destinoSeguro(new URLSearchParams(window.location.search).get("destino"));
+}
 
 export default function Login() {
   const router = useRouter();
-  const { resetPassword } = useAuth();
+  const { resetPassword, user, ready } = useAuth();
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
   const [recuperar, setRecuperar] = useState(false);
+  const [destino] = useState(destinoPedido);
+
+  // Se navega cuando el CONTEXTO ya tiene al usuario, no apenas vuelve
+  // `signInWithPassword`: así el layout lo recibe con el perfil marcado como
+  // pendiente y espera los permisos en vez de decidir sin ellos. Cubre también
+  // entrar al login con una sesión ya abierta.
+  useEffect(() => {
+    if (ready && user) router.replace(destino);
+  }, [ready, user, destino, router]);
 
   async function submit() {
     setBusy(true); setErr(""); setOk("");
     const { error } = await supabaseBrowser().auth.signInWithPassword({ email, password: pass });
-    setBusy(false);
-    if (error) { setErr(error.message); return; }
-    router.push("/admin");
+    if (error) { setBusy(false); setErr(error.message); return; }
+    // Sigue "Un momento…" hasta que el efecto de arriba navega.
   }
 
   async function enviarReset() {

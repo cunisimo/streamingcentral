@@ -526,6 +526,7 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/cors.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "envoltorio de rutas: 500 con CORS" },
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "productor rechazado: libera el turno y sirve UB o propaga" },
   { archivo: "lib/mi-lista-memoria.ts", ancla: "while (enVuelo.size) await Promise.allSettled([...enVuelo]);", clase: "no-tmdb", motivo: "Mi lista: espera a que se asienten las escrituras de Supabase (confirmadas o revertidas); cada una ya resolvió su error con rollback" },
+  { archivo: "lib/admin-acceso.ts", ancla: "try { r = await leer(userId); } catch (e)", clase: "no-tmdb", motivo: "acceso a /admin: una lectura de perfil que lanza se informa como error (reintentable), nunca como \"sin permisos\"" },
   { archivo: "lib/compartir-accion.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "compartir en el contenedor: si el plugin falló se cae a WhatsApp; si el usuario canceló, no" },
   { archivo: "lib/compartir-accion.ts", ancla: "} catch (err) {", clase: "no-tmdb", motivo: "compartir: navigator.share falló; AbortError es que el usuario cerró la hoja, el resto cae a WhatsApp" },
   // Etapa 3.b: el fondo. Con UB, un rechazo del productor ya lo atrapó el catch de arriba (sirve el UB);

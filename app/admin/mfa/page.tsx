@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase";
 import { useAdminSesion } from "@/components/admin/useAdminSesion";
+import { destinoSeguro } from "@/lib/admin-acceso";
 
 // Alta y verificación del segundo factor del administrador.
 //
@@ -76,8 +77,11 @@ export default function MfaPage() {
   }, [codigo, factorId, refrescar]);
 
   useEffect(() => {
-    // Con dos factores y la sesión ya elevada no queda nada que hacer acá.
-    if (estado === "listo" && factores >= 2) router.replace("/admin");
+    // Con dos factores y la sesión ya elevada no queda nada que hacer acá: se
+    // vuelve a la sección pedida (`?destino=`, validada), no siempre a /admin.
+    if (estado === "listo" && factores >= 2) {
+      router.replace(destinoSeguro(new URLSearchParams(window.location.search).get("destino")));
+    }
   }, [estado, factores, router]);
 
   return (
