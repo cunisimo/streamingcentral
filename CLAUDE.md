@@ -572,6 +572,23 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   sin poder publicar y no hay forma de saltear `aal2` desde la app.
   ⚠️ `/api/admin-search` **no validaba nada** antes de esta tanda: cualquiera
   podía consumirla y gastar cuota de TMDB. Ahora exige admin con MFA.
+  **El guard del layout decide con `decidirAccesoAdmin`** (`lib/admin-acceso.ts`,
+  puro): con el perfil todavía en camino ESPERA, con un error de lectura lo
+  muestra para reintentar, y una cuenta sin permisos ve su mensaje; **nunca
+  redirige a `/`**. Antes `ready` llegaba antes que el perfil y "perfil
+  pendiente" se leía como "no es admin" → el Yump público (informe del dueño,
+  17/10). `AuthContext` expone `estadoPerfil` (`pendiente`/`listo`/`error`) y
+  `reintentarPerfil`; la carga usa generaciones, así que una respuesta de otra
+  cuenta no pisa a la actual. Login y MFA conservan la sección pedida en
+  `?destino=` (sólo rutas `/admin…`, validadas por `destinoSeguro`).
+  **"Salir" cierra SÓLO la sesión actual** (`signOut({ scope: "local" })`):
+  sin scope, auth-js usa `global` y revoca todas las sesiones de la cuenta. Los
+  cierres de la eliminación de cuenta no se tocaron.
+  ⚠️ **Verificar el MFA cierra las OTRAS sesiones de menor nivel de la misma
+  cuenta** (comportamiento de Supabase Auth, señalado por la auditoría y no
+  verificado en nuestro proyecto): entrar al panel con la cuenta personal
+  echaba al celular. Eso no se arregla desde la app; la salida es una cuenta
+  exclusiva de administración (runbook en `docs/MANTENIMIENTO.md`).
 - **La carga manual es también evidencia de disponibilidad** (procedencia
   `top-manual`, prioridad 3 del resolvedor). Cuando el dueño confirma que un
   título está en una plataforma, eso resuelve el caso que TMDB tarda en publicar.

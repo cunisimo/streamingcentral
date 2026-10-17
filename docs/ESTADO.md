@@ -1,12 +1,51 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 9 de octubre de 2026.**
+> **Estado canónico. Actualizado el 17 de octubre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
 ## Evidencia y alcance de esta actualización
 
+- **Acceso al dashboard `/admin` (2026-10-17): EN RAMA `fix/admin-acceso`
+  (worktree `wt-admin-acceso`, desde `origin/main` `dcc8c6e`), SIN MERGE NI
+  DEPLOY; espera la prueba manual del dueño.**
+  **Informado por el dueño:** al abrir `/admin/top` muchas veces terminaba en
+  el Yump público (también en incógnito), y al entrar al panel y completar el
+  2FA se le cerraba la sesión de la app del celular sin pulsar "Salir".
+  **Comprobado en código/tests:** `ready` llegaba antes que el perfil
+  (`getSession()` lanzaba `sync` sin esperarla) y el layout trataba "perfil
+  pendiente" igual que "no es admin" → `router.replace("/")`; la lectura del
+  perfil descartaba el error (lo leía como "sin permisos"); respuestas fuera de
+  orden podían pisar a la cuenta actual; login y MFA volvían siempre a
+  `/admin`. Corrección mínima: `lib/admin-acceso.ts` (puro) con
+  `decidirAccesoAdmin` (espera el perfil, muestra el error con "Reintentar",
+  mensaje para cuentas sin permisos, nunca `/`), `destinoSeguro`/`conDestino`
+  (`?destino=` sólo para rutas `/admin…`) y `crearSesionPerfil` (estados
+  pendiente/listo/error con generaciones). `AuthContext` expone `estadoPerfil`
+  y `reintentarPerfil` sin cambiar `ready`; el login navega cuando el contexto
+  ya tiene al usuario, al destino; el MFA vuelve al destino. "Salir" (app,
+  layout y página del panel) pasa a `signOut({ scope: "local" })`; sin scope,
+  auth-js 2.108.2 usa `global`. Los cierres de la eliminación de cuenta y la
+  recuperación de contraseña NO se tocaron. Sin cambios en APIs, RLS, MFA,
+  Top ni módulo editorial. Tests: `lib/admin-acceso.test.ts` **RED → GREEN**
+  (12 de 14 fallaban contra una réplica exacta del comportamiento anterior;
+  la entrada directa devolvía `ir /`): perfil lento, error de lectura, cuenta
+  sin permisos, cambio de cuenta fuera de orden, cierre con lectura en vuelo,
+  refresco de token, entrada directa, login y MFA con destino; tres
+  mutaciones detectadas (3, 2 y 1 fallos); `lib/admin-acceso-cableado.test.ts`
+  fija el cableado y que la eliminación de cuenta conserva sus cierres. Suite
+  2261 / 2261 ok / 0 omitidos, `tsc` 0, `git diff --check` limpio, build de
+  Producción exit 0 y export nativo exit 0. **Comprobado en navegador** (build
+  de Producción servido en local, sin sesión): `/admin/top` →
+  `/admin/login?destino=%2Fadmin%2Ftop`, nunca `/`.
+  **NO comprobado:** login, perfil y MFA con una cuenta real (Claude no inicia
+  sesión contra Supabase de Producción); la expulsión del celular: es
+  comportamiento de Supabase Auth al verificar MFA (auditoría de Codex, no
+  verificado contra nuestra versión ni los registros), y la salida es una
+  **cuenta exclusiva de administración**: runbook paso a paso en
+  `docs/MANTENIMIENTO.md` ("Runbook: cuenta EXCLUSIVA de administración"),
+  **no ejecutado**: ninguna cuenta ni permiso de Producción se tocó.
 - **Mantenimiento INCREMENTAL de la ruleta (2026-10-06 → 2026-10-09):
   INTEGRADO A `main` Y DESPLEGADO.** Pool de Producción 2401 → 2901 (carga
   manual del dueño, 08/10). Lo de abajo es el registro cronológico; las
