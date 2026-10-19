@@ -917,7 +917,13 @@ chico (un título en 314) que la deriva lo tapa entero.
 
 ---
 
-## Runbook: cuenta ADICIONAL de administración (preparado el 2026-10-17, NO ejecutado)
+## Runbook: cuenta ADICIONAL de administración (preparado el 2026-10-17; EJECUTADO por el dueño el 2026-10-19)
+
+> **Ejecutado el 19/10** con la cuenta adicional del dueño (su correo no se
+> registra acá; pasos 1–7; resultado en `docs/ESTADO.md`). Queda como procedimiento para
+> repetirlo si alguna vez hace falta otra cuenta. ⚠️ Para comprobar factores
+> con la API de administración usar `getUserById`: `listUsers` no los trae.
+
 
 **Por qué.** El dueño informó (17/10) que al entrar al panel y completar el 2FA
 se le cerraba la sesión de la app del celular, sin pulsar "Salir". Supabase

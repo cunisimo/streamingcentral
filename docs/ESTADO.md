@@ -67,12 +67,34 @@
   administración es **adicional** y se usa para administrar habitualmente.
   Conservar el rol no cambia el mecanismo de Supabase: entrar al panel con la
   personal puede volver a cerrar las sesiones de su celular.
-  **Pendiente (nadie lo comprobó todavía):** login, perfil y MFA con una
-  cuenta real; la versión de Supabase Auth del proyecto y sus registros; la
-  prueba manual del dueño de esta rama (instrucciones en el runbook y en la
-  respuesta del 17/10) y, recién después, merge y deploy. Runbook:
-  `docs/MANTENIMIENTO.md`, "Runbook: cuenta ADICIONAL de administración",
-  **no ejecutado**: ninguna cuenta, permiso ni factor de Producción se tocó.
+  **Prueba manual del dueño (19/10), con la rama en local** (`next dev` en
+  `localhost:3000` contra el Supabase de Producción). La cuenta adicional
+  (su correo lo tiene el dueño; no se registra acá) la creó el dueño, y él
+  corrió el `UPDATE` de `is_admin`. **Comprobado por Claude, sólo lectura con la clave de servicio:**
+  correo confirmado, `onboarding_completed = true`, `is_admin = true` y DOS
+  factores TOTP verificados (19:20 y 19:22 UTC); la cuenta personal conserva
+  `is_admin = true` y sus DOS factores (creados el 02/09). ⚠️ El listado de
+  usuarios de la API de administración NO trae los factores (`listUsers`
+  devolvió 0 para la personal); la cifra válida sale de `getUserById`.
+  **Informado por el dueño:** login + 2FA de la cuenta adicional sin que se
+  cierre la sesión personal del celular; las recargas de `/admin/top` se
+  quedan en el panel; "Salir" en una ventana deja abierta la otra sesión de la
+  misma cuenta y el celular.
+  **Defecto encontrado en la prueba y corregido:** entrando por `/admin/top`,
+  después del 2FA terminaba en `/admin`. Causa: el login leía `?destino=` de la
+  barra al DIBUJARSE (inicializador de `useState`), y en una navegación interna
+  del App Router la página nueva se dibuja antes de que Next actualice la
+  barra: leía `/admin/top` sin `?destino` y el destino caía a `/admin`. El 2FA
+  no lo tenía porque lee en un efecto. Corrección: el login lee el destino
+  dentro del efecto que navega. Test de cableado RED (2 fallos) → GREEN. El
+  dueño repitió la prueba desde una ventana privada nueva: **termina en
+  `/admin/top`** (19/10). Sobre el código final: suite 2262 / 2262 ok / 0
+  omitidos, `tsc` 0, `git diff --check` limpio, build de Producción limpio y
+  export nativo exit 0.
+  **Pendiente:** la versión de Supabase Auth del proyecto y sus registros (no
+  hacen falta para operar); merge y deploy, con autorización del dueño. El
+  runbook (`docs/MANTENIMIENTO.md`, "Runbook: cuenta ADICIONAL de
+  administración") quedó ejecutado por el dueño hasta el paso 7.
 - **Mantenimiento INCREMENTAL de la ruleta (2026-10-06 → 2026-10-09):
   INTEGRADO A `main` Y DESPLEGADO.** Pool de Producción 2401 → 2901 (carga
   manual del dueño, 08/10). Lo de abajo es el registro cronológico; las
