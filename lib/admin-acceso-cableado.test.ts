@@ -26,9 +26,25 @@ test("AuthContext: el perfil sale de crearSesionPerfil y los errores de lectura 
 
 test("login: navega cuando el contexto tiene al usuario, al destino validado", () => {
   const s = fuente("app/admin/login/page.tsx");
-  assert.match(s, /if \(ready && user\) router\.replace\(destino\);/);
+  assert.match(s, /if \(ready && user\) router\.replace\(destinoPedido\(\)\);/);
   assert.match(s, /destinoSeguro\(new URLSearchParams\(window\.location\.search\)\.get\("destino"\)\)/);
   assert.ok(!/router\.push\("\/admin"\)/.test(s), "volvía siempre a /admin");
+});
+
+// Prueba manual del dueño (19/10): entrando por /admin/top terminaba en /admin.
+// En una navegación interna del App Router la página nueva se DIBUJA antes de
+// que Next actualice la barra: leer `window.location` al dibujar (por ejemplo
+// en el inicializador de `useState`) ve la URL ANTERIOR, sin `?destino`. Hay
+// que leerla en un efecto, que corre con la barra ya actualizada.
+test("login y MFA: el destino se lee de la barra en un EFECTO, nunca al dibujar", () => {
+  const login = fuente("app/admin/login/page.tsx");
+  assert.ok(!/useState\(destinoPedido\)/.test(login), "el login calculaba el destino al dibujar, con la URL anterior");
+  assert.ok(!/useState\([^)]*window\.location/.test(login));
+  const efecto = login.match(/useEffect\(\(\) => \{[\s\S]*?\}, \[[^\]]*\]\);/g) ?? [];
+  assert.ok(efecto.some((e) => /destinoPedido\(\)/.test(e)), "el destino tiene que leerse dentro del efecto que navega");
+  const mfa = fuente("app/admin/mfa/page.tsx");
+  const efectoMfa = mfa.match(/useEffect\(\(\) => \{[\s\S]*?\}, \[[^\]]*\]\);/g) ?? [];
+  assert.ok(efectoMfa.some((e) => /window\.location\.search/.test(e)), "el MFA lee el destino en su efecto");
 });
 
 test("MFA: al completarse vuelve al destino validado, no siempre a /admin", () => {

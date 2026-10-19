@@ -9,6 +9,12 @@ import { destinoSeguro } from "@/lib/admin-acceso";
 // A dónde volver: la sección que se pidió (`?destino=/admin/top`), validada.
 // Se lee de la barra en el cliente; sin `useSearchParams`, que obligaría a un
 // <Suspense> en una página que se prerenderiza.
+//
+// 🔴 SÓLO DENTRO DE UN EFECTO. En una navegación interna del App Router la
+// página nueva se DIBUJA antes de que Next actualice la barra, así que leerla
+// al dibujar (en un inicializador de `useState`) ve la URL ANTERIOR —
+// `/admin/top`, sin `?destino`— y el destino caía a `/admin`. Lo encontró la
+// prueba manual del dueño (19/10). En el efecto la barra ya es la nueva.
 function destinoPedido(): string {
   if (typeof window === "undefined") return "/admin";
   return destinoSeguro(new URLSearchParams(window.location.search).get("destino"));
@@ -23,15 +29,15 @@ export default function Login() {
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
   const [recuperar, setRecuperar] = useState(false);
-  const [destino] = useState(destinoPedido);
 
   // Se navega cuando el CONTEXTO ya tiene al usuario, no apenas vuelve
   // `signInWithPassword`: así el layout lo recibe con el perfil marcado como
   // pendiente y espera los permisos en vez de decidir sin ellos. Cubre también
-  // entrar al login con una sesión ya abierta.
+  // entrar al login con una sesión ya abierta. El destino se lee ACÁ, con la
+  // barra ya actualizada (ver `destinoPedido`).
   useEffect(() => {
-    if (ready && user) router.replace(destino);
-  }, [ready, user, destino, router]);
+    if (ready && user) router.replace(destinoPedido());
+  }, [ready, user, router]);
 
   async function submit() {
     setBusy(true); setErr(""); setOk("");
