@@ -1,15 +1,131 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 17 de octubre de 2026.**
+> **Estado canónico. Actualizado el 19 de octubre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
+## Resumen vigente — 19/10/2026 (qué está hecho y qué falta)
+
+**Leer esto primero.** Esta sección reemplaza a las anteriores "Estado de
+producto e integración" y "Próximo trabajo, en orden" (09/09), que habían
+quedado viejas. El detalle y la evidencia de cada punto están en las entradas
+de "Evidencia y alcance" (abajo, de la más nueva a la más vieja); lo que está
+debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de evidencia: **Git** (commit en `main`),
+**deploy** (deployment de Vercel *Production – streamingcentral* en la API
+pública de deployments de GitHub, estado `success`), **dueño** (informado por
+el dueño), **Producción** (comprobado contra `app.yump.ar`).
+
+**Producción web.** `main` = `7937b4c`, desplegado el 19/10 (deploy
+7183850925). Todo lo que está en `main` está en Producción. Entregas recientes,
+todas con deploy `success`: Yumpeá `2af1a37` (27/09, 6698094206), filmografía
+v2 `95bf527` (29/09, 6744925544), 1.2.0 —badge, RESEÑAS, filtro de Mi lista—
+`072e227` (05/10, 6871735270), ruleta incremental `3eface7`/`dcc8c6e` (09/10),
+acceso al dashboard `7937b4c` (19/10, aprobado por el dueño en Producción).
+
+**Hecho (no volver a listarlo como pendiente):**
+- Android/Capacitor integrado en `main` con CORS (`lib/cors.ts`, merge
+  `fd2cd23`); release contra `https://app.yump.ar`.
+- Yumpeá (salas compartidas) en Producción: `009_salas.sql` aplicada y
+  `sala_config.activas` encendida (dueño, 27/09); `assetlinks.json` publicado
+  (Producción: 200) y App Links de `/sala/` y `/titulo/` en el manifest.
+- Top manual en `/admin/top` (merge `c993d7c`): el dueño lo usa desde el 09/09.
+- Acceso al dashboard: cerrado el 19/10. Se administra con la cuenta
+  ADICIONAL; la personal conserva su rol y sus dos factores 2FA.
+- Disponibilidad centralizada (`3b075b7`), evidencia oficial (`9c4d595`),
+  tandas 2 y 3 del idioma (`es-MX` en Producción), etapas de capacidad PREVIA,
+  0, 1, 2, 3.a, 3.b y 3.c.1 (todas en `main` y desplegadas).
+- Eliminación de cuenta en la app (`lib/eliminar-cuenta.ts`, merge
+  `2d1e959`) y la página pública en `yump.ar/eliminar-cuenta/`
+  (`docs/PLAY-STORE.md`).
+
+**Migraciones en Producción (no re-ejecutar ninguna):** 006 aplicada
+(registrada en la tanda 3); 007 en uso por el dueño desde el 09/09 (sin ella
+`/admin/top` no funcionaría); 008 comprobada el 19/10: `/api/upcoming`
+responde 200 y lee `original_language` (sin la columna devolvería 500); 009
+aplicada por el dueño el 27/09 y verificada con RPC; 010 aplicada a mano el
+08/10. 001–003 y 005 no tienen un registro individual, pero las funciones que
+dependen de ellas (chips, ruleta, "No es para mí") funcionan en Producción. El
+proyecto no usa el historial del CLI (`[db.migrations] enabled = false`).
+`004_news.sql` no está en el repo (sin seguimiento en el checkout principal) y
+su estado en la base NO se comprobó.
+
+**Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
+AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
+(3/10). AAB `4 (1.2.0)` generado el 05/10 desde `072e227` (SHA-256
+`39f6ccd0…a03cab`). El repo está en `versionCode 4` / `1.2.0`.
+
+**Pendiente, con lo que falta para cerrarlo:**
+1. **AAB 4:** que el dueño confirme si lo subió a Play y a qué pista.
+2. **Acceso a Producción de Play:** la respuesta de Google (no registrada).
+3. **Segundo proyecto de Vercel `wt-integracion-3c1`:** GitHub muestra que
+   cada push a `main` también genera un deploy *Production* de ese proyecto
+   (p. ej. 19/10, para `7937b4c`), que nadie documentó. Decidir si se
+   desconecta o se borra (es configuración de Vercel; no se tocó).
+4. **Issue #24:** el primer cruce mensual de supresiones vence el 20/10/2026
+   (`proximaRevision` en `lib/supresiones-disponibilidad.ts`).
+5. **Issue #22:** la prueba real del dueño por correo y la causa de la
+   consumición del enlace (requiere los registros de Auth).
+6. **Capacidad:** 3.c.2 (circuito), limitador y membresía no implementados;
+   Etapas 4 (CDN + límite por ruta) y 5 (observabilidad) sin iniciar (#19,
+   #20).
+7. **Enlaces Android:** volver desde los correos de confirmación y
+   recuperación no tiene filtro de App Links. Probar en teléfono los App Links
+   (`app.yump.ar: verified`), el gesto táctil y el filtro de Mi lista con sesión
+   en la app.
+8. **Analíticas Android:** sin decidir (Analytics y Speed Insights no se
+   montan en el contenedor, `app/layout.tsx`).
+9. **Issues abiertos de producto:** ver `docs/ISSUES.md` (#1–#7, #9–#12, #14,
+   #15, #16, #19, #20, #22, #24).
+10. **iOS:** no iniciado; decidir con resultados de Android. Definir alertas de
+    costo y consumo (Vercel, Upstash, Supabase).
+11. Sin verificar contra los paneles (no se pudo desde acá): la versión de
+    Supabase Auth del proyecto y sus registros; el kill switch
+    `TMDB_PAUSA_429` (documentado como NO activado al 19/09); el botón web de
+    Google Play (`NEXT_PUBLIC_YUMP_PLAY_PUBLICA`).
+
+**Capacidad — tabla de etapas (actualizada al 19/10):**
+
+| Etapa | Qué | Issue | Estado |
+|---|---|---|---|
+| PREVIA | El 500 por escritura fallida en Redis | #21 | ✅ desplegada el 11/09 |
+| 0 | Poder medir | #20 | ✅ mergeada (`1073c70`) y desplegada (`9a4b7aa`) |
+| 1 | Canonizar entradas + single-flight acotado al Home | #18 | ✅ mergeada (`e4bf75a`) y desplegada (12/09) |
+| 2 | Turno distribuido + último Home bueno | #17 | ✅ mergeada (`cd1f393`) y desplegada (13/09) |
+| 3 | Resistencia frente a TMDB | #19 | ✅ 3.a y 3.b desplegadas (15/09); ✅ 3.c.1 —pausa compartida ante 429— mergeada (`367b765`) y desplegada el 19/09; ⏳ 3.c.2, limitador, circuito, cadencias y membresía NO implementados; reintentos apagados |
+| 4 | CDN + límite por ruta | — | no iniciada |
+| 5 | Observabilidad permanente | #20 | no iniciada |
+
+`feat/dia-rotacion` sigue divergida (cientos de commits detrás de `main`): se
+reusa su diseño, no se mergea.
+
 ## Evidencia y alcance de esta actualización
 
-- **Acceso al dashboard `/admin` (2026-10-17): EN RAMA `fix/admin-acceso`
-  (worktree `wt-admin-acceso`, desde `origin/main` `dcc8c6e`), SIN MERGE NI
-  DEPLOY; espera la prueba manual del dueño.**
+- **Acceso al dashboard `/admin`: CERRADO — INTEGRADO, DESPLEGADO Y APROBADO
+  (2026-10-19).** No quedan pendientes de merge, deploy ni prueba manual.
+  **Comprobado en Git:** `origin/main` avanzó por fast-forward `dcc8c6e` →
+  **`7937b4c`** (push sin force, 20:10:18 UTC; el remoto se verificó con
+  `git ls-remote` antes y después).
+  **Comprobado en el despliegue:** GitHub registra el deployment **7183850925**
+  de Vercel, entorno *Production – streamingcentral*, estado **success** a las
+  20:11:23 UTC para `7937b4c` (API pública de deployments del repo; el panel de
+  Vercel no lo vio Claude). `app.yump.ar` sirvió el código nuevo desde las
+  20:11:47 UTC: los chunks del panel traen "Verificando permisos…", el error
+  con "Reintentar", el cierre `scope: "local"` y el destino; las rutas
+  principales responden 200; `/api/health` con Redis OK y 0 errores 429; sin
+  sesión, `/admin/top` → `/admin/login?destino=%2Fadmin%2Ftop`.
+  **Informado por el dueño (19/10):** prueba final en Producción OK con la
+  cuenta adicional (entrada por `/admin/top`, login y 2FA terminando en
+  `/admin/top`) y la sesión personal del celular abierta.
+  **Cómo se opera desde ahora:** se administra habitualmente con la cuenta
+  ADICIONAL; la cuenta personal del dueño conserva su rol de administrador y
+  sus dos factores 2FA (verificado sólo lectura el 19/10), y entrar al panel
+  con ella puede volver a cerrar sus otras sesiones (comportamiento de
+  Supabase Auth al verificar MFA). En la documentación NO se guardan correos,
+  claves ni tokens de ninguna cuenta.
+  **Antecedente del trabajo** (lo de abajo es el registro de la rama; donde
+  dice "en rama", "sin merge" o "pendiente" quedó supersedido por este
+  encabezado):
   **Informado por el dueño:** al abrir `/admin/top` muchas veces terminaba en
   el Yump público (también en incógnito), y al entrar al panel y completar el
   2FA se le cerraba la sesión de la app del celular sin pulsar "Salir".
@@ -91,8 +207,9 @@
   `/admin/top`** (19/10). Sobre el código final: suite 2262 / 2262 ok / 0
   omitidos, `tsc` 0, `git diff --check` limpio, build de Producción limpio y
   export nativo exit 0.
-  **Pendiente:** la versión de Supabase Auth del proyecto y sus registros (no
-  hacen falta para operar); merge y deploy, con autorización del dueño. El
+  **Pendiente:** sólo la versión de Supabase Auth del proyecto y sus registros
+  (no hacen falta para operar). El merge, el deploy y la prueba final se
+  hicieron el 19/10 (ver el encabezado de esta entrada). El
   runbook (`docs/MANTENIMIENTO.md`, "Runbook: cuenta ADICIONAL de
   administración") quedó ejecutado por el dueño hasta el paso 7.
 - **Mantenimiento INCREMENTAL de la ruleta (2026-10-06 → 2026-10-09):
@@ -311,8 +428,65 @@
   conector MCP de Supabase no conecta). Integrado a `main` el 09/10 (ver
   arriba).
 
+- **ENTREGA `1.2.0` PUBLICADA EN LA WEB (2026-10-05) Y AAB `4 (1.2.0)`
+  GENERADO; su subida a Play NO está confirmada.** (Registro recuperado el
+  19/10 de un commit local que no se había subido; el deploy lo confirma
+  GitHub: deployment **6871735270**, *Production – streamingcentral*,
+  **success** 2026-10-05 23:27 UTC, commit `072e227`.) Comprende el badge "★ Yump", la
+  sección RESEÑAS en acordeón, el filtro de Mi lista con su corrección de
+  carrera y `versionCode 4` / `versionName "1.2.0"` (entradas de abajo).
+  **Comprobado en Git:** prueba manual web del dueño aprobada (informado por el
+  dueño); antes de integrar, sobre `072e227` (árbol `d6a74e1`): build de
+  Producción limpio exit 0 (2 min 16 s, sin `next dev` y con `.next` y
+  `out-capacitor` borrados), export nativo exit 0, suite 2237 / 2237 ok / 0
+  omitidos, `tsc` 0, `git diff --check` limpio. **Fast-forward** de
+  `origin/main` `95bf527` → **`072e227`** (push de `main` sin force, 23:25:58
+  UTC). Producción sirvió el código nuevo a las 23:27:52 UTC (detectado por el
+  selector de Mi lista en los chunks de `/cuenta/lista`); el estado "Ready" del
+  deployment en el panel de Vercel no lo vio Claude.
+  **Comprobado en Producción (`app.yump.ar`):** 200 en `/`, `/top`, `/buscar`,
+  `/proximamente`, `/cuenta`, `/cuenta/lista`, la ficha de *Freaks*,
+  `/persona/137427`, `/sala/nueva`, `/api/health` y
+  `/.well-known/assetlinks.json`; `/api/health` con Redis OK y 0 errores 429;
+  Home con 12 rieles, `fallos: 0`, `degradado: false`; filmografía v2 con
+  secciones. En el navegador, la ficha de *Freaks* muestra "RESEÑAS · 1" y la
+  bajada, cerrada; abierta, "RESEÑA YUMP" con la fecha, ventana con
+  `overflow-y: auto` y `overscroll-behavior: contain`. Los chunks de la ficha y
+  del Home traen el badge "Reseña Yump" y ninguno "Reseña SC"; los de
+  `/cuenta/lista`, el selector y los dos mensajes de tipo vacío. El filtro con
+  una sesión real no lo comprobó Claude en Producción (no inicia sesión).
+  **AAB:** desde `072e227`, el mismo commit desplegado. `bundleRelease` BUILD
+  SUCCESSFUL (2 min 47 s) con `verificarBaseDeApi`, `verificarFirmaDeCarga` y
+  `verificarPaqueteConSalas` en verde. Copia estable
+  `D:\DESARROLLO\stream central\releases\Yump-1.2.0-vc4.aab`,
+  **7.541.431 bytes**, SHA-256
+  **`39f6ccd0d46b14fe2db8c71e48da54b0ec9d59018098684ce015351896a03cab`**
+  (idéntica al de `android/app/build/outputs/bundle/release/`). Firma: `jar
+  verified.` (JDK 17), certificado de SUBIDA
+  `2D:18:A7:C1:F4:FC:AB:D4:09:79:B3:CB:EA:66:1F:E5:41:D4:92:89:7D:47:B2:C6:7E:CF:AB:9F:93:03:95:AE`.
+  Manifest dentro del AAB: `ar.yump.app`, `versionCode 4`, `versionName
+  1.2.0`, dos filtros `autoVerify` con `https://app.yump.ar` y `/sala/`,
+  `/titulo/movie/`, `/titulo/tv/`, 0 `vercel.app`. Paquete web: 201 entradas,
+  199 idénticas al export más `cordova.js` y `cordova_plugins.js`, sin
+  `.well-known/assetlinks.json` (excluido por `ignoreAssetsPattern`);
+  `https://app.yump.ar` en 6 archivos, 0 `vercel.app`; trae el selector de Mi
+  lista, "RESEÑAS", el badge "Reseña Yump" y ningún "Reseña SC".
+  **Entorno (no es código):** Gradle 8.14 no compila los scripts de build
+  sobre Java 25 (`Unsupported class file major version 69`) y Capacitor 8
+  necesita Java 21, así que el AAB se generó con el JBR 21 de
+  `~/.jdks/jbr-21.0.11` pasado sólo al comando, y `ANDROID_HOME` también sólo
+  al comando. 🔒 `keystore.properties` se copió byte por byte desde el checkout
+  principal con autorización del dueño (destino ignorado por Git, contenido no
+  abierto ni mostrado) y se **eliminó** al terminar; ningún keystore ni `.jks`
+  en el índice ni en el historial de Git. **Subida a Play:** el dueño dijo
+  que la subiría; al 19/10 no hay confirmación registrada (pendiente de que
+  el dueño la confirme en Play Console). **Pendiente:** el gesto táctil en teléfono y el filtro de Mi lista
+  con sesión dentro de la app Android.
 - **"Mi lista" con selector Películas | Series y versión `4 (1.2.0)`
-  (2026-10-05): EN RAMA `fix/badge-resena-yump`, SIN PUSH, DEPLOY NI AAB.**
+  (2026-10-05): INTEGRADO Y DESPLEGADO el 05/10 con `072e227` (ver la entrada
+  de arriba); el AAB `4 (1.2.0)` se generó y su subida no está confirmada.**
+  *Lo que sigue es el registro de la rama: "en rama / sin push / sin deploy"
+  quedó supersedido.*
   Pedido del dueño: en `/cuenta/lista` (sólo la vista completa; los rieles del
   hub siguen con `UserShelf`) el selector de las categorías, mismas clases
   `.tipo-toggle`/`.tt`, sólo Películas y Series. Abre en Películas, o en Series
@@ -371,9 +545,9 @@
   con sesión real** (no se inician sesiones contra Supabase de Producción):
   volver al toque tras agregar/eliminar, el scroll al volver y la vista de
   escritorio quedan para la prueba del dueño.
-- **Sección RESEÑAS de la ficha como acordeón (2026-10-05): EN RAMA
-  `fix/badge-resena-yump`, SIN PUSH NI DEPLOY; va con el badge (abajo) en el
-  próximo deploy web y el AAB 4.** Pedido y decisiones del dueño (5/10): el
+- **Sección RESEÑAS de la ficha como acordeón (2026-10-05): INTEGRADA Y
+  DESPLEGADA el 05/10 con `072e227`; va en el AAB 4 generado (subida sin
+  confirmar).** *Registro de la rama; "en rama / sin deploy" supersedido.* Pedido y decisiones del dueño (5/10): el
   título "Reseña editorial" pasa a **"RESEÑAS · n"** con la bajada "Cuidado,
   puede contener spoilers."; arranca **siempre cerrada** (cerrada no renderiza
   texto) y al volver a la ficha vuelve cerrada; abierta, una ventana de alto
@@ -390,9 +564,9 @@
   `lib/resenas.test.ts` (RED → GREEN); suite 2217 / 2217 ok / 0 omitidos, `tsc`
   0, build de Producción exit 0. No probado: el arrastre táctil en un teléfono
   real (sólo emulación con rueda).
-- **Badge de reseña editorial con la marca Yump (2026-10-03): EN RAMA
-  `fix/badge-resena-yump` (sobre `fix/yumpea-filmografia-entrega` `4ef762c`),
-  SIN PUSH NI DEPLOY.** **Informado por el dueño:** el 3/10 publicó la primera
+- **Badge de reseña editorial con la marca Yump (2026-10-03): INTEGRADO Y
+  DESPLEGADO el 05/10 con `072e227` (rama `fix/badge-resena-yump`, sobre
+  `4ef762c`).** *Registro de la rama; "sin push ni deploy" supersedido.* **Informado por el dueño:** el 3/10 publicó la primera
   reseña desde `/admin` y se vio bien; pidió que el badge dijera "Reseña Yump"
   y no "Reseña SC" (marca vieja). **Comprobado en código/tests:** la ficha dice
   "Reseña Yump"; la tarjeta dice **"★ Yump"** con `title="Reseña Yump"`,
@@ -621,8 +795,8 @@
   de fichas y de salas (`app.yump.ar: verified`, app cerrada y en segundo
   plano), la vista previa real de WhatsApp, los cambios visuales en teléfono,
   PWA y escritorio, la filmografía v2 en el AAB nuevo y el cliente Android
-  anterior durante la transición. El filtro de fichas llega recién con el
-  próximo AAB. Checklist al final de esta entrada.
+  anterior durante la transición. *(Supersedido: el filtro de fichas ya va en el
+  AAB `3 (1.1.0)`, subido a Alpha el 3/10.)* Checklist al final de esta entrada.
   **AAB definitivo:** el dueño confirmó en Play Console que el mayor es
   `2 (1.0.0)`; el nuevo es **`versionCode 3`** con **`versionName "1.1.0"`**
   (decisión del dueño del 29/09; la propuesta `1.0.1` no se aplicó). 🔴 **Orden obligatorio, cumplido: primero
@@ -630,7 +804,8 @@
   `filmografia=v2`; contra el servidor actual (sin versiones) recibiría el
   contrato viejo y la ficha de persona no lo entiende. Al revés no hay
   problema: los bundles viejos piden sin versión y reciben v1.
-  **Checklist para el dueño (pendiente, no hecho):** web de escritorio;
+  **Checklist para el dueño (OMITIDA por decisión del dueño al publicar el
+  AAB 3; queda como referencia si se quiere hacer):** web de escritorio;
   navegador móvil; PWA instalada; app Android actualizada desde Alpha; con la
   app cerrada y en segundo plano, abrir un enlace `/sala/` y uno `/titulo/`;
   teléfono sin la app: los dos abren la web; vista previa real de WhatsApp
@@ -658,8 +833,17 @@
   en teléfonos:** una sala completa web–Android, enlaces de WhatsApp y
   `app.yump.ar: verified`. (Registrado primero en el commit local `d95e04d` de
   `feat/salas`, no pusheado; se integró acá a mano con el dato del 28/09.)
-- **Salas compartidas (MVP): EN RAMA `feat/salas`, Etapas 0 a 3 hechas y 4 construida; sin
-  merge, push, deploy ni cambios en Producción (2026-09-19).** Plan aprobado
+- **Salas compartidas (MVP) = Yumpeá: HISTÓRICO, YA INTEGRADO Y EN PRODUCCIÓN.**
+  `feat/salas` se integró con el merge `2af1a37` (en `main`) y se desplegó el
+  27/09 (GitHub: deployment 6698094206, *Production – streamingcentral*,
+  success); `009_salas.sql` aplicada y `sala_config.activas` encendida por el
+  dueño, y `assetlinks.json` publicado (ver la entrada "Yumpeá EN PRODUCCIÓN
+  WEB"). Lo que sigue es el registro del 19/09: "en rama", "sin merge",
+  "assetlinks pendiente", "nada ejecutado" y "no autorizado" quedaron
+  supersedidos. El `feat/salas` local tiene además un commit propio
+  (`d95e04d`) que NO está en `main`. *Texto original:* EN RAMA `feat/salas`,
+  Etapas 0 a 3 hechas y 4 construida; sin merge, push, deploy ni cambios en
+  Producción (2026-09-19). Plan aprobado
   por el dueño con tres rondas de correcciones:
   [`superpowers/plans/2026-09-17-salas-compartidas.md`](superpowers/plans/2026-09-17-salas-compartidas.md).
   **Comprobado en panel por el dueño (Tarea 0.1):** Supabase Free, PostgreSQL
@@ -960,7 +1144,8 @@
   auditoría de Codex, 18 desde cero, según los artefactos opcionales).
   Verificado sobre el `main` fusionado antes del push: suite 1926 (1916 ok,
   0 fallos, 10 omitidos), `tsc` 0, build fresco OK, `diff --check` limpio.
-  **Siguiente paso:** reintegrar el hotfix en `feat/salas` (esa rama recupera
+  **Siguiente paso** *(el reintegro en `feat/salas` ya ocurrió: `594dd09` está
+  en `2af1a37`)*: reintegrar el hotfix en `feat/salas` (esa rama recupera
   la fila de `lib/sala/preparacion-nucleo.ts` en el barrido). Cruce global
   periódico mensual desde octubre (decisión del dueño); cada tanda nueva sube
   las dos versiones. Ver `docs/ISSUES.md` #24 y
@@ -1111,7 +1296,7 @@
   el corte de Vercel a `maxDuration`. **Observado y no explicado:** `DBSIZE`
   de Upstash 802 → 90 durante la primera corrida de la precondición (la ruta
   sólo borró sus 8 claves prefijadas; sin evidencia de la causa; el Preview
-  usaba el Redis de Producción, §54.4). **Siguiente paso:** auditoría de Codex sobre la rama; merge, push y
+  usaba el Redis de Producción, §54.4). *(Histórico: la auditoría, el merge `367b765` y el deploy del 19/09 ya ocurrieron; los commits de salas citados abajo también están en `main`.)* **Siguiente paso:** auditoría de Codex sobre la rama; merge, push y
   deploy sólo con autorización del dueño; después, observación pasiva de
   `/api/health` (rollback si `pausas > 0` con `429 = 0`, o `pausados503 > 0`
   con `429 = 0`: `TMDB_PAUSA_429=0` + redeploy). 3.c.2 fuera de alcance.
@@ -1610,7 +1795,9 @@
   Corrección a la v2: un 429 en `enNetflixAR` no persistía un "no está" sino
   una fila sin resolver (`needs_review`).
 
-- **Diseño de la Etapa 3 (v4.1): pendiente de auditoría; sólo 3.a
+- **Diseño de la Etapa 3 (v4.1) — HISTÓRICO: después se aprobaron, mergearon
+  y desplegaron 3.a, 3.b y 3.c.1; lo no implementado está en el resumen
+  vigente.** *Texto original:* pendiente de auditoría; sólo 3.a
   aprobada. Restricción del dueño (14/09): la Etapa 3 no puede alterar el
   contenido correcto del Home.** Rama de documentación
   `diseno/etapa3-resistencia-tmdb` (worktree `wt-etapa3`): v1 `a15b650` → v2
@@ -1799,7 +1986,8 @@
   instancias de Vercel no coordina nada — eso, y el último Home bueno, son la
   Etapa 2. **#18 resuelto el 12/09; #17 resuelto el 13/09 con la Etapa 2.** Informe:
   [`medidas/2026-09-11-etapa1-canonizar-single-flight.md`](medidas/2026-09-11-etapa1-canonizar-single-flight.md).
-  Etapa 3: 3.a implementada en rama (pendiente de auditoría, reintentos
+  Etapa 3 *(histórico; hoy: 3.a, 3.b y 3.c.1 desplegadas, ver el resumen
+  vigente)*: 3.a implementada en rama (pendiente de auditoría, reintentos
   apagados); diseño v4.1 pendiente de auditoría para el resto; restricción del
   dueño: no puede alterar el contenido correcto del Home (ver arriba). Etapas
   4 y 5: no iniciadas.
@@ -1921,7 +2109,8 @@
 - **Informado por el dueño el 09/09:** el 08/09 agregó 20 testers en Google Play
   y generó el enlace; desde el 09/09 están usando la aplicación. No afirmó que
   los 20 hayan aceptado o instalado: esos conteos siguen por verificar.
-- **Heredado del chat anterior:** web/PWA en producción; Android firmado en
+- **Heredado del chat anterior** *(al 09/09; después subieron a Alpha los
+  AAB 2 y 3, ver el resumen vigente)*: web/PWA en producción; Android firmado en
   prueba cerrada Alpha, versión 1 (1.0.0), Argentina, publicación gestionada
   desactivada, ficha y declaraciones principales completadas. No se abrió Play
   Console en esta sesión. Esto NO acredita publicación pública en Producción.
@@ -1986,78 +2175,6 @@ de cómo se llegó.
   abre la web y la contraseña nueva luego no permite ingresar en Android.
   No estaba comprobado que la escritura hubiera fallado. No confundir la falta
   de App Links con fallo de guardado.
-
-## Estado de producto e integración
-
-Android ya está integrado en `main`; no queda pendiente mergear Capacitor ni
-agregar su CORS al código principal. Según el traspaso, la release consume
-`https://app.yump.ar`, usa paquete web local, firma de carga, guards de release,
-íconos propios, navegación/Atrás y compartir nativos, sesión persistente y
-recordatorios locales de estreno a las 10:00 locales, probados en teléfono.
-La PWA y su service worker se mantienen separados del contenedor.
-
-El traspaso da por integrados Top manual, Próximamente, ruleta rediseñada,
-evidencia oficial y últimos cambios de PWA. **El dueño confirma el 09/09 que ya usa el dashboard `/admin/top` para cargar películas y series de las plataformas del Top.** Su implementación y conexión al ranking se comprobaron en código. No volver a listar la carga manual ni la reparación del cron como pendientes del ranking. Esta sesión no inspeccionó la base; no ejecutar migraciones basándose en notas antiguas.
-
-iOS no está implementado según el traspaso: sin proyecto, TestFlight ni pruebas
-en iPhone. La decisión de iniciarlo queda para después de evaluar Android.
-
-## Próximo trabajo, en orden
-
-1. **Prueba cerrada:** comprobar adhesiones efectivas y fecha que contabiliza
-   Play Console; verificar instalaciones y registrar feedback, dispositivos,
-   recorridos probados y correcciones. No calcular una fecha de acceso a
-   Producción sólo desde la creación de la lista o el primer uso informado.
-   El traspaso cita 12 testers durante 14 días para ciertas cuentas personales:
-   comprobar la aplicabilidad y exigencia vigente en la consola antes de actuar.
-2. **Operación de Play:** revisar informes previos al lanzamiento, fallos/ANR,
-   respuesta de anuncios/ID de publicidad y respaldo seguro de firma. Para un
-   nuevo AAB, incrementar `versionCode`. Solicitar acceso a Producción cuando la
-   consola lo habilite; lanzamiento público todavía pendiente.
-3. **Capacidad antes de difusión masiva — auditado y revisado el 10/09, ver más
-   abajo.** Sigue sin existir un máximo medido de usuarios simultáneos, y ahora
-   está escrito por qué no se puede deducir **ni siquiera con un banco aislado**.
-   Cinco problemas quedaron **comprobados** y registrados como issues **#17 a
-   #21**. El plan tiene **siete etapas** y el orden es:
-
-   | Etapa | Qué | Issue | ¿Depende de medir? |
-   |---|---|---|---|
-   | **PREVIA** ✅ hecha y desplegada el 11/09 | El 500 por escritura fallida en Redis | #21 | **No** |
-   | 0 | Poder medir — **mergeada (`1073c70`) y desplegada (`9a4b7aa`); las líneas nuevas se ven en `vercel logs`; sin serie histórica** | #20 | — |
-   | 1 | Canonizar entradas + single-flight **acotado al Home** — ✅ **mergeada (`e4bf75a`) y desplegada (`f76d9ca`) el 12/09; #18 resuelto, #17 sigue por la Etapa 2** | #18, #17 | Sí |
-   | 2 | Turno distribuido + último Home bueno — ✅ **mergeada (`cd1f393`), desplegada (`c7a3ce1`) y verificada el 13/09; #17 resuelto** | #17 | Sí |
-   | 3 | Resistencia frente a TMDB — **3.a desplegada (`7b2fc8f`, 15/09) y 3.b desplegada (`5604750`, 15/09: último bueno primero + reconstrucción en fondo con `waitUntil`, camino observado en Producción); 3.c (§45-§48, vigente): 3.c.1 —pausa idempotente por evento, adquisición atómica con sobrepaso estimado (no acotado), lector no bloqueante (sólo `Δt`, `F_max = 1`), espera breve acotada sin UB con un solo sueño (§42, decisión del dueño), un solo deadline absoluto `plazo − ahora` (la lectura previa cuenta) y el fondo con `min(interno, externo)` sin composiciones condenadas (la señal limita el trabajo nuevo; Redis ya enviado completa o pierde la respuesta; tras el plazo sólo un `LIBERAR` de limpieza, una vez, estrictamente antes del corte externo, con recuperación eventual por TTL), vencimiento interno por el centinela 4d, Lua que falla seguro— NO aprobada, pendiente de nueva auditoría, nada implementado; 3.c.2 fuera de alcance; reintentos apagados; limitador, circuito, cadencias y membresía NO implementados; restricción del dueño: no alterar el contenido correcto del Home** | #19 | Sí |
-   | 4 | CDN + límite por ruta | — | Sí |
-   | 5 | Observabilidad permanente | #20 | — |
-
-   La Etapa PREVIA va primera porque es la única que **no depende de ninguna
-   medición**: es un `catch` que falta y la decisión ya está tomada — *si el
-   payload se produjo correctamente y sólo falla la escritura en Redis, se
-   entrega al usuario y se registra el error*.
-
-   El single-flight de la Etapa 1 **se aplica sólo a `lib/home.ts`**, no a
-   `cached`/`cachedIf`: los contextos de degradación son `AsyncLocalStorage` por
-   request, y compartir en profundidad haría que el segundo guardara un payload
-   degradado como sano. La integración global no está prohibida, está **sin
-   demostrar** (inventario y requisitos en la Etapa 1 del informe).
-
-   `feat/dia-rotacion` está divergida y **su arreglo de `fresh=1` corrige un
-   agujero que ella misma abre y que `main` no tiene**: se reusa el diseño, no se
-   mergea.
-4. **Enlaces Android:** `assetlinks.json`, App Links y retorno desde correos de
-   confirmación/recuperación pendientes según el traspaso.
-5. **Analíticas Android:** pendientes de decidir e implementar. Analytics y
-   Speed Insights **no se montan en el contenedor por decisión**
-   (`app/layout.tsx:133`, con la medición del 06/09 escrita al lado), así que el
-   uso de los testers nativos no se puede contar ni seguir. Lo único que deja
-   rastro son las peticiones a la API, y hoy no se pueden separar por origen.
-   Entra dentro del issue #20.
-6. **Pendientes históricos:** semántica y actualización de
-   Próximamente, fechas UTC restantes, piso de cantidad de votos, rendimiento
-   móvil, pruebas reales offline, contraste y avatar. Consultar `ISSUES.md` y
-   contrastar con código antes de declarar algo resuelto o proponer arreglos.
-7. Con resultados reales de Android, decidir iOS. Vigilar costos y consumo de
-   Vercel, Upstash y Supabase y definir alertas operativas.
 
 ## Auditoría de capacidad y tráfico — 10/09/2026
 
@@ -2164,6 +2281,9 @@ no justifica reabrir el problema del ranking ya resuelto por carga manual.
 |---|---|---|---|
 | 08/09/2026 | 20 testers agregados y enlace generado | Dueño, conversación del 09/09 | Adhesiones efectivas en consola |
 | 09/09/2026 | Comenzaron a usar la app | Dueño, conversación del 09/09 | Cantidad, dispositivos, recorridos y feedback |
+| 28/09/2026 | AAB `2 (1.0.0)` (Yumpeá) subido a Alpha | Dueño | Prueba de sala completa en teléfonos |
+| 03/10/2026 | AAB `3 (1.1.0)` subido a Alpha; acceso a Producción pedido a Google | Dueño | Respuesta de Google |
+| 05/10/2026 | AAB `4 (1.2.0)` generado | Git/Claude | Confirmación de la subida a Play |
 
 Todavía no hay observaciones concretas de testers registradas en esta sesión.
 Agregar resultados con fecha y procedencia, sin publicar sus correos personales.
@@ -2187,6 +2307,7 @@ Sin seguimiento al comprobar Git: `avatares/`, `prompts/noticias-filtro.md`,
 Preservarlos; no usar `git add -A`. El estado real de la migración de noticias
 no se comprobó en la base. No guardar secretos de firma en Git.
 
+*(Histórico, sesión del 09/09: sus cambios documentales ya están en `main`.)*
 Esta sesión actualiza documentación por pedido explícito del dueño. No modifica
 código, ejecuta migraciones, genera AAB, despliega ni cambia paneles. Los cambios
 documentales quedan locales hasta que se revisen y se incorporen al repositorio;
@@ -2217,6 +2338,8 @@ archivo no las repite**: acá va el estado del momento y lo que queda pendiente.
 ---
 
 ## Estado de despliegue
+
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** La tabla de ramas es del 17/08. `feat/salas` (con `0c13036`, `8429f5e`, `34e4637`) entró a `main` con `2af1a37`; `feat/ejes-rieles-genero` con `1042b8a`; `feat/avatares-propios` y `feat/legal-play-web` ya no existen. Estado vigente: "Resumen vigente" al principio.
 
 ```
 origin/main                          ← DESPLEGADO en producción (app.yump.ar)
@@ -2319,6 +2442,8 @@ memoria del proyecto).
 ---
 
 ## El Top 10 de Netflix — **el código, cerrado y desplegado; el cron, abierto**
+
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** El issue #13 se retiró de abiertos el 09/09 (el Top se carga a mano en `/admin/top`). Que el cron haya quedado reparado NO está verificado; sigue programado en `vercel.json` y alimenta la evidencia de disponibilidad.
 
 **Estado al 27/08.** Se cerraron y desplegaron en `1e14f5c` tres arreglos de
 código, y queda abierto el problema del cron (**issue #13**).
@@ -2628,6 +2753,8 @@ Para volver al camino viejo y comparar en la misma pantalla:
 
 ## Lo que queda por hacer
 
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** La lista vigente de pendientes está en "Resumen vigente" al principio; #13 ya no existe en `docs/ISSUES.md`.
+
 - **`home:v2`** — evaluar si el payload compuesto sigue teniendo sentido, ahora
   sí con los números del hero puestos.
 - **Pipeline de escrituras a Upstash** — baja round-trips, no comandos. Poco
@@ -2641,6 +2768,8 @@ Para volver al camino viejo y comparar en la misma pantalla:
 ---
 
 ## Issues abiertos (`docs/ISSUES.md`)
+
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** Esta tabla es vieja: #13 se retiró y #8 está corregido e integrado; faltan #16, #19, #20, #22, #23 y #24. La fuente es `docs/ISSUES.md`.
 
 | # | Qué |
 |---|---|
@@ -2751,7 +2880,7 @@ quedan intactas y se muestra el motivo.
 
 ### Pendiente para Google Play
 
-Falta la **página pública `/eliminar-cuenta`**, accesible sin la app, que Google
+*(Supersedido: la página pública existe en `yump.ar/eliminar-cuenta/`, 200 al 19/10; ver `docs/PLAY-STORE.md`.)* Falta la **página pública `/eliminar-cuenta`**, accesible sin la app, que Google
 exige enlazar desde la ficha de Play. El mecanismo del servidor ya está listo
 para reutilizarse: depende solo de un token válido, así que esa página solo
 tiene que pedir email y contraseña, iniciar sesión y llamar al mismo endpoint.
@@ -2763,6 +2892,8 @@ de arriba es la fuente para ese formulario.
 ---
 
 ## Tanda 3 del idioma: EN PRODUCCIÓN
+
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** `feat/idioma-tanda-3` ya está en `main` (merge `ba4a5aa`): no falta ningún merge.
 
 **Cerrada el 2026-08-24.** `upcoming_content` quedó en es-MX y el sync escribe en
 es-MX de acá en adelante. Falta **solo el merge** de `feat/idioma-tanda-3`.
@@ -3093,7 +3224,7 @@ hasta 30 h.
 ### El Preview: aislado y desplegado
 
 ```
-https://streamingcentral-git-feat-4b4d31-jfgalindez-gmailcoms-projects.vercel.app
+https://streamingcentral-git-feat-4b4d31-<equipo-vercel>.vercel.app
 ```
 
 **Producción sigue en `es-ES` y sus variables no se tocaron.**
@@ -3185,6 +3316,8 @@ como se colaron en un commit de esta rama, y hubo que sacarlos con
 
 ## Disponibilidad centralizada + selector en "Últimos lanzamientos" (2026-08-30)
 
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** Mergeada en `main` (`3b075b7`) y desplegada. "No mergeada" y "lista para integrar" son del 30/08.
+
 Rama `fix/disponibilidad-oficial`. **No mergeada al escribir esto.**
 
 - **Un solo resolvedor** decide "está en X" para toda la app
@@ -3256,6 +3389,8 @@ está cubierta por 23 tests apuntados al resolvedor.
 
 ## Top semanal manual — rama `feat/top-manual` (2026-09-01)
 
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** Mergeada (`c993d7c`) y desplegada; el dueño usa `/admin/top` desde el 09/09, lo que requiere la migración 007; las dos cuentas administradoras tienen dos factores TOTP (comprobado sólo lectura el 19/10). Que `verificar-007.sql` se haya corrido NO tiene registro.
+
 **Sin mergear y SIN EJECUTAR LA MIGRACIÓN al escribir esto.** Falta la prueba
 manual del dueño.
 
@@ -3319,6 +3454,8 @@ conserva su última versión publicada.
 - Las reseñas editoriales siguen en standby y sus policies **no se tocaron**.
 
 ## Evidencia oficial general — rama `feat/evidencia-oficial` (2026-08-31)
+
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** Mergeada (`9c4d595`) y desplegada. Las menciones al issue #13 "abierto" quedaron viejas: se retiró el 09/09.
 
 **Prueba manual local APROBADA por el dueño el 2026-08-31. Lista para
 integrar.** Ver el bloque de cierre al final de esta sección.
@@ -3401,6 +3538,8 @@ anterior: se probó en local en modo Producción, con caché en memoria y fecha
 argentina real.
 
 Lo que este trabajo **NO** arregla, y conviene no darlo por cerrado:
+
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** Filas viejas de esta tabla: **#13** se retiró de abiertos el 09/09; **Capacitor** está integrado en `main` con CORS (`lib/cors.ts`, merge `fd2cd23`), el AAB apunta a Producción y ya hubo AAB 2 y 3 en Alpha; el repo está en `versionCode 4` / `1.2.0`. Ver "Resumen vigente".
 
 | | Estado |
 |---|---|

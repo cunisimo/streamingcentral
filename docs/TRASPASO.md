@@ -38,7 +38,7 @@ Lo que sí es propio de esta tanda:
 
 | Pieza | Dato |
 |---|---|
-| URL del Preview | `streamingcentral-git-feat-4e07d7-jfgalindez-gmailcoms-projects.vercel.app` |
+| URL del Preview | `streamingcentral-git-feat-4e07d7-<equipo-vercel>.vercel.app` |
 | Estado del deployment | **no verificado desde la sesión**: no hay CLI de Vercel ni token, y la URL responde 302 al SSO. Hay que mirarlo en el panel |
 | Punta de la rama | `git log -1 feat/avatares-propios` — a propósito no se escribe acá |
 

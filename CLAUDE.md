@@ -108,13 +108,17 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
 - **Upstash Redis** — cache de providers/covers. Opcional: sin
   credenciales, `lib/cache.ts` cae a cache en memoria (se pierde en cada cold
   start de serverless, pero no rompe nada).
-- **Supabase** — Postgres + Auth, solo para reseñas editoriales y el login del
-  dashboard `/admin`. RLS activado.
+- **Supabase** — Postgres + Auth, con RLS. Empezó sólo para reseñas
+  editoriales y el login de `/admin`; hoy guarda además perfiles y cuentas
+  públicas, votos, Mi lista / Ya la vi (`user_items`), historial
+  (`view_history`), el Top manual, la agenda de estrenos, la ruleta y las
+  salas de Yumpeá (ver `docs/ESTADO.md`).
 
 ## Decisiones de arquitectura que importan
 
-- **TMDB es la fuente del catálogo, no se replica.** Supabase solo guarda
-  `editorial_reviews`. La ficha se arma en cada request combinando
+- **TMDB es la fuente del catálogo, no se replica.** Supabase guarda lo
+  propio de Yump (reseñas editoriales, datos de usuario, Top, agenda, ruleta,
+  salas), nunca una copia del catálogo. La ficha se arma en cada request combinando
   TMDB + Supabase, cacheado en Redis (`lib/enrich.ts` → `detail()`).
 - **Región fija `AR`.** `watch_region=AR`, `with_watch_monetization_types=flatrate`.
   Todo lo que no tenga oferta de streaming plano en AR simplemente no aparece
@@ -136,10 +140,11 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   documentales/ficción, el orden de los chips curados y la tanda de la ruleta —
   así que tocarla las mueve a todas juntas, que es lo que se quiere.
   Quedan otras fechas calculadas en UTC — ver **issue #4** en `docs/ISSUES.md`.
-- **Votos/reseñas de usuario están en el schema pero NO construidos**
-  (`supabase/schema.sql`, tablas `votes` y `user_reviews`, con RLS). Esto es a
-  propósito — el dueño quiere ese módulo en standby hasta decidir el sistema
-  de cuentas del lado público.
+- **Los votos de usuario ESTÁN construidos** (`votes`, `LikeButton`, rieles
+  "Lo más votados" y "No gustaron"; ver "Pendiente / en standby"). **Las
+  reseñas de usuario NO** (`user_reviews` existe en el schema, sin
+  interfaz): el dueño anunció que se van a construir y la sección "RESEÑAS"
+  de la ficha ya está preparada para recibirlas (`lib/resenas.ts`).
 - **El Home se arma en un solo lugar (`lib/home.ts`, "Home Composer").** Pipeline
   `TMDB → audiencia → compose → dedup → [rotación] → [personalización] → JSON`.
   Un título aparece **una sola vez** en todo el Home: la prioridad es el orden

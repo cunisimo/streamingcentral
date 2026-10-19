@@ -447,7 +447,7 @@ No son intercambiables y conviene no mezclarlas.
 |---|---|---|
 | **1. Tests automáticos** | la decisión de pedir o no pedir, y las guardas estructurales | ✅ 966 pasan |
 | **2. Navegador real con respuestas interceptadas** | el comportamiento de la interfaz: peticiones, restauración, scroll | ✅ **todos los escenarios** |
-| **3. Integración real con Supabase** | que el read-path lea de verdad, con la columna y los datos reales | ⏳ **pendiente**: necesita la migración `008` |
+| **3. Integración real con Supabase** | que el read-path lea de verdad, con la columna y los datos reales | ✅ **hecho**: la migración `008` está aplicada en Producción (comprobado el 19/10/2026: `/api/upcoming` responde 200 y lee `original_language`; sin la columna devolvería 500) |
 
 ⚠️ El nivel 2 usa datos inventados servidos desde el navegador. **No prueba nada
 de Supabase ni de producción**, y no reemplaza al nivel 3.
@@ -579,7 +579,7 @@ código. **Sin caché**: no arreglaría un arranque en frío.
 
 ## 🔴 Orden de despliegue
 
-**La migración `008` va ANTES de deployar el código.** El `SELECT` del read-path
+*(Histórico: la 008 ya está aplicada; ver la tabla de arriba.)* **La migración `008` va ANTES de deployar el código.** El `SELECT` del read-path
 pide `original_language`; sin la columna, PostgREST responde
 `400 column upcoming_content.original_language does not exist`, `upcomingList`
 lanza y **`/api/upcoming` entero devuelve 500** — no sólo la selección: también el

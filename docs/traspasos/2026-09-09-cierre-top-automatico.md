@@ -45,7 +45,7 @@ el cron de Vercel no disparó nunca. La guarda de 14 días lo tapó durante dos
 semanas — mientras el dato aguantó, nadie se enteró.
 
 **Sospecha sin confirmar**: el scope de Vercel se llama
-`jfgalindez-gmailcom's projects`, que es el nombre de un plan Hobby, y ahí los
+`<equipo de Vercel del dueño>`, que es el nombre de un plan Hobby, y ahí los
 cron jobs tienen límites. **No está verificado** y hay que mirarlo en
 Vercel → Settings → Cron Jobs, donde se ve si el cron está registrado y sus
 últimas ejecuciones. No dar por sentado cómo se comporta la plataforma: es el

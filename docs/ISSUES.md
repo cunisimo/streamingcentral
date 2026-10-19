@@ -2,6 +2,17 @@
 
 ## #25 — La ficha de persona pierde películas (roles pisados y truncado)
 
+> ✅ **CERRADO por su criterio (auditoría del 19/10/2026).** Todo el criterio
+> de cierre está cumplido: auditoría aprobada, merge y deploy (`95bf527`,
+> deployment 6744925544 *Production – streamingcentral*, success 29/09), AAB
+> `3 (1.1.0)` subido a Alpha (informado por el dueño, 3/10), checklist en
+> teléfonos omitida por decisión del dueño, y el último paso —"el
+> fast-forward de `main` con la documentación final"— es `da21b6d`, que está
+> en `main` y desplegado. Por la regla de este archivo correspondería
+> borrarlo; se conserva como antecedente hasta que el dueño lo decida. Lo de
+> abajo ("sin merge, sin push, sin deploy", "queda el fast-forward") es
+> histórico.
+
 **Estado (29/09): CORREGIDO Y EN PRODUCCIÓN WEB** (fast-forward de `main` a
 `95bf527`; Vercel Ready para ese commit, informado por el dueño). v2 para la
 web y el AAB nuevo (`3 (1.1.0)`, subido a Alpha por el dueño el 3/10); v1
@@ -167,6 +178,10 @@ Queda: el fast-forward de `main` con la documentación final.
 
 ## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
 
+> ⏳ **Al 19/10/2026:** sigue abierto. El primer cruce mensual de
+> supresiones vence el **20/10/2026** (`proximaRevision` en
+> `lib/supresiones-disponibilidad.ts`) y todavía no tiene registro.
+
 **Estado (20/09): CORREGIDO para los 20 casos confirmados, MERGEADO EN
 `main` (`594dd09`, `--no-ff` de `fix/supresiones-disney` en `d88ecbb`) Y
 DESPLEGADO (`dpl_BUgH7twdWVnuXQxkd5eKsVxPP7sq`, READY, asociado a
@@ -249,7 +264,17 @@ medir, no para servir.
 mergeada; por eso este es el #24 y no hay hueco que rellenar.)
 ## #23 — Dos tests de concurrencia del Home dependen del reloj de pared y fallan bajo carga
 
-**Estado:** abierto · **Prioridad:** baja · **Abierto:** 2026-09-18 · **No bloquea** la
+> ✅ **CERRADO por su criterio (auditoría del 19/10/2026).** Los dos tests
+> del criterio son deterministas desde `0ce9704` (18/09: `home-fondo-orden`
+> con reloj fijo `AHORA_FIJO` y barrera `puertaA`/`liberarA`; `home-vuelo`
+> con la compuerta `puerta`/`soltar`, sin umbrales de reloj), que entró a
+> `main` con el merge de la 3.c.1 (`367b765`) y está desplegado. No se
+> revisaron los otros dos tests de la misma familia citados abajo ("ORDEN
+> COMPLETO…" y "FRONTERA EXTERNA…"), que están fuera del criterio. La nota
+> de que `feat/salas` "todavía no está mergeada" quedó vieja: entró con
+> `2af1a37`.
+
+**Estado (original):** abierto · **Prioridad:** baja · **Abierto:** 2026-09-18 · **No bloquea** la
 Etapa 1 de salas ni ningún deploy. **Clasificación: arnés sensible a carga y a
 reloj real, NO regresión del producto.**
 
@@ -865,6 +890,12 @@ anterior a la última corrida del sync.
 
 ## #8 — `upcoming_content`: sesgo permanente hacia lo popular
 
+> ✅ **CERRADO por su criterio (auditoría del 19/10/2026).** El criterio
+> —definir qué contiene la agenda y que la pertenencia no dependa del ranking
+> de popularidad— está cumplido: decisión del dueño del 01/09 (abajo) y merge
+> `5ce7202` en `main`, desplegado. "Sigue abierto y no se tocó" y la
+> descripción del código con `MAX_PAGES = 3` más abajo son históricos.
+
 **Estado: CORREGIDO e INTEGRADO** el 2026-09-01 desde
 `fix/proximamente-sin-popularidad` · **Abierto:** 2026-08-15
 
@@ -1111,7 +1142,7 @@ la agenda de "Próximamente" tiene que mostrarlos. La resolución de
 disponibilidad ya sabe recuperar estos casos con evidencia oficial; **el sync no
 la usa**, porque corre en una Edge Function aparte.
 
-**Sigue abierto y no se tocó** — la corrección de disponibilidad del 2026-08-31
+*(Histórico, antes del 01/09.)* **Sigue abierto y no se tocó** — la corrección de disponibilidad del 2026-08-31
 no lo alcanza.
 
 **Criterio de cierre:** definir qué debería contener la agenda —¿todo lo que
