@@ -142,12 +142,11 @@ export default function AdminTopPage() {
     <div className="admin admin-top">
       <h1>Top semanal</h1>
 
-      {/* Preparación inicial. Cuenta PUBLICACIONES, no la fuente que sirve
-          `/top`: como el cutover es atómico, contar la fuente sólo podía dar 0 o
-          12 y saltaba de golpe. El cutover no cambió — sigue exigiendo los doce,
-          y el mensaje lo dice. Ver `preparacion()`. */}
+      {/* Cuántos de los doce bloques tienen al menos una publicación. Los que
+          faltan se ven en `/top` como "todavía no disponible": no hay fuente
+          alternativa. Ver `preparacion()`. */}
       <p className="admin-nota">
-        Preparación inicial:{" "}
+        Bloques publicados:{" "}
         <strong>{avance.hechos} de {avance.total} publicados</strong>. {avance.mensaje}
       </p>
 

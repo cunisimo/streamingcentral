@@ -1,12 +1,11 @@
 // Las reglas del Top manual que no necesitan base ni red.
 //
 // Vive aparte de `top-manual.ts` por el motivo de siempre en este proyecto: ese
-// archivo es `server-only` y arrastra el cliente de Supabase, y lo que decide
-// **si el Top público cambia de fuente** tiene que poder probarse sin levantar
-// nada.
+// archivo es `server-only` y arrastra el cliente de Supabase, y estas reglas
+// tienen que poder probarse sin levantar nada.
 import type { MediaType, PlatformCode } from "./types";
 
-/** Las seis plataformas del Top. Espeja `TOP_PLATFORMS` de `lib/top.ts`. */
+/** Las seis plataformas del Top. El orden de aparición lo decide `platformOrder`. */
 export const TOP_PLATAFORMAS: PlatformCode[] = ["n", "d", "m", "p", "at", "cr"];
 
 export interface Bloque { plataforma: PlatformCode; tipo: MediaType }
@@ -17,22 +16,6 @@ export const BLOQUES: Bloque[] = TOP_PLATAFORMAS.flatMap((plataforma) =>
 
 export const claveBloque = (p: string, t: string) => `${p}:${t}`;
 
-/**
- * ¿Están publicados los DOCE bloques?
- *
- * 🔴 EL CUTOVER ES ATÓMICO, y es una decisión del dueño. Mientras falte
- * cualquiera, `/top` entero sigue con la implementación vieja. Media página con
- * ranking curado y media con popularidad de TMDB sería peor que cualquiera de
- * las dos cosas por separado: el lector no tendría forma de saber qué está
- * mirando.
- *
- * Se comprueba contra `BLOQUES`, no contra el tamaño del conjunto: doce claves
- * no alcanzan, tienen que ser LAS doce.
- */
-export function hayCutover(publicados: Set<string>): boolean {
-  return BLOQUES.every((b) => publicados.has(claveBloque(b.plataforma, b.tipo)));
-}
-
 /** Cuántos bloques hay en total: seis plataformas por dos tipos. */
 export const TOTAL_BLOQUES = BLOQUES.length;
 
@@ -40,7 +23,7 @@ export interface Preparacion {
   /** Bloques con al menos una publicación. */
   hechos: number;
   total: number;
-  /** ¿Ya cambió la fuente pública? Es `hayCutover` con otro nombre. */
+  /** ¿Están publicados LOS doce? */
   listo: boolean;
   mensaje: string;
 }
@@ -48,32 +31,27 @@ export interface Preparacion {
 /**
  * El resumen de preparación del panel: "X de 12 publicados".
  *
- * 🔴 CUENTA PUBLICACIONES, NO LA FUENTE QUE SIRVE `/top`. Antes el panel leía
- * `/api/top` y contaba bloques con `source: "manual"`, pero como el cutover es
- * ATÓMICO esa fuente sólo cambia cuando están los doce: con cuatro publicados
- * el contador decía **0 de 12** y saltaba de 0 a 12 de golpe. Como indicador de
- * progreso no servía, que es justamente para lo que está.
+ * Cuenta PUBLICACIONES: un bloque publicado dos veces (una corrección) cuenta
+ * UNA vez, y una clave que no sea de los doce no cuenta — doce claves no
+ * alcanzan, tienen que ser LAS doce.
  *
- * ⚠️ ESTO NO TOCA EL CUTOVER. `listo` es `hayCutover` y sigue exigiendo los
- * doce; lo único que cambia es qué número se muestra mientras tanto.
- *
- * Un bloque publicado dos veces (una corrección) cuenta UNA vez, y una clave
- * que no sea de los doce no cuenta: doce claves no alcanzan, tienen que ser LAS
- * doce.
+ * Desde el 2026-10-20 el Top público muestra cada bloque publicado apenas se
+ * publica, y los que faltan como "todavía no disponible". Ya no hay "cutover
+ * atómico" ni fuente anterior: el mensaje sólo informa qué ve el público.
  */
 export function preparacion(publicados: readonly string[]): Preparacion {
   const validas = new Set(
     publicados.filter((k) =>
       BLOQUES.some((b) => claveBloque(b.plataforma, b.tipo) === k)),
   );
-  const listo = hayCutover(validas);
+  const listo = BLOQUES.every((b) => validas.has(claveBloque(b.plataforma, b.tipo)));
   return {
     hechos: validas.size,
     total: TOTAL_BLOQUES,
     listo,
     mensaje: listo
-      ? "El Top público ya usa la carga manual."
-      : "Hasta que estén los doce, el Top público sigue con la fuente anterior.",
+      ? "Los doce bloques están publicados."
+      : "Los bloques sin publicar se ven en el Top público como «todavía no disponible».",
   };
 }
 
@@ -169,8 +147,8 @@ export interface FilaEvidencia {
  *
  *  - **Sólo lo publicado.** Un borrador es trabajo a medias; no dice nada del
  *    mundo. El filtro por estado lo hace la consulta, no esta función.
- *  - **Vence a los 14 días**, la misma ventana que el top oficial de Netflix y
- *    por el mismo motivo: una captura vieja no dice dónde está hoy un título.
+ *  - **Vence a los 14 días**: una captura vieja no dice dónde está hoy un
+ *    título.
  *  - **La clave es `tipo:id`**, nunca el id solo: TMDB reutiliza los números
  *    entre tipos.
  *

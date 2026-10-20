@@ -32,14 +32,12 @@ export const CLAVE_EVIDENCIA_MANUAL = "disp:top-manual";
  * Un minuto para la lista de publicaciones.
  *
  * ⚠️ ESTO NO ESTABA EN EL PLAN Y SE AGREGÓ AL MEDIR. `/api/top` es
- * `force-dynamic`, así que sin cache esta consulta corría **en cada pedido** —
- * y antes del cutover se sumaría a las dos que ya hace `latestWeekRows`,
- * pasando de 2 a 3 consultas por request. Con el minuto, el techo son 60 por
- * hora sin importar el tráfico.
+ * `force-dynamic`, así que sin cache esta consulta corría **en cada pedido**.
+ * Con el minuto, el techo son 60 por hora sin importar el tráfico.
  *
  * El precio es que un bloque recién publicado tarda hasta un minuto en
- * aparecer, incluido el momento del cutover y el contador "X de 12" del
- * dashboard. Es aceptable para algo que se publica una vez por semana.
+ * aparecer en `/top`. Es aceptable para algo que se publica una vez por
+ * semana.
  */
 export const TTL_PUBLICACIONES = 60;
 export const CLAVE_PUBLICACIONES = "top:manual:publicaciones";
@@ -101,6 +99,11 @@ const aFila = (r: CrudoRanking): RankingFila => ({
  * memoria, en vez de hacer doce consultas con `limit 1`. Son pocas filas (una
  * por publicación) y una sola ida a la base; el índice parcial
  * `top_rankings_publicados` la cubre.
+ *
+ * 🔴 LANZA SI NO PUEDE LEER. Es la única fuente del Top público (sin respaldo
+ * desde el 2026-10-20), así que "no se pudo leer" y "no hay publicaciones"
+ * tienen que llegar distintos: lo primero es un error con reintento, lo
+ * segundo un bloque "todavía no disponible". Un fallo no se guarda en caché.
  */
 export async function ultimasPublicaciones(): Promise<Map<string, RankingFila>> {
   const filas = await resolverConCache<CrudoRanking[]>({
@@ -109,23 +112,19 @@ export async function ultimasPublicaciones(): Promise<Map<string, RankingFila>> 
     backend: backendCache,
     producir: async () => {
       const db = supabaseServer();
-      if (!db) return { valor: [], fallo: true };
+      if (!db) throw new Error("Supabase no configurado: no se pueden leer las publicaciones del Top");
       const { data, error } = await db
         .from("top_rankings")
         .select(SELECT_PUBLICO)
         .eq("estado", "publicado")
         .order("published_at", { ascending: false });
       // Un error de query NO es "no hay publicaciones": supabase-js devuelve
-      // `{ data: null, error }` sin lanzar, y tratarlo como vacío haría que una
-      // caída se lea como "todavía no hay Top" — o sea que apagaría el cutover.
-      // Se marca `fallo` para que NO se guarde y el pedido siguiente reintente.
+      // `{ data: null, error }` sin lanzar, y tratarlo como vacío mostraría los
+      // doce bloques como "todavía no disponible" por una caída. Se lanza:
+      // `resolverConCache` no guarda nada y el pedido siguiente reintenta.
       if (error) {
-        // Se loguea porque si no, "la tabla no existe todavía" y "Supabase
-        // se cayó" son el mismo silencio: en los dos casos el gate no hace
-        // cutover y `/top` sigue con la fuente vieja, que es correcto pero
-        // no dice nada de por qué.
         console.error("[top-manual] no se pudieron leer las publicaciones —", error.message);
-        return { valor: [], fallo: true };
+        throw new Error(`no se pudieron leer las publicaciones del Top: ${error.message}`);
       }
       return { valor: (data ?? []) as unknown as CrudoRanking[], fallo: false };
     },
@@ -144,7 +143,7 @@ export async function ultimasPublicaciones(): Promise<Map<string, RankingFila>> 
  *
  * La consume `resolverDisponibilidad` como procedencia `top-manual`. Cacheada
  * bajo una clave fija con TTL de 5 minutos: el techo son 12 consultas por hora,
- * haya el tráfico que haya — el mismo criterio que la evidencia de Netflix.
+ * haya el tráfico que haya.
  *
  * 🔴 UN FALLO NO ES UNA AUSENCIA. Si la consulta falla se devuelve vacío **y no
  * se guarda**, para que el pedido siguiente reintente. Sin eso, una caída de

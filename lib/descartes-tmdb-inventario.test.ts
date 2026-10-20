@@ -55,7 +55,7 @@ import { resolverConCache, type BackendCache } from "./reparar-y-cachear.ts";
 import { settleAll } from "./settle-all.ts";
 import { clavePorId, repararLote, repararUno } from "./idioma.ts";
 import { resolverDisponibilidad } from "./disponibilidad.ts";
-import { resolverTitulo } from "./netflix-resolver.ts";
+import { componerTop } from "./top-composer.ts";
 import type { PlatformCode, UITitle } from "./types.ts";
 
 const raiz = path.resolve(import.meta.dirname, "..");
@@ -365,21 +365,25 @@ const EJECUCIONES = {
   },
   disponibilidad: {
     sitio: "disponibilidad:leerDatosTitulo",
-    correr: () => resolverDisponibilidad({ tipo: "tv", id: 1, deTmdb: [] as PlatformCode[], hoy: "2026-09-14", leerTopOficial: async () => new Set<string>(), leerDatosTitulo: async () => { throw e429("/tv/1?language=es-ES"); } }),
+    correr: () => resolverDisponibilidad({ tipo: "tv", id: 1, deTmdb: [] as PlatformCode[], hoy: "2026-09-14", leerDatosTitulo: async () => { throw e429("/tv/1?language=es-ES"); } }),
     consumidor: (r: { fallo: boolean; plataformas: unknown[] }) => { assert.equal(r.fallo, true, "un fallo nunca es una ausencia, y no se cachea"); assert.deepEqual(r.plataformas, []); },
   },
-  resolverBuscar: {
-    sitio: "netflix-resolver:buscar",
-    correr: () => resolverTitulo("Moria", { buscar: async () => { throw e429("/search/tv"); }, enNetflixAR: async () => true }),
-    consumidor: (r: { tmdbId: number | null; needsReview: boolean }) => { assert.deepEqual(r, { tmdbId: null, needsReview: true }, "'no sé', no 'no está'"); },
-  },
-  resolverBuscarReducida: {
-    sitio: "netflix-resolver:buscar-reducida",
-    correr: () => resolverTitulo("Operation Safed Sagar: The Highest Air Force Mission", {
-      buscar: async (consulta) => { if (consulta.includes(":")) return [{ id: 7, title: "Otra cosa" }]; throw e429("/search/tv"); },
-      enNetflixAR: async () => false,
+  // El Top manual (2026-10-20): un bloque publicado cuyas fichas no llegan por
+  // TMDB se muestra IGUAL —con los títulos y el orden del dueño— y el payload
+  // sale degradado. Nunca se esconde ni se reemplaza por otro ranking.
+  topEnriquecer: {
+    sitio: "top:movie:n",
+    correr: () => componerTop("movie", ["n"], {
+      leerPublicaciones: async () => new Map([["n:movie", { captured_at: "2026-10-09", entradas: [{ posicion: 1, tipo: "movie" as const, tmdb_id: 1, titulo: "Uno" }] }]]),
+      enriquecer: async () => { throw e429("/movie/1"); },
+      conPlataforma: (t) => t,
+      orden: () => 0,
     }),
-    consumidor: (r: { tmdbId: number | null }) => { assert.equal(r.tmdbId, null); },
+    consumidor: (r: Awaited<ReturnType<typeof componerTop>>) => {
+      assert.ok(r.ok);
+      assert.equal(r.payload.degradado, true, "el fallo de TMDB tiene que verse");
+      assert.deepEqual(r.payload.mine[0].slots.map((x) => [x.rank, x.rawTitle, x.item]), [[1, "Uno", null]], "el bloque publicado se muestra igual");
+    },
   },
 } satisfies Record<string, Ejecucion>;
 type ClaveEjecucion = keyof typeof EJECUCIONES;
@@ -440,7 +444,6 @@ type Fila = { archivo: string; ancla: string; motivo?: string } & (
   | { clase: "no-tmdb" }
 );
 
-const CRON = "app/api/cron/netflix-top10/route.ts";
 const RECORDATORIO = "app/api/recordatorio/route.ts";
 /** Los dos bloques de `candidatosDeSuperficie` que deciden el recorrido. */
 const BLOQUE_EJES = "if (opts.superficie && poolsHabilitados) {";
@@ -506,12 +509,9 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/home.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto",
     estructura: { contenedor: "lib/home.ts#producirHome", apertura: "withFallosDeFuentes(", operacion: "composeHome", cadena: ["lib/home.ts#composeHome", "lib/home.ts#safe"], consumo: [/degradado: true/, /fallosTmdb/] } },
   { archivo: "lib/home.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "3.b: la línea [home-fondo] no se pudo escribir; la composición ya terminó" },
-  { archivo: "lib/top.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "ruta", ruta: "app/api/top/route.ts", operacion: "buildTop", cadena: ["lib/top.ts#buildTop", "lib/top.ts#safe"] },
+  { archivo: "lib/top-composer.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "ruta", ruta: "app/api/top/route.ts", operacion: "buildTop", cadena: ["lib/top.ts#buildTop", "lib/top-composer.ts#componerTop", "lib/top-composer.ts#bloque"], ejecucion: "topEnriquecer" },
   { archivo: "lib/idioma.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "idiomaLote" },
   { archivo: "lib/idioma.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "idiomaUno" },
-  { archivo: "lib/netflix-top10.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "ruta", ruta: CRON, operacion: "ingestLatestWeek", cadena: ["lib/netflix-top10.ts#ingestLatestWeek", "lib/netflix-top10.ts#resolveTitle", "lib/netflix-top10.ts#enNetflixAR"] },
-  { archivo: "lib/netflix-resolver.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "ruta", ruta: CRON, operacion: "ingestLatestWeek", cadena: ["lib/netflix-top10.ts#ingestLatestWeek", "lib/netflix-top10.ts#resolveTitle", "lib/netflix-resolver.ts#resolverTitulo"], ejecucion: "resolverBuscar" },
-  { archivo: "lib/netflix-resolver.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "ruta", ruta: CRON, operacion: "ingestLatestWeek", cadena: ["lib/netflix-top10.ts#ingestLatestWeek", "lib/netflix-top10.ts#resolveTitle", "lib/netflix-resolver.ts#resolverTitulo"], ejecucion: "resolverBuscarReducida" },
   { archivo: "lib/disponibilidad.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "contexto", ejecucion: "disponibilidad" },
   { archivo: "lib/tmdb.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "relanza", motivo: "es el cliente: clasifica el fetch y relanza ErrorTmdb" },
   { archivo: "lib/tmdb.ts", ancla: "} catch (e) {", clase: "tmdb-registra", efecto: "relanza", motivo: "es el cliente: clasifica el cuerpo y relanza ErrorTmdb" },
@@ -521,7 +521,7 @@ const INVENTARIO: Fila[] = [
   // --- rutas: propagan como estado HTTP --------------------------------------
   { archivo: "app/api/title/[tipo]/[id]/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga" },
   { archivo: "app/api/search/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga" },
-  ...["admin-search", "audience", "cards", "cron/netflix-top10", "directores", "discover", "genre-covers", "hacete-cargo", "home", "latest", "mas-votados", "miniseries", "personas", "providers", "recomendaciones", "ruleta", "top", "upcoming", "admin/top", "te-va-a-gustar"]
+  ...["admin-search", "audience", "cards", "directores", "discover", "genre-covers", "hacete-cargo", "home", "latest", "mas-votados", "miniseries", "personas", "providers", "recomendaciones", "ruleta", "top", "upcoming", "admin/top", "te-va-a-gustar"]
     .map((r) => ({ archivo: `app/api/${r}/route.ts`, ancla: "} catch (e) {", clase: "tmdb-propaga" as const })),
   { archivo: "lib/cors.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "envoltorio de rutas: 500 con CORS" },
   { archivo: "lib/home-servir.ts", ancla: "} catch (error) {", clase: "tmdb-propaga", motivo: "productor rechazado: libera el turno y sirve UB o propaga" },
@@ -544,10 +544,9 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/home-fondo.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "la tarea de fondo rechazó: se loguea entero (console.error con el error), la promesa registrada resuelve" },
   { archivo: "lib/home-fondo.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "waitUntil lanzó al registrar: se loguea y se compone en línea" },
   // --- no pueden ser errores de TMDB -----------------------------------------
-  { archivo: "lib/disponibilidad.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "top oficial: Supabase" },
   { archivo: "lib/disponibilidad.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "top manual: Supabase" },
   { archivo: "lib/curated.ts", ancla: "}).catch((e) => {", clase: "no-tmdb", motivo: "blocklist de un chip: Supabase" },
-  { archivo: "lib/top.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "publicaciones manuales: Supabase (segunda aparición)" },
+  { archivo: "lib/top-composer.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "publicaciones manuales: Supabase → error 503 con reintento, nunca \"no hay publicaciones\" ni otro ranking" },
   { archivo: "lib/top-manual.ts", ancla: "} catch (e) {", clase: "no-tmdb", motivo: "Supabase" },
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
   { archivo: "lib/cache.ts", ancla: "catch", clase: "no-tmdb", motivo: "Redis" },
@@ -578,7 +577,6 @@ const INVENTARIO: Fila[] = [
   // App Links (28/09: salió de lib/sala/, que el barrido no recorre, y ahora también abre fichas).
   { archivo: "lib/enlaces-app.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "new URL() de un intent: url inválida → no navega" },
   { archivo: "lib/enlaces-app.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "plugin @capacitor/app ausente o fallido → el enlace no se abre adentro" },
-  { archivo: "lib/netflix-top10.ts", ancla: "reader.cancel().catch", clase: "no-tmdb", motivo: "stream del TSV" },
   { archivo: "app/api/admin/top/route.ts", ancla: "catch { return NextResponse.json({ error: \"cuerpo inválido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   { archivo: "app/api/admin/top/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo handler de la ruta de admin (Supabase)" },
   // Issue #25: la ruta de filmografía ya no atrapa nada; lo hace su módulo puro, con el mismo 500 de siempre para v1, v2 e items.
@@ -634,8 +632,8 @@ test("🔴 ejecución (rutas): un sitio que llega por conDescartesRegistrados de
     if (fila.efecto !== "ruta" || !fila.ejecucion) continue;
     const ej = EJECUCIONES[fila.ejecucion] as Ejecucion;
     const lineas: string[] = [];
-    await conDescartesRegistrados("cron/netflix-top10", ej.correr, { log: (...a) => { lineas.push(String(a[0])); } });
-    assert.deepEqual(lineas, ["[tmdb] cron/netflix-top10: 1 descarte(s) por error de TMDB"], `${sitio.archivo}:${sitio.linea}`);
+    await conDescartesRegistrados("api/top", ej.correr, { log: (...a) => { lineas.push(String(a[0])); } });
+    assert.deepEqual(lineas, ["[tmdb] api/top: 1 descarte(s) por error de TMDB"], `${sitio.archivo}:${sitio.linea}`);
   }
 });
 
@@ -769,20 +767,15 @@ test("CONTROL mutado (ruta): wrapper corrido fuera de la operación, operación 
   assert.throws(() => verificarWrapperDeRuta(top.replace("export const dynamic", "const precalentar = () => buildTop(\"movie\", []);\nexport const dynamic"), "buildTop"), /FUERA del wrapper/);
   // 3) sin wrapper.
   assert.throws(() => verificarWrapperDeRuta(top.replace(wrapper, "buildTop(tipo, providers)"), "buildTop"), /no envuelve buildTop\(/);
-  // 4) la cadena se corta: buildTop deja de pasar por safe.
-  const topLib = limpio("lib/top.ts");
-  const sitio = { archivo: "lib/top.ts", linea: lineaDelCatch(topLib, "registrarDescarteTmdb(e, `top:") };
-  assert.doesNotThrow(() => verificarCadena(["lib/top.ts#buildTop", "lib/top.ts#safe"], sitio));
-  const buildTop = cuerpoDe(topLib, "buildTop");
-  const sinSafe = topLib.slice(0, buildTop.inicio) + texto(topLib, buildTop).replace(/(?<![\w.])safe\(/g, "directo(") + topLib.slice(buildTop.fin);
-  assert.throws(() => verificarCadena(["lib/top.ts#buildTop", "lib/top.ts#safe"], sitio, { "lib/top.ts": sinSafe }), /buildTop no llama a safe\(/);
-  // 5) la cadena de la ruta cron también: ingestLatestWeek sin resolveTitle.
-  const nt = limpio("lib/netflix-top10.ts");
-  const ingest = cuerpoDe(nt, "ingestLatestWeek");
-  const sinResolver = nt.slice(0, ingest.inicio) + texto(nt, ingest).replace("resolveTitle(", "resolverAparte(") + nt.slice(ingest.fin);
-  const sitioNetflix = { archivo: "lib/netflix-top10.ts", linea: lineaDelCatch(nt, 'registrarDescarteTmdb(e, "enNetflixAR")') };
-  assert.doesNotThrow(() => verificarCadena(["lib/netflix-top10.ts#ingestLatestWeek", "lib/netflix-top10.ts#resolveTitle", "lib/netflix-top10.ts#enNetflixAR"], sitioNetflix));
-  assert.throws(() => verificarCadena(["lib/netflix-top10.ts#ingestLatestWeek", "lib/netflix-top10.ts#resolveTitle", "lib/netflix-top10.ts#enNetflixAR"], sitioNetflix, { "lib/netflix-top10.ts": sinResolver }), /ingestLatestWeek no llama a resolveTitle\(/);
+  // 4) la cadena se corta: componerTop deja de pasar por bloque.
+  const comp = limpio("lib/top-composer.ts");
+  const sitio = { archivo: "lib/top-composer.ts", linea: lineaDelCatch(comp, "registrarDescarteTmdb(e, etiqueta)") };
+  const cadenaTop = ["lib/top.ts#buildTop", "lib/top-composer.ts#componerTop", "lib/top-composer.ts#bloque"];
+  assert.doesNotThrow(() => verificarCadena(cadenaTop, sitio));
+  const componer = cuerpoDe(comp, "componerTop");
+  const sinBloque = comp.slice(0, componer.inicio) + texto(comp, componer).replace(/(?<![\w.])bloque\(/g, "directo(") + comp.slice(componer.fin);
+  assert.throws(() => verificarCadena(cadenaTop, sitio, { "lib/top-composer.ts": sinBloque }), /componerTop no llama a bloque\(/);
+  // 5) (la cadena de la ruta cron de Netflix se borró con la ruta, 2026-10-20.)
   // 6) recordatorio: datosDe deja de pasar por digitalAR.
   const rec = limpio(RECORDATORIO);
   const datosDe = cuerpoDe(rec, "datosDe");
@@ -1231,7 +1224,7 @@ test("CONTROL mutado (pools, los nueve recorridos inventariados): cada tipo de r
 
 test("el inventario cubre los doce sitios del informe (S1-S11 + genreCovers) y no afirma que sean sólo once", () => {
   const registranArchivos = new Set(INVENTARIO.filter((i) => i.clase === "tmdb-registra").map((i) => i.archivo));
-  for (const a of ["lib/home.ts", "lib/settle-all.ts", "lib/enrich.ts", "lib/lotes-tolerantes.ts", "lib/pools.ts", "lib/top.ts", "lib/netflix-top10.ts", "lib/idioma.ts", "lib/busqueda-enriquecido.ts", "lib/disponibilidad.ts", "lib/netflix-resolver.ts", RECORDATORIO]) {
+  for (const a of ["lib/home.ts", "lib/settle-all.ts", "lib/enrich.ts", "lib/lotes-tolerantes.ts", "lib/pools.ts", "lib/top-composer.ts", "lib/idioma.ts", "lib/busqueda-enriquecido.ts", "lib/disponibilidad.ts", RECORDATORIO]) {
     assert.ok(registranArchivos.has(a), `${a} falta entre los que registran`);
   }
 });

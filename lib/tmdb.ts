@@ -312,18 +312,10 @@ export function searchMulti(query: string, page = 1) {
   });
 }
 
-// Búsqueda acotada a un tipo. La usa la ingesta del top 10 de Netflix, que
-// recibe títulos EN INGLÉS: por eso fuerza `language`, pisando el es-ES de
-// DEFAULTS. Sin eso, "The Running Man" no matchea contra el título en español.
-export function searchTitles(type: MediaType, query: string) {
-  return tmdb<Paged<RawTitle>>(`/search/${type}`, {
-    query, include_adult: "false", language: "en-US", page: "1",
-  });
-}
-
-// Las dos de abajo son para el buscador de la app y NO son intercambiables con
-// `searchTitles`: aceptan página, que es lo que permite mirar más allá de los 20
-// primeros para poder reordenar. Ver `search()` en lib/enrich.ts.
+// Las dos de abajo son para el buscador de la app: aceptan página, que es lo que
+// permite mirar más allá de los 20 primeros para poder reordenar. Ver `search()`
+// en lib/enrich.ts. (`searchTitles`, la búsqueda en inglés de la ingesta del top
+// de Netflix, se borró con esa ingesta el 2026-10-20.)
 
 // ES-MX ACÁ Y EN NINGÚN OTRO LADO. El resto de la app sigue en el `es-ES` de
 // DEFAULTS; esto pisa el idioma SOLO para la búsqueda de títulos.

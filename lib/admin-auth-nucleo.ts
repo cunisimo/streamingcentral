@@ -1,7 +1,7 @@
 // Lo que la puerta del dashboard puede decidir SIN red ni credenciales.
 //
 // Vive aparte de `admin-auth.ts` por el mismo motivo que
-// `hooks/home-types-nucleo.ts` o `lib/netflix-resolver.ts`: ese archivo importa
+// `hooks/home-types-nucleo.ts` o `lib/top-composer.ts`: ese archivo importa
 // el cliente de Supabase, y un módulo con imports de paquete no se puede correr
 // con `node --test`. Lo que decide si una sesión entra o no tiene que poder
 // probarse sin levantar nada.

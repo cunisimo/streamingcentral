@@ -15,34 +15,23 @@ import { platformByCode } from "@/lib/providers-ar";
 import type { TopBlock, TopPayload } from "@/lib/top";
 import type { MediaType } from "@/lib/types";
 
-// La nota explicaba por qué Netflix decía una cosa y el resto otra. Con el Top
-// semanal cargado a mano esa distinción desapareció: las seis plataformas salen
-// de la misma fuente, así que no hay nada que aclarar.
-//
-// ⚠️ ANTES DEL CUTOVER la nota sigue haciendo falta: hasta que estén publicados
-// los doce bloques, `/top` sirve la implementación vieja y ahí Netflix y el
-// resto SÍ son cosas distintas. Por eso el texto no se borró — se muestra sólo
-// cuando el bloque viene de la fuente vieja.
-const NOTA =
-  "El top de Netflix sale de los datos que la propia Netflix publica cada semana " +
-  "para Argentina: son horas vistas reales, de la semana que cerró el domingo. " +
-  "En el resto de las plataformas no hay dato público de consumo, así que " +
-  "mostramos las más populares del momento — no es lo mismo, y por eso lo " +
-  "aclaramos.";
+// El subtítulo de cada bloque. Las seis plataformas salen de la MISMA fuente
+// —la carga manual del dueño, la única desde el 2026-10-20— así que todas
+// dicen lo mismo. Las fechas de captura NO se muestran acá: viven en el
+// dashboard. El lector no tiene que auditar cuándo se cargó un ranking.
+const SUBTITULO = "Top semanal";
+const SIN_PUBLICAR = "Todavía no disponible.";
 
-// El subtítulo de cada bloque.
-//
-// 🔴 CON LA CARGA MANUAL TODAS DICEN LO MISMO. La distinción "dato oficial" vs
-// "popularidad" existía porque las fuentes eran distintas de verdad; ahora las
-// seis las arma el dueño con el mismo criterio, y sostener dos rótulos sería
-// afirmar una diferencia que ya no existe.
-//
-// Las fechas de captura NO se muestran acá: viven en el dashboard. El lector no
-// tiene que auditar cuándo se cargó un ranking.
-function subtitulo(source: TopBlock["source"]): string {
-  if (source === "manual") return "Top semanal";
-  return source === "netflix" ? "Lo más visto esta semana · dato oficial" : "Lo más popular ahora";
-}
+/** Un payload anterior al 20/10/2026 no trae `estado`: se lee como publicado. */
+const sinPublicar = (b: TopBlock) => b.estado === "sin-publicar";
+
+/**
+ * ¿Lo restaurado es del Top manual? Un snapshot guardado antes del 20/10/2026
+ * podía traer bloques de las fuentes retiradas (`netflix`, `popular`): ésos no
+ * se restauran, se pide de nuevo.
+ */
+const esSoloManual = (p: TopPayload) =>
+  [...(p.mine ?? []), ...(p.others ?? [])].every((b) => b.source === "manual");
 
 // La clave del carrusel incluye el TIPO, y eso es lo que hace que al pasar de
 // Películas a Series cada riel arranque del principio: es una clave nueva, no
@@ -53,8 +42,8 @@ export const claveTop = (platform: string, tipo: MediaType) => `top:${tipo}:${pl
 
 function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
   const track = useRef<HTMLDivElement>(null);
-  const [nota, setNota] = useState(false);
   useTrackScroll(claveTop(b.platform, tipo), track, b.slots.length > 0);
+  const vacio = sinPublicar(b);
   const def = platformByCode(b.platform);
   const scroll = (d: number) =>
     track.current?.scrollBy({ left: d * (track.current.clientWidth * 0.8), behavior: "smooth" });
@@ -67,24 +56,18 @@ function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
               así que poner además `def.name` al lado lo duplicaría. El
               aria-label lo deja explícito para lectores de pantalla. */}
           <h2 className="top-plat" aria-label={def?.name ?? b.platform}><PlatformLogo code={b.platform} /></h2>
-          {b.source === "netflix" && (
-            <button
-              type="button" className="top-info" aria-label="De dónde sale este dato"
-              // `aria-controls` apunta al párrafo que este botón muestra/oculta:
-              // sin esto, `aria-expanded` dice que algo se expandió pero un
-              // lector de pantalla no tiene forma de saber qué es.
-              aria-expanded={nota} aria-controls={`top-nota-${b.platform}`}
-              onClick={() => setNota((v) => !v)}
-            >i</button>
-          )}
         </div>
-        <div className="arrows">
-          <button className="arrow" onClick={() => scroll(-1)} aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg></button>
-          <button className="arrow" onClick={() => scroll(1)} aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg></button>
-        </div>
+        {!vacio && (
+          <div className="arrows">
+            <button className="arrow" onClick={() => scroll(-1)} aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg></button>
+            <button className="arrow" onClick={() => scroll(1)} aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg></button>
+          </div>
+        )}
       </div>
-      <p className="top-sub">{subtitulo(b.source)}</p>
-      {nota && <p className="top-nota" id={`top-nota-${b.platform}`}>{NOTA}</p>}
+      <p className="top-sub">{SUBTITULO}</p>
+      {/* Sin publicación del dueño, el bloque lo dice. No hay ranking
+          alternativo, y los demás bloques se ven igual. */}
+      {vacio ? <p className="empty-note">{SIN_PUBLICAR}</p> : (
       <div className="track" ref={track}>
         {b.slots.map((s) =>
           s.item
@@ -100,6 +83,7 @@ function Bloque({ b, tipo }: { b: TopBlock; tipo: MediaType }) {
             ),
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -132,7 +116,7 @@ export default function TopView() {
 
   useEffect(() => {
     const e = decidirRestauracionVista<TopPayload>({ clave: claveTop2, firma: firmaTop, volvio: consumirVuelta(window.location.pathname) });
-    if (e) { setRestaurado(e.datos); pendienteY.current = e.scrollY; setCtxRestaurado(ctxActual); }
+    if (e && esSoloManual(e.datos)) { setRestaurado(e.datos); pendienteY.current = e.scrollY; setCtxRestaurado(ctxActual); }
     setDecidido(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claveTop2]);
@@ -194,17 +178,21 @@ export default function TopView() {
     }
   }, [tipo, vivo]);
 
-  const mine = vivo?.mine ?? [];
-  const others = vivo?.others ?? [];
+  // Un error del servidor (503: no se pudieron leer las publicaciones) NO deja
+  // en pantalla el payload anterior: podía ser del otro tipo (Series bajo
+  // "Películas") y no es lo que se pidió. Se muestra el error con reintento.
+  const mine = error ? [] : vivo?.mine ?? [];
+  const others = error ? [] : vivo?.others ?? [];
   const hayContenido = mine.length > 0 || others.length > 0;
-  // 200 pero con bloques caídos (`safe` en lib/top.ts los descartó): distinto de
-  // "esa plataforma no tiene top hoy". Mismo criterio que CatalogView con el
-  // Home — reintentar sí puede arreglarlo.
+  // 200 pero con fichas que TMDB no devolvió (los bloques se muestran igual,
+  // con los títulos del dueño): reintentar puede completarlas. Distinto de un
+  // bloque sin publicar, que no es un fallo.
   const degradado = !!vivo?.degradado;
   const cargando = loading;
-  // `error` = el server respondió 500. `offline` = no hubo respuesta. `degradado`
-  // = respondió 200 pero con bloques caídos. Los tres ameritan el mismo aviso
-  // con reintento.
+  // `error` = el server respondió con error (503: no se pudieron leer las
+  // publicaciones). `offline` = no hubo respuesta. `degradado` = respondió 200
+  // pero faltan fichas. Los tres ameritan aviso con reintento; ninguno muestra
+  // otro ranking.
   const fallo = !online || offline || error || degradado;
 
   // Pantalla completa SOLO cuando no hay nada que mostrar todavía: si ya hay
@@ -225,7 +213,7 @@ export default function TopView() {
       {fallo && hayContenido && (
         <p className="empty-note home-retry" role="status">
           {degradado && online && !offline && !error
-            ? "No pudimos cargar todo el top."
+            ? "No pudimos cargar todas las fichas del top."
             : "No pudimos actualizar el top."}{" "}
           <button className="up-retry" onClick={retry}>Reintentar</button>
         </p>
@@ -235,9 +223,10 @@ export default function TopView() {
         cargando ? (
           <div className="loading">Cargando…</div>
         ) : (
-          // Payload llegó (o el fetch falló con error/degradado) y no hay un
-          // solo bloque: antes esto era una pantalla vacía y muda bajo el
-          // toggle, sin mensaje ni forma de reintentar.
+          // No hay un solo bloque: la lectura de las publicaciones falló (503)
+          // o el fetch no llegó. Es un ERROR con reintento — "no hay
+          // publicaciones" llega como bloques "todavía no disponible", nunca
+          // como esta pantalla.
           <p className="empty-note home-retry" role="status">
             No pudimos cargar el top.{" "}
             <button className="up-retry" onClick={retry}>Reintentar</button>

@@ -31,7 +31,6 @@ import {
 } from "./pools";
 import { consultaListaMiniseries, soloMiniseries } from "./miniseries";
 import { topVotedRows } from "./votes";
-import { disponiblesEnTopOficial } from "./netflix-top10";
 import { evidenciaTopManual } from "./top-manual";
 import { decisionDeTmdb, resolverDisponibilidad } from "./disponibilidad";
 import { hayFallosDisponibilidad, registrarFalloDisponibilidad } from "./fallos-disponibilidad";
@@ -180,9 +179,8 @@ export async function disponibilidadDe(
   const res = await cachedIf(`disp:${type}:${id}`, TTL.editorial, async () => {
     const r = await resolverDisponibilidad({
       tipo: type, id, deTmdb: prov.codes, hayFlatrateAR: prov.hayFlatrateAR, hoy: hoyAR(),
-      leerTopOficial: disponiblesEnTopOficial,
       // El Top semanal cargado a mano. Va por el resolvedor central y no
-      // por un camino propio de : si viviera sólo allá, la misma
+      // por un camino propio de /top: si viviera sólo allá, la misma
       // película saldría en color en el Top y en gris en la ficha, la
       // búsqueda y el Home — el bug que este resolvedor existe para impedir.
       leerTopManual: evidenciaTopManual,
@@ -211,9 +209,9 @@ export async function disponibilidadDe(
  * Para el resto, las dos lecturas son las MISMAS que ya hizo el camino de
  * disponibilidad —`pv3:` la pidió `toUITitle`, `oficial:` la pidió el
  * resolvedor—, así que en la práctica son aciertos de caché. La excepción es un
- * título que resolvió por el top oficial de Netflix (prioridad 2, que corta
- * antes de mirar el enlace): ahí `oficial:` puede estar vacía y se paga un
- * detalle, que queda cacheado 8 h.
+ * título que resolvió por el Top cargado a mano (prioridad 2, que corta antes
+ * de mirar el enlace): ahí `oficial:` puede estar vacía y se paga un detalle,
+ * que queda cacheado 8 h.
  */
 async function identidadDeBusqueda(type: MediaType, id: number): Promise<string | null> {
   const prov = await providersOf(type, id);
@@ -262,8 +260,9 @@ export async function listByCategory(opts: {
   // lanzamientos", que ya no filtra por cantidad de votos.
   soloCompletos?: boolean;
   /** Señal de salida: `fallo` queda en true si la reparación de idioma falló.
-   *  Los llamadores que NO cachean la omiten. El que sí cachea usa
-   *  `listByCategoryCacheable`, que la exige por tipo — así no se puede olvidar. */
+   *  Quien cachee el resultado tiene que pasarla. (Su único cacheador, el Top
+   *  por popularidad `top:pop:`, se retiró el 2026-10-20 con
+   *  `listByCategoryCacheable`.) */
   senal?: { fallo: boolean };
 }): Promise<UITitle[]> {
   if (!opts.providers.length) return [];
@@ -398,20 +397,6 @@ export async function listByCategory(opts: {
   );
   if (opts.senal && falloIdiomaCat) opts.senal.fallo = true;
   return items.filter((i) => onUserPlatforms(i, opts.providers));
-}
-
-/**
- * `listByCategory` para quien va a CACHEAR el resultado.
- *
- * La señal deja de ser opcional: el tipo obliga a pasarla. Antes era opcional
- * para no cambiarle la firma a los diez llamadores que no cachean, y eso dejaba
- * al que sí cachea (`top:pop:`) a un descuido de guardar una lista sin reparar
- * durante 24 h.
- */
-export function listByCategoryCacheable(
-  opts: Omit<Parameters<typeof listByCategory>[0], "senal"> & { senal: { fallo: boolean } },
-): Promise<UITitle[]> {
-  return listByCategory(opts);
 }
 
 // --- Últimos lanzamientos (por fecha de estreno, en tus plataformas) ---
@@ -1442,23 +1427,13 @@ export async function detail(
   const d = rep.detalle;
   const prov = provOpcional ?? { codes: [] as PlatformCode[], links: {} as Partial<Record<PlatformCode, string>>, watchLink: null as string | null, hayFlatrateAR: false, reg: undefined };
   // DESPUÉS de leer el cache de proveedores, y sin tocarlo. Si TMDB no informa
-  // ninguna plataforma en AR, se mira si el título está en el top oficial
-  // vigente de Netflix: esa lista la publica Netflix y dice, literalmente, qué
-  // se vio EN Netflix Argentina esta semana.
+  // ninguna plataforma en AR, decide el resolvedor central
+  // (`lib/disponibilidad.ts`), con sus respaldos: el Top cargado a mano, la
+  // evidencia oficial y el registro manual.
   //
-  // Pasó con "Moria" (`tv/322428`): TMDB tiene la ficha —hasta muestra el canal
-  // y el homepage de Netflix en su web— pero `watch/providers` devuelve
-  // `results: {}`, sin AR y sin ninguna otra región. La ficha del #1 del top
-  // oficial de Netflix decía "No está en streaming".
-  //
-  // Lo que NO se hace acá, y es tan importante como lo que sí:
-  //  - No se inventa `watchLink`. Ese link sale de TMDB y si TMDB no lo tiene,
-  //    no hay a dónde mandar a nadie. La ficha dice dónde está, no promete un
-  //    botón que no existe.
-  //  - No se usa `networks` como disponibilidad. Que la serie sea "de Netflix"
-  //    no dice que se pueda ver en Netflix Argentina; hay producciones de
-  //    Netflix licenciadas a otros en la región, y otras que directamente no
-  //    llegan. Lo único que se usa es el top de ESTE país.
+  // Lo que NO se hace acá: no se inventa `watchLink`. Ese link sale de TMDB y
+  // si TMDB no lo tiene, no hay a dónde mandar a nadie. La ficha dice dónde
+  // está, no promete un botón que no existe.
   // Sin proveedores (TMDB falló) no hay evidencia que resolver: plataformas
   // vacías y la marca. Con proveedores, el camino central de siempre.
   const plataformas = provOpcional ? await disponibilidadDe(type, id, prov) : [];

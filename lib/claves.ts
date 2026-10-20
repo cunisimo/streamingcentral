@@ -75,8 +75,8 @@ export const VERSION_HOME: number =
     : 7;
 
 /**
- * La versión de las PLATAFORMAS RESUELTAS que viaja en cinco familias: card,
- * búsqueda, Top por popularidad, riel de recomendaciones y últimos. Todas
+ * La versión de las PLATAFORMAS RESUELTAS que viaja en cuatro familias: card,
+ * búsqueda, riel de recomendaciones y últimos. Todas
  * guardan títulos ya enriquecidos con `platforms` adentro, y la disponibilidad
  * cambia sin que cambie nada de TMDB cuando cambia el registro de supresiones
  * (`lib/supresiones-disponibilidad.ts`). Subirla es lo que hace que una
@@ -157,11 +157,6 @@ export function claveCombinadaCache(
 /** Card reconstruida a partir de (tipo, id). */
 export function claveCard(tipo: MediaType, id: number, huella: string): ClaveLocalizada {
   return marcar(`card:${pre(huella)}${dv}:${tipo}:${id}`);
-}
-
-/** Bloque de popularidad de /top. */
-export function claveTopPop(plataforma: PlatformCode, tipo: MediaType, huella: string): ClaveLocalizada {
-  return marcar(`top:pop:${pre(huella)}${dv}:${plataforma}:${tipo}`);
 }
 
 /** El riel "Elegidas para vos", ya armado. */

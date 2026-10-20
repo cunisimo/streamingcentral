@@ -10,7 +10,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   claveCard, claveCombinadaCache, claveHome, clavePeoplePopular, clavePoolCache,
-  claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil, claveSearch, claveTopPop,
+  claveReco, claveRecoCruce, claveRecoMismo, claveRecoPerfil, claveSearch,
   claveUltimosSeries, CLAVES_SIN_HUELLA,
 } from "./claves.ts";
 import { calcularHuella } from "./idioma.ts";
@@ -34,7 +34,6 @@ test("modo compatible: las doce familias producen los bytes pre-tanda-1", () => 
     "disc:v1:AR:2026-08-23:tv:combo-d+m+n:pop.abc123:p3",
   );
   assert.equal(claveCard("movie", 278, H), "card:d1:movie:278");
-  assert.equal(claveTopPop("n", "movie", H), "top:pop:d1:n:movie");
   assert.equal(claveReco("h4sh", H), "reco:v2.d1:h4sh");
   assert.equal(claveRecoMismo("tv", 1399, H), "reco:mismo:tv:1399");
   assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:movie:557:d,m,n");
@@ -68,7 +67,6 @@ test("tanda 2: las doce familias llevan la huella es-MX+f.r1", () => {
     "disc:es-MX+f.r1:v1:AR:2026-08-23:tv:combo-d+m+n:pop.abc123:p3",
   );
   assert.equal(claveCard("movie", 278, H), "card:es-MX+f.r1:d1:movie:278");
-  assert.equal(claveTopPop("n", "movie", H), "top:pop:es-MX+f.r1:d1:n:movie");
   assert.equal(claveReco("h4sh", H), "reco:es-MX+f.r1:v2.d1:h4sh");
   assert.equal(claveRecoMismo("tv", 1399, H), "reco:mismo:es-MX+f.r1:tv:1399");
   assert.equal(claveRecoCruce("movie", 557, "d,m,n", H), "reco:cruce:es-MX+f.r1:movie:557:d,m,n");
@@ -103,7 +101,6 @@ test("los tres espacios de claves son disjuntos dos a dos", () => {
   ];
   const familias = [
     (h: string) => claveCard("movie", 278, h),
-    (h: string) => claveTopPop("n", "movie", h),
     (h: string) => claveHome(1, "n", "", h),
     (h: string) => clavePeoplePopular(1, h),
     (h: string) => claveRecoMismo("tv", 1399, h),
@@ -177,7 +174,7 @@ test("rollback es-MX+f → es-MX → es-ES → es-MX: nunca lee el espacio de ot
 // resuelve variables, que era el agujero de la primera versión.
 
 const FAMILIAS_LOCALIZADAS = [
-  "home:", "disc:", "card:", "top:pop:", "reco:", "people:popular:", "search:",
+  "home:", "disc:", "card:", "reco:", "people:popular:", "search:",
   "ultimos:",
 ];
 // Empiezan igual que una familia localizada pero no lo son.
@@ -278,7 +275,7 @@ test("EN ROJO: detecta un `as ClaveLocalizada` sobre un literal", () => {
 });
 
 test("EN ROJO: el barrido mira también cachedLoc y cachedLocIf", () => {
-  assert.equal(claveManualEn("cachedLoc(`top:pop:${p}:${t}`, TTL.catalog, fn);").length, 1);
+  assert.equal(claveManualEn("cachedLoc(`search:${q}:${p}`, TTL.search, fn);").length, 1);
   assert.equal(claveManualEn("cachedLocIf(`home:v6:${s}`, TTL.home, fn, ok);").length, 1);
   // CANARIO de la familia nueva. Es rojo→verde de verdad: antes de agregar
   // "ultimos:" a FAMILIAS_LOCALIZADAS esta línea devolvía 0, o sea que una clave
@@ -346,13 +343,17 @@ test("el barrido descubre los constructores solo, y hay dieciséis", () => {
   // último bueno y el degradado guardan contenido localizado; la generación y
   // el turno llevan la huella igual para vivir en el mismo espacio y caer con
   // la misma versión.
-  assert.equal(CONSTRUCTORES.length, 16, `constructores en lib/claves.ts: ${CONSTRUCTORES.join(", ")}`);
-  // Y que sean los que el resto del archivo prueba, no otros dieciséis.
+  //
+  // 2026-10-20: se RETIRÓ `claveTopPop` (`top:pop:`), con el Top por
+  // popularidad. El Top es sólo la carga manual del dueño y no cachea listas
+  // propias. Quedan quince.
+  assert.equal(CONSTRUCTORES.length, 15, `constructores en lib/claves.ts: ${CONSTRUCTORES.join(", ")}`);
+  // Y que sean los que el resto del archivo prueba, no otros quince.
   assert.deepEqual([...CONSTRUCTORES].sort(), [
     "claveCard", "claveCombinadaCache", "claveHome", "claveHomeDegradado",
     "claveHomeGeneracion", "claveHomeUltimoBueno", "clavePeoplePopular",
     "clavePoolCache", "claveReco", "claveRecoCruce", "claveRecoMismo",
-    "claveRecoPerfil", "claveSearch", "claveTopPop", "claveTurnoHome",
+    "claveRecoPerfil", "claveSearch", "claveTurnoHome",
     "claveUltimosSeries",
   ]);
 });
@@ -398,7 +399,7 @@ function llamadasAConstructores(src: string): { nombre: string; ultimo: string }
   return out;
 }
 
-test("los diecisiete call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
+test("los dieciséis call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", () => {
   const infractores: string[] = [];
   const usos: Record<string, number> = {};
   let total = 0;
@@ -411,7 +412,8 @@ test("los diecisiete call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", 
   }
   assert.deepEqual(infractores, [],
     `constructores sin la huella real:\n${infractores.join("\n")}`);
-  // Dieciséis familias y DIECISIETE call sites: las cinco del Home se llaman
+  // Quince familias y DIECISÉIS call sites (hasta el 2026-10-20 eran 16 y 17:
+  // se retiró `claveTopPop` con el Top por popularidad). Las cinco del Home se llaman
   // una vez cada una en lib/home.ts (Etapa 2). La de más es `claveUltimosSeries`, que se
   // llama en dos lugares —una página del catálogo regional y el suplemento por
   // redes— y es a propósito: son dos TRAMOS del mismo espacio de claves, no dos
@@ -420,7 +422,7 @@ test("los diecisiete call sites pasan HUELLA_IDIOMA, ninguno la huella vacía", 
   //
   // El total se afirma para que sumar una familia (o un tramo) obligue a
   // decidirlo, no para contar por contar.
-  assert.equal(total, 17, `se esperaban 17 llamadas a constructores, hay ${total}`);
+  assert.equal(total, 16, `se esperaban 16 llamadas a constructores, hay ${total}`);
   assert.equal(usos["claveUltimosSeries"], 2,
     "los dos tramos de `ultimos:` tienen que seguir cacheándose por separado");
   // Un constructor exportado que nadie llama es una familia declarada y sin
@@ -437,7 +439,7 @@ test("EN ROJO: detecta un constructor que quedó con la huella vacía", () => {
 });
 
 test("EN ROJO: detecta una huella que no es HUELLA_IDIOMA", () => {
-  const l = llamadasAConstructores(`claveTopPop(p, t, HUELLA_EN_CLAVES)`);
+  const l = llamadasAConstructores(`claveReco(h, HUELLA_EN_CLAVES)`);
   assert.equal(l[0].ultimo, "HUELLA_EN_CLAVES");
 });
 

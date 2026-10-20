@@ -26,8 +26,8 @@ export async function adaptadorCard<T extends Localizable>(deps: {
   return { valor: r.item, fallo: r.fallo };
 }
 
-/** Una lista de un solo tipo: el productor de `top:pop:` (`listByCategory`),
- *  las categorías y los pools por plataforma. */
+/** Una lista de un solo tipo: `listByCategory` (categorías) y los pools por
+ *  plataforma. */
 export async function adaptadorLista<T extends Localizable>(deps: {
   pedirBase: () => Promise<T[]>;
   pedirRespaldo: () => Promise<Localizable[] | null | undefined>;

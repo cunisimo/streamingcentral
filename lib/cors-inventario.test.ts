@@ -93,8 +93,6 @@ export function integraCors(src: string): boolean {
  * cross-origin desde el contenedor**, que es lo único que CORS habilita.
  */
 const EXCLUIDAS = new Map([
-  ["app/api/cron/netflix-top10/route.ts",
-   "server-to-server: la ejecuta Vercel Cron con el CRON_SECRET; el contenedor no la consume"],
   ["app/api/admin-search/route.ts",
    "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
   // Llegó con el Top manual, después de CP4. Mismo motivo que la de arriba, no
@@ -205,16 +203,18 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 27 rutas = 24 integradas + 3 excluidas", () => {
+test("el recuento cierra: 26 rutas = 24 integradas + 2 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
   const integradas = todas.filter((r) => integraCors(leer(r)));
   // 26 -> 27 con las salas: `app/api/sala/preparar` integra CORS (la consume el
   // contenedor con el JWT del organizador, igual que /api/te-va-a-gustar).
-  assert.equal(todas.length, 27, "cambió la cantidad de rutas: hay que reclasificar");
+  // 27 -> 26 el 2026-10-20: se borró `app/api/cron/netflix-top10` (excluida),
+  // con la ingesta automática del Top.
+  assert.equal(todas.length, 26, "cambió la cantidad de rutas: hay que reclasificar");
   assert.equal(integradas.length, 24);
-  assert.equal(EXCLUIDAS.size, 3);
+  assert.equal(EXCLUIDAS.size, 2);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });
 

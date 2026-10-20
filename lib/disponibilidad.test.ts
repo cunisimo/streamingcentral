@@ -66,14 +66,13 @@ const sinAR = (o: Partial<DatosTitulo> = {}): DatosTitulo => ({ ...GUTIERREZ, ..
 // 2. El resolvedor central — prioridad y procedencia
 // ============================================================================
 
-const nadaTop = async () => new Set<string>();
 const nadaSerie = async () => null;
 
 test("TMDB AR con proveedores: prevalece y NO consulta ningún respaldo", async () => {
   let consultas = 0;
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: ["d"] as PlatformCode[], hoy: HOY,
-    leerTopOficial: async () => { consultas++; return new Set<string>(); },
+    leerTopManual: async () => { consultas++; return new Map(); },
     leerDatosTitulo: async () => { consultas++; return GUTIERREZ; },
   });
   assert.deepEqual(r.plataformas, ["d"]);
@@ -90,7 +89,7 @@ test("TMDB tiene flatrate AR que Yump no mapea: NO se consulta ningún respaldo"
   let consultas = 0;
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hayFlatrateAR: true, hoy: HOY,
-    leerTopOficial: async () => { consultas++; return new Set(["tv:275224"]); },
+    leerTopManual: async () => { consultas++; return new Map([["tv:275224", ["n"] as PlatformCode[]]]); },
     leerDatosTitulo: async () => { consultas++; return GUTIERREZ; },
     excepciones: [EXC({ clave: "tv:275224" })],
   });
@@ -103,7 +102,7 @@ test("sin flatrate AR sí se consultan los respaldos", async () => {
   // El control del test de arriba: la misma llamada con la señal en false.
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hayFlatrateAR: false, hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: async () => GUTIERREZ,
+    leerDatosTitulo: async () => GUTIERREZ,
   });
   assert.deepEqual(r.plataformas, ["d"]);
 });
@@ -111,7 +110,7 @@ test("sin flatrate AR sí se consultan los respaldos", async () => {
 test("la señal por defecto es `false`: no cambia lo que ya andaba", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: async () => GUTIERREZ,
+    leerDatosTitulo: async () => GUTIERREZ,
   });
   assert.deepEqual(r.plataformas, ["d"]);
 });
@@ -120,7 +119,7 @@ test("NO muta el array cacheado de TMDB", async () => {
   const cacheado: PlatformCode[] = ["m"];
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 1, deTmdb: cacheado, hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
   });
   assert.equal(r.plataformas, cacheado, "debería devolver el MISMO array");
   assert.deepEqual(cacheado, ["m"], "el array cacheado cambió");
@@ -129,27 +128,16 @@ test("NO muta el array cacheado de TMDB", async () => {
 test("caso testigo end-to-end: TMDB vacío -> enlace oficial -> d", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop,
     leerDatosTitulo: async () => GUTIERREZ,
   });
   assert.deepEqual(r.plataformas, ["d"]);
   assert.equal(r.procedencia, "oficial-probable");
 });
 
-test("Moria conserva Netflix por el top oficial, y ANTES que el enlace", async () => {
-  const r = await resolverDisponibilidad({
-    tipo: "tv", id: 322428, deTmdb: [], hoy: HOY,
-    leerTopOficial: async () => new Set(["tv:322428"]),
-    leerDatosTitulo: async () => GUTIERREZ, // aunque hubiera enlace, gana el top
-  });
-  assert.deepEqual(r.plataformas, ["n"]);
-  assert.equal(r.procedencia, "top-oficial");
-});
-
-test("un título que NO está en el top no hereda nada", async () => {
+test("un título que NO está en el Top manual no hereda nada", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 999999, deTmdb: [], hoy: HOY,
-    leerTopOficial: async () => new Set(["tv:322428"]),
+    leerTopManual: async () => new Map([["tv:322428", ["n"] as PlatformCode[]]]),
     leerDatosTitulo: nadaSerie,
   });
   assert.deepEqual(r.plataformas, []);
@@ -161,7 +149,7 @@ test("un fallo de la evidencia NO se convierte en ausencia definitiva", async ()
   // ni cachear un "no está en ningún lado".
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
-    leerTopOficial: async () => { throw new Error("supabase caído"); },
+    leerTopManual: async () => { throw new Error("supabase caído"); },
     leerDatosTitulo: async () => { throw new Error("tmdb caído"); },
   });
   assert.deepEqual(r.plataformas, []);
@@ -172,15 +160,15 @@ test("un fallo de la evidencia NO se convierte en ausencia definitiva", async ()
 test("sin fallo, `fallo` es false", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 1, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
   });
   assert.equal(r.fallo, false);
 });
 
-test("un fallo del top no impide probar el enlace oficial", async () => {
+test("un fallo del Top manual no impide probar el enlace oficial", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
-    leerTopOficial: async () => { throw new Error("caído"); },
+    leerTopManual: async () => { throw new Error("caído"); },
     leerDatosTitulo: async () => GUTIERREZ,
   });
   assert.deepEqual(r.plataformas, ["d"]);
@@ -201,7 +189,7 @@ const EXC = (o: Partial<ExcepcionManual> = {}): ExcepcionManual => ({
 test("excepción manual VIGENTE se aplica", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 111, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
     excepciones: [EXC()],
   });
   assert.deepEqual(r.plataformas, ["d"]);
@@ -211,7 +199,7 @@ test("excepción manual VIGENTE se aplica", async () => {
 test("excepción manual VENCIDA no se aplica", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 111, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
     excepciones: [EXC({ vence: "2026-08-29" })],
   });
   assert.deepEqual(r.plataformas, []);
@@ -226,7 +214,7 @@ test("vence HOY todavía vale; el día siguiente no", () => {
 test("una excepción de otra región no se aplica en AR", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 111, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
     excepciones: [EXC({ region: "US" })],
   });
   assert.deepEqual(r.plataformas, []);
@@ -235,7 +223,6 @@ test("una excepción de otra región no se aplica en AR", async () => {
 test("la excepción manual es la ÚLTIMA prioridad, no la primera", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop,
     leerDatosTitulo: async () => GUTIERREZ,
     excepciones: [EXC({ clave: "tv:275224", plataforma: "m" })],
   });
@@ -283,7 +270,7 @@ const SIN_MANUAL = async () => new Map<string, PlatformCode[]>();
 test("el Top manual resuelve un título que TMDB no ubica", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 322428, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
     leerTopManual: async () => new Map([["tv:322428", ["n"] as PlatformCode[]]]),
   });
   assert.deepEqual(r.plataformas, ["n"]);
@@ -300,7 +287,7 @@ test("🔴 el Top manual NO se consulta si TMDB sabe algo", async () => {
     let consultas = 0;
     const r = await resolverDisponibilidad({
       tipo: "tv", id: 322428, ...caso, hoy: HOY,
-      leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+      leerDatosTitulo: nadaSerie,
       leerTopManual: async () => { consultas++; return new Map([["tv:322428", ["n"] as PlatformCode[]]]); },
     });
     assert.equal(consultas, 0, "consultó el Top manual teniendo dato de TMDB");
@@ -312,7 +299,7 @@ test("🔴 el Top manual NO se consulta si TMDB sabe algo", async () => {
 test("un fallo del Top manual es «no sé»: no niega, y no se cachea", async () => {
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 322428, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
     leerTopManual: async () => { throw new Error("Supabase caído"); },
   });
   assert.deepEqual(r.plataformas, [], "una caída nuestra produjo una afirmación");
@@ -324,28 +311,23 @@ test("sin lector de Top manual, todo sigue como antes", async () => {
   // cambian de comportamiento por existir esta procedencia.
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 1, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie,
+    leerDatosTitulo: nadaSerie,
   });
   assert.equal(r.procedencia, null);
   assert.equal(r.fallo, false);
 });
 
-test("el Top manual va DESPUÉS del top oficial y ANTES del enlace probable", async () => {
-  // Los dos primeros son hechos publicados; el tercero es una regla que infiere.
-  // El orden sólo importa cuando dos discrepan, que es raro, pero cuando pasa
-  // gana el dato sobre la inferencia.
-  const conTodo = {
-    tipo: "tv" as const, id: 275224, deTmdb: [] as PlatformCode[], hoy: HOY,
+test("el Top manual va ANTES del enlace probable", async () => {
+  // El Top manual es un dato que confirmó el dueño; el enlace es una regla que
+  // infiere. Cuando discrepan, gana el dato. (Hasta el 2026-10-20 había un
+  // escalón más arriba, el top automático de Netflix: se retiró.)
+  const r = await resolverDisponibilidad({
+    tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
     leerTopManual: async () => new Map([["tv:275224", ["n"] as PlatformCode[]]]),
     leerDatosTitulo: async () => GUTIERREZ,
-  };
-  const gana = await resolverDisponibilidad({ ...conTodo, leerTopOficial: nadaTop });
-  assert.equal(gana.procedencia, "top-manual", "el enlace probable le ganó al dato manual");
-
-  const oficial = await resolverDisponibilidad({
-    ...conTodo, leerTopOficial: async () => new Set(["tv:275224"]),
   });
-  assert.equal(oficial.procedencia, "top-oficial");
+  assert.equal(r.procedencia, "top-manual", "el enlace probable le ganó al dato manual");
+  assert.deepEqual(r.plataformas, ["n"]);
 });
 
 // ============================================================================
@@ -365,7 +347,7 @@ const SUP_2118: SupresionManual = {
 test("supresión: TMDB dice Disney+ y Paramount+ → queda Paramount+, procedencia tmdb-ar", async () => {
   const r = await resolverDisponibilidad({
     tipo: "movie", id: 2118, deTmdb: ["d", "pp"] as PlatformCode[], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
+    leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
   });
   assert.deepEqual(r.plataformas, ["pp"]);
   assert.equal(r.procedencia, "tmdb-ar");
@@ -377,7 +359,7 @@ test("supresión: TMDB dice sólo Disney+ → vacío, y NO se consulta ningún r
   let consultas = 0;
   const r = await resolverDisponibilidad({
     tipo: "movie", id: 2118, deTmdb: ["d"] as PlatformCode[], hoy: HOY,
-    leerTopOficial: async () => { consultas++; return new Set<string>(); },
+    leerTopManual: async () => { consultas++; return new Map(); },
     leerDatosTitulo: async () => { consultas++; return GUTIERREZ; },
     supresiones: [SUP_2118],
   });
@@ -389,7 +371,7 @@ test("supresión: NO muta el array cacheado de providersOf", async () => {
   const cacheado: PlatformCode[] = ["d", "pp"];
   const r = await resolverDisponibilidad({
     tipo: "movie", id: 2118, deTmdb: cacheado, hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
+    leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
   });
   assert.notEqual(r.plataformas, cacheado);
   assert.deepEqual(cacheado, ["d", "pp"], "el array cacheado cambió");
@@ -399,7 +381,7 @@ test("supresión: otra película sigue devolviendo el MISMO array de TMDB", asyn
   const cacheado: PlatformCode[] = ["d", "pp"];
   const r = await resolverDisponibilidad({
     tipo: "movie", id: 949, deTmdb: cacheado, hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
+    leerDatosTitulo: nadaSerie, supresiones: [SUP_2118],
   });
   assert.equal(r.plataformas, cacheado);
 });
@@ -409,7 +391,7 @@ test("supresión: se aplica también sobre lo que agregan los respaldos", async 
   // supresión gana igual: es la verificación más directa que hay.
   const r = await resolverDisponibilidad({
     tipo: "tv", id: 275224, deTmdb: [], hoy: HOY,
-    leerTopOficial: nadaTop, leerDatosTitulo: async () => GUTIERREZ,
+    leerDatosTitulo: async () => GUTIERREZ,
     supresiones: [{ ...SUP_2118, clave: "tv:275224" }],
   });
   assert.deepEqual(r.plataformas, []);

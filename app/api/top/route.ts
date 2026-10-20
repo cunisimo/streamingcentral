@@ -13,14 +13,19 @@ async function manejar(req: NextRequest) {
   const providers = (q.get("providers") || "")
     .split(",").map((s) => s.trim()).filter(Boolean) as PlatformCode[];
   try {
-    // Etapa 3.a: el `safe()` de cada bloque registra la causa; el resumen
-    // sale en UNA línea por solicitud.
-    return NextResponse.json(await conDescartesRegistrados("api/top", () => buildTop(tipo, providers)));
+    const r = await conDescartesRegistrados("api/top", () => buildTop(tipo, providers));
+    // No se pudieron leer las publicaciones: es un ERROR (503, la vista
+    // ofrece reintentar), nunca un Top vacío ni otro ranking. Lo que el dueño
+    // no publicó llega como bloque `sin-publicar` dentro de un 200.
+    if (!r.ok) {
+      return NextResponse.json(
+        { error: r.error, mine: [], others: [], fallos: 1, degradado: true },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(r.payload);
   } catch (e) {
-    // buildTop envuelve cada bloque en `safe`, así que en producción no
-    // rechaza: la degradación viaja en el payload (`degradado`/`fallos`) con
-    // 200. Este catch queda para lo que `safe` NO cubre — fuera de producción
-    // `safe` re-lanza a propósito, y para cualquier fallo del propio handler.
+    // Lo que `componerTop` no cubre: un fallo del propio handler.
     console.error("[api/top] buildTop rechazó —", e);
     return NextResponse.json(
       { error: String(e), mine: [], others: [], fallos: 1, degradado: true },

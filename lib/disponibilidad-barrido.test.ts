@@ -48,15 +48,12 @@ const TODAS = fuentes("lib", "app", "components", "hooks");
 // 1. El dato crudo de TMDB no se lee fuera de enrich
 // ============================================================================
 
-// Los tres que pueden tocar el dato crudo, cada uno con su motivo. Una
-// excepción sin motivo registrado es un agujero disfrazado de decisión.
+// Los que pueden tocar el dato crudo, cada uno con su motivo. Una excepción sin
+// motivo registrado es un agujero disfrazado de decisión. (`lib/netflix-top10.ts`
+// estaba acá y se borró el 2026-10-20 con la ingesta automática del Top.)
 const PUEDEN_LEER_CRUDO: Record<string, string> = {
   "lib/tmdb.ts": "es el cliente HTTP de TMDB: acá vive la llamada",
   "lib/enrich.ts": "`providersOf` (privada) y el adaptador del resolvedor central",
-  "lib/netflix-top10.ts":
-    "NO decide disponibilidad: `enNetflixAR` desambigua homónimos al resolver un "
-    + "título del TSV a un id de TMDB. Es una ENTRADA de la evidencia, no una salida "
-    + "hacia la interfaz — lo que la app muestra sigue saliendo del resolvedor.",
 };
 
 test("sólo los archivos autorizados llaman a watchProviders()", () => {
@@ -196,7 +193,9 @@ test("el contexto llega a todos los archivos que cachean títulos", () => {
   // que ningún archivo con superficies que enriquecen se quedó sin el contexto.
   // Etapa 3.a: el contexto se abre a través del compuesto `withFallosDeFuentes`
   // (lib/fallos-tmdb.ts), que envuelve a `withFallosDisponibilidad`.
-  for (const a of ["lib/enrich.ts", "lib/home.ts", "lib/top.ts", "lib/reco.ts"]) {
+  // `lib/top.ts` salió el 2026-10-20: el Top manual no cachea títulos propios
+  // (sus fichas salen de `cardsByIds`, que ya abre el contexto en la card).
+  for (const a of ["lib/enrich.ts", "lib/home.ts", "lib/reco.ts"]) {
     assert.match(codigo(a), /withFallos(?:Disponibilidad|DeFuentes)\(/, `${a} no envuelve`);
   }
 });
@@ -486,10 +485,11 @@ test("cambiar el registro de supresiones obliga a subir las versiones de caché"
   assert.match(claves, /export const VERSION_HOME: number =[\s\S]*?: 7;/);
 });
 
-test("las cinco familias que guardan plataformas resueltas llevan VERSION_DISPONIBILIDAD", () => {
+test("las cuatro familias que guardan plataformas resueltas llevan VERSION_DISPONIBILIDAD", () => {
+  // Eran cinco: `claveTopPop` se retiró el 2026-10-20 con el Top por popularidad.
   const claves = codigo("lib/claves.ts");
   assert.match(claves, /const dv = `d\$\{VERSION_DISPONIBILIDAD\}`;/, "`dv` no sale de la constante");
-  for (const fn of ["claveCard", "claveSearch", "claveTopPop", "claveReco", "claveUltimosSeries"]) {
+  for (const fn of ["claveCard", "claveSearch", "claveReco", "claveUltimosSeries"]) {
     const m = new RegExp(`export function ${fn}\\([\\s\\S]*?\\n}`).exec(claves);
     assert.ok(m, `no existe ${fn}`);
     assert.match(m![0], /\$\{dv\}/, `${fn} no lleva la versión de disponibilidad`);

@@ -7,9 +7,14 @@
 // PRIORIDAD DE EVIDENCIA, de más fuerte a más débil:
 //
 //   1. `watch/providers` de TMDB para AR, `flatrate`.   → "tmdb-ar"
-//   2. Top oficial reciente de Netflix.                 → "top-oficial"
+//   2. Top semanal cargado a mano (publicado, ≤ 14 d).  → "top-manual"
 //   3. Evidencia oficial de alta probabilidad.          → "oficial-probable"
 //   4. Registro manual versionado.                      → "manual"
+//
+// El top AUTOMÁTICO de Netflix (`netflix_top10`) era la prioridad 2 y se
+// RETIRÓ el 2026-10-20 por decisión del dueño: el Top de todas las plataformas
+// se carga a mano. La tabla y su historial se conservan, pero ningún camino
+// de la app la lee.
 //
 // 🔴 LOS RESPALDOS SÓLO AGREGAN CUANDO TMDB NO SABE NADA. Nunca contradicen a
 // TMDB ni lo reemplazan. Si TMDB ubica el título en otras plataformas, el dato
@@ -47,7 +52,7 @@ export type { ExcepcionManual };
  * inferencia, no una confirmación de la plataforma.
  */
 export type Procedencia =
-  | "tmdb-ar" | "top-oficial" | "top-manual" | "oficial-probable" | "manual";
+  | "tmdb-ar" | "top-manual" | "oficial-probable" | "manual";
 
 export interface Disponibilidad {
   plataformas: PlatformCode[];
@@ -118,8 +123,6 @@ export async function resolverDisponibilidad(opts: {
   hayFlatrateAR?: boolean;
   /** Fecha argentina, YYYY-MM-DD. */
   hoy: string;
-  /** Evidencia del top oficial de Netflix. Puede lanzar. */
-  leerTopOficial: () => Promise<Set<string>>;
   /** Datos crudos del título para la regla oficial. Puede lanzar. */
   leerDatosTitulo: () => Promise<DatosTitulo | null>;
   /**
@@ -134,7 +137,7 @@ export async function resolverDisponibilidad(opts: {
   supresiones?: SupresionManual[];
 }): Promise<Disponibilidad> {
   const r = await resolverSinSupresiones(opts);
-  // --- 6. Supresiones: la única resta, sobre cualquier procedencia ----------
+  // --- 5. Supresiones: la única resta, sobre cualquier procedencia ----------
   // Después de todo lo demás a propósito: si un respaldo agregara la plataforma
   // suprimida (un enlace oficial de Disney+, un ranking manual viejo), la
   // verificación directa del dueño gana igual. Sin nada que quitar devuelve
@@ -164,26 +167,10 @@ async function resolverSinSupresiones(
   const clave = claveTitulo(opts.tipo, opts.id);
   let fallo = false;
 
-  // --- 2. Top oficial de Netflix -------------------------------------------
-  // Intacto: mismas reglas de ventana y de `needs_review` que ya estaban.
-  try {
-    const evidencia = await opts.leerTopOficial();
-    if (evidencia.has(clave)) {
-      return { plataformas: ["n"], procedencia: "top-oficial", fallo };
-    }
-  } catch {
-    // Una caída de nuestra base no puede producir NI negar disponibilidad.
-    // Se sigue con las otras evidencias, marcando que esto no se cachea.
-    fallo = true;
-  }
-
-  // --- 3. Top semanal cargado a mano ---------------------------------------
+  // --- 2. Top semanal cargado a mano ---------------------------------------
   // El dueño eligió cada título y confirmó su plataforma. Es un dato verificado
   // a mano, no una inferencia, y por eso va ANTES de la regla de enlace: cuando
   // los dos discrepan, gana el dato.
-  //
-  // Va DESPUÉS del top oficial de Netflix porque ése es una publicación de la
-  // propia plataforma; entre dos hechos, el de la fuente primaria.
   if (opts.leerTopManual) {
     try {
       const manual = await opts.leerTopManual();
@@ -192,13 +179,13 @@ async function resolverSinSupresiones(
         return { plataformas: [...codes], procedencia: "top-manual", fallo };
       }
     } catch {
-      // Igual que arriba: una caída de nuestra base no niega disponibilidad, y
-      // lo que se responda no se puede cachear.
+      // Una caída de nuestra base no puede producir NI negar disponibilidad:
+      // se sigue con las otras evidencias, marcando que esto no se cachea.
       fallo = true;
     }
   }
 
-  // --- 4. Evidencia oficial de alta probabilidad ---------------------------
+  // --- 3. Evidencia oficial de alta probabilidad ---------------------------
   // Series y películas. Los `arIds` van vacíos a propósito: si AR tuviera datos,
   // la prioridad 1 ya habría cortado. Se pasan igual para que la regla pueda
   // aplicar su chequeo de contradicción sin depender de ese orden.
@@ -215,7 +202,7 @@ async function resolverSinSupresiones(
     fallo = true;
   }
 
-  // --- 5. Registro manual versionado ---------------------------------------
+  // --- 4. Registro manual versionado ---------------------------------------
   const exc = (opts.excepciones ?? EXCEPCIONES).find(
     (e) => e.clave === clave && e.region === "AR" && vigente(e, opts.hoy),
   );

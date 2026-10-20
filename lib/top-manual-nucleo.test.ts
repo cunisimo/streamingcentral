@@ -3,16 +3,16 @@
 // ============================================================================
 // LAS DOS QUE IMPORTAN
 // ============================================================================
-//  1. **El cutover es atómico.** Mientras falte cualquiera de los 12 bloques,
-//     `/top` entero sigue con la implementación vieja. No se mezclan fuentes por
-//     bloque: media página con ranking curado y media con popularidad sería peor
-//     que cualquiera de las dos.
+//  1. **Los doce bloques.** Desde el 2026-10-20 ya no hay "cutover atómico":
+//     cada bloque publicado se muestra solo, y el que falta se ve como
+//     "todavía no disponible" (`lib/top-solo-manual.test.ts`). El panel cuenta
+//     cuántos de LOS doce tienen publicación.
 //  2. **La evidencia de disponibilidad sale sólo de lo PUBLICADO y vence a los
 //     14 días.** Un borrador no dice nada del mundo, y una captura vieja tampoco.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  BLOQUES, evidenciaDeRankings, hayCutover, posicionesDeReordenar, preparacion, validarBloque,
+  BLOQUES, evidenciaDeRankings, posicionesDeReordenar, preparacion, validarBloque,
 } from "./top-manual-nucleo.ts";
 
 const diez = (n = 10) => Array.from({ length: n }, (_, i) => ({
@@ -30,25 +30,14 @@ test("son doce bloques: seis plataformas por dos tipos", () => {
   assert.equal(BLOQUES.filter((b) => b.tipo === "movie").length, 6);
 });
 
-// --- cutover atómico ---------------------------------------------------------
+// --- los doce, completos -----------------------------------------------------
 
-test("el cutover exige los DOCE bloques publicados", () => {
-  const todos = new Set(BLOQUES.map((b) => `${b.plataforma}:${b.tipo}`));
-  assert.equal(hayCutover(todos), true);
+test("`listo` exige LOS doce bloques publicados", () => {
+  const todos = BLOQUES.map((b) => `${b.plataforma}:${b.tipo}`);
+  assert.equal(preparacion(todos).listo, true);
   for (const falta of ["n:movie", "cr:tv", "at:movie"]) {
-    const casi = new Set(todos); casi.delete(falta);
-    assert.equal(hayCutover(casi), false, `faltando ${falta} igual hizo cutover`);
+    assert.equal(preparacion(todos.filter((k) => k !== falta)).listo, false, `faltando ${falta} dio listo`);
   }
-  assert.equal(hayCutover(new Set()), false);
-});
-
-test("un bloque de más no cuenta como cutover", () => {
-  // Defensa contra una clave mal formada: doce entradas no alcanzan, tienen que
-  // ser LAS doce.
-  const raras = new Set(BLOQUES.slice(0, 11).map((b) => `${b.plataforma}:${b.tipo}`));
-  raras.add("zz:movie");
-  assert.equal(raras.size, 12);
-  assert.equal(hayCutover(raras), false);
 });
 
 // --- validación de un bloque -------------------------------------------------
@@ -181,16 +170,17 @@ test("un bloque incompleto no se compacta por un movimiento válido tampoco", ()
 // de 0 a 12 de golpe. Como indicador de progreso no servía para nada, que es
 // justamente para lo que está.
 //
-// Ahora cuenta las publicaciones que existen de verdad. Lo que NO cambia es el
-// cutover: sigue exigiendo los doce, y el mensaje sigue diciendo lo mismo.
+// Ahora cuenta las publicaciones que existen de verdad. Desde el 2026-10-20 el
+// mensaje informa qué ve el público: los que faltan, "todavía no disponible".
 
 test("con cuatro publicaciones el contador dice 4, no 0", () => {
   const p = preparacion(["n:movie", "n:tv", "d:movie", "d:tv"]);
   assert.equal(p.hechos, 4);
   assert.equal(p.total, 12);
-  assert.equal(p.listo, false, "hizo cutover con cuatro bloques");
+  assert.equal(p.listo, false, "dio listo con cuatro bloques");
   assert.equal(p.mensaje,
-    "Hasta que estén los doce, el Top público sigue con la fuente anterior.");
+    "Los bloques sin publicar se ven en el Top público como «todavía no disponible».");
+  assert.doesNotMatch(p.mensaje, /fuente anterior/);
 });
 
 test("con los doce cambia el mensaje y recién ahí está listo", () => {
@@ -198,7 +188,7 @@ test("con los doce cambia el mensaje y recién ahí está listo", () => {
   const p = preparacion(todos);
   assert.equal(p.hechos, 12);
   assert.equal(p.listo, true);
-  assert.equal(p.mensaje, "El Top público ya usa la carga manual.");
+  assert.equal(p.mensaje, "Los doce bloques están publicados.");
 });
 
 test("sin publicaciones arranca en cero", () => {

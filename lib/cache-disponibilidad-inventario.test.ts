@@ -3,7 +3,8 @@
 // 🔴 POR QUÉ HACE FALTA UN INVENTARIO Y NO UNA LISTA DE TRES. La primera versión
 // cubrió card, Home y "Últimos lanzamientos" —las que se habían nombrado— y dio
 // el requisito por resuelto. Quedaban afuera `search()` (1 h), `popularBlock()`
-// del Top (24 h) y el riel de recomendaciones (6 h), que cachean títulos
+// del Top (24 h; retirado el 2026-10-20 con el Top por popularidad) y el riel
+// de recomendaciones (6 h), que cachean títulos
 // enriquecidos exactamente igual. Este archivo obliga a clasificar CADA llamada
 // a `cachedLoc`/`cachedLocIf`: una superficie nueva no compila el test hasta que
 // alguien decida si necesita el contexto o explique por qué no.
@@ -23,7 +24,7 @@ function codigo(rel: string): string {
 /** Todo lo que termina llamando a `disponibilidadDe`, directa o indirectamente. */
 const ENRIQUECEN = [
   "toUITitle", "enrichRaw", "cardsByIds", "titleCard",
-  "listByCategory", "listByCategoryCacheable", "disponibilidadDe",
+  "listByCategory", "disponibilidadDe",
 ];
 
 interface Superficie {
@@ -74,10 +75,6 @@ const SUPERFICIES: Superficie[] = [
     // sigue abriendo el contexto de fallos en su productor.
     nombre: "payload del Home", archivo: "lib/home.ts",
     ancla: "servirConTurno<HomePayload>(", ttl: "TTL.home (6 h) / TTL.homeUltimoBueno (36 h)", enriquece: true,
-  },
-  {
-    nombre: "Top por popularidad", archivo: "lib/top.ts",
-    ancla: "cachedLocIf(claveTopPop(", ttl: "TTL.catalog (24 h)", enriquece: true,
   },
   {
     nombre: "riel Elegidas para vos", archivo: "lib/reco.ts",

@@ -68,7 +68,7 @@ test("S3 lib/enrich.ts titleCard: una card que falla por TMDB no se guarda", () 
   assert.match(tramo, /registrarDescarteTmdb\(e, "titleCard"\)/);
 });
 
-test("S4 directorCards, S5 pools, S6 top, S7 netflix, S8 idioma registran la causa", () => {
+test("S4 directorCards, S5 pools, S6 top manual, S8 idioma registran la causa", () => {
   // Corrección tras la auditoría: directores y portadas viven en
   // lib/lotes-tolerantes.ts, con el resultado parcial SIN guardar.
   assert.match(codigo("lib/lotes-tolerantes.ts"), /registrarDescarteTmdb\(s\.reason, "directorCards"\)/);
@@ -76,8 +76,10 @@ test("S4 directorCards, S5 pools, S6 top, S7 netflix, S8 idioma registran la cau
   assert.match(codigo("lib/enrich.ts"), /resolverDirectores<UIPerson>\(/);
   assert.match(codigo("lib/enrich.ts"), /resolverPortadas\(/);
   assert.match(codigo("lib/pools.ts"), /registrarDescarteTmdb\(r\.reason, "pool"\)/);
-  assert.match(codigo("lib/top.ts"), /registrarDescarteTmdb\(e, /);
-  assert.match(codigo("lib/netflix-top10.ts"), /registrarDescarteTmdb\(e, "enNetflixAR"\)/);
+  // S6: desde el 2026-10-20 el Top es la carga manual; el registro vive en su
+  // núcleo puro (un bloque cuyas fichas no llegan se muestra igual). S7 —la
+  // ingesta de Netflix— se borró con la automatización.
+  assert.match(codigo("lib/top-composer.ts"), /registrarDescarteTmdb\(e, etiqueta\)/);
   assert.equal((codigo("lib/idioma.ts").match(/registrarDescarteTmdb\(e, "respaldo-idioma"\)/g) ?? []).length, 2);
 });
 
@@ -91,7 +93,8 @@ test("S11 la ruleta se cubre por titleCard (S3) y reco no traga: no hay catch en
 });
 
 // ============================================================================
-// Las siete superficies cacheadas abren el contexto COMPUESTO
+// Las superficies cacheadas abren el contexto COMPUESTO (eran siete; el Top por
+// popularidad se retiró el 2026-10-20)
 // ============================================================================
 
 test("ningún cachedLocIf abre sólo withFallosDisponibilidad: todos usan withFallosDeFuentes", () => {
@@ -104,7 +107,8 @@ test("ningún cachedLocIf abre sólo withFallosDisponibilidad: todos usan withFa
   assert.equal((codigo("lib/busqueda-enriquecido.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);
   assert.match(codigo("lib/enrich.ts"), /producirBusquedaConFallos\(\{/);
   assert.equal((codigo("lib/reco.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);
-  assert.equal((codigo("lib/top.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);
+  // El Top manual no cachea títulos propios: ni envuelve ni debe envolver.
+  assert.equal((codigo("lib/top.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 0);
   assert.equal((codigo("lib/home.ts").match(/withFallosDeFuentes\(/g) ?? []).length, 1);
 });
 
