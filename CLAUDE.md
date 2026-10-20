@@ -322,8 +322,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   sobre las cantidades por riel. Las dos variantes se miden **alternadas en la
   misma ventana**, y el control es correr la misma variante dos veces: si el
   composer es determinístico, da 0 diferencias.
-  `searchDeTipo` está clavado en `es-MX` y `searchTitles` en `en-US` (matchea el
-  TSV de Netflix): ninguno de los dos sigue al idioma base.
+  `searchDeTipo` está clavado en `es-MX`: no sigue al idioma base.
 - **"Miniseries para ansiosos"** (`lib/miniseries.ts` + el cableado en
   `lib/home.ts`) va debajo de "Documental" y arriba de los dos de audiencia; esa
   posición ES su prioridad de dedup. Solo `tv` y sin toggle. La condición es
@@ -512,8 +511,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   la vista: `discover()` trae **60 por defecto** (`lib/tmdb.ts`) y ese es el
   único que nadie decidió por superficie — excluye cine regional en todas, y es
   el gemelo del **issue #9**. Los demás son explícitos y medidos: 300 en el eje
-  `top` y en `genreCovers()`, 10 en el eje `nuevo`, 60 en `lib/top.ts`, y **0**
-  en `latestReleases`.
+  `top` y en `genreCovers()`, 10 en el eje `nuevo` y **0** en `latestReleases`.
 - **Animación y familia son DOS filtros separados, y el `scope` lo decide el
   llamador** (`lib/audience.ts` → `excludedGenres`). Mezclarlos ya causó dos bugs
   reportados, así que no volver a unirlos:
@@ -537,31 +535,49 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   **única** plataforma, el carrusel "Animación para adultos" se oculta: todo el
   Home ya es anime y sería el mismo contenido con otro título. Con Crunchyroll +
   otra (Max, Netflix) se mantiene, porque esas también tienen animación adulta.
-- **El Top (`/top`) se carga A MANO, con cutover atómico.** Implementación de la rama
-  `feat/top-manual`, integrada; estado operativo en `docs/ESTADO.md`. No usar el antiguo pendiente de merge/migración como instrucción de ejecución.
-  Doce bloques (seis plataformas × dos tipos) que el dueño arma, revisa y
-  publica desde `/admin/top`; tablas `top_rankings` (la VERSIÓN de un bloque) y
-  `top_ranking_entries` (sus diez posiciones), migración `007`.
+- **El Top (`/top`) es EXCLUSIVAMENTE la carga manual del dueño** (decisión del
+  2026-10-20; `lib/top-composer.ts`, puro, cableado en `lib/top.ts`). Doce
+  bloques (seis plataformas × dos tipos, Netflix incluida) que el dueño arma,
+  revisa y publica desde `/admin/top`; tablas `top_rankings` (la VERSIÓN de un
+  bloque) y `top_ranking_entries` (sus diez posiciones), migración `007`.
+  🔴 **NO HAY NINGUNA FUENTE ALTERNATIVA.** Cada bloque muestra su última
+  versión publicada, con exactamente los títulos y el orden del dueño. TMDB sólo
+  ENRIQUECE esos títulos (`cardsByIds`): no elige ni ordena. Tres estados que no
+  se confunden:
+  - **publicado**: sus posiciones, tal cual. Si TMDB no devuelve una ficha, el
+    puesto se ve igual con el título cargado ("Ficha no disponible"); si el
+    enriquecimiento entero falla, el bloque se muestra con sus títulos y el
+    payload sale `degradado` (la vista ofrece reintentar). Nunca se esconde.
+  - **sin publicar** (`estado: "sin-publicar"`): el bloque aparece con
+    "Todavía no disponible." y los demás se ven igual. No es un fallo.
+  - **lectura fallida**: `ultimasPublicaciones` LANZA ante un error de Supabase
+    (no lo guarda en caché) y `/api/top` responde **503**; la vista muestra "No
+    pudimos cargar el top." con "Reintentar" y no deja en pantalla el payload
+    anterior. Nunca se lee como "no hay publicaciones" ni muestra otro ranking.
+  Lo fija `lib/top-solo-manual.test.ts`. Hasta el 2026-10-20 había un "cutover
+  atómico": mientras faltara cualquiera de los doce bloques, `/top` entero
+  servía la fuente vieja (top automático de Netflix + popularidad de TMDB). Se
+  retiró con esas fuentes.
   🔴 **NADA SE SOBREESCRIBE AL PUBLICAR**: publicar crea una fila nueva y la
   anterior queda intacta, así que el historial se conserva y una corrección es
   una versión más que apunta a la previa con `copiado_de`. Lo garantizan dos
   triggers, no la buena conducta del código. Un índice PARCIAL da un solo
-  borrador por bloque sin impedir publicar el mismo bloque muchas veces.
-  🔴 **EL CUTOVER ES ATÓMICO Y ESO ES UNA DECISIÓN DEL DUEÑO.** Mientras falte
-  cualquiera de los doce bloques publicados, `/top` **entero** sigue con la
-  implementación vieja (`hayCutover` en `lib/top-manual-nucleo.ts`). No se
-  mezclan fuentes por bloque: media página con ranking curado y media con
-  popularidad no le da al lector forma de saber qué mira. Un fallo al leer las
-  publicaciones tampoco cambia de fuente — que Supabase se caiga no puede vaciar
-  el Top.
+  borrador por bloque sin impedir publicar el mismo bloque muchas veces. Lo que
+  se publica tarda hasta un minuto en verse en `/top` (`TTL_PUBLICACIONES`).
   **Publicar es una función de la base** (`publicar_top`, `security invoker`):
   valida las diez posiciones y cambia el estado en una transacción. Si eso
   viviera en la API, entre validar y escribir cabría cualquier cosa y una
   llamada directa a PostgREST se saltearía la validación entera.
-  **El copy público se unifica en "Top semanal"** y las fechas de captura
-  quedan sólo en el dashboard. La nota que explicaba "dato oficial vs
-  popularidad" **no se borró**: antes del cutover esa distinción sigue siendo
-  real, así que se muestra sólo para los bloques de la fuente vieja.
+  **El copy público es "Top semanal"** para las seis y las fechas de captura
+  quedan sólo en el dashboard. El toggle Películas/Series es **uno solo global**
+  para toda la página: los bloques son la misma pregunta repetida por
+  plataforma. En el Top no corren ni los filtros de audiencia ni el dedup del
+  Home. **En cada bloque la plataforma la garantiza el BLOQUE, no TMDB**
+  (`conPlataformaDeLaFuente` en `lib/top-plataformas.ts`): si TMDB no conoce
+  ninguna plataforma del título, se le pone la del bloque (pasando por las
+  supresiones); si lo ubica en otras, no se toca. Nació con "Moria"
+  (`tv/322428`, agosto de 2026), #1 de Netflix pintada en gris porque TMDB no
+  tenía proveedores en ninguna región.
 - **El segundo factor del admin se comprueba en TRES lugares, y sólo dos son
   seguridad.** La sesión vive en `localStorage`, no en cookies, así que el
   servidor no la ve: el guard de `/admin/layout.tsx` es **experiencia de
@@ -598,122 +614,31 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   entrar al panel con ella puede volver a cerrar sus otras sesiones (runbook en
   `docs/MANTENIMIENTO.md`).
 - **La carga manual es también evidencia de disponibilidad** (procedencia
-  `top-manual`, prioridad 3 del resolvedor). Cuando el dueño confirma que un
+  `top-manual`, prioridad 2 del resolvedor). Cuando el dueño confirma que un
   título está en una plataforma, eso resuelve el caso que TMDB tarda en publicar.
   🔴 **Entra por `resolverDisponibilidad`, NO por un camino propio de `/top`.**
   Si viviera sólo allá, la misma película saldría en color en el Top y en gris
   en la ficha, la búsqueda y el Home — exactamente el bug que el resolvedor
   central existe para impedir. Sale **sólo de rankings publicados**, vence a los
-  **14 días** (la misma ventana que la evidencia de Netflix y por lo mismo: una
-  captura vieja no dice dónde está hoy un título), los borradores no cuentan, y
-  un fallo de lectura es "no sé" — no niega y no se cachea.
-  Va **después** del top oficial de Netflix y **antes** del enlace probable:
-  entre dos hechos publicados gana la fuente primaria, y entre un hecho y una
-  inferencia gana el hecho. En `/top` se conserva además
-  `conPlataformaDeLaFuente`, porque ahí la plataforma la garantiza el bloque.
-- ⚠️ **Actualización del dueño (20/10/2026):** el Top de TODAS las plataformas,
-  Netflix incluida, se carga a mano, y **Cron Jobs está apagado** en
-  `streamingcentral`. No ejecutar ni recuperar la ingesta automática. Lo que
-  sigue sobre el cron "corriendo" y la prioridad 2 quedó viejo; el código
-  todavía mantiene `top-oficial` como evidencia y respaldo (ver
-  `docs/ESTADO.md`, pendiente 3b). No borrar `netflix_top10` sin decisión.
-- **El Top automático de Netflix queda ARCHIVADO, no eliminado.** `netflix_top10`,
-  el resolvedor título→TMDB, la ingesta y sus tests siguen vivos, **y el cron
-  semanal de Vercel sigue corriendo**. Es una decisión del dueño y tiene un
-  motivo concreto: esa tabla ya **no alimenta sólo a `/top`**, es la prioridad 2
-  del resolvedor de disponibilidad (`disponiblesEnTopOficial` en
-  `lib/enrich.ts`). Apagar el cron habría vaciado esa evidencia en 14 días y
-  devuelto a gris los títulos que dependen de ella — la misma regresión
-  programada que ya se corrigió una vez.
-  Lo que sí se desconecta es su uso como **fuente del ranking público**, y pasa
-  solo: en el cutover, `bloqueManual` reemplaza a `netflixBlock` y a
-  `popularBlock` para las seis plataformas. **El código viejo se retira en un
-  cambio posterior**, una vez probado el Top manual en producción.
-- **El Top (`/top`) era la única sección con dato de consumo real, y solo para
-  Netflix.** (Vigente **hasta el cutover**; lo de arriba lo reemplaza.) Sale del TSV público de Netflix (`lib/netflix-top10.ts`), ingestado
-  por un cron semanal a la tabla `netflix_top10`, que hace de ranking **y** de
-  mapa título→TMDB (el TSV solo trae el título en inglés). Las otras cinco
-  plataformas van por popularidad de TMDB y se etiquetan distinto a propósito:
-  "Lo más popular ahora" vs "Lo más visto esta semana · dato oficial". No unificar
-  ese copy — la distinción es deliberada. Disney+, Prime Video, Max, Apple TV+ y
-  Crunchyroll **no publican** su top 10; las únicas fuentes que lo agregan
-  (FlixPatrol, JustWatch) son de pago. En el Top no corren ni los filtros de
-  audiencia ni el dedup del Home. El toggle Películas/Series es **uno solo
-  global** para toda la página, no uno por riel como en el Home: los bloques son
-  la misma pregunta repetida por plataforma, y estados independientes rompen la
-  lectura de "el top de ahora".
-  **En el bloque oficial, la plataforma la garantiza la FUENTE, no TMDB**
-  (`lib/top-plataformas.ts`). Esos veinte títulos los publicó Netflix como lo
-  más visto EN Netflix Argentina, así que "está en Netflix" es un dato, no una
-  deducción — y es mejor dato que `watch/providers`, que llega tarde en los
-  estrenos. Sin eso, "Moria" entró **#1 del top oficial pintada en gris y con
-  "No está en tus plataformas"** (`tv/322428`, semana 2026-08-16: estrenó el
-  14/08 y TMDB no tenía proveedores en NINGUNA región). Es el caso que la
-  **regla 2** de `resolveTitle` ya contemplaba —título exacto que TMDB todavía
-  no ubica en Netflix— y que nadie había bajado a la card. **Solo se aplica
-  cuando no sabemos NADA**: si TMDB conoce el título y lo ubica en otras
-  plataformas, no hay lag que explicar, lo más probable es que la resolución
-  del TSV haya agarrado un homónimo, y ahí agregar Netflix convertiría un error
-  de matcheo en una afirmación falsa bajo el sello "dato oficial".
-  **La FICHA usa la misma evidencia** (`plataformasDeFicha` +
-  `disponiblesEnTopOficial`). Era una limitación declarada y estaba mal: `Moria`
-  decía **"No está en streaming"** siendo el #1 del top oficial, y esperar a
-  TMDB no era una salida — su web ya muestra el canal y el homepage de Netflix
-  mientras `/tv/322428/watch/providers` sigue devolviendo `results: {}`. Si
-  `providersOf` viene **vacío**, se mira si ese `tipo:id` aparece en el top con
-  `tmdb_id` resuelto y **`needs_review = false`**. Esa segunda condición es más
-  estricta que en la card a propósito: `needs_review` marca las filas que pueden
-  apuntar a un homónimo, y en el top el peor caso es una card de más, mientras
-  que la ficha dice "Disponible en Netflix".
-  **Mira TODAS las semanas de la ventana de 14 días, no la última**, y eso no es
-  un detalle: atada a la semana más nueva, la evidencia se evaporaba sola con el
-  cron siguiente —el título salía del top, la ficha volvía a "No está en
-  streaming" y no había cambiado nada ni en TMDB ni acá—. Era una regresión
-  programada. Por lo mismo, una fila nueva con `needs_review = true` **no**
-  invalida una anterior confiable del mismo `tipo:id`: la evidencia se acumula
-  en un conjunto, no se resuelve por "la última gana".
-  Tres cosas que NO se hacen: inventar `watchLink` (sale de TMDB; si no lo hay,
-  no hay a dónde mandar a nadie), usar `networks` **solo** como disponibilidad
-  (que sea "de Netflix" no dice que se vea en Netflix Argentina) y tocar el
-  array cacheado de `providersOf`.
-  ⚠️ **Esa regla del medio cambió y conviene leerla bien.** Antes decía
-  "`networks` no se usa nunca". Ahora dice **"`networks` nunca se usa SOLA"**:
-  en SERIES, acompañada de un enlace oficial de la misma plataforma a ese título
-  concreto y sin contradicción fuerte, sí sirve. **En PELÍCULAS sigue sin usarse
-  nunca** — TMDB no lo publica para películas, y ahí decide sólo el enlace. Ver
-  "Disponibilidad" abajo.
-  **UNA consulta por MISS**, filtrada por fecha: el corte sale del reloj, no de
-  una consulta previa que pregunte cuál es la última semana. La primera versión
-  hacía esas dos y por eso el techo real era 24 lecturas por hora, no 12.
-  Medido: tres fichas con proveedores de TMDB cuestan **0** consultas, y cinco
-  visitas seguidas a una ficha sin proveedores más una sexta ficha vacía
-  distinta cuestan **1** (clave fija, la comparten todas). Con el TTL de 5 min,
-  el techo es **12 consultas por hora**, haya el tráfico que haya.
-  **La resolución título→TMDB vive en `lib/netflix-resolver.ts`**, sin
-  `server-only` para poder probarla sin red; `netflix-top10.ts` sólo le enchufa
-  las dos puertas (`buscar`, `enNetflixAR`). Las tres reglas de siempre no
-  cambiaron y hay un **cuarto paso**: si ninguna aceptó y el título trae
-  subtítulo, se repite la búsqueda con la parte anterior a los dos puntos.
-  Nació de "Operation Safed Sagar: The Highest Air Force Mission", donde TMDB
-  devuelve **cero** resultados para el título completo y uno solo para
-  "Operation Safed Sagar" (`tv/284753`, con Netflix en AR y otro subtítulo).
-  **Ese paso es más desconfiado que los otros tres, y tiene que serlo**: exige
-  que TMDB devuelva **un único** resultado —ése es el criterio de "coincidencia
-  dudosa", y reemplaza cualquier cuenta de palabras: "Monster: The Ed Gein
-  Story" reduce a "Monster" y entre varios "Monster" alguno va a estar en
-  Netflix AR—, mira **primero el proveedor y después el título** (al revés que
-  la consulta completa, porque acá el título se compara contra un prefijo) y
-  marca **todo** con `needs_review`. Exige dos puntos **seguidos de espacio**:
-  de 1969 títulos del TSV argentino, 209 tienen `:` y el único sin espacio es
-  "3:10 to Yuma", donde reducir a "3" sería la peor consulta posible. Una caída
-  de la búsqueda completa aborta **sin** intentar la reducida: un error no es
-  "no encontré", es "no sé".
-  El cron escribe con `supabaseAdmin()`
-  (service role, bypassa RLS, en `lib/supabase-admin.ts` — aparte de
-  `lib/supabase.ts`, que sí llega al bundle del navegador), porque `netflix_top10` solo
-  tiene policy de lectura: necesita `SUPABASE_SERVICE_ROLE_KEY` en el entorno de
-  Next. Sin esa variable la ingesta no corre y el bloque de Netflix cae a
-  popularidad como los otros cinco — la app no se rompe.
+  **14 días** (una captura vieja no dice dónde está hoy un título; el Top
+  público, en cambio, muestra la última publicada sin vencimiento), los
+  borradores no cuentan, y un fallo de lectura es "no sé" — no niega y no se
+  cachea. Va **antes** del enlace probable: entre un hecho y una inferencia
+  gana el hecho.
+- **El top AUTOMÁTICO de Netflix se RETIRÓ el 2026-10-20** (decisión del dueño;
+  antecedente). Era la ingesta semanal del TSV público de Netflix (Vercel Cron,
+  martes 12:00 UTC) a la tabla `netflix_top10`, que servía el bloque de Netflix
+  ("dato oficial") antes del cutover y la evidencia de disponibilidad
+  `top-oficial` (prioridad 2). Se borraron la ingesta y su resolvedor
+  título→TMDB (`lib/netflix-top10.ts`, `lib/netflix-resolver.ts`), la ruta
+  `/api/cron/netflix-top10`, `vercel.json` (sólo programaba ese cron), la
+  procedencia `top-oficial` y el Top por popularidad de TMDB (`top:pop:`). El
+  dueño apagó además Cron Jobs en el panel de Vercel. **`netflix_top10` y sus
+  datos históricos se conservan** y nada de la app los lee: no borrar la tabla
+  sin decisión del dueño, y no volver a programar ni ejecutar la ingesta. Que
+  la tabla no se actualice NO es una avería. El diseño viejo (reglas de
+  resolución, ventana de 14 días, `needs_review`, Moria/Operation) quedó en el
+  historial de Git anterior al commit `09cc2ee` y en `docs/ESTADO.md`.
 - **La disponibilidad se resuelve en UN solo lugar** (`lib/disponibilidad.ts` →
   `resolverDisponibilidad`, con el adaptador `disponibilidadDe` en `enrich.ts`).
   Ficha, cards, búsqueda, relacionados, listas y Home pasan todos por ahí.
@@ -723,8 +648,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   lee `watchProviders` y se saltea el resolvedor.
   **Prioridad de evidencia**, y sólo se AGREGA cuando TMDB no sabe nada:
   1. `watch/providers` de TMDB para AR, `flatrate` → `tmdb-ar`.
-  2. Top oficial reciente de Netflix → `top-oficial` (reglas de ventana y
-     `needs_review` intactas).
+  2. Top semanal cargado a mano (publicado, ≤ 14 días) → `top-manual`.
   3. **Evidencia oficial de alta probabilidad** → `oficial-probable`.
      Seis plataformas en series, cuatro en películas.
   4. Registro manual versionado (`lib/excepciones-disponibilidad.ts`, hoy
@@ -750,7 +674,7 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   `proximaRevision` es un recordatorio del cruce mensual (desde octubre de
   2026), y se levantan con una verificación positiva directa, nunca por
   calendario. 🔴 **Cada cambio del registro sube `VERSION_DISPONIBILIDAD`
-  (segmento `d1` en card, búsqueda, Top, reco y últimos) Y `VERSION_HOME`**:
+  (segmento `d1` en card, búsqueda, reco y últimos) Y `VERSION_HOME`**:
   las plataformas resueltas viven en cachés de hasta 36 h y sin eso el cambio
   no se ve al deployar. Un test ata las dos versiones. `pv3:` no se toca nunca:
   la supresión se aplica al leerlo, sobre una copia.
@@ -770,8 +694,9 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   **el padre no se enteraba y el Home se guardaba igual**. Ahora cada contador
   conoce a su padre y le suma al salir, en `finally`: se cuenta una sola vez por
   nivel, un hijo que lanza igual propaga, y la excepción no se toca.
-  **Siete superficies lo abren** —card, Home, búsqueda, Top por popularidad,
-  riel de recomendaciones y los dos tramos de "Últimos"—; el inventario completo
+  **Seis superficies lo abren** —card, Home, búsqueda, riel de
+  recomendaciones y los dos tramos de "Últimos"; el Top por popularidad, que
+  era la séptima, se retiró el 2026-10-20—; el inventario completo
   de qué caché necesita el contexto y cuál no (con el motivo escrito) lo fija
   `lib/cache-disponibilidad-inventario.test.ts`, que falla si aparece un
   `cachedLoc` sin clasificar.
@@ -1180,7 +1105,7 @@ app/
   persona/[id]/, titulo/[tipo]/[id]/         — ficha de persona y de título
   cuenta/                                     — área de usuario (hub, perfil, listas, config)
   proximamente/, directores/, onboarding/     — agenda de estrenos, directores, alta inicial
-  top/                                         — top 10 por plataforma (Netflix real + popularidad)
+  top/                                         — Top semanal por plataforma: SÓLO la carga manual
   admin/                                      — dashboard editorial (login + CRUD reseñas)
   api/                                        — todas las rutas backend (ver abajo)
   layout.tsx                                  — fuentes (next/font/google) + PlatformsProvider
@@ -1224,12 +1149,10 @@ lib/
   home.ts           — Home Composer: arma el Home entero (hero + rieles) en un
                        solo pipeline server-side, deduplicado. Ver nota de
                        arquitectura abajo.
-  netflix-top10.ts   — ingesta del TSV oficial de Netflix y resolución
-                       título→TMDB contra `netflix_top10`. Ver nota de
-                       arquitectura abajo sobre el Top.
-  top.ts            — Top Composer: arma los bloques de `/top` (Netflix real +
-                       popularidad TMDB de las otras cinco), sin dedup ni
-                       filtros de audiencia.
+  top.ts            — cablea el Top: lecturas reales para `top-composer.ts`.
+  top-composer.ts   — arma `/top` SÓLO con las publicaciones manuales
+                       (publicado / sin publicar / error). PURO. Ver la nota
+                       de arquitectura sobre el Top.
   roulette.ts        — llama a `get_roulette_picks`, enriquece con TMDB
                        (`cardsByIds`, clave `type:id`) y arma el deep link.
                        Ver nota de arquitectura arriba sobre la ruleta.
@@ -1266,8 +1189,7 @@ supabase/schema.sql   — editorial_reviews (en uso desde el 3/10/2026, a criter
 | Ruta | Qué hace |
 |---|---|
 | `GET /api/home` | arma el Home entero (hero + rieles) deduplicado, vía `lib/home.ts`. `maxDuration = 60` |
-| `GET /api/top` | top 10 por plataforma (Netflix real + popularidad), vía `lib/top.ts`. `maxDuration = 60` |
-| `GET /api/cron/netflix-top10` | ingesta semanal del TSV oficial de Netflix (Vercel Cron, martes). `maxDuration = 60`, protegida con `CRON_SECRET` |
+| `GET /api/top` | Top semanal por plataforma, SÓLO de las publicaciones manuales, vía `lib/top.ts`. Bloque sin publicar → `estado: "sin-publicar"`; lectura fallida → 503. `maxDuration = 60` |
 | `GET /api/ruleta` | una tanda de 20 candidatos del pool curado (`roulette_titles`), vía `lib/roulette.ts`. `maxDuration = 60` |
 | `GET /api/discover` | listado por tipo+género+país+edad, filtrado a `providers` |
 | `GET /api/audience` | carruseles de audiencia (`family` / `adult-anime`), recetas de `lib/audience.ts` |

@@ -1359,7 +1359,7 @@ para ninguna de las superficies de abajo, aunque esté en Netflix AR.
 | ejes `pop`, `taquilla`, `hondo` | 60 explícito | mismo valor, pero elegido |
 | eje `top` | 300 | medido: con 60 el ranking se llena de nicho |
 | `genreCovers()` | 300 | elegir UN póster representativo |
-| `lib/top.ts` | 60 explícito | medido contra Netflix AR |
+| ~~`lib/top.ts`~~ | ~~60 explícito~~ | retirado el 2026-10-20: el Top es sólo la carga manual, sin `discover` |
 
 `supabase/functions/tmdb-sync` tiene su propia implementación de `discover` (es
 una edge function de Deno, aparte) y no comparte este default. Hay que revisarla

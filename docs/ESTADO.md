@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 20 de octubre de 2026 (tarde).**
+> **Estado canónico. Actualizado el 20 de octubre de 2026 (noche).**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -32,6 +32,8 @@ acceso al dashboard `7937b4c` (19/10, aprobado por el dueño en Producción).
   `sala_config.activas` encendida (dueño, 27/09); `assetlinks.json` publicado
   (Producción: 200) y App Links de `/sala/` y `/titulo/` en el manifest.
 - Top manual en `/admin/top` (merge `c993d7c`): el dueño lo usa desde el 09/09.
+  En Producción `/top` ya sirve los 12 bloques manuales (comprobado el 20/10);
+  el código que retira toda fuente alternativa está en rama (pendiente 3b).
 - Acceso al dashboard: implementado, integrado (`7937b4c`), desplegado
   (7183850925) y aprobado por el dueño en su prueba de Producción del 19/10.
   Configuración de cuentas hecha por el dueño: se administra con la cuenta
@@ -112,17 +114,21 @@ AAB tiene que ser `5` o mayor.
    200 con el último deployment. Que un push a `main` ya no genere deploys de
    ese proyecto se podrá comprobar recién con el próximo push (GitHub
    deployments). Queda decidir si se elimina.
-3b. **Top de Netflix: decisión vigente del dueño (20/10/2026)** — el Top de
-   TODAS las plataformas, Netflix incluida, se carga a mano en `/admin/top`.
-   El dueño **apagó Cron Jobs** en `streamingcentral` el 20/10/2026. La
-   ingesta automática NO se ejecuta ni se recupera, y que falte una semana en
-   `netflix_top10` **no es una avería** (supersede lo escrito antes el mismo
-   día). **Comprobado (20/10, sólo lectura):** `/api/top` sirve los 12
-   bloques con `source: "manual"` (Netflix con captura del 09/10). **Pendiente
-   de decidir y hacer (cambios de código, no hechos):** retirar el ranking
-   automático como respaldo de `/top` y como evidencia `top-oficial`; sacar el
-   cron de `vercel.json`. Las tablas y los datos históricos no se borran por
-   ahora. Detalle en la entrada del 20/10 de "Evidencia y alcance".
+3b. **Top exclusivamente manual — IMPLEMENTADO EN RAMA, SIN INTEGRAR NI
+   DESPLEGAR.** Decisión del dueño (20/10/2026): el Top de TODAS las
+   plataformas, Netflix incluida, usa sólo sus publicaciones de `/admin/top`;
+   no existe ninguna fuente alternativa. Que `netflix_top10` no se actualice
+   **no es una avería**. **Configuración (informado por el dueño, 20/10):**
+   apagó Cron Jobs en el proyecto `streamingcentral`. **Implementación (Git):**
+   rama `feat/top-solo-manual`, commit `09cc2ee`, local, sin push. Retira el
+   cutover atómico, el respaldo al top automático y a la popularidad de TMDB,
+   la evidencia `top-oficial`, la ingesta, la ruta `/api/cron/netflix-top10` y
+   `vercel.json`. Conserva `netflix_top10` y sus datos. **Falta:** (1) la
+   prueba manual del dueño; (2) merge y deploy con su autorización; (3)
+   después del deploy, comprobar en el panel de Vercel que el proyecto ya no
+   declara el cron; (4) decidir si se borra la variable `CRON_SECRET` de
+   Vercel (sin uso desde este cambio; configuración, no se tocó). Detalle en la
+   entrada "Top exclusivamente manual" de "Evidencia y alcance".
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -165,6 +171,56 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Top exclusivamente manual (2026-10-20) — implementado en
+  `feat/top-solo-manual` (`09cc2ee`), NO integrado, NO desplegado.**
+  **Comportamiento:** `/top` y `/api/top` arman cada bloque SÓLO con su última
+  versión publicada (mismo criterio de selección: la más reciente por
+  `published_at`; sin vencimientos nuevos). Bloque sin publicar →
+  "Todavía no disponible." y los demás visibles. Lectura de publicaciones
+  fallida → `/api/top` 503 y la vista muestra "No pudimos cargar el top." con
+  "Reintentar", sin el payload anterior. TMDB sólo enriquece los títulos
+  elegidos; si falla, el bloque se ve con sus títulos y el payload sale
+  `degradado`. **Retirado:** cutover atómico, `netflixBlock`, `popularBlock`,
+  `lib/netflix-top10.ts`, `lib/netflix-resolver.ts`, `searchTitles`, la ruta
+  `/api/cron/netflix-top10`, `vercel.json`, la procedencia `top-oficial`,
+  `claveTopPop` (`top:pop:`), `listByCategoryCacheable`, el rótulo "dato
+  oficial" y su nota, y `CRON_SECRET` de `.env.local.example`. La evidencia
+  `top-manual` pasa a prioridad 2 con sus reglas de siempre.
+  **Cachés (evaluado, sin subir versiones):** el camino retirado sólo
+  alimentaba (a) la evidencia `top-oficial`, vacía desde el 18/10/2026 00:00
+  UTC (la semana más nueva, `2026-10-04`, salió de los 14 días) y cacheada 5
+  min; lo más largo que un resultado suyo podía sobrevivir era tarjeta (24 h)
+  → Home "último bueno" (36 h), o sea hasta ~20/10/2026 12:05 UTC, ya
+  vencido; y (b) los bloques `top:pop:`, que nadie lee después del cambio. Por
+  eso no se suben `VERSION_DISPONIBILIDAD` ni `VERSION_HOME` (subirlas
+  costaría un arranque frío del Home sin nada que invalidar). `/api/top` no
+  se cachea entera; `top:manual:publicaciones` (60 s) no cambió de forma. Un
+  snapshot de `/top` en `sessionStorage` con bloques de las fuentes retiradas
+  no se restaura.
+  **Verificación (Claude):** `lib/top-solo-manual.test.ts` (17 pruebas:
+  selección y orden exactos, bloque faltante sin respaldo, error ≠ ausencia
+  con reintento, datos automáticos que no intervienen en el Top ni en la
+  disponibilidad, sin cron ni ruta), con tres mutaciones del núcleo
+  detectadas (1, 2 y 5 fallos); inventarios ajustados; suite **2239 / 2239**,
+  0 fallos, 0 omitidos (antes 2262: se borraron las pruebas de la ingesta y
+  de la evidencia retirada); `tsc --noEmit` 0; `git diff --check` limpio;
+  build de Producción OK. El repo no tiene ESLint configurado (`next lint`
+  pide configurarlo), así que no se corrió. **Navegador** (build de
+  Producción en `localhost:3200`, leyendo las publicaciones de Producción con
+  la clave pública, sin Redis ni clave de servicio, sin escribir nada): los 12
+  bloques coinciden EXACTAMENTE con la base en títulos, ids y orden (y con
+  `app.yump.ar`); con la respuesta interceptada en el navegador (simulación,
+  no datos reales) se vieron "Todavía no disponible." en Netflix con los
+  demás visibles, y el error "No pudimos cargar el top." con "Reintentar",
+  que al reintentar recuperó los 6 bloques. Sin Supabase configurado, la API
+  real respondió 503. **No probado:** el contenedor Android (el AAB 1.2.0 lee
+  `source`, que sigue en `"manual"`, y un bloque sin publicar le llega vacío);
+  un fallo real de Supabase en Producción; el panel de Vercel después del
+  deploy.
+- ⚠️ *Las dos entradas siguientes (20/10, sólo lectura) quedan como
+  antecedente: sus datos siguen siendo correctos, pero la propuesta de cambios
+  y el "hallazgo de diseño" del horario del cron quedaron resueltos por la
+  entrada de arriba.*
 - **Top de Netflix: carga manual como fuente (2026-10-20, sólo lectura de
   código y datos).** **Decisión del dueño:** el Top de todas las plataformas,
   Netflix incluida, se carga a mano. El dueño apagó Cron Jobs en
