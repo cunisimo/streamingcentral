@@ -124,7 +124,10 @@ AAB tiene que ser `5` o mayor.
    cutover atómico, el respaldo al top automático y a la popularidad de TMDB,
    la evidencia `top-oficial`, la ingesta, la ruta `/api/cron/netflix-top10` y
    `vercel.json`. Conserva `netflix_top10` y sus datos. **Falta:** (1) la
-   prueba manual del dueño; (2) **justo antes del merge**, comprobar (sólo
+   ~~prueba manual del dueño~~ — **hecha: el dueño informó "todo ok" el
+   20/10/2026** (local, `feat/top-solo-manual` en `423ef04`, código de
+   `09cc2ee`: `/top` contra sus publicaciones en Películas y Series, la ruta
+   vieja del cron en 404 y las simulaciones locales); (2) **justo antes del merge**, comprobar (sólo
    lectura) que `netflix_top10` sigue sin semanas posteriores a `2026-10-04`
    ni escrituras posteriores al 13/10 — si cambió, hay que subir
    `VERSION_DISPONIBILIDAD` y `VERSION_HOME` (ver la auditoría de cachés); (3)
