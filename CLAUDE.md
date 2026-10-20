@@ -983,7 +983,8 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   y el tope lleva a 8,3%: su valor es ser una garantía para el día que TMDB publique
   una tanda grande de anime. Un anime que no entra se descarta, no se posterga
   (postergarlo lo movería de fecha y reintentarlo lo duplicaría entre páginas).
-  ⚠️ **La migración `008` va ANTES del deploy.** Sin la columna
+  ⚠️ **La migración `008` va ANTES del deploy** (ya aplicada: comprobado contra
+  Producción el 19/10/2026, ver `docs/ESTADO.md`; no repetirla). Sin la columna
   `original_language`, PostgREST responde 400 y `/api/upcoming` **entero** devuelve
   500 — riel del Home y watchlist incluidos. No necesita backfill: el sync hace
   `upsert` de la fila entera, así que la corrida diaria la completa, y mientras

@@ -178,9 +178,10 @@ Queda: el fast-forward de `main` con la documentación final.
 
 ## #24 — TMDB lista en Disney+ títulos que Disney+ ya no tiene (falsos positivos)
 
-> ⏳ **Al 19/10/2026:** sigue abierto. El primer cruce mensual de
-> supresiones vence el **20/10/2026** (`proximaRevision` en
-> `lib/supresiones-disponibilidad.ts`) y todavía no tiene registro.
+> ⏳ **Al 20/10/2026:** sigue abierto. El primer cruce mensual de
+> supresiones tenía fecha prevista el **20/10/2026** (`proximaRevision` en
+> `lib/supresiones-disponibilidad.ts`); **no hay evidencia de que se haya
+> hecho** (ni commit ni registro ni informe del dueño). Sigue pendiente.
 
 **Estado (20/09): CORREGIDO para los 20 casos confirmados, MERGEADO EN
 `main` (`594dd09`, `--no-ff` de `fix/supresiones-disney` en `d88ecbb`) Y

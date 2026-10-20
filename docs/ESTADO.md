@@ -1,11 +1,11 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 19 de octubre de 2026.**
+> **Estado canónico. Actualizado el 20 de octubre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
-## Resumen vigente — 19/10/2026 (qué está hecho y qué falta)
+## Resumen vigente — 20/10/2026 (qué está hecho y qué falta)
 
 **Leer esto primero.** Esta sección reemplaza a las anteriores "Estado de
 producto e integración" y "Próximo trabajo, en orden" (09/09), que habían
@@ -16,8 +16,10 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Producción web.** `main` = `7937b4c`, desplegado el 19/10 (deploy
-7183850925). Todo lo que está en `main` está en Producción. Entregas recientes,
+**Producción web.** Último cambio de CÓDIGO en `main`: `7937b4c`, desplegado
+el 19/10 (deploy 7183850925). Los commits posteriores en `main` son sólo de
+documentación (su deploy se registra en la entrada de cada uno). Todo el
+código de `main` está en Producción. Entregas recientes,
 todas con deploy `success`: Yumpeá `2af1a37` (27/09, 6698094206), filmografía
 v2 `95bf527` (29/09, 6744925544), 1.2.0 —badge, RESEÑAS, filtro de Mi lista—
 `072e227` (05/10, 6871735270), ruleta incremental `3eface7`/`dcc8c6e` (09/10),
@@ -30,8 +32,11 @@ acceso al dashboard `7937b4c` (19/10, aprobado por el dueño en Producción).
   `sala_config.activas` encendida (dueño, 27/09); `assetlinks.json` publicado
   (Producción: 200) y App Links de `/sala/` y `/titulo/` en el manifest.
 - Top manual en `/admin/top` (merge `c993d7c`): el dueño lo usa desde el 09/09.
-- Acceso al dashboard: cerrado el 19/10. Se administra con la cuenta
-  ADICIONAL; la personal conserva su rol y sus dos factores 2FA.
+- Acceso al dashboard: implementado, integrado (`7937b4c`), desplegado
+  (7183850925) y aprobado por el dueño en su prueba de Producción del 19/10.
+  Configuración de cuentas hecha por el dueño: se administra con la cuenta
+  ADICIONAL; la personal conserva su rol de administrador y sus dos factores
+  2FA (comprobado sólo lectura el 19/10).
 - Disponibilidad centralizada (`3b075b7`), evidencia oficial (`9c4d595`),
   tandas 2 y 3 del idioma (`es-MX` en Producción), etapas de capacidad PREVIA,
   0, 1, 2, 3.a, 3.b y 3.c.1 (todas en `main` y desplegadas).
@@ -39,16 +44,31 @@ acceso al dashboard `7937b4c` (19/10, aprobado por el dueño en Producción).
   `2d1e959`) y la página pública en `yump.ar/eliminar-cuenta/`
   (`docs/PLAY-STORE.md`).
 
-**Migraciones en Producción (no re-ejecutar ninguna):** 006 aplicada
-(registrada en la tanda 3); 007 en uso por el dueño desde el 09/09 (sin ella
-`/admin/top` no funcionaría); 008 comprobada el 19/10: `/api/upcoming`
-responde 200 y lee `original_language` (sin la columna devolvería 500); 009
-aplicada por el dueño el 27/09 y verificada con RPC; 010 aplicada a mano el
-08/10. 001–003 y 005 no tienen un registro individual, pero las funciones que
-dependen de ellas (chips, ruleta, "No es para mí") funcionan en Producción. El
-proyecto no usa el historial del CLI (`[db.migrations] enabled = false`).
-`004_news.sql` no está en el repo (sin seguimiento en el checkout principal) y
-su estado en la base NO se comprobó.
+**Migraciones.** Regla: **no repetir ninguna migración basándose en notas
+históricas** (instrucciones como "pendiente de ejecutar" o "va antes del
+deploy" en las entradas viejas están supersedidas). Esto NO afirma que todas
+estén aplicadas: cada una tiene su evidencia, de distinta fuerza.
+- **006:** aplicada (registrada en la tanda 3).
+- **007:** **evidencia funcional indirecta**, no comprobación directa: el
+  dueño usa `/admin/top` desde el 09/09 y el 19/10 completó en Producción login,
+  2FA y carga del panel con la cuenta adicional. El panel trabaja sobre objetos
+  que crea la 007 (`top_rankings`, `top_ranking_entries`, `publicar_top`,
+  `is_admin_mfa()`), así que su uso exitoso indica que existen. No hay registro de que el archivo se
+  haya ejecutado íntegro ni de que se haya corrido `supabase/verificar-007.sql`.
+- **008:** comprobada contra Producción el 19/10: `/api/upcoming` responde 200
+  y lee `original_language` (sin la columna devolvería 500).
+- **009:** aplicada por el dueño el 27/09 y verificada con RPC.
+- **010:** aplicada a mano el 08/10.
+- **001–003 y 005:** sin registro individual; las funciones que dependen de
+  ellas (chips, ruleta, "No es para mí") funcionan en Producción (evidencia
+  funcional indirecta).
+- **`004_news.sql`:** **SIN VERIFICAR.** No está en el repo (existe sólo como
+  archivo sin seguimiento en el checkout principal) y su estado en la base no
+  se comprobó. Que esté sin verificar **no autoriza ejecutarla**: es una
+  decisión del dueño, aparte.
+
+El proyecto no usa el historial del CLI (`[db.migrations] enabled = false`),
+así que no hay una tabla de migraciones aplicadas que consultar.
 
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
@@ -58,12 +78,32 @@ AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
 **Pendiente, con lo que falta para cerrarlo:**
 1. **AAB 4:** que el dueño confirme si lo subió a Play y a qué pista.
 2. **Acceso a Producción de Play:** la respuesta de Google (no registrada).
-3. **Segundo proyecto de Vercel `wt-integracion-3c1`:** GitHub muestra que
-   cada push a `main` también genera un deploy *Production* de ese proyecto
-   (p. ej. 19/10, para `7937b4c`), que nadie documentó. Decidir si se
-   desconecta o se borra (es configuración de Vercel; no se tocó).
-4. **Issue #24:** el primer cruce mensual de supresiones vence el 20/10/2026
-   (`proximaRevision` en `lib/supresiones-disponibilidad.ts`).
+3. **Segundo proyecto de Vercel `wt-integracion-3c1`** (investigado sólo
+   leyendo el 20/10/2026; el panel de Vercel NO se pudo ver: el token local
+   de la CLI venció el 21/09 y no se renovó). **Comprobado (GitHub y HTTP
+   públicos):** está conectado al mismo repositorio; desde el 19/09/2026 cada
+   push a `main` genera además un deploy *Production – wt-integracion-3c1*
+   (9 en total, el último `7937b4c` el 19/10, `success`) y las ramas generan
+   Previews (3); publica su commit status `Vercel – wt-integracion-3c1` en
+   cada commit (`main` no tiene protección de rama que lo exija). Su dominio
+   `wt-integracion-3c1.vercel.app` sirve Yump **en público** (200), pero sin
+   la configuración de Producción: los chunks no traen la URL de Supabase y
+   `/api/providers` devuelve `{"providers":[]}`; las URLs de equipo y de
+   cada deployment piden login de Vercel. **Origen probable (inferido):** la
+   carpeta `wt-integracion-3c1/.vercel/` se enlazó el 19/09 a las 16:28 UTC,
+   minutos después de que la integración de la 3.c.1 consultara su deploy con
+   la CLI desde esa worktree, y el primer deploy del proyecto es de las 16:35
+   UTC; el mismo accidente (CLI sin `.vercel/` → proyecto nuevo) ya había
+   pasado con `wt-spike-waituntil`. **Sin referencias** en código, Android,
+   CORS ni documentación operativa. **Sin verificar (requiere el panel):**
+   variables de entorno, dominios extra, el cron semanal de `vercel.json`
+   (correría también ahí; sin `CRON_SECRET` respondería 401) y consumo.
+   Decisión del dueño, aparte; no se tocó nada.
+4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
+   el **20/10/2026** (`proximaRevision: "2026-10-20"` en
+   `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
+   que se haya hecho** (ningún commit, registro ni informe del dueño): sigue
+   pendiente. Al hacerlo, registrar el resultado y la próxima fecha.
 5. **Issue #22:** la prueba real del dueño por correo y la causa de la
    consumición del enlace (requiere los registros de Auth).
 6. **Capacidad:** 3.c.2 (circuito), limitador y membresía no implementados;
@@ -178,6 +218,30 @@ reusa su diseño, no se mergea.
   (`onboarding_completed = false` en toda cuenta nueva; `OnboardingGate` no
   exime `/admin` y al terminar vuelve a `/`), también en la alternativa de
   crear la cuenta desde Supabase.
+  **Conciliación de las notas de Codex (20/10/2026).** Las tres notas del
+  17/10 siguen en el checkout principal como cambio local sin commitear; no se
+  copiaron ni se tocaron allá. Su estado frente a lo que pasó después:
+  - *Vigente:* la carrera `ready`/perfil como causa de la vuelta al Yump
+    público; el mecanismo de Supabase Auth al verificar MFA, que sigue **sin
+    verificar** contra la versión del proyecto y sus registros (pendiente 11
+    del resumen); la decisión de que la personal conserva rol y factores.
+  - *Supersedido — diagnóstico corregido:* que el `signOut()` global explicara
+    la caída del celular. El propio Codex lo corrigió tras la aclaración del
+    dueño (el celular se cae al verificar el 2FA, sin pulsar "Salir").
+  - *Supersedido — hecho:* "reproducir con sesión administrativa en
+    Producción" y "verificar el permiso real de la cuenta" (permisos y factores
+    comprobados sólo lectura el 19/10; prueba del dueño en Producción el
+    19/10); "confirmar con el dueño si pulsa salir" (no lo pulsaba); la
+    corrección propuesta (implementada en esta rama e integrada en
+    `7937b4c`); "quitar el paso 6 del runbook" y "agregar la bienvenida"
+    (corregidos el 17/10; el runbook vigente no quita nada a la personal);
+    "falta la prueba manual autenticada y conciliar antes de integrar" (hecho
+    el 19/10).
+  - *Cubierto sólo por tests, no por prueba manual:* perfil lento y perfil con
+    error de lectura (`lib/admin-acceso.test.ts`). El dueño probó a mano
+    recargas, login, MFA, "Salir" y dos dispositivos con la rama en local
+    (19/10), y en Producción entrada por `/admin/top`, login y 2FA con el
+    celular abierto (19/10).
   **Decisión del dueño (17/10):** la cuenta personal **conserva
   permanentemente** el rol de administrador y sus factores 2FA; la cuenta de
   administración es **adicional** y se usa para administrar habitualmente.
@@ -3389,7 +3453,7 @@ está cubierta por 23 tests apuntados al resolvedor.
 
 ## Top semanal manual — rama `feat/top-manual` (2026-09-01)
 
-> ⚠️ **Supersedido (auditoría del 19/10/2026).** Mergeada (`c993d7c`) y desplegada; el dueño usa `/admin/top` desde el 09/09, lo que requiere la migración 007; las dos cuentas administradoras tienen dos factores TOTP (comprobado sólo lectura el 19/10). Que `verificar-007.sql` se haya corrido NO tiene registro.
+> ⚠️ **Supersedido (auditoría del 19/10/2026).** Mergeada (`c993d7c`) y desplegada; el dueño usa `/admin/top` desde el 09/09, evidencia funcional INDIRECTA de la migración 007 (no hay comprobación directa de que el archivo se haya ejecutado íntegro); las dos cuentas administradoras tienen dos factores TOTP (comprobado sólo lectura el 19/10). Que `verificar-007.sql` se haya corrido NO tiene registro.
 
 **Sin mergear y SIN EJECUTAR LA MIGRACIÓN al escribir esto.** Falta la prueba
 manual del dueño.
