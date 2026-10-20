@@ -16,8 +16,9 @@ debajo de "Antecedentes anteriores al 09/09/2026" es histórico. Categorías de 
 pública de deployments de GitHub, estado `success`), **dueño** (informado por
 el dueño), **Producción** (comprobado contra `app.yump.ar`).
 
-**Producción web.** Último cambio de CÓDIGO en `main`: `7937b4c`, desplegado
-el 19/10 (deploy 7183850925). Los commits posteriores en `main` son sólo de
+**Producción web.** Último cambio de CÓDIGO en `main`: `09cc2ee` (Top
+exclusivamente manual), desplegado el 20/10 con `main` = `915ef2e` (deploy
+7210383316). Los commits posteriores en `main` son sólo de
 documentación (su deploy se registra en la entrada de cada uno). Todo el
 código de `main` está en Producción. Entregas recientes,
 todas con deploy `success`: Yumpeá `2af1a37` (27/09, 6698094206), filmografía
@@ -113,29 +114,21 @@ AAB tiene que ser `5` o mayor.
    después (HTTP público): `wt-integracion-3c1.vercel.app` sigue respondiendo
    200 con el último deployment. Que un push a `main` ya no genere deploys de
    ese proyecto se podrá comprobar recién con el próximo push (GitHub
-   deployments). Queda decidir si se elimina.
-3b. **Top exclusivamente manual — IMPLEMENTADO EN RAMA, SIN INTEGRAR NI
-   DESPLEGAR.** Decisión del dueño (20/10/2026): el Top de TODAS las
-   plataformas, Netflix incluida, usa sólo sus publicaciones de `/admin/top`;
-   no existe ninguna fuente alternativa. Que `netflix_top10` no se actualice
-   **no es una avería**. **Configuración (informado por el dueño, 20/10):**
-   apagó Cron Jobs en el proyecto `streamingcentral`. **Implementación (Git):**
-   rama `feat/top-solo-manual`, commit `09cc2ee`, local, sin push. Retira el
-   cutover atómico, el respaldo al top automático y a la popularidad de TMDB,
-   la evidencia `top-oficial`, la ingesta, la ruta `/api/cron/netflix-top10` y
-   `vercel.json`. Conserva `netflix_top10` y sus datos. **Falta:** (1) la
-   ~~prueba manual del dueño~~ — **hecha: el dueño informó "todo ok" el
-   20/10/2026** (local, `feat/top-solo-manual` en `423ef04`, código de
-   `09cc2ee`: `/top` contra sus publicaciones en Películas y Series, la ruta
-   vieja del cron en 404 y las simulaciones locales); (2) **justo antes del merge**, comprobar (sólo
-   lectura) que `netflix_top10` sigue sin semanas posteriores a `2026-10-04`
-   ni escrituras posteriores al 13/10 — si cambió, hay que subir
-   `VERSION_DISPONIBILIDAD` y `VERSION_HOME` (ver la auditoría de cachés); (3)
-   merge y deploy con su autorización; (4) después del deploy, comprobar en el
-   panel de Vercel que el proyecto ya no declara el cron, y abrir el Top en la
-   app 1.2.0 instalada; (5) decidir si se borra la variable `CRON_SECRET` de
-   Vercel (sin uso desde este cambio; configuración, no se tocó). Detalle en la
-   entrada "Top exclusivamente manual" de "Evidencia y alcance".
+   deployments). Queda decidir si se elimina. **Comprobado con el push del
+   20/10 (`915ef2e`):** GitHub registra UN solo deployment (entorno
+   "Production", contexto "Vercel"), ninguno de `wt-integracion-3c1`: el
+   proyecto ya no despliega desde Git.
+3b. **Top exclusivamente manual — INTEGRADO Y DESPLEGADO (20/10/2026).**
+   Decisión del dueño (20/10): el Top de TODAS las plataformas, Netflix
+   incluida, usa sólo sus publicaciones de `/admin/top`; no existe ninguna
+   fuente alternativa. Que `netflix_top10` no se actualice **no es una
+   avería**. **Git:** `main` avanzó por fast-forward `70757a4` → `915ef2e`
+   (código en `09cc2ee`). **Deploy:** 7210383316, `success` 20:32:33 UTC.
+   **Prueba local del dueño:** OK (20/10). **Falta (del dueño):** (1) en el
+   panel de Vercel, confirmar que `streamingcentral` ya no lista el cron; (2)
+   probar el Top en la web de Producción y en la app Android 1.2.0 instalada;
+   (3) decidir si se borra `CRON_SECRET` de Vercel (sin uso; no se tocó).
+   Detalle en las entradas del Top de "Evidencia y alcance".
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -178,6 +171,31 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Top exclusivamente manual: integración y deploy (2026-10-20).**
+  **Antes de integrar (Claude, sólo lectura):** remoto en `70757a4`, rama en
+  `915ef2e`, fast-forward posible. Publicaciones manuales vigentes (la última
+  de cada bloque; 66 en total), registradas para comparar: Películas —
+  `n` 35de5532, `d` f583da0c, `m` 52e97480, `at` a360f2c5, `p` 7d0a9d5e,
+  `cr` 595b5773; Series — `n` cfabb308, `d` ce2b3533, `m` f16b685c, `at`
+  6949b7e4, `p` 2461c403, `cr` fc3567b2 (prefijos de id). Captura del
+  09/10 y publicación del 19/10, salvo Crunchyroll (captura 02/09, publicada
+  el 20/09). `netflix_top10`, revisada por separado, SIN CAMBIOS (última
+  semana `2026-10-04`, última escritura 13/10, 0 filas posteriores): la
+  conclusión de cachés se mantiene y no se subió ninguna versión.
+  **Git:** push sin force `70757a4..915ef2e` a las 20:31 UTC; `git ls-remote`
+  lo confirmó. **Deploy:** GitHub registra el deployment **7210383316**
+  (Production) en `success` a las 20:32:33 UTC para `915ef2e`.
+  **Producción (Claude):** `/api/top` ya responde con el contrato nuevo (trae
+  `estado`); en Películas y Series los 6 bloques son `source: "manual"`,
+  `estado: "publicado"`, `fallos: 0`, y sus títulos, ids (tipo + tmdb_id),
+  orden y fecha de captura son IDÉNTICOS a la foto previa; los ids de las
+  publicaciones vigentes no cambiaron. `/api/cron/netflix-top10` → 404;
+  `vercel.json` no existe en `915ef2e`. `/`, `/top`, `/proximamente` y
+  `/admin/login` 200; `/api/health` `ok: true`. No se provocaron fallos ni se
+  tocaron rankings. **No verificado por Claude:** el panel de Vercel (el
+  token de la CLI está vencido): que el proyecto ya no declare el cron lo
+  tiene que confirmar el dueño; la prueba en la web de Producción y en el
+  teléfono.
 - **Top exclusivamente manual: auditoría de cachés y compatibilidad con
   Android 1.2.0 (2026-10-20, antes del merge; sin cambios de código).**
   **Cachés — comprobado por código:** la única puerta del ranking automático a
