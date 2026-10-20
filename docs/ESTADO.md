@@ -141,6 +141,17 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Publicación de la auditoría documental (2026-10-20).** **Git:**
+  `origin/main` avanzó por fast-forward `7937b4c` → `db92be9` → **`9019ca5`**
+  (push sin force a las 18:37 UTC; remoto consultado antes y después con
+  `git ls-remote`); sólo `CLAUDE.md` y `docs/`. **Deploy:** GitHub registra el
+  deployment **7208100938** (*Production – streamingcentral*) en **success**
+  a las 18:41:39 UTC para `9019ca5` (y el 7208081777 del segundo proyecto,
+  ver pendiente 3). **Producción, pasivo:** `/`, `/top`, `/proximamente` y
+  `/admin/login` 200, `/api/health` `ok: true`, mismo chunk de layout que
+  antes (no cambió código). No se repitieron suite ni build: cambio sólo
+  documental (sí los 6 tests que leen documentación: 102 + ruleta, 0 fallos).
+  El commit que agrega esta línea también es sólo documental.
 - **Acceso al dashboard `/admin`: CERRADO — INTEGRADO, DESPLEGADO Y APROBADO
   (2026-10-19).** No quedan pendientes de merge, deploy ni prueba manual.
   **Comprobado en Git:** `origin/main` avanzó por fast-forward `dcc8c6e` →
