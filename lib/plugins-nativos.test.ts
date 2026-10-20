@@ -130,11 +130,11 @@ test("compartir usa el selector nativo y NO duplica la lógica de la URL", () =>
   const accion = codigo("lib/compartir-accion.ts");
   assert.match(accion, /await import\("@capacitor\/share"\)/, "el import tiene que ser dinámico");
   assert.match(accion, /ES_NATIVO/, "no consulta la bandera de build");
-  const consumidores = ["components/DetailView.tsx", "components/sala/CompartirMatch.tsx"];
+  const consumidores = ["components/DetailView.tsx", "components/sala/CompartirMatch.tsx", "components/sala/Lobby.tsx"];
   for (const p of consumidores) {
     const src = codigo(p);
     assert.match(src, /compartir-accion/, `${p}: tiene que delegar la acción`);
-    assert.match(src, /mensaje(Compartir|Match)/, `${p}: dejó de usar el armador canónico`);
+    assert.match(src, /mensaje(Compartir|Match|Invitacion)/, `${p}: dejó de usar el armador canónico`);
     // 🔴 Nada de armar la URL por otro lado: sale de `lib/compartir.ts` y por eso
     // siempre es `https://app.yump.ar/titulo/...`.
     assert.doesNotMatch(src, /app\.yump\.ar/, `${p}: hay una URL escrita a mano`);

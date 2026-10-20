@@ -4,7 +4,8 @@ import PlatformLogo from "../PlatformLogo";
 import PrepararTanda from "./PrepararTanda";
 import CerrarSala from "./CerrarSala";
 import { useVenceEn, formatoSeg } from "@/hooks/useVenceEn";
-import { enlaceDeInvitacion } from "@/lib/sala/invitacion";
+import { enlaceDeInvitacion, mensajeInvitacion } from "@/lib/sala/invitacion";
+import { compartir } from "@/lib/compartir-accion";
 import { rotuloEmpezar, lineaGente, reciénLlegados, avisoDeLlegada, accionEmpezar } from "@/lib/sala/lobby-nucleo";
 import type { EstadoSala } from "@/lib/sala/estado";
 
@@ -12,8 +13,9 @@ import type { EstadoSala } from "@/lib/sala/estado";
 // creó la sala— la configuración de la tanda y el botón "Empezar"
 // (`PrepararTanda`, compartido con "Otra tanda" de los resultados).
 //
-// El enlace para invitar se muestra acá como texto + "Copiar". El mensaje y la
-// acción de compartir del sistema llegan en la Etapa 5.
+// Para invitar: "Compartir invitación" como acción principal —la misma acción
+// de compartir de toda la app (`lib/compartir-accion.ts`) con el mensaje de
+// `mensajeInvitacion`— y debajo el enlace como texto + "Copiar enlace".
 export default function Lobby({ estado, desfase, roomId, releer }: { estado: EstadoSala; desfase: number; roomId: string; releer: () => Promise<void> }) {
   const seg = useVenceEn(estado, desfase);
   const [copiado, setCopiado] = useState(false);
@@ -29,6 +31,17 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
   // yumpear."). No es identidad ni permiso: la sala es el UUID. Ver
   // lib/sala/invitacion.ts. No lee `window`: no hace falta esperar al montaje.
   const enlace = enlaceDeInvitacion(roomId, organizador);
+
+  // Compartir: el mensaje lleva ESE MISMO enlace, con el texto aparte. Cerrar la
+  // hoja no abre WhatsApp (lo decide la acción compartida). El ref evita una
+  // segunda hoja con un doble toque: Web Share con otra hoja abierta rechaza
+  // con un error que NO es cancelación y caería a WhatsApp.
+  const compartiendo = useRef(false);
+  async function compartirInvitacion() {
+    if (compartiendo.current) return;
+    compartiendo.current = true;
+    try { await compartir(mensajeInvitacion(roomId, organizador)); } finally { compartiendo.current = false; }
+  }
 
   // Aviso de llegada, JUNTO AL BOTÓN. La lista de arriba ya se actualizaba sola
   // por Realtime; lo que faltaba era que el organizador se enterara sin subir la
@@ -91,9 +104,16 @@ export default function Lobby({ estado, desfase, roomId, releer }: { estado: Est
 
       <section className="sala-bloque">
         <span className="chip-group-label">Invitá a alguien</span>
+        <button type="button" className="rlt-btn rlt-btn-primary sala-compartir" onClick={() => void compartirInvitacion()}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+            <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+          </svg>
+          Compartir invitación
+        </button>
         <div className="sala-enlace">
           <input readOnly value={enlace} aria-label="Enlace de la sala" onFocus={(e) => e.currentTarget.select()} />
-          <button type="button" className="rlt-btn" onClick={copiar}>{copiado ? "Copiado" : "Copiar"}</button>
+          <button type="button" className="rlt-btn" onClick={copiar}>{copiado ? "Copiado" : "Copiar enlace"}</button>
         </div>
       </section>
 
