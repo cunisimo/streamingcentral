@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 20 de octubre de 2026.**
+> **Estado canónico. Actualizado el 20 de octubre de 2026 (tarde).**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -73,11 +73,18 @@ así que no hay una tabla de migraciones aplicadas que consultar.
 **Google Play (informado por el dueño):** AAB `2 (1.0.0)` en Alpha (28/09);
 AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
 (3/10). AAB `4 (1.2.0)` generado el 05/10 desde `072e227` (SHA-256
-`39f6ccd0…a03cab`). El repo está en `versionCode 4` / `1.2.0`.
+`39f6ccd0…a03cab`). **El 20/10/2026 el dueño confirmó con una captura de Play
+Console que la versión `4 (1.2.0)` está en Producción desde el 07/10/2026**
+(Claude vio la confirmación del dueño, no la consola). De ahí se sigue que el
+acceso a Producción se concedió; la fecha y el texto de la respuesta de Google
+no están registrados. El repo está en `versionCode 4` / `1.2.0`: el próximo
+AAB tiene que ser `5` o mayor.
 
 **Pendiente, con lo que falta para cerrarlo:**
-1. **AAB 4:** que el dueño confirme si lo subió a Play y a qué pista.
-2. **Acceso a Producción de Play:** la respuesta de Google (no registrada).
+1. ~~**AAB 4**~~ — **resuelto (20/10/2026, informado por el dueño con
+   captura):** `4 (1.2.0)` en Producción de Play desde el 07/10/2026.
+2. ~~**Acceso a Producción de Play**~~ — resuelto por lo anterior (la versión
+   está en Producción); la respuesta de Google en sí no quedó registrada.
 3. **Segundo proyecto de Vercel `wt-integracion-3c1`** (investigado sólo
    leyendo el 20/10/2026; el panel de Vercel NO se pudo ver: el token local
    de la CLI venció el 21/09 y no se renovó). **Comprobado (GitHub y HTTP
@@ -98,7 +105,19 @@ AAB `3 (1.1.0)` en Alpha (3/10) y acceso a Producción pedido a Google
    CORS ni documentación operativa. **Sin verificar (requiere el panel):**
    variables de entorno, dominios extra, el cron semanal de `vercel.json`
    (correría también ahí; sin `CRON_SECRET` respondería 401) y consumo.
-   Decisión del dueño, aparte; no se tocó nada.
+   Decisión del dueño, aparte; Claude no tocó nada.
+   **Actualización 20/10/2026 (informado por el dueño):** desconectó Git del
+   proyecto y apagó sus Cron Jobs; **el proyecto NO se eliminó**. Comprobado
+   después (HTTP público): `wt-integracion-3c1.vercel.app` sigue respondiendo
+   200 con el último deployment. Que un push a `main` ya no genere deploys de
+   ese proyecto se podrá comprobar recién con el próximo push (GitHub
+   deployments). Queda decidir si se elimina.
+3b. **Top 10 de Netflix — la ingesta del martes 20/10/2026 no dejó
+   registro** (ver la entrada del 20/10 en "Evidencia y alcance"). La última
+   escritura comprobable es del **13/10/2026 12:05 UTC** (semana `2026-10-04`)
+   y falta la semana `2026-10-11`, que según el patrón de las corridas
+   anteriores Netflix ya publicaba antes del cron de hoy. Sin los logs no se sabe si el cron no disparó o si falló. Recuperarla
+   es una escritura en Producción: espera el OK del dueño.
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -141,6 +160,58 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Top 10 de Netflix: revisión de SÓLO LECTURA de la última ingesta
+  (2026-10-20, ~19:20 UTC).** Sin ejecutar el cron ni escribir nada; el plan de
+  Vercel no deja ver los logs de esta mañana.
+  **Qué fechas prueban qué (código y esquema).** `netflix_top10` tiene dos
+  fechas: `week` es la **semana del ranking** (la que trae el TSV de Netflix)
+  y `updated_at` es el **momento de la escritura** (`ingestLatestWeek` en
+  `lib/netflix-top10.ts` lo pone en cada fila que escribe; la tabla no tiene
+  trigger). Que haya datos de una semana NO prueba que el cron corriera hoy.
+  Y una corrida que no encuentra nada nuevo **no escribe nada** (sale con
+  `inserted: 0`), igual que una que falla: ninguna de las dos deja rastro en
+  la tabla. La tabla prueba escrituras, no ejecuciones.
+  **Comprobado en Producción** (lectura con la clave pública; la tabla tiene
+  policy de lectura pública):
+  | Semana (`week`) | Escrita (`updated_at`, UTC) | Filas |
+  |---|---|---|
+  | `2026-10-04` | 13/10/2026 12:05:09 | 20 (10 + 10), 0 sin `tmdb_id`, 1 `needs_review` |
+  | `2026-09-27` | 06/10/2026 12:05:09 | 20, 0 sin `tmdb_id`, 1 `needs_review` |
+  | `2026-09-20` | 29/09/2026 12:05:09 | 20, 0 sin `tmdb_id`, 0 `needs_review` |
+  Las tres escrituras caen martes a las 12:05 UTC, dentro de la ventana del
+  cron (`0 12 * * 2`): son compatibles con el cron, no con una ingesta a mano.
+  **Última actualización comprobable: 13/10/2026 12:05 UTC.** Hoy (martes
+  20/10) no hay ninguna escritura.
+  **Los datos NO están al día.** El TSV público de Netflix (leído hoy, sólo su
+  cabecera) ya trae `2026-10-11` y `2026-10-18` para Argentina, con
+  `Last-Modified` 20/10/2026 18:59 UTC. El patrón de las tres semanas muestra
+  que a las 12:00 UTC del martes Netflix todavía no publicó la semana que
+  cerró el domingo anterior, así que la corrida de hoy debía guardar
+  `2026-10-11`, que según ese patrón se publicó el martes 13/10 (no se puede
+  ver cuándo apareció en el TSV). **Esa semana no está.**
+  **Efecto (deducido del código y los datos, no observado en pantalla):**
+  `2026-10-04` superó los 14 días de `VENTANA_RECIENTE_MS` el 18/10/2026 a las
+  00:00 UTC. Desde entonces `latestWeekRows()` devuelve `null` y la evidencia
+  de disponibilidad `top-oficial` (prioridad 2) no tiene ninguna semana dentro
+  de su ventana. `/top` responde 200.
+  **Hallazgo de diseño (inferido de los datos, no comprobado en logs):** el
+  comentario de `SEMANA_VIEJA_MS` supone que el martes del cron ya está
+  publicada la semana anterior, con un desfase de ~9 días como máximo. Los
+  datos dicen otra cosa: cada corrida guarda una semana de 9 días, que llega a
+  ~16 días antes de la corrida siguiente. Aun con el cron funcionando, la
+  semana guardada pasa los 14 días cada domingo, y hasta el martes a las
+  12:05 UTC el bloque oficial y la evidencia `top-oficial` caen. Corregirlo
+  (horario del cron o ventana) es un cambio de código o de configuración:
+  queda propuesto, no hecho.
+  **Configuración, informada por el dueño con captura (20/10):** en el
+  proyecto `streamingcentral`, Cron Jobs está habilitado y
+  `/api/cron/netflix-top10` está programado los martes a las 12:00 UTC. Eso
+  acredita la **configuración**, no que alguna corrida haya terminado bien.
+  **No se puede determinar sin los logs:** si el cron disparó hoy; si disparó
+  y falló (TSV, TMDB, Supabase, `CRON_SECRET` o el tope de 60 s); si alguna
+  corrida terminó bien sin escribir; y la hora real de cada disparo. Ver los
+  logs requiere un plan de Vercel con retención o un registro propio de cada
+  ejecución, que hoy no existe.
 - **Publicación de la auditoría documental (2026-10-20).** **Git:**
   `origin/main` avanzó por fast-forward `7937b4c` → `db92be9` → **`9019ca5`**
   (push sin force a las 18:37 UTC; remoto consultado antes y después con
