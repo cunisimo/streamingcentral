@@ -611,6 +611,12 @@ directas, sin relleno, con las limitaciones reales marcadas antes de codear
   entre dos hechos publicados gana la fuente primaria, y entre un hecho y una
   inferencia gana el hecho. En `/top` se conserva además
   `conPlataformaDeLaFuente`, porque ahí la plataforma la garantiza el bloque.
+- ⚠️ **Actualización del dueño (20/10/2026):** el Top de TODAS las plataformas,
+  Netflix incluida, se carga a mano, y **Cron Jobs está apagado** en
+  `streamingcentral`. No ejecutar ni recuperar la ingesta automática. Lo que
+  sigue sobre el cron "corriendo" y la prioridad 2 quedó viejo; el código
+  todavía mantiene `top-oficial` como evidencia y respaldo (ver
+  `docs/ESTADO.md`, pendiente 3b). No borrar `netflix_top10` sin decisión.
 - **El Top automático de Netflix queda ARCHIVADO, no eliminado.** `netflix_top10`,
   el resolvedor título→TMDB, la ingesta y sus tests siguen vivos, **y el cron
   semanal de Vercel sigue corriendo**. Es una decisión del dueño y tiene un

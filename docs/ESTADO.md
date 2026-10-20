@@ -112,12 +112,17 @@ AAB tiene que ser `5` o mayor.
    200 con el último deployment. Que un push a `main` ya no genere deploys de
    ese proyecto se podrá comprobar recién con el próximo push (GitHub
    deployments). Queda decidir si se elimina.
-3b. **Top 10 de Netflix — la ingesta del martes 20/10/2026 no dejó
-   registro** (ver la entrada del 20/10 en "Evidencia y alcance"). La última
-   escritura comprobable es del **13/10/2026 12:05 UTC** (semana `2026-10-04`)
-   y falta la semana `2026-10-11`, que según el patrón de las corridas
-   anteriores Netflix ya publicaba antes del cron de hoy. Sin los logs no se sabe si el cron no disparó o si falló. Recuperarla
-   es una escritura en Producción: espera el OK del dueño.
+3b. **Top de Netflix: decisión vigente del dueño (20/10/2026)** — el Top de
+   TODAS las plataformas, Netflix incluida, se carga a mano en `/admin/top`.
+   El dueño **apagó Cron Jobs** en `streamingcentral` el 20/10/2026. La
+   ingesta automática NO se ejecuta ni se recupera, y que falte una semana en
+   `netflix_top10` **no es una avería** (supersede lo escrito antes el mismo
+   día). **Comprobado (20/10, sólo lectura):** `/api/top` sirve los 12
+   bloques con `source: "manual"` (Netflix con captura del 09/10). **Pendiente
+   de decidir y hacer (cambios de código, no hechos):** retirar el ranking
+   automático como respaldo de `/top` y como evidencia `top-oficial`; sacar el
+   cron de `vercel.json`. Las tablas y los datos históricos no se borran por
+   ahora. Detalle en la entrada del 20/10 de "Evidencia y alcance".
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -160,6 +165,49 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Top de Netflix: carga manual como fuente (2026-10-20, sólo lectura de
+  código y datos).** **Decisión del dueño:** el Top de todas las plataformas,
+  Netflix incluida, se carga a mano. El dueño apagó Cron Jobs en
+  `streamingcentral`. La entrada siguiente, que trataba la falta de ingesta
+  como una avería, queda **supersedida** en esa conclusión; sus datos (qué hay
+  en `netflix_top10`) siguen siendo correctos.
+  **1. `/top` muestra los bloques manuales — comprobado.** Los 12 bloques
+  tienen versión publicada (66 publicaciones en total). `hayCutover` es
+  verdadero, y `/api/top` en Producción devuelve los 12 con `source:
+  "manual"`, `fallos: 0`. Netflix lleva la captura del 09/10/2026 (publicada
+  el 19/10), igual que las demás salvo Crunchyroll (captura del 02/09). La
+  página muestra la última publicada de cada bloque sin vencimiento.
+  **2. Dónde sigue el ranking automático (código):**
+  - *Respaldo de `/top`:* si falta un bloque publicado o falla la lectura de
+    publicaciones (`publicacionesSiHayCutover` → `null`), TODO `/top` vuelve
+    al camino viejo: `netflixBlock` lee `netflix_top10` y, con la semana
+    vencida como ahora, cae a popularidad de TMDB. Hoy no se usa.
+  - *Evidencia de disponibilidad:* sigue cableada como **prioridad 2**
+    (`top-oficial`, `leerTopOficial: disponiblesEnTopOficial` en
+    `lib/enrich.ts`), **por delante** de la carga manual (`top-manual`,
+    prioridad 3). Hoy no aporta nada porque no hay semanas dentro de los 14
+    días, pero se sigue consultando en cada título sin dato de TMDB (cacheado
+    5 min). Si el cron volviera a escribir, el ranking automático pasaría a
+    ganarle a la carga manual.
+  - *Carga manual como evidencia:* ya funciona para las seis plataformas, con
+    capturas de hasta 14 días (`DIAS_EVIDENCIA_TOP`). La captura del 09/10
+    deja de valer como evidencia después del 23/10 si no se publica otra; la
+    de Crunchyroll (02/09) ya no aporta.
+  **3. Cambios necesarios (propuestos, no hechos):** ninguno para que `/top`
+  muestre la carga manual de Netflix; ya la muestra. Para que sea la ÚNICA
+  fuente:
+  (a) `lib/top.ts`: decidir qué pasa sin cutover; por ejemplo, popularidad
+  para todas o un error visible, sin `netflixBlock`/`latestWeekRows`;
+  (b) `lib/disponibilidad.ts` + `lib/enrich.ts`: quitar la prioridad
+  `top-oficial` (y ajustar tests y barridos); evaluar subir
+  `VERSION_DISPONIBILIDAD`/`VERSION_HOME`;
+  (c) `vercel.json`: sacar el cron, para que reactivar Cron Jobs no la
+  reanude; la ruta `/api/cron/netflix-top10` puede quedar archivada o
+  retirarse;
+  (d) `components/TopView.tsx` y `lib/top-plataformas.ts`: el rótulo "dato
+  oficial" y `source: "netflix"` quedan como código muerto;
+  (e) `CLAUDE.md`: actualizar el bloque "Top automático archivado".
+  `netflix_top10` y su historial se conservan por ahora.
 - **Top 10 de Netflix: revisión de SÓLO LECTURA de la última ingesta
   (2026-10-20, ~19:20 UTC).** Sin ejecutar el cron ni escribir nada; el plan de
   Vercel no deja ver los logs de esta mañana.
@@ -3597,6 +3645,8 @@ conserva su última versión publicada.
   subtítulo.
 - El cron semanal de Netflix **sigue corriendo**: alimenta la evidencia de
   disponibilidad, no el ranking. Ver `CLAUDE.md`.
+  *(Supersedido el 20/10/2026: el dueño apagó Cron Jobs; el Top de Netflix se
+  carga a mano. Ver "Resumen vigente", pendiente 3b.)*
 - Las reseñas editoriales siguen en standby y sus policies **no se tocaron**.
 
 ## Evidencia oficial general — rama `feat/evidencia-oficial` (2026-08-31)
