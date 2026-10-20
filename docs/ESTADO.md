@@ -124,9 +124,13 @@ AAB tiene que ser `5` o mayor.
    cutover atómico, el respaldo al top automático y a la popularidad de TMDB,
    la evidencia `top-oficial`, la ingesta, la ruta `/api/cron/netflix-top10` y
    `vercel.json`. Conserva `netflix_top10` y sus datos. **Falta:** (1) la
-   prueba manual del dueño; (2) merge y deploy con su autorización; (3)
-   después del deploy, comprobar en el panel de Vercel que el proyecto ya no
-   declara el cron; (4) decidir si se borra la variable `CRON_SECRET` de
+   prueba manual del dueño; (2) **justo antes del merge**, comprobar (sólo
+   lectura) que `netflix_top10` sigue sin semanas posteriores a `2026-10-04`
+   ni escrituras posteriores al 13/10 — si cambió, hay que subir
+   `VERSION_DISPONIBILIDAD` y `VERSION_HOME` (ver la auditoría de cachés); (3)
+   merge y deploy con su autorización; (4) después del deploy, comprobar en el
+   panel de Vercel que el proyecto ya no declara el cron, y abrir el Top en la
+   app 1.2.0 instalada; (5) decidir si se borra la variable `CRON_SECRET` de
    Vercel (sin uso desde este cambio; configuración, no se tocó). Detalle en la
    entrada "Top exclusivamente manual" de "Evidencia y alcance".
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
@@ -171,6 +175,73 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Top exclusivamente manual: auditoría de cachés y compatibilidad con
+  Android 1.2.0 (2026-10-20, antes del merge; sin cambios de código).**
+  **Cachés — comprobado por código:** la única puerta del ranking automático a
+  datos servidos era la evidencia `top-oficial` → `disp:` → títulos
+  resueltos. Inventario (las lecturas NO renuevan TTL: `cached*` escribe sólo
+  en un MISS con `SET EX`, y el "último bueno" del Home sólo lo escribe
+  PUBLICAR con un payload recién compuesto; ENFRIAR guarda el degradado unos
+  segundos):
+  | Caché | TTL | Se alimenta de | ¿Puede traer evidencia automática después del deploy? |
+  |---|---|---|---|
+  | `top:oficial:disponibles` (evidencia) | 5 min | `netflix_top10`, filtrado por `week` ≥ hoy − 14 d | No: vacía desde el 18/10 00:00 UTC; tras el deploy nadie la lee |
+  | `disp:<tipo>:<id>` | 5 min | resolvedor (lee la evidencia) | No |
+  | `card:…d1:<tipo>:<id>` | 24 h | `disponibilidadDe` → `disp:` | No |
+  | `search:` | 1 h | `toUITitle` → `disp:` | No |
+  | `ultimos:` (dos tramos) | 8 h | `toUITitle` → `disp:` | No |
+  | `reco:` "Elegidas para vos" | 6 h | `enrichRaw` → `disp:` | No |
+  | Home fresca / último bueno | 6 h / 36 h | composer: `toUITitle` → `disp:`, `cardsByIds` → `card:`, `ultimos:` | No |
+  | `top:pop:` | 24 h | popularidad (retirado) | No: nadie la lee |
+  | pools, `reco:mismo/perfil/cruce`, actores, `pv3:`, `oficial:` | — | crudos de TMDB | No guardan plataformas resueltas |
+  Una relectura NO vuelve a meter evidencia: el filtro es por fecha de la
+  semana contra el reloj (`week` + 14 días), no por la fecha de escritura, así
+  que todo cálculo posterior al 18/10/2026 00:00 UTC la da vacía. La cadena
+  más larga es evidencia (5 min) → `disp:` (5 min) → `card:` (24 h) → último
+  bueno (36 h): ningún resultado derivado vive más allá del ~20/10/2026 12:10
+  UTC. **Comprobado en Producción (sólo lectura, 20/10 20:15 UTC):**
+  `netflix_top10` sigue con última semana `2026-10-04`, última escritura
+  13/10 12:05 UTC y 0 filas posteriores. **Conclusión:** no hay vía
+  demostrable para servir resultados del camino retirado después del deploy;
+  no se suben versiones. La condición es que la tabla no cambie antes del
+  merge (pendiente 3b, paso 2). Fuera de las cachés del servidor: las salas
+  guardan plataformas de sus candidatas pero viven minutos; las vistas
+  guardadas en `sessionStorage` duran la pestaña.
+  **Android 1.2.0 — artefacto revisado:** `releases/Yump-1.2.0-vc4.aab`
+  (SHA-256 `39f6ccd0…a03cab`, el de Producción de Play según el dueño),
+  generado desde `072e227`; se leyó su chunk de `/top` y su `useApi`, y se
+  ejecutaron sus assets web en el navegador local (`localhost:3300`, con
+  `https://app.yump.ar/api/` redirigido al servidor de la rama; el bundle sin
+  modificar). **Comprobado (código del artefacto + navegador):**
+  - *Publicados:* los 6 bloques, 10 posiciones cada uno, títulos y orden
+    idénticos a la base en Películas y Series; subtítulo "Top semanal"; sin
+    botón de información (sólo aparece con `source: "netflix"`). Usa
+    `platform`, `source`, `slots[].rank/item/rawTitle`, `mine`, `others`,
+    `degradado`; ignora `estado` y `week`.
+  - *Fallo parcial de enriquecimiento (simulado):* el bloque se ve con sus 10
+    títulos como "Ficha no disponible" y el aviso "No pudimos cargar todo el
+    top. Reintentar"; reintentar lo recupera.
+  - *503 en la primera carga (simulado):* "No pudimos cargar el top.
+    Reintentar", sin bloques; reintentar recupera los 6.
+  - ⚠️ *503 después de cambiar de tipo:* 1.2.0 conserva el payload anterior
+    (`keepPrevious`) bajo el otro botón — p. ej. series de Netflix con
+    "Películas" marcado — con "No pudimos actualizar el top. Reintentar". Es
+    el comportamiento de 1.2.0 ante cualquier error HTTP desde antes; la web
+    nueva ya no lo hace y el próximo AAB tampoco. No se arregla desde el
+    servidor.
+  - ⚠️ *Bloque sin publicar (simulado):* 1.2.0 muestra la cabecera de la
+    plataforma y "Top semanal" con el carrusel vacío; no conoce "Todavía no
+    disponible.". **Hoy no puede ocurrir en Producción:** los 12 bloques
+    están publicados y una publicación no se modifica ni se borra (triggers
+    `top_rankings_inmutable` y `top_rankings_sin_delete` de la 007; la API del
+    panel no tiene acción de despublicar). Sólo aparecería si se agregara un
+    bloque nuevo al código.
+  - *Películas/Series y reintentos:* misma URL que antes
+    (`/api/top?tipo=&providers=`); los cambios de tipo y "Reintentar" piden de
+    nuevo y pintan lo que llega.
+  **No comprobado:** en un teléfono, el contenedor Android con el deploy real
+  (queda para después del deploy, sin reinstalar nada); los casos simulados
+  no salieron de datos reales.
 - **Top exclusivamente manual (2026-10-20) — implementado en
   `feat/top-solo-manual` (`09cc2ee`), NO integrado, NO desplegado.**
   **Comportamiento:** `/top` y `/api/top` arman cada bloque SÓLO con su última
