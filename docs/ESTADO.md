@@ -142,8 +142,10 @@ AAB tiene que ser `5` o mayor.
    une por merge `feat/compartir-invitacion` (`f0fc85c`, `2d260e6`,
    `06f3c59`, sobre `88c5120`) y `fix/icono-compartir-match` (`f49ff65`).
    Verificado con build local y Supabase FALSO (no con una sala real ni en
-   teléfono). **Falta:** (1) la prueba manual del dueño (pasos en la entrada
-   "Integración de Yumpeá" de "Evidencia y alcance"); (2) merge y deploy con su
+   teléfono). **Revisión del dueño en ese mismo build con Supabase FALSO:
+   "todo OK" (informado por el dueño, 21/10).** **Falta:** (1) la prueba
+   manual del dueño CON SALA REAL (pasos en la entrada "Integración de
+   Yumpeá" de "Evidencia y alcance"); (2) merge y deploy con su
    autorización — con eso llega a la web y la PWA; (3) Android: UNA sola
    actualización con los dos cambios (AAB `5 (1.3.0)`), después del deploy y
    por decisión del dueño; no se generó.
@@ -250,6 +252,10 @@ reusa su diseño, no se mergea.
   Share y cae a WhatsApp), así que la hoja nativa del lobby nuevo se prueba
   en la computadora o después del deploy/AAB. La worktree tiene hoy un
   `.env.local` FALSO (ignorado por Git) y su `.next` se compiló con él.
+  **Revisión del dueño (informado por el dueño, 21/10: "todo OK"):** en el
+  panel del navegador de la app, el mismo build local contra el Supabase
+  FALSO (lobby, match y empate resuelto de las salas inventadas). NO es la
+  prueba con sala real, que sigue pendiente.
   **Prueba manual del dueño (preparada; crea datos reales en Producción):**
   1. En `D:\DESARROLLO\stream central\wt-integracion-compartir`, reemplazar
      el `.env.local` falso por el real: `copy ..\streamingcentral\.env.local
