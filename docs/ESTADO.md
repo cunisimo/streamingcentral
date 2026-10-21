@@ -150,6 +150,12 @@ AAB tiene que ser `5` o mayor.
    que el futuro sistema de reseñas de usuarios (decisión del dueño, 21/10;
    versión y `versionCode` sin fijar). Opcional, no requisito de cierre: el
    recorrido con una sala real descripto en "Evidencia y alcance".
+3d. **Reseñas de usuarios y Top Yumpers — EN DISEÑO (21/10/2026).** Diseño
+   de Codex y revisión de Claude en la rama local `docs/resenas-comunidad`
+   (sólo documentación). Nada implementado ni autorizado. Falta: auditoría
+   de Codex, decisiones del dueño F1–F11 (revisión §1.3), verificación de
+   sólo lectura (E0) y recién después el plan. Viaja en el mismo AAB que
+   3c.
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -191,6 +197,40 @@ AAB tiene que ser `5` o mayor.
 reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
+
+- **Reseñas de usuarios y Top Yumpers — diseño de Codex registrado y
+  preparación de Claude (2026-10-21). Sólo documentación: SIN código, SQL,
+  migraciones, servicios pagos, consultas a Producción, push, merge, deploy
+  ni AAB.** Rama local `docs/resenas-comunidad` (worktree
+  `wt-resenas-comunidad`), desde `integracion/yumpea-compartir` (`52c7ae7`).
+  El diseño de Codex
+  (`docs/superpowers/specs/2026-10-21-resenas-comunidad-design.md`) se copió
+  sin cambios del checkout principal, donde era un archivo sin seguimiento;
+  no se tocó ningún otro archivo de ese checkout. La revisión está en
+  `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
+  **Comprobado en código (`52c7ae7`):**
+  - `user_reviews` es legible por `anon` (policy sin `to`, `schema.sql:297`)
+    y su trigger conserva el estado al editar;
+  - la reseña editorial se escribe con `is_admin()` SIN MFA en la base (sólo
+    el Top usa `is_admin_mfa()`);
+  - `profiles` no guarda correo y sólo deja leer la fila propia;
+  - `display_name` no tiene reglas en la base;
+  - no hay limitador de tasa ni planificador en Vercel;
+  - la ficha no está en el bundle nativo;
+  - CORS sólo admite GET/POST.
+  **Doc oficial (21/10):** ninguna API de toxicidad detecta estafas, spam ni
+  contactos. Perspective se da de baja al 31/12/2026 y Comprehend
+  toxicidad es sólo inglés. Con reglas propias + un LLM chico (Haiku 5.5
+  ≈ USD 2,34 / 10.000 análisis con ediciones y reintentos) el costo es de
+  pocos dólares por mes.
+  **Pendiente del dueño** (detalle en la revisión, §1.3): proveedor y
+  transferencia internacional (F1), plazos de retención con validación de
+  privacidad (F2), confirmación de correo en Producción junto con el issue
+  #22 (F3), destino de `user_reviews` (F4), nombre visible y selector del Top
+  (F6, F8). **Fuera de este proyecto:** el hueco de MFA de la editorial
+  (C3). **Siguiente paso:** auditoría de Codex sobre esta rama; después,
+  la entrega E0 (verificación de sólo lectura) y recién entonces el plan
+  detallado.
 
 - **Integración de Yumpeá: "Compartir invitación" + ícono del resultado
   (2026-10-21) — desarrollo y prueba local TERMINADOS; rama local
