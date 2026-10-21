@@ -136,19 +136,20 @@ AAB tiene que ser `5` o mayor.
    dueño la dé.
    Detalle en las entradas del Top de "Evidencia y alcance".
 3c. **Yumpeá: "Compartir invitación" en el lobby + ícono de "Compartir" del
-   resultado — INTEGRADOS EN RAMA LOCAL, SIN MERGE A `main`, SIN PUSH, SIN
-   DEPLOY, SIN AAB (21/10/2026).** Rama `integracion/yumpea-compartir`
-   (worktree `wt-integracion-compartir`, desde `origin/main` `915ef2e`), que
-   une por merge `feat/compartir-invitacion` (`f0fc85c`, `2d260e6`,
-   `06f3c59`, sobre `88c5120`) y `fix/icono-compartir-match` (`f49ff65`).
-   Verificado con build local y Supabase FALSO (no con una sala real ni en
-   teléfono). **Revisión del dueño en ese mismo build con Supabase FALSO:
-   "todo OK" (informado por el dueño, 21/10).** **Falta:** (1) la prueba
-   manual del dueño CON SALA REAL (pasos en la entrada "Integración de
-   Yumpeá" de "Evidencia y alcance"); (2) merge y deploy con su
-   autorización — con eso llega a la web y la PWA; (3) Android: UNA sola
-   actualización con los dos cambios (AAB `5 (1.3.0)`), después del deploy y
-   por decisión del dueño; no se generó.
+   resultado — DESARROLLO Y PRUEBA LOCAL TERMINADOS; integración a `main` y
+   deploy PENDIENTES DE AUTORIZACIÓN (21/10/2026).** Rama
+   `integracion/yumpea-compartir` (worktree `wt-integracion-compartir`, desde
+   `origin/main` `915ef2e`), local, sin push: une por merge
+   `feat/compartir-invitacion` (`f0fc85c`, `2d260e6`, `06f3c59`, sobre
+   `88c5120`) y `fix/icono-compartir-match` (`f49ff65`). **Prueba local
+   aprobada por el dueño (21/10)**, sobre el build local con Supabase SIMULADO:
+   no hubo salas reales, WhatsApp real, teléfono ni Producción. Auditoría de
+   Codex sobre `298555a` sin defectos bloqueantes. **Falta:** merge a `main` y
+   deploy con autorización del dueño (con eso llega a la web y la PWA).
+   **Android:** NO tiene release propia; estos cambios viajan en el MISMO AAB
+   que el futuro sistema de reseñas de usuarios (decisión del dueño, 21/10;
+   versión y `versionCode` sin fijar). Opcional, no requisito de cierre: el
+   recorrido con una sala real descripto en "Evidencia y alcance".
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -192,9 +193,19 @@ reusa su diseño, no se mergea.
 ## Evidencia y alcance de esta actualización
 
 - **Integración de Yumpeá: "Compartir invitación" + ícono del resultado
-  (2026-10-21) — rama local `integracion/yumpea-compartir`, SIN push, SIN
-  merge a `main`, SIN deploy, SIN AAB.** Autorizada por el dueño sólo para
-  integrar en una rama aparte.
+  (2026-10-21) — desarrollo y prueba local TERMINADOS; rama local
+  `integracion/yumpea-compartir`, SIN push, SIN merge a `main`, SIN deploy,
+  SIN AAB.** Autorizada por el dueño sólo para integrar en una rama aparte;
+  merge y deploy siguen pendientes de su autorización.
+  **Cierre (decisiones del dueño, 21/10):** (1) su prueba local queda
+  APROBADA y no se repite; (2) la prueba con sala real deja de ser requisito:
+  queda sólo como verificación adicional opcional; (3) Android: estos cambios
+  se publican en el MISMO AAB que el futuro sistema de reseñas de usuarios —
+  no hay release separada y la versión y el `versionCode` NO se fijan ahora.
+  **Auditoría de Codex sobre `298555a` (informada por el dueño, 21/10):**
+  revisó el código combinado sin defectos bloqueantes identificados; `npm
+  test` **2249 / 2249**, sin omitidas; tipos sin errores; diff sin problemas
+  de formato. Codex NO repitió las compilaciones ni las pruebas visuales.
   **Estado previo (Git, 21/10):** `origin/main` = `915ef2e` (`git ls-remote`);
   ninguna de las dos ramas existe en el remoto; `feat/compartir-invitacion` =
   `06f3c59` (sobre `88c5120`), `fix/icono-compartir-match` = `f49ff65` (sobre
@@ -252,11 +263,13 @@ reusa su diseño, no se mergea.
   Share y cae a WhatsApp), así que la hoja nativa del lobby nuevo se prueba
   en la computadora o después del deploy/AAB. La worktree tiene hoy un
   `.env.local` FALSO (ignorado por Git) y su `.next` se compiló con él.
-  **Revisión del dueño (informado por el dueño, 21/10: "todo OK"):** en el
-  panel del navegador de la app, el mismo build local contra el Supabase
-  FALSO (lobby, match y empate resuelto de las salas inventadas). NO es la
-  prueba con sala real, que sigue pendiente.
-  **Prueba manual del dueño (preparada; crea datos reales en Producción):**
+  **Prueba local del dueño: APROBADA (informado por el dueño, 21/10: "todo
+  OK").** En el panel del navegador de la app, el mismo build local contra el
+  Supabase SIMULADO (lobby, match y empate resuelto de las salas inventadas).
+  Alcance exacto: no incluye salas reales, WhatsApp real, teléfono ni
+  Producción.
+  **Verificación adicional OPCIONAL — no es requisito de cierre (crea datos
+  reales en Producción):**
   1. En `D:\DESARROLLO\stream central\wt-integracion-compartir`, reemplazar
      el `.env.local` falso por el real: `copy ..\streamingcentral\.env.local
      .env.local`.
@@ -285,21 +298,18 @@ reusa su diseño, no se mergea.
      hasta el deploy.
   10. Al terminar, "Cerrar sala" (las salas vencen solas). Opcional: borrar el
       `.env.local` real de la worktree.
-  **Android — UNA sola actualización con los dos cambios (no generada):** el
-  lobby y el resultado viajan en el bundle local, así que la 1.2.0 instalada
-  no muestra ninguno de los dos hasta un AAB nuevo. Después del merge y el
-  deploy, desde el commit desplegado: el dueño confirma en Play Console que el
-  mayor subido es 4; `android/app/build.gradle` → `versionCode 5` /
-  `versionName "1.3.0"` (funcionalidad visible nueva → MINOR), actualizar
-  `lib/release-android.test.ts` y el historial de `CLAUDE.md`; `node
-  scripts/build-capacitor.mjs --release --api-base=https://app.yump.ar`; `npx
-  cap sync android`; `bundleRelease` con JBR 21 y `keystore.properties`
-  copiado con autorización del dueño y borrado al terminar; verificar el AAB
-  (firma de subida, `versionCode 5`, App Links, "Compartir invitación" y
-  `sala-compartir-match` en el paquete) y copiarlo a
-  `releases/Yump-1.3.0-vc5.aab`. Probar en teléfono (hoja nativa del lobby e
-  ícono del resultado) antes de subirlo a un canal. No hace falta ningún
-  plugin nuevo (`@capacitor/share` ya viaja).
+  **Android — sin release propia (decisión del dueño, 21/10):** el lobby y el
+  resultado viajan en el bundle local, así que la 1.2.0 instalada no muestra
+  ninguno de los dos hasta un AAB nuevo. Ese AAB es el MISMO que llevará el
+  futuro sistema de reseñas de usuarios: salas y reseñas se publican juntas.
+  No se prepara un AAB separado para estos arreglos y la versión y el
+  `versionCode` se deciden recién con esa release (la regla general sigue: el
+  `versionCode` nuevo tiene que ser mayor que el último subido, hoy 4). Al
+  armar esa release conviene verificar en el paquete "Compartir invitación" y
+  `sala-compartir-match`, y probar en teléfono la hoja nativa del lobby y el
+  ícono del resultado. No hace falta ningún plugin nuevo (`@capacitor/share`
+  ya viaja). El procedimiento de AAB `5 (1.3.0)` que figuraba en esta entrada
+  y en la de "Compartir invitación" queda REEMPLAZADO por esta decisión.
 - **Ícono del botón "Compartir" del resultado de Yumpeá (2026-10-21) —
   corregido en `fix/icono-compartir-match`; integrado el 21/10 en la rama
   local `integracion/yumpea-compartir` (entrada de arriba), NO desplegado, sin
@@ -324,9 +334,12 @@ reusa su diseño, no se mergea.
   izquierda de "Compartir" y sin desborde horizontal.
   **No probado:** la pantalla real "¡Hay match!" / empate con una sala de
   verdad, un teléfono, Producción y el contenedor Android.
-  **Prueba del dueño:** terminar una sala con match (o empate resuelto) y
-  comprobar que "Compartir" muestra el ícono de compartir a la izquierda del
-  texto, en el celular y en la computadora.
+  *(Histórico, superado el 21/10: la prueba del dueño quedó cubierta por su
+  prueba local aprobada de la integración —ver la entrada de arriba—; lo de
+  abajo ya no es un paso pendiente.)* Prueba del dueño propuesta entonces:
+  terminar una sala con match (o empate resuelto) y comprobar que "Compartir"
+  muestra el ícono de compartir a la izquierda del texto, en el celular y en
+  la computadora.
 - **"Compartir invitación" en el lobby de Yumpeá (2026-10-20) —
   implementado en `feat/compartir-invitacion` (`f0fc85c` + `2d260e6`); integrado el
   21/10 en la rama local `integracion/yumpea-compartir` (ver esa entrada), NO
@@ -378,8 +391,12 @@ reusa su diseño, no se mergea.
   reproducir su marcado dentro de `.sala-acciones-resultado` en el navegador
   medía **0×0** (invisible; el botón y su texto funcionan). No se verificó en
   Producción ni en teléfono.
-  **Prueba manual del dueño (preparada):** con la rama en local o en un
-  Preview. (1) Con su cuenta, crear una sala desde `/sala/nueva`. (2) En el
+  *(Histórico, superado el 21/10 por la entrada de integración: la prueba
+  local del dueño está APROBADA, la prueba con sala real es opcional y el
+  procedimiento de AAB `5 (1.3.0)` de más abajo quedó REEMPLAZADO por la
+  decisión de publicar salas y reseñas de usuarios en el mismo AAB. Nada de
+  este párrafo es una instrucción vigente.)* Prueba manual del dueño
+  propuesta el 20/10: con la rama en local o en un Preview. (1) Con su cuenta, crear una sala desde `/sala/nueva`. (2) En el
   lobby tocar "Compartir invitación": en el celular aparece la hoja del
   sistema; elegir WhatsApp y comprobar que el mensaje es el texto nuevo con el
   enlace abajo (en la computadora sin hoja, abre WhatsApp Web). (3) Tocar de
@@ -395,8 +412,9 @@ reusa su diseño, no se mergea.
   deploy; en la rama se prueba el botón y el mensaje. **Android:** el lobby va
   dentro del bundle local, así que la 1.2.0 instalada sigue mostrando sólo
   "Copiar" hasta instalar un AAB nuevo. No hace falta ningún plugin nuevo
-  (`@capacitor/share` ya viaja desde la ficha). **Procedimiento del AAB, sin
-  publicarlo** (el mismo de la 1.2.0, entrada del 05/10): después del merge y
+  (`@capacitor/share` ya viaja desde la ficha). ~~**Procedimiento del AAB, sin
+  publicarlo**~~ *(REEMPLAZADO el 21/10: no habrá AAB `5 (1.3.0)` propio; ver
+  la entrada de integración)* (el mismo de la 1.2.0, entrada del 05/10): después del merge y
   deploy, desde el commit desplegado; el dueño confirma en Play Console que el
   mayor subido es 4; subir `android/app/build.gradle` a `versionCode 5` /
   `versionName "1.3.0"` (funcionalidad visible nueva → MINOR) y actualizar
