@@ -1207,6 +1207,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .sala-ganadora .rlt-title{font-size:26px}
 .sala-acciones-resultado{justify-content:center;margin-top:18px}
 .sala-acciones-resultado .rlt-btn{text-decoration:none}
+.sala-compartir-match svg{width:18px;height:18px;flex:none}
 .sala-pie-resultado{margin-top:26px;text-align:left}
 .sala-pie-resultado .sala-vence{text-align:center}
 .sala-preparar{margin-top:4px}

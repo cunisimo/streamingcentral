@@ -1,6 +1,6 @@
 # Estado de Yump
 
-> **Estado canónico. Actualizado el 20 de octubre de 2026 (noche).**
+> **Estado canónico. Actualizado el 21 de octubre de 2026.**
 > Leer este bloque antes de los antecedentes históricos. Arquitectura y reglas:
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
@@ -136,6 +136,14 @@ AAB tiene que ser `5` o mayor.
    app 1.2.0 instalada; (5) decidir si se borra la variable `CRON_SECRET` de
    Vercel (sin uso desde este cambio; configuración, no se tocó). Detalle en la
    entrada "Top exclusivamente manual" de "Evidencia y alcance".
+3d. **Ícono de "Compartir" en el resultado de Yumpeá — CORREGIDO EN RAMA,
+   SIN INTEGRAR NI DESPLEGAR (21/10/2026).** Rama `fix/icono-compartir-match`
+   (worktree `wt-icono-compartir-match`, desde `origin/main` `915ef2e`),
+   local, sin push. Cierra el "hallazgo aparte" de la entrada "Compartir
+   invitación" (rama `feat/compartir-invitacion`). **Falta:** prueba del dueño
+   en teléfono, y merge y deploy con su autorización; en Android, recién con un
+   AAB nuevo (el resultado viaja en el bundle local). Detalle en "Evidencia y
+   alcance".
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -178,6 +186,32 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Ícono del botón "Compartir" del resultado de Yumpeá (2026-10-21) —
+  corregido en `fix/icono-compartir-match`, NO integrado, NO desplegado, sin
+  AAB.** **Problema:** `components/sala/CompartirMatch.tsx` (usado por
+  `ResultadoMatch.tsx` y `ResultadoEmpate.tsx`) dibuja un `<svg viewBox="0 0
+  24 24">` sin width/height y ninguna regla de CSS le daba tamaño; dentro de
+  `.sala-acciones.sala-acciones-resultado` medía **0×0**: el botón y su texto
+  funcionaban, el ícono no se veía. **Cambio:** el botón suma la clase
+  `sala-compartir-match` y `app/globals.css` la regla
+  `.sala-compartir-match svg{width:18px;height:18px;flex:none}`, la misma
+  medida que `.sala-compartir svg` del lobby (`2d260e6`, en
+  `feat/compartir-invitacion`). Sin cambios de lógica, servidor ni base.
+  **Verificación (Claude):** `lib/sala/compartir-match-icono.test.ts` (2:
+  clase en el botón y regla en el CSS); suite **2223 / 2241** pasan, 0 fallos,
+  18 omitidos (los de artefactos: sin `out-capacitor` ni build web en la
+  worktree); `tsc --noEmit` 0; `git diff --check` limpio. **Navegador**
+  (`next dev` local con variables FALSAS, una página temporal —no
+  commiteada— que renderizaba el `CompartirMatch` real dentro de
+  `.sala-resultado.sala-match > .sala-acciones.sala-acciones-resultado`): a
+  1024 px el ícono mide **18×18**; quitándole la clase en el mismo DOM vuelve a
+  **0×0** (reproduce el hallazgo); a 375 px, 18×18, ícono visible a la
+  izquierda de "Compartir" y sin desborde horizontal.
+  **No probado:** la pantalla real "¡Hay match!" / empate con una sala de
+  verdad, un teléfono, Producción y el contenedor Android.
+  **Prueba del dueño:** terminar una sala con match (o empate resuelto) y
+  comprobar que "Compartir" muestra el ícono de compartir a la izquierda del
+  texto, en el celular y en la computadora.
 - **Top exclusivamente manual: auditoría de cachés y compatibilidad con
   Android 1.2.0 (2026-10-20, antes del merge; sin cambios de código).**
   **Cachés — comprobado por código:** la única puerta del ranking automático a
