@@ -152,14 +152,17 @@ AAB tiene que ser `5` o mayor.
    recorrido con una sala real descripto en "Evidencia y alcance".
 3d. **Reseñas de usuarios y Top Yumpers — EN DISEÑO (21/10/2026).** Diseño
    de Codex y revisión de Claude en la rama local `docs/resenas-comunidad`
-   (sólo documentación). Nada implementado ni autorizado. Revisión v2
-   corregida tras la auditoría de Codex sobre `f64a659`.
+   (sólo documentación). Nada implementado ni autorizado.
+   **Decisión del dueño (21/10): sin gastos adicionales.** No hay API paga,
+   banco pago, tope de USD 10, servicios nuevos ni upgrades, y tampoco
+   transferencia a una API gratuita. La revisión v3 propone moderación por
+   reglas propias, sin clasificador externo.
    **Falta:**
-   - nueva auditoría de Codex;
-   - autorización P5: sólo lectura de E0 y gasto del banco E1;
-   - preguntas al dueño P1–P4 (revisión §1.4): proveedor y transferencia,
-     presupuesto, plazos de retención y, sólo si E0 lo exige, prueba de buzón
-     para cuentas autoconfirmadas;
+   - auditoría de Codex sobre v3;
+   - P5: autorización de sólo lectura para E0;
+   - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
+     prueba de buzón sólo si E0 lo exige, y período supervisado al activar la
+     publicación automática;
    - recién después, el plan.
    Viaja en el mismo AAB que 3c.
    **MFA de la reseña editorial:** trabajo separado. Confirmado en código,
@@ -217,7 +220,49 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
+  **Versión 3 (21/10) — decisión del dueño: SIN gastos adicionales.**
+  Auditoría de Codex sobre `68bd773`
+  (`docs/medidas/2026-10-21-auditoria-resenas-68bd773-presupuesto.md`) y el
+  diseño actualizado por Codex con esa decisión, copiados sin cambios del
+  checkout principal. Al diseño sólo se le agregó una nota de registro que
+  remite a la revisión, sin cambiar sus reglas.
+  - **Superado por la decisión del dueño:** proveedor y clasificador externo,
+    configuración de modelos, costos de API, tope de USD 10, banco pago y
+    retención de proveedores (v2 §3, §4, §5.1; P1, P2). Tampoco se sustituye
+    por una API gratuita.
+  - **Propuesto en v3, no aprobado:**
+    - **Moderación por reglas propias** en la ruta del servidor, para enlaces,
+      contactos, ofuscación, duplicados y spam:
+      - rechazo de enlaces y contactos claros, con motivo;
+      - retención de señales de spam, odio u amenaza explícita y datos
+        personales;
+      - publicación automática del resto;
+      - un fallo nunca aprueba;
+      - cola con pausa automática.
+      - Las mismas reglas valen para ediciones y nombres comunitarios, con
+        las vías de elusión revisadas.
+      - No entiende contexto: acoso sin términos de lista, ironía y
+        difamación dependen de denuncias y revisión.
+      - Pruebas sintéticas locales con suite de falsos positivos.
+    - Escritura sólo por funciones ejecutables por `service_role`.
+    - Autoevaluación impedida con autor redundante, FK compuesta y `CHECK`
+      de la misma fila.
+    - Baja de cuenta atómica: participante comunitario con
+      `on delete set null`, trigger de cierre en la misma transacción y sin
+      estado "no reconstruible".
+    - Corte mensual para todas las operaciones por bloqueo consultivo
+      compartido/exclusivo con marca `clock_timestamp()` posterior al
+      bloqueo. **Reemplaza el margen de 15 min de v2.**
+    - Snapshots `bigint[]` con un solo generador por título, cota de
+      almacenamiento y revalidación de 50 posiciones por página.
+  - **Cuotas.** Panel (dueño, 18-19/09): Supabase Free, PostgreSQL 17.6,
+    `pg_cron` 1.6.4; Vercel 19K de 1M invocaciones a 30 días. Hay que
+    actualizarlas en E0; no se promete costo cero.
+  - **Entregas:** E0–E9, sin elección de proveedor ni pruebas pagas.
+
   **Versión 2 (21/10), corregida tras la auditoría de Codex sobre `f64a659`**
+  (sus partes de proveedor, costos, tope y el margen de 15 min quedan
+  SUPERADAS por la v3)
   (`docs/medidas/2026-10-21-auditoria-preparacion-resenas.md`, copiada sin
   cambios del checkout principal). Correcciones, detalle en la revisión §0:
   - **Permisos (A1):** la escritura por RPC `security invoker` de `f64a659`
@@ -274,8 +319,8 @@ reusa su diseño, no se mergea.
   - la ficha no está en el bundle nativo;
   - CORS sólo admite GET/POST.
 
-  **Siguiente paso:** nueva auditoría de Codex; después E0 (sólo lectura,
-  con autorización) y recién entonces el plan detallado.
+  **Siguiente paso:** auditoría de Codex sobre la v3; después E0 (sólo
+  lectura, con autorización) y recién entonces el plan detallado.
 
 - **Integración de Yumpeá: "Compartir invitación" + ícono del resultado
   (2026-10-21) — desarrollo y prueba local TERMINADOS; rama local

@@ -6,6 +6,44 @@ El estado operativo sigue en `docs/ESTADO.md`; este documento define el producto
 futuro y no afirma que esté construido. El checkout principal tiene cambios ajenos
 y documentación anterior: no usarlo como base de implementación por este archivo.
 
+## Actualización del dueño — presupuesto sin gastos adicionales
+
+Decisión posterior a la revisión `68bd773`, recibida en esta conversación:
+el dueño NO autoriza gastos adicionales para este módulo. Quedan descartadas
+las llamadas pagas, el banco pago (aunque sea menor a USD 1), el tope propuesto
+de USD 10/mes y nuevos servicios o cambios de plan que requieran pago.
+No hubo autorización de gasto anterior por el hecho de haber aceptado filtros.
+
+Las propuestas de §3.5 que dependen de un clasificador externo y la elección
+de proveedor de §5 quedan SUPERADAS como requisito de esta primera versión.
+Reformular como propuesta pendiente de revisión: reglas determinísticas en el
+servidor/base para enlaces/contactos, spam y patrones de abuso, límites por
+cuenta, casos sospechosos retenidos y moderación reactiva mediante denuncias y
+bloqueos. No equivale a la cobertura contextual del clasificador: medir errores
+y carga humana antes de habilitar publicación automática. No publicar todo por
+omitir un proveedor ni dejar todo pendiente como si esa fuera la solución.
+
+No incorporar una API gratuita como sustitución automática: requiere evaluar
+tratamiento de datos, disponibilidad y límites. No prometer costo operativo cero:
+los controles y datos consumen recursos de los planes existentes. Verificar que
+entren en sus cuotas sin upgrades ni habilitar facturación adicional. Reutilizar
+los servicios ya contratados y probar reglas con datos sintéticos locales.
+El resto del diseño y las decisiones aprobadas siguen vigentes.
+
+> **Nota de registro (Claude, 21/10/2026; no modifica reglas de este
+> documento).** Lo que este diseño menciona de un clasificador externo queda
+> superado por la actualización de arriba:
+> - en §3.5, el clasificador contextual, el proveedor, el presupuesto y la
+>   frase "Guardar proveedor…";
+> - en §4, el "proveedor de filtro" de la política de privacidad;
+> - en §5, la elección y el presupuesto del filtro;
+> - en §6, "Filtro probado con…", en la parte que dependa de un proveedor.
+>
+> La propuesta de reemplazo por reglas, las soluciones técnicas y los cambios
+> que se proponen a este diseño están en
+> [`2026-10-21-resenas-comunidad-revision.md`](2026-10-21-resenas-comunidad-revision.md)
+> (v3). **No están aprobados.**
+
 ## 1. Intención y alcance acordado con el dueño
 
 Ayudar a elegir qué ver mediante opiniones breves de usuarios, reconocer a los
