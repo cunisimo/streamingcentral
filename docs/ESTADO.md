@@ -5,7 +5,7 @@
 > [`CLAUDE.md`](../CLAUDE.md). Problemas históricos: [`ISSUES.md`](ISSUES.md).
 > No duplicar este estado en otros manuales: enlazarlo.
 
-## Resumen vigente — 20/10/2026 (qué está hecho y qué falta)
+## Resumen vigente — 21/10/2026 (qué está hecho y qué falta)
 
 **Leer esto primero.** Esta sección reemplaza a las anteriores "Estado de
 producto e integración" y "Próximo trabajo, en orden" (09/09), que habían
@@ -135,23 +135,18 @@ AAB tiene que ser `5` o mayor.
    no tiene esa confirmación explícita, así que quedan PENDIENTES hasta que el
    dueño la dé.
    Detalle en las entradas del Top de "Evidencia y alcance".
-3c. **"Compartir invitación" en el lobby de Yumpeá — IMPLEMENTADO EN RAMA,
-   SIN INTEGRAR NI DESPLEGAR (20/10/2026).** Rama `feat/compartir-invitacion`
-   (código en `f0fc85c` y `2d260e6`, worktree `wt-compartir-invitacion`), local, sin
-   push. **Falta:** (1) la prueba manual del dueño (procedimiento en la entrada
-   "Compartir invitación" de "Evidencia y alcance"); (2) merge y deploy con su
-   autorización — con eso queda en la web y la PWA; (3) para Android, un AAB
-   nuevo `5 (1.3.0)`: el lobby viaja en el bundle local y la 1.2.0 instalada
-   no lo muestra hasta actualizarse; generarlo y subirlo a Play es decisión
-   del dueño.
-3d. **Ícono de "Compartir" en el resultado de Yumpeá — CORREGIDO EN RAMA,
-   SIN INTEGRAR NI DESPLEGAR (21/10/2026).** Rama `fix/icono-compartir-match`
-   (worktree `wt-icono-compartir-match`, desde `origin/main` `915ef2e`),
-   local, sin push. Cierra el "hallazgo aparte" de la entrada "Compartir
-   invitación" (rama `feat/compartir-invitacion`). **Falta:** prueba del dueño
-   en teléfono, y merge y deploy con su autorización; en Android, recién con un
-   AAB nuevo (el resultado viaja en el bundle local). Detalle en "Evidencia y
-   alcance".
+3c. **Yumpeá: "Compartir invitación" en el lobby + ícono de "Compartir" del
+   resultado — INTEGRADOS EN RAMA LOCAL, SIN MERGE A `main`, SIN PUSH, SIN
+   DEPLOY, SIN AAB (21/10/2026).** Rama `integracion/yumpea-compartir`
+   (worktree `wt-integracion-compartir`, desde `origin/main` `915ef2e`), que
+   une por merge `feat/compartir-invitacion` (`f0fc85c`, `2d260e6`,
+   `06f3c59`, sobre `88c5120`) y `fix/icono-compartir-match` (`f49ff65`).
+   Verificado con build local y Supabase FALSO (no con una sala real ni en
+   teléfono). **Falta:** (1) la prueba manual del dueño (pasos en la entrada
+   "Integración de Yumpeá" de "Evidencia y alcance"); (2) merge y deploy con su
+   autorización — con eso llega a la web y la PWA; (3) Android: UNA sola
+   actualización con los dos cambios (AAB `5 (1.3.0)`), después del deploy y
+   por decisión del dueño; no se generó.
 4. **Issue #24:** el primer cruce mensual de supresiones tenía fecha prevista
    el **20/10/2026** (`proximaRevision: "2026-10-20"` en
    `lib/supresiones-disponibilidad.ts`). **Al 20/10/2026 no hay evidencia de
@@ -194,8 +189,114 @@ reusa su diseño, no se mergea.
 
 ## Evidencia y alcance de esta actualización
 
+- **Integración de Yumpeá: "Compartir invitación" + ícono del resultado
+  (2026-10-21) — rama local `integracion/yumpea-compartir`, SIN push, SIN
+  merge a `main`, SIN deploy, SIN AAB.** Autorizada por el dueño sólo para
+  integrar en una rama aparte.
+  **Estado previo (Git, 21/10):** `origin/main` = `915ef2e` (`git ls-remote`);
+  ninguna de las dos ramas existe en el remoto; `feat/compartir-invitacion` =
+  `06f3c59` (sobre `88c5120`), `fix/icono-compartir-match` = `f49ff65` (sobre
+  `915ef2e`); el `main` local (`06bdfd1`) está viejo y no se usó. No se
+  tocaron otros checkouts, sus cambios pendientes ni los stashes.
+  **Cómo se integró:** desde `origin/main`, dos merges `--no-ff` (sin
+  cherry-pick: ningún commit duplicado): `b0d089f` (lobby, trae también
+  `88c5120`, sólo documentación del deploy del Top) y `7b1f2cf` (ícono). Único
+  conflicto: este archivo; se conservaron los dos registros y el cierre del
+  Top de `88c5120` (deploy re-comprobado: 7210383316, `success`). La
+  anotación "Pruebas OK" del Top que traía `06f3c59` volvió a PENDIENTE (ver
+  3b del resumen): no hay confirmación explícita del dueño en esta sesión.
+  **Diff contra `origin/main` (código):** `components/sala/Lobby.tsx`,
+  `lib/sala/invitacion.ts`, `components/sala/CompartirMatch.tsx`,
+  `app/globals.css` (`.sala-compartir` y `.sala-compartir-match svg`, 18×18)
+  y tres archivos de prueba. `lib/compartir-accion.ts` (la acción común,
+  incluida la cancelación sin WhatsApp) **no cambia**. Sin servidor, base ni
+  migraciones.
+  **Verificación (Claude):** `tsc --noEmit` 0; `npm run build` OK y
+  `build-capacitor` no release (`--api-base=https://ejemplo.invalid`) OK,
+  los dos con variables FALSAS; los dos bundles traen "Compartir invitación" y
+  `sala-compartir-match`. `npm test` **2249 / 2249**, 0 fallos, **0 omitidos**
+  (con los dos builds presentes).
+  **Navegador — build de Producción local (`next start`, `localhost:3200`)
+  contra un Supabase FALSO local (`:3301`, responde `sala_estado`/`sala_unirse`
+  para tres salas inventadas; ninguna petición a la base real, el build no
+  contiene el host real). NO es un recorrido con una sala real.** Se usaron
+  las pantallas reales (`SalaView`: `Lobby`, `ResultadoMatch` y
+  `ResultadoEmpate` desempatado). Lobby, con `navigator.share` y
+  `window.open` simulados: doble toque con la hoja abierta = 1 llamada;
+  payload `{title: "Yump", text: "¡Sumate a mi sala de Yumpeá! Elegimos juntos
+  qué ver:", url: https://app.yump.ar/sala/<uuid>?organizador=Juan%20P%C3%A9rez}`;
+  cancelar (AbortError) no abre nada y el botón vuelve a funcionar; un error
+  que no es cancelación y la falta de Web Share abren `wa.me` con texto +
+  salto de línea + enlace; "Copiar enlace" copia la MISMA url y pasa a
+  "Copiado". Resultado: "Compartir" comparte "¡Nuestro match!" con la ficha
+  `https://app.yump.ar/titulo/movie/<id>`; cancelar no abre nada. **Medidas:**
+  a 1280 px y a 375 px (emulación móvil), ícono del lobby **18×18**, ícono del
+  match y del empate resuelto **18×18** a la izquierda del texto, sin
+  desborde horizontal ni elementos fuera de pantalla; capturas revisadas.
+  **No probado:** Supabase real, Realtime, una sala real, la hoja real del
+  sistema (Windows, Android, iOS), WhatsApp de verdad, un teléfono y el
+  contenedor Android.
+  **Backend del build de prueba (comprobado 21/10, sólo nombres de host):** el
+  `.env.local` del checkout principal y la web pública `app.yump.ar` usan el
+  MISMO proyecto de Supabase (`aibqqebwlladjjkeqllo`; en la web, leído de sus
+  chunks públicos). Por eso un build local con ese `.env.local` crea salas
+  REALES en la base de Producción y el enlace público
+  `app.yump.ar/sala/<uuid>` lleva a la MISMA sala: **el recorrido completo
+  (compartir → invitado entra → votan → resultado) se puede probar sin
+  desplegar.** Lo que ese recorrido NO comprueba: lo que ve el invitado sale
+  del código de Producción (sin estos cambios; para él, el ícono del
+  resultado sigue invisible hasta el deploy), y un teléfono no puede abrir
+  `localhost` (por la IP de la red local no es contexto seguro: no hay Web
+  Share y cae a WhatsApp), así que la hoja nativa del lobby nuevo se prueba
+  en la computadora o después del deploy/AAB. La worktree tiene hoy un
+  `.env.local` FALSO (ignorado por Git) y su `.next` se compiló con él.
+  **Prueba manual del dueño (preparada; crea datos reales en Producción):**
+  1. En `D:\DESARROLLO\stream central\wt-integracion-compartir`, reemplazar
+     el `.env.local` falso por el real: `copy ..\streamingcentral\.env.local
+     .env.local`.
+  2. RECOMPILAR (las `NEXT_PUBLIC_*` quedan fijas en el build): `npm run
+     build` y después `npx next start -p 3200`.
+  3. En Chrome de la computadora, `http://localhost:3200`, entrar con la
+     cuenta personal o la adicional (la sesión de `app.yump.ar` no se
+     comparte con `localhost`; si el método de ingreso redirige a
+     `app.yump.ar`, usar uno que no lo haga).
+  4. `/sala/nueva` → crear la sala → lobby "Sala de <nombre>".
+  5. "Compartir invitación": aparece la hoja de Windows; elegir WhatsApp (o
+     copiar) y comprobar el texto "¡Sumate a mi sala de Yumpeá! Elegimos
+     juntos qué ver:" con el enlace `https://app.yump.ar/sala/<uuid>?organizador=…`
+     abajo. Si no aparece hoja, abre WhatsApp Web con el mismo mensaje.
+  6. Tocar de nuevo y cerrar la hoja sin elegir nada: no se abre WhatsApp.
+     Doble clic rápido: una sola hoja.
+  7. "Copiar enlace" → pegarlo: es la misma url del mensaje; el botón dice
+     "Copiado".
+  8. Abrir ese enlace en el celular (o en una ventana privada): es la web de
+     Producción. Pide el nombre, entra, y en el lobby de `localhost` aparece en
+     "Quiénes están".
+  9. Empezar la tanda desde `localhost` y votar las dos partes para llegar a
+     "¡Hay match!" (o a un empate y "Desempatar"). En `localhost`, "Compartir"
+     muestra el ícono a la izquierda del texto; tocarlo y cancelar no abre
+     nada. En el celular (Producción) el ícono sigue invisible: es lo esperado
+     hasta el deploy.
+  10. Al terminar, "Cerrar sala" (las salas vencen solas). Opcional: borrar el
+      `.env.local` real de la worktree.
+  **Android — UNA sola actualización con los dos cambios (no generada):** el
+  lobby y el resultado viajan en el bundle local, así que la 1.2.0 instalada
+  no muestra ninguno de los dos hasta un AAB nuevo. Después del merge y el
+  deploy, desde el commit desplegado: el dueño confirma en Play Console que el
+  mayor subido es 4; `android/app/build.gradle` → `versionCode 5` /
+  `versionName "1.3.0"` (funcionalidad visible nueva → MINOR), actualizar
+  `lib/release-android.test.ts` y el historial de `CLAUDE.md`; `node
+  scripts/build-capacitor.mjs --release --api-base=https://app.yump.ar`; `npx
+  cap sync android`; `bundleRelease` con JBR 21 y `keystore.properties`
+  copiado con autorización del dueño y borrado al terminar; verificar el AAB
+  (firma de subida, `versionCode 5`, App Links, "Compartir invitación" y
+  `sala-compartir-match` en el paquete) y copiarlo a
+  `releases/Yump-1.3.0-vc5.aab`. Probar en teléfono (hoja nativa del lobby e
+  ícono del resultado) antes de subirlo a un canal. No hace falta ningún
+  plugin nuevo (`@capacitor/share` ya viaja).
 - **Ícono del botón "Compartir" del resultado de Yumpeá (2026-10-21) —
-  corregido en `fix/icono-compartir-match`, NO integrado, NO desplegado, sin
+  corregido en `fix/icono-compartir-match`; integrado el 21/10 en la rama
+  local `integracion/yumpea-compartir` (entrada de arriba), NO desplegado, sin
   AAB.** **Problema:** `components/sala/CompartirMatch.tsx` (usado por
   `ResultadoMatch.tsx` y `ResultadoEmpate.tsx`) dibuja un `<svg viewBox="0 0
   24 24">` sin width/height y ninguna regla de CSS le daba tamaño; dentro de
@@ -221,7 +322,8 @@ reusa su diseño, no se mergea.
   comprobar que "Compartir" muestra el ícono de compartir a la izquierda del
   texto, en el celular y en la computadora.
 - **"Compartir invitación" en el lobby de Yumpeá (2026-10-20) —
-  implementado en `feat/compartir-invitacion` (`f0fc85c` + `2d260e6`), NO integrado, NO
+  implementado en `feat/compartir-invitacion` (`f0fc85c` + `2d260e6`); integrado el
+  21/10 en la rama local `integracion/yumpea-compartir` (ver esa entrada), NO
   desplegado, sin AAB.** Base: `88c5120` (= `origin/main` `915ef2e` + el
   registro del deploy del Top, sólo documentación, también sin push).
   **Qué cambia:** en "Invitá a alguien" la acción principal es "Compartir
@@ -264,7 +366,8 @@ reusa su diseño, no se mergea.
   **No probado:** la hoja real del sistema (Android, Chrome móvil, iOS),
   WhatsApp de verdad, la vista previa generada por WhatsApp, un organizador
   real con cuenta, Realtime, y el contenedor Android (requiere AAB nuevo).
-  ⚠️ **Hallazgo aparte, sin tocar:** el ícono del botón "Compartir" del
+  ⚠️ **Hallazgo aparte (corregido el 21/10 en `fix/icono-compartir-match`, ver
+  arriba):** el ícono del botón "Compartir" del
   resultado (`components/sala/CompartirMatch.tsx`) no tiene tamaño en CSS; al
   reproducir su marcado dentro de `.sala-acciones-resultado` en el navegador
   medía **0×0** (invisible; el botón y su texto funcionan). No se verificó en
@@ -278,7 +381,9 @@ reusa su diseño, no se mergea.
   Abrir el enlace recibido en otro dispositivo o en una ventana privada, sin
   sesión: pide el nombre, entra y aparece en "Quiénes están" de la sala
   correcta (mismo organizador). (5) "Copiar enlace" y pegarlo: es la misma url
-  del mensaje. ⚠️ Un enlace a `app.yump.ar` abre PRODUCCIÓN: para probar la
+  del mensaje. ⚠️ *(Corregido el 21/10: el build local con el `.env.local` real comparte la
+  base con Producción, así que el recorrido completo NO exige desplegar; ver
+  la entrada de integración.)* Un enlace a `app.yump.ar` abre PRODUCCIÓN: para probar la
   rama de punta a punta, la sala tiene que crearse en Producción, así que la
   prueba completa (WhatsApp → invitado entra) es la que se hace después del
   deploy; en la rama se prueba el botón y el mensaje. **Android:** el lobby va
