@@ -226,6 +226,19 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
+  **Plan corregido tras la auditoría de Codex sobre `9450006` (22/10).**
+  Informe copiado sin cambios
+  (`docs/medidas/2026-10-22-auditoria-plan-resenas-9450006.md`, SHA-256
+  `BBF24038…993A3AAC`). Correcciones puntuales, resumen en el plan §0:
+  - tareas de interfaz por recorrido;
+  - pruebas preliminares separadas de los gates de integración;
+  - MFA real en local, sin stub;
+  - E0 en bloques independientes con privilegios efectivos (sin ejecutar);
+  - E9c sin revisión obligatoria de todo;
+  - barreras del esquema privado probadas por separado;
+  - casos de baja B12–B14;
+  - rollback que conserva el cierre de `user_reviews`.
+
   **Plan de implementación (22/10) — preparado, pendiente de auditoría y
   autorización.** Sólo documentación; nada ejecutado.
   - Auditoría de Codex sobre `e34c53e`
