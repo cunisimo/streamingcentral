@@ -198,7 +198,7 @@ reusa su diseño, no se mergea.
   **No probado:** nada se probó en un teléfono, y que lleguen eventos a Meta no está verificado.
 
   **Pendiente antes del AAB:**
-  - El dueño confirma en Play Console el mayor versionCode subido. El candidato es `5 (1.2.1)`.
+  - Esta rama NO toca versionCode ni versionName. Sale junto con la versión 5, que trae reseñas y otras correcciones (decisión del dueño, 22/10). El número lo fija esa integración: hoy el mayor subido a Play es 4, confirmado por el dueño el 22/10.
   - El texto de Meta en `yump.ar/privacidad`.
   - En Play Console: ID de publicidad "Sí" y Data Safety con *ID de dispositivo u otros* e *Interacciones con la app*, compartidos con Meta.
 
