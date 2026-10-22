@@ -168,14 +168,17 @@ AAB tiene que ser `5` o mayor.
    - **E1.1 tampoco:** el reservado 2, más grande y escrito en su mayor parte
      por un agente que no conocía las reglas, **no cumple C1 ni C2** (12 de
      124 contactos claros sin detectar; 87,2 % de ofuscadas detectadas).
-   - **E1.2** corrige huecos mecánicos y familias divulgadas. Sólo se probó
-     con casos conocidos y regresiones, **sin validación independiente**.
-     **E1 sigue sin cerrar.** Pendiente de auditoría de Codex; ninguna otra
-     entrega está autorizada.
+   - **E1.2** corrige huecos mecánicos y familias divulgadas. La auditoría de
+     `40288f6` encontró dos huecos (terminaciones largas en enlaces con ruta y
+     correo incompleto o indirecto), corregidos en local el 22/10 (ver
+     "Corrección de E1.2" abajo). Sólo se probó con casos conocidos y
+     regresiones, **sin validación independiente**. **E1 sigue pendiente de
+     cierre.** Pendiente de auditoría de Codex; ninguna otra entrega está
+     autorizada.
    **Falta:**
-   - auditoría de Codex sobre E1.2 (incluida la familia detenida y la
-     decisión sobre una medición independiente), y autorización del dueño por
-     entrega;
+   - auditoría de Codex sobre la corrección de E1.2 y decisión sobre una única
+     medición independiente con alcance fijado antes de crear los casos, y
+     autorización del dueño por entrega;
    - P5: autorización de sólo lectura para E0 (no está autorizada; las
      consultas están en el plan y no se ejecutaron);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
@@ -239,6 +242,33 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
+  **Corrección de E1.2 — enlaces con terminación larga y correo indirecto
+  (22/10), en local, pendiente de auditoría. E1 sigue pendiente de cierre.**
+  Auditoría de `40288f6` copiada sin cambios
+  (`docs/medidas/2026-10-22-auditoria-e12-40288f6.md`). Informe:
+  `docs/medidas/2026-10-22-informe-claude-e12-correccion.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1 (`contacto.enlace` v4): la dirección con ruta acepta terminaciones
+      alfabéticas de 2 a 63 letras; E1.2 sólo cubría de 2 a 6, aunque su
+      informe decía "cualquier terminación". `ejemplo.photography/demo` se
+      rechaza;
+    - A2 (`contacto.email_indirecto` v1, nueva, **sólo retiene**):
+      autoatribución de correo con alias, o pedido de correo con alias con
+      forma de usuario. `R2-RA-042` ya no figura como fuera de alcance: se
+      **retiene**, aunque su etiqueta dice "rechazar" (no se cambió).
+    - `VERSION_REGLAS` `2026-10-22.4`.
+  - **Pruebas conocidas, no validación independiente:**
+    - banco de desarrollo de 498 casos: C0 0/498, C1 0/180, C2 173/173,
+      C3 0/207, C4 1/207 (el retenido conocido `D-RG-17-B`);
+    - regresiones del reservado 1 y 2 sin abusos sin detectar.
+  - **Falso positivo conocido de A1:** un texto sin espacio después del
+    punto y con una barra ("Buenísima.Recomendada/obligatoria") se rechaza.
+    No aparece en ninguna legítima de los bancos.
+  - **Pruebas:** `lib/comunidad` 71 de 71; `tsc` 0 errores; `npm test` 2320
+    pruebas, 2302 pasan, 0 fallan y 18 omitidas (exigen builds no hechos).
+  - **Reservados:** intactos; no se preparó ni ejecutó un reservado 3.
+  - **Siguiente paso:** auditoría de Codex. No se avanza a E2.
+
   **E1.2 — huecos mecánicos y familias divulgadas (22/10), en local,
   pendiente de auditoría. E1 NO está cerrada.** Auditoría de `1f475e3`
   copiada sin cambios (`docs/medidas/2026-10-22-auditoria-e11-1f475e3.md`).
@@ -250,16 +280,17 @@ reusa su diseño, no se mergea.
     - A2: dígitos de cualquier sistema Unicode, separadores por clase de
       signo, números dictados 16–99 y lectura amplia (coma, letras sueltas)
       sólo con señal fuerte;
-    - A3: dirección con ruta y cualquier TLD, más TLD y acortadores; "las
-      punto com" ya no es dominio;
+    - A3: dirección con ruta y TLD de 2 a 6 letras (el informe decía
+      "cualquier TLD"; corregido después, ver arriba), más TLD y acortadores;
+      "las punto com" ya no es dominio;
     - familias del reservado 2: alias de redes, spam por familias, correo en
       nombres, partido con colgante, amenaza espaciada y DNI con espacios.
     - `VERSION_REGLAS` `2026-10-22.3`.
   - **Pruebas conocidas, no validación independiente:**
     - los 6 ejemplos de la auditoría dan lo esperado;
     - regresión del reservado 1 y del reservado 2 verdes, con
-      `R2-RA-042` (correo descripto con paráfrasis) **fuera de alcance y
-      detenido para revisión**;
+      `R2-RA-042` (correo descripto con paráfrasis) **detenido para
+      revisión** (después retenido; ver la corrección arriba);
     - banco de desarrollo de 488 casos;
     - transformaciones de comillas, separadores, 8 formas de dígitos,
       confusables y contacto repartido.

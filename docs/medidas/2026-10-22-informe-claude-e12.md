@@ -2,6 +2,12 @@
 
 22/10/2026. Claude Code. Rama `feat/resenas-reglas`, sobre `1f475e3`.
 
+> **Errata posterior (auditoría de `40288f6`):** donde este informe dice
+> "cualquier terminación" para la dirección con ruta, lo implementado era de
+> 2 a 6 letras. Corregido en `contacto.enlace` v4; ver
+> `2026-10-22-informe-claude-e12-correccion.md`. `R2-RA-042` dejó de estar
+> fuera de alcance: ahora se retiene.
+
 **Alcance:** módulo puro, sin conectar.
 - Sin rutas, pantallas, Supabase, SQL, red, proveedores, Producción,
   variables, push, merge, deploy ni AAB.
