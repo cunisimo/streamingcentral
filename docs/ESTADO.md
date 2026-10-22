@@ -171,7 +171,9 @@ AAB tiene que ser `5` o mayor.
    - **E1.2** corrige huecos mecánicos y familias divulgadas. La auditoría de
      `40288f6` encontró dos huecos (terminaciones largas en enlaces con ruta y
      correo incompleto o indirecto), corregidos en local el 22/10 (ver
-     "Corrección de E1.2" abajo). Sólo se probó con casos conocidos y
+     "Corrección de E1.2" abajo). La auditoría de `251f3d0` encontró dos huecos
+     en esas mismas familias (inicio de ruta y criterio de alias), corregidos
+     en local el 22/10 (ver "Segunda corrección de E1.2" abajo). Sólo se probó con casos conocidos y
      regresiones, **sin validación independiente**. **E1 sigue pendiente de
      cierre.** Pendiente de auditoría de Codex; ninguna otra entrega está
      autorizada.
@@ -242,8 +244,38 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
-  **Corrección de E1.2 — enlaces con terminación larga y correo indirecto
+  **Segunda corrección de E1.2 — inicio de ruta y criterio único de alias
   (22/10), en local, pendiente de auditoría. E1 sigue pendiente de cierre.**
+  Auditoría de `251f3d0` copiada sin cambios
+  (`docs/medidas/2026-10-22-auditoria-e12-correccion-251f3d0.md`). Informe:
+  `docs/medidas/2026-10-22-informe-claude-e12-correccion-2.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1 (`contacto.enlace` v5): la ruta vuelve a admitir al principio los
+      caracteres de v3 (`/_demo`, `/-x`, `/?id=1`), con la terminación de
+      2–63 letras; v4 había dejado de detectar `ejemplo.xy/_demo`;
+    - A2 (`contacto.email_indirecto` v2): un solo criterio de alias para los
+      dos recorridos; "soy 88cine" y "soy cine8fan" se retienen. Sigue sin
+      rechazar.
+    - `VERSION_REGLAS` `2026-10-22.5`.
+  - **Pruebas conocidas, no validación independiente:**
+    - banco de desarrollo de 506 casos: C0 0/506, C1 0/182, C2 177/177,
+      C3 0/211, C4 1/211;
+    - regresiones de los reservados 1 y 2 iguales que antes;
+    - ninguna regresión observada.
+  - **Falsos positivos conocidos:**
+    - un título alfanumérico ("Se7en") con correo y pedido cerca se retiene;
+    - "Buenísima.Recomendada/obligatoria" se sigue rechazando; Codex no lo
+      considera bloqueante.
+  - **Pruebas:** `lib/comunidad` 73 de 73; `tsc` 0 errores; `npm test` 2322
+    pruebas, 2304 pasan, 0 fallan y 18 omitidas (exigen builds no hechos).
+  - **Reservados:** intactos; no se preparó ni ejecutó un reservado 3.
+  - **Siguiente paso:** auditoría de Codex. Después, decidir una única
+    medición independiente con código y alcance congelados antes de escribir
+    los casos. No se avanza a E2.
+
+  **Corrección de E1.2 — enlaces con terminación larga y correo indirecto
+  (22/10), en local. Antecedente: auditada en `251f3d0`, ver la segunda
+  corrección arriba.**
   Auditoría de `40288f6` copiada sin cambios
   (`docs/medidas/2026-10-22-auditoria-e12-40288f6.md`). Informe:
   `docs/medidas/2026-10-22-informe-claude-e12-correccion.md`.
