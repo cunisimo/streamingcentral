@@ -314,44 +314,80 @@ Resuelto o retirado:
 de la auditoría).** v2 permitía borrar aunque fallara la preparación y
 marcar el mes "no reconstruible". Se retira. Propuesta:
 
-1. **La reconstrucción no depende de una preparación previa.**
-   - La FK `participantes.user_id … on delete set null` se ejecuta **dentro
-     de la misma transacción** en que Auth borra la fila de `auth.users`.
-   - O se borra la cuenta y el participante queda sin `user_id`, o no pasa
-     nada: no existe el estado intermedio "borrado sin preparar".
-   - Votos, tramos y resultados ya referenciaban el participante, así que
-     nada de eso se pierde ni conserva el `user_id`.
-2. **Cierre de los tramos vigentes (el mes en curso se recalcula, como pide
-   el diseño). Corregido en v3.1 por el orden de locks (§2.2.4).**
-   - **Ninguna tabla comunitaria referencia `auth.users`** salvo
-     `participantes.user_id`. Reseñas, versiones, votos, denuncias, bloqueos
-     y suspensiones referencian al participante. Así el `DELETE` de Auth
-     sólo toca, como mucho, la fila de `participantes`.
-   - **Camino normal: baja en dos pasos desde la ruta existente**
-     (`/api/cuenta/eliminar`, que ya usa `service_role`):
-     1. la función `baja_comunitaria(uid)` corre en su propia transacción
-        con el orden estándar de §2.2.4: cierra tramos con su marca, borra
-        reseñas, votos propios, denuncias hechas y bloqueos según §5, y pone
-        `participantes.user_id = null`;
-     2. recién si eso confirmó, `deleteUser`.
-   - Si el paso 1 falla, **no se borra la cuenta**: la ruta responde error y
-     el usuario reintenta. No existe "cuenta borrada con el mes no
-     reconstruible", que fue lo que se retiró de v2.
-   - Si el paso 1 confirma y `deleteUser` falla, queda una cuenta sin datos
-     comunitarios. Eso es parte de lo que el usuario pidió borrar; el
-     reintento completa la baja. La reconstrucción del ranking no depende de
-     ese paso.
-   - **Red de seguridad** para bajas que no pasen por la ruta (por ejemplo,
-     desde el panel de Supabase): `on delete set null` más un trigger
-     `AFTER UPDATE OF user_id` sobre `participantes`, que hace lo mismo que
-     el paso 1 dentro de la transacción de Auth.
-     - En ese camino el orden **no** es el estándar: Auth ya tiene la fila
-       de `participantes` cuando el trigger pide `K_CORTE`. Con una
-       consolidación esperando el exclusivo, puede formarse un ciclo, y
-       Postgres aborta una de las transacciones; la baja se revierte entera.
-     - Es una excepción documentada, no el camino de diseño. El
-       procedimiento manual dice: llamar primero a `baja_comunitaria`.
-       E2 lo prueba.
+> **Conciliación (22/10/2026, auditoría de `e34c53e`).** La versión 3
+> decía que toda la baja era atómica dentro de la transacción de Auth. Desde
+> la v3.1 el camino normal tiene **dos transacciones que no comparten
+> atomicidad**: la parte comunitaria y `deleteUser`. Lo único atómico es
+> cada paso por separado. Lo que sí sigue valiendo: la **reconstrucción del
+> ranking** no depende de que la baja termine, porque tramos y resultados
+> referencian al participante y se cierran con su marca. El contrato de abajo
+> reemplaza los textos anteriores que hablaban de baja atómica.
+
+1. **Identidad comunitaria separada.** Ninguna tabla comunitaria referencia
+   `auth.users` salvo `participantes.user_id … on delete set null`. Reseñas,
+   versiones, votos, denuncias, bloqueos y suspensiones referencian al
+   participante. Votos, tramos y resultados no pierden nada ni conservan el
+   `user_id`.
+2. **Contrato de baja con estado persistente (cierra A1 de `e34c53e`).**
+   - **Marcador:** tabla `bajas_en_curso(user_id primary key references
+     auth.users on delete cascade, iniciada_en, intentos, ultimo_error)`.
+     Mientras exista Auth, el marcador existe; cuando Auth borra la fila, el
+     marcador cae con ella.
+   - **Lock por cuenta:** toda función que resuelve o crea el participante
+     de un `uid`, y `baja_comunitaria`, toma `pg_advisory_xact_lock(K_CUENTA,
+     hash(uid))` **después de `K_CORTE` y antes de cualquier fila** (§2.2.4).
+     Eso serializa la comprobación del marcador con la creación del
+     participante.
+   - **Paso 1, `baja_comunitaria(uid)`** (una transacción, idempotente):
+     inserta el marcador si no existe; cierra tramos con su marca; borra
+     reseñas, votos propios, denuncias hechas y bloqueos según §5; pone
+     `participantes.user_id = null`. Si no había participante, sólo inserta
+     el marcador. Repetirla no cambia nada más.
+   - **Efecto del marcador:** con el marcador presente, ninguna función crea
+     participante ni acepta publicar, editar, evaluar, denunciar, bloquear o
+     cambiar nombre para ese `uid` (se rechaza con "baja en curso"). Incluye
+     las escrituras que ya habían verificado el Bearer antes: la comprobación
+     ocurre dentro de su transacción, bajo `K_CUENTA`. Una escritura que tomó
+     `K_CUENTA` antes que la baja confirma primero, y la baja la procesa
+     después.
+   - **Paso 2, `deleteUser`.** Siguen funcionando gestionar la cuenta, leer
+     lo no comunitario y **reintentar la eliminación**.
+   - **Reconciliación** en la ruta (y al reintentar):
+     - `deleteUser` ok → "Tu cuenta se eliminó".
+     - `deleteUser` con error → se consulta si el usuario existe
+       (`getUserById`). Si ya no existe (respuesta perdida o reintento
+       concurrente que ganó) → eliminación completa. Si existe → se registra
+       `ultimo_error` y se responde **"Borramos tus datos de comunidad, pero
+       no pudimos eliminar la cuenta. Probá de nuevo"**. Nunca se dice que la
+       cuenta se eliminó si Auth sigue teniéndola.
+     - Al volver a iniciar sesión con el marcador presente, la app muestra el
+       estado "Eliminación pendiente" con el botón de reintento.
+   - **Cancelación:** el usuario no cancela en esta versión. El dueño puede
+     quitar el marcador con un procedimiento admin registrado; **no restaura
+     nada**: si la persona vuelve a participar, nace un participante nuevo,
+     sin reseñas, votos ni historial anteriores.
+   - **Limpieza del marcador:** por cascada al borrarse Auth. Un marcador con
+     Auth vivo se lista en el dashboard como baja pendiente; no se borra solo.
+   - **No hay garantía atómica entre los dos pasos** y no se promete. Lo que
+     se garantiza es: paso 1 todo-o-nada, ninguna escritura comunitaria
+     posterior, y un mensaje que dice exactamente qué se borró.
+3. **Bajas fuera de la ruta (panel de Supabase u otra herramienta de
+   Auth).** Red de seguridad: `on delete set null` más un trigger `AFTER
+   UPDATE OF user_id` sobre `participantes` que hace lo mismo que el paso 1
+   dentro de la transacción de Auth.
+   - Ahí el orden de locks está invertido (Auth ya tiene la fila de
+     `participantes` cuando el trigger pide `K_CORTE` y `K_CUENTA`). Puede
+     haber un deadlock que Postgres resuelve abortando una transacción; si la
+     abortada es la de Auth, la baja se revierte entera y no queda nada a
+     medias.
+   - **Procedimiento técnico seguro** (runbook en el plan, entrega E2b): ante
+     un pedido de baja que no pasa por la app, el admin ejecuta primero
+     `baja_comunitaria_admin(uid)` (mismo paso 1, ejecutable sólo con
+     `service_role`) y recién después borra en Auth; si el borrado de Auth
+     falla por deadlock o timeout, se reintenta; verificar con la consulta
+     del runbook que no quede participante con ese `user_id`.
+   - Se prueba con el borrado real de Auth en la base local aislada, no sólo
+     borrando filas con SQL.
    - No se agrega otro trigger sobre `auth.users`, aunque `handle_new_user`
      es precedente: se evita acoplar más lógica a la tabla de Auth.
 3. **Reseñas y versiones borradas:** `baja_comunitaria` (o el borrado de la
@@ -384,6 +420,9 @@ intervalos desordenados o una decisión sobre una versión obsoleta. Cada
 operación de §2.1.2 que muta sigue estos pasos, en este orden:
 
 1. `pg_advisory_xact_lock_shared(K_CORTE)`, sin tener ningún otro lock;
+   después `pg_advisory_xact_lock(K_CUENTA, hash(uid))` del que actúa
+   (agregado el 22/10 por el contrato de baja, §2.2.3), y relectura del
+   marcador de baja;
 2. **locks de las entidades afectadas** con `select … for update`, en un
    orden global estable:
    1. participantes, por id ascendente;

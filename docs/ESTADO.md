@@ -156,16 +156,20 @@ AAB tiene que ser `5` o mayor.
    **Decisión del dueño (21/10): sin gastos adicionales.** No hay API paga,
    banco pago, tope de USD 10, servicios nuevos ni upgrades, y tampoco
    transferencia a una API gratuita. La revisión v3 propone moderación por
-   reglas propias, sin clasificador externo. Codex auditó la v3 (`97cf4d7`)
-   y la v3.1 aplica sus correcciones puntuales (propuestas, no aprobadas).
+   reglas propias, sin clasificador externo. Codex auditó la v3.1
+   (`e34c53e`); el contrato de baja quedó cerrado en la revisión §2.2.3.
+   **Plan preparado, pendiente de auditoría y autorización** (22/10):
+   `docs/superpowers/plans/2026-10-22-resenas-comunidad.md`, entregas
+   E0–E9c. Ninguna entrega está autorizada.
    **Falta:**
-   - auditoría de Codex sobre la v3.1;
-   - P5: autorización de sólo lectura para E0 (no está autorizada);
+   - auditoría de Codex sobre el plan, y autorización del dueño por entrega;
+   - P5: autorización de sólo lectura para E0 (no está autorizada; las
+     consultas están en el plan y no se ejecutaron);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
      prueba de buzón sólo si E0 lo exige, y la carga de revisión que acepta
      (propuesta: colas de retenidos y denuncias más un muestreo de hasta 5
-     publicaciones por sesión; **no aceptada**);
-   - recién después, el plan.
+     publicaciones por sesión; **no aceptada**). No bloquean construir con
+     fixtures; sí activar lo que depende de ellas (plan §1).
    Viaja en el mismo AAB que 3c.
    **MFA de la reseña editorial:** trabajo separado. Confirmado en código,
    no en la configuración efectiva de Producción.
@@ -221,6 +225,30 @@ reusa su diseño, no se mergea.
   sin cambios del checkout principal, donde era un archivo sin seguimiento;
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
+
+  **Plan de implementación (22/10) — preparado, pendiente de auditoría y
+  autorización.** Sólo documentación; nada ejecutado.
+  - Auditoría de Codex sobre `e34c53e`
+    (`docs/medidas/2026-10-22-auditoria-resenas-e34c53e.md`, copiada sin
+    cambios, SHA-256 `E52E997D…21ADB2DEA4`).
+  - **Contrato de baja cerrado** (revisión §2.2.3): marcador persistente
+    `bajas_en_curso` mientras Auth tiene la cuenta; lock por cuenta que
+    impide recrear participante y rechaza escrituras en vuelo; reintento y
+    reconciliación con `getUserById`; el mensaje distingue "se borraron tus
+    datos de comunidad" de "se eliminó la cuenta"; sin cancelación del
+    usuario y sin restauración; procedimiento técnico para bajas desde el
+    panel. **No hay atomicidad entre los dos pasos**; los textos que la
+    afirmaban quedaron conciliados.
+  - Plan en `docs/superpowers/plans/2026-10-22-resenas-comunidad.md`: E0
+    (consultas de sólo lectura escritas, **no ejecutadas**), E1 reglas, E2a
+    esquema y permisos, E2b baja (temprana, casos B1–B11), E2c locks, E3a
+    escritura, E3b colas y denuncias, E4 moderación, E5a lectura, E5b
+    utilidad, E6 perfiles, E7 Top Yumpers, E8 purga, E9a web apagada, E9b
+    Android (mismo AAB que salas), E9c activación.
+  - Pruebas de permisos, concurrencia y cascadas en Supabase local con roles
+    reales y REST/RPC directo, sobre el banco de salas.
+  - **Siguiente paso:** auditoría de Codex del plan. Después, autorización
+    del dueño entrega por entrega.
 
   **Versión 3.1 (21/10) — correcciones puntuales tras la auditoría de Codex
   sobre `97cf4d7`** (`docs/medidas/2026-10-21-auditoria-resenas-97cf4d7.md`,
@@ -300,9 +328,10 @@ reusa su diseño, no se mergea.
     - Escritura sólo por funciones ejecutables por `service_role`.
     - Autoevaluación impedida con autor redundante, FK compuesta y `CHECK`
       de la misma fila.
-    - Baja de cuenta atómica: participante comunitario con
-      `on delete set null`, trigger de cierre en la misma transacción y sin
-      estado "no reconstruible".
+    - Baja de cuenta: participante comunitario con `on delete set null` y
+      sin estado "no reconstruible". (Lo de "atómica" quedó superado: desde
+      el 22/10 es una baja en dos pasos con marcador persistente, sin
+      atomicidad entre los pasos; ver revisión §2.2.3.)
     - Corte mensual para todas las operaciones por bloqueo consultivo
       compartido/exclusivo con marca `clock_timestamp()` posterior al
       bloqueo. **Reemplaza el margen de 15 min de v2.**
@@ -372,9 +401,8 @@ reusa su diseño, no se mergea.
   - la ficha no está en el bundle nativo;
   - CORS sólo admite GET/POST.
 
-  **Siguiente paso:** auditoría de Codex sobre la v3.1; después E0 (sólo
-  lectura, cuando el dueño lo autorice) y recién entonces el plan detallado.
-  Mientras tanto no se escribe código ni SQL.
+  **Siguiente paso:** ver el bloque "Plan de implementación (22/10)" de
+  arriba. Mientras no haya autorización no se escribe código ni SQL.
 
 - **Integración de Yumpeá: "Compartir invitación" + ícono del resultado
   (2026-10-21) — desarrollo y prueba local TERMINADOS; rama local
