@@ -218,10 +218,22 @@ const RE_AUTO_CORREO = new RegExp(
 const RE_PALABRA_CORREO = palabras(L.PALABRAS_CORREO);
 const RE_INTENCION = palabras([...L.VERBOS_CONTACTO, ...L.INTENCION_CORREO]);
 const NO_ALIAS = new Set(L.NO_ALIAS_CORREO);
-// Un alias con forma de usuario: letras y un "_", "." o dígito adentro
-// ("charly_movies", "ana.demo", "tito88"). "007" o "2.0" no: sin letras.
-const RE_ALIAS_FUERTE_G = /(?<![\p{L}\p{N}@._])(?=[\p{N}_.]*\p{L})[\p{L}\p{N}]+(?:[_.][\p{L}\p{N}]+)+|(?<![\p{L}\p{N}@._])\p{L}+\d+(?![\p{L}\p{N}])/gu;
-const esAliasFuerte = (a: string) => /\p{L}/u.test(a) && /[_.\d]/.test(a.replace(/[._]+$/, ""));
+// Candidatos a alias: tramos de letras, dígitos, ".", "_" y "-". UNA sola
+// definición de "alias con forma de usuario" para los dos recorridos (A2 de
+// 251f3d0: antes la búsqueda libre no veía "88cine" ni "cine8fan").
+const RE_TOKEN_ALIAS_G = /(?<![\p{L}\p{N}@._\-])[\p{L}\p{N}][\p{L}\p{N}._\-]*/gu;
+const RE_FORMA_ALIAS = /^[\p{L}\p{N}]+(?:[._\-][\p{L}\p{N}]+)*$/u;
+/**
+ * Alias con forma de usuario: letras y dígitos con al menos una letra y al
+ * menos un dígito, "_" o "." en cualquier posición ("charly_movies",
+ * "ana.demo", "tito88", "88cine", "cine8fan"). Sin letras no ("007", "2.0",
+ * "8.5"); sólo letras y guiones tampoco ("ciencia-ficcion"). La puntuación
+ * final de la oración no cuenta.
+ */
+export function esAliasFuerte(token: string): boolean {
+  const a = token.replace(/[._\-]+$/, "");
+  return RE_FORMA_ALIAS.test(a) && /\p{L}/u.test(a) && /[_.\d]/.test(a);
+}
 
 /** Señales combinadas de un correo dado sin la dirección completa. */
 export function correoIndirecto(b: string): boolean {
@@ -240,8 +252,9 @@ export function correoIndirecto(b: string): boolean {
   //    charly_movies"). Un verbo, "correo" o un proveedor solos no alcanzan.
   const correos = posiciones(RE_PALABRA_CORREO, b);
   if (correos.length === 0 || intenciones.length === 0) return false;
-  RE_ALIAS_FUERTE_G.lastIndex = 0;
-  for (const m of b.matchAll(RE_ALIAS_FUERTE_G)) {
+  RE_TOKEN_ALIAS_G.lastIndex = 0;
+  for (const m of b.matchAll(RE_TOKEN_ALIAS_G)) {
+    if (!esAliasFuerte(m[0])) continue;
     const i = m.index!;
     if (correos.some((c) => Math.abs(c - i) <= L.VENTANA_CORREO_INDIRECTO) && cerca(i)) return true;
   }
@@ -254,10 +267,12 @@ export function correoIndirecto(b: string): boolean {
  * correo es charly_movies en el de Google") y el pedido de correo con un
  * alias con forma de usuario cerca. No dispara con Google, "correo" o un
  * verbo aislados, ni con "mi correo es un desastre".
+ * v2 (A2 de 251f3d0): un solo criterio de alias (`esAliasFuerte`) en los dos
+ * recorridos; la búsqueda libre ya reconoce dígitos al principio y en medio.
  */
 export const reglaCorreoIndirecto: Regla<unknown> = {
   id: "contacto.email_indirecto",
-  version: 1,
+  version: 2,
   evaluar: (p) =>
     correoIndirecto(p.base)
       ? disparo("retener", "Posible correo de contacto dado de forma incompleta o indirecta.")
@@ -273,10 +288,13 @@ const RE_DOMINIO_DEBIL = new RegExp(`${BORDE_ANTES}${ETIQUETA}\\.(?:${L.TLD_DEBI
  * "etiqueta.letras" no aparece en puntuación natural, así que no hace falta
  * conocer el TLD. El tope es el largo de una etiqueta DNS (63), no una lista:
  * E1.2 lo limitaba a 6 letras y dejaba pasar las terminaciones largas (A1 de
- * 40288f6). La ruta empieza con letra o dígito. "y/o", "8.5/10" y "2.0/beta"
- * no llegan acá: les falta "etiqueta.letras/". Sin ruta, manda la lista de TLD.
+ * 40288f6). La ruta admite los mismos caracteres que en E1.2, también al
+ * principio ("/_demo", "/-x", "/?id=1"): v4 exigía letra o dígito inicial y
+ * eso dejó pasar rutas que v3 detectaba (A1 de 251f3d0). "y/o", "8.5/10" y
+ * "2.0/beta" no llegan acá: les falta "etiqueta.letras/". Sin ruta, manda la
+ * lista de TLD.
  */
-const RE_DOMINIO_CON_RUTA = new RegExp(`${BORDE_ANTES}${ETIQUETA}(?:\\.${ETIQUETA})*\\.\\p{L}{2,63}/[\\p{L}\\p{N}][\\p{L}\\p{N}_\\-./?=&%#]*`, "u");
+const RE_DOMINIO_CON_RUTA = new RegExp(`${BORDE_ANTES}${ETIQUETA}(?:\\.${ETIQUETA})*\\.\\p{L}{2,63}/[\\p{L}\\p{N}_\\-./?=&%#]+`, "u");
 const RE_ESQUEMA = /(?:https?:\/\/|www\.)/u;
 const RE_HOSTS = palabras(L.HOSTS_SIN_TLD);
 
@@ -286,10 +304,12 @@ const RE_HOSTS = palabras(L.HOSTS_SIN_TLD);
  * acortadores conocidos; "las punto com" ya no llega como dominio (plegado).
  * v4 (A1 de 40288f6): la dirección con ruta acepta terminaciones alfabéticas
  * de cualquier largo (hasta 63), no sólo de 2 a 6.
+ * v5 (A1 de 251f3d0): la ruta vuelve a admitir cualquier carácter de ruta al
+ * principio, como en v3; v4 había perdido "/_demo".
  */
 export const reglaEnlace: Regla<unknown> = {
   id: "contacto.enlace",
-  version: 4,
+  version: 5,
   evaluar: (p) =>
     RE_ESQUEMA.test(p.letras) || RE_DOMINIO_FUERTE.test(p.letras) || RE_DOMINIO_DEBIL.test(p.letras) ||
     RE_DOMINIO_CON_RUTA.test(p.letras) || hay(RE_HOSTS, p.letras)

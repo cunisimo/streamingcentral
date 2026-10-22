@@ -137,3 +137,40 @@ test("correo indirecto: autoatribución con alias o pedido + alias se retienen; 
     "Gmail, Outlook y Yahoo aparecen en la escena de la oficina, muy de los 2000.",
   ]) assert.equal(evaluar(l), "publicar", l);
 });
+
+// ---------------------------------------------------------------- inicio de ruta (A1 de 251f3d0)
+
+test("dirección con ruta: cualquier carácter de ruta al principio, con y sin subdominio, en cualquier largo", () => {
+  const INICIOS = ["demo", "9demo", "_demo", "-demo", ".demo", "?id=1", "=x", "&x", "%20x", "#x", "/x"];
+  for (const n of [2, 3, 6, 7, 11, 18, 40]) {
+    const tld = "abcdefghijklmnopqrstuvwxyz".repeat(2).slice(0, n);
+    for (const ruta of INICIOS) {
+      assert.equal(evaluar(`Mirala en ejemplo.${tld}/${ruta} sin cortes.`), "rechazo_contenido", `${n} letras, /${ruta}`);
+      assert.equal(evaluar(`Mirala en cdn.ejemplo.${tld}/${ruta} sin cortes.`), "rechazo_contenido", `${n} letras, subdominio, /${ruta}`);
+    }
+  }
+  for (const l of [
+    "Es el final de la frase./ Sigue otra escena igual de buena.",
+    "Termina así.../ y sigue con un epílogo largo.",
+    "Le doy un 7/10, la música/el sonido son lo mejor.",
+    "Drama/comedia/suspenso, todo junto y bien hecho.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});
+
+// ---------------------------------------------------------------- un solo criterio de alias (A2 de 251f3d0)
+
+test("alias: dígitos al principio, en medio y al final, puntos y guiones bajos se retienen por los dos recorridos", () => {
+  const ALIAS = ["88cine", "cine8fan", "cinefan88", "cine.fan", "cine_fan", "cine.fan88", "8cine_fan", "c1n3fan"];
+  for (const a of ALIAS) {
+    assert.equal(evaluar(`Mandame un mail, soy ${a}, y te paso la lista.`), "retener", `libre: ${a}`);
+    assert.equal(evaluar(`Mi correo es ${a}, ahí charlamos.`), "retener", `autoatribución: ${a}`);
+  }
+  for (const l of [
+    "Mandame un mail, soy 2024, y te paso la lista de estrenos.",
+    "El agente 007 le manda un mail a M y escribe todo en clave.",
+    "Blade Runner 2049 y Se7en tienen la mejor fotografía de su década.",
+    "Le escribe un mail a su jefe con la versión 2.0 del informe y la trama arranca.",
+    "La app de correo funciona en Android 14 y aparece en cada plano.",
+    "Mi correo es un desastre desde que vi M3GAN, todos me escriben.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});

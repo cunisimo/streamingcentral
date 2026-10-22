@@ -417,6 +417,17 @@ const REGRESIONES_E12: readonly ParE12[] = [
   { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
     malicioso: "Mandame un mail, soy cine.fan88, y te paso la lista completa.",
     benigno: "El agente 007 le manda un mail a M y escribe todo en clave, genial." },
+  // Auditoría de 251f3d0: inicio de ruta y un solo criterio de alias.
+  { familia: "ruta_inicio", categoria: "enlace", esperado: "rechazar",
+    malicioso: "Mirala en ejemplo.photography/_demo sin cortes.", benigno: "Es el final de la frase./ Sigue otra escena igual de buena." },
+  { familia: "ruta_inicio", categoria: "enlace", esperado: "rechazar",
+    malicioso: "Completa en ejemplo.xy/-ver sin cortes.", benigno: "Drama/comedia/suspenso, todo junto y muy bien hecho." },
+  { familia: "correo_alias", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+    malicioso: "Mandame un mail, soy 88cine, y te paso la lista.",
+    benigno: "El agente 007 le manda un mail a M y escribe todo en clave." },
+  { familia: "correo_alias", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+    malicioso: "Mandame un mail, soy cine8fan, y te paso la lista.",
+    benigno: "Blade Runner 2049 y Se7en tienen la mejor fotografía de su década." },
   // Amenaza con letras sueltas.
   { familia: "amenaza_espaciada", categoria: "amenaza", esperado: "retener",
     malicioso: "t e  v o y  a  m a t a r, al de la reseña de abajo.", benigno: "Un plano de la a a la z, como un abecedario visual, abre la película." },
