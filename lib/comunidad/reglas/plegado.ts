@@ -51,6 +51,26 @@ export const MIN_PIEZAS_CORRIDA = 3;
 // Entre dos piezas de una corrida sólo puede haber separadores, nunca letras.
 const SEPARADOR_CORRIDA = /^[\s.\-_()*+,:;/|]*$/;
 
+// Letras que se usan en lugar de dígitos: "5O5O", "1l", "5S", "7O".
+const LETRA_DIGITO: Readonly<Record<string, string>> = {
+  o: "0", l: "1", i: "1", "|": "1", s: "5", z: "2", b: "8", g: "9",
+};
+
+/**
+ * En una pieza que YA tiene al menos un dígito y sólo tiene dígitos o letras
+ * de `LETRA_DIGITO`, las letras se pasan a dígitos ("5o5o" → "5050"). Una
+ * pieza sin dígitos no se toca ("solo", "bis"), y una con otra letra tampoco
+ * ("Se7en", "M3GAN", "2do", "T3E8"). La familia es la de los confusables
+ * ambiguos de la pasada 2, vista desde los números (E1.1, A1).
+ */
+export function letrasADigitos(b: string): string {
+  return b.replace(/[\p{L}\p{N}|]+/gu, (pieza) => {
+    if (!/\d/.test(pieza)) return pieza;
+    if (![...pieza].every((c) => /\d/.test(c) || c in LETRA_DIGITO)) return pieza;
+    return [...pieza].map((c) => LETRA_DIGITO[c] ?? c).join("");
+  });
+}
+
 /**
  * Pasa a dígitos las palabras-número que forman una corrida de al menos
  * `MIN_PIEZAS_CORRIDA` piezas numéricas ("once cinco cinco…", "11 cinco 66").
@@ -94,12 +114,25 @@ export function palabrasADigitos(b: string): string {
 
 // ---------------------------------------------------------------- pasada 2
 
-// Cirílicas y griegas que se ven como una latina y no son ambiguas. La lista
-// es la de los confusables más comunes, no una tabla completa de Unicode.
+// Letras de otros alfabetos que se ven como una latina (minúsculas: `base` ya
+// bajó las mayúsculas). E1.1 amplió la tabla a las formas "de versalita" que
+// también se usan para disimular ("сом" con м cirílica, A2). Sigue siendo una
+// lista de los confusables más comunes, NO una tabla completa de Unicode.
 const CONFUSABLES_LETRA: Readonly<Record<string, string>> = {
-  "а": "a", "с": "c", "е": "e", "о": "o", "р": "p", "х": "x", "у": "y",
-  "і": "i", "ј": "j", "ѕ": "s", "ԁ": "d", "һ": "h", "ӏ": "l", "ԛ": "q", "ԝ": "w",
-  "α": "a", "ο": "o", "ν": "v", "τ": "t", "ι": "i", "κ": "k", "ρ": "p",
+  // cirílico
+  "а": "a", "в": "b", "с": "c", "ԁ": "d", "е": "e", "г": "r", "һ": "h", "н": "h",
+  "і": "i", "ј": "j", "к": "k", "ӏ": "l", "м": "m", "п": "n", "о": "o", "р": "p",
+  "ԛ": "q", "ѕ": "s", "т": "t", "и": "u", "ѵ": "v", "ԝ": "w", "х": "x", "у": "y", "ь": "b",
+  // griego
+  "α": "a", "β": "b", "ε": "e", "η": "n", "ι": "i", "κ": "k", "μ": "u", "ν": "v",
+  "ο": "o", "ρ": "p", "τ": "t", "υ": "u", "χ": "x", "ω": "w", "γ": "y",
+  // latín extendido y versalitas
+  "ı": "i", "ɑ": "a", "ɡ": "g", "ɩ": "i", "ᴀ": "a", "ʙ": "b", "ᴄ": "c", "ᴅ": "d",
+  "ᴇ": "e", "ɢ": "g", "ʜ": "h", "ɪ": "i", "ᴊ": "j", "ᴋ": "k", "ʟ": "l", "ᴍ": "m",
+  "ɴ": "n", "ᴏ": "o", "ᴘ": "p", "ʀ": "r", "ꜱ": "s", "ᴛ": "t", "ᴜ": "u", "ᴠ": "v",
+  "ᴡ": "w", "ʏ": "y", "ᴢ": "z",
+  // armenio
+  "օ": "o", "ս": "u", "ց": "g",
 };
 
 /** Cada letra con sus variantes ambiguas, para armar patrones. */
@@ -155,7 +188,7 @@ export function plegar(texto: string): Plegado {
   return {
     original,
     base: b,
-    digitos: palabrasADigitos(b),
+    digitos: palabrasADigitos(letrasADigitos(b)),
     letras: mapearConfusables(resolverSeparadores(b)),
   };
 }

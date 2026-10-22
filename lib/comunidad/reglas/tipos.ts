@@ -32,7 +32,7 @@ export interface Plegado {
   original: string;
   /** NFKC, minúsculas, sin acentos ni invisibles, espacios colapsados. */
   base: string;
-  /** Pasada 1: `base` con las corridas de palabras-número pasadas a dígitos. */
+  /** Pasada 1: `base` con letras por dígitos en piezas numéricas y las corridas de palabras-número pasadas a dígitos. */
   digitos: string;
   /** Pasada 2: `base` con puntos y arrobas ofuscados resueltos, letras sueltas unidas y cirílicas/griegas mapeadas. */
   letras: string;

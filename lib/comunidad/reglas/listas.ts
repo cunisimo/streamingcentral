@@ -28,6 +28,18 @@ export const PALABRAS_CONTACTO = [
   "dm", "md", "privado",
 ];
 
+/**
+ * Señales FUERTES de contacto: pedidos en primera persona y medios de contacto.
+ * Sólo éstas hacen que un número con forma de año, fecha o importe cuente como
+ * teléfono (E1.1, A1). "número", "mensaje" o "contacto" son débiles: "el número
+ * de entradas vendidas fue 1.200.000" es legítimo.
+ */
+export const CONTACTO_FUERTE = [
+  "llamame", "escribime", "escribile", "mandame", "mensajeame", "hablame",
+  "contactame", "agendate", "agendame", "wsp", "wpp", "whatsapp", "whats",
+  "wa", "telegram", "tel", "telefono", "cel", "celu", "celular",
+];
+
 /** Redes y mensajería. Solas no dicen nada ("lo vi en Twitter"). */
 export const PLATAFORMAS_RED = [
   "instagram", "insta", "ig", "telegram", "whatsapp", "wsp", "wpp", "wa",
@@ -46,8 +58,30 @@ export const VERBOS_CONTACTO = [
   "seguime", "buscame", "encontrame", "contactame", "sumame", "dm", "md", "privado",
 ];
 
+/**
+ * Una red y un verbo de contacto cuentan como pedido sólo si están a esta
+ * distancia, en caracteres, y el verbo no está entre comillas (E1.1, A3).
+ */
+export const VENTANA_RED = 30;
+/** Usuario y red, o usuario y verbo, a esta distancia. */
+export const VENTANA_HANDLE = 60;
+
 /** Proveedores de correo: "algo@gmail" ya es un correo aunque falte el ".com". */
 export const PROVEEDORES_CORREO = ["gmail", "hotmail", "yahoo", "outlook", "live", "icloud", "proton", "protonmail"];
+
+/**
+ * "usuario en gmail" / "usuario de hotmail" (E1.1, A2). El usuario NO puede
+ * ser una de estas palabras: "el correo de gmail de su jefe", "un mail de
+ * hotmail con la promo".
+ */
+export const NO_USUARIO_CORREO = [
+  "mail", "mails", "email", "emails", "correo", "correos", "cuenta", "cuentas",
+  "casilla", "mensaje", "mensajes", "notificacion", "notificaciones", "promo",
+  "promos", "app", "aplicacion", "bandeja", "buscador", "servicio", "usuarios",
+];
+/** Pista de correo cerca para aceptar un usuario sin dígitos, "_" ni ".". */
+export const PISTAS_CORREO = ["correo", "mail", "email", "escribime", "escribile", "mandame", "manda", "contacto", "contactame"];
+export const VENTANA_CORREO = 40;
 
 /**
  * TLD que cuentan siempre. Ninguno es una palabra común del castellano, así

@@ -16,13 +16,31 @@ test("teléfono: 8 dígitos o más se rechazan; 6–7 sólo con una palabra de c
   assert.equal(resena("Tel 4455667 por cualquier cosa.").resultado, "rechazo_contenido");
 });
 
-test("teléfono: años, montos con miles y fechas no son contactos", () => {
-  assert.deepEqual(corridasNumericas("de 1984 1989 y 1990").map((c) => c.texto), []);
-  assert.deepEqual(corridasNumericas("recaudo 1.000.000.000 de dolares"), []);
-  assert.deepEqual(corridasNumericas("estreno el 15-03-2024"), []);
+test("teléfono: años, montos con miles y fechas quedan marcados como excepción", () => {
+  assert.deepEqual(corridasNumericas("de 1984 1989 y 1990").map((c) => c.excepcion), ["anio", "anio"]);
+  assert.deepEqual(corridasNumericas("recaudo 1.000.000.000 de dolares").map((c) => c.excepcion), ["miles"]);
+  assert.deepEqual(corridasNumericas("estreno el 15-03-2024").map((c) => c.excepcion), ["fecha"]);
   // Con "/" son tres números distintos, ninguno largo.
   assert.ok(corridasNumericas("15/03/2024").every((c) => c.digitos <= 4));
   assert.equal(resena("Es de 2001, se filmó en 1999 y llegó en 2003.").resultado, "publicar");
+  assert.equal(resena("Recaudó 1.155.512.345 dólares en todo el mundo.").resultado, "publicar");
+  assert.equal(resena("Las fechas clave de la saga son 1985 2026 y 2030.").resultado, "publicar");
+  // "número" es una señal débil: no convierte un importe en teléfono.
+  assert.equal(resena("El número de entradas vendidas fue 1.200.000 en una semana.").resultado, "publicar");
+});
+
+test("teléfono v2 (A1): una señal fuerte de contacto anula la excepción", () => {
+  assert.equal(resena("Escribime al 1.155.512.345 para charlar.").resultado, "rechazo_contenido");
+  assert.equal(resena("Escribime al 1985 2026 para charlar.").resultado, "rechazo_contenido");
+  assert.equal(resena("Llamame al 15-03-2024, es mi número.").resultado, "rechazo_contenido");
+});
+
+test("teléfono v2 (A1): letras por dígitos dentro de un número", () => {
+  assert.equal(resena("Escribime al 11 5O5O 1234 para charlar.").resultado, "rechazo_contenido");
+  assert.equal(resena("Mandame un mensaje al 1l 44 5S 66 77.").resultado, "rechazo_contenido");
+  // Sin contacto ni largo de teléfono, una pieza así es un nombre de modelo.
+  assert.equal(resena("El robot modelo 5O5O aparece recién en el capítulo 12.").resultado, "publicar");
+  assert.equal(resena("Se7en, M3GAN y T3E8 son títulos con números.").resultado, "publicar");
 });
 
 test("teléfono: un CUIT con su palabra es dato personal (retiene), no teléfono", () => {
@@ -50,6 +68,35 @@ test("redes: mencionar una red no es contacto; red + verbo, usuario + red o 'red
 test("correo: con o sin TLD si el proveedor es conocido", () => {
   assert.equal(resena("Escribime a ana@gmail sin el punto com.").resultado, "rechazo_contenido");
   assert.ok(reglas("Mandame a ana arroba hotmail punto com.").includes("contacto.email"));
+});
+
+test("correo v2 (A2): 'usuario en/de proveedor', con usuario de forma reconocible o pista de correo", () => {
+  assert.ok(reglas("Mi correo es cuenta_demo en gmail para charlar.").includes("contacto.email"));
+  assert.ok(reglas("Escribime a anita1990 de hotmail.").includes("contacto.email"));
+  assert.ok(reglas("Para más, juanperez en yahoo, escribime.").includes("contacto.email"));
+  // Benignos emparejados.
+  assert.equal(resena("El hacker entra al correo de gmail de su jefe.").resultado, "publicar");
+  assert.equal(resena("Me llegó un mail de hotmail con la promo del estreno.").resultado, "publicar");
+  assert.equal(resena("Su usuario en gmail era el mismo que el de la serie.").resultado, "publicar");
+});
+
+test("dominio v2 (A2): terminaciones con confusables de otros alfabetos", () => {
+  assert.equal(resena("Visita ejemplo.coм para encontrar novedades.").resultado, "rechazo_contenido");
+  assert.equal(resena("Está en verpelis.nеt sin cortes.").resultado, "rechazo_contenido");
+  assert.equal(resena("La tenés en verpelis.οrg gratis.").resultado, "rechazo_contenido");
+  // Texto en otro alfabeto sin dominio no dispara nada.
+  assert.equal(resena("Левиафан es una película rusa durísima.").resultado, "publicar");
+});
+
+test("redes v2 (A3): diálogo de ficción y menciones lejanas no son contacto", () => {
+  assert.equal(resena("El padre le dice \"escribime\" a su hija; luego ella mira Instagram, y esa escena me emocionó.").resultado, "publicar");
+  assert.equal(resena("En una escena él le dice 'mandame un mensaje por WhatsApp cuando llegues' y nunca llega.").resultado, "publicar");
+  assert.equal(resena("Agregame a la lista de fans: la vi tres veces. Después busqué el tráiler en TikTok.").resultado, "publicar");
+  // Pedidos reales, emparejados.
+  assert.equal(resena("Agregame al wsp y charlamos de la peli.").resultado, "rechazo_contenido");
+  assert.equal(resena("Escribime por insta, soy cinefila_demo.").resultado, "rechazo_contenido");
+  // Entre comillas, pero con un usuario: lo detecta igual.
+  assert.equal(resena("\"Seguime en ig @cine_demo\" dice el final.").resultado, "rechazo_contenido");
 });
 
 test("spam: una sola señal no alcanza; dos sí", () => {

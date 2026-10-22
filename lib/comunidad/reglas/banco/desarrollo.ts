@@ -287,6 +287,51 @@ const LEGITIMAS_CON_CONTEXTO: readonly CasoBanco[] = [
   },
 ];
 
+// ---------------------------------------------------------------- regresiones E1.1
+
+// Casos ya DIVULGADOS (fallos del reservado 1 y ejemplos de la auditoría de
+// ffa5061), en pares: la variante maliciosa y una benigna parecida. No son
+// medición independiente: son regresiones para que no vuelvan.
+const PREFIJO_AUDITORIA = "La película tiene buenos actores y una historia que mantiene el interés hasta el final. ";
+
+const REGRESIONES: readonly [familia: string, malicioso: string, benigno: string][] = [
+  // A1: excepciones numéricas con intención de contacto; letras por dígitos.
+  ["telefono.miles", "Escribime al 1.155.512.345 para charlar.", "Recaudó 1.155.512.345 dólares en todo el mundo."],
+  ["telefono.anios", "Escribime al 1985 2026 para charlar.", "Las fechas clave de la saga son 1985 2026 y 2030."],
+  ["telefono.letras", "Escribime al 11 5O5O 1234 para charlar.", "El robot modelo 5O5O aparece recién en el capítulo 12."],
+  ["telefono.letras", "Teléfono 11 5O5O 1234, preguntá por la colección.", "El episodio 5O es el mejor de la temporada, sin dudas."],
+  ["telefono.fecha", "Llamame al 15-03-2024, es mi número de siempre.", "Estrenó el 15-03-2024 en salas de todo el país."],
+  ["telefono.letras", "Mandame un mensaje al 1l 44 5S 66 77 y te cuento.", "El droide R2 y el modelo 5S aparecen juntos al final."],
+  ["telefono.letras", "Mi cel: 11 44 55 66 7O, escribime cuando quieras.", "Los años 7O y 8O están muy bien recreados en la serie."],
+  // A2: correo "usuario en/de proveedor".
+  ["correo.proveedor", "Mi correo es cuenta_demo en gmail para charlar.", "El hacker entra al correo de gmail de su jefe y descubre todo."],
+  ["correo.proveedor", "Escribime a anita1990 de hotmail y te paso la lista.", "Me llegó un mail de hotmail con la promo del estreno."],
+  ["correo.proveedor", "Mandá un mensaje a demo.cine en outlook y te contesto.", "En la serie todos usan Outlook en la oficina y es parte del chiste."],
+  ["correo.proveedor", "Para más, ana.cine en yahoo, escribime cuando quieras.", "Yahoo era el buscador de moda en la época de la serie."],
+  // A2: dominios con confusables en la terminación.
+  ["dominio.confusable", "Visita ejemplo.coм para encontrar novedades.", "Левиафан es una película rusa durísima y muy recomendable."],
+  ["dominio.confusable", "Está entera en verpelis.nеt sin cortes.", "La versión en ruso se llama Сталкер y es una joya."],
+  ["dominio.confusable", "La tenés en verpelis.οrg gratis.", "El título griego es Ωμέγα y la traducción es muy libre."],
+  ["dominio.confusable", "Mirala en cinemania.сοм y comentá.", "Me hizo acordar a una película polaca de los 80."],
+  // A3: contacto.red en diálogos de ficción frente a pedidos reales.
+  ["red.dialogo", "Agregame al wsp y charlamos de la peli.", "El padre le dice \"escribime\" a su hija; luego ella mira Instagram, y esa escena me emocionó."],
+  ["red.dialogo", "Escribime por insta, soy cinefila_demo.", "En una escena él le dice 'mandame un mensaje por WhatsApp cuando llegues' y nunca llega."],
+  ["red.dialogo", "Seguime en tiktok que subo más reseñas.", "Agregame a la lista de fans: la vi tres veces. Después busqué el tráiler en TikTok."],
+];
+
+function regresiones(): CasoBanco[] {
+  return REGRESIONES.flatMap(([familia, malicioso, benigno], i): CasoBanco[] => {
+    const n = String(i + 1).padStart(2, "0");
+    const categoria = familia.startsWith("telefono") ? "contacto.telefono"
+      : familia.startsWith("correo") ? "contacto.email"
+      : familia.startsWith("dominio") ? "enlace" : "contacto.red";
+    return [
+      { id: `D-RG-${n}-M`, tipo: "resena", grupo: "abuso", categoria, variante: "ofuscada", claro: true, esperado: "rechazar", texto: PREFIJO_AUDITORIA + malicioso },
+      { id: `D-RG-${n}-B`, tipo: "resena", grupo: "legitima", categoria: `regresion.${familia}`, esperado: "publicar", texto: PREFIJO_AUDITORIA + benigno },
+    ];
+  });
+}
+
 // ---------------------------------------------------------------- nombres
 
 const NOMBRES_LEGITIMOS = [
@@ -336,5 +381,6 @@ export const CASOS_DESARROLLO: readonly CasoBanco[] = [
   ...LEGITIMAS_CON_CONTEXTO,
   ...abusoPorPlantilla(),
   ...ABUSO_A_MANO,
+  ...regresiones(),
   ...nombres(),
 ];

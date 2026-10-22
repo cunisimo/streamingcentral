@@ -7,7 +7,7 @@
 // en E3; acá no hay ninguna consulta.
 
 import * as L from "./listas.ts";
-import { base, clase, palabrasADigitos } from "./plegado.ts";
+import { base, clase, letrasADigitos, palabrasADigitos } from "./plegado.ts";
 import type { ContextoResena, Disparo, Plegado, Regla } from "./tipos.ts";
 
 // ---------------------------------------------------------------- utilidades
@@ -38,7 +38,18 @@ const disparo = (resultado: Disparo["resultado"], motivo: string): Disparo => ({
 
 // ---------------------------------------------------------------- números
 
-export interface Corrida { texto: string; desde: number; hasta: number; digitos: number }
+export interface Corrida {
+  texto: string;
+  desde: number;
+  hasta: number;
+  digitos: number;
+  /**
+   * Por qué parece legítima (año, importe con miles, fecha, CUIT), o `null`.
+   * Una excepción NO la descarta: sólo exige una señal fuerte de contacto
+   * para contarla como teléfono (E1.1, A1).
+   */
+  excepcion: "anio" | "miles" | "fecha" | "cuit" | null;
+}
 
 // Dígitos con hasta 3 separadores entre ellos ("11 4433-2211", "1 1 . 5 5").
 // Ni "/" ni "," separan: "15/03/2024" y "1985, 1999" son tres y dos números.
@@ -47,40 +58,53 @@ const MILES = /^\d{1,3}(?:\.\d{3})+$/;
 const FECHA = /^\d{1,2}[.\-]\d{1,2}[.\-](?:\d{2}|\d{4})$/;
 const ANIO = /^(?:19|20)\d{2}$/;
 
-/** Corridas de dígitos que podrían ser un contacto (sin años, montos con miles ni fechas). */
+/** Todas las corridas de dígitos, con su excepción si parecen legítimas. */
 export function corridasNumericas(digitos: string): Corrida[] {
   const salida: Corrida[] = [];
   for (const m of digitos.matchAll(CORRIDA)) {
     const texto = m[0].trim();
     const grupos = texto.split(/\D+/).filter(Boolean);
-    if (MILES.test(texto) || FECHA.test(texto)) continue;
-    if (grupos.length > 0 && grupos.every((g) => ANIO.test(g))) continue;
-    // CUIT/CUIL con su palabra delante: es dato personal (otra regla), no un teléfono.
     const antes = digitos.slice(Math.max(0, m.index! - 12), m.index!);
-    if (/\bcui[lt]\b/.test(antes) && /^\d{2}-?\d{8}-?\d$/.test(texto)) continue;
-    salida.push({ texto, desde: m.index!, hasta: m.index! + m[0].length, digitos: texto.replace(/\D/g, "").length });
+    let excepcion: Corrida["excepcion"] = null;
+    if (MILES.test(texto)) excepcion = "miles";
+    else if (FECHA.test(texto)) excepcion = "fecha";
+    else if (grupos.length > 0 && grupos.every((g) => ANIO.test(g))) excepcion = "anio";
+    // CUIT/CUIL con su palabra delante: es dato personal (otra regla).
+    else if (/\bcui[lt]\b/.test(antes) && /^\d{2}-?\d{8}-?\d$/.test(texto)) excepcion = "cuit";
+    salida.push({ texto, desde: m.index!, hasta: m.index! + m[0].length, digitos: texto.replace(/\D/g, "").length, excepcion });
   }
   return salida;
 }
 
-const RE_CONTACTO = palabras(L.PALABRAS_CONTACTO);
+/** Corridas sin excepción: las que podrían ser un contacto por sí solas. */
+export const corridasSinExcepcion = (digitos: string) => corridasNumericas(digitos).filter((c) => c.excepcion === null);
 
-function hayContactoCerca(t: string, desde: number, hasta: number): boolean {
-  const ventana = t.slice(Math.max(0, desde - L.VENTANA_CONTACTO), hasta + L.VENTANA_CONTACTO);
-  return hay(RE_CONTACTO, ventana);
+const RE_CONTACTO = palabras(L.PALABRAS_CONTACTO);
+const RE_CONTACTO_FUERTE = palabras(L.CONTACTO_FUERTE);
+
+function cerca(re: RegExp, t: string, desde: number, hasta: number): boolean {
+  return hay(re, t.slice(Math.max(0, desde - L.VENTANA_CONTACTO), hasta + L.VENTANA_CONTACTO));
 }
 
 // ---------------------------------------------------------------- contacto
 
+/**
+ * v2 (E1.1, A1): un año, un importe con miles o una fecha ya no se descartan
+ * si hay una señal FUERTE de contacto cerca ("Escribime al 1.155.512.345");
+ * sin ella siguen siendo legítimos. Las letras por dígitos ("5O5O") llegan
+ * resueltas desde el plegado.
+ */
 export const reglaTelefono: Regla<unknown> = {
   id: "contacto.telefono",
-  version: 1,
+  version: 2,
   evaluar: (p) => {
     for (const c of corridasNumericas(p.digitos)) {
-      if (
-        c.digitos >= L.DIGITOS_TELEFONO ||
-        (c.digitos >= L.DIGITOS_TELEFONO_CON_CONTEXTO && hayContactoCerca(p.digitos, c.desde, c.hasta))
-      ) return disparo("rechazo_contenido", "Sacá el número de teléfono: no se pueden compartir datos de contacto.");
+      const fuerte = () => cerca(RE_CONTACTO_FUERTE, p.digitos, c.desde, c.hasta);
+      const telefono = c.excepcion === null
+        ? c.digitos >= L.DIGITOS_TELEFONO ||
+          (c.digitos >= L.DIGITOS_TELEFONO_CON_CONTEXTO && cerca(RE_CONTACTO, p.digitos, c.desde, c.hasta))
+        : c.excepcion !== "cuit" && c.digitos >= L.DIGITOS_TELEFONO_CON_CONTEXTO && fuerte();
+      if (telefono) return disparo("rechazo_contenido", "Sacá el número de teléfono: no se pueden compartir datos de contacto.");
     }
     return null;
   },
@@ -88,21 +112,43 @@ export const reglaTelefono: Regla<unknown> = {
 
 export const reglaTelefonoNombre: Regla<unknown> = {
   id: "contacto.telefono_nombre",
-  version: 1,
+  version: 2,
   evaluar: (p) =>
-    corridasNumericas(p.digitos).some((c) => c.digitos >= L.DIGITOS_TELEFONO_NOMBRE)
+    corridasSinExcepcion(p.digitos).some((c) => c.digitos >= L.DIGITOS_TELEFONO_NOMBRE)
       ? disparo("rechazo_contenido", "Sacá el número: los nombres no pueden tener datos de contacto.")
       : null,
 };
 
 const RE_CORREO = /[\p{L}\p{N}._%+\-]+@[\p{L}\p{N}\-]+(?:\.[\p{L}\p{N}\-]+)+/u;
-const RE_CORREO_PROVEEDOR = new RegExp(`[\\p{L}\\p{N}._\\-]{2,}@(?:${L.PROVEEDORES_CORREO.map(clase).join("|")})${BORDE_DESPUES}`, "u");
+const PROVEEDORES = L.PROVEEDORES_CORREO.map(clase).join("|");
+const RE_CORREO_PROVEEDOR = new RegExp(`[\\p{L}\\p{N}._\\-]{2,}@(?:${PROVEEDORES})${BORDE_DESPUES}`, "u");
+// "usuario en gmail", "usuario de hotmail", "usuario del outlook", "usuario at yahoo".
+const RE_USUARIO_EN_PROVEEDOR = new RegExp(
+  `${BORDE_ANTES}([\\p{L}\\p{N}][\\p{L}\\p{N}._\\-]{2,})\\s+(?:en|de|del|at|por)\\s+(?:${PROVEEDORES})${BORDE_DESPUES}`,
+  "gu",
+);
+const NO_USUARIO = new Set(L.NO_USUARIO_CORREO);
+const RE_PISTA_CORREO = palabras(L.PISTAS_CORREO);
 
+/** "cuenta_demo en gmail" o, con una pista de correo cerca, "juanperez en gmail". */
+function usuarioEnProveedor(t: string): boolean {
+  RE_USUARIO_EN_PROVEEDOR.lastIndex = 0;
+  for (const m of t.matchAll(RE_USUARIO_EN_PROVEEDOR)) {
+    const usuario = m[1];
+    if (NO_USUARIO.has(usuario)) continue;
+    const pareceUsuario = /[\d_.]/.test(usuario.slice(1, -1)) || /\d/.test(usuario);
+    const ventana = t.slice(Math.max(0, m.index! - L.VENTANA_CORREO), m.index! + m[0].length + L.VENTANA_CORREO);
+    if (pareceUsuario || hay(RE_PISTA_CORREO, ventana)) return true;
+  }
+  return false;
+}
+
+/** v2 (E1.1, A2): suma la familia "usuario en/de proveedor". */
 export const reglaCorreo: Regla<unknown> = {
   id: "contacto.email",
-  version: 1,
+  version: 2,
   evaluar: (p) =>
-    RE_CORREO.test(p.letras) || RE_CORREO_PROVEEDOR.test(p.letras)
+    RE_CORREO.test(p.letras) || RE_CORREO_PROVEEDOR.test(p.letras) || usuarioEnProveedor(p.letras)
       ? disparo("rechazo_contenido", "Sacá la dirección de correo: no se pueden compartir datos de contacto.")
       : null,
 };
@@ -113,9 +159,10 @@ const RE_DOMINIO_DEBIL = new RegExp(`${BORDE_ANTES}${ETIQUETA}\\.(?:${L.TLD_DEBI
 const RE_ESQUEMA = /(?:https?:\/\/|www\.)/u;
 const RE_HOSTS = palabras(L.HOSTS_SIN_TLD);
 
+/** v2 (E1.1, A2): mismos patrones; el plegado mapea más confusables ("сом" con м cirílica). */
 export const reglaEnlace: Regla<unknown> = {
   id: "contacto.enlace",
-  version: 1,
+  version: 2,
   evaluar: (p) =>
     RE_ESQUEMA.test(p.letras) || RE_DOMINIO_FUERTE.test(p.letras) || RE_DOMINIO_DEBIL.test(p.letras) || hay(RE_HOSTS, p.letras)
       ? disparo("rechazo_contenido", "Sacá el enlace o la dirección web: no se pueden compartir enlaces.")
@@ -128,15 +175,48 @@ const RE_PLATAFORMA_DOS_PUNTOS = new RegExp(`${RE_PLATAFORMA.source}\\s*(?::|->|
 const RE_VERBO = palabras([...L.VERBOS_CONTACTO, "me encuentran", "me encontras"]);
 
 const MOTIVO_RED = "Sacá el usuario o la red social: no se pueden compartir datos de contacto.";
+const RE_HANDLE_G = new RegExp(RE_HANDLE.source, "gu");
 
+// Tramos entre comillas: diálogo o cita, no un pedido de quien escribe.
+const RE_COMILLAS = /"[^"]*"|“[^”]*”|«[^»]*»|(?<![\p{L}\p{N}])'[^']*'(?![\p{L}\p{N}])/gu;
+
+function entreComillas(t: string): (i: number) => boolean {
+  const tramos = [...t.matchAll(RE_COMILLAS)].map((m) => [m.index!, m.index! + m[0].length] as const);
+  return (i) => tramos.some(([d, h]) => i > d && i < h);
+}
+
+const algunaCerca = (xs: number[], ys: number[], ventana: number) =>
+  xs.some((x) => ys.some((y) => Math.abs(x - y) <= ventana));
+
+/**
+ * v2 (E1.1, A3). Ya no alcanza con que una red y un verbo aparezcan en
+ * cualquier parte del texto. Rechaza sólo con evidencia acotada:
+ *   - un usuario (@algo) cerca de una red o de un verbo de contacto;
+ *   - "red: algo";
+ *   - un verbo de contacto FUERA de comillas, a ≤ VENTANA_RED de una red.
+ * Un verbo entre comillas es diálogo o cita ("le dice 'escribime'"): sin un
+ * usuario, número o correo (que miran otras reglas) no dispara.
+ */
 export const reglaRed: Regla<unknown> = {
   id: "contacto.red",
-  version: 1,
+  version: 2,
   evaluar: (p) => {
-    const handle = RE_HANDLE.test(p.base);
-    const plataforma = hay(RE_PLATAFORMA, p.letras);
-    const verbo = hay(RE_VERBO, p.base);
-    if ((handle && (plataforma || verbo)) || (plataforma && verbo) || RE_PLATAFORMA_DOS_PUNTOS.test(p.letras)) {
+    // `base` y `letras` tienen distintas posiciones; cada señal se compara
+    // dentro de su propia copia.
+    const handles = posiciones(RE_HANDLE_G, p.base);
+    const plataformasBase = posiciones(RE_PLATAFORMA, p.base);
+    const verbos = posiciones(RE_VERBO, p.base);
+    const comillas = entreComillas(p.base);
+    const verbosPropios = verbos.filter((i) => !comillas(i));
+    const plataformasLetras = posiciones(RE_PLATAFORMA, p.letras);
+    const verbosLetras = posiciones(RE_VERBO, p.letras);
+    const comillasLetras = entreComillas(p.letras);
+    if (
+      algunaCerca(handles, [...plataformasBase, ...verbos], L.VENTANA_HANDLE) ||
+      RE_PLATAFORMA_DOS_PUNTOS.test(p.letras) ||
+      algunaCerca(verbosPropios, plataformasBase, L.VENTANA_RED) ||
+      algunaCerca(verbosLetras.filter((i) => !comillasLetras(i)), plataformasLetras, L.VENTANA_RED)
+    ) {
       return disparo("rechazo_contenido", MOTIVO_RED);
     }
     return null;
@@ -162,12 +242,13 @@ export const reglaRedNombre: Regla<unknown> = {
  */
 export const reglaContactoPartido: Regla<ContextoResena> = {
   id: "contacto.partido",
-  version: 1,
+  // v2: los recientes se pliegan igual que el texto (letras por dígitos).
+  version: 2,
   evaluar: (p, contexto) => {
-    const fragmentos = (d: string) => corridasNumericas(d).filter((c) => c.digitos >= 2);
+    const fragmentos = (d: string) => corridasSinExcepcion(d).filter((c) => c.digitos >= 2);
     const propios = fragmentos(p.digitos);
     if (propios.length === 0 || contexto.textosRecientes.length === 0) return null;
-    const recientes = contexto.textosRecientes.map((t) => palabrasADigitos(base(t)));
+    const recientes = contexto.textosRecientes.map((t) => palabrasADigitos(letrasADigitos(base(t))));
     const total = [...propios, ...recientes.flatMap(fragmentos)].reduce((s, c) => s + c.digitos, 0);
     const contacto = [p.digitos, ...recientes].some((t) => hay(RE_CONTACTO, t));
     return total >= L.DIGITOS_TELEFONO && contacto
