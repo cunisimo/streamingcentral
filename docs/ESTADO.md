@@ -156,13 +156,15 @@ AAB tiene que ser `5` o mayor.
    **Decisión del dueño (21/10): sin gastos adicionales.** No hay API paga,
    banco pago, tope de USD 10, servicios nuevos ni upgrades, y tampoco
    transferencia a una API gratuita. La revisión v3 propone moderación por
-   reglas propias, sin clasificador externo.
+   reglas propias, sin clasificador externo. Codex auditó la v3 (`97cf4d7`)
+   y la v3.1 aplica sus correcciones puntuales (propuestas, no aprobadas).
    **Falta:**
-   - auditoría de Codex sobre v3;
-   - P5: autorización de sólo lectura para E0;
+   - auditoría de Codex sobre la v3.1;
+   - P5: autorización de sólo lectura para E0 (no está autorizada);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
-     prueba de buzón sólo si E0 lo exige, y período supervisado al activar la
-     publicación automática;
+     prueba de buzón sólo si E0 lo exige, y la carga de revisión que acepta
+     (propuesta: colas de retenidos y denuncias más un muestreo de hasta 5
+     publicaciones por sesión; **no aceptada**);
    - recién después, el plan.
    Viaja en el mismo AAB que 3c.
    **MFA de la reseña editorial:** trabajo separado. Confirmado en código,
@@ -220,7 +222,58 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
+  **Versión 3.1 (21/10) — correcciones puntuales tras la auditoría de Codex
+  sobre `97cf4d7`** (`docs/medidas/2026-10-21-auditoria-resenas-97cf4d7.md`,
+  copiada sin cambios del checkout principal, SHA-256 `099CAB0E…68BBA595`).
+  No reescribe la revisión; cambia sólo las secciones afectadas (tabla al
+  inicio del documento). Todo sigue **propuesto, no aprobado**:
+  - **Autorización por operación (§2.1.2):** publicar/editar/evaluar exigen
+    no estar suspendido, publicación encendida, términos y correo. Retirar
+    voto, borrar reseña, bloquear y gestionar/eliminar cuenta **no dependen**
+    de pausa, suspensión, términos, correo ni filtro. Denunciar no depende de
+    suspensión ni pausa, y sí exige correo, como fija el diseño.
+  - **Denuncias (§3.3.2):** ninguna oculta por la categoría elegida; retiene
+    sólo la corroboración por las reglas vigentes o el admin; lo demás se
+    prioriza y quien denuncia puede bloquear al instante. Sin umbral fijo de
+    cantidad. "No me sirvió" no afecta moderación.
+  - **Saturación (§3.3):** colas separadas de retenidos y denuncias. La
+    admisión a retenidos está acotada por autor y en total: lo que iría a la
+    cola no se admite cuando está llena. Lo que pasa las reglas se sigue
+    publicando. La pausa total es sólo manual. **Se retira** el "sólo
+    retener" automático de v3 y la retención por cantidad de rechazos.
+  - **Revisión de rechazos (§3.3.3):** el autor puede enviar a revisión el
+    texto rechazado por una regla de contenido. Queda retenido con id,
+    `version_reglas` y regla; nunca se publica sin el admin. No se guardan
+    todos los rechazos.
+  - **Ediciones (§3.4.1):** un rechazo, un fallo o un conflicto no tocan la
+    versión anterior ni los votos. Los votos se reinician una sola vez, al
+    persistir un texto nuevo. Los reintentos son idempotentes con
+    `id_intento`.
+  - **Concurrencia (§2.2.2–§2.2.4):**
+    - orden de locks fijo: `K_CORTE` compartido, luego entidades en orden
+      estable, relectura y recién después la marca;
+    - consolidación en `READ COMMITTED`, con el cálculo en una sentencia
+      posterior al lock exclusivo;
+    - mismo lado del corte para tramos y suspensiones;
+    - baja en dos pasos desde la ruta (`baja_comunitaria` antes de
+      `deleteUser`) y red de seguridad documentada para Auth;
+    - 11 casos verificables con sesiones concurrentes.
+  - **Carga del dueño (§3.5, P6):** se retira la lectura diaria de todo. Se
+    propone muestreo acotado más las colas; no certifica eficacia.
+  - **Precisiones:**
+    - snapshots en filas de 100 ids, con la cota física distinta de la
+      lógica;
+    - plegado en dos pasadas, con confusables ambiguos como clases;
+    - nombres sin reglas de texto anómalo;
+    - hashes de shingles con clave, en vez de fragmentos;
+    - el avatar ya no se describe como "sin riesgo";
+    - Vercel y Supabase siguen tratando el texto;
+    - umbrales como hipótesis.
+
   **Versión 3 (21/10) — decisión del dueño: SIN gastos adicionales.**
+  (Sus puntos sobre autorización común, denuncia grave que retiene,
+  "sólo retener" automático, lectura diaria de lo publicado, snapshot en un
+  solo `bigint[]` y baja por trigger quedan corregidos por la v3.1.)
   Auditoría de Codex sobre `68bd773`
   (`docs/medidas/2026-10-21-auditoria-resenas-68bd773-presupuesto.md`) y el
   diseño actualizado por Codex con esa decisión, copiados sin cambios del
@@ -319,8 +372,9 @@ reusa su diseño, no se mergea.
   - la ficha no está en el bundle nativo;
   - CORS sólo admite GET/POST.
 
-  **Siguiente paso:** auditoría de Codex sobre la v3; después E0 (sólo
-  lectura, con autorización) y recién entonces el plan detallado.
+  **Siguiente paso:** auditoría de Codex sobre la v3.1; después E0 (sólo
+  lectura, cuando el dueño lo autorice) y recién entonces el plan detallado.
+  Mientras tanto no se escribe código ni SQL.
 
 - **Integración de Yumpeá: "Compartir invitación" + ícono del resultado
   (2026-10-21) — desarrollo y prueba local TERMINADOS; rama local
