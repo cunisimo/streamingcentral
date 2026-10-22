@@ -158,11 +158,16 @@ AAB tiene que ser `5` o mayor.
    transferencia a una API gratuita. La revisión v3 propone moderación por
    reglas propias, sin clasificador externo. Codex auditó la v3.1
    (`e34c53e`); el contrato de baja quedó cerrado en la revisión §2.2.3.
-   **Plan preparado, pendiente de auditoría y autorización** (22/10):
+   **Plan preparado** (22/10):
    `docs/superpowers/plans/2026-10-22-resenas-comunidad.md`, entregas
-   E0–E9c. Ninguna entrega está autorizada.
+   E0–E9c; corregido tras la auditoría de Codex sobre `9450006`.
+   **E1 (reglas puras y banco sintético) implementada en local**, rama
+   `feat/resenas-reglas`, sin conectar a nada. **Pendiente de auditoría de
+   Codex.** El reservado **no cumple C1 ni C2** (3 de 50 contactos claros
+   publicados; 93 % de ofuscadas frenadas). Ninguna otra entrega está
+   autorizada.
    **Falta:**
-   - auditoría de Codex sobre el plan, y autorización del dueño por entrega;
+   - auditoría de Codex sobre E1, y autorización del dueño por entrega;
    - P5: autorización de sólo lectura para E0 (no está autorizada; las
      consultas están en el plan y no se ejecutaron);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
@@ -225,6 +230,47 @@ reusa su diseño, no se mergea.
   sin cambios del checkout principal, donde era un archivo sin seguimiento;
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
+
+  **E1 — reglas propias y banco sintético (22/10), implementada en local,
+  pendiente de auditoría.** Rama `feat/resenas-reglas` desde
+  `docs/resenas-comunidad` (`a029259`). Informe para Codex:
+  `docs/medidas/2026-10-22-informe-claude-e1.md`.
+  - **Comprobado en código y pruebas locales:**
+    - `lib/comunidad/reglas/`: plegado en dos pasadas, 19 reglas con `id` y
+      versión, y decisión publicar/retener/rechazo/error, donde ningún fallo
+      publica;
+    - contexto explícito para el contacto partido;
+    - **no está conectado** a rutas, pantallas, Supabase ni publicaciones.
+  - **Reservado sellado antes de escribir las reglas** (commit `3437578`,
+    SHA-256 LF `9975c60c…62c4ec79`) y corrido **una vez** al cierre:
+    - C0, C3 y C4 cumplen;
+    - **C1 no cumple: 3 de 50 contactos claros publicados.** Letras O dentro
+      de un número, correo dicho "juanperez en gmail" y una `м` cirílica en
+      el TLD;
+    - **C2 no cumple: 40 de 43 ofuscadas frenadas (93 %);**
+    - 1 legítima retenida: una dirección ficticia de la trama.
+    - No se modificó el conjunto ni se volvió a correr. Resultado por caso
+      en `docs/medidas/2026-10-22-e1-banco-reservado.md`.
+  - **Banco de desarrollo:** 406 casos; todos los casos dan lo esperado y
+    cumple C0–C4.
+  - **Pruebas:**
+    - `lib/comunidad`: 42 de 42;
+    - `npx tsc --noEmit`: 0 errores;
+    - `npm test`: 2291 pruebas, 2273 pasan, 0 fallan y 18 omitidas. Las
+      omitidas exigen un build web o de Capacitor, que no se hizo por estar
+      fuera de E1.
+    - Dependencias instaladas en el worktree con `npm ci --prefer-offline`
+      desde el mismo lockfile.
+  - **Limitaciones:**
+    - mide reglas contra casos sintéticos, no seguridad en uso real;
+    - el reservado lo escribió el mismo autor de las reglas, así que el
+      resultado es probablemente optimista;
+    - menores sólo con combinaciones mínimas;
+    - duplicados y límites por cuenta quedan para E3b;
+    - listas y umbrales son hipótesis.
+  - **Siguiente paso:** auditoría de Codex de E1. Ajustar o no las reglas
+    por los fallos del reservado, y si hace falta un conjunto nuevo sellado,
+    queda a criterio de esa auditoría y del dueño. No se avanza a E2.
 
   **Plan corregido tras la auditoría de Codex sobre `9450006` (22/10).**
   Informe copiado sin cambios
