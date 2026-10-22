@@ -168,10 +168,14 @@ AAB tiene que ser `5` o mayor.
    - **E1.1 tampoco:** el reservado 2, más grande y escrito en su mayor parte
      por un agente que no conocía las reglas, **no cumple C1 ni C2** (12 de
      124 contactos claros sin detectar; 87,2 % de ofuscadas detectadas).
-   - **E1.1 pendiente de auditoría de Codex.** Ninguna otra entrega está
-     autorizada.
+   - **E1.2** corrige huecos mecánicos y familias divulgadas. Sólo se probó
+     con casos conocidos y regresiones, **sin validación independiente**.
+     **E1 sigue sin cerrar.** Pendiente de auditoría de Codex; ninguna otra
+     entrega está autorizada.
    **Falta:**
-   - auditoría de Codex sobre E1.1, y autorización del dueño por entrega;
+   - auditoría de Codex sobre E1.2 (incluida la familia detenida y la
+     decisión sobre una medición independiente), y autorización del dueño por
+     entrega;
    - P5: autorización de sólo lectura para E0 (no está autorizada; las
      consultas están en el plan y no se ejecutaron);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
@@ -235,8 +239,44 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
-  **E1.1 — corrección de reglas y evaluador (22/10), en local, pendiente
-  de auditoría. NO cumple C1 ni C2.** Auditoría de Codex sobre `ffa5061`
+  **E1.2 — huecos mecánicos y familias divulgadas (22/10), en local,
+  pendiente de auditoría. E1 NO está cerrada.** Auditoría de `1f475e3`
+  copiada sin cambios (`docs/medidas/2026-10-22-auditoria-e11-1f475e3.md`).
+  Informe: `docs/medidas/2026-10-22-informe-claude-e12.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1: las comillas ya no eximen. Un pedido con destinatario se rechaza
+      con o sin comillas; entre comillas o atribuido, sin destinatario, se
+      retiene;
+    - A2: dígitos de cualquier sistema Unicode, separadores por clase de
+      signo, números dictados 16–99 y lectura amplia (coma, letras sueltas)
+      sólo con señal fuerte;
+    - A3: dirección con ruta y cualquier TLD, más TLD y acortadores; "las
+      punto com" ya no es dominio;
+    - familias del reservado 2: alias de redes, spam por familias, correo en
+      nombres, partido con colgante, amenaza espaciada y DNI con espacios.
+    - `VERSION_REGLAS` `2026-10-22.3`.
+  - **Pruebas conocidas, no validación independiente:**
+    - los 6 ejemplos de la auditoría dan lo esperado;
+    - regresión del reservado 1 y del reservado 2 verdes, con
+      `R2-RA-042` (correo descripto con paráfrasis) **fuera de alcance y
+      detenido para revisión**;
+    - banco de desarrollo de 488 casos;
+    - transformaciones de comillas, separadores, 8 formas de dígitos,
+      confusables y contacto repartido.
+  - **Falsos positivos nuevos:** diálogos legítimos con un pedido de red
+    entre comillas pasan a retenerse (`D-RG-17-B`, `R2-RL-105`).
+  - **Pruebas:** `lib/comunidad` 69 de 69; `tsc` 0 errores; `npm test` 2318
+    pruebas, 2300 pasan, 0 fallan y 18 omitidas (exigen builds no hechos).
+  - **Reservados:** no se preparó ni ejecutó un reservado 3. Ambos
+    reservados, sus sellos y sus informes siguen intactos. Errata: el
+    archivo sensible del reservado 2 tiene 26 reseñas y 4 nombres, no "30 +
+    4" como dice su `SELLO.md` (no se modificó).
+  - **Siguiente paso:** auditoría de Codex de E1.2; si se acuerda, una
+    medición independiente con alcance sellado de antemano. No se avanza a
+    E2.
+
+  **E1.1 — corrección de reglas y evaluador (22/10), en local. NO cumplió
+  C1 ni C2 (antecedente; ver E1.2 arriba).** Auditoría de Codex sobre `ffa5061`
   copiada sin cambios (`docs/medidas/2026-10-22-auditoria-e1-ffa5061.md`).
   Informe para Codex: `docs/medidas/2026-10-22-informe-claude-e11.md`.
   - **Correcciones (comprobado en código y pruebas locales):**
