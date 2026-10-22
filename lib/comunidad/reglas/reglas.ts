@@ -207,26 +207,89 @@ export const reglaCorreoNombre: Regla<unknown> = {
       : null,
 };
 
+// ---- correo incompleto o indirecto (A2 de 40288f6)
+// No reconstruye la dirección: junta señales que, solas, no alcanzan.
+
+// "mi correo es <alias>", "mi mail: <alias>", "mi gmail es <alias>".
+const RE_AUTO_CORREO = new RegExp(
+  `${BORDE_ANTES}mi\\s+(?:${[...L.PALABRAS_CORREO].map(esc).join("|")}|${PROVEEDORES})\\s*(?:es|:|=|->)\\s*([\\p{L}\\p{N}][\\p{L}\\p{N}._\\-]*)`,
+  "gu",
+);
+const RE_PALABRA_CORREO = palabras(L.PALABRAS_CORREO);
+const RE_INTENCION = palabras([...L.VERBOS_CONTACTO, ...L.INTENCION_CORREO]);
+const NO_ALIAS = new Set(L.NO_ALIAS_CORREO);
+// Un alias con forma de usuario: letras y un "_", "." o dígito adentro
+// ("charly_movies", "ana.demo", "tito88"). "007" o "2.0" no: sin letras.
+const RE_ALIAS_FUERTE_G = /(?<![\p{L}\p{N}@._])(?=[\p{N}_.]*\p{L})[\p{L}\p{N}]+(?:[_.][\p{L}\p{N}]+)+|(?<![\p{L}\p{N}@._])\p{L}+\d+(?![\p{L}\p{N}])/gu;
+const esAliasFuerte = (a: string) => /\p{L}/u.test(a) && /[_.\d]/.test(a.replace(/[._]+$/, ""));
+
+/** Señales combinadas de un correo dado sin la dirección completa. */
+export function correoIndirecto(b: string): boolean {
+  const intenciones = posiciones(RE_INTENCION, b);
+  const cerca = (i: number) => intenciones.some((x) => Math.abs(x - i) <= L.VENTANA_CORREO_INDIRECTO);
+  // 1. Autoatribución con alias: "mi correo es charly_movies" (forma de
+  //    usuario), o "mi correo es charly" con intención de contacto cerca.
+  RE_AUTO_CORREO.lastIndex = 0;
+  for (const m of b.matchAll(RE_AUTO_CORREO)) {
+    const alias = m[1];
+    if (NO_ALIAS.has(alias) || alias.length < 3) continue;
+    if (esAliasFuerte(alias) || cerca(m.index!)) return true;
+  }
+  // 2. Sin autoatribución: palabra de correo + intención de contacto + alias
+  //    con forma de usuario, los tres cerca ("mandame un mail, soy
+  //    charly_movies"). Un verbo, "correo" o un proveedor solos no alcanzan.
+  const correos = posiciones(RE_PALABRA_CORREO, b);
+  if (correos.length === 0 || intenciones.length === 0) return false;
+  RE_ALIAS_FUERTE_G.lastIndex = 0;
+  for (const m of b.matchAll(RE_ALIAS_FUERTE_G)) {
+    const i = m.index!;
+    if (correos.some((c) => Math.abs(c - i) <= L.VENTANA_CORREO_INDIRECTO) && cerca(i)) return true;
+  }
+  return false;
+}
+
+/**
+ * v1 (A2 de 40288f6). RETIENE, nunca rechaza: no encontró una dirección,
+ * encontró un intento. Cubre la autoatribución de correo con alias ("mi
+ * correo es charly_movies en el de Google") y el pedido de correo con un
+ * alias con forma de usuario cerca. No dispara con Google, "correo" o un
+ * verbo aislados, ni con "mi correo es un desastre".
+ */
+export const reglaCorreoIndirecto: Regla<unknown> = {
+  id: "contacto.email_indirecto",
+  version: 1,
+  evaluar: (p) =>
+    correoIndirecto(p.base)
+      ? disparo("retener", "Posible correo de contacto dado de forma incompleta o indirecta.")
+      : null,
+};
+
 const ETIQUETA = "[\\p{L}\\p{N}][\\p{L}\\p{N}_\\-]*";
 const RE_DOMINIO_FUERTE = new RegExp(`${BORDE_ANTES}${ETIQUETA}\\.(?:${L.TLD_FUERTES.map(clase).join("|")})${BORDE_DESPUES}`, "u");
 const RE_DOMINIO_DEBIL = new RegExp(`${BORDE_ANTES}${ETIQUETA}\\.(?:${L.TLD_DEBILES.map(esc).join("|")})/`, "u");
 /**
- * Dirección con ruta y cualquier terminación de 2 a 6 letras ("is.gd/demo",
- * "algo.xyz/abc"): una ruta pegada no aparece en puntuación natural, así que
- * no hace falta conocer el TLD (E1.2, A3). Sin ruta, sigue mandando la lista.
+ * Dirección con ruta y CUALQUIER terminación alfabética ("is.gd/demo",
+ * "algo.xyz/abc", "ejemplo.photography/demo"): una ruta pegada a
+ * "etiqueta.letras" no aparece en puntuación natural, así que no hace falta
+ * conocer el TLD. El tope es el largo de una etiqueta DNS (63), no una lista:
+ * E1.2 lo limitaba a 6 letras y dejaba pasar las terminaciones largas (A1 de
+ * 40288f6). La ruta empieza con letra o dígito. "y/o", "8.5/10" y "2.0/beta"
+ * no llegan acá: les falta "etiqueta.letras/". Sin ruta, manda la lista de TLD.
  */
-const RE_DOMINIO_CON_RUTA = new RegExp(`${BORDE_ANTES}${ETIQUETA}(?:\\.${ETIQUETA})*\\.\\p{L}{2,6}/[\\p{L}\\p{N}_\\-./?=&%#]+`, "u");
+const RE_DOMINIO_CON_RUTA = new RegExp(`${BORDE_ANTES}${ETIQUETA}(?:\\.${ETIQUETA})*\\.\\p{L}{2,63}/[\\p{L}\\p{N}][\\p{L}\\p{N}_\\-./?=&%#]*`, "u");
 const RE_ESQUEMA = /(?:https?:\/\/|www\.)/u;
 const RE_HOSTS = palabras(L.HOSTS_SIN_TLD);
 
 /**
  * v2 (E1.1, A2): mismos patrones; el plegado mapea más confusables ("сом" con м cirílica).
- * v3 (E1.2, A3): dirección con ruta sin importar la terminación, más TLD y
+ * v3 (E1.2, A3): dirección con ruta y terminación de 2 a 6 letras, más TLD y
  * acortadores conocidos; "las punto com" ya no llega como dominio (plegado).
+ * v4 (A1 de 40288f6): la dirección con ruta acepta terminaciones alfabéticas
+ * de cualquier largo (hasta 63), no sólo de 2 a 6.
  */
 export const reglaEnlace: Regla<unknown> = {
   id: "contacto.enlace",
-  version: 3,
+  version: 4,
   evaluar: (p) =>
     RE_ESQUEMA.test(p.letras) || RE_DOMINIO_FUERTE.test(p.letras) || RE_DOMINIO_DEBIL.test(p.letras) ||
     RE_DOMINIO_CON_RUTA.test(p.letras) || hay(RE_HOSTS, p.letras)
@@ -579,7 +642,7 @@ export const reglaFormatoNombre: Regla<unknown> = {
 
 /** Reseñas: todas las de contenido, más las de texto anómalo y el contexto. */
 export const REGLAS_RESENA: readonly Regla<ContextoResena>[] = [
-  reglaFormatoResena, reglaTelefono, reglaCorreo, reglaEnlace, reglaRed,
+  reglaFormatoResena, reglaTelefono, reglaCorreo, reglaCorreoIndirecto, reglaEnlace, reglaRed,
   reglaContactoPartido, reglaSpam, reglaOdio, reglaAmenaza, reglaDocumento,
   reglaDomicilio, reglaMenores, reglaMayusculas, reglaVocabulario,
   reglaRepeticion, reglaPerfil,

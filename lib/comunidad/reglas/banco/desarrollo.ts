@@ -345,6 +345,8 @@ interface ParE12 {
   benigno: string;
   contextoMalicioso?: string[];
   contextoBenigno?: string[];
+  /** Si el abuso es un contacto "claro" (C1). Por defecto, según la categoría. */
+  claro?: boolean;
 }
 
 const REGRESIONES_E12: readonly ParE12[] = [
@@ -400,6 +402,21 @@ const REGRESIONES_E12: readonly ParE12[] = [
     malicioso: "Sigue con hotmail, la terminación es com, escribime.",
     contextoBenigno: ["Muy buena la primera temporada, la recomiendo."],
     benigno: "El final de la segunda temporada es todavía mejor que el de la primera." },
+  // Corrección de 40288f6, A1: dirección con ruta y terminación larga.
+  { familia: "ruta_tld_largo", categoria: "enlace", esperado: "rechazar",
+    malicioso: "Mirala en ejemplo.photography/demo sin cortes.", benigno: "Actuación/guion/fotografía: todo impecable, un 8.5/10 merecido." },
+  { familia: "ruta_tld_largo", categoria: "enlace", esperado: "rechazar",
+    malicioso: "Completa en pelisdemo.entertainment/ver?id=12 gratis.", benigno: "Es entretenimiento puro y/o un drama, según cómo la mires en la 2.0/beta." },
+  // Corrección de 40288f6, A2: correo incompleto o indirecto (se retiene).
+  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+    malicioso: "Mi correo es charly_movies en el de Google, el que termina en com. Escribime.",
+    benigno: "Ella revisa su correo de Google y encuentra la carta que le dejó el padre." },
+  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+    malicioso: "Mi correo es charly_movies. Escribime por correo y te paso las pelis.",
+    benigno: "Mi correo es un desastre desde que la vi: todos me escriben para comentarla." },
+  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+    malicioso: "Mandame un mail, soy cine.fan88, y te paso la lista completa.",
+    benigno: "El agente 007 le manda un mail a M y escribe todo en clave, genial." },
   // Amenaza con letras sueltas.
   { familia: "amenaza_espaciada", categoria: "amenaza", esperado: "retener",
     malicioso: "t e  v o y  a  m a t a r, al de la reseña de abajo.", benigno: "Un plano de la a a la z, como un abecedario visual, abre la película." },
@@ -408,7 +425,7 @@ const REGRESIONES_E12: readonly ParE12[] = [
 function regresionesE12(): CasoBanco[] {
   return REGRESIONES_E12.flatMap((r, i): CasoBanco[] => {
     const n = String(i + 1).padStart(2, "0");
-    const claro = r.categoria.startsWith("contacto.") && r.categoria !== "contacto.partido" || r.categoria === "enlace";
+    const claro = r.claro ?? (r.categoria.startsWith("contacto.") && r.categoria !== "contacto.partido" || r.categoria === "enlace");
     return [
       {
         id: `D-R2-${n}-M`, tipo: "resena", grupo: "abuso", categoria: r.categoria, variante: "ofuscada",

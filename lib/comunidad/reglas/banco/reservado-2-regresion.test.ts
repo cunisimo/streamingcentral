@@ -13,12 +13,15 @@ const casos: CasoBanco[] = ["reservado.json", "reservado-sensible.json"]
   .flatMap((f) => JSON.parse(readFileSync(join(DIR, f), "utf8")).casos);
 
 /**
- * Fuera del alcance de reglas determinísticas, documentado y DETENIDO para
- * revisión (no se declara resuelto ni se reclasifica): un correo descripto con
- * paráfrasis ("en el de Google, el que termina en com").
+ * Abusos detectados con una salida MÁS DÉBIL que su etiqueta. Antes de la
+ * corrección de 40288f6, R2-RA-042 estaba declarado "fuera de alcance" y una
+ * prueba exigía que siguiera sin detectarse; esa declaración se retiró (A2 de
+ * la auditoría). Ahora `contacto.email_indirecto` lo RETIENE: no reconstruye
+ * la dirección, detecta el intento. La etiqueta del reservado ("rechazar") no
+ * se cambia; la diferencia queda a la vista y no se excluye de ninguna métrica.
  */
-const FUERA_DE_ALCANCE: Readonly<Record<string, string>> = {
-  "R2-RA-042": "Correo descripto con paráfrasis, sin '@', 'arroba' ni el nombre del proveedor.",
+const DETECTADOS_MAS_DEBILES: Readonly<Record<string, string>> = {
+  "R2-RA-042": "Correo descripto con paráfrasis ('mi correo es charly_movies en el de Google'): se retiene, etiqueta 'rechazar'.",
 };
 
 /** Legítimas que desde E1.2 quedan RETENIDAS (no rechazadas): pedido de red entre comillas. */
@@ -28,9 +31,9 @@ const RETENIDAS_CONOCIDAS: Readonly<Record<string, string>> = {
 
 const resultados = casos.map(evaluarCaso);
 
-test("reservado 2 como regresión: todo abuso se detecta salvo lo declarado fuera de alcance", () => {
+test("reservado 2 como regresión: todo abuso se detecta, sin excepciones", () => {
   const sinDetectar = resultados
-    .filter((r) => r.caso.grupo === "abuso" && !r.detectado && !(r.caso.id in FUERA_DE_ALCANCE))
+    .filter((r) => r.caso.grupo === "abuso" && !r.detectado)
     .map((r) => `${r.caso.id} → ${r.decision.resultado}`);
   assert.deepEqual(sinDetectar, []);
 });
@@ -45,8 +48,8 @@ test("reservado 2 como regresión: legítimas publican; las retenidas conocidas 
   }
 });
 
-test("lo declarado fuera de alcance sigue sin detectarse (si cambia, hay que revisar la declaración)", () => {
-  for (const id of Object.keys(FUERA_DE_ALCANCE)) {
-    assert.equal(resultados.find((r) => r.caso.id === id)?.detectado, false, id);
+test("los detectados con salida más débil quedan retenidos (si cambia, hay que revisar la declaración)", () => {
+  for (const id of Object.keys(DETECTADOS_MAS_DEBILES)) {
+    assert.equal(resultados.find((r) => r.caso.id === id)?.decision.resultado, "retener", id);
   }
 });

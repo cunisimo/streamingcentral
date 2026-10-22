@@ -107,6 +107,24 @@ export const PISTAS_CORREO = ["correo", "mail", "email", "escribime", "escribile
 export const VENTANA_CORREO = 40;
 
 /**
+ * Correo indirecto (A2 de 40288f6): palabras que nombran una casilla, en
+ * "mi correo es …" o cerca de un pedido. Solas no disparan nada. "e-mail"
+ * no hace falta: "mail" ya se reconoce después del guion.
+ */
+export const PALABRAS_CORREO = ["correo electronico", "direccion de correo", "correo", "mail", "email", "casilla"];
+/** Intención de contacto por correo, además de VERBOS_CONTACTO. */
+export const INTENCION_CORREO = ["te paso", "les paso", "pasame", "pedime", "pidanme", "escribanme"];
+/** No son un alias: "mi correo es un desastre", "mi mail es lo de menos". */
+export const NO_ALIAS_CORREO = [
+  "un", "una", "uno", "el", "la", "lo", "los", "las", "mi", "tu", "su", "muy", "re", "mas", "otro", "otra",
+  "este", "esta", "ese", "esa", "privado", "privada", "secreto", "secreta", "personal", "viejo", "nuevo",
+  "falso", "trucho", "publico", "igual", "distinto", "importante", "simple", "facil", "largo", "corto",
+  "raro", "que", "como", "donde", "cual", "nada", "algo", "todo", "puro", "pura", "solo", "de", "del",
+];
+/** Distancia máxima entre alias, palabra de correo e intención de contacto. */
+export const VENTANA_CORREO_INDIRECTO = 80;
+
+/**
  * TLD que cuentan siempre. Ninguno es una palabra común del castellano, así
  * que "algo.com" o "algo . com" son un dominio aunque haya espacios.
  */

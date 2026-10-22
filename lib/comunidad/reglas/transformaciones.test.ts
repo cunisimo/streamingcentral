@@ -94,3 +94,46 @@ test("contacto repartido: número o correo partidos entre reseñas no se publica
   assert.equal(evaluar("La temporada 3 tiene 12 episodios.", { textosRecientes: ["La vi en 2019 y en 2023.", "La temporada 1 tiene 10 episodios."] }), "publicar");
   assert.equal(evaluar("El final de la segunda es mejor.", { textosRecientes: ["Muy buena la primera temporada."] }), "publicar");
 });
+
+// ---------------------------------------------------------------- terminaciones de cualquier largo (A1 de 40288f6)
+
+test("dirección con ruta: se rechaza con terminaciones de 2 a 63 letras; la puntuación con barras no", () => {
+  for (const n of [2, 3, 5, 6, 7, 9, 11, 14, 18, 24, 40, 63]) {
+    const tld = "abcdefghijklmnopqrstuvwxyz".repeat(3).slice(0, n);
+    assert.equal(evaluar(`Mirala en ejemplo.${tld}/demo sin cortes.`), "rechazo_contenido", `${n} letras`);
+    assert.equal(evaluar(`Mirala en sub.ejemplo.${tld}/a/b?c=1 sin cortes.`), "rechazo_contenido", `${n} letras, subdominio y query`);
+  }
+  for (const l of [
+    "Le doy un 8.5/10 y la recomiendo a todos.",
+    "Actuación/guion/fotografía: todo impecable.",
+    "Es la versión 2.0/beta del director y es mejor.",
+    "Para chicos y/o grandes, según el humor del día.",
+    "Final abierto. Muy bueno/a para charlar después.",
+    "Vista en el cine 3.5/5 y en casa 4/5, cambia mucho.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});
+
+// ---------------------------------------------------------------- correo indirecto (A2 de 40288f6)
+
+test("correo indirecto: autoatribución con alias o pedido + alias se retienen; menciones aisladas publican", () => {
+  for (const m of [
+    "Mi correo es charly_movies en el de Google, el que termina en com. Escribime.",
+    "Mi correo es charly_movies. Escribime por correo y te paso las pelis.",
+    "Mi mail: charly_movies, el de siempre.",
+    "Mi gmail es charly.movies y ahí te paso todo.",
+    "Mi correo es charly. Escribime y te paso las pelis.",
+    "Mandame un mail, soy cine.fan88, y te paso la lista.",
+    "«Mi correo es charly_movies», escribime y charlamos.",
+  ]) assert.equal(evaluar(m), "retener", m);
+  for (const l of [
+    "Ella revisa su correo de Google y encuentra la carta del padre.",
+    "Mi correo es un desastre desde que vi esta película.",
+    "Mi mail es lo de menos, lo que importa es la peli.",
+    "Escribime qué opinan del final, me encantó el mail del villano.",
+    "El hacker le pide el mail a su víctima y la trama se complica.",
+    "La app de correo de Google aparece en cada plano, puro product placement.",
+    "El agente 007 le manda un mail a M y escribe todo en clave.",
+    "«Mi correo es charly», le dice al detective, y él lo anota en la libreta.",
+    "Gmail, Outlook y Yahoo aparecen en la escena de la oficina, muy de los 2000.",
+  ]) assert.equal(evaluar(l), "publicar", l);
+});
