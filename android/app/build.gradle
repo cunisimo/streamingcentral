@@ -187,6 +187,13 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // SDK de Meta, SOLO el modulo de eventos (facebook-core): mide instalacion y
+    // aperturas para atribuir las campanas de Facebook/Instagram. Sin login, sin
+    // share, sin eventos propios: nada de lo que la persona hace adentro de Yump
+    // sale hacia Meta. Version fija y no `latest.release`: 18.3.0 (junio 2026)
+    // y no la 19.0.0, que salio el 16/10 y todavia no tiene recorrido. La
+    // configuracion esta en AndroidManifest.xml y la fija lib/meta-sdk.test.ts.
+    implementation "com.facebook.android:facebook-core:18.3.0"
 }
 
 apply from: 'capacitor.build.gradle'

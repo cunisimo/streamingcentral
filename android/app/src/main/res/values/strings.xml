@@ -4,4 +4,9 @@
     <string name="title_activity_main">Yump</string>
     <string name="package_name">ar.yump.app</string>
     <string name="custom_url_scheme">ar.yump.app</string>
+    <!-- App "Yump" en Meta for Developers (portafolio Estudio Bushi). El token
+         de cliente NO es un secreto: Meta lo disena para viajar dentro de la
+         app, y solo sirve junto con este identificador. -->
+    <string name="facebook_app_id" translatable="false">1114281058003052</string>
+    <string name="facebook_client_token" translatable="false">7813112b6d9daf31a7ad567769bdf750</string>
 </resources>

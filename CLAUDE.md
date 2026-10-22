@@ -60,6 +60,15 @@ a las API remotas sí llegan al servidor: sus logs no equivalen a usuarios,
 sesiones ni recorridos medidos. Incorporar analíticas nativas exige una decisión
 de implementación y revisar las declaraciones de privacidad correspondientes.
 
+**SDK de Meta (decisión del dueño, 21/10/2026; rama `feat/meta-sdk`).** Sólo
+`facebook-core` 18.3.0 en `android/app/build.gradle`. Registra solo la
+instalación y las aperturas para atribuir las campañas de Facebook/Instagram.
+No hay eventos propios ni ningún otro módulo del SDK. AD_ID se conserva y los
+permisos de Privacy Sandbox se quitan. La configuración y sus motivos están en
+el manifest, y `lib/meta-sdk.test.ts` la fija. **Antes de publicar una versión
+con el SDK:** `yump.ar/privacidad` tiene que nombrar a Meta, y en Play Console
+hay que declarar el ID de publicidad como "Sí" y actualizar Data Safety.
+
 Agregador de streaming para Argentina. Resuelve "no sé qué ver": agrega catálogo
 de las plataformas del usuario (Netflix, Disney+, Max, etc.), sin cine ni TV
 abierta.
