@@ -2,7 +2,9 @@
 // confusables ambiguos como clases, no como reemplazo único.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { base, clase, letrasADigitos, normalizarOriginal, palabrasADigitos, plegar, resolverSeparadores } from "./plegado.ts";
+import {
+  base, clase, digitosAscii, letrasADigitos, normalizarOriginal, numerosCompuestos, palabrasADigitos, plegar, resolverSeparadores,
+} from "./plegado.ts";
 
 test("normalizarOriginal: NFC, saltos de línea unificados y bordes recortados", () => {
   assert.equal(normalizarOriginal("  éxito\r\nfinal\r  "), "éxito\nfinal");
@@ -38,6 +40,27 @@ test("letras por dígitos: sólo en piezas que ya tienen un dígito y sólo letr
   assert.equal(letrasADigitos("solo bis oso"), "solo bis oso");
   assert.equal(letrasADigitos("se7en m3gan 2do t3e8"), "se7en m3gan 2do t3e8");
   assert.match(plegar("Escribime al 11 5O5O 1234").digitos, /11 5050 1234/);
+});
+
+test("E1.2: dígitos de cualquier sistema pasan a ASCII", () => {
+  assert.equal(digitosAscii("٠١٢٣٤٥٦٧٨٩"), "0123456789");
+  assert.equal(digitosAscii("۰۹ ०९ ০৯"), "09 09 09");
+  assert.equal(digitosAscii("sin dígitos ñ"), "sin dígitos ñ");
+  assert.equal(base("Llamame al ١١٥٥"), "llamame al 1155");
+});
+
+test("E1.2: números de 16 a 99 dictados pasan a dígitos; del 0 al 15 sólo en corridas", () => {
+  assert.equal(numerosCompuestos("setenta y dos, ochenta y uno, noventa"), "72, 81, 90");
+  assert.equal(numerosCompuestos("veintitres y dieciseis"), "23 y 16");
+  assert.equal(numerosCompuestos("un clasico de los ochenta"), "un clasico de los 80");
+  assert.match(plegar("Llamame: once, seis, setenta y dos").digitos, /11, 6, 72/);
+});
+
+test("E1.2: 'punto' sólo une si la palabra anterior puede ser parte de una dirección", () => {
+  assert.equal(resolverSeparadores("la burbuja de las punto com"), "la burbuja de las punto com");
+  assert.equal(resolverSeparadores("esta a punto de estallar"), "esta a punto de estallar");
+  assert.equal(resolverSeparadores("pelisplus punto com"), "pelisplus.com");
+  assert.equal(resolverSeparadores("juan arroba gmail punto com"), "juan@gmail.com");
 });
 
 test("separadores ofuscados de dominios y correos", () => {

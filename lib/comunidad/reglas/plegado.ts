@@ -23,10 +23,26 @@ export function normalizarOriginal(texto: string): string {
   return texto.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 }
 
-/** NFKC, minúsculas, sin acentos, sin invisibles ni controles, espacios colapsados. */
+/**
+ * Cualquier dígito decimal Unicode (arábigo-índico ٤, devanagari ४, bengalí…)
+ * pasa a ASCII (E1.2, A2). NFKC ya resuelve los de ancho completo y los
+ * matemáticos; éstos no tienen descomposición. Los bloques de dígitos de
+ * Unicode son de 10 consecutivos empezando en el cero, así que el valor es la
+ * distancia al comienzo de la corrida de dígitos módulo 10.
+ */
+export function digitosAscii(t: string): string {
+  return t.replace(/[^\x00-\x7F]/gu, (c) => {
+    if (!/\p{Nd}/u.test(c)) return c;
+    const cp = c.codePointAt(0)!;
+    let inicio = cp;
+    while (/\p{Nd}/u.test(String.fromCodePoint(inicio - 1))) inicio--;
+    return String((cp - inicio) % 10);
+  });
+}
+
+/** NFKC, dígitos ASCII, minúsculas, sin acentos, sin invisibles ni controles, espacios colapsados. */
 export function base(texto: string): string {
-  return texto
-    .normalize("NFKC")
+  return digitosAscii(texto.normalize("NFKC"))
     .replace(INVISIBLES, "")
     .replace(CONTROLES, " ")
     .toLowerCase()
@@ -44,6 +60,34 @@ export const PALABRAS_NUMERO: Readonly<Record<string, string>> = {
   cinco: "5", seis: "6", siete: "7", ocho: "8", nueve: "9", diez: "10",
   once: "11", doce: "12", trece: "13", catorce: "14", quince: "15",
 };
+
+const DECENAS: Readonly<Record<string, number>> = {
+  veinte: 20, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90,
+};
+const UNIDADES: Readonly<Record<string, number>> = {
+  un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9,
+};
+const COMPUESTOS: Readonly<Record<string, number>> = {
+  dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19,
+  veintiun: 21, veintiuno: 21, veintiuna: 21, veintidos: 22, veintitres: 23, veinticuatro: 24,
+  veinticinco: 25, veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+};
+const RE_COMPUESTO = new RegExp(
+  `(?<![\\p{L}\\p{N}])(?:(${Object.keys(DECENAS).join("|")})(?:\\s+y\\s+(${Object.keys(UNIDADES).join("|")}))?|(${Object.keys(COMPUESTOS).join("|")}))(?![\\p{L}\\p{N}])`,
+  "gu",
+);
+
+/**
+ * Números de 16 a 99 dichos con palabras ("setenta y dos", "veintitrés",
+ * "noventa") pasan a dígitos en cualquier lugar: no hay forma de que esa
+ * conversión arme un contacto donde no lo hay, porque el resultado sigue
+ * siendo un número de dos cifras (E1.2, A2). Del 0 al 15 se convierten sólo
+ * dentro de corridas (`palabrasADigitos`): "un clásico" sigue siendo texto.
+ */
+export function numerosCompuestos(b: string): string {
+  return b.replace(RE_COMPUESTO, (_m, decena?: string, unidad?: string, compuesto?: string) =>
+    String(compuesto ? COMPUESTOS[compuesto] : DECENAS[decena!] + (unidad ? UNIDADES[unidad] : 0)));
+}
 
 /** Corridas con al menos tantas piezas numéricas se convierten. */
 export const MIN_PIEZAS_CORRIDA = 3;
@@ -112,6 +156,11 @@ export function palabrasADigitos(b: string): string {
   return salida + b.slice(cursor);
 }
 
+/** La pasada 1 completa, sobre un texto ya en `base`. */
+export function pasadaDigitos(b: string): string {
+  return palabrasADigitos(letrasADigitos(numerosCompuestos(b)));
+}
+
 // ---------------------------------------------------------------- pasada 2
 
 // Letras de otros alfabetos que se ven como una latina (minúsculas: `base` ya
@@ -151,18 +200,37 @@ export function clase(palabra: string): string {
 }
 
 /**
+ * Palabras que no pueden ser la etiqueta de una dirección antes de "punto":
+ * artículos, preposiciones y nexos. "las punto com", "en el punto de vista",
+ * "a punto de". Lista cerrada de palabras gramaticales, no de temas.
+ */
+const NO_ETIQUETA: ReadonlySet<string> = new Set([
+  "el", "la", "los", "las", "lo", "un", "una", "unos", "unas", "al", "del", "de",
+  "en", "a", "y", "o", "u", "e", "que", "su", "sus", "mi", "mis", "tu", "tus",
+  "este", "esta", "estos", "estas", "ese", "esa", "esos", "esas", "aquel",
+  "aquella", "con", "sin", "por", "para", "como", "cada", "otro", "otra", "buen",
+  "mal", "gran", "ultimo", "primer", "mismo", "misma", "era", "es", "fue", "muy",
+]);
+
+/**
  * Resuelve las formas ofuscadas de "." y "@" y une letras sueltas:
  * "pelis punto com", "bit(.)ly", "juan arroba gmail", "(at)", "[dot]",
  * "j u a n @ g m a i l . c o m", "cine-oscuro . blogspot . com".
  * "final. Me encantó" NO se une: el punto pegado a la palabra anterior y un
  * espacio después es puntuación, no un dominio.
+ *
+ * "punto" suelto (sin corchetes) se convierte sólo si la palabra anterior
+ * puede ser parte de una dirección (E1.2, A3): "pelisplus punto com" sí, "la
+ * burbuja de las punto com" no ("las" es un artículo, no un nombre de sitio).
+ * Las formas entre corchetes ("[punto]", "(.)") se convierten siempre.
  */
 export function resolverSeparadores(b: string): string {
   let t = b
     .replace(/[([{]\s*(?:\.|punto|dot)\s*[)\]}]/g, ".")
     .replace(/[([{]\s*(?:@|arroba|at)\s*[)\]}]/g, "@")
     .replace(/\barroba\b/g, "@")
-    .replace(/ (?:punto|dot) /g, ".");
+    .replace(/([\p{L}\p{N}_.\-]+) (?:punto|dot) (?=[\p{L}\p{N}])/gu, (m, previa: string) =>
+      NO_ETIQUETA.has(previa) ? m : `${previa}.`);
   t = unirLetrasSueltas(t);
   // Espacio a ambos lados de "." o "@" entre dos piezas: es una dirección partida.
   t = t.replace(/([\p{L}\p{N}_-]) +([.@]) +(?=[\p{L}\p{N}])/gu, "$1$2");
@@ -173,7 +241,8 @@ export function resolverSeparadores(b: string): string {
 
 /** Corridas de 3 o más piezas de un solo carácter separadas por espacios: "w w w . p e l i s". */
 function unirLetrasSueltas(t: string): string {
-  return t.replace(/(?:^|(?<= ))(?:[\p{L}\p{N}.@] ){2,}[\p{L}\p{N}.@](?=$| )/gu, (m) => m.replace(/ /g, ""));
+  // E1.2: la última letra puede ir seguida de puntuación ("… b u s c a r,").
+  return t.replace(/(?:^|(?<= ))(?:[\p{L}\p{N}.@] ){2,}[\p{L}\p{N}.@](?=$| |[,;:!?)\]])/gu, (m) => m.replace(/ /g, ""));
 }
 
 export function mapearConfusables(t: string): string {
@@ -188,7 +257,7 @@ export function plegar(texto: string): Plegado {
   return {
     original,
     base: b,
-    digitos: palabrasADigitos(letrasADigitos(b)),
+    digitos: pasadaDigitos(b),
     letras: mapearConfusables(resolverSeparadores(b)),
   };
 }

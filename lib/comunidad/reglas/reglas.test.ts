@@ -88,10 +88,23 @@ test("dominio v2 (A2): terminaciones con confusables de otros alfabetos", () => 
   assert.equal(resena("Левиафан es una película rusa durísima.").resultado, "publicar");
 });
 
-test("redes v2 (A3): diálogo de ficción y menciones lejanas no son contacto", () => {
+test("redes v3: menciones lejanas o sin verbo publican; un pedido entre comillas o atribuido se RETIENE, no se publica", () => {
   assert.equal(resena("El padre le dice \"escribime\" a su hija; luego ella mira Instagram, y esa escena me emocionó.").resultado, "publicar");
-  assert.equal(resena("En una escena él le dice 'mandame un mensaje por WhatsApp cuando llegues' y nunca llega.").resultado, "publicar");
   assert.equal(resena("Agregame a la lista de fans: la vi tres veces. Después busqué el tráiler en TikTok.").resultado, "publicar");
+  assert.equal(resena("En el final ella le dice «nos vemos en Instagram» y se va.").resultado, "publicar");
+  // E1.2 (A1 de 1f475e3): antes publicaban; ahora son señal débil.
+  assert.equal(resena("En una escena él le dice 'mandame un mensaje por WhatsApp cuando llegues' y nunca llega.").resultado, "retener");
+  assert.equal(resena("El villano le grita escribime por WhatsApp y cuelga.").resultado, "retener");
+});
+
+test("redes v3 (A1): con o sin comillas, un pedido con destinatario se rechaza", () => {
+  assert.equal(resena("Escribime por Instagram a cine_amigo.").resultado, "rechazo_contenido");
+  assert.equal(resena("«Escribime por Instagram a cine_amigo».").resultado, "rechazo_contenido");
+  assert.equal(resena("\"Escribime por Instagram a cine_amigo\".").resultado, "rechazo_contenido");
+  assert.equal(resena("Le dice: 'agregame al wsp, soy demo_88'.").resultado, "rechazo_contenido");
+});
+
+test("redes v2 (A3): pedidos reales sin comillas", () => {
   // Pedidos reales, emparejados.
   assert.equal(resena("Agregame al wsp y charlamos de la peli.").resultado, "rechazo_contenido");
   assert.equal(resena("Escribime por insta, soy cinefila_demo.").resultado, "rechazo_contenido");

@@ -7,7 +7,7 @@
 // en E3; acá no hay ninguna consulta.
 
 import * as L from "./listas.ts";
-import { base, clase, letrasADigitos, palabrasADigitos } from "./plegado.ts";
+import { base, clase, pasadaDigitos } from "./plegado.ts";
 import type { ContextoResena, Disparo, Plegado, Regla } from "./tipos.ts";
 
 // ---------------------------------------------------------------- utilidades
@@ -48,32 +48,60 @@ export interface Corrida {
    * Una excepción NO la descarta: sólo exige una señal fuerte de contacto
    * para contarla como teléfono (E1.1, A1).
    */
-  excepcion: "anio" | "miles" | "fecha" | "cuit" | null;
+  excepcion: "anio" | "miles" | "fecha" | "cuit" | "documento" | null;
 }
 
-// Dígitos con hasta 3 separadores entre ellos ("11 4433-2211", "1 1 . 5 5").
-// Ni "/" ni "," separan: "15/03/2024" y "1985, 1999" son tres y dos números.
-const CORRIDA = /\+?\d(?:[ .\-_()*+]{0,3}\d)*/g;
+// Separadores dentro de un número: espacio, puntuación de enlace y símbolos
+// tipográficos (punto medio, viñeta, rayas y guiones Unicode, tilde, barra
+// vertical). E1.2 (A2) generalizó la lista de E1 por CLASE de signo, no por
+// literal. Ni "/" ni "," separan: "15/03/2024" y "1985, 1999" son números
+// distintos (la coma tiene una lectura aparte, sólo con señal fuerte).
+const SEP = "[ .\\-_()*+·•∙⋅‧‐‑‒–—―−~|\\\\]";
+const CORRIDA = new RegExp(`\\+?\\d(?:${SEP}{0,3}\\d)*`, "g");
+// Lectura amplia: además la coma y el punto y coma ("once, seis, 72, 81…").
+const CORRIDA_AMPLIA = new RegExp(`\\+?\\d(?:(?:${SEP}|[,;]){0,3}\\d)*`, "g");
 const MILES = /^\d{1,3}(?:\.\d{3})+$/;
 const FECHA = /^\d{1,2}[.\-]\d{1,2}[.\-](?:\d{2}|\d{4})$/;
 const ANIO = /^(?:19|20)\d{2}$/;
 
 /** Todas las corridas de dígitos, con su excepción si parecen legítimas. */
-export function corridasNumericas(digitos: string): Corrida[] {
+export function corridasNumericas(digitos: string, patron: RegExp = CORRIDA): Corrida[] {
   const salida: Corrida[] = [];
-  for (const m of digitos.matchAll(CORRIDA)) {
+  patron.lastIndex = 0;
+  for (const m of digitos.matchAll(patron)) {
     const texto = m[0].trim();
     const grupos = texto.split(/\D+/).filter(Boolean);
-    const antes = digitos.slice(Math.max(0, m.index! - 12), m.index!);
+    const antes = digitos.slice(Math.max(0, m.index! - 14), m.index!);
     let excepcion: Corrida["excepcion"] = null;
     if (MILES.test(texto)) excepcion = "miles";
     else if (FECHA.test(texto)) excepcion = "fecha";
     else if (grupos.length > 0 && grupos.every((g) => ANIO.test(g))) excepcion = "anio";
-    // CUIT/CUIL con su palabra delante: es dato personal (otra regla).
+    // CUIT/CUIL o DNI con su palabra delante: es dato personal (otra regla, que retiene).
     else if (/\bcui[lt]\b/.test(antes) && /^\d{2}-?\d{8}-?\d$/.test(texto)) excepcion = "cuit";
+    else if (/\b(?:dni|d\.n\.i\.?|documento)\b[^\d]*$/.test(antes) && /^\d{1,2}[ .]?\d{3}[ .]?\d{3}$/.test(texto)) excepcion = "documento";
     salida.push({ texto, desde: m.index!, hasta: m.index! + m[0].length, digitos: texto.replace(/\D/g, "").length, excepcion });
   }
   return salida;
+}
+
+// Letras sueltas de la familia de LETRA_DIGITO dentro de una secuencia de
+// dígitos espaciados ("I I 4 9 S 2 6 O 8 7"). Sólo se usa en la lectura
+// amplia: "entre 1985 o 1986" daría un falso teléfono si se hiciera siempre.
+const LETRA_SUELTA: Readonly<Record<string, string>> = { o: "0", l: "1", i: "1", s: "5", z: "2", b: "8", g: "9" };
+const RE_LETRA_SUELTA = new RegExp(`(?<![\\p{L}\\p{N}])([olisbzg])(?![\\p{L}\\p{N}])`, "gu");
+
+/**
+ * Lectura amplia de los números: la coma separa y las letras sueltas de la
+ * familia valen como dígitos. Sólo cuenta con una señal FUERTE de contacto
+ * cerca y con el largo completo de un teléfono (E1.2, A2): "puntajes 8, 9, 7,
+ * 10 y 6" no es un teléfono.
+ */
+export function corridasAmplias(digitos: string): Corrida[] {
+  const conLetras = digitos.replace(RE_LETRA_SUELTA, (l: string, letra: string, i: number) => {
+    const alrededor = digitos.slice(Math.max(0, i - 4), i + 5);
+    return /\d/.test(alrededor) ? LETRA_SUELTA[letra] : l;
+  });
+  return corridasNumericas(conLetras, CORRIDA_AMPLIA);
 }
 
 /** Corridas sin excepción: las que podrían ser un contacto por sí solas. */
@@ -93,18 +121,27 @@ function cerca(re: RegExp, t: string, desde: number, hasta: number): boolean {
  * si hay una señal FUERTE de contacto cerca ("Escribime al 1.155.512.345");
  * sin ella siguen siendo legítimos. Las letras por dígitos ("5O5O") llegan
  * resueltas desde el plegado.
+ * v3 (E1.2, A2): dígitos de cualquier sistema (plegado), separadores por
+ * clase de signo, números dictados de 16 a 99 (plegado) y la lectura amplia
+ * (coma y letras sueltas) con señal fuerte y largo completo.
  */
 export const reglaTelefono: Regla<unknown> = {
   id: "contacto.telefono",
-  version: 2,
+  version: 3,
   evaluar: (p) => {
+    const MOTIVO = "Sacá el número de teléfono: no se pueden compartir datos de contacto.";
     for (const c of corridasNumericas(p.digitos)) {
       const fuerte = () => cerca(RE_CONTACTO_FUERTE, p.digitos, c.desde, c.hasta);
       const telefono = c.excepcion === null
         ? c.digitos >= L.DIGITOS_TELEFONO ||
           (c.digitos >= L.DIGITOS_TELEFONO_CON_CONTEXTO && cerca(RE_CONTACTO, p.digitos, c.desde, c.hasta))
-        : c.excepcion !== "cuit" && c.digitos >= L.DIGITOS_TELEFONO_CON_CONTEXTO && fuerte();
-      if (telefono) return disparo("rechazo_contenido", "Sacá el número de teléfono: no se pueden compartir datos de contacto.");
+        : c.excepcion !== "cuit" && c.excepcion !== "documento" && c.digitos >= L.DIGITOS_TELEFONO_CON_CONTEXTO && fuerte();
+      if (telefono) return disparo("rechazo_contenido", MOTIVO);
+    }
+    for (const c of corridasAmplias(p.digitos)) {
+      if (c.excepcion === null && c.digitos >= L.DIGITOS_TELEFONO && cerca(RE_CONTACTO_FUERTE, p.digitos, c.desde, c.hasta)) {
+        return disparo("rechazo_contenido", MOTIVO);
+      }
     }
     return null;
   },
@@ -112,7 +149,8 @@ export const reglaTelefono: Regla<unknown> = {
 
 export const reglaTelefonoNombre: Regla<unknown> = {
   id: "contacto.telefono_nombre",
-  version: 2,
+  // v3: hereda los cambios del plegado y de los separadores (E1.2).
+  version: 3,
   evaluar: (p) =>
     corridasSinExcepcion(p.digitos).some((c) => c.digitos >= L.DIGITOS_TELEFONO_NOMBRE)
       ? disparo("rechazo_contenido", "Sacá el número: los nombres no pueden tener datos de contacto.")
@@ -153,18 +191,45 @@ export const reglaCorreo: Regla<unknown> = {
       : null,
 };
 
+/**
+ * En un nombre no hay motivo para nombrar un proveedor de correo: "lucas en
+ * gmail" ya es un pedido de contacto aunque falte la pista que se exige en una
+ * reseña (E1.2; en reseñas, "el correo de gmail de su jefe" es legítimo).
+ */
+const RE_PROVEEDOR_SOLO = new RegExp(`${BORDE_ANTES}(?:${PROVEEDORES})${BORDE_DESPUES}`, "u");
+
+export const reglaCorreoNombre: Regla<unknown> = {
+  id: "contacto.email_nombre",
+  version: 1,
+  evaluar: (p) =>
+    RE_PROVEEDOR_SOLO.test(p.letras)
+      ? disparo("rechazo_contenido", "Sacá el correo: los nombres no pueden tener datos de contacto.")
+      : null,
+};
+
 const ETIQUETA = "[\\p{L}\\p{N}][\\p{L}\\p{N}_\\-]*";
 const RE_DOMINIO_FUERTE = new RegExp(`${BORDE_ANTES}${ETIQUETA}\\.(?:${L.TLD_FUERTES.map(clase).join("|")})${BORDE_DESPUES}`, "u");
 const RE_DOMINIO_DEBIL = new RegExp(`${BORDE_ANTES}${ETIQUETA}\\.(?:${L.TLD_DEBILES.map(esc).join("|")})/`, "u");
+/**
+ * Dirección con ruta y cualquier terminación de 2 a 6 letras ("is.gd/demo",
+ * "algo.xyz/abc"): una ruta pegada no aparece en puntuación natural, así que
+ * no hace falta conocer el TLD (E1.2, A3). Sin ruta, sigue mandando la lista.
+ */
+const RE_DOMINIO_CON_RUTA = new RegExp(`${BORDE_ANTES}${ETIQUETA}(?:\\.${ETIQUETA})*\\.\\p{L}{2,6}/[\\p{L}\\p{N}_\\-./?=&%#]+`, "u");
 const RE_ESQUEMA = /(?:https?:\/\/|www\.)/u;
 const RE_HOSTS = palabras(L.HOSTS_SIN_TLD);
 
-/** v2 (E1.1, A2): mismos patrones; el plegado mapea más confusables ("сом" con м cirílica). */
+/**
+ * v2 (E1.1, A2): mismos patrones; el plegado mapea más confusables ("сом" con м cirílica).
+ * v3 (E1.2, A3): dirección con ruta sin importar la terminación, más TLD y
+ * acortadores conocidos; "las punto com" ya no llega como dominio (plegado).
+ */
 export const reglaEnlace: Regla<unknown> = {
   id: "contacto.enlace",
-  version: 2,
+  version: 3,
   evaluar: (p) =>
-    RE_ESQUEMA.test(p.letras) || RE_DOMINIO_FUERTE.test(p.letras) || RE_DOMINIO_DEBIL.test(p.letras) || hay(RE_HOSTS, p.letras)
+    RE_ESQUEMA.test(p.letras) || RE_DOMINIO_FUERTE.test(p.letras) || RE_DOMINIO_DEBIL.test(p.letras) ||
+    RE_DOMINIO_CON_RUTA.test(p.letras) || hay(RE_HOSTS, p.letras)
       ? disparo("rechazo_contenido", "Sacá el enlace o la dirección web: no se pueden compartir enlaces.")
       : null,
 };
@@ -177,56 +242,81 @@ const RE_VERBO = palabras([...L.VERBOS_CONTACTO, "me encuentran", "me encontras"
 const MOTIVO_RED = "Sacá el usuario o la red social: no se pueden compartir datos de contacto.";
 const RE_HANDLE_G = new RegExp(RE_HANDLE.source, "gu");
 
-// Tramos entre comillas: diálogo o cita, no un pedido de quien escribe.
-const RE_COMILLAS = /"[^"]*"|“[^”]*”|«[^»]*»|(?<![\p{L}\p{N}])'[^']*'(?![\p{L}\p{N}])/gu;
+// Tramos entre comillas. Son una señal CONTEXTUAL (posible diálogo o cita),
+// no una prueba de inocuidad (E1.2, A1).
+const RE_COMILLAS = /"[^"]*"|“[^”]*”|«[^»]*»|‹[^›]*›|(?<![\p{L}\p{N}])'[^']*'(?![\p{L}\p{N}])|‘[^’]*’/gu;
 
 function entreComillas(t: string): (i: number) => boolean {
   const tramos = [...t.matchAll(RE_COMILLAS)].map((m) => [m.index!, m.index! + m[0].length] as const);
   return (i) => tramos.some(([d, h]) => i > d && i < h);
 }
 
-const algunaCerca = (xs: number[], ys: number[], ventana: number) =>
-  xs.some((x) => ys.some((y) => Math.abs(x - y) <= ventana));
+// Atribución narrativa justo antes del verbo: "le dice", "le grita", "responde".
+const RE_ATRIBUCION = palabras(L.VERBOS_ATRIBUCION);
+// Destinatario de forma reconocible cerca: "a cine_amigo", "soy cinefila_demo", "como juan.cine".
+const RE_DESTINATARIO = /(?<![\p{L}\p{N}])(?:a|al|como|soy|usuario|user|nick)\s+[\p{L}\p{N}]*[_.\d][\p{L}\p{N}_.]*/u;
+
+type Fuerza = "rechazo" | "retencion" | null;
+
+/** Pedidos "verbo de contacto + red" en una copia del texto, con su fuerza. */
+function pedidosDeRed(t: string): Fuerza {
+  const plataformas = posiciones(RE_PLATAFORMA, t);
+  if (plataformas.length === 0) return null;
+  const comillas = entreComillas(t);
+  let fuerza: Fuerza = null;
+  for (const v of posiciones(RE_VERBO, t)) {
+    if (!plataformas.some((x) => Math.abs(x - v) <= L.VENTANA_RED)) continue;
+    const ventana = t.slice(Math.max(0, v - 10), v + L.VENTANA_RED + 30);
+    if (RE_DESTINATARIO.test(ventana)) return "rechazo";
+    const atribuido = hay(RE_ATRIBUCION, t.slice(Math.max(0, v - 25), v));
+    if (comillas(v) || atribuido) fuerza = "retencion";
+    else return "rechazo";
+  }
+  return fuerza;
+}
 
 /**
  * v2 (E1.1, A3). Ya no alcanza con que una red y un verbo aparezcan en
- * cualquier parte del texto. Rechaza sólo con evidencia acotada:
+ * cualquier parte del texto.
+ * v3 (E1.2, A1). Las comillas dejaron de ser una exención: «Escribime por
+ * Instagram a cine_amigo» se rechaza igual que sin comillas.
+ *   Rechaza:
  *   - un usuario (@algo) cerca de una red o de un verbo de contacto;
  *   - "red: algo";
- *   - un verbo de contacto FUERA de comillas, a ≤ VENTANA_RED de una red.
- * Un verbo entre comillas es diálogo o cita ("le dice 'escribime'"): sin un
- * usuario, número o correo (que miran otras reglas) no dispara.
+ *   - verbo de contacto + red a ≤ VENTANA_RED, con un destinatario de forma
+ *     reconocible cerca, con o sin comillas;
+ *   - verbo de contacto + red sin comillas ni atribución narrativa.
+ *   Retiene (señal débil, revisión humana):
+ *   - verbo + red entre comillas o atribuido a un personaje ("le dice
+ *     'escribime por WhatsApp'") sin destinatario. No se publica solo.
+ *   No dispara: una red mencionada sin verbo de contacto cerca.
  */
 export const reglaRed: Regla<unknown> = {
   id: "contacto.red",
-  version: 2,
+  version: 3,
   evaluar: (p) => {
     // `base` y `letras` tienen distintas posiciones; cada señal se compara
     // dentro de su propia copia.
     const handles = posiciones(RE_HANDLE_G, p.base);
-    const plataformasBase = posiciones(RE_PLATAFORMA, p.base);
-    const verbos = posiciones(RE_VERBO, p.base);
-    const comillas = entreComillas(p.base);
-    const verbosPropios = verbos.filter((i) => !comillas(i));
-    const plataformasLetras = posiciones(RE_PLATAFORMA, p.letras);
-    const verbosLetras = posiciones(RE_VERBO, p.letras);
-    const comillasLetras = entreComillas(p.letras);
-    if (
-      algunaCerca(handles, [...plataformasBase, ...verbos], L.VENTANA_HANDLE) ||
-      RE_PLATAFORMA_DOS_PUNTOS.test(p.letras) ||
-      algunaCerca(verbosPropios, plataformasBase, L.VENTANA_RED) ||
-      algunaCerca(verbosLetras.filter((i) => !comillasLetras(i)), plataformasLetras, L.VENTANA_RED)
-    ) {
+    const cercaDeHandle = [...posiciones(RE_PLATAFORMA, p.base), ...posiciones(RE_VERBO, p.base)];
+    if (algunaCerca(handles, cercaDeHandle, L.VENTANA_HANDLE) || RE_PLATAFORMA_DOS_PUNTOS.test(p.letras)) {
       return disparo("rechazo_contenido", MOTIVO_RED);
     }
+    const fuerzas = [pedidosDeRed(p.base), pedidosDeRed(p.letras)];
+    if (fuerzas.includes("rechazo")) return disparo("rechazo_contenido", MOTIVO_RED);
+    if (fuerzas.includes("retencion")) return disparo("retener", "Pedido de contacto por red entre comillas o en un diálogo.");
     return null;
   },
 };
 
+const algunaCerca = (xs: number[], ys: number[], ventana: number) =>
+  xs.some((x) => ys.some((y) => Math.abs(x - y) <= ventana));
+
 /** En un nombre, un usuario o una red sola ya es un pedido de contacto. */
 export const reglaRedNombre: Regla<unknown> = {
   id: "contacto.red_nombre",
-  version: 1,
+  // v2 (E1.2): más alias de redes ("tik tok", "tg") desde listas.ts.
+  version: 2,
   evaluar: (p) =>
     RE_HANDLE.test(p.base) || hay(RE_PLATAFORMA, p.letras) || hay(RE_VERBO, p.base)
       ? disparo("rechazo_contenido", MOTIVO_RED)
@@ -240,20 +330,42 @@ export const reglaRedNombre: Regla<unknown> = {
  * palabra de contacto en alguno, retiene. Retiene y no rechaza porque la
  * evidencia es más débil que un número entero en un solo texto.
  */
+// Un texto reciente que termina "colgando" un correo o usuario ("vale.series
+// arroba", "hotmail punto com punto", "… como @tito").
+// El punto final NO cuenta: casi todo texto termina así.
+const RE_COLGANTE = /(?:@|\barroba|\bpunto|\bdot|[_:])\s*$|(?<![\p{L}\p{N}._%+\-])@[\p{L}\p{N}_.]{2,}\s*[.!]?\s*$/u;
+const RE_PISTA_CONTINUACION = palabras(L.PISTAS_CONTINUACION);
+
+/**
+ * Contacto partido entre reseñas (revisión §3.4): mitigación PARCIAL, siempre
+ * RETIENE (la evidencia es más débil que un dato completo en un texto).
+ * - Números: suma los dígitos de las corridas de 2 o más (sin años, montos
+ *   ni fechas) del texto y de los recientes; con una palabra de contacto en
+ *   alguno, si llegan a un teléfono.
+ * - v3 (E1.2): correo o usuario repartido. Un reciente termina colgando un
+ *   correo o usuario y el texto actual tiene una pista de continuación
+ *   ("terminación", "el resto", "sumalo", "mail", "usuario").
+ * Armar un dato a partir de instrucciones en lenguaje natural ("sumalo al
+ * principio que ya te dije") queda fuera: depende de denuncias.
+ */
 export const reglaContactoPartido: Regla<ContextoResena> = {
   id: "contacto.partido",
-  // v2: los recientes se pliegan igual que el texto (letras por dígitos).
-  version: 2,
+  // v2: los recientes se pliegan igual que el texto. v3: colgantes de correo o usuario.
+  version: 3,
   evaluar: (p, contexto) => {
+    if (contexto.textosRecientes.length === 0) return null;
+    const MOTIVO = "Posible dato de contacto repartido entre reseñas.";
+    const recientesBase = contexto.textosRecientes.map((t) => base(t));
+    if (recientesBase.some((t) => RE_COLGANTE.test(t)) && hay(RE_PISTA_CONTINUACION, p.base)) {
+      return disparo("retener", MOTIVO);
+    }
     const fragmentos = (d: string) => corridasSinExcepcion(d).filter((c) => c.digitos >= 2);
     const propios = fragmentos(p.digitos);
-    if (propios.length === 0 || contexto.textosRecientes.length === 0) return null;
-    const recientes = contexto.textosRecientes.map((t) => palabrasADigitos(letrasADigitos(base(t))));
+    if (propios.length === 0) return null;
+    const recientes = recientesBase.map(pasadaDigitos);
     const total = [...propios, ...recientes.flatMap(fragmentos)].reduce((s, c) => s + c.digitos, 0);
     const contacto = [p.digitos, ...recientes].some((t) => hay(RE_CONTACTO, t));
-    return total >= L.DIGITOS_TELEFONO && contacto
-      ? disparo("retener", "Posible dato de contacto repartido entre reseñas.")
-      : null;
+    return total >= L.DIGITOS_TELEFONO && contacto ? disparo("retener", MOTIVO) : null;
   },
 };
 
@@ -264,26 +376,42 @@ const RE_INVERSION = raices(L.SPAM_INVERSION);
 const RE_FRASES = palabras(L.SPAM_FRASES);
 const RE_PROMO = palabras(L.SPAM_PROMO);
 const RE_ACCION = palabras(L.SPAM_ACCION);
+// Los imperativos de voseo se buscan con tilde, en el original en minúsculas.
+const RE_ACCION_VOSEO = new RegExp(`${BORDE_ANTES}(?:${L.SPAM_ACCION_VOSEO.map(esc).join("|")})\\p{L}*`, "gu");
 const RE_MONTO = /(?:\$|usd|u\$s|usdt|dolares|pesos)\s?\d|\d+\s?(?:usd|usdt|dolares|pesos|%)/u;
 const VENTANA_PROMO = 60;
 
-/** Cuántas señales de spam tiene el texto (para pruebas e informes). */
-export function puntajeSpam(b: string): number {
+/**
+ * Cuántas señales de spam tiene el texto (para pruebas e informes).
+ * `acentuado`: el original en minúsculas, para los imperativos de voseo.
+ * Las posiciones de `b` y `acentuado` son aproximadamente las mismas (NFC y
+ * sin acentos conserva el largo salvo casos raros); la ventana lo tolera.
+ */
+export function puntajeSpam(b: string, acentuado = b): number {
   let puntos = 0;
   if (hay(RE_CRIPTO, b)) puntos++;
   if (hay(RE_INVERSION, b)) puntos++;
-  if (hay(RE_FRASES, b)) puntos++;
+  RE_FRASES.lastIndex = 0;
+  puntos += Math.min(L.MAX_SENALES_FRASES, new Set([...b.matchAll(RE_FRASES)].map((m) => m[0])).size);
   if (RE_MONTO.test(b)) puntos++;
   const promos = posiciones(RE_PROMO, b);
-  const acciones = posiciones(RE_ACCION, b);
+  const acciones = [...posiciones(RE_ACCION, b), ...posiciones(RE_ACCION_VOSEO, acentuado)];
   if (promos.some((x) => acciones.some((y) => Math.abs(x - y) <= VENTANA_PROMO))) puntos += 2;
   return puntos;
 }
 
+/**
+ * v2 (E1.2): familias divulgadas (premio por encuesta, casino, productos
+ * milagro, sorteos con otros verbos); cada frase distinta suma (hasta 2); los
+ * imperativos ambiguos se exigen con tilde.
+ */
 export const reglaSpam: Regla<unknown> = {
   id: "spam.promocion",
-  version: 1,
-  evaluar: (p) => (puntajeSpam(p.base) >= L.UMBRAL_SPAM ? disparo("retener", "Señales de spam o promoción.") : null),
+  version: 2,
+  evaluar: (p) =>
+    puntajeSpam(p.base, p.original.normalize("NFKC").toLowerCase()) >= L.UMBRAL_SPAM
+      ? disparo("retener", "Señales de spam o promoción.")
+      : null,
 };
 
 // ---------------------------------------------------------------- odio y amenazas
@@ -307,22 +435,35 @@ export const reglaOdio: Regla<unknown> = {
 };
 
 const RE_AMENAZA = palabras(L.AMENAZAS);
+const AMENAZAS_PEGADAS = L.AMENAZAS.map((a) => a.replace(/ /g, ""));
 
+/**
+ * v2 (E1.2): además busca las frases sin espacios dentro de las palabras que
+ * se formaron al unir letras sueltas ("t e v o y a b u s c a r"). Sólo en
+ * esas: buscar sin espacios en todo el texto encontraría "temato" en "el tema
+ * todo".
+ */
 export const reglaAmenaza: Regla<unknown> = {
   id: "amenaza.directa",
-  version: 1,
-  evaluar: (p) => (hay(RE_AMENAZA, p.base) ? disparo("retener", "Amenaza.") : null),
+  version: 2,
+  evaluar: (p) => {
+    if (hay(RE_AMENAZA, p.base)) return disparo("retener", "Amenaza.");
+    const deBase = new Set(p.base.match(/[\p{L}\p{N}]+/gu) ?? []);
+    const unidas = (p.letras.match(/[\p{L}\p{N}]+/gu) ?? []).filter((w) => !deBase.has(w) && w.length >= 6);
+    return unidas.some((w) => AMENAZAS_PEGADAS.some((a) => w.includes(a))) ? disparo("retener", "Amenaza.") : null;
+  },
 };
 
 // ---------------------------------------------------------------- datos personales y menores
 
-const RE_DNI = /(?<![\p{L}])(?:dni|d\.n\.i\.?|documento)(?![\p{L}])[^\d]{0,12}\d{1,2}\.?\d{3}\.?\d{3}(?!\d)/u;
+const RE_DNI = /(?<![\p{L}])(?:dni|d\.n\.i\.?|documento)(?![\p{L}])[^\d]{0,12}\d{1,2}[.\s]?\d{3}[.\s]?\d{3}(?!\d)/u;
 const RE_CUIT = /(?<![\p{L}])cui[lt](?![\p{L}])[^\d]{0,6}\d{2}-?\d{8}-?\d(?!\d)/u;
 const RE_DOMICILIO = palabras(L.DOMICILIO);
 
+/** v2 (E1.2): el DNI también con espacios entre grupos ("29 876 543"). */
 export const reglaDocumento: Regla<unknown> = {
   id: "datos.documento",
-  version: 1,
+  version: 2,
   evaluar: (p) => (RE_DNI.test(p.base) || RE_CUIT.test(p.base) ? disparo("retener", "Posibles datos personales.") : null),
 };
 
@@ -449,5 +590,5 @@ export const REGLAS_RESENA: readonly Regla<ContextoResena>[] = [
  * están pensadas para reseñas de 80–600 (revisión §3.1).
  */
 export const REGLAS_NOMBRE: readonly Regla<unknown>[] = [
-  reglaFormatoNombre, reglaTelefonoNombre, reglaCorreo, reglaEnlace, reglaRedNombre, reglaOdio,
+  reglaFormatoNombre, reglaTelefonoNombre, reglaCorreo, reglaCorreoNombre, reglaEnlace, reglaRedNombre, reglaOdio,
 ];

@@ -45,6 +45,9 @@ export const PLATAFORMAS_RED = [
   "instagram", "insta", "ig", "telegram", "whatsapp", "wsp", "wpp", "wa",
   "tiktok", "discord", "snapchat", "snap", "facebook", "fb", "twitter",
   "threads", "kik", "signal", "onlyfans",
+  // E1.2: alias de escritura habituales. Una red descripta en palabras ("la
+  // app del video corto") queda fuera: no se resuelve con una lista.
+  "tik tok", "tg", "telegran", "whatsap", "watsap", "guasap", "twitch", "face",
 ];
 
 /**
@@ -56,11 +59,31 @@ export const PLATAFORMAS_RED = [
 export const VERBOS_CONTACTO = [
   "escribime", "escribi", "escribile", "hablame", "mandame", "agregame",
   "seguime", "buscame", "encontrame", "contactame", "sumame", "dm", "md", "privado",
+  // E1.2: exhortaciones en plural o a un tercero ("Sigan a @…").
+  "sigan", "siganme", "seguinos", "escriban", "escribanme", "agreguen", "agreguenme",
+];
+
+/**
+ * Verbos de narración que, justo antes del pedido, indican que lo dice un
+ * personaje ("le dice 'escribime por WhatsApp'"). Bajan la señal a retención;
+ * nunca la convierten en publicación (E1.2, A1).
+ */
+export const VERBOS_ATRIBUCION = [
+  "dice", "dijo", "decia", "grita", "grito", "gritaba", "responde", "respondio",
+  "pregunta", "pregunto", "contesta", "contesto", "susurra", "susurro",
+  "pide", "pidio", "repite", "repitio", "escribe", "escribio", "manda", "mando",
+];
+
+/** Pistas, en el texto actual, de que continúa un dato empezado en otra reseña. */
+export const PISTAS_CONTINUACION = [
+  "terminacion", "termina", "resto", "final", "sigue", "seguimos", "continua",
+  "principio", "sumalo", "agregale", "completo", "completa", "mail", "correo",
+  "usuario", "user", "nick", "numero",
 ];
 
 /**
  * Una red y un verbo de contacto cuentan como pedido sólo si están a esta
- * distancia, en caracteres, y el verbo no está entre comillas (E1.1, A3).
+ * distancia, en caracteres (E1.1, A3).
  */
 export const VENTANA_RED = 30;
 /** Usuario y red, o usuario y verbo, a esta distancia. */
@@ -91,6 +114,11 @@ export const TLD_FUERTES = [
   "com", "net", "org", "info", "biz", "xyz", "ly", "io", "gg", "link", "site",
   "online", "app", "live", "club", "shop", "store", "top", "ru", "tk", "ml",
   "ga", "cf", "nz", "ar", "cc", "ws", "blog", "page", "lat", "uy", "cl", "mx",
+  // E1.2: TLD de acortadores y genéricos frecuentes. Con ruta ("algo.zz/x")
+  // cualquier terminación ya cuenta; esta lista es para direcciones SIN ruta.
+  "gd", "gl", "sh", "st", "su", "cx", "pw", "icu", "vip", "fun", "art", "best",
+  "click", "life", "news", "pro", "tech", "today", "world", "zone", "space",
+  "website", "digital", "stream", "movie", "watch", "media", "video", "tube",
 ];
 
 /**
@@ -101,16 +129,52 @@ export const TLD_FUERTES = [
 export const TLD_DEBILES = ["me", "es", "la", "de", "co", "tv", "to", "in", "it", "us", "be", "fm", "am", "so"];
 
 /** Acortadores y hosts que delatan un enlace aunque falte el TLD. */
-export const HOSTS_SIN_TLD = ["bitly", "linktr", "wa.me", "t.me", "mega.nz"];
+export const HOSTS_SIN_TLD = [
+  "bitly", "linktr", "wa.me", "t.me", "mega.nz",
+  // E1.2: acortadores conocidos escritos sin TLD o con TLD débil.
+  "tinyurl", "cuttly", "cutt.ly", "is.gd", "v.gd", "ow.ly", "t.ly", "s.id", "rebrandly", "shorturl", "adfly",
+];
 
 // ---------------------------------------------------------------- spam
 
 export const SPAM_CRIPTO = ["bitcoin", "btc", "cripto", "criptomoneda", "criptomonedas", "usdt", "binance", "ethereum", "forex", "trading", "airdrop"];
 /** Raíces (se buscan como comienzo de palabra). */
 export const SPAM_INVERSION = ["invert", "invirt", "inversion", "ganancia", "rentabilidad", "garantizad"];
-export const SPAM_FRASES = ["ingresos extra", "ganar plata", "gana plata", "gana dinero", "ganar dinero", "plata facil", "dinero facil", "desde tu casa", "sin salir de tu casa", "trabajo desde casa"];
-export const SPAM_PROMO = ["gratis", "sorteo", "sorteando", "sorteamos", "regalo", "regalamos", "promo", "descuento", "cupon", "oferta", "exclusiva"];
-export const SPAM_ACCION = ["entra", "ingresa", "registrate", "participa", "reclama", "descarga", "clic", "click", "clickea", "segui", "seguinos", "comparti", "compartiendo", "deja tu like", "aprovecha", "consultame", "escribime", "suscribite"];
+/**
+ * Frases de familias de spam conocidas. Cada frase distinta suma una señal
+ * (hasta 2). E1.2 sumó familias divulgadas: premio por encuesta, casino,
+ * productos milagro y venta con envío. Es una lista finita: una paráfrasis
+ * nueva pasa (y depende de denuncias).
+ */
+export const SPAM_FRASES = [
+  "ingresos extra", "ganar plata", "gana plata", "gana dinero", "ganar dinero",
+  "plata facil", "dinero facil", "desde tu casa", "sin salir de tu casa", "trabajo desde casa",
+  "fuiste seleccionado", "fuiste seleccionada", "fuiste elegido", "fuiste elegida",
+  "breve encuesta", "completar una encuesta", "reclamar tu premio", "reclama tu premio",
+  "casino online", "bono de bienvenida", "giros gratis", "retiros al instante",
+  "envio gratis", "pago contra entrega", "precio promocional", "conecta tu billetera",
+  "baja de peso", "bajar de peso",
+];
+/** Hasta cuántas señales aportan las frases. */
+export const MAX_SENALES_FRASES = 2;
+export const SPAM_PROMO = [
+  "gratis", "sorteo", "sorteando", "sorteamos", "regalo", "regalamos", "promo",
+  "descuento", "cupon", "oferta", "premio", "premios", "ganadores", "bono", "tokens",
+];
+/** Acciones sin ambigüedad: se buscan en `base`. */
+export const SPAM_ACCION = [
+  "registrate", "clic", "click", "clickea", "seguinos", "compartiendo",
+  "deja tu like", "consultame", "escribime", "suscribite", "probalo", "sumate",
+];
+/**
+ * Imperativos de voseo que sin tilde coinciden con la tercera persona
+ * ("participá" / "participa"): se buscan CON tilde en el original en
+ * minúsculas (E1.2). "El protagonista participa de un sorteo" no suma.
+ */
+export const SPAM_ACCION_VOSEO = [
+  "entrá", "ingresá", "participá", "participás", "reclamá", "descargá", "seguí",
+  "compartí", "aprovechá", "comentá", "completá", "conectá", "comprá", "etiquetá", "dejá",
+];
 /** Señales necesarias para retener. Promoción + acción ya suma 2. */
 export const UMBRAL_SPAM = 2;
 
@@ -127,6 +191,7 @@ export const GRUPOS = [
 export const INSULTOS_ODIO = ["maricon", "maricones", "trolo", "trolos", "trola", "sudaca", "sudacas", "mogolico", "mogolicos", "mogolica"];
 export const VERBOS_EXPULSION = ["matar", "matarlos", "exterminar", "sacar", "sacarlos", "echar", "echarlos", "quemar"];
 
+/** También se buscan sin espacios dentro de letras sueltas unidas ("t e v o y a b u s c a r", E1.2). */
 export const AMENAZAS = [
   "te voy a matar", "te voy a buscar", "te voy a encontrar", "te voy a romper",
   "te voy a cagar", "te voy a reventar", "te voy a lastimar", "te voy a violar",

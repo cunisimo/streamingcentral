@@ -2,7 +2,7 @@
 // único banco con el que se ajustan las reglas; el reservado no se toca acá.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CASOS_DESARROLLO } from "./desarrollo.ts";
+import { CASOS_DESARROLLO, RETENIDOS_CONOCIDOS } from "./desarrollo.ts";
 import { evaluarBanco } from "./evaluar.ts";
 import { REGLAS_NOMBRE, REGLAS_RESENA } from "../reglas.ts";
 
@@ -29,9 +29,15 @@ test("criterios C0–C4 sobre el banco de desarrollo", () => {
   for (const c of informe.criterios) assert.ok(c.cumple, `${c.id} ${c.descripcion}: ${c.valor}`);
 });
 
-test("cada caso da el resultado esperado", () => {
-  const fallidos = informe.resultados.filter((r) => !r.coincide).map((r) => `${r.caso.id} → ${r.decision.resultado}`);
+test("cada caso da el resultado esperado, salvo los retenidos conocidos (que deben quedar retenidos)", () => {
+  const fallidos = informe.resultados
+    .filter((r) => !r.coincide && !(r.caso.id in RETENIDOS_CONOCIDOS))
+    .map((r) => `${r.caso.id} → ${r.decision.resultado}`);
   assert.deepEqual(fallidos, []);
+  for (const id of Object.keys(RETENIDOS_CONOCIDOS)) {
+    const r = informe.resultados.find((x) => x.caso.id === id);
+    assert.equal(r?.decision.resultado, "retener", id);
+  }
 });
 
 test("todas las reglas de contenido se disparan con al menos un caso", () => {

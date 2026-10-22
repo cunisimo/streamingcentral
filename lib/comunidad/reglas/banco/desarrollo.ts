@@ -332,6 +332,108 @@ function regresiones(): CasoBanco[] {
   });
 }
 
+// ---------------------------------------------------------------- regresiones E1.2
+
+// Ejemplos de la auditoría de 1f475e3 y VARIANTES de las familias que fallaron
+// en el reservado 2 (no sus literales), cada una con un control benigno
+// parecido. Siguen siendo casos conocidos: no son medición independiente.
+interface ParE12 {
+  familia: string;
+  categoria: string;
+  esperado: "rechazar" | "retener" | "frenar";
+  malicioso: string;
+  benigno: string;
+  contextoMalicioso?: string[];
+  contextoBenigno?: string[];
+}
+
+const REGRESIONES_E12: readonly ParE12[] = [
+  // A1: las comillas ya no eximen.
+  { familia: "comillas", categoria: "contacto.red", esperado: "rechazar",
+    malicioso: "«Escribime por Instagram a cine_amigo».", benigno: "En el final ella le dice «nos vemos en Instagram» y se va sin mirar atrás." },
+  { familia: "comillas", categoria: "contacto.red", esperado: "rechazar",
+    malicioso: "\"Agregame al wsp, soy demo_88\" y charlamos de la peli.", benigno: "Ella publica todo en Instagram y la serie se ríe muy bien de eso." },
+  // A2: dígitos Unicode y separadores.
+  { familia: "digitos_unicode", categoria: "contacto.telefono", esperado: "rechazar",
+    malicioso: "Escribime al ١١٥٥٦٦٧٧٨٨ para comentar.", benigno: "La versión árabe muestra el año ٢٠٢٤ en los créditos finales." },
+  { familia: "digitos_unicode", categoria: "contacto.telefono", esperado: "rechazar",
+    malicioso: "Llamame al ११५५६६७७८८ cuando quieras.", benigno: "En la versión india el título es ३ idiotas y es divertidísima." },
+  { familia: "separadores", categoria: "contacto.telefono", esperado: "rechazar",
+    malicioso: "Escribime al 11·55·66·77·88 para comentar.", benigno: "Puntajes: 8·9·7 para fotografía, guion y música, en ese orden." },
+  { familia: "separadores", categoria: "contacto.telefono", esperado: "rechazar",
+    malicioso: "Pedila al 11–4­4­5­5–6­6­7­7 por wsp.", benigno: "Del 2–3 de la primera mitad pasa a un 4–1 final increíble." },
+  // A2: números dictados.
+  { familia: "dictado", categoria: "contacto.telefono", esperado: "rechazar",
+    malicioso: "Llamame: doce, cinco, sesenta y tres, veintidós, catorce, ochenta.", benigno: "Tiene setenta y dos minutos de pura tensión y noventa de puro drama." },
+  { familia: "dictado", categoria: "contacto.telefono", esperado: "rechazar",
+    malicioso: "Mi wsp es dos dos, tres cuatro cinco seis, siete ocho nueve cero.", benigno: "Le doy un ocho, un nueve y un siete, en ese orden, a cada temporada." },
+  { familia: "letras_sueltas", categoria: "contacto.telefono", esperado: "rechazar",
+    malicioso: "Cel: I I 5 S 6 6 O O 4 4, escribime cuando quieras.", benigno: "Entre 1985 o 1986, no recuerdo bien, la vi en el cine del barrio." },
+  // A3: direcciones y acortadores; "punto com" como expresión.
+  { familia: "acortador", categoria: "enlace", esperado: "rechazar",
+    malicioso: "Más información en is.gd/demo.", benigno: "Cuenta la burbuja de las punto com con grandes actuaciones y una puesta muy cuidada." },
+  { familia: "ruta", categoria: "enlace", esperado: "rechazar",
+    malicioso: "Versión completa en algo.zz/peli123 sin cortes.", benigno: "Es la versión 2.0/beta del director y es mucho mejor que la original." },
+  { familia: "tld", categoria: "enlace", esperado: "rechazar",
+    malicioso: "Está en verpelis.watch sin cortes y en buena calidad.", benigno: "Está a punto de estallar y en el punto de vista del villano se entiende." },
+  { familia: "punto_palabra", categoria: "enlace", esperado: "rechazar",
+    malicioso: "La tenés en verpelis punto net, entrá ya.", benigno: "Muestra la época de las punto com y los primeros celulares con mucho humor." },
+  // Alias de redes y exhortaciones.
+  { familia: "alias_red", categoria: "contacto.red", esperado: "rechazar",
+    malicioso: "Tik tok: la.reina.de.series, seguime.", benigno: "Se volvió famosa en Tik Tok por un baile y la serie cuenta eso con gracia." },
+  { familia: "alias_red", categoria: "contacto.red", esperado: "rechazar",
+    malicioso: "TG: @series_demo, ahí mandamos estrenos.", benigno: "El TG del título es un chiste interno de la productora que nadie entendió." },
+  { familia: "exhortacion", categoria: "contacto.red", esperado: "rechazar",
+    malicioso: "Sigan a @pelis_demo para más recomendaciones.", benigno: "Sigan la saga en orden y no se van a perder ningún detalle importante." },
+  // Spam: familias divulgadas, con verbos de voseo con tilde.
+  { familia: "spam_sorteo", categoria: "spam", esperado: "retener",
+    malicioso: "¡SORTEO! Comentá esta reseña y participás por una tele.", benigno: "El protagonista participa de un sorteo en el pueblo y gana una tele vieja." },
+  { familia: "spam_casino", categoria: "spam", esperado: "retener",
+    malicioso: "Casino online con bono de bienvenida y giros gratis todos los días.", benigno: "Casino de Scorsese es una obra maestra sobre la mafia en Las Vegas." },
+  { familia: "spam_premio", categoria: "spam", esperado: "retener",
+    malicioso: "Fuiste seleccionado: completá una breve encuesta y reclamá tu premio.", benigno: "La serie gira alrededor de una encuesta política y un premio literario." },
+  { familia: "spam_producto", categoria: "spam", esperado: "retener",
+    malicioso: "Bajá de peso con estas cápsulas, envío gratis y pago contra entrega.", benigno: "El actor tuvo que bajar de peso para el papel y se nota en pantalla." },
+  // Contacto partido sin números: un reciente cuelga un correo o usuario.
+  { familia: "partido_colgante", categoria: "contacto.partido", esperado: "frenar",
+    contextoMalicioso: ["Muy buena serie. Para charlar: ana.series arroba"],
+    malicioso: "Sigue con hotmail, la terminación es com, escribime.",
+    contextoBenigno: ["Muy buena la primera temporada, la recomiendo."],
+    benigno: "El final de la segunda temporada es todavía mejor que el de la primera." },
+  // Amenaza con letras sueltas.
+  { familia: "amenaza_espaciada", categoria: "amenaza", esperado: "retener",
+    malicioso: "t e  v o y  a  m a t a r, al de la reseña de abajo.", benigno: "Un plano de la a a la z, como un abecedario visual, abre la película." },
+];
+
+function regresionesE12(): CasoBanco[] {
+  return REGRESIONES_E12.flatMap((r, i): CasoBanco[] => {
+    const n = String(i + 1).padStart(2, "0");
+    const claro = r.categoria.startsWith("contacto.") && r.categoria !== "contacto.partido" || r.categoria === "enlace";
+    return [
+      {
+        id: `D-R2-${n}-M`, tipo: "resena", grupo: "abuso", categoria: r.categoria, variante: "ofuscada",
+        ...(claro ? { claro: true } : {}), esperado: r.esperado, texto: PREFIJO_AUDITORIA + r.malicioso,
+        ...(r.contextoMalicioso ? { contexto: { textosRecientes: r.contextoMalicioso } } : {}),
+      },
+      {
+        id: `D-R2-${n}-B`, tipo: "resena", grupo: "legitima", categoria: `regresion_e12.${r.familia}`, esperado: "publicar",
+        texto: PREFIJO_AUDITORIA + r.benigno,
+        ...(r.contextoBenigno ? { contexto: { textosRecientes: r.contextoBenigno } } : {}),
+      },
+    ];
+  });
+}
+
+/**
+ * Falsos positivos RETENIDOS conocidos del banco de desarrollo, con su
+ * motivo. Siguen siendo legítimos (no se les cambia el grupo): la prueba los
+ * exige retenidos, ni publicados ni rechazados, para que un cambio que los
+ * empeore o los convierta en exención se vea.
+ */
+export const RETENIDOS_CONOCIDOS: Readonly<Record<string, string>> = {
+  "D-RG-17-B": "Diálogo legítimo con 'mandame un mensaje por WhatsApp' entre comillas: desde E1.2 las comillas no eximen; sin destinatario se retiene (A1 de 1f475e3).",
+};
+
 // ---------------------------------------------------------------- nombres
 
 const NOMBRES_LEGITIMOS = [
@@ -382,5 +484,8 @@ export const CASOS_DESARROLLO: readonly CasoBanco[] = [
   ...abusoPorPlantilla(),
   ...ABUSO_A_MANO,
   ...regresiones(),
+  ...regresionesE12(),
   ...nombres(),
+  { id: "D-NA-E12-1", tipo: "nombre", grupo: "abuso", categoria: "contacto.email", variante: "ofuscada", claro: true, esperado: "rechazar", texto: "ana en hotmail" },
+  { id: "D-NL-E12-1", tipo: "nombre", grupo: "legitima", categoria: "nombre", esperado: "publicar", texto: "Ana del Sur" },
 ];
