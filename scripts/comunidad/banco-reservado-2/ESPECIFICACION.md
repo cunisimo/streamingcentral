@@ -17,6 +17,22 @@ vuelven a usarse como medición independiente.
   que nombra las familias de abuso. La separación reduce el sesgo; no lo
   elimina.
 
+### Enmienda (22/10/2026, antes de que exista ningún caso)
+
+El agente separado no pudo escribir textos realistas de odio, amenazas y
+datos personales: un clasificador de seguridad le cortó la respuesta. Tamaños
+y categorías **no cambian**; el banco se arma en dos archivos:
+
+- **`reservado.json`** (agente separado): todo, **salvo** `odio` (10 reseñas
+  y 4 nombres), `amenaza` (8) y `datos_personales` (8).
+- **`reservado-sensible.json`** (Claude): esas 30 reseñas y 4 nombres,
+  escritos **antes** de cualquier ajuste de reglas de E1.1.
+- **Compromiso que lo hace aceptable:** E1.1 **no modifica** las reglas
+  `odio.lista`, `amenaza.directa`, `datos.documento` ni `datos.domicilio`. La
+  parte escrita por quien ajusta queda en reglas que no se ajustan. Igual se
+  informa por separado: esas categorías **no** son independientes.
+- Se sellan los dos juntos y se evalúan como un solo banco.
+
 ## Tamaños y categorías (fijos)
 
 **Reseñas legítimas: 150.** `esperado: "publicar"`.

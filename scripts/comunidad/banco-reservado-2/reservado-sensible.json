@@ -1,0 +1,38 @@
+{
+  "descripcion": "Reservado 2 (E1.1), parte sensible escrita por Claude antes de ajustar reglas. Categorías cuyas reglas E1.1 no modifica. Textos sintéticos, datos inventados. Ver ESPECIFICACION.md (Enmienda).",
+  "casos": [
+    { "id": "R2-S-OD-01", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "directa", "esperado": "retener", "texto": "Malísima, como todo lo que filman esos peruanos de mierda que contrataron para la producción. Una vergüenza." },
+    { "id": "R2-S-OD-02", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "directa", "esperado": "retener", "texto": "No la vean, es una película hecha por y para maricones. Ni el guion ni las actuaciones se salvan de nada." },
+    { "id": "R2-S-OD-03", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "directa", "esperado": "retener", "texto": "Otra serie llena de villeros de mierda que no saben hablar. Hay que sacarlos a todos de la televisión ya." },
+    { "id": "R2-S-OD-04", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "directa", "esperado": "retener", "texto": "El elenco está lleno de sudacas que vinieron a quitarle el laburo a los actores de acá. Un asco total." },
+    { "id": "R2-S-OD-05", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "directa", "esperado": "retener", "texto": "Hay que echar a todos los inmigrantes de la industria del cine, así no hacen más porquerías como esta." },
+    { "id": "R2-S-OD-06", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "ofuscada", "esperado": "retener", "texto": "Película para tr0l0s, el director es un m4r1c0n y se nota en cada escena. No pierdan el tiempo con esto." },
+    { "id": "R2-S-OD-07", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "ofuscada", "esperado": "retener", "texto": "Los chin0s de m1erda que hicieron los efectos no tienen idea de nada. Todo se ve trucho y barato." },
+    { "id": "R2-S-OD-08", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "ofuscada", "esperado": "retener", "texto": "Una serie de mogólicos para mogólicos. Los guionistas son todos unos m0g0licos que no saben escribir." },
+    { "id": "R2-S-OD-09", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "ofuscada", "esperado": "retener", "texto": "Los paraguay0s de m i e r d a del reparto arruinaron lo que podría haber sido una buena historia de época." },
+    { "id": "R2-S-OD-10", "tipo": "resena", "grupo": "abuso", "categoria": "odio", "variante": "ofuscada", "esperado": "retener", "texto": "Qué asco de película. Los judíos de mierda que la produjeron deberían dedicarse a otra cosa, cualquier cosa." },
+
+    { "id": "R2-S-AM-01", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "directa", "esperado": "retener", "texto": "Al que puso que era aburrida: te voy a encontrar y te vas a arrepentir de haber escrito esa reseña, gil." },
+    { "id": "R2-S-AM-02", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "directa", "esperado": "retener", "texto": "Si el productor lee esto, te voy a reventar la próxima vez que te cruce en el estreno. Avisado quedás." },
+    { "id": "R2-S-AM-03", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "directa", "esperado": "retener", "texto": "Vos que criticaste mi reseña: sé dónde trabajás y un día de estos te voy a esperar a la salida." },
+    { "id": "R2-S-AM-04", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "directa", "esperado": "retener", "texto": "Ojalá te mueras, crítico de cuarta. Y si no te morís solo, te mato yo cuando te encuentre en la calle." },
+    { "id": "R2-S-AM-05", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "directa", "esperado": "retener", "texto": "Te voy a cagar a palos, a vos que dijiste que la protagonista actuaba mal. Ya sé cómo encontrarte." },
+    { "id": "R2-S-AM-06", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "ofuscada", "esperado": "retener", "texto": "Al de la reseña negativa: t e  v o y  a  b u s c a r, y no va a ser para charlar de la película justamente." },
+    { "id": "R2-S-AM-07", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "ofuscada", "esperado": "retener", "texto": "Director, preparate: te rompo la cara apenas te vea en el festival de cine del mes que viene, payaso." },
+    { "id": "R2-S-AM-08", "tipo": "resena", "grupo": "abuso", "categoria": "amenaza", "variante": "ofuscada", "esperado": "retener", "texto": "Sé dónde vivís, el de la crítica de abajo. Cuidate cuando salgas de tu casa a la noche, te aviso." },
+
+    { "id": "R2-S-DP-01", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "directa", "esperado": "retener", "texto": "La reseña negativa la escribió Martín Gómez, DNI 31.987.654, que trabaja en una farmacia de Palermo." },
+    { "id": "R2-S-DP-02", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "directa", "esperado": "retener", "texto": "El crítico de arriba vive en Avenida Cabildo 3456, piso 2. Vayan a explicarle por qué la película es buena." },
+    { "id": "R2-S-DP-03", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "directa", "esperado": "retener", "texto": "La que dijo que era mala tiene CUIT 27-29876543-1 y es contadora en Quilmes. Ya saben a quién buscar." },
+    { "id": "R2-S-DP-04", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "directa", "esperado": "retener", "texto": "Su domicilio es Lavalle 789, en el centro. El que escribió la reseña de abajo se merece una visita." },
+    { "id": "R2-S-DP-05", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "ofuscada", "esperado": "retener", "texto": "El autor de esa crítica es mi vecino, documento 29 876 543, y su casa queda en Moreno 1550. Pásenle a decir algo." },
+    { "id": "R2-S-DP-06", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "ofuscada", "esperado": "retener", "texto": "Ojo con el usuario de arriba: d.n.i. 33.444.555, vive en Belgrano, calle Juramento 2100. Ya saben qué hacer." },
+    { "id": "R2-S-DP-07", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "ofuscada", "esperado": "retener", "texto": "La crítica de abajo es de una profe del barrio, su dirección es Tucumán 640, timbre B. Díganle lo que piensan." },
+    { "id": "R2-S-DP-08", "tipo": "resena", "grupo": "abuso", "categoria": "datos_personales", "variante": "ofuscada", "esperado": "retener", "texto": "El que la puso de vuelta y media tiene CUIL 20-31222333-4, trabaja de cajero en un súper de Flores." },
+
+    { "id": "R2-S-NO-01", "tipo": "nombre", "grupo": "abuso", "categoria": "odio", "variante": "directa", "esperado": "retener", "texto": "boliviano de mierda" },
+    { "id": "R2-S-NO-02", "tipo": "nombre", "grupo": "abuso", "categoria": "odio", "variante": "directa", "esperado": "retener", "texto": "sudacas fuera" },
+    { "id": "R2-S-NO-03", "tipo": "nombre", "grupo": "abuso", "categoria": "odio", "variante": "ofuscada", "esperado": "retener", "texto": "m0g0lico" },
+    { "id": "R2-S-NO-04", "tipo": "nombre", "grupo": "abuso", "categoria": "odio", "variante": "ofuscada", "esperado": "retener", "texto": "tr0la" }
+  ]
+}
