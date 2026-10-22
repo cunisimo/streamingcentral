@@ -161,13 +161,17 @@ AAB tiene que ser `5` o mayor.
    **Plan preparado** (22/10):
    `docs/superpowers/plans/2026-10-22-resenas-comunidad.md`, entregas
    E0–E9c; corregido tras la auditoría de Codex sobre `9450006`.
-   **E1 (reglas puras y banco sintético) implementada en local**, rama
-   `feat/resenas-reglas`, sin conectar a nada. **Pendiente de auditoría de
-   Codex.** El reservado **no cumple C1 ni C2** (3 de 50 contactos claros
-   publicados; 93 % de ofuscadas frenadas). Ninguna otra entrega está
-   autorizada.
+   **E1 y su corrección E1.1 (reglas puras y banco sintético)
+   implementadas en local**, rama `feat/resenas-reglas`, sin conectar a
+   nada.
+   - **E1 no cumple su aceptación.** La auditoría de `ffa5061` lo confirmó.
+   - **E1.1 tampoco:** el reservado 2, más grande y escrito en su mayor parte
+     por un agente que no conocía las reglas, **no cumple C1 ni C2** (12 de
+     124 contactos claros sin detectar; 87,2 % de ofuscadas detectadas).
+   - **E1.1 pendiente de auditoría de Codex.** Ninguna otra entrega está
+     autorizada.
    **Falta:**
-   - auditoría de Codex sobre E1, y autorización del dueño por entrega;
+   - auditoría de Codex sobre E1.1, y autorización del dueño por entrega;
    - P5: autorización de sólo lectura para E0 (no está autorizada; las
      consultas están en el plan y no se ejecutaron);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
@@ -231,8 +235,55 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
-  **E1 — reglas propias y banco sintético (22/10), implementada en local,
-  pendiente de auditoría.** Rama `feat/resenas-reglas` desde
+  **E1.1 — corrección de reglas y evaluador (22/10), en local, pendiente
+  de auditoría. NO cumple C1 ni C2.** Auditoría de Codex sobre `ffa5061`
+  copiada sin cambios (`docs/medidas/2026-10-22-auditoria-e1-ffa5061.md`).
+  Informe para Codex: `docs/medidas/2026-10-22-informe-claude-e11.md`.
+  - **Correcciones (comprobado en código y pruebas locales):**
+    - A1: teléfonos con forma de año, importe o fecha cuentan si hay una
+      señal fuerte de contacto; letras por dígitos;
+    - A2: correo "usuario en/de proveedor" y confusables ampliados (no es
+      Unicode completo);
+    - A3: `contacto.red` exige evidencia acotada; el diálogo entre comillas
+      no dispara;
+    - A4: el evaluador declara `no_evaluable` un banco inválido o 0/0, y los
+      errores no cuentan como detección;
+    - `VERSION_REGLAS` `2026-10-22.2`; odio, amenazas y datos personales sin
+      cambios.
+  - **Regresiones:** 18 pares benigno/malicioso con los casos divulgados, y
+    el reservado 1 como regresión conocida. **El reservado 1, su sello y su
+    informe fallido siguen intactos** y no se presentan como medición nueva.
+  - **Reservado 2:**
+    - especificación commiteada antes (`44bd6bd`) y sello antes de ajustar
+      (`a24df81`);
+    - 330 casos de un agente separado que no leyó las reglas, más 34
+      sensibles (odio, amenazas, datos) escritos por Claude sobre reglas no
+      modificadas, informados aparte;
+    - corrido **una vez**: evaluable; C0, C3 (1/150) y C4 (0/150) cumplen;
+      **C1 12/124 y C2 102/117 (87,2 %) no cumplen**. Resultado por caso en
+      `docs/medidas/2026-10-22-e11-banco-reservado-2.md`.
+  - **Fallos por familia:**
+    - palabras-número compuestas y separadores tipográficos;
+    - letras sueltas sin dígitos y dígitos no ASCII;
+    - correo descripto sin nombrar el proveedor;
+    - acortador con TLD no listado;
+    - "tik tok"/"tg" y red descripta en palabras;
+    - spam fuera del vocabulario (6 de 12);
+    - contacto partido sin números;
+    - 1 falso positivo: "las punto com".
+  - **Pruebas:** `lib/comunidad` 56 de 56; `tsc` 0 errores; `npm test` 2305
+    pruebas, 2287 pasan, 0 fallan y 18 omitidas (exigen builds no hechos);
+    sin llamadas externas.
+  - **Comparación con E1:** no se puede leer como mejora o empeoramiento. El
+    reservado 2 es más grande y más independiente. Los fallos divulgados ya
+    se detectan, pero un banco escrito sin conocer las reglas sigue
+    encontrando huecos.
+  - **Siguiente paso:** auditoría de Codex de E1.1. Otra corrección, si se
+    autoriza, necesitaría un reservado 3 nuevo y sellado. No se avanza a
+    E2.
+
+  **E1 — reglas propias y banco sintético (22/10), implementada en local;
+  no cumple su aceptación (auditoría de `ffa5061`).** Rama `feat/resenas-reglas` desde
   `docs/resenas-comunidad` (`a029259`). Informe para Codex:
   `docs/medidas/2026-10-22-informe-claude-e1.md`.
   - **Comprobado en código y pruebas locales:**
