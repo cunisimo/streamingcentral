@@ -173,7 +173,10 @@ AAB tiene que ser `5` o mayor.
      correo incompleto o indirecto), corregidos en local el 22/10 (ver
      "Corrección de E1.2" abajo). La auditoría de `251f3d0` encontró dos huecos
      en esas mismas familias (inicio de ruta y criterio de alias), corregidos
-     en local el 22/10 (ver "Segunda corrección de E1.2" abajo). Sólo se probó con casos conocidos y
+     en local el 22/10 (ver "Segunda corrección de E1.2" abajo). Codex la
+     aprobó en `a8e973a` para medir. **Reservado 3 (23/10): detenido antes de
+     evaluar.** El agente de las categorías sensibles no pudo escribirlas y
+     falta decidir cómo completarlas (ver "Reservado 3" abajo). Sólo se probó con casos conocidos y
      regresiones, **sin validación independiente**. **E1 sigue pendiente de
      cierre.** Pendiente de auditoría de Codex; ninguna otra entrega está
      autorizada.
@@ -243,6 +246,32 @@ reusa su diseño, no se mergea.
   sin cambios del checkout principal, donde era un archivo sin seguimiento;
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
+
+  **Reservado 3 — medición independiente final de E1 (23/10): DETENIDO
+  ANTES DE EVALUAR. E1 sigue pendiente de cierre.** Informe:
+  `docs/medidas/2026-10-23-e1-reservado-3-detenido.md`.
+  - **Hecho, en este orden (comprobado en Git):**
+    - auditoría de `a8e973a` copiada;
+    - congelamiento del código (`2026-10-22.5`, `b6e1f33`, huellas en
+      `docs/medidas/2026-10-23-e1-reservado-3-congelamiento.md`);
+    - protocolo en `scripts/comunidad/banco-reservado-3/PROTOCOLO.md`, antes
+      de cualquier caso;
+    - ejecutor `scripts/comunidad/correr-reservado-3.mjs`, probado con datos
+      ajenos antes de encargar los casos.
+  - **Autoría:**
+    - un agente separado escribió `reservado.json` completo: 340 casos,
+      forma correcta, sin leer y sin evaluar, guardado con su huella;
+    - el agente de `reservado-sensible.json` (odio, amenaza, datos personales
+      y fuera de capacidad) fue frenado por un clasificador de seguridad y no
+      escribió nada.
+  - **No se selló ni se evaluó.** Reglas sin cambios.
+  - **Falta:** decisión del dueño, con revisión de Codex, entre:
+    - que una persona ajena a las reglas escriba lo sensible;
+    - que lo escriba Claude como enmienda declarada, no independiente;
+    - o enmendar el protocolo para medir sin esa parte, lo que baja el abuso a
+      124, por debajo del mínimo de 150.
+
+    Se fija en Git antes de sellar.
 
   **Segunda corrección de E1.2 — inicio de ruta y criterio único de alias
   (22/10), en local, pendiente de auditoría. E1 sigue pendiente de cierre.**
