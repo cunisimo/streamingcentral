@@ -1,0 +1,6638 @@
+{
+  "versionReglas": "2026-10-22.5",
+  "sello": {
+    "reservado.json": "8d9e171440bd2ce20f52ee73037d233138ef114adfe90bffa3e4352b8d0f83c7",
+    "reservado-sensible.json": "31fbb2bf661e71dfc3e69d0e5ce26807a207a0ad903b9042bd324cf5d31db03c"
+  },
+  "evaluable": true,
+  "problemas": [],
+  "criterios": [
+    {
+      "id": "C0",
+      "descripcion": "Ningún caso termina en error",
+      "valor": "0/376 (0.0 %)",
+      "estado": "cumple",
+      "cumple": true
+    },
+    {
+      "id": "C1",
+      "descripcion": "0 enlaces o contactos claros sin detectar",
+      "valor": "24/116 (20.7 %)",
+      "estado": "no_cumple",
+      "cumple": false
+    },
+    {
+      "id": "C2",
+      "descripcion": "≥ 95 % de variantes ofuscadas detectadas",
+      "valor": "69/99 (69.7 %)",
+      "estado": "no_cumple",
+      "cumple": false
+    },
+    {
+      "id": "C3",
+      "descripcion": "≤ 2 % de reseñas legítimas rechazadas",
+      "valor": "0/160 (0.0 %)",
+      "estado": "cumple",
+      "cumple": true
+    },
+    {
+      "id": "C4",
+      "descripcion": "≤ 5 % de reseñas legítimas retenidas",
+      "valor": "0/160 (0.0 %)",
+      "estado": "cumple",
+      "cumple": true
+    },
+    {
+      "id": "N1",
+      "descripcion": "Nombres legítimos frenados (informativo, sin umbral en la revisión)",
+      "valor": "0/30 (0.0 %)",
+      "estado": "cumple",
+      "cumple": true
+    }
+  ],
+  "porCategoria": [
+    {
+      "clave": "nombre/abuso/contacto.email",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 6,
+      "errores": 0
+    },
+    {
+      "clave": "nombre/abuso/contacto.red",
+      "total": 6,
+      "coinciden": 5,
+      "detectados": 5,
+      "errores": 0
+    },
+    {
+      "clave": "nombre/abuso/contacto.telefono",
+      "total": 8,
+      "coinciden": 8,
+      "detectados": 8,
+      "errores": 0
+    },
+    {
+      "clave": "nombre/abuso/enlace",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 6,
+      "errores": 0
+    },
+    {
+      "clave": "nombre/abuso/odio",
+      "total": 4,
+      "coinciden": 1,
+      "detectados": 1,
+      "errores": 0
+    },
+    {
+      "clave": "nombre/legitima/nombre",
+      "total": 30,
+      "coinciden": 30,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/amenaza",
+      "total": 8,
+      "coinciden": 4,
+      "detectados": 4,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/anomalo",
+      "total": 4,
+      "coinciden": 4,
+      "detectados": 4,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/contacto.email",
+      "total": 22,
+      "coinciden": 21,
+      "detectados": 21,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/contacto.indirecto",
+      "total": 8,
+      "coinciden": 2,
+      "detectados": 2,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/contacto.partido",
+      "total": 6,
+      "coinciden": 5,
+      "detectados": 5,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/contacto.red",
+      "total": 18,
+      "coinciden": 11,
+      "detectados": 11,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/contacto.telefono",
+      "total": 28,
+      "coinciden": 18,
+      "detectados": 18,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/datos_personales",
+      "total": 8,
+      "coinciden": 7,
+      "detectados": 7,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/enlace",
+      "total": 22,
+      "coinciden": 17,
+      "detectados": 17,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/fuera_capacidad",
+      "total": 8,
+      "coinciden": 0,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/odio",
+      "total": 8,
+      "coinciden": 2,
+      "detectados": 2,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/perfil",
+      "total": 4,
+      "coinciden": 2,
+      "detectados": 2,
+      "errores": 0
+    },
+    {
+      "clave": "resena/abuso/spam",
+      "total": 12,
+      "coinciden": 7,
+      "detectados": 7,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/citas",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/correo_tecnologia",
+      "total": 10,
+      "coinciden": 10,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/dialogo_ficcion",
+      "total": 12,
+      "coinciden": 12,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/general",
+      "total": 10,
+      "coinciden": 10,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/insulto_personaje",
+      "total": 10,
+      "coinciden": 10,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/inversion_cripto",
+      "total": 8,
+      "coinciden": 8,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/lunfardo",
+      "total": 12,
+      "coinciden": 12,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/negativa",
+      "total": 8,
+      "coinciden": 8,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/numeros.anios",
+      "total": 8,
+      "coinciden": 8,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/numeros.duraciones",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/numeros.fechas",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/numeros.montos",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/numeros.puntajes",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/numeros.temporadas",
+      "total": 6,
+      "coinciden": 6,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/plataformas_redes",
+      "total": 12,
+      "coinciden": 12,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/puntuacion_barras",
+      "total": 8,
+      "coinciden": 8,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/titulos_alfanumericos",
+      "total": 12,
+      "coinciden": 12,
+      "detectados": 0,
+      "errores": 0
+    },
+    {
+      "clave": "resena/legitima/trama",
+      "total": 14,
+      "coinciden": 14,
+      "detectados": 0,
+      "errores": 0
+    }
+  ],
+  "porParte": {
+    "general": {
+      "Casos": "340",
+      "Reseñas de abuso": "124",
+      "C0 errores": "0/340 (0.0 %)",
+      "C1 claros sin detectar": "24/116 (20.7 %)",
+      "C2 ofuscadas detectadas": "69/99 (69.7 %)",
+      "C3 legítimas rechazadas": "0/160 (0.0 %)",
+      "C4 legítimas retenidas": "0/160 (0.0 %)",
+      "Abuso detectado (todas las categorías)": "112/150 (74.7 %)",
+      "Distintos de la etiqueta": "38/340 (11.2 %)"
+    },
+    "complementaria": {
+      "Casos": "36",
+      "Reseñas de abuso": "32",
+      "C0 errores": "0/36 (0.0 %)",
+      "C1 claros sin detectar": "sin casos",
+      "C2 ofuscadas detectadas": "sin casos",
+      "C3 legítimas rechazadas": "sin casos",
+      "C4 legítimas retenidas": "sin casos",
+      "Abuso detectado (todas las categorías)": "14/36 (38.9 %)",
+      "Distintos de la etiqueta": "22/36 (61.1 %)"
+    }
+  },
+  "coberturaSensible": [
+    {
+      "cat": "odio",
+      "tipo": "resena",
+      "total": 8,
+      "frenados": 2,
+      "rechazos": 0,
+      "retenidos": 2,
+      "errores": 0
+    },
+    {
+      "cat": "odio",
+      "tipo": "nombre",
+      "total": 4,
+      "frenados": 1,
+      "rechazos": 0,
+      "retenidos": 1,
+      "errores": 0
+    },
+    {
+      "cat": "amenaza",
+      "tipo": "resena",
+      "total": 8,
+      "frenados": 4,
+      "rechazos": 0,
+      "retenidos": 4,
+      "errores": 0
+    },
+    {
+      "cat": "datos_personales",
+      "tipo": "resena",
+      "total": 8,
+      "frenados": 7,
+      "rechazos": 0,
+      "retenidos": 7,
+      "errores": 0
+    }
+  ],
+  "resultados": [
+    {
+      "id": "R3-L-001",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-002",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-003",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-004",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-005",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-006",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-007",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-008",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-009",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-010",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-011",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-012",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-013",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-014",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-015",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-016",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-017",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-018",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-019",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-020",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-021",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-022",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-023",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-024",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-025",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-026",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-027",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-028",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-029",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-030",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-031",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-032",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-033",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-034",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-035",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-036",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-037",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-038",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-039",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-040",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-041",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-042",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-043",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-044",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-045",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-046",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-047",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-048",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-049",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-050",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-051",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-052",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-053",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-054",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-055",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-056",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-057",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-058",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-059",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-060",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-061",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-062",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-063",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-064",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-065",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-066",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-067",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-068",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-069",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-070",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-071",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-072",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-073",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-074",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-075",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-076",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-077",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-078",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-079",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-080",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-081",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-082",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-083",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-084",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-085",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-086",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-087",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-088",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-089",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-090",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-091",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-092",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-093",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-094",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-095",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-096",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-097",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-098",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-099",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-100",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-101",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-102",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-103",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-104",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-105",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-106",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-107",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-108",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-109",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-110",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-111",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-112",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-113",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-114",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-115",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-116",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-117",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-118",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-119",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-120",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-121",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-122",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-123",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-124",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-125",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-126",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-127",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-128",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-129",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-130",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-131",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-132",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-133",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-134",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-135",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-136",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-137",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-138",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-139",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-140",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-141",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-142",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-143",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-144",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-145",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-146",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-147",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-148",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-149",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-150",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-151",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-152",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-153",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-154",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-155",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-156",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-157",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-158",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-159",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-L-160",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-001",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-002",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-003",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-004",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-005",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-006",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-007",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-008",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-009",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-010",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-011",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-012",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-013",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-014",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-015",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-016",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-017",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-018",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-019",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-020",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-021",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-022",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-023",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-024",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-025",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-026",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-027",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número de teléfono: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-028",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-029",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.email_indirecto",
+            "version": 2,
+            "resultado": "retener"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-030",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-031",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-032",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-033",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-034",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-035",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-036",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-037",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-038",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-039",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email_indirecto",
+            "version": 2,
+            "resultado": "retener"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-040",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-041",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-042",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-043",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-044",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-045",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-046",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-047",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-048",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-049",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-050",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email_indirecto",
+            "version": 2,
+            "resultado": "retener"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-051",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-052",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-053",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-054",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-055",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-056",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-057",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-058",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-059",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-060",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-061",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-062",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-063",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-064",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-065",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-066",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-067",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-068",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-069",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-070",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-071",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-072",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-073",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-074",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-075",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-076",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-077",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-078",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-079",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-080",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-081",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-082",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-083",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-084",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-085",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-086",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-087",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-088",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-089",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-090",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-091",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-092",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-093",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-094",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-095",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "perfil.derivacion",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-096",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-097",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-098",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-099",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.partido",
+            "version": 3,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-100",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-101",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-102",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-103",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.partido",
+            "version": 3,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-104",
+      "archivo": "reservado.json",
+      "esperado": "frenar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-105",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "perfil.derivacion",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-106",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "perfil.derivacion",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-107",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-108",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-109",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "spam.promocion",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-110",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "spam.promocion",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-111",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-112",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "spam.promocion",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-113",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "spam.promocion",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-114",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "spam.promocion",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-115",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-116",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "spam.promocion",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-117",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-118",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "spam.promocion",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-119",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-120",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-A-121",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "anomalo.mayusculas",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-122",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "anomalo.vocabulario",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-123",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "anomalo.vocabulario",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-A-124",
+      "archivo": "reservado.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "anomalo.mayusculas",
+            "version": 1,
+            "resultado": "retener"
+          },
+          {
+            "regla": "anomalo.vocabulario",
+            "version": 1,
+            "resultado": "retener"
+          },
+          {
+            "regla": "anomalo.repeticion",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-01",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-02",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-03",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-04",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-05",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-06",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-07",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-08",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-09",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-10",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-11",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-12",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-13",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-14",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-15",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-16",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-17",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-18",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-19",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-20",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-21",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-22",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-23",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-24",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-25",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-26",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-27",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-28",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-29",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NL-30",
+      "archivo": "reservado.json",
+      "esperado": "publicar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-01",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red_nombre",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-02",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-03",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-04",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-05",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-06",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red_nombre",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-07",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-08",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.telefono_nombre",
+            "version": 3,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el número: los nombres no pueden tener datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-09",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.email_nombre",
+            "version": 1,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el correo: los nombres no pueden tener datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-10",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.email_nombre",
+            "version": 1,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el correo: los nombres no pueden tener datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-11",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.email_nombre",
+            "version": 1,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el correo: los nombres no pueden tener datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-12",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.email_nombre",
+            "version": 1,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el correo: los nombres no pueden tener datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-13",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.email_nombre",
+            "version": 1,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el correo: los nombres no pueden tener datos de contacto. Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-14",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.email_nombre",
+            "version": 1,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el correo: los nombres no pueden tener datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-15",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-16",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-17",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-18",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-19",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-20",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.enlace",
+            "version": 5,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el enlace o la dirección web: no se pueden compartir enlaces."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-21",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red_nombre",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-22",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.email",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          },
+          {
+            "regla": "contacto.red_nombre",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá la dirección de correo: no se pueden compartir datos de contacto. Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-23",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red_nombre",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-24",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red_nombre",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-NA-25",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-NA-26",
+      "archivo": "reservado.json",
+      "esperado": "rechazar",
+      "decision": {
+        "resultado": "rechazo_contenido",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "contacto.red_nombre",
+            "version": 2,
+            "resultado": "rechazo_contenido"
+          }
+        ],
+        "motivoUsuario": "Sacá el usuario o la red social: no se pueden compartir datos de contacto."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-001",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-002",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-003",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-004",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "odio.lista",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-005",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-006",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-007",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-008",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "odio.lista",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-009",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "amenaza.directa",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-010",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "amenaza.directa",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-011",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-012",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "amenaza.directa",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-013",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-014",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-015",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "amenaza.directa",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-016",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-017",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "datos.documento",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-018",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "datos.domicilio",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-019",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "datos.documento",
+            "version": 2,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-020",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "datos.domicilio",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-021",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "datos.documento",
+            "version": 2,
+            "resultado": "retener"
+          },
+          {
+            "regla": "datos.domicilio",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-022",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "datos.documento",
+            "version": 2,
+            "resultado": "retener"
+          },
+          {
+            "regla": "datos.domicilio",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-023",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-024",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "datos.documento",
+            "version": 2,
+            "resultado": "retener"
+          },
+          {
+            "regla": "datos.domicilio",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu reseña quedó en revisión. Te vamos a avisar cuando se resuelva."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-025",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-026",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-027",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-028",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-029",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-030",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-031",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-032",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-033",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-034",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    },
+    {
+      "id": "R3-S-035",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "retener",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [
+          {
+            "regla": "odio.lista",
+            "version": 1,
+            "resultado": "retener"
+          }
+        ],
+        "motivoUsuario": "Tu nombre quedó en revisión. Mientras tanto se muestra el anterior."
+      },
+      "detectado": true,
+      "error": false,
+      "coincide": true
+    },
+    {
+      "id": "R3-S-036",
+      "archivo": "reservado-sensible.json",
+      "esperado": "retener",
+      "decision": {
+        "resultado": "publicar",
+        "versionReglas": "2026-10-22.5",
+        "disparadas": [],
+        "motivoUsuario": ""
+      },
+      "detectado": false,
+      "error": false,
+      "coincide": false
+    }
+  ]
+}

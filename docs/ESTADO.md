@@ -174,9 +174,9 @@ AAB tiene que ser `5` o mayor.
      "Corrección de E1.2" abajo). La auditoría de `251f3d0` encontró dos huecos
      en esas mismas familias (inicio de ruta y criterio de alias), corregidos
      en local el 22/10 (ver "Segunda corrección de E1.2" abajo). Codex la
-     aprobó en `a8e973a` para medir. **Reservado 3 (23/10): detenido antes de
-     evaluar.** El agente de las categorías sensibles no pudo escribirlas y
-     falta decidir cómo completarlas (ver "Reservado 3" abajo). Sólo se probó con casos conocidos y
+     aprobó en `a8e973a` para medir. **Reservado 3 híbrido (23/10),
+     ejecutado una vez: NO CUMPLE C1 (24/116 claros sin detectar) ni C2
+     (69/99).** C3 y C4 se cumplen (0/160). Ver "Reservado 3" abajo. Sólo se probó con casos conocidos y
      regresiones, **sin validación independiente**. **E1 sigue pendiente de
      cierre.** Pendiente de auditoría de Codex; ninguna otra entrega está
      autorizada.
@@ -247,8 +247,38 @@ reusa su diseño, no se mergea.
   no se tocó ningún otro archivo de ese checkout. La revisión está en
   `docs/superpowers/specs/2026-10-21-resenas-comunidad-revision.md`.
 
-  **Reservado 3 — medición independiente final de E1 (23/10): DETENIDO
-  ANTES DE EVALUAR. E1 sigue pendiente de cierre.** Informe:
+  **Reservado 3 híbrido, ejecutado una vez (23/10): NO CUMPLE C1 NI C2.
+  E1 sigue pendiente de cierre.** Informe:
+  `docs/medidas/2026-10-23-informe-claude-reservado-3.md`. Resultado del
+  ejecutor: `docs/medidas/2026-10-23-e1-reservado-3-resultado.md` y `.json`.
+  - **Enmienda** (`scripts/comunidad/banco-reservado-3/ENMIENDA-1.md`,
+    aceptada por el dueño antes de escribir, sellar y evaluar): la parte
+    sensible (36 casos) la escribió Claude, **no independiente**. La parte
+    general (340 casos, 124 reseñas de abuso) es del agente separado. No es
+    validación independiente integral.
+  - **Sello** `48cb2f7`, antes de ejecutar. Código congelado
+    `2026-10-22.5`, sin cambios.
+  - **Criterios (agregado = parte general):**
+    - C0: 0/376 errores;
+    - **C1: 24/116 claros sin detectar;**
+    - **C2: 69/99 ofuscadas detectadas;**
+    - C3 y C4: 0/160 legítimas rechazadas o retenidas.
+  - **Familias sin detectar:** emojis de tecla, dígitos en inglés o de otros
+    alfabetos, separadores fuera de la clase, instrucciones de armado,
+    enlaces con espacios o "dot/slash", redes fuera de la lista (Discord,
+    snap, face, "tt") y correo indirecto sin alias escrito.
+  - **Sin umbral, informativo:**
+    - odio 3/12 frenados (reseñas y nombres);
+    - amenaza 4/8;
+    - datos personales 7/8;
+    - spam 7/12;
+    - perfil 2/4;
+    - fuera de capacidad 0/8.
+  - **No se ajustó nada:** no se corrigieron reglas, no se repite el conjunto
+    como inédito y no se preparó otro. Siguiente paso: dictamen de Codex y
+    decisión del dueño sobre el alcance.
+
+  **Antecedente: la detención previa del reservado 3 (23/10).** Informe:
   `docs/medidas/2026-10-23-e1-reservado-3-detenido.md`.
   - **Hecho, en este orden (comprobado en Git):**
     - auditoría de `a8e973a` copiada;
