@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Reservado 3 de E1: medición independiente final
-// (scripts/comunidad/banco-reservado-3/PROTOCOLO.md).
+// Reservado 3 de E1: medición final (scripts/comunidad/banco-reservado-3/
+// PROTOCOLO.md), HÍBRIDA según ENMIENDA-1.md: parte general independiente y
+// parte complementaria escrita por quien conoce las reglas.
 //
 // Uso:
 //   node scripts/comunidad/correr-reservado-3.mjs --solo-forma [dir]
@@ -208,6 +209,36 @@ const fuera = res.filter((r) => r.caso.alcance === "fuera_de_capacidad");
 const legitimasFrenadas = res.filter((r) => r.caso.grupo === "legitima" && r.detectado);
 const abusoSinDetectar = res.filter((r) => r.caso.grupo === "abuso" && !r.detectado && r.caso.alcance !== "fuera_de_capacidad");
 const distintos = res.filter((r) => !r.coincide);
+// ENMIENDA-1.md: resultados por parte (general / complementaria) y cobertura
+// de las categorías sensibles. Una parte sin casos para un criterio dice
+// "sin casos", nunca 0 %.
+const PARTES = [["general", R], ["complementaria", S]];
+const fraccion = (n, d) => (d === 0 ? "sin casos" : `${n}/${d} (${((100 * n) / d).toFixed(1)} %)`);
+const rechazada = (r) => r.decision.resultado === "rechazo_contenido" || r.decision.resultado === "rechazo_formato";
+function cuentasDeParte(rs) {
+  const claros = rs.filter((r) => r.caso.grupo === "abuso" && r.caso.claro);
+  const ofuscadas = rs.filter((r) => r.caso.grupo === "abuso" && r.caso.variante === "ofuscada");
+  const legitimas = rs.filter((r) => r.caso.grupo === "legitima" && r.caso.tipo === "resena");
+  const abusoResena = rs.filter((r) => r.caso.grupo === "abuso" && r.caso.tipo === "resena");
+  return [
+    ["Casos", String(rs.length)],
+    ["Reseñas de abuso", String(abusoResena.length)],
+    ["C0 errores", fraccion(rs.filter((r) => r.error).length, rs.length)],
+    ["C1 claros sin detectar", fraccion(claros.filter((r) => !r.detectado).length, claros.length)],
+    ["C2 ofuscadas detectadas", fraccion(ofuscadas.filter((r) => r.detectado).length, ofuscadas.length)],
+    ["C3 legítimas rechazadas", fraccion(legitimas.filter(rechazada).length, legitimas.length)],
+    ["C4 legítimas retenidas", fraccion(legitimas.filter((r) => r.decision.resultado === "retener").length, legitimas.length)],
+    ["Abuso detectado (todas las categorías)", fraccion(rs.filter((r) => r.caso.grupo === "abuso" && r.detectado).length, rs.filter((r) => r.caso.grupo === "abuso").length)],
+    ["Distintos de la etiqueta", fraccion(rs.filter((r) => !r.coincide).length, rs.length)],
+  ];
+}
+const porParte = PARTES.map(([nombre, archivo]) => [nombre, cuentasDeParte(res.filter((r) => origen.get(r.caso.id) === archivo))]);
+const SENSIBLES = ["odio", "amenaza", "datos_personales"];
+const cobertura = SENSIBLES.flatMap((cat) => ["resena", "nombre"].map((tipo) => {
+  const rs = res.filter((r) => r.caso.categoria === cat && r.caso.tipo === tipo && r.caso.grupo === "abuso");
+  return { cat, tipo, total: rs.length, frenados: rs.filter((r) => r.detectado).length, rechazos: rs.filter(rechazada).length, retenidos: rs.filter((r) => r.decision.resultado === "retener").length, errores: rs.filter((r) => r.error).length };
+}).filter((x) => x.total > 0));
+
 const tablaCasos = (rs) => [
   "| Id | Archivo | Tipo | Categoría | Variante | Claro | Esperado | Obtenido | Reglas | Coincide |",
   "|---|---|---|---|---|---|---|---|---|---|",
@@ -231,6 +262,27 @@ const lineas = [
   "| Criterio | Descripción | Valor | Estado |",
   "|---|---|---|---|",
   ...informe.criterios.map((c) => `| ${c.id} | ${c.descripcion} | ${c.valor} | ${c.estado === "cumple" ? "cumple" : `**${c.estado}**`} |`),
+  "",
+  "> **Advertencia (ENMIENDA-1.md):** C0–C4 no exigen un mínimo de detección para odio,",
+  "> amenazas ni datos personales. Cumplirlos no certifica por sí solo esa detección. La",
+  "> parte complementaria la escribió un autor que conoce las reglas: **no es independiente**",
+  "> y no es evidencia de generalización.",
+  "",
+  "## Resultados por parte",
+  "",
+  "| Cuenta | General (`reservado.json`, independiente) | Complementaria (`reservado-sensible.json`, no independiente) |",
+  "|---|---|---|",
+  ...porParte[0][1].map(([k, v], i) => `| ${k} | ${v} | ${porParte[1][1][i][1]} |`),
+  "",
+  "## Cobertura de las categorías sensibles (sin umbral)",
+  "",
+  "| Categoría | Tipo | Casos | Frenados | Rechazados | Retenidos | Errores |",
+  "|---|---|---|---|---|---|---|",
+  ...cobertura.map((x) => `| ${x.cat} | ${x.tipo} | ${x.total} | ${x.frenados} | ${x.rechazos} | ${x.retenidos} | ${x.errores} |`),
+  "",
+  `## Errores (${res.filter((r) => r.error).length})`,
+  "",
+  ...tablaCasos(res.filter((r) => r.error)),
   "",
   `## Fuera de la capacidad declarada (informativo, fuera de C1 y C2)`,
   "",
@@ -265,12 +317,15 @@ writeFileSync(INFORME, lineas.join("\n"), "utf8");
 writeFileSync(RESULTADOS_JSON, JSON.stringify({
   versionReglas: VERSION_REGLAS, sello, evaluable: informe.evaluable, problemas: informe.problemas,
   criterios: informe.criterios, porCategoria: informe.porCategoria,
+  porParte: Object.fromEntries(porParte.map(([n, c]) => [n, Object.fromEntries(c)])), coberturaSensible: cobertura,
   resultados: res.map((r) => ({ id: r.caso.id, archivo: origen.get(r.caso.id), esperado: r.caso.esperado, decision: r.decision, detectado: r.detectado, error: r.error, coincide: r.coincide })),
 }, null, 2) + "\n", "utf8");
 
 console.log(`Evaluable: ${informe.evaluable}`);
 for (const p of informe.problemas) console.log(`  problema: ${p}`);
 for (const c of informe.criterios) console.log(`${c.id} ${c.estado.padEnd(12)} ${c.descripcion}: ${c.valor}`);
+for (const [n, c] of porParte) console.log(`Parte ${n}: ${c.map(([k, v]) => `${k} ${v}`).join("; ")}`);
+for (const x of cobertura) console.log(`Sensible ${x.cat}/${x.tipo}: ${x.frenados}/${x.total} frenados (${x.rechazos} rechazados, ${x.retenidos} retenidos, ${x.errores} errores)`);
 console.log(`Fuera de capacidad frenados: ${fuera.filter((r) => r.detectado).length}/${fuera.length}`);
 console.log(`Legítimas frenadas: ${legitimasFrenadas.length}; abuso sin detectar (en capacidad): ${abusoSinDetectar.length}; distintos de la etiqueta: ${distintos.length}`);
 console.log(`Informe: ${INFORME}\nPor caso: ${RESULTADOS_JSON}`);
