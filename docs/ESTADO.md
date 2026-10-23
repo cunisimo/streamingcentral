@@ -185,15 +185,25 @@ AAB tiene que ser `5` o mayor.
      `docs/medidas/2026-10-23-auditoria-reservado-3-4183d37.md`.
    - **E1 sigue sin aprobarse.** No hay más parches ni otro reservado
      autorizados, y no se avanza a E2.
-   - **Propuesta de alcance (23/10, sólo documentación, pendiente del dueño
-     y de Codex):** `docs/medidas/2026-10-23-propuesta-alcance-moderacion.md`.
-     Incluye el diagnóstico de los 60 fallos, el filtro como barrera mecánica
-     más señales, un cambio de aceptación (C1a/C1b, C2a/C2b, con catálogo y
-     generador) y una regla de detención.
+   - **Propuesta de alcance, v2 (23/10, sólo documentación, pendiente de
+     Codex y del dueño):**
+     - `docs/medidas/2026-10-23-propuesta-alcance-moderacion.md`;
+     - catálogo: `docs/medidas/2026-10-23-catalogo-moderacion-propuesto.md`.
+
+     Corrige la auditoría de `4ef9a51`:
+     - la evidencia es por versión; un solo conjunto independiente, y si
+       falla queda fallido, sin aprobado por agotamiento;
+     - catálogo con exclusiones cerradas;
+     - CS para amenazas, odio y datos personales explícitos;
+     - operación de las dos colas con hipótesis marcadas;
+     - el muestreo P6 figura como "no aceptado" (no "rechazado"); el
+       contenido de `user_reviews` en Producción, como no verificado.
    **Falta:**
-   - las decisiones D1–D7 del dueño sobre la propuesta de alcance y la
-     auditoría de Codex. Recién después se autorizan cambios y una
-     estrategia de validación;
+   - la auditoría de Codex de la propuesta v2;
+   - las decisiones de producto P-1 a P-4 (alcance residual, condición para
+     publicar, disponibilidad aproximada y autoría de la parte sensible).
+
+     Recién después se autorizan cambios y una estrategia de validación;
    - P5: autorización de sólo lectura para E0 (no está autorizada; las
      consultas están en el plan y no se ejecutaron);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
