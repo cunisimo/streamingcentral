@@ -155,7 +155,7 @@ invento ahora.
   - instrucciones aritméticas o de armado;
   - redes y alias fuera de la lista;
   - espacios dentro de un enlace con terminación larga.
-  
+
   Es el mismo patrón de los reservados 1 y 2: cada conjunto nuevo encuentra
   familias nuevas. Ese patrón, y no este número aislado, es lo relevante para
   decidir el alcance.

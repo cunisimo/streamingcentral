@@ -176,14 +176,24 @@ AAB tiene que ser `5` o mayor.
      en local el 22/10 (ver "Segunda corrección de E1.2" abajo). Codex la
      aprobó en `a8e973a` para medir. **Reservado 3 híbrido (23/10),
      ejecutado una vez: NO CUMPLE C1 (24/116 claros sin detectar) ni C2
-     (69/99).** C3 y C4 se cumplen (0/160). Ver "Reservado 3" abajo. Sólo se probó con casos conocidos y
-     regresiones, **sin validación independiente**. **E1 sigue pendiente de
-     cierre.** Pendiente de auditoría de Codex; ninguna otra entrega está
-     autorizada.
+     (69/99).** C3 y C4 se cumplen (0/160). Ver "Reservado 3" abajo.
+   - **Sí hubo una medición.** Fue **híbrida**: la parte general (340 casos,
+     124 reseñas de abuso) la escribió un agente separado, según la autoría
+     declarada, y la parte sensible (36 casos) la escribió Claude, no
+     independiente. **No fue una validación independiente integral**, y su
+     resultado **no aprueba E1**. Codex lo confirmó en
+     `docs/medidas/2026-10-23-auditoria-reservado-3-4183d37.md`.
+   - **E1 sigue sin aprobarse.** No hay más parches ni otro reservado
+     autorizados, y no se avanza a E2.
+   - **Propuesta de alcance (23/10, sólo documentación, pendiente del dueño
+     y de Codex):** `docs/medidas/2026-10-23-propuesta-alcance-moderacion.md`.
+     Incluye el diagnóstico de los 60 fallos, el filtro como barrera mecánica
+     más señales, un cambio de aceptación (C1a/C1b, C2a/C2b, con catálogo y
+     generador) y una regla de detención.
    **Falta:**
-   - auditoría de Codex sobre la corrección de E1.2 y decisión sobre una única
-     medición independiente con alcance fijado antes de crear los casos, y
-     autorización del dueño por entrega;
+   - las decisiones D1–D7 del dueño sobre la propuesta de alcance y la
+     auditoría de Codex. Recién después se autorizan cambios y una
+     estrategia de validación;
    - P5: autorización de sólo lectura para E0 (no está autorizada; las
      consultas están en el plan y no se ejecutaron);
    - preguntas al dueño P3, P4 y P6 (revisión §1.4): plazos de retención,
@@ -275,8 +285,9 @@ reusa su diseño, no se mergea.
     - perfil 2/4;
     - fuera de capacidad 0/8.
   - **No se ajustó nada:** no se corrigieron reglas, no se repite el conjunto
-    como inédito y no se preparó otro. Siguiente paso: dictamen de Codex y
-    decisión del dueño sobre el alcance.
+    como inédito y no se preparó otro. **Dictamen de Codex (`4183d37`): E1
+    no cumple.** Siguiente paso: la propuesta de alcance del 23/10 y las
+    decisiones del dueño (ver arriba).
 
   **Antecedente: la detención previa del reservado 3 (23/10).** Informe:
   `docs/medidas/2026-10-23-e1-reservado-3-detenido.md`.
