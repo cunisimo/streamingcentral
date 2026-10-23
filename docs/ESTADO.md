@@ -221,8 +221,20 @@ AAB tiene que ser `5` o mayor.
      - E9 pendiente de aceptación y E8 como cobertura no certificada.
 
      Hay puntos abiertos con resolución propuesta en el catálogo §12.
+     **v3.1 (23/10, auditoría de `77d8bda`):**
+     - composición de F3 con espacios y terminaciones largas (F3-4, sin
+       depender de IANA);
+     - S3 con verbos de remisión al perfil (§6.R);
+     - **la condición de uso de la lista de IANA queda pendiente de
+       verificación** (no se afirma CC0);
+     - las huellas figuran como calculadas por Claude, no verificadas por un
+       segundo revisor.
+
+     Las recomendaciones para P-1, E9, P-2 y P-4, todas pendientes de
+     aceptación, están en la propuesta §10.
    **Falta:**
-   - la auditoría de Codex de la v3 y, después, tu aprobación del catálogo;
+   - la auditoría final de Codex de la v3.1 y, después, la aprobación del
+     catálogo por el dueño y su disponibilidad aproximada;
    - las decisiones de producto P-1 a P-4 (alcance residual, condición para
      publicar, disponibilidad aproximada y autoría de la parte sensible).
 

@@ -1,7 +1,12 @@
 # Catálogo de cobertura de la moderación de reseñas: candidato a aprobación
 
-23/10/2026. Claude Code. **Versión candidata (v3), conciliada según la
-auditoría de `cac5c50`.**
+23/10/2026. Claude Code. **Versión candidata (v3.1).** La v3 concilió la
+auditoría de `cac5c50`. La v3.1 corrige los tres hallazgos de la auditoría
+de `77d8bda`:
+- A1, la composición de F3 con espacios y terminaciones largas (§3.1);
+- A2, la derivación al perfil (S3 y §6.R);
+- A3, la condición de uso de la lista de IANA y el estado de las huellas
+  (§1).
 - **Estado:** pendiente de la auditoría de Codex y de la aprobación del
   dueño.
 - **No implementado:** no hay reglas, generador ni evaluador nuevos.
@@ -48,8 +53,16 @@ Lo que sigue abierto está en §12.
 Se consultaron el 23/10/2026, sólo en lectura y sin costo, en las fuentes
 oficiales. Las huellas son del archivo tal como se descargó a la carpeta
 temporal de la sesión, **fuera del repositorio**.
-- **Ningún archivo se incorporó al repositorio ni se verificó contra otra
-  copia.**
+- **Las huellas las calculé yo (Claude) sobre esas descargas.** Codex
+  comprobó por lectura las cabeceras, versiones, fechas y la cantidad de TLD,
+  pero **no pudo recalcular las huellas**, porque su acceso a los bytes falló.
+  Por eso son **huellas declaradas, no verificadas independientemente**, y lo
+  mismo vale para los tamaños de categorías y confusables. No están
+  declaradas incorrectas.
+- **Ningún archivo se incorporó al repositorio.** Al incorporarlo, se vuelve
+  a descargar la versión fijada, se recalcula la huella y la verifica un
+  segundo revisor. La lista de IANA cambia con el tiempo: la cabecera de hoy
+  no reemplaza una copia conservada.
 - Incorporarlos es un paso futuro: se copian con esta huella, y si la huella
   no coincide no se incorporan.
 
@@ -57,9 +70,29 @@ temporal de la sesión, **fuera del repositorio**.
 |---|---|---|---|---|---|
 | Unicode, categorías generales | **Unicode 18.0.0** | `https://www.unicode.org/Public/18.0.0/ucd/extracted/DerivedGeneralCategory.txt` | 2026-06-29 | `d6b151d2d40ee9b1876d26f417980f45ffae47b6055ccf7203cb31f07a030f94` | Unicode License v3 (`https://www.unicode.org/license.txt`), con aviso de copyright |
 | UTS #39, confusables | **18.0.0** | `https://www.unicode.org/Public/18.0.0/security/confusables.txt` (idéntico a `security/latest` el 23/10) | 2026-08-06 | `6ed3ee967c9dfdf6677d563c9985182fbc50a2efb7d6059cd57b2e2ce18f5b92` | Unicode License v3 |
-| IANA, TLD | **Versión `2026102300`** ("Last Updated Fri Oct 23 07:07:01 2026 UTC") | `https://data.iana.org/TLD/tlds-alpha-by-domain.txt` | 2026-10-23 | `274be608419b2c4ae93966cd8e98f6783628312e371c406c0b3a88ca945daa89` | Declaración conjunta IANA–IETF del 10/11/2021: CC0 1.0 (`https://www.iana.org/help/licensing-terms`) |
+| IANA, TLD | **Versión `2026102300`** ("Last Updated Fri Oct 23 07:07:01 2026 UTC") | `https://data.iana.org/TLD/tlds-alpha-by-domain.txt` | 2026-10-23 | `274be608419b2c4ae93966cd8e98f6783628312e371c406c0b3a88ca945daa89` | **Pendiente de verificación** (ver abajo). **No se afirma CC0**, y tampoco que esté prohibido |
 
-**Tamaños medidos sobre esas copias,** para dimensionar el generador:
+**Condición de uso de la lista de TLD de IANA: pendiente.**
+- La declaración IANA–IETF del 10/11/2021
+  (`https://www.iana.org/help/licensing-terms`) dedica a CC0 los "Protocol
+  Registries", y los define como los datos de registro **enlazados
+  directamente** desde `https://www.iana.org/protocols` o
+  `https://www.ietf.org/assignments/`.
+- El 23/10 comprobé, sólo en lectura, que `iana.org/protocols` enlaza la
+  página "Root Zone Registry" (`/domains/root`), pero **no** el archivo
+  `tlds-alpha-by-domain.txt`. El archivo está publicado en
+  `data.iana.org/TLD/` y se enlaza desde `/domains/root/files`, sin un aviso
+  de licencia propio.
+- Esa fuente **no alcanza** para acreditar CC0 para este archivo concreto, y
+  no encontré otro fundamento publicado.
+- **Condición:** antes de incorporarlo, hay que verificar su condición de uso,
+  por ejemplo con una consulta escrita a IANA o con una fuente oficial que
+  lo cubra.
+- **Si no se verifica**, rige la alternativa de §3.1: F3 deja de depender de
+  IANA, y se informa como reducción respecto de esta versión.
+
+**Tamaños medidos sobre esas copias** (declarados por Claude, no verificados
+independientemente), para dimensionar el generador:
 - Unicode 18.0.0:
   - `Zs` 17, `Pd` 27, `Ps` 80, `Pe` 78, `Me` 13;
   - `Po` 643, `Sm` 1005, `Mn` 2090;
@@ -75,10 +108,10 @@ temporal de la sesión, **fuera del repositorio**.
 |---|---|---|
 | **D. Formas de dígito** | **D1** ASCII. **D2** todo `Nd` de Unicode 18.0.0. **D3** ancho completo y matemáticos (por NFKC). **D4** superíndices y subíndices `⁰–⁹ ₀–₉`. **D5** circulados `⓪ ①–⑨`. **D6** emoji de tecla: dígito + U+FE0F opcional + U+20E3. **D7** palabras-número en castellano (§6.N). **D8** palabras-número en inglés (§6.N). **D9** letras y signos que imitan dígitos (§6.L) | D7 y D8, sólo según §6.N. D9, **sólo** dentro de una corrida que ya tiene al menos un dígito |
 | **S. Separadores entre grupos de dígitos** | Hasta 3 caracteres por hueco, de este conjunto **cerrado**: `Zs`, `Pd`, `Ps`, `Pe`, `Po` (salvo `,` `;` `:`), `Sm`, `Mn`, `Me`, U+FE0F, `/` y **`_` (U+005F)** | **S2:** `,` `;` `:` cuentan **sólo** con una señal de intención (I) o un medio (M) en el ámbito. **No** son separadores `So` (pendiente, E9) ni el resto de `Pc`; `_` sí lo es, para conservar la cobertura de `SEP` |
-| **P. Punto de dominio** | `.` `。` `．` `｡` · "punto", "dot" (también entre `[ ]` o `( )`) · hasta 1 espacio a cada lado · guiones pegados a una forma entre corchetes o paréntesis (`-[punto]-`) · `,` **sólo** seguida de un TLD de IANA y de una ruta (B) | |
+| **P. Punto de dominio** | **Pegado:** `.` `。` `．` `｡`. **Espaciado:** esos signos con al menos un espacio **a cada lado**. **Escrito:** "punto" o "dot", sueltos o entre `[ ]` o `( )`, con guiones pegados opcionales (`-[punto]-`). **Coma pegada:** sólo en F3-6 | Cómo se combina con T y la ruta: §3.1 |
 | **B. Barra** | `/` · "slash" · "barra" · hasta 1 espacio a cada lado | |
-| **T. Terminaciones** | **T-fuerte** (§6.T1): cuentan con o sin espacios alrededor del punto. **T-IANA:** el resto de la lista de §1, en ASCII y, para las IDN, también en Unicode; cuentan **pegadas** (sin espacios). **T-palabra** (§6.T2): cuentan **sólo** pegadas y con ruta. **Cualquier terminación alfabética de 2 a 63 letras**: cuenta pegada y con ruta, como en la versión 2026-10-22.5 | |
-| **C. Confusables de letra** | Esqueleto de UTS #39 18.0.0 hacia el latín, sólo para letras. Los dígitos siguen como clases ambiguas (`[o0]`, `[il1|]`) | |
+| **T. Terminaciones** | **T-fuerte** (§6.T1). **T-IANA:** el resto de la lista de §1, en ASCII y, para las IDN, también en Unicode. **T-palabra** (§6.T2). **Alfabética:** cualquier terminación de 2 a 63 letras | **Qué terminación vale con cada punto y con o sin ruta: sólo según la tabla de §3.1** |
+| **C. Confusables de letra** | Esqueleto de UTS #39 18.0.0 hacia el latín, **sólo para caracteres que no son ASCII**. Los ASCII no se transforman: UTS #39 incluye mapeos ASCII→ASCII, como `m`→`rn`, que romperían coincidencias normales. Textos, patrones y listas se pliegan con la misma función. Los dígitos siguen como clases ambiguas (`[o0]`, `[il1|]`) | |
 | **I. Intención de contacto** | Formas cerradas de §6.I | La tercera persona, el infinitivo, el presente de indicativo y el pretérito **no** son intención |
 | **M. Medios de contacto** | §6.M | |
 | **A. Alias con forma de usuario** | Letras y dígitos con al menos una letra y al menos un dígito, `_` o `.`, en cualquier posición. Además: `alias#dddd` (2 a 6 dígitos), `@` seguido de hasta 1 espacio y alias, y letras sueltas separadas por un mismo signo (`l.u.n.a`, al menos 4 letras). La puntuación final de la oración no cuenta | Las palabras de §6.A nunca son alias |
@@ -89,8 +122,52 @@ temporal de la sesión, **fuera del repositorio**.
 |---|---|---|---|
 | **F1 Teléfono** | **8 o más dígitos en total, prefijos incluidos** (`+54`, `0`, `9` y `15` suman). (a) Corrida continua sin separadores. (b) Grupos de 1 a 4 dígitos separados por S | D1–D9 × S. S2 con I o M. Número con forma de año, fecha (`dd/mm/aaaa`, con `/` `-` `.`) o importe (`$`, separador de miles) **con I o M en el ámbito** | Años sueltos y en pares, rangos de años, duraciones, temporadas y episodios (`T3E8`), puntajes con barra, rankings, recaudaciones y presupuestos **sin** I ni M, fechas de estreno, títulos con dígitos, emoji de tecla usado como puntaje (`5️⃣ estrellas`, con menos de 8 dígitos) |
 | **F2 Correo** | `usuario@dominio` o `usuario@proveedor` | `@` y "arroba", "at", `(at)`, `[at]` × P × letras espaciadas × C. "usuario en/de/del <proveedor>". Alias (A) + "mi usuario/mail/correo/casilla de <proveedor>" en el ámbito | "el mail de su jefe en Gmail", "le escribe un correo", proveedores nombrados en una escena |
-| **F3 Enlace** | Esquema (`http`, `https`, `www.`). `etiqueta(.etiqueta)*` + P + T, con o sin B + ruta. Acortador de §6.H sin TLD | P × B × C × T. Etiquetas con guiones | "las punto com", "y/o", "8.5/10", "2.0/beta", "drama/comedia", palabras unidas por un punto sin espacio cuya terminación es T-palabra y sin ruta ("buenísima.Final") |
+| **F3 Enlace** | Las formas F3-1 a F3-6 de §3.1. Acortador de §6.H sin TLD | P × B × C × T, según §3.1. Etiquetas con guiones | "las punto com", "y/o", "8.5/10", "2.0/beta", "drama/comedia", palabras unidas por un punto sin espacio cuya terminación es T-palabra y sin ruta ("buenísima.Final") |
 | **F4 Usuario de red** | (A, o "usuario/user/nick/soy/como/el usuario es/mi usuario es" + alias) **y** (plataforma de §6.M o I), en el ámbito | Con comillas o atribución narrativa: **rechaza si hay alias** | "la sigue en Instagram", "busca a su hermana en TikTok", la cuenta de Twitter de un personaje sin alias |
+
+### 3.1 Composición de F3 (A1 de `77d8bda`)
+
+**Definiciones:**
+- **Punto pegado:** `.` `。` `．` `｡` sin espacios a los lados.
+- **Punto espaciado:** uno de esos signos con **al menos un espacio a cada
+  lado**. "Palabra. Palabra", con espacio sólo después, es fin de oración y no
+  cuenta.
+- **Punto escrito:** "punto" o "dot", sueltos o entre `[ ]` o `( )`, con
+  guiones pegados opcionales (`-[punto]-`).
+- **Barra:** `/` con 0 o 1 espacio a cada lado, o "slash" o "barra".
+- **Ruta:** después de la barra, al menos un segmento de 2 o más letras o
+  dígitos. Los segmentos siguientes se unen con más barras.
+
+| Forma | Punto | Terminación | Ruta | Datos de IANA |
+|---|---|---|---|---|
+| **F3-1** | Esquema `http(s)://` o `www.` | Cualquiera | Opcional | No |
+| **F3-2** | Pegado | T-fuerte (§6.T1) o IANA salvo T-palabra (§6.T2) | Sin ruta | **Sí**, para lo que no es T-fuerte |
+| **F3-3** | Pegado | **Cualquier terminación alfabética de 2 a 63 letras**, incluidas las T-palabra | **Obligatoria** | No (es la cobertura vigente) |
+| **F3-4** | **Espaciado o escrito** | **Cualquier terminación alfabética de 2 a 63 letras, salvo T-palabra** | **Obligatoria** (barra con o sin espacios, o escrita) | **No** |
+| **F3-5** | Espaciado o escrito | Sólo T-fuerte | Sin ruta | No (es la cobertura vigente) |
+| **F3-6** | Coma pegada en lugar del punto | T-fuerte o IANA salvo T-palabra | **Obligatoria** | Sí, para lo que no es T-fuerte |
+
+- **El caso `R3-A-064`** (`lacinematecadelsur . photography / analisis /
+  ultima`) es **F3-4**: punto espaciado, terminación alfabética que no es
+  T-palabra y ruta. `R3-A-066` ("dot argentina slash directores") también es
+  F3-4, aunque "argentina" no es un TLD. No se agregó ninguna terminación a
+  ninguna lista.
+- **Restricciones contra falsas alarmas:**
+  - **Sin ruta:** sólo el punto pegado admite terminaciones de IANA. Con
+    espacios o escrito, sólo T-fuerte (F3-5, como hoy). T-palabra nunca
+    cuenta sin ruta.
+  - **Con ruta:** el punto espaciado exige espacios a **los dos** lados, así
+    que el fin de oración no cuenta. T-palabra cuenta sólo con punto pegado
+    (F3-3), nunca espaciada (F3-4). La ruta exige un segmento de 2 o más
+    caracteres.
+  - "y/o", "8.5/10", "2.0/beta" y "drama / comedia" no tienen una etiqueta
+    seguida de un punto y una terminación alfabética.
+- **Costo a medir con C3 y C4:** un texto como "palabra . palabra / palabra",
+  con espacios a los dos lados del punto, se rechaza.
+- **Dependencia de IANA:** sólo F3-2 y F3-6, más allá de T-fuerte. Si la
+  condición de uso de §1 no se verifica, F3-2 y F3-6 quedan con T-fuerte
+  solo. Eso **no** reduce la cobertura vigente, pero sí la de esta versión, y
+  se informa así. F3-4 no depende de IANA.
 
 ## 4. Señales indirectas (**retener**, nunca rechazar)
 
@@ -101,7 +178,7 @@ proveedor o una palabra de medio, solos, publican.
 |---|---|---|---|
 | **S1 Autoatribución + intención** | "mi/nuestro/nuestra" + medio de §6.M **y** I | C2a | "mi celular se quedó sin batería", "mi Instagram está lleno de spoilers" (sin I) |
 | **S2 Medio sin dato + pedido** | I + "por privado / al privado / por dm / por md", o I + medio sin alias | C2a | "le pide el número por privado" (no es I) |
-| **S3 Derivación al perfil** | I + "mi nombre/apodo/perfil/usuario/nick" + un marcador de §6.P | C2a | "el apodo del personaje es…" |
+| **S3 Derivación al perfil** | **S3-a:** las expresiones de la regla vigente `perfil.derivacion`, que retienen solas porque ya combinan posesivo e identidad: "mi perfil", "mi bio", "mi nombre de usuario", "mi nombre de perfil". **S3-b:** un verbo de remisión de §6.R + "en/a/por" opcional + "mi" + (nombre, apodo, nick, usuario, perfil, cuenta). **S3-c:** I + "mi" + esa misma palabra + un marcador de §6.P. Todo en el ámbito | C2a | "fíjense en el nombre del personaje", "miren el perfil del villano", "el apodo del protagonista es…", "fíjense en mi nombre favorito de la saga" (sin "mi" + palabra de identidad, sin marcador) |
 | **S4 Contacto partido** | Las últimas 3 versiones o reseñas de la cuenta en 24 h. Hay un dato incompleto en una y su continuación en otra: corridas de dígitos que suman 8 o más, o un colgante de F2 o F4, con un marcador de §6.K | C2a | Reseñas sucesivas con años, temporadas o episodios |
 | **S5 Venta o promoción** | Un término de venta o sorteo de §6.V + un acompañante de §6.V en el ámbito, o la regla de spam vigente | Informativo, sin umbral (como el spam hasta hoy) | "el protagonista vende…", "el sorteo del pueblo en la trama" |
 
@@ -262,6 +339,15 @@ argentinas, o marcas de plataformas. Cuentan sólo pegados **y** con ruta.
   yoga, you, zero.
 - **Marcas:** amazon, apple, google, hbo, netflix, prime, youtube.
 
+**§6.R Verbos de remisión al perfil (S3-b; A2 de `77d8bda`):**
+- **Fijarse:** fijate, fíjate, fíjense, fíjese.
+- **Mirar:** mirá (con tilde en el original), miren, mire.
+- **Otros:** chequeá, chequeen, vean, revisá, revisen; "pasá por" y "entrá a"
+  (con tilde); "pasen por", "entren a"; buscá (con tilde), busquen.
+
+Solos no retienen nada: hace falta "mi" + una palabra de identidad (S3-b).
+"Fíjense que la peli…" o "miren el final" publican.
+
 **§6.P Marcadores de perfil (S3):** "de acá", "que ven", "comunitario", "en
 todas las redes", "el mismo", "mismo nombre", "mismo apodo".
 
@@ -370,6 +456,7 @@ transformaciones declaradas, y nada más.
 | S: `Po` (643), `Sm` (1005), `Mn` (2090) | **Muestrea** 64 por clase, con semilla fija |
 | P, B, §6.I, §6.M, §6.H, §6.T1, §6.T2, §6.H1–H3 | **Enumera** |
 | T-IANA | **Enumera** los TLD ASCII de 2 y 3 letras; **muestrea** 100 más largos y 20 IDN |
+| F3 (§3.1) | **Enumera** cada forma, de F3-1 a F3-6 × cada punto pegado, espaciado o escrito × la barra con o sin espacios o escrita. En F3-4, **muestrea** 50 terminaciones alfabéticas de 7 a 63 letras con semilla, más las de T-fuerte. Controles: fin de oración seguido de una barra, T-palabra espaciada con ruta, "drama / comedia" |
 | C (UTS #39 hacia el latín) | **Muestrea** 200 |
 | Combinaciones | Cada dimensión se recorre completa con las demás en su forma base. Después, **todos los pares** de dimensiones con representantes. No se genera el producto completo |
 | Controles | Cada transformación lleva un control legítimo con la **misma** transformación (por ejemplo, el mismo separador entre años). Los controles narrativos de §4 y §5 son **plantillas redactadas**, marcadas como tales |
@@ -382,12 +469,15 @@ transformaciones declaradas, y nada más.
 | `⁃`, emoji de tecla, `З` como dígito, palabras pegadas a dígitos, inglés | F1 por S, D6, D9 (§6.L), D7 y D8 |
 | Dictado en grupos con "escriban" o "mi número es" | F1 por S2 + I o M |
 | Fecha `11/04/1988` cerca de "Llamame" | F1 (fecha + I) |
-| Espacios alrededor del punto con terminación larga, coma por punto, "dot"/"slash", `。`, `-[punto]-` | F3 por P, B y T |
+| Espacios alrededor del punto con terminación larga (`. photography /`), "dot … slash" | **F3-4** (§3.1) |
+| Coma por punto (`,com/…`) | F3-6 |
+| `。` y `-[punto]-` con ruta | F3-3 y F3-4 |
 | Discord + "mándenme" + `alias#4821`; "búsquenme"; "pásense"; "mandá"; `@ ` con espacio; "tt", "tele" | F4 por I, A y M |
 | "sgme" | E6, salvo que lleve otro indicador |
 | "nachito.cine, mi usuario de Gmail" | F2 |
 | "mi casilla de Hotmail es la de siempre…", "pedime el número por privado", "mi usuario de TikTok es el mismo apodo…", "canal en Telegram… búsquenlo" | S1 y S2 |
-| "fíjense en mi nombre comunitario" | S3 |
+| "fíjense en mi nombre comunitario" | S3-b ("fíjense" + "mi nombre"); el marcador "comunitario" no hace falta |
+| "búsquenme con el nombre que ven… mi apodo de acá es el mismo" | S3-c |
 | Usuario partido con "empieza con" / "termina con" | S4 |
 | "Vendo cuentas…", "Sorteamos… seguí, etiquetá" | S5 |
 | "te voy a pegar un tiro", "lo voy a ir a buscar…", "le voy a reventar…" | H1 |
@@ -442,5 +532,6 @@ prometida**.
 | **Nombre propio (H3)** | Es una heurística por mayúsculas; falla en un texto todo en minúsculas | Aceptarla como límite declarado de H3, o pedir que el domicilio o el DNI sin etiqueta se retengan con el localizador solo. Eso amplía el alcance y retiene más reseñas legítimas. **Recomiendo la primera opción** |
 | **Evaluador** | Hoy mide detección por salida; CS exige leer los disparos y marcar los casos puros | Es un cambio del evaluador, que se implementa y prueba con datos ajenos **antes** de cualquier conjunto (como en el reservado 3). No se hace ahora |
 | **Mapeo regla → familia** | Depende de cómo se nombren las reglas nuevas | Se fija y versiona junto con la implementación. Un cambio es una versión nueva |
-| **Incorporación de referencias** | No están en el repositorio | Copiarlas con las huellas de §1 en la entrega de implementación, junto con su aviso de licencia (Unicode) y una nota de su origen (IANA, CC0) |
+| **Incorporación de referencias** | No están en el repositorio. Las huellas son declaradas, no verificadas por un segundo revisor | En la entrega de implementación: volver a descargar la versión fijada, recalcular la huella y que la verifique un segundo revisor. Unicode, con su aviso de licencia v3 |
+| **Condición de uso de la lista de IANA** | La declaración CC0 citada cubre los "Protocol Registries" enlazados desde `/protocols`, y el archivo de TLD no está enlazado ahí (§1) | **Verificarla antes de incorporarla.** Si no se puede, F3-2 y F3-6 quedan con T-fuerte solo (§3.1), informado como reducción respecto de esta versión |
 | **"su" en T1** | La lista T-fuerte vigente incluye `su`, que también es un posesivo del castellano. Cuenta incluso con espacios alrededor del punto | Mantenerla en T1 para no reducir la cobertura vigente, y medir el costo con los controles. Moverla a T2 reduce el alcance y requiere una decisión explícita |

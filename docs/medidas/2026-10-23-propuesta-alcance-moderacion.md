@@ -1,4 +1,4 @@
-# Moderación de reseñas: diagnóstico del reservado 3 y propuesta de alcance (v3)
+# Moderación de reseñas: diagnóstico del reservado 3 y propuesta de alcance (v3.1)
 
 23/10/2026. Claude Code. Rama `feat/resenas-reglas`. **Versión 2.1.**
 - La v2 corrigió la auditoría de `4ef9a51`.
@@ -14,6 +14,13 @@
   - E9 queda pendiente de aceptación y E8 se reformuló.
 
   El resumen y el paquete de decisiones están en §9.
+- La v3.1 concilia la auditoría de `77d8bda`
+  (`2026-10-23-auditoria-catalogo-v3-77d8bda.md`):
+  - la composición de F3 con espacios (catálogo §3.1);
+  - la derivación al perfil (S3 y §6.R);
+  - la condición de uso de IANA, que queda **pendiente**.
+
+  Las recomendaciones para decidir están en §10.
 - Se conservan el procedimiento por versión y la operación de las colas.
 - Las versiones anteriores quedan en Git.
 
@@ -29,8 +36,11 @@ El catálogo técnico está en `2026-10-23-catalogo-moderacion-propuesto.md`.
 Es un **candidato a aprobación**:
 - tiene las listas cerradas (§6), el ámbito (§7) y el generador (§8);
 - las referencias están fijadas por versión y huella (§1): Unicode 18.0.0,
-  UTS #39 18.0.0 e IANA `2026102300`. **Se consultaron, pero todavía no
-  están incorporadas al repositorio**;
+  UTS #39 18.0.0 e IANA `2026102300`.
+  - **Se consultaron, pero todavía no están incorporadas.**
+  - Las huellas las calculó Claude y **Codex no pudo recalcularlas**.
+  - La condición de uso del archivo de IANA está **pendiente de
+    verificación**;
 - los puntos técnicos abiertos están en §12, cada uno con la resolución que
   propongo.
 
@@ -500,3 +510,56 @@ aprobarlas o rechazarlas, no como siete preguntas separadas.
 | **P-2** | Condición para publicar: todas las capas implementadas y probadas, y el filtro aprobado según §4.1 | Hasta entonces, no hay reseñas de usuarios públicas |
 | **P-3** | Tu disponibilidad aproximada para las colas | Fija N y la alerta. **No hay cifra acordada** y no la propongo |
 | **P-4** | Autoría de la parte sensible: ruta A (independiente) o ruta B (evidencia limitada, con un dictamen y tu aceptación **específica**) | **No se hereda** la autorización híbrida del reservado 3 |
+
+## 10. Resumen para decidir (v3.1)
+
+### 10.1 Los tres hallazgos de `77d8bda` y cómo quedaron
+
+| Hallazgo | Resolución |
+|---|---|
+| **A1:** el enlace `. photography / ruta` figuraba cubierto, pero T lo prohibía | Composición explícita de F3 (catálogo §3.1). **F3-4:** punto espaciado (con espacios a los dos lados) o escrito + **cualquier terminación alfabética de 2 a 63 letras, salvo T-palabra** + ruta obligatoria. No depende de IANA ni de agregar "photography". Sin ruta rigen las restricciones vigentes (F3-5, sólo T-fuerte). El costo se mide con C3 y C4 |
+| **A2:** "fíjense en mi nombre comunitario" figuraba en S3, pero "fíjense" no estaba en I | **S3-b:** un verbo de remisión de la lista cerrada §6.R (fijate, fíjense, miren, chequeen, vean…) + "mi" + una palabra de identidad. **S3-a** conserva las expresiones de la regla vigente; **S3-c**, la intención + un marcador. Controles: "fíjense en el nombre del personaje", "miren el perfil del villano" |
+| **A3:** CC0 atribuido a la lista de TLD | La declaración citada cubre los "Protocol Registries" enlazados desde `/protocols`, y el archivo de TLD no está enlazado ahí. No encontré otro fundamento. La condición queda **pendiente de verificación** antes de incorporar el archivo; no se afirma CC0 ni una prohibición. Las huellas quedan como **calculadas por Claude**, sin verificación independiente |
+
+### 10.2 Qué queda cerrado y qué condición pendiente frena un paso posterior
+
+- **Cerrado técnicamente (para aprobar el contrato):**
+  - familias F, S y H con sus listas cerradas;
+  - ámbito, generador y CS por disparo con casos puros;
+  - prioridad única;
+  - exclusiones explícitas;
+  - procedimiento por versión.
+
+  No encuentro una contradicción que impida aprobar el contrato.
+- **Condiciones pendientes que frenan pasos posteriores**, no la aprobación:
+  1. **La condición de uso de IANA** frena la **incorporación** de ese
+     archivo. Si no se verifica, F3-2 y F3-6 quedan con T-fuerte solo, y se
+     informa como reducción.
+  2. **La verificación de las huellas por un segundo revisor** frena la
+     incorporación de las tres referencias.
+  3. **El cambio del evaluador** (CS por disparo y pureza) y la tabla de
+     reglas por familia frenan la **creación de cualquier conjunto**.
+     Primero hay que implementarlos y probarlos con datos ajenos.
+  4. **La ruta de autoría sensible y tu disponibilidad** frenan, en ese
+     orden, el conjunto final y la publicación.
+- **Detalles de implementación** que se revisan en su propia entrega: el
+  costo de T-palabra, "su" y F3-4 (que se mide con C3 y C4), el plegado
+  compatible de UTS #39 y el nombre de las reglas.
+
+### 10.3 Recomendaciones (todas pendientes de tu aceptación)
+
+| Decisión | Recomiendo | Por qué |
+|---|---|---|
+| **P-1 Alcance residual** | **Aceptar E1 a E8** como riesgo residual | Lo contextual (E7) y las instrucciones (E1) no tienen un borde implementable sin pagar un clasificador. E8 queda **sin certificar** y con una defensa sin criterio, de forma explícita. Lo excluido **se publica**: denunciar no lo oculta de inmediato, el bloqueo oculta sólo para quien bloquea y pausar no retira lo visible |
+| **E9, por separado** | **Aceptar E9** (no prometer emojis o símbolos sueltos entre los dígitos de un teléfono) | Los emojis son muy frecuentes en reseñas legítimas, incluso entre números ("8 🍿 10"), y la forma es rara como evasión. Los emojis de tecla siguen cubiertos. Si no lo aceptás, hay que ampliar S con `So` y medir su costo antes |
+| **P-2 Condición para publicar** | **Aceptar**: ninguna reseña de usuario se publica hasta que el filtro esté aprobado según §4.1 y estén implementadas y probadas las denuncias, los bloqueos, la cola con admisión acotada, el panel, las suspensiones, los límites por cuenta y la pausa T4 | El filtro solo no alcanza: lo excluido depende de las otras capas |
+| **P-4 Ruta de autoría sensible** | **Ruta A**, con una persona ajena a las reglas que escriba H1–H3 según el protocolo. **Sólo si no hay nadie disponible, la ruta B**, con un dictamen de Codex de evidencia limitada y tu aceptación **específica** para ese contrato y ese conjunto | Los agentes separados no pudieron redactar esa parte. La ruta B no es independiente, y **no hereda** la autorización híbrida del reservado 3 |
+
+### 10.4 Lo único que necesito saber de vos
+
+**Tu disponibilidad aproximada para revisar las colas de retenidos y
+denuncias**, por ejemplo cuántas veces por semana y cuánto tiempo cada vez.
+- Con ese dato se propone N, la cantidad máxima de retenidos sin resolver, y
+  la alerta de atraso.
+- **No hay cifra acordada y no la invento.** Mientras no la indiques, la
+  publicación no se habilita.
