@@ -1,139 +1,390 @@
-# Catálogo de cobertura propuesto para la moderación de reseñas
+# Catálogo de cobertura de la moderación de reseñas: candidato a aprobación
 
-23/10/2026. Claude Code. **BORRADOR, conciliado según la auditoría de
-`2bc6c1c` (v2.1).**
-- Es una propuesta técnica pendiente de auditoría de Codex y de aprobación
-  del dueño.
-- **No es congelable ni aprobable** hasta fijar las listas y versiones de §8:
-  definen alcance y denominadores, así que se fijan en el contrato, no durante
-  la implementación.
-- No está implementado y no se aplica al reservado 3, que sigue fallido.
-- Acompaña a `2026-10-23-propuesta-alcance-moderacion.md` (v2.1).
+23/10/2026. Claude Code. **Versión candidata (v3), conciliada según la
+auditoría de `cac5c50`.**
+- **Estado:** pendiente de la auditoría de Codex y de la aprobación del
+  dueño.
+- **No implementado:** no hay reglas, generador ni evaluador nuevos.
+- **No se aplica al reservado 3,** que sigue fallido. **E1 sigue sin
+  aprobarse.**
+- Acompaña a `2026-10-23-propuesta-alcance-moderacion.md`.
+
+**Qué cambió respecto del borrador v2.1:**
+- se fijaron las referencias y versiones (§1) y las listas cerradas (§6);
+- el ámbito (§7) y el generador (§8);
+- la detección propia de H1, H2 y H3 (§5.1);
+- `_` se agregó a S (§2);
+- E9 queda como exclusión pendiente de aceptación (§10);
+- E8 se reformuló (§10).
+
+Lo que sigue abierto está en §12.
 
 ## 0. Reglas del catálogo
 
-- **El catálogo dice qué se promete, no qué se detecta hoy.** Incluye todo
-  lo mecánico que E1–E1.2 ya prometían y que falló en los reservados. Cada
-  exclusión está en la lista cerrada de §7, con su justificación.
-- **Un caso queda "fuera" del catálogo sólo si cita una exclusión de §7.**
-  - La clasificación la hace el autor del conjunto antes de sellar.
-  - Codex la revisa antes de ejecutar, sin conocer los resultados.
-  - Un caso que no encaja en ninguna exclusión cuenta como **dentro**.
+- **El catálogo dice qué se promete, no qué detecta el módulo hoy.** Incluye
+  la cobertura mecánica que E1–E1.2 ya prometían. Cada exclusión está en §10
+  y queda pendiente de aceptación.
+- **Un caso es "fuera" sólo si no contiene ninguna forma incluida y cita una
+  exclusión.**
+  - La clasificación la hace el autor antes de sellar, y Codex la revisa
+    antes de ejecutar.
+  - Lo que no encaja en ninguna exclusión cuenta como "dentro".
   - Ningún caso se mueve de categoría después de medir.
-- **Ámbito de "cerca".** Salvo que se diga otra cosa, las señales combinadas
-  se buscan **dentro de la misma oración o de la oración contigua**, y como
-  máximo a 25 palabras. Las ventanas en caracteres actuales (30, 40, 60) se
-  reemplazan. Los límites son hipótesis técnicas y se pueden revisar antes de
-  congelar.
 - **Salidas:**
-  - **rechazar:** contacto o enlace completo;
-  - **retener:** señal o contenido sensible explícito;
-  - **publicar:** controles legítimos.
-- **Datos de referencia (propuestos, todavía NO incorporados).** Las clases
-  de §1 se definirían con:
-  - las categorías generales de Unicode;
-  - la tabla de confusables de UTS #39;
-  - la lista de TLD de IANA.
+  - **rechazar:** contacto o enlace completo (F);
+  - **retener:** señal (S) o contenido sensible explícito (H);
+  - **publicar:** el texto no contiene ninguna forma incluida.
 
-  Serían copias con versión dentro del repositorio, sin servicio ni API.
-  **Hoy ninguna de esas copias está incorporada ni verificada**, y esta
-  entrega no las descarga. Su versión y el procedimiento para incorporarlas
-  y verificarlas están pendientes (§8).
-- **Prioridad de salidas y casos mixtos:** §9.
+  La prioridad y los casos mixtos están en §11.
+- **Comparación de listas:** sobre el texto **plegado**: NFKC, minúsculas, sin
+  acentos ni invisibles, con los confusables de letra de §2-C. Las formas que
+  exigen tilde (voseo, §6.I) se buscan en el **original** en minúsculas.
+- **Versión:** cualquier cambio de una lista de §6 o de una referencia de §1
+  es una versión nueva del catálogo y, para la evaluación, una versión nueva
+  del módulo (propuesta §4.1).
 
-## 1. Clases de transformación (compartidas)
+## 1. Referencias fijadas (consultadas, **todavía NO incorporadas**)
 
-| Clase | Definición verificable | Límite |
+Se consultaron el 23/10/2026, sólo en lectura y sin costo, en las fuentes
+oficiales. Las huellas son del archivo tal como se descargó a la carpeta
+temporal de la sesión, **fuera del repositorio**.
+- **Ningún archivo se incorporó al repositorio ni se verificó contra otra
+  copia.**
+- Incorporarlos es un paso futuro: se copian con esta huella, y si la huella
+  no coincide no se incorporan.
+
+| Referencia | Versión fijada | Origen | Fecha del archivo | SHA-256 | Condiciones de uso |
+|---|---|---|---|---|---|
+| Unicode, categorías generales | **Unicode 18.0.0** | `https://www.unicode.org/Public/18.0.0/ucd/extracted/DerivedGeneralCategory.txt` | 2026-06-29 | `d6b151d2d40ee9b1876d26f417980f45ffae47b6055ccf7203cb31f07a030f94` | Unicode License v3 (`https://www.unicode.org/license.txt`), con aviso de copyright |
+| UTS #39, confusables | **18.0.0** | `https://www.unicode.org/Public/18.0.0/security/confusables.txt` (idéntico a `security/latest` el 23/10) | 2026-08-06 | `6ed3ee967c9dfdf6677d563c9985182fbc50a2efb7d6059cd57b2e2ce18f5b92` | Unicode License v3 |
+| IANA, TLD | **Versión `2026102300`** ("Last Updated Fri Oct 23 07:07:01 2026 UTC") | `https://data.iana.org/TLD/tlds-alpha-by-domain.txt` | 2026-10-23 | `274be608419b2c4ae93966cd8e98f6783628312e371c406c0b3a88ca945daa89` | Declaración conjunta IANA–IETF del 10/11/2021: CC0 1.0 (`https://www.iana.org/help/licensing-terms`) |
+
+**Tamaños medidos sobre esas copias,** para dimensionar el generador:
+- Unicode 18.0.0:
+  - `Zs` 17, `Pd` 27, `Ps` 80, `Pe` 78, `Me` 13;
+  - `Po` 643, `Sm` 1005, `Mn` 2090;
+  - `Nd` 770 caracteres, en 77 tramos de 10;
+  - `Pc` 10 y `So` 7561.
+- UTS #39: 302 caracteres cuyo esqueleto coincide con el de un dígito ASCII.
+  Entre ellos están `I` y `|`, y 97 son `Nd`.
+- IANA: 1437 TLD, de los cuales 151 son IDN (`xn--`).
+
+## 2. Clases de transformación
+
+| Clase | Definición | Límite |
 |---|---|---|
-| **D. Formas de dígito** | D1 ASCII · D2 todo `\p{Nd}` (todos los scripts) · D3 ancho completo y matemáticos (por NFKC) · D4 superíndices y subíndices `⁰–⁹ ₀–₉` · D5 circulados `⓪ ①–⑨` · D6 secuencia de tecla (dígito + U+FE0F opcional + U+20E3) · D7 palabras-número en castellano 0–99 · D8 palabras-número en inglés 0–9 y "oh" por cero · D9 letras que imitan dígitos, sólo dentro de una corrida que ya tiene dígitos: los confusables de dígito de UTS #39 (incluye `З`, `О`, `l`, `I`, `O`) | D7 y D8 son conjuntos cerrados. D9 no aplica a palabras sin dígitos |
-| **S. Separadores entre grupos de dígitos** | Hasta 3 caracteres por hueco, de este conjunto **cerrado**: `\p{Zs}`, `\p{Pd}`, `\p{Po}` (salvo `,` `;` `:`, que están en S2), `\p{Ps}`, `\p{Pe}`, `\p{Sm}`, `\p{Mn}`, `\p{Me}`, U+FE0F, `/` | S2: `,` `;` `:` cuentan **sólo** con una señal de contacto (§2). **`\p{So}` (símbolos y emojis sueltos) no es separador del catálogo.** Un teléfono partido con emojis no está prometido y cita E9. El emoji de tecla no es `So`: es dígito + U+FE0F + U+20E3 (`Me`), y está en D6 |
-| **P. Formas del punto de dominio** | `.` · `。` `．` `｡` · "punto", "dot" (también `[ ]` y `( )`) · hasta 1 espacio a cada lado · guiones pegados alrededor de una forma con corchetes (`-[punto]-`) · `,` **sólo** seguida de un TLD de la lista IANA y de una ruta | La coma sin TLD ni ruta nunca es punto |
-| **B. Formas de la barra** | `/` · "slash", "barra" · hasta 1 espacio a cada lado | |
-| **T. Terminaciones** | **Lista IANA de TLD**, copiada con su versión, en lugar de la lista corta actual. Los TLD que son palabras comunes del castellano (`la`, `es`, `me`, `de`, `casa`, `hoy`…, en una lista cerrada) cuentan **sólo** pegados y con ruta | Un TLD que no está en IANA cuenta sólo con ruta, como hoy |
-| **C. Confusables de letra** | Tabla UTS #39 para mapear a latín (no sólo cirílico y griego); los dígitos ambiguos siguen como clases | |
-| **I. Intención de contacto** | Lista **morfológica cerrada**: raíces `escrib-`, `mand-`, `agreg-`, `busc-`, `segu-`/`sig-`, `contact-`, `habl-`, `llam-`, `sum-`, `pas-`, `entr-`, `agend-`, `ped-`/`pid-`. **Sólo** con desinencias de imperativo o clítico de primera persona: `-me`, `-nos`, `-enme`, `-anme`, `-ate`, `-ense`, imperativo plural (`-en`, `-an`) y voseo con tilde (`-á`, `-é`, `-í`). Además, "por privado", "al privado", "por dm", "md" | **No** son intención: la tercera persona ni el infinitivo ("busca", "pasa", "sigue", "entra", "escribe", "buscar"), ni el presente de indicativo |
-| **M. Medios de contacto** | Plataformas (lista cerrada con alias: instagram, insta, ig, tiktok, tik tok, tt, telegram, tg, tele, whatsapp, wsp, wpp, wa, guasap, discord, dc, snapchat, snap, facebook, face, fb, twitter, x (sólo junto a "usuario" o "@"), twitch, kick, threads, signal, onlyfans) · proveedores de correo (gmail, hotmail, outlook, yahoo, live, icloud, proton) · palabras de medio (cel, celu, celular, número, teléfono, wsp, correo, mail, casilla, usuario, cuenta, canal, grupo, perfil, nick, apodo) | Una lista cerrada, revisable por versión |
-| **A. Alias con forma de usuario** | La definición actual (`esAliasFuerte`): letras y al menos un dígito, `_` o `.` · además `alias#dddd` · `@` seguido de hasta 1 espacio · letras sueltas separadas por un mismo signo (`l.u.n.a`) | |
+| **D. Formas de dígito** | **D1** ASCII. **D2** todo `Nd` de Unicode 18.0.0. **D3** ancho completo y matemáticos (por NFKC). **D4** superíndices y subíndices `⁰–⁹ ₀–₉`. **D5** circulados `⓪ ①–⑨`. **D6** emoji de tecla: dígito + U+FE0F opcional + U+20E3. **D7** palabras-número en castellano (§6.N). **D8** palabras-número en inglés (§6.N). **D9** letras y signos que imitan dígitos (§6.L) | D7 y D8, sólo según §6.N. D9, **sólo** dentro de una corrida que ya tiene al menos un dígito |
+| **S. Separadores entre grupos de dígitos** | Hasta 3 caracteres por hueco, de este conjunto **cerrado**: `Zs`, `Pd`, `Ps`, `Pe`, `Po` (salvo `,` `;` `:`), `Sm`, `Mn`, `Me`, U+FE0F, `/` y **`_` (U+005F)** | **S2:** `,` `;` `:` cuentan **sólo** con una señal de intención (I) o un medio (M) en el ámbito. **No** son separadores `So` (pendiente, E9) ni el resto de `Pc`; `_` sí lo es, para conservar la cobertura de `SEP` |
+| **P. Punto de dominio** | `.` `。` `．` `｡` · "punto", "dot" (también entre `[ ]` o `( )`) · hasta 1 espacio a cada lado · guiones pegados a una forma entre corchetes o paréntesis (`-[punto]-`) · `,` **sólo** seguida de un TLD de IANA y de una ruta (B) | |
+| **B. Barra** | `/` · "slash" · "barra" · hasta 1 espacio a cada lado | |
+| **T. Terminaciones** | **T-fuerte** (§6.T1): cuentan con o sin espacios alrededor del punto. **T-IANA:** el resto de la lista de §1, en ASCII y, para las IDN, también en Unicode; cuentan **pegadas** (sin espacios). **T-palabra** (§6.T2): cuentan **sólo** pegadas y con ruta. **Cualquier terminación alfabética de 2 a 63 letras**: cuenta pegada y con ruta, como en la versión 2026-10-22.5 | |
+| **C. Confusables de letra** | Esqueleto de UTS #39 18.0.0 hacia el latín, sólo para letras. Los dígitos siguen como clases ambiguas (`[o0]`, `[il1|]`) | |
+| **I. Intención de contacto** | Formas cerradas de §6.I | La tercera persona, el infinitivo, el presente de indicativo y el pretérito **no** son intención |
+| **M. Medios de contacto** | §6.M | |
+| **A. Alias con forma de usuario** | Letras y dígitos con al menos una letra y al menos un dígito, `_` o `.`, en cualquier posición. Además: `alias#dddd` (2 a 6 dígitos), `@` seguido de hasta 1 espacio y alias, y letras sueltas separadas por un mismo signo (`l.u.n.a`, al menos 4 letras). La puntuación final de la oración no cuenta | Las palabras de §6.A nunca son alias |
 
-## 2. Familias de contacto y enlace: se **rechazan**
+## 3. Familias de contacto y enlace (**rechazar**; cuentan en C1a y C2a)
 
-| Familia | Forma | Combinaciones incluidas | Controles legítimos (publicar) |
+| Familia | Forma | Combinaciones | Controles legítimos (publicar) |
 |---|---|---|---|
-| **F1 Teléfono** | **8 o más dígitos en total, prefijos incluidos.** Se cuentan todos los dígitos de la corrida: `+54`, `0`, `9` y `15` suman. **Formas:** (a) corrida **continua sin separadores** (`1144556677`, `+5491144556677`); (b) en grupos de 1 a 4 dígitos separados por S. El generador produce entre 8 y 13 dígitos (13 = `+54 9` + 10). Más de 13 sigue siendo F1 | D1–D9 × S en cualquier hueco, y sin separadores. S2 con I o M. Número con forma de año, fecha o importe (incluso con `/`, `$` o separador de miles) con I o M en el ámbito | Años sueltos y en pares, duraciones, temporadas y episodios ("T3E8"), puntajes con barra, rankings, importes de recaudación, fechas, ISBN o códigos de catálogo sin I ni M, títulos con dígitos, emojis de tecla usados como puntaje ("5️⃣ estrellas") |
-| **F2 Correo** | `usuario@dominio`, `usuario@proveedor` | "arroba", "at" y `(at)` × P × letras espaciadas × C. "usuario en/de/del <proveedor>". "<alias A>, mi usuario/mail/casilla de <proveedor>" en el ámbito | "el mail de su jefe en gmail", "le escribe un correo", proveedores mencionados en una escena |
-| **F3 Enlace** | Esquema; `etiqueta(.etiqueta)*` + P + T, con o sin B + ruta; acortadores (lista cerrada) | P × B × C × T. Etiquetas con guiones | "las punto com", "y/o", "8.5/10", "2.0/beta", "drama/comedia", puntos sin espacio entre palabras sin TLD de IANA |
-| **F4 Usuario de red** | (A o "usuario/user/nick/soy/como/el usuario es" + alias) **y** (M plataforma o I), en el ámbito | Comillas y atribución: **rechaza si hay alias** (destinatario), como hoy. Sin alias, va a S1 | "la sigue en Instagram", "busca a su hermana en TikTok", "su cuenta de Twitter es tema de la trama" (sin alias) |
+| **F1 Teléfono** | **8 o más dígitos en total, prefijos incluidos** (`+54`, `0`, `9` y `15` suman). (a) Corrida continua sin separadores. (b) Grupos de 1 a 4 dígitos separados por S | D1–D9 × S. S2 con I o M. Número con forma de año, fecha (`dd/mm/aaaa`, con `/` `-` `.`) o importe (`$`, separador de miles) **con I o M en el ámbito** | Años sueltos y en pares, rangos de años, duraciones, temporadas y episodios (`T3E8`), puntajes con barra, rankings, recaudaciones y presupuestos **sin** I ni M, fechas de estreno, títulos con dígitos, emoji de tecla usado como puntaje (`5️⃣ estrellas`, con menos de 8 dígitos) |
+| **F2 Correo** | `usuario@dominio` o `usuario@proveedor` | `@` y "arroba", "at", `(at)`, `[at]` × P × letras espaciadas × C. "usuario en/de/del <proveedor>". Alias (A) + "mi usuario/mail/correo/casilla de <proveedor>" en el ámbito | "el mail de su jefe en Gmail", "le escribe un correo", proveedores nombrados en una escena |
+| **F3 Enlace** | Esquema (`http`, `https`, `www.`). `etiqueta(.etiqueta)*` + P + T, con o sin B + ruta. Acortador de §6.H sin TLD | P × B × C × T. Etiquetas con guiones | "las punto com", "y/o", "8.5/10", "2.0/beta", "drama/comedia", palabras unidas por un punto sin espacio cuya terminación es T-palabra y sin ruta ("buenísima.Final") |
+| **F4 Usuario de red** | (A, o "usuario/user/nick/soy/como/el usuario es/mi usuario es" + alias) **y** (plataforma de §6.M o I), en el ámbito | Con comillas o atribución narrativa: **rechaza si hay alias** | "la sigue en Instagram", "busca a su hermana en TikTok", la cuenta de Twitter de un personaje sin alias |
 
-## 3. Señales indirectas: se **retienen** (nunca rechazan)
+## 4. Señales indirectas (**retener**, nunca rechazar)
 
-**Ninguna se dispara con un solo indicio.** Un verbo, una plataforma, un
+**Ninguna se dispara con un solo indicio:** un verbo, una plataforma, un
 proveedor o una palabra de medio, solos, publican.
 
-| Señal | Condición combinada (en el ámbito) | Controles narrativos (publicar) |
+| Señal | Condición (en el ámbito) | Criterio | Controles (publicar) |
+|---|---|---|---|
+| **S1 Autoatribución + intención** | "mi/nuestro/nuestra" + medio de §6.M **y** I | C2a | "mi celular se quedó sin batería", "mi Instagram está lleno de spoilers" (sin I) |
+| **S2 Medio sin dato + pedido** | I + "por privado / al privado / por dm / por md", o I + medio sin alias | C2a | "le pide el número por privado" (no es I) |
+| **S3 Derivación al perfil** | I + "mi nombre/apodo/perfil/usuario/nick" + un marcador de §6.P | C2a | "el apodo del personaje es…" |
+| **S4 Contacto partido** | Las últimas 3 versiones o reseñas de la cuenta en 24 h. Hay un dato incompleto en una y su continuación en otra: corridas de dígitos que suman 8 o más, o un colgante de F2 o F4, con un marcador de §6.K | C2a | Reseñas sucesivas con años, temporadas o episodios |
+| **S5 Venta o promoción** | Un término de venta o sorteo de §6.V + un acompañante de §6.V en el ámbito, o la regla de spam vigente | Informativo, sin umbral (como el spam hasta hoy) | "el protagonista vende…", "el sorteo del pueblo en la trama" |
+
+## 5. Contenido sensible explícito (**retener**; cuenta en CS)
+
+Sólo **formas explícitas**. Lo velado, irónico o contextual va a E7.
+
+| Familia | Condición (listas de §6) | Controles narrativos (publicar) |
 |---|---|---|
-| **S1 Autoatribución + intención** | "mi/nuestro" + M (medio) **y** I | "mi celular se quedó sin batería en la peli", "mi Instagram está lleno de spoilers" (sin I), "su número" (tercera persona) |
-| **S2 Medio sin dato + pedido** | I + "por privado/dm" o I + M sin alias ("pedime el número por privado") | "le pide el número por privado" (tercera persona, no es I) |
-| **S3 Derivación al perfil** | I + "mi nombre/apodo/perfil/usuario" + ("de acá", "que ven", "comunitario", "en todas las redes", "mismo") | "el nombre del personaje es…", "su apodo en la serie" |
-| **S4 Contacto partido** | Las últimas 3 versiones o reseñas de la cuenta en 24 h (límite elegido del diseño). Hay un dato incompleto en una y su continuación en otra: corridas de dígitos que suman una forma F1, o un colgante de F2 o F4 con marcador ("en otra reseña", "lo termino", "empieza con", "termina con") | Reseñas sucesivas con años, temporadas o episodios |
-| **S5 Venta o promoción** | "vendo/vendemos/liquido/sorteamos/sorteo" + (precio, envío, stock, cuotas, "consultas", I) en el ámbito | "el protagonista vende…", "el sorteo del pueblo en la trama" |
+| **H1 Amenaza explícita** | (a) Una forma directa de §6.H1-a; o (b) pronombre (`te`, `lo`, `la`, `le`, `los`, `las`, `les`) + (`voy`, `vamos`, `van`) `a` + daño de §6.H1-b. Con `lo`, `la`, `le`, `los`, `las` o `les`, hace falta además un **destinatario** de §6.H1-c en el ámbito; con `van a`, sólo vale `te`. (c) Deseo o merecimiento de §6.H1-d. Nunca dispara una expresión de §6.H1-e | "el villano le dice que lo va a matar" (tercera persona), "me mató de risa", "la rompe", "la vamos a pasar bomba" |
+| **H2 Odio explícito** | (a) Un término de grupo de §6.H2-a **y** un término de deshumanización o exclusión de §6.H2-b, en la misma oración y en cualquier orden. (b) Un insulto de §6.H2-c, que retiene solo. (c) En nombres: primero se separan las mayúsculas internas, los dígitos y los signos, y después se aplican (a) y (b) | "la película retrata el racismo contra los bolivianos", "un documental sobre inmigrantes". Una **cita explícita** ("un personaje dice que los inmigrantes son una plaga") **se retiene**, y el costo cuenta en C4 |
+| **H3 Datos personales** | (a) Documento: "dni / d.n.i. / documento / doc." + 7 u 8 dígitos (con puntos o espacios). CUIT o CUIL con la forma `dd-dddddddd-d`, con o sin etiqueta. 7 u 8 dígitos con la forma `d.ddd.ddd` o `dd.ddd.ddd` y un **nombre propio** en el ámbito, sin unidad monetaria ni de cantidad a 3 palabras o menos. (b) Domicilio: tipo de vía de §6.H3-a + 1 a 4 palabras + un número de 1 a 5 dígitos, **y** un nombre propio o relación personal de §6.H3-b, **y** un localizador de §6.H3-c, todo en el ámbito | "vive en la calle Elm 1428" de una ficción (sin localizador de persona real, o sin nombre propio), números de expediente, recaudaciones |
 
-## 4. Contenido sensible explícito: se **retiene**
+**Nombre propio:** dos o más palabras seguidas que empiezan con mayúscula en
+el original, y no al comienzo de una oración salvo que sigan dos. Es una
+heurística: en un texto todo en minúsculas no hay nombre propio, y eso
+**limita** H3 (§12).
 
-Sólo **formas explícitas**: lo velado, irónico o contextual está en §7.
+### 5.1 Detección propia de cada familia H
 
-| Familia | Condición | Controles narrativos (publicar) |
-|---|---|---|
-| **H1 Amenaza explícita** | Primera persona + futuro, perífrasis o deseo (`voy a`, `vamos a`, `te/lo/la/le/los/les + voy a`, `ojalá`, `merecés/merecen`) + verbo o expresión de daño de una lista cerrada (matar, reventar, romper la cara, cagar a palos, pegar un tiro, prender fuego, degollar, apuñalar, violar, lastimar, "que te maten") **y** un destinatario en segunda persona o alguien identificable de la plataforma (vos, "el de la reseña", "al que…", "a ese actor"). También: "sé dónde vivís/trabajás", "te voy a buscar/encontrar" | "el villano le dice que lo va a matar", "en la peli amenaza con prender fuego la casa" (tercera persona narrativa), "me mató de risa" |
-| **H2 Odio explícito** | Un término de grupo de una lista cerrada (nacionalidad, etnia, religión, orientación, identidad de género, discapacidad, sexo; con argot y plurales) **y**, en el ámbito, deshumanización o exclusión de una lista cerrada (plaga, basura, enfermedad, lacra, no son personas, que se vayan/vuelvan, sacarlos/echarlos/exterminarlos en cualquier orden, "de mierda"). También insultos de odio que retienen solos (lista cerrada). Los nombres comunitarios se separan antes por mayúsculas internas ("FueraBolitas") | "la película retrata el racismo contra los bolivianos", "un personaje dice que los inmigrantes son una plaga, y la peli lo desarma" (**se espera retenerlo**: es una cita explícita, y el costo cuenta en C4) |
-| **H3 Datos personales** | DNI o CUIT con o sin etiqueta (7–8 dígitos con forma `dd.ddd.ddd` cerca de un nombre propio, o con "dni/documento/cuit"); domicilio = tipo de vía (calle, av., pasaje, diagonal, ruta…) + nombre + número, **y** una persona identificable (nombre propio o "mi vecina", "el acomodador") en el ámbito | Direcciones de la ficción ("vive en la calle Elm 1428"), números de expediente en tramas |
+- **Indicador de CS:** que se dispare la **regla de la familia**, registrada
+  en las reglas disparadas de la decisión. Que el texto no se haya publicado
+  **no** alcanza.
+  - Un caso H1 con un teléfono rechazado por F1 sólo cuenta para CS-H1 si
+    además se disparó una regla de H1.
+  - La salida final sigue la prioridad única (§11). Los indicadores se leen
+    de los disparos, no de la salida.
+- **Mínimos con casos puros:**
 
-## 5. Qué enumera y qué muestrea el generador
+  | Familia | Mínimo de casos puros | Denominador | Cumple si |
+  |---|---|---|---|
+  | H1 | 30 reseñas | Casos puros H1 "dentro" | Regla H1 disparada en ≥ 95 % |
+  | H2-R | 30 reseñas | Casos puros H2 "dentro" de tipo reseña | ≥ 95 % |
+  | H2-N | 10 nombres | Casos puros H2 "dentro" de tipo nombre | ≥ 95 %, es decir 10 de 10 |
+  | H3 | 30 reseñas | Casos puros H3 "dentro" | ≥ 95 % |
 
-El generador es determinista, versionado y con semilla fija. **No promete
-cobertura semántica**: cubre las transformaciones declaradas y nada más.
+  - **Puro** quiere decir que no contiene ninguna forma de F, S ni de otra
+    familia H.
+  - Lo marca el autor y Codex lo revisa antes de ejecutar.
+- **Casos mixtos:** son adicionales y **no** cuentan para los mínimos. Se
+  informan aparte con dos columnas:
+  - la salida final correcta según §11;
+  - si se disparó la familia H correspondiente.
+- **Para F y S**, C1a y C2a siguen midiendo que el texto **no se publicó**:
+  para los contactos, lo que importa es que no se publiquen. Igual, el
+  generador (§8) exige el disparo de la regla propia de cada familia.
+- **Mapeo de reglas a familias:** se fija en la implementación con la tabla
+  `regla → familia`, y cualquier cambio a esa tabla es una versión nueva.
+  Hoy, H1 es `amenaza.*`, H2 es `odio.*` y H3 es `datos.*`.
+- **Cambio pendiente en el evaluador** (no se hace en esta entrega): agregar
+  a cada caso las marcas de pureza y de familias, y calcular CS por disparo.
+  Hoy el evaluador calcula detección por salida.
 
-- **Enumeración completa, porque las clases son chicas y finitas:**
-  - D2 por bloque: un dígito de cada bloque `\p{Nd}` de la versión de Unicode
-    elegida, más los 10 dígitos del bloque en una corrida completa;
-  - D4–D8 y la tabla D9 completas;
-  - S: todos los de `\p{Zs}`, `\p{Pd}`, `\p{Ps}`, `\p{Pe}` y `\p{Me}`, más
-    U+FE0F, `/` y S2;
-  - P y B: todas las formas;
-  - I: todas las combinaciones de raíz y desinencia;
-  - M y alias: todas las entradas;
-  - las listas de H1–H3.
-- **Muestreo, porque las clases son grandes:**
-  - S: `\p{Po}`, `\p{Sm}` y `\p{Mn}`, 64 por clase, con semilla fija.
-    `\p{So}` no se recorre porque no está en S;
-  - TLD de IANA: todos los de 2–3 letras y 100 más largos, con semilla;
-  - confusables de letra de UTS #39: 200, con semilla.
+## 6. Listas cerradas (catálogo v3)
 
-  Un acierto en la muestra **no** prueba la clase entera, y el informe lo
-  dice.
-- **Combinaciones:**
-  - cada dimensión de una familia se recorre **completa** con las demás en su
-    forma base;
-  - después, **todos los pares** de dimensiones (pairwise) con
-    representantes;
-  - el producto cartesiano completo **no** se genera: es demasiado grande y
-    no agrega clases nuevas.
-- **Controles:** cada transformación lleva al menos un control legítimo
-  generado con la **misma** transformación (por ejemplo, el mismo separador
-  entre años). Los controles narrativos de §3 y §4 son **plantillas
-  redactadas**, y el informe las marca así.
-- **Requisito:** 100 % de la salida esperada en lo generado, porque lo
-  generado **es** la promesa. Un fallo es un defecto del mecanismo, no
-  "otra familia".
+Formas plegadas: sin tilde salvo donde se indica, y en singular y plural
+cuando se indica. Ninguna se amplía durante la implementación.
 
-## 6. Cómo se usó cada fallo conocido para armar el catálogo
+**§6.N Palabras-número**
+- **Castellano 0–15:** cero, uno, una, un, dos, tres, cuatro, cinco, seis,
+  siete, ocho, nueve, diez, once, doce, trece, catorce, quince. Cuentan
+  **sólo** en corridas de 3 o más piezas numéricas, como hoy.
+- **Castellano 16–99**, siempre:
+  - dieciséis a diecinueve, también como "diez y seis" a "diez y nueve";
+  - veinte; veintiuno, veintiún, veintiuna, veintidós a veintinueve, también
+    como "veinte y …";
+  - treinta, cuarenta, cincuenta, sesenta, setenta, ochenta y noventa, más
+    "y" + unidad.
+- **Inglés:** zero, oh (sólo dentro de una corrida), one, two, three, four,
+  five, six, seven, eight, nine. Cuentan **sólo** en corridas de 3 o más
+  piezas.
+- **Fuera**, con la exclusión E1: centenas, miles, y "doble/double" o
+  "triple".
+
+**§6.L Letras que imitan dígitos (D9)**, sólo dentro de una corrida con
+dígitos:
+- `o`→0, `l` `i` `|`→1, `s`→5, `z`→2, `b`→8 y `g`→9: la tabla vigente, que
+  se conserva.
+- **Además**, los 302 caracteres de UTS #39 18.0.0 cuyo esqueleto coincide
+  con el de un dígito ASCII, incluidos `З`, `О` cirílica y `I`.
+
+**§6.I Intención** (lista cerrada de formas)
+- **Voseo con clítico:** escribime, escribinos, mandame, mandanos, agregame,
+  agreganos, buscame, buscanos, seguime, seguinos, contactame, contactanos,
+  hablame, hablanos, llamame, llamanos, sumame, sumate, pasame, pedime,
+  pedinos, encontrame, avisame, consultame, agendame, agendate.
+- **Voseo sin clítico, sólo de verbos en -ar, con tilde en el original:**
+  mandá, agregá, buscá, contactá, hablá, llamá, sumá, pasá, entrá, agendá,
+  consultá, avisá.
+  - **No** valen las de -er e -ir (escribí, seguí, pedí): coinciden con el
+    pretérito de primera persona.
+  - Sin tilde, "manda" es tercera persona: tampoco vale.
+- **Tú:** escríbeme, mándame, agrégame, búscame, sígueme, contáctame,
+  háblame, llámame, encuéntrame, avísame, pídeme.
+- **Usted:** escríbame, mándeme, agrégueme, búsqueme, sígame, contácteme,
+  hábleme, llámeme, encuéntreme, avíseme, pídame.
+- **Plural, con o sin clítico:** escriban, escríbanme, escríbannos, manden,
+  mándenme, agreguen, agréguenme, busquen, búsquenme, sigan, síganme,
+  contacten, contáctenme, hablen, háblenme, llamen, llámenme, súmense,
+  pásense, entren, agenden, agéndenme, pidan, pídanme, encuéntrenme,
+  avísenme, consulten.
+- **Frases:** "por privado", "al privado", "por dm", "al dm", "por md",
+  "al md", "dm", "md", "te paso", "les paso", "les dejo mi", "te dejo mi".
+- **Nunca son intención:**
+  - tercera persona: busca, pasa, sigue, entra, escribe, manda, llama;
+  - infinitivos;
+  - pretéritos: escribí, pasé, busqué, seguí;
+  - presente de indicativo: escribo, mando, sigo.
+
+**§6.M Medios**
+- **Plataformas y alias:**
+  - instagram, insta, ig;
+  - tiktok, tik tok, tt;
+  - telegram, telegran, tg, tele;
+  - whatsapp, whatsap, watsap, guasap, wsp, wpp, wa, whats;
+  - discord, dc;
+  - snapchat, snap;
+  - facebook, face, fb;
+  - twitter;
+  - x, **sólo** junto a "usuario", "@" o un alias;
+  - twitch, kick, threads, signal, kik, onlyfans.
+- **Proveedores:** gmail, hotmail, outlook, yahoo, live, icloud, proton,
+  protonmail.
+- **Palabras de medio:** cel, celu, celular, número, numero, nro, teléfono,
+  telefono, tel, correo, mail, email, casilla, usuario, user, cuenta, canal,
+  grupo, perfil, nick, apodo.
+
+**§6.A Palabras que nunca son alias:** la lista `NO_ALIAS_CORREO` de la
+versión 2026-10-22.5, sin cambios (50 palabras: artículos, pronombres,
+adjetivos comunes).
+
+**§6.H Acortadores sin TLD:** bitly, linktr, tinyurl, cuttly, rebrandly,
+shorturl, adfly, wa.me, t.me, is.gd, v.gd, ow.ly, t.ly, s.id, mega.nz.
+- Es la lista vigente, sin agregados.
+- Con TLD, un acortador ya es F3 por T.
+
+**§6.T1 T-fuerte:** la lista `TLD_FUERTES` de 2026-10-22.5, sin cambios (62
+terminaciones).
+
+**§6.T2 T-palabra**: TLD de IANA que son palabras comunes en reseñas
+argentinas, o marcas de plataformas. Cuentan sólo pegados **y** con ruta.
+- **De la lista vigente:** me, es, la, de, co, tv, to, in, it, us, be, fm, am,
+  so.
+- **Agregados de 2 letras:** al, as, do, no, se, si, va, ve, re. ("su" ya está en T1: ver §12.)
+- **Agregados de 3 o más letras** (los que no están en T1): actor, arte, auto,
+  autos, baby, band, bar, bet, bio, blue, book, box, buy, cafe, cam, car,
+  cars, casa, case, cash, casino, cat, chat, city, coach, cool, data, date,
+  day, deal, dog, eco, email, fan, fans, film, final, fit, food, free,
+  futbol, game, games, gay, gift, gold, golf, gratis, green, hair, help,
+  here, hot, house, ice, juegos, kids, land, latino, law, like, love, lol,
+  luxe, mango, map, market, meme, men, menu, moda, money, monster, moto,
+  music, new, next, ninja, now, one, open, party, pet, phone, photo, pics,
+  pink, pizza, play, plus, poker, porn, press, promo, radio, red, rent,
+  rest, rio, rocks, room, run, sale, salon, sex, sexy, show, ski, sky,
+  smart, smile, soccer, social, solar, song, soy, spa, sport, star, studio,
+  style, surf, taxi, team, tienda, tips, tours, toys, travel, uno, vegas,
+  viajes, vision, viva, vivo, vote, voto, web, win, wine, work, wow, wtf,
+  yoga, you, zero.
+- **Marcas:** amazon, apple, google, hbo, netflix, prime, youtube.
+
+**§6.P Marcadores de perfil (S3):** "de acá", "que ven", "comunitario", "en
+todas las redes", "el mismo", "mismo nombre", "mismo apodo".
+
+**§6.K Marcadores de continuación (S4):**
+- la lista `PISTAS_CONTINUACION` vigente;
+- más: "en otra reseña", "en la otra reseña", "en mi próxima reseña", "lo
+  termino", "la termino", "empieza con", "arranca con", "termina con",
+  "termina en", "la segunda parte".
+
+**§6.V Venta y promoción (S5)**
+- **Venta o sorteo:** vendo, vendemos, revendo, liquido, liquidamos, alquilo,
+  sorteo, sorteamos, sorteando, regalamos, giveaway.
+- **Acompañantes:**
+  - precio, precios, `$` + número, envío, envíos, stock, cuotas, consultas,
+    interesados, oferta, descuento, mayorista;
+  - "dale like", "dale me gusta";
+  - las formas de §6.I y del voseo de spam vigente (seguí, etiquetá,
+    compartí, comentá, participá, con tilde).
+
+**§6.H1 Amenazas**
+- **a. Formas directas:**
+  - te mato, te reviento, te rompo la cara, te cago a palos, te cago a
+    trompadas, te parto la cara, te quemo;
+  - sé dónde vivís, sé dónde vive, sé dónde trabajás, sé dónde trabaja, sé
+    dónde laburás, sé dónde estudiás;
+  - te voy a buscar, te voy a encontrar, te vamos a buscar, te vamos a
+    encontrar.
+- **b. Daño:**
+  - matar, asesinar, reventar, romper la cara, romper las piernas, cagar a
+    palos, cagar a trompadas, cagar a piñas, cagar a tiros, pegar un tiro,
+    pegar un balazo, pegar una paliza, dar una paliza, meter un tiro,
+    apuñalar, acuchillar, degollar, quemar, prender fuego, violar, lastimar,
+    golpear, ahorcar, envenenar, hacer boleta, hacer mierda, hacer
+    desaparecer;
+  - también con el clítico pegado: matarte, reventarlo.
+- **c. Destinatario:** vos, "al de la reseña", "el de la reseña", "al que
+  puso", "al que escribió", "al que comentó", "a ese", "a esa", "a este", "a
+  esta", "al director", "al actor", "a la actriz", "moderador", `@` + alias.
+- **d. Deseo o merecimiento:**
+  - ojalá te mueras, ojalá se muera, ojalá te maten, ojalá lo maten;
+  - merecés morir, merecen morir, merecen que los maten, merecés que te
+    maten.
+- **e. Nunca disparan:** de risa, la rompe, la rompió, romperla, matar el
+  tiempo, quemar la cabeza, la vamos a pasar, me mató, me reventó de risa.
+
+**§6.H2 Odio**
+- **a. Grupos**, con flexión de género y número:
+  - **nacionalidad y etnia:** boliviano, bolita, paraguayo, paragua (sólo
+    con 2-b: "paraguas" es también un objeto), peruano, perucho, chileno,
+    chino, ponja, coreano, judío, negro, villero, sudaca, gitano,
+    inmigrante, extranjero, indio, coya, mapuche, turco, árabe, moro,
+    musulmán;
+  - **orientación e identidad:** gay, puto, trolo, maricón, lesbiana, trava,
+    travesti, trans, homosexual;
+  - **discapacidad:** mogólico, discapacitado, retrasado, autista, down;
+  - **sexo y género:** mujer, mina, hembra, feminista, feminazi.
+- **b. Deshumanización y exclusión:**
+  - plaga, basura, lacra, escoria, parásito, enfermedad, enfermos,
+    cucaracha, rata, animales, bestias, inferiores, infrahumanos;
+  - "no son personas", "no son humanos", "no deberían existir", "no
+    tendrían que haber nacido", "no tendrían que tener derechos";
+  - "hay que" o "habría que" + (echarlos, sacarlos, matarlos,
+    exterminarlos, quemarlos, deportarlos);
+  - "que se vuelvan", "que se vayan", "fuera", "muerte a", "odio a", "odio"
+    (en nombres), "de mierda", exterminio.
+- **c. Insultos que retienen solos:** maricón, maricones, trolo, trolos,
+  trola, sudaca, sudacas, mogólico, mogólicos, mogólica, feminazi, feminazis.
+  Es la lista vigente más feminazi.
+
+**§6.H3 Datos personales**
+- **a. Tipos de vía:** calle, av., avenida, pasaje, pje., diagonal, diag.,
+  boulevard, bulevar, bv., ruta, camino, manzana, mz.
+- **b. Relación personal:** mi vecino, mi vecina, mi ex, mi jefe, mi jefa,
+  el acomodador, la acomodadora, el profe, la profe, el dueño, la dueña.
+- **c. Localizadores:** vive, vivía, lo encuentran, la encuentran,
+  ubíquenlo, ubíquenla, vayan a, visítenlo, su casa, su departamento, su
+  dirección, su domicilio, queda en, timbre, escrachenlo, escráchenla.
+
+## 7. Ámbito y oración
+
+- **Palabra:** una corrida máxima de letras, dígitos y `_` en el texto
+  plegado.
+- **Oración:** un tramo que termina en `.` `!` `?` `…` (o en una
+  combinación de ellos) seguido de un espacio, un salto de línea o el final
+  del texto, o que termina en un salto de línea.
+  - **No** cortan: un punto entre dos caracteres alfanuméricos sin espacio
+    (dominios, `8.5`, `11.345.678`), ni un punto dentro de comillas que
+    sigue en minúscula.
+- **Ámbito:** la misma oración o la contigua, y como máximo **25 palabras**
+  entre el primer indicio y el último de la condición.
+  - Reemplaza las ventanas en caracteres vigentes (30, 40 y 60).
+  - En H2-a, el ámbito es **sólo la misma oración**.
+- **Nombres comunitarios:** todo el nombre es una oración.
+
+## 8. Generador (futuro; no implementado)
+
+Es determinista, versionado, con semilla fija y basado en las referencias de
+§1 y las listas de §6. **No promete cobertura semántica:** cubre las
+transformaciones declaradas, y nada más.
+
+| Dimensión | Qué hace |
+|---|---|
+| D2 | **Enumera** los 77 tramos `Nd`: un dígito por tramo en una corrida, y la corrida completa con los 10 dígitos del tramo |
+| D3–D8, §6.L completa (302 + la tabla vigente) | **Enumera** |
+| S: `Zs` (17), `Pd` (27), `Ps` (80), `Pe` (78), `Me` (13), U+FE0F, `/`, `_` y S2 | **Enumera** |
+| S: `Po` (643), `Sm` (1005), `Mn` (2090) | **Muestrea** 64 por clase, con semilla fija |
+| P, B, §6.I, §6.M, §6.H, §6.T1, §6.T2, §6.H1–H3 | **Enumera** |
+| T-IANA | **Enumera** los TLD ASCII de 2 y 3 letras; **muestrea** 100 más largos y 20 IDN |
+| C (UTS #39 hacia el latín) | **Muestrea** 200 |
+| Combinaciones | Cada dimensión se recorre completa con las demás en su forma base. Después, **todos los pares** de dimensiones con representantes. No se genera el producto completo |
+| Controles | Cada transformación lleva un control legítimo con la **misma** transformación (por ejemplo, el mismo separador entre años). Los controles narrativos de §4 y §5 son **plantillas redactadas**, marcadas como tales |
+| Requisito | **100 %** de la salida esperada **y** del disparo de la regla de la propia familia en lo generado. Un fallo en una muestra **no** prueba la clase entera, y el informe lo dice |
+
+## 9. Fallos conocidos y su lugar en el catálogo
 
 | Fallo (reservado 3) | Queda en |
 |---|---|
-| `⁃`, emoji de tecla, `З` como dígito, palabras pegadas a dígitos, inglés | F1 con S, D6, D9, D7 y D8 |
-| Dictado en grupos con "escriban" o "mi número es" | F1 con S2 + I/M (I incluye "escriban") |
-| Fecha `11/04/1988` cerca de "Llamame" | F1 (la fecha con I) |
-| Espacios alrededor del punto con terminación larga, coma por punto, "dot"/"slash", `。`, `-[punto]-` | F3 con P, B y T |
-| Discord + "mándenme" + `alias#4821`; "búsquenme"; "pásense"; "mandá"; `@ ` con espacio; "tt", "tele", "sgme" | F4 con I, A y M. "sgme" es abreviatura **fuera** (§7, E6), salvo que lleve otro indicador |
+| `⁃`, emoji de tecla, `З` como dígito, palabras pegadas a dígitos, inglés | F1 por S, D6, D9 (§6.L), D7 y D8 |
+| Dictado en grupos con "escriban" o "mi número es" | F1 por S2 + I o M |
+| Fecha `11/04/1988` cerca de "Llamame" | F1 (fecha + I) |
+| Espacios alrededor del punto con terminación larga, coma por punto, "dot"/"slash", `。`, `-[punto]-` | F3 por P, B y T |
+| Discord + "mándenme" + `alias#4821`; "búsquenme"; "pásense"; "mandá"; `@ ` con espacio; "tt", "tele" | F4 por I, A y M |
+| "sgme" | E6, salvo que lleve otro indicador |
 | "nachito.cine, mi usuario de Gmail" | F2 |
 | "mi casilla de Hotmail es la de siempre…", "pedime el número por privado", "mi usuario de TikTok es el mismo apodo…", "canal en Telegram… búsquenlo" | S1 y S2 |
 | "fíjense en mi nombre comunitario" | S3 |
@@ -143,69 +394,53 @@ cobertura semántica**: cubre las transformaciones declaradas y nada más.
 | Grupo + "plaga", "enfermedad", "habría que sacarlos"; argot de nacionalidad; nombres pegados | H2 |
 | Domicilio sin "vive en" | H3 |
 
-## 7. Exclusiones (lista cerrada; cada caso "fuera" cita una)
+## 10. Exclusiones (todas **pendientes de aceptación del dueño**; ninguna exime)
+
+**Ninguna exclusión hace que se ignore otra forma incluida presente en el
+mismo texto** (§11). Una exclusión sólo dice que esa evidencia **no está
+prometida**.
 
 | # | Exclusión | Por qué (límite elegido, no imposibilidad) |
 |---|---|---|
-| **E1** | Instrucciones aritméticas o de armado ("sumale 52", "11 seguido de esos dos años") | Se podría implementar una gramática acotada de instrucciones, pero cada forma nueva de redactarlas vuelve a abrir el ciclo. Si el texto trae una señal S1 o S2, se retiene igual |
-| **E2** | Referencias a datos fuera del texto y del historial S4 ("el mismo que uso en el colegio") | No hay de dónde sacar el dato. Si hay S1 o S3, se retiene |
-| **E3** | Medios, dominios o redes descriptos sólo en palabras ("la app del pajarito", "el sitio de la luna") | Exige interpretar descripciones abiertas |
-| **E4** | Palabras-número en idiomas distintos del castellano y del inglés | Límite elegido; ampliable por versión |
-| **E5** | Dato repartido en más de 3 textos o en más de 24 h | Es un **límite del historial elegido** (S4), no de interpretación. Ampliarlo cuesta lecturas de la base por envío |
-| **E6** | Abreviaturas libres de verbos o redes fuera de las listas I y M ("sgme") | Las listas son cerradas por versión |
-| **E7** | Amenazas veladas, condicionales sin daño explícito, acoso sin términos, ironía, odio en código o indirecto, difamación, estafas narradas sin datos y phishing narrado | Exige interpretar intención y contexto. Queda para las denuncias |
-| **E8** | **Contenido sexual que involucra a menores.** El catálogo no promete detectarlo de forma medible: no hay familia ni criterio | No se lo puede medir sin generar ese material, y eso no se hace (restricción G1, más abajo). La regla `menores.sexual` del módulo se conserva como **defensa adicional sin criterio de aceptación**. No define el alcance. La denuncia tiene categoría grave |
-| **E9** | Teléfono separado con símbolos o emojis sueltos (`\p{So}`) | Es la frontera de la clase S, declarada en §1. No depende de lo que detecte el módulo |
+| **E1** | Instrucciones aritméticas o de armado ("sumale 52", "11 seguido de esos dos años"), centenas y miles dictados, "doble" o "triple" | Se podría implementar una gramática acotada, pero cada redacción nueva reabre el ciclo. Si hay S1 o S2, se retiene |
+| **E2** | Referencias a datos que no están en el texto ni en el historial de S4 | No hay de dónde tomar el dato. Si hay S1 o S3, se retiene |
+| **E3** | Medios, dominios o redes descriptos sólo en palabras | Exige interpretar descripciones abiertas |
+| **E4** | Palabras-número en idiomas distintos del castellano y el inglés | Límite elegido |
+| **E5** | Dato repartido en más de 3 textos o en más de 24 h | Límite del historial del diseño |
+| **E6** | Abreviaturas y formas fuera de §6.I y §6.M ("sgme") | Las listas son cerradas por versión |
+| **E7** | Amenazas veladas, condicionales sin daño explícito, acoso sin términos, ironía, odio en código o indirecto, difamación, estafas y phishing narrados sin datos | Exige interpretar intención y contexto. Queda para las denuncias |
+| **E8** | **Contenido sexual que involucra a menores: cobertura no certificada.** | Es una **restricción elegida de esta evaluación**, no una imposibilidad: no se genera ni se redacta ese material (G1), así que esta evaluación no lo mide ni lo certifica. La regla vigente `menores.sexual` se conserva como **defensa adicional sin criterio**, y **no garantiza la detección**. La denuncia tiene categoría grave. Cualquier evaluación de esa cobertura necesitaría otro procedimiento, que esta propuesta no plantea |
+| **E9** | **Teléfono partido con símbolos o emojis sueltos** (`So`) entre los grupos de dígitos. **Pendiente de aceptación del dueño.** | Incluir `So` (7561 caracteres) agrega muchos separadores posibles y el riesgo de leer puntajes con emojis como teléfonos. **Alternativa** si el dueño no la acepta: incluir `So` en S, que es una ampliación del alcance que hay que diseñar y auditar. El emoji de tecla (D6) **no** está excluido |
 
-**Restricciones de generación de material** (no son alcance del producto):
-- **G1:** no se genera ni se redacta contenido sexual con menores en ningún
-  conjunto ni generador.
-- **G2:** todos los datos son ficticios. Ninguna persona real es blanco de
-  odio, amenazas ni datos personales.
+**Restricciones de generación** (no son alcance del producto):
+- **G1:** no se genera ni se redacta contenido sexual con menores.
+- **G2:** todos los datos son ficticios, y ninguna persona real es blanco.
 
-## 8. Pendiente de fijar antes de aprobar este catálogo
+## 11. Prioridad de salidas y casos mixtos
 
-Definen el alcance o los denominadores. Por eso se fijan, con versión, en el
-contrato y **antes** de implementar, y no durante la implementación.
+- **Una sola salida por texto, la más restrictiva:** rechazo de formato,
+  rechazo de contenido, retención y publicación.
+- **Una exclusión no exime:** si el texto trae una forma incluida, esa forma
+  decide.
+- **Clasificación:** un caso se marca con **todas** las familias incluidas
+  que contiene, y es "fuera" sólo si no contiene ninguna y cita una
+  exclusión.
+- **C1a y C2a:** el éxito es la detección (que no se publique).
+- **CS:** el éxito es el **disparo de la familia** (§5.1), contado sólo sobre
+  casos puros. Los mixtos se informan aparte.
+- **Contacto + sensible:** la salida esperada es **rechazar**.
+  - Para CS, el caso es mixto y no cuenta en el mínimo.
+  - Se informa si la familia H también se disparó.
+  - Un texto rechazado no se guarda, y el contenido sensible se vuelve a
+    evaluar cuando el autor lo reenvía.
 
-| Pendiente | Qué hay que fijar |
-|---|---|
-| Unicode | La versión, y con ella el conjunto exacto de `\p{Nd}` y de las categorías de S |
-| UTS #39 | La versión y el subconjunto usado: confusables de dígito (D9) y mapeo a latín (C) |
-| IANA | La lista de TLD, con su fecha, y la lista cerrada de TLD que son palabras comunes |
-| Procedimiento de datos | Cómo se incorporan y verifican las copias (origen, huella, licencia). **No se descargan en esta entrega** |
-| D7 y D8 | Las palabras-número exactas, incluidas variantes ("dieciséis", "diez y seis", "oh") |
-| I | La lista de raíces y desinencias, y las frases ("por privado", "al dm") |
-| M | Las plataformas con sus alias, los proveedores y las palabras de medio |
-| A | Las formas de alias (incluidas `#dddd` y `@` con espacio) y las palabras que no son alias |
-| Acortadores (F3) | La lista cerrada |
-| S4 y S5 | Los marcadores de continuación, y los términos de venta y promoción |
-| H1 | Los verbos y expresiones de daño, los pronombres y las formas de destinatario |
-| H2 | Los términos de grupo (con argot y plurales), la deshumanización y exclusión, y los insultos que retienen solos |
-| H3 | Los tipos de vía, la forma del DNI y CUIT sin etiqueta, y los marcadores de persona identificable |
-| Ámbito | El límite en palabras y la definición de oración |
+## 12. Puntos técnicos abiertos (con la resolución que propongo)
 
-## 9. Prioridad de salidas y casos mixtos
-
-- **Prioridad única, la del módulo actual:** gana la salida más restrictiva.
-  El orden es: rechazo de formato, rechazo de contenido, retención y
-  publicación. Las salidas no se acumulan: el texto entero recibe una sola.
-- **Una exclusión no es una exención.** Dice sólo que **esa** evidencia no
-  está prometida. Si el mismo texto trae una forma incluida (F, S o H), esa
-  forma decide la salida.
-- **Clasificación de un caso mixto:** se marca con **todas** las familias
-  incluidas que contiene. Cuenta como "fuera" **sólo** si no contiene ninguna
-  y cita una exclusión. Un caso con una parte excluida y una incluida es
-  "dentro" para la familia incluida.
-- **Cómo cuenta:**
-  - en C1a, C2a y CS se cuenta una vez en cada familia incluida que contiene;
-  - el éxito se mide por **detección** (rechazo o retención), como hoy, y no
-    por coincidencia exacta con la etiqueta;
-  - la etiqueta esperada es la salida más restrictiva entre sus familias.
-- **Contacto completo + contenido sensible:**
-  - la salida esperada es **rechazar**, porque el contacto es lo más
-    restrictivo;
-  - para CS, ese caso cuenta como **detectado** (no se publicó);
-  - no se exige rechazar y retener a la vez.
-  - **Limitación:** un texto rechazado no se guarda. El contenido sensible
-    vuelve a evaluarse cuando el autor lo reenvía sin el contacto.
+| Punto | Por qué sigue abierto | Resolución propuesta |
+|---|---|---|
+| **T-palabra (§6.T2)** | Es una lista de criterio, no derivada de un diccionario | Que Codex la revise antes de aprobar. Agregar o quitar entradas cambia el alcance y es una versión nueva |
+| **Nombre propio (H3)** | Es una heurística por mayúsculas; falla en un texto todo en minúsculas | Aceptarla como límite declarado de H3, o pedir que el domicilio o el DNI sin etiqueta se retengan con el localizador solo. Eso amplía el alcance y retiene más reseñas legítimas. **Recomiendo la primera opción** |
+| **Evaluador** | Hoy mide detección por salida; CS exige leer los disparos y marcar los casos puros | Es un cambio del evaluador, que se implementa y prueba con datos ajenos **antes** de cualquier conjunto (como en el reservado 3). No se hace ahora |
+| **Mapeo regla → familia** | Depende de cómo se nombren las reglas nuevas | Se fija y versiona junto con la implementación. Un cambio es una versión nueva |
+| **Incorporación de referencias** | No están en el repositorio | Copiarlas con las huellas de §1 en la entrega de implementación, junto con su aviso de licencia (Unicode) y una nota de su origen (IANA, CC0) |
+| **"su" en T1** | La lista T-fuerte vigente incluye `su`, que también es un posesivo del castellano. Cuenta incluso con espacios alrededor del punto | Mantenerla en T1 para no reducir la cobertura vigente, y medir el costo con los controles. Moverla a T2 reduce el alcance y requiere una decisión explícita |

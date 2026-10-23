@@ -210,11 +210,19 @@ AAB tiene que ser `5` o mayor.
      - F1 sin separadores, S alineada con el generador, E8 separada de la
        restricción de generación.
 
-     **Pendiente:** el catálogo no es aprobable hasta fijar sus listas y
-     versiones (§8 del catálogo). Las copias de Unicode, UTS #39 e IANA **no
-     están incorporadas ni verificadas**.
+     **v3 (23/10, auditoría de `cac5c50`):** el catálogo pasa a ser
+     **candidato a aprobación**:
+     - referencias fijadas por versión y huella: Unicode 18.0.0, UTS #39
+       18.0.0 e IANA `2026102300`, **consultadas y no incorporadas**;
+     - listas cerradas, ámbito de 25 palabras y generador (qué enumera y qué
+       muestrea);
+     - CS medido por el disparo de la familia sobre casos puros;
+     - `_` en S;
+     - E9 pendiente de aceptación y E8 como cobertura no certificada.
+
+     Hay puntos abiertos con resolución propuesta en el catálogo §12.
    **Falta:**
-   - la auditoría de Codex de la propuesta v2.1;
+   - la auditoría de Codex de la v3 y, después, tu aprobación del catálogo;
    - las decisiones de producto P-1 a P-4 (alcance residual, condición para
      publicar, disponibilidad aproximada y autoría de la parte sensible).
 

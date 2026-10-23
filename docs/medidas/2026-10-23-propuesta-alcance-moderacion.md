@@ -1,10 +1,19 @@
-# Moderación de reseñas: diagnóstico del reservado 3 y propuesta de alcance (v2.1)
+# Moderación de reseñas: diagnóstico del reservado 3 y propuesta de alcance (v3)
 
 23/10/2026. Claude Code. Rama `feat/resenas-reglas`. **Versión 2.1.**
 - La v2 corrigió la auditoría de `4ef9a51`.
 - La v2.1 concilia la auditoría de `2bc6c1c`
   (`2026-10-23-auditoria-alcance-v2-2bc6c1c.md`): CS por familia, dos rutas
   de autoría, prioridad y casos mixtos, P-1 y el catálogo.
+- La v3 concilia la auditoría de `cac5c50`
+  (`2026-10-23-auditoria-alcance-v21-cac5c50.md`):
+  - el catálogo pasa a ser candidato a aprobación, con referencias y listas
+    fijadas;
+  - CS se mide por el disparo de la familia sobre casos puros;
+  - `_` vuelve a S;
+  - E9 queda pendiente de aceptación y E8 se reformuló.
+
+  El resumen y el paquete de decisiones están en §9.
 - Se conservan el procedimiento por versión y la operación de las colas.
 - Las versiones anteriores quedan en Git.
 
@@ -17,9 +26,13 @@
   le aplica retroactivamente.
 
 El catálogo técnico está en `2026-10-23-catalogo-moderacion-propuesto.md`.
-Es un **borrador**: no se puede aprobar hasta fijar sus listas y versiones
-(catálogo §8). Las copias de Unicode, UTS #39 e IANA **no están incorporadas
-ni verificadas**.
+Es un **candidato a aprobación**:
+- tiene las listas cerradas (§6), el ámbito (§7) y el generador (§8);
+- las referencias están fijadas por versión y huella (§1): Unicode 18.0.0,
+  UTS #39 18.0.0 e IANA `2026102300`. **Se consultaron, pero todavía no
+  están incorporadas al repositorio**;
+- los puntos técnicos abiertos están en §12, cada uno con la resolución que
+  propongo.
 
 ## 0. Estado: implementado, diseñado y no verificado
 
@@ -86,7 +99,7 @@ formas:
   puntos", "11 seguido de esos dos años").
   - **El módulo actual no interpreta instrucciones.** Implementar una
     gramática acotada de instrucciones es posible, pero **propongo
-    excluirla** (catálogo §7, E1), porque cada redacción nueva reabre el
+    excluirla** (catálogo §10, E1), porque cada redacción nueva reabre el
     ciclo.
   - Con el catálogo, `014` se rechazaría por F1 (la fecha cerca de "Llamame"
     y "Wsp") y `016` se retendría por S1 ("mi cel es" + "Escribime").
@@ -94,12 +107,12 @@ formas:
     quedaría **fuera** (E1) y dependería de las denuncias.
 - **`fuera_capacidad`, 0 de 8:** amenaza velada, acoso sin términos, ironía,
   estafa narrada y phishing narrado. Exigen interpretar intención. El alcance
-  elegido los deja a las denuncias (catálogo §7, E7).
+  elegido los deja a las denuncias (catálogo §10, E7).
 - **Lo que ya no digo como en la v1:**
   - No digo que "ninguna regla determinística puede" hacerlo: es un límite
     del módulo y del alcance que propongo.
   - No digo que el dato repartido en más de 3 textos "exija interpretar": es
-    el límite de historial que eligió el diseño (catálogo §7, E5).
+    el límite de historial que eligió el diseño (catálogo §10, E5).
 
 ### 1.4 Formas sensibles explícitas que se publicaron
 
@@ -134,7 +147,7 @@ separan del abuso contextual de §1.3.
   - **Una exclusión no es una exención:** marca la evidencia que no se
     promete detectar. Si el mismo texto trae una forma incluida, esa forma
     decide la salida.
-  - Gana la salida más restrictiva (catálogo §9).
+  - Gana la salida más restrictiva (catálogo §11).
 
 **Qué aporta razonablemente:**
 - frena las formas habituales y las ofuscaciones mecánicas declaradas;
@@ -191,19 +204,26 @@ la tabla, **y** el filtro haya aprobado su evaluación (§4).
 | **C4** | ≤ 5 % de legítimas retenidas | **Igual.** Además, la retención de los controles narrativos de S y H se informa aparte | Las señales y H retienen más: el tope no se sube | — |
 | **CS** (nuevo) | No existe: las sensibles son informativas | **Por familia; cada una tiene que cumplir por separado** (tabla siguiente). 100 % en lo generado y ≥ 95 % de lo "dentro" del conjunto. El agregado se informa, pero **no compensa** a una familia que falle | Son formas explícitas de listas cerradas, de la misma naturaleza mecánica que C2, y llevan el mismo umbral | Lo contextual (E7) no queda cubierto por CS. Se informa aparte, sin umbral |
 
-**CS por familia** (conjunto independiente; "frenado" quiere decir retenido o
-rechazado):
+**CS por familia** (conjunto independiente). **El indicador es el disparo
+de la regla de la propia familia**, no que el texto no se haya publicado
+(catálogo §5.1).
 
-| Familia | Mínimo de casos | Denominador | Cumple si |
+| Familia | Mínimo de casos **puros** | Denominador | Cumple si |
 |---|---|---|---|
-| **H1** amenaza explícita | 30 reseñas | Casos H1 "dentro" | frenados ≥ 95 %: 29 de 30, o lo equivalente con más casos |
-| **H2-R** odio explícito, reseñas | 30 reseñas | Casos H2 "dentro" de tipo reseña | ≥ 95 % |
-| **H2-N** odio explícito, nombres | 10 nombres | Casos H2 "dentro" de tipo nombre | ≥ 95 %: con 10, exige 10 de 10 |
-| **H3** datos personales | 30 reseñas | Casos H3 "dentro" | ≥ 95 % |
+| **H1** amenaza explícita | 30 reseñas | Casos puros H1 "dentro" | regla H1 disparada en ≥ 95 %: 29 de 30, o lo equivalente con más casos |
+| **H2-R** odio explícito, reseñas | 30 reseñas | Casos puros H2 "dentro" de tipo reseña | ≥ 95 % |
+| **H2-N** odio explícito, nombres | 10 nombres | Casos puros H2 "dentro" de tipo nombre | ≥ 95 %: con 10, exige 10 de 10 |
+| **H3** datos personales | 30 reseñas | Casos puros H3 "dentro" | ≥ 95 % |
 
-- H2 se informa y se evalúa **por separado** para reseñas y nombres, para que
-  los nombres no oculten un subgrupo de reseñas, ni al revés.
-- Un caso mixto cuenta en cada familia incluida que contiene (catálogo §9).
+- **Caso puro:** no contiene ninguna forma de F, S ni de otra familia H. Así
+  ninguna familia aprueba por la detección de otra.
+- **Casos mixtos:** son adicionales y **no** cuentan para los mínimos. Se
+  informan con dos columnas: la salida final, que sigue la prioridad única, y
+  si se disparó la familia H.
+- **"El texto no se publicó"** se informa aparte de **"la familia lo
+  detectó"**.
+- **H2** se informa y se evalúa por separado para reseñas y nombres.
+- **Medir CS así exige un cambio futuro en el evaluador** (catálogo §12).
 - **Qué significan los tamaños:**
   - **El mínimo es de granularidad y cobertura, no una garantía
     estadística.** Con 8 casos, el 95 % exige 8 de 8: el criterio sí
@@ -357,15 +377,15 @@ cantidad y no hay pausa global automática.
 2. **Clases Unicode, listas cerradas por versión y datos públicos de UTS #39 y
    de IANA**, sin servicios externos.
    - Esos datos se **incorporarían** al repositorio con su versión y su
-     huella. **Hoy no están incorporados ni verificados**, y esta entrega no
-     los descarga.
-   - Las listas y versiones del catálogo §8 se fijan **antes** de implementar.
+     huella. **Hoy no están incorporados** (en la v3 se consultaron y se fijaron sus
+     huellas, fuera del repositorio).
+   - Las listas y versiones del catálogo (§1 y §6) ya están fijadas en la v3, y cualquier cambio es una versión nueva.
 3. **El contrato de §3:**
    - C1a, C1b, C2a y C2b;
    - CS por familia (H1, H2 reseñas, H2 nombres y H3), cada una por
      separado, sin compensación por el agregado;
    - C3 y C4 sin cambios;
-   - prioridad y casos mixtos según el catálogo §9.
+   - prioridad y casos mixtos según el catálogo §11.
 4. **El procedimiento de §4:** la evidencia es por versión, hay un solo
    conjunto independiente, y un fallo queda fallido sin aprobado por
    agotamiento.
@@ -377,7 +397,7 @@ cantidad y no hay pausa global automática.
 
 | # | Decisión | Por qué es tuya |
 |---|---|---|
-| **P-1** | **Alcance:** aceptar que el filtro no frene lo contextual ni lo que sólo cita una exclusión (catálogo §7), y que eso **se publique**. **Denunciar no lo oculta de inmediato:** sigue visible para todos hasta la decisión administrativa, salvo que al revalidarlo una regla lo retenga. **El bloqueo personal** sólo lo oculta para quien bloquea. **Pausar** frena la publicación nueva, pero no retira lo que ya está visible | Es el riesgo residual del producto |
+| **P-1** | **Alcance:** aceptar que el filtro no frene lo contextual ni lo que sólo cita una exclusión (catálogo §10, E1–E9; **E9 se acepta o se rechaza aparte**), y que eso **se publique**. **Denunciar no lo oculta de inmediato:** sigue visible para todos hasta la decisión administrativa, salvo que al revalidarlo una regla lo retenga. **El bloqueo personal** sólo lo oculta para quien bloquea. **Pausar** frena la publicación nueva, pero no retira lo que ya está visible | Es el riesgo residual del producto |
 | **P-2** | **Condición para publicar (§2.2):** ninguna reseña de usuario se publica hasta tener todas las capas implementadas y probadas y el filtro aprobado | Afecta cuándo existen las reseñas |
 | **P-3** | **Tu disponibilidad aproximada** para revisar las colas, por ejemplo con qué frecuencia y cuánto tiempo. Fija N y la alerta. No te propongo una cifra | Sólo vos la sabés |
 | **P-4** | **Autoría de la parte sensible** (§4.3). **Ruta A:** autor independiente, que requiere a una persona disponible. **Ruta B:** autor que conoce las reglas, con evidencia **limitada**, que sólo cierra H1–H3 con un dictamen de Codex y tu aceptación específica | Requiere a una persona o aceptar menos evidencia |
@@ -413,7 +433,7 @@ aprobarlas o rechazarlas, no como siete preguntas separadas.
   - la evidencia posterior al lanzamiento no reemplaza las condiciones
     previas.
 
-## 8. Conciliación v2.1 (auditoría de `2bc6c1c`)
+## 8. Conciliación v2.1 (auditoría de `2bc6c1c`; numeración del catálogo de la v2.1)
 
 - **A1:**
   - CS por familia (H1, H2 reseñas, H2 nombres y H3), con mínimo,
@@ -435,3 +455,48 @@ aprobarlas o rechazarlas, no como siete preguntas separadas.
   - E8 se separó de la restricción de generación G1;
   - las listas y versiones pendientes figuran en el catálogo §8;
   - los datos de Unicode, UTS #39 e IANA figuran como no incorporados.
+
+## 9. Resumen para decidir (v3)
+
+### 9.1 Cobertura, exclusiones y límites de la evidencia
+
+- **Rechaza** (catálogo §3): teléfonos de 8 dígitos o más, con o sin
+  separadores y prefijos incluidos, en cualquier escritura de dígitos de
+  Unicode 18.0.0, con emojis de tecla, palabras-número en castellano o
+  inglés y letras que imitan dígitos; correos; enlaces con cualquier TLD de
+  IANA según la forma; usuarios de red con un alias y una plataforma o un
+  pedido.
+- **Retiene** (catálogo §4 y §5):
+  - las señales S1–S5;
+  - las amenazas, el odio y los datos personales explícitos (H1–H3), según
+    listas cerradas.
+- **Exclusiones, todas pendientes de tu aceptación** (catálogo §10):
+  - **E1** instrucciones;
+  - **E2** referencias externas;
+  - **E3** medios descriptos en palabras;
+  - **E4** otros idiomas;
+  - **E5** datos repartidos en más de 3 textos o 24 h;
+  - **E6** abreviaturas fuera de las listas;
+  - **E7** lo contextual (amenazas veladas, ironía, acoso sin términos,
+    estafas narradas);
+  - **E8** contenido sexual con menores: **cobertura no certificada**. No se
+    genera ese material, y la regla vigente es una defensa sin criterio;
+  - **E9** emojis o símbolos sueltos entre los dígitos de un teléfono:
+    **decisión aparte**.
+
+  Ninguna exclusión exime de otra forma incluida en el mismo texto.
+- **Límites de la evidencia:**
+  - el generador cubre transformaciones, no significado;
+  - CS con 30 casos da granularidad, no una eficacia real;
+  - la ruta B no es independiente;
+  - "nombre propio" es una heurística (H3);
+  - T-palabra es una lista de criterio.
+
+### 9.2 Paquete de decisiones de producto (para presentarte después de la auditoría de Codex)
+
+| # | Decisión | Qué implica |
+|---|---|---|
+| **P-1** | Alcance residual: lo excluido (E1–E8) y lo contextual **se publica**. Por separado, aceptar o rechazar **E9** | Denunciar no oculta de inmediato: lo denunciado sigue visible hasta la decisión, salvo que una regla lo retenga. El bloqueo oculta sólo para quien bloquea. La pausa no retira lo visible |
+| **P-2** | Condición para publicar: todas las capas implementadas y probadas, y el filtro aprobado según §4.1 | Hasta entonces, no hay reseñas de usuarios públicas |
+| **P-3** | Tu disponibilidad aproximada para las colas | Fija N y la alerta. **No hay cifra acordada** y no la propongo |
+| **P-4** | Autoría de la parte sensible: ruta A (independiente) o ruta B (evidencia limitada, con un dictamen y tu aceptación **específica**) | **No se hereda** la autorización híbrida del reservado 3 |
