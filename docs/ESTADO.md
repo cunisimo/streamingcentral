@@ -185,21 +185,36 @@ AAB tiene que ser `5` o mayor.
      `docs/medidas/2026-10-23-auditoria-reservado-3-4183d37.md`.
    - **E1 sigue sin aprobarse.** No hay más parches ni otro reservado
      autorizados, y no se avanza a E2.
-   - **Propuesta de alcance, v2 (23/10, sólo documentación, pendiente de
+   - **Propuesta de alcance, v2.1 (23/10, sólo documentación, pendiente de
      Codex y del dueño):**
      - `docs/medidas/2026-10-23-propuesta-alcance-moderacion.md`;
-     - catálogo: `docs/medidas/2026-10-23-catalogo-moderacion-propuesto.md`.
+     - catálogo, todavía **borrador**:
+       `docs/medidas/2026-10-23-catalogo-moderacion-propuesto.md`.
 
-     Corrige la auditoría de `4ef9a51`:
+     **La v2 corrigió la auditoría de `4ef9a51`:**
      - la evidencia es por versión; un solo conjunto independiente, y si
        falla queda fallido, sin aprobado por agotamiento;
      - catálogo con exclusiones cerradas;
-     - CS para amenazas, odio y datos personales explícitos;
      - operación de las dos colas con hipótesis marcadas;
      - el muestreo P6 figura como "no aceptado" (no "rechazado"); el
        contenido de `user_reviews` en Producción, como no verificado.
+
+     **La v2.1 concilia la auditoría de `2bc6c1c`:**
+     - CS por familia (H1, H2 reseñas, H2 nombres y H3), sin compensación
+       por el agregado;
+     - dos rutas de autoría para la parte sensible: independiente, o
+       evidencia limitada que exige un dictamen y una aceptación específica;
+     - prioridad única y casos mixtos: una exclusión no exime;
+     - P-1 corregida: denunciar no oculta de inmediato y pausar no retira lo
+       visible;
+     - F1 sin separadores, S alineada con el generador, E8 separada de la
+       restricción de generación.
+
+     **Pendiente:** el catálogo no es aprobable hasta fijar sus listas y
+     versiones (§8 del catálogo). Las copias de Unicode, UTS #39 e IANA **no
+     están incorporadas ni verificadas**.
    **Falta:**
-   - la auditoría de Codex de la propuesta v2;
+   - la auditoría de Codex de la propuesta v2.1;
    - las decisiones de producto P-1 a P-4 (alcance residual, condición para
      publicar, disponibilidad aproximada y autoría de la parte sensible).
 

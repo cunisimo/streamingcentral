@@ -1,8 +1,12 @@
-# Moderación de reseñas: diagnóstico del reservado 3 y propuesta de alcance (v2)
+# Moderación de reseñas: diagnóstico del reservado 3 y propuesta de alcance (v2.1)
 
-23/10/2026. Claude Code. Rama `feat/resenas-reglas`. **Versión 2**,
-corregida según la auditoría de Codex sobre `4ef9a51`
-(`2026-10-23-auditoria-alcance-4ef9a51.md`). La v1 queda en Git.
+23/10/2026. Claude Code. Rama `feat/resenas-reglas`. **Versión 2.1.**
+- La v2 corrigió la auditoría de `4ef9a51`.
+- La v2.1 concilia la auditoría de `2bc6c1c`
+  (`2026-10-23-auditoria-alcance-v2-2bc6c1c.md`): CS por familia, dos rutas
+  de autoría, prioridad y casos mixtos, P-1 y el catálogo.
+- Se conservan el procedimiento por versión y la operación de las colas.
+- Las versiones anteriores quedan en Git.
 
 **Qué es este documento.**
 - Sólo análisis y propuesta, pendientes de la auditoría de Codex y de las
@@ -13,6 +17,9 @@ corregida según la auditoría de Codex sobre `4ef9a51`
   le aplica retroactivamente.
 
 El catálogo técnico está en `2026-10-23-catalogo-moderacion-propuesto.md`.
+Es un **borrador**: no se puede aprobar hasta fijar sus listas y versiones
+(catálogo §8). Las copias de Unicode, UTS #39 e IANA **no están incorporadas
+ni verificadas**.
 
 ## 0. Estado: implementado, diseñado y no verificado
 
@@ -123,8 +130,11 @@ separan del abuso contextual de §1.3.
     "sigue", una plataforma o "correo", solos, publican.
   - La intención sólo cuenta en imperativo o con clítico de primera persona.
     La tercera persona narrativa no cuenta.
-- **Publica** el resto: lo que cita una exclusión (catálogo §7, E1–E8) pasa
-  y queda para las denuncias.
+- **Publica** el texto sólo si no contiene ninguna forma incluida.
+  - **Una exclusión no es una exención:** marca la evidencia que no se
+    promete detectar. Si el mismo texto trae una forma incluida, esa forma
+    decide la salida.
+  - Gana la salida más restrictiva (catálogo §9).
 
 **Qué aporta razonablemente:**
 - frena las formas habituales y las ofuscaciones mecánicas declaradas;
@@ -179,7 +189,28 @@ la tabla, **y** el filtro haya aprobado su evaluación (§4).
 | **C2** | ≥ 95 % de las ofuscadas detectadas | **C2a:** **100 %** en lo generado (es la promesa) y **≥ 95 %** de lo "dentro" del conjunto independiente detectado. **C2b:** la detección total, informada | El 95 % del independiente deja margen para ambigüedades de clasificación. El 100 % del generador obliga a que el mecanismo cubra su clase | La detección de lo "fuera" deja de tener umbral. Se informa siempre y no puede omitirse en el resumen |
 | **C3** | ≤ 2 % de legítimas rechazadas | **Igual**, sobre las legítimas del independiente y sobre los controles generados | — | — |
 | **C4** | ≤ 5 % de legítimas retenidas | **Igual.** Además, la retención de los controles narrativos de S y H se informa aparte | Las señales y H retienen más: el tope no se sube | — |
-| **CS** (nuevo) | No existe: las sensibles son informativas | **CS:** 100 % de H1–H3 generados retenidos y **≥ 95 %** de las formas explícitas H1–H3 "dentro" del independiente retenidas. **Con al menos 30 casos por familia** | Son formas explícitas de listas cerradas, de la misma naturaleza mecánica que C2, y llevan el mismo umbral. Con 8 casos por categoría, como en el reservado 3, un solo fallo es el 12,5 %: el criterio no discrimina. Con 30, un fallo es el 3,3 % y dos son el 6,7 % | Lo contextual (E7) no queda cubierto por CS. Se informa aparte, sin umbral |
+| **CS** (nuevo) | No existe: las sensibles son informativas | **Por familia; cada una tiene que cumplir por separado** (tabla siguiente). 100 % en lo generado y ≥ 95 % de lo "dentro" del conjunto. El agregado se informa, pero **no compensa** a una familia que falle | Son formas explícitas de listas cerradas, de la misma naturaleza mecánica que C2, y llevan el mismo umbral | Lo contextual (E7) no queda cubierto por CS. Se informa aparte, sin umbral |
+
+**CS por familia** (conjunto independiente; "frenado" quiere decir retenido o
+rechazado):
+
+| Familia | Mínimo de casos | Denominador | Cumple si |
+|---|---|---|---|
+| **H1** amenaza explícita | 30 reseñas | Casos H1 "dentro" | frenados ≥ 95 %: 29 de 30, o lo equivalente con más casos |
+| **H2-R** odio explícito, reseñas | 30 reseñas | Casos H2 "dentro" de tipo reseña | ≥ 95 % |
+| **H2-N** odio explícito, nombres | 10 nombres | Casos H2 "dentro" de tipo nombre | ≥ 95 %: con 10, exige 10 de 10 |
+| **H3** datos personales | 30 reseñas | Casos H3 "dentro" | ≥ 95 % |
+
+- H2 se informa y se evalúa **por separado** para reseñas y nombres, para que
+  los nombres no oculten un subgrupo de reseñas, ni al revés.
+- Un caso mixto cuenta en cada familia incluida que contiene (catálogo §9).
+- **Qué significan los tamaños:**
+  - **El mínimo es de granularidad y cobertura, no una garantía
+    estadística.** Con 8 casos, el 95 % exige 8 de 8: el criterio sí
+    distingue 8 de 7, pero no tolera ningún fallo.
+  - Con 30 se tolera 1 fallo y el resultado tiene más resolución. Aun así,
+    30 casos **no demuestran** una eficacia real del 95 %: miden el conjunto,
+    no la población.
 
 **Regla del catálogo contra el cambio de denominador:**
 - un caso es "fuera" sólo si cita una exclusión de la lista cerrada (catálogo
@@ -203,10 +234,11 @@ orden**:
 2. V está **congelada** con huellas **antes** de crear los casos del conjunto
    independiente.
 3. **Requisito técnico, necesario pero no suficiente:** sobre V pasan el
-   generador del catálogo (C1a, C2a, CS al 100 %, controles dentro de C3 y
-   C4), la suite y las regresiones conocidas.
+   generador del catálogo (C1a, C2a, CS por familia al 100 %, controles
+   dentro de C3 y C4), la suite y las regresiones conocidas.
 4. **Requisito de validación:** un conjunto independiente, sellado, se ejecuta
-   **una vez** sobre V y cumple C0, C1a, C2a, CS, C3 y C4.
+   **una vez** sobre V y cumple C0, C1a, C2a, C3, C4 y CS por familia.
+   - CS sólo cuenta como independiente con la ruta A (§4.3).
    - Lo "fuera" (C1b, C2b) y lo contextual se informan.
 
 **Si el código cambia después del paso 4, la evaluación no se traslada.** El
@@ -237,14 +269,24 @@ independiente". **No la recomiendo para los contactos.**
 
   Lo que no puede pasar es un aprobado por agotamiento de rondas.
 
-**Autoría del componente sensible del conjunto final.** En el reservado 3, el
-agente separado no pudo redactar odio, amenazas ni datos personales. Para CS
-con 30 casos por familia hay dos caminos:
-- un autor humano ajeno a las reglas;
-- un autor que conoce las reglas, declarado como evidencia **limitada** para
-  CS.
+### 4.3 Autoría de la parte sensible: dos rutas que no se confunden
 
-Esa decisión es del dueño (§6.2).
+En el reservado 3, el agente separado no pudo redactar odio, amenazas ni
+datos personales.
+
+| | **Ruta A: autoría independiente** | **Ruta B: autor que conoce las reglas** |
+|---|---|---|
+| Quién escribe H1–H3 | Una persona o un autor que no conoce las reglas ni sus listas, con la misma separación que la parte general | Claude u otro autor que conoce las reglas |
+| Qué evidencia da | **CS independiente** | **CS complementario, no independiente.** Sirve como prueba y regresión |
+| ¿Satisface el paso 4 de §4.1? | **Sí**, si cumple CS por familia | **No.** No se puede rotular "CS independiente aprobado" |
+| Qué haría falta para cerrar H1–H3 | Nada más | Un **dictamen de Codex** que califique explícitamente la evidencia como limitada, **y** una **aceptación específica del dueño** para este contrato y este conjunto, con el nombre "aceptación con evidencia limitada para H1–H3". La parte de contactos sigue exigiendo un conjunto independiente |
+
+- **La autorización híbrida del reservado 3 fue específica de aquella
+  entrega:** no se hereda ni vale para este contrato.
+- **Sin la ruta A ni una aceptación específica de la ruta B,** H1–H3 quedan
+  sin cerrar, y con ellas la versión: no se publica.
+- **La ruta A puede no estar disponible:** el bloqueo del reservado 3 indica
+  que un agente separado probablemente no pueda escribir esa parte.
 
 ## 5. Operación: sobrecarga de cada cola
 
@@ -313,9 +355,17 @@ cantidad y no hay pausa global automática.
 1. **El filtro como barrera y señales (§2.1)**, con el catálogo cerrado y
    versionado.
 2. **Clases Unicode, listas cerradas por versión y datos públicos de UTS #39 y
-   de IANA copiados al repositorio**, sin servicios externos.
-3. **El contrato de §3:** C1a, C1b, C2a, C2b, CS ≥ 95 % con al menos 30 casos
-   por familia, y C3 y C4 sin cambios.
+   de IANA**, sin servicios externos.
+   - Esos datos se **incorporarían** al repositorio con su versión y su
+     huella. **Hoy no están incorporados ni verificados**, y esta entrega no
+     los descarga.
+   - Las listas y versiones del catálogo §8 se fijan **antes** de implementar.
+3. **El contrato de §3:**
+   - C1a, C1b, C2a y C2b;
+   - CS por familia (H1, H2 reseñas, H2 nombres y H3), cada una por
+     separado, sin compensación por el agregado;
+   - C3 y C4 sin cambios;
+   - prioridad y casos mixtos según el catálogo §9.
 4. **El procedimiento de §4:** la evidencia es por versión, hay un solo
    conjunto independiente, y un fallo queda fallido sin aprobado por
    agotamiento.
@@ -327,10 +377,10 @@ cantidad y no hay pausa global automática.
 
 | # | Decisión | Por qué es tuya |
 |---|---|---|
-| **P-1** | **Alcance:** aceptar que el filtro no frene lo contextual ni lo que cita una exclusión (catálogo §7), y que eso se publique hasta que alguien lo denuncie | Es el riesgo residual del producto |
+| **P-1** | **Alcance:** aceptar que el filtro no frene lo contextual ni lo que sólo cita una exclusión (catálogo §7), y que eso **se publique**. **Denunciar no lo oculta de inmediato:** sigue visible para todos hasta la decisión administrativa, salvo que al revalidarlo una regla lo retenga. **El bloqueo personal** sólo lo oculta para quien bloquea. **Pausar** frena la publicación nueva, pero no retira lo que ya está visible | Es el riesgo residual del producto |
 | **P-2** | **Condición para publicar (§2.2):** ninguna reseña de usuario se publica hasta tener todas las capas implementadas y probadas y el filtro aprobado | Afecta cuándo existen las reseñas |
 | **P-3** | **Tu disponibilidad aproximada** para revisar las colas, por ejemplo con qué frecuencia y cuánto tiempo. Fija N y la alerta. No te propongo una cifra | Sólo vos la sabés |
-| **P-4** | **Autoría de la parte sensible del conjunto final:** un autor humano ajeno a las reglas, o Claude como evidencia limitada para CS | Requiere a una persona o aceptar menos evidencia |
+| **P-4** | **Autoría de la parte sensible** (§4.3). **Ruta A:** autor independiente, que requiere a una persona disponible. **Ruta B:** autor que conoce las reglas, con evidencia **limitada**, que sólo cierra H1–H3 con un dictamen de Codex y tu aceptación específica | Requiere a una persona o aceptar menos evidencia |
 
 **Lo que no te pido ni propongo:**
 - gastos, servicios o APIs;
@@ -362,3 +412,26 @@ aprobarlas o rechazarlas, no como siete preguntas separadas.
   - se retiró la atribución a Play;
   - la evidencia posterior al lanzamiento no reemplaza las condiciones
     previas.
+
+## 8. Conciliación v2.1 (auditoría de `2bc6c1c`)
+
+- **A1:**
+  - CS por familia (H1, H2 reseñas, H2 nombres y H3), con mínimo,
+    denominador y umbral propios, y sin compensación por el agregado;
+  - se corrigió la justificación numérica: 8 casos sí distinguen; 30
+    mejoran la granularidad, pero no prueban una eficacia real.
+- **A2:** las rutas A y B (§4.3). La B no satisface el paso 4 sin un
+  dictamen y una aceptación específica, y no hereda la autorización del
+  reservado 3.
+- **A3:**
+  - prioridad única y casos mixtos (catálogo §9);
+  - una exclusión no exime;
+  - P-1 describe que denunciar no oculta de inmediato y que pausar no retira
+    lo visible.
+- **A4:**
+  - F1 incluye la corrida sin separadores, con los prefijos contados;
+  - S quedó alineada con el generador (Ps, Pe y Me enumerados; So fuera, con
+    la exclusión E9);
+  - E8 se separó de la restricción de generación G1;
+  - las listas y versiones pendientes figuran en el catálogo §8;
+  - los datos de Unicode, UTS #39 e IANA figuran como no incorporados.
