@@ -1,0 +1,369 @@
+# E2a — salidas de las baterías locales (24/10/2026)
+# Base: supabase start local (supabase_db_streamingcentral, 127.0.0.1:54321). Sin Producción.
+# Commit base: 31eeafa + cambios de E2a (ver el informe)
+
+## node scripts/sala/db-local.mjs
+contenedor: supabase_db_streamingcentral
+✔ scripts/sala/local-pre.sql (2 avisos)
+✔ supabase/schema.sql (28 avisos)
+✔ supabase/migrations/001_chip_titles.sql (6 avisos)
+✔ supabase/migrations/002_roulette.sql (5 avisos)
+✔ supabase/migrations/003_lock_roulette.sql
+✔ supabase/migrations/007_top_manual.sql (5 avisos)
+✔ supabase/migrations/009_salas.sql (20 avisos)
+✔ supabase/migrations/011_comunidad_esquema.sql (21 avisos)
+✔ supabase/migrations/022_cerrar_user_reviews.sql
+✔ scripts/sala/fixtures-local.sql
+
+10 archivos aplicados.
+
+## node --test scripts/comunidad/local.test.mjs scripts/sala/db-local.test.mjs
+✔ .env.comunidad-local está ignorado por Git (y .env.local también) (486.2479ms)
+✔ urlLocal acepta sólo 127.0.0.1 y localhost (3.3258ms)
+✔ dockerLocal rechaza un motor remoto (1.9797ms)
+✔ las baterías no leen .env.local ni mencionan un host de Supabase remoto (126.4345ms)
+✔ projectIdDe lee el project_id del config.toml real del repo (14.1224ms)
+✔ elige exactamente supabase_db_<project_id>, aunque haya otros proyectos corriendo (1.4531ms)
+✔ falla si el contenedor del proyecto no está, y nombra los que sí están (4.4391ms)
+✔ falla si la selección no es inequívoca o falta el project_id (1.1267ms)
+✔ un prefijo parecido NO alcanza: 'streamingcentral2' no es 'streamingcentral' (1.7918ms)
+✔ las cargas del catálogo van en orden numérico y sólo si se pidieron (6.3996ms)
+✔ aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks (1.7158ms)
+ℹ tests 11
+ℹ pass 11
+ℹ fail 0
+
+## up-down-up.mjs (primero: recrea el esquema limpio)
+base: supabase_db_streamingcentral
+
+   volcado 1-con-011: 11404 líneas, sha256 2121d0f00b453587…
+   volcado 1-con-011-sin-comunidad: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ estado de partida: 011 aplicada (repetible)
+   volcado 2-sin-011: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ down: el esquema desaparece y el resto queda idéntico a lo que había con 011
+   volcado 2b-sin-011-otra-vez: 10413 líneas, sha256 6aa727421a1a8b08…
+✔ down repetido: inocuo
+   volcado 3-con-011: 11404 líneas, sha256 2121d0f00b453587…
+✔ up: vuelve exactamente al volcado con 011
+   volcado 4-sin-011: 10413 líneas, sha256 6aa727421a1a8b08…
+   volcado 5-con-011: 11404 líneas, sha256 2121d0f00b453587…
+✔ segunda vuelta down → up: mismos volcados
+   volcado 6-con-011-repetida: 11404 líneas, sha256 2121d0f00b453587…
+✔ up repetido sobre sí mismo: no cambia el volcado
+   volcado 7a-antes-de-022: 11418 líneas, sha256 99037f7dd2a03b21…
+   volcado 7b-despues-de-022: 11404 líneas, sha256 2121d0f00b453587…
+   quitado por 022:
+     -- Name: user_reviews el autor gestiona la suya; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "el autor gestiona la suya" ON public.user_reviews USING ((auth.uid() = user_id)) WITH CHECK ((auth.uid() = user_id));
+     -- Name: user_reviews lectura publica aprobadas; Type: POLICY; Schema: public; Owner: postgres
+     CREATE POLICY "lectura publica aprobadas" ON public.user_reviews FOR SELECT USING ((estado = 'aprobada'::text));
+✔ 022 sólo cambia policies y permisos de user_reviews (schema.sql re-crea las policies, como en db-local)
+   volcado 7-con-022: 11404 líneas, sha256 2121d0f00b453587…
+✔ 022 aplicada: user_reviews sin policies ni permisos para anon/authenticated, RLS activa
+   volcado 8-tras-022-down: 11404 líneas, sha256 2121d0f00b453587…
+✔ 022_down conservador: no cambia el volcado ni reabre nada, y las filas siguen
+✔ tras 022_down, anon por REST sigue sin leer user_reviews (401/403, nunca 200)
+   volcado 9-con-022-repetida: 11404 líneas, sha256 2121d0f00b453587…
+✔ 022 repetida: inocua
+
+
+11 de 11 pasaron.
+
+## pruebas-permisos.mjs
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— 1. SQL (SET ROLE) —
+✔ el esquema tiene exactamente las once tablas previstas
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las once y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las once tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 165 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 165 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+
+— Usuarios del Auth local —
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+
+— 2. REST —
+✔ REST: 7 credenciales × 11 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI de PostgREST no menciona ninguna tabla de comunidad (anon y service_role)
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+
+— 3. RPC —
+✔ no existe ninguna función public.comunidad_* en E2a (las escrituras llegan desde E2b)
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+
+— Evidencia: ACL efectivas del esquema —
+bajas_en_curso: {postgres=arwdDxtm/postgres}
+bloqueos: {postgres=arwdDxtm/postgres}
+config: {postgres=arwdDxtm/postgres}
+contadores: {postgres=arwdDxtm/postgres}
+denuncias: {postgres=arwdDxtm/postgres}
+denuncias_id_seq: {postgres=rwU/postgres}
+esquema comunidad: {postgres=UC/postgres}
+evaluaciones: {postgres=arwdDxtm/postgres}
+evaluaciones_id_seq: {postgres=rwU/postgres}
+participantes: {postgres=arwdDxtm/postgres}
+resenas: {postgres=arwdDxtm/postgres}
+resenas_id_seq: {postgres=rwU/postgres}
+suspensiones: {postgres=arwdDxtm/postgres}
+suspensiones_id_seq: {postgres=rwU/postgres}
+tramos: {postgres=arwdDxtm/postgres}
+tramos_id_seq: {postgres=rwU/postgres}
+versiones: {postgres=arwdDxtm/postgres}
+versiones_id_seq: {postgres=rwU/postgres}
+
+25 de 25 pasaron.
+
+## DETALLE=1 pruebas-invariantes.mjs
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— Control positivo —
+    ok
+✔ las fixtures completas (las once tablas) confirman → ok
+    ok
+✔ config: una sola fila, todo apagado por defecto y límites de §2.1.2 → ok
+
+— Autoría: FK compuesta y CHECK de la misma fila —
+    23514 new row for relation "evaluaciones" violates check constraint "evaluaciones_no_propia"
+✔ autoevaluación (evaluador = autor de la versión) → 23514
+    23503 insert or update on table "evaluaciones" violates foreign key constraint "evaluaciones_version_autor_fk"
+✔ evaluación que declara otro autor que el de la versión → 23503
+    23514 new row for relation "denuncias" violates check constraint "denuncias_no_propia"
+✔ denuncia de la propia reseña → 23514
+    23503 insert or update on table "denuncias" violates foreign key constraint "denuncias_version_autor_fk"
+✔ denuncia que declara otro autor → 23503
+    23514 new row for relation "tramos" violates check constraint "tramos_no_propio"
+✔ tramo propio (evaluador = autor) → 23514
+    23503 tramo: la versión 900001 no es del autor indicado
+✔ tramo con un autor que no es el de la versión (trigger) → 23503
+    23503 tramo: la versión 999999999 no es del autor indicado
+✔ tramo con una versión inexistente → 23503
+    23514 new row for relation "bloqueos" violates check constraint "bloqueos_no_propio"
+✔ bloquearse a sí mismo → 23514
+    23503 insert or update on table "versiones" violates foreign key constraint "versiones_resena_autor_fk"
+✔ una versión de una reseña con otro autor declarado → 23503
+
+— Texto de la versión: largo, NFC y controles —
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+✔ 79 caracteres → 23514
+    ok
+✔ 80 caracteres → ok
+    ok
+✔ 600 caracteres → ok
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+✔ 601 caracteres → 23514
+    ok
+✔ 600 letras astrales (600 puntos de código, 1200 unidades UTF-16) → ok
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+✔ texto en NFD (e + acento combinante) → 23514
+    ok
+✔ el mismo texto en NFC → ok
+    ok
+✔ con salto de línea (fin de oración) → ok
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+✔ con tabulación → 23514
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+✔ con U+202E (inversión bidireccional) → 23514
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+✔ con U+200B (espacio de ancho cero) → 23514
+    23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
+✔ con U+0085 (control C1) → 23514
+
+— Unicidad —
+    23505 duplicate key value violates unique constraint "resenas_una_viva_por_autor_y_titulo"
+✔ segunda reseña viva del mismo autor y título → 23505
+    ok
+✔ mismo autor, otro tipo (tv 603) sí → ok
+    ok
+✔ después de borrar la suya (borrada_en), puede volver a reseñar el título → ok
+    23505 duplicate key value violates unique constraint "evaluaciones_una_vigente"
+✔ segundo voto vigente del mismo evaluador a la misma versión → 23505
+    ok
+✔ retirado el voto, puede votar de nuevo → ok
+    23505 duplicate key value violates unique constraint "denuncias_una_por_version"
+✔ segunda denuncia del mismo denunciante a la misma versión → 23505
+    23505 duplicate key value violates unique constraint "tramos_uno_abierto"
+✔ segundo tramo abierto del mismo evaluador y versión → 23505
+    23505 duplicate key value violates unique constraint "suspensiones_una_abierta"
+✔ segunda suspensión abierta del mismo participante → 23505
+    23505 duplicate key value violates unique constraint "versiones_intento_unico"
+✔ el mismo id_intento dos veces en la misma reseña (reintento) → 23505
+    23505 duplicate key value violates unique constraint "participantes_user_id_key"
+✔ dos participantes con el mismo user_id → 23505
+    23505 duplicate key value violates unique constraint "config_pkey"
+✔ segunda fila de config → 23505
+    23514 new row for relation "config" violates check constraint "config_id_check"
+✔ config con id = false → 23514
+
+— Estados de versión y vigencia —
+    ok
+✔ edición publicada: la vieja pasa a reemplazada y la vigente se mueve → ok
+    ok
+✔ edición retenida: la vieja deja de verse (reemplazada) → ok
+    23514 transición no permitida: reemplazada → publicada (versión 900001)
+✔ reemplazada → publicada → 23514
+    23514 transición no permitida: rechazada → publicada (versión 900001)
+✔ rechazada → publicada → 23514
+    ok
+✔ publicada → oculta → publicada (restauración del admin) → ok
+    ok
+✔ revision_solicitada → publicada (el admin aprueba) → ok
+    23514 una versión no nace en estado reemplazada
+✔ una versión no nace reemplazada → 23514
+    23514 una versión no nace en estado oculta
+✔ una versión no nace oculta → 23514
+    23514 la versión 900001 es inmutable salvo su estado
+✔ el texto de una versión no cambia → 23514
+    23514 la reseña 900001 no cambia de autor ni de título
+✔ una reseña no cambia de título → 23514
+    23514 la reseña 900001 tiene una versión publicada que no es la vigente
+✔ dos versiones publicadas: la nueva no es la vigente (al confirmar) → 23514
+    23514 la reseña 900001 tiene una versión publicada que no es la vigente
+✔ mover la vigente sin reemplazar la publicada anterior (al confirmar) → 23514
+    23514 la vigente de la reseña 900001 está reemplazada
+✔ la vigente marcada reemplazada sin moverla (al confirmar) → 23514
+    23514 la reseña 22 no tiene versión vigente
+✔ reseña sin versión vigente (al confirmar) → 23514
+    23503 insert or update on table "resenas" violates foreign key constraint "resenas_vigente_fk"
+✔ vigente que apunta a una versión de OTRA reseña (al confirmar) → 23503
+
+— Tramos y suspensiones: intervalos que sólo se cierran —
+    ok
+✔ cerrar un tramo → ok
+    23514 un tramo sólo se cierra, y una sola vez (tramo 59)
+✔ cerrar un tramo dos veces → 23514
+    23514 un tramo sólo se cierra, y una sola vez (tramo 60)
+✔ reabrir un tramo cerrado → 23514
+    23514 new row for relation "tramos" violates check constraint "tramos_intervalo"
+✔ cerrar un tramo antes de que empiece (intervalo vacío) → 23514
+    23514 un tramo nace abierto
+✔ un tramo no nace cerrado → 23514
+    23514 new row for relation "tramos" violates check constraint "tramos_mes_primera_positiva_check"
+✔ mes de primera positiva que no es día 1 → 23514
+    ok
+✔ un tramo sobrevive al borrado de su reseña (versión sin FK) → ok
+    23514 una suspensión sólo se cierra, y una sola vez (suspensión 63)
+✔ cerrar una suspensión y volver a cerrarla → 23514
+    ok
+✔ cerrada la suspensión, puede abrirse otra → ok
+
+— Nombre comunitario —
+    23514 new row for relation "participantes" violates check constraint "participantes_nombre_forma"
+✔ 1 carácter → 23514
+    ok
+✔ 2 caracteres → ok
+    ok
+✔ 24 caracteres → ok
+    23514 new row for relation "participantes" violates check constraint "participantes_nombre_forma"
+✔ 25 caracteres → 23514
+    23514 new row for relation "participantes" violates check constraint "participantes_nombre_forma"
+✔ con un control (U+0007) → 23514
+    23514 new row for relation "participantes" violates check constraint "participantes_nombre_forma"
+✔ con salto de línea → 23514
+    23514 new row for relation "participantes" violates check constraint "participantes_nombre_forma"
+✔ con U+202E → 23514
+    23514 new row for relation "participantes" violates check constraint "participantes_nombre_forma"
+✔ con espacio inicial → 23514
+    23514 new row for relation "participantes" violates check constraint "participantes_nombre_forma"
+✔ en NFD → 23514
+    ok
+✔ en NFC, con espacio interior → ok
+
+— Denuncias, contadores, bloqueos —
+    23514 new row for relation "denuncias" violates check constraint "denuncias_categoria_check"
+✔ categoría fuera de la lista → 23514
+    23514 new row for relation "denuncias" violates check constraint "denuncias_comentario_check"
+✔ comentario de 301 caracteres → 23514
+    ok
+✔ comentario de 300 caracteres → ok
+    23514 new row for relation "denuncias" violates check constraint "denuncias_cierre"
+✔ cerrar una denuncia sin fecha de cierre → 23514
+    ok
+✔ cerrar una denuncia con fecha → ok
+    23514 new row for relation "contadores" violates check constraint "contadores_cantidad_check"
+✔ contador negativo → 23514
+    23514 new row for relation "contadores" violates check constraint "contadores_accion_check"
+✔ acción de contador desconocida → 23514
+    23514 new row for relation "resenas" violates check constraint "resenas_tipo_check"
+✔ tipo de reseña desconocido → 23514
+
+— Auth: borrado de la cuenta —
+    ok
+✔ borrar auth.users (SQL): participante queda con user_id nulo y conserva su reseña; el marcador de baja cae → ok
+    23503 update or delete on table "participantes" violates foreign key constraint "resenas_autor_participante_fkey" on table "resenas"
+✔ borrar un participante con reseñas está prohibido (no hay cascada desde participantes) → 23503
+✔ borrar con la API real de Auth (admin.deleteUser): user_id → null, marcador → borrado
+✔ ninguna fixture de los casos quedó en la base
+
+81 de 81 pasaron.
+
+## Grants y policies efectivos (base local, después de todo lo anterior)
+  esquema  |          acl
+-----------+------------------------
+ comunidad | {postgres=UC/postgres}
+(1 row)
+
+       relname       | relkind | rls |             acl              | policies
+---------------------+---------+-----+------------------------------+----------
+ bajas_en_curso      | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ bloqueos            | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ config              | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ contadores          | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ denuncias           | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ denuncias_id_seq    | S       | f   | {postgres=rwU/postgres}      |        0
+ evaluaciones        | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ evaluaciones_id_seq | S       | f   | {postgres=rwU/postgres}      |        0
+ participantes       | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ resenas             | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ resenas_id_seq      | S       | f   | {postgres=rwU/postgres}      |        0
+ suspensiones        | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ suspensiones_id_seq | S       | f   | {postgres=rwU/postgres}      |        0
+ tramos              | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ tramos_id_seq       | S       | f   | {postgres=rwU/postgres}      |        0
+ versiones           | r       | t   | {postgres=arwdDxtm/postgres} |        0
+ versiones_id_seq    | S       | f   | {postgres=rwU/postgres}      |        0
+(17 rows)
+
+                   funcion                   |          acl          | security_definer
+---------------------------------------------+-----------------------+------------------
+ comunidad.versiones_transicion()            | {postgres=X/postgres} | f
+ comunidad.resena_vigencia_coherente(bigint) | {postgres=X/postgres} | f
+ comunidad.versiones_vigencia()              | {postgres=X/postgres} | f
+ comunidad.resenas_vigencia()                | {postgres=X/postgres} | f
+ comunidad.resenas_inmutables()              | {postgres=X/postgres} | f
+ comunidad.tramos_integridad()               | {postgres=X/postgres} | f
+ comunidad.suspensiones_integridad()         | {postgres=X/postgres} | f
+(7 rows)
+
+   relname    | rls |                           acl                           | policies | filas
+--------------+-----+---------------------------------------------------------+----------+-------
+ user_reviews | t   | {postgres=arwdDxtm/postgres,service_role=Dxtm/postgres} |        0 |     0
+(1 row)
+
+ default_acl_en_comunidad
+--------------------------
+                        0
+(1 row)
+
+ proname
+---------
+(0 rows)
+
+
+## Batería de salas: node --env-file=.env.comunidad-local scripts/sala/pruebas-rls.mjs
+✔ 17. el barrido elimina la sala completa (seis tablas) 5 min después del estado terminal
+
+Todo verde (37 pruebas)

@@ -2,6 +2,7 @@ node_modules
 .next
 .env.local
 .env.sala-local
+.env.comunidad-local
 .DS_Store
 *.log
 

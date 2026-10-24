@@ -63,8 +63,16 @@ export function archivosAAplicar({ conCatalogo, cargas }) {
     "supabase/migrations/001_chip_titles.sql",
     "supabase/migrations/002_roulette.sql",
     "supabase/migrations/003_lock_roulette.sql",
+    // is_admin_mfa() (admin + aal2 + dos TOTP): la necesitan las pruebas de
+    // reseñas de la comunidad con MFA real (plan de reseñas, §4 y E2a).
+    "supabase/migrations/007_top_manual.sql",
     "supabase/migrations/009_salas.sql",
     ...(conCatalogo ? cargas : []),
+    // Reseñas de la comunidad (E2a): esquema privado y cierre de user_reviews.
+    // 022 va después de schema.sql, que vuelve a crear las policies viejas en
+    // cada corrida; así siempre las deja cerradas.
+    "supabase/migrations/011_comunidad_esquema.sql",
+    "supabase/migrations/022_cerrar_user_reviews.sql",
     "scripts/sala/fixtures-local.sql",
   ];
 }

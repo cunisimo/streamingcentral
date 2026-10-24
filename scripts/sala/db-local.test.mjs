@@ -46,3 +46,15 @@ test("las cargas del catálogo van en orden numérico y sólo si se pidieron", (
   assert.equal(con.at(-1), "scripts/sala/fixtures-local.sql");
   assert.equal(con[0], "scripts/sala/local-pre.sql");
 });
+
+test("aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks", () => {
+  const l = archivosAAplicar({ conCatalogo: false, cargas: [] });
+  const i = (f) => l.indexOf(`supabase/migrations/${f}`);
+  assert.ok(i("007_top_manual.sql") > l.indexOf("supabase/schema.sql"));
+  assert.ok(i("009_salas.sql") > i("007_top_manual.sql"));
+  assert.ok(i("011_comunidad_esquema.sql") > i("009_salas.sql"));
+  // 022 cierra user_reviews: tiene que ir DESPUÉS de schema.sql, que recrea sus policies.
+  assert.ok(i("022_cerrar_user_reviews.sql") > i("011_comunidad_esquema.sql"));
+  assert.ok(!l.some((f) => /_down\.sql$/.test(f)), "un rollback nunca va en la lista");
+  assert.equal(l.at(-1), "scripts/sala/fixtures-local.sql");
+});

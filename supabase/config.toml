@@ -304,9 +304,12 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# Encendido para la base LOCAL: las pruebas de reseñas enrolan y verifican dos
+# factores TOTP reales para is_admin_mfa() (plan de reseñas, §4 y E2a). Este
+# archivo sólo configura `supabase start`; no cambia nada en Producción.
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

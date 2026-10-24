@@ -1,0 +1,158 @@
+#!/usr/bin/env node
+// up → down → up de las migraciones de reseñas (E2a), en la base LOCAL, con
+// comparación de `pg_dump --schema-only` (plan de reseñas, E2a).
+//
+// Uso:
+//   node scripts/sala/db-local.mjs
+//   node --env-file=.env.comunidad-local scripts/comunidad/up-down-up.mjs
+//
+// Qué fija:
+//   - 011 no toca nada fuera del esquema `comunidad`: el volcado sin 011 es
+//     IDÉNTICO al volcado con 011 excluyendo ese esquema;
+//   - 011_down deja la base exactamente como sin 011, y 011 vuelve a dejarla
+//     exactamente igual que antes (dos vueltas);
+//   - 022_down es conservador: no cambia el volcado, `user_reviews` sigue con
+//     sus filas y sin policies, y `anon`/`authenticated` siguen sin leerla
+//     (SQL y REST).
+// Los volcados se normalizan sólo en las líneas `\restrict`/`\unrestrict`, que
+// pg_dump 17.6 genera con una clave aleatoria en cada corrida.
+// Deja la base con 011 y 022 aplicadas, como db-local.mjs.
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { aplicarArchivo, arnes, contenedor, sqlOk, urlLocal } from "./local.mjs";
+
+const URL_API = urlLocal(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (!ANON) { console.error("Falta NEXT_PUBLIC_SUPABASE_ANON_KEY (¿--env-file=.env.comunidad-local?)"); process.exit(2); }
+console.log(`base: ${contenedor()}\n`);
+
+const UP = "supabase/migrations/011_comunidad_esquema.sql";
+const DOWN = "supabase/migrations/011_comunidad_esquema_down.sql";
+const UP22 = "supabase/migrations/022_cerrar_user_reviews.sql";
+const DOWN22 = "supabase/migrations/022_cerrar_user_reviews_down.sql";
+const dirVolcados = join(tmpdir(), `comunidad-volcados-${Date.now()}`);
+mkdirSync(dirVolcados, { recursive: true });
+
+function volcar(nombre, { sinComunidad = false } = {}) {
+  const args = ["exec", contenedor(), "pg_dump", "-U", "postgres", "-d", "postgres", "--schema-only"];
+  if (sinComunidad) args.push("--exclude-schema=comunidad");
+  const r = spawnSync("docker", args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+  if (r.status !== 0) throw new Error(`pg_dump: ${r.stderr}`);
+  const texto = r.stdout.split("\n").filter((l) => !/^\\(un)?restrict /.test(l)).join("\n");
+  writeFileSync(join(dirVolcados, `${nombre}.sql`), texto);
+  const sha = createHash("sha256").update(texto).digest("hex").slice(0, 16);
+  console.log(`   volcado ${nombre}: ${texto.split("\n").length} líneas, sha256 ${sha}…`);
+  return texto;
+}
+
+/** Primeras diferencias de línea, para que un fallo diga qué cambió. */
+function diferencias(a, b) {
+  const la = a.split("\n"), lb = b.split("\n");
+  const out = [];
+  for (let i = 0; i < Math.max(la.length, lb.length) && out.length < 6; i++) {
+    if (la[i] !== lb[i]) out.push(`línea ${i + 1}: «${la[i] ?? "∅"}» ≠ «${lb[i] ?? "∅"}»`);
+  }
+  return out.join("\n");
+}
+const iguales = (a, b, msg) => assert.ok(a === b, `${msg}\n${diferencias(a, b)}`);
+
+const { prueba, cerrar } = arnes();
+const v = {};
+
+await prueba("estado de partida: 011 aplicada (repetible)", () => {
+  aplicarArchivo(UP);
+  assert.equal(sqlOk("select count(*) from pg_tables where schemaname = 'comunidad'"), "11");
+  v.con = volcar("1-con-011");
+  v.conSinEsquema = volcar("1-con-011-sin-comunidad", { sinComunidad: true });
+});
+
+await prueba("down: el esquema desaparece y el resto queda idéntico a lo que había con 011", () => {
+  aplicarArchivo(DOWN);
+  assert.equal(sqlOk("select count(*) from pg_namespace where nspname = 'comunidad'"), "0");
+  v.sin = volcar("2-sin-011");
+  iguales(v.sin, v.conSinEsquema, "011 tocó algo fuera de su esquema");
+  assert.ok(!/comunidad\./.test(v.sin), "quedó una referencia a comunidad");
+});
+
+await prueba("down repetido: inocuo", () => {
+  aplicarArchivo(DOWN);
+  iguales(volcar("2b-sin-011-otra-vez"), v.sin, "el segundo down cambió algo");
+});
+
+await prueba("up: vuelve exactamente al volcado con 011", () => {
+  aplicarArchivo(UP);
+  iguales(volcar("3-con-011"), v.con, "el segundo up no reprodujo el primero");
+  assert.equal(sqlOk("select modulo_activo or publicacion_activa or top_yumpers_activo from comunidad.config"), "f");
+});
+
+await prueba("segunda vuelta down → up: mismos volcados", () => {
+  aplicarArchivo(DOWN);
+  iguales(volcar("4-sin-011"), v.sin, "la segunda bajada difiere");
+  aplicarArchivo(UP);
+  iguales(volcar("5-con-011"), v.con, "la segunda subida difiere");
+});
+
+await prueba("up repetido sobre sí mismo: no cambia el volcado", () => {
+  aplicarArchivo(UP);
+  iguales(volcar("6-con-011-repetida"), v.con, "repetir 011 cambió el esquema");
+});
+
+// ---------------------------------------------------------------------------
+const estadoUserReviews = () => sqlOk(`
+  select (select count(*) from public.user_reviews) || '|' ||
+         (select count(*) from pg_policy where polrelid = 'public.user_reviews'::regclass) || '|' ||
+         has_table_privilege('anon', 'public.user_reviews', 'SELECT') || '|' ||
+         has_table_privilege('authenticated', 'public.user_reviews', 'SELECT') || '|' ||
+         has_table_privilege('authenticated', 'public.user_reviews', 'INSERT') || '|' ||
+         (select relrowsecurity from pg_class where oid = 'public.user_reviews'::regclass)`);
+
+await prueba("022 sólo cambia policies y permisos de user_reviews (schema.sql re-crea las policies, como en db-local)", () => {
+  aplicarArchivo("supabase/schema.sql");
+  assert.equal(sqlOk("select count(*) from pg_policy where polrelid = 'public.user_reviews'::regclass"), "2");
+  const antes = volcar("7a-antes-de-022");
+  aplicarArchivo(UP22);
+  const despues = volcar("7b-despues-de-022");
+  // Diferencia como multiconjunto de líneas: lo agregado tiene que ser nada, y
+  // lo quitado, sólo las policies, sus comentarios y los GRANT de user_reviews.
+  const cuenta = (t) => t.split("\n").reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());
+  const a = cuenta(antes), d = cuenta(despues);
+  const agregadas = [...d].filter(([l, n]) => n > (a.get(l) ?? 0)).map(([l]) => l);
+  const quitadas = [...a].filter(([l, n]) => n > (d.get(l) ?? 0)).map(([l]) => l);
+  assert.deepEqual(agregadas, []);
+  const ajenas = quitadas.filter((l) => l !== "" && l !== "--" && !/user_reviews/.test(l));
+  assert.deepEqual(ajenas, []);
+  console.log("   quitado por 022:\n" + quitadas.filter((l) => /user_reviews/.test(l)).map((l) => "     " + l.slice(0, 150)).join("\n"));
+});
+
+await prueba("022 aplicada: user_reviews sin policies ni permisos para anon/authenticated, RLS activa", () => {
+  aplicarArchivo(UP22);
+  const [, pol, anonSel, authSel, authIns, rls] = estadoUserReviews().split("|");
+  assert.deepEqual([pol, anonSel, authSel, authIns, rls], ["0", "false", "false", "false", "true"]);
+  v.con22 = volcar("7-con-022");
+});
+
+await prueba("022_down conservador: no cambia el volcado ni reabre nada, y las filas siguen", () => {
+  const antes = estadoUserReviews();
+  aplicarArchivo(DOWN22);
+  assert.equal(estadoUserReviews(), antes);
+  iguales(volcar("8-tras-022-down"), v.con22, "el down de 022 cambió el esquema");
+});
+
+await prueba("tras 022_down, anon por REST sigue sin leer user_reviews (401/403, nunca 200)", async () => {
+  const r = await fetch(`${URL_API}/rest/v1/user_reviews?select=*`, { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } });
+  const cuerpo = await r.text();
+  assert.ok(r.status === 401 || r.status === 403, `status ${r.status}: ${cuerpo.slice(0, 120)}`);
+  assert.match(cuerpo, /42501|permission denied/);
+});
+
+await prueba("022 repetida: inocua", () => {
+  aplicarArchivo(UP22);
+  iguales(volcar("9-con-022-repetida"), v.con22, "repetir 022 cambió el esquema");
+});
+
+console.log(`\nvolcados en ${dirVolcados}`);
+cerrar();
