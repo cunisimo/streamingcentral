@@ -2,7 +2,7 @@
 // único banco con el que se ajustan las reglas; el reservado no se toca acá.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CASOS_DESARROLLO, RETENIDOS_CONOCIDOS } from "./desarrollo.ts";
+import { CASOS_DESARROLLO, FALSOS_POSITIVOS_CONTRATO_V1, RETENIDOS_CONOCIDOS } from "./desarrollo.ts";
 import { evaluarBanco } from "./evaluar.ts";
 import { REGLAS_NOMBRE, REGLAS_RESENA } from "../reglas.ts";
 
@@ -31,12 +31,18 @@ test("criterios C0–C4 sobre el banco de desarrollo", () => {
 
 test("cada caso da el resultado esperado, salvo los retenidos conocidos (que deben quedar retenidos)", () => {
   const fallidos = informe.resultados
-    .filter((r) => !r.coincide && !(r.caso.id in RETENIDOS_CONOCIDOS))
+    .filter((r) => !r.coincide && !(r.caso.id in RETENIDOS_CONOCIDOS) && !(r.caso.id in FALSOS_POSITIVOS_CONTRATO_V1))
     .map((r) => `${r.caso.id} → ${r.decision.resultado}`);
   assert.deepEqual(fallidos, []);
   for (const id of Object.keys(RETENIDOS_CONOCIDOS)) {
     const r = informe.resultados.find((x) => x.caso.id === id);
     assert.equal(r?.decision.resultado, "retener", id);
+  }
+  // Los falsos positivos del contrato v1 tienen exactamente la salida registrada (y cuentan en C3/C4).
+  for (const [id, { salida }] of Object.entries(FALSOS_POSITIVOS_CONTRATO_V1)) {
+    const r = informe.resultados.find((x) => x.caso.id === id);
+    assert.equal(r?.caso.grupo, "legitima", id);
+    assert.equal(r?.decision.resultado, salida, id);
   }
 });
 

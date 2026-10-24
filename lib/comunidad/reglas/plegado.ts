@@ -10,7 +10,25 @@
 //      mal la mitad de las veces. Sólo se mapean las cirílicas y griegas que no
 //      son ambiguas.
 
+import { PALABRAS_NUMERO_EN } from "./listas.ts";
+import { CONFUSABLES_DIGITO, CONFUSABLES_LETRA_UTS39, RANGOS_ME, RANGOS_ND, RANGOS_SEPARADOR } from "./tablas-unicode.ts";
 import type { Plegado } from "./tipos.ts";
+
+/** Clase de caracteres (modo `u`) a partir de rangos de puntos de código. */
+export function claseDeRangos(rangos: readonly (readonly [number, number])[], extra = ""): string {
+  const h = (cp: number) => `\\u{${cp.toString(16)}}`;
+  return `[${rangos.map(([a, b]) => (a === b ? h(a) : `${h(a)}-${h(b)}`)).join("")}${extra}]`;
+}
+
+/**
+ * S (contrato v1 §2): separadores entre grupos de dígitos, de Unicode 18.0.0
+ * (Zs, Pd, Ps, Pe, Po sin `,;:`, Sm, Mn, Me, `_`, `/`). Fuente de verdad para
+ * reglas.ts y para las corridas de palabras-número.
+ */
+export const CLASE_SEPARADOR = claseDeRangos(RANGOS_SEPARADOR);
+// Selectores de variación (U+FE0E/FE0F) y marcas que encierran (Me, como el
+// U+20E3 del emoji de tecla): se quitan para que "1️⃣1️⃣" sea "11" (D6).
+const SELECTORES_Y_ME = new RegExp(claseDeRangos(RANGOS_ME, "\\u{fe0e}\\u{fe0f}"), "gu");
 
 // Invisibles que sirven para partir palabras sin que se vea: ZWSP, ZWNJ, ZWJ,
 // marcas de dirección, word joiner, BOM y guion blando.
@@ -32,22 +50,46 @@ export function normalizarOriginal(texto: string): string {
  */
 export function digitosAscii(t: string): string {
   return t.replace(/[^\x00-\x7F]/gu, (c) => {
-    if (!/\p{Nd}/u.test(c)) return c;
     const cp = c.codePointAt(0)!;
-    let inicio = cp;
-    while (/\p{Nd}/u.test(String.fromCodePoint(inicio - 1))) inicio--;
-    return String((cp - inicio) % 10);
+    // v2 (contrato v1, D2): los rangos `Nd` de Unicode 18.0.0 (tablas-unicode.ts),
+    // no los del runtime. Cada bloque empieza en su cero.
+    for (const [a, b] of RANGOS_ND) if (cp >= a && cp <= b) return String((cp - a) % 10);
+    return c;
   });
 }
 
 /** NFKC, dígitos ASCII, minúsculas, sin acentos, sin invisibles ni controles, espacios colapsados. */
+// Marcas combinantes, que encierran y selectores de variación pegados a un
+// dígito: hacen de separador (S), no desaparecen. Así "1985⃣2026" sigue siendo
+// dos años y "1️⃣1️⃣" una corrida "1 1" (contrato v1, S y D6).
+const MARCAS_TRAS_DIGITO = new RegExp(`(\\d)(?:${claseDeRangos(RANGOS_ME, "\\u{fe0e}\\u{fe0f}\\p{Mn}")})+`, "gu");
+
 export function base(texto: string): string {
   return digitosAscii(texto.normalize("NFKC"))
+    .replace(MARCAS_TRAS_DIGITO, "$1 ")
     .replace(INVISIBLES, "")
+    .replace(SELECTORES_Y_ME, "")
     .replace(CONTROLES, " ")
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{Mn}/gu, "")
+    .normalize("NFC")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Como `base` pero CONSERVA las tildes (contrato v1 §0): las formas de voseo
+ * sin clítico ("mandá", "pasá por") sólo cuentan con tilde, porque sin ella
+ * son tercera persona. Las posiciones coinciden con `base` salvo casos raros.
+ */
+export function acentuada(texto: string): string {
+  return digitosAscii(texto.normalize("NFKC"))
+    .replace(MARCAS_TRAS_DIGITO, "$1 ")
+    .replace(INVISIBLES, "")
+    .replace(SELECTORES_Y_ME, "")
+    .replace(CONTROLES, " ")
+    .toLowerCase()
     .normalize("NFC")
     .replace(/\s+/g, " ")
     .trim();
@@ -72,8 +114,10 @@ const COMPUESTOS: Readonly<Record<string, number>> = {
   veintiun: 21, veintiuno: 21, veintiuna: 21, veintidos: 22, veintitres: 23, veinticuatro: 24,
   veinticinco: 25, veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
 };
+// v2 (contrato v1 §6.N): también "diez y seis" a "diez y nueve".
+const DIEZ_Y: Readonly<Record<string, number>> = { seis: 16, siete: 17, ocho: 18, nueve: 19 };
 const RE_COMPUESTO = new RegExp(
-  `(?<![\\p{L}\\p{N}])(?:(${Object.keys(DECENAS).join("|")})(?:\\s+y\\s+(${Object.keys(UNIDADES).join("|")}))?|(${Object.keys(COMPUESTOS).join("|")}))(?![\\p{L}\\p{N}])`,
+  `(?<![\\p{L}\\p{N}])(?:(${Object.keys(DECENAS).join("|")})(?:\\s+y\\s+(${Object.keys(UNIDADES).join("|")}))?|(${Object.keys(COMPUESTOS).join("|")})|diez\\s+y\\s+(${Object.keys(DIEZ_Y).join("|")}))(?![\\p{L}\\p{N}])`,
   "gu",
 );
 
@@ -85,15 +129,36 @@ const RE_COMPUESTO = new RegExp(
  * dentro de corridas (`palabrasADigitos`): "un clásico" sigue siendo texto.
  */
 export function numerosCompuestos(b: string): string {
-  return b.replace(RE_COMPUESTO, (_m, decena?: string, unidad?: string, compuesto?: string) =>
-    String(compuesto ? COMPUESTOS[compuesto] : DECENAS[decena!] + (unidad ? UNIDADES[unidad] : 0)));
+  return b.replace(RE_COMPUESTO, (_m, decena?: string, unidad?: string, compuesto?: string, diezY?: string) =>
+    String(diezY ? DIEZ_Y[diezY] : compuesto ? COMPUESTOS[compuesto] : DECENAS[decena!] + (unidad ? UNIDADES[unidad] : 0)));
 }
 
 /** Corridas con al menos tantas piezas numéricas se convierten. */
 export const MIN_PIEZAS_CORRIDA = 3;
 
 // Entre dos piezas de una corrida sólo puede haber separadores, nunca letras.
-const SEPARADOR_CORRIDA = /^[\s.\-_()*+,:;/|]*$/;
+// v2 (contrato v1): la clase S completa, más `,` `;` `:`.
+const SEPARADOR_CORRIDA = new RegExp(`^(?:${CLASE_SEPARADOR}|[\\s,;:])*$`, "u");
+
+/** Palabras-número de una sola cifra, en castellano e inglés (§6.N). */
+const CIFRA_PALABRA: Readonly<Record<string, string>> = {
+  cero: "0", uno: "1", dos: "2", tres: "3", cuatro: "4", cinco: "5", seis: "6", siete: "7", ocho: "8", nueve: "9",
+  zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9",
+};
+const RE_PIEZA_PEGADA = new RegExp(`^(?:\\d+|${Object.keys(CIFRA_PALABRA).join("|")})+$`, "u");
+const RE_CIFRA_PALABRA = new RegExp(Object.keys(CIFRA_PALABRA).join("|"), "g");
+
+/**
+ * v2 (contrato v1, D7/D8): una pieza que mezcla dígitos y palabras de una
+ * cifra pegadas ("ocho2cuatro5") pasa a dígitos. Hace falta al menos un
+ * dígito y al menos una palabra: "ocho" solo no es una pieza pegada.
+ */
+export function palabrasPegadas(b: string): string {
+  return b.replace(/[\p{L}\p{N}]+/gu, (pieza) => {
+    if (!/\d/.test(pieza) || !/\p{L}/u.test(pieza) || !RE_PIEZA_PEGADA.test(pieza)) return pieza;
+    return pieza.replace(RE_CIFRA_PALABRA, (w) => CIFRA_PALABRA[w]);
+  });
+}
 
 // Letras que se usan en lugar de dígitos: "5O5O", "1l", "5S", "7O".
 const LETRA_DIGITO: Readonly<Record<string, string>> = {
@@ -110,9 +175,21 @@ const LETRA_DIGITO: Readonly<Record<string, string>> = {
 export function letrasADigitos(b: string): string {
   return b.replace(/[\p{L}\p{N}|]+/gu, (pieza) => {
     if (!/\d/.test(pieza)) return pieza;
-    if (![...pieza].every((c) => /\d/.test(c) || c in LETRA_DIGITO)) return pieza;
-    return [...pieza].map((c) => LETRA_DIGITO[c] ?? c).join("");
+    if (![...pieza].every((c) => /\d/.test(c) || digitoDe(c) !== undefined)) return pieza;
+    return [...pieza].map((c) => (/\d/.test(c) ? c : digitoDe(c)!)).join("");
   });
+}
+
+/**
+ * v2 (contrato v1, D9 §6.L): la tabla vigente más los confusables de dígito
+ * de UTS #39 18.0.0 (`З` → 3); también una letra no ASCII cuyo esqueleto es
+ * una letra de la tabla vigente (`о` cirílica → o → 0).
+ */
+function digitoDe(c: string): string | undefined {
+  if (c in LETRA_DIGITO) return LETRA_DIGITO[c];
+  if (c in CONFUSABLES_DIGITO) return CONFUSABLES_DIGITO[c];
+  const letra = CONFUSABLES_LETRA_UTS39[c];
+  return letra !== undefined && letra in LETRA_DIGITO ? LETRA_DIGITO[letra] : undefined;
 }
 
 /**
@@ -125,7 +202,7 @@ export function palabrasADigitos(b: string): string {
   const piezas = [...b.matchAll(/[\p{L}\p{N}]+/gu)].map((m) => ({
     texto: m[0], desde: m.index!, hasta: m.index! + m[0].length,
   }));
-  const esNumerica = (t: string) => /^\d+$/.test(t) || t in PALABRAS_NUMERO;
+  const esNumerica = (t: string) => /^\d+$/.test(t) || t in PALABRAS_NUMERO || t in PALABRAS_NUMERO_EN;
   const reemplazos = new Map<number, string>();
   let i = 0;
   while (i < piezas.length) {
@@ -140,6 +217,7 @@ export function palabrasADigitos(b: string): string {
       for (let k = i; k <= j; k++) {
         const t = piezas[k].texto;
         if (t in PALABRAS_NUMERO) reemplazos.set(k, PALABRAS_NUMERO[t]);
+        else if (t in PALABRAS_NUMERO_EN) reemplazos.set(k, PALABRAS_NUMERO_EN[t]);
       }
     }
     i = j + 1;
@@ -158,7 +236,7 @@ export function palabrasADigitos(b: string): string {
 
 /** La pasada 1 completa, sobre un texto ya en `base`. */
 export function pasadaDigitos(b: string): string {
-  return palabrasADigitos(letrasADigitos(numerosCompuestos(b)));
+  return palabrasADigitos(letrasADigitos(palabrasPegadas(numerosCompuestos(b))));
 }
 
 // ---------------------------------------------------------------- pasada 2
@@ -226,7 +304,10 @@ const NO_ETIQUETA: ReadonlySet<string> = new Set([
  */
 export function resolverSeparadores(b: string): string {
   let t = b
-    .replace(/[([{]\s*(?:\.|punto|dot)\s*[)\]}]/g, ".")
+    // v2 (contrato v1, P): puntos ideográficos pegados entre alfanuméricos.
+    .replace(/(?<=[\p{L}\p{N}])[。｡](?=[\p{L}\p{N}])/gu, ".")
+    // v2: guiones pegados a una forma entre corchetes ("-[punto]-").
+    .replace(/-?[([{]\s*(?:\.|punto|dot)\s*[)\]}]-?/g, ".")
     .replace(/[([{]\s*(?:@|arroba|at)\s*[)\]}]/g, "@")
     .replace(/\barroba\b/g, "@")
     .replace(/([\p{L}\p{N}_.\-]+) (?:punto|dot) (?=[\p{L}\p{N}])/gu, (m, previa: string) =>
@@ -236,6 +317,8 @@ export function resolverSeparadores(b: string): string {
   t = t.replace(/([\p{L}\p{N}_-]) +([.@]) +(?=[\p{L}\p{N}])/gu, "$1$2");
   t = t.replace(/([\p{L}\p{N}_-]) +@(?=[\p{L}\p{N}])/gu, "$1@");
   t = t.replace(/([\p{L}\p{N}_-])@ +(?=[\p{L}\p{N}])/gu, "$1@");
+  // v2 (contrato v1, A): "@ usuario" con un espacio es un usuario.
+  t = t.replace(/(^|[^\p{L}\p{N}._%+\-])@ (?=[\p{L}\p{N}])/gu, "$1@");
   return t;
 }
 
@@ -245,8 +328,13 @@ function unirLetrasSueltas(t: string): string {
   return t.replace(/(?:^|(?<= ))(?:[\p{L}\p{N}.@] ){2,}[\p{L}\p{N}.@](?=$| |[,;:!?)\]])/gu, (m) => m.replace(/ /g, ""));
 }
 
+/**
+ * v2 (contrato v1, C): la tabla vigente y, para las letras que no están ahí,
+ * el esqueleto UTS #39 18.0.0 de las letras NO ASCII. Las ASCII no se tocan
+ * (UTS #39 tiene `m` → `rn`).
+ */
 export function mapearConfusables(t: string): string {
-  return [...t].map((c) => CONFUSABLES_LETRA[c] ?? c).join("");
+  return [...t].map((c) => CONFUSABLES_LETRA[c] ?? (c.charCodeAt(0) >= 0x80 ? CONFUSABLES_LETRA_UTS39[c] : undefined) ?? c).join("");
 }
 
 /** Las cuatro copias que miran las reglas. Lanza si el texto no es un string. */
@@ -257,6 +345,7 @@ export function plegar(texto: string): Plegado {
   return {
     original,
     base: b,
+    acentuada: acentuada(original),
     digitos: pasadaDigitos(b),
     letras: mapearConfusables(resolverSeparadores(b)),
   };

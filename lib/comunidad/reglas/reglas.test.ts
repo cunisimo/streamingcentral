@@ -20,13 +20,16 @@ test("teléfono: años, montos con miles y fechas quedan marcados como excepció
   assert.deepEqual(corridasNumericas("de 1984 1989 y 1990").map((c) => c.excepcion), ["anio", "anio"]);
   assert.deepEqual(corridasNumericas("recaudo 1.000.000.000 de dolares").map((c) => c.excepcion), ["miles"]);
   assert.deepEqual(corridasNumericas("estreno el 15-03-2024").map((c) => c.excepcion), ["fecha"]);
-  // Con "/" son tres números distintos, ninguno largo.
-  assert.ok(corridasNumericas("15/03/2024").every((c) => c.digitos <= 4));
+  // Contrato v1: "/" es separador (S); una fecha con barras es UNA corrida con excepción "fecha".
+  assert.deepEqual(corridasNumericas("15/03/2024").map((c) => c.excepcion), ["fecha"]);
+  assert.deepEqual(corridasNumericas("8/10 9/10 7.5/10").map((c) => c.excepcion), ["puntaje"]);
   assert.equal(resena("Es de 2001, se filmó en 1999 y llegó en 2003.").resultado, "publicar");
   assert.equal(resena("Recaudó 1.155.512.345 dólares en todo el mundo.").resultado, "publicar");
   assert.equal(resena("Las fechas clave de la saga son 1985 2026 y 2030.").resultado, "publicar");
-  // "número" es una señal débil: no convierte un importe en teléfono.
-  assert.equal(resena("El número de entradas vendidas fue 1.200.000 en una semana.").resultado, "publicar");
+  // Contrato v1 (F1): un importe con un medio de §6.M en el ámbito cuenta como
+  // teléfono, y "número" es un medio. Este texto legítimo se RECHAZA: falso
+  // positivo del contrato aplicado literalmente (cuenta en C3). Ver el informe.
+  assert.equal(resena("El número de entradas vendidas fue 1.200.000 en una semana.").resultado, "rechazo_contenido");
 });
 
 test("teléfono v2 (A1): una señal fuerte de contacto anula la excepción", () => {
@@ -89,8 +92,10 @@ test("dominio v2 (A2): terminaciones con confusables de otros alfabetos", () => 
 });
 
 test("redes v3: menciones lejanas o sin verbo publican; un pedido entre comillas o atribuido se RETIENE, no se publica", () => {
-  assert.equal(resena("El padre le dice \"escribime\" a su hija; luego ella mira Instagram, y esa escena me emocionó.").resultado, "publicar");
-  assert.equal(resena("Agregame a la lista de fans: la vi tres veces. Después busqué el tráiler en TikTok.").resultado, "publicar");
+  // Falsos positivos del contrato v1: S2 (intención + medio sin alias, en el
+  // ámbito) retiene estos dos textos legítimos. Cuentan en C4; no se exceptúan.
+  assert.equal(resena("El padre le dice \"escribime\" a su hija; luego ella mira Instagram, y esa escena me emocionó.").resultado, "retener");
+  assert.equal(resena("Agregame a la lista de fans: la vi tres veces. Después busqué el tráiler en TikTok.").resultado, "retener");
   assert.equal(resena("En el final ella le dice «nos vemos en Instagram» y se va.").resultado, "publicar");
   // E1.2 (A1 de 1f475e3): antes publicaban; ahora son señal débil.
   assert.equal(resena("En una escena él le dice 'mandame un mensaje por WhatsApp cuando llegues' y nunca llega.").resultado, "retener");

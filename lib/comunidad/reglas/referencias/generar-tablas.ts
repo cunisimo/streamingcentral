@@ -104,14 +104,16 @@ export function confusablesDeDigito(m: Map<string, string>): Map<string, string>
  */
 export function confusablesDeLetra(m: Map<string, string>): Map<string, string> {
   const salida = new Map<string, string>();
-  for (const [fuente, destino] of m) {
-    if ([...fuente].length !== 1 || fuente.charCodeAt(0) < 0x80) continue;
-    if (!/^[A-Za-z]+$/.test(destino)) continue;
-    const valor = destino.toLowerCase();
-    for (const clave of new Set([fuente, fuente.normalize("NFKC").toLowerCase()])) {
-      if ([...clave].length !== 1 || clave.charCodeAt(0) < 0x80) continue;
-      if (!salida.has(clave)) salida.set(clave, valor);
-    }
+  const candidatos = [...m].filter(([fuente, destino]) =>
+    [...fuente].length === 1 && fuente.charCodeAt(0) >= 0x80 && /^[A-Za-z]+$/.test(destino));
+  // 1. Las fuentes tal cual (tienen prioridad).
+  for (const [fuente, destino] of candidatos) salida.set(fuente, destino.toLowerCase());
+  // 2. Su forma NFKC en minúsculas, sólo si no es ya una fuente: `base` aplica
+  //    NFKC y minúsculas antes de mapear (ej.: 𝜎 → σ).
+  for (const [fuente, destino] of candidatos) {
+    const clave = fuente.normalize("NFKC").toLowerCase();
+    if ([...clave].length !== 1 || clave.charCodeAt(0) < 0x80 || salida.has(clave)) continue;
+    salida.set(clave, destino.toLowerCase());
   }
   return salida;
 }

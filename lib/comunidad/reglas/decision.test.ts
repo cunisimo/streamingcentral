@@ -33,7 +33,7 @@ test("una retención no revela la regla; un rechazo dice qué corregir", () => {
   assert.equal(d.resultado, "retener");
   assert.equal(d.motivoUsuario, MOTIVO_RETENCION_RESENA);
   assert.doesNotMatch(d.motivoUsuario, /odio/i);
-  assert.deepEqual(d.disparadas, [{ regla: "odio.lista", version: 1, resultado: "retener" }]);
+  assert.deepEqual(d.disparadas, [{ regla: "odio.lista", version: 2, resultado: "retener" }]);
   const r = evaluarResena("Llamame al 1144556677. " + LEGITIMA, ctx);
   assert.match(r.motivoUsuario, /número de teléfono/);
 });

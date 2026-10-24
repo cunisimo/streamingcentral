@@ -407,14 +407,16 @@ const REGRESIONES_E12: readonly ParE12[] = [
     malicioso: "Mirala en ejemplo.photography/demo sin cortes.", benigno: "Actuación/guion/fotografía: todo impecable, un 8.5/10 merecido." },
   { familia: "ruta_tld_largo", categoria: "enlace", esperado: "rechazar",
     malicioso: "Completa en pelisdemo.entertainment/ver?id=12 gratis.", benigno: "Es entretenimiento puro y/o un drama, según cómo la mires en la 2.0/beta." },
-  // Corrección de 40288f6, A2: correo incompleto o indirecto (se retiene).
-  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+  // Corrección de 40288f6, A2: correo incompleto o indirecto. Hasta 2026-10-22.5
+  // se retenía; con el contrato v1 contiene un alias y una intención (F4), y la
+  // etiqueta pasa a la salida más restrictiva (catálogo §11): rechazar.
+  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "rechazar", claro: false,
     malicioso: "Mi correo es charly_movies en el de Google, el que termina en com. Escribime.",
     benigno: "Ella revisa su correo de Google y encuentra la carta que le dejó el padre." },
-  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "rechazar", claro: false,
     malicioso: "Mi correo es charly_movies. Escribime por correo y te paso las pelis.",
     benigno: "Mi correo es un desastre desde que la vi: todos me escriben para comentarla." },
-  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+  { familia: "correo_indirecto", categoria: "contacto.email_indirecto", esperado: "rechazar", claro: false,
     malicioso: "Mandame un mail, soy cine.fan88, y te paso la lista completa.",
     benigno: "El agente 007 le manda un mail a M y escribe todo en clave, genial." },
   // Auditoría de 251f3d0: inicio de ruta y un solo criterio de alias.
@@ -422,10 +424,10 @@ const REGRESIONES_E12: readonly ParE12[] = [
     malicioso: "Mirala en ejemplo.photography/_demo sin cortes.", benigno: "Es el final de la frase./ Sigue otra escena igual de buena." },
   { familia: "ruta_inicio", categoria: "enlace", esperado: "rechazar",
     malicioso: "Completa en ejemplo.xy/-ver sin cortes.", benigno: "Drama/comedia/suspenso, todo junto y muy bien hecho." },
-  { familia: "correo_alias", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+  { familia: "correo_alias", categoria: "contacto.email_indirecto", esperado: "rechazar", claro: false,
     malicioso: "Mandame un mail, soy 88cine, y te paso la lista.",
     benigno: "El agente 007 le manda un mail a M y escribe todo en clave." },
-  { familia: "correo_alias", categoria: "contacto.email_indirecto", esperado: "retener", claro: false,
+  { familia: "correo_alias", categoria: "contacto.email_indirecto", esperado: "rechazar", claro: false,
     malicioso: "Mandame un mail, soy cine8fan, y te paso la lista.",
     benigno: "Blade Runner 2049 y Se7en tienen la mejor fotografía de su década." },
   // Amenaza con letras sueltas.
@@ -460,6 +462,19 @@ function regresionesE12(): CasoBanco[] {
  */
 export const RETENIDOS_CONOCIDOS: Readonly<Record<string, string>> = {
   "D-RG-17-B": "Diálogo legítimo con 'mandame un mensaje por WhatsApp' entre comillas: desde E1.2 las comillas no eximen; sin destinatario se retiene (A1 de 1f475e3).",
+};
+
+/**
+ * Falsos positivos que produce el contrato de moderación v1 aplicado
+ * literalmente (24/10/2026). Siguen siendo legítimos (no se cambia su
+ * etiqueta) y cuentan en C3/C4. La prueba exige exactamente esta salida, para
+ * que un cambio que los empeore o los oculte se vea.
+ */
+export const FALSOS_POSITIVOS_CONTRATO_V1: Readonly<Record<string, { salida: string; motivo: string }>> = {
+  "D-LG-05-2": { salida: "rechazo_contenido", motivo: "F1: importe con miles y un medio (M, \"celular\") en el ámbito." },
+  "D-LC-002": { salida: "rechazo_contenido", motivo: "F1: importe con miles y un medio (M, \"número\") en el ámbito." },
+  "D-RG-16-B": { salida: "retener", motivo: "S2: intención (\"escribime\", en un diálogo) y un medio (\"Instagram\") en el ámbito." },
+  "D-RG-18-B": { salida: "retener", motivo: "S2: intención (\"agregame\") y un medio (\"TikTok\") en el ámbito." },
 };
 
 // ---------------------------------------------------------------- nombres

@@ -14,7 +14,10 @@ const casos: CasoBanco[] = JSON.parse(
 
 // Falso positivo conocido y aceptado por la auditoría de ffa5061: una
 // dirección ficticia de la trama ("vive en la calle Corrientes 1234") retiene.
-const FALSOS_POSITIVOS_CONOCIDOS = new Set(["R-L-045"]);
+// R-L-035: falso positivo del contrato de moderación v1 aplicado literalmente
+// (24/10/2026). F4: "4K" tiene forma de alias (A) y "tele" es un alias de
+// Telegram en §6.M ("en una tele grande"). Rechazo; cuenta en C3.
+const FALSOS_POSITIVOS_CONOCIDOS = new Set(["R-L-045", "R-L-035"]);
 
 test("reservado 1 como regresión: los tres fallos divulgados ya se detectan", () => {
   for (const id of ["R-A-009", "R-A-018", "R-A-029"]) {

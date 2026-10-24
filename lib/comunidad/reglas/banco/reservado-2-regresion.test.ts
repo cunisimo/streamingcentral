@@ -13,15 +13,23 @@ const casos: CasoBanco[] = ["reservado.json", "reservado-sensible.json"]
   .flatMap((f) => JSON.parse(readFileSync(join(DIR, f), "utf8")).casos);
 
 /**
- * Abusos detectados con una salida MÁS DÉBIL que su etiqueta. Antes de la
- * corrección de 40288f6, R2-RA-042 estaba declarado "fuera de alcance" y una
- * prueba exigía que siguiera sin detectarse; esa declaración se retiró (A2 de
- * la auditoría). Ahora `contacto.email_indirecto` lo RETIENE: no reconstruye
- * la dirección, detecta el intento. La etiqueta del reservado ("rechazar") no
- * se cambia; la diferencia queda a la vista y no se excluye de ninguna métrica.
+ * R2-RA-042 ("mi correo es charly_movies en el de Google... Escribime"): de
+ * 40288f6 a 2026-10-22.5 se RETENÍA (correo indirecto), más débil que su
+ * etiqueta "rechazar". Con el contrato v1 contiene un alias y una intención
+ * (F4) y se RECHAZA, que coincide con su etiqueta. La prueba lo fija.
  */
-const DETECTADOS_MAS_DEBILES: Readonly<Record<string, string>> = {
-  "R2-RA-042": "Correo descripto con paráfrasis ('mi correo es charly_movies en el de Google'): se retiene, etiqueta 'rechazar'.",
+const AHORA_COINCIDE_CON_LA_ETIQUETA: Readonly<Record<string, string>> = {
+  "R2-RA-042": "F4 (contrato v1): alias + intención en el ámbito; se rechaza.",
+};
+
+/**
+ * Falsos positivos del contrato de moderación v1 aplicado literalmente
+ * (24/10/2026). Siguen siendo legítimas y cuentan en C3/C4.
+ */
+const FALSOS_POSITIVOS_CONTRATO_V1: Readonly<Record<string, { salida: string; motivo: string }>> = {
+  "R2-RL-087": { salida: "rechazo_contenido", motivo: "F4: '4K' tiene forma de alias (A) y 'tele' es alias de Telegram (§6.M)." },
+  "R2-RL-101": { salida: "retener", motivo: "S2: intención ('mandame', en un diálogo) y medio ('celular') en el ámbito." },
+  "R2-RL-108": { salida: "retener", motivo: "S2: intención ('contactame', en un diálogo) y medio ('canal') en el ámbito." },
 };
 
 /** Legítimas que desde E1.2 quedan RETENIDAS (no rechazadas): pedido de red entre comillas. */
@@ -40,16 +48,19 @@ test("reservado 2 como regresión: todo abuso se detecta, sin excepciones", () =
 
 test("reservado 2 como regresión: legítimas publican; las retenidas conocidas quedan retenidas, nunca rechazadas", () => {
   const malas = resultados
-    .filter((r) => r.caso.grupo === "legitima" && r.decision.resultado !== "publicar" && !(r.caso.id in RETENIDAS_CONOCIDAS))
+    .filter((r) => r.caso.grupo === "legitima" && r.decision.resultado !== "publicar" && !(r.caso.id in RETENIDAS_CONOCIDAS) && !(r.caso.id in FALSOS_POSITIVOS_CONTRATO_V1))
     .map((r) => `${r.caso.id} → ${r.decision.resultado}`);
   assert.deepEqual(malas, []);
   for (const id of Object.keys(RETENIDAS_CONOCIDAS)) {
     assert.equal(resultados.find((r) => r.caso.id === id)?.decision.resultado, "retener", id);
   }
+  for (const [id, { salida }] of Object.entries(FALSOS_POSITIVOS_CONTRATO_V1)) {
+    assert.equal(resultados.find((r) => r.caso.id === id)?.decision.resultado, salida, id);
+  }
 });
 
-test("los detectados con salida más débil quedan retenidos (si cambia, hay que revisar la declaración)", () => {
-  for (const id of Object.keys(DETECTADOS_MAS_DEBILES)) {
-    assert.equal(resultados.find((r) => r.caso.id === id)?.decision.resultado, "retener", id);
+test("R2-RA-042 ahora coincide con su etiqueta (rechazo por F4)", () => {
+  for (const id of Object.keys(AHORA_COINCIDE_CON_LA_ETIQUETA)) {
+    assert.equal(resultados.find((r) => r.caso.id === id)?.decision.resultado, "rechazo_contenido", id);
   }
 });

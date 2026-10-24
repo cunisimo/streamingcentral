@@ -241,3 +241,149 @@ export const MAX_REPETICION_UNIDAD = 6;
 export const LARGO_RESENA = { min: 80, max: 600 } as const;
 export const LARGO_NOMBRE = { min: 2, max: 24 } as const;
 export const MAX_TEXTOS_RECIENTES = 3;
+
+// ================================================================
+// Contrato de moderación v1 (catálogo v3.2), §6. Listas CERRADAS: cada cambio
+// es una versión nueva del contrato. Formas plegadas (sin tilde) salvo las
+// que dicen "con tilde", que se buscan en la copia acentuada.
+// ================================================================
+
+/** §7: ámbito máximo, en palabras, entre el primer y el último indicio. */
+export const AMBITO_PALABRAS = 25;
+
+/** §6.N: palabras-número en inglés, sólo dentro de corridas (como 0–15). */
+export const PALABRAS_NUMERO_EN: Readonly<Record<string, string>> = {
+  zero: "0", oh: "0", one: "1", two: "2", three: "3", four: "4", five: "5",
+  six: "6", seven: "7", eight: "8", nine: "9",
+};
+
+/** §6.I: intención de contacto, formas cerradas (plegadas). */
+export const INTENCION = [
+  // voseo con clítico
+  "escribime", "escribinos", "mandame", "mandanos", "agregame", "agreganos", "buscame", "buscanos",
+  "seguime", "seguinos", "contactame", "contactanos", "hablame", "hablanos", "llamame", "llamanos",
+  "sumame", "sumate", "pasame", "pedime", "pedinos", "encontrame", "avisame", "consultame", "agendame", "agendate",
+  // tú (las que coinciden con el voseo ya están arriba)
+  "escribeme", "sigueme", "encuentrame", "pideme",
+  // usted
+  "escribame", "mandeme", "agregueme", "busqueme", "sigame", "contacteme", "hableme", "llameme", "encuentreme", "aviseme", "pidame",
+  // plural
+  "escriban", "escribanme", "escribannos", "manden", "mandenme", "agreguen", "agreguenme", "busquen", "busquenme",
+  "sigan", "siganme", "contacten", "contactenme", "hablen", "hablenme", "llamen", "llamenme", "sumense", "pasense",
+  "entren", "agenden", "agendenme", "pidan", "pidanme", "encuentrenme", "avisenme", "consulten",
+  // frases
+  "por privado", "al privado", "por dm", "al dm", "por md", "al md", "dm", "md", "te paso", "les paso", "les dejo mi", "te dejo mi",
+];
+/** §6.I: voseo sin clítico, sólo verbos en -ar, CON TILDE (en la copia acentuada). */
+export const INTENCION_VOSEO_AR = ["mandá", "agregá", "buscá", "contactá", "hablá", "llamá", "sumá", "pasá", "entrá", "agendá", "consultá", "avisá"];
+/** §6.I: frases de pedido por privado (S2). */
+export const PEDIDO_PRIVADO = ["por privado", "al privado", "por dm", "al dm", "por md", "al md"];
+
+/** §6.M: plataformas y alias. "x" sólo junto a "usuario", "@" o un alias (reglas.ts). */
+export const PLATAFORMAS_CONTRATO = [
+  "instagram", "insta", "ig", "tiktok", "tik tok", "tt", "telegram", "telegran", "tg", "tele",
+  "whatsapp", "whatsap", "watsap", "guasap", "wsp", "wpp", "wa", "whats", "discord", "dc",
+  "snapchat", "snap", "facebook", "face", "fb", "twitter", "twitch", "kick", "threads", "signal", "kik", "onlyfans",
+];
+/** §6.M: palabras de medio. */
+export const PALABRAS_MEDIO = [
+  "cel", "celu", "celular", "numero", "nro", "telefono", "tel", "correo", "mail", "email", "casilla",
+  "usuario", "user", "cuenta", "canal", "grupo", "perfil", "nick", "apodo",
+];
+
+/** §6.R: verbos de remisión al perfil (S3-b). Plegados y, aparte, con tilde. */
+export const REMISION = ["fijate", "fijense", "fijese", "miren", "mire", "chequeen", "vean", "revisen", "pasen por", "entren a", "busquen"];
+export const REMISION_TILDE = ["mirá", "chequeá", "revisá", "pasá por", "entrá a", "buscá"];
+/** S3: palabras de identidad. */
+export const IDENTIDAD_PERFIL = ["nombre", "apodo", "nick", "usuario", "perfil", "cuenta"];
+/** §6.P: marcadores de perfil (S3-c). */
+export const MARCADORES_PERFIL = ["de aca", "que ven", "comunitario", "en todas las redes", "el mismo", "mismo nombre", "mismo apodo"];
+
+/** §6.K: marcadores de continuación agregados (S4). */
+export const CONTINUACION_EXTRA = [
+  "en otra resena", "en la otra resena", "en mi proxima resena", "lo termino", "la termino",
+  "empieza con", "arranca con", "termina con", "termina en", "la segunda parte",
+];
+
+/** §6.V: venta o sorteo, y acompañantes (S5). */
+export const VENTA = ["vendo", "vendemos", "revendo", "liquido", "liquidamos", "alquilo", "sorteo", "sorteamos", "sorteando", "regalamos", "giveaway"];
+export const ACOMPANANTES_VENTA = [
+  "precio", "precios", "envio", "envios", "stock", "cuotas", "consultas", "interesados", "oferta",
+  "descuento", "mayorista", "dale like", "dale me gusta",
+];
+
+/** §6.T2: terminaciones que son palabras comunes o marcas (cuentan sólo pegadas y con ruta). */
+export const T_PALABRA = [
+  "me", "es", "la", "de", "co", "tv", "to", "in", "it", "us", "be", "fm", "am", "so",
+  "al", "as", "do", "no", "se", "si", "va", "ve", "re",
+  "actor", "arte", "auto", "autos", "baby", "band", "bar", "bet", "bio", "blue", "book", "box", "buy", "cafe",
+  "cam", "car", "cars", "casa", "case", "cash", "casino", "cat", "chat", "city", "coach", "cool", "data", "date",
+  "day", "deal", "dog", "eco", "email", "fan", "fans", "film", "final", "fit", "food", "free", "futbol", "game",
+  "games", "gay", "gift", "gold", "golf", "gratis", "green", "hair", "help", "here", "hot", "house", "ice",
+  "juegos", "kids", "land", "latino", "law", "like", "love", "lol", "luxe", "mango", "map", "market", "meme",
+  "men", "menu", "moda", "money", "monster", "moto", "music", "new", "next", "ninja", "now", "one", "open",
+  "party", "pet", "phone", "photo", "pics", "pink", "pizza", "play", "plus", "poker", "porn", "press", "promo",
+  "radio", "red", "rent", "rest", "rio", "rocks", "room", "run", "sale", "salon", "sex", "sexy", "show", "ski",
+  "sky", "smart", "smile", "soccer", "social", "solar", "song", "soy", "spa", "sport", "star", "studio", "style",
+  "surf", "taxi", "team", "tienda", "tips", "tours", "toys", "travel", "uno", "vegas", "viajes", "vision", "viva",
+  "vivo", "vote", "voto", "web", "win", "wine", "work", "wow", "wtf", "yoga", "you", "zero",
+  "amazon", "apple", "google", "hbo", "netflix", "prime", "youtube",
+];
+
+/** §6.H1-a: amenazas directas (plegadas). */
+export const H1_DIRECTAS = [
+  "te mato", "te reviento", "te rompo la cara", "te cago a palos", "te cago a trompadas", "te parto la cara", "te quemo",
+  "se donde vivis", "se donde vive", "se donde trabajas", "se donde trabaja", "se donde laburas", "se donde estudias",
+  "te voy a buscar", "te voy a encontrar", "te vamos a buscar", "te vamos a encontrar",
+];
+/** §6.H1-b: daño (infinitivo o expresión; reglas.ts acepta el clítico pegado). */
+export const H1_DANO = [
+  "matar", "asesinar", "reventar", "romper la cara", "romper las piernas", "cagar a palos", "cagar a trompadas",
+  "cagar a pinas", "cagar a tiros", "pegar un tiro", "pegar un balazo", "pegar una paliza", "dar una paliza",
+  "meter un tiro", "apunalar", "acuchillar", "degollar", "quemar", "prender fuego", "violar", "lastimar",
+  "golpear", "ahorcar", "envenenar", "hacer boleta", "hacer mierda", "hacer desaparecer",
+];
+/** §6.H1-c: destinatario (necesario con lo/la/le/los/las/les). */
+export const H1_DESTINATARIO = [
+  "vos", "al de la resena", "el de la resena", "al que puso", "al que escribio", "al que comento",
+  "a ese", "a esa", "a este", "a esta", "al director", "al actor", "a la actriz", "moderador",
+];
+/** §6.H1-d: deseo o merecimiento. */
+export const H1_DESEO = [
+  "ojala te mueras", "ojala se muera", "ojala te maten", "ojala lo maten",
+  "mereces morir", "merecen morir", "merecen que los maten", "mereces que te maten",
+];
+/** §6.H1-e: nunca disparan (si el indicio cae dentro de una de estas). */
+export const H1_EXCLUIDAS = [
+  "de risa", "la rompe", "la rompio", "romperla", "matar el tiempo", "quemar la cabeza", "la vamos a pasar", "me mato", "me revento de risa",
+];
+
+/** §6.H2-a: grupos (forma base; reglas.ts agrega género y número). */
+export const H2_GRUPOS = [
+  "boliviano", "bolita", "paraguayo", "paragua", "peruano", "perucho", "chileno", "chino", "ponja", "coreano",
+  "judio", "negro", "villero", "sudaca", "gitano", "inmigrante", "extranjero", "indio", "coya", "mapuche",
+  "turco", "arabe", "moro", "musulman", "gay", "puto", "trolo", "maricon", "lesbiana", "trava", "travesti",
+  "trans", "homosexual", "mogolico", "discapacitado", "retrasado", "autista", "down", "mujer", "mina",
+  "hembra", "feminista", "feminazi",
+];
+/** §6.H2-b: deshumanización y exclusión. */
+export const H2_DESHUMANIZACION = [
+  "plaga", "basura", "lacra", "escoria", "parasito", "parasitos", "enfermedad", "enfermos", "cucaracha", "cucarachas",
+  "rata", "ratas", "animales", "bestias", "inferiores", "infrahumanos", "no son personas", "no son humanos",
+  "no deberian existir", "no tendrian que haber nacido", "no tendrian que tener derechos", "que se vuelvan",
+  "que se vayan", "fuera", "muerte a", "odio a", "de mierda", "exterminio",
+];
+/** §6.H2-b: "hay que" / "habría que" + estos verbos. */
+export const H2_VERBOS_EXPULSION = ["echarlos", "sacarlos", "matarlos", "exterminarlos", "quemarlos", "deportarlos"];
+/** §6.H2-c: insultos que retienen solos. */
+export const H2_INSULTOS = ["maricon", "maricones", "trolo", "trolos", "trola", "sudaca", "sudacas", "mogolico", "mogolicos", "mogolica", "feminazi", "feminazis"];
+
+/** §6.H3-a: tipos de vía. */
+export const H3_VIAS = ["calle", "av.", "avenida", "pasaje", "pje.", "diagonal", "diag.", "boulevard", "bulevar", "bv.", "ruta", "camino", "manzana", "mz"];
+/** §6.H3-b: relación personal. */
+export const H3_RELACION = ["mi vecino", "mi vecina", "mi ex", "mi jefe", "mi jefa", "el acomodador", "la acomodadora", "el profe", "la profe", "el dueno", "la duena"];
+/** §6.H3-c: localizadores. */
+export const H3_LOCALIZADORES = [
+  "vive", "vivia", "lo encuentran", "la encuentran", "ubiquenlo", "ubiquenla", "vayan a", "visitenlo",
+  "su casa", "su departamento", "su direccion", "su domicilio", "queda en", "timbre", "escrachenlo", "escrachenla",
+];

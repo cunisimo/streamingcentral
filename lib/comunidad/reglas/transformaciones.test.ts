@@ -115,21 +115,25 @@ test("dirección con ruta: se rechaza con terminaciones de 2 a 63 letras; la pun
 
 // ---------------------------------------------------------------- correo indirecto (A2 de 40288f6)
 
-test("correo indirecto: autoatribución con alias o pedido + alias se retienen; menciones aisladas publican", () => {
+test("correo indirecto: autoatribución con alias o pedido + alias nunca publican; menciones aisladas publican", () => {
+  // Contrato v1: con un alias y una intención en el ámbito es F4 y se RECHAZA
+  // (más restrictivo); sin intención, S1 (correo indirecto) retiene.
   for (const m of [
     "Mi correo es charly_movies en el de Google, el que termina en com. Escribime.",
     "Mi correo es charly_movies. Escribime por correo y te paso las pelis.",
-    "Mi mail: charly_movies, el de siempre.",
     "Mi gmail es charly.movies y ahí te paso todo.",
-    "Mi correo es charly. Escribime y te paso las pelis.",
     "Mandame un mail, soy cine.fan88, y te paso la lista.",
     "«Mi correo es charly_movies», escribime y charlamos.",
-  ]) assert.equal(evaluar(m), "retener", m);
+  ]) assert.equal(evaluar(m), "rechazo_contenido", m);
+  assert.equal(evaluar("Mi mail: charly_movies, el de siempre."), "retener");
+  // "charly" no tiene forma de alias y "mi correo es" no es una presentación de F4: S1 retiene.
+  assert.equal(evaluar("Mi correo es charly. Escribime y te paso las pelis."), "retener");
+  // Falso positivo del contrato v1 (S2: intención + medio sin alias), cuenta en C4.
+  assert.equal(evaluar("Escribime qué opinan del final, me encantó el mail del villano."), "retener");
   for (const l of [
     "Ella revisa su correo de Google y encuentra la carta del padre.",
     "Mi correo es un desastre desde que vi esta película.",
     "Mi mail es lo de menos, lo que importa es la peli.",
-    "Escribime qué opinan del final, me encantó el mail del villano.",
     "El hacker le pide el mail a su víctima y la trama se complica.",
     "La app de correo de Google aparece en cada plano, puro product placement.",
     "El agente 007 le manda un mail a M y escribe todo en clave.",
@@ -162,11 +166,13 @@ test("dirección con ruta: cualquier carácter de ruta al principio, con y sin s
 test("alias: dígitos al principio, en medio y al final, puntos y guiones bajos se retienen por los dos recorridos", () => {
   const ALIAS = ["88cine", "cine8fan", "cinefan88", "cine.fan", "cine_fan", "cine.fan88", "8cine_fan", "c1n3fan"];
   for (const a of ALIAS) {
-    assert.equal(evaluar(`Mandame un mail, soy ${a}, y te paso la lista.`), "retener", `libre: ${a}`);
+    // Contrato v1: "soy <alias>" + intención es F4 (rechazo).
+    assert.equal(evaluar(`Mandame un mail, soy ${a}, y te paso la lista.`), "rechazo_contenido", `libre: ${a}`);
     assert.equal(evaluar(`Mi correo es ${a}, ahí charlamos.`), "retener", `autoatribución: ${a}`);
   }
+  // Un pedido de mail sin alias es S2 (contrato v1): se retiene.
+  assert.equal(evaluar("Mandame un mail, soy 2024, y te paso la lista de estrenos."), "retener");
   for (const l of [
-    "Mandame un mail, soy 2024, y te paso la lista de estrenos.",
     "El agente 007 le manda un mail a M y escribe todo en clave.",
     "Blade Runner 2049 y Se7en tienen la mejor fotografía de su década.",
     "Le escribe un mail a su jefe con la versión 2.0 del informe y la trama arranca.",
