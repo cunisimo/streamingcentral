@@ -16,7 +16,7 @@
 //     (SQL y REST).
 // Los volcados se normalizan sólo en las líneas `\restrict`/`\unrestrict`, que
 // pg_dump 17.6 genera con una clave aleatoria en cada corrida.
-// Deja la base con 011, 012 y 022 aplicadas, como db-local.mjs.
+// Deja la base con 011, 012, 013 y 022 aplicadas, como db-local.mjs.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -33,6 +33,8 @@ const UP = "supabase/migrations/011_comunidad_esquema.sql";
 const DOWN = "supabase/migrations/011_comunidad_esquema_down.sql";
 const UP12 = "supabase/migrations/012_comunidad_baja.sql";
 const DOWN12 = "supabase/migrations/012_comunidad_baja_down.sql";
+const UP13 = "supabase/migrations/013_comunidad_protocolo.sql";
+const DOWN13 = "supabase/migrations/013_comunidad_protocolo_down.sql";
 const UP22 = "supabase/migrations/022_cerrar_user_reviews.sql";
 const DOWN22 = "supabase/migrations/022_cerrar_user_reviews_down.sql";
 const dirVolcados = join(tmpdir(), `comunidad-volcados-${Date.now()}`);
@@ -64,15 +66,42 @@ const iguales = (a, b, msg) => assert.ok(a === b, `${msg}\n${diferencias(a, b)}`
 const { prueba, cerrar } = arnes();
 const v = {};
 
-// 012 (E2b) depende de 011: se baja ANTES (012_down → 011_down) y se sube
-// DESPUÉS. Con 012 aplicada, bajar sólo 011 dejaría las cuatro
-// `public.comunidad_*` apuntando a un esquema inexistente.
+// 013 (E2c) depende de 012, y 012 (E2b) de 011: se bajan en orden inverso
+// (013_down → 012_down → 011_down) y se suben en orden. Con 012 aplicada,
+// bajar sólo 011 dejaría las cuatro `public.comunidad_*` apuntando a un
+// esquema inexistente.
+await prueba("013 (E2c): up → down → up da el mismo volcado; down no agrega nada y quita sus funciones; repetidas, inocuas", () => {
+  aplicarArchivo(UP);
+  aplicarArchivo(UP12);
+  aplicarArchivo(UP13);
+  const con13 = volcar("00-con-013");
+  aplicarArchivo(DOWN13);
+  const sin13 = volcar("00b-sin-013");
+  v.sin13 = sin13;
+  assert.equal(sqlOk(`select count(*) from pg_proc where pronamespace = 'comunidad'::regnamespace
+    and (proname like 'proto\\_%' or proname in ('corte_de_mes', 'rige_antes_de', 'mes_ar'))`), "0");
+  const cuenta = (t) => t.split("\n").reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());
+  const a = cuenta(con13), d = cuenta(sin13);
+  assert.deepEqual([...d].filter(([l, n]) => n > (a.get(l) ?? 0)).map(([l]) => l), [], "013_down agregó algo");
+  // Que lo quitado sea SÓLO 013 lo fija la prueba siguiente: el volcado sin
+  // 013 es idéntico al de 011 + 012.
+  aplicarArchivo(DOWN13);
+  iguales(volcar("00c-sin-013-otra-vez"), sin13, "repetir 013_down cambió algo");
+  aplicarArchivo(UP13);
+  iguales(volcar("00d-con-013"), con13, "subir 013 no reprodujo el volcado");
+  aplicarArchivo(UP13);
+  iguales(volcar("00e-con-013-repetida"), con13, "repetir 013 cambió el esquema");
+  aplicarArchivo(DOWN13);
+  iguales(volcar("00f-sin-013"), sin13, "la segunda bajada de 013 difiere");
+});
+
 await prueba("estado de partida: 011 y 012 aplicadas (repetibles)", () => {
   aplicarArchivo(UP);
   aplicarArchivo(UP12);
   assert.equal(sqlOk("select count(*) from pg_tables where schemaname = 'comunidad'"), "11");
   assert.equal(sqlOk("select count(*) from pg_proc where proname like 'comunidad\\_%'"), "4");
   v.con12 = volcar("0-con-011-y-012");
+  iguales(v.con12, v.sin13, "013_down no dejó exactamente 011 + 012");
 });
 
 await prueba("012_down: quita sólo lo de 012 (funciones, triggers y columnas del marcador)", () => {
@@ -141,6 +170,7 @@ await prueba("up repetido sobre sí mismo: no cambia el volcado", () => {
 await prueba("vuelta a 012: 011 + 012 dan el mismo volcado del principio", () => {
   aplicarArchivo(UP12);
   iguales(volcar("6b-con-011-y-012"), v.con12, "011 + 012 no reprodujo el estado inicial");
+  aplicarArchivo(UP13);
 });
 
 // ---------------------------------------------------------------------------
