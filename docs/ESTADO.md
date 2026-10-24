@@ -307,9 +307,23 @@ AAB tiene que ser `5` o mayor.
 
      Informe: `docs/medidas/2026-10-24-informe-claude-e2a.md`; salidas:
      `docs/medidas/2026-10-24-e2a-salidas.txt`.
+     Las cifras de arriba son **corridas de Claude**.
+     **Auditoría focalizada de E2a (24/10, Codex sobre `74e46af`;
+     `docs/medidas/2026-10-24-auditoria-e2a-74e46af.md`, copiada sin cambios,
+     SHA-256 `4c22c7bc…26cb91`):** sin defectos bloqueantes en las
+     migraciones locales. Las corridas propias de Codex no fueron completas:
+     invariantes 80/81 y permisos 22/25. Los fallos coincidieron con falta de
+     memoria del proceso (`VirtualAlloc … errno=1455`) y no con rechazos SQL.
+     Codex repitió aislados el caso y los controles interrumpidos, y pasaron.
+     Codex no declara un 81/81 ni un 25/25 propios y no repitió el ciclo
+     destructivo up/down/up. Pidió dos ajustes del arnés para E2b:
+     - **A1:** que la prueba heredada de eliminación no convierta un permiso
+       denegado en cero filas;
+     - **A2:** que el guardián local mire el contexto efectivo de Docker y no
+       sólo `DOCKER_HOST`.
+     El dueño autorizó **E2b local** con esos dos ajustes.
    **Falta:**
-   - la auditoría focalizada de E2a y su evidencia. E2b no empieza sin
-     autorización;
+   - E2b local (en curso);
    - la validación independiente de E1 (protocolo, autoría y ejecutor, no
      preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se
