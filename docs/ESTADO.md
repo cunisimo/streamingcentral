@@ -243,8 +243,27 @@ AAB tiene que ser `5` o mayor.
 
      Archivo: `docs/medidas/2026-10-23-catalogo-moderacion-propuesto.md`
      (con el título del contrato v1).
+     **Implementación local del contrato v1 (24/10, `7e6e5cd`; reglas
+     `2026-10-24.1`, sin conectar):**
+     - referencias Unicode 18.0.0 incorporadas (`e42b8de`), con huellas
+       calculadas por Claude y todavía no verificadas por Codex;
+     - F1–F4, S1–S5 y H1–H3, ámbito, tabla `regla → familia`, generador
+       determinista (2091 casos al 100 %) y evaluador del contrato
+       (`banco/evaluar-contrato.ts`);
+     - `lib/comunidad`: 99 de 99; `tsc` 0 errores; `npm test` 2348 pruebas,
+       2330 pasan, 0 fallan y 18 omitidas (exigen builds no hechos);
+     - regresiones conocidas, **no independientes**: reservado 3 con C1 0/116,
+       C2 99/99 y C3 1/160;
+     - el contrato aplicado literalmente produce falsos positivos (importe +
+       "número", "4K" + "tele", "M3GAN" + "pidan", diálogos con S2). Hay
+       cambios propuestos y **no aplicados**, pendientes de decisión.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-contrato-v1.md`.
    **Falta:**
-   - la implementación local del contrato v1 y la auditoría de Codex;
+   - la auditoría de Codex de la implementación;
+   - la decisión sobre los cambios del contrato antes de congelar;
+   - la autoría del conjunto final y el ejecutor del reservado 4 (no
+     preparados);
    - las decisiones de producto P-1 a P-4 (alcance residual, condición para
      publicar, disponibilidad aproximada y autoría de la parte sensible).
 
