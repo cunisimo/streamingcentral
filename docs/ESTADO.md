@@ -259,9 +259,22 @@ AAB tiene que ser `5` o mayor.
        cambios propuestos y **no aplicados**, pendientes de decisión.
 
      Informe: `docs/medidas/2026-10-24-informe-claude-contrato-v1.md`.
+     **Corrección de los cinco hallazgos de `bbb8fc7` (24/10, `3ff1643`;
+     reglas `2026-10-24.2`):**
+     - el evaluador mide sólo lo independiente y valida largos, contextos y
+       formato;
+     - la excepción de amenazas quedó acotada al propio fragmento;
+     - el generador tiene 2871 casos, con una prueba de inventario contra el
+       contrato y Unicode 18.0.0;
+     - el salto de línea es fin de oración.
+
+     Resultados: `lib/comunidad` 115 de 115; `tsc` 0 errores; `npm test` 2364
+     pruebas, 2346 pasan, 0 fallan y 18 omitidas. Versión candidata y huellas
+     en `docs/medidas/2026-10-24-informe-claude-correccion-contrato-v1.md`.
    **Falta:**
-   - la auditoría de Codex de la implementación;
-   - la decisión sobre los cambios del contrato antes de congelar;
+   - la auditoría de Codex de la corrección;
+   - la decisión sobre los cambios opcionales del contrato (por ahora no se
+     aplican; los falsos positivos cuentan en C3/C4);
    - la autoría del conjunto final y el ejecutor del reservado 4 (no
      preparados);
    - las decisiones de producto P-1 a P-4 (alcance residual, condición para
