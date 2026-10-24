@@ -47,7 +47,12 @@ const inicioCorrida = sqlOk("select now()");
 console.log(`inicio: ${inicioCorrida}\n`);
 
 const admin = createClient(URL_API, SRV, { auth: { persistSession: false, autoRefreshToken: false } });
-const { prueba, cerrar } = arnes();
+const { prueba: pruebaArnes, cerrar } = arnes();
+// SOLO=<texto>: corre sólo las pruebas cuyo nombre lo contiene (para la
+// evidencia antes/después de una corrección). Sin SOLO, corren todas.
+const SOLO = process.env.SOLO ?? "";
+const prueba = (nombre, fn) => (!SOLO || nombre.includes(SOLO) ? pruebaArnes(nombre, fn) : Promise.resolve());
+if (SOLO) console.log(`(sólo las pruebas que contienen «${SOLO}»)\n`);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const q = (v) => { if (!UUID.test(v)) throw new Error(`uuid inesperado: ${v}`); return `'${v}'`; };
 
@@ -361,6 +366,46 @@ select 'nivel|' || comunidad.proto_nivel();`);
   });
 
   // =========================================================================
+  // =========================================================================
+  console.log("\n— Actores cruzados (auditoría de E2c, A1) —");
+  // A evalúa la reseña de B mientras B evalúa la de A, los dos siguiendo las
+  // primitivas en orden. Se coordinan DESPUÉS del paso de cuenta: los dos
+  // pasaron proto_cuenta y recién entonces piden proto_participantes([A, B]).
+  // Con el paso 1 bloqueando la fila del actor (013 original), cada uno ya
+  // retenía la suya y el orden global llegaba tarde → 40P01. Esperado ahora:
+  // uno espera al otro en el orden por id, los dos confirman, sin 40P01 ni
+  // CB002, y el resultado es el de algún orden serial.
+  await prueba("cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002", async () => {
+    const a = await autor("cruce-a"), b = await autor("cruce-b");
+    const ba = await barrera(21), bb = await barrera(22);
+    const SA = new Sesion("cruce-a"), SB = new Sesion("cruce-b");
+    SA.enviar(votar({ ev: a, au: b, pausa: 21, pausaEn: 1 }));
+    SB.enviar(votar({ ev: b, au: a, pausa: 22, pausaEn: 1 }));
+    await esperar(esperaLock(SA, "advisory"), "A pasó el paso de cuenta y espera");
+    await esperar(esperaLock(SB, "advisory"), "B pasó el paso de cuenta y espera");
+    // Qué filas de participante retiene cada sesión al terminar el paso 1. Un
+    // FOR UPDATE concedido no figura en pg_locks (queda en la fila): se
+    // comprueba desde un tercero con NOWAIT, sin esperar.
+    const r = psql(`do $$ begin
+      begin perform 1 from comunidad.participantes where id = ${q(a.part)} for update nowait; raise notice 'RES|A|libre';
+      exception when lock_not_available then raise notice 'RES|A|bloqueada'; end;
+      begin perform 1 from comunidad.participantes where id = ${q(b.part)} for update nowait; raise notice 'RES|B|libre';
+      exception when lock_not_available then raise notice 'RES|B|bloqueada'; end;
+    end $$;`);
+    const filas = resultados(r.stderr).map(([quien, estado]) => `${quien}=${estado}`).join(", ");
+    console.log(`   filas de participante tras el paso de cuenta: ${filas}`);
+    ba.soltar(); bb.soltar();
+    await SA.terminar(); await SB.terminar();
+    const fallos = [SA, SB].map((s) => (s.err.match(/ERROR:\s+(.*)/) ?? [])[1]).filter(Boolean);
+    assert.deepEqual(fallos, [], `errores: ${fallos.join(" | ")}`);
+    const [, mA] = res(SA, "voto")[0], [, mB] = res(SB, "voto")[0];
+    assert.notEqual(mA, mB);
+    // Resultado válido: cada uno con su voto y su tramo, intervalos sanos.
+    assert.deepEqual(estadoVoto(a, b.version), { vigentes: 1, retirados: 0, tramos_abiertos: 1, tramos_cerrados: 0, intervalos_ok: true });
+    assert.deepEqual(estadoVoto(b, a.version), { vigentes: 1, retirados: 0, tramos_abiertos: 1, tramos_cerrados: 0, intervalos_ok: true });
+    assert.equal(filas, "A=libre, B=libre", "el paso de cuenta no debe retener la fila del actor");
+  });
+
   console.log("\n— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —");
   await prueba("1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar", async () => {
     const au = await autor("c1a-au"), ev = await lector("c1a-ev");
