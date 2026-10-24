@@ -271,8 +271,17 @@ AAB tiene que ser `5` o mayor.
      Resultados: `lib/comunidad` 115 de 115; `tsc` 0 errores; `npm test` 2364
      pruebas, 2346 pasan, 0 fallan y 18 omitidas. Versión candidata y huellas
      en `docs/medidas/2026-10-24-informe-claude-correccion-contrato-v1.md`.
+     **Cierre de la revisión local (24/10;
+     `docs/medidas/2026-10-24-auditoria-focalizada-3ff1643.md`):** Codex
+     verificó cuatro correcciones. El caso pendiente de A3 ("…un tiro la
+     rompe esta peli", sin puntuación, se publica) queda como **riesgo
+     residual aceptado por el dueño**: lo atienden las denuncias y su revisión
+     diaria, y no se vuelve a corregir el filtro por ese ejemplo. **La
+     validación independiente sigue pendiente; E1 no está aprobada.** El
+     dueño autorizó **E2a local** mientras tanto, sin publicación.
    **Falta:**
-   - la auditoría de Codex de la corrección;
+   - la validación independiente de E1 (protocolo, autoría y ejecutor, no
+     preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se
      aplican; los falsos positivos cuentan en C3/C4);
    - la autoría del conjunto final y el ejecutor del reservado 4 (no

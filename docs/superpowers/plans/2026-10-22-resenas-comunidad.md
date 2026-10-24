@@ -445,6 +445,17 @@ rollback;
   ajustar contra el reservado.
 - **Evidencia para Codex:** diff, salida de `npm test`, informe por caso del
   reservado con su SHA-256, lista de reglas con `VERSION_REGLAS`.
+- **Estado al 24/10/2026** (`docs/ESTADO.md` es la fuente vigente):
+  - versión candidata de reglas `2026-10-24.2` (`3ff1643`);
+  - la revisión local de correcciones quedó cerrada (auditoría
+    `2026-10-24-auditoria-focalizada-3ff1643.md`);
+  - **el dueño aceptó como riesgo residual** el caso pendiente de A3 ("Te
+    voy a pegar un tiro la rompe esta peli", sin puntuación, se publica): lo
+    atienden las denuncias y su revisión diaria. No se vuelve a corregir el
+    filtro por ese ejemplo;
+  - **la validación independiente sigue pendiente**, y E1 no está aprobada;
+  - el dueño autorizó avanzar con E2a **local** mientras tanto, sin
+    publicación.
 
 ### E2a — Esquema, participantes y permisos
 
