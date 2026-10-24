@@ -83,9 +83,77 @@ end;
 $$;
 
 -- ------------------------------------------------------------------
+-- resolver_participante SIN bloquear la fila del actor (auditoría de E2c,
+-- A1). La versión de 012 terminaba con `select … for update` sobre el
+-- participante del actor: el paso 1 retenía ESA fila antes del bloqueo
+-- ordenado de proto_participantes, y dos actores cruzados (A evalúa la
+-- reseña de B mientras B evalúa la de A) quedaban cada uno con la suya y
+-- pidiendo la del otro → 40P01, aunque los dos siguieran el protocolo.
+--
+-- Ahora el paso 1 sólo toma K_CORTE compartido y K_CUENTA (locks
+-- consultivos) y LEE el participante. Lo que el lock de fila daba ya lo da
+-- K_CUENTA, que se toma antes de leer y se retiene hasta confirmar:
+--   - marcador: se relee con K_CUENTA tomado (B2, B3b);
+--   - serialización por cuenta y creación de identidad: dos operaciones de
+--     la misma cuenta se excluyen por K_CUENTA, así que no se pueden crear
+--     dos participantes ni cambiar el vínculo en el medio;
+--   - baja: aplicar_baja toma K_CUENTA antes de tocar la fila (B3a, B4);
+--   - cancelación con sanción: igual que antes (B14).
+-- La fila se bloquea recién en el nivel 2, en el orden global por id. Quien
+-- llama la relee ahí (paso 3). Bloqueos implícitos del paso 1: el INSERT de
+-- un participante nuevo retiene su propia fila (invisible para los demás
+-- hasta confirmar) y un KEY SHARE sobre su fila de auth.users (FK). Con la
+-- sanción copiada, el INSERT de la suspensión toma KEY SHARE sobre ese
+-- mismo participante nuevo. Ninguno toca filas de otro actor.
+--
+-- 013_down restaura la definición de 012, sin cambios.
+-- ------------------------------------------------------------------
+create or replace function comunidad.resolver_participante(p_uid uuid, p_crear boolean)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id      uuid;
+  v_sancion timestamptz;
+  v_ahora   timestamptz;
+begin
+  if p_uid is null then
+    raise exception 'resolver_participante: uid nulo' using errcode = '22004';
+  end if;
+  perform comunidad.tomar_cuenta(p_uid);
+
+  if exists (select 1 from comunidad.bajas_en_curso
+              where user_id = p_uid and cancelada_en is null) then
+    raise exception 'baja_en_curso' using errcode = 'CB001',
+      detail = 'La cuenta tiene una eliminación pendiente: no se aceptan operaciones comunitarias.';
+  end if;
+
+  -- Sin FOR UPDATE: K_CUENTA ya excluye a toda otra operación de esta
+  -- cuenta, y el lock de fila va en el nivel 2, en orden.
+  select id into v_id from comunidad.participantes where user_id = p_uid;
+  if found or not p_crear then
+    return v_id;
+  end if;
+
+  insert into comunidad.participantes (user_id) values (p_uid) returning id into v_id;
+
+  select sancion_hasta into v_sancion from comunidad.bajas_en_curso
+   where user_id = p_uid and cancelada_en is not null;
+  v_ahora := clock_timestamp();
+  if v_sancion is not null and v_sancion > v_ahora then
+    insert into comunidad.suspensiones (participante_id, desde, hasta)
+    values (v_id, v_ahora, case when v_sancion = 'infinity' then null else v_sancion end);
+  end if;
+  return v_id;
+end;
+$$;
+revoke all on function comunidad.resolver_participante(uuid, boolean) from public, anon, authenticated, service_role;
+
+-- ------------------------------------------------------------------
 -- Paso 1: K_CORTE compartido → K_CUENTA → relectura del marcador. Devuelve
--- el participante (o null si no existe y p_crear es falso). Con baja en
--- curso lanza CB001 (E2b).
+-- el participante (o null si no existe y p_crear es falso), SIN bloquear su
+-- fila: eso es del nivel 2. Con baja en curso lanza CB001 (E2b).
 -- ------------------------------------------------------------------
 create or replace function comunidad.proto_cuenta(p_uid uuid, p_crear boolean)
 returns uuid

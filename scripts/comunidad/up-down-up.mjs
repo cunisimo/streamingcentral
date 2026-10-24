@@ -19,7 +19,7 @@
 // Deja la base con 011, 012, 013 y 022 aplicadas, como db-local.mjs.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { aplicarArchivo, arnes, contenedor, docker, sqlOk, urlLocal } from "./local.mjs";
@@ -70,7 +70,7 @@ const v = {};
 // (013_down → 012_down → 011_down) y se suben en orden. Con 012 aplicada,
 // bajar sólo 011 dejaría las cuatro `public.comunidad_*` apuntando a un
 // esquema inexistente.
-await prueba("013 (E2c): up → down → up da el mismo volcado; down no agrega nada y quita sus funciones; repetidas, inocuas", () => {
+await prueba("013 (E2c): up → down → up da el mismo volcado; down quita sus funciones y sólo restaura la definición de 012; repetidas, inocuas", () => {
   aplicarArchivo(UP);
   aplicarArchivo(UP12);
   aplicarArchivo(UP13);
@@ -82,7 +82,13 @@ await prueba("013 (E2c): up → down → up da el mismo volcado; down no agrega 
     and (proname like 'proto\\_%' or proname in ('corte_de_mes', 'rige_antes_de', 'mes_ar'))`), "0");
   const cuenta = (t) => t.split("\n").reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());
   const a = cuenta(con13), d = cuenta(sin13);
-  assert.deepEqual([...d].filter(([l, n]) => n > (a.get(l) ?? 0)).map(([l]) => l), [], "013_down agregó algo");
+  // 013 REDEFINE resolver_participante (sin el FOR UPDATE de 012; auditoría
+  // de E2c, A1), así que su down vuelve a poner la definición de 012: lo
+  // único que puede "agregar" son líneas de esa definición.
+  const de012 = new Set(readFileSync(UP12, "utf8").replace(/\r\n/g, "\n").split("\n").map((l) => l.trim()));
+  const agregadas = [...d].filter(([l, n]) => n > (a.get(l) ?? 0)).map(([l]) => l);
+  assert.deepEqual(agregadas.filter((l) => !de012.has(l.trim())), [], "013_down agregó algo que no es la definición de 012");
+  assert.ok(agregadas.some((l) => /where user_id = p_uid for update/.test(l)), "013_down no restauró el FOR UPDATE de 012");
   // Que lo quitado sea SÓLO 013 lo fija la prueba siguiente: el volcado sin
   // 013 es idéntico al de 011 + 012.
   aplicarArchivo(DOWN13);
