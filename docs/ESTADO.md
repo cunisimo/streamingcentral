@@ -433,9 +433,43 @@ AAB tiene que ser `5` o mayor.
 
      Informe: `docs/medidas/2026-10-24-informe-claude-e2c.md`; salidas:
      `docs/medidas/2026-10-24-e2c-salidas.txt`.
+     **Auditoría focalizada de E2c (24/10, Codex sobre `cd62577`;
+     `docs/medidas/2026-10-24-auditoria-e2c-cd62577.md`, copia sin cambios,
+     SHA-256 `20e341a0…`):**
+     - **Cerrada la corrección del aviso de E2b.**
+     - **E2c seguía pendiente** por el hallazgo A1 (P1). `proto_cuenta`,
+       vía `resolver_participante` (012), bloqueaba la fila del actor antes
+       del bloqueo ordenado de `proto_participantes`. Dos actores cruzados
+       que seguían el protocolo hacían 40P01; Codex lo reprodujo dos veces.
+       Codex también pidió precisar que, en el deadlock deliberado, la
+       víctima observada no es una garantía.
+     **Corrección de A1 (24/10; regresión `7b33702`, corrección `b4aa75b`;
+     sólo local):**
+     - 013 redefine `resolver_participante` para que sólo **lea** el
+       participante, sin `FOR UPDATE`. `K_CUENTA` ya da la serialización
+       por cuenta, la relectura del marcador, la creación única de identidad
+       y la exclusión con la baja; la fila se bloquea en el nivel 2, en
+       orden. 013_down restaura literalmente la definición de 012;
+     - regresión con A y B evaluando la reseña del otro, coordinados
+       después del paso de cuenta:
+       - **antes, 3/3 fallan**: filas `A=bloqueada, B=bloqueada` y
+         `deadlock detected`;
+       - **después, 3/3 pasan**: filas libres, los dos confirman y no hay
+         CB002;
+     - corridas posteriores:
+       - concurrencia **21/21 en cinco corridas seguidas**;
+       - baja 26/26, con el servidor local sólo para esa corrida;
+       - up/down/up 15/15, y sin 013 el volcado sigue idéntico al de E2b;
+     - en esas cinco corridas, la víctima del deadlock deliberado fue la
+       sesión fuera de orden en 4 y **la sesión en orden en 1**. No hay
+       garantía de víctima;
+     - las operaciones siguen siendo fixtures: todo es preliminar.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2c-a1.md`; salidas:
+     `docs/medidas/2026-10-24-e2c-a1-salidas.txt`.
    **Falta:**
-   - la auditoría focalizada de E2c y del cierre de E2b. E3a no empieza
-     sin autorización;
+   - la auditoría focalizada de la corrección A1 de E2c. E3a no empieza sin
+     autorización;
    - resolver, antes de E4, E8 y la publicación, el alcance del borrado de
      denuncias recibidas en la baja, y el plazo de los intervalos
      seudónimos (P3);

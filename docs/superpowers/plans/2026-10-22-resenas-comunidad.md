@@ -646,8 +646,10 @@ rollback;
   seguidas, informadas como preliminares.
 - **Evidencia para Codex:** salida de las corridas, logs de espera de locks.
 - **Estado al 24/10/2026** (`docs/ESTADO.md` es la fuente vigente):
-  implementada **en local** en `a306cb8`. Pendiente de auditoría
-  focalizada.
+  implementada **en local** en `a306cb8`. La auditoría de `cd62577` encontró
+  un deadlock entre dos actores cruzados que seguían el protocolo (el paso 1
+  bloqueaba la fila del actor). Se corrigió en `b4aa75b`, con su regresión en
+  `7b33702`. Pendiente de la auditoría focalizada de esa corrección.
   - 013 trae una primitiva por paso. El orden **se hace cumplir** (CB002 si
     se pide fuera de orden).
   - Casos 1–5, 6, 7 y 11, preliminares: 20/20 en **cinco corridas

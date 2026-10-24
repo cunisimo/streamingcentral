@@ -127,7 +127,7 @@ Comprobado por catálogo y con `SET ROLE` (42501 en las tres).
 | 4 mismo `id_intento` | Una versión, un reinicio; la segunda devuelve la misma | E3a |
 | 5a suspensión primero | El voto relee y da CB004 | E4 |
 | 5b voto primero | `desde` de la suspensión > marca del voto | E4 |
-| Violación del orden (a mano) | Deadlock 40P01; abortada siempre la sesión fuera de orden; su escritura previa no quedó | — |
+| Violación del orden (a mano) | Deadlock 40P01; su escritura previa no quedó. La víctima fue la sesión fuera de orden **en las corridas observadas** (cinco de cinco). No es una garantía de qué sesión aborta Postgres, y la prueba acepta cualquiera de las dos (precisión de la auditoría de `cd62577`) | — |
 | `lock_timeout` 1 s | 55P03; tampoco queda el participante que creó el paso 1 | E3a |
 | Error tras escrituras parciales | La edición con texto inválido se revierte entera | E3a |
 | 6 compartido antes de T, confirma después | m < T ≤ L; la consolidación la cuenta | E7 |
