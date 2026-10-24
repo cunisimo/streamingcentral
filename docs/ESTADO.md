@@ -322,8 +322,55 @@ AAB tiene que ser `5` o mayor.
      - **A2:** que el guardián local mire el contexto efectivo de Docker y no
        sólo `DOCKER_HOST`.
      El dueño autorizó **E2b local** con esos dos ajustes.
+     **E2b local y ajustes A1/A2 (24/10; `6e0e1d1`, `9cea2ea`, `c6c6ba5`;
+     sólo `supabase start` y la app local en el puerto 3100, sin
+     Producción):**
+     - A2: el guardián de Docker resuelve el contexto efectivo (precedencia
+       del CLI, contrastada con `docker context show`) y fija ese endpoint
+       en cada `docker`. Pruebas con contextos remotos simulados;
+     - A1: `scripts/prueba-eliminar-cuenta.mjs` ya no convierte errores en
+       cero, exige cantidades exactas y es sólo local: el dueño de la base
+       prepara las fixtures heredadas. Destapó dos fallas que escondía:
+       sin permisos de fila locales y `platforms` con el tipo equivocado;
+     - `012_comunidad_baja.sql` (+ down), sólo en local:
+       - marcador con origen, copia de la sanción y cancelación;
+       - `resolver_participante`, con K_CORTE → K_CUENTA y el rechazo
+         `CB001`;
+       - paso 1 idempotente, que cierra tramos, borra lo propio,
+         desvincula y conserva suspensiones;
+       - red de seguridad en el borrado de Auth;
+       - cuatro funciones de API, sólo para `service_role`;
+     - app: el flujo hace contraseña → paso 1 → `deleteUser` →
+       reconciliación con `getUserById` (`ok`, `baja-parcial` o
+       `baja-sin-verificar`; nunca `ok` sin confirmar). Hay ruta nueva
+       `GET /api/cuenta/estado-baja`, y Configuración muestra "Eliminación
+       pendiente" con reintento. El runbook está en
+       `docs/MANTENIMIENTO.md`;
+     - resultados (corridas de Claude, en secuencia):
+       - `pruebas-baja` 26/26, con B2, B3, B8, B10 y B14 como
+         preliminares;
+       - permisos 27/27, invariantes 81/81 y up/down/up 14/14 (mismos
+         hashes de E2a sin 012);
+       - salas 37 en verde y la prueba heredada con 0 fallas;
+       - `tsc` 0 errores; `npm test` 2362 pasan, 0 fallan, 16 omitidas;
+       - el recorrido visible quedó registrado con capturas;
+     - observado y distinto del plan:
+       - dos `deleteUser` simultáneos responden 200 los dos en el GoTrue
+         local; el camino "404 → reconciliar" se probó aparte;
+       - un ciclo blando de B8 no aborta; el deadlock real (40P01) y el
+         `lock_timeout` (55P03) abortan Auth entera, y el reintento
+         termina;
+     - ⚠️ la ruta de eliminación ahora depende de 011 y 012. Desplegar este
+       código sin esas migraciones deja la eliminación en `fallo-borrado`
+       sin borrar nada;
+     - no verificado: privilegios por defecto y GoTrue de Producción (E0),
+       y Android.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2b.md`; salidas:
+     `docs/medidas/2026-10-24-e2b-salidas.txt`.
    **Falta:**
-   - E2b local (en curso);
+   - la auditoría focalizada de E2b y de los ajustes A1/A2. E2c no empieza
+     sin autorización;
    - la validación independiente de E1 (protocolo, autoría y ejecutor, no
      preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se

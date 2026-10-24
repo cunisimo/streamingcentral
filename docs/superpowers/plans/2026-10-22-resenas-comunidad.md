@@ -606,6 +606,15 @@ rollback;
   escrito.
 - **Evidencia para Codex:** salida de `pruebas-baja.mjs` caso por caso,
   diff del flujo y su test, runbook.
+- **Estado al 24/10/2026** (`docs/ESTADO.md` es la fuente vigente):
+  implementada **en local** en `c6c6ba5`, junto con los ajustes A1/A2 de la
+  auditoría de E2a (`6e0e1d1`, `9cea2ea`). Pendiente de auditoría focalizada.
+  - B1–B14: 26/26.
+  - Distinto de lo esperado en B4: dos `deleteUser` simultáneos responden
+    200 los dos, y "uno falla y reconcilia" se probó forzando el orden.
+  - Distinto de lo esperado en B8: un ciclo blando no aborta, y se agregaron
+    las variantes con deadlock real y con `lock_timeout`.
+  - Informe: `docs/medidas/2026-10-24-informe-claude-e2b.md`.
 
 ### E2c — Orden de locks y concurrencia base
 
