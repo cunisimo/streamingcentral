@@ -279,7 +279,37 @@ AAB tiene que ser `5` o mayor.
      diaria, y no se vuelve a corregir el filtro por ese ejemplo. **La
      validación independiente sigue pendiente; E1 no está aprobada.** El
      dueño autorizó **E2a local** mientras tanto, sin publicación.
+     **E2a local (24/10, `1d045f3`; sólo `supabase start`, sin Producción):**
+     - `011_comunidad_esquema.sql` (+ down): esquema privado `comunidad`
+       con 11 tablas e invariantes (FK compuestas, autoevaluación, texto
+       80–600 NFC, únicos parciales, transiciones y vigencia diferida).
+       Revoke explícito a PUBLIC, `anon`, `authenticated` y `service_role`,
+       RLS sin policies y fuera de PostgREST. Interruptores apagados;
+       límites guardados como hipótesis;
+     - `022_cerrar_user_reviews.sql`: quita las dos policies y los permisos
+       de `anon`/`authenticated`, sin tocar filas; su down no reabre.
+       **Aplicada sólo en local**; en Producción, después de E0 y con
+       autorización;
+     - `db-local.mjs` aplica 007, 011 y 022; TOTP encendido en
+       `supabase/config.toml` (sólo local); `.env.comunidad-local` ignorado
+       por Git;
+     - resultados: permisos 25/25 (tres barreras por separado, 616 pedidos
+       REST sin un 2xx, `is_admin_mfa()` real con dos TOTP: AAL1 `false`,
+       AAL2 `true`); invariantes 81/81; up→down→up 11/11 con volcados
+       idénticos; salas 37 en verde; `tsc` 0; `npm test` 2346 pasan, 0
+       fallan, 18 omitidas;
+     - se corrigió en la misma entrega un `alter default privileges … in
+       schema` que no cerraba nada (comprobado): cada entrega repite su
+       revoke;
+     - **no verificado:** privilegios por defecto de Producción (E0 Q5).
+       Con 022, `scripts/prueba-eliminar-cuenta.mjs` deja de poblar
+       `user_reviews` (no se cambió).
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2a.md`; salidas:
+     `docs/medidas/2026-10-24-e2a-salidas.txt`.
    **Falta:**
+   - la auditoría focalizada de E2a y su evidencia. E2b no empieza sin
+     autorización;
    - la validación independiente de E1 (protocolo, autoría y ejecutor, no
      preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se

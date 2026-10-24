@@ -517,6 +517,10 @@ rollback;
   antes y obtenido.
 - **Evidencia para Codex:** migraciones, salida de `pruebas-permisos.mjs`,
   volcado de grants y policies de la base local, log de up/down/up.
+- **Estado al 24/10/2026** (`docs/ESTADO.md` es la fuente vigente):
+  implementada **en local** en `1d045f3`; pendiente de auditoría
+  focalizada. `IS NFC NORMALIZED` sirvió en el `CHECK`. 022 sólo en local.
+  Informe: `docs/medidas/2026-10-24-informe-claude-e2a.md`.
 
 ### E2b — Contrato de baja de cuenta (temprano)
 
