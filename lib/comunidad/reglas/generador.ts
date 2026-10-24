@@ -1,37 +1,46 @@
 // Generador determinista del contrato de moderación v1 (catálogo v3.2, §8).
 // NO promete cobertura semántica: recorre las transformaciones declaradas.
+// v2 (auditoría de bbb8fc7, A4): inventario completo y verificado por
+// `generador-inventario.test.ts` contra el contrato y las referencias.
 //
 // QUÉ ENUMERA (completo):
-//   - D2: un caso por cada rango `Nd` de Unicode 18.0.0 (72 rangos unidos de
-//     los 77 tramos), con el teléfono entero escrito en ese sistema;
-//   - D3–D8: ancho completo, matemáticos, superíndices, circulados, emoji de
-//     tecla, dictado en castellano e inglés, palabras pegadas a dígitos;
-//   - D9: cada confusable de dígito de UTS #39 de la tabla generada, en una
-//     posición de la corrida; y la tabla vigente (o l i | s z b g);
-//   - S: cada carácter de Zs, Pd, Ps, Pe y Me, más U+FE0F, `/` y `_`;
+//   - D2: los 77 tramos de 10 dígitos `Nd` de Unicode 18.0.0;
+//   - D3–D6: ancho completo, matemáticos, superíndices, SUBÍNDICES,
+//     circulados y emoji de tecla;
+//   - D7: cada palabra-número de 0 a 15 dentro de una corrida y cada forma de
+//     16 a 99 (incluidas "diez y seis…" y "veinte y …"); D8: cada palabra en
+//     inglés de §6.N; y palabras pegadas a dígitos;
+//   - D9: cada confusable de dígito de la tabla, contando PUNTOS DE CÓDIGO
+//     (incluye los astrales);
+//   - S: cada carácter de Zs, Pd, Ps, Pe y Me según Unicode 18.0.0 (no el
+//     runtime), más U+FE0F, `/` y `_`;
 //   - F2: cada proveedor con "en/de/del", y las formas de arroba y punto;
-//   - F3: cada T-fuerte pegado sin ruta (F3-2) y espaciado o escrito (F3-5),
-//     cada inicio de ruta de F3-3, cada punto y barra de F3-4, coma por punto
-//     (F3-6) con cada T-fuerte y cada acortador;
+//   - F3: cada T-fuerte en F3-2, F3-5 y F3-6, cada inicio de ruta de F3-3,
+//     cada punto y barra de F3-4 y cada acortador;
 //   - F4: cada forma de alias × cada plataforma de §6.M (salvo "x") y cada
 //     forma de intención de §6.I;
 //   - S1–S5, H1–H3: cada entrada de sus listas de §6;
 //   - controles legítimos con la MISMA transformación (años con el mismo
 //     separador) y plantillas narrativas redactadas (marcadas `plantilla`).
 // QUÉ MUESTREA (semilla fija, mulberry32):
-//   - S: 64 caracteres de Po, 64 de Sm y 64 de Mn;
+//   - S: 64 caracteres de Po (sin `,;:`), 64 de Sm y 64 de Mn, de Unicode 18.0.0;
 //   - F3-4: 50 terminaciones alfabéticas de 7 a 63 letras;
-//   - C: 200 confusables de letra de UTS #39 (en el dominio de F3).
-// COMBINACIONES: cada dimensión completa con las demás en su forma base, y
-// pares (forma de dígito × separador) con representantes. No el producto
-// cartesiano completo. Un acierto en una muestra no prueba la clase entera.
+//   - C: 200 confusables de letra de TODA la clase de UTS #39 (letras L*),
+//     cada uno dentro de una terminación T-fuerte o de un proveedor que
+//     contiene su letra (si ninguno la contiene, en una terminación con ruta).
+// COMBINACIONES: cada dimensión completa con las demás en su forma base y,
+// por familia, el producto de representantes de cada dimensión (cubre todos
+// los pares): F1 forma × separador por categoría × señal; F2 arroba × punto ×
+// confusable; F3 punto × terminación × barra; F4 alias × plataforma o
+// intención × comillas; H1 pronombre × daño × puntuación o salto. No el
+// producto cartesiano completo. Un acierto en una muestra no prueba la clase.
 
 import type { Familia } from "./familias.ts";
 import * as L from "./listas.ts";
-import { CONFUSABLES_DIGITO, CONFUSABLES_LETRA_UTS39, RANGOS_ME, RANGOS_ND, RANGOS_SEPARADOR } from "./tablas-unicode.ts";
+import { CONFUSABLES_DIGITO, CONFUSABLES_LETRA_UTS39, RANGOS_CATEGORIA, RANGOS_ND } from "./tablas-unicode.ts";
 import type { ContextoResena } from "./tipos.ts";
 
-export const VERSION_GENERADOR = "1";
+export const VERSION_GENERADOR = "2";
 export const SEMILLA = 20261024;
 
 export interface CasoGenerado {
@@ -76,11 +85,30 @@ const GRUPOS = ["11", "4455", "6677"];
 
 const caracteres = (rangos: readonly (readonly [number, number])[]) => rangos.flatMap(([a, b]) => Array.from({ length: b - a + 1 }, (_, i) => String.fromCodePoint(a + i)));
 
-/** Los caracteres de una categoría general dentro de RANGOS_SEPARADOR, por prueba de propiedad del runtime. */
-function separadoresDe(categoria: string): string[] {
-  const re = new RegExp(`^\\p{${categoria}}$`, "u");
-  return caracteres(RANGOS_SEPARADOR).filter((c) => re.test(c));
+/**
+ * v2 (auditoría de bbb8fc7, A4): los caracteres de una categoría de S según
+ * Unicode 18.0.0 (`RANGOS_CATEGORIA`), sin reclasificar con el runtime. Po sin
+ * `,` `;` `:` (que son S2).
+ */
+export function separadoresDe(categoria: keyof typeof RANGOS_CATEGORIA): string[] {
+  return caracteres(RANGOS_CATEGORIA[categoria]).filter((c) => !(categoria === "Po" && /^[,;:]$/.test(c)));
 }
+
+const SUB = "₀₁₂₃₄₅₆₇₈₉";
+/** §6.N: castellano 0–15 (sólo en corridas). */
+export const PALABRAS_0_15 = ["cero", "uno", "una", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce", "quince"];
+const UNIDADES_ES = ["uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+/** §6.N: castellano 16–99, cada forma (incluidas "diez y seis…" y "veinte y …"). */
+export const PALABRAS_16_99 = [
+  "dieciséis", "diecisiete", "dieciocho", "diecinueve", "diez y seis", "diez y siete", "diez y ocho", "diez y nueve",
+  "veinte", "veintiuno", "veintiún", "veintiuna", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve",
+  ...UNIDADES_ES.map((u) => `veinte y ${u}`),
+  ...["treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"].flatMap((d) => [d, ...UNIDADES_ES.map((u) => `${d} y ${u}`)]),
+];
+/** C: tamaño de la muestra de confusables de letra (catálogo §8). */
+export const MUESTRA_C = 200;
+/** Muestras de S por categoría grande (catálogo §8). */
+export const MUESTRA_S = 64;
 
 export function generar(semilla = SEMILLA): CasoGenerado[] {
   const azar = mulberry32(semilla);
@@ -104,6 +132,7 @@ export function generar(semilla = SEMILLA): CasoGenerado[] {
   telefono([...NUMERO].map((d) => String.fromCodePoint(0x1d7ce + Number(d))).join(""), "D3:matematico");
   const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
   telefono([...NUMERO].map((d) => SUP[Number(d)]).join(""), "D4:superindice");
+  telefono([...NUMERO].map((d) => SUB[Number(d)]).join(""), "D4:subindice");
   const CIRC = "⓪①②③④⑤⑥⑦⑧⑨";
   telefono([...NUMERO].map((d) => CIRC[Number(d)]).join(" "), "D5:circulado");
   telefono([...NUMERO].map((d) => `${d}️⃣`).join(""), "D6:tecla");
@@ -112,27 +141,47 @@ export function generar(semilla = SEMILLA): CasoGenerado[] {
   telefono([...NUMERO].map((d) => ES[Number(d)]).join(" "), "D7:castellano");
   telefono([...NUMERO].map((d) => EN[Number(d)]).join(" "), "D8:ingles");
   telefono([...NUMERO].map((d, i) => (i % 2 ? d : ES[Number(d)])).join(""), "D7:pegadas");
-  // D9: cada confusable de dígito, en la segunda posición.
+  // D7 (§6.N): cada palabra-número de 0 a 15 dentro de una corrida, y cada forma de 16 a 99.
+  for (const w of PALABRAS_0_15) telefono(`once ${w} cuatro cuatro cinco cinco seis seis`, `D7:corrida:${w}`);
+  for (const w of PALABRAS_16_99) telefono(`once ${w} cuatro cuatro cinco cinco seis seis`, `D7:compuesto:${w}`);
+  // D8 (§6.N): cada palabra-número en inglés dentro de una corrida.
+  for (const w of Object.keys(L.PALABRAS_NUMERO_EN)) telefono(`one one ${w} four four five five six six`, `D8:corrida:${w}`);
+  // D9: cada confusable de dígito (por PUNTO DE CÓDIGO: incluye los astrales), en la segunda posición.
   for (const [c, d] of Object.entries(CONFUSABLES_DIGITO)) {
-    if (c.length !== 1 || /\s/.test(c)) continue;
-    const num = NUMERO.replace(/^(.)(.)/, `$1${d}`);
-    if (num[1] !== d) continue;
-    telefono(`${num[0]}${c}${num.slice(2)}`, `D9:${c.codePointAt(0)!.toString(16)}`);
+    if ([...c].length !== 1 || /\s/u.test(c)) continue;
+    telefono(`${NUMERO[0]}${c}${NUMERO.slice(2)}`, `D9:${c.codePointAt(0)!.toString(16)}:${d}`);
   }
-  // S: separadores enumerados y muestreados, con su control (años con el mismo separador).
-  const enumerados = [...separadoresDe("Zs"), ...separadoresDe("Pd"), ...separadoresDe("Ps"), ...separadoresDe("Pe"), ...caracteres(RANGOS_ME), "️", "/", "_"];
-  const muestreados = [...muestra(separadoresDe("Po"), 64, azar), ...muestra(separadoresDe("Sm"), 64, azar), ...muestra(separadoresDe("Mn"), 64, azar)];
+  // S: categorías de Unicode 18.0.0 (tablas-unicode.ts), no las del runtime.
+  // Enumerados: Zs, Pd, Ps, Pe, Me, U+FE0F, "/" y "_". Muestreados: 64 de Po, Sm y Mn.
+  const enumerados = [...separadoresDe("Zs"), ...separadoresDe("Pd"), ...separadoresDe("Ps"), ...separadoresDe("Pe"), ...separadoresDe("Me"), "️", "/", "_"];
+  const muestreados = [...muestra(separadoresDe("Po"), MUESTRA_S, azar), ...muestra(separadoresDe("Sm"), MUESTRA_S, azar), ...muestra(separadoresDe("Mn"), MUESTRA_S, azar)];
   for (const [sep, mu] of [...enumerados.map((s) => [s, false] as const), ...muestreados.map((s) => [s, true] as const)]) {
     telefono(GRUPOS.join(sep), `S:${sep.codePointAt(0)!.toString(16)}`, mu);
     agregar({ tipo: "resena", familia: null, esperado: "publicar", dimension: `S-control:${sep.codePointAt(0)!.toString(16)}`, texto: resena(`La vi en ${["1985", "2026"].join(sep)} y me gustó.`), muestreado: mu });
   }
-  // Pares (forma de dígito × separador) con representantes.
-  for (const forma of ["ancho", "arabigo", "tecla"]) {
-    for (const sep of [" ", "-", "·", "–", "/", "_"]) {
-      const g = (s: string) => forma === "ancho" ? [...s].map((d) => String.fromCodePoint(0xff10 + Number(d))).join("")
-        : forma === "arabigo" ? [...s].map((d) => String.fromCodePoint(0x660 + Number(d))).join("")
-        : [...s].map((d) => `${d}️⃣`).join("");
-      telefono(GRUPOS.map(g).join(sep), `par:${forma}:${sep.codePointAt(0)!.toString(16)}`);
+  // Pares de F1 (catálogo §8): forma de dígito × separador (un representante por
+  // categoría de S) × señal, con TODOS los representantes de cada dimensión:
+  // el producto de representantes cubre todos los pares.
+  const FORMAS_F1: Record<string, (s: string) => string> = {
+    ascii: (s) => s,
+    ancho: (s) => [...s].map((d) => String.fromCodePoint(0xff10 + Number(d))).join(""),
+    arabigo: (s) => [...s].map((d) => String.fromCodePoint(0x660 + Number(d))).join(""),
+    tecla: (s) => [...s].map((d) => `${d}️⃣`).join(""),
+    confusable: (s) => s.replace(/3/g, "З").replace(/0/g, "О"),
+  };
+  const REPRESENTANTES_S: Record<string, string> = {
+    Zs: " ", Pd: "-", Ps: "(", Pe: ")", Po: "·", Sm: "+", Mn: "́", Me: "⃝", barra: "/", guion_bajo: "_",
+  };
+  const SENALES_F1: Record<string, (num: string) => string> = {
+    sin_senal: (num) => `Dejo esto acá: ${num}, sin más.`,
+    intencion: (num) => `Llamame al ${num} para comentar.`,
+    medio: (num) => `Mi celu es ${num} por si acaso.`,
+  };
+  for (const [forma, f] of Object.entries(FORMAS_F1)) {
+    for (const [cat, sep] of Object.entries(REPRESENTANTES_S)) {
+      for (const [senal, s] of Object.entries(SENALES_F1)) {
+        agregar({ tipo: "resena", familia: "F1", esperado: "rechazar", dimension: `par-F1:${forma}:${cat}:${senal}`, texto: resena(s(["11", "4435", "6607"].map(f).join(sep))) });
+      }
     }
   }
   // Fecha y año con intención o medio en el ámbito; y sus controles sin I ni M.
@@ -178,8 +227,24 @@ export function generar(semilla = SEMILLA): CasoGenerado[] {
   for (const h of L.HOSTS_SIN_TLD) {
     agregar({ tipo: "resena", familia: "F3", esperado: "rechazar", dimension: `F3:acortador:${h}`, texto: resena(`Está en ${h}/abc123 completa.`) });
   }
-  for (const c of muestra(Object.keys(CONFUSABLES_LETRA_UTS39).filter((k) => CONFUSABLES_LETRA_UTS39[k] === "o"), 20, azar)) {
-    agregar({ tipo: "resena", familia: "F3", esperado: "rechazar", dimension: `F3:C:${c.codePointAt(0)!.toString(16)}`, texto: resena(`Mirala en verpelis.c${c}m sin cortes.`), muestreado: true });
+  // C (catálogo §8): 200 confusables de letra de TODA la clase de UTS #39 (no
+  // sólo los que imitan "o"). Cada uno reemplaza su letra dentro de una
+  // terminación T-fuerte que la contiene (sin ruta: si el mapeo falla, no hay
+  // otra regla que lo salve); si ninguna T-fuerte contiene esa letra, dentro
+  // de la etiqueta de un correo con proveedor ("ana@gmail" no tiene esa
+  // garantía, así que se usa el proveedor: el mapeo tiene que reconstruirlo).
+  for (const c of muestra(Object.keys(CONFUSABLES_LETRA_UTS39), MUESTRA_C, azar)) {
+    const v = CONFUSABLES_LETRA_UTS39[c];
+    const tld = L.TLD_FUERTES.find((t) => t.includes(v));
+    const prov = L.PROVEEDORES_CORREO.find((p) => p.includes(v));
+    const cp = c.codePointAt(0)!.toString(16);
+    if (tld) {
+      agregar({ tipo: "resena", familia: "F3", esperado: "rechazar", dimension: `C:${cp}:tld`, texto: resena(`Mirala en verpelis.${tld.replace(v, c)} sin cortes.`), muestreado: true });
+    } else if (prov) {
+      agregar({ tipo: "resena", familia: "F2", esperado: "rechazar", dimension: `C:${cp}:proveedor`, texto: resena(`Escribime a ana.demo@${prov.replace(v, c)} y charlamos.`), muestreado: true });
+    } else {
+      agregar({ tipo: "resena", familia: "F3", esperado: "rechazar", dimension: `C:${cp}:sin-ancla`, texto: resena(`Mirala en verpelis.x${c}x/ver sin cortes.`), muestreado: true });
+    }
   }
   for (const control of ["Cuenta la burbuja de las punto com con humor.", "Para chicos y/o grandes: un 8.5/10 merecido.", "Drama / comedia, muy bien hecha.", "Fin de la escena. / Sigue otra.", "Linda casa . final / feliz para todos."]) {
     agregar({ tipo: "resena", familia: null, esperado: "publicar", dimension: "F3-control", texto: resena(control), plantilla: true });
@@ -275,6 +340,60 @@ export function generar(semilla = SEMILLA): CasoGenerado[] {
   }
   agregar({ tipo: "resena", familia: null, esperado: "publicar", dimension: "H3-control", texto: resena("En la película, Freddy Krueger ataca en la calle Elm 1428 de noche."), plantilla: true });
   agregar({ tipo: "resena", familia: null, esperado: "publicar", dimension: "H3-control", texto: resena("Recaudó 12.345.678 dólares, según Box Office Mojo."), plantilla: true });
+
+  // ---------------------------------------------------------------- pares por familia (catálogo §8)
+  // Producto de representantes de cada dimensión: cubre todos los pares.
+  // F2: forma de arroba × forma de punto × confusable en el proveedor.
+  for (const [arroba, an] of [["@", "@"], [" arroba ", "arroba"], [" (at) ", "(at)"], [" [at] ", "[at]"]]) {
+    for (const [punto, pn] of [[".", "."], [" punto ", "punto"], [" (dot) ", "(dot)"], ["[punto]", "[punto]"]]) {
+      for (const [prov, cn] of [["gmail", "latino"], ["gmаil", "cirilico"]]) {
+        agregar({ tipo: "resena", familia: "F2", esperado: "rechazar", dimension: `par-F2:${an}:${pn}:${cn}`, texto: resena(`Escribime a ana.demo${arroba}${prov}${punto}com para charlar.`) });
+      }
+    }
+  }
+  // F3: punto (pegado, espaciado, escrito, corchetes, ideográfico) × terminación (T-fuerte, larga) × barra.
+  const PUNTOS_F3: Record<string, string> = { pegado: ".", espaciado: " . ", escrito: " punto ", corchetes: "[.]", ideografico: "。" };
+  const BARRAS_F3: Record<string, string> = { pegada: "/", espaciada: " / ", escrita: " slash " };
+  for (const [pn, punto] of Object.entries(PUNTOS_F3)) {
+    for (const [tn, t] of [["fuerte", "net"], ["larga", "photography"]]) {
+      for (const [bn, barra] of Object.entries(BARRAS_F3)) {
+        // F3-3 exige punto pegado Y barra pegada; con punto pegado y barra espaciada/escrita no hay forma prometida.
+        const pegadoNoPrometido = (pn === "pegado" || pn === "ideografico") && bn !== "pegada" && tn === "larga";
+        agregar({
+          tipo: "resena", familia: pegadoNoPrometido ? null : "F3", esperado: pegadoNoPrometido ? "publicar" : "rechazar",
+          dimension: `par-F3:${pn}:${tn}:${bn}`, texto: resena(`Mi análisis en lacinemateca${punto}${t}${barra}analisis completo.`),
+        });
+      }
+    }
+  }
+  // F4: forma de alias × (plataforma o intención) × comillas.
+  const ALIAS_F4: Record<string, string> = { guion_bajo: "cine_fan99", punto: "cine.fan", digitos: "88cine", etiqueta: "fede.cine#4821", arroba_espacio: "@ docu_sur", letras_sueltas: "l.u.n.a.r.o.s.a" };
+  const OTRO_F4: Record<string, (a: string) => string> = {
+    plataforma: (a) => `en TikTok el usuario es ${a}`,
+    intencion: (a) => `escribime, soy ${a}`,
+    voseo_tilde: (a) => `mandá un mensaje, soy ${a}`,
+  };
+  for (const [an, a] of Object.entries(ALIAS_F4)) {
+    for (const [on, o] of Object.entries(OTRO_F4)) {
+      for (const [cn, [abre, cierra]] of [["sin_comillas", ["", ""]], ["con_comillas", ["«", "»"]]] as const) {
+        agregar({ tipo: "resena", familia: "F4", esperado: "rechazar", dimension: `par-F4:${an}:${on}:${cn}`, texto: resena(`Para charlar del final ${abre}${o(a)}${cierra} y listo.`) });
+      }
+    }
+  }
+  // H1: pronombre (con destinatario si hace falta) × daño representativo × puntuación o salto de línea antes de otra frase.
+  const PRON_H1: Record<string, (d: string) => string> = {
+    te: (d) => `Vos, te voy a ${d}`,
+    le: (d) => `Le voy a ${d} a ese actor`,
+    lo: (d) => `Al que escribió esa reseña lo voy a ${d}`,
+    clitico: (d) => `Vos, voy a ${d.split(" ")[0]}te${d.includes(" ") ? d.slice(d.indexOf(" ")) : ""}`,
+  };
+  for (const [pn, pr] of Object.entries(PRON_H1)) {
+    for (const d of ["matar", "pegar un tiro", "prender fuego", "hacer boleta"]) {
+      for (const [sn, sep] of [["punto", ". "], ["salto", "\n"], ["coma", ", "]]) {
+        agregar({ tipo: "resena", familia: "H1", esperado: "retener", dimension: `par-H1:${pn}:${d}:${sn}`, texto: resena(`${pr(d)}${sep}La rompe esta peli igual.`) });
+      }
+    }
+  }
 
   return casos;
 }

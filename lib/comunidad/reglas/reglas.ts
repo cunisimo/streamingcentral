@@ -82,7 +82,10 @@ export interface Corrida {
 // v4 (contrato v1, S): la lista finita de E1.2 se reemplazó por la clase S de
 // Unicode 18.0.0 (`CLASE_SEPARADOR`, que incluye `_` y `/`). Como `/` ahora
 // separa, las fechas `dd/mm/aaaa` y los puntajes `8/10` son excepciones.
-const SEP = CLASE_SEPARADOR;
+// El salto de línea (que el plegado conserva desde A5 de bbb8fc7) sigue
+// partiendo números como antes, cuando se convertía en espacio: no se reduce
+// la cobertura vigente de teléfonos escritos en dos líneas.
+const SEP = `(?:${CLASE_SEPARADOR}|\\n)`;
 const CORRIDA = new RegExp(`\\+?\\d(?:${SEP}{0,3}\\d)*`, "gu");
 // Lectura amplia (S2): además `,` `;` `:` ("once, seis, 72, 81…").
 const CORRIDA_AMPLIA = new RegExp(`\\+?\\d(?:(?:${SEP}|[,;:]){0,3}\\d)*`, "gu");
@@ -801,11 +804,22 @@ const RE_H1_CLITICO = new RegExp(
 const RE_H1_DESTINATARIO = new RegExp(`${BORDE_ANTES}(?:${L.H1_DESTINATARIO.map(frase).join("|")})${BORDE_DESPUES}|@[\\p{L}\\p{N}_.]{2,}`, "gu");
 const RE_H1_EXCLUIDA = palabras(L.H1_EXCLUIDAS);
 
+/**
+ * v2 (auditoría de bbb8fc7, A3): una expresión de §6.H1-e exime SÓLO si
+ * explica el propio fragmento: si se superpone con la amenaza ("la vamos a
+ * pasar…", "me mató…") o la continúa inmediatamente, sin puntuación ni otra
+ * palabra en el medio ("lo voy a matar de risa", "voy a matar el tiempo").
+ * Una frase cercana en otra oración o separada por puntuación no exime:
+ * "Te voy a pegar un tiro. La rompe esta peli." sigue siendo amenaza.
+ */
 function dentroDeExcluida(t: string, i: number, largo: number): boolean {
+  const fin = i + largo;
   RE_H1_EXCLUIDA.lastIndex = 0;
   for (const m of t.matchAll(RE_H1_EXCLUIDA)) {
     const a = m.index!, b = a + m[0].length;
-    if (a < i + largo + 12 && b > i - 2) return true;
+    const superpuesta = a < fin && b > i;
+    const continua = a >= fin && /^[ \t]*$/.test(t.slice(fin, a));
+    if (superpuesta || continua) return true;
   }
   return false;
 }
@@ -837,7 +851,9 @@ export const reglaAmenaza: Regla<unknown> = {
   // daño (con lo/la/le/los/las/les hace falta un destinatario; con "van a",
   // sólo "te"), deseo o merecimiento, y las expresiones de §6.H1-e nunca
   // disparan. Lo vigente (incluidas las letras sueltas unidas) se conserva.
-  version: 3,
+  // v4 (auditoría de bbb8fc7, A3): la expresión excluida sólo exime si se
+  // superpone con la amenaza o la continúa sin puntuación en el medio.
+  version: 4,
   evaluar: (p) => {
     if (hay(RE_AMENAZA, p.base) || amenazaExplicita(p.base)) return disparo("retener", "Amenaza.");
     const deBase = new Set(p.base.match(/[\p{L}\p{N}]+/gu) ?? []);

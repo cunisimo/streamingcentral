@@ -102,10 +102,14 @@ export function confusablesDeDigito(m: Map<string, string>): Map<string, string>
  * incluye `m` → `rn`, que rompería coincidencias normales. Las claves van en
  * minúsculas, porque se aplican sobre `base`.
  */
-export function confusablesDeLetra(m: Map<string, string>): Map<string, string> {
+export function confusablesDeLetra(m: Map<string, string>, letras: readonly Rango[] | null = null): Map<string, string> {
   const salida = new Map<string, string>();
+  // v2 (auditoría de bbb8fc7): C es para LETRAS (categorías L* de Unicode
+  // 18.0.0). Ni dígitos Nd (Warang Citi: D2/D9) ni signos ("¡" → "i") entran,
+  // aunque su esqueleto sea una letra.
+  const esLetra = (c: string) => letras === null || letras.some(([a, b]) => c.codePointAt(0)! >= a && c.codePointAt(0)! <= b);
   const candidatos = [...m].filter(([fuente, destino]) =>
-    [...fuente].length === 1 && fuente.charCodeAt(0) >= 0x80 && /^[A-Za-z]+$/.test(destino));
+    [...fuente].length === 1 && fuente.charCodeAt(0) >= 0x80 && esLetra(fuente) && /^[A-Za-z]+$/.test(destino));
   // 1. Las fuentes tal cual (tienen prioridad).
   for (const [fuente, destino] of candidatos) salida.set(fuente, destino.toLowerCase());
   // 2. Su forma NFKC en minúsculas, sólo si no es ya una fuente: `base` aplica
@@ -136,7 +140,7 @@ export function generarTablas(dgc: string, confusables: string, huellas: Huellas
   const me = unirRangos(cats.get("Me") ?? []);
   const m = mapaConfusables(confusables);
   const dig = confusablesDeDigito(m);
-  const letra = confusablesDeLetra(m);
+  const letra = confusablesDeLetra(m, unirRangos(["Lu", "Ll", "Lt", "Lm", "Lo"].flatMap((c) => cats.get(c) ?? [])));
   return [
     "// GENERADO por scripts/comunidad/generar-tablas-unicode.mjs desde",
     "// lib/comunidad/reglas/referencias/unicode-18.0.0/. NO EDITAR A MANO: una",
@@ -155,6 +159,10 @@ export function generarTablas(dgc: string, confusables: string, huellas: Huellas
     "",
     "/** Me (marcas que encierran, como U+20E3 del emoji de tecla). */",
     `export const RANGOS_ME: readonly (readonly [number, number])[] = ${rangosTs(me)};`,
+    "",
+    "/** Rangos por categoría de S (Unicode 18.0.0), para el plegado y el generador (sin reclasificar con el runtime). */",
+    `export const RANGOS_CATEGORIA: Readonly<Record<"Zs" | "Pd" | "Ps" | "Pe" | "Po" | "Sm" | "Mn" | "Me" | "Pc", readonly (readonly [number, number])[]>> = {${
+      (["Zs", "Pd", "Ps", "Pe", "Po", "Sm", "Mn", "Me", "Pc"] as const).map((c) => `${c}:${rangosTs(unirRangos(cats.get(c) ?? []))}`).join(",")}};`,
     "",
     "/** D9: confusables de dígito de UTS #39 18.0.0 → dígito ASCII. */",
     `export const CONFUSABLES_DIGITO: Readonly<Record<string, string>> = ${mapaTs(dig)};`,

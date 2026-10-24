@@ -3,15 +3,14 @@
 // primer y el último indicio. Se calcula sobre la copia en la que se buscaron
 // los indicios (las posiciones de cada copia son distintas).
 //
-// LÍMITE conocido: las copias plegadas colapsan los saltos de línea en
-// espacios, así que una oración que termina sólo con un salto de línea se
-// une a la siguiente (el ámbito se agranda, no se achica).
+// v2 (auditoría de bbb8fc7, A5): las copias plegadas conservan el salto de
+// línea (\n) y acá es fin de oración, como dice el contrato (§7).
 
 import { AMBITO_PALABRAS } from "./listas.ts";
 
 // Fin de oración: . ! ? … (o una combinación) seguido de espacio o del final.
 // Un punto entre dos alfanuméricos sin espacio (dominio, 8.5, 1.155.512) no corta.
-const RE_FIN = /[.!?…]+(?=\s|$)/gu;
+const RE_FIN = /[.!?…]+(?=\s|$)|\n/gu;
 const RE_PALABRA = /[\p{L}\p{N}_]+/gu;
 
 export interface Ambito {

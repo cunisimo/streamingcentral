@@ -11,7 +11,7 @@
 //      son ambiguas.
 
 import { PALABRAS_NUMERO_EN } from "./listas.ts";
-import { CONFUSABLES_DIGITO, CONFUSABLES_LETRA_UTS39, RANGOS_ME, RANGOS_ND, RANGOS_SEPARADOR } from "./tablas-unicode.ts";
+import { CONFUSABLES_DIGITO, CONFUSABLES_LETRA_UTS39, RANGOS_CATEGORIA, RANGOS_ME, RANGOS_ND, RANGOS_SEPARADOR } from "./tablas-unicode.ts";
 import type { Plegado } from "./tipos.ts";
 
 /** Clase de caracteres (modo `u`) a partir de rangos de puntos de código. */
@@ -58,24 +58,45 @@ export function digitosAscii(t: string): string {
   });
 }
 
-/** NFKC, dígitos ASCII, minúsculas, sin acentos, sin invisibles ni controles, espacios colapsados. */
-// Marcas combinantes, que encierran y selectores de variación pegados a un
-// dígito: hacen de separador (S), no desaparecen. Así "1985⃣2026" sigue siendo
-// dos años y "1️⃣1️⃣" una corrida "1 1" (contrato v1, S y D6).
-const MARCAS_TRAS_DIGITO = new RegExp(`(\\d)(?:${claseDeRangos(RANGOS_ME, "\\u{fe0e}\\u{fe0f}\\p{Mn}")})+`, "gu");
+// Marcas combinantes (Mn), que encierran (Me) y selectores de variación pegados
+// a un dígito: hacen de separador (S), no desaparecen. Así "1985⃣2026" sigue
+// siendo dos años y "1️⃣1️⃣" una corrida "1 1" (contrato v1, S y D6). Las
+// categorías son las de Unicode 18.0.0 (tablas), no las del runtime.
+const MARCAS_TRAS_DIGITO = new RegExp(`(\\d)(?:${claseDeRangos([...RANGOS_ME, ...RANGOS_CATEGORIA.Mn], "\\u{fe0e}\\u{fe0f}")})+`, "gu");
+const MN_18 = new RegExp(claseDeRangos(RANGOS_CATEGORIA.Mn), "gu");
 
+/**
+ * v2 (auditoría de bbb8fc7, A5): los espacios se colapsan pero el SALTO DE
+ * LÍNEA se conserva (como "\n"), porque el contrato lo usa como fin de
+ * oración (§7). Antes se convertía en espacio y H2 unía oraciones separadas.
+ */
+const colapsar = (t: string) => t.replace(/[^\S\n]+/g, " ").replace(/ ?\n\s*/g, "\n").trim();
+
+const SEPARADOR_SUELTO = new RegExp(CLASE_SEPARADOR, "gu");
+const SOLO_SEPARADORES = new RegExp(`^${CLASE_SEPARADOR}+$`, "u");
+/**
+ * v3 (auditoría de bbb8fc7, A4): un separador S que NFKC expande en varios
+ * separadores ("⨌" → "∫∫∫∫") cuenta como UNO, como en el texto original: se
+ * reemplaza por el primero de su forma NFKC antes de normalizar el resto.
+ */
+function nfkc(texto: string): string {
+  return texto.replace(SEPARADOR_SUELTO, (c) => {
+    const n = c.normalize("NFKC");
+    return [...n].length > 1 && SOLO_SEPARADORES.test(n) ? [...n][0] : c;
+  }).normalize("NFKC");
+}
+
+/** NFKC, dígitos ASCII, minúsculas, sin acentos, sin invisibles ni controles, espacios colapsados (salto de línea conservado). */
 export function base(texto: string): string {
-  return digitosAscii(texto.normalize("NFKC"))
+  return colapsar(digitosAscii(nfkc(texto))
     .replace(MARCAS_TRAS_DIGITO, "$1 ")
     .replace(INVISIBLES, "")
     .replace(SELECTORES_Y_ME, "")
     .replace(CONTROLES, " ")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/\p{Mn}/gu, "")
-    .normalize("NFC")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(MN_18, "")
+    .normalize("NFC"));
 }
 
 /**
@@ -84,15 +105,13 @@ export function base(texto: string): string {
  * son tercera persona. Las posiciones coinciden con `base` salvo casos raros.
  */
 export function acentuada(texto: string): string {
-  return digitosAscii(texto.normalize("NFKC"))
+  return colapsar(digitosAscii(nfkc(texto))
     .replace(MARCAS_TRAS_DIGITO, "$1 ")
     .replace(INVISIBLES, "")
     .replace(SELECTORES_Y_ME, "")
     .replace(CONTROLES, " ")
     .toLowerCase()
-    .normalize("NFC")
-    .replace(/\s+/g, " ")
-    .trim();
+    .normalize("NFC"));
 }
 
 // ---------------------------------------------------------------- pasada 1
@@ -173,7 +192,9 @@ const LETRA_DIGITO: Readonly<Record<string, string>> = {
  * ambiguos de la pasada 2, vista desde los números (E1.1, A1).
  */
 export function letrasADigitos(b: string): string {
-  return b.replace(/[\p{L}\p{N}|]+/gu, (pieza) => {
+  // v3 (auditoría de bbb8fc7, A4): "|" es separador (Sm) y también imita al 1.
+  // ENTRE dos dígitos manda el separador: "1985|2026" son dos años.
+  return b.replace(/(?<=\d)\|(?=\d)/g, " | ").replace(/[\p{L}\p{N}|]+/gu, (pieza) => {
     if (!/\d/.test(pieza)) return pieza;
     if (![...pieza].every((c) => /\d/.test(c) || digitoDe(c) !== undefined)) return pieza;
     return [...pieza].map((c) => (/\d/.test(c) ? c : digitoDe(c)!)).join("");
@@ -333,6 +354,10 @@ function unirLetrasSueltas(t: string): string {
  * el esqueleto UTS #39 18.0.0 de las letras NO ASCII. Las ASCII no se tocan
  * (UTS #39 tiene `m` → `rn`).
  */
+export function premapeo(texto: string): string {
+  return [...nfkc(texto)].map((c) => (c.charCodeAt(0) >= 0x80 && !/\p{M}/u.test(c) ? CONFUSABLES_LETRA_UTS39[c] ?? c : c)).join("");
+}
+
 export function mapearConfusables(t: string): string {
   return [...t].map((c) => CONFUSABLES_LETRA[c] ?? (c.charCodeAt(0) >= 0x80 ? CONFUSABLES_LETRA_UTS39[c] : undefined) ?? c).join("");
 }
@@ -347,6 +372,9 @@ export function plegar(texto: string): Plegado {
     base: b,
     acentuada: acentuada(original),
     digitos: pasadaDigitos(b),
-    letras: mapearConfusables(resolverSeparadores(b)),
+    // v3 (auditoría de bbb8fc7, A4): los confusables de letra de UTS #39 se
+    // aplican ANTES de pasar a minúsculas (la mayúscula Η es "H", pero su
+    // minúscula η es "n"). Después, la tabla vigente sobre `base`.
+    letras: mapearConfusables(resolverSeparadores(base(premapeo(original)))),
   };
 }

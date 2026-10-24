@@ -74,6 +74,40 @@ test("H1: lo/le + daño exige destinatario; con 'van a' sólo 'te'; las expresio
   assert.equal(r("La protagonista la rompe y me mató de risa.").resultado, "publicar");
 });
 
+test("A3 de bbb8fc7: una expresión excluida cercana NO anula una amenaza (ambos órdenes, puntuación y saltos)", () => {
+  for (const t of [
+    "Te voy a pegar un tiro. La rompe esta peli.",
+    "La rompe esta peli. Te voy a pegar un tiro.",
+    "Te voy a pegar un tiro, la rompe esta peli.",
+    "Te voy a pegar un tiro\nLa rompe esta peli.",
+    "La rompe esta peli\nte voy a pegar un tiro.",
+    "Me mató de risa. Vos, te voy a reventar si te cruzo.",
+    "Le voy a reventar la cara a ese actor; la vamos a pasar bomba igual.",
+  ]) assert.equal(r(t).resultado, "retener", JSON.stringify(t));
+  // La excepción sigue valiendo para el uso idiomático del propio fragmento.
+  for (const t of [
+    "Lo voy a matar de risa con este chiste a mi hermano.",
+    "Voy a matar el tiempo con otra peli, a esta la rompe.",
+    "Me mató de risa, la protagonista la rompe.",
+    "La vamos a pasar bomba viendo esta comedia con amigos.",
+  ]) assert.equal(r(t).resultado, "publicar", JSON.stringify(t));
+});
+
+test("A5 de bbb8fc7: el salto de línea es fin de oración (H2 no une; S1–S3 admiten la contigua)", () => {
+  assert.equal(r("El documental muestra inmigrantes. La plaga del cultivo explica el conflicto.").resultado, "publicar");
+  assert.equal(r("El documental muestra inmigrantes\nLa plaga del cultivo explica el conflicto.").resultado, "publicar");
+  assert.equal(r("Llegan inmigrantes al pueblo\nuna plaga de langostas arruina la cosecha.").resultado, "publicar");
+  assert.equal(r("Llegan inmigrantes al pueblo y una plaga de langostas arruina la cosecha.").resultado, "retener");
+  assert.equal(r("Los inmigrantes son una plaga y la serie lo muestra.").resultado, "retener");
+  // Señales que admiten la oración contigua: siguen funcionando a través de un salto.
+  assert.equal(r("Mi celular es el de siempre\nescribime cuando quieras.").resultado, "retener");
+  assert.equal(r("Fíjense en mi nombre de acá\nlos espero.").resultado, "retener");
+  // Pero no más allá de la contigua.
+  assert.equal(r("Mi celular es el de siempre\nLa peli es larga.\nEscribime qué opinan del final.").resultado, "publicar");
+  // Un teléfono partido en dos líneas se sigue detectando (cobertura vigente).
+  assert.equal(r("Llamame al 11 4455\n6677 para comentar.").resultado, "rechazo_contenido");
+});
+
 test("H2: grupo + deshumanización en la MISMA oración; en oraciones distintas no (límite del contrato)", () => {
   assert.equal(r("Los bolivianos son una plaga y vienen a ensuciar.").resultado, "retener");
   assert.equal(r("Pusieron bolivianos en todos lados. Son una plaga.").resultado, "publicar");
