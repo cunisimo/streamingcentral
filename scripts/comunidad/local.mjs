@@ -2,7 +2,9 @@
 //
 // Antes de mandar una sola sentencia SQL se comprueba que la base sea la de
 // `supabase start` de ESTE proyecto:
-//   - Docker habla con el motor local (sin DOCKER_HOST remoto);
+//   - Docker habla con un motor de ESTA computadora: contexto efectivo y su
+//     endpoint, con la precedencia del CLI (docker-local.mjs, auditoría A2);
+//     cada `docker` recibe ese endpoint fijo;
 //   - el contenedor es exactamente `supabase_db_<project_id>` (mismo selector
 //     que scripts/sala/db-local.mjs);
 //   - adentro del contenedor, la base escucha en el socket local y se llama
@@ -15,14 +17,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { elegirContenedor, projectIdDe } from "../sala/db-local.mjs";
+import { dockerVerificado } from "./docker-local.mjs";
 
-/** Lanza si DOCKER_HOST apunta a un motor que no es local. */
-export function dockerLocal(env = process.env) {
-  const h = env.DOCKER_HOST;
-  if (!h) return true;
-  if (/^(unix|npipe):\/\//.test(h)) return true;
-  if (/^tcp:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(h)) return true;
-  throw new Error(`DOCKER_HOST no es local: ${h}`);
+/** `docker` contra el motor local verificado. Mismas opciones que spawnSync. */
+export function docker(args, opciones = {}) {
+  return spawnSync("docker", args, { ...opciones, env: dockerVerificado().env });
 }
 
 /** Lanza si la URL de la API no es local. */
@@ -38,9 +37,8 @@ let contenedorElegido = null;
 /** El contenedor de la base local del proyecto, verificado una vez. */
 export function contenedor() {
   if (contenedorElegido) return contenedorElegido;
-  dockerLocal();
   const projectId = projectIdDe(readFileSync("supabase/config.toml", "utf8"));
-  const nombres = execFileSync("docker", ["ps", "--format", "{{.Names}}"], { encoding: "utf8" })
+  const nombres = execFileSync("docker", ["ps", "--format", "{{.Names}}"], { encoding: "utf8", env: dockerVerificado().env })
     .trim().split("\n").filter(Boolean);
   const nombre = elegirContenedor(nombres, projectId);
   const r = psqlCrudo(nombre, "select current_database() || '|' || coalesce(inet_server_addr()::text, 'socket')");
@@ -52,7 +50,7 @@ export function contenedor() {
 }
 
 function psqlCrudo(nombre, sql, { usuario = "postgres", detenerEnError = true } = {}) {
-  return spawnSync("docker", [
+  return docker([
     "exec", "-i", nombre, "psql", "-X", "-q", "-t", "-A",
     "-v", `ON_ERROR_STOP=${detenerEnError ? 1 : 0}`, "-U", usuario, "-d", "postgres",
   ], { input: sql, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
