@@ -5,7 +5,7 @@ import { supabaseBrowser } from "@/lib/supabase";
 import { clavesABorrar } from "@/lib/limpieza-local";
 import { apiUrl } from "@/lib/api-base";
 import {
-  ESTADO_INICIAL, TEXTO_PENDIENTE, alResponder, consultar, mensajeEliminar, trasIntento, type EstadoBaja,
+  ESTADO_INICIAL, alResponder, avisoVisible, consultar, mensajeEliminar, trasIntento, type EstadoBaja,
 } from "@/lib/cuenta/estado-baja-nucleo";
 
 // "Eliminar cuenta" — la acción irreversible de Cuenta → Configuración.
@@ -22,7 +22,9 @@ import {
 // ELIMINACIÓN PENDIENTE (contrato de baja, E2b). La eliminación tiene dos
 // pasos: si lo comunitario se borró pero la cuenta sigue viva, al volver a
 // esta pantalla —en este dispositivo o en otro— se ve "Eliminación pendiente"
-// y el mismo botón reintenta. El estado sale de GET /api/cuenta/estado-baja y
+// y el mismo botón reintenta. Si no se pudo saber si la cuenta se borró, el
+// aviso es neutral ("sin confirmar"): no afirma ninguna de las dos cosas.
+// Los textos los elige avisoVisible(). El estado sale de GET /api/cuenta/estado-baja y
 // lo decide lib/cuenta/estado-baja-nucleo.ts (puro, con tests): una respuesta
 // de otra cuenta o vieja se descarta, y un error de la consulta no se lee
 // como "no hay nada pendiente".
@@ -108,7 +110,7 @@ export default function EliminarCuenta({ email, uid }: { email: string; uid: str
     }
   }
 
-  const pendiente = baja.fase === "pendiente";
+  const aviso = avisoVisible(baja);
 
   return (
     <>
@@ -116,14 +118,10 @@ export default function EliminarCuenta({ email, uid }: { email: string; uid: str
         <div className="cfg-peligro-h">Zona de riesgo</div>
         <div className="cfg-row" style={{ borderBottom: "none" }}>
           <div className="cfg-info">
-            <div className="cfg-lbl">{pendiente ? TEXTO_PENDIENTE.titulo : "Eliminar cuenta"}</div>
-            <div className="cfg-sub" role={pendiente ? "status" : undefined}>
-              {pendiente ? TEXTO_PENDIENTE.cuerpo : "Se borra tu cuenta y todo lo tuyo. No se puede deshacer."}
-            </div>
+            <div className="cfg-lbl">{aviso.titulo}</div>
+            <div className="cfg-sub" role={aviso.anuncio ? "status" : undefined}>{aviso.cuerpo}</div>
           </div>
-          <button className="cfg-danger-btn" onClick={() => setAbierto(true)}>
-            {pendiente ? TEXTO_PENDIENTE.boton : "Eliminar cuenta"}
-          </button>
+          <button className="cfg-danger-btn" onClick={() => setAbierto(true)}>{aviso.boton}</button>
         </div>
       </div>
 
