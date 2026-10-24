@@ -368,9 +368,77 @@ AAB tiene que ser `5` o mayor.
 
      Informe: `docs/medidas/2026-10-24-informe-claude-e2b.md`; salidas:
      `docs/medidas/2026-10-24-e2b-salidas.txt`.
+     **Auditoría focalizada de E2b (24/10, Codex sobre `f650725`;
+     `docs/medidas/2026-10-24-auditoria-e2b-f650725.md`, copia sin cambios,
+     SHA-256 `d768cb80…`):**
+     - Codex verificó el flujo de baja: 26/26, prueba heredada con 0
+       fallas y 57/57 focalizadas, en corridas propias.
+     - Cerró los ajustes A1 y A2 del arnés de E2a.
+     - Quedaba un hallazgo de presentación (A1 de E2b): tras
+       `baja-sin-verificar`, el aviso afirmaba que la cuenta existía.
+     - **Corregido en `8646586`:**
+       - el estado propio "Eliminación sin confirmar" es neutral y no
+         afirma existencia ni eliminación;
+       - el comentario quedó corregido;
+       - hay una regresión con la respuesta de Auth perdida y la
+         reconciliación fallida, que comprueba el diálogo y el aviso;
+       - se quitó la línea vacía final del log.
+     - No se repitió la batería de E2b. Control visual: con
+       `baja-parcial` el aviso sigue en "pendiente". El estado
+       `sin-verificar` no se puede provocar en el servidor real sin un
+       gancho de prueba; lo cubre la regresión del núcleo.
+     **Conciliación documental de E2b (24/10):**
+     - B4: los dos borrados simultáneos de Auth pueden responder éxito. El
+       camino 404 → reconciliar sigue probado.
+     - Suspensiones: el vínculo de la sanción con la cuenta se borra con la
+       baja. Los intervalos históricos seudónimos se conservan para el
+       ranking, sin plazo decidido (P3).
+     - Denuncias recibidas que caen en cascada con la reseña: discrepancia
+       con la tabla de retención, **pendiente de resolver antes de E4, E8 y
+       la publicación**. El comportamiento no se cambió.
+     - Orden de despliegue: las migraciones van antes del código.
+     Todo esto está en la revisión §5 y en el plan.
+     **E2c local (24/10, `a306cb8`; sólo `supabase start`, sin
+     Producción):**
+     - `013_comunidad_protocolo.sql` (+ down) trae las primitivas del
+       protocolo de §2.2.4:
+       - una por paso: `proto_cuenta` (reusa `resolver_participante` de
+         E2b) → participantes → reseña → versiones → votos y tramos →
+         suspensiones → contadores → `proto_marca`;
+       - `proto_corte_exclusivo` para la consolidación, que sólo corre en
+         READ COMMITTED;
+       - `corte_de_mes`, `rige_antes_de` y `mes_ar`;
+       - el orden se hace cumplir: CB002 si se piden fuera de orden;
+       - nada ejecutable por la API;
+     - `pruebas-concurrencia.mjs`, con sesiones psql reales:
+       - casos 1–5 (voto/retiro, edición/voto, dos ediciones,
+         `id_intento`, suspensión/voto), 6, 7a/7b (frente a la
+         consolidación) y 11 (igualdad exacta en T(M));
+       - deadlock 40P01 al violar el orden;
+       - `lock_timeout` 55P03 y error tras escrituras parciales, ambos sin
+         cambios a medias;
+       - **20/20 en cinco corridas seguidas**, sin restos;
+     - **Todo preliminar.** Las operaciones son fixtures sobre las
+       primitivas reales, con gate en E3a (1–4), E4 (5) y E7 (6–11). Los
+       casos 8–10 quedan para E7 y E8;
+     - otras verificaciones:
+       - up/down/up 15/15; sin 013 da el mismo volcado que E2b;
+       - salas: 37 en verde;
+       - `tsc`: 0 errores;
+       - `npm test`: 2364 pasan, 0 fallan, 16 omitidas;
+     - la primera corrida falló por memoria de Windows (`VirtualAlloc …
+       errno=1455`). Se corrigió en el arnés: un observador persistente y
+       una sola sesión de control. Además se detuvo el servidor de la app
+       del puerto 3100.
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e2c.md`; salidas:
+     `docs/medidas/2026-10-24-e2c-salidas.txt`.
    **Falta:**
-   - la auditoría focalizada de E2b y de los ajustes A1/A2. E2c no empieza
+   - la auditoría focalizada de E2c y del cierre de E2b. E3a no empieza
      sin autorización;
+   - resolver, antes de E4, E8 y la publicación, el alcance del borrado de
+     denuncias recibidas en la baja, y el plazo de los intervalos
+     seudónimos (P3);
    - la validación independiente de E1 (protocolo, autoría y ejecutor, no
      preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se

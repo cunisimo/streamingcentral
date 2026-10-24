@@ -999,6 +999,31 @@ validado legalmente**: son propuestas para P3.
 | Logs | Nunca texto, nombre ni token | Retención del plan de Vercel (E0) |
 | Backups | La purga no los alcanza hasta rotar | **Verificar el plan Free (E0)** antes de escribir plazos |
 
+> **Conciliación con lo construido en E2b (24/10/2026; auditoría de
+> `f650725`). No fija plazos nuevos ni aprueba excepciones: P3 sigue
+> pendiente.**
+>
+> - **"Sanción activa … con la baja, se borra"** se lee como el **vínculo de
+>   la sanción con la cuenta**, no como los intervalos de suspensión. La
+>   baja (012) borra ese vínculo: el participante queda seudónimo, sin
+>   `user_id` ni nombre. Lo que **se conserva** son los **intervalos
+>   históricos de suspensión del seudónimo**, porque los necesita la
+>   reconstrucción del ranking (§2.2.2: ninguna suspensión del evaluador ni
+>   del autor rige antes de `T(M)`), y porque el dueño pidió no quitar
+>   suspensiones. Esos intervalos son **datos seudónimos** con la misma
+>   regla que los tramos huérfanos ("hasta consolidar el mes que los
+>   necesita"). **Su plazo concreto no está decidido ni validado**: se fija
+>   con P3, antes de implementar la purga (E8). La copia de la sanción en el
+>   marcador (`sancion_hasta`) cae con la cuenta en Auth.
+> - **Denuncias recibidas, discrepancia abierta.** La fila "Denuncias: hasta
+>   cerrar el caso + 30 días" choca con el paso 1 de la baja (§2.2.3), que
+>   borra físicamente las reseñas de la cuenta. Las versiones caen en
+>   cascada con la reseña, y con ellas **las denuncias que otros hicieron
+>   sobre esos textos, también las abiertas** (comprobado en las cascadas de
+>   E2b). **Esa excepción NO está aprobada.** Queda pendiente de resolución
+>   **antes del panel de moderación (E4), de la purga (E8) y de habilitar la
+>   publicación**. El comportamiento local no se cambia hasta decidirlo.
+
 **A validar por alguien competente** (no es asesoramiento legal):
 - cada plazo marcado;
 - los cambios a `/privacidad`: contenido visible para registrados, perfil y

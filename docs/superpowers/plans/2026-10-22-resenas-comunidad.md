@@ -573,7 +573,7 @@ rollback;
   | B2 | Durante la ventana, otra sesión publica, vota, denuncia, bloquea o cambia nombre | Rechazo `baja_en_curso`; **no se crea participante** |
   | B3a | Voto en vuelo que tomó `K_CUENTA` antes que la baja | El voto confirma; la baja espera y después lo borra y cierra su tramo |
   | B3b | Voto que verificó el Bearer antes de la baja pero entra a la base después | Rechazo `baja_en_curso` |
-  | B4 | Dos pedidos de baja simultáneos | `baja_comunitaria` se serializa y la segunda no cambia nada; un `deleteUser` gana, el otro falla y reconcilia con `getUserById` → ambos responden eliminación completa |
+  | B4 | Dos pedidos de baja simultáneos | `baja_comunitaria` se serializa y la segunda no cambia nada; ambos responden eliminación completa. Con dos `deleteUser` realmente simultáneos, **los dos pueden responder éxito** (observado en el GoTrue local, E2b); si el segundo llega cuando la cuenta ya no está, falla con 404 y reconcilia con `getUserById` (probado forzando el orden). Lo que fija el contrato es la respuesta de los flujos, no cuál `deleteUser` falla |
   | B5 | Auth borró pero la respuesta se perdió (fallo inyectado después del éxito) | Reconcilia → eliminación completa; no queda marcador (cascada) |
   | B6 | Cuenta sin participante previo | Sólo marcador; después `deleteUser` → completa |
   | B7 | Reingreso con marcador y reintento | Se ve "Eliminación pendiente"; el reintento completa |
@@ -645,6 +645,25 @@ rollback;
 - **Criterio de cierre:** pruebas preliminares verdes cinco corridas
   seguidas, informadas como preliminares.
 - **Evidencia para Codex:** salida de las corridas, logs de espera de locks.
+- **Estado al 24/10/2026** (`docs/ESTADO.md` es la fuente vigente):
+  implementada **en local** en `a306cb8`. Pendiente de auditoría
+  focalizada.
+  - 013 trae una primitiva por paso. El orden **se hace cumplir** (CB002 si
+    se pide fuera de orden).
+  - Casos 1–5, 6, 7 y 11, preliminares: 20/20 en **cinco corridas
+    seguidas**.
+  - Las operaciones de prueba son fixtures sobre las primitivas reales.
+    Gates en E3a (casos 1–4), E4 (caso 5) y E7 (casos 6–11).
+  - El caso 11 se probó con las primitivas del corte y un cómputo de
+    fixture. Los casos 8–10 no son de esta entrega: dependen de la
+    consolidación (E7) y de la purga (E8).
+  - Informe: `docs/medidas/2026-10-24-informe-claude-e2c.md`.
+- **Orden de despliegue** (vale para todas las entregas): cada migración se
+  aplica **antes** del código que depende de ella. Esa dependencia empezó en
+  E2b, con 011 → 012 antes de la ruta de eliminación; sin ellas, la
+  eliminación falla cerrada (`fallo-borrado`, sin borrar nada). 013 no tiene
+  código de la app que dependa de ella todavía. Ninguna se aplica fuera del
+  entorno local sin E0 y autorización.
 
 ### E3a — Escritura: reseñas, ediciones, votos e idempotencia
 
