@@ -550,8 +550,8 @@ aprobarlas o rechazarlas, no como siete preguntas separadas.
 
 | Decisión | Recomiendo | Por qué |
 |---|---|---|
-| **P-1 Alcance residual** | **Aceptar E1 a E8** como riesgo residual | Lo contextual (E7) y las instrucciones (E1) no tienen un borde implementable sin pagar un clasificador. E8 queda **sin certificar** y con una defensa sin criterio, de forma explícita. Lo excluido **se publica**: denunciar no lo oculta de inmediato, el bloqueo oculta sólo para quien bloquea y pausar no retira lo visible |
-| **E9, por separado** | **Aceptar E9** (no prometer emojis o símbolos sueltos entre los dígitos de un teléfono) | Los emojis son muy frecuentes en reseñas legítimas, incluso entre números ("8 🍿 10"), y la forma es rara como evasión. Los emojis de tecla siguen cubiertos. Si no lo aceptás, hay que ampliar S con `So` y medir su costo antes |
+| **P-1 Alcance residual** | **Aceptar E1 a E8** como riesgo residual | En este alcance no se implementa interpretación abierta de lo contextual (E7) ni de las instrucciones (E1). E8 queda **sin certificar** y con una defensa sin criterio, de forma explícita. Lo excluido **se publica**: denunciar no lo oculta de inmediato, el bloqueo oculta sólo para quien bloquea y pausar no retira lo visible |
+| **E9, por separado** | **Aceptar E9** (no prometer emojis o símbolos sueltos entre los dígitos de un teléfono) | **Hipótesis, sin datos de uso real:** incluir los emojis sueltos ampliaría mucho los separadores posibles y podría leer puntajes con emojis como teléfonos. No hay evidencia sobre la frecuencia de esa forma, ni como evasión ni en reseñas legítimas. Los emojis de tecla siguen cubiertos. Si no lo aceptás, hay que ampliar S con `So` y medir su costo antes |
 | **P-2 Condición para publicar** | **Aceptar**: ninguna reseña de usuario se publica hasta que el filtro esté aprobado según §4.1 y estén implementadas y probadas las denuncias, los bloqueos, la cola con admisión acotada, el panel, las suspensiones, los límites por cuenta y la pausa T4 | El filtro solo no alcanza: lo excluido depende de las otras capas |
 | **P-4 Ruta de autoría sensible** | **Ruta A**, con una persona ajena a las reglas que escriba H1–H3 según el protocolo. **Sólo si no hay nadie disponible, la ruta B**, con un dictamen de Codex de evidencia limitada y tu aceptación **específica** para ese contrato y ese conjunto | Los agentes separados no pudieron redactar esa parte. La ruta B no es independiente, y **no hereda** la autorización híbrida del reservado 3 |
 
@@ -563,3 +563,16 @@ denuncias**, por ejemplo cuántas veces por semana y cuánto tiempo cada vez.
   la alerta de atraso.
 - **No hay cifra acordada y no la invento.** Mientras no la indiques, la
   publicación no se habilita.
+
+## 11. Decisiones del dueño del 24/10/2026
+
+El contrato de moderación v1 (catálogo v3.2) recoge las decisiones del dueño
+en su §0.1:
+- variante sin IANA;
+- E1–E8 y E9 aceptadas para esta etapa, sin certificar;
+- publicación desactivada;
+- revisión diaria de las colas, sin N acordado;
+- autoría del conjunto final sin resolver.
+
+También se retiraron dos afirmaciones no demostradas: la frecuencia de los
+emojis como evasión y la necesidad de un clasificador pago.

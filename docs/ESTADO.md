@@ -232,9 +232,19 @@ AAB tiene que ser `5` o mayor.
 
      Las recomendaciones para P-1, E9, P-2 y P-4, todas pendientes de
      aceptación, están en la propuesta §10.
+     **Contrato de moderación v1 (24/10):** el dueño aprobó como base de
+     implementación el catálogo v3.2, con las dos enmiendas de `5982374` y
+     la **variante sin IANA** (F3-2 y F3-6 sólo con T-fuerte: menor
+     cobertura, registrada antes de implementar).
+     - Exclusiones E1–E8 y E9 aceptadas para esta etapa, sin certificar.
+     - La publicación sigue desactivada.
+     - Revisión diaria de las colas, sin N acordado.
+     - Autoría del conjunto final sin resolver.
+
+     Archivo: `docs/medidas/2026-10-23-catalogo-moderacion-propuesto.md`
+     (con el título del contrato v1).
    **Falta:**
-   - la auditoría final de Codex de la v3.1 y, después, la aprobación del
-     catálogo por el dueño y su disponibilidad aproximada;
+   - la implementación local del contrato v1 y la auditoría de Codex;
    - las decisiones de producto P-1 a P-4 (alcance residual, condición para
      publicar, disponibilidad aproximada y autoría de la parte sensible).
 

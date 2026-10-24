@@ -1,6 +1,13 @@
-# Catálogo de cobertura de la moderación de reseñas: candidato a aprobación
+# Contrato de moderación de reseñas v1 (catálogo v3.2)
 
-23/10/2026. Claude Code. **Versión candidata (v3.1).** La v3 concilió la
+24/10/2026. Claude Code. **Contrato de moderación v1 = catálogo v3.2.**
+- **Es la base aprobada por el dueño para implementar** el 24/10/2026, con
+  las dos enmiendas de la auditoría `5982374` y la variante **sin IANA**
+  (§0.1).
+- **No certifica cobertura ni autoriza publicar.** E1 sigue pendiente de la
+  implementación y de su validación.
+
+**Historial:** la v3.1 resolvió la auditoría de `77d8bda`. La v3 concilió la
 auditoría de `cac5c50`. La v3.1 corrige los tres hallazgos de la auditoría
 de `77d8bda`:
 - A1, la composición de F3 con espacios y terminaciones largas (§3.1);
@@ -23,6 +30,31 @@ de `77d8bda`:
 - E8 se reformuló (§10).
 
 Lo que sigue abierto está en §12.
+
+## 0.1 Decisiones del dueño (24/10/2026) incorporadas a este contrato
+
+- **Base de implementación:** este catálogo, con las enmiendas 1 (rutas de
+  F3-3) y 2 (control de S3) de la auditoría `5982374`.
+- **Variante sin IANA.** No se incorpora la lista de TLD de IANA.
+  - F3-2 y F3-6 usan **sólo T-fuerte** (§6.T1). **Es menor cobertura que la
+    variante completa de la v3.1**, y se registra antes de implementar y
+    evaluar. No se cambia después de ver resultados.
+  - Las formas genéricas que no dependen de IANA quedan intactas: F3-1, F3-3,
+    F3-4, F3-5, los acortadores y la terminación alfabética con ruta.
+  - Ampliarlo con IANA queda **diferido** hasta que se acredite su condición
+    de uso.
+- **Exclusiones E1–E8, y E9 por separado:** aceptadas **para esta etapa**,
+  con sus límites. Esto no certifica esa cobertura ni autoriza publicar.
+- **Publicación:** desactivada hasta que todas las defensas previstas estén
+  implementadas y probadas y se apruebe el filtro.
+- **Disponibilidad:** el dueño revisa las colas de retenidos y denuncias
+  **diariamente**.
+  - No se acordaron minutos, ni una cantidad diaria de casos, ni N.
+  - El equipo propone un límite inicial **provisional y conservador**, que se
+    contrasta con el trabajo observado.
+  - No hay que leer todas las publicaciones.
+- **Autoría del futuro conjunto final:** sin resolver en esta etapa. **No se
+  hereda** la autorización híbrida del reservado 3.
 
 ## 0. Reglas del catálogo
 
@@ -70,7 +102,7 @@ temporal de la sesión, **fuera del repositorio**.
 |---|---|---|---|---|---|
 | Unicode, categorías generales | **Unicode 18.0.0** | `https://www.unicode.org/Public/18.0.0/ucd/extracted/DerivedGeneralCategory.txt` | 2026-06-29 | `d6b151d2d40ee9b1876d26f417980f45ffae47b6055ccf7203cb31f07a030f94` | Unicode License v3 (`https://www.unicode.org/license.txt`), con aviso de copyright |
 | UTS #39, confusables | **18.0.0** | `https://www.unicode.org/Public/18.0.0/security/confusables.txt` (idéntico a `security/latest` el 23/10) | 2026-08-06 | `6ed3ee967c9dfdf6677d563c9985182fbc50a2efb7d6059cd57b2e2ce18f5b92` | Unicode License v3 |
-| IANA, TLD | **Versión `2026102300`** ("Last Updated Fri Oct 23 07:07:01 2026 UTC") | `https://data.iana.org/TLD/tlds-alpha-by-domain.txt` | 2026-10-23 | `274be608419b2c4ae93966cd8e98f6783628312e371c406c0b3a88ca945daa89` | **Pendiente de verificación** (ver abajo). **No se afirma CC0**, y tampoco que esté prohibido |
+| IANA, TLD (**no se incorpora**: variante sin IANA, §0.1) | **Versión `2026102300`** ("Last Updated Fri Oct 23 07:07:01 2026 UTC") | `https://data.iana.org/TLD/tlds-alpha-by-domain.txt` | 2026-10-23 | `274be608419b2c4ae93966cd8e98f6783628312e371c406c0b3a88ca945daa89` | **Pendiente de verificación** (ver abajo). **No se afirma CC0**, y tampoco que esté prohibido |
 
 **Condición de uso de la lista de TLD de IANA: pendiente.**
 - La declaración IANA–IETF del 10/11/2021
@@ -110,7 +142,7 @@ independientemente), para dimensionar el generador:
 | **S. Separadores entre grupos de dígitos** | Hasta 3 caracteres por hueco, de este conjunto **cerrado**: `Zs`, `Pd`, `Ps`, `Pe`, `Po` (salvo `,` `;` `:`), `Sm`, `Mn`, `Me`, U+FE0F, `/` y **`_` (U+005F)** | **S2:** `,` `;` `:` cuentan **sólo** con una señal de intención (I) o un medio (M) en el ámbito. **No** son separadores `So` (pendiente, E9) ni el resto de `Pc`; `_` sí lo es, para conservar la cobertura de `SEP` |
 | **P. Punto de dominio** | **Pegado:** `.` `。` `．` `｡`. **Espaciado:** esos signos con al menos un espacio **a cada lado**. **Escrito:** "punto" o "dot", sueltos o entre `[ ]` o `( )`, con guiones pegados opcionales (`-[punto]-`). **Coma pegada:** sólo en F3-6 | Cómo se combina con T y la ruta: §3.1 |
 | **B. Barra** | `/` · "slash" · "barra" · hasta 1 espacio a cada lado | |
-| **T. Terminaciones** | **T-fuerte** (§6.T1). **T-IANA:** el resto de la lista de §1, en ASCII y, para las IDN, también en Unicode. **T-palabra** (§6.T2). **Alfabética:** cualquier terminación de 2 a 63 letras | **Qué terminación vale con cada punto y con o sin ruta: sólo según la tabla de §3.1** |
+| **T. Terminaciones** | **T-fuerte** (§6.T1). **T-IANA:** el resto de la lista de §1 (**no se usa** en la variante sin IANA, §0.1). **T-palabra** (§6.T2). **Alfabética:** cualquier terminación de 2 a 63 letras | **Qué terminación vale con cada punto y con o sin ruta: sólo según la tabla de §3.1** |
 | **C. Confusables de letra** | Esqueleto de UTS #39 18.0.0 hacia el latín, **sólo para caracteres que no son ASCII**. Los ASCII no se transforman: UTS #39 incluye mapeos ASCII→ASCII, como `m`→`rn`, que romperían coincidencias normales. Textos, patrones y listas se pliegan con la misma función. Los dígitos siguen como clases ambiguas (`[o0]`, `[il1|]`) | |
 | **I. Intención de contacto** | Formas cerradas de §6.I | La tercera persona, el infinitivo, el presente de indicativo y el pretérito **no** son intención |
 | **M. Medios de contacto** | §6.M | |
@@ -135,17 +167,24 @@ independientemente), para dimensionar el generador:
 - **Punto escrito:** "punto" o "dot", sueltos o entre `[ ]` o `( )`, con
   guiones pegados opcionales (`-[punto]-`).
 - **Barra:** `/` con 0 o 1 espacio a cada lado, o "slash" o "barra".
-- **Ruta:** después de la barra, al menos un segmento de 2 o más letras o
-  dígitos. Los segmentos siguientes se unen con más barras.
+- **Ruta (depende de la forma; enmienda 1 de `5982374`):**
+  - **En F3-3**, la ruta conserva la clase de caracteres de la versión
+    2026-10-22.5: al menos un carácter de letras, dígitos, `_`, `-`, `.`,
+    `/`, `?`, `=`, `&`, `%` o `#`, **también al inicio**. No exige un
+    segmento de dos caracteres alfanuméricos.
+  - **En F3-4 y F3-6**, la ruta exige al menos un segmento de 2 o más letras
+    o dígitos, y los segmentos siguientes se unen con más barras.
+  - Las restricciones nuevas contra falsas alarmas de las formas nuevas, como
+    F3-4, **no se aplican retroactivamente a F3-3**.
 
 | Forma | Punto | Terminación | Ruta | Datos de IANA |
 |---|---|---|---|---|
 | **F3-1** | Esquema `http(s)://` o `www.` | Cualquiera | Opcional | No |
-| **F3-2** | Pegado | T-fuerte (§6.T1) o IANA salvo T-palabra (§6.T2) | Sin ruta | **Sí**, para lo que no es T-fuerte |
+| **F3-2** | Pegado | **Sólo T-fuerte** (§6.T1) en la variante sin IANA (§0.1). En la variante completa, diferida: también IANA salvo T-palabra | Sin ruta | **No** en esta variante |
 | **F3-3** | Pegado | **Cualquier terminación alfabética de 2 a 63 letras**, incluidas las T-palabra | **Obligatoria** | No (es la cobertura vigente) |
 | **F3-4** | **Espaciado o escrito** | **Cualquier terminación alfabética de 2 a 63 letras, salvo T-palabra** | **Obligatoria** (barra con o sin espacios, o escrita) | **No** |
 | **F3-5** | Espaciado o escrito | Sólo T-fuerte | Sin ruta | No (es la cobertura vigente) |
-| **F3-6** | Coma pegada en lugar del punto | T-fuerte o IANA salvo T-palabra | **Obligatoria** | Sí, para lo que no es T-fuerte |
+| **F3-6** | Coma pegada en lugar del punto | **Sólo T-fuerte** en la variante sin IANA (§0.1) | **Obligatoria** (segmento de 2 o más) | **No** en esta variante |
 
 - **El caso `R3-A-064`** (`lacinematecadelsur . photography / analisis /
   ultima`) es **F3-4**: punto espaciado, terminación alfabética que no es
@@ -178,7 +217,7 @@ proveedor o una palabra de medio, solos, publican.
 |---|---|---|---|
 | **S1 Autoatribución + intención** | "mi/nuestro/nuestra" + medio de §6.M **y** I | C2a | "mi celular se quedó sin batería", "mi Instagram está lleno de spoilers" (sin I) |
 | **S2 Medio sin dato + pedido** | I + "por privado / al privado / por dm / por md", o I + medio sin alias | C2a | "le pide el número por privado" (no es I) |
-| **S3 Derivación al perfil** | **S3-a:** las expresiones de la regla vigente `perfil.derivacion`, que retienen solas porque ya combinan posesivo e identidad: "mi perfil", "mi bio", "mi nombre de usuario", "mi nombre de perfil". **S3-b:** un verbo de remisión de §6.R + "en/a/por" opcional + "mi" + (nombre, apodo, nick, usuario, perfil, cuenta). **S3-c:** I + "mi" + esa misma palabra + un marcador de §6.P. Todo en el ámbito | C2a | "fíjense en el nombre del personaje", "miren el perfil del villano", "el apodo del protagonista es…", "fíjense en mi nombre favorito de la saga" (sin "mi" + palabra de identidad, sin marcador) |
+| **S3 Derivación al perfil** | **S3-a:** las expresiones de la regla vigente `perfil.derivacion`, que retienen solas porque ya combinan posesivo e identidad: "mi perfil", "mi bio", "mi nombre de usuario", "mi nombre de perfil". **S3-b:** un verbo de remisión de §6.R + "en/a/por" opcional + "mi" + (nombre, apodo, nick, usuario, perfil, cuenta). **S3-c:** I + "mi" + esa misma palabra + un marcador de §6.P. Todo en el ámbito | C2a | "fíjense en el nombre del personaje", "miren el perfil del villano", "el apodo del protagonista es…". **Falso positivo conocido (enmienda 2 de `5982374`):** "fíjense en mi nombre favorito de la saga" es una reseña legítima que S3-b **puede retener** por ambigüedad. **No es un control publicable**: cuenta como falso positivo en C4, sin una excepción particular y sin etiquetarla como abuso |
 | **S4 Contacto partido** | Las últimas 3 versiones o reseñas de la cuenta en 24 h. Hay un dato incompleto en una y su continuación en otra: corridas de dígitos que suman 8 o más, o un colgante de F2 o F4, con un marcador de §6.K | C2a | Reseñas sucesivas con años, temporadas o episodios |
 | **S5 Venta o promoción** | Un término de venta o sorteo de §6.V + un acompañante de §6.V en el ámbito, o la regla de spam vigente | Informativo, sin umbral (como el spam hasta hoy) | "el protagonista vende…", "el sorteo del pueblo en la trama" |
 
@@ -455,7 +494,7 @@ transformaciones declaradas, y nada más.
 | S: `Zs` (17), `Pd` (27), `Ps` (80), `Pe` (78), `Me` (13), U+FE0F, `/`, `_` y S2 | **Enumera** |
 | S: `Po` (643), `Sm` (1005), `Mn` (2090) | **Muestrea** 64 por clase, con semilla fija |
 | P, B, §6.I, §6.M, §6.H, §6.T1, §6.T2, §6.H1–H3 | **Enumera** |
-| T-IANA | **Enumera** los TLD ASCII de 2 y 3 letras; **muestrea** 100 más largos y 20 IDN |
+| T-IANA | **No aplica** en la variante sin IANA (§0.1) |
 | F3 (§3.1) | **Enumera** cada forma, de F3-1 a F3-6 × cada punto pegado, espaciado o escrito × la barra con o sin espacios o escrita. En F3-4, **muestrea** 50 terminaciones alfabéticas de 7 a 63 letras con semilla, más las de T-fuerte. Controles: fin de oración seguido de una barra, T-palabra espaciada con ruta, "drama / comedia" |
 | C (UTS #39 hacia el latín) | **Muestrea** 200 |
 | Combinaciones | Cada dimensión se recorre completa con las demás en su forma base. Después, **todos los pares** de dimensiones con representantes. No se genera el producto completo |
@@ -500,7 +539,7 @@ prometida**.
 | **E6** | Abreviaturas y formas fuera de §6.I y §6.M ("sgme") | Las listas son cerradas por versión |
 | **E7** | Amenazas veladas, condicionales sin daño explícito, acoso sin términos, ironía, odio en código o indirecto, difamación, estafas y phishing narrados sin datos | Exige interpretar intención y contexto. Queda para las denuncias |
 | **E8** | **Contenido sexual que involucra a menores: cobertura no certificada.** | Es una **restricción elegida de esta evaluación**, no una imposibilidad: no se genera ni se redacta ese material (G1), así que esta evaluación no lo mide ni lo certifica. La regla vigente `menores.sexual` se conserva como **defensa adicional sin criterio**, y **no garantiza la detección**. La denuncia tiene categoría grave. Cualquier evaluación de esa cobertura necesitaría otro procedimiento, que esta propuesta no plantea |
-| **E9** | **Teléfono partido con símbolos o emojis sueltos** (`So`) entre los grupos de dígitos. **Pendiente de aceptación del dueño.** | Incluir `So` (7561 caracteres) agrega muchos separadores posibles y el riesgo de leer puntajes con emojis como teléfonos. **Alternativa** si el dueño no la acepta: incluir `So` en S, que es una ampliación del alcance que hay que diseñar y auditar. El emoji de tecla (D6) **no** está excluido |
+| **E9** | **Teléfono partido con símbolos o emojis sueltos** (`So`) entre los grupos de dígitos. **Pendiente de aceptación del dueño.** | **Aceptada por el dueño para esta etapa** (§0.1). **Hipótesis, no evidencia:** incluir `So` (7561 caracteres) agregaría muchos separadores posibles y el riesgo de leer como teléfonos los puntajes escritos con emojis. No hay datos de uso real sobre su frecuencia, ni en reseñas legítimas ni como evasión. **Alternativa** si el dueño no la acepta: incluir `So` en S, que es una ampliación del alcance que hay que diseñar y auditar. El emoji de tecla (D6) **no** está excluido |
 
 **Restricciones de generación** (no son alcance del producto):
 - **G1:** no se genera ni se redacta contenido sexual con menores.
