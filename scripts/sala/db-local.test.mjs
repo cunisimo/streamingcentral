@@ -53,6 +53,8 @@ test("aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin lo
   assert.ok(i("007_top_manual.sql") > l.indexOf("supabase/schema.sql"));
   assert.ok(i("009_salas.sql") > i("007_top_manual.sql"));
   assert.ok(i("011_comunidad_esquema.sql") > i("009_salas.sql"));
+  // 012 (baja, E2b) completa tablas de 011.
+  assert.ok(i("012_comunidad_baja.sql") === i("011_comunidad_esquema.sql") + 1);
   // 022 cierra user_reviews: tiene que ir DESPUÉS de schema.sql, que recrea sus policies.
   assert.ok(i("022_cerrar_user_reviews.sql") > i("011_comunidad_esquema.sql"));
   assert.ok(!l.some((f) => /_down\.sql$/.test(f)), "un rollback nunca va en la lista");

@@ -22,8 +22,10 @@
 //      suspendido, admin AAL1 y admin AAL2: ninguna tabla nueva es alcanzable,
 //      ni por `public` ni pidiendo el perfil `comunidad`. GraphQL tampoco las
 //      ve.
-//   3. RPC: no existe ninguna `public.comunidad_*` en E2a, y ninguna función
-//      del esquema es ejecutable por los roles de la API.
+//   3. RPC: las únicas `public.comunidad_*` son las cuatro de la baja (E2b,
+//      012), security definer con search_path vacío y ejecutables SÓLO por
+//      service_role (catálogo y llamada real por REST de cada credencial); y
+//      ninguna función del esquema es ejecutable por los roles de la API.
 // Además: `is_admin_mfa()` REAL (007) con dos factores TOTP enrolados y
 // verificados contra el Auth local (RFC 6238 con node:crypto, sin stub).
 //
@@ -384,14 +386,17 @@ await prueba("REST: 7 credenciales × 11 tablas × 4 métodos × 2 perfiles → 
   assert.deepEqual(mal.slice(0, 10), [], `${mal.length} desvíos`);
 });
 
-await prueba("REST: el OpenAPI de PostgREST no menciona ninguna tabla de comunidad (anon y service_role)", async () => {
-  for (const token of [ANON, SRV]) {
+await prueba("REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC de la baja (E2b), anon no ve ninguna y service_role ve sólo las cuatro", async () => {
+  for (const [quien, token] of [["anon", ANON], ["service_role", SRV]]) {
     const r = await fetch(`${URL_API}/rest/v1/`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
     const doc = await r.json();
     const rutas = Object.keys(doc.paths ?? {});
     assert.ok(rutas.length > 0, "el OpenAPI vino vacío: la prueba no prueba nada");
-    const filtradas = rutas.filter((p) => TABLAS.some((t) => p === `/${t}`) || p.includes("comunidad"));
-    assert.deepEqual(filtradas, []);
+    assert.deepEqual(rutas.filter((p) => TABLAS.some((t) => p === `/${t}`)), [], `${quien}: tablas`);
+    const rpcs = rutas.filter((p) => p.includes("comunidad")).sort();
+    assert.deepEqual(rpcs, quien === "anon" ? [] : [
+      "/rpc/comunidad_baja_comunitaria", "/rpc/comunidad_baja_comunitaria_admin",
+      "/rpc/comunidad_baja_registrar_fallo", "/rpc/comunidad_estado_baja"], quien);
   }
 });
 
@@ -416,8 +421,51 @@ await prueba("GraphQL: pg_graphql no está habilitada en la base local; el endpo
 // ===========================================================================
 console.log("\n— 3. RPC —");
 
-await prueba("no existe ninguna función public.comunidad_* en E2a (las escrituras llegan desde E2b)", () => {
-  assert.equal(sqlOk("select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%'"), "0");
+// E2b (012): el inventario exacto. Una función nueva sin clasificar falla acá.
+const RPC_BAJA = {
+  comunidad_baja_comunitaria: {},
+  comunidad_baja_comunitaria_admin: {},
+  comunidad_baja_registrar_fallo: { p_error: "prueba de permisos" },
+  comunidad_estado_baja: {},
+};
+
+await prueba("las únicas public.comunidad_* son las cuatro de la baja (E2b), security definer y search_path vacío", () => {
+  const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
+    from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
+  assert.deepEqual(out.split("\n"), Object.keys(RPC_BAJA).map((f) =>
+    `${f}:true:search_path=""${f.startsWith("comunidad_baja_comunitaria") ? ",lock_timeout=10s" : ""}`));
+});
+
+await prueba("catálogo: EXECUTE de las cuatro sólo para service_role (ni PUBLIC, ni anon, ni authenticated)", () => {
+  const out = sqlOk(`select f.proname || ':' || r || ':' || has_function_privilege(r, f.oid, 'EXECUTE')
+    from pg_proc f, unnest(array['public','anon','authenticated','service_role']) r
+    where f.pronamespace = 'public'::regnamespace and f.proname like 'comunidad\\_%' order by 1`);
+  const filas = out.split("\n");
+  assert.equal(filas.length, 16);
+  const mal = filas.filter((l) => !l.endsWith(l.includes(":service_role:") ? ":true" : ":false"));
+  assert.deepEqual(mal, []);
+});
+
+await prueba("RPC real por REST: anon y cada JWT reciben 401/403 en las cuatro; service_role ejecuta (uid inexistente: sin efectos)", async () => {
+  const mal = [];
+  const nadie = "00000000-0000-4000-8000-00000000dead";
+  for (const [quien, token] of Object.entries(QUIENES())) {
+    for (const [f, args] of Object.entries(RPC_BAJA)) {
+      const r = await fetch(`${URL_API}/rest/v1/rpc/${f}`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ ...args, p_uid: nadie }),
+      });
+      const cuerpo = await r.text();
+      if (quien === "service_role") {
+        if (r.status !== 200) mal.push(`${quien} ${f}: ${r.status} ${cuerpo.slice(0, 80)}`);
+      } else if (!((r.status === 401 || r.status === 403) && /42501|permission denied/.test(cuerpo))) {
+        mal.push(`${quien} ${f}: ${r.status} ${cuerpo.slice(0, 80)}`);
+      }
+    }
+  }
+  assert.deepEqual(mal, []);
+  assert.equal(sqlOk(`select count(*) from comunidad.bajas_en_curso where user_id = '${nadie}'`), "0");
 });
 
 await prueba("ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API", () => {

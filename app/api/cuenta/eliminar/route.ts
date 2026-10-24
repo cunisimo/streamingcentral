@@ -71,6 +71,12 @@ async function manejar(req: NextRequest) {
     // la contraseña correcta de la incorrecta.
     return responder({ error: "no-disponible" }, 503);
   }
+  // Contrato de baja (E2b): lo comunitario ya se borró y la cuenta sigue viva
+  // (o no se pudo saber). La persona puede reintentar con el mismo pedido;
+  // los textos los arma lib/cuenta/estado-baja-nucleo.ts. Un bundle viejo
+  // muestra su mensaje genérico de error, que también es cierto.
+  if (!r.ok && r.motivo === "baja-parcial") return responder({ error: "baja-parcial" }, 500);
+  if (!r.ok && r.motivo === "baja-sin-verificar") return responder({ error: "baja-sin-verificar" }, 500);
   if (!r.ok) return responder({ error: "no-se-pudo" }, 500);
 
   // La cuenta ya no existe: el contador tampoco tiene por qué.

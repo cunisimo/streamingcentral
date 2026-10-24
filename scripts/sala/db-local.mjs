@@ -28,6 +28,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { dockerVerificado } from "../comunidad/docker-local.mjs";
 
 /** El `project_id` declarado en supabase/config.toml, o null si no está. */
 export function projectIdDe(configToml) {
@@ -68,10 +69,12 @@ export function archivosAAplicar({ conCatalogo, cargas }) {
     "supabase/migrations/007_top_manual.sql",
     "supabase/migrations/009_salas.sql",
     ...(conCatalogo ? cargas : []),
-    // Reseñas de la comunidad (E2a): esquema privado y cierre de user_reviews.
+    // Reseñas de la comunidad: esquema privado (E2a), contrato de baja (E2b) y
+    // cierre de user_reviews (E2a).
     // 022 va después de schema.sql, que vuelve a crear las policies viejas en
     // cada corrida; así siempre las deja cerradas.
     "supabase/migrations/011_comunidad_esquema.sql",
+    "supabase/migrations/012_comunidad_baja.sql",
     "supabase/migrations/022_cerrar_user_reviews.sql",
     "scripts/sala/fixtures-local.sql",
   ];
@@ -91,7 +94,16 @@ function main() {
   const ARCHIVOS = archivosAAplicar({ conCatalogo, cargas });
 
   const projectId = projectIdDe(readFileSync("supabase/config.toml", "utf8"));
-  const corriendo = execFileSync("docker", ["ps", "--format", "{{.Names}}"], { encoding: "utf8" })
+  // El motor Docker tiene que ser de esta computadora (contexto efectivo, no
+  // sólo DOCKER_HOST); cada `docker` de abajo usa ese endpoint fijo.
+  let env;
+  try {
+    env = dockerVerificado().env;
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
+  const corriendo = execFileSync("docker", ["ps", "--format", "{{.Names}}"], { encoding: "utf8", env })
     .trim().split("\n").filter(Boolean);
   let nombre;
   try {
@@ -106,7 +118,7 @@ function main() {
   for (const f of ARCHIVOS) {
     if (!existsSync(f)) { console.log(`– ${f} (no existe todavía, se saltea)`); continue; }
     const r = spawnSync("docker", ["exec", "-i", nombre, "psql", "-q", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "postgres"], {
-      input: readFileSync(f, "utf8"), encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
+      input: readFileSync(f, "utf8"), encoding: "utf8", maxBuffer: 64 * 1024 * 1024, env,
     });
     if (r.status !== 0) {
       console.error(`✖ ${f}\n${r.stderr}`);

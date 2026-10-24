@@ -585,6 +585,9 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/filmografia-cliente.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "cliente: un 'Ver más' fallido abre el bloque con 'sin datos' (fetch del navegador)" },
   { archivo: "lib/filmografia-cliente.ts", ancla: "} catch (err) {", clase: "no-tmdb", motivo: "cliente: apertura fallida → offline o error (fetch del navegador)" },
   { archivo: "app/api/cuenta/eliminar/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "Supabase" },
+  // Contrato de baja (E2b): Supabase/Auth, nunca TMDB.
+  { archivo: "lib/eliminar-cuenta-deps.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "getUserById de Auth que lanza → 'indeterminado' (nunca 'no existe')" },
+  { archivo: "lib/eliminar-cuenta-flujo.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "un paso del borrado que lanza vale como su respuesta pesimista" },
   { archivo: "app/api/te-va-a-gustar/route.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "JSON del cliente" },
 ];
 

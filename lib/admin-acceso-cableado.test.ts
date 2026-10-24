@@ -65,6 +65,9 @@ test("eliminación de cuenta: sus cierres de sesión NO se tocaron", () => {
   // Después de borrar la cuenta, el cierre es el de siempre: la cuenta ya no
   // existe y no hay ninguna sesión que conservar.
   assert.match(fuente("components/cuenta/EliminarCuenta.tsx"), /await sb\.auth\.signOut\(\)\.catch\(/);
-  // La revalidación de contraseña del servidor cierra la sesión que acaba de crear.
-  assert.match(fuente("lib/eliminar-cuenta.ts"), /await sb\.auth\.signOut\(\);/);
+  // La revalidación de contraseña del servidor cierra la sesión que acaba de
+  // crear. Desde E2b vive en los adaptadores (lib/eliminar-cuenta-deps.ts),
+  // que lib/eliminar-cuenta.ts cablea.
+  assert.match(fuente("lib/eliminar-cuenta-deps.ts"), /await sb\.auth\.signOut\(\);/);
+  assert.match(fuente("lib/eliminar-cuenta.ts"), /dependenciasReales\(/);
 });

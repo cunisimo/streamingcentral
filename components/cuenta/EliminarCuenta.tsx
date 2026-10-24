@@ -1,9 +1,12 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase";
 import { clavesABorrar } from "@/lib/limpieza-local";
 import { apiUrl } from "@/lib/api-base";
+import {
+  ESTADO_INICIAL, TEXTO_PENDIENTE, alResponder, consultar, mensajeEliminar, trasIntento, type EstadoBaja,
+} from "@/lib/cuenta/estado-baja-nucleo";
 
 // "Eliminar cuenta" — la acción irreversible de Cuenta → Configuración.
 //
@@ -15,12 +18,49 @@ import { apiUrl } from "@/lib/api-base";
 // paralelo— un fallo del servidor dejaría a la persona deslogueada, con el
 // dispositivo limpio y la cuenta intacta: creyendo que se borró algo que sigue
 // existiendo.
-export default function EliminarCuenta({ email }: { email: string }) {
+//
+// ELIMINACIÓN PENDIENTE (contrato de baja, E2b). La eliminación tiene dos
+// pasos: si lo comunitario se borró pero la cuenta sigue viva, al volver a
+// esta pantalla —en este dispositivo o en otro— se ve "Eliminación pendiente"
+// y el mismo botón reintenta. El estado sale de GET /api/cuenta/estado-baja y
+// lo decide lib/cuenta/estado-baja-nucleo.ts (puro, con tests): una respuesta
+// de otra cuenta o vieja se descarta, y un error de la consulta no se lee
+// como "no hay nada pendiente".
+export default function EliminarCuenta({ email, uid }: { email: string; uid: string }) {
   const router = useRouter();
+  const [baja, setBajaVista] = useState<EstadoBaja>(ESTADO_INICIAL);
+  // La fuente es el ref: las transiciones se calculan en el acto (no en un
+  // updater de React, que puede correr más tarde o dos veces) y la vista copia.
+  const bajaRef = useRef<EstadoBaja>(ESTADO_INICIAL);
+  const setBaja = useCallback((f: (prev: EstadoBaja) => EstadoBaja) => {
+    bajaRef.current = f(bajaRef.current);
+    setBajaVista(bajaRef.current);
+  }, []);
   const [abierto, setAbierto] = useState(false);
   const [password, setPassword] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBaja((prev) => consultar(prev, uid || null));
+    const gen = bajaRef.current.gen;
+    if (!uid) return;
+    (async () => {
+      let r: { status: number; cuerpo: unknown } | "sin-red";
+      try {
+        const { data } = await supabaseBrowser().auth.getSession();
+        const token = data.session?.access_token;
+        const res = await fetch(apiUrl("/api/cuenta/estado-baja"), {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          cache: "no-store",
+        });
+        r = { status: res.status, cuerpo: await res.json().catch(() => null) };
+      } catch {
+        r = "sin-red";
+      }
+      setBaja((prev) => alResponder(prev, gen, uid, r));
+    })();
+  }, [uid, setBaja]);
 
   const cerrar = useCallback(() => {
     if (enviando) return;   // no se puede cancelar a mitad de camino
@@ -51,7 +91,8 @@ export default function EliminarCuenta({ email }: { email: string }) {
         // La cuenta y la sesión se quedan como estaban. Solo se muestra el
         // motivo, con un texto que diga qué hacer.
         const j = await r.json().catch(() => ({}));
-        setError(mensaje(j?.error, j?.minutos));
+        setError(mensajeEliminar(j?.error, j?.minutos));
+        setBaja((prev) => trasIntento(prev, uid, j?.error));
         setEnviando(false);
         return;
       }
@@ -67,16 +108,22 @@ export default function EliminarCuenta({ email }: { email: string }) {
     }
   }
 
+  const pendiente = baja.fase === "pendiente";
+
   return (
     <>
       <div className="cfg-peligro">
         <div className="cfg-peligro-h">Zona de riesgo</div>
         <div className="cfg-row" style={{ borderBottom: "none" }}>
           <div className="cfg-info">
-            <div className="cfg-lbl">Eliminar cuenta</div>
-            <div className="cfg-sub">Se borra tu cuenta y todo lo tuyo. No se puede deshacer.</div>
+            <div className="cfg-lbl">{pendiente ? TEXTO_PENDIENTE.titulo : "Eliminar cuenta"}</div>
+            <div className="cfg-sub" role={pendiente ? "status" : undefined}>
+              {pendiente ? TEXTO_PENDIENTE.cuerpo : "Se borra tu cuenta y todo lo tuyo. No se puede deshacer."}
+            </div>
           </div>
-          <button className="cfg-danger-btn" onClick={() => setAbierto(true)}>Eliminar cuenta</button>
+          <button className="cfg-danger-btn" onClick={() => setAbierto(true)}>
+            {pendiente ? TEXTO_PENDIENTE.boton : "Eliminar cuenta"}
+          </button>
         </div>
       </div>
 
@@ -122,17 +169,6 @@ export default function EliminarCuenta({ email }: { email: string }) {
       )}
     </>
   );
-}
-
-function mensaje(codigo: unknown, minutos: unknown): string {
-  if (codigo === "password-invalida") return "La contraseña no es correcta.";
-  if (codigo === "demasiados-intentos") {
-    const m = typeof minutos === "number" ? minutos : 15;
-    return `Demasiados intentos. Probá de nuevo en ${m} minuto${m === 1 ? "" : "s"}.`;
-  }
-  if (codigo === "sin-sesion") return "Se cerró tu sesión. Volvé a entrar e intentá de nuevo.";
-  if (codigo === "no-disponible") return "El borrado de cuentas no está disponible en este momento. Escribinos si el problema sigue.";
-  return "No pudimos eliminar la cuenta. Probá de nuevo en un rato.";
 }
 
 // Se borra lo PERSONAL y se conservan las preferencias del dispositivo — sobre

@@ -1030,6 +1030,60 @@ personal puede volver a cerrar las sesiones de su celular.
 Auth, filtrar por la cuenta personal a la hora de un MFA, y buscar el cierre
 de sus otras sesiones.
 
+## Runbook: baja de cuenta pedida FUERA de la app (reseñas de la comunidad, E2b)
+
+**Estado:** preparado y probado sólo en la base local (`supabase start`,
+caso B9 de `scripts/comunidad/pruebas-baja.mjs`). En Producción no existe
+todavía: hace falta aplicar 011 y 012 después de E0 y con autorización.
+
+**Cuándo:** alguien pide por correo u otro canal que se elimine su cuenta y
+no puede o no quiere hacerlo desde Cuenta → Configuración.
+
+**Por qué no alcanza con borrar en Auth.** Borrar la cuenta desde el panel
+de Supabase (Authentication → Users → Delete) también limpia lo comunitario,
+porque la red de seguridad de 012 corre dentro de esa transacción. Pero ahí
+el orden de locks está invertido: si en ese momento hay una escritura
+comunitaria de la misma cuenta, o una consolidación del Top Yumpers, Auth
+puede abortar por deadlock o por `lock_timeout` (5 s). En la prueba local,
+Auth respondió 500 y no borró **nada**: la cuenta, su participante y sus
+tramos quedaron intactos, y el reintento terminó. No queda nada a medias,
+pero se evita con este orden:
+
+1. **Paso 1, la parte comunitaria.** En el SQL Editor, con el uid de la
+   cuenta (lo da Authentication → Users):
+
+   ```sql
+   select public.comunidad_baja_comunitaria_admin('<uid>');
+   ```
+
+   Devuelve qué hizo: `marcador` (`nuevo`, `existente` o `reactivado`),
+   cuántos tramos cerró y cuántas reseñas, votos, denuncias, bloqueos y
+   contadores borró. `participantes_vinculados` tiene que ser **0**. Es
+   idempotente: repetirlo no cambia nada más.
+
+2. **Paso 2, la cuenta.** Authentication → Users → la cuenta → Delete user.
+   Si falla (deadlock o timeout), reintentar: el paso 1 ya dejó todo lo
+   comunitario cerrado y la cuenta sigue con su marcador.
+
+3. **Verificar** (las dos consultas tienen que dar 0):
+
+   ```sql
+   select count(*) from comunidad.participantes where user_id = '<uid>';
+   select count(*) from comunidad.bajas_en_curso where user_id = '<uid>';
+   ```
+
+   El marcador cae solo con la cuenta (cascada). Si la primera da 1, la
+   cuenta todavía tiene participante vinculado: volver al paso 1.
+
+**Qué NO hace este procedimiento.** No restaura nada ni quita suspensiones.
+El participante queda como seudónimo sin `user_id` ni nombre, con sus tramos
+cerrados y sus suspensiones intactas, porque los necesita la reconstrucción
+del ranking (revisión §2.2.2–§2.2.3). Cancelar una baja (quitar el marcador
+con la cuenta viva) es otra operación, de E4 (`comunidad_quitar_marcador_baja`,
+todavía no existe). Esa operación tampoco restaura nada: si la persona vuelve,
+nace un participante nuevo, suspendido si la sanción copiada en el marcador
+sigue vigente.
+
 ## Runbook: la ingesta manual del Top 10 después de deployar el resolvedor
 
 Corre UNA vez, después de que el deploy esté en producción. **No hace falta

@@ -79,7 +79,7 @@ export default function ConfiguracionPage() {
 
           {/* ÚLTIMA sección de la página y visualmente separada: una acción
               irreversible no puede quedar al lado de un toggle de tema. */}
-          <EliminarCuenta email={user.email ?? ""} />
+          <EliminarCuenta email={user.email ?? ""} uid={user.id} />
         </div>
       </main>
       <BottomNav />

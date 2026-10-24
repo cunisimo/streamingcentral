@@ -256,15 +256,23 @@ await caso("tipo de reseña desconocido", "23514",
 
 // ---------------------------------------------------------------------------
 console.log("\n— Auth: borrado de la cuenta —");
-await caso("borrar auth.users (SQL): participante queda con user_id nulo y conserva su reseña; el marcador de baja cae", "ok", `
+// Desde E2b (012) el borrado de Auth dispara la red de seguridad sobre
+// `participantes` (revisión §2.2.3, punto 3): dentro de la misma transacción
+// hace el paso 1. E2a fijaba que la reseña sobrevivía porque todavía no
+// existía; ahora se fija lo contrario, y lo que se conserva.
+await caso("borrar auth.users (SQL): desvincula y la red de seguridad (E2b) borra lo propio, cierra tramos y conserva suspensiones; el marcador cae", "ok", `
   delete from auth.users where id in ('${FX.usuarioA}', '${FX.usuarioB}');
-  ${asegurar(`(select user_id is null from comunidad.participantes where id = ${A})`, "user_id no quedó nulo")}
-  ${asegurar(`(select count(*) from comunidad.resenas where autor_participante = ${A}) = 1`, "la reseña no sobrevivió")}
-  ${asegurar(`(select count(*) from comunidad.bajas_en_curso) = 0`, "el marcador no cayó")}`);
+  ${asegurar(`(select bool_and(user_id is null and nombre_comunitario is null) from comunidad.participantes where id in (${A}, ${L}))`, "no quedaron desvinculados y sin nombre")}
+  ${asegurar(`(select count(*) from comunidad.resenas where autor_participante = ${A}) = 0`, "la reseña no se borró")}
+  ${asegurar(`(select count(*) from comunidad.evaluaciones where version_id = ${V} or evaluador_participante in (${A}, ${L})) = 0 and (select count(*) from comunidad.denuncias where version_id = ${V} or denunciante_participante in (${A}, ${L})) = 0`, "quedaron votos o denuncias")}
+  ${asegurar(`(select count(*) from comunidad.tramos where vigente_hasta is null and ${L} in (evaluador_participante, autor_participante)) = 0 and (select count(*) from comunidad.tramos where ${L} in (evaluador_participante, autor_participante)) = 1`, "el tramo no quedó cerrado (o se borró)")}
+  ${asegurar(`(select count(*) from comunidad.bloqueos where bloqueador_participante in (${A}, ${L})) = 0 and (select count(*) from comunidad.contadores where participante_id in (${A}, ${L})) = 0`, "quedaron bloqueos o contadores")}
+  ${asegurar(`(select count(*) from comunidad.suspensiones where participante_id = ${L}) = 1`, "la suspensión no se conservó")}
+  ${asegurar(`(select count(*) from comunidad.bajas_en_curso where user_id in ('${FX.usuarioA}', '${FX.usuarioB}')) = 0`, "el marcador no cayó")}`);
 await caso("borrar un participante con reseñas está prohibido (no hay cascada desde participantes)", "23503",
   `delete from comunidad.participantes where id = ${A};`);
 
-await prueba("borrar con la API real de Auth (admin.deleteUser): user_id → null, marcador → borrado", async () => {
+await prueba("borrar con la API real de Auth (admin.deleteUser): user_id → null, nombre → null (red de seguridad, E2b), marcador → borrado", async () => {
   const admin = createClient(URL_API, SRV, { auth: { persistSession: false, autoRefreshToken: false } });
   const email = `baja-${Date.now()}-${randomBytes(3).toString("hex")}@comunidad.test`;
   const { data, error } = await admin.auth.admin.createUser({ email, password: randomBytes(18).toString("base64url"), email_confirm: true });
@@ -274,7 +282,7 @@ await prueba("borrar con la API real de Auth (admin.deleteUser): user_id → nul
     insert into comunidad.bajas_en_curso (user_id) values ('${uid}');`).split("\n")[0];
   const { error: e2 } = await admin.auth.admin.deleteUser(uid);
   assert.ifError(e2);
-  assert.equal(sqlOk(`select coalesce(user_id::text, 'null') || '|' || nombre_comunitario from comunidad.participantes where id = '${pid}'`), "null|Baja");
+  assert.equal(sqlOk(`select coalesce(user_id::text, 'null') || '|' || coalesce(nombre_comunitario, 'null') from comunidad.participantes where id = '${pid}'`), "null|null");
   assert.equal(sqlOk(`select count(*) from comunidad.bajas_en_curso where user_id = '${uid}'`), "0");
   // Fixture local: se borra (el dueño puede, la API no).
   sqlOk(`delete from comunidad.participantes where id = '${pid}'`);

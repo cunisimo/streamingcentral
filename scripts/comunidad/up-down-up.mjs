@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// up → down → up de las migraciones de reseñas (E2a), en la base LOCAL, con
+// up → down → up de las migraciones de reseñas (E2a y E2b), en la base LOCAL, con
 // comparación de `pg_dump --schema-only` (plan de reseñas, E2a).
 //
 // Uso:
@@ -16,14 +16,13 @@
 //     (SQL y REST).
 // Los volcados se normalizan sólo en las líneas `\restrict`/`\unrestrict`, que
 // pg_dump 17.6 genera con una clave aleatoria en cada corrida.
-// Deja la base con 011 y 022 aplicadas, como db-local.mjs.
+// Deja la base con 011, 012 y 022 aplicadas, como db-local.mjs.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { aplicarArchivo, arnes, contenedor, sqlOk, urlLocal } from "./local.mjs";
+import { aplicarArchivo, arnes, contenedor, docker, sqlOk, urlLocal } from "./local.mjs";
 
 const URL_API = urlLocal(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -32,6 +31,8 @@ console.log(`base: ${contenedor()}\n`);
 
 const UP = "supabase/migrations/011_comunidad_esquema.sql";
 const DOWN = "supabase/migrations/011_comunidad_esquema_down.sql";
+const UP12 = "supabase/migrations/012_comunidad_baja.sql";
+const DOWN12 = "supabase/migrations/012_comunidad_baja_down.sql";
 const UP22 = "supabase/migrations/022_cerrar_user_reviews.sql";
 const DOWN22 = "supabase/migrations/022_cerrar_user_reviews_down.sql";
 const dirVolcados = join(tmpdir(), `comunidad-volcados-${Date.now()}`);
@@ -40,7 +41,7 @@ mkdirSync(dirVolcados, { recursive: true });
 function volcar(nombre, { sinComunidad = false } = {}) {
   const args = ["exec", contenedor(), "pg_dump", "-U", "postgres", "-d", "postgres", "--schema-only"];
   if (sinComunidad) args.push("--exclude-schema=comunidad");
-  const r = spawnSync("docker", args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+  const r = docker(args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
   if (r.status !== 0) throw new Error(`pg_dump: ${r.stderr}`);
   const texto = r.stdout.split("\n").filter((l) => !/^\\(un)?restrict /.test(l)).join("\n");
   writeFileSync(join(dirVolcados, `${nombre}.sql`), texto);
@@ -63,11 +64,47 @@ const iguales = (a, b, msg) => assert.ok(a === b, `${msg}\n${diferencias(a, b)}`
 const { prueba, cerrar } = arnes();
 const v = {};
 
-await prueba("estado de partida: 011 aplicada (repetible)", () => {
+// 012 (E2b) depende de 011: se baja ANTES (012_down → 011_down) y se sube
+// DESPUÉS. Con 012 aplicada, bajar sólo 011 dejaría las cuatro
+// `public.comunidad_*` apuntando a un esquema inexistente.
+await prueba("estado de partida: 011 y 012 aplicadas (repetibles)", () => {
   aplicarArchivo(UP);
+  aplicarArchivo(UP12);
   assert.equal(sqlOk("select count(*) from pg_tables where schemaname = 'comunidad'"), "11");
+  assert.equal(sqlOk("select count(*) from pg_proc where proname like 'comunidad\\_%'"), "4");
+  v.con12 = volcar("0-con-011-y-012");
+});
+
+await prueba("012_down: quita sólo lo de 012 (funciones, triggers y columnas del marcador)", () => {
+  aplicarArchivo(DOWN12);
+  assert.equal(sqlOk("select count(*) from pg_proc where proname like 'comunidad\\_%'"), "0");
   v.con = volcar("1-con-011");
+  // Sin la coma final: al quitar la última restricción del CREATE TABLE, la
+  // línea anterior la pierde y no es un cambio. Las vueltas de abajo comparan
+  // los volcados byte a byte.
+  const cuenta = (t) => t.split("\n").map((l) => l.replace(/,$/, ""))
+    .reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());
+  const a = cuenta(v.con12), d = cuenta(v.con);
+  const agregadas = [...d].filter(([l, n]) => n > (a.get(l) ?? 0)).map(([l]) => l);
+  assert.deepEqual(agregadas.filter((l) => l.trim() !== ""), [], "012_down agregó algo");
+  const quitadas = [...a].filter(([l, n]) => n > (d.get(l) ?? 0)).map(([l]) => l).join("\n");
+  for (const objeto of ["comunidad_baja_comunitaria", "comunidad_estado_baja", "comunidad_baja_registrar_fallo",
+    "resolver_participante", "aplicar_baja", "limpiar_participante", "tomar_cuenta", "participantes_desvinculado",
+    "participantes_vinculo", "sancion_hasta", "cancelada_en", "bajas_origen"]) {
+    assert.ok(quitadas.includes(objeto), `012_down no quitó ${objeto}`);
+  }
   v.conSinEsquema = volcar("1-con-011-sin-comunidad", { sinComunidad: true });
+});
+
+await prueba("012 up → down → up: mismos volcados; repetida, inocua", () => {
+  aplicarArchivo(UP12);
+  iguales(volcar("1b-con-012"), v.con12, "subir 012 no reprodujo el estado inicial");
+  aplicarArchivo(UP12);
+  iguales(volcar("1c-con-012-repetida"), v.con12, "repetir 012 cambió el esquema");
+  aplicarArchivo(DOWN12);
+  iguales(volcar("1d-sin-012"), v.con, "la segunda bajada de 012 difiere");
+  aplicarArchivo(DOWN12);
+  iguales(volcar("1e-sin-012-otra-vez"), v.con, "repetir 012_down cambió algo");
 });
 
 await prueba("down: el esquema desaparece y el resto queda idéntico a lo que había con 011", () => {
@@ -99,6 +136,11 @@ await prueba("segunda vuelta down → up: mismos volcados", () => {
 await prueba("up repetido sobre sí mismo: no cambia el volcado", () => {
   aplicarArchivo(UP);
   iguales(volcar("6-con-011-repetida"), v.con, "repetir 011 cambió el esquema");
+});
+
+await prueba("vuelta a 012: 011 + 012 dan el mismo volcado del principio", () => {
+  aplicarArchivo(UP12);
+  iguales(volcar("6b-con-011-y-012"), v.con12, "011 + 012 no reprodujo el estado inicial");
 });
 
 // ---------------------------------------------------------------------------

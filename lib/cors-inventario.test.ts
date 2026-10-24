@@ -170,7 +170,7 @@ test("toda ruta está clasificada: integrada o excluida, sin pendientes", () => 
     `rutas sin CORS y sin clasificar:\n${sinClasificar.join("\n")}`);
 });
 
-test("las 24 integradas coinciden en sus TRES declaraciones de método", () => {
+test("las 25 integradas coinciden en sus TRES declaraciones de método", () => {
   const divergentes: string[] = [];
   for (const r of rutasDeApi()) {
     if (EXCLUIDAS.has(r)) continue;
@@ -203,7 +203,7 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 26 rutas = 24 integradas + 2 excluidas", () => {
+test("el recuento cierra: 27 rutas = 25 integradas + 2 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
@@ -212,8 +212,11 @@ test("el recuento cierra: 26 rutas = 24 integradas + 2 excluidas", () => {
   // contenedor con el JWT del organizador, igual que /api/te-va-a-gustar).
   // 27 -> 26 el 2026-10-20: se borró `app/api/cron/netflix-top10` (excluida),
   // con la ingesta automática del Top.
-  assert.equal(todas.length, 26, "cambió la cantidad de rutas: hay que reclasificar");
-  assert.equal(integradas.length, 24);
+  // 26 -> 27 con el contrato de baja (E2b): `app/api/cuenta/estado-baja`
+  // integra CORS, como `cuenta/eliminar`: la consulta Configuración, que
+  // viaja en el contenedor.
+  assert.equal(todas.length, 27, "cambió la cantidad de rutas: hay que reclasificar");
+  assert.equal(integradas.length, 25);
   assert.equal(EXCLUIDAS.size, 2);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });
