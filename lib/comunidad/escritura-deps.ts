@@ -10,16 +10,25 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { evaluarResena } from "./reglas/decision.ts";
-import type { DependenciasEscritura, RespuestaBase } from "./escritura-nucleo.ts";
+import { conReconciliacion, errorRpc, type DependenciasEscritura, type RespuestaBase } from "./escritura-nucleo.ts";
 
-async function rpc(admin: SupabaseClient, f: string, args: Record<string, unknown>): Promise<RespuestaBase> {
+// Todo error sale clasificado (`errorRpc`): rechazo confirmado por la base o
+// confirmación perdida. Un 200 con un cuerpo que no es un resultado también es
+// una confirmación perdida: la función pudo haber corrido entera.
+async function rpcCrudo(admin: SupabaseClient, f: string, args: Record<string, unknown>): Promise<RespuestaBase> {
   const { data, error } = await admin.rpc(f, args);
-  if (error) throw Object.assign(new Error(error.message), { code: error.code });
+  if (error) throw errorRpc(f, error);
   if (typeof data !== "object" || data === null || typeof (data as { resultado?: unknown }).resultado !== "string") {
-    throw new Error(`${f}: respuesta inesperada`);
+    throw errorRpc(f, { message: "respuesta inesperada" });
   }
   return data as RespuestaBase;
 }
+
+// Las mutaciones sin texto se reconcilian acá mismo: repetirlas es seguro
+// (votar lo mismo es `sin_cambios`, retirar lo retirado `sin_efecto`, borrar
+// lo borrado `repetido`, aceptar los mismos términos no cambia nada).
+const rpc = (admin: SupabaseClient, f: string, args: Record<string, unknown>) =>
+  conReconciliacion(() => rpcCrudo(admin, f, args));
 
 export const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
@@ -27,16 +36,16 @@ export function dependenciasEscritura(admin: SupabaseClient): DependenciasEscrit
   return {
     textosRecientes: async (uid) => {
       const { data, error } = await admin.rpc("comunidad_textos_recientes", { p_uid: uid });
-      if (error) throw new Error(error.message);
+      if (error) throw errorRpc("comunidad_textos_recientes", error);
       return Array.isArray(data) ? data.filter((x): x is string => typeof x === "string") : [];
     },
     evaluar: (texto, contexto) => evaluarResena(texto, contexto),
     hash: sha256,
-    publicar: (a) => rpc(admin, "comunidad_publicar", {
+    publicar: (a) => rpcCrudo(admin, "comunidad_publicar", {
       p_uid: a.uid, p_tipo: a.tipo, p_tmdb_id: a.tmdbId, p_texto: a.texto, p_decision: a.decision,
       p_id_intento: a.idIntento, p_hash: a.hash,
     }),
-    editar: (a) => rpc(admin, "comunidad_editar", {
+    editar: (a) => rpcCrudo(admin, "comunidad_editar", {
       p_uid: a.uid, p_resena: a.resenaId, p_version_esperada: a.versionEsperada, p_texto: a.texto,
       p_decision: a.decision, p_id_intento: a.idIntento, p_hash: a.hash,
     }),
@@ -55,7 +64,7 @@ export function operacionesComunidad(admin: SupabaseClient) {
       rpc(admin, "comunidad_aceptar_terminos", { p_uid: uid, p_version: version }),
     leerTitulo: async (uid: string, tipo: string, tmdbId: number) => {
       const { data, error } = await admin.rpc("comunidad_leer_titulo", { p_uid: uid, p_tipo: tipo, p_tmdb_id: tmdbId });
-      if (error) throw Object.assign(new Error(error.message), { code: error.code });
+      if (error) throw errorRpc("comunidad_leer_titulo", error);
       return data as Record<string, unknown>;
     },
   };

@@ -53,6 +53,7 @@ export function mensajeEscritura(r: { resultado?: unknown; motivo?: unknown; men
       return { tono: "rechazo", texto: MOTIVOS_CUENTA.baja_en_curso };
     case "borrada": return { tono: "exito", texto: "Borraste tu reseña." };
     case "error": return { tono: "error", texto: MENSAJE_ERROR };
+    case "sin_confirmar":
     default: return { tono: "sin_confirmar", texto: MENSAJE_SIN_CONFIRMAR };
   }
 }

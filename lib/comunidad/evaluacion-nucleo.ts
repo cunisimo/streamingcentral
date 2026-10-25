@@ -35,6 +35,7 @@ export function mensajeVoto(r: { resultado?: unknown; motivo?: unknown } | "sin-
       return MOTIVOS_CUENTA.baja_en_curso;
     case "error":
       return "No se pudo registrar el voto, probá de nuevo.";
+    case "sin_confirmar":
     default:
       return MENSAJE_SIN_CONFIRMAR;
   }

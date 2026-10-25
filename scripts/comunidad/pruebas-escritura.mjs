@@ -268,8 +268,10 @@ try {
     const e = await editar(a, r.resena_id, r.version_id, BIEN());
     console.log(`   edición con la reseña retenida: ${e.resultado} en ${Date.now() - t0} ms`);
     await H.terminar();
-    assert.equal(e.resultado, "error");
+    assert.equal(e.resultado, "error", "55P03 es un rechazo confirmado: se revirtió");
+    assert.ok(Date.now() - t0 < 9000, "sin reintento: una sola espera de lock_timeout");
     assert.deepEqual(estadoResena(r.resena_id), antes);
+    assert.equal(contador(a, "edicion"), 0, "cupo intacto");
   });
 
   await prueba("§3.4.1 · edición aceptada y publicada → anterior reemplazada, tramos cerrados, votos reiniciados UNA vez; la nueva en cero", async () => {
@@ -351,6 +353,109 @@ try {
   await prueba("el hash del intento es el del pedido normalizado (cliente y servidor firman lo mismo)", () => {
     const acc = { tipo: "publicar", titulo: { tipo: "movie", tmdbId: 1 } };
     assert.equal(sha256(firmaPedido(acc, normalizarTexto("  a \r\n"))), sha256(firmaPedido(acc, "a")));
+  });
+
+  // =========================================================================
+  console.log("\n— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —");
+  // El cliente de abajo hace el pedido REAL a PostgREST (la función corre y
+  // confirma) y después descarta la respuesta: o lanza como un `fetch` caído
+  // (status 0, code "") o la cambia por un 502 sin JSON de un proxy. Es lo que
+  // ve el servidor de la app cuando la confirmación se pierde DESPUÉS del commit.
+  function clientePerdedor(funciones, perdidas, modo = "red") {
+    const estado = { llamadas: 0, perdidas: 0 };
+    const f = async (input, init) => {
+      const url = typeof input === "string" ? input : String(input.url ?? input);
+      const r = await fetch(input, init);
+      if (!funciones.some((x) => url.includes(`/rpc/${x}`))) return r;
+      estado.llamadas++;
+      if (estado.perdidas >= perdidas) return r;
+      estado.perdidas++;
+      await r.arrayBuffer();
+      if (modo === "red") throw new TypeError("fetch failed (respuesta descartada por la prueba)");
+      return new Response("<html>502 Bad Gateway</html>", { status: 502, headers: { "Content-Type": "text/html" } });
+    };
+    const cli = createClient(URL_API, SRV, { ...opcionesCliente, global: { fetch: f } });
+    return { deps: dependenciasEscritura(cli), ops: operacionesComunidad(cli), estado };
+  }
+  const editarCon = (d, c, resenaId, versionEsperada, texto, idIntento = randomUUID()) =>
+    escribirResena(d, { uid: c.uid, idIntento, texto, accion: { tipo: "editar", resenaId, versionEsperada } });
+
+  await prueba("A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo", async () => {
+    const c = await cuenta("a1-pub");
+    const p = clientePerdedor(["comunidad_publicar"], 1);
+    const tid = tmdb++;
+    const r = await escribirResena(p.deps, { uid: c.uid, idIntento: randomUUID(), texto: BIEN(), accion: { tipo: "publicar", titulo: { tipo: "movie", tmdbId: tid } } });
+    assert.deepEqual([r.resultado, r.repetido, p.estado.llamadas, p.estado.perdidas], ["publicada", true, 2, 1], JSON.stringify(r));
+    assert.equal(sqlOk(`select count(*) from comunidad.resenas where autor_participante = ${q(c.part)} and tmdb_id = ${tid}`), "1");
+    assert.equal(sqlOk(`select count(*) from comunidad.versiones v join comunidad.resenas r on r.id = v.resena_id where r.autor_participante = ${q(c.part)}`), "1");
+    assert.equal(contador(c, "resena"), 1, "un solo cupo consumido");
+  });
+
+  await prueba("A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición", async () => {
+    const { a, r } = await conVotos("a1-ed", 2);
+    const p = clientePerdedor(["comunidad_editar"], 1);
+    const e = await editarCon(p.deps, a, r.resena_id, r.version_id, BIEN());
+    assert.deepEqual([e.resultado, e.repetido, e.votos_reiniciados, p.estado.llamadas], ["publicada", true, 2, 2], JSON.stringify(e));
+    const s = estadoResena(r.resena_id);
+    assert.deepEqual([s.versiones, s.vigente, s.votos_vigentes, s.votos_retirados, s.marcas_reinicio], [2, e.version_id, 0, 2, 1]);
+    assert.equal(contador(a, "edicion"), 1);
+  });
+
+  for (const modo of ["red", "502"]) {
+    await prueba(`A1 · se pierden las DOS respuestas (${modo}) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar`, async () => {
+      const { a, r } = await conVotos(`a1-dos-${modo}`, 2);
+      const p = clientePerdedor(["comunidad_editar"], 2, modo);
+      const id = randomUUID(), texto = BIEN();
+      const e = await editarCon(p.deps, a, r.resena_id, r.version_id, texto, id);
+      assert.deepEqual(e, { resultado: "sin_confirmar" });
+      assert.equal(p.estado.llamadas, 2, "un solo reintento interno");
+      const s1 = estadoResena(r.resena_id);
+      assert.deepEqual([s1.versiones, s1.marcas_reinicio], [2, 1], "la edición SÍ había quedado: decir 'no se guardó' habría sido falso");
+      // El usuario toca "Reintentar": el cliente reusa el id_intento.
+      const e2 = await editar(a, r.resena_id, r.version_id, texto, id);
+      assert.deepEqual([e2.resultado, e2.repetido, e2.version_id], ["publicada", true, s1.vigente]);
+      assert.deepEqual(estadoResena(r.resena_id), s1, "nada se duplicó ni se reinició otra vez");
+      assert.equal(contador(a, "edicion"), 1);
+    });
+  }
+
+  await prueba("A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar", async () => {
+    const { a, r } = await conVotos("a1-ops", 0);
+    const v = await cuenta("a1-ops-v");
+    const pv = clientePerdedor(["comunidad_votar"], 1);
+    const rv = await pv.ops.votar(v.uid, r.version_id, true);
+    assert.equal(rv.resultado, "sin_cambios", "el reintento ve el voto ya registrado");
+    assert.equal(estadoResena(r.resena_id).votos_vigentes, 1);
+    assert.equal(contador(v, "evaluacion"), 1);
+    const pr = clientePerdedor(["comunidad_retirar_voto"], 1);
+    assert.equal((await pr.ops.retirarVoto(v.uid, r.version_id)).resultado, "sin_efecto");
+    assert.equal(estadoResena(r.resena_id).votos_vigentes, 0);
+    const pb = clientePerdedor(["comunidad_borrar"], 1);
+    const rb = await pb.ops.borrar(a.uid, r.resena_id);
+    assert.deepEqual([rb.resultado, rb.repetido], ["borrada", true]);
+    const todas = clientePerdedor(["comunidad_votar"], 2);
+    const otra = await publicar(a, BIEN());
+    assert.deepEqual(await todas.ops.votar(v.uid, otra.version_id, true), { resultado: "sin_confirmar" });
+    assert.equal(sqlOk(`select count(*) from comunidad.evaluaciones where version_id = ${otra.version_id} and retirada_en is null`), "1", "el voto había quedado");
+  });
+
+  await prueba("A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos", async () => {
+    const { a, r } = await conVotos("a1-conf", 2);
+    const antes = estadoResena(r.resena_id), lim = contador(a, "edicion");
+    // Un SQLSTATE real (check_violation) por el adaptador: confirmado.
+    const texto = BIEN().replace(" ", "\t");
+    const e = await deps.editar({ uid: a.uid, resenaId: r.resena_id, versionEsperada: r.version_id, texto,
+      decision: { resultado: "publicar", version_reglas: "x", reglas: [] }, idIntento: randomUUID(), hash: sha256(texto) }).catch((x) => x);
+    assert.equal(e.confirmado, true, `${e.code} ${e.message}`);
+    assert.match(e.code, /^[0-9A-Z]{5}$/);
+    // Por el núcleo: la base rechaza el pedido → "error", UNA sola llamada.
+    const p = clientePerdedor(["comunidad_editar"], 0);
+    const d = { ...p.deps, editar: (x) => p.deps.editar({ ...x, decision: { ...x.decision, resultado: "otra" } }) };
+    const r2 = await editarCon(d, a, r.resena_id, r.version_id, BIEN());
+    assert.equal(r2.resultado, "error", JSON.stringify(r2));
+    assert.equal(p.estado.llamadas, 1, "sin reintento");
+    assert.deepEqual(estadoResena(r.resena_id), antes);
+    assert.equal(contador(a, "edicion"), lim);
   });
 
   // =========================================================================

@@ -6,7 +6,9 @@ import { LARGO_MAX, LARGO_MIN, largoTexto, normalizarTexto, problemaFormato } fr
 import { normalizarOriginal } from "./reglas/plegado.ts";
 import { LARGO_RESENA } from "./reglas/listas.ts";
 import { MOTIVO_RETENCION_RESENA, evaluarResena } from "./reglas/decision.ts";
-import { escribirResena, firmaPedido, type DependenciasEscritura, type RespuestaBase } from "./escritura-nucleo.ts";
+import {
+  conReconciliacion, errorConfirmado, errorRpc, escribirResena, estadoHttp, firmaPedido, type DependenciasEscritura, type RespuestaBase,
+} from "./escritura-nucleo.ts";
 import {
   MENSAJE_ERROR, MENSAJE_RETENIDA, MENSAJE_SIN_CONFIRMAR, MOTIVOS_CUENTA, mensajeEscritura,
 } from "./mensajes.ts";
@@ -133,13 +135,85 @@ test("fallos: contexto que falla, reglas que lanzan o dan error, base que lanza 
   const err = falsas(); err.deps.evaluar = () => ({ resultado: "error", versionReglas: "v", disparadas: [], motivoUsuario: "" });
   assert.equal((await escribirResena(err.deps, pedido(BIEN))).resultado, "error");
   assert.deepEqual(err.llamadas.includes("publicar"), false);
-  assert.equal((await escribirResena(falsas({ base: new Error("timeout") }).deps, pedido(BIEN))).resultado, "error");
+  // La base RECHAZÓ (SQLSTATE): se revirtió, "error", sin reintentar.
+  const rechazo = falsas({ base: errorRpc("comunidad_publicar", { message: "lock", code: "55P03" }) });
+  assert.equal((await escribirResena(rechazo.deps, pedido(BIEN))).resultado, "error");
+  assert.equal(rechazo.llamadas.filter((x) => x === "publicar").length, 1);
+});
+
+test("A1: una excepción sin clasificar o un cuerpo ilegible NO es 'error': pudo haberse guardado", async () => {
+  const lanza = falsas({ base: new Error("timeout") });
+  assert.equal((await escribirResena(lanza.deps, pedido(BIEN))).resultado, "sin_confirmar");
+  assert.equal(lanza.llamadas.filter((x) => x === "publicar").length, 2, "un solo reintento");
   const raro = falsas({ base: { resultado: 1 } as never });
-  assert.equal((await escribirResena(raro.deps, pedido(BIEN))).resultado, "error");
+  assert.equal((await escribirResena(raro.deps, pedido(BIEN))).resultado, "sin_confirmar");
+});
+
+test("A1: clasificación de los errores de supabase.rpc (formas medidas contra Supabase local)", () => {
+  const conf = (code?: string) => errorRpc("f", { message: "m", code }).confirmado;
+  // Rechazos de la base o de PostgREST: la transacción no quedó.
+  for (const c of ["22023", "55P03", "40P01", "23505", "42501", "CB001", "CB002", "57014", "PGRST202", "PGRST002", "PGRST301"]) {
+    assert.equal(conf(c), true, c);
+  }
+  // Confirmación perdida: fetch que lanza (code ""), 5xx sin código, conexión
+  // caída a mitad del commit, reinicio del servidor, desenlace desconocido.
+  for (const c of [undefined, "", "08006", "08007", "57P01", "58030", "XX000", "40003", "PGRST000", "PGRST001", "502"]) {
+    assert.equal(conf(c), false, String(c));
+  }
+  assert.equal(errorConfirmado(new Error("x")), false, "lo que no viene clasificado, no se sabe");
+});
+
+test("A1: confirmación perdida → se repite UNA vez con el mismo id_intento y hash y se recupera el resultado", async () => {
+  for (const accion of [
+    { tipo: "publicar" as const, titulo: { tipo: "movie" as const, tmdbId: 603 } },
+    { tipo: "editar" as const, resenaId: 7, versionEsperada: 11 },
+  ]) {
+    const { deps, pedidos } = falsas();
+    let n = 0;
+    const perdida = errorRpc("f", { message: "TypeError: fetch failed", code: "" });
+    const real = accion.tipo === "publicar" ? deps.publicar : deps.editar;
+    const una = async (a: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      n++; const r = await (real as (a: unknown) => Promise<RespuestaBase>)(a); if (n === 1) throw perdida; return { ...r, repetido: true }; };
+    if (accion.tipo === "publicar") deps.publicar = una; else deps.editar = una;
+    const r = await escribirResena(deps, pedido(BIEN, { accion }));
+    assert.equal(r.resultado, "publicada", accion.tipo);
+    assert.equal((r as { repetido?: boolean }).repetido, true);
+    assert.equal(pedidos.length, 2);
+    assert.deepEqual(pedidos[0], pedidos[1], "mismos argumentos: id_intento, hash, versión esperada");
+  }
+});
+
+test("A1: si el reintento tampoco confirma (o la base lo rechaza), 'sin_confirmar', nunca 'error'", async () => {
+  const perdida = errorRpc("f", { message: "bad gateway" });
+  const dos = falsas({ base: perdida });
+  assert.equal((await escribirResena(dos.deps, pedido(BIEN))).resultado, "sin_confirmar");
+  const luegoRechazo = falsas();
+  let n = 0;
+  luegoRechazo.deps.publicar = async () => { n++; throw n === 1 ? perdida : errorRpc("f", { message: "lock", code: "55P03" }); };
+  assert.equal((await escribirResena(luegoRechazo.deps, pedido(BIEN))).resultado, "sin_confirmar");
+  assert.equal(n, 2);
+});
+
+test("A1: conReconciliacion para las demás mutaciones (votar, retirar, borrar, términos)", async () => {
+  let n = 0;
+  const perdida = errorRpc("f", { message: "fetch failed", code: "" });
+  assert.deepEqual(await conReconciliacion(async () => { n++; if (n === 1) throw perdida; return { resultado: "sin_cambios" }; }), { resultado: "sin_cambios" });
+  assert.deepEqual(await conReconciliacion(async () => { throw perdida; }), { resultado: "sin_confirmar" });
+  n = 0;
+  await assert.rejects(conReconciliacion(async () => { n++; throw errorRpc("f", { message: "x", code: "CB001" }); }), /f: x/);
+  assert.equal(n, 1, "un rechazo confirmado no se repite");
+});
+
+test("A1: HTTP y mensajes de sin_confirmar: 503, no afirma nada y conserva el intento", () => {
+  assert.equal(estadoHttp({ resultado: "sin_confirmar" }), 503);
+  assert.equal(estadoHttp({ resultado: "error" }), 500);
+  assert.deepEqual(mensajeEscritura({ resultado: "sin_confirmar" }), { tono: "sin_confirmar", texto: MENSAJE_SIN_CONFIRMAR });
+  assert.equal(mensajeVoto({ resultado: "sin_confirmar" }), MENSAJE_SIN_CONFIRMAR);
+  assert.equal(conservarIntento({ resultado: "sin_confirmar" }), true);
 });
 
 test("la baja en curso (CB001) de la base se informa como tal", async () => {
-  const e = Object.assign(new Error("baja_en_curso"), { code: "CB001" });
+  const e = errorRpc("comunidad_publicar", { message: "baja_en_curso", code: "CB001" });
   assert.equal((await escribirResena(falsas({ base: e }).deps, pedido(BIEN))).resultado, "baja_en_curso");
 });
 

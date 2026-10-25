@@ -11,6 +11,8 @@ import { NextResponse } from "next/server";
 import { sesionDeToken } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { escribirResena, esBajaEnCurso, type PedidoEscritura, type ResultadoEscritura } from "./escritura-nucleo";
+
+export { estadoHttp } from "./escritura-nucleo";
 import { dependenciasEscritura, operacionesComunidad } from "./escritura-deps";
 
 const SIN_CACHE = { "Cache-Control": "no-store, no-cache, must-revalidate" };
@@ -33,20 +35,18 @@ export async function cuerpoJson(req: Request): Promise<Record<string, unknown> 
   }
 }
 
-/** HTTP de un resultado de escritura: 200 salvo pedido inválido o error. */
-export function estadoHttp(r: ResultadoEscritura | Record<string, unknown>): number {
-  if (r.resultado === "invalido") return 400;
-  if (r.resultado === "error") return 500;
-  return 200;
-}
-
 export async function escribir(p: PedidoEscritura): Promise<ResultadoEscritura | null> {
   const admin = supabaseAdmin();
   if (!admin) return null;
   return escribirResena(dependenciasEscritura(admin), p);
 }
 
-/** Operaciones sin texto. null = sin configuración; las excepciones se traducen. */
+/**
+ * Operaciones sin texto. null = sin configuración. Las mutaciones ya vuelven
+ * reconciliadas (`sin_confirmar` si la confirmación se perdió dos veces), así
+ * que una excepción acá es un rechazo CONFIRMADO de la base: "error" sólo
+ * cuando se sabe que no se hizo nada.
+ */
 export async function operar<T>(f: (ops: ReturnType<typeof operacionesComunidad>) => Promise<T>): Promise<T | Record<string, unknown> | null> {
   const admin = supabaseAdmin();
   if (!admin) return null;

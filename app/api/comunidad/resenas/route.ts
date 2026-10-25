@@ -10,7 +10,9 @@ import type { AccionEscritura } from "@/lib/comunidad/escritura-nucleo";
 // Cuerpo: { accion: "publicar", tipo, tmdb_id, texto, id_intento }
 //       | { accion: "editar", resena_id, version_esperada, texto, id_intento }
 // Respuestas: 401 sin sesión; 400 pedido inválido; 503 sin configuración;
-// 500 "error" (no se guardó nada); 200 con { resultado, … } para todo lo demás.
+// 500 "error" (confirmado: no se guardó nada); 503 "sin_confirmar" (se perdió
+// la confirmación con la base y el reintento tampoco la recuperó: pudo haberse
+// guardado); 200 con { resultado, … } para todo lo demás.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

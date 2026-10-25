@@ -15,8 +15,15 @@
 //      `publicar`, `retener` y `rechazo_contenido` llegan a la base;
 //   5. función de la base (sólo service_role), que corre el protocolo, la
 //      matriz, el límite y la idempotencia, y decide;
-//   6. si la función lanza: "error", no se guardó nada (la transacción se
-//      revierte entera; nada se escribe antes de la marca).
+//   6. si la función falla, importa CÓMO (auditoría E3a, A1):
+//      - antes de enviarla (pasos 1-4): "error", no se tocó la base;
+//      - la base la RECHAZÓ (SQLSTATE o código de PostgREST, ver
+//        `errorRpc`): la transacción se revirtió entera, "error";
+//      - se perdió la confirmación (red, 5xx sin código, cuerpo ilegible):
+//        pudo haberse guardado. Se repite UNA vez con el mismo id_intento y
+//        el mismo hash: si había quedado, la base devuelve el resultado
+//        guardado (`repetido`) sin escribir de nuevo. Si tampoco se confirma,
+//        "sin_confirmar": nunca "no se guardó".
 // El hash del pedido es sobre el pedido NORMALIZADO: un reintento del mismo
 // envío da el mismo hash aunque cambien espacios en los bordes.
 import type { Decision } from "./reglas/tipos.ts";
@@ -55,6 +62,7 @@ export type ResultadoEscritura =
   | { resultado: "rechazo_formato"; mensaje: string }
   | { resultado: "error" }
   | { resultado: "baja_en_curso" }
+  | SinConfirmar
   | ({ resultado: "rechazo_contenido"; mensaje: string } & Record<string, unknown>)
   | RespuestaBase;
 
@@ -82,6 +90,82 @@ export function firmaPedido(accion: AccionEscritura, normalizado: string): strin
 /** SQLSTATE de baja en curso (E2b) en el error de la función. */
 export const esBajaEnCurso = (e: unknown) =>
   /CB001|baja_en_curso/.test(String((e as { code?: string })?.code ?? "") + " " + String((e as Error)?.message ?? e));
+
+export type SinConfirmar = { resultado: "sin_confirmar" };
+
+/**
+ * Un error de una función de la base, ya clasificado. `confirmado`: la base
+ * respondió que no lo hizo (la transacción se revirtió). Si no, la respuesta
+ * se perdió y pudo haberse confirmado.
+ */
+export class ErrorRpc extends Error {
+  readonly code: string;
+  readonly confirmado: boolean;
+  constructor(message: string, code: string, confirmado: boolean) {
+    super(message);
+    this.code = code;
+    this.confirmado = confirmado;
+  }
+}
+
+// SQLSTATE que NO prueban que se revirtió: conexión perdida (08), el servidor
+// se cayó o se reinició (57P), fallas del sistema (58, XX) y el
+// `transaction_resolution_unknown` (08007) / `statement_completion_unknown`
+// (40003). Con ellos el commit pudo haber ocurrido.
+const SQLSTATE_INCIERTO = /^(08|57P|58|XX|40003)/;
+// PostgREST: PGRST000/001 son conexión con la base perdida; el resto rechaza
+// el pedido sin ejecutarlo (esquema, permisos, JWT, función inexistente…).
+const PGRST_INCIERTO = /^PGRST00[01]$/;
+
+/**
+ * Clasifica lo que devolvió `supabase.rpc`. Medido contra Supabase local:
+ * error de SQL → status 400 y SQLSTATE; PostgREST → `PGRSTnnn`; `fetch`
+ * que lanza → status 0 y code ""; un proxy con 502 sin JSON → sin code.
+ */
+export function errorRpc(f: string, error: { message?: string; code?: string }): ErrorRpc {
+  const code = typeof error.code === "string" ? error.code : "";
+  const sqlstate = /^[0-9A-Z]{5}$/.test(code) && !code.startsWith("PGRST");
+  const confirmado = sqlstate ? !SQLSTATE_INCIERTO.test(code) : /^PGRST\d{3}$/.test(code) && !PGRST_INCIERTO.test(code);
+  return new ErrorRpc(`${f}: ${error.message ?? "error"}`, code, confirmado);
+}
+
+/** ¿El error prueba que la base NO hizo nada? Cualquier otro, no se sabe. */
+export const errorConfirmado = (e: unknown) => e instanceof ErrorRpc && e.confirmado;
+
+/**
+ * Corre una función de la base que es idempotente por su id_intento (o por su
+ * naturaleza: votar lo mismo es `sin_cambios`, borrar lo borrado es
+ * `repetido`). Si la confirmación se perdió, la repite UNA vez con los mismos
+ * argumentos para recuperar el resultado; si tampoco se confirma, devuelve
+ * `sin_confirmar`. Un rechazo confirmado de la PRIMERA llamada se propaga:
+ * ahí sí se sabe que no se hizo nada.
+ */
+export async function conReconciliacion<T>(f: () => Promise<T>): Promise<T | SinConfirmar> {
+  try {
+    return await f();
+  } catch (e) {
+    if (errorConfirmado(e)) throw e;
+  }
+  try {
+    return await f();
+  } catch {
+    // Aunque la segunda la rechace, la primera pudo haber quedado.
+    return { resultado: "sin_confirmar" };
+  }
+}
+
+/**
+ * HTTP de un resultado de escritura: 200 salvo pedido inválido, error
+ * confirmado (500: no se guardó nada) o confirmación perdida (503: pudo
+ * haberse guardado; el cuerpo lo dice y el cliente reintenta con el mismo
+ * id_intento).
+ */
+export function estadoHttp(r: ResultadoEscritura | Record<string, unknown>): number {
+  if (r.resultado === "invalido") return 400;
+  if (r.resultado === "error") return 500;
+  if (r.resultado === "sin_confirmar") return 503;
+  return 200;
+}
 
 export async function escribirResena(deps: DependenciasEscritura, p: PedidoEscritura): Promise<ResultadoEscritura> {
   if (!pedidoValido(p)) return { resultado: "invalido" };
@@ -111,15 +195,23 @@ export async function escribirResena(deps: DependenciasEscritura, p: PedidoEscri
     reglas: d.disparadas.filter((x) => x.resultado === d.resultado).map((x) => x.regla),
   };
   const hash = deps.hash(firmaPedido(p.accion, texto));
-  let r: RespuestaBase;
+  const a = p.accion;
+  // Una respuesta sin forma de resultado también es una confirmación perdida.
+  const llamar = async () => {
+    const x = a.tipo === "publicar"
+      ? await deps.publicar({ uid: p.uid, tipo: a.titulo.tipo, tmdbId: a.titulo.tmdbId, texto, decision, idIntento: p.idIntento, hash })
+      : await deps.editar({ uid: p.uid, resenaId: a.resenaId, versionEsperada: a.versionEsperada, texto, decision, idIntento: p.idIntento, hash });
+    if (!x || typeof x.resultado !== "string") throw new Error("respuesta inesperada");
+    return x;
+  };
+  let r: RespuestaBase | SinConfirmar;
   try {
-    r = p.accion.tipo === "publicar"
-      ? await deps.publicar({ uid: p.uid, tipo: p.accion.titulo.tipo, tmdbId: p.accion.titulo.tmdbId, texto, decision, idIntento: p.idIntento, hash })
-      : await deps.editar({ uid: p.uid, resenaId: p.accion.resenaId, versionEsperada: p.accion.versionEsperada, texto, decision, idIntento: p.idIntento, hash });
+    r = await conReconciliacion(llamar);
   } catch (e) {
+    // Sólo llega acá un rechazo confirmado: no se guardó nada.
     return esBajaEnCurso(e) ? { resultado: "baja_en_curso" } : { resultado: "error" };
   }
-  if (!r || typeof r.resultado !== "string") return { resultado: "error" };
+  if (r.resultado === "sin_confirmar") return r;
   // El texto del rechazo de contenido lo dan las reglas, no la base (que no
   // guarda el texto rechazado). En un reintento, la decisión es la misma.
   if (r.resultado === "rechazo_contenido") return { ...r, resultado: "rechazo_contenido", mensaje: d.motivoUsuario };
