@@ -484,8 +484,57 @@ AAB tiene que ser `5` o mayor.
      - El dueño autorizó **E3a local**, integrando las reglas candidatas de
        E1 sólo en local y con los interruptores apagados. Eso no aprueba E1
        ni habilita contenido real.
+     **E3a local (24/10; `64daf53`, `c2bf84a`, `5ee5133`; sólo `supabase
+     start` y la app local; interruptores apagados al terminar):**
+     - `014_comunidad_escritura.sql` (+ down):
+       - términos versionados (texto **borrador local**, sin aprobar) y la
+         tabla `intentos` (idempotencia por id_intento y hash del pedido);
+       - publicar, editar, borrar, votar, retirar voto y aceptar términos,
+         sólo `service_role`. Cada una usa las primitivas de 013 en orden,
+         sin bloquear antes la fila del actor, relee lo bloqueado y no
+         escribe nada antes de la marca;
+       - matriz A/B (§2.1.2) y tabla §3.4.1 de ediciones; los votos se
+         reinician una sola vez;
+       - lectura provisional mínima de un título (la reemplaza E5a);
+     - app:
+       - cinco rutas con Bearer y CORS;
+       - normalización y cuenta compartidas entre pantalla, servidor y base;
+       - en la ficha, un acordeón cerrado con los términos, el editor (con
+         aviso y confirmación de reinicio, borrado con confirmación,
+         reintento sin duplicar y "No sabemos si se guardó") y la
+         evaluación;
+     - resultados (corridas de Claude, en secuencia):
+       - escritura 37/37: gates 1–4, B3a/B3b y cruzados con las funciones
+         reales, matriz, §3.4.1, idempotencia, límites con carreras, rutas
+         y acceso directo;
+       - up/down/up 16/16; sin 014, el volcado es el de E2c;
+       - permisos 27/27, invariantes 81/81, baja 26/26 y concurrencia
+         21/21;
+       - `tsc` 0 errores; `npm test` 2387 pasan, 0 fallan, 16 omitidas;
+     - recorrido en navegador, en escritorio y con 375 px, con 15
+       capturas en `docs/medidas/2026-10-24-e3a-recorrido/`;
+     - hallazgos y correcciones dentro de la entrega:
+       - los triggers diferidos de 011 corrían al confirmar con el rol de
+         la sesión: `set constraints all immediate` en publicar y editar;
+       - un emoji con ZWJ pasaba el contador pero el CHECK de 011 lo
+         rechaza: ahora el editor lo avisa antes de enviar;
+       - el mensaje se perdía al volver a montar el editor;
+       - el botón deshabilitado no se veía como tal;
+     - ⚠️ la ruta y la interfaz dependen de 011–014: las migraciones van
+       antes del código;
+     - no verificado:
+       - la ficha real con TMDB (en local se usó
+         `/revision-local/comunidad`, el mismo componente);
+       - Android;
+       - lo de E3b (admisión, duplicados, revisión de rechazos).
+
+     Informe: `docs/medidas/2026-10-24-informe-claude-e3a.md`; salidas:
+     `docs/medidas/2026-10-24-e3a-salidas.txt`.
    **Falta:**
-   - E3a local (en curso);
+   - la auditoría focalizada de E3a. E3b no empieza sin autorización;
+   - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
+     bloquea los emojis compuestos. Es una restricción de E2a que no se
+     reabrió;
    - resolver, antes de E4, E8 y la publicación, el alcance del borrado de
      denuncias recibidas en la baja, y el plazo de los intervalos
      seudónimos (P3);

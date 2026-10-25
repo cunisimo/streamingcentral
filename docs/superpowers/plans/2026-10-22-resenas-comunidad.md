@@ -739,6 +739,19 @@ rollback;
 - **Criterio de cierre:** pruebas verdes; casos 1–5 de E2c siguen verdes.
 - **Evidencia para Codex:** salidas, diff, tabla de rev. §3.4.1 con el
   resultado obtenido por fila.
+- **Estado al 24/10/2026** (`docs/ESTADO.md` es la fuente vigente):
+  implementada **en local** en `64daf53`, `c2bf84a` y `5ee5133`. Pendiente
+  de auditoría focalizada.
+  - Gates de §5.0 cerrados con las funciones reales: casos 1–4 de §2.2.4,
+    B3a/B3b y actores cruzados. El caso 5 (suspensión frente a voto) sigue
+    con gate en E4.
+  - Dependencias mínimas agregadas:
+    - términos con texto de **borrador local**;
+    - una lectura provisional de un título, que reemplaza E5a;
+    - una página `/revision-local/comunidad`, porque la ficha necesita
+      TMDB y en local no hay token.
+  - No se construyó: admisión, duplicados ni "Pedir revisión" (E3b).
+  - Informe: `docs/medidas/2026-10-24-informe-claude-e3a.md`.
 
 ### E3b — Admisión, colas, denuncias, bloqueos y revisión de rechazos
 
