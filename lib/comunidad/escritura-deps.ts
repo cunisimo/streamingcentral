@@ -10,6 +10,7 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { evaluarResena } from "./reglas/decision.ts";
+import { huella, secretoDuplicados } from "./duplicados.ts";
 import { conReconciliacion, errorRpc, type DependenciasEscritura, type RespuestaBase } from "./escritura-nucleo.ts";
 
 // Todo error sale clasificado (`errorRpc`): rechazo confirmado por la base o
@@ -32,7 +33,7 @@ const rpc = (admin: SupabaseClient, f: string, args: Record<string, unknown>) =>
 
 export const sha256 = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
 
-export function dependenciasEscritura(admin: SupabaseClient): DependenciasEscritura {
+export function dependenciasEscritura(admin: SupabaseClient, secreto: string | null = secretoDuplicados()): DependenciasEscritura {
   return {
     textosRecientes: async (uid) => {
       const { data, error } = await admin.rpc("comunidad_textos_recientes", { p_uid: uid });
@@ -41,6 +42,10 @@ export function dependenciasEscritura(admin: SupabaseClient): DependenciasEscrit
     },
     evaluar: (texto, contexto) => evaluarResena(texto, contexto),
     hash: sha256,
+    huella: (texto) => {
+      if (!secreto) throw new Error("falta COMUNIDAD_HMAC_DUPLICADOS");
+      return huella(texto, secreto);
+    },
     publicar: (a) => rpcCrudo(admin, "comunidad_publicar", {
       p_uid: a.uid, p_tipo: a.tipo, p_tmdb_id: a.tmdbId, p_texto: a.texto, p_decision: a.decision,
       p_id_intento: a.idIntento, p_hash: a.hash,
@@ -62,6 +67,20 @@ export function operacionesComunidad(admin: SupabaseClient) {
       rpc(admin, "comunidad_retirar_voto", { p_uid: uid, p_version: versionId }),
     aceptarTerminos: (uid: string, version: string) =>
       rpc(admin, "comunidad_aceptar_terminos", { p_uid: uid, p_version: version }),
+    // E3b. Denunciar es idempotente por (denunciante, versión) salvo en el
+    // excedente (después de N filas por versión sólo suma un contador, que
+    // ordena y nunca oculta); retener por regla, bloquear y desbloquear lo son.
+    denunciar: (uid: string, versionId: number, categoria: string, comentario: string | null) =>
+      rpc(admin, "comunidad_denunciar", { p_uid: uid, p_version: versionId, p_categoria: categoria, p_comentario: comentario }),
+    retenerPorRegla: (versionId: number, decision: { resultado: string; version_reglas: string; reglas: string[] }) =>
+      rpc(admin, "comunidad_retener_por_regla", { p_version: versionId, p_decision: decision }),
+    bloquear: (uid: string, versionId: number) => rpc(admin, "comunidad_bloquear", { p_uid: uid, p_version: versionId }),
+    desbloquear: (uid: string, bloqueoId: number) => rpc(admin, "comunidad_desbloquear", { p_uid: uid, p_bloqueo: bloqueoId }),
+    bloqueados: async (uid: string) => {
+      const { data, error } = await admin.rpc("comunidad_bloqueados", { p_uid: uid });
+      if (error) throw errorRpc("comunidad_bloqueados", error);
+      return data as Record<string, unknown>;
+    },
     leerTitulo: async (uid: string, tipo: string, tmdbId: number) => {
       const { data, error } = await admin.rpc("comunidad_leer_titulo", { p_uid: uid, p_tipo: tipo, p_tmdb_id: tmdbId });
       if (error) throw errorRpc("comunidad_leer_titulo", error);

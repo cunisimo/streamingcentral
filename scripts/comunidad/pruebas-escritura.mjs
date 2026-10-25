@@ -30,6 +30,7 @@ import { escribirResena, firmaPedido } from "../../lib/comunidad/escritura-nucle
 import { dependenciasEscritura, operacionesComunidad, sha256 } from "../../lib/comunidad/escritura-deps.ts";
 import { normalizarTexto } from "../../lib/comunidad/texto.ts";
 import { TERMINOS_VERSION } from "../../lib/comunidad/terminos.ts";
+import { huella, secretoDuplicados } from "../../lib/comunidad/duplicados.ts";
 
 const URL_API = urlLocal(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, SRV = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -42,6 +43,13 @@ console.log(`base: ${contenedor()} · API ${URL_API} · app ${BASE}\n`);
 if (sqlOk("select count(*) from pg_proc where proname = 'comunidad_publicar'") !== "1") {
   console.error("Falta 014_comunidad_escritura.sql (¿node scripts/sala/db-local.mjs?)"); process.exit(2);
 }
+
+// E3b (015): toda decisión que guarda lleva la huella de duplicados (HMAC con
+// el secreto LOCAL de prueba de .env.comunidad-local). Los gates de abajo
+// llaman a la función por SQL, así que la arman igual que la ruta.
+const SECRETO = secretoDuplicados();
+if (!SECRETO) { console.error("Falta COMUNIDAD_HMAC_DUPLICADOS (¿--env-file=.env.comunidad-local?)"); process.exit(2); }
+const decSql = (texto) => JSON.stringify({ resultado: "publicar", version_reglas: "2026-10-24.2", reglas: [], huella: huella(normalizarTexto(texto), SECRETO) });
 
 const opcionesCliente = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
 const admin = createClient(URL_API, SRV, opcionesCliente);
@@ -298,8 +306,18 @@ try {
     assert.equal(propia.mia.estado, "retenida", "el autor la ve 'En revisión'");
   });
 
-  await prueba("§3.4.1 · admisión cerrada (cola llena) → NO APLICA en E3a: la admisión es de E3b (sin probar acá)", async () => {
-    assert.equal(sqlOk("select count(*) from pg_proc where proname like '%admision%'"), "0");
+  await prueba("§3.4.1 · admisión cerrada (cola llena) → la anterior intacta, con sus votos, y 'admision_global' (E3b; el resto de la admisión, en pruebas-moderacion.mjs)", async () => {
+    const { a, r } = await conVotos("admision", 1);
+    const antes = estadoResena(r.resena_id);
+    const prev = sqlOk("select admision_global from comunidad.config");
+    config({ admision_global: 0 });
+    try {
+      const e = await editar(a, r.resena_id, r.version_id, SPAM);
+      assert.deepEqual([e.resultado, e.motivo], ["rechazo_cuenta", "admision_global"]);
+    } finally {
+      config({ admision_global: prev });
+    }
+    assert.deepEqual(estadoResena(r.resena_id), antes);
   });
 
   // =========================================================================
@@ -521,10 +539,9 @@ try {
     const a = await cuenta("g2a-a"), ev = await cuenta("g2a-ev");
     const r = await publicar(a, BIEN());
     const texto = BIEN();
-    const dec = JSON.stringify({ resultado: "publicar", version_reglas: "2026-10-24.2", reglas: [] });
     const b = await barrera(32);
     const X = new Sesion("g2a-editar"), Y = new Sesion("g2a-votar");
-    X.enviar(enTx(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${texto}', '${dec}'::jsonb, '${randomUUID()}', '${sha256(texto)}'`), 32));
+    X.enviar(enTx(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${texto}', '${decSql(texto)}'::jsonb, '${randomUUID()}', '${sha256(texto)}'`), 32));
     await esperar(esperaLock(X, "advisory"), "la edición retiene sus locks");
     Y.enviar(comoServicio(llamar("comunidad_votar", `${q(ev.uid)}, ${r.version_id}, true`)));
     await esperar(esperaLock(Y), "el voto espera");
@@ -539,12 +556,11 @@ try {
     const a = await cuenta("g2b-a"), ev = await cuenta("g2b-ev");
     const r = await publicar(a, BIEN());
     const texto = BIEN();
-    const dec = JSON.stringify({ resultado: "publicar", version_reglas: "2026-10-24.2", reglas: [] });
     const b = await barrera(33);
     const X = new Sesion("g2b-votar"), Y = new Sesion("g2b-editar");
     X.enviar(enTx(llamar("comunidad_votar", `${q(ev.uid)}, ${r.version_id}, true`), 33));
     await esperar(esperaLock(X, "advisory"), "el voto retiene sus locks");
-    Y.enviar(comoServicio(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${texto}', '${dec}'::jsonb, '${randomUUID()}', '${sha256(texto)}'`)));
+    Y.enviar(comoServicio(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${texto}', '${decSql(texto)}'::jsonb, '${randomUUID()}', '${sha256(texto)}'`)));
     await esperar(esperaLock(Y), "la edición espera");
     b.soltar();
     await X.terminar(); await Y.terminar();
@@ -557,13 +573,12 @@ try {
   await prueba("gate caso 3 · dos ediciones con la misma versión esperada: la segunda da conflicto; UNA versión nueva", async () => {
     const a = await cuenta("g3");
     const r = await publicar(a, BIEN());
-    const dec = JSON.stringify({ resultado: "publicar", version_reglas: "2026-10-24.2", reglas: [] });
     const t1 = BIEN(), t2 = BIEN();
     const b = await barrera(34);
     const X = new Sesion("g3-e1"), Y = new Sesion("g3-e2");
-    X.enviar(enTx(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${t1}', '${dec}'::jsonb, '${randomUUID()}', '${sha256(t1)}'`), 34));
+    X.enviar(enTx(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${t1}', '${decSql(t1)}'::jsonb, '${randomUUID()}', '${sha256(t1)}'`), 34));
     await esperar(esperaLock(X, "advisory"), "E1 retiene");
-    Y.enviar(comoServicio(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${t2}', '${dec}'::jsonb, '${randomUUID()}', '${sha256(t2)}'`)));
+    Y.enviar(comoServicio(llamar("comunidad_editar", `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${t2}', '${decSql(t2)}'::jsonb, '${randomUUID()}', '${sha256(t2)}'`)));
     await esperar(esperaLock(Y, "advisory"), "E2 espera K_CUENTA");
     b.soltar();
     await X.terminar(); await Y.terminar();
@@ -574,9 +589,8 @@ try {
 
   await prueba("gate caso 4 · el mismo id_intento en dos sesiones a la vez: UNA versión, UN reinicio; la segunda devuelve el mismo resultado", async () => {
     const { a, r } = await conVotos("g4", 2);
-    const dec = JSON.stringify({ resultado: "publicar", version_reglas: "2026-10-24.2", reglas: [] });
     const t = BIEN(), id = randomUUID();
-    const args = `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${t}', '${dec}'::jsonb, '${id}', '${sha256(t)}'`;
+    const args = `${q(a.uid)}, ${r.resena_id}, ${r.version_id}, '${t}', '${decSql(t)}'::jsonb, '${id}', '${sha256(t)}'`;
     const b = await barrera(35);
     const X = new Sesion("g4-e1"), Y = new Sesion("g4-e2");
     X.enviar(enTx(llamar("comunidad_editar", args), 35));

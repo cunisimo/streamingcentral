@@ -14,6 +14,8 @@ import { escribirResena, esBajaEnCurso, type PedidoEscritura, type ResultadoEscr
 
 export { estadoHttp } from "./escritura-nucleo";
 import { dependenciasEscritura, operacionesComunidad } from "./escritura-deps";
+import { evaluarResena } from "./reglas/decision";
+import { denunciarVersion, type PedidoDenuncia } from "./moderacion-nucleo";
 
 const SIN_CACHE = { "Cache-Control": "no-store, no-cache, must-revalidate" };
 export const responder = (body: unknown, status: number) => NextResponse.json(body, { status, headers: SIN_CACHE });
@@ -55,4 +57,21 @@ export async function operar<T>(f: (ops: ReturnType<typeof operacionesComunidad>
   } catch (e) {
     return esBajaEnCurso(e) ? { resultado: "baja_en_curso" } : { resultado: "error" };
   }
+}
+
+/**
+ * Una denuncia (E3b): el núcleo de ./moderacion-nucleo con los adaptadores
+ * reales. La corroboración corre las reglas vigentes sin el contexto de
+ * textos recientes del autor (la regla de contacto partido no mira ahí).
+ */
+export async function denunciar(p: PedidoDenuncia): Promise<Record<string, unknown> | null> {
+  const admin = supabaseAdmin();
+  if (!admin) return null;
+  const ops = operacionesComunidad(admin);
+  return denunciarVersion({
+    denunciar: ops.denunciar,
+    evaluar: (texto) => evaluarResena(texto, { textosRecientes: [] }),
+    retenerPorRegla: ops.retenerPorRegla,
+    bloquear: ops.bloquear,
+  }, p);
 }

@@ -1,13 +1,15 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import {
-  adoptar, alCambiarPersistida, avisoReinicio, cargarRemota, conservarIntento, contador, cuerpoEnvio, empezarEdicion, etiquetaEstado,
-  firmaEnvio, hayBorrador, intentoPara, mantenerBorrador, publicarComoNueva, puedeEnviar, trasGuardado,
-  type EstadoEditor, type Intento, type Persistida, type Titulo,
+  adoptar, alCambiarPersistida, avisoReinicio, cargarRemota, conservarIntento, contador, cuerpoEnvio, cuerpoRevision, empezarEdicion,
+  etiquetaEstado, firmaEnvio, firmaRevision, guardoVersion, hayBorrador, intentoPara, mantenerBorrador, ofreceRevision, publicarComoNueva,
+  puedeEnviar, trasGuardado, type EstadoEditor, type Intento, type Persistida, type Titulo,
 } from "@/lib/comunidad/editor-nucleo";
 import {
-  AVISO_REINICIO, MENSAJE_CONFLICTO_BORRADOR, REMOTO_BORRADA, REMOTO_MODIFICADA, REMOTO_PUBLICADA, mensajeEscritura, type Tono,
+  AVISO_REINICIO, AVISO_REVISION_EDICION, MENSAJE_CONFLICTO_BORRADOR, OFERTA_REVISION, REMOTO_BORRADA, REMOTO_MODIFICADA, REMOTO_PUBLICADA,
+  mensajeEscritura, type Tono,
 } from "@/lib/comunidad/mensajes";
+import { normalizarTexto } from "@/lib/comunidad/texto";
 
 export type RespuestaEditor = Record<string, unknown> | "sin-confirmar";
 
@@ -23,20 +25,31 @@ export type RespuestaEditor = Record<string, unknown> | "sin-confirmar";
 //     borrador ni cambia la versión esperada: aviso y decisión explícita (A2).
 // Quien lo monta le da una `key` por cuenta y título (`claveEditor`): cambiar
 // de una a otra empieza de cero, sin borrador ni intento.
+//
+// E3b, "Pedir revisión" (§3.3.3): sólo tras un rechazo por regla de
+// contenido y mientras el texto sea el rechazado. Va por su propia ruta y con
+// su propio id_intento; en una edición pide antes la confirmación de que la
+// publicada deja de verse (§3.4.1). "Reintentar" repite la última acción.
 export default function EditorResena({
-  titulo, mia, enviar, borrar, recargar,
+  titulo, mia, enviar, pedirRevision, borrar, recargar,
 }: {
   titulo: Titulo;
   mia: Persistida | null;
   enviar: (cuerpo: Record<string, unknown>) => Promise<RespuestaEditor>;
+  pedirRevision: (cuerpo: Record<string, unknown>) => Promise<RespuestaEditor>;
   borrar: (resenaId: number) => Promise<RespuestaEditor>;
   recargar: () => void;
 }) {
   const [e, setE] = useState<EstadoEditor>(() => adoptar(mia));
   const [enviando, setEnviando] = useState(false);
   const [msg, setMsg] = useState<{ tono: Tono; texto: string } | null>(null);
-  const [confirmar, setConfirmar] = useState<"reinicio" | "borrar" | null>(null);
+  const [confirmar, setConfirmar] = useState<"reinicio" | "borrar" | "revision" | null>(null);
   const intento = useRef<Intento | null>(null);
+  const intentoRev = useRef<Intento | null>(null);
+  // El texto (normalizado) que las reglas rechazaron por contenido: la oferta
+  // de revisión vale sólo para ESE texto.
+  const [rechazado, setRechazado] = useState<string | null>(null);
+  const ultima = useRef<"guardar" | "revision">("guardar");
   // La última versión persistida, para decidir al volver una respuesta.
   const miaActual = useRef(mia);
   miaActual.current = mia;
@@ -57,6 +70,8 @@ export default function EditorResena({
     if (!puedeEnviar(base, e.texto, enviando)) return;
     setEnviando(true);
     setMsg(null);
+    setRechazado(null);
+    ultima.current = "guardar";
     const it = intentoPara(intento.current, firmaEnvio(base, titulo, e.texto), () => crypto.randomUUID());
     intento.current = it;
     const r = await enviar(cuerpoEnvio(e, titulo, it.id));
@@ -68,13 +83,36 @@ export default function EditorResena({
       ? { tono: "rechazo", texto: MENSAJE_CONFLICTO_BORRADOR }
       : mensajeEscritura(r === "sin-confirmar" ? r : (r as { resultado?: unknown })));
     setEnviando(false);
-    if (res === "publicada" || res === "retenida") {
+    if (ofreceRevision(r)) setRechazado(normalizarTexto(e.texto));
+    if (guardoVersion(res)) {
       setE((x) => trasGuardado(x, (r as { version_id?: unknown }).version_id, miaActual.current));
       recargar();
     }
     // Conflicto o reseña existente: traer la vigente para que el aviso ofrezca
     // la decisión. El borrador no se toca.
     if (res === "conflicto" || (res === "rechazo_cuenta" && (r as { motivo?: unknown }).motivo === "resena_existente")) recargar();
+  }
+
+  async function revisar(confirmado: boolean) {
+    setConfirmar(null);
+    if (enviando) return;
+    if (base && !confirmado) { setConfirmar("revision"); return; }
+    setEnviando(true);
+    setMsg(null);
+    ultima.current = "revision";
+    const it = intentoPara(intentoRev.current, firmaRevision(base, titulo, e.texto), () => crypto.randomUUID());
+    intentoRev.current = it;
+    const r = await pedirRevision(cuerpoRevision(e, titulo, it.id, true));
+    if (!conservarIntento(r === "sin-confirmar" ? r : (r as { resultado?: unknown }))) intentoRev.current = null;
+    setMsg(mensajeEscritura(r === "sin-confirmar" ? r : (r as { resultado?: unknown })));
+    setEnviando(false);
+    const res = r === "sin-confirmar" ? null : r.resultado;
+    if (guardoVersion(res)) {
+      setRechazado(null);
+      setE((x) => trasGuardado(x, (r as { version_id?: unknown }).version_id, miaActual.current));
+      recargar();
+    }
+    if (res === "conflicto") recargar();
   }
 
   function pedirGuardar() {
@@ -150,25 +188,37 @@ export default function EditorResena({
       {msg && (
         <p className={`cm-msg ${msg.tono}`} role={msg.tono === "exito" || msg.tono === "info" ? "status" : "alert"}>
           {msg.texto}
-          {msg.tono === "sin_confirmar" && e.editando && <> <button className="cm-link" onClick={() => void guardar()}>Reintentar</button></>}
+          {msg.tono === "sin_confirmar" && e.editando && <> <button className="cm-link" onClick={() => void (ultima.current === "revision" ? revisar(true) : guardar())}>Reintentar</button></>}
           {msg.tono === "rechazo" && /otro dispositivo/.test(msg.texto) && !remoto && <> <button className="cm-link" onClick={recargar}>Recargar</button></>}
         </p>
+      )}
+
+      {/* Después del motivo del rechazo: primero qué pasó, después la oferta. */}
+      {e.editando && rechazado !== null && normalizarTexto(e.texto) === rechazado && (
+        <div className="cm-aviso cm-revision">
+          <p>{OFERTA_REVISION}</p>
+          <button className="btn ghost" disabled={enviando} onClick={() => void revisar(false)}>Pedir revisión</button>
+        </div>
       )}
 
       {confirmar && (
         <div className="dlg-backdrop" onClick={() => setConfirmar(null)} role="presentation">
           <div className="dlg" onClick={(ev) => ev.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cm-conf-t">
-            <h2 id="cm-conf-t">{confirmar === "borrar" ? "Borrar tu reseña" : "Guardar cambios"}</h2>
+            <h2 id="cm-conf-t">{confirmar === "borrar" ? "Borrar tu reseña" : confirmar === "revision" ? "Pedir revisión" : "Guardar cambios"}</h2>
             <p className="dlg-sub">
               {confirmar === "borrar"
                 ? "Tu reseña deja de verse al instante. No se puede deshacer."
-                : `${AVISO_REINICIO} ¿Querés guardar igual?`}
+                : confirmar === "revision"
+                  ? (mia?.estado === "publicada" ? AVISO_REVISION_EDICION : "Esta edición reemplaza la versión actual y queda en revisión hasta que se resuelva.")
+                  : `${AVISO_REINICIO} ¿Querés guardar igual?`}
             </p>
             <div className="dlg-acciones">
               <button className="btn ghost" autoFocus onClick={() => setConfirmar(null)}>Cancelar</button>
               {confirmar === "borrar"
                 ? <button className="cfg-danger-btn" onClick={() => void borrarla()}>Borrar</button>
-                : <button className="btn" onClick={() => void guardar()}>Guardar</button>}
+                : confirmar === "revision"
+                  ? <button className="btn" onClick={() => void revisar(true)}>Pedir revisión</button>
+                  : <button className="btn" onClick={() => void guardar()}>Guardar</button>}
             </div>
           </div>
         </div>

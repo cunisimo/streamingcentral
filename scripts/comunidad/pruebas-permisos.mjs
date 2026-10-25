@@ -44,16 +44,22 @@ console.log(`base: ${contenedor()} · API: ${URL_API}\n`);
 
 const { prueba, cerrar } = arnes();
 
-// 011 (E2a) creó once; 014 (E3a) suma `intentos` (idempotencia).
+// 011 (E2a) creó once; 014 (E3a) suma `intentos` (idempotencia); 015 (E3b)
+// suma `huellas`, `denuncias_excedentes` y `corroboraciones`.
 const TABLAS = [
-  "bajas_en_curso", "bloqueos", "config", "contadores", "denuncias", "evaluaciones",
-  "intentos", "participantes", "resenas", "suspensiones", "tramos", "versiones",
+  "bajas_en_curso", "bloqueos", "config", "contadores", "corroboraciones", "denuncias", "denuncias_excedentes", "evaluaciones",
+  "huellas", "intentos", "participantes", "resenas", "suspensiones", "tramos", "versiones",
 ];
-// El inventario exacto de `public.comunidad_*`: la baja (E2b, 012) y la
-// escritura (E3a, 014). Una función nueva sin clasificar falla acá. Los
-// argumentos son los de una llamada SIN EFECTOS con un uid inexistente: la
-// función rechaza o no encuentra nada.
-const DECISION_PRUEBA = { resultado: "publicar", version_reglas: "prueba", reglas: [] };
+// El inventario exacto de `public.comunidad_*`: la baja (E2b, 012), la
+// escritura (E3a, 014) y la moderación (E3b, 015). Una función nueva sin
+// clasificar falla acá. Los argumentos son los de una llamada SIN EFECTOS con
+// un uid inexistente: la función rechaza o no encuentra nada. Las de E3b
+// reciben una versión que no existe (rechazan antes del paso 1) y retener por
+// regla una decisión `publicar` (no hace nada).
+const DECISION_PRUEBA = { resultado: "publicar", version_reglas: "prueba", reglas: [], huella: { texto: "a".repeat(64), shingles: ["0123456789abcdef"] } };
+const VERSION_INEXISTENTE = 9007199254740991;
+// Sin `p_uid`: la corroboración la llama la ruta sin actor.
+const SIN_UID = new Set(["comunidad_retener_por_regla"]);
 const HASH_PRUEBA = "a".repeat(64);
 const INTENTO_PRUEBA = "00000000-0000-4000-8000-0000000000ee";
 const RPC_COMUNIDAD = {
@@ -61,20 +67,26 @@ const RPC_COMUNIDAD = {
   comunidad_baja_comunitaria: {},
   comunidad_baja_comunitaria_admin: {},
   comunidad_baja_registrar_fallo: { p_error: "prueba de permisos" },
+  comunidad_bloqueados: {},
+  comunidad_bloquear: { p_version: VERSION_INEXISTENTE },
   comunidad_borrar: { p_resena: 1 },
+  comunidad_denunciar: { p_version: VERSION_INEXISTENTE, p_categoria: "spam", p_comentario: null },
+  comunidad_desbloquear: { p_bloqueo: VERSION_INEXISTENTE },
   comunidad_editar: { p_resena: 1, p_version_esperada: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
   comunidad_estado_baja: {},
   comunidad_leer_titulo: { p_tipo: "movie", p_tmdb_id: 1 },
   comunidad_publicar: { p_tipo: "movie", p_tmdb_id: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
+  comunidad_retener_por_regla: { p_version: VERSION_INEXISTENTE, p_decision: DECISION_PRUEBA },
   comunidad_retirar_voto: { p_version: 1 },
   comunidad_textos_recientes: {},
   comunidad_votar: { p_version: 1, p_util: true },
 };
-// lock_timeout de cada una (vacío = sin): 10 s la baja, 5 s las escrituras de E3a.
+// lock_timeout de cada una (vacío = sin): 10 s la baja, 5 s las escrituras de E3a y E3b.
 const LOCK_TIMEOUT = {
   comunidad_baja_comunitaria: "10s", comunidad_baja_comunitaria_admin: "10s",
   comunidad_aceptar_terminos: "5s", comunidad_publicar: "5s", comunidad_editar: "5s",
   comunidad_borrar: "5s", comunidad_votar: "5s", comunidad_retirar_voto: "5s",
+  comunidad_denunciar: "5s", comunidad_retener_por_regla: "5s", comunidad_bloquear: "5s", comunidad_desbloquear: "5s",
 };
 
 const ROLES_API = ["anon", "authenticated", "service_role"];
@@ -82,7 +94,8 @@ const OPS = ["select", "insert", "update", "delete", "truncate"];
 // Una columna por tabla para el `update … set c = c`.
 const COLUMNA = {
   bajas_en_curso: "intentos", bloqueos: "creado_en", config: "modulo_activo", contadores: "cantidad",
-  denuncias: "estado", evaluaciones: "util", intentos: "resultado", participantes: "nombre_comunitario", resenas: "borrada_en",
+  corroboraciones: "reglas", denuncias: "estado", denuncias_excedentes: "cantidad", evaluaciones: "util", huellas: "creada_en",
+  intentos: "resultado", participantes: "nombre_comunitario", resenas: "borrada_en",
   suspensiones: "hasta", tramos: "vigente_hasta", versiones: "decidida_en",
 };
 
@@ -135,7 +148,7 @@ function correrModo(modo, preparar, casos) {
 // ===========================================================================
 console.log("— 1. SQL (SET ROLE) —");
 
-await prueba("el esquema tiene exactamente las doce tablas previstas (11 de E2a + intentos de E3a)", () => {
+await prueba("el esquema tiene exactamente las quince tablas previstas (11 de E2a + intentos de E3a + 3 de E3b)", () => {
   const t = sqlOk("select string_agg(tablename, ',' order by tablename) from pg_tables where schemaname = 'comunidad'");
   assert.equal(t, TABLAS.join(","));
 });
@@ -191,14 +204,14 @@ await prueba("control: una función nueva en el esquema SIN su revoke queda ejec
   assert.deepEqual(resultados(r.stderr), [["x", "42501"]]);
 });
 
-await prueba("catálogo: RLS activada en las doce y ninguna policy", () => {
+await prueba("catálogo: RLS activada en las quince y ninguna policy", () => {
   const sin = sqlOk("select string_agg(relname, ',') from pg_class where relnamespace = 'comunidad'::regnamespace and relkind = 'r' and not relrowsecurity");
   assert.equal(sin, "", `sin RLS: ${sin}`);
   const pol = sqlOk("select count(*) from pg_policy p join pg_class c on c.oid = p.polrelid where c.relnamespace = 'comunidad'::regnamespace");
   assert.equal(pol, "0");
 });
 
-await prueba("control positivo: el dueño (postgres) sí lee las doce tablas", () => {
+await prueba("control positivo: el dueño (postgres) sí lee las quince tablas", () => {
   const out = sqlOk(TABLAS.map((t) => `select '${t}', count(*) from comunidad.${t};`).join("\n"));
   assert.equal(out.split("\n").length, TABLAS.length);
 });
@@ -259,11 +272,15 @@ await prueba("1c · después de revertir, los grants de prueba no quedaron", () 
 const admin = createClient(URL_API, SRV, { auth: { persistSession: false, autoRefreshToken: false } });
 const nuevoCliente = () => createClient(URL_API, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
 
+// Las cuentas que crea ESTA corrida: se borran al final con lo que colgaba de
+// ellas (E3b: antes quedaban en la base compartida, cuatro por corrida).
+const creados = [];
 async function usuario(prefijo) {
   const email = `${prefijo}-${Date.now()}-${randomBytes(3).toString("hex")}@comunidad.test`;
   const password = randomBytes(18).toString("base64url");
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (error) throw error;
+  creados.push(data.user.id);
   const cliente = nuevoCliente();
   const { data: s, error: e2 } = await cliente.auth.signInWithPassword({ email, password });
   if (e2) throw e2;
@@ -415,7 +432,7 @@ await prueba(`REST: 7 credenciales × ${TABLAS.length} tablas × 4 métodos × 2
   assert.deepEqual(mal.slice(0, 10), [], `${mal.length} desvíos`);
 });
 
-await prueba("REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b y E3a), anon no ve ninguna y service_role ve exactamente las del inventario", async () => {
+await prueba("REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario", async () => {
   for (const [quien, token] of [["anon", ANON], ["service_role", SRV]]) {
     const r = await fetch(`${URL_API}/rest/v1/`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
     const doc = await r.json();
@@ -450,7 +467,7 @@ console.log("\n— 3. RPC —");
 
 
 
-await prueba("las únicas public.comunidad_* son las del inventario (E2b y E3a), security definer y search_path vacío", () => {
+await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a y E3b), security definer y search_path vacío", () => {
   const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
     from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
   assert.deepEqual(out.split("\n"), Object.keys(RPC_COMUNIDAD).map((f) =>
@@ -475,7 +492,7 @@ await prueba("RPC real por REST: anon y cada JWT reciben 401/403 en todas; servi
       const r = await fetch(`${URL_API}/rest/v1/rpc/${f}`, {
         method: "POST",
         headers: { apikey: ANON, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ ...args, p_uid: nadie }),
+        body: JSON.stringify(SIN_UID.has(f) ? args : { ...args, p_uid: nadie }),
       });
       const cuerpo = await r.text();
       if (quien === "service_role") {
@@ -518,4 +535,23 @@ console.log(sqlOk(`select 'esquema comunidad: ' || coalesce(nspacl::text, '(sin 
   select c.relname || ': ' || coalesce(c.relacl::text, '(sin ACL)') from pg_class c
    where c.relnamespace = 'comunidad'::regnamespace and c.relkind in ('r', 'S') order by 1`));
 
+// ---------------------------------------------------------------------------
+console.log("\n— Limpieza (base compartida): sólo lo que creó esta corrida —");
+{
+  const us = creados.map((u) => `'${u}'`).join(",");
+  if (us) {
+    const ps = sqlOk(`select coalesce(string_agg(quote_literal(id), ','), '') from comunidad.participantes where user_id in (${us})`);
+    if (ps) sqlOk(`begin;
+      delete from comunidad.resenas where autor_participante in (${ps});
+      delete from comunidad.suspensiones where participante_id in (${ps});
+      delete from comunidad.contadores where participante_id in (${ps});
+      delete from comunidad.participantes where id in (${ps});
+      commit;`);
+    for (const u of creados) await admin.auth.admin.deleteUser(u, false);
+  }
+  const restos = sqlOk(`select (select count(*) from auth.users where id in (${us || "null::uuid"}))
+    || '|' || (select count(*) from comunidad.participantes where user_id in (${us || "null::uuid"}))`);
+  console.log(`   cuentas: ${creados.length}; restos (cuentas|participantes): ${restos}`);
+  if (restos !== "0|0") { console.log("✖ quedaron restos"); process.exitCode = 1; }
+}
 cerrar();

@@ -74,8 +74,23 @@ export function intentoPara(previo: Intento | null, firma: string, nuevoId: () =
  */
 export function conservarIntento(r: { resultado?: unknown } | "sin-confirmar"): boolean {
   if (r === "sin-confirmar") return true;
-  return r.resultado !== "publicada" && r.resultado !== "retenida";
+  return !guardoVersion(r.resultado);
 }
+
+/** ¿La respuesta confirma una versión nueva? (E3b suma la revisión pedida.) */
+export const guardoVersion = (resultado: unknown) =>
+  resultado === "publicada" || resultado === "retenida" || resultado === "revision_solicitada";
+
+/**
+ * "Pedir revisión" (E3b, §3.3.3) se ofrece SÓLO tras un rechazo por regla de
+ * contenido: los de formato o de cuenta se corrigen sin caso.
+ */
+export const ofreceRevision = (r: { resultado?: unknown } | "sin-confirmar" | null) =>
+  r !== null && r !== "sin-confirmar" && r.resultado === "rechazo_contenido";
+
+/** La firma del pedido de revisión: otra que la del envío normal, así lleva su propio id. */
+export const firmaRevision = (persistida: Persistida | null, titulo: Titulo, texto: string) =>
+  `${firmaEnvio(persistida, titulo, texto)}|revision`;
 
 /** ¿Se puede enviar? Texto válido en largo y no idéntico al persistido. */
 export function puedeEnviar(persistida: Persistida | null, texto: string, enviando: boolean): boolean {
@@ -168,6 +183,11 @@ export function cuerpoEnvio(e: EstadoEditor, titulo: Titulo, idIntento: string):
   return e.base
     ? { accion: "editar", resena_id: e.base.resenaId, version_esperada: e.base.versionId, texto: e.texto, id_intento: idIntento }
     : { accion: "publicar", tipo: titulo.tipo, tmdb_id: titulo.tmdbId, texto: e.texto, id_intento: idIntento };
+}
+
+/** El pedido de revisión: el mismo texto, y en una edición la confirmación de que la publicada deja de verse. */
+export function cuerpoRevision(e: EstadoEditor, titulo: Titulo, idIntento: string, confirmarOculta: boolean): Record<string, unknown> {
+  return e.base ? { ...cuerpoEnvio(e, titulo, idIntento), confirmar_oculta: confirmarOculta } : cuerpoEnvio(e, titulo, idIntento);
 }
 
 /** El editor es otro para otra cuenta u otro título: nada se traslada. */

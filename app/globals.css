@@ -1337,3 +1337,22 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .cm-pulgar[aria-disabled="true"]{opacity:.55;cursor:default}
 @media (hover:hover){.cm-pulgar:not(.on):not([aria-disabled="true"]):hover{color:var(--text);border-color:var(--faint)}}
 .cm .btn:disabled{opacity:.55;cursor:default}
+/* E3b: menú de la reseña ajena (denunciar, bloquear), su diálogo y la lista
+   de bloqueados. Botón de 44×44, ítems de 44 de alto, foco visible. */
+.cm-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.cm-cab .badge{margin-bottom:0}
+.cm-menu{position:relative;flex:0 0 auto}
+.cm-menu-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:none;border-radius:999px;background:none;color:var(--dim);cursor:pointer}
+.cm-menu-btn svg{width:20px;height:20px;display:block}
+.cm-menu-btn:focus-visible,.cm-menu-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (hover:hover){.cm-menu-btn:hover{color:var(--text);background:var(--surface-2)}.cm-menu-item:hover{background:var(--surface-2)}}
+.cm-menu-lista{position:absolute;right:0;top:46px;z-index:20;min-width:200px;padding:6px 0;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-sm);box-shadow:var(--sh-h)}
+.cm-menu-item{display:block;width:100%;min-height:44px;padding:0 16px;border:none;background:none;color:var(--text);font-family:var(--body);font-size:14.5px;text-align:left;cursor:pointer}
+.cm-dlg{max-width:460px}
+.cm-cats{border:none;margin:0 0 10px;padding:0}
+.cm-cat{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14.5px;line-height:1.35;cursor:pointer}
+.cm-cat input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--accent)}
+.cm-com{min-height:80px}
+.cm-bloq{margin-top:8px}
+.cm-revision p{margin:0 0 8px}
+.cm-bloqueados{list-style:none;margin:8px 0 0;padding:0}

@@ -13,6 +13,14 @@
 //   3. contexto de las reglas: textos propios de las últimas 24 h;
 //   4. reglas de E1. `error` → "No se pudo guardar" (nada se toca). Sólo
 //      `publicar`, `retener` y `rechazo_contenido` llegan a la base;
+//   4b. (E3b) la huella de duplicados (lib/comunidad/duplicados.ts, HMAC con
+//      el secreto del servidor). Sin secreto o si falla: "error". La base
+//      compara las huellas y decide la admisión a la cola de retenidos;
+//   4c. (E3b) "Pedir revisión" (§3.3.3): si el autor la pide y las reglas
+//      VIGENTES siguen rechazando el texto por contenido, va a la base como
+//      revisión (retenida, `revision_solicitada`). Si ya no lo rechazan, es
+//      un envío normal. Pedirla sobre una edición exige `confirmarOculta`:
+//      la publicada deja de verse (§3.4.1);
 //   5. función de la base (sólo service_role), que corre el protocolo, la
 //      matriz, el límite y la idempotencia, y decide;
 //   6. si la función falla, importa CÓMO (auditoría E3a, A1):
@@ -27,6 +35,7 @@
 // El hash del pedido es sobre el pedido NORMALIZADO: un reintento del mismo
 // envío da el mismo hash aunque cambien espacios en los bordes.
 import type { Decision } from "./reglas/tipos.ts";
+import type { Huella } from "./duplicados.ts";
 import { mensajeFormato, normalizarTexto, problemaFormato } from "./texto.ts";
 
 export type AccionEscritura =
@@ -38,6 +47,10 @@ export interface PedidoEscritura {
   accion: AccionEscritura;
   texto: string;
   idIntento: string;
+  /** "Pedir revisión" de un rechazo por contenido (§3.3.3). */
+  revision?: boolean;
+  /** En una edición a revisión: el autor confirmó que la publicada deja de verse. */
+  confirmarOculta?: boolean;
 }
 
 /** Lo que devuelve la función de la base (jsonb). */
@@ -47,6 +60,8 @@ export interface DependenciasEscritura {
   textosRecientes: (uid: string) => Promise<string[]>;
   evaluar: (texto: string, contexto: { textosRecientes: string[] }) => Decision;
   hash: (s: string) => string;
+  /** La huella de duplicados. Lanza si no hay secreto. */
+  huella: (texto: string) => Huella;
   publicar: (a: { uid: string; tipo: string; tmdbId: number; texto: string; decision: DecisionBase; idIntento: string; hash: string }) => Promise<RespuestaBase>;
   editar: (a: { uid: string; resenaId: number; versionEsperada: number; texto: string; decision: DecisionBase; idIntento: string; hash: string }) => Promise<RespuestaBase>;
 }
@@ -55,6 +70,9 @@ export interface DecisionBase {
   resultado: "publicar" | "retener" | "rechazo_contenido";
   version_reglas: string;
   reglas: string[];
+  huella: Huella;
+  /** Sólo con `rechazo_contenido`: guardarla como revisión pedida. */
+  revision?: true;
 }
 
 export type ResultadoEscritura =
@@ -62,6 +80,7 @@ export type ResultadoEscritura =
   | { resultado: "rechazo_formato"; mensaje: string }
   | { resultado: "error" }
   | { resultado: "baja_en_curso" }
+  | { resultado: "requiere_confirmacion" }
   | SinConfirmar
   | ({ resultado: "rechazo_contenido"; mensaje: string } & Record<string, unknown>)
   | RespuestaBase;
@@ -73,18 +92,24 @@ export function pedidoValido(p: PedidoEscritura): boolean {
   if (typeof p.uid !== "string" || !UUID.test(p.uid)) return false;
   if (typeof p.idIntento !== "string" || !UUID.test(p.idIntento)) return false;
   if (typeof p.texto !== "string" || p.texto.length > 20000) return false;
+  if (p.revision !== undefined && typeof p.revision !== "boolean") return false;
+  if (p.confirmarOculta !== undefined && typeof p.confirmarOculta !== "boolean") return false;
   const a = p.accion;
   if (a?.tipo === "publicar") return (a.titulo?.tipo === "movie" || a.titulo?.tipo === "tv") && entero(a.titulo.tmdbId);
   if (a?.tipo === "editar") return entero(a.resenaId) && entero(a.versionEsperada);
   return false;
 }
 
-/** El texto que se firma: la acción, sus ids y el texto normalizado. */
-export function firmaPedido(accion: AccionEscritura, normalizado: string): string {
+/**
+ * El texto que se firma: la acción, sus ids y el texto normalizado. Un pedido
+ * de revisión firma distinto: el mismo id_intento con y sin revisión es un
+ * conflicto, no el mismo envío.
+ */
+export function firmaPedido(accion: AccionEscritura, normalizado: string, revision = false): string {
   const ids = accion.tipo === "publicar"
     ? ["publicar", accion.titulo.tipo, accion.titulo.tmdbId]
     : ["editar", accion.resenaId, accion.versionEsperada];
-  return JSON.stringify([...ids, normalizado]);
+  return JSON.stringify([...ids, normalizado, ...(revision ? ["revision"] : [])]);
 }
 
 /** SQLSTATE de baja en curso (E2b) en el error de la función. */
@@ -189,13 +214,23 @@ export async function escribirResena(deps: DependenciasEscritura, p: PedidoEscri
   if (d.resultado === "rechazo_formato") return { resultado: "rechazo_formato", mensaje: d.motivoUsuario };
   if (d.resultado !== "publicar" && d.resultado !== "retener" && d.resultado !== "rechazo_contenido") return { resultado: "error" };
 
+  const a = p.accion;
+  const revision = p.revision === true && d.resultado === "rechazo_contenido";
+  if (revision && a.tipo === "editar" && p.confirmarOculta !== true) return { resultado: "requiere_confirmacion" };
+  let h: Huella;
+  try {
+    h = deps.huella(texto);
+  } catch {
+    return { resultado: "error" };
+  }
   const decision: DecisionBase = {
     resultado: d.resultado,
     version_reglas: d.versionReglas,
     reglas: d.disparadas.filter((x) => x.resultado === d.resultado).map((x) => x.regla),
+    huella: h,
+    ...(revision ? { revision: true as const } : {}),
   };
-  const hash = deps.hash(firmaPedido(p.accion, texto));
-  const a = p.accion;
+  const hash = deps.hash(firmaPedido(p.accion, texto, p.revision === true));
   // Una respuesta sin forma de resultado también es una confirmación perdida.
   const llamar = async () => {
     const x = a.tipo === "publicar"

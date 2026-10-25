@@ -17,12 +17,14 @@ import {
   avisoReinicio, conservarIntento, contador, firmaEnvio, intentoPara, puedeEnviar, respuestaVigente, type Persistida,
 } from "./editor-nucleo.ts";
 import { accionVoto, conteoUtilidad, mensajeVoto, nombreBotonVoto, puedeEvaluar } from "./evaluacion-nucleo.ts";
+import { huella } from "./duplicados.ts";
 
 const BIEN = "La vi el fin de semana y me sorprendió para bien: buen ritmo, actuaciones creíbles y un final que no regala nada.";
 const TELEFONO = "La vi el fin de semana y me encantó. Si querés hablar de la peli llamame al 11 5566 7788 y lo charlamos tranquilos.";
 const SPAM = "Gana plata gratis con cripto: invertí hoy y duplicá tus ganancias en una semana, sorteo exclusivo para los primeros.";
 const UID = "00000000-0000-4000-8000-000000000001";
 const INTENTO = "00000000-0000-4000-8000-0000000000aa";
+const SECRETO = "prueba-unitaria-".padEnd(40, "x");
 
 // ============================================================================
 // Texto: pantalla, servidor y base cuentan igual
@@ -74,6 +76,7 @@ function falsas(o: { recientesFalla?: boolean; base?: RespuestaBase | Error } = 
     textosRecientes: async () => { llamadas.push("recientes"); if (o.recientesFalla) throw new Error("red"); return []; },
     evaluar: (t, c) => { llamadas.push("reglas"); return evaluarResena(t, c); },
     hash: (s) => { llamadas.push("hash"); return "f".repeat(64) + String(s.length).slice(0, 0); },
+    huella: (t) => { llamadas.push("huella"); return huella(t, SECRETO); },
     publicar: async (a) => {
       llamadas.push("publicar"); pedidos.push(a);
       if (o.base instanceof Error) throw o.base;
@@ -88,13 +91,15 @@ const pedido = (texto: string, extra = {}) => ({
   accion: { tipo: "publicar" as const, titulo: { tipo: "movie" as const, tmdbId: 603 } }, ...extra,
 });
 
-test("orden: forma → texto → contexto → reglas → hash → función", async () => {
+test("orden: forma → texto → contexto → reglas → huella → hash → función", async () => {
   const { deps, llamadas, pedidos } = falsas();
   const r = await escribirResena(deps, pedido(`  ${BIEN}\r\n`));
   assert.equal(r.resultado, "publicada");
-  assert.deepEqual(llamadas, ["recientes", "reglas", "hash", "publicar"]);
+  assert.deepEqual(llamadas, ["recientes", "reglas", "huella", "hash", "publicar"]);
   assert.equal((pedidos[0] as { texto: string }).texto, BIEN, "a la base llega el texto normalizado");
-  assert.deepEqual((pedidos[0] as { decision: unknown }).decision, { resultado: "publicar", version_reglas: evaluarResena(BIEN, { textosRecientes: [] }).versionReglas, reglas: [] });
+  assert.deepEqual((pedidos[0] as { decision: unknown }).decision, {
+    resultado: "publicar", version_reglas: evaluarResena(BIEN, { textosRecientes: [] }).versionReglas, reglas: [], huella: huella(BIEN, SECRETO),
+  });
 });
 
 test("pedido inválido o texto de formato inválido: no se toca la base", async () => {

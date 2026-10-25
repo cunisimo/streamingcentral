@@ -22,6 +22,12 @@ export const REMOTO_PUBLICADA = "Publicaste una reseña de este título desde ot
 export const MENSAJE_CONFLICTO_BORRADOR = "No se guardó: tu reseña cambió en otro dispositivo. Tu borrador sigue acá; elegí qué hacer en el aviso.";
 export const REMOTO_BORRADA = "Tu reseña se borró desde otro dispositivo. Tu borrador sigue acá: elegí qué hacer.";
 export const AVISO_REINICIO ="Al editar tu reseña se reinician los votos de utilidad.";
+// E3b: "Pedir revisión" de un rechazo por contenido (§3.3.3) y admisión a la
+// cola de retenidos (§3.3).
+export const MENSAJE_REVISION_SOLICITADA = "Pediste una revisión. Tu reseña queda en revisión y no se ve hasta que la revise una persona.";
+export const OFERTA_REVISION = "¿Creés que es un error? Podés pedir que la revise una persona: queda guardada en revisión y no se ve hasta que se resuelva.";
+export const AVISO_REVISION_EDICION = "Si pedís revisión de esta edición, tu reseña publicada deja de verse hasta que se resuelva, y se reinician sus votos.";
+export const MENSAJE_REQUIERE_CONFIRMACION = "Confirmá que tu reseña publicada deja de verse mientras se revisa.";
 
 export const MOTIVOS_CUENTA: Readonly<Record<string, string>> = {
   modulo_apagado: "Las reseñas de la comunidad no están disponibles.",
@@ -36,6 +42,8 @@ export const MOTIVOS_CUENTA: Readonly<Record<string, string>> = {
   propia: "No podés evaluar tu propia reseña.",
   version_no_disponible: "Esa reseña ya no está disponible.",
   baja_en_curso: "Tu cuenta tiene una eliminación pendiente: no se aceptan acciones de la comunidad.",
+  admision_autor: "Tenés publicaciones en revisión; esperá a que se resuelvan.",
+  admision_global: "No podemos revisar más publicaciones ahora, probá más tarde.",
 };
 
 export type Tono = "exito" | "info" | "rechazo" | "error" | "sin_confirmar";
@@ -46,6 +54,8 @@ export function mensajeEscritura(r: { resultado?: unknown; motivo?: unknown; men
   switch (r.resultado) {
     case "publicada": return { tono: "exito", texto: MENSAJE_PUBLICADA };
     case "retenida": return { tono: "info", texto: MENSAJE_RETENIDA };
+    case "revision_solicitada": return { tono: "info", texto: MENSAJE_REVISION_SOLICITADA };
+    case "requiere_confirmacion": return { tono: "rechazo", texto: MENSAJE_REQUIERE_CONFIRMACION };
     case "sin_cambios": return { tono: "info", texto: MENSAJE_SIN_CAMBIOS };
     case "rechazo_formato":
     case "rechazo_contenido":

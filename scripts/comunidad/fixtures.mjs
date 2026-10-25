@@ -46,5 +46,18 @@ insert into comunidad.contadores (participante_id, accion, dia, cantidad) values
 insert into comunidad.intentos (participante_id, accion, id_intento, hash_peticion, resultado)
   values ('${FX.lector}', 'publicar', '00000000-0000-4000-8000-00000000f0f0', repeat('a', 64), '{"resultado": "publicada"}'::jsonb);
 ${conAuth ? `insert into comunidad.bajas_en_curso (user_id) values ('${FX.usuarioB}');` : ""}
+-- E3b (015): una fila por tabla nueva, sólo si la migración está aplicada.
+do $$
+begin
+  if to_regclass('comunidad.huellas') is not null then
+    insert into comunidad.huellas (version_id, resena_id, autor_participante, hash_texto, shingles, creada_en)
+      values (${FX.version}, ${FX.resena}, '${FX.autor}', repeat('b', 64), array['0123456789abcdef'], now());
+    insert into comunidad.denuncias_excedentes (version_id, autor_participante, hora, cantidad, graves)
+      values (${FX.version}, '${FX.autor}', date_trunc('hour', now()), 1, 0);
+    insert into comunidad.corroboraciones (version_id, autor_participante, version_reglas, reglas, creada_en)
+      values (${FX.version}, '${FX.autor}', '2026-10-24.2', 'prueba', now());
+  end if;
+end;
+$$;
 `;
 }

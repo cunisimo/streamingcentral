@@ -1,13 +1,16 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/AuthContext";
 import { supabaseBrowser } from "@/lib/supabase";
 import { apiUrl } from "@/lib/api-base";
 import { claveEditor, respuestaVigente, type Persistida, type Titulo } from "@/lib/comunidad/editor-nucleo";
 import { MOTIVOS_CUENTA } from "@/lib/comunidad/mensajes";
+import { BLOQUEO_HECHO, DENUNCIA_RECIBIDA } from "@/lib/comunidad/menu-nucleo";
 import type { Voto } from "@/lib/comunidad/evaluacion-nucleo";
 import EditorResena, { type RespuestaEditor } from "./EditorResena";
 import EvaluacionResena from "./EvaluacionResena";
+import MenuResena, { DialogoDenuncia } from "./MenuResena";
 import TerminosComunidad from "./TerminosComunidad";
 
 // Reseñas de la comunidad en la ficha (E3a, interfaz LOCAL). Todo se pide
@@ -22,7 +25,11 @@ import TerminosComunidad from "./TerminosComunidad";
 // editor se monta de nuevo por cuenta y título (sin borrador ni intento del
 // anterior). Una recarga que falla conserva lo que ya se veía: si vaciara los
 // datos, el editor se desmontaría y se perdería el borrador (A2).
-interface Otra { resena_id: number; version_id: number; texto: string; utiles: number; total: number; mi_voto: Voto | null }
+//
+// E3b: cada reseña ajena tiene su menú (denunciar, bloquear al autor). Al
+// bloquear, la lectura ya no trae las reseñas de ese autor; queda un aviso con
+// el enlace a la cuenta y, si no se denunció, la opción de denunciarla igual.
+interface Otra { resena_id: number; version_id: number; texto: string; utiles: number; total: number; mi_voto: Voto | null; denunciada?: boolean }
 interface DatosTitulo {
   activo: boolean;
   publicacion_activa?: boolean;
@@ -64,6 +71,10 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
   const [abierto, setAbierto] = useState(false);
   const gen = useRef(0);
   const panel = useId();
+  const [bloqueo, setBloqueo] = useState<{ versionId: number; denunciada: boolean } | null>(null);
+  const [denunciarTras, setDenunciarTras] = useState<number | null>(null);
+  const aviso = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (bloqueo) aviso.current?.scrollIntoView({ block: "nearest" }); }, [bloqueo]);
 
   const cargar = useCallback(async () => {
     const mia = { gen: ++gen.current, uid };
@@ -129,6 +140,7 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
               titulo={titulo}
               mia={mia}
               enviar={(cuerpo) => postear("/api/comunidad/resenas", cuerpo)}
+              pedirRevision={(cuerpo) => postear("/api/comunidad/revision", cuerpo)}
               borrar={(resenaId) => postear("/api/comunidad/resenas/borrar", { resena_id: resenaId })}
               recargar={() => void cargar()}
             />
@@ -136,9 +148,25 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
           {mia && datos?.mia && (
             <EvaluacionResena versionId={mia.versionId} utiles={datos.mia.utiles} total={datos.mia.total} miVoto={null} esPropia votar={votar} />
           )}
+          {bloqueo && (
+            <div ref={aviso} className="cm-msg exito" role="status">
+              {bloqueo.denunciada && <>{DENUNCIA_RECIBIDA} </>}{BLOQUEO_HECHO}{" "}
+              <Link className="cm-link" href="/cuenta/bloqueados">Gestionar bloqueados</Link>
+              {!bloqueo.denunciada && <> · <button className="cm-link" onClick={() => setDenunciarTras(bloqueo.versionId)}>Denunciar la reseña</button></>}
+            </div>
+          )}
+          {denunciarTras !== null && (
+            <DialogoDenuncia versionId={denunciarTras} enviar={postear} ofrecerBloqueo={false} cerrar={() => setDenunciarTras(null)}
+              alTerminar={({ denunciada }) => { if (denunciada) setBloqueo((b) => (b ? { ...b, denunciada: true } : b)); }} />
+          )}
           {otras.map((o) => (
             <article key={o.version_id} className="review usuario">
-              <div className="badge">Reseña de la comunidad</div>
+              <div className="cm-cab">
+                <div className="badge">Reseña de la comunidad</div>
+                <MenuResena versionId={o.version_id} denunciada={o.denunciada === true} enviar={postear}
+                  alDenunciar={() => void cargar()}
+                  alBloquear={({ denunciada }) => { setBloqueo({ versionId: o.version_id, denunciada }); void cargar(); }} />
+              </div>
               <p>{o.texto}</p>
               <EvaluacionResena versionId={o.version_id} utiles={o.utiles} total={o.total} miVoto={o.mi_voto} esPropia={false} votar={votar} />
             </article>
