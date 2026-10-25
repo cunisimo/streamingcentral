@@ -747,7 +747,11 @@ rollback;
   - A2: el editor conserva el borrador y la versión base.
   Las dos se corrigieron el 25/10 en `8bdfe3f` y `d66244b`
   (`docs/medidas/2026-10-25-informe-claude-e3a-a1a2.md`), y quedan
-  pendientes de su auditoría focalizada.
+  cerradas por Codex el 25/10
+  (`docs/medidas/2026-10-25-auditoria-e3a-a1a2-f9be491.md`): **E3a local
+  cerrada**, con sus límites. El mismo día se cambiaron los botones de
+  evaluación por pulgares, a pedido del dueño
+  (`docs/medidas/2026-10-25-informe-claude-e3a-pulgares.md`).
   - Gates de §5.0 cerrados con las funciones reales: casos 1–4 de §2.2.4,
     B3a/B3b y actores cruzados. El caso 5 (suspensión frente a voto) sigue
     con gate en E4.

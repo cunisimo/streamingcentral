@@ -16,7 +16,7 @@ import { TERMINOS_VERSION } from "./terminos.ts";
 import {
   avisoReinicio, conservarIntento, contador, firmaEnvio, intentoPara, puedeEnviar, respuestaVigente, type Persistida,
 } from "./editor-nucleo.ts";
-import { accionVoto, conteoUtilidad, mensajeVoto, puedeEvaluar } from "./evaluacion-nucleo.ts";
+import { accionVoto, conteoUtilidad, mensajeVoto, nombreBotonVoto, puedeEvaluar } from "./evaluacion-nucleo.ts";
 
 const BIEN = "La vi el fin de semana y me sorprendió para bien: buen ritmo, actuaciones creíbles y un final que no regala nada.";
 const TELEFONO = "La vi el fin de semana y me encantó. Si querés hablar de la peli llamame al 11 5566 7788 y lo charlamos tranquilos.";
@@ -308,9 +308,13 @@ test("una respuesta de otra cuenta o de otra carga se descarta", () => {
 });
 
 test("evaluación: conteo explícito, botón elegido retira, la propia no se evalúa", () => {
-  assert.equal(conteoUtilidad(0, 0), "Todavía nadie la evaluó.");
-  assert.equal(conteoUtilidad(1, 1), "A 1 de 1 le sirvió.");
-  assert.equal(conteoUtilidad(3, 5), "A 3 de 5 les sirvió.");
+  assert.equal(conteoUtilidad(285, 481), "285 de 481 encontraron útil esta opinión", "el formato pedido por el dueño");
+  assert.equal(conteoUtilidad(0, 0), "Todavía nadie evaluó esta opinión.");
+  assert.equal(conteoUtilidad(1, 1), "1 de 1 encontró útil esta opinión");
+  assert.equal(conteoUtilidad(1, 4), "1 de 4 encontró útil esta opinión");
+  assert.equal(conteoUtilidad(0, 3), "0 de 3 encontraron útil esta opinión");
+  assert.equal(conteoUtilidad(3, 5), "3 de 5 encontraron útil esta opinión");
+  assert.equal(conteoUtilidad(1250, 2400), "1.250 de 2.400 encontraron útil esta opinión", "miles con punto, como en Argentina");
   assert.equal(accionVoto(null, "util"), "util");
   assert.equal(accionVoto("util", "util"), "retirar");
   assert.equal(accionVoto("util", "no_util"), "no_util");
@@ -318,6 +322,25 @@ test("evaluación: conteo explícito, botón elegido retira, la propia no se eva
   assert.equal(puedeEvaluar(false, false), false);
   assert.equal(mensajeVoto({ resultado: "voto_registrado" }), null);
   assert.equal(mensajeVoto({ resultado: "rechazo_cuenta", motivo: "propia" }), MOTIVOS_CUENTA.propia);
+});
+
+test("evaluación con pulgares: nombre accesible, aria-pressed, SVG con tamaño propio y superficie táctil", () => {
+  assert.equal(nombreBotonVoto("util"), "Me sirvió");
+  assert.equal(nombreBotonVoto("no_util"), "No me sirvió");
+  const c = readFileSync("components/comunidad/EvaluacionResena.tsx", "utf8");
+  assert.match(c, /aria-label=\{nombreBotonVoto\(v\)\}/);
+  assert.match(c, /aria-pressed=\{elegido\}/);
+  assert.match(c, /aria-disabled=\{enviando\}/, "no `disabled`: conserva el foco del teclado al votar");
+  assert.match(c, /if \(enviando\) return;/, "y la guarda evita el doble envío");
+  assert.match(c, /<svg className="cm-pulgar-ico" width="22" height="22"/, "un SVG sin tamaño mide 0×0 en un flex");
+  assert.match(c, /onClick=\{\(\) => void tocar\(v\)\}/, "la acción sale de accionVoto (retirar o cambiar)");
+  assert.match(c, /puedeEvaluar\(esPropia, true\) &&/, "la propia: conteo sin botones");
+  assert.doesNotMatch(c, />Me sirvió<|>No me sirvió</, "sin el texto visible de los botones viejos");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.cm-pulgar\{[^}]*width:44px;height:44px/);
+  assert.match(css, /\.cm-pulgar-ico\{width:22px;height:22px/);
+  assert.match(css, /\.cm-pulgar:focus-visible\{outline:2px solid/);
+  assert.match(css, /\.cm-pulgar\.on\{/);
 });
 
 // ============================================================================

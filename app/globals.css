@@ -1325,10 +1325,15 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .cm-msg.rechazo,.cm-msg.error{color:var(--danger)}
 .cm-msg.sin_confirmar{color:var(--text);border:1px dashed var(--line-2)}
 .cm-link{background:none;border:none;padding:0;color:var(--accent);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
-.cm-eval{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:8px}
-.cm-conteo{font-size:12.5px;color:var(--dim)}
-.cm-eval-btns{display:flex;gap:8px;flex-wrap:wrap}
-.cm-chip{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);font-family:var(--body);font-size:13px;font-weight:600;cursor:pointer}
-.cm-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.cm-chip:disabled{opacity:.55;cursor:default}
+/* Evaluación: conteo arriba, pulgares abajo. 44×44 de superficie táctil;
+   el elegido va relleno, con el color de acento y borde; foco visible. */
+.cm-eval{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px}
+.cm-eval .cm-conteo{font-family:var(--body);font-size:12.5px;line-height:1.4;font-weight:400;color:var(--dim);white-space:normal;margin:0}
+.cm-eval-btns{display:flex;gap:8px}
+.cm-pulgar{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;flex:0 0 auto;padding:0;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--dim);cursor:pointer;transition:background-color .15s,color .15s,border-color .15s}
+.cm-pulgar-ico{width:22px;height:22px;flex:0 0 auto;display:block}
+.cm-pulgar.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cm-pulgar:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.cm-pulgar[aria-disabled="true"]{opacity:.55;cursor:default}
+@media (hover:hover){.cm-pulgar:not(.on):not([aria-disabled="true"]):hover{color:var(--text);border-color:var(--faint)}}
 .cm .btn:disabled{opacity:.55;cursor:default}

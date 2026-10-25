@@ -541,8 +541,14 @@ AAB tiene que ser `5` o mayor.
      - A2: una recarga remota descartaba el borrador en edición y adoptaba
        en silencio otra versión esperada. Lo encontró por lectura.
    - **Correcciones A1/A2 de E3a (25/10, local; `98eba43` copia de la
-     auditoría, `8bdfe3f` A1, `d66244b` A2): hechas, pendientes de su
-     auditoría focalizada.**
+     auditoría, `8bdfe3f` A1, `d66244b` A2): hechas y cerradas por Codex**
+     (25/10, sobre `f9be491`; `docs/medidas/2026-10-25-auditoria-e3a-a1a2-f9be491.md`,
+     copia sin cambios, SHA-256 `6e8eee47…`). Codex repitió A1 real 6/6
+     (restos `0|0|0|0|false`), 37/37 tests de escritura y editor, y `tsc`.
+     Sin recorrido propio en navegador: las capturas son evidencia de Claude.
+     **E3a local queda cerrada** con sus límites (lectura provisional,
+     términos sin aprobar, admisión y defensas de E3b pendientes). No
+     aprueba E1 ni habilita publicación, Producción ni E3b.
      - A1: los errores de `supabase.rpc` salen clasificados. Un SQLSTATE o
        PGRST es un rechazo confirmado: "error". Una confirmación perdida
        (fetch caído, 5xx sin código, cuerpo ilegible, conexión perdida)
@@ -568,7 +574,20 @@ AAB tiene que ser `5` o mayor.
        la ficha con TMDB; Android.
      Informe: `docs/medidas/2026-10-25-informe-claude-e3a-a1a2.md`;
      salidas: `docs/medidas/2026-10-25-e3a-a1a2-salidas.txt`.
-   - la auditoría focalizada de A1/A2. E3b no empieza sin autorización;
+   - **Pulgares en la evaluación (25/10, pedido visual del dueño en la
+     auditoría de A1/A2):** "Me sirvió" / "No me sirvió" pasan a ser
+     pulgar arriba y pulgar abajo, con el conteo encima ("285 de 481
+     encontraron útil esta opinión"; singular "1 de 4 encontró…"; sin
+     evaluaciones "Todavía nadie evaluó esta opinión."). Nombres accesibles,
+     `aria-pressed`, foco visible, 44×44 de superficie y el elegido relleno
+     en naranja. Misma lógica de voto, cambio y retiro; la propia sólo
+     muestra el conteo. Verificado en navegador local en escritorio y a
+     375 px con conteos reales; capturas en
+     `docs/medidas/2026-10-25-e3a-pulgares/`, informe en
+     `docs/medidas/2026-10-25-informe-claude-e3a-pulgares.md`. Pendiente de
+     revisión del dueño y de Codex. Se limpiaron además los seis espacios
+     finales del log de A1/A2 que señaló la auditoría (sólo espacios);
+   - E3b no empieza sin autorización;
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

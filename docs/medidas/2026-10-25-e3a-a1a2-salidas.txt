@@ -8,17 +8,17 @@ base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://l
 — Revisión §3.4.1: qué se conserva en cada resultado de una edición —
 — Idempotencia: respuesta perdida y mismo id_intento —
 — A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
-✖ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo 
+✖ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
     {"resultado":"error"}
-✖ A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición 
+✖ A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición
     {"resultado":"error"}
-✖ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar 
+✖ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
     Expected values to be strictly deep-equal:
-✖ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar 
+✖ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
     Expected values to be strictly deep-equal:
-✖ A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar 
+✖ A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar
     TypeError: fetch failed (respuesta descartada por la prueba)
-✖ A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos 
+✖ A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos
     23514 new row for relation "versiones" violates check constraint "versiones_texto_forma"
 — Límites por día con carreras —
 — Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
