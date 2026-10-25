@@ -600,9 +600,13 @@ AAB tiene que ser `5` o mayor.
      terminar). Auditada por Codex sobre `64d940e`
      (`docs/medidas/2026-10-25-auditoria-e3b-64d940e.md`, copia sin
      cambios): dos P2 de interfaz, A1 y A2, sin defectos en el SQL, la
-     concurrencia ni los permisos ejercitados. A1/A2 CORREGIDAS por Claude
-     (ver abajo), PENDIENTES DE AUDITORÍA FOCALIZADA; E4 no empieza sin
-     autorización.**
+     concurrencia ni los permisos ejercitados. A1/A2 corregidas por Claude
+     (ver abajo). **CERRADA por Codex** sobre `ce26526`
+     (`docs/medidas/2026-10-25-auditoria-e3b-a1a2-ce26526.md`, copia sin
+     cambios, SHA-256 `ccb5cce4…`): sin hallazgos bloqueantes; no aprueba
+     E1, parámetros de lanzamiento ni publicación. Codex corrió 98/98 de
+     núcleos y una sonda del diálogo real; no repitió baterías de base,
+     navegador, teléfono ni TMDB.**
      - **A1 (aislamiento por cuenta):** `/cuenta/bloqueados`, las reseñas de
        la ficha (aviso de bloqueo, diálogos, mensajes) y la fila de
        Configuración montan su estado por cuenta; una frontera
@@ -678,14 +682,81 @@ AAB tiene que ser `5` o mayor.
        lectores de pantalla reales, caída real de red a mitad del commit.
      Informe: `docs/medidas/2026-10-25-informe-claude-e3b.md`; salidas:
      `docs/medidas/2026-10-25-e3b-salidas.txt`.
+   - **E4 local: moderación administrativa (25/10, autorizada por el dueño;
+     sólo `supabase start`, la app local y datos ficticios; interruptores,
+     publicación y muestreo apagados al terminar). PENDIENTE DE AUDITORÍA
+     FOCALIZADA de Codex.**
+     - `016_comunidad_admin.sql` (+ down generado con copias literales de
+       011, 012 y 015):
+       - registro de decisiones (admin, acción, versión o participante o
+         cuenta, motivo, estado previo; sin texto; idempotente por intento);
+       - acciones `comunidad_admin_*` y `comunidad_quitar_marcador_baja`,
+         ejecutables SÓLO por `authenticated` con `is_admin_mfa()`
+         comprobado adentro antes de cualquier lock (como el Top). Son
+         publicar o rechazar retenidos, retirar y restaurar, descartar o
+         cerrar denuncias, suspender y levantar, quitar el marcador de baja
+         y pausar o reanudar la publicación;
+       - lecturas del panel (resumen, colas con cursor, cuentas, registro y
+         muestreo apagado);
+       - `proto_admin`: K_CORTE compartido y, al quitar un marcador, el
+         K_CUENTA de esa cuenta;
+       - retirar cierra tramos; publicar y restaurar los reabren sólo para
+         votos positivos vigentes que ya tenían tramo, con su mes original;
+       - invariantes: `rechazada → reemplazada` (el autor puede corregir) y
+         una suspensión con fin futuro se puede acortar (nunca alargar ni
+         llevar al pasado).
+     - **Denuncias recibidas en la baja (pendiente de E2b):** la baja ahora
+       las cierra en `comunidad.denuncias_cerradas` con lo mínimo
+       (denunciante seudónimo, categoría, estado final `cerrada_por_baja`,
+       fechas), SIN texto, comentario ni autor. Se borran con la baja de
+       quien denunció. **El texto denunciado se sigue borrando con la cuenta:
+       conservarlo es una excepción de preservación que decide el dueño con
+       P3** (propuesta A/B/C en el informe). Ningún plazo nuevo.
+     - app: `/admin/moderacion` en la navegación del dashboard; ruta
+       `/api/admin/moderacion` con `adminDeToken` y la sesión del admin (sin
+       CORS, como `admin/top`); motivo obligatorio, efecto antes de
+       confirmar, "No sabemos si se aplicó" con reintento del mismo
+       intento, aislamiento por cuenta (frontera de E3b). El autor ve
+       "Rechazada por moderación".
+     - resultados (corridas de Claude, en secuencia):
+       - `pruebas-admin` 32/32 (nueva): permisos por API y por RPC directo
+         con TOTP reales; decisiones atadas a versión (vieja, borrada,
+         baja); simultáneas; reintentos y respuesta perdida; caso 5 con las
+         funciones de producto; B10 y B14 con la función real; pausa;
+         paginación; muestreo;
+       - up/down/up de 016 5/5;
+       - por dependencia modificada: permisos 28/28, invariantes 85/85,
+         baja 26/26, moderación E3b 46/46, escritura 43/43;
+       - unitarias 13/13, `npm test` 2458 pasan, 0 fallan, 16 omitidas,
+         `tsc` 0;
+       - concurrencia (E2c) no se repitió: las primitivas no cambiaron y el
+         caso 5 está en la batería nueva.
+     - recorrido real en navegador local (escritorio y 375 px; respuesta
+       perdida y demora simuladas en la página): 12 capturas en
+       `docs/medidas/2026-10-25-e4-recorrido/`.
+     - ⚠️ entorno local: `supabase start` no da `SELECT` de
+       `public.profiles` a `authenticated` (la ruta del admin respondía
+       503; al Top le pasa igual en local). Se concede sólo mientras corren
+       la batería y el recorrido, y se revoca. No es un cambio de esquema.
+     - decisiones a auditar (informe): la suspensión no cierra tramos (el
+       cómputo al corte la excluye por intervalo); reapertura de tramos;
+       las dos invariantes ampliadas; publicar no toca denuncias abiertas;
+       la pausa no frena una escritura que ya leyó la configuración;
+       suspensión sin plazo; muestreo sin interruptor en el panel.
+     - no verificado: teléfono, Android, tema claro, lector de pantalla,
+       ficha con TMDB, una caída real de red, TOTP tecleado en
+       `/admin/mfa`, Producción.
+     Informe: `docs/medidas/2026-10-25-informe-claude-e4.md`; salidas:
+     `docs/medidas/2026-10-25-e4-salidas.txt`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
-   - resolver, antes de E4, E8 y la publicación, el alcance del borrado de
-     denuncias recibidas en la baja, y el plazo de los intervalos
-     seudónimos (P3). E3b no lo resolvió: las tablas nuevas que cuelgan de
-     una versión (huellas, excedentes de denuncias, corroboraciones) caen
-     en cascada igual que las denuncias;
+   - denuncias recibidas en la baja: E4 (local, pendiente de auditoría) las
+     cierra sin texto en `denuncias_cerradas`. Queda para el dueño, con P3 y
+     antes de E8 y de la publicación, si se conserva el TEXTO denunciado
+     después de una baja (opciones A/B/C del informe de E4) y el plazo de
+     los intervalos seudónimos. Huellas, excedentes y corroboraciones siguen
+     cayendo en cascada con la versión;
    - la validación independiente de E1 (protocolo, autoría y ejecutor, no
      preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se

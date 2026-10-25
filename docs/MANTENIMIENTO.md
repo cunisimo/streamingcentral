@@ -1079,10 +1079,18 @@ pero se evita con este orden:
 El participante queda como seudónimo sin `user_id` ni nombre, con sus tramos
 cerrados y sus suspensiones intactas, porque los necesita la reconstrucción
 del ranking (revisión §2.2.2–§2.2.3). Cancelar una baja (quitar el marcador
-con la cuenta viva) es otra operación, de E4 (`comunidad_quitar_marcador_baja`,
-todavía no existe). Esa operación tampoco restaura nada: si la persona vuelve,
-nace un participante nuevo, suspendido si la sanción copiada en el marcador
-sigue vigente.
+con la cuenta viva) es otra operación, de E4: `/admin/moderacion` → Cuentas →
+Bajas pendientes → «Quitar el marcador» (función
+`comunidad_quitar_marcador_baja`, con admin y segundo factor, motivo
+obligatorio y registro de la decisión; implementada en local el 25/10/2026,
+pendiente de auditoría y sin aplicar en Producción). Esa operación tampoco
+restaura nada: si la persona vuelve, nace un participante nuevo, suspendido si
+la sanción copiada en el marcador sigue vigente.
+**Denuncias recibidas:** desde E4 (016, sólo local), la baja cierra las
+denuncias que otros hicieron sobre el contenido de la cuenta en
+`comunidad.denuncias_cerradas`, sin texto, sin comentario y sin el autor; el
+texto denunciado se borra con la cuenta. Conservarlo es una decisión pendiente
+del dueño (P3; ver el informe de E4).
 
 ## Runbook: la ingesta manual del Top 10 después de deployar el resolvedor
 
