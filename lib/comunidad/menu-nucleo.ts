@@ -92,6 +92,59 @@ export function mensajeBloqueo(r: Respuesta): { tono: Tono; texto: string } {
 /** ¿Se ofrece reintentar? Sólo cuando no se sabe o no se pudo (nunca tras un rechazo). */
 export const ofreceReintento = (t: Tono) => t === "sin_confirmar" || t === "error";
 
+// El diálogo de denuncia con "Bloquear también al autor" (corrección A2). La
+// denuncia y el bloqueo son dos resultados independientes: la base guarda la
+// denuncia primero y bloquea después. Cuando la denuncia ya tiene resultado
+// definitivo (recibida, o rechazada habiendo pedido bloquear) el formulario se
+// cierra y lo único que puede quedar pendiente es el BLOQUEO:
+//   - `incierto` (no se sabe si se guardó) o `fallido` (la base respondió que
+//     no se pudo): se ofrece reintentar SÓLO el bloqueo, contra la ruta de
+//     bloqueos. Es idempotente y no reenvía la denuncia, así que no cuenta
+//     otra vez en el excedente.
+//   - un rechazo (límite diario, eliminación pendiente…) es definitivo: no se
+//     ofrece reintento.
+// Si la DENUNCIA es la incierta, el formulario sigue abierto y "Reintentar"
+// reenvía el pedido completo (la denuncia repetida vuelve como `repetido`).
+export type BloqueoPendiente = "incierto" | "fallido" | null;
+export interface EstadoDenuncia {
+  msg: { tono: Tono; texto: string } | null;
+  msgBloqueo: { tono: Tono; texto: string } | null;
+  denunciada: boolean;
+  bloqueado: boolean;
+  /** El formulario de la denuncia ya no se ofrece. */
+  cerrada: boolean;
+  bloqueoPendiente: BloqueoPendiente;
+}
+
+export const ESTADO_DENUNCIA_INICIAL: EstadoDenuncia = {
+  msg: null, msgBloqueo: null, denunciada: false, bloqueado: false, cerrada: false, bloqueoPendiente: null,
+};
+
+function pendiente(m: { tono: Tono }, bloqueado: boolean): BloqueoPendiente {
+  if (bloqueado) return null;
+  return m.tono === "sin_confirmar" ? "incierto" : m.tono === "error" ? "fallido" : null;
+}
+
+/** El estado tras la respuesta de la ruta de denuncias. */
+export function trasDenuncia(r: Respuesta & { bloqueo?: unknown }, pidioBloqueo: boolean): EstadoDenuncia {
+  const msg = mensajeDenuncia(r);
+  const b = pidioBloqueo && r !== "sin-confirmar" && r.bloqueo && typeof r.bloqueo === "object" ? (r.bloqueo as Respuesta) : null;
+  const msgBloqueo = b ? mensajeBloqueo(b) : null;
+  const denunciada = r !== "sin-confirmar" && r.resultado === "denuncia_registrada";
+  const bloqueado = msgBloqueo?.tono === "exito";
+  const cerrada = denunciada || bloqueado || (pidioBloqueo && msg.tono === "rechazo" && msgBloqueo !== null);
+  return { msg, msgBloqueo, denunciada, bloqueado, cerrada, bloqueoPendiente: cerrada && msgBloqueo ? pendiente(msgBloqueo, bloqueado) : null };
+}
+
+/** El estado tras reintentar SÓLO el bloqueo pendiente: la denuncia no cambia. */
+export function trasReintentoBloqueo(e: EstadoDenuncia, r: Respuesta): EstadoDenuncia {
+  const msgBloqueo = mensajeBloqueo(r);
+  const bloqueado = msgBloqueo.tono === "exito";
+  return { ...e, msgBloqueo, bloqueado, bloqueoPendiente: pendiente(msgBloqueo, bloqueado) };
+}
+
+export const REINTENTAR_BLOQUEO = "Reintentar el bloqueo";
+
 /** La etiqueta de un bloqueo en la cuenta: no hay nombres comunitarios hasta E6. */
 export function etiquetaBloqueo(b: { origen_tipo?: unknown; creado_en?: unknown }, titulo?: string | null): string {
   // Con la hora: dos bloqueos del mismo título y el mismo día se distinguen.

@@ -2,7 +2,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  CATEGORIAS, COMENTARIO_MAX, comentarioDenuncia, mensajeBloqueo, mensajeDenuncia, ofreceReintento, type Categoria, type Tono,
+  CATEGORIAS, COMENTARIO_MAX, ESTADO_DENUNCIA_INICIAL, REINTENTAR_BLOQUEO, comentarioDenuncia, mensajeBloqueo, ofreceReintento,
+  trasDenuncia, trasReintentoBloqueo, type Categoria, type EstadoDenuncia, type Tono,
 } from "@/lib/comunidad/menu-nucleo";
 import type { RespuestaEditor } from "./EditorResena";
 
@@ -16,6 +17,9 @@ import type { RespuestaEditor } from "./EditorResena";
 //     lectura ya no la trae) y se gestiona desde la cuenta.
 //   - Un envío cuya respuesta se perdió ofrece "Reintentar" con el mismo
 //     pedido: denunciar y bloquear son idempotentes, no se duplican.
+//   - Denuncia recibida con el bloqueo incierto o fallido: la denuncia queda
+//     como recibida y se ofrece reintentar SÓLO el bloqueo (A2, ver
+//     `trasDenuncia` en menu-nucleo.ts).
 // Los diálogos van en un portal a <body>: dentro de `.review` heredarían la
 // tipografía del texto de la reseña.
 export type Enviar = (ruta: string, cuerpo: Record<string, unknown>) => Promise<RespuestaEditor>;
@@ -52,28 +56,33 @@ export function DialogoDenuncia({ versionId, enviar, cerrar, alTerminar, ofrecer
   const [comentario, setComentario] = useState("");
   const [bloquear, setBloquear] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const [msg, setMsg] = useState<Msg>(null);
-  const [msgBloqueo, setMsgBloqueo] = useState<Msg>(null);
-  const [hecho, setHecho] = useState(false);
+  const [e, setE] = useState<EstadoDenuncia>(ESTADO_DENUNCIA_INICIAL);
   const idCom = useId();
   const c = comentarioDenuncia(comentario);
+  const { msg, msgBloqueo, cerrada: hecho, bloqueoPendiente } = e;
 
   async function mandar() {
     if (!categoria || !c.ok || enviando) return;
     setEnviando(true);
-    setMsg(null);
-    setMsgBloqueo(null);
+    setE((x) => ({ ...x, msg: null, msgBloqueo: null }));
     const r = await enviar("/api/comunidad/denuncias", {
       version_id: versionId, categoria, ...(c.valor ? { comentario: c.valor } : {}), ...(bloquear ? { bloquear: true } : {}),
     });
     setEnviando(false);
-    const m = mensajeDenuncia(r === "sin-confirmar" ? r : (r as { resultado?: unknown }));
-    setMsg(m);
-    const b = r !== "sin-confirmar" ? (r as { bloqueo?: { resultado?: unknown } }).bloqueo : undefined;
-    if (b) setMsgBloqueo(mensajeBloqueo(b));
-    const denunciada = r !== "sin-confirmar" && r.resultado === "denuncia_registrada";
-    const bloqueado = b?.resultado === "bloqueado";
-    if (denunciada || bloqueado) { setHecho(!ofreceReintento(m.tono)); alTerminar({ denunciada, bloqueado }); }
+    const n = trasDenuncia(r === "sin-confirmar" ? r : (r as { resultado?: unknown; bloqueo?: unknown }), bloquear);
+    setE(n);
+    if (n.denunciada || n.bloqueado) alTerminar({ denunciada: n.denunciada, bloqueado: n.bloqueado });
+  }
+
+  // A2: sólo el bloqueo pendiente, contra la ruta de bloqueos. La denuncia no se reenvía.
+  async function reintentarBloqueo() {
+    if (enviando || !bloqueoPendiente) return;
+    setEnviando(true);
+    const r = await enviar("/api/comunidad/bloqueos", { accion: "bloquear", version_id: versionId });
+    setEnviando(false);
+    const n = trasReintentoBloqueo(e, r === "sin-confirmar" ? r : (r as { resultado?: unknown }));
+    setE(n);
+    if (n.bloqueado) alTerminar({ denunciada: n.denunciada, bloqueado: true });
   }
 
   return (
@@ -103,12 +112,17 @@ export function DialogoDenuncia({ versionId, enviar, cerrar, alTerminar, ofrecer
         </>
       )}
       {msg && <p className={`cm-msg ${msg.tono}`} role={msg.tono === "exito" ? "status" : "alert"}>{msg.texto}</p>}
-      {msgBloqueo && <p className={`cm-msg ${msgBloqueo.tono}`} role="status">{msgBloqueo.texto}</p>}
+      {msgBloqueo && <p className={`cm-msg ${msgBloqueo.tono}`} role={bloqueoPendiente ? "alert" : "status"}>{msgBloqueo.texto}</p>}
       <div className="dlg-acciones">
         <button className="btn ghost" autoFocus onClick={cerrar}>{hecho ? "Cerrar" : "Cancelar"}</button>
         {!hecho && (
           <button className="btn" disabled={!categoria || !c.ok || enviando} onClick={() => void mandar()}>
             {enviando ? "Enviando…" : msg && ofreceReintento(msg.tono) ? "Reintentar" : "Enviar denuncia"}
+          </button>
+        )}
+        {hecho && bloqueoPendiente && (
+          <button className="cfg-danger-btn" disabled={enviando} onClick={() => void reintentarBloqueo()}>
+            {enviando ? "Bloqueando…" : REINTENTAR_BLOQUEO}
           </button>
         )}
       </div>
@@ -175,7 +189,15 @@ export default function MenuResena({ versionId, denunciada, enviar, alDenunciar,
     if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
   }
   const elegir = (d: "denunciar" | "bloquear") => { setAbierto(false); setDialogo(d); };
-  const cerrarDialogo = () => { setDialogo(null); boton.current?.focus(); };
+  // La recarga por una denuncia recibida espera a que se cierre el diálogo: si
+  // el bloqueo quedó incierto pero la base sí lo aplicó, recargar con el
+  // diálogo abierto quitaría esta reseña y, con ella, el reintento (A2).
+  const recargarAlCerrar = useRef(false);
+  const cerrarDialogo = () => {
+    setDialogo(null);
+    boton.current?.focus();
+    if (recargarAlCerrar.current) { recargarAlCerrar.current = false; alDenunciar(); }
+  };
 
   return (
     <div className="cm-menu">
@@ -195,7 +217,9 @@ export default function MenuResena({ versionId, denunciada, enviar, alDenunciar,
       )}
       {dialogo === "denunciar" && (
         <DialogoDenuncia versionId={versionId} enviar={enviar} cerrar={cerrarDialogo}
-          alTerminar={({ denunciada: d, bloqueado }) => { if (bloqueado) { setDialogo(null); alBloquear({ denunciada: d }); } else if (d) alDenunciar(); }} />
+          alTerminar={({ denunciada: d, bloqueado }) => {
+            if (bloqueado) { recargarAlCerrar.current = false; setDialogo(null); alBloquear({ denunciada: d }); } else if (d) recargarAlCerrar.current = true;
+          }} />
       )}
       {dialogo === "bloquear" && (
         <DialogoBloqueo versionId={versionId} enviar={enviar} cerrar={cerrarDialogo}

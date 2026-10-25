@@ -1,10 +1,11 @@
 "use client";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthContext";
 import { supabaseBrowser } from "@/lib/supabase";
 import { apiUrl } from "@/lib/api-base";
-import { claveEditor, respuestaVigente, type Persistida, type Titulo } from "@/lib/comunidad/editor-nucleo";
+import { claveEditor, type Persistida, type Titulo } from "@/lib/comunidad/editor-nucleo";
+import { crearFrontera, tokenDeCuenta } from "@/lib/comunidad/frontera-cuenta";
 import { MOTIVOS_CUENTA } from "@/lib/comunidad/mensajes";
 import { BLOQUEO_HECHO, DENUNCIA_RECIBIDA } from "@/lib/comunidad/menu-nucleo";
 import type { Voto } from "@/lib/comunidad/evaluacion-nucleo";
@@ -21,9 +22,11 @@ import TerminosComunidad from "./TerminosComunidad";
 // La lectura es la PROVISIONAL de E3a (/api/comunidad/titulo): la propia y las
 // publicadas de otros. E5a la reemplaza (bloqueos, suspensiones, orden,
 // paginación). Arranca cerrada, como el acordeón de reseñas: puede haber
-// spoilers. Cambiar de cuenta descarta las respuestas de la anterior, y el
-// editor se monta de nuevo por cuenta y título (sin borrador ni intento del
-// anterior). Una recarga que falla conserva lo que ya se veía: si vaciara los
+// spoilers. Cambiar de cuenta o de título monta todo de nuevo (sin borrador,
+// intento, aviso ni diálogo del anterior) y descarta las respuestas que
+// lleguen tarde (A1 de E3b, lib/comunidad/frontera-cuenta.ts); los pedidos
+// sólo salen con la sesión de la cuenta que los inició. Una recarga que falla
+// de la MISMA cuenta conserva lo que ya se veía: si vaciara los
 // datos, el editor se desmontaría y se perdería el borrador (A2).
 //
 // E3b: cada reseña ajena tiene su menú (denunciar, bloquear al autor). Al
@@ -41,15 +44,16 @@ interface DatosTitulo {
   otras?: Otra[];
 }
 
-async function token(): Promise<string | null> {
+/** El token, sólo si la sesión sigue siendo de `uid` (A1). */
+async function tokenComo(uid: string): Promise<string | null> {
   const { data } = await supabaseBrowser().auth.getSession();
-  return data.session?.access_token ?? null;
+  return tokenDeCuenta(data.session, uid);
 }
 
-/** POST a una ruta comunitaria. Red caída o respuesta ilegible: "sin-confirmar". */
-async function postear(ruta: string, cuerpo: Record<string, unknown>): Promise<RespuestaEditor> {
+/** POST a una ruta comunitaria en nombre de `uid`. Red caída o respuesta ilegible: "sin-confirmar". */
+async function postear(uid: string, ruta: string, cuerpo: Record<string, unknown>): Promise<RespuestaEditor> {
   try {
-    const t = await token();
+    const t = await tokenComo(uid);
     if (!t) return { resultado: "sin_sesion" };
     const r = await fetch(apiUrl(ruta), {
       method: "POST",
@@ -66,36 +70,50 @@ async function postear(ruta: string, cuerpo: Record<string, unknown>): Promise<R
 export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
   const { user } = useAuth();
   const uid = user?.id ?? null;
+  // A1: todo el estado (datos, aviso de bloqueo, diálogos, mensajes) vive
+  // dentro de una instancia por cuenta y título; cambiar de cuenta o cerrar
+  // sesión la desmonta y no se traslada nada.
+  if (!uid) return null;
+  return <ResenasDeCuenta key={claveEditor(uid, titulo)} uid={uid} titulo={titulo} />;
+}
+
+function ResenasDeCuenta({ uid, titulo }: { uid: string; titulo: Titulo }) {
   const [datos, setDatos] = useState<DatosTitulo | null>(null);
   const [error, setError] = useState(false);
   const [abierto, setAbierto] = useState(false);
-  const gen = useRef(0);
   const panel = useId();
   const [bloqueo, setBloqueo] = useState<{ versionId: number; denunciada: boolean } | null>(null);
   const [denunciarTras, setDenunciarTras] = useState<number | null>(null);
   const aviso = useRef<HTMLDivElement>(null);
   useEffect(() => { if (bloqueo) aviso.current?.scrollIntoView({ block: "nearest" }); }, [bloqueo]);
 
+  // Las respuestas de esta instancia valen mientras siga montada; las de una
+  // carga, sólo si es la última (A1).
+  const frontera = useMemo(() => crearFrontera(uid), [uid]);
+  useEffect(() => { frontera.abrir(); return () => frontera.cerrar(); }, [frontera]);
+  const enviar = useCallback((ruta: string, cuerpo: Record<string, unknown>) => postear(uid, ruta, cuerpo), [uid]);
+
   const cargar = useCallback(async () => {
-    const mia = { gen: ++gen.current, uid };
-    if (!uid) { setDatos(null); return; }
+    if (!frontera.vigente()) return;
+    const g = frontera.carga();
     try {
-      const t = await token();
+      const t = await tokenComo(uid);
+      if (!t) return; // la sesión ya es de otra cuenta: esta instancia se va a desmontar
       const r = await fetch(apiUrl(`/api/comunidad/titulo?tipo=${titulo.tipo}&id=${titulo.tmdbId}`), {
-        headers: t ? { Authorization: `Bearer ${t}` } : {}, cache: "no-store",
+        headers: { Authorization: `Bearer ${t}` }, cache: "no-store",
       });
       const j = r.ok ? ((await r.json()) as DatosTitulo) : null;
-      if (!respuestaVigente({ gen: gen.current, uid }, mia)) return;
+      if (!frontera.vigente(g)) return;
       setError(!j);
       if (j) setDatos(j);
     } catch {
-      if (respuestaVigente({ gen: gen.current, uid }, mia)) setError(true);
+      if (frontera.vigente(g)) setError(true);
     }
-  }, [uid, titulo.tipo, titulo.tmdbId]);
+  }, [frontera, uid, titulo.tipo, titulo.tmdbId]);
 
-  useEffect(() => { setDatos(null); void cargar(); }, [cargar]);
+  useEffect(() => { void cargar(); }, [cargar]);
 
-  if (!uid || (!datos && !error) || (datos && !datos.activo)) return null;
+  if ((!datos && !error) || (datos && !datos.activo)) return null;
 
   const mia: Persistida | null = datos?.mia
     ? { resenaId: datos.mia.resena_id, versionId: datos.mia.version_id, texto: datos.mia.texto, estado: datos.mia.estado }
@@ -109,7 +127,7 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
   ].filter(Boolean) as string[];
 
   const votar = async (versionId: number, voto: Voto | "retirar") => {
-    const r = await postear("/api/comunidad/votos", { version_id: versionId, voto });
+    const r = await enviar("/api/comunidad/votos", { version_id: versionId, voto });
     void cargar();
     return r;
   };
@@ -132,16 +150,16 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
           )}
           {avisos.map((a) => <p key={a} className="cm-msg info" role="status">{a}</p>)}
           {datos && !datos.terminos?.aceptada && !datos.baja_en_curso && (
-            <TerminosComunidad aceptar={async (version) => { const r = await postear("/api/comunidad/terminos", { version }); void cargar(); return r; }} />
+            <TerminosComunidad aceptar={async (version) => { const r = await enviar("/api/comunidad/terminos", { version }); void cargar(); return r; }} />
           )}
           {datos && (datos.terminos?.aceptada || mia) && (
             <EditorResena
               key={claveEditor(uid, titulo)}
               titulo={titulo}
               mia={mia}
-              enviar={(cuerpo) => postear("/api/comunidad/resenas", cuerpo)}
-              pedirRevision={(cuerpo) => postear("/api/comunidad/revision", cuerpo)}
-              borrar={(resenaId) => postear("/api/comunidad/resenas/borrar", { resena_id: resenaId })}
+              enviar={(cuerpo) => enviar("/api/comunidad/resenas", cuerpo)}
+              pedirRevision={(cuerpo) => enviar("/api/comunidad/revision", cuerpo)}
+              borrar={(resenaId) => enviar("/api/comunidad/resenas/borrar", { resena_id: resenaId })}
               recargar={() => void cargar()}
             />
           )}
@@ -156,14 +174,14 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
             </div>
           )}
           {denunciarTras !== null && (
-            <DialogoDenuncia versionId={denunciarTras} enviar={postear} ofrecerBloqueo={false} cerrar={() => setDenunciarTras(null)}
+            <DialogoDenuncia versionId={denunciarTras} enviar={enviar} ofrecerBloqueo={false} cerrar={() => setDenunciarTras(null)}
               alTerminar={({ denunciada }) => { if (denunciada) setBloqueo((b) => (b ? { ...b, denunciada: true } : b)); }} />
           )}
           {otras.map((o) => (
             <article key={o.version_id} className="review usuario">
               <div className="cm-cab">
                 <div className="badge">Reseña de la comunidad</div>
-                <MenuResena versionId={o.version_id} denunciada={o.denunciada === true} enviar={postear}
+                <MenuResena versionId={o.version_id} denunciada={o.denunciada === true} enviar={enviar}
                   alDenunciar={() => void cargar()}
                   alBloquear={({ denunciada }) => { setBloqueo({ versionId: o.version_id, denunciada }); void cargar(); }} />
               </div>
