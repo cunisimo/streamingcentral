@@ -467,9 +467,25 @@ AAB tiene que ser `5` o mayor.
 
      Informe: `docs/medidas/2026-10-24-informe-claude-e2c-a1.md`; salidas:
      `docs/medidas/2026-10-24-e2c-a1-salidas.txt`.
+     **Auditoría focalizada de la corrección A1 (24/10, Codex sobre `f67ff90`;
+     `docs/medidas/2026-10-24-auditoria-e2c-a1-f67ff90.md`, copia sin
+     cambios, SHA-256 `6547a056…`):** el fallo de actores cruzados quedó
+     corregido y **E2c está cerrada en local**, sin hallazgos bloqueantes
+     nuevos.
+     - Codex repitió la regresión cruzada (1/1, `A=libre, B=libre`).
+     - Controló, en una transacción revertida, la identidad, la baja, la
+       sanción y la cancelación.
+     - Comparó el SQL: la de 013_down es idéntica a 012.
+     - No hace falta una entrega previa de inventario automático. El
+       inventario de uso del protocolo se cierra en cada entrega que crea
+       funciones.
+     - Las operaciones de concurrencia de E2c siguen siendo fixtures, con
+       gates en E3a, E4 y E7.
+     - El dueño autorizó **E3a local**, integrando las reglas candidatas de
+       E1 sólo en local y con los interruptores apagados. Eso no aprueba E1
+       ni habilita contenido real.
    **Falta:**
-   - la auditoría focalizada de la corrección A1 de E2c. E3a no empieza sin
-     autorización;
+   - E3a local (en curso);
    - resolver, antes de E4, E8 y la publicación, el alcance del borrado de
      denuncias recibidas en la baja, y el plazo de los intervalos
      seudónimos (P3);
