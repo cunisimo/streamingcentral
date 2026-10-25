@@ -170,7 +170,7 @@ test("toda ruta está clasificada: integrada o excluida, sin pendientes", () => 
     `rutas sin CORS y sin clasificar:\n${sinClasificar.join("\n")}`);
 });
 
-test("las 25 integradas coinciden en sus TRES declaraciones de método", () => {
+test("las 30 integradas coinciden en sus TRES declaraciones de método", () => {
   const divergentes: string[] = [];
   for (const r of rutasDeApi()) {
     if (EXCLUIDAS.has(r)) continue;
@@ -203,7 +203,7 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 27 rutas = 25 integradas + 2 excluidas", () => {
+test("el recuento cierra: 32 rutas = 30 integradas + 2 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
@@ -215,8 +215,11 @@ test("el recuento cierra: 27 rutas = 25 integradas + 2 excluidas", () => {
   // 26 -> 27 con el contrato de baja (E2b): `app/api/cuenta/estado-baja`
   // integra CORS, como `cuenta/eliminar`: la consulta Configuración, que
   // viaja en el contenedor.
-  assert.equal(todas.length, 27, "cambió la cantidad de rutas: hay que reclasificar");
-  assert.equal(integradas.length, 25);
+  // 27 -> 32 con la escritura de reseñas (E3a): resenas, resenas/borrar,
+  // votos, terminos y titulo integran CORS: las usa la ficha, que viaja en el
+  // contenedor.
+  assert.equal(todas.length, 32, "cambió la cantidad de rutas: hay que reclasificar");
+  assert.equal(integradas.length, 30);
   assert.equal(EXCLUIDAS.size, 2);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });

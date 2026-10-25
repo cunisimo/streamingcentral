@@ -24,6 +24,7 @@ import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType, PlatformCode } from "@/lib/types";
 import AyudasBusqueda from "@/components/AyudasBusqueda";
 import ResenasAcordeon from "./ResenasAcordeon";
+import ResenasComunidad from "./comunidad/ResenasComunidad";
 import { resenasDeFicha } from "@/lib/resenas";
 
 export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }) {
@@ -217,6 +218,8 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
         </div>
 
         {resenas.length > 0 && <ResenasAcordeon key={`${t.type}:${t.id}`} resenas={resenas} />}
+        {/* Reseñas de la comunidad (E3a, local): no dibuja nada sin sesión o con el módulo apagado. */}
+        <ResenasComunidad key={`cm:${t.type}:${t.id}`} titulo={{ tipo: t.type, tmdbId: t.id }} />
 
         {t.genres.length > 0 && (
           <div className="gtags">{t.genres.map((g) => <span key={g} className="gt">{genreLabel(g)}</span>)}</div>

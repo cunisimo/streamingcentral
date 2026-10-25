@@ -201,7 +201,9 @@ const ARCHIVOS = [
  * que entró la carpeta `app/sala`, o sea que el AAB no compilaba—. Adentro del
  * contenedor esa sala se muestra con `/s/?id=<uuid>`, igual que `/t` y `/p`.
  */
-const APP_FUERA = new Set(["api", "admin", "titulo", "persona", "sala/[id]"]);
+// `revision-local`: la página de revisión local de reseñas (E3a), que no es
+// producto; además responde 404 fuera de `next dev` con su variable local.
+const APP_FUERA = new Set(["api", "admin", "titulo", "persona", "sala/[id]", "revision-local"]);
 
 /**
  * ¿La ruta relativa a `app/` queda fuera del artefacto? `rel` viene con "/" y
