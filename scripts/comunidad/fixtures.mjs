@@ -43,6 +43,8 @@ insert into comunidad.denuncias (version_id, autor_participante, denunciante_par
   values (${FX.version}, '${FX.autor}', '${FX.lector}', 'spam');
 insert into comunidad.bloqueos (bloqueador_participante, bloqueado_participante) values ('${FX.lector}', '${FX.autor}');
 insert into comunidad.contadores (participante_id, accion, dia, cantidad) values ('${FX.lector}', 'evaluacion', '2026-10-24', 1);
+insert into comunidad.intentos (participante_id, accion, id_intento, hash_peticion, resultado)
+  values ('${FX.lector}', 'publicar', '00000000-0000-4000-8000-00000000f0f0', repeat('a', 64), '{"resultado": "publicada"}'::jsonb);
 ${conAuth ? `insert into comunidad.bajas_en_curso (user_id) values ('${FX.usuarioB}');` : ""}
 `;
 }

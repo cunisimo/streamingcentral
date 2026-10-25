@@ -44,16 +44,45 @@ console.log(`base: ${contenedor()} · API: ${URL_API}\n`);
 
 const { prueba, cerrar } = arnes();
 
+// 011 (E2a) creó once; 014 (E3a) suma `intentos` (idempotencia).
 const TABLAS = [
   "bajas_en_curso", "bloqueos", "config", "contadores", "denuncias", "evaluaciones",
-  "participantes", "resenas", "suspensiones", "tramos", "versiones",
+  "intentos", "participantes", "resenas", "suspensiones", "tramos", "versiones",
 ];
+// El inventario exacto de `public.comunidad_*`: la baja (E2b, 012) y la
+// escritura (E3a, 014). Una función nueva sin clasificar falla acá. Los
+// argumentos son los de una llamada SIN EFECTOS con un uid inexistente: la
+// función rechaza o no encuentra nada.
+const DECISION_PRUEBA = { resultado: "publicar", version_reglas: "prueba", reglas: [] };
+const HASH_PRUEBA = "a".repeat(64);
+const INTENTO_PRUEBA = "00000000-0000-4000-8000-0000000000ee";
+const RPC_COMUNIDAD = {
+  comunidad_aceptar_terminos: { p_version: "prueba-de-permisos" },
+  comunidad_baja_comunitaria: {},
+  comunidad_baja_comunitaria_admin: {},
+  comunidad_baja_registrar_fallo: { p_error: "prueba de permisos" },
+  comunidad_borrar: { p_resena: 1 },
+  comunidad_editar: { p_resena: 1, p_version_esperada: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
+  comunidad_estado_baja: {},
+  comunidad_leer_titulo: { p_tipo: "movie", p_tmdb_id: 1 },
+  comunidad_publicar: { p_tipo: "movie", p_tmdb_id: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
+  comunidad_retirar_voto: { p_version: 1 },
+  comunidad_textos_recientes: {},
+  comunidad_votar: { p_version: 1, p_util: true },
+};
+// lock_timeout de cada una (vacío = sin): 10 s la baja, 5 s las escrituras de E3a.
+const LOCK_TIMEOUT = {
+  comunidad_baja_comunitaria: "10s", comunidad_baja_comunitaria_admin: "10s",
+  comunidad_aceptar_terminos: "5s", comunidad_publicar: "5s", comunidad_editar: "5s",
+  comunidad_borrar: "5s", comunidad_votar: "5s", comunidad_retirar_voto: "5s",
+};
+
 const ROLES_API = ["anon", "authenticated", "service_role"];
 const OPS = ["select", "insert", "update", "delete", "truncate"];
 // Una columna por tabla para el `update … set c = c`.
 const COLUMNA = {
   bajas_en_curso: "intentos", bloqueos: "creado_en", config: "modulo_activo", contadores: "cantidad",
-  denuncias: "estado", evaluaciones: "util", participantes: "nombre_comunitario", resenas: "borrada_en",
+  denuncias: "estado", evaluaciones: "util", intentos: "resultado", participantes: "nombre_comunitario", resenas: "borrada_en",
   suspensiones: "hasta", tramos: "vigente_hasta", versiones: "decidida_en",
 };
 
@@ -106,7 +135,7 @@ function correrModo(modo, preparar, casos) {
 // ===========================================================================
 console.log("— 1. SQL (SET ROLE) —");
 
-await prueba("el esquema tiene exactamente las once tablas previstas", () => {
+await prueba("el esquema tiene exactamente las doce tablas previstas (11 de E2a + intentos de E3a)", () => {
   const t = sqlOk("select string_agg(tablename, ',' order by tablename) from pg_tables where schemaname = 'comunidad'");
   assert.equal(t, TABLAS.join(","));
 });
@@ -162,14 +191,14 @@ await prueba("control: una función nueva en el esquema SIN su revoke queda ejec
   assert.deepEqual(resultados(r.stderr), [["x", "42501"]]);
 });
 
-await prueba("catálogo: RLS activada en las once y ninguna policy", () => {
+await prueba("catálogo: RLS activada en las doce y ninguna policy", () => {
   const sin = sqlOk("select string_agg(relname, ',') from pg_class where relnamespace = 'comunidad'::regnamespace and relkind = 'r' and not relrowsecurity");
   assert.equal(sin, "", `sin RLS: ${sin}`);
   const pol = sqlOk("select count(*) from pg_policy p join pg_class c on c.oid = p.polrelid where c.relnamespace = 'comunidad'::regnamespace");
   assert.equal(pol, "0");
 });
 
-await prueba("control positivo: el dueño (postgres) sí lee las once tablas", () => {
+await prueba("control positivo: el dueño (postgres) sí lee las doce tablas", () => {
   const out = sqlOk(TABLAS.map((t) => `select '${t}', count(*) from comunidad.${t};`).join("\n"));
   assert.equal(out.split("\n").length, TABLAS.length);
 });
@@ -367,7 +396,7 @@ async function pedir(metodo, tabla, token, perfil) {
   return { status: r.status, codigo };
 }
 
-await prueba("REST: 7 credenciales × 11 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106", async () => {
+await prueba(`REST: 7 credenciales × ${TABLAS.length} tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106`, async () => {
   const mal = [];
   let n = 0;
   for (const [quien, token] of Object.entries(QUIENES())) {
@@ -382,11 +411,11 @@ await prueba("REST: 7 credenciales × 11 tablas × 4 métodos × 2 perfiles → 
       }
     }
   }
-  assert.equal(n, 7 * 11 * 4 * 2);
+  assert.equal(n, 7 * TABLAS.length * 4 * 2);
   assert.deepEqual(mal.slice(0, 10), [], `${mal.length} desvíos`);
 });
 
-await prueba("REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC de la baja (E2b), anon no ve ninguna y service_role ve sólo las cuatro", async () => {
+await prueba("REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b y E3a), anon no ve ninguna y service_role ve exactamente las del inventario", async () => {
   for (const [quien, token] of [["anon", ANON], ["service_role", SRV]]) {
     const r = await fetch(`${URL_API}/rest/v1/`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
     const doc = await r.json();
@@ -394,9 +423,7 @@ await prueba("REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RP
     assert.ok(rutas.length > 0, "el OpenAPI vino vacío: la prueba no prueba nada");
     assert.deepEqual(rutas.filter((p) => TABLAS.some((t) => p === `/${t}`)), [], `${quien}: tablas`);
     const rpcs = rutas.filter((p) => p.includes("comunidad")).sort();
-    assert.deepEqual(rpcs, quien === "anon" ? [] : [
-      "/rpc/comunidad_baja_comunitaria", "/rpc/comunidad_baja_comunitaria_admin",
-      "/rpc/comunidad_baja_registrar_fallo", "/rpc/comunidad_estado_baja"], quien);
+    assert.deepEqual(rpcs, quien === "anon" ? [] : Object.keys(RPC_COMUNIDAD).map((f) => `/rpc/${f}`).sort(), quien);
   }
 });
 
@@ -421,36 +448,30 @@ await prueba("GraphQL: pg_graphql no está habilitada en la base local; el endpo
 // ===========================================================================
 console.log("\n— 3. RPC —");
 
-// E2b (012): el inventario exacto. Una función nueva sin clasificar falla acá.
-const RPC_BAJA = {
-  comunidad_baja_comunitaria: {},
-  comunidad_baja_comunitaria_admin: {},
-  comunidad_baja_registrar_fallo: { p_error: "prueba de permisos" },
-  comunidad_estado_baja: {},
-};
 
-await prueba("las únicas public.comunidad_* son las cuatro de la baja (E2b), security definer y search_path vacío", () => {
+
+await prueba("las únicas public.comunidad_* son las del inventario (E2b y E3a), security definer y search_path vacío", () => {
   const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
     from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
-  assert.deepEqual(out.split("\n"), Object.keys(RPC_BAJA).map((f) =>
-    `${f}:true:search_path=""${f.startsWith("comunidad_baja_comunitaria") ? ",lock_timeout=10s" : ""}`));
+  assert.deepEqual(out.split("\n"), Object.keys(RPC_COMUNIDAD).map((f) =>
+    `${f}:true:search_path=""${LOCK_TIMEOUT[f] ? `,lock_timeout=${LOCK_TIMEOUT[f]}` : ""}`));
 });
 
-await prueba("catálogo: EXECUTE de las cuatro sólo para service_role (ni PUBLIC, ni anon, ni authenticated)", () => {
+await prueba("catálogo: EXECUTE de cada una sólo para service_role (ni PUBLIC, ni anon, ni authenticated)", () => {
   const out = sqlOk(`select f.proname || ':' || r || ':' || has_function_privilege(r, f.oid, 'EXECUTE')
     from pg_proc f, unnest(array['public','anon','authenticated','service_role']) r
     where f.pronamespace = 'public'::regnamespace and f.proname like 'comunidad\\_%' order by 1`);
   const filas = out.split("\n");
-  assert.equal(filas.length, 16);
+  assert.equal(filas.length, Object.keys(RPC_COMUNIDAD).length * 4);
   const mal = filas.filter((l) => !l.endsWith(l.includes(":service_role:") ? ":true" : ":false"));
   assert.deepEqual(mal, []);
 });
 
-await prueba("RPC real por REST: anon y cada JWT reciben 401/403 en las cuatro; service_role ejecuta (uid inexistente: sin efectos)", async () => {
+await prueba("RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)", async () => {
   const mal = [];
   const nadie = "00000000-0000-4000-8000-00000000dead";
   for (const [quien, token] of Object.entries(QUIENES())) {
-    for (const [f, args] of Object.entries(RPC_BAJA)) {
+    for (const [f, args] of Object.entries(RPC_COMUNIDAD)) {
       const r = await fetch(`${URL_API}/rest/v1/rpc/${f}`, {
         method: "POST",
         headers: { apikey: ANON, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -466,6 +487,7 @@ await prueba("RPC real por REST: anon y cada JWT reciben 401/403 en las cuatro; 
   }
   assert.deepEqual(mal, []);
   assert.equal(sqlOk(`select count(*) from comunidad.bajas_en_curso where user_id = '${nadie}'`), "0");
+  assert.equal(sqlOk(`select count(*) from comunidad.participantes where user_id = '${nadie}'`), "0");
 });
 
 await prueba("ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API", () => {

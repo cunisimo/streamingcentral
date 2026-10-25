@@ -16,7 +16,7 @@
 //     (SQL y REST).
 // Los volcados se normalizan sólo en las líneas `\restrict`/`\unrestrict`, que
 // pg_dump 17.6 genera con una clave aleatoria en cada corrida.
-// Deja la base con 011, 012, 013 y 022 aplicadas, como db-local.mjs.
+// Deja la base con 011, 012, 013, 014 y 022 aplicadas, como db-local.mjs.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -35,6 +35,8 @@ const UP12 = "supabase/migrations/012_comunidad_baja.sql";
 const DOWN12 = "supabase/migrations/012_comunidad_baja_down.sql";
 const UP13 = "supabase/migrations/013_comunidad_protocolo.sql";
 const DOWN13 = "supabase/migrations/013_comunidad_protocolo_down.sql";
+const UP14 = "supabase/migrations/014_comunidad_escritura.sql";
+const DOWN14 = "supabase/migrations/014_comunidad_escritura_down.sql";
 const UP22 = "supabase/migrations/022_cerrar_user_reviews.sql";
 const DOWN22 = "supabase/migrations/022_cerrar_user_reviews_down.sql";
 const dirVolcados = join(tmpdir(), `comunidad-volcados-${Date.now()}`);
@@ -70,11 +72,44 @@ const v = {};
 // (013_down → 012_down → 011_down) y se suben en orden. Con 012 aplicada,
 // bajar sólo 011 dejaría las cuatro `public.comunidad_*` apuntando a un
 // esquema inexistente.
+// 014 (E3a) depende de 013: se baja primero (014_down → 013_down → …).
+await prueba("014 (E3a): up → down → up da el mismo volcado; down quita sus funciones, la tabla de intentos y las columnas de términos; repetidas, inocuas", () => {
+  aplicarArchivo(UP);
+  aplicarArchivo(UP12);
+  aplicarArchivo(UP13);
+  aplicarArchivo(UP14);
+  const con14 = volcar("000-con-014");
+  aplicarArchivo(DOWN14);
+  const sin14 = volcar("000b-sin-014");
+  v.sin14 = sin14;
+  assert.equal(sqlOk(`select count(*) from pg_proc where proname in ('comunidad_publicar', 'comunidad_editar', 'comunidad_borrar',
+    'comunidad_votar', 'comunidad_retirar_voto', 'comunidad_aceptar_terminos', 'comunidad_textos_recientes', 'comunidad_leer_titulo',
+    'condiciones_a', 'hay_cupo', 'consumir_cupo', 'decision_valida', 'intento_previo', 'rechazo_cuenta', 'dia_ar')`), "0");
+  assert.equal(sqlOk("select count(*) from pg_tables where schemaname = 'comunidad' and tablename = 'intentos'"), "0");
+  assert.equal(sqlOk(`select count(*) from information_schema.columns where table_schema = 'comunidad'
+    and column_name in ('terminos_version', 'terminos_aceptados_en')`), "0");
+  // Sin la coma final (quitar la última columna o restricción de un CREATE
+  // TABLE se la saca a la anterior): 014_down no agrega nada.
+  const cuenta = (t) => t.split("\n").map((l) => l.replace(/,$/, "")).reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());
+  const a = cuenta(con14), d = cuenta(sin14);
+  assert.deepEqual([...d].filter(([l, n]) => n > (a.get(l) ?? 0)).map(([l]) => l).filter((l) => l.trim() !== ""), [], "014_down agregó algo");
+  aplicarArchivo(DOWN14);
+  iguales(volcar("000c-sin-014-otra-vez"), sin14, "repetir 014_down cambió algo");
+  aplicarArchivo(UP14);
+  iguales(volcar("000d-con-014"), con14, "subir 014 no reprodujo el volcado");
+  aplicarArchivo(UP14);
+  iguales(volcar("000e-con-014-repetida"), con14, "repetir 014 cambió el esquema");
+  aplicarArchivo(DOWN14);
+  iguales(volcar("000f-sin-014"), sin14, "la segunda bajada de 014 difiere");
+});
+
 await prueba("013 (E2c): up → down → up da el mismo volcado; down quita sus funciones y sólo restaura la definición de 012; repetidas, inocuas", () => {
   aplicarArchivo(UP);
   aplicarArchivo(UP12);
   aplicarArchivo(UP13);
   const con13 = volcar("00-con-013");
+  // Que 014_down quitó SÓLO lo de 014: sin 014 es idéntico a 011 + 012 + 013.
+  iguales(con13, v.sin14, "014_down no dejó exactamente 011 + 012 + 013");
   aplicarArchivo(DOWN13);
   const sin13 = volcar("00b-sin-013");
   v.sin13 = sin13;
@@ -177,6 +212,7 @@ await prueba("vuelta a 012: 011 + 012 dan el mismo volcado del principio", () =>
   aplicarArchivo(UP12);
   iguales(volcar("6b-con-011-y-012"), v.con12, "011 + 012 no reprodujo el estado inicial");
   aplicarArchivo(UP13);
+  aplicarArchivo(UP14);
 });
 
 // ---------------------------------------------------------------------------
