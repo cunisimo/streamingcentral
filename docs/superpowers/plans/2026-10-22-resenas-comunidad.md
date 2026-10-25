@@ -815,10 +815,14 @@ rollback;
   calculado con los topes.
 - **Evidencia para Codex:** salidas, cálculo de cotas, diff.
 - **Estado al 25/10/2026** (`docs/ESTADO.md` es la fuente vigente):
-  implementada **en local** en `2e2d00e`, **pendiente de auditoría
-  focalizada**. Informe con el cálculo de cotas y las interpretaciones a
-  auditar: `docs/medidas/2026-10-25-informe-claude-e3b.md`; salidas:
-  `docs/medidas/2026-10-25-e3b-salidas.txt`.
+  implementada **en local** en `2e2d00e`. Informe con el cálculo de cotas y
+  las interpretaciones a auditar: `docs/medidas/2026-10-25-informe-claude-e3b.md`;
+  salidas: `docs/medidas/2026-10-25-e3b-salidas.txt`. Auditada por Codex
+  sobre `64d940e` con dos P2 de interfaz (A1 aislamiento por cuenta, A2
+  bloqueo pendiente tras la denuncia), corregidas en local y **pendientes de
+  auditoría focalizada**: `docs/medidas/2026-10-25-informe-claude-e3b-a1a2.md`.
+  Al construir E4: 50 es el tope de admisión, no una cota del total retenido
+  (la corroboración puede superarlo).
   - Además de los archivos de arriba: `lib/comunidad/menu-nucleo.ts` y
     `moderacion-nucleo.ts`, `components/comunidad/FilaBloqueados.tsx`, la
     batería `scripts/comunidad/pruebas-moderacion.mjs` y

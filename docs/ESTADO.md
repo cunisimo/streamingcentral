@@ -597,8 +597,40 @@ AAB tiene que ser `5` o mayor.
      autor en E6, sin mostrar correos ni datos privados;
    - **E3b local (25/10, autorizada por el dueño; `2e2d00e`; sólo `supabase
      start` y la app local; interruptores apagados y límites restaurados al
-     terminar). PENDIENTE DE AUDITORÍA FOCALIZADA de Codex; E4 no empieza
-     sin autorización.**
+     terminar). Auditada por Codex sobre `64d940e`
+     (`docs/medidas/2026-10-25-auditoria-e3b-64d940e.md`, copia sin
+     cambios): dos P2 de interfaz, A1 y A2, sin defectos en el SQL, la
+     concurrencia ni los permisos ejercitados. A1/A2 CORREGIDAS por Claude
+     (ver abajo), PENDIENTES DE AUDITORÍA FOCALIZADA; E4 no empieza sin
+     autorización.**
+     - **A1 (aislamiento por cuenta):** `/cuenta/bloqueados`, las reseñas de
+       la ficha (aviso de bloqueo, diálogos, mensajes) y la fila de
+       Configuración montan su estado por cuenta; una frontera
+       (`lib/comunidad/frontera-cuenta.ts`) descarta respuestas de cuentas
+       anteriores, de instancias desmontadas y cargas superadas, y los
+       pedidos sólo salen si la sesión sigue siendo de la cuenta que los
+       inició. Una recarga fallida de la misma cuenta conserva datos y
+       borrador (E3a intacta);
+     - **A2 (denuncia recibida, bloqueo pendiente):** el diálogo conserva la
+       denuncia y ofrece "Reintentar el bloqueo" sólo contra la ruta de
+       bloqueos (no reenvía la denuncia ni suma excedente); incierto y error
+       confirmado tienen mensajes distintos; un rechazo definitivo deja sólo
+       "Cerrar". Hallazgo del recorrido, corregido: con el bloqueo aplicado
+       pero la respuesta perdida, la recarga quitaba la reseña y el
+       reintento; ahora la recarga espera al cierre del diálogo;
+     - 21 regresiones focalizadas (preliminares: núcleos y modelos), 77/77
+       vecinas, `npm test` 2445 pasan, 0 fallan, 16 omitidas, `tsc` 0;
+       recorrido real en navegador (escritorio y 375 px) con demoras y
+       respuestas perdidas simuladas en la página; 12 capturas en
+       `docs/medidas/2026-10-25-e3b-a1a2-recorrido/`. Sin baterías de base:
+       no cambió SQL ni rutas;
+     - se mantiene documentado: **50 es el tope de ADMISIÓN, no una cota
+       absoluta de retenidos**; la corroboración por regla puede superarlo
+       (comportamiento sin cambios);
+     - no verificado: la fila de Configuración en navegador (sólo código y
+       barrido), teléfono real, Android, tema claro, TMDB, lector de
+       pantalla. Informe: `docs/medidas/2026-10-25-informe-claude-e3b-a1a2.md`;
+       salidas: `docs/medidas/2026-10-25-e3b-a1a2-salidas.txt`.
      - `015_comunidad_moderacion_datos.sql` (+ down):
        - límites nuevos en `config`, todos **hipótesis** (P6, ninguno
          aprobado): admisión por autor 2 y global 50, 50 filas de denuncia
@@ -635,7 +667,9 @@ AAB tiene que ser `5` o mayor.
      - interpretaciones a auditar (informe, "Decisiones a auditar"):
        duplicado propio = de otra reseña; "3 o más cuentas" literal (la 4.ª
        se retiene); denunciar y bloquear crean la identidad sin términos;
-       la corroboración cierra tramos y no pasa por la admisión;
+       la corroboración cierra tramos y no pasa por la admisión (Codex: no
+       son hallazgos; conservar en E4 que 50 limita la admisión, no el total
+       retenido);
      - `pruebas-permisos.mjs` no borraba sus cuentas: se borraron sólo las
        de las tres corridas de Claude del 25/10 y ahora limpia lo suyo (las
        del 24/10 quedan). El up/down/up completo de 011 no se repitió:
