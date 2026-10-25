@@ -16,7 +16,12 @@ export const MENSAJE_ERROR = "No se pudo guardar, probá de nuevo.";
 export const MENSAJE_SIN_CONFIRMAR = "No sabemos si se guardó. Reintentá: si ya se había guardado, no se duplica.";
 export const MENSAJE_CONFLICTO_VERSION = "Tu reseña cambió en otro dispositivo. Recargá para ver la última versión antes de editar.";
 export const MENSAJE_CONFLICTO_INTENTO = "No pudimos guardar este envío. Recargá y probá de nuevo.";
-export const AVISO_REINICIO = "Al editar tu reseña se reinician los votos de utilidad.";
+// A2: lo que pasó en otra sesión mientras se editaba. El borrador se conserva.
+export const REMOTO_MODIFICADA = "Tu reseña cambió en otro dispositivo mientras la editabas. Tu borrador sigue acá: elegí qué hacer. Si guardás sin elegir, no se pisa la otra versión.";
+export const REMOTO_PUBLICADA = "Publicaste una reseña de este título desde otro dispositivo. Tu borrador sigue acá: elegí qué hacer.";
+export const MENSAJE_CONFLICTO_BORRADOR = "No se guardó: tu reseña cambió en otro dispositivo. Tu borrador sigue acá; elegí qué hacer en el aviso.";
+export const REMOTO_BORRADA = "Tu reseña se borró desde otro dispositivo. Tu borrador sigue acá: elegí qué hacer.";
+export const AVISO_REINICIO ="Al editar tu reseña se reinician los votos de utilidad.";
 
 export const MOTIVOS_CUENTA: Readonly<Record<string, string>> = {
   modulo_apagado: "Las reseñas de la comunidad no están disponibles.",

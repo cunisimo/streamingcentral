@@ -24,7 +24,7 @@ export default function RevisionLocalComunidad({ searchParams }: { searchParams:
       <main className="page" style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
         <p className="cm-msg info">Revisión local de reseñas de la comunidad (E3a). No es una pantalla de producto.</p>
         <h1 style={{ fontFamily: "var(--display)", fontSize: 24, margin: "16px 0" }}>{searchParams.titulo ?? `Título ${tipo} ${id}`}</h1>
-        <ResenasComunidad titulo={{ tipo, tmdbId: id }} />
+        <ResenasComunidad key={`cm:${tipo}:${id}`} titulo={{ tipo, tmdbId: id }} />
       </main>
       <BottomNav />
     </>

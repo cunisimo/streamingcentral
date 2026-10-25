@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { supabaseBrowser } from "@/lib/supabase";
 import { apiUrl } from "@/lib/api-base";
-import { respuestaVigente, type Persistida, type Titulo } from "@/lib/comunidad/editor-nucleo";
+import { claveEditor, respuestaVigente, type Persistida, type Titulo } from "@/lib/comunidad/editor-nucleo";
 import { MOTIVOS_CUENTA } from "@/lib/comunidad/mensajes";
 import type { Voto } from "@/lib/comunidad/evaluacion-nucleo";
 import EditorResena, { type RespuestaEditor } from "./EditorResena";
@@ -18,7 +18,10 @@ import TerminosComunidad from "./TerminosComunidad";
 // La lectura es la PROVISIONAL de E3a (/api/comunidad/titulo): la propia y las
 // publicadas de otros. E5a la reemplaza (bloqueos, suspensiones, orden,
 // paginación). Arranca cerrada, como el acordeón de reseñas: puede haber
-// spoilers. Cambiar de cuenta descarta las respuestas de la anterior.
+// spoilers. Cambiar de cuenta descarta las respuestas de la anterior, y el
+// editor se monta de nuevo por cuenta y título (sin borrador ni intento del
+// anterior). Una recarga que falla conserva lo que ya se veía: si vaciara los
+// datos, el editor se desmontaría y se perdería el borrador (A2).
 interface Otra { resena_id: number; version_id: number; texto: string; utiles: number; total: number; mi_voto: Voto | null }
 interface DatosTitulo {
   activo: boolean;
@@ -73,9 +76,9 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
       const j = r.ok ? ((await r.json()) as DatosTitulo) : null;
       if (!respuestaVigente({ gen: gen.current, uid }, mia)) return;
       setError(!j);
-      setDatos(j);
+      if (j) setDatos(j);
     } catch {
-      if (respuestaVigente({ gen: gen.current, uid }, mia)) { setError(true); setDatos(null); }
+      if (respuestaVigente({ gen: gen.current, uid }, mia)) setError(true);
     }
   }, [uid, titulo.tipo, titulo.tmdbId]);
 
@@ -122,7 +125,7 @@ export default function ResenasComunidad({ titulo }: { titulo: Titulo }) {
           )}
           {datos && (datos.terminos?.aceptada || mia) && (
             <EditorResena
-              key="editor"
+              key={claveEditor(uid, titulo)}
               titulo={titulo}
               mia={mia}
               enviar={(cuerpo) => postear("/api/comunidad/resenas", cuerpo)}

@@ -1,10 +1,13 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import {
-  avisoReinicio, conservarIntento, contador, etiquetaEstado, firmaEnvio, intentoPara, puedeEnviar,
-  type Intento, type Persistida, type Titulo,
+  adoptar, alCambiarPersistida, avisoReinicio, cargarRemota, conservarIntento, contador, cuerpoEnvio, empezarEdicion, etiquetaEstado,
+  firmaEnvio, hayBorrador, intentoPara, mantenerBorrador, publicarComoNueva, puedeEnviar, trasGuardado,
+  type EstadoEditor, type Intento, type Persistida, type Titulo,
 } from "@/lib/comunidad/editor-nucleo";
-import { AVISO_REINICIO, mensajeEscritura, type Tono } from "@/lib/comunidad/mensajes";
+import {
+  AVISO_REINICIO, MENSAJE_CONFLICTO_BORRADOR, REMOTO_BORRADA, REMOTO_MODIFICADA, REMOTO_PUBLICADA, mensajeEscritura, type Tono,
+} from "@/lib/comunidad/mensajes";
 
 export type RespuestaEditor = Record<string, unknown> | "sin-confirmar";
 
@@ -15,7 +18,11 @@ export type RespuestaEditor = Record<string, unknown> | "sin-confirmar";
 //     reinician los votos;
 //   - un reintento del mismo envío reusa el id_intento: si la respuesta se
 //     perdió, reintentar no duplica ni reinicia votos dos veces;
-//   - ningún mensaje afirma un resultado que no se confirmó.
+//   - ningún mensaje afirma un resultado que no se confirmó;
+//   - una versión que llega de otra sesión mientras se edita NO pisa el
+//     borrador ni cambia la versión esperada: aviso y decisión explícita (A2).
+// Quien lo monta le da una `key` por cuenta y título (`claveEditor`): cambiar
+// de una a otra empieza de cero, sin borrador ni intento.
 export default function EditorResena({
   titulo, mia, enviar, borrar, recargar,
 }: {
@@ -25,47 +32,53 @@ export default function EditorResena({
   borrar: (resenaId: number) => Promise<RespuestaEditor>;
   recargar: () => void;
 }) {
-  const [texto, setTexto] = useState(mia?.texto ?? "");
-  const [editando, setEditando] = useState(mia === null);
+  const [e, setE] = useState<EstadoEditor>(() => adoptar(mia));
   const [enviando, setEnviando] = useState(false);
   const [msg, setMsg] = useState<{ tono: Tono; texto: string } | null>(null);
   const [confirmar, setConfirmar] = useState<"reinicio" | "borrar" | null>(null);
   const intento = useRef<Intento | null>(null);
-  // Cuando llega otra versión persistida (recién guardada, borrada o cambiada
-  // en otro dispositivo) y no se está editando, la vista la toma. El editor NO
-  // se vuelve a montar: así el mensaje del último envío sigue a la vista.
+  // La última versión persistida, para decidir al volver una respuesta.
+  const miaActual = useRef(mia);
+  miaActual.current = mia;
+  // Otra versión persistida (recién guardada, borrada o cambiada en otro
+  // dispositivo): el núcleo decide si se toma o si se avisa. El editor NO se
+  // vuelve a montar: así el mensaje del último envío sigue a la vista.
   const versionVista = mia?.versionId ?? null;
   useEffect(() => {
-    if (enviando) return;
-    setTexto(mia?.texto ?? "");
-    setEditando(mia === null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setE((x) => alCambiarPersistida(x, miaActual.current));
   }, [versionVista]);
   const idTexto = useId();
   const idCont = useId();
-  const c = contador(texto);
+  const c = contador(e.texto);
+  const base = e.base;
 
   async function guardar() {
     setConfirmar(null);
-    if (!puedeEnviar(mia, texto, enviando)) return;
+    if (!puedeEnviar(base, e.texto, enviando)) return;
     setEnviando(true);
     setMsg(null);
-    const it = intentoPara(intento.current, firmaEnvio(mia, titulo, texto), () => crypto.randomUUID());
+    const it = intentoPara(intento.current, firmaEnvio(base, titulo, e.texto), () => crypto.randomUUID());
     intento.current = it;
-    const cuerpo = mia
-      ? { accion: "editar", resena_id: mia.resenaId, version_esperada: mia.versionId, texto, id_intento: it.id }
-      : { accion: "publicar", tipo: titulo.tipo, tmdb_id: titulo.tmdbId, texto, id_intento: it.id };
-    const r = await enviar(cuerpo);
+    const r = await enviar(cuerpoEnvio(e, titulo, it.id));
     if (!conservarIntento(r === "sin-confirmar" ? r : (r as { resultado?: unknown }))) intento.current = null;
-    setMsg(mensajeEscritura(r === "sin-confirmar" ? r : (r as { resultado?: unknown })));
-    setEnviando(false);
     const res = r === "sin-confirmar" ? null : r.resultado;
-    if (res === "publicada" || res === "retenida") { setEditando(false); recargar(); }
-    if (res === "rechazo_cuenta" && (r as { motivo?: unknown }).motivo === "resena_existente") recargar();
+    // Un conflicto de versión con borrador: la recarga de abajo trae la
+    // vigente y el aviso ofrece la decisión; el mensaje remite a él.
+    setMsg(res === "conflicto" && (r as { motivo?: unknown }).motivo === "version" && hayBorrador(e)
+      ? { tono: "rechazo", texto: MENSAJE_CONFLICTO_BORRADOR }
+      : mensajeEscritura(r === "sin-confirmar" ? r : (r as { resultado?: unknown })));
+    setEnviando(false);
+    if (res === "publicada" || res === "retenida") {
+      setE((x) => trasGuardado(x, (r as { version_id?: unknown }).version_id, miaActual.current));
+      recargar();
+    }
+    // Conflicto o reseña existente: traer la vigente para que el aviso ofrezca
+    // la decisión. El borrador no se toca.
+    if (res === "conflicto" || (res === "rechazo_cuenta" && (r as { motivo?: unknown }).motivo === "resena_existente")) recargar();
   }
 
   function pedirGuardar() {
-    if (avisoReinicio(mia, texto)) setConfirmar("reinicio");
+    if (avisoReinicio(base, e.texto)) setConfirmar("reinicio");
     else void guardar();
   }
 
@@ -77,34 +90,59 @@ export default function EditorResena({
     const r = await borrar(mia.resenaId);
     setMsg(mensajeEscritura(r === "sin-confirmar" ? r : (r as { resultado?: unknown })));
     setEnviando(false);
-    if (r !== "sin-confirmar" && r.resultado === "borrada") { setTexto(""); recargar(); }
+    if (r !== "sin-confirmar" && r.resultado === "borrada") recargar();
   }
+
+  const decidir = (s: EstadoEditor) => { setE(s); setMsg(null); };
+  const remoto = e.remoto;
 
   return (
     <div className="cm-bloque">
-      <h3 className="cm-h">{mia ? "Tu reseña" : "Escribí tu reseña"}</h3>
-      {mia && !editando && (
+      <h3 className="cm-h">{mia || base ? "Tu reseña" : "Escribí tu reseña"}</h3>
+      {mia && !e.editando && (
         <>
           <p className="cm-estado">{etiquetaEstado(mia.estado)}</p>
           <p className="cm-texto">{mia.texto}</p>
           <div className="cm-acciones">
-            <button className="btn ghost" onClick={() => { setTexto(mia.texto); setEditando(true); setMsg(null); }}>Editar</button>
+            <button className="btn ghost" onClick={() => decidir(empezarEdicion(mia))}>Editar</button>
             <button className="cfg-danger-btn" onClick={() => setConfirmar("borrar")} disabled={enviando}>Borrar</button>
           </div>
         </>
       )}
-      {editando && (
+      {remoto && (
+        <div className="cm-msg sin_confirmar" role="alert">
+          <p>{remoto.tipo === "borrada" ? REMOTO_BORRADA : base ? REMOTO_MODIFICADA : REMOTO_PUBLICADA}</p>
+          <div className="cm-acciones">
+            {remoto.tipo === "borrada" ? (
+              <>
+                <button className="btn ghost" disabled={enviando} onClick={() => decidir(cargarRemota(miaActual.current))}>Descartar el borrador</button>
+                <button className="btn" disabled={enviando} onClick={() => decidir(publicarComoNueva(e))}>Publicarla como nueva</button>
+              </>
+            ) : (
+              <>
+                <button className="btn ghost" disabled={enviando} onClick={() => decidir(cargarRemota(miaActual.current))}>
+                  {base ? "Cargar la versión nueva" : "Ver la publicada"}
+                </button>
+                <button className="btn" disabled={enviando} onClick={() => decidir(mantenerBorrador(e))}>
+                  {base ? "Usar mi borrador sobre la nueva" : "Reemplazarla con mi borrador"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {e.editando && (
         <>
-          <label className="dlg-lbl" htmlFor={idTexto}>{mia ? "Editá tu reseña" : "Qué te pareció"}</label>
-          <textarea id={idTexto} className="cm-textarea" value={texto} rows={6} disabled={enviando}
-            aria-describedby={idCont} onChange={(e) => setTexto(e.target.value)} />
+          <label className="dlg-lbl" htmlFor={idTexto}>{base ? "Editá tu reseña" : "Qué te pareció"}</label>
+          <textarea id={idTexto} className="cm-textarea" value={e.texto} rows={6} disabled={enviando}
+            aria-describedby={idCont} onChange={(ev) => { const t = ev.target.value; setE((x) => ({ ...x, texto: t })); }} />
           <p id={idCont} className={`cm-contador ${c.estado}`} aria-live="polite">{c.texto}</p>
           {c.aviso && <p className="cm-msg rechazo" role="alert">{c.aviso}</p>}
-          {mia && avisoReinicio(mia, texto) && <p className="cm-aviso">{AVISO_REINICIO}</p>}
+          {base && avisoReinicio(base, e.texto) && <p className="cm-aviso">{AVISO_REINICIO}</p>}
           <div className="cm-acciones">
-            {mia && <button className="btn ghost" disabled={enviando} onClick={() => { setEditando(false); setTexto(mia.texto); setMsg(null); }}>Cancelar</button>}
-            <button className="btn" disabled={!puedeEnviar(mia, texto, enviando)} onClick={pedirGuardar}>
-              {enviando ? "Guardando…" : mia ? "Guardar cambios" : "Publicar"}
+            {(base || mia) && <button className="btn ghost" disabled={enviando} onClick={() => decidir(cargarRemota(miaActual.current))}>Cancelar</button>}
+            <button className="btn" disabled={!puedeEnviar(base, e.texto, enviando)} onClick={pedirGuardar}>
+              {enviando ? "Guardando…" : base ? "Guardar cambios" : "Publicar"}
             </button>
           </div>
         </>
@@ -112,14 +150,14 @@ export default function EditorResena({
       {msg && (
         <p className={`cm-msg ${msg.tono}`} role={msg.tono === "exito" || msg.tono === "info" ? "status" : "alert"}>
           {msg.texto}
-          {msg.tono === "sin_confirmar" && editando && <> <button className="cm-link" onClick={() => void guardar()}>Reintentar</button></>}
-          {msg.tono === "rechazo" && mia && /otro dispositivo/.test(msg.texto) && <> <button className="cm-link" onClick={recargar}>Recargar</button></>}
+          {msg.tono === "sin_confirmar" && e.editando && <> <button className="cm-link" onClick={() => void guardar()}>Reintentar</button></>}
+          {msg.tono === "rechazo" && /otro dispositivo/.test(msg.texto) && !remoto && <> <button className="cm-link" onClick={recargar}>Recargar</button></>}
         </p>
       )}
 
       {confirmar && (
         <div className="dlg-backdrop" onClick={() => setConfirmar(null)} role="presentation">
-          <div className="dlg" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cm-conf-t">
+          <div className="dlg" onClick={(ev) => ev.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cm-conf-t">
             <h2 id="cm-conf-t">{confirmar === "borrar" ? "Borrar tu reseña" : "Guardar cambios"}</h2>
             <p className="dlg-sub">
               {confirmar === "borrar"
