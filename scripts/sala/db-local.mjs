@@ -78,6 +78,7 @@ export function archivosAAplicar({ conCatalogo, cargas }) {
     "supabase/migrations/013_comunidad_protocolo.sql",
     "supabase/migrations/014_comunidad_escritura.sql",
     "supabase/migrations/015_comunidad_moderacion_datos.sql",
+    "supabase/migrations/016_comunidad_admin.sql",
     "supabase/migrations/022_cerrar_user_reviews.sql",
     "scripts/sala/fixtures-local.sql",
   ];

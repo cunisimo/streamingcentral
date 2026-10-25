@@ -1036,7 +1036,7 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 /* --- Panel: Top semanal manual ------------------------------------------- */
 /* Reusa `.admin` (ancho, tipografía, inputs). Acá van sólo las piezas que esa
    pantalla agrega: la navegación, el editor de posiciones y el buscador. */
-.admin-nav{display:flex;gap:14px;align-items:center;max-width:760px;margin:0 auto;padding:16px 24px 0}
+.admin-nav{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;max-width:760px;margin:0 auto;padding:16px 24px 0}
 .admin-nav a{font-size:14px;font-weight:600;color:var(--dim);text-decoration:none}
 .admin-nav a[aria-current="page"]{color:var(--text);text-decoration:underline}
 .admin-nav button{margin-left:auto;background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer}
@@ -1356,3 +1356,38 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .cm-bloq{margin-top:8px}
 .cm-revision p{margin:0 0 8px}
 .cm-bloqueados{list-style:none;margin:8px 0 0;padding:0}
+
+/* Moderación de reseñas de la comunidad (E4, /admin/moderacion) */
+.admin.mod{max-width:860px;--danger:#C0392B}
+.mod-resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0}
+.mod-dato{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.mod-dato span{font-size:12px;color:var(--dim);font-weight:600}
+.mod-dato strong{font-size:18px}
+.mod-dato small{font-size:12px;color:var(--faint);line-height:1.45}
+.mod-ok{color:var(--good)}
+.mod-pausa{color:#e08a00}
+.mod-btn{margin-top:6px;align-self:flex-start;min-height:44px}
+.mod-muestreo{grid-column:1/-1;margin:0}
+.mod-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 10px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.mod-tabs button{border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--dim);padding:10px 14px;min-height:44px;font-size:13.5px;font-weight:600;cursor:pointer}
+.mod-tabs button[aria-selected="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.mod-lista{list-style:none;margin:0;padding:0}
+.mod-caso{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:14px 16px;margin-top:10px;min-width:0}
+.mod-cab{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.mod-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--dim)}
+.mod-chip-grave{background:rgba(229,72,77,.14);color:#e5484d}
+.mod-meta{font-size:12.5px;color:var(--faint);line-height:1.5;margin:6px 0 0;overflow-wrap:anywhere}
+.mod-regla{font-size:13px;color:var(--dim);margin:8px 0 0;overflow-wrap:anywhere}
+.mod-regla code,.mod-uuid{font-size:12px;overflow-wrap:anywhere}
+.mod-texto{margin:10px 0 0;padding:10px 12px;border-left:3px solid var(--line-2);background:var(--surface-2);border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px;line-height:1.55}
+.mod-coms{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--dim);line-height:1.5;overflow-wrap:anywhere}
+.mod-autor{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px;font-size:12.5px}
+.mod-cod{font-family:ui-monospace,monospace;font-weight:700;font-size:12.5px}
+.mod-ante{color:var(--faint)}
+.mod-autor .cm-link{min-height:44px}
+.mod-acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.mod-acciones .btn,.mod-acciones .cfg-danger-btn{min-height:44px}
+.mod-h2{font-family:var(--display);font-size:18px;margin:20px 0 4px}
+.mod-mas{margin-top:14px;min-height:44px}
+.mod-dlg{max-width:480px}
+.mod-motivo{width:100%;box-sizing:border-box;min-height:84px}

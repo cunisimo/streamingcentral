@@ -168,6 +168,10 @@ await caso("rechazada → publicada", "23514", `
   update comunidad.versiones set estado = 'retenida' where id = ${V};
   update comunidad.versiones set estado = 'rechazada' where id = ${V};
   update comunidad.versiones set estado = 'publicada' where id = ${V};`);
+// E4 (016): una rechazada la puede corregir el autor (pasa a reemplazada), nunca publicarse.
+await caso("rechazada → reemplazada (el autor corrige la rechazada; E4)", "ok", `
+  update comunidad.versiones set estado = 'retenida' where id = ${V};
+  update comunidad.versiones set estado = 'rechazada' where id = ${V};` + editar("publicada"));
 await caso("publicada → oculta → publicada (restauración del admin)", "ok", `
   update comunidad.versiones set estado = 'oculta' where id = ${V};
   update comunidad.versiones set estado = 'publicada' where id = ${V};`);
@@ -222,6 +226,17 @@ await caso("un tramo sobrevive al borrado de su reseña (versión sin FK)", "ok"
 await caso("cerrar una suspensión y volver a cerrarla", "23514", `
   update comunidad.suspensiones set hasta = now() + interval '1 second' where participante_id = ${L};
   update comunidad.suspensiones set hasta = now() + interval '2 second' where participante_id = ${L};`);
+// E4 (016): una suspensión con fin FUTURO se puede acortar (levantarla antes),
+// nunca alargar ni llevar al pasado.
+await caso("acortar hacia el futuro una suspensión con plazo (E4)", "ok", `
+  update comunidad.suspensiones set hasta = now() + interval '10 days' where participante_id = ${L};
+  update comunidad.suspensiones set hasta = clock_timestamp() + interval '1 hour' where participante_id = ${L};`);
+await caso("alargar una suspensión con plazo", "23514", `
+  update comunidad.suspensiones set hasta = now() + interval '1 day' where participante_id = ${L};
+  update comunidad.suspensiones set hasta = now() + interval '2 days' where participante_id = ${L};`);
+await caso("llevar al pasado el fin de una suspensión", "23514", `
+  update comunidad.suspensiones set hasta = now() + interval '10 days' where participante_id = ${L};
+  update comunidad.suspensiones set hasta = clock_timestamp() - interval '1 minute' where participante_id = ${L};`);
 await caso("cerrada la suspensión, puede abrirse otra", "ok", `
   update comunidad.suspensiones set hasta = now() + interval '1 second' where participante_id = ${L};
   insert into comunidad.suspensiones (participante_id, desde) values (${L}, now() + interval '1 hour');`);

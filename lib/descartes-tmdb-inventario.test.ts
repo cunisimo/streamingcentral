@@ -579,6 +579,8 @@ const INVENTARIO: Fila[] = [
   { archivo: "lib/enlaces-app.ts", ancla: "} catch {", clase: "no-tmdb", motivo: "plugin @capacitor/app ausente o fallido → el enlace no se abre adentro" },
   { archivo: "app/api/admin/top/route.ts", ancla: "catch { return NextResponse.json({ error: \"cuerpo inválido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   { archivo: "app/api/admin/top/route.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "segundo handler de la ruta de admin (Supabase)" },
+  // E4: moderación de reseñas. Sólo atrapa el JSON del cliente; lo demás lo clasifica lib/comunidad/admin-moderacion.ts (Supabase).
+  { archivo: "app/api/admin/moderacion/route.ts", ancla: "catch { return NextResponse.json({ resultado: \"invalido\" }", clase: "no-tmdb", motivo: "JSON del cliente" },
   // Issue #25: la ruta de filmografía ya no atrapa nada; lo hace su módulo puro, con el mismo 500 de siempre para v1, v2 e items.
   { archivo: "lib/filmografia-ruta.ts", ancla: "} catch (e) {", clase: "tmdb-propaga", motivo: "ruta /api/person: 500 con el error (v1, v2 o items), como siempre" },
   // El controlador del CLIENTE: lo que atrapa son fallos del fetch del navegador contra nuestra API, no de TMDB.

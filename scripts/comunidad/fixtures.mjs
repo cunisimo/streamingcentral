@@ -57,6 +57,13 @@ begin
     insert into comunidad.corroboraciones (version_id, autor_participante, version_reglas, reglas, creada_en)
       values (${FX.version}, '${FX.autor}', '2026-10-24.2', 'prueba', now());
   end if;
+  -- E4 (016): el registro de decisiones y el historial mínimo de denuncias.
+  if to_regclass('comunidad.decisiones') is not null then
+    insert into comunidad.decisiones (id_intento, accion, version_id, participante_id, motivo, creada_en)
+      values ('00000000-0000-4000-8000-00000000e4e4', 'retirar', ${FX.version}, '${FX.autor}', 'fixture de prueba', now());
+    insert into comunidad.denuncias_cerradas (denunciante_participante, categoria, estado, creada_en, cerrada_en)
+      values ('${FX.lector}', 'spam', 'descartada', now(), now());
+  end if;
 end;
 $$;
 `;

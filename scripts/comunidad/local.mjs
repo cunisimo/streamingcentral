@@ -91,7 +91,8 @@ export function arnes() {
     prueba: async (nombre, fn) => {
       total++;
       try { await fn(); console.log("✔", nombre); }
-      catch (e) { fallos.push(nombre); console.log("✖", nombre, "\n   ", String(e.message ?? e).split("\n")[0]); }
+      // DETALLE=1: el mensaje entero (el diff de assert), para diagnosticar.
+      catch (e) { fallos.push(nombre); console.log("✖", nombre, "\n   ", process.env.DETALLE ? String(e.message ?? e) : String(e.message ?? e).split("\n")[0]); }
     },
     cerrar: () => {
       console.log(`\n${total - fallos.length} de ${total} pasaron.`);

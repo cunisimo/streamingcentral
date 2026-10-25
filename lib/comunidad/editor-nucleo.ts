@@ -205,5 +205,7 @@ export function etiquetaEstado(estado: string): string {
   if (estado === "publicada") return "Publicada";
   if (estado === "retenida" || estado === "revision_solicitada") return "En revisión";
   if (estado === "oculta") return "Oculta por moderación";
+  // E4: el autor se entera del rechazo en la app; puede corregirla o borrarla.
+  if (estado === "rechazada") return "Rechazada por moderación";
   return "No visible";
 }

@@ -45,10 +45,11 @@ console.log(`base: ${contenedor()} · API: ${URL_API}\n`);
 const { prueba, cerrar } = arnes();
 
 // 011 (E2a) creó once; 014 (E3a) suma `intentos` (idempotencia); 015 (E3b)
-// suma `huellas`, `denuncias_excedentes` y `corroboraciones`.
+// suma `huellas`, `denuncias_excedentes` y `corroboraciones`; 016 (E4) suma
+// `decisiones` (registro) y `denuncias_cerradas` (historial mínimo de la baja).
 const TABLAS = [
-  "bajas_en_curso", "bloqueos", "config", "contadores", "corroboraciones", "denuncias", "denuncias_excedentes", "evaluaciones",
-  "huellas", "intentos", "participantes", "resenas", "suspensiones", "tramos", "versiones",
+  "bajas_en_curso", "bloqueos", "config", "contadores", "corroboraciones", "decisiones", "denuncias", "denuncias_cerradas",
+  "denuncias_excedentes", "evaluaciones", "huellas", "intentos", "participantes", "resenas", "suspensiones", "tramos", "versiones",
 ];
 // El inventario exacto de `public.comunidad_*`: la baja (E2b, 012), la
 // escritura (E3a, 014) y la moderación (E3b, 015). Una función nueva sin
@@ -81,7 +82,26 @@ const RPC_COMUNIDAD = {
   comunidad_textos_recientes: {},
   comunidad_votar: { p_version: 1, p_util: true },
 };
-// lock_timeout de cada una (vacío = sin): 10 s la baja, 5 s las escrituras de E3a y E3b.
+// E4 (016): las de moderación NO son de service_role: las ejecuta
+// `authenticated` y cada una exige `is_admin_mfa()` adentro (como el Top). Su
+// batería propia (pruebas-admin.mjs) las prueba con admin AAL1/AAL2 y TOTP
+// reales; acá se fija el catálogo y que nadie sin admin + MFA las ejecuta.
+const RPC_ADMIN = {
+  comunidad_admin_cuentas: {},
+  comunidad_admin_decidir: { p_accion: "publicar", p_version: VERSION_INEXISTENTE, p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
+  comunidad_admin_denuncias: { p_limite: 1, p_despues: null },
+  comunidad_admin_levantar_suspension: { p_participante: "00000000-0000-4000-8000-00000000dead", p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
+  comunidad_admin_muestreo: {},
+  comunidad_admin_publicacion: { p_activa: true, p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
+  comunidad_admin_registro: { p_limite: 1, p_antes: null },
+  comunidad_admin_resumen: {},
+  comunidad_admin_retenidos: { p_limite: 1, p_despues: null },
+  comunidad_admin_suspender: { p_participante: "00000000-0000-4000-8000-00000000dead", p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
+  comunidad_quitar_marcador_baja: { p_user: "00000000-0000-4000-8000-00000000dead", p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
+};
+const ESCRIBE_ADMIN = new Set(["comunidad_admin_decidir", "comunidad_admin_levantar_suspension", "comunidad_admin_publicacion",
+  "comunidad_admin_suspender", "comunidad_quitar_marcador_baja"]);
+// lock_timeout de cada una (vacío = sin): 10 s la baja, 5 s las escrituras de E3a, E3b y E4.
 const LOCK_TIMEOUT = {
   comunidad_baja_comunitaria: "10s", comunidad_baja_comunitaria_admin: "10s",
   comunidad_aceptar_terminos: "5s", comunidad_publicar: "5s", comunidad_editar: "5s",
@@ -94,7 +114,8 @@ const OPS = ["select", "insert", "update", "delete", "truncate"];
 // Una columna por tabla para el `update … set c = c`.
 const COLUMNA = {
   bajas_en_curso: "intentos", bloqueos: "creado_en", config: "modulo_activo", contadores: "cantidad",
-  corroboraciones: "reglas", denuncias: "estado", denuncias_excedentes: "cantidad", evaluaciones: "util", huellas: "creada_en",
+  corroboraciones: "reglas", decisiones: "motivo", denuncias: "estado", denuncias_cerradas: "estado",
+  denuncias_excedentes: "cantidad", evaluaciones: "util", huellas: "creada_en",
   intentos: "resultado", participantes: "nombre_comunitario", resenas: "borrada_en",
   suspensiones: "hasta", tramos: "vigente_hasta", versiones: "decidida_en",
 };
@@ -148,7 +169,7 @@ function correrModo(modo, preparar, casos) {
 // ===========================================================================
 console.log("— 1. SQL (SET ROLE) —");
 
-await prueba("el esquema tiene exactamente las quince tablas previstas (11 de E2a + intentos de E3a + 3 de E3b)", () => {
+await prueba("el esquema tiene exactamente las diecisiete tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4)", () => {
   const t = sqlOk("select string_agg(tablename, ',' order by tablename) from pg_tables where schemaname = 'comunidad'");
   assert.equal(t, TABLAS.join(","));
 });
@@ -467,20 +488,27 @@ console.log("\n— 3. RPC —");
 
 
 
-await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a y E3b), security definer y search_path vacío", () => {
+await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b y E4), security definer y search_path vacío", () => {
   const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
     from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
-  assert.deepEqual(out.split("\n"), Object.keys(RPC_COMUNIDAD).map((f) =>
-    `${f}:true:search_path=""${LOCK_TIMEOUT[f] ? `,lock_timeout=${LOCK_TIMEOUT[f]}` : ""}`));
+  const esperadas = [
+    ...Object.keys(RPC_COMUNIDAD).map((f) => `${f}:true:search_path=""${LOCK_TIMEOUT[f] ? `,lock_timeout=${LOCK_TIMEOUT[f]}` : ""}`),
+    ...Object.keys(RPC_ADMIN).map((f) => `${f}:true:search_path=""${ESCRIBE_ADMIN.has(f) ? ",lock_timeout=5s" : ""}`),
+  ].sort();
+  assert.deepEqual(out.split("\n"), esperadas);
 });
 
-await prueba("catálogo: EXECUTE de cada una sólo para service_role (ni PUBLIC, ni anon, ni authenticated)", () => {
+await prueba("catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4)", () => {
   const out = sqlOk(`select f.proname || ':' || r || ':' || has_function_privilege(r, f.oid, 'EXECUTE')
     from pg_proc f, unnest(array['public','anon','authenticated','service_role']) r
     where f.pronamespace = 'public'::regnamespace and f.proname like 'comunidad\\_%' order by 1`);
   const filas = out.split("\n");
-  assert.equal(filas.length, Object.keys(RPC_COMUNIDAD).length * 4);
-  const mal = filas.filter((l) => !l.endsWith(l.includes(":service_role:") ? ":true" : ":false"));
+  assert.equal(filas.length, (Object.keys(RPC_COMUNIDAD).length + Object.keys(RPC_ADMIN).length) * 4);
+  const mal = filas.filter((l) => {
+    const [f, rol] = l.split(":");
+    const debe = f in RPC_ADMIN ? rol === "authenticated" : rol === "service_role";
+    return !l.endsWith(debe ? ":true" : ":false");
+  });
   assert.deepEqual(mal, []);
 });
 
@@ -505,6 +533,30 @@ await prueba("RPC real por REST: anon y cada JWT reciben 401/403 en todas; servi
   assert.deepEqual(mal, []);
   assert.equal(sqlOk(`select count(*) from comunidad.bajas_en_curso where user_id = '${nadie}'`), "0");
   assert.equal(sqlOk(`select count(*) from comunidad.participantes where user_id = '${nadie}'`), "0");
+});
+
+await prueba("RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra", async () => {
+  const mal = [];
+  const antes = sqlOk("select count(*) || '|' || (select publicacion_activa from comunidad.config) from comunidad.decisiones");
+  // Pausar/reanudar al valor que YA tiene: para el admin AAL2 es `sin_efecto`.
+  RPC_ADMIN.comunidad_admin_publicacion.p_activa = sqlOk("select publicacion_activa::text from comunidad.config") === "true";
+  for (const [quien, token] of Object.entries(QUIENES())) {
+    for (const [f, args] of Object.entries(RPC_ADMIN)) {
+      const r = await fetch(`${URL_API}/rest/v1/rpc/${f}`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(args),
+      });
+      const cuerpo = await r.text();
+      if (quien === "adminAAL2") {
+        if (r.status !== 200) mal.push(`${quien} ${f}: ${r.status} ${cuerpo.slice(0, 80)}`);
+      } else if (!((r.status === 401 || r.status === 403) && /42501/.test(cuerpo))) {
+        mal.push(`${quien} ${f}: ${r.status} ${cuerpo.slice(0, 80)}`);
+      }
+    }
+  }
+  assert.deepEqual(mal, []);
+  assert.equal(sqlOk("select count(*) || '|' || (select publicacion_activa from comunidad.config) from comunidad.decisiones"), antes);
 });
 
 await prueba("ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API", () => {

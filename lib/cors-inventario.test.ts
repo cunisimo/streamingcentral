@@ -100,6 +100,9 @@ const EXCLUIDAS = new Map([
   // además escribe: darle CORS sería abrirla al contenedor sin necesidad.
   ["app/api/admin/top/route.ts",
    "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
+  // E4, mismo motivo: la consume `app/admin/moderacion`, que no viaja en el APK.
+  ["app/api/admin/moderacion/route.ts",
+   "sólo la consume app/admin, que NO viaja en el artefacto nativo: habilitarla sería innecesario"],
 ]);
 
 // ============================================================================
@@ -203,7 +206,7 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 35 rutas = 33 integradas + 2 excluidas", () => {
+test("el recuento cierra: 36 rutas = 33 integradas + 3 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
@@ -220,9 +223,11 @@ test("el recuento cierra: 35 rutas = 33 integradas + 2 excluidas", () => {
   // contenedor.
   // 32 -> 35 con la moderación (E3b): denuncias, bloqueos y revision integran
   // CORS por el mismo motivo (la ficha y Configuración viajan en el contenedor).
-  assert.equal(todas.length, 35, "cambió la cantidad de rutas: hay que reclasificar");
+  // 35 -> 36 con la moderación administrativa (E4): `app/api/admin/moderacion`
+  // queda EXCLUIDA, como `admin/top` (sólo la usa app/admin).
+  assert.equal(todas.length, 36, "cambió la cantidad de rutas: hay que reclasificar");
   assert.equal(integradas.length, 33);
-  assert.equal(EXCLUIDAS.size, 2);
+  assert.equal(EXCLUIDAS.size, 3);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });
 
