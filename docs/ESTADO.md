@@ -531,7 +531,44 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-24-informe-claude-e3a.md`; salidas:
      `docs/medidas/2026-10-24-e3a-salidas.txt`.
    **Falta:**
-   - la auditoría focalizada de E3a. E3b no empieza sin autorización;
+   - **Auditoría focalizada de E3a (24/10, Codex sobre `faabf5a`;
+     `docs/medidas/2026-10-24-auditoria-e3a-faabf5a.md`, copia sin cambios,
+     SHA-256 `98c619f9…`):** E3a quedó ampliamente verificada (Codex:
+     40/40 tests, `tsc` limpio, batería 37/37 con restos `0|0|0|0|false`,
+     catálogo cerrado). **Sigue pendiente de dos correcciones P2:**
+     - A1: una respuesta RPC perdida después del commit se informaba como
+       "No se pudo guardar". Codex lo reprodujo con una publicación real;
+     - A2: una recarga remota descartaba el borrador en edición y adoptaba
+       en silencio otra versión esperada. Lo encontró por lectura.
+   - **Correcciones A1/A2 de E3a (25/10, local; `98eba43` copia de la
+     auditoría, `8bdfe3f` A1, `d66244b` A2): hechas, pendientes de su
+     auditoría focalizada.**
+     - A1: los errores de `supabase.rpc` salen clasificados. Un SQLSTATE o
+       PGRST es un rechazo confirmado: "error". Una confirmación perdida
+       (fetch caído, 5xx sin código, cuerpo ilegible, conexión perdida)
+       se repite una vez con el mismo `id_intento`; si tampoco se confirma
+       queda `sin_confirmar` (503, "No sabemos si se guardó"). Lo mismo
+       para votar, retirar, borrar y aceptar términos.
+       Pruebas reales con la respuesta descartada tras el commit: 6/6
+       (0/6 sobre `faabf5a`). §3.4.1 9/9, idempotencia 5/5, gates 1–4
+       5/5, rutas 3/3;
+     - A2: el editor guarda la versión base y el borrador. Una versión o un
+       borrado remoto muestran un aviso con decisión explícita; sin
+       decidir, el envío sale contra la base original y vuelve el conflicto.
+       El editor se monta por cuenta y título, y una recarga fallida ya no
+       desmonta el editor. 8 regresiones puras y un recorrido en navegador
+       con el "antes" reproducido sobre `faabf5a`
+       (`docs/medidas/2026-10-25-e3a-a1a2-recorrido/`);
+     - `tsc` 0; `lib/comunidad` 37/37; `npm test` 2399 pasan, 0 fallan,
+       18 omitidas (con el `.next` de `next dev` apartado: con él, dos
+       pruebas de bundle de producción fallan por entorno);
+     - interruptores apagados y límites 5/10/100 al terminar;
+     - no probado: una caída real de conexión a mitad del commit; el cambio
+       directo de cuenta A→B con el editor montado (cubierto por la `key`);
+       la ficha con TMDB; Android.
+     Informe: `docs/medidas/2026-10-25-informe-claude-e3a-a1a2.md`;
+     salidas: `docs/medidas/2026-10-25-e3a-a1a2-salidas.txt`.
+   - la auditoría focalizada de A1/A2. E3b no empieza sin autorización;
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

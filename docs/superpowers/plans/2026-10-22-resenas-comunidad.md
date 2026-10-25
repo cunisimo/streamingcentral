@@ -740,8 +740,14 @@ rollback;
 - **Evidencia para Codex:** salidas, diff, tabla de rev. §3.4.1 con el
   resultado obtenido por fila.
 - **Estado al 24/10/2026** (`docs/ESTADO.md` es la fuente vigente):
-  implementada **en local** en `64daf53`, `c2bf84a` y `5ee5133`. Pendiente
-  de auditoría focalizada.
+  implementada **en local** en `64daf53`, `c2bf84a` y `5ee5133`. La
+  auditoría focalizada (Codex, sobre `faabf5a`) pidió dos correcciones P2:
+  - A1: una confirmación perdida con Supabase no se informa como "no se
+    guardó";
+  - A2: el editor conserva el borrador y la versión base.
+  Las dos se corrigieron el 25/10 en `8bdfe3f` y `d66244b`
+  (`docs/medidas/2026-10-25-informe-claude-e3a-a1a2.md`), y quedan
+  pendientes de su auditoría focalizada.
   - Gates de §5.0 cerrados con las funciones reales: casos 1–4 de §2.2.4,
     B3a/B3b y actores cruzados. El caso 5 (suspensión frente a voto) sigue
     con gate en E4.
