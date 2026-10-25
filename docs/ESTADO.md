@@ -584,16 +584,74 @@ AAB tiene que ser `5` o mayor.
      muestra el conteo. Verificado en navegador local en escritorio y a
      375 px con conteos reales; capturas en
      `docs/medidas/2026-10-25-e3a-pulgares/`, informe en
-     `docs/medidas/2026-10-25-informe-claude-e3a-pulgares.md`. Pendiente de
-     revisión del dueño y de Codex. Se limpiaron además los seis espacios
-     finales del log de A1/A2 que señaló la auditoría (sólo espacios);
-   - E3b no empieza sin autorización;
+     `docs/medidas/2026-10-25-informe-claude-e3a-pulgares.md`. Se limpiaron
+     además los seis espacios finales del log de A1/A2 que señaló la
+     auditoría (sólo espacios). **Cerrado por Codex** (25/10, sobre
+     `0af5f49`; `docs/medidas/2026-10-25-auditoria-pulgares-0af5f49.md`,
+     copia sin cambios en `7698e7a`, SHA-256 `db132d89…`): sin hallazgos
+     bloqueantes; Codex repitió 38/38 y `git diff --check` y comparó la
+     captura a 375 px con la referencia del dueño (cumple; usa el estilo de
+     botones de Yump). Sin recorrido propio de Codex en navegador, teléfono,
+     tema claro, TMDB, Android ni lector de pantalla. El dueño confirmó que
+     el rótulo "Reseña de la comunidad" pasa a ser el nombre comunitario del
+     autor en E6, sin mostrar correos ni datos privados;
+   - **E3b local (25/10, autorizada por el dueño; `2e2d00e`; sólo `supabase
+     start` y la app local; interruptores apagados y límites restaurados al
+     terminar). PENDIENTE DE AUDITORÍA FOCALIZADA de Codex; E4 no empieza
+     sin autorización.**
+     - `015_comunidad_moderacion_datos.sql` (+ down):
+       - límites nuevos en `config`, todos **hipótesis** (P6, ninguno
+         aprobado): admisión por autor 2 y global 50, 50 filas de denuncia
+         por versión, 100 denuncias por hora;
+       - protocolo con dos niveles nuevos antes de la marca (8 hash de
+         texto, 9 cola de retenidos o de denuncias; la marca pasa a 10):
+         los topes y el conteo entre cuentas se cumplen bajo concurrencia;
+       - huellas HMAC de duplicados (texto plegado y shingles de 3
+         palabras, sólo hex por CHECK; el secreto es del servidor:
+         `COMUNIDAD_HMAC_DUPLICADOS`, en local uno de prueba que se rechaza
+         en producción);
+       - publicar/editar con duplicados, admisión a la cola (lo limpio se
+         publica igual; lo retenible que no entra no se guarda; nada se
+         publica por vencimiento) y "Pedir revisión"
+         (`revision_solicitada`, pasa por la admisión y el límite);
+       - denunciar (fila C; no oculta; la cantidad sólo ordena la cola
+         interna para E4), corroboración por regla, bloquear y desbloquear
+         (fila D); la lectura provisional oculta al bloqueado sólo para
+         quien bloquea;
+     - app: rutas `denuncias`, `bloqueos` y `revision`; menú de la reseña
+       (denunciar con categorías, confirmación y bloqueo en el mismo paso,
+       bloquear, reintento sin duplicar, mensajes honestos con la cola
+       llena); "Pedir revisión" en el editor con la confirmación de que la
+       publicada deja de verse; `/cuenta/bloqueados` y su fila en
+       Configuración;
+     - resultados (corridas de Claude, en secuencia): moderación E3b 46/46
+       (con compuertas psql que observan la espera de los locks 7303/7304;
+       las 5 de concurrencia de topes, 3 veces), up/down/up de 015 5/5,
+       permisos 27/27, escritura 43/43, concurrencia 21/21, baja 26/26,
+       invariantes 81/81, unitarias 67/67, `npm test` 2424 pasan, 0 fallan,
+       16 omitidas, `tsc` 0 errores;
+     - recorrido en navegador local en escritorio y a 375 px, con 19
+       capturas en `docs/medidas/2026-10-25-e3b-recorrido/`;
+     - interpretaciones a auditar (informe, "Decisiones a auditar"):
+       duplicado propio = de otra reseña; "3 o más cuentas" literal (la 4.ª
+       se retiene); denunciar y bloquear crean la identidad sin términos;
+       la corroboración cierra tramos y no pasa por la admisión;
+     - `pruebas-permisos.mjs` no borraba sus cuentas: se borraron sólo las
+       de las tres corridas de Claude del 25/10 y ahora limpia lo suyo (las
+       del 24/10 quedan). El up/down/up completo de 011 no se repitió:
+       borra el esquema de la base compartida;
+     - no verificado: teléfono real y Android, tema claro, ficha con TMDB,
+       lectores de pantalla reales, caída real de red a mitad del commit.
+     Informe: `docs/medidas/2026-10-25-informe-claude-e3b.md`; salidas:
+     `docs/medidas/2026-10-25-e3b-salidas.txt`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
    - resolver, antes de E4, E8 y la publicación, el alcance del borrado de
      denuncias recibidas en la baja, y el plazo de los intervalos
-     seudónimos (P3);
+     seudónimos (P3). E3b no lo resolvió: las tablas nuevas que cuelgan de
+     una versión (huellas, excedentes de denuncias, corroboraciones) caen
+     en cascada igual que las denuncias;
    - la validación independiente de E1 (protocolo, autoría y ejecutor, no
      preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se

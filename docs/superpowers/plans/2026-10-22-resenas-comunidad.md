@@ -814,6 +814,20 @@ rollback;
 - **Criterio de cierre:** pruebas verdes y volumen máximo por tabla
   calculado con los topes.
 - **Evidencia para Codex:** salidas, cálculo de cotas, diff.
+- **Estado al 25/10/2026** (`docs/ESTADO.md` es la fuente vigente):
+  implementada **en local** en `2e2d00e`, **pendiente de auditoría
+  focalizada**. Informe con el cálculo de cotas y las interpretaciones a
+  auditar: `docs/medidas/2026-10-25-informe-claude-e3b.md`; salidas:
+  `docs/medidas/2026-10-25-e3b-salidas.txt`.
+  - Además de los archivos de arriba: `lib/comunidad/menu-nucleo.ts` y
+    `moderacion-nucleo.ts`, `components/comunidad/FilaBloqueados.tsx`, la
+    batería `scripts/comunidad/pruebas-moderacion.mjs` y
+    `up-down-up-015.mjs` (sólo 015: el up/down/up de 011 borra el esquema
+    de la base compartida).
+  - Protocolo: dos niveles nuevos antes de la marca (8 hash, 9 cola).
+  - Los topes siguen siendo hipótesis (P6).
+  - No resuelve el pendiente de las denuncias recibidas que caen al borrar
+    una cuenta, ni fija plazos de retención.
 
 ### E4 — Moderación administrativa
 

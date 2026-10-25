@@ -1,0 +1,601 @@
+# Salidas de E3b local — 25/10/2026 (Claude, rama feat/resenas-reglas)
+#
+# Todo contra supabase start (contenedor supabase_db_streamingcentral) y el
+# servidor local en :3100 con .env.comunidad-local. Cuentas @comunidad.test
+# ficticias. Corridas en secuencia, en este orden. Se omiten las advertencias
+# de Node (MODULE_TYPELESS_PACKAGE_JSON). Espacios finales recortados.
+
+================================================================
+$ npx tsc --noEmit --incremental false
+================================================================
+(exit 0, sin salida)
+
+================================================================
+$ node --test lib/comunidad/*.test.ts scripts/sala/db-local.test.mjs
+================================================================
+✔ A2 · editando V1 con borrador llega V2 por una recarga: texto, base y versión esperada intactos; aviso con decisión (12.5662ms)
+✔ A2 · decisiones explícitas ante V2: cargarla descarta el borrador; mantenerlo pasa V2 a ser la base (intento nuevo) (2.7232ms)
+✔ A2 · borrado remoto con borrador: no se vacía el texto; publicar como nueva o descartar, a elección (1.2603ms)
+✔ A2 · reseña nueva en borrador y otra sesión publica una del mismo título: aviso, el borrador queda (0.9135ms)
+✔ A2 · el guardado propio confirmado SÍ actualiza el editor (sin aviso), llegue antes o después la recarga (5.0677ms)
+✔ A2 · sin borrador no hay nada que conservar: la versión nueva (o el borrado) se toma (1.0232ms)
+✔ A2 · cuenta y título: otra clave monta otro editor, sin borrador ni intento del anterior (87.6571ms)
+✔ A2 · el componente no decide por su cuenta: el envío usa la base del estado, no la prop (1.1572ms)
+✔ normalizarTexto es la normalización de las reglas de E1 (9.0657ms)
+✔ los largos son los de E1 y los del CHECK de la base (5.0177ms)
+✔ el largo cuenta puntos de código, como char_length (emojis compuestos incluidos) (2.4135ms)
+✔ los caracteres que la base rechaza se rechazan antes (tabulación e invisibles incluidos) (226.9337ms)
+✔ orden: forma → texto → contexto → reglas → huella → hash → función (126.1364ms)
+✔ pedido inválido o texto de formato inválido: no se toca la base (2.6467ms)
+✔ reglas: rechazo de contenido llega a la base (cuenta para el límite) con el motivo de las reglas (7.8317ms)
+✔ reglas: retención llega como 'retener' con sus reglas (5.7766ms)
+✔ fallos: contexto que falla, reglas que lanzan o dan error, base que lanza → 'error', nunca publicado (5.796ms)
+✔ A1: una excepción sin clasificar o un cuerpo ilegible NO es 'error': pudo haberse guardado (9.5206ms)
+✔ A1: clasificación de los errores de supabase.rpc (formas medidas contra Supabase local) (3.6395ms)
+✔ A1: confirmación perdida → se repite UNA vez con el mismo id_intento y hash y se recupera el resultado (12.8902ms)
+✔ A1: si el reintento tampoco confirma (o la base lo rechaza), 'sin_confirmar', nunca 'error' (8.7967ms)
+✔ A1: conReconciliacion para las demás mutaciones (votar, retirar, borrar, términos) (3.2893ms)
+✔ A1: HTTP y mensajes de sin_confirmar: 503, no afirma nada y conserva el intento (1.3027ms)
+✔ la baja en curso (CB001) de la base se informa como tal (4.7429ms)
+✔ el hash firma acción, ids y texto normalizado: un reintento igual, el mismo; otro texto, otro (0.7112ms)
+✔ el texto de retención es el de E1 (0.5012ms)
+✔ la versión de los términos es la que la migración 014 pone en la base (24.7703ms)
+✔ cada motivo de cuenta que devuelve la base tiene su texto (1.5752ms)
+✔ ningún mensaje afirma un resultado sin confirmar (0.9332ms)
+✔ aviso de reinicio: sólo al cambiar un texto persistido (0.5063ms)
+✔ id_intento: el mismo envío reusa el id; otro envío, id nuevo (0.7509ms)
+✔ el contador avisa ANTES de enviar lo que la ruta rechazaría (emoji con ZWJ incluido) y no deja enviar (0.4909ms)
+✔ puedeEnviar: largo válido, distinto del persistido y no enviando (0.4852ms)
+✔ una respuesta de otra cuenta o de otra carga se descarta (0.4685ms)
+✔ evaluación: conteo explícito, botón elegido retira, la propia no se evalúa (119.3274ms)
+✔ evaluación con pulgares: nombre accesible, aria-pressed, SVG con tamaño propio y superficie táctil (20.8306ms)
+✔ la página de revisión local sólo se habilita fuera de producción y con la variable local (15.0732ms)
+✔ la página de revisión local no viaja en el artefacto Android (0.7371ms)
+✔ huella: determinística, sólo hex (64 y 16), sin palabras del texto; otro secreto, otra huella (59.6196ms)
+✔ huella: se calcula sobre el texto plegado (mayúsculas, tildes y puntuación no la cambian) (11.9767ms)
+✔ jaccard: una palabra cambiada en un texto largo queda ≥ 0,8; dos reseñas distintas, muy por debajo (6.6169ms)
+✔ secreto: falta o es corto → null; el de prueba local se rechaza en producción (3.9998ms)
+✔ el secreto local no está en el repo: .env.comunidad-local está ignorado y ningún archivo versionado lo define (84.3269ms)
+✔ revisión: sólo con rechazo por contenido va como revisión; con un texto que ya pasa, es un envío normal (462.968ms)
+✔ revisión de una edición sin confirmar que la publicada deja de verse → 'requiere_confirmacion' sin tocar la base (11.1987ms)
+✔ la firma de una revisión es otra: el mismo id con y sin revisión es un conflicto, no el mismo envío (1.1637ms)
+✔ toda decisión lleva la huella; sin secreto la escritura es 'error' y no llega a la base (17.9789ms)
+✔ editor: la revisión se ofrece SÓLO tras un rechazo por contenido; su intento es aparte; guarda versión (3.4235ms)
+✔ mensajes de escritura: revisión pedida, admisión cerrada (por autor y global) y confirmación pendiente (2.0577ms)
+✔ categorías: las siete del diseño, iguales a las del CHECK de la base y a las de la función (55.9923ms)
+✔ comentario: opcional, NFC, sin controles ni bordes, hasta 300 caracteres (2.2918ms)
+✔ mensajes de denuncia: nunca 'atendida' ni que se ocultó; la cola llena ofrece bloquear; lo incierto ofrece reintentar (1.9095ms)
+✔ mensajes de bloqueo y desbloqueo; etiqueta sin datos privados (424.2617ms)
+✔ denuncia legítima: se corroboran las reglas y NO se retiene; la respuesta no trae el texto ni detalles (5.0238ms)
+✔ corroboración: si las reglas vigentes retienen o rechazan el texto, se retiene POR LA REGLA; un fallo ahí no cambia la respuesta (10.8129ms)
+✔ sin corroboración si la denuncia no es nueva (repetida, rechazada o incierta) (1.1773ms)
+✔ bloquear en el mismo paso: se hace aunque la denuncia no se reciba (cola llena) (1.1922ms)
+✔ pedido inválido: sin categoría del diseño, versión no entera, comentario largo o bloquear no booleano → 'invalido' sin llamar a la base (4.465ms)
+✔ menú y diálogos: nombres accesibles, foco, 44 px, portal; rutas reales; la lectura oculta a los bloqueados (61.1983ms)
+✔ decisiones que E3b conserva: denunciar no oculta, 'No me sirvió' no modera, nada se publica por vencimiento, el pendiente de bajas sigue explícito (1.9643ms)
+✔ projectIdDe lee el project_id del config.toml real del repo (20.2151ms)
+✔ elige exactamente supabase_db_<project_id>, aunque haya otros proyectos corriendo (1.1523ms)
+✔ falla si el contenedor del proyecto no está, y nombra los que sí están (2.2721ms)
+✔ falla si la selección no es inequívoca o falta el project_id (0.7312ms)
+✔ un prefijo parecido NO alcanza: 'streamingcentral2' no es 'streamingcentral' (0.5891ms)
+✔ las cargas del catálogo van en orden numérico y sólo si se pidieron (31.9509ms)
+✔ aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks (1.6903ms)
+ℹ tests 67
+ℹ suites 0
+ℹ pass 67
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4532.9499
+
+================================================================
+$ npm test (sólo el resumen)
+================================================================
+ℹ tests 2440
+ℹ suites 0
+ℹ pass 2424
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 16
+ℹ todo 0
+ℹ duration_ms 72050.6403
+
+================================================================
+$ node --env-file=.env.comunidad-local scripts/comunidad/up-down-up-015.mjs
+================================================================
+base: supabase_db_streamingcentral
+
+   volcado 1-con-015: 13734 líneas, sha256 d689d5b63d910089…
+✔ 015 aplicada y sin datos que la bajada perdería (huellas, excedentes, corroboraciones, bloqueos con origen, límites de E3b por defecto)
+   volcado 2-sin-015: 12959 líneas, sha256 4f01359618a8ac5c…
+✔ 015_down: quita todo lo de 015 y sólo restaura definiciones de 013 y 014
+   volcado 3-sin-015-otra-vez: 12959 líneas, sha256 4f01359618a8ac5c…
+✔ 015_down repetida: inocua
+   volcado 4-con-015: 13734 líneas, sha256 d689d5b63d910089…
+   volcado 5-con-015-repetida: 13734 líneas, sha256 d689d5b63d910089…
+✔ 015 up: vuelve exactamente al volcado con 015; repetida, inocua
+   volcado 6-sin-015: 12959 líneas, sha256 4f01359618a8ac5c…
+   volcado 7-con-015: 13734 líneas, sha256 d689d5b63d910089…
+✔ segunda vuelta down → up: mismos volcados; datos ajenos intactos
+
+5 de 5 pasaron.
+
+================================================================
+$ node --env-file=.env.comunidad-local scripts/comunidad/pruebas-permisos.mjs
+================================================================
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— 1. SQL (SET ROLE) —
+✔ el esquema tiene exactamente las quince tablas previstas (11 de E2a + intentos de E3a + 3 de E3b)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 225 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 225 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+
+— Usuarios del Auth local —
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+
+— 2. REST —
+✔ REST: 7 credenciales × 15 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+
+— 3. RPC —
+✔ las únicas public.comunidad_* son las del inventario (E2b, E3a y E3b), security definer y search_path vacío
+✔ catálogo: EXECUTE de cada una sólo para service_role (ni PUBLIC, ni anon, ni authenticated)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+
+— Evidencia: ACL efectivas del esquema —
+bajas_en_curso: {postgres=arwdDxtm/postgres}
+bloqueos: {postgres=arwdDxtm/postgres}
+bloqueos_id_seq: {postgres=rwU/postgres}
+config: {postgres=arwdDxtm/postgres}
+contadores: {postgres=arwdDxtm/postgres}
+corroboraciones: {postgres=arwdDxtm/postgres}
+denuncias: {postgres=arwdDxtm/postgres}
+denuncias_excedentes: {postgres=arwdDxtm/postgres}
+denuncias_id_seq: {postgres=rwU/postgres}
+esquema comunidad: {postgres=UC/postgres}
+evaluaciones: {postgres=arwdDxtm/postgres}
+evaluaciones_id_seq: {postgres=rwU/postgres}
+huellas: {postgres=arwdDxtm/postgres}
+intentos: {postgres=arwdDxtm/postgres}
+participantes: {postgres=arwdDxtm/postgres}
+resenas: {postgres=arwdDxtm/postgres}
+resenas_id_seq: {postgres=rwU/postgres}
+suspensiones: {postgres=arwdDxtm/postgres}
+suspensiones_id_seq: {postgres=rwU/postgres}
+tramos: {postgres=arwdDxtm/postgres}
+tramos_id_seq: {postgres=rwU/postgres}
+versiones: {postgres=arwdDxtm/postgres}
+versiones_id_seq: {postgres=rwU/postgres}
+
+— Limpieza (base compartida): sólo lo que creó esta corrida —
+   cuentas: 4; restos (cuentas|participantes): 0|0
+
+27 de 27 pasaron.
+
+================================================================
+$ node --env-file=.env.comunidad-local scripts/comunidad/pruebas-invariantes.mjs
+================================================================
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— Control positivo —
+✔ las fixtures completas (las once tablas) confirman → ok
+✔ config: una sola fila, todo apagado por defecto y límites de §2.1.2 → ok
+
+— Autoría: FK compuesta y CHECK de la misma fila —
+✔ autoevaluación (evaluador = autor de la versión) → 23514
+✔ evaluación que declara otro autor que el de la versión → 23503
+✔ denuncia de la propia reseña → 23514
+✔ denuncia que declara otro autor → 23503
+✔ tramo propio (evaluador = autor) → 23514
+✔ tramo con un autor que no es el de la versión (trigger) → 23503
+✔ tramo con una versión inexistente → 23503
+✔ bloquearse a sí mismo → 23514
+✔ una versión de una reseña con otro autor declarado → 23503
+
+— Texto de la versión: largo, NFC y controles —
+✔ 79 caracteres → 23514
+✔ 80 caracteres → ok
+✔ 600 caracteres → ok
+✔ 601 caracteres → 23514
+✔ 600 letras astrales (600 puntos de código, 1200 unidades UTF-16) → ok
+✔ texto en NFD (e + acento combinante) → 23514
+✔ el mismo texto en NFC → ok
+✔ con salto de línea (fin de oración) → ok
+✔ con tabulación → 23514
+✔ con U+202E (inversión bidireccional) → 23514
+✔ con U+200B (espacio de ancho cero) → 23514
+✔ con U+0085 (control C1) → 23514
+
+— Unicidad —
+✔ segunda reseña viva del mismo autor y título → 23505
+✔ mismo autor, otro tipo (tv 603) sí → ok
+✔ después de borrar la suya (borrada_en), puede volver a reseñar el título → ok
+✔ segundo voto vigente del mismo evaluador a la misma versión → 23505
+✔ retirado el voto, puede votar de nuevo → ok
+✔ segunda denuncia del mismo denunciante a la misma versión → 23505
+✔ segundo tramo abierto del mismo evaluador y versión → 23505
+✔ segunda suspensión abierta del mismo participante → 23505
+✔ el mismo id_intento dos veces en la misma reseña (reintento) → 23505
+✔ dos participantes con el mismo user_id → 23505
+✔ segunda fila de config → 23505
+✔ config con id = false → 23514
+
+— Estados de versión y vigencia —
+✔ edición publicada: la vieja pasa a reemplazada y la vigente se mueve → ok
+✔ edición retenida: la vieja deja de verse (reemplazada) → ok
+✔ reemplazada → publicada → 23514
+✔ rechazada → publicada → 23514
+✔ publicada → oculta → publicada (restauración del admin) → ok
+✔ revision_solicitada → publicada (el admin aprueba) → ok
+✔ una versión no nace reemplazada → 23514
+✔ una versión no nace oculta → 23514
+✔ el texto de una versión no cambia → 23514
+✔ una reseña no cambia de título → 23514
+✔ dos versiones publicadas: la nueva no es la vigente (al confirmar) → 23514
+✔ mover la vigente sin reemplazar la publicada anterior (al confirmar) → 23514
+✔ la vigente marcada reemplazada sin moverla (al confirmar) → 23514
+✔ reseña sin versión vigente (al confirmar) → 23514
+✔ vigente que apunta a una versión de OTRA reseña (al confirmar) → 23503
+
+— Tramos y suspensiones: intervalos que sólo se cierran —
+✔ cerrar un tramo → ok
+✔ cerrar un tramo dos veces → 23514
+✔ reabrir un tramo cerrado → 23514
+✔ cerrar un tramo antes de que empiece (intervalo vacío) → 23514
+✔ un tramo no nace cerrado → 23514
+✔ mes de primera positiva que no es día 1 → 23514
+✔ un tramo sobrevive al borrado de su reseña (versión sin FK) → ok
+✔ cerrar una suspensión y volver a cerrarla → 23514
+✔ cerrada la suspensión, puede abrirse otra → ok
+
+— Nombre comunitario —
+✔ 1 carácter → 23514
+✔ 2 caracteres → ok
+✔ 24 caracteres → ok
+✔ 25 caracteres → 23514
+✔ con un control (U+0007) → 23514
+✔ con salto de línea → 23514
+✔ con U+202E → 23514
+✔ con espacio inicial → 23514
+✔ en NFD → 23514
+✔ en NFC, con espacio interior → ok
+
+— Denuncias, contadores, bloqueos —
+✔ categoría fuera de la lista → 23514
+✔ comentario de 301 caracteres → 23514
+✔ comentario de 300 caracteres → ok
+✔ cerrar una denuncia sin fecha de cierre → 23514
+✔ cerrar una denuncia con fecha → ok
+✔ contador negativo → 23514
+✔ acción de contador desconocida → 23514
+✔ tipo de reseña desconocido → 23514
+
+— Auth: borrado de la cuenta —
+✔ borrar auth.users (SQL): desvincula y la red de seguridad (E2b) borra lo propio, cierra tramos y conserva suspensiones; el marcador cae → ok
+✔ borrar un participante con reseñas está prohibido (no hay cascada desde participantes) → 23503
+✔ borrar con la API real de Auth (admin.deleteUser): user_id → null, nombre → null (red de seguridad, E2b), marcador → borrado
+✔ ninguna fixture de los casos quedó en la base
+
+81 de 81 pasaron.
+
+================================================================
+$ node --env-file=.env.comunidad-local scripts/comunidad/pruebas-concurrencia.mjs
+================================================================
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+inicio: 2026-10-25 18:29:51.908508+00
+
+— Permisos de las primitivas (SQL con SET ROLE) —
+✔ anon, authenticated y service_role no ejecutan ninguna primitiva de 013 (42501)
+✔ catálogo: ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+
+— El guardián del orden (nivel por transacción) —
+✔ fuera de orden → CB002 en el acto, sin esperar ningún lock: sin paso 1, nivel repetido, retroceso, lock tras la marca, paso 1 dos veces
+✔ la marca se toma DESPUÉS de los locks: una operación que esperó un lock marca después de que lo soltó quien lo tenía
+
+— Actores cruzados (auditoría de E2c, A1) —
+   filas de participante tras el paso de cuenta: A=libre, B=libre
+✔ cruce · A evalúa la reseña de B y B la de A, coordinados después del paso de cuenta: los dos confirman, sin deadlock ni CB002
+
+— Caso 1: dos sesiones sobre el mismo (evaluador, versión) (preliminar; gate en E3a) —
+✔ 1a · votar ‖ retirar, gana votar: B espera, relee el voto y lo retira; marcas monótonas; igual al serial votar→retirar
+✔ 1b · retirar ‖ votar, gana retirar (no hay voto: no-op); el voto entra después; igual al serial retirar→votar
+
+— Caso 2: edición y voto sobre la misma versión (preliminar; gate en E3a) —
+✔ 2a · la edición confirma primero: el voto esperó la fila del autor, relee, ve la versión reemplazada y se rechaza (CB003); no escribe nada
+✔ 2b · el voto confirma primero: la edición espera, relee y lo reinicia con su marca (posterior); cierra su tramo
+
+— Caso 3: dos ediciones con la misma versión esperada (preliminar; gate en E3a) —
+✔ 3 · la segunda espera, relee la vigente y da conflicto (CB003); hay UNA versión nueva
+
+— Caso 4: reintento con el mismo id_intento (preliminar; gate en E3a) —
+✔ 4 · dos envíos del mismo intento a la vez: UNA versión y UN reinicio de votos; el segundo devuelve la misma
+
+— Caso 5: suspensión y voto del suspendido (preliminar; gate en E4) —
+✔ 5a · la suspensión confirma primero: el voto espera la fila, relee la suspensión y se rechaza (CB004)
+✔ 5b · el voto confirma primero: la suspensión espera y su desde es POSTERIOR a la marca del voto
+
+— El orden importa: una sesión que lo viola produce el deadlock —
+   abortada: dl-fuera-de-orden
+✔ una sesión fuera del protocolo (versión → participante) contra una en orden: deadlock 40P01; la abortada no deja nada
+
+— Errores y tiempos de espera: nada a medias —
+✔ lock_timeout: una cuenta nueva espera la fila del autor más de 1 s → 55P03; tampoco queda el participante que creó el paso 1
+✔ error después de la marca y de escrituras parciales (texto inválido): la edición se revierte entera
+
+— Casos 6 y 7: frente a la consolidación (preliminar: consolidación de FIXTURE; gate en E7) —
+✔ 6 · operación con el compartido tomado y marca < T, que confirma DESPUÉS de T mientras la consolidación espera: la consolidación la ve y la cuenta
+✔ 7a · operación que llega con la consolidación CALCULANDO: espera; su marca es > L; el cómputo al corte L no la incluye
+✔ 7b · operación que llega con la consolidación ESPERANDO: no se cuela delante; marca > L; la anterior sí cuenta
+
+— Caso 11: igualdad exacta en T(M) (primitivas reales; cómputo de FIXTURE, gate en E7) —
+✔ 11 · corte_de_mes, mes_ar y rige_antes_de en T(M) y a 1 µs de cada lado
+✔ 11 · cómputo de FIXTURE sobre filas con marcas exactas: cuentan los pares cuyo tramo rige antes de T, con primera positiva en [T(M-1), T(M)) y sin suspensión vigente
+
+— Limpieza (base compartida) —
+   cuentas: 45, participantes: 42; restos (cuentas|participantes|sesiones|locks consultivos): 0|0|0|0
+   log de Postgres de esta corrida: 3 esperas registradas, 3 adquiridas tras esperar, 1 deadlock, 1 lock timeout
+
+21 de 21 pasaron.
+
+================================================================
+$ node --env-file=.env.comunidad-local scripts/comunidad/pruebas-escritura.mjs
+================================================================
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Matriz de autorización por operación (§2.1.2), con las funciones reales —
+✔ matriz · suspendido: A → rechazo 'suspendida' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · correo pendiente: A → rechazo 'correo_pendiente' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · términos nuevos: A → rechazo 'terminos_pendientes' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · publicación pausada: A → rechazo 'publicacion_pausada' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · módulo apagado: A → rechazo 'modulo_apagado' sin escribir nada; B (borrar, retirar) → permitidas
+✔ matriz · baja en curso: A y B rechazadas con CB001 (baja_en_curso); el paso 1 ya había borrado todo
+✔ matriz · sin términos aceptados: no hay identidad comunitaria y nada se crea
+✔ términos: una versión distinta de la vigente no se acepta
+✔ propiedad y reglas de la fila A: no se edita ni borra lo ajeno; no se evalúa la propia; una reseña viva por título
+
+— Revisión §3.4.1: qué se conserva en cada resultado de una edición —
+✔ §3.4.1 · texto idéntico tras normalizar → 'sin_cambios'; versión y votos intactos; no consume límite
+✔ §3.4.1 · rechazo de formato → anterior intacta y publicada, votos intactos, sin tocar la base
+✔ §3.4.1 · rechazo por regla de contenido → anterior intacta, votos intactos; consume UNA edición; no guarda el texto
+✔ §3.4.1 · versión esperada distinta de la vigente → 'conflicto' (version), intacta
+✔ §3.4.1 · fallo técnico en la base (texto que el CHECK rechaza, llamado directo) → error; anterior, votos y límite intactos
+   edición con la reseña retenida: error en 5089 ms
+✔ §3.4.1 · lock_timeout (otra transacción retiene la reseña > 5 s) → error; anterior y votos intactos
+✔ §3.4.1 · edición aceptada y publicada → anterior reemplazada, tramos cerrados, votos reiniciados UNA vez; la nueva en cero
+✔ §3.4.1 · edición aceptada y retenida → anterior reemplazada (deja de verse), votos reiniciados una vez, nueva 'retenida'
+✔ §3.4.1 · admisión cerrada (cola llena) → la anterior intacta, con sus votos, y 'admision_global' (E3b; el resto de la admisión, en pruebas-moderacion.mjs)
+
+— Idempotencia: respuesta perdida y mismo id_intento —
+✔ reintento tras confirmar (respuesta perdida): el mismo resultado, UNA versión y UN reinicio de votos
+✔ mismo id_intento con OTRO contenido → conflicto genérico, sin datos del primero; nada cambia
+✔ reintento de un rechazo de contenido: el mismo rechazo, sin consumir otra edición
+✔ el hash del intento es el del pedido normalizado (cliente y servidor firman lo mismo)
+
+— A1 · confirmación perdida entre el servidor y Supabase (auditoría E3a) —
+✔ A1 · publicar: la respuesta se pierde tras el commit → se reconcilia con el mismo id_intento: 'publicada', UNA reseña, UN cupo
+✔ A1 · editar con votos: la respuesta se pierde tras el commit → 'publicada' recuperada; votos reiniciados UNA vez, UNA edición
+✔ A1 · se pierden las DOS respuestas (red) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · se pierden las DOS respuestas (502) → 'sin_confirmar' (nunca 'error'); el reintento normal con el mismo id_intento recupera sin duplicar
+✔ A1 · votar, retirar y borrar con la respuesta perdida tras el commit: se reconcilian sin duplicar
+✔ A1 · un rechazo CONFIRMADO de la base no se reintenta ni se presenta como incierto: 'error', versión, votos y cupo intactos
+
+— Límites por día con carreras —
+✔ límite de reseñas = 2 y 5 envíos simultáneos de la misma cuenta: exactamente 2 entran, nunca se supera
+✔ límite de evaluaciones = 1: 4 votos simultáneos a reseñas distintas → 1 entra
+
+— Gates de integración (§5.0) con las FUNCIONES REALES y sesiones concurrentes —
+✔ gate caso 1 · votar ‖ retirar del mismo evaluador: el segundo espera, relee y retira; igual al serial
+✔ gate caso 2a · la edición confirma primero: el voto a la versión vieja espera, relee y se rechaza (version_no_disponible)
+✔ gate caso 2b · el voto confirma primero: la edición espera y lo reinicia (votos_reiniciados = 1)
+✔ gate caso 3 · dos ediciones con la misma versión esperada: la segunda da conflicto; UNA versión nueva
+✔ gate caso 4 · el mismo id_intento en dos sesiones a la vez: UNA versión, UN reinicio; la segunda devuelve el mismo resultado
+✔ gate B3a · voto real de U en vuelo con K_CUENTA tomado: la baja de U espera y después lo borra y cierra su tramo
+✔ gate B3b · baja de U en vuelo: el voto real de U espera K_CUENTA, relee el marcador y se rechaza (CB001); nada escrito
+✔ gate actores cruzados · A evalúa la reseña de B y B la de A con las funciones reales: los dos confirman, sin deadlock
+✔ gate actores cruzados (carga) · 10 rondas de pares cruzados simultáneos sin coordinar: 20 votos, 0 errores
+
+— Rutas HTTP (servidor local) —
+✔ rutas · sin sesión → 401 en las cinco; con sesión y cuerpo inválido → 400; sin caché
+✔ rutas · publicar, rechazar, retener y editar de punta a punta con el JWT; el uid sale del token, no del cuerpo
+✔ rutas · votar y retirar por HTTP; con el módulo apagado la lectura responde { activo: false } y nada más
+✔ acceso directo · un JWT de usuario no lee ni escribe las tablas por REST ni ejecuta las funciones por RPC
+
+— Limpieza (base compartida) —
+   cuentas: 113; restos (cuentas|participantes|sesiones|locks|interruptores encendidos): 0|0|0|0|false
+
+43 de 43 pasaron.
+
+================================================================
+$ node --env-file=.env.comunidad-local scripts/comunidad/pruebas-baja.mjs
+================================================================
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Permisos de las funciones nuevas (SQL con SET ROLE) —
+✔ anon y authenticated no ejecutan las cuatro; service_role no ejecuta las internas
+✔ service_role SÍ ejecuta las cuatro (uid inexistente: sin efectos)
+
+— B6: cuenta sin participante —
+✔ B6 · sólo marcador; después deleteUser → completa; el marcador cae con la cuenta
+
+— B1, B2, B13, B7: baja parcial, ventana, aviso y reintento —
+✔ B1 · paso 1 confirma y deleteUser FALLA (trigger real) → baja-parcial con el texto del contrato
+✔ B1 · lo de la otra cuenta queda: su reseña, su bloqueo; sólo cae lo que colgaba de lo borrado
+✔ B2 · durante la ventana, otra sesión que quiera escribir (resolver_participante) → baja_en_curso; no se crea participante
+✔ B13 · login nuevo con marcador: GET /api/cuenta/estado-baja → pendiente; otra cuenta no lo ve; sin sesión → 401
+✔ B7 · reingreso con marcador y reintento: completa; no queda marcador ni vínculo
+
+— B3a, B3b: escrituras en vuelo (preliminar, §5.0) —
+✔ B3a · escritura que tomó K_CUENTA antes: confirma; la baja espera y después la borra y cierra su tramo
+✔ B3b · escritura que verificó el Bearer antes pero llega después (secuencial): baja_en_curso, nada escrito
+✔ B3b · la misma, esperando K_CUENTA mientras la baja confirma: relee el marcador y se rechaza
+
+— B4, B5: pedidos simultáneos y respuesta perdida —
+✔ B4 · dos baja_comunitaria a la vez: se serializan; la segunda no cambia nada
+   deleteUser simultáneos: true, true
+✔ B4 · dos flujos completos a la vez: los dos responden ok (eliminación completa)
+✔ B4 · el segundo deleteUser llega cuando el primero ya borró: falla (404) y reconcilia → los dos responden ok
+✔ B5 · Auth borró pero la respuesta se perdió: reconcilia → completa; sin marcador (cascada)
+
+— B12: no se puede verificar —
+[TypeError: fetch failed] {
+  [cause]: Error: connect ECONNREFUSED 127.0.0.1:59999
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1706:16) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 59999
+  }
+}
+✔ B12 · deleteUser falla y getUserById falla por red → baja-sin-verificar; nunca ok; el marcador sigue
+✔ B12 · sin configuración para verificar (cliente ausente) → también baja-sin-verificar
+✔ B12 · el reintento vuelve a reconciliar: con red → baja-parcial; sin la falla → completa
+
+— B9: runbook (baja pedida fuera de la app) —
+✔ B9 · comunidad_baja_comunitaria_admin y después borrado en Auth → completa; la consulta del runbook da 0
+
+— B10, B11, B14: cancelación y suspensiones —
+✔ B10 · el admin cancela el marcador (preliminar: dueño de la base): nada se restaura; la próxima escritura crea OTRO participante
+✔ B11 · cuenta suspendida pide la baja: se permite; la suspensión no se toca; el marcador impide recrear identidad
+✔ B14 · suspendida → paso 1 → el admin cancela con la sanción vigente: el participante nuevo nace suspendido hasta sancion_hasta
+✔ B10/B14 · una baja con marcador cancelado lo REACTIVA (no crea otro)
+
+— B8: borrado por Auth SIN paso 1, con voto concurrente y consolidación esperando (preliminar) —
+   deleteUser: ok en 3472 ms · abortada: ninguna · escritura confirmó
+✔ B8a · voto de OTRA cuenta en vuelo + consolidación esperando: ciclo de colas; la baja termina o se revierte entera
+   deleteUser: error 500 en 4692 ms · abortada: auth (500 {}) · escritura confirmó
+✔ B8b · escritura de la PROPIA cuenta en vuelo (retiene su K_CUENTA) + consolidación: deadlock real; se aborta una; nunca a medio cerrar
+   deleteUser: error 500 en 9383 ms · abortada: auth (500 {}) · escritura confirmó
+✔ B8c · escritura de la propia cuenta que retiene K_CUENTA más que lock_timeout (5 s): Auth se revierte ENTERA y el reintento termina
+
+— Limpieza (base compartida) —
+   cuentas creadas: 24, participantes: 25; restos (cuentas|participantes|solo_local|trigger): 0|0|0|0
+
+26 de 26 pasaron.
+
+================================================================
+$ node --env-file=.env.comunidad-local scripts/comunidad/pruebas-moderacion.mjs
+================================================================
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Duplicados (§3.3.1): huella HMAC, sin texto en claro —
+✔ duplicados · el mismo texto en otro título de la misma cuenta → 'retenida' (sin revelar la regla); otro texto → 'publicada'
+✔ duplicados · casi duplicado propio (una palabra cambiada, Jaccard ≥ 0,8) → retenida, también como edición de OTRA reseña; editar la MISMA reseña con un cambio chico → publicada
+✔ duplicados · el mismo texto en 3 cuentas → la 4.ª cuenta queda 'retenida' (duplicado_coordinado); las 3 primeras, publicadas
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ duplicados · la tabla de huellas NO contiene texto: sólo hex (64 y 16); ninguna palabra del texto aparece; un shingle en claro lo rechaza el CHECK
+✔ duplicados · borrar la reseña borra sus huellas; volver a publicar el mismo texto ya no es duplicado
+✔ duplicados · sin secreto HMAC la escritura responde 'error' y no toca la base (una regla que no corre nunca aprueba)
+
+— Admisión a la cola de retenidos (§3.3) —
+✔ admisión · por autor: con 2 retenidos, el 3.º que sería retenido NO se guarda ('admision_autor', sin cupo); lo limpio se publica
+✔ admisión · por autor: editar uno de SUS 2 retenidos con otro texto retenido se admite (la vigente reemplazada sale de la cola)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admision_global'; lo limpio se sigue publicando
+✔ admisión · lo retenido NO se publica por vencimiento: no hay job que lo haga (pg_cron no programa nada sobre comunidad)
+
+— Pedir revisión de un rechazo por contenido (§3.3.3, §3.4.1) —
+✔ revisión · publicar con teléfono → rechazo_contenido (nada guardado); pedir revisión (id nuevo) → 'revision_solicitada', invisible para otros, cuenta para el límite
+✔ revisión · si las reglas vigentes ya no rechazan el texto, es un envío normal ('publicada')
+✔ revisión · edición: sin confirmar → 'requiere_confirmacion' sin tocar nada; confirmada → la publicada se reemplaza (deja de verse), votos reiniciados UNA vez
+✔ revisión · pasa por la admisión: con 2 retenidos propios → 'admision_autor' y nada guardado
+✔ revisión · idempotencia: respuesta perdida tras el commit → el reintento con el mismo id devuelve lo guardado (UNA versión); el mismo id sin revisión → conflicto
+
+— Denuncias (§3.3.2) —
+✔ denuncia · se registra, la reseña SIGUE VISIBLE; repetirla da el mismo resultado sin otra fila ni otro cupo; quien denuncia la ve marcada
+✔ denuncia · no la propia ('propia'); no lo invisible (retenida → 'version_no_disponible'); motivo fuera del diseño → 'invalido' sin tocar la base
+✔ denuncia · ATAQUE: 8 cuentas denuncian como grave una reseña legítima → sigue publicada y visible, y queda PRIMERA en la cola (la cantidad ordena, no oculta)
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con bloquear, el bloqueo se hace igual
+✔ denuncia · límite diario propio (tope 2): la 3.ª → 'limite_diario'
+✔ denuncia · CORROBORACIÓN: una versión publicada con reglas viejas que las vigentes retendrían pasa a 'retenida' POR LA REGLA; una legítima denunciada, no
+✔ denuncia · 'No me sirvió' masivo (12 cuentas) → ningún efecto de moderación: publicada, sin denuncias, fuera de la cola
+✔ denuncia · respuesta perdida tras el commit → se reconcilia: 'denuncia_registrada' repetida, UNA fila, UN cupo; perdidas las dos → 'sin_confirmar' y el reintento no duplica
+
+— Bloqueos (§3.3.4) —
+✔ bloqueo · oculta TODAS las reseñas del autor sólo para quien bloquea; los demás las siguen viendo; su estado no cambia
+✔ bloqueo · idempotente; no a sí mismo ('propio'); límite diario (tope 1 → el 2.º 'limite_diario'); se puede denunciar después de bloquear
+✔ desbloqueo · por id: vuelve a verse; el bloqueo de OTRA cuenta no se toca ('sin_efecto', la fila sigue); repetirlo es 'sin_efecto'
+✔ bloqueo y desbloqueo · respuesta perdida tras el commit → reconciliados sin duplicar ni fallar
+
+— Matriz filas C (denunciar) y D (bloquear, desbloquear) (§2.1.2) —
+✔ matriz · suspendido: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · correo pendiente: C → 'correo_pendiente'; D → permitidas
+✔ matriz · términos sin aceptar: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · publicación pausada: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · módulo apagado: C → 'modulo_apagado'; D → permitidas
+✔ matriz · cola de retenidos llena: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · cola de denuncias llena: C → 'cola_denuncias_llena'; D → permitidas
+✔ matriz · baja en curso: C → 'baja_en_curso'; D → 'baja_en_curso'
+
+— Protocolo: niveles 8 (huella) y 9 (cola) —
+✔ protocolo · fuera de orden → CB002: cola antes que huella, huella o cola después de la marca, cola repetida; saltear la huella vale
+
+— Compuertas con sesiones psql: el segundo ESPERA el lock del nivel 8/9 y relee —
+✔ compuerta · admisión global: X entra a la cola (tope = cola + 1) y retiene; Y espera el lock 7304, relee y recibe 'admision_global'
+✔ compuerta · denuncias por hora: X recibe la última (tope = ingreso + 1) y retiene; Y espera el lock 7304, relee y recibe 'cola_denuncias_llena'
+✔ compuerta · duplicado entre cuentas: con el texto en 2 cuentas, X (3.ª) publica y retiene el hash; Y (4.ª) espera el lock 7303, relee y queda 'retenida'
+
+— Acceso directo —
+✔ acceso directo · un JWT de usuario (y anon) no lee ni escribe las tablas nuevas ni ejecuta las funciones de E3b
+
+— Rutas HTTP (servidor local) —
+✔ rutas · sin sesión → 401; cuerpo inválido → 400; sin caché
+✔ rutas · denunciar + bloquear en un paso por HTTP: la respuesta no trae el texto; la reseña desaparece para quien bloquea; listar y desbloquear por HTTP
+✔ rutas · pedir revisión por HTTP: edición sin confirmar → 'requiere_confirmacion'; publicar → 'revision_solicitada'
+
+— Limpieza (base compartida) —
+   cuentas: 147; restos (cuentas|participantes|locks|interruptores encendidos|límites): 0|0|0|false|{"limite_resenas":5,"limite_ediciones":10,"limite_evaluaciones":100,"limite_denuncias":10,"limite_bloqueos":50,"admision_por_autor":2,"admision_global":50,"denuncias_filas_por_version":50,"denuncias_por_hora":100}
+
+46 de 46 pasaron.
+
+================================================================
+$ SOLO=CONCURRENCIA … pruebas-moderacion.mjs, tres veces
+================================================================
+== corrida 1 ==
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admision_global'; lo limpio se sigue publicando
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con bloquear, el bloqueo se hace igual
+   cuentas: 45; restos (cuentas|participantes|locks|interruptores encendidos|límites): 0|0|0|false|{"limite_resenas":5,"limite_ediciones":10,"limite_evaluaciones":100,"limite_denuncias":10,"limite_bloqueos":50,"admision_por_autor":2,"admision_global":50,"denuncias_filas_por_version":50,"denuncias_por_hora":100}
+5 de 5 pasaron.
+== corrida 2 ==
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admision_global'; lo limpio se sigue publicando
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con bloquear, el bloqueo se hace igual
+   cuentas: 45; restos (cuentas|participantes|locks|interruptores encendidos|límites): 0|0|0|false|{"limite_resenas":5,"limite_ediciones":10,"limite_evaluaciones":100,"limite_denuncias":10,"limite_bloqueos":50,"admision_por_autor":2,"admision_global":50,"denuncias_filas_por_version":50,"denuncias_por_hora":100}
+5 de 5 pasaron.
+== corrida 3 ==
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admision_global'; lo limpio se sigue publicando
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con bloquear, el bloqueo se hace igual
+   cuentas: 45; restos (cuentas|participantes|locks|interruptores encendidos|límites): 0|0|0|false|{"limite_resenas":5,"limite_ediciones":10,"limite_evaluaciones":100,"limite_denuncias":10,"limite_bloqueos":50,"admision_por_autor":2,"admision_global":50,"denuncias_filas_por_version":50,"denuncias_por_hora":100}
+5 de 5 pasaron.
