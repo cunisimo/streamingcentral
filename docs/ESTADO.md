@@ -813,8 +813,10 @@ AAB tiene que ser `5` o mayor.
        `docs/medidas/2026-10-25-e4-a1a2-recorrido/`.
    - **E5a local: lectura protegida y "Recientes" (26/10, autorizada por el
      dueño; sólo `supabase start`, la app local y datos ficticios;
-     interruptores, publicación y muestreo apagados al terminar). PENDIENTE
-     DE AUDITORÍA FOCALIZADA de Codex.**
+     interruptores, publicación y muestreo apagados al terminar).** Auditada
+     por Codex sobre `b7ba962` (`docs/medidas/2026-10-26-auditoria-e5a-b7ba962.md`):
+     un P2, A1. **Corrección A1 hecha por Claude el 26/10, PENDIENTE DE
+     AUDITORÍA FOCALIZADA** (detalle al final de este bloque).
      - entorno: Docker Desktop estaba detenido tras el reinicio (la distro
        WSL `docker-desktop` parada). Lo inicié; el motor respondió en 25 s y
        los contenedores volvieron solos. No borré volúmenes ni recreé nada;
@@ -875,6 +877,33 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-26-informe-claude-e5a.md`; salidas:
      `docs/medidas/2026-10-26-e5a-salidas.txt`; capturas:
      `docs/medidas/2026-10-26-e5a-recorrido/`.
+     - **Corrección A1 (26/10, Claude; pendiente de auditoría focalizada):**
+       - el problema: la lista ignoraba los resultados idempotentes del voto
+         recuperado (`sin_cambios`, `sin_efecto`). La base quedaba bien, pero
+         la pantalla no, y el siguiente toque volvía a votar;
+       - la corrección (`lib/comunidad/lista-nucleo.ts`, sólo el núcleo):
+         - `votoConfirmado` toma también los idempotentes;
+         - `trasVoto` aplica el estado confirmado por diferencia, sin contar
+           dos veces y sin recargar la lista;
+         - `sin_confirmar` no cambia nada y deja el aviso;
+       - regresión unitaria: falla antes (`[null,2,3]` contra
+         `["util",3,4]`) y pasa después;
+       - regresión real `pruebas-voto-lista`: 3/10 con el núcleo anterior,
+         11/11 con la corrección. Cubre positivo, negativo, cambio y retiro;
+         la primera respuesta perdida; la pérdida de ambas y el reintento.
+         El siguiente toque actúa sobre el voto real y la lista conserva sus
+         dos páginas. La pérdida es simulada;
+       - focalizadas 78/78; `tsc` 0;
+       - navegador local, escritorio y 375 px, 5 capturas: incierto →
+         reintento → reflejado, con la lista de dos o tres páginas intacta;
+       - sin cambios en la base, la ruta ni el componente. No se repitieron
+         baterías generales;
+       - quité la línea vacía extra de `components/ResenasSeccion.tsx`;
+       - sigue pendiente: `/api/title` en ejecución, teléfono, Android,
+         tema claro, lector de pantalla, Producción.
+       Informe: `docs/medidas/2026-10-26-informe-claude-e5a-a1.md`; salidas:
+       `docs/medidas/2026-10-26-e5a-a1-salidas.txt`; capturas:
+       `docs/medidas/2026-10-26-e5a-a1-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;

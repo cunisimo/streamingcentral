@@ -932,6 +932,10 @@ rollback;
   porque la envoltura CORS admite un método por ruta. La comparación de
   `/api/title` en ejecución queda pendiente (sin TMDB en local); la fija un
   barrido de fuente. Informe: `docs/medidas/2026-10-26-informe-claude-e5a.md`.
+  **Corrección A1** (auditoría `docs/medidas/2026-10-26-auditoria-e5a-b7ba962.md`),
+  pendiente de auditoría focalizada: la lista refleja también el voto
+  confirmado por la reconciliación (`sin_cambios`, `sin_efecto`). Informe:
+  `docs/medidas/2026-10-26-informe-claude-e5a-a1.md`.
 
 ### E5b — Utilidad y "Más útiles"
 
