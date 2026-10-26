@@ -873,10 +873,12 @@ rollback;
   cierran sin texto; conservar el texto queda para el dueño (P3). Informe:
   `docs/medidas/2026-10-25-informe-claude-e4.md`.
   **Corrección A1/A2** (auditoría `docs/medidas/2026-10-25-auditoria-e4-9340da9.md`),
-  pendiente de auditoría focalizada: pestaña Retiradas y "Ver situación
-  actual" en el Registro para restaurar (A1); la baja bloquea las denuncias
-  hechas y recibidas antes de copiar el historial, así dos bajas simultáneas
-  no lo recrean (A2). Informe: `docs/medidas/2026-10-25-informe-claude-e4-a1a2.md`.
+  pestaña Retiradas y "Ver situación actual" en el Registro para restaurar
+  (A1); la baja bloquea las denuncias hechas y recibidas antes de copiar el
+  historial, así dos bajas simultáneas no lo recrean (A2). Informe:
+  `docs/medidas/2026-10-25-informe-claude-e4-a1a2.md`. **Cerrada como entrega
+  local el 26/10** (`docs/medidas/2026-10-26-auditoria-e4-a1a2-1fb85cb.md`),
+  sin publicación; Codex no pudo repetir las pruebas de base (Docker).
 
 ### E5a — Lectura protegida y "Recientes"
 
@@ -922,6 +924,14 @@ rollback;
 - **Rollback:** interruptor de lectura apagado; down antes de activar.
 - **Criterio de cierre:** pruebas verdes.
 - **Evidencia para Codex:** salidas, comparación de `/api/title`, diff.
+- **Estado al 26/10/2026** (`docs/ESTADO.md` es la fuente vigente):
+  implementada **en local** (`017_comunidad_lectura.sql`,
+  `/api/comunidad/resenas/lista`, una sola sección RESEÑAS en la ficha),
+  **pendiente de auditoría focalizada**. Desvío: la lectura es
+  `GET /api/comunidad/resenas/lista` y no un GET de `/api/comunidad/resenas`,
+  porque la envoltura CORS admite un método por ruta. La comparación de
+  `/api/title` en ejecución queda pendiente (sin TMDB en local); la fija un
+  barrido de fuente. Informe: `docs/medidas/2026-10-26-informe-claude-e5a.md`.
 
 ### E5b — Utilidad y "Más útiles"
 

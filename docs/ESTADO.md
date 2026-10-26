@@ -686,8 +686,21 @@ AAB tiene que ser `5` o mayor.
      sólo `supabase start`, la app local y datos ficticios; interruptores,
      publicación y muestreo apagados al terminar).** Auditada por Codex sobre
      `9340da9` (`docs/medidas/2026-10-25-auditoria-e4-9340da9.md`): dos P2,
-     A1 y A2. **Corrección A1/A2 hecha por Claude el 25/10, PENDIENTE DE
-     AUDITORÍA FOCALIZADA** (detalle al final de este bloque).
+     A1 y A2, corregidas por Claude el 25/10 (detalle al final de este
+     bloque). **E4 CERRADA COMO ENTREGA LOCAL por Codex el 26/10**
+     (`docs/medidas/2026-10-26-auditoria-e4-a1a2-1fb85cb.md`), sin habilitar
+     la publicación. ⚠️ **Límite de verificación:** Codex cerró por revisión
+     de código, sus pruebas focalizadas (64/64, `tsc` 0) y la evidencia de
+     Claude; **no pudo repetir las pruebas de base** porque Docker Desktop
+     respondía 500 después del reinicio. Las corridas 38/38, 5/5, 28/28,
+     26/26, 85/85 y 46/46 siguen siendo evidencia de Claude. El 26/10 Claude
+     volvió a levantar Docker Desktop (sin borrar volúmenes ni recrear
+     contenedores) y comprobó la base tal como había quedado: 6
+     participantes, 2 versiones, 42 cuentas, 2 suspensiones ajenas, 0
+     decisiones, interruptores y muestreo apagados, `SELECT` de `profiles`
+     revocado, sin locks. Codex marcó un espacio final en la línea 22 de
+     `docs/medidas/2026-10-25-e4-a1a2-salidas.txt` (el fallo histórico): no
+     se tocó, para no alterar la salida histórica.
      - `016_comunidad_admin.sql` (+ down generado con copias literales de
        011, 012 y 015):
        - registro de decisiones (admin, acción, versión o participante o
@@ -798,6 +811,70 @@ AAB tiene que ser `5` o mayor.
        Informe: `docs/medidas/2026-10-25-informe-claude-e4-a1a2.md`; salidas:
        `docs/medidas/2026-10-25-e4-a1a2-salidas.txt`; capturas:
        `docs/medidas/2026-10-25-e4-a1a2-recorrido/`.
+   - **E5a local: lectura protegida y "Recientes" (26/10, autorizada por el
+     dueño; sólo `supabase start`, la app local y datos ficticios;
+     interruptores, publicación y muestreo apagados al terminar). PENDIENTE
+     DE AUDITORÍA FOCALIZADA de Codex.**
+     - entorno: Docker Desktop estaba detenido tras el reinicio (la distro
+       WSL `docker-desktop` parada). Lo inicié; el motor respondió en 25 s y
+       los contenedores volvieron solos. No borré volúmenes ni recreé nada;
+     - `017_comunidad_lectura.sql` (+ down con la lectura provisional de 015,
+       copia literal):
+       - `comunidad_resenas` reemplaza a la lectura provisional (que se
+         borra). La ejecuta SÓLO `authenticated` y lee al lector de
+         `auth.uid()`; no tiene `p_uid`;
+       - "Recientes" con cursor por clave (primera publicación desc, id desc),
+         de a 5 (tope 20);
+       - visibilidad recalculada en cada página: reseña viva, versión vigente
+         publicada, no propia, autor no bloqueado por quien lee ni
+         suspendido;
+       - la primera página trae la propia, el estado de la cuenta y el total;
+       - "utiles" → 22023 (E5b);
+       - `comunidad_modulo_activo` (sólo `service_role`) para la ruta;
+     - ruta `GET /api/comunidad/resenas/lista` (desvío del plan: la envoltura
+       CORS admite un método por ruta):
+       - Bearer → sesión del lector, nunca `service_role`;
+       - sin sesión, 401 `{resultado, activo}` (sólo el interruptor);
+       - `private, no-store`;
+     - ficha: una sola sección RESEÑAS:
+       - la de Yump primero; el módulo editorial no se tocó;
+       - sin sesión, invitación a registrarse, también en un título sin
+         reseñas y sin número en el encabezado;
+       - con sesión, cinco reseñas y "Cargar más" (cursor confirmado, fallo
+         con reintento desde el mismo punto, sin duplicados);
+       - selector con "Más útiles" deshabilitado;
+       - se conservan editor, pulgares, conteos, denuncias, bloqueos y
+         revisión;
+       - sin nombre del autor hasta E6;
+     - suspensión: desde E5a la lectura oculta las reseñas del autor
+       suspendido mientras rige (diseño §2.3). Se cambió el texto del
+       diálogo de E4, que decía lo contrario;
+     - resultados reales en secuencia:
+       - `pruebas-lectura` 11/11 (nueva): sin sesión nada por RPC ni ruta;
+         214 visibles en 43 páginas, exactas, con un empate de 12; cambios
+         entre páginas (retiro, borrado, edición, bloqueo y suspensión, con
+         funciones reales): 0 repetidas, 0 salteadas; bloqueo personal;
+         suspensión y levantamiento;
+       - up/down/up de 017 5/5;
+       - por dependencia modificada (usaban la lectura provisional o el
+         inventario): permisos 29/29, escritura 43/43,
+         moderación 46/46, admin 38/38;
+     - unitarias: `npm test` 2471 pasan, 0 fallan, 16 omitidas; `tsc` 0;
+     - recorrido real en navegador local, escritorio y 375 px, 12 capturas:
+       - invitación con y sin reseñas; cinco + Cargar más;
+       - fallo y reintento; voto sin achicar la lista; bloqueo;
+       - cambio de cuenta, cierre de sesión y cambio de título con una tanda
+         pendiente (la tardía no se pinta);
+       - estado vacío; fallo y demora simulados con un interceptor de
+         `fetch`;
+     - corregido en el recorrido: abrir la sección mientras se resolvía la
+       sesión la volvía a cerrar. Ahora el abierto/cerrado vive por título;
+     - pendiente: comparar `/api/title` en ejecución (sin TMDB en local; lo
+       fija un barrido de fuente), teléfono, Android, tema claro, lector de
+       pantalla, Producción.
+     Informe: `docs/medidas/2026-10-26-informe-claude-e5a.md`; salidas:
+     `docs/medidas/2026-10-26-e5a-salidas.txt`; capturas:
+     `docs/medidas/2026-10-26-e5a-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
