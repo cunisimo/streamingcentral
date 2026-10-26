@@ -96,7 +96,9 @@ const RPC_ADMIN = {
   comunidad_admin_registro: { p_limite: 1, p_antes: null },
   comunidad_admin_resumen: {},
   comunidad_admin_retenidos: { p_limite: 1, p_despues: null },
+  comunidad_admin_retiradas: { p_limite: 1, p_despues: null },
   comunidad_admin_suspender: { p_participante: "00000000-0000-4000-8000-00000000dead", p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
+  comunidad_admin_version: { p_version: VERSION_INEXISTENTE },
   comunidad_quitar_marcador_baja: { p_user: "00000000-0000-4000-8000-00000000dead", p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
 };
 const ESCRIBE_ADMIN = new Set(["comunidad_admin_decidir", "comunidad_admin_levantar_suspension", "comunidad_admin_publicacion",

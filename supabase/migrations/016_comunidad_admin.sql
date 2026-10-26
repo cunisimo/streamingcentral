@@ -229,6 +229,21 @@ begin
   perform 1 from comunidad.tramos
    where vigente_hasta is null and (evaluador_participante = p_part or autor_participante = p_part)
    order by evaluador_participante, version_id for update;
+  -- E4 (A2 de la auditoría sobre 9340da9): las denuncias que HIZO y las que
+  -- RECIBIÓ, por id, al final de los locks. Sin esto, dos bajas simultáneas
+  -- (autor y quien lo denunció) recreaban el historial de quien denunció
+  -- después de su baja: la del autor copiaba la denuncia con su foto mientras
+  -- la del denunciante la borraba sin confirmar. Con el lock, la baja que
+  -- llega segunda espera a la primera y relee: si confirmó la de quien
+  -- denunció, la denuncia ya no existe y no se copia; si confirmó la del
+  -- autor, la del denunciante borra su historial DESPUÉS de esperar (otra
+  -- sentencia, otra foto) y ve la copia recién confirmada. Las dos bajas toman
+  -- el mismo conjunto en el mismo orden, y nadie más bloquea estas filas antes
+  -- de las de votos y tramos (las decisiones del admin y la denuncia nueva las
+  -- tocan después de la marca, con la versión ya bloqueada).
+  perform 1 from comunidad.denuncias
+   where denunciante_participante = p_part or autor_participante = p_part
+   order by id for update;
 
   v_marca := clock_timestamp();
 
@@ -938,6 +953,116 @@ begin
 end;
 $$;
 
+-- A1 (auditoría de E4 sobre 9340da9): restaurar desde el panel. Retirar
+-- resuelve las denuncias y la versión sale de las dos colas; sin esto el
+-- admin no podía volver a encontrarla. Dos lecturas, sólo para admin con MFA:
+-- la lista de retiradas y la situación ACTUAL de una versión (la abre el
+-- Registro). Ninguna decide nada: restaurar sigue siendo
+-- `comunidad_admin_decidir('restaurar', …)`, que relee con todo bloqueado y
+-- rechaza una versión reemplazada, borrada o de una cuenta dada de baja.
+
+-- Los votos que volverían a contar al restaurar o publicar: exactamente los
+-- que `reabrir_tramos` reabriría (positivos, vigentes, con tramo en esta
+-- versión y ninguno abierto). Es el número del aviso previo.
+create or replace function comunidad.votos_recuperables(p_version bigint)
+returns integer
+language sql
+stable
+set search_path = ''
+as $$
+  select count(*)::integer
+    from comunidad.evaluaciones e
+   where e.version_id = p_version and e.retirada_en is null and e.util
+     and exists (select 1 from comunidad.tramos t
+                  where t.evaluador_participante = e.evaluador_participante and t.version_id = p_version)
+     and not exists (select 1 from comunidad.tramos t
+                      where t.evaluador_participante = e.evaluador_participante and t.version_id = p_version
+                        and t.vigente_hasta is null);
+$$;
+
+-- Lo que el panel muestra de una versión, en su situación actual. Sin texto
+-- si la reseña está borrada (el autor la borró: no se vuelve a mostrar).
+create or replace function comunidad.ficha_version(v comunidad.versiones, r comunidad.resenas)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'version_id', v.id, 'resena_id', v.resena_id, 'tipo', r.tipo, 'tmdb_id', r.tmdb_id,
+    'texto', case when r.borrada_en is null then v.texto end,
+    'estado', v.estado, 'situacion', comunidad.situacion(v, r), 'decidida_en', v.decidida_en,
+    'retiro', (select jsonb_build_object('motivo', d.motivo, 'creada_en', d.creada_en, 'admin_propio', d.admin_id = auth.uid())
+                 from comunidad.decisiones d where d.version_id = v.id and d.accion = 'retirar'
+                order by d.id desc limit 1),
+    'votos_vigentes', (select count(*) from comunidad.evaluaciones e where e.version_id = v.id and e.retirada_en is null),
+    'votos_recuperables', comunidad.votos_recuperables(v.id),
+    'denuncias_abiertas', (select count(*) from comunidad.denuncias d where d.version_id = v.id and d.estado = 'abierta'),
+    'autor', comunidad.antecedentes(v.autor_participante));
+$$;
+
+-- Retiradas que se pueden restaurar: vigentes, reseña viva, de la más
+-- reciente a la más vieja. Cursor por clave {t, v}.
+create or replace function public.comunidad_admin_retiradas(p_limite integer, p_despues jsonb)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_lim integer := least(greatest(coalesce(p_limite, 20), 1), 50);
+  v_items jsonb;
+  v_n integer;
+begin
+  perform comunidad.exigir_admin();
+  with pagina as (
+    select v, r
+      from comunidad.versiones v
+      join comunidad.resenas r on r.version_vigente_id = v.id and r.borrada_en is null
+     where v.estado = 'oculta'
+       and (p_despues is null
+            or (v.decidida_en, v.id) < ((p_despues->>'t')::timestamptz, (p_despues->>'v')::bigint))
+     order by v.decidida_en desc, v.id desc
+     limit v_lim + 1
+  )
+  select coalesce(jsonb_agg(comunidad.ficha_version(x.v, x.r)
+                            || jsonb_build_object('cursor', jsonb_build_object('t', (x.v).decidida_en, 'v', (x.v).id))
+                            order by (x.v).decidida_en desc, (x.v).id desc), '[]'::jsonb),
+         count(*)
+    into v_items, v_n
+    from pagina x;
+  return jsonb_build_object(
+    'items', case when v_n > v_lim then v_items - v_lim else v_items end,
+    'hay_mas', v_n > v_lim,
+    'total', (select count(*) from comunidad.versiones v
+                join comunidad.resenas r on r.version_vigente_id = v.id and r.borrada_en is null
+               where v.estado = 'oculta'));
+end;
+$$;
+
+-- La situación ACTUAL de una versión (desde el Registro). Una versión que ya
+-- no existe (baja de la cuenta) es `eliminada`, sin más datos.
+create or replace function public.comunidad_admin_version(p_version bigint)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v comunidad.versiones;
+  r comunidad.resenas;
+begin
+  perform comunidad.exigir_admin();
+  if p_version is null then raise exception 'pedido_invalido' using errcode = '22023'; end if;
+  select * into v from comunidad.versiones where id = p_version;
+  if not found then return jsonb_build_object('version_id', p_version, 'situacion', 'eliminada'); end if;
+  select * into r from comunidad.resenas where id = v.resena_id;
+  return comunidad.ficha_version(v, r);
+end;
+$$;
+
 -- Muestreo (§3.5): APAGADO hasta P6. Encendido, hasta 5 publicaciones al
 -- azar (vigentes, reseña viva). No certifica eficacia.
 create or replace function public.comunidad_admin_muestreo()
@@ -978,6 +1103,8 @@ revoke all on function comunidad.antecedentes(uuid)                             
 revoke all on function comunidad.situacion(comunidad.versiones, comunidad.resenas) from public, anon, authenticated, service_role;
 revoke all on function comunidad.reabrir_tramos(bigint, uuid, timestamptz)      from public, anon, authenticated, service_role;
 revoke all on function comunidad.registrar(uuid, text, bigint, uuid, uuid, text, jsonb, jsonb, timestamptz) from public, anon, authenticated, service_role;
+revoke all on function comunidad.votos_recuperables(bigint)                    from public, anon, authenticated, service_role;
+revoke all on function comunidad.ficha_version(comunidad.versiones, comunidad.resenas) from public, anon, authenticated, service_role;
 
 revoke all on function public.comunidad_admin_decidir(text, bigint, text, uuid)          from public, anon, authenticated, service_role;
 revoke all on function public.comunidad_admin_suspender(uuid, text, uuid)                from public, anon, authenticated, service_role;
@@ -990,6 +1117,8 @@ revoke all on function public.comunidad_admin_denuncias(integer, jsonb)         
 revoke all on function public.comunidad_admin_cuentas()                                  from public, anon, authenticated, service_role;
 revoke all on function public.comunidad_admin_registro(integer, bigint)                  from public, anon, authenticated, service_role;
 revoke all on function public.comunidad_admin_muestreo()                                 from public, anon, authenticated, service_role;
+revoke all on function public.comunidad_admin_retiradas(integer, jsonb)                 from public, anon, authenticated, service_role;
+revoke all on function public.comunidad_admin_version(bigint)                            from public, anon, authenticated, service_role;
 grant execute on function public.comunidad_admin_decidir(text, bigint, text, uuid)       to authenticated;
 grant execute on function public.comunidad_admin_suspender(uuid, text, uuid)             to authenticated;
 grant execute on function public.comunidad_admin_levantar_suspension(uuid, text, uuid)   to authenticated;
@@ -1001,5 +1130,7 @@ grant execute on function public.comunidad_admin_denuncias(integer, jsonb)      
 grant execute on function public.comunidad_admin_cuentas()                               to authenticated;
 grant execute on function public.comunidad_admin_registro(integer, bigint)               to authenticated;
 grant execute on function public.comunidad_admin_muestreo()                              to authenticated;
+grant execute on function public.comunidad_admin_retiradas(integer, jsonb)              to authenticated;
+grant execute on function public.comunidad_admin_version(bigint)                         to authenticated;
 
 commit;

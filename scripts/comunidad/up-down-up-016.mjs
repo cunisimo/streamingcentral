@@ -60,7 +60,7 @@ await prueba("016_down: quita todo lo de 016 y sólo restaura definiciones de 01
   aplicarArchivo(DOWN);
   v.sin = volcar("2-sin-016");
   assert.equal(sqlOk(`select count(*) from pg_proc where proname like 'comunidad\\_admin\\_%' or proname in ('comunidad_quitar_marcador_baja',
-    'exigir_admin', 'proto_admin', 'motivo_valido', 'decision_previa', 'antecedentes', 'situacion', 'reabrir_tramos', 'registrar')`), "0");
+    'exigir_admin', 'proto_admin', 'motivo_valido', 'decision_previa', 'antecedentes', 'situacion', 'reabrir_tramos', 'registrar', 'votos_recuperables', 'ficha_version')`), "0");
   assert.equal(sqlOk("select count(*) from pg_tables where schemaname = 'comunidad' and tablename in ('decisiones', 'denuncias_cerradas')"), "0");
   assert.equal(sqlOk("select count(*) from information_schema.columns where table_schema = 'comunidad' and table_name = 'config' and column_name = 'muestreo_activo'"), "0");
   const cuenta = (t) => t.split("\n").map((l) => l.replace(/,$/, "")).reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());

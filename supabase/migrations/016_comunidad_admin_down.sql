@@ -22,6 +22,8 @@ drop function if exists public.comunidad_admin_denuncias(integer, jsonb);
 drop function if exists public.comunidad_admin_cuentas();
 drop function if exists public.comunidad_admin_registro(integer, bigint);
 drop function if exists public.comunidad_admin_muestreo();
+drop function if exists public.comunidad_admin_retiradas(integer, jsonb);
+drop function if exists public.comunidad_admin_version(bigint);
 drop function if exists comunidad.exigir_admin();
 drop function if exists comunidad.proto_admin(uuid);
 drop function if exists comunidad.motivo_valido(text);
@@ -29,6 +31,8 @@ drop function if exists comunidad.decision_previa(uuid, text, bigint, uuid, uuid
 drop function if exists comunidad.antecedentes(uuid);
 drop function if exists comunidad.situacion(comunidad.versiones, comunidad.resenas);
 drop function if exists comunidad.reabrir_tramos(bigint, uuid, timestamptz);
+drop function if exists comunidad.ficha_version(comunidad.versiones, comunidad.resenas);
+drop function if exists comunidad.votos_recuperables(bigint);
 drop function if exists comunidad.registrar(uuid, text, bigint, uuid, uuid, text, jsonb, jsonb, timestamptz);
 
 -- 011

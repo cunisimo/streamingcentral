@@ -5,8 +5,8 @@ import { useAdminSesion } from "@/components/admin/useAdminSesion";
 import { supabaseBrowser } from "@/lib/supabase";
 import { crearFrontera, tokenDeCuenta } from "@/lib/comunidad/frontera-cuenta";
 import {
-  ETIQUETA_ACCION, MOTIVO_MAX, SITUACION, accionesDenuncia, accionesRetenido, codigoParticipante, efectoDecision,
-  etiquetaCategoria, fechaAR, mensajeModeracion, normalizarMotivo, reintentable,
+  ETIQUETA_ACCION, MOTIVO_MAX, SITUACION, accionesDenuncia, accionesRetenido, accionesRetirada, codigoParticipante,
+  efectoDecision, etiquetaCategoria, fechaAR, mensajeModeracion, motivoNoRestaurable, normalizarMotivo, reintentable,
   type AccionVersion, type Tono, type Vista,
 } from "@/lib/comunidad/admin-nucleo";
 
@@ -16,6 +16,11 @@ import {
 //   - DOS colas separadas: retenidos (guardados e invisibles, a decidir) y
 //     denuncias (casos sobre contenido, agrupados por versión). Más Cuentas
 //     (suspensiones vigentes y bajas pendientes) y el Registro.
+//   - Retirar resuelve las denuncias y la versión sale de las dos colas: la
+//     pestaña Retiradas y "Ver situación actual" del Registro la vuelven a
+//     encontrar para restaurarla (A1 de la auditoría de E4). La base relee
+//     con todo bloqueado: una versión reemplazada, borrada o de una cuenta
+//     dada de baja no vuelve.
 //   - Cada decisión pide motivo y muestra su efecto antes de confirmar. Va
 //     atada a UNA versión: si cambió, la base no aplica nada y lo dice.
 //   - Una respuesta perdida dice "No sabemos si se aplicó" y ofrece reintentar
@@ -27,7 +32,7 @@ import {
 // 🔴 Este guard es experiencia de usuario: quien rechaza de verdad es la API
 // (`adminDeToken`) y la base (`is_admin_mfa()` en cada función).
 
-type Pestana = "retenidos" | "denuncias" | "cuentas" | "registro";
+type Pestana = "retenidos" | "denuncias" | "retiradas" | "cuentas" | "registro";
 type J = Record<string, unknown>;
 type Lista = { items: J[]; despues: J | null; antes: number | null; hayMas: boolean; cargando: boolean; error: boolean; total?: number };
 type Msg = { tono: Tono; texto: string } | null;
@@ -40,7 +45,7 @@ type Dialogo =
 
 const LISTA_VACIA: Lista = { items: [], despues: null, antes: null, hayMas: false, cargando: false, error: false };
 const PESTANAS: { id: Pestana; titulo: string }[] = [
-  { id: "retenidos", titulo: "Retenidos" }, { id: "denuncias", titulo: "Denuncias" },
+  { id: "retenidos", titulo: "Retenidos" }, { id: "denuncias", titulo: "Denuncias" }, { id: "retiradas", titulo: "Retiradas" },
   { id: "cuentas", titulo: "Cuentas" }, { id: "registro", titulo: "Registro" },
 ];
 
@@ -77,7 +82,7 @@ function ModeracionDeCuenta({ uid }: { uid: string }) {
   const [errResumen, setErrResumen] = useState(false);
   const [pestana, setPestana] = useState<Pestana>("retenidos");
   const [listas, setListas] = useState<Record<Pestana, Lista>>({
-    retenidos: LISTA_VACIA, denuncias: LISTA_VACIA, cuentas: LISTA_VACIA, registro: LISTA_VACIA,
+    retenidos: LISTA_VACIA, denuncias: LISTA_VACIA, retiradas: LISTA_VACIA, cuentas: LISTA_VACIA, registro: LISTA_VACIA,
   });
   const [dialogo, setDialogo] = useState<Dialogo | null>(null);
   const [aviso, setAviso] = useState<Msg>(null);
@@ -111,7 +116,7 @@ function ModeracionDeCuenta({ uid }: { uid: string }) {
     setListas((l) => ({ ...l, [p]: { ...l[p], cargando: true, error: false } }));
     const vista: Vista = p;
     const cuerpo: J = { accion: "leer", vista };
-    if (mas && (p === "retenidos" || p === "denuncias")) cuerpo.despues = base.despues;
+    if (mas && (p === "retenidos" || p === "denuncias" || p === "retiradas")) cuerpo.despues = base.despues;
     if (mas && p === "registro") cuerpo.antes = base.antes;
     const r = await pedir(uid, cuerpo);
     if (!gen.vale(p, g)) return;
@@ -141,6 +146,15 @@ function ModeracionDeCuenta({ uid }: { uid: string }) {
   useEffect(() => { void cargar(pestana, false); }, [pestana, cargar]);
 
   const refrescar = useCallback(() => { void cargarResumen(); void cargar(pestana, false); }, [cargarResumen, cargar, pestana]);
+
+  // La situación ACTUAL de una versión (Registro). null: no se pudo leer o la
+  // instancia ya no es de esta cuenta (la respuesta tardía se descarta).
+  const consultarVersion = useCallback(async (version: number): Promise<J | null> => {
+    if (!frontera.vigente()) return null;
+    const r = await pedir(uid, { accion: "leer", vista: "version", version });
+    if (!frontera.vigente() || r === "sin-confirmar" || typeof r.resultado === "string") return null;
+    return r;
+  }, [frontera, uid]);
 
   const enviar = useCallback(async (d: Dialogo, motivo: string, intento: string) => {
     const cuerpo: J =
@@ -197,9 +211,11 @@ function ModeracionDeCuenta({ uid }: { uid: string }) {
         {pestana === "retenidos" && <Retenidos items={lista.items} abrir={setDialogo} />}
         {pestana === "denuncias" && <Denuncias items={lista.items} abrir={setDialogo} />}
         {pestana === "cuentas" && <Cuentas datos={lista.items[0] ?? null} abrir={setDialogo} />}
-        {pestana === "registro" && <Registro items={lista.items} />}
+        {pestana === "retiradas" && <Retiradas items={lista.items} abrir={setDialogo} />}
+        {pestana === "registro" && <Registro items={lista.items} consultar={consultarVersion} abrir={setDialogo} />}
         {!lista.cargando && !lista.error && !lista.items.length && pestana !== "cuentas" && (
-          <p className="cm-sub">{pestana === "retenidos" ? "No hay retenidos sin resolver." : pestana === "denuncias" ? "No hay denuncias abiertas." : "Todavía no hay decisiones."}</p>
+          <p className="cm-sub">{pestana === "retenidos" ? "No hay retenidos sin resolver." : pestana === "denuncias" ? "No hay denuncias abiertas."
+            : pestana === "retiradas" ? "No hay reseñas retiradas para restaurar." : "Todavía no hay decisiones."}</p>
         )}
         {lista.hayMas && (
           <button className="btn ghost mod-mas" disabled={lista.cargando} onClick={() => void cargar(pestana, true)}>
@@ -211,7 +227,22 @@ function ModeracionDeCuenta({ uid }: { uid: string }) {
       {dialogo && (
         <DialogoAccion d={dialogo} enviar={enviar}
           cerrar={(huboCambio) => { setDialogo(null); if (huboCambio) refrescar(); }}
-          alAplicar={(m) => { setAviso(m); setDialogo(null); refrescar(); }} />
+          alAplicar={(m) => {
+            setAviso(m);
+            // Aplicada y confirmada: el caso sale de las colas en el acto, sin
+            // esperar la recarga (que puede tardar) con su botón todavía activo.
+            if (dialogo.tipo === "decidir") {
+              const v = dialogo.item.version_id;
+              setListas((l) => ({
+                ...l,
+                retenidos: { ...l.retenidos, items: l.retenidos.items.filter((x) => x.version_id !== v) },
+                denuncias: { ...l.denuncias, items: l.denuncias.items.filter((x) => x.version_id !== v) },
+                retiradas: { ...l.retiradas, items: l.retiradas.items.filter((x) => x.version_id !== v) },
+              }));
+            }
+            setDialogo(null);
+            refrescar();
+          }} />
       )}
     </div>
   );
@@ -337,19 +368,78 @@ function Cuentas({ datos, abrir }: { datos: J | null; abrir: (d: Dialogo) => voi
   );
 }
 
-function Registro({ items }: { items: J[] }) {
+/** Una versión retirada (o su situación actual), con Restaurar sólo si sigue retirada y vigente. */
+function FichaVersion({ it, abrir }: { it: J; abrir: (d: Dialogo) => void }) {
+  const sit = String(it.situacion);
+  const retiro = (it.retiro as J | null) ?? null;
+  const no = motivoNoRestaurable(sit);
+  return (
+    <>
+      <div className="mod-cab">
+        <span className={sit === "oculta" ? "mod-chip mod-chip-grave" : "mod-chip"}>{SITUACION[sit] ?? sit}</span>
+        <span className="mod-meta">{it.tmdb_id ? `${tituloObra(it)} · ` : ""}versión {String(it.version_id)}{sit === "oculta" && it.decidida_en ? ` · retirada ${fechaAR(it.decidida_en)}` : ""}</span>
+      </div>
+      {retiro && <p className="mod-meta">Motivo del retiro: {String(retiro.motivo)}{retiro.admin_propio ? " (vos)" : ""}</p>}
+      {typeof it.texto === "string" && <blockquote className="mod-texto">{it.texto}</blockquote>}
+      {sit !== "eliminada" && (
+        <p className="mod-meta">{cant(it.votos_vigentes, "voto vigente", "votos vigentes")} · {sit === "oculta" ? `${cant(it.votos_recuperables, "voto de utilidad vuelve", "votos de utilidad vuelven")} a contar al restaurar` : cant(it.denuncias_abiertas, "denuncia abierta", "denuncias abiertas")}</p>
+      )}
+      {it.autor ? <Autor a={it.autor as J} abrir={abrir} /> : null}
+      <div className="mod-acciones">
+        {accionesRetirada(sit).map((a) => (
+          <button key={a} className="btn" onClick={() => abrir({ tipo: "decidir", accion: a, item: it })}>{ETIQUETA_ACCION[a]}</button>
+        ))}
+        {no && <p className="mod-meta" role="note">{no}</p>}
+      </div>
+    </>
+  );
+}
+
+function Retiradas({ items, abrir }: { items: J[]; abrir: (d: Dialogo) => void }) {
+  return (
+    <>
+      <p className="admin-nota">Reseñas retiradas que siguen siendo la versión vigente. Restaurar las vuelve a mostrar; si el autor la editó, la borró o se dio de baja, ya no aparecen acá.</p>
+      <ul className="mod-lista">
+        {items.map((it) => <li key={String(it.version_id)} className="mod-caso"><FichaVersion it={it} abrir={abrir} /></li>)}
+      </ul>
+    </>
+  );
+}
+
+type Consulta = { cargando: boolean; dato: J | null; error: boolean };
+function Registro({ items, consultar, abrir }: { items: J[]; consultar: (v: number) => Promise<J | null>; abrir: (d: Dialogo) => void }) {
+  const [fichas, setFichas] = useState<Record<string, Consulta>>({});
+  // Lo consultado vale para ESTA carga del registro: una recarga (por ejemplo,
+  // después de restaurar) lo descarta en vez de mostrar una situación vieja.
+  useEffect(() => { setFichas({}); }, [items]);
+  async function ver(d: J) {
+    const k = String(d.id);
+    setFichas((f) => ({ ...f, [k]: { cargando: true, dato: null, error: false } }));
+    const r = await consultar(Number(d.version_id));
+    setFichas((f) => (k in f ? { ...f, [k]: { cargando: false, dato: r, error: !r } } : f));
+  }
   return (
     <ul className="mod-lista">
-      {items.map((d) => (
-        <li key={String(d.id)} className="mod-caso mod-reg">
-          <div className="mod-cab">
-            <span className="mod-chip">{ETIQUETA_ACCION[String(d.accion)] ?? String(d.accion)}</span>
-            {d.falso_positivo ? <span className="mod-chip">Falso positivo</span> : null}
-            <span className="mod-meta">{fechaAR(d.creada_en)}{d.version_id ? ` · versión ${String(d.version_id)}` : ""}{d.participante ? ` · ${codigoParticipante(d.participante)}` : ""}{d.cuenta ? " · cuenta" : ""}{d.estado_previo ? ` · antes: ${SITUACION[String(d.estado_previo)] ?? String(d.estado_previo)}` : ""}{d.admin_propio ? " · vos" : ""}</span>
-          </div>
-          <p className="mod-meta">Motivo: {String(d.motivo)}</p>
-        </li>
-      ))}
+      {items.map((d) => {
+        const f = fichas[String(d.id)];
+        return (
+          <li key={String(d.id)} className="mod-caso mod-reg">
+            <div className="mod-cab">
+              <span className="mod-chip">{ETIQUETA_ACCION[String(d.accion)] ?? String(d.accion)}</span>
+              {d.falso_positivo ? <span className="mod-chip">Falso positivo</span> : null}
+              <span className="mod-meta">{fechaAR(d.creada_en)}{d.version_id ? ` · versión ${String(d.version_id)}` : ""}{d.participante ? ` · ${codigoParticipante(d.participante)}` : ""}{d.cuenta ? " · cuenta" : ""}{d.estado_previo ? ` · antes: ${SITUACION[String(d.estado_previo)] ?? String(d.estado_previo)}` : ""}{d.admin_propio ? " · vos" : ""}</span>
+            </div>
+            <p className="mod-meta">Motivo: {String(d.motivo)}</p>
+            {typeof d.version_id === "number" && !f?.dato && !f?.error && (
+              <button className="cm-link mod-ver" disabled={f?.cargando} onClick={() => void ver(d)}>
+                {f?.cargando ? "Consultando…" : "Ver situación actual"}
+              </button>
+            )}
+            {f?.error && <p className="cm-msg error" role="alert">No pudimos consultar la versión. <button className="cm-link" onClick={() => void ver(d)}>Reintentar</button></p>}
+            {f?.dato && <div className="mod-ficha" aria-label={`Situación actual de la versión ${String(d.version_id)}`}><FichaVersion it={f.dato} abrir={abrir} /></div>}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -361,8 +451,9 @@ function tituloDialogo(d: Dialogo) {
 }
 function efectoDialogo(d: Dialogo) {
   if (d.tipo === "decidir") {
+    // Restaurar recupera sólo los votos que ya contaban (votos_recuperables, de la base).
     return efectoDecision(d.accion, {
-      votos: n(d.item.votos_vigentes), denuncias: n(d.item.denuncias_abiertas), revision: d.item.estado === "revision_solicitada",
+      votos: d.accion === "restaurar" ? n(d.item.votos_recuperables) : n(d.item.votos_vigentes), denuncias: n(d.item.denuncias_abiertas), revision: d.item.estado === "revision_solicitada",
     });
   }
   if (d.tipo === "suspender") return `${codigoParticipante(d.participante)} no podrá publicar, editar ni evaluar hasta que se levante. Puede seguir borrando, denunciando, bloqueando y eliminar su cuenta. Sus reseñas no se ocultan por esto.`;

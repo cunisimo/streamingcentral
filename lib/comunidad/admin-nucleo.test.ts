@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  MOD_SIN_CONFIRMAR, accionesDenuncia, accionesRetenido, codigoParticipante, efectoDecision, estadoHttpModeracion,
+  MOD_SIN_CONFIRMAR, accionesDenuncia, accionesRetenido, accionesRetirada, codigoParticipante, motivoNoRestaurable, efectoDecision, estadoHttpModeracion,
   fechaAR, mensajeModeracion, normalizarMotivo, pedidoModeracion, reintentable,
 } from "./admin-nucleo.ts";
 import { moderar } from "./admin-moderacion.ts";
@@ -24,9 +24,14 @@ test("motivo: NFC, sin controles ni bordes, 3–300 puntos de código", () => {
 });
 
 test("pedido: lecturas con cursor; acciones con intento uuid, motivo válido y objetivo del tipo correcto", () => {
-  assert.deepEqual(pedidoModeracion({ accion: "leer", vista: "retenidos" }), { tipo: "leer", vista: "retenidos", despues: null, antes: null });
-  assert.deepEqual(pedidoModeracion({ accion: "leer", vista: "registro", antes: 40 }), { tipo: "leer", vista: "registro", despues: null, antes: 40 });
+  assert.deepEqual(pedidoModeracion({ accion: "leer", vista: "retenidos" }), { tipo: "leer", vista: "retenidos", despues: null, antes: null, version: null });
+  assert.deepEqual(pedidoModeracion({ accion: "leer", vista: "registro", antes: 40 }), { tipo: "leer", vista: "registro", despues: null, antes: 40, version: null });
   assert.ok("invalido" in pedidoModeracion({ accion: "leer", vista: "todo" }));
+  // A1: la situación de una versión exige su id; las retiradas paginan por cursor.
+  assert.deepEqual(pedidoModeracion({ accion: "leer", vista: "version", version: 12 }), { tipo: "leer", vista: "version", despues: null, antes: null, version: 12 });
+  assert.ok("invalido" in pedidoModeracion({ accion: "leer", vista: "version" }));
+  assert.ok("invalido" in pedidoModeracion({ accion: "leer", vista: "version", version: "12" }));
+  assert.deepEqual(pedidoModeracion({ accion: "leer", vista: "retiradas", despues: { t: "x", v: 3 } }), { tipo: "leer", vista: "retiradas", despues: { t: "x", v: 3 }, antes: null, version: null });
   assert.ok("invalido" in pedidoModeracion({ accion: "leer", vista: "registro", antes: -1 }));
   const base = { motivo: "Spam evidente", intento: UUID };
   assert.deepEqual(pedidoModeracion({ accion: "decidir", decision: "retirar", version: 7, ...base }),
@@ -63,7 +68,9 @@ test("mensajes: honestos; una respuesta perdida dice que no se sabe y ofrece rei
 });
 
 test("efecto antes de confirmar: restaurar dice qué votos vuelve a contar y que los meses cerrados no cambian", () => {
-  assert.match(efectoDecision("restaurar", { votos: 3 }), /Recupera 3 votos.*meses ya cerrados no cambian/);
+  assert.match(efectoDecision("restaurar", { votos: 3 }), /Vuelven a contar 3 votos.*mes original.*ninguno nuevo.*meses ya cerrados no cambian/);
+  assert.match(efectoDecision("restaurar", { votos: 1 }), /Vuelven a contar 1 voto de utilidad/);
+  assert.match(efectoDecision("restaurar", { votos: 0 }), /No tiene votos de utilidad que recuperar/);
   assert.match(efectoDecision("publicar", { votos: 0 }), /no tiene votos/);
   assert.match(efectoDecision("publicar", { votos: 0, revision: true }), /falso positivo/);
   assert.match(efectoDecision("retirar", { denuncias: 2 }), /Deja de verse.*2 denuncias abiertas quedan resueltas/);
@@ -132,6 +139,25 @@ test("adaptador: si tampoco se confirma, `sin_confirmar`; un rechazo confirmado 
   assert.deepEqual(await moderar(d.sb, pedir(DECIDIR)), { resultado: "sin_confirmar" });
 });
 
+test("A1: restaurar sólo sobre una retirada vigente; las demás situaciones dicen por qué no", () => {
+  assert.deepEqual(accionesRetirada("oculta"), ["restaurar"]);
+  for (const s of ["visible", "reemplazada", "borrada", "eliminada", "retenida", "rechazada"]) assert.deepEqual(accionesRetirada(s), []);
+  assert.equal(motivoNoRestaurable("oculta"), null);
+  assert.match(motivoNoRestaurable("reemplazada")!, /editó/);
+  assert.match(motivoNoRestaurable("borrada")!, /borró/);
+  assert.match(motivoNoRestaurable("eliminada")!, /baja/);
+});
+
+test("adaptador A1: retiradas con cursor y la situación de una versión, cada una con SU función", async () => {
+  const a = baseFalsa([{ data: { items: [] } }, { data: { situacion: "oculta" } }]);
+  await moderar(a.sb, pedir({ accion: "leer", vista: "retiradas", despues: { t: "2026-10-25T00:00:00Z", v: 4 } }));
+  await moderar(a.sb, pedir({ accion: "leer", vista: "version", version: 4 }));
+  assert.deepEqual(a.llamadas, [
+    { f: "comunidad_admin_retiradas", args: { p_limite: 20, p_despues: { t: "2026-10-25T00:00:00Z", v: 4 } } },
+    { f: "comunidad_admin_version", args: { p_version: 4 } },
+  ]);
+});
+
 test("adaptador: las lecturas no se repiten ni inventan datos; 42501 es no_autorizado", async () => {
   const a = baseFalsa(["lanza"]);
   assert.deepEqual(await moderar(a.sb, pedir({ accion: "leer", vista: "retenidos", despues: { p: 1 } })), { resultado: "error" });
@@ -160,7 +186,7 @@ test("barrido: la ruta pasa por adminDeToken y usa la sesión del admin; nunca s
 test("barrido: la base comprueba is_admin_mfa() ANTES de cualquier lock en cada función del admin, y sólo authenticated las ejecuta", () => {
   const s = leer("supabase/migrations/016_comunidad_admin.sql");
   const funciones = [...s.matchAll(/create or replace function public\.(comunidad_[a-z_]+)\(/g)].map((m) => m[1]);
-  assert.equal(funciones.length, 11);
+  assert.equal(funciones.length, 13);
   for (const f of funciones) {
     const cuerpo = s.slice(s.indexOf(`function public.${f}(`), s.indexOf("$$;", s.indexOf(`function public.${f}(`)));
     const primera = cuerpo.indexOf("comunidad.exigir_admin()");

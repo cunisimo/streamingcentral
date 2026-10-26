@@ -194,6 +194,8 @@ const FUNCIONES_ADMIN = {
   comunidad_admin_cuentas: {},
   comunidad_admin_registro: { p_limite: 1, p_antes: null },
   comunidad_admin_muestreo: {},
+  comunidad_admin_retiradas: { p_limite: 1, p_despues: null },
+  comunidad_admin_version: { p_version: 9007199254740991 },
 };
 
 // ⚠️ ENTORNO LOCAL: la base de `supabase start` no le da SELECT de
@@ -231,7 +233,7 @@ try {
 
   // =========================================================================
   console.log("\n— Permisos: catálogo y RPC directo —");
-  await prueba("catálogo: las 11 funciones del admin son security definer, search_path vacío, lock_timeout en las que escriben, EXECUTE SÓLO para authenticated", () => {
+  await prueba("catálogo: las 13 funciones del admin son security definer, search_path vacío, lock_timeout en las que escriben, EXECUTE SÓLO para authenticated", () => {
     const out = sqlOk(`select f.proname || ':' || f.prosecdef || ':' || coalesce(array_to_string(f.proconfig, ','), '') || ':' ||
         has_function_privilege('public', f.oid, 'EXECUTE') || has_function_privilege('anon', f.oid, 'EXECUTE')
         || has_function_privilege('authenticated', f.oid, 'EXECUTE') || has_function_privilege('service_role', f.oid, 'EXECUTE')
@@ -245,7 +247,7 @@ try {
       and table_name in ('decisiones', 'denuncias_cerradas') and grantee in ('PUBLIC', 'anon', 'authenticated', 'service_role')`), "0");
   });
 
-  await prueba("RPC directo por REST: anon, usuario común, admin AAL1 y service_role → 401/403 con 42501 en las 11; admin AAL2 → 200; nada cambia", async () => {
+  await prueba("RPC directo por REST: anon, usuario común, admin AAL1 y service_role → 401/403 con 42501 en las 13; admin AAL2 → 200; nada cambia", async () => {
     const antes = sqlOk("select (select count(*) from comunidad.decisiones) || '|' || (select publicacion_activa from comunidad.config)");
     const quienes = { anon: ANON, comun: S.jwtComun, adminAal1: S.jwtAal1, service_role: SRV, adminAal2: S.jwtAal2 };
     const mal = [];
@@ -352,6 +354,103 @@ try {
     const n = decisionesDeVersion(r.version_id);
     assert.equal((await decidir("restaurar", r.version_id)).resultado, "conflicto");
     assert.deepEqual([tramos(r.version_id), decisionesDeVersion(r.version_id)], ["2|2", n]);
+  });
+
+  // A1 (auditoría de E4 sobre 9340da9): el recorrido del panel para restaurar.
+  const retiradas = async (despues = null, sb = sbAdmin) => mod({ accion: "leer", vista: "retiradas", despues }, sb);
+  const situacionDe = async (version, sb = sbAdmin) => mod({ accion: "leer", vista: "version", version }, sb);
+  const enCola = async (vista, v) => ((await mod({ accion: "leer", vista })).items ?? []).some((x) => x.version_id === v);
+  await prueba("A1 · retirar → sale de las dos colas → la encuentran Retiradas y la situación del Registro (votos que vuelven) → restaurar desde ahí: mismos votos, mes original, sin duplicar; ya no figura", async () => {
+    const { r, tmdbId } = await publicada("a1-ret");
+    const e1 = await cuenta("a1-ev1"), e2 = await cuenta("a1-ev2"), e3 = await cuenta("a1-ev3"), den = await cuenta("a1-den");
+    assert.equal((await ops.votar(e1.uid, r.version_id, true)).resultado, "voto_registrado");
+    assert.equal((await ops.votar(e2.uid, r.version_id, true)).resultado, "voto_registrado");
+    assert.equal((await ops.votar(e3.uid, r.version_id, false)).resultado, "voto_registrado");
+    assert.equal((await ops.denunciar(den.uid, r.version_id, "spam", null)).resultado, "denuncia_registrada");
+    assert.equal(await enCola("denuncias", r.version_id), true);
+    const mesAntes = sqlOk(`select string_agg(distinct mes_primera_positiva::text, ',') from comunidad.tramos where version_id = ${r.version_id}`);
+    assert.equal((await decidir("retirar", r.version_id)).resultado, "aplicada");
+    // Fuera de las dos colas (el retiro resolvió la denuncia).
+    assert.deepEqual([await enCola("denuncias", r.version_id), await enCola("retenidos", r.version_id)], [false, false]);
+    // Retiradas: la encuentra con lo que el aviso necesita.
+    const l = await retiradas();
+    const it = l.items.find((x) => x.version_id === r.version_id);
+    assert.ok(it, "la retirada no aparece en Retiradas");
+    assert.deepEqual([it.situacion, it.votos_vigentes, it.votos_recuperables, it.retiro.motivo, it.retiro.admin_propio, typeof it.texto],
+      ["oculta", 3, 2, MOTIVO, true, "string"]);
+    // El Registro: la decisión de retiro lleva a la situación ACTUAL de la versión.
+    const reg = (await mod({ accion: "leer", vista: "registro" })).items.find((d) => d.version_id === r.version_id && d.accion === "retirar");
+    assert.ok(reg);
+    const s = await situacionDe(reg.version_id);
+    assert.deepEqual([s.situacion, s.votos_recuperables], ["oculta", 2]);
+    // Restaurar con el mismo camino que el diálogo del panel.
+    const d2 = await decidir("restaurar", r.version_id);
+    assert.deepEqual([d2.resultado, d2.estado, d2.tramos], ["aplicada", "publicada", 2]);
+    assert.equal(tramos(r.version_id), "2|2");
+    assert.equal(sqlOk(`select string_agg(distinct mes_primera_positiva::text, ',') from comunidad.tramos where version_id = ${r.version_id}`), mesAntes);
+    assert.deepEqual(await visiblesPara(den, tmdbId), [r.version_id]);
+    assert.equal((await retiradas()).items.some((x) => x.version_id === r.version_id), false);
+    assert.deepEqual([(await situacionDe(r.version_id)).situacion, (await situacionDe(r.version_id)).votos_recuperables], ["visible", 0]);
+    const n = decisionesDeVersion(r.version_id);
+    assert.equal((await decidir("restaurar", r.version_id)).resultado, "conflicto");
+    assert.deepEqual([tramos(r.version_id), decisionesDeVersion(r.version_id)], ["2|2", n]);
+  });
+
+  await prueba("A1 · Retiradas pagina por cursor sin repetir; con AAL1 o usuario común, Retiradas y la situación son `no_autorizado`", async () => {
+    const vs = [];
+    for (const k of [1, 2, 3]) {
+      const { r } = await publicada(`a1-pag${k}`);
+      assert.equal((await decidir("retirar", r.version_id)).resultado, "aplicada");
+      vs.push(r.version_id);
+    }
+    const vistos = [];
+    let despues = null;
+    for (let i = 0; i < 50; i++) {
+      const { data, error } = await sbAdmin.rpc("comunidad_admin_retiradas", { p_limite: 1, p_despues: despues });
+      assert.ifError(error);
+      vistos.push(...data.items.map((x) => x.version_id));
+      if (!data.hay_mas) break;
+      despues = data.items[0].cursor;
+    }
+    assert.equal(new Set(vistos).size, vistos.length, "repitió una retirada");
+    assert.deepEqual(vs.filter((v) => vistos.includes(v)).sort(), [...vs].sort());
+    assert.deepEqual(vistos.slice(0, 3), [...vs].reverse(), "la más reciente primero");
+    for (const jwt of [S.jwtAal1, S.jwtComun]) {
+      assert.deepEqual(await retiradas(null, comoUsuario(jwt)), { resultado: "no_autorizado" });
+      assert.deepEqual(await situacionDe(vs[0], comoUsuario(jwt)), { resultado: "no_autorizado" });
+    }
+  });
+
+  await prueba("A1 · retirada y después REEMPLAZADA, BORRADA o de una cuenta en BAJA: no figura en Retiradas, la situación lo dice y restaurar no resucita nada", async () => {
+    // Reemplazada: el autor editó la retirada.
+    const { a: a1, r: r1 } = await publicada("a1-reemp");
+    assert.equal((await decidir("retirar", r1.version_id)).resultado, "aplicada");
+    const e = await editar(a1, r1.resena_id, r1.version_id, BIEN());
+    assert.equal(e.resultado, "publicada", JSON.stringify(e));
+    // Borrada: el autor borró la reseña retirada.
+    const { a: a2, r: r2 } = await publicada("a1-borr");
+    assert.equal((await decidir("retirar", r2.version_id)).resultado, "aplicada");
+    assert.equal((await ops.borrar(a2.uid, r2.resena_id)).resultado, "borrada");
+    // Baja: la cuenta del autor se dio de baja.
+    const { a: a3, r: r3 } = await publicada("a1-baja");
+    assert.equal((await decidir("retirar", r3.version_id)).resultado, "aplicada");
+    assert.ifError((await srv.rpc("comunidad_baja_comunitaria", { p_uid: a3.uid })).error);
+
+    const lista = (await retiradas()).items.map((x) => x.version_id);
+    for (const v of [r1.version_id, r2.version_id, r3.version_id]) assert.equal(lista.includes(v), false, `la versión ${v} sigue en Retiradas`);
+    const s1 = await situacionDe(r1.version_id), s2 = await situacionDe(r2.version_id), s3 = await situacionDe(r3.version_id);
+    assert.deepEqual([s1.situacion, s2.situacion, s2.texto, s3.situacion], ["reemplazada", "borrada", null, "eliminada"]);
+
+    const n1 = decisionesDeVersion(r1.version_id), n2 = decisionesDeVersion(r2.version_id);
+    const d1 = await decidir("restaurar", r1.version_id), d2 = await decidir("restaurar", r2.version_id), d3 = await decidir("restaurar", r3.version_id);
+    assert.deepEqual([d1.resultado, d1.situacion, d2.resultado, d2.situacion, d3.resultado, d3.situacion],
+      ["conflicto", "reemplazada", "conflicto", "borrada", "no_disponible", "eliminada"]);
+    assert.deepEqual([estado(r1.version_id), estado(e.version_id), estado(r2.version_id), estado(r3.version_id)],
+      ["reemplazada", "publicada", "oculta", "eliminada"]);
+    assert.equal(sqlOk(`select (borrada_en is not null)::text from comunidad.resenas where id = ${r2.resena_id}`), "true");
+    assert.deepEqual([decisionesDeVersion(r1.version_id), decisionesDeVersion(r2.version_id)], [n1, n2]);
+    assert.equal(sqlOk(`select (select count(*) from comunidad.bajas_en_curso where user_id = ${q(a3.uid)} and cancelada_en is null)
+      || '|' || (select count(*) from comunidad.participantes where user_id = ${q(a3.uid)})`), "1|0");
   });
 
   await prueba("decisión sobre una versión VIEJA: el autor editó → publicar la anterior es conflicto y la nueva no se toca", async () => {
@@ -638,6 +737,65 @@ reset role;`;
       where d.version_id = ${otra.version_id} and p.user_id is null`), "1");
     assert.ifError((await srv.rpc("comunidad_baja_comunitaria", { p_uid: d2.uid })).error);
     assert.equal(sqlOk(`select count(*) from comunidad.denuncias_cerradas where denunciante_participante = ${q(d2.part)}`), "0");
+  });
+
+  // A2 (auditoría de E4 sobre 9340da9): dos bajas simultáneas, la del autor y
+  // la de quien lo denunció. El historial de quien denunció NO puede
+  // reaparecer después de su baja, en ninguno de los dos órdenes de
+  // confirmación, y la denuncia de una cuenta ACTIVA (c) se conserva.
+  // Determinista: la primera baja termina su función y queda retenida por una
+  // barrera; la segunda se observa ESPERANDO un lock de fila (no consultivo)
+  // antes de soltar la primera.
+  const esperaFila = (s) => `exists (select 1 from pg_stat_activity where application_name = '${s.app}'
+    and wait_event_type = 'Lock' and wait_event <> 'advisory')`;
+  async function dosBajas(primero, nb) {
+    const { a, r } = await publicada(`a2-autor-${primero}`);
+    const b = await cuenta(`a2-denun-${primero}`), c = await cuenta(`a2-activa-${primero}`);
+    assert.equal((await ops.denunciar(b.uid, r.version_id, "spam", "comentario de prueba de b")).resultado, "denuncia_registrada");
+    assert.equal((await ops.denunciar(c.uid, r.version_id, "otro", null)).resultado, "denuncia_registrada");
+    const [x, y] = primero === "denunciante" ? [b, a] : [a, b];
+    const bx = await barrera(nb), by = await barrera(nb + 1);
+    const Sx = new Sesion(`a2-${primero}-1`), Sy = new Sesion(`a2-${primero}-2`);
+    Sx.enviar(`begin;\nselect 'RES|' || public.comunidad_baja_comunitaria(${q(x.uid)})::text;\n${BARRERA(nb)}\ncommit;`);
+    await esperar(esperaLock(Sx, "advisory"), "la primera baja terminó su función y espera la barrera sin confirmar");
+    Sy.enviar(`begin;\nselect 'RES|' || public.comunidad_baja_comunitaria(${q(y.uid)})::text;\n${BARRERA(nb + 1)}\ncommit;`);
+    await esperar(esperaFila(Sy), "la segunda baja espera una fila retenida por la primera");
+    bx.soltar();
+    await esperar(esperaLock(Sy, "advisory"), "la segunda baja terminó su función");
+    by.soltar();
+    const ox = await Sx.terminar(), oy = await Sy.terminar();
+    assert.doesNotMatch(ox.err + oy.err, /ERROR|deadlock/i, ox.err + oy.err);
+    assert.equal(Sx.lineas("RES").length, 1); assert.equal(Sy.lineas("RES").length, 1);
+    assert.equal(sqlOk(`select count(*) from comunidad.participantes where id in (${q(a.part)}, ${q(b.part)}) and user_id is null`), "2");
+    const hb = sqlOk(`select count(*) from comunidad.denuncias_cerradas where denunciante_participante = ${q(b.part)}`);
+    const hc = sqlOk(`select coalesce(string_agg(categoria || ':' || estado, ','), '') from comunidad.denuncias_cerradas
+      where denunciante_participante = ${q(c.part)}`);
+    console.log(`     historial de b (dado de baja): ${hb}; de c (activa): ${hc}; resultado y: ${JSON.stringify(JSON.parse(Sy.lineas("RES")[0][0]))}`);
+    assert.equal(hb, "0", "el historial de quien denunció reapareció después de su baja");
+    assert.equal(hc, "otro:cerrada_por_baja");
+    assert.equal(sqlOk(`select count(*) from comunidad.denuncias where version_id = ${r.version_id}`), "0");
+  }
+  await prueba("A2 · bajas simultáneas, confirma primero quien DENUNCIÓ (secuencia de la auditoría): su historial no reaparece; la denuncia de una cuenta activa queda en el historial", () => dosBajas("denunciante", 61));
+  await prueba("A2 · bajas simultáneas, confirma primero el AUTOR: la baja de quien denunció espera, relee y borra el historial recién creado; la de la cuenta activa queda", () => dosBajas("autor", 63));
+
+  await prueba("A2 · denuncias CRUZADAS (cada uno denunció al otro) y bajas simultáneas: sin deadlock, la segunda espera y ningún historial de los dos queda", async () => {
+    const { a, r: ra } = await publicada("a2-cruz-a");
+    const { a: b, r: rb } = await publicada("a2-cruz-b");
+    assert.equal((await ops.denunciar(a.uid, rb.version_id, "spam", null)).resultado, "denuncia_registrada");
+    assert.equal((await ops.denunciar(b.uid, ra.version_id, "odio", "comentario cruzado")).resultado, "denuncia_registrada");
+    const bx = await barrera(65), by = await barrera(66);
+    const Sx = new Sesion("a2-cruz-1"), Sy = new Sesion("a2-cruz-2");
+    Sx.enviar(`begin;\nselect 'RES|' || public.comunidad_baja_comunitaria(${q(a.uid)})::text;\n${BARRERA(65)}\ncommit;`);
+    await esperar(esperaLock(Sx, "advisory"), "la baja de a espera la barrera sin confirmar");
+    Sy.enviar(`begin;\nselect 'RES|' || public.comunidad_baja_comunitaria(${q(b.uid)})::text;\n${BARRERA(66)}\ncommit;`);
+    await esperar(esperaFila(Sy), "la baja de b espera las denuncias que retiene la de a");
+    bx.soltar();
+    await esperar(esperaLock(Sy, "advisory"), "la baja de b terminó su función");
+    by.soltar();
+    const ox = await Sx.terminar(), oy = await Sy.terminar();
+    assert.doesNotMatch(ox.err + oy.err, /ERROR|deadlock/i, ox.err + oy.err);
+    assert.equal(sqlOk(`select count(*) from comunidad.denuncias_cerradas where denunciante_participante in (${q(a.part)}, ${q(b.part)})`), "0");
+    assert.equal(sqlOk(`select count(*) from comunidad.participantes where id in (${q(a.part)}, ${q(b.part)}) and user_id is null`), "2");
   });
 
   await prueba("quitar el marcador mientras la baja de esa cuenta confirma (sesiones): espera su K_CUENTA y después cancela el marcador recién creado", async () => {

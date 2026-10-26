@@ -12,7 +12,7 @@ export const ACCIONES_VERSION = ["publicar", "rechazar", "retirar", "restaurar",
 export type AccionVersion = (typeof ACCIONES_VERSION)[number];
 export const esAccionVersion = (x: unknown): x is AccionVersion => ACCIONES_VERSION.includes(x as AccionVersion);
 
-export const VISTAS = ["resumen", "retenidos", "denuncias", "cuentas", "registro", "muestreo"] as const;
+export const VISTAS = ["resumen", "retenidos", "denuncias", "retiradas", "version", "cuentas", "registro", "muestreo"] as const;
 export type Vista = (typeof VISTAS)[number];
 
 export const MOTIVO_MIN = 3;
@@ -33,7 +33,7 @@ const entero = (n: unknown): n is number => typeof n === "number" && Number.isSa
 const objeto = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
 
 export type PedidoModeracion =
-  | { tipo: "leer"; vista: Vista; despues: Record<string, unknown> | null; antes: number | null }
+  | { tipo: "leer"; vista: Vista; despues: Record<string, unknown> | null; antes: number | null; version: number | null }
   | { tipo: "decidir"; accion: AccionVersion; version: number; motivo: string; intento: string }
   | { tipo: "suspender"; participante: string; motivo: string; intento: string }
   | { tipo: "levantar"; participante: string; motivo: string; intento: string }
@@ -53,7 +53,10 @@ export function pedidoModeracion(b: unknown): PedidoModeracion | { invalido: str
     if (despues === undefined) return { invalido: "cursor inválido" };
     const antes = b.antes === undefined || b.antes === null ? null : entero(b.antes) ? b.antes : undefined;
     if (antes === undefined) return { invalido: "cursor inválido" };
-    return { tipo: "leer", vista: b.vista as Vista, despues, antes };
+    // La situación de UNA versión (desde el Registro) exige cuál.
+    const version = b.vista === "version" ? (entero(b.version) ? b.version : undefined) : null;
+    if (version === undefined) return { invalido: "versión inválida" };
+    return { tipo: "leer", vista: b.vista as Vista, despues, antes, version };
   }
   if (typeof b.intento !== "string" || !UUID.test(b.intento)) return { invalido: "intento inválido" };
   const m = normalizarMotivo(b.motivo);
@@ -121,7 +124,9 @@ export function efectoDecision(accion: AccionVersion, caso: { votos?: number; de
     case "publicar":
       return `La versión se publica y la ve todo el mundo. ${deVotos}${caso.revision ? " Queda registrada como falso positivo de las reglas." : ""}`;
     case "restaurar":
-      return `La versión vuelve a verse. ${deVotos}`;
+      return votos > 0
+        ? `La versión vuelve a verse. Vuelven a contar ${votos} voto${votos === 1 ? "" : "s"} de utilidad que ya tenía, en su mes original; no se suma ninguno nuevo y los meses ya cerrados no cambian.`
+        : "La versión vuelve a verse. No tiene votos de utilidad que recuperar: no se suma ninguno.";
     case "rechazar":
       return `No se publica. El autor la ve como rechazada y puede corregirla o borrarla.${den ? ` ${den} denuncia${den === 1 ? "" : "s"} abierta${den === 1 ? "" : "s"} quedan resueltas.` : ""}`;
     case "retirar":
@@ -194,6 +199,21 @@ export function estadoHttpModeracion(r: { resultado?: unknown }): number {
 /** Qué acciones ofrece un caso según dónde está su versión. */
 export function accionesRetenido(estado: string): AccionVersion[] {
   return estado === "retenida" || estado === "revision_solicitada" ? ["publicar", "rechazar"] : [];
+}
+/** Restaurar sólo se ofrece sobre una retirada vigente (la base vuelve a comprobarlo con todo bloqueado). */
+export function accionesRetirada(situacion: string): AccionVersion[] {
+  return situacion === "oculta" ? ["restaurar"] : [];
+}
+/** Por qué una versión del Registro no se puede restaurar, o null si se puede. */
+export function motivoNoRestaurable(situacion: string): string | null {
+  switch (situacion) {
+    case "oculta": return null;
+    case "visible": return "Ya está visible.";
+    case "reemplazada": return "El autor la editó: la versión vigente es otra y ésta no vuelve.";
+    case "borrada": return "El autor borró la reseña: no se restaura.";
+    case "eliminada": return "Se eliminó con la baja de la cuenta: no se restaura.";
+    default: return "No está retirada: no hay nada que restaurar.";
+  }
 }
 export function accionesDenuncia(situacion: string): AccionVersion[] {
   if (situacion === "visible") return ["retirar", "descartar"];

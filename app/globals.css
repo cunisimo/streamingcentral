@@ -1389,5 +1389,8 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .mod-acciones .btn,.mod-acciones .cfg-danger-btn{min-height:44px}
 .mod-h2{font-family:var(--display);font-size:18px;margin:20px 0 4px}
 .mod-mas{margin-top:14px;min-height:44px}
+.mod-ver{min-height:44px;margin-top:4px}
+.mod-ficha{margin-top:10px;padding:12px 14px;border:1px dashed var(--line-2);border-radius:10px;min-width:0}
+.mod-acciones .mod-meta{margin:0;align-self:center}
 .mod-dlg{max-width:480px}
 .mod-motivo{width:100%;box-sizing:border-box;min-height:84px}

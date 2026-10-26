@@ -33,6 +33,8 @@ const LECTURAS: Record<string, (p: Extract<PedidoModeracion, { tipo: "leer" }>) 
   resumen: () => ["comunidad_admin_resumen", {}],
   retenidos: (p) => ["comunidad_admin_retenidos", { p_limite: 20, p_despues: p.despues }],
   denuncias: (p) => ["comunidad_admin_denuncias", { p_limite: 20, p_despues: p.despues }],
+  retiradas: (p) => ["comunidad_admin_retiradas", { p_limite: 20, p_despues: p.despues }],
+  version: (p) => ["comunidad_admin_version", { p_version: p.version }],
   cuentas: () => ["comunidad_admin_cuentas", {}],
   registro: (p) => ["comunidad_admin_registro", { p_limite: 30, p_antes: p.antes }],
   muestreo: () => ["comunidad_admin_muestreo", {}],
