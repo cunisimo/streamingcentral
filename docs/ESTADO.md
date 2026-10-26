@@ -684,8 +684,10 @@ AAB tiene que ser `5` o mayor.
      `docs/medidas/2026-10-25-e3b-salidas.txt`.
    - **E4 local: moderación administrativa (25/10, autorizada por el dueño;
      sólo `supabase start`, la app local y datos ficticios; interruptores,
-     publicación y muestreo apagados al terminar). PENDIENTE DE AUDITORÍA
-     FOCALIZADA de Codex.**
+     publicación y muestreo apagados al terminar).** Auditada por Codex sobre
+     `9340da9` (`docs/medidas/2026-10-25-auditoria-e4-9340da9.md`): dos P2,
+     A1 y A2. **Corrección A1/A2 hecha por Claude el 25/10, PENDIENTE DE
+     AUDITORÍA FOCALIZADA** (detalle al final de este bloque).
      - `016_comunidad_admin.sql` (+ down generado con copias literales de
        011, 012 y 015):
        - registro de decisiones (admin, acción, versión o participante o
@@ -748,11 +750,62 @@ AAB tiene que ser `5` o mayor.
        `/admin/mfa`, Producción.
      Informe: `docs/medidas/2026-10-25-informe-claude-e4.md`; salidas:
      `docs/medidas/2026-10-25-e4-salidas.txt`.
+     - **Corrección A1/A2 (25/10, Claude; pendiente de auditoría focalizada):**
+       - A1, restaurar desde el panel:
+         - la base suma dos lecturas, sólo para admin con MFA:
+           `comunidad_admin_retiradas` (retiradas vigentes de reseñas vivas,
+           con cursor) y `comunidad_admin_version` (situación actual);
+         - el panel suma la pestaña **Retiradas** y «Ver situación actual»
+           en el Registro. Restaurar se ofrece sólo si la versión sigue
+           retirada y vigente, con el aviso de los votos que vuelven (los
+           que `reabrir_tramos` reabre);
+         - restaurar sigue siendo la misma función, que rechaza una versión
+           reemplazada, borrada o eliminada;
+       - A2, bajas simultáneas:
+         - `limpiar_participante` bloquea, al final de sus locks, las
+           denuncias hechas y recibidas, por id;
+         - la segunda baja espera y relee, así el historial de quien
+           denunció ya no reaparece después de su baja;
+         - regresión determinista con las funciones reales: falla antes,
+           pasa después, en ambos órdenes y con denuncias cruzadas, sin
+           deadlock;
+         - las denuncias de cuentas activas se conservan;
+       - documentación: el diseño §2.2.2 concilia la suspensión (intervalo,
+         no cierra tramos, efecto exacto en el cómputo); el plan suma a E7
+         el gate con el cómputo real. El ranking no se tocó;
+       - resultados reales en secuencia:
+         - `pruebas-admin` 38/38 (A1 3, A2 3);
+         - up/down/up de 016 5/5;
+         - permisos 28/28, baja 26/26, invariantes 85/85, moderación 46/46;
+       - unitarias y tipado: `npm test` 2460 pasan, 0 fallan, 16 omitidas;
+         `tsc` 0;
+       - no repetidas: escritura y concurrencia, porque sus funciones no
+         cambiaron;
+       - recorrido en navegador local, escritorio y 375 px, sesión AAL2
+         real:
+         - retirar → recargar → Retiradas → restaurar;
+         - decisión tardía sobre una retirada que el autor editó: «No se
+           aplicó»;
+         - Registro con reemplazada, borrada y eliminada sin botón;
+         - la edición concurrente la disparó un script (simulado el
+           momento, real la función);
+         - 8 capturas;
+       - limpieza: base con 6 participantes, 2 versiones y 42 cuentas, 0
+         locks, suspensiones ajenas intactas, interruptores y muestreo
+         apagados, `SELECT` local de `profiles` revocado;
+       - no verificado: teléfono, Android, tema claro, lector de pantalla,
+         Producción.
+       Informe: `docs/medidas/2026-10-25-informe-claude-e4-a1a2.md`; salidas:
+       `docs/medidas/2026-10-25-e4-a1a2-salidas.txt`; capturas:
+       `docs/medidas/2026-10-25-e4-a1a2-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
    - denuncias recibidas en la baja: E4 (local, pendiente de auditoría) las
-     cierra sin texto en `denuncias_cerradas`. Queda para el dueño, con P3 y
+     cierra sin texto en `denuncias_cerradas`; desde A2, ese historial
+     también se borra cuando la baja de quien denunció corre a la vez que la
+     del autor. Que esté implementado NO equivale a aceptar la opción A.
+     Queda para el dueño, con P3 y
      antes de E8 y de la publicación, si se conserva el TEXTO denunciado
      después de una baja (opciones A/B/C del informe de E4) y el plazo de
      los intervalos seudónimos. Huellas, excedentes y corroboraciones siguen

@@ -872,6 +872,11 @@ rollback;
   El muestreo existe y queda apagado. Las denuncias recibidas en una baja se
   cierran sin texto; conservar el texto queda para el dueño (P3). Informe:
   `docs/medidas/2026-10-25-informe-claude-e4.md`.
+  **Corrección A1/A2** (auditoría `docs/medidas/2026-10-25-auditoria-e4-9340da9.md`),
+  pendiente de auditoría focalizada: pestaña Retiradas y "Ver situación
+  actual" en el Registro para restaurar (A1); la baja bloquea las denuncias
+  hechas y recibidas antes de copiar el historial, así dos bajas simultáneas
+  no lo recrean (A2). Informe: `docs/medidas/2026-10-25-informe-claude-e4-a1a2.md`.
 
 ### E5a — Lectura protegida y "Recientes"
 
@@ -995,7 +1000,10 @@ rollback;
   lecturas concurrentes después del corte → un solo cálculo y el resto sin
   esperar el exclusivo una vez consolidado; `lib/top-solo-manual.test.ts`
   sigue verde; **gates:** casos 6–11 y B8 con votos y `consolidar_mes`
-  reales; **recorrido visible:** selector Top semanal plataformas / Top
+  reales; **suspensión como intervalo** (conciliación de rev. §2.2.2 del
+  25/10/2026: suspender NO cierra tramos) con suspensiones y votos reales de
+  E4: rige antes de `T(M)` → el par no cuenta; levantada antes de `T(M)` →
+  cuenta; igualdad exacta en `desde = T(M)` y `hasta = T(M)`; **recorrido visible:** selector Top semanal plataformas / Top
   Yumpers, sin toggle Películas/Series en Top Yumpers, "Cuenta eliminada"
   sin nombre.
 - **Riesgos:** confundir Top Yumpers con el Top manual. Pruebas de que no

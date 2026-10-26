@@ -1090,7 +1090,14 @@ la sanción copiada en el marcador sigue vigente.
 denuncias que otros hicieron sobre el contenido de la cuenta en
 `comunidad.denuncias_cerradas`, sin texto, sin comentario y sin el autor; el
 texto denunciado se borra con la cuenta. Conservarlo es una decisión pendiente
-del dueño (P3; ver el informe de E4).
+del dueño (P3; ver el informe de E4). Ese historial mínimo se borra con la baja
+de quien denunció, también si las dos bajas corren a la vez (corrección A2 del
+25/10/2026: la baja bloquea las denuncias hechas y recibidas antes de copiarlas).
+**Restaurar una reseña retirada por error:** `/admin/moderacion` → Retiradas
+(o Registro → «Ver situación actual» sobre el retiro) → «Restaurar», con
+motivo. Sólo vuelve si sigue siendo la versión vigente de una reseña viva: si
+el autor la editó, la borró o se dio de baja, no se restaura (corrección A1,
+local, pendiente de auditoría).
 
 ## Runbook: la ingesta manual del Top 10 después de deployar el resolvedor
 

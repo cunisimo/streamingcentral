@@ -293,6 +293,29 @@ Resuelto o retirado:
 - Retirar, pasar a negativo, editar, ocultar, suspender, borrar la reseña o
   dar de baja la cuenta **cierran** tramos; no los borran.
 - Las suspensiones también son intervalos.
+
+> **Conciliación (25/10/2026, auditoría de E4 sobre `9340da9`).** "Suspender"
+> **no cierra tramos** en la implementación (016): la suspensión es sólo su
+> intervalo `[desde, hasta)` en `suspensiones` (`desde` = la marca de la
+> decisión; `hasta` nulo hasta que se levanta, que lo fija en la marca del
+> levantamiento). Los tramos del suspendido, como evaluador o como autor,
+> siguen abiertos. Efecto exacto sobre el cómputo de abajo:
+> - un par (evaluador, autor) no cuenta en el mes `M` si una suspensión de
+>   cualquiera de los dos **rige antes de `T(M)`** (`desde < T(M)` y `hasta`
+>   nulo o `T(M) ≤ hasta`); como un tramo cuenta sólo en el mes de su primera
+>   positiva, ese mes queda excluido para ese par y, una vez consolidado, no
+>   cambia;
+> - una suspensión levantada **antes** de `T(M)` no excluye `M`; los meses
+>   cuyo corte es posterior al levantamiento cuentan con normalidad, sin
+>   reabrir nada;
+> - mientras rige, el suspendido no evalúa (no nacen tramos suyos como
+>   evaluador); los votos de otros a sus reseñas sí abren tramos, que el
+>   cómputo excluye en los meses en que la suspensión rige.
+> Para el cómputo es lo mismo que cerrar los tramos al suspender y reabrirlos
+> al levantar, sin tener que reabrir. La prueba con el cómputo y la
+> consolidación **reales** queda para E7 (gate en el plan); hoy está probada
+> con tramos de fixture (caso 11 de §2.2.4, E2c) y, con las funciones
+> reales, la suspensión frente al voto (caso 5, E4).
 - Cómputo del mes `M` al corte
   `T(M)` = 00:00 del día 1 siguiente en `America/Argentina/Buenos_Aires`,
   con intervalos semiabiertos `[desde, hasta)`.
