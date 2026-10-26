@@ -114,23 +114,39 @@ export function alLlegarMas(e: EstadoLista, n: number, clave: string, tanda: Tan
   return { ...e, items: unir(e.items, tanda.items), cursor: tanda.cursor, hayMas: tanda.hayMas, cargandoMas: false, errorMas: false };
 }
 
-/** Un voto CONFIRMADO por la base, aplicado a la reseña que ya se ve. */
+/**
+ * El voto que la base CONFIRMÓ para lo enviado, o `undefined` si no hay
+ * confirmación. Los resultados idempotentes también confirman (A1 de la
+ * auditoría de E5a): cuando la primera respuesta se pierde después del commit,
+ * el reintento de la reconciliación responde `sin_cambios` (el voto vigente
+ * YA es el pedido) o, al retirar, `sin_efecto` (ya no hay voto vigente). Sin
+ * confirmación (`sin_confirmar`, error, rechazo) no se cambia nada: la
+ * pantalla sigue mostrando el último estado conocido y el aviso de
+ * incertidumbre.
+ */
+export function votoConfirmado(resultado: unknown, enviado: Voto | "retirar"): Voto | null | undefined {
+  if (enviado === "retirar") return resultado === "voto_retirado" || resultado === "sin_efecto" ? null : undefined;
+  return resultado === "voto_registrado" || resultado === "sin_cambios" ? enviado : undefined;
+}
+
+/**
+ * Un voto CONFIRMADO por la base, aplicado a la reseña que ya se ve. Los
+ * conteos se mueven por la diferencia entre lo que se veía y lo confirmado:
+ * aplicar la misma confirmación dos veces no suma ni resta de nuevo.
+ */
 export function trasVoto(e: EstadoLista, versionId: number, resultado: unknown, enviado: Voto | "retirar"): EstadoLista {
-  const nuevo: Voto | null | undefined =
-    resultado === "voto_registrado" && enviado !== "retirar" ? enviado
-    : resultado === "voto_retirado" ? null
-    : undefined;
+  const nuevo = votoConfirmado(resultado, enviado);
   if (nuevo === undefined) return e;
-  return {
-    ...e,
-    items: e.items.map((x) => {
-      if (x.version_id !== versionId || x.mi_voto === nuevo) return x;
-      const antes = x.mi_voto;
-      const total = x.total - (antes ? 1 : 0) + (nuevo ? 1 : 0);
-      const utiles = x.utiles - (antes === "util" ? 1 : 0) + (nuevo === "util" ? 1 : 0);
-      return { ...x, mi_voto: nuevo, total: Math.max(0, total), utiles: Math.max(0, utiles) };
-    }),
-  };
+  let cambio = false;
+  const items = e.items.map((x) => {
+    if (x.version_id !== versionId || x.mi_voto === nuevo) return x;
+    cambio = true;
+    const antes = x.mi_voto;
+    const total = x.total - (antes ? 1 : 0) + (nuevo ? 1 : 0);
+    const utiles = x.utiles - (antes === "util" ? 1 : 0) + (nuevo === "util" ? 1 : 0);
+    return { ...x, mi_voto: nuevo, total: Math.max(0, total), utiles: Math.max(0, utiles) };
+  });
+  return cambio ? { ...e, items } : e;
 }
 
 /** La denuncia confirmada marca la reseña que ya se ve. */

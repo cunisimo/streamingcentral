@@ -51,4 +51,3 @@ export function ResenasYump({ resenas }: { resenas: ResenaFicha[] }) {
     </>
   );
 }
-

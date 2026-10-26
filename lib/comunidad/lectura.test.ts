@@ -81,6 +81,32 @@ test("voto confirmado: se aplica a la reseña que se ve, sin recargar; sin confi
   assert.equal(trasDenuncia(e, 10).items[0].denunciada, true);
 });
 
+test("A1 (auditoría de E5a): los resultados IDEMPOTENTES de una confirmación recuperada también se reflejan, sin contar dos veces", () => {
+  const base = conPrimeraPagina(listaVacia(K), { items: [it(1, { utiles: 2, total: 3 }), it(2)], cursor: "c1", hayMas: true, orden: "recientes" });
+  // Voto positivo cuya primera respuesta se perdió: el reintento confirma `sin_cambios` (ya quedó guardado).
+  const util = trasVoto(base, 10, "sin_cambios", "util");
+  assert.deepEqual([util.items[0].mi_voto, util.items[0].utiles, util.items[0].total], ["util", 3, 4]);
+  // Repetirlo (otra respuesta tardía, otro reintento) no vuelve a sumar.
+  assert.equal(trasVoto(util, 10, "sin_cambios", "util"), util);
+  assert.equal(trasVoto(util, 10, "voto_registrado", "util"), util);
+  // Negativo y cambio de voto recuperados.
+  const no = trasVoto(base, 10, "sin_cambios", "no_util");
+  assert.deepEqual([no.items[0].mi_voto, no.items[0].utiles, no.items[0].total], ["no_util", 2, 4]);
+  const cambio = trasVoto(util, 10, "sin_cambios", "no_util");
+  assert.deepEqual([cambio.items[0].mi_voto, cambio.items[0].utiles, cambio.items[0].total], ["no_util", 2, 4]);
+  // Retiro cuya primera respuesta se perdió: el reintento confirma `sin_efecto` (ya no hay voto).
+  const retirado = trasVoto(util, 10, "sin_efecto", "retirar");
+  assert.deepEqual([retirado.items[0].mi_voto, retirado.items[0].utiles, retirado.items[0].total], [null, 2, 3]);
+  assert.equal(trasVoto(retirado, 10, "sin_efecto", "retirar"), retirado);
+  // Lo que NO es una confirmación no cambia nada: incierto, rechazo, error, o un resultado que no corresponde a lo enviado.
+  for (const [r, enviado] of [["sin_confirmar", "util"], ["error", "util"], ["rechazo_cuenta", "no_util"], ["sin_efecto", "util"], ["sin_cambios", "retirar"], ["voto_retirado", "util"]] as const) {
+    assert.equal(trasVoto(util, 10, r, enviado), util, `${r} tras ${enviado}`);
+  }
+  // Otra versión (la reseña se editó): no toca nada. Páginas, cursor y orden quedan.
+  assert.equal(trasVoto(base, 99, "sin_cambios", "util"), base);
+  assert.deepEqual([util.items.length, util.cursor, util.hayMas, util.clave], [2, "c1", true, K]);
+});
+
 test("pedido de lectura: título válido, sólo «recientes» habilitado, cursor opaco; el lector NUNCA sale de la consulta", () => {
   const q = (s: string) => pedidoLectura(new URLSearchParams(s));
   assert.deepEqual(q("tipo=movie&id=603"), { tipo: "movie", tmdbId: 603, orden: "recientes", cursor: null, limite: 5 });
