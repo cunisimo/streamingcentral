@@ -24,7 +24,6 @@ import { COUNTRIES, genreLabel } from "./data";
 import type { UITitleDetail, MediaType, PlatformCode } from "@/lib/types";
 import AyudasBusqueda from "@/components/AyudasBusqueda";
 import ResenasAcordeon from "./ResenasAcordeon";
-import ResenasComunidad from "./comunidad/ResenasComunidad";
 import { resenasDeFicha } from "@/lib/resenas";
 
 export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }) {
@@ -72,7 +71,7 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
   if (loading || !data) return <DetailSkeleton />;
   const t = data;
   const mine = t.platforms.filter((p) => platforms.includes(p));
-  // Hoy sólo la de Yump; las de usuarios entran acá cuando existan.
+  // La de Yump; las de la comunidad las pide la sección desde el cliente (E5a).
   const resenas = resenasDeFicha(t.editorial);
   // Todavía no salió: es lo que habilita "Recordarme". Se compara contra el día
   // de hoy en ISO, sin husos: la fecha de TMDB es un día calendario, no un
@@ -217,9 +216,10 @@ export default function DetailView({ tipo, id }: { tipo: MediaType; id: string }
           {t.editorial?.rating != null && <div className="rb ed"><div className="lbl">Reseña Yump</div><div className="num">{t.editorial.rating.toFixed(1)}</div></div>}
         </div>
 
-        {resenas.length > 0 && <ResenasAcordeon key={`${t.type}:${t.id}`} resenas={resenas} />}
-        {/* Reseñas de la comunidad (E3a, local): no dibuja nada sin sesión o con el módulo apagado. */}
-        <ResenasComunidad key={`cm:${t.type}:${t.id}`} titulo={{ tipo: t.type, tmdbId: t.id }} />
+        {/* Una sola sección: la de Yump primero y las de la comunidad (E5a), que se
+            leen sólo con sesión desde el cliente; sin sesión, la invitación.
+            Con el módulo apagado, sólo la de Yump, como antes. */}
+        <ResenasAcordeon key={`${t.type}:${t.id}`} resenas={resenas} titulo={{ tipo: t.type, tmdbId: t.id }} />
 
         {t.genres.length > 0 && (
           <div className="gtags">{t.genres.map((g) => <span key={g} className="gt">{genreLabel(g)}</span>)}</div>

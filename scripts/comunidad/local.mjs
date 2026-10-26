@@ -100,3 +100,23 @@ export function arnes() {
     },
   };
 }
+
+/**
+ * E5a: la lectura REAL (`public.comunidad_resenas`) como la cuenta `uid`, por
+ * psql con `role authenticated` y los claims de su JWT (sub), igual que las
+ * sesiones del admin de E4. Reemplaza en las baterías a la lectura provisional
+ * de service_role (`comunidad_leer_titulo`, borrada en 017). Devuelve la
+ * respuesta de la función (JSON) o lanza con el error de la base.
+ */
+export function leerComo(uid, tipo, tmdbId, { cursor = null, limite = 20 } = {}) {
+  if (!/^[0-9a-f-]{36}$/.test(uid) || !["movie", "tv"].includes(tipo) || !Number.isSafeInteger(tmdbId)) throw new Error("leerComo: argumentos inválidos");
+  const c = cursor === null ? "null" : `'${JSON.stringify(cursor).replace(/'/g, "''")}'::jsonb`;
+  const out = sqlOk(`begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"${uid}","role":"authenticated"}', true);
+select 'LECTURA|' || public.comunidad_resenas('${tipo}', ${tmdbId}, 'recientes', ${c}, ${Number(limite)})::text;
+commit;`);
+  const l = out.split("\n").find((x) => x.startsWith("LECTURA|"));
+  if (!l) throw new Error(`leerComo: sin respuesta (${out.slice(0, 200)})`);
+  return JSON.parse(l.slice("LECTURA|".length));
+}

@@ -456,7 +456,7 @@ function efectoDialogo(d: Dialogo) {
       votos: d.accion === "restaurar" ? n(d.item.votos_recuperables) : n(d.item.votos_vigentes), denuncias: n(d.item.denuncias_abiertas), revision: d.item.estado === "revision_solicitada",
     });
   }
-  if (d.tipo === "suspender") return `${codigoParticipante(d.participante)} no podrá publicar, editar ni evaluar hasta que se levante. Puede seguir borrando, denunciando, bloqueando y eliminar su cuenta. Sus reseñas no se ocultan por esto.`;
+  if (d.tipo === "suspender") return `${codigoParticipante(d.participante)} no podrá publicar, editar ni evaluar hasta que se levante. Puede seguir borrando, denunciando, bloqueando y eliminar su cuenta. Mientras dure, sus reseñas no se muestran a nadie (vuelven a verse al levantarla).`;
   if (d.tipo === "levantar") return `${codigoParticipante(d.participante)} vuelve a poder publicar y evaluar. Los meses ya cerrados no cambian.`;
   if (d.tipo === "quitar_marcador") return "La cuenta vuelve a poder participar, pero no se restaura nada de lo que la baja borró. Si tenía una sanción vigente, la nueva identidad nace suspendida hasta entonces.";
   return d.activa ? "Las reseñas que pasan las reglas vuelven a publicarse." : "Nadie puede publicar ni editar. Leer, borrar, denunciar y bloquear siguen funcionando.";

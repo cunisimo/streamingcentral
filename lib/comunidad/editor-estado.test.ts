@@ -97,10 +97,13 @@ test("A2 · cuenta y título: otra clave monta otro editor, sin borrador ni inte
   const editor = readFileSync("components/comunidad/EditorResena.tsx", "utf8");
   assert.match(editor, /useRef<Intento \| null>\(null\)/, "el intento vive en el editor y nace vacío");
   assert.match(editor, /useState<EstadoEditor>\(\(\) => adoptar\(mia\)\)/, "el estado nace de la versión de ESTA cuenta y título");
-  assert.match(readFileSync("components/DetailView.tsx", "utf8"), /<ResenasComunidad key=\{`cm:\$\{t\.type\}:\$\{t\.id\}`\}/);
-  assert.match(readFileSync("app/revision-local/comunidad/page.tsx", "utf8"), /<ResenasComunidad key=\{`cm:\$\{tipo\}:\$\{id\}`\}/);
+  // E5a: la ficha y la revisión local montan la sección por título, y la sección monta lo comunitario por cuenta y título.
+  assert.match(readFileSync("components/DetailView.tsx", "utf8"), /<ResenasAcordeon key=\{`\$\{t\.type\}:\$\{t\.id\}`\}/);
+  assert.match(readFileSync("app/revision-local/comunidad/page.tsx", "utf8"), /<ResenasAcordeon key=\{`\$\{tipo\}:\$\{id\}`\}/);
+  assert.match(readFileSync("components/ResenasAcordeon.tsx", "utf8"), /<ResenasComunidad key=\{claveEditor\(uid, titulo\)\}/);
   // Una recarga que falla no vacía los datos (desmontaría el editor y su borrador).
-  assert.doesNotMatch(resenas, /setError\(true\); setDatos\(null\)/);
+  assert.doesNotMatch(resenas, /setError\(true\); setDatos\(null\)|setError\(true\); setCab\(null\)/);
+  assert.match(resenas, /if \(!t \|\| !j\) \{ setError\(true\); return; \}/, "el fallo sólo marca el error");
 });
 
 test("A2 · el componente no decide por su cuenta: el envío usa la base del estado, no la prop", () => {

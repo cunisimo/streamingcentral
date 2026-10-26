@@ -63,6 +63,8 @@ test("aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin lo
   assert.ok(i("015_comunidad_moderacion_datos.sql") === i("014_comunidad_escritura.sql") + 1);
   // 016 (moderación administrativa, E4) redefine funciones de 011, 012 y 015.
   assert.ok(i("016_comunidad_admin.sql") === i("015_comunidad_moderacion_datos.sql") + 1);
+  // 017 (lectura, E5a) borra la lectura provisional de 015 y usa la configuración de 016.
+  assert.ok(i("017_comunidad_lectura.sql") === i("016_comunidad_admin.sql") + 1);
   // 022 cierra user_reviews: tiene que ir DESPUÉS de schema.sql, que recrea sus policies.
   assert.ok(i("022_cerrar_user_reviews.sql") > i("011_comunidad_esquema.sql"));
   assert.ok(!l.some((f) => /_down\.sql$/.test(f)), "un rollback nunca va en la lista");

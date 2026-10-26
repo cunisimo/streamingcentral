@@ -24,7 +24,7 @@
 import { createClient } from "@supabase/supabase-js";
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
-import { arnes, contenedor, psql, sqlOk, urlLocal } from "./local.mjs";
+import { arnes, contenedor, psql, sqlOk, urlLocal, leerComo } from "./local.mjs";
 import { dockerVerificado } from "./docker-local.mjs";
 import { Sesion, barrera, cerrarSesiones, esperar, esperaLock, BARRERA } from "./sesiones.mjs";
 import { escribirResena } from "../../lib/comunidad/escritura-nucleo.ts";
@@ -138,7 +138,9 @@ const contador = (c, accion) => Number(sqlOk(`select coalesce(sum(cantidad), 0) 
 const enCola = () => Number(sqlOk("select comunidad.retenidos_sin_resolver(null, null)"));
 const ingresoHora = () => Number(sqlOk(`select (select count(*) from comunidad.denuncias where creada_en > clock_timestamp() - interval '1 hour')
   + (select coalesce(sum(cantidad), 0) from comunidad.denuncias_excedentes where hora >= date_trunc('hour', clock_timestamp()) - interval '1 hour')`));
-const leer = async (c, tmdbId, tipo = "movie") => ops.leerTitulo(c.uid, tipo, tmdbId);
+// E5a: la lectura real (`comunidad_resenas`, como la cuenta, por psql con role authenticated);
+// `otras` = la primera página de `items` (hasta 20), el nombre que usaban estas pruebas.
+const leer = async (c, tmdbId, tipo = "movie") => { const r = leerComo(c.uid, tipo, tmdbId); return { ...r, otras: r.items ?? [] }; };
 const idsVisibles = async (c, tmdbId) => (await leer(c, tmdbId)).otras.map((o) => o.version_id);
 
 /** Autor con una reseña publicada en un título propio. */

@@ -23,7 +23,7 @@
 import { createClient } from "@supabase/supabase-js";
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
-import { arnes, contenedor, psql, sqlOk, urlLocal } from "./local.mjs";
+import { arnes, contenedor, leerComo, psql, sqlOk, urlLocal } from "./local.mjs";
 import { dockerVerificado } from "./docker-local.mjs";
 import { Sesion, barrera, cerrarSesiones, consultar, esperaLock, esperar, BARRERA } from "./sesiones.mjs";
 import { escribirResena, firmaPedido } from "../../lib/comunidad/escritura-nucleo.ts";
@@ -300,9 +300,10 @@ try {
     const s = estadoResena(r.resena_id);
     assert.deepEqual(s.estados, { [r.version_id]: "reemplazada", [e.version_id]: "retenida" });
     assert.deepEqual([s.votos_vigentes, s.votos_retirados, s.marcas_reinicio], [0, 2, 1]);
-    const lectura = await ops.leerTitulo(votantes[0].uid, "movie", Number(sqlOk(`select tmdb_id from comunidad.resenas where id = ${r.resena_id}`)));
-    assert.equal(lectura.otras.length, 0, "para otros ya no se ve");
-    const propia = await ops.leerTitulo(a.uid, "movie", Number(sqlOk(`select tmdb_id from comunidad.resenas where id = ${r.resena_id}`)));
+    // E5a: la lectura real (`comunidad_resenas`) como cada cuenta.
+    const lectura = leerComo(votantes[0].uid, "movie", Number(sqlOk(`select tmdb_id from comunidad.resenas where id = ${r.resena_id}`)));
+    assert.equal(lectura.items.length, 0, "para otros ya no se ve");
+    const propia = leerComo(a.uid, "movie", Number(sqlOk(`select tmdb_id from comunidad.resenas where id = ${r.resena_id}`)));
     assert.equal(propia.mia.estado, "retenida", "el autor la ve 'En revisión'");
   });
 
@@ -680,7 +681,7 @@ try {
 
   await prueba("rutas · sin sesión → 401 en las cinco; con sesión y cuerpo inválido → 400; sin caché", async () => {
     const rutas = [["POST", "/api/comunidad/resenas"], ["POST", "/api/comunidad/resenas/borrar"], ["POST", "/api/comunidad/votos"],
-      ["POST", "/api/comunidad/terminos"], ["GET", "/api/comunidad/titulo?tipo=movie&id=603"]];
+      ["POST", "/api/comunidad/terminos"], ["GET", "/api/comunidad/resenas/lista?tipo=movie&id=603"]];
     for (const [m, ruta] of rutas) {
       const r = await http(m, ruta, null, m === "POST" ? {} : undefined);
       assert.equal(r.status, 401, `${m} ${ruta}`);
@@ -692,7 +693,7 @@ try {
       ["/api/comunidad/resenas/borrar", { resena_id: -1 }], ["/api/comunidad/terminos", { version: "" }]]) {
       assert.equal((await http("POST", ruta, t, cuerpo)).status, 400, ruta);
     }
-    assert.equal((await http("GET", "/api/comunidad/titulo?tipo=serie&id=1", t)).status, 400);
+    assert.equal((await http("GET", "/api/comunidad/resenas/lista?tipo=serie&id=1", t)).status, 400);
   });
 
   await prueba("rutas · publicar, rechazar, retener y editar de punta a punta con el JWT; el uid sale del token, no del cuerpo", async () => {
@@ -708,7 +709,8 @@ try {
     assert.equal(rt.j.resultado, "retenida");
     const f = await http("POST", "/api/comunidad/resenas", t, { accion: "publicar", tipo: "movie", tmdb_id: tmdb++, texto: "corta", id_intento: randomUUID() });
     assert.deepEqual([f.status, f.j.resultado], [200, "rechazo_formato"]);
-    const lectura = await http("GET", `/api/comunidad/titulo?tipo=movie&id=${tid}`, t);
+    // E5a: la lectura protegida (con la sesión del lector).
+    const lectura = await http("GET", `/api/comunidad/resenas/lista?tipo=movie&id=${tid}`, t);
     assert.deepEqual([lectura.status, lectura.j.activo, lectura.j.mia.estado], [200, true, "retenida"]);
     const b = await http("POST", "/api/comunidad/resenas/borrar", t, { resena_id: p.j.resena_id });
     assert.equal(b.j.resultado, "borrada");
@@ -720,12 +722,12 @@ try {
     const r = await publicar(a, BIEN(), { tmdbId: tid });
     const t = await tokenDe(ev);
     assert.equal((await http("POST", "/api/comunidad/votos", t, { version_id: r.version_id, voto: "util" })).j.resultado, "voto_registrado");
-    const l = await http("GET", `/api/comunidad/titulo?tipo=movie&id=${tid}`, t);
-    assert.deepEqual([l.j.otras[0].utiles, l.j.otras[0].total, l.j.otras[0].mi_voto], [1, 1, "util"]);
+    const l = await http("GET", `/api/comunidad/resenas/lista?tipo=movie&id=${tid}`, t);
+    assert.deepEqual([l.j.items[0].utiles, l.j.items[0].total, l.j.items[0].mi_voto], [1, 1, "util"]);
     assert.equal((await http("POST", "/api/comunidad/votos", t, { version_id: r.version_id, voto: "retirar" })).j.resultado, "voto_retirado");
     config({ modulo_activo: false });
     try {
-      const off = await http("GET", `/api/comunidad/titulo?tipo=movie&id=${tid}`, t);
+      const off = await http("GET", `/api/comunidad/resenas/lista?tipo=movie&id=${tid}`, t);
       assert.deepEqual(off.j, { activo: false });
     } finally {
       config({ modulo_activo: true });

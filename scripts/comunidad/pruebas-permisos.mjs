@@ -60,7 +60,7 @@ const TABLAS = [
 const DECISION_PRUEBA = { resultado: "publicar", version_reglas: "prueba", reglas: [], huella: { texto: "a".repeat(64), shingles: ["0123456789abcdef"] } };
 const VERSION_INEXISTENTE = 9007199254740991;
 // Sin `p_uid`: la corroboración la llama la ruta sin actor.
-const SIN_UID = new Set(["comunidad_retener_por_regla"]);
+const SIN_UID = new Set(["comunidad_retener_por_regla", "comunidad_modulo_activo"]);
 const HASH_PRUEBA = "a".repeat(64);
 const INTENTO_PRUEBA = "00000000-0000-4000-8000-0000000000ee";
 const RPC_COMUNIDAD = {
@@ -75,7 +75,7 @@ const RPC_COMUNIDAD = {
   comunidad_desbloquear: { p_bloqueo: VERSION_INEXISTENTE },
   comunidad_editar: { p_resena: 1, p_version_esperada: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
   comunidad_estado_baja: {},
-  comunidad_leer_titulo: { p_tipo: "movie", p_tmdb_id: 1 },
+  comunidad_modulo_activo: {},
   comunidad_publicar: { p_tipo: "movie", p_tmdb_id: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
   comunidad_retener_por_regla: { p_version: VERSION_INEXISTENTE, p_decision: DECISION_PRUEBA },
   comunidad_retirar_voto: { p_version: 1 },
@@ -100,6 +100,11 @@ const RPC_ADMIN = {
   comunidad_admin_suspender: { p_participante: "00000000-0000-4000-8000-00000000dead", p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
   comunidad_admin_version: { p_version: VERSION_INEXISTENTE },
   comunidad_quitar_marcador_baja: { p_user: "00000000-0000-4000-8000-00000000dead", p_motivo: "prueba de permisos", p_id_intento: INTENTO_PRUEBA },
+};
+// E5a (017): la LECTURA tampoco es de service_role: la ejecuta `authenticated`
+// y toma al lector de `auth.uid()` (sin p_uid). anon y service_role, no.
+const RPC_LECTURA = {
+  comunidad_resenas: { p_tipo: "movie", p_tmdb_id: 1, p_orden: "recientes", p_cursor: null, p_limite: 5 },
 };
 const ESCRIBE_ADMIN = new Set(["comunidad_admin_decidir", "comunidad_admin_levantar_suspension", "comunidad_admin_publicacion",
   "comunidad_admin_suspender", "comunidad_quitar_marcador_baja"]);
@@ -490,25 +495,26 @@ console.log("\n— 3. RPC —");
 
 
 
-await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b y E4), security definer y search_path vacío", () => {
+await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4 y E5a), security definer y search_path vacío", () => {
   const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
     from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
   const esperadas = [
     ...Object.keys(RPC_COMUNIDAD).map((f) => `${f}:true:search_path=""${LOCK_TIMEOUT[f] ? `,lock_timeout=${LOCK_TIMEOUT[f]}` : ""}`),
     ...Object.keys(RPC_ADMIN).map((f) => `${f}:true:search_path=""${ESCRIBE_ADMIN.has(f) ? ",lock_timeout=5s" : ""}`),
+    ...Object.keys(RPC_LECTURA).map((f) => `${f}:true:search_path=""`),
   ].sort();
   assert.deepEqual(out.split("\n"), esperadas);
 });
 
-await prueba("catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4)", () => {
+await prueba("catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a)", () => {
   const out = sqlOk(`select f.proname || ':' || r || ':' || has_function_privilege(r, f.oid, 'EXECUTE')
     from pg_proc f, unnest(array['public','anon','authenticated','service_role']) r
     where f.pronamespace = 'public'::regnamespace and f.proname like 'comunidad\\_%' order by 1`);
   const filas = out.split("\n");
-  assert.equal(filas.length, (Object.keys(RPC_COMUNIDAD).length + Object.keys(RPC_ADMIN).length) * 4);
+  assert.equal(filas.length, (Object.keys(RPC_COMUNIDAD).length + Object.keys(RPC_ADMIN).length + Object.keys(RPC_LECTURA).length) * 4);
   const mal = filas.filter((l) => {
     const [f, rol] = l.split(":");
-    const debe = f in RPC_ADMIN ? rol === "authenticated" : rol === "service_role";
+    const debe = f in RPC_ADMIN || f in RPC_LECTURA ? rol === "authenticated" : rol === "service_role";
     return !l.endsWith(debe ? ":true" : ":false");
   });
   assert.deepEqual(mal, []);
@@ -535,6 +541,26 @@ await prueba("RPC real por REST: anon y cada JWT reciben 401/403 en todas; servi
   assert.deepEqual(mal, []);
   assert.equal(sqlOk(`select count(*) from comunidad.bajas_en_curso where user_id = '${nadie}'`), "0");
   assert.equal(sqlOk(`select count(*) from comunidad.participantes where user_id = '${nadie}'`), "0");
+});
+
+await prueba("RPC real por REST a la lectura (E5a): anon y service_role → 401/403 sin datos; cada JWT real (autor, ajeno, suspendido, admin AAL1 y AAL2) → 200 como sí mismo", async () => {
+  const mal = [];
+  for (const [quien, token] of Object.entries(QUIENES())) {
+    for (const [f, args] of Object.entries(RPC_LECTURA)) {
+      const r = await fetch(`${URL_API}/rest/v1/rpc/${f}`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(args),
+      });
+      const cuerpo = await r.text();
+      if (quien === "anon" || quien === "service_role") {
+        if (!((r.status === 401 || r.status === 403) && /42501|permission denied/.test(cuerpo))) mal.push(`${quien} ${f}: ${r.status} ${cuerpo.slice(0, 80)}`);
+      } else if (r.status !== 200) {
+        mal.push(`${quien} ${f}: ${r.status} ${cuerpo.slice(0, 80)}`);
+      }
+    }
+  }
+  assert.deepEqual(mal, []);
 });
 
 await prueba("RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra", async () => {

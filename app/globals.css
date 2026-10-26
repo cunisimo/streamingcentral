@@ -1341,6 +1341,16 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
    de bloqueados. Botón de 44×44, ítems de 44 de alto, foco visible. */
 .cm-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
 .cm-cab .badge{margin-bottom:0}
+.cm-lista{margin-top:12px;min-width:0}
+.cm-orden{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
+.cm-orden-op{border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--dim);padding:8px 14px;min-height:44px;font-size:13px;font-weight:600;cursor:pointer}
+.cm-orden-op.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.cm-orden-op[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.cm-orden-pronto{font-size:11px;font-weight:500;margin-left:4px}
+.cm-mas{margin-top:12px;min-height:44px;width:100%}
+.cm-invita{margin-top:12px;padding:14px;border:1px dashed var(--line-2);border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.cm-invita-t{font-weight:700;margin:0}
+.cm-invita .btn{min-height:44px;margin-top:4px}
 .cm-menu{position:relative;flex:0 0 auto}
 .cm-menu-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:none;border-radius:999px;background:none;color:var(--dim);cursor:pointer}
 .cm-menu-btn svg{width:20px;height:20px;display:block}

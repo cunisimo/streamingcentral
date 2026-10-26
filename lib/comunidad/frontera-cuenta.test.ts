@@ -194,6 +194,7 @@ test("barrido: bloqueados, la ficha y la fila de configuración usan tokenDeCuen
     assert.doesNotMatch(s, /session\?\.access_token/, `${n}: el token sale sin comprobar la cuenta`);
   }
   assert.match(pagina, /<BloqueadosDeCuenta key=\{user\.id\}/);
-  assert.match(ficha, /<ResenasDeCuenta key=\{claveEditor\(uid, titulo\)\}/);
+  // E5a: la sección de la ficha monta lo comunitario por cuenta y título.
+  assert.match(leer("components/ResenasAcordeon.tsx"), /<ResenasComunidad key=\{claveEditor\(uid, titulo\)\}/);
   assert.match(fila, /ver\?\.uid !== uid/);
 });

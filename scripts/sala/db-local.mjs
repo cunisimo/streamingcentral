@@ -70,7 +70,8 @@ export function archivosAAplicar({ conCatalogo, cargas }) {
     "supabase/migrations/009_salas.sql",
     ...(conCatalogo ? cargas : []),
     // Reseñas de la comunidad: esquema privado (E2a), contrato de baja (E2b),
-    // protocolo de locks (E2c), escritura (E3a), moderación (E3b) y cierre de user_reviews (E2a).
+    // protocolo de locks (E2c), escritura (E3a), moderación (E3b), admin (E4), lectura (E5a)
+    // y cierre de user_reviews (E2a).
     // 022 va después de schema.sql, que vuelve a crear las policies viejas en
     // cada corrida; así siempre las deja cerradas.
     "supabase/migrations/011_comunidad_esquema.sql",
@@ -79,6 +80,7 @@ export function archivosAAplicar({ conCatalogo, cargas }) {
     "supabase/migrations/014_comunidad_escritura.sql",
     "supabase/migrations/015_comunidad_moderacion_datos.sql",
     "supabase/migrations/016_comunidad_admin.sql",
+    "supabase/migrations/017_comunidad_lectura.sql",
     "supabase/migrations/022_cerrar_user_reviews.sql",
     "scripts/sala/fixtures-local.sql",
   ];

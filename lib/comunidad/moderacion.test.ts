@@ -259,8 +259,13 @@ test("menú y diálogos: nombres accesibles, foco, 44 px, portal; rutas reales; 
   assert.match(css, /\.cm-menu-btn\{[^}]*width:44px;height:44px/);
   assert.match(css, /\.cm-menu-item\{[^}]*min-height:44px/);
   assert.match(css, /\.cm-cat\{[^}]*min-height:44px/);
-  const lista = readFileSync("components/comunidad/ResenasComunidad.tsx", "utf8");
-  assert.ok(lista.includes("/api/comunidad/revision") && lista.includes("<MenuResena") && lista.includes("/cuenta/bloqueados"));
+  // E5a: la lista vive en ListaResenas; la sección conserva revisión y el enlace a bloqueados.
+  const seccion = readFileSync("components/comunidad/ResenasComunidad.tsx", "utf8");
+  const lista = readFileSync("components/comunidad/ListaResenas.tsx", "utf8");
+  assert.ok(seccion.includes("/api/comunidad/revision") && lista.includes("<MenuResena") && seccion.includes("/cuenta/bloqueados"));
+  // Y la lectura protegida de E5a (017) sigue ocultando a los bloqueados por quien lee.
+  assert.match(readFileSync("supabase/migrations/017_comunidad_lectura.sql", "utf8"),
+    /not exists \(select 1 from comunidad\.bloqueos b\s+where b\.bloqueador_participante = v_part and b\.bloqueado_participante = r\.autor_participante\)/);
   const sql = readFileSync("supabase/migrations/015_comunidad_moderacion_datos.sql", "utf8");
   assert.match(sql, /not exists \(select 1 from comunidad\.bloqueos b\s+where b\.bloqueador_participante = v_part and b\.bloqueado_participante = r\.autor_participante\)/);
 });

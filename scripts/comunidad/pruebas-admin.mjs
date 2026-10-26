@@ -27,7 +27,7 @@
 import { createClient } from "@supabase/supabase-js";
 import assert from "node:assert/strict";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
-import { arnes, contenedor, psql, sqlOk, urlLocal } from "./local.mjs";
+import { arnes, contenedor, leerComo, psql, sqlOk, urlLocal } from "./local.mjs";
 import { dockerVerificado } from "./docker-local.mjs";
 import { Sesion, barrera, cerrarSesiones, esperar, esperaLock, BARRERA } from "./sesiones.mjs";
 import { escribirResena } from "../../lib/comunidad/escritura-nucleo.ts";
@@ -161,7 +161,8 @@ const decisiones = (intento) => Number(sqlOk(`select count(*) from comunidad.dec
 const decisionesDeVersion = (v) => Number(sqlOk(`select count(*) from comunidad.decisiones where version_id = ${Number(v)}`));
 const tramos = (v) => sqlOk(`select count(*) filter (where vigente_hasta is null) || '|' || count(*) filter (where vigente_hasta is not null)
   from comunidad.tramos where version_id = ${Number(v)}`);
-const visiblesPara = async (c, tmdbId) => ((await ops.leerTitulo(c.uid, "movie", tmdbId)).otras ?? []).map((o) => o.version_id);
+// E5a: la lectura real (`comunidad_resenas`, como la cuenta).
+const visiblesPara = async (c, tmdbId) => (leerComo(c.uid, "movie", tmdbId).items ?? []).map((o) => o.version_id);
 
 /** Autor con una reseña RETENIDA por las reglas reales (spam). */
 async function retenida(etiqueta) {
@@ -303,7 +304,7 @@ try {
     const { a, r } = await retenida("rech");
     const d = await decidir("rechazar", r.version_id);
     assert.deepEqual([d.resultado, d.estado], ["aplicada", "rechazada"]);
-    const mia = (await ops.leerTitulo(a.uid, "movie", Number(sqlOk(`select tmdb_id from comunidad.resenas where id = ${r.resena_id}`)))).mia;
+    const mia = (leerComo(a.uid, "movie", Number(sqlOk(`select tmdb_id from comunidad.resenas where id = ${r.resena_id}`)))).mia;
     assert.equal(mia.estado, "rechazada");
     const e = await editar(a, r.resena_id, r.version_id, BIEN());
     assert.equal(e.resultado, "publicada", JSON.stringify(e));
@@ -344,7 +345,7 @@ try {
     assert.equal(tramos(r.version_id), "0|2");
     assert.deepEqual(await visiblesPara(den, tmdbId), []);
     assert.equal(sqlOk(`select estado from comunidad.denuncias where version_id = ${r.version_id}`), "resuelta");
-    assert.equal((await ops.leerTitulo(a.uid, "movie", tmdbId)).mia.estado, "oculta");
+    assert.equal(leerComo(a.uid, "movie", tmdbId).mia.estado, "oculta");
     const d2 = await decidir("restaurar", r.version_id);
     assert.deepEqual([d2.resultado, d2.estado, d2.tramos, d2.votos_vigentes], ["aplicada", "publicada", 2, 2]);
     assert.equal(tramos(r.version_id), "2|2");

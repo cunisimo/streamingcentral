@@ -81,10 +81,13 @@ export function operacionesComunidad(admin: SupabaseClient) {
       if (error) throw errorRpc("comunidad_bloqueados", error);
       return data as Record<string, unknown>;
     },
-    leerTitulo: async (uid: string, tipo: string, tmdbId: number) => {
-      const { data, error } = await admin.rpc("comunidad_leer_titulo", { p_uid: uid, p_tipo: tipo, p_tmdb_id: tmdbId });
-      if (error) throw errorRpc("comunidad_leer_titulo", error);
-      return data as Record<string, unknown>;
+    // E5a: la lectura de reseñas ya NO es de service_role (lib/comunidad/lectura.ts,
+    // con la sesión del lector). Acá sólo queda el interruptor, para que la ruta
+    // decida si muestra la invitación a registrarse a quien no tiene sesión.
+    moduloActivo: async () => {
+      const { data, error } = await admin.rpc("comunidad_modulo_activo");
+      if (error) throw errorRpc("comunidad_modulo_activo", error);
+      return data === true;
     },
   };
 }
