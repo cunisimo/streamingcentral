@@ -72,6 +72,8 @@ const RPC_COMUNIDAD = {
   comunidad_bloqueados: {},
   comunidad_bloquear: { p_version: VERSION_INEXISTENTE },
   comunidad_borrar: { p_resena: 1 },
+  // E6 (019): cambiar el nombre comunitario, como publicar (la ruta pasa la decisión).
+  comunidad_cambiar_nombre: { p_nombre: "Prueba de permisos", p_decision: DECISION_PRUEBA },
   comunidad_denunciar: { p_version: VERSION_INEXISTENTE, p_categoria: "spam", p_comentario: null },
   comunidad_desbloquear: { p_bloqueo: VERSION_INEXISTENTE },
   comunidad_editar: { p_resena: 1, p_version_esperada: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
@@ -106,13 +108,17 @@ const RPC_ADMIN = {
 // y toma al lector de `auth.uid()` (sin p_uid). anon y service_role, no.
 const RPC_LECTURA = {
   comunidad_resenas: { p_tipo: "movie", p_tmdb_id: 1, p_orden: "recientes", p_cursor: null, p_limite: 5 },
+  // E6 (019): el perfil comunitario, con la sesión de quien mira (null = el propio).
+  comunidad_perfil: { p_participante: null, p_cursor: null, p_limite: 5 },
 };
+// lock_timeout de las lecturas: sólo la de reseñas (E5b genera el orden).
+const LOCK_LECTURA = { comunidad_resenas: "5s" };
 const ESCRIBE_ADMIN = new Set(["comunidad_admin_decidir", "comunidad_admin_levantar_suspension", "comunidad_admin_publicacion",
   "comunidad_admin_suspender", "comunidad_quitar_marcador_baja"]);
 // lock_timeout de cada una (vacío = sin): 10 s la baja, 5 s las escrituras de E3a, E3b y E4.
 const LOCK_TIMEOUT = {
   comunidad_baja_comunitaria: "10s", comunidad_baja_comunitaria_admin: "10s",
-  comunidad_aceptar_terminos: "5s", comunidad_publicar: "5s", comunidad_editar: "5s",
+  comunidad_aceptar_terminos: "5s", comunidad_publicar: "5s", comunidad_editar: "5s", comunidad_cambiar_nombre: "5s",
   comunidad_borrar: "5s", comunidad_votar: "5s", comunidad_retirar_voto: "5s",
   comunidad_denunciar: "5s", comunidad_retener_por_regla: "5s", comunidad_bloquear: "5s", comunidad_desbloquear: "5s",
 };
@@ -496,19 +502,19 @@ console.log("\n— 3. RPC —");
 
 
 
-await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a y E5b), security definer y search_path vacío", () => {
+await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a, E5b y E6), security definer y search_path vacío", () => {
   const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
     from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
   const esperadas = [
     ...Object.keys(RPC_COMUNIDAD).map((f) => `${f}:true:search_path=""${LOCK_TIMEOUT[f] ? `,lock_timeout=${LOCK_TIMEOUT[f]}` : ""}`),
     ...Object.keys(RPC_ADMIN).map((f) => `${f}:true:search_path=""${ESCRIBE_ADMIN.has(f) ? ",lock_timeout=5s" : ""}`),
-    // E5b (018): la lectura genera el orden de "Más útiles" y lleva lock_timeout.
-    ...Object.keys(RPC_LECTURA).map((f) => `${f}:true:search_path="",lock_timeout=5s`),
+    // E5b (018): la lectura genera el orden de "Más útiles" y lleva lock_timeout; el perfil (E6), no.
+    ...Object.keys(RPC_LECTURA).map((f) => `${f}:true:search_path=""${LOCK_LECTURA[f] ? `,lock_timeout=${LOCK_LECTURA[f]}` : ""}`),
   ].sort();
   assert.deepEqual(out.split("\n"), esperadas);
 });
 
-await prueba("catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a)", () => {
+await prueba("catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a) y el perfil (E6)", () => {
   const out = sqlOk(`select f.proname || ':' || r || ':' || has_function_privilege(r, f.oid, 'EXECUTE')
     from pg_proc f, unnest(array['public','anon','authenticated','service_role']) r
     where f.pronamespace = 'public'::regnamespace and f.proname like 'comunidad\\_%' order by 1`);

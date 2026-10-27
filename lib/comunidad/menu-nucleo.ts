@@ -145,7 +145,7 @@ export function trasReintentoBloqueo(e: EstadoDenuncia, r: Respuesta): EstadoDen
 
 export const REINTENTAR_BLOQUEO = "Reintentar el bloqueo";
 
-/** La etiqueta de un bloqueo en la cuenta: no hay nombres comunitarios hasta E6. */
+/** La etiqueta de un bloqueo en la cuenta. Sin el nombre comunitario del bloqueado: E6 no lo agregó a `comunidad_bloqueados`. */
 export function etiquetaBloqueo(b: { origen_tipo?: unknown; creado_en?: unknown }, titulo?: string | null): string {
   // Con la hora: dos bloqueos del mismo título y el mismo día se distinguen.
   const d = typeof b.creado_en === "string" ? new Date(b.creado_en) : null;

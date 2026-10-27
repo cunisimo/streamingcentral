@@ -1,10 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { supabaseBrowser } from "@/lib/supabase";
 import { apiUrl } from "@/lib/api-base";
 import { claveEditor, type Persistida, type Titulo } from "@/lib/comunidad/editor-nucleo";
-import { crearFrontera, tokenDeCuenta } from "@/lib/comunidad/frontera-cuenta";
+import { crearFrontera } from "@/lib/comunidad/frontera-cuenta";
+import { postear, tokenComo } from "./peticiones";
 import { MOTIVOS_CUENTA } from "@/lib/comunidad/mensajes";
 import { BLOQUEO_HECHO, DENUNCIA_RECIBIDA } from "@/lib/comunidad/menu-nucleo";
 import { ORDEN_INICIAL, type Orden } from "@/lib/comunidad/lectura";
@@ -60,29 +60,6 @@ interface Cabecera {
   suspendida?: boolean;
   mia?: { resena_id: number; version_id: number; texto: string; estado: string; utiles: number; total: number } | null;
   total?: number;
-}
-
-/** El token, sólo si la sesión sigue siendo de `uid` (A1 de E3b). */
-async function tokenComo(uid: string): Promise<string | null> {
-  const { data } = await supabaseBrowser().auth.getSession();
-  return tokenDeCuenta(data.session, uid);
-}
-
-/** POST a una ruta comunitaria en nombre de `uid`. Red caída o respuesta ilegible: "sin-confirmar". */
-async function postear(uid: string, ruta: string, cuerpo: Record<string, unknown>): Promise<RespuestaEditor> {
-  try {
-    const t = await tokenComo(uid);
-    if (!t) return { resultado: "sin_sesion" };
-    const r = await fetch(apiUrl(ruta), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
-      body: JSON.stringify(cuerpo),
-    });
-    const j = await r.json().catch(() => null);
-    return j && typeof j === "object" && typeof (j as { resultado?: unknown }).resultado === "string" ? (j as Record<string, unknown>) : "sin-confirmar";
-  } catch {
-    return "sin-confirmar";
-  }
 }
 
 /** Una página de la lista. null: sin sesión de esta cuenta, red caída o respuesta ilegible. */

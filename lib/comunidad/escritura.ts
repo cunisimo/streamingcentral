@@ -13,7 +13,8 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { escribirResena, esBajaEnCurso, type PedidoEscritura, type ResultadoEscritura } from "./escritura-nucleo";
 
 export { estadoHttp } from "./escritura-nucleo";
-import { dependenciasEscritura, operacionesComunidad } from "./escritura-deps";
+import { dependenciasEscritura, dependenciasNombre, operacionesComunidad } from "./escritura-deps";
+import { cambiarNombre, type PedidoNombre, type ResultadoNombre } from "./nombre-nucleo";
 import { evaluarResena } from "./reglas/decision";
 import { denunciarVersion, type PedidoDenuncia } from "./moderacion-nucleo";
 
@@ -74,4 +75,11 @@ export async function denunciar(p: PedidoDenuncia): Promise<Record<string, unkno
     retenerPorRegla: ops.retenerPorRegla,
     bloquear: ops.bloquear,
   }, p);
+}
+
+/** Cambiar el nombre comunitario (E6). null = sin configuración. */
+export async function nombrar(p: PedidoNombre): Promise<ResultadoNombre | null> {
+  const admin = supabaseAdmin();
+  if (!admin) return null;
+  return cambiarNombre(dependenciasNombre(admin), p);
 }

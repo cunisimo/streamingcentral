@@ -33,7 +33,13 @@ export interface ItemLista {
   total: number;
   mi_voto: Voto | null;
   denunciada: boolean;
+  /** E6: el autor (id de participante, nunca de la cuenta) y su nombre comunitario; null si no vino. */
+  autor: AutorItem | null;
+  /** E6: el título de la reseña (sólo en el perfil, donde las reseñas son de títulos distintos). */
+  titulo: { tipo: "movie" | "tv"; tmdbId: number } | null;
 }
+
+export interface AutorItem { id: string; nombre: string | null }
 
 export interface EstadoLista {
   /** cuenta|tipo:id|orden. Una respuesta de otra clave no se aplica. */
@@ -59,6 +65,20 @@ export function listaVacia(clave: string): EstadoLista {
 }
 
 const esVoto = (x: unknown): x is Voto => x === "util" || x === "no_util";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** El autor de un item, o null si no tiene la forma esperada (no invalida el item). */
+export function autorValido(x: unknown): AutorItem | null {
+  if (!x || typeof x !== "object") return null;
+  const o = x as Record<string, unknown>;
+  if (typeof o.id !== "string" || !UUID.test(o.id)) return null;
+  return { id: o.id, nombre: typeof o.nombre === "string" && o.nombre ? o.nombre : null };
+}
+
+function tituloValido(o: Record<string, unknown>): ItemLista["titulo"] {
+  return (o.tipo === "movie" || o.tipo === "tv") && Number.isSafeInteger(o.tmdb_id) && (o.tmdb_id as number) > 0
+    ? { tipo: o.tipo, tmdbId: o.tmdb_id as number } : null;
+}
 
 /** Un item como lo devuelve la base, o null si no tiene la forma esperada. */
 export function itemValido(x: unknown): ItemLista | null {
@@ -70,6 +90,7 @@ export function itemValido(x: unknown): ItemLista | null {
     resena_id: o.resena_id as number, version_id: o.version_id as number, texto: o.texto, publicada_en: o.publicada_en,
     editada: o.editada === true, utiles: o.utiles as number, total: o.total as number,
     mi_voto: esVoto(o.mi_voto) ? o.mi_voto : null, denunciada: o.denunciada === true,
+    autor: autorValido(o.autor), titulo: tituloValido(o),
   };
 }
 

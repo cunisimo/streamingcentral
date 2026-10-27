@@ -9,9 +9,10 @@
 // 014), ejecutables SÓLO por service_role. Las tablas siguen cerradas.
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { evaluarResena } from "./reglas/decision.ts";
+import { evaluarNombre, evaluarResena } from "./reglas/decision.ts";
 import { huella, secretoDuplicados } from "./duplicados.ts";
 import { conReconciliacion, errorRpc, type DependenciasEscritura, type RespuestaBase } from "./escritura-nucleo.ts";
+import type { DependenciasNombre } from "./nombre-nucleo.ts";
 
 // Todo error sale clasificado (`errorRpc`): rechazo confirmado por la base o
 // confirmación perdida. Un 200 con un cuerpo que no es un resultado también es
@@ -54,6 +55,17 @@ export function dependenciasEscritura(admin: SupabaseClient, secreto: string | n
       p_uid: a.uid, p_resena: a.resenaId, p_version_esperada: a.versionEsperada, p_texto: a.texto,
       p_decision: a.decision, p_id_intento: a.idIntento, p_hash: a.hash,
     }),
+  };
+}
+
+/**
+ * E6: el cambio de nombre comunitario. Sin reconciliar acá: el núcleo
+ * (./nombre-nucleo.ts) repite UNA vez si la confirmación se perdió.
+ */
+export function dependenciasNombre(admin: SupabaseClient): DependenciasNombre {
+  return {
+    evaluar: (nombre) => evaluarNombre(nombre),
+    cambiar: (a) => rpcCrudo(admin, "comunidad_cambiar_nombre", { p_uid: a.uid, p_nombre: a.nombre, p_decision: a.decision }),
   };
 }
 

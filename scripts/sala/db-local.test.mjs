@@ -67,6 +67,8 @@ test("aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin lo
   assert.ok(i("017_comunidad_lectura.sql") === i("016_comunidad_admin.sql") + 1);
   // 018 (utilidad, E5b) redefine la lectura de 017.
   assert.ok(i("018_comunidad_utilidad.sql") === i("017_comunidad_lectura.sql") + 1);
+  // 019 (perfiles, E6) redefine item_lectura de 017 (suma el autor).
+  assert.ok(i("019_comunidad_perfiles.sql") === i("018_comunidad_utilidad.sql") + 1);
   // 022 cierra user_reviews: tiene que ir DESPUÉS de schema.sql, que recrea sus policies.
   assert.ok(i("022_cerrar_user_reviews.sql") > i("011_comunidad_esquema.sql"));
   assert.ok(!l.some((f) => /_down\.sql$/.test(f)), "un rollback nunca va en la lista");

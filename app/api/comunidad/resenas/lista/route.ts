@@ -7,7 +7,9 @@ import { supabaseComoUsuario } from "@/lib/admin-auth";
 
 // Leer las reseñas de la comunidad de un título (E5a), SÓLO con sesión.
 // Reemplaza la lectura provisional de E3a/E3b (borrada en 017).
-//   ?tipo=movie|tv&id=<tmdb_id>&orden=recientes[&cursor=<opaco>]
+//   ?tipo=movie|tv&id=<tmdb_id>[&orden=recientes|utiles][&cursor=<opaco>]
+// Sin `orden`, "Recientes" (como en E5a); la lista de la ficha pide
+// "utiles" por defecto (E5b). El cursor tiene la forma de su orden.
 // Bearer → `comunidad_resenas` con la SESIÓN DEL LECTOR (nunca service_role):
 // la base toma al lector de `auth.uid()` y filtra visibilidad, bloqueos y
 // suspensiones en cada página. Sin sesión: 401 con `{resultado: "sin_sesion",

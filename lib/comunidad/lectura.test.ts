@@ -16,7 +16,7 @@ import { encabezadoResenas } from "../resenas.ts";
 
 const it = (id: number, extra: Partial<ItemLista> = {}): ItemLista => ({
   resena_id: id, version_id: id * 10, texto: `t${id}`, publicada_en: `2026-10-26T00:00:0${id % 10}.000001+00:00`,
-  editada: false, utiles: 0, total: 0, mi_voto: null, denunciada: false, ...extra,
+  editada: false, utiles: 0, total: 0, mi_voto: null, denunciada: false, autor: null, titulo: null, ...extra,
 });
 const tanda = (ids: number[], cursor: string | null): Tanda => ({ items: ids.map((i) => it(i)), cursor, hayMas: cursor !== null, orden: "recientes", vencido: false });
 const K = claveLista("u1", "movie", 603, "recientes");

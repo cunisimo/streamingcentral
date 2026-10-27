@@ -188,11 +188,24 @@ test("barrido: bloqueados, la ficha y la fila de configuración usan tokenDeCuen
   const pagina = leer("app/cuenta/bloqueados/page.tsx");
   const ficha = leer("components/comunidad/ResenasComunidad.tsx");
   const fila = leer("components/comunidad/FilaBloqueados.tsx");
-  for (const [n, s] of [["página", pagina], ["ficha", ficha], ["fila", fila]] as const) {
+  // E6: el token de la ficha, el perfil y el nombre sale de peticiones.ts
+  // (`tokenComo` → tokenDeCuenta); cada componente conserva su frontera.
+  const peticiones = leer("components/comunidad/peticiones.ts");
+  const perfil = leer("components/comunidad/PerfilComunitario.tsx");
+  const nombre = leer("components/comunidad/NombreComunitario.tsx");
+  for (const [n, s] of [["página", pagina], ["fila", fila], ["peticiones", peticiones]] as const) {
     assert.match(s, /tokenDeCuenta\(/, n);
-    assert.match(s, /crearFrontera\(/, n);
     assert.doesNotMatch(s, /session\?\.access_token/, `${n}: el token sale sin comprobar la cuenta`);
   }
+  for (const [n, s] of [["página", pagina], ["ficha", ficha], ["fila", fila], ["perfil", perfil], ["nombre", nombre]] as const) {
+    assert.match(s, /crearFrontera\(/, n);
+  }
+  for (const [n, s] of [["ficha", ficha], ["perfil", perfil], ["nombre", nombre]] as const) {
+    assert.match(s, /from "\.\/peticiones"/, `${n}: pide sin el token por cuenta`);
+    assert.doesNotMatch(s, /session\?\.access_token|getSession\(/, `${n}: el token sale sin comprobar la cuenta`);
+  }
+  assert.match(leer("components/comunidad/PerfilComunitario.tsx"), /<PerfilConSesion key=\{`\$\{user\.id\}\|\$\{id\}`\}/);
+  assert.match(leer("app/cuenta/perfil/page.tsx"), /<NombreComunitario key=\{user\.id\}/);
   assert.match(pagina, /<BloqueadosDeCuenta key=\{user\.id\}/);
   // E5a: la sección de la ficha monta lo comunitario por cuenta y título.
   assert.match(leer("components/ResenasAcordeon.tsx"), /<ResenasComunidad key=\{claveEditor\(uid, titulo\)\}/);

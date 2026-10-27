@@ -1,7 +1,10 @@
 "use client";
+import Link from "next/link";
 import { puedeReiniciar, type EstadoLista } from "@/lib/comunidad/lista-nucleo";
 import type { Orden } from "@/lib/comunidad/lectura";
 import type { Voto } from "@/lib/comunidad/evaluacion-nucleo";
+import { NOMBRE_PENDIENTE } from "@/lib/comunidad/nombre";
+import { hrefPerfil } from "@/lib/rutas";
 import EvaluacionResena from "./EvaluacionResena";
 import MenuResena from "./MenuResena";
 import type { RespuestaEditor } from "./EditorResena";
@@ -16,8 +19,10 @@ import type { RespuestaEditor } from "./EditorResena";
 // máximo 50 posiciones por página) y, si el orden vence, la lista avisa "Orden
 // actualizado" y ofrece volver a empezar UNA vez.
 //
-// Sin nombre del autor: el nombre comunitario llega en E6. Hasta entonces no se
-// muestra ningún dato de la cuenta (ni correo ni nombre del perfil).
+// E6: cada reseña lleva el NOMBRE COMUNITARIO de su autor, con el enlace a su
+// perfil (`/u/?id=<participante>`). Nunca el correo ni el nombre del perfil
+// privado: sin nombre elegido, un texto neutro. Si el autor no vino en la
+// respuesta (base anterior a 019), queda "Reseña de la comunidad".
 const ORDENES: { id: Orden; titulo: string }[] = [{ id: "utiles", titulo: "Más útiles" }, { id: "recientes", titulo: "Recientes" }];
 
 export default function ListaResenas({
@@ -45,7 +50,12 @@ export default function ListaResenas({
       {lista.items.map((o) => (
         <article key={o.resena_id} className="review usuario">
           <div className="cm-cab">
-            <div className="badge">Reseña de la comunidad{o.editada ? " · editada" : ""}</div>
+            <div className="badge cm-autor">
+              {o.autor
+                ? <Link href={hrefPerfil(o.autor.id)}>{o.autor.nombre ?? NOMBRE_PENDIENTE}</Link>
+                : "Reseña de la comunidad"}
+              {o.editada ? " · editada" : ""}
+            </div>
             <MenuResena versionId={o.version_id} denunciada={o.denunciada} enviar={enviar}
               alDenunciar={() => alDenunciar(o.version_id)}
               alBloquear={({ denunciada }) => alBloquear(o.version_id, denunciada)} />
