@@ -64,6 +64,12 @@ begin
     insert into comunidad.denuncias_cerradas (denunciante_participante, categoria, estado, creada_en, cerrada_en)
       values ('${FX.lector}', 'spam', 'descartada', now(), now());
   end if;
+  -- E5b (018): un orden congelado de "Más útiles" (ids, sin datos del lector).
+  if to_regclass('comunidad.ordenes_utiles') is not null then
+    insert into comunidad.ordenes_utiles (id, tipo, tmdb_id, creado_en, vence_en, total)
+      overriding system value values (900001, 'movie', 1, now(), now() + interval '2 hours', 1);
+    insert into comunidad.ordenes_utiles_tramos (orden_id, tramo_no, ids) values (900001, 0, array[${FX.resena}]::bigint[]);
+  end if;
 end;
 $$;
 `;

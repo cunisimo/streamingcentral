@@ -18,7 +18,7 @@ const it = (id: number, extra: Partial<ItemLista> = {}): ItemLista => ({
   resena_id: id, version_id: id * 10, texto: `t${id}`, publicada_en: `2026-10-26T00:00:0${id % 10}.000001+00:00`,
   editada: false, utiles: 0, total: 0, mi_voto: null, denunciada: false, ...extra,
 });
-const tanda = (ids: number[], cursor: string | null): Tanda => ({ items: ids.map((i) => it(i)), cursor, hayMas: cursor !== null, orden: "recientes" });
+const tanda = (ids: number[], cursor: string | null): Tanda => ({ items: ids.map((i) => it(i)), cursor, hayMas: cursor !== null, orden: "recientes", vencido: false });
 const K = claveLista("u1", "movie", 603, "recientes");
 
 test("lista: la primera página reemplaza; Cargar más avanza el cursor SÓLO con una tanda válida", () => {
@@ -70,7 +70,7 @@ test("tanda válida: activo, el orden pedido, items bien formados y cursor exact
 });
 
 test("voto confirmado: se aplica a la reseña que se ve, sin recargar; sin confirmar o rechazado no cambia nada", () => {
-  const e = conPrimeraPagina(listaVacia(K), { items: [it(1, { utiles: 2, total: 3 })], cursor: null, hayMas: false, orden: "recientes" });
+  const e = conPrimeraPagina(listaVacia(K), { items: [it(1, { utiles: 2, total: 3 })], cursor: null, hayMas: false, orden: "recientes", vencido: false });
   const util = trasVoto(e, 10, "voto_registrado", "util");
   assert.deepEqual([util.items[0].mi_voto, util.items[0].utiles, util.items[0].total], ["util", 3, 4]);
   const cambio = trasVoto(util, 10, "voto_registrado", "no_util");
@@ -82,7 +82,7 @@ test("voto confirmado: se aplica a la reseña que se ve, sin recargar; sin confi
 });
 
 test("A1 (auditoría de E5a): los resultados IDEMPOTENTES de una confirmación recuperada también se reflejan, sin contar dos veces", () => {
-  const base = conPrimeraPagina(listaVacia(K), { items: [it(1, { utiles: 2, total: 3 }), it(2)], cursor: "c1", hayMas: true, orden: "recientes" });
+  const base = conPrimeraPagina(listaVacia(K), { items: [it(1, { utiles: 2, total: 3 }), it(2)], cursor: "c1", hayMas: true, orden: "recientes", vencido: false });
   // Voto positivo cuya primera respuesta se perdió: el reintento confirma `sin_cambios` (ya quedó guardado).
   const util = trasVoto(base, 10, "sin_cambios", "util");
   assert.deepEqual([util.items[0].mi_voto, util.items[0].utiles, util.items[0].total], ["util", 3, 4]);
@@ -107,12 +107,19 @@ test("A1 (auditoría de E5a): los resultados IDEMPOTENTES de una confirmación r
   assert.deepEqual([util.items.length, util.cursor, util.hayMas, util.clave], [2, "c1", true, K]);
 });
 
-test("pedido de lectura: título válido, sólo «recientes» habilitado, cursor opaco; el lector NUNCA sale de la consulta", () => {
+test("pedido de lectura: título válido, «recientes» y «utiles» (E5b) habilitados, cursor opaco de la forma del orden; el lector NUNCA sale de la consulta", () => {
   const q = (s: string) => pedidoLectura(new URLSearchParams(s));
   assert.deepEqual(q("tipo=movie&id=603"), { tipo: "movie", tmdbId: 603, orden: "recientes", cursor: null, limite: 5 });
   const c = codificarCursor({ t: "2026-10-26T01:02:03.123456+00:00", id: 77 });
   assert.deepEqual(q(`tipo=tv&id=1&orden=recientes&cursor=${c}`), { tipo: "tv", tmdbId: 1, orden: "recientes", cursor: { t: "2026-10-26T01:02:03.123456+00:00", id: 77 }, limite: 5 });
-  assert.deepEqual(q("tipo=movie&id=603&orden=utiles"), { invalido: "orden_no_disponible" }, "Más útiles es de E5b");
+  // E5b: "Más útiles" habilitado, con su propio cursor {o, p}; un cursor de un orden no vale para el otro.
+  assert.deepEqual(q("tipo=movie&id=603&orden=utiles"), { tipo: "movie", tmdbId: 603, orden: "utiles", cursor: null, limite: 5 });
+  const cu = codificarCursor({ o: 7, p: 50 });
+  assert.deepEqual(q(`tipo=movie&id=603&orden=utiles&cursor=${cu}`), { tipo: "movie", tmdbId: 603, orden: "utiles", cursor: { o: 7, p: 50 }, limite: 5 });
+  assert.ok("invalido" in q(`tipo=movie&id=603&orden=recientes&cursor=${cu}`), "cursor de útiles en recientes");
+  assert.ok("invalido" in q(`tipo=movie&id=603&orden=utiles&cursor=${c}`), "cursor de recientes en útiles");
+  assert.equal(decodificarCursor(codificarCursor({ o: 0, p: 1 })), null);
+  assert.equal(decodificarCursor(codificarCursor({ o: 1, p: -1 })), null);
   for (const mal of ["", "tipo=x&id=1", "tipo=movie&id=0", "tipo=movie&id=1.5", "tipo=movie&id=-3", "tipo=movie&id=99999999999",
     "tipo=movie&id=1&orden=otro", "tipo=movie&id=1&cursor=nada", `tipo=movie&id=1&cursor=${codificarCursor({ t: "ayer", id: 1 })}`]) {
     assert.ok("invalido" in q(mal), mal);
@@ -203,7 +210,7 @@ test("barrido: /api/title y la ficha del servidor no tocan nada comunitario (T1:
   assert.match(cm, /cache: "no-store"/);
 });
 
-test("barrido: la base. comunidad_resenas sólo para authenticated, lee al lector de auth.uid() (sin p_uid), filtra bloqueos y suspensiones y rechaza «utiles»", () => {
+test("barrido: la base de E5a (017). comunidad_resenas sólo para authenticated, lee al lector de auth.uid() (sin p_uid), filtra bloqueos y suspensiones; 017 rechazaba «utiles» (lo habilita 018, ver utiles.test.ts)", () => {
   const s = leer("supabase/migrations/017_comunidad_lectura.sql");
   assert.match(s, /function public\.comunidad_resenas\(p_tipo text, p_tmdb_id integer, p_orden text, p_cursor jsonb, p_limite integer\)/);
   assert.doesNotMatch(s.slice(s.indexOf("function public.comunidad_resenas"), s.indexOf("function public.comunidad_modulo_activo")), /p_uid/);

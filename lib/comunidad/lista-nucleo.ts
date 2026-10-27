@@ -13,7 +13,14 @@
 //     páginas, la clave del cursor (primera publicación, id) no cambia y la
 //     reseña no vuelve a entrar; si apareciera igual, gana la que ya se ve;
 //   - un voto confirmado se aplica sobre la reseña que ya se ve, sin recargar
-//     (recargar llevaría la lista otra vez a cinco).
+//     (recargar llevaría la lista otra vez a cinco). En "Más útiles" eso
+//     actualiza el CONTEO pero no REORDENA: el orden es el congelado;
+//   - E5b, "Más útiles": si el orden congelado vence mientras se lee, la base
+//     responde `orden_actualizado`. La lista queda como está, avisa "Orden
+//     actualizado" y permite volver a empezar UNA vez: la primera página del
+//     orden nuevo se agrega a lo visible sin repetir reseñas y la lista sigue
+//     desde ahí. Si el orden nuevo también vence, ya no se ofrece otro
+//     reinicio (sin ciclos).
 import type { Voto } from "./evaluacion-nucleo.ts";
 
 export interface ItemLista {
@@ -39,12 +46,16 @@ export interface EstadoLista {
   pedido: number;
   cargandoMas: boolean;
   errorMas: boolean;
+  /** El orden congelado venció: no hay más en ese orden ("Orden actualizado"). */
+  vencido: boolean;
+  /** Ya se volvió a empezar una vez: no se ofrece otro reinicio. */
+  reiniciado: boolean;
 }
 
 export const claveLista = (uid: string, tipo: string, tmdbId: number, orden: string) => `${uid}|${tipo}:${tmdbId}|${orden}`;
 
 export function listaVacia(clave: string): EstadoLista {
-  return { clave, items: [], cursor: null, hayMas: false, pedido: 0, cargandoMas: false, errorMas: false };
+  return { clave, items: [], cursor: null, hayMas: false, pedido: 0, cargandoMas: false, errorMas: false, vencido: false, reiniciado: false };
 }
 
 const esVoto = (x: unknown): x is Voto => x === "util" || x === "no_util";
@@ -62,11 +73,14 @@ export function itemValido(x: unknown): ItemLista | null {
   };
 }
 
-export interface Tanda { items: ItemLista[]; cursor: string | null; hayMas: boolean; orden: string }
+export interface Tanda { items: ItemLista[]; cursor: string | null; hayMas: boolean; orden: string; vencido: boolean }
 
 /**
  * Una tanda válida, o null. Válida: `activo`, el orden pedido, un arreglo de
- * items bien formados, y un cursor exactamente cuando `hay_mas`.
+ * items bien formados, y un cursor exactamente cuando `hay_mas`. En "Más
+ * útiles" una tanda puede traer MENOS de cinco (muchas ocultas en las 50
+ * posiciones revisadas) o ninguna. `orden_actualizado` es una tanda válida
+ * vacía, sin más, con `vencido`.
  */
 export function tandaValida(j: unknown, orden: string): Tanda | null {
   if (!j || typeof j !== "object") return null;
@@ -77,7 +91,9 @@ export function tandaValida(j: unknown, orden: string): Tanda | null {
   const hayMas = o.hay_mas === true;
   const cursor = typeof o.cursor === "string" && o.cursor ? o.cursor : null;
   if (hayMas !== (cursor !== null)) return null;
-  return { items: items as ItemLista[], cursor, hayMas, orden };
+  const vencido = o.orden_actualizado === true;
+  if (vencido && (items.length > 0 || hayMas)) return null;
+  return { items: items as ItemLista[], cursor, hayMas, orden, vencido };
 }
 
 /** Une sin repetir reseñas; lo que ya se ve queda primero y como está. */
@@ -94,7 +110,8 @@ export function unir(previos: ItemLista[], nuevos: ItemLista[]): ItemLista[] {
  * invalidado y su respuesta tardía no puede confundirse con uno nuevo.
  */
 export function conPrimeraPagina(e: EstadoLista, t: Tanda): EstadoLista {
-  return { ...e, items: unir([], t.items), cursor: t.cursor, hayMas: t.hayMas, pedido: e.pedido + 1, cargandoMas: false, errorMas: false };
+  return { ...e, items: unir([], t.items), cursor: t.cursor, hayMas: t.hayMas, pedido: e.pedido + 1, cargandoMas: false, errorMas: false,
+    vencido: false, reiniciado: false };
 }
 
 /** Tocar "Cargar más" (o "Reintentar"): el pedido sale desde el cursor CONFIRMADO. */
@@ -111,7 +128,30 @@ export function pedirMas(e: EstadoLista): { estado: EstadoLista; pedido: { n: nu
 export function alLlegarMas(e: EstadoLista, n: number, clave: string, tanda: Tanda | null): EstadoLista {
   if (clave !== e.clave || n !== e.pedido || !e.cargandoMas) return e;
   if (!tanda) return { ...e, cargandoMas: false, errorMas: true };
+  if (tanda.vencido) return { ...e, cursor: null, hayMas: false, cargandoMas: false, errorMas: false, vencido: true };
   return { ...e, items: unir(e.items, tanda.items), cursor: tanda.cursor, hayMas: tanda.hayMas, cargandoMas: false, errorMas: false };
+}
+
+/** ¿Se puede volver a empezar? Sólo con el orden vencido y si todavía no se reinició. */
+export const puedeReiniciar = (e: EstadoLista) => e.vencido && !e.reiniciado && !e.cargandoMas;
+
+/** "Volver a empezar": pide la PRIMERA página del orden nuevo (sin cursor). */
+export function pedirReinicio(e: EstadoLista): { estado: EstadoLista; pedido: { n: number; clave: string } } | null {
+  if (!puedeReiniciar(e)) return null;
+  const n = e.pedido + 1;
+  return { estado: { ...e, pedido: n, cargandoMas: true, errorMas: false }, pedido: { n, clave: e.clave } };
+}
+
+/**
+ * Llegó la primera página del orden nuevo. Se AGREGA a lo visible sin repetir
+ * reseñas y la lista sigue desde su cursor. Falla: lo visible queda y se puede
+ * reintentar el reinicio (todavía no se gastó).
+ */
+export function alLlegarReinicio(e: EstadoLista, n: number, clave: string, tanda: Tanda | null): EstadoLista {
+  if (clave !== e.clave || n !== e.pedido || !e.cargandoMas || !e.vencido) return e;
+  if (!tanda || tanda.vencido) return { ...e, cargandoMas: false, errorMas: true };
+  return { ...e, items: unir(e.items, tanda.items), cursor: tanda.cursor, hayMas: tanda.hayMas, cargandoMas: false, errorMas: false,
+    vencido: false, reiniciado: true };
 }
 
 /**

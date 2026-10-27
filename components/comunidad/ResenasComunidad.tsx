@@ -7,8 +7,9 @@ import { claveEditor, type Persistida, type Titulo } from "@/lib/comunidad/edito
 import { crearFrontera, tokenDeCuenta } from "@/lib/comunidad/frontera-cuenta";
 import { MOTIVOS_CUENTA } from "@/lib/comunidad/mensajes";
 import { BLOQUEO_HECHO, DENUNCIA_RECIBIDA } from "@/lib/comunidad/menu-nucleo";
+import { ORDEN_INICIAL, type Orden } from "@/lib/comunidad/lectura";
 import {
-  alLlegarMas, claveLista, conPrimeraPagina, listaVacia, pedirMas, tandaValida, trasDenuncia, trasVoto,
+  alLlegarMas, alLlegarReinicio, claveLista, conPrimeraPagina, listaVacia, pedirMas, pedirReinicio, tandaValida, trasDenuncia, trasVoto,
   type EstadoLista,
 } from "@/lib/comunidad/lista-nucleo";
 import { encabezadoResenas, type ResenaFicha } from "@/lib/resenas";
@@ -42,7 +43,13 @@ import TerminosComunidad from "./TerminosComunidad";
 // enlace a la cuenta y, si no se denunció, la opción de denunciarla igual.
 // Un voto confirmado se aplica sobre la reseña que ya se ve (sin recargar: la
 // lista volvería a cinco).
-const ORDEN = "recientes";
+//
+// E5b: dos órdenes, "Más útiles" (por defecto, el orden congelado del título)
+// y "Recientes". Cambiar de orden vacía la lista y pide la primera página del
+// otro; las respuestas del orden anterior se descartan (generación de la carga
+// y clave de la lista, que incluye el orden). Si el orden congelado vence
+// mientras se lee, la lista avisa "Orden actualizado" y permite volver a
+// empezar UNA vez, sin repetir lo que ya se ve.
 
 interface Cabecera {
   activo: boolean;
@@ -79,11 +86,11 @@ async function postear(uid: string, ruta: string, cuerpo: Record<string, unknown
 }
 
 /** Una página de la lista. null: sin sesión de esta cuenta, red caída o respuesta ilegible. */
-async function pedirPagina(uid: string, titulo: Titulo, cursor: string | null): Promise<{ status: number; j: unknown } | null> {
+async function pedirPagina(uid: string, titulo: Titulo, orden: Orden, cursor: string | null): Promise<{ status: number; j: unknown } | null> {
   try {
     const t = await tokenComo(uid);
     if (!t) return null;
-    const q = `tipo=${titulo.tipo}&id=${titulo.tmdbId}&orden=${ORDEN}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+    const q = `tipo=${titulo.tipo}&id=${titulo.tmdbId}&orden=${orden}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
     const r = await fetch(apiUrl(`/api/comunidad/resenas/lista?${q}`), { headers: { Authorization: `Bearer ${t}` }, cache: "no-store" });
     return { status: r.status, j: await r.json().catch(() => null) };
   } catch {
@@ -92,7 +99,8 @@ async function pedirPagina(uid: string, titulo: Titulo, cursor: string | null): 
 }
 
 export default function ResenasComunidad({ uid, titulo, yump }: { uid: string; titulo: Titulo; yump: ResenaFicha[] }) {
-  const clave = claveLista(uid, titulo.tipo, titulo.tmdbId, ORDEN);
+  const [orden, setOrden] = useState<Orden>(ORDEN_INICIAL);
+  const clave = claveLista(uid, titulo.tipo, titulo.tmdbId, orden);
   const [cab, setCab] = useState<Cabecera | null>(null);
   const [lista, setLista] = useState<EstadoLista>(() => listaVacia(clave));
   const listaRef = useRef(lista);
@@ -113,19 +121,19 @@ export default function ResenasComunidad({ uid, titulo, yump }: { uid: string; t
   const cargar = useCallback(async () => {
     if (!frontera.vigente()) return;
     const g = frontera.carga();
-    const r = await pedirPagina(uid, titulo, null);
+    const r = await pedirPagina(uid, titulo, orden, null);
     if (!frontera.vigente(g)) return;
     const j = r?.j as Cabecera | null | undefined;
     if (r?.status === 200 && j && j.activo === false) { setError(false); setCab({ activo: false }); return; }
-    const t = r?.status === 200 ? tandaValida(r.j, ORDEN) : null;
+    const t = r?.status === 200 ? tandaValida(r.j, orden) : null;
     if (!t || !j) { setError(true); return; }
     setError(false);
     setCab({
       activo: true, publicacion_activa: j.publicacion_activa, terminos: j.terminos, correo_confirmado: j.correo_confirmado,
       baja_en_curso: j.baja_en_curso, suspendida: j.suspendida, mia: j.mia ?? null, total: typeof j.total === "number" ? j.total : 0,
     });
-    setLista((l) => conPrimeraPagina(l, t));
-  }, [frontera, uid, titulo]);
+    setLista((l) => conPrimeraPagina(l.clave === clave ? l : listaVacia(clave), t));
+  }, [frontera, uid, titulo, orden, clave]);
 
   useEffect(() => { void cargar(); }, [cargar]);
 
@@ -136,11 +144,33 @@ export default function ResenasComunidad({ uid, titulo, yump }: { uid: string; t
     if (!p) return;
     listaRef.current = p.estado;
     setLista(p.estado);
-    const r = await pedirPagina(uid, titulo, p.pedido.cursor);
+    const r = await pedirPagina(uid, titulo, orden, p.pedido.cursor);
     if (!frontera.vigente()) return;
-    const t = r?.status === 200 ? tandaValida(r.j, ORDEN) : null;
+    const t = r?.status === 200 ? tandaValida(r.j, orden) : null;
     setLista((l) => alLlegarMas(l, p.pedido.n, p.pedido.clave, t));
-  }, [frontera, uid, titulo]);
+  }, [frontera, uid, titulo, orden]);
+
+  /** "Volver a empezar" tras "Orden actualizado": una sola vez, sin repetir lo visible. */
+  const reiniciar = useCallback(async () => {
+    if (!frontera.vigente()) return;
+    const p = pedirReinicio(listaRef.current);
+    if (!p) return;
+    listaRef.current = p.estado;
+    setLista(p.estado);
+    const r = await pedirPagina(uid, titulo, orden, null);
+    if (!frontera.vigente()) return;
+    const t = r?.status === 200 ? tandaValida(r.j, orden) : null;
+    setLista((l) => alLlegarReinicio(l, p.pedido.n, p.pedido.clave, t));
+  }, [frontera, uid, titulo, orden]);
+
+  /** Otro orden: la lista se vacía y se pide su primera página (la carga anterior queda sin valor). */
+  const cambiarOrden = useCallback((o: Orden) => {
+    if (o === orden) return;
+    const nueva = listaVacia(claveLista(uid, titulo.tipo, titulo.tmdbId, o));
+    listaRef.current = nueva;
+    setLista(nueva);
+    setOrden(o);
+  }, [orden, uid, titulo]);
 
   const votar = useCallback(async (versionId: number, voto: Voto | "retirar") => {
     const r = await enviar("/api/comunidad/votos", { version_id: versionId, voto });
@@ -203,14 +233,15 @@ export default function ResenasComunidad({ uid, titulo, yump }: { uid: string; t
           alTerminar={({ denunciada }) => { if (denunciada) setBloqueo((b) => (b ? { ...b, denunciada: true } : b)); }} />
       )}
       {cab && (
-        <ListaResenas lista={lista} enviar={enviar} votar={votar} cargarMas={() => void cargarMas()}
+        <ListaResenas lista={lista} orden={orden} cambiarOrden={cambiarOrden} reiniciar={() => void reiniciar()}
+          enviar={enviar} votar={votar} cargarMas={() => void cargarMas()}
           alDenunciar={(v) => setLista((l) => trasDenuncia(l, v))}
           alBloquear={(v, denunciada) => { setBloqueo({ versionId: v, denunciada }); void cargar(); }} />
       )}
-      {cab && lista.items.length === 0 && !mia && yump.length === 0 && (
+      {cab && lista.pedido > 0 && !lista.hayMas && !lista.vencido && lista.items.length === 0 && !mia && yump.length === 0 && (
         <p className="cm-sub">Todavía no hay reseñas. {cab.terminos?.aceptada ? "Podés escribir la primera." : ""}</p>
       )}
-      {cab && lista.items.length === 0 && !mia && yump.length > 0 && (
+      {cab && lista.pedido > 0 && !lista.hayMas && !lista.vencido && lista.items.length === 0 && !mia && yump.length > 0 && (
         <p className="cm-sub">Todavía no hay reseñas de la comunidad.</p>
       )}
     </Acordeon>

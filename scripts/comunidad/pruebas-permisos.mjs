@@ -49,7 +49,8 @@ const { prueba, cerrar } = arnes();
 // `decisiones` (registro) y `denuncias_cerradas` (historial mínimo de la baja).
 const TABLAS = [
   "bajas_en_curso", "bloqueos", "config", "contadores", "corroboraciones", "decisiones", "denuncias", "denuncias_cerradas",
-  "denuncias_excedentes", "evaluaciones", "huellas", "intentos", "participantes", "resenas", "suspensiones", "tramos", "versiones",
+  "denuncias_excedentes", "evaluaciones", "huellas", "intentos", "ordenes_utiles", "ordenes_utiles_tramos", "participantes", "resenas",
+  "suspensiones", "tramos", "versiones",
 ];
 // El inventario exacto de `public.comunidad_*`: la baja (E2b, 012), la
 // escritura (E3a, 014) y la moderación (E3b, 015). Una función nueva sin
@@ -123,7 +124,7 @@ const COLUMNA = {
   bajas_en_curso: "intentos", bloqueos: "creado_en", config: "modulo_activo", contadores: "cantidad",
   corroboraciones: "reglas", decisiones: "motivo", denuncias: "estado", denuncias_cerradas: "estado",
   denuncias_excedentes: "cantidad", evaluaciones: "util", huellas: "creada_en",
-  intentos: "resultado", participantes: "nombre_comunitario", resenas: "borrada_en",
+  intentos: "resultado", ordenes_utiles: "total", ordenes_utiles_tramos: "ids", participantes: "nombre_comunitario", resenas: "borrada_en",
   suspensiones: "hasta", tramos: "vigente_hasta", versiones: "decidida_en",
 };
 
@@ -176,7 +177,7 @@ function correrModo(modo, preparar, casos) {
 // ===========================================================================
 console.log("— 1. SQL (SET ROLE) —");
 
-await prueba("el esquema tiene exactamente las diecisiete tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4)", () => {
+await prueba("el esquema tiene exactamente las diecinueve tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b)", () => {
   const t = sqlOk("select string_agg(tablename, ',' order by tablename) from pg_tables where schemaname = 'comunidad'");
   assert.equal(t, TABLAS.join(","));
 });
@@ -495,13 +496,14 @@ console.log("\n— 3. RPC —");
 
 
 
-await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4 y E5a), security definer y search_path vacío", () => {
+await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a y E5b), security definer y search_path vacío", () => {
   const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
     from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
   const esperadas = [
     ...Object.keys(RPC_COMUNIDAD).map((f) => `${f}:true:search_path=""${LOCK_TIMEOUT[f] ? `,lock_timeout=${LOCK_TIMEOUT[f]}` : ""}`),
     ...Object.keys(RPC_ADMIN).map((f) => `${f}:true:search_path=""${ESCRIBE_ADMIN.has(f) ? ",lock_timeout=5s" : ""}`),
-    ...Object.keys(RPC_LECTURA).map((f) => `${f}:true:search_path=""`),
+    // E5b (018): la lectura genera el orden de "Más útiles" y lleva lock_timeout.
+    ...Object.keys(RPC_LECTURA).map((f) => `${f}:true:search_path="",lock_timeout=5s`),
   ].sort();
   assert.deepEqual(out.split("\n"), esperadas);
 });

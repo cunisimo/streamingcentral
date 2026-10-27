@@ -250,7 +250,8 @@ try {
       has_function_privilege('public', p.oid, 'EXECUTE') || has_function_privilege('anon', p.oid, 'EXECUTE') ||
       has_function_privilege('authenticated', p.oid, 'EXECUTE') || has_function_privilege('service_role', p.oid, 'EXECUTE')
       from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = '${f}'`);
-    assert.equal(fila("comunidad_resenas"), 'true:search_path="":falsefalsetruefalse');
+    // E5b (018): la función genera el orden de "Más útiles" (escribe), así que lleva lock_timeout.
+    assert.equal(fila("comunidad_resenas"), 'true:search_path="",lock_timeout=5s:falsefalsetruefalse');
     assert.equal(fila("comunidad_modulo_activo"), 'true:search_path="":falsefalsefalsetrue');
     assert.equal(sqlOk("select count(*) from pg_proc where proname = 'comunidad_leer_titulo'"), "0");
     assert.equal(sqlOk(`select count(*) from pg_proc f, unnest(array['public','anon','authenticated','service_role']) r
@@ -366,13 +367,15 @@ try {
 
   // =========================================================================
   console.log("\n— Contrato de la función —");
-  await prueba("pedidos inválidos: «utiles» (E5b), cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20", async () => {
+  await prueba("pedidos inválidos: orden desconocido, cursor del otro orden, cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20", async () => {
     const mal = async (args) => {
       const { data, error } = await S.sbLector.rpc("comunidad_resenas", { p_tipo: "movie", p_tmdb_id: S.T, p_orden: "recientes", p_cursor: null, p_limite: 5, ...args });
       assert.equal(data, null);
       assert.equal(error?.code, "22023", JSON.stringify(error));
     };
-    await mal({ p_orden: "utiles" });
+    // E5b habilitó "utiles": lo inválido ahora es un orden desconocido y un cursor del otro orden.
+    await mal({ p_orden: "otro" });
+    await mal({ p_orden: "utiles", p_cursor: { t: "2026-10-26T00:00:00Z", id: 1 } });
     await mal({ p_cursor: { t: "no es fecha", id: 1 } });
     await mal({ p_cursor: { t: "2026-10-26T00:00:00Z" } });
     await mal({ p_tipo: "serie" });
@@ -422,7 +425,7 @@ try {
       j = await s.json();
     }
     assert.deepEqual(ids, esperadoSql(S.T, S.lector.part));
-    for (const q2 of ["tipo=x&id=1", "tipo=movie&id=1&orden=utiles", "tipo=movie&id=1&cursor=basura"]) {
+    for (const q2 of ["tipo=x&id=1", "tipo=movie&id=1&orden=otro", "tipo=movie&id=1&cursor=basura"]) {
       const m = await fetch(`${BASE}/api/comunidad/resenas/lista?${q2}`, { headers: auth });
       assert.equal(m.status, 400, q2);
     }
