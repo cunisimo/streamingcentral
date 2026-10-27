@@ -1080,6 +1080,20 @@ rollback;
 - **Criterio de cierre:** pruebas verdes; los plazos de P3 cargados recién
   cuando estén validados.
 - **Evidencia para Codex:** salidas, `cron-comunidad.sql` revisado.
+- **Estado (27/10):** implementada en local por Claude, **pendiente de
+  auditoría focalizada**. Cambio respecto de este plan, por decisión del
+  dueño del 27/10: los plazos NO arrancan vacíos. El dueño fijó plazos como
+  decisiones de producto (no validados legalmente; P3 sigue abierto para la
+  validación) y quedan cargados en `comunidad.purga_config` con el
+  interruptor `purga_activa` APAGADO, así que nada se purga hasta
+  encenderlo. Los no definidos (huellas, rechazadas, retenidas, votos
+  retirados y otros) quedan sin configurar; la excepción del texto
+  denunciado tras una baja sigue pendiente y bloqueada por un CHECK. La
+  interfaz es el procedimiento `comunidad.purgar(alcance, ahora)` ('hora' |
+  'dia' | una categoría), que confirma cada lote, en vez de una función
+  `purgar_comunidad(ahora)` en una sola transacción.
+
+  Informe: `docs/medidas/2026-10-27-informe-claude-e8.md`.
 
 ### E9a — Integración web con interruptores apagados
 

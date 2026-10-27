@@ -1,0 +1,238 @@
+# E8 local: retención y purga — salidas (27/10/2026)
+# Base LOCAL de supabase start (supabase_db_streamingcentral). Claves y tokens no aparecen en estas salidas.
+# Rama feat/resenas-reglas, worktree wt-resenas-comunidad, sobre 004690e (+ el commit de código de E8).
+
+## 1. up → down → up de 021 (scripts/comunidad/up-down-up-021.mjs)
+base: supabase_db_streamingcentral
+
+   volcado 0-sin-021: 15827 líneas, sha256 3e41cc8f0bd74f83…
+✔ antes: sin 021 (el volcado de partida), con 020 aplicada
+   volcado 1-con-021: 16529 líneas, sha256 228f09ace01cbabd…
+✔ 021 up: tablas, funciones y procedimiento; purga APAGADA; plazos del dueño; huellas y excepción sin configurar
+   volcado 2-sin-021: 15827 líneas, sha256 3e41cc8f0bd74f83…
+✔ 021_down: vuelve EXACTAMENTE al volcado de antes (020 restaurada) y no toca datos
+   volcado 3-sin-021-otra-vez: 15827 líneas, sha256 3e41cc8f0bd74f83…
+✔ 021_down repetida: inocua
+   volcado 4-con-021: 16529 líneas, sha256 228f09ace01cbabd…
+   volcado 5-con-021-repetida: 16529 líneas, sha256 228f09ace01cbabd…
+✔ 021 up: vuelve exactamente al volcado con 021; repetida, inocua
+   volcado 6-sin-021: 15827 líneas, sha256 3e41cc8f0bd74f83…
+   volcado 7-con-021: 16529 líneas, sha256 228f09ace01cbabd…
+✔ segunda vuelta down → up: mismos volcados; datos ajenos intactos
+
+6 de 6 pasaron.
+
+## 2. Batería real de purga (scripts/comunidad/pruebas-purga.mjs), corrida final
+(node:21180) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/DESARROLLO/stream%20central/wt-resenas-comunidad/lib/comunidad/escritura-deps.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\D:\DESARROLLO\stream central\wt-resenas-comunidad\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+
+✔ preparación: meses libres, registro de purga vacío, purga APAGADA; reloj forzado; módulo y publicación encendidos; admin con dos TOTP
+✔ apagada: con candidatos vencidos, `purgar` no hace nada ni deja registro
+
+— Intentos de recuperación: 7 días —
+✔ intentos: justo antes se conserva; en y después se borra; idempotente; un reintento con un intento purgado no duplica
+
+— Órdenes de «Más útiles»: al vencer sus 2 horas (cada hora) —
+✔ órdenes: vigente (1 µs antes) se conserva; vencida en y después se borra con sus tramos; la del generador real se conserva
+✔ órdenes, concurrencia: un título que el generador está regenerando (lock 7311 tomado) se saltea sin esperar; la corrida siguiente lo borra
+
+— Denuncias resueltas: 30 días después del cierre —
+✔ denuncias: cerradas justo antes se conservan; en y después se borran; con otra abierta en la misma versión, se conservan; las abiertas nunca
+✔ denuncias_cerradas (historial mínimo de la baja): 30 días desde el cierre, mismo criterio
+
+— Historial de moderación sin texto: 12 meses —
+✔ decisiones: justo antes se conserva; en y después se borra; se conservan las de casos abiertos, la suspensión vigente y el último estado de la publicación
+
+— Versiones reemplazadas: 30 días, salvo denuncia pendiente —
+✔ reemplazadas: justo antes se conserva; en y después se borra (con sus votos y huellas; los tramos quedan); con denuncia abierta o cerrada sin vencer, se conserva
+
+— Textos retirados por moderación: 30 días, salvo denuncia pendiente —
+✔ retiradas: justo antes se conserva; en y después se borra la reseña entera; con una versión anterior denunciada, se conserva; restaurar sigue andando
+✔ retiradas, concurrencia: una reseña tomada por un borrado en vuelo se saltea SIN esperar (nowait); al confirmar, ya no es candidata
+
+— Textos borrados por el autor: 30 días (interpretación de «textos retirados») —
+✔ borradas: justo antes se conserva; en y después se borra; retenida, rechazada o denunciada, se conserva; el autor puede volver a publicar
+
+— Historial de puntos: tramos, mes consolidado + 30 días —
+✔ tramos: mes sin margen → nada; en el margen → se borran los cerrados que no hacen falta y queda UNO por par vivo; mes sin consolidar → nada; votar, retirar y restaurar siguen con el mes original
+
+— Suspensiones: 12 meses desde su fin y meses del corte liberados —
+✔ suspensiones: dentro de un mes, 12 meses desde el fin (antes/en/después); cruzando un corte, se conserva hasta consolidar + margen; abierta, nunca
+
+— Rankings: 12 meses desde el corte; la ventana de lectura —
+✔ rankings: 1 µs antes del vencimiento se conserva; en y después se borra; un mes purgado NO se reconstruye vacío
+✔ ventana de lectura (Top Yumpers, JWT real): un mes fuera de la conservación da 400 y no se consolida; uno dentro, 200 (plazo acortado sólo en esta prueba)
+✔ rankings, concurrencia: con K_CORTE exclusivo tomado (una consolidación), la purga espera el compartido y termina al soltarlo; si pasa lock_timeout, registra el SQLSTATE y sigue
+
+— Participantes huérfanos —
+✔ participantes: un desvinculado se borra sólo sin referencias (intentos, bloqueos de otros, tramos, suspensiones); los vinculados nunca
+
+— Lotes, progreso, reintentos e interrupciones —
+✔ lotes: con lote = 2, cinco intentos vencidos salen en 3 lotes confirmados; el registro lleva sólo cantidades
+✔ una corrida por vez: con otra en curso, la segunda queda registrada como `ocupada` y no borra nada
+✔ interrupción: cancelada mientras espera en rankings, quedan confirmados SÓLO los lotes anteriores; el lote en curso no deja nada; reintentar completa; repetir no borra más
+✔ apagar en curso: la corrida termina el lote que estaba haciendo y no empieza otro (`apagada_en_curso`)
+
+— Concurrencia con operaciones reales —
+✔ edición en vuelo: la purga borra la reemplazada VIEJA de esa misma reseña sin esperar; la edición confirma y su anterior queda (recién reemplazada)
+✔ baja en vuelo: la corrida diaria completa termina sin esperar (saltea lo que la baja tiene tomado) y la baja confirma igual
+
+— Permisos —
+✔ permisos: nadie de la API ejecuta la purga ni ve su configuración (SQL y REST)
+✔ ningún job programado: cron-comunidad.sql no se ejecutó (sólo `sala-barrido` en cron.job)
+✔ datos ajenos intactos después de todas las corridas
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 35; restos (cuentas|participantes|meses|órdenes|ejecuciones|locks|decisiones|reloj|proto_marca igual|interruptores|purga): 0|0|0|0|0|0|0|0|true|false|false
+
+27 de 27 pasaron.
+
+## 3. Permisos (scripts/comunidad/pruebas-permisos.mjs), con las dos tablas nuevas
+— Limpieza (base compartida): sólo lo que creó esta corrida —
+   cuentas: 4; restos (cuentas|participantes): 0|0
+
+29 de 29 pasaron.
+
+## 4. Regresiones: E7 (consolidar_mes y la lectura se redefinieron), con la ruta real en localhost:3100
+### pruebas-top.mjs
+✔ preparación: meses de prueba libres; reloj forzado instalado; módulo y Top Yumpers encendidos; admin con dos TOTP
+✔ un punto por evaluador DISTINTO y autor: dos positivos de la misma persona suman 1; publicar no suma; un negativo no resta; retirar o pasar a negativo dentro del mes deja 0; abril no cuenta
+✔ caso 11: tramo que empieza, tramo que termina, suspensión (de autor y de evaluador) que empieza y que termina EXACTAMENTE en T(M) y a 1 µs de cada lado
+✔ suspender NO cierra tramos (conciliación del 25/10): los votos del autor y del evaluador suspendidos siguen abiertos; el cómputo los excluye sólo mientras la suspensión rige antes del corte
+✔ caso 10: edición, retiro por moderación, suspensión y bajas ENTRE el corte y la primera consulta no cambian el mes; restaurar antes del corte cuenta y después no; cierre repetido sin cambios
+✔ reproducible: un voto con marca de julio que llega DESPUÉS de consolidar (fixture de reloj) no cambia el mes consolidado, aunque el cómputo de hoy sí lo vería
+✔ proyección: sólo posición, puntos, estado y, para cuentas activas, id de participante, nombre comunitario, avatar del catálogo y propio; nunca user_id, correo, display_name ni semilla
+✔ bloqueo: quien bloqueó a D lo ve como «Usuario bloqueado» (con su posición y puntos, sin id ni nombre); otro lector lo ve normal
+✔ permisos: anon y service_role no leen (401/403 42501); las funciones internas y las tablas no tienen grants; el interruptor sólo para service_role
+✔ ruta: sin sesión 401 SÓLO {resultado, activo}; con sesión 200 privado y sin caché; mes inválido 400; interruptores apagados → {activo:false} y el selector desaparece
+   cuentas: 48; restos (cuentas|participantes|meses|locks|decisiones|reloj|proto_marca igual|interruptores): 0|0|0|0|0|0|true|false
+10 de 10 pasaron.
+### pruebas-top-concurrencia.mjs
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+6 de 6 pasaron.
+
+## 5. Regresiones: órdenes de «Más útiles» (E5b) y baja (E2b)
+### pruebas-utiles.mjs
+✔ preparación: lector, otro lector y un admin con dos TOTP reales
+✔ Wilson en la base = valores calculados aparte (Python) en 18 casos, |error| < 1e-12; sin votos, 0
+✔ Wilson de la base = lib/comunidad/wilson.ts BIT A BIT en los 1890 pares con total ≤ 60; con 0 positivos, exactamente 0 (antes de la corrección, 0/1 daba ~4.6e-17)
+✔ orden real con votos REALES: 9/10, 1/1, 2/4, empate 1/2 ×3 (fecha desc y, con la misma fecha, id desc), 0/3 y 0/0 (fecha desc)
+✔ 20 lectores CONCURRENTES (sesiones reales, PostgREST) piden la primera página de un título sin orden → UN solo orden generado, el mismo para los 20
+✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran los VENCIDOS del título
+✔ conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
+✔ cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible se saltea
+✔ página con MUCHAS ocultas (fixture: 120 versiones pasadas a oculta después de generar el orden): devuelve menos o ninguna, el cursor avanza exactamente 50 y nunca revisa más de 50
+✔ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un segundo vencimiento ya no ofrece otro
+✔ un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
+✔ votar dentro del orden congelado cambia el CONTEO que se lee, no el lugar; el orden siguiente (> 10 min, simulado) sí lo refleja
+✔ las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
+✔ «Recientes» no cambió: el mismo título recorre por fecha, sin tocar el orden congelado
+   cuentas: 47; restos (cuentas|participantes|reseñas|órdenes|decisiones|locks|interruptores): 0|0|0|0|0|0|false
+14 de 14 pasaron.
+### pruebas-baja.mjs
+✔ anon y authenticated no ejecutan las cuatro; service_role no ejecuta las internas
+✔ service_role SÍ ejecuta las cuatro (uid inexistente: sin efectos)
+✔ B6 · sólo marcador; después deleteUser → completa; el marcador cae con la cuenta
+✔ B1 · paso 1 confirma y deleteUser FALLA (trigger real) → baja-parcial con el texto del contrato
+✔ B1 · lo de la otra cuenta queda: su reseña, su bloqueo; sólo cae lo que colgaba de lo borrado
+✔ B2 · durante la ventana, otra sesión que quiera escribir (resolver_participante) → baja_en_curso; no se crea participante
+✔ B13 · login nuevo con marcador: GET /api/cuenta/estado-baja → pendiente; otra cuenta no lo ve; sin sesión → 401
+✔ B7 · reingreso con marcador y reintento: completa; no queda marcador ni vínculo
+✔ B3a · escritura que tomó K_CUENTA antes: confirma; la baja espera y después la borra y cierra su tramo
+✔ B3b · escritura que verificó el Bearer antes pero llega después (secuencial): baja_en_curso, nada escrito
+✔ B3b · la misma, esperando K_CUENTA mientras la baja confirma: relee el marcador y se rechaza
+✔ B4 · dos baja_comunitaria a la vez: se serializan; la segunda no cambia nada
+✔ B4 · dos flujos completos a la vez: los dos responden ok (eliminación completa)
+✔ B4 · el segundo deleteUser llega cuando el primero ya borró: falla (404) y reconcilia → los dos responden ok
+✔ B5 · Auth borró pero la respuesta se perdió: reconcilia → completa; sin marcador (cascada)
+✔ B12 · deleteUser falla y getUserById falla por red → baja-sin-verificar; nunca ok; el marcador sigue
+✔ B12 · sin configuración para verificar (cliente ausente) → también baja-sin-verificar
+✔ B12 · el reintento vuelve a reconciliar: con red → baja-parcial; sin la falla → completa
+✔ B9 · comunidad_baja_comunitaria_admin y después borrado en Auth → completa; la consulta del runbook da 0
+✔ B10 · el admin cancela el marcador (preliminar: dueño de la base): nada se restaura; la próxima escritura crea OTRO participante
+✔ B11 · cuenta suspendida pide la baja: se permite; la suspensión no se toca; el marcador impide recrear identidad
+✔ B14 · suspendida → paso 1 → el admin cancela con la sanción vigente: el participante nuevo nace suspendido hasta sancion_hasta
+✔ B10/B14 · una baja con marcador cancelado lo REACTIVA (no crea otro)
+✔ B8a · voto de OTRA cuenta en vuelo + consolidación esperando: ciclo de colas; la baja termina o se revierte entera
+✔ B8b · escritura de la PROPIA cuenta en vuelo (retiene su K_CUENTA) + consolidación: deadlock real; se aborta una; nunca a medio cerrar
+✔ B8c · escritura de la propia cuenta que retiene K_CUENTA más que lock_timeout (5 s): Auth se revierte ENTERA y el reintento termina
+   cuentas creadas: 24, participantes: 25; restos (cuentas|participantes|solo_local|trigger): 0|0|0|0
+26 de 26 pasaron.
+
+## 6. Unitarias de E8 y relacionadas (barridos de 021, cron-comunidad.sql, E7, Top manual, lista local, guardas)
+✔ barrido 021: interruptor propio APAGADO; plazos del dueño cargados; huellas sin configurar; la excepción de la baja identificada y bloqueada (15.3056ms)
+✔ barrido 021: retenidos, denuncias abiertas y rechazadas no tienen plazo (no hay columna) y nada los borra por antigüedad (6.3446ms)
+✔ barrido 021: el procedimiento confirma cada lote, no tiene SET, no avanza el reloj, y registra sólo cantidades y SQLSTATE (3.8932ms)
+✔ barrido 021: la purga no espera locks de filas (nowait / skip locked); los únicos que espera son K_CORTE compartido y nada más (48.7916ms)
+✔ barrido 021: tramos conservan UN tramo por par mientras la versión pueda volver a votarse o restaurarse; sólo de meses liberados (12.6239ms)
+✔ barrido 021: el Top Yumpers no lee ni reconstruye un mes fuera de la conservación (lectura y consolidación, antes y después del exclusivo) (10.7246ms)
+✔ barrido 021: permisos cerrados (nada nuevo ejecutable por la API) y sin cron ni solo_local (6.1797ms)
+✔ barrido 021_down: restaura consolidar_mes y la lectura EXACTAMENTE como en 020, borra sólo lo de 021 y avisa que lo purgado no vuelve (3.0889ms)
+✔ cron-comunidad.sql: unschedule idempotente; cada hora las órdenes, una vez al día el resto; SQL puro en Supabase; no enciende nada ni toca otros jobs (46.4648ms)
+✔ respuesta: eliminada y bloqueado no toman id, nombre ni avatar aunque vengan; activo exige id uuid y avatar con forma de catálogo (15.8114ms)
+✔ textos: mes en español rioplatense, puntos en singular y plural (1.3519ms)
+✔ pedido: sin mes, el último cerrado (lo decide la base); con mes, YYYY-MM válido (2.2998ms)
+✔ barrido 020: el cómputo es el de §2.2.2 (mes de la primera positiva, tramo y suspensiones con la MISMA condición al corte, pares distintos) (7.1512ms)
+✔ barrido 020: consolidar_mes = comprobación rápida SIN lock → exclusivo real → nueva comprobación → UNA sentencia; huérfanos sin id (4.5016ms)
+✔ barrido 020: la lectura exige sesión (auth.uid), consolida antes de leer y proyecta sin user_id, correo ni semilla; permisos explícitos (5.3819ms)
+✔ barrido 020: el down no toca tramos, votos, suspensiones ni participantes (2.4659ms)
+✔ el Top Yumpers no comparte fuente, caché ni sessionStorage con el Top de plataformas (44.3711ms)
+✔ el selector: Top semanal plataformas (público, con su toggle Películas/Series) y Top Yumpers (sin toggle); aparece sólo con el interruptor (35.5569ms)
+✔ un bloque publicado conserva EXACTAMENTE la selección y el orden manual (27.5244ms)
+✔ TMDB sólo enriquece: se le piden EXACTAMENTE los títulos del bloque, en su orden (3.629ms)
+✔ las seis plataformas usan su propia publicación, Netflix incluida (9.4048ms)
+✔ un bloque sin publicar dice que no está disponible; los demás se ven igual (2.9985ms)
+✔ el tipo cuenta: Películas publicado no cubre Series (1.7447ms)
+✔ las plataformas del usuario van primero; el resto, abajo; en el orden del selector (1.6679ms)
+✔ una lectura fallida es un ERROR, no un Top vacío ni otro ranking (1.9609ms)
+✔ sin publicaciones NO es un error: los doce bloques dicen «todavía no disponible» (1.6415ms)
+✔ reintentar después de un fallo devuelve el Top publicado (2.7246ms)
+✔ un fallo de TMDB al enriquecer NO esconde el bloque: sale con sus títulos y degradado (5.2263ms)
+✔ la lectura real LANZA ante un error de Supabase, y no lo guarda en caché (8.5084ms)
+✔ la ruta responde 503 ante la lectura fallida, y la vista ofrece reintentar (10.1846ms)
+✔ el Top no tiene ningún camino hacia el ranking automático ni la popularidad (11.7864ms)
+✔ la disponibilidad ignora el top automático aunque traiga un dato «reciente» (2.5025ms)
+✔ ningún código de la app lee `netflix_top10` ni importa la ingesta (1348.3932ms)
+✔ no queda programación de cron en el repo (4.4817ms)
+✔ la ruta antigua no existe: /api/cron/netflix-top10 ya no puede ejecutar nada (3.5933ms)
+✔ .env.comunidad-local está ignorado por Git (y .env.local también) (703.5706ms)
+✔ urlLocal acepta sólo 127.0.0.1 y localhost (3.6425ms)
+✔ ningún `docker` de las baterías ni de db-local sale sin el endpoint verificado (311.9193ms)
+✔ las ayudas sólo locales nunca van en una migración (plan §4) (128.0045ms)
+✔ las baterías no leen .env.local ni mencionan un host de Supabase remoto (34.0554ms)
+✔ projectIdDe lee el project_id del config.toml real del repo (25.8652ms)
+✔ elige exactamente supabase_db_<project_id>, aunque haya otros proyectos corriendo (1.2762ms)
+✔ falla si el contenedor del proyecto no está, y nombra los que sí están (3.6243ms)
+✔ falla si la selección no es inequívoca o falta el project_id (1.0785ms)
+✔ un prefijo parecido NO alcanza: 'streamingcentral2' no es 'streamingcentral' (1.1336ms)
+✔ las cargas del catálogo van en orden numérico y sólo si se pidieron (25.5304ms)
+✔ aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks (3.1892ms)
+ℹ tests 47
+ℹ pass 47
+ℹ fail 0
+
+## 7. npm test completo y tsc
+ℹ tests 2534
+ℹ pass 2518
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 16
+tsc --noEmit: 0 errores (código de salida 0)
+
+## 8. Pruebas de scripts/ (guardas locales, Docker local, lista de migraciones)
+ℹ tests 23
+ℹ pass 23
+ℹ fail 0
+
+## 9. pruebas-purga.mjs, tercera corrida seguida de la versión final (resumen)
+   cuentas: 35; restos (cuentas|participantes|meses|órdenes|ejecuciones|locks|decisiones|reloj|proto_marca igual|interruptores|purga): 0|0|0|0|0|0|0|0|true|false|false
+27 de 27 pasaron.

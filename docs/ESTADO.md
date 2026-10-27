@@ -1154,6 +1154,75 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-27-informe-claude-e7.md`; salidas:
      `docs/medidas/2026-10-27-e7-salidas.txt`; capturas:
      `docs/medidas/2026-10-27-e7-recorrido/`.
+   - **E8 local: retención y purga (27/10, Claude, autorizada por el dueño
+     sólo en local; `supabase start` y datos ficticios; `a730934`).
+     PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     - **Plazos (informado por el dueño, 27/10; decisiones de producto, NO
+       validadas legalmente: P3 sigue abierto para la validación):** reseñas
+       y votos vigentes, sin plazo; órdenes de Más útiles al vencer sus 2 h;
+       intentos 7 días; reemplazadas y textos retirados 30 días salvo
+       denuncia pendiente; retenidos y denuncias abiertas hasta resolverlos,
+       nunca por antigüedad; denuncias resueltas 30 días desde el cierre;
+       decisiones 12 meses; rankings 12 meses; historial de puntos después de
+       consolidar el mes + 30 días. Sin configurar: huellas antispam (siguen
+       cayendo con su versión y con la baja), rechazadas, retenidas, votos
+       retirados y el resto sin plazo. **Sigue pendiente** conservar el texto
+       denunciado tras borrar una cuenta: identificado
+       (`conservar_texto_denunciado_baja`) y bloqueado por un CHECK.
+     - **Interpretaciones a confirmar** (informe): "textos retirados" incluye
+       el borrado del autor (`plazo_borradas`); "resueltas" = cerradas,
+       también `denuncias_cerradas`; 12 meses del ranking desde el corte;
+       suspensiones con las dos reglas (12 meses desde el fin y meses del
+       corte liberados).
+     - **Qué entró** (`021_comunidad_purga.sql` + down):
+       - `comunidad.purga_config` (una fila) con `purga_activa` APAGADO y
+         los plazos; `comunidad.purga_ejecuciones`, registro mínimo
+         (cantidades y SQLSTATE, sin textos ni ids);
+       - `comunidad.purgar(alcance, ahora)`: PROCEDIMIENTO que confirma
+         cada lote ('hora' = órdenes; 'dia' = el resto), idempotente, una
+         corrida por vez, se detiene si se apaga; no espera locks de filas
+         (nowait / skip locked);
+       - protecciones: vigentes, retenidas, rechazadas, denunciadas, casos
+         abiertos, mes sin consolidar; un tramo por par mientras la versión
+         pueda volver a votarse o restaurarse (mes de la primera positiva);
+         huérfanos sólo sin referencias;
+       - ventana del Top Yumpers: un mes fuera de la conservación no se lee
+         ni se consolida (no se reconstruye vacío). El down devuelve
+         `consolidar_mes` y la lectura exactamente a 020;
+       - `supabase/cron-comunidad.sql`: cada hora y diario, `unschedule`
+         idempotente, SQL puro en Supabase. **NO ejecutado**: `cron.job`
+         sigue con sólo `sala-barrido`.
+     - **Hallazgos propios corregidos:** una variable `t` del lote anulaba
+       los alias `t` (tramos, rankings y participantes fallaban; unitaria
+       nueva); `decisiones` iba antes del contenido y la corrida diaria no
+       era idempotente (reordenado).
+     - **Pruebas reales:** `pruebas-purga` 27/27 (cada categoría antes, en
+       y después; protecciones; lotes; interrupción; `ocupada`; apagado en
+       curso; `lock_timeout`; voto, borrado, edición, baja, generador y
+       consolidación en vuelo; meses fuera de la conservación; permisos);
+       up/down/up de 021 6/6 (sin 021 = volcado de E7); permisos 29/29;
+       regresiones `pruebas-top` 10/10 con la ruta, `pruebas-top-concurrencia`
+       6/6, `pruebas-utiles` 14/14, `pruebas-baja` 26/26; unitarias 47/47;
+       **`npm test` 2518 pasan, 0 fallan, 16 omitidas**; `tsc` 0.
+     - **Fixture declarado:** reloj de `proto_marca`; `ahora` de la purga;
+       UPDATE de `intentos.creado_en`, `top_meses.consolidado_en` y
+       `denuncias_cerradas.cerrada_en` de filas propias; plazo de rankings
+       cambiado sólo dentro de algunas pruebas y restaurado.
+     - **Limitaciones / decisiones para el dueño:** una reseña borrada con
+       una retenida o rechazada adentro no se purga nunca (el admin no la
+       puede resolver); purgar versiones baja la cobertura de
+       `duplicado_propio` (las huellas caen con su versión); el peso de quien
+       denuncia cuenta sólo descartadas de 30 días; un mes que nadie leyó
+       conserva su historial hasta salir de la conservación (no hay job de
+       consolidación mensual); sin probar pg_cron, backups, escala ni
+       Producción.
+     - **Limpieza:** la base quedó como al empezar, con 021 aplicada:
+       6/2/42/2, todo lo demás en 0, límites e interruptores intactos,
+       **purga apagada**, `SELECT` de `profiles` revocado, sin `solo_local`
+       ni locks. Docker Desktop estaba detenido: lo inicié sin tocar
+       volúmenes.
+     Informe: `docs/medidas/2026-10-27-informe-claude-e8.md`; salidas:
+     `docs/medidas/2026-10-27-e8-salidas.txt`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
@@ -1162,10 +1231,12 @@ AAB tiene que ser `5` o mayor.
      también se borra cuando la baja de quien denunció corre a la vez que la
      del autor. Que esté implementado NO equivale a aceptar la opción A.
      Queda para el dueño, con P3 y
-     antes de E8 y de la publicación, si se conserva el TEXTO denunciado
-     después de una baja (opciones A/B/C del informe de E4) y el plazo de
-     los intervalos seudónimos. Huellas, excedentes y corroboraciones siguen
-     cayendo en cascada con la versión;
+     antes de la publicación, si se conserva el TEXTO denunciado
+     después de una baja (opciones A/B/C del informe de E4): E8 lo deja
+     identificado y desactivado, sin archivo de textos. El plazo de los
+     intervalos seudónimos lo fijó el dueño el 27/10 (historial de puntos:
+     consolidado + 30 días; ver E8). Huellas, excedentes y corroboraciones
+     siguen cayendo en cascada con la versión;
    - la validación independiente de E1 (protocolo, autoría y ejecutor, no
      preparados);
    - la decisión sobre los cambios opcionales del contrato (por ahora no se
