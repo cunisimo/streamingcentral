@@ -1,0 +1,562 @@
+E6 local — nombre comunitario y perfil mínimo del autor. Salidas reales contra Supabase local (supabase_db_streamingcentral) y la app local (http://localhost:3100), 27/10/2026.
+Sobre 662e247, en feat/resenas-reglas (worktree wt-resenas-comunidad). Datos ficticios; credenciales y tokens no se imprimen.
+
+===== 1. pruebas-perfiles, primera corrida (falló la PREPARACIÓN: límite de 5 reseñas por día y el trigger no deja retirar por SQL) =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+✖ preparación: autor A con 9 reseñas (7 visibles: una retirada y una borrada), otros autores, lectores con sesión real y votos
+    {"motivo":"limite_diario","resultado":"rechazo_cuenta"}
+
+— Nombre comunitario (núcleo y adaptador de la ruta, base real) —
+✔ aceptado: se guarda NORMALIZADO en participantes; repetirlo es sin_cambios y no consume límite
+✔ rechazos: contacto ofuscado → rechazo_contenido con motivo; odio → nombre_no_admitido; formato → sin tocar la base. Nada se guarda
+✔ límite del día (3): el cuarto intento es rechazo_cuenta limite_diario y no cambia nada
+✔ fila A: publicación pausada, sin términos y suspensión rechazan; nada se escribe
+✔ ningún camino salta la validación: authenticated no ejecuta la función; el esquema no se expone; la base rechaza forma y decisiones inválidas aunque llame service_role
+✖ profiles.display_name por update directo (la propia cuenta, como la app) NO cambia el nombre comunitario ni aparece en lo comunitario
+    Expected values to be strictly equal:
+✔ por la RUTA: sin sesión 401; con sesión, el contacto se rechaza con motivo y uno válido se acepta (B)
+
+— Perfil comunitario —
+✔ acceso: sin sesión, anon y service_role no leen (ruta 401 sólo con {resultado}; RPC 401/403 42501); id inválido 400; inexistente no_existe
+✖ proyección: sólo los campos permitidos; avatar ELEGIDO (escrito por la cuenta) sale como id del catálogo; ni correo, ni user_id, ni display_name, ni semilla
+    Expected values to be strictly equal:
+✖ paginación: 5 + 2 por la ruta con el núcleo del cliente, sin repetir ni saltear; retirada y borrada no aparecen; agregados = visibles
+    Expected values to be strictly deep-equal:
+✖ cambios ENTRE páginas (retiro fixture y borrado real): lo oculto no reaparece; nada se repite
+    ERROR:  transición no permitida: publicada → retirada (versión 38451)
+✔ cambio de cuenta y respuestas tardías: la tanda de OTRA cuenta (otro bloqueo, otro voto) no se aplica a esta lista
+✔ propio: ?yo=1 devuelve el perfil propio (propio, con sus reseñas); sin identidad comunitaria, sin_participante
+✖ bloqueo: quien bloqueó ve «Usuario bloqueado» sin nombre, avatar ni reseñas; otro lector lo ve normal; desbloquear lo devuelve
+    Cannot read properties of undefined (reading 'version_id')
+✖ suspensión: los demás ven el perfil sin reseñas y con agregados en 0 (no se informa la suspensión); el suspendido ve las suyas
+    Expected values to be strictly deep-equal:
+✔ cuenta eliminada (flujo real de la app): el perfil queda «Cuenta eliminada», sin nombre, avatar ni reseñas
+✖ la ficha (lectura de E5a/E5b, ruta real) trae el autor: id de participante y nombre comunitario; nada más del autor
+    Expected values to be strictly deep-equal:
+✔ módulo apagado: el perfil y el nombre responden sin datos
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 7; restos (cuentas|participantes|bajas|locks|interruptores): 0|0|0|0|false
+
+11 de 19 pasaron.
+Fallaron:
+ - preparación: autor A con 9 reseñas (7 visibles: una retirada y una borrada), otros autores, lectores con sesión real y votos
+ - profiles.display_name por update directo (la propia cuenta, como la app) NO cambia el nombre comunitario ni aparece en lo comunitario
+ - proyección: sólo los campos permitidos; avatar ELEGIDO (escrito por la cuenta) sale como id del catálogo; ni correo, ni user_id, ni display_name, ni semilla
+ - paginación: 5 + 2 por la ruta con el núcleo del cliente, sin repetir ni saltear; retirada y borrada no aparecen; agregados = visibles
+ - cambios ENTRE páginas (retiro fixture y borrado real): lo oculto no reaparece; nada se repite
+ - bloqueo: quien bloqueó ve «Usuario bloqueado» sin nombre, avatar ni reseñas; otro lector lo ve normal; desbloquear lo devuelve
+ - suspensión: los demás ven el perfil sin reseñas y con agregados en 0 (no se informa la suspensión); el suspendido ve las suyas
+ - la ficha (lectura de E5a/E5b, ruta real) trae el autor: id de participante y nombre comunitario; nada más del autor
+
+===== 2. pruebas-perfiles, segunda corrida (retiro y suspensión con el admin de E4; fallaba la escritura de profiles por PostgREST: el SELECT local está revocado) =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+✔ preparación: autor A con 9 reseñas (7 visibles: una retirada y una borrada), otros autores, lectores con sesión real y votos
+
+— Nombre comunitario (núcleo y adaptador de la ruta, base real) —
+✔ aceptado: se guarda NORMALIZADO en participantes; repetirlo es sin_cambios y no consume límite
+✔ rechazos: contacto ofuscado → rechazo_contenido con motivo; odio → nombre_no_admitido; formato → sin tocar la base. Nada se guarda
+✔ límite del día (3): el cuarto intento es rechazo_cuenta limite_diario y no cambia nada
+✔ fila A: publicación pausada, sin términos y suspensión rechazan; nada se escribe
+✔ ningún camino salta la validación: authenticated no ejecuta la función; el esquema no se expone; la base rechaza forma y decisiones inválidas aunque llame service_role
+✖ profiles.display_name por update directo (la propia cuenta, como la app) NO cambia el nombre comunitario ni aparece en lo comunitario
+    Expected values to be strictly equal:
+✔ por la RUTA: sin sesión 401; con sesión, el contacto se rechaza con motivo y uno válido se acepta (B)
+
+— Perfil comunitario —
+✔ acceso: sin sesión, anon y service_role no leen (ruta 401 sólo con {resultado}; RPC 401/403 42501); id inválido 400; inexistente no_existe
+✖ proyección: sólo los campos permitidos; avatar ELEGIDO (escrito por la cuenta) sale como id del catálogo; ni correo, ni user_id, ni display_name, ni semilla
+    Expected values to be strictly equal:
+✔ paginación: 5 + 2 por la ruta con el núcleo del cliente, sin repetir ni saltear; retirada y borrada no aparecen; agregados = visibles
+✔ cambios ENTRE páginas (retiro por E4 y borrado real): lo oculto no reaparece; nada se repite
+✔ cambio de cuenta y respuestas tardías: la tanda de OTRA cuenta (otro bloqueo, otro voto) no se aplica a esta lista
+✔ propio: ?yo=1 devuelve el perfil propio (propio, con sus reseñas); sin identidad comunitaria, sin_participante
+✔ bloqueo: quien bloqueó ve «Usuario bloqueado» sin nombre, avatar ni reseñas; otro lector lo ve normal; desbloquear lo devuelve
+✔ suspensión: los demás ven el perfil sin reseñas y con agregados en 0 (no se informa la suspensión); el suspendido ve las suyas
+✔ cuenta eliminada (flujo real de la app): el perfil queda «Cuenta eliminada», sin nombre, avatar ni reseñas
+✔ la ficha (lectura de E5a/E5b, ruta real) trae el autor: id de participante y nombre comunitario; nada más del autor
+✔ módulo apagado: el perfil y el nombre responden sin datos
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 8; restos (cuentas|participantes|bajas|locks|decisiones|limite_resenas|interruptores): 0|0|0|0|0|5|false
+
+17 de 19 pasaron.
+Fallaron:
+ - profiles.display_name por update directo (la propia cuenta, como la app) NO cambia el nombre comunitario ni aparece en lo comunitario
+ - proyección: sólo los campos permitidos; avatar ELEGIDO (escrito por la cuenta) sale como id del catálogo; ni correo, ni user_id, ni display_name, ni semilla
+
+===== 3. pruebas-perfiles, corrida final (tras usar eleccionAvatar en la batería, por el barrido de DiceBear) =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+✔ preparación: autor A con 9 reseñas (7 visibles: una retirada y una borrada), otros autores, lectores con sesión real y votos
+
+— Nombre comunitario (núcleo y adaptador de la ruta, base real) —
+✔ aceptado: se guarda NORMALIZADO en participantes; repetirlo es sin_cambios y no consume límite
+✔ rechazos: contacto ofuscado → rechazo_contenido con motivo; odio → nombre_no_admitido; formato → sin tocar la base. Nada se guarda
+✔ límite del día (3): el cuarto intento es rechazo_cuenta limite_diario y no cambia nada
+✔ fila A: publicación pausada, sin términos y suspensión rechazan; nada se escribe
+✔ ningún camino salta la validación: authenticated no ejecuta la función; el esquema no se expone; la base rechaza forma y decisiones inválidas aunque llame service_role
+✔ profiles.display_name por update DIRECTO en la base NO cambia el nombre comunitario ni aparece en lo comunitario
+✔ por la RUTA: sin sesión 401; con sesión, el contacto se rechaza con motivo y uno válido se acepta (B)
+
+— Perfil comunitario —
+✔ acceso: sin sesión, anon y service_role no leen (ruta 401 sólo con {resultado}; RPC 401/403 42501); id inválido 400; inexistente no_existe
+✔ proyección: sólo los campos permitidos; avatar ELEGIDO (escrito como lo guarda la app) sale como id del catálogo; ni correo, ni user_id, ni display_name, ni semilla
+✔ paginación: 5 + 2 por la ruta con el núcleo del cliente, sin repetir ni saltear; retirada y borrada no aparecen; agregados = visibles
+✔ cambios ENTRE páginas (retiro por E4 y borrado real): lo oculto no reaparece; nada se repite
+✔ cambio de cuenta y respuestas tardías: la tanda de OTRA cuenta (otro bloqueo, otro voto) no se aplica a esta lista
+✔ propio: ?yo=1 devuelve el perfil propio (propio, con sus reseñas); sin identidad comunitaria, sin_participante
+✔ bloqueo: quien bloqueó ve «Usuario bloqueado» sin nombre, avatar ni reseñas; otro lector lo ve normal; desbloquear lo devuelve
+✔ suspensión: los demás ven el perfil sin reseñas y con agregados en 0 (no se informa la suspensión); el suspendido ve las suyas
+✔ cuenta eliminada (flujo real de la app): el perfil queda «Cuenta eliminada», sin nombre, avatar ni reseñas
+✔ la ficha (lectura de E5a/E5b, ruta real) trae el autor: id de participante y nombre comunitario; nada más del autor
+✔ módulo apagado: el perfil y el nombre responden sin datos
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 8; restos (cuentas|participantes|bajas|locks|decisiones|limite_resenas|interruptores): 0|0|0|0|0|5|false
+
+19 de 19 pasaron.
+
+===== 4. up/down/up de 019 =====
+base: supabase_db_streamingcentral
+
+   volcado 1-con-019: 15523 líneas, sha256 4c1d01691f7b4e06…
+✔ 019 aplicada
+   volcado 2-sin-019: 15304 líneas, sha256 f76d0b9b1544fdbd…
+✔ 019_down: quita todo lo de 019 y sólo restaura item_lectura de 017 (sin el autor)
+   volcado 3-sin-019-otra-vez: 15304 líneas, sha256 f76d0b9b1544fdbd…
+✔ 019_down repetida: inocua
+   volcado 4-con-019: 15523 líneas, sha256 4c1d01691f7b4e06…
+   volcado 5-con-019-repetida: 15523 líneas, sha256 4c1d01691f7b4e06…
+✔ 019 up: vuelve exactamente al volcado con 019; repetida, inocua
+   volcado 6-sin-019: 15304 líneas, sha256 f76d0b9b1544fdbd…
+   volcado 7-con-019: 15523 líneas, sha256 4c1d01691f7b4e06…
+✔ segunda vuelta down → up: mismos volcados; datos ajenos intactos
+
+5 de 5 pasaron.
+
+===== 5. Regresiones afectadas (019 redefine item_lectura; lista-nucleo suma autor y título; inventario de RPC) =====
+--- pruebas-permisos ---
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— 1. SQL (SET ROLE) —
+✔ el esquema tiene exactamente las diecinueve tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 285 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 285 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+
+— Usuarios del Auth local —
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+
+— 2. REST —
+✔ REST: 7 credenciales × 19 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+
+— 3. RPC —
+✔ las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a, E5b y E6), security definer y search_path vacío
+✔ catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a) y el perfil (E6)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ RPC real por REST a la lectura (E5a): anon y service_role → 401/403 sin datos; cada JWT real (autor, ajeno, suspendido, admin AAL1 y AAL2) → 200 como sí mismo
+✔ RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+
+— Evidencia: ACL efectivas del esquema —
+bajas_en_curso: {postgres=arwdDxtm/postgres}
+bloqueos: {postgres=arwdDxtm/postgres}
+bloqueos_id_seq: {postgres=rwU/postgres}
+config: {postgres=arwdDxtm/postgres}
+contadores: {postgres=arwdDxtm/postgres}
+corroboraciones: {postgres=arwdDxtm/postgres}
+decisiones: {postgres=arwdDxtm/postgres}
+decisiones_id_seq: {postgres=rwU/postgres}
+denuncias: {postgres=arwdDxtm/postgres}
+denuncias_cerradas: {postgres=arwdDxtm/postgres}
+denuncias_cerradas_id_seq: {postgres=rwU/postgres}
+denuncias_excedentes: {postgres=arwdDxtm/postgres}
+denuncias_id_seq: {postgres=rwU/postgres}
+esquema comunidad: {postgres=UC/postgres}
+evaluaciones: {postgres=arwdDxtm/postgres}
+evaluaciones_id_seq: {postgres=rwU/postgres}
+huellas: {postgres=arwdDxtm/postgres}
+intentos: {postgres=arwdDxtm/postgres}
+ordenes_utiles: {postgres=arwdDxtm/postgres}
+ordenes_utiles_id_seq: {postgres=rwU/postgres}
+ordenes_utiles_tramos: {postgres=arwdDxtm/postgres}
+participantes: {postgres=arwdDxtm/postgres}
+resenas: {postgres=arwdDxtm/postgres}
+resenas_id_seq: {postgres=rwU/postgres}
+suspensiones: {postgres=arwdDxtm/postgres}
+suspensiones_id_seq: {postgres=rwU/postgres}
+tramos: {postgres=arwdDxtm/postgres}
+tramos_id_seq: {postgres=rwU/postgres}
+versiones: {postgres=arwdDxtm/postgres}
+versiones_id_seq: {postgres=rwU/postgres}
+
+— Limpieza (base compartida): sólo lo que creó esta corrida —
+   cuentas: 4; restos (cuentas|participantes): 0|0
+
+29 de 29 pasaron.
+--- pruebas-lectura ---
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Preparación —
+✔ preparación: un título con 213 visibles + 6 que no deben verse; lector, otro lector, admin con dos TOTP
+
+— Permisos: sin sesión nada; con sesión, sólo como uno mismo —
+✔ RPC directo: anon y service_role → 401/403 con 42501/permission denied; un JWT real → 200; no hay parámetro para leer como otro
+✔ catálogo: comunidad_resenas security definer, search_path vacío, EXECUTE sólo authenticated; modulo_activo sólo service_role; comunidad_leer_titulo ya no existe
+
+— Recientes: recorrido completo —
+     214 reseñas en 43 páginas; empate en las posiciones 107–118
+✔ más de 200 reseñas: el lector recorre las 214 visibles de a 5, en el orden (primera publicación desc, id desc), sin repetir ni saltear, con un empate de 12 cruzando páginas
+✔ el mismo recorrido por el ADAPTADOR de la ruta (cursor opaco) y con tandas de 20: mismo conjunto y orden
+✔ bloqueo personal: la reseña bloqueada no la ve quien bloqueó, SÍ la ve otro lector; el suspendido no lo ve nadie
+
+— Cambios entre páginas (funciones reales) —
+     recorrido con cambios: 210 reseñas, 0 repetidas, 0 salteadas
+✔ entre páginas: retiro, borrado, edición, bloqueo y suspensión. Nada oculto reaparece por el cursor, nada se repite, nada visible se saltea
+✔ levantar la suspensión vuelve a mostrar sus reseñas; desbloquear también
+
+— Contrato de la función —
+✔ pedidos inválidos: orden desconocido, cursor del otro orden, cursor mal formado y título inválido → 22023 sin datos; el límite se acota a 1–20
+✔ un título sin reseñas: lista vacía, total 0, sin cursor; con el módulo APAGADO, {activo:false} y nada más
+
+— La ruta /api/comunidad/resenas/lista (servidor local) —
+✔ ruta: sin token o con uno inválido 401 con SÓLO {resultado, activo}; con sesión 200 privado y sin caché; inválido 400; el cursor de la ruta recorre lo mismo
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 222; restos (cuentas|participantes|decisiones|locks|interruptores): 0|0|0|0|false
+
+11 de 11 pasaron.
+--- pruebas-voto-lista ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · núcleo: lib/comunidad/lista-nucleo.ts
+
+✔ preparación: 7 reseñas reales (dos páginas: 5 + 2), un lector con sesión real y otra cuenta que ya votó dos
+✔ positivo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque RETIRA
+✔ positivo con la PRIMERA respuesta perdida: la reconciliación confirma sin_cambios; pantalla = base (util, sin contar dos veces); el siguiente toque RETIRA
+✔ negativo SIN pérdida: voto_registrado; pantalla = base; el siguiente toque del mismo pulgar RETIRA
+✔ negativo con la primera respuesta perdida (reseña con un voto ajeno negativo): sin_cambios; pantalla = base
+✔ CAMBIO de voto (útil → no útil) con la primera respuesta perdida: sin_cambios; útiles −1, total igual; pantalla = base
+✔ RETIRO con la primera respuesta perdida: la reconciliación confirma sin_efecto; pantalla = base (sin voto); el siguiente toque VOTA
+✔ retiro SIN pérdida (voto_retirado) sobre una reseña con voto ajeno: pantalla = base
+✔ pérdida de AMBAS respuestas: sin_confirmar, la pantalla NO cambia y avisa la incertidumbre; el reintento posterior confirma sin_cambios y la pantalla queda = base
+✔ pérdida de AMBAS respuestas al retirar: sin_confirmar sin cambio visible; el reintento confirma sin_efecto y la pantalla queda sin voto = base
+     respuestas perdidas simuladas: 8
+✔ al final: TODA la lista (las dos páginas) coincide con la base, reseña por reseña
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 9; restos (cuentas|participantes|interruptores): 0|0|false
+
+11 de 11 pasaron.
+--- pruebas-utiles ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321
+
+— Preparación —
+✔ preparación: lector, otro lector y un admin con dos TOTP reales
+
+— Wilson y desempates —
+✔ Wilson en la base = valores calculados aparte (Python) en 18 casos, |error| < 1e-12; sin votos, 0
+✔ Wilson de la base = lib/comunidad/wilson.ts BIT A BIT en los 1890 pares con total ≤ 60; con 0 positivos, exactamente 0 (antes de la corrección, 0/1 daba ~4.6e-17)
+✔ orden real con votos REALES: 9/10, 1/1, 2/4, empate 1/2 ×3 (fecha desc y, con la misma fecha, id desc), 0/3 y 0/0 (fecha desc)
+
+— Un orden por título —
+     20 lectores → 1 orden (35)
+✔ 20 lectores CONCURRENTES (sesiones reales, PostgREST) piden la primera página de un título sin orden → UN solo orden generado, el mismo para los 20
+✔ reutilización y vigencia (tiempo simulado): < 10 min se reutiliza; > 10 min se genera otro y el anterior sigue valiendo hasta vencer; al generar se borran los VENCIDOS del título
+
+— Recorrido y revalidación —
+✔ conjunto estable de 237 reseñas: el recorrido de a 5 sigue EXACTAMENTE el orden (Wilson + desempates), sin duplicar ni saltear; filas de 100 ids
+✔ cambios ENTRE páginas (funciones reales): retiro, suspensión, bloqueo, borrado y edición. Lo oculto no reaparece, lo editado sale una vez, nada visible se saltea
+     tandas [5,0,0,5,5,5,5,5] · avances del cursor [5,50,50,25,5,5,5]
+✔ página con MUCHAS ocultas (fixture: 120 versiones pasadas a oculta después de generar el orden): devuelve menos o ninguna, el cursor avanza exactamente 50 y nunca revisa más de 50
+
+— Vencimiento —
+✔ vencimiento a mitad de lectura (tiempo simulado): `orden_actualizado` sin reseñas; UN reinicio con el núcleo real agrega sin repetir y llega al final; un segundo vencimiento ya no ofrece otro
+✔ un cursor de OTRO título o de un orden borrado responde orden_actualizado, nunca mezcla; un cursor de «Más útiles» en «Recientes» es inválido
+
+— Votos dentro del orden congelado —
+✔ votar dentro del orden congelado cambia el CONTEO que se lee, no el lugar; el orden siguiente (> 10 min, simulado) sí lo refleja
+
+— Permisos y privacidad —
+✔ las tablas del orden: sin grants, RLS sin policies, sin columnas del lector; wilson y orden_utiles sin EXECUTE; anon y service_role no leen «Más útiles»
+✔ «Recientes» no cambió: el mismo título recorre por fecha, sin tocar el orden congelado
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 47; restos (cuentas|participantes|reseñas|órdenes|decisiones|locks|interruptores): 0|0|0|0|0|0|false
+
+14 de 14 pasaron.
+--- pruebas-moderacion ---
+docker: desktop-linux (config.json) → npipe:////./pipe/dockerDesktopLinuxEngine
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+— Duplicados (§3.3.1): huella HMAC, sin texto en claro —
+✔ duplicados · el mismo texto en otro título de la misma cuenta → 'retenida' (sin revelar la regla); otro texto → 'publicada'
+✔ duplicados · casi duplicado propio (una palabra cambiada, Jaccard ≥ 0,8) → retenida, también como edición de OTRA reseña; editar la MISMA reseña con un cambio chico → publicada
+✔ duplicados · el mismo texto en 3 cuentas → la 4.ª cuenta queda 'retenida' (duplicado_coordinado); las 3 primeras, publicadas
+✔ duplicados · CONCURRENCIA: 7 cuentas publican el mismo texto a la vez → exactamente 3 publicadas y 4 retenidas (lock por hash, nivel 8)
+✔ duplicados · la tabla de huellas NO contiene texto: sólo hex (64 y 16); ninguna palabra del texto aparece; un shingle en claro lo rechaza el CHECK
+✔ duplicados · borrar la reseña borra sus huellas; volver a publicar el mismo texto ya no es duplicado
+✔ duplicados · sin secreto HMAC la escritura responde 'error' y no toca la base (una regla que no corre nunca aprueba)
+
+— Admisión a la cola de retenidos (§3.3) —
+✔ admisión · por autor: con 2 retenidos, el 3.º que sería retenido NO se guarda ('admision_autor', sin cupo); lo limpio se publica
+✔ admisión · por autor: editar uno de SUS 2 retenidos con otro texto retenido se admite (la vigente reemplazada sale de la cola)
+✔ admisión · por autor, CONCURRENCIA: 5 envíos retenibles simultáneos de la misma cuenta → exactamente 2 retenidos y 3 'admision_autor'
+✔ admisión · global, CONCURRENCIA (ataque que llena la cola): tope = cola + 3; 10 cuentas envían spam a la vez → exactamente 3 entran y 7 reciben 'admision_global'; lo limpio se sigue publicando
+✔ admisión · lo retenido NO se publica por vencimiento: no hay job que lo haga (pg_cron no programa nada sobre comunidad)
+
+— Pedir revisión de un rechazo por contenido (§3.3.3, §3.4.1) —
+✔ revisión · publicar con teléfono → rechazo_contenido (nada guardado); pedir revisión (id nuevo) → 'revision_solicitada', invisible para otros, cuenta para el límite
+✔ revisión · si las reglas vigentes ya no rechazan el texto, es un envío normal ('publicada')
+✔ revisión · edición: sin confirmar → 'requiere_confirmacion' sin tocar nada; confirmada → la publicada se reemplaza (deja de verse), votos reiniciados UNA vez
+✔ revisión · pasa por la admisión: con 2 retenidos propios → 'admision_autor' y nada guardado
+✔ revisión · idempotencia: respuesta perdida tras el commit → el reintento con el mismo id devuelve lo guardado (UNA versión); el mismo id sin revisión → conflicto
+
+— Denuncias (§3.3.2) —
+✔ denuncia · se registra, la reseña SIGUE VISIBLE; repetirla da el mismo resultado sin otra fila ni otro cupo; quien denuncia la ve marcada
+✔ denuncia · no la propia ('propia'); no lo invisible (retenida → 'version_no_disponible'); motivo fuera del diseño → 'invalido' sin tocar la base
+✔ denuncia · ATAQUE: 8 cuentas denuncian como grave una reseña legítima → sigue publicada y visible, y queda PRIMERA en la cola (la cantidad ordena, no oculta)
+✔ denuncia · cota por versión, CONCURRENCIA: tope 3 filas; 7 denuncias simultáneas → 3 filas + excedente 4, todas 'denuncia_registrada'; sigue publicada
+✔ denuncia · tope global por hora, CONCURRENCIA: tope = ingreso + 4; 9 cuentas denuncian a la vez → exactamente 4 recibidas y 5 'cola_denuncias_llena'; con bloquear, el bloqueo se hace igual
+✔ denuncia · límite diario propio (tope 2): la 3.ª → 'limite_diario'
+✔ denuncia · CORROBORACIÓN: una versión publicada con reglas viejas que las vigentes retendrían pasa a 'retenida' POR LA REGLA; una legítima denunciada, no
+✔ denuncia · 'No me sirvió' masivo (12 cuentas) → ningún efecto de moderación: publicada, sin denuncias, fuera de la cola
+✔ denuncia · respuesta perdida tras el commit → se reconcilia: 'denuncia_registrada' repetida, UNA fila, UN cupo; perdidas las dos → 'sin_confirmar' y el reintento no duplica
+
+— Bloqueos (§3.3.4) —
+✔ bloqueo · oculta TODAS las reseñas del autor sólo para quien bloquea; los demás las siguen viendo; su estado no cambia
+✔ bloqueo · idempotente; no a sí mismo ('propio'); límite diario (tope 1 → el 2.º 'limite_diario'); se puede denunciar después de bloquear
+✔ desbloqueo · por id: vuelve a verse; el bloqueo de OTRA cuenta no se toca ('sin_efecto', la fila sigue); repetirlo es 'sin_efecto'
+✔ bloqueo y desbloqueo · respuesta perdida tras el commit → reconciliados sin duplicar ni fallar
+
+— Matriz filas C (denunciar) y D (bloquear, desbloquear) (§2.1.2) —
+✔ matriz · suspendido: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · correo pendiente: C → 'correo_pendiente'; D → permitidas
+✔ matriz · términos sin aceptar: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · publicación pausada: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · módulo apagado: C → 'modulo_apagado'; D → permitidas
+✔ matriz · cola de retenidos llena: C → 'denuncia_registrada'; D → permitidas
+✔ matriz · cola de denuncias llena: C → 'cola_denuncias_llena'; D → permitidas
+✔ matriz · baja en curso: C → 'baja_en_curso'; D → 'baja_en_curso'
+
+— Protocolo: niveles 8 (huella) y 9 (cola) —
+✔ protocolo · fuera de orden → CB002: cola antes que huella, huella o cola después de la marca, cola repetida; saltear la huella vale
+
+— Compuertas con sesiones psql: el segundo ESPERA el lock del nivel 8/9 y relee —
+✔ compuerta · admisión global: X entra a la cola (tope = cola + 1) y retiene; Y espera el lock 7304, relee y recibe 'admision_global'
+✔ compuerta · denuncias por hora: X recibe la última (tope = ingreso + 1) y retiene; Y espera el lock 7304, relee y recibe 'cola_denuncias_llena'
+✔ compuerta · duplicado entre cuentas: con el texto en 2 cuentas, X (3.ª) publica y retiene el hash; Y (4.ª) espera el lock 7303, relee y queda 'retenida'
+
+— Acceso directo —
+✔ acceso directo · un JWT de usuario (y anon) no lee ni escribe las tablas nuevas ni ejecuta las funciones de E3b
+
+— Rutas HTTP (servidor local) —
+✔ rutas · sin sesión → 401; cuerpo inválido → 400; sin caché
+✔ rutas · denunciar + bloquear en un paso por HTTP: la respuesta no trae el texto; la reseña desaparece para quien bloquea; listar y desbloquear por HTTP
+✔ rutas · pedir revisión por HTTP: edición sin confirmar → 'requiere_confirmacion'; publicar → 'revision_solicitada'
+
+— Limpieza (base compartida) —
+   cuentas: 147; restos (cuentas|participantes|locks|interruptores encendidos|límites): 0|0|0|false|{"limite_resenas":5,"limite_ediciones":10,"limite_evaluaciones":100,"limite_denuncias":10,"limite_bloqueos":50,"admision_por_autor":2,"admision_global":50,"denuncias_filas_por_version":50,"denuncias_por_hora":100}
+
+46 de 46 pasaron.
+
+===== 6. Unitarias focalizadas (perfiles, lectura, utiles, frontera, CORS, DiceBear, db-local), tsc y diff --check =====
+✔ tokenDeCuenta: sólo con la sesión de la misma cuenta (9.3815ms)
+✔ frontera: sólo vale la última carga; cerrada no vale nada; reabrir (Strict Mode) no revive cargas viejas (1.4562ms)
+✔ A→B mientras A carga: B no ve nada de A, ni con la respuesta de A llegando después (116.8592ms)
+✔ A cargada, cambio a B y la lectura de B falla: no queda la lista de A (caso de la auditoría) (6.003ms)
+✔ recarga fallida de la MISMA cuenta: conserva la lista y muestra el error (4.8019ms)
+✔ misma cuenta, cargas fuera de orden: la vieja no pisa a la nueva (81.1699ms)
+✔ cierre de sesión con lectura pendiente: no hay vista y la respuesta se descarta (3.2161ms)
+✔ cambio a B durante un desbloqueo de A: el mensaje y la recarga de A no aparecen en B (6.2898ms)
+✔ una operación que empieza con la sesión ya cambiada no sale en nombre de nadie (4.8193ms)
+✔ barrido: bloqueados, la ficha y la fila de configuración usan tokenDeCuenta y frontera (254.96ms)
+✔ lista: la primera página reemplaza; Cargar más avanza el cursor SÓLO con una tanda válida (94.7191ms)
+✔ lista: una respuesta vieja, de otra clave (cuenta, título u orden) o después de una recarga se descarta (4.9634ms)
+✔ lista: sin duplicados por reseña (una edición entre páginas trae otra versión de la misma reseña) (60.507ms)
+✔ tanda válida: activo, el orden pedido, items bien formados y cursor exactamente cuando hay más (3.1458ms)
+✔ voto confirmado: se aplica a la reseña que se ve, sin recargar; sin confirmar o rechazado no cambia nada (2.779ms)
+✔ A1 (auditoría de E5a): los resultados IDEMPOTENTES de una confirmación recuperada también se reflejan, sin contar dos veces (1.4343ms)
+✔ pedido de lectura: título válido, «recientes» y «utiles» (E5b) habilitados, cursor opaco de la forma del orden; el lector NUNCA sale de la consulta (5.2594ms)
+✔ adaptador: llama a comunidad_resenas con el pedido y codifica el cursor siguiente; 42501 y JWT vencido = sin_sesion (4.9545ms)
+✔ encabezado: sin sesión con el módulo encendido NO lleva número (no revela si hay); con sesión cuenta lo que ve; apagado, sólo Yump (1.6422ms)
+✔ barrido: la ruta de lectura usa la sesión del lector y nunca service_role; sin sesión sólo informa el interruptor (4513.0005ms)
+✔ barrido: /api/title y la ficha del servidor no tocan nada comunitario (T1: la respuesta no cambia con el módulo) (23.1019ms)
+✔ barrido: la base de E5a (017). comunidad_resenas sólo para authenticated, lee al lector de auth.uid() (sin p_uid), filtra bloqueos y suspensiones; 017 rechazaba «utiles» (lo habilita 018, ver utiles.test.ts) (1.8093ms)
+✔ nombre: NFC, bordes y espacios colapsados; 2–24 puntos de código; sin controles ni invisibles (12.1493ms)
+✔ nombre: la validación previa usa los MISMOS caracteres que el CHECK de 011 (20.5994ms)
+✔ reglas de E1 sobre nombres: contacto ofuscado → rechazo; odio → retener; lo común → publicar (263.0412ms)
+✔ ruta del nombre: formato y pedido inválido no tocan la base; el nombre que llega es el NORMALIZADO (9.6986ms)
+✔ ruta del nombre: rechazo de contenido lleva el motivo de las reglas; retener viaja como retener (la base no lo guarda) (5.6807ms)
+✔ ruta del nombre: una regla que falla NUNCA llega a la base como publicar (1.4978ms)
+✔ ruta del nombre: confirmación perdida → se repite UNA vez (sin_cambios confirma); dos pérdidas → sin_confirmar; rechazo confirmado → error (34.5766ms)
+✔ mensajes del nombre: ninguno afirma un guardado sin confirmar (0.9542ms)
+✔ cabecera: fuera de `activo` no se toma nombre ni avatar aunque vengan; avatar sólo con forma de id del catálogo (2.9869ms)
+✔ perfil: pedido válido sólo con un id uuid o yo=1, y cursor de la forma (fecha, id) (4.7773ms)
+✔ lista del perfil: misma máquina que la ficha; respuestas de otra cuenta, otro perfil o pedido viejo no se aplican; votar no reordena ni pierde páginas (14.5327ms)
+✔ item: el autor sólo con id uuid (nunca otro dato); un autor mal formado no invalida la reseña (1.742ms)
+✔ rutas: /u/?id= igual en la web y el contenedor; sólo uuid (59.3983ms)
+✔ barrido 019: permisos. El perfil sólo authenticated (lee al lector de auth.uid(), sin uid en el pedido); el nombre sólo service_role (28.2658ms)
+✔ barrido 019: la proyección no nombra correo, display_name ni user_id; el nombre se escribe SÓLO en participantes (2.4204ms)
+✔ barrido 019: bloqueo, cuenta eliminada y suspensión en el perfil (1.4609ms)
+✔ barrido 019: el catálogo del avatar público es LEGADO_V1 y coincide con los 31 de AVATARES (2.1745ms)
+✔ barrido 019: el down restaura item_lectura de 017 LITERAL y no toca nombres (39.3124ms)
+✔ Wilson (z = 1,96): coincide con los valores calculados aparte; sin votos, 0 (64.0589ms)
+✔ desempates documentados: Wilson desc → primera publicación desc → id desc (6.6026ms)
+✔ tanda válida en «Más útiles»: puede traer menos de cinco o ninguna con más por delante; `orden_actualizado` es vacía y sin más (3.1634ms)
+✔ vencimiento: la lista queda, avisa y permite volver a empezar UNA vez; el reinicio agrega sin repetir; un segundo vencimiento ya no ofrece otro (4.0266ms)
+✔ reinicio que falla: lo visible queda y el reinicio todavía se puede reintentar; una respuesta de otro pedido no cuenta (1.4229ms)
+✔ respuestas tardías de otro orden, cuenta o título no se aplican (1.0095ms)
+✔ dentro del orden congelado votar cambia el CONTEO, no el lugar (2.1568ms)
+✔ barrido 018: filas de 100 ids, lock por título con doble búsqueda, 10 min / 2 h, 50 posiciones, sin datos del lector (466.773ms)
+✔ CANARIO 1: GET + conCors GET + opcionesCors GET es válido (15.5584ms)
+✔ CANARIO 1b (Etapa 3.b): GET envuelto por la frontera del fondo, conFrontera(conCors(manejar, GET)), es válido y conserva el método (1.9145ms)
+✔ CANARIO 2: POST + conCors POST + opcionesCors POST es válido (0.7667ms)
+✔ CANARIO 3: export GET con conCors POST FALLA (0.6459ms)
+✔ CANARIO 4: conCors GET con opcionesCors POST FALLA (0.7734ms)
+✔ CANARIO 5: sin OPTIONS FALLA (0.7926ms)
+✔ CANARIO 6: un OPTIONS que llama o envuelve el handler real FALLA (0.9587ms)
+✔ CANARIO 7: una exclusión huérfana se detecta (1.2888ms)
+✔ toda ruta está clasificada: integrada o excluida, sin pendientes (508.7885ms)
+✔ las 33 integradas coinciden en sus TRES declaraciones de método (2361.6888ms)
+✔ las excluidas NO integran CORS ni exportan OPTIONS (83.6412ms)
+✔ ninguna exclusión quedó huérfana (2.8715ms)
+✔ ningún OPTIONS puede ejecutar el handler real (601.5862ms)
+✔ el recuento cierra: 38 rutas = 35 integradas + 3 excluidas (283.6095ms)
+✔ recordatorio integra CORS: su fetch de validación es cross-origin (23.8333ms)
+✔ ninguna ruta declara métodos que no existen (1170.8654ms)
+✔ no existe middleware.ts: el CORS no pasa por ahí (1.0645ms)
+✔ cero rastros de DiceBear en código ejecutable y archivos públicos (5779.0691ms)
+✔ EXTENSIONES incluye .sql: sin eso el barrido no mira el schema (0.9956ms)
+✔ CANARIO SQL: las sentencias con la cadena prohibida se detectan (20.0081ms)
+✔ CANARIO JS: el codigo Y el comentario se reportan los dos (10.9912ms)
+✔ CANARIO del CLI: ejecutar el script de verdad DEVUELVE 1 ante un hallazgo (445.4557ms)
+✔ CANARIO del CLI: sin hallazgos sale con 0 y lo dice (431.4432ms)
+✔ supabase/schema.sql pasa el guard (11.3328ms)
+✔ el schema tiene EXACTAMENTE una aparición del identificador (3.9685ms)
+✔ la línea autorizada es la que crea la columna sin default (0.6798ms)
+✔ CANARIO: la única línea autorizada pasa (1.1125ms)
+✔ CANARIO: la autorizada pasa aunque venga con otro formato (0.9185ms)
+✔ CANARIO: una segunda aparición en otra sentencia FALLA (0.8194ms)
+✔ CANARIO: una aparición dentro de un COMENTARIO también falla (0.4492ms)
+✔ CANARIO: el E-string con `--` adentro FALLA (0.4673ms)
+✔ CANARIO: el alias `as "--"` FALLA (0.5411ms)
+✔ CANARIO: COMENTAR la línea autorizada hace fallar el guard (0.6808ms)
+✔ CANARIO: BORRAR la línea autorizada hace fallar el guard (0.5877ms)
+✔ CANARIO: cambiar la sentencia para que traiga un default FALLA (0.5206ms)
+✔ CANARIO: la sentencia autorizada TODA EN MAYÚSCULAS pasa (0.6281ms)
+✔ CANARIO: una segunda aparición como AVATAR_STYLE FALLA (0.7735ms)
+✔ CANARIO: una segunda aparición como Avatar_Style FALLA (0.6005ms)
+✔ CANARIO: una aparición EN MAYÚSCULAS dentro de un comentario también falla (0.5976ms)
+✔ CANARIO: el diagnóstico muestra la línea TAL CUAL está en el archivo (0.7314ms)
+✔ CANARIO: otras columnas de profiles no son asunto de este guard (0.6808ms)
+✔ normalizar aplana espacios y baja a minúsculas (0.4667ms)
+✔ lib/avatar.ts, el helper que armaba la URL remota, ya no existe (0.8013ms)
+✔ el service worker ya no cachea ningún host de imágenes externo salvo TMDB (1.4633ms)
+✔ el service worker cachea /avatars/ como asset propio (0.8751ms)
+✔ SC_CACHE_VERSION subió: sin eso, activate no borra los caches viejos (1.1495ms)
+✔ la versión vive en sw.js y NO en sw/config.js (1.7765ms)
+✔ activate borra sólo caches del service worker, no datos del usuario (1.2781ms)
+✔ la allowlist tiene UNA sola entrada, y es la constante del estilo (0.6702ms)
+✔ lib/avatares.ts declara esa línea EXACTAMENTE una vez (3.2594ms)
+✔ CANARIO: la línea autorizada, en su archivo, NO se reporta (10.9571ms)
+✔ CANARIO: la línea autorizada pasa aunque venga con otra indentación (10.191ms)
+✔ CANARIO: la MISMA línea en OTRO archivo sí se reporta (9.5089ms)
+✔ CANARIO: OTRA línea con la cadena, en el archivo autorizado, sí se reporta (24.8653ms)
+✔ CANARIO: los patrones de dependencia real NO tienen excepción (21.303ms)
+✔ CANARIO: DUPLICAR la línea autorizada hace fallar `revisarAutorizadas` (28.9362ms)
+✔ CANARIO: BORRAR la línea autorizada hace fallar `revisarAutorizadas` (13.9485ms)
+✔ CANARIO del CLI: la línea autorizada duplicada DEVUELVE 1 (480.494ms)
+✔ PROHIBIDO_DEPENDENCIA es un subconjunto: las dos de dependencia real (1.0361ms)
+✔ CANARIO de bundles: el nombre del estilo inlineado NO se reporta (65.0828ms)
+✔ CANARIO de bundles: la URL del generador SÍ se reporta (13.5402ms)
+✔ CANARIO de bundles: el paquete de DiceBear SÍ se reporta (14.3807ms)
+✔ sobre la FUENTE se siguen aplicando los tres patrones (12.3922ms)
+✔ CANARIO del CLI: un bundle con el estilo inlineado sale con 0 (344.5586ms)
+✔ CANARIO del CLI: un bundle con la URL del generador sale con 1 (217.4095ms)
+✔ CANARIO CSS: el selector universal NO es un comentario (8.4605ms)
+✔ CANARIO CSS: el selector universal CON espacio tampoco (8.6507ms)
+✔ CANARIO: código DESPUÉS de un bloque cerrado en la misma línea (7.1477ms)
+✔ CANARIO: código después de CERRAR un bloque abierto antes (7.1582ms)
+✔ CANARIO CSS: una propiedad personalizada empieza con `--` y ES código (6.5851ms)
+✔ NINGUNA forma de comentario exime ya, en ningun lenguaje (86.1316ms)
+✔ app/globals.css tiene las formas que disparaban el falso negativo (2.3268ms)
+✔ MANIFIESTOS incluye package.json y package-lock.json (0.3288ms)
+✔ los manifiestos son parte de las raíces de fuente (0.2816ms)
+✔ CANARIO: `@dicebear/core` en package.json se detecta (29.1351ms)
+✔ CANARIO: `@dicebear/core` en package-lock.json se detecta (33.918ms)
+✔ CANARIO: un lock alternativo también se barre (11.8538ms)
+✔ la raíz del repositorio NO se recorre entera (9.8689ms)
+✔ CANARIO: un metodo generador NO es una continuacion de bloque (8.446ms)
+✔ CANARIO: una plantilla cuyo contenido arranca con /* se inspecciona (7.8302ms)
+✔ el escaner NO exporta ninguna funcion que decida si algo es comentario (1.196ms)
+✔ los comentarios legitimos del codigo se reformularon (1345.6176ms)
+✔ projectIdDe lee el project_id del config.toml real del repo (82.5532ms)
+✔ elige exactamente supabase_db_<project_id>, aunque haya otros proyectos corriendo (1.2964ms)
+✔ falla si el contenedor del proyecto no está, y nombra los que sí están (3.0093ms)
+✔ falla si la selección no es inequívoca o falta el project_id (1.4288ms)
+✔ un prefijo parecido NO alcanza: 'streamingcentral2' no es 'streamingcentral' (1.3724ms)
+✔ las cargas del catálogo van en orden numérico y sólo si se pidieron (11.9112ms)
+✔ aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin los rollbacks (1.7178ms)
+ℹ tests 137
+ℹ suites 0
+ℹ pass 137
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12415.8404
+tsc --noEmit --incremental false: exit 0. git diff --check: sin errores.
+
+===== 7. npm test (resumen de la corrida completa; las 2 fallas eran el barrido de DiceBear sobre la batería nueva, corregido: ver sección 6) =====
+✖ cero rastros de DiceBear en código ejecutable y archivos públicos (9265.4162ms)
+✖ los comentarios legitimos del codigo se reformularon (2445.9029ms)
+ℹ tests 2514
+ℹ suites 0
+ℹ pass 2496
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 16
+ℹ todo 0
+ℹ duration_ms 99544.8481
+✖ failing tests:
+✖ cero rastros de DiceBear en código ejecutable y archivos públicos (9265.4162ms)
+✖ los comentarios legitimos del codigo se reformularon (2445.9029ms)
+
+===== 8. Comparación del avatar público (base) con resolverAvatar (TypeScript) =====
+comparadas 337 (31 del catálogo, 300 uuid al azar y 6 casos borde) diferencias 0; vacía|null → null|null
+
+===== 9. Recorrido en navegador local (escritorio y 375 px) =====
+Datos: lector, autor con nombre comunitario «Cinéfila de Prueba», avatar «lola» y nombre privado distinto («Nombre Privado Secreto»), otro autor sin nombre; 7 reseñas del autor en 7 títulos, votos reales.
+Escritorio (zoom CSS 0,6 en la página para que entre en el panel):
+  ficha: «Cinéfila de Prueba» y «Yumper sin nombre» como enlaces a /u?id=<participante>; el nombre privado no aparece en ningún lado;
+  clic real en el nombre → perfil: avatar lola, «7 reseñas · 3 «Me sirvió» recibidos», 5 reseñas y «Cargar más» → 7 de 7 únicas, sin más;
+  Mi perfil (lector): la sección arranca vacía (no propone el nombre privado); «juan arroba gmail» → rechazo con el motivo de las reglas; «Lectora del Sur» → aceptado.
+375 px (iframe de 375 px; ancho del documento 375 = 375):
+  ficha con los nombres; clic real en el nombre → perfil; «Cargar más» → 7 de 7 únicas;
+  cambio de cuenta en la misma pestaña (sesión del autor): «wsp 11 5555 4444» → rechazo; «Cinéfila del Sur» → aceptado; «Ver mi perfil» → perfil propio con el nombre nuevo, sin pulgares ni menú.
+Estado en la base tras el recorrido: nombres ["Lectora del Sur", "Cinéfila de Prueba" (luego «Cinéfila del Sur»), ∅]; contador de nombre del lector: 2.
+Limpieza del recorrido: limpio (cuentas|participantes|interruptores|limite): 0|0|false|5; sesión borrada del navegador; servidor detenido.
+
+===== 10. Estado final de la base =====
+6 participantes | 2 versiones | 42 cuentas | 2 suspensiones | 0 evaluaciones | 0 órdenes | 0 tramos | 0 locks | interruptores false | grant profiles false
+límites: 5/10/100/10/3/50 | nombres no nulos: 0 | decisiones: 0 | 019: 3

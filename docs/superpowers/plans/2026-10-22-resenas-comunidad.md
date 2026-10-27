@@ -966,8 +966,9 @@ rollback;
 - **Criterio de cierre:** mediciones registradas y pruebas verdes.
 - **Evidencia para Codex:** mediciones, `EXPLAIN (ANALYZE, BUFFERS)` de la
   página, diff.
-- **Estado (26/10):** implementada en local por Claude, **pendiente de
-  auditoría focalizada**:
+- **Estado (26/10):** implementada en local por Claude; **cerrada como
+  entrega local por Codex el 26/10**
+  (`docs/medidas/2026-10-26-auditoria-e5b-662e247.md`):
   - `pruebas-utiles` 14/14 y up/down/up 5/5; baterías anteriores verdes;
   - página con cursor constante en N (10.000 medidas);
   - generar el orden: 2,07 s con 10.000;
@@ -1001,6 +1002,14 @@ rollback;
 - **Rollback:** down y quitar la ruta.
 - **Criterio de cierre:** pruebas verdes.
 - **Evidencia para Codex:** salidas, diff.
+- **Estado (27/10):** implementada en local por Claude, **pendiente de
+  auditoría focalizada**:
+  - `pruebas-perfiles` 19/19 y up/down/up 5/5;
+  - regresiones afectadas verdes.
+  - Un nombre que E1 retendría no se guarda: no hay cola de revisión de
+    nombres.
+
+  Informe: `docs/medidas/2026-10-27-informe-claude-e6.md`.
 
 ### E7 — Top Yumpers
 

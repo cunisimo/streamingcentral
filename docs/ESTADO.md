@@ -911,7 +911,11 @@ AAB tiene que ser `5` o mayor.
        `docs/medidas/2026-10-26-e5a-a1-recorrido/`.
    - **E5b local: orden "Más útiles" (26/10, Claude, autorizada por el
      dueño; sólo `supabase start`, la app local y datos ficticios).
-     PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     CERRADA COMO ENTREGA LOCAL por Codex el 26/10**
+     (`docs/medidas/2026-10-26-auditoria-e5b-662e247.md`): sin hallazgos
+     bloqueantes; no habilita publicación. Pendientes de integración
+     conservados: `/api/title` en ejecución, tema claro, teléfono/Android,
+     lector de pantalla y Producción; la purga y la cuota siguen para E8.
      - **Qué entró:**
        - `018_comunidad_utilidad.sql` + down;
        - Wilson al 95 % (z = 1,96), con 0 positivos o sin votos = 0, y
@@ -978,6 +982,75 @@ AAB tiene que ser `5` o mayor.
      `docs/medidas/2026-10-26-e5b-mediciones.md`; salidas:
      `docs/medidas/2026-10-26-e5b-salidas.txt`; capturas:
      `docs/medidas/2026-10-26-e5b-recorrido/`.
+   - **E6 local: nombre comunitario y perfil mínimo del autor (27/10,
+     Claude, autorizada por el dueño sólo en local; `supabase start`, la app
+     local y datos ficticios). PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     - **Qué entró** (`019_comunidad_perfiles.sql` + down):
+       - `comunidad_cambiar_nombre`, sólo service_role:
+         - reglas de nombre de E1 en la ruta;
+         - fila A y límite de 3 por día;
+         - escribe sólo `participantes.nombre_comunitario`;
+         - `profiles.display_name` no participa;
+       - `comunidad_perfil`, sólo authenticated y con el lector de
+         `auth.uid()`:
+         - nombre, avatar del catálogo, reseñas visibles y "Me sirvió"
+           recibidos, de a 5 con cursor;
+         - `bloqueado` y `eliminada` sin nombre, avatar ni reseñas;
+         - autor suspendido: sin reseñas para los demás;
+       - `avatar_publico`: nunca la semilla guardada (mismo mapeo que
+         `resolverAvatar`, 337 casos sin diferencias);
+       - `item_lectura` suma el autor (id de participante y nombre);
+       - rutas `/api/comunidad/nombre` (POST) y `/api/comunidad/perfil` (GET,
+         Bearer, `private, no-store`);
+       - en la ficha, el nombre del autor con enlace al perfil;
+       - página `/u/?id=` (`noindex`, igual en web y contenedor, incluida en
+         la exportación nativa; sin AAB ni versión);
+       - en Mi perfil, "Nombre en la comunidad", separado de "Nombre para
+         mostrar";
+       - el comentario de la ruta de lectura ahora ejemplifica los dos
+         órdenes.
+     - **Decisión a auditar:** un nombre que E1 retendría (odio) **no se
+       guarda**: no hay cola de revisión de nombres. Cuenta para el límite y
+       se informa "Ese nombre no se puede usar".
+     - **Pruebas reales:**
+       - `pruebas-perfiles` 19/19 (rutas y base): permisos por ruta, REST y
+         RPC; ningún atajo a la validación; `display_name` sin efecto;
+         paginación; cambios entre páginas; cuenta y respuestas tardías;
+         bloqueo, suspensión y baja reales;
+       - up/down/up de 019 5/5;
+       - regresiones afectadas: permisos 29/29, lectura 11/11, voto-lista
+         11/11, utilidad 14/14 y moderación 46/46;
+       - focalizadas 137/137; `npm test` en verde tras corregir el barrido de
+         DiceBear sobre la batería nueva; `tsc` 0.
+     - **Simulado o fixture:**
+       - el límite de reseñas, subido mientras corre;
+       - `display_name` y el avatar escritos por SQL (el SELECT local de
+         `profiles` está revocado);
+       - la pérdida de respuestas y el cambio de cuenta, con el núcleo del
+         cliente.
+     - **Navegador local, escritorio y 375 px, 11 capturas:**
+       - del nombre en la reseña al perfil;
+       - "Cargar más" hasta 7 de 7;
+       - nombre rechazado (contacto) y aceptado;
+       - cambio de cuenta y perfil propio.
+     - **Limitaciones:**
+       - el perfil no muestra el nombre del título (es dato de TMDB);
+       - la lista de bloqueados sigue sin nombres comunitarios;
+       - ZWJ prohibido también en nombres (decisión pendiente abajo).
+     - **Limpieza:** la base quedó como al empezar, con 019 aplicada:
+       - 6 participantes, 2 versiones, 42 cuentas y 2 suspensiones;
+       - 0 órdenes, locks y decisiones;
+       - límites intactos;
+       - interruptores apagados;
+       - `SELECT` de `profiles` revocado.
+       Docker Desktop estaba detenido: lo inicié sin tocar volúmenes.
+     - **Sigue pendiente:**
+       - `/api/title` en ejecución;
+       - teléfono, Android y Capacitor para `/u/`;
+       - tema claro, lector de pantalla y Producción.
+     Informe: `docs/medidas/2026-10-27-informe-claude-e6.md`; salidas:
+     `docs/medidas/2026-10-27-e6-salidas.txt`; capturas:
+     `docs/medidas/2026-10-27-e6-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
