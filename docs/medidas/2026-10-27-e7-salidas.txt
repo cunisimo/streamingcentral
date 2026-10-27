@@ -1,0 +1,384 @@
+E7 local — Top Yumpers mensual. Salidas reales contra Supabase local (supabase_db_streamingcentral) y la app local (http://localhost:3100), 27/10/2026.
+Sobre 43117a2, en feat/resenas-reglas (worktree wt-resenas-comunidad). Datos ficticios; credenciales y tokens no se imprimen.
+FIXTURE declarado: el reloj de proto_marca (scripts/comunidad/solo-local-reloj.sql), instalado y quitado en cada corrida con la definición comparada (proto_marca igual = true).
+
+===== 1. pruebas-top, primera corrida (con la FK de top_resultados a participantes) =====
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+✔ preparación: meses de prueba libres; reloj forzado instalado; módulo y Top Yumpers encendidos; admin con dos TOTP
+
+— Fórmula (marzo de 2026) —
+✔ un punto por evaluador DISTINTO y autor: dos positivos de la misma persona suman 1; publicar no suma; un negativo no resta; retirar o pasar a negativo dentro del mes deja 0; abril no cuenta
+
+— Igualdad exacta en T(M) y suspensiones como intervalo (mayo de 2026) —
+     14 fronteras, cada una con su par propio
+✔ caso 11: tramo que empieza, tramo que termina, suspensión (de autor y de evaluador) que empieza y que termina EXACTAMENTE en T(M) y a 1 µs de cada lado
+✔ suspender NO cierra tramos (conciliación del 25/10): los votos del autor y del evaluador suspendidos siguen abiertos; el cómputo los excluye sólo mientras la suspensión rige antes del corte
+
+— Caso 10 y reproducibilidad (julio de 2026) —
+✔ caso 10: edición, retiro por moderación, suspensión y bajas ENTRE el corte y la primera consulta no cambian el mes; restaurar antes del corte cuenta y después no; cierre repetido sin cambios
+✔ reproducible: un voto con marca de julio que llega DESPUÉS de consolidar (fixture de reloj) no cambia el mes consolidado, aunque el cómputo de hoy sí lo vería
+
+— Proyección, bloqueo y nombres (E6) —
+✔ proyección: sólo posición, puntos, estado y, para cuentas activas, id de participante, nombre comunitario, avatar del catálogo y propio; nunca user_id, correo, display_name ni semilla
+✔ bloqueo: quien bloqueó a D lo ve como «Usuario bloqueado» (con su posición y puntos, sin id ni nombre); otro lector lo ve normal
+
+— Permisos y ruta —
+✔ permisos: anon y service_role no leen (401/403 42501); las funciones internas y las tablas no tienen grants; el interruptor sólo para service_role
+✔ ruta: sin sesión 401 SÓLO {resultado, activo}; con sesión 200 privado y sin caché; mes inválido 400; interruptores apagados → {activo:false} y el selector desaparece
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 48; restos (cuentas|participantes|meses|locks|decisiones|reloj|proto_marca igual|interruptores): 0|0|0|0|0|0|true|false
+
+10 de 10 pasaron.
+
+===== 2. pruebas-top-concurrencia, primeras corridas (con la FK): B8 aborta SIEMPRE la consolidación por deadlock =====
+--- corrida de prueba (falló una aserción del script: psql imprime «K|fin» aunque haya error; se corrigió el script, no el código) ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida prueba
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 811 ms; segunda ola (con el compartido retenido): 110 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 1805 ms · abortada: consolidación (deadlock)
+✖ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+    Expected values to be strictly equal:
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+5 de 6 pasaron.
+Fallaron:
+ - B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+--- corrida 1 (con la FK) ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 1
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 1457 ms; segunda ola (con el compartido retenido): 143 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 2290 ms · abortada: consolidación (deadlock)
+     consolidado: ∅=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- corrida 2 (con la FK) ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 2
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 2523 ms; segunda ola (con el compartido retenido): 2387 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 5472 ms · abortada: consolidación (deadlock)
+     consolidado: ∅=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- corrida 3 (con la FK) ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 3
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 925 ms; segunda ola (con el compartido retenido): 447 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 2109 ms · abortada: consolidación (deadlock)
+     consolidado: ∅=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- corrida 4 (con la FK) ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 4
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 1535 ms; segunda ola (con el compartido retenido): 286 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 1804 ms · abortada: consolidación (deadlock)
+     consolidado: ∅=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- corrida 5 (con la FK) ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 5
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 886 ms; segunda ola (con el compartido retenido): 125 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 1565 ms · abortada: consolidación (deadlock)
+     consolidado: ∅=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+
+===== 3. up/down/up de 020 (después de sacar la FK) =====
+base: supabase_db_streamingcentral
+
+   volcado 1-con-020: 15827 líneas, sha256 3e41cc8f0bd74f83…
+✔ 020 aplicada, sin meses consolidados que la bajada perdería
+   volcado 2-sin-020: 15544 líneas, sha256 3d4f4e010385976d…
+✔ 020_down: quita todo lo de 020 y no agrega nada
+   volcado 3-sin-020-otra-vez: 15544 líneas, sha256 3d4f4e010385976d…
+✔ 020_down repetida: inocua
+   volcado 4-con-020: 15827 líneas, sha256 3e41cc8f0bd74f83…
+   volcado 5-con-020-repetida: 15827 líneas, sha256 3e41cc8f0bd74f83…
+✔ 020 up: vuelve exactamente al volcado con 020; repetida, inocua
+   volcado 6-sin-020: 15544 líneas, sha256 3d4f4e010385976d…
+   volcado 7-con-020: 15827 líneas, sha256 3e41cc8f0bd74f83…
+✔ segunda vuelta down → up: mismos volcados; datos ajenos intactos
+
+5 de 5 pasaron.
+(el volcado «sin 020» tiene el mismo sha256 que el «con 019» del cierre de E6: 3d4f4e010385976d…)
+
+===== 4. Corridas FINALES (sin la FK) =====
+--- pruebas-top ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · app http://localhost:3100
+
+✔ preparación: meses de prueba libres; reloj forzado instalado; módulo y Top Yumpers encendidos; admin con dos TOTP
+
+— Fórmula (marzo de 2026) —
+✔ un punto por evaluador DISTINTO y autor: dos positivos de la misma persona suman 1; publicar no suma; un negativo no resta; retirar o pasar a negativo dentro del mes deja 0; abril no cuenta
+
+— Igualdad exacta en T(M) y suspensiones como intervalo (mayo de 2026) —
+     14 fronteras, cada una con su par propio
+✔ caso 11: tramo que empieza, tramo que termina, suspensión (de autor y de evaluador) que empieza y que termina EXACTAMENTE en T(M) y a 1 µs de cada lado
+✔ suspender NO cierra tramos (conciliación del 25/10): los votos del autor y del evaluador suspendidos siguen abiertos; el cómputo los excluye sólo mientras la suspensión rige antes del corte
+
+— Caso 10 y reproducibilidad (julio de 2026) —
+✔ caso 10: edición, retiro por moderación, suspensión y bajas ENTRE el corte y la primera consulta no cambian el mes; restaurar antes del corte cuenta y después no; cierre repetido sin cambios
+✔ reproducible: un voto con marca de julio que llega DESPUÉS de consolidar (fixture de reloj) no cambia el mes consolidado, aunque el cómputo de hoy sí lo vería
+
+— Proyección, bloqueo y nombres (E6) —
+✔ proyección: sólo posición, puntos, estado y, para cuentas activas, id de participante, nombre comunitario, avatar del catálogo y propio; nunca user_id, correo, display_name ni semilla
+✔ bloqueo: quien bloqueó a D lo ve como «Usuario bloqueado» (con su posición y puntos, sin id ni nombre); otro lector lo ve normal
+
+— Permisos y ruta —
+✔ permisos: anon y service_role no leen (401/403 42501); las funciones internas y las tablas no tienen grants; el interruptor sólo para service_role
+✔ ruta: sin sesión 401 SÓLO {resultado, activo}; con sesión 200 privado y sin caché; mes inválido 400; interruptores apagados → {activo:false} y el selector desaparece
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 48; restos (cuentas|participantes|meses|locks|decisiones|reloj|proto_marca igual|interruptores): 0|0|0|0|0|0|true|false
+
+10 de 10 pasaron.
+--- pruebas-permisos ---
+base: supabase_db_streamingcentral · API: http://127.0.0.1:54321
+
+— 1. SQL (SET ROLE) —
+✔ el esquema tiene exactamente las diecinueve tablas previstas (11 de E2a + intentos de E3a + 3 de E3b + 2 de E4 + 2 de E5b)
+✔ catálogo: ningún privilegio de tabla para PUBLIC, anon, authenticated ni service_role
+✔ catálogo: ningún privilegio de columna para esos roles
+✔ catálogo: el esquema niega USAGE y CREATE; secuencias y funciones cerradas
+✔ control: una función nueva en el esquema SIN su revoke queda ejecutable por PUBLIC (default de PostgreSQL); la frena sólo el esquema
+✔ catálogo: RLS activada en las quince y ninguna policy
+✔ control positivo: el dueño (postgres) sí lee las quince tablas
+✔ control positivo: SET ROLE cambia de verdad el rol (current_user = anon)
+✔ 1a · esquema: 315 intentos reales → 42501
+✔ 1b · grants de tabla (USAGE concedido y revertido): 315 intentos → 42501
+✔ 1c · RLS sin policies (grants concedidos y revertidos, con fixtures): anon y authenticated no ven ni tocan nada
+✔ 1c · service_role tiene BYPASSRLS: con grants vería todo (por eso su cierre son 1a y 1b)
+✔ 1c · después de revertir, los grants de prueba no quedaron
+
+— Usuarios del Auth local —
+✔ crear autor, ajeno, suspendido y admin; participantes, reseña y suspensión puestas por el dueño
+✔ is_admin_mfa(): admin AAL1 → false
+✔ is_admin_mfa(): admin AAL2 con UN factor verificado → false
+✔ is_admin_mfa(): admin AAL2 con DOS factores TOTP verificados → true
+✔ is_admin_mfa(): el mismo admin con dos factores pero sesión nueva AAL1 → false
+✔ is_admin_mfa(): usuario común (sin is_admin) → false
+
+— 2. REST —
+✔ REST: 7 credenciales × 21 tablas × 4 métodos × 2 perfiles → nunca 2xx; 404 PGRST205 / 406 PGRST106
+✔ REST: el OpenAPI no menciona ninguna tabla de comunidad; de las RPC (E2b, E3a y E3b), anon no ve ninguna y service_role ve exactamente las del inventario
+✔ GraphQL: pg_graphql no está habilitada en la base local; el endpoint lo informa y no expone nada
+
+— 3. RPC —
+✔ las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a, E5b, E6 y E7), security definer y search_path vacío
+✔ catálogo: EXECUTE sólo service_role en las de E2b–E3b, y sólo authenticated en las de moderación (E4) y en la lectura (E5a) y el perfil (E6)
+✔ RPC real por REST: anon y cada JWT reciben 401/403 en todas; service_role ejecuta (uid inexistente: sin efectos)
+✔ RPC real por REST a la lectura (E5a): anon y service_role → 401/403 sin datos; cada JWT real (autor, ajeno, suspendido, admin AAL1 y AAL2) → 200 como sí mismo
+✔ RPC real por REST a las de moderación (E4): anon, autor, ajeno, suspendido, admin AAL1 y service_role → 401/403 con 42501; el admin AAL2 con dos factores → 200 (pedidos sin efecto); nada se registra
+✔ ninguna función del esquema comunidad es ejecutable por PUBLIC ni por los roles de la API
+✔ RPC por REST a una función del esquema: 406 PGRST106 con el perfil, 404 sin él, para cada credencial
+
+— Evidencia: ACL efectivas del esquema —
+bajas_en_curso: {postgres=arwdDxtm/postgres}
+bloqueos: {postgres=arwdDxtm/postgres}
+bloqueos_id_seq: {postgres=rwU/postgres}
+config: {postgres=arwdDxtm/postgres}
+contadores: {postgres=arwdDxtm/postgres}
+corroboraciones: {postgres=arwdDxtm/postgres}
+decisiones: {postgres=arwdDxtm/postgres}
+decisiones_id_seq: {postgres=rwU/postgres}
+denuncias: {postgres=arwdDxtm/postgres}
+denuncias_cerradas: {postgres=arwdDxtm/postgres}
+denuncias_cerradas_id_seq: {postgres=rwU/postgres}
+denuncias_excedentes: {postgres=arwdDxtm/postgres}
+denuncias_id_seq: {postgres=rwU/postgres}
+esquema comunidad: {postgres=UC/postgres}
+evaluaciones: {postgres=arwdDxtm/postgres}
+evaluaciones_id_seq: {postgres=rwU/postgres}
+huellas: {postgres=arwdDxtm/postgres}
+intentos: {postgres=arwdDxtm/postgres}
+ordenes_utiles: {postgres=arwdDxtm/postgres}
+ordenes_utiles_id_seq: {postgres=rwU/postgres}
+ordenes_utiles_tramos: {postgres=arwdDxtm/postgres}
+participantes: {postgres=arwdDxtm/postgres}
+resenas: {postgres=arwdDxtm/postgres}
+resenas_id_seq: {postgres=rwU/postgres}
+suspensiones: {postgres=arwdDxtm/postgres}
+suspensiones_id_seq: {postgres=rwU/postgres}
+top_meses: {postgres=arwdDxtm/postgres}
+top_resultados: {postgres=arwdDxtm/postgres}
+top_resultados_id_seq: {postgres=rwU/postgres}
+tramos: {postgres=arwdDxtm/postgres}
+tramos_id_seq: {postgres=rwU/postgres}
+versiones: {postgres=arwdDxtm/postgres}
+versiones_id_seq: {postgres=rwU/postgres}
+
+— Limpieza (base compartida): sólo lo que creó esta corrida —
+   cuentas: 4; restos (cuentas|participantes): 0|0
+
+29 de 29 pasaron.
+--- pruebas-top-concurrencia, corrida 1 de 5 ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 1
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 967 ms; segunda ola (con el compartido retenido): 138 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 1082 ms · abortada: ninguna
+     consolidado: u=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- pruebas-top-concurrencia, corrida 2 de 5 ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 2
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 609 ms; segunda ola (con el compartido retenido): 201 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 607 ms · abortada: ninguna
+     consolidado: u=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- pruebas-top-concurrencia, corrida 3 de 5 ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 3
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 893 ms; segunda ola (con el compartido retenido): 120 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 925 ms · abortada: ninguna
+     consolidado: u=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- pruebas-top-concurrencia, corrida 4 de 5 ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 4
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 2032 ms; segunda ola (con el compartido retenido): 717 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 1530 ms · abortada: ninguna
+     consolidado: u=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+--- pruebas-top-concurrencia, corrida 5 de 5 ---
+base: supabase_db_streamingcentral · API http://127.0.0.1:54321 · corrida 5
+
+✔ preparación: meses libres, reloj forzado, interruptores encendidos
+✔ caso 6: un voto que tomó el compartido ANTES de T(M) y confirma DESPUÉS, mientras la consolidación espera el exclusivo: la consolidación lo espera y lo cuenta
+✔ caso 7a: con la consolidación CALCULANDO (exclusivo tomado), un voto con marca después de T(M) espera el compartido; el mes no lo incluye y coincide con el cómputo exacto
+✔ caso 7b: con la consolidación ESPERANDO el exclusivo, un voto nuevo (marca después de T(M)) queda detrás de ella; el previo cuenta, el nuevo no
+     primera ola: 949 ms; segunda ola (con el compartido retenido): 250 ms
+✔ 50 lecturas concurrentes después del corte: UN solo cálculo y la misma respuesta; después, 50 más se resuelven sin pedir el exclusivo (con un compartido retenido) mientras un mes sin consolidar sí lo espera
+     deleteUser: ok en 980 ms · abortada: ninguna
+     consolidado: u=2@1,e=1@2 · exacto: u=2,e=1
+✔ B8: borrado por Auth SIN paso 1, con un voto real de otra cuenta en vuelo y una consolidación real esperando: o termina (tramos cerrados con UNA marca, participante sin user_id) o se revierte entera y el reintento termina; la consolidación termina y coincide con el cómputo exacto
+
+— Limpieza (base compartida): sólo lo de esta corrida —
+   cuentas: 18; restos (cuentas|participantes|meses|locks|reloj|proto_marca igual|interruptores): 0|0|0|0|0|true|false
+
+6 de 6 pasaron.
+
+===== 5. Suite completa (npm test) y tipado, después de la última corrección =====
+ℹ tests 2525
+ℹ suites 0
+ℹ pass 2509
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 16
+ℹ todo 0
+ℹ duration_ms 72283.7543
+tsc --noEmit --incremental false: exit 0. git diff --check: sin errores.
+
+===== 6. Recorrido en navegador local (escritorio y 375 px) =====
+Datos (último mes cerrado REAL, septiembre de 2026; marcas de votos forzadas en septiembre DURANTE la preparación y el reloj quitado antes de navegar):
+  Cinéfila del Sur 4 · Butaca Crítica 3 · Pochoclo Nocturno 3 · Se Va Pronto 2 (baja con el flujo de la app antes de la primera consulta) · Bloqueable 2 (bloqueada por el lector) · Lectora Curiosa (el lector) 1.
+Sin sesión: /top con el selector y el Top manual intacto («Todavía no disponible»: no hay publicaciones locales); «Top Yumpers» → invitación a ingresar, sin toggle.
+Con sesión: la primera lectura consolidó septiembre; ranking 1 Cinéfila 4 · 2 Pochoclo 3 · 2 Butaca 3 · 3 Cuenta eliminada 2 · 3 Usuario bloqueado 2 · 4 Lectora Curiosa (vos) 1;
+  «Tu posición en septiembre de 2026: 4.º con 1 punto»; nombres con enlace al perfil (clic real → /u?id=…, «1 reseña · 4 «Me sirvió» recibidos»); eliminada y bloqueado sin enlace ni avatar; sin toggle Películas/Series.
+  Consolidado guardado: la cuenta eliminada SIN id (pos 3, 2 pts), el resto con id.
+Error de red (interceptor de fetch, SIMULADO) → «No pudimos cargar el Top Yumpers. Reintentar» → clic real → 6 filas.
+Vacío: respuesta reescrita en el cliente con items [] (SIMULADO) → «Todavía no hay Yumpers en el ranking de septiembre de 2026».
+375 px (iframe de 375; documento 375 = 375; todas las filas dentro del ancho): ranking, eliminada y bloqueado, vuelta a plataformas con su toggle; sessionStorage sin nada del Top Yumpers.
+Volver a /top: la sección no se persiste (vuelve a «Top semanal plataformas»).
+Interruptores apagados (después de limpiar): /top sin selector, igual que antes de E7.
+Limpieza del recorrido: limpio (cuentas|participantes|septiembre|reloj|interruptores): 0|0|0|0|false; sesión borrada del navegador; servidor detenido.
+Nota: el recorrido tuvo un primer intento fallido de preparación (correo con tilde rechazado por Auth); su resto (una cuenta y los interruptores encendidos) se borró antes de repetir.
+
+===== 7. Estado final de la base =====
+6 participantes | 2 versiones | 42 cuentas | 2 suspensiones | 0 evaluaciones | 0 órdenes | 0 tramos | 0 locks | interruptores false | grant profiles false
+límites: 5/10/100/10/3/50 | nombres no nulos: 0 | decisiones: 0 | 019: 3
+top_meses: 0 | top_resultados: 0 | tramos: 0 | solo_local: 0 | 020: 4

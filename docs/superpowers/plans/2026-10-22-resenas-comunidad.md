@@ -1002,14 +1002,16 @@ rollback;
 - **Rollback:** down y quitar la ruta.
 - **Criterio de cierre:** pruebas verdes.
 - **Evidencia para Codex:** salidas, diff.
-- **Estado (27/10):** implementada en local por Claude, **pendiente de
-  auditoría focalizada**:
-  - `pruebas-perfiles` 19/19 y up/down/up 5/5;
-  - regresiones afectadas verdes.
-  - Un nombre que E1 retendría no se guarda: no hay cola de revisión de
-    nombres.
+- **Estado (27/10):** implementada en local por Claude; auditada sobre
+  `8cbe0cd` (A1, A2) y, con la corrección, **cerrada como entrega local por
+  Codex el 27/10** (`docs/medidas/2026-10-27-auditoria-e6-a1a2-43117a2.md`):
+  - un nombre que E1 retendría no se guarda: no hay cola de revisión de
+    nombres;
+  - el cambio de nombre es idempotente por intento (A1);
+  - el perfil aplica los cambios de disponibilidad al cargar más (A2).
 
-  Informe: `docs/medidas/2026-10-27-informe-claude-e6.md`.
+  Informes: `docs/medidas/2026-10-27-informe-claude-e6.md` y
+  `docs/medidas/2026-10-27-informe-claude-e6-a1a2.md`.
 
 ### E7 — Top Yumpers
 
@@ -1047,6 +1049,14 @@ rollback;
   casos concurrentes.
 - **Evidencia para Codex:** salidas, diff de `TopView`, resultado de los
   casos de igualdad.
+- **Estado (27/10):** implementada en local por Claude, **pendiente de
+  auditoría focalizada**:
+  - casos 6–11 y B8 con funciones reales;
+  - cinco corridas seguidas de los concurrentes;
+  - `top_resultados.participante_id` sin FK, para que la consolidación no
+    tome locks implícitos de filas de participantes.
+
+  Informe: `docs/medidas/2026-10-27-informe-claude-e7.md`.
 
 ### E8 — Retención y purga
 

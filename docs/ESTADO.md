@@ -986,8 +986,12 @@ AAB tiene que ser `5` o mayor.
      Claude, autorizada por el dueño sólo en local; `supabase start`, la app
      local y datos ficticios).** Auditada por Codex sobre `8cbe0cd`
      (`docs/medidas/2026-10-27-auditoria-e6-8cbe0cd.md`): dos P2, A1 y A2.
-     **Corrección A1/A2 hecha por Claude el 27/10, PENDIENTE DE REVISIÓN
-     FOCALIZADA** (detalle al final de este bloque).
+     Corrección A1/A2 hecha por Claude el 27/10 (detalle al final de este
+     bloque). **E6 CERRADA COMO ENTREGA LOCAL por Codex el 27/10**
+     (`docs/medidas/2026-10-27-auditoria-e6-a1a2-43117a2.md`): A1 y A2
+     cerradas, sin hallazgos nuevos; no habilita publicación. Pendientes de
+     integración conservados: `/api/title` en ejecución, TMDB, tema claro,
+     teléfono/Android y lector de pantalla.
      - **Qué entró** (`019_comunidad_perfiles.sql` + down):
        - `comunidad_cambiar_nombre`, sólo service_role:
          - reglas de nombre de E1 en la ruta;
@@ -1054,7 +1058,7 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-27-informe-claude-e6.md`; salidas:
      `docs/medidas/2026-10-27-e6-salidas.txt`; capturas:
      `docs/medidas/2026-10-27-e6-recorrido/`.
-     - **Corrección A1/A2 (27/10, Claude; pendiente de revisión focalizada):**
+     - **Corrección A1/A2 (27/10, Claude; cerrada por Codex el 27/10):**
        - **A1:** el cambio de nombre usa la idempotencia de publicar y editar
          (`comunidad.intentos`, acción `'nombre'`):
          - `id_intento` del cliente y hash del pedido;
@@ -1092,6 +1096,57 @@ AAB tiene que ser `5` o mayor.
        Informe: `docs/medidas/2026-10-27-informe-claude-e6-a1a2.md`; salidas:
        `docs/medidas/2026-10-27-e6-a1a2-salidas.txt`; capturas:
        `docs/medidas/2026-10-27-e6-a1a2-recorrido/`.
+   - **E7 local: Top Yumpers mensual (27/10, Claude, autorizada por el dueño
+     sólo en local; `supabase start`, la app local y datos ficticios).
+     PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     - **Qué entró** (`020_comunidad_top.sql` + down):
+       - `puntos_al_corte`: el cómputo de §2.2.2 (pares distintos;
+         primera positiva del mes; tramo y suspensiones con la misma
+         condición al corte; la suspensión es intervalo y no cierra tramos);
+       - `consolidar_mes`: comprobación rápida sin lock → exclusivo
+         (`proto_corte_exclusivo`) → nueva comprobación → una sentencia;
+         posición densa y huérfanos sin id;
+       - `comunidad_top_yumpers` (authenticated): último mes cerrado,
+         consolida en la primera lectura, proyección con nombre y avatar de
+         E6; "Cuenta eliminada" y "Usuario bloqueado" sin identidad;
+       - ruta `/api/comunidad/top-yumpers` (Bearer, `private, no-store`);
+       - selector en `/top`: "Top semanal plataformas" (el manual de
+         siempre, público, con su toggle) y "Top Yumpers" (con sesión, sin
+         toggle, sin `sessionStorage` ni caché compartida). Con los
+         interruptores apagados, `/top` es el de antes;
+       - sin cron ni purga (E8).
+     - **Hallazgo propio corregido:** una FK de `top_resultados` a
+       `participantes` hacía que la consolidación tomara KEY SHARE sobre los
+       autores (lock implícito) y entrara en ciclo con la red de seguridad de
+       Auth: abortada 5 de 5 en B8. Sin la FK, 0 de 5.
+     - **Pruebas reales:**
+       - `pruebas-top` 10/10: fórmula; caso 11 con 14 fronteras exactas;
+         suspensión como intervalo; caso 10; reproducibilidad; proyección;
+         bloqueo; permisos; ruta;
+       - `pruebas-top-concurrencia` 6/6 en **cinco corridas seguidas**:
+         casos 6 y 7; 50 lecturas con un solo cálculo y reutilización sin
+         exclusivo; B8 real;
+       - up/down/up de 020 5/5; permisos 29/29; unitarias 55/55;
+       - **`npm test` 2509 pasan, 0 fallan, 16 omitidas**; `tsc` 0.
+     - **Fixture declarado:** el reloj de `proto_marca`
+       (`scripts/comunidad/solo-local-reloj.sql`), instalado y quitado en
+       cada corrida con la definición comparada. En el navegador fueron
+       simulados el error de red y el vacío.
+     - **Navegador local, escritorio y 375 px, 9 capturas:**
+       - selector e invitación sin sesión;
+       - ranking real de septiembre con eliminada, bloqueado y posición
+         propia;
+       - perfil desde el ranking; error y reintento; vacío;
+       - vuelta a plataformas con toggle; interruptores apagados.
+     - **Limitaciones:** la primera lectura de un mes espera el exclusivo; el
+       ranking muestra 50 filas sin paginar; la purga queda para E8.
+     - **Limpieza:** la base quedó como al empezar, con 020 aplicada:
+       - 6 participantes, 2 versiones, 42 cuentas y 2 suspensiones;
+       - 0 tramos y 0 meses consolidados; sin `solo_local`;
+       - límites e interruptores intactos.
+     Informe: `docs/medidas/2026-10-27-informe-claude-e7.md`; salidas:
+     `docs/medidas/2026-10-27-e7-salidas.txt`; capturas:
+     `docs/medidas/2026-10-27-e7-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
