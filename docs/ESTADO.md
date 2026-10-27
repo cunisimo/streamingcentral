@@ -984,7 +984,10 @@ AAB tiene que ser `5` o mayor.
      `docs/medidas/2026-10-26-e5b-recorrido/`.
    - **E6 local: nombre comunitario y perfil mínimo del autor (27/10,
      Claude, autorizada por el dueño sólo en local; `supabase start`, la app
-     local y datos ficticios). PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     local y datos ficticios).** Auditada por Codex sobre `8cbe0cd`
+     (`docs/medidas/2026-10-27-auditoria-e6-8cbe0cd.md`): dos P2, A1 y A2.
+     **Corrección A1/A2 hecha por Claude el 27/10, PENDIENTE DE REVISIÓN
+     FOCALIZADA** (detalle al final de este bloque).
      - **Qué entró** (`019_comunidad_perfiles.sql` + down):
        - `comunidad_cambiar_nombre`, sólo service_role:
          - reglas de nombre de E1 en la ruta;
@@ -1051,6 +1054,44 @@ AAB tiene que ser `5` o mayor.
      Informe: `docs/medidas/2026-10-27-informe-claude-e6.md`; salidas:
      `docs/medidas/2026-10-27-e6-salidas.txt`; capturas:
      `docs/medidas/2026-10-27-e6-recorrido/`.
+     - **Corrección A1/A2 (27/10, Claude; pendiente de revisión focalizada):**
+       - **A1:** el cambio de nombre usa la idempotencia de publicar y editar
+         (`comunidad.intentos`, acción `'nombre'`):
+         - `id_intento` del cliente y hash del pedido;
+         - relectura bajo los locks y registro de todo resultado en la misma
+           transacción que su efecto;
+         - un reintento devuelve lo resuelto sin escribir ni consumir cupo,
+           y no pisa un nombre posterior de otra sesión;
+         - el intento no guarda ningún nombre y su hash es un HMAC con el
+           secreto del servidor;
+         - la firma de la función cambió (019 borra la anterior); el down
+           restaura el CHECK de 014;
+       - **A2:** reductor puro de la vista del perfil
+         (`lib/comunidad/perfil-nucleo.ts`):
+         - "Cargar más" aplica `bloqueado`, `eliminada` o el módulo apagado,
+           retira lo anterior e invalida los pedidos pendientes;
+         - una falla real conserva las páginas;
+         - una respuesta superada o de otra cuenta o perfil no toca nada;
+       - **regresiones reales:**
+         - `pruebas-nombre-intento` 5/5 (antes 0/4 con `8cbe0cd`);
+         - `pruebas-perfiles` 25/25 (antes 22/25 con el manejador anterior);
+         - up/down/up 5/5, permisos 29/29 y escritura 43/43;
+         - **`npm test` completo: 2500 pasan, 0 fallan, 16 omitidas**;
+           `tsc` 0;
+       - **navegador local con los componentes reales**, escritorio y
+         375 px, 11 capturas:
+         - bloqueo en otra sesión, baja, módulo apagado, falla de red y
+           reintento;
+         - respuesta tardía tras un bloqueo desde el menú;
+         - nombre con `id_intento`;
+       - **simulado:** pérdida de respuestas, red, demora y "otra sesión"
+         (script con funciones reales);
+       - **limpieza:** la base quedó como al empezar (6/2/42/2, 0 órdenes,
+         locks, decisiones e intentos de nombre; límites e interruptores
+         intactos).
+       Informe: `docs/medidas/2026-10-27-informe-claude-e6-a1a2.md`; salidas:
+       `docs/medidas/2026-10-27-e6-a1a2-salidas.txt`; capturas:
+       `docs/medidas/2026-10-27-e6-a1a2-recorrido/`.
    - decidir si el CHECK de 011 sigue prohibiendo U+200D (ZWJ), que
      bloquea los emojis compuestos. Es una restricción de E2a que no se
      reabrió;
