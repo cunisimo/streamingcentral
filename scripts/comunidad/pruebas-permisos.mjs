@@ -50,7 +50,7 @@ const { prueba, cerrar } = arnes();
 const TABLAS = [
   "bajas_en_curso", "bloqueos", "config", "contadores", "corroboraciones", "decisiones", "denuncias", "denuncias_cerradas",
   "denuncias_excedentes", "evaluaciones", "huellas", "intentos", "ordenes_utiles", "ordenes_utiles_tramos", "participantes", "resenas",
-  "suspensiones", "tramos", "versiones",
+  "suspensiones", "top_meses", "top_resultados", "tramos", "versiones",
 ];
 // El inventario exacto de `public.comunidad_*`: la baja (E2b, 012), la
 // escritura (E3a, 014) y la moderación (E3b, 015). Una función nueva sin
@@ -61,7 +61,7 @@ const TABLAS = [
 const DECISION_PRUEBA = { resultado: "publicar", version_reglas: "prueba", reglas: [], huella: { texto: "a".repeat(64), shingles: ["0123456789abcdef"] } };
 const VERSION_INEXISTENTE = 9007199254740991;
 // Sin `p_uid`: la corroboración la llama la ruta sin actor.
-const SIN_UID = new Set(["comunidad_retener_por_regla", "comunidad_modulo_activo"]);
+const SIN_UID = new Set(["comunidad_retener_por_regla", "comunidad_modulo_activo", "comunidad_top_yumpers_activo"]);
 const HASH_PRUEBA = "a".repeat(64);
 const INTENTO_PRUEBA = "00000000-0000-4000-8000-0000000000ee";
 const RPC_COMUNIDAD = {
@@ -83,6 +83,8 @@ const RPC_COMUNIDAD = {
   comunidad_retener_por_regla: { p_version: VERSION_INEXISTENTE, p_decision: DECISION_PRUEBA },
   comunidad_retirar_voto: { p_version: 1 },
   comunidad_textos_recientes: {},
+  // E7 (020): los interruptores del Top Yumpers, para la ruta sin sesión.
+  comunidad_top_yumpers_activo: {},
   comunidad_votar: { p_version: 1, p_util: true },
 };
 // E4 (016): las de moderación NO son de service_role: las ejecuta
@@ -110,9 +112,11 @@ const RPC_LECTURA = {
   comunidad_resenas: { p_tipo: "movie", p_tmdb_id: 1, p_orden: "recientes", p_cursor: null, p_limite: 5 },
   // E6 (019): el perfil comunitario, con la sesión de quien mira (null = el propio).
   comunidad_perfil: { p_participante: null, p_cursor: null, p_limite: 5 },
+  // E7 (020): el Top Yumpers (mes cerrado; apagado responde {activo:false} sin consolidar).
+  comunidad_top_yumpers: { p_mes: "2026-09-01" },
 };
 // lock_timeout de las lecturas: sólo la de reseñas (E5b genera el orden).
-const LOCK_LECTURA = { comunidad_resenas: "5s" };
+const LOCK_LECTURA = { comunidad_resenas: "5s", comunidad_top_yumpers: "10s" };
 const ESCRIBE_ADMIN = new Set(["comunidad_admin_decidir", "comunidad_admin_levantar_suspension", "comunidad_admin_publicacion",
   "comunidad_admin_suspender", "comunidad_quitar_marcador_baja"]);
 // lock_timeout de cada una (vacío = sin): 10 s la baja, 5 s las escrituras de E3a, E3b y E4.
@@ -131,7 +135,7 @@ const COLUMNA = {
   corroboraciones: "reglas", decisiones: "motivo", denuncias: "estado", denuncias_cerradas: "estado",
   denuncias_excedentes: "cantidad", evaluaciones: "util", huellas: "creada_en",
   intentos: "resultado", ordenes_utiles: "total", ordenes_utiles_tramos: "ids", participantes: "nombre_comunitario", resenas: "borrada_en",
-  suspensiones: "hasta", tramos: "vigente_hasta", versiones: "decidida_en",
+  suspensiones: "hasta", top_meses: "autores", top_resultados: "puntos", tramos: "vigente_hasta", versiones: "decidida_en",
 };
 
 // ---------------------------------------------------------------------------
@@ -502,7 +506,7 @@ console.log("\n— 3. RPC —");
 
 
 
-await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a, E5b y E6), security definer y search_path vacío", () => {
+await prueba("las únicas public.comunidad_* son las del inventario (E2b, E3a, E3b, E4, E5a, E5b, E6 y E7), security definer y search_path vacío", () => {
   const out = sqlOk(`select proname || ':' || prosecdef || ':' || coalesce(array_to_string(proconfig, ','), '')
     from pg_proc where pronamespace = 'public'::regnamespace and proname like 'comunidad\\_%' order by 1`);
   const esperadas = [

@@ -70,6 +70,11 @@ begin
       overriding system value values (900001, 'movie', 1, now(), now() + interval '2 hours', 1);
     insert into comunidad.ordenes_utiles_tramos (orden_id, tramo_no, ids) values (900001, 0, array[${FX.resena}]::bigint[]);
   end if;
+  -- E7 (020): un mes consolidado del Top Yumpers (un mes que no usa nadie).
+  if to_regclass('comunidad.top_meses') is not null then
+    insert into comunidad.top_meses (mes, corte, consolidado_en, autores) values ('2025-01-01', '2025-02-01 03:00:00+00', now(), 1);
+    insert into comunidad.top_resultados (mes, posicion, puntos, participante_id) values ('2025-01-01', 1, 1, '${FX.autor}');
+  end if;
 end;
 $$;
 `;

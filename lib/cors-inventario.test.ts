@@ -206,7 +206,7 @@ test("ningún OPTIONS puede ejecutar el handler real", () => {
   assert.deepEqual(malas, [], `OPTIONS que llegarían al handler:\n${malas.join("\n")}`);
 });
 
-test("el recuento cierra: 38 rutas = 35 integradas + 3 excluidas", () => {
+test("el recuento cierra: 39 rutas = 36 integradas + 3 excluidas", () => {
   // 25 -> 26 al integrar `main`: el Top manual sumó `app/api/admin/top`, que se
   // clasificó como excluida. Las 23 integradas de CP4 no se movieron.
   const todas = rutasDeApi();
@@ -228,8 +228,10 @@ test("el recuento cierra: 38 rutas = 35 integradas + 3 excluidas", () => {
   // 36 -> 38 con los perfiles (E6): `comunidad/perfil` y `comunidad/nombre`
   // integran CORS: las usan el perfil (`/u`) y la cuenta, que viajan en el
   // contenedor.
-  assert.equal(todas.length, 38, "cambió la cantidad de rutas: hay que reclasificar");
-  assert.equal(integradas.length, 35);
+  // 38 -> 39 con el Top Yumpers (E7): `comunidad/top-yumpers` integra CORS:
+  // la usa /top, que viaja en el contenedor.
+  assert.equal(todas.length, 39, "cambió la cantidad de rutas: hay que reclasificar");
+  assert.equal(integradas.length, 36);
   assert.equal(EXCLUIDAS.size, 3);
   assert.equal(integradas.length + EXCLUIDAS.size, todas.length);
 });

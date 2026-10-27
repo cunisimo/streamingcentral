@@ -1352,6 +1352,18 @@ main{padding-bottom:calc(var(--nav-total) + 20px);min-height:60vh}
 .cm-perfil-avatar{width:64px;height:64px;border-radius:50%;flex:0 0 auto;background:var(--surface-2)}
 .cm-perfil .review .badge a{display:inline-flex;align-items:center;min-height:44px;color:inherit}
 .cm-nombre{margin-top:24px}
+.top-secciones{margin:8px 0 12px}
+/* E7: Top Yumpers. Filas de 44+ de alto; el nombre se corta sin desbordar. */
+.cm-top{margin-top:8px}
+.cm-top-invita{margin-top:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.cm-top-lista{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cm-top-fila{display:grid;grid-template-columns:32px 36px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:48px;padding:6px 10px;border:1px solid var(--line-2);border-radius:var(--radius-sm);background:var(--surface)}
+.cm-top-fila.propia{border-color:var(--accent)}
+.cm-top-pos{font-family:var(--display);font-weight:700;font-size:17px;text-align:center}
+.cm-top-avatar{width:36px;height:36px;border-radius:50%;background:var(--surface-2);display:block}
+.cm-top-nombre{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px}
+.cm-top-nombre a{color:inherit;text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px}
+.cm-top-puntos{font-size:13px;color:var(--dim);white-space:nowrap}
 .cm-nombre .cm-sub{margin:4px 0 8px}
 .cm-orden{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
 .cm-orden-op{border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--dim);padding:8px 14px;min-height:44px;font-size:13px;font-weight:600;cursor:pointer}

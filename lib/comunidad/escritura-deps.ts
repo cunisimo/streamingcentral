@@ -109,5 +109,11 @@ export function operacionesComunidad(admin: SupabaseClient) {
       if (error) throw errorRpc("comunidad_modulo_activo", error);
       return data === true;
     },
+    // E7: módulo y Top Yumpers encendidos, para el selector de /top sin sesión.
+    topYumpersActivo: async () => {
+      const { data, error } = await admin.rpc("comunidad_top_yumpers_activo");
+      if (error) throw errorRpc("comunidad_top_yumpers_activo", error);
+      return data === true;
+    },
   };
 }
