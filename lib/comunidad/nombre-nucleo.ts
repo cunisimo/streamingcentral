@@ -14,18 +14,26 @@
 //   4. `comunidad_cambiar_nombre` (sólo service_role): fila A, límite del día
 //      y la escritura. Un nombre que se retendría NO se guarda: no hay cola
 //      de revisión de nombres;
-//   5. confirmación perdida: se repite UNA vez. Repetir el mismo nombre es
-//      `sin_cambios`, así que el reintento confirma sin escribir de nuevo; si
-//      tampoco se confirma, `sin_confirmar`.
+//   5. confirmación perdida: se repite UNA vez con el MISMO `id_intento` y
+//      el mismo hash (A1 de la auditoría de E6). La base devuelve el
+//      resultado ya registrado de ese intento (`repetido`) sin escribir ni
+//      consumir cupo, aunque otra sesión haya cambiado el nombre en el
+//      medio; si tampoco se confirma, `sin_confirmar`. El hash es un HMAC del
+//      pedido normalizado (lo arma el adaptador; sin secreto, "error") y el
+//      intento guardado no lleva el nombre.
 import type { Decision } from "./reglas/tipos.ts";
 import { conReconciliacion, esBajaEnCurso, type RespuestaBase, type SinConfirmar } from "./escritura-nucleo.ts";
 import { normalizarNombre, problemaNombre } from "./nombre.ts";
 
-export interface PedidoNombre { uid: string; nombre: string }
+/** `idIntento`: uuid del cliente, el MISMO en cada reintento del mismo envío. */
+export interface PedidoNombre { uid: string; nombre: string; idIntento: string }
 
 export interface DependenciasNombre {
   evaluar: (nombre: string) => Decision;
-  cambiar: (a: { uid: string; nombre: string; decision: { resultado: string; version_reglas: string; reglas: string[] } }) => Promise<RespuestaBase>;
+  hash: (s: string) => string;
+  cambiar: (a: {
+    uid: string; nombre: string; decision: { resultado: string; version_reglas: string; reglas: string[] }; idIntento: string; hash: string;
+  }) => Promise<RespuestaBase>;
 }
 
 export type ResultadoNombre =
@@ -38,8 +46,12 @@ export type ResultadoNombre =
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Lo que se firma: la acción y el nombre NORMALIZADO (mismo envío, mismo hash). */
+export const firmaNombre = (normalizado: string) => JSON.stringify(["nombre", normalizado]);
+
 export async function cambiarNombre(deps: DependenciasNombre, p: PedidoNombre): Promise<ResultadoNombre> {
-  if (typeof p.uid !== "string" || !UUID.test(p.uid) || typeof p.nombre !== "string" || p.nombre.length > 200) {
+  if (typeof p.uid !== "string" || !UUID.test(p.uid) || typeof p.nombre !== "string" || p.nombre.length > 200
+      || typeof p.idIntento !== "string" || !UUID.test(p.idIntento)) {
     return { resultado: "invalido" };
   }
   const nombre = normalizarNombre(p.nombre);
@@ -61,8 +73,14 @@ export async function cambiarNombre(deps: DependenciasNombre, p: PedidoNombre): 
     version_reglas: d.versionReglas,
     reglas: d.disparadas.filter((x) => x.resultado === d.resultado).map((x) => x.regla),
   };
+  let hash: string;
+  try {
+    hash = deps.hash(firmaNombre(nombre));
+  } catch {
+    return { resultado: "error" };
+  }
   const llamar = async () => {
-    const x = await deps.cambiar({ uid: p.uid, nombre, decision });
+    const x = await deps.cambiar({ uid: p.uid, nombre, decision, idIntento: p.idIntento, hash });
     if (!x || typeof x.resultado !== "string") throw new Error("respuesta inesperada");
     return x;
   };

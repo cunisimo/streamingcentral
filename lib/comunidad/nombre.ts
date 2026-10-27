@@ -41,6 +41,7 @@ export const MENSAJE_NOMBRE_NO_ADMITIDO = "Ese nombre no se puede usar en la com
 export const MENSAJE_NOMBRE_SIN_CAMBIOS = "Ese ya es tu nombre comunitario.";
 export const MENSAJE_NOMBRE_SIN_CONFIRMAR = "No sabemos si se guardó. Reintentá: si ya se había guardado, queda igual.";
 export const MENSAJE_NOMBRE_ERROR = "No se pudo guardar, probá de nuevo.";
+export const MENSAJE_NOMBRE_CONFLICTO = "No pudimos guardar este envío. Recargá y probá de nuevo.";
 
 const MOTIVOS: Readonly<Record<string, string>> = {
   modulo_apagado: "La comunidad no está disponible.",
@@ -55,10 +56,15 @@ const MOTIVOS: Readonly<Record<string, string>> = {
 export type TonoNombre = "exito" | "info" | "rechazo" | "error" | "sin_confirmar";
 
 /** Texto y tono de la respuesta de la ruta del nombre. */
-export function mensajeNombre(r: { resultado?: unknown; motivo?: unknown; mensaje?: unknown; nombre?: unknown } | "sin-confirmar"): { tono: TonoNombre; texto: string } {
+export function mensajeNombre(r: { resultado?: unknown; motivo?: unknown; mensaje?: unknown; nombre?: unknown; repetido?: unknown } | "sin-confirmar"): { tono: TonoNombre; texto: string } {
   if (r === "sin-confirmar") return { tono: "sin_confirmar", texto: MENSAJE_NOMBRE_SIN_CONFIRMAR };
   switch (r.resultado) {
-    case "nombre_cambiado": return { tono: "exito", texto: `Listo: tu nombre comunitario es «${String(r.nombre ?? "")}».` };
+    case "nombre_cambiado":
+      // Un intento ya resuelto (recuperado): el registro no guarda el nombre y no se afirma cuál es el actual.
+      return r.repetido === true
+        ? { tono: "info", texto: "Tu cambio de nombre ya se había guardado." }
+        : { tono: "exito", texto: `Listo: tu nombre comunitario es «${String(r.nombre ?? "")}».` };
+    case "conflicto": return { tono: "rechazo", texto: MENSAJE_NOMBRE_CONFLICTO };
     case "sin_cambios": return { tono: "info", texto: MENSAJE_NOMBRE_SIN_CAMBIOS };
     case "nombre_no_admitido": return { tono: "rechazo", texto: MENSAJE_NOMBRE_NO_ADMITIDO };
     case "rechazo_formato":

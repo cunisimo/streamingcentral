@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { evaluarNombre } from "./reglas/decision.ts";
 import { cambiarNombre, type DependenciasNombre } from "./nombre-nucleo.ts";
 import { mensajeNombre, MENSAJE_NOMBRE_NO_ADMITIDO, NOMBRE_PENDIENTE, normalizarNombre, problemaNombre } from "./nombre.ts";
-import { agregadosPerfil, cabeceraValida, clavePerfil, ORDEN_PERFIL, tituloPerfil } from "./perfil-nucleo.ts";
+import { agregadosPerfil, alCargarPerfil, alLlegarMasPerfil, cabeceraValida, clavePerfil, ORDEN_PERFIL, tituloPerfil, vistaTerminal, vistaVacia } from "./perfil-nucleo.ts";
 import { pedidoPerfil } from "./perfil.ts";
 import { codificarCursor } from "./lectura.ts";
 import { alLlegarMas, conPrimeraPagina, itemValido, listaVacia, pedirMas, tandaValida, trasVoto } from "./lista-nucleo.ts";
@@ -19,6 +19,7 @@ const leer = (f: string) => readFileSync(new URL(`../../${f}`, import.meta.url),
 const UID = "11111111-1111-4111-8111-111111111111";
 const P1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const P2 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const INTENTO = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 // ------------------------------------------------------------ forma del nombre
 
@@ -58,9 +59,10 @@ test("reglas de E1 sobre nombres: contacto ofuscado → rechazo; odio → retene
 // ------------------------------------------------------------ núcleo de la ruta
 
 function deps(respuestas: (() => Promise<Record<string, unknown>>)[], evaluar = evaluarNombre) {
-  const llamadas: { uid: string; nombre: string; decision: { resultado: string } }[] = [];
+  const llamadas: { uid: string; nombre: string; decision: { resultado: string }; idIntento: string; hash: string }[] = [];
   const d: DependenciasNombre = {
     evaluar,
+    hash: (x) => `h:${x}`,
     cambiar: async (a) => { llamadas.push(a); const f = respuestas.shift(); if (!f) throw new Error("sin respuesta"); return f() as never; },
   };
   return { d, llamadas };
@@ -69,45 +71,50 @@ const ok = (x: Record<string, unknown>) => async () => x;
 
 test("ruta del nombre: formato y pedido inválido no tocan la base; el nombre que llega es el NORMALIZADO", async () => {
   const { d, llamadas } = deps([ok({ resultado: "nombre_cambiado", nombre: "Juan Pérez" })]);
-  assert.deepEqual(await cambiarNombre(d, { uid: "no-uuid", nombre: "Ana" }), { resultado: "invalido" });
-  assert.equal((await cambiarNombre(d, { uid: UID, nombre: "x" })).resultado, "rechazo_formato");
-  assert.equal((await cambiarNombre(d, { uid: UID, nombre: "Ana​" })).resultado, "rechazo_formato");
+  assert.deepEqual(await cambiarNombre(d, { uid: "no-uuid", nombre: "Ana", idIntento: INTENTO }), { resultado: "invalido" });
+  assert.deepEqual(await cambiarNombre(d, { uid: UID, nombre: "Ana", idIntento: "no-uuid" }), { resultado: "invalido" });
+  assert.equal((await cambiarNombre(d, { uid: UID, nombre: "x", idIntento: INTENTO })).resultado, "rechazo_formato");
+  assert.equal((await cambiarNombre(d, { uid: UID, nombre: "Ana​", idIntento: INTENTO })).resultado, "rechazo_formato");
   assert.equal(llamadas.length, 0);
-  const r = await cambiarNombre(d, { uid: UID, nombre: "  Juan   Pérez " });
+  const r = await cambiarNombre(d, { uid: UID, nombre: "  Juan   Pérez ", idIntento: INTENTO });
   assert.equal(r.resultado, "nombre_cambiado");
   assert.deepEqual([llamadas[0].nombre, llamadas[0].decision.resultado], ["Juan Pérez", "publicar"]);
 });
 
 test("ruta del nombre: rechazo de contenido lleva el motivo de las reglas; retener viaja como retener (la base no lo guarda)", async () => {
   const { d, llamadas } = deps([ok({ resultado: "rechazo_contenido" }), ok({ resultado: "nombre_no_admitido" })]);
-  const r = await cambiarNombre(d, { uid: UID, nombre: "juan arroba gmail" });
+  const r = await cambiarNombre(d, { uid: UID, nombre: "juan arroba gmail", idIntento: INTENTO });
   assert.equal(r.resultado, "rechazo_contenido");
   assert.match(String((r as { mensaje?: unknown }).mensaje), /correo/);
-  assert.equal((await cambiarNombre(d, { uid: UID, nombre: "FueraBolitas" })).resultado, "nombre_no_admitido");
+  assert.equal((await cambiarNombre(d, { uid: UID, nombre: "FueraBolitas", idIntento: INTENTO })).resultado, "nombre_no_admitido");
   assert.deepEqual(llamadas.map((x) => x.decision.resultado), ["rechazo_contenido", "retener"]);
   assert.equal(mensajeNombre({ resultado: "nombre_no_admitido" }).texto, MENSAJE_NOMBRE_NO_ADMITIDO);
 });
 
 test("ruta del nombre: una regla que falla NUNCA llega a la base como publicar", async () => {
   const { d, llamadas } = deps([], () => { throw new Error("falla"); });
-  assert.deepEqual(await cambiarNombre(d, { uid: UID, nombre: "Ana" }), { resultado: "error" });
+  assert.deepEqual(await cambiarNombre(d, { uid: UID, nombre: "Ana", idIntento: INTENTO }), { resultado: "error" });
   const e = deps([], () => ({ resultado: "error", versionReglas: "v", disparadas: [], motivoUsuario: "x" }));
-  assert.deepEqual(await cambiarNombre(e.d, { uid: UID, nombre: "Ana" }), { resultado: "error" });
+  assert.deepEqual(await cambiarNombre(e.d, { uid: UID, nombre: "Ana", idIntento: INTENTO }), { resultado: "error" });
   assert.equal(llamadas.length + e.llamadas.length, 0);
 });
 
-test("ruta del nombre: confirmación perdida → se repite UNA vez (sin_cambios confirma); dos pérdidas → sin_confirmar; rechazo confirmado → error", async () => {
+test("ruta del nombre: confirmación perdida → se repite UNA vez con el MISMO intento y hash (A1); dos pérdidas → sin_confirmar; rechazo confirmado → error", async () => {
   const perdida = async () => { throw new ErrorRpc("x", "", false); };
-  const a = deps([perdida, ok({ resultado: "sin_cambios", nombre: "Ana" })]);
-  assert.equal((await cambiarNombre(a.d, { uid: UID, nombre: "Ana" })).resultado, "sin_cambios");
+  const a = deps([perdida, ok({ resultado: "nombre_cambiado", nombre: "Ana", repetido: true })]);
+  assert.equal((await cambiarNombre(a.d, { uid: UID, nombre: " Ana ", idIntento: INTENTO })).resultado, "nombre_cambiado");
   assert.equal(a.llamadas.length, 2);
+  assert.deepEqual(a.llamadas.map((x) => [x.idIntento, x.hash]), [[INTENTO, 'h:["nombre","Ana"]'], [INTENTO, 'h:["nombre","Ana"]']],
+    "el reintento es el MISMO intento (hash del nombre normalizado)");
+  assert.equal(mensajeNombre({ resultado: "nombre_cambiado", repetido: true }).texto, "Tu cambio de nombre ya se había guardado.");
+  assert.equal(mensajeNombre({ resultado: "conflicto" }).tono, "rechazo");
   const b = deps([perdida, perdida]);
-  assert.deepEqual(await cambiarNombre(b.d, { uid: UID, nombre: "Ana" }), { resultado: "sin_confirmar" });
+  assert.deepEqual(await cambiarNombre(b.d, { uid: UID, nombre: "Ana", idIntento: INTENTO }), { resultado: "sin_confirmar" });
   const c = deps([async () => { throw new ErrorRpc("x", "23514", true); }]);
-  assert.deepEqual(await cambiarNombre(c.d, { uid: UID, nombre: "Ana" }), { resultado: "error" });
+  assert.deepEqual(await cambiarNombre(c.d, { uid: UID, nombre: "Ana", idIntento: INTENTO }), { resultado: "error" });
   assert.equal(c.llamadas.length, 1);
   const baja = deps([async () => { throw new ErrorRpc("baja_en_curso", "CB001", true); }]);
-  assert.deepEqual(await cambiarNombre(baja.d, { uid: UID, nombre: "Ana" }), { resultado: "baja_en_curso" });
+  assert.deepEqual(await cambiarNombre(baja.d, { uid: UID, nombre: "Ana", idIntento: INTENTO }), { resultado: "baja_en_curso" });
 });
 
 test("mensajes del nombre: ninguno afirma un guardado sin confirmar", () => {
@@ -197,7 +204,7 @@ const funcion = (s: string, nombre: string) => {
 test("barrido 019: permisos. El perfil sólo authenticated (lee al lector de auth.uid(), sin uid en el pedido); el nombre sólo service_role", () => {
   const s = sql019();
   assert.match(s, /grant execute on function public\.comunidad_perfil\(uuid, jsonb, integer\) to authenticated;/);
-  assert.match(s, /grant execute on function public\.comunidad_cambiar_nombre\(uuid, text, jsonb\) to service_role;/);
+  assert.match(s, /grant execute on function public\.comunidad_cambiar_nombre\(uuid, text, jsonb, uuid, text\) to service_role;/);
   assert.doesNotMatch(s, /grant execute on function public\.comunidad_perfil[^;]*(anon|service_role)/);
   assert.doesNotMatch(s, /grant execute on function public\.comunidad_cambiar_nombre[^;]*(anon|authenticated)/);
   assert.match(s, /revoke all on function comunidad\.avatar_publico\(text\) from public, anon, authenticated, service_role;/);
@@ -221,6 +228,13 @@ test("barrido 019: la proyección no nombra correo, display_name ni user_id; el 
   assert.match(cambiar, /comunidad\.decision_valida\(p_decision\)/);
   assert.match(cambiar, /comunidad\.condiciones_a\(p_uid, v_part\)/);
   assert.match(cambiar, /limite_nombres/);
+  // A1: el intento se relee bajo los locks y se registra en la misma transacción que su efecto.
+  assert.match(cambiar, /comunidad\.intento_previo\(v_part, 'nombre', p_id_intento, p_hash\)/);
+  assert.match(cambiar, /insert into comunidad\.intentos \(participante_id, accion, id_intento, hash_peticion, resultado\)\s+values \(v_part, 'nombre', p_id_intento, p_hash, v_res - 'nombre'\)/,
+    "el intento no guarda el nombre");
+  assert.ok(cambiar.indexOf("intento_previo") < cambiar.indexOf("proto_marca()") && cambiar.indexOf("proto_marca()") < cambiar.indexOf("consumir_cupo"),
+    "relectura del intento antes de la marca; cupo después");
+  assert.match(s, /drop function if exists public\.comunidad_cambiar_nombre\(uuid, text, jsonb\);/, "sin la sobrecarga vieja");
   // `profiles.display_name` no aparece en ninguna parte de 019.
   assert.doesNotMatch(s.replace(/^--.*$/gm, ""), /display_name/);
 });
@@ -246,4 +260,60 @@ test("barrido 019: el down restaura item_lectura de 017 LITERAL y no toca nombre
   const de017 = funcion(leer("supabase/migrations/017_comunidad_lectura.sql"), "comunidad.item_lectura");
   assert.ok(down.includes(de017), "item_lectura de 017 copiada sin cambios");
   assert.doesNotMatch(down, /nombre_comunitario\s*=|update /);
+});
+
+// ------------------------------------------------------------ A2: disponibilidad al cargar más
+
+
+test("A2: un «Cargar más» que informa bloqueado, eliminada o módulo apagado lo APLICA: sin nombre, avatar ni reseñas, y no es un error de red", () => {
+  const K = clavePerfil(UID, P1);
+  const item = (id: number) => ({ resena_id: id, version_id: id * 10, texto: `t${id}`, publicada_en: "2026-10-27T00:00:00+00:00", utiles: 0, total: 0, autor: { id: P1, nombre: "Ana" }, tipo: "movie", tmdb_id: id });
+  const activa = { activo: true, estado: "activo", orden: ORDEN_PERFIL, id: P1, nombre: "Ana", avatar: "coco", propio: false, resenas: 6, utiles_recibidos: 1,
+    items: [1, 2, 3, 4, 5].map(item), hay_mas: true, cursor: "c1" };
+  const base = alCargarPerfil(vistaVacia(K), { status: 200, j: activa })!;
+  assert.deepEqual([base.cab?.nombre, base.lista.items.length], ["Ana", 5]);
+  for (const [nombre, j, esperado] of [
+    ["bloqueado", { activo: true, estado: "bloqueado", id: P1 }, "Usuario bloqueado"],
+    ["eliminada", { activo: true, estado: "eliminada", id: P1 }, "Cuenta eliminada"],
+    ["apagado", { activo: false }, null],
+  ] as const) {
+    const p = pedirMas(base.lista)!;
+    const enCurso = { ...base, lista: p.estado };
+    const v = alLlegarMasPerfil(enCurso, p.pedido.n, p.pedido.clave, { status: 200, j });
+    assert.ok(vistaTerminal(v), nombre);
+    assert.deepEqual([v.lista.items.length, v.lista.errorMas, v.lista.hayMas, v.lista.cargandoMas], [0, false, false, false], nombre);
+    assert.equal(v.cab ? tituloPerfil(v.cab) : null, esperado, nombre);
+    assert.equal(v.cab?.nombre ?? null, null);
+    assert.equal(v.cab?.avatar ?? null, null);
+    assert.equal(v.apagado, nombre === "apagado");
+    // El pedido avanzó: la respuesta del pedido superado (aunque traiga reseñas) ya no aplica.
+    assert.ok(v.lista.pedido > p.pedido.n);
+    assert.equal(alLlegarMasPerfil(v, p.pedido.n, p.pedido.clave, { status: 200, j: { ...activa, items: [item(6)], hay_mas: false, cursor: null } }), v);
+  }
+});
+
+test("A2: una falla REAL (red, HTTP, forma) conserva cabecera y páginas y deja reintentar; respuestas de otra clave o de un pedido superado no tocan nada", () => {
+  const K = clavePerfil(UID, P1);
+  const item = (id: number) => ({ resena_id: id, version_id: id * 10, texto: `t${id}`, publicada_en: "2026-10-27T00:00:00+00:00", utiles: 0, total: 0, tipo: "movie", tmdb_id: id });
+  const activa = { activo: true, estado: "activo", orden: ORDEN_PERFIL, id: P1, nombre: "Ana", avatar: null, propio: false, resenas: 6, utiles_recibidos: 0,
+    items: [1, 2, 3, 4, 5].map(item), hay_mas: true, cursor: "c1" };
+  const base = alCargarPerfil(vistaVacia(K), { status: 200, j: activa })!;
+  for (const r of [null, { status: 500, j: { resultado: "error" } }, { status: 200, j: { activo: true, estado: "activo" } }, { status: 401, j: { resultado: "sin_sesion" } }]) {
+    const p = pedirMas(base.lista)!;
+    const v = alLlegarMasPerfil({ ...base, lista: p.estado }, p.pedido.n, p.pedido.clave, r);
+    assert.deepEqual([v.cab?.nombre, v.lista.items.length, v.lista.errorMas, v.lista.cursor], ["Ana", 5, true, "c1"], JSON.stringify(r));
+    assert.equal(vistaTerminal(v), false);
+  }
+  const p = pedirMas(base.lista)!;
+  const enCurso = { ...base, lista: p.estado };
+  const bloqueo = { status: 200, j: { activo: true, estado: "bloqueado", id: P1 } };
+  assert.equal(alLlegarMasPerfil(enCurso, p.pedido.n, clavePerfil("22222222-2222-4222-8222-222222222222", P1), bloqueo), enCurso, "otra cuenta");
+  assert.equal(alLlegarMasPerfil(enCurso, p.pedido.n, clavePerfil(UID, P2), bloqueo), enCurso, "otro perfil");
+  assert.equal(alLlegarMasPerfil(enCurso, p.pedido.n - 1, p.pedido.clave, bloqueo), enCurso, "pedido superado");
+  // Una página activa de OTRO perfil con la misma clave no se mezcla: es una falla.
+  const ajena = alLlegarMasPerfil(enCurso, p.pedido.n, p.pedido.clave, { status: 200, j: { ...activa, id: P2 } });
+  assert.deepEqual([ajena.lista.items.length, ajena.lista.errorMas], [5, true]);
+  // La primera carga también aplica el cambio; una falla suya no borra lo visible.
+  assert.equal(alCargarPerfil(base, null), null);
+  assert.equal(alCargarPerfil(base, { status: 200, j: { activo: true, estado: "eliminada", id: P1 } })?.cab?.estado, "eliminada");
 });

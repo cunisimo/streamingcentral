@@ -7,7 +7,7 @@
 //
 // Toda escritura pasa por las funciones `public.comunidad_*` (migración
 // 014), ejecutables SÓLO por service_role. Las tablas siguen cerradas.
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { evaluarNombre, evaluarResena } from "./reglas/decision.ts";
 import { huella, secretoDuplicados } from "./duplicados.ts";
@@ -62,10 +62,18 @@ export function dependenciasEscritura(admin: SupabaseClient, secreto: string | n
  * E6: el cambio de nombre comunitario. Sin reconciliar acá: el núcleo
  * (./nombre-nucleo.ts) repite UNA vez si la confirmación se perdió.
  */
-export function dependenciasNombre(admin: SupabaseClient): DependenciasNombre {
+export function dependenciasNombre(admin: SupabaseClient, secreto: string | null = secretoDuplicados()): DependenciasNombre {
   return {
     evaluar: (nombre) => evaluarNombre(nombre),
-    cambiar: (a) => rpcCrudo(admin, "comunidad_cambiar_nombre", { p_uid: a.uid, p_nombre: a.nombre, p_decision: a.decision }),
+    // HMAC con el secreto del servidor (el de duplicados): el intento queda en
+    // la base después de una baja y un SHA-256 de un nombre corto se adivina.
+    hash: (s) => {
+      if (!secreto) throw new Error("falta COMUNIDAD_HMAC_DUPLICADOS");
+      return createHmac("sha256", secreto).update(`intento-nombre:${s}`, "utf8").digest("hex");
+    },
+    cambiar: (a) => rpcCrudo(admin, "comunidad_cambiar_nombre", {
+      p_uid: a.uid, p_nombre: a.nombre, p_decision: a.decision, p_id_intento: a.idIntento, p_hash: a.hash,
+    }),
   };
 }
 

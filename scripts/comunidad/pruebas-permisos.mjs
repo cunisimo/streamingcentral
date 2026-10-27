@@ -73,7 +73,7 @@ const RPC_COMUNIDAD = {
   comunidad_bloquear: { p_version: VERSION_INEXISTENTE },
   comunidad_borrar: { p_resena: 1 },
   // E6 (019): cambiar el nombre comunitario, como publicar (la ruta pasa la decisión).
-  comunidad_cambiar_nombre: { p_nombre: "Prueba de permisos", p_decision: DECISION_PRUEBA },
+  comunidad_cambiar_nombre: { p_nombre: "Prueba de permisos", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },
   comunidad_denunciar: { p_version: VERSION_INEXISTENTE, p_categoria: "spam", p_comentario: null },
   comunidad_desbloquear: { p_bloqueo: VERSION_INEXISTENTE },
   comunidad_editar: { p_resena: 1, p_version_esperada: 1, p_texto: "x", p_decision: DECISION_PRUEBA, p_id_intento: INTENTO_PRUEBA, p_hash: HASH_PRUEBA },

@@ -10,6 +10,7 @@
 // nunca el `display_name` del perfil privado ni el correo. Sin nombre
 // elegido, un texto neutro (NOMBRE_PENDIENTE).
 import { NOMBRE_PENDIENTE } from "./nombre.ts";
+import { alLlegarMas, conPrimeraPagina, listaVacia, tandaValida, type EstadoLista } from "./lista-nucleo.ts";
 
 export const ORDEN_PERFIL = "perfil";
 export type EstadoPerfil = "activo" | "bloqueado" | "eliminada" | "no_existe" | "sin_participante";
@@ -70,4 +71,60 @@ export function agregadosPerfil(c: CabeceraPerfil): string {
   const r = c.resenas === 1 ? "1 reseña" : `${c.resenas} reseñas`;
   const u = c.utilesRecibidos === 1 ? "1 «Me sirvió» recibido" : `${c.utilesRecibidos} «Me sirvió» recibidos`;
   return `${r} · ${u}`;
+}
+
+// ---------------------------------------------------------------------------
+// La vista del perfil (A2 de la auditoría de E6 sobre 8cbe0cd).
+//
+// Cualquier página —la primera o un "Cargar más"— puede informar que el
+// perfil dejó de estar disponible: `bloqueado` (quien mira lo bloqueó, quizás
+// en otra pestaña), `eliminada` (baja del autor) o el módulo apagado
+// (`activo: false`). Eso NO es una falla de red: se aplica, se retira lo que
+// ya no corresponde (nombre, avatar, reseñas) y el número de pedido avanza,
+// así ninguna respuesta pendiente puede volver a mostrar lo anterior. Una
+// falla real (red, HTTP, forma) conserva lo visible y deja reintentar.
+// Sólo cuenta la respuesta del pedido en curso de la misma clave (cuenta y
+// perfil): una superada no borra nada.
+// ---------------------------------------------------------------------------
+
+export interface VistaPerfil { cab: CabeceraPerfil | null; apagado: boolean; lista: EstadoLista }
+export type RespuestaPerfil = { status: number; j: unknown } | null;
+
+export const vistaVacia = (clave: string): VistaPerfil => ({ cab: null, apagado: false, lista: listaVacia(clave) });
+
+/** El perfil ya no se puede mostrar (bloqueado, eliminado, módulo apagado). */
+export const vistaTerminal = (v: VistaPerfil) => v.apagado || (v.cab !== null && v.cab.estado !== "activo");
+
+/** ¿La respuesta informa un cambio de disponibilidad? */
+export function cambioDeDisponibilidad(r: RespuestaPerfil): { apagado: true } | { cab: CabeceraPerfil } | null {
+  if (!r || r.status !== 200 || !r.j || typeof r.j !== "object") return null;
+  if ((r.j as { activo?: unknown }).activo === false) return { apagado: true };
+  const c = cabeceraValida(r.j);
+  return c && c.estado !== "activo" ? { cab: c } : null;
+}
+
+/** Retira todo y supera cualquier pedido pendiente. */
+function aplicarCambio(v: VistaPerfil, cambio: { apagado: true } | { cab: CabeceraPerfil }): VistaPerfil {
+  const lista = { ...listaVacia(v.lista.clave), pedido: v.lista.pedido + 1 };
+  return "apagado" in cambio ? { cab: null, apagado: true, lista } : { cab: cambio.cab, apagado: false, lista };
+}
+
+/** La primera página o una recarga. null = falla: lo visible queda y se ofrece reintentar. */
+export function alCargarPerfil(v: VistaPerfil, r: RespuestaPerfil): VistaPerfil | null {
+  const cambio = cambioDeDisponibilidad(r);
+  if (cambio) return aplicarCambio(v, cambio);
+  const c = r?.status === 200 ? cabeceraValida(r.j) : null;
+  const t = c?.estado === "activo" ? tandaValida(r?.j, ORDEN_PERFIL) : null;
+  if (!c || !t) return null;
+  return { cab: c, apagado: false, lista: conPrimeraPagina(v.lista, t) };
+}
+
+/** Llegó la respuesta del "Cargar más" `n` de la clave `clave`. */
+export function alLlegarMasPerfil(v: VistaPerfil, n: number, clave: string, r: RespuestaPerfil): VistaPerfil {
+  if (clave !== v.lista.clave || n !== v.lista.pedido || !v.lista.cargandoMas) return v;
+  const cambio = cambioDeDisponibilidad(r);
+  if (cambio) return aplicarCambio(v, cambio);
+  const c = r?.status === 200 ? cabeceraValida(r.j) : null;
+  const t = c?.estado === "activo" && c.id === v.cab?.id ? tandaValida(r?.j, ORDEN_PERFIL) : null;
+  return { ...v, lista: alLlegarMas(v.lista, n, clave, t) };
 }

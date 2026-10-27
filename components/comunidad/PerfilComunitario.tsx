@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthContext";
 import { resolverAvatar } from "@/lib/avatares";
 import { crearFrontera } from "@/lib/comunidad/frontera-cuenta";
-import { alLlegarMas, conPrimeraPagina, listaVacia, pedirMas, tandaValida, trasDenuncia, trasVoto, type EstadoLista } from "@/lib/comunidad/lista-nucleo";
-import { agregadosPerfil, cabeceraValida, clavePerfil, ORDEN_PERFIL, tituloPerfil, type CabeceraPerfil } from "@/lib/comunidad/perfil-nucleo";
+import { pedirMas, trasDenuncia, trasVoto, type EstadoLista } from "@/lib/comunidad/lista-nucleo";
+import {
+  agregadosPerfil, alCargarPerfil, alLlegarMasPerfil, clavePerfil, tituloPerfil, vistaTerminal, vistaVacia, type VistaPerfil,
+} from "@/lib/comunidad/perfil-nucleo";
 import { BLOQUEO_HECHO } from "@/lib/comunidad/menu-nucleo";
 import type { Voto } from "@/lib/comunidad/evaluacion-nucleo";
 import { hrefTitulo } from "@/lib/rutas";
@@ -25,7 +27,10 @@ import { pedirComo, postear } from "./peticiones";
 //
 // La lista usa el núcleo de la ficha (lib/comunidad/lista-nucleo.ts): cinco
 // iniciales, "Cargar más" desde el cursor confirmado y respuestas de otra
-// clave descartadas. Cambiar de cuenta o de perfil monta todo de nuevo (`key`)
+// clave descartadas. Si una página informa que el perfil dejó de estar
+// disponible (bloqueado en otra pestaña, baja del autor, módulo apagado), se
+// aplica y se retira lo anterior; no es una falla de red (A2,
+// lib/comunidad/perfil-nucleo.ts). Cambiar de cuenta o de perfil monta todo de nuevo (`key`)
 // y la frontera descarta lo que llegue tarde. Votar actualiza el conteo sin
 // recargar ni perder las páginas.
 //
@@ -49,13 +54,15 @@ export default function PerfilComunitario({ id }: { id: string }) {
 
 function PerfilConSesion({ uid, id }: { uid: string; id: string }) {
   const clave = clavePerfil(uid, id);
-  const [cab, setCab] = useState<CabeceraPerfil | null>(null);
-  const [apagado, setApagado] = useState(false);
+  // Cabecera, módulo apagado y lista en UN estado: un cambio de disponibilidad
+  // los reemplaza juntos (lib/comunidad/perfil-nucleo.ts, A2).
+  const [vista, setVista] = useState<VistaPerfil>(() => vistaVacia(clave));
+  const vistaRef = useRef(vista);
+  vistaRef.current = vista;
   const [error, setError] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
-  const [lista, setLista] = useState<EstadoLista>(() => listaVacia(clave));
-  const listaRef = useRef(lista);
-  listaRef.current = lista;
+  const aplicar = useCallback((v: VistaPerfil) => { vistaRef.current = v; setVista(v); }, []);
+  const conLista = useCallback((f: (l: EstadoLista) => EstadoLista) => aplicar({ ...vistaRef.current, lista: f(vistaRef.current.lista) }), [aplicar]);
 
   const frontera = useMemo(() => crearFrontera(uid), [uid]);
   useEffect(() => { frontera.abrir(); return () => frontera.cerrar(); }, [frontera]);
@@ -63,43 +70,44 @@ function PerfilConSesion({ uid, id }: { uid: string; id: string }) {
   const ruta = useCallback((cursor: string | null) =>
     `/api/comunidad/perfil?id=${id}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, [id]);
 
+  /** La primera página o una recarga. Una falla conserva lo visible; un cambio de disponibilidad lo reemplaza. */
   const cargar = useCallback(async () => {
     if (!frontera.vigente()) return;
     const g = frontera.carga();
     const r = await pedirComo(uid, ruta(null));
     if (!frontera.vigente(g)) return;
-    const j = r?.j as { activo?: unknown } | null | undefined;
-    if (r?.status === 200 && j && j.activo === false) { setError(false); setApagado(true); return; }
-    const c = r?.status === 200 ? cabeceraValida(r.j) : null;
-    const t = c?.estado === "activo" ? tandaValida(r?.j, ORDEN_PERFIL) : null;
-    if (!c || (c.estado === "activo" && !t)) { setError(true); return; }
+    const v = alCargarPerfil(vistaRef.current, r);
+    if (!v) { setError(true); return; }
     setError(false);
-    setApagado(false);
-    setCab(c);
-    setLista((l) => (t ? conPrimeraPagina(l.clave === clave ? l : listaVacia(clave), t) : listaVacia(clave)));
-  }, [frontera, uid, ruta, clave]);
+    aplicar(v);
+  }, [frontera, uid, ruta, aplicar]);
 
   useEffect(() => { void cargar(); }, [cargar]);
 
+  /** "Cargar más" o su reintento, desde el cursor confirmado. */
   const cargarMas = useCallback(async () => {
     if (!frontera.vigente()) return;
-    const p = pedirMas(listaRef.current);
+    const p = pedirMas(vistaRef.current.lista);
     if (!p) return;
-    listaRef.current = p.estado;
-    setLista(p.estado);
+    aplicar({ ...vistaRef.current, lista: p.estado });
     const r = await pedirComo(uid, ruta(p.pedido.cursor));
     if (!frontera.vigente()) return;
-    const t = r?.status === 200 ? tandaValida(r.j, ORDEN_PERFIL) : null;
-    setLista((l) => alLlegarMas(l, p.pedido.n, p.pedido.clave, t));
-  }, [frontera, uid, ruta]);
+    const antes = vistaRef.current;
+    const v = alLlegarMasPerfil(antes, p.pedido.n, p.pedido.clave, r);
+    if (v === antes) return;
+    // El perfil dejó de estar disponible: una recarga en vuelo tampoco puede volver a mostrarlo.
+    if (vistaTerminal(v)) { frontera.carga(); setError(false); }
+    aplicar(v);
+  }, [frontera, uid, ruta, aplicar]);
 
   const votar = useCallback(async (versionId: number, voto: Voto | "retirar") => {
     const r = await enviar("/api/comunidad/votos", { version_id: versionId, voto });
-    if (frontera.vigente() && r !== "sin-confirmar") setLista((l) => trasVoto(l, versionId, r.resultado, voto));
+    if (frontera.vigente() && r !== "sin-confirmar") conLista((l) => trasVoto(l, versionId, r.resultado, voto));
     return r;
-  }, [enviar, frontera]);
+  }, [enviar, frontera, conLista]);
 
-  if (apagado) return <div className="wrap cm cm-perfil"><p className="cm-sub">La comunidad no está disponible.</p></div>;
+  const { cab, apagado, lista } = vista;
+  if (apagado) return <div className="wrap cm cm-perfil"><p className="cm-sub" role="status">La comunidad no está disponible.</p></div>;
   if (!cab) {
     return (
       <div className="wrap cm cm-perfil">
@@ -143,7 +151,7 @@ function PerfilConSesion({ uid, id }: { uid: string; id: string }) {
                 </div>
                 {!cab.propio && (
                   <MenuResena versionId={o.version_id} denunciada={o.denunciada} enviar={enviar}
-                    alDenunciar={() => setLista((l) => trasDenuncia(l, o.version_id))}
+                    alDenunciar={() => conLista((l) => trasDenuncia(l, o.version_id))}
                     alBloquear={() => { setBloqueado(true); void cargar(); }} />
                 )}
               </div>

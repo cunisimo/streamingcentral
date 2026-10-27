@@ -1,11 +1,19 @@
 -- Rollback de 019 (E6): quita el cambio de nombre, el perfil y el avatar
--- público, y restaura `comunidad.item_lectura` de 017 (copia literal, sin el
--- autor). No toca `participantes.nombre_comunitario` (es de 011): los
+-- público, restaura `comunidad.item_lectura` de 017 (copia literal, sin el
+-- autor) y el CHECK de acciones de `comunidad.intentos` de 014. No toca `participantes.nombre_comunitario` (es de 011): los
 -- nombres elegidos se conservan y vuelven a verse al subir 019.
 begin;
 
 drop function if exists public.comunidad_perfil(uuid, jsonb, integer);
+drop function if exists public.comunidad_cambiar_nombre(uuid, text, jsonb, uuid, text);
 drop function if exists public.comunidad_cambiar_nombre(uuid, text, jsonb);
+
+-- La idempotencia vuelve a la de 014. Los intentos de nombre son registros
+-- de recuperación (retención de 7 días, E8): se borran para poder restaurar
+-- el CHECK. No hay otro dato de 019 que perder.
+delete from comunidad.intentos where accion = 'nombre';
+alter table comunidad.intentos drop constraint if exists intentos_accion_check;
+alter table comunidad.intentos add constraint intentos_accion_check check (accion in ('publicar', 'editar'));
 drop function if exists comunidad.avatar_publico(text);
 
 -- Copia literal de 017_comunidad_lectura.sql.

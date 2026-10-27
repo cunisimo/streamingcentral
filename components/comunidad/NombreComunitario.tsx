@@ -14,6 +14,9 @@ import { pedirComo, postear } from "./peticiones";
 //
 // El aviso previo (forma y largo) no decide nada: la ruta corre las reglas de
 // E1 y la base valida de nuevo. El motivo de un rechazo se muestra tal cual.
+// Cada envío lleva un `id_intento`; si la respuesta se perdió y la persona
+// reintenta el MISMO nombre, viaja el mismo intento y la base devuelve lo que
+// ya resolvió, sin aplicarlo de nuevo (A1). Otro nombre es otro intento.
 // Montado con `key` por cuenta: una respuesta de la cuenta anterior no pisa
 // a la actual (frontera de E3b).
 
@@ -26,6 +29,8 @@ export default function NombreComunitario({ uid }: { uid: string }) {
   const [nombre, setNombre] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [msg, setMsg] = useState<{ tono: TonoNombre; texto: string } | null>(null);
+  // El intento sin confirmar: se reutiliza sólo para el mismo nombre normalizado.
+  const [pendiente, setPendiente] = useState<{ id: string; nombre: string } | null>(null);
 
   const cargar = useCallback(async () => {
     if (!frontera.vigente()) return;
@@ -48,10 +53,13 @@ export default function NombreComunitario({ uid }: { uid: string }) {
     if (enviando || aviso || normalizado === "") return;
     setEnviando(true);
     setMsg(null);
-    const r = await postear(uid, "/api/comunidad/nombre", { nombre });
+    const id = pendiente && pendiente.nombre === normalizado ? pendiente.id : crypto.randomUUID();
+    const r = await postear(uid, "/api/comunidad/nombre", { nombre, id_intento: id });
     if (!frontera.vigente()) return;
     setEnviando(false);
     setMsg(mensajeNombre(r));
+    const incierto = r === "sin-confirmar" || r.resultado === "sin_confirmar";
+    setPendiente(incierto ? { id, nombre: normalizado } : null);
     if (r !== "sin-confirmar" && (r.resultado === "nombre_cambiado" || r.resultado === "sin_cambios")) {
       setNombre("");
       void cargar();

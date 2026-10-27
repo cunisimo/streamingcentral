@@ -31,7 +31,7 @@ import { normalizarTexto } from "../../lib/comunidad/texto.ts";
 import { huella, secretoDuplicados } from "../../lib/comunidad/duplicados.ts";
 import { TERMINOS_VERSION } from "../../lib/comunidad/terminos.ts";
 import { alLlegarMas, conPrimeraPagina, listaVacia, pedirMas, tandaValida } from "../../lib/comunidad/lista-nucleo.ts";
-import { cabeceraValida, clavePerfil, ORDEN_PERFIL } from "../../lib/comunidad/perfil-nucleo.ts";
+import { alCargarPerfil, alLlegarMasPerfil, cabeceraValida, clavePerfil, ORDEN_PERFIL, vistaTerminal, vistaVacia } from "../../lib/comunidad/perfil-nucleo.ts";
 import { eleccionAvatar, resolverAvatar } from "../../lib/avatares.ts";
 import { correrFlujo } from "../../lib/eliminar-cuenta-flujo.ts";
 import { dependenciasReales } from "../../lib/eliminar-cuenta-deps.ts";
@@ -120,7 +120,7 @@ const config = (cols) => sqlOk(`update comunidad.config set ${Object.entries(col
 const configPrevia = JSON.parse(sqlOk("select row_to_json(c)::text from comunidad.config c"));
 const nombreEnBase = (c) => sqlOk(`select coalesce(nombre_comunitario, '∅') from comunidad.participantes where id = ${q(c.part)}`);
 const contadorNombre = (c) => sqlOk(`select coalesce(sum(cantidad), 0) from comunidad.contadores where participante_id = ${q(c.part)} and accion = 'nombre'`);
-const nombrar = (c, nombre) => cambiarNombre(depsNombre, { uid: c.uid, nombre });
+const nombrar = (c, nombre) => cambiarNombre(depsNombre, { uid: c.uid, nombre, idIntento: randomUUID() });
 
 /** El perfil por la RUTA, con el Bearer de `c` (o sin token). */
 async function rutaPerfil(c, query) {
@@ -149,6 +149,13 @@ async function recorrer(c, id) {
   }
   return { cab: cabeceraValida(p1.j), crudo: p1.j, lista: l, tandas };
 }
+// A2: lo que hace la pantalla con la respuesta de "Cargar más". PANTALLA=antes
+// usa la transcripción literal del manejador de 8cbe0cd
+// (components/comunidad/PerfilComunitario.tsx: tandaValida → alLlegarMas, sin
+// mirar la cabecera) para verla fallar.
+const PANTALLA = process.env.PANTALLA === "antes"
+  ? (v, n, clave, r) => ({ ...v, lista: alLlegarMas(v.lista, n, clave, r?.status === 200 ? tandaValida(r.j, ORDEN_PERFIL) : null) })
+  : alLlegarMasPerfil;
 const PERMITIDAS = new Set(["activo", "estado", "orden", "id", "propio", "nombre", "avatar", "resenas", "utiles_recibidos", "items", "hay_mas", "cursor"]);
 const ITEM = new Set(["resena_id", "version_id", "texto", "publicada_en", "editada", "utiles", "total", "mi_voto", "denunciada", "autor", "tipo", "tmdb_id"]);
 
@@ -224,7 +231,8 @@ try {
   await prueba("ningún camino salta la validación: authenticated no ejecuta la función; el esquema no se expone; la base rechaza forma y decisiones inválidas aunque llame service_role", async () => {
     const r = await fetch(`${URL_API}/rest/v1/rpc/comunidad_cambiar_nombre`, {
       method: "POST", headers: { apikey: ANON, Authorization: `Bearer ${S.B.jwt}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_uid: S.B.uid, p_nombre: "Hackeado", p_decision: { resultado: "publicar", version_reglas: "x", reglas: [] } }),
+      body: JSON.stringify({ p_uid: S.B.uid, p_nombre: "Hackeado", p_decision: { resultado: "publicar", version_reglas: "x", reglas: [] },
+        p_id_intento: randomUUID(), p_hash: "a".repeat(64) }),
     });
     assert.ok((r.status === 401 || r.status === 403) && /42501|permission denied/.test(await r.text()), String(r.status));
     for (const token of [ANON, S.B.jwt]) {
@@ -236,9 +244,11 @@ try {
     }
     // service_role (sólo servidor) con una forma inválida: el CHECK de 011 revierte todo, contador incluido.
     const antes = contadorNombre(S.B);
-    const f = await srv.rpc("comunidad_cambiar_nombre", { p_uid: S.B.uid, p_nombre: "Ana​Beta", p_decision: { resultado: "publicar", version_reglas: "x", reglas: [] } });
+    const f = await srv.rpc("comunidad_cambiar_nombre", { p_uid: S.B.uid, p_nombre: "Ana​Beta", p_decision: { resultado: "publicar", version_reglas: "x", reglas: [] },
+      p_id_intento: randomUUID(), p_hash: "a".repeat(64) });
     assert.equal(f.error?.code, "23514", JSON.stringify(f.error));
-    const d = await srv.rpc("comunidad_cambiar_nombre", { p_uid: S.B.uid, p_nombre: "Ana Beta", p_decision: { resultado: "aprobar", version_reglas: "x", reglas: [] } });
+    const d = await srv.rpc("comunidad_cambiar_nombre", { p_uid: S.B.uid, p_nombre: "Ana Beta", p_decision: { resultado: "aprobar", version_reglas: "x", reglas: [] },
+      p_id_intento: randomUUID(), p_hash: "a".repeat(64) });
     assert.equal(d.error?.code, "22023");
     assert.equal(contadorNombre(S.B), antes);
     assert.equal(nombreEnBase(S.B), "∅");
@@ -259,18 +269,22 @@ try {
   });
 
   await prueba("por la RUTA: sin sesión 401; con sesión, el contacto se rechaza con motivo y uno válido se acepta (B)", async () => {
-    const sin = await fetch(`${BASE}/api/comunidad/nombre`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre: "Ana" }) });
+    const sin = await fetch(`${BASE}/api/comunidad/nombre`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre: "Ana", id_intento: randomUUID() }) });
     assert.equal(sin.status, 401);
     const post = (nombre) => fetch(`${BASE}/api/comunidad/nombre`, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${S.B.jwt}` }, body: JSON.stringify({ nombre }),
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${S.B.jwt}` }, body: JSON.stringify({ nombre, id_intento: randomUUID() }),
     }).then(async (r) => ({ status: r.status, j: await r.json() }));
+    const sinIntento = await fetch(`${BASE}/api/comunidad/nombre`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${S.B.jwt}` }, body: JSON.stringify({ nombre: "Ana" }),
+    });
+    assert.equal(sinIntento.status, 400, "sin id_intento no se acepta");
     const c = await post("wsp 11 5555 4444");
     assert.deepEqual([c.status, c.j.resultado], [200, "rechazo_contenido"]);
     assert.match(c.j.mensaje, /número/);
     // Un `uid` en el cuerpo se ignora: el actor sale del token.
     const o = await fetch(`${BASE}/api/comunidad/nombre`, {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${S.B.jwt}` },
-      body: JSON.stringify({ nombre: "Lector Verde", uid: S.A.uid, p_uid: S.A.uid }),
+      body: JSON.stringify({ nombre: "Lector Verde", id_intento: randomUUID(), uid: S.A.uid, p_uid: S.A.uid }),
     }).then(async (r) => ({ status: r.status, j: await r.json() }));
     assert.deepEqual([o.status, o.j.resultado, o.j.nombre], [200, "nombre_cambiado", "Lector Verde"]);
     assert.deepEqual([nombreEnBase(S.B), nombreEnBase(S.A)], ["Lector Verde", "Cinéfila de Prueba"]);
@@ -402,6 +416,93 @@ try {
     assert.deepEqual(porAutor[S.Z.part], { id: S.Z.part, nombre: "Autor Bloqueable" });
     for (const x of j.items) assert.deepEqual(Object.keys(x.autor).sort(), ["id", "nombre"]);
     assert.ok(!j.items.some((x) => x.autor.id === S.Y.part), "la reseña de la cuenta eliminada no se ve");
+  });
+
+  console.log("\n— A2: cambios de disponibilidad al «Cargar más» (respuestas reales de la ruta, reductor de la pantalla) —");
+  /** La primera página como la aplica la pantalla. */
+  async function primera(c, id) {
+    const v = alCargarPerfil(vistaVacia(clavePerfil(c.uid, id)), await rutaPerfil(c, `id=${id}`));
+    assert.ok(v && v.cab?.estado === "activo" && v.lista.items.length === 5 && v.lista.hayMas, "primera página activa de 5 con más");
+    return v;
+  }
+  /** "Cargar más": el pedido sale y su respuesta se aplica con la función de la pantalla. */
+  async function mas(c, id, v, { antesDeResponder = null, perderRed = false } = {}) {
+    const p = pedirMas(v.lista);
+    const enCurso = { ...v, lista: p.estado };
+    if (antesDeResponder) await antesDeResponder();
+    const r = perderRed ? null : await rutaPerfil(c, `id=${id}&cursor=${encodeURIComponent(p.pedido.cursor)}`);
+    return { v: PANTALLA(enCurso, p.pedido.n, p.pedido.clave, r), p, r, enCurso };
+  }
+  const sinIdentidad = (v) => [v.cab?.nombre ?? null, v.cab?.avatar ?? null, v.lista.items.length, v.lista.errorMas];
+
+  await prueba("A2 · preparación: dos autores con 6 reseñas visibles cada uno (dos páginas)", async () => {
+    S.D = await cuenta("autorD");
+    S.E = await cuenta("autorE");
+    assert.equal((await nombrar(S.D, "Autora Disponible")).resultado, "nombre_cambiado");
+    assert.equal((await nombrar(S.E, "Autor Que Se Va")).resultado, "nombre_cambiado");
+    S.rD = [];
+    for (let i = 0; i < 6; i++) S.rD.push(await publicar(S.D, S.T + 100 + i));
+    for (let i = 0; i < 6; i++) await publicar(S.E, S.T + 200 + i);
+  });
+
+  await prueba("A2 · bloqueo desde OTRA sesión entre páginas: «Cargar más» aplica «Usuario bloqueado» sin nombre, avatar ni reseñas; no es un error de red", async () => {
+    const v = await primera(S.L, S.D.part);
+    const { v: d, r } = await mas(S.L, S.D.part, v, { antesDeResponder: async () => assert.equal((await ops.bloquear(S.L.uid, S.rD[0].version_id)).resultado, "bloqueado") });
+    assert.deepEqual(r.j, { activo: true, estado: "bloqueado", id: S.D.part }, "la base ya informa el bloqueo");
+    assert.equal(d.cab?.estado, "bloqueado");
+    assert.deepEqual(sinIdentidad(d), [null, null, 0, false]);
+    assert.ok(vistaTerminal(d));
+  });
+
+  await prueba("A2 · respuesta tardía: una página activa pedida ANTES del bloqueo no restaura nada después de que se aplicó el bloqueo", async () => {
+    for (const x of (await ops.bloqueados(S.L.uid)).bloqueados) assert.equal((await ops.desbloquear(S.L.uid, x.bloqueo_id)).resultado, "desbloqueado");
+    const v = await primera(S.L, S.D.part);
+    const p = pedirMas(v.lista);
+    const enCurso = { ...v, lista: p.estado };
+    const tardia = await rutaPerfil(S.L, `id=${S.D.part}&cursor=${encodeURIComponent(p.pedido.cursor)}`);
+    assert.equal(tardia.j.estado, "activo", "la respuesta tardía trae la reseña restante");
+    assert.equal((await ops.bloquear(S.L.uid, S.rD[0].version_id)).resultado, "bloqueado");
+    // La pantalla recarga (p. ej. tras bloquear desde el menú) y aplica el bloqueo.
+    const bloqueada = alCargarPerfil(enCurso, await rutaPerfil(S.L, `id=${S.D.part}`));
+    assert.equal(bloqueada.cab?.estado, "bloqueado");
+    const despues = PANTALLA(bloqueada, p.pedido.n, p.pedido.clave, tardia);
+    assert.equal(despues.cab?.estado, "bloqueado");
+    assert.deepEqual(sinIdentidad(despues), [null, null, 0, false], "la respuesta superada no restaura reseñas");
+    for (const x of (await ops.bloqueados(S.L.uid)).bloqueados) assert.equal((await ops.desbloquear(S.L.uid, x.bloqueo_id)).resultado, "desbloqueado");
+  });
+
+  await prueba("A2 · baja del autor entre páginas (flujo real de la app): «Cargar más» aplica «Cuenta eliminada» y retira lo anterior", async () => {
+    const v = await primera(S.L, S.E.part);
+    const { v: d, r } = await mas(S.L, S.E.part, v, {
+      antesDeResponder: async () => {
+        const res = await correrFlujo(dependenciasReales({ admin: createClient(URL_API, SRV, opc), url: URL_API, anon: ANON }), { userId: S.E.uid, email: S.E.email, password: S.E.password });
+        assert.deepEqual(res, { ok: true });
+        cuentas.delete(S.E.uid);
+      },
+    });
+    assert.deepEqual(r.j, { activo: true, estado: "eliminada", id: S.E.part });
+    assert.equal(d.cab?.estado, "eliminada");
+    assert.deepEqual(sinIdentidad(d), [null, null, 0, false]);
+  });
+
+  await prueba("A2 · módulo apagado entre páginas: «Cargar más» aplica «no disponible» y retira todo", async () => {
+    const v = await primera(S.L, S.D.part);
+    let d;
+    try {
+      ({ v: d } = await mas(S.L, S.D.part, v, { antesDeResponder: async () => config({ modulo_activo: false }) }));
+    } finally { config({ modulo_activo: true }); }
+    assert.equal(d.apagado, true);
+    assert.deepEqual(sinIdentidad(d), [null, null, 0, false]);
+  });
+
+  await prueba("A2 · falla REAL de red: se conservan cabecera y páginas; el reintento desde el mismo cursor completa sin repetir", async () => {
+    const v = await primera(S.L, S.D.part);
+    const { v: d } = await mas(S.L, S.D.part, v, { perderRed: true });
+    assert.deepEqual([d.cab?.nombre, d.cab?.estado, d.lista.items.length, d.lista.errorMas], ["Autora Disponible", "activo", 5, true]);
+    assert.equal(d.cab?.avatar, v.cab?.avatar, "la cabecera queda como estaba");
+    assert.equal(vistaTerminal(d), false);
+    const { v: e } = await mas(S.L, S.D.part, { ...d, lista: { ...d.lista, errorMas: false } });
+    assert.deepEqual([e.lista.items.length, new Set(e.lista.items.map((x) => x.resena_id)).size, e.lista.hayMas, e.lista.errorMas], [6, 6, false, false]);
   });
 
   await prueba("módulo apagado: el perfil y el nombre responden sin datos", async () => {

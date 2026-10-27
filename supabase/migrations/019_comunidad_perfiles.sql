@@ -7,7 +7,8 @@
 -- propia columna), §3.4 (nombre con las mismas reglas; `display_name` fuera).
 --
 -- QUÉ HACE.
---   - `comunidad_cambiar_nombre(uid, nombre, decisión)`, SÓLO service_role:
+--   - `comunidad_cambiar_nombre(uid, nombre, decisión, id_intento, hash)`,
+--     SÓLO service_role:
 --     la ruta corre las reglas de nombre de E1 y pasa la decisión, como en
 --     publicar. Fila A de la matriz (módulo, publicación, suspensión, correo,
 --     términos) y el límite del día `limite_nombres` (3, hipótesis). Escribe
@@ -17,6 +18,17 @@
 --     nombre. Un nombre que las reglas RETENDRÍAN no se guarda (no hay cola
 --     de revisión de nombres): cuenta para el límite y se informa. Repetir el
 --     mismo nombre es `sin_cambios` y no consume límite.
+--     IDEMPOTENCIA (A1 de la auditoría de E6 sobre 8cbe0cd): cada envío lleva
+--     un `id_intento` del cliente y el hash del pedido normalizado, como
+--     publicar y editar (014, `comunidad.intentos`, acción 'nombre'). Todo
+--     resultado posterior a la relectura queda registrado en la MISMA
+--     transacción que su efecto; un reintento con el mismo intento devuelve
+--     ese resultado (`repetido`) sin escribir ni consumir cupo, aunque otra
+--     sesión haya cambiado el nombre en el medio. Mismo id con otro hash:
+--     `conflicto`. El intento NO guarda ningún nombre (ni el aceptado: la
+--     baja no borra intentos y una cuenta eliminada no conserva su nombre);
+--     el hash del pedido es un HMAC con el secreto del servidor, así que un
+--     nombre corto no se puede adivinar desde él.
 --   - `comunidad_perfil(participante, cursor, límite)`, SÓLO authenticated:
 --     el lector sale de `auth.uid()` (sin uid en el pedido). Devuelve la
 --     proyección: nombre comunitario, un avatar DEL CATÁLOGO, dos agregados
@@ -40,6 +52,12 @@
 -- Rollback: 019_comunidad_perfiles_down.sql (restaura `item_lectura` de 017).
 
 begin;
+
+-- ------------------------------------------------------------------
+-- La idempotencia de 014 suma la acción 'nombre' (A1).
+-- ------------------------------------------------------------------
+alter table comunidad.intentos drop constraint if exists intentos_accion_check;
+alter table comunidad.intentos add constraint intentos_accion_check check (accion in ('publicar', 'editar', 'nombre'));
 
 -- ------------------------------------------------------------------
 -- Avatar público: sólo ids del catálogo. LEGADO_V1 congelado (lib/avatares.ts).
@@ -98,9 +116,13 @@ $$;
 
 -- ------------------------------------------------------------------
 -- Cambiar el nombre comunitario (fila A). Protocolo de 013: cuenta →
--- participante → suspensiones → contador → relectura → marca → escritura.
+-- participante → suspensiones → contador → relectura (intento previo
+-- incluido) → marca → escritura del efecto Y del intento.
 -- ------------------------------------------------------------------
-create or replace function public.comunidad_cambiar_nombre(p_uid uuid, p_nombre text, p_decision jsonb)
+-- La firma anterior (sin intento, 8cbe0cd) no queda como sobrecarga.
+drop function if exists public.comunidad_cambiar_nombre(uuid, text, jsonb);
+create or replace function public.comunidad_cambiar_nombre(
+  p_uid uuid, p_nombre text, p_decision jsonb, p_id_intento uuid, p_hash text)
 returns jsonb
 language plpgsql
 security definer
@@ -110,44 +132,65 @@ as $$
 declare
   v_dec text := comunidad.decision_valida(p_decision);
   v_part uuid;
+  v_prev jsonb;
   v_motivo text;
   v_actual text;
   v_cant integer;
   v_limite integer;
   v_dia date := comunidad.dia_ar(clock_timestamp());
+  v_cupo boolean := false;
+  v_res jsonb;
   m timestamptz;
 begin
   if p_nombre is null then
     raise exception 'nombre_invalido' using errcode = '22023';
   end if;
   v_part := comunidad.proto_cuenta(p_uid, false);
+  -- Sin identidad comunitaria no hay dónde registrar el intento ni nada que
+  -- cambiar: un reintento devuelve lo mismo.
   if v_part is null then return comunidad.rechazo_cuenta('terminos_pendientes'); end if;
   perform 1 from comunidad.proto_participantes(array[v_part]);
   perform 1 from comunidad.proto_suspensiones(array[v_part]);
   perform 1 from comunidad.proto_contadores(v_part, array['nombre'], v_dia);
 
-  -- Relectura, con todo bloqueado.
+  -- Relectura, con todo bloqueado. Un intento ya resuelto se devuelve tal
+  -- cual: recuperar una confirmación nunca es otra escritura.
+  v_prev := comunidad.intento_previo(v_part, 'nombre', p_id_intento, p_hash);
+  if v_prev is not null then return v_prev; end if;
   v_motivo := comunidad.condiciones_a(p_uid, v_part);
-  if v_motivo is not null then return comunidad.rechazo_cuenta(v_motivo); end if;
   select nombre_comunitario into v_actual from comunidad.participantes where id = v_part;
-  if v_dec = 'publicar' and v_actual is not distinct from p_nombre then
-    return jsonb_build_object('resultado', 'sin_cambios', 'nombre', v_actual);
-  end if;
   select limite_nombres into v_limite from comunidad.config;
   select cantidad into v_cant from comunidad.contadores
    where participante_id = v_part and accion = 'nombre' and dia = v_dia;
-  if coalesce(v_cant, 0) >= v_limite then return comunidad.rechazo_cuenta('limite_diario'); end if;
+
+  if v_motivo is not null then
+    v_res := comunidad.rechazo_cuenta(v_motivo);
+  elsif v_dec = 'publicar' and v_actual is not distinct from p_nombre then
+    v_res := jsonb_build_object('resultado', 'sin_cambios', 'nombre', v_actual);
+  elsif coalesce(v_cant, 0) >= v_limite then
+    v_res := comunidad.rechazo_cuenta('limite_diario');
+  elsif v_dec = 'publicar' then
+    v_res := jsonb_build_object('resultado', 'nombre_cambiado', 'nombre', p_nombre);
+    v_cupo := true;
+  elsif v_dec = 'retener' then
+    v_res := jsonb_build_object('resultado', 'nombre_no_admitido');
+    v_cupo := true;
+  else
+    v_res := jsonb_build_object('resultado', 'rechazo_contenido');
+    v_cupo := true;
+  end if;
 
   m := comunidad.proto_marca();
-  perform comunidad.consumir_cupo(v_part, 'nombre', v_dia);
-  if v_dec = 'publicar' then
-    -- El CHECK de 011 (forma) rige igual: un nombre mal formado revierte todo.
+  if v_cupo then perform comunidad.consumir_cupo(v_part, 'nombre', v_dia); end if;
+  if (v_res->>'resultado') = 'nombre_cambiado' then
+    -- El CHECK de 011 (forma) rige igual: un nombre mal formado revierte todo,
+    -- cupo e intento incluidos.
     update comunidad.participantes set nombre_comunitario = p_nombre, nombre_cambiado_en = m where id = v_part;
-    return jsonb_build_object('resultado', 'nombre_cambiado', 'nombre', p_nombre);
-  elsif v_dec = 'retener' then
-    return jsonb_build_object('resultado', 'nombre_no_admitido');
   end if;
-  return jsonb_build_object('resultado', 'rechazo_contenido');
+  -- El intento guarda el hash del pedido y el resultado SIN el nombre.
+  insert into comunidad.intentos (participante_id, accion, id_intento, hash_peticion, resultado)
+  values (v_part, 'nombre', p_id_intento, p_hash, v_res - 'nombre');
+  return v_res;
 end;
 $$;
 
@@ -259,9 +302,9 @@ $$;
 -- ==================================================================
 revoke all on function comunidad.avatar_publico(text) from public, anon, authenticated, service_role;
 revoke all on function comunidad.item_lectura(comunidad.resenas, comunidad.versiones, uuid) from public, anon, authenticated, service_role;
-revoke all on function public.comunidad_cambiar_nombre(uuid, text, jsonb) from public, anon, authenticated;
+revoke all on function public.comunidad_cambiar_nombre(uuid, text, jsonb, uuid, text) from public, anon, authenticated;
 revoke all on function public.comunidad_perfil(uuid, jsonb, integer) from public, anon, authenticated, service_role;
-grant execute on function public.comunidad_cambiar_nombre(uuid, text, jsonb) to service_role;
+grant execute on function public.comunidad_cambiar_nombre(uuid, text, jsonb, uuid, text) to service_role;
 grant execute on function public.comunidad_perfil(uuid, jsonb, integer) to authenticated;
 
 commit;
