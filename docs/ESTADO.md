@@ -1098,7 +1098,14 @@ AAB tiene que ser `5` o mayor.
        `docs/medidas/2026-10-27-e6-a1a2-recorrido/`.
    - **E7 local: Top Yumpers mensual (27/10, Claude, autorizada por el dueño
      sólo en local; `supabase start`, la app local y datos ficticios).
-     PENDIENTE DE AUDITORÍA FOCALIZADA de Codex.**
+     E7 CERRADA COMO ENTREGA LOCAL por Codex el 27/10**
+     (`docs/medidas/2026-10-27-auditoria-e7-ed6a791.md`, copiada sin cambios
+     el 27/10; SHA-256 `188a22f4…`, igual al original): sin hallazgos
+     bloqueantes; no habilita publicación. Precisión de la auditoría: las 14
+     fronteras del caso 11 son 6 de tramo, 6 de suspensión del autor y 2 de
+     suspensión del evaluador. Pendientes de integración conservados:
+     `/api/title` en ejecución, TMDB, tema claro, teléfono/Android y lector
+     de pantalla.
      - **Qué entró** (`020_comunidad_top.sql` + down):
        - `puntos_al_corte`: el cómputo de §2.2.2 (pares distintos;
          primera positiva del mes; tramo y suspensiones con la misma

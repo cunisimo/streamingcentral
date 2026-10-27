@@ -1049,8 +1049,10 @@ rollback;
   casos concurrentes.
 - **Evidencia para Codex:** salidas, diff de `TopView`, resultado de los
   casos de igualdad.
-- **Estado (27/10):** implementada en local por Claude, **pendiente de
-  auditoría focalizada**:
+- **Estado (27/10):** implementada en local por Claude y **cerrada como
+  entrega local por Codex el 27/10**
+  (`docs/medidas/2026-10-27-auditoria-e7-ed6a791.md`), sin hallazgos
+  bloqueantes:
   - casos 6–11 y B8 con funciones reales;
   - cinco corridas seguidas de los concurrentes;
   - `top_resultados.participante_id` sin FK, para que la consolidación no
