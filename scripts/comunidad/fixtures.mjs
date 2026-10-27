@@ -75,6 +75,10 @@ begin
     insert into comunidad.top_meses (mes, corte, consolidado_en, autores) values ('2025-01-01', '2025-02-01 03:00:00+00', now(), 1);
     insert into comunidad.top_resultados (mes, posicion, puntos, participante_id) values ('2025-01-01', 1, 1, '${FX.autor}');
   end if;
+  -- E8 (021): una ejecución de la purga (la configuración ya tiene su fila).
+  if to_regclass('comunidad.purga_ejecuciones') is not null then
+    insert into comunidad.purga_ejecuciones (alcance, ahora, iniciada_en, estado) values ('dia', now(), now(), 'en_curso');
+  end if;
 end;
 $$;
 `;

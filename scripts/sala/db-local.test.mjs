@@ -71,6 +71,8 @@ test("aplica 007 (is_admin_mfa) y las migraciones de reseñas, en orden y sin lo
   assert.ok(i("019_comunidad_perfiles.sql") === i("018_comunidad_utilidad.sql") + 1);
   // 020 (Top Yumpers, E7) usa los nombres y avatares de 019.
   assert.ok(i("020_comunidad_top.sql") === i("019_comunidad_perfiles.sql") + 1);
+  // 021 (purga, E8) redefine consolidar_mes y la lectura del Top Yumpers de 020.
+  assert.ok(i("021_comunidad_purga.sql") === i("020_comunidad_top.sql") + 1);
   // 022 cierra user_reviews: tiene que ir DESPUÉS de schema.sql, que recrea sus policies.
   assert.ok(i("022_cerrar_user_reviews.sql") > i("011_comunidad_esquema.sql"));
   assert.ok(!l.some((f) => /_down\.sql$/.test(f)), "un rollback nunca va en la lista");
